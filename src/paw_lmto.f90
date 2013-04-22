@@ -955,7 +955,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     **                     IAT AND MAIN ANGULAR MOMENTUM L                  **
 !     **                     (RELATIVE TO THE FIRST ELEMENT FOR THIS ATOM)    **
 !     **                                                                      **
-!     **  THE ARRAYS ISPECIES1 AND LX1 HAVE STRANGE NAMES BECAUSE THE    **
+!     **  THE ARRAYS ISPECIES1 AND LX1 HAVE STRANGE NAMES BECAUSE THE         **
 !     **  ORIGINAL                                                            **
 !     **  NAMES ARE ALREADY USED BY LMTO_MODULE. WE USE SEPARATE ARRAYS,      **
 !     **  BECAUSE WE WANT TO REMOVE THESE ARRAYS FROM THE MODULE              **
@@ -15185,26 +15185,36 @@ INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
 REAL(8)                :: MU            ! CHEMICAL POTENTIAL
 REAL(8)                :: DELTAT        ! TIMESTEP
-REAL(8)                :: MUMIN,MUMAX   ! BOUNDS OF SEARCH GRID FOR CHEM. POT'LS
 REAL(8)   ,ALLOCATABLE :: WKPTL(:)      ! (NKPTL) K-POINT WEIGHTS ON THIS TASK
+COMPLEX(8),ALLOCATABLE :: pipsi(:,:,:,:)    !(Nchi,NB,NKPTL,NSPIN) <pi|psi>
+COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:)   !(NB,NB,NKPTL,NSPIN)
+COMPLEX(8),ALLOCATABLE :: hamilton(:,:,:,:) !(NB  ,NB,NKPTL,NSPIN)<psi|heff|psi>
+COMPLEX(8),ALLOCATABLE :: XLOC(:,:,:,:)     !(NCHI,NCHI,NOMEGA,NSPIN)
+COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
+!
+!== local Greens function ======================================================
+!
 COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:)    !(NCHI,NCHI,NOMEGA,NSPIN)
+!__laurent expansion for the local greens function______________________________
 COMPLEX(8),ALLOCATABLE :: hamloc0(:,:)  !(Nchi,nchi)
 COMPLEX(8),ALLOCATABLE :: hamloc1(:,:)  !(Nchi,nchi)
 COMPLEX(8),ALLOCATABLE :: hamloc2(:,:)  !(Nchi,nchi)
+!__matrix to diagonalize overlap matrix_________________________________________
 COMPLEX(8),ALLOCATABLE :: diagsloc(:,:) !(Nchi,nchi)
-COMPLEX(8),ALLOCATABLE :: XLOC(:,:,:,:)     !(NCHI,NCHI,NOMEGA,NSPIN)
-COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:)   !(NB,NB,NKPTL,NSPIN)
-COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
-COMPLEX(8),ALLOCATABLE :: hamilton(:,:,:,:) !(NB  ,NB,NKPTL,NSPIN)
-COMPLEX(8),ALLOCATABLE :: pipsi(:,:,:,:)    !(Nchi,NB,NKPTL,NSPIN)
+!
+!== self energy minus double counting ==========================================
 REAL(8)                :: ANNESIGMA
 REAL(8)                :: MSIGMA
+!__self energy__________________________________________________________________
 COMPLEX(8),ALLOCATABLE :: DSIGMAM(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: DSIGMA0(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: DSIGMAP(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
+!__laurent expansion for dsigma_________________________________________________
 COMPLEX(8),ALLOCATABLE :: DSP(:,:,:,:)    !(NCHI,NCHI,NSPIN,2)
 COMPLEX(8),ALLOCATABLE :: DS0(:,:,:,:)    !(NCHI,NCHI,NSPIN,2)
 COMPLEX(8),ALLOCATABLE :: DSm(:,:,:,:)    !(NCHI,NCHI,NSPIN,2)
+!
+!== lagrange multiplier for density matrix constraint ==========================
 REAL(8)                :: ANNELAMBDA
 REAL(8)                :: MLAMBDA
 COMPLEX(8),ALLOCATABLE :: LAMBDAM(:,:,:,:) !(NB,NB,NKPTL,NSPIN)
@@ -15220,8 +15230,8 @@ END MODULE DMFT_MODULE
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
       IMPLICIT NONE
       REAL(8)                :: PI
-      INTEGER(4),PARAMETER   :: ISP0=2
-      INTEGER(4),PARAMETER   :: L0=2
+      INTEGER(4)             :: ISP0
+      INTEGER(4)             :: L0
       REAL(8)   ,ALLOCATABLE :: WKPT(:)    ! K-POINT WEIGHTS (GLOBAL)
       INTEGER(4)             :: NTASKS_K,THISTASK_K
       INTEGER(4)             :: NTASKS_M,THISTASK_M
@@ -15274,6 +15284,9 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     == SELECT CORRELATED ORBITALS                                           ==
 !     ==========================================================================
+!this is specific for srvo3
+      ISP0=2
+      L0=2
       NCHI=3    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       IPRO=0
       DO ISP=1,ISP0-1
@@ -15284,23 +15297,20 @@ END MODULE DMFT_MODULE
         IPRO=IPRO+2*LOX(LN,ISP0)+1
       ENDDO
       ALLOCATE(IPROOFCHI(NCHI))
-      IPROOFCHI(1)=IPRO+2
+      IPROOFCHI(1)=IPRO+2   !t2g orbitals
       IPROOFCHI(2)=IPRO+4
       IPROOFCHI(3)=IPRO+5
 !
 !     ==========================================================================
 !     == OTHER VARIABLES                                                      ==
 !     ==========================================================================
+!this is hard wired
       KBT=0.333d0*ev
-!
       deltat=10.d0
       ANNESIGMA=0.1D0
       ANNELAMBDA=0.1D0
       MSIGMA=1.D+2
       MLAMBDA=1.D+2
-!
-      MUMIN=0.460
-      MUMAX=0.5D0
 !
 !     ==========================================================================
 !     ==  CALCULATE MATSUBARA FREQUENCIES                                     ==
@@ -15350,6 +15360,95 @@ END MODULE DMFT_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT$GREEN()
+!     **************************************************************************
+!     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     **                                                                      **
+!     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
+!     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
+     &                      ,WKPTL,GLOC,DENMAT &
+     &                      ,hamloc0,hamloc1,hamloc2,diagsloc
+      USE MPE_MODULE
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      COMPLEX(8),ALLOCATABLE :: GREENINV(:,:)
+      COMPLEX(8),ALLOCATABLE :: GREEN(:,:) !(NB,NB)
+      COMPLEX(8),ALLOCATABLE :: hps0(:,:)  !(Nb,nb)
+      COMPLEX(8),ALLOCATABLE :: l3mat(:,:)  !(Nb,nb)
+      REAL(8)   ,ALLOCATABLE :: floc(:) 
+      COMPLEX(8)             :: CSVAR
+      INTEGER(4)             :: NTASKS_K,THISTASK_K
+      INTEGER(4)             :: NTASKS_M,THISTASK_M
+      INTEGER(4)             :: ISPIN,IMU,NU,I,IB,IBH,IKPT,ICHI,IPRO
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+                              CALL TRACE$PUSH('DMFT$GREEN')
+      CALL DMFT_INI()
+      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
+      CALL MPE$QUERY('MONOMER',NTASKS_M,THISTASK_M)
+!
+!     ==========================================================================
+!     ==  collect dft hamiltonian                                             ==
+!     ==========================================================================
+      call DMFT$COLLECTHAMILTONIAN()
+!
+!     ==========================================================================
+!     ==  determine chemical potential                                        ==
+!     ==========================================================================
+      call DMFT$chempot()
+!
+!     ==========================================================================
+!     ==  calculate local Greens function and the one-particle density matrix ==
+!     ==========================================================================
+      call DMFT_GREENanddenmat()
+!
+!     ==========================================================================
+!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
+!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC
+!     ==========================================================================
+      ALLOCATE(FLOC(NCHI))
+      CALL LIB$DIAGC8(NCHI,HAMLOC0,FLOC,DIAGSLOC)
+      DO IB=1,NCHI
+        DIAGSLOC(:,IB)=DIAGSLOC(:,IB)/SQRT(FLOC(IB))
+      ENDDO
+!
+!     ==========================================================================
+!     ==  WRITE LOCAL FILE FOR SOLVER                                         ==
+!     ==========================================================================
+      CALL DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,omega &
+     &                   ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
+call dmft_testgloc()
+!
+!     ==========================================================================
+!     ==  plot dn/dmu as test of the spectral properties                      ==
+!     ==========================================================================
+      CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
+stop 'forced stop in dmft$green'
+!
+!     ==========================================================================
+!     ==  CHECK IF THINGS MAKE SENSE                                          ==
+!     ==========================================================================
+      CALL DMFT$TEST1(NOMEGA,OMEGA,NB,NKPTL,NCHI,NSPIN,KBT,WKPTL,GLOC,DENMAT &
+     &               ,HAMLOC0,HAMLOC1,HAMLOC2)
+!!$STOP 'STOPPING AFTER TEST1'
+!
+!     ==========================================================================
+!     ==  TEST THE CONTINUATION                                               ==
+!     ==========================================================================
+      CALL DMFT$DEDGREEN()
+      CALL DMFT$ADDTOHPSI()
+      CALL DMFT$ADDTOEIGVAL()
+!STOP 'FORCED'
+!
+      CALL DMFT$PROPAGATE()
+      CALL DMFT$SWITCH()
+                                       CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$COLLECTHAMILTONIAN()
 !     **************************************************************************
 !     ** COLLECTS THE HAMILTONIAN AND STORES IT ON THE MODULE                 **
@@ -15365,7 +15464,8 @@ END MODULE DMFT_MODULE
       INTEGER(4)             :: NGL
       integer(4)             :: ikpt,ispin,ibh,ichi,ipro
 !     **************************************************************************
-print*,'collecting hamiltonian....'
+      IF(.NOT.TON) RETURN
+                                      call trace$push('DMFT$COLLECTHAMILTONIAN')
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -15401,7 +15501,7 @@ print*,'collecting hamiltonian....'
           ENDDO
         enddo
       enddo
-print*,'..... hamiltonian collected'
+                                      call trace$pop()
       return
       end
 !
@@ -15414,7 +15514,7 @@ print*,'..... hamiltonian collected'
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
-     &                      ,MUMIN,MUMAX,WKPTL,GLOC,DSIGMA0,DENMAT &
+     &                      ,WKPTL,GLOC,DSIGMA0,DENMAT &
      &                      ,hamloc0,hamloc1,hamloc2,diagsloc,ds0 &
      &                      ,hamilton,pipsi
       USE MPE_MODULE
@@ -15439,6 +15539,7 @@ print*,'..... hamiltonian collected'
       real(8)                :: ev
       REAL(8)   ,PARAMETER   :: TOL=1.D-5
 !     **************************************************************************
+      IF(.NOT.TON) RETURN
 PRINT*,'DETERMINING CHEMPOT....'
       CALL CONSTANTS$GET('EV',EV)
       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
@@ -15499,7 +15600,7 @@ PRINT*,'DMFT$chempot: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
 !         == LAURENT EXPANSION COEFFICIENTS REQUIRED FOR THE REGULARIZATION ==
 !         ====================================================================
           LAURENT1=TRHPS0-MU*TR1
-          LAURENT2=0.5D0*(TRHPS0SQUARE-2.D0*TRHPS0*MU+MU**2*TR1)+TRDS1
+          LAURENT2=(TRHPS0SQUARE-2.D0*TRHPS0*MU+MU**2*TR1)+TRDS1
 !
 !         ====================================================================
 !         ==  PERFORM MATSUBARA SUMS                                        ==
@@ -15545,19 +15646,19 @@ PRINT*,'MU = ',MU ,' MU[EV] =',MU*27.211D0
 print*,'..... chempot determined'
       return
       end
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$GREEN()
+      SUBROUTINE DMFT_GREENanddenmat()
 !     **************************************************************************
 !     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     ** and the density matrix                                               **
 !     **                                                                      **
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
      &                      ,WKPTL,GLOC,DSIGMA0,DENMAT &
-     &                      ,hamloc0,hamloc1,hamloc2,diagsloc,ds0 &
+     &                      ,hamloc0,hamloc1,hamloc2,ds0 &
      &                      ,hamilton,pipsi
       USE MPE_MODULE
       IMPLICIT NONE
@@ -15573,20 +15674,9 @@ print*,'..... chempot determined'
       INTEGER(4)             :: ISPIN,IMU,NU,I,IB,IBH,IKPT,ICHI,IPRO
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-                              CALL TRACE$PUSH('DMFT$GREEN')
-      CALL DMFT_INI()
+                              CALL TRACE$PUSH('DMFT_GREENanddenmat')
       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
       CALL MPE$QUERY('MONOMER',NTASKS_M,THISTASK_M)
-!
-!     ==========================================================================
-!     ==  collect dft hamiltonian                                             ==
-!     ==========================================================================
-      call DMFT$COLLECTHAMILTONIAN()
-!
-!     ==========================================================================
-!     ==  determine chemical potential                                        ==
-!     ==========================================================================
-      call DMFT$chempot()
 !
 !     ==========================================================================
 !     ==  ALLOCATE ARRAYS                                                     ==
@@ -15609,16 +15699,19 @@ print*,'..... chempot determined'
 !
 !         ======================================================================
 !         ==  calculate matrices for the regularization                       ==
+!         ==  glat -> 1/iomega + hps0/iomega^2 + l3mat/iomega^3               ==
+!         ==  gloc -> hamloc0/iomega + hamloc1/iomega^2 + hamloc2/iomega^3    ==
 !         ======================================================================
-!         == hamilton+sigma-mu
+!         == hps0=hamilton+sigma-mu ============================================
           hps0=hamilton(:,:,ikpt,ispin) &
        &         +matmul(transpose(conjg(pipsi(:,:,ikpt,ispin))) &
        &                      ,matmul(ds0(:,:,ispin,1),pipsi(:,:,ikpt,ispin)))
           DO IB=1,NB
             Hps0(IB,IB)=Hps0(IB,IB)-MU
           ENDDO
-          l3mat=0.5d0*matmul(hps0,hps0) &
-       &         +matmul(transpose(conjg(pipsi(:,:,ikpt,ispin))) &
+!         == l3mat=hps0**2 =====================================================
+          l3mat=matmul(hps0,hps0) &
+       &       +matmul(transpose(conjg(pipsi(:,:,ikpt,ispin))) &
        &                ,matmul(ds0(:,:,ispin,2),pipsi(:,:,ikpt,ispin)))
 !
 !         == laurent expansion terms for the local green's function ============
@@ -15637,7 +15730,8 @@ print*,'..... chempot determined'
 !         ======================================================================
           DO NU=1,NOMEGA
             IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
-!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
+!
+!           == inverse LATTICE GREENS FUNCTION =================================
             GREENINV(:,:)=-HAMILTON(:,:,ikpt,ispin) &
      &             -MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,ikpt,ispin))) &
      &                    ,MATMUL(DSIGMA0(:,:,NU,ISPIN),PIPSI(:,:,ikpt,ispin)))
@@ -15645,6 +15739,8 @@ print*,'..... chempot determined'
             DO IB=1,NB
               GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
             ENDDO
+!
+!           == invert to obtain lattice greens function ========================
             CALL LIB$INVERTC8(NB,GREENINV,GREEN)
 !
 !           == CONSTRUCT INTERACTING LOCAL GREEN'S FUNCTION ====================
@@ -15652,7 +15748,7 @@ print*,'..... chempot determined'
      &                 *MATMUL(PIPSI(:,:,ikpt,ispin) &
      &                   ,MATMUL(GREEN,CONJG(TRANSPOSE(PIPSI(:,:,ikpt,ispin)))))
 !
-!           == REGULARIZE THE GREEN'S FUNCTION BEFORE ADDING IT UP =============
+!           == REGULARIZE before adding up 1p density matrix====================
             CSVAR=1.D0/(CI*OMEGA(NU))
             DO IB=1,NB
               GREEN(IB,IB)=GREEN(IB,IB)-CSVAR
@@ -15662,6 +15758,8 @@ print*,'..... chempot determined'
 !           == ACCUMULATE DENSITY MATRIX =======================================
             DENMAT(:,:,IKPT,ISPIN)=DENMAT(:,:,IKPT,ISPIN)+kbt*GREEN(:,:)
           ENDDO
+!
+!         == finish regularization =============================================
           DO IB=1,NB
             IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
             DENMAT(IB,IB,IKPT,ISPIN)=DENMAT(IB,IB,IKPT,ISPIN)+(0.5D0,0.D0)
@@ -15676,48 +15774,12 @@ print*,'..... chempot determined'
 !     == ADD OVER ALL NODES (INCLUDES SUM IN K-GROUPS AND OVER K-GROUPS) =======
       CALL MPE$COMBINE('MONOMER','+',GLOC)
       CALL MPE$COMBINE('K','+',DENMAT)
-!
-!     ==========================================================================
-!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
-!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC
-!     ==========================================================================
-      ALLOCATE(FLOC(NCHI))
-      CALL LIB$DIAGC8(NCHI,HAMLOC0,FLOC,DIAGSLOC)
-      DO IB=1,NCHI
-        DIAGSLOC(:,IB)=DIAGSLOC(:,IB)/SQRT(FLOC(IB))
-      ENDDO
-!
-!     ==========================================================================
-!     ==  WRITE LOCAL FILE FOR SOLVER                                         ==
-!     ==========================================================================
-      CALL DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC &
-     &                   ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
-
-CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
-!
-!     ==========================================================================
-!     ==  CHECK IF THINGS MAKE SENSE                                          ==
-!     ==========================================================================
-      CALL DMFT$TEST1(NOMEGA,OMEGA,NB,NKPTL,NCHI,NSPIN,KBT,WKPTL,GLOC,DENMAT &
-     &               ,HAMLOC0,HAMLOC1,HAMLOC2)
-!!$STOP 'STOPPING AFTER TEST1'
-!
-!     ==========================================================================
-!     ==  TEST THE CONTINUATION                                               ==
-!     ==========================================================================
-      CALL DMFT$DEDGREEN()
-      CALL DMFT$ADDTOHPSI()
-      CALL DMFT$ADDTOEIGVAL()
-!STOP 'FORCED'
-!
-      CALL DMFT$PROPAGATE()
-      CALL DMFT$SWITCH()
                                        CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,diagsloc &
+      SUBROUTINE DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,diagsloc,omega &
      &                          ,gloc,hamloc0,hamloc1,hamloc2)
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -15726,6 +15788,7 @@ CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
       INTEGER(4),INTENT(IN)  :: NSPIN
       REAL(8)   ,INTENT(IN)  :: KBT
       REAL(8)   ,INTENT(IN)  :: MU
+      REAL(8)   ,INTENT(IN)  :: omega(nomega)
       COMPLEX(8),INTENT(IN)  :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
       COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI)
       COMPLEX(8),INTENT(IN)  :: HAMLOC0(NCHI,NCHI)
@@ -15743,7 +15806,7 @@ CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
        DO NU=1,NOMEGA
           GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(GLOC(:,:,NU,ISPIN),DIAGSLOC))
           WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
-     &                ,I=1,NCHI),J=1,NCHI)
+     &                ,I=1,NCHI),J=1,NCHI),omega(nu)
         ENDDO
       ENDDO
       GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(HAMLOC0,DIAGSLOC))
@@ -15755,6 +15818,109 @@ CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
       GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(HAMLOC2,DIAGSLOC))
       WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
      &                ,I=1,NCHI),J=1,NCHI)
+      CLOSE(NFIL)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine dmft_testgloc()
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NSPIN,NOMEGA
+      USE STRINGS_MODULE
+      implicit none
+      REAL(8)    :: KBT
+      REAL(8)    :: MU
+      COMPLEX(8) :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8) :: HAMLOC0(NCHI,NCHI)
+      COMPLEX(8) :: HAMLOC1(NCHI,NCHI)
+      COMPLEX(8) :: HAMLOC2(NCHI,NCHI)
+      COMPLEX(8) :: GLOC1(NCHI,NCHI)
+      REAL(8)    :: GLOC_RE(NCHI,NCHI),GLOC_IM(NCHI,NCHI)
+      REAL(8)    :: OMEGA(NOMEGA)      
+      INTEGER(4) :: NU
+      INTEGER(4) :: NFIL1=11,NFIL2=12,NFIL3=13,NFIL4=14
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
+!     **************************************************************************
+      CALL DMFT_READGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,OMEGA &
+     &                  ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
+      OPEN(NFIL1,FILE=-'READGLOC_RE.DAT')
+      OPEN(NFIL2,FILE=-'READGLOC_IM.DAT')
+      OPEN(NFIL3,FILE=-'READGLOC_WOT_RE.DAT')
+      OPEN(NFIL4,FILE=-'READGLOC_WOT_IM.DAT')
+      DO NU=1,NOMEGA
+        GLOC1=GLOC(:,:,NU,1)
+        WRITE(NFIL1,*)OMEGA(NU),REAL(GLOC1)
+        WRITE(NFIL2,*)OMEGA(NU),AIMAG(GLOC1)
+        GLOC1=GLOC1-(HAMLOC0/(CI*OMEGA(NU)) &
+     &              +HAMLOC1/(CI*OMEGA(NU))**2+HAMLOC2/(CI*OMEGA(NU))**3)
+        WRITE(NFIL3,*)OMEGA(NU),REAL(GLOC1)
+        WRITE(NFIL4,*)OMEGA(NU),AIMAG(GLOC1)
+      ENDDO
+      CLOSE(NFIL1)
+      CLOSE(NFIL2)
+      CLOSE(NFIL3)
+      CLOSE(NFIL4)
+STOP 'FORCED IN DMFT_TESTGLOC'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_READGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,OMEGA &
+     &                        ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
+!     **************************************************************************
+!     ** THIS ROUTINE IS FOR TESTING WHAT HAS BEEN WRITTEN TO THE FILE        **
+!     ** IT DOES NOT UNDO THE TRANSFORMATION TO ORTHONORMAL LOCAL ORBITALS    **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NCHI
+      INTEGER(4),INTENT(IN)  :: NOMEGA
+      INTEGER(4),INTENT(IN)  :: NSPIN
+      REAL(8)   ,INTENT(out) :: KBT
+      REAL(8)   ,INTENT(out) :: MU
+      REAL(8)   ,INTENT(out) :: omega(nomega)
+      COMPLEX(8),INTENT(out) :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(out) :: HAMLOC0(NCHI,NCHI)
+      COMPLEX(8),INTENT(out) :: HAMLOC1(NCHI,NCHI)
+      COMPLEX(8),INTENT(out) :: HAMLOC2(NCHI,NCHI)
+      real(8)                :: GLOC_re(NCHI,NCHI),GLOC_im(NCHI,NCHI)
+      INTEGER(4)             :: nchi_,nomega_,nspin_
+      INTEGER(4)             :: NU,ISPIN,I,J
+      INTEGER(4)             :: NFIL=11
+!     **************************************************************************
+      OPEN(NFIL,FILE=-'GLOC.DATA')
+      read(NFIL,*)NCHI_,NOMEGA_,NSPIN_,KBT,MU !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      IF(NCHI_.NE.NCHI) THEN
+        CALL ERROR$MSG('NCHI ON FILE INCONSISTENT WITH INTERNAL VALUE')
+        CALL ERROR$CHVAL('NCHI ON FILE',NCHI_)
+        CALL ERROR$CHVAL('INTERNAL NCHI',NCHI)
+        CALL ERROR$STOP('DMFT_READGLOC')
+      END IF
+      IF(NOMEGA_.NE.NOMEGA) THEN
+        CALL ERROR$MSG('NOMEGA ON FILE INCONSISTENT WITH INTERNAL VALUE')
+        CALL ERROR$CHVAL('NOMEGA ON FILE',NOMEGA_)
+        CALL ERROR$CHVAL('INTERNAL NOMEGA',NOMEGA)
+        CALL ERROR$STOP('DMFT_READGLOC')
+      END IF
+      IF(NSPIN_.NE.NSPIN) THEN
+        CALL ERROR$MSG('NSPIN ON FILE INCONSISTENT WITH INTERNAL VALUE')
+        CALL ERROR$CHVAL('NSPIN ON FILE',NSPIN_)
+        CALL ERROR$CHVAL('INTERNAL NSPIN',NSPIN)
+        CALL ERROR$STOP('DMFT_READGLOC')
+      end if
+      DO ISPIN=1,NSPIN
+        DO NU=1,NOMEGA
+          read(NFIL,*)((GLOC_re(I,J),GLOC_im(I,J),I=1,NCHI),J=1,NCHI),omega(nu)
+          gloc(:,:,nu,ispin)=cmplx(gloc_re,gloc_im)
+        ENDDO
+      ENDDO
+      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+      HAMLOC0=CMPLX(GLOC_RE,GLOC_IM)
+      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+      HAMLOC1=CMPLX(GLOC_RE,GLOC_IM)
+      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+      HAMLOC2=CMPLX(GLOC_RE,GLOC_IM)
       CLOSE(NFIL)
       RETURN
       END
@@ -16139,6 +16305,8 @@ print*,'.... dmft$addtohpsi done'
       SUBROUTINE DMFT$dos(NOMEGA,OMEGA,nchi,nspin,kbt,mu,GLOC)
 !     **************************************************************************
 !     ** calculates a kind of density of states from dN/dchempot              **
+!     ** this should be the thermally broadened spectral function??           **
+!     ** it also calls dmft$dos1 for comparison                               **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NOMEGA
@@ -16148,7 +16316,7 @@ print*,'.... dmft$addtohpsi done'
       REAL(8)   ,INTENT(IN)  :: KBt
       REAL(8)   ,INTENT(IN)  :: mu
       complex(8),INTENT(IN)  :: gloc(nchi,nchi,nomega,nspin)
-      integer(4),parameter   :: ne=1000
+      integer(4),parameter   :: ne=10000
       real(8)                :: emin
       real(8)                :: emax
       real(8)                :: de
@@ -16217,6 +16385,9 @@ print*,'.... dmft$addtohpsi done'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$dos1()
 !     **************************************************************************
+!     ** density of states of the effective Hamiltonian projected onto        **
+!     ** the correlated subspace. Used for comparing with the function from   **
+!     ** dmft$ dos obtained from the Green's function                         **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,IPROOFCHI,WKPTL,kbt
       USE MPE_MODULE
@@ -16241,7 +16412,7 @@ print*,'.... dmft$addtohpsi done'
 !     **************************************************************************
       CALL CONSTANTS$GET('EV',EV)
       EMIN=-20.D0*ev
-      EMIN=+40.D0*ev
+      EMax=+40.D0*ev
       de=(emax-emin)/real(ne-1,kind=8)
 
       ALLOCATE(HAMILTON(NB,NB))
