@@ -68,6 +68,8 @@ end Module version_module
 !     == TIMING MUST BE CALLED BY ALL NODES ====================================
       CALL TRACE$PASS('BEFORE TIMING')
       CALL TIMING$PRINT('MONOMER',NFILO)
+      WRITE(NFILO,*)'REMARK: THE TIMING REPORT DOES NOT CONSIDERTHE FIRST ' &
+     &              ,'ITERATION TO EXCLUDE THE TIME FOR SELF-INITIALIZATION'
       CALL TRACE$PASS('AFTER TIMING')
       CALL MPE$CLOCKREPORT(NFILO)
 !
@@ -244,6 +246,9 @@ end Module version_module
       CALL FILEHANDLER$UNIT('PROT',NFILO)
                               CALL TIMING$CLOCKOFF('INITIALIZATION')
                               CALL TIMING$PRINT('MONOMER',NFILO)
+!     == clock will be restarted again at the end of the first iteration to
+!     == account for the fact that many routines iniitialize themselfes in the 
+!     == first iteration. the time to this reset is not printed 
                               CALL TIMING$START
 !
 !     ==================================================================

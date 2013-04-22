@@ -1912,7 +1912,11 @@
 !     ==                                           /CONVERSIONS/MATRIXTOANGLE ==
       CALL ROTATION$MATRIXTOANGLE(ROT,AXIS,TINV)
       ANGLE=SQRT(SUM(AXIS**2))
-      AXIS=AXIS/ANGLE
+      IF(ANGLE.NE.0.D0) THEN
+         AXIS=AXIS/ANGLE
+      ELSE
+         AXIS(:)=(/0.D0,0.D0,1.D0/)
+      END IF
 !
 !     == CREATE COLOR ===== ====================================================
       COLOR(:,:,:)=0.D0
