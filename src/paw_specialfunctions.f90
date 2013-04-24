@@ -811,7 +811,8 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! BESSEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
-      INTEGER(4)            :: FAC, I
+      real(8)               :: FAc
+      INTEGER(4)            :: I
 !     **************************************************************************
       IF(L.EQ.0) THEN
         Y = 1.D0
@@ -819,10 +820,10 @@
       ELSE
         FAC=1.D0
         DO I=1, 2*L+1, 2
-          FAC = FAC*I
+          FAC = FAC*real(I,kind=8)
         END DO
-        Y = X**L / REAL(FAC,KIND=8)
-        DYDX=REAL(L,KIND=8)*X**(L-1)/REAL(FAC,KIND=8)
+        Y = X**L/FAC
+        DYDX=REAL(L,KIND=8)*X**(L-1)/FAC
       END IF
       END SUBROUTINE SPFUNCTION$BESSEL0
 !
@@ -838,7 +839,8 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
-      INTEGER(4)            :: FAC, I
+      real(8)               :: FAC
+      INTEGER(4)            :: I
 !     **************************************************************************
       IF(X.LE.0.D0) THEN
         CALL ERROR$MSG('NOT DEFINED FOR ZERO OR NEGATIVE ARGUMENTS')
@@ -846,9 +848,9 @@
       END IF
       FAC=1.D0
       DO I=1,2*L-1,2
-         FAC=FAC*I
+         FAC=FAC*real(I,kind=8)
       END DO
-      Y = -REAL(FAC,KIND=8) / X**(L+1)
+      Y = -FAC / X**(L+1)
       DYDX = -REAL(L+1,KIND=8)*Y/X
       RETURN
       END SUBROUTINE SPFUNCTION$NEUMANN0
