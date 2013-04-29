@@ -15174,7 +15174,7 @@ MODULE DMFT_MODULE
 !*******************************************************************************
 LOGICAL(4),PARAMETER   :: TON=.true.
 LOGICAL(4),SAVE        :: TINI=.FALSE.
-INTEGER(4),PARAMETER   :: NOMEGA=300
+INTEGER(4),PARAMETER   :: NOMEGA=400
 INTEGER(4)             :: NCHI          ! #(CORRELATED ORBITALS)
 INTEGER(4)             :: NB            ! #(BAND STATES PER K-POINT)
 INTEGER(4)             :: NKPTL         ! #(KPOINTS ON THIS TASK)
@@ -15315,13 +15315,8 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  CALCULATE MATSUBARA FREQUENCIES                                     ==
 !     ==========================================================================
-      IF(MOD(NOMEGA,2).NE.0) THEN
-        CALL ERROR$MSG('NOMEGA MUST BE EVEN')
-        CALL ERROR$I4VAL('NOMEGA',NOMEGA)
-        CALL ERROR$STOP('DMFT_ini')
-      END IF
       DO NU=1,NOMEGA
-        OMEGA(NU)=REAL(2*NU-1-NOMEGA,KIND=8)*PI*KBT
+        OMEGA(NU)=REAL(2*NU-1,KIND=8)*PI*KBT
       ENDDO
 !
 !     ==========================================================================
@@ -15419,20 +15414,20 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
       CALL DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,omega &
      &                   ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
-call dmft_testgloc()
+!call dmft_testgloc()
 !
 !     ==========================================================================
 !     ==  plot dn/dmu as test of the spectral properties                      ==
 !     ==========================================================================
       CALL DMFT$DOS(NOMEGA,OMEGA,NCHI,NSPIN,KBT,MU,GLOC)
-stop 'forced stop in dmft$green'
+!stop 'forced stop in dmft$green'
 !
 !     ==========================================================================
 !     ==  CHECK IF THINGS MAKE SENSE                                          ==
 !     ==========================================================================
       CALL DMFT$TEST1(NOMEGA,OMEGA,NB,NKPTL,NCHI,NSPIN,KBT,WKPTL,GLOC,DENMAT &
      &               ,HAMLOC0,HAMLOC1,HAMLOC2)
-!!$STOP 'STOPPING AFTER TEST1'
+STOP 'STOPPING AFTER TEST1'
 !
 !     ==========================================================================
 !     ==  TEST THE CONTINUATION                                               ==
@@ -15524,6 +15519,7 @@ stop 'forced stop in dmft$green'
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:) ! OCCUPATIONS (INCLUDING K-WEIGHT)
       REAL(8)                :: NEL        ! #(ELECTRONS) 
       REAL(8)                :: Nofmu      ! PARTICLE NUMBER FOR MUGRID
+      REAL(8)                :: Nofmu1     ! nofmu contrib from 1 kpoint
       COMPLEX(8),ALLOCATABLE :: hps0(:,:)  !(Nb,nb)
       COMPLEX(8),ALLOCATABLE :: GREENINV(:,:)
       COMPLEX(8),ALLOCATABLE :: GREEN(:,:) !(NB,NB)
@@ -15605,6 +15601,7 @@ PRINT*,'DMFT$chempot: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
 !         ====================================================================
 !         ==  PERFORM MATSUBARA SUMS                                        ==
 !         ====================================================================
+          nofmu1=0.d0
           DO NU=1,NOMEGA
             IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
 !           == CONSTRUCT LATTICE GREENS FUNCTION =============================
@@ -15617,14 +15614,15 @@ PRINT*,'DMFT$chempot: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
             ENDDO
             CALL LIB$INVERTC8(NB,GREENINV,GREEN)
             DO IB=1,NB
-              NOFMU=NOFMU+WKPTL(IKPT)*KBT*REAL(GREEN(IB,IB))
+              NOFMU1=NOFMU1+WKPTL(IKPT)*KBT*REAL(GREEN(IB,IB))
             ENDDO
 !
 !           == REGULARIZE THE GREEN'S FUNCTION BEFORE ADDING IT UP ===========
             CSVAR=TR1/(CI*OMEGA(NU))+laurent1/(CI*OMEGA(NU))**2 &
         &                           +laurent2/(CI*OMEGA(NU))**3
-            NOFMU=NOFMU-WKPTL(IKPT)*KBT*REAL(CSVAR)
+            NOFMU1=NOFMU1-WKPTL(IKPT)*KBT*REAL(CSVAR)
           ENDDO
+          nofmu=nofmu+2.d0*nofmu1   ! add negative frequencies
 !         == add sum of long-range tails =====================================
           SVAR=real(0.5D0*TR1-0.25D0/KBT*laurent1)
           NOFMU=NOFMU+WKPTL(IKPT)*SVAR/REAL(NTASKS_K)
@@ -15667,6 +15665,7 @@ print*,'..... chempot determined'
       COMPLEX(8),ALLOCATABLE :: GREEN(:,:) !(NB,NB)
       COMPLEX(8),ALLOCATABLE :: hps0(:,:)  !(Nb,nb)
       COMPLEX(8),ALLOCATABLE :: l3mat(:,:)  !(Nb,nb)
+      COMPLEX(8),ALLOCATABLE :: denmat1(:,:) !(Nb,nb)
       REAL(8)   ,ALLOCATABLE :: floc(:) 
       COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: NTASKS_K,THISTASK_K
@@ -15684,7 +15683,8 @@ print*,'..... chempot determined'
       ALLOCATE(GREENINV(NB,NB))
       ALLOCATE(GREEN(NB,NB))
       ALLOCATE(hps0(NB,NB))
-      ALLOCATE(l3mat(NB,NB)) ! tird term of laurent expansion
+      ALLOCATE(l3mat(NB,NB)) ! third term of laurent expansion
+      ALLOCATE(denmat1(NB,NB)) 
 !
 !     ==========================================================================
 !     ==  ACCUMULATE LOCAL GREENS FUNCTION AND ONE-PARTICLE DENSITY MATRIX    ==
@@ -15728,6 +15728,7 @@ print*,'..... chempot determined'
 !         ======================================================================
 !         ==  PERFORM MATSUBARA SUMS                                          ==
 !         ======================================================================
+          denmat1(:,:)=(0.d0,0.d0)
           DO NU=1,NOMEGA
             IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
 !
@@ -15756,8 +15757,11 @@ print*,'..... chempot determined'
             green=green-csvar**2*hps0-csvar**3*l3mat
 !
 !           == ACCUMULATE DENSITY MATRIX =======================================
-            DENMAT(:,:,IKPT,ISPIN)=DENMAT(:,:,IKPT,ISPIN)+kbt*GREEN(:,:)
+            DENMAT1(:,:)=DENMAT1(:,:)+kbt*GREEN(:,:)
           ENDDO
+!         == contribution from negative frequencies ============================
+          denmat1=denmat1+transpose(conjg(denmat1))
+          DENMAT(:,:,IKPT,ISPIN)=DENMAT(:,:,IKPT,ISPIN)+denmat1
 !
 !         == finish regularization =============================================
           DO IB=1,NB
@@ -15836,7 +15840,6 @@ print*,'..... chempot determined'
       COMPLEX(8) :: HAMLOC1(NCHI,NCHI)
       COMPLEX(8) :: HAMLOC2(NCHI,NCHI)
       COMPLEX(8) :: GLOC1(NCHI,NCHI)
-      REAL(8)    :: GLOC_RE(NCHI,NCHI),GLOC_IM(NCHI,NCHI)
       REAL(8)    :: OMEGA(NOMEGA)      
       INTEGER(4) :: NU
       INTEGER(4) :: NFIL1=11,NFIL2=12,NFIL3=13,NFIL4=14
@@ -15927,7 +15930,7 @@ STOP 'FORCED IN DMFT_TESTGLOC'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_READsigma(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC &
-     &                          ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2)
+     &                          ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2,sdc)
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NCHI
@@ -15937,9 +15940,10 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       REAL(8)   ,INTENT(IN)  :: MU
       COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI)
       COMPLEX(8),INTENT(OUT) :: DEDGLOC(NCHI,NCHI,NOMEGA,NSPIN)
-      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC0(NCHI,NCHI)
-      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC1(NCHI,NCHI)
-      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC2(NCHI,NCHI)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC0(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC1(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC2(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: sdc(NCHI,NCHI,nspin) ! double counting
       COMPLEX(8)             :: SIGMAPRIME(NCHI,NCHI)
       COMPLEX(8)             :: DIAGSLOCPLUS(NCHI,NCHI)
       INTEGER(4)             :: NCHI_
@@ -15970,13 +15974,15 @@ STOP 'FORCED IN DMFT_TESTGLOC'
           READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
           DEDGLOC(:,:,NU,ISPIN)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
         ENDDO
-      ENDDO
-      READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-      DEDHAMLOC0(:,:)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-      READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-      DEDHAMLOC1(:,:)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-      READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-      DEDHAMLOC2(:,:)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
+        DEDHAMLOC0(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
+        DEDHAMLOC1(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
+        DEDHAMLOC2(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
+        sdc(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+      enddo
       CLOSE(NFIL)
 !
       RETURN
@@ -16005,6 +16011,7 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       COMPLEX(8),ALLOCATABLE :: dedhamloc0(:,:)  !(Nchi,nchi)
       COMPLEX(8),ALLOCATABLE :: dedhamloc1(:,:)  !(Nchi,nchi)
       COMPLEX(8),ALLOCATABLE :: dedhamloc2(:,:)  !(Nchi,nchi)
+      COMPLEX(8),ALLOCATABLE :: sdc(:,:)  !(Nchi,nchi)
       INTEGER(4)             :: NTASKS_K,THISTASK_K
       INTEGER(4)             :: NTASKS_M,THISTASK_M
       INTEGER(4)             :: IKPT,ISPIN,NU,IB,IBH,ICHI,IPRO,i
@@ -16027,12 +16034,14 @@ PRINT*,'ENTERING DEDGREEN'
       ALLOCATE(DEDhamloc0(NCHI,NCHI))
       ALLOCATE(DEDhamloc1(NCHI,NCHI))
       ALLOCATE(DEDhamloc2(NCHI,NCHI))
+      ALLOCATE(sdc(nCHI,NCHI))
+stop 'not finished: sdc depends on spin only in readsigma'
 !
 !     ==========================================================================
 !     ==  ACCUMULATE LOCAL GREENS FUNCTION AND ONE-PARTICLE DENSITY MATRIX    ==
 !     ==========================================================================
       call DMFT_READsigma(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC &
-     &                          ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2)
+     &                          ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2,sdc)
 open(11,file='dedg.dat')
 do nu=1,nomega
   write(11,*)omega(nu),(real(dedgloc(i,i,nu,1)),aimag(dedgloc(i,i,nu,1)),i=1,nchi)
