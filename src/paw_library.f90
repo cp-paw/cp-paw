@@ -5676,3 +5676,91 @@ END MODULE RANDOM_MODULE
       END IF        
       RETURN
       END
+! 
+!*******************************************************************************
+!*******************************************************************************
+!****                                                                      *****
+!****              INTERFACES FOR SPECIAL FUNCTIONS                        *****
+!****                                                                      *****
+!****     INTERFACE FOR BASIC SPECIAL FUNCTIONS FROM SLATEC                *****
+!****     SEE SLATEC.F FOR FURTHER DETAILS                                 *****
+!*******************************************************************************
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$DBESJ(L,X,Y)
+!     **************************************************************************
+!     **  BESSEL FUNCTION OF FIRST KIND                                       **
+!     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)           :: L
+      REAL(8),INTENT(IN)           :: X
+      REAL(8),INTENT(OUT)          :: Y
+      INTEGER(4)                   :: NZ
+!     ================================================================
+      CALL DBESJ(X,L,1,Y,NZ)
+      IF(NZ.NE.0)THEN
+        Y=0.0D0
+!        CALL ERROR$MSG('UNDERFLOW OR OVERFLOW')
+!        CALL ERROR$STOP('LIB$DBESJ')
+      END IF
+      RETURN
+      END SUBROUTINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$DBESY(L,X,Y)
+!     **************************************************************************
+!     **  BESSEL FUNCTION OF SECOND KIND                                      **
+!     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)           :: L
+      REAL(8),INTENT(IN)           :: X
+      REAL(8),INTENT(OUT)          :: Y
+!     ================================================================
+      CALL DBESY(X,L,1,Y)
+      RETURN
+      END SUBROUTINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$DBESI(L,X,Y)
+!     **************************************************************************
+!     **  MODIFIED BESSEL FUNCTION OF FIRST KIND                              **
+!     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)           :: L
+      REAL(8),INTENT(IN)           :: X
+      REAL(8),INTENT(OUT)          :: Y
+      INTEGER(4)                   :: NZ
+!     ================================================================
+      CALL DBESI(X,L,1,1,Y,NZ)
+      IF(NZ.NE.0)THEN
+        Y=0.0D0
+!        CALL ERROR$MSG('UNDERFLOW OR OVERFLOW')
+!        CALL ERROR$STOP('LIB$DBESI')
+      END IF
+      RETURN
+      END SUBROUTINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$DBESK(L,X,Y)
+!     **************************************************************************
+!     **  MODIFIED BESSEL FUNCTION OF THIRD KIND                              **
+!     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)           :: L
+      REAL(8),INTENT(IN)           :: X
+      REAL(8),INTENT(OUT)          :: Y
+      INTEGER(4)                   :: NZ
+!     ================================================================
+      CALL DBESK(X,L,1,1,Y,NZ)
+      IF(NZ.NE.0)THEN
+        Y=0.0D0
+!        CALL ERROR$MSG('UNDERFLOW OR OVERFLOW')
+!        CALL ERROR$STOP('LIB$DBESK')
+      END IF
+      RETURN
+      END SUBROUTINE

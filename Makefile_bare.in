@@ -152,6 +152,8 @@ clean:
 ##  define object files kept in the library                             ##
 ##########################################################################
 #
+LOBJSF77 = \
+	 ${OBJDIR}/slatec.o
 LOBJS = \
         ${OBJDIR}/paw_trace.o \
         ${OBJDIR}/paw_error.o \
@@ -334,16 +336,16 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} \
+${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJECTS} ${MPE}
-	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 #
 #########################################################################
 ##  build paw library                                                  ##
 #########################################################################
-${PAWLIB}: ${LOBJS} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIB) $(LOBJS) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
+	ar -rus $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build Tools                                                        ##
@@ -498,6 +500,11 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+#__general rule for object files fortran 77______________________________
+$(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
+	cp $< ${OBJDIR}/$*_d.f
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.f
 #
 #__compile the tools____________________________________________________
 #
