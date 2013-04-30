@@ -15310,7 +15310,7 @@ END MODULE DMFT_MODULE
       deltat=10.d0
       ANNESIGMA=0.1D0
       ANNELAMBDA=0.1D0
-      MSIGMA=1.D+2
+      MSIGMA=1.D+4
       MLAMBDA=1.D+2
 !
 !     ==========================================================================
@@ -16371,12 +16371,12 @@ print*,'.... dmft$addtohpsi done'
       SVAR1=2.D0/(1.D0+ANNELAMBDA)
       SVAR2=1.D0-SVAR1
       SVAR3=MLAMBDA/DELTAT**2/(1.D0+ANNELAMBDA)
-      LAMBDAP=DENMAT
+      LAMBDAP=-DENMAT  ! density matrix calculated from lattice greens function
       DO ISPIN=1,NSPIN
         DO IKPT=1,NKPTL
           DO IB=1,NB
             LAMBDAP(IB,IB,IKPT,ISPIN)=LAMBDAP(IB,IB,IKPT,ISPIN) &
-     &                               -OCC(IB,IKPT,ISPIN)/wkptl(ikpt)
+     &                                +OCC(IB,IKPT,ISPIN)/wkptl(ikpt)
           ENDDO
         ENDDO
       ENDDO
@@ -16385,7 +16385,7 @@ ikpt=1
 PRINT*,'DEMAT:  ',(real(DENMAT(IB,IB,ikpt,ispin)),IB=1,NB)
 PRINT*,'OCC:    ',(OCC(IB,ikpt,ispin)/WKPTL(IKPT),IB=1,NB)
 PRINT*,'LAMBDAP:',(LAMBDAP(IB,IB,ikpt,ispin)/WKPTL(IKPT),IB=1,NB)
-      LAMBDAP=LAMBDA0*SVAR1+LAMBDAM*SVAR2-LAMBDAP*SVAR3
+      LAMBDAP=LAMBDA0*SVAR1+LAMBDAM*SVAR2+LAMBDAP*SVAR3
 
 PRINT*,'WARNING: FREEZING LAMBDA....'
 CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -16409,6 +16409,10 @@ LAMBDAP=LAMBDA0
       SVAR2=1.D0-SVAR1
       SVAR3=MSIGMA/DELTAT**2/(1.D0+ANNESIGMA)
       DSIGMAP=DSIGMA0*SVAR1+DSIGMAM*SVAR2-XLOC*SVAR3
+!!$PRINT*,'WARNING: FREEZING sigma....'
+!!$CALL FILEHANDLER$UNIT('PROT',NFILO)
+!!$WRITE(NFILO,*)'WARNING: sigma FROZEN'
+!!$sigmap=sigma0
       RETURN
       END
 !
