@@ -15174,13 +15174,13 @@ MODULE DMFT_MODULE
 !*******************************************************************************
 LOGICAL(4),PARAMETER   :: TON=.true.
 LOGICAL(4),SAVE        :: TINI=.FALSE.
-INTEGER(4),PARAMETER   :: NOMEGA=400
+INTEGER(4)             :: NOMEGA
 INTEGER(4)             :: NCHI          ! #(CORRELATED ORBITALS)
 INTEGER(4)             :: NB            ! #(BAND STATES PER K-POINT)
 INTEGER(4)             :: NKPTL         ! #(KPOINTS ON THIS TASK)
 INTEGER(4)             :: NSPIN         ! #(SPIN COMPONENTS)
 INTEGER(4)             :: NDIM          ! #(SPINOR COMPONENTS)
-REAL(8)                :: OMEGA(NOMEGA) ! MATSUBARA FREQUENCIES
+REAL(8)   ,allocatable :: OMEGA(:)      ! MATSUBARA FREQUENCIES
 INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
 REAL(8)                :: MU            ! CHEMICAL POTENTIAL
@@ -15196,11 +15196,11 @@ COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
 !
 COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:)    !(NCHI,NCHI,NOMEGA,NSPIN)
 !__laurent expansion for the local greens function______________________________
-COMPLEX(8),ALLOCATABLE :: hamloc0(:,:)  !(Nchi,nchi)
-COMPLEX(8),ALLOCATABLE :: hamloc1(:,:)  !(Nchi,nchi)
-COMPLEX(8),ALLOCATABLE :: hamloc2(:,:)  !(Nchi,nchi)
+COMPLEX(8),ALLOCATABLE :: hamloc0(:,:,:)  !(Nchi,nchi,nspin)
+COMPLEX(8),ALLOCATABLE :: hamloc1(:,:,:)  !(Nchi,nchi,nspin)
+COMPLEX(8),ALLOCATABLE :: hamloc2(:,:,:)  !(Nchi,nchi,nspin)
 !__matrix to diagonalize overlap matrix_________________________________________
-COMPLEX(8),ALLOCATABLE :: diagsloc(:,:) !(Nchi,nchi)
+COMPLEX(8),ALLOCATABLE :: diagsloc(:,:,:) !(Nchi,nchi,nspin)
 !
 !== self energy minus double counting ==========================================
 REAL(8)                :: ANNESIGMA
@@ -15305,6 +15305,7 @@ END MODULE DMFT_MODULE
 !     == OTHER VARIABLES                                                      ==
 !     ==========================================================================
 !this is hard wired
+      nomega=200
       KBT=0.333d0*ev
       deltat=10.d0
       ANNESIGMA=0.1D0
@@ -15315,6 +15316,7 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  CALCULATE MATSUBARA FREQUENCIES                                     ==
 !     ==========================================================================
+      allocate(omega(nomega))
       DO NU=1,NOMEGA
         OMEGA(NU)=REAL(2*NU-1,KIND=8)*PI*KBT
       ENDDO
@@ -15333,10 +15335,10 @@ END MODULE DMFT_MODULE
       ALLOCATE(LAMBDAP(NB,NB,NKPT,NSPIN))
 
       ALLOCATE(GLOC(NCHI,NCHI,NOMEGA,NSPIN))
-      ALLOCATE(diagsloc(NCHI,NCHI))
-      ALLOCATE(hamLOC0(NCHI,NCHI))
-      ALLOCATE(hamLOC1(NCHI,NCHI))
-      ALLOCATE(hamLOC2(NCHI,NCHI))
+      ALLOCATE(diagsloc(NCHI,NCHI,nspin))
+      ALLOCATE(hamLOC0(NCHI,NCHI,nspin))
+      ALLOCATE(hamLOC1(NCHI,NCHI,nspin))
+      ALLOCATE(hamLOC2(NCHI,NCHI,nspin))
       ALLOCATE(XLOC(NCHI,NCHI,NOMEGA,NSPIN))
       ALLOCATE(DENMAT(NB,NB,NKPTL,NSPIN))
       ALLOCATE(XMAT(NB,NB,NKPTL,NSPIN))
@@ -15404,10 +15406,13 @@ END MODULE DMFT_MODULE
 !     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC
 !     ==========================================================================
       ALLOCATE(FLOC(NCHI))
-      CALL LIB$DIAGC8(NCHI,HAMLOC0,FLOC,DIAGSLOC)
-      DO IB=1,NCHI
-        DIAGSLOC(:,IB)=DIAGSLOC(:,IB)/SQRT(FLOC(IB))
-      ENDDO
+      do ispin=1,nspin
+        CALL LIB$DIAGC8(NCHI,HAMLOC0(:,:,ispin),FLOC,DIAGSLOC(:,:,ispin))
+        DO IB=1,NCHI
+          DIAGSLOC(:,IB,ispin)=DIAGSLOC(:,IB,ispin)/SQRT(FLOC(IB))
+        ENDDO
+      enddo
+      deallocate(floc)
 !
 !     ==========================================================================
 !     ==  WRITE LOCAL FILE FOR SOLVER                                         ==
@@ -15427,7 +15432,12 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
       CALL DMFT$TEST1(NOMEGA,OMEGA,NB,NKPTL,NCHI,NSPIN,KBT,WKPTL,GLOC,DENMAT &
      &               ,HAMLOC0,HAMLOC1,HAMLOC2)
-STOP 'STOPPING AFTER TEST1'
+!STOP 'STOPPING AFTER TEST1'
+!
+!     ==========================================================================
+!     ==  call the solver                                                     ==
+!     ==========================================================================
+      call DMFT$solver()
 !
 !     ==========================================================================
 !     ==  TEST THE CONTINUATION                                               ==
@@ -15715,14 +15725,14 @@ print*,'..... chempot determined'
        &                ,matmul(ds0(:,:,ispin,2),pipsi(:,:,ikpt,ispin)))
 !
 !         == laurent expansion terms for the local green's function ============
-          hamloc0=hamloc0+wkptl(ikpt)/real(nspin) &
-       &                       *MATMUL(PIPSI(:,:,ikpt,ispin) &
+          hamloc0(:,:,ispin)=hamloc0(:,:,ispin)+wkptl(ikpt) &
+       &                               *MATMUL(PIPSI(:,:,ikpt,ispin) &
        &                               ,CONJG(TRANSPOSE(PIPSI(:,:,ikpt,ispin))))
-          hamloc1=hamloc1+wkptl(ikpt)/real(nspin) &
-       &           *MATMUL(PIPSI(:,:,ikpt,ispin) &
+          hamloc1(:,:,ispin)=hamloc1(:,:,ispin)+wkptl(ikpt) &
+       &                  *MATMUL(PIPSI(:,:,ikpt,ispin) &
        &                  ,matmul(hps0,CONJG(TRANSPOSE(PIPSI(:,:,ikpt,ispin)))))
-          hamloc2=hamloc2+wkptl(ikpt)/real(nspin) &
-       &          *MATMUL(PIPSI(:,:,ikpt,ispin) &
+          hamloc2(:,:,ispin)=hamloc2(:,:,ispin)+wkptl(ikpt) &
+       &                 *MATMUL(PIPSI(:,:,ikpt,ispin) &
        &                 ,matmul(l3mat,CONJG(TRANSPOSE(PIPSI(:,:,ikpt,ispin)))))
 !
 !         ======================================================================
@@ -15794,34 +15804,36 @@ print*,'..... chempot determined'
       REAL(8)   ,INTENT(IN)  :: MU
       REAL(8)   ,INTENT(IN)  :: omega(nomega)
       COMPLEX(8),INTENT(IN)  :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
-      COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI)
-      COMPLEX(8),INTENT(IN)  :: HAMLOC0(NCHI,NCHI)
-      COMPLEX(8),INTENT(IN)  :: HAMLOC1(NCHI,NCHI)
-      COMPLEX(8),INTENT(IN)  :: HAMLOC2(NCHI,NCHI)
+      COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(IN)  :: HAMLOC0(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(IN)  :: HAMLOC1(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(IN)  :: HAMLOC2(NCHI,NCHI,nspin)
       COMPLEX(8)             :: GLOCPRIME(NCHI,NCHI)
-      COMPLEX(8)             :: diagslocplus(NCHI,NCHI)
+      COMPLEX(8)             :: T(NCHI,NCHI)
+      COMPLEX(8)             :: Tplus(NCHI,NCHI)
       INTEGER(4)             :: NU,ISPIN,I,J
       INTEGER(4)             :: NFIL=11
 !     **************************************************************************
-      DIAGSLOCPLUS=TRANSPOSE(CONJG(DIAGSLOC)) 
       OPEN(NFIL,FILE=-'GLOC.DATA')
       WRITE(NFIL,*)NCHI,NOMEGA,NSPIN,KBT,MU !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       DO ISPIN=1,NSPIN
-       DO NU=1,NOMEGA
-          GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(GLOC(:,:,NU,ISPIN),DIAGSLOC))
+        t=diagsloc(:,:,ispin)
+        tplus=TRANSPOSE(CONJG(t)) 
+        DO NU=1,NOMEGA
+          GLOCPRIME=MATMUL(tPLUS,MATMUL(GLOC(:,:,NU,ISPIN),t))
           WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
      &                ,I=1,NCHI),J=1,NCHI),omega(nu)
         ENDDO
+        GLOCPRIME=MATMUL(tPLUS,MATMUL(HAMLOC0(:,:,ispin),t))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
+        GLOCPRIME=MATMUL(tPLUS,MATMUL(HAMLOC1(:,:,ispin),t))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
+        GLOCPRIME=MATMUL(tPLUS,MATMUL(HAMLOC2(:,:,ispin),t))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
       ENDDO
-      GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(HAMLOC0,DIAGSLOC))
-      WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
-     &                ,I=1,NCHI),J=1,NCHI)
-      GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(HAMLOC1,DIAGSLOC))
-      WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
-     &                ,I=1,NCHI),J=1,NCHI)
-      GLOCPRIME=MATMUL(DIAGSLOCPLUS,MATMUL(HAMLOC2,DIAGSLOC))
-      WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
-     &                ,I=1,NCHI),J=1,NCHI)
       CLOSE(NFIL)
       RETURN
       END
@@ -15884,9 +15896,9 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       REAL(8)   ,INTENT(out) :: MU
       REAL(8)   ,INTENT(out) :: omega(nomega)
       COMPLEX(8),INTENT(out) :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
-      COMPLEX(8),INTENT(out) :: HAMLOC0(NCHI,NCHI)
-      COMPLEX(8),INTENT(out) :: HAMLOC1(NCHI,NCHI)
-      COMPLEX(8),INTENT(out) :: HAMLOC2(NCHI,NCHI)
+      COMPLEX(8),INTENT(out) :: HAMLOC0(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(out) :: HAMLOC1(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(out) :: HAMLOC2(NCHI,NCHI,nspin)
       real(8)                :: GLOC_re(NCHI,NCHI),GLOC_im(NCHI,NCHI)
       INTEGER(4)             :: nchi_,nomega_,nspin_
       INTEGER(4)             :: NU,ISPIN,I,J
@@ -15914,16 +15926,16 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       end if
       DO ISPIN=1,NSPIN
         DO NU=1,NOMEGA
-          read(NFIL,*)((GLOC_re(I,J),GLOC_im(I,J),I=1,NCHI),J=1,NCHI),omega(nu)
-          gloc(:,:,nu,ispin)=cmplx(gloc_re,gloc_im)
+          READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI),OMEGA(NU)
+          GLOC(:,:,NU,ISPIN)=CMPLX(GLOC_RE,GLOC_IM)
         ENDDO
+        READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+        HAMLOC0(:,:,ISPIN)=CMPLX(GLOC_RE,GLOC_IM)
+        READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+        HAMLOC1(:,:,ISPIN)=CMPLX(GLOC_RE,GLOC_IM)
+        READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
+        HAMLOC2(:,:,ISPIN)=CMPLX(GLOC_RE,GLOC_IM)
       ENDDO
-      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
-      HAMLOC0=CMPLX(GLOC_RE,GLOC_IM)
-      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
-      HAMLOC1=CMPLX(GLOC_RE,GLOC_IM)
-      READ(NFIL,*)((GLOC_RE(I,J),GLOC_IM(I,J),I=1,NCHI),J=1,NCHI)
-      HAMLOC2=CMPLX(GLOC_RE,GLOC_IM)
       CLOSE(NFIL)
       RETURN
       END
@@ -15938,14 +15950,17 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       INTEGER(4),INTENT(IN)  :: NSPIN
       REAL(8)   ,INTENT(IN)  :: KBT
       REAL(8)   ,INTENT(IN)  :: MU
-      COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI)
+      COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI,nspin)
       COMPLEX(8),INTENT(OUT) :: DEDGLOC(NCHI,NCHI,NOMEGA,NSPIN)
       COMPLEX(8),INTENT(OUT) :: DEDHAMLOC0(NCHI,NCHI,nspin)
       COMPLEX(8),INTENT(OUT) :: DEDHAMLOC1(NCHI,NCHI,nspin)
       COMPLEX(8),INTENT(OUT) :: DEDHAMLOC2(NCHI,NCHI,nspin)
       COMPLEX(8),INTENT(OUT) :: sdc(NCHI,NCHI,nspin) ! double counting
       COMPLEX(8)             :: SIGMAPRIME(NCHI,NCHI)
-      COMPLEX(8)             :: DIAGSLOCPLUS(NCHI,NCHI)
+      real(8)                :: S_re(NCHI,NCHI)
+      real(8)                :: S_im(NCHI,NCHI)
+      COMPLEX(8)             :: t(NCHI,NCHI)
+      COMPLEX(8)             :: tplus(NCHI,NCHI)
       INTEGER(4)             :: NCHI_
       INTEGER(4)             :: NOMEGA_
       INTEGER(4)             :: NSPIN_
@@ -15954,8 +15969,7 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       INTEGER(4)             :: NU,ISPIN,I,J
       INTEGER(4)             :: NFIL=11
 !     **************************************************************************
-      DIAGSLOCPLUS=TRANSPOSE(CONJG(DIAGSLOC)) 
-      OPEN(NFIL,FILE=-'SIGMA.DATa')
+      OPEN(NFIL,FILE=-'SIGMA.DATA')
       READ(NFIL,*)NCHI_,NOMEGA_,NSPIN_,KBT_,MU_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       IF(NCHI_.NE.NCHI) THEN
         CALL ERROR$MSG('NCHI INCONSISTENT')
@@ -15970,23 +15984,137 @@ STOP 'FORCED IN DMFT_TESTGLOC'
         CALL ERROR$STOP('DMFT_WRITEDEGLOC')
       END IF
       DO ISPIN=1,NSPIN
+        T=TRANSPOSE(CONJG(DIAGSLOC(:,:,ISPIN))) 
+        TPLUS=TRANSPOSE(CONJG(T)) 
         DO NU=1,NOMEGA
-          READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-          DEDGLOC(:,:,NU,ISPIN)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
+          READ(NFIL,*)((S_RE(I,J),S_IM(I,J),I=1,NCHI),J=1,NCHI)
+          SIGMAPRIME=CMPLX(S_RE,S_IM)
+          DEDGLOC(:,:,NU,ISPIN)=MATMUL(T,MATMUL(SIGMAPRIME,TPLUS))
         ENDDO
-        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-        DEDHAMLOC0(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-        DEDHAMLOC1(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-        DEDHAMLOC2(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-        READ(NFIL,*)((SIGMAPRIME(I,J),I=1,NCHI),J=1,NCHI)
-        sdc(:,:,ispin)=MATMUL(DIAGSLOC,MATMUL(SIGMAPRIME,DIAGSLOCPLUS))
-      enddo
+        READ(NFIL,*)((S_RE(I,J),S_IM(I,J),I=1,NCHI),J=1,NCHI)
+        SIGMAPRIME=CMPLX(S_RE,S_IM)
+        DEDHAMLOC0(:,:,ISPIN)=MATMUL(T,MATMUL(SIGMAPRIME,TPLUS))
+        READ(NFIL,*)((S_RE(I,J),S_IM(I,J),I=1,NCHI),J=1,NCHI)
+        SIGMAPRIME=CMPLX(S_RE,S_IM)
+        DEDHAMLOC1(:,:,ISPIN)=MATMUL(T,MATMUL(SIGMAPRIME,TPLUS))
+        READ(NFIL,*)((S_RE(I,J),S_IM(I,J),I=1,NCHI),J=1,NCHI)
+        SIGMAPRIME=CMPLX(S_RE,S_IM)
+        DEDHAMLOC2(:,:,ISPIN)=MATMUL(T,MATMUL(SIGMAPRIME,TPLUS))
+        READ(NFIL,*)((S_RE(I,J),S_IM(I,J),I=1,NCHI),J=1,NCHI)
+        SIGMAPRIME=CMPLX(S_RE,S_IM)
+        SDC(:,:,ISPIN)=MATMUL(T,MATMUL(SIGMAPRIME,TPLUS))
+      ENDDO
       CLOSE(NFIL)
 !
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_writesigma(NCHI,NOMEGA,NSPIN,KBT,MU &
+     &                          ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2,sdc)
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NCHI
+      INTEGER(4),INTENT(IN)  :: NOMEGA
+      INTEGER(4),INTENT(IN)  :: NSPIN
+      REAL(8)   ,INTENT(IN)  :: KBT
+      REAL(8)   ,INTENT(IN)  :: MU
+      COMPLEX(8),INTENT(OUT) :: DEDGLOC(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC0(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC1(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: DEDHAMLOC2(NCHI,NCHI,nspin)
+      COMPLEX(8),INTENT(OUT) :: sdc(NCHI,NCHI,nspin) ! double counting
+      COMPLEX(8)             :: SIGMAPRIME(NCHI,NCHI)
+      INTEGER(4)             :: NU,ISPIN,I,J
+      INTEGER(4)             :: NFIL=11
+!     **************************************************************************
+      OPEN(NFIL,FILE=-'SIGMA.DATA')
+      write(NFIL,*)NCHI,NOMEGA,NSPIN,KBT,MU !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      DO ISPIN=1,NSPIN
+        DO NU=1,NOMEGA
+          sigmaprime=dedgloc(:,:,nu,ispin)
+          write(NFIL,*)((real(SIGMAPRIME(I,J)),aimag(SIGMAPRIME(I,J)) &
+     &                                                    ,I=1,NCHI),J=1,NCHI)
+        ENDDO
+        sigmaprime=dedhamloc0(:,:,ispin)
+        write(NFIL,*)((real(SIGMAPRIME(I,J)),aimag(SIGMAPRIME(I,J)) &
+     &                                                    ,I=1,NCHI),J=1,NCHI)
+        sigmaprime=dedhamloc1(:,:,ispin)
+        write(NFIL,*)((real(SIGMAPRIME(I,J)),aimag(SIGMAPRIME(I,J)) &
+     &                                                    ,I=1,NCHI),J=1,NCHI)
+        sigmaprime=dedhamloc2(:,:,ispin)
+        write(NFIL,*)((real(SIGMAPRIME(I,J)),aimag(SIGMAPRIME(I,J)) &
+     &                                                    ,I=1,NCHI),J=1,NCHI)
+        sigmaprime=sdc(:,:,ispin)
+        write(NFIL,*)((real(SIGMAPRIME(I,J)),aimag(SIGMAPRIME(I,J)) &
+     &                                                    ,I=1,NCHI),J=1,NCHI)
+      ENDDO
+      CLOSE(NFIL)
+!
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT$solver()
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA
+      implicit none
+      real(8)          :: kbt
+      real(8)          :: mu
+      real(8)          :: omega(nomega)
+      complex(8)       :: gloc(nchi,nchi,nomega,nspin)
+      complex(8)       :: hamloc0(nchi,nchi,nspin)
+      complex(8)       :: hamloc1(nchi,nchi,nspin)
+      complex(8)       :: hamloc2(nchi,nchi,nspin)
+      complex(8)       :: dh(nchi,nchi,nspin)
+      complex(8)       :: dedgloc(nchi,nchi,nomega,nspin)
+      complex(8)       :: dedhamloc0(nchi,nchi,nspin)
+      complex(8)       :: dedhamloc1(nchi,nchi,nspin)
+      complex(8)       :: dedhamloc2(nchi,nchi,nspin)
+      complex(8)       :: sdc(nchi,nchi,nspin)
+      real(8)          :: ev
+      integer(4)       :: ispin,nu
+!     **************************************************************************
+print*,'entering dmft$solver...'
+      CALL CONSTANTS('EV',EV)
+      dh=(0.d0,0.d0)
+      do ispin=1,nspin
+        dh(1,1,ispin)=-1.d0*ev
+        dh(2,2,ispin)=-1.d0*ev
+        dh(3,3,ispin)=+2.d0*ev
+      enddo
+!
+!     ==========================================================================
+!     == read greens function                                                 ==
+!     ==========================================================================
+print*,'reading greens function...'
+      call DMFT_READGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,OMEGA &
+     &                        ,GLOC,HAMLOC0,HAMLOC1,HAMLOC2)
+!
+!     ==========================================================================
+!     == construct self energy                                                ==
+!     ==========================================================================
+print*,'constructing self energy...'
+      do ispin=1,nspin
+        do nu=1,nomega
+          dedgloc(:,:,nu,ispin)=dh(:,:,ispin)
+        enddo
+        dedhamloc0(:,:,ispin)=0.d0
+        dedhamloc1(:,:,ispin)=dh(:,:,ispin)
+        dedhamloc2(:,:,ispin)=0.d0
+        sdc(:,:,ispin)=0.d0
+      enddo
+!
+!     ==========================================================================
+!     == write self energy
+!     ==========================================================================
+print*,'writing self energy   '
+      call DMFT_writesigma(NCHI,NOMEGA,NSPIN,KBT,MU &
+     &                            ,DEDGLOC,DEDHAMLOC0,DEDHAMLOC1,DEDHAMLOC2,sdc)
+print*,'... dmft$solver done.'
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$DEDGREEN()
@@ -16008,10 +16136,10 @@ STOP 'FORCED IN DMFT_TESTGLOC'
       COMPLEX(8),ALLOCATABLE :: X(:,:) !(NB,NB)
       COMPLEX(8),ALLOCATABLE :: DEDGLOC(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:) ! OCCUPATIONS (INCLUDING K-WEIGHT)
-      COMPLEX(8),ALLOCATABLE :: dedhamloc0(:,:)  !(Nchi,nchi)
-      COMPLEX(8),ALLOCATABLE :: dedhamloc1(:,:)  !(Nchi,nchi)
-      COMPLEX(8),ALLOCATABLE :: dedhamloc2(:,:)  !(Nchi,nchi)
-      COMPLEX(8),ALLOCATABLE :: sdc(:,:)  !(Nchi,nchi)
+      COMPLEX(8),ALLOCATABLE :: dedhamloc0(:,:,:)  !(Nchi,nchi,nspin)
+      COMPLEX(8),ALLOCATABLE :: dedhamloc1(:,:,:)  !(Nchi,nchi,nspin)
+      COMPLEX(8),ALLOCATABLE :: dedhamloc2(:,:,:)  !(Nchi,nchi,nspin)
+      COMPLEX(8),ALLOCATABLE :: sdc(:,:,:)  !(Nchi,nchi,nspin)
       INTEGER(4)             :: NTASKS_K,THISTASK_K
       INTEGER(4)             :: NTASKS_M,THISTASK_M
       INTEGER(4)             :: IKPT,ISPIN,NU,IB,IBH,ICHI,IPRO,i
@@ -16031,11 +16159,10 @@ PRINT*,'ENTERING DEDGREEN'
 !     ==  ALLOCATE ARRAYS                                                     ==
 !     ==========================================================================
       ALLOCATE(DEDGLOC(NCHI,NCHI,NOMEGA,NSPIN))
-      ALLOCATE(DEDhamloc0(NCHI,NCHI))
-      ALLOCATE(DEDhamloc1(NCHI,NCHI))
-      ALLOCATE(DEDhamloc2(NCHI,NCHI))
-      ALLOCATE(sdc(nCHI,NCHI))
-stop 'not finished: sdc depends on spin only in readsigma'
+      ALLOCATE(DEDhamloc0(NCHI,NCHI,nspin))
+      ALLOCATE(DEDhamloc1(NCHI,NCHI,nspin))
+      ALLOCATE(DEDhamloc2(NCHI,NCHI,nspin))
+      ALLOCATE(sdc(nCHI,NCHI,nspin))
 !
 !     ==========================================================================
 !     ==  ACCUMULATE LOCAL GREENS FUNCTION AND ONE-PARTICLE DENSITY MATRIX    ==
@@ -16047,11 +16174,11 @@ do nu=1,nomega
   write(11,*)omega(nu),(real(dedgloc(i,i,nu,1)),aimag(dedgloc(i,i,nu,1)),i=1,nchi)
 enddo
 write(11,*)2.d0*omega(nomega)-omega(nomega-1) &
-           ,(real(dedhamloc0(i,i)),aimag(dedhamloc0(i,i)),i=1,nchi)
+           ,(real(dedhamloc0(i,i,1)),aimag(dedhamloc0(i,i,1)),i=1,nchi)
 write(11,*)2.d0*omega(nomega)-omega(nomega-2) &
-           ,(real(dedhamloc1(i,i)),aimag(dedhamloc1(i,i)),i=1,nchi)
+           ,(real(dedhamloc1(i,i,1)),aimag(dedhamloc1(i,i,1)),i=1,nchi)
 write(11,*)2.d0*omega(nomega)-omega(nomega-3) &
-           ,(real(dedhamloc2(i,i)),aimag(dedhamloc2(i,i)),i=1,nchi)
+           ,(real(dedhamloc2(i,i,1)),aimag(dedhamloc2(i,i,1)),i=1,nchi)
 close(11)
 !stop 'after writeing trash'
 
@@ -16109,6 +16236,8 @@ close(11)
 !           == ACCUMULATE DENSITY MATRIX =======================================
             XMAT(:,:,IKPT,ISPIN)=XMAT(:,:,IKPT,ISPIN)+KBT*X(:,:)
           ENDDO
+          xmat(:,:,ikpt,ispin)=xmat(:,:,ikpt,ispin) &
+     &                        +transpose(conjg(xmat(:,:,ikpt,ispin)))
         ENDDO
       ENDDO
 !
@@ -16127,6 +16256,7 @@ enddo
 close(11)
 !stop 'forced'
 !
+print*,'xmat ',maxval(abs(xmat))
 PRINT*,'... DEDGREEN DONE'
                                        CALL TRACE$POP()
       RETURN
@@ -16230,10 +16360,11 @@ print*,'.... dmft$addtohpsi done'
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: ton,MLAMBDA,ANNELAMBDA,DELTAT &
      &                      ,LAMBDAM,LAMBDA0,LAMBDAP &
-     &                      ,DENMAT,NB,NKPTL,NSPIN
+     &                      ,DENMAT,NB,NKPTL,NSPIN,wkptl
       REAL(8)                :: SVAR1,SVAR2,SVAR3
       REAL(8)                :: OCC(NB,NKPTL,NSPIN)
       INTEGER(4)             :: ISPIN,IKPT,IB
+      INTEGER(4)             :: nfilo
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL DYNOCC$GETR8A('OCC',NB*NKPTL*NSPIN,OCC)
@@ -16245,11 +16376,21 @@ print*,'.... dmft$addtohpsi done'
         DO IKPT=1,NKPTL
           DO IB=1,NB
             LAMBDAP(IB,IB,IKPT,ISPIN)=LAMBDAP(IB,IB,IKPT,ISPIN) &
-     &                               -OCC(IB,IKPT,ISPIN)
+     &                               -OCC(IB,IKPT,ISPIN)/wkptl(ikpt)
           ENDDO
         ENDDO
       ENDDO
+ispin=1
+ikpt=1
+PRINT*,'DEMAT:  ',(real(DENMAT(IB,IB,ikpt,ispin)),IB=1,NB)
+PRINT*,'OCC:    ',(OCC(IB,ikpt,ispin)/WKPTL(IKPT),IB=1,NB)
+PRINT*,'LAMBDAP:',(LAMBDAP(IB,IB,ikpt,ispin)/WKPTL(IKPT),IB=1,NB)
       LAMBDAP=LAMBDA0*SVAR1+LAMBDAM*SVAR2-LAMBDAP*SVAR3
+
+PRINT*,'WARNING: FREEZING LAMBDA....'
+CALL FILEHANDLER$UNIT('PROT',NFILO)
+WRITE(NFILO,*)'WARNING: LAMBDA FROZEN'
+LAMBDAP=LAMBDA0
       RETURN
       END
 !
