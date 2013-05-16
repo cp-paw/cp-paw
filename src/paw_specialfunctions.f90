@@ -783,7 +783,8 @@
         CALL LIB$DBESI(REAL(L,KIND=8)+0.5D0,X,Ilphalb)
         Y=0.5d0*sqrt(2.d0*PI/X)*Ilphalb
         IF(L.eq.0)THEN
-          DYDX=(x*cosh(x)-sinh(x))/x**2
+          CALL LIB$DBESI(REAL(L,KIND=8)-0.5D0,X,Ilmhalb)
+          DYDX=-Ilmhalb
         ELSE
           CALL LIB$DBESI(REAL(L,KIND=8)-0.5D0,X,Ilmhalb)
           CALL LIB$DBESI(REAL(L,KIND=8)+1.5D0,X,Ilpdreihalb)
