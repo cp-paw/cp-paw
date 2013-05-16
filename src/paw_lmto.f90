@@ -15172,7 +15172,7 @@ MODULE DMFT_MODULE
 !**    GLOCLAUR1,1,2 EXPANSION OF SPIN-AVERAGED GLOC IN 1/(CI*HBAR*OMEGA)       **
 !**                                                                           **
 !*******************************************************************************
-LOGICAL(4),PARAMETER   :: TON=.TRUE.
+LOGICAL(4),PARAMETER   :: TON=.true.
 LOGICAL(4),SAVE        :: TINI=.FALSE.
 INTEGER(4)             :: NOMEGA
 INTEGER(4)             :: NCHI          ! #(CORRELATED ORBITALS)
@@ -15206,6 +15206,8 @@ COMPLEX(8),ALLOCATABLE :: DIAGSLOC(:,:,:) !(NCHI,NCHI,NSPIN)
 !== SELF ENERGY MINUS DOUBLE COUNTING ==========================================
 REAL(8)                :: ANNESIGMA
 REAL(8)                :: MSIGMA
+REAL(8)                :: MSIGMAc2
+REAL(8)   ,allocatable :: MSIGarr(:)     !(nomega) omega-dep. self-energy mass
 !__SELF ENERGY__________________________________________________________________
 COMPLEX(8),ALLOCATABLE :: DSIGM(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: DSIG0(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
@@ -15309,9 +15311,12 @@ END MODULE DMFT_MODULE
       NOMEGA=200
       KBT=0.333D0*EV
       DELTAT=10.D0
-      ANNESIGMA=0.1D0
+!
+      MSIGMA=1.D+6
+      MSIGMAC2=250.d0
+      ANNESIGMA=1.d-1
+!
       ANNEGAMMA=0.1D0
-      MSIGMA=1.D+2
       MGAMMA=1.D+2
 !
 !     ==========================================================================
@@ -15321,6 +15326,14 @@ END MODULE DMFT_MODULE
       DO NU=1,NOMEGA
         OMEGA(NU)=REAL(2*NU-1,KIND=8)*PI*KBT
       ENDDO
+!
+!     ==========================================================================
+!     ==  CALCULATE MATSUBARA FREQUENCIES                                     ==
+!     ==========================================================================
+      ALLOCATE(msigarr(NOMEGA))
+      MSIGARR(:)=MSIGMA &
+     &          *( ATAN(0.5D0*PI*SQRT(MSIGMAC2/MSIGMA)/OMEGA(:))/(0.5D0*PI) )**2
+!      msigarr(:)=msigmac2/(msigmac2/msigma+omega(:)**2)
 !
 !     ==========================================================================
 !     ==  ALLOCATE PERMANENT ARRAYS
@@ -15444,13 +15457,14 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  TEST THE CONTINUATION                                               ==
 !     ==========================================================================
+do i=1,50
       CALL DMFT$DEDGREEN()
-      CALL DMFT$ADDTOHPSI()
-      CALL DMFT$ADDTOEIGVAL()
-!STOP 'FORCED'
-!
+!!$      CALL DMFT$ADDTOHPSI()
+!!$      CALL DMFT$ADDTOEIGVAL()
       CALL DMFT$PROPAGATE()
       CALL DMFT$SWITCH()
+enddo
+stop 'end of loop. stopping.'
                                        CALL TRACE$POP()
       RETURN
       END
@@ -16094,7 +16108,7 @@ PRINT*,'ENTERING DMFT$SOLVER...'
       DO ISPIN=1,NSPIN
         DH(1,1,ISPIN)=-1.D0*EV
         DH(2,2,ISPIN)=-1.D0*EV
-        DH(3,3,ISPIN)=+2.D0*EV
+        DH(3,3,ISPIN)=-1.D0*EV
       ENDDO
 !
 !     ==========================================================================
@@ -16129,6 +16143,84 @@ PRINT*,'... DMFT$SOLVER DONE.'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT$HFsolver(nchi,nspin,nomega,kbt,mu,omega &
+     &        ,gloc,gloclaur1,gloclaur2,gloclaur3,philw &
+     &        ,sigma,siglaur1,siglaur2,siglaur3)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in)  :: nchi
+      integer(4),intent(in)  :: nspin
+      integer(4),intent(in)  :: nomega
+      real(8)   ,intent(in)  :: kbt
+      real(8)   ,intent(in)  :: mu
+      real(8)   ,intent(in)  :: omega(nomega)
+      complex(8),intent(in)  :: gloc(nchi,nchi,nomega,nspin)
+      complex(8),intent(in)  :: gloclaur1(nchi,nchi,nspin)
+      complex(8),intent(in)  :: gloclaur2(nchi,nchi,nspin)
+      complex(8),intent(in)  :: gloclaur3(nchi,nchi,nspin)
+      real(8)   ,intent(out) :: philw
+      complex(8),intent(out) :: sigma(nchi,nchi,nomega,nspin)
+      complex(8),intent(out) :: siglaur1(nchi,nchi,nspin)
+      complex(8),intent(out) :: siglaur2(nchi,nchi,nspin)
+      complex(8),intent(out) :: siglaur3(nchi,nchi,nspin)
+      real(8)   ,parameter   :: upar=1.d0
+      complex(8)             :: rho(nchi,nchi,nspin)
+      complex(8)             :: v(nchi,nchi,nspin)
+      integer(4)             :: nu,ispin,i
+      real(8)                :: svar
+      complex(8)             :: csvar
+!     **************************************************************************
+print*,'uparameter is not implemented properly!!!'
+stop 'forced in dmft$hfsolver'
+!
+!     ==========================================================================
+!     == calculate one-particle density matrix                                ==
+!     ==========================================================================
+      rho(:,:,:)=(0.d0,0.d0)
+      do ispin=1,nspin
+        do nu=1,nomega
+          csvar=1.d0/cmplx(0.d0,omega(nu))
+          rho(:,:,ispin)=rho(:,:,ispin)+kbt*(gloc(:,:,nu,ispin) &
+    &            -csvar*(gloclaur1(:,:,ispin) &
+    &                   +csvar*(gloclaur2(:,:,ispin) &
+    &                           +csvar*gloclaur3(:,:,ispin))))
+        enddo
+      enddo
+!
+!     ==========================================================================
+!     == calculate hartree fock potential
+!     ==========================================================================
+      do ispin=1,nspin
+        v(:,:,ispin)=transpose(rho(:,:,ispin))
+      enddo
+      do ispin=1,nspin
+        svar=0.d0
+        do i=1,nchi
+          svar=svar+real(rho(i,i,ispin))
+        enddo
+        do i=1,nchi
+          v(i,i,ispin)=v(i,i,ispin)-svar
+        enddo
+      enddo
+      v(:,:,:)=upar*v(:,:,:)
+!
+!     ==========================================================================
+!     == calculate self-energy                                                ==
+!     ==========================================================================
+      do ispin=1,nspin
+        do nu=1,nomega
+          sigma(:,:,nu,ispin)=v(:,:,ispin)
+        enddo
+      enddo
+      siglaur1=0.d0
+      siglaur2=0.d0
+      siglaur3=0.d0
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$DEDGREEN()
 !     **************************************************************************
 !     **                                                                      **
@@ -16156,6 +16248,10 @@ PRINT*,'... DMFT$SOLVER DONE.'
       INTEGER(4)             :: NTASKS_K,THISTASK_K
       INTEGER(4)             :: NTASKS_M,THISTASK_M
       INTEGER(4)             :: IKPT,ISPIN,NU,IB,IBH,ICHI,IPRO,I
+integer(4) :: i1,j1,i2,j2,ind1,ind2
+complex(8) :: mat(nchi**2,nchi**2),umat(nchi**2,nchi**2)
+complex(8) :: mat2(nb,nb)
+real(8)    :: eig(nchi**2)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT$DEDGREEN')
@@ -16239,10 +16335,47 @@ CLOSE(11)
               GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
             ENDDO
             CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+mat2=matmul(greeninv,green)
+do i=1,nb
+  mat2(i,i)=mat2(i,i)-(1.d0,0.d0)
+enddo
+print*,'inversion test ',maxval(abs(mat2))
+
 !
 !           == first part from force on self energy ============================
             gcorr=matmul(pipsi(:,:,ikpt,ispin) &
                         ,matmul(green,transpose(conjg(pipsi(:,:,ikpt,ispin)))))
+if(nu.eq.1) then
+write(*,fmt='(82("="),t10,2i5)')ikpt,ispin
+do i=1,nchi
+  write(*,fmt='("gcorr:",10("(",2f10.5,")  ") )')gcorr(i,:)
+enddo
+do i=1,nchi
+  write(*,fmt='("dsig0:",10("(",2f10.5,")  ") )')dsig0(i,:,nu,ispin)
+enddo
+!
+ind1=0
+do i1=1,nchi
+  do j1=1,nchi
+    ind1=ind1+1
+    ind2=0
+    do i2=1,nchi
+      do j2=1,nchi
+        ind2=ind2+1
+        mat(ind1,ind2)=gcorr(i1,j1)*gcorr(j2,i2)
+      enddo
+    enddo
+  enddo
+enddo
+do i=1,nchi**2
+  write(*,fmt='("mat:",10("(",2f8.3,")  ") )')mat(i,:)
+enddo
+call lib$diagc8(nchi**2,mat,eig,umat)
+print*,'eig ',eig 
+stop 'forced stop'
+end if
+
+
             FDSIG1(:,:,NU,ISPIN)=FDSIG1(:,:,NU,ISPIN)-WKPTL(IKPT) &
       &                *matmul(gcorr &
       &                ,matmul(dedgloc(:,:,nu,ispin)-dsig0(:,:,nu,ispin),gcorr))
@@ -16268,7 +16401,15 @@ CLOSE(11)
         ENDDO
       ENDDO
 !
-!     == ADD OVER ALL NODES (INCLUDES SUM IN K-GROUPS AND OVER K-GROUPS) =======
+!     == THE FORCE ON THE SELF ENERGY IS THE TRANSPOSE OF THE DERIVATIVE =======
+      DO ISPIN=1,NSPIN
+        DO NU=1,NOMEGA 
+          FDSIG1(:,:,NU,ISPIN)=TRANSPOSE(FDSIG1(:,:,NU,ISPIN))
+          FDSIG2(:,:,NU,ISPIN)=TRANSPOSE(FDSIG2(:,:,NU,ISPIN))
+        ENDDO
+      ENDDO
+!
+!     == sum OVER ALL NODES (INCLUDES SUM IN K-GROUPS AND OVER K-GROUPS) =======
       CALL MPE$COMBINE('MONOMER','+',FDSIG1)
       CALL MPE$COMBINE('MONOMER','+',FDSIG2)
       CALL MPE$COMBINE('K','+',XMAT)
@@ -16276,13 +16417,7 @@ CLOSE(11)
 !     ==========================================================================
 !     ==  SEE IF THINGS MAKE SENSE
 !     ==========================================================================
-OPEN(11,FILE='Y.DAT')
-REWIND 11
-DO NU=1,NOMEGA
-  WRITE(11,*)OMEGA(NU),REAL(FDSIG1(:,:,NU,1)),AIMAG(FDSIG1(:,:,NU,1))
-ENDDO
-CLOSE(11)
-!STOP 'FORCED'
+STOP 'FORCED'
 !
 PRINT*,'XMAT ',MAXVAL(ABS(XMAT))
 PRINT*,'... DEDGREEN DONE'
@@ -16426,29 +16561,84 @@ GAMMAP=GAMMA0
       SUBROUTINE DMFT_PROPAGATESIGMA()
 !     **************************************************************************
 !     **  PROPAGATE DSIGMA                                                    **
+!     **                                                                      **
+!     **  Preconditioning considers the Green's function that is constant     **
+!     **  within an energy region.                                            **
+!     **          m(omega)=msigma/omega*atan(msigmac2/omega)                  **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,MSIGMA,ANNESIGMA,DELTAT &
-     &                      ,DSIGM,DSIG0,DSIGP &
-     &                      ,FDSIG1,FDSIG2
+      USE DMFT_MODULE, ONLY: TON,nspin,nomega,omega &
+     &                      ,MSIGarr,ANNESIGMA,DELTAT &
+     &                      ,DSIGM,DSIG0,DSIGP,FDSIG1,FDSIG2
       REAL(8)                :: SVAR1,SVAR2,SVAR3
+      integer(4)             :: nu,ispin
+      integer(4),save        :: iter=1
+      character(64)          :: file
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       SVAR1=2.D0/(1.D0+ANNESIGMA)
       SVAR2=1.D0-SVAR1
-      SVAR3=DELTAT**2/MSIGMA/(1.D0+ANNESIGMA)
-      DSIGP=DSIG0*SVAR1+DSIGM*SVAR2+FDSIG1*SVAR3    ! +FDSIG2*SVAR3
-
+      SVAR3=DELTAT**2/(1.D0+ANNESIGMA)
+      DSIGP=DSIG0*SVAR1+DSIGM*SVAR2 
+      do ispin=1,nspin
+        do nu=1,nomega
+!         ==  preconditioning
+          DSIGP(:,:,nu,ispin)=DSIGp(:,:,nu,ispin) &
+     &                       +FDSIG1(:,:,nu,ispin)*SVAR3/msigarr(nu) &
+     &                   !   +FDSIG2(:,:,nu,ispin)*SVAR3/msigarr(nu)
+        enddo
+      enddo
 PRINT*,'SVAR1,SVAR2,SVAR3',SVAR1,SVAR2,SVAR3
-PRINT*,'ANNESIGMA,DELTAT,MSIGMA',ANNESIGMA,DELTAT,MSIGMA
 PRINT*,'DSIGM:  ',REAL(DSIGM(:,:,1,1))
 PRINT*,'DSIG0:  ',REAL(DSIG0(:,:,1,1))
 PRINT*,'DSIGP:  ',REAL(DSIGP(:,:,1,1))
 PRINT*,'FDSIG1: ',REAL(FDSIG1(:,:,1,1))
 
-!!$PRINT*,'WARNING: FREEZING SIGMA....'
-!!$CALL FILEHANDLER$UNIT('PROT',NFILO)
-!!$WRITE(NFILO,*)'WARNING: SIGMA FROZEN'
-!!$SIGMAP=SIGMA0
+write(file,*)iter
+file='sigma'//trim(adjustl(file))//'.dat'
+open(11,file=file)
+REWIND 11
+DO NU=1,NOMEGA
+  WRITE(11,*)OMEGA(NU),REAL(dsigp(:,:,NU,1)),AIMAG(dsigp(:,:,NU,1))
+ENDDO
+CLOSE(11)
+write(file,*)iter
+file='fdsig'//trim(adjustl(file))//'.dat'
+open(11,file=file)
+REWIND 11
+DO NU=1,NOMEGA
+  WRITE(11,*)OMEGA(NU),REAL(fdsig1(:,:,NU,1))/msigarr(nu) &
+&                    ,AIMAG(fdsig1(:,:,NU,1))/msigarr(nu)
+ENDDO
+CLOSE(11)
+iter=iter+1
+if(iter.gt.200) stop 'forced stop after 200 iterations'
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_ekinsigma()
+!     **************************************************************************
+!     **  kinetic energy of the self energy dynamics                          **
+!     **                                                                      **
+!     **  check if the factor 1/2 is correct!!!!!                             **
+!     **          m(omega)=msigma/omega*atan(msigmac2/omega)                  **
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: TON,nspin,nomega &
+     &                      ,MSIGarr,ANNESIGMA,DELTAT &
+     &                      ,DSIGM,DSIG0,DSIGP
+      integer(4)             :: nu      ! Index of Matsubara frequency
+      real(8)                :: ekinsig ! kinetic energy related to self energy
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      EKINSIG=0.D0
+      do ispin=1,nspin
+        DO NU=1,NOMEGA
+          EKINSIG=EKINSIG+msigarr(nu)*SUM(abs(DSIGP(:,:,NU,ISPIN) &
+     &                                       -DSIGM(:,:,NU,ISPIN))**2)
+        ENDDO
+      enddo
+      ekinsig=0.5d0*ekinsig/(2.D0*DELTAT)**2   
       RETURN
       END
 !
