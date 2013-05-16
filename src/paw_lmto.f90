@@ -14747,7 +14747,7 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
       LOGICAL(4)            :: TEVEN
       REAL(8)               :: PI
       REAL(8)   ,INTENT(OUT):: RES
-      INTEGER(4)            :: K
+      INTEGER(4)            :: K,I
 !     **************************************************************************
       K=INT(N/2)
       TEVEN=(2*K.EQ.N)
