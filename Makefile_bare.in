@@ -192,6 +192,7 @@ LOBJS = \
 ##########################################################################
 #
 OBJECTS1 = \
+           ${OBJDIR}/paw_driver.o \
            ${OBJDIR}/paw_thermostat.o \
            ${OBJDIR}/paw_isolate.o \
            ${OBJDIR}/paw_assist.o \
