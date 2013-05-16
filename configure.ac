@@ -334,88 +334,88 @@ fi
 # substituting to get Makefile.none
 #
 AC_MSG_RESULT(creating Makefile in none)
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
-    -e 's%varPARALLEL%F%'\
-    -e 's%varOBJTYPE%none%'\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw.x%g"\
+    -e 's%varPARALLEL%F%g'\
+    -e 's%varOBJTYPE%none%g'\
     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile
 #
 # substituting to get Makefile_parallel in none
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile in none_parallel)
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
-      -e 's%varPARALLEL%T%'\
-      -e 's%varOBJTYPE%none_parallel%'\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw.x%g"\
+      -e 's%varPARALLEL%T%g'\
+      -e 's%varOBJTYPE%none_parallel%g'\
       ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
 fi
 #
 # substituting to get Makefile.fast
 #
 AC_MSG_RESULT(creating Makefile in fast)
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
-    -e 's%varOBJTYPE%fast%'\
-    -e 's%varPARALLEL%F%'\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%g"\
+    -e 's%varOBJTYPE%fast%g'\
+    -e 's%varPARALLEL%F%g'\
     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile
 #
 # substituting to get Makefile.fast_parallel
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in fast)
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
-      -e 's%varOBJTYPE%fast_parallel%'\
-      -e 's%varPARALLEL%T%'\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%g"\
+      -e 's%varOBJTYPE%fast_parallel%g'\
+      -e 's%varPARALLEL%T%g'\
       ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile
 fi
 #
 # substituting to get Makefile in dbg
 #
 AC_MSG_RESULT(creating Makefile in dbg)
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
-    -e 's%varOBJTYPE%dbg%'\
-    -e 's%varPARALLEL%F%'\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%g"\
+    -e 's%varOBJTYPE%dbg%g'\
+    -e 's%varPARALLEL%F%g'\
    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile
 #
 # substituting to get Makefile_parallel in dbg
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in dbg)
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
-      -e 's%varOBJTYPE%dbg_parallel%'\
-      -e 's%varPARALLEL%T%'\ 
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%g"\
+      -e 's%varOBJTYPE%dbg_parallel%g'\
+      -e 's%varPARALLEL%T%g'\ 
      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile
 fi
 #
 # substituting to get Makefile in prof
 #
 AC_MSG_RESULT(creating Makefile in prof)
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
-    -e 's%varOBJTYPE%prof%'\
-    -e 's%varPARALLEL%F%'\
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%g"\
+    -e 's%varOBJTYPE%prof%g'\
+    -e 's%varPARALLEL%F%g'\
      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile
 #
 # substituting to get Makefile_parallel in prof
 #
 if test "$TPARALLEL" = "T"; then
   AC_MSG_RESULT(creating Makefile_parallel in prof)
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
-      -e 's%varOBJTYPE%prof_parallel%'\
-      -e 's%varPARALLEL%T%'\
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%g"\
+      -e 's%varOBJTYPE%prof_parallel%g'\
+      -e 's%varPARALLEL%T%g'\
      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile
 fi
 #

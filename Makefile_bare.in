@@ -26,74 +26,74 @@ SHELL=/bin/sh
 #########################################################################
 #
 #___________________________ the hardware architecture
-ARCH=@ARCH@
+export ARCH=@ARCH@
 #___________________________ root directory of the PAW distribution
-PAWDIR=@PAWDIR@
+export PAWDIR=@PAWDIR@
 #___________________________ object type (none,fast,dbg,prof)
-OBJTYPE=varOBJTYPE
+export OBJTYPE=varOBJTYPE
 #___________________________ path to the source files
-SRCDIR=${PAWDIR}/src
+export SRCDIR=${PAWDIR}/src
 #___________________________ path to the object files
-OBJDIR=${PAWDIR}/bin/${ARCH}/Objects/${OBJTYPE}
+export OBJDIR=${PAWDIR}/bin/${ARCH}/Objects/${OBJTYPE}
 #___________________________ path to the binaries
-BINDIR=${PAWDIR}/bin/${ARCH}
+export BINDIR=${PAWDIR}/bin/${ARCH}
 #___________________________ path to the tool-directory
-TOOLDIR=${PAWDIR}/src/Tools
+export TOOLDIR=${PAWDIR}/src/Tools
 #___________________________ directory with blas library
-BLASDIR=@BLASDIR@
+export BLASDIR=@BLASDIR@
 #___________________________ directory with lapack library
-LAPACKDIR=@LAPACKDIR@
+export LAPACKDIR=@LAPACKDIR@
 #___________________________ directory with fft library
-FFTDIR=@FFTDIR@
+export FFTDIR=@FFTDIR@
 #___________________________ directory with MPI library
-MPIDIR=@MPIDIR@
+export MPIDIR=@MPIDIR@
 #___________________________header file for fft
-FFT_HEADER=@FFT_HEADER@
+export FFT_HEADER=@FFT_HEADER@
 #___________________________header file for MPI
-MPI_HEADER=@MPI_HEADER@
+export MPI_HEADER=@MPI_HEADER@
 #___________________________special treatment
-SPECIAL=@SPECIAL@
+export SPECIAL=@SPECIAL@
 #___________________________ set to T, if this is Makefile.parallel
-PARALLEL=varPARALLEL
+export PARALLEL=varPARALLEL
 #___________________________ Fortran90 compiler + compiler flags
 ifeq (${PARALLEL},T)
-  COMPILE=@COMPILE_PARALLEL@
-  LINK=@LINK_PARALLEL@
-  LIBS=@LIBS_PARALLEL@
-  F90PP=${BINDIR}/f90pp @CPPFLAGS@ -DCPPVARIABLE_PARALLEL
+  export COMPILE=@COMPILE_PARALLEL@
+  export LINK=@LINK_PARALLEL@
+  export LIBS=@LIBS_PARALLEL@
+  export F90PP=${BINDIR}/f90pp @CPPFLAGS@ -DCPPVARIABLE_PARALLEL
 else
-  COMPILE=@COMPILE_SCALAR@
-  LINK=@LINK_SCALAR@
-  LIBS=@LIBS_SCALAR@
-  F90PP=${BINDIR}/f90pp @CPPFLAGS@
+  export COMPILE=@COMPILE_SCALAR@
+  export LINK=@LINK_SCALAR@
+  export LIBS=@LIBS_SCALAR@
+  export F90PP=${BINDIR}/f90pp @CPPFLAGS@
 endif
 #___________________________ the PAW-binary (inclusive path)
-PAWX=@PAWX@
+export PAWX=@PAWX@
 #___________________________ the extension of files to be compiled
-FEXT=@FEXT@
+export FEXT=@FEXT@
 #___________________________ the GNU make utility
-MAKE=@MAKE@
+export MAKE=@MAKE@
 #
 ##########################################################################
 ##  define parameters                                                   ##
 ##########################################################################
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
-  MODE=_p
+  export MODE=_p
 else
-  MODE=_s
+  export MODE=_s
 endif
 ifeq (${SPECIAL},IBM)
-  POE_PREFIX=poe
-  POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
+  export POE_PREFIX=poe
+  export POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
 else
-  POE_PREFIX=
-  POE_SUFFIX=
+  export POE_PREFIX=
+  export POE_SUFFIX=
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
 # a sequential _s version are produced
 #
-MPE = ${OBJDIR}/paw_mpelib$(MODE).o
+export MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 #
 ##########################################################################
 ##  include files                                                       ##
@@ -137,7 +137,7 @@ endif
 # libpaw.a holds the object files and can be linked to any code which
 # needs a PAW subroutine (leave the # after libpaw.a)
 # MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
-PAWLIB= ${OBJDIR}/libpaw.a#
+export PAWLIB= ${OBJDIR}/libpaw.a#
 #
 #########################################################################
 ## Definition of the targets                                           ##
@@ -147,14 +147,15 @@ default: ${PAWX}
 clean:
 	find ${OBJDIR}/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	rm -f ${PAWX}
+	rm -rf ${BINDIR}/*_tests
 #
 ##########################################################################
 ##  define object files kept in the library                             ##
 ##########################################################################
 #
-LOBJSF77 = \
+export LOBJSF77 = \
 	 ${OBJDIR}/slatec.o
-LOBJS = \
+export LOBJS = \
         ${OBJDIR}/paw_trace.o \
         ${OBJDIR}/paw_error.o \
         ${OBJDIR}/paw_filehandler.o \
@@ -192,7 +193,8 @@ LOBJS = \
 ##########################################################################
 #
 OBJECTS1 = \
-           ${OBJDIR}/paw_driver.o \
+	    ${OBJDIR}/paw_driver.o \
+	    ${OBJDIR}/paw_version.o \
            ${OBJDIR}/paw_thermostat.o \
            ${OBJDIR}/paw_isolate.o \
            ${OBJDIR}/paw_assist.o \
@@ -243,7 +245,7 @@ OBJECTS3 = \
 #           ${OBJDIR}/paw_pdos.o  #into library
 #          ${OBJDIR}/paw_optic.o \   # removed
 #
-OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
+export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
 #
 # Definition of objects for the compilation of the PAW-tools
@@ -486,6 +488,14 @@ ${OBJDIR}/fftw_f77.i:
 ${OBJDIR}/mpif.h:
 	${MPIINCLUDE}
 #
+#########################################################################
+##  execute tests                                                      ##
+#########################################################################
+#
+tests: ${PAWX} varOBJTYPE_tests
+varOBJTYPE_tests: ${PAWX} 
+	rm -rf ${BINDIR}/varOBJTYPE_tests;cp -r ${PAWDIR}/tests ${BINDIR}/varOBJTYPE_tests;cd ${BINDIR}/varOBJTYPE_tests;${MAKE} all
+#
 #${OBJDIR}/mm_paw_f77.o
 #########################################################################
 ##  compile code files independent of parameter                        ##
@@ -505,7 +515,8 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 #__general rule for object files fortran 77______________________________
 $(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
 	cp $< ${OBJDIR}/$*_d.f
-	${COMPILE} -o $@ ${OBJDIR}/$*_d.f
+	$(COMPILE:-fimplicit-none=) -o $@ ${OBJDIR}/$*_d.f
+	#${COMPILE} -o $@ ${OBJDIR}/$*_d.f
 #
 #__compile the tools____________________________________________________
 #

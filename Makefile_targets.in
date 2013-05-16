@@ -81,23 +81,23 @@ SHELL=/bin/sh
 #########################################################################
 #___________________________ root directory of the PAW distribution
 # 
-PAWDIR=@PAWDIR@
+export PAWDIR=@PAWDIR@
 #___________________________ the hardware architecture
-ARCH=@ARCH@
+export ARCH=@ARCH@
 #___________________________ the way to compile the tools 
-TOOLCOMP=dbg
+export TOOLCOMP=dbg
 #___________________________ the GNU make utility
-MAKE=@MAKE@
+export MAKE=@MAKE@
 #___________________________ parallel environment?
-PENV=@TPARALLEL@
+export PENV=@TPARALLEL@
 #
 ##########################################################################
 #  complete shortcuts to directories etc
 ##########################################################################
 #___________________________ path to the object files
-OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
+export OBJDIR=${PAWDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
-BINDIR=${PAWDIR}/bin/${ARCH}
+export BINDIR=${PAWDIR}/bin/${ARCH}
 #
 OBJTYPES_SCALAR=fast dbg none prof
 OBJTYPES_PRIMARY_SCALAR=fast
@@ -113,6 +113,7 @@ endif
 TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz \
       1davpot cmcwave lattice stpa stpreport bands murnaghan polyhedra
 SCRIPTS=scripts
+TESTS=$(addsuffix _tests,${OBJTYPES})
 #
 #########################################################################
 ## Definition of the collective targets                                ##
@@ -146,6 +147,14 @@ clean_small: $(addprefix clean_,${OBJTYPES_PRIMARY} tools)
 tools: ${TOOLS} ${SCRIPTS}
 #
 clean_tools: $(addprefix clean_,${TOOLS} ${SCRIPTS})
+#
+#---------------------------------------------------------------------------
+#-- make tests                                                            --
+#---------------------------------------------------------------------------
+tests: ${TESTS}
+#
+${TESTS}:
+	cd ${OBJDIR}/$(subst _tests,,$@); ${MAKE} $@
 #
 #########################################################################
 ## specific target rules                                               ##
