@@ -31,7 +31,7 @@
       REAL(8)               :: X(NRX)
       REAL(8)               :: Y,DYDX
       REAL(8)               :: DIFFY,DIFFDYDX
-      INTEGER(4)            :: I,J,K,FUNC
+      INTEGER(4)            :: I,J,FUNC
 !     **************************************************************************
       !EXCLUDE NONE AT FIRST
       EXCLUDE(:,:,:)=.FALSE.
@@ -5336,6 +5336,7 @@ EXCLUDE(7,20,17)=.true.
             diffY=ABS(REFDATA_Y(FUNC,I,J)-Y)/REFDATA_Y(FUNC,I,J)
             diffDYDX=ABS(REFDATA_DYDX(FUNC,I,J)-DYDX)/REFDATA_DYDX(FUNC,I,J)
             IF(log10(diffY).GT.LOG10RELTOL)THEN
+              PRINT*,"TEST FAILED"
               PRINT*,"ERROR IN FUNCTION VALUE"
               PRINT*,"FUNC=",FUNC
               PRINT*,"L=",L(I)
@@ -5349,6 +5350,7 @@ EXCLUDE(7,20,17)=.true.
               CALL EXIT(1)
             ENDIF
             IF(log10(diffDYDX).GT.LOG10RELTOL)THEN
+              PRINT*,"TEST FAILED"
               PRINT*,"ERROR IN DERIVATIVE VALUE"
               PRINT*,"FUNC=",FUNC
               PRINT*,"L=",I
@@ -5364,6 +5366,6 @@ EXCLUDE(7,20,17)=.true.
           ENDDO
         ENDDO
       ENDDO
-      PRINT*,"PASSED"
+      PRINT*,"TEST PASSED"
 !     **************************************************************************
       END

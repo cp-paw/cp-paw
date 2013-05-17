@@ -12,5 +12,4 @@ all:
 	@#link binary
 	@${LINK} -o paw_unittest_${TEST}.x $(subst paw.o,paw_unittest_${TEST}_d.o,${OBJECTS}) $(subst paw.o,paw_unittest_${TEST}_d.o,${LOBJS}) ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 	@#run unittest
-	@./paw_unittest_${TEST}.x 2> err.log > out.log; if [ $$? -eq 0 ] ; then echo "test ${TEST} passed."; else echo "test ${TEST} failed. See `pwd`/out.log and `pwd`/err.log."; exit 1 ; fi
-	
+	@./paw_unittest_${TEST}.x

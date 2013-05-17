@@ -8,5 +8,4 @@ all:
 	@echo "running paw..."
 	${PAWX} ${TEST}.cntl 2> err.log > out.log
 	@echo "analyse results ..."
-	@${SHELL} analyse.sh 2> err.log > out.log; if [ $$? -eq 0 ] ; then echo "test ${TEST} passed."; else echo "test ${TEST} failed. See `pwd`/out.log and `pwd`/err.log."; exit 1 ; fi
-	
+	@${SHELL} analyse.sh

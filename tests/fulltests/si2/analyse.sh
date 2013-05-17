@@ -8,7 +8,10 @@ CRIT=`echo "define abs(x) {if (x<0) {return -x}; return x;}scale=20;abs(($TOTAL_
 echo $CRIT
 if [ "$CRIT" = "1"  ];
 then
+  echo "TEST PASSED"
   exit 0
 else
+  echo "TEST FAILED"
+  echo "SEE `pwd`."
   exit 1
 fi
