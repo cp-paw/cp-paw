@@ -5,7 +5,7 @@ TOLERANCE=0.0001
 
 TOTAL_ENERGY=`grep "TOTAL ENERGY" si2.prot | tail -n 1 | awk 'BEGIN { FS = " " } ; { print $4 }'`
 CRIT=`echo "define abs(x) {if (x<0) {return -x}; return x;}scale=20;abs(($TOTAL_ENERGY_REF)-($TOTAL_ENERGY))<$TOLERANCE" | bc -l`
-echo $CRIT
+#echo $CRIT
 if [ "$CRIT" = "1"  ];
 then
   echo "TEST PASSED"
