@@ -110,8 +110,11 @@ else
 endif
 #TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc \
 #       toxyz 1davpot cmcwave lattice test
-TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz \
-      1davpot cmcwave lattice stpa stpreport bands murnaghan polyhedra
+#TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz \
+#      1davpot cmcwave lattice stpa stpreport bands murnaghan polyhedra
+#Oldtools lattice cmcwave
+TOOLS=bands grab murnaghan dos polyhedra preopt stpa stpreport \
+      strc tostrc toxyz tra converttra cleantra wave 1davpot 
 SCRIPTS=scripts
 #
 #########################################################################
