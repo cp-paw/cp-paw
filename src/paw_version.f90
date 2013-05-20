@@ -65,8 +65,7 @@
      &              //',"  CP-PAW VERSION INFO: ")')
         WRITE(*,FMT='(72("*"))')
 
-        VERINF=TRIM(ADJUSTL(VERINF))
-        WRITE(*,FMT='(A)')VERINF(1:11)//TRIM(VERINF(43:))
+        WRITE(*,FMT='(A)')TRIM(VERINF)
         WRITE(*,FMT='(A)')TRIM(VERREV)
         WRITE(*,FMT='(A)')TRIM(VERAUT)
         WRITE(*,FMT='(A)')TRIM(VERDAT)

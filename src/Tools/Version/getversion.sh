@@ -16,8 +16,15 @@ if [ "$GIT_IS_AVAILABLE" = 0 ]; then
   if git rev-parse --git-dir > /dev/null 2>&1; then
     #git is installed and we are in a git repo
     echo "inside git repo: YES"    
-    #remotes
-    VER1=`git remote -v | awk 'BEGIN { FS = " " } ; { print $2 }' | uniq | tr '\n' ';'`
+    ##all remotes--> too long
+    #VER1=`git remote -v | awk 'BEGIN { FS = " " } ; { print $2 }' | uniq | tr '\n' ';'`
+    #only remote that hast tracking branch
+    branch=$(git symbolic-ref HEAD)
+    branch=${branch##refs/heads/}
+    remote=$(git config "branch.${branch}.remote")
+    remoteBranch=$(git config "branch.${branch}.merge")
+    remoteBranch=${remoteBranch##refs/heads/}
+    VER1=`git remote show -n ${remote:?} | grep "Fetch URL:" | sed "s/[ ]*Fetch URL://g" | tr -d '\n'`
     #banchname
     VER2=`git branch | grep "*" | sed "s/* //"`
     #short revision number
@@ -26,7 +33,7 @@ if [ "$GIT_IS_AVAILABLE" = 0 ]; then
     VER4=`git log -1 --format="%H"` 
     #number of files changed since last commit
     VER5=`git status --porcelain ../../../../src | wc -l` 
-    VERINF="remotes: $VER1 branch: $VER2"
+    VERINF="remote: $VER1 branch: $VER2"
     VERREV="r$VER3; $VER4; $VER5 changes since last commit"
     VERAUT="last commit by `git log -1 --format="%an (%ae)"`; compiled by `whoami` on `hostname`"
     VERDAT="last commit at `git log -1 --format="%aD"`; compiled at `date`"    
@@ -51,10 +58,10 @@ fi
 #echo "VERREV=$VERREV"
 #echo "VERAUT=$VERAUT"
 #echo "VERDAT=$VERDAT"
-VERINF2=`echo "$VERINF" | sed 's/\//\\\\\//g'`
-VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'`
-VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'`
-VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'`
+VERINF2=`echo "$VERINF" | sed 's/\//\\\\\//g'| cut  -c -250`
+VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'| cut  -c -250`
+VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'| cut  -c -250`
+VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'| cut  -c -250`
 
 #modify in file
 sed -i "s/_VERINF/${VERINF2}/g" $PAWVERSIONFILE
