@@ -194,7 +194,6 @@ export LOBJS = \
 #
 OBJECTS1 = \
 	    ${OBJDIR}/paw_driver.o \
-	    ${OBJDIR}/paw_version.o \
            ${OBJDIR}/paw_thermostat.o \
            ${OBJDIR}/paw_isolate.o \
            ${OBJDIR}/paw_assist.o \
@@ -246,6 +245,11 @@ OBJECTS3 = \
 #          ${OBJDIR}/paw_optic.o \   # removed
 #
 export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
+#
+# Objects for version information
+OBJVERSION = \
+	      ${OBJDIR}/paw_version.o
+#
 #
 #
 # Definition of objects for the compilation of the PAW-tools
@@ -341,8 +345,8 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 #
 ${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
-                ${OBJECTS} ${MPE}
-	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+                ${OBJVERSION} ${OBJECTS} ${MPE}
+	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 #
 #########################################################################
 ##  build paw library                                                  ##
@@ -506,6 +510,13 @@ varOBJTYPE_tests: ${PAWX}
 ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
+#
+# generate version information __________________________________________
+.PHONY: ${OBJVERSION}
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	#change version infos
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90

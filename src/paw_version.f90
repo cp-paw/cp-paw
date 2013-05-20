@@ -1,10 +1,10 @@
-Module version_module
-!uses SVN keyword substitution
-character(256):: VERInf='$HeadURL: https://yap/paw/branches/pbloechl/devel/src/paw.f90 $'
-character(256):: VERrev='$LastChangedRevision: 1199 $'
-character(256):: VERaut='$LastChangedBy: ptpb $'
-character(256):: VERdat='$LastChangedDate: 2013-01-11 11:41:15 +0100 (Fri, 11 Jan 2013) $'
-end Module version_module
+      MODULE VERSION_MODULE
+        !_VERINF, _VERREV, _VERAUT, _VERDAT WILL BE SUBSTITUTED BY MAKEFILE
+        CHARACTER(256):: VERINF='_VERINF'
+        CHARACTER(256):: VERREV='_VERREV'
+        CHARACTER(256):: VERAUT='_VERAUT'
+        CHARACTER(256):: VERDAT='_VERDAT'
+      END MODULE VERSION_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAW_VERSION()
