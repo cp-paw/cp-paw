@@ -515,7 +515,7 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 .PHONY: ${OBJVERSION}
 $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
-	#change version infos
+	sh ${SRCDIR}/Tools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__general rule for object files_________________________________________
