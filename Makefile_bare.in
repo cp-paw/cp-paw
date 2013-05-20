@@ -246,9 +246,13 @@ OBJECTS3 = \
 #
 export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
-# Objects for version information
+# Object for version information
 OBJVERSION = \
 	      ${OBJDIR}/paw_version.o
+#
+# Object for source blob
+SRCBLOB = \
+	   ${OBJDIR}/paw_srcblob.o
 #
 #
 #
@@ -343,10 +347,10 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
+${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
-	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 #
 #########################################################################
 ##  build paw library                                                  ##
@@ -505,6 +509,7 @@ varOBJTYPE_tests: ${PAWX}
 ##  compile code files independent of parameter                        ##
 ##  and place the objects in OBJDIR                                    ##
 #########################################################################
+.PHONY: ${OBJVERSION} ${SRCBLOB}
 #
 #__special rule for parallel interface because of preprocessor___________
 ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
@@ -512,11 +517,16 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
-.PHONY: ${OBJVERSION}
 $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	sh ${SRCDIR}/Tools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+# generate source blob __________________________________________________
+${SRCBLOB}:
+	rm -f paw_srcblob paw_srcblob.o
+	tar -czf paw_srcblob ${SRCDIR}
+	ld -r -b binary -o paw_srcblob.o paw_srcblob
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
