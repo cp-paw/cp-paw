@@ -138,6 +138,7 @@ endif
 # needs a PAW subroutine (leave the # after libpaw.a)
 # MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
 export PAWLIB= ${OBJDIR}/libpaw.a#
+export PAWLIBFULL= ${OBJDIR}/libpawfull.a#
 #
 #########################################################################
 ## Definition of the targets                                           ##
@@ -357,6 +358,13 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 #########################################################################
 ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 	ar -rus $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+#
+#########################################################################
+##  build full paw library and optionally exclude objects              ##
+#########################################################################
+${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
+	ar -rus $(PAWLIBFULL) $(subst ${OBJDIR}/paw.o,,${OBJECTS}) ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 #
 #########################################################################
 ##  build Tools                                                        ##

@@ -184,6 +184,15 @@ lib_new:
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
 #
 #---------------------------------------------------------------------------
+#--          PAW library libpawfull.a                                     --
+#---------------------------------------------------------------------------
+libfull:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpawfull.a EXCLUDE="${EXCLUDE}"
+#
+libfull_new:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpawfull.a EXCLUDE="${EXCLUDE}"
+#
+#---------------------------------------------------------------------------
 #--          Tools and scripts                                            --
 #---------------------------------------------------------------------------
 ${TOOLS}: lib_new
