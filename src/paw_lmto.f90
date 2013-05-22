@@ -14742,6 +14742,7 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
       SUBROUTINE EXPINTEGRAL(N,E,RES)
 !     **************************************************************************
 !     **************************************************************************
+      implicit none
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: E
       LOGICAL(4)            :: TEVEN
