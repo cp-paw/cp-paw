@@ -34,7 +34,7 @@ if [ "$GIT_IS_AVAILABLE" = 0 ]; then
     #number of files changed since last commit
     VER5=`git status --porcelain ../../../../src | wc -l` 
     VERINF="remote: $VER1 branch: $VER2"
-    VERREV="r$VER3; $VER4; $VER5 changes since last commit"
+    VERREV="revision $VER3; $VER4; $VER5 changes since last commit"
     VERAUT="last commit by `git log -1 --format="%an (%ae)"`; compiled by `whoami` on `hostname`"
     VERDAT="last commit at `git log -1 --format="%aD"`; compiled at `date`"    
   else
