@@ -351,13 +351,7 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
 ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
-#FIXME: temporary fix
-ifeq ($(shell uname -s),Darwin)
-       echo "FIXME: we are on Darwin... not creating source blob"
-	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
-else
 	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
-endif
 #
 #########################################################################
 ##  build paw library                                                  ##
@@ -375,13 +369,7 @@ ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
 ${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-#FIXME: temporary fix
-ifeq ($(shell uname -s),Darwin)
-       echo "FXIME: we are on Darwin... not creating source blob"
-	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
-else
 	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
-endif
 	ar -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 #
@@ -556,10 +544,10 @@ ${SRCBLOB}:
 ifeq ($(shell uname -s),Linux) 
 	ld -r -b binary -o paw_srcblob.o paw_srcblob
 endif
-#FIXME: temporary fix
 ifeq ($(shell uname -s),Darwin)
-	touch $(SRCBLOB)
-	echo "FIXME: we are on Darwin... not creating source blob"
+	touch paw_srcblob_dummy.f90
+	${COMPILE} -o paw_srcblob_dummy.o paw_srcblob_dummy.f90
+	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin paw_srcblob paw_srcblob_dummy.o
 endif
 #
 #__general rule for object files_________________________________________
