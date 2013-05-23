@@ -64,7 +64,7 @@ SHELL=/bin/sh
 ##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
 ##    @PAWDIR@/src              contains sources for CP-PAW main code  ##
 ##    @PAWDIR@/src/Tools        contains sources of Tools              ##
-##    @PAWDIR@/src/F90PP        contains sources for preprocessor etc  ##
+##    @PAWDIR@/src/Buildtools/F90PP contains sources for preprocessor etc  ##
 ##    @PAWDIR@/docs             containes documentation                ##
 ##                                                                     ##
 #########################################################################

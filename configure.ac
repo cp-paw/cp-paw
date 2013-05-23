@@ -17,7 +17,7 @@ AC_INIT(src)
 #
 # directory structure is set to
 #   $PAWDIR/src               contains source files for simulation code
-#   $PAWDIR/F90PP/            contains files for f90pp preprocessor
+#   $PAWDIR/Buildtools/F90PP/ contains files for f90pp preprocessor
 #   $PAWDIR/Tools/            contains subdirectories with tools
 #   $PAWDIR/bin/$ARCH         holds all executables
 #   $PAWDIR/bin/$ARCH/none    Objects compiled simple
@@ -298,7 +298,7 @@ fi
 #
 # create f90pp from f90pp.in and make it executable
 #
-AC_CONFIG_FILES($PAWDIR/bin/$ARCH/f90pp:$PAWDIR/src/F90PP/f90pp.in,[chmod +x $PAWDIR/bin/$ARCH/f90pp])
+AC_CONFIG_FILES($PAWDIR/bin/$ARCH/f90pp:$PAWDIR/src/Buildtools/F90PP/f90pp.in,[chmod +x $PAWDIR/bin/$ARCH/f90pp])
 #
 # create Makefile from Makefile_targets.in 
 #

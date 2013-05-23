@@ -18,7 +18,7 @@ SHELL=/bin/sh
 ##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
 ##    @PAWDIR@/src              sources for CP-PAW main code           ##
 ##    @PAWDIR@/src/Tools        directory containing Tools             ##
-##    @PAWDIR@/src/F90PP        directory preprocessor etc             ##
+##    @PAWDIR@/src/Buildtools/F90PP directory preprocessor etc         ##
 ##                                                                     ##
 #########################################################################
 ## The following block of variables is set by the configure            ##
@@ -329,8 +329,8 @@ OBJPOLYHEDRA=  \
 ##  create preprocessor                                                ##
 #########################################################################
 f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
-${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/F90PP/f90pp_tmplts.f90
-	${F90PP} -notemplates ${SRCDIR}/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
 
@@ -339,8 +339,8 @@ ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
 	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 
-${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
-	${F90PP} -notemplates ${SRCDIR}/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
 #
@@ -351,7 +351,13 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
+#FIXME: temporary fix
+ifeq ($(shell uname -s),Darwin)
+       echo "FIXME: we are on Darwin... not creating source blob"
+	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+else
 	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+endif
 #
 #########################################################################
 ##  build paw library                                                  ##
@@ -361,9 +367,22 @@ ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build full paw library and optionally exclude objects              ##
+##  this target can be used to create a library of all objects         ##
+##  additionally on can exclude objects using the EXCLUDE parameter    ##
+##  for example: make libfull EXCLUDE="paw_classical.o paw_setups.o"   ##
+##  The object paw.o will allways be excluded, because it contains a   ##
+##  main program.                                                      ##
+##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
 ${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIBFULL) $(subst ${OBJDIR}/paw.o,,${OBJECTS}) ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+#FIXME: temporary fix
+ifeq ($(shell uname -s),Darwin)
+       echo "FXIME: we are on Darwin... not creating source blob"
+	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+else
+	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+endif
+	ar -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 #
 #########################################################################
@@ -527,14 +546,21 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 # generate version information __________________________________________
 $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
-	sh ${SRCDIR}/Tools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
+	sh ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 # generate source blob __________________________________________________
 ${SRCBLOB}:
 	rm -f paw_srcblob paw_srcblob.o
 	tar -czf paw_srcblob ${SRCDIR}
+ifeq ($(shell uname -s),Linux) 
 	ld -r -b binary -o paw_srcblob.o paw_srcblob
+endif
+#FIXME: temporary fix
+ifeq ($(shell uname -s),Darwin)
+	touch $(SRCBLOB)
+	echo "FIXME: we are on Darwin... not creating source blob"
+endif
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
@@ -709,7 +735,7 @@ endif
 #   machine-generated dependencies
 #
 #   the dependencies are generated by the shell script "finddep"
-#   which must be run in the directory where it lies (src/F90PP)
+#   which must be run in the directory where it lies (src/Buildtools/F90PP)
 #   the resulting file "dependencies" in that directory is copied here...
 ###########################################################################
  ## file:src/paw_assist.f90

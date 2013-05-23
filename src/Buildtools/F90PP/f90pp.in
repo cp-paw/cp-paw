@@ -59,7 +59,7 @@ SPECIAL="@SPECIAL@"
 ##                                                                    ##
 ########################################################################
 #______________________________location of f90pp source files
-F90PPDIR=${PAWDIR}/src/F90PP
+F90PPDIR=${PAWDIR}/src/Buildtools/F90PP
 #______________________________final location of the f90pp preprocessor
 BINDIR=${PAWDIR}/bin/$ARCH
 #

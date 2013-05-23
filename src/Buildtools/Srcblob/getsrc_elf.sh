@@ -1,6 +1,7 @@
 #!/bin/bash
-#this script extracts the embedded source code from a cppaw binary
-#call with: bash getsrc.sh $PAWBINARY $DESTINATION
+#this script extracts the embedded source code from a cppaw binary which is in elf-format
+#if you have a binary that has been cerated on macosx please use getsrc_macho.sh
+#call with: bash getsrc_elf.sh $PAWBINARY $DESTINATION
 #PAWBINARY is for example paw_fast.x
 #DESTINATION is the location for the output of the source-tar-archive
 

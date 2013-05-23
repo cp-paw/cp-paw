@@ -30,13 +30,19 @@ if [ "$GIT_IS_AVAILABLE" = 0 ]; then
     #short revision number
     VER3=`git rev-list $VER2 | wc -l`
     #hash of last commit
-    VER4=`git log -1 --format="%H"` 
+    #VER4=`git log -1 --format="%H"` # --> not working on git 1.5.5.1
+    VER4=`git log -1 | head -n 1| cut -d " " -f2`
     #number of files changed since last commit
-    VER5=`git status --porcelain ../../../../src | wc -l` 
+    #VER5=`git status --porcelain ../../../../src | wc -l` # --> not working on git 1.5.5.1
+    VER5=`git diff ../../../../src | wc -l`
+    #AUTHOR=`git log -1 --format="%an (%ae)"` # --> not working on git 1.5.5.1
+    AUTHOR=`git log -1 | grep "Author: " | head -n 1 | sed "s/Author: //g"`
+    #DATE=`git log -1 --format="%aD"` #--> not working on git 1.5.5.1
+    DATE=`git log -1 | grep "Date: " | head -n 1 | sed "s/Date:   //g"`
     VERINF="branch: $VER2; remote: $VER1"
     VERREV="revision $VER3; $VER4; $VER5 changes since last commit"
-    VERAUT="last commit by `git log -1 --format="%an (%ae)"`; compiled by `whoami` on `hostname`"
-    VERDAT="last commit at `git log -1 --format="%aD"`; compiled at `date`"    
+    VERAUT="last commit by $AUTHOR; compiled by `whoami` on `hostname`"
+    VERDAT="last commit at $DATE; compiled at `date`"    
   else
     #git is installed, but we are not in a git repo
     echo "inside git repo: NO"    
