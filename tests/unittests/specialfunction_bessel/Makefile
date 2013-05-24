@@ -10,6 +10,6 @@ all:
 	@#compile ${UNITTESTS}.f90
 	@${COMPILE} -o ${OBJDIR}/paw_unittest_${TEST}_d.o ${OBJDIR}/paw_unittest_${TEST}_d.${FEXT}
 	@#link binary
-	@${LINK} -o paw_unittest_${TEST}.x $(subst paw.o,paw_unittest_${TEST}_d.o,${OBJECTS}) $(subst paw.o,paw_unittest_${TEST}_d.o,${LOBJS}) ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+	@${LINK} -o paw_unittest_${TEST}.x $(subst paw.o,paw_unittest_${TEST}_d.o,${OBJECTS}) $(subst paw.o,paw_unittest_${TEST}_d.o,${LOBJS}) ${OBJVERSION} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 	@#run unittest
 	@./paw_unittest_${TEST}.x

@@ -248,11 +248,11 @@ OBJECTS3 = \
 export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
 #
 # Object for version information
-OBJVERSION = \
+export OBJVERSION = \
 	      ${OBJDIR}/paw_version.o
 #
 # Object for source blob
-SRCBLOB = \
+export SRCBLOB = \
 	   ${OBJDIR}/paw_srcblob.o
 #
 #
