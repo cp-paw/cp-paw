@@ -73,7 +73,7 @@ CONTAINS
         FILE(1)%UNIT     =-1
         FILE(1)%OPEN     =.FALSE.
         FILE(1)%USED     =.FALSE.
-        FILE(1)%STATUS   ='ASIS'
+        FILE(1)%STATUS   ='UNKNOWN'
         FILE(1)%POSITION ='APPEND'
         FILE(1)%PERMISSION ='W'
         FILE(1)%FORMATTED=.TRUE.
@@ -184,7 +184,7 @@ END MODULE FILEHANDLER_MODULE
 !     **************************************************************************
 !     **  RETURN FILE UNIT FOR A GIVEN FILE (OPEN IF NECCESARY)               **
 !     **************************************************************************
-      USE FILEHANDLER_MODULE, only : file,filehandler_create,filehandler_lookup
+      USE FILEHANDLER_MODULE, ONLY : FILE,FILEHANDLER_CREATE,FILEHANDLER_LOOKUP
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       INTEGER(4)  ,INTENT(OUT):: UNIT_
@@ -472,9 +472,9 @@ END MODULE FILEHANDLER_MODULE
       END 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      recursive SUBROUTINE FILEHANDLER_OPEN(FILE_)
+      RECURSIVE SUBROUTINE FILEHANDLER_OPEN(FILE_)
 !     **************************************************************************
-!     **  OPEN files unless already open                                      **
+!     **  OPEN FILES UNLESS ALREADY OPEN                                      **
 !     **************************************************************************
       USE STRINGS_MODULE
       USE FILEHANDLER_MODULE
@@ -492,6 +492,7 @@ END MODULE FILEHANDLER_MODULE
       INTEGER(4)                     :: I
       LOGICAL(4)                     :: TOPENIBM  ! IBM CHOICE BETWEEN LITTLE AND BIG ENDIAN
       CHARACTER(1)                   :: CONVERT        !USED TO TEST FOR LITTLE AND BIG ENDIAN
+      CHARACTER(128)                 :: IOMSG
 !     **************************************************************************
       STDOUT =-'STDOUT'
       STDIN  =-'STDIN'
@@ -518,8 +519,15 @@ END MODULE FILEHANDLER_MODULE
       IERR=1
       IF(FILE_%OPEN) THEN
         IERR=2
-        CLOSE(FILE_%UNIT,IOSTAT=IOS)
-        CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+        CLOSE(FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG)
+        IF(IOS.NE.0) THEN 
+          CALL ERROR$MSG('ERROR CLOSING A FILE')
+          CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+          CALL ERROR$I4VAL('INTERNAL ID TO IDENTIFY ERROR LOCATION',IERR)
+          CALL ERROR$CHVAL('FILE ID',FILE_%ID)
+          CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
+          CALL ERROR$STOP('FILEHANDLER_OPEN')
+        END IF
         FILE_%OPEN=.FALSE.
       ELSE
         IERR=3
@@ -527,8 +535,15 @@ END MODULE FILEHANDLER_MODULE
           IF(I.EQ.0) CYCLE
           IF(I.EQ.5) CYCLE
           IF(I.EQ.6) CYCLE
-          INQUIRE(UNIT=I,OPENED=OD,IOSTAT=IOS)
-          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+          INQUIRE(UNIT=I,OPENED=OD,IOSTAT=IOS,IOMSG=IOMSG)
+          IF(IOS.NE.0) THEN
+            CALL ERROR$MSG('ERROR INQUIRING ABOUT A FILE')
+            CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+            CALL ERROR$I4VAL('INTERNAL ID TO IDENTIFY ERROR LOCATION',IERR)
+            CALL ERROR$CHVAL('FILE ID',FILE_%ID)
+            CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
+            CALL ERROR$STOP('FILEHANDLER_OPEN')
+          END IF
           IF(.NOT.OD) THEN
             FILE_%UNIT=I
             GOTO 200
@@ -577,42 +592,56 @@ END MODULE FILEHANDLER_MODULE
 !     == OPEN FILE                                                           ==
 !     =========================================================================
       IF(TRIM(FILE_%PERMISSION).EQ.'N') THEN
-!       == permission 'N' chooses default permission of (R,W,RW) ==============
-!       == special because parameter ACTION is omitted  =======================
+!       == PERMISSION 'N' CHOOSES DEFAULT PERMISSION OF (R,W,RW) ==============
+!       == SPECIAL BECAUSE PARAMETER ACTION IS OMITTED  =======================
         IERR=4
         IF(FILE_%FORMATTED) THEN
-!         == recl is explicitely specified to avoid arbitrary breakinf of =====
-!         == lines. recl is the max number if characters per line. ============
-!         == see: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=20257
-          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+!         == RECL IS EXPLICITELY SPECIFIED TO AVOID ARBITRARY BREAKINF OF =====
+!         == LINES. RECL IS THE MAX NUMBER IF CHARACTERS PER LINE. ============
+!         == SEE: HTTP://GCC.GNU.ORG/BUGZILLA/SHOW_BUG.CGI?ID=20257
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
      &        ,FILE=FILE_%NAME &
      &        ,STATUS=FILE_%STATUS &
-     &        ,FORM='formatted' &
+     &        ,FORM='FORMATTED' &
      &        ,POSITION=FILE_%POSITION &
-     &        ,recl=10000)    !max value accepted by gfortran
-         else
-!          == recl not specified for unformatted files. uses default.         ==
-!          == The default or recl is 2^31 bytes for direct access files       ==
-           OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+     &        ,RECL=10000)    !MAX VALUE ACCEPTED BY GFORTRAN
+        ELSE
+!          == RECL NOT SPECIFIED FOR UNFORMATTED FILES. USES DEFAULT.         ==
+!          == THE DEFAULT OR RECL IS 2^31 BYTES FOR DIRECT ACCESS FILES       ==
+           OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
      &        ,FILE=FILE_%NAME &
      &        ,STATUS=FILE_%STATUS &
      &        ,FORM='UNFORMATTED' &
      &        ,POSITION=FILE_%POSITION)
-         end if
-         CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+        END IF
+        IF(IOS.NE.0) THEN
+          CALL ERROR$MSG('ERROR OPENING A FILE')
+          CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+          CALL ERROR$I4VAL('INTERNAL ID TO IDENTIFY ERROR LOCATION',IERR)
+          CALL ERROR$CHVAL('FILE ID',FILE_%ID)
+          CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
+          CALL ERROR$STOP('FILEHANDLER_OPEN')
+        END IF
       ELSE
-!       == here files with specified action are opened ========================
+!       == HERE FILES WITH SPECIFIED ACTION ARE OPENED ========================
         IERR=5
         IF(FILE_%FORMATTED) THEN
-          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
      &        ,FILE=FILE_%NAME &
      &        ,STATUS=FILE_%STATUS &
      &        ,FORM='FORMATTED' &
      &        ,POSITION=FILE_%POSITION &
      &        ,ACTION=ACTION &
      &        ,RECL=1000)
-          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
-        else
+          IF(IOS.NE.0) THEN
+            CALL ERROR$MSG('ERROR OPENING A FILE')
+            CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+            CALL ERROR$I4VAL('INTERNAL ID TO IDENTIFY ERROR LOCATION',IERR)
+            CALL ERROR$CHVAL('FILE ID',FILE_%ID)
+            CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
+            CALL ERROR$STOP('FILEHANDLER_OPEN')
+          END IF
+        ELSE
 #IF DEFINED(CPPVAR_ENDIANCHECK)
           CALL FILEHANDLER_READCONVERT(FILE_,FORM,CONVERT)
           IF(CONVERT.EQ.'U') TOPENIBM=(.NOT.TLITTLEENDIAN) !UNKNOWN
@@ -623,7 +652,7 @@ END MODULE FILEHANDLER_MODULE
           IF(TOPENIBM) THEN 
             !FILE IS IBM COMPATIBLE AND HAS TO STAY SO
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIBLE'
-            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
                   &    ,FILE=FILE_%NAME &
                   &    ,STATUS=FILE_%STATUS &
                   &    ,FORM=FORM &
@@ -633,7 +662,7 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED IBM-COMPATIB
           ELSE
             ! FILE IS INTEL COMPATIBLE
 PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPATIBLE'
-            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+            OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
                   &    ,FILE=FILE_%NAME &
                   &    ,STATUS=FILE_%STATUS &
                   &    ,FORM=FORM &
@@ -642,14 +671,21 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
                   &    ,CONVERT='LITTLE_ENDIAN')
           END IF
 #ELSE
-          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS &
+          OPEN(UNIT=FILE_%UNIT,IOSTAT=IOS,IOMSG=IOMSG &
      &        ,FILE=FILE_%NAME &
      &        ,STATUS=FILE_%STATUS &
      &        ,FORM='UNFORMATTED' &
      &        ,POSITION=FILE_%POSITION &
      &        ,ACTION=ACTION)
 #ENDIF
-          CALL FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
+          IF(IOS.NE.0) THEN
+            CALL ERROR$MSG('ERROR OPENING A FILE')
+            CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+            CALL ERROR$I4VAL('INTERNAL ID TO IDENTIFY ERROR LOCATION',IERR)
+            CALL ERROR$CHVAL('FILE ID',FILE_%ID)
+            CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
+            CALL ERROR$STOP('FILEHANDLER_OPEN')
+          END IF
         END IF
       END IF
       FILE_%OPEN=.TRUE.
@@ -667,40 +703,6 @@ PRINT*,'FILEHANDLER: ATTENTION: FILE ',TRIM(FILE_%NAME),' IS OPENED INTEL-COMPAT
 !     FILE_%POSITION='ASIS'
       FILE_%USED=.TRUE.
       RETURN
-      END
-!
-!     ..................................................................
-      recursive SUBROUTINE FILEHANDLER_OPENERROR(IOS,IERR,FILE_)
-!     ******************************************************************
-!     ******************************************************************
-      Use STRINGS_MODULE
-      USE FILEHANDLER_MODULE, ONLY : FILE_TYPE
-      IMPLICIT NONE
-      TYPE (FILE_TYPE),INTENT(IN) :: FILE_
-      INTEGER(4)      ,INTENT(IN) :: IERR
-      INTEGER(4)      ,INTENT(IN) :: IOS
-      CHARACTER(9)                :: DEVNULL
-      CHARACTER(128)              :: IOSTATMESSAGE
-!     ******************************************************************
-      DEVNULL=-'/DEV/NULL'
-      IF(IOS.EQ.0) RETURN 
-      IF(FILE_%NAME.EQ.DEVNULL) RETURN
-      CALL FILEHANDLER$IOSTATMESSAGE(IOS,IOSTATMESSAGE)
-      CALL ERROR$MSG('IO ERROR')
-      CALL ERROR$I4VAL('IOS ',IOS)
-      CALL ERROR$I4VAL('IERR ',IERR)
-      CALL ERROR$CHVAL('FILE ID',FILE_%ID)
-      CALL ERROR$CHVAL('FILENAME ',FILE_%NAME)
-      CALL ERROR$L4VAL('OPEN',FILE_%OPEN)
-      CALL ERROR$L4VAL('USED',FILE_%USED)
-      CALL ERROR$CHVAL('STATUS',FILE_%STATUS)
-      CALL ERROR$CHVAL('POSITION ',FILE_%POSITION)
-      CALL ERROR$CHVAL('PERMISSION',FILE_%PERMISSION)
-      CALL ERROR$L4VAL('FORMATTED',FILE_%FORMATTED)
-!      CALL ERROR$CHVAL('IOSTATMESSAGE ',IOSTATMESSAGE)
-!      CALL ERROR$MSG('IOSTATMESSAGE MAY BE INCORRECT (COMPILER DEP)')
-      CALL ERROR$STOP('FILEHANDLER_OPEN')
-      STOP
       END
 !
 !     ..................................................................

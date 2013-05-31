@@ -746,17 +746,17 @@ MODULE LINKEDLIST_TRANSFERCH_MODULE
 PUBLIC LINKEDLIST_TRANSFERCHTO1
 PUBLIC LINKEDLIST_TRANSFERCHFROM1
 INTERFACE LINKEDLIST_TRANSFERCHTO1
-  MODULE PROCEDURE LINKEDLIST_TRANSFERCHvalTO1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHVALTO1
   MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRTO1
 END INTERFACE 
-INTERFACE LINKEDLIST_TRANSFERCHfrom1
-  MODULE PROCEDURE LINKEDLIST_TRANSFERCHvalfrom1
-  MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRfrom1
+INTERFACE LINKEDLIST_TRANSFERCHFROM1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHVALFROM1
+  MODULE PROCEDURE LINKEDLIST_TRANSFERCHARRFROM1
 END INTERFACE 
 CONTAINS
 
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHarrTO1(FROMSIZE,FROM,NTO,TO)
+      SUBROUTINE LINKEDLIST_TRANSFERCHARRTO1(FROMSIZE,FROM,NTO,TO)
       INTEGER(4)             ,INTENT(IN)  :: NTO
       INTEGER(4)             ,INTENT(IN)  :: FROMSIZE
       CHARACTER(*)           ,INTENT(IN)  :: FROM(FROMSIZE)
@@ -779,20 +779,20 @@ CONTAINS
       END SUBROUTINE LINKEDLIST_TRANSFERCHARRTO1
 !
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_TRANSFERCHvalTO1(fromsize,FROM,NTO,TO)
+      SUBROUTINE LINKEDLIST_TRANSFERCHVALTO1(FROMSIZE,FROM,NTO,TO)
       INTEGER(4)  ,INTENT(IN)   :: NTO
-      INTEGER(4)  ,INTENT(IN)   :: fromsize   !not needed
+      INTEGER(4)  ,INTENT(IN)   :: FROMSIZE   !NOT NEEDED
       CHARACTER(*),INTENT(IN)   :: FROM
       CHARACTER(1),INTENT(OUT)  :: TO(NTO)
       INTEGER(4)                :: I
       INTEGER(4)                :: FROMLEN
 !     ******************************************************************
       FROMLEN=LEN(FROM)
-      DO i=1,FROMLEN
-        TO(i)=FROM(i:i)
+      DO I=1,FROMLEN
+        TO(I)=FROM(I:I)
       ENDDO
-      DO i=fromlen+1,NTO
-        TO(i)=' '
+      DO I=FROMLEN+1,NTO
+        TO(I)=' '
       ENDDO
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHVALTO1
@@ -800,7 +800,7 @@ CONTAINS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LINKEDLIST_TRANSFERCHVALFROM1(NFROM,FROM,TOSIZE,TO)
 !     **************************************************************************
-!     **  map a character(1) array onto a string                              **
+!     **  MAP A CHARACTER(1) ARRAY ONTO A STRING                              **
 !     **************************************************************************
       INTEGER(4)  ,INTENT(IN)   :: NFROM
       CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
@@ -813,16 +813,16 @@ CONTAINS
       IF(TOLEN.LT.NFROM) THEN
         CALL ERROR$MSG('INCONSISTENT SIZE')
         CALL ERROR$MSG('TARGET STRING SMALLER THAN INPUT STRING')
-        do i=1,min(3,nfrom)
-          CALL ERROR$CHVAL('FROM',FROM(i))
-        enddo
+        DO I=1,MIN(3,NFROM)
+          CALL ERROR$CHVAL('FROM',FROM(I))
+        ENDDO
         CALL ERROR$I4VAL('NFROM',NFROM)
         CALL ERROR$I4VAL('TOLEN',TOLEN)
         CALL ERROR$STOP('LINKEDLIST_TRANSFERCHVALFROM1')
       END IF
       TO=' '
       DO I=1,NFROM
-        TO(i:i)=FROM(I)
+        TO(I:I)=FROM(I)
       ENDDO
       RETURN
       END SUBROUTINE LINKEDLIST_TRANSFERCHVALFROM1
@@ -830,7 +830,7 @@ CONTAINS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LINKEDLIST_TRANSFERCHARRFROM1(NFROM,FROM,TOSIZE,TO)
 !     **************************************************************************
-!     **  map a character(1) array onto a string array                        **
+!     **  MAP A CHARACTER(1) ARRAY ONTO A STRING ARRAY                        **
 !     **************************************************************************
       INTEGER(4)  ,INTENT(IN)   :: NFROM
       CHARACTER(1),INTENT(IN)   :: FROM(NFROM)
@@ -893,8 +893,8 @@ END MODULE LINKEDLIST_TRANSFERCH_MODULE
 !**                                                                   **
 !**  FUNCTIONS:                                                       **
 !**    LINKEDLIST$NEW(LIST)                                           **
-!**    LINKEDLIST$READ(LIST,NFIL,cid)                                 **
-!**    LINKEDLIST$WRITE(LIST,NFIL,cid)                                **
+!**    LINKEDLIST$READ(LIST,NFIL,CID)                                 **
+!**    LINKEDLIST$WRITE(LIST,NFIL,CID)                                **
 !**    LINKEDLIST$SELECT(LIST,ID,[NTH])                               **
 !**    LINKEDLIST$SET(LIST,ID,NTH,VAL)                                **
 !**    LINKEDLIST$GET(LIST,ID,NTH,VAL)                                **
@@ -926,7 +926,7 @@ END MODULE LINKEDLIST_TRANSFERCH_MODULE
 !***********************************************************************
 MODULE LINKEDLIST_MODULE
 USE LLIST_MODULE
-use LINKEDLIST_TRANSFERCH_MODULE
+USE LINKEDLIST_TRANSFERCH_MODULE
 TYPE LL_TYPE
  TYPE(LLIST_TYPE),POINTER :: PTR
 END TYPE LL_TYPE
@@ -1072,7 +1072,7 @@ CONTAINS
 !     **  STORES A DATA                                               **
 !     **                                                              **
 !     **  WILDCARDS:                                                  **
-!     **    1) NTH=0 ATTACH DATA TO THE FIrST ITEM AND CREATE ONE      **
+!     **    1) NTH=0 ATTACH DATA TO THE FIRST ITEM AND CREATE ONE      **
 !     **       IF NECCESARY                                           **
 !     **    2) NTH<0 APPENDS DATA ENTRY AND ATTACHES DATA THERE       **
 !     **    3) '*' APPLIES TO ANY ID                                  **
@@ -1604,7 +1604,7 @@ CONTAINS
       END IF
       IF(.NOT.ASSOCIATED(DATA)) THEN
         CALL ERROR$MSG('DATA DOES NOT EXIST')
-        CALL ERROR$STOP('LINKEDLIST$len')
+        CALL ERROR$STOP('LINKEDLIST$LEN')
       END IF
       STRING=DATA%TYPE
       I1=INDEX(STRING,'(')
@@ -1771,7 +1771,7 @@ CONTAINS
       INTEGER(4)                  :: LENG
       INTEGER(4)                  :: LENVAL
       CHARACTER(8)                :: STRING
-      integer(4)                  :: isvar1,isvar2
+      INTEGER(4)                  :: ISVAR1,ISVAR2
 !     ******************************************************************
       LIST=>LL%PTR
       LENG=<SIZE>
@@ -1786,12 +1786,12 @@ CONTAINS
       ISVAR2=ISVAR2+2
       STRING='('//TRIM(STRING(1:6))//')'
       ISVAR1=LEN_TRIM(TYPE%NAME)
-      IF(isvar1+isvar2.GT.8) THEN
+      IF(ISVAR1+ISVAR2.GT.8) THEN
         CALL ERROR$MSG('DATA EXCEEDED SIZE OF CHARACTER VARIABLE STRING')
         CALL ERROR$STOP('LINKEDLIST$SETCH')
       END IF
-!old      STRING=trim(TYPE%NAME(1:ISVAR1))//ADJUSTL(STRING)
-      STRING=trim(TYPE%NAME)//ADJUSTL(STRING)
+!OLD      STRING=TRIM(TYPE%NAME(1:ISVAR1))//ADJUSTL(STRING)
+      STRING=TRIM(TYPE%NAME)//ADJUSTL(STRING)
       ALLOCATE(CHARVAL(LENG*LENVAL))
 !          == IN THE FOLLOWING LINE THE <RANK>(1:LENVAL) WAS REQUIRED
 !          == TO AVOID THAT A BLANK WAS INSERTED AFTER EACH ELEMENT OF VAL
@@ -1805,7 +1805,7 @@ CONTAINS
 #END TEMPLATE LINKEDLIST$SETCHAR
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_SETCHr1withlength(LL,ID,NTH,leng,VAL)
+      SUBROUTINE LINKEDLIST_SETCHR1WITHLENGTH(LL,ID,NTH,LENG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  SPECIFIC INTERFACE FOR LINKEDLIST_SET.                      **
@@ -1821,14 +1821,14 @@ CONTAINS
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
       CHARACTER(*)    ,INTENT(IN) :: ID
       INTEGER(4)      ,INTENT(IN) :: NTH
-      INTEGER(4)      ,intent(in) :: LENG
-      CHARACTER(*)    ,INTENT(IN) :: VAL(leng)
+      INTEGER(4)      ,INTENT(IN) :: LENG
+      CHARACTER(*)    ,INTENT(IN) :: VAL(LENG)
       TYPE(LLIST_TYPE),POINTER    :: LIST
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
       CHARACTER(1)    ,POINTER    :: CHARVAL(:)
       INTEGER(4)                  :: LENVAL
       CHARACTER(8)                :: STRING
-      integer(4)                  :: isvar1,isvar2
+      INTEGER(4)                  :: ISVAR1,ISVAR2
 !     ******************************************************************
       LIST=>LL%PTR
       LENVAL=LEN(VAL)
@@ -1842,12 +1842,12 @@ CONTAINS
       ISVAR2=ISVAR2+2
       STRING='('//TRIM(STRING(1:6))//')'
       ISVAR1=LEN_TRIM(TYPE%NAME)
-      IF(isvar1+isvar2.GT.8) THEN
+      IF(ISVAR1+ISVAR2.GT.8) THEN
         CALL ERROR$MSG('DATA EXCEEDED SIZE OF CHARACTER VARIABLE STRING')
         CALL ERROR$STOP('LINKEDLIST_SETCHR1WITHLENGTH')
       END IF
-!old      STRING=trim(TYPE%NAME(1:ISVAR1))//ADJUSTL(STRING)
-      STRING=trim(TYPE%NAME)//ADJUSTL(STRING)
+!OLD      STRING=TRIM(TYPE%NAME(1:ISVAR1))//ADJUSTL(STRING)
+      STRING=TRIM(TYPE%NAME)//ADJUSTL(STRING)
       ALLOCATE(CHARVAL(LENG*LENVAL))
 !          == IN THE FOLLOWING LINE THE <RANK>(1:LENVAL) WAS REQUIRED
 !          == TO AVOID THAT A BLANK WAS INSERTED AFTER EACH ELEMENT OF VAL
@@ -1918,15 +1918,15 @@ CONTAINS
       I2=INDEX(STRING,')')
       READ(STRING(I1+1:I2-1),*)KIND
 !     == MAP STORED DATA ONTO VAL ====================================
-!      val=' '
+!      VAL=' '
 !      VAL=<RESHAPE(>TRANSFER(CHARVAL,MOLD(1:KIND)<,SIZE>)<RESHAPE)>
-      call LINKEDLIST_TRANSFERCHFROM1(kind*leng,charval,leng,val)
+      CALL LINKEDLIST_TRANSFERCHFROM1(KIND*LENG,CHARVAL,LENG,VAL)
       RETURN 
       END SUBROUTINE LINKEDLIST$GETCH<RANKID>
 #END TEMPLATE LINKEDLIST$GETCHAR
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST_GETCHr1withlength(LL,ID,NTH,leng,VAL)
+      SUBROUTINE LINKEDLIST_GETCHR1WITHLENGTH(LL,ID,NTH,LENG,VAL)
 !     ******************************************************************
 !     **                                                              **
 !     **  SPECIFIC INTERFACE FOR LINKEDLIST_GET.                      **
@@ -1942,8 +1942,8 @@ CONTAINS
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
       CHARACTER(*)    ,INTENT(IN) :: ID
       INTEGER(4)      ,INTENT(IN) :: NTH
-      INTEGER(4)      ,INTENT(IN) :: leng
-      CHARACTER(*)    ,INTENT(OUT):: VAL(leng)
+      INTEGER(4)      ,INTENT(IN) :: LENG
+      CHARACTER(*)    ,INTENT(OUT):: VAL(LENG)
       TYPE(LLIST_TYPE),POINTER    :: LIST
       TYPE(LDATA_TYPE),POINTER    :: DATA
       TYPE(TYPE_TYPE) ,PARAMETER  :: TYPE=TYPE_TYPE('CH',1)
@@ -1970,8 +1970,8 @@ CONTAINS
       I2=INDEX(STRING,')')
       READ(STRING(I1+1:I2-1),*)KIND
 !     == MAP STORED DATA ONTO VAL ====================================
-!      VAL=RESHAPE(TRANSFER(CHARVAL,MOLD(1:KIND),leng),shape(val))
-      call LINKEDLIST_TRANSFERCHFROM1(kind*leng,charval,leng,val)
+!      VAL=RESHAPE(TRANSFER(CHARVAL,MOLD(1:KIND),LENG),SHAPE(VAL))
+      CALL LINKEDLIST_TRANSFERCHFROM1(KIND*LENG,CHARVAL,LENG,VAL)
       RETURN 
       END SUBROUTINE LINKEDLIST_GETCHR1WITHLENGTH
 !     
@@ -2118,7 +2118,7 @@ CONTAINS
       END SUBROUTINE BUFFER_DELETE
 !
 !     ..................................................................
-      RECURSIVE SUBROUTINE BUFFER$WRITE(LIST_,NFIL,cid)
+      RECURSIVE SUBROUTINE BUFFER$WRITE(LIST_,NFIL,CID)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: BUFFER$WRITE(LIST,NFIL)                               **
@@ -2126,7 +2126,7 @@ CONTAINS
 !     ******************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
-      character(*),intent(in)  :: cid
+      CHARACTER(*),INTENT(IN)  :: CID
       INTEGER(4)   ,INTENT(IN) :: NFIL
       TYPE(LL_TYPE),INTENT(IN) :: LIST_
       TYPE(LL_TYPE)            :: LIST
@@ -2204,12 +2204,12 @@ CONTAINS
           ENDDO
           DEALLOCATE(L4ARRAY)
         ELSE IF(TYPE(1:3).EQ.'CH(') THEN
-          j=INDEX(TYPE,')')
-          READ(TYPE(4:j-1),*)ISVAR
+          J=INDEX(TYPE,')')
+          READ(TYPE(4:J-1),*)ISVAR
           ALLOCATE(CHARRAY(LENG))
           CHARRAY(:)=' '
 !         CALL LINKEDLIST$GET(LIST,'*',I,CHARRAY(:)(1:ISVAR))
-          CALL LINKEDLIST_GETchr1withlength(LIST,'*',I,leng,CHARRAY(:)(1:ISVAR))
+          CALL LINKEDLIST_GETCHR1WITHLENGTH(LIST,'*',I,LENG,CHARRAY(:)(1:ISVAR))
           DO J=1,LENG
             WRITE(NFIL,*)"'"//TRIM(CHARRAY(J))//"'"
           ENDDO
@@ -2230,7 +2230,7 @@ CONTAINS
         KEY='!'//TRIM(KEY)
         CALL LINKEDLIST$SELECT(LIST,'*',I)
         WRITE(NFIL,FMT='(A)')TRIM(KEY)
-        CALL BUFFER$WRITE(LIST,NFIL,cid)
+        CALL BUFFER$WRITE(LIST,NFIL,CID)
         WRITE(NFIL,FMT='("!END")')
         CALL LINKEDLIST$SELECT(LIST,'..',0)
       ENDDO
@@ -2238,7 +2238,7 @@ CONTAINS
       END SUBROUTINE BUFFER$WRITE
 !
 !     ..................................................................
-      SUBROUTINE BUFFER$READ(LIST_,NFIL,cid)
+      SUBROUTINE BUFFER$READ(LIST_,NFIL,CID)
 !     ******************************************************************
 !     **                                                              **
 !     **  READS DATA IN A BLOCK STRUCTURE INTO THE LINKED LIST        **
@@ -2255,7 +2255,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4)    ,INTENT(IN) :: NFIL
       TYPE(LL_TYPE) ,INTENT(IN) :: LIST_
-      character(*)  ,intent(in) :: cid
+      CHARACTER(*)  ,INTENT(IN) :: CID
       TYPE(LL_TYPE)             :: LIST
       TYPE(BUFF_TYPE)           :: BUFFER
       INTEGER(4)    ,PARAMETER  :: BUFFERSIZE=1000000
@@ -2270,8 +2270,9 @@ CONTAINS
       COMPLEX(8)    ,ALLOCATABLE:: C8ARRAY(:)
       REAL(8)       ,ALLOCATABLE:: R8ARRAY(:)
       INTEGER(4)    ,ALLOCATABLE:: I4ARRAY(:)
-      LOGICAL(4)    ,ALLOCATABLE:: L4ARRAY(:)
+      LOGICAL(4)    ,ALLOCATABLE:: L4ARRAY(:)!
       CHARACTER(256),ALLOCATABLE:: CHARRAY(:)
+      CHARACTER(50)             :: SCRATCH
 !     ******************************************************************
       LIST=LIST_
       KEY=' '
@@ -2281,8 +2282,8 @@ CONTAINS
 !     == INITIALIZE AND FILL BUFFER                                   ==
 !     ==================================================================
       CALL BUFFER_NEW(BUFFER,BUFFERSIZE)
-      rewind(nfil)
-      CALL BUFFER_READTOBUFFER(NFIL,BUFFER,cid)
+      REWIND(NFIL)
+      CALL BUFFER_READTOBUFFER(NFIL,BUFFER,CID)
 !
 !     ==================================================================
 !     ==  RESOLVE BUFFER AND MAP TO LINKEDLIST                        ==
@@ -2300,12 +2301,14 @@ CONTAINS
           CALL BUFFER_NEXTWORD(BUFFER,I1,I2)
 !         == REFRESH BUFFER
           IF(I1.EQ.0) THEN
-            CALL BUFFER_READTOBUFFER(NFIL,BUFFER,cid)
+            CALL BUFFER_READTOBUFFER(NFIL,BUFFER,CID)
             I1=BUFFER%FIRST
             CALL BUFFER_NEXTWORD(BUFFER,I1,I2)
             IF(I1.EQ.0) THEN
               CALL ERROR$MSG('DATA DOES NOT FIT BUFFER')
               CALL ERROR$MSG('OR BUFFER STRUCTURE CORRUPTED')
+              CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+              CALL ERROR$CHVAL('SCRATCH',SCRATCH)
               CALL ERROR$STOP('BUFFER$READ')
             ENDIF
           END IF
@@ -2333,6 +2336,8 @@ CONTAINS
             IF(LEVEL.LT.0) THEN
               CALL ERROR$MSG('BLOCK STRUCTURE INCORRECT')
               CALL ERROR$MSG('ENCONTERED !END WHILE NO BRANCH IS OPEN')
+              CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+              CALL ERROR$CHVAL('SCRATCH',SCRATCH)
               CALL ERROR$STOP('BUFFER$READ')
             END IF
             CALL LINKEDLIST$SELECT(LIST,'..')
@@ -2354,13 +2359,15 @@ CONTAINS
         ELSE
           CALL BUFFER_TYPESIZE(BUFFER,TYPE,LENG)
           IF(LENG.EQ.0) THEN
-            CALL BUFFER_READTOBUFFER(NFIL,BUFFER,cid)
+            CALL BUFFER_READTOBUFFER(NFIL,BUFFER,CID)
             CALL BUFFER_TYPESIZE(BUFFER,TYPE,LENG)
             IF(LENG.EQ.0) THEN
               CALL ERROR$MSG('DATA DOES NOT FIT BUFFER')
               CALL ERROR$MSG('OR BUFFER STRUCTURE CORRUPTED')
               CALL ERROR$MSG('LENG=0 AFTER CALLING TYPESIZE')
-              CALL ERROR$chval('type',type)
+              CALL ERROR$CHVAL('TYPE',TYPE)
+              CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+              CALL ERROR$CHVAL('SCRATCH',SCRATCH)
               CALL ERROR$STOP('BUFFER$READ')
             ENDIF
           END IF
@@ -2399,15 +2406,19 @@ CONTAINS
               CALL ERROR$CHVAL('CHARRAY(1)',CHARRAY(1))
               CALL ERROR$I4VAL('ACTUAL  LENGTH',ISVAR)
               CALL ERROR$I4VAL('MAXIMUM LENGTH',256)
+              CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+              CALL ERROR$CHVAL('SCRATCH',SCRATCH)
               CALL ERROR$STOP('BUFFER$READ')
             END IF
 !           CALL LINKEDLIST$SET(LIST,TRIM(KEY),-1,CHARRAY(:)(1:ISVAR))
-            CALL LINKEDLIST_SETchr1withlength(LIST,TRIM(KEY),-1,leng &
+            CALL LINKEDLIST_SETCHR1WITHLENGTH(LIST,TRIM(KEY),-1,LENG &
       &                                                    ,CHARRAY(:)(1:ISVAR))
             DEALLOCATE(CHARRAY)
           ELSE
             CALL ERROR$MSG('TYPE NOT RECOGNIZED')
             CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER$READ')
           END IF
           TDATA=.FALSE.
@@ -2418,7 +2429,7 @@ CONTAINS
       END SUBROUTINE BUFFER$READ
 !
 !     ..................................................................
-      SUBROUTINE BUFFER_READTOBUFFER(NFIL,BUFFER,cid)
+      SUBROUTINE BUFFER_READTOBUFFER(NFIL,BUFFER,CID)
 !     ******************************************************************
 !     **                                                              **
 !     **  NAME: BUFFER_READTOBUFFER(NFIL,BUFFER)                      **
@@ -2433,7 +2444,7 @@ CONTAINS
       INTEGER(4)     ,INTENT(IN)    :: NFIL
       TYPE(BUFF_TYPE),INTENT(INOUT) :: BUFFER
       INTEGER(4)     ,PARAMETER     :: LENGX=1024*32
-      character(*)   ,intent(in)    :: cid   ! id of the processor group
+      CHARACTER(*)   ,INTENT(IN)    :: CID   ! ID OF THE PROCESSOR GROUP
       LOGICAL(4)                    :: TEOB
       LOGICAL(4)                    :: PACKED  !INSIGNIFICANT BLANKS REMOVED
       CHARACTER(LENGX)              :: LINE
@@ -2442,9 +2453,10 @@ CONTAINS
       CHARACTER                     :: STCHAR
       INTEGER(4)                    :: IOS
       INTEGER(4)                    :: ISVAR,I
-      INTEGER(4)                    :: ntasks,thistask
+      INTEGER(4)                    :: NTASKS,THISTASK
+      CHARACTER(50)                 :: SCRATCH
 !     ******************************************************************
-      call mpe$query(cid,ntasks,thistask)
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
       CALL BUFFER_PACK(BUFFER)
       FREE=BUFFER%LENG-BUFFER%LAST+1
       PACKED=.TRUE.
@@ -2470,15 +2482,15 @@ CONTAINS
           READ(NFIL,FMT='(A)',ERR=9999,IOSTAT=IOS,END=200)LINE
         END IF
  200    CONTINUE
-        CALL MPE$BROADCAST(cid,1,LINE)
+        CALL MPE$BROADCAST(CID,1,LINE)
         LINE=ADJUSTL(LINE)
         LENG=LEN_TRIM(LINE)
-        if(leng.le.0) cycle
+        IF(LENG.LE.0) CYCLE
 !
 !       ================================================================
 !       ==  CHECK HERE FOR THE PRESENCE OF TABS ETC                   ==
 !       ================================================================
-!       == remove carriage return as special character
+!       == REMOVE CARRIAGE RETURN AS SPECIAL CHARACTER
         STCHAR=LINE(LENG:LENG)
         IF(IACHAR(STCHAR).EQ.13) THEN
           LINE(LENG:LENG)=' '
@@ -2488,16 +2500,18 @@ CONTAINS
           STCHAR=LINE(I:I)
           ISVAR=IACHAR(STCHAR)
           IF(ISVAR.LT.32) THEN
-            if(isvar.eq.9) then  ! horizontal tab
-              line(i:i)=' '
-            else
+            IF(ISVAR.EQ.9) THEN  ! HORIZONTAL TAB
+              LINE(I:I)=' '
+            ELSE
               CALL ERROR$MSG('TABS AND OTHER SPECIAL LETTERS ARE NOT ALLOWED')
               CALL ERROR$MSG('IN BUFFER STRUCTURED INPUT FILES')
               CALL ERROR$CHVAL('LINE',TRIM(LINE))
-              CALL ERROR$i4vaL('POSITION',i)
+              CALL ERROR$I4VAL('POSITION',I)
               CALL ERROR$I4VAL('ASCII VALUE OF DISALLOWED CHARACTER',ISVAR)
+              CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+              CALL ERROR$CHVAL('SCRATCH',SCRATCH)
               CALL ERROR$STOP('BUFFER_READ')
-           end if
+           END IF
           END IF
         ENDDO
 !
@@ -2624,6 +2638,7 @@ CONTAINS
       CHARACTER(128)               :: DATUM
       INTEGER(4)                   :: I1,I2
       INTEGER(4)                   :: ISVAR,II
+      CHARACTER(50)                :: SCRATCH
 !     ******************************************************************
       I1=BUFFER%FIRST
       TYPE='NONE'
@@ -2675,6 +2690,8 @@ CONTAINS
             CALL ERROR$CHVAL('PREVIOUS TYPE',TRIM(TYPE))
             CALL ERROR$CHVAL('TYPE ENCOUNTERED','CHARACTER')
             CALL ERROR$CHVAL('DATA',DATUM)
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER_TYPESIZE')
           END IF
 !
@@ -2691,6 +2708,8 @@ CONTAINS
             CALL ERROR$CHVAL('PREVIOUS TYPE',TRIM(TYPE))
             CALL ERROR$CHVAL('TYPE ENCOUNTERED','LOGICAL')
             CALL ERROR$CHVAL('DATA',DATUM)
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER_TYPESIZE')
           END IF
 !
@@ -2706,6 +2725,8 @@ CONTAINS
             CALL ERROR$CHVAL('PREVIOUS TYPE',TRIM(TYPE))
             CALL ERROR$CHVAL('TYPE ENCOUNTERED','COMPLEX')
             CALL ERROR$CHVAL('DATA',DATUM)
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER_TYPESIZE')
           END IF
 !
@@ -2722,6 +2743,8 @@ CONTAINS
             CALL ERROR$CHVAL('PREVIOUS TYPE',TRIM(TYPE))
             CALL ERROR$CHVAL('TYPE ENCOUNTERED','REAL')
             CALL ERROR$CHVAL('DATA',DATUM)
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER_TYPESIZE')
           END IF
 !
@@ -2737,6 +2760,8 @@ CONTAINS
             CALL ERROR$CHVAL('PREVIOUS TYPE',TRIM(TYPE))
             CALL ERROR$CHVAL('TYPE ENCOUNTERED','INTEGER')
             CALL ERROR$CHVAL('DATA',DATUM)
+            CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+            CALL ERROR$CHVAL('SCRATCH',SCRATCH)
             CALL ERROR$STOP('BUFFER_TYPESIZE')
           END IF
         END IF        
@@ -2776,6 +2801,7 @@ CONTAINS
       INTEGER(4)                   :: ISVAR,II,IDATA
       INTEGER(4)                   :: LENG
       INTEGER(4)                   :: I
+      CHARACTER(50)                :: SCRATCH
 !     ******************************************************************
       I1=BUFFER%FIRST
       LENG=SIZE(VAL)
@@ -2787,6 +2813,8 @@ CONTAINS
 !       == TERMINATE LOOP IF KEY WORD ENCOUNTERED OR NO NEXT WORD     ==
 !       ================================================================
         IF(I1.EQ.0) THEN
+          CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+          CALL ERROR$CHVAL('SCRATCH',SCRATCH)
           CALL ERROR$STOP('BUFFER_READ<TYPEID>')
         END IF
         IF((BUFFER%CH(I2).EQ.'=').OR.(BUFFER%CH(I1).EQ.'!')) THEN
@@ -2816,6 +2844,8 @@ CONTAINS
         END IF
         IF(IDATA+II.GT.LENG) THEN
           CALL ERROR$MSG('MORE DATA THAN ARRAY CAN HOLD')
+          CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+          CALL ERROR$CHVAL('SCRATCH',SCRATCH)
           CALL ERROR$STOP('BUFFER_READ<TYPEID>')
         END IF
 !
@@ -2824,13 +2854,15 @@ CONTAINS
 !       ================================================================
         DO I=1,II
           IDATA=IDATA+1
-          READ(DATUM,*,err=1000)VAL(IDATA)
+          READ(DATUM,*,ERR=1000)VAL(IDATA)
         ENDDO
       ENDDO
       RETURN
 1000  CONTINUE
       CALL ERROR$MSG('CORRUPTED DATA FIELD ON INPUT')
       CALL ERROR$CHVAL('DATUM',DATUM)
+      CALL BUFFER_SCRATCH(BUFFER,SCRATCH)
+      CALL ERROR$CHVAL('SCRATCH',SCRATCH)
       CALL ERROR$STOP('BUFFER_READ<TYPEID>')
       END SUBROUTINE BUFFER_READ<TYPEID>
 #END TEMPLATE BUFFER_READXX
@@ -2920,9 +2952,9 @@ CONTAINS
         END IF
 !       ========================================================================
 !       ==  SWITCH FOR CHARACTER CONTEXT                                      ==
-!       == ichar=0: outside text string                                       ==
-!       == ichar=1: inside text string enclosed by single apostrophes         ==
-!       == ichar=2: inside text string enclosed by double apostrophes         ==
+!       == ICHAR=0: OUTSIDE TEXT STRING                                       ==
+!       == ICHAR=1: INSIDE TEXT STRING ENCLOSED BY SINGLE APOSTROPHES         ==
+!       == ICHAR=2: INSIDE TEXT STRING ENCLOSED BY DOUBLE APOSTROPHES         ==
 !       ========================================================================
         IF(ICHAR.EQ.0) THEN
           IF(CHAR.EQ."'") THEN
@@ -2941,7 +2973,7 @@ CONTAINS
 !       ==                                                                    ==
 !       ========================================================================
         IF(I1NEW.EQ.0) THEN
-          IF(IBLANK.EQ.0) I1NEW=I  !position of first non-blank character
+          IF(IBLANK.EQ.0) I1NEW=I  !POSITION OF FIRST NON-BLANK CHARACTER
         ELSE
           IF(ICHAR.EQ.0) THEN
             IF(IBLANK.GE.1) THEN
@@ -2958,17 +2990,45 @@ CONTAINS
       IF(I2.EQ.0) I1=0
       RETURN
       END SUBROUTINE BUFFER_NEXTWORD
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BUFFER_SCRATCH(BUFFER,STRING)
+!     **************************************************************************
+!     **                                                                      **
+!     **  NAME: BUFFER_SCRATCH(BUFFER,STRING)                                 **
+!     **                                                                      **
+!     **  PURPOSE: DUMPS A SEQUENCE OF BUFFER TO A STRING AS A HINT TO        **
+!     **    LOCATE THE ACTUAL POSITION OF A PROBLEM IN AN ERROR MESSAGE       **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      TYPE(BUFF_TYPE),INTENT(INOUT):: BUFFER
+      CHARACTER(*)   ,INTENT(OUT)  :: STRING
+      INTEGER(4)                   :: I,ICHAR
+      INTEGER(4)                   :: LENGTH
+      CHARACTER(1)                 :: CHAR
+!     **************************************************************************
+      LENGTH=LEN(STRING)
+      ICHAR=0
+      DO I=BUFFER%FIRST,BUFFER%LAST      
+        ICHAR=ICHAR+1
+        IF(ICHAR.GT.LENGTH) EXIT
+        CHAR=BUFFER%CH(I)
+        STRING(ICHAR:ICHAR)=CHAR
+      ENDDO
+      RETURN
+      END SUBROUTINE BUFFER_SCRATCH
 END MODULE BUFFER_MODULE
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST$READ(LL_,NFIL,cid)
+      SUBROUTINE LINKEDLIST$READ(LL_,NFIL,CID)
 !     ******************************************************************
 !     **                                                              **
 !     **  CREATES A HOME DIRECTORY FOR THE LIST                       **
 !     **  IF LIST IS ASSOCIATED ALREADY, ITS CONNECTION IS BROKEN     **
 !     **                                                              **
-!     **  reads on the first task of the specified processor group    **
-!     **  and distributes the result onto all processors in the group **
+!     **  READS ON THE FIRST TASK OF THE SPECIFIED PROCESSOR GROUP    **
+!     **  AND DISTRIBUTES THE RESULT ONTO ALL PROCESSORS IN THE GROUP **
 !     **                                                              **
 !     **  ERROR CONDITIONS: NONE                                      **
 !     **                                                              **
@@ -2979,22 +3039,22 @@ END MODULE BUFFER_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL_
       INTEGER(4)      ,INTENT(IN) :: NFIL
-      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
+      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
       TYPE(LL_TYPE)               :: LL
 !     ******************************************************************
       LL=LL_
-      CALL BUFFER$READ(LL,NFIL,cid)
+      CALL BUFFER$READ(LL,NFIL,CID)
       RETURN
       END SUBROUTINE LINKEDLIST$READ
 !     
 !     ..................................................................
-      SUBROUTINE LINKEDLIST$WRITE(LL,NFIL,cid)
+      SUBROUTINE LINKEDLIST$WRITE(LL,NFIL,CID)
 !     ******************************************************************
 !     **                                                              **
 !     **  CREATES A HOME DIRECTORY FOR THE LIST                       **
 !     **  IF LIST IS ASSOCIATED ALREADY, ITS CONNECTION IS BROKEN     **
 !     **                                                              **
-!     **  works only on the first task of the specified processor group*
+!     **  WORKS ONLY ON THE FIRST TASK OF THE SPECIFIED PROCESSOR GROUP*
 !     **                                                              **
 !     **                                                              **
 !     **  ERROR CONDITIONS: NONE                                      **
@@ -3005,13 +3065,13 @@ END MODULE BUFFER_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
       INTEGER(4)      ,INTENT(IN) :: NFIL
-      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE mpe OBECT)
-      integer(4)                  :: ntasks,thistask
+      CHARACTER(*)    ,INTENT(IN) :: CID ! RELEVANT PROCESSOR GROUP (SEE MPE OBECT)
+      INTEGER(4)                  :: NTASKS,THISTASK
 !     ******************************************************************
-      call mpe$query(cid,ntasks,thistask)
-      if(thistask.eq.1) then
-        CALL BUFFER$WRITE(LL,NFIL,cid)
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
+      IF(THISTASK.EQ.1) THEN
+        CALL BUFFER$WRITE(LL,NFIL,CID)
         WRITE(NFIL,FMT='(A)')'!EOB'
-      end if
+      END IF
       RETURN
       END SUBROUTINE LINKEDLIST$WRITE
