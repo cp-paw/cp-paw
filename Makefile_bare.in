@@ -540,7 +540,7 @@ $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 # generate source blob __________________________________________________
 ${SRCBLOB}:
 	rm -f paw_srcblob paw_srcblob.o
-	tar -czf paw_srcblob ${SRCDIR}
+	tar -czf paw_srcblob ${SRCDIR} ${PAWDIR}/parms.in_use
 ifeq ($(shell uname -s),Linux) 
 	ld -r -b binary -o paw_srcblob.o paw_srcblob
 endif
