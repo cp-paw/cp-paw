@@ -15374,7 +15374,7 @@ END MODULE DMFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$GREEN()
 !     **************************************************************************
-!     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     ** CALCULATES THE LOCAL INTERACTING GREENS FUNCTION                     **
 !     **                                                                      **
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
@@ -15529,7 +15529,7 @@ stop 'end of loop. stopping.'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$CHEMPOT()
 !     **************************************************************************
-!     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     ** CALCULATES THE LOCAL INTERACTING GREENS FUNCTION                     **
 !     **                                                                      **
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
@@ -15618,19 +15618,19 @@ PRINT*,'DMFT$CHEMPOT: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
 !
           TRHPS0SQUARE=SUM(HPS0**2)
 !
-!         ====================================================================
-!         == LAURENT EXPANSION COEFFICIENTS REQUIRED FOR THE REGULARIZATION ==
-!         ====================================================================
+!         ======================================================================
+!         == LAURENT EXPANSION COEFFICIENTS REQUIRED FOR THE REGULARIZATION   ==
+!         ======================================================================
           LAURENT1=TRHPS0-MU*TR1
           LAURENT2=(TRHPS0SQUARE-2.D0*TRHPS0*MU+MU**2*TR1)+TRDS1
 !
-!         ====================================================================
-!         ==  PERFORM MATSUBARA SUMS                                        ==
-!         ====================================================================
+!         ======================================================================
+!         ==  PERFORM MATSUBARA SUMS                                          ==
+!         ======================================================================
           NOFMU1=0.D0
           DO NU=1,NOMEGA
             IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
-!           == CONSTRUCT LATTICE GREENS FUNCTION =============================
+!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
             GREENINV(:,:)=-HAMILTON(:,:,IKPT,ISPIN) &
      &            -MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
      &                   ,MATMUL(DSIG0(:,:,NU,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
@@ -15643,13 +15643,13 @@ PRINT*,'DMFT$CHEMPOT: #(ELECTRONS)=',NEL,' #(BANDS)=',NB
               NOFMU1=NOFMU1+WKPTL(IKPT)*KBT*REAL(GREEN(IB,IB))
             ENDDO
 !
-!           == REGULARIZE THE GREEN'S FUNCTION BEFORE ADDING IT UP ===========
+!           == REGULARIZE THE GREENS FUNCTION BEFORE ADDING IT UP ==============
             CSVAR=TR1/(CI*OMEGA(NU))+LAURENT1/(CI*OMEGA(NU))**2 &
         &                           +LAURENT2/(CI*OMEGA(NU))**3
             NOFMU1=NOFMU1-WKPTL(IKPT)*KBT*REAL(CSVAR)
           ENDDO
           NOFMU=NOFMU+2.D0*NOFMU1   ! ADD NEGATIVE FREQUENCIES
-!         == ADD SUM OF LONG-RANGE TAILS =====================================
+!         == ADD SUM OF LONG-RANGE TAILS =======================================
           SVAR=REAL(0.5D0*TR1-0.25D0/KBT*LAURENT1)
           NOFMU=NOFMU+WKPTL(IKPT)*SVAR/REAL(NTASKS_K)
         ENDDO
@@ -15674,7 +15674,7 @@ PRINT*,'..... CHEMPOT DETERMINED'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_GREENANDDENMAT()
 !     **************************************************************************
-!     ** CALCULATES THE LOCAL INTERACTING GREEN'S FUNCTION                    **
+!     ** CALCULATES THE LOCAL INTERACTING GREENS FUNCTION                     **
 !     ** AND THE DENSITY MATRIX                                               **
 !     **                                                                      **
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
@@ -15726,12 +15726,12 @@ PRINT*,'..... CHEMPOT DETERMINED'
 !         ======================================================================
 !         ==  CALCULATE MATRICES FOR THE REGULARIZATION                       ==
 !         ==  GLAT -> 1/IOMEGA + HPS0/IOMEGA^2 + L3MAT/IOMEGA^3               ==
-!         ==  GLOC -> GLOCLAUR1/IOMEGA + GLOCLAUR2/IOMEGA^2 + GLOCLAUR3/IOMEGA^3    ==
+!         ==  GLOC -> GLOCLAUR1/IOMEGA + GLOCLAUR2/IOMEGA^2+GLOCLAUR3/IOMEGA^3==
 !         ======================================================================
 !         == HPS0=HAMILTON+SIGMA-MU ============================================
           HPS0=HAMILTON(:,:,IKPT,ISPIN) &
        &         +MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
-       &                      ,MATMUL(DSIGLAUR0(:,:,ISPIN,1),PIPSI(:,:,IKPT,ISPIN)))
+       &                  ,MATMUL(DSIGLAUR0(:,:,ISPIN,1),PIPSI(:,:,IKPT,ISPIN)))
           DO IB=1,NB
             HPS0(IB,IB)=HPS0(IB,IB)-MU
           ENDDO
@@ -15740,7 +15740,7 @@ PRINT*,'..... CHEMPOT DETERMINED'
        &       +MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
        &                ,MATMUL(DSIGLAUR0(:,:,ISPIN,2),PIPSI(:,:,IKPT,ISPIN)))
 !
-!         == LAURENT EXPANSION TERMS FOR THE LOCAL GREEN'S FUNCTION ============
+!         == LAURENT EXPANSION TERMS FOR THE LOCAL GREENS FUNCTION =============
           GLOCLAUR1(:,:,ISPIN)=GLOCLAUR1(:,:,ISPIN)+WKPTL(IKPT) &
        &                               *MATMUL(PIPSI(:,:,IKPT,ISPIN) &
        &                               ,CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN))))
@@ -15770,7 +15770,7 @@ PRINT*,'..... CHEMPOT DETERMINED'
 !           == INVERT TO OBTAIN LATTICE GREENS FUNCTION ========================
             CALL LIB$INVERTC8(NB,GREENINV,GREEN)
 !
-!           == CONSTRUCT INTERACTING LOCAL GREEN'S FUNCTION ====================
+!           == CONSTRUCT INTERACTING LOCAL GREENS FUNCTION =====================
             GLOC(:,:,NU,ISPIN)=GLOC(:,:,NU,ISPIN)+WKPTL(IKPT) &
      &                 *MATMUL(PIPSI(:,:,IKPT,ISPIN) &
      &                   ,MATMUL(GREEN,CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN)))))
@@ -16562,7 +16562,7 @@ GAMMAP=GAMMA0
 !     **************************************************************************
 !     **  PROPAGATE DSIGMA                                                    **
 !     **                                                                      **
-!     **  Preconditioning considers the Green's function that is constant     **
+!     **  Preconditioning considers the Greens function that is constant      **
 !     **  within an energy region.                                            **
 !     **          m(omega)=msigma/omega*atan(msigmac2/omega)                  **
 !     **************************************************************************
@@ -16769,7 +16769,7 @@ if(iter.gt.200) stop 'forced stop after 200 iterations'
 !     **************************************************************************
 !     ** DENSITY OF STATES OF THE EFFECTIVE HAMILTONIAN PROJECTED ONTO        **
 !     ** THE CORRELATED SUBSPACE. USED FOR COMPARING WITH THE FUNCTION FROM   **
-!     ** DMFT$ DOS OBTAINED FROM THE GREEN'S FUNCTION                         **
+!     ** DMFT$ DOS OBTAINED FROM THE GREENS FUNCTION                          **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,IPROOFCHI,WKPTL,KBT
       USE MPE_MODULE
@@ -17006,7 +17006,7 @@ if(iter.gt.200) stop 'forced stop after 200 iterations'
       PRINT*,'... DELTA.DAT WRITTEN'
 !
 !     ==========================================================================
-!     ==  WRITE LOCAL GREEN'S FUNCTION TO FILE                                ==
+!     ==  WRITE LOCAL GREENS FUNCTION TO FILE                                 ==
 !     ==========================================================================
       PRINT*,'WRITING GLOC.DAT'
       OPEN(UNIT=11,FILE='GLOC.DAT')
