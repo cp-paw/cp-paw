@@ -45,7 +45,7 @@ set +x
 # configure script
 #
 #______________________ 
-PAWDIR="@PAWDIR@"
+THISDIR="@THISDIR@"
 #______________________ 
 CPP="@CPP@"
 #______________________ 
@@ -59,9 +59,9 @@ SPECIAL="@SPECIAL@"
 ##                                                                    ##
 ########################################################################
 #______________________________location of f90pp source files
-F90PPDIR=${PAWDIR}/src/Buildtools/F90PP
+F90PPDIR=${THISDIR}/src/Buildtools/F90PP
 #______________________________final location of the f90pp preprocessor
-BINDIR=${PAWDIR}/bin/$ARCH
+BINDIR=${THISDIR}/bin/$ARCH
 #
 if test "${SPECIAL}" = "IBM" ; then
   POE_PREFIX='poe'

@@ -11,14 +11,14 @@ SHELL=/bin/sh
 ##  Primary targets:                                                   ##
 ##                                                                     ##
 ##  directory structure                                                ##
-##    @PAWDIR@/bin/@ARCH@       executables                            ##
-##    @PAWDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
-##    @PAWDIR@/bin/@ARCH@/fast  optimized objects                      ##
-##    @PAWDIR@/bin/@ARCH@/prof  objects for profiling                  ##
-##    @PAWDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
-##    @PAWDIR@/src              sources for CP-PAW main code           ##
-##    @PAWDIR@/src/Tools        directory containing Tools             ##
-##    @PAWDIR@/src/Buildtools/F90PP directory preprocessor etc         ##
+##    @THISDIR@/bin/@ARCH@       executables                            ##
+##    @THISDIR@/bin/@ARCH@/none  objects with simple compiler flags     ##
+##    @THISDIR@/bin/@ARCH@/fast  optimized objects                      ##
+##    @THISDIR@/bin/@ARCH@/prof  objects for profiling                  ##
+##    @THISDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
+##    @THISDIR@/src              sources for CP-PAW main code           ##
+##    @THISDIR@/src/Tools        directory containing Tools             ##
+##    @THISDIR@/src/Buildtools/F90PP directory preprocessor etc         ##
 ##                                                                     ##
 #########################################################################
 ## The following block of variables is set by the configure            ##
@@ -28,17 +28,17 @@ SHELL=/bin/sh
 #___________________________ the hardware architecture
 export ARCH=@ARCH@
 #___________________________ root directory of the PAW distribution
-export PAWDIR=@PAWDIR@
+export THISDIR=@THISDIR@
 #___________________________ object type (none,fast,dbg,prof)
 export OBJTYPE=varOBJTYPE
 #___________________________ path to the source files
-export SRCDIR=${PAWDIR}/src
+export SRCDIR=${THISDIR}/src
 #___________________________ path to the object files
-export OBJDIR=${PAWDIR}/bin/${ARCH}/Objects/${OBJTYPE}
+export OBJDIR=${THISDIR}/bin/${ARCH}/Objects/${OBJTYPE}
 #___________________________ path to the binaries
-export BINDIR=${PAWDIR}/bin/${ARCH}
+export BINDIR=${THISDIR}/bin/${ARCH}
 #___________________________ path to the tool-directory
-export TOOLDIR=${PAWDIR}/src/Tools
+export TOOLDIR=${THISDIR}/src/Tools
 #___________________________ directory with blas library
 export BLASDIR=@BLASDIR@
 #___________________________ directory with lapack library
@@ -335,7 +335,7 @@ ${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
 
 ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
-	cat ${PAWDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
+	cat ${THISDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
 	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 
@@ -517,7 +517,7 @@ ${OBJDIR}/mpif.h:
 #
 tests: ${PAWX} varOBJTYPE_tests
 varOBJTYPE_tests: ${PAWX} 
-	rm -rf ${BINDIR}/varOBJTYPE_tests;cp -r ${PAWDIR}/tests ${BINDIR}/varOBJTYPE_tests;cd ${BINDIR}/varOBJTYPE_tests;${MAKE} all
+	rm -rf ${BINDIR}/varOBJTYPE_tests;cp -r ${THISDIR}/tests ${BINDIR}/varOBJTYPE_tests;cd ${BINDIR}/varOBJTYPE_tests;${MAKE} all
 #
 #${OBJDIR}/mm_paw_f77.o
 #########################################################################
@@ -540,7 +540,7 @@ $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 # generate source blob __________________________________________________
 ${SRCBLOB}:
 	rm -f paw_srcblob paw_srcblob.o
-	tar -czf paw_srcblob ${SRCDIR} ${PAWDIR}/parms.in_use
+	tar -czf paw_srcblob ${SRCDIR} ${THISDIR}/parms.in_use
 ifeq ($(shell uname -s),Linux) 
 	ld -r -b binary -o paw_srcblob.o paw_srcblob
 endif
