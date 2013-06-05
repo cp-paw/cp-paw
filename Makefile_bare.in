@@ -18,7 +18,7 @@ SHELL=/bin/sh
 ##    @THISDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
 ##    @THISDIR@/src              sources for CP-PAW main code           ##
 ##    @THISDIR@/src/Tools        directory containing Tools             ##
-##    @THISDIR@/src/F90PP        directory preprocessor etc             ##
+##    @THISDIR@/src/Buildtools/F90PP directory preprocessor etc         ##
 ##                                                                     ##
 #########################################################################
 ## The following block of variables is set by the configure            ##
@@ -26,74 +26,74 @@ SHELL=/bin/sh
 #########################################################################
 #
 #___________________________ the hardware architecture
-ARCH=@ARCH@
+export ARCH=@ARCH@
 #___________________________ root directory of the PAW distribution
-THISDIR=@THISDIR@
+export THISDIR=@THISDIR@
 #___________________________ object type (none,fast,dbg,prof)
-OBJTYPE=varOBJTYPE
+export OBJTYPE=varOBJTYPE
 #___________________________ path to the source files
-SRCDIR=${THISDIR}/src
+export SRCDIR=${THISDIR}/src
 #___________________________ path to the object files
-OBJDIR=${THISDIR}/bin/${ARCH}/Objects/${OBJTYPE}
+export OBJDIR=${THISDIR}/bin/${ARCH}/Objects/${OBJTYPE}
 #___________________________ path to the binaries
-BINDIR=${THISDIR}/bin/${ARCH}
+export BINDIR=${THISDIR}/bin/${ARCH}
 #___________________________ path to the tool-directory
-TOOLDIR=${THISDIR}/src/Tools
+export TOOLDIR=${THISDIR}/src/Tools
 #___________________________ directory with blas library
-BLASDIR=@BLASDIR@
+export BLASDIR=@BLASDIR@
 #___________________________ directory with lapack library
-LAPACKDIR=@LAPACKDIR@
+export LAPACKDIR=@LAPACKDIR@
 #___________________________ directory with fft library
-FFTDIR=@FFTDIR@
+export FFTDIR=@FFTDIR@
 #___________________________ directory with MPI library
-MPIDIR=@MPIDIR@
+export MPIDIR=@MPIDIR@
 #___________________________header file for fft
-FFT_HEADER=@FFT_HEADER@
+export FFT_HEADER=@FFT_HEADER@
 #___________________________header file for MPI
-MPI_HEADER=@MPI_HEADER@
+export MPI_HEADER=@MPI_HEADER@
 #___________________________special treatment
-SPECIAL=@SPECIAL@
+export SPECIAL=@SPECIAL@
 #___________________________ set to T, if this is Makefile.parallel
-PARALLEL=varPARALLEL
+export PARALLEL=varPARALLEL
 #___________________________ Fortran90 compiler + compiler flags
 ifeq (${PARALLEL},T)
-  COMPILE=@COMPILE_PARALLEL@
-  LINK=@LINK_PARALLEL@
-  LIBS=@LIBS_PARALLEL@
-  F90PP=${BINDIR}/f90pp @CPPFLAGS@ -DCPPVARIABLE_PARALLEL
+  export COMPILE=@COMPILE_PARALLEL@
+  export LINK=@LINK_PARALLEL@
+  export LIBS=@LIBS_PARALLEL@
+  export F90PP=${BINDIR}/f90pp @CPPFLAGS@ -DCPPVARIABLE_PARALLEL
 else
-  COMPILE=@COMPILE_SCALAR@
-  LINK=@LINK_SCALAR@
-  LIBS=@LIBS_SCALAR@
-  F90PP=${BINDIR}/f90pp @CPPFLAGS@
+  export COMPILE=@COMPILE_SCALAR@
+  export LINK=@LINK_SCALAR@
+  export LIBS=@LIBS_SCALAR@
+  export F90PP=${BINDIR}/f90pp @CPPFLAGS@
 endif
 #___________________________ the PAW-binary (inclusive path)
-PAWX=@PAWX@
+export PAWX=@PAWX@
 #___________________________ the extension of files to be compiled
-FEXT=@FEXT@
+export FEXT=@FEXT@
 #___________________________ the GNU make utility
-MAKE=@MAKE@
+export MAKE=@MAKE@
 #
 ##########################################################################
 ##  define parameters                                                   ##
 ##########################################################################
 ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
-  MODE=_p
+  export MODE=_p
 else
-  MODE=_s
+  export MODE=_s
 endif
 ifeq (${SPECIAL},IBM)
-  POE_PREFIX=poe
-  POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
+  export POE_PREFIX=poe
+  export POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
 else
-  POE_PREFIX=
-  POE_SUFFIX=
+  export POE_PREFIX=
+  export POE_SUFFIX=
 endif
 #
 # out of the file src/paw_mpelib.f a parallel _p and
 # a sequential _s version are produced
 #
-MPE = ${OBJDIR}/paw_mpelib$(MODE).o
+export MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 #
 ##########################################################################
 ##  include files                                                       ##
@@ -137,7 +137,8 @@ endif
 # libpaw.a holds the object files and can be linked to any code which
 # needs a PAW subroutine (leave the # after libpaw.a)
 # MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
-PAWLIB= ${OBJDIR}/libpaw.a#
+export PAWLIB= ${OBJDIR}/libpaw.a#
+export PAWLIBFULL= ${OBJDIR}/libpawfull.a#
 #
 #########################################################################
 ## Definition of the targets                                           ##
@@ -147,14 +148,15 @@ default: ${PAWX}
 clean:
 	find ${OBJDIR}/* -maxdepth 0 \! -name Makefile -exec rm {} \;
 	rm -f ${PAWX}
+	rm -rf ${BINDIR}/*_tests
 #
 ##########################################################################
 ##  define object files kept in the library                             ##
 ##########################################################################
 #
-LOBJSF77 = \
+export LOBJSF77 = \
 	 ${OBJDIR}/slatec.o
-LOBJS = \
+export LOBJS = \
         ${OBJDIR}/paw_trace.o \
         ${OBJDIR}/paw_error.o \
         ${OBJDIR}/paw_filehandler.o \
@@ -192,7 +194,7 @@ LOBJS = \
 ##########################################################################
 #
 OBJECTS1 = \
-           ${OBJDIR}/paw_driver.o \
+	    ${OBJDIR}/paw_driver.o \
            ${OBJDIR}/paw_thermostat.o \
            ${OBJDIR}/paw_isolate.o \
            ${OBJDIR}/paw_assist.o \
@@ -243,7 +245,16 @@ OBJECTS3 = \
 #           ${OBJDIR}/paw_pdos.o  #into library
 #          ${OBJDIR}/paw_optic.o \   # removed
 #
-OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
+export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
+#
+# Object for version information
+export OBJVERSION = \
+	      ${OBJDIR}/paw_version.o
+#
+# Object for source blob
+export SRCBLOB = \
+	   ${OBJDIR}/paw_srcblob.o
+#
 #
 #
 # Definition of objects for the compilation of the PAW-tools
@@ -318,8 +329,8 @@ OBJPOLYHEDRA=  \
 ##  create preprocessor                                                ##
 #########################################################################
 f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
-${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/F90PP/f90pp_tmplts.f90
-	${F90PP} -notemplates ${SRCDIR}/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
 
@@ -328,8 +339,8 @@ ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
 	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 
-${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
-	${F90PP} -notemplates ${SRCDIR}/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
 #
@@ -337,16 +348,30 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/F90PP/parmfilewriter.f90
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
+${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
-                ${OBJECTS} ${MPE}
-	${LINK} -o ${PAWX} ${OBJECTS} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+                ${OBJVERSION} ${OBJECTS} ${MPE}
+	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
 #
 #########################################################################
 ##  build paw library                                                  ##
 #########################################################################
 ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 	ar -rus $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+#
+#########################################################################
+##  build full paw library and optionally exclude objects              ##
+##  this target can be used to create a library of all objects         ##
+##  additionally on can exclude objects using the EXCLUDE parameter    ##
+##  for example: make libfull EXCLUDE="paw_classical.o paw_setups.o"   ##
+##  The object paw.o will allways be excluded, because it contains a   ##
+##  main program.                                                      ##
+##  This library can then be linked to a main program, like libpaw.a   ##
+#########################################################################
+${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
+	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	ar -dv ${PAWLIBFULL} paw.o
+	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 #
 #########################################################################
 ##  build Tools                                                        ##
@@ -486,16 +511,44 @@ ${OBJDIR}/fftw_f77.i:
 ${OBJDIR}/mpif.h:
 	${MPIINCLUDE}
 #
+#########################################################################
+##  execute tests                                                      ##
+#########################################################################
+#
+tests: ${PAWX} varOBJTYPE_tests
+varOBJTYPE_tests: ${PAWX} 
+	rm -rf ${BINDIR}/varOBJTYPE_tests;cp -r ${THISDIR}/tests ${BINDIR}/varOBJTYPE_tests;cd ${BINDIR}/varOBJTYPE_tests;${MAKE} all
+#
 #${OBJDIR}/mm_paw_f77.o
 #########################################################################
 ##  compile code files independent of parameter                        ##
 ##  and place the objects in OBJDIR                                    ##
 #########################################################################
+.PHONY: ${OBJVERSION} ${SRCBLOB}
 #
 #__special rule for parallel interface because of preprocessor___________
 ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
+#
+# generate version information __________________________________________
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	sh ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+# generate source blob __________________________________________________
+${SRCBLOB}:
+	rm -f paw_srcblob paw_srcblob.o
+	tar -czf paw_srcblob ${SRCDIR} ${THISDIR}/parms.in_use
+ifeq ($(shell uname -s),Linux) 
+	ld -r -b binary -o paw_srcblob.o paw_srcblob
+endif
+ifeq ($(shell uname -s),Darwin)
+	touch paw_srcblob_dummy.f90
+	${COMPILE} -o paw_srcblob_dummy.o paw_srcblob_dummy.f90
+	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin paw_srcblob paw_srcblob_dummy.o
+endif
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
@@ -505,7 +558,8 @@ $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
 #__general rule for object files fortran 77______________________________
 $(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
 	cp $< ${OBJDIR}/$*_d.f
-	${COMPILE} -o $@ ${OBJDIR}/$*_d.f
+	$(COMPILE:-fimplicit-none=) -o $@ ${OBJDIR}/$*_d.f
+	#${COMPILE} -o $@ ${OBJDIR}/$*_d.f
 #
 #__compile the tools____________________________________________________
 #
@@ -669,7 +723,7 @@ endif
 #   machine-generated dependencies
 #
 #   the dependencies are generated by the shell script "finddep"
-#   which must be run in the directory where it lies (src/F90PP)
+#   which must be run in the directory where it lies (src/Buildtools/F90PP)
 #   the resulting file "dependencies" in that directory is copied here...
 ###########################################################################
  ## file:src/paw_assist.f90

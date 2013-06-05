@@ -64,7 +64,7 @@ SHELL=/bin/sh
 ##    @THISDIR@/bin/@ARCH@/dbg   objects for debugging                  ##
 ##    @THISDIR@/src              contains sources for CP-PAW main code  ##
 ##    @THISDIR@/src/Tools        contains sources of Tools              ##
-##    @THISDIR@/src/F90PP        contains sources for preprocessor etc  ##
+##    @THISDIR@/src/Buildtools/F90PP contains sources for preprocessor etc  ##
 ##    @THISDIR@/docs             containes documentation                ##
 ##                                                                     ##
 #########################################################################
@@ -81,23 +81,23 @@ SHELL=/bin/sh
 #########################################################################
 #___________________________ root directory of the PAW distribution
 # 
-THISDIR=@THISDIR@
+export THISDIR=@THISDIR@
 #___________________________ the hardware architecture
-ARCH=@ARCH@
+export ARCH=@ARCH@
 #___________________________ the way to compile the tools 
-TOOLCOMP=dbg
+export TOOLCOMP=dbg
 #___________________________ the GNU make utility
-MAKE=@MAKE@
+export MAKE=@MAKE@
 #___________________________ parallel environment?
-PENV=@TPARALLEL@
+export PENV=@TPARALLEL@
 #
 ##########################################################################
 #  complete shortcuts to directories etc
 ##########################################################################
 #___________________________ path to the object files
-OBJDIR=${THISDIR}/bin/${ARCH}/Objects
+export OBJDIR=${THISDIR}/bin/${ARCH}/Objects
 #___________________________ path to the binaries
-BINDIR=${THISDIR}/bin/${ARCH}
+export BINDIR=${THISDIR}/bin/${ARCH}
 #
 OBJTYPES_SCALAR=fast dbg none prof
 OBJTYPES_PRIMARY_SCALAR=fast
@@ -110,12 +110,11 @@ else
 endif
 #TOOLS=newatom atom tra wave grab dos preopt converttra cleantra strc tostrc \
 #       toxyz 1davpot cmcwave lattice test
-#TOOLS=tra wave grab dos preopt converttra cleantra strc tostrc toxyz \
-#      1davpot cmcwave lattice stpa stpreport bands murnaghan polyhedra
-#Oldtools lattice cmcwave
+#Oldtools: lattice cmcwave (should be included later)
 TOOLS=bands grab murnaghan dos polyhedra preopt stpa stpreport \
       strc tostrc toxyz tra converttra cleantra wave 1davpot 
 SCRIPTS=scripts
+TESTS=$(addsuffix _tests,${OBJTYPES})
 #
 #########################################################################
 ## Definition of the collective targets                                ##
@@ -150,6 +149,14 @@ tools: ${TOOLS} ${SCRIPTS}
 #
 clean_tools: $(addprefix clean_,${TOOLS} ${SCRIPTS})
 #
+#---------------------------------------------------------------------------
+#-- make tests                                                            --
+#---------------------------------------------------------------------------
+tests: ${TESTS}
+#
+${TESTS}:
+	cd ${OBJDIR}/$(subst _tests,,$@); ${MAKE} $@
+#
 #########################################################################
 ## specific target rules                                               ##
 #########################################################################
@@ -175,6 +182,15 @@ lib:
 #
 lib_new:
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
+#
+#---------------------------------------------------------------------------
+#--          PAW library libpawfull.a                                     --
+#---------------------------------------------------------------------------
+libfull:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpawfull.a EXCLUDE="${EXCLUDE}"
+#
+libfull_new:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpawfull.a EXCLUDE="${EXCLUDE}"
 #
 #---------------------------------------------------------------------------
 #--          Tools and scripts                                            --

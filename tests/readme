@@ -1,0 +1,13 @@
+In order to create a new unit test (e.g. for testing a FUNCTION or SUBROUTINE from the CP-PAW code)
+- add $DIR to TOBETESTED in tests/unittest/Makefile
+- copy an existing unit test to $DIR
+- unit test program to $DIR, the source code file name has to be the same as the $DIR
+- the unittest programs should end with exit code 0 if test passed and a nonzero exit code, when a problem occured, the stdout and stderr are written to $DIR/out.log and $DIR/err.log
+
+In order to create a new full test (e.g. for testing a whole paw-calculation)
+- add $DIR to TOBETESTED in tests/fulltests/Makefile
+- copy an existing full test to $DIR
+- add a full test szenario to $DIR (like $DIR.strc, $DIR.cntl)
+- create analyse.sh, which checks results from paw-calculation to $DIR
+- analyse.sh should end with exit code 0 if test passed and a nonzero exit code, when a problem occured, the stdout and stderr are written to $DIR/out.log and $DIR/err.log
+

@@ -602,7 +602,7 @@ COMPILE_PARALLEL
 COMPILE_SCALAR
 SPECIAL
 ARCH
-PAWDIR
+THISDIR
 EXIST_COMPILER_FORT
 EXIST_COMPILER_F90
 EXIST_COMPILER_IFC
@@ -1710,16 +1710,16 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 #######################################################################
 #
 # directory structure is set to
-#   $PAWDIR/src               contains source files for simulation code
-#   $PAWDIR/F90PP/            contains files for f90pp preprocessor
-#   $PAWDIR/Tools/            contains subdirectories with tools
-#   $PAWDIR/bin/$ARCH         holds all executables
-#   $PAWDIR/bin/$ARCH/none    Objects compiled simple
-#   $PAWDIR/bin/$ARCH/prof    Objects compiled for profiling
-#   $PAWDIR/bin/$ARCH/dbg     Objects compiled with debugger
-#   $PAWDIR/bin/$ARCH/fast    Objects compiled with optimizer
+#   $THISDIR/src               contains source files for simulation code
+#   $THISDIR/Buildtools/F90PP/ contains files for f90pp preprocessor
+#   $THISDIR/Tools/            contains subdirectories with tools
+#   $THISDIR/bin/$ARCH         holds all executables
+#   $THISDIR/bin/$ARCH/none    Objects compiled simple
+#   $THISDIR/bin/$ARCH/prof    Objects compiled for profiling
+#   $THISDIR/bin/$ARCH/dbg     Objects compiled with debugger
+#   $THISDIR/bin/$ARCH/fast    Objects compiled with optimizer
 #
-# PAWDIR will be set automatically after this block!
+# THISDIR will be set automatically after this block!
 #
 #######################################################################
 #######################################################################
@@ -1731,7 +1731,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 #
 # subdirectory tree of PAW distribution
 #
-# the PAWDIR is determined automatically, the rest follows
+# the THISDIR is determined automatically, the rest follows
 #
 #
 # process command line arguments
@@ -2248,9 +2248,9 @@ if test "$PARMFILE" != notset; then
   #
   # compose final variables
   #
-  PAWDIR=`pwd`  # This is for absolute paths
+  THISDIR=`pwd`  # This is for absolute paths
 #  OBJDIR="$OBJDIR/$ARCH/Objects"
-  PAWX="$PAWDIR/bin/$ARCH"
+  PAWX="$THISDIR/bin/$ARCH"
   COMPILE_SCALAR="$COMPILER_SCALAR"
   COMPILE_PARALLEL="$COMPILER_PARALLEL"
   LINK_SCALAR="$COMPILER_SCALAR $LDFLAGS_SCALAR"
@@ -2418,33 +2418,33 @@ fi
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: copy $PARMFILE to parms.in_use" >&5
 $as_echo "copy $PARMFILE to parms.in_use" >&6; }
-cp $PARMFILE ${PAWDIR}/parms.in_use
+cp $PARMFILE ${THISDIR}/parms.in_use
 #
 # creating subdirectories
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating subdirectories and copying shell scripts" >&5
 $as_echo "creating subdirectories and copying shell scripts" >&6; }
-mkdir -p  ${PAWDIR}/bin/${ARCH}
-mkdir -p  ${PAWDIR}/doc
-mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none
-mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg
-mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof
-mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast
+mkdir -p  ${THISDIR}/bin/${ARCH}
+mkdir -p  ${THISDIR}/doc
+mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/none
+mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/dbg
+mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/prof
+mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/fast
 if test "$TPARALLEL" = "T"; then
-  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/none_parallel
-  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel
-  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel
-  mkdir -p  ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel
+  mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/none_parallel
+  mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/dbg_parallel
+  mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/prof_parallel
+  mkdir -p  ${THISDIR}/bin/${ARCH}/Objects/fast_parallel
 fi
 #
 #  copy script files from
 #
-#AC_MSG_RESULT(copy scripts into $PAWDIR/bin/$ARCH/)
-#cp $PAWDIR/src/Tools/Scripts/* $PAWDIR/bin/$ARCH/
+#AC_MSG_RESULT(copy scripts into $THISDIR/bin/$ARCH/)
+#cp $THISDIR/src/Tools/Scripts/* $THISDIR/bin/$ARCH/
 #
 # create f90pp from f90pp.in and make it executable
 #
-ac_config_files="$ac_config_files $PAWDIR/bin/$ARCH/f90pp:$PAWDIR/src/F90PP/f90pp.in"
+ac_config_files="$ac_config_files $THISDIR/bin/$ARCH/f90pp:$THISDIR/src/Buildtools/F90PP/f90pp.in"
 
 #
 # create Makefile from Makefile_targets.in
@@ -3164,7 +3164,7 @@ cat >>$CONFIG_STATUS <<\_ACEOF || ac_write_fail=1
 for ac_config_target in $ac_config_targets
 do
   case $ac_config_target in
-    "$PAWDIR/bin/$ARCH/f90pp") CONFIG_FILES="$CONFIG_FILES $PAWDIR/bin/$ARCH/f90pp:$PAWDIR/src/F90PP/f90pp.in" ;;
+    "$THISDIR/bin/$ARCH/f90pp") CONFIG_FILES="$CONFIG_FILES $THISDIR/bin/$ARCH/f90pp:$THISDIR/src/Buildtools/F90PP/f90pp.in" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile:Makefile_targets.in" ;;
     "Makefile_bare") CONFIG_FILES="$CONFIG_FILES Makefile_bare:Makefile_bare.in" ;;
 
@@ -3582,7 +3582,7 @@ which seems to be undefined.  Please make sure it is defined" >&2;}
 
 
   case $ac_file$ac_mode in
-    "$PAWDIR/bin/$ARCH/f90pp":F) chmod +x $PAWDIR/bin/$ARCH/f90pp ;;
+    "$THISDIR/bin/$ARCH/f90pp":F) chmod +x $THISDIR/bin/$ARCH/f90pp ;;
 
   esac
 done # for ac_tag
@@ -3621,7 +3621,7 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
 
-chmod +x $PAWDIR/bin/$ARCH/f90pp
+chmod +x $THISDIR/bin/$ARCH/f90pp
 #
 # substituting to accept lowercase module files
 # default are uppercase module file names with lowercase extension
@@ -3636,106 +3636,106 @@ $as_echo "modify makefile_bare for lowercase module files" >&6; }
 # sed command       s%stringa%stringb%g  replace stringa by stringb
 #
 #  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
-#      ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
-  ./lowercasemodnames.sh  < ${PAWDIR}/Makefile_bare > ${PAWDIR}/Makefile_bare_tmp
-  cp  ${PAWDIR}/Makefile_bare_tmp  ${PAWDIR}/Makefile_bare
-  rm  -f ${PAWDIR}/Makefile_bare_tmp
+#      ${THISDIR}/Makefile_bare > ${THISDIR}/Makefile_bare_tmp
+  ./lowercasemodnames.sh  < ${THISDIR}/Makefile_bare > ${THISDIR}/Makefile_bare_tmp
+  cp  ${THISDIR}/Makefile_bare_tmp  ${THISDIR}/Makefile_bare
+  rm  -f ${THISDIR}/Makefile_bare_tmp
 fi
 #
 # substituting to get Makefile.none
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile in none" >&5
 $as_echo "creating Makefile in none" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw.x%"\
-    -e 's%varPARALLEL%F%'\
-    -e 's%varOBJTYPE%none%'\
-    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none/Makefile
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw.x%g"\
+    -e 's%varPARALLEL%F%g'\
+    -e 's%varOBJTYPE%none%g'\
+    ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/none/Makefile
 #
 # substituting to get Makefile_parallel in none
 #
 if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile in none_parallel" >&5
 $as_echo "creating Makefile in none_parallel" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw.x%"\
-      -e 's%varPARALLEL%T%'\
-      -e 's%varOBJTYPE%none_parallel%'\
-      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_NONE %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_NONE %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw.x%g"\
+      -e 's%varPARALLEL%T%g'\
+      -e 's%varOBJTYPE%none_parallel%g'\
+      ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/none_parallel/Makefile
 fi
 #
 # substituting to get Makefile.fast
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile in fast" >&5
 $as_echo "creating Makefile in fast" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%"\
-    -e 's%varOBJTYPE%fast%'\
-    -e 's%varPARALLEL%F%'\
-    ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast/Makefile
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_fast.x%g"\
+    -e 's%varOBJTYPE%fast%g'\
+    -e 's%varPARALLEL%F%g'\
+    ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/fast/Makefile
 #
 # substituting to get Makefile.fast_parallel
 #
 if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile_parallel in fast" >&5
 $as_echo "creating Makefile_parallel in fast" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%"\
-      -e 's%varOBJTYPE%fast_parallel%'\
-      -e 's%varPARALLEL%T%'\
-      ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_OPT %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_OPT %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_fast.x%g"\
+      -e 's%varOBJTYPE%fast_parallel%g'\
+      -e 's%varPARALLEL%T%g'\
+      ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/fast_parallel/Makefile
 fi
 #
 # substituting to get Makefile in dbg
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile in dbg" >&5
 $as_echo "creating Makefile in dbg" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%"\
-    -e 's%varOBJTYPE%dbg%'\
-    -e 's%varPARALLEL%F%'\
-   ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg/Makefile
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_dbg.x%g"\
+    -e 's%varOBJTYPE%dbg%g'\
+    -e 's%varPARALLEL%F%g'\
+   ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/dbg/Makefile
 #
 # substituting to get Makefile_parallel in dbg
 #
 if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile_parallel in dbg" >&5
 $as_echo "creating Makefile_parallel in dbg" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%"\
-      -e 's%varOBJTYPE%dbg_parallel%'\
-      -e 's%varPARALLEL%T%'\
-     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_DBG %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_DBG %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_dbg.x%g"\
+      -e 's%varOBJTYPE%dbg_parallel%g'\
+      -e 's%varPARALLEL%T%g'\
+     ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/dbg_parallel/Makefile
 fi
 #
 # substituting to get Makefile in prof
 #
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile in prof" >&5
 $as_echo "creating Makefile in prof" >&6; }
-sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
-    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%"\
-    -e 's%varOBJTYPE%prof%'\
-    -e 's%varPARALLEL%F%'\
-     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof/Makefile
+sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %g"\
+    -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %g"\
+    -e "s%\(PAWX.*=.*\)%\1/paw_prof.x%g"\
+    -e 's%varOBJTYPE%prof%g'\
+    -e 's%varPARALLEL%F%g'\
+     ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/prof/Makefile
 #
 # substituting to get Makefile_parallel in prof
 #
 if test "$TPARALLEL" = "T"; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: creating Makefile_parallel in prof" >&5
 $as_echo "creating Makefile_parallel in prof" >&6; }
-  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %"\
-      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %"\
-      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%"\
-      -e 's%varOBJTYPE%prof_parallel%'\
-      -e 's%varPARALLEL%T%'\
-     ${PAWDIR}/Makefile_bare > ${PAWDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile
+  sed -e "s%\(COMPILE=.*\)%\1 $FCFLAGS_PROF %g"\
+      -e "s%\(LINK=.*\)%\1 $LDFLAGS_PROF %g"\
+      -e "s%\(PAWX.*=.*\)%\1/ppaw_prof.x%g"\
+      -e 's%varOBJTYPE%prof_parallel%g'\
+      -e 's%varPARALLEL%T%g'\
+     ${THISDIR}/Makefile_bare > ${THISDIR}/bin/${ARCH}/Objects/prof_parallel/Makefile
 fi
 #
 # removal of config.cache
@@ -3753,10 +3753,10 @@ $as_echo "---------------------------------------------------------------" >&6; 
 $as_echo "-----------------------SUMMARY---------------------------------" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: ---------------------------------------------------------------" >&5
 $as_echo "---------------------------------------------------------------" >&6; }
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: directory of distribution      : $PAWDIR" >&5
-$as_echo "directory of distribution      : $PAWDIR" >&6; }
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: directory with binaries        : $PAWDIR/bin/$ARCH" >&5
-$as_echo "directory with binaries        : $PAWDIR/bin/$ARCH" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: directory of distribution      : $THISDIR" >&5
+$as_echo "directory of distribution      : $THISDIR" >&6; }
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: directory with binaries        : $THISDIR/bin/$ARCH" >&5
+$as_echo "directory with binaries        : $THISDIR/bin/$ARCH" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: architecture                   : $ARCH" >&5
 $as_echo "architecture                   : $ARCH" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: preprocessor variables         : $CPPFLAGS" >&5

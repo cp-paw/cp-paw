@@ -14888,12 +14888,13 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
       SUBROUTINE EXPINTEGRAL(N,E,RES)
 !     **************************************************************************
 !     **************************************************************************
+      implicit none
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: E
       LOGICAL(4)            :: TEVEN
       REAL(8)               :: PI
       REAL(8)   ,INTENT(OUT):: RES
-      INTEGER(4)            :: K
+      INTEGER(4)            :: K,I
 !     **************************************************************************
       K=INT(N/2)
       TEVEN=(2*K.EQ.N)

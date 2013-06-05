@@ -218,7 +218,7 @@ END MODULE ERROR_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE ERROR$STOP(MESSAGE_)
+      recursive SUBROUTINE ERROR$STOP(MESSAGE_)
 !     ******************************************************************
 !     **  WRITE ERROR MESSAGE, FLUSH FILES AND STOP                   **
 !     ******************************************************************
