@@ -6,6 +6,6 @@ SHELL=/bin/sh
 ###########################################################################
 all:
 	@echo "running paw..."
-	${PAWX} ${TEST}.cntl 2> err.log > out.log
+	export PAWDIR="not defined"; ${PAWX} ${TEST}.cntl 2> err.log > out.log
 	@echo "analyse results ..."
 	@${SHELL} analyse.sh

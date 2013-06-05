@@ -2,10 +2,10 @@
 PAWVERSIONFILE="$1"
 echo "File to modify: $PAWVERSIONFILE"
 
-VERINF=""
-VERREV=""
-VERAUT=""
-VERDAT=""
+VERINF="\'unknown\'"
+VERREV="\'unknown\'"
+VERAUT="\'unknown\'"
+VERDAT="\'unknown\'"
 
 #check if in git installed
 git --version 2>&1 >/dev/null # improvement by tripleee
@@ -39,41 +39,61 @@ if [ "$GIT_IS_AVAILABLE" = 0 ]; then
     AUTHOR=`git log -1 | grep "Author: " | head -n 1 | sed "s/Author: //g"`
     #DATE=`git log -1 --format="%aD"` #--> not working on git 1.5.5.1
     DATE=`git log -1 | grep "Date: " | head -n 1 | sed "s/Date:   //g"`
-    VERINF="branch: $VER2; remote: $VER1"
-    VERREV="revision $VER3; $VER4; $VER5 changes since last commit"
-    VERAUT="last commit by $AUTHOR; compiled by `whoami` on `hostname`"
-    VERDAT="last commit at $DATE; compiled at `date`"    
+    VERINF="'branch: $VER2; remotes: $VER1'"
+    VERREV="'revision $VER3; $VER4; $VER5 changes since last commit'"
+    VERAUT="'last commit by $AUTHOR; compiled by `whoami` on `hostname`'"
+    VERDAT="'last commit at $DATE; compiled at `date`'"    
   else
     #git is installed, but we are not in a git repo
     echo "inside git repo: NO"    
-    VERINF="unknown"
-    VERREV="unknown"
-    VERAUT="compiled by `whoami` on `hostname`"
-    VERDAT="compiled at `date`"
+    VERINF="'unknown'"
+    VERREV="'unknown'"
+    VERAUT="'compiled by `whoami` on `hostname`'"
+    VERDAT="'compiled at `date`'"
   fi
 else
   #git is not installed
   echo "git installed: NO"    
-  VERINF="unknown"
-  VERREV="unknown"
-  VERAUT="compiled by `whoami` on `hostname`"
-  VERDAT=`date`
+  VERINF="'unknown'"
+  VERREV="'unknown'"
+  VERAUT="'compiled by `whoami` on `hostname`'"
+  VERDAT="'compiled at `date`'"
 fi
 
 #echo "VERINF=$VERINF"
 #echo "VERREV=$VERREV"
 #echo "VERAUT=$VERAUT"
 #echo "VERDAT=$VERDAT"
-VERINF2=`echo "$VERINF" | sed 's/\//\\\\\//g'| cut  -c -250`
-VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'| cut  -c -250`
-VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'| cut  -c -250`
-VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'| cut  -c -250`
+#VERINF2=`echo "$VERINF" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+#VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+#VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+#VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+VERINF2=`echo "$VERINF" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+VERREV2=`echo "$VERREV" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+VERAUT2=`echo "$VERAUT" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+VERDAT2=`echo "$VERDAT" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
+
+#echo "VERINF=$VERINF2"
+#echo "VERREV=$VERREV2"
+#echo "VERAUT=$VERAUT2"
+#echo "VERDAT=$VERDAT2"
+
+#build version module
+echo "MODULE VERSION_MODULE" > $PAWVERSIONFILE.tmp
+echo "CHARACTER(256):: VERINF=$VERINF2" >> $PAWVERSIONFILE.tmp
+echo "CHARACTER(256):: VERREV=$VERREV2" >> $PAWVERSIONFILE.tmp
+echo "CHARACTER(256):: VERAUT=$VERAUT2" >> $PAWVERSIONFILE.tmp
+echo "CHARACTER(256):: VERDAT=$VERDAT2" >> $PAWVERSIONFILE.tmp
+echo "END MODULE VERSION_MODULE" >> $PAWVERSIONFILE.tmp
+cat $PAWVERSIONFILE.tmp $PAWVERSIONFILE > $PAWVERSIONFILE.tmp2
+rm $PAWVERSIONFILE.tmp
+mv $PAWVERSIONFILE.tmp2 $PAWVERSIONFILE
 
 #modify in file
-sed -i "s/_VERINF/${VERINF2}/g" $PAWVERSIONFILE
-sed -i "s/_VERREV/${VERREV2}/g" $PAWVERSIONFILE
-sed -i "s/_VERAUT/${VERAUT2}/g" $PAWVERSIONFILE
-sed -i "s/_VERDAT/${VERDAT2}/g" $PAWVERSIONFILE
+#sed -i "s/_VERINF/${VERINF2}/g" $PAWVERSIONFILE
+#sed -i "s/_VERREV/${VERREV2}/g" $PAWVERSIONFILE
+#sed -i "s/_VERAUT/${VERAUT2}/g" $PAWVERSIONFILE
+#sed -i "s/_VERDAT/${VERDAT2}/g" $PAWVERSIONFILE
 
 
 
