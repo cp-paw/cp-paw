@@ -202,6 +202,7 @@ OBJECTS1 = \
            ${OBJDIR}/paw_lists.o \
            ${OBJDIR}/paw_constraints.o \
            ${OBJDIR}/paw_lmto.o \
+           ${OBJDIR}/paw_dmft.o \
            ${OBJDIR}/paw_fft.o 
 #
 OBJECTS2 = \
@@ -717,6 +718,9 @@ ifeq ($(ALLDEP),T)
 # ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
  ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_report.o
 
+ ${OBJDIR}/paw_dmft.o:          ${OBJDIR}/paw_lmto.o
+ ${OBJDIR}/paw_dmft.o:          ${OBJDIR}/paw_waves1.o
+
  ${OBJDIR}/paw_library.o:      ${OBJDIR}/fftw_f77.i
 endif
 ##########################################################################
@@ -1065,4 +1069,11 @@ endif
 ##  ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod
 ${OBJDIR}/paw_lmto.o : PERIODICTABLE_MODULE.mod
 LMTO_MODULE.mod : ${OBJDIR}/paw_lmto.o
+ ## file:src/Tools/Wave/paw_dmft.f90
+DMFT_MODULE.mod : ${OBJDIR}/paw_dmft.o
+${OBJDIR}/paw_dmft.o : LMTO_MODULE.mod
+${OBJDIR}/paw_dmft.o : DMFT_MODULE.mod
+${OBJDIR}/paw_dmft.o : WAVES_MODULE.mod
+${OBJDIR}/paw_dmft.o : MPE_MODULE.mod
+${OBJDIR}/paw_dmft.o : STRINGS_MODULE.mod
 

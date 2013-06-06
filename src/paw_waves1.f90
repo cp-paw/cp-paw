@@ -1296,20 +1296,20 @@ END MODULE WAVES_MODULE
         DEALLOCATE(VALG)
         CALL MPE$BROADCAST('K',1,VAL)
 !
-!!$      ELSE IF(ID.EQ.'WKPT') THEN
-!!$!       == THIS OPTION IS NOT USED ===========================
-!!$        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!!$        ALLOCATE(VALG(NKPT))
-!!$        CALL DYNOCC$GETR8A('WKPT',NKPT,VALG)
-!!$        IKPTL=0
-!!$        DO IKPT=1,NKPT
-!!$          IF(KMAP(IKPT).EQ.THISTASK) THEN
-!!$            IKPTL=IKPTL+1
-!!$            VAL(IKPTL)=VALG(IKPT)
-!!$          END IF
-!!$        ENDDO                         
-!!$        DEALLOCATE(VALG)
-!!$        CALL MPE$BROADCAST('K',1,VAL)
+      ELSE IF(ID.EQ.'WKPT') THEN
+!       == THIS OPTION IS used in dmft module  =================================
+        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+        ALLOCATE(VALG(NKPT))
+        CALL DYNOCC$GETR8A('WKPT',NKPT,VALG)
+        IKPTL=0
+        DO IKPT=1,NKPT
+          IF(KMAP(IKPT).EQ.THISTASK) THEN
+            IKPTL=IKPTL+1
+            VAL(IKPTL)=VALG(IKPT)
+          END IF
+        ENDDO                         
+        DEALLOCATE(VALG)
+        CALL MPE$BROADCAST('K',1,VAL)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
