@@ -27,20 +27,20 @@ COMPLEX(8),ALLOCATABLE :: PIPSI(:,:,:,:)    !(NCHI,NB,NKPTL,NSPIN) <PI|PSI>
 COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:)   !(NB,NB,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:,:,:) !(NB,NB,NKPTL,NSPIN)<PSI|HEFF|PSI>
 real(8)   ,ALLOCATABLE :: erho(:,:,:)       !(NB,NKPTL,NSPIN)
-COMPLEX(8),ALLOCATABLE :: FDSIG1(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
-COMPLEX(8),ALLOCATABLE :: FDSIG2(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
-COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: dedrho(:,:,:,:)   !(Nchi,Nchi,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: h0(:,:,:,:)       !(Nchi,Nchi,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: hrho(:,:,:,:)     !(Nchi,Nchi,NKPTL,NSPIN)
 !
 !== LOCAL GREENS FUNCTION (WITH LAURENT EXPANSION COEFFICIENTS) ================
 COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:)     !(NCHI,NCHI,NOMEGA,NSPIN)
+COMPLEX(8),ALLOCATABLE :: GLOCLAUR(:,:,:,:)  !(NCHI,NCHI,3,NSPIN)
 COMPLEX(8),ALLOCATABLE :: GLOCLAUR1(:,:,:)  !(NCHI,NCHI,NSPIN)
 COMPLEX(8),ALLOCATABLE :: GLOCLAUR2(:,:,:)  !(NCHI,NCHI,NSPIN)
 COMPLEX(8),ALLOCATABLE :: GLOCLAUR3(:,:,:)  !(NCHI,NCHI,NSPIN)
 !__MATRIX TO DIAGONALIZE OVERLAP MATRIX_________________________________________
 COMPLEX(8),ALLOCATABLE :: DIAGSLOC(:,:,:) !(NCHI,NCHI,NSPIN)
+COMPLEX(8),ALLOCATABLE :: smat(:,:,:)     !(NCHI,NCHI,NSPIN)
+COMPLEX(8),ALLOCATABLE :: sinv(:,:,:,:)   !(NCHI,NCHI,nkptl,NSPIN)
 !
 !== SELF ENERGY ================================================================
 COMPLEX(8),ALLOCATABLE :: sigma(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
@@ -167,13 +167,13 @@ END MODULE DMFT_MODULE
 
       ALLOCATE(GLOC(NCHI,NCHI,NOMEGA,NSPIN))
       ALLOCATE(DIAGSLOC(NCHI,NCHI,NSPIN))
+      ALLOCATE(smat(NCHI,NCHI,NSPIN))
+      ALLOCATE(sinv(NCHI,NCHI,nkptl,NSPIN))
+      ALLOCATE(GLOCLAUR(NCHI,NCHI,3,NSPIN))
       ALLOCATE(GLOCLAUR1(NCHI,NCHI,NSPIN))
       ALLOCATE(GLOCLAUR2(NCHI,NCHI,NSPIN))
       ALLOCATE(GLOCLAUR3(NCHI,NCHI,NSPIN))
-      ALLOCATE(FDSIG1(NCHI,NCHI,NOMEGA,NSPIN))
-      ALLOCATE(FDSIG2(NCHI,NCHI,NOMEGA,NSPIN))
       ALLOCATE(DENMAT(NB,NB,NKPTL,NSPIN))
-      ALLOCATE(XMAT(NB,NB,NKPTL,NSPIN))
       ALLOCATE(HAMILTON(NB,NB,NKPTL,NSPIN))
       ALLOCATE(erho(NB,NKPTL,NSPIN))
       ALLOCATE(PIPSI(NCHI,NB,NKPTL,NSPIN))
@@ -203,7 +203,7 @@ END MODULE DMFT_MODULE
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
-     &                      ,WKPTL,GLOC,DENMAT,hamilton &
+     &                      ,WKPTL,h0,sigma,GLOC,gloclaur,DENMAT,hamilton &
      &                      ,GLOCLAUR1,GLOCLAUR2,GLOCLAUR3,DIAGSLOC
       USE MPE_MODULE
       IMPLICIT NONE
@@ -230,6 +230,12 @@ END MODULE DMFT_MODULE
       CALL DMFT$COLLECTHAMILTONIAN()
 !
 !     ==========================================================================
+!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
+!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC
+!     ==========================================================================
+      call DMFT_diagsloc()
+!
+!     ==========================================================================
 !     ==  DETERMINE CHEMICAL POTENTIAL                                        ==
 !     ==  just for testing. mu should be zero                                 ==
 !     ==========================================================================
@@ -241,22 +247,9 @@ END MODULE DMFT_MODULE
       CALL DMFT_GREENANDDENMAT()
 !
 !     ==========================================================================
-!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
-!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC
-!     ==========================================================================
-      ALLOCATE(FLOC(NCHI))
-      DO ISPIN=1,NSPIN
-        CALL LIB$DIAGC8(NCHI,GLOCLAUR1(:,:,ISPIN),FLOC,DIAGSLOC(:,:,ISPIN))
-        DO IB=1,NCHI
-          DIAGSLOC(:,IB,ISPIN)=DIAGSLOC(:,IB,ISPIN)/SQRT(FLOC(IB))
-        ENDDO
-      ENDDO
-      DEALLOCATE(FLOC)
-!
-!     ==========================================================================
 !     ==  WRITE LOCAL FILE FOR SOLVER                                         ==
 !     ==========================================================================
-      CALL DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,OMEGA &
+      CALL DMFT_WRITEGLOC_old(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,OMEGA &
      &                   ,GLOC,GLOCLAUR1,GLOCLAUR2,GLOCLAUR3)
 !CALL DMFT_TESTGLOC()
 !
@@ -274,6 +267,19 @@ END MODULE DMFT_MODULE
 !STOP 'STOPPING AFTER TEST1'
 !
 !     ==========================================================================
+!     == determine local greens function                                      ==
+!     ==========================================================================
+      mu=0.d0
+do i=1,3
+      CALL DMFT_GLOC(H0,SIGma,GLOC,GLOCLAUR)
+!
+!     ==========================================================================
+!     ==  WRITE LOCAL FILE FOR SOLVER                                         ==
+!     ==========================================================================
+      CALL DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,OMEGA &
+     &                   ,GLOC,GLOCLAUR)
+!
+!     ==========================================================================
 !     ==  CALL THE SOLVER                                                     ==
 !     ==========================================================================
       CALL DMFT$SOLVER()
@@ -281,7 +287,6 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  read self energy from file
 !     ==========================================================================
-do i=1,3
       call DMFT_GETSIGMA()
 !
 !     ==========================================================================
@@ -289,17 +294,72 @@ do i=1,3
 !     ==========================================================================
       call DMFT_constraints()
 enddo
-stop 'forced after dmft_constraints'      
 
-do i=1,50
-      CALL DMFT$DEDGREEN()
-!!$      CALL DMFT$ADDTOHPSI()
-!!$      CALL DMFT$ADDTOEIGVAL()
-enddo
 stop 'end of loop. stopping.'
                                        CALL TRACE$POP()
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_DIAGSLOC()
+!     **************************************************************************
+!     **  DETERMINE OVERLAP MATRIX smat(nchi,nchi,ispin) OF LOCAL ORBITALS,   **
+!     **  the k-dependent inverse sinv(nchi,nchi,ikpt,ispin)                  **
+!     **  AND THE MATRIX THAT CONVERTS THE LOCAL ORBITALS                     **
+!     **  INTO AN ORTHONORMAL BASISSET OF CORRELATED ORBITALS                 **
+!     **                                                                      **
+!     **   |PI_NEU>  = |PI_ALT>  DIAGSLOC                                     **
+!     **   |PI_ALT>  = |PI_NEU>  INVERT(DIAGSLOC)                             **
+!     **   |CHI_ALT> = |CHI_NEU> TRANSPOSE(DIAGSLOC)                          **
+!     **                                                                      **
+!     **  WHERE THE PI ARE PROJECTOR FUNCTIONS AND CHI ARE ORBITALS           **
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NSPIN,WKPTL,PIPSI,diagsloc,smat,sinv
+      implicit none
+      integer(4)      :: ikpt,ispin,i
+      complex(8)      :: mat(nchi,nchi)
+      real(8)         :: floc(nchi)
+      logical(4)      :: ttest=.false.
+!     **************************************************************************
+      do ispin=1,nspin
+!       ========================================================================
+!       == inverse overlap matrix from sum_n <pi|psi><psi|pi>                 ==
+!       ========================================================================
+        mat=(0.d0,0.d0)
+        DO IKPT=1,NKPTL
+          sinv(:,:,ikpt,ispin)=MATMUL(PIPSI(:,:,IKPT,ISPIN) &
+     &                                ,CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN))))
+          mat=mat+WKPTL(IKPT)*sinv(:,:,ikpt,ispin)
+        enddo
+!
+!       ========================================================================
+!       == overlap matrix                                                     **
+!       ========================================================================
+        call lib$invertc8(nchi,mat,smat(:,:,ispin))
+!
+!       ========================================================================
+!       == obtain matrix that make the overlap equal to the unit matrix       ==
+!       ========================================================================
+        CALL LIB$DIAGC8(NCHI,mat,FLOC,DIAGSLOC(:,:,ISPIN))
+        DO I=1,NCHI
+          DIAGSLOC(:,I,ISPIN)=DIAGSLOC(:,I,ISPIN)/SQRT(FLOC(I))
+        ENDDO
+!
+!       ========================================================================
+!       == OPTIONAL TESTS
+!       ========================================================================
+        IF(TTEST) THEN
+          MAT=MATMUL(CONJG(TRANSPOSE(DIAGSLOC(:,:,ISPIN))) &
+                                ,MATMUL(mat,DIAGSLOC(:,:,ISPIN)))
+          DO I=1,NCHI
+            WRITE(*,FMT='("TEST",10("(",2F10.5,")"))')MAT(I,:)
+          ENDDO
+          CALL ERROR$MSG('SCHEDULED STOP AFTER TEST')
+          CALL ERROR$STOP('DMFT_DIAGSLOC')
+        END IF
+      ENDDO
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$COLLECTHAMILTONIAN()
@@ -729,6 +789,50 @@ PRINT*,'..... CHEMPOT DETERMINED'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_WRITEGLOC(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,OMEGA &
+     &                          ,GLOC,GLOCLAUR)
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NCHI
+      INTEGER(4),INTENT(IN)  :: NOMEGA
+      INTEGER(4),INTENT(IN)  :: NSPIN
+      REAL(8)   ,INTENT(IN)  :: KBT
+      REAL(8)   ,INTENT(IN)  :: MU
+      REAL(8)   ,INTENT(IN)  :: OMEGA(NOMEGA)
+      COMPLEX(8),INTENT(IN)  :: GLOC(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(IN)  :: DIAGSLOC(NCHI,NCHI,NSPIN)
+      COMPLEX(8),INTENT(IN)  :: GLOCLAUR(NCHI,NCHI,3,NSPIN)
+      COMPLEX(8)             :: GLOCPRIME(NCHI,NCHI)
+      COMPLEX(8)             :: T(NCHI,NCHI)
+      COMPLEX(8)             :: TPLUS(NCHI,NCHI)
+      INTEGER(4)             :: NU,ISPIN,I,J
+      INTEGER(4)             :: NFIL=11
+!     **************************************************************************
+      OPEN(NFIL,FILE=-'GLOC.DATA')
+      WRITE(NFIL,*)NCHI,NOMEGA,NSPIN,KBT,MU !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      DO ISPIN=1,NSPIN
+        T=DIAGSLOC(:,:,ISPIN)
+        TPLUS=TRANSPOSE(CONJG(T)) 
+        DO NU=1,NOMEGA
+          GLOCPRIME=MATMUL(TPLUS,MATMUL(GLOC(:,:,NU,ISPIN),T))
+          WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI),OMEGA(NU)
+        ENDDO
+        GLOCPRIME=MATMUL(TPLUS,MATMUL(GLOCLAUR(:,:,1,ISPIN),T))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
+        GLOCPRIME=MATMUL(TPLUS,MATMUL(GLOCLAUR(:,:,2,ISPIN),T))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
+        GLOCPRIME=MATMUL(TPLUS,MATMUL(GLOCLAUR(:,:,3,ISPIN),T))
+        WRITE(NFIL,*)((REAL(GLOCPRIME(I,J)),AIMAG(GLOCPRIME(I,J)) &
+     &                ,I=1,NCHI),J=1,NCHI)
+      ENDDO
+      CLOSE(NFIL)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_WRITEGLOC_old(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC,OMEGA &
      &                          ,GLOC,GLOCLAUR1,GLOCLAUR2,GLOCLAUR3)
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -1352,206 +1456,83 @@ PRINT*,'... dmft_getsigma DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$DEDGREEN()
+      SUBROUTINE DMFT_gloc(H0,SIG,gloc,laur)
 !     **************************************************************************
-!     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
-!     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
-     &                      ,WKPTL,DSIG0,GAMMA0,FDSIG1,fdsig2,XMAT &
-     &                      ,DIAGSLOC,HAMILTON,PIPSI
-      USE MPE_MODULE
-      USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
+      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
+     &                       ,wkptl,smat,sinv,dsiglaur0
       IMPLICIT NONE
-      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      COMPLEX(8)             :: CSVAR
-      COMPLEX(8),ALLOCATABLE :: GREENINV(:,:)
-      COMPLEX(8),ALLOCATABLE :: GREEN(:,:) !(NB,NB)
-      COMPLEX(8),ALLOCATABLE :: X(:,:) !(NB,NB)
-      COMPLEX(8),ALLOCATABLE :: DEDGLOC(:,:,:,:) !(NCHI,NCHI,NOMEGA,NSPIN)
-      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:) ! OCCUPATIONS (INCLUDING K-WEIGHT)
-      COMPLEX(8),ALLOCATABLE :: DEDGLOCLAUR1(:,:,:)  !(NCHI,NCHI,NSPIN)
-      COMPLEX(8),ALLOCATABLE :: DEDGLOCLAUR2(:,:,:)  !(NCHI,NCHI,NSPIN)
-      COMPLEX(8),ALLOCATABLE :: DEDGLOCLAUR3(:,:,:)  !(NCHI,NCHI,NSPIN)
-      COMPLEX(8),ALLOCATABLE :: SDC(:,:,:)  !(NCHI,NCHI,NSPIN)
-      COMPLEX(8)             :: gcorr(nchi,nchi)
-      INTEGER(4)             :: NTASKS_K,THISTASK_K
-      INTEGER(4)             :: NTASKS_M,THISTASK_M
-      INTEGER(4)             :: IKPT,ISPIN,NU,IB,IBH,ICHI,IPRO,I
-integer(4) :: i1,j1,i2,j2,ind1,ind2
-complex(8) :: mat(nchi**2,nchi**2),umat(nchi**2,nchi**2)
-complex(8) :: mat2(nb,nb)
-real(8)    :: eig(nchi**2)
+      COMPLEX(8),INTENT(IN)    :: H0(NCHI,NCHI,NKPTL,NSPIN)
+      COMPLEX(8),INTENT(IN)    :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(out)   :: gloc(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(out)   :: laur(NCHI,NCHI,3,NSPIN)
+      COMPLEX(8)               :: Ginv(nchi,nchi)
+      COMPLEX(8)               :: mat(nchi,nchi)
+      COMPLEX(8)               :: G(nchi,nchi)
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      COMPLEX(8)               :: CSVAR
+      INTEGER(4)               :: IKPT,ISPIN,nu,i,j
+      INTEGER(4)               :: nfil
+      logical(4),parameter     :: tprint=.false.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-                              CALL TRACE$PUSH('DMFT$DEDGREEN')
-PRINT*,'ENTERING DEDGREEN'
-      CALL DMFT_INI()
-!
-      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
-      CALL MPE$QUERY('MONOMER',NTASKS_M,THISTASK_M)
-!
-      ALLOCATE(OCC(NB,NKPTL,NSPIN))
-      CALL DYNOCC$GETR8A('OCC',NB*NKPTL*NSPIN,OCC)
-!
-!     ==========================================================================
-!     ==  ALLOCATE ARRAYS                                                     ==
-!     ==========================================================================
-      ALLOCATE(DEDGLOC(NCHI,NCHI,NOMEGA,NSPIN))
-      ALLOCATE(DEDGLOCLAUR1(NCHI,NCHI,NSPIN))
-      ALLOCATE(DEDGLOCLAUR2(NCHI,NCHI,NSPIN))
-      ALLOCATE(DEDGLOCLAUR3(NCHI,NCHI,NSPIN))
-      ALLOCATE(SDC(NCHI,NCHI,NSPIN))
-!
-!     ==========================================================================
-!     ==  ACCUMULATE LOCAL GREENS FUNCTION AND ONE-PARTICLE DENSITY MATRIX    ==
-!     ==========================================================================
-      CALL DMFT_READSIGMA(NCHI,NOMEGA,NSPIN,KBT,MU,DIAGSLOC &
-     &                   ,DEDGLOC,DEDGLOCLAUR1,DEDGLOCLAUR2,DEDGLOCLAUR3,SDC)
-!
-! attention: from here on delta-sigma and dc-sigma is stored
-!            readsigma probably returns the full sigma and dc-sigma
-!
-OPEN(11,FILE='DEDG.DAT')
-DO NU=1,NOMEGA
-  WRITE(11,*)OMEGA(NU),(REAL(DEDGLOC(I,I,NU,1)),AIMAG(DEDGLOC(I,I,NU,1)),I=1,NCHI)
-ENDDO
-WRITE(11,*)2.D0*OMEGA(NOMEGA)-OMEGA(NOMEGA-1) &
-           ,(REAL(DEDGLOCLAUR1(I,I,1)),AIMAG(DEDGLOCLAUR1(I,I,1)),I=1,NCHI)
-WRITE(11,*)2.D0*OMEGA(NOMEGA)-OMEGA(NOMEGA-2) &
-           ,(REAL(DEDGLOCLAUR2(I,I,1)),AIMAG(DEDGLOCLAUR2(I,I,1)),I=1,NCHI)
-WRITE(11,*)2.D0*OMEGA(NOMEGA)-OMEGA(NOMEGA-3) &
-           ,(REAL(DEDGLOCLAUR3(I,I,1)),AIMAG(DEDGLOCLAUR3(I,I,1)),I=1,NCHI)
-CLOSE(11)
-!STOP 'AFTER WRITEING TRASH'
-
-!!$DEDGLOC=(0.D0,0.D0)
-!!$DEDGLOCLAUR1=(0.D0,0.D0)
-!!$DEDGLOCLAUR2=(0.D0,0.D0)
-!!$DEDGLOCLAUR3=(0.D0,0.D0)
-!
-!     ==========================================================================
-!     ==  ACCUMULATE XNN                                                      ==
-!     ==========================================================================
-      ALLOCATE(GREENINV(NB,NB))
-      ALLOCATE(GREEN(NB,NB))
-      ALLOCATE(X(NB,NB))
-      FDSIG1=(0.D0,0.D0)
-      FDSIG2=(0.D0,0.D0)
-      XMAT=(0.D0,0.D0)
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-!
-!         ======================================================================
-!         ==  DETERMINE LAURENT EXPANSION OF X0                               ==
-!         ======================================================================
-!         == X2=G0[PSIPI*S0*PIPSI-GAMMA]G0
-!         == X3=G1[PSIPI*S0*PIPSI-GAMMA]G0+G0[PSIPI*S0*PIPSI-GAMMA]G1
-!               +G0[PSIPI*S0*PIPSI]G0
-!         == NOT YET INCLUDED BECAUSE LEADING TERM CONVERGES WITH 1/OMEGA**2
-!
-!         ======================================================================
-!         ==  PERFORM MATSUBARA SUMS                                          ==
-!         ======================================================================
-          DO NU=1,NOMEGA
-            IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
-
-!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
-            GREENINV(:,:)=-HAMILTON(:,:,IKPT,ISPIN) &
-     &                    -MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
-     &                     ,MATMUL(DSIG0(:,:,NU,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
-            CSVAR=CI*OMEGA(NU)+MU
-            DO IB=1,NB
-              GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
-            ENDDO
-            CALL LIB$INVERTC8(NB,GREENINV,GREEN)
-mat2=matmul(greeninv,green)
-do i=1,nb
-  mat2(i,i)=mat2(i,i)-(1.d0,0.d0)
-enddo
-print*,'inversion test ',maxval(abs(mat2))
-
-!
-!           == first part from force on self energy ============================
-            gcorr=matmul(pipsi(:,:,ikpt,ispin) &
-                        ,matmul(green,transpose(conjg(pipsi(:,:,ikpt,ispin)))))
-if(nu.eq.1) then
-write(*,fmt='(82("="),t10,2i5)')ikpt,ispin
-do i=1,nchi
-  write(*,fmt='("gcorr:",10("(",2f10.5,")  ") )')gcorr(i,:)
-enddo
-do i=1,nchi
-  write(*,fmt='("dsig0:",10("(",2f10.5,")  ") )')dsig0(i,:,nu,ispin)
-enddo
-!
-ind1=0
-do i1=1,nchi
-  do j1=1,nchi
-    ind1=ind1+1
-    ind2=0
-    do i2=1,nchi
-      do j2=1,nchi
-        ind2=ind2+1
-        mat(ind1,ind2)=gcorr(i1,j1)*gcorr(j2,i2)
-      enddo
-    enddo
-  enddo
-enddo
-do i=1,nchi**2
-  write(*,fmt='("mat:",10("(",2f8.3,")  ") )')mat(i,:)
-enddo
-call lib$diagc8(nchi**2,mat,eig,umat)
-print*,'eig ',eig 
-stop 'forced stop'
-end if
-
-
-            FDSIG1(:,:,NU,ISPIN)=FDSIG1(:,:,NU,ISPIN)-WKPTL(IKPT) &
-      &                *matmul(gcorr &
-      &                ,matmul(dedgloc(:,:,nu,ispin)-dsig0(:,:,nu,ispin),gcorr))
-!
-!           == second part from force on self energy ===========================
-            X=MATMUL(CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN))) &
-      &             ,MATMUL(dsig0(:,:,NU,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
-            X=X-GAMMA0(:,:,IKPT,ISPIN)
-            X=MATMUL(GREEN,MATMUL(X,GREEN))
-            FDSIG2(:,:,NU,ISPIN)=FDSIG2(:,:,NU,ISPIN)-WKPTL(IKPT) &
-     &                   *MATMUL(PIPSI(:,:,IKPT,ISPIN) &
-     &                       ,MATMUL(X,CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN)))))
-!
-!           == CALCULATE MATRIX used for the correction density=================
-            X=MATMUL(CONJG(TRANSPOSE(PIPSI(:,:,IKPT,ISPIN))) &
-      &             ,MATMUL(DEDGLOC(:,:,NU,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
-            X=X-GAMMA0(:,:,IKPT,ISPIN)
-            X=MATMUL(GREEN,MATMUL(X,GREEN))
-            XMAT(:,:,IKPT,ISPIN)=XMAT(:,:,IKPT,ISPIN)+KBT*X(:,:)
-          ENDDO
-          XMAT(:,:,IKPT,ISPIN)=XMAT(:,:,IKPT,ISPIN) &
-     &                        +TRANSPOSE(CONJG(XMAT(:,:,IKPT,ISPIN)))
-        ENDDO
-      ENDDO
-!
-!     == THE FORCE ON THE SELF ENERGY IS THE TRANSPOSE OF THE DERIVATIVE =======
+                              CALL TRACE$PUSH('DMFT_GETSIGMA')
       DO ISPIN=1,NSPIN
-        DO NU=1,NOMEGA 
-          FDSIG1(:,:,NU,ISPIN)=TRANSPOSE(FDSIG1(:,:,NU,ISPIN))
-          FDSIG2(:,:,NU,ISPIN)=TRANSPOSE(FDSIG2(:,:,NU,ISPIN))
+!       ========================================================================
+!       == LAURENT EXPANSION OF THE LOCAL GREENS FUNCTION FROM 0 TO 2
+!       == REMEMBER THAT MU=0 !!!
+!       ========================================================================
+        LAUR(:,:,1,ISPIN)=SMAT(:,:,ISPIN)
+        LAUR(:,:,2,ISPIN)=(0.d0,0.d0)
+        LAUR(:,:,3,ISPIN)=(0.d0,0.d0)
+        do ikpt=1,nkptl
+          MAT=h0(:,:,ikpt,ispin)+DSIGLAUR0(:,:,ISPIN,1)
+          mat=MATMUL(SINV(:,:,ikpt,ISPIN),MATMUL(MAT,SINV(:,:,ikpt,ISPIN)))
+          LAUR(:,:,2,ISPIN)=LAUR(:,:,2,ISPIN)+wkptl(ikpt)*mat
+          MAT=h0(:,:,ikpt,ispin)+DSIGLAUR0(:,:,ISPIN,1)
+          mat=matmul(mat,matmul(sinv(:,:,ikpt,ispin),mat))
+          mat=mat+DSIGLAUR0(:,:,ISPIN,2)
+          mat=MATMUL(SINV(:,:,ikpt,ISPIN),MATMUL(MAT,SINV(:,:,ikpt,ISPIN)))
+          LAUR(:,:,3,ISPIN)=LAUR(:,:,3,ISPIN)+wkptl(ikpt)*mat
+        enddo
+!
+!       ========================================================================
+!       == LOCAL GREENS FUNCTION ON THE MATSUBARA GRID
+!       ========================================================================
+        DO IKPT=1,NKPTL
+          DO NU=1,NOMEGA
+            CSVAR=CI*OMEGA(NU)+MU
+            GINV(:,:)=SMAT(:,:,ISPIN)*CSVAR-H0(:,:,IKPT,ISPIN)-SIG(:,:,NU,ISPIN)
+            CALL LIB$INVERTC8(NCHI,GINV,G)
+            GLOC(:,:,NU,ISPIN)=GLOC(:,:,NU,ISPIN)+WKPTL(IKPT)*G
+          ENDDO
         ENDDO
       ENDDO
 !
-!     == sum OVER ALL NODES (INCLUDES SUM IN K-GROUPS AND OVER K-GROUPS) =======
-      CALL MPE$COMBINE('MONOMER','+',FDSIG1)
-      CALL MPE$COMBINE('MONOMER','+',FDSIG2)
-      CALL MPE$COMBINE('K','+',XMAT)
-!
 !     ==========================================================================
-!     ==  SEE IF THINGS MAKE SENSE
+!     == LOCAL GREENS FUNCTION ON THE MATSUBARA GRID                          ==
 !     ==========================================================================
-STOP 'FORCED'
+      IF(TPRINT) THEN
+        DO ISPIN=1,NSPIN  
+          DO I=1,3
+            WRITE(*,FMT='(82("="),T10," LAUR(",I1,") IKPT,ISPIN",I4)'),I,ISPIN
+            DO J=1,3
+               WRITE(*,FMT='(10("(",2F10.5,")"))')LAUR(J,:,I,ISPIN)
+            ENDDO
+          ENDDO
+        ENDDO
 !
-PRINT*,'XMAT ',MAXVAL(ABS(XMAT))
-PRINT*,'... DEDGREEN DONE'
-                                       CALL TRACE$POP()
+        CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,'DMFT_GLOC.DAT')
+        CALL FILEHANDLER$UNIT('HOOK',NFIL)
+        DO NU=1,NOMEGA
+          WRITE(NFIL,*)OMEGA(NU),REAL(GLOC(:,:,NU,:)),AIMAG(GLOC(:,:,NU,:))
+        ENDDO
+        CALL FILEHANDLER$CLOSE('HOOK')
+        CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOKERROR')
+        CALL ERROR$MSG('SCHEDULED STOP AFTER PRINTING FILE DMFT_GLOC.DAT')
+        CALL ERROR$STOP('DMFT_GLOC')
+      END IF
+                              CALL TRACE$POP()
       RETURN
       END
 !
