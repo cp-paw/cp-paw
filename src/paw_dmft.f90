@@ -30,6 +30,7 @@ real(8)   ,ALLOCATABLE :: erho(:,:,:)       !(NB,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: FDSIG1(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: FDSIG2(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
+COMPLEX(8),ALLOCATABLE :: dedrho(:,:,:,:)   !(Nchi,Nchi,NKPTL,NSPIN)
 !
 !== LOCAL GREENS FUNCTION (with laurent expansion coefficients) ================
 COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:)     !(NCHI,NCHI,NOMEGA,NSPIN)
@@ -174,11 +175,13 @@ END MODULE DMFT_MODULE
       ALLOCATE(HAMILTON(NB,NB,NKPTL,NSPIN))
       ALLOCATE(erho(NB,NKPTL,NSPIN))
       ALLOCATE(PIPSI(NCHI,NB,NKPTL,NSPIN))
+      ALLOCATE(dedrho(NCHI,Nchi,NKPTL,NSPIN))
       SIGMA=(0.D0,0.D0)
       SIGMALAUR1=(0.D0,0.D0)
       SIGMALAUR2=(0.D0,0.D0)
       SIGMALAUR3=(0.D0,0.D0)
       sigmadc=(0.D0,0.D0)
+      dedrho=(0.D0,0.D0)
       DSIG0=(0.D0,0.D0)
       DSIGLAUR0=(0.D0,0.D0)
       GAMMA0=(0.D0,0.D0)
@@ -277,9 +280,7 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  constraints
 !     ==========================================================================
-do i=1,50
       call DMFT_constraints()
-enddo
 stop 'forced after dmft_constraints'      
 
 
@@ -1196,96 +1197,143 @@ PRINT*,'... dmft_getsigma DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_constraints()
+      SUBROUTINE DMFT_CONSTRAINTS()
 !     **************************************************************************
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,nb,nkptl,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
-     &                      ,sigma,sigmalaur1,sigmalaur2,sigmalaur3,sigmadc &
-     &                      ,diagsloc,pipsi,hamilton,erho
+      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
+     &                      ,SIGMA,SIGMALAUR1,SIGMALAUR2,SIGMALAUR3,SIGMADC &
+     &                      ,DIAGSLOC,PIPSI,HAMILTON,ERHO,DEDRHO
       IMPLICIT NONE
-      INTEGER(4)             :: NU
-      complex(8),allocatable :: greeninv(:,:)
-      complex(8),allocatable :: green(:,:)
-      complex(8),allocatable :: gamma(:,:,:,:)
-      complex(8)             :: devrho(nchi,nchi,nkptl,nspin)
-      INTEGER(4)             :: NTASKS_K,THISTASK_K
-      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      COMPLEX(8)             :: CSVAR
-      integer(4)             :: ikpt,ispin,ib,i
+      INTEGER(4)             :: IKPT,ISPIN,I
+      COMPLEX(8)             :: H0(NCHI,NCHI,NKPTL,NSPIN)
+      COMPLEX(8)             :: HRHO(NCHI,NCHI,NKPTL,NSPIN)
+      COMPLEX(8)             :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-                              CALL TRACE$PUSH('DMFT_getsigma')
-      CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
+                              CALL TRACE$PUSH('DMFT_GETSIGMA')
 !
 !     ==========================================================================
-!     ==  determine deviation from the target density matrix
+!     ==  CONSTRUCT ONE-PARTICLE HAMILTONIANS THAT OBEY                       ==
+!     ==  DENSITY MATRIX CONSTRAINT                                           ==
+!     ==========================================================================
+      H0=(0.D0,0.D0)
+      CALL DMFT_CONSTRAINTS_TWO(H0,SIGMA)
+      HRHO=(0.D0,0.D0)
+      SIG=(0.D0,0.D0)
+      CALL DMFT_CONSTRAINTS_TWO(HRHO,SIG)
+      DEDRHO=HRHO-H0
+!
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          WRITE(*,FMT='(82("="),T10,"IKPT=",I5," ISPIN=",I2)')IKPT,ISPIN
+          DO I=1,NCHI
+            WRITE(*,FMT='("DRHO",80("(",2F10.5,")"))')DEDRHO(I,:,IKPT,ISPIN)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == MAP ONTO HAMILTONIAN
+!     ==========================================================================
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          HAMILTON(:,:,IKPT,ISPIN) &
+     &                 =MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
+     &                        ,MATMUL(H0(:,:,IKPT,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
+        ENDDO
+      ENDDO
+
+                              CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_CONSTRAINTS_TWO(H0,SIG)
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
+     &                      ,DIAGSLOC,PIPSI,ERHO
+      IMPLICIT NONE
+      COMPLEX(8),INTENT(INOUT) :: H0(NCHI,NCHI,NKPTL,NSPIN)
+      COMPLEX(8),INTENT(IN)    :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
+      REAL(8)   ,PARAMETER     :: AMIX=1.D-1
+      REAL(8)   ,PARAMETER     :: TOL=1.D-6
+      INTEGER(4),PARAMETER     :: NITER=100
+      LOGICAL(4)               :: CONVG
+      REAL(8)                  :: MAXDEV
+      INTEGER(4)               :: NU
+      COMPLEX(8),ALLOCATABLE   :: GREENINV(:,:)
+      COMPLEX(8),ALLOCATABLE   :: GREEN(:,:)
+      COMPLEX(8)               :: DEVRHO(NCHI,NCHI)
+      INTEGER(4)               :: NTASKS_K,THISTASK_K
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      COMPLEX(8)               :: CSVAR
+      INTEGER(4)               :: IKPT,ISPIN,IB,I,ITER
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+                              CALL TRACE$PUSH('DMFT_GETSIGMA')
+!       
+!     ==========================================================================
+!     ==  ADJUST H0 TO OBEY DENSITY MATRIX CONSTRAINT                         ==
 !     ==========================================================================
       ALLOCATE(GREENINV(NB,NB))
       ALLOCATE(GREEN(NB,NB))
-      ALLOCATE(gamma(Nchi,Nchi,nkptl,nspin))
-      devrho=(0.d0,0.d0)
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-!
-!         ======================================================================
-!         ==  PERFORM MATSUBARA SUMS                                          ==
-!         ======================================================================
-          DO NU=1,NOMEGA
-            IF(MODULO(NU,NTASKS_K).NE.0) CYCLE
-
-!           == CONSTRUCT LATTICE GREENS FUNCTION ===============================
-            GREENINV(:,:)=-HAMILTON(:,:,IKPT,ISPIN) &
-     &                    -MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
-     &                     ,MATMUL(sigma(:,:,NU,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
-            CSVAR=CI*OMEGA(NU)+MU
-            DO IB=1,NB
-              GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
+      DO ITER=1,NITER
+        MAXDEV=0.D0
+!       
+!       ========================================================================
+!       ==  DEVIATION FROM TARGET DENSITY MATRIX                              ==
+!       ========================================================================
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            DEVRHO=(0.D0,0.D0)
+            DO NU=1,NOMEGA
+        
+!             == CONSTRUCT LATTICE GREENS FUNCTION =============================
+              GREENINV(:,:)=-MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
+     &                          ,MATMUL(H0(:,:,IKPT,ISPIN)+SIG(:,:,NU,ISPIN) &
+     &                                   ,PIPSI(:,:,IKPT,ISPIN)))
+              CSVAR=CI*OMEGA(NU)+MU
+              DO IB=1,NB
+                GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
+              ENDDO
+              CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+!       
+!             == SUBTRACT REFERENCE GREENS FUNCTION ============================
+              DO IB=1,NB
+                CSVAR=1.D0/(CI*OMEGA(NU)-ERHO(IB,IKPT,ISPIN))
+                GREEN(IB,IB)=GREEN(IB,IB)-CSVAR
+              ENDDO 
+!       
+!             == ADD UP DEVIATION OF THE DENSITY MATRICES ======================
+              DEVRHO(:,:)=DEVRHO(:,:)+KBT*MATMUL(PIPSI(:,:,IKPT,ISPIN) &
+        &               ,MATMUL(GREEN,TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN)))))
             ENDDO
-            CALL LIB$INVERTC8(NB,GREENINV,GREEN)
 !
-!           == subtract reference greens function ==============================
-            do ib=1,nb
-              green(ib,ib)=green(ib,ib)-1.d0/(ci*omega(nu)-erho(ib,ikpt,ispin))
-            enddo 
+!           == INCLUDE NEGATIVE FREQUENCIES ====================================
+            DEVRHO(:,:)=DEVRHO(:,:)+CONJG(TRANSPOSE(DEVRHO(:,:)))
+            MAXDEV=MAX(MAXDEV,MAXVAL(ABS(DEVRHO)))
 !
-!           == ddenmat =========================================================
-            devrho(:,:,ikpt,ispin)=devrho(:,:,ikpt,ispin) &
-      &              +kbt*matmul(pipsi(:,:,ikpt,ispin) &
-      &                  ,matmul(green,transpose(conjg(pipsi(:,:,ikpt,ispin)))))
-          enddo
-          devrho(:,:,ikpt,ispin)=devrho(:,:,ikpt,ispin) &
-     &                      +conjg(transpose(devrho(:,:,ikpt,ispin)))
-!!$print*,'==================== ikpt, ispin ',ikpt,ispin
-!!$do i=1,nchi
-!!$  write(*,fmt='("devrho",80("(",2f10.5,")"))')devrho(i,:,ikpt,ispin)
-!!$enddo
-        enddo
-      enddo
-print*,'maxdev',maxval(abs(devrho))
+!           == MIX INTO H0 =====================================================
+            H0(:,:,IKPT,ISPIN)=H0(:,:,IKPT,ISPIN)+AMIX*DEVRHO(:,:)
+          ENDDO
+        ENDDO
 !
-!     ==========================================================================
-!     == determine change of the one-particle hamiltonian                     ==
-!     ==========================================================================
-      do ikpt=1,nkptl
-        do ispin=1,nspin
-          gamma(:,:,ikpt,ispin)=+2.d-1*devrho(:,:,ikpt,ispin)
-        enddo
-      enddo
-!
-!     ==========================================================================
-!     == map onto Hamiltonian
-!     ==========================================================================
-      do ikpt=1,nkptl
-        do ispin=1,nspin
-          hamilton(:,:,ikpt,ispin)=HAMILTON(:,:,IKPT,ISPIN) &
-     &                    +MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
-     &                     ,MATMUL(gamma(:,:,ikpt,ISPIN),PIPSI(:,:,IKPT,ISPIN)))
-        enddo
-      enddo
+!       ========================================================================
+!       == CHECK CONVERGENCE
+!       ========================================================================
+        PRINT*,'MAXDEV',ITER,MAXDEV
+        CONVG=MAXDEV.LT.TOL
+        IF(CONVG) EXIT
+      ENDDO
+      IF(.NOT.CONVG) THEN
+        CALL ERROR$MSG('LOOP NOT CONVERGED')
+        CALL ERROR$STOP('DMFT_CONSTRAINTS_TWO')
+      END IF
 
-                              CALL TRACE$Pop()
-      return
-      end
+                              CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$DEDGREEN()
