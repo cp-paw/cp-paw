@@ -31,8 +31,10 @@ COMPLEX(8),ALLOCATABLE :: FDSIG1(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: FDSIG2(:,:,:,:)   !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: XMAT(:,:,:,:)     !(NB,NB,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: dedrho(:,:,:,:)   !(Nchi,Nchi,NKPTL,NSPIN)
+COMPLEX(8),ALLOCATABLE :: h0(:,:,:,:)       !(Nchi,Nchi,NKPTL,NSPIN)
+COMPLEX(8),ALLOCATABLE :: hrho(:,:,:,:)     !(Nchi,Nchi,NKPTL,NSPIN)
 !
-!== LOCAL GREENS FUNCTION (with laurent expansion coefficients) ================
+!== LOCAL GREENS FUNCTION (WITH LAURENT EXPANSION COEFFICIENTS) ================
 COMPLEX(8),ALLOCATABLE :: GLOC(:,:,:,:)     !(NCHI,NCHI,NOMEGA,NSPIN)
 COMPLEX(8),ALLOCATABLE :: GLOCLAUR1(:,:,:)  !(NCHI,NCHI,NSPIN)
 COMPLEX(8),ALLOCATABLE :: GLOCLAUR2(:,:,:)  !(NCHI,NCHI,NSPIN)
@@ -176,12 +178,16 @@ END MODULE DMFT_MODULE
       ALLOCATE(erho(NB,NKPTL,NSPIN))
       ALLOCATE(PIPSI(NCHI,NB,NKPTL,NSPIN))
       ALLOCATE(dedrho(NCHI,Nchi,NKPTL,NSPIN))
+      ALLOCATE(h0(NCHI,Nchi,NKPTL,NSPIN))
+      ALLOCATE(hrho(NCHI,Nchi,NKPTL,NSPIN))
       SIGMA=(0.D0,0.D0)
       SIGMALAUR1=(0.D0,0.D0)
       SIGMALAUR2=(0.D0,0.D0)
       SIGMALAUR3=(0.D0,0.D0)
       sigmadc=(0.D0,0.D0)
       dedrho=(0.D0,0.D0)
+      hrho=(0.D0,0.D0)
+      h0=(0.D0,0.D0)
       DSIG0=(0.D0,0.D0)
       DSIGLAUR0=(0.D0,0.D0)
       GAMMA0=(0.D0,0.D0)
@@ -275,14 +281,15 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     ==  read self energy from file
 !     ==========================================================================
+do i=1,3
       call DMFT_GETSIGMA()
 !
 !     ==========================================================================
 !     ==  constraints
 !     ==========================================================================
       call DMFT_constraints()
+enddo
 stop 'forced after dmft_constraints'      
-
 
 do i=1,50
       CALL DMFT$DEDGREEN()
@@ -1202,12 +1209,11 @@ PRINT*,'... dmft_getsigma DONE'
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
      &                      ,SIGMA,SIGMALAUR1,SIGMALAUR2,SIGMALAUR3,SIGMADC &
-     &                      ,DIAGSLOC,PIPSI,HAMILTON,ERHO,DEDRHO
+     &                      ,DIAGSLOC,PIPSI,HAMILTON,ERHO,DEDRHO,h0,hrho
       IMPLICIT NONE
       INTEGER(4)             :: IKPT,ISPIN,I
-      COMPLEX(8)             :: H0(NCHI,NCHI,NKPTL,NSPIN)
-      COMPLEX(8)             :: HRHO(NCHI,NCHI,NKPTL,NSPIN)
       COMPLEX(8)             :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
+      logical(4),parameter   :: tprint=.false.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT_GETSIGMA')
@@ -1216,21 +1222,31 @@ PRINT*,'... dmft_getsigma DONE'
 !     ==  CONSTRUCT ONE-PARTICLE HAMILTONIANS THAT OBEY                       ==
 !     ==  DENSITY MATRIX CONSTRAINT                                           ==
 !     ==========================================================================
-      H0=(0.D0,0.D0)
       CALL DMFT_CONSTRAINTS_TWO(H0,SIGMA)
-      HRHO=(0.D0,0.D0)
       SIG=(0.D0,0.D0)
       CALL DMFT_CONSTRAINTS_TWO(HRHO,SIG)
       DEDRHO=HRHO-H0
 !
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          WRITE(*,FMT='(82("="),T10,"IKPT=",I5," ISPIN=",I2)')IKPT,ISPIN
-          DO I=1,NCHI
-            WRITE(*,FMT='("DRHO",80("(",2F10.5,")"))')DEDRHO(I,:,IKPT,ISPIN)
+!     ==========================================================================
+!     == MAP ONTO HAMILTONIAN
+!     ==========================================================================
+      if(tprint) then
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            WRITE(*,FMT='(82("="),T10,"IKPT=",I5," ISPIN=",I2)')IKPT,ISPIN
+            WRITE(*,FMT='("erho ",10f10.5)')erho(:,ikpt,ISPIN)
+            DO I=1,NCHI
+              WRITE(*,FMT='("DedRHO",80("(",2F10.5,")"))')DEDRHO(I,:,IKPT,ISPIN)
+            ENDDO
+            DO I=1,NCHI
+              WRITE(*,FMT='("hRHO  ",80("(",2F10.5,")"))')hRHO(I,:,IKPT,ISPIN)
+            ENDDO
+            DO I=1,NCHI
+              WRITE(*,FMT='("h0   =",80("(",2F10.5,")"))')h0(I,:,IKPT,ISPIN)
+            ENDDO
           ENDDO
         ENDDO
-      ENDDO
+      end if
 !
 !     ==========================================================================
 !     == MAP ONTO HAMILTONIAN
