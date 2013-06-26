@@ -27,6 +27,7 @@ COMPLEX(8),ALLOCATABLE :: PIPSI(:,:,:,:)    !(NCHI,NB,NKPTL,NSPIN) <PI|PSI>
 REAL(8)   ,ALLOCATABLE :: ERHO(:,:,:)       !(NB,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: H0(:,:,:,:)       !(NCHI,NCHI,NKPTL,NSPIN)
 COMPLEX(8),ALLOCATABLE :: HRHO(:,:,:,:)     !(NCHI,NCHI,NKPTL,NSPIN)
+COMPLEX(8),ALLOCATABLE :: RHOOFK(:,:,:,:)   !(NCHI,NCHI,NKPTL,NSPIN)
 !__MATRIX TO DIAGONALIZE OVERLAP MATRIX_________________________________________
 COMPLEX(8),ALLOCATABLE :: DIAGSLOC(:,:,:) !(NCHI,NCHI,NSPIN)
 COMPLEX(8),ALLOCATABLE :: SMAT(:,:,:,:)   !(NCHI,NCHI,NKPTL,NSPIN)
@@ -126,6 +127,7 @@ END MODULE DMFT_MODULE
       NOMEGA=400
       KBT=0.333D0*EV
       DELTAT=10.D0
+      MU=0.D0
 !
 !     ==========================================================================
 !     ==  CALCULATE MATSUBARA FREQUENCIES                                     ==
@@ -141,6 +143,7 @@ END MODULE DMFT_MODULE
       ALLOCATE(ERHO(NB,NKPTL,NSPIN))
       ALLOCATE(PIPSI(NCHI,NB,NKPTL,NSPIN))
       ALLOCATE(HRHO(NCHI,NCHI,NKPTL,NSPIN))
+      ALLOCATE(rhoofk(NCHI,NCHI,NKPTL,NSPIN))
 !     == H0 IS PURPOSELY NOT ALLOCATED
       ALLOCATE(SIGMADC(NCHI,NCHI,NSPIN))
       ALLOCATE(SMAT(NCHI,NCHI,NKPTL,NSPIN))
@@ -170,7 +173,8 @@ END MODULE DMFT_MODULE
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)             :: I
+      INTEGER(4)             :: I,iter,ikpt,ispin
+      logical(4)             :: tprint=.false.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT$GREEN')
@@ -181,25 +185,32 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
       CALL DMFT$COLLECTHAMILTONIAN()
 !
+!     ==========================================================================
+!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
+!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC                              ==
+!     ==========================================================================
+      CALL DMFT_DIAGSLOC()
+!
       CALL DMFT_GRHO() ! test only: density from reference greens function
 !
 !     ==========================================================================
 !     ==  CONSTRUCT NON-INTERACTING HAMILTONIAN THAT PRODUCES THE CORRECT     ==
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
+!!$      hrho=(0.d0,0.d0)
+!!$      SIGMA=(0.D0,0.D0)
+!!$print*,'marke before constraints_2'
+!!$      CALL DMFT_CONSTRAINTS_two(HRHO,SIGMA)
+!!$print*,'marke before constraints_1'
+      HRHO=(0.D0,0.D0)
       SIGMA=(0.D0,0.D0)
-      CALL DMFT_CONSTRAINTS_TWO(HRHO,SIGMA)
+      SIGLAUR=(0.D0,0.D0)
+      CALL DMFT_CONSTRAINTS_ONE(HRHO,SIGMA,SIGLAUR)
 !
       IF(.NOT.ALLOCATED(H0)) THEN
         ALLOCATE(H0(NCHI,NCHI,NKPTL,NSPIN))
         H0=HRHO
       END IF
-!
-!     ==========================================================================
-!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
-!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC                              ==
-!     ==========================================================================
-      CALL DMFT_DIAGSLOC()
 !
       call DMFT_test()  !test only
 !
@@ -207,8 +218,8 @@ END MODULE DMFT_MODULE
 !     == DETERMINE LOCAL GREENS FUNCTION                                      ==
 !     ==========================================================================
       MU=0.D0
-DO I=1,10
-WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')I
+DO Iter=1,10
+WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')Iter
       CALL DMFT_GLOC(H0,SIGMA,SIGLAUR,GLOC,GLOCLAUR)
       CALL DMFT$PLOTGLOC(-'GLOC.DAT')
 !
@@ -232,7 +243,8 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')I
 !     ==========================================================================
 !     ==  CONSTRAINTS
 !     ==========================================================================
-      CALL DMFT_CONSTRAINTS_TWO(H0,SIGMA)
+!      CALL DMFT_CONSTRAINTS_TWO(H0,SIGMA)
+      CALL DMFT_CONSTRAINTS_ONE(H0,SIGMA,SIGLAUR)
 !
 !     ==========================================================================
 !     == MAP ONTO HAMILTONIAN
@@ -331,7 +343,7 @@ STOP 'END OF LOOP. STOPPING.'
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,IPROOFCHI,KBT &
-     &                       ,ERHO,PIPSI
+     &                       ,ERHO,PIPSI,rhoofk,wkptl
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
@@ -343,6 +355,7 @@ STOP 'END OF LOOP. STOPPING.'
       REAL(8)                :: F(NB,NKPTL,NSPIN)
       REAL(8)                :: SVAR
       COMPLEX(8)             :: RHO(NCHI,NCHI,NSPIN)
+      COMPLEX(8)             :: csvar
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                       CALL TRACE$PUSH('DMFT$COLLECTHAMILTONIAN')
@@ -391,6 +404,37 @@ STOP 'END OF LOOP. STOPPING.'
         ENDDO
       ENDDO 
 PRINT*,'BOUNDS OF SPECTRUM [EV] ',MINVAL(ERHO)*27.211D0,MAXVAL(ERHO)*27.211D0
+!
+!     ==========================================================================
+!     ==  determine constraint rhoofk 
+!     ==========================================================================
+      rhoofk=(0.d0,0.d0)
+      do ikpt=1,nkptl
+        do ispin=1,nspin
+          do ib=1,nb
+            do j=1,nchi
+              csvar=f(ib,ikpt,ispin)*conjg(pipsi(j,ib,ikpt,ispin))
+              rhoofk(:,j,ikpt,ispin)=rhoofk(:,j,ikpt,ispin) &
+     &                               +pipsi(:,ib,ikpt,ispin)*csvar
+            enddo
+          enddo
+        enddo
+      enddo
+!
+!     == calculate density matrix for testing ==================================
+      RHO(:,:,:)=(0.D0,0.D0)
+      do ikpt=1,nkptl
+        do ispin=1,nspin
+          rho(:,:,ispin)=rho(:,:,ispin)+rhoofk(:,:,ikpt,ispin)*wkptl(ikpt)
+        enddo
+      enddo
+      if(nspin.eq.1)rho=2.d0*rho
+      WRITE(*,FMT='(82("="),T10," DENSITY MATRIX FROM BAND OCCUPATIONS (1) ")')
+      DO ISPIN=1,NSPIN
+        DO I=1,NCHI
+          WRITE(*,FMT='("RHO",100("(",2F10.5,")"))')RHO(I,:,ISPIN)
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
 !     ==  CALCULATE LOCAL DENSITY MATRIX FOR TESTING 
@@ -927,44 +971,171 @@ PRINT*,'... DMFT_GETSIGMA DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_CONSTRAINTS()
+      SUBROUTINE DMFT_CONSTRAINTS_ONE(H0,SIG,siglaur)
 !     **************************************************************************
+!     **  ADJUSTS H0(:,:,IKPT,IPSIN) SUCH THAT                                **
+!     **                                                                      **
+!     **  G(K,NU)=<PI(K)|PSI(K)> &                                            **
+!     **         /[I*OMEGA_NU+MU-<PSI(K)|PI>(H0(K)-SIGMA(NU))<PI(K)|PSI(K)>] &**
+!     **         *<PSI(K)|PI(K)>                                              **
+!     **                                                                      **
+!     **  PRODUCES THE SAME K-DEPENDENT DENSITY MATRIX AS GRHO                **
+!     **                                                                      **
+!     **  GRHO(K,NU)=<PI(K)|PSI(K)>/[I*OMEGA_NU+MU-HRHO(K)]<PI(K)|PSI(K)>     **
+!     **                                                                      **
+!     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NSPIN,NDIM,NOMEGA,KBT,MU &
-     &                      ,SIGMA,ERHO,H0,HRHO
+      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
+     &                      ,PIPSI,ERHO,AMIX,smat,hrho,rhoofk,wkptl
       IMPLICIT NONE
-      INTEGER(4)             :: IKPT,ISPIN,I
-      COMPLEX(8)             :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
-      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
+      COMPLEX(8),INTENT(INOUT) :: H0(NCHI,NCHI,NKPTL,NSPIN)
+      COMPLEX(8),INTENT(IN)    :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
+      COMPLEX(8),INTENT(IN)    :: SIGlaur(NCHI,NCHI,3,NSPIN)
+      REAL(8)   ,PARAMETER     :: TOL=1.D-6
+      INTEGER(4),PARAMETER     :: NITER=1000
+      LOGICAL(4),PARAMETER     :: TMIX=.false.
+      LOGICAL(4)               :: CONVG
+      REAL(8)                  :: MAXDEV
+      INTEGER(4)               :: NU
+      COMPLEX(8)               :: DEVRHO(NCHI,NCHI)
+      INTEGER(4)               :: NTASKS_K,THISTASK_K
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      COMPLEX(8)               :: CSVAR
+      COMPLEX(8)               :: X4(NCHI*NCHI,NCHI*NCHI)
+      COMPLEX(8)               :: mat(NCHI,NCHI)
+      COMPLEX(8)               :: sinv(NCHI,NCHI)
+      COMPLEX(8)               :: rhosum(NCHI,NCHI)
+      COMPLEX(8)               :: G(NCHI,NCHI)
+      COMPLEX(8)               :: Glaur1(NCHI,NCHI)
+      COMPLEX(8)               :: Glaur2(NCHI,NCHI)
+      COMPLEX(8)               :: Glaur3(NCHI,NCHI)
+      COMPLEX(8)               :: DH0(NCHI,NCHI)
+      COMPLEX(8)               :: X4INV(NCHI*NCHI,NCHI*NCHI)
+      INTEGER(4)               :: IKPT,ISPIN,IB,ITER,I,J,K,L,IND1,IND2
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT_GETSIGMA')
-!
+!       
 !     ==========================================================================
-!     ==  CONSTRUCT ONE-PARTICLE HAMILTONIANS THAT OBEY                       ==
-!     ==  DENSITY MATRIX CONSTRAINT                                           ==
+!     ==  ADJUST H0 TO OBEY DENSITY MATRIX CONSTRAINT                         ==
 !     ==========================================================================
-      CALL DMFT_CONSTRAINTS_TWO(H0,SIGMA)
-!
-!     ==========================================================================
-!     == MAP ONTO HAMILTONIAN
-!     ==========================================================================
-      IF(TPRINT) THEN
+      DO ITER=1,NITER
+!       
+!       ========================================================================
+!       ==  DEVIATION FROM TARGET DENSITY MATRIX                              ==
+!       ========================================================================
+rhosum=(0.d0,0.d0)
+        MAXDEV=0.D0
+PRINT*,'MINMAX(H0)  ',MINVAL(REAL(H0)),MAXVAL(REAL(H0))
+PRINT*,'MINMAX(SIG) ',MINVAL(REAL(SIG)),MAXVAL(REAL(SIG))
         DO IKPT=1,NKPTL
           DO ISPIN=1,NSPIN
-            WRITE(*,FMT='(82("="),T10,"IKPT=",I5," ISPIN=",I2)')IKPT,ISPIN
-            DO I=1,NCHI
-              WRITE(*,FMT='("DEDRHO",80("(",2F10.5,")"))') &
-    &                 HRHO(I,:,IKPT,ISPIN)-H0(I,:,IKPT,ISPIN)
-            ENDDO
-            DO I=1,NCHI
-              WRITE(*,FMT='("HRHO  ",80("(",2F10.5,")"))')HRHO(I,:,IKPT,ISPIN)
-            ENDDO
-            DO I=1,NCHI
-              WRITE(*,FMT='("H0   =",80("(",2F10.5,")"))')H0(I,:,IKPT,ISPIN)
-            ENDDO
+!           == laurent expansion for the greens function =======================
+            call lib$invertc8(nchi,smat(:,:,ikpt,ispin),sinv)
+            GLAUR1=sinv
+            MAT=H0(:,:,IKPT,ISPIN)+SIGLAUR(:,:,1,ISPIN)-MU*SMAT(:,:,IKPT,ISPIN)
+            GLAUR2=MATMUL(SINV,MATMUL(MAT,SINV))
+            MAT=H0(:,:,IKPT,ISPIN)+SIGLAUR(:,:,1,ISPIN)-MU*SMAT(:,:,IKPT,ISPIN)
+            MAT=MATMUL(MAT,MATMUL(SINV,MAT))
+            MAT=MAT+SIGLAUR(:,:,2,ISPIN)
+            GLAUR3=MATMUL(SINV,MATMUL(MAT,SINV))
+!
+            X4=(0.D0,0.D0)        
+            DEVRHO=(0.D0,0.D0)
+            DO NU=1,NOMEGA
+        
+!             == CONSTRUCT LATTICE GREENS FUNCTION =============================
+              MAT=(CI*OMEGA(NU)+mu)*SMAT(:,:,IKPT,ISPIN) &
+                                   -H0(:,:,IKPT,ISPIN)-SIG(:,:,NU,ISPIN)
+              CALL LIB$INVERTC8(NCHI,MAT,G)
+              CSVAR=1.D0/(CI*OMEGA(NU))
+              DEVRHO=DEVRHO+KBT*(G-csvar*(glaur1+csvar*(glaur2+csvar*glaur3)))
+!
+!             == ACCUMULATE SECOND ORDER TERM ==================================
+              DO I=1,NCHI
+                DO J=1,NCHI
+                  IND1=I+(J-1)*NCHI  !(I,J)
+                  DO K=1,NCHI
+                    DO L=1,NCHI
+                      IND2=K+(L-1)*NCHI  !(K,L)
+                      X4(IND1,IND2)=X4(IND1,IND2)+KBT*(G(I,K)*G(L,J) &
+    &                                           +CONJG(G(K,I)*G(J,L)))
+                    ENDDO
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO ! end loop over matsubara frequencies
+!
+!           == INCLUDE NEGATIVE FREQUENCIES ====================================
+!           == ALREADY INCLUDED FOR X4
+            DEVRHO=DEVRHO+CONJG(TRANSPOSE(DEVRHO))
+!           == ADD TAILS (glaur3 does not contribute) ==========================
+            DEVRHO=DEVRHO+0.5D0*GLAUR1
+            DEVRHO=DEVRHO-0.25D0/KBT*GLAUR2
+!rhosum=rhosum+devrho*wkptl(ikpt)*2.d0
+rhosum=rhosum+rhoofk(:,:,ikpt,ispin)*wkptl(ikpt)*2.d0
+!
+!           == SUBTRACT TARGET DENSITY =========================================
+!!$PRINT*,'RHO(a)'
+!!$DO I=1,NCHI
+!!$  WRITE(*,FMT='("RHO",10("(",2F10.5,")"))')devrho(i,:)
+!!$ENDDO
+!!$PRINT*,'RHO(b)'
+!!$DO I=1,NCHI
+!!$  WRITE(*,FMT='("RHO",10("(",2F10.5,")"))')rhoofk(i,:,ikpt,ispin)
+!!$ENDDO
+            DEVRHO=DEVRHO-RHOOFK(:,:,IKPT,ISPIN)
+!!$PRINT*,'devrho'
+!!$DO I=1,NCHI
+!!$  WRITE(*,FMT='("RHO",10("(",2F10.5,")"))')devrho(i,:)
+!!$ENDDO
+!
+            MAXDEV=MAX(MAXDEV,MAXVAL(ABS(DEVRHO)))
+
+PRINT*,'ITER=',ITER,' IKPT=',IKPT &
+&     ,'MAXVAL(X4) ',MAXVAL(ABS(X4)),' MAX(DEVRHO) ',MAXVAL(ABS(DEVRHO))
+!
+
+!
+            IF(TMIX) THEN
+              DH0(:,:)=AMIX*DEVRHO(:,:)
+            ELSE
+              CALL LIB$INVERTC8(NCHI**2,X4,X4INV)
+              DH0=(0.D0,0.D0)
+              DO I=1,NCHI
+                DO J=1,NCHI
+                  IND1=I+NCHI*(J-1)
+                  DO K=1,NCHI
+                    DO L=1,NCHI
+                      IND2=K+NCHI*(L-1)
+                      DH0(I,J)=DH0(I,J)-X4INV(IND1,IND2)*DEVRHO(K,L)
+                    ENDDO
+                  ENDDO
+                ENDDO
+              ENDDO
+            END IF
+!
+!           =================================================================== 
+!           == ADD DH
+!           ====================================================================
+            H0(:,:,IKPT,ISPIN)=H0(:,:,IKPT,ISPIN)+DH0(:,:)
           ENDDO
         ENDDO
+!!$print*,'rhosum'
+!!$DO I=1,NCHI
+!!$  WRITE(*,FMT='("RHO",10("(",2F10.5,")"))')rhosum(i,:)
+!!$ENDDO
+!
+!       ========================================================================
+!       == CHECK CONVERGENCE
+!       ========================================================================
+        PRINT*,'MAXDEV',ITER,MAXDEV
+        CONVG=MAXDEV.LT.TOL
+        IF(CONVG) EXIT
+      ENDDO
+      IF(.NOT.CONVG) THEN
+        CALL ERROR$MSG('LOOP NOT CONVERGED')
+        CALL ERROR$STOP('DMFT_CONSTRAINTS_TWO')
       END IF
 
                               CALL TRACE$POP()
@@ -987,7 +1158,7 @@ PRINT*,'... DMFT_GETSIGMA DONE'
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NOMEGA,OMEGA,KBT,MU &
-     &                      ,PIPSI,ERHO,AMIX
+     &                      ,PIPSI,ERHO,AMIX,smat,hrho
       IMPLICIT NONE
       COMPLEX(8),INTENT(INOUT) :: H0(NCHI,NCHI,NKPTL,NSPIN)
       COMPLEX(8),INTENT(IN)    :: SIG(NCHI,NCHI,NOMEGA,NSPIN)
@@ -1004,7 +1175,9 @@ PRINT*,'... DMFT_GETSIGMA DONE'
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: CSVAR
       COMPLEX(8)               :: X4(NCHI*NCHI,NCHI*NCHI)
+      COMPLEX(8)               :: mat(NCHI,NCHI)
       COMPLEX(8)               :: GLOC(NCHI,NCHI)
+      COMPLEX(8)               :: Grho(NCHI,NCHI)
       COMPLEX(8)               :: DH0(NCHI,NCHI)
       COMPLEX(8)               :: X4INV(NCHI*NCHI,NCHI*NCHI)
       INTEGER(4)               :: IKPT,ISPIN,IB,ITER,I,J,K,L,IND1,IND2
@@ -1033,18 +1206,30 @@ PRINT*,'MINMAX(SIG) ',MINVAL(REAL(SIG)),MAXVAL(REAL(SIG))
             DO NU=1,NOMEGA
         
 !             == CONSTRUCT LATTICE GREENS FUNCTION =============================
-              GREENINV(:,:)=-MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
-     &                          ,MATMUL(H0(:,:,IKPT,ISPIN)+SIG(:,:,NU,ISPIN) &
-     &                                   ,PIPSI(:,:,IKPT,ISPIN)))
-              CSVAR=CI*OMEGA(NU)+MU
-              DO IB=1,NB
-                GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
-              ENDDO
-              CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+                GREENINV(:,:)=-MATMUL(TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN))) &
+     &                            ,MATMUL(H0(:,:,IKPT,ISPIN)+SIG(:,:,NU,ISPIN) &
+     &                                     ,PIPSI(:,:,IKPT,ISPIN)))
+                CSVAR=CI*OMEGA(NU)+MU
+                DO IB=1,NB
+                  GREENINV(IB,IB)=GREENINV(IB,IB)+CSVAR
+                ENDDO
+                CALL LIB$INVERTC8(NB,GREENINV,GREEN)
+                GLOC(:,:)=MATMUL(PIPSI(:,:,IKPT,ISPIN) &
+        &                ,MATMUL(GREEN,TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN)))))
+!       
+!               == REFERENCE GREENS FUNCTION ===================================
+                green=(0.d0,0.d0)
+                DO IB=1,NB
+                  GREEN(IB,IB)=1.D0/(CI*OMEGA(NU)-ERHO(IB,IKPT,ISPIN))
+                ENDDO 
+                Grho(:,:)=MATMUL(PIPSI(:,:,IKPT,ISPIN) &
+        &                ,MATMUL(GREEN,TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN)))))
+
+!       
+!             == ADD UP DEVIATION OF THE DENSITY MATRICES ======================
+              DEVRHO(:,:)=DEVRHO(:,:)+KBT*(gloc-grho)
 !
 !             == ACCUMULATE SECOND ORDER TERM ==================================
-              GLOC(:,:)=MATMUL(PIPSI(:,:,IKPT,ISPIN) &
-        &              ,MATMUL(GREEN,TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN)))))
               DO I=1,NCHI
                 DO J=1,NCHI
                   IND1=I+(J-1)*NCHI  !(I,J)
@@ -1057,17 +1242,8 @@ PRINT*,'MINMAX(SIG) ',MINVAL(REAL(SIG)),MAXVAL(REAL(SIG))
                   ENDDO
                 ENDDO
               ENDDO
-!       
-!             == SUBTRACT REFERENCE GREENS FUNCTION ============================
-              DO IB=1,NB
-                CSVAR=1.D0/(CI*OMEGA(NU)-ERHO(IB,IKPT,ISPIN))
-                GREEN(IB,IB)=GREEN(IB,IB)-CSVAR
-              ENDDO 
-!       
-!             == ADD UP DEVIATION OF THE DENSITY MATRICES ======================
-              DEVRHO(:,:)=DEVRHO(:,:)+KBT*MATMUL(PIPSI(:,:,IKPT,ISPIN) &
-        &               ,MATMUL(GREEN,TRANSPOSE(CONJG(PIPSI(:,:,IKPT,ISPIN)))))
             ENDDO
+
 !
 !           == INCLUDE NEGATIVE FREQUENCIES ====================================
 !           == ALREADY INCLUDED FOR X4
@@ -1101,6 +1277,7 @@ PRINT*,'MINMAX(SIG) ',MINVAL(REAL(SIG)),MAXVAL(REAL(SIG))
 !!$ENDDO
 PRINT*,'ITER=',ITER,' IKPT=',IKPT &
 &     ,'MAXVAL(X4) ',MAXVAL(ABS(X4)),' MAX(DEVRHO) ',MAXVAL(ABS(DEVRHO))
+!
 !
             IF(TMIX) THEN
               DH0(:,:)=AMIX*DEVRHO(:,:)
@@ -1208,7 +1385,7 @@ PRINT*,'ITER=',ITER,' IKPT=',IKPT &
         RHO(:,:,ISPIN)=RHO(:,:,ISPIN)*KBT
         RHO(:,:,ISPIN)=RHO(:,:,ISPIN)+0.5D0*GLAUR(:,:,1,ISPIN)
         RHO(:,:,ISPIN)=RHO(:,:,ISPIN)-0.25D0/KBT*GLAUR(:,:,2,ISPIN)
-        RHO(:,:,ISPIN)=RHO(:,:,ISPIN)*2.D0/REAL(NSPIN) ! SPIN MULTIPLICITY
+        if(nspin.eq.1) RHO(:,:,ISPIN)=RHO(:,:,ISPIN)*2.D0 ! SPIN MULTIPLICITY
       ENDDO
       RETURN
       END
