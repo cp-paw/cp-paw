@@ -1265,36 +1265,43 @@ each step that reduces the energy}
 %----------------------------------------------------------------------
 \block{!CONTROL!PSIDYN!THERMOSTAT}
 %----------------------------------------------------------------------
-\brules{optional}
-\bdescr{(presently in test phase:\\
-  Thermostat for the wave functions. The thermostat acts like a
-  Nose-Hoover
-  thermostat\cite{nose84_molphys52_255,nose84_jcp81_511,hoover85_pra31_1695}
-  , but it does not aim at constructing a canonical ensemble. Instead
-  it starts acting only when the wave function kinetic exceeds the
-  target temperature estimated for Born-Oppenheimer kinetic
-  energy.\cite{bloechl02_prb65_104303} If the thermostat kicks in, it
-  reshuffles kinetic energy from the wave functions into the atomic
-  motion.  The target kinetic energy is subtracted from the wave
-  function kinetic energy in the protocol. A friction on the
-  thermostat shall be used to avoid instabilities. The thermostat
-  shall be used only if the atoms are moving.} 
+\brules{optional} \bdescr{Thermostat for the wave
+  functions.\cite{bloechl02_prb65_104303} This thermostat shuffles
+  energy from the wave functions to the atomic motion, when the
+  wave-function kinetic energy former exceeds an estimated target
+  value $\frac{1}{2}\sum_iK_i\dot{\vec{R}}_i^2$. A friction on the thermostat
+  shall be used to avoid instabilities. The thermostat shall be used
+  only if the atoms are moving.
+\begin{eqnarray*}
+M_i\ddot{\vec{R}}_i&=& \vec{F}_i+K_i\dot{\vec{R}}_i\dot{x}_\psi
+\\
+Q_\psi\ddot{x}_\psi&=&2\theta(\dot{x}_\psi)
+\left(\sum_n f_n 
+\langle\dot{\tilde{\psi}}_n|m_\psi|\dot{\tilde{\psi}}_n\rangle
+-\frac{1}{2}\sum_i\vec{K}_i\dot{R}_i^2\right)
+\end{eqnarray*}
+The values for $K_i$ are derived from the atomic pseudo wave
+functions.
 
-\mbax{\key{$<$EKIN$>$}
-\vdescr{average kinetic energy of the wave functions. Do not use in
-  the new version.}
-\vformat{real}
-\vrules{optional}
-\vdefault{0.01}}
+}
 
-\mbax{\key{T[K]}
-\vdescr{New version: atom temperature in Kelvin.
-\\ 
-Old version: average kinetic energy of the wave functions divided by
-  Boltzmann's constant. }
-\vformat{real}
-\vrules{optional}
-\vdefault{see $<$EKIN$>$}}
+%% \mbax{\key{$<$EKIN$>$}
+%% \vdescr{average kinetic energy of the wave functions. Do not use in
+%%   the new version.}
+%% \vformat{real}
+%% \vrules{optional}
+%% \vdefault{0.01}}
+
+%% \mbax{\key{T[K]}
+%% \vdescr{New version: atom temperature in Kelvin.
+%% \\ 
+%% Old version: average kinetic energy of the wave functions divided by
+%%   Boltzmann's constant. }
+%% \vformat{real}
+%% \vrules{optional}
+%% \vdefault{see $<$EKIN$>$}}
+
+
 
 \mbax{\key{PERIOD}
 \vdescr{Oscillation period of the Nos\'e variable in a.u.}
@@ -2244,25 +2251,32 @@ original deviation.}
 \bdescr{select trajectories to be written.}
 
 \mbax{\key{R} 
-  \vdescr{positions an point charges.} 
+  \vdescr{positions and point charges. (extension ``\_r.tra'')} 
   \vformat{logical} 
   \vrules{optional}
   \vdefault{.true.}}
 
 \mbax{\key{FORCE} 
-  \vdescr{forces acting on the atoms.} 
+  \vdescr{forces acting on the atoms. (extension ``\_f.tra'')} 
   \vformat{logical} 
   \vrules{optional}
   \vdefault{.false.}}
 
 \mbax{\key{E} 
-  \vdescr{total energy contributions.} 
+  \vdescr{total energy contributions. (extension ``\_e.tra'')} 
   \vformat{logical} 
   \vrules{optional}
   \vdefault{.false.}}
 
 \mbax{\key{BANDS} 
-  \vdescr{one-particle energies.(not yet implemented)} 
+  \vdescr{one-particle energies.(not yet implemented, extension ``\_b.tra'')} 
+  \vformat{logical} 
+  \vrules{optional}
+  \vdefault{.false.}}
+
+\mbax{\key{QMMM} 
+  \vdescr{atomic trajectory including the environment studied with
+    QM-MM coupling.(not yet implemented, extension ``\_rqmmm.tra'')}
   \vformat{logical} 
   \vrules{optional}
   \vdefault{.false.}}
@@ -5295,7 +5309,7 @@ the paw\_tra tool. I recommend the extension
 \vdescr{Center of viewbox}
 \vformat{real} 
 \vrules{optional; incompatible with ``!TCNTL!MOVIE!VIEWBOX:O''}
-\vdefault{0. 0. 0.}}
+\vdefault{see ``!TCNTL!MOVIE!VIEWBOX:O''}}
 
 \mbax{\key{T}
 \vdescr{vectors defining the edges of the view box}

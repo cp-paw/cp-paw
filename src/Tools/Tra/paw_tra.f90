@@ -1086,6 +1086,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       REAL(8)                  :: DR(3)
       REAL(8)                  :: DIS
       REAL(8)                  :: TAV,T2AV
+      REAL(8)                  :: Tsum,T2sum
       REAL(8)                  :: SVAR
       REAL(8)                  :: DELTAT
       LOGICAL(4)               :: TFILE   ! FILE SHALL BE WRITTEN OR NOT
@@ -1118,6 +1119,8 @@ CALL FILEHANDLER$FILENAME('TRA',str)
 !     ==  TEMPERATURE                                                  ==
 !     ================================================================
       CALL REPORT$TITLE(NFILO,'TEMPERATURE OF INDIVIDUAL ATOMS')
+      tsum=0.d0
+      t2sum=0.d0
       DO IAT=1,NATOM
         TAV=0.D0
         T2AV=0.D0
@@ -1133,10 +1136,17 @@ CALL FILEHANDLER$FILENAME('TRA',str)
         SVAR=0.5D0*MASS(IAT)/1.5D0
         TAV =SVAR*TAV
         T2AV=SVAR**2*T2AV
+        tsum=tsum+tav
+        t2sum=t2sum+t2av
         WRITE(NFILO,FMT='("ATOM ",A10," <T>:",F10.1,"K" &
      &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
      &    TRIM(ATOM(IAT)),TAV/KELVIN,SQRT(T2AV-TAV**2)/KELVIN
       ENDDO
+      tsum=tsum/natom
+      t2sum=t2sum/natom
+      WRITE(NFILO,FMT='("sum      <T>:",F10.1,"K" &
+     &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
+     &    Tsum/KELVIN,SQRT(T2sum-Tsum**2)/KELVIN
 !
 !     ================================================================
 !     ==  INDIVIDUAL PLOTS                                          ==
@@ -1672,11 +1682,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==  SPECIFY FILE                                              ==
 !     ================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('!TCNTL!MOVIE!FILE NOT FOUND')
-        CALL ERROR$STOP('WRITETRA')
-      END IF
-      CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',1)
+      CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',0)
 !     
 !     == READ FLAG FOR EXTENSION =======================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EXT',1,TCHK)

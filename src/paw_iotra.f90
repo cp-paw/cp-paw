@@ -61,21 +61,22 @@ MODULE TRAJECTORYIO_MODULE
 !**                                                                           **
 !*******************************************************************************
 TYPE THIS_TYPE
-  CHARACTER(32)          :: ID        ! IDENTIFIER; MUST BE A FILE-ID OF FILEHANDLER 
-  TYPE(THIS_TYPE),POINTER :: NEXT      ! POINTS TO NEXT THIS-TYPE ELEMENT
-  CHARACTER(512)         :: FILE      ! FILE NAME TO WHICH THE TRAJECTORY IS WRITTEN
-  LOGICAL(4)             :: TON       ! ON-OFF SWITCH
-  INTEGER(4)             :: NSIZE     ! LENGTH OF EACH TRAJECTORY ENTRY
-  INTEGER(4)             :: NRECX      ! NUMBER OF TIME SLICES TO BE STORED BEFORE FLUSH
+  CHARACTER(32)          :: ID   ! IDENTIFIER; MUST BE A FILE-ID OF FILEHANDLER 
+  TYPE(THIS_TYPE),POINTER:: NEXT ! POINTS TO NEXT THIS-TYPE ELEMENT
+  CHARACTER(512)         :: FILE ! FILE NAME TO WHICH THE TRAJECTORY IS WRITTEN
+  LOGICAL(4)             :: TON  ! ON-OFF SWITCH
+  INTEGER(4)             :: NSIZE ! LENGTH OF EACH TRAJECTORY ENTRY
+  INTEGER(4)             :: NRECX ! #(TIME SLICES) TO BE STORED BEFORE FLUSH
   REAL(8)                :: SKIP=0
-  INTEGER(4)             :: NREC      ! INDEX OF LAST WRITTEN ENTRY IN THE POINTER ARRAY
-                                      ! I=0 INDICATES THAT ARRAYS ARE NOT ALLOCATED 
-  INTEGER(4)    ,POINTER :: ISTEP(:)  ! (NSTEP)         TIME STEP NUMBER
-  REAL(8)       ,POINTER :: TIME(:)   ! (NSTEP)         ABSOLUTE TIME IN A.U.
-  REAL(8)       ,POINTER :: ARRAY(:,:)! (NSIZE,NSTEP)   ARRAY HOLDING TRAJECTORY INFORMATION 
+  INTEGER(4)             :: NREC ! INDEX OF LAST WRITTEN ENTRY IN  POINTER ARRAY
+                                 ! I=0 INDICATES THAT ARRAYS ARE NOT ALLOCATED 
+  INTEGER(4)    ,POINTER :: ISTEP(:)  ! (NSTEP)        TIME STEP NUMBER
+  REAL(8)       ,POINTER :: TIME(:)   ! (NSTEP)        ABSOLUTE TIME IN A.U.
+  REAL(8)       ,POINTER :: ARRAY(:,:)! (NSIZE,NSTEP)  ARRAY HOLDING 
+                                      !                TRAJECTORY INFORMATION 
 END TYPE THIS_TYPE
 LOGICAL(4)               :: TINI=.FALSE.
-INTEGER(4)               :: NSTEP=100 ! %(TIME STEPS) STORED BEFORE WRITING TO FILE
+INTEGER(4)               :: NSTEP=100 ! #(TIME STEPS) STORED BEFORE WRITING TO FILE
 TYPE(THIS_TYPE)  ,POINTER :: FIRST_THIS
 TYPE(THIS_TYPE)  ,POINTER :: THIS
 END MODULE TRAJECTORYIO_MODULE
@@ -83,7 +84,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_SETFILE(FILE)
 !     **************************************************************************
-!     **  DEFINE THE RELEVANT FILE                                            **   
+!     **  DEFINE THE RELEVANT FILE                                            **
 !     **************************************************************************
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
@@ -91,7 +92,7 @@ END MODULE TRAJECTORYIO_MODULE
       CHARACTER(32)            :: ID
       LOGICAL(4)               :: EXT
       CHARACTER(512)           :: FILE1
-!     ************************************************************************** 
+!     **************************************************************************
       ID=THIS%ID
       EXT=.FALSE.
       IF(FILE(1:1).EQ.'*') THEN
@@ -111,12 +112,12 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO_FIRSTTASK(TCHK)
 !     **************************************************************************
-!     **  CHECKS IF ON THE FIRST NODE OF THE RELEVANT TASK GROUP              **   
+!     **  CHECKS IF ON THE FIRST NODE OF THE RELEVANT TASK GROUP              **
 !     **************************************************************************
       IMPLICIT NONE
       LOGICAL(4)   ,INTENT(OUT):: TCHK
       INTEGER(4)               :: NTASKS,THISTASK
-!     ************************************************************************** 
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       TCHK=(THISTASK.EQ.1)
       RETURN
@@ -220,7 +221,7 @@ END MODULE TRAJECTORYIO_MODULE
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO TRAJECTORY SELECTED; USE TRAJECTORYIO$SELECT FIRST')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('TRAJECTORYIO$ADD')
+        CALL ERROR$STOP('TRAJECTORYIO$SETL4')
       END IF
 !
       IF(ID.EQ.'ON') THEN
@@ -229,6 +230,35 @@ END MODULE TRAJECTORYIO_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('TRAJECTORYIO$SETL4')
+       END IF
+       RETURN
+       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TRAJECTORYIO$GETL4(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE TRAJECTORYIO_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(OUT):: VAL
+      LOGICAL(4)              :: TCHK
+!     **************************************************************************
+      CALL TRAJECTORYIO_FIRSTTASK(TCHK)
+      IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
+      IF(.NOT.ASSOCIATED(THIS)) THEN
+        CALL ERROR$MSG('NO TRAJECTORY SELECTED; USE TRAJECTORYIO$SELECT FIRST')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('TRAJECTORYIO$GETL4')
+      END IF
+!
+      IF(ID.EQ.'ON') THEN
+        VAL=THIS%TON
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('TRAJECTORYIO$GETL4')
        END IF
        RETURN
        END
@@ -254,7 +284,8 @@ END MODULE TRAJECTORYIO_MODULE
 !
       IF(ID.EQ.'NRECX') THEN
         IF(ASSOCIATED(THIS%ARRAY)) THEN
-          CALL ERROR$MSG('ARRAY ALREADY ALLOCATED. NO CHANGE OF ARRAY-SIZE POSSIBLE')
+          CALL ERROR$MSG('ARRAY ALREADY ALLOCATED')
+          CALL ERROR$MSG('NO CHANGE OF ARRAY-SIZE POSSIBLE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('TRAJECTORYIO$SETI4')
         END IF
@@ -285,11 +316,11 @@ END MODULE TRAJECTORYIO_MODULE
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO TRAJECTORY SELECTED; USE TRAJECTORYIO$SELECT FIRST')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('TRAJECTORYIO$SETI4')
+        CALL ERROR$STOP('TRAJECTORYIO$SETCH')
       END IF
 !
       IF(ID.EQ.'FILE') THEN
-!       == A PRECEDING STAR AT THE FILE NAME INDICATES THAT IT IS AN EXTENSION ==
+!       == A PRECEDING STAR AT THE FILE NAME INDICATES THAT IT IS AN EXTENSION =
 !       == TO THE ROOT NAME
         THIS%FILE=VAL
         CALL TRAJECTORYIO_SETFILE(THIS%FILE)
@@ -304,7 +335,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO$ADD(ISTEP,TIME,NSIZE,ARRAY)
 !     **************************************************************************
-!     **  ADD                                                                 **   
+!     **  ADD                                                                 **
 !     **************************************************************************
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
@@ -317,7 +348,7 @@ END MODULE TRAJECTORYIO_MODULE
       INTEGER(4)               :: NREC
       INTEGER(4)               :: NRECX
       INTEGER(4)               :: NFIL
-!     ************************************************************************** 
+!     **************************************************************************
       CALL TRAJECTORYIO_FIRSTTASK(TCHK)
       IF(.NOT.TCHK) RETURN   ! RETURN IF NOT ON TASK 1
       IF(.NOT.ASSOCIATED(THIS)) THEN
@@ -381,7 +412,7 @@ END MODULE TRAJECTORYIO_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRAJECTORYIO$FLUSHALL
 !     **************************************************************************
-!     **  CLEAN OUT STORAGE AREA OF ALL TRAJECTORIES                          **   
+!     **  CLEAN OUT STORAGE AREA OF ALL TRAJECTORIES                          **
 !     **************************************************************************
       USE TRAJECTORYIO_MODULE
       IMPLICIT NONE
