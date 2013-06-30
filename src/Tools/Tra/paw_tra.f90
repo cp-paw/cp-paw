@@ -1098,6 +1098,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       REAL(8)                  :: SUM
       REAL(8)                  :: TRTRD,ALPHARTRD,TAVRTRD
       INTEGER(4)               :: NATOM
+      character(80)            :: string
 !     ******************************************************************
                                CALL TRACE$PUSH('TEMPERATURE')
       IF(TQMMM) THEN
@@ -1144,9 +1145,17 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       ENDDO
       tsum=tsum/natom
       t2sum=t2sum/natom
-      WRITE(NFILO,FMT='("sum      <T>:",F10.1,"K" &
+      WRITE(NFILO,FMT='(80("-"))')
+      WRITE(NFILO,FMT='("SUM",T17,"<T>:",F10.1,"K" &
      &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
-     &    Tsum/KELVIN,SQRT(T2sum-Tsum**2)/KELVIN
+     &    TSUM/KELVIN,SQRT(T2SUM-TSUM**2)/KELVIN
+      STRING="NOTE THAT THE TEMPERATURE USES G=3*N INSTEAD OF" &
+     &       //" G=3N-3 OR G=3N-6"
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
+      STRING="FOR THE NUMBER OF DEGREES OF FREEDOM."
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
+      STRING="THIS UNDERESTIMATES THE TRUE TEMPERATURE"
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
 !
 !     ================================================================
 !     ==  INDIVIDUAL PLOTS                                          ==
