@@ -992,7 +992,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL ATOMS$GETR8('FRICTION',ANNER)
 !
         IF (TCOSMO) THEN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F8.5' &
+          WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5' &
      &                     //',2F11.5)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &              ,EPOTCOSMO,EKINCOSMO
@@ -1000,17 +1000,18 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL CONSTANTS('KB',CELVIN)
           CALL QMMM$GETI4('NAT:ENV',ISVAR)
           QMMMTEMP=2.D0*QMMMKIN/REAL(3*ISVAR,KIND=8)/CELVIN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F6.3' &
+          WRITE(NFILO,FMT='("!>",I5,F10.5,1X,I5,F10.5,2F13.5,2F6.3' &
      &                //',I10,2F10.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &               ,NINT(QMMMTEMP),QMMMPOT,QMMMKIN+QMMMPOT
         ELSE IF(CALGARY_QMMM) THEN
           IMM_TEMP=NINT(MM_TEMP)
-          WRITE(NFILO,FMT='("!>",I5,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X' &
-     &       //',I4,1X,F5.2 )') NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER   &
-     &                     ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
+          WRITE(NFILO,FMT='("!>",I6,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X' &
+     &       //',I4,1X,F5.2 )') &
+     &                     NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
+     &                    ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
         ELSE
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F8.5)') &
+          WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER
         ENDIF
 !

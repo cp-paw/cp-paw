@@ -5532,9 +5532,14 @@ the paw\_tra tool. I recommend the extension
 %----------------------------------------------------------------------
 \block{!TCNTL!TEMPERATURE}
 %----------------------------------------------------------------------
-\brules{optional, multiple} 
-\bdescr{prints the average temperatures of the atoms and optionally
-  a plot for the temperature versus time for individual atoms.}
+\brules{optional, multiple} \bdescr{prints the average temperatures of
+  the atoms and optionally a plot for the temperature versus time for
+  individual atoms.  \textbf{Warning:} The temperatures are obtained
+  from the kinetic energy using $g=3N$ where $N$ is the number of
+  atoms in the selected group. If translations and/or rotations are
+  excluded, the temperature given here is underestimated and must be
+  rescaled by a factor $3N/(3N-5)$ for dimers, $3N/(3N-6)$ for other
+  molecules, $3N/(3N-3)$ for solids.}
 
 \mbax{\key{RETARD[PS]}
 \vdescr{The values are averaged over previous values with exponential
