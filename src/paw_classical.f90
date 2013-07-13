@@ -4780,11 +4780,13 @@ END MODULE UFFTABLE_MODULE
             ITR(I,IAT)=INT(X(I))-1
           END IF
         ENDDO
-        X(:)=X(:)-REAL(ITR(:,IAT))
+        X(:)=X(:)-REAL(ITR(:,IAT),kind=8)
 !       == IDENTIFY SUB-BOX ====================================================
 !       == idiv are the numbers of sub-box translations pointing to the origin==
 !       == of the respective sub=box ===========================================
         IDIV(:,IAT)=INT(X(:)*REAL(NDIV(:),KIND=8))
+!       == avoid rounding error if x is rounded to 1.d0 ========================
+        IDIV(:,IAT)=MIN(NDIV(:)-1,IDIV(:,IAT))
         I1=1+IDIV(1,IAT)
         I2=1+IDIV(2,IAT)
         I3=1+IDIV(3,IAT)
