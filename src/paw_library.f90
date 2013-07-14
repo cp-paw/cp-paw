@@ -4004,7 +4004,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 #ELIF DEFINED(CPPVAR_FFT_FFTW)
       CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_FFTW3)
-      CALL LIB_FFT3DW3(DIR,N1,N2,N3,X,Y)
+      CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
       CALL LIB_ACML_FFT3DC8(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_PACK)
@@ -4391,64 +4391,37 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
 !     **                                                                      **
 !     **************************************************************************
+      use, intrinsic :: iso_c_binding
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       REAL(8)     ,SAVE       :: SCALE
-      COMPLEX(8)              :: XDUMMY(LEN,NFFT)
       INTEGER(4)              :: I
-      INTEGER(4),SAVE         :: NP=0
-      INTEGER(8),SAVE         :: PLAN=-1
-      INTEGER                 :: ISUCCESS
-      LOGICAL    ,SAVE        :: TINI=.FALSE.
-      INTEGER                 :: INEMBED(LEN)
-      INTEGER                 :: ONEMBED(LEN)
-      INCLUDE 'FFTW_F77.I'
-!     ***********  FFTW_F77.I **************************************************
-!     ** THIS FILE IS A COPY OF FFTW3.F SUPPLIED WITH THE FFTW VERSION 3      **
-!     **                                                                      **
-!     ** THE NAME OF THE COPY IS INHERITED FROM FFTW VERSION 2                **
+      type(C_PTR) :: plan
+      include 'fftw3.f03'
 !     **************************************************************************
-      CALL ERROR$MSG('THE FFTW3 INTERFACES ARE UNDER DEVELOPMENT')
-      CALL ERROR$MSG('AND NOT YET READY FOR USE')
-      CALL ERROR$STOP('LIB_FFTW3')
-      IF(.NOT.TINI) THEN
-!       == ATTEMPT TO IMPORTS PRE-CALCULATED WISDOM.
-!       == ON UNIX SYSTEMS THE WISDOM SHOULD BE IN /ETC/EETF/WISDOM
-!       == IT IS CREATED WITH THE STAND-ALLONE PROGRAM FFTW_WISDOM SUPPLIED WITH FFTW
-        CALL DFFTW_IMPORT_SYSTEM_WISDOM(ISUCCESS)
-        TINI=.TRUE.
-      END IF
-!
-!     ==========================================================================
-!     ==  CREATE PLAN FOR FFT                                                 ==
-!     ==========================================================================
-!     == A PLAN IS SPECIFIC TO THE INPUT AND OUTPUT POINTER VARIABLES
-!     == ATTENTION!! THE ROUTINE WITH PARAMETER FFTW_MEASURE OVERWRITES INPUT AND OUTPUT!
-!     == HENCE USE A LOCAL ARRAY XDUMMY THAT IS REWRITTEN BEFORE EXECUTION.
-      INEMBED(:)=LEN
-      ONEMBED(:)=LEN
+      I=1
       IF(DIR.EQ.'RTOG') THEN
-        CALL DFFTW_PLAN_MANY_DFT(PLAN,LEN,LEN,NFFT,XDUMMY,INEMBED,1,NP &
-     &                          ,Y,ONEMBED,1,NP,FFTW_FORWARD,FFTW_MEASURE)
+        plan = fftw_plan_dft_1d(LEN,X(:,I),Y(:,I),FFTW_FORWARD,FFTW_ESTIMATE)
       ELSE IF (DIR.EQ.'GTOR') THEN
-        CALL DFFTW_PLAN_MANY_DFT(PLAN,LEN,LEN,NFFT,XDUMMY,INEMBED,1,NP &
-     &                          ,Y,ONEMBED,1,NP,FFTW_BACKWARD,FFTW_MEASURE)
+        plan = fftw_plan_dft_1d(LEN,X(:,I),Y(:,I),FFTW_BACKWARD,FFTW_ESTIMATE)
       ELSE
         CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
         CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
         CALL ERROR$CHVAL('DIR',TRIM(DIR))
-        CALL ERROR$STOP('1D-FFTW')
+        CALL ERROR$STOP('LIB_FFTW3')
       END IF  
 !
 !     ==========================================================================
 !     ==  EXECUTE FOURIER TRANSFORM                                           ==
 !     ==========================================================================
-      XDUMMY=X
-      CALL DFFTW_EXECUTE(PLAN)
+      DO I=1,NFFT
+        call fftw_execute_dft(plan, X(:,I), Y(:,I))
+      enddo
+      call fftw_destroy_plan(plan)
 !
 !     ==========================================================================
 !     ==  SCALE RESULT                                                        ==
@@ -4470,59 +4443,32 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **    USES THE 3D FFTW ROUTINES                                         **
 !     **                                        CLEMENS FOERST, 2001          **
 !     **************************************************************************
+      use, intrinsic :: iso_c_binding
       IMPLICIT NONE
       CHARACTER(4)            :: DIR
-      INTEGER                 :: DIM(3)
       INTEGER(4)              :: N1,N2,N3
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)  ,SAVE       :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10
-      INTEGER(8)              :: PLAN
-      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
+      type(C_PTR) :: plan
       REAL(8)     ,SAVE       :: SCALE
-      INTEGER     ,SAVE       :: DIMSAVE(3)=0
-      CHARACTER(4),SAVE       :: DIRSAVE=''
-      LOGICAL                 :: DEF
-      INTEGER(4)              :: I
-      INTEGER     ,SAVE       :: ISIGN
-      INTEGER                 :: ISUCCESS
-      LOGICAL    ,SAVE        :: TINI=.FALSE.
-      INCLUDE 'FFTW3.F'
+      include 'fftw3.f03'
 !     **************************************************************************
-      CALL ERROR$MSG('THE FFTW3 INTERFACES ARE UNDER DEVELOPMENT')
-      CALL ERROR$MSG('AND NOT YET READY FOR USE')
-      CALL ERROR$STOP('LIB_3DFFTW3')
-      IF(.NOT.TINI) THEN
-!       == ATTEMPT TO IMPORTS PRE-CALCULATED WISDOM.
-!       == ON UNIX SYSTEMS THE WISDOM SHOULD BE IN /ETC/EETF/WISDOM
-!       == IT IS CREATED WITH THE STAND-ALLONE PROGRAM FFTW_WISDOM SUPPLIED WITH FFTW
-        CALL DFFTW_IMPORT_SYSTEM_WISDOM(ISUCCESS)
-        TINI=.TRUE.
-      END IF
-!
-!     ==========================================================================
-!     ==  CREATE PLAN FOR FFT                                                 ==
-!     ==========================================================================
-!     == A PLAN IS SPECIFIC TO THE INPUT AND OUTPUT POINTER VARIABLES
-!     == ATTENTION!! THE ROUTINE WITH PARAMETER FFTW_MEASURE OVERWRITES INPUT AND OUTPUT!
-!     == HENCE USE A LOCAL ARRAY XDUMMY THAT IS REWRITTEN BEFORE EXECUTION.
       IF(DIR.EQ.'RTOG') THEN
-        CALL DFFTW_PLAN_DFT_3D(PLAN,N1,N2,N3,XDUMMY,Y,FFTW_FORWARD,FFTW_MEASURE)
+        plan = fftw_plan_dft_3d(N3,N2,N1,X,Y,FFTW_FORWARD,FFTW_ESTIMATE)
       ELSE IF (DIR.EQ.'GTOR') THEN
-        CALL DFFTW_PLAN_DFT_3D(PLAN,N1,N2,N3,XDUMMY,Y,FFTW_BACKWARD,FFTW_MEASURE)
+        plan = fftw_plan_dft_3d(N3,N2,N1,X,Y,FFTW_BACKWARD,FFTW_ESTIMATE)
       ELSE
         CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
         CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
         CALL ERROR$CHVAL('DIR',TRIM(DIR))
-        CALL ERROR$STOP('1D-FFTW')
+        CALL ERROR$STOP('LIB_3DFFTW3')
       END IF  
 !
 !     ==========================================================================
 !     ==  EXECUTE FOURIER TRANSFORM                                           ==
 !     ==========================================================================
-      XDUMMY=X
-      CALL DFFTW_EXECUTE(PLAN)
+      call fftw_execute_dft(plan, X, Y)
+      call fftw_destroy_plan(plan)
 !
 !     ==========================================================================
 !     ==  SCALE RESULT                                                        ==
