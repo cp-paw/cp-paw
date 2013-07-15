@@ -4398,22 +4398,61 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+!      COMPLEX(8),ALLOCATABLE  :: YDUMMY(:)
+!      COMPLEX(8),ALLOCATABLE  :: XDUMMY(:)
+      COMPLEX(8)              :: YDUMMY(LEN)
+      COMPLEX(8)              :: XDUMMY(LEN)
       REAL(8)     ,SAVE       :: SCALE
       INTEGER(4)              :: I
-      type(C_PTR) :: plan
+      type(C_PTR)             :: plan
+      INTEGER(4),pointer      :: planf
+      LOGICAL(4),PARAMETER    :: T_GENERATE_FFTW_WISDOM=.TRUE.
+      integer(C_INT)          :: GENERATE_FFTW_WISDOM_MODE
       include 'fftw3.f03'
 !     **************************************************************************
-      I=1
-      IF(DIR.EQ.'RTOG') THEN
-        plan = fftw_plan_dft_1d(LEN,X(:,I),Y(:,I),FFTW_FORWARD,FFTW_ESTIMATE)
-      ELSE IF (DIR.EQ.'GTOR') THEN
-        plan = fftw_plan_dft_1d(LEN,X(:,I),Y(:,I),FFTW_BACKWARD,FFTW_ESTIMATE)
-      ELSE
-        CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-        CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-        CALL ERROR$CHVAL('DIR',TRIM(DIR))
-        CALL ERROR$STOP('LIB_FFTW3')
-      END IF  
+      IF(T_GENERATE_FFTW_WISDOM)THEN
+        !CHECK IF WISDOM EXISTS (GENERATE_FFTW_WISDOM_MODE CAN BE ONE OF:
+        !FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
+        GENERATE_FFTW_WISDOM_MODE=FFTW_MEASURE
+        IF(DIR.EQ.'RTOG') THEN
+          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
+       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
+        ELSE IF (DIR.EQ.'GTOR') THEN
+          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
+       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
+        ELSE
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('LIB_FFTW3')
+        END IF 
+        CALL C_F_POINTER(plan,planf)
+        if(.not.associated(planf))then
+          IF(DIR.EQ.'RTOG') THEN
+            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
+       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+          ELSE IF (DIR.EQ.'GTOR') THEN
+            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
+       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+          ELSE
+            CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+            CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+            CALL ERROR$CHVAL('DIR',TRIM(DIR))
+            CALL ERROR$STOP('LIB_FFTW3')
+          END IF  
+        endif
+      else
+        IF(DIR.EQ.'RTOG') THEN
+          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_FORWARD,FFTW_ESTIMATE)
+        ELSE IF (DIR.EQ.'GTOR') THEN
+          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_BACKWARD,FFTW_ESTIMATE)
+        ELSE
+          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
+          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
+          CALL ERROR$CHVAL('DIR',TRIM(DIR))
+          CALL ERROR$STOP('LIB_FFTW3')
+        END IF 
+      endif
 !
 !     ==========================================================================
 !     ==  EXECUTE FOURIER TRANSFORM                                           ==
@@ -4453,6 +4492,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)     ,SAVE       :: SCALE
       include 'fftw3.f03'
 !     **************************************************************************
+      print*,"3dfftw3",N1,N2,N3
       IF(DIR.EQ.'RTOG') THEN
         plan = fftw_plan_dft_3d(N3,N2,N1,X,Y,FFTW_FORWARD,FFTW_ESTIMATE)
       ELSE IF (DIR.EQ.'GTOR') THEN
