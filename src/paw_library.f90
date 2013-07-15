@@ -4398,8 +4398,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-!      COMPLEX(8),ALLOCATABLE  :: YDUMMY(:)
-!      COMPLEX(8),ALLOCATABLE  :: XDUMMY(:)
       COMPLEX(8)              :: YDUMMY(LEN)
       COMPLEX(8)              :: XDUMMY(LEN)
       REAL(8)     ,SAVE       :: SCALE
@@ -4410,6 +4408,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       integer(C_INT)          :: GENERATE_FFTW_WISDOM_MODE
       include 'fftw3.f03'
 !     **************************************************************************
+      !FIXME: include recycling of plans as in LIB_FFTW
       IF(T_GENERATE_FFTW_WISDOM)THEN
         !CHECK IF WISDOM EXISTS (GENERATE_FFTW_WISDOM_MODE CAN BE ONE OF:
         !FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
