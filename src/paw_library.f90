@@ -4396,7 +4396,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       COMPLEX(8)              :: YDUMMY(LEN)
       COMPLEX(8)              :: XDUMMY(LEN)
