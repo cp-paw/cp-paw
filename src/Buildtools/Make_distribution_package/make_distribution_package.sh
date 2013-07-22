@@ -22,6 +22,7 @@ cp -r .git $WD
 ARGS=$@
 for arg in $ARGS;
 do
+  echo $arg
   cp -v $arg $WD
 done
 
@@ -30,7 +31,7 @@ sh src/Buildtools/Version/getversion.sh
 rm -rf .git
 eval "set -- $ARGS"
 
-./configure --with-parmfile=$2
+./configure --with-parmfile=`basename $2`
 make docs
 make clean
 cd ..
