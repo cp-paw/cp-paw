@@ -170,7 +170,11 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$SETSPECIFICATION('STRC','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
+!
+!     ==========================================================================
 !SASCHA QM-MM
+!     ==========================================================================
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
 
@@ -364,7 +368,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
        CALL SPAGHETTI(LL_CNTL)
 !
 !     ==========================================================================
-!     ==  DEFINE MODES MODES                                                  ==
+!     ==  DEFINE MODES                                                        ==
 !     ==========================================================================
       CALL MODES(LL_CNTL)
 !
@@ -3723,5 +3727,69 @@ PRINT*,'COLLECT JUMPS'
       DEALLOCATE(X_TRA%Q)
       RETURN
       END
-
-
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RESOLVEEXTENDEDNAME(XNAME,NAME,IT)
+!     **************************************************************************
+!     **  RESOLVES THE EXTENDED ATOM NAME NOTATION, WHICH INCLUDES            **
+!     **  A LATTICE TRANSLATION                                               **
+!     **                                                                      **
+!     **  THE EXTENDED NOTATION INCLUDES AN INTEGER LATTICE TRANSLATIONS      **
+!     **  IN THE ATOM NAME FOLLOWING A COLON                                  **
+!     **                                                                      **
+!     **   'O_23:+1-1+1'  ATOM 'O_23' SHIFTED BY RBAS(:,1)-RBAS(:,2)+RBAS(:,3)**
+!     **                                                                      **
+!     **   THE '+'SIGNS ARE NOT REQUIRED.                                     **
+!     **   ONLY SINGLE-DIGIT TRANSLATIONS ARE PERMITTED                       **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: XNAME  ! EXTENDED ATOM NAME
+      CHARACTER(*),INTENT(OUT):: NAME   ! NON-EXTENDED ATOM NAME
+      INTEGER(4)  ,INTENT(OUT):: IT(3)  ! INTEGER LATTICE TRANSLATIONS
+      INTEGER(4)              :: ICOLON ! POSITION OF THE COLON IN XNAME
+      INTEGER(4)              :: IPOS,IND,SGN
+      INTEGER(4)              :: ICH    ! ASCII NUMBER OF THE SELECTED LETTER
+!     **************************************************************************
+      ICOLON=INDEX(XNAME,':')
+!     == RETURN IF NO TRANSLATION VECTOR GIVEN =================================
+      IF(ICOLON.EQ.0) THEN
+        NAME=XNAME
+        IT(:)=0
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == RESOLVE EXTENDED ATOM NAME                                           ==
+!     ==========================================================================
+      NAME=XNAME(:ICOLON-1)
+      IPOS=ICOLON+1
+      IND=0
+      sgn=+1
+      DO WHILE(IND.LT.3) 
+        ICH=IACHAR(XNAME(IPOS:IPOS))
+!       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN ! if "0,1,...,9"
+          IND=IND+1
+          IT(IND)=SGN*(ICH-48)
+          SGN=+1
+        ELSE IF(ICH.EQ.43) THEN   ! if "+"
+          SGN=+1
+        ELSE IF(ICH.EQ.45) THEN   ! if "-"
+          SGN=-1
+        ELSE
+          CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  
+          CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+          CALL ERROR$CHVAL('ILLEGAL CHARACTER ',XNAME(IPOS:IPOS))
+          CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+        END IF
+        IPOS=IPOS+1
+      ENDDO
+      IF(XNAME(IPOS:).NE.' ') THEN
+        CALL ERROR$MSG('LETTERS FOUND BEYOND END OF EXTENDED ATOM NOTATION')  
+        CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+        CALL ERROR$CHVAL('ADDITIONAL LETTERS ',XNAME(IPOS:))
+        CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+      END IF
+      RETURN
+      END
