@@ -141,7 +141,7 @@ END TYPE OFFSITEX_TYPE
 !== PARAMETER SECTION                                                         ==
 !===============================================================================
 LOGICAL(4)            :: TON=.FALSE.       
-LOGICAL(4)            :: TOFFSITE=.TRUE.  !INCLUDE OFFSITE EXCHANGE
+LOGICAL(4)            :: TOFFSITE=.false.  !INCLUDE OFFSITE EXCHANGE
 LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 
@@ -173,6 +173,7 @@ REAL(8)               :: HFWEIGHT=0.25D0
 LOGICAL(4)              :: TINI=.FALSE.
 LOGICAL(4)              :: TINISTRUC=.FALSE.
 LOGICAL(4)              :: THTBC=.FALSE. ! HTBC CALCULATED
+CHARACTER(32)           :: modus='NONE'
 INTEGER(4)              :: NSP=-1
 INTEGER(4)              :: ISPSELECTOR=-1 ! USED ONLY FOR HYBRIDSETTING
 TYPE(HYBRIDSETTING_TYPE),ALLOCATABLE :: HYBRIDSETTING(:)
@@ -475,6 +476,26 @@ END MODULE LMTO_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$SETCH(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : MODUS
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(IN) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'MODUS') THEN
+        MODUS=VAL
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO$SETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$REPORT(NFIL)
 !     **************************************************************************
 !     **                                                                      **
@@ -579,12 +600,11 @@ END MODULE LMTO_MODULE
       INTEGER(4)             :: NTASKS,THISTASK,FROMTASK
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-PRINT*,'MARKE 1'
 CALL SETUP$ISELECT(1)
 CALL SETUP$ISELECT(0)
-PRINT*,'MARKE 2'
+!
+!     == lmto interface works only with internal setups ========================
       CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
-PRINT*,'MARKE 3'
       IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
                               CALL TIMING$CLOCKON('LMTO STRUCTURECONSTANTS')
@@ -1109,10 +1129,13 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         POTPAR(ISP)%LNSCATT(:)=-1
         DO LN=1,LNX1
           IF(POTPAR(ISP)%LNSCATT(LN).NE.-1) CYCLE  ! ALREADY DONE
-!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =====================
+!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =======================
+!         == AEPHIDOT(LNSCATT(LN)) IS THE SCATTERING WAVE FUNCTION (PHIBARDOT) =
+!         == THUS LNSCATT(LN) POINTS TO THE VALENCE WAVE FUNCTION ==============
           POTPAR(ISP)%LNSCATT(LN)=LN
           DO LN1=LN+1,LNX1
             IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
+!           == SELECT LN OF HIGHEST NON-SCATTERING PARTIAL WAVE INDEX ==========
             IF(ISCATT(LN1).GT.ISCATT(LN).AND.ISCATT(LN1).LE.0) THEN
               POTPAR(ISP)%LNSCATT(LN)=LN1
             END IF
@@ -1346,6 +1369,7 @@ INTEGER(4)             :: LN3,LN4
         DO LN=1,LNX(ISP)
           LOXT(:LN)=LOX(:LN,ISP)  ! FOR THE HANKEL FUNCTIONS
           IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
+!         == this loops over the scattering waves ==============================
           LNT=LNT+1
           LOXT(LNT)=LOX(LN,ISP)   ! FOR THE BESSEL FUNCTIONS
           LNDOT(LN)=LNT
@@ -2437,6 +2461,10 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **************************************************************************
 !     ** TRANSFORMS THE PROJECTIONS ONTO COEFFICIENTS FOR                     **
 !     ** NATURAL TIGHT-BINDING ORBITALS                                       **
+!     **                                                                      **
+!     ** REMARK:                                                              **
+!     **   NOTE THAT NPRO REFERS TO THE NUMBER OF PARTIAL WAVES (R,L,M,N),    **
+!     **   WHILE NRL REFERS TO THE NUMBER OF DIFFERENT (R,L,M) SETS           **
 !     **************************************************************************
       USE LMTO_MODULE
       IMPLICIT NONE
@@ -2558,7 +2586,6 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       INTEGER(4)              :: NAT
       INTEGER(4)              :: I,L,ISP,IPRO,IAT,LN,I1,IM,J
 !     **************************************************************************
-      IF(.NOT.TON) RETURN
       IF(.NOT.THTBC) THEN
          PROJ=(0.D0,0.D0)
          RETURN
@@ -3052,7 +3079,7 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
                                  CALL TRACE$PUSH('LMTO_NTBODENMATDER')
       PI=4.D0*ATAN(1.D0)
-      THTBC=.TRUE.
+      THTBC=.TRUE.   ! htbc will be calculated
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -3151,9 +3178,11 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,THIS,WAVES_SELECTWV
+      use lmto_module, only: thtbc
       IMPLICIT NONE
       INTEGER(4) :: IKPT,ISPIN
 !     **************************************************************************
+      thtbc=.false. ! htbc will be reset set to zero
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -4221,7 +4250,7 @@ PRINT*,'MARKE 7'
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_DROPPICK_HTBC')
       IF(.NOT.TPICK) RETURN
-      THTBC=.TRUE.
+      THTBC=.TRUE.  !htbc will be calculated
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
       NAT=SIZE(ISPECIES)
@@ -5715,7 +5744,7 @@ PRINT*,'DH READ '
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,THTBC
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
 USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
@@ -5728,13 +5757,20 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
-      THTBC=.FALSE.   
-      CALL LMTO$SETHTBCTOZERO()
+      IF((TDROP.OR.TPICK).NEQV.(modus.EQ.'OLDDMFT')) THEN
+        CALL ERROR$MSG('INCONSISTENT OPTIONS')
+        CALL ERROR$MSG('(TDROP.OR.TPICK).NEQV.(modus.EQ."OLDDMFT")')
+        CALL ERROR$STOP('LMTO$STOP')
+      END IF
 !
 !     ==========================================================================
-!     == WRITE DMFT INTERFACE 
+!     ==  Select choices                                                      ==
 !     ==========================================================================
-      IF(TDROP.OR.TPICK) THEN
+      CALL LMTO$SETHTBCTOZERO()
+      IF(modus.EQ.'DMFT') THEN
+        CALL DMFT$GREEN()
+! 
+      ELSE IF(MODUS.EQ.'OLDDMFT') THEN
         IF(TPICK) THEN
           PRINT*,'CALLING DMFT INTERFACE PICK ....'
           CALL LMTO_DROPPICK_HTBC()
@@ -5748,7 +5784,43 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
         ELSE  
           RETURN  ! IF DROP OR PICK IS TRUE INTERFACE DMFT IS USED.
         END IF
+
+      ELSE IF(modus.EQ.'HYBRID') then
+        call LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+
+      ELSE
+        CALL ERROR$MSG('MODUS NOT RECOGNIZED')
+        CALL ERROR$MSG('ALLOWED VALUES ARE "DMFT", "OLDDMFT", "HYBRID"')
+        CALL ERROR$CHVAL('MODUS',MODUS)
+        CALL ERROR$STOP('LMTO$ETOT')
       END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+!     **************************************************************************
+!     **                                                                      **
+!     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
+!     **  IS USED IN THE AUGMENTATION                                         **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : TON
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
+USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LMNXX_
+      INTEGER(4),INTENT(IN) :: NDIMD_
+      INTEGER(4),INTENT(IN) :: NAT_
+      COMPLEX(8),INTENT(IN) :: DENMAT_(LMNXX_,LMNXX_,NDIMD_,NAT_)
+      INTEGER(4)            :: SWITCH
+INTEGER(4) ::IX,NN,IND1,IND2,IND3
+REAL(8)    :: XDELTA,XSVAR,XENERGY
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
+      CALL LMTO$SETHTBCTOZERO()
 !
 !     ==========================================================================
 !     ==  TEST
@@ -6038,6 +6110,20 @@ PRINT*,'HFSCALE',IAT,HFSCALE
         ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
         CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
+if(iat.ge.5.and.iat.le.8) then
+DO I=1,NDIMD,3
+  WRITE(*,FMT='(82("="),T30," IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  DO LMN=1,LMNX
+    WRITE(*,FMT='(200F10.5)')D(LMN,:,i)
+  ENDDO
+ENDDO
+DO I=1,NDIMD,3
+  WRITE(*,FMT='(82("="),T30," IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  DO LMN=1,LMNXT
+    WRITE(*,FMT='(200F10.5)')DT(LMN,:,I)
+  ENDDO
+ENDDO
+END IF
 !
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
@@ -6293,6 +6379,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !       ==  DETERMINE SIZE OF STRUCTURE CONSTANT ARRAY                        ==
 !       ========================================================================
         ISP=ISPECIES(IAT)
+!       == determine n2=#(partial waves) n1=%(scattering waves) ================
         N1=0
         N2=0
         DO LN=1,LNX(ISP)
