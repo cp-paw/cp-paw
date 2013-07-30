@@ -5766,6 +5766,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     ==========================================================================
 !     ==  Select choices                                                      ==
 !     ==========================================================================
+print*,'in lmto$etot: modus=',trim(modus)
       CALL LMTO$SETHTBCTOZERO()
       IF(modus.EQ.'DMFT') THEN
         CALL DMFT$GREEN()
