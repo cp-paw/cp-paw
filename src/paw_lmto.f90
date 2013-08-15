@@ -5998,9 +5998,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       REAL(8)               :: QSPIN(4)
       REAL(8)               :: SVAR
       INTEGER(4)            :: IDFTTYPE
+INTEGER(4)            :: idimd
 CHARACTER(128) :: STRING
 REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       REAL(8)               :: HFSCALE
+      logical(4)            :: tactive ! does this atom contribute?
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
 PRINT*,'============ ENERGYTEST2 ============================='
@@ -6028,6 +6030,11 @@ PRINT*,'============ ENERGYTEST2 ============================='
       EXTOT=0.D0
       EHTOT=0.D0
       DO IAT=1,NAT
+        isp=ispecies(iat)
+        tactive=.false.
+        do ln=1,size(potpar(isp)%torb)
+          tactive=tactive.or.potpar(isp)%torb(ln)
+        enddo
 !
 !       == FIND LOCAL DENSITY MATRIX ===========================================
         IND=-1
@@ -6069,7 +6076,7 @@ PRINT*,'============ ENERGYTEST2 ============================='
         ELSE
           HFSCALE=1.D0
         END IF
-PRINT*,'HFSCALE',IAT,HFSCALE
+PRINT*,'IAT=',IAT,' LOCAL HFSCALE=',HFSCALE
 !
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
@@ -6111,15 +6118,15 @@ PRINT*,'HFSCALE',IAT,HFSCALE
         ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
         CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
-if(iat.ge.5.and.iat.le.8) then
+if(tactive) then
 DO I=1,NDIMD,3
-  WRITE(*,FMT='(82("="),T30," IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
   DO LMN=1,LMNX
     WRITE(*,FMT='(200F10.5)')D(LMN,:,i)
   ENDDO
 ENDDO
 DO I=1,NDIMD,3
-  WRITE(*,FMT='(82("="),T30," IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX DT FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
   DO LMN=1,LMNXT
     WRITE(*,FMT='(200F10.5)')DT(LMN,:,I)
   ENDDO
@@ -6157,9 +6164,9 @@ END IF
 !               ================================================================
 !               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION INTO TOTAL AND SPIN
                 SVAR=-0.25D0*U(I,J,K,L)
-                EX=EX+SVAR*SUM(DT(K,J,:)*DT(I,L,:))
-                HT(K,J,:)=HT(K,J,:)+SVAR*DT(I,L,:) 
-                HT(I,L,:)=HT(I,L,:)+SVAR*DT(K,J,:) 
+                EX=EX+SVAR*SUM(DT(K,J,:)*DT(l,i,:))
+                HT(K,J,:)=HT(K,J,:)+SVAR*DT(l,i,:) 
+                HT(l,i,:)=HT(l,i,:)+SVAR*DT(K,J,:) 
               ENDDO
             ENDDO
           ENDDO
@@ -6186,9 +6193,33 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
         CALL LMTO_SIMPLEDC(GID,NR,LMNXT,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF &
      &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HTALL,LMNX,LMNX,H)
+!!$!
+!!$if(tactive) then 
+!!$print*,'iat=',iat,ndimd
+!!$WRITE(*,FMT='(82("="),T10,"  h(1) from simpledc ")')
+!!$do idimd=1,ndimd
+!!$  do lmn=1,lmnx
+!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+!!$  enddo
+!!$enddo
+!!$end if
+!
+
         POTPAR(ISP)%TALLORB=.FALSE.  ! DO NOT FORGET THIS!!!!!
+
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
+!!$!
+!!$if(tactive) then
+!!$print*,'iat=',iat
+!!$WRITE(*,FMT='(82("="),T10,"  h(2) from simpledc ")')
+!!$do idimd=1,ndimd
+!!$  do lmn=1,lmnx
+!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+!!$  enddo
+!!$enddo
+!!$end if
+!!$!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
         DEALLOCATE(DTALL)
@@ -6237,7 +6268,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         DEALLOCATE(D)
         DEALLOCATE(AECORE)
         DEALLOCATE(LOXT)
-      ENDDO
+      ENDDO !end of loop over atoms
 !
 !     ==========================================================================
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
@@ -6729,6 +6760,8 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     **   VXTOT=MU(RHOTOT)-MU(RHOTOT-RHOCOR)                                 **
 !     **   VXCOR=MU(RHOTOT-RHOCOR)                                            **
 !     **                                                                      **
+!     **  the density matrix is in a (t,x,y,z) representation                 **
+!     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
@@ -7084,7 +7117,7 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
 !     **************************************************************************
-      CALL TRACE$PUSH('AUGMENTATION_XC')
+                                                  CALL TRACE$PUSH('LMTO_RADXC')
       FXC(:)=0.D0
       VXC(:,:,:)=0.D0
 !
@@ -7201,6 +7234,7 @@ PRINT*,'----EXC  ',ETOT
           ENDDO
         ENDDO
       ENDDO
+      CALL TRACE$PASS('AFTER DFT')
 !
 !     ==========================================================================
 !     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
