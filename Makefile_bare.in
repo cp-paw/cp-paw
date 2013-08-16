@@ -181,6 +181,7 @@ export LOBJS = \
         ${OBJDIR}/paw_strcio.o \
         ${OBJDIR}/paw_cell.o \
         ${OBJDIR}/paw_pdos.o \
+        ${OBJDIR}/paw_banddata.o \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o \
         ${OBJDIR}/paw_dimer.o  \
@@ -455,8 +456,8 @@ ${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 clean_dos:
 	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
 #
-${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIB}
-	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpaw ${LIBS}
+${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIBFULL}
+	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpawfull ${LIBS}
 #
 clean_bands:
 	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
@@ -890,6 +891,8 @@ endif
  ${OBJDIR}/paw_pairpotential.o : MPE_MODULE.mod
  ## file:src/paw_pdos.f90
  PDOS_MODULE.mod : ${OBJDIR}/paw_pdos.o
+ ## file:src/paw_banddata.f90
+ BANDDATA_MODULE.mod : ${OBJDIR}/paw_banddata.o
  ## file:src/paw_periodictable.f90
  ${OBJDIR}/paw_periodictable.o : STRINGS_MODULE.mod
  PERIODICTABLE_MODULE.mod : ${OBJDIR}/paw_periodictable.o
