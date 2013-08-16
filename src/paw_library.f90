@@ -3461,7 +3461,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
       COMPLEX(8),INTENT(OUT):: VEC(N,N)  ! EIGENVECTORS
       INTEGER               :: LDWORK
-      COMPLEX(8)            :: WORK(N*N)
+      COMPLEX(8),ALLOCATABLE:: WORK(:)
       COMPLEX(8)            :: S1(N,N)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER               :: INFO
@@ -3491,9 +3491,15 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ========================================================================
 !     == CALL LAPACK ROUTINE                                                ==
 !     ========================================================================
-      LDWORK=N*N
       VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
       S1=S
+      !DO WORKSPAVE QUERY
+      allocate(WORK(1))
+      LDWORK=-1
+      CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
+      LDWORK=WORK(1)
+      deallocate(WORK)
+      allocate(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
@@ -4398,68 +4404,75 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      COMPLEX(8)              :: YDUMMY(LEN)
-      COMPLEX(8)              :: XDUMMY(LEN)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       REAL(8)     ,SAVE       :: SCALE
+      INTEGER     ,SAVE       :: ISIGN
+      COMPLEX(8)              :: XDUMMY(LEN)
+      COMPLEX(8)              :: YDUMMY(LEN)
+      INTEGER(4),SAVE         :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
+      type(C_PTR),SAVE        :: PLANS2(NPX),PLAN
+      INTEGER(4),SAVE         :: PLANS1(NPX)
+      LOGICAL                 :: DEF
       INTEGER(4)              :: I
-      type(C_PTR)             :: plan
-      INTEGER(4),pointer      :: planf
-      LOGICAL(4),PARAMETER    :: T_GENERATE_FFTW_WISDOM=.TRUE.
-      integer(C_INT)          :: GENERATE_FFTW_WISDOM_MODE
       include 'fftw3.f03'
 !     **************************************************************************
-      !FIXME: include recycling of plans as in LIB_FFTW
-      IF(T_GENERATE_FFTW_WISDOM)THEN
-        !CHECK IF WISDOM EXISTS (GENERATE_FFTW_WISDOM_MODE CAN BE ONE OF:
-        !FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
-        GENERATE_FFTW_WISDOM_MODE=FFTW_MEASURE
-        IF(DIR.EQ.'RTOG') THEN
-          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
-       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
-        ELSE IF (DIR.EQ.'GTOR') THEN
-          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
-       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
+      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
+        IF (DIR.EQ.'GTOR') THEN
+          ISIGN=1
+        ELSE IF (DIR.EQ.'RTOG') THEN
+          ISIGN=-1
         ELSE
           CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
           CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
           CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('LIB_FFTW3')
-        END IF 
-        CALL C_F_POINTER(plan,planf)
-        if(.not.associated(planf))then
+          CALL ERROR$STOP('1D-FFTW')
+        END IF
+!
+!       == FIND PLAN IN THE LIST ===============================================
+        DEF=.FALSE.
+        DO I=1,NP
+          IF((LEN*ISIGN).EQ.PLANS1(I)) THEN
+            DEF=.TRUE.
+            PLAN=PLANS2(I)
+            EXIT
+          END IF
+        END DO
+!
+!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
+        IF(.NOT.DEF) THEN
+          WRITE(*,*) 'LIB_FFTW: CREATE PLAN FOR: ',TRIM(DIR),ISIGN,LEN,NP
+          NP=NP+1
+          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
           IF(DIR.EQ.'RTOG') THEN
-            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
-       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+            PLANS2(NP) = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
+              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE IF (DIR.EQ.'GTOR') THEN
-            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
-       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+            PLANS2(NP) = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
+              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE
             CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
             CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
             CALL ERROR$CHVAL('DIR',TRIM(DIR))
             CALL ERROR$STOP('LIB_FFTW3')
-          END IF  
-        endif
-      else
-        IF(DIR.EQ.'RTOG') THEN
-          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_FORWARD,FFTW_ESTIMATE)
-        ELSE IF (DIR.EQ.'GTOR') THEN
-          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_BACKWARD,FFTW_ESTIMATE)
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('LIB_FFTW3')
-        END IF 
-      endif
+          END IF 
+
+          PLANS1(NP)=ISIGN*LEN
+          PLAN=PLANS2(NP)
+        END IF
+        LENSAVE=LEN
+        DIRSAVE=DIR
+      END IF
 !
 !     ==========================================================================
-!     ==  EXECUTE FOURIER TRANSFORM                                           ==
+!     ==  NOW PERFORM FFT                                                     ==
 !     ==========================================================================
       DO I=1,NFFT
-        call fftw_execute_dft(plan, X(:,I), Y(:,I))
+        XDUMMY=X(:,I)
+        call fftw_execute_dft(plan, XDUMMY, Y(:,I))
       enddo
-      call fftw_destroy_plan(plan)
 !
 !     ==========================================================================
 !     ==  SCALE RESULT                                                        ==
