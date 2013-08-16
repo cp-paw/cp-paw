@@ -261,6 +261,7 @@ END MODULE SETUP_MODULE
 !     **  AND CREATES A NEW, IF IT DOES NOT EXIST                             **
 !     **************************************************************************
       USE SETUP_MODULE
+      USE RADIAL_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,PARAMETER  :: GMAX=15.D0 ! <-> EPW OF ABOUT 200 RY
@@ -273,6 +274,8 @@ END MODULE SETUP_MODULE
 !!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299d-4
 !!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
+      CHARACTER(6)           :: TYPEID
+      INTEGER(4)              :: TYPE
 !     **************************************************************************
       IF(SELECTED) THEN
         CALL ERROR$MSG('SAFEGUARD FUNCTION:')
@@ -312,11 +315,27 @@ END MODULE SETUP_MODULE
 !     == CREATE NEW
 !     ==========================================================================
       IF(GIDG_PROTO.EQ.0) THEN
-        CALL RADIAL$NEW('LOG',GIDG_PROTO)
+        TYPEID='LOG'
+        CALL RADIAL$NEW(TYPEID,GIDG_PROTO)
         DEX=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
         CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG)
         CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1)
         CALL RADIAL$SETR8(GIDG_PROTO,'DEX',DEX)
+
+        !WRITE GRID FOR PROJECTORS TO BANDDATA MODULE
+        CALL BANDDATA$SETI4('NG_PROTO',NG)
+        IF(TYPEID.EQ.GRIDTYPE(1)) THEN 
+          TYPE=1
+        ELSE IF(TYPEID.EQ.GRIDTYPE(2)) THEN 
+          TYPE=2
+        ELSE
+          CALL ERROR$MSG('ERROR: GRIDTYPE NOT RECOGNIZED')
+          CALL ERROR$STOP('SETUP$SELECT')
+        END IF
+        CALL BANDDATA$SETI4('TYPE_PROTO',TYPE)
+        CALL BANDDATA$SETR8('GMAX_PROTO',GMAX)
+        CALL BANDDATA$SETR8('G1_PROTO',G1)
+        CALL BANDDATA$SETR8('DEX_PROTO',DEX)
       END IF
 !
 !     ==========================================================================

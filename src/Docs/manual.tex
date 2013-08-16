@@ -808,6 +808,10 @@ largely independent of the system}
 & extension: {\tt .pdos}\\
 & used by the paw\_dos tool.\\
 \hline
+'BANDDATA'& paw hamiltonian for band structure;\\
+& extension: {\tt .banddata}\\
+& used by the paw\_bands tool.\\
+\hline
 'CONSTRAINTS'& constraint report;\\
 & extension: {\tt \_constr.report}\\
 \hline
@@ -6523,9 +6527,31 @@ the paw\_dos tool. I recommend the extension ``.bcntl''.
 An example for the input control file is given here
 \begin{verbatim}
 !BCNTL
-  !LINE FILE='BANDS_gammax.DAT' SPIN=1
-    XK1= 0. 0. 0. XK2= .5 0. 0. NK=101 
+  !INPUTFILE NAME="bla.banddata" !END
+  !METHOD
+    ID=1
+    METHOD_DIAG=1
+  !END
+  !LINE FILE='BANDS_gammax.DAT' 
+    SPIN=1
+    XK1= 0. 0. 0. 
+    XK2= .5 0. 0. 
+    NB=20
+    NK=10
+    NKDIAG=10
     XKPROJECT= 0. 0. 1.  NPROJECT=11 
+    !FATBAND FILE='BANDS_gammax_FATBAND_SI1_IPRO_1.dat'
+      ATOM='SI1'
+      IPRO=1
+      LINESPERBAND=50
+      MAXWIDTH=1.0
+    !END
+    !FATBAND FILE='BANDS_gammax_FATBAND_SI2_IPRO_2.dat'
+      ATOM='SI2'
+      IPRO=2
+      LINESPERBAND=50
+      MAXWIDTH=1.0
+    !END
   !END
   !LINE FILE='BANDS_xm.DAT' SPIN=1
     XK1= .5 0. 0. XK2= .5 .5 0. NK=101 
@@ -6535,10 +6561,15 @@ An example for the input control file is given here
 !EOB
 \end{verbatim}
 
-The bands are written in the format \centerline{$ik e_1(ik) e_2(ik)
-  e_3(ik) \ldots$} onto the specified band. $ik$ is the index of the
-k-point along the line from xk1 to xk2. $e_j(ik)$ is the energy
-eigenvalue of the j-th band.
+The bands are written in the format $|\vec k_{rel}|\ |\vec k|\ x\ v_1(\vec k)\ v_2(\vec k)\ v_3(\vec k) \ldots $.\\
+ $|\vec k_{rel}|$ is the norm of the k-vector in relative coordinates, $|\vec k|$ is the norm of the  k-vector 
+in absolute coordinates, i.e. $\vec k=GBAS*\vec k_{rel}$, and $x$ specifies the
+point on the line from xk1 ($x=0$) to xk2 ($x=1$). The values $v_i(\vec k)$
+are either the eigenvalues in eV for the $i$-th band or the coordinates 
+for the fat bands if the FATBAND-option is used.\\
+The plotting of a fat bands is done using a number (LINESPERBAND) of lines,
+so that the width represents the value of the projection. That means that
+for every band there are LINESPERBAND columns in the file instead of one.
 
 The result can be viewed using the program ``xmgrace'' with the
 command
@@ -6558,9 +6589,38 @@ command
 largely independent of the system}
 
 %----------------------------------------------------------------------
-\block{!BCNTL!LINE}
+\block{!BCNTL!INPUTFILE}
 %----------------------------------------------------------------------
 \brules{optional}
+\bdescr{Defines band data file.}
+
+\mbax{\key{NAME}
+\vdescr{file name of band data file from paw calculation.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{If none is specified, the file is the one with extension '.banddata'}}
+%----------------------------------------------------------------------
+\block{!BCNTL!METHOD}
+%----------------------------------------------------------------------
+\brules{mandatory}
+\bdescr{defines method to calculate band structure}
+
+\mbax{\key{ID}
+\vdescr{ID=0 uses a linear interpolation of the energy bands from the paw calculation (Note: this method produces wrong results and is only included for testing purposes), ID=1 uses a diagonalisation of the paw hamiltonian.}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{1}}
+
+\mbax{\key{METHOD\_DIAG}
+\vdescr{determines the method to diagonalize the paw hamiltonian if ID=1. METHOD\_DIAG=1 is the full diagonalisation with lapack routines. Other methods are not implemented yet.}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{1}}
+
+%----------------------------------------------------------------------
+\block{!BCNTL!LINE}
+%----------------------------------------------------------------------
+\brules{optional,multiple}
 \bdescr{defines one line seqment in k-space}
 
 \mbax{\key{xk1}
@@ -6585,21 +6645,33 @@ calculation the parameter can have the values 1 or 2.}
 \vdefault{1}}
 
 \mbax{\key{NK}
-\vdescr{number of grid points along the line segment}
+\vdescr{number of grid points along the line segment.}
 \vformat{integer} 
 \vrules{optional}
-\vdefault{101}}
+\vdefault{10}}
+
+\mbax{\key{NKDIAG}
+\vdescr{number of grid points along the line segment for diagonalisation. IF NKDIAG$<$NK the bands obtained from the diagonalisation of the paw hamiltonian will be interpolated using a 1D-FFT. NKDIAG$>$NK causes an error.}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{NK}}
+
+\mbax{\key{NB}
+\vdescr{number of bands}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{10}}
 
 \mbax{\key{XKPROJECT}
 \vdescr{direction for the projection for 2-d band structures 
-in relative coordinates of the reciprocal lattice vectors.}
+in relative coordinates of the reciprocal lattice vectors. Not yet implemented for METHOD=1.}
 \vformat{real(3)} 
 \vrules{optional}
 \vdefault{(0.,0.,0.)}}
 
 \mbax{\key{NPROJECT}
 \vdescr{number of displaced band line segments for the projection 
-for 2-d band structures}
+for 2-d band structures. Not yet implemented for METHOD=1.}
 \vformat{integer} 
 \vrules{optional, must be an odd number}
 \vdefault{1}}
@@ -6612,11 +6684,53 @@ for 2-d band structures}
 \vdefault{data are appended to previously specified file. 
 If none is specified, the file is the one with extension '.bands'}}
 
+%----------------------------------------------------------------------
+\block{!BCNTL!LINE!FATBAND}
+%----------------------------------------------------------------------
+\brules{optional,multiple}
+\bdescr{defines an orbital projected band structure (fat bands). This rudimentary interface will be extended in the future.}
+
+\mbax{\key{ATOM}
+\vdescr{name of an atom.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{IPRO}
+\vdescr{number of projector for the calculation of the projected band structure.}
+\vformat{integer} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{LINESPERBAND}
+\vdescr{number of lines per band to draw in band structure in order to represent the value of the projection.}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{10}}
+
+\mbax{\key{MAXWIDTH}
+\vdescr{maximal width in eV of bands in projected band structure.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{1.0}}
+
+\mbax{\key{FILE}
+\vdescr{Output file.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{data are appended to previously specified file.}}
 %==========================================================================
 \subsection{Theoretical background}
 %==========================================================================
-The bands are interpolated between the grid points using a linear
-interpolation in each tetrahedron.
+If method=0 the bands are interpolated between the grid points using a linear
+interpolation in each tetrahedron.\\
+If method=1 the bands are calculated using a full diagonalisation of the paw 
+hamiltonian in the basis of plane waves. The projections are evaluated from the
+eigenvectors and the projectors, i.e. 
+$|\langle\tilde p_\alpha |\tilde \psi_i\rangle|^2$. This means that projections
+with different projectors are not comparable. The implementation has 
+only been tested for spin-restricted and collinear calculations.
+
 
 
 

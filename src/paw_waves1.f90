@@ -1673,7 +1673,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !        END IF
 !        CALL OPTICS$WRITEOUT_PARTIALS(NSPIN,NAT,LMNXX,DH,DO)
 !      END IF
-      DEALLOCATE(DO)  ! DO NOT USED YET....; EXCEPT IN OPTICS
+!      DEALLOCATE(DO)  ! DO NOT USED YET....; EXCEPT IN OPTICS
 !
 !     ==================================================================
 !     == PRINTOUT FOR TESTING 
@@ -1768,10 +1768,26 @@ CALL ERROR$STOP('WAVES$ETOT')
               cSVAR2=DH(LMN1,LMN2,2,IAT)
               DH(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
               DH(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
+              cSVAR1=DO(LMN1,LMN2,1,IAT)
+              cSVAR2=DO(LMN1,LMN2,2,IAT)
+              DO(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
+              DO(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
             ENDDO
           ENDDO
         ENDDO
       END IF
+!
+!     ==================================================================
+!     ==  SEND DATA TO BANDDATA MODULE                                ==
+!     ================================================================== 
+      CALL BANDDATA$SETI4('LMNXX',LMNXX)
+      CALL BANDDATA$SETI4('NAT',NAT)
+      CALL BANDDATA$SETI4('NRL',NRL)
+      CALL BANDDATA$SETI4('NDIMD',NDIMD)
+      CALL BANDDATA$SETR8A('VOFR',NRL*NDIMD,RHO(:,:))
+      CALL BANDDATA$SETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH(:,:,:,:))
+      CALL BANDDATA$SETR8A('DO',LMNXX*LMNXX*NDIMD*NAT,DO(:,:,:,:))
+      DEALLOCATE(DO)
 !
 !     ==================================================================
 !     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==

@@ -2739,6 +2739,92 @@ print*,'a     ',(a(i,i),i=1,nb)
       RETURN
       END
 !
+!     ..................................................................
+      SUBROUTINE WAVES$COLLECTBANDDATA
+      USE WAVES_MODULE
+      IMPLICIT NONE
+      REAL(8)               :: EPW_
+      REAL(8)               :: RBAS_(3,3)
+      REAL(8)               :: GBAS_(3,3)
+      INTEGER(4)            :: NRL_
+      LOGICAL(4)            :: SET
+      REAL(8),ALLOCATABLE   :: R_(:,:)
+      REAL(8),ALLOCATABLE   :: PROOFG_(:,:,:)
+      CHARACTER(16),ALLOCATABLE :: ATOMID_(:)
+      INTEGER(4)            :: NG_PROTO_,ISP
+      INTEGER(4)            :: NR1_
+      INTEGER(4)            :: NR2_
+      INTEGER(4)            :: NR3_
+!     ..................................................................
+      CALL BANDDATA$SETI4('NDIM' ,NDIM)
+      CALL BANDDATA$SETI4('NSPIN',NSPIN)
+      CALL BANDDATA$SETI4('NDIMD',NDIMD)
+
+      CALL WAVES$GETR8('EPWPSI',EPW_)
+      CALL BANDDATA$SETR8('EPW',EPW_)
+      CALL WAVES$GETI4('NR1',NR1_)
+      CALL WAVES$GETI4('NR2',NR2_)
+      CALL WAVES$GETI4('NR3',NR3_)
+      CALL BANDDATA$SETI4('NR1',NR1_)
+      CALL BANDDATA$SETI4('NR2',NR2_)
+      CALL BANDDATA$SETI4('NR3',NR3_)
+    
+      
+      CALL CELL$GETR8A('T0',9,RBAS_)
+      CALL BANDDATA$SETR8A('RBAS',9,RBAS_)
+      
+      CALL PLANEWAVE$GETR8A('GBAS',9,GBAS_)
+      CALL BANDDATA$SETR8A('GBAS',9,GBAS_)
+      
+      CALL BANDDATA$SETI4('NSP',MAP%NSP)
+      CALL BANDDATA$SETI4('NAT',MAP%NAT)
+      CALL BANDDATA$SETI4('NPRO',MAP%NPRO)
+      CALL BANDDATA$SETI4('LNXX',MAP%LNXX)!MAXVAL(MAP%LNX)
+      CALL BANDDATA$SETI4('LMNXX',MAXVAL(MAP%LMNX))
+      
+      ALLOCATE(R_(3,MAP%NAT))
+      ALLOCATE(ATOMID_(MAP%NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*MAP%NAT,R_)
+      CALL ATOMLIST$GETCHA('NAME',0,MAP%NAT,ATOMID_)
+      CALL BANDDATA$SETR8A('R',3*MAP%NAT,R_)
+      CALL BANDDATA$SETCHA('ATOMID',MAP%NAT,ATOMID_)
+      DEALLOCATE(R_)
+      DEALLOCATE(ATOMID_)
+
+      CALL BANDDATA$SETI4('LMX',MAP%LMX)
+      CALL BANDDATA$SETI4('NBAREPRO',MAP%NBAREPRO)
+      CALL BANDDATA$SETI4A('LNX',MAP%NSP,MAP%LNX)
+      CALL BANDDATA$SETI4A('LMNX',MAP%NSP,MAP%LMNX)
+      CALL BANDDATA$SETI4A('LOX',MAP%LNXX*MAP%NSP,MAP%LOX)
+      CALL BANDDATA$SETI4A('ISPECIES',MAP%NAT,MAP%ISP)
+      
+      CALL WAVES_COLLECTBANDDATA_PRO(MAP%NSP,MAP%LNXX)
+      RETURN
+      END SUBROUTINE WAVES$COLLECTBANDDATA
+!
+!     ..................................................................
+      SUBROUTINE WAVES_COLLECTBANDDATA_PRO(NSP_,LNXX_)
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NSP_
+      INTEGER(4),INTENT(IN) :: LNXX_
+      REAL(8),ALLOCATABLE   :: PROOFG_(:,:,:)
+      INTEGER(4)            :: NG_PROTO_,ISP
+!     ..................................................................
+      CALL BANDDATA$GETI4('NG_PROTO',NG_PROTO_)
+      ALLOCATE(PROOFG_(NG_PROTO_,LNXX_,NSP_))
+      DO ISP=1,NSP_
+        CALL SETUP$ISELECT(ISP)
+        PROOFG_(:,:,ISP)=0.0D0
+        PROOFG_(:,:,ISP)=THIS%PROOFG(:,:)
+        CALL SETUP$unSELECT()
+      ENDDO
+      CALL BANDDATA$SETR8A('PROOFG',NG_PROTO_*LNXX_*NSP_,PROOFG_)
+      DEALLOCATE(PROOFG_)
+      RETURN
+      END SUBROUTINE WAVES_COLLECTBANDDATA_PRO
+
+!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$REPORTEIG(NFIL)
 !     **************************************************************************

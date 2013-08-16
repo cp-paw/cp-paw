@@ -1111,6 +1111,14 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$PASS('AFTER STATEANALYSIS')
 !   
 !     ==========================================================================
+!     ==   BANDDATA                                                           ==
+!     ==========================================================================
+      IF(TPRINT)THEN
+        CALL WAVES$COLLECTBANDDATA
+        CALL BANDDATA$WRITEFILE
+      ENDIF
+!   
+!     ==========================================================================
 !     ==   WRITE FILE FOR COSMOTHERM                                          ==
 !     ==========================================================================
       CALL COSMO$PRINTOUT()
