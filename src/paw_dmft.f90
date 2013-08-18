@@ -52,7 +52,6 @@ INTEGER(4)             :: NDIMd         ! can be 1,2,4
 INTEGER(4)             :: Nat           ! #(atoms)
 REAL(8)   ,ALLOCATABLE :: OMEGA(:)      ! MATSUBARA FREQUENCIES
 INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)  !(nchi) map ichi to ipro
-INTEGER(4),ALLOCATABLE :: Ichibnd(:,:)  !(2,nat) map iat to ichistart,ichiend
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
 REAL(8)                :: MU            ! CHEMICAL POTENTIAL
 REAL(8)                :: DELTAT        ! TIMESTEP
@@ -64,7 +63,7 @@ END MODULE DMFT_MODULE
       SUBROUTINE DMFT_INI()
 !     **************************************************************************
       USE DMFT_MODULE, only: tini,ndim,ndimd,nspin,nkptl,nb,nat,nchi &
-     &                       ,nomega,kbt,deltat,mu,omega,ichibnd,iproofchi &
+     &                       ,nomega,kbt,deltat,mu,omega,iproofchi &
      &                       ,kset,atomset
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
       IMPLICIT NONE
@@ -137,9 +136,6 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
       call atomlist$natom(nat)
       allocate(atomset(nat))
-      allocate(ichibnd(2,nat))
-      ichibnd(1,:)=1
-      ichibnd(2,:)=0
       atomset(:)%ichi1=1
       atomset(:)%ichi2=0
 !
@@ -171,8 +167,6 @@ print*,'torb ',iat,torb
         atomset(iat)%nloc=nloc
         atomset(iat)%ichi1=i1
         atomset(iat)%ichi2=i2
-        ichibnd(1,iat)=i1
-        ichibnd(2,iat)=i2
 !
 !       == allocate atomset subarrays ==========================================
         allocate(atomset(iat)%u(nloc,nloc,nloc,nloc))
@@ -340,12 +334,11 @@ print*,'iproofchi ',iproofchi
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NB,NCHI,NKPTL,NSPIN,NDIM,ndimd,nat,NOMEGA &
-     &                     ,OMEGA,KBT,MU,kset,ichibnd
+      USE DMFT_MODULE, ONLY: TON
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)             :: I,ITER,IKPT,ISPIN
+      INTEGER(4)             :: ITER
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT$GREEN')
@@ -383,7 +376,6 @@ PRINT*,'... HRHO DONE'
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
 !     ==========================================================================
-      MU=0.D0
       DO ITER=1,10
 WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
         call DMFT_GLOC_withatomset() 
@@ -585,7 +577,7 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,ndimd,IPROOFCHI,KBT &
-     &                      ,ichibnd,nat,kset
+     &                      ,nat,kset,atomset
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
@@ -596,6 +588,7 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
       INTEGER(4)             :: NGL
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IB,I,J,iat,idim1,idim2
       INTEGER(4)             :: Idimd
+      INTEGER(4)             :: i1,i2
       REAL(8)                :: F(NB,NKPTL,NSPIN)
       REAL(8)                :: SVAR
       REAL(8)                :: emin,emax
@@ -736,8 +729,12 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',emin*27.211D0,eMAX*27.211D0
         enddo
 !       == print ===============================================================
         print*,' in DMFT$COLLECTHAMILTONIAN_withkset'
-        CALL DMFT_PRINTSPINORMATRIX(6,'DENSITY MATRIX(UPDOWN)','UPDOWN' &
-     &                             ,NAT,ICHIBND,NDIMD,NCHI,RHO)
+        do iat=1,nat
+          i1=atomset(iat)%ichi1
+          i2=atomset(iat)%ichi2
+          CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(UPDOWN)','UPDOWN' &
+      &                          ,i1,i2,NDIMD,NCHI,rho)
+        enddo
         DEALLOCATE(RHO)
       END IF
                                       CALL TRACE$POP()
@@ -1541,8 +1538,7 @@ print*,'estat ',estat
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NSPIN,ndimd,nat,NOMEGA &
-     &                      ,OMEGA,KBT,MU &
-     &                      ,AMIX,kset,atomset,ichibnd
+     &                      ,OMEGA,KBT,MU,AMIX,kset,atomset
       IMPLICIT NONE
       character(*),intent(in)  :: type  ! can be 'hrho','h0'
       REAL(8)   ,PARAMETER     :: TOL=1.D-6
@@ -1608,8 +1604,8 @@ print*,'estat ',estat
           slaur3=(0.d0,0.d0)
           if(th0) then
             do iat=1,nat
-              i1=ichibnd(1,iat)
-              i2=ichibnd(2,iat)
+              i1=atomset(iat)%ichi1
+              i2=atomset(iat)%ichi2
               slaur1(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,1)
               slaur2(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,2)
               slaur3(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,3)
@@ -1644,8 +1640,8 @@ print*,'estat ',estat
             mat=mat-kset(ikpt)%H0
             if(th0) then
               do iat=1,nat
-                i1=ichibnd(1,iat)
-                i2=ichibnd(2,iat)
+                i1=atomset(iat)%ichi1
+                i2=atomset(iat)%ichi2
                 mat(i1:i2,i1:i2,:)=mat(i1:i2,i1:i2,:) &
      &                            -atomset(iat)%sloc(:,:,:,nu)
               enddo
@@ -1953,7 +1949,7 @@ print*,'th0 ',th0
 !     **************************************************************************
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: NCHI,NKPTL,NSPIN,ndimd,nat,NOMEGA,OMEGA,KBT,MU &
-     &                      ,kset,atomset,ichibnd
+     &                      ,kset,atomset
       IMPLICIT NONE
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       LOGICAL(4),PARAMETER     :: TPRINT=.FALSE.
@@ -1984,8 +1980,8 @@ print*,'th0 ',th0
         slaur2=(0.d0,0.d0)
         slaur3=(0.d0,0.d0)
         do iat=1,nat
-          i1=ichibnd(1,iat)
-          i2=ichibnd(2,iat)
+          i1=atomset(iat)%ichi1
+          i2=atomset(iat)%ichi2
           slaur1(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,1)
           slaur2(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,2)
           slaur3(i1:i2,i1:i2,:)=atomset(iat)%sloclaur(:,:,:,3)
@@ -2020,8 +2016,8 @@ print*,'th0 ',th0
           ENDDO
         END IF
         do iat=1,nat
-          i1=ichibnd(1,iat)
-          i2=ichibnd(2,iat)
+          i1=atomset(iat)%ichi1
+          i2=atomset(iat)%ichi2
           atomset(iat)%gloclaur(:,:,:,1)=atomset(iat)%gloclaur(:,:,:,1) &
      &                                  +wkptl*glaur1(i1:i2,i1:i2,:)
           atomset(iat)%gloclaur(:,:,:,2)=atomset(iat)%gloclaur(:,:,:,2) &
@@ -2035,8 +2031,8 @@ print*,'th0 ',th0
           MAT=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT
           MAT=MAT-KSET(IKPT)%H0
           DO IAT=1,NAT
-            I1=ICHIBND(1,IAT)
-            I2=ICHIBND(2,IAT)
+            I1=atomset(iat)%ichi1
+            I2=atomset(iat)%ichi2
             MAT(I1:I2,I1:I2,:)=MAT(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
           ENDDO
           CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
@@ -2051,8 +2047,8 @@ print*,'th0 ',th0
             G=0.5D0*(G+MAT2)
           END IF
           DO IAT=1,NAT
-            I1=ICHIBND(1,IAT)
-            I2=ICHIBND(2,IAT)
+            I1=atomset(iat)%ICHI1
+            I2=atomset(iat)%ICHI2
             ATOMSET(IAT)%GLOC(:,:,:,NU)=ATOMSET(IAT)%GLOC(:,:,:,NU) &
      &                                 +WKPTL*G(I1:I2,I1:I2,:)
           ENDDO
@@ -2066,8 +2062,8 @@ print*,'th0 ',th0
 !     ==========================================================================
 !     == all Laurent expansion coefficients are hermitian ======================
       do iat=1,nat
-        I1=ICHIBND(1,IAT)
-        I2=ICHIBND(2,IAT)
+        I1=atomset(iat)%ICHi1
+        I2=atomset(iat)%ICHi2
         do i=1,3
           do idimd=1,ndimd
             atomset(iat)%gloclaur(:,:,idimd,i)=0.5d0 &
@@ -2091,7 +2087,7 @@ print*,'th0 ',th0
 !     ** 
 !     **************************************************************************
       USE DMFT_MODULE, ONLY  : TON,NKPTL,NSPIN,ndim,ndimd,NB,nchi,nat &
-     &                        ,iproofchi,ichibnd,atomset,kset
+     &                        ,iproofchi,atomset,kset
       USE WAVES_MODULE, ONLY : GSET,WAVES_SELECTWV,THIS,map
       IMPLICIT NONE
       complex(8),parameter   :: ci=(0.d0,1.d0)
@@ -2195,8 +2191,8 @@ PRINT*,'ENTERING DMFT$ADDTOHPSI_withkset'
 !         ==  NOW THE SITE-LOCAL TERM FROM THE DOUBLE COUNTING                ==
 !         ======================================================================
           DO IAT=1,NAT
-            I1=Ichibnd(1,IAT)
-            I2=Ichibnd(2,IAT)
+            I1=atomset(iat)%ichi1
+            I2=atomset(iat)%ichi2
             DO IDIM2=1,NDIMD
               DO IDIM1=1,NDIMD
                 IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
@@ -2664,30 +2660,6 @@ print*,' before spinor$printl'
           WRITE(NFIL,FMT='("IDIMD=",I1,":",100("(",2F10.5,")"))') &
     &                    IDIMD,A(I,I1:I2,IDIMD)
         ENDDO
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_PRINTSPINORMATRIX(NFIL,NAME,TYPE,NAT,ICHIBND,NDIMD,NCHI,A)
-!     **************************************************************************
-!     ** 
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: NFIL
-      CHARACTER(*),INTENT(IN) :: NAME
-      CHARACTER(*),INTENT(IN) :: TYPE
-      INTEGER(4)  ,INTENT(IN) :: NDIMD
-      INTEGER(4)  ,INTENT(IN) :: NCHI
-      INTEGER(4)  ,INTENT(IN) :: NAT
-      INTEGER(4)  ,INTENT(IN) :: ICHIBND(2,NAT)
-      COMPLEX(8)  ,INTENT(IN) :: A(NCHI,NCHI,NDIMD)
-      INTEGER(4)              :: I,IDIMD,IAT
-!     **************************************************************************
-      DO IAT=1,NAT
-        IF(ICHIBND(2,IAT).LT.ICHIBND(1,IAT)) CYCLE
-        CALL SPINOR$PRINTMATRIX(NFIL,NAME,TYPE,ICHIBND(1,IAT),ICHIBND(2,IAT) &
-     &                         ,NDIMD,NCHI,A)
       ENDDO
       RETURN
       END
