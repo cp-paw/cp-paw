@@ -229,6 +229,8 @@ END MODULE LMTO_MODULE
         TPICK=VAL
       ELSE IF(ID.EQ.'DHOFK') THEN
         CALL LMTO_DROPPICK$SETL4('DHOFK',VAL)
+      ELSE IF(ID.EQ.'THTBC') THEN
+        THTBC=VAL
 !
 !     ==========================================================================
 !     == IF ACTIVE THE HYBRID CONTRIBTIONS ON THIS ATOM ARE CONSIDERED        ==
@@ -4368,7 +4370,8 @@ PRINT*,'MARKE 7'
 !     ==========================================================================
 !!$CALL FILEHANDLER$UNIT('PROT',NFILO)
 !!$WRITE(NFILO,*)'LMTO INTERFACE ',ETOT
-      CALL ENERGYLIST$SET('LMTO INTERFACE',ETOT)
+      CALL ENERGYLIST$SET('DROPPICK INTERFACE',ETOT)
+!      CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
 !
                                            CALL TRACE$POP()
@@ -5969,7 +5972,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR,TOFFSITE &
      &                       ,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR=.true.
       LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NAT
@@ -6177,6 +6180,16 @@ END IF
 PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,QSPIN(1)
 PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=           ',IAT,QSPIN(2:NDIMD)
 PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
+
+if(tactive) then 
+print*,'iat=',iat,ndimd
+WRITE(*,FMT='(82("="),T10,"  h before dc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
 !
 !       ========================================================================
 !       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
@@ -6194,31 +6207,29 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
      &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HTALL,LMNX,LMNX,H)
 !!$!
-!!$if(tactive) then 
-!!$print*,'iat=',iat,ndimd
-!!$WRITE(*,FMT='(82("="),T10,"  h(1) from simpledc ")')
-!!$do idimd=1,ndimd
-!!$  do lmn=1,lmnx
-!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
-!!$  enddo
-!!$enddo
-!!$end if
+if(tactive) then 
+print*,'iat=',iat,ndimd
+WRITE(*,FMT='(82("="),T10,"  h(1) from simpledc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
 !
-
         POTPAR(ISP)%TALLORB=.FALSE.  ! DO NOT FORGET THIS!!!!!
-
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
 !!$!
-!!$if(tactive) then
-!!$print*,'iat=',iat
-!!$WRITE(*,FMT='(82("="),T10,"  h(2) from simpledc ")')
-!!$do idimd=1,ndimd
-!!$  do lmn=1,lmnx
-!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
-!!$  enddo
-!!$enddo
-!!$end if
+if(tactive) then
+print*,'iat=',iat
+WRITE(*,FMT='(82("="),T10,"  h(2) from simpledc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
 !!$!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
@@ -6301,7 +6312,9 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     ==========================================================================
 !     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
 !     ==========================================================================
+PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
+      CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
 !
 !     ==========================================================================
@@ -6357,6 +6370,8 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
             WRITE(*,FMT='(82("-"))')
           ENDDO
         ENDDO
+!!$print*,'stopping after printing'
+!!$stop 'forced stop'
       END IF
 !
                             CALL TRACE$POP()

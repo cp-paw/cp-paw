@@ -9,9 +9,9 @@ MODULE DMFT_MODULE
 !**                                                                           **
 !*******************************************************************************
 TYPE DENMAT_TYPE
-INTEGER(4)          :: LNX
+INTEGER(4)          :: LNX    !#(radial partial waves)
 INTEGER(4),POINTER  :: LOX(:) !(LNX)
-INTEGER(4),POINTER  :: LMN(:) !(NLOC)
+INTEGER(4),POINTER  :: LMN(:) !(nloc) maps local orbitals onto projector array
 INTEGER(4)          :: LMNX
 COMPLEX(8),POINTER  :: MAT(:,:,:) => NULL() ! DENSITY MATRIX
 COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
@@ -29,7 +29,7 @@ TYPE ATOMSET_TYPE
   TYPE(DENMAT_TYPE)    :: DENMAT
 END TYPE ATOMSET_TYPE
 TYPE KSET_TYPE
-  REAL(8)            :: WKPTL
+  REAL(8)            :: WKPT
   LOGICAL(4)         :: TADDMINUSK    !ADD  THE TERM FOR -K
   REAL(8)   ,POINTER :: ERHO(:,:)     !(NB,NSPIN)
   COMPLEX(8),POINTER :: PIPSI(:,:,:,:)!(NDIM,NCHI,NB,NSPIN)
@@ -157,14 +157,35 @@ END MODULE DMFT_MODULE
         ENDDO
         I2=NCHI
 PRINT*,'TORB ',IAT,TORB
-        DEALLOCATE(LOX)
-        DEALLOCATE(TORB)
 !
 !       == SAVE BOUNDS TO ATOMSET ==============================================
         NLOC=I2-I1+1
         ATOMSET(IAT)%NLOC=NLOC
         ATOMSET(IAT)%ICHI1=I1
         ATOMSET(IAT)%ICHI2=I2
+!
+!       == now determine substructure denmat ==================================
+        ATOMSET(IAT)%DENMAT%LNX=LNX
+        ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
+        ATOMSET(IAT)%DENMAT%LOX=LOX
+        LMNX=SUM(2*LOX+1)
+        ATOMSET(IAT)%DENMAT%LMNX=LMNX
+        NLOC=ATOMSET(IAT)%NLOC
+        ALLOCATE(ATOMSET(IAT)%DENMAT%LMN(NLOC))
+        LMN=0
+        I=0
+        DO LN=1,LNX
+          L=LOX(LN)
+          IF(TORB(LN)) THEN
+            DO IM=1,2*L+1
+              I=I+1
+              LMN=LMN+1
+              ATOMSET(IAT)%DENMAT%LMN(I)=LMN
+            ENDDO
+          ELSE
+            LMN=LMN+2*L+1
+          END IF
+        ENDDO
 !
 !       == ALLOCATE ATOMSET SUBARRAYS ==========================================
         ALLOCATE(ATOMSET(IAT)%U(NLOC,NLOC,NLOC,NLOC))
@@ -173,16 +194,25 @@ PRINT*,'TORB ',IAT,TORB
         ALLOCATE(ATOMSET(IAT)%SLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%SLOCLAUR(NLOC,NLOC,NDIMD,3))
         ALLOCATE(ATOMSET(IAT)%DIAGSLOC(NLOC,NLOC,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%DENMAT%MAT(LMNX,LMNX,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%DENMAT%H(LMNX,LMNX,NDIMD))
         ATOMSET(IAT)%U=0.D0
         ATOMSET(IAT)%GLOC=(0.D0,0.D0)
         ATOMSET(IAT)%GLOCLAUR=(0.D0,0.D0)
         ATOMSET(IAT)%SLOC=(0.D0,0.D0)
         ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
         ATOMSET(IAT)%DIAGSLOC=(0.D0,0.D0)
+        ATOMSET(IAT)%DENMAT%MAT=(0.D0,0.D0)
+        ATOMSET(IAT)%DENMAT%H  =(0.D0,0.D0)
+!
+        DEALLOCATE(LOX)
+        DEALLOCATE(TORB)
       ENDDO
 PRINT*,'NCHI ',NCHI
 !
-!     == ACCUMULATE IPROOFCHI ==================================================
+!     ==========================================================================
+!     == ACCUMULATE IPROOFCHI                                                 ==
+!     ==========================================================================
       ALLOCATE(IPROOFCHI(NCHI))
       ICHI=0
       IPRO=0
@@ -224,7 +254,7 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
         ALLOCATE(KSET(IKPTL)%HRHO(NCHI,NCHI,NDIMD))
         ALLOCATE(KSET(IKPTL)%SINV(NCHI,NCHI,NDIMD))
         ALLOCATE(KSET(IKPTL)%SMAT(NCHI,NCHI,NDIMD))
-        KSET(IKPTL)%WKPTL=0.D0
+        KSET(IKPTL)%WKPT=0.D0
         KSET(IKPTL)%ERHO=0.D0
         KSET(IKPTL)%PIPSI=(0.D0,0.D0)
         KSET(IKPTL)%RHO=(0.D0,0.D0)
@@ -247,7 +277,7 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
             CALL ERROR$I4VAL('NKPTL',NKPTL)
             CALL ERROR$STOP('DMFT_INI')
           END IF
-          KSET(IKPTL)%WKPTL=WKPT(IKPT)
+          KSET(IKPTL)%WKPT=WKPT(IKPT)
         END IF
       ENDDO
       IF(IKPTL.NE.NKPTL) THEN
@@ -256,54 +286,6 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
         CALL ERROR$I4VAL('IKPTL',IKPTL)
         CALL ERROR$STOP('DMFT_INI')
       END IF
-!
-!     ==========================================================================
-!     ==  ALLOCATE PERMANENT ARRAYS
-!     ==========================================================================
-!
-!     == ATOMSET ===============================================================
-      DO IAT=1,NAT
-      ENDDO
-!
-!     == ATOMSET%DENMAT%... FOR DOUBLE COUNTING CORRECTION =====================
-      DO IAT=1,NAT
-        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        ALLOCATE(TORB(LNX))
-        CALL SETUP$GETL4A('TORB',LNX,TORB)
-        CALL SETUP$UNSELECT()
-!
-        ATOMSET(IAT)%DENMAT%LNX=LNX
-        ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
-        ATOMSET(IAT)%DENMAT%LOX=LOX
-        LMNX=SUM(2*LOX+1)
-        ATOMSET(IAT)%DENMAT%LMNX=LMNX
-        NLOC=ATOMSET(IAT)%NLOC
-        ALLOCATE(ATOMSET(IAT)%DENMAT%LMN(NLOC))
-        LMN=0
-        I=0
-        DO LN=1,LNX
-          L=LOX(LN)
-          IF(TORB(LN)) THEN
-            DO IM=1,2*L+1
-              I=I+1
-              LMN=LMN+1
-              ATOMSET(IAT)%DENMAT%LMN(I)=LMN
-            ENDDO
-          ELSE
-            LMN=LMN+2*L+1
-          END IF
-        ENDDO
-        ALLOCATE(ATOMSET(IAT)%DENMAT%MAT(LMNX,LMNX,NDIMD))
-        ALLOCATE(ATOMSET(IAT)%DENMAT%H(LMNX,LMNX,NDIMD))
-        ATOMSET(IAT)%DENMAT%MAT=(0.D0,0.D0)
-        ATOMSET(IAT)%DENMAT%H  =(0.D0,0.D0)
-        DEALLOCATE(LOX)
-        DEALLOCATE(TORB)
-      ENDDO        
       RETURN
       END
 !
@@ -319,6 +301,8 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
+      real(8)                :: etot
+      real(8)                :: svar
       INTEGER(4)             :: ITER
 !     **************************************************************************
       IF(.NOT.TON) RETURN
@@ -351,33 +335,45 @@ PRINT*,'... U-TENSOR DONE'
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
 PRINT*,'SETTING UP NON-INTERACTING HAMILTONIAN HRHO...'
-      CALL DMFT_CONSTRAINTS_WITHKSET('HRHO') !NEW
+!      CALL DMFT_CONSTRAINTS_WITHKSET('HRHO') 
 PRINT*,'... HRHO DONE'
 !
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
 !     ==========================================================================
-      DO ITER=1,10
+      DO ITER=1,1
 WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
         CALL DMFT_GLOC_WITHATOMSET() 
 !
 !       ========================================================================
 !       ==  CALL THE SOLVER                                                   ==
 !       ========================================================================
-        CALL DMFT$SOLVER_WITHKSET() 
+        CALL DMFT_SOLVER_WITHKSET(etot) 
+print*,'etot after DMFT_SOLVER_WITHKSET ',etot
 !
 !       ========================================================================
 !       ==  CONSTRAINTS                                                       ==
 !       ========================================================================
-        CALL DMFT_CONSTRAINTS_WITHKSET('H0')
+!        CALL DMFT_CONSTRAINTS_WITHKSET('H0')
 !PRINT*,'FORCED STOP AFTER CONSTRAINTS_WITHKSET("H0")'
 !STOP
         PRINT*,'ITERATION COMPLETED ',ITER
       ENDDO ! END OF LOOP OVER ITERATIONS TO ENFORCE CONSTRAINT
 !
+!     ==========================================================================
+!     ==  calculate missing total energy contribution                         ==
+!     ==========================================================================
+!      call dmft_detot(svar)
+!      etot=etot+svar      
+      CALL ENERGYLIST$SET('DMFT INTERFACE',ETOT)
+      CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+!
+!     ==========================================================================
+!     ==  add hamiltonian this%htbc                                           ==
+!     ==========================================================================
       CALL DMFT$ADDTOHPSI_WITHKSET()
 
-!STOP 'END OF LOOP. STOPPING.'
                                        CALL TRACE$POP()
       RETURN
       END
@@ -465,7 +461,7 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
         ATOMSET(IAT)%DIAGSLOC(:,:,:)=(0.D0,0.D0)
         DO IKPT=1,NKPTL
           ATOMSET(IAT)%DIAGSLOC=ATOMSET(IAT)%DIAGSLOC &
-    &                           +KSET(IKPT)%WKPTL*KSET(IKPT)%SINV(I1:I2,I1:I2,:)
+    &                           +KSET(IKPT)%WKPT*KSET(IKPT)%SINV(I1:I2,I1:I2,:)
         ENDDO
 !
 !       == MAKE REAL IF TIME-INVERSION SYMMETRY IS VALID =======================
@@ -530,7 +526,7 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
           DO IDIMD=1,NDIMD
             MAT1=(0.D0,0.D0)
             DO IKPT=1,NKPTL
-              MAT1=MAT1+KSET(IKPT)%WKPTL*KSET(IKPT)%SINV(I1:I2,I1:I2,IDIMD)
+              MAT1=MAT1+KSET(IKPT)%WKPT*KSET(IKPT)%SINV(I1:I2,I1:I2,IDIMD)
             END DO
             IF(NDIMD.LT.4)MAT1=REAL(MAT1)
 !
@@ -699,7 +695,7 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
         ALLOCATE(RHO(NCHI,NCHI,NDIMD))
         RHO(:,:,:)=(0.D0,0.D0)
         DO IKPT=1,NKPTL
-          RHO=RHO+KSET(IKPT)%WKPTL*KSET(IKPT)%RHO
+          RHO=RHO+KSET(IKPT)%WKPT*KSET(IKPT)%RHO
         ENDDO
 !       == MAKE HERMITEAN ======================================================
         DO IDIMD=1,NDIMD
@@ -708,9 +704,12 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
 !       == PRINT ===============================================================
         PRINT*,' IN DMFT$COLLECTHAMILTONIAN_WITHKSET'
         DO IAT=1,NAT
+          if(atomset(iat)%nloc.le.0) cycle
           I1=ATOMSET(IAT)%ICHI1
           I2=ATOMSET(IAT)%ICHI2
           CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(UPDOWN)','UPDOWN' &
+      &                          ,I1,I2,NDIMD,NCHI,RHO)
+          CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(TXYZ)','TXYZ' &
       &                          ,I1,I2,NDIMD,NCHI,RHO)
         ENDDO
         DEALLOCATE(RHO)
@@ -728,7 +727,7 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
       USE DMFT_MODULE, ONLY: NKPTL,NSPIN,NAT,NDIM,NDIMD,NB,ATOMSET
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.false.
       INTEGER(4)             :: NBH     !#(SUPER STATES)
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: I1,I2
@@ -867,8 +866,10 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
 !     ==  PRINT
 !     ==========================================================================
       IF(TPRINT) THEN
+        PRINT*,'DENSITY MATRIX REPOST FROM DMFT$COLLECTFULLDENMAT'
         DO IAT=1,NAT
           IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
+          LMNX=ATOMSET(IAT)%DENMAT%LMNX
           WRITE(*,FMT='(82("="),T10," DENSITY MATRIX FOR ATOM ",I3," ")')IAT
           DO IDIMD=1,NDIMD
             DO LMN=1,LMNX
@@ -955,26 +956,28 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$SOLVER_WITHKSET()
+      SUBROUTINE DMFT_SOLVER_WITHKSET(etot)
 !     **************************************************************************
 !     ** MIMICKS A DMFT SOLVER                                                **
 !     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: NAT,NDIMD,NOMEGA,OMEGA,KBT,ATOMSET
+      USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,OMEGA,KBT,ATOMSET
+      use lmto_module ,only: hybridsetting,hfweight,ispecies
       IMPLICIT NONE
+      REAL(8)   ,intent(out) :: ETOT
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-      REAL(8)   ,PARAMETER   :: DMFTHFWEIGHT=0.25D0
+      REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EV
       REAL(8)                :: PHILW
-      REAL(8)                :: ETOT
       REAL(8)                :: EDC
       INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: LMNX  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: IAT
       INTEGER(4)             :: IDIMD,I,J,LMN1,LMN2,NU
-      COMPLEX(8),ALLOCATABLE :: H(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: rho(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: ham(:,:,:)
 !     **************************************************************************
-PRINT*,'ENTERING DMFT$SOLVER...'
+                                      call trace$push('DMFT$SOLVER_WITHKSET')
       CALL CONSTANTS('EV',EV)
 !
 !     ==========================================================================
@@ -985,15 +988,95 @@ PRINT*,'ENTERING DMFT$SOLVER...'
         NLOC=ATOMSET(IAT)%NLOC
         IF(NLOC.LE.0) CYCLE
 !
+        ATOMSET(IAT)%DENMAT%H=(0.D0,0.D0)
+        ATOMSET(IAT)%SLOC=(0.D0,0.D0)
+        ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
+!
 !       ========================================================================
-!       == COLLECT LOCAL ARRAYS GLOC1 AND ULOC1                               ==
+!       == collect hfweight from lmto_module                                                  ==
 !       ========================================================================
-PRINT*,'CONSTRUCTING SELF ENERGY FOR ATOM ',IAT,' ...'
-        CALL DMFT$HFSOLVER_WITHSET(NLOC,NDIMD,NOMEGA,KBT,OMEGA &
-     &                            ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
-     &                            ,ATOMSET(IAT)%U,PHILW &
-     &                            ,ATOMSET(IAT)%SLOC,ATOMSET(IAT)%SLOCLAUR)
-        ETOT=ETOT+PHILW
+        IF(HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT.GE.0.D0) THEN
+          LHFWEIGHT=HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT
+        ELSE
+          LHFWEIGHT=hfweight
+        END IF
+        PRINT*,'IAT=',IAT,' LOCAL HFweight=',LHFWEIGHT
+!
+!       ========================================================================
+!       == DETERMINE HARTREE FOCK CONTRIBUTION                                ==
+!       ========================================================================
+        ALLOCATE(RHO(NLOC,NLOC,NDIMD))
+        ALLOCATE(HAM(NLOC,NLOC,NDIMD))
+        DO I=1,NLOC
+          DO J=1,NLOC
+            LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
+            LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
+            RHO(I,J,:)=ATOMSET(IAT)%DENMAT%MAT(LMN1,LMN2,:)
+          ENDDO
+        ENDDO
+        CALL DMFT_FOCK(NLOC,NDIMD,RHO,ATOMSET(IAT)%U,PHILW,HAM)
+        ETOT=ETOT+lhfweight*PHILW
+print*,'after fock ',iat,etot,lhfweight*philw
+        DO I=1,NLOC
+          DO J=1,NLOC
+            LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
+            LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
+            ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:) &
+     &                  =ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:)+lhfweight*HAM(I,J,:)
+          ENDDO
+        ENDDO
+!
+!       == PRINT IF DESIRED ====================================================
+        IF(TPRINT) THEN
+          WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
+       &                        'Fock HAMILTONIAN',IAT
+          DO IDIMD=1,NDIMD
+            DO I=1,NLOC
+              WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I,HAM(I,:,IDIMD)
+            ENDDO
+          ENDDO
+        END IF
+!
+        DEALLOCATE(RHO)
+        DEALLOCATE(HAM)
+!
+!       ========================================================================
+!       == SUBTRACT DOUBLE COUNTING TERM                                      ==
+!       ========================================================================
+        LMNX=ATOMSET(IAT)%DENMAT%LMNX
+        ALLOCATE(HAM(LMNX,LMNX,NDIMD))
+        CALL DMFT_DC(IAT,LMNX,NDIMD,ATOMSET(IAT)%DENMAT%MAT,EDC,HAM)
+        ETOT=ETOT+lhfweight*EDC
+print*,'after dc ',iat,etot,lhfweight*edc
+        ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+lhfweight*HAM
+!
+!       == PRINT IF DESIRED ====================================================
+        IF(TPRINT) THEN
+          WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
+       &                        'DBLE-CNTNG HAMILTONIAN',IAT
+          DO IDIMD=1,NDIMD
+            DO I=1,LMNX
+              WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I,HAM(I,:,IDIMD) 
+            ENDDO
+          ENDDO
+        END IF
+!
+        DEALLOCATE(HAM)
+!
+!       ========================================================================
+!       == CHECK CONSISTENCY BETWEEN GLOC AND ATOMSET%DENMAT%MAT              ==
+!       ========================================================================
+!
+!       ========================================================================
+!       == ADD DYNAMIC CONTRIBUTIONS                                          ==
+!       ========================================================================
+! do not forget to scale with lhfweight!!!!!
+!
+!!$        CALL DMFT$HFSOLVER_WITHSET(NLOC,NDIMD,NOMEGA,KBT,OMEGA &
+!!$     &                            ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
+!!$     &                            ,ATOMSET(IAT)%U,PHILW &
+!!$     &                            ,ATOMSET(IAT)%SLOC,ATOMSET(IAT)%SLOCLAUR)
+!!$        ETOT=ETOT+PHILW
 !!$WRITE(*,FMT='(82("="),T10," SLOC FROM HFSOLVER_WITHKSET ",I4,"  ")'),IAT
 !!$DO NU=1,NOMEGA
 !!$  DO IDIMD=1,NDIMD
@@ -1004,7 +1087,7 @@ PRINT*,'CONSTRUCTING SELF ENERGY FOR ATOM ',IAT,' ...'
 !!$  ENDDO
 !!$ENDDO
 !!$WRITE(*,FMT='(82("="),T10," SLOCLAUR FROM HFSOLVER_WITHKSET ",I4,"  ")'),IAT
-!!$DO NU=1,3
+!!$DO NU=1,1
 !!$  DO IDIMD=1,NDIMD
 !!$    DO I=1,NLOC
 !!$      WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I &
@@ -1012,63 +1095,22 @@ PRINT*,'CONSTRUCTING SELF ENERGY FOR ATOM ',IAT,' ...'
 !!$    ENDDO
 !!$  ENDDO
 !!$ENDDO
-!
-!       ========================================================================
-!       == SUBTRACT DOUBLE COUNTING TERM                                      ==
-!       ========================================================================
-        LMNX=ATOMSET(IAT)%DENMAT%LMNX
-        CALL DMFT_DC(IAT,LMNX,NDIMD,ATOMSET(IAT)%DENMAT%MAT &
-       &                       ,EDC,ATOMSET(IAT)%DENMAT%H)
-        ETOT=ETOT+EDC
-!
-!       ========================================================================
-!       == SHIFT STATIC SELF ENERGY TO THE DC TERM                            ==
-!       ========================================================================
-        NLOC=ATOMSET(IAT)%NLOC
-        ALLOCATE(H(NLOC,NLOC,NDIMD))
-!       == SHIFT ONLY REAL PART BECAUSE ATOMSET%DENMAT%H IS REAL ===============
-        H=ATOMSET(IAT)%SLOCLAUR(:,:,:,1)
-!
-!       == REMOVE FROM SLOC ====================================================
-        DO NU=1,NOMEGA
-          ATOMSET(IAT)%SLOC(:,:,:,NU)=ATOMSET(IAT)%SLOC(:,:,:,NU)-H
-        ENDDO
-        ATOMSET(IAT)%SLOCLAUR(:,:,:,1)=ATOMSET(IAT)%SLOCLAUR(:,:,:,1)-H
-!
-!       == ADD TO DOUBLE COUNTING HAMILTONIAN===================================
-        DO I=1,NLOC
-          LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
-          DO J=1,NLOC
-            LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
-            ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:) &
-   &                     =ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:)+H(I,J,:)
-          ENDDO
-        ENDDO
-        DEALLOCATE(H)
+!!$        IF(TPRINT) THEN
+!!$          WRITE(*,FMT='(82("="),T10,A," IAT=",I4,"  ")') &
+!!$     &                     " self energy iat=",IAT
+!!$          DO NU=1,NOMEGA
+!!$            DO IDIMD=1,NDIMD
+!!$              DO I=1,ATOMSET(IAT)%NLOC
+!!$                WRITE(*,FMT='(4I5,100("(",2F10.5,")"))')IAT,NU,IDIMD,I &
+!!$     &                              ,ATOMSET(IAT)%SLOC(I,:,IDIMD,NU)
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$        END IF
 !
 !       ========================================================================
 !       == SCALE                                                              ==
 !       ========================================================================
-        ATOMSET(IAT)%SLOC    =DMFTHFWEIGHT*ATOMSET(IAT)%SLOC
-        ATOMSET(IAT)%SLOCLAUR=DMFTHFWEIGHT*ATOMSET(IAT)%SLOCLAUR
-        ATOMSET(IAT)%DENMAT%H=DMFTHFWEIGHT*ATOMSET(IAT)%DENMAT%H
-!
-!       ========================================================================
-!       == PRINT                                                              ==
-!       ========================================================================
-        IF(TPRINT) THEN
-          WRITE(*,FMT='(82("="),T10,A," IAT=",I4,"  ")') &
-     &                     " HAMILTONIAN FROM HFSOLVER_WITHKSET ",IAT
-          DO NU=1,NOMEGA
-            DO IDIMD=1,NDIMD
-              DO I=1,ATOMSET(IAT)%NLOC
-                WRITE(*,FMT='(4I5,100("(",2F10.5,")"))')IAT,NU,IDIMD,I &
-     &                              ,ATOMSET(IAT)%SLOC(I,:,IDIMD,NU)
-              ENDDO
-            ENDDO
-          ENDDO
-        END IF
-!
       ENDDO ! END OF LOOP OVER ATOMS (IAT)
       RETURN
       END
@@ -1172,6 +1214,122 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
       END IF
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_detot(etot)
+!     **************************************************************************
+!     ** calculates the energy contribution from the logarishm term etc       **
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NAT,nkptl,nchi,NDIMD,NOMEGA,OMEGA,KBT,mu &
+     &                      ,ATOMSET,kset
+      implicit none
+      real(8)   ,intent(out) :: etot
+      complex(8),parameter   :: ci=(0.d0,1.d0)
+      complex(8)             :: mat1(nchi,nchi,ndimd)
+      complex(8)             :: mat2(nchi,nchi,ndimd)
+      complex(8)             :: mat3(nchi,nchi,ndimd)
+      real(8)                :: vec(nchi)
+      complex(8),allocatable :: bmat1(:,:)
+      complex(8),allocatable :: bmat2(:,:)
+      real(8)   ,allocatable :: bvec(:)
+      complex(8)             :: grho(nchi,nchi,ndimd)
+      complex(8)             :: gfull(nchi,nchi,ndimd)
+      real(8)                :: xsum
+      real(8)                :: etot1
+      integer(4)             :: nu,i,iat,i1,i2,idimd,ikpt
+!     **************************************************************************
+      if(ndimd.eq.4) then
+        allocate(bmat1(2*nchi,2*nchi))
+        allocate(bmat2(2*nchi,2*nchi))
+        allocate(bvec(2*nchi))
+      end if
+      ETOT=0.D0
+      do ikpt=1,nkptl
+        etot1=0.d0
+        DO NU=1,NOMEGA
+!         == CALCULATE GRHO ======================================================
+          MAT1=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT-KSET(IKPT)%HRHO
+          CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,GRHO)
+!     
+!         == HPRIME+SIGMA-HRHO ===================================================
+          MAT2=KSET(IKPT)%H0-KSET(IKPT)%HRHO
+          DO IAT=1,NAT
+            I1=ATOMSET(IAT)%ICHI1
+            I2=ATOMSET(IAT)%ICHI2
+            MAT2(I1:I2,I1:I2,:)=MAT2(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOC(:,:,:,nu)
+          ENDDO
+!     
+!         == CALCULATE G =========================================================
+          MAT1=MAT1-MAT2
+          CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,GFULL)
+!     
+!         ========================================================================
+!         == constraint term
+!         ========================================================================
+          CALL SPINOR$MATMUL(NDIMD,NCHI,grho-gfull,KSET(IKPT)%H0-KSET(IKPT)%HRHO &
+         &                  ,MAT1) 
+          xsum=0.d0
+          do i=1,nchi
+            xsum=xsum+2.d0*real(mat1(i,i,1))  ! factor two comes from (-omega)
+          enddo
+          etot1=etot1+xsum
+!     
+!         ========================================================================
+!         == (HPRIME+SIGMA-HRHO)*G                                              ==
+!         ========================================================================
+          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT2,GFULL,MAT1) 
+          xsum=0.d0
+          do i=1,nchi
+            xsum=xsum+2.d0*real(mat1(i,i,1))  ! factor two comes from (-omega)
+          enddo
+          etot1=etot1+xsum
+!     
+!         ========================================================================
+!         == LOGARITHM TERM                                                     ==
+!         ==                                                                    ==
+!         == I AM USING THE TRICK OF DAHLEN, PHYS.REV.A 73,P12511 (2006) EQ. B7 == 
+!         == (THE MATH BEHIND THE TRICK NEEDS TO BE CHECKED).                   ==
+!         ==                                                                    ==
+!         == NOT USED IS THE POTENTIALLY MORE EFFICIENT ROUTE USING             ==
+!         == TR[LN(A)]=LN(DET[A]). ACCORDING TO ROBERT SCHADE THE DETERMINANT   ==
+!         == IS CALCULATED EFFICIENTLY VIA THE LU DECOMPOSITION IN LAPACK       ==
+!         ========================================================================
+          CALL SPINOR$MATMUL(NDIMD,NCHI,GRHO,MAT2,MAT1) !MAT1=GRHO*MAT1
+          DO I=1,NCHI
+            MAT1(I,I,1)=MAT1(I,I,1)+(2.D0,0.D0)   !(unit in spinor representation)
+          ENDDO
+          DO IDIMD=1,NDIMD  ! MAT2(OMEGA)=MAT1(-OMEGA)
+            MAT2(:,:,IDIMD)=TRANSPOSE(CONJG(MAT1(:,:,IDIMD)))
+          ENDDO
+          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT1,MAT2,MAT3) !MAT1=GRHO*MAT1
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT3) !MAT1=GRHO*MAT1
+          IF(NDIMD.EQ.4) THEN
+            BMAT1(:NCHI,:NCHI)    =MAT3(:,:,1)
+            BMAT1(NCHI+1:,:NCHI)  =MAT3(:,:,2)
+            BMAT1(:NCHI,NCHI+1:)  =MAT3(:,:,3)
+            BMAT1(NCHI+1:,NCHI+1:)=MAT3(:,:,4)
+            CALL LIB$DIAGC8(2*NCHI,BMAT1,BVEC,BMAT2)
+            XSUM=0.D0
+            DO I=1,2*NCHI
+              XSUM=XSUM+LOG(BVEC(I))
+            ENDDO
+            ETOT1=ETOT1+XSUM
+          ELSE
+            XSUM=0.D0
+            DO IDIMD=1,NDIMD
+              CALL LIB$DIAGC8(NCHI,MAT3(:,:,IDIMD),VEC,MAT1(:,:,IDIMD))
+              DO I=1,NCHI
+                XSUM=XSUM+LOG(VEC(I))  !SLOW BUT AVOIDS OVERFLOWS              
+              ENDDO
+            ENDDO
+            ETOT1=ETOT1+XSUM
+          END IF
+        ENDDO ! END OF LOOP OVER MATSUBARA FREQUENCIES
+        etot=etot+kset(ikpt)%wkpt*etot1
+      enddo ! end of look over k-points
+      ETOT=-KBT*ETOT
+      RETURN
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_UCHI_WITHATOMSET()
@@ -1490,6 +1648,59 @@ PRINT*,'EX IN DMFT$HFSOLVER_WITHSET:',ETOT
         CALL SPINOR$PRINTMATRIX(6 &
      &                      ,'H_XC (UPDOWN) IN DMFT$HFSOLVER_WITHSET','UPDOWN' &
      &                      ,1,NLOC,NDIMD,NLOC,H)
+      END IF
+!
+                                     CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_fock(NLOC,NDIMD,rho,uchi,etot,ham)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NLOC
+      INTEGER(4),INTENT(IN)  :: NDIMD
+      COMPLEX(8),INTENT(OUT) :: rho(NLOC,NLOC,NDIMD)
+      REAL(8)   ,INTENT(OUT) :: UCHI(NLOC,NLOC,NLOC,NLOC)
+      REAL(8)   ,INTENT(OUT) :: ETOT
+      COMPLEX(8),INTENT(OUT) :: ham(NLOC,NLOC,NDIMD)
+      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
+      INTEGER(4)             :: I,J,K,L
+      REAL(8)                :: SVAR
+!     **************************************************************************
+                                     CALL TRACE$PUSH('DMFT_fock')
+!
+!     ==========================================================================
+!     == CALCULATE HARTREE FOCK POTENTIAL                                     ==
+!     ==========================================================================
+      ETOT=0.D0
+      Ham=(0.D0,0.D0)
+      DO I=1,NLOC
+        DO J=1,NLOC
+          DO K=1,NLOC
+            DO L=1,NLOC
+              SVAR=-0.25D0*UCHI(I,J,K,L) 
+              IF(SVAR.EQ.0.D0) CYCLE
+              ETOT=ETOT+SVAR*REAL(SUM(RHO(K,J,:)*RHO(L,I,:)))
+              Ham(K,J,:)=Ham(K,J,:)+SVAR*RHO(I,L,:)
+              Ham(I,L,:)=Ham(I,L,:)+SVAR*RHO(K,J,:)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == PRINT IF DESIRED                                                     ==
+!     ==========================================================================
+      IF(TPRINT) THEN
+        CALL SPINOR$PRINTMATRIX(6 &
+     &                      ,'DENMAT (TXYZ) IN DMFT$HFSOLVER_WITHSET','TXYZ' &
+     &                      ,1,NLOC,NDIMD,NLOC,RHO)
+        CALL SPINOR$PRINTMATRIX(6 &
+     &                      ,'H_XC (TXYZ) IN DMFT$HFSOLVER_WITHSET','TXYZ' &
+     &                      ,1,NLOC,NDIMD,NLOC,Ham)
       END IF
 !
                                      CALL TRACE$POP()
@@ -1947,7 +2158,7 @@ PRINT*,'TH0 ',TH0
       ENDDO
 !
       DO IKPT=1,NKPTL
-        WKPTL=KSET(IKPT)%WKPTL
+        WKPTL=KSET(IKPT)%WKPT
 !       == LAURENT EXPANSION FOR THE GREENS FUNCTION =========================
         SLAUR1=(0.D0,0.D0)
         SLAUR2=(0.D0,0.D0)
@@ -2053,22 +2264,20 @@ PRINT*,'TH0 ',TH0
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT$ADDTOHPSI_WITHKSET()
 !     **************************************************************************
-!     ** 
-!     ** 
-!     ** 
-!     ** 
-!     ** 
+!     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY  : TON,NKPTL,NSPIN,NDIM,NDIMD,NB,NCHI,NAT &
      &                        ,IPROOFCHI,ATOMSET,KSET
       USE WAVES_MODULE, ONLY : GSET,WAVES_SELECTWV,THIS,MAP
       IMPLICIT NONE
+      logical(4),parameter   :: tprint=.true.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE :: DHPIPSI(:,:,:) !(NDIM,NCHI,NB)
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)     !(NCHI,NCHI,NDIMD)
       LOGICAL(4)             :: TCHK,TRESET
       INTEGER(4)             :: NBH
       INTEGER(4)             :: LMNX
+      INTEGER(4)             :: nfil
       INTEGER(4)             :: NPRO
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IDIM1,IDIM2,IDIMD,IAT
       INTEGER(4)             :: I1,I2
@@ -2081,8 +2290,28 @@ PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
 !     == CHECK IF HTBC ALREADY CONTAINS INFORMATION                           ==
 !     ==========================================================================
       CALL LMTO$GETL4('ON',TCHK)
+print*,'lmto on? ',tchk
       IF(TCHK) CALL LMTO$GETL4('THTBC',TCHK)
       TRESET=.NOT.TCHK
+      CALL LMTO$SETL4('THTBC',.true.)
+print*,'reset? ',treset
+!
+!     ==========================================================================
+!     ==  print local hamiltonian (static and double counting)                ==
+!     ==========================================================================
+      IF(TPRINT) THEN
+        nfil=6 
+        WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'LOCAL HAMILTONIAN (FOCK+DC)' 
+        WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'FROM DMFT$ADDTOHPSI'
+        write(nfil,*)'local hamiltonian (fock+dc)' 
+        DO IAT=1,NAT
+          IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
+          LMNX=ATOMSET(IAT)%DENMAT%LMNX
+          PRINT*,'ATOM ',IAT,' LMNX=',LMNX
+          CALL SPINOR_PRINTMATRIX(nfil,'DC HAMILTONIAN(TXYZ)',1,LMNX &
+    &                            ,NDIMD,LMNX,ATOMSET(IAT)%DENMAT%H)
+        ENDDO
+      END IF
 !
 !     ==========================================================================
 !     ==  COLLECT CONSTANTS
@@ -2095,7 +2324,9 @@ PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
 !     ==  CONVERT ON-SITE TERMS FROM (TXYZ) TO UPDOWN                         ==
 !     ==========================================================================
       DO IAT=1,NAT
+        IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
         LMNX=ATOMSET(IAT)%DENMAT%LMNX
+CALL SPINOR_PRINTMATRIX(6,'atomset%h',1,lmnx,NDIMD,lmnx,ATOMSET(IAT)%DENMAT%H)
         CALL SPINOR$CONVERT('BACK',LMNX,NDIMD,ATOMSET(IAT)%DENMAT%H)
         ATOMSET(IAT)%DENMAT%H=2.D0*ATOMSET(IAT)%DENMAT%H
       ENDDO
@@ -2129,6 +2360,12 @@ PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
           MAT=KSET(IKPT)%H0(:,:,:)-KSET(IKPT)%HRHO(:,:,:)
           CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT)
           MAT=2.D0*MAT   
+!!$DO IAT=1,NAT
+!!$  IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
+!!$  I1=ATOMSET(IAT)%ICHI1
+!!$  I2=ATOMSET(IAT)%ICHI2
+!!$  CALL SPINOR_PRINTMATRIX(6,'CORR. HAMILTONIAN',1,I2-I1+1,NDIMD,I2-I1+1,MAT(I1:I2,I1:I2,:))
+!!$ENDDO
           IDIMD=0
           DO IDIM2=1,NDIM
             DO IDIM1=1,NDIM
@@ -2163,11 +2400,16 @@ PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
 !         ======================================================================
 !         ==  NOW THE SITE-LOCAL TERM FROM THE DOUBLE COUNTING                ==
 !         ======================================================================
+          ipro=0
           DO IAT=1,NAT
-            I1=ATOMSET(IAT)%ICHI1
-            I2=ATOMSET(IAT)%ICHI2
-            DO IDIM2=1,NDIMD
-              DO IDIM1=1,NDIMD
+            lmnx=atomset(iat)%denmat%lmnx
+            i1=ipro+1
+            i2=ipro+lmnx
+            ipro=ipro+lmnx
+            if(atomset(iat)%nloc.le.0) cycle ! no double counting          
+!
+            DO IDIM2=1,NDIM
+              DO IDIM1=1,NDIM
                 IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
 !               == HTBC=HAM*TBC ================================================
 !               == HTBC(IB,I)=HTBC(IB,I)+HAM(I,J)*TBC(IB,J) ====================
