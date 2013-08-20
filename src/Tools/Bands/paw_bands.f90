@@ -59,20 +59,18 @@
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD',1)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',0,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',0,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'ID',1,METHOD)
-        ENDIF
-        IF(METHOD.eq.0)THEN
-          CALL BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
-        ELSE IF(METHOD.eq.1)then
-          CALL BANDS_DIAG(LL_CNTL,NFIL,NFILO)
-        ELSE
-          CALL ERROR$MSG('!METHOD!ID NOT IMPLEMENTED')
-          CALL ERROR$I4VAL('ID',METHOD)
-          CALL ERROR$STOP('MAIN')
-        ENDIF
+        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,METHOD)
+      ENDIF
+      IF(METHOD.eq.0)THEN
+        CALL BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
+      ELSE IF(METHOD.eq.1)then
+        CALL BANDS_DIAG(LL_CNTL,NFIL,NFILO)
+      ELSE
+        CALL ERROR$MSG('!METHOD!ID NOT IMPLEMENTED')
+        CALL ERROR$I4VAL('ID',METHOD)
+        CALL ERROR$STOP('MAIN')
       ENDIF
 !
 !     ==========================================================================
@@ -91,8 +89,6 @@
                             CALL TRACE$PASS('AFTER FILEHANDLER$CLOSEALL')
       CALL TRACE$POP
       CALL ERROR$NORMALSTOP
-      STOP
-      RETURN
       END PROGRAM MAIN
 !      
 !      ..1.........2.........3.........4.........5.........6.........7.........8
