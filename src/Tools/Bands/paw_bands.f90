@@ -732,7 +732,7 @@ print*,'nb ',nb
       INTEGER(4)   ,INTENT(IN)  :: NFIL
       INTEGER(4)   ,INTENT(IN)  :: NFILO
       INTEGER(4)                :: NFILN
-      LOGICAL(4)                :: TPRINT=.FALSE.
+      LOGICAL(4)                :: TPRINT=.TRUE.
       LOGICAL(4)                :: TCHK
       INTEGER(4)                :: METHOD_DIAG !1=LAPACK,2=LANCZOS
       REAL(8)                   :: XK1(3)  !initial k-point in relative coordinates
@@ -767,6 +767,7 @@ print*,'nb ',nb
       COMPLEX(8),allocatable    :: TI_SK(:,:)
       COMPLEX(8),allocatable    :: FOFG(:)
       COMPLEX(8) ,ALLOCATABLE   :: PRO(:,:,:)   !(NAT,NGG,LMNXX)
+      COMPLEX(8) ,ALLOCATABLE   :: PROTMP(:)
       REAL(8),allocatable       :: BAREPRO(:,:)
       REAL(8),allocatable       :: YLM(:,:)
       REAL(8),allocatable       :: YLM_(:)
@@ -881,6 +882,7 @@ print*,'nb ',nb
       ALLOCATE(G2(NG))
       ALLOCATE(EIGR(NG))
       ALLOCATE(PRO(NAT,NG,LMNXX))
+      ALLOCATE(PROTMP(NG))
       CALL PLANEWAVE$GETR8A('GVEC',3*NG,GVEC)
       CALL PLANEWAVE$GETR8A('G2',NG,G2)
       CALL GBASS(RBAS,GBAS,GWEIGHT)
@@ -1090,6 +1092,7 @@ print*,'nb ',nb
         IF(METHOD_DIAG.eq.1)THEN  
 !         == ITERATE K-POINTS =================================================
           DO IKDIAG=0,NKDIAG-1
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG
             XK=XK1+(XK2-XK1)*REAL(IKDIAG,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
             KVEC=MATMUL(GBAS,XK)
             KVECVAL(:,IKDIAG+1)=KVEC
@@ -1099,11 +1102,13 @@ print*,'nb ',nb
             TI_SK=TI_S(:,:,ISPIN)
 
             !COMPUTE G+K and (G+K)^2
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing GVEC G2"
             DO I=1,NG
               GVECPK(:,I)=GVEC(:,I)+KVEC(:)
               G2(I)=sum(GVECPK(:,I)**2)
             ENDDO
 
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing BAREPRO"
             IF(.NOT.ALLOCATED(BAREPRO)) ALLOCATE(BAREPRO(NG,NBAREPRO))
             IND=0
             DO ISP=1,NSP
@@ -1114,6 +1119,7 @@ print*,'nb ',nb
               ENDDO
             ENDDO
             
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing YLM"
             IF(.NOT.ALLOCATED(YLM)) ALLOCATE(YLM(NG,LMX))
             ALLOCATE(YLM_(LMX))
             DO I=1,NG
@@ -1122,6 +1128,7 @@ print*,'nb ',nb
             ENDDO        
             DEALLOCATE(YLM_)
             
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing PRO"
             ALLOCATE(LOX_(LNXX))    
             IPRO=1
             PRO(:,:,:)=0.0D0
@@ -1148,31 +1155,46 @@ print*,'nb ',nb
         &                   TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
             ENDDO
 
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding (G+k)^2/2"
             !add (G+k)^2/2 and augmentation to TI_HK
             DO I=1,NG
               DO IDIM1=1,NDIM
-                DO J=1,NG
-                  DO IDIM2=1,NDIM
-                    I1=I*(NDIM)+(IDIM1-1)
-                    J1=J*(NDIM)+(IDIM2-1)
-                    !EKIN
-                    IF(I1.eq.J1)TI_HK(I1,J1)=TI_HK(I1,J1)+0.5D0*G2(I)
-    
-                    !Augmentation LMNXX,LMNXX,NDIMD,NAT
-                    DO K=1,LMNXX
-                      DO L=1,LMNXX
-                        DO M=1,NAT
-                          TI_HK(I1,J1)=TI_HK(I1,J1)+&
-       &                    DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
-                          TI_SK(I1,J1)=TI_SK(I1,J1)+&
-       &                    DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
-                        ENDDO
-                      ENDDO
+                I1=I*(NDIM)+(IDIM1-1)
+                TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
+              ENDDO
+            ENDDO
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation"
+            DO M=1,NAT
+              ISP=ISPECIES(M)
+              LMNX_=LMNX(ISP)
+              DO K=1,LMNX_
+                DO L=1,LMNX_
+                  IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation",M,K,L
+                  DO I=1,NG
+                    DO IDIM1=1,NDIM
+                      I1=I*(NDIM)+(IDIM1-1)
+                      !FIXME: this will not work for non-collinear calc.
+                      PROTMP(:)=CONJG(PRO(M,I,K))*PRO(M,:,L)*GWEIGHT
+                      TI_HK(I1,:)=TI_HK(I1,:)+&
+       &                 DH(K,L,ISPIN,M)*PROTMP
+                      TI_SK(I1,:)=TI_SK(I1,:)+&
+       &                 DO(K,L,ISPIN,M)*PROTMP
+
+!                      DO J=1,NG
+!                        DO IDIM2=1,NDIM
+!                          J1=J*(NDIM)+(IDIM2-1)
+!                          TI_HK(I1,J1)=TI_HK(I1,J1)+&
+!       &                    DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
+!                          TI_SK(I1,J1)=TI_SK(I1,J1)+&
+!       &                    DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
+!                        ENDDO
+!                      ENDDO
                     ENDDO
                   ENDDO
                 ENDDO
               ENDDO
             ENDDO
+            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"Lapack"
             !SOLVE EIGENVALUE PROBLEM WITH LAPACK ROUTINES
             CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
             IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
