@@ -845,6 +845,7 @@ print*,'nb ',nb
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'METHOD_DIAG',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'METHOD_DIAG',1,METHOD_DIAG)
@@ -854,6 +855,13 @@ print*,'nb ',nb
       IF(METHOD_DIAG.ne.1)THEN
         CALL ERROR$MSG('ONLY LAPACK IMPLEMENTED (METHOD_DIAG=1)')
         CALL ERROR$STOP('BANDS_DIAG')
+      ENDIF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
+        WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
+        !input is in Hartree
+        EPW=0.5D0*EPW
       ENDIF
 !
 !     =========================================================================

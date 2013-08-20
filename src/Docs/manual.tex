@@ -6531,6 +6531,7 @@ An example for the input control file is given here
   !METHOD
     ID=1
     METHOD_DIAG=1
+    EPW=10.0
   !END
   !LINE FILE='BANDS_gammax.DAT' 
     SPIN=1
@@ -6616,6 +6617,12 @@ largely independent of the system}
 \vformat{integer} 
 \vrules{optional}
 \vdefault{1}}
+
+\mbax{\key{EPWPSI}
+\vdescr{determines the plane wave cutoff for the diagonalisation in Rydberg. See !CONTROL!FOURIER!EPWPSI.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{value from banddata-file}}
 
 %----------------------------------------------------------------------
 \block{!BCNTL!LINE}
