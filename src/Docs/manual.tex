@@ -6565,7 +6565,7 @@ An example for the input control file is given here
 The bands are written in the format $|\vec k_{rel}|\ |\vec k|\ x\ v_1(\vec k)\ v_2(\vec k)\ v_3(\vec k) \ldots $.\\
  $|\vec k_{rel}|$ is the norm of the k-vector in relative coordinates, $|\vec k|$ is the norm of the  k-vector 
 in absolute coordinates, i.e. $\vec k=GBAS*\vec k_{rel}$, and $x$ specifies the
-point on the line from xk1 ($x=0$) to xk2 ($x=1$). The values $v_i(\vec k)$
+point on the line from xk1 resp. kvec1 ($x=0$) to xk2 resp. kvec2 ($x=1$). The values $v_i(\vec k)$
 are either the eigenvalues in eV for the $i$-th band or the coordinates 
 for the fat bands if the FATBAND-option is used.\\
 The plotting of a fat bands is done using a number (LINESPERBAND) of lines,
@@ -6634,14 +6634,26 @@ largely independent of the system}
 \vdescr{First point of the line segment in relative coordinates 
 of the reciprocal lattice vectors.}
 \vformat{real(3)} 
-\vrules{mandatory}
+\vrules{mandatory (xk1 or kvec1)}
+\vdefault{none}}
+
+\mbax{\key{kvec1}
+\vdescr{First point of the line segment in absolute coordinates.}
+\vformat{real(3)} 
+\vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
 
 \mbax{\key{xk2}
 \vdescr{Last point of the line segment in relative coordinates 
 of the reciprocal lattice vectors.}
 \vformat{real(3)} 
-\vrules{mandatory}
+\vrules{mandatory (xk2 or kvec2)}
+\vdefault{none}}
+
+\mbax{\key{kvec2}
+\vdescr{Last point of the line segment in absolute coordinates.}
+\vformat{real(3)} 
+\vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
 
 \mbax{\key{spin}

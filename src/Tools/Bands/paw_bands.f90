@@ -732,11 +732,14 @@ print*,'nb ',nb
       INTEGER(4)   ,INTENT(IN)  :: NFIL
       INTEGER(4)   ,INTENT(IN)  :: NFILO
       INTEGER(4)                :: NFILN
-      LOGICAL(4)                :: TPRINT=.TRUE.
-      LOGICAL(4)                :: TCHK
+      LOGICAL(4)                :: TPRINT=.FALSE.
+      LOGICAL(4)                :: TCHK,TCHK1,TCHK2
       INTEGER(4)                :: METHOD_DIAG !1=LAPACK,2=LANCZOS
       REAL(8)                   :: XK1(3)  !initial k-point in relative coordinates
       REAL(8)                   :: XK2(3)  !final k-point in relative coordinates
+      REAL(8)                   :: KVEC1(3)  !initial k-point in absolute coordinates
+      REAL(8)                   :: KVEC2(3)  !final k-point in abolute coordinates
+      REAL(8)                   :: GBASINV(3,3)
       INTEGER(4)                :: NK,NKDIAG
       INTEGER(4)                :: NB
       INTEGER(4)                :: ILINE,NLINE,NFILE
@@ -793,6 +796,7 @@ print*,'nb ',nb
       REAL(8)                   :: FATBANDMAX,SVAR1,SVAR2
 !     **************************************************************************
                             CALL TRACE$PUSH('BANDS_DIAG')
+      CALL TIMING$START
 !
 !     ==========================================================================
 !     ==  SET BANDDATAFILE                                                   ==
@@ -910,6 +914,8 @@ print*,'nb ',nb
       TI_S=0.0D0
        
 !     == COMPUTE K_INDEPENDET ARRAYS ===========================================
+                            CALL TRACE$PUSH('COMPUTE K_INDEPENDET ARRAYS')
+      CALL TIMING$CLOCKON('PS_POTENTIAL')
       allocate(HPSI1(NG,NDIM,1))
       allocate(PSI1(NG,NDIM,1))
       !EVALUATE MATRIX-ELEMENTS OF PS-POTENTIAL
@@ -938,6 +944,9 @@ print*,'nb ',nb
           TI_H(I1,I1,:)=TI_H(I1,I1,:)-0.5D0*sum(GVEC(:,I)**2)
         ENDDO
       ENDDO
+      CALL TIMING$CLOCKOFF('PS_POTENTIAL')
+                            CALL TRACE$POP
+
       allocate(TI_HK(NG*NDIM,NG*NDIM))
       allocate(TI_SK(NG*NDIM,NG*NDIM))
       ALLOCATE(U(NG*NDIM,NG*NDIM))
@@ -957,8 +966,11 @@ print*,'nb ',nb
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
       CALL LINKEDLIST$NLISTS(LL_CNTL,'LINE',NLINE)
       
-      X2=0.D0
+!      X2=0.D0
       DO ILINE=1,NLINE
+        WRITE(NFILO,FMT='(72("="))')
+        WRITE(NFILO,*)'LINE-BLOCK:',ILINE,' of ',NLINE
+        WRITE(NFILO,FMT='(72("="))')
         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
         CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
         CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
@@ -971,15 +983,57 @@ print*,'nb ',nb
           CALL FILEHANDLER$SETSPECIFICATION('BANDS','POSITION','APPEND')
           CALL FILEHANDLER$SETSPECIFICATION('BANDS','ACTION','WRITE')
           CALL FILEHANDLER$SETSPECIFICATION('BANDS','FORM','FORMATTED')
-          X1=0.D0
-          X2=1.D0
+          WRITE(NFILO,*)'OUTPUT FILE: ',trim(FILE)
+!          X1=0.D0
+!          X2=1.D0
         ELSE
-          X1=X2
-          X2=X1+1.D0
+          CALL ERROR$MSG('NO OUTPUT FILE GIVEN')
+          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+          CALL ERROR$STOP('BANDS_DIAG')
+!          X1=X2
+!          X2=X1+1.D0
         END IF
 !
-        CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
-        CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
+        !INPUT OF K-VECTORS
+        CALL LIB$INVERTR8(3,GBAS,GBASINV) 
+
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'XK1',0,TCHK1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC1',0,TCHK2)
+        IF(TCHK1)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
+          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          KVEC1=MATMUL(GBAS,XK1)
+        ELSE IF (TCHK2)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
+          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+          XK1=MATMUL(GBASINV,KVEC1)
+        ELSE
+          CALL ERROR$MSG('NO XK1 OR KVEC1 GIVEN')
+          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+          CALL ERROR$STOP('BANDS_DIAG')
+        ENDIF
+        WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
+        WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
+
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'XK2',0,TCHK1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC2',0,TCHK2)
+        IF(TCHK1)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
+          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          KVEC2=MATMUL(GBAS,XK2)
+        ELSE IF (TCHK2)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
+          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+          XK2=MATMUL(GBASINV,KVEC2)
+        ELSE
+          CALL ERROR$MSG('NO XK2 OR KVEC2 GIVEN')
+          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+          CALL ERROR$STOP('BANDS_DIAG')
+        ENDIF
+
+        WRITE(NFILO,*)'LAST K-POINT IN RELATIVE COORDINATES:',XK2
+        WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
+
         !NK is number of points for output
         !if NKDIAG<NK: do 1D-fft interpoaltion
         !if NKDIAG=NK: use results from diagonalisation directly
@@ -1007,7 +1061,7 @@ print*,'nb ',nb
           CALL ERROR$I4VAL('NKDIAG',NKDIAG)
           CALL ERROR$STOP('BANDS_DIAG')
         ENDIF
-        IF(TPRINT)PRINT*,XK1,XK2,NB,NK,NKDIAG,X1,X2,FILE
+        IF(TPRINT)PRINT*,XK1,XK2,NB,NK,NKDIAG,X1,X2,TRIM(FILE)
 !       == SPECIFY SPIN DIRECTION =============================================
         ISPIN=1
         CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',0,TCHK)
@@ -1101,21 +1155,30 @@ print*,'nb ',nb
 !         == ITERATE K-POINTS =================================================
           DO IKDIAG=0,NKDIAG-1
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG
+                            CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
             XK=XK1+(XK2-XK1)*REAL(IKDIAG,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
             KVEC=MATMUL(GBAS,XK)
             KVECVAL(:,IKDIAG+1)=KVEC
             XKVAL(:,IKDIAG+1)=XK
             
+            WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
+              &NKDIAG-1,' IN RELATIVE COORDINATES ',XK
+            WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
+              &NKDIAG-1,' IN ABSOLUTE COORDINATES ',KVEC
+            
             TI_HK=TI_H(:,:,ISPIN)
             TI_SK=TI_S(:,:,ISPIN)
 
             !COMPUTE G+K and (G+K)^2
+            CALL TIMING$CLOCKON('G+K,G2')
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing GVEC G2"
             DO I=1,NG
               GVECPK(:,I)=GVEC(:,I)+KVEC(:)
               G2(I)=sum(GVECPK(:,I)**2)
             ENDDO
+            CALL TIMING$CLOCKOFF('G+K,G2')
 
+            CALL TIMING$CLOCKON('PROJECTORS')
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing BAREPRO"
             IF(.NOT.ALLOCATED(BAREPRO)) ALLOCATE(BAREPRO(NG,NBAREPRO))
             IND=0
@@ -1154,6 +1217,7 @@ print*,'nb ',nb
            &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
             ENDDO
             deallocate(LOX_)
+            CALL TIMING$CLOCKOFF('PROJECTORS')
 
             !FIXME: DH IS NOT HERMITIAN, SEE paw_setups.f90 setup_MAKEPARTIALWAVES
             !here we make it symmetric, so that ZHEGV can be used instead of
@@ -1172,6 +1236,8 @@ print*,'nb ',nb
               ENDDO
             ENDDO
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation"
+            CALL TIMING$CLOCKON('AUGMENTATION')
+            !FIXME: OPTIMIZE THIS BLOCK!!!
             DO M=1,NAT
               ISP=ISPECIES(M)
               LMNX_=LMNX(ISP)
@@ -1202,9 +1268,15 @@ print*,'nb ',nb
                 ENDDO
               ENDDO
             ENDDO
+            CALL TIMING$CLOCKOFF('AUGMENTATION')
+                            CALL TRACE$POP
+                            CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
+            CALL TIMING$CLOCKON('GENERALEIGENVALUEC8')
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"Lapack"
             !SOLVE EIGENVALUE PROBLEM WITH LAPACK ROUTINES
             CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
+            CALL TIMING$CLOCKOFF('GENERALEIGENVALUEC8')
+                            CALL TRACE$POP
             IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
             EIGVAL(1:NB,IKDIAG+1)=E(1:NB)*27.21139D0
 !
@@ -1212,6 +1284,7 @@ print*,'nb ',nb
 !           ==  FAT BANDS                                                     ==
 !           ====================================================================
             IF(NFATBAND.GE.1)THEN
+              CALL TIMING$CLOCKON('PROJECTIONS')
               DO IFATBAND=1,NFATBAND
                 IF(TPRINT)PRINT*,"FATBAND IFATBAND",IFATBAND
                 IF(TPRINT)PRINT*,"FATBAND IAT",FATBANDIAT(IFATBAND)
@@ -1221,6 +1294,7 @@ print*,'nb ',nb
                   FATBANDVAL(IFATBAND,IKDIAG+1,IB)=ABS(CSVAR)**2
                 ENDDO
               ENDDO
+              CALL TIMING$CLOCKOFF('PROJECTIONS')
             ELSE
               FATBANDVAL(:,:,:)=0.0D0 
             ENDIF
@@ -1230,6 +1304,7 @@ print*,'nb ',nb
 !       =========================================================================
 !       ==  WRITE BANDS                                                        ==
 !       =========================================================================
+                            CALL TRACE$PUSH('WRITE_BANDS')
         CALL FILEHANDLER$UNIT('BANDS',NFILBAND)
         IF(NB.GT.100) THEN
           CALL ERROR$MSG('NUMBER OF BANDS EXCEEDS LIMIT OF 100')
@@ -1266,6 +1341,7 @@ print*,'nb ',nb
             WRITE(NFILFATBAND,FMT='(a)')" "
           ENDDO
         ENDDO
+                            CALL TRACE$POP
         DEALLOCATE(EIGVAL)
         DEALLOCATE(FATBANDVAL)
         DEALLOCATE(KVECVAL)
@@ -1278,6 +1354,7 @@ print*,'nb ',nb
           DEALLOCATE(FATBANDFILE)
         ENDIF
       ENDDO
+      CALL TIMING$PRINT('ALL',NFILO)
                             CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDS_DIAG
