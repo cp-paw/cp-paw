@@ -6656,6 +6656,13 @@ of the reciprocal lattice vectors.}
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
 
+\mbax{\key{kvecscale}
+\vdescr{scale factor for kvec1 and kvec2 so that they can be given in 
+common coordinates, i.e. $\vec k=\frac{2\pi}{kvecscale}\vec k_{input}$.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{2\pi}}
+
 \mbax{\key{spin}
 \vdescr{spin direction. In a spin-polarized collinear 
 calculation the parameter can have the values 1 or 2.}
