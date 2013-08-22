@@ -1182,13 +1182,13 @@ print*,'nb ',nb
               &NKDIAG-1,' IN RELATIVE COORDINATES ',XK
             WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
               &NKDIAG-1,' IN ABSOLUTE COORDINATES ',KVEC
-            
+
+!begin: put in extra function and use OMP
             TI_HK=TI_H(:,:,ISPIN)
             TI_SK=TI_S(:,:,ISPIN)
 
             !COMPUTE G+K and (G+K)^2
             CALL TIMING$CLOCKON('G+K,G2')
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing GVEC G2"
             DO I=1,NG
               GVECPK(:,I)=GVEC(:,I)+KVEC(:)
               G2(I)=sum(GVECPK(:,I)**2)
@@ -1196,7 +1196,6 @@ print*,'nb ',nb
             CALL TIMING$CLOCKOFF('G+K,G2')
 
             CALL TIMING$CLOCKON('PROJECTORS')
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing BAREPRO"
             IF(.NOT.ALLOCATED(BAREPRO)) ALLOCATE(BAREPRO(NG,NBAREPRO))
             IND=0
             DO ISP=1,NSP
@@ -1207,7 +1206,6 @@ print*,'nb ',nb
               ENDDO
             ENDDO
             
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing YLM"
             IF(.NOT.ALLOCATED(YLM)) ALLOCATE(YLM(NG,LMX))
             ALLOCATE(YLM_(LMX))
             DO I=1,NG
@@ -1216,7 +1214,6 @@ print*,'nb ',nb
             ENDDO        
             DEALLOCATE(YLM_)
             
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"composing PRO"
             ALLOCATE(LOX_(LNXX))    
             IPRO=1
             PRO(:,:,:)=0.0D0
@@ -1244,7 +1241,6 @@ print*,'nb ',nb
         &                   TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
             ENDDO
 
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding (G+k)^2/2"
             !add (G+k)^2/2 and augmentation to TI_HK
             DO I=1,NG
               DO IDIM1=1,NDIM
@@ -1252,7 +1248,6 @@ print*,'nb ',nb
                 TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
               ENDDO
             ENDDO
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation"
             CALL TIMING$CLOCKON('AUGMENTATION')
             PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
             !FIXME: OPTIMIZE THIS BLOCK!!!
@@ -1313,6 +1308,7 @@ print*,'nb ',nb
 
             IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
             EIGVAL(1:NB,IKDIAG+1)=E(1:NB)*27.21139D0
+
 !
 !           ====================================================================
 !           ==  FAT BANDS                                                     ==
@@ -1332,6 +1328,7 @@ print*,'nb ',nb
             ELSE
               FATBANDVAL(:,:,:)=0.0D0 
             ENDIF
+!end: put in extra function
           ENDDO
         ENDIF
 !
