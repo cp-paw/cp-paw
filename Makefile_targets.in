@@ -85,7 +85,7 @@ export THISDIR=@THISDIR@
 #___________________________ the hardware architecture
 export ARCH=@ARCH@
 #___________________________ the way to compile the tools 
-export TOOLCOMP=dbg
+export TOOLCOMP=fast
 #___________________________ the GNU make utility
 export MAKE=@MAKE@
 #___________________________ parallel environment?

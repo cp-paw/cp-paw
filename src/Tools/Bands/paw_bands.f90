@@ -795,6 +795,7 @@ print*,'nb ',nb
       REAL(8),ALLOCATABLE       :: FATBANDMAXWIDTH(:)
       CHARACTER(512),ALLOCATABLE:: FATBANDFILE(:)
       REAL(8)                   :: FATBANDMAX,SVAR1,SVAR2
+      COMPLEX(8)                :: CSVAR_H,CSVAR_S
 !     **************************************************************************
                             CALL TRACE$PUSH('BANDS_DIAG')
       CALL TIMING$START
@@ -1044,13 +1045,12 @@ print*,'nb ',nb
           CALL ERROR$STOP('BANDS_DIAG')
         ENDIF
 
+        WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
+        WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
 
         WRITE(NFILO,*)'LAST K-POINT IN RELATIVE COORDINATES:',XK2
         WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
         
-        WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
-        WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
-
         !NK is number of points for output
         !if NKDIAG<NK: do 1D-fft interpoaltion
         !if NKDIAG=NK: use results from diagonalisation directly
@@ -1254,46 +1254,63 @@ print*,'nb ',nb
             ENDDO
             IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation"
             CALL TIMING$CLOCKON('AUGMENTATION')
+            PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
             !FIXME: OPTIMIZE THIS BLOCK!!!
-            DO M=1,NAT
-              ISP=ISPECIES(M)
-              LMNX_=LMNX(ISP)
-              DO K=1,LMNX_
-                DO L=1,LMNX_
-                  IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"adding augmentation",M,K,L
-                  DO I=1,NG
-                    DO IDIM1=1,NDIM
-                      I1=I*(NDIM)+(IDIM1-1)
-                      !FIXME: this will not work for non-collinear calc.
-                      PROTMP(:)=CONJG(PRO(M,I,K))*PRO(M,:,L)*GWEIGHT
-                      TI_HK(I1,:)=TI_HK(I1,:)+&
-       &                 DH(K,L,ISPIN,M)*PROTMP
-                      TI_SK(I1,:)=TI_SK(I1,:)+&
-       &                 DO(K,L,ISPIN,M)*PROTMP
 
-!                      DO J=1,NG
-!                        DO IDIM2=1,NDIM
-!                          J1=J*(NDIM)+(IDIM2-1)
-!                          TI_HK(I1,J1)=TI_HK(I1,J1)+&
-!       &                    DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
-!                          TI_SK(I1,J1)=TI_SK(I1,J1)+&
-!       &                    DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)*GWEIGHT
-!                        ENDDO
-!                      ENDDO
+            DO I=1,NG
+              DO J=1,I
+                CSVAR_H=0.0D0
+                CSVAR_S=0.0D0
+                DO M=1,NAT
+                  ISP=ISPECIES(M)
+                  LMNX_=LMNX(ISP)
+                  DO K=1,LMNX_
+                    DO L=1,LMNX_
+                    !FIXME: this will not work for non-collinear calc.
+!                    PROTMP(1:I)=CONJG(PRO(M,I,K))*PRO(M,1:I,L)*GWEIGHT
+!                    TI_HK(I,1:I)=TI_HK(I,1:I)+&
+!       &               DH(K,L,ISPIN,M)*PROTMP
+!                    TI_SK(I,1:I)=TI_SK(I,1:I)+&
+!       &               DO(K,L,ISPIN,M)*PROTMP
+                      CSVAR_H=CSVAR_H+&
+       &                 DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
+                      CSVAR_S=CSVAR_S+&
+       &                 DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
                     ENDDO
                   ENDDO
                 ENDDO
+                TI_HK(I,J)=TI_HK(I,J)+CSVAR_H
+                TI_SK(I,J)=TI_SK(I,J)+CSVAR_S
               ENDDO
             ENDDO
+            
+            DO I=1,NG
+              DO J=I+1,NG
+                TI_HK(I,J)=CONJG(TI_HK(J,I))
+                TI_SK(I,J)=CONJG(TI_SK(J,I))
+              ENDDO
+            ENDDO
+
             CALL TIMING$CLOCKOFF('AUGMENTATION')
                             CALL TRACE$POP
-                            CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
-            CALL TIMING$CLOCKON('GENERALEIGENVALUEC8')
-            IF(TPRINT)PRINT*,"IKDIAG",IKDIAG,"Lapack"
+
             !SOLVE EIGENVALUE PROBLEM WITH LAPACK ROUTINES
-            CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
-            CALL TIMING$CLOCKOFF('GENERALEIGENVALUEC8')
+                            CALL TRACE$PUSH('LAPACK_ZHEGVD')
+            CALL TIMING$CLOCKON('LAPACK_ZHEGVD')
+            IF(NFATBAND.GE.1)THEN
+              CALL LAPACK_ZHEGVD(NG,'V',TI_HK,TI_SK,E)            
+            ELSE
+              CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
+            ENDIF
+            CALL TIMING$CLOCKOFF('LAPACK_ZHEGVD')
                             CALL TRACE$POP
+
+!                            CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
+!            CALL TIMING$CLOCKON('GENERALEIGENVALUEC8')
+!            CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
+!            CALL TIMING$CLOCKOFF('GENERALEIGENVALUEC8')
+!                            CALL TRACE$POP
+
             IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
             EIGVAL(1:NB,IKDIAG+1)=E(1:NB)*27.21139D0
 !
@@ -1332,7 +1349,7 @@ print*,'nb ',nb
         !ITERATE K-POINTS
         DO IKDIAG=1,NKDIAG
           !WRITE EIGENVALUES
-          WRITE(NFILBAND,FMT='(103F9.5)')sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
+          WRITE(NFILBAND,FMT='(103F10.5)')sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
     &           REAL(IKDIAG-1,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8),EIGVAL(:,IKDIAG)
         ENDDO
         !WRITE FATBANDS
@@ -1345,7 +1362,7 @@ print*,'nb ',nb
           CALL FILEHANDLER$UNIT('FATBANDS',NFILFATBAND)
           !ITERATE K-POINTS
           DO IKDIAG=1,NKDIAG
-            WRITE(NFILFATBAND,FMT='(103F9.5)',advance="no")sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
+            WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
     &           REAL(IKDIAG-1,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
 
             FATBANDMAX=MAXVAL(FATBANDVAL(IFATBAND,:,:))
@@ -1353,7 +1370,7 @@ print*,'nb ',nb
             DO ILINESPERBAND=0,LINESPERBAND(IFATBAND)-1
               SVAR1=2.0D0/REAL(LINESPERBAND(IFATBAND)-1,KIND=8)*REAL(ILINESPERBAND,KIND=8)-1.0D0
               SVAR2=0.5D0*SVAR1*FATBANDMAXWIDTH(IFATBAND)/FATBANDMAX
-              WRITE(NFILFATBAND,FMT='(100F9.5)',advance="no")EIGVAL(:,IKDIAG)+SVAR2*FATBANDVAL(IFATBAND,IKDIAG,:) 
+              WRITE(NFILFATBAND,FMT='(100F10.5)',advance="no")EIGVAL(:,IKDIAG)+SVAR2*FATBANDVAL(IFATBAND,IKDIAG,:) 
             ENDDO
             WRITE(NFILFATBAND,FMT='(a)')" "
           ENDDO
@@ -1427,4 +1444,46 @@ print*,'nb ',nb
 !     ==================================================================
       F=F/CELLVOL
       RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      Character(1),INTENT(IN)  :: JOBZ
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8),INTENT(OUT)      :: E(N)
+      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
+      COMPLEX(8),ALLOCATABLE   :: WORK(:)
+      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
+      INTEGER(4),ALLOCATABLE   :: IWORK(:)
+!     ******************************************************************
+
+      LWORK=-1
+      LRWORK=-1
+      LIWORK=-1
+      Allocate(WORK(1))!complex(8)
+      Allocate(RWORK(1))!real(8)
+      Allocate(IWORK(1))!integer(4)
+      
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      LWORK=WORK(1)
+      LRWORK=RWORK(1)
+      LIWORK=IWORK(1)
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+      allocate(WORK(LWORK)) 
+      allocate(RWORK(LRWORK)) 
+      allocate(IWORK(LIWORK)) 
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+
+      return
       END
