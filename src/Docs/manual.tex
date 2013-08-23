@@ -6562,10 +6562,10 @@ An example for the input control file is given here
 !EOB
 \end{verbatim}
 
-The bands are written in the format $|\vec k_{rel}|\ |\vec k|\ x\ v_1(\vec k)\ v_2(\vec k)\ v_3(\vec k) \ldots $.\\
- $|\vec k_{rel}|$ is the norm of the k-vector in relative coordinates, $|\vec k|$ is the norm of the  k-vector 
-in absolute coordinates, i.e. $\vec k=GBAS*\vec k_{rel}$, and $x$ specifies the
-point on the line from xk1 resp. kvec1 ($x=0$) to xk2 resp. kvec2 ($x=1$). The values $v_i(\vec k)$
+The bands are written in the format $|\vec k-\vec k_0|\ v_1(\vec k)\ v_2(\vec k)\ v_3(\vec k) \ldots $.\\
+ $|\vec k-\vec k_0|$ is the norm of the difference k-vector between the k-point $\vec k$
+ and the first k-point $\vec k_0$ of this LINE-block (i.e. kvec1 resp. xk1)
+in absolute coordinates. The values $v_i(\vec k)$
 are either the eigenvalues in eV for the $i$-th band or the coordinates 
 for the fat bands if the FATBAND-option is used.\\
 The plotting of a fat bands is done using a number (LINESPERBAND) of lines,
@@ -6599,7 +6599,7 @@ largely independent of the system}
 \vdescr{file name of band data file from paw calculation.}
 \vformat{character} 
 \vrules{mandatory}
-\vdefault{If none is specified, the file is the one with extension '.banddata'}}
+\vdefault{If none is specified, the file is the one with extension '.'}}
 %----------------------------------------------------------------------
 \block{!BCNTL!METHOD}
 %----------------------------------------------------------------------
@@ -6632,7 +6632,7 @@ largely independent of the system}
 
 \mbax{\key{xk1}
 \vdescr{First point of the line segment in relative coordinates 
-of the reciprocal lattice vectors.}
+of the reciprocal lattice vectors. kvec1=GBAS*xk1}
 \vformat{real(3)} 
 \vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
@@ -6645,7 +6645,7 @@ of the reciprocal lattice vectors.}
 
 \mbax{\key{xk2}
 \vdescr{Last point of the line segment in relative coordinates 
-of the reciprocal lattice vectors.}
+of the reciprocal lattice vectors. kvec2=GBAS*xk2}
 \vformat{real(3)} 
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}

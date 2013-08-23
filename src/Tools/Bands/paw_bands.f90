@@ -1346,8 +1346,9 @@ print*,'nb ',nb
         !ITERATE K-POINTS
         DO IKDIAG=1,NKDIAG
           !WRITE EIGENVALUES
-          WRITE(NFILBAND,FMT='(103F10.5)')sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
-    &           REAL(IKDIAG-1,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8),EIGVAL(:,IKDIAG)
+          WRITE(NFILBAND,FMT='(103F10.5)')&
+            &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2)),&
+            &  EIGVAL(:,IKDIAG)
         ENDDO
         !WRITE FATBANDS
         DO IFATBAND=1,NFATBAND
@@ -1359,8 +1360,8 @@ print*,'nb ',nb
           CALL FILEHANDLER$UNIT('FATBANDS',NFILFATBAND)
           !ITERATE K-POINTS
           DO IKDIAG=1,NKDIAG
-            WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")sqrt(sum(XKVAL(:,IKDIAG)**2)),sqrt(sum(KVECVAL(:,IKDIAG)**2)),&
-    &           REAL(IKDIAG-1,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
+            WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")&
+            &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
 
             FATBANDMAX=MAXVAL(FATBANDVAL(IFATBAND,:,:))
             IF(TPRINT)PRINT*,"FATBAND FATBANDMAX",FATBANDMAX
