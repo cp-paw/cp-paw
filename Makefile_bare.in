@@ -964,6 +964,7 @@ endif
  WAVES_MODULE.mod : ${OBJDIR}/paw_waves1.o
  ## file:src/paw_waves2.f90
  ${OBJDIR}/paw_waves2.o : MPE_MODULE.mod
+ ${OBJDIR}/paw_waves2.o : SETUP_MODULE.mod
  ${OBJDIR}/paw_waves2.o : WAVES_MODULE.mod
  ${OBJDIR}/paw_waves2.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_waves2.o : RESTART_INTERFACE.mod
