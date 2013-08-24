@@ -47,6 +47,8 @@ export LAPACKDIR=@LAPACKDIR@
 export FFTDIR=@FFTDIR@
 #___________________________ directory with MPI library
 export MPIDIR=@MPIDIR@
+#___________________________ library archiver
+export LIBAR=@LIBAR@
 #___________________________header file for fft
 export FFT_HEADER=@FFT_HEADER@
 #___________________________header file for MPI
@@ -358,7 +360,7 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 ##  build paw library                                                  ##
 #########################################################################
 ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build full paw library and optionally exclude objects              ##
@@ -370,8 +372,8 @@ ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
 ${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
-	ar -dv ${PAWLIBFULL} paw.o
+	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 #
 #########################################################################
