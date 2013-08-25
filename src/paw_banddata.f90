@@ -702,7 +702,7 @@
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
       CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
-      LOGICAL(4)             :: TPRINT=.true.
+      LOGICAL(4)             :: TPRINT=.FALSE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_READ')
 !
