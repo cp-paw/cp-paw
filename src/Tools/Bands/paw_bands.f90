@@ -1136,7 +1136,6 @@ print*,'nb ',nb
         ENDIF
                             CALL TRACE$PASS('AFTER READ BNCTL')
         
-        IF(.not.allocated(E))ALLOCATE(E(NG*NDIM))
         ALLOCATE(EIGVAL(NB,NKDIAG))
         ALLOCATE(KVECVAL(3,NKDIAG))
         ALLOCATE(XKVAL(3,NKDIAG))
@@ -1144,9 +1143,10 @@ print*,'nb ',nb
         TPROJ=NFATBAND.GE.1
 
 !       == ITERATE K-POINTS =================================================
-!$omp parallel do private(IKDIAG,XK,KVEC,PROJ)
+!$omp parallel do private(IKDIAG,XK,KVEC,E,PROJ)
         DO IKDIAG=0,NKDIAG-1
           ALLOCATE(PROJ(NAT,NB,LMNXX))
+          ALLOCATE(E(NG*NDIM))
 !$omp critical
           IF(TPRINT)PRINT*,"IKDIAG",IKDIAG
           XK=XK1+(XK2-XK1)*REAL(IKDIAG,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
@@ -1187,6 +1187,7 @@ print*,'nb ',nb
           ENDIF
 !$omp end critical
           DEALLOCATE(PROJ)
+          DEALLOCATE(E)
         ENDDO
 !$omp end parallel do
 !
