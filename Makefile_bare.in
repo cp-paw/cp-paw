@@ -359,7 +359,7 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 #########################################################################
 ##  build paw library                                                  ##
 #########################################################################
-${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
+${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
@@ -371,7 +371,7 @@ ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 ##  main program.                                                      ##
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
-${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
+${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
