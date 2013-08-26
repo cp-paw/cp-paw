@@ -31,7 +31,6 @@ END TYPE ATOMSET_TYPE
 TYPE KSET_TYPE
   REAL(8)            :: WKPT
   LOGICAL(4)         :: TADDMINUSK    !ADD  THE TERM FOR -K
-  REAL(8)   ,POINTER :: ERHO(:,:)     !(NB,NSPIN)
   COMPLEX(8),POINTER :: PIPSI(:,:,:,:)!(NDIM,NCHI,NB,NSPIN)
   COMPLEX(8),POINTER :: RHO(:,:,:)    !(NCHI,NCHI,NDIMD)
   COMPLEX(8),POINTER :: H0(:,:,:)     !(NCHI,NCHI,NDIMD)
@@ -247,7 +246,6 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
 !     ==========================================================================
       ALLOCATE(KSET(NKPTL))
       DO IKPTL=1,NKPTL
-        ALLOCATE(KSET(IKPTL)%ERHO(NB,NSPIN))
         ALLOCATE(KSET(IKPTL)%PIPSI(NDIM,NCHI,NB,NSPIN))
         ALLOCATE(KSET(IKPTL)%RHO(NCHI,NCHI,NDIMD))
         ALLOCATE(KSET(IKPTL)%H0(NCHI,NCHI,NDIMD))
@@ -255,7 +253,6 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
         ALLOCATE(KSET(IKPTL)%SINV(NCHI,NCHI,NDIMD))
         ALLOCATE(KSET(IKPTL)%SMAT(NCHI,NCHI,NDIMD))
         KSET(IKPTL)%WKPT=0.D0
-        KSET(IKPTL)%ERHO=0.D0
         KSET(IKPTL)%PIPSI=(0.D0,0.D0)
         KSET(IKPTL)%RHO=(0.D0,0.D0)
         KSET(IKPTL)%HRHO=(0.D0,0.D0)
@@ -309,7 +306,7 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
       CALL DMFT_INI()
 !
 !     ==========================================================================
-!     ==  COLLECT DFT HAMILTONIAN  (HAMILTONIAN INITIALIZED TO ERHO)          ==
+!     ==  COLLECT DFT HAMILTONIAN                                             ==
 !     ==========================================================================
       CALL DMFT$COLLECTHAMILTONIAN_WITHKSET()  
       CALL DMFT$COLLECTFULLDENMAT()  
@@ -319,9 +316,7 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
 !     ==     SHAPE OF ORBITALS ARE DEFINED BY NPRO AND ATOMIC STRUCTRE        ==
 !     ==     ORBITALS ARE SELECTED BY TORB.                                   ==
 !     ==========================================================================
-PRINT*,'SETTING UP U-TENSOR...'
       CALL DMFT_UCHI_WITHATOMSET() 
-PRINT*,'... U-TENSOR DONE'
 !
 !     ==========================================================================
 !     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
@@ -333,11 +328,8 @@ PRINT*,'... U-TENSOR DONE'
 !     ==  CONSTRUCT NON-INTERACTING HAMILTONIAN THAT PRODUCES THE CORRECT     ==
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
-PRINT*,'SETTING UP NON-INTERACTING HAMILTONIAN HRHO...'
       call DMFT_hrho()
       CALL DMFT_CONSTRAINTSSIMPLE('HRHO')
-!     CALL DMFT_CONSTRAINTS_WITHKSET('HRHO') 
-PRINT*,'... HRHO DONE'
 !
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
@@ -355,9 +347,8 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
 !       ========================================================================
 !       ==  CONSTRAINTS                                                       ==
 !       ========================================================================
-        CALL DMFT_CONSTRAINTS_WITHKSET('H0')
-!!$PRINT*,'FORCED STOP AFTER CONSTRAINTS_WITHKSET("H0")'
-!!$STOP
+        CALL DMFT_CONSTRAINTSSIMPLE('H0')
+!        CALL DMFT_CONSTRAINTS_WITHKSET('H0')
         PRINT*,'ITERATION COMPLETED ',ITER
       ENDDO ! END OF LOOP OVER ITERATIONS TO ENFORCE CONSTRAINT
 !
@@ -559,36 +550,18 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
+      LOGICAL(4),PARAMETER   :: TTEST=.false.
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:) !(NCHI,NCHI,NDIMD)
       INTEGER(4)             :: NBH     !#(SUPER STATES)
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IB,J,IAT,IDIM1,IDIM2
       INTEGER(4)             :: IDIMD
       INTEGER(4)             :: I1,I2
       REAL(8)                :: F(NB,NKPTL,NSPIN)
-      REAL(8)                :: EMIN,EMAX
       COMPLEX(8)             :: MAT(NCHI,NCHI)
       COMPLEX(8)             :: CSVAR
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                       CALL TRACE$PUSH('DMFT$COLLECTHAMILTONIAN')
-!
-!     ==========================================================================
-!     ==  DETERMINE ERHO 
-!     ==========================================================================
-      CALL DMFT$COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
-      EMIN=+HUGE(EMIN)
-      EMAX=-HUGE(EMAX)
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          DO IB=1,NB
-            CALL DMFT_EOFF(KBT,F(IB,IKPT,ISPIN),KSET(IKPT)%ERHO(IB,ISPIN))
-            EMIN=MIN(EMIN,KSET(IKPT)%ERHO(IB,ISPIN))
-            EMAX=MAX(EMAX,KSET(IKPT)%ERHO(IB,ISPIN))
-          ENDDO
-        ENDDO
-      ENDDO 
-PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
 !
 !     ==========================================================================
 !     ==  EXTRACT <PSI|PSI>
@@ -655,6 +628,11 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
 !     ==  NDIM=1,NSPIN=2  NDIMD=2: (T,Z)                                      ==
 !     ==  NDIM=2,NSPIN=1  NDIMD=4: (T,X,Y,Z)                                  ==
 !     ==========================================================================
+!
+!     ==  collect occupations w/o k-point weight ===============================
+      CALL DMFT$COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
+!
+!     == sum up density matrix =================================================
       DO IKPT=1,NKPTL
         KSET(IKPT)%RHO=(0.D0,0.D0)
         DO ISPIN=1,NSPIN
@@ -928,6 +906,114 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_HRHO()
+!     **************************************************************************
+!     **  CALCULATES A STATIC HAMILTONIAN HRHO SUCH THAT THE RESULTING        **
+!     **  DENSITY MATRIX IS RHO=[1+EXP(BETA*HRHO)]^(-1)                       **
+!     **************************************************************************
+      USE DMFT_MODULE ,ONLY: NKPTL,NAT,NCHI,NDIMD,NOMEGA,OMEGA,KBT,KSET
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
+      real(8)   ,parameter   :: tol=1.d-5  ! tolerance for the density matrix
+      COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: A(:,:)
+      COMPLEX(8),ALLOCATABLE :: B(:,:)
+      REAL(8)   ,ALLOCATABLE :: F(:)   !OCCUPATIONS
+      COMPLEX(8),ALLOCATABLE :: U(:,:)
+      INTEGER(4)             :: N
+      REAL(8)                :: SVAR
+      INTEGER(4)             :: IKPT,ISPIN,I
+!     **************************************************************************
+      IF(NDIMD.LE.2) THEN  ! NON-SPIN AND COLLINEAR
+        N=NCHI
+      ELSE IF(NDIMD.EQ.4) THEN ! NON-COLLINEAR
+        N=2*NCHI
+        ALLOCATE(A(N,N))
+        ALLOCATE(MAT(NCHI,NCHI,NDIMD))
+      ELSE
+        CALL ERROR$STOP('DMFT_HRHO')
+      END IF
+      ALLOCATE(F(N))
+      ALLOCATE(U(N,N))
+      ALLOCATE(B(N,N))
+!
+!     ==========================================================================
+!     == CALCULATE HRHO                                                       ==
+!     ==========================================================================
+      DO IKPT=1,NKPTL
+        IF(NDIMD.LE.2) THEN
+!         == CONVERT TO UP-DOWN REPRESENTATION =================================
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%RHO) 
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%SINV) 
+          DO ISPIN=1,NDIMD
+!           == A*U=B*U*F  WITH U^DAGGER*S*U=1 ==================================
+            CALL LIB$GENERALEIGENVALUEC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN) &
+     &                                       ,KSET(IKPT)%SINV(:,:,ISPIN),F,U)
+            B=TRANSPOSE(CONJG(U))
+            DO I=1,NCHI
+              CALL DMFT_EOFF(KBT,F(I),SVAR)
+              B(I,:)=SVAR*B(I,:)
+            ENDDO
+            KSET(IKPT)%HRHO(:,:,ISPIN)=MATMUL(U,B)
+          ENDDO
+          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%RHO)
+          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%SINV)
+          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%HRHO)
+        ELSE
+          ALLOCATE(MAT(NCHI,NCHI,NDIMD))
+          MAT=KSET(IKPT)%RHO
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT) 
+          A(  :NCHI,  :NCHI)=MAT(:,:,1)
+          A(NCHI+1:,  :NCHI)=MAT(:,:,2)
+          A(  :NCHI,NCHI+1:)=MAT(:,:,3)
+          A(NCHI+1:,NCHI+1:)=MAT(:,:,4)
+          MAT=KSET(IKPT)%SINV
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT) 
+          B(  :NCHI,  :NCHI)=MAT(:,:,1)
+          B(NCHI+1:,  :NCHI)=MAT(:,:,2)
+          B(  :NCHI,NCHI+1:)=MAT(:,:,3)
+          B(NCHI+1:,NCHI+1:)=MAT(:,:,4)
+!         == A*U=B*U*F  WITH U^DAGGER*S*U=1 ====================================
+          CALL LIB$GENERALEIGENVALUEC8(N,A,B,F,U)
+          B=TRANSPOSE(CONJG(U))
+          DO I=1,N
+            CALL DMFT_EOFF(KBT,F(I),SVAR)
+            B(I,:)=SVAR*B(I,:)
+          ENDDO
+          A=MATMUL(U,B)
+          MAT(:,:,1)=A(  :NCHI,  :NCHI)
+          MAT(:,:,2)=A(NCHI+1:,  :NCHI)
+          MAT(:,:,3)=A(  :NCHI,NCHI+1:)
+          MAT(:,:,4)=A(NCHI+1:,NCHI+1:)
+          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,MAT) 
+          KSET(IKPT)%HRHO=MAT
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  TEST                                                                ==
+!     ==========================================================================
+      IF(TTEST) THEN 
+        IF(.NOT.ALLOCATED(MAT))ALLOCATE(MAT(NCHI,NCHI,NDIMD))
+        DO IKPT=1,NKPTL
+!         == calculate the density matrix from the greens function with hrho ===
+          CALL DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,OMEGA,KBT &
+     &                       ,KSET(IKPT)%SMAT,KSET(IKPT)%HRHO,MAT) !MAT=RHO
+!         == calculate deviation from target density matrix ====================
+          MAT=MAT-KSET(IKPT)%RHO
+          IF(MAXVAL(ABS(MAT)).GT.tol) THEN
+            CALL SPINOR_PRINTMATRIX(6,'RHO[HRHO]-RHO',1,NCHI &
+     &                           ,NDIMD,NCHI,MAT)
+            CALL ERROR$MSG('TEST OF HRHO FAILED')
+            CALL ERROR$R8VAL('MAX DEV OF RHO',MAXVAL(ABS(MAT)))
+            CALL ERROR$STOP('DMFT_HRHO')
+          END IF
+        ENDDO
+      END IF
+      RETURN
+      END
+!
 !     ..........................................................................
       SUBROUTINE DMFT_EOFF(KBT,F,E)
 !     **************************************************************************
@@ -958,119 +1044,6 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_hrho()
-!     **************************************************************************
-!     **  calculates a static hamiltonian hrho such that the resulting        **
-!     **  density matrix is rho=[1+exp(beta*hrho)]^(-1)                       **
-!     **************************************************************************
-      USE DMFT_MODULE ,ONLY: nkptl,NAT,nchi,NDIMD,NOMEGA,OMEGA,KBT,kset
-      implicit none
-      real(8)   ,parameter   :: df=1.d-8
-      logical(4),parameter   :: ttest=.false.
-      complex(8),allocatable :: mat(:,:,:)
-      complex(8),allocatable :: a(:,:)
-      complex(8),allocatable :: b(:,:)
-      real(8)   ,allocatable :: f(:)   !occupations
-      complex(8),allocatable :: u(:,:)
-      integer(4)             :: n
-      real(8)                :: svar
-      integer(4)             :: ikpt,ispin,i
-!     **************************************************************************
-      if(ndimd.le.2) then  ! non-spin and collinear
-        n=nchi
-      else if(ndimd.eq.4) then ! non-collinear
-        n=2*nchi
-        allocate(a(n,n))
-        allocate(mat(nchi,nchi,ndimd))
-      else
-        call error$stop('dmft_hrho')
-      end if
-      allocate(f(n))
-      allocate(u(n,n))
-      allocate(b(n,n))
-!
-!     ==========================================================================
-!     == calculate hrho                                                       ==
-!     ==========================================================================
-      do ikpt=1,nkptl
-        call SPINOR_PRINTMATRIX(6,'dmft_hrho:rho',1,nchi,ndimd,NCHI &
-     &                         ,kset(ikpt)%rho)
-        call SPINOR_PRINTMATRIX(6,'dmft_hrho:hrho before',1,nchi,ndimd,NCHI &
-     &                         ,kset(ikpt)%hrho)
-        if(ndimd.le.2) then
-!         == convert to up-down representation
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%RHO) 
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%SINV) 
-          call SPINOR_PRINTMATRIX(6,'dmft_hrho:rho(ud)',1,nchi,ndimd,NCHI &
-     &                         ,kset(ikpt)%rho)
-          call SPINOR_PRINTMATRIX(6,'dmft_hrho:sinv(ud) ',1,nchi,ndimd,NCHI &
-     &                         ,kset(ikpt)%sinv)
-          do ispin=1,ndimd
-!           == a*u=b*u*f  with u^dagger*s*u=1 ==================================
-            CALL LIB$GENERALEIGENVALUEC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN) &
-     &                                       ,KSET(IKPT)%SINV(:,:,ISPIN),F,U)
-            f=min(f,1.d0-df)
-            f=max(f,df)
-            b=transpose(conjg(u))
-            do i=1,nchi
-              svar=kbt*log((1.d0-f(i))/f(i))
-              b(i,:)=svar*b(i,:)
-            enddo
-            kset(ikpt)%hrho(:,:,ispin)=matmul(u,b)
-          enddo
-          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%RHO)
-          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%SINV)
-          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%hRHO)
-        else
-          ALLOCATE(MAT(NCHI,NCHI,NDIMD))
-          MAT=KSET(IKPT)%RHO
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT) 
-          A(  :NCHI,  :NCHI)=MAT(:,:,1)
-          A(NCHI+1:,  :NCHI)=MAT(:,:,2)
-          A(  :NCHI,NCHI+1:)=MAT(:,:,3)
-          A(NCHI+1:,NCHI+1:)=MAT(:,:,4)
-          MAT=KSET(IKPT)%SINV
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT) 
-          B(  :NCHI,  :NCHI)=MAT(:,:,1)
-          B(NCHI+1:,  :NCHI)=MAT(:,:,2)
-          B(  :NCHI,NCHI+1:)=MAT(:,:,3)
-          B(NCHI+1:,NCHI+1:)=MAT(:,:,4)
-          CALL LIB$GENERALEIGENVALUEC8(n,A,B,F,U)
-          B=TRANSPOSE(CONJG(U))
-          DO I=1,N
-            f(i)=min(f(i),1.d0-df)
-            f(i)=max(f(i),df)
-            SVAR=KBT*LOG((1.D0-F(I))/F(I))
-            B(I,:)=SVAR*B(I,:)
-          ENDDO
-          A=MATMUL(U,B)
-          MAT(:,:,1)=A(  :NCHI,  :NCHI)
-          MAT(:,:,2)=A(NCHI+1:,  :NCHI)
-          MAT(:,:,3)=A(  :NCHI,NCHI+1:)
-          MAT(:,:,4)=A(NCHI+1:,NCHI+1:)
-          CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,MAT) 
-          KSET(IKPT)%HRHO=MAT
-        END IF
-        call SPINOR_PRINTMATRIX(6,'dmft_hrho:hrho',1,nchi,ndimd,NCHI &
-     &                         ,kset(ikpt)%hrho)
-      enddo
-!
-!     ==========================================================================
-!     ==========================================================================
-!     ==========================================================================
-      if(ttest) then 
-        if(.not.allocated(mat))allocate(mat(nchi,nchi,ndimd))
-        do ikpt=1,nkptl
-          call DMFT_hrho_test(nchi,ndimd,nomega,omega,kbt &
-     &                       ,kset(ikpt)%smat,kset(ikpt)%hrho,mat) !mat=rho
-          call SPINOR_PRINTMATRIX(6,'dmft_hrho:rho from hrho',1,nchi &
-     &                           ,ndimd,NCHI,mat)
-        enddo
-      end if
-      return
-      end
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,OMEGA,KBT,S,H,RHO)
 !     **************************************************************************
 !     ** CALCULATES THE DENSITY MATRIX FROM THE GREENS FUNCTION FOR           **
@@ -1080,31 +1053,31 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
 !     **  DOES OT KNOW K-POINTS                                               **
 !     **************************************************************************
       IMPLICIT NONE
-      integer(4),intent(in)    :: nchi
-      integer(4),intent(in)    :: ndimd
-      integer(4),intent(in)    :: nomega
-      real(8)   ,intent(in)    :: kbt
-      real(8)   ,intent(in)    :: omega(nomega)        ! matsubara frequencies
-      complex(8),intent(in)    :: s(nchi,nchi,ndimd)   ! overlap matrix
-      complex(8),intent(in)    :: h(nchi,nchi,ndimd)   ! hamilton matrix
-      complex(8),intent(out)   :: rho(nchi,nchi,ndimd) !density matrix
+      INTEGER(4),INTENT(IN)    :: NCHI
+      INTEGER(4),INTENT(IN)    :: NDIMD
+      INTEGER(4),INTENT(IN)    :: NOMEGA
+      REAL(8)   ,INTENT(IN)    :: KBT
+      REAL(8)   ,INTENT(IN)    :: OMEGA(NOMEGA)        ! MATSUBARA FREQUENCIES
+      COMPLEX(8),INTENT(IN)    :: S(NCHI,NCHI,NDIMD)   ! OVERLAP MATRIX
+      COMPLEX(8),INTENT(IN)    :: H(NCHI,NCHI,NDIMD)   ! HAMILTON MATRIX
+      COMPLEX(8),INTENT(OUT)   :: RHO(NCHI,NCHI,NDIMD) !DENSITY MATRIX
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: MAT1(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: sinv(NCHI,NCHI,NDIMD)
-      real(8)                  :: fn(3)
-      integer(4)               :: nu,idimd
+      COMPLEX(8)               :: SINV(NCHI,NCHI,NDIMD)
+      REAL(8)                  :: FN(3)
+      INTEGER(4)               :: NU,IDIMD
 !     **************************************************************************
 !       
 !     ==========================================================================
-!     ==  Matsubara sum                                                       ==
+!     ==  MATSUBARA SUM                                                       ==
 !     ==========================================================================
       RHO=(0.D0,0.D0)
       DO NU=1,NOMEGA
 !       == CONSTRUCT LATTICE GREENS FUNCTION ===================================
-        MAT1=CI*OMEGA(NU)*s-h
-        CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,mat2)  !mat2=g
-        rho=rho+kbt*mat2
+        MAT1=CI*OMEGA(NU)*S-H
+        CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,MAT2)  !MAT2=G
+        RHO=RHO+KBT*MAT2
       ENDDO ! END LOOP OVER MATSUBARA FREQUENCIES
 !     == INCLUDE NEGATIVE FREQUENCIES ==========================================
       DO IDIMD=1,NDIMD
@@ -1112,33 +1085,33 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
       ENDDO
 !     
 !     ==========================================================================
-!     ==  regularization                                                      ==
+!     ==  REGULARIZATION                                                      ==
 !     ==========================================================================
-      call DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,3,FN)
-      CALL SPINOR$INVERT(NDIMD,NCHI,s,sinv)
+      CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,3,FN)
+      CALL SPINOR$INVERT(NDIMD,NCHI,S,SINV)
 !     == GLAUR1=SINV ===========================================================
-      rho=rho+fn(1)*sinv
-!     == GLAUR2=SINV*h*SINV ====================================================
-      CALL SPINOR$MATMUL(NDIMD,NCHI,h,SINV,MAT1)
-      CALL SPINOR$MATMUL(NDIMD,NCHI,SINV,MAT1,mat2)
-      rho=rho+fn(2)*mat2
-!     == glaur3=sinv*h*sinv*h*sinv =============================================
-      CALL SPINOR$MATMUL(NDIMD,NCHI,mat2,h,MAT1)
-      CALL SPINOR$MATMUL(NDIMD,NCHI,mat1,sinv,MAT2)
-      rho=rho+fn(3)*mat2
+      RHO=RHO+FN(1)*SINV
+!     == GLAUR2=SINV*H*SINV ====================================================
+      CALL SPINOR$MATMUL(NDIMD,NCHI,H,SINV,MAT1)
+      CALL SPINOR$MATMUL(NDIMD,NCHI,SINV,MAT1,MAT2)
+      RHO=RHO+FN(2)*MAT2
+!     == GLAUR3=SINV*H*SINV*H*SINV =============================================
+      CALL SPINOR$MATMUL(NDIMD,NCHI,MAT2,H,MAT1)
+      CALL SPINOR$MATMUL(NDIMD,NCHI,MAT1,SINV,MAT2)
+      RHO=RHO+FN(3)*MAT2
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_SOLVER_WITHKSET(etot)
+      SUBROUTINE DMFT_SOLVER_WITHKSET(ETOT)
 !     **************************************************************************
 !     ** MIMICKS A DMFT SOLVER                                                **
 !     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
 !     **************************************************************************
       USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,OMEGA,KBT,ATOMSET
-      use lmto_module ,only: hybridsetting,hfweight,ispecies
+      USE LMTO_MODULE ,ONLY: HYBRIDSETTING,HFWEIGHT,ISPECIES
       IMPLICIT NONE
-      REAL(8)   ,intent(out) :: ETOT
+      REAL(8)   ,INTENT(OUT) :: ETOT
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EV
@@ -1167,7 +1140,7 @@ PRINT*,'BOUNDS OF SPECTRUM [EV] ',EMIN*27.211D0,EMAX*27.211D0
         ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
 !
 !       ========================================================================
-!       == collect hfweight from lmto_module                                                  ==
+!       == collect hfweight from lmto_module                                  ==
 !       ========================================================================
         IF(HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT.GE.0.D0) THEN
           LHFWEIGHT=HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT
@@ -1773,7 +1746,7 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
       REAL(8)   ,INTENT(OUT) :: ETOT
       COMPLEX(8),INTENT(OUT) :: SLOC(NLOC,NLOC,NDIMD,NOMEGA)
       COMPLEX(8),INTENT(OUT) :: SLOCLAUR(NLOC,NLOC,NDIMD,3)
-      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.false.
       COMPLEX(8)             :: RHO(NLOC,NLOC,NDIMD)
       COMPLEX(8)             :: H(NLOC,NLOC,NDIMD)
       INTEGER(4)             :: NU,I,J,K,L
@@ -1840,7 +1813,7 @@ PRINT*,'EX IN DMFT$HFSOLVER_WITHSET:',ETOT
       REAL(8)   ,INTENT(OUT) :: UCHI(NLOC,NLOC,NLOC,NLOC)
       REAL(8)   ,INTENT(OUT) :: ETOT
       COMPLEX(8),INTENT(OUT) :: ham(NLOC,NLOC,NDIMD)
-      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.false.
       INTEGER(4)             :: I,J,K,L
       REAL(8)                :: SVAR
 !     **************************************************************************
@@ -2245,13 +2218,6 @@ PRINT*,'TH0 ',TH0
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
       real(8)                  :: fn(2)
-real(8) :: amp=1.d-3
-COMPLEX(8)               :: DHam1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Dham2(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Drho1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Drho2(NCHI,NCHI,NDIMD)
-integer(4) :: ispin
-real(8)    :: eig(nchi)
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS_WITHKSET')
       TH0=(TYPE.EQ.'H0') 
@@ -2351,8 +2317,8 @@ if(mod(iter,100).eq.0)PRINT*,'MAXVAL OF DH /drho ',iter,MAXVAL(ABS(DH0)),MAXval(
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
         ENDDO ! END OF LOOP OVER iterations
-call SPINOR_PRINTMATRIX(6,'final kset%h0 ',1,nchi,ndimd,NCHI,KSET(IKPT)%H0)
-call SPINOR_PRINTMATRIX(6,'final devrho ',1,nchi,ndimd,NCHI,devrho)
+!!$call SPINOR_PRINTMATRIX(6,'final kset%h0 ',1,nchi,ndimd,NCHI,KSET(IKPT)%H0)
+!!$call SPINOR_PRINTMATRIX(6,'final devrho ',1,nchi,ndimd,NCHI,devrho)
         IF(.NOT.CONVG) THEN
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$I4VAL('IKPT',IKPT)
@@ -3035,7 +3001,7 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
      &                        ,IPROOFCHI,ATOMSET,KSET
       USE WAVES_MODULE, ONLY : GSET,WAVES_SELECTWV,THIS,MAP
       IMPLICIT NONE
-      logical(4),parameter   :: tprint=.true.
+      logical(4),parameter   :: tprint=.false.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE :: DHPIPSI(:,:,:) !(NDIM,NCHI,NB)
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)     !(NCHI,NCHI,NDIMD)
@@ -3091,7 +3057,7 @@ print*,'reset? ',treset
       DO IAT=1,NAT
         IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
         LMNX=ATOMSET(IAT)%DENMAT%LMNX
-CALL SPINOR_PRINTMATRIX(6,'atomset%h',1,lmnx,NDIMD,lmnx,ATOMSET(IAT)%DENMAT%H)
+!CALL SPINOR_PRINTMATRIX(6,'atomset%h',1,lmnx,NDIMD,lmnx,ATOMSET(IAT)%DENMAT%H)
         CALL SPINOR$CONVERT('BACK',LMNX,NDIMD,ATOMSET(IAT)%DENMAT%H)
         ATOMSET(IAT)%DENMAT%H=2.D0*ATOMSET(IAT)%DENMAT%H
       ENDDO
