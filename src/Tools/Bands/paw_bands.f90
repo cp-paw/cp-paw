@@ -1402,6 +1402,7 @@ print*,'nb ',nb
 !     **                                                              **
 !     ******************************************************************
       USE BANDDATA_MODULE
+      use omp_lib
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: NG
       INTEGER(4)  ,INTENT(IN)  :: NB
@@ -1434,8 +1435,14 @@ print*,'nb ',nb
       REAL(8)                  :: CELLVOL,GWEIGHT
       REAL(8)                  :: SVAR
       COMPLEX(8)               :: CSVAR,CSVAR_H,CSVAR_S
+      LOGICAL(4)               :: TTIMING
 !     ******************************************************************
-!                          CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
+      if(omp_get_num_threads().eq.1)then
+        TTIMING=.true.
+      else
+        TTIMING=.false.
+      endif
+      IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
       allocate(TI_HK(NG*NDIM,NG*NDIM))
       allocate(TI_SK(NG*NDIM,NG*NDIM))
       TI_HK(:,:)=TI_H(:,:,ISPIN)
@@ -1445,14 +1452,14 @@ print*,'nb ',nb
       CELLVOL=GWEIGHT
 
       !COMPUTE G+K and (G+K)^2
-!      CALL TIMING$CLOCKON('G+K,G2')
+      IF(TTIMING) CALL TIMING$CLOCKON('G+K,G2')
       DO I=1,NG
         GVECPK(:,I)=GVEC(:,I)+KVEC(:)
         G2(I)=sum(GVECPK(:,I)**2)
       ENDDO
-!      CALL TIMING$CLOCKOFF('G+K,G2')
+      IF(TTIMING)CALL TIMING$CLOCKOFF('G+K,G2')
 
-!      CALL TIMING$CLOCKON('PROJECTORS')
+      IF(TTIMING)CALL TIMING$CLOCKON('PROJECTORS')
       IND=0
       DO ISP=1,NSP
         DO LN=1,LNX(ISP)
@@ -1482,7 +1489,7 @@ print*,'nb ',nb
         CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG,GVECPK &
      &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
       ENDDO
-!      CALL TIMING$CLOCKOFF('PROJECTORS')
+      IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
 
       !FIXME: DH IS NOT HERMITIAN, SEE paw_setups.f90 setup_MAKEPARTIALWAVES
       !here we make it symmetric, so that ZHEGV can be used instead of
@@ -1501,7 +1508,7 @@ print*,'nb ',nb
           TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
         ENDDO
       ENDDO
-!      CALL TIMING$CLOCKON('AUGMENTATION')
+      IF(TTIMING)CALL TIMING$CLOCKON('AUGMENTATION')
       PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
       !FIXME: OPTIMIZE THIS BLOCK!!!
 
@@ -1539,24 +1546,24 @@ print*,'nb ',nb
         ENDDO
       ENDDO
 
-!      CALL TIMING$CLOCKOFF('AUGMENTATION')
-!                      CALL TRACE$POP
+      IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
+      IF(TTIMING)CALL TRACE$POP
 
       !SOLVE EIGENVALUE PROBLEM WITH LAPACK ROUTINES
-!      CALL TIMING$CLOCKON('DIAG')
+      IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
-!        CALL TRACE$PUSH('LAPACK_ZHEGVD')
+        IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
         IF(TPROJ)THEN
           U=TI_HK
           CALL LAPACK_ZHEGVD(NG,'V',U,TI_SK,E)            
         ELSE
           CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
         ENDIF
-!        CALL TRACE$POP
+        IF(TTIMING)CALL TRACE$POP
       ELSE IF(METHOD.eq.2)then
-        CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
+        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
         CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
-        CALL TRACE$POP
+        IF(TTIMING)CALL TRACE$POP
 !      ELSE IF(METHOD.eq.3)then
 !        CALL TRACE$PUSH('LAPACK_ZGGEV')
 !        IF(TPROJ)THEN
@@ -1578,9 +1585,9 @@ print*,'nb ',nb
         CALL ERROR$STOP('BANDS_KPOINT')
       ENDiF
 
-!      CALL TIMING$CLOCKOFF('DIAG')
+      IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
       IF(TPROJ)THEN
-!        CALL TIMING$CLOCKON('PROJECTIONS')
+        IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
           DO IB=1,NB
             DO LN=1,LMNXX
@@ -1589,7 +1596,7 @@ print*,'nb ',nb
             ENDDO
           ENDDO
         ENDDO
-!        CALL TIMING$CLOCKOFF('PROJECTIONS')
+        IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
       ENDIF
       RETURN
       end subroutine
