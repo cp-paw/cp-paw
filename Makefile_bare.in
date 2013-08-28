@@ -1072,7 +1072,6 @@ LMTO_MODULE.mod : ${OBJDIR}/paw_lmto.o
  ## file:src/Tools/Wave/paw_dmft.f90
 DMFT_MODULE.mod : ${OBJDIR}/paw_dmft.o
 ${OBJDIR}/paw_dmft.o : LMTO_MODULE.mod
-${OBJDIR}/paw_dmft.o : DMFT_MODULE.mod
 ${OBJDIR}/paw_dmft.o : WAVES_MODULE.mod
 ${OBJDIR}/paw_dmft.o : MPE_MODULE.mod
 ${OBJDIR}/paw_dmft.o : STRINGS_MODULE.mod
