@@ -60,8 +60,7 @@ INTEGER(4)             :: NAT           ! #(ATOMS)
 REAL(8)   ,ALLOCATABLE :: OMEGA(:)      ! MATSUBARA FREQUENCIES
 INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)  !(NCHI) MAP ICHI TO IPRO
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
-REAL(8)                :: MU            ! CHEMICAL POTENTIAL
-REAL(8)                :: DELTAT        ! TIMESTEP
+REAL(8)   ,parameter   :: MU=0.d0       ! CHEMICAL POTENTIAL
 !== KSET =======================================================================
 TYPE(KSET_TYPE)   ,ALLOCATABLE :: KSET(:)  !(NKPTL)
 TYPE(ATOMSET_TYPE),ALLOCATABLE :: ATOMSET(:)  !(NAT)
@@ -70,7 +69,7 @@ END MODULE DMFT_MODULE
       SUBROUTINE DMFT_INI()
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TINI,NDIM,NDIMD,NSPIN,NKPTL,NB,NAT,NCHI &
-     &                       ,NOMEGA,KBT,DELTAT,MU,OMEGA,IPROOFCHI &
+     &                       ,NOMEGA,KBT,MU,OMEGA,IPROOFCHI &
      &                       ,KSET,ATOMSET
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
       IMPLICIT NONE
@@ -103,8 +102,6 @@ END MODULE DMFT_MODULE
 !THIS IS HARD WIRED
       NOMEGA=50
       KBT=0.333D0*EV
-      DELTAT=10.D0
-      MU=0.D0
 !
 !     ==========================================================================
 !     == COLLECT PERMANENT DATA                                               ==
@@ -319,15 +316,15 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
 !     ==========================================================================
 !     ==  COLLECT DFT HAMILTONIAN                                             ==
 !     ==========================================================================
-      CALL DMFT$COLLECTHAMILTONIAN_WITHKSET()  
-      CALL DMFT$COLLECTFULLDENMAT()  
+      CALL DMFT_COLLECTHAMILTONIAN()  
+      CALL DMFT_COLLECTFULLDENMAT()  
 !
 !     ==========================================================================
 !     ==  OBTAIN BARE U-TENSOR FROM LMTO OBJECT.                              ==
 !     ==     SHAPE OF ORBITALS ARE DEFINED BY NPRO AND ATOMIC STRUCTRE        ==
 !     ==     ORBITALS ARE SELECTED BY TORB.                                   ==
 !     ==========================================================================
-      CALL DMFT_UCHI_WITHATOMSET() 
+      CALL DMFT_Utensor() 
 !
 !     ==========================================================================
 !     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
@@ -346,7 +343,7 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
       call DMFT_hrho()
-      CALL DMFT_CONSTRAINTSSIMPLE('HRHO')
+      CALL DMFT_CONSTRAINTS('HRHO')
 !
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
@@ -358,13 +355,13 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
 !       ========================================================================
 !       ==  CALL THE SOLVER                                                   ==
 !       ========================================================================
-        CALL DMFT_SOLVER_WITHKSET(etot) 
-print*,'etot after DMFT_SOLVER_WITHKSET ',etot
+        CALL DMFT_SOLVER(etot) 
+print*,'etot after DMFT_SOLVER ',etot
 !
 !       ========================================================================
 !       ==  CONSTRAINTS                                                       ==
 !       ========================================================================
-        CALL DMFT_CONSTRAINTSSIMPLE('H0')
+        CALL DMFT_CONSTRAINTS('H0')
 !        CALL DMFT_CONSTRAINTS_WITHKSET('H0')
         PRINT*,'ITERATION COMPLETED ',ITER
       ENDDO ! END OF LOOP OVER ITERATIONS TO ENFORCE CONSTRAINT
@@ -381,7 +378,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
 !     ==========================================================================
 !     ==  add hamiltonian this%htbc                                           ==
 !     ==========================================================================
-      CALL DMFT$ADDTOHPSI_WITHKSET()
+      CALL DMFT_ADDTOHPSI()
                                        CALL TRACE$POP()
       RETURN
       END
@@ -670,7 +667,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$COLLECTHAMILTONIAN_WITHKSET()
+      SUBROUTINE DMFT_COLLECTHAMILTONIAN()
 !     **************************************************************************
 !     ** COLLECTS THE HAMILTONIAN AND STORES IT ON THE MODULE                 **
 !     **                                                                      **
@@ -692,7 +689,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       COMPLEX(8)             :: CSVAR
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-                                      CALL TRACE$PUSH('DMFT$COLLECTHAMILTONIAN')
+                                      CALL TRACE$PUSH('DMFT_COLLECTHAMILTONIAN')
 !
 !     ==========================================================================
 !     ==  EXTRACT <PSI|PSI>
@@ -705,7 +702,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
             CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
             CALL ERROR$I4VAL('NB IN DYNOCC',NB)
             CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT$COLLECTHAMILTONIAN')
+            CALL ERROR$STOP('DMFT_COLLECTHAMILTONIAN')
           END IF
           NBH=THIS%NBH
 !
@@ -761,7 +758,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
 !     ==========================================================================
 !
 !     ==  collect occupations w/o k-point weight ===============================
-      CALL DMFT$COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
+      CALL DMFT_COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
 !
 !     == sum up density matrix =================================================
       DO IKPT=1,NKPTL
@@ -813,7 +810,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
           RHO(:,:,IDIMD)=0.5D0*(RHO(:,:,IDIMD)+CONJG(TRANSPOSE(RHO(:,:,IDIMD))))
         ENDDO
 !       == PRINT ===============================================================
-        PRINT*,' IN DMFT$COLLECTHAMILTONIAN_WITHKSET'
+        PRINT*,' IN DMFT_COLLECTHAMILTONIAN'
         DO IAT=1,NAT
           if(atomset(iat)%nloc.le.0) cycle
           I1=ATOMSET(IAT)%ICHI1
@@ -830,7 +827,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$COLLECTFULLDENMAT()
+      SUBROUTINE DMFT_COLLECTFULLDENMAT()
 !     **************************************************************************
 !     ==  EXTRACT ONSITE DENSITY MATRICES WITH ALL PROJECTOR FUNCTIONS        ==
 !     ==  FOR DOUBLE COUNTING                                                 ==
@@ -857,7 +854,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NB',NB)
         CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT$COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_collectfulldenmat')
       END IF
 !
       CALL DYNOCC$GETI4('NSPIN',NSPIN_)
@@ -865,7 +862,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT$COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_collectfulldenmat')
       END IF
       CALL WAVES_DYNOCCGETR8A('OCC',NB*NKPTL*NSPIN,OCC)
 !
@@ -887,7 +884,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
             CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
             CALL ERROR$I4VAL('NB IN DYNOCC',NB)
             CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT$COLLECTHAMILTONIAN')
+            CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
           END IF
           NBH=THIS%NBH
 !
@@ -974,17 +971,10 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       ENDDO
 !
 !     ==========================================================================
-!     ==  contract to local orbtals                                           ==
-!     ==========================================================================
-      do iat=1,nat
-      
-      enddo
-!
-!     ==========================================================================
 !     ==  PRINT
 !     ==========================================================================
       IF(TPRINT) THEN
-        PRINT*,'DENSITY MATRIX REPOST FROM DMFT$COLLECTFULLDENMAT'
+        PRINT*,'DENSITY MATRIX REPOST FROM DMFT_COLLECTFULLDENMAT'
         DO IAT=1,NAT
           IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
           LMNX=ATOMSET(IAT)%DENMAT%LMNX
@@ -1001,7 +991,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
+      SUBROUTINE DMFT_COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
 !     **************************************************************************
 !     ** COLLECTS THE OCCUPATIONS FOR THIS NODE AND REMOVES THE K-POINT       **
 !     ** WEIGHT                                                               **
@@ -1020,7 +1010,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NB',NB)
         CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT$COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
       END IF
 !
       CALL DYNOCC$GETI4('NSPIN',NSPIN_)
@@ -1028,7 +1018,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT$COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
       END IF
 !
       CALL WAVES_DYNOCCGETR8A('OCC',NB*NKPTL*NSPIN,F)
@@ -1241,7 +1231,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_SOLVER_WITHKSET(ETOT)
+      SUBROUTINE DMFT_SOLVER(ETOT)
 !     **************************************************************************
 !     ** MIMICKS A DMFT SOLVER                                                **
 !     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
@@ -1262,7 +1252,7 @@ print*,'etot after DMFT_SOLVER_WITHKSET ',etot
       COMPLEX(8),ALLOCATABLE :: rho(:,:,:)
       COMPLEX(8),ALLOCATABLE :: ham(:,:,:)
 !     **************************************************************************
-                                      call trace$push('DMFT$SOLVER_WITHKSET')
+                                      call trace$push('DMFT_SOLVER')
       CALL CONSTANTS('EV',EV)
 !
 !     ==========================================================================
@@ -1584,7 +1574,7 @@ print*,'etot from dmft_detot: ',etot
       end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_UCHI_WITHATOMSET()
+      SUBROUTINE DMFT_Utensor()
 !     **************************************************************************
 !     ** CALCULATE THE U-TENSOR OF THE CORRELATED ORBITALS IN THE SELECTED SET
 !     **************************************************************************
@@ -1598,7 +1588,7 @@ print*,'etot from dmft_detot: ',etot
       INTEGER(4)            :: NCHI1        ! #(SELECTED ORBITALS ON THIS ATOM)
       INTEGER(4)            :: IAT
 !     **************************************************************************
-                                          CALL TRACE$PUSH('DMFT_UCHI')
+                                          CALL TRACE$PUSH('DMFT_Utensor')
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
 !
@@ -1615,7 +1605,7 @@ print*,'etot from dmft_detot: ',etot
         IF(NCHI1.EQ.0) CYCLE
         IF(NCHI1.NE.ATOMSET(IAT)%NLOC) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-          CALL ERROR$STOP('DMFT_UCHI')
+          CALL ERROR$STOP('DMFT_Utensor')
         END IF
 !
 !       ========================================================================
@@ -2297,7 +2287,7 @@ CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
 !!$CALL SPINOR_PRINTMATRIX(6,'Dh0 b',1,NCHI,NDIMD,NCHI,Dh0)
           ELSE
             CALL ERROR$MSG('MIXTYPE NOT RECOGNIZED')
-            CALL ERROR$STOP('DMFT_CONSTRAINTS')
+            CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
           END IF
 PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
 !
@@ -2320,7 +2310,7 @@ PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
           CALL ERROR$I4VAL('ITER',ITER)
           CALL ERROR$R8VAL('MAX. DEVIATION',MAXDEV)
           CALL ERROR$R8VAL('TOLERANCE',TOL)
-          CALL ERROR$STOP('DMFT_CONSTRAINTS')
+          CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
         END IF
       ENDDO   !END OF LOOP OVER k-points
 !
@@ -2339,7 +2329,7 @@ PRINT*,'TH0 ',TH0
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_CONSTRAINTSsimple(TYPE)
+      SUBROUTINE DMFT_CONSTRAINTS(TYPE)
 !     **************************************************************************
 !     **  ADJUSTS H0(:,:,IKPT,IPSIN) SUCH THAT                                **
 !     **                                                                      **
@@ -2381,12 +2371,12 @@ PRINT*,'TH0 ',TH0
       LOGICAL(4)               :: TH0
       real(8)                  :: fn(2)
 !     **************************************************************************
-                              CALL TRACE$PUSH('DMFT_CONSTRAINTS_WITHKSET')
+                              CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       TH0=(TYPE.EQ.'H0') 
       IF(.NOT.(TH0.OR.TYPE.EQ.'HRHO')) THEN
         CALL ERROR$MSG('ILLEGAL VALUE OF TYPE. (MAY BE "H0" OR "HRHO")')
         CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')     
+        CALL ERROR$STOP('DMFT_CONSTRAINTS')     
       END IF
       IF(.NOT.TH0)  THEN
         DO IKPT=1,NKPTL
@@ -2543,12 +2533,12 @@ PRINT*,'TH0 ',TH0
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
 !     **************************************************************************
-                              CALL TRACE$PUSH('DMFT_CONSTRAINTS_WITHKSET')
+                              CALL TRACE$PUSH('DMFT_testrho')
       TH0=(TYPE.EQ.'H0') 
       IF(.NOT.(TH0.OR.TYPE.EQ.'HRHO')) THEN
         CALL ERROR$MSG('ILLEGAL VALUE OF TYPE. (MAY BE "H0" OR "HRHO")')
         CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')     
+        CALL ERROR$STOP('DMFT_testrho')     
       END IF
       IF(.NOT.TH0)  THEN
         DO IKPT=1,NKPTL
@@ -3155,7 +3145,7 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT$ADDTOHPSI_WITHKSET()
+      SUBROUTINE DMFT_ADDTOHPSI()
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -3177,7 +3167,7 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
 PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
-                              CALL TRACE$PUSH('DMFT$ADDTOHPSI_WITHKSET')
+                              CALL TRACE$PUSH('DMFT_ADDTOHPSI')
 !
 !     ==========================================================================
 !     == CHECK IF HTBC ALREADY CONTAINS INFORMATION                           ==
@@ -3314,7 +3304,6 @@ print*,'reset? ',treset
           ENDDO
         ENDDO ! END OF LOOP OVER NSPIN
       ENDDO ! END OF LOOP OVER K-POINTS
-PRINT*,'.... DMFT$ADDTOHPSI DONE'
                               CALL TRACE$POP()
       RETURN
       END
