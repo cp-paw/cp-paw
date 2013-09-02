@@ -3348,6 +3348,7 @@ PRINT*,'RESET? ',TRESET
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TESTBESSEL()
+      IMPLICIT NONE
       INTEGER(4)           :: L=2
       INTEGER(4),PARAMETER :: NKAPPA=5
       INTEGER(4)           :: I
@@ -3355,7 +3356,7 @@ PRINT*,'RESET? ',TRESET
       REAL(8)              :: K2(NKAPPA)=(/-0.2D0,-0.1D0,0.D0,1.D0,2.D0/)
       REAL(8)              :: JVAL(NKAPPA),JDER(NKAPPA)
       REAL(8)              :: KVAL(NKAPPA),KDER(NKAPPA)
-      INTEGER(4)           :: NFIL1=12,NFIL2=14
+      INTEGER(4)           :: NFIL1=12,NFIL2=14,IKAPPA
       OPEN(NFIL1,FILE='JVAL.DAT')
       OPEN(NFIL2,FILE='KVAL.DAT')
       DO I=1,1000
