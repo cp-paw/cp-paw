@@ -16,16 +16,17 @@ INTEGER(4)          :: LMNX
 COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
 COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
 END TYPE DENMAT_TYPE
-TYPE NATORB_TYPE                             ! natural orbitals
-COMPLEX(8),POINTER  :: CHIPHI(:,:) => NULL() !(2*NLOC,2*NLOC) <chi|NATorb>
-COMPLEX(8),POINTER  :: PIPHI(:,:)  => NULL() !(2*NLOC,2*NLOC) <pi|natorb>
+TYPE NATORB_TYPE                             ! NATURAL ORBITALS
+COMPLEX(8),POINTER  :: CHIPHI(:,:) => NULL() !(2*NLOC,2*NLOC) <CHI|NATORB>
+COMPLEX(8),POINTER  :: PIPHI(:,:)  => NULL() !(2*NLOC,2*NLOC) <PI|NATORB>
 END TYPE NATORB_TYPE
 TYPE ATOMSET_TYPE
   INTEGER(4)           :: NLOC
   INTEGER(4)           :: ICHI1
   INTEGER(4)           :: ICHI2
+  REAL(8)              :: LHFWEIGHT
   REAL(8)   ,POINTER   :: U(:,:,:,:)        => NULL() !(NLOC,NLOC,NLOC,NLOC) 
-  REAL(8)   ,POINTER   :: dedU(:,:,:,:)     => NULL() !(NLOC,NLOC,NLOC,NLOC) 
+  REAL(8)   ,POINTER   :: DEDU(:,:,:,:)     => NULL() !(NLOC,NLOC,NLOC,NLOC) 
   COMPLEX(8),POINTER   :: GLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: GLOCLAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,3)
   COMPLEX(8),POINTER   :: SLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
@@ -71,6 +72,7 @@ END MODULE DMFT_MODULE
      &                       ,NOMEGA,KBT,MU,OMEGA,IPROOFCHI &
      &                       ,KSET,ATOMSET
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
+      USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
       REAL(8)                :: PI
       INTEGER(4)             :: NTASKS_K,THISTASK_K
@@ -86,21 +88,32 @@ END MODULE DMFT_MODULE
       REAL(8)   ,ALLOCATABLE :: WKPT(:) !(NKPT) K-POINT WEIGHTS
       INTEGER(4),ALLOCATABLE :: LOX(:)  !(LNX)
       LOGICAL(4),ALLOCATABLE :: TORB(:) !(LNX)
-      REAL(8)                :: EV
 !     **************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
       PI=4.D0*ATAN(1.D0)
-      CALL CONSTANTS$GET('EV',EV)
       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K)
       CALL MPE$QUERY('MONOMER',NTASKS_M,THISTASK_M)
 !
 !     ==========================================================================
-!     == OTHER VARIABLES                                                      ==
+!     == HARDWIRED VARIABLES                                                  ==
 !     ==========================================================================
-!THIS IS HARD WIRED
       NOMEGA=50
-      KBT=0.333D0*EV
+!
+!     ==========================================================================
+!     == INHERIT KBT FROM OCCUPATIONS OBJECT                                  ==
+!     ==   (SPECIFIED IN !CONTROL!MERMIN:T[K])                                ==
+!     ==========================================================================
+      CALL DYNOCC$GETR8('TEMP',KBT)
+      IF(KBT.LT.1.D-5) THEN
+        CALL ERROR$MSG('TEMPERATURE MUST BE FINITE')
+        CALL ERROR$MSG('SET !CONTROL!MERMIN:T[K]')
+        CALL ERROR$R8VAL('KBT',KBT)
+        CALL ERROR$STOP('DMFT_INI')
+      END IF
+PRINT*,'KBT=',KBT,' KBT[EV]=',KBT*27.211D0
+!!$KBT=0.333D0*27.211D0
+!!$print*,'kbt=',kbt,' kbt[ev]=',kbt*27.211d0
 !
 !     ==========================================================================
 !     == COLLECT PERMANENT DATA                                               ==
@@ -190,9 +203,19 @@ PRINT*,'TORB ',IAT,TORB
           END IF
         ENDDO
 !
+!       ========================================================================
+!       == INHERIT SCREENING FACTOR  FROM LMTO_MODULE                         ==
+!       ========================================================================
+        IF(HYBRIDSETTING(ISP)%LHFWEIGHT.GE.0.D0) THEN
+          ATOMSET(IAT)%LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
+        ELSE
+          ATOMSET(IAT)%LHFWEIGHT=HFWEIGHT
+        END IF
+PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',ATOMSET(IAT)%LHFWEIGHT
+!
 !       == ALLOCATE ATOMSET SUBARRAYS ==========================================
         ALLOCATE(ATOMSET(IAT)%U(NLOC,NLOC,NLOC,NLOC))
-        ALLOCATE(ATOMSET(IAT)%dedu(NLOC,NLOC,NLOC,NLOC))
+        ALLOCATE(ATOMSET(IAT)%DEDU(NLOC,NLOC,NLOC,NLOC))
         ALLOCATE(ATOMSET(IAT)%GLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%GLOCLAUR(NLOC,NLOC,NDIMD,3))
         ALLOCATE(ATOMSET(IAT)%SLOC(NLOC,NLOC,NDIMD,NOMEGA))
@@ -326,7 +349,7 @@ WRITE(*,FMT='(82("="),T20," ENTERING DMFT$GREEN ")')
       CALL DMFT_UTENSOR() 
 !
 !     ==========================================================================
-!     ==  overlap matrix in k-space                                           ==
+!     ==  OVERLAP MATRIX IN K-SPACE                                           ==
 !     ==========================================================================
       CALL DMFT_SMAT()
 !
@@ -452,16 +475,16 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     **************************************************************************
       USE DMFT_MODULE, ONLY : NAT,NKPTL,NDIMD,ATOMSET,KSET
       IMPLICIT NONE
-      LOGICAL(4)             :: NATORB=.true.
+      LOGICAL(4)             :: NATORB=.TRUE.
       INTEGER(4)             :: NLOC
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:)
       COMPLEX(8),ALLOCATABLE :: SINV(:,:,:)
       COMPLEX(8),ALLOCATABLE :: RHOB(:,:)
       COMPLEX(8),ALLOCATABLE :: SINVB(:,:)
-      real(8)   ,ALLOCATABLE :: X(:)
+      REAL(8)   ,ALLOCATABLE :: X(:)
       REAL(8)                :: SVAR
       INTEGER(4)             :: I1,I2
-      INTEGER(4)             :: IAT,ISPIN,IKPT,i
+      INTEGER(4)             :: IAT,ISPIN,IKPT,I
 !     **************************************************************************
       DO IAT=1,NAT
         NLOC=ATOMSET(IAT)%NLOC
@@ -501,8 +524,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !       ========================================================================
 !       == DETERMINE OCCUPATIONS AND EIGENVALUES                              ==
 !       ========================================================================
-        ATOMSET(IAT)%NATORB%CHIPHI=(0.d0,0.d0)
-        ATOMSET(IAT)%NATORB%piPHI=(0.d0,0.d0)
+        ATOMSET(IAT)%NATORB%CHIPHI=(0.D0,0.D0)
+        ATOMSET(IAT)%NATORB%PIPHI=(0.D0,0.D0)
         IF(NDIMD.LE.2) THEN
           ALLOCATE(X(NLOC))
           DO ISPIN=1,NDIMD
@@ -516,7 +539,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
               ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I1:I2) &
       &         =MATMUL(SINV(:,:,ISPIN),ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2))
             ELSE
-!call SPINOR_PRINTMATRIX(6,'xxx',1,5,2,Nloc,sinv)
+!CALL SPINOR_PRINTMATRIX(6,'XXX',1,5,2,NLOC,SINV)
 !             == EIGENSTATES OF SINV ===========================================
               CALL LIB$DIAGC8(NLOC,SINV(:,:,ISPIN),X &
       &                                ,ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2))
@@ -1149,14 +1172,13 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ** MIMICKS A DMFT SOLVER                                                **
 !     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: ISPECIES,HYBRIDSETTING,HFWEIGHT
       USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,KBT,ATOMSET
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: ETOT
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       REAL(8)                :: EV
       REAL(8)                :: PHILW
-      real(8)                :: lhfweight
+      REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EDC
       INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: LMNX  !#(LOCAL ORBITALS ON THIS SITE)
@@ -1193,8 +1215,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           ENDDO
         ENDDO
         CALL DMFT_FOCK(NLOC,NDIMD,RHO,ATOMSET(IAT)%U,PHILW,HAM)
-        ETOT=ETOT+PHILW  !screening done already in u-tensor
-PRINT*,'AFTER FOCK ',IAT,ETOT,pHILW
+        ETOT=ETOT+PHILW  !SCREENING DONE ALREADY IN U-TENSOR
+PRINT*,'AFTER FOCK ',IAT,ETOT,PHILW
         DO I=1,NLOC
           DO J=1,NLOC
             LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
@@ -1221,13 +1243,8 @@ PRINT*,'AFTER FOCK ',IAT,ETOT,pHILW
 !       ========================================================================
 !       == SUBTRACT DOUBLE COUNTING TERM                                      ==
 !       ========================================================================
-!       == collect local hf weight =============================================
-        IF(HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT.GE.0.D0) THEN
-          LHFWEIGHT=HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT
-        ELSE
-          LHFWEIGHT=HFWEIGHT
-        END IF
-!
+!       == COLLECT LOCAL HF WEIGHT =============================================
+        LHFWEIGHT=ATOMSET(IAT)%LHFWEIGHT
         LMNX=ATOMSET(IAT)%DENMAT%LMNX
         ALLOCATE(HAM(LMNX,LMNX,NDIMD))
         CALL DMFT_DC(IAT,LMNX,NDIMD,ATOMSET(IAT)%DENMAT%RHO,EDC,HAM)
@@ -1259,14 +1276,7 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
      &                         ,ATOMSET(IAT)%DEDU &
      &                         ,ATOMSET(IAT)%NATORB%PIPHI &
      &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
-!!$ print*,'max: ',philw,maxval(abs(atomset(iat)%sloc)) &
-!!$&                    ,maxval(abs(atomset(iat)%sloclaur)) &
-!!$&                    ,maxval(abs(atomset(iat)%dedu))
-!!$philw=0.d0
-!!$atomset(iat)%sloc=(0.d0,0.d0)
-!!$atomset(iat)%sloclaur=(0.d0,0.d0)
-!!$atomset(iat)%dedu=0.d0
-        ETOT=ETOT+PHILW !screening already contained in u-tensor
+        ETOT=ETOT+PHILW !SCREENING ALREADY CONTAINED IN U-TENSOR
       ENDDO ! END OF LOOP OVER ATOMS (IAT)
       RETURN
       END
@@ -1493,13 +1503,12 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     **************************************************************************
 !     ** CALCULATE THE U-TENSOR OF THE CORRELATED ORBITALS IN THE SELECTED SET
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR,HYBRIDSETTING,HFWEIGHT
+      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR
       USE DMFT_MODULE, ONLY: NAT,ATOMSET
       IMPLICIT NONE
       REAL(8)  ,ALLOCATABLE :: UB(:,:,:,:)
       INTEGER(4)            :: ISP ! ATOM TYPE
       INTEGER(4)            :: L,LN,LMN,ICHI
-      real(8)               :: lhfweight
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: NCHI1        ! #(SELECTED ORBITALS ON THIS ATOM)
       INTEGER(4)            :: IAT
@@ -1591,16 +1600,10 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
         DEALLOCATE(UB)
 !
 !       ========================================================================
-!       == screen U-tensor by local hf-weight                                 ==
+!       == SCREEN U-TENSOR BY LOCAL HF-WEIGHT                                 ==
 !       ========================================================================
-        IF(HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT.GE.0.D0) THEN
-          LHFWEIGHT=HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT
-        ELSE
-          LHFWEIGHT=HFWEIGHT
-        END IF
-        ATOMSET(IAT)%U=lhfweight*ATOMSET(IAT)%U
+        ATOMSET(IAT)%U=ATOMSET(IAT)%LHFWEIGHT*ATOMSET(IAT)%U
 !
-        PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',LHFWEIGHT
       ENDDO  ! END LOOP OVER ATOMS
                                           CALL TRACE$POP()
       RETURN
@@ -1776,7 +1779,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       REAL(8)   ,INTENT(OUT) :: DEDUCHI(NLOC,NLOC,NLOC,NLOC)
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       COMPLEX(8)             :: U(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
-      COMPLEX(8)             :: dedU(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
+      COMPLEX(8)             :: DEDU(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
       COMPLEX(8)             :: V(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
       COMPLEX(8)             :: G(2*NLOC,2*NLOC,NOMEGA)
       COMPLEX(8)             :: GLAUR(2*NLOC,2*NLOC,3)
@@ -1785,7 +1788,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       INTEGER(4)             :: NU,I,J
       INTEGER(4)             :: NFIL
 !     **************************************************************************
-                                     CALL TRACE$PUSH('DMFT$HFSOLVER_WITHSET')
+                                     CALL TRACE$PUSH('DMFT$HFSOLVER')
 !
 !     ==========================================================================
 !     == CONVERT U-TENSOR                                                     ==
@@ -1822,12 +1825,12 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     ==========================================================================
       DO NU=1,NOMEGA
         CALL SPINOR$BLOWUP(NDIMD,NLOC,GLOC(:,:,:,NU),G(:,:,NU))
-        G(:,:,NU)=MATMUL(TRANSPOSE(CONJG(CHIPhI)),MATMUL(G(:,:,NU),CHIPHI))
+        G(:,:,NU)=MATMUL(TRANSPOSE(CONJG(CHIPHI)),MATMUL(G(:,:,NU),CHIPHI))
       ENDDO
       DO I=1,3
         CALL SPINOR$BLOWUP(NDIMD,NLOC,GLOCLAUR(:,:,:,I),GLAUR(:,:,I))
-        GLAUR(:,:,i)=MATMUL(TRANSPOSE(CONJG(CHIPhI)) &
-     &                      ,MATMUL(GLAUR(:,:,i),CHIPHI))
+        GLAUR(:,:,I)=MATMUL(TRANSPOSE(CONJG(CHIPHI)) &
+     &                      ,MATMUL(GLAUR(:,:,I),CHIPHI))
       ENDDO
 !
 !     ==========================================================================
@@ -1839,13 +1842,13 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     == CONVERT GREEN'S FUNCTION                                             ==
 !     ==========================================================================
       DO NU=1,NOMEGA
-        S(:,:,NU)=MATMUL(CHIPhI,MATMUL(S(:,:,NU),CONJG(TRANSPOSE(CHIPhI))))
+        S(:,:,NU)=MATMUL(CHIPHI,MATMUL(S(:,:,NU),CONJG(TRANSPOSE(CHIPHI))))
         CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,S(:,:,NU),SLOC(:,:,:,NU))
       ENDDO
       DO I=1,3
-        Slaur(:,:,i)=MATMUL(chiphi,MATMUL(slaur(:,:,i) &
-     &                                   ,CONJG(TRANSPOSE(CHIPhI))))
-        CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,SLAUR(:,:,i),SLOCLAUR(:,:,:,I))
+        SLAUR(:,:,I)=MATMUL(CHIPHI,MATMUL(SLAUR(:,:,I) &
+     &                                   ,CONJG(TRANSPOSE(CHIPHI))))
+        CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,SLAUR(:,:,I),SLOCLAUR(:,:,:,I))
       ENDDO
 !
 !     ==========================================================================
@@ -1876,7 +1879,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
           U(:,:,:,I)=U(:,:,:,I)+V(:,:,:,J)*PIPHI(I,J)
         ENDDO
       ENDDO
-      dedUCHI=real(U(  :NLOC,  :NLOC,  :NLOC,  :NLOC) &
+      DEDUCHI=REAL(U(  :NLOC,  :NLOC,  :NLOC,  :NLOC) &
      &            +U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:))
                                      CALL TRACE$POP()
       RETURN
@@ -1885,8 +1888,8 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_SOLVERIO(NORB,NOMEGA,KBT,G,GLAUR,U,ETOT,S,SLAUR,DEDU)
 !     **************************************************************************
-!     ** interface routine for the communication with the dmft solver         **
-!     ** the spin-up orbitals are stored first and then the spin-down         **
+!     ** INTERFACE ROUTINE FOR THE COMMUNICATION WITH THE DMFT SOLVER         **
+!     ** THE SPIN-UP ORBITALS ARE STORED FIRST AND THEN THE SPIN-DOWN         **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
@@ -1899,10 +1902,10 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       COMPLEX(8),INTENT(OUT):: S(NORB,NORB,NOMEGA)    !SELF ENERGY
       COMPLEX(8),INTENT(OUT):: SLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF S
       COMPLEX(8),INTENT(OUT):: DEDU(NORB,NORB,NORB,NORB) 
-      integer(4)            :: norb_,nomega_
-      integer(4)            :: nfil
+      INTEGER(4)            :: NORB_,NOMEGA_
+      INTEGER(4)            :: NFIL
 !     **************************************************************************
-call testg(norb,nomega,kbt,g,glaur)
+CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       ETOT=0.D0
       S=(0.D0,0.D0)
       SLAUR=(0.D0,0.D0)
@@ -1912,11 +1915,11 @@ call testg(norb,nomega,kbt,g,glaur)
 !     ==========================================================================
 !     == WRITE DATA
 !     ==========================================================================
-!warning!! The two files are not yet defined
-!careful: in fortran, the first index runs first
+!WARNING!! THE TWO FILES ARE NOT YET DEFINED
+!CAREFUL: IN FORTRAN, THE FIRST INDEX RUNS FIRST
       CALL FILEHANDLER$UNIT('DMFTOSOLVER',NFIL)
       REWIND NFIL
-      WRITE(NFIL,*)Norb,NOMEGA,kbt
+      WRITE(NFIL,*)NORB,NOMEGA,KBT
       WRITE(NFIL,FMT='(2F20.10)')G
       WRITE(NFIL,FMT='(2F20.10)')GLAUR
       WRITE(NFIL,FMT='(2F20.10)')U
@@ -1928,26 +1931,26 @@ call testg(norb,nomega,kbt,g,glaur)
       CALL FILEHANDLER$UNIT('SOLVERTODMFT',NFIL)
       REWIND NFIL
       READ(NFIL,*)NORB_,NOMEGA_,ETOT
-      read(NFIL,FMT='(2F20.10)')S
-      read(NFIL,FMT='(2F20.10)')SLAUR
-      read(NFIL,FMT='(2F20.10)')DEDU
+      READ(NFIL,FMT='(2F20.10)')S
+      READ(NFIL,FMT='(2F20.10)')SLAUR
+      READ(NFIL,FMT='(2F20.10)')DEDU
       CALL FILEHANDLER$CLOSE(NFIL)
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine testg(norb,nomega,kbt,g,glaur)
-      implicit none
+      SUBROUTINE TESTG(NORB,NOMEGA,KBT,G,GLAUR)
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
       INTEGER(4),INTENT(IN) :: NOMEGA   !#(POSITIVE MATSUBARA FREQUENCIES
       REAL(8)   ,INTENT(IN) :: KBT      
       COMPLEX(8),INTENT(IN) :: G(NORB,NORB,NOMEGA)    !GREENS FUNCTION
       COMPLEX(8),INTENT(IN) :: GLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF G
-      real(8)               :: pi
-      integer(4)            :: nu,i
-      real(8)               :: omega(nomega)
-      complex(8)            :: rho(norb,norb)
-      real(8)               :: fn(3)
+      REAL(8)               :: PI
+      INTEGER(4)            :: NU,I
+      REAL(8)               :: OMEGA(NOMEGA)
+      COMPLEX(8)            :: RHO(NORB,NORB)
+      REAL(8)               :: FN(3)
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       RHO=(0.D0,0.D0)
@@ -1965,7 +1968,7 @@ call testg(norb,nomega,kbt,g,glaur)
       DO I=1,NORB
         WRITE(*,FMT='(100("(",2F10.5,")"))')RHO(I,:)
       ENDDO
-      STOP
+      return
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
