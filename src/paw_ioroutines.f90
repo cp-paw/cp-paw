@@ -864,7 +864,11 @@ CALL TRACE$PASS('DONE')
 !
 !     ==  SETUP PARAMETER FILE ==========================================
       ID=+'PARMS_STP'
-      CALL FILEHANDLER$SETFILE(ID,F,TRIM(PAWDIR)//-'/PARAMETERS/STP.CNTL')
+      IF(LEN_TRIM(PAWDIR).EQ.0) THEN
+        CALL FILEHANDLER$SETFILE(ID,F,-'STP.CNTL')
+      ELSE
+        CALL FILEHANDLER$SETFILE(ID,F,TRIM(PAWDIR)//-'/PARAMETERS/STP.CNTL')
+      END IF
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -1015,8 +1019,9 @@ CALL TRACE$PASS('DONE')
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)               :: ILDA
-      LOGICAL(4)               :: TCHK,tchk1,tchk2
-      real(8)                  :: svar
+      LOGICAL(4)               :: TCHK,TCHK1,TCHK2
+      REAL(8)                  :: SVAR
+      CHARACTER(32)            :: MODUS
 !     ******************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
       LL_CNTL=LL_CNTL_
@@ -1032,12 +1037,15 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
       CALL DFT$SETI4('TYPE',ILDA)
 !
+!     ==========================================================================
+!     == VAN DER WAALS INTERFACE                                              ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW',1,TCHK)
-      if(tchk) then
+      IF(TCHK) THEN
         CALL VDW$SETL4('ON',TCHK)
-!       == set isolate object to on. decouple is off per default 
-        CALL ISOLATE$SETL4('ON',.true.)
+!       == SET ISOLATE OBJECT TO ON. DECOUPLE IS OFF PER DEFAULT 
+        CALL ISOLATE$SETL4('ON',.TRUE.)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'VDW-3BODY',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'VDW-3BODY',1,TCHK)
         CALL VDW$SETL4('E63',TCHK)
@@ -1048,28 +1056,64 @@ CALL TRACE$PASS('DONE')
           CALL ERROR$MSG('INCLUDED ONLY FOR PBE0 FUNCTIONAL (ILDA=10)')
           CALL ERROR$STOP('READIN_DFT')
         END IF
-      end if
+      END IF
 !
+!     ==========================================================================
+!     == NTBO INTERFACE                                                       ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'NTBO',1,TCHK)
       IF(TCHK) THEN
         CALL LMTO$SETL4('ON',.TRUE.)
         CALL LINKEDLIST$SELECT(LL_CNTL,'NTBO')
 !
+!       == MODUS  (CAN BE 'HYBRID', 'DMFT', OR 'OLDDMFT') ======================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'MODUS',1,TCHK1)
+        MODUS='HYBRID' ! DEFAULT
+        IF(TCHK1)CALL LINKEDLIST$GET(LL_CNTL,'MODUS',1,MODUS)
+        IF(MODUS.NE.'HYBRID'.AND.MODUS.NE.'DMFT'.AND.MODUS.NE.'OLDDMFT') THEN
+          CALL ERROR$MSG('INVALID VALUE FOR VARIABLE !CONTROL!DFT!NTBO:MODUS')
+          CALL ERROR$MSG('ALLOWED VALUES ARE "HYBRID", "DMFT", "OLDDMFT"')
+          CALL ERROR$CHVAL('MODUS',MODUS)
+          CALL ERROR$STOP('READIN_DFT')
+        END IF
+        CALL LMTO$SETCH('MODUS',MODUS) 
+!
         CALL LINKEDLIST$EXISTD(LL_CNTL,'OFFSITE',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'OFFSITE',1,TCHK2)
+          IF(tchk2.and.MODUS.NE.'HYBRID') THEN
+            CALL ERROR$MSG('INCONSISTENT SETTING')
+            CALL ERROR$MSG('OFFSITE=T IS COMPATIBLE ONLY WITH MODUS "HYBRID"')
+            CALL ERROR$L4VAL('OFFSITE',TCHK2)
+            CALL ERROR$CHVAL('MODUS',MODUS)
+            CALL ERROR$STOP('READIN_DFT')
+          END IF
           CALL LMTO$SETL4('OFFSITE',TCHK2)
         END IF
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'DROP',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'DROP',1,TCHK2)
+          IF(TCHK2.AND.MODUS.NE.'OLDDMFT') THEN
+            CALL ERROR$MSG('INCONSISTENT SETTINGE')
+            CALL ERROR$MSG('DROP=T IS COMPATIBLE ONLY WITH MODUS "OLDDMFT"')
+            CALL ERROR$L4VAL('DROP',TCHK2)
+            CALL ERROR$CHVAL('MODUS',MODUS)
+            CALL ERROR$STOP('READIN_DFT')
+          END IF
           CALL LMTO$SETL4('DROP',TCHK2)
         END IF
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'PICK',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'PICK',1,TCHK2)
+          IF(tchk2.and.MODUS.NE.'OLDDMFT') THEN
+            CALL ERROR$MSG('INCONSISTENT SETTINGE')
+            CALL ERROR$MSG('PICK=T IS COMPATIBLE ONLY WITH MODUS "OLDDMFT"')
+            CALL ERROR$L4VAL('DROP',TCHK2)
+            CALL ERROR$CHVAL('MODUS',MODUS)
+            CALL ERROR$STOP('READIN_DFT')
+          END IF
           CALL LMTO$SETL4('PICK',TCHK2)
           CALL LINKEDLIST$EXISTD(LL_CNTL,'DHOFK',1,TCHK2)
           IF(TCHK2) THEN
@@ -1097,7 +1141,7 @@ CALL TRACE$PASS('DONE')
         END IF
 
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      end if
+      END IF
 
                           CALL TRACE$POP
       RETURN
@@ -4327,7 +4371,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LMTO$SETI4('ISP ',ISP)
         CALL LINKEDLIST$SELECT(LL_STRC,'NTBO')
 !   
-!       == SELECT ATOMTYPE AS ACTIVE (HYBRID CONTRIBUTIONS ARE NOT SWITCHED OFF)==
+!       == SELECT ATOMTYPE AS ACTIVE (HYBRID CONTRIBUTIONS ARE NOT SWITCHED OFF)
         CALL LMTO$SETL4('ACTIVE',.TRUE.)
 !   
 !!$        CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)

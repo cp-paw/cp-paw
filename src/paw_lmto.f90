@@ -141,7 +141,7 @@ END TYPE OFFSITEX_TYPE
 !== PARAMETER SECTION                                                         ==
 !===============================================================================
 LOGICAL(4)            :: TON=.FALSE.       
-LOGICAL(4)            :: TOFFSITE=.TRUE.  !INCLUDE OFFSITE EXCHANGE
+LOGICAL(4)            :: TOFFSITE=.false.  !INCLUDE OFFSITE EXCHANGE
 LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 
@@ -173,6 +173,7 @@ REAL(8)               :: HFWEIGHT=0.25D0
 LOGICAL(4)              :: TINI=.FALSE.
 LOGICAL(4)              :: TINISTRUC=.FALSE.
 LOGICAL(4)              :: THTBC=.FALSE. ! HTBC CALCULATED
+CHARACTER(32)           :: modus='NONE'
 INTEGER(4)              :: NSP=-1
 INTEGER(4)              :: ISPSELECTOR=-1 ! USED ONLY FOR HYBRIDSETTING
 TYPE(HYBRIDSETTING_TYPE),ALLOCATABLE :: HYBRIDSETTING(:)
@@ -228,6 +229,8 @@ END MODULE LMTO_MODULE
         TPICK=VAL
       ELSE IF(ID.EQ.'DHOFK') THEN
         CALL LMTO_DROPPICK$SETL4('DHOFK',VAL)
+      ELSE IF(ID.EQ.'THTBC') THEN
+        THTBC=VAL
 !
 !     ==========================================================================
 !     == IF ACTIVE THE HYBRID CONTRIBTIONS ON THIS ATOM ARE CONSIDERED        ==
@@ -475,6 +478,26 @@ END MODULE LMTO_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$SETCH(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : MODUS
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(IN) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'MODUS') THEN
+        MODUS=VAL
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO$SETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$REPORT(NFIL)
 !     **************************************************************************
 !     **                                                                      **
@@ -579,12 +602,11 @@ END MODULE LMTO_MODULE
       INTEGER(4)             :: NTASKS,THISTASK,FROMTASK
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-PRINT*,'MARKE 1'
 CALL SETUP$ISELECT(1)
 CALL SETUP$ISELECT(0)
-PRINT*,'MARKE 2'
+!
+!     == lmto interface works only with internal setups ========================
       CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
-PRINT*,'MARKE 3'
       IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
                               CALL TIMING$CLOCKON('LMTO STRUCTURECONSTANTS')
@@ -955,7 +977,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     **                     IAT AND MAIN ANGULAR MOMENTUM L                  **
 !     **                     (RELATIVE TO THE FIRST ELEMENT FOR THIS ATOM)    **
 !     **                                                                      **
-!     **  THE ARRAYS ISPECIES1 AND LX1 HAVE STRANGE NAMES BECAUSE THE    **
+!     **  THE ARRAYS ISPECIES1 AND LX1 HAVE STRANGE NAMES BECAUSE THE         **
 !     **  ORIGINAL                                                            **
 !     **  NAMES ARE ALREADY USED BY LMTO_MODULE. WE USE SEPARATE ARRAYS,      **
 !     **  BECAUSE WE WANT TO REMOVE THESE ARRAYS FROM THE MODULE              **
@@ -1109,10 +1131,13 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         POTPAR(ISP)%LNSCATT(:)=-1
         DO LN=1,LNX1
           IF(POTPAR(ISP)%LNSCATT(LN).NE.-1) CYCLE  ! ALREADY DONE
-!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =====================
+!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =======================
+!         == AEPHIDOT(LNSCATT(LN)) IS THE SCATTERING WAVE FUNCTION (PHIBARDOT) =
+!         == THUS LNSCATT(LN) POINTS TO THE VALENCE WAVE FUNCTION ==============
           POTPAR(ISP)%LNSCATT(LN)=LN
           DO LN1=LN+1,LNX1
             IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
+!           == SELECT LN OF HIGHEST NON-SCATTERING PARTIAL WAVE INDEX ==========
             IF(ISCATT(LN1).GT.ISCATT(LN).AND.ISCATT(LN1).LE.0) THEN
               POTPAR(ISP)%LNSCATT(LN)=LN1
             END IF
@@ -1346,6 +1371,7 @@ INTEGER(4)             :: LN3,LN4
         DO LN=1,LNX(ISP)
           LOXT(:LN)=LOX(:LN,ISP)  ! FOR THE HANKEL FUNCTIONS
           IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
+!         == this loops over the scattering waves ==============================
           LNT=LNT+1
           LOXT(LNT)=LOX(LN,ISP)   ! FOR THE BESSEL FUNCTIONS
           LNDOT(LN)=LNT
@@ -2437,6 +2463,10 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **************************************************************************
 !     ** TRANSFORMS THE PROJECTIONS ONTO COEFFICIENTS FOR                     **
 !     ** NATURAL TIGHT-BINDING ORBITALS                                       **
+!     **                                                                      **
+!     ** REMARK:                                                              **
+!     **   NOTE THAT NPRO REFERS TO THE NUMBER OF PARTIAL WAVES (R,L,M,N),    **
+!     **   WHILE NRL REFERS TO THE NUMBER OF DIFFERENT (R,L,M) SETS           **
 !     **************************************************************************
       USE LMTO_MODULE
       IMPLICIT NONE
@@ -2558,7 +2588,6 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       INTEGER(4)              :: NAT
       INTEGER(4)              :: I,L,ISP,IPRO,IAT,LN,I1,IM,J
 !     **************************************************************************
-      IF(.NOT.TON) RETURN
       IF(.NOT.THTBC) THEN
          PROJ=(0.D0,0.D0)
          RETURN
@@ -3052,7 +3081,7 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
                                  CALL TRACE$PUSH('LMTO_NTBODENMATDER')
       PI=4.D0*ATAN(1.D0)
-      THTBC=.TRUE.
+      THTBC=.TRUE.   ! htbc will be calculated
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -3151,9 +3180,11 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,THIS,WAVES_SELECTWV
+      use lmto_module, only: thtbc
       IMPLICIT NONE
       INTEGER(4) :: IKPT,ISPIN
 !     **************************************************************************
+      thtbc=.false. ! htbc will be reset set to zero
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -3296,6 +3327,7 @@ COMPLEX(8)  :: PHASE
       REAL(8)               :: SVAR
       INTEGER(4)            :: I,J,LMN,LN,L
       LOGICAL(4)            :: TORB(LMNX)
+      LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
 !     **************************************************************************
       ISP=ISPECIES(IAT)
 !
@@ -3306,9 +3338,20 @@ COMPLEX(8)  :: PHASE
       LMNXT=POTPAR(ISP)%TAILED%LMNX
       CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,1 &
    &               ,LMNXT,LMNXT,POTPAR(ISP)%TAILED%OVERLAP,LMNX,LMNX,OVERLAP)
-!!$      DO I=1,LMNX
-!!$        WRITE(*,FMT='(I3," O=",100("(",2F8.4,")"))')I,OVERLAP(I,:)
-!!$      ENDDO
+      IF(TWRITE) THEN
+        PRINT*,'LMNXT ',LMNXT
+        PRINT*,'LMNX  ',LMNX
+        PRINT*,'TALLORB',POTPAR(ISP)%TALLORB
+        PRINT*,'TORB   ',POTPAR(ISP)%TORB
+        DO I=1,LMNXT
+          WRITE(*,FMT='(I3," OBIG=",100E10.2)')I,POTPAR(ISP)%TAILED%OVERLAP(I,:)
+        ENDDO
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," O=",100E10.2)')I,OVERLAP(I,:)
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP')
+        CALL ERROR$STOP('LMTO_ONSORTHO')
+      END IF
 !
 !     ==========================================================================
 !     == DETERIMINE ACTIVE ORBITALS                                           ==
@@ -3346,6 +3389,19 @@ COMPLEX(8)  :: PHASE
         OVERLAP(I,:)=OVERLAP(I,:)*SVAR
       ENDDO
 !
+      IF(TWRITE) THEN
+        PRINT*,' IN ONSORTHO IAT=',IAT
+        PRINT*,' TORB ',TORB
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," T=",100E10.2)')I,T(I,:)
+        ENDDO
+        DO I=1,LMNX
+          WRITE(*,FMT='(I3," O=",100E10.2)')I,OVERLAP(I,:)
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP')
+        CALL ERROR$STOP('LMTO_ONSORTHO')
+     END IF
+!
 !     ==========================================================================
 !     == INVERT                                                               ==
 !     ==========================================================================
@@ -3366,11 +3422,11 @@ MODULE LMTO_DROPPICK_MODULE
 !===============================================================================
 !== HARD-WIRED INPUT DATA                                                     ==
 !===============================================================================
-LOGICAL(4)            :: TREADDHOFK=.FALSE.
-!CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
+LOGICAL(4)              :: TREADDHOFK=.FALSE.
+CHARACTER(32),PARAMETER :: SWITCHID='SRVO3'
 !!CHARACTER(32),PARAMETER :: SWITCHID='CAFE2AS2'
 !CHARACTER(32),PARAMETER :: SWITCHID='H2'
-CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
+!CHARACTER(32),PARAMETER :: SWITCHID='HUBBARD'
 INTEGER(4)           :: NB1        ! FIRST BAND IN W
 LOGICAL(4),POINTER   :: TPRO(:)    ! SELECTOR FOR CORRELATED ORBITALS
 !===============================================================================
@@ -3487,6 +3543,10 @@ END IF
         ENDDO
       ENDDO
       NBW=NB2-NB1+1  !#(BANDS IN THE WINDOW)
+
+PRINT*,'INFO FROM LMTO_DROPPICK_INI SWITCHID    ',SWITCHID
+PRINT*,'INFO FROM LMTO_DROPPICK_INI NB1,NB2,NBW ',NB1,NB2,NBW 
+PRINT*,'INFO FROM LMTO_DROPPICK_INI NCORR       ',NCORR
 !
 !     ==========================================================================
 !     ==  ATTACH FILE                                                         ==
@@ -3544,14 +3604,14 @@ END IF
 !     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      use strings_module
+      USE STRINGS_MODULE
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       USE LMTO_MODULE, ONLY : TDROP,LOX,LNX,ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : NCORR,NB1,NB2,NBW,TPRO,DHOFK,T,TICKET &
      &                                ,IPRO1,NPROAT
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
-      LOGICAL(4),PARAMETER   :: TDUMMY=.false. !WRITE A DUMMY DMFT2DFT FILE
+      LOGICAL(4),PARAMETER   :: TDUMMY=.FALSE. !WRITE A DUMMY DMFT2DFT FILE
       INTEGER(4)             :: NPRO
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: NFIL,NFIL2
@@ -3559,15 +3619,19 @@ END IF
       REAL(8)                :: MU
       REAL(8)                :: KBT
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSI1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0PLUSDELTA(:,:)
+      COMPLEX(8),ALLOCATABLE :: DELTAH(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:)
       COMPLEX(8),ALLOCATABLE :: QSQINV(:,:)
       REAL(8)   ,ALLOCATABLE :: WKPT(:)
       CHARACTER(16)          :: ID
       INTEGER(4)             :: NAT
       INTEGER(4)             :: NKPT
+      INTEGER(4)             :: NBX
       INTEGER(4)             :: LMNXT,LMNX
       INTEGER(4)             :: I,J,I1,I2,IDIM,IPRO,IAT,ISP,IKPT,ISPIN 
       INTEGER(4)             :: IB,JB,IBH
@@ -3619,20 +3683,7 @@ PRINT*,'ENTERING LMTO_DROPPICK_DROP'
 !     == MULTIPLY WITH SPIN MULTIPLICITY =======================================
       IF(NSPIN.EQ.2) WKPT=2.D0*WKPT
 !
-!     ==========================================================================
-!     ==  TRANSFORMATION ONTO ONSITE ORTHOGONALIZED PARTIAL WAVES             ==
-!     ==  USES PRE-CALCULATED OVERLAP OF TAILED PARTIAL WAVES                 ==
-!     ==========================================================================
-      ALLOCATE(T(NAT))
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        LMNX=NPROAT(IAT)
-        T(IAT)%I1=IPRO1(IAT)
-        T(IAT)%I2=IPRO1(IAT)-1+NPROAT(IAT)
-        ALLOCATE(T(IAT)%MAT(LMNX,LMNX))
-        ALLOCATE(T(IAT)%INV(LMNX,LMNX))
-        CALL LMTO_ONSORTHO(IAT,LMNX,T(IAT)%MAT,T(IAT)%INV)
-      ENDDO
+! T IS NO MORE CALCULATED BECAUSE IT IS ALREADY CALCULATED IN DROPPICK_MAKET
 !
 !     ==========================================================================
 !     ==  ATTACH FILE                                                         ==
@@ -3658,6 +3709,7 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
         ID='INFO'
         WRITE(NFIL2,*)ID,NKPT,NSPIN,NBW,TICKET   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       END IF
+!
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
         IWORK16(:)=-1
@@ -3684,12 +3736,21 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
       ENDDO
 !
 !     ==========================================================================
+!     ==  COLLECT OCCUPATIONS                                                 ==
+!     ==========================================================================
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+!
+!     ==========================================================================
 !     ==  WRITE WAVE FUNCTIONS                                                ==
 !     ==========================================================================
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(H0PLUSDELTA(NBW,NBW))
+      ALLOCATE(DELTAH(NBW,NBW))
       NPRO=MAP%NPRO
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -3709,10 +3770,15 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
             CALL ERROR$STOP('LMTO_DROPPICK_DROP')
           END IF
 !
-!         ==  WRITE WAVE FUNCTIONS =============================================
+!         ==  COPY COEFFICIENTS OF LOCAL ORBITALS ONTO PSI =====================
+!         ==  RESOLVE SUPER WAVE FUNCTIONS =====================================
           ALLOCATE(PSI(NDIM,NPRO,NB))
           ALLOCATE(PSI1(NDIM,NPRO,NB))
           IF(TINV) THEN
+            IF(NBH.EQ.NB) THEN
+              CALL ERROR$MSG('SUPER WAVE FUNCTIONS NOT PROPERLY ACCOUNTED FOR')
+              CALL ERROR$STOP('LMTO_DROPPICK_DROP')
+            END IF
             DO IBH=1,NBH
               PSI(:,:,2*IBH-1)=REAL(THIS%TBC(:,IBH,:))
               PSI(:,:,2*IBH)=AIMAG(THIS%TBC(:,IBH,:))
@@ -3784,29 +3850,31 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
           END IF
 !
 !         ======================================================================
+!         == COLLECT EFFECTIVE HAMILTONIAN                                    ==
+!         ======================================================================
+          H0PLUSDELTA(:,:)=THIS%RLAM0(NB1:NB2,NB1:NB2)
+          H0PLUSDELTA(:,:)=0.5D0*(H0PLUSDELTA(:,:)+TRANSPOSE(CONJG(H0PLUSDELTA)))
+!
+!         ======================================================================
 !         == DETERMINE NON-INTERACTING HAMILTONIAN                            ==
 !         ======================================================================
           IF(ASSOCIATED(DHOFK)) THEN
             IDIM=1
             QSQ=MATMUL(QSQ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQ))
-            H0=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
+            DELTAH=MATMUL(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) &
          &           ,MATMUL(QSQ,PSICORR(IDIM,:,:)))
-!           == CHANGE SIGN BECAUSE CORRELATION CONTRIBUTION MUST BE SUBTRACTED==
-            H0=-H0
           ELSE
-            H0=(0.D0,0.D0)
+            DELTAH=0.D0
           END IF
-!
-!         == ADD EIGENVALUES OF THE LAMBDA MATRIX ==============================
-          DO IB=1,NBW
-             H0(IB,IB)=H0(IB,IB)+THIS%RLAM0(NB1-1+IB,NB1-1+IB)
-          ENDDO
+          H0=H0PLUSDELTA-DELTAH
 !
 !         ======================================================================
 !         == WRITE WAVE FUNCTION TO FILE                                      ==
 !         ======================================================================
-          ID='HINFO'
+          ID='H0INFO'
           WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0(:,:) !<<<<<<<<<<<<<<<<<<<<<<<
+          ID='H0PLUSDELTAINFO'
+          WRITE(NFIL,*)ID,IKPT,ISPIN,WKPT(IKPT),H0PLUSDELTA !<<<<<<<<<<<<<<<<<<<
           ID='QSQINV'
           WRITE(NFIL,*)ID,IKPT,ISPIN,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           ID='PIPSI'
@@ -3836,7 +3904,7 @@ OPEN(NFIL2,FILE=-'DMFT2DFT.DAT')
       DEALLOCATE(QSQ)
       DEALLOCATE(QSQINV)
       DEALLOCATE(H0)
-close(nfil)
+CLOSE(NFIL)
 !      CALL FILEHANDLER$CLOSE('DFT2DMFT')
 !      IF(TDUMMY) CALL FILEHANDLER$CLOSE('DMFT2DFTDUMMY')
       IF(TDUMMY) CLOSE(NFIL2)
@@ -3853,7 +3921,11 @@ close(nfil)
       USE LMTO_MODULE, ONLY : ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : TICKET,NCORR,NBW,TPRO,TPICKED &
      &                                ,IPRO1,NPROAT,DHOFK,NB1,NB2,T
+      USE WAVES_MODULE, ONLY : THIS,WAVES_SELECTWV
       IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TREFRESH=.FALSE. ! RECALCULATE DELTA-H EACH STEP
+!      CHARACTER(128),PARAMETER :: TYPE='CONSTRAINEDSEARCH'
+      CHARACTER(128),PARAMETER :: TYPE='NONE'
       REAL(8)                :: MU
       REAL(8)                :: KBT
       CHARACTER(16)          :: ID
@@ -3863,17 +3935,28 @@ close(nfil)
       INTEGER(4)             :: NKPT,NSPIN,NDIM
       INTEGER(4)             :: NKPT1,NSPIN1,NBW1,NDIM1
       INTEGER(4)             :: NCORR1
-      INTEGER(4)             :: NBH,NB
+      INTEGER(4)             :: NBH,NB,NBX
       COMPLEX(8),ALLOCATABLE :: RHO(:,:)
       COMPLEX(8),ALLOCATABLE :: RHO0(:,:)
       COMPLEX(8),ALLOCATABLE :: U(:,:)
       REAL(8)   ,ALLOCATABLE :: F(:)
       COMPLEX(8),ALLOCATABLE :: H0(:,:)
+      COMPLEX(8),ALLOCATABLE :: DELTAH(:,:)
+      COMPLEX(8),ALLOCATABLE :: DEVRHO(:,:)
+      COMPLEX(8),ALLOCATABLE :: H0PLUSDELTA(:,:)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSICORR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: QSQ(:,:),QSQINV(:,:)
-      COMPLEX(8)             :: SVAR
+      COMPLEX(8),ALLOCATABLE :: LAMBDAP(:,:)
+      COMPLEX(8),ALLOCATABLE :: LAMBDA0(:,:)
+      COMPLEX(8),ALLOCATABLE :: LAMBDAM(:,:)
+      REAL(8)                :: SVAR1,SVAR2,SVAR3
+      REAL(8)   ,PARAMETER   :: ALAMBDA=0.1D0
+      REAL(8)   ,PARAMETER   :: MLAMBDA=1.D0
+      REAL(8)   ,PARAMETER   :: DELTA=5.D0
+      REAL(8)                :: SVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,I1,I2
+      INTEGER(4)             :: IKPT,ISPIN,IB,IDIM,IPRO,IBH,IAT,I,J,I1,I2
       INTEGER(4)             :: IKPT1,ISPIN1,IB1
       INTEGER(4)             :: NPRO
       REAL(8)                :: WKPT1
@@ -3940,17 +4023,29 @@ PRINT*,'C TICKET1',TICKET1
         CALL ERROR$I4VAL('NBW1',NBW1)
         CALL ERROR$STOP('LMTO_DROPPICK_PICK')
       END IF
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPT,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPT*NSPIN,OCC)
       IF(.NOT.ASSOCIATED(DHOFK)) ALLOCATE(DHOFK(NCORR,NCORR,NKPT,NSPIN))
       ALLOCATE(RHO(NBW,NBW))
       ALLOCATE(RHO0(NBW,NBW))
       ALLOCATE(H0(NBW,NBW))
+      ALLOCATE(H0PLUSDELTA(NBW,NBW))
+      ALLOCATE(DELTAH(NBW,NBW))
+PRINT*,'SHAPE  OF DELTAH  (1) :',SHAPE(DELTAH),' NBW ',NBW
       ALLOCATE(F(NBW))
       ALLOCATE(U(NBW,NBW))
+      ALLOCATE(DEVRHO(NCORR,NCORR))
+      ALLOCATE(LAMBDAP(NCORR,NCORR))
+      ALLOCATE(LAMBDA0(NCORR,NCORR))
+      ALLOCATE(LAMBDAM(NCORR,NCORR))
       ALLOCATE(PSICORR(NDIM,NCORR,NBW))
       ALLOCATE(QSQ(NCORR,NCORR))
       ALLOCATE(QSQINV(NCORR,NCORR))
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+PRINT*,'SHAPE  OF DELTAH  (1A) :',SHAPE(DELTAH),' NBW ',NBW
 !
 !         ======================================================================
 !         == READ DENSITY MATRIX                                              ==
@@ -3967,6 +4062,7 @@ PRINT*,'C TICKET1',TICKET1
             CALL ERROR$CHVAL('ISPIN',ISPIN)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+PRINT*,'SHAPE  OF DELTAH  (1B) :',SHAPE(DELTAH),' NBW ',NBW
 !
 !         ======================================================================
 !         == READ DFT FILE                                                    ==
@@ -3976,19 +4072,27 @@ READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1
 BACKSPACE(NFIL1)
 PRINT*,'MARKE 1A',TRIM(ID),IKPT1,ISPIN1,WKPT1
           READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0 !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-PRINT*,'MARKE 2'
-          IF(ID.NE.'HINFO') THEN
-            CALL ERROR$MSG('INCORRECT ID: MUST BE "HINFO"')
+          IF(ID.NE.'H0INFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0INFO"')
+            CALL ERROR$MSG('OLD FORMAT USED HINFO')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,WKPT1,H0PLUSDELTA !<<<<<<<<<<<<<<<<<<<<<<
+          IF(ID.NE.'H0PLUSDELTAINFO') THEN
+            CALL ERROR$MSG('INCORRECT ID: MUST BE "H0PLUSDELTAINFO"')
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTO_DROPPICK_PICK')
+          END IF
+PRINT*,'SHAPE  OF DELTAH  (1C) :',SHAPE(DELTAH),' NBW ',NBW
 !
-          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+          READ(NFIL1,*)ID,IKPT1,ISPIN1,QSQINV(:,:) !<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           IF(ID.NE.'QSQINV') THEN
             CALL ERROR$MSG('INCORRECT ID: MUST BE "QSQINV"')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('LMTO_DROPPICK_PICK')
           END IF
+PRINT*,'SHAPE  OF DELTAH  (1D) :',SHAPE(DELTAH),' NBW ',NBW
 !
           DO IB=1,NBW
             READ(NFIL1,*)ID,IB1,IKPT1,ISPIN1,PSICORR(:,:,IB) !<<<<<<<<<<<<<<<<<<
@@ -3998,51 +4102,104 @@ PRINT*,'MARKE 2'
               CALL ERROR$STOP('LMTO_DROPPICK_PICK')
             END IF
           ENDDO
-!
-!         ======================================================================
-!         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
-!         ======================================================================
+PRINT*,'SHAPE  OF DELTAH  (1E) :',SHAPE(DELTAH),' NBW ',NBW
+
 !         == NON-SPIN-POLARIZED CALCULATIONS HAVE TWO ELECTRONS PER STATE
 !!$          IF(NSPIN.EQ.1.AND.NDIM.EQ.1) THEN
 !!$            RHO=0.5D0*RHO
 !!$          END IF
 !
-!!$DO IB=1,NBW
-!!$WRITE(*,FMT='("REAL(RHO)",I3,100F8.4)')IB,REAL(RHO(IB,:))
-!!$ENDDO
-!!$DO IB=1,NBW
-!!$WRITE(*,FMT='("IMAG(RHO)",I3,100F8.4)')IB,AIMAG(RHO(IB,:))
-!!$ENDDO
-          CALL LIB$DIAGC8(NBW,RHO,F,U)
-WRITE(*,FMT='("F   ",100F8.4)')F
-          DO IB=1,NBW
-            F(IB)=MAX(1.D-5,MIN(1.D0-1.D-5,F(IB)))
-            SVAR=(1.D0-F(IB))/F(IB)
-            SVAR=LOG(SVAR)
-            F(IB)=MU+KBT*SVAR
-          ENDDO
-          DO IB=1,NBW
-            RHO(IB,:)=F(IB)*U(IB,:)
-          ENDDO
-          RHO=MATMUL(CONJG(TRANSPOSE(U)),RHO)  !THIS IS NOW A HAMILTONIAN
+!         ======================================================================
+!         == CONVERT DENSITY MATRIX INTO FINITE TEMPERATURE HAMILTONIAN       ==
+!         ======================================================================
+PRINT*,'SHAPE  OF DELTAH  (1F) :',SHAPE(DELTAH),' NBW ',NBW
+          IF(TYPE.EQ.'CONSTRAINEDSEARCH') THEN
+            F(:)=OCC(NB1:,IKPT,ISPIN)/WKPT1
+!SET UP MATRIX
+!           == VIOLATION OF THE CONSTRAINT =====================================
+            IDIM=1
+            DEVRHO=0.D0
+            DO I=1,NCORR
+              DO J=1,NCORR
+                DO IB=1,NBW
+!HERE SHOULD BE THE PSICORR OF THE ACTUAL TIME STEP
+                  DEVRHO(I,J)=DEVRHO(I,J) &
+                             +PSICORR(IDIM,I,IB)*F(IB)*CONJG(PSICORR(IDIM,J,IB))
+                ENDDO
+              ENDDO
+            ENDDO
+!THE REFERENCE PSICORR SHOULD REMAIN CONSTANT WITHIN THE DFT-LOOP
+            DEVRHO(:,:)=DEVRHO-MATMUL(PSICORR(IDIM,:,:), &
+                               MATMUL(RHO,CONJG(TRANSPOSE(PSICORR(IDIM,:,:)))))
 !
-!         ======================================================================
-!         == SUBTRACT NON-INTERACTING HAMILTONIAN                             ==
-!         ======================================================================
-          H0=RHO-H0
+!           ==  PROPAGATE LAGRANGE MULTIPLIERS==================================
+            SVAR1=2.D0/(1.D0+ALAMBDA)
+            SVAR2=1.D0-SVAR1
+            SVAR3=DELTA**2/MLAMBDA/(1.D0+ALAMBDA)
+            LAMBDAP=LAMBDA0*SVAR1+LAMBDAM*SVAR2+DEVRHO*SVAR3
+!
+!           == SET DELTAH ======================================================
+PRINT*,'SHAPE  OF DELTAH  (1F1) :',SHAPE(DELTAH),' NBW ',NBW
+STOP 'PROGRAMM ERROR: LAMBDA0 AND DELTAH HAVE DIFFERENT SHAPE'
+            DELTAH=LAMBDA0
+PRINT*,'SHAPE  OF DELTAH  (1F2) :',SHAPE(DELTAH),' NBW ',NBW
+!
+!           == SWITCH ==========================================================
+            LAMBDAM=LAMBDA0
+            LAMBDA0=LAMBDAP
+          ELSE 
+            CALL LIB$DIAGC8(NBW,RHO,F,U)
+            DO IB=1,NBW
+              F(IB)=MAX(1.D-5,MIN(1.D0-1.D-5,F(IB)))
+              SVAR=(1.D0-F(IB))/F(IB)
+              SVAR=LOG(SVAR)
+              F(IB)=MU+KBT*SVAR
+            ENDDO
+            DO IB=1,NBW
+              RHO(IB,:)=F(IB)*U(IB,:)
+            ENDDO
+            RHO=MATMUL(CONJG(TRANSPOSE(U)),RHO)  !THIS IS NOW A HAMILTONIAN
+!
+!           ====================================================================
+!           == SUBTRACT NON-INTERACTING HAMILTONIAN                           ==
+!           ====================================================================
+PRINT*,'SHAPE  OF DELTAH (2)  :',SHAPE(DELTAH),' NBW ',NBW
+            DELTAH=RHO-H0
+PRINT*,'SHAPE  OF DELTAH (3)  :',SHAPE(DELTAH),' NBW ',NBW
+!!$            IF(TREFRESH) THEN
+!!$CALL ERROR$STOP('LMTO_DROPPICK_PICK')
+!!$              H0=DELTAH+H0PLUSDELTA
+!!$              H0PLUSDELTA(:,:)=THIS%RLAM0(NB1:,NB1:)
+!!$              H0PLUSDELTA(:,:)=(H0PLUSDELTA(:,:)+TRANSPOSE(CONJG(H0PLUSDELTA)))
+!!$              H0=H0-H0PLUSDELTA
+!!$            END IF
+          END IF
+PRINT*,'SHAPE  OF DELTAH  (4) :',SHAPE(DELTAH),' NBW ',NBW
 !
 !         ======================================================================
 !         == CONVERT INTO ORBITAL BASIS                                       ==
 !         ======================================================================
           IDIM=1
+PRINT*,'DIMENSIONS PSICORR :',NDIM,NCORR,NBW
+PRINT*,'DIMENSIONS DELTAH  :',NBW,NBW
+PRINT*,'DIMENSIONS DHOFK   :',NCORR,NCORR,NKPT,NSPIN
+PRINT*,'SHAPE  OF DHOFK    :',SHAPE(DHOFK)
+PRINT*,'SHAPE  OF DELTAH (5)  :',SHAPE(DELTAH)
+PRINT*,'SHAPE  OF PSICORR  :',SHAPE(PSICORR)
+PRINT*,'SHAPE  OF TRANSPOSE(CONJG(PSICORR(IDIM,:,:))) :',SHAPE(TRANSPOSE(CONJG(PSICORR(IDIM,:,:))))
+PRINT*,'SHAPE  OF MATMUL(DELTAH,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))) :' &
+       ,SHAPE(MATMUL(DELTAH,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+PRINT*,'MARKE 5'
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(PSICORR(IDIM,:,:) &
-     &                         ,MATMUL(H0,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+     &                      ,MATMUL(DELTAH,TRANSPOSE(CONJG(PSICORR(IDIM,:,:)))))
+PRINT*,'MARKE 6'
 !
 !         ======================================================================
 !         ==  TRANSFORM DHOFK TO THE SITE ORTHOGONALIZED REPRESENTATION       ==
 !         ======================================================================
           DHOFK(:,:,IKPT,ISPIN)=MATMUL(QSQINV &
      &                                ,MATMUL(DHOFK(:,:,IKPT,ISPIN),QSQINV))
+PRINT*,'MARKE 7'
         ENDDO
       ENDDO
       CALL FILEHANDLER$CLOSE('DFT2DMFT')
@@ -4053,6 +4210,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     ==========================================================================
       CALL LMTO_DROPPICK_WRITEDHOFK()
       TPICKED=.TRUE.
+      IF(TREFRESH) TPICKED=.FALSE.
                                            CALL TRACE$POP()
       RETURN
       END
@@ -4068,7 +4226,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     **  THE BASIS ARE ONSITE-ORTHOGONALIZED NATURAL TIGHT-BINDING ORBITALS  **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET,WVSET_TYPE
       USE LMTO_MODULE,  ONLY : TPICK,ISPECIES,LNX,LOX,THTBC
       USE LMTO_DROPPICK_MODULE, ONLY : TPRO,NCORR,T,DHOFK,TREADDHOFK,NPROAT
       IMPLICIT NONE
@@ -4083,7 +4241,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8),ALLOCATABLE :: VEC1(:)
       COMPLEX(8),ALLOCATABLE :: VEC2(:)
-      COMPLEX(8)             :: F1,F2
+      REAL(8)                :: F1,F2
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IB,IBH,IKPT,ISPIN,I,J,IDIM,IPRO
       INTEGER(4)             :: I1,I2
@@ -4094,7 +4252,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_DROPPICK_HTBC')
       IF(.NOT.TPICK) RETURN
-      THTBC=.TRUE.
+      THTBC=.TRUE.  !htbc will be calculated
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
       NAT=SIZE(ISPECIES)
@@ -4108,7 +4266,6 @@ WRITE(*,FMT='("F   ",100F8.4)')F
         CALL LMTO_DROPPICK_READDHOFK()
       ELSE
         CALL LMTO_DROPPICK_PICK()
-!        CALL LMTO_PICKGET()
       END IF
 !
 !     ==========================================================================
@@ -4140,6 +4297,7 @@ WRITE(*,FMT='("F   ",100F8.4)')F
           DO IBH=1,NBH
 !
 !           == MAKE COPY OF THIS%TBC ===========================================
+!           == VEC1 IS A SUPER WAVE FUNCTION IF TINV=TRUE ======================
             VEC1=THIS%TBC(1,IBH,:)
             IF(NDIM.NE.1) THEN
               CALL ERROR$MSG('IMPLEMENTATION ONLY FOR NDIM=1')
@@ -4212,7 +4370,8 @@ WRITE(*,FMT='("F   ",100F8.4)')F
 !     ==========================================================================
 !!$CALL FILEHANDLER$UNIT('PROT',NFILO)
 !!$WRITE(NFILO,*)'LMTO INTERFACE ',ETOT
-      CALL ENERGYLIST$SET('LMTO INTERFACE',ETOT)
+      CALL ENERGYLIST$SET('DROPPICK INTERFACE',ETOT)
+!      CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
 !
                                            CALL TRACE$POP()
@@ -4402,10 +4561,12 @@ WRITE(*,FMT='("SUMRULE",2E20.5)')MINVAL(EIG),MAXVAL(EIG)
       USE LMTO_MODULE, ONLY : ISPECIES
       USE LMTO_DROPPICK_MODULE, ONLY : IPRO1,NPROAT,T
       IMPLICIT NONE
-      INTEGER(4)     :: NAT
-      INTEGER(4)     :: IAT
-      INTEGER(4)     :: ISP
-      INTEGER(4)     :: LMNX
+      LOGICAL(4),PARAMETER :: TWRITE=.FALSE.
+      INTEGER(4)           :: NAT
+      INTEGER(4)           :: IAT
+      INTEGER(4)           :: ISP
+      INTEGER(4)           :: LMNX
+      INTEGER(4)           :: LMN
 !     **************************************************************************
       CALL LMTO_DROPICK_INI()
       NAT=SIZE(ISPECIES)
@@ -4424,6 +4585,22 @@ WRITE(*,FMT='("SUMRULE",2E20.5)')MINVAL(EIG),MAXVAL(EIG)
         ALLOCATE(T(IAT)%INV(LMNX,LMNX))
         CALL LMTO_ONSORTHO(IAT,LMNX,T(IAT)%MAT,T(IAT)%INV)
       ENDDO
+!
+!     ==========================================================================
+!     ==  REPORT                                                              ==
+!     ==========================================================================
+      IF(TWRITE) THEN
+        DO IAT=1,NAT
+          WRITE(*,FMT='(82("="),T10,"ONSITE OVERLAP FOR ATOM ",I5)')IAT
+          ISP=ISPECIES(IAT)
+          LMNX=NPROAT(IAT)
+          DO LMN=1,LMNX      
+            WRITE(*,FMT='(20F10.5)')T(IAT)%MAT(LMN,:)
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER REPORTING')
+        CALL ERROR$STOP('LMTO_DROPPICK_MAKET')
+      END IF
       RETURN
       END
 !
@@ -5570,7 +5747,7 @@ PRINT*,'DH READ '
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,THTBC
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
 USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
@@ -5583,25 +5760,71 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
-      THTBC=.FALSE.   
-      CALL LMTO$SETHTBCTOZERO()
+      IF((TDROP.OR.TPICK).NEQV.(modus.EQ.'OLDDMFT')) THEN
+        CALL ERROR$MSG('INCONSISTENT OPTIONS')
+        CALL ERROR$MSG('(TDROP.OR.TPICK).NEQV.(modus.EQ."OLDDMFT")')
+        CALL ERROR$STOP('LMTO$STOP')
+      END IF
 !
 !     ==========================================================================
-!     == WRITE DMFT INTERFACE 
+!     ==  Select choices                                                      ==
 !     ==========================================================================
-      IF(TDROP) THEN
-        IF(TPICK) CALL LMTO_DROPPICK_HTBC()   !FIRST READ DHOFK
-        CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
-        CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
-        CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
+print*,'in lmto$etot: modus=',trim(modus)
+      CALL LMTO$SETHTBCTOZERO()
+      IF(modus.EQ.'DMFT') THEN
+        CALL DMFT$GREEN()
+! 
+      ELSE IF(MODUS.EQ.'OLDDMFT') THEN
+        IF(TPICK) THEN
+          PRINT*,'CALLING DMFT INTERFACE PICK ....'
+          CALL LMTO_DROPPICK_HTBC()
+          PRINT*,'.... DMFT INTERFACE PICK DONE'
+        END IF
+        IF(TDROP) THEN
+          CALL LMTO_DROPPICK_DROP()   !OLD:   CALL LMTO_DROP()
+          CALL ERROR$MSG('REGULAR STOP AFTER EXECUTING LMTO_DROPPICK_DROP')
+          CALL ERROR$MSG('DROP IS EXEWCUTED ONLY ONCE')
+          CALL ERROR$STOP('LMTO$ETOT')
+        ELSE  
+          RETURN  ! IF DROP OR PICK IS TRUE INTERFACE DMFT IS USED.
+        END IF
+
+      ELSE IF(modus.EQ.'HYBRID') then
+        call LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+
+      ELSE
+        CALL ERROR$MSG('MODUS NOT RECOGNIZED')
+        CALL ERROR$MSG('ALLOWED VALUES ARE "DMFT", "OLDDMFT", "HYBRID"')
+        CALL ERROR$CHVAL('MODUS',MODUS)
         CALL ERROR$STOP('LMTO$ETOT')
       END IF
-      IF(TPICK) THEN
-        PRINT*,'CALLING DMFT INTERFACE PICK ....'
-        CALL LMTO_DROPPICK_HTBC()
-        PRINT*,'.... DMFT INTERFACE PICK DONE'
-        RETURN
-      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+!     **************************************************************************
+!     **                                                                      **
+!     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
+!     **  IS USED IN THE AUGMENTATION                                         **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : TON
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
+USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LMNXX_
+      INTEGER(4),INTENT(IN) :: NDIMD_
+      INTEGER(4),INTENT(IN) :: NAT_
+      COMPLEX(8),INTENT(IN) :: DENMAT_(LMNXX_,LMNXX_,NDIMD_,NAT_)
+      INTEGER(4)            :: SWITCH
+INTEGER(4) ::IX,NN,IND1,IND2,IND3
+REAL(8)    :: XDELTA,XSVAR,XENERGY
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
+      CALL LMTO$SETHTBCTOZERO()
 !
 !     ==========================================================================
 !     ==  TEST
@@ -5705,24 +5928,24 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !!$!     ...1.........2.........3.........4.........5.........6.........7.......
 !!$      SUBROUTINE LMTO_FAKEDENMAT()
 !!$!     ***********************************************************************
-!!$!     **  Unfinished test version                                          **
+!!$!     **  UNFINISHED TEST VERSION                                          **
 !!$!     **  ENFORCE A CERTAIN DENSITY MATRIX                                 **
 !!$!     ***********************************************************************
 !!$      USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,LNX,LOX
 !!$      IMPLICIT NONE
-!!$      type list_type 
-!!$        character(32) :: name
-!!$        integer(4)    :: l
-!!$        integer(4)    :: im
-!!$        integer(4)    :: is
-!!$      end type list_type
-!!$      integer(4),parameter :: nentry
-!!$      type(list_type)      :: list(nentry)
+!!$      TYPE LIST_TYPE 
+!!$        CHARACTER(32) :: NAME
+!!$        INTEGER(4)    :: L
+!!$        INTEGER(4)    :: IM
+!!$        INTEGER(4)    :: IS
+!!$      END TYPE LIST_TYPE
+!!$      INTEGER(4),PARAMETER :: NENTRY
+!!$      TYPE(LIST_TYPE)      :: LIST(NENTRY)
 !!$      INTEGER(4) :: NND
 !!$      INTEGER(4) :: NN
 !!$      INTEGER(4) :: IAT1,IAT2,IT(3)
 !!$      INTEGER(4) :: ISP
-!!$      character(32) :: name  ! atom name
+!!$      CHARACTER(32) :: NAME  ! ATOM NAME
 !!$!     ***********************************************************************
 !!$      NND=SIZE(DENMAT)
 !!$      DO NN=1,NND
@@ -5732,12 +5955,12 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !!$        IF(IAT2.NE.IAT1.OR.ABS(SUM(IT**2)).NE.0) CYCLE ! ONSITE ELEMENTS ONLY
 !!$        ISP=ISPECIES(IAT1)
 !!$        CALL ATOMLIST$GETCH('NAME',IAT1,NAME)
-!!$        do i=1,nentry
-!!$          if(name.ne.list%name) cycle
-!!$        enddo
+!!$        DO I=1,NENTRY
+!!$          IF(NAME.NE.LIST%NAME) CYCLE
+!!$        ENDDO
 !!$      ENDDO
 !!$      RETURN
-!!$      ENd
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2()
@@ -5749,7 +5972,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR,TOFFSITE &
      &                       ,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR=.true.
       LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NAT
@@ -5778,9 +6001,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       REAL(8)               :: QSPIN(4)
       REAL(8)               :: SVAR
       INTEGER(4)            :: IDFTTYPE
+INTEGER(4)            :: idimd
 CHARACTER(128) :: STRING
 REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       REAL(8)               :: HFSCALE
+      logical(4)            :: tactive ! does this atom contribute?
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
 PRINT*,'============ ENERGYTEST2 ============================='
@@ -5808,6 +6033,11 @@ PRINT*,'============ ENERGYTEST2 ============================='
       EXTOT=0.D0
       EHTOT=0.D0
       DO IAT=1,NAT
+        isp=ispecies(iat)
+        tactive=.false.
+        do ln=1,size(potpar(isp)%torb)
+          tactive=tactive.or.potpar(isp)%torb(ln)
+        enddo
 !
 !       == FIND LOCAL DENSITY MATRIX ===========================================
         IND=-1
@@ -5849,7 +6079,7 @@ PRINT*,'============ ENERGYTEST2 ============================='
         ELSE
           HFSCALE=1.D0
         END IF
-PRINT*,'HFSCALE',IAT,HFSCALE
+PRINT*,'IAT=',IAT,' LOCAL HFSCALE=',HFSCALE
 !
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
@@ -5891,6 +6121,20 @@ PRINT*,'HFSCALE',IAT,HFSCALE
         ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
         CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
+if(tactive) then
+DO I=1,NDIMD,3
+  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  DO LMN=1,LMNX
+    WRITE(*,FMT='(200F10.5)')D(LMN,:,i)
+  ENDDO
+ENDDO
+DO I=1,NDIMD,3
+  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX DT FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
+  DO LMN=1,LMNXT
+    WRITE(*,FMT='(200F10.5)')DT(LMN,:,I)
+  ENDDO
+ENDDO
+END IF
 !
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
@@ -5923,9 +6167,9 @@ PRINT*,'HFSCALE',IAT,HFSCALE
 !               ================================================================
 !               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION INTO TOTAL AND SPIN
                 SVAR=-0.25D0*U(I,J,K,L)
-                EX=EX+SVAR*SUM(DT(K,J,:)*DT(I,L,:))
-                HT(K,J,:)=HT(K,J,:)+SVAR*DT(I,L,:) 
-                HT(I,L,:)=HT(I,L,:)+SVAR*DT(K,J,:) 
+                EX=EX+SVAR*SUM(DT(K,J,:)*DT(l,i,:))
+                HT(K,J,:)=HT(K,J,:)+SVAR*DT(l,i,:) 
+                HT(l,i,:)=HT(l,i,:)+SVAR*DT(K,J,:) 
               ENDDO
             ENDDO
           ENDDO
@@ -5936,6 +6180,16 @@ PRINT*,'HFSCALE',IAT,HFSCALE
 PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,QSPIN(1)
 PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=           ',IAT,QSPIN(2:NDIMD)
 PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
+
+if(tactive) then 
+print*,'iat=',iat,ndimd
+WRITE(*,FMT='(82("="),T10,"  h before dc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
 !
 !       ========================================================================
 !       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
@@ -5952,9 +6206,31 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
         CALL LMTO_SIMPLEDC(GID,NR,LMNXT,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF &
      &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HTALL,LMNX,LMNX,H)
+!!$!
+if(tactive) then 
+print*,'iat=',iat,ndimd
+WRITE(*,FMT='(82("="),T10,"  h(1) from simpledc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
+!
         POTPAR(ISP)%TALLORB=.FALSE.  ! DO NOT FORGET THIS!!!!!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
+!!$!
+if(tactive) then
+print*,'iat=',iat
+WRITE(*,FMT='(82("="),T10,"  h(2) from simpledc ")')
+do idimd=1,ndimd
+  do lmn=1,lmnx
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
+  enddo
+enddo
+end if
+!!$!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
         DEALLOCATE(DTALL)
@@ -6003,7 +6279,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         DEALLOCATE(D)
         DEALLOCATE(AECORE)
         DEALLOCATE(LOXT)
-      ENDDO
+      ENDDO !end of loop over atoms
 !
 !     ==========================================================================
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
@@ -6036,7 +6312,9 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     ==========================================================================
 !     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
 !     ==========================================================================
+PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
+      CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
 !
 !     ==========================================================================
@@ -6092,6 +6370,8 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
             WRITE(*,FMT='(82("-"))')
           ENDDO
         ENDDO
+!!$print*,'stopping after printing'
+!!$stop 'forced stop'
       END IF
 !
                             CALL TRACE$POP()
@@ -6146,6 +6426,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !       ==  DETERMINE SIZE OF STRUCTURE CONSTANT ARRAY                        ==
 !       ========================================================================
         ISP=ISPECIES(IAT)
+!       == determine n2=#(partial waves) n1=%(scattering waves) ================
         N1=0
         N2=0
         DO LN=1,LNX(ISP)
@@ -6167,13 +6448,6 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
           IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
           IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
           IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
-          IF(SBAR(NN)%N1.NE.N1.OR.SBAR(NN)%N2.NE.N1) THEN
-            CALL ERROR$MSG('INCONSISTENT ARRAY SIZES N1,N2')
-            CALL ERROR$I4VAL('N1',N1)
-            CALL ERROR$I4VAL('SBAR%N1',SBAR(NN)%N1)
-            CALL ERROR$I4VAL('SBAR%N2',SBAR(NN)%N2)
-            CALL ERROR$STOP('LMTO_BLOWUPDENMATNL')
-          END IF
           LMN=0
           DO LN=1,LNX(ISP)
             L=LOX(LN,ISP)
@@ -6272,13 +6546,6 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
         IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
         IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
-        IF(SBAR(NN)%N1.NE.N1.OR.SBAR(NN)%N2.NE.N1) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZES N1,N2')
-          CALL ERROR$I4VAL('N1',N1)
-          CALL ERROR$I4VAL('SBAR%N1',SBAR(NN)%N1)
-          CALL ERROR$I4VAL('SBAR%N2',SBAR(NN)%N2)
-          CALL ERROR$STOP('LMTO_BLOWUPPSINL')
-        END IF
         LMN=0
         DO LN=1,LNX(ISP)
           L=LOX(LN,ISP)
@@ -6507,6 +6774,8 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     **   DEX=EX(RHOTOT)-EX(RHOTOT-RHOCOR)                                   **
 !     **   VXTOT=MU(RHOTOT)-MU(RHOTOT-RHOCOR)                                 **
 !     **   VXCOR=MU(RHOTOT-RHOCOR)                                            **
+!     **                                                                      **
+!     **  the density matrix is in a (t,x,y,z) representation                 **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -6863,7 +7132,7 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
 !     **************************************************************************
-      CALL TRACE$PUSH('AUGMENTATION_XC')
+                                                  CALL TRACE$PUSH('LMTO_RADXC')
       FXC(:)=0.D0
       VXC(:,:,:)=0.D0
 !
@@ -6980,6 +7249,7 @@ PRINT*,'----EXC  ',ETOT
           ENDDO
         ENDDO
       ENDDO
+      CALL TRACE$PASS('AFTER DFT')
 !
 !     ==========================================================================
 !     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
@@ -13397,7 +13667,6 @@ CALL TEST_LMTO$STRUCTURECONSTANTS()
 !     **************************************************************************
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
-      USE LMTO_MODULE, ONLY : ISPECIES,NSP,LNX,LOX,SBAR,K2,POTPAR,SBARLI1
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: IATORB=1
       INTEGER(4),PARAMETER :: LMNORB=1
