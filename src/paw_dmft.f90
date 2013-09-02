@@ -4,33 +4,32 @@ MODULE DMFT_MODULE
 !** IPROOFCHI(NCHI) IS A POINTER THAT SELECTS A PARTICULAR LOCAL ORBITAL      **
 !**                                                                           **
 !**  DESCRIPTION OF VARIABLES                                                 **
-!**    DIAGSLOC:   |CHI_NON-ORTHONORMAL>*DIAGSLOC = |CHI_ORTHONORMAL>         **
 !**    GLOCLAUR1,1,2 EXPANSION OF SPIN-AVERAGED GLOC IN 1/(CI*HBAR*OMEGA)     **
 !**                                                                           **
 !*******************************************************************************
-TYPE DENMAT_TYPE   ! considers all orbitals on this site
-INTEGER(4)          :: LNX              !#(radial partial waves)
+TYPE DENMAT_TYPE   ! CONSIDERS ALL ORBITALS ON THIS SITE
+INTEGER(4)          :: LNX              !#(RADIAL PARTIAL WAVES)
 INTEGER(4),POINTER  :: LOX(:) => NULL() !(LNX)
-INTEGER(4),POINTER  :: LMN(:) => NULL() !(nloc) maps local orbitals 
-                                        !onto projector array
+INTEGER(4),POINTER  :: LMN(:) => NULL() !(NLOC) MAPS LOCAL ORBITALS 
+                                        !ONTO PROJECTOR ARRAY
 INTEGER(4)          :: LMNX
-COMPLEX(8),POINTER  :: rho(:,:,:) => NULL() ! DENSITY MATRIX
+COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
 COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
 END TYPE DENMAT_TYPE
-TYPE NATORB_TYPE
-COMPLEX(8),POINTER  :: F(:)     => NULL() !(2*LOC) OCCUPATIONS
-COMPLEX(8),POINTER  :: PSI(:,:) => NULL() !(2*NLOC,2*NLOC) NATURAL ORBITALS 
+TYPE NATORB_TYPE                             ! natural orbitals
+COMPLEX(8),POINTER  :: CHIPHI(:,:) => NULL() !(2*NLOC,2*NLOC) <chi|NATorb>
+COMPLEX(8),POINTER  :: PIPHI(:,:)  => NULL() !(2*NLOC,2*NLOC) <pi|natorb>
 END TYPE NATORB_TYPE
 TYPE ATOMSET_TYPE
   INTEGER(4)           :: NLOC
   INTEGER(4)           :: ICHI1
   INTEGER(4)           :: ICHI2
   REAL(8)   ,POINTER   :: U(:,:,:,:)        => NULL() !(NLOC,NLOC,NLOC,NLOC) 
+  REAL(8)   ,POINTER   :: dedU(:,:,:,:)     => NULL() !(NLOC,NLOC,NLOC,NLOC) 
   COMPLEX(8),POINTER   :: GLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: GLOCLAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,3)
   COMPLEX(8),POINTER   :: SLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: SLOCLAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,3)
-  COMPLEX(8),POINTER   :: DIAGSLOC(:,:,:)   => NULL() !(NLOC,NLOC,NDIMD)
   COMPLEX(8),POINTER   :: RHO(:,:,:)        => NULL() !LOCAL DENSITY MATRIX
   COMPLEX(8),POINTER   :: SMAT(:,:,:)       => NULL() !OVERLAP OF LOCAL ORBITALS
   TYPE(DENMAT_TYPE)    :: DENMAT
@@ -60,7 +59,7 @@ INTEGER(4)             :: NAT           ! #(ATOMS)
 REAL(8)   ,ALLOCATABLE :: OMEGA(:)      ! MATSUBARA FREQUENCIES
 INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)  !(NCHI) MAP ICHI TO IPRO
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
-REAL(8)   ,parameter   :: MU=0.d0       ! CHEMICAL POTENTIAL
+REAL(8)   ,PARAMETER   :: MU=0.D0       ! CHEMICAL POTENTIAL
 !== KSET =======================================================================
 TYPE(KSET_TYPE)   ,ALLOCATABLE :: KSET(:)  !(NKPTL)
 TYPE(ATOMSET_TYPE),ALLOCATABLE :: ATOMSET(:)  !(NAT)
@@ -168,7 +167,7 @@ PRINT*,'TORB ',IAT,TORB
         ATOMSET(IAT)%ICHI1=I1
         ATOMSET(IAT)%ICHI2=I2
 !
-!       == now determine substructure denmat ==================================
+!       == NOW DETERMINE SUBSTRUCTURE DENMAT ==================================
         ATOMSET(IAT)%DENMAT%LNX=LNX
         ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
         ATOMSET(IAT)%DENMAT%LOX=LOX
@@ -193,12 +192,12 @@ PRINT*,'TORB ',IAT,TORB
 !
 !       == ALLOCATE ATOMSET SUBARRAYS ==========================================
         ALLOCATE(ATOMSET(IAT)%U(NLOC,NLOC,NLOC,NLOC))
+        ALLOCATE(ATOMSET(IAT)%dedu(NLOC,NLOC,NLOC,NLOC))
         ALLOCATE(ATOMSET(IAT)%GLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%GLOCLAUR(NLOC,NLOC,NDIMD,3))
         ALLOCATE(ATOMSET(IAT)%SLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%SLOCLAUR(NLOC,NLOC,NDIMD,3))
-        ALLOCATE(ATOMSET(IAT)%DIAGSLOC(NLOC,NLOC,NDIMD))
-        ALLOCATE(ATOMSET(IAT)%smat(LMNX,LMNX,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%SMAT(LMNX,LMNX,NDIMD))
         ALLOCATE(ATOMSET(IAT)%DENMAT%RHO(LMNX,LMNX,NDIMD))
         ALLOCATE(ATOMSET(IAT)%DENMAT%H(LMNX,LMNX,NDIMD))
         ATOMSET(IAT)%U=0.D0
@@ -206,8 +205,7 @@ PRINT*,'TORB ',IAT,TORB
         ATOMSET(IAT)%GLOCLAUR=(0.D0,0.D0)
         ATOMSET(IAT)%SLOC=(0.D0,0.D0)
         ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
-        ATOMSET(IAT)%DIAGSLOC=(0.D0,0.D0)
-        ATOMSET(IAT)%smat=(0.D0,0.D0)
+        ATOMSET(IAT)%SMAT=(0.D0,0.D0)
         ATOMSET(IAT)%DENMAT%RHO =(0.D0,0.D0)
         ATOMSET(IAT)%DENMAT%H   =(0.D0,0.D0)
 !
@@ -305,12 +303,13 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      real(8)                :: etot
-      real(8)                :: svar
+      REAL(8)                :: ETOT
+      REAL(8)                :: SVAR
       INTEGER(4)             :: ITER
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT$GREEN')
+WRITE(*,FMT='(82("="),T20," ENTERING DMFT$GREEN ")')
       CALL DMFT_INI()
 !
 !     ==========================================================================
@@ -324,25 +323,23 @@ PRINT*,'IPROOFCHI ',IPROOFCHI
 !     ==     SHAPE OF ORBITALS ARE DEFINED BY NPRO AND ATOMIC STRUCTRE        ==
 !     ==     ORBITALS ARE SELECTED BY TORB.                                   ==
 !     ==========================================================================
-      CALL DMFT_Utensor() 
+      CALL DMFT_UTENSOR() 
 !
 !     ==========================================================================
-!     ==  TRANSFORMATION ONTO A ORTHONORMAL CORRELATED BASIS SET              ==
-!     ==    |CHIORTHO>   =|CHINONORTHO>*DIAGSLOC                              ==
+!     ==  overlap matrix in k-space                                           ==
 !     ==========================================================================
-      call DMFT_smat()
+      CALL DMFT_SMAT()
 !
 !     ==========================================================================
-!     ==  construct local natural orbitals                                    ==
+!     ==  CONSTRUCT LOCAL NATURAL ORBITALS                                    ==
 !     ==========================================================================
-      call DMFT_NATORB()
-      CALL DMFT_DIAGSLOC_WITHKSET() 
+      CALL DMFT_NATORB()
 !
 !     ==========================================================================
 !     ==  CONSTRUCT NON-INTERACTING HAMILTONIAN THAT PRODUCES THE CORRECT     ==
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
-      call DMFT_hrho()
+      CALL DMFT_HRHO()
       CALL DMFT_CONSTRAINTS('HRHO')
 !
 !     ==========================================================================
@@ -355,8 +352,8 @@ WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
 !       ========================================================================
 !       ==  CALL THE SOLVER                                                   ==
 !       ========================================================================
-        CALL DMFT_SOLVER(etot) 
-print*,'etot after DMFT_SOLVER ',etot
+        CALL DMFT_SOLVER(ETOT) 
+PRINT*,'ETOT AFTER DMFT_SOLVER ',ETOT
 !
 !       ========================================================================
 !       ==  CONSTRAINTS                                                       ==
@@ -367,148 +364,25 @@ print*,'etot after DMFT_SOLVER ',etot
       ENDDO ! END OF LOOP OVER ITERATIONS TO ENFORCE CONSTRAINT
 !
 !     ==========================================================================
-!     ==  calculate missing total energy contribution                         ==
+!     ==  CALCULATE MISSING TOTAL ENERGY CONTRIBUTION                         ==
 !     ==========================================================================
-      call dmft_detot(svar)
-      etot=etot+svar      
+      CALL DMFT_DETOT(SVAR)
+      ETOT=ETOT+SVAR      
       CALL ENERGYLIST$SET('DMFT INTERFACE',ETOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
 !
 !     ==========================================================================
-!     ==  add hamiltonian this%htbc                                           ==
+!     ==  ADD HAMILTONIAN THIS%HTBC                                           ==
 !     ==========================================================================
       CALL DMFT_ADDTOHPSI()
+WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
                                        CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_DIAGSLOC_WITHKSET()
-!     **************************************************************************
-!     **  DETERMINE OVERLAP MATRIX SMAT(NCHI,NCHI,ISPIN) OF LOCAL ORBITALS,   **
-!     **  THE K-DEPENDENT INVERSE SINV(NCHI,NCHI,IKPT,ISPIN)                  **
-!     **  AND THE MATRIX THAT CONVERTS THE LOCAL ORBITALS                     **
-!     **  INTO AN ORTHONORMAL BASISSET OF CORRELATED ORBITALS                 **
-!     **                                                                      **
-!     **   |PI_NEU>  = |PI_ALT>  DIAGSLOC                                     **
-!     **   |PI_ALT>  = |PI_NEU>  INVERT(DIAGSLOC)                             **
-!     **   |CHI_ALT> = |CHI_NEU> TRANSPOSE(DIAGSLOC)                          **
-!     **                                                                      **
-!     **  WHERE THE PI ARE PROJECTOR FUNCTIONS AND CHI ARE ORBITALS           **
-!     **                                                                      **
-!     **   SINV(K) =SUM_N <PI|PSI(N,K)><PSI(N,K)|PI>                          **
-!     **                                                                      **
-!     **************************************************************************
-      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NSPIN,NDIM,NDIMD,KSET,ATOMSET,NAT
-      IMPLICIT NONE
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
-      INTEGER(4)            :: IKPT,ISPIN,IDIM1,IDIM2,IDIMD,I
-      COMPLEX(8),ALLOCATABLE:: MAT1(:,:) !(2*NCHI,2*NCHI)
-      COMPLEX(8),ALLOCATABLE:: MAT2(:,:) !(2*NCHI,2*NCHI)
-      REAL(8)   ,ALLOCATABLE:: FLOC(:)  !(NLOC)
-      INTEGER(4)            :: I1,I2,NLOC,IAT
-!     **************************************************************************
-!
-!     ==========================================================================
-!     == OBTAIN MATRIX THAT MAKES THE OVERLAP EQUAL TO THE UNIT MATRIX        ==
-!     ==========================================================================
-      DO IAT=1,NAT
-        NLOC=ATOMSET(IAT)%NLOC
-        IF(NLOC.LE.0) CYCLE
-        I1=ATOMSET(IAT)%ICHI1
-        I2=ATOMSET(IAT)%ICHI2
-        ATOMSET(IAT)%DIAGSLOC(:,:,:)=(0.D0,0.D0)
-        DO IKPT=1,NKPTL
-          ATOMSET(IAT)%DIAGSLOC=ATOMSET(IAT)%DIAGSLOC &
-    &                           +KSET(IKPT)%WKPT*KSET(IKPT)%SINV(I1:I2,I1:I2,:)
-        ENDDO
-!
-!       == MAKE REAL IF TIME-INVERSION SYMMETRY IS VALID =======================
-        IF(NDIMD.LT.4) ATOMSET(IAT)%DIAGSLOC=REAL(ATOMSET(IAT)%DIAGSLOC)
-!
-!       == CONVERT FROM (TXYZ) TO (UP-DOWN REPRESENTATION) =====================
-        CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,ATOMSET(IAT)%DIAGSLOC)
-!
-!       == DIAGONALIZE AND FORM TRANSFORMATION MATRIX ==========================
-        IF(NDIMD.EQ.1.OR.NDIMD.EQ.2) THEN
-          ALLOCATE(MAT1(NLOC,NLOC))
-          ALLOCATE(FLOC(NLOC))
-          DO IDIMD=1,NDIMD
-            MAT1=ATOMSET(IAT)%DIAGSLOC(:,:,IDIMD)
-!           == COMPLEX DIAGONALIZATION USED. (CAN PROBABLY BE REAL)
-            CALL LIB$DIAGC8(NLOC,MAT1,FLOC,ATOMSET(IAT)%DIAGSLOC(:,:,IDIMD))
-            DO I=1,Nloc
-              ATOMSET(IAT)%DIAGSLOC(:,I,IDIMD) &
-      &                   =ATOMSET(IAT)%DIAGSLOC(:,I,IDIMD)/SQRT(FLOC(I))
-            ENDDO
-          ENDDO
-          DEALLOCATE(MAT1)
-          DEALLOCATE(FLOC)
-        ELSE IF(NDIMD.EQ.4) THEN  ! NON-COLLINEAR CASE
-          ALLOCATE(MAT1(2*NLOC,2*NLOC))
-          ALLOCATE(MAT2(2*NLOC,2*NLOC))
-          ALLOCATE(FLOC(2*NLOC))  ! (COMPLEX ARRAY)
-          MAT1(1:NLOC ,1:NLOC )=ATOMSET(IAT)%DIAGSLOC(:,:,1)      
-          MAT1(1:NLOC ,NLOC+1:)=ATOMSET(IAT)%DIAGSLOC(:,:,2)      
-          MAT1(NLOC+1:,1:NLOC )=ATOMSET(IAT)%DIAGSLOC(:,:,3)      
-          MAT1(NLOC+1:,NLOC+1:)=ATOMSET(IAT)%DIAGSLOC(:,:,4)      
-          CALL LIB$DIAGC8(2*NLOC,MAT1,FLOC,MAT2)
-          DO I=1,2*NLOC
-            MAT2(:,I)=MAT2(:,I)/SQRT(FLOC(I))
-          ENDDO
-          ATOMSET(IAT)%DIAGSLOC(:,:,1)=MAT2(1:NLOC ,1:NLOC )
-          ATOMSET(IAT)%DIAGSLOC(:,:,2)=MAT2(1:NLOC ,NLOC+1:)      
-          ATOMSET(IAT)%DIAGSLOC(:,:,3)=MAT2(NLOC+1:,1:NLOC )      
-          ATOMSET(IAT)%DIAGSLOC(:,:,4)=MAT2(NLOC+1:,NLOC+1:)
-          DEALLOCATE(MAT1)
-          DEALLOCATE(MAT2)
-          DEALLOCATE(FLOC)
-        ELSE
-          CALL ERROR$MSG('ILLEGAL VALUE OF NDIMD')
-          CALL ERROR$STOP('DMFT_DIAGSLOC')
-        END IF
-!
-!       == CONVERT FROM (UP-DOWN REPRESENTATION TO (TXYZ) ======================
-        CALL SPINOR$CONVERT('FWRD',NLOC,NDIMD,ATOMSET(IAT)%DIAGSLOC)
-      ENDDO  !END OF LOOP OVER ATOMS
-!
-!     ==========================================================================
-!     == OPTIONAL TESTS
-!     ==========================================================================
-      IF(TTEST) THEN
-        DO IAT=1,NAT
-          NLOC=ATOMSET(IAT)%NLOC
-          I1=ATOMSET(IAT)%ICHI1
-          I2=ATOMSET(IAT)%ICHI2
-          ALLOCATE(MAT1(NLOC,NLOC))
-          ALLOCATE(MAT2(NLOC,NLOC))
-          DO IDIMD=1,NDIMD
-            MAT1=(0.D0,0.D0)
-            DO IKPT=1,NKPTL
-              MAT1=MAT1+KSET(IKPT)%WKPT*KSET(IKPT)%SINV(I1:I2,I1:I2,IDIMD)
-            END DO
-            IF(NDIMD.LT.4)MAT1=REAL(MAT1)
-!
-            MAT2=ATOMSET(IAT)%DIAGSLOC(:,:,IDIMD)
-            MAT1=MATMUL(CONJG(TRANSPOSE(MAT2)),MATMUL(MAT1,MAT2))
-!
-            WRITE(*,FMT='(82("="),T10,"  TEST DIAGSLOC FOR IDIMD=",I2,"  ")') &
-     &                                            IDIMD
-            DO I=1,NLOC
-              WRITE(*,FMT='("TEST",10("(",2F10.5,")"))')MAT1(I,:)
-            ENDDO
-          ENDDO ! END OF LOOP OVER IDIMD
-        ENDDO   !END OF LOOP OVER ATOMS
-        CALL ERROR$MSG('SCHEDULED STOP AFTER TEST')
-        CALL ERROR$STOP('DMFT_DIAGSLOC')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_smat()
+      SUBROUTINE DMFT_SMAT()
 !     **************************************************************************
 !     **  DETERMINE OVERLAP MATRIX SMAT(NCHI,NCHI,ISPIN) OF LOCAL ORBITALS,   **
 !     **  THE K-DEPENDENT INVERSE SINV(NCHI,NCHI,IKPT,ISPIN)                  **
@@ -517,12 +391,11 @@ print*,'etot after DMFT_SOLVER ',etot
 !     **   WHERE THE PI ARE PROJECTOR FUNCTIONS AND CHI ARE ORBITALS          **
 !     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NSPIN,NDIM,NDIMD,KSET,ATOMSET,NAT
+      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NSPIN,NDIM,NDIMD,KSET
       IMPLICIT NONE
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)  ! SQRT(-1)
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
-      INTEGER(4)            :: IKPT,ISPIN,IDIM1,IDIM2,IDIMD,I
-      INTEGER(4)            :: I1,I2,NLOC,IAT
+      INTEGER(4)            :: IKPT,ISPIN,IDIM1,IDIM2,IDIMD
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -575,18 +448,20 @@ print*,'etot after DMFT_SOLVER ',etot
       SUBROUTINE DMFT_NATORB()
 !     **************************************************************************
 !     ** NATURAL ORBITALS IN A TWO COMPONENT PAULI-SPINOR REPRESENTATION      **
-!     **  uses kset%rho and kset%sinv 
+!     **  USES KSET%RHO AND KSET%SINV 
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY : NAT,nkptl,NDIMD,ATOMSET,kset
+      USE DMFT_MODULE, ONLY : NAT,NKPTL,NDIMD,ATOMSET,KSET
       IMPLICIT NONE
+      LOGICAL(4)             :: NATORB=.true.
       INTEGER(4)             :: NLOC
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:)
       COMPLEX(8),ALLOCATABLE :: SINV(:,:,:)
       COMPLEX(8),ALLOCATABLE :: RHOB(:,:)
       COMPLEX(8),ALLOCATABLE :: SINVB(:,:)
-      real(8)                :: svar
+      real(8)   ,ALLOCATABLE :: X(:)
+      REAL(8)                :: SVAR
       INTEGER(4)             :: I1,I2
-      INTEGER(4)             :: IAT,ISPIN,ikpt
+      INTEGER(4)             :: IAT,ISPIN,IKPT,i
 !     **************************************************************************
       DO IAT=1,NAT
         NLOC=ATOMSET(IAT)%NLOC
@@ -595,11 +470,11 @@ print*,'etot after DMFT_SOLVER ',etot
 !       ========================================================================
 !       == ALLOCATE ARRAYS                                                    ==
 !       ========================================================================
-        IF(.NOT.ASSOCIATED(ATOMSET(IAT)%NATORB%F)) THEN
-          ALLOCATE(ATOMSET(IAT)%NATORB%F(2*NLOC))
+        IF(.NOT.ASSOCIATED(ATOMSET(IAT)%NATORB%CHIPHI)) THEN
+          ALLOCATE(ATOMSET(IAT)%NATORB%CHIPHI(2*NLOC,2*NLOC))
         END IF
-        IF(.NOT.ASSOCIATED(ATOMSET(IAT)%NATORB%PSI)) THEN
-          ALLOCATE(ATOMSET(IAT)%NATORB%PSI(2*NLOC,2*NLOC))
+        IF(.NOT.ASSOCIATED(ATOMSET(IAT)%NATORB%PIPHI)) THEN
+          ALLOCATE(ATOMSET(IAT)%NATORB%PIPHI(2*NLOC,2*NLOC))
         END IF
 !
 !       ========================================================================
@@ -618,34 +493,58 @@ print*,'etot after DMFT_SOLVER ',etot
         ENDDO
 !
 !       ========================================================================
-!       == CONVERT TO UP-DOWN REPRESENTATION ===================================
+!       == CONVERT TO UP-DOWN REPRESENTATION                                  ==
 !       ========================================================================
         CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,RHO) 
         CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,SINV) 
 !
 !       ========================================================================
-!       == DETERMINE OCCUPATIONS AND EIGENVALUES ===============================
+!       == DETERMINE OCCUPATIONS AND EIGENVALUES                              ==
 !       ========================================================================
+        ATOMSET(IAT)%NATORB%CHIPHI=(0.d0,0.d0)
+        ATOMSET(IAT)%NATORB%piPHI=(0.d0,0.d0)
         IF(NDIMD.LE.2) THEN
+          ALLOCATE(X(NLOC))
           DO ISPIN=1,NDIMD
             I1=1+NLOC*(ISPIN-1)
             I2=NLOC*ISPIN
-!           == A*U=B*U*F  WITH U^DAGGER*S*U=1 ==================================
-            CALL LIB$GENERALEIGENVALUEC8(NLOC,RHO(:,:,ISPIN),SINV(:,:,ISPIN) &
-      &                                 ,ATOMSET(IAT)%NATORB%F(I1:I2) &
-      &                                 ,ATOMSET(IAT)%NATORB%PSI(I1:I2,I1:I2))
+            IF(NATORB) THEN
+!             == A*U=B*U*X  WITH U^DAGGER*S*U=1 ================================
+!             == X IS THE OCCUPATION ===========================================
+              CALL LIB$GENERALEIGENVALUEC8(NLOC,RHO(:,:,ISPIN),SINV(:,:,ISPIN) &
+      &                              ,X,ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2))
+              ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I1:I2) &
+      &         =MATMUL(SINV(:,:,ISPIN),ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2))
+            ELSE
+!call SPINOR_PRINTMATRIX(6,'xxx',1,5,2,Nloc,sinv)
+!             == EIGENSTATES OF SINV ===========================================
+              CALL LIB$DIAGC8(NLOC,SINV(:,:,ISPIN),X &
+      &                                ,ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2))
+              ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I1:I2) &
+      &                                 =ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2)
+              DO I=I1,I2
+                SVAR=SQRT(X(I-I1+1))
+                ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I) &
+      &                                 =ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I)*SVAR
+                ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I) &
+      &                                =ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I)/SVAR
+              ENDDO
+            END IF
           ENDDO
+          DEALLOCATE(X)
 !         == COMPLETE SECOND SPIN DIRECTION FOR NON-SPIN-POLARIZED CASE ========
           IF(NDIMD.EQ.1) THEN
             I1=NLOC+1
             I2=2*NLOC
-            ATOMSET(IAT)%NATORB%F(I1:I2)=ATOMSET(IAT)%NATORB%F(1:NLOC)
-            ATOMSET(IAT)%NATORB%PSI(I1:I2,I1:I2) &
-      &                                 =ATOMSET(IAT)%NATORB%PSI(1:NLOC,1:NLOC)
+            ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I1:I2) &
+      &                               =ATOMSET(IAT)%NATORB%CHIPHI(1:NLOC,1:NLOC)
+            ATOMSET(IAT)%NATORB%PIPHI(I1:I2,I1:I2) &
+      &                               =ATOMSET(IAT)%NATORB%PIPHI(1:NLOC,1:NLOC)
           END IF
         ELSE 
           ALLOCATE(RHOB(2*NLOC,2*NLOC))
           ALLOCATE(SINVB(2*NLOC,2*NLOC))
+          ALLOCATE(X(2*NLOC))
           RHOB(  :NLOC,  :NLOC)=RHO(:,:,1)
           RHOB(NLOC+1:,  :NLOC)=RHO(:,:,2)
           RHOB(  :NLOC,NLOC+1:)=RHO(:,:,3)
@@ -654,9 +553,23 @@ print*,'etot after DMFT_SOLVER ',etot
           SINVB(NLOC+1:,  :NLOC)=SINV(:,:,2)
           SINVB(  :NLOC,NLOC+1:)=SINV(:,:,3)
           SINVB(NLOC+1:,NLOC+1:)=SINV(:,:,4)
-!         == A*U=B*U*F  WITH U^DAGGER*S*U=1 ==================================
-          CALL LIB$GENERALEIGENVALUEC8(2*NLOC,RHO(:,:,ISPIN),SINV(:,:,ISPIN) &
-      &                      ,ATOMSET(IAT)%NATORB%F,ATOMSET(IAT)%NATORB%PSI)
+          IF(NATORB) THEN
+!           == A*U=B*U*F  WITH U^DAGGER*S*U=1 ==================================
+            CALL LIB$GENERALEIGENVALUEC8(2*NLOC,RHOB,SINVB &
+      &                                           ,X,ATOMSET(IAT)%NATORB%CHIPHI)
+            ATOMSET(IAT)%NATORB%PIPHI=MATMUL(SINVB,ATOMSET(IAT)%NATORB%CHIPHI)
+          ELSE
+!           == EIGENSTATES OF SINV ===========================================
+            CALL LIB$DIAGC8(2*NLOC,SINVB,X,ATOMSET(IAT)%NATORB%CHIPHI)
+            ATOMSET(IAT)%NATORB%PIPHI=ATOMSET(IAT)%NATORB%CHIPHI
+            DO I=1,2*NLOC
+              ATOMSET(IAT)%NATORB%PIPHI(I,I1:I2) &
+      &                               =ATOMSET(IAT)%NATORB%PIPHI(I,:)*SQRT(X(I))
+              ATOMSET(IAT)%NATORB%CHIPHI(I1:I2,I) &
+      &                              =ATOMSET(IAT)%NATORB%CHIPHI(:,I)/SQRT(X(I))
+            ENDDO
+          END IF
+          DEALLOCATE(X)
           DEALLOCATE(RHOB)
           DEALLOCATE(SINVB)
         END IF
@@ -664,7 +577,7 @@ print*,'etot after DMFT_SOLVER ',etot
         DEALLOCATE(SINV)
       ENDDO ! END OF LOOP OVER ATOMS
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_COLLECTHAMILTONIAN()
@@ -672,13 +585,13 @@ print*,'etot after DMFT_SOLVER ',etot
 !     ** COLLECTS THE HAMILTONIAN AND STORES IT ON THE MODULE                 **
 !     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,IPROOFCHI,KBT &
+      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,IPROOFCHI &
      &                      ,NAT,KSET,ATOMSET
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      LOGICAL(4),PARAMETER   :: TTEST=.false.
+      LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:) !(NCHI,NCHI,NDIMD)
       INTEGER(4)             :: NBH     !#(SUPER STATES)
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IB,J,IAT,IDIM1,IDIM2
@@ -757,10 +670,10 @@ print*,'etot after DMFT_SOLVER ',etot
 !     ==  NDIM=2,NSPIN=1  NDIMD=4: (T,X,Y,Z)                                  ==
 !     ==========================================================================
 !
-!     ==  collect occupations w/o k-point weight ===============================
+!     ==  COLLECT OCCUPATIONS W/O K-POINT WEIGHT ===============================
       CALL DMFT_COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
 !
-!     == sum up density matrix =================================================
+!     == SUM UP DENSITY MATRIX =================================================
       DO IKPT=1,NKPTL
         KSET(IKPT)%RHO=(0.D0,0.D0)
         DO ISPIN=1,NSPIN
@@ -812,7 +725,7 @@ print*,'etot after DMFT_SOLVER ',etot
 !       == PRINT ===============================================================
         PRINT*,' IN DMFT_COLLECTHAMILTONIAN'
         DO IAT=1,NAT
-          if(atomset(iat)%nloc.le.0) cycle
+          IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
           I1=ATOMSET(IAT)%ICHI1
           I2=ATOMSET(IAT)%ICHI2
           CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(UPDOWN)','UPDOWN' &
@@ -835,7 +748,7 @@ print*,'etot after DMFT_SOLVER ',etot
       USE DMFT_MODULE, ONLY: NKPTL,NSPIN,NAT,NDIM,NDIMD,NB,ATOMSET
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPRINT=.false.
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH     !#(SUPER STATES)
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: I1,I2
@@ -854,7 +767,7 @@ print*,'etot after DMFT_SOLVER ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NB',NB)
         CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT_collectfulldenmat')
+        CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
       END IF
 !
       CALL DYNOCC$GETI4('NSPIN',NSPIN_)
@@ -862,7 +775,7 @@ print*,'etot after DMFT_SOLVER ',etot
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT_collectfulldenmat')
+        CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
       END IF
       CALL WAVES_DYNOCCGETR8A('OCC',NB*NKPTL*NSPIN,OCC)
 !
@@ -1040,10 +953,10 @@ print*,'etot after DMFT_SOLVER ',etot
 !     **  CALCULATES A STATIC HAMILTONIAN HRHO SUCH THAT THE RESULTING        **
 !     **  DENSITY MATRIX IS RHO=[1+EXP(BETA*HRHO)]^(-1)                       **
 !     **************************************************************************
-      USE DMFT_MODULE ,ONLY: NKPTL,NAT,NCHI,NDIMD,NOMEGA,OMEGA,KBT,KSET
+      USE DMFT_MODULE ,ONLY: NKPTL,NCHI,NDIMD,NOMEGA,OMEGA,KBT,KSET
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
-      real(8)   ,parameter   :: tol=1.d-5  ! tolerance for the density matrix
+      REAL(8)   ,PARAMETER   :: TOL=1.D-5  ! TOLERANCE FOR THE DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)
       COMPLEX(8),ALLOCATABLE :: A(:,:)
       COMPLEX(8),ALLOCATABLE :: B(:,:)
@@ -1125,12 +1038,12 @@ print*,'etot after DMFT_SOLVER ',etot
       IF(TTEST) THEN 
         IF(.NOT.ALLOCATED(MAT))ALLOCATE(MAT(NCHI,NCHI,NDIMD))
         DO IKPT=1,NKPTL
-!         == calculate the density matrix from the greens function with hrho ===
+!         == CALCULATE THE DENSITY MATRIX FROM THE GREENS FUNCTION WITH HRHO ===
           CALL DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,OMEGA,KBT &
      &                       ,KSET(IKPT)%SMAT,KSET(IKPT)%HRHO,MAT) !MAT=RHO
-!         == calculate deviation from target density matrix ====================
+!         == CALCULATE DEVIATION FROM TARGET DENSITY MATRIX ====================
           MAT=MAT-KSET(IKPT)%RHO
-          IF(MAXVAL(ABS(MAT)).GT.tol) THEN
+          IF(MAXVAL(ABS(MAT)).GT.TOL) THEN
             CALL SPINOR_PRINTMATRIX(6,'RHO[HRHO]-RHO',1,NCHI &
      &                           ,NDIMD,NCHI,MAT)
             CALL ERROR$MSG('TEST OF HRHO FAILED')
@@ -1236,23 +1149,23 @@ print*,'etot after DMFT_SOLVER ',etot
 !     ** MIMICKS A DMFT SOLVER                                                **
 !     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
 !     **************************************************************************
-      USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,OMEGA,KBT,ATOMSET
-      USE LMTO_MODULE ,ONLY: HYBRIDSETTING,HFWEIGHT,ISPECIES
+      USE LMTO_MODULE, ONLY: ISPECIES,HYBRIDSETTING,HFWEIGHT
+      USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,KBT,ATOMSET
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: ETOT
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-      REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EV
       REAL(8)                :: PHILW
+      real(8)                :: lhfweight
       REAL(8)                :: EDC
       INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: LMNX  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: IAT
       INTEGER(4)             :: IDIMD,I,J,LMN1,LMN2,NU
-      COMPLEX(8),ALLOCATABLE :: rho(:,:,:)
-      COMPLEX(8),ALLOCATABLE :: ham(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: RHO(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: HAM(:,:,:)
 !     **************************************************************************
-                                      call trace$push('DMFT_SOLVER')
+                                      CALL TRACE$PUSH('DMFT_SOLVER')
       CALL CONSTANTS('EV',EV)
 !
 !     ==========================================================================
@@ -1268,16 +1181,6 @@ print*,'etot after DMFT_SOLVER ',etot
         ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
 !
 !       ========================================================================
-!       == collect hfweight from lmto_module                                  ==
-!       ========================================================================
-        IF(HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT.GE.0.D0) THEN
-          LHFWEIGHT=HYBRIDSETTING(ISPecies(iat))%LHFWEIGHT
-        ELSE
-          LHFWEIGHT=hfweight
-        END IF
-        PRINT*,'IAT=',IAT,' LOCAL HFweight=',LHFWEIGHT
-!
-!       ========================================================================
 !       == DETERMINE HARTREE FOCK CONTRIBUTION                                ==
 !       ========================================================================
         ALLOCATE(RHO(NLOC,NLOC,NDIMD))
@@ -1290,21 +1193,21 @@ print*,'etot after DMFT_SOLVER ',etot
           ENDDO
         ENDDO
         CALL DMFT_FOCK(NLOC,NDIMD,RHO,ATOMSET(IAT)%U,PHILW,HAM)
-        ETOT=ETOT+lhfweight*PHILW
-print*,'after fock ',iat,etot,lhfweight*philw
+        ETOT=ETOT+PHILW  !screening done already in u-tensor
+PRINT*,'AFTER FOCK ',IAT,ETOT,pHILW
         DO I=1,NLOC
           DO J=1,NLOC
             LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
             LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
             ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:) &
-     &                  =ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:)+lhfweight*HAM(I,J,:)
+     &                            =ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:)+HAM(I,J,:)
           ENDDO
         ENDDO
 !
 !       == PRINT IF DESIRED ====================================================
         IF(TPRINT) THEN
           WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
-       &                        'Fock HAMILTONIAN',IAT
+       &                        'FOCK HAMILTONIAN',IAT
           DO IDIMD=1,NDIMD
             DO I=1,NLOC
               WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I,HAM(I,:,IDIMD)
@@ -1318,12 +1221,19 @@ print*,'after fock ',iat,etot,lhfweight*philw
 !       ========================================================================
 !       == SUBTRACT DOUBLE COUNTING TERM                                      ==
 !       ========================================================================
+!       == collect local hf weight =============================================
+        IF(HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT.GE.0.D0) THEN
+          LHFWEIGHT=HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT
+        ELSE
+          LHFWEIGHT=HFWEIGHT
+        END IF
+!
         LMNX=ATOMSET(IAT)%DENMAT%LMNX
         ALLOCATE(HAM(LMNX,LMNX,NDIMD))
         CALL DMFT_DC(IAT,LMNX,NDIMD,ATOMSET(IAT)%DENMAT%RHO,EDC,HAM)
-        ETOT=ETOT+lhfweight*EDC
-print*,'after dc ',iat,etot,lhfweight*edc
-        ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+lhfweight*HAM
+        ETOT=ETOT+LHFWEIGHT*EDC
+PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
+        ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+LHFWEIGHT*HAM
 !
 !       == PRINT IF DESIRED ====================================================
         IF(TPRINT) THEN
@@ -1340,18 +1250,23 @@ print*,'after dc ',iat,etot,lhfweight*edc
 !
 !       ========================================================================
 !       == ADD DYNAMIC CONTRIBUTIONS                                          ==
-!       == hfweight is absorbed in the local u-tensor
+!       == HFWEIGHT IS ABSORBED IN THE LOCAL U-TENSOR
 !       ========================================================================
-        CALL DMFT_dynamicSOLVER_WITHSET(NLOC,NDIMD,NOMEGA,KBT,OMEGA &
-     &                            ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
-     &                            ,lhfweight*ATOMSET(IAT)%U,PHILW &
-     &                            ,ATOMSET(IAT)%SLOC,ATOMSET(IAT)%SLOCLAUR &
-     &                            ,atomset(iat)%natorb%psi)
-        ETOT=ETOT+PHILW
-!
-!       ========================================================================
-!       == SCALE                                                              ==
-!       ========================================================================
+        CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,KBT &
+     &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
+     &                         ,ATOMSET(IAT)%U,PHILW &
+     &                         ,ATOMSET(IAT)%SLOC,ATOMSET(IAT)%SLOCLAUR &
+     &                         ,ATOMSET(IAT)%DEDU &
+     &                         ,ATOMSET(IAT)%NATORB%PIPHI &
+     &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
+!!$ print*,'max: ',philw,maxval(abs(atomset(iat)%sloc)) &
+!!$&                    ,maxval(abs(atomset(iat)%sloclaur)) &
+!!$&                    ,maxval(abs(atomset(iat)%dedu))
+!!$philw=0.d0
+!!$atomset(iat)%sloc=(0.d0,0.d0)
+!!$atomset(iat)%sloclaur=(0.d0,0.d0)
+!!$atomset(iat)%dedu=0.d0
+        ETOT=ETOT+PHILW !screening already contained in u-tensor
       ENDDO ! END OF LOOP OVER ATOMS (IAT)
       RETURN
       END
@@ -1457,36 +1372,36 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_detot(etot)
+      SUBROUTINE DMFT_DETOT(ETOT)
 !     **************************************************************************
-!     ** calculates the energy contribution from the logarishm term etc       **
+!     ** CALCULATES THE ENERGY CONTRIBUTION FROM THE LOGARISHM TERM ETC       **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: NAT,nkptl,nchi,NDIMD,NOMEGA,OMEGA,KBT,mu &
-     &                      ,ATOMSET,kset
-      implicit none
-      real(8)   ,intent(out) :: etot
-      complex(8),parameter   :: ci=(0.d0,1.d0)
-      complex(8)             :: mat1(nchi,nchi,ndimd)
-      complex(8)             :: mat2(nchi,nchi,ndimd)
-      complex(8)             :: mat3(nchi,nchi,ndimd)
-      real(8)                :: vec(nchi)
-      complex(8),allocatable :: bmat1(:,:)
-      complex(8),allocatable :: bmat2(:,:)
-      real(8)   ,allocatable :: bvec(:)
-      complex(8)             :: grho(nchi,nchi,ndimd)
-      complex(8)             :: gfull(nchi,nchi,ndimd)
-      real(8)                :: xsum
-      real(8)                :: etot1
-      integer(4)             :: nu,i,iat,i1,i2,idimd,ikpt
+      USE DMFT_MODULE, ONLY: NAT,NKPTL,NCHI,NDIMD,NOMEGA,OMEGA,KBT,MU &
+     &                      ,ATOMSET,KSET
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(OUT) :: ETOT
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      COMPLEX(8)             :: MAT1(NCHI,NCHI,NDIMD)
+      COMPLEX(8)             :: MAT2(NCHI,NCHI,NDIMD)
+      COMPLEX(8)             :: MAT3(NCHI,NCHI,NDIMD)
+      REAL(8)                :: VEC(NCHI)
+      COMPLEX(8),ALLOCATABLE :: BMAT1(:,:)
+      COMPLEX(8),ALLOCATABLE :: BMAT2(:,:)
+      REAL(8)   ,ALLOCATABLE :: BVEC(:)
+      COMPLEX(8)             :: GRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8)             :: GFULL(NCHI,NCHI,NDIMD)
+      REAL(8)                :: XSUM
+      REAL(8)                :: ETOT1
+      INTEGER(4)             :: NU,I,IAT,I1,I2,IDIMD,IKPT
 !     **************************************************************************
-      if(ndimd.eq.4) then
-        allocate(bmat1(2*nchi,2*nchi))
-        allocate(bmat2(2*nchi,2*nchi))
-        allocate(bvec(2*nchi))
-      end if
+      IF(NDIMD.EQ.4) THEN
+        ALLOCATE(BMAT1(2*NCHI,2*NCHI))
+        ALLOCATE(BMAT2(2*NCHI,2*NCHI))
+        ALLOCATE(BVEC(2*NCHI))
+      END IF
       ETOT=0.D0
-      do ikpt=1,nkptl
-        etot1=0.d0
+      DO IKPT=1,NKPTL
+        ETOT1=0.D0
         DO NU=1,NOMEGA
 !         == CALCULATE GRHO ====================================================
           MAT1=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT-KSET(IKPT)%HRHO
@@ -1497,7 +1412,7 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
           DO IAT=1,NAT
             I1=ATOMSET(IAT)%ICHI1
             I2=ATOMSET(IAT)%ICHI2
-            MAT2(I1:I2,I1:I2,:)=MAT2(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOC(:,:,:,nu)
+            MAT2(I1:I2,I1:I2,:)=MAT2(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOC(:,:,:,NU)
           ENDDO
 !     
 !         == CALCULATE G =======================================================
@@ -1505,25 +1420,25 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
           CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,GFULL)
 !     
 !         ======================================================================
-!         == constraint term
+!         == CONSTRAINT TERM
 !         ======================================================================
-          CALL SPINOR$MATMUL(NDIMD,NCHI,grho-gfull &
+          CALL SPINOR$MATMUL(NDIMD,NCHI,GRHO-GFULL &
     &                       ,KSET(IKPT)%H0-KSET(IKPT)%HRHO,MAT1) 
-          xsum=0.d0
-          do i=1,nchi
-            xsum=xsum+2.d0*real(mat1(i,i,1))  ! factor two comes from (-omega)
-          enddo
-          etot1=etot1+xsum
+          XSUM=0.D0
+          DO I=1,NCHI
+            XSUM=XSUM+2.D0*REAL(MAT1(I,I,1))  ! FACTOR TWO COMES FROM (-OMEGA)
+          ENDDO
+          ETOT1=ETOT1+XSUM
 !     
 !         ======================================================================
 !         == (HPRIME+SIGMA-HRHO)*G                                            ==
 !         ======================================================================
           CALL SPINOR$MATMUL(NDIMD,NCHI,MAT2,GFULL,MAT1) 
-          xsum=0.d0
-          do i=1,nchi
-            xsum=xsum+2.d0*real(mat1(i,i,1))  ! factor two comes from (-omega)
-          enddo
-          etot1=etot1+xsum
+          XSUM=0.D0
+          DO I=1,NCHI
+            XSUM=XSUM+2.D0*REAL(MAT1(I,I,1))  ! FACTOR TWO COMES FROM (-OMEGA)
+          ENDDO
+          ETOT1=ETOT1+XSUM
 !     
 !         ======================================================================
 !         == LOGARITHM TERM                                                   ==
@@ -1537,7 +1452,7 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
 !         ======================================================================
           CALL SPINOR$MATMUL(NDIMD,NCHI,GRHO,MAT2,MAT1) !MAT1=GRHO*MAT1
           DO I=1,NCHI
-            MAT1(I,I,1)=MAT1(I,I,1)+(2.D0,0.D0) !(unit in spinor representation)
+            MAT1(I,I,1)=MAT1(I,I,1)+(2.D0,0.D0) !(UNIT IN SPINOR REPRESENTATION)
           ENDDO
           DO IDIMD=1,NDIMD  ! MAT2(OMEGA)=MAT1(-OMEGA)
             MAT2(:,:,IDIMD)=TRANSPOSE(CONJG(MAT1(:,:,IDIMD)))
@@ -1566,33 +1481,36 @@ PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
             ETOT1=ETOT1+XSUM
           END IF
         ENDDO ! END OF LOOP OVER MATSUBARA FREQUENCIES
-        etot=etot+kset(ikpt)%wkpt*etot1
-      enddo ! end of look over k-points
+        ETOT=ETOT+KSET(IKPT)%WKPT*ETOT1
+      ENDDO ! END OF LOOK OVER K-POINTS
       ETOT=-KBT*ETOT
-print*,'etot from dmft_detot: ',etot
+PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_Utensor()
+      SUBROUTINE DMFT_UTENSOR()
 !     **************************************************************************
 !     ** CALCULATE THE U-TENSOR OF THE CORRELATED ORBITALS IN THE SELECTED SET
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR
+      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR,HYBRIDSETTING,HFWEIGHT
       USE DMFT_MODULE, ONLY: NAT,ATOMSET
       IMPLICIT NONE
       REAL(8)  ,ALLOCATABLE :: UB(:,:,:,:)
       INTEGER(4)            :: ISP ! ATOM TYPE
       INTEGER(4)            :: L,LN,LMN,ICHI
+      real(8)               :: lhfweight
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: NCHI1        ! #(SELECTED ORBITALS ON THIS ATOM)
       INTEGER(4)            :: IAT
 !     **************************************************************************
-                                          CALL TRACE$PUSH('DMFT_Utensor')
+                                          CALL TRACE$PUSH('DMFT_UTENSOR')
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
 !
+!       ========================================================================
 !       == CALCULATE LOCAL DIMENSIONS LMNX AND NCHI1 ===========================
+!       ========================================================================
         LMN=0
         ICHI=0
         DO LN=1,LNX(ISP)
@@ -1605,7 +1523,7 @@ print*,'etot from dmft_detot: ',etot
         IF(NCHI1.EQ.0) CYCLE
         IF(NCHI1.NE.ATOMSET(IAT)%NLOC) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-          CALL ERROR$STOP('DMFT_Utensor')
+          CALL ERROR$STOP('DMFT_UTENSOR')
         END IF
 !
 !       ========================================================================
@@ -1671,6 +1589,18 @@ print*,'etot from dmft_detot: ',etot
 !       ========================================================================
         ATOMSET(IAT)%U=UB(:NCHI1,:NCHI1,:NCHI1,:NCHI1)
         DEALLOCATE(UB)
+!
+!       ========================================================================
+!       == screen U-tensor by local hf-weight                                 ==
+!       ========================================================================
+        IF(HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT.GE.0.D0) THEN
+          LHFWEIGHT=HYBRIDSETTING(ISPECIES(IAT))%LHFWEIGHT
+        ELSE
+          LHFWEIGHT=HFWEIGHT
+        END IF
+        ATOMSET(IAT)%U=lhfweight*ATOMSET(IAT)%U
+!
+        PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',LHFWEIGHT
       ENDDO  ! END LOOP OVER ATOMS
                                           CALL TRACE$POP()
       RETURN
@@ -1824,8 +1754,9 @@ print*,'etot from dmft_detot: ',etot
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_dynamicSOLVER_WITHSET(NLOC,NDIMD,NOMEGA,KBT,OMEGA &
-     &                        ,GLOC,GLOCLAUR,UCHI,ETOT,SLOC,SLOCLAUR,psi)
+      SUBROUTINE DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,KBT &
+     &                        ,GLOC,GLOCLAUR,UCHI,ETOT,SLOC,SLOCLAUR,DEDUCHI &
+     &                        ,PIPHI,CHIPHI)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1834,150 +1765,232 @@ print*,'etot from dmft_detot: ',etot
       INTEGER(4),INTENT(IN)  :: NDIMD
       INTEGER(4),INTENT(IN)  :: NOMEGA
       REAL(8)   ,INTENT(IN)  :: KBT
-      REAL(8)   ,INTENT(IN)  :: OMEGA(NOMEGA)
-      COMPLEX(8),INTENT(IN)  :: psi(2*NLOC,2*NLOC)
+      COMPLEX(8),INTENT(IN)  :: PIPHI(2*NLOC,2*NLOC)  !<PI|NATORB>
+      COMPLEX(8),INTENT(IN)  :: CHIPHI(2*NLOC,2*NLOC) !<CHI|NATORB>
       COMPLEX(8),INTENT(IN)  :: GLOC(NLOC,NLOC,NDIMD,NOMEGA)
       COMPLEX(8),INTENT(IN)  :: GLOCLAUR(NLOC,NLOC,NDIMD,3)
-      REAL(8)   ,INTENT(in)  :: UCHI(NLOC,NLOC,NLOC,NLOC)
+      REAL(8)   ,INTENT(IN)  :: UCHI(NLOC,NLOC,NLOC,NLOC)
       REAL(8)   ,INTENT(OUT) :: ETOT
       COMPLEX(8),INTENT(OUT) :: SLOC(NLOC,NLOC,NDIMD,NOMEGA)
       COMPLEX(8),INTENT(OUT) :: SLOCLAUR(NLOC,NLOC,NDIMD,3)
-      LOGICAL(4),PARAMETER   :: TPRINT=.false.
-      COMPLEX(8)             :: u(2*NLOC,2*NLOC,2*nloc,2*nloc)
-      COMPLEX(8)             :: v(2*NLOC,2*NLOC,2*nloc,2*nloc)
-      COMPLEX(8)             :: g(2*NLOC,2*NLOC,nomega)
-      COMPLEX(8)             :: glaur(2*NLOC,2*NLOC,3)
-      COMPLEX(8)             :: s(2*NLOC,2*NLOC,nomega)
-      COMPLEX(8)             :: slaur(2*NLOC,2*NLOC,3)
-      COMPLEX(8)             :: RHO(NLOC,NLOC,NDIMD)
-      COMPLEX(8)             :: H(NLOC,NLOC,NDIMD)
-      COMPLEX(8)             :: psiinv(2*NLOC,2*NLOC)
-      INTEGER(4)             :: Ndimd_,nloc_,nomega_
-      INTEGER(4)             :: NU,I,J,K,L
-      REAL(8)                :: SVAR
-      integer(4)             :: nfil
+      REAL(8)   ,INTENT(OUT) :: DEDUCHI(NLOC,NLOC,NLOC,NLOC)
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      COMPLEX(8)             :: U(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
+      COMPLEX(8)             :: dedU(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
+      COMPLEX(8)             :: V(2*NLOC,2*NLOC,2*NLOC,2*NLOC)
+      COMPLEX(8)             :: G(2*NLOC,2*NLOC,NOMEGA)
+      COMPLEX(8)             :: GLAUR(2*NLOC,2*NLOC,3)
+      COMPLEX(8)             :: S(2*NLOC,2*NLOC,NOMEGA)
+      COMPLEX(8)             :: SLAUR(2*NLOC,2*NLOC,3)
+      INTEGER(4)             :: NU,I,J
+      INTEGER(4)             :: NFIL
 !     **************************************************************************
                                      CALL TRACE$PUSH('DMFT$HFSOLVER_WITHSET')
 !
 !     ==========================================================================
-!     == CALCULATE ONE-PARTICLE DENSITY MATRIX                                ==
-!     ==========================================================================
-      CALL DMFT_RHO_WITHSET(NLOC,NDIMD,NOMEGA,KBT,OMEGA,GLOC,GLOCLAUR,RHO)
-!
-      IF(TPRINT) THEN
-        CALL SPINOR$PRINTMATRIX(6 &
-     &    ,'DENSITY MATRIX (UPDOWN) IN DMFT$HFSOLVER_WITHSET','UPDOWN',1,NLOC &
-     &                       ,NDIMD,NLOC,RHO)
-      END IF
-!
-!     ==========================================================================
 !     == CONVERT U-TENSOR                                                     ==
 !     ==========================================================================
-! not checked
       U(  :NLOC,  :NLOC,  :NLOC,  :NLOC)=UCHI                              
       U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:)=UCHI                              
-      DO I=1,NLOC
+      DO I=1,2*NLOC
         V=(0.D0,0.D0)
-        DO J=1,NLOC
-          V(I,:,:,:)=V(I,:,:,:)+PSI(I,J)*U(J,:,:,:)
+        DO J=1,2*NLOC
+          V(I,:,:,:)=V(I,:,:,:)+CONJG(PIPHI(J,I))*U(J,:,:,:)
         ENDDO
       ENDDO
-      DO I=1,NLOC
+      DO I=1,2*NLOC
         U=(0.D0,0.D0)
-        DO J=1,NLOC
-          U(:,I,:,:)=U(:,I,:,:)+psi(I,J)*V(:,J,:,:)
+        DO J=1,2*NLOC
+          U(:,I,:,:)=U(:,I,:,:)+CONJG(PIPHI(J,I))*V(:,J,:,:)
         ENDDO
       ENDDO
-      DO I=1,NLOC
+      DO I=1,2*NLOC
         V=(0.D0,0.D0)
-        DO J=1,NLOC
-          V(:,:,I,:)=V(:,:,I,:)+PSI(I,J)*U(:,:,J,:)
+        DO J=1,2*NLOC
+          V(:,:,I,:)=V(:,:,I,:)+U(:,:,J,:)*PIPHI(J,I)
         ENDDO
       ENDDO
-      DO I=1,NLOC
+      DO I=1,2*NLOC
         U=(0.D0,0.D0)
-        DO J=1,NLOC
-          U(:,:,:,I)=U(:,:,:,I)+psi(I,J)*V(:,:,:,J)
+        DO J=1,2*NLOC
+          U(:,:,:,I)=U(:,:,:,I)+V(:,:,:,J)*PIPHI(J,I)
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     == CONVERT greens function                                              ==
+!     == CONVERT GREENS FUNCTION                                              ==
 !     ==========================================================================
-      do nu=1,nomega
-! not checked
-        call spinor$blowup(ndimd,nloc,gloc(:,:,:,nu),g(:,:,nu))
-        g(:,:,nu)=matmul(psi,matmul(g(:,:,nu),conjg(transpose(psi))))
-      enddo
-      do i=1,3
-! not checked
-        call spinor$blowup(ndimd,nloc,gloclaur(:,:,:,i),glaur(:,:,i))
-        glaur(:,:,nu)=matmul(psi,matmul(glaur(:,:,nu),conjg(transpose(psi))))
-      enddo
-
+      DO NU=1,NOMEGA
+        CALL SPINOR$BLOWUP(NDIMD,NLOC,GLOC(:,:,:,NU),G(:,:,NU))
+        G(:,:,NU)=MATMUL(TRANSPOSE(CONJG(CHIPhI)),MATMUL(G(:,:,NU),CHIPHI))
+      ENDDO
+      DO I=1,3
+        CALL SPINOR$BLOWUP(NDIMD,NLOC,GLOCLAUR(:,:,:,I),GLAUR(:,:,I))
+        GLAUR(:,:,i)=MATMUL(TRANSPOSE(CONJG(CHIPhI)) &
+     &                      ,MATMUL(GLAUR(:,:,i),CHIPHI))
+      ENDDO
 !
 !     ==========================================================================
-!     == write data
+!     == WRITE DATA
 !     ==========================================================================
+      CALL DMFT_SOLVERIO(2*NLOC,NOMEGA,KBT,G,GLAUR,U,ETOT,S,SLAUR,DEDU)
+!
+!     ==========================================================================
+!     == CONVERT GREEN'S FUNCTION                                             ==
+!     ==========================================================================
+      DO NU=1,NOMEGA
+        S(:,:,NU)=MATMUL(CHIPhI,MATMUL(S(:,:,NU),CONJG(TRANSPOSE(CHIPhI))))
+        CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,S(:,:,NU),SLOC(:,:,:,NU))
+      ENDDO
+      DO I=1,3
+        Slaur(:,:,i)=MATMUL(chiphi,MATMUL(slaur(:,:,i) &
+     &                                   ,CONJG(TRANSPOSE(CHIPhI))))
+        CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,SLAUR(:,:,i),SLOCLAUR(:,:,:,I))
+      ENDDO
+!
+!     ==========================================================================
+!     == CONVERT DERIVATIVE OF U-TENSOR                                       ==
+!     ==========================================================================
+      U=DEDU
+      DO I=1,2*NLOC
+        V=(0.D0,0.D0)
+        DO J=1,2*NLOC
+          V(I,:,:,:)=V(I,:,:,:)+CONJG(PIPHI(I,J))*U(J,:,:,:)
+        ENDDO
+      ENDDO
+      DO I=1,2*NLOC
+        U=(0.D0,0.D0)
+        DO J=1,2*NLOC
+          U(:,I,:,:)=U(:,I,:,:)+CONJG(PIPHI(I,J))*V(:,J,:,:)
+        ENDDO
+      ENDDO
+      DO I=1,2*NLOC
+        V=(0.D0,0.D0)
+        DO J=1,2*NLOC
+          V(:,:,I,:)=V(:,:,I,:)+U(:,:,J,:)*PIPHI(I,J)
+        ENDDO
+      ENDDO
+      DO I=1,2*NLOC
+        U=(0.D0,0.D0)
+        DO J=1,2*NLOC
+          U(:,:,:,I)=U(:,:,:,I)+V(:,:,:,J)*PIPHI(I,J)
+        ENDDO
+      ENDDO
+      dedUCHI=real(U(  :NLOC,  :NLOC,  :NLOC,  :NLOC) &
+     &            +U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:))
+                                     CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_SOLVERIO(NORB,NOMEGA,KBT,G,GLAUR,U,ETOT,S,SLAUR,DEDU)
+!     **************************************************************************
+!     ** interface routine for the communication with the dmft solver         **
+!     ** the spin-up orbitals are stored first and then the spin-down         **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
+      INTEGER(4),INTENT(IN) :: NOMEGA   !#(POSITIVE MATSUBARA FREQUENCIES
+      REAL(8)   ,INTENT(IN) :: KBT      
+      COMPLEX(8),INTENT(IN) :: G(NORB,NORB,NOMEGA)    !GREENS FUNCTION
+      COMPLEX(8),INTENT(IN) :: GLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF G
+      COMPLEX(8),INTENT(IN) :: U(NORB,NORB,NORB,NORB) !U-TENSOR
+      REAL(8)   ,INTENT(OUT):: ETOT                   !LUTTINGER WARD FUNCTIONAL
+      COMPLEX(8),INTENT(OUT):: S(NORB,NORB,NOMEGA)    !SELF ENERGY
+      COMPLEX(8),INTENT(OUT):: SLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF S
+      COMPLEX(8),INTENT(OUT):: DEDU(NORB,NORB,NORB,NORB) 
+      integer(4)            :: norb_,nomega_
+      integer(4)            :: nfil
+!     **************************************************************************
+call testg(norb,nomega,kbt,g,glaur)
+      ETOT=0.D0
+      S=(0.D0,0.D0)
+      SLAUR=(0.D0,0.D0)
+      DEDU=(0.D0,0.D0)
+      RETURN
+!
+!     ==========================================================================
+!     == WRITE DATA
+!     ==========================================================================
+!warning!! The two files are not yet defined
+!careful: in fortran, the first index runs first
       CALL FILEHANDLER$UNIT('DMFTOSOLVER',NFIL)
       REWIND NFIL
-      WRITE(NFIL,*)NDIMD,NLOC,NOMEGA
+      WRITE(NFIL,*)Norb,NOMEGA,kbt
       WRITE(NFIL,FMT='(2F20.10)')G
       WRITE(NFIL,FMT='(2F20.10)')GLAUR
       WRITE(NFIL,FMT='(2F20.10)')U
-      CALL FILEHANDlER$CLOSE(NFIL)
+      CALL FILEHANDLER$CLOSE(NFIL)
 !
 !     ==========================================================================
 !     == READ DATA DATA
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('SOLVERTODMFT',NFIL)
       REWIND NFIL
-      READ(NFIL,*)NDIMD_,NLOC_,NOMEGA_
-      WRITE(NFIL,FMT='(2F20.10)')S
-      WRITE(NFIL,FMT='(2F20.10)')SLAUR
-      CALL FILEHANDlER$CLOSE(NFIL)
+      READ(NFIL,*)NORB_,NOMEGA_,ETOT
+      read(NFIL,FMT='(2F20.10)')S
+      read(NFIL,FMT='(2F20.10)')SLAUR
+      read(NFIL,FMT='(2F20.10)')DEDU
+      CALL FILEHANDLER$CLOSE(NFIL)
+      return
+      end
 !
-!     ==========================================================================
-!     == CONVERT greens function                                              ==
-!     ==========================================================================
-      call lib$invertc8(2*nloc,psi,psiinv)
-      do nu=1,nomega
-! not checked
-        s(:,:,nu)=matmul(psiinv,matmul(s(:,:,nu),conjg(transpose(psiinv))))
-        call SPINOR$shrinkdown(NDIMD,Nloc,s(:,:,nu),sloc(:,:,:,nu))
-      enddo
-      do i=1,3
-! not checked
-        s(:,:,nu)=matmul(psiinv,matmul(slaur(:,:,nu),conjg(transpose(psiinv))))
-        call SPINOR$shrinkdown(NDIMD,Nloc,slaur(:,:,nu),sloclaur(:,:,:,i))
-      enddo
-                                     CALL TRACE$POP()
-      RETURN
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine testg(norb,nomega,kbt,g,glaur)
+      implicit none
+      INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
+      INTEGER(4),INTENT(IN) :: NOMEGA   !#(POSITIVE MATSUBARA FREQUENCIES
+      REAL(8)   ,INTENT(IN) :: KBT      
+      COMPLEX(8),INTENT(IN) :: G(NORB,NORB,NOMEGA)    !GREENS FUNCTION
+      COMPLEX(8),INTENT(IN) :: GLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF G
+      real(8)               :: pi
+      integer(4)            :: nu,i
+      real(8)               :: omega(nomega)
+      complex(8)            :: rho(norb,norb)
+      real(8)               :: fn(3)
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      RHO=(0.D0,0.D0)
+      DO NU=1,NOMEGA
+        OMEGA(NU)=REAL(2*NU-1,KIND=8)*PI*KBT
+        RHO=RHO+KBT*G(:,:,NU)
+      ENDDO
+      RHO=RHO+TRANSPOSE(CONJG(RHO))
+      CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,3,FN)
+      RHO=RHO+GLAUR(:,:,1)*FN(1) &
+     &       +GLAUR(:,:,2)*FN(2) &
+     &       +GLAUR(:,:,3)*FN(3) 
+!
+      WRITE(*,FMT='(100("="),T30,"  ",A,"  ")')'DENSITY MATRIX IN TESTG'
+      DO I=1,NORB
+        WRITE(*,FMT='(100("(",2F10.5,")"))')RHO(I,:)
+      ENDDO
+      STOP
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_fock(NLOC,NDIMD,rho,uchi,etot,ham)
+      SUBROUTINE DMFT_FOCK(NLOC,NDIMD,RHO,UCHI,ETOT,HAM)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NLOC
       INTEGER(4),INTENT(IN)  :: NDIMD
-      COMPLEX(8),INTENT(OUT) :: rho(NLOC,NLOC,NDIMD)
+      COMPLEX(8),INTENT(OUT) :: RHO(NLOC,NLOC,NDIMD)
       REAL(8)   ,INTENT(OUT) :: UCHI(NLOC,NLOC,NLOC,NLOC)
       REAL(8)   ,INTENT(OUT) :: ETOT
-      COMPLEX(8),INTENT(OUT) :: ham(NLOC,NLOC,NDIMD)
-      LOGICAL(4),PARAMETER   :: TPRINT=.false.
+      COMPLEX(8),INTENT(OUT) :: HAM(NLOC,NLOC,NDIMD)
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: I,J,K,L
       REAL(8)                :: SVAR
 !     **************************************************************************
-                                     CALL TRACE$PUSH('DMFT_fock')
+                                     CALL TRACE$PUSH('DMFT_FOCK')
 !
 !     ==========================================================================
 !     == CALCULATE HARTREE FOCK POTENTIAL                                     ==
 !     ==========================================================================
       ETOT=0.D0
-      Ham=(0.D0,0.D0)
+      HAM=(0.D0,0.D0)
       DO I=1,NLOC
         DO J=1,NLOC
           DO K=1,NLOC
@@ -1985,8 +1998,8 @@ print*,'etot from dmft_detot: ',etot
               SVAR=-0.25D0*UCHI(I,J,K,L) 
               IF(SVAR.EQ.0.D0) CYCLE
               ETOT=ETOT+SVAR*REAL(SUM(RHO(K,J,:)*RHO(L,I,:)))
-              Ham(K,J,:)=Ham(K,J,:)+SVAR*RHO(I,L,:)
-              Ham(I,L,:)=Ham(I,L,:)+SVAR*RHO(K,J,:)
+              HAM(K,J,:)=HAM(K,J,:)+SVAR*RHO(I,L,:)
+              HAM(I,L,:)=HAM(I,L,:)+SVAR*RHO(K,J,:)
             ENDDO
           ENDDO
         ENDDO
@@ -2001,7 +2014,7 @@ print*,'etot from dmft_detot: ',etot
      &                      ,1,NLOC,NDIMD,NLOC,RHO)
         CALL SPINOR$PRINTMATRIX(6 &
      &                      ,'H_XC (TXYZ) IN DMFT$HFSOLVER_WITHSET','TXYZ' &
-     &                      ,1,NLOC,NDIMD,NLOC,Ham)
+     &                      ,1,NLOC,NDIMD,NLOC,HAM)
       END IF
 !
                                      CALL TRACE$POP()
@@ -2029,7 +2042,7 @@ print*,'etot from dmft_detot: ',etot
       CHARACTER(*),INTENT(IN)  :: TYPE  ! CAN BE 'HRHO','H0'
       REAL(8)   ,PARAMETER     :: TOL=1.D-5
       INTEGER(4),PARAMETER     :: NITER=500
-      character(16)            :: MIXtype
+      CHARACTER(16)            :: MIXTYPE
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
@@ -2053,16 +2066,16 @@ print*,'etot from dmft_detot: ',etot
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
       INTEGER(4)               :: LX4 ! FIRST DIMENSION OF X4
-COMPLEX(8),ALLOCATABLE   :: X4save(:,:,:)
-COMPLEX(8),ALLOCATABLE   :: X4vec(:)
-real(8) :: amp=1.d-3
-COMPLEX(8)               :: DHam1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Dham2(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Drho1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: Drho2(NCHI,NCHI,NDIMD)
-integer(4) :: ispin
-real(8)    :: eig(nchi)
-complex(8) :: u(nchi,nchi)
+COMPLEX(8),ALLOCATABLE   :: X4SAVE(:,:,:)
+COMPLEX(8),ALLOCATABLE   :: X4VEC(:)
+REAL(8) :: AMP=1.D-3
+COMPLEX(8)               :: DHAM1(NCHI,NCHI,NDIMD)
+COMPLEX(8)               :: DHAM2(NCHI,NCHI,NDIMD)
+COMPLEX(8)               :: DRHO1(NCHI,NCHI,NDIMD)
+COMPLEX(8)               :: DRHO2(NCHI,NCHI,NDIMD)
+INTEGER(4) :: ISPIN
+REAL(8)    :: EIG(NCHI)
+COMPLEX(8) :: U(NCHI,NCHI)
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS_WITHKSET')
       TH0=(TYPE.EQ.'H0') 
@@ -2085,22 +2098,22 @@ complex(8) :: u(nchi,nchi)
       ENDIF
       ALLOCATE(X4(LX4,LX4,NSPIN))
 
-do ispin=1,nspin
-  do ikpt=1,nkptl
-    call lib$diagc8(nchi,kset(ikpt)%rho(:,:,ispin),eig(:nchi),u)
-    print*,'eigenvalues of rho ',ispin,eig(:nchi)
-  enddo
-enddo
+DO ISPIN=1,NSPIN
+  DO IKPT=1,NKPTL
+    CALL LIB$DIAGC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN),EIG(:NCHI),U)
+    PRINT*,'EIGENVALUES OF RHO ',ISPIN,EIG(:NCHI)
+  ENDDO
+ENDDO
 
 
-!!$dham1=(0.d0,0.d0)
-!!$dham1(3,5,1)=amp
-!!$dham1(2,5,2)=amp
-!!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DHAM1) ! CONVERT TO 0xyz
-!!$call DMFT_testrho(TYPE,nchi,ndimd,dham1,drho1)
-!!$call DMFT_testrho(TYPE,nchi,ndimd,-dham1,drho2)
-!!$dham2=(drho2-drho1)/(2.d0*amp)
-!!$call SPINOR_PRINTMATRIX(6,'ham numerical ',1,nchi,ndimd,NCHI,dham2)
+!!$DHAM1=(0.D0,0.D0)
+!!$DHAM1(3,5,1)=AMP
+!!$DHAM1(2,5,2)=AMP
+!!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DHAM1) ! CONVERT TO 0XYZ
+!!$CALL DMFT_TESTRHO(TYPE,NCHI,NDIMD,DHAM1,DRHO1)
+!!$CALL DMFT_TESTRHO(TYPE,NCHI,NDIMD,-DHAM1,DRHO2)
+!!$DHAM2=(DRHO2-DRHO1)/(2.D0*AMP)
+!!$CALL SPINOR_PRINTMATRIX(6,'HAM NUMERICAL ',1,NCHI,NDIMD,NCHI,DHAM2)
 !       
 !     ========================================================================
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                              ==
@@ -2159,11 +2172,11 @@ enddo
               ENDDO
             END IF
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
-!!$call SPINOR_PRINTMATRIX(6,'g direct ',1,nchi,ndimd,NCHI,g)
-!!$call SPINOR_PRINTMATRIX(6,'g test ',1,nchi,ndimd,NCHI &
-!!$&                   ,kset(ikpt)%sinv/(ci*omega(nu)))
-!!$print*,'kbt ',kbt
-!!$stop 'forced'
+!!$CALL SPINOR_PRINTMATRIX(6,'G DIRECT ',1,NCHI,NDIMD,NCHI,G)
+!!$CALL SPINOR_PRINTMATRIX(6,'G TEST ',1,NCHI,NDIMD,NCHI &
+!!$&                   ,KSET(IKPT)%SINV/(CI*OMEGA(NU)))
+!!$PRINT*,'KBT ',KBT
+!!$STOP 'FORCED'
 !           == SUBTRACT LAURENT EXPANSION TO IMPROVE OMEGA-CONVERGENCE =========
             CSVAR=1.D0/(CI*OMEGA(NU))
             DEVRHO=DEVRHO+KBT*(G-CSVAR*(GLAUR1+CSVAR*(GLAUR2+CSVAR*GLAUR3)))
@@ -2182,60 +2195,60 @@ enddo
           ENDDO
 !         == ADD TAILS (GLAUR3 DOES NOT CONTRIBUTE) ============================
           DEVRHO=DEVRHO+0.5D0*GLAUR1-0.25D0/KBT*GLAUR2
-!rho0=0.5d0*ket(ikpt)%sinv
+!RHO0=0.5D0*KET(IKPT)%SINV
 
-!!$call SPINOR_PRINTMATRIX(6,'devrho direct ',1,nchi,ndimd,NCHI,devrho)
-!!$call SPINOR_PRINTMATRIX(6,'devrho test ',1,nchi,ndimd,NCHI &
-!!$&                   ,kset(ikpt)%sinv/2.d0)
-!!$print*,'kbt ',kbt
-!!$stop 'forced'
+!!$CALL SPINOR_PRINTMATRIX(6,'DEVRHO DIRECT ',1,NCHI,NDIMD,NCHI,DEVRHO)
+!!$CALL SPINOR_PRINTMATRIX(6,'DEVRHO TEST ',1,NCHI,NDIMD,NCHI &
+!!$&                   ,KSET(IKPT)%SINV/2.D0)
+!!$PRINT*,'KBT ',KBT
+!!$STOP 'FORCED'
 !
 !         == SUBTRACT TARGET DENSITY ===========================================
-!!$call SPINOR_PRINTMATRIX(6,'rho from G ',1,nchi,ndimd,NCHI,devrho)
-!!$call SPINOR_PRINTMATRIX(6,'kset%rho   ',1,nchi,ndimd,NCHI,kset(ikpt)%rho)
+!!$CALL SPINOR_PRINTMATRIX(6,'RHO FROM G ',1,NCHI,NDIMD,NCHI,DEVRHO)
+!!$CALL SPINOR_PRINTMATRIX(6,'KSET%RHO   ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%RHO)
           DEVRHO=DEVRHO-KSET(IKPT)%RHO
 !
-!         == regularize x4 =====================================================
-          glaur(:,:,:,1)=glaur1
-          glaur(:,:,:,2)=glaur2
-          glaur(:,:,:,3)=glaur3
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,Glaur(:,:,:,1)) ! CNVRTTO UPDOWN
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,Glaur(:,:,:,2)) ! CNVRTTO UPDOWN
-          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,Glaur(:,:,:,3)) ! CNVRTTO UPDOWN
-          call DMFT_ADDX4laur(NDIMD,NCHI,kbt,nomega,omega,Glaur,LX4,NSPIN,X4)
-if(.not.allocated(x4save)) then
-ALLOCATE(X4save(LX4,LX4,NSPIN))
-  x4save=x4
-!!$  do ispin=1,nspin
-!!$    do i1=1,nchi**2
-!!$      do i2=1,nchi**2
-!!$        if(abs(x4(i1,i2,ispin)).gt.1.d-3) then
-!!$          print*,'x4 ',i1,i2,ispin,x4(i1,i2,ispin)
-!!$        end if
-!!$      enddo
-!!$    enddo
-!!$  enddo
-else
-  x4=x4save
-end if
+!         == REGULARIZE X4 =====================================================
+          GLAUR(:,:,:,1)=GLAUR1
+          GLAUR(:,:,:,2)=GLAUR2
+          GLAUR(:,:,:,3)=GLAUR3
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,GLAUR(:,:,:,1)) ! CNVRTTO UPDOWN
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,GLAUR(:,:,:,2)) ! CNVRTTO UPDOWN
+          CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,GLAUR(:,:,:,3)) ! CNVRTTO UPDOWN
+          CALL DMFT_ADDX4LAUR(NDIMD,NCHI,KBT,NOMEGA,OMEGA,GLAUR,LX4,NSPIN,X4)
+IF(.NOT.ALLOCATED(X4SAVE)) THEN
+ALLOCATE(X4SAVE(LX4,LX4,NSPIN))
+  X4SAVE=X4
+!!$  DO ISPIN=1,NSPIN
+!!$    DO I1=1,NCHI**2
+!!$      DO I2=1,NCHI**2
+!!$        IF(ABS(X4(I1,I2,ISPIN)).GT.1.D-3) THEN
+!!$          PRINT*,'X4 ',I1,I2,ISPIN,X4(I1,I2,ISPIN)
+!!$        END IF
+!!$      ENDDO
+!!$    ENDDO
+!!$  ENDDO
+ELSE
+  X4=X4SAVE
+END IF
 
 !
-do ispin=1,nspin
-    call lib$diagc8(nchi,kset(ikpt)%rho(:,:,ispin)+devrho(:,:,ispin),eig(:nchi),u)
-    print*,'eigenvalues of rho ',ispin,eig(:nchi)
-if(minval(eig).lt.0.d0.or.maxval(eig).gt.1.d0) then
-   call error$msg('occupations out of range')
-   call error$r8val('max(f)',maxval(eig))
-   call error$r8val('min(f)',minval(eig))
-   call error$stop('DMFT_CONSTRAINTS_WITHKSET')
-end if
-enddo
+DO ISPIN=1,NSPIN
+    CALL LIB$DIAGC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN)+DEVRHO(:,:,ISPIN),EIG(:NCHI),U)
+    PRINT*,'EIGENVALUES OF RHO ',ISPIN,EIG(:NCHI)
+IF(MINVAL(EIG).LT.0.D0.OR.MAXVAL(EIG).GT.1.D0) THEN
+   CALL ERROR$MSG('OCCUPATIONS OUT OF RANGE')
+   CALL ERROR$R8VAL('MAX(F)',MAXVAL(EIG))
+   CALL ERROR$R8VAL('MIN(F)',MINVAL(EIG))
+   CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
+END IF
+ENDDO
 !
 CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DEVRHO) ! CONVERT TO UPDOWN
 MAXDEV=MAXVAL(ABS(DEVRHO))
 DO IDIMD=1,NDIMD
     PRINT*,'ITER=',ITER,' IKPT=',IKPT,' IDIMD=',IDIMD &
-  &       ,' MAXVAL(abs(X4))  ',MAXVAL(abs(X4(:,:,IDIMD))) &
+  &       ,' MAXVAL(ABS(X4))  ',MAXVAL(ABS(X4(:,:,IDIMD))) &
   &       ,' MAX(DEVRHO) ',MAXVAL(ABS(DEVRHO(:,:,IDIMD)))
 ENDDO
 CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
@@ -2272,19 +2285,19 @@ CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
             CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DH0)    ! CONVERT TO TXYZ
 !            DH0=0.5D0*DH0   !PART OF THE CONVERSION FOR HAMILTONIANS
           ELSE IF(MIXTYPE.EQ.'LINEAR0') THEN
-!!$print*,'x4save ',x4save(1,1,1)
-!!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,kset(ikpt)%sinv) ! CONVERT TO UPDOWN
-!!$print*,'x4new ',-1.d0/(4.d0*kbt)*kset(ikpt)%sinv(1,1,1)**2
-!!$stop
-            CALL SPINOR$MATMUL(NDIMD,NCHI,DEVRHO,KSET(IKPT)%Smat,MAT)
-            CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%Smat,MAT,DH0)
+!!$PRINT*,'X4SAVE ',X4SAVE(1,1,1)
+!!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%SINV) ! CONVERT TO UPDOWN
+!!$PRINT*,'X4NEW ',-1.D0/(4.D0*KBT)*KSET(IKPT)%SINV(1,1,1)**2
+!!$STOP
+            CALL SPINOR$MATMUL(NDIMD,NCHI,DEVRHO,KSET(IKPT)%SMAT,MAT)
+            CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
             DH0=4.D0*KBT*DH0
-   dh0=0.5d0*dh0
-!!$CALL SPINOR_PRINTMATRIX(6,'Dh0 a',1,NCHI,NDIMD,NCHI,Dh0)
+   DH0=0.5D0*DH0
+!!$CALL SPINOR_PRINTMATRIX(6,'DH0 A',1,NCHI,NDIMD,NCHI,DH0)
 !!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DEVRHO) ! CONVERT TO UPDOWN
 !!$CALL DMFT_SOLVEX4(NDIMD,NCHI,DEVRHO,LX4,NSPIN,X4,DH0)
 !!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DH0)    ! CONVERT TO TXYZ
-!!$CALL SPINOR_PRINTMATRIX(6,'Dh0 b',1,NCHI,NDIMD,NCHI,Dh0)
+!!$CALL SPINOR_PRINTMATRIX(6,'DH0 B',1,NCHI,NDIMD,NCHI,DH0)
           ELSE
             CALL ERROR$MSG('MIXTYPE NOT RECOGNIZED')
             CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
@@ -2300,10 +2313,10 @@ PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
           MAXDEV=MAXVAL(ABS(DEVRHO))
-          PRINT*,'MAXDEV',ITER,ikpt,MAXDEV
+          PRINT*,'MAXDEV',ITER,IKPT,MAXDEV
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
-        ENDDO ! END OF LOOP OVER iterations
+        ENDDO ! END OF LOOP OVER ITERATIONS
         IF(.NOT.CONVG) THEN
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$I4VAL('IKPT',IKPT)
@@ -2312,7 +2325,7 @@ PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
           CALL ERROR$R8VAL('TOLERANCE',TOL)
           CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
         END IF
-      ENDDO   !END OF LOOP OVER k-points
+      ENDDO   !END OF LOOP OVER K-POINTS
 !
 !     ==========================================================================
 !     == MAP ONTO HRHO                                                        ==
@@ -2343,7 +2356,7 @@ PRINT*,'TH0 ',TH0
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NSPIN,NDIMD,NAT,NOMEGA &
+      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NDIMD,NAT,NOMEGA &
      &                      ,OMEGA,KBT,MU,AMIX,KSET,ATOMSET
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: TYPE  ! CAN BE 'HRHO','H0'
@@ -2369,7 +2382,7 @@ PRINT*,'TH0 ',TH0
       INTEGER(4)               :: IKPT,ITER,IDIMD,NU,IAT
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
-      real(8)                  :: fn(2)
+      REAL(8)                  :: FN(2)
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       TH0=(TYPE.EQ.'H0') 
@@ -2380,10 +2393,10 @@ PRINT*,'TH0 ',TH0
       END IF
       IF(.NOT.TH0)  THEN
         DO IKPT=1,NKPTL
-          KSET(IKPT)%H0=KSET(IKPT)%Hrho
+          KSET(IKPT)%H0=KSET(IKPT)%HRHO
         ENDDO
       END IF
-      call DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
+      CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
 !       
 !     ========================================================================
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                              ==
@@ -2426,7 +2439,7 @@ PRINT*,'TH0 ',TH0
           CALL SPINOR$MATMUL(NDIMD,NCHI,MAT3,KSET(IKPT)%SINV,MAT)
           CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SINV,MAT,GLAUR3)
 !
-!         == loop over omega ===================================================
+!         == LOOP OVER OMEGA ===================================================
           RHO=(0.D0,0.D0)
           DO NU=1,NOMEGA
         
@@ -2442,35 +2455,35 @@ PRINT*,'TH0 ',TH0
               ENDDO
             END IF
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
-            RHO=RHO+kbt*G
+            RHO=RHO+KBT*G
           ENDDO ! END LOOP OVER MATSUBARA FREQUENCIES
 !         == INCLUDE NEGATIVE FREQUENCIES ======================================
           DO IDIMD=1,NDIMD
             RHO(:,:,IDIMD)=RHO(:,:,IDIMD)+CONJG(TRANSPOSE(RHO(:,:,IDIMD)))
           ENDDO
 !         == ADD TAILS (GLAUR3 DOES NOT CONTRIBUTE) ============================
-          RHO=RHO+fn(1)*GLAUR1+fn(2)*GLAUR2
-!rho0=0.5d0*ket(ikpt)%sinv
+          RHO=RHO+FN(1)*GLAUR1+FN(2)*GLAUR2
+!RHO0=0.5D0*KET(IKPT)%SINV
           DEVRHO=RHO-KSET(IKPT)%RHO
 !
 !         ======================================================================
-!         == adjust Hamiltonian (Lagrange multiplier)                         ==
+!         == ADJUST HAMILTONIAN (LAGRANGE MULTIPLIER)                         ==
 !         ======================================================================
-          CALL SPINOR$MATMUL(NDIMD,NCHI,DEVRHO,KSET(IKPT)%Smat,MAT)
-          CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%Smat,MAT,DH0)
+          CALL SPINOR$MATMUL(NDIMD,NCHI,DEVRHO,KSET(IKPT)%SMAT,MAT)
+          CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
           DH0=4.D0*KBT*DH0
           KSET(IKPT)%H0=KSET(IKPT)%H0+DH0
 !
 !         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
-if(mod(iter,100).eq.0)PRINT*,'MAXVAL OF DH /drho ',iter,MAXVAL(ABS(DH0)),MAXval(abs(devrho))
+IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
           MAXDEV=MAXVAL(ABS(DEVRHO))
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
-        ENDDO ! END OF LOOP OVER iterations
-!!$call SPINOR_PRINTMATRIX(6,'final kset%h0 ',1,nchi,ndimd,NCHI,KSET(IKPT)%H0)
-!!$call SPINOR_PRINTMATRIX(6,'final devrho ',1,nchi,ndimd,NCHI,devrho)
+        ENDDO ! END OF LOOP OVER ITERATIONS
+!!$CALL SPINOR_PRINTMATRIX(6,'FINAL KSET%H0 ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%H0)
+!!$CALL SPINOR_PRINTMATRIX(6,'FINAL DEVRHO ',1,NCHI,NDIMD,NCHI,DEVRHO)
         IF(.NOT.CONVG) THEN
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$I4VAL('IKPT',IKPT)
@@ -2479,7 +2492,7 @@ if(mod(iter,100).eq.0)PRINT*,'MAXVAL OF DH /drho ',iter,MAXVAL(ABS(DH0)),MAXval(
           CALL ERROR$R8VAL('TOLERANCE',TOL)
           CALL ERROR$STOP('DMFT_CONSTRAINTS')
         END IF
-      ENDDO   !END OF LOOP OVER k-points
+      ENDDO   !END OF LOOP OVER K-POINTS
 !
 !     ==========================================================================
 !     == MAP ONTO HRHO                                                        ==
@@ -2495,7 +2508,7 @@ PRINT*,'TH0 ',TH0
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_testrho(TYPE,nchi_,ndimd_,dham,drho)
+      SUBROUTINE DMFT_TESTRHO(TYPE,NCHI_,NDIMD_,DHAM,DRHO)
 !     **************************************************************************
 !     **  ADJUSTS H0(:,:,IKPT,IPSIN) SUCH THAT                                **
 !     **                                                                      **
@@ -2513,10 +2526,10 @@ PRINT*,'TH0 ',TH0
      &                      ,OMEGA,KBT,MU,KSET,ATOMSET
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: TYPE  ! CAN BE 'HRHO','H0'
-      integer(4),intent(in)    :: nchi_
-      integer(4),intent(in)    :: ndimd_
-      complex(8),intent(in)    :: dham(nchi_,nchi_,ndimd_)
-      complex(8),intent(out)   :: drho(nchi_,nchi_,ndimd_)
+      INTEGER(4),INTENT(IN)    :: NCHI_
+      INTEGER(4),INTENT(IN)    :: NDIMD_
+      COMPLEX(8),INTENT(IN)    :: DHAM(NCHI_,NCHI_,NDIMD_)
+      COMPLEX(8),INTENT(OUT)   :: DRHO(NCHI_,NCHI_,NDIMD_)
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
@@ -2533,12 +2546,12 @@ PRINT*,'TH0 ',TH0
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
 !     **************************************************************************
-                              CALL TRACE$PUSH('DMFT_testrho')
+                              CALL TRACE$PUSH('DMFT_TESTRHO')
       TH0=(TYPE.EQ.'H0') 
       IF(.NOT.(TH0.OR.TYPE.EQ.'HRHO')) THEN
         CALL ERROR$MSG('ILLEGAL VALUE OF TYPE. (MAY BE "H0" OR "HRHO")')
         CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('DMFT_testrho')     
+        CALL ERROR$STOP('DMFT_TESTRHO')     
       END IF
       IF(.NOT.TH0)  THEN
         DO IKPT=1,NKPTL
@@ -2565,14 +2578,14 @@ PRINT*,'TH0 ',TH0
         END IF
         GLAUR1=KSET(IKPT)%SINV
         MAT=-MU*KSET(IKPT)%SMAT
-        MAT=MAT+KSET(IKPT)%H0+dham
+        MAT=MAT+KSET(IKPT)%H0+DHAM
         IF(TH0) MAT=MAT+SLAUR1(:,:,:)
 !       == GLAUR2=SINV*MAT*SINV ==============================================
         CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,KSET(IKPT)%SINV,MAT2)
         CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SINV,MAT2,GLAUR2)
 !
         MAT=-MU*KSET(IKPT)%SMAT
-        MAT=MAT+KSET(IKPT)%H0+dham
+        MAT=MAT+KSET(IKPT)%H0+DHAM
         IF(TH0) MAT=MAT+SLAUR1(:,:,:)
 !       == MAT3=MAT*(SINV*MAT) ===============================================
         CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,KSET(IKPT)%SINV,MAT2)
@@ -2586,7 +2599,7 @@ PRINT*,'TH0 ',TH0
         DO NU=1,NOMEGA
 !         == CONSTRUCT LATTICE GREENS FUNCTION =============================
           MAT=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT
-          MAT=MAT-KSET(IKPT)%H0-dham
+          MAT=MAT-KSET(IKPT)%H0-DHAM
           IF(TH0) THEN
             DO IAT=1,NAT
               I1=ATOMSET(IAT)%ICHI1
@@ -2610,7 +2623,7 @@ PRINT*,'TH0 ',TH0
 !
 !       == SUBTRACT TARGET DENSITY ===========================================
         DRHO=DRHO-KSET(IKPT)%RHO
-      ENDDO   !END OF LOOP OVER k-points
+      ENDDO   !END OF LOOP OVER K-POINTS
                               CALL TRACE$POP()
       RETURN
       END
@@ -2626,7 +2639,7 @@ PRINT*,'TH0 ',TH0
       INTEGER(4),INTENT(IN)    :: LX4
       INTEGER(4),INTENT(IN)    :: NSPIN
       COMPLEX(8),INTENT(IN)    :: DRHO(NCHI,NCHI,NDIMD)
-      COMPLEX(8),INTENT(INout)    :: X4(LX4,LX4,NSPIN)
+      COMPLEX(8),INTENT(INOUT)    :: X4(LX4,LX4,NSPIN)
       COMPLEX(8),INTENT(OUT)   :: DH(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: BVEC(LX4)
       COMPLEX(8)               :: XVEC(LX4)
@@ -2636,8 +2649,8 @@ PRINT*,'TH0 ',TH0
       INTEGER(4)               :: IAB
       INTEGER(4)               :: IDIMAB
       INTEGER(4)               :: ISPIN 
-real(8) :: eig(lx4)
-complex(8) :: u(lx4,lx4)
+REAL(8) :: EIG(LX4)
+COMPLEX(8) :: U(LX4,LX4)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -2660,18 +2673,18 @@ complex(8) :: u(lx4,lx4)
             ENDDO
           ENDDO              
 ! =============================================
-!!$do ia=1,lx4
-!!$  x4(ia,ia,ispin)=x4(ia,ia,ispin)-1.d-2
-!!$enddo
+!!$DO IA=1,LX4
+!!$  X4(IA,IA,ISPIN)=X4(IA,IA,ISPIN)-1.D-2
+!!$ENDDO
 
 !         ====
-print*,'lx4 ',lx4,ispin
-call SPINOR_PRINTMATRIX(6,'drho (updown)',1,nchi,1,NCHI,drho(:,:,ispin))
-call lib$diagc8(nchi,drho(:,:,ispin),eig(:nchi),u)
-print*,'eigenvalues of drho ',ispin,eig(:nchi)
-call lib$diagc8(lx4,x4(:,:,ispin),eig,u)
-print*,'eigenvalues of x4 ',ispin,eig
-if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
+PRINT*,'LX4 ',LX4,ISPIN
+CALL SPINOR_PRINTMATRIX(6,'DRHO (UPDOWN)',1,NCHI,1,NCHI,DRHO(:,:,ISPIN))
+CALL LIB$DIAGC8(NCHI,DRHO(:,:,ISPIN),EIG(:NCHI),U)
+PRINT*,'EIGENVALUES OF DRHO ',ISPIN,EIG(:NCHI)
+CALL LIB$DIAGC8(LX4,X4(:,:,ISPIN),EIG,U)
+PRINT*,'EIGENVALUES OF X4 ',ISPIN,EIG
+IF(MAXVAL(EIG).GT.0.D0) PRINT*,'WARNING!!!',MAXVAL(EIG)
 !
 !         == A*X=B -> X (THEREFORE MINUS SIGN NEEDED)===========================
           CALL LIB$MATRIXSOLVEC8(LX4,LX4,1,X4(:,:,ISPIN),XVEC,BVEC)
@@ -2763,7 +2776,7 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
               IAB=IA+NCHI*(IB-1)
               DO IC=1,NCHI
                 DO ID=1,NCHI
-                  Icd=Ic+NCHI*(Id-1)
+                  ICD=IC+NCHI*(ID-1)
 !                 == THE SECOND TERM IS FOR -I*OMEGA_\NU =======================
 !                 == G(-I*OMEGA)=G^\DAGGER(I*OMEGA) ============================
                   X4(IAB,ICD,ISPIN)=X4(IAB,ICD,ISPIN) &
@@ -2792,12 +2805,12 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
         DO ICHIA=1,NCHI
           DO IDB=1,2
           DO ICHIB=1,NCHI
-            iab=ichia+nchi*(ida-1+2*(ichib+nchi*(idb-1)))
+            IAB=ICHIA+NCHI*(IDA-1+2*(ICHIB+NCHI*(IDB-1)))
             DO IDC=1,2
             DO ICHIC=1,NCHI
               DO IDD=1,2
               DO ICHID=1,NCHI
-                icd=ichic+nchi*(idc-1+2*(ichid+nchi*(idd-1)))
+                ICD=ICHIC+NCHI*(IDC-1+2*(ICHID+NCHI*(IDD-1)))
 !
                 IDIMAC=IDA+2*(IDC-1)
                 IDIMCA=IDC+2*(IDA-1)
@@ -2844,7 +2857,7 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
      &     ,0.D0,27741322.625D0/)
       REAL(8)                  :: FACTOR(20)
       REAL(8)                  :: SVAR
-      integer(4)               :: j,nu
+      INTEGER(4)               :: J,NU
 !     **************************************************************************
       IF(N.GT.6) THEN
         CALL ERROR$MSG('N EXCEEDS INTERNAL MAXIMUM')
@@ -2852,19 +2865,19 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
       END IF
 !
 !     ==========================================================================
-!     == ATTACH 1/[kbt**(j-1) * (j-1)!]
+!     == ATTACH 1/[KBT**(J-1) * (J-1)!]
 !     ==========================================================================
-!     == Factor=1/[(J-1)!]*PARTIAL^(J-1) [1/(1+EXP(X))]
-      SVAR=1.d0
-      DO J=1,n
-        factor(J)=ARR(J)*SVAR            ! svar=1/[kbt**(j-1) * (j-1)!]
-        SVAR=SVAR/(kbt*REAL(J,KIND=8))   ! svar=1/[kbt**j * j!]
+!     == FACTOR=1/[(J-1)!]*PARTIAL^(J-1) [1/(1+EXP(X))]
+      SVAR=1.D0
+      DO J=1,N
+        FACTOR(J)=ARR(J)*SVAR            ! SVAR=1/[KBT**(J-1) * (J-1)!]
+        SVAR=SVAR/(KBT*REAL(J,KIND=8))   ! SVAR=1/[KBT**J * J!]
       ENDDO
 !
 !     ==========================================================================
-!     == subtract TRUNCATED MATSUBARA SUM                                     ==
+!     == SUBTRACT TRUNCATED MATSUBARA SUM                                     ==
 !     ==========================================================================
-      FN(:)=factor(:n)
+      FN(:)=FACTOR(:N)
       DO NU=1,NOMEGA              ! FN(J)=SUM_NU: 1/(I*OMEGA_NU)**JJ
         SVAR=-1.D0/OMEGA(NU)**2   ! [1.D0/(CI*OMEGA(NU))]**2
         DO J=1,N/2                ! REAL PART FROM -OMEGA
@@ -2872,22 +2885,22 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
         ENDDO
       ENDDO
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_ADDX4laur(NDIMD,NCHI,kbt,nomega,omega,Glaur,LX4,NSPIN,X4)
+      SUBROUTINE DMFT_ADDX4LAUR(NDIMD,NCHI,KBT,NOMEGA,OMEGA,GLAUR,LX4,NSPIN,X4)
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NDIMD
       INTEGER(4),INTENT(IN)    :: NCHI
-      INTEGER(4),INTENT(IN)    :: Nomega
-      real(8)   ,intent(in)    :: omega(nomega)
-      real(8)   ,intent(in)    :: kbt
+      INTEGER(4),INTENT(IN)    :: NOMEGA
+      REAL(8)   ,INTENT(IN)    :: OMEGA(NOMEGA)
+      REAL(8)   ,INTENT(IN)    :: KBT
       INTEGER(4),INTENT(IN)    :: LX4
       INTEGER(4),INTENT(IN)    :: NSPIN
-      COMPLEX(8),INTENT(IN)    :: Glaur(NCHI,NCHI,NDIMD,3)
+      COMPLEX(8),INTENT(IN)    :: GLAUR(NCHI,NCHI,NDIMD,3)
       COMPLEX(8),INTENT(INOUT) :: X4(LX4,LX4,NSPIN)
-      real(8)                  :: fn(6),f2,f4,f6
+      REAL(8)                  :: FN(6),F2,F4,F6
       INTEGER(4)               :: IA,IB,IC,ID
       INTEGER(4)               :: IDA,IDB,IDC,IDD
       INTEGER(4)               :: ICHIA,ICHIB,ICHIC,ICHID
@@ -2895,10 +2908,10 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
       INTEGER(4)               :: IDIMAC,IDIMDB,IDIMCA,IDIMBD
       INTEGER(4)               :: ISPIN 
 !     **************************************************************************
-      call DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,6,FN)
-      f2=fn(2)
-      f4=fn(4)
-      f6=fn(6)
+      CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,6,FN)
+      F2=FN(2)
+      F4=FN(4)
+      F6=FN(6)
 !
 !     ==========================================================================
 !     == COLLINEAR CASE: SPIN INDICES ARE DECOUPLED                           ==
@@ -2918,15 +2931,15 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
               IAB=IA+NCHI*(IB-1)
               DO IC=1,NCHI
                 DO ID=1,NCHI
-                  Icd=Ic+NCHI*(Id-1)
+                  ICD=IC+NCHI*(ID-1)
 !                 == THE SECOND TERM IS FOR -I*OMEGA_\NU =======================
 !                 == G(-I*OMEGA)=G^\DAGGER(I*OMEGA) ============================
                   X4(IAB,ICD,ISPIN)=X4(IAB,ICD,ISPIN) &
-     &                       +f2* Glaur(IA,IC,ISPIN,1)*Glaur(ID,IB,ISPIN,1) &
-     &                       +f4*(Glaur(IA,IC,ISPIN,1)*Glaur(ID,IB,ISPIN,3) &
-     &                           +Glaur(IA,IC,ISPIN,2)*Glaur(ID,IB,ISPIN,2) &
-     &                           +Glaur(IA,IC,ISPIN,3)*Glaur(ID,IB,ISPIN,1)) &
-     &                       +f6* Glaur(IA,IC,ISPIN,3)*Glaur(ID,IB,ISPIN,3) 
+     &                       +F2* GLAUR(IA,IC,ISPIN,1)*GLAUR(ID,IB,ISPIN,1) &
+     &                       +F4*(GLAUR(IA,IC,ISPIN,1)*GLAUR(ID,IB,ISPIN,3) &
+     &                           +GLAUR(IA,IC,ISPIN,2)*GLAUR(ID,IB,ISPIN,2) &
+     &                           +GLAUR(IA,IC,ISPIN,3)*GLAUR(ID,IB,ISPIN,1)) &
+     &                       +F6* GLAUR(IA,IC,ISPIN,3)*GLAUR(ID,IB,ISPIN,3) 
                 ENDDO
               ENDDO
             ENDDO
@@ -2950,23 +2963,23 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
         DO ICHIA=1,NCHI
           DO IDB=1,2
           DO ICHIB=1,NCHI
-            iab=ichia+nchi*(ida-1+2*(ichib+nchi*(idb-1)))
+            IAB=ICHIA+NCHI*(IDA-1+2*(ICHIB+NCHI*(IDB-1)))
             DO IDC=1,2
             DO ICHIC=1,NCHI
               DO IDD=1,2
               DO ICHID=1,NCHI
-                icd=ichic+nchi*(idc-1+2*(ichid+nchi*(idd-1)))
+                ICD=ICHIC+NCHI*(IDC-1+2*(ICHID+NCHI*(IDD-1)))
 !
                 IDIMAC=IDA+2*(IDC-1)
                 IDIMCA=IDC+2*(IDA-1)
                 IDIMDB=IDD+2*(IDB-1)
                 IDIMBD=IDB+2*(IDD-1)
                 X4(IAB,ICD,1)=X4(IAB,ICD,1) &
-     &           +f2* Glaur(ICHIA,ICHIC,IDIMAC,1)*Glaur(ICHID,ICHIB,IDIMDB,1) &
-     &           +f4*(Glaur(ICHIA,ICHIC,IDIMAC,1)*Glaur(ICHID,ICHIB,IDIMDB,3) &
-     &               +Glaur(ICHIA,ICHIC,IDIMAC,2)*Glaur(ICHID,ICHIB,IDIMDB,2) &
-     &               +Glaur(ICHIA,ICHIC,IDIMAC,3)*Glaur(ICHID,ICHIB,IDIMDB,1)) &
-     &           +f6* Glaur(ICHIA,ICHIC,IDIMAC,3)*Glaur(ICHID,ICHIB,IDIMDB,3) 
+     &           +F2* GLAUR(ICHIA,ICHIC,IDIMAC,1)*GLAUR(ICHID,ICHIB,IDIMDB,1) &
+     &           +F4*(GLAUR(ICHIA,ICHIC,IDIMAC,1)*GLAUR(ICHID,ICHIB,IDIMDB,3) &
+     &               +GLAUR(ICHIA,ICHIC,IDIMAC,2)*GLAUR(ICHID,ICHIB,IDIMDB,2) &
+     &               +GLAUR(ICHIA,ICHIC,IDIMAC,3)*GLAUR(ICHID,ICHIB,IDIMDB,1)) &
+     &           +F6* GLAUR(ICHIA,ICHIC,IDIMAC,3)*GLAUR(ICHID,ICHIB,IDIMDB,3) 
               ENDDO
               ENDDO
             ENDDO
@@ -3153,45 +3166,45 @@ if(maxval(eig).gt.0.d0) print*,'warning!!!',maxval(eig)
      &                        ,IPROOFCHI,ATOMSET,KSET
       USE WAVES_MODULE, ONLY : GSET,WAVES_SELECTWV,THIS,MAP
       IMPLICIT NONE
-      logical(4),parameter   :: tprint=.false.
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE :: DHPIPSI(:,:,:) !(NDIM,NCHI,NB)
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)     !(NCHI,NCHI,NDIMD)
       LOGICAL(4)             :: TCHK,TRESET
       INTEGER(4)             :: NBH
       INTEGER(4)             :: LMNX
-      INTEGER(4)             :: nfil
+      INTEGER(4)             :: NFIL
       INTEGER(4)             :: NPRO
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IDIM1,IDIM2,IDIMD,IAT
       INTEGER(4)             :: I1,I2
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-PRINT*,'ENTERING DMFT$ADDTOHPSI_WITHKSET'
+PRINT*,'ENTERING DMFT_ADDTOHPSI'
                               CALL TRACE$PUSH('DMFT_ADDTOHPSI')
 !
 !     ==========================================================================
 !     == CHECK IF HTBC ALREADY CONTAINS INFORMATION                           ==
 !     ==========================================================================
       CALL LMTO$GETL4('ON',TCHK)
-print*,'lmto on? ',tchk
+PRINT*,'LMTO ON? ',TCHK
       IF(TCHK) CALL LMTO$GETL4('THTBC',TCHK)
       TRESET=.NOT.TCHK
-      CALL LMTO$SETL4('THTBC',.true.)
-print*,'reset? ',treset
+      CALL LMTO$SETL4('THTBC',.TRUE.)
+PRINT*,'RESET? ',TRESET
 !
 !     ==========================================================================
-!     ==  print local hamiltonian (static and double counting)                ==
+!     ==  PRINT LOCAL HAMILTONIAN (STATIC AND DOUBLE COUNTING)                ==
 !     ==========================================================================
       IF(TPRINT) THEN
-        nfil=6 
+        NFIL=6 
         WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'LOCAL HAMILTONIAN (FOCK+DC)' 
-        WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'FROM DMFT$ADDTOHPSI'
-        write(nfil,*)'local hamiltonian (fock+dc)' 
+        WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'FROM DMFT_ADDTOHPSI'
+        WRITE(NFIL,*)'LOCAL HAMILTONIAN (FOCK+DC)' 
         DO IAT=1,NAT
           IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
           LMNX=ATOMSET(IAT)%DENMAT%LMNX
           PRINT*,'ATOM ',IAT,' LMNX=',LMNX
-          CALL SPINOR_PRINTMATRIX(nfil,'DC HAMILTONIAN(TXYZ)',1,LMNX &
+          CALL SPINOR_PRINTMATRIX(NFIL,'DC HAMILTONIAN(TXYZ)',1,LMNX &
     &                            ,NDIMD,LMNX,ATOMSET(IAT)%DENMAT%H)
         ENDDO
       END IF
@@ -3209,7 +3222,7 @@ print*,'reset? ',treset
       DO IAT=1,NAT
         IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
         LMNX=ATOMSET(IAT)%DENMAT%LMNX
-!CALL SPINOR_PRINTMATRIX(6,'atomset%h',1,lmnx,NDIMD,lmnx,ATOMSET(IAT)%DENMAT%H)
+!CALL SPINOR_PRINTMATRIX(6,'ATOMSET%H',1,LMNX,NDIMD,LMNX,ATOMSET(IAT)%DENMAT%H)
         CALL SPINOR$CONVERT('BACK',LMNX,NDIMD,ATOMSET(IAT)%DENMAT%H)
         ATOMSET(IAT)%DENMAT%H=2.D0*ATOMSET(IAT)%DENMAT%H
       ENDDO
@@ -3225,7 +3238,7 @@ print*,'reset? ',treset
             CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
             CALL ERROR$I4VAL('NB IN DYNOCC',NB)
             CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT$ADDTOHPSI')
+            CALL ERROR$STOP('DMFT_ADDTOHPSI')
           END IF
           NBH=THIS%NBH
 !
@@ -3283,13 +3296,13 @@ print*,'reset? ',treset
 !         ======================================================================
 !         ==  NOW THE SITE-LOCAL TERM FROM THE DOUBLE COUNTING                ==
 !         ======================================================================
-          ipro=0
+          IPRO=0
           DO IAT=1,NAT
-            lmnx=atomset(iat)%denmat%lmnx
-            i1=ipro+1
-            i2=ipro+lmnx
-            ipro=ipro+lmnx
-            if(atomset(iat)%nloc.le.0) cycle ! no double counting          
+            LMNX=ATOMSET(IAT)%DENMAT%LMNX
+            I1=IPRO+1
+            I2=IPRO+LMNX
+            IPRO=IPRO+LMNX
+            IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
 !
             DO IDIM2=1,NDIM
               DO IDIM1=1,NDIM
@@ -3481,21 +3494,21 @@ PRINT*,' BEFORE SPINOR$PRINTL'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPINOR$blowup(NDIMD,NCHI,a,b)
+      SUBROUTINE SPINOR$BLOWUP(NDIMD,NCHI,A,B)
 !     **************************************************************************
-!     ** convert a matrix from the 0xyz representation into the               **
-!     ** (uu,ud/du,dd) representation                                         **
+!     ** CONVERT A MATRIX FROM THE 0XYZ REPRESENTATION INTO THE               **
+!     ** (UU,UD/DU,DD) REPRESENTATION                                         **
 !     **************************************PETER BLOECHL GOSLAR 2013***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NCHI
       INTEGER(4),INTENT(IN) :: NDIMD
       COMPLEX(8),INTENT(IN) :: A(NCHI,NCHI,NDIMD)
-      complex(8),intent(out):: b(2*nchi,2*nchi)
-      COMPLEX(8)            :: a1(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(OUT):: B(2*NCHI,2*NCHI)
+      COMPLEX(8)            :: A1(NCHI,NCHI,NDIMD)
 !     **************************************************************************
       A1=A
       CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,A1)
-      b=(0.d0,0.d0)
+      B=(0.D0,0.D0)
       IF(NDIMD.EQ.1) THEN
         B(  :NCHI,  :NCHI)=A1(:,:,1)
         B(NCHI+1:,NCHI+1:)=A1(:,:,1)
@@ -3516,19 +3529,19 @@ PRINT*,' BEFORE SPINOR$PRINTL'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPINOR$shrinkdown(NDIMD,NCHI,b,a)
+      SUBROUTINE SPINOR$SHRINKDOWN(NDIMD,NCHI,B,A)
 !     **************************************************************************
-!     ** convert matrix b from the (uu,ud/du,dd) representation               **
-!     ** into matrix a in 0xyz representation                                 **
+!     ** CONVERT MATRIX B FROM THE (UU,UD/DU,DD) REPRESENTATION               **
+!     ** INTO MATRIX A IN 0XYZ REPRESENTATION                                 **
 !     **************************************PETER BLOECHL GOSLAR 2013***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NCHI
       INTEGER(4),INTENT(IN) :: NDIMD
-      complex(8),intent(in) :: b(2*nchi,2*nchi)
-      COMPLEX(8),INTENT(out):: A(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: B(2*NCHI,2*NCHI)
+      COMPLEX(8),INTENT(OUT):: A(NCHI,NCHI,NDIMD)
 !     **************************************************************************
       IF(NDIMD.EQ.1) THEN
-        a(:,:,1)=0.5d0*(B(  :NCHI,  :NCHI)+B(NCHI+1:,NCHI+1:))
+        A(:,:,1)=0.5D0*(B(  :NCHI,  :NCHI)+B(NCHI+1:,NCHI+1:))
       ELSE IF(NDIMD.EQ.2) THEN
         A(:,:,1)=B(  :NCHI,  :NCHI)
         A(:,:,2)=B(NCHI+1:,NCHI+1:)
