@@ -170,7 +170,11 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$SETSPECIFICATION('STRC','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
+!
+!     ==========================================================================
 !SASCHA QM-MM
+!     ==========================================================================
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
 
@@ -364,7 +368,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
        CALL SPAGHETTI(LL_CNTL)
 !
 !     ==========================================================================
-!     ==  DEFINE MODES MODES                                                  ==
+!     ==  DEFINE MODES                                                        ==
 !     ==========================================================================
       CALL MODES(LL_CNTL)
 !
@@ -1086,6 +1090,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       REAL(8)                  :: DR(3)
       REAL(8)                  :: DIS
       REAL(8)                  :: TAV,T2AV
+      REAL(8)                  :: Tsum,T2sum
       REAL(8)                  :: SVAR
       REAL(8)                  :: DELTAT
       LOGICAL(4)               :: TFILE   ! FILE SHALL BE WRITTEN OR NOT
@@ -1097,6 +1102,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       REAL(8)                  :: SUM
       REAL(8)                  :: TRTRD,ALPHARTRD,TAVRTRD
       INTEGER(4)               :: NATOM
+      character(80)            :: string
 !     ******************************************************************
                                CALL TRACE$PUSH('TEMPERATURE')
       IF(TQMMM) THEN
@@ -1118,6 +1124,8 @@ CALL FILEHANDLER$FILENAME('TRA',str)
 !     ==  TEMPERATURE                                                  ==
 !     ================================================================
       CALL REPORT$TITLE(NFILO,'TEMPERATURE OF INDIVIDUAL ATOMS')
+      tsum=0.d0
+      t2sum=0.d0
       DO IAT=1,NATOM
         TAV=0.D0
         T2AV=0.D0
@@ -1133,10 +1141,25 @@ CALL FILEHANDLER$FILENAME('TRA',str)
         SVAR=0.5D0*MASS(IAT)/1.5D0
         TAV =SVAR*TAV
         T2AV=SVAR**2*T2AV
+        tsum=tsum+tav
+        t2sum=t2sum+t2av
         WRITE(NFILO,FMT='("ATOM ",A10," <T>:",F10.1,"K" &
      &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
      &    TRIM(ATOM(IAT)),TAV/KELVIN,SQRT(T2AV-TAV**2)/KELVIN
       ENDDO
+      tsum=tsum/natom
+      t2sum=t2sum/natom
+      WRITE(NFILO,FMT='(80("-"))')
+      WRITE(NFILO,FMT='("SUM",T17,"<T>:",F10.1,"K" &
+     &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
+     &    TSUM/KELVIN,SQRT(T2SUM-TSUM**2)/KELVIN
+      STRING="NOTE THAT THE TEMPERATURE USES G=3*N INSTEAD OF" &
+     &       //" G=3N-3 OR G=3N-6"
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
+      STRING="FOR THE NUMBER OF DEGREES OF FREEDOM."
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
+      STRING="THIS UNDERESTIMATES THE TRUE TEMPERATURE"
+      WRITE(NFILO,FMT='(A)')TRIM(STRING)
 !
 !     ================================================================
 !     ==  INDIVIDUAL PLOTS                                          ==
@@ -1672,11 +1695,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==  SPECIFY FILE                                              ==
 !     ================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('!TCNTL!MOVIE!FILE NOT FOUND')
-        CALL ERROR$STOP('WRITETRA')
-      END IF
-      CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',1)
+      CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',0)
 !     
 !     == READ FLAG FOR EXTENSION =======================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EXT',1,TCHK)
@@ -3708,5 +3727,69 @@ PRINT*,'COLLECT JUMPS'
       DEALLOCATE(X_TRA%Q)
       RETURN
       END
-
-
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RESOLVEEXTENDEDNAME(XNAME,NAME,IT)
+!     **************************************************************************
+!     **  RESOLVES THE EXTENDED ATOM NAME NOTATION, WHICH INCLUDES            **
+!     **  A LATTICE TRANSLATION                                               **
+!     **                                                                      **
+!     **  THE EXTENDED NOTATION INCLUDES AN INTEGER LATTICE TRANSLATIONS      **
+!     **  IN THE ATOM NAME FOLLOWING A COLON                                  **
+!     **                                                                      **
+!     **   'O_23:+1-1+1'  ATOM 'O_23' SHIFTED BY RBAS(:,1)-RBAS(:,2)+RBAS(:,3)**
+!     **                                                                      **
+!     **   THE '+'SIGNS ARE NOT REQUIRED.                                     **
+!     **   ONLY SINGLE-DIGIT TRANSLATIONS ARE PERMITTED                       **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: XNAME  ! EXTENDED ATOM NAME
+      CHARACTER(*),INTENT(OUT):: NAME   ! NON-EXTENDED ATOM NAME
+      INTEGER(4)  ,INTENT(OUT):: IT(3)  ! INTEGER LATTICE TRANSLATIONS
+      INTEGER(4)              :: ICOLON ! POSITION OF THE COLON IN XNAME
+      INTEGER(4)              :: IPOS,IND,SGN
+      INTEGER(4)              :: ICH    ! ASCII NUMBER OF THE SELECTED LETTER
+!     **************************************************************************
+      ICOLON=INDEX(XNAME,':')
+!     == RETURN IF NO TRANSLATION VECTOR GIVEN =================================
+      IF(ICOLON.EQ.0) THEN
+        NAME=XNAME
+        IT(:)=0
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == RESOLVE EXTENDED ATOM NAME                                           ==
+!     ==========================================================================
+      NAME=XNAME(:ICOLON-1)
+      IPOS=ICOLON+1
+      IND=0
+      sgn=+1
+      DO WHILE(IND.LT.3) 
+        ICH=IACHAR(XNAME(IPOS:IPOS))
+!       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN ! if "0,1,...,9"
+          IND=IND+1
+          IT(IND)=SGN*(ICH-48)
+          SGN=+1
+        ELSE IF(ICH.EQ.43) THEN   ! if "+"
+          SGN=+1
+        ELSE IF(ICH.EQ.45) THEN   ! if "-"
+          SGN=-1
+        ELSE
+          CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  
+          CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+          CALL ERROR$CHVAL('ILLEGAL CHARACTER ',XNAME(IPOS:IPOS))
+          CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+        END IF
+        IPOS=IPOS+1
+      ENDDO
+      IF(XNAME(IPOS:).NE.' ') THEN
+        CALL ERROR$MSG('LETTERS FOUND BEYOND END OF EXTENDED ATOM NOTATION')  
+        CALL ERROR$CHVAL('EXT. NAME ',XNAME)
+        CALL ERROR$CHVAL('ADDITIONAL LETTERS ',XNAME(IPOS:))
+        CALL ERROR$STOP('STRCIN_RESOLVEEXTENDEDNAME')
+      END IF
+      RETURN
+      END

@@ -47,7 +47,7 @@
 !     ==================================================================
 !     ==  INITIALIZE ATOMIC SETUPS                                    ==
 !     ==================================================================
-!     CALL SETUP$READ()   !now called from strcin
+!     CALL SETUP$READ()   !NOW CALLED FROM STRCIN
 !
 !     ==================================================================
 !     ==  INITIALIZE ATOMS OBJECT                                     ==
@@ -81,9 +81,9 @@
       CALL FILEHANDLER$UNIT('PROT',NFILO)
                               CALL TIMING$CLOCKOFF('INITIALIZATION')
                               CALL TIMING$PRINT('MONOMER',NFILO)
-!     == clock will be restarted again at the end of the first iteration to
-!     == account for the fact that many routines iniitialize themselfes in the 
-!     == first iteration. the time to this reset is not printed 
+!     == CLOCK WILL BE RESTARTED AGAIN AT THE END OF THE FIRST ITERATION TO
+!     == ACCOUNT FOR THE FACT THAT MANY ROUTINES INIITIALIZE THEMSELFES IN THE 
+!     == FIRST ITERATION. THE TIME TO THIS RESET IS NOT PRINTED 
                               CALL TIMING$START
 !
 !     ==================================================================
@@ -151,7 +151,7 @@
       END IF
 !     __ WRITE TRAJECTORY FROM TEMPORARY BUFFER TO FILE_________________
       IF(TPRINT.OR.TLAST) THEN
-        CALL TRAJECTORYIO$FLUSHall
+        CALL TRAJECTORYIO$FLUSHALL
       END IF
 !
 !     ==================================================================
@@ -161,8 +161,8 @@
 !     ==================================================================
       IF(TFIRST) THEN
         CALL TIMING$START
-      else
-        call timing$count
+      ELSE
+        CALL TIMING$COUNT
       END IF
 !
 !     ==================================================================
@@ -289,8 +289,8 @@
       USE TIMESTEP_MODULE ,ONLY : DELTAT,ISTEPNUMBER,TNEWTHERMOSTAT
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT   ! TIME STEP
-      LOGICAL(4),INTENT(IN)   :: TPRINT ! flag FOR LONG PRINTOUT
-      LOGICAL(4),INTENT(IN)   :: TSTOP  ! flag FOR LAST TIME STEP
+      LOGICAL(4),INTENT(IN)   :: TPRINT ! FLAG FOR LONG PRINTOUT
+      LOGICAL(4),INTENT(IN)   :: TSTOP  ! FLAG FOR LAST TIME STEP
       INTEGER(4),INTENT(INOUT):: NFI    ! TIME STEP COUNTER
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TFOR   ! ON/OFF SWITCH FOR ATOMIC MOTION
@@ -303,7 +303,7 @@
       REAL(8)                 :: EKIN   ! GENERIC KINETIC ENERGY
       REAL(8)                 :: SVAR
       LOGICAL(4)              :: TCHK1,TCHK2
-      real(8)                 :: fav,fmax
+      REAL(8)                 :: FAV,FMAX
 !     ******************************************************************      
                               CALL TRACE$PUSH('TIMESTEP')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -377,7 +377,7 @@
         CALL THERMOSTAT$GETR8('COOLING',ANNEE)
         CALL WAVES$SETR8('FRICTION',ANNEE)
         CALL ATOMS$SETR8('ANNEE',ANNEE)
-      else
+      ELSE
         CALL ATOMS$SETR8('ANNEE',0.D0)
       END IF
 !!$!
@@ -400,21 +400,21 @@
 !
 !     ==================================================================
 !     ==================================================================
-!     ==  Propagate:                                                  ==
+!     ==  PROPAGATE:                                                  ==
 !     ==================================================================
 !     ==================================================================
 ! 
 !     ==================================================================
 !     ==  PROPAGATE NUCLEI (CONSTRAINTS FOLLLOW LATER...)             ==
 !     ==================================================================
-!---dimermerge fix      
+!---DIMERMERGE FIX      
       CALL DIMER$GETL4('DIMER',TCHK)
       IF(TCHK) THEN
          CALL ATOMS$PROPAGATE_DIMER()
       ELSE
          CALL ATOMS$PROPAGATE()
       END IF
-!---end dimermerge fix      
+!---END DIMERMERGE FIX      
 ! 
 !     ==================================================================
 !     ==  PROPAGATE UNIT CELL                                         ==
@@ -425,7 +425,7 @@
       CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
 ! 
 !     ==================================================================
-!     ==  apply constraints to atomic coordinates                     ==
+!     ==  APPLY CONSTRAINTS TO ATOMIC COORDINATES                     ==
 !     ==================================================================
       CALL ATOMS$CONSTRAINTS()
 ! 
@@ -539,11 +539,11 @@
 !
 !     ==================================================================
 !     ==================================================================
-!     == check convergence                                            ==
+!     == CHECK CONVERGENCE                                            ==
 !     ==================================================================
 !     ==================================================================
-      call atoms$forcecriterion(fav,fmax)
-!print*,'force fav=',fav,' fmax=',fmax
+      CALL ATOMS$FORCECRITERION(FAV,FMAX)
+!PRINT*,'FORCE FAV=',FAV,' FMAX=',FMAX
 !
 !     ==================================================================
 !     ==================================================================
@@ -710,7 +710,7 @@ END MODULE STOPIT_MODULE
             CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
 !           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
 !           CALL ERROR$STOP('STOPIT$UPDATE')
-            CALL lib$SYSTEM(CMD)
+            CALL LIB$SYSTEM(CMD)
           END IF
           EXITFILEREMOVED=.TRUE.
         END IF
@@ -788,10 +788,10 @@ END MODULE STOPIT_MODULE
 !     **  PRINFO IS CALLED ONCE PER TIMESTEP                                  **
 !     **************************************************************************
       IMPLICIT NONE
-      LOGICAL(4),INTENT(IN) :: TPRINT  ! flag for extensive printout
-      LOGICAL(4),INTENT(IN) :: Tlast   ! flag for one-time execution
-      INTEGER(4),INTENT(IN) :: NFI     ! time step number
-      REAL(8)   ,INTENT(IN) :: DELT    ! rime step
+      LOGICAL(4),INTENT(IN) :: TPRINT  ! FLAG FOR EXTENSIVE PRINTOUT
+      LOGICAL(4),INTENT(IN) :: TLAST   ! FLAG FOR ONE-TIME EXECUTION
+      INTEGER(4),INTENT(IN) :: NFI     ! TIME STEP NUMBER
+      REAL(8)   ,INTENT(IN) :: DELT    ! RIME STEP
       LOGICAL(4),SAVE       :: TFIRST=.TRUE.
       INTEGER(4)            :: NAT
       INTEGER(4)            :: NFILO
@@ -836,7 +836,7 @@ END MODULE STOPIT_MODULE
       REAL(8)               :: MM_FRIC
       LOGICAL(4)            :: TCOSMO
       REAL(8)               :: EKINCOSMO,EPOTCOSMO
-      character(8)          :: FFTYPE
+      CHARACTER(8)          :: FFTYPE
 !     **************************************************************************
                               CALL TRACE$PUSH('PRINFO')
       TIME=DBLE(NFI)*DELT
@@ -852,20 +852,20 @@ END MODULE STOPIT_MODULE
 !     ==========================================================================
 !     ==  PLOT WAVE FUNCTIONS, DENSITIES                                      ==
 !     ==========================================================================
-!     == graphics object is set into the wake state only if tlast.and.tprint
+!     == GRAPHICS OBJECT IS SET INTO THE WAKE STATE ONLY IF TLAST.AND.TPRINT
                              CALL TRACE$PASS('BEFORE GRAPHICS$PLOT')
       CALL GRAPHICS$PLOT()
                              CALL TRACE$PASS('AFTER GRAPHICS$PLOT')
 !
 !     ==========================================================================
-      if(tprint) then
-!       == opteels object is switched on only in the last iteration ============
-        call OPTEELS$PLOT()
-      end if
+      IF(TPRINT) THEN
+!       == OPTEELS OBJECT IS SWITCHED ON ONLY IN THE LAST ITERATION ============
+        CALL OPTEELS$PLOT()
+      END IF
 !   
-!     ==================================================================
-!     ==   THE FOLLOWING IS ONLY EXECUTED ON THE FIRST NODE           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   THE FOLLOWING IS ONLY EXECUTED ON THE FIRST NODE                   ==
+!     ==========================================================================
 !     IF(THISTASK.GT.1) THEN
 !       CALL TRACE$POP
 !       RETURN
@@ -874,9 +874,9 @@ END MODULE STOPIT_MODULE
 !     CALL MM_RUN(CALGARY_QMMM)
       CALGARY_QMMM = .FALSE.
     
-!     ==================================================================
-!     ==   WRITE HEADER FOR PROTOCOLL FOR EACH TIME STEP              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE HEADER FOR PROTOCOLL FOR EACH TIME STEP                      ==
+!     ==========================================================================
                              CALL TRACE$PASS('WRITE HEADER')
       IF(THISTASK.EQ.1.AND.TFIRST) THEN
         CALL COSMO$GETL4('ON',TCOSMO)
@@ -904,9 +904,9 @@ END MODULE STOPIT_MODULE
       END IF
       IF(TPRINT) TFIRST=.TRUE.
 !   
-!     ==================================================================
-!     ==   WRITE PROTOCOLL FOR EACH TIME STEP                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE PROTOCOLL FOR EACH TIME STEP                                 ==
+!     ==========================================================================
                              CALL TRACE$PASS('WRITE PROTOCOLL')
       IF(THISTASK.EQ.1) THEN
 
@@ -914,9 +914,9 @@ END MODULE STOPIT_MODULE
         CALL CONSTANTS('SECOND',SECOND)
         CALL CONSTANTS('KB',CELVIN)
         TME1=TIME/(PICO*SECOND)
-!       ================================================================
-!       == ADD UP CONSERVED ENERGY                                    ==
-!       ================================================================
+!       ========================================================================
+!       == ADD UP CONSERVED ENERGY                                            ==
+!       ========================================================================
         ECONS=0.D0
 !
 !       == BASIC LDA + ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY =
@@ -926,13 +926,13 @@ END MODULE STOPIT_MODULE
         CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
         ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
 !
-!       == ELECTRON AND ATOM THERMOSTATS ===============================
+!       == ELECTRON AND ATOM THERMOSTATS =======================================
         CALL ENERGYLIST$RETURN('CELLOSTAT KINETIC',ECELLKIN)     
         CALL ENERGYLIST$RETURN('CELLOSTAT POTENTIAL',ECELLPOT)     
         ECONS=ECONS+ECELLKIN+ECELLPOT
 !PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
 !
-!       == ELECTRON AND ATOM THERMOSTATS ===============================
+!       == ELECTRON AND ATOM THERMOSTATS =======================================
         CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
         CALL ENERGYLIST$RETURN('ELECTRON THERMOSTAT',ENOSEE)     
         ECONS=ECONS+ENOSEP+ENOSEE
@@ -940,24 +940,24 @@ END MODULE STOPIT_MODULE
         CALL ENERGYLIST$RETURN('CONSTRAINT KINETIC ENERGY',EKINFC)     
         ECONS=ECONS+EKINFC
 !
-!       == OCCUPATIONS =================================================
+!       == OCCUPATIONS =========================================================
         CALL ENERGYLIST$RETURN('EPOT',HEAT) ! -T*S_MERMIN-MU*N-B*S
         CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
         ECONS=ECONS+HEAT+OCCKIN
 !
-!       == QM-MM ENVIRONMENT ===========================================
+!       == QM-MM ENVIRONMENT ===================================================
         CALL QMMM$GETL4('ON',TQMMM)
         IF(TQMMM) THEN
           CALL QMMM$GETR8('EKIN',QMMMKIN)
           CALL QMMM$GETR8('EPOT',QMMMPOT)
           ECONS=ECONS+QMMMKIN   !POTENTIAL ENERGY ALREADY INCLUDED IN ETOT
 !
-!         == THERMOSTAT FOR THE ENVIRONMENT ============================
+!         == THERMOSTAT FOR THE ENVIRONMENT ====================================
           CALL QMMM$GETR8('ETHERM',QMMMTHERM)
           ECONS=ECONS+QMMMTHERM
         END IF
 
-!       == QMMM CALGARY IMPLEMENTATION  ===============================
+!       == QMMM CALGARY IMPLEMENTATION  ========================================
         IF (CALGARY_QMMM) THEN
           CALL ENERGYLIST$RETURN('MM KINETIC ENERGY',MM_KINETIC_ENERGY)
           CALL ENERGYLIST$RETURN('MM POT ENERGY',MM_POT_ENERGY)
@@ -967,32 +967,32 @@ END MODULE STOPIT_MODULE
           ECONS=ECONS + MM_KINETIC_ENERGY + MM_NOSE_ENERGY
         END IF
 !
-!       == COsmo =========================================================
+!       == COSMO ===============================================================
         CALL COSMO$GETL4('ON',TCOSMO)
         IF(TCOSMO) THEN
           CALL ENERGYLIST$RETURN('COSMO KINETIC ENERGY',EKINCOSMO)
           CALL ENERGYLIST$RETURN('COSMO POTENTIAL ENERGY',EPOTCOSMO)
-!is already contained in econs and etot
+!IS ALREADY CONTAINED IN ECONS AND ETOT
 !          ECONS=ECONS+EKINCOSMO+EPOTCOSMO
 !          ETOT=ETOT+EPOTCOSMO
-!print*,'prinfo epotcosmo added to etot ',epotcosmo
+!PRINT*,'PRINFO EPOTCOSMO ADDED TO ETOT ',EPOTCOSMO
         END IF
 !
-!       == EXTERNAL POTENTIAL============================================
+!       == EXTERNAL POTENTIAL===================================================
         CALL ENERGYLIST$RETURN('EXTERNAL POTENTIAL',EEXT)
         ECONS=ECONS+EEXT
 !
         CALL ENERGYLIST$RETURN('CONSTANT ENERGY',SVAR)
 PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
-!       == SOME OTHER STUFF =============================================
+!       == SOME OTHER STUFF ====================================================
         CALL ENERGYLIST$RETURN('IONIC TEMPERATURE',TEMPINST)
         ITEMP=NINT(TEMPINST/CELVIN)
         CALL WAVES$GETR8('FRICTION',ANNEE)
         CALL ATOMS$GETR8('FRICTION',ANNER)
 !
         IF (TCOSMO) THEN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F8.5' &
+          WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5' &
      &                     //',2F11.5)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &              ,EPOTCOSMO,EKINCOSMO
@@ -1000,43 +1000,44 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL CONSTANTS('KB',CELVIN)
           CALL QMMM$GETI4('NAT:ENV',ISVAR)
           QMMMTEMP=2.D0*QMMMKIN/REAL(3*ISVAR,KIND=8)/CELVIN
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F6.3' &
+          WRITE(NFILO,FMT='("!>",I5,F10.5,1X,I5,F10.5,2F13.5,2F6.3' &
      &                //',I10,2F10.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &               ,NINT(QMMMTEMP),QMMMPOT,QMMMKIN+QMMMPOT
         ELSE IF(CALGARY_QMMM) THEN
           IMM_TEMP=NINT(MM_TEMP)
-          WRITE(NFILO,FMT='("!>",I5,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X' &
-     &       //',I4,1X,F5.2 )') NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER   &
-     &                     ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
+          WRITE(NFILO,FMT='("!>",I6,F8.4,1X,I4,F8.5,2F11.5,2F6.3,1X,F6.3,1X' &
+     &       //',I4,1X,F5.2 )') &
+     &                     NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
+     &                    ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
         ELSE
-          WRITE(NFILO,FMT='("!>",I5,F9.5,1X,I5,F10.5,2F13.5,2F8.5)') &
+          WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER
         ENDIF
 !
-!       ================================================================
-!       ==   WRITE ENERGIES TO PROTOCOLL                              ==
-!       ================================================================
+!       ========================================================================
+!       ==   WRITE ENERGIES TO PROTOCOLL                                      ==
+!       ========================================================================
                              CALL TRACE$PASS('WRITE ENERGIES')
         IF(TPRINT) THEN
           CALL ENERGYLIST$PRINTHEADER(NFILO)     
-!         ==  BASIC LDA ================================================
+!         ==  BASIC LDA ========================================================
           CALL ENERGYLIST$PRINTONE(NFILO,'TOTAL ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  KINETIC')     
-!         == AE electrostatic energy does not include isolate energy  ==
-!         == (previously it was added)                             =====
+!         == AE ELECTROSTATIC ENERGY DOES NOT INCLUDE ISOLATE ENERGY  ==========
+!         == (PREVIOUSLY IT WAS ADDED)                             =============
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  ELECTROSTATIC')     
           CALL ENERGYLIST$PRINTONE(NFILO,'AE  EXCHANGE-CORRELATION')     
           CALL ENERGYLIST$PRINTONE(NFILO,'    LOCAL CORRELATIONS')     
           CALL ENERGYLIST$PRINTONE(NFILO,'BACKGROUND')     
           CALL ENERGYLIST$PRINTONE(NFILO,'ISOLATE ENERGY')     
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  KINETIC')     
-!         == PS electrostatic energy does not include isolate energy  ==
-!         == (previously it was added)                             =====
+!         == PS ELECTROSTATIC ENERGY DOES NOT INCLUDE ISOLATE ENERGY  ==========
+!         == (PREVIOUSLY IT WAS ADDED)                             =============
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  ELECTROSTATIC')     
           CALL ENERGYLIST$PRINTONE(NFILO,'PS  EXCHANGE-CORRELATION')     
           CALL ENERGYLIST$PRINTONE(NFILO,'CORE RELAXATION')     
-!         == ATOM KINETIC ENERGY =======================================
+!         == ATOM KINETIC ENERGY ===============================================
           CALL ENERGYLIST$PRINTONE(NFILO,'IONIC KINETIC ENERGY')
           CALL ENERGYLIST$PRINTONE(NFILO,'IONIC TEMPERATURE')
           CALL ENERGYLIST$PRINTONE(NFILO,'ATOM THERMOSTAT')     
@@ -1048,13 +1049,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
           CALL ENERGYLIST$PRINTONE(NFILO,'LMTO INTERFACE')     
           CALL ENERGYLIST$PRINTONE(NFILO,'DMFT INTERFACE')     
 !
-!         == Van der Waals energy========================================
+!         == VAN DER WAALS ENERGY===============================================
           CALL VDW$GETL4('ON',TCHK)
           IF(TCHK) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'VAN DER WAALS ENERGY')
           END IF
 !
-!         == CELLOSTAT   ================================================
+!         == CELLOSTAT   =======================================================
           CALL CELL$GETL4('ON',TCHK)
           CALL CELL$GETL4('MOVE',TCHK1)
           IF(TCHK.AND.TCHK1) THEN
@@ -1062,24 +1063,24 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
             CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT POTENTIAL')
           END IF
 !          
-!         == OCCUPATIONS ================================================
+!         == OCCUPATIONS =======================================================
           CALL DYNOCC$GETL4('DYN',TCHK)
           IF(TCHK) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATIONAL ENTROPY TERM (-TS)')
             CALL ENERGYLIST$PRINTONE(NFILO,'OCCUPATION KINETIC ENERGY')
-          end if
+          END IF
 !
-!         == external potential =========================================
+!         == EXTERNAL POTENTIAL ================================================
           CALL ENERGYLIST$PRINTONE(NFILO,'EXTERNAL POTENTIAL')
 !
-!         == QM-MM ======================================================
+!         == QM-MM =============================================================
           CALL QMMM$GETL4('ON',TQMMM)
           IF(TQMMM) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'QMMM KINETIC ENERGY')
             CALL ENERGYLIST$PRINTONE(NFILO,'QMMM POTENTIAL ENERGY')
-          end if
+          END IF
 !
-!         == COSMO ======================================================
+!         == COSMO =============================================================
           IF(TCOSMO) THEN
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO KINETIC ENERGY')
             CALL ENERGYLIST$PRINTONE(NFILO,'COSMO POTENTIAL ENERGY')
@@ -1099,9 +1100,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         END IF
       END IF
 !   
-!     ==================================================================
-!     ==   PROJECTED DENSITY OF STATES                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   PROJECTED DENSITY OF STATES                                        ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE STATEANALYSIS')
       IF(TPRINT) THEN
         CALL WAVES$WRITEPDOS
@@ -1110,19 +1111,19 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       ENDIF
                               CALL TRACE$PASS('AFTER STATEANALYSIS')
 !   
-!     ==================================================================
-!     ==   write file for cosmotherm                                  ==
-!     ==================================================================
-      call cosmo$printout()
+!     ==========================================================================
+!     ==   WRITE FILE FOR COSMOTHERM                                          ==
+!     ==========================================================================
+      CALL COSMO$PRINTOUT()
 !   
-!     ==================================================================
-!     ==   CALCULATE OPTICAL MATRIXELEMENTS                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   CALCULATE OPTICAL MATRIXELEMENTS                                   ==
+!     ==========================================================================
 !     CALL OPTICS$EVALUATE
 !   
-!     ==================================================================
-!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOLL                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOLL                        ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE OCCUPATIONS')
       IF(TPRINT) THEN
         WRITE(NFILO,FMT='()')
@@ -1135,9 +1136,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL CORE$REPORT(NFILO)
       END IF
 !   
-!     ==================================================================
-!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOLL                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOLL                          ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE CONSTRAINTS')
       IF(TPRINT) THEN
         CALL CONSTRAINTS$REPORT(NFILO,'FULL')
@@ -1145,9 +1146,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
                               CALL TRACE$PASS('BEFORE FLUSH')
       CALL LIB$FLUSHFILE(NFILO)
 !   
-!     ==================================================================
-!     ==   WRITE CONSTRAINT INFORMATION                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE CONSTRAINT INFORMATION                                       ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('CONSTRAINTS',NFIL)
       IF(THISTASK.EQ.1) THEN
         WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
@@ -1155,9 +1156,9 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL LIB$FLUSHFILE(NFIL)
       END IF
 !   
-!     ==================================================================
-!     ==   WRITE FILE STRC_OUT                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE FILE STRC_OUT                                                ==
+!     ==========================================================================
       CALL STRCOUT
       CALL QMMM$GETL4('ON',TQMMM)
       IF(TQMMM) THEN
@@ -1172,8 +1173,12 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       RETURN
       END
 !
-!     ................................................................... 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITETRAJECTORY(NFI,DELT)
+!     **************************************************************************
+!     **  transfers trajectory data into the trajectory object                **
+!     **  data will be accumulated an be written in bigu chunks               **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFI
       REAL(8)   ,INTENT(IN)  :: DELT
@@ -1196,10 +1201,10 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: EKINFC
       REAL(8)                :: HEAT
       REAL(8)                :: OCCKIN
-      LOGICAL(4)             :: TQMMM,TCALGARYQMMM
+      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,tchk
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
       REAL(8)                :: EEXT
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
                                  CALL TRACE$PUSH('WRITETRAJECTORY')
@@ -1208,23 +1213,24 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       CALL CONSTANTS('SECOND',SECOND)
       CALL CONSTANTS('KB',CELVIN)
       TIME=DBLE(NFI)*DELT
+      CALL ATOMLIST$NATOM(NAT)
 !
-!     ==================================================================
-!     ==  COLLECT ENERGIES                                            ==
-!     ==================================================================
-!     ================================================================
-!     == ADD UP CONSERVED ENERGY                                    ==
-!     ================================================================
+!     ==========================================================================
+!     ==  COLLECT ENERGIES                                                    ==
+!     ==========================================================================
+!     ==========================================================================
+!     == ADD UP CONSERVED ENERGY                                              ==
+!     ==========================================================================
       ECONS=0.D0
 !     
-!     == BASIC LDA + ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY =
+!     == BASIC LDA + ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY ===========
       CALL ENERGYLIST$RETURN('TOTAL ENERGY',ETOT)     
       CALL ENERGYLIST$RETURN('IONIC KINETIC ENERGY',EKINP)
       CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKINC)     
       CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
       ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
 !     
-!     == ELECTRON AND ATOM THERMOSTATS ===============================
+!     == ELECTRON AND ATOM THERMOSTATS =========================================
       CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
       CALL ENERGYLIST$RETURN('ELECTRON THERMOSTAT',ENOSEE)     
       ECONS=ECONS+ENOSEP+ENOSEE
@@ -1232,24 +1238,24 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       CALL ENERGYLIST$RETURN('CONSTRAINT KINETIC ENERGY',EKINFC)     
       ECONS=ECONS+EKINFC
 !     
-!     == OCCUPATIONS =================================================
+!     == OCCUPATIONS ===========================================================
       CALL ENERGYLIST$RETURN('OCCUPATIONAL ENTROPY TERM (-TS)',HEAT) ! -T*S_MERMIN
       CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
       ECONS=ECONS+HEAT+OCCKIN
 !     
-!     == QM-MM ENVIRONMENT ===========================================
+!     == QM-MM ENVIRONMENT =====================================================
       CALL QMMM$GETL4('ON',TQMMM)
       IF(TQMMM) THEN
         CALL QMMM$GETR8('EKIN',QMMMKIN)
         CALL QMMM$GETR8('EPOT',QMMMPOT)
         ECONS=ECONS+QMMMKIN   !POTENTIAL ENERGY ALREADY INCLUDED IN ETOT
 !     
-!       == THERMOSTAT FOR THE ENVIRONMENT ============================
+!       == THERMOSTAT FOR THE ENVIRONMENT ======================================
         CALL QMMM$GETR8('ETHERM',QMMMTHERM)
         ECONS=ECONS+QMMMTHERM
       END IF
 !     
-!     == QMMM CALGARY IMPLEMENTATION  ===============================
+!     == QMMM CALGARY IMPLEMENTATION  ==========================================
       TCALGARYQMMM = .FALSE.
       IF(TCALGARYQMMM) THEN
         CALL ENERGYLIST$RETURN('MM KINETIC ENERGY',QMMMKIN)
@@ -1257,79 +1263,91 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ECONS=ECONS+QMMMKIN+QMMMTHERM
       END IF
 !     
-!     == EXTERNAL POTENTIAL============================================
+!     == EXTERNAL POTENTIAL=====================================================
       CALL ENERGYLIST$RETURN('EXTERNAL POTENTIAL',EEXT)
       ECONS=ECONS+EEXT
 !   
-!     ==================================================================
-!     ==   WRITE ENERGY TRAJECTORY                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE ENERGY TRAJECTORY                                            ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE E-TRAJECTORY')
-      CALL ATOMLIST$NATOM(NAT)
-      ALLOCATE(DWORK(MAX(4*NAT,8)))
-      CALL CONSTANTS('KB',CELVIN)
-      GLIB=3*NAT-3
-      IF(GLIB.NE.0.D0) THEN 
-        SVAR=NINT(EKINP/(.5D0*GLIB*CELVIN))
-      ELSE
-        SVAR=0.D0
-      END IF
-      DWORK(1)=SVAR
-      DWORK(2)=EKINC
-      DWORK(3)=EKINP
-      DWORK(4)=ETOT
-      DWORK(5)=ECONS
-      DWORK(6)=ENOSEE
-      DWORK(7)=ENOSEP
-      DWORK(8)=HEAT
       CALL TRAJECTORYIO$SELECT('ENERGY-TRAJECTORY')
-      CALL TRAJECTORYIO$ADD(NFI,TIME,8,DWORK)
+      CALL TRAJECTORYIO$GETL4('ON',TCHK)
+      IF(TCHK) THEN
+        ALLOCATE(DWORK(MAX(4*NAT,8)))
+        CALL CONSTANTS('KB',CELVIN)
+        GLIB=3*NAT-3
+        IF(GLIB.NE.0.D0) THEN 
+          SVAR=NINT(EKINP/(.5D0*GLIB*CELVIN))
+        ELSE
+          SVAR=0.D0
+        END IF
+        DWORK(1)=SVAR
+        DWORK(2)=EKINC
+        DWORK(3)=EKINP
+        DWORK(4)=ETOT
+        DWORK(5)=ECONS
+        DWORK(6)=ENOSEE
+        DWORK(7)=ENOSEP
+        DWORK(8)=HEAT
+        CALL TRAJECTORYIO$ADD(NFI,TIME,8,DWORK)
+        DEALLOCATE(DWORK)
+      END IF
       CALL TRAJECTORYIO$SELECT('NONE')
-      DEALLOCATE(DWORK)
 !   
-!     ==================================================================
-!     ==   WRITE POSITION TRAJECTORY                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE POSITION TRAJECTORY                                          ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE R-TRAJECTORY')
-      ALLOCATE(DWORK(9+8*NAT))
-      CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
-      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(9+1:9+3*NAT))
-      CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(9+3*NAT+1:9+3*nat+nat))
-      CALL ATOMLIST$GETR8A('CHARGEANDMOMENTS',0,4*NAT,DWORK(9+3*NAT+NAT+1:9+3*NAT+NAT+4*NAT))
       CALL TRAJECTORYIO$SELECT('POSITION-TRAJECTORY')
-      CALL TRAJECTORYIO$ADD(NFI,TIME,9+8*NAT,DWORK)
+      CALL TRAJECTORYIO$GETL4('ON',TCHK)
+      IF(TCHK) THEN
+        ALLOCATE(DWORK(9+8*NAT))
+        CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
+        CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,DWORK(9+1:9+3*NAT))
+        CALL ATOMLIST$GETR8A('Q',0,NAT,DWORK(9+3*NAT+1:9+3*NAT+NAT))
+        CALL ATOMLIST$GETR8A('CHARGEANDMOMENTS',0,4*NAT &
+     &                                  ,DWORK(9+3*NAT+NAT+1:9+3*NAT+NAT+4*NAT))
+        CALL TRAJECTORYIO$ADD(NFI,TIME,9+8*NAT,DWORK)
+        DEALLOCATE(DWORK)
+      END IF
       CALL TRAJECTORYIO$SELECT('NONE')
-      DEALLOCATE(DWORK)
 !   
-!     ==================================================================
-!     ==   WRITE FORCE TRAJECTORY                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE FORCE TRAJECTORY                                             ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE F-TRAJECTORY')
-      ALLOCATE(DWORK(4*NAT))
-      CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,DWORK)
-      DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS
-      CALL TRAJECTORYIO$select('FORCE-TRAJECTORY')
-      CALL TRAJECTORYIO$ADD(NFI,TIME,4*NAT,DWORK)
+      CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
+      CALL TRAJECTORYIO$GETL4('ON',TCHK)
+      IF(TCHK) THEN
+        ALLOCATE(DWORK(4*NAT))
+        CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,DWORK)
+        DWORK(3*NAT+1:4*NAT)=0.D0 ! SHALL CONTAIN IN FUTURE THE POTENTIALS
+        CALL TRAJECTORYIO$ADD(NFI,TIME,4*NAT,DWORK)
+        DEALLOCATE(DWORK)
+      END IF
       CALL TRAJECTORYIO$SELECT('NONE')
-      DEALLOCATE(DWORK)
 !   
-!     ==================================================================
-!     ==   WRITE POSITION TRAJECTORY FOR QMMM                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==   WRITE POSITION TRAJECTORY FOR QMMM                                 ==
+!     ==========================================================================
                               CALL TRACE$PASS('BEFORE QM-MM R-TRAJECTORY')
       CALL QMMM$GETL4('ON',TQMMM)
       IF(TQMMM) THEN
-         CALL CLASSICAL$SELECT('QMMM')
-         CALL CLASSICAL$GETI4('NAT',NATM)
-         ALLOCATE(DWORK(9+4*NATM))
-         CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
-         CALL CLASSICAL$GETR8A('R(0)',3*NATM,DWORK(10:9+3*NATM))
-         CALL CLASSICAL$GETR8A('QEL',NATM,DWORK(10+3*NATM:))
+         CALL TRAJECTORYIO$SELECT('QMMM-POS-TRA')
+         CALL TRAJECTORYIO$GETL4('ON',TCHK)
+         IF(TCHK) THEN      
+           CALL CLASSICAL$SELECT('QMMM')
+           CALL CLASSICAL$GETI4('NAT',NATM)
+           ALLOCATE(DWORK(9+4*NATM))
+           CALL CELL$GETR8A('T(0)',9,DWORK(1:9))
+           CALL CLASSICAL$GETR8A('R(0)',3*NATM,DWORK(10:9+3*NATM))
+           CALL CLASSICAL$GETR8A('QEL',NATM,DWORK(10+3*NATM:))
 
-         CALL TRAJECTORYIO$select('QMMM-POS-TRA')
-         CALL TRAJECTORYIO$ADD(NFI,TIME,9+4*NATM,DWORK)
+           CALL TRAJECTORYIO$ADD(NFI,TIME,9+4*NATM,DWORK)
+           DEALLOCATE(DWORK)
+         END IF
          CALL TRAJECTORYIO$SELECT('NONE')
-         DEALLOCATE(DWORK)
       END IF
 !
                               CALL TRACE$POP

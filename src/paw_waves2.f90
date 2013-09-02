@@ -603,7 +603,6 @@ END IF
                                CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
        RETURN
        END
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE WAVES_ADDPSI(NGL,NDIM,NBH,NB,PSIBAR,OPSI,LAMBDA)
