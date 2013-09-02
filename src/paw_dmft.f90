@@ -1839,7 +1839,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       CALL DMFT_SOLVERIO(2*NLOC,NOMEGA,KBT,G,GLAUR,U,ETOT,S,SLAUR,DEDU)
 !
 !     ==========================================================================
-!     == CONVERT GREEN'S FUNCTION                                             ==
+!     == CONVERT GREENS FUNCTION                                              ==
 !     ==========================================================================
       DO NU=1,NOMEGA
         S(:,:,NU)=MATMUL(CHIPHI,MATMUL(S(:,:,NU),CONJG(TRANSPOSE(CHIPHI))))
