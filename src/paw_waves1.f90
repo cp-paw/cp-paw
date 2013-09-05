@@ -1255,15 +1255,15 @@ END MODULE WAVES_MODULE
       INTEGER(4)              :: ISVAR1L,ISVAR2L,ISVAR1G,ISVAR2G
       INTEGER(4)              :: ISPIN
 !     ******************************************************************
-      IF(ID.EQ.'OCC') THEN
+      IF(ID.EQ.'OCC'.OR.ID.EQ.'EPSILON') THEN
         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
         CALL DYNOCC$GETI4('NB',NBX)
         CALL DYNOCC$GETI4('NSPIN',NSPIN)
         ALLOCATE(VALG(NBX*NKPT*NSPIN))
-        CALL DYNOCC$GETR8A('OCC',NBX*NKPT*NSPIN,VALG)
+        CALL DYNOCC$GETR8A(ID,NBX*NKPT*NSPIN,VALG)
         IKPTL=0
         DO IKPT=1,NKPT
-          IF(KMAP(IKPT).EQ.THISTASK) THEN
+           IF(KMAP(IKPT).EQ.THISTASK) THEN
             IKPTL=IKPTL+1
             DO ISPIN=1,NSPIN
 !             == DIMENSIONS: OCC(NBX,NKPT,NSPIN)
@@ -1296,20 +1296,20 @@ END MODULE WAVES_MODULE
         DEALLOCATE(VALG)
         CALL MPE$BROADCAST('K',1,VAL)
 !
-!!$      ELSE IF(ID.EQ.'WKPT') THEN
-!!$!       == THIS OPTION IS NOT USED ===========================
-!!$        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!!$        ALLOCATE(VALG(NKPT))
-!!$        CALL DYNOCC$GETR8A('WKPT',NKPT,VALG)
-!!$        IKPTL=0
-!!$        DO IKPT=1,NKPT
-!!$          IF(KMAP(IKPT).EQ.THISTASK) THEN
-!!$            IKPTL=IKPTL+1
-!!$            VAL(IKPTL)=VALG(IKPT)
-!!$          END IF
-!!$        ENDDO                         
-!!$        DEALLOCATE(VALG)
-!!$        CALL MPE$BROADCAST('K',1,VAL)
+      ELSE IF(ID.EQ.'WKPT') THEN
+!       == THIS OPTION IS used in dmft module  =================================
+        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+        ALLOCATE(VALG(NKPT))
+        CALL DYNOCC$GETR8A('WKPT',NKPT,VALG)
+        IKPTL=0
+        DO IKPT=1,NKPT
+          IF(KMAP(IKPT).EQ.THISTASK) THEN
+            IKPTL=IKPTL+1
+            VAL(IKPTL)=VALG(IKPT)
+          END IF
+        ENDDO                         
+        DEALLOCATE(VALG)
+        CALL MPE$BROADCAST('K',1,VAL)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -3875,7 +3875,8 @@ RETURN
 !     **                                                                      **
 !     ********************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
       USE MPE_MODULE
-      USE WAVES_MODULE
+      USE WAVES_MODULE, only : ndimd,ndim,nkptl,nspin,map,gset,this &
+     &                        ,waves_selectwv
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NRL
       INTEGER(4),INTENT(IN) :: NDIMD_

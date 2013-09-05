@@ -110,7 +110,7 @@ END MODULE AUGMENTATION_MODULE
 !     ==  ID(7)='AE1-PS1 KINETIC' ======================================
 !     ==  ID(8)='LDA+U EXCHANGE' =======================================
 !     ==  ID(9)='CORE RELAXATION' ======================================
-!     ==  ID(9)='EXTERNAL 1CENTER POTENTIAL' ===========================
+!     ==  ID(10)='EXTERNAL 1CENTER POTENTIAL' ===========================
       SVAR=VAL(7)+VAL(1)-VAL(2)+VAL(3)-VAL(4)+VAL(5)-VAL(6)+VAL(8)+VAL(9)+VAL(10)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
       CALL ENERGYLIST$ADD('AE  KINETIC',VAL(7))
