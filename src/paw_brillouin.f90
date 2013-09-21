@@ -862,11 +862,19 @@ END MODULE BRILLOUIN_MODULE
         J3=MODULO(I3,N(3))
         NUM(I)=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
       ENDDO
-!     ==================================================================
-!     ==  REDUCTION OF REDUCIBLE K-POINTS                             ==
-!     ==================================================================
-      DO I=1,NSYM                                                    
-        DO J=1,NMSHP                                                   
+!     ==========================================================================
+!     ==  REDUCTION OF REDUCIBLE K-POINTS                                     ==
+!     ==  apply the full point group on each k-point. The k-point with the    ==
+!     ==  minimum index in the resulting star is the irrducible point         ==
+!     ==========================================================================
+      DO J=1,NMSHP                                                   
+        IF(NUM(J).LT.J) THEN
+!         == point is not irreducible. use mapping to direct to irreducible 
+!         == k-point
+          NUM(J)=NUM(NUM(J))
+          CYCLE
+        END IF
+        DO I=1,NSYM                                                    
           IND=NUM(J)-1
           I1=IND/((N(3)+1)*(N(2)+1))
           IND=IND-I1*(N(3)+1)*(N(2)+1)
@@ -894,10 +902,15 @@ END MODULE BRILLOUIN_MODULE
           J1=MODULO(J1,N(1))
           J2=MODULO(J2,N(2))
           J3=MODULO(J3,N(3))
-          IND2=1+J1+N(1)*(J2+N(2)*J3)
+          IND2=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
 !         == IDENTIFY WITH ONE OF THE TWO SYMMETRY RELATED K-POINTS
-          IF(IND2.LT.IND1) THEN
-            NUM(J)=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
+          IF(IND2.LT.J) THEN
+!           == IF IND2<J,  NUM(IND2) POINTS TO AN IRREDUCIBLE K-POINT
+!           == IF IND2.GE.J FOR ALL SYMMETRY OPERATIONS, IT IS IRREDUCIBLE
+            NUM(J)=NUM(IND2)
+            EXIT
+          ELSE IF(IND2.GT.J) THEN
+            NUM(IND2)=J
           END IF
         ENDDO
       ENDDO
