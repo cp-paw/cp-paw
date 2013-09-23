@@ -205,25 +205,45 @@ scripts:
 	cp ${THISDIR}/src/Tools/Scripts/* ${BINDIR}
 #
 clean_scripts:
-	rm -f ${BINDIR}/compare_filelist ${BINDIR}/paw_collect ${BINDIR}/paw_copy    ${BINDIR}/paw_ext_copy  
-	rm -f ${BINDIR}/paw_run          ${BINDIR}/paw         ${BINDIR}/paw_compare ${BINDIR}/paw_distribution  
-	rm -f ${BINDIR}/paw_mpeg_encode  ${BINDIR}/paw_show
+	rm -f ${BINDIR}/compare_filelist \
+              ${BINDIR}/paw_collect \
+              ${BINDIR}/paw_copy    \
+              ${BINDIR}/paw_ext_copy  
+	rm -f ${BINDIR}/paw_run \
+              ${BINDIR}/paw \
+              ${BINDIR}/paw_compare \
+              ${BINDIR}/paw_distribution  
+	rm -f ${BINDIR}/paw_mpeg_encode  \
+              ${BINDIR}/paw_show
 #
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-docs: ${THISDIR}/doc/manual.pdf ${THISDIR}/doc/history.pdf ${THISDIR}/doc/install.pdf ${THISDIR}/doc/style.pdf ${THISDIR}/doc/Examples
+docs: ${THISDIR}/doc/manual.pdf \
+      ${THISDIR}/doc/history.pdf \
+      ${THISDIR}/doc/install.pdf \
+      ${THISDIR}/doc/style.pdf \
+      ${THISDIR}/doc/Examples
 #
-${THISDIR}/doc/manual.pdf :  ${THISDIR}/doc/manual.tex  ${THISDIR}/doc/doc.bib ${THISDIR}/doc/Figs
+${THISDIR}/doc/manual.pdf :  ${THISDIR}/doc/manual.tex  \
+                             ${THISDIR}/doc/doc.bib \
+                             ${THISDIR}/doc/all.bib \
+                             ${THISDIR}/doc/Figs
 	cd ${THISDIR}/doc; latex manual; makeindex manual.idx; latex manual;  bibtex manual; latex manual; latex manual; dvips manual.dvi; ps2pdf manual.ps 
 #
-${THISDIR}/doc/history.pdf :  ${THISDIR}/doc/history.tex ${THISDIR}/doc/doc.bib
+${THISDIR}/doc/history.pdf :  ${THISDIR}/doc/history.tex \
+                              ${THISDIR}/doc/doc.bib \
+                              ${THISDIR}/doc/all.bib
 	cd ${THISDIR}/doc; latex history; makeindex history.idx; latex history; bibtex history; latex history; latex history; dvips history.dvi; ps2pdf history.ps 
 #
-${THISDIR}/doc/install.pdf :  ${THISDIR}/doc/install.tex ${THISDIR}/doc/doc.bib
+${THISDIR}/doc/install.pdf :  ${THISDIR}/doc/install.tex \
+                              ${THISDIR}/doc/doc.bib \
+                              ${THISDIR}/doc/all.bib
 	cd ${THISDIR}/doc; latex install; makeindex install.idx; latex install; bibtex install; latex install; latex install; dvips install.dvi; ps2pdf install.ps
 #
-${THISDIR}/doc/style.pdf :  ${THISDIR}/doc/style.tex ${THISDIR}/doc/doc.bib
+${THISDIR}/doc/style.pdf :  ${THISDIR}/doc/style.tex \
+                            ${THISDIR}/doc/doc.bib\
+                            ${THISDIR}/doc/all.bib
 	cd ${THISDIR}/doc; latex style; makeindex style.idx; latex style; bibtex style; latex style; latex style; dvips style.dvi; ps2pdf style.ps
 #
 #  dependencies for documentation
@@ -242,6 +262,9 @@ ${THISDIR}/doc/history.tex :${THISDIR}/src/Docs/history.tex
 #
 ${THISDIR}/doc/doc.bib :${THISDIR}/src/Docs/doc.bib
 	cp ${THISDIR}/src/Docs/doc.bib ${THISDIR}/doc/doc.bib
+#
+${THISDIR}/doc/all.bib :${THISDIR}/src/Docs/all.bib
+	cp ${THISDIR}/src/Docs/all.bib ${THISDIR}/doc/all.bib
 #
 ${THISDIR}/doc/Figs :${THISDIR}/src/Docs/Figs
 	cp -r ${THISDIR}/src/Docs/Figs ${THISDIR}/doc/

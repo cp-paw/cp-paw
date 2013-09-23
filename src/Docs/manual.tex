@@ -3,6 +3,8 @@
 %
 %  include packages
 %
+\usepackage[numbers]{natbib}     % bibliography style
+\usepackage{url}\urlstyle{tt}
 \usepackage{times}
 \usepackage{ifthen}
 \usepackage{graphics}
@@ -70,6 +72,28 @@
 \resizebox{!}{9.0cm}{\includegraphics{Figs/big.eps}}
 }
 \date{\hrulefill\\Peter~E.~Bl\"ochl, Clausthal University of Technology\\(\today)}
+%
+%==========================================================================
+%==                                                                     ===
+%==========================================================================
+\makeindex    % make index. uses makeidx package.
+
+%== allow links between documents ============================================
+\usepackage{xr}
+\usepackage{xr-hyper}
+%==  hyperref package (must be last package)
+\usepackage[colorlinks=true]{hyperref} %specify this as last package
+\hypersetup{citecolor=blue}
+\hypersetup{menucolor=magenta}
+\hypersetup{urlcolor=blue}      % 
+\hypersetup{filecolor=green}    % file links
+\hypersetup{linkcolor=magenta}  %table of contents
+\hypersetup{pdfauthor={Peter E. Bl\"ochl}}
+\hypersetup{pdfdisplaydoctitle=true}
+
+
+
+
 
 \begin{document}          
 \maketitle   
@@ -468,7 +492,7 @@ confusion can occur. A simple rule that avoids confusion, is not to
 use colons in atom names.
 
 %==========================================================================
-\section{Before starting... (\$PAWDIR and \$ROOT)}
+\section{Before starting...}
 %==========================================================================
 In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are explained in the following:
 
@@ -970,7 +994,7 @@ parameterization of the Ceperley Alder quantum Monte Carlo calculation}
 
 
 \mbax{\key{VDW}
-\vdescr{Adds van der Waals Interactions\cite{grimme10_jcp32_154104}. 
+\vdescr{Adds van der Waals Interactions\cite{grimme10_jcp132_154104}. 
 The van der Waals interaction is described by an interatomic pair potential 
 that has a long-ranged $r^{-6}$ behavior and which is cut of smoothly 
 at short distances.}
@@ -979,7 +1003,7 @@ at short distances.}
 \vdefault{F}}
 
 \mbax{\key{VDW-3BODY} 
-\vdescr{adds three-body interactions\cite{grimme10_jcp32_154104} to
+\vdescr{adds three-body interactions\cite{grimme10_jcp132_154104} to
     the pair-wise van der Waals interactions of Grimme et al. (As of
     March 2012, not yet recommended by Grimme)}
 \vformat{logical} 
@@ -1068,7 +1092,7 @@ Example: $E_{PW}=50$~Ry, $E_B=30$~Ry, $c_B=1$}
   \sum_m\vert\tilde\Psi_m\rangle\Lambda_{mn}, $$
   where $\alpha$ can be
   tuned by a Nos\'e thermostat or the parameters below. The equation
-  of motions are integrated using the Verlet algorithm \cite{Verlet}.
+  of motions are integrated using the Verlet algorithm \cite{verlet67_pr159_98}.
   The friction parameter $\alpha$ is converted into a parameter
   $c_\alpha= \alpha\Delta/2$, which can range from 0 to 1.  A value of
   $c_\alpha=0$ indicates frictionless dynamics, whereas a value of
@@ -1571,7 +1595,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   In the adiabatic mode of operation also the improved tetrahedron
   method\footnote{The original papers on the tetrahedron method ar by
     Jepsen/Andersen\cite{jepsen71_ssc9_1763} and
-    Lehman/Taut\cite{lehmann72_pssb54_463}. The improved tetrahedron
+    Lehman/Taut\cite{lehmann72_pssb54_469}. The improved tetrahedron
     method by Bl\"ochl/Jepsen/Andersen\cite{bloechl94_prb49_16223}
     goes beyond the linear interpolation and leads to dramatically
     improved convergence.}  \cite{bloechl94_prb49_16223} can be used,
@@ -1950,7 +1974,7 @@ each step that reduces the energy}
 \bdescr{controls parameters for the dynamics of the continuum
   description of solvent. Essentially identical to the COSMO method by
   Klamt and Schuurmann, with modifications that allow consistent
-  forces\cite{senn03_jcp118p1089.}.}
+  forces\cite{senn03_jcp118_1089}.}
 
 
 \mbax{\key{STOP}
@@ -5595,10 +5619,10 @@ the paw\_tra tool. I recommend the extension
 \bdescr{produces the mass weighted path-length versus time 
   $$s(t)=\int_0^t \sqrt{\sum_i M_i\dot{R}_i^2}$$.  This mapping can be
   used to transform a time scale to a length scale, using the
-  definitions of the intrinsic reaction coordinate (IRC)\cite{IRC}.
-  The unit of the mass weighted path length is \AA$\sqrt{{\rm u}}$,
-  where u is the ``atomic mass unit'', i.e. one twelfth of the mass of
-  $^{12}$C.}
+  definitions of the intrinsic reaction coordinate
+  (IRC)\cite{fukui70_jcp74_4161,fukui81_acr14_363}.  The unit of the
+  mass weighted path length is \AA$\sqrt{{\rm u}}$, where u is the
+  ``atomic mass unit'', i.e. one twelfth of the mass of $^{12}$C.}
 %
 %----------------------------------------------------------------------
 \block{!TCNTL!SOFT!SELECT}
@@ -8685,214 +8709,11 @@ specified if E is specified. }
 
 %}{} % end of \ifthenelse
 
-\newpage
-%%==========================================================================
-%\section{Literature}
-%%==========================================================================
-%%==========================================================================
-%%\subsection{Introductory material}
-%%==========================================================================
-%\subsubsection{Electronic structure}
-%\subsubsection{Molecular Dynamics}
-%\subsubsection{Ab-initio Molecular Dynamics}
-%\subsubsection{PAW Method}
-%\subsubsection{Density functional Theory}
-%%\begin{description}
-%%\end{description}
-%%==========================================================================
-%\subsection{Recommended Literature}
-%%==========================================================================
-%\begin{description}
-%\item[``Projector Augmented Wave method'', P.E. Bl\"ochl, Phys. Rev. B
-%  {\bf 50}, 17953 (1994)] (Description of the PAW method)
-
-%\item[W. Kohn and L. J. Sham, Phys. Rev. 140,A1133(1965)] Local
-%  density approximation:
-
-
-%\item[J.P. Perdew, J. A. Chevary, S.H. Vosko, K.A. Jackson,
-%  M.R. pederson, D.J. Singh and C. Fiolhais, Phys. Rev. B,
-%  46,6671(1992-I)]
-% Perdew-Wang gradient correction for correlation
-
-%\item[J.P. Perdew, K. Burke and M. Ernzerhof,
-%  Phys. Rev. Lett. submitted (1997)]
-% Simplified version of Perdew Wang's 91 GGA-type exchange-correlation functional
-
-%\item[K. Schwarz; Phys. Rev. B5, 2466 (1972)]X-alpha (alpha=0.7) 
-
-%\item[Barth-Hedin (J.Phys.C5,p1629(1972))] 
-%Parameterizations of the exchange and correlation energy,
-
-%\item[??]Rajagopal-Singhal-Kimball \hfill\break 
-
-%\item[J.Chem.Phys.96,p2155(1992)]Becke gradient correction
-
-%\item[Phys. Rev. B33,p8822(1986))] Perdew gradient correction for
-%  correlation
-
-%\item[R. Car and M. Parrinello, Phys. Rev. Lett. 55, 2471 (1985)]
-%  Original paper on first principles molecular dynamics
-
-%\item[R. Car and M. Parrinello, in ``Simple molecular systems at very
-%  high density''] ed. A Polian et al. (Plenum Publishing corporation,
-%  1989) p455-476\hfill\break more extended description on ab-initio
-%  MD. describes the method for orthogonalization in some detail
-
-
-
-%\item[J.-P. Ryckaert, G. Cicotti and H.J.C. Berendsen, J. Comp. Phys.
-%  23.327 (1977)] original paper on treating constraints in a molecular
-%  dynamics simulation
-
-%\item[S. Nos\'e, J. Chem. Phys. 81, 511 (1984)] original paper on the
-%  Nos\'e thermostat
-
-%\item[S. Nos\'e, Mol. Phys. 52, 255 (1984)] paper on the Nos\'e thermostat
-
-%\item[P.E.  Bl\"ochl and M. Parrinello, Phys. Rev. B. 45, 9413
-%  (1992)]``Adiabaticity in first-principles molecular dynamics'', Nos\'e
-%  thermostat for the electronic wave functions
-
-%\item[]Mermin functional (finite temperature for the electrons,
-%  variable occupations)
-
-%\item[P.E. Bl\"ochl, Phys. Rev. {\bf B 41}, 5414 (1990)]''Generalized
-%  separable pseudopotentials''. Precursor of the PAW method in the
-%  pseudopotential formalism.
-
-%\item[C.G. Van de Walle and P.E. Bl\"ochl, Phys. Rev. B {\bf 47} 4244
-%  (1993)] Poor man's PAW applied to extract hyperfine parameters from
-%  a pseudopotential calculation.
-
-%\end{description}
-% %==========================================================================
-% \section{Applications of the PAW method (until June 1997)}
-% %==========================================================================
-% \begin{sloppypar}
-% \begin{enumerate}
-% \item ``Ab-initio calculations of one-dimensional band structures of
-%   mixed-stack molecular crystals'', C. Katan, C. Koenig and P.E.
-%   Bl\"ochl, Solid State Comm. 102, 589 (1997)
-% %
-% \item ``Ab-initio Molecular Dynamics Calculations to Study
-%   Catalysis'', K. Schwarz, E. Nusterer, P. Margl and P.E. Bl\"ochl,
-%   Int'l J. Quantum Chem. {\bf 61}, 369 (1997)
- 
-% \item ``A Static and Dynamic Density Functional Study of the Ti(IV)
-%   Constrained Geometry Catalyst (CpSiH2NH)Ti-R+: 1. Resting States and
-%   Chain Propagation'', Tom K. Woo, Peter Margl, John C.W. Lohrenz, Tom
-%   Ziegler and Peter E. Bl\"ochl; J. Am. Chem.  Soc. {\bf 118}, 13021
-%   (1996).
- 
-% \item ``First-Principles Investigation of Enantioselective Catalysis:
-%   Asymmetric Allylic Amination with Pd Complexes Bearing P, N
-%   Ligands'', P.E. Bl\"ochl and A. Togni, Organometallics {\bf 15},
-%   4125 (1996).
-  
-% \item ``Interaction of Water and Methanol with a Zeolite at High
-%   Coverages'', E. Nusterer, P.E. Bl\"ochl and K. Schwarz, Chem.  Phys.
-%   Lett. {\bf 253}, 448 (1996)
-  
-% \item ``Migratory CO Insertion and Aldehyde Formation in Carbonylation
-%   of Methane by the Rh(PH3)2Cl Catalyst. A Dynamical Density
-%   Functional Study'', P. Margl, T. Ziegler and P.E.  Bl\"ochl, J. Am.
-%   Chem. Soc. {\bf 118}, 5412 (1996)
-  
-% \item ``Ab-Initio Molecular Dynamics with the Projector Augmented Wave
-%   Method'', P.E. Bl\"ochl, P. Margl und K. Schwarz, in {\it Chemical
-%     Applications of Density Functional Methods}, B.B. Laird, R.B. Ross
-%   and T. Ziegler (eds.)  (American Chemical Society, Washington D.C.,
-%   1996), p.54
-  
-% \item ``Ab-Initio Molecular-Dynamics study of diffusion and defects in
-%   Solid Li$_3$N'', J. Sarnthein, K. Schwarz and P.E. Bl\"ochl, Phys.
-%   Rev. B {\bf 53}, 9084 (1996).
-  
-% \item ``A Dynamical Density Functional Study on the Reaction of
-%   Ethylene with Cp$_2$Zr(C$_2$H$_5$)$^+$'', P. Margl, J.C. W Lohrenz,
-%   T. Ziegler and P.E. Bl\"ochl, J. Am. Chem. Soc. {\bf 118}, 4434
-%   (1996).
-  
-% \item ``First Principles Molecular Dynamics Simulations for Neutral
-%   and Radical Anion of p-Chloranil''\hfill\break C. Katan, P.E.
-%   Bl\"ochl, P. Margl and C. Koenig, Phys. Rev. B {\bf 53}, 12112
-%   (1996).
-      
-% \item ``Structure and Dynamics of Methanol in a Zeolite'',
-%   E.~Nusterer, P.E.~Bl\"ochl and K.~Schwarz, Angew. Chem.  Int'l Ed.
-%   Engl.  {\bf 35}, 175 (1996); Angew. Chem. {\bf 108}, 187 (1996).
-  
-% \item ``Reaction of Methane with Rh(PH$_3$)$_2$Cl: A Dynamical Density
-%   Functional Study'', P. Margl, T. Ziegler and P.E. Bl\"ochl, J. Am.
-%   Chem. Soc {\bf 117}, 12625 (1995).
-  
-% \item ``Electronic Structure of Crystalline (NH$_4)_2$CuCl$_4$ from
-%   First Principles, P. Carloni, P.E.~Bl\"ochl, P.L.~Orioli, Gazzetta
-%   Chimica Italiana, {\bf 125} 497 (1995).
-  
-% \item ``Dynamics of Beryllocene''\hfill\break P. Margl, K.  Schwarz
-%   and P.E. Bl\"ochl, J. Chem. Phys. {\bf 103}, 683 (1995).
-  
-% \item ``The electronic structure of Cu, Zn superoxide dismutase active
-%   site and its interactions with the substrate''\hfill\break P.
-%   Carloni, P.E. Bl\"ochl and M. Parrinello, J. Phys. Chem. {\bf 99},
-%   1338 (1995).
-  
-% \item ``Projector Augmented Wave Method''\hfill\break P.E. Bl\"ochl,
-%   Phys. Rev. B {\bf 50}, 17953 (1994).
-  
-% \item ``Fluxional Dynamics of Beryllocene''\hfill\break P. Margl, K.
-%   Schwarz and P.E. Bl\"ochl, J. Am. Chem. Soc. {\bf 116}, 11177 (1994).
-      
-% \item ``Finite Temperature Characterization of Ferrocene from
-%   First-Principles Molecular Dynamics Simulations''\hfill\break P.
-%   Margl, K. Schwarz and P.E. Bl\"ochl, J. Chem. Phys. {\bf 100}, 8617
-%   (1994).
-  
-% \item ``Adsorption and STM imaging of organic molecules from first
-%   principles'',\hfill\break A.J. Fisher and P. Bl\"ochl, in {\it
-%     Computations for the Nano-Scale} ed. P.E. Bl\"ochl, C.Joachim and
-%   A.J. Fisher (Kluwer Academic Publishers, Dordrecht, 1993) 185.
-  
-% \item ``First-principles calculations of organometallic
-%   compounds''\hfill\break P. Margl, K. Schwarz and P. E. Bl\"ochl, in
-%   {\bf Computations for the Nano-Scale} ed. P.E. Bl\"ochl, C.Joachim
-%   and A.J.~Fisher (Kluwer Academic Publishers, Dordrecht, 1993)
-%   153-162.
-
-% \item ``Adsorption and scanning-tunneling microscope imaging of benzene
-%   on graphite and MoS$_2$''\hfill\break A.J. Fisher and P. Bl\"ochl,
-%   Phys. Rev. Lett. {\bf 70}, 3263 (1993).
-
-% \item ``Hypothetical carbon modifications derived from zeolite
-%   frameworks''\hfill\break R. Nesper, K. Vogel and P.E. Bl\"ochl, Angew.
-%   Chem. Int. Ed. Engl. {\bf 32}, 701 (1993).
-
-% \item ``Hypothetische Kohlenstoffmodifikationen mit Zeolith-analogen
-%   Strukturen''\hfill\break R. Nesper, K. Vogel and P.E. Bl\"ochl, Angew.
-%   Chem. {\bf 105}, 786 (1993).
-% %25
-% \item C.G.~Van~de~Walle and P.E.~Bl\"ochl, Phys. Rev. B
-%   {\bf 47} 4244 (1993).
-% %??
-% \item``Generalized separable pseudopotentials''
-%   P.E.~Bl\"ochl, Phys. Rev. {\bf B 41}, 5414 (1990).
-% \end{enumerate}
-% \end{sloppypar}
-
 
 %====================================================================
 \newpage
-\bibliographystyle{unsrt}
-\bibliography{doc.bib}
-
-%\begin{thebibliography}{99}
-%\bibitem{IRC} ``A Formulation of the Reaction Coordinate'' J. Phys.
-%  Chem. {\bf 74}, 4161 (1970); ``The Path of Chemical Reactions -- The
-%  IRC Approach'' Acc. Chem. Res. {\bf 14}, 363 (1981).
-%\end{thebibliography}
-
+\bibliographystyle{unsrtnat}
+\bibliography{all.bib,doc.bib}
 \printindex
 \end{document}
 \bye
