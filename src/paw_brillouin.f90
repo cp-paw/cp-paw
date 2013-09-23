@@ -446,9 +446,12 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4),INTENT(IN) :: NSYM       ! #(SYMMETRY OPERATIONS)
       INTEGER(4),INTENT(IN) :: IIO(3,3,NSYM) !SYMMETRY OPERATIONS
       INTEGER(4),INTENT(IN) :: IARB(3)    ! DEPENDENCE
-      logical(4),intent(inout) :: tshift     ! attempts a shift from the Gamma point
+      logical(4),intent(inout) :: tshift  ! attempts a shift from Gamma point
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       REAL(8)   ,ALLOCATABLE:: XK(:,:)   !(3,NGKP) K-POINTS
+      integer(4),parameter  :: nopx=48    ! max #(point group operations)
+      integer(4)            :: nop        ! #(point group operations)
+      integer(4)            :: op(3,3,nopx)  ! point group operations
       REAL(8)               :: GBAS(3,3)
       INTEGER(4)            :: N(3)       !DIVISION OF REC.LATT. VECT.
       INTEGER(4)            :: IWBK=0
@@ -467,20 +470,27 @@ END MODULE BRILLOUIN_MODULE
                                    CALL TRACE$PUSH('BRILLOUIN$MSH') 
       THIS%RBAS=RBAS
       INV=0
-!     ------------------------------------------------------------------
-!     -- DEFINE MESH                                                  --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     == DEFINE MESH                                                          ==
+!     ==========================================================================
       NMSHP=NGKP                                                         
       CALL GBASS(RBAS,GBAS,DUMMY)                                             
       CALL BRILLOUIN_BASDIV(N,NMSHP,GBAS,IARB)
       this%nkdiv(:)=n(:)
 !
 !     ==========================================================================
+!     == expand generators to complete full point group                       ==
+!     ==========================================================================
+      nop=nsym
+      op(:,:,nsym)=iio(:,:,nsym)
+      call BRILLOUIN_COMPLETE(NOPX,NOP,OP)
+!
+!     ==========================================================================
 !     == ATTEMPT TO SHIFT GRID                                                ==
 !     ==========================================================================
       IF(TSHIFT) THEN
         ISHIF(:)=1
-        CALL BRILLOUIN_CHECKSHIFT(ISHIF,NSYM,IIO,TCHK)
+        CALL BRILLOUIN_CHECKSHIFT(ISHIF,Nop,op,TCHK)
         IF(.NOT.TCHK) ISHIF(:)=0
         TSHIFT=TCHK  ! return feedback whether shift was successful
       ELSE
@@ -491,7 +501,7 @@ END MODULE BRILLOUIN_MODULE
 !     == FIND IRREDUCIBLE K-POINTS                                            ==
 !     ==========================================================================
       ALLOCATE(NUM(NMSHP))
-      CALL BRILLOUIN_REDUZ(N,NMSHP,ISHIF,NSYM,IIO,NUM)
+      CALL BRILLOUIN_REDUZ(N,NMSHP,ISHIF,Nop,op,NUM)
       IF(ISHIF(1).NE.0.OR.ISHIF(2).NE.0.OR.ISHIF(3).NE.0)INV=0   
       ALLOCATE(XK(3,NGKP))
       CALL BRILLOUIN_ZUORD(NMSHP,NUM,N,ISHIF,NGKP,NKP,XK)            
@@ -513,9 +523,9 @@ END MODULE BRILLOUIN_MODULE
 !     -- PRINTOUT OF SYMMETRY OPERATIONS                                      ==
 !     ==========================================================================
       IF(TPR) THEN
-        DO ISYM=1,NSYM                                             
+        DO ISYM=1,nop                                             
           WRITE(*,FMT='("SYMMETRYMATRIX NR. : ",I5/3(" ",3I10/))') &
-     &            ISYM,((IIO(I,J,ISYM),J=1,3),I=1,3)                 
+     &            ISYM,((op(I,J,ISYM),J=1,3),I=1,3)                 
         ENDDO
       END IF                                                            
 !     ==========================================================================
@@ -2722,3 +2732,115 @@ END MODULE BRILLOUIN_MODULE
       ENDDO
       RETURN                                                            
       END                                                               
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN_TESTCOMPLETE()
+!     **************************************************************************
+!     ** testroutine for the routine brillouin_complete                       **
+!     **************************************************************************
+      INTEGER(4),PARAMETER :: NOPX=48
+      INTEGER(4)           :: NOP
+      INTEGER(4)           :: OP(3,3,NOPX)
+      INTEGER(4),DIMENSION(3,3) :: C2Z,C2X,C2A,C31P,INV
+!     **************************************************************************
+!     == LIST OF GENERATORS ====================================================
+!     == GROUP 228 ==GAMMA^F_C==================================================
+      C2Z(:,1)=(/0,1,0/)   ; C2Z(:,2)=(/1,0,0/)  ; C2Z(:,3)=(/-1,-1,-1/) 
+      C2X(:,1)=(/-1,-1,-1/); C2X(:,2)=(/0,0,1/)  ; C2X(:,3)=(/0,1,0/)
+      C2A(:,1)=(/-1,0,0/)  ; C2A(:,2)=(/0,-1,0/) ; C2A(:,3)=(/1,1,1/)
+      C31P(:,1)=(/0,1,0/)  ; C31P(:,2)=(/0,0,1/) ; C31P(:,3)=(/1,0,0/)
+      INV(:,1)=(/-1,0,0/)  ; INV(:,2)=(/0,-1,0/) ; INV(:,3)=(/0,0,-1/)
+!
+!     ==========================================================================
+!     == PUT GENERATORS ONTO INPUT ARRAY                                      ==
+!     ==========================================================================
+      NOP=5
+      OP(:,:,1)=C2Z
+      OP(:,:,2)=C2X
+      OP(:,:,3)=C2A
+      OP(:,:,4)=C31P
+      OP(:,:,5)=INV
+      WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
+      DO I=1,NOP
+        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  RUN BRILLOUIN_COMPLETE
+!     ==========================================================================
+      CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
+!
+!     ==========================================================================
+!     ==  RUN BRILLOUIN_COMPLETE
+!     ==========================================================================
+      WRITE(*,FMT='(82("="),T10," FULL POINT GROUP ")')
+      DO I=1,NOP
+        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN_COMPLETE(NOPX,NOP,OP)
+!     **************************************************************************
+!     ** PRODUCES THE COMPLETE SET OF POINT GROUP OPERATIONS FROM A           **
+!     ** SET OF GENERATORS OF THE GROUP.                                      **
+!     **                                                                      **
+!     ** REMARK: THE ROUTINE TOLERATES IF MORE THAN A MINIMUM SET OF          **
+!     **         GENERATORS IS PROVIDED                                       **
+!     ** REMARK: THE IDENTITY NEED NOT BE INCLUDED IN THE SET OF GENERATORS   **
+!     **         GENERATORS IS PROVIDED                                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NOPX ! MAX #(POINT GROUP OPERATIONS)
+      INTEGER(4),INTENT(INOUT) :: NOP  ! IN: #(GENERATORS) OUT:  #(OPERATIONS)
+      INTEGER(4),INTENT(INOUT) :: OP(3,3,NOPX) ! IN: GENERATORS OUT: OPERATIONS
+      INTEGER(4)               :: GENERATOR(3,3,NOPX) ! COPY OF THE GENERATORS
+      INTEGER(4)               :: OPNEW(3,3)
+      INTEGER(4)               :: NGENERATOR
+      INTEGER(4)               :: I,IOP,IOP2
+      LOGICAL(4)               :: TOLD
+!     **************************************************************************
+      NGENERATOR=NOP
+      GENERATOR(:,:,:NOP)=OP(:,:,:NOP)
+!
+!     == IDENTITY ==============================================================
+      OP(:,:,:)=0
+      OP(1,1,1)=1
+      OP(2,2,1)=1
+      OP(3,3,1)=1
+      NOP=1
+!
+!     ==========================================================================
+!     == COMPLETE SYMMETRY GROUP                                              ==
+!     == ENSURES THAT NO NEW OPERATION IS OBTAINED BY APPLYING ANY OF THE     ==
+!     == GENERATORS TO ANT OF THE OPERATIONS IN THE GROUP                     ==
+!     ==========================================================================
+      NOP=1
+      IOP=1
+      DO WHILE(IOP.LE.NOP) !LOOP OVER OPERATIONS
+!WRITE(*,FMT='("OLD OPERATION ",I5,T20,3("|",3I5,"|"))')IOP,OP(:,:,IOP)
+        DO I=1,NGENERATOR
+          OPNEW=MATMUL(GENERATOR(:,:,I),OP(:,:,IOP))
+!WRITE(*,FMT='("OPNEW ",T20,3("|",3I5,"|"))') OPNEW
+!         == CHECK IF OPNEW ALREADY PRESENT IN OP ============================
+          TOLD=.FALSE.
+          DO IOP2=1,NOP
+            TOLD=SUM(ABS(OPNEW-OP(:,:,IOP2))).EQ.0
+            IF(TOLD) EXIT
+          ENDDO
+          IF(TOLD) CYCLE
+          NOP=NOP+1
+          IF(NOP.GT.NOPX) THEN
+            CALL ERROR$MSG('NUMBER OF OPERATIONS EXCEEDS MAXIMUM')
+            CALL ERROR$I4VAL('NOP',NOP)
+            CALL ERROR$I4VAL('NOPX',NOPX)
+            CALL ERROR$STOP('BRILLOUIN_COMPLETE')
+          END IF
+          OP(:,:,NOP)=OPNEW
+!WRITE(*,FMT='("NEW OP: ",I5,T20,3("|",3I5,"|"))')NOP,OP(:,:,NOP)
+        ENDDO ! END OF LOOP OVER GENERATORS
+        IOP=IOP+1
+      ENDDO !END OF LOOP OVER OPERATIONS
+      RETURN
+      END
