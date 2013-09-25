@@ -2844,3 +2844,1544 @@ END MODULE BRILLOUIN_MODULE
       ENDDO !END OF LOOP OVER OPERATIONS
       RETURN
       END
+!
+!........1.........2.........3.........4.........5.........6.........7.........8
+MODULE SPACEGROUP_MODULE
+TYPE SG_TYPE  !SPACE-GROUP TYPE
+  CHARACTER(3) :: BRAVAIS
+  CHARACTER(16):: INTERNATIONALSYMBOL
+  REAL(8)      :: T0(3)   ! T0 IN TABLE 3.7 OF BRADLEY CRACKNELL
+END TYPE SG_TYPE
+LOGICAL(4)    :: TINI=.FALSE.
+INTEGER(4)    :: ISPACEGROUP=0
+TYPE(SG_TYPE) :: SG(230)
+END MODULE SPACEGROUP_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPACEGROUP_INI()
+!     **************************************************************************
+!     **************************************************************************
+      USE SPACEGROUP_MODULE, ONLY : TINI,SG,SG_TYPE
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(TINI) RETURN
+      TINI=.TRUE.
+      SG(  1)=SG_TYPE('G1','P1',(/0.D0,0.D0,0.D0/))
+      SG(  2)=SG_TYPE('G1','P\BAR{1}',(/0.D0,0.D0,0.D0/))
+      SG(  3)=SG_TYPE('GM','P2',(/0.D0,0.D0,0.D0/))  
+      SG(  4)=SG_TYPE('GM','P2_1',(/0.D0,0.D0,0.D0/))
+      SG(  5)=SG_TYPE('GMB','B2',(/0.D0,0.D0,0.D0/))
+      SG(  6)=SG_TYPE('GM','PM',(/0.D0,0.D0,0.D0/))
+      SG(  7)=SG_TYPE('GM','PB',(/0.D0,0.D0,0.D0/))
+      SG(  8)=SG_TYPE('GMB','BM',(/0.D0,0.D0,0.D0/))
+      SG(  9)=SG_TYPE('GMB','BP',(/0.D0,0.D0,0.D0/))  
+      SG( 10)=SG_TYPE('GM','P2/M',(/0.D0,0.D0,0.D0/))
+      SG( 11)=SG_TYPE('GM','P2_1/M',(/0.D0,0.D0,0.25D0/))
+      SG( 12)=SG_TYPE('GBM','B2/M',(/0.D0,0.D0,0.D0/))
+      SG( 13)=SG_TYPE('GM','P2/B',(/-0.25D0,0.D0,0.25D0/))
+      SG( 14)=SG_TYPE('GM','P2_1/B',(/0.D0,0.D0,0.D0/))
+      SG( 15)=SG_TYPE('GMB','B2/B',(/0.25D0,0.D0,0.D0/))  
+      SG( 16)=SG_TYPE('GO','P222',(/0.D0,0.D0,0.D0/))
+      SG( 17)=SG_TYPE('GO','P222_1',(/0.D0,0.D0,0.D0/))
+      SG( 18)=SG_TYPE('GO','P2_12_12',(/0.D0,0.D0,0.D0/))
+      SG( 19)=SG_TYPE('GO','P2_12_12_1',(/0.D0,0.D0,0.D0/))
+      SG( 20)=SG_TYPE('GOB','C222_1',(/0.D0,0.D0,0.D0/))
+      SG( 21)=SG_TYPE('GOB','C222',(/0.D0,0.D0,0.D0/))
+      SG( 22)=SG_TYPE('GOF','F222',(/0.D0,0.D0,0.D0/))
+      SG( 23)=SG_TYPE('GOV','I222',(/0.D0,0.D0,0.D0/))
+      SG( 24)=SG_TYPE('GOV','I2_12_12_1',(/0.5D0,0.D0,0.D0/))
+      SG( 25)=SG_TYPE('GO','PMM2',(/0.D0,0.D0,0.D0/))
+      SG( 26)=SG_TYPE('GO','PMC2_1',(/0.D0,0.D0,0.D0/))
+      SG( 27)=SG_TYPE('GO','PCC2',(/0.D0,0.D0,0.D0/))
+      SG( 28)=SG_TYPE('GO','PMA2',(/-0.25D0,0.D0,0.D0/))
+      SG( 29)=SG_TYPE('GO','PCA2_1',(/-0.25D0,0.D0,0.D0/))
+      SG( 30)=SG_TYPE('GO','PNC2',(/-0.25D0,0.D0,0.D0/))
+      SG( 31)=SG_TYPE('GO','PMN2_1',(/0.D0,0.D0,0.D0/))
+      SG( 32)=SG_TYPE('GO','PBA2',(/-0.25D0,0.25D0,0.D0/))
+      SG( 33)=SG_TYPE('GO','PNA2_1',(/-0.25D0,0.25D0,0.D0/))
+      SG( 34)=SG_TYPE('GO','PNN2',(/-0.25D0,0.25D0,0.D0/))
+      SG( 35)=SG_TYPE('GOB','CMM2',(/0.D0,0.D0,0.D0/))
+      SG( 36)=SG_TYPE('GOB','CMC2_1',(/0.D0,0.D0,0.D0/))
+      SG( 37)=SG_TYPE('GOB','CCC2',(/0.D0,0.D0,0.D0/))
+      SG( 38)=SG_TYPE('GOB','AMM2',(/0.D0,0.D0,0.D0/))
+      SG( 39)=SG_TYPE('GOB','ABM2',(/0.D0,0.D0,0.D0/))
+      SG( 40)=SG_TYPE('GOB','AMA2',(/0.D0,0.D0,0.D0/))
+      SG( 41)=SG_TYPE('GOB','ABA2',(/0.D0,0.D0,0.D0/))
+      SG( 42)=SG_TYPE('GOF','FMM2',(/0.D0,0.D0,0.D0/))
+      SG( 43)=SG_TYPE('GOF','FDD2',(/0.D0,0.D0,0.25D0/))
+      SG( 44)=SG_TYPE('GOV','IMM2',(/0.D0,0.D0,0.D0/))
+      SG( 45)=SG_TYPE('GOV','IBA2',(/0.D0,0.D0,0.D0/))
+      SG( 46)=SG_TYPE('GOV','IMA2',(/0.D0,0.D0,0.D0/))
+      SG( 47)=SG_TYPE('GO','PMMM',(/0.D0,0.D0,0.D0/))
+      SG( 48)=SG_TYPE('GO','PNNN',(/0.D0,0.D0,0.D0/))
+      SG( 49)=SG_TYPE('GO','PCCM',(/0.D0,0.D0,0.25D0/))
+      SG( 50)=SG_TYPE('GO','PBAN',(/0.D0,0.D0,0.D0/))
+      SG( 51)=SG_TYPE('GO','PMMA',(/0.D0,0.D0,0.D0/))
+      SG( 52)=SG_TYPE('GO','PNNA',(/0.25D0,0.25D0,0.D0/))
+      SG( 53)=SG_TYPE('GO','PMNA',(/-0.25D0,0.D0,0.D0/))
+      SG( 54)=SG_TYPE('GO','PCCA',(/0.D0,0.25D0,0.D0/))
+      SG( 55)=SG_TYPE('GO','PBAM',(/0.D0,0.D0,0.D0/))
+      SG( 56)=SG_TYPE('GO','PCCN',(/-0.25D0,0.25D0,0.25D0/))
+      SG( 57)=SG_TYPE('GO','PBCM',(/0.D0,0.25D0,0.D0/))
+      SG( 58)=SG_TYPE('GO','PNNM',(/0.D0,0.D0,-0.25D0/))
+      SG( 59)=SG_TYPE('GO','PMMN',(/0.D0,0.D0,0.D0/))
+      SG( 60)=SG_TYPE('GO','PBCN',(/-0.25D0,0.D0,0.25D0/))
+      SG( 61)=SG_TYPE('GO','PBCA',(/0.D0,0.D0,0.D0/))
+      SG( 62)=SG_TYPE('GO','PNMA',(/0.25D0,0.25D0,0.D0/))
+      SG( 63)=SG_TYPE('GOB','CMCM',(/0.D0,0.D0,0.D0/))
+      SG( 64)=SG_TYPE('GOB','CMCA',(/0.25D0,0.25D0,0.D0/))
+      SG( 65)=SG_TYPE('GOB','CMMM',(/0.D0,0.D0,0.D0/))
+      SG( 66)=SG_TYPE('GOB','CCCM',(/0.D0,0.D0,0.25D0/))
+      SG( 67)=SG_TYPE('GOB','CMMA',(/0.25D0,0.25D0,0.D0/))
+      SG( 68)=SG_TYPE('GOB','CCCA',(/-0.25D0,0.25D0,0.25D0/))
+      SG( 69)=SG_TYPE('GOF','FMMM',(/0.D0,0.D0,0.D0/))
+      SG( 70)=SG_TYPE('GOF','FDDD',(/0.D0,0.D0,0.D0/))
+      SG( 71)=SG_TYPE('GOV','IMMM',(/0.D0,0.D0,0.D0/))
+      SG( 72)=SG_TYPE('GOV','IBAM',(/0.25D0,0.25D0,0.D0/))
+      SG( 73)=SG_TYPE('GOV','IBAC',(/0.25D0,0.D0,0.D0/))
+      SG( 74)=SG_TYPE('GOV','IMMA',(/0.75D0,0.25D0,0.D0/))
+      SG( 75)=SG_TYPE('GQ','P4',(/0.D0,0.D0,0.D0/))
+      SG( 76)=SG_TYPE('GQ','P4_1',(/0.D0,0.D0,0.D0/))
+      SG( 77)=SG_TYPE('GQ','P4_2',(/0.D0,0.D0,0.D0/))
+      SG( 78)=SG_TYPE('GQ','P4_3',(/0.D0,0.D0,0.D0/))
+      SG( 79)=SG_TYPE('GQV','I4',(/0.D0,0.D0,0.D0/))
+      SG( 80)=SG_TYPE('GQV','I4_1',(/0.D0,0.D0,0.D0/))
+      SG( 81)=SG_TYPE('GQ','P\BAR{4}',(/0.D0,0.D0,0.D0/))
+      SG( 82)=SG_TYPE('GQV','I\BAR{4}',(/0.D0,0.D0,0.D0/))
+      SG( 83)=SG_TYPE('GQ','P4/M',(/0.D0,0.D0,0.D0/))
+      SG( 84)=SG_TYPE('GQ','P4_2/M',(/0.D0,0.D0,0.25D0/))
+      SG( 85)=SG_TYPE('GQ','P4/N',(/0.D0,0.D0,0.D0/))
+      SG( 86)=SG_TYPE('GQ','P4_2/N',(/0.D0,0.D0,0.D0/))
+      SG( 87)=SG_TYPE('GQV','I4/M',(/0.D0,0.D0,0.D0/))
+      SG( 88)=SG_TYPE('GQV','I4_1/M',(/0.D0,0.D0,0.D0/))
+      SG( 89)=SG_TYPE('GQ','P422',(/0.D0,0.D0,0.D0/))
+      SG( 90)=SG_TYPE('GQ','P42_12',(/0.5D0,0.D0,0.D0/))
+      SG( 91)=SG_TYPE('GQ','P4_122',(/0.D0,0.D0,0.25D0/))
+      SG( 92)=SG_TYPE('GQ','P4_12_12',(/0.5D0,0.D0,-0.375D0/))
+      SG( 93)=SG_TYPE('GQ','P4_222',(/0.D0,0.D0,0.D0/))
+      SG( 94)=SG_TYPE('GQ','P4_22_12',(/0.5D0,0.D0,0.25D0/))
+      SG( 95)=SG_TYPE('GQ','P4_322',(/0.D0,0.D0,0.25D0/))
+      SG( 96)=SG_TYPE('GQ','P4_32_12',(/0.5D0,0.D0,-0.125D0/))
+      SG( 97)=SG_TYPE('GQV','I422',(/0.D0,0.D0,0.D0/))
+      SG( 98)=SG_TYPE('GQV','I4_122',(/0.125D0,0.125D0,0.D0/))
+      SG( 99)=SG_TYPE('GQ','P4MM',(/0.D0,0.D0,0.D0/))
+      SG(100)=SG_TYPE('GQ','P4BM',(/0.D0,0.D0,0.D0/))
+      SG(101)=SG_TYPE('GQ','P4_2CM',(/0.D0,0.D0,0.D0/))
+      SG(102)=SG_TYPE('GQ','P4_2NM',(/0.5D0,0.D0,0.D0/))
+      SG(103)=SG_TYPE('GQ','P4CC',(/0.D0,0.D0,0.D0/))
+      SG(104)=SG_TYPE('GQ','P4NC',(/0.D0,0.D0,0.D0/))
+      SG(105)=SG_TYPE('GQ','P4_2MC',(/0.D0,0.D0,0.D0/))
+      SG(106)=SG_TYPE('GQ','P4_2BC',(/0.D0,0.D0,0.D0/))
+      SG(107)=SG_TYPE('GQV','I4MM',(/0.D0,0.D0,0.D0/))
+      SG(108)=SG_TYPE('GQV','I4CM',(/0.D0,0.D0,0.D0/))
+      SG(109)=SG_TYPE('GQV','I4_1MD',(/0.D0,0.D0,0.D0/))
+      SG(110)=SG_TYPE('GQV','I4_1CD',(/0.D0,0.D0,0.D0/))
+      SG(111)=SG_TYPE('GQ','P\BAR{4}2M',(/0.D0,0.D0,0.D0/))
+      SG(112)=SG_TYPE('GQ','P\BAR{4}2C',(/0.D0,0.D0,0.D0/))
+      SG(113)=SG_TYPE('GQ','P\BAR{4}2_1M',(/0.D0,0.D0,0.D0/))
+      SG(114)=SG_TYPE('GQ','P\BAR{4}2_1C',(/0.D0,0.D0,0.D0/))
+      SG(115)=SG_TYPE('GQ','P\BAR{4}M2',(/0.D0,0.D0,0.D0/))
+      SG(116)=SG_TYPE('GQ','P\BAR{4}C2',(/0.D0,0.D0,0.D0/)) 
+      SG(117)=SG_TYPE('GQ','P\BAR{4}B2',(/0.D0,0.D0,0.D0/)) 
+      SG(118)=SG_TYPE('GQ','P\BAR{4}N2',(/0.D0,0.D0,0.D0/))
+      SG(119)=SG_TYPE('GQV','I\BAR{4}M2',(/0.D0,0.D0,0.D0/))
+      SG(120)=SG_TYPE('GQV','I\BAR{4}C2',(/0.D0,0.D0,0.D0/))
+      SG(121)=SG_TYPE('GQV','I\BAR{4}2M',(/0.D0,0.D0,0.D0/))
+      SG(122)=SG_TYPE('GQV','I\BAR{4}2D',(/0.D0,0.D0,0.D0/))
+      SG(123)=SG_TYPE('GQ','P4/MMM',(/0.D0,0.D0,0.D0/))
+      SG(124)=SG_TYPE('GQ','P4/MCC',(/0.D0,0.D0,0.25D0/))
+      SG(125)=SG_TYPE('GQ','P4/NBM',(/0.25D0,-0.25D0,0.D0/))
+      SG(126)=SG_TYPE('GQ','P4/NNC',(/0.5D0,0.D0,0.D0/))
+      SG(127)=SG_TYPE('GQ','P4/MBM',(/0.5D0,0.D0,0.D0/))
+      SG(128)=SG_TYPE('GQ','P4/MNC',(/0.5D0,0.D0,0.25D0/))
+      SG(129)=SG_TYPE('GQ','P4/NMM',(/0.5D0,0.D0,0.D0/))
+      SG(130)=SG_TYPE('GQ','P4/NCC',(/0.5D0,0.D0,0.25D0/))
+      SG(131)=SG_TYPE('GQ','P4_2/MMC',(/0.D0,0.D0,0.D0/))
+      SG(132)=SG_TYPE('GQ','P4_2/MCM',(/0.D0,0.D0,0.25D0/))
+      SG(133)=SG_TYPE('GQ','P4_2/NBC',(/0.D0,0.D0,0.25D0/))
+      SG(134)=SG_TYPE('GQ','P4_2/NNM',(/0.D0,0.D0,0.D0/))
+      SG(135)=SG_TYPE('GQ','P4_2/MBC',(/0.5D0,0.D0,0.D0/))
+      SG(136)=SG_TYPE('GQ','P4_2/MNM',(/0.D0,0.D0,0.25D0/))
+      SG(137)=SG_TYPE('GQ','P4_2/NMC',(/0.5D0,0.D0,0.25D0/))
+      SG(138)=SG_TYPE('GQ','P4_2/NCM',(/0.5D0,0.D0,0.D0/))
+      SG(139)=SG_TYPE('GQV','I4/MMM',(/0.D0,0.D0,0.D0/))
+      SG(140)=SG_TYPE('GQV','I4/MCM',(/0.75D0,0.25D0,0.5D0/))
+      SG(141)=SG_TYPE('GQV','I4_1/AMD',(/0.25D0,0.25D0,0.D0/))
+      SG(142)=SG_TYPE('GQV','I4_1/ACD',(/0.D0,0.D0,0.D0/))
+      SG(143)=SG_TYPE('GH','P3',(/0.D0,0.D0,0.D0/))
+      SG(144)=SG_TYPE('GH','P3_1',(/0.D0,0.D0,0.D0/))
+      SG(145)=SG_TYPE('GH','P3_2',(/0.D0,0.D0,0.D0/))
+      SG(146)=SG_TYPE('GRH','R3',(/0.D0,0.D0,0.D0/))
+      SG(147)=SG_TYPE('GH','P\BAR{3}',(/0.D0,0.D0,0.D0/)) 
+      SG(148)=SG_TYPE('GRH','R\BAR{3}',(/0.D0,0.D0,0.D0/)) 
+      SG(149)=SG_TYPE('GH','P312',(/0.D0,0.D0,0.D0/)) 
+      SG(150)=SG_TYPE('GH','P321',(/0.D0,0.D0,0.D0/)) 
+      SG(151)=SG_TYPE('GH','P3_112',(/0.D0,0.D0,(1.D0/6.D0)/))
+      SG(152)=SG_TYPE('GH','P3_121',(/0.D0,0.D0,0.D0/)) 
+      SG(153)=SG_TYPE('GH','P3_212',(/0.D0,0.D0,-(1.D0/6.D0)/))
+      SG(154)=SG_TYPE('GH','P3_221',(/0.D0,0.D0,0.D0/))
+      SG(155)=SG_TYPE('GRH','R32',(/0.D0,0.D0,0.D0/))     
+      SG(156)=SG_TYPE('GH','P3M1',(/0.D0,0.D0,0.D0/))     
+      SG(157)=SG_TYPE('GH','P31M',(/0.D0,0.D0,0.D0/))     
+      SG(158)=SG_TYPE('GH','P3C1',(/0.D0,0.D0,0.D0/))     
+      SG(159)=SG_TYPE('GH','P31C',(/0.D0,0.D0,0.D0/))  
+      SG(160)=SG_TYPE('GRH','R3M',(/0.D0,0.D0,0.D0/))
+      SG(161)=SG_TYPE('GRH','R3C',(/0.D0,0.D0,0.D0/))
+      SG(162)=SG_TYPE('GH','P\BAR{3}1M',(/0.D0,0.D0,0.D0/)) 
+      SG(163)=SG_TYPE('GH','P\BAR{3}1C',(/0.D0,0.D0,0.D0/)) 
+      SG(164)=SG_TYPE('GH','P\BAR{3}M1',(/0.D0,0.D0,0.D0/)) 
+      SG(165)=SG_TYPE('GH','P\BAR{3}C1',(/0.D0,0.D0,0.D0/))    
+      SG(166)=SG_TYPE('GRH','R\BAR{3}M',(/0.D0,0.D0,0.D0/)) 
+      SG(167)=SG_TYPE('GRH','R\BAR{3}C',(/0.D0,0.D0,0.D0/)) 
+      SG(168)=SG_TYPE('GH','P6',(/0.D0,0.D0,0.D0/))
+      SG(169)=SG_TYPE('GH','P6_1',(/0.D0,0.D0,0.D0/))
+      SG(170)=SG_TYPE('GH','P6_5',(/0.D0,0.D0,0.D0/))
+      SG(171)=SG_TYPE('GH','P6_2',(/0.D0,0.D0,0.D0/))
+      SG(172)=SG_TYPE('GH','P6_4',(/0.D0,0.D0,0.D0/))
+      SG(173)=SG_TYPE('GH','P6_3',(/0.D0,0.D0,0.D0/))
+      SG(174)=SG_TYPE('GH','P\BAR{6}',(/0.D0,0.D0,0.D0/))
+      SG(175)=SG_TYPE('GH','P6/M',(/0.D0,0.D0,0.D0/))
+      SG(176)=SG_TYPE('GH','P6_3/M',(/0.D0,0.D0,0.25D0/))
+      SG(177)=SG_TYPE('GH','P622',(/0.D0,0.D0,0.D0/))
+      SG(178)=SG_TYPE('GH','P6_122',(/0.D0,0.D0,0.D0/))
+      SG(179)=SG_TYPE('GH','P6_522',(/0.D0,0.D0,0.D0/))     
+      SG(180)=SG_TYPE('GH','P6_222',(/0.D0,0.D0,0.D0/))   
+      SG(181)=SG_TYPE('GH','P6_422',(/0.D0,0.D0,0.D0/))   
+      SG(182)=SG_TYPE('GH','P6_322',(/0.D0,0.D0,0.D0/)) 
+      SG(183)=SG_TYPE('GH','P6MM',(/0.D0,0.D0,0.D0/)) 
+      SG(184)=SG_TYPE('GH','P6CC',(/0.D0,0.D0,0.D0/)) 
+      SG(185)=SG_TYPE('GH','P6_3CM',(/0.D0,0.D0,0.D0/)) 
+      SG(186)=SG_TYPE('GH','P6_3MC',(/0.D0,0.D0,0.D0/)) 
+      SG(187)=SG_TYPE('GH','P\BAR{6}M2',(/0.D0,0.D0,0.D0/)) 
+      SG(188)=SG_TYPE('GH','P\BAR{6}C2',(/0.D0,0.D0,0.25D0/)) 
+      SG(189)=SG_TYPE('GH','P\BAR{6}2M',(/0.D0,0.D0,0.D0/)) 
+      SG(190)=SG_TYPE('GH','P\BAR{6}2C',(/0.D0,0.D0,0.25D0/)) 
+      SG(191)=SG_TYPE('GH','P6/MMM',(/0.D0,0.D0,0.D0/)) 
+      SG(192)=SG_TYPE('GH','P6/MMC',(/0.D0,0.D0,0.D0/)) 
+      SG(193)=SG_TYPE('GH','P6/MCM',(/0.D0,0.D0,0.D0/)) 
+      SG(194)=SG_TYPE('GH','P6_3/MMC',(/0.D0,0.D0,0.D0/)) 
+      SG(195)=SG_TYPE('GC','P23',(/0.D0,0.D0,0.D0/)) 
+      SG(196)=SG_TYPE('GCF','F23',(/0.D0,0.D0,0.D0/))
+      SG(197)=SG_TYPE('GCV','I23',(/0.D0,0.D0,0.D0/))
+      SG(198)=SG_TYPE('GC','P2_13',(/0.D0,0.D0,0.D0/))
+      SG(199)=SG_TYPE('GCV','I2_13',(/0.D0,0.D0,0.D0/))
+      SG(200)=SG_TYPE('GC','PM3',(/0.D0,0.D0,0.D0/))
+      SG(201)=SG_TYPE('GC','PN3',(/0.D0,0.D0,0.D0/))
+      SG(202)=SG_TYPE('GCF','FM3',(/0.D0,0.D0,0.D0/))
+      SG(203)=SG_TYPE('GCF','FD3',(/0.D0,0.D0,0.D0/))
+      SG(204)=SG_TYPE('GCV','IM3',(/0.D0,0.D0,0.D0/))
+      SG(205)=SG_TYPE('GC','PA3',(/0.D0,0.D0,0.D0/))
+      SG(206)=SG_TYPE('GCV','IA3',(/0.D0,0.D0,0.D0/))
+      SG(207)=SG_TYPE('GC','P432',(/0.D0,0.D0,0.D0/))
+      SG(208)=SG_TYPE('GC','P4_232',(/0.D0,0.D0,0.D0/))
+      SG(209)=SG_TYPE('GCF','F432',(/0.D0,0.D0,0.D0/))
+      SG(210)=SG_TYPE('GCF','F4_132',(/0.D0,0.D0,0.D0/))
+      SG(211)=SG_TYPE('GCV','I432',(/0.D0,0.D0,0.D0/))
+      SG(212)=SG_TYPE('GC','P4_332',(/0.D0,0.D0,0.D0/))
+      SG(213)=SG_TYPE('GC','P4_132',(/0.D0,0.D0,0.D0/))
+      SG(214)=SG_TYPE('GCV','I4_132',(/0.D0,0.D0,0.D0/))
+      SG(215)=SG_TYPE('GC','P\BAR{4}3M',(/0.D0,0.D0,0.D0/))
+      SG(216)=SG_TYPE('GCF','F\BAR{4}3M',(/0.D0,0.D0,0.D0/))
+      SG(217)=SG_TYPE('GCV','I\BAR{4}3M',(/0.D0,0.D0,0.D0/))
+      SG(218)=SG_TYPE('GC','P\BAR{4}3N',(/0.D0,0.D0,0.D0/))
+      SG(219)=SG_TYPE('GCF','F\BAR{4}3C',(/0.D0,0.D0,0.D0/))
+      SG(220)=SG_TYPE('GCV','I\BAR{4}3D',(/0.D0,0.D0,0.D0/))
+      SG(221)=SG_TYPE('GC','PM3M',(/0.D0,0.D0,0.D0/))
+      SG(222)=SG_TYPE('GC','PN3N',(/0.D0,0.D0,0.D0/))
+      SG(223)=SG_TYPE('GC','PM3N',(/0.D0,0.D0,0.D0/))
+      SG(224)=SG_TYPE('GC','PN3M',(/0.D0,0.D0,0.D0/))
+      SG(225)=SG_TYPE('GCF','FM3M',(/0.D0,0.D0,0.D0/))
+      SG(226)=SG_TYPE('GCF','FM3C',(/0.25D0,0.25D0,0.25D0/))
+      SG(227)=SG_TYPE('GCF','FD3M',(/0.D0,0.D0,0.D0/))
+      SG(228)=SG_TYPE('GCF','FD3C',(/0.D0,0.D0,0.D0/))
+      SG(229)=SG_TYPE('GCV','IM3M',(/0.D0,0.D0,0.D0/))
+      SG(230)=SG_TYPE('GCV','IA3D',(/0.D0,0.D0,0.D0/))
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPACEGROUP_SETI4(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: VAL
+!     **************************************************************************
+      CALL SPACEGROUP_INI()
+      IF(ID.EQ.'SPACEGROUP') THEN
+        ISPACEGROUP=VAL
+        IF(ISPACEGROUP.LE.1.OR.ISPACEGROUP.GT.230) THEN
+          CALL ERROR$MSG('SPACE GROUP NUMBER OUT OF RANGE')
+          CALL ERROR$I4VAL('ISPACEGROUP',ISPACEGROUP)
+          CALL ERROR$STOP('SPACEGROUP_SETI4')
+        END IF
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SPACEGROUP_SETI4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPACEGROUP_GETCH(ID,VAL)
+      USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP,SG
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(OUT):: VAL
+!     **************************************************************************
+      CALL SPACEGROUP_INI()
+      IF(ISPACEGROUP.EQ.0) THEN
+        CALL ERROR$MSG('NO SPACE GROUP SELECTED')
+        CALL ERROR$MSG('CALL SPACEGROUP$SETCH WITH ID="SPACEGROUP:"')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SPACEGROUP_GETCH')
+      END IF
+!
+      IF(ID.EQ.'BRAVAIS') THEN
+        VAL=SG(ISPACEGROUP)%BRAVAIS
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SPACEGROUP$GETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPACEGROUP$GENERATORS(ID,NOPX,NOP,OPERATION,C)
+!     **************************************************************************
+!     **   IMPLEMENTS TABLE 3.4 OF BRADLEY CRACKNELL                          **
+!     **************************************************************************
+      USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP
+      IMPLICIT NONE
+      CHARACTER(4),INTENT(IN) :: ID ! CAN BE 'REAL' OR 'RECI'
+      INTEGER(4)  ,INTENT(IN) :: NOPX
+      INTEGER(4)  ,INTENT(OUT):: NOP
+      INTEGER(4)  ,INTENT(OUT):: OPERATION(3,3,NOPX)
+      REAL(8)     ,INTENT(OUT):: C(3,NOPX)  ! CENTER OF OPERATION
+      INTEGER(4)              :: E(3,3),INV(3,3)
+      INTEGER(4)              :: C4XP(3,3),  C4XM(3,3)
+      INTEGER(4)              :: C4YP(3,3),  C4YM(3,3)
+      INTEGER(4)              :: C4ZP(3,3),  C4ZM(3,3)
+      INTEGER(4)              :: C2Z(3,3)
+      INTEGER(4)              :: C2X(3,3)
+      INTEGER(4)              :: C2Y(3,3)
+      INTEGER(4)              :: C2A(3,3)
+      INTEGER(4)              :: C2B(3,3)
+      INTEGER(4)              :: C2C(3,3)
+      INTEGER(4)              :: C2D(3,3)
+      INTEGER(4)              :: C2E(3,3)
+      INTEGER(4)              :: C2F(3,3)
+      INTEGER(4)              :: C6P(3,3), C6M(3,3)
+      INTEGER(4)              :: C3P(3,3), C3M(3,3)
+      INTEGER(4)              :: C2(3,3)
+      INTEGER(4)              :: C21S(3,3), C22S(3,3), C23S(3,3)
+      INTEGER(4)              :: C21SS(3,3), C22SS(3,3), C23SS(3,3)
+      INTEGER(4)              :: C31P(3,3),C32P(3,3),C33P(3,3),C34P(3,3) 
+      INTEGER(4)              :: C31M(3,3),C32M(3,3),C33M(3,3),C34M(3,3)
+      INTEGER(4)              :: SIGMAZ(3,3),SIGMAX(3,3),SIGMAY(3,3)
+      INTEGER(4)              :: SIGMAV1(3,3),SIGMAD1(3,3),SIGMAH(3,3)
+      INTEGER(4)              :: SIGMADA(3,3)
+      INTEGER(4)              :: I
+      CHARACTER(3)            :: BRAVAIS
+!     **************************************************************************
+      CALL SPACEGROUP_INI()
+      IF(ISPACEGROUP.EQ.0) THEN 
+        CALL ERROR$MSG('NO SPACE GROUP SELECTED')
+        CALL ERROR$MSG('CALL SPACEGROUP$SETCH WITH ID="SPACEGROUP:"')
+        CALL ERROR$STOP('SPACEGROUP$GENERATORS')
+      END IF
+!
+!     ==========================================================================
+!     == SELECT THE BRAVAIS LATTICE FOR THE SPECIFIED POINT GROUP
+!     ==========================================================================
+      CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
+!
+!     ==========================================================================
+!     == GENERATORS IN RECIPROCAL SPACE FOR THE BRAVAIS LATTICES              ==
+!     ==========================================================================
+      E=0
+      INV=0
+      C4XP=0;  C4XM=0; C4YP=0;  C4YM=0; C4ZP=0;  C4ZM=0
+      C2Z=0; C2X=0; C2Y=0; C2A=0; C2B=0; C2C=0; C2D=0; C2E=0; C2F=0
+      C6P=0; C6M=0
+      C3P=0; C3M=0; C2=0; C21S=0; C22S=0; C23S=0; C21SS=0; C22SS=0; C23SS=0
+      C31P=0; C32P=0;C33P=0;C34P=0; C31M=0;C32M=0;C33M=0;C34M=0
+
+      E(:,1)=(/1,0,0/); E(:,3)=(/0,1,0/); E(:,3)=(/0,0,1/); 
+      INV(:,1)=(/-1,0,0/); INV(:,3)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
+      IF(BRAVAIS.EQ.'G1') THEN ! MONOCLINIC
+        CONTINUE
+
+      ELSE IF(BRAVAIS.EQ.'GM ') THEN ! MONOCLINIC
+        C2Z(:,1)=(/-1,0,0/); C2Z(:,2)=(/0,-1,0/); C2Z(:,3)=(/0,0,1/)
+        !
+      ELSE IF(BRAVAIS.EQ.'GMB') THEN
+        C2Z(:,1)=(/-1,0,0/); C2Z(:,2)=(/0,0,-1/); C2Z(:,3)=(/0,-1,0/)
+        !
+      ELSE IF(BRAVAIS.EQ.'GO') THEN
+        C2X(:,1)=(/-1,0,0/); C2X(:,2)=(/0,1,0/); C2X(:,3)=(/0,0,-1/)
+        C2Y(:,1)=(/1,0,0/); C2Y(:,2)=(/0,-1,0/); C2Y(:,3)=(/0,0,-1/)
+        C2Z(:,1)=(/-1,0,0/); C2Z(:,2)=(/0,-1,0/); C2Z(:,3)=(/0,0,1/)
+        !
+      ELSE IF(BRAVAIS.EQ.'GOB') THEN
+        C2X(:,1)=(/0,1,0/); C2X(:,2)=(/1,0,0/); C2X(:,3)=(/0,0,-1/)
+        C2Y(:,1)=(/0,-1,0/); C2Y(:,2)=(/-1,0,0/); C2Y(:,3)=(/0,0,-1/)
+        C2Z(:,1)=(/-1,0,0/); C2Z(:,2)=(/0,-1,0/); C2Z(:,3)=(/0,0,1/) 
+        !
+      ELSE IF(BRAVAIS.EQ.'GOV') THEN
+        C2X(:,1)=(/0,-1,1/); C2X(:,2)=(/0,-1,0/); C2X(:,3)=(/1,-1,0/)
+        C2Y(:,1)=(/-1,0,0/); C2Y(:,2)=(/-1,0,1/); C2Y(:,3)=(/-1,1,0/)
+        C2Z(:,1)=(/0,1,-1/); C2Z(:,2)=(/1,0,-1/); C2Z(:,3)=(/0,0,-1/) 
+        !
+      ELSE IF(BRAVAIS.EQ.'GOF') THEN
+        C2X(:,1)=(/0,0,1/); C2X(:,2)=(/-1,-1,-1/); C2X(:,3)=(/1,0,0/)
+        C2Y(:,1)=(/-1,-1,-1/); C2Y(:,2)=(/0,0,1/); C2Y(:,3)=(/0,1,0/)
+        C2Z(:,1)=(/0,1,0/); C2Z(:,2)=(/1,0,0/); C2Z(:,3)=(/-1,-1,-1/) 
+        !
+      ELSE IF(BRAVAIS.EQ.'GQ') THEN
+        C4ZP(:,1)=(/0,1,0/);  C4ZP(:,2)=(/-1,0,0/);  C4ZP(:,3)=(/0,0,1/)
+        C2Z=MATMUL(C4ZP,C4ZP)
+        C4ZM=MATMUL(C4ZP,C2Z)
+        C2X(:,1)=(/1,0,0/); C2X(:,2)=(/0,-1,0/); C2X(:,3)=(/0,0,-1/)
+        C2Y(:,1)=(/-1,0,0/); C2Y(:,2)=(/0,1,0/); C2Y(:,3)=(/0,0,-1/)
+        C2A(:,1)=(/0,1,0/); C2A(:,2)=(/1,0,0/); C2A(:,3)=(/0,0,-1/) 
+        C2B(:,1)=(/0,-1,0/); C2B(:,2)=(/-1,0,0/); C2B(:,3)=(/0,0,-1/) 
+        !
+      ELSE IF(BRAVAIS.EQ.'GQV') THEN
+        C4ZP(:,1)=(/1,0,-1/);  C4ZP(:,2)=(/1,0,0/);  C4ZP(:,3)=(/1,-1,0/)
+        C2Z=MATMUL(C4ZP,C4ZP)
+        C4ZM=MATMUL(C4ZP,C2Z)
+        C2X(:,1)=(/-1,0,0/); C2X(:,2)=(/-1,0,1/); C2X(:,3)=(/-1,1,0/)
+        C2Y(:,1)=(/0,-1,1/); C2Y(:,2)=(/0,-1,0/); C2Y(:,3)=(/1,-1,0/)
+        C2A(:,1)=(/-1,0,1/); C2A(:,2)=(/0,-1,1/); C2A(:,3)=(/0,0,1/) 
+        C2B(:,1)=(/0,-1,0/); C2B(:,2)=(/-1,0,0/); C2B(:,3)=(/0,0,-1/) 
+        !
+      ELSE IF(BRAVAIS.EQ.'GRH') THEN
+        C3P(:,1)=(/0,1,0/); C3P(:,2)=(/0,0,1/); C3P(:,3)=(/1,0,0/)
+        C3M=MATMUL(C3P,C3P) 
+        C21S(:,1)=(/-1,0,0/); C21S(:,2)=(/0,0,-1/); C21S(:,3)=(/0,-1,0/) 
+        C22S(:,1)=(/0,0,-1/); C22S(:,2)=(/0,-1,0/); C22S(:,3)=(/-1,0,0/)
+        C23S(:,1)=(/0,-1,0/); C23S(:,2)=(/-1,0,0/); C23S(:,3)=(/0,0,-1/)
+        !
+      ELSE IF(BRAVAIS.EQ.'GRH') THEN
+        C6P(:,1)=(/0,1,0/); C6P(:,2)=(/-1,1,0/); C6P(:,3)=(/0,0,1/)
+        C3P=MATMUL(C6P,C6P)
+        C2(:,1)=(/-1,0,0/); C2(:,2)=(/0,-1,0/); C2(:,3)=(/0,0,1/) 
+        C3M(:,1)=(/0,-1,0/); C3M(:,2)=(/1,-1,0/); C3M(:,3)=(/0,0,1/)
+        C6M=MATMUL(C3M,C6P) 
+        C21S(:,1)=(/-1,1,0/); C21S(:,2)=(/0,1,0/); C21S(:,3)=(/0,0,-1/) 
+        C22S(:,1)=(/1,0,0/); C22S(:,2)=(/1,-1,0/); C22S(:,3)=(/0,0,-1/)
+        C23S(:,1)=(/0,-1,0/); C23S(:,2)=(/-1,0,0/); C23S(:,3)=(/0,0,-1/)
+        C21SS(:,1)=(/1,-1,0/); C21SS(:,2)=(/0,-1,0/); C21SS(:,3)=(/0,0,-1/) 
+        C22SS(:,1)=(/-1,0,0/); C22SS(:,2)=(/-1,1,0/); C22SS(:,3)=(/0,0,-1/)
+        C23SS(:,1)=(/0,1,0/); C23SS(:,2)=(/1,0,0/); C23SS(:,3)=(/0,0,-1/)  
+        !
+      ELSE IF(BRAVAIS.EQ.'GC') THEN
+        C2X(:,1)=(/1,0,0/); C2X(:,2)=(/0,-1,0/); C2X(:,3)=(/0,0,-1/)
+        C2Y(:,1)=(/-1,0,0/); C2Y(:,2)=(/0,1,0/); C2Y(:,3)=(/0,0,-1/)
+        C2Z(:,1)=(/-1,0,0/); C2Z(:,2)=(/0,-1,0/); C2Z(:,3)=(/0,0,1/)         
+        C31P(:,1)=(/0,1,0/); C31P(:,2)=(/0,0,1/); C31P(:,3)=(/1,0,0/)
+        C32P(:,1)=(/0,1,0/); C32P(:,2)=(/0,0,-1/); C32P(:,3)=(/-1,0,0/)
+        C33P(:,1)=(/0,-1,0/); C33P(:,2)=(/0,0,1/); C33P(:,3)=(/-1,0,0/)
+        C34P(:,1)=(/0,-1,0/); C34P(:,2)=(/0,0,-1/); C34P(:,3)=(/1,0,0/)
+        C31M(:,1)=(/0,0,1/); C31M(:,2)=(/1,0,0/); C31M(:,3)=(/0,1,0/)
+        C32M(:,1)=(/0,0,-1/); C32M(:,2)=(/1,0,0/); C32M(:,3)=(/0,-1,0/)
+        C33M(:,1)=(/0,0,-1/); C33M(:,2)=(/-1,0,0/); C33M(:,3)=(/0,1,0/)
+        C34M(:,1)=(/0,0,1/); C34M(:,2)=(/-1,0,0/); C34M(:,3)=(/0,-1,0/)
+        C4XP(:,1)=(/1,0,0/); C4XP(:,2)=(/0,0,1/); C4XP(:,3)=(/0,-1,0/)
+        C4YP(:,1)=(/0,0,-1/); C4YP(:,2)=(/0,1,0/); C4YP(:,3)=(/1,0,0/)
+        C4ZP(:,1)=(/0,1,0/); C4ZP(:,2)=(/-1,0,0/); C4ZP(:,3)=(/0,0,1/)
+        C4XM(:,1)=(/1,0,0/); C4XM(:,2)=(/0,0,-1/); C4XM(:,3)=(/0,1,0/)
+        C4YM(:,1)=(/0,0,1/); C4YM(:,2)=(/0,1,0/); C4YM(:,3)=(/-1,0,0/)
+        C4ZM(:,1)=(/0,-1,0/); C4ZM(:,2)=(/1,0,0/); C4ZM(:,3)=(/0,0,1/) 
+        C2A(:,1)=(/0,1,0/); C2A(:,2)=(/1,0,0/); C2A(:,3)=(/0,0,-1/) 
+        C2B(:,1)=(/0,-1,0/); C2B(:,2)=(/-1,0,0/); C2B(:,3)=(/0,0,-1/)
+        C2C(:,1)=(/0,0,1/); C2C(:,2)=(/0,-1,0/); C2C(:,3)=(/1,0,0/) 
+        C2D(:,1)=(/-1,0,0/); C2D(:,2)=(/0,0,1/); C2D(:,3)=(/0,1,0/)
+        C2E(:,1)=(/0,0,-1/); C2E(:,2)=(/0,-1,0/); C2E(:,3)=(/-1,0,0/) 
+        C2F(:,1)=(/-1,0,0/); C2F(:,2)=(/0,0,-1/); C2F(:,3)=(/0,-1,0/)
+
+      ELSE IF(BRAVAIS.EQ.'GCF') THEN
+        C2X(:,1)=(/-1,-1,-1/); C2X(:,2)=(/0,0,1/); C2X(:,3)=(/0,1,0/)
+        C2Y(:,1)=(/0,0,1/); C2Y(:,2)=(/-1,-1,-1/); C2Y(:,3)=(/1,0,0/)
+        C2Z(:,1)=(/0,1,0/); C2Z(:,2)=(/1,0,0/); C2Z(:,3)=(/-1,-1,-1/)         
+        C31P(:,1)=(/0,1,0/); C31P(:,2)=(/0,0,1/); C31P(:,3)=(/1,0,0/)
+        C32P(:,1)=(/-1,-1,-1/); C32P(:,2)=(/1,0,0/); C32P(:,3)=(/0,0,1/)
+        C33P(:,1)=(/1,0,0/); C33P(:,2)=(/-1,-1,-1/); C33P(:,3)=(/0,1,0/)
+        C34P(:,1)=(/0,0,1/); C34P(:,2)=(/0,1,0/); C34P(:,3)=(/-1,-1,-1/)
+        C31M(:,1)=(/0,0,1/); C31M(:,2)=(/1,0,0/); C31M(:,3)=(/0,1,0/)
+        C32M(:,1)=(/0,1,0/); C32M(:,2)=(/-1,-1,-1/); C32M(:,3)=(/0,0,1/)
+        C33M(:,1)=(/1,0,0/); C33M(:,2)=(/0,0,1/); C33M(:,3)=(/-1,-1,-1/)
+        C34M(:,1)=(/-1,-1,-1/); C34M(:,2)=(/0,1,0/); C34M(:,3)=(/1,0,0/)
+        C4XP(:,1)=(/0,0,-1/); C4XP(:,2)=(/-1,0,0/); C4XP(:,3)=(/1,1,1/)
+        C4YP(:,1)=(/1,1,1/); C4YP(:,2)=(/-1,0,0/); C4YP(:,3)=(/0,-1,0/)
+        C4ZP(:,1)=(/0,0,-1/); C4ZP(:,2)=(/1,1,1/); C4ZP(:,3)=(/0,-1,0/)
+        C4XM(:,1)=(/0,-1,0/); C4XM(:,2)=(/1,1,1/); C4XM(:,3)=(/-1,0,0/)
+        C4YM(:,1)=(/0,-1,0/); C4YM(:,2)=(/0,0,-1/); C4YM(:,3)=(/1,1,1/)
+        C4ZM(:,1)=(/1,1,1/); C4ZM(:,2)=(/0,0,-1/); C4ZM(:,3)=(/-1,0,0/) 
+        C2A(:,1)=(/-1,0,0/); C2A(:,2)=(/0,-1,0/); C2A(:,3)=(/1,1,1/) 
+        C2B(:,1)=(/0,-1,0/); C2B(:,2)=(/-1,0,0/); C2B(:,3)=(/0,0,-1/)
+        C2C(:,1)=(/-1,0,0/); C2C(:,2)=(/1,1,1/); C2C(:,3)=(/0,0,-1/) 
+        C2D(:,1)=(/1,1,1/); C2D(:,2)=(/0,-1,0/); C2D(:,3)=(/0,0,-1/)
+        C2E(:,1)=(/0,0,-1/); C2E(:,2)=(/0,-1,0/); C2E(:,3)=(/-1,0,0/) 
+        C2F(:,1)=(/-1,0,0/); C2F(:,2)=(/0,0,-1/); C2F(:,3)=(/0,-1,0/)      
+        !
+      ELSE IF(BRAVAIS.EQ.'GCV') THEN
+        C2X(:,1)=(/-1,0,0/); C2X(:,2)=(/-1,0,1/); C2X(:,3)=(/-1,1,0/)
+        C2Y(:,1)=(/0,-1,1/); C2Y(:,2)=(/0,-1,0/); C2Y(:,3)=(/1,-1,0/)
+        C2Z(:,1)=(/0,1,-1/); C2Z(:,2)=(/1,0,-1/); C2Z(:,3)=(/0,0,-1/)         
+        C31P(:,1)=(/0,1,0/); C31P(:,2)=(/0,0,1/); C31P(:,3)=(/1,0,0/)
+        C32P(:,1)=(/0,-1,0/); C32P(:,2)=(/1,-1,0/); C32P(:,3)=(/0,-1,1/)
+        C33P(:,1)=(/1,0,-1/); C33P(:,2)=(/0,0,-1/); C33P(:,3)=(/0,1,-1/)
+        C34P(:,1)=(/-1,0,1/); C34P(:,2)=(/-1,1,0/); C34P(:,3)=(/-1,0,0/)
+        C31M(:,1)=(/0,0,1/); C31M(:,2)=(/1,0,0/); C31M(:,3)=(/0,1,0/)
+        C32M(:,1)=(/-1,1,0/); C32M(:,2)=(/-1,0,0/); C32M(:,3)=(/-1,0,1/)
+        C33M(:,1)=(/1,-1,0/); C33M(:,2)=(/0,-1,1/); C33M(:,3)=(/0,-1,0/)
+        C34M(:,1)=(/0,0,-1/); C34M(:,2)=(/0,1,-1/); C34M(:,3)=(/1,0,-1/)
+        C4XP(:,1)=(/0,1,-1/); C4XP(:,2)=(/-1,1,0/); C4XP(:,3)=(/0,1,0/)
+        C4YP(:,1)=(/0,0,1/); C4YP(:,2)=(/-1,0,1/); C4YP(:,3)=(/0,-1,1/)
+        C4ZP(:,1)=(/1,0,-1/); C4ZP(:,2)=(/1,0,0/); C4ZP(:,3)=(/1,-1,0/)
+        C4XM(:,1)=(/0,-1,1/); C4YM(:,2)=(/0,0,1/); C4YM(:,3)=(/-1,0,1/)
+        C4YM(:,1)=(/1,-1,0/); C4YM(:,2)=(/1,0,-1/); C4YM(:,3)=(/1,0,0/)
+        C4ZM(:,1)=(/0,1,0/); C4ZM(:,2)=(/0,1,-1/); C4ZM(:,3)=(/-1,1,0/) 
+        C2A(:,1)=(/-1,0,1/); C2A(:,2)=(/0,-1,1/); C2A(:,3)=(/0,0,1/) 
+        C2B(:,1)=(/0,-1,0/); C2B(:,2)=(/-1,0,0/); C2B(:,3)=(/0,0,-1/)
+        C2C(:,1)=(/-1,1,0/); C2C(:,2)=(/0,1,0/); C2C(:,3)=(/0,1,-1/) 
+        C2D(:,1)=(/1,0,0/); C2D(:,2)=(/1,-1,0/); C2D(:,3)=(/1,0,-1/)
+        C2E(:,1)=(/0,0,-1/); C2E(:,2)=(/0,-1,0/); C2E(:,3)=(/-1,0,0/) 
+        C2F(:,1)=(/-1,0,0/); C2F(:,2)=(/0,0,-1/); C2F(:,3)=(/0,-1,0/)
+      ELSE
+        CALL ERROR$MSG('LATTICE SYMBOL NOT RECOGNIZED')
+        CALL ERROR$STOP('XXX')
+      END IF
+!
+!     ==========================================================================
+!     == BUILD UP ALL POINT GROUPS                                            ==
+!     ==========================================================================
+      OPERATION=0
+      C=0.D0
+      NOP=0
+      IF(ISPACEGROUP.EQ.1) THEN
+      ELSE IF(ISPACEGROUP.EQ.2) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.3) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+      ELSE IF(ISPACEGROUP.EQ.4) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.5) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+      ELSE IF(ISPACEGROUP.EQ.6) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ
+      ELSE IF(ISPACEGROUP.EQ.7) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ ; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.8) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ 
+      ELSE IF(ISPACEGROUP.EQ.9) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ ; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.10) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.11) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.12) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.13) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV ; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.14) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV ; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.15) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV ; C(:,NOP)=(/0.5D0,0.D0,0.0D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.0D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.16) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+      ELSE IF(ISPACEGROUP.EQ.17) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.18) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.19) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.20) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.21) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X         
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+      ELSE IF(ISPACEGROUP.EQ.22) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X         
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+      ELSE IF(ISPACEGROUP.EQ.23) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X         
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+      ELSE IF(ISPACEGROUP.EQ.24) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.25) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY 
+      ELSE IF(ISPACEGROUP.EQ.26) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+      ELSE IF(ISPACEGROUP.EQ.27) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+      ELSE IF(ISPACEGROUP.EQ.28) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.29) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.30) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.31) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.32) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.33) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.34) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.35) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+      ELSE IF(ISPACEGROUP.EQ.36) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.37) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.38) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+      ELSE IF(ISPACEGROUP.EQ.39) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.D0/) 
+      ELSE IF(ISPACEGROUP.EQ.40) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,05.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.41) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAZ; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+      ELSE IF(ISPACEGROUP.EQ.42) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+      ELSE IF(ISPACEGROUP.EQ.43) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX;C(:,NOP)=(/0.D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY;C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX;C(:,NOP)=(/0.75D0,0.75D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY;C(:,NOP)=(/0.75D0,0.75D0,0.75D0/)
+      ELSE IF(ISPACEGROUP.EQ.44) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY
+      ELSE IF(ISPACEGROUP.EQ.45) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.46) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAY; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.47) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.48) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+      ELSE IF(ISPACEGROUP.EQ.49) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.50) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+      ELSE IF(ISPACEGROUP.EQ.51) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.52) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.53) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.54) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.55) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.56) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.57) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.58) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.59) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.60) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.61) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.62) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.63) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.64) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.65) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.66) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.67) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.68) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.69) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.70) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.75D0,0.75D0,0.75D0/)
+      ELSE IF(ISPACEGROUP.EQ.71) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.72) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.73) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.74) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Y; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.75) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+      ELSE IF(ISPACEGROUP.EQ.76) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.25D0/)
+      ELSE IF(ISPACEGROUP.EQ.77) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.78) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.75D0/)
+      ELSE IF(ISPACEGROUP.EQ.79) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+      ELSE IF(ISPACEGROUP.EQ.80) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.81) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+      ELSE IF(ISPACEGROUP.EQ.82) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+      ELSE IF(ISPACEGROUP.EQ.83) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.84) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.85) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.86) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.87) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.88) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.89) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+      ELSE IF(ISPACEGROUP.EQ.90) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.91) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.92) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.75D0/)
+      ELSE IF(ISPACEGROUP.EQ.93) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+      ELSE IF(ISPACEGROUP.EQ.94) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.95) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.96) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.25D0/)
+      ELSE IF(ISPACEGROUP.EQ.97) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+      ELSE IF(ISPACEGROUP.EQ.98) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.99) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+      ELSE IF(ISPACEGROUP.EQ.100) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.101) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.102) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.103) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.104) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.105) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+      ELSE IF(ISPACEGROUP.EQ.106) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.107) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+      ELSE IF(ISPACEGROUP.EQ.108) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.109) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX
+      ELSE IF(ISPACEGROUP.EQ.110) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAX; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.111) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+      ELSE IF(ISPACEGROUP.EQ.112) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.113) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.114) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.115) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+      ELSE IF(ISPACEGROUP.EQ.116) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.117) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.118) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.119) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+      ELSE IF(ISPACEGROUP.EQ.120) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.121) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+      ELSE IF(ISPACEGROUP.EQ.122) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.25D0,0.75D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.75D0,0.25D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.123) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.124) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.125) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.126) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.127) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.128) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.129) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.130) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.131) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.132) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.133) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.134) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP;  C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.135) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.136) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.137) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.138) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.139) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.140) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.141) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.142) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+        NOP=NOP+1; OPERATION(:,:,NOP)=C4ZP; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.143) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+      ELSE IF(ISPACEGROUP.EQ.144) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.145) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.146) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+      ELSE IF(ISPACEGROUP.EQ.147) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+      ELSE IF(ISPACEGROUP.EQ.148) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+      ELSE IF(ISPACEGROUP.EQ.149) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+      ELSE IF(ISPACEGROUP.EQ.150) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS
+      ELSE IF(ISPACEGROUP.EQ.151) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.152) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.153) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.154) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.155) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS
+      ELSE IF(ISPACEGROUP.EQ.156) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.157) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1
+      ELSE IF(ISPACEGROUP.EQ.158) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.159) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.D0,0.5D0,0.D0/)
+      ELSE IF(ISPACEGROUP.EQ.160) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.161) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/) 
+        NOP=NOP+1; OPERATION(:,:,NOP)=C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.162) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1
+      ELSE IF(ISPACEGROUP.EQ.163) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.164) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.165) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.166) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.167) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.168) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+      ELSE IF(ISPACEGROUP.EQ.169) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(1.D0/6.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.170) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(5.D0/6.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.171) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.172) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+      ELSE IF(ISPACEGROUP.EQ.173) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.174) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P
+      ELSE IF(ISPACEGROUP.EQ.175) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAH
+      ELSE IF(ISPACEGROUP.EQ.176) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAH
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAH; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.177) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+      ELSE IF(ISPACEGROUP.EQ.178) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(1.D0/6.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(1.D0/6.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS
+      ELSE IF(ISPACEGROUP.EQ.179) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(5.D0/6.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(5.D0/6.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS
+      ELSE IF(ISPACEGROUP.EQ.180) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(1.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+      ELSE IF(ISPACEGROUP.EQ.181) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,(2.D0/3.D0)/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+      ELSE IF(ISPACEGROUP.EQ.182) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21SS
+      ELSE IF(ISPACEGROUP.EQ.183) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.184) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.185) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.186) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.187) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1
+      ELSE IF(ISPACEGROUP.EQ.188) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAV1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.189) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1
+      ELSE IF(ISPACEGROUP.EQ.190) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=-C3P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMAD1; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.191) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.192) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.193) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.194) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C6P; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C21S; C(:,NOP)=(/0.D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.195) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.196) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.197) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.198) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.199) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.200) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.201) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.202) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.203) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+      ELSE IF(ISPACEGROUP.EQ.204) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.205) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.206) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.207) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.208) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.209) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.210) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.211) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.212) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.25D0,0.75D0,0.75D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.213) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.75D0,0.25D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.214) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.215) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.216) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.217) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.218) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.219) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.220) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=SIGMADA; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+      ELSE IF(ISPACEGROUP.EQ.221) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.222) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.223) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.224) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+      ELSE IF(ISPACEGROUP.EQ.225) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.226) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.5D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.227) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+      ELSE IF(ISPACEGROUP.EQ.228) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.25D0,0.25D0,0.25D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV; C(:,NOP)=(/0.75D0,0.75D0,0.75D0/)
+      ELSE IF(ISPACEGROUP.EQ.229) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+      ELSE IF(ISPACEGROUP.EQ.221) THEN
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2Z; C(:,NOP)=(/0.5D0,0.D0,0.5D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2X; C(:,NOP)=(/0.5D0,0.5D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
+        NOP=NOP+1; OPERATION(:,:,NOP)=C31P
+        NOP=NOP+1; OPERATION(:,:,NOP)=INV
+
+      END IF
+!
+!     ==========================================================================
+!     ==  TRANSFORM RECIPROCAL SPACE OPERATIONS INTO REAL SPACE OPERATIONS
+!     ==========================================================================
+      IF(ID.EQ.'REAL') THEN
+        CALL ERROR$MSG('REAL SPACE GENERATORES NOT YET IMPLEMENTED')
+        CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+      ELSE IF(ID.EQ.'RECI') THEN
+        C(:,:)=0.D0
+      ELSE
+        CALL ERROR$MSG('INVALID VALUE OF ID (MUST BE "REAL" OR "RECI")')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+      END IF
+!
+!     ==========================================================================
+!     ==  CHECK CONSISTENCY OF POINT GROUP OPERATIONS                         ==
+!     ==========================================================================
+        DO I=1,NOP
+          IF(SUM(ABS(OPERATION(:,:,I))).GT.0) THEN
+            CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
+            CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
+            CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
+            CALL ERROR$I4VAL('SPACE GROUP NUMBER',ISPACEGROUP)
+            CALL ERROR$CHVAL('BRAVAIS LATTICE',BRAVAIS)
+            CALL ERROR$I4VAL('NUMBER OF GENERATORS',NOP)
+            CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+          END IF
+        ENDDO
+        RETURN
+      END SUBROUTINE SPACEGROUP$GENERATORS
