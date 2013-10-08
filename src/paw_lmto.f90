@@ -10194,22 +10194,29 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        SUBROUTINE LMTO_TWOCENTER(L1_,M1_,GID1_,NR1_,F1_ &
       &                         ,L2_,M2_,GID2_,NR2_,F2_,DIS_,TOLERANCE,OVERLAP)
 !      *************************************************************************
+!      ** determines the two-center integral of two functions specified       **
+!      ** on a radial grid and real spherical harmonics. the two functions    **
+!      ** are displaced in z-direction                                        **
+!      **                                                                     **
+!      ** see Z. Romanowski, int.J.Quant.Chem.108, 249 (2008),                **
+!      **     Z. Romanowski, int.J.Quant.Chem.108, 487 (2008) and             **
+!      **     Z. Romanowski and A. F. Jalbot, J. math. chem. 46, 97 (2009)    **
 !      *************************************************************************
        USE LMTO_TWOCENTER_MODULE
        IMPLICIT NONE
-       INTEGER(4),INTENT(IN) :: L1_
-       INTEGER(4),INTENT(IN) :: M1_
-       INTEGER(4),INTENT(IN) :: GID1_
-       INTEGER(4),INTENT(IN) :: NR1_
-       REAL(8)   ,INTENT(IN) :: F1_(NR1_)
-       INTEGER(4),INTENT(IN) :: L2_
-       INTEGER(4),INTENT(IN) :: M2_
-       INTEGER(4),INTENT(IN) :: GID2_
-       INTEGER(4),INTENT(IN) :: NR2_
-       REAL(8)   ,INTENT(IN) :: F2_(NR2_)
-       REAL(8)   ,INTENT(IN) :: DIS_
-       REAL(8)   ,INTENT(IN) :: TOLERANCE
-       REAL(8)   ,INTENT(OUT):: OVERLAP
+       INTEGER(4),INTENT(IN) :: L1_       ! main angular momentum of f1
+       INTEGER(4),INTENT(IN) :: M1_       ! m-index of real sph. harmonics of f1
+       INTEGER(4),INTENT(IN) :: GID1_     ! grid id of f1 (see paw_radial.f90)
+       INTEGER(4),INTENT(IN) :: NR1_      ! #(radial grid points for f1)
+       REAL(8)   ,INTENT(IN) :: F1_(NR1_) ! radial part of f1
+       INTEGER(4),INTENT(IN) :: L2_       ! main angular momentum of f2
+       INTEGER(4),INTENT(IN) :: M2_       ! m-index of real sph. harmonics of f2
+       INTEGER(4),INTENT(IN) :: GID2_     ! grid id of f2 (see paw_radial.f90)
+       INTEGER(4),INTENT(IN) :: NR2_      ! #(radial grid points for f2)
+       REAL(8)   ,INTENT(IN) :: F2_(NR2_) ! radial part of f2
+       REAL(8)   ,INTENT(IN) :: DIS_      ! distance in z-direction
+       REAL(8)   ,INTENT(IN) :: TOLERANCE ! allowed deviation from exact result
+       REAL(8)   ,INTENT(OUT):: OVERLAP   ! resulting two-center integral
        REAL(8)               :: SVAR1,SVAR2
 !      *************************************************************************
        IF(ABS(M1_).GT.L1_.OR.ABS(M2_).GT.L2_) THEN

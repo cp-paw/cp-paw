@@ -1133,7 +1133,7 @@ END MODULE SETUP_MODULE
       IF(NGAMMA.NE.0) THEN
         PI=4.D0*ATAN(1.D0)
         IF(TDER) THEN
-          NGAMMA=0.D0
+          NGAMMA=0
         ELSE
           IF(ID.EQ.'G0') THEN 
             F(NGAMMA)=4.D0*PI
@@ -2981,7 +2981,7 @@ call trace$pass('before pop in setup_read_new')
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.false.
       LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
@@ -3026,7 +3026,7 @@ call trace$pass('before pop in setup_read_new')
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO
+      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO,jb
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: X0,Z0,DX,XM,ZM
@@ -3720,6 +3720,19 @@ PRINT*,'EOFI1 A ',EOFI1
 !     ==========================================================================
 !     == DT,DO                                                                ==
 !     == ATTENTION!! DO NOT MAKE DT AND DH SYMMETRIC. THEY ARE NOT HERMITEAN! ==
+!     ==                                                                      ==
+!     == THE REASON FOR THE WARNING NOT TO SYMMETRIZE IS NO MORE UNDERSTOOD.  ==
+!     == IN ORDER TO OBTAIN A HERMITEAN HAMILTONIAN LATERON, DTKIN MUST BE    ==
+!     == SYMMETRIC. THEREFORE IT IS SYMMETRIZED AT THE END OF THE CONSTRUCTION.=
+!     ==                                                                      ==
+!     == THE ASYMMETRY DECREASES WHEN THE CUTOFF RADIUS FOR THE CONSTRUCTION  ==
+!     == OF PSEUDO PARTIAL WAVES INCREASED. IT DECREASES WHE THE RADIUS       ==
+!     == RBOX/RCOV AS DEFINED IN THE SETUP-PARAMETER FILE IS INCREASED        ==
+!     ==                                                                      ==
+!     == BOTH, AEPHI AND PSPHI ARE CONSTRUCTED FROM QN                        ==
+!     == IT SEEMS THAT REPLACING AEPHI BY QN REDUCES MOST OF THE ASYMMETRY    ==
+!     ==                                                                      ==
+!     == THE ASYMMETRY ALSO OCCURS IN NON-RELATIVISTIC CALCULATIONS           ==
 !     ==========================================================================
       DT=0.D0
       DOVER=0.D0
@@ -3731,22 +3744,30 @@ PRINT*,'EOFI1 A ',EOFI1
 ! END OF THE GRID. HOWEVER THE EXPONENTIALLY GROWING TAIL OF THE PARTIAL 
 ! WAVES MAY INTRODUCE NUMERICAL ERRORS
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
+!AUX(:)=R(:)**2*(aephi(:,LN1)*Taephi(:,LN2)-psphi(:,LN1)*Tpsphi(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
           DT(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
       IF(TTEST) THEN
+!       == THE NON-HERMIEANITY COMES (FOR SILICON) TO 85 PERCENT FROM         ==
+!       == THE ADMIXTURE OF THE CORE WAVE FUNCTIONS, WHEN AEPHI IS OBTAINED.  ==
+!       == ABOUT 15 PERCENT CAN BE ATTRIBUTED TO THE CONSTRUCTION OF THE      ==
+!       == PSEUDO PARTIAL WAVES FROM THE QN                                   ==
         DO LN=1,LNX
           WRITE(6,FMT='("LN=",I2," DTKIN-TRANSPOSE(DTKIN)=",10F10.5)') &
      &                                    LN,(DT(LN,LN2)-DT(LN2,LN),LN2=1,LNX)
@@ -4263,6 +4284,26 @@ GOTO 10001
       END IF
 !
 !     ==========================================================================
+!     == MAKE DT AND DO SYMMETRIC                                             ==
+!     ==========================================================================
+      WRITE(6,FMT='(82("="),T20,"  DTKIN BEFORE SYMMETRIZATION ")')
+      DO LN1=1,LNX
+        WRITE(6,FMT='(20F12.3)')DT(LN1,:)
+      ENDDO
+!
+      DO LN1=1,LNX
+        DO LN2=LN1+1,LNX
+          IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+          SVAR=0.5D0*(DT(LN1,LN2)+DT(LN2,LN1))
+          DT(LN1,LN2)=SVAR
+          DT(LN2,LN1)=SVAR
+          SVAR=0.5D0*(DOver(LN1,LN2)+DOver(LN2,LN1))
+          DOver(LN1,LN2)=SVAR
+          DOver(LN2,LN1)=SVAR
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
 !     == WRITE INFORMATION TO FILE                                            ==
 !     ==========================================================================
       IF(TTEST) THEN
@@ -4309,8 +4350,6 @@ GOTO 10001
         ENDDO
         DEALLOCATE(A)
       END IF
-
-
 !
 !     ==========================================================================
 !     == CONSTRUCT PARAMETERS FOR MASS RENORMALIZATION                        ==
@@ -4432,6 +4471,7 @@ GOTO 10001
 !!$STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
 !!$CALL LMTO_WRITEPHI(-'DLOG'//TRIM(STRING),GID,NR,LNX,PSPHI)
 !!$CALL LMTO_WRITEPHI(-'DLOGDOT'//TRIM(STRING),GID,NR,LNX,PSPHIDOT)
+
                                 CALL TRACE$POP()
       RETURN
       END
