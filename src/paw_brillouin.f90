@@ -2847,6 +2847,14 @@ END MODULE BRILLOUIN_MODULE
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE SPACEGROUP_MODULE
+!*******************************************************************************
+!
+!** the translation T0 of SG_Type is the translation of the origin that,      **
+!** substituted in Eq.32.5.11 of bradley+Cracknell changes the                **
+!** elements {R|v} that we use into the elements {R'|v'} of the               **
+!** International Tables of Crystallography. (see footnote V of table         **
+!** 3.7 of bradley cracknell.)                                                **
+!*******************************************************************************
 TYPE SG_TYPE  !SPACE-GROUP TYPE
   CHARACTER(3) :: BRAVAIS
   CHARACTER(16):: INTERNATIONALSYMBOL
@@ -2860,6 +2868,8 @@ END MODULE SPACEGROUP_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPACEGROUP_INI()
 !     **************************************************************************
+!
+
 !     **************************************************************************
       USE SPACEGROUP_MODULE, ONLY : TINI,SG,SG_TYPE
       IMPLICIT NONE
@@ -3100,7 +3110,7 @@ END MODULE SPACEGROUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPACEGROUP_SETI4(ID,VAL)
+      SUBROUTINE SPACEGROUP$SETI4(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
       USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP
@@ -3114,12 +3124,12 @@ END MODULE SPACEGROUP_MODULE
         IF(ISPACEGROUP.LE.1.OR.ISPACEGROUP.GT.230) THEN
           CALL ERROR$MSG('SPACE GROUP NUMBER OUT OF RANGE')
           CALL ERROR$I4VAL('ISPACEGROUP',ISPACEGROUP)
-          CALL ERROR$STOP('SPACEGROUP_SETI4')
+          CALL ERROR$STOP('SPACEGROUP$SETI4')
         END IF
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SPACEGROUP_SETI4')
+        CALL ERROR$STOP('SPACEGROUP$SETI4')
       END IF
       RETURN
       END
@@ -3154,6 +3164,10 @@ END MODULE SPACEGROUP_MODULE
 !     **************************************************************************
 !     **   IMPLEMENTS TABLE 3.4 OF BRADLEY CRACKNELL                          **
 !     ** SYMMETRY ELEMENTS EXPLAINED IN TABLE 1.2 OF BRADLEY CRACKNELL        **
+!     **                                                                      **
+!     ** the transofrmation of relative coordinates is                        **
+!     **    R' = operation*R + C                                              **
+!     **                                                                      **
 !     **************************************************************************
       USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP
       IMPLICIT NONE
@@ -3183,6 +3197,9 @@ END MODULE SPACEGROUP_MODULE
       INTEGER(4)              :: C21SS(3,3), C22SS(3,3), C23SS(3,3)
       INTEGER(4)              :: C31P(3,3),C32P(3,3),C33P(3,3),C34P(3,3) 
       INTEGER(4)              :: C31M(3,3),C32M(3,3),C33M(3,3),C34M(3,3)
+      real(8)                 :: mat(3,3)
+      real(8)                 :: pi, pih ! pih=pi/2
+      real(8)                 :: rbas(3,3),ttaut(3,3),ttautinv(3,3)
       INTEGER(4)              :: I
       CHARACTER(3)            :: BRAVAIS
 !     **************************************************************************
@@ -3211,6 +3228,7 @@ END MODULE SPACEGROUP_MODULE
 
       E(:,1)=(/1,0,0/); E(:,3)=(/0,1,0/); E(:,3)=(/0,0,1/); 
       INV(:,1)=(/-1,0,0/); INV(:,3)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
+!
       IF(BRAVAIS.EQ.'G1') THEN ! MONOCLINIC
         CONTINUE
 
@@ -4360,6 +4378,21 @@ END MODULE SPACEGROUP_MODULE
       IF(ID.EQ.'REAL') THEN
         CALL ERROR$MSG('REAL SPACE GENERATORES NOT YET IMPLEMENTED')
         CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+        PI=4.D0*ATAN(1.D0)
+        PIH=PI/2.D0
+        CALL SPACEGROUP$RBAS(BRAVAIS,1.D0,1.D0,1.D0,PIH,PIH,PIH,RBAS)
+        TTAUT=MATMUL(TRANSPOSE(RBAS),RBAS)
+        CALL LIB$INVERTR8(3,TTAUT,TTAUTINV)
+        DO I=1,NOP
+          MAT=REAL(OPERATION(:,:,I))
+          MAT=MATMUL(TTAUTINV,MATMUL(MAT,TTAUT))
+          OPERATION(:,:,I)=NINT(MAT)
+          MAT=MAT-NINT(MAT)
+          IF(MAXVAL(ABS(MAT)).GT.1.D-6) THEN
+            CALL ERROR$MSG('SYMMETRY OP. INCONSISTENT WITH BRAVAIS LATTICE')
+            CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+          END IF
+        ENDDO
       ELSE IF(ID.EQ.'RECI') THEN
         C(:,:)=0.D0
       ELSE
@@ -4610,5 +4643,78 @@ END MODULE SPACEGROUP_MODULE
         BETA =ACOS(COSB)
         GAMMA=ACOS(COSG)
       END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPACEGROUP$COMPLETE(NOPX,NOP,OP,C)
+!     **************************************************************************
+!     ** PRODUCES THE COMPLETE SET OF POINT GROUP OPERATIONS FROM A           **
+!     ** SET OF GENERATORS OF THE GROUP.                                      **
+!     **                                                                      **
+!     ** REMARK: THE ROUTINE TOLERATES IF MORE THAN A MINIMUM SET OF          **
+!     **         GENERATORS IS PROVIDED                                       **
+!     ** REMARK: THE IDENTITY NEED NOT BE INCLUDED IN THE SET OF GENERATORS   **
+!     **         GENERATORS IS PROVIDED                                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NOPX ! MAX #(POINT GROUP OPERATIONS)
+      INTEGER(4),INTENT(INOUT) :: NOP  ! IN: #(GENERATORS) OUT:  #(OPERATIONS)
+      INTEGER(4),INTENT(INOUT) :: OP(3,3,NOPX) ! IN: GENERATORS OUT: OPERATIONS
+      real(8)   ,INTENT(INOUT) :: c(3,NOPX)    ! IN: GENERATORS OUT: OPERATIONS
+      INTEGER(4)               :: GENERATOR(3,3,NOPX) ! COPY OF THE GENERATORS
+      real(8)                  :: cgenerator(3,nopx)
+      INTEGER(4)               :: OPNEW(3,3)
+      real(8)                  :: cnew(3)
+      INTEGER(4)               :: NGENERATOR
+      INTEGER(4)               :: I,IOP,IOP2
+      LOGICAL(4)               :: TOLD
+!     **************************************************************************
+      NGENERATOR=NOP
+      GENERATOR(:,:,:NOP)=OP(:,:,:NOP)
+      cGENERATOR(:,:NOP)=c(:,:NOP)
+!
+!     == IDENTITY ==============================================================
+      OP(:,:,:)=0
+      OP(1,1,1)=1
+      OP(2,2,1)=1
+      OP(3,3,1)=1
+      c(:,1)=0.d0
+      NOP=1
+!
+!     ==========================================================================
+!     == COMPLETE SYMMETRY GROUP                                              ==
+!     == ENSURES THAT NO NEW OPERATION IS OBTAINED BY APPLYING ANY OF THE     ==
+!     == GENERATORS TO ANT OF THE OPERATIONS IN THE GROUP                     ==
+!     ==========================================================================
+      NOP=1
+      IOP=1
+      DO WHILE(IOP.LE.NOP) !LOOP OVER OPERATIONS
+!WRITE(*,FMT='("OLD OPERATION ",I5,T20,3("|",3I5,"|"))')IOP,OP(:,:,IOP)
+        DO I=1,NGENERATOR
+          OPNEW=MATMUL(GENERATOR(:,:,I),OP(:,:,IOP))
+          cnew=matmul(real(generator(:,:,i)),c(:,iop))+cgenerator(:,i)
+!WRITE(*,FMT='("OPNEW ",T20,3("|",3I5,"|"))') OPNEW
+!         == CHECK IF OPNEW ALREADY PRESENT IN OP ============================
+          TOLD=.FALSE.
+          DO IOP2=1,NOP
+            TOLD=(SUM(ABS(OPNEW-OP(:,:,IOP2))).EQ.0) &
+     &           .and.(maxval(abs(cnew-c(:,iop2))).gt.1.d-6)
+            IF(TOLD) EXIT
+          ENDDO
+          IF(TOLD) CYCLE
+          NOP=NOP+1
+          IF(NOP.GT.NOPX) THEN
+            CALL ERROR$MSG('NUMBER OF OPERATIONS EXCEEDS MAXIMUM')
+            CALL ERROR$I4VAL('NOP',NOP)
+            CALL ERROR$I4VAL('NOPX',NOPX)
+            CALL ERROR$STOP('BRILLOUIN_COMPLETE')
+          END IF
+          OP(:,:,NOP)=OPNEW
+          c(:,nop)=cnew
+!WRITE(*,FMT='("NEW OP: ",I5,T20,3("|",3I5,"|"))')NOP,OP(:,:,NOP)
+        ENDDO ! END OF LOOP OVER GENERATORS
+        IOP=IOP+1
+      ENDDO !END OF LOOP OVER OPERATIONS
       RETURN
       END
