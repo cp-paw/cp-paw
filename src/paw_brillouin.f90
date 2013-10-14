@@ -2735,6 +2735,7 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TESTCOMPLETE()
+      IMPLICIT NONE
 !     **************************************************************************
 !     ** TESTROUTINE FOR THE ROUTINE BRILLOUIN_COMPLETE                       **
 !     **************************************************************************
@@ -2742,6 +2743,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)           :: NOP
       INTEGER(4)           :: OP(3,3,NOPX)
       INTEGER(4),DIMENSION(3,3) :: C2Z,C2X,C2A,C31P,INV
+      INTEGER(4)           :: I
 !     **************************************************************************
 !     == LIST OF GENERATORS ====================================================
 !     == GROUP 228 ==GAMMA^F_C==================================================
