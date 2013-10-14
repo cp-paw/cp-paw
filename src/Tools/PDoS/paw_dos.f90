@@ -1324,7 +1324,7 @@ END MODULE READCNTL_MODULE
 !     **************************************************************************
 !     ** ADDS A CONTRIBUTION TO THE SET, WHICH CONTAINS THE CONTRIBUTION      **
 !     ** TO THE WEIGHT FROM ALL THE STATES                                    **
-!     **   SPIN: MAY BE 'TOTAL, 'MAIN', 'X', 'Y', 'Z'                         **
+!     **   SPIN: MAY BE 'TOTAL', 'MAIN', 'X', 'Y', 'Z'                        **
 !     **         TOTAL IS THE TOTAL DENSITY OF STATES                         **
 !     **         MAIN IS THE PROJECTION ON SPINDIR(I,IAT)                     **
 !     **   ORBITALID MAY BE:  'ALL','S','P','D','F'                           **
