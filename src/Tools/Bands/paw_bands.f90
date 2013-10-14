@@ -1491,15 +1491,12 @@ print*,'nb ',nb
       ENDDO
       IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
 
-      !FIXME: DH IS NOT HERMITIAN, SEE paw_setups.f90 setup_MAKEPARTIALWAVES
-      !here we make it symmetric, so that ZHEGV can be used instead of
-      !ZGGEV.
-      IF(METHOD.NE.3)THEN
-        DO IAT=1,NAT
-          DH(:,:,ISPIN,IAT)=0.5D0*(DH(:,:,ISPIN,IAT)+&
-  &                      TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
-        ENDDO
-      ENDIF
+!      !NOTE: DTKIN/DH FROM SETUP_MAKEPARTIALWAVES NOW 
+!      !(AFTER COMMIT 85f857388191c58f050acf5be749412fcfe54d12) PRODUCE A HERMITIAN HAMILTONIAN
+!      DO IAT=1,NAT
+!        DH(:,:,ISPIN,IAT)=0.5D0*(DH(:,:,ISPIN,IAT)+&
+!  &                    TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
+!      ENDDO
 
       !add (G+k)^2/2 and augmentation to TI_HK
       DO I=1,NG
@@ -1538,7 +1535,22 @@ print*,'nb ',nb
           TI_SK(I,J)=TI_SK(I,J)+CSVAR_S
         ENDDO
       ENDDO
-      
+     
+!      !check if TI_HK is hermitian
+!      DO I=1,NG
+!        DO J=I,NG
+!          IF(abs(TI_HK(I,J)-CONJG(TI_HK(J,I))).gt.1d-10)THEN
+!            PRINT*,"H",I,J
+!            STOP
+!          ENDIF
+!          IF(abs(TI_SK(I,J)-CONJG(TI_SK(J,I))).gt.1d-10)THEN
+!            PRINT*,"S",I,J
+!            STOP
+!          ENDIF
+!        enddo
+!      ENDDO
+
+      !complete TI_HK and TI_SK
       DO I=1,NG
         DO J=I+1,NG
           TI_HK(I,J)=CONJG(TI_HK(J,I))
@@ -1549,7 +1561,7 @@ print*,'nb ',nb
       IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
       IF(TTIMING)CALL TRACE$POP
 
-      !SOLVE EIGENVALUE PROBLEM WITH LAPACK ROUTINES
+      !SOLVE GENERALIZED EIGENVALUE PROBLEM
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
         IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
@@ -1564,21 +1576,6 @@ print*,'nb ',nb
         IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
         CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$POP
-!      ELSE IF(METHOD.eq.3)then
-!        CALL TRACE$PUSH('LAPACK_ZGGEV')
-!        IF(TPROJ)THEN
-!          U=TI_HK
-!          CALL LAPACK_ZGGEV(NG,'V',U,TI_SK,E)            
-!        ELSE
-!          CALL LAPACK_ZGGEV(NG,'N',TI_HK,TI_SK,E)            
-!        ENDIF
-!        CALL TRACE$POP
-!      ELSE IF(METHOD.eq.4)then
-!        CALL TRACE$PUSH('LAPACK_ZHEEV')
-!        CALL LIB$INVERTC8(NG,TI_SK,U)
-!        TI_HK=MATMUL(U,TI_HK)
-!        CALL LIB$DIAGC8(NG,TI_HK,E,U)
-!        CALL TRACE$POP
       ELSE 
         CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
         CALL ERROR$I4VAL('METHOD_DIAG',METHOD)
