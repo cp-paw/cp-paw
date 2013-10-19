@@ -6180,10 +6180,13 @@ PRINT*,'KI ',KI
       real(8)   ,parameter  :: rc=1.5d0
       real(8)               :: ecore1(nc)
       real(8)               :: ucore1(nr,nc)
+      real(8)               :: ucoresm(nr,nc)
       real(8)               :: qn(nr,nj)
+      real(8)               :: qnsm(nr,nj)
       real(8)               :: qndot(nr)
       real(8)               :: psphi(nr,nj)
       real(8)               :: aephi(nr,nj)
+      real(8)               :: aephism(nr,nj)
       real(8)               :: pro(nr,nj)
       real(8)               :: dtkin(nj,nj)
       real(8)               :: dover(nj,nj)
@@ -6200,10 +6203,14 @@ PRINT*,'KI ',KI
       real(8)               :: work(nr,10),aux(nr),svar
       real(8)               :: r(nr)
       real(8)               :: pi,y0
+      character(16)         :: reltype
 !     **************************************************************************
       pi=4.d0*atan(1.d0)
       y0=1.d0/sqrt(4.d0*pi)
       call radial$r(gid,nr,r)
+      NFIL=11
+      WRITE(LSTRING,*)L
+      LSTRING=ADJUSTL(LSTRING)
 !
 !     ==========================================================================
 !     == construct pseudo potential                                           ==
@@ -6214,9 +6221,16 @@ PRINT*,'KI ',KI
 !     ==========================================================================
 !     == construct augmentation
 !     ==========================================================================
-      ecore1=ecore
-      call SETUPS_newpro(GID,NR,rout,l,so,nc,nj,rc,enu,ecore1,aepot,pspot1 &
-     &                  ,ucore1,qn,qndot,psphi,aephi,pro,dtkin,dover)
+!     RELTYPE='NONREL'
+!      RELTYPE='ZORA'
+      RELTYPE='SPINORBIT'
+      ECORE1=ECORE
+      CALL SETUP_WRITEPHI(-'myvme'//TRIM(LSTRING),GID,NR,1,aepot*y0-enu)
+!
+      CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU,ECORE1 &
+     &                  ,AEPOT,PSPOT1 &
+     &                  ,UCORE1,QN,QNDOT,PSPHI,AEPHI &
+     &                  ,UCORESM,QNSM,AEPHISM,PRO,DTKIN,DOVER)
 !
 !     ==========================================================================
 !     == WRITE DTKIN AND DOVER                                                ==
@@ -6248,9 +6262,6 @@ PRINT*,'KI ',KI
 !     ==========================================================================
 !     == WRITE RESULT                                                         ==
 !     ==========================================================================
-      NFIL=11
-      WRITE(LSTRING,*)L
-      LSTRING=ADJUSTL(LSTRING)
 !
 !     == CUTOFF TOO LARGE AND TOO SMALL VALUES FOR PLOTTING ====================
       SVAR=1.D0
@@ -6260,11 +6271,14 @@ PRINT*,'KI ',KI
 !
 !     == WRITE PARTIAL WAVES AN PROJECTORS =====================================
       CALL SETUP_WRITEPHI(-'MYQN'//TRIM(LSTRING),GID,NR,NJ,QN)
+      CALL SETUP_WRITEPHI(-'MYQNsm'//TRIM(LSTRING),GID,NR,NJ,QNsm)
       CALL SETUP_WRITEPHI(-'MYPS'//TRIM(LSTRING),GID,NR,NJ,PSPHI)
       CALL SETUP_WRITEPHI(-'MYAE'//TRIM(LSTRING),GID,NR,NJ,AEPHI)
+      CALL SETUP_WRITEPHI(-'MYAEsm'//TRIM(LSTRING),GID,NR,NJ,AEPHIsm)
       CALL SETUP_WRITEPHI(-'MYAEMQN'//TRIM(LSTRING),GID,NR,NJ,AEPHI-QN)
       CALL SETUP_WRITEPHI(-'MYAEMPS'//TRIM(LSTRING),GID,NR,NJ,AEPHI-PSPHI)
       CALL SETUP_WRITEPHI(-'MYCORE'//TRIM(LSTRING),GID,NR,NC,UCORE)
+      CALL SETUP_WRITEPHI(-'MYCOREsm'//TRIM(LSTRING),GID,NR,NC,UCOREsm)
       CALL SETUP_WRITEPHI(-'MYPRO'//TRIM(LSTRING),GID,NR,NJ,PRO)
       CALL SETUP_WRITEPHI(-'DEPOT.DAT',GID,NR,1,(PSPOT-AEPOT)*Y0)
 !
@@ -6273,159 +6287,304 @@ PRINT*,'BEFORE NEWPROANALYZE1'
 !      CALL SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE(:,NC),AEPOT,PSPOT,ENU,NJ,QN)
 PRINT*,'BEFORE NEWPROANALYZE2'
       CALL SETUPS_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
-      return 
-      end
+      RETURN 
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_newpro(GID,NR,rout,l,so,nc,nj,rc,enu,ecore,aepot,pspot &
-     &                        ,UCORE,QN,qndot,PSPHI,AEPHI,PRO,DTKIN,DOVER)
+      SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
+     &                        ,ECORE,AEPOT,PSPOT &
+     &                        ,UCORE,QN,QNDOT,PSPHI,AEPHI &
+     &                        ,UCORESM,QNSM,AEPHISM,PRO,DTKIN,DOVER)
 !     **************************************************************************
-!     **                                                                      **
 !     **  THE CORE STATES SOLVE                                               **
 !     **     (H-E(I))|U_I>=|U_{I-1}>   WITH |U_0>=|0>                         **
 !     **  THE NODE-REDUCED VALENCE STATES OBEY                                **
 !     **     (H-ENU)|QN_J>=|QN_{J-1}>   WITH |QN_0>=|U_{NC}>                  **
 !     **                                                                      **
+!     **  RELTYPE='NONREL', 'ZORA', 'SCALAR', 'SPINORBIT'                     **
+!     **                                                                      **
+!     **  for the small component, we use the model that also the pseudo-     **
+!     **  partial waves carry a small compoment, which is identical to that   **
+!     **  of the node-reduced partial waves qn. dtkin and dover are done      **
+!     **  on this basis, which ensures that there are no expoentially growing **
+!     **  contributions in the integrals.                                     **
+!     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID           ! GRID ID
-      INTEGER(4),INTENT(IN) :: NR
+      CHARACTER(*),INTENT(IN) :: RELTYPE ! SELECTOR FOR RELATIVISTIC TREATMENT
+      INTEGER(4),INTENT(IN) :: GID       ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR        ! #(GRID POINTS)
       REAL(8)   ,INTENT(IN) :: ROUT      ! RADIUS OF ATOM IN A BOX
-      INTEGER(4),INTENT(IN) :: L
-      INTEGER(4),INTENT(IN) :: SO
-      INTEGER(4),INTENT(IN) :: NC
-      INTEGER(4),INTENT(IN) :: NJ
-      REAL(8)   ,INTENT(IN) :: rc
-      REAL(8)   ,INTENT(IN) :: ENU
-      REAL(8)   ,INTENT(IN) :: ECORE(NC)
-      REAL(8)   ,INTENT(IN) :: AEPOT(NR)
-      REAL(8)   ,INTENT(IN) :: PSPOT(NR)
-      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)
-      REAL(8)   ,INTENT(OUT):: QN(NR,NJ)
-      REAL(8)   ,INTENT(OUT):: QNdot(NR)
+      INTEGER(4),INTENT(IN) :: L         ! MAIN ANGULAR MOMENTUM
+      INTEGER(4),INTENT(IN) :: SO        ! SPIN ORBIT ALLIGNMENT (-1,0,1)
+      INTEGER(4),INTENT(IN) :: NC        ! #(CORE STATES)
+      INTEGER(4),INTENT(IN) :: NJ        ! #(PARTIAL WAVES)
+      REAL(8)   ,INTENT(IN) :: RC        ! PSEUDIZATION RADIUS
+      REAL(8)   ,INTENT(IN) :: ENU       ! EXPANSION ENERGY FOR PARTIAL WAVES
+      REAL(8)   ,INTENT(IN) :: ECORE(NC) ! CORE LEVEL ENERGIES
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
+      REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
+      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)   ! CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: UCORESM(NR,NC) ! SMALL COMPONENT OF CORE STATES
+      REAL(8)   ,INTENT(OUT):: QN(NR,NJ)      ! NODE REDUCED PARTIAL WAVES
+      REAL(8)   ,INTENT(OUT):: QNSM(NR,NJ)    ! SMALL COMPONENTS OF QN
+      REAL(8)   ,INTENT(OUT):: QNDOT(NR)      
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,NJ)
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,NJ)
+      REAL(8)   ,INTENT(OUT):: AEPHISM(NR,NJ)
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
-      logical   ,PARAMETER  :: TVARDREL=.FALSE.
-      integer(4),parameter  :: switch=1   ! biorthogonalization method
+      LOGICAL               :: TVARDREL ! ADJUST DREL IN BOUND-STATE SEARCH
+      INTEGER(4),PARAMETER  :: SWITCH=1 ! BIORTHOGONALIZATION METHOD
+      LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
+      LOGICAL(4)            :: TZORA    ! ZEROTH-ORDER RELATIVISTIC EFFECTS
+      LOGICAL(4)            :: TSMALL   ! SMALL COMPONENTS CALCULATED
+      REAL(8)               :: KAPPA
+      REAL(8)               :: SPEEDOFLIGHT
+      REAL(8)               :: ALPHA    ! 1/C (=FINE-STRUCTURE CONSTANT IN A.U.)
       REAL(8)               :: TUCORE(NR,NC)
       REAL(8)               :: TQN(NR,NJ)
       REAL(8)               :: TPSPHI(NR,NJ)
+      REAL(8)               :: PSPHIsm(NR,NJ)
       REAL(8)               :: TAEPHI(NR,NJ)
       INTEGER(4),PARAMETER  :: IDIR=1
       REAL(8)               :: DREL(NR)
-      real(8)               :: r(nr)
-      real(8)               :: aux(nr)
-      real(8)               :: g(nr)
-      real(8)               :: mat(nj,nj),matinv(nj,nj)
-      real(8)               :: pi,y0
-      real(8)               :: b(nj,nc)
-      real(8)               :: a(nj,nc)
-      real(8)               :: ff(nj,nc)
-      real(8)               :: svar,e
-      integer(4)            :: jp,j,ir,k,m,i,ib
+      REAL(8)               :: R(NR)
+      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)               :: G(NR),GSM(NR)
+      REAL(8)               :: MAT(NJ,NJ),MATINV(NJ,NJ)
+      REAL(8)               :: PI,Y0
+      REAL(8)               :: B(NJ,NC)
+      REAL(8)               :: A(NJ,NC)
+      REAL(8)               :: FF(NJ,NC)
+      REAL(8)               :: SVAR,E
+      INTEGER(4)            :: ircl ! grid point beyond classical turning point
+      INTEGER(4)            :: JP,J,IR,K,M,I,IB
+integer(4):: ind
+real(8) :: work(nr,100)
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      CALL SCHROEDINGER$DREL(GID,NR,AEPOT,Enu,DREL)
-drel=0.d0
-      call radial$r(gid,nr,r)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+!     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =========
+      KAPPA=REAL( -1+SO*(-L+(SO-1)/2) ,KIND=8)
+      CALL RADIAL$R(GID,NR,R)
+      CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
+      ALPHA=1.D0/SPEEDOFLIGHT ! FINE STRUCTURE CONSTANT IN A.U.
 !
 !     ==========================================================================
-!     == CONSTRUCT nodeless core states                                       ==
+!     == RESOLVE RELTYPE                                                      ==
 !     ==========================================================================
-      g(:)=0.d0
-      do ib=1,nc
-        e=ecore(ib)
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,ROUT,tvardrel,DREL,G,0,AEPOT &
-     &                               ,E,Ucore(:,IB))
-        TUcore(:,IB)=G+(E-AEPOT(:)*Y0)*Ucore(:,IB)
-!!$        CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
-!!$     &                                    ,DREL,GS,Ucore(:,IB),Ucoresm(:,IB))
-        g=ucore(:,ib)
-print*,'ecore ',ib,' e(old)=',ecore(ib),' e(new)=',e,' diff=',e-ecore(ib)
-      enddo
+      IF(RELTYPE.EQ.'NONREL') THEN
+        TREL=.FALSE.
+        TZORA=.FALSE.
+        TSMALL=.FALSE.
+        TVARDREL=.FALSE.
+      ELSE IF(RELTYPE.EQ.'ZORA') THEN
+        TREL=.TRUE.
+        TZORA=.TRUE.
+        TSMALL=.FALSE.
+        TVARDREL=.FALSE.
+      ELSE IF(RELTYPE.EQ.'SPINORBIT') THEN
+        TREL=.TRUE.
+        TZORA=.FALSE.
+        TSMALL=.TRUE.
+        TVARDREL=.TRUE.
+      ELSE
+        CALL ERROR$MSG('RELTYPE NOT RECOGNIZED')
+        CALL ERROR$MSG('MUST BE "NONREL", "ZORA", OR "SPINORBIT"')
+        CALL ERROR$CHVAL('RELTYPE',RELTYPE)
+        CALL ERROR$STOP('SETUPS_NEWPRO')
+      END IF
+      IF(.NOT.TSMALL.AND.SO.NE.0) THEN
+        CALL ERROR$MSG('SPIN ORBIT REQUIRES SMALL COMPONENTS')
+        CALL ERROR$CHVAL('RELTYPE',RELTYPE)
+        CALL ERROR$I4VAL('SO',SO)
+        CALL ERROR$STOP('SETUPS_NEWPRO')
+      END IF
 !
 !     ==========================================================================
-!     == CONSTRUCT NODE-reduced partial waves                                 ==
+!     == FIND CLASSICAL TURNING POINT TO SWITCH OFF RELATIVISTIC EFFECTS      ==
 !     ==========================================================================
+      IRCL=0
+      DO IR=1,NR
+        IF(AEPOT(IR).GT.ENU/Y0) THEN
+          IRCL=IR
+          EXIT
+        END IF
+      ENDDO
+      IF(IRCL.EQ.0) THEN
+        CALL ERROR$MSG('NO CLASSICAL TURNING POINT ENCOUNTERED')
+        CALL ERROR$MSG('ENU MUT LIE BELOW MAXIMUM OF POTENTIAL')
+        CALL ERROR$CHVAL('ENU',ENU)
+        CALL ERROR$I4VAL('MAX(POT)',MAXVAL(AEPOT)*Y0)
+        CALL ERROR$STOP('SETUPS_NEWPRO')
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT relativisitc factor                                        ==
+!     ==========================================================================
+      DREL=0.D0   !NON-RELATIVISTIC CASE
+      IF(TREL) then
+        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+        drel(ircl:)=0.d0
+      end if
+!
+!     ==========================================================================
+!     == CONSTRUCT NODELESS CORE STATES                                       ==
+!     ==========================================================================
+      G(:)=0.D0
+      GSM(:)=0.D0
+      DO IB=1,NC
+        E=ECORE(IB)
+        IF(TREL.AND.(.NOT.TZORA)) then
+          CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          drel(ircl:)=0.d0
+        end if
+!       == PREPARE INHOMOGENEITY ===============================================
+        IF(TSMALL) THEN
+          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
+          CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+          G=G-AUX1-(1.D0-KAPPA)/R*AUX
+        END IF
+!
+!       == OBTAIN LARGE COMPONENT ==============================================
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,ROUT,TVARDREL,DREL,G,0,AEPOT &
+     &                               ,E,UCORE(:,IB))
+        TUCORE(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)
+!
+!       == CONSTRUCT SMALL COMPONENT ===========================================
+        IF(TSMALL) THEN
+          drel(ircl:)=0.d0  ! may have been reset in atomlib$boundstate
+          CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
+     &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
+          ucoresm(ircl:,ib)=0.d0
+        ELSE
+          UCORESM(:,IB)=0.D0
+        END IF
+!
+!       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
+        G=UCORE(:,IB)
+        GSM=UCORESM(:,IB)
+      ENDDO
+!
+!     ==========================================================================
+!     == CONSTRUCT NODE-REDUCED PARTIAL WAVES                                 ==
+!     ==========================================================================
+!     == GO BACK TO THE DIRAC EQUATION TO SEE HOW THE INHOMGENEITY TRANSLATES
+      IF(TREL) then
+        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+        drel(ircl:)=0.d0
+      end if
+      G=0.D0
+      GSM=0.D0
+      IF(NC.NE.0) then
+        G=-UCORE(:,NC)
+        Gsm=-UCOREsm(:,NC)
+      end if
       DO JP=1,NJ
         J=JP-1
-        if(jp.eq.1) then
-          g=0.d0
-          if(nc.ne.0) G=-UCORE(:,nc)
-        else
-          G=QN(:,J)*REAL(J,kind=8)
+!
+!       == PREPARE INHOMOGENEITY ===============================================
+        if(jp.gt.1) then
+          G=G*REAL(J,KIND=8)
+          GSM=GSM*REAL(J,KIND=8)
         end if
+        IF(TSMALL) THEN
+          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
+          CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+          G=G-AUX1-(1.D0-KAPPA)/R*AUX
+        END IF
+!
+!       == OBTAIN LARGE COMPONENT ==============================================
         CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,ENU,IDIR,QN(:,JP))
         TQN(:,JP)=G-(AEPOT*Y0-ENU)*QN(:,JP)
+!
+!       == CONSTRUCT SMALL COMPONENT ===========================================
+        IF(TSMALL) THEN
+          CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
+     &                                      ,DREL,GSM,QN(:,JP),QNSM(:,JP))
+          qnsm(ircl:,jp)=0.d0
+        ELSE
+          QNSM(:,JP)=0.D0
+        END IF
+!
+!       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
+        G=QN(:,JP)
+        GSM=qNSM(:,JP)
       ENDDO
 !
 !     ==========================================================================
 !     == CONSTRUCT QNDOT FUNCTION                                             ==
 !     ==========================================================================
       G=QN(:,NJ)*REAL(NJ,KIND=8)
+      IF(TSMALL) THEN
+        GSM=QNSM(:,NJ)*REAL(J,KIND=8)
+        AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
+        CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+        G=G-AUX1-(1.D0-KAPPA)/R*AUX
+      END IF
       CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,ENU,IDIR,QNDOT)
 !
 !     ==========================================================================
 !     == MAKE ALL-ELECTRON PARTIAL WAVES                                      ==
 !     ==========================================================================
-!     == b(j+1,m)= partial_e^j 1/(ecore(m)-e) = j!/(ecore(m)-e)**(j+1) =====
-      DO M=1,nc  ! loop over core states
-        svar=1.d0/(ecore(m)-enu)
-        do jp=1,nj
-          b(jp,m)=svar
-          svar=svar*real(jp,kind=8)/(ecore(m)-enu)
-        enddo
-      enddo
+!     == B(J+1,M)= PARTIAL_E^J 1/(ECORE(M)-E) = J!/(ECORE(M)-E)**(J+1) =====
+      DO M=1,NC  ! LOOP OVER CORE STATES
+        SVAR=1.D0/(ECORE(M)-ENU)
+        DO JP=1,NJ
+          B(JP,M)=SVAR
+          SVAR=SVAR*REAL(JP,KIND=8)/(ECORE(M)-ENU)
+        ENDDO
+      ENDDO
 !
-!     == a(j+1,m)=partial_e^{j} sum_{k=m}^nc 1/(ecore(m)-e) ====================
-!     ==        =sum_{k=m}^nc b(j+1,k) =========================================
-      do m=1,nc
-        do jp=1,nj
-          a(jp,m)=sum(b(jp,m:))
-        enddo
-      enddo
+!     == A(J+1,M)=PARTIAL_E^{J} SUM_{K=M}^NC 1/(ECORE(M)-E) ====================
+!     ==        =SUM_{K=M}^NC B(J+1,K) =========================================
+      DO M=1,NC
+        DO JP=1,NJ
+          A(JP,M)=SUM(B(JP,M:))
+        ENDDO
+      ENDDO
 !
-!     == ff(j+1,m)=partial_\epsilon^j prod_{k=m}^nc 1/(ecore(k)-e) =============
-      svar=1.d0
-      do m=nc,1,-1
-        svar=svar/(ecore(m)-enu)
-        ff(1,m)=svar     !FF_{1,M}=PROD_{I=M}^{NC} 1/(ECORE(I)-ENU)
-      enddo
-      do jp=2,nj
-        j=jp-1
-        ff(jp,:)=0.d0
-        do k=0,j-1
-          call binomialcoefficient(j-1,k,svar) !(j-1)!/( k! (j-k-1)! )
-          ff(jp,:)=ff(jp,:)+svar*a(k+1,:)*ff(jp-k-1,:)
-        enddo
-      enddo
-!     == include core states ===================================================
-      aephi=qn+matmul(ucore,transpose(ff))
-      taephi=tqn+matmul(tucore,transpose(ff))
+!     == FF(J+1,M)=PARTIAL_\EPSILON^J PROD_{K=M}^NC 1/(ECORE(K)-E) =============
+      SVAR=1.D0
+      DO M=NC,1,-1
+        SVAR=SVAR/(ECORE(M)-ENU)
+        FF(1,M)=SVAR     !FF_{1,M}=PROD_{I=M}^{NC} 1/(ECORE(I)-ENU)
+      ENDDO
+      DO JP=2,NJ
+        J=JP-1
+        FF(JP,:)=0.D0
+        DO K=0,J-1
+          CALL BINOMIALCOEFFICIENT(J-1,K,SVAR) !(J-1)!/( K! (J-K-1)! )
+          FF(JP,:)=FF(JP,:)+SVAR*A(K+1,:)*FF(JP-K-1,:)
+        ENDDO
+      ENDDO
+!     == INCLUDE CORE STATES ===================================================
+      AEPHI=QN+MATMUL(UCORE,TRANSPOSE(FF))
+      TAEPHI=TQN+MATMUL(TUCORE,TRANSPOSE(FF))
+      AEPHISM=QNSM+MATMUL(UCORESM,TRANSPOSE(FF))
 !
 !     ==========================================================================
-!     == MAKE PSEUDO PARTIAL WAVE ==============================================
+!     == MAKE PSEUDO PARTIAL WAVE                                             ==
 !     ==========================================================================
       PSPHI=QN
       TPSPHI=TQN
+      psphism=qnsm
       CALL SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PSPHI,TPSPHI)
 !
 !     ==========================================================================
-!     == CONSTRUCT BARE PROJECTOR FUNCTIONS ====================================
+!     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
 !     ==========================================================================
       PRO(:,1)=TPSPHI(:,1)+(PSPOT*Y0-ENU)*PSPHI(:,1)
       DO JP=2,NJ
         PRO(:,JP)=(PSPOT-AEPOT)*Y0*QN(:,JP)
       ENDDO
-      PRO(:,2)=PRO(:,2)-(PSPHI(:,1)-QN(:,1))
+      PRO(:,2)=PRO(:,2)-(PSPHI(:,1)-QN(:,1))  !-|k>
 !
 !     ==========================================================================
-!     == UNBARE PROJECTOR FUNCTIONS ============================================
+!     == UNBARE PROJECTOR FUNCTIONS                                           ==
 !     ==========================================================================
       IF(SWITCH.EQ.0) THEN
       ELSE IF(SWITCH.EQ.1) THEN
@@ -6437,167 +6596,174 @@ print*,'ecore ',ib,' e(old)=',ecore(ib),' e(new)=',e,' diff=',e-ecore(ib)
         ENDDO        
         CALL LIB$INVERTR8(NJ,MAT,MATINV)
         PRO(:,:)=MATMUL(PRO,MATINV)
-      else if(switch.eq.2) then
-        do i=1,50
-        do jp=1,nj
-!         == orthogonalize partial wave ========================================
-          do j=1,jp-1
-            AUX(:)=R(:)**2*pro(:,J)*psphi(:,Jp)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,svar)
-            psphi(:,jp) = psphi(:,jp)- psphi(:,j)*svar
-            tpsphi(:,jp)=tpsphi(:,jp)-tpsphi(:,j)*svar
-            aephi(:,jp) = aephi(:,jp)- aephi(:,j)*svar
-            taephi(:,jp)=taephi(:,jp)-taephi(:,j)*svar
-          enddo
+      ELSE IF(SWITCH.EQ.2) THEN
+        DO I=1,50
+        DO JP=1,NJ
+!         == ORTHOGONALIZE PARTIAL WAVE ========================================
+          DO J=1,JP-1
+            AUX(:)=R(:)**2*PRO(:,J)*PSPHI(:,JP)
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+            PSPHI(:,JP) = PSPHI(:,JP)- PSPHI(:,J)*SVAR
+            TPSPHI(:,JP)=TPSPHI(:,JP)-TPSPHI(:,J)*SVAR
+            AEPHI(:,JP) = AEPHI(:,JP)- AEPHI(:,J)*SVAR
+            TAEPHI(:,JP)=TAEPHI(:,JP)-TAEPHI(:,J)*SVAR
+          ENDDO
 !
-!         == orthogonalize projector function ==================================
-          do j=1,jp-1
-            AUX(:)=R(:)**2*PSPHI(:,J)*PRO(:,Jp)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,svar)
-            pro(:,jp)=pro(:,jp)-pro(:,j)*svar
-          enddo
+!         == ORTHOGONALIZE PROJECTOR FUNCTION ==================================
+          DO J=1,JP-1
+            AUX(:)=R(:)**2*PSPHI(:,J)*PRO(:,JP)
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+            PRO(:,JP)=PRO(:,JP)-PRO(:,J)*SVAR
+          ENDDO
 !
-!         == normalize =========================================================
-          AUX(:)=R(:)**2*PSPHI(:,Jp)*PRO(:,JP)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar)
-          pro(:,jp)=pro(:,jp)/svar
-        enddo
-        enddo
-      end if
-!
-!     ==========================================================================
-!     == calculate dover and dtkin                                            ==
-!     ==========================================================================
-      do jp=1,nj
-        do j=1,nj
-          aux(:)=r(:)**2*(aephi(:,j)*aephi(:,jp)-psphi(:,j)*psphi(:,jp))
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,dover(J,JP))
-          aux(:)=r(:)**2*(aephi(:,j)*taephi(:,jp)-psphi(:,j)*tpsphi(:,jp))
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,dtkin(J,JP))
-        enddo
-      enddo
+!         == NORMALIZE =========================================================
+          AUX(:)=R(:)**2*PSPHI(:,JP)*PRO(:,JP)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+          PRO(:,JP)=PRO(:,JP)/SVAR
+        ENDDO
+        ENDDO
+      END IF
 !
 !     ==========================================================================
-!     == symmetrize dtkin                                                     ==
-!     == dtkin is not exactly symmetric. The culprit is the pseudo partial    ==
-!     == wave.                                                                ==
+!     == CALCULATE DOVER AND DTKIN                                            ==
+!     ==========================================================================
+      DO JP=1,NJ
+        DO J=1,NJ
+          AUX(:)=AEPHI(:,J)*AEPHI(:,JP)-PSPHI(:,J)*PSPHI(:,JP) &
+     &          +AEPHISM(:,J)*AEPHISM(:,JP)-PSPHISM(:,J)*PSPHISM(:,JP)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX*R**2,DOVER(J,JP))
+          AUX(:)=AEPHI(:,J)*TAEPHI(:,JP)-PSPHI(:,J)*TPSPHI(:,JP)
+          IF(TSMALL) THEN
+             AUX(:)=AUX(:)+TAEPHI(:,J)*AEPHI(:,JP) &
+     &                    -2.D0*SPEEDOFLIGHT**2*AEPHISM(:,J)*AEPHISM(:,JP) &
+     &                    -TPSPHI(:,J)*AEPHI(:,JP) &
+     &                    +2.D0*SPEEDOFLIGHT**2*PSPHISM(:,J)*PSPHISM(:,JP)
+          END IF
+          CALL RADIAL$INTEGRAL(GID,NR,AUX**2,DTKIN(J,JP))
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == SYMMETRIZE DTKIN                                                     ==
+!     == DTKIN IS NOT EXACTLY SYMMETRIC. THE CULPRIT IS THE PSEUDO PARTIAL    ==
+!     == WAVE.                                                                ==
 !     ==========================================================================
       DTKIN=0.5D0*(DTKIN+TRANSPOSE(DTKIN))
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine setups_MAKEPSPHI_mine(GID,NR,RC,L,PHI,TPHI)
+      SUBROUTINE SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PHI,TPHI)
 !     **************************************************************************
-!     **  replaces phi by its pseudized version                               **
+!     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
-!     **  note, that fddot is 1/2 of the second derivative                    **
-!     **       (h-e)|f^j>=j|f^{j-1}>.  we drop the factor j                   **
-!     ******************************peter Bloechl, Goslar 2013 *****************
-      implicit none
-      integer(4),INTENT(IN) :: GID
-      integer(4),INTENT(IN) :: NR
+!     **  NOTE, THAT FDDOT IS 1/2 OF THE SECOND DERIVATIVE                    **
+!     **       (H-E)|F^J>=J|F^{J-1}>.  WE DROP THE FACTOR J                   **
+!     ******************************PETER BLOECHL, GOSLAR 2013 *****************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: RC
-      integer(4),INTENT(IN) :: L
+      INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(INOUT) :: PHI(NR)
       REAL(8)   ,INTENT(INOUT) :: TPHI(NR)
       REAL(8)               :: DREL(NR)
       INTEGER(4),PARAMETER  :: IDIR=1
       INTEGER(4),PARAMETER  :: SO=0
-      logical(4),PARAMETER  :: t3par=.true.
-      logical(4),PARAMETER  :: twrite=.false.
-      integer(4)            :: irc
+      LOGICAL(4),PARAMETER  :: T3PAR=.TRUE.
+      LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
+      INTEGER(4)            :: IRC
       REAL(8)               :: R(NR)
       REAL(8)               :: POT(NR)
       REAL(8)               :: G(NR)
       REAL(8)               :: F(NR)
-      REAL(8)               :: tF(NR)
+      REAL(8)               :: TF(NR)
       REAL(8)               :: FDOT(NR)
-      REAL(8)               :: tFDOT(NR)
-      REAL(8)               :: FdDOT(NR)
-      REAL(8)               :: tFdDOT(NR)
+      REAL(8)               :: TFDOT(NR)
+      REAL(8)               :: FDDOT(NR)
+      REAL(8)               :: TFDDOT(NR)
       REAL(8)               :: ENU
-      REAL(8)               :: valphi,valf,valfdot,valfddot,val
-      REAL(8)               :: derphi,derf,derfdot,derfddot
-      REAL(8)               :: c1,c2,c3,det
-      integer(4)            :: ir
+      REAL(8)               :: VALPHI,VALF,VALFDOT,VALFDDOT,VAL
+      REAL(8)               :: DERPHI,DERF,DERFDOT,DERFDDOT
+      REAL(8)               :: C1,C2,C3,DET
+      INTEGER(4)            :: IR
       REAL(8)               :: PI,Y0
-      REAL(8)               :: work(nr,2)
-      character(16) :: lstring
+      REAL(8)               :: WORK(NR,2)
+      CHARACTER(16) :: LSTRING
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      call radial$r(gid,nr,r)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
 
 !     ==========================================================================
-!     == initial reporting                                                    ==
+!     == INITIAL REPORTING                                                    ==
 !     ==========================================================================
-      if(twrite) then
+      IF(TWRITE) THEN
         WRITE(LSTRING,*)L
         LSTRING=ADJUSTL(LSTRING)
-        CALL SETUP_WRITEPHI('phibefore'//TRIM(LSTRING),GID,NR,1,phi)
-        CALL SETUP_WRITEPHI('tphibefore'//TRIM(LSTRING),GID,NR,1,tphi)
-      end if
+        CALL SETUP_WRITEPHI('PHIBEFORE'//TRIM(LSTRING),GID,NR,1,PHI)
+        CALL SETUP_WRITEPHI('TPHIBEFORE'//TRIM(LSTRING),GID,NR,1,TPHI)
+      END IF
 !
 !     ==========================================================================
-!     == extract potential from input partial wave                            ==
+!     == EXTRACT POTENTIAL FROM INPUT PARTIAL WAVE                            ==
 !     ==========================================================================
-      drel(:)=0.d0
+      DREL(:)=0.D0
       POT(:)=-TPHI/PHI/Y0
       G(:)=0.D0
       ENU=0.D0
 !
       DO IR=1,NR
-        irc=ir
+        IRC=IR
         IF(R(IR).GT.RC) EXIT
       ENDDO
-      val=pot(irc)
-      POT(:IRc)=VAL  ! potential inside is constant
-      G(:IRc)=0.D0   ! inhomogeneity inside vanishes
+      VAL=POT(IRC)
+      POT(:IRC)=VAL  ! POTENTIAL INSIDE IS CONSTANT
+      G(:IRC)=0.D0   ! INHOMOGENEITY INSIDE VANISHES
 !
 !     ==========================================================================
-!     == determine radial functions  for pseudo partial waves                 ==
+!     == DETERMINE RADIAL FUNCTIONS  FOR PSEUDO PARTIAL WAVES                 ==
 !     ==========================================================================
       CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,ENU,IDIR,F)
       TF=G-(POT*Y0-ENU)*F
-      g=f
-      g(irc+1:)=0.d0
-      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,g,L,ENU,IDIR,FDOT)
-      TFDOT=g-(POT*Y0-ENU)*FDOT
-      g=2.d0*fdot
-      g(irc+1:)=0.d0
-      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,g,L,ENU,IDIR,FDDOT)
-      TFDDOT=g-(POT*Y0-ENU)*FDDOT
+      G=F
+      G(IRC+1:)=0.D0
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,ENU,IDIR,FDOT)
+      TFDOT=G-(POT*Y0-ENU)*FDOT
+      G=2.D0*FDOT
+      G(IRC+1:)=0.D0
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,ENU,IDIR,FDDOT)
+      TFDDOT=G-(POT*Y0-ENU)*FDDOT
 !
 !     ==========================================================================
-!     == superimpose so that it matches to input partial wave                 ==
+!     == SUPERIMPOSE SO THAT IT MATCHES TO INPUT PARTIAL WAVE                 ==
 !     ==========================================================================
-      CALL RADIAL$VALUE(GID,NR,phi,RC,VALphi)
-      CALL RADIAL$derivative(GID,NR,phi,RC,derphi)
-      CALL RADIAL$VALUE(GID,NR,f,RC,VALf)
-      CALL RADIAL$derivative(GID,NR,f,RC,derf)
-      CALL RADIAL$VALUE(GID,NR,fdot,RC,VALfdot)
-      CALL RADIAL$derivative(GID,NR,fdot,RC,derfdot)
-      CALL RADIAL$VALUE(GID,NR,fddot,RC,VALfddot)
-      CALL RADIAL$derivative(GID,NR,fddot,RC,derfddot)
-      det=valf*derfdot-valfdot*derf
+      CALL RADIAL$VALUE(GID,NR,PHI,RC,VALPHI)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DERPHI)
+      CALL RADIAL$VALUE(GID,NR,F,RC,VALF)
+      CALL RADIAL$DERIVATIVE(GID,NR,F,RC,DERF)
+      CALL RADIAL$VALUE(GID,NR,FDOT,RC,VALFDOT)
+      CALL RADIAL$DERIVATIVE(GID,NR,FDOT,RC,DERFDOT)
+      CALL RADIAL$VALUE(GID,NR,FDDOT,RC,VALFDDOT)
+      CALL RADIAL$DERIVATIVE(GID,NR,FDDOT,RC,DERFDDOT)
+      DET=VALF*DERFDOT-VALFDOT*DERF
 !
-!     ==  first remove value and derivative from the fddot function ============
-      c1=(derfdot*valfddot-valfdot*derfddot)/det
-      c2=(-derf*valfddot+valf*derfddot)/det
-      fddot(:) = fddot(:)- f(:)*c1- fdot(:)*c2
-      tfddot(:)=tfddot(:)-tf(:)*c1-tfdot(:)*c2
+!     ==  FIRST REMOVE VALUE AND DERIVATIVE FROM THE FDDOT FUNCTION ============
+      C1=(DERFDOT*VALFDDOT-VALFDOT*DERFDDOT)/DET
+      C2=(-DERF*VALFDDOT+VALF*DERFDDOT)/DET
+      FDDOT(:) = FDDOT(:)- F(:)*C1- FDOT(:)*C2
+      TFDDOT(:)=TFDDOT(:)-TF(:)*C1-TFDOT(:)*C2
 !
-!     ==  now match onto input partial wave  ===================================
-      c1=( derfdot*valphi-valfdot*derphi)/det
-      c2=(-derf   *valphi+valf   *derphi)/det
-      if(t3par) then
-        c3=(tphi(irc)-tf(irc)*c1-tfdot(irc)*c2)/tfddot(irc)
-      else
-        c3=0.d0
-      end if
-      phi(:irc) = f(:irc)*c1+ fdot(:irc)*c2+ fddot(:irc)*c3
-      tphi(:irc)=tf(:irc)*c1+tfdot(:irc)*c2+tfddot(:irc)*c3
+!     ==  NOW MATCH ONTO INPUT PARTIAL WAVE  ===================================
+      C1=( DERFDOT*VALPHI-VALFDOT*DERPHI)/DET
+      C2=(-DERF   *VALPHI+VALF   *DERPHI)/DET
+      IF(T3PAR) THEN
+        C3=(TPHI(IRC)-TF(IRC)*C1-TFDOT(IRC)*C2)/TFDDOT(IRC)
+      ELSE
+        C3=0.D0
+      END IF
+      PHI(:IRC) = F(:IRC)*C1+ FDOT(:IRC)*C2+ FDDOT(:IRC)*C3
+      TPHI(:IRC)=TF(:IRC)*C1+TFDOT(:IRC)*C2+TFDDOT(:IRC)*C3
 !
 !     ==========================================================================
 !     == FINAL REPORTING                                                      ==
@@ -6609,112 +6775,112 @@ print*,'ecore ',ib,' e(old)=',ecore(ib),' e(new)=',e,' diff=',e-ecore(ib)
         CALL SETUP_WRITEPHI('TPHIAFTER'//TRIM(LSTRING),GID,NR,1,TPHI)
       END IF
       RETURN
-      end
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_newproanalyze1(GID,NR,l,ucore,aepot,pspot,enu,nj,qn)
+      SUBROUTINE SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE,AEPOT,PSPOT,ENU,NJ,QN)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID           ! GRID ID
-      INTEGER(4),INTENT(IN) :: nr
-      INTEGER(4),INTENT(IN) :: l
-      real(8)   ,intent(in) :: enu
-      integer(4),intent(in) :: nj
-      real(8)   ,intent(in) :: qn(nr,nj)
-      real(8)   ,intent(in) :: aepot(nr)
-      real(8)   ,intent(in) :: pspot(nr)
-      real(8)   ,intent(in) :: ucore(nr)
-      real(8)               :: r(nr)
-      real(8)               :: g(nr)
-      real(8)               :: drel(nr)
-      real(8)               :: aux(nr)
-      integer(4),parameter  :: ne=100
-      real(8)               :: emin=-10.d0,emax=10.d0,e
-      real(8)               :: phiofe0(nr,ne)
-      real(8)               :: phiofe1(nr,ne)
-      real(8)               :: rdev(nj,ne)
-      integer(4)            :: ie,j,jp,ir
-      integer(4),parameter  :: so=0
-      integer(4),parameter  :: idir=1
-      integer(4),parameter  :: nfil=11
-      real(8)               :: pi,y0
-      real(8)               :: svar
-      real(8)               :: tol
-      character(16)         :: lstring
-      character(128)        :: filename
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(IN) :: ENU
+      INTEGER(4),INTENT(IN) :: NJ
+      REAL(8)   ,INTENT(IN) :: QN(NR,NJ)
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR)
+      REAL(8)   ,INTENT(IN) :: PSPOT(NR)
+      REAL(8)   ,INTENT(IN) :: UCORE(NR)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: G(NR)
+      REAL(8)               :: DREL(NR)
+      REAL(8)               :: AUX(NR)
+      INTEGER(4),PARAMETER  :: NE=100
+      REAL(8)               :: EMIN=-10.D0,EMAX=10.D0,E
+      REAL(8)               :: PHIOFE0(NR,NE)
+      REAL(8)               :: PHIOFE1(NR,NE)
+      REAL(8)               :: RDEV(NJ,NE)
+      INTEGER(4)            :: IE,J,JP,IR
+      INTEGER(4),PARAMETER  :: SO=0
+      INTEGER(4),PARAMETER  :: IDIR=1
+      INTEGER(4),PARAMETER  :: NFIL=11
+      REAL(8)               :: PI,Y0
+      REAL(8)               :: SVAR
+      REAL(8)               :: TOL
+      CHARACTER(16)         :: LSTRING
+      CHARACTER(128)        :: FILENAME
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      CALL SCHROEDINGER$DREL(GID,NR,AEPOT,Enu,DREL)
-      call radial$r(gid,nr,r)
-      write(lstring,*)l
-      lstring=adjustl(lstring)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+      CALL RADIAL$R(GID,NR,R)
+      WRITE(LSTRING,*)L
+      LSTRING=ADJUSTL(LSTRING)
 !
-      tol=0
-      do ir=1,nr
-        svar=abs(qn(ir,1))
-        if(svar.lt.tol)exit
-        if(r(ir).gt.2.d0) exit
-        tol=svar
-      enddo
-      tol=tol/10.d0
+      TOL=0
+      DO IR=1,NR
+        SVAR=ABS(QN(IR,1))
+        IF(SVAR.LT.TOL)EXIT
+        IF(R(IR).GT.2.D0) EXIT
+        TOL=SVAR
+      ENDDO
+      TOL=TOL/10.D0
 !
-      rdev=0.d0
-      do ie=1,ne
-        e=emin+(emax-emin)*real(ie-1,kind=8)/real(ne-1,kind=8)
+      RDEV=0.D0
+      DO IE=1,NE
+        E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1,KIND=8)
 !
         G=-UCORE
         CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,E,IDIR &
-     &                             ,phiofe0(:,ie))
-        phiofe1(:,ie)=qn(:,1)
-        aux=abs(phiofe1(:,ie)-phiofe0(:,ie))
-        do ir=1,nr
-          rdev(1,ie)=r(ir)
-          if(aux(ir).gt.tol) exit
-        enddo
-        svar=1.d0
-        do jp=2,nj
-          j=jp-1
-          svar=svar*(e-enu)/real(j,kind=8)
-          phiofe1(:,ie)=phiofe1(:,ie)+qn(:,jp)*svar
+     &                             ,PHIOFE0(:,IE))
+        PHIOFE1(:,IE)=QN(:,1)
+        AUX=ABS(PHIOFE1(:,IE)-PHIOFE0(:,IE))
+        DO IR=1,NR
+          RDEV(1,IE)=R(IR)
+          IF(AUX(IR).GT.TOL) EXIT
+        ENDDO
+        SVAR=1.D0
+        DO JP=2,NJ
+          J=JP-1
+          SVAR=SVAR*(E-ENU)/REAL(J,KIND=8)
+          PHIOFE1(:,IE)=PHIOFE1(:,IE)+QN(:,JP)*SVAR
 !
-          aux=abs(phiofe1(:,ie)-phiofe0(:,ie))
-          do ir=1,nr
-            rdev(jp,ie)=r(ir)
-            if(aux(ir).gt.tol) exit
-          enddo
-        enddo
-      enddo
+          AUX=ABS(PHIOFE1(:,IE)-PHIOFE0(:,IE))
+          DO IR=1,NR
+            RDEV(JP,IE)=R(IR)
+            IF(AUX(IR).GT.TOL) EXIT
+          ENDDO
+        ENDDO
+      ENDDO
 !
-!     == cutt off too large and too small values for plotting ==================
-      svar=5.d-4
-      phiofe0=MAX(-SVAR,MIN(SVAR,phiofe0))
-      phiofe1=MAX(-SVAR,MIN(SVAR,phiofe1))
+!     == CUTT OFF TOO LARGE AND TOO SMALL VALUES FOR PLOTTING ==================
+      SVAR=5.D-4
+      PHIOFE0=MAX(-SVAR,MIN(SVAR,PHIOFE0))
+      PHIOFE1=MAX(-SVAR,MIN(SVAR,PHIOFE1))
 !
-      filename='phiofe0_'//trim(lstring)
-      open(nfil,file=filename)
-      do ir=1,nr
-        write(nfil,*)r(ir),phiofe0(ir,:)
-      enddo
-      close(nfil)
-      filename='phiofe1_'//trim(lstring)
-      open(nfil,file=filename)
-      do ir=1,nr
-        write(nfil,*)r(ir),phiofe1(ir,:)
-      enddo
-      close(nfil)
+      FILENAME='PHIOFE0_'//TRIM(LSTRING)
+      OPEN(NFIL,FILE=FILENAME)
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),PHIOFE0(IR,:)
+      ENDDO
+      CLOSE(NFIL)
+      FILENAME='PHIOFE1_'//TRIM(LSTRING)
+      OPEN(NFIL,FILE=FILENAME)
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),PHIOFE1(IR,:)
+      ENDDO
+      CLOSE(NFIL)
 
-      filename='rdev_'//trim(lstring)
-      open(nfil,file=filename)
-      do ie=1,ne
-        e=emin+(emax-emin)*real(ie-1,kind=8)/real(ne-1,kind=8)
-        write(nfil,*)e,rdev(:,ie)
-      enddo
-      close(nfil)
-      return 
-      end
+      FILENAME='RDEV_'//TRIM(LSTRING)
+      OPEN(NFIL,FILE=FILENAME)
+      DO IE=1,NE
+        E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1,KIND=8)
+        WRITE(NFIL,*)E,RDEV(:,IE)
+      ENDDO
+      CLOSE(NFIL)
+      RETURN 
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
@@ -6771,125 +6937,125 @@ PRINT*,'MARKE 1',ECORE
  
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine testdtkin(gid,nr,nj,aephi,taephi,psphi,tpsphi)
+      SUBROUTINE TESTDTKIN(GID,NR,NJ,AEPHI,TAEPHI,PSPHI,TPSPHI)
 !     **************************************************************************
 !     **************************************************************************
       USE STRINGS_MODULE
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID           ! GRID ID
-      INTEGER(4),INTENT(IN) :: nr
-      INTEGER(4),INTENT(IN) :: nj
-      real(8)   ,intent(in) :: aephi(nr,nj)
-      real(8)   ,intent(in) :: taephi(nr,nj)
-      real(8)   ,intent(in) :: psphi(nr,nj)
-      real(8)   ,intent(in) :: tpsphi(nr,nj)
-      real(8)               :: r(nr)
-      real(8)               :: aux(nr),aux2(nr)
-      real(8)               :: intftg(nr),intgtf(nr)
-      real(8)               :: daephi(nr,nj),dpsphi(nr,nj)
-      real(8)               :: work(nr,10)
-      real(8)               :: pi,y0
-      integer(4)            :: i,j
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: NJ
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,NJ)
+      REAL(8)   ,INTENT(IN) :: TAEPHI(NR,NJ)
+      REAL(8)   ,INTENT(IN) :: PSPHI(NR,NJ)
+      REAL(8)   ,INTENT(IN) :: TPSPHI(NR,NJ)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: AUX(NR),AUX2(NR)
+      REAL(8)               :: INTFTG(NR),INTGTF(NR)
+      REAL(8)               :: DAEPHI(NR,NJ),DPSPHI(NR,NJ)
+      REAL(8)               :: WORK(NR,10)
+      REAL(8)               :: PI,Y0
+      INTEGER(4)            :: I,J
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      call radial$r(gid,nr,r)
-      do i=1,nj
-        aux=r(:)*aephi(:,i)
-        CALL RADIAL$derive(GID,NR,aux,daephi(:,i))
-        aux=r(:)*psphi(:,i)
-        CALL RADIAL$derive(GID,NR,aux,dpsphi(:,i))
-      enddo
-      DO i=1,NJ
-        DO J=i+1,NJ
-          aux(:)=r(:)**2*(aephi(:,i)*taephi(:,j)-psphi(:,i)*tpsphi(:,j))
-          CALL RADIAL$INTEGRAte(GID,NR,AUX,intftg)
-          aux(:)=r(:)**2*(aephi(:,j)*taephi(:,i)-psphi(:,j)*tpsphi(:,i))
-          CALL RADIAL$INTEGRAte(GID,NR,AUX,intgtf)
-          work(:,1)=intftg
-          work(:,2)=intgtf
-          work(:,3)=intgtf-intftg
-          CALL SETUP_WRITEPHI(-'dtkintest',GID,NR,3,work)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
+      DO I=1,NJ
+        AUX=R(:)*AEPHI(:,I)
+        CALL RADIAL$DERIVE(GID,NR,AUX,DAEPHI(:,I))
+        AUX=R(:)*PSPHI(:,I)
+        CALL RADIAL$DERIVE(GID,NR,AUX,DPSPHI(:,I))
+      ENDDO
+      DO I=1,NJ
+        DO J=I+1,NJ
+          AUX(:)=R(:)**2*(AEPHI(:,I)*TAEPHI(:,J)-PSPHI(:,I)*TPSPHI(:,J))
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,INTFTG)
+          AUX(:)=R(:)**2*(AEPHI(:,J)*TAEPHI(:,I)-PSPHI(:,J)*TPSPHI(:,I))
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,INTGTF)
+          WORK(:,1)=INTFTG
+          WORK(:,2)=INTGTF
+          WORK(:,3)=INTGTF-INTFTG
+          CALL SETUP_WRITEPHI(-'DTKINTEST',GID,NR,3,WORK)
 !
-          aux=r(:)*psphi(:,i)*psphi(:,j)
-          CALL RADIAL$derive(GID,NR,aux,aux2)
-          aux(:)=2.d0*r(:)**2*psphi(:,i)*tpsphi(:,j) &
-      &         -aux2+dpsphi(:,i)*dpsphi(:,j)
+          AUX=R(:)*PSPHI(:,I)*PSPHI(:,J)
+          CALL RADIAL$DERIVE(GID,NR,AUX,AUX2)
+          AUX(:)=2.D0*R(:)**2*PSPHI(:,I)*TPSPHI(:,J) &
+      &         -AUX2+DPSPHI(:,I)*DPSPHI(:,J)
 
-!         == -2*r^2*f*tg-r*f*d*[d*r*g] =========================================
-          CALL RADIAL$derive(GID,NR,dpsphi(:,j),aux2)
-          work(:,1)=-2.d0*r(:)**2*psphi(:,i)*tpsphi(:,j) &
-         &         -(r*psphi(:,i)*aux2)
-!         == d[r*f*[d*r*g]]-r*f*d*[d*r*g]-[d*r*f][d*r*g]
-          CALL RADIAL$derive(GID,NR,dpsphi(:,j),aux2)
-          aux=r*psphi(:,i)*dpsphi(:,j)
-          CALL RADIAL$derive(GID,NR,aux,work(:,2))
-          work(:,2)=work(:,2)-r*psphi(:,i)*aux2-dpsphi(:,i)*dpsphi(:,j)
-!        == -2*r^2*f*tg-r*f*d*[d*r*g] ==========================================
-          CALL RADIAL$derive(GID,NR,r*psphi(:,i)*dpsphi(:,j),aux)
-          work(:,3)=-2.d0*r(:)**2*psphi(:,i)*tpsphi(:,j) &
-      &             -aux+dpsphi(:,i)*dpsphi(:,j)
-!         == integral
-          CALL RADIAL$INTEGRAte(GID,NR,work(:,3),work(:,4))
-!         == asymmetry pseudo
-          work(:,5)=-2.d0*r(:)**2*psphi(:,i)*tpsphi(:,j) &
-      &             +2.d0*r(:)**2*psphi(:,j)*tpsphi(:,i) 
-          CALL RADIAL$derive(GID,NR,r*psphi(:,i)*dpsphi(:,j),aux)
-          work(:,5)=work(:,5)-aux+dpsphi(:,i)*dpsphi(:,j)
-          CALL RADIAL$derive(GID,NR,r*psphi(:,j)*dpsphi(:,i),aux)
-          work(:,5)=work(:,5)+aux-dpsphi(:,i)*dpsphi(:,j)
-          aux=work(:,5)
-          CALL RADIAL$INTEGRAte(GID,NR,aux,work(:,5))
-!         == asymmetry all-electron
-          work(:,6)=-2.d0*r(:)**2*aephi(:,i)*taephi(:,j) &
-      &             +2.d0*r(:)**2*aephi(:,j)*taephi(:,i) 
-          CALL RADIAL$derive(GID,NR,r*aephi(:,i)*daephi(:,j),aux)
-          work(:,6)=work(:,6)-aux+daephi(:,i)*daephi(:,j)
-          CALL RADIAL$derive(GID,NR,r*aephi(:,j)*daephi(:,i),aux)
-          work(:,6)=work(:,6)+aux-daephi(:,i)*daephi(:,j)
-          aux=work(:,6)
-          CALL RADIAL$INTEGRAte(GID,NR,aux,work(:,6))
+!         == -2*R^2*F*TG-R*F*D*[D*R*G] =========================================
+          CALL RADIAL$DERIVE(GID,NR,DPSPHI(:,J),AUX2)
+          WORK(:,1)=-2.D0*R(:)**2*PSPHI(:,I)*TPSPHI(:,J) &
+         &         -(R*PSPHI(:,I)*AUX2)
+!         == D[R*F*[D*R*G]]-R*F*D*[D*R*G]-[D*R*F][D*R*G]
+          CALL RADIAL$DERIVE(GID,NR,DPSPHI(:,J),AUX2)
+          AUX=R*PSPHI(:,I)*DPSPHI(:,J)
+          CALL RADIAL$DERIVE(GID,NR,AUX,WORK(:,2))
+          WORK(:,2)=WORK(:,2)-R*PSPHI(:,I)*AUX2-DPSPHI(:,I)*DPSPHI(:,J)
+!        == -2*R^2*F*TG-R*F*D*[D*R*G] ==========================================
+          CALL RADIAL$DERIVE(GID,NR,R*PSPHI(:,I)*DPSPHI(:,J),AUX)
+          WORK(:,3)=-2.D0*R(:)**2*PSPHI(:,I)*TPSPHI(:,J) &
+      &             -AUX+DPSPHI(:,I)*DPSPHI(:,J)
+!         == INTEGRAL
+          CALL RADIAL$INTEGRATE(GID,NR,WORK(:,3),WORK(:,4))
+!         == ASYMMETRY PSEUDO
+          WORK(:,5)=-2.D0*R(:)**2*PSPHI(:,I)*TPSPHI(:,J) &
+      &             +2.D0*R(:)**2*PSPHI(:,J)*TPSPHI(:,I) 
+          CALL RADIAL$DERIVE(GID,NR,R*PSPHI(:,I)*DPSPHI(:,J),AUX)
+          WORK(:,5)=WORK(:,5)-AUX+DPSPHI(:,I)*DPSPHI(:,J)
+          CALL RADIAL$DERIVE(GID,NR,R*PSPHI(:,J)*DPSPHI(:,I),AUX)
+          WORK(:,5)=WORK(:,5)+AUX-DPSPHI(:,I)*DPSPHI(:,J)
+          AUX=WORK(:,5)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,WORK(:,5))
+!         == ASYMMETRY ALL-ELECTRON
+          WORK(:,6)=-2.D0*R(:)**2*AEPHI(:,I)*TAEPHI(:,J) &
+      &             +2.D0*R(:)**2*AEPHI(:,J)*TAEPHI(:,I) 
+          CALL RADIAL$DERIVE(GID,NR,R*AEPHI(:,I)*DAEPHI(:,J),AUX)
+          WORK(:,6)=WORK(:,6)-AUX+DAEPHI(:,I)*DAEPHI(:,J)
+          CALL RADIAL$DERIVE(GID,NR,R*AEPHI(:,J)*DAEPHI(:,I),AUX)
+          WORK(:,6)=WORK(:,6)+AUX-DAEPHI(:,I)*DAEPHI(:,J)
+          AUX=WORK(:,6)
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,WORK(:,6))
 !         ==
-          work(:,7)=-2.d0*r(:)**2*psphi(:,i)*tpsphi(:,j) &
-      &             +2.d0*r(:)**2*psphi(:,j)*tpsphi(:,i) &
-      &             +2.d0*r(:)**2*aephi(:,i)*taephi(:,j) &
-      &             -2.d0*r(:)**2*aephi(:,j)*taephi(:,i) 
-!!$          CALL RADIAL$derive(GID,NR,r*psphi(:,i)*dpsphi(:,j),aux)
-!!$          work(:,7)=work(:,7)-aux !+dpsphi(:,i)*dpsphi(:,j)
-!!$          CALL RADIAL$derive(GID,NR,r*psphi(:,j)*dpsphi(:,i),aux)
-!!$          work(:,7)=work(:,7)+aux !-dpsphi(:,i)*dpsphi(:,j)
-!!$!         == asymmetry all-electron
-!!$          CALL RADIAL$derive(GID,NR,r*aephi(:,i)*daephi(:,j),aux)
-!!$          work(:,7)=work(:,7)+aux !+daephi(:,i)*daephi(:,j)
-!!$          CALL RADIAL$derive(GID,NR,r*aephi(:,j)*daephi(:,i),aux)
-!!$          work(:,7)=work(:,7)-aux !-daephi(:,i)*daephi(:,j)
-!!$          aux=work(:,7)
-             CALL RADIAL$INTEGRAte(GID,NR,aux,work(:,7))
+          WORK(:,7)=-2.D0*R(:)**2*PSPHI(:,I)*TPSPHI(:,J) &
+      &             +2.D0*R(:)**2*PSPHI(:,J)*TPSPHI(:,I) &
+      &             +2.D0*R(:)**2*AEPHI(:,I)*TAEPHI(:,J) &
+      &             -2.D0*R(:)**2*AEPHI(:,J)*TAEPHI(:,I) 
+!!$          CALL RADIAL$DERIVE(GID,NR,R*PSPHI(:,I)*DPSPHI(:,J),AUX)
+!!$          WORK(:,7)=WORK(:,7)-AUX !+DPSPHI(:,I)*DPSPHI(:,J)
+!!$          CALL RADIAL$DERIVE(GID,NR,R*PSPHI(:,J)*DPSPHI(:,I),AUX)
+!!$          WORK(:,7)=WORK(:,7)+AUX !-DPSPHI(:,I)*DPSPHI(:,J)
+!!$!         == ASYMMETRY ALL-ELECTRON
+!!$          CALL RADIAL$DERIVE(GID,NR,R*AEPHI(:,I)*DAEPHI(:,J),AUX)
+!!$          WORK(:,7)=WORK(:,7)+AUX !+DAEPHI(:,I)*DAEPHI(:,J)
+!!$          CALL RADIAL$DERIVE(GID,NR,R*AEPHI(:,J)*DAEPHI(:,I),AUX)
+!!$          WORK(:,7)=WORK(:,7)-AUX !-DAEPHI(:,I)*DAEPHI(:,J)
+!!$          AUX=WORK(:,7)
+             CALL RADIAL$INTEGRATE(GID,NR,AUX,WORK(:,7))
 !         ==
-          CALL SETUP_WRITEPHI(-'dtkintest2',GID,NR,7,work)
-stop 'forced'
-        enddo
-      enddo
-      return
-      end
+          CALL SETUP_WRITEPHI(-'DTKINTEST2',GID,NR,7,WORK)
+STOP 'FORCED'
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine tdirekt(GID,NR,L,PHI,TPHI)
+      SUBROUTINE TDIREKT(GID,NR,L,PHI,TPHI)
 !     **************************************************************************
 !     **************************************************************************
-      implicit none
-      integer(4),INTENT(IN) :: GID
-      integer(4),INTENT(IN) :: NR
-      integer(4),INTENT(IN) :: L
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: PHI(NR)
       REAL(8)   ,INTENT(OUT):: TPHI(NR)
-      real(8)               :: r(nr)
-      real(8)               :: aux(nr)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: AUX(NR)
 !     **************************************************************************
-      call radial$r(gid,nr,r)
-      CALL RADIAL$derive(GID,NR,r*phi,aux)
-      CALL RADIAL$derive(GID,NR,aux,tphi)
-      tphi=-0.5d0*tphi/r+real(l*(l+1))*phi/(2.d0*r**2)
-      tphi(1:10)=0.d0
-      return
-      end
+      CALL RADIAL$R(GID,NR,R)
+      CALL RADIAL$DERIVE(GID,NR,R*PHI,AUX)
+      CALL RADIAL$DERIVE(GID,NR,AUX,TPHI)
+      TPHI=-0.5D0*TPHI/R+REAL(L*(L+1))*PHI/(2.D0*R**2)
+      TPHI(1:10)=0.D0
+      RETURN
+      END
