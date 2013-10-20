@@ -6157,7 +6157,7 @@ PRINT*,'KI ',KI
       END      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_newprowrapper(GID,NR,rout,l,nc,ecore,ucore,tucore &
+      SUBROUTINE SETUPS_newprowrapper(GID,NR,rout,l,nc,ecore,ucore1,tucore &
      &                               ,aepot,pspot,enu)
 !     **************************************************************************
 !     **                                                                      **
@@ -6171,7 +6171,7 @@ PRINT*,'KI ',KI
       real(8)   ,intent(in) :: enu
       INTEGER(4),INTENT(IN) :: nc
       real(8)   ,intent(in) :: ecore(nc)
-      real(8)   ,intent(in) :: ucore(nr,nc)
+      real(8)   ,intent(in) :: ucore1(nr,nc)
       real(8)   ,intent(in) :: tucore(nr,nc)
       real(8)   ,intent(in) :: aepot(nr)
       real(8)   ,intent(in) :: pspot(nr)
@@ -6179,12 +6179,17 @@ PRINT*,'KI ',KI
       integer(4),parameter  :: so=0
       real(8)   ,parameter  :: rc=1.5d0
       real(8)               :: ecore1(nc)
-      real(8)               :: ucore1(nr,nc)
+      real(8)               :: ucore(nr,nc)
+      real(8)               :: aecore(nr,nc)
+      real(8)               :: pscore(nr,nc)
       real(8)               :: ucoresm(nr,nc)
+      real(8)               :: aecoresm(nr,nc)
+      real(8)               :: pscoresm(nr,nc)
       real(8)               :: qn(nr,nj)
       real(8)               :: qnsm(nr,nj)
       real(8)               :: qndot(nr)
       real(8)               :: psphi(nr,nj)
+      real(8)               :: psphism(nr,nj)
       real(8)               :: aephi(nr,nj)
       real(8)               :: aephism(nr,nj)
       real(8)               :: pro(nr,nj)
@@ -6199,8 +6204,8 @@ PRINT*,'KI ',KI
       character(16)         :: lstring
       character(128)        :: filename
       integer(4)            :: nfil
-      integer(4)            :: j,jp
-      real(8)               :: work(nr,10),aux(nr),svar
+      integer(4)            :: j,jp,i
+      real(8)               :: work(nr,10),aux(nr),svar,svar1,svar2,svar3
       real(8)               :: r(nr)
       real(8)               :: pi,y0
       character(16)         :: reltype
@@ -6225,12 +6230,11 @@ PRINT*,'KI ',KI
 !      RELTYPE='ZORA'
       RELTYPE='SPINORBIT'
       ECORE1=ECORE
-      CALL SETUP_WRITEPHI(-'myvme'//TRIM(LSTRING),GID,NR,1,aepot*y0-enu)
-!
       CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU,ECORE1 &
      &                  ,AEPOT,PSPOT1 &
-     &                  ,UCORE1,QN,QNDOT,PSPHI,AEPHI &
-     &                  ,UCORESM,QNSM,AEPHISM,PRO,DTKIN,DOVER)
+     &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
+     &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
+     &                  ,PRO,DTKIN,DOVER)
 !
 !     ==========================================================================
 !     == WRITE DTKIN AND DOVER                                                ==
@@ -6260,6 +6264,21 @@ PRINT*,'KI ',KI
       ENDDO
 !
 !     ==========================================================================
+!     == test orthogonality of core wave functions
+!     ==========================================================================
+      DO i=1,NC
+        DO J=i+1,NC
+          AUX(:)=R(:)**2*(aecore(:,i)*aecore(:,j)+aecoresm(:,i)*aecoresm(:,j))
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar1)
+          AUX(:)=R(:)**2*(aecore(:,i)**2+aecoresm(:,i)**2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar2)
+          AUX(:)=R(:)**2*(aecore(:,j)**2+aecoresm(:,j)**2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar3)
+          print*,'overlap :',i,j,svar1/sqrt(svar2*svar3)
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
 !     == WRITE RESULT                                                         ==
 !     ==========================================================================
 !
@@ -6273,12 +6292,15 @@ PRINT*,'KI ',KI
       CALL SETUP_WRITEPHI(-'MYQN'//TRIM(LSTRING),GID,NR,NJ,QN)
       CALL SETUP_WRITEPHI(-'MYQNsm'//TRIM(LSTRING),GID,NR,NJ,QNsm)
       CALL SETUP_WRITEPHI(-'MYPS'//TRIM(LSTRING),GID,NR,NJ,PSPHI)
+      CALL SETUP_WRITEPHI(-'MYPSsm'//TRIM(LSTRING),GID,NR,NJ,PSPHIsm)
       CALL SETUP_WRITEPHI(-'MYAE'//TRIM(LSTRING),GID,NR,NJ,AEPHI)
       CALL SETUP_WRITEPHI(-'MYAEsm'//TRIM(LSTRING),GID,NR,NJ,AEPHIsm)
-      CALL SETUP_WRITEPHI(-'MYAEMQN'//TRIM(LSTRING),GID,NR,NJ,AEPHI-QN)
-      CALL SETUP_WRITEPHI(-'MYAEMPS'//TRIM(LSTRING),GID,NR,NJ,AEPHI-PSPHI)
-      CALL SETUP_WRITEPHI(-'MYCORE'//TRIM(LSTRING),GID,NR,NC,UCORE)
-      CALL SETUP_WRITEPHI(-'MYCOREsm'//TRIM(LSTRING),GID,NR,NC,UCOREsm)
+      CALL SETUP_WRITEPHI(-'MYuCORE'//TRIM(LSTRING),GID,NR,NC,UCORE)
+      CALL SETUP_WRITEPHI(-'MYuCOREsm'//TRIM(LSTRING),GID,NR,NC,UCOREsm)
+      CALL SETUP_WRITEPHI(-'MYpsCORE'//TRIM(LSTRING),GID,NR,NC,psCORE)
+      CALL SETUP_WRITEPHI(-'MYpsCOREsm'//TRIM(LSTRING),GID,NR,NC,psCOREsm)
+      CALL SETUP_WRITEPHI(-'MYaeCORE'//TRIM(LSTRING),GID,NR,NC,aeCORE)
+      CALL SETUP_WRITEPHI(-'MYaeCOREsm'//TRIM(LSTRING),GID,NR,NC,aeCOREsm)
       CALL SETUP_WRITEPHI(-'MYPRO'//TRIM(LSTRING),GID,NR,NJ,PRO)
       CALL SETUP_WRITEPHI(-'DEPOT.DAT',GID,NR,1,(PSPOT-AEPOT)*Y0)
 !
@@ -6293,8 +6315,9 @@ PRINT*,'BEFORE NEWPROANALYZE2'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
      &                        ,ECORE,AEPOT,PSPOT &
-     &                        ,UCORE,QN,QNDOT,PSPHI,AEPHI &
-     &                        ,UCORESM,QNSM,AEPHISM,PRO,DTKIN,DOVER)
+     &                        ,UCORE,aecore,pscore,QN,AEPHI,PSPHI,QNDOT &
+     &                        ,UCORESM,aecoresm,pscoresm,QNSM,AEPHISM,psphism &
+     &                        ,PRO,DTKIN,DOVER)
 !     **************************************************************************
 !     **  THE CORE STATES SOLVE                                               **
 !     **     (H-E(I))|U_I>=|U_{I-1}>   WITH |U_0>=|0>                         **
@@ -6325,14 +6348,22 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)   ,INTENT(IN) :: ECORE(NC) ! CORE LEVEL ENERGIES
       REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
       REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
-      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)   ! CORE WAVE FUNCTIONS
+!
+      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)  ! nodeless CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: aeCORE(NR,NC) ! all-electron CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: psCORE(NR,NC) ! pseudo CORE WAVE FUNCTIONS
       REAL(8)   ,INTENT(OUT):: UCORESM(NR,NC) ! SMALL COMPONENT OF CORE STATES
+      REAL(8)   ,INTENT(OUT):: aeCOREsm(NR,NC) ! small ae CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: psCOREsm(NR,NC) ! small ps CORE WAVE FUNCTIONS
+!
       REAL(8)   ,INTENT(OUT):: QN(NR,NJ)      ! NODE REDUCED PARTIAL WAVES
-      REAL(8)   ,INTENT(OUT):: QNSM(NR,NJ)    ! SMALL COMPONENTS OF QN
-      REAL(8)   ,INTENT(OUT):: QNDOT(NR)      
-      REAL(8)   ,INTENT(OUT):: PSPHI(NR,NJ)
+      REAL(8)   ,INTENT(OUT):: QNSM(NR,NJ)    ! SMALL QN
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,NJ)
       REAL(8)   ,INTENT(OUT):: AEPHISM(NR,NJ)
+      REAL(8)   ,INTENT(OUT):: PSPHI(NR,NJ)
+      REAL(8)   ,INTENT(OUT):: psPHISM(NR,NJ)
+!
+      REAL(8)   ,INTENT(OUT):: QNDOT(NR)      
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
@@ -6345,10 +6376,11 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: ALPHA    ! 1/C (=FINE-STRUCTURE CONSTANT IN A.U.)
       REAL(8)               :: TUCORE(NR,NC)
+      REAL(8)               :: TaeCORE(NR,NC)
+      REAL(8)               :: TpsCORE(NR,NC)
       REAL(8)               :: TQN(NR,NJ)
-      REAL(8)               :: TPSPHI(NR,NJ)
-      REAL(8)               :: PSPHIsm(NR,NJ)
       REAL(8)               :: TAEPHI(NR,NJ)
+      REAL(8)               :: TPSPHI(NR,NJ)
       INTEGER(4),PARAMETER  :: IDIR=1
       REAL(8)               :: DREL(NR)
       REAL(8)               :: R(NR)
@@ -6365,6 +6397,8 @@ PRINT*,'BEFORE NEWPROANALYZE2'
 integer(4):: ind
 real(8) :: work(nr,100)
 !     **************************************************************************
+print*,'in setups_newpro for l=',l,' and so=',so
+                                       call trace$push('setups_newpro')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
 !     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =========
@@ -6423,7 +6457,7 @@ real(8) :: work(nr,100)
       END IF
 !
 !     ==========================================================================
-!     == CONSTRUCT relativisitc factor                                        ==
+!     == CONSTRUCT relativistic factor                                        ==
 !     ==========================================================================
       DREL=0.D0   !NON-RELATIVISTIC CASE
       IF(TREL) then
@@ -6444,9 +6478,9 @@ real(8) :: work(nr,100)
         end if
 !       == PREPARE INHOMOGENEITY ===============================================
         IF(TSMALL) THEN
-          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
+          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
-          G=G-AUX1-(1.D0-KAPPA)/R*AUX
+          G=G-AUX1-(1.D0-KAPPA)/R*AUX  !gsm=-fsm(ib-1)
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
@@ -6465,12 +6499,12 @@ real(8) :: work(nr,100)
         END IF
 !
 !       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
-        G=UCORE(:,IB)
-        GSM=UCORESM(:,IB)
+        G=-UCORE(:,IB)
+        GSM=-UCORESM(:,IB)
       ENDDO
 !
 !     ==========================================================================
-!     == CONSTRUCT NODE-REDUCED PARTIAL WAVES                                 ==
+!     == NODE-REDUCED PARTIAL WAVES                                           ==
 !     ==========================================================================
 !     == GO BACK TO THE DIRAC EQUATION TO SEE HOW THE INHOMGENEITY TRANSLATES
       IF(TREL) then
@@ -6528,6 +6562,28 @@ real(8) :: work(nr,100)
       CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,ENU,IDIR,QNDOT)
 !
 !     ==========================================================================
+!     == PSEUDO CORE WAVE FUNCTIONS                                           ==
+!     ==========================================================================
+      PSCORE=UCORE
+      TPSCORE=TUCORE
+      PSCOREsm=UCOREsm
+      DO IB=1,nc
+        CALL SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PSCORE(:,IB),TPSCORE(:,IB))
+        aux=0.d0
+        CALL SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PSCOREsm(:,IB),aux)
+      ENDDO
+!
+!     ==========================================================================
+!     == MAKE PSEUDO PARTIAL WAVE                                             ==
+!     ==========================================================================
+      PSPHI=QN
+      TPSPHI=TQN
+      psphism=qnsm
+!     == only the first partial wave is pseudized ==============================
+!     == tails of the pseud core functions will be added later  ================
+      CALL SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PSPHI,TPSPHI)
+!
+!     ==========================================================================
 !     == MAKE ALL-ELECTRON PARTIAL WAVES                                      ==
 !     ==========================================================================
 !     == B(J+1,M)= PARTIAL_E^J 1/(ECORE(M)-E) = J!/(ECORE(M)-E)**(J+1) =====
@@ -6562,17 +6618,30 @@ real(8) :: work(nr,100)
         ENDDO
       ENDDO
 !     == INCLUDE CORE STATES ===================================================
-      AEPHI=QN+MATMUL(UCORE,TRANSPOSE(FF))
-      TAEPHI=TQN+MATMUL(TUCORE,TRANSPOSE(FF))
-      AEPHISM=QNSM+MATMUL(UCORESM,TRANSPOSE(FF))
+      AEPHI  =     QN+MATMUL(   UCORE,TRANSPOSE(FF))
+      TAEPHI =    TQN+MATMUL(  TUCORE,TRANSPOSE(FF))
+      AEPHISM=   QNSM+MATMUL( UCORESM,TRANSPOSE(FF))
+      psPHI  =  psphi+MATMUL(  psCORE,TRANSPOSE(FF))
+      TpsPHI = Tpsphi+MATMUL( TpsCORE,TRANSPOSE(FF))
+      psPHIsm=psphism+MATMUL(psCOREsm,TRANSPOSE(FF))
 !
 !     ==========================================================================
-!     == MAKE PSEUDO PARTIAL WAVE                                             ==
+!     == MAKE ALL-ELECTRON core states                                        ==
 !     ==========================================================================
-      PSPHI=QN
-      TPSPHI=TQN
-      psphism=qnsm
-      CALL SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PSPHI,TPSPHI)
+      AECORE(:,:)  =UCORE(:,:)
+      AECOREsm(:,:)=UCOREsm(:,:)
+      DO IB=2,NC
+        SVAR=1.D0
+        DO M=IB-1,1,-1
+          SVAR=SVAR/(ECORE(M)-ECORE(IB))
+          AECORE(:,IB)  =  AECORE(:,IB)+   UCORE(:,M)*SVAR
+          TAECORE(:,IB) = TAECORE(:,IB)+  TUCORE(:,M)*SVAR
+          AECORESM(:,IB)=AECORESM(:,IB)+ UCORESM(:,M)*SVAR
+          PSCORE(:,IB)  =  PSCORE(:,IB)+  PSCORE(:,M)*SVAR
+          TPSCORE(:,IB) = TPSCORE(:,IB)+ TPSCORE(:,M)*SVAR
+          PSCORESM(:,IB)=PSCORESM(:,IB)+PSCORESM(:,M)*SVAR
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
 !     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
@@ -6649,6 +6718,7 @@ real(8) :: work(nr,100)
 !     == WAVE.                                                                ==
 !     ==========================================================================
       DTKIN=0.5D0*(DTKIN+TRANSPOSE(DTKIN))
+                                       call trace$pop()
       RETURN
       END
 !
@@ -6694,6 +6764,10 @@ real(8) :: work(nr,100)
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IRC=IR
+        IF(R(IR).GT.RC) EXIT
+      ENDDO
 
 !     ==========================================================================
 !     == INITIAL REPORTING                                                    ==
@@ -6713,10 +6787,6 @@ real(8) :: work(nr,100)
       G(:)=0.D0
       ENU=0.D0
 !
-      DO IR=1,NR
-        IRC=IR
-        IF(R(IR).GT.RC) EXIT
-      ENDDO
       VAL=POT(IRC)
       POT(:IRC)=VAL  ! POTENTIAL INSIDE IS CONSTANT
       G(:IRC)=0.D0   ! INHOMOGENEITY INSIDE VANISHES
@@ -6734,6 +6804,107 @@ real(8) :: work(nr,100)
       G(IRC+1:)=0.D0
       CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,ENU,IDIR,FDDOT)
       TFDDOT=G-(POT*Y0-ENU)*FDDOT
+!
+!     ==========================================================================
+!     == SUPERIMPOSE SO THAT IT MATCHES TO INPUT PARTIAL WAVE                 ==
+!     ==========================================================================
+      CALL RADIAL$VALUE(GID,NR,PHI,RC,VALPHI)
+      CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DERPHI)
+      CALL RADIAL$VALUE(GID,NR,F,RC,VALF)
+      CALL RADIAL$DERIVATIVE(GID,NR,F,RC,DERF)
+      CALL RADIAL$VALUE(GID,NR,FDOT,RC,VALFDOT)
+      CALL RADIAL$DERIVATIVE(GID,NR,FDOT,RC,DERFDOT)
+      CALL RADIAL$VALUE(GID,NR,FDDOT,RC,VALFDDOT)
+      CALL RADIAL$DERIVATIVE(GID,NR,FDDOT,RC,DERFDDOT)
+      DET=VALF*DERFDOT-VALFDOT*DERF
+!
+!     ==  FIRST REMOVE VALUE AND DERIVATIVE FROM THE FDDOT FUNCTION ============
+      C1=(DERFDOT*VALFDDOT-VALFDOT*DERFDDOT)/DET
+      C2=(-DERF*VALFDDOT+VALF*DERFDDOT)/DET
+      FDDOT(:) = FDDOT(:)- F(:)*C1- FDOT(:)*C2
+      TFDDOT(:)=TFDDOT(:)-TF(:)*C1-TFDOT(:)*C2
+!
+!     ==  NOW MATCH ONTO INPUT PARTIAL WAVE  ===================================
+      C1=( DERFDOT*VALPHI-VALFDOT*DERPHI)/DET
+      C2=(-DERF   *VALPHI+VALF   *DERPHI)/DET
+      IF(T3PAR) THEN
+        C3=(TPHI(IRC)-TF(IRC)*C1-TFDOT(IRC)*C2)/TFDDOT(IRC)
+      ELSE
+        C3=0.D0
+      END IF
+      PHI(:IRC) = F(:IRC)*C1+ FDOT(:IRC)*C2+ FDDOT(:IRC)*C3
+      TPHI(:IRC)=TF(:IRC)*C1+TFDOT(:IRC)*C2+TFDDOT(:IRC)*C3
+!
+!     ==========================================================================
+!     == FINAL REPORTING                                                      ==
+!     ==========================================================================
+      IF(TWRITE) THEN
+        WRITE(LSTRING,*)L
+        LSTRING=ADJUSTL(LSTRING)
+        CALL SETUP_WRITEPHI('PHIAFTER'//TRIM(LSTRING),GID,NR,1,PHI)
+        CALL SETUP_WRITEPHI('TPHIAFTER'//TRIM(LSTRING),GID,NR,1,TPHI)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PHI,TPHI)
+!     **************************************************************************
+!     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
+!     **                                                                      **
+!     **  NOTE, THAT FDDOT IS 1/2 OF THE SECOND DERIVATIVE                    **
+!     **       (H-E)|F^J>=J|F^{J-1}>.  WE DROP THE FACTOR J                   **
+!     ******************************PETER BLOECHL, GOSLAR 2013 *****************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: RC
+      INTEGER(4),INTENT(IN) :: L
+      REAL(8)   ,INTENT(INOUT) :: PHI(NR)
+      REAL(8)   ,INTENT(INOUT) :: TPHI(NR)
+      LOGICAL(4),PARAMETER  :: T3PAR=.TRUE.
+      LOGICAL(4),PARAMETER  :: TWRITE=.false.
+      INTEGER(4)            :: IRC
+      REAL(8)               :: R(NR)
+      REAL(8)               :: F(NR)
+      REAL(8)               :: TF(NR)
+      REAL(8)               :: FDOT(NR)
+      REAL(8)               :: TFDOT(NR)
+      REAL(8)               :: FDDOT(NR)
+      REAL(8)               :: TFDDOT(NR)
+      REAL(8)               :: ENU
+      REAL(8)               :: VALPHI,VALF,VALFDOT,VALFDDOT,VAL
+      REAL(8)               :: DERPHI,DERF,DERFDOT,DERFDDOT
+      REAL(8)               :: C1,C2,C3,DET
+      INTEGER(4)            :: IR
+      REAL(8)               :: WORK(NR,2)
+      CHARACTER(16) :: LSTRING
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        IRC=IR
+        IF(R(IR).GT.RC) EXIT
+      ENDDO
+!
+!     ==========================================================================
+!     == INITIAL REPORTING                                                    ==
+!     ==========================================================================
+      IF(TWRITE) THEN
+        WRITE(LSTRING,*)L
+        LSTRING=ADJUSTL(LSTRING)
+        CALL SETUP_WRITEPHI('PHIBEFORE'//TRIM(LSTRING),GID,NR,1,PHI)
+        CALL SETUP_WRITEPHI('TPHIBEFORE'//TRIM(LSTRING),GID,NR,1,TPHI)
+      END IF
+!
+!     ==========================================================================
+!     == DETERMINE RADIAL FUNCTIONS  FOR PSEUDO PARTIAL WAVES                 ==
+!     ==========================================================================
+      f=r(:)**l
+      tf=0.0
+      fdot=r(:)**(l+2)
+      tfdot=-0.5d0*real((l+2)*(l+3)-l*(l+1),kind=8)*r(:)**(l)
+      fddot=r(:)**(l+4)
+      tfddot=-0.5d0*real((l+4)*(l+5)-l*(l+1),kind=8)*r(:)**(l+2)
 !
 !     ==========================================================================
 !     == SUPERIMPOSE SO THAT IT MATCHES TO INPUT PARTIAL WAVE                 ==
