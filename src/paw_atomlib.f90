@@ -1487,7 +1487,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,ROUT,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,ROUT,Z0)
         Z0=Z0-REAL(NN+1)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
 !       ========================================================================
@@ -1675,7 +1675,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1717,7 +1717,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
         IF(Z0.GT.0.D0) THEN
@@ -2278,7 +2278,7 @@ PRINT*,'#ITERATIONS ',ITER
 !     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
 !     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
 !     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.d0,RBND,PHASE)
 !
       DO IR=1,NR
         IRBND=IR
@@ -2678,7 +2678,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND,Z0)
         Z0=Z0-PHASE
         IF(Z0.GE.0.D0) THEN
           PHIUP(:)=PHI(:)
@@ -2715,7 +2715,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !PRINT*,'FACTORS ',ZUP/(ZUP-ZDOWN),-ZDOWN/(ZUP-ZDOWN)
 !PRINT*,'XUP  =',XUP  ,' ZUP   ',ZUP  ,' DIFFZ ',ZUP-ZDOWN
 !PRINT*,'XDOWN=',XDOWN,' ZDOWN ',ZDOWN,' DIFFX ',XUP-XDOWN
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND,Z0)
       Z0=Z0-PHASE
 !PRINT*,'L=',L,' E=',E,' ZUP-ZDOWN',ZUP-ZDOWN,' Z0=',Z0
 
@@ -3334,7 +3334,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$!     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
 !!$!     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
 !!$!     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
-!!$      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
+!!$      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.d0,RBND,PHASE)
 !!$!
 !!$      DO IR=1,NR
 !!$        IRBND=IR
@@ -3602,7 +3602,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$!       ==  PROPAGATE                                                         ==
 !!$!       ========================================================================
 !!$        PSI(:)=PSI(:)+DPSI(:)
-!!$! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,SVAR)
+!!$! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.d0,RBND,SVAR)
 !!$!PRINT*,'TARGET PHASE+ ',PHASE,' ACTUAL PHASE=',SVAR,' R=',RBND
 !!$!   
 !!$!       ========================================================================

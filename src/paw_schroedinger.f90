@@ -2825,7 +2825,7 @@ CHARACTER(32):: FILE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RC,PHASE)
+      SUBROUTINE SCHROEDINGER$PHASESHIFT(GID,NR,PHI,rmin,RC,PHASE)
 !     **************************************************************************
 !     **  CALCULATES THE PHASE SHIFT FOR A RADIAL FUNCTION AT RADIUS RC       **
 !     **                                                                      **
@@ -2842,7 +2842,8 @@ CHARACTER(32):: FILE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: PHI(NR)
-      REAL(8)   ,INTENT(IN) :: RC
+      REAL(8)   ,INTENT(IN) :: Rmin  ! nodes inside rmin are not counted
+      REAL(8)   ,INTENT(IN) :: RC    ! phaseshift calculated at rc
       REAL(8)   ,INTENT(OUT):: PHASE
       REAL(8)               :: PI
       REAL(8)               :: R(NR)
@@ -2861,6 +2862,7 @@ CHARACTER(32):: FILE
       END IF
       PHASE=0.D0
       DO IR=3,NR-1  ! DO NOT CONSIDER A ZERO AT THE ORIGIN
+        IF(R(IR-1).LT.RMIN) CYCLE  ! DO NOT COUNT ZEROS WITHIN RMIN
         IF(R(IR).GE.RC) THEN
           DER=(PHI(IR)-PHI(IR-1))/(R(IR)-R(IR-1))
           VAL=PHI(IR-1)+DER*(RC-R(IR-1))
@@ -2912,46 +2914,6 @@ CHARACTER(32):: FILE
         VAL=TAN(PI*SVAR)
         DER=1.D0
       END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SCHROEDINGER$PHASESHIFT_OLD(GID,NR,PHI,RC,PHASE)
-!     **************************************************************************
-!     **  CALCULATES THE PHASE SHIFT FOR A RADIAL FUNCTION AT RADIUS RC       **
-!     **                                                                      **
-!     **  THE PHASE SHIFT IS DEFINED AS                                       **
-!     **     0.5-1/PI * ATAN (DPHIDR/PHI)+NN                                  **
-!     **  WHERE PHI AND DPHIDR ARE VALUE AND DERIVATIVE OF PHI AT RADIUS RC   **
-!     **  AND NN IS THE NUMBER OF NODES INSIDE RC.                            **
-!     **                                                                      **
-!     **  THIS DEFINITION OF THE PHASE SHIFT DIFFERS FROM THE TERM USED       **
-!     **  IN SCATTERING THEORY                                                **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: PHI(NR)
-      REAL(8)   ,INTENT(IN) :: RC
-      REAL(8)   ,INTENT(OUT):: PHASE
-      REAL(8)               :: PI
-      REAL(8)               :: R(NR)
-      REAL(8)               :: VAL,DER
-      INTEGER(4)            :: IR
-!     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      CALL RADIAL$R(GID,NR,R)
-      CALL RADIAL$VALUE(GID,NR,PHI,RC,VAL)
-      CALL RADIAL$DERIVATIVE(GID,NR,PHI,RC,DER)
-      PHASE=0.5D0-ATAN(DER/VAL)/PI
-      DO IR=3,NR  ! LEAVE OUT FIRST POINT WHICH IS OFTEN ZERO
-        IF(R(IR).GT.RC) THEN
-          IF(PHI(IR-1)*VAL.LT.0.D0)PHASE=PHASE+1.D0
-          EXIT
-        END IF
-        IF(PHI(IR)*PHI(IR-1).LT.0.D0)PHASE=PHASE+1.D0
-      ENDDO
       RETURN
       END
 !
