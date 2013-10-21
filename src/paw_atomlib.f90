@@ -1381,7 +1381,8 @@ PRINT*,'#ITERATIONS ',ITER
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN,POT,E,PHI)
+      SUBROUTINE ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN &
+     &                             ,POT,E,PHI)
 !     **************************************************************************
 !     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
 !     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **

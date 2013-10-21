@@ -6158,7 +6158,7 @@ PRINT*,'KI ',KI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_newprowrapper(GID,NR,rout,l,nc,ecore,ucore1,tucore &
-     &                               ,aepot,pspot,enu)
+     &                               ,aepot,pspot,enu1)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
@@ -6168,7 +6168,7 @@ PRINT*,'KI ',KI
       INTEGER(4),INTENT(IN) :: nr
       real(8)   ,intent(in) :: rout
       INTEGER(4),INTENT(IN) :: l
-      real(8)   ,intent(in) :: enu
+      real(8)   ,intent(in) :: enu1
       INTEGER(4),INTENT(IN) :: nc
       real(8)   ,intent(in) :: ecore(nc)
       real(8)   ,intent(in) :: ucore1(nr,nc)
@@ -6177,7 +6177,7 @@ PRINT*,'KI ',KI
       real(8)   ,intent(in) :: pspot(nr)
       integer(4),parameter  :: nj=3
       integer(4),parameter  :: so=0
-      real(8)   ,parameter  :: rc=1.5d0
+      real(8)   ,parameter  :: rc=2.5d0
       real(8)               :: ecore1(nc)
       real(8)               :: ucore(nr,nc)
       real(8)               :: aecore(nr,nc)
@@ -6207,6 +6207,7 @@ PRINT*,'KI ',KI
       integer(4)            :: j,jp,i
       real(8)               :: work(nr,10),aux(nr),svar,svar1,svar2,svar3
       real(8)               :: r(nr)
+      real(8)               :: enu
       real(8)               :: pi,y0
       character(16)         :: reltype
 !     **************************************************************************
@@ -6230,6 +6231,7 @@ PRINT*,'KI ',KI
 !      RELTYPE='ZORA'
       RELTYPE='SPINORBIT'
       ECORE1=ECORE
+      enu=min(enu1,maxval(aepot*y0)-1.d-1)
       CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU,ECORE1 &
      &                  ,AEPOT,PSPOT1 &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
@@ -6276,6 +6278,13 @@ PRINT*,'KI ',KI
           CALL RADIAL$INTEGRAL(GID,NR,AUX,svar3)
           print*,'overlap :',i,j,svar1/sqrt(svar2*svar3)
         ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == exlore size of nodeless wave functions
+!     ==========================================================================
+      DO I=1,NC
+        PRINT*,'(MAX(UCORE) ib=',i,MAXVAL(UCORE(:,I)),MAXVAL(UCORESM(:,I)),ecore(i)
       ENDDO
 !
 !     ==========================================================================
@@ -6450,9 +6459,9 @@ print*,'in setups_newpro for l=',l,' and so=',so
       ENDDO
       IF(IRCL.EQ.0) THEN
         CALL ERROR$MSG('NO CLASSICAL TURNING POINT ENCOUNTERED')
-        CALL ERROR$MSG('ENU MUT LIE BELOW MAXIMUM OF POTENTIAL')
-        CALL ERROR$CHVAL('ENU',ENU)
-        CALL ERROR$I4VAL('MAX(POT)',MAXVAL(AEPOT)*Y0)
+        CALL ERROR$MSG('ENU MUST LIE BELOW MAXIMUM OF POTENTIAL')
+        CALL ERROR$R8VAL('ENU',ENU)
+        CALL ERROR$R8VAL('MAX(POT)',MAXVAL(AEPOT)*Y0)
         CALL ERROR$STOP('SETUPS_NEWPRO')
       END IF
 !
@@ -6480,7 +6489,9 @@ print*,'in setups_newpro for l=',l,' and so=',so
         IF(TSMALL) THEN
           AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
-          G=G-AUX1-(1.D0-KAPPA)/R*AUX  !gsm=-fsm(ib-1)
+          aux=AUX1+(1.D0-KAPPA)/R*AUX  
+          aux(1)=aux(2)
+!         G=G-AUx !gsm=-fsm(ib-1)
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
@@ -6567,10 +6578,10 @@ print*,'in setups_newpro for l=',l,' and so=',so
       PSCORE=UCORE
       TPSCORE=TUCORE
       PSCOREsm=UCOREsm
-      DO IB=1,nc
-        CALL SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PSCORE(:,IB),TPSCORE(:,IB))
-        aux=0.d0
-        CALL SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PSCOREsm(:,IB),aux)
+      DO IB=1,NC
+        CALL SETUPS_MAKEPSCORE_MINE(GID,NR,RC,L,ib-1,PSCORE(:,IB),TPSCORE(:,IB))
+        AUX=0.D0
+        CALL SETUPS_MAKEPSCORE_MINE(GID,NR,RC,L,ib-1,PSCORESM(:,IB),AUX)
       ENDDO
 !
 !     ==========================================================================
@@ -6578,9 +6589,9 @@ print*,'in setups_newpro for l=',l,' and so=',so
 !     ==========================================================================
       PSPHI=QN
       TPSPHI=TQN
-      psphism=qnsm
-!     == only the first partial wave is pseudized ==============================
-!     == tails of the pseud core functions will be added later  ================
+      PSPHISM=QNSM
+!     == ONLY THE FIRST PARTIAL WAVE IS PSEUDIZED ==============================
+!     == TAILS OF THE PSEUD CORE FUNCTIONS WILL BE ADDED LATER  ================
       CALL SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PSPHI,TPSPHI)
 !
 !     ==========================================================================
@@ -6848,7 +6859,7 @@ print*,'in setups_newpro for l=',l,' and so=',so
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_MAKEPScore_MINE(GID,NR,RC,L,PHI,TPHI)
+      SUBROUTINE SETUPS_MAKEPScore_MINE(GID,NR,RC,L,n,PHI,TPHI)
 !     **************************************************************************
 !     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
@@ -6860,6 +6871,7 @@ print*,'in setups_newpro for l=',l,' and so=',so
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: RC
       INTEGER(4),INTENT(IN) :: L
+      INTEGER(4),INTENT(IN) :: n  !wave function starts with r**(l+2n)
       REAL(8)   ,INTENT(INOUT) :: PHI(NR)
       REAL(8)   ,INTENT(INOUT) :: TPHI(NR)
       LOGICAL(4),PARAMETER  :: T3PAR=.TRUE.
@@ -6877,6 +6889,7 @@ print*,'in setups_newpro for l=',l,' and so=',so
       REAL(8)               :: DERPHI,DERF,DERFDOT,DERFDDOT
       REAL(8)               :: C1,C2,C3,DET
       INTEGER(4)            :: IR
+      INTEGER(4)            :: j
       REAL(8)               :: WORK(NR,2)
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
@@ -6899,12 +6912,15 @@ print*,'in setups_newpro for l=',l,' and so=',so
 !     ==========================================================================
 !     == DETERMINE RADIAL FUNCTIONS  FOR PSEUDO PARTIAL WAVES                 ==
 !     ==========================================================================
-      f=r(:)**l
-      tf=0.0
-      fdot=r(:)**(l+2)
-      tfdot=-0.5d0*real((l+2)*(l+3)-l*(l+1),kind=8)*r(:)**(l)
-      fddot=r(:)**(l+4)
-      tfddot=-0.5d0*real((l+4)*(l+5)-l*(l+1),kind=8)*r(:)**(l+2)
+      J=L+2*N
+      F=R(:)**J
+      TF=-0.5D0*REAL(J*(J+1)-L*(L+1),KIND=8)*R(:)**(J-2)
+      J=L+2*N+2
+      FDOT=R(:)**J
+      TFDOT=-0.5D0*REAL(J*(J+1)-L*(L+1),KIND=8)*R(:)**(J-2)
+      J=L+2*N+4
+      FDDOT=R(:)**J
+      TFDDOT=-0.5D0*REAL(J*(J+1)-L*(L+1),KIND=8)*R(:)**(J-2)
 !
 !     ==========================================================================
 !     == SUPERIMPOSE SO THAT IT MATCHES TO INPUT PARTIAL WAVE                 ==
