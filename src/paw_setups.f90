@@ -3135,8 +3135,8 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
             IF(LOFI(IB).NE.L) CYCLE
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,ROUT,TVARDREL,DREL,G,0,AEPOT &
-     &                               ,E,UOFI(:,IB))
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.d0,ROUT,TVARDREL &
+     &                             ,DREL,G,0,AEPOT,E,UOFI(:,IB))
             IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
@@ -4105,8 +4105,8 @@ GOTO 10001
 !         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
 !         ======================================================================
           G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,TVARDREL,DREL,G,NNOFI(IB),AEPOT &
-       &                             ,E,AEPSIF(:,IB-NC))
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.d0,ROUT,TVARDREL &
+       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
        &                              ,ROUT,E,AEPSIF(:,IB-NC))
           SVAR1=E
