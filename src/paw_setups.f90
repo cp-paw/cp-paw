@@ -6228,8 +6228,8 @@ PRINT*,'KI ',KI
 !     == construct augmentation
 !     ==========================================================================
 !     RELTYPE='NONREL'
-!      RELTYPE='ZORA'
-      RELTYPE='SPINORBIT'
+      RELTYPE='ZORA'
+!      RELTYPE='SPINORBIT'
       ECORE1=ECORE
       enu=min(enu1,maxval(aepot*y0)-1.d-1)
       CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU,ECORE1 &
@@ -6323,7 +6323,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
-     &                        ,ECORE,AEPOT,PSPOT &
+     &                        ,ECOREin,AEPOT,PSPOT &
      &                        ,UCORE,aecore,pscore,QN,AEPHI,PSPHI,QNDOT &
      &                        ,UCORESM,aecoresm,pscoresm,QNSM,AEPHISM,psphism &
      &                        ,PRO,DTKIN,DOVER)
@@ -6354,7 +6354,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       INTEGER(4),INTENT(IN) :: NJ        ! #(PARTIAL WAVES)
       REAL(8)   ,INTENT(IN) :: RC        ! PSEUDIZATION RADIUS
       REAL(8)   ,INTENT(IN) :: ENU       ! EXPANSION ENERGY FOR PARTIAL WAVES
-      REAL(8)   ,INTENT(IN) :: ECORE(NC) ! CORE LEVEL ENERGIES
+      REAL(8)   ,INTENT(IN) :: ECOREin(NC) ! CORE LEVEL ENERGIES
       REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
       REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
 !
@@ -6376,6 +6376,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
+      real(8)   ,parameter  :: rnscore=0.07d0
       LOGICAL               :: TVARDREL ! ADJUST DREL IN BOUND-STATE SEARCH
       INTEGER(4),PARAMETER  :: SWITCH=1 ! BIORTHOGONALIZATION METHOD
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
@@ -6384,6 +6385,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)               :: KAPPA
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: ALPHA    ! 1/C (=FINE-STRUCTURE CONSTANT IN A.U.)
+      REAL(8)               :: ecore(NC)
       REAL(8)               :: TUCORE(NR,NC)
       REAL(8)               :: TaeCORE(NR,NC)
       REAL(8)               :: TpsCORE(NR,NC)
@@ -6401,6 +6403,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)               :: A(NJ,NC)
       REAL(8)               :: FF(NJ,NC)
       REAL(8)               :: SVAR,E
+      REAL(8)               :: rns
       INTEGER(4)            :: ircl ! grid point beyond classical turning point
       INTEGER(4)            :: JP,J,IR,K,M,I,IB
 integer(4):: ind
@@ -6410,6 +6413,7 @@ print*,'in setups_newpro for l=',l,' and so=',so
                                        call trace$push('setups_newpro')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
+      ecore=ecorein
 !     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =========
       KAPPA=REAL( -1+SO*(-L+(SO-1)/2) ,KIND=8)
       CALL RADIAL$R(GID,NR,R)
@@ -6491,13 +6495,17 @@ print*,'in setups_newpro for l=',l,' and so=',so
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
           aux=AUX1+(1.D0-KAPPA)/R*AUX  
           aux(1)=aux(2)
-!         G=G-AUx !gsm=-fsm(ib-1)
+          G=G-AUx !gsm=-fsm(ib-1)
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,ROUT,TVARDREL,DREL,G,0,AEPOT &
-     &                               ,E,UCORE(:,IB))
+        rns=0.d0
+        if(ib.gt.1.and.tsmall) rns=rnscore ! avoid spurious zeros near origin
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,TVARDREL &
+     &                         ,DREL,G,0,AEPOT,E,UCORE(:,IB))
         TUCORE(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)
+        ecore(ib)=e
+PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib),' OLD ',ECOREin(IB),ECORE(IB)-ECOREin(IB)
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
         IF(TSMALL) THEN
