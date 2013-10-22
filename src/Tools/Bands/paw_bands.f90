@@ -1745,9 +1745,9 @@ END MODULE
       NKDIV(1)=5
       NKDIV(2)=5
       NKDIV(3)=5
-      ISHIFT(1)=1
-      ISHIFT(2)=1
-      ISHIFT(3)=1
+      ISHIFT(1)=0
+      ISHIFT(2)=0
+      ISHIFT(3)=0
       NB=10
       TPROJ=.false.
       RNTOT=4.0D0 !silizium
