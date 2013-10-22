@@ -68,6 +68,8 @@
         CALL BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
       ELSE IF(METHOD.eq.1)then
         CALL BANDS_DIAG(LL_CNTL,NFIL,NFILO)
+      ELSE IF(METHOD.eq.2)THEN
+        CALL BANDS_DOS(LL_CNTL,NFIL,NFILO)
       ELSE
         CALL ERROR$MSG('!METHOD!ID NOT IMPLEMENTED')
         CALL ERROR$I4VAL('ID',METHOD)
@@ -717,6 +719,458 @@ print*,'nb ',nb
                                                  CALL TRACE$POP()
       RETURN
       END
+
+MODULE KPOINTDIAG_MODULE
+  IMPLICIT NONE
+  CONTAINS
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+!     **************************************************************************
+!     **  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                         **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      USE BANDDATA_MODULE
+      USE RADIAL_MODULE
+      USE WAVES_MODULE, ONLY : GSET_TYPE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(OUT)              :: NG
+      REAL(8),allocatable,INTENT(INOUT)   :: GVEC(:,:)   !G
+      REAL(8),allocatable,INTENT(INOUT)   :: G2(:)
+      REAL(8),INTENT(OUT)                 :: GWEIGHT
+      INTEGER(4),INTENT(OUT)              :: GIDG_PROTO
+      COMPLEX(8),allocatable,INTENT(INOUT):: TI_H(:,:,:)
+      COMPLEX(8),allocatable,INTENT(INOUT):: TI_S(:,:,:)
+      REAL(8)                             :: KVEC(3)
+      TYPE(GSET_TYPE)                     :: GSET
+      COMPLEX(8),allocatable              :: PSI1(:,:,:)
+      COMPLEX(8),allocatable              :: HPSI1(:,:,:)
+      INTEGER(4)                          :: ISPIN,I,IDIM1,IDIM2,I1
+      LOGICAL(4)                          :: TPRINT=.true.
+!
+!     == GENERATE G-GRID ==================================================
+      KVEC(1)=0.0D0
+      KVEC(2)=0.0D0
+      KVEC(3)=0.0D0
+!
+!     ==========================================================================
+!     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
+!     ==========================================================================
+      CALL MPE$INIT
+
+      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA','~',RBAS,KVEC,.false.,EPW &
+     &                               ,0,NR1,NR2,NR3)
+      CALL PLANEWAVE$SELECT('WAVE GAMMA')      
+
+      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW,NG)
+      GSET%NGL=NG
+      IF(TPRINT)PRINT*,"EPW NG",EPW,NG
+      
+      ALLOCATE(GVEC(3,NG))
+      ALLOCATE(G2(NG))
+      CALL PLANEWAVE$GETR8A('GVEC',3*NG,GVEC)
+      CALL PLANEWAVE$GETR8A('G2',NG,G2)
+      CALL GBASS(RBAS,GBAS,GWEIGHT)
+
+!     == GENERATE G-GRID FOR PROJECTORS ========================================
+      CALL RADIAL$NEW(GRIDTYPE(TYPE_PROTO),GIDG_PROTO)
+      !DEX_PROTO=LOG(GMAX_PROTO/G1_PROTO)/REAL(NG_PROTO-1,KIND=8)
+      CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG_PROTO)
+      CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1_PROTO)
+      CALL RADIAL$SETR8(GIDG_PROTO,'DEX',DEX_PROTO)
+
+!     == ALLOCATE K-INDEPENDET ARRAYS ==========================================
+      allocate(TI_H(NG*NDIM,NG*NDIM,NSPIN))
+      allocate(TI_S(NG*NDIM,NG*NDIM,NSPIN))
+      TI_H=0.0D0
+      TI_S=0.0D0
+       
+!     == COMPUTE K_INDEPENDET ARRAYS ===========================================
+                            CALL TRACE$PUSH('COMPUTE K_INDEPENDET ARRAYS')
+      CALL TIMING$CLOCKON('PS_POTENTIAL')
+      allocate(HPSI1(NG,NDIM,1))
+      allocate(PSI1(NG,NDIM,1))
+      !EVALUATE MATRIX-ELEMENTS OF PS-POTENTIAL
+      !FIXME: introduce G-G', this part could use some work
+      DO ISPIN=1,NSPIN
+        DO I=1,NG
+          DO IDIM1=1,NDIM
+            I1=I*(NDIM)+(IDIM1-1)
+            PSI1(:,:,:)=0.0D0
+            PSI1(I,IDIM1,1)=1.0D0
+            HPSI1(:,:,:)=0.0D0
+            call WAVES_VPSI(GSET,NG,NDIM,1,NRL,PSI1,VOFR(:,ISPIN),HPSI1)
+         
+            DO IDIM2=1,NDIM
+              TI_H(I1,1+(IDIM2-1)*NG:IDIM2*NG,ISPIN)=HPSI1(:,IDIM2,1)
+            ENDDO
+            TI_S(I1,I1,ISPIN)=1.0D0
+          ENDDO
+        ENDDO
+      ENDDO
+      deallocate(HPSI1)
+      deallocate(PSI1)
+      !REMOVE KINETIC ENERGY FROM TI_H
+      DO I=1,NG
+        DO IDIM1=1,NDIM
+          I1=I*(NDIM)+(IDIM1-1)
+          !EKIN
+          TI_H(I1,I1,:)=TI_H(I1,I1,:)-0.5D0*G2(I)
+        ENDDO
+      ENDDO
+      CALL TIMING$CLOCKOFF('PS_POTENTIAL')
+                            CALL TRACE$POP
+      END SUBROUTINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BANDS_KPOINT(NG,NB,ISPIN,METHOD,GIDG_PROTO,TPROJ,KVEC,GVEC,TI_H,TI_S,E,PROJ)
+!     ******************************************************************
+!     **                                                              **
+!     ** COMPUTES EIGENVALUES[H] AND PROJECTIONS FOR A GIVEN KVEC     **
+!     **                                                              **
+!     ******************************************************************
+      USE BANDDATA_MODULE
+      use omp_lib
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: NG
+      INTEGER(4)  ,INTENT(IN)  :: NB
+      INTEGER(4)  ,INTENT(IN)  :: ISPIN
+      INTEGER(4)  ,INTENT(IN)  :: METHOD
+      INTEGER(4)  ,INTENT(IN)  :: GIDG_PROTO
+      LOGICAL(4)  ,INTENT(IN)  :: TPROJ
+      REAL(8)     ,INTENT(IN)  :: KVEC(3)
+      REAL(8)     ,INTENT(IN)  :: GVEC(3,NG)
+      COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
+      COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
+      REAL(8)     ,INTENT(OUT) :: E(NG*NDIM)
+      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,NB,LMNXX)
+      COMPLEX(8),allocatable   :: TI_HK(:,:)
+      COMPLEX(8),allocatable   :: TI_SK(:,:)
+      COMPLEX(8)               :: U(NG*NDIM,NG*NDIM)
+      REAL(8)                  :: GVECPK(3,NG)
+      REAL(8)                  :: G2(NG)
+      COMPLEX(8)               :: EIGR(NG)
+      COMPLEX(8)               :: FOFG(NG)
+      COMPLEX(8)               :: PRO(NAT,NG,LMNXX)
+      REAL(8)                  :: BAREPRO(NG,NBAREPRO)
+      REAL(8)                  :: YLM(NG,LMX)
+      REAL(8)                  :: YLM_(LMX)
+      INTEGER(4)               :: LOX_(LNXX)
+      INTEGER(4)               :: ISP,IND,LN,IAT,IDIM1,IDIM2,IBPRO
+      INTEGER(4)               :: LMN1,LMN2,IB
+      INTEGER(4)               :: LNX_,LMNX_,IPRO
+      INTEGER(4)               :: I,I1,J,K,L,M,N
+      REAL(8)                  :: CELLVOL,GWEIGHT
+      REAL(8)                  :: SVAR
+      COMPLEX(8)               :: CSVAR,CSVAR_H,CSVAR_S
+      LOGICAL(4)               :: TTIMING
+!     ******************************************************************
+      if(omp_get_num_threads().eq.1)then
+        TTIMING=.true.
+      else
+        TTIMING=.false.
+      endif
+      IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
+      allocate(TI_HK(NG*NDIM,NG*NDIM))
+      allocate(TI_SK(NG*NDIM,NG*NDIM))
+      TI_HK(:,:)=TI_H(:,:,ISPIN)
+      TI_SK(:,:)=TI_S(:,:,ISPIN)
+      
+      CALL GBASS(RBAS,GBAS,GWEIGHT)
+      CELLVOL=GWEIGHT
+
+      !COMPUTE G+K and (G+K)^2
+      IF(TTIMING) CALL TIMING$CLOCKON('G+K,G2')
+      DO I=1,NG
+        GVECPK(:,I)=GVEC(:,I)+KVEC(:)
+        G2(I)=sum(GVECPK(:,I)**2)
+      ENDDO
+      IF(TTIMING)CALL TIMING$CLOCKOFF('G+K,G2')
+
+      IF(TTIMING)CALL TIMING$CLOCKON('PROJECTORS')
+      IND=0
+      DO ISP=1,NSP
+        DO LN=1,LNX(ISP)
+          IND=IND+1
+          !BANDS_GETFOFG IS A MODIFIED VERSION OF SETUP$GETFOFG
+          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG,G2,CELLVOL,BAREPRO(:,IND))
+        ENDDO
+      ENDDO
+      
+      DO I=1,NG
+        CALL GETYLM(LMX,GVECPK(1,I),YLM_)
+        YLM(I,:)=YLM_(:) 
+      ENDDO        
+      
+      IPRO=1
+      PRO(:,:,:)=0.0D0
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        LNX_=LNX(ISP)
+        LMNX_=LMNX(ISP)
+        LOX_=LOX(ISP,:)
+        IBPRO=1+SUM(LNX(1:ISP-1))
+        DO I=1,NG
+          SVAR=SUM(GVECPK(:,I)*R(:,IAT))
+          EIGR(I)=CMPLX(cos(SVAR),-sin(SVAR))
+        ENDDO
+        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG,GVECPK &
+     &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
+      ENDDO
+      IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
+
+!      !NOTE: DTKIN/DH FROM SETUP_MAKEPARTIALWAVES NOW 
+!      !(AFTER COMMIT 85f857388191c58f050acf5be749412fcfe54d12) PRODUCE A HERMITIAN HAMILTONIAN
+!      DO IAT=1,NAT
+!        DH(:,:,ISPIN,IAT)=0.5D0*(DH(:,:,ISPIN,IAT)+&
+!  &                    TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
+!      ENDDO
+
+      !add (G+k)^2/2 and augmentation to TI_HK
+      DO I=1,NG
+        DO IDIM1=1,NDIM
+          I1=I*(NDIM)+(IDIM1-1)
+          TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
+        ENDDO
+      ENDDO
+      IF(TTIMING)CALL TIMING$CLOCKON('AUGMENTATION')
+      PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
+      !FIXME: OPTIMIZE THIS BLOCK!!!
+
+      DO I=1,NG
+        DO J=1,I
+          CSVAR_H=0.0D0
+          CSVAR_S=0.0D0
+          DO M=1,NAT
+            ISP=ISPECIES(M)
+            LMNX_=LMNX(ISP)
+            DO K=1,LMNX_
+              DO L=1,LMNX_
+              !FIXME: this will not work for non-collinear calc.
+!                    PROTMP(1:I)=CONJG(PRO(M,I,K))*PRO(M,1:I,L)*GWEIGHT
+!                    TI_HK(I,1:I)=TI_HK(I,1:I)+&
+!       &               DH(K,L,ISPIN,M)*PROTMP
+!                    TI_SK(I,1:I)=TI_SK(I,1:I)+&
+!       &               DO(K,L,ISPIN,M)*PROTMP
+                CSVAR_H=CSVAR_H+&
+ &                 DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
+                CSVAR_S=CSVAR_S+&
+ &                 DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
+              ENDDO
+            ENDDO
+          ENDDO
+          TI_HK(I,J)=TI_HK(I,J)+CSVAR_H
+          TI_SK(I,J)=TI_SK(I,J)+CSVAR_S
+        ENDDO
+      ENDDO
+     
+!      !check if TI_HK is hermitian
+!      DO I=1,NG
+!        DO J=I,NG
+!          IF(abs(TI_HK(I,J)-CONJG(TI_HK(J,I))).gt.1d-10)THEN
+!            PRINT*,"H",I,J
+!            STOP
+!          ENDIF
+!          IF(abs(TI_SK(I,J)-CONJG(TI_SK(J,I))).gt.1d-10)THEN
+!            PRINT*,"S",I,J
+!            STOP
+!          ENDIF
+!        enddo
+!      ENDDO
+
+      !complete TI_HK and TI_SK
+      DO I=1,NG
+        DO J=I+1,NG
+          TI_HK(I,J)=CONJG(TI_HK(J,I))
+          TI_SK(I,J)=CONJG(TI_SK(J,I))
+        ENDDO
+      ENDDO
+
+      IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
+      IF(TTIMING)CALL TRACE$POP
+
+      !SOLVE GENERALIZED EIGENVALUE PROBLEM
+      IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
+      IF(METHOD.eq.1)then
+        IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
+        IF(TPROJ)THEN
+          U=TI_HK
+          CALL LAPACK_ZHEGVD(NG,'V',U,TI_SK,E)            
+        ELSE
+          CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
+        ENDIF
+        IF(TTIMING)CALL TRACE$POP
+      ELSE IF(METHOD.eq.2)then
+        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
+        CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
+        IF(TTIMING)CALL TRACE$POP
+      ELSE 
+        CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
+        CALL ERROR$I4VAL('METHOD_DIAG',METHOD)
+        CALL ERROR$STOP('BANDS_KPOINT')
+      ENDiF
+
+      IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
+      IF(TPROJ)THEN
+        IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
+        DO IAT=1,NAT
+          DO IB=1,NB
+            DO LN=1,LMNXX
+              CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
+              PROJ(IAT,IB,LN)=CSVAR
+            ENDDO
+          ENDDO
+        ENDDO
+        IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
+      ENDIF
+      RETURN
+      end subroutine
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BANDS_GETFOFG(GIDG,IND,ISP,NG_,G2,CELLVOL,F)
+!     ******************************************************************
+!     **                                                              **
+!     **  THIS IS A MODIFIED VERSION OF SETUP$GETFOFGD                **
+!     **                                                              **
+!     ******************************************************************
+      USE BANDDATA_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: GIDG
+      INTEGER(4)  ,INTENT(IN)  :: IND
+      INTEGER(4)  ,INTENT(IN)  :: ISP
+      INTEGER(4)  ,INTENT(IN)  :: NG_     ! #(PLANE WAVES)
+      REAL(8)     ,INTENT(IN)  :: G2(NG_) ! G**2
+      REAL(8)     ,INTENT(OUT) :: F(NG_)  
+      REAL(8)     ,ALLOCATABLE :: FOFG(:)  !(NG)
+      REAL(8)                  :: PI
+      INTEGER(4)               :: IG
+      INTEGER(4)               :: NG
+      INTEGER(4)               :: NGAMMA
+      REAL(8)                  :: CELLVOL
+      REAL(8)                  :: G
+!     ******************************************************************
+      IF(NG_.EQ.0) RETURN
+      CALL RADIAL$GETI4(GIDG,'NR',NG)
+      ALLOCATE(FOFG(NG))
+      FOFG(:)=PROOFG(:,IND,ISP)
+!
+!     ==================================================================
+!     == INTERPOLATE VALUES FROM RADIAL GRID
+!     ==================================================================
+      NGAMMA=0
+      G=SQRT(G2(1))
+      IF(G.LT.1.D-6) NGAMMA=1
+      CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
+      DO IG=2,NG_
+        IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
+          F(IG) =F(IG-1)
+        ELSE
+          G=SQRT(G2(IG))
+          IF(G.LT.1.D-6) NGAMMA=IG
+          CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(IG))
+        END IF
+      ENDDO
+      DEALLOCATE(FOFG)
+!
+!     ==================================================================
+!     == DIVIDE BY CELLVOL                                            ==
+!     ==================================================================
+      F=F/CELLVOL
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      Character(1),INTENT(IN)  :: JOBZ
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8),INTENT(OUT)      :: E(N)
+      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
+      COMPLEX(8),ALLOCATABLE   :: WORK(:)
+      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
+      INTEGER(4),ALLOCATABLE   :: IWORK(:)
+!     ******************************************************************
+
+      LWORK=-1
+      LRWORK=-1
+      LIWORK=-1
+      Allocate(WORK(1))!complex(8)
+      Allocate(RWORK(1))!real(8)
+      Allocate(IWORK(1))!integer(4)
+      
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      LWORK=WORK(1)
+      LRWORK=RWORK(1)
+      LIWORK=IWORK(1)
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+      allocate(WORK(LWORK)) 
+      allocate(RWORK(LRWORK)) 
+      allocate(IWORK(LIWORK)) 
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+
+      IF(INFO.ne.0)THEN
+        CALL ERROR$MSG('ZHEGVD FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      return
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LAPACK_ZGGEV(N,JOBZ,H,S,E)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      Character(1),INTENT(IN)  :: JOBZ
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8),INTENT(OUT)      :: E(N)
+      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
+      COMPLEX(8),ALLOCATABLE   :: WORK(:)
+      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
+      Character(1)             :: JOBVL,JOBVR
+      COMPLEX(8)               :: ALPHA(N),BETA(N)
+      COMPLEX(8)               :: VL(N,N),VR(N,N)
+!     ******************************************************************
+
+      LWORK=-1
+      Allocate(WORK(1))!complex(8)
+      Allocate(RWORK(8*N))!complex(8)
+      JOBVL='N'
+      JOBVR=JOBZ
+!      ( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHA, BETA,
+!         22 *                         VL, LDVL, VR, LDVR, WORK, LWORK, RWORK,
+!         INFO )
+      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
+      LWORK=WORK(1)
+      deallocate(WORK)
+      allocate(WORK(LWORK)) 
+      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
+      deallocate(WORK)
+
+!      IF(INFO.ne.0)THEN
+!        CALL ERROR$MSG('ZGGEV FAILED')
+!        CALL ERROR$I4VAL('INFO',INFO)
+!        CALL ERROR$STOP('LAPACK_ZGGEV')
+!      ENDIF
+      E=REAL(ALPHA/BETA)
+      return
+      END
+
+END MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BANDS_DIAG(LL_CNTL,NFIL,NFILO)
@@ -728,6 +1182,7 @@ print*,'nb ',nb
       USE BANDDATA_MODULE
       USE RADIAL_MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
+      USE KPOINTDIAG_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(INOUT):: LL_CNTL
       INTEGER(4)   ,INTENT(IN)  :: NFIL
@@ -763,8 +1218,6 @@ print*,'nb ',nb
       REAL(8)   ,allocatable    :: GVEC(:,:)   !G
       REAL(8)   ,allocatable    :: G2(:)
       INTEGER(4)                :: GIDG_PROTO
-      COMPLEX(8),allocatable    :: PSI1(:,:,:)
-      COMPLEX(8),allocatable    :: HPSI1(:,:,:)
       COMPLEX(8),allocatable    :: TI_H(:,:,:)
       COMPLEX(8),allocatable    :: TI_S(:,:,:)
       COMPLEX(8),allocatable    :: PROJ(:,:,:)
@@ -858,79 +1311,7 @@ print*,'nb ',nb
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
-!     == GENERATE G-GRID ==================================================
-      KVEC(1)=0.0D0
-      KVEC(2)=0.0D0
-      KVEC(3)=0.0D0
-!
-!     ==========================================================================
-!     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
-!     ==========================================================================
-      CALL MPE$INIT
-
-      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA','~',RBAS,KVEC,.false.,EPW &
-     &                               ,0,NR1,NR2,NR3)
-      CALL PLANEWAVE$SELECT('WAVE GAMMA')      
-
-      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW,NG)
-      GSET%NGL=NG
-      IF(TPRINT)PRINT*,"EPW NG",EPW,NG
-      
-      ALLOCATE(GVEC(3,NG))
-      ALLOCATE(G2(NG))
-      CALL PLANEWAVE$GETR8A('GVEC',3*NG,GVEC)
-      CALL PLANEWAVE$GETR8A('G2',NG,G2)
-      CALL GBASS(RBAS,GBAS,GWEIGHT)
-
-!     == GENERATE G-GRID FOR PROJECTORS ========================================
-      CALL RADIAL$NEW(GRIDTYPE(TYPE_PROTO),GIDG_PROTO)
-      !DEX_PROTO=LOG(GMAX_PROTO/G1_PROTO)/REAL(NG_PROTO-1,KIND=8)
-      CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG_PROTO)
-      CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1_PROTO)
-      CALL RADIAL$SETR8(GIDG_PROTO,'DEX',DEX_PROTO)
-
-!     == ALLOCATE K-INDEPENDET ARRAYS ==========================================
-      allocate(TI_H(NG*NDIM,NG*NDIM,NSPIN))
-      allocate(TI_S(NG*NDIM,NG*NDIM,NSPIN))
-      TI_H=0.0D0
-      TI_S=0.0D0
-       
-!     == COMPUTE K_INDEPENDET ARRAYS ===========================================
-                            CALL TRACE$PUSH('COMPUTE K_INDEPENDET ARRAYS')
-      CALL TIMING$CLOCKON('PS_POTENTIAL')
-      allocate(HPSI1(NG,NDIM,1))
-      allocate(PSI1(NG,NDIM,1))
-      !EVALUATE MATRIX-ELEMENTS OF PS-POTENTIAL
-      !FIXME: introduce G-G', this part could use some work
-      DO ISPIN=1,NSPIN
-        DO I=1,NG
-          DO IDIM1=1,NDIM
-            I1=I*(NDIM)+(IDIM1-1)
-            PSI1(:,:,:)=0.0D0
-            PSI1(I,IDIM1,1)=1.0D0
-            HPSI1(:,:,:)=0.0D0
-            call WAVES_VPSI(GSET,NG,NDIM,1,NRL,PSI1,VOFR(:,ISPIN),HPSI1)
-         
-            DO IDIM2=1,NDIM
-              TI_H(I1,1+(IDIM2-1)*NG:IDIM2*NG,ISPIN)=HPSI1(:,IDIM2,1)
-            ENDDO
-            TI_S(I1,I1,ISPIN)=1.0D0
-          ENDDO
-        ENDDO
-      ENDDO
-      deallocate(HPSI1)
-      deallocate(PSI1)
-      !REMOVE KINETIC ENERGY FROM TI_H
-      DO I=1,NG
-        DO IDIM1=1,NDIM
-          I1=I*(NDIM)+(IDIM1-1)
-          !EKIN
-          TI_H(I1,I1,:)=TI_H(I1,I1,:)-0.5D0*G2(I)
-        ENDDO
-      ENDDO
-      CALL TIMING$CLOCKOFF('PS_POTENTIAL')
-                            CALL TRACE$POP
-
+      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !
 !     =========================================================================
 !     ==  CONSTRUCT BAND STRUCTURE                                           ==
@@ -1249,351 +1630,240 @@ print*,'nb ',nb
                             CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDS_DIAG
+
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_GETFOFG(GIDG,IND,ISP,NG_,G2,CELLVOL,F)
-!     ******************************************************************
-!     **                                                              **
-!     **  THIS IS A MODIFIED VERSION OF SETUP$GETFOFGD                **
-!     **                                                              **
-!     ******************************************************************
+      SUBROUTINE BANDS_DOS(LL_CNTL,NFIL,NFILO)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
       USE BANDDATA_MODULE
+      USE RADIAL_MODULE
+      USE WAVES_MODULE, ONLY : GSET_TYPE
+      USE KPOINTDIAG_MODULE
+      USE BRILLOUIN_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: GIDG
-      INTEGER(4)  ,INTENT(IN)  :: IND
-      INTEGER(4)  ,INTENT(IN)  :: ISP
-      INTEGER(4)  ,INTENT(IN)  :: NG_     ! #(PLANE WAVES)
-      REAL(8)     ,INTENT(IN)  :: G2(NG_) ! G**2
-      REAL(8)     ,INTENT(OUT) :: F(NG_)  
-      REAL(8)     ,ALLOCATABLE :: FOFG(:)  !(NG)
-      REAL(8)                  :: PI
-      INTEGER(4)               :: IG
-      INTEGER(4)               :: NG
-      INTEGER(4)               :: NGAMMA
-      REAL(8)                  :: CELLVOL
-      REAL(8)                  :: G
-!     ******************************************************************
-      IF(NG_.EQ.0) RETURN
-      CALL RADIAL$GETI4(GIDG,'NR',NG)
-      ALLOCATE(FOFG(NG))
-      FOFG(:)=PROOFG(:,IND,ISP)
-!
-!     ==================================================================
-!     == INTERPOLATE VALUES FROM RADIAL GRID
-!     ==================================================================
-      NGAMMA=0
-      G=SQRT(G2(1))
-      IF(G.LT.1.D-6) NGAMMA=1
-      CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(1))
-      DO IG=2,NG_
-        IF(ABS(G2(IG)-G2(IG-1)).LT.1.D-6) THEN
-          F(IG) =F(IG-1)
-        ELSE
-          G=SQRT(G2(IG))
-          IF(G.LT.1.D-6) NGAMMA=IG
-          CALL RADIAL$VALUE(GIDG,NG,FOFG,G,F(IG))
-        END IF
-      ENDDO
-      DEALLOCATE(FOFG)
-!
-!     ==================================================================
-!     == DIVIDE BY CELLVOL                                            ==
-!     ==================================================================
-      F=F/CELLVOL
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: N
-      Character(1),INTENT(IN)  :: JOBZ
-      COMPLEX(8),INTENT(INOUT) :: H(N,N)
-      COMPLEX(8),INTENT(INOUT) :: S(N,N)
-      REAL(8),INTENT(OUT)      :: E(N)
-      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
-      COMPLEX(8),ALLOCATABLE   :: WORK(:)
-      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
-      INTEGER(4),ALLOCATABLE   :: IWORK(:)
-!     ******************************************************************
+      TYPE(LL_TYPE),INTENT(INOUT)  :: LL_CNTL
+      INTEGER(4)   ,INTENT(IN)     :: NFIL
+      INTEGER(4)   ,INTENT(IN)     :: NFILO
+      INTEGER(4)                   :: ILINE,NLINE,NFILE
+      CHARACTER(512)               :: BANDDATAFILE,ID
+      LOGICAL(4)                   :: TCHK
+      INTEGER(4)                   :: IB
+      INTEGER(4)                   :: NKP
+      INTEGER(4)                   :: IKP
+      LOGICAL(4)                   :: TINV=.TRUE.
+      INTEGER(4)                   :: NKDIV(3)
+      INTEGER(4)                   :: ISHIFT(3)
+      INTEGER(4)                   :: NB
+      INTEGER(4)                   :: I1,I2,IE,ISPIN
 
-      LWORK=-1
-      LRWORK=-1
-      LIWORK=-1
-      Allocate(WORK(1))!complex(8)
-      Allocate(RWORK(1))!real(8)
-      Allocate(IWORK(1))!integer(4)
-      
-      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
-      LWORK=WORK(1)
-      LRWORK=RWORK(1)
-      LIWORK=IWORK(1)
-      deallocate(WORK)
-      deallocate(RWORK)
-      deallocate(IWORK)
-      allocate(WORK(LWORK)) 
-      allocate(RWORK(LRWORK)) 
-      allocate(IWORK(LIWORK)) 
-      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
-      deallocate(WORK)
-      deallocate(RWORK)
-      deallocate(IWORK)
-
-      IF(INFO.ne.0)THEN
-        CALL ERROR$MSG('ZHEGVD FAILED')
-        CALL ERROR$I4VAL('INFO',INFO)
-        CALL ERROR$STOP('LAPACK_ZHEGVD')
-      ENDIF
-      return
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LAPACK_ZGGEV(N,JOBZ,H,S,E)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: N
-      Character(1),INTENT(IN)  :: JOBZ
-      COMPLEX(8),INTENT(INOUT) :: H(N,N)
-      COMPLEX(8),INTENT(INOUT) :: S(N,N)
-      REAL(8),INTENT(OUT)      :: E(N)
-      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
-      COMPLEX(8),ALLOCATABLE   :: WORK(:)
-      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
-      Character(1)             :: JOBVL,JOBVR
-      COMPLEX(8)               :: ALPHA(N),BETA(N)
-      COMPLEX(8)               :: VL(N,N),VR(N,N)
-!     ******************************************************************
-
-      LWORK=-1
-      Allocate(WORK(1))!complex(8)
-      Allocate(RWORK(8*N))!complex(8)
-      JOBVL='N'
-      JOBVR=JOBZ
-!      ( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHA, BETA,
-!         22 *                         VL, LDVL, VR, LDVR, WORK, LWORK, RWORK,
-!         INFO )
-      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
-      LWORK=WORK(1)
-      deallocate(WORK)
-      allocate(WORK(LWORK)) 
-      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
-      deallocate(WORK)
-
-!      IF(INFO.ne.0)THEN
-!        CALL ERROR$MSG('ZGGEV FAILED')
-!        CALL ERROR$I4VAL('INFO',INFO)
-!        CALL ERROR$STOP('LAPACK_ZGGEV')
-!      ENDIF
-      E=REAL(ALPHA/BETA)
-      return
-      END
-
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_KPOINT(NG,NB,ISPIN,METHOD,GIDG_PROTO,TPROJ,KVEC,GVEC,TI_H,TI_S,E,PROJ)
-!     ******************************************************************
-!     **                                                              **
-!     ** COMPUTES EIGENVALUES[H] AND PROJECTIONS FOR A GIVEN KVEC     **
-!     **                                                              **
-!     ******************************************************************
-      USE BANDDATA_MODULE
-      use omp_lib
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: NG
-      INTEGER(4)  ,INTENT(IN)  :: NB
-      INTEGER(4)  ,INTENT(IN)  :: ISPIN
-      INTEGER(4)  ,INTENT(IN)  :: METHOD
-      INTEGER(4)  ,INTENT(IN)  :: GIDG_PROTO
-      LOGICAL(4)  ,INTENT(IN)  :: TPROJ
-      REAL(8)     ,INTENT(IN)  :: KVEC(3)
-      REAL(8)     ,INTENT(IN)  :: GVEC(3,NG)
-      COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
-      COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
-      REAL(8)     ,INTENT(OUT) :: E(NG*NDIM)
-      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,NB,LMNXX)
-      COMPLEX(8),allocatable   :: TI_HK(:,:)
-      COMPLEX(8),allocatable   :: TI_SK(:,:)
-      COMPLEX(8)               :: U(NG*NDIM,NG*NDIM)
-      REAL(8)                  :: GVECPK(3,NG)
-      REAL(8)                  :: G2(NG)
-      COMPLEX(8)               :: EIGR(NG)
-      COMPLEX(8)               :: FOFG(NG)
-      COMPLEX(8)               :: PRO(NAT,NG,LMNXX)
-      REAL(8)                  :: BAREPRO(NG,NBAREPRO)
-      REAL(8)                  :: YLM(NG,LMX)
-      REAL(8)                  :: YLM_(LMX)
-      INTEGER(4)               :: LOX_(LNXX)
-      INTEGER(4)               :: ISP,IND,LN,IAT,IDIM1,IDIM2,IBPRO
-      INTEGER(4)               :: LMN1,LMN2,IB
-      INTEGER(4)               :: LNX_,LMNX_,IPRO
-      INTEGER(4)               :: I,I1,J,K,L,M,N
-      REAL(8)                  :: CELLVOL,GWEIGHT
-      REAL(8)                  :: SVAR
-      COMPLEX(8)               :: CSVAR,CSVAR_H,CSVAR_S
-      LOGICAL(4)               :: TTIMING
-!     ******************************************************************
-      if(omp_get_num_threads().eq.1)then
-        TTIMING=.true.
-      else
-        TTIMING=.false.
-      endif
-      IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
-      allocate(TI_HK(NG*NDIM,NG*NDIM))
-      allocate(TI_SK(NG*NDIM,NG*NDIM))
-      TI_HK(:,:)=TI_H(:,:,ISPIN)
-      TI_SK(:,:)=TI_S(:,:,ISPIN)
-      
-      CALL GBASS(RBAS,GBAS,GWEIGHT)
-      CELLVOL=GWEIGHT
-
-      !COMPUTE G+K and (G+K)^2
-      IF(TTIMING) CALL TIMING$CLOCKON('G+K,G2')
-      DO I=1,NG
-        GVECPK(:,I)=GVEC(:,I)+KVEC(:)
-        G2(I)=sum(GVECPK(:,I)**2)
-      ENDDO
-      IF(TTIMING)CALL TIMING$CLOCKOFF('G+K,G2')
-
-      IF(TTIMING)CALL TIMING$CLOCKON('PROJECTORS')
-      IND=0
-      DO ISP=1,NSP
-        DO LN=1,LNX(ISP)
-          IND=IND+1
-          !BANDS_GETFOFG IS A MODIFIED VERSION OF SETUP$GETFOFG
-          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG,G2,CELLVOL,BAREPRO(:,IND))
-        ENDDO
-      ENDDO
-      
-      DO I=1,NG
-        CALL GETYLM(LMX,GVECPK(1,I),YLM_)
-        YLM(I,:)=YLM_(:) 
-      ENDDO        
-      
-      IPRO=1
-      PRO(:,:,:)=0.0D0
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        LNX_=LNX(ISP)
-        LMNX_=LMNX(ISP)
-        LOX_=LOX(ISP,:)
-        IBPRO=1+SUM(LNX(1:ISP-1))
-        DO I=1,NG
-          SVAR=SUM(GVECPK(:,I)*R(:,IAT))
-          EIGR(I)=CMPLX(cos(SVAR),-sin(SVAR))
-        ENDDO
-        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG,GVECPK &
-     &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
-      ENDDO
-      IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
-
-!      !NOTE: DTKIN/DH FROM SETUP_MAKEPARTIALWAVES NOW 
-!      !(AFTER COMMIT 85f857388191c58f050acf5be749412fcfe54d12) PRODUCE A HERMITIAN HAMILTONIAN
-!      DO IAT=1,NAT
-!        DH(:,:,ISPIN,IAT)=0.5D0*(DH(:,:,ISPIN,IAT)+&
-!  &                    TRANSPOSE(CONJG(DH(:,:,ISPIN,IAT))))  
-!      ENDDO
-
-      !add (G+k)^2/2 and augmentation to TI_HK
-      DO I=1,NG
-        DO IDIM1=1,NDIM
-          I1=I*(NDIM)+(IDIM1-1)
-          TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
-        ENDDO
-      ENDDO
-      IF(TTIMING)CALL TIMING$CLOCKON('AUGMENTATION')
-      PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
-      !FIXME: OPTIMIZE THIS BLOCK!!!
-
-      DO I=1,NG
-        DO J=1,I
-          CSVAR_H=0.0D0
-          CSVAR_S=0.0D0
-          DO M=1,NAT
-            ISP=ISPECIES(M)
-            LMNX_=LMNX(ISP)
-            DO K=1,LMNX_
-              DO L=1,LMNX_
-              !FIXME: this will not work for non-collinear calc.
-!                    PROTMP(1:I)=CONJG(PRO(M,I,K))*PRO(M,1:I,L)*GWEIGHT
-!                    TI_HK(I,1:I)=TI_HK(I,1:I)+&
-!       &               DH(K,L,ISPIN,M)*PROTMP
-!                    TI_SK(I,1:I)=TI_SK(I,1:I)+&
-!       &               DO(K,L,ISPIN,M)*PROTMP
-                CSVAR_H=CSVAR_H+&
- &                 DH(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
-                CSVAR_S=CSVAR_S+&
- &                 DO(K,L,ISPIN,M)*CONJG(PRO(M,I,K))*PRO(M,J,L)
-              ENDDO
-            ENDDO
-          ENDDO
-          TI_HK(I,J)=TI_HK(I,J)+CSVAR_H
-          TI_SK(I,J)=TI_SK(I,J)+CSVAR_S
-        ENDDO
-      ENDDO
+      REAL(8)      ,ALLOCATABLE    :: BK(:,:)
+      REAL(8),ALLOCATABLE          :: EB(:,:)
+      REAL(8),ALLOCATABLE          :: WGHT(:,:)
+      TYPE(EWGHT_TYPE),allocatable :: EWGHT(:,:)
+      REAL(8),ALLOCATABLE          :: A(:,:)
+      REAL(8)                      :: RNTOT
+      REAL(8)                      :: EF
+      REAL(8)                      :: SUMA
+      REAL(8)                      :: EMIN,EMAX
+      INTEGER(4)                   :: NE
+      REAL(8),ALLOCATABLE          :: DOS(:,:)
      
-!      !check if TI_HK is hermitian
-!      DO I=1,NG
-!        DO J=I,NG
-!          IF(abs(TI_HK(I,J)-CONJG(TI_HK(J,I))).gt.1d-10)THEN
-!            PRINT*,"H",I,J
-!            STOP
-!          ENDIF
-!          IF(abs(TI_SK(I,J)-CONJG(TI_SK(J,I))).gt.1d-10)THEN
-!            PRINT*,"S",I,J
-!            STOP
-!          ENDIF
-!        enddo
-!      ENDDO
+      INTEGER(4)                   :: NG
+      INTEGER(4)                   :: METHOD_DIAG 
+      INTEGER(4)                   :: GIDG_PROTO
+      LOGICAL(4)                   :: TPROJ
+      REAL(8)                      :: KVEC(3)
+      REAL(8),ALLOCATABLE          :: GVEC(:,:)
+      REAL(8),ALLOCATABLE          :: G2(:)
+      COMPLEX(8),ALLOCATABLE       :: TI_H(:,:,:)
+      COMPLEX(8),ALLOCATABLE       :: TI_S(:,:,:)
+      REAL(8),ALLOCATABLE          :: E(:)
+      COMPLEX(8),ALLOCATABLE       :: PROJ(:,:,:)
+      REAL(8)                      :: GWEIGHT
+      
+     
+      LOGICAL(4)                   :: TPRINT=.FALSE.
+!     **************************************************************************
+      IF(NDIM.eq.2)THEN
+        CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
+        CALL ERROR$STOP('BANDS_DOS')
+      ENDIF
+                            CALL TRACE$PUSH('BANDS_DOS')
+      CALL TIMING$START
+!
+!     ==========================================================================
+!     ==  SET BANDDATAFILE                                                   ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'INPUTFILE',NFILE)
+      IF(NFILE.eq.1)THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'INPUTFILE',NFILE)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,BANDDATAFILE)
+          ID=+'BANDDATAIN'
+          CALL FILEHANDLER$SETFILE(ID,.false.,-BANDDATAFILE)
+          CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
+          CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+          CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
+          CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+        ELSE
+          CALL ERROR$MSG('!BCNTL!INPUTFILE!NAME NOT FOUND')
+          CALL ERROR$STOP('BANDS_DOS')
+        ENDIF
+      ELSE IF (NFILE.gt.1)then
+        CALL ERROR$MSG('MULTIPLE INPUT FILES GIVEN (!BCNTL!INPUTFILE)')
+        CALL ERROR$STOP('BANDS_DOS')
+      ELSE
+        ID=+'BANDDATAIN'
+        CALL FILEHANDLER$SETFILE(ID,.true.,-'.BANDDATA')
+        CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
+        CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
+        CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+      ENDIF
+!
+!     ==========================================================================
+!     ==  READ BANDDATAFILE                                                   ==
+!     ==========================================================================
+      CALL BANDDATA$READFILE
+!
+!     ==========================================================================
+!     ==  CHECKS                                                              ==
+!     ==========================================================================
+      IF(NDIM.eq.2)THEN
+        CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
+        CALL ERROR$STOP('BANDS_DOS')
+      ENDIF
 
-      !complete TI_HK and TI_SK
-      DO I=1,NG
-        DO J=I+1,NG
-          TI_HK(I,J)=CONJG(TI_HK(J,I))
-          TI_SK(I,J)=CONJG(TI_SK(J,I))
+      !FIXME: TO BE READ FROM BCNTL/DCNTL
+      NKDIV(1)=5
+      NKDIV(2)=5
+      NKDIV(3)=5
+      ISHIFT(1)=1
+      ISHIFT(2)=1
+      ISHIFT(3)=1
+      NB=10
+      TPROJ=.false.
+      RNTOT=4.0D0 !silizium
+      METHOD_DIAG=2
+      NE=1000
+                            CALL TRACE$PASS('AFTER READ BNCTL')
+                            CALL TRACE$PUSH('BRILLOUIN$MSH')
+      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+                            CALL TRACE$POP()
+! 
+!     ==========================================================================
+!     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS                      ==
+!     ==========================================================================
+      CALL BRILLOUIN$GETI4('NK',NKP)
+      IF(TPRINT)write(*,*)' NKP nach BRILLOUIN$GETI4',NKP  
+      ALLOCATE(BK(3,NKP))
+      CALL BRILLOUIN$GETR8A('K',3*NKP,BK)
+      
+      ALLOCATE(EB(NB*NSPIN,NKP))        
+      ALLOCATE(WGHT(NB*NSPIN,NKP))
+      ALLOCATE(A(NB*NSPIN,NKP))
+
+!
+!     =========================================================================
+!     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
+!     =========================================================================
+      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+
+!       == ITERATE K-POINTS =================================================
+                            CALL TRACE$PUSH('ITERATE KPOINTS')
+!$omp parallel do private(IKP,KVEC,E,PROJ)
+      DO IKP=1,NKP
+        DO ISPIN=1,NSPIN
+          KVEC=BK(:,IKP)
+!$omp critical
+          WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+!$omp end critical
+          ALLOCATE(PROJ(NAT,NB,LMNXX))
+          ALLOCATE(E(NG*NDIM))
+          CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
+      &              GVEC,TI_H,TI_S,E,PROJ)
+!$omp critical
+          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)*27.21139D0
+          A(1:NB+NB*(ISPIN-1),IKP)=EB(1:NB+NB*(ISPIN-1),IKP)
+!$omp end critical
+          DEALLOCATE(PROJ)
+          DEALLOCATE(E)
         ENDDO
       ENDDO
+!$omp end parallel do
+                            CALL TRACE$POP()
+! 
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
+      IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
+&      BOTH SPIN DIRECTIONS.'
+      CALL BRILLOUIN$DOS(NSPIN*NB,NKP,EB,WGHT,RNTOT,EF)
+!
+!     ==========================================================================
+!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
+!     ==========================================================================
+      !FIXME TOTAL DENSITY for testing
+      A=1
+      SUMA=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          SUMA=0.0D0
+          DO IKP=1,NKP
+            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKP)*A(IB+NB*(ISPIN-1),IKP)
+          ENDDO
+          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA
+        ENDDO
+      ENDDO
+      
+      A=1
+      SUMA=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          DO IKP=1,NKP
+            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKP)*A(IB+NB*(ISPIN-1),IKP)
+          ENDDO
+        ENDDO
+      ENDDO
+      PRINT*,'INTEGRAL OF A : ',SUMA,' should be ',RNTOT 
+      
+      !TOTAL DENSITY OF STATES
+      EMIN=minval(EB(:,:))
+      EMAX=maxval(EB(:,:))
+      allocate(EWGHT(NSPIN*NB,NKP))
+      CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
 
-      IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
-      IF(TTIMING)CALL TRACE$POP
-
-      !SOLVE GENERALIZED EIGENVALUE PROBLEM
-      IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
-      IF(METHOD.eq.1)then
-        IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
-        IF(TPROJ)THEN
-          U=TI_HK
-          CALL LAPACK_ZHEGVD(NG,'V',U,TI_SK,E)            
-        ELSE
-          CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
-        ENDIF
-        IF(TTIMING)CALL TRACE$POP
-      ELSE IF(METHOD.eq.2)then
-        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
-        CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
-        IF(TTIMING)CALL TRACE$POP
-      ELSE 
-        CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
-        CALL ERROR$I4VAL('METHOD_DIAG',METHOD)
-        CALL ERROR$STOP('BANDS_KPOINT')
-      ENDiF
-
-      IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
-      IF(TPROJ)THEN
-        IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
-        DO IAT=1,NAT
-          DO IB=1,NB
-            DO LN=1,LMNXX
-              CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
-              PROJ(IAT,IB,LN)=CSVAR
+      A(:,:)=1.0d0
+      ALLOCATE(DOS(NE,NSPIN))
+      DOS(:,:)=0.0D0
+      DO IKP=1,NKP
+        DO IB=1,NB
+          DO ISPIN=1,NSPIN
+            I1=EWGHT(IB+NB*(ISPIN-1),IKP)%I1
+            I2=EWGHT(IB+NB*(ISPIN-1),IKP)%I2
+            DO IE=I1,I2
+              DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB+NB*(ISPIN-1),IKP)%WGHT(IE)*A(IB+NB*(ISPIN-1),IKP)
             ENDDO
           ENDDO
         ENDDO
-        IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
-      ENDIF
+      ENDDO
+
+      !FIXME: make output nice
+      open(101,file='dos.dat')
+      do ie=1,ne
+      write(101,*)emin+real(ie-1,kind=8)*(emax-emin)/real(ne-1,kind=8),DOS(ie,1)
+      enddo
+      close(101)
+                            CALL TRACE$POP()
       RETURN
-      end subroutine
+      END SUBROUTINE
+
+
+

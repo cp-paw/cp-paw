@@ -61,6 +61,11 @@
         REAL(8)   ,allocatable :: PROOFG(:,:,:) !
         COMPLEX(8),allocatable :: DH(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
         REAL(8)   ,allocatable :: DO(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
+
+        REAL(8)                :: NEL
+        LOGICAL(4)             :: NEL_SET
+        REAL(8)                :: SPIN
+        LOGICAL(4)             :: SPIN_SET
       END MODULE BANDDATA_MODULE
 !
 !     ..................................................................
@@ -394,6 +399,12 @@
       ELSE IF(ID.EQ.'DEX_PROTO') THEN
         DEX_PROTO=VAL
         DEX_PROTO_SET=.true.
+      ELSE IF(ID.EQ.'NEL') THEN
+        NEL=VAL
+        NEL_SET=.true.
+      ELSE IF(ID.EQ.'SPIN') THEN
+        SPIN=VAL
+        SPIN_SET=.true.
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -654,6 +665,8 @@
       IF(TPRINT)PRINT*,ALLOCATED(LOX),allocated(LMNX)
       SET=SET.and.ALLOCATED(R).and.allocated(ATOMID).and.allocated(PROOFG)
       IF(TPRINT)PRINT*,ALLOCATED(R),allocated(ATOMID),allocated(PROOFG)
+      SET=SET.and.NEL_SET.and.SPIN_SET
+      IF(TPRINT)PRINT*,NEL_SET,SPIN_SET
       IF(.not.set)THEN
         CALL ERROR$MSG('ERROR WRITING BANDDATA FILE')
         CALL ERROR$MSG('NOT ALL QUANTITIES SET')
@@ -685,6 +698,7 @@
       WRITE(NFIL)PROOFG(:,:,:)
       WRITE(NFIL)DH(:,:,:,:)
       WRITE(NFIL)DO(:,:,:,:)
+      WRITE(NFIL)NEL,SPIN
                              CALL TRACE$POP
       RETURN
       END
@@ -741,6 +755,7 @@
       READ(NFIL)PROOFG(:,:,:)
       READ(NFIL)DH(:,:,:,:)
       READ(NFIL)DO(:,:,:,:)
+      READ(NFIL)NEL,SPIN
       IF(TPRINT)PRINT*,"ISPECIES ",ISPECIES(:)
       IF(TPRINT)PRINT*,"LNX ",LNX(:)
       IF(TPRINT)PRINT*,"LOX ",LOX(:,:)
@@ -750,6 +765,8 @@
       IF(TPRINT)PRINT*,"PROOFG ",PROOFG(1,1,:)
       IF(TPRINT)PRINT*,"DH ",DH(1,1,1,1)
       IF(TPRINT)PRINT*,"DO ",DO(1,1,1,1)
-                             CALL TRACE$POP
+      IF(TPRINT)PRINT*,"NEL ",NEL
+      IF(TPRINT)PRINT*,"SPIN ",SPIN
+      CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDDATA_READ

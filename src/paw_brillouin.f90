@@ -83,6 +83,11 @@ TYPE THIS_TYPE
   INTEGER(4)    ,POINTER :: IRRKP(:)  !(NMSHP) POINTER TO IRR. K-POINT
 END TYPE THIS_TYPE
 TYPE(THIS_TYPE) :: THIS
+TYPE EWGHT_TYPE
+  INTEGER(4)             :: I1
+  INTEGER(4)             :: I2
+  REAL(8),pointer        :: WGHT(:)
+END TYPE EWGHT_TYPE
 END MODULE BRILLOUIN_MODULE
 !
 !-------------------------------------------------------------------------------
@@ -4720,3 +4725,116 @@ END MODULE SPACEGROUP_MODULE
       ENDDO !END OF LOOP OVER OPERATIONS
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$EWGHT(NKP,NB,EB,EMIN,EMAX,NE,EWGHT)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE BRILLOUIN_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NKP
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NE
+      REAL(8)   ,INTENT(IN) :: EB(NB,NKP)
+      REAL(8)   ,INTENT(IN) :: EMIN
+      REAL(8)   ,INTENT(IN) :: EMAX
+      TYPE(EWGHT_TYPE),INTENT(INOUT) :: EWGHT(NB,NKP)
+      INTEGER(4)            :: IKP(4)
+      REAL(8)               :: VOL
+      REAL(8)               :: E(4)
+      REAL(8)               :: EF
+      REAL(8)               :: WGHT0(4)
+      REAL(8)               :: AE,BE,DE
+      REAL(8)               :: SVARM,SVARP
+      INTEGER(4)            :: NTET  !#(TETRAHEDRA)
+      INTEGER(4)            :: ITET,IK,IB,I,IE
+      INTEGER(4)            :: I1,I2
+!     **************************************************************************
+      NTET=THIS%NTET
+!
+!     ==========================================================================
+!     == PARAMETERS FOR THE ENERGY GRID                                       ==
+!     ==  E=EMIN+(EMAX-EMIN)/(NE-1)*(IE-1)  ====================================
+!     ==  IE=1+(NE-1)*(E-EMIN)/(EMAX-EMIN) =====================================
+!     ==  IE=[(NE-1)/(EMAX-EMIN)] * E + [1-(NE-1)*EMIN/(EMAX-EMIN)]
+!     ==  IE=AE * E + BE
+!     ==========================================================================
+      AE=REAL(NE-1,KIND=8)/(EMAX-EMIN)
+      BE=1.D0-REAL(NE-1,KIND=8)*EMIN/(EMAX-EMIN)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+!
+!     ==========================================================================
+!     == DETERMINE GRID RANGE FOR EACH BAND AND K-POINT                       ==
+!     ==========================================================================
+      EWGHT(:,:)%I1=NE
+      EWGHT(:,:)%I2=1
+      DO ITET=1,NTET
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+!         == WGHT(I2) CONTAINS THE COMPLETE INTEGRAL ===========================
+          I1=INT(AE*MINVAL(EB(IB,IKP(:)))+BE)
+          I2=1+INT(AE*MAXVAL(EB(IB,IKP(:)))+BE)
+          EWGHT(IB,IKP)%I1=MIN(EWGHT(IB,IKP)%I1,I1)
+          EWGHT(IB,IKP)%I2=MAX(EWGHT(IB,IKP)%I2,I2)
+        ENDDO
+      ENDDO
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          I1=MAX(I1,1)
+          I2=MIN(I2,NE)
+          EWGHT(IB,IK)%I1=I1
+          EWGHT(IB,IK)%I2=I2
+          ALLOCATE(EWGHT(IB,IK)%WGHT(I1:I2))
+          EWGHT(IB,IK)%WGHT(:)=0.D0
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == ADD UP INTEGRATION WEIGHTS                                           ==
+!     ==========================================================================
+      DO ITET=1,NTET
+        VOL=THIS%VOL*THIS%MULT(ITET)
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+          I1=NE
+          I2=1
+          DO I=1,4                                                      
+            E(I)=EB(IB,IKP(I))                                                
+            I1=MIN(I1,1+INT(AE*E(I)+BE))
+            I2=MAX(I2,INT(AE*E(I)+BE))
+          ENDDO
+          DO IE=I1,I2          
+            EF=EMIN+REAL(IE-1,KIND=8)*DE
+            WGHT0(:)=0.D0
+            CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
+            DO I=1,4                                                      
+              EWGHT(IB,IKP(I))%WGHT(IE)=EWGHT(IB,IKP(I))%WGHT(IE)+WGHT0(I)
+            ENDDO
+          ENDDO
+          DO I=1,4                                                      
+            EWGHT(IB,IKP(I))%WGHT(I2+1:)=EWGHT(IB,IKP(I))%WGHT(I2+1:)+0.25D0*VOL
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DIFFERENTIATE INTEGRATION WEIGHTS                                    ==
+!     ==========================================================================
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          SVARM=0.5D0*EWGHT(IB,IK)%WGHT(I1)/DE
+          DO IE=I1,I2-1
+            SVARP=0.5D0*(EWGHT(IB,IK)%WGHT(IE+1)-EWGHT(IB,IK)%WGHT(IE))/DE
+            EWGHT(IB,IK)%WGHT(IE)=SVARM+SVARP
+            SVARM=SVARP
+          ENDDO
+          EWGHT(IB,IK)%WGHT(I2)=SVARM
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE BRILLOUIN$EWGHT

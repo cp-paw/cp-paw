@@ -1432,6 +1432,8 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NFILO
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
+      REAL(8)                :: NEL !FOR BANDDATA OBJECT
+      REAL(8)                :: SPIN !FOR BANDDATA OBJECT
 !     **************************************************************************
       INTEGER(4) ::NTASKS_W,THISTASK_W
       CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
@@ -1787,6 +1789,10 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL BANDDATA$SETR8A('VOFR',NRL*NDIMD,RHO(:,:))
       CALL BANDDATA$SETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH(:,:,:,:))
       CALL BANDDATA$SETR8A('DO',LMNXX*LMNXX*NDIMD*NAT,DO(:,:,:,:))
+      CALL DYNOCC$GETR8('NEL',NEL)
+      CALL BANDDATA$SETR8('NEL',NEL)
+      CALL DYNOCC$GETR8('SPIN',SPIN)
+      CALL BANDDATA$SETR8('SPIN',SPIN)
       DEALLOCATE(DO)
 !
 !     ==================================================================
