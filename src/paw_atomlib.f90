@@ -582,11 +582,11 @@ END MODULE RADIALFOCK_MODULE
       VFOCK%GID=-1
       VFOCK%NR=-1
       VFOCK%LRHOX=-1
-      if(associated(vfock%l))DEALLOCATE(VFOCK%L)
-      if(associated(vfock%so))DEALLOCATE(VFOCK%SO)
-      if(associated(vfock%f))DEALLOCATE(VFOCK%F)
-      if(associated(vfock%psi))DEALLOCATE(VFOCK%PSI)
-      if(associated(vfock%mux))DEALLOCATE(VFOCK%MUX)
+      IF(ASSOCIATED(VFOCK%L))DEALLOCATE(VFOCK%L)
+      IF(ASSOCIATED(VFOCK%SO))DEALLOCATE(VFOCK%SO)
+      IF(ASSOCIATED(VFOCK%F))DEALLOCATE(VFOCK%F)
+      IF(ASSOCIATED(VFOCK%PSI))DEALLOCATE(VFOCK%PSI)
+      IF(ASSOCIATED(VFOCK%MUX))DEALLOCATE(VFOCK%MUX)
       RETURN
       END SUBROUTINE RADIALFOCK$CLEANVFOCK
 !
@@ -729,7 +729,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
       REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
       REAL(8)   ,PARAMETER       :: TOL=1.D-3
-      REAL(8)   ,PARAMETER       :: preTOL=1.D-4
+      REAL(8)   ,PARAMETER       :: PRETOL=1.D-4
       REAL(8)   ,PARAMETER       :: XMAXTOL=1.D-8
       REAL(8)   ,PARAMETER       :: XAVTOL=1.D-8
       INTEGER(4),PARAMETER       :: NITER=1000
@@ -764,7 +764,7 @@ USE PERIODICTABLE_MODULE
       INTEGER(4)                 :: IPERIOD,ISVAR1,IPOS
       CHARACTER(128)             :: STRING,STRING1
       REAL(8)                    :: SCALE
-      REAL(8)                    :: efock,ex
+      REAL(8)                    :: EFOCK,EX
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
@@ -914,14 +914,14 @@ USE PERIODICTABLE_MODULE
         NB=IB
         FTOT=SUM(FOFI(:NB))
 !
-!       == correct for non-integer atomic numbers ==============================
-!       == this is used for dummy hydrogen atoms, that carry only a fractional =
-!       == nuclear and electronic charge =======================================
-        SVAR=aez-FTOT
+!       == CORRECT FOR NON-INTEGER ATOMIC NUMBERS ==============================
+!       == THIS IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY A FRACTIONAL =
+!       == NUCLEAR AND ELECTRONIC CHARGE =======================================
+        SVAR=AEZ-FTOT
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
             FOFI(IB)=FOFI(IB)+SVAR
-            IF(FOFI(ib).GE.0.D0) THEN
+            IF(FOFI(IB).GE.0.D0) THEN
               EXIT
             ELSE
               SVAR=FOFI(IB)
@@ -930,7 +930,7 @@ USE PERIODICTABLE_MODULE
          ENDDO
         END IF
 !
-!       == consistency check                                                 ==
+!       == CONSISTENCY CHECK                                                 ==
         FTOT=SUM(FOFI(:NB))
         IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
           DO IB=1,NB
@@ -1030,14 +1030,14 @@ USE PERIODICTABLE_MODULE
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
           CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
           ETOT=EKIN+EH+EXC
-!         == work out fock exchange energy =====================================
+!         == WORK OUT FOCK EXCHANGE ENERGY =====================================
           IF(TFOCK.AND.TSECOND) THEN
             CALL DFT$SETL4('XCONLY',.TRUE.)
             CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EX)
             CALL DFT$SETL4('XCONLY',.FALSE.)
-!           == save scale and mux to restore vfock for later use ===============
-            scale=vfock%scale
-            mux(:)=vfock%mux(:)
+!           == SAVE SCALE AND MUX TO RESTORE VFOCK FOR LATER USE ===============
+            SCALE=VFOCK%SCALE
+            MUX(:)=VFOCK%MUX(:)
 !           ==  CHANGE VFOCK TO PURE FOCK TERM WITHOUT DOUBLE COUNTING =========
 !           ==  AND CALCULATE FOCK TERM TO THE ENERGY ==========================
             VFOCK%SCALE=1.D0
@@ -1052,7 +1052,7 @@ USE PERIODICTABLE_MODULE
             CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EFOCK)
 !           == RESTORE VFOCK ==================================================
             VFOCK%SCALE=SCALE
-            VFOCK%mux(:)=mux(:)
+            VFOCK%MUX(:)=MUX(:)
           ELSE
             EFOCK=0.D0
             EX=0.D0
@@ -1065,7 +1065,7 @@ USE PERIODICTABLE_MODULE
           WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
           WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
           IF(TFOCK.AND.TSECOND) THEN
-            WRITE(*,FMT='(30("."),T1,"exact xc MIXING factor:",T30,F15.6)')SCALE
+            WRITE(*,FMT='(30("."),T1,"EXACT XC MIXING FACTOR:",T30,F15.6)')SCALE
             WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F15.6)') &
      &                                                      EXC+SCALE*(EFOCK-EX)
             WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F15.6)')EXC
@@ -1105,14 +1105,14 @@ USE PERIODICTABLE_MODULE
 !!$! RADIUS AFFECTS THE RESULTS. THE RESTRICTED CUTOFF HAS BEEN INTRODUCED 
 !!$! BECAUSE OTHERWISE THE SELFCONSISTENCY OF THE PARTIAL WAVES IN 
 !!$! MAKEPARTIALWAVES DOES NOT CONVERGE
-!!$! a value of 3*rcov gives MH accuracy for He but not for the heavier elements
+!!$! A VALUE OF 3*RCOV GIVES MH ACCURACY FOR HE BUT NOT FOR THE HEAVIER ELEMENTS
           RFOCK=RBOX
           CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK); RFOCK=1.1D0*RFOCK   
 !         CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RFOCK); RFOCK=3.0D0*RFOCK   
-          rfock=min(rbox,rfock)
+          RFOCK=MIN(RBOX,RFOCK)
           IF(.NOT.TSECOND) THEN
             ALLOCATE(EOFI_FOCK(NB))
-            EOFI_FOCK(:)=EOFI(:nb)
+            EOFI_FOCK(:)=EOFI(:NB)
             CALL ATOMLIB$BOUNDSTATES(GID,NR,NB,LOFI,SOFI,NNOFI,EOFI_FOCK,POT &
      &                              ,TREL,TZORA,RFOCK,PHI,SPHI)
           ELSE
@@ -1226,7 +1226,7 @@ PRINT*,'#ITERATIONS ',ITER
         SPHI(:,IB+1:JB)=SPHI(:,IB:JB-1)
         SPHI(:,IB)=AUX
       ENDDO
-!stop 'forced stop in aescf'
+!STOP 'FORCED STOP IN AESCF'
 
       RETURN
       END
@@ -1283,8 +1283,8 @@ PRINT*,'#ITERATIONS ',ITER
 !       == DETERMINE ENERGY AND LARGE COMPONENT                               ==
 !       ========================================================================
         G(:)=0.D0
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,TVARDREL,DREL,G &
-     &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),0.D0,RBOX &
+     &                        ,TVARDREL,DREL,G,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
 !
 !       ========================================================================
 !       == DETERMINE SMALL COMPONENTS                                         ==
@@ -1352,8 +1352,8 @@ PRINT*,'#ITERATIONS ',ITER
 !       == DETERMINE ENERGY AND LARGE COMPONENT                               ==
 !       ========================================================================
         G(:)=0.D0
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,TVARDREL,DREL,G &
-     &                         ,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),0.D0,RBOX,TVARDREL &
+     &                         ,DREL,G,NNOFI(IB),POT,EOFI(IB),PHI(:,IB))
         CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,LOFI(IB),SOFI(IB),DREL,G,POT &
      &                                   ,VFOCK,RBOX,EOFI(IB),PHI(:,IB))
 !
@@ -1381,7 +1381,8 @@ PRINT*,'#ITERATIONS ',ITER
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN,POT,E,PHI)
+      SUBROUTINE ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RNS,RBOX &
+     &                             ,TVARDREL,DREL,G,NN,POT,E,PHI)
 !     **************************************************************************
 !     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
 !     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
@@ -1402,6 +1403,7 @@ PRINT*,'#ITERATIONS ',ITER
       INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
       INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
       INTEGER(4) ,INTENT(IN)     :: SO      ! SWITCH FOR SPIN-ORBIT COUP.
+      REAL(8)    ,INTENT(IN)     :: RNS     ! NODES WITHIN RNS ARE IGNORED
       REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
       LOGICAL(4) ,INTENT(IN)     :: TVARDREL! UPDATE RELATIVISTIC PARAMETER
       REAL(8)    ,INTENT(INOUT)  :: DREL(NR)! RELATIVISTIC CORRECTION
@@ -1487,7 +1489,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,ROUT,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RNS,ROUT,Z0)
         Z0=Z0-REAL(NN+1)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
 !       ========================================================================
@@ -1559,7 +1561,8 @@ PRINT*,'#ITERATIONS ',ITER
         IF(.NOT.THOM) THEN     
           GHOM=G   !AVOID OVERFLOW BY REMOVIN INHOMOGENEITY OUTSIDE OF THE BOX
           GHOM(IREND+2:)=0.D0
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL1,SO,GHOM,L,E,IDIR,PHIINHOM)
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,POT1,DREL1,SO,GHOM,L,E,IDIR &
+      &                              ,PHIINHOM)
           CALL RADIAL$VALUE(GID,NR,PHIINHOM,ROUT,VAL1)
           CALL RADIAL$VALUE(GID,NR,PHI1,ROUT,VAL2)
           PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
@@ -1656,7 +1659,7 @@ PRINT*,'#ITERATIONS ',ITER
 !     ==========================================================================
 !     ==========================================================================
       X0=E
-      z0=333.333d0 ! first value is meaningless
+      Z0=333.333D0 ! FIRST VALUE IS MEANINGLESS
       DX=1.D-2
       DO ITER=1,NITER
         E=X0
@@ -1675,7 +1678,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1697,7 +1700,7 @@ PRINT*,'#ITERATIONS ',ITER
 !     ==========================================================================
       ISTART=1
       X0=E
-      z0=333.333d0   ! first value is meaningless
+      Z0=333.333D0   ! FIRST VALUE IS MEANINGLESS
 !     == DX IS DEFINED BY THE PREVIOUS LOOP
       CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
       DO ITER=1,NITER
@@ -1717,7 +1720,7 @@ PRINT*,'#ITERATIONS ',ITER
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(ABS(2.D0*DX).LE.TOL) EXIT
         IF(Z0.GT.0.D0) THEN
@@ -2030,8 +2033,8 @@ PRINT*,'#ITERATIONS ',ITER
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      uofi(:,:)=0.d0
-      tuofi(:,:)=0.d0
+      UOFI(:,:)=0.D0
+      TUOFI(:,:)=0.D0
       DO IB=1,NB
         L=LOFI(IB)
         E=EOFI(IB)
@@ -2046,7 +2049,7 @@ PRINT*,'#ITERATIONS ',ITER
         DREL(:)=0.D0
         TVARDREL=.FALSE.
         NN=0
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,TVARDREL,DREL,G,NN,POT &
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,0.D0,RBOX,TVARDREL,DREL,G,NN,POT &
      &                         ,E,UOFI(:,IB))
         TUOFI(:,IB)=G(:)+(E-POT(:)*Y0)*UOFI(:,IB)
         EOFI(IB)=E
@@ -2278,7 +2281,7 @@ PRINT*,'#ITERATIONS ',ITER
 !     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
 !     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
 !     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.D0,RBND,PHASE)
 !
       DO IR=1,NR
         IRBND=IR
@@ -2352,11 +2355,11 @@ PRINT*,'#ITERATIONS ',ITER
           CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
           CALL RADIAL$VALUE(GID,NR,AUX2,3.D0,NORM)
         END IF
-!!$if(tinhom.and.(.not.tfixe)) then
-!!$  print*,'l ',l,' e ',e
-!!$  call atomlib_writephi('x1.dat',gid,nr,1,aux)
-!!$  call atomlib_writephi('x2.dat',gid,nr,1,psi)
-!!$end if
+!!$IF(TINHOM.AND.(.NOT.TFIXE)) THEN
+!!$  PRINT*,'L ',L,' E ',E
+!!$  CALL ATOMLIB_WRITEPHI('X1.DAT',GID,NR,1,AUX)
+!!$  CALL ATOMLIB_WRITEPHI('X2.DAT',GID,NR,1,PSI)
+!!$END IF
 !
 !       == MAP INTO DPSI =======================================================
         DPSI(:)=-AUX(:)
@@ -2442,7 +2445,7 @@ PRINT*,'#ITERATIONS ',ITER
 !
       ENDDO    ! END OF ITERATION
 !CALL ATOMLIB_WRITEPHI('PSIAFTER',GID,NR,1,PSI)
-!if(tinhom)stop 'forced ATOMLIB$UPDATESTATEWITHHF'
+!IF(TINHOM)STOP 'FORCED ATOMLIB$UPDATESTATEWITHHF'
 
       IF(TPR) PRINT*,'ITER=',ITER,' L=',L,' E=',E,' DEV=',VAL
 !
@@ -2501,7 +2504,7 @@ PRINT*,'#ITERATIONS ',ITER
       REAL(8)   ,INTENT(OUT):: ETOT
       REAL(8)               :: DRRPSI(NR,NB)
       REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
-      REAL(8)               :: ekden(NR),ehden(NR),exden(NR),ekin,eh,ex
+      REAL(8)               :: EKDEN(NR),EHDEN(NR),EXDEN(NR),EKIN,EH,EX
       REAL(8)               :: R(NR)
       REAL(8)               :: EOFI(NB)
       REAL(8)               :: DREL(NR),RDPRIME(NR)
@@ -2546,9 +2549,9 @@ PRINT*,'#ITERATIONS ',ITER
 !     ==  CALCULATE TOTAL ENERGY (THIS A FAKE QUANTITY)                     ==
 !     ========================================================================
       AUX(:)=0.D0
-      ekden(:)=0.D0
-      ehden(:)=0.D0
-      exden(:)=0.D0
+      EKDEN(:)=0.D0
+      EHDEN(:)=0.D0
+      EXDEN(:)=0.D0
       DO IB=1,NB
         L=LOFI(IB)
         IF(TREL) THEN
@@ -2572,30 +2575,30 @@ PRINT*,'#ITERATIONS ',ITER
         AUX1(:)=0.5D0*(1.D0+DREL) &
      &               *(DRRPSI(:,IB)**2+REAL(L*(L+1),KIND=8)*PSI(:,IB)**2)
         AUX1(:)=AUX1(:)+0.5D0*(SOFACTOR+1.D0)*RDPRIME*R(:)*PSI(:,IB)**2
-        ekden(:)=ekden(:)+fofi(ib)*aux1(:)
+        EKDEN(:)=EKDEN(:)+FOFI(IB)*AUX1(:)
 !       == POTENTIAL ENERGY ==================================================
-        aux1(:)=0.d0
+        AUX1(:)=0.D0
         AUX1(:)=AUX1(:)+R(:)**2*POT(:)*Y0*PSI(:,IB)**2
-        ehden(:)=ehden(:)+fofi(ib)*aux1(:)
+        EHDEN(:)=EHDEN(:)+FOFI(IB)*AUX1(:)
 !       == HARTREE-FOCK CORRECTION ===========================================
-        aux1(:)=0.d0
+        AUX1(:)=0.D0
         CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOFI(IB),PSI(:,IB),AUX2)
         AUX2(:)=PSI(:,IB)*(0.5D0*AUX2-0.5D0*VFOCK%MUX(:)*Y0*PSI(:,IB))
         AUX1(:)=AUX1(:)+R(:)**2*AUX2(:)
-        exden(:)=exden(:)+fofi(ib)*aux1(:)
+        EXDEN(:)=EXDEN(:)+FOFI(IB)*AUX1(:)
 !       == ADD TO SUM OVER STATES ============================================
         AUX(:)=AUX(:)+FOFI(IB)*AUX1(:)
       ENDDO
-      aux(:)=ekden+ehden+exden
+      AUX(:)=EKDEN+EHDEN+EXDEN
       CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
       CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,ETOT)
-      CALL RADIAL$INTEGRATE(GID,NR,ekden,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Ekin)
-      CALL RADIAL$INTEGRATE(GID,NR,ehden,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Eh)
-      CALL RADIAL$INTEGRATE(GID,NR,exden,AUX1)
-      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,Ex)
-print*,'ekin,eh,ex ',ekin,eh,ex
+      CALL RADIAL$INTEGRATE(GID,NR,EKDEN,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
+      CALL RADIAL$INTEGRATE(GID,NR,EHDEN,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EH)
+      CALL RADIAL$INTEGRATE(GID,NR,EXDEN,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EX)
+PRINT*,'EKIN,EH,EX ',EKIN,EH,EX
       RETURN
       END
 !
@@ -2678,7 +2681,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND,Z0)
         Z0=Z0-PHASE
         IF(Z0.GE.0.D0) THEN
           PHIUP(:)=PHI(:)
@@ -2715,7 +2718,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !PRINT*,'FACTORS ',ZUP/(ZUP-ZDOWN),-ZDOWN/(ZUP-ZDOWN)
 !PRINT*,'XUP  =',XUP  ,' ZUP   ',ZUP  ,' DIFFZ ',ZUP-ZDOWN
 !PRINT*,'XDOWN=',XDOWN,' ZDOWN ',ZDOWN,' DIFFX ',XUP-XDOWN
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,Z0)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND,Z0)
       Z0=Z0-PHASE
 !PRINT*,'L=',L,' E=',E,' ZUP-ZDOWN',ZUP-ZDOWN,' Z0=',Z0
 
@@ -2744,7 +2747,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
         PHI1(:)=PHI(IR,:)
         DO I=1,NPHI  ! AVOID CONFLICT WITH XMGRACE
           IF(ABS(PHI1(I)).LT.1.D-60) PHI1(I)=0.D0
-          phi1(i)=max(-1.d+6,min(1.d+6,phi1(i)))
+          PHI1(I)=MAX(-1.D+6,MIN(1.D+6,PHI1(I)))
         ENDDO
         WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1
       ENDDO
@@ -2848,8 +2851,8 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$          DREL(:)=0.D0 
 !!$        END IF
 !!$        G(:)=0.D0
-!!$        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),RBOX,DREL,G,NN &
-!!$     &                         ,POT,EOFI(IB),PSI(:,IB))
+!!$        CALL ATOMLIB$BOUNDSTATE(GID,NR,LOFI(IB),SOFI(IB),0.D0,RBOX &
+!!$     &                         ,DREL,G,NN,POT,EOFI(IB),PSI(:,IB))
 !!$        AUX(:)=R(:)**2*PSI(:,IB)**2
 !!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 !!$        CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
@@ -3334,7 +3337,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$!     :: REMARK: SCHROEDINGER$PHASESHIFT TAKES VALUE AND DERIVATIVE FROM A    ::
 !!$!     :: TWO-POINT FORMULA, AND THEREFORE IS NOT FULLY CONSISTENT WITH        ::
 !!$!     :: RADIAL$VALUE AND RADIAL$DERIVATIVE                                   ::
-!!$      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,PHASE)
+!!$      CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.D0,RBND,PHASE)
 !!$!
 !!$      DO IR=1,NR
 !!$        IRBND=IR
@@ -3602,7 +3605,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$!       ==  PROPAGATE                                                         ==
 !!$!       ========================================================================
 !!$        PSI(:)=PSI(:)+DPSI(:)
-!!$! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,RBND,SVAR)
+!!$! CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSI,0.D0,RBND,SVAR)
 !!$!PRINT*,'TARGET PHASE+ ',PHASE,' ACTUAL PHASE=',SVAR,' R=',RBND
 !!$!   
 !!$!       ========================================================================
@@ -3713,7 +3716,7 @@ print*,'ekin,eh,ex ',ekin,eh,ex
 !!$      ELSE 
 !!$        DREL(:)=0.D0 
 !!$      END IF
-!!$      CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RBOX,DREL,G,NN,POT,E,PSI)
+!!$      CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,0.D0,RBOX,DREL,G,NN,POT,E,PSI)
 !!$!
 !!$      IF(TPR.AND.THOM) THEN
 !!$        AUX(:)=R(:)**2*PSI(:)**2
