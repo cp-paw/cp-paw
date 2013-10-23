@@ -1012,8 +1012,8 @@ MODULE KPOINTDIAG_MODULE
       ENDiF
 
       IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
-      IF(TPROJ)THEN
 !$omp critical
+      IF(TPROJ)THEN
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
           DO IB=1,NB
@@ -1024,8 +1024,10 @@ MODULE KPOINTDIAG_MODULE
           ENDDO
         ENDDO
         IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
-!$omp end critical
       ENDIF
+!$omp end critical
+      DEALLOCATE(TI_HK)
+      DEALLOCATE(TI_SK)
       RETURN
       end subroutine
 !
@@ -1838,7 +1840,7 @@ END MODULE
       CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
-!$omp parallel do private(IKP,KVEC,E,PROJ)
+!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN)
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
           KVEC=BK(:,IKP)
