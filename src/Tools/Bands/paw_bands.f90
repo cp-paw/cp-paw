@@ -1078,7 +1078,7 @@ MODULE KPOINTDIAG_MODULE
 !     ==================================================================
       F=F/CELLVOL
       RETURN
-      END
+      END SUBROUTINE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
@@ -1125,7 +1125,7 @@ MODULE KPOINTDIAG_MODULE
         CALL ERROR$STOP('LAPACK_ZHEGVD')
       ENDIF
       return
-      END
+      END SUBROUTINE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LAPACK_ZGGEV(N,JOBZ,H,S,E)
@@ -1168,7 +1168,7 @@ MODULE KPOINTDIAG_MODULE
 !      ENDIF
       E=REAL(ALPHA/BETA)
       return
-      END
+      END SUBROUTINE
 
 END MODULE
 !
@@ -1658,7 +1658,7 @@ END MODULE
       INTEGER(4)                   :: NKDIV(3)
       INTEGER(4)                   :: ISHIFT(3)
       INTEGER(4)                   :: NB
-      INTEGER(4)                   :: I1,I2,IE,ISPIN
+      INTEGER(4)                   :: I,J,I1,I2,IE,ISPIN
 
       REAL(8)      ,ALLOCATABLE    :: BK(:,:)
       REAL(8),ALLOCATABLE          :: EB(:,:)
@@ -1684,7 +1684,19 @@ END MODULE
       REAL(8),ALLOCATABLE          :: E(:)
       COMPLEX(8),ALLOCATABLE       :: PROJ(:,:,:)
       REAL(8)                      :: GWEIGHT
-      
+
+      LOGICAL(4)                   :: TUSESYM
+      INTEGER(4)                   :: SPACEGROUP
+      REAL(8)                      :: A0,B0,C0,ALPHA,BETA,GAMMA
+      INTEGER(4)                   :: NSYM,NOP
+      INTEGER(4),parameter         :: NSYMX=48
+      INTEGER(4),parameter         :: NOPX=48
+      INTEGER(4)                   :: IARB(3)
+      CHARACTER(3)                 :: BRAVAIS
+      INTEGER(4)                   :: IIO(3,3,NOPX)
+      REAL(8)                      :: C(3,NOPX)
+      INTEGER(4)                   :: ISYM
+      LOGICAL(4)                   :: TSHIFT
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
 !     **************************************************************************
@@ -1753,10 +1765,52 @@ END MODULE
       RNTOT=4.0D0 !silizium
       METHOD_DIAG=2
       NE=1000
+      TUSESYM=.TRUE.
+      SPACEGROUP=225
+      TSHIFT=.FALSE. 
+
+
                             CALL TRACE$PASS('AFTER READ BNCTL')
+      IF(TUSESYM)THEN
+!     ==========================================================================
+!     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                            ==
+!     ==========================================================================
+        IARB=1
+        IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
+         IARB(1)=1
+         IARB(2)=0
+         IARB(3)=0
+        ENDIF 
+        IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
+          IARB=0
+        ENDIF 
+        IF(BRAVAIS.EQ.'GMB') THEN
+         IARB(1)=0
+         IARB(2)=1
+         IARB(3)=0
+        ENDIF 
                             CALL TRACE$PUSH('BRILLOUIN$MSH')
-      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+        NKP=NKDIV(1)*NKDIV(2)*NKDIV(3)
+        CALL SPACEGROUP$SETI4('SPACEGROUP',SPACEGROUP)
+        CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
+        CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+
+!        CALL BRILLOUIN_TESTCOMPLETE()
+        CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
+        WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
+        DO I=1,NOP
+          WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,IIO(:,:,I)
+        ENDDO
+        CALL BRILLOUIN$MSH(RBAS,NKP,NOP,IIO,IARB,TSHIFT)
                             CALL TRACE$POP()
+      ELSE
+                            CALL TRACE$PUSH('BRILLOUIN$MSHNOSYM')
+!     ==========================================================================
+!     ==  FIND K-POINTS AND TETRAHEDRA                                        ==
+!     ==========================================================================
+        CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+                            CALL TRACE$POP()
+      ENDIF
 ! 
 !     ==========================================================================
 !     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS                      ==

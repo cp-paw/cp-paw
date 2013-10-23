@@ -487,7 +487,7 @@ END MODULE BRILLOUIN_MODULE
 !     == EXPAND GENERATORS TO COMPLETE FULL POINT GROUP                       ==
 !     ==========================================================================
       NOP=NSYM
-      OP(:,:,NSYM)=IIO(:,:,NSYM)
+      OP(:,:,1:NSYM)=IIO(:,:,1:NSYM)
       CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
 !
 !     ==========================================================================
@@ -2809,7 +2809,7 @@ END MODULE BRILLOUIN_MODULE
       LOGICAL(4)               :: TOLD
 !     **************************************************************************
       NGENERATOR=NOP
-      GENERATOR(:,:,:NOP)=OP(:,:,:NOP)
+      GENERATOR(:,:,1:NOP)=OP(:,:,1:NOP)
 !
 !     == IDENTITY ==============================================================
       OP(:,:,:)=0
@@ -3234,7 +3234,7 @@ END MODULE SPACEGROUP_MODULE
       C31P=0; C32P=0;C33P=0;C34P=0; C31M=0;C32M=0;C33M=0;C34M=0
 
       E(:,1)=(/1,0,0/); E(:,3)=(/0,1,0/); E(:,3)=(/0,0,1/); 
-      INV(:,1)=(/-1,0,0/); INV(:,3)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
+      INV(:,1)=(/-1,0,0/); INV(:,2)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
 !
       IF(BRAVAIS.EQ.'G1') THEN ! MONOCLINIC
         CONTINUE
@@ -4376,7 +4376,6 @@ END MODULE SPACEGROUP_MODULE
         NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
         NOP=NOP+1; OPERATION(:,:,NOP)=C31P
         NOP=NOP+1; OPERATION(:,:,NOP)=INV
-
       END IF
 !
 !     ==========================================================================
@@ -4411,18 +4410,19 @@ END MODULE SPACEGROUP_MODULE
 !     ==========================================================================
 !     ==  CHECK CONSISTENCY OF POINT GROUP OPERATIONS                         ==
 !     ==========================================================================
-        DO I=1,NOP
-          IF(SUM(ABS(OPERATION(:,:,I))).GT.0) THEN
-            CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
-            CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
-            CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
-            CALL ERROR$I4VAL('SPACE GROUP NUMBER',ISPACEGROUP)
-            CALL ERROR$CHVAL('BRAVAIS LATTICE',BRAVAIS)
-            CALL ERROR$I4VAL('NUMBER OF GENERATORS',NOP)
-            CALL ERROR$STOP('BRILLOUIN$GENERATORS')
-          END IF
-        ENDDO
-        RETURN
+      DO I=1,NOP
+        IF(SUM(ABS(OPERATION(:,:,I))).EQ.0) THEN
+          CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
+          CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
+          CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
+          CALL ERROR$I4VAL('SPACE GROUP NUMBER',ISPACEGROUP)
+          CALL ERROR$CHVAL('BRAVAIS LATTICE',BRAVAIS)
+          CALL ERROR$I4VAL('NUMBER OF GENERATORS',NOP)
+          CALL ERROR$I4VAL('PROBLEM WITH GENERATOR',I)
+          CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+        END IF
+      ENDDO
+      RETURN
       END SUBROUTINE SPACEGROUP$GENERATORS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -4715,7 +4715,7 @@ END MODULE SPACEGROUP_MODULE
             CALL ERROR$MSG('NUMBER OF OPERATIONS EXCEEDS MAXIMUM')
             CALL ERROR$I4VAL('NOP',NOP)
             CALL ERROR$I4VAL('NOPX',NOPX)
-            CALL ERROR$STOP('BRILLOUIN_COMPLETE')
+            CALL ERROR$STOP('SPACEGROUP$COMPLETE')
           END IF
           OP(:,:,NOP)=OPNEW
           c(:,nop)=cnew
@@ -4729,7 +4729,7 @@ END MODULE SPACEGROUP_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$EWGHT(NKP,NB,EB,EMIN,EMAX,NE,EWGHT)
 !     **************************************************************************
-!     **                                                                      **
+!     ** GENERATES ENERGY DEPENDENT WEIGHTS FOR DOS AND PDOS                  **
 !     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
@@ -4838,3 +4838,123 @@ END MODULE SPACEGROUP_MODULE
       ENDDO
       RETURN
       END SUBROUTINE BRILLOUIN$EWGHT
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER         :: NSYMX=48
+      CHARACTER(3),INTENT(IN)      :: BRAVAIS
+      REAL(8),INTENT(IN)           :: RBAS(3,3)
+      REAL(8),INTENT(OUT)          :: A0,B0,C0,ALPHA,BETA,GAMMA
+      INTEGER(4)                   :: ISYM,I,J,NB,IKP,IB,K
+      REAL(8)                      :: RBASBRAVAIS(3,3)
+      REAL(8),PARAMETER            :: TOL=1.D-6
+
+!   LATTICE VECTORS AND TRANSFORMATION MATRICES FOR THE RESPECTIVE RECIPROCAL LATTICE VECTORS
+!     ACCORDING TO BRADLEY AND CRACKNELL
+
+      !AT FIRST COMPUTE THE EXACT BRAVAIS LATTICE VECTORS FROM RBAS
+      !AND THEN CHECK IF THE RBAS USED IN THE PAW
+      !CALCULATION IS THE SAME WITHIN THE TOLERANCE TOL
+
+      !CUBIC
+      IF(BRAVAIS.EQ.'GC') THEN
+        WRITE(*,*)' SC'
+        A0=RBAS(1,1)
+      ENDIF
+      IF(BRAVAIS.EQ.'GCF') THEN
+        WRITE(*,*)'FCC'
+        A0=2.0D0*RBAS(2,1)
+      ENDIF
+      IF(BRAVAIS.EQ.'GCV') THEN
+        WRITE(*,*)'BCC'
+        A0=-2.0D0*RBAS(1,1)
+      ENDIF
+      !MONOCLIN PRIMITIVE
+      IF(BRAVAIS.EQ.'GM') THEN
+        WRITE(*,*)'MONOCLIN PRIMITIVE'
+        A0=SQRT(RBAS(1,2)**2+RBAS(2,2)**2)
+        B0=-RBAS(2,1)
+        C0=RBAS(3,3)
+        GAMMA=ASIN(RBAS(2,1)/A0)
+      ENDIF
+      !MONOCLIN BASE-CENTRED
+      IF(BRAVAIS.EQ.'GMB') THEN
+        WRITE(*,*)'MONOCLIN BASE-CENTRED'
+        A0=SQRT((2.0D0*RBAS(2,1))**2+(2.0D0*RBAS(2,2))**2)
+        B0=-RBAS(1,2)
+        C0=2.0D0*RBAS(3,3)
+        GAMMA=ASIN(RBAS(2,1)/(0.5D0*A0))
+      ENDIF
+      !ORTHORHOMBIC PRIMITIVE
+      IF(BRAVAIS.EQ.'GO') THEN
+        WRITE(*,*)'ORTHORHOMBIC PRIMITIVE'
+        A0=RBAS(1,2)
+        B0=-RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !ORTHORHOMBIC BASE-CENTRED
+      IF(BRAVAIS.EQ.'GOB') THEN
+        WRITE(*,*)'ORTHORHOMBIC BASE-CENTRED'
+        A0=2.0D0*RBAS(1,1)
+        B0=-2.0D0*RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !ORTHORHOMBIC BODY-CENTRED
+      IF(BRAVAIS.EQ.'GOV') THEN
+        WRITE(*,*)'ORTHORHOMBIC BODY-CENTRED'
+        A0=2.0D0*RBAS(1,1)
+        B0=2.0D0*RBAS(2,1)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+      !ORTHORHOMBIC FACE-CENTRED
+      IF(BRAVAIS.EQ.'GOF') THEN
+        WRITE(*,*)'ORTHORHOMBIC FACE-CENTRED'
+        A0=2.0D0*RBAS(1,1)
+        B0=-2.0D0*RBAS(2,2)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+      !TETRAGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GQ') THEN
+        WRITE(*,*)'TETRAGONAL PRIMITIVE'
+        A0=RBAS(1,1)
+        C0=RBAS(3,3)
+      ENDIF
+!TETRAGONAL BODY-CENTRED
+      IF(BRAVAIS.EQ.'GQV') THEN
+        WRITE(*,*)'TETRAGONAL BODY-CENTRED'
+        A0=-2.0D0*RBAS(1,1)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+!TRIGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GRH') THEN
+WRITE(*,*)'TRIGONAL PRIMITIVE'
+        A0=-RBAS(2,1)
+        C0=RBAS(3,1)
+      ENDIF
+!HEXAGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GH') THEN
+WRITE(*,*)'HEXAGONAL PRIMITIVE'
+        A0=-RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      WRITE(*,*)'BRAVAIS =',BRAVAIS
+      CALL SPACEGROUP$RBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBASBRAVAIS)
+      IF(MAXVAL(ABS(RBAS(:,:)-RBASBRAVAIS(:,:))).gt.TOL)THEN
+        CALL ERROR$MSG('LATTICE VECTORS FROM PAW CALCULATION AND')
+        CALL ERROR$MSG('GIVEN BRAVAIS LATTICE ARE NOT CONSISTENT')
+        CALL ERROR$CHVAL("BRAVAIS TYPE",BRAVAIS)
+        CALL ERROR$R8VAL("REQUESTED TOLERANCE",TOL)
+        CALL ERROR$R8VAL("MAX(RBAS-RBASBRAVAIS)",MAXVAL(ABS(RBAS-RBASBRAVAIS)))
+        DO I=1,3
+          WRITE(*,*)"RBAS       ",I,RBAS(I,:)
+          WRITE(*,*)"RBASBRAVAIS",I,RBASBRAVAIS(I,:)
+        ENDDO
+        CALL ERROR$STOP('BRILLOUIN$CHECKRBAS')
+      ENDIF
+      RETURN
+      END SUBROUTINE BRILLOUIN$CHECKRBAS
