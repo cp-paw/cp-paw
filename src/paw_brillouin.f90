@@ -4405,7 +4405,7 @@ END MODULE SPACEGROUP_MODULE
 !     ==  CHECK CONSISTENCY OF POINT GROUP OPERATIONS                         ==
 !     ==========================================================================
         DO I=1,NOP
-          IF(SUM(ABS(OPERATION(:,:,I))).GT.0) THEN
+          IF(SUM(ABS(OPERATION(:,:,I))).EQ.0) THEN
             CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
             CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
             CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
