@@ -1764,7 +1764,7 @@ END MODULE
       ISHIFT(2)=0
       ISHIFT(3)=0
       NB=10
-      TPROJ=.TRUE.
+      TPROJ=.FALSE.
       RNTOT=0.5D0*NEL
 
       METHOD_DIAG=2
