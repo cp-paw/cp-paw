@@ -1013,6 +1013,7 @@ MODULE KPOINTDIAG_MODULE
 
       IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
       IF(TPROJ)THEN
+!$omp critical
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
           DO IB=1,NB
@@ -1023,6 +1024,7 @@ MODULE KPOINTDIAG_MODULE
           ENDDO
         ENDDO
         IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
+!$omp end critical
       ENDIF
       RETURN
       end subroutine
@@ -1683,6 +1685,7 @@ END MODULE
       COMPLEX(8),ALLOCATABLE       :: TI_S(:,:,:)
       REAL(8),ALLOCATABLE          :: E(:)
       COMPLEX(8),ALLOCATABLE       :: PROJ(:,:,:)
+      COMPLEX(8),ALLOCATABLE       :: PROJK(:,:,:,:)
       REAL(8)                      :: GWEIGHT
 
       LOGICAL(4)                   :: TUSESYM
@@ -1761,8 +1764,9 @@ END MODULE
       ISHIFT(2)=0
       ISHIFT(3)=0
       NB=10
-      TPROJ=.false.
-      RNTOT=4.0D0 !silizium
+      TPROJ=.TRUE.
+      RNTOT=0.5D0*NEL
+
       METHOD_DIAG=2
       NE=1000
       TUSESYM=.TRUE.
@@ -1822,14 +1826,16 @@ END MODULE
       
       ALLOCATE(EB(NB*NSPIN,NKP))        
       ALLOCATE(WGHT(NB*NSPIN,NKP))
-      ALLOCATE(A(NB*NSPIN,NKP))
+      
+      IF(TPROJ)THEN
+        ALLOCATE(PROJK(NAT,NB,LMNXX,IKP))
+      ENDIF
 
 !
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
       CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
-
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
 !$omp parallel do private(IKP,KVEC,E,PROJ)
@@ -1845,7 +1851,9 @@ END MODULE
       &              GVEC,TI_H,TI_S,E,PROJ)
 !$omp critical
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)*27.21139D0
-          A(1:NB+NB*(ISPIN-1),IKP)=EB(1:NB+NB*(ISPIN-1),IKP)
+          IF(TPROJ)THEN
+            PROJK(:,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),:,IKP)=PROJ(:,1:NB,:)
+          ENDIF
 !$omp end critical
           DEALLOCATE(PROJ)
           DEALLOCATE(E)
@@ -1865,6 +1873,7 @@ END MODULE
 !     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
 !     ==========================================================================
       !FIXME TOTAL DENSITY for testing
+      ALLOCATE(A(NB*NSPIN,NKP))
       A=1
       SUMA=0.D0
       DO IB=1,NB
