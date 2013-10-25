@@ -3225,6 +3225,15 @@
  !END
 
 
+ !SETUP  ID='AU_TEST_MY' EL='AU' ZV=11.
+         TYPE='HBS' RBOX/RCOV=1.5 RCSM/RCOV=0.25
+         RCL/RCOV= .85 0.95 0.75 0.75
+         LAMBDA= 6. 6. 6. 6.
+   !GRID DMIN=5.E-6 DMAX=0.1 RMAX= 5.6 !END
+   !POT  POW=3.  RC/RCOV=0.67 !END
+   !CORE POW=3.   RC/RCOV=0.67 !END
+ !END
+
 !End
 !EOB
 
