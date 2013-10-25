@@ -1748,6 +1748,7 @@ END MODULE BRILLOUIN_MODULE
         CALL ERROR$R8VAL('NUMBER OF STATES AT THE UPPER BOUND',NOS(NP))        
         CALL ERROR$R8VAL('NUMBER OF STATES REQUESTED',RNTOT)          
         CALL ERROR$R8VAL('ADD ',ADD)
+        CALL ERROR$MSG('YOU PROBABLY HAVE TO INCREASE THE NUMBER OF BANDS NB')
         CALL ERROR$STOP('BRILLOUIN_EFI')
       END IF                                                            
       IPUP=NP                                                           

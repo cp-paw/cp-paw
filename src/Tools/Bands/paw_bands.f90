@@ -1759,19 +1759,33 @@ END MODULE
       ENDIF
 
       !FIXME: TO BE READ FROM BCNTL/DCNTL
-      NKDIV(1)=5
-      NKDIV(2)=5
-      NKDIV(3)=5
+      NKDIV(1)=10
+      NKDIV(2)=10
+      NKDIV(3)=1
       ISHIFT(1)=0
       ISHIFT(2)=0
       ISHIFT(3)=0
-      NB=10
+      NB=20
+      EPW=0.5D0*15.D0
       TPROJ=.FALSE.
-      RNTOT=0.5D0*NEL
+      IF(NSPIN.eq.1)THEN
+        RNTOT=0.5D0*NEL
+      ELSE
+        RNTOT=NEL
+      ENDIF
+
+      !check if NB*NSPIN>RNTOT
+      IF(NB*NSPIN.lt.RNTOT)THEN
+        CALL ERROR$MSG('NB*NPSIN IS LESS THAN THE NUMBER OF BANDS, PLEASE INCREASE NB')
+        CALL ERROR$I4VAL('NB',NB)
+        CALL ERROR$I4VAL('NSPIN',NSPIN)
+        CALL ERROR$R8VAL('NUMBER OF BANDS',RNTOT)
+        CALL ERROR$STOP('BANDS_DOS')
+      ENDIF
 
       METHOD_DIAG=2
       NE=1000
-      TUSESYM=.TRUE.
+      TUSESYM=.false.
       SPACEGROUP=225
       TSHIFT=.FALSE. 
 
@@ -1826,18 +1840,18 @@ END MODULE
       ALLOCATE(BK(3,NKP))
       CALL BRILLOUIN$GETR8A('K',3*NKP,BK)
       
-      ALLOCATE(EB(NB*NSPIN,NKP))        
-      ALLOCATE(WGHT(NB*NSPIN,NKP))
-      
-      IF(TPROJ)THEN
-        ALLOCATE(PROJK(NAT,NB,LMNXX,IKP))
-      ENDIF
 
 !
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
       CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      ALLOCATE(EB(NB*NSPIN,NKP))        
+      ALLOCATE(WGHT(NB*NSPIN,NKP))
+      
+      IF(TPROJ)THEN
+        ALLOCATE(PROJK(NAT,NB,LMNXX,IKP))
+      ENDIF
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
 !$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN)
