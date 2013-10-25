@@ -1937,7 +1937,7 @@ END MODULE
       !FIXME: make output nice
       open(101,file='dos.dat')
       do ie=1,ne
-      write(101,*)emin+real(ie-1,kind=8)*(emax-emin)/real(ne-1,kind=8),DOS(ie,1)
+      write(101,*)emin+real(ie-1,kind=8)*(emax-emin)/real(ne-1,kind=8),(DOS(ie,ISPIN),ISPIN=1,NSPIN)
       enddo
       close(101)
                             CALL TRACE$POP()
