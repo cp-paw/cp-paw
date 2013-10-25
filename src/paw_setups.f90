@@ -6678,9 +6678,8 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)               :: G(NR),GSM(NR)
       REAL(8)               :: MAT(NJ,NJ),MATINV(NJ,NJ)
       REAL(8)               :: PI,Y0
-      REAL(8)               :: B(NJ,NC)
-      REAL(8)               :: A(NJ,NC)
-      REAL(8)               :: FF(NJ,NC)
+      REAL(8)               :: A(Nc,Nj),B(nc,NJ)
+      REAL(8)               :: cfac(nc,NJ)
       REAL(8)               :: SVAR,E
       REAL(8)               :: rns
       integer(4)            :: iphiscale  
@@ -6825,10 +6824,6 @@ PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib),' OLD ',ECOREin(IB),ECORE(IB)-ECOREin
         J=JP-1
 !
 !       == PREPARE INHOMOGENEITY ===============================================
-        if(jp.gt.1) then
-          G=G*REAL(J,KIND=8)
-          GSM=GSM*REAL(J,KIND=8)
-        end if
         IF(TSMALL) THEN
           AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
@@ -6838,17 +6833,17 @@ PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib),' OLD ',ECOREin(IB),ECORE(IB)-ECOREin
 !       == OBTAIN LARGE COMPONENT ==============================================
         if(jp.eq.1) then
           rns=rnsphi ! avoid spurious zeros near origin
-print*,'rout ',rout,' eofphi ',eofphi(jp) 
-         CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,.false. &
-     &                           ,DREL,G,0,AEPOT,Eofphi(jp),qn(:,jp))
-print*,'after eofphi ',eofphi(jp) 
+          e=eofphi(jp)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,.false. &
+     &                           ,DREL,G,0,AEPOT,E,qn(:,jp))
+          eofphi(jp)=e
           scale=1.d0/maxval(abs(qn(:,jp)))
           iphiscale=jp
         else
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,eofphi(jp),IDIR &
-                                                       ,QN(:,JP))
+          e=eofphi(jp)
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,e,IDIR,QN(:,JP))
         end if
-        TQN(:,JP)=G-(AEPOT*Y0-Eofphi(jp))*QN(:,JP)
+        TQN(:,JP)=G-(AEPOT*Y0-E)*QN(:,JP)
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
         IF(TSMALL) THEN
@@ -6860,8 +6855,8 @@ print*,'after eofphi ',eofphi(jp)
         END IF
 !
 !       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
-        G=QN(:,JP)
-        GSM=qNSM(:,JP)
+        G=-QN(:,JP)
+        GSM=-qNSM(:,JP)
       ENDDO
 !
 !     ==========================================================================
@@ -6878,9 +6873,9 @@ print*,'after eofphi ',eofphi(jp)
 !     ==========================================================================
 !     == CONSTRUCT QNDOT FUNCTION                                             ==
 !     ==========================================================================
-      G=QN(:,NJ)*REAL(NJ,KIND=8)
+      G=-QN(:,NJ)
       IF(TSMALL) THEN
-        GSM=QNSM(:,NJ)*REAL(J,KIND=8)
+        GSM=-QNSM(:,NJ)
         AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
         CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
         G=G-AUX1-(1.D0-KAPPA)/R*AUX
@@ -6912,20 +6907,20 @@ print*,'after eofphi ',eofphi(jp)
 !     ==========================================================================
 !     == MAKE ALL-ELECTRON PARTIAL WAVES                                      ==
 !     ==========================================================================
-!     == B(J+1,M)= PARTIAL_E^J 1/(ECORE(M)-E) = J!/(ECORE(M)-E)**(J+1) =====
+!     == B(m,J+1)= PARTIAL_E^J 1/(ECORE(M)-E) = 1/(ECORE(M)-E)**(J+1) =====
       DO M=1,NC  ! LOOP OVER CORE STATES
-        SVAR=1.D0/(ECORE(M)-ENU)
+        SVAR=1.D0/(ECORE(M)-enu)
         DO JP=1,NJ
-          B(JP,M)=SVAR
-          SVAR=SVAR*REAL(JP,KIND=8)/(ECORE(M)-ENU)
+          b(m,JP)=SVAR
+          SVAR=SVAR/(ECORE(M)-enu)
         ENDDO
       ENDDO
 !
-!     == A(J+1,M)=PARTIAL_E^{J} SUM_{K=M}^NC 1/(ECORE(M)-E) ====================
-!     ==        =SUM_{K=M}^NC B(J+1,K) =========================================
-      DO M=1,NC
-        DO JP=1,NJ
-          A(JP,M)=SUM(B(JP,M:))
+!     == A(m,J+1)=PARTIAL_E^{J} SUM_{K=M}^NC 1/(ECORE(M)-E) ====================
+!     ==        =SUM_{K=M}^NC B(k,J+1) =========================================
+      DO JP=1,NJ
+        DO M=1,NC
+          A(m,JP)=SUM(B(m:,jp))
         ENDDO
       ENDDO
 !
@@ -6933,25 +6928,25 @@ print*,'after eofphi ',eofphi(jp)
       SVAR=1.D0
       DO M=NC,1,-1
         SVAR=SVAR/(ECORE(M)-ENU)
-        FF(1,M)=SVAR     !FF_{1,M}=PROD_{I=M}^{NC} 1/(ECORE(I)-ENU)
+        cfac(m,1)=SVAR     !cfac_{1,M}=PROD_{I=M}^{NC} 1/(ECORE(I)-ENU)
       ENDDO
       DO JP=2,NJ
         J=JP-1
-        FF(JP,:)=0.D0
+        Cfac(:,JP)=0.D0
         DO K=0,J-1
-          CALL BINOMIALCOEFFICIENT(J-1,K,SVAR) !(J-1)!/( K! (J-K-1)! )
-          FF(JP,:)=FF(JP,:)+SVAR*A(K+1,:)*FF(JP-K-1,:)
+          cfac(:,JP)=cfac(:,JP)+A(:,K+1)*cfac(:,JP-K-1)
         ENDDO
+        cfac(:,jp)=cfac(:,jp)/real(j,kind=8)
       ENDDO
 !     == INCLUDE CORE STATES ===================================================
-      AEPHI  =     QN+MATMUL(   UCORE,TRANSPOSE(FF))
-      TAEPHI =    TQN+MATMUL(  TUCORE,TRANSPOSE(FF))
-      AEPHISM=   QNSM+MATMUL( UCORESM,TRANSPOSE(FF))
+      AEPHI  =     QN+MATMUL(   UCORE,CFAC)
+      TAEPHI =    TQN+MATMUL(  TUCORE,CFAC)
+      AEPHISM=   QNSM+MATMUL( UCORESM,CFAC)
 !     == here it is not clear whether it is better to 
 !     ==  include the psuedocore or not
-      psPHI  =  psphi+MATMUL(  psCORE,TRANSPOSE(FF))
-      TpsPHI = Tpsphi+MATMUL( TpsCORE,TRANSPOSE(FF))
-      psPHIsm=psphism+MATMUL(psCOREsm,TRANSPOSE(FF))
+      psPHI  =  psphi+MATMUL(  psCORE,CFAC)
+      TpsPHI = Tpsphi+MATMUL( TpsCORE,CFAC)
+      psPHIsm=psphism+MATMUL(psCOREsm,CFAC)
 !
 !     ==========================================================================
 !     == rescale consistently                                                 ==
