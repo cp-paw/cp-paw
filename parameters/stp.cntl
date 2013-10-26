@@ -3234,6 +3234,15 @@
    !CORE POW=3.   RC/RCOV=0.67 !END
  !END
 
+ !SETUP  ID='SI_TEST_MY' EL='SI' ZV= 4.
+         TYPE='HBS' RBOX/RCOV=2.86 RCSM/RCOV=0.25
+         RCL/RCOV= 0.75 0.75 0.75 0.75
+         LAMBDA= 6. 6. 6. 6.
+   !GRID DMIN=1.E-6 DMAX=0.1 RMAX= 9. !END
+   !POT  POW=3.  RC/RCOV=0.67 !END
+   !CORE POW=3.  RC/RCOV=0.67 !END
+ !END
+
 !End
 !EOB
 

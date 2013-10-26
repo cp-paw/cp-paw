@@ -6656,7 +6656,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
       real(8)   ,parameter  :: rnscore=0.07d0
       real(8)   ,parameter  :: rnsphi=0.09d0
-      INTEGER(4),PARAMETER  :: SWITCH=1 ! BIORTHOGONALIZATION METHOD
+      INTEGER(4),PARAMETER  :: SWITCH=2 ! BIORTHOGONALIZATION METHOD
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
       LOGICAL(4)            :: TZORA    ! ZEROTH-ORDER RELATIVISTIC EFFECTS
@@ -6680,10 +6680,11 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       REAL(8)               :: PI,Y0
       REAL(8)               :: A(Nc,Nj),B(nc,NJ)
       REAL(8)               :: cfac(nc,NJ)
-      REAL(8)               :: SVAR,E
+      REAL(8)               :: SVAR,svar1,svar2
       REAL(8)               :: rns
       integer(4)            :: iphiscale  
       REAL(8)               :: scale  
+      REAL(8)               :: e
       REAL(8)               :: enu   !  max(eofphi)
       INTEGER(4)            :: ircl ! grid point beyond classical turning point
       INTEGER(4)            :: JP,J,IR,K,M,I,IB
@@ -6831,7 +6832,8 @@ PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib),' OLD ',ECOREin(IB),ECORE(IB)-ECOREin
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
-        if(jp.eq.1) then
+!        if(jp.eq.1) then
+        if(jp.gt.0) then
           rns=rnsphi ! avoid spurious zeros near origin
           e=eofphi(jp)
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,.false. &
@@ -6905,48 +6907,22 @@ PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib),' OLD ',ECOREin(IB),ECORE(IB)-ECOREin
       CALL SETUPS_MAKEPSPHI_MINE(GID,NR,RC,L,PSPHI,TPSPHI)
 !
 !     ==========================================================================
-!     == MAKE ALL-ELECTRON PARTIAL WAVES                                      ==
+!     == core-orthogonalization
 !     ==========================================================================
-!     == B(m,J+1)= PARTIAL_E^J 1/(ECORE(M)-E) = 1/(ECORE(M)-E)**(J+1) =====
-      DO M=1,NC  ! LOOP OVER CORE STATES
-        SVAR=1.D0/(ECORE(M)-enu)
-        DO JP=1,NJ
-          b(m,JP)=SVAR
-          SVAR=SVAR/(ECORE(M)-enu)
-        ENDDO
-      ENDDO
-!
-!     == A(m,J+1)=PARTIAL_E^{J} SUM_{K=M}^NC 1/(ECORE(M)-E) ====================
-!     ==        =SUM_{K=M}^NC B(k,J+1) =========================================
-      DO JP=1,NJ
-        DO M=1,NC
-          A(m,JP)=SUM(B(m:,jp))
-        ENDDO
-      ENDDO
-!
-!     == FF(J+1,M)=PARTIAL_\EPSILON^J PROD_{K=M}^NC 1/(ECORE(K)-E) =============
-      SVAR=1.D0
-      DO M=NC,1,-1
-        SVAR=SVAR/(ECORE(M)-ENU)
-        cfac(m,1)=SVAR     !cfac_{1,M}=PROD_{I=M}^{NC} 1/(ECORE(I)-ENU)
-      ENDDO
-      DO JP=2,NJ
-        J=JP-1
-        Cfac(:,JP)=0.D0
-        DO K=0,J-1
-          cfac(:,JP)=cfac(:,JP)+A(:,K+1)*cfac(:,JP-K-1)
-        ENDDO
-        cfac(:,jp)=cfac(:,jp)/real(j,kind=8)
-      ENDDO
-!     == INCLUDE CORE STATES ===================================================
-      AEPHI  =     QN+MATMUL(   UCORE,CFAC)
-      TAEPHI =    TQN+MATMUL(  TUCORE,CFAC)
-      AEPHISM=   QNSM+MATMUL( UCORESM,CFAC)
-!     == here it is not clear whether it is better to 
-!     ==  include the psuedocore or not
-      psPHI  =  psphi+MATMUL(  psCORE,CFAC)
-      TpsPHI = Tpsphi+MATMUL( TpsCORE,CFAC)
-      psPHIsm=psphism+MATMUL(psCOREsm,CFAC)
+      aephi=qn
+      taephi=tqn
+      aephism=qnsm
+      do i=nc,1,-1
+        aux(:)=r**2*(ucore(:,i)*ucore(:,i)+ucoresm(:,i)*ucoresm(:,i))
+        call radial$integral(gid,nr,aux,svar1)
+        do jp=1,nj
+          aux(:)=r**2*(ucore(:,i)*aephi(:,jp)+ucoresm(:,i)*aephism(:,jp))/svar1
+          call radial$integral(gid,nr,aux,svar2)
+          aephi(:,jp)=aephi(:,jp)-ucore(:,i)*svar2
+          taephi(:,jp)=taephi(:,jp)-tucore(:,i)*svar2
+          aephism(:,jp)=aephism(:,jp)-ucoresm(:,i)*svar2
+        enddo
+      enddo
 !
 !     ==========================================================================
 !     == rescale consistently                                                 ==
@@ -7003,48 +6979,19 @@ call radial$value(gid,nr,aux1,3.7983493397406152d0,scale)
       DO JP=2,NJ
         PRO(:,JP)=(PSPOT-AEPOT)*Y0*QN(:,JP)
       ENDDO
-      if(nj.ge.2) PRO(:,2)=PRO(:,2)-(PSPHI(:,1)-QN(:,1))  !-|k>
+      if(nj.ge.2) PRO(:,2)=PRO(:,2)+(PSPHI(:,1)-QN(:,1))  ! |k>
 !
 !     ==========================================================================
 !     == UNBARE PROJECTOR FUNCTIONS                                           ==
 !     ==========================================================================
-      IF(SWITCH.EQ.0) THEN
-      ELSE IF(SWITCH.EQ.1) THEN
-        DO JP=1,NJ
-          DO J=1,NJ
-            AUX(:)=R(:)**2*PSPHI(:,J)*PRO(:,JP)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,MAT(J,JP))
-          ENDDO
-        ENDDO        
-        CALL LIB$INVERTR8(NJ,MAT,MATINV)
-        PRO(:,:)=MATMUL(PRO,MATINV)
-      ELSE IF(SWITCH.EQ.2) THEN
-        DO I=1,50
-        DO JP=1,NJ
-!         == ORTHOGONALIZE PARTIAL WAVE ========================================
-          DO J=1,JP-1
-            AUX(:)=R(:)**2*PRO(:,J)*PSPHI(:,JP)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-            PSPHI(:,JP) = PSPHI(:,JP)- PSPHI(:,J)*SVAR
-            TPSPHI(:,JP)=TPSPHI(:,JP)-TPSPHI(:,J)*SVAR
-            AEPHI(:,JP) = AEPHI(:,JP)- AEPHI(:,J)*SVAR
-            TAEPHI(:,JP)=TAEPHI(:,JP)-TAEPHI(:,J)*SVAR
-          ENDDO
-!
-!         == ORTHOGONALIZE PROJECTOR FUNCTION ==================================
-          DO J=1,JP-1
-            AUX(:)=R(:)**2*PSPHI(:,J)*PRO(:,JP)
-            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-            PRO(:,JP)=PRO(:,JP)-PRO(:,J)*SVAR
-          ENDDO
-!
-!         == NORMALIZE =========================================================
-          AUX(:)=R(:)**2*PSPHI(:,JP)*PRO(:,JP)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
-          PRO(:,JP)=PRO(:,JP)/SVAR
+      DO JP=1,NJ
+        DO J=1,NJ
+          AUX(:)=R(:)**2*PSPHI(:,J)*PRO(:,JP)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,MAT(J,JP))
         ENDDO
-        ENDDO
-      END IF
+      ENDDO        
+      CALL LIB$INVERTR8(NJ,MAT,MATINV)
+      PRO(:,:)=MATMUL(PRO,MATINV)
 !
 !     ==========================================================================
 !     == CALCULATE DOVER AND DTKIN                                            ==
