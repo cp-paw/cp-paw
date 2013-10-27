@@ -3135,8 +3135,8 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
             IF(LOFI(IB).NE.L) CYCLE
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,ROUT,TVARDREL,DREL,G,0,AEPOT &
-     &                               ,E,UOFI(:,IB))
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.d0,ROUT,TVARDREL &
+     &                             ,DREL,G,0,AEPOT,E,UOFI(:,IB))
             IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
      &                                         ,DREL,GS,UOFI(:,IB),UOFISM(:,IB))
@@ -3205,7 +3205,7 @@ PRINT*,'EOFI1 ',EOFI1
             PHIPHASE=1.D0   ! NODE AT ROUT
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
-            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND,PHIPHASE)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND,PHIPHASE)
 !           == FIX SIZE OF FIRST PARTIAL WAVE ABOUT EQUAL TO UOFI   ============
             IF(NCL(L).EQ.0) THEN
               DO IR1=1,NR
@@ -4105,8 +4105,8 @@ GOTO 10001
 !         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
 !         ======================================================================
           G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,ROUT,TVARDREL,DREL,G,NNOFI(IB),AEPOT &
-       &                             ,E,AEPSIF(:,IB-NC))
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.d0,ROUT,TVARDREL &
+       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
        &                              ,ROUT,E,AEPSIF(:,IB-NC))
           SVAR1=E
@@ -4772,7 +4772,7 @@ GOTO 10001
           END IF
           G(:)=0.D0          
           CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOM%AEPOT,DREL,0,G,L,E,1,PHI)
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,AEPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,AEPHASE(L+1,IE))
           IF(NPRO.GT.0) THEN
             G(:)=0.D0          
             CALL ATOMLIB_PAWDER(GID,NR,L,E,THIS%PSPOT,NPRO,PRO,DH,DO,G,PHI)
@@ -4781,7 +4781,7 @@ GOTO 10001
             DREL(:)=0.D0
             CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%PSPOT,DREL,0,G,L,E,1,PHI)
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RCOV,PAWPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,PAWPHASE(L+1,IE))
           PAWPHASE(L+1,IE)=PAWPHASE(L+1,IE)+DPHASE
         ENDDO
         DEALLOCATE(DH)
@@ -5288,7 +5288,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !       ==  CORRECT FOR NODES LYING WITHIN 0.3. THEY CAN OCCUR                ==
 !       ==  WITH A (NONLOCAL) FOCK POTENTIAL AND UPSET THE FORMALISM          ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),RBND2,PHIPHASE)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),0.d0,RBND2,PHIPHASE)
 PRINT*,'L ',L,' E=',E,'PHIPHASE BEFORE ADJUSTMENT= ',PHIPHASE
         DO IR=1,IRBND
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
@@ -5318,7 +5318,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
             CALL ERROR$MSG('OVERFLOW OF WAVE FUNCTION ENCOUNTERED')
             CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RBND2,Z0)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND2,Z0)
           Z0=PHIPHASE-Z0
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
@@ -5473,7 +5473,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !     ==========================================================================
 !     == DETERMINE OFFSET IN THE NUMBER OF NODES                              ==
 !     ==========================================================================
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),RC,SHIFT)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),0.d0,RC,SHIFT)
       OFFSETNN=REAL(INT(SHIFT),KIND=8)
 !     
 !     ==========================================================================
@@ -5483,7 +5483,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !       ========================================================================
 !       == DETERMINE K-VALUES FOR WHICH THE LOGARITHIC DERIVATIVE MATCHES     ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),RC,SHIFT)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),0.d0,RC,SHIFT)
         SHIFT=SHIFT-OFFSETNN
         IF(SHIFT.LT.PHASE(1)) THEN
           CALL ERROR$MSG('MATCHING INCLUDING FIRST BESSEL FUNCTION NOT POSSIBLE')
