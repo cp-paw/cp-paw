@@ -2984,10 +2984,10 @@ call trace$pass('before pop in setup_read_new')
       LOGICAL   ,PARAMETER  :: TTEST=.false.
       LOGICAL   ,PARAMETER  :: TWRITE=.false.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
-      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
+      LOGICAL(4),PARAMETER  :: Tnew=.true.
+      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.not.tnew
       LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.false.
       LOGICAL(4),PARAMETER  :: Tcuttail=.true.
-      LOGICAL(4),PARAMETER  :: Tnew=.true.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3124,17 +3124,7 @@ print*,'pow ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !     ==========================================================================
 !     == alternate PROJECTOR CONSTRUCTION                                     ==
 !     ==========================================================================
-      IF(TNEW) THEN
-!!$        CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
-!!$      &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT &
-!!$      &                   ,QN,AEPHI,PSPHI,PRO,DT,DOVER)
-!!$        NLPHI=QN
-!!$        PSPHIDOT=0.D0
-!!$        AEPHIDOT=0.D0
-!!$        EOFLN=0.D0
-!!$        ESCATT=0.D0
-!!$        GOTO 2000
-      END IF
+      IF(TNEW) GOTO 2000
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS WAVE FUNCTIONS (LOCAL POTENTIAL ONLY)             ==
@@ -4095,18 +4085,18 @@ GOTO 10001
 !!$        enddo
 !
         CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
-      &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT &
+      &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,vfock &
       &                   ,QN,AEPHI,PSPHI,PRO,DT,DOVER)
+        eofi1=eofi
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
         EOFLN=0.D0
         ESCATT=0.D0
-!
-        CALL SETUP_WRITEPHI(-'new_pro',GID,NR,lnx,pro)
-        CALL SETUP_WRITEPHI(-'new_qn',GID,NR,lnx,qn)
-        CALL SETUP_WRITEPHI(-'new_aephi',GID,NR,lnx,aephi)
-        CALL SETUP_WRITEPHI(-'new_psphi',GID,NR,lnx,psphi)
+        IF(TSEQUENTIALAUGMENT) THEN
+          CALL ERRRO$MSG('TSEQUENTIALAUGMENT=.TRUE. INCOMPATIBLE WITH NEW PRO')
+          CALL ERRRO$STOP('SETUP_MAKEPARTIALWAVES')
+        END IF
 !
 !       == calculate dh =======================================================
         do ln1=1,lnx
@@ -4133,6 +4123,10 @@ GOTO 10001
         do ln1=1,lnx
           write(*,fmt='(a,100e10.3)')'dover',dover(ln1,:)
         enddo
+        CALL SETUP_WRITEPHI(-'new_pro',GID,NR,lnx,pro)
+        CALL SETUP_WRITEPHI(-'new_qn',GID,NR,lnx,qn)
+        CALL SETUP_WRITEPHI(-'new_aephi',GID,NR,lnx,aephi)
+        CALL SETUP_WRITEPHI(-'new_psphi',GID,NR,lnx,psphi)
       END IF
 !
 !     ==========================================================================
@@ -6192,11 +6186,12 @@ PRINT*,'KI ',KI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       subroutine setups_outernewprowrapper(gid,nr,rout &
-     &                   ,nb,nc,lofi,sofi,eofi,lnx,lox,rc,aepot,pspot &
+     &                   ,nb,nc,lofi,sofi,eofi,lnx,lox,rc,aepot,pspot,vfock &
      &                   ,g_qnphi,g_aephi,g_psphi,g_pro,g_dtkin,g_dover)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
+      USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: GID    ! GRID ID
@@ -6212,6 +6207,7 @@ PRINT*,'KI ',KI
       real(8)   ,intent(in)  :: rc(lnx)  !only the first per l is used!!
       real(8)   ,intent(in)  :: aepot(nr)
       real(8)   ,intent(in)  :: pspot(nr)
+      TYPE(VFOCK_TYPE),intent(in) :: VFOCK
 
       real(8)   ,intent(out) :: g_qnphi(nr,lnx)
       real(8)   ,intent(out) :: g_aephi(nr,lnx)
@@ -6345,7 +6341,7 @@ print*,'ec       ',ec
 print*,'eofphi   ',eofphi
 print*,'-----------------------------------------------------'
           CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NCl,NPHI,RCl,eofphi,EC &
-     &                  ,AEPOT,PSPOT &
+     &                  ,AEPOT,PSPOT,vfock &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
@@ -6430,7 +6426,7 @@ print*,'... setups_outernewprowrapper finished'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,Eofphi &
-     &                        ,ECOREin,AEPOT,PSPOT &
+     &                        ,ECOREin,AEPOT,PSPOT,vfock &
      &                        ,UCORE,aecore,pscore,QN,AEPHI,PSPHI,QNDOT &
      &                        ,UCORESM,aecoresm,pscoresm,QNSM,AEPHISM,psphism &
      &                        ,PRO,DTKIN,DOVER)
@@ -6450,6 +6446,7 @@ print*,'... setups_outernewprowrapper finished'
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE STRINGS_MODULE
+      USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: RELTYPE ! SELECTOR FOR RELATIVISTIC TREATMENT
       INTEGER(4),INTENT(IN) :: GID       ! GRID ID
@@ -6464,6 +6461,7 @@ print*,'... setups_outernewprowrapper finished'
       REAL(8)   ,INTENT(IN) :: ECOREin(NC) ! CORE LEVEL ENERGIES
       REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
       REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
+      TYPE(VFOCK_TYPE),intent(in) :: VFOCK
 !
       REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)  ! nodeless CORE WAVE FUNCTIONS
       REAL(8)   ,INTENT(OUT):: aeCORE(NR,NC) ! all-electron CORE WAVE FUNCTIONS
@@ -6599,6 +6597,7 @@ print*,'... setups_outernewprowrapper finished'
           CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
           drel(ircl:)=0.d0
         end if
+!
 !       == PREPARE INHOMOGENEITY ===============================================
         IF(TSMALL) THEN
           AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
@@ -6691,6 +6690,98 @@ print*,'... setups_outernewprowrapper finished'
         G=-QN(:,JP)
         GSM=-qNSM(:,JP)
       ENDDO
+!
+!     ==========================================================================
+!     == UPDATE WAVE FUNCTIONS WITH FOCK POTENTIAL                            ==
+!     == THE FOCK CORRECTION MUST
+!     ==========================================================================
+      IF(VFOCK%TON) THEN
+        G(:)=0.D0
+        GSM(:)=0.D0
+        DO IB=1,NC
+          E=ECORE(IB)
+          IF(TREL.AND.(.NOT.TZORA)) THEN
+            CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+            DREL(IRCL:)=0.D0
+          END IF
+!
+!         == PREPARE INHOMOGENEITY =============================================
+          IF(TSMALL) THEN
+            AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
+            CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+            AUX=AUX1+(1.D0-KAPPA)/R*AUX  
+            AUX(1)=AUX(2)
+            G=G-AUX !GSM=-FSM(IB-1)
+          END IF
+!
+!         == OBTAIN LARGE COMPONENT ============================================
+          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,SO,DREL,G,AEPOT,VFOCK &
+     &                                    ,ROUT,E,UCORE(:,IB))
+          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,UCORE(:,IB),AUX)
+          TUcore(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)-AUX(:)
+          ECORE(IB)=E
+!
+!         == CONSTRUCT SMALL COMPONENT =========================================
+          IF(TSMALL) THEN
+            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
+     &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
+            UCORESM(IRCL:,IB)=0.D0
+          ELSE
+            UcoreSM(:,IB)=0.D0
+          END IF
+!
+!         == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ================
+          G(:) =-Ucore(:,IB) 
+          GSm(:)=-UcoreSM(:,IB) 
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == UPDATE NODELESS PARTIAL WAVES WITH FOCK POTENTIAL                    ==
+!     ==========================================================================
+      IF(VFOCK%TON) THEN
+        IF(TREL) then
+          CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+          drel(ircl:)=0.d0
+        end if
+        G(:)=0.D0
+        Gsm(:)=0.D0
+        IF(NC.NE.0) then
+          G(:)=Ucore(:,NC)
+          Gsm(:)=Ucoresm(:,NC)
+        end if
+        DO jp=1,nj
+!
+!         == PREPARE INHOMOGENEITY =============================================
+          IF(TSMALL) THEN
+            AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
+            CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+            G=G-AUX1-(1.D0-KAPPA)/R*AUX
+          END IF
+!
+!         == OBTAIN LARGE COMPONENT ============================================
+          rns=rnsphi ! avoid spurious zeros near origin
+          e=eofphi(jp)
+          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,SO,DREL,G,AEPOT,VFOCK &
+    &                                    ,ROUT,E,qn(:,jp))
+          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,qn(:,jp),AUX)
+          Tqn(:,jp)=G(:)+(E-AEPOT(:)*Y0)*qn(:,jp)-AUX(:)
+          eofphi(jp)=e
+!
+!         == CONSTRUCT SMALL COMPONENT =========================================
+          IF(TSMALL) THEN
+            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
+     &                                      ,DREL,GSM,QN(:,JP),QNSM(:,JP))
+            qnsm(ircl:,jp)=0.d0
+          ELSE
+            QNSM(:,JP)=0.D0
+          END IF
+!
+!         == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ================
+          G(:)=-qn(:,jp)
+          Gsm(:)=-qnsm(:,jp)
+        ENDDO
+      END IF
 !
 !     ==========================================================================
 !     == rescale consistently                                                 ==
