@@ -469,6 +469,31 @@ END MODULE PDOS_MODULE
       END
 !
 !     ..................................................................
+      SUBROUTINE PDOS$SETCHA(ID,LEN,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      CHARACTER(16),INTENT(IN):: VAL(LEN)
+!     ******************************************************************
+      IF(ID.EQ.'ATOMID') THEN
+        IF(LEN.NE.NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$SETCHA')
+        END IF
+        IF(.NOT.ALLOCATED(ATOMID)) ALLOCATE(ATOMID(NAT))
+        ATOMID(:)=VAL(:)
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$SETCHA')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE PDOS$READ(NFIL)
 !     ******************************************************************
 !     **  WAVES$GET                                                   **
@@ -583,13 +608,14 @@ END MODULE PDOS_MODULE
       INTEGER(4),INTENT(IN)  :: NFIL
       INTEGER(4)             :: ISP,IKPT,ISPIN,IB
       INTEGER(4)             :: LNX1,NB
+      CHARACTER(32)          :: FLAG='011004'
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
 !     ==================================================================
-      WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
+      WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
 !
 !     ==================================================================
@@ -605,21 +631,48 @@ END MODULE PDOS_MODULE
         WRITE(NFIL)IZ(ISP),RAD(ISP),PHIOFR(1:LNX1,ISP) &
      &            ,DPHIDR(1:LNX1,ISP),OV(1:LNX1,1:LNX1,ISP)
       ENDDO
+!!
+!!     ==================================================================
+!!     ==  NOW WRITE PROJECTIONS                                       ==
+!!     ==================================================================
+!      DO IKPT=1,NKPT
+!        DO ISPIN=1,NSPIN
+!          STATE=>STATEARR(IKPT,ISPIN)
+!          NB=STATE%NB
+!          WRITE(NFIL)XK(:,IKPT),NB
+!          DO IB=1,NB
+!            WRITE(NFIL)STATE%EIG(NB),STATE%VEC(:,:,IB)
+!          ENDDO
+!        ENDDO
+!      ENDDO
+                             CALL TRACE$POP
+      RETURN
+      END
 !
-!     ==================================================================
-!     ==  NOW WRITE PROJECTIONS                                       ==
-!     ==================================================================
-      DO IKPT=1,NKPT
-        DO ISPIN=1,NSPIN
-          STATE=>STATEARR(IKPT,ISPIN)
-          NB=STATE%NB
-          WRITE(NFIL)XK(:,IKPT),NB
-          DO IB=1,NB
-            WRITE(NFIL)STATE%EIG(NB),STATE%VEC(:,:,IB)
-          ENDDO
-        ENDDO
+!     ..................................................................
+      SUBROUTINE PDOS$WRITEK(NFIL,XK,NB,NDIM,NPRO,WKPT,EIG,OCC,VECTOR)
+!     ******************************************************************
+!     **  WRITE EIG,OCC,PROJ FOR ONE KPOINT                           **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)        :: NFIL
+      REAL(8)   ,INTENT(IN)        :: XK(3)
+      INTEGER(4),INTENT(IN)        :: NB
+      INTEGER(4),INTENT(IN)        :: NDIM
+      INTEGER(4),INTENT(IN)        :: NPRO
+      REAL(8)   ,INTENT(IN)        :: WKPT
+      REAL(8)   ,INTENT(IN)        :: EIG(NB)
+      REAL(8)   ,INTENT(IN)        :: OCC(NB)
+      COMPLEX(8),INTENT(IN)        :: VECTOR(NDIM,NPRO,NB)
+      INTEGER(4)                   :: IB1
+!     ******************************************************************
+                             CALL TRACE$PUSH('PDOS$WRITEK')
+      WRITE(NFIL)XK,NB,wkpt
+      DO IB1=1,NB
+        WRITE(NFIL)EIG(IB1),OCC(IB1),VECTOR(:,:,IB1)
       ENDDO
                              CALL TRACE$POP
       RETURN
       END
+
 

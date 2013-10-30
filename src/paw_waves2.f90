@@ -2575,22 +2575,23 @@ print*,'a     ',(a(i,i),i=1,nb)
       NAT=MAP%NAT
       NPRO=MAP%NPRO
       LNXX=MAP%LNXX
-! THE SETTING OF PDOS DOES SEEM REDUNDANT. IT IS WRITTEN HERE....
-!!$      CALL PDOS$SETI4('NAT',NAT)
-!!$      CALL PDOS$SETI4('NSP',NSP)
-!!$      CALL PDOS$SETI4('NKPT',NKPT)
-!!$      CALL PDOS$SETI4('NSPIN',NSPIN)
-!!$      CALL PDOS$SETI4('NDIM',NDIM)
-!!$      CALL PDOS$SETI4('NPRO',NPRO)
-!!$      CALL PDOS$SETI4('LNXX',LNXX)
-!!$      CALL PDOS$SETI4A('LNX',NSP,MAP%LNX)
-!!$      CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
-!!$      CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
+      
+      CALL PDOS$SETI4('NAT',NAT)
+      CALL PDOS$SETI4('NSP',NSP)
+      CALL PDOS$SETI4('NKPT',NKPT)
+      CALL PDOS$SETI4('NSPIN',NSPIN)
+      CALL PDOS$SETI4('NDIM',NDIM)
+      CALL PDOS$SETI4('NPRO',NPRO)
+      CALL PDOS$SETI4('LNXX',LNXX)
+      CALL PDOS$SETI4A('LNX',NSP,MAP%LNX)
+      CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
+      CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
+
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('PDOS',NFIL)
         REWIND NFIL
-        WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
-        WRITE(NFIL)MAP%LNX(:),MAP%LOX(:,:),MAP%ISP(:)
+        !WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
+        !WRITE(NFIL)MAP%LNX(:),MAP%LOX(:,:),MAP%ISP(:)
       END IF
 !
 !     ==================================================================
@@ -2601,12 +2602,15 @@ print*,'a     ',(a(i,i),i=1,nb)
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
       CALL ATOMLIST$GETCHA('NAME',0,NAT,ATOMID)
-!!$      CALL PDOS$SETR8A('RBAS',9,RBAS)
-!!$      CALL PDOS$SETR8A('R',3*NAT,R)
-      IF(THISTASK.EQ.1) THEN
-        WRITE(NFIL)RBAS,R,ATOMID
-      END IF
-      DEALLOCATE(ATOMID)
+
+      CALL PDOS$SETR8A('RBAS',9,RBAS)
+      CALL PDOS$SETR8A('R',3*NAT,R)
+      CALL PDOS$SETCHA('ATOMID',NAT,ATOMID)
+
+!      IF(THISTASK.EQ.1) THEN
+!        WRITE(NFIL)RBAS,R,ATOMID
+!      END IF
+!      DEALLOCATE(ATOMID)
 !
 !     ==================================================================
 !     == ELEMENT SPECIFIC QUANTITIES                                  ==
@@ -2646,26 +2650,30 @@ print*,'a     ',(a(i,i),i=1,nb)
             OV(LN2,LN1,ISP)=OV(LN1,LN2,ISP)
           ENDDO
         ENDDO
-        IF(THISTASK.EQ.1) THEN
-          WRITE(NFIL)IZ(ISP),RAD(ISP),VAL(1:LNX,ISP),DER(1:LNX,ISP) &
-     &              ,OV(1:LNX,1:LNX,ISP)
-        END IF
+!        IF(THISTASK.EQ.1) THEN
+!          WRITE(NFIL)IZ(ISP),RAD(ISP),VAL(1:LNX,ISP),DER(1:LNX,ISP) &
+!     &              ,OV(1:LNX,1:LNX,ISP)
+!        END IF
         DEALLOCATE(RI)
         DEALLOCATE(WORK)
         DEALLOCATE(WORK1)
         DEALLOCATE(AEPHI)
       ENDDO
-!!$      CALL PDOS$SETI4A('IZ',NSP,IZ)
-!!$      CALL PDOS$SETR8A('RAD',NSP,RAD)
-!!$      CALL PDOS$SETR8A('PHI',LNXX*NSP,VAL)
-!!$      CALL PDOS$SETR8A('DPHIDR',LNXX*NSP,DER)
-!!$      CALL PDOS$SETR8A('OVERLAP',LNXX*LNXX*NSP,OV)
+      CALL PDOS$SETI4A('IZ',NSP,IZ)
+      CALL PDOS$SETR8A('RAD',NSP,RAD)
+      CALL PDOS$SETR8A('PHI',LNXX*NSP,VAL)
+      CALL PDOS$SETR8A('DPHIDR',LNXX*NSP,DER)
+      CALL PDOS$SETR8A('OVERLAP',LNXX*LNXX*NSP,OV)
       DEALLOCATE(VAL)
       DEALLOCATE(IZ)
       DEALLOCATE(RAD)
       DEALLOCATE(DER)
       DEALLOCATE(OV)
       DEALLOCATE(LOX)
+
+      IF(THISTASK.EQ.1) THEN
+        CALL PDOS$WRITE(NFIL)
+      ENDIF
 !
 !     ==================================================================
 !     ==  NOW WRITE PROJECTIONS                                       ==
@@ -2677,7 +2685,9 @@ print*,'a     ',(a(i,i),i=1,nb)
       CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
       ALLOCATE(wkpt(NKPT))
       CALL DYNOCC$GETR8A('WKPT',NKPT,WKPT)
-!!$      CALL PDOS$SETR8A('XK',3*NKPT,XK)
+
+      CALL PDOS$SETR8A('XK',3*NKPT,XK)
+
       IKPT=0    ! IKPT IS THE K-POINT INDEX LOCAL TO MPE-GROUP K
       DO IKPTG=1,NKPT
         TKGROUP=THISTASK.EQ.KMAP(IKPTG)
@@ -2782,16 +2792,18 @@ print*,'a     ',(a(i,i),i=1,nb)
 !         == ARE ALREADY IN TASK 1.                                     ==
 !         ================================================================
           IF(THISTASK.EQ.1) THEN
-            WRITE(NFIL)XK(:,IKPTG),NB,wkpt(ikptg)
-            DO IB1=1,NB
-              IF(FLAG.EQ.'011004') THEN
-!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPTg,ISPIN),VECTOR1(:,:,ib1)
-              ELSE
-!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
-              END IF
-            ENDDO
+            !WRITE(NFIL)XK(:,IKPTG),NB,wkpt(ikptg)
+            CALL PDOS$WRITEK(NFIL,XK(:,IKPTG),NB,NDIM,NPRO,&
+      &              WKPT(IKPTG),EIG,OCC(:,IKPTG,ISPIN),VECTOR1(:,:,:))
+!            DO IB1=1,NB
+!              IF(FLAG.EQ.'011004') THEN
+!!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+!                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPTg,ISPIN),VECTOR1(:,:,ib1)
+!              ELSE
+!!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
+!                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
+!              END IF
+!            ENDDO
             DEALLOCATE(EIG)
             DEALLOCATE(VECTOR1)
           END IF
