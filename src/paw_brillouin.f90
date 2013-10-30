@@ -3380,7 +3380,7 @@ END MODULE SPACEGROUP_MODULE
         C2F(:,1)=(/-1,0,0/); C2F(:,2)=(/0,0,-1/); C2F(:,3)=(/0,-1,0/)
       ELSE
         CALL ERROR$MSG('LATTICE SYMBOL NOT RECOGNIZED')
-        CALL ERROR$STOP('XXX')
+        CALL ERROR$STOP('SPACEGROUP$GENERATORS')
       END IF
 !
 !     ==========================================================================
