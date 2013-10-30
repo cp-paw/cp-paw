@@ -168,6 +168,13 @@
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+
+      ID=+'PDOSOUT'
+      CALL FILEHANDLER$SETFILE(ID,T,-'.PDOSOUT')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
                                    CALL TRACE$POP
       RETURN
       END SUBROUTINE STANDARDFILES_BANDS
@@ -1665,7 +1672,10 @@ END MODULE
       INTEGER(4)                   :: I,J,I1,I2,IE,ISPIN
 
       REAL(8)      ,ALLOCATABLE    :: BK(:,:)
+      REAL(8)      ,ALLOCATABLE    :: XK(:,:)
+      REAL(8)                      :: RBASINV(3,3)
       REAL(8),ALLOCATABLE          :: EB(:,:)
+      REAL(8),ALLOCATABLE          :: EBTMP(:,:)
       REAL(8),ALLOCATABLE          :: WGHT(:,:)
       TYPE(EWGHT_TYPE),allocatable :: EWGHT(:,:)
       REAL(8),ALLOCATABLE          :: A(:,:)
@@ -1702,6 +1712,8 @@ END MODULE
       REAL(8)                      :: C(3,NOPX)
       INTEGER(4)                   :: ISYM
       LOGICAL(4)                   :: TSHIFT
+
+      INTEGER(4)                   :: NFILOUT,NFILIN
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
 !     **************************************************************************
@@ -1759,14 +1771,14 @@ END MODULE
       ENDIF
 
       !FIXME: TO BE READ FROM BCNTL/DCNTL
-      NKDIV(1)=10
-      NKDIV(2)=10
-      NKDIV(3)=1
+      NKDIV(1)=20
+      NKDIV(2)=20
+      NKDIV(3)=20
       ISHIFT(1)=0
       ISHIFT(2)=0
       ISHIFT(3)=0
-      NB=20
-      EPW=0.5D0*15.D0
+      NB=10
+      !EPW=0.5D0*15.D0
       TPROJ=.FALSE.
       IF(NSPIN.eq.1)THEN
         RNTOT=0.5D0*NEL
@@ -1786,7 +1798,7 @@ END MODULE
       METHOD_DIAG=2
       NE=1000
       TUSESYM=.false.
-      SPACEGROUP=225
+      SPACEGROUP=229
       TSHIFT=.FALSE. 
 
 
@@ -1836,10 +1848,16 @@ END MODULE
 !     ==  CALCULATE ENERGIES AT THE IRREDUCIBLE K-POINTS                      ==
 !     ==========================================================================
       CALL BRILLOUIN$GETI4('NK',NKP)
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
       IF(TPRINT)write(*,*)' NKP nach BRILLOUIN$GETI4',NKP  
       ALLOCATE(BK(3,NKP))
+      ALLOCATE(XK(3,NKP))
       CALL BRILLOUIN$GETR8A('K',3*NKP,BK)
-      
+
+      CALL LIB$INVERTR8(3,RBAS,RBASINV)
+      XK=MATMUL(RBASINV,BK)
 
 !
 !     =========================================================================
@@ -1850,7 +1868,7 @@ END MODULE
       ALLOCATE(WGHT(NB*NSPIN,NKP))
       
       IF(TPROJ)THEN
-        ALLOCATE(PROJK(NAT,NB,LMNXX,IKP))
+        ALLOCATE(PROJK(NAT,NB*NSPIN,LMNXX,IKP))
       ENDIF
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
@@ -1877,7 +1895,89 @@ END MODULE
       ENDDO
 !$omp end parallel do
                             CALL TRACE$POP()
-! 
+      DO IKP=1,NKP
+        DO I=1,NB
+          PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
+        ENDDO
+      ENDDO
+
+!bcc Fe, 555
+!ALLOCATE(EBTMP(10,4))        
+!EBTMP(1,1)=8.90519471374423D0
+!EBTMP(2,1)=15.9434033733550D0
+!EBTMP(3,1)=15.9437318985426D0
+!EBTMP(4,1)=15.9439782149963D0
+!EBTMP(5,1)=17.4331464451587D0
+!EBTMP(6,1)=17.4332575780743D0
+!EBTMP(7,1)=42.1940822516814D0
+!EBTMP(8,1)=42.1948986745993D0
+!EBTMP(9,1)=42.1955108417937D0
+!EBTMP(10,1)=47.3335853129882D0
+!EBTMP(1,2)=12.3673809615346D0
+!EBTMP(2,2)=15.1409086127278D0
+!EBTMP(3,2)=15.7856215226624D0
+!EBTMP(4,2)=17.2826678202824D0
+!EBTMP(5,2)=17.5522773569203D0
+!EBTMP(6,2)=17.7871577224451D0
+!EBTMP(7,2)=29.6606949980102D0
+!EBTMP(8,2)=37.2043315559138D0
+!EBTMP(9,2)=39.9091911884596D0
+!EBTMP(10,2)=41.1678488884605D0
+!EBTMP(1,3)=14.5347471996221D0
+!EBTMP(2,3)=14.9176142640354D0
+!EBTMP(3,3)=14.9185269579434D0
+!EBTMP(4,3)=17.5706279784390D0
+!EBTMP(5,3)=17.5748786681166D0
+!EBTMP(6,3)=24.2776710779338D0
+!EBTMP(7,3)=24.2962112814693D0
+!EBTMP(8,3)=27.1274063016807D0
+!EBTMP(9,3)=36.6869486713712D0
+!EBTMP(10,3)=45.8183345525610D0
+!EBTMP(1,4)=13.8692342529125D0
+!EBTMP(2,4)=14.6195957197494D0
+!EBTMP(3,4)=17.0029133195168D0
+!EBTMP(4,4)=17.0710170479733D0
+!EBTMP(5,4)=17.8472980812975D0
+!EBTMP(6,4)=20.5994303387914D0
+!EBTMP(7,4)=31.1501089743446D0
+!EBTMP(8,4)=31.3120829681898D0
+!EBTMP(9,4)=35.6501004998864D0
+!EBTMP(10,4)=36.2712404230226D0
+!
+!EB(:,1)=EBTMP(:,1)
+!EB(:,2)=EBTMP(:,2)
+!EB(:,3)=EBTMP(:,2)
+!EB(:,4)=EBTMP(:,3)
+!EB(:,5)=EBTMP(:,2)
+!EB(:,6)=EBTMP(:,2)
+!EB(:,7)=EBTMP(:,3)
+!EB(:,8)=EBTMP(:,2)
+!EB(:,9)=EBTMP(:,3)
+!EB(:,10)=EBTMP(:,3)
+!EB(:,11)=EBTMP(:,4)
+!EB(:,12)=EBTMP(:,2)
+!EB(:,13)=EBTMP(:,4)
+!EB(:,14)=EBTMP(:,4)
+
+!     ==========================================================================
+!     ==  WRITE PDOS FILE                                                     ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('PDOS',NFILIN)
+      REWIND(NFILIN)
+      CALL PDOS$READ(NFILIN)
+      CALL PDOS$SETI4('NKPT',NKP)
+      CALL PDOS$SETI4('NB',NB)
+      CALL PDOS$SETR8A('XK',3*NKP,XK)
+      
+      CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
+      REWIND NFILOUT
+      CALL PDOS$WRITE(NFILOUT)
+      CALL LIB$FLUSHFILE(NFILOUT)
+      CALL FILEHANDLER$CLOSE('PDOSOUT')
+      
+
+STOP
+
 !     ==========================================================================
 !     ==  CALCULATE WEIGHTS                                                   ==
 !     ==========================================================================
@@ -1912,7 +2012,7 @@ END MODULE
         ENDDO
       ENDDO
       PRINT*,'INTEGRAL OF A : ',SUMA,' should be ',RNTOT 
-      
+ 
       !TOTAL DENSITY OF STATES
       EMIN=minval(EB(:,:))
       EMAX=maxval(EB(:,:))
