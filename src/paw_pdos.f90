@@ -73,6 +73,7 @@ END MODULE PDOS_MODULE
         NSP=VAL
       ELSE IF(ID.EQ.'NKPT') THEN
         NKPT=VAL
+        IF(ALLOCATED(XK))DEALLOCATE(XK)
       ELSE IF(ID.EQ.'NSPIN') THEN
         NSPIN=VAL
       ELSE IF(ID.EQ.'NDIM') THEN
@@ -509,7 +510,7 @@ END MODULE PDOS_MODULE
       CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
       LOGICAL(4)             :: TCHK
 !     ******************************************************************
-                             CALL TRACE$PUSH('PDOS%READ')
+                             CALL TRACE$PUSH('PDOS$READ')
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==

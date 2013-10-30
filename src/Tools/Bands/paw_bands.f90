@@ -851,10 +851,10 @@ MODULE KPOINTDIAG_MODULE
       COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
       COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
       REAL(8)     ,INTENT(OUT) :: E(NG*NDIM)
-      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,NB,LMNXX)
+      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,LMNXX,NB)
       COMPLEX(8),allocatable   :: TI_HK(:,:)
       COMPLEX(8),allocatable   :: TI_SK(:,:)
-      COMPLEX(8)               :: U(NG*NDIM,NG*NDIM)
+      COMPLEX(8),allocatable   :: U(:,:)
       REAL(8)                  :: GVECPK(3,NG)
       REAL(8)                  :: G2(NG)
       COMPLEX(8)               :: EIGR(NG)
@@ -997,12 +997,13 @@ MODULE KPOINTDIAG_MODULE
       IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
       IF(TTIMING)CALL TRACE$POP
 
+      allocate(U(NG*NDIM,NG*NDIM))
       !SOLVE GENERALIZED EIGENVALUE PROBLEM
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
         IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
         IF(TPROJ)THEN
-          U=TI_HK
+          U(:,:)=TI_HK(:,:)
           CALL LAPACK_ZHEGVD(NG,'V',U,TI_SK,E)            
         ELSE
           CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
@@ -1024,9 +1025,9 @@ MODULE KPOINTDIAG_MODULE
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
           DO IB=1,NB
-            DO LN=1,LMNXX
+            DO LN=1,LMNX(ISPECIES(IAT))
               CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
-              PROJ(IAT,IB,LN)=CSVAR
+              PROJ(IAT,LN,IB)=CSVAR
             ENDDO
           ENDDO
         ENDDO
@@ -1035,6 +1036,7 @@ MODULE KPOINTDIAG_MODULE
 !$omp end critical
       DEALLOCATE(TI_HK)
       DEALLOCATE(TI_SK)
+      DEALLOCATE(U)
       RETURN
       end subroutine
 !
@@ -1116,9 +1118,14 @@ MODULE KPOINTDIAG_MODULE
       Allocate(IWORK(1))!integer(4)
       
       CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
-      LWORK=WORK(1)
-      LRWORK=RWORK(1)
-      LIWORK=IWORK(1)
+      IF(INFO.ne.0)THEN
+        CALL ERROR$MSG('ZHEGVD WORKSPACE QUERY FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      LWORK=INT(WORK(1))
+      LRWORK=INT(RWORK(1))
+      LIWORK=INT(IWORK(1))
       deallocate(WORK)
       deallocate(RWORK)
       deallocate(IWORK)
@@ -1689,7 +1696,7 @@ END MODULE
       INTEGER(4)                   :: NG
       INTEGER(4)                   :: METHOD_DIAG 
       INTEGER(4)                   :: GIDG_PROTO
-      LOGICAL(4)                   :: TPROJ
+      LOGICAL(4)                   :: TPROJ=.TRUE.
       REAL(8)                      :: KVEC(3)
       REAL(8),ALLOCATABLE          :: GVEC(:,:)
       REAL(8),ALLOCATABLE          :: G2(:)
@@ -1714,6 +1721,10 @@ END MODULE
       LOGICAL(4)                   :: TSHIFT
 
       INTEGER(4)                   :: NFILOUT,NFILIN
+      REAL(8),ALLOCATABLE          :: OCC(:,:)
+      REAL(8),ALLOCATABLE          :: WKPT(:)
+      COMPLEX(8),ALLOCATABLE       :: PROJTMP(:,:,:)
+      INTEGER(4)                   :: LMN,index,IAT
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
 !     **************************************************************************
@@ -1771,15 +1782,14 @@ END MODULE
       ENDIF
 
       !FIXME: TO BE READ FROM BCNTL/DCNTL
-      NKDIV(1)=20
-      NKDIV(2)=20
-      NKDIV(3)=20
+      NKDIV(1)=11
+      NKDIV(2)=11
+      NKDIV(3)=11
       ISHIFT(1)=0
       ISHIFT(2)=0
       ISHIFT(3)=0
-      NB=10
+      NB=18
       !EPW=0.5D0*15.D0
-      TPROJ=.FALSE.
       IF(NSPIN.eq.1)THEN
         RNTOT=0.5D0*NEL
       ELSE
@@ -1795,7 +1805,7 @@ END MODULE
         CALL ERROR$STOP('BANDS_DOS')
       ENDIF
 
-      METHOD_DIAG=2
+      METHOD_DIAG=1
       NE=1000
       TUSESYM=.false.
       SPACEGROUP=229
@@ -1854,10 +1864,13 @@ END MODULE
       IF(TPRINT)write(*,*)' NKP nach BRILLOUIN$GETI4',NKP  
       ALLOCATE(BK(3,NKP))
       ALLOCATE(XK(3,NKP))
+      ALLOCATE(WKPT(NKP))
       CALL BRILLOUIN$GETR8A('K',3*NKP,BK)
+!      CALL LIB$INVERTR8(3,RBAS,RBASINV)
+!      XK=MATMUL(RBASINV,BK)
+      CALL BRILLOUIN$GETR8A('XK',3*NKP,XK)
+      CALL BRILLOUIN$GETR8A('WKPT',NKP,WKPT)
 
-      CALL LIB$INVERTR8(3,RBAS,RBASINV)
-      XK=MATMUL(RBASINV,BK)
 
 !
 !     =========================================================================
@@ -1868,32 +1881,81 @@ END MODULE
       ALLOCATE(WGHT(NB*NSPIN,NKP))
       
       IF(TPROJ)THEN
-        ALLOCATE(PROJK(NAT,NB*NSPIN,LMNXX,IKP))
+        ALLOCATE(PROJK(NAT,NB*NSPIN,LMNXX,NKP))
       ENDIF
+
+!     ==========================================================================
+!     ==  READ BEGINNING OF PDOS FILE                                         ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('PDOS',NFILIN)
+      REWIND(NFILIN)
+      CALL PDOS$READ(NFILIN)
+      CALL PDOS$SETI4('NKPT',NKP)
+!     ==========================================================================
+!     ==  WRITE BEGINNING OF PDOS FILE                                        ==
+!     ==========================================================================
+      
+      ALLOCATE(OCC(NKP,NB))
+      OCC(:,:)=1.0D0
+      
+      CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
+      REWIND NFILOUT
+      CALL PDOS$WRITE(NFILOUT)
+
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
-!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN)
+!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN,index,iat,lmn,projtmp)
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
           KVEC=BK(:,IKP)
 !$omp critical
           WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
 !$omp end critical
-          ALLOCATE(PROJ(NAT,NB,LMNXX))
+          ALLOCATE(PROJ(NAT,LMNXX,NB))
           ALLOCATE(E(NG*NDIM))
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TI_H,TI_S,E,PROJ)
 !$omp critical
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)*27.21139D0
+          ALLOCATE(PROJTMP(NDIM,NPRO,NB))
+          
+          
           IF(TPROJ)THEN
-            PROJK(:,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),:,IKP)=PROJ(:,1:NB,:)
+            DO IAT=1,NAT
+              DO LMN=1,LMNXX
+                PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)=PROJ(IAT,LMN,1:NB)
+              ENDDO         
+            ENDDO
+            !reorder projections
+            index=1
+            DO IAT=1,NAT
+              DO LMN=1,LMNX(ISPECIES(IAT))
+                PROJTMP(1,index,:)=PROJ(IAT,LMN,:)
+                index=index+1 
+              ENDDO
+            ENDDO
+          ELSE
+            PROJTMP(:,:,:)=0.0D0
           ENDIF
+          CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
+      &               WKPT(IKP),E(1:NB),OCC(IKP,1:NB),PROJTMP)
+          DEALLOCATE(PROJTMP)
 !$omp end critical
           DEALLOCATE(PROJ)
           DEALLOCATE(E)
         ENDDO
       ENDDO
 !$omp end parallel do
+      
+
+!     ==========================================================================
+!     ==  CLOSE PDOS FILE                                                     ==
+!     ==========================================================================
+      CALL LIB$FLUSHFILE(NFILOUT)
+      CALL FILEHANDLER$CLOSE('PDOSOUT')
+stop      
+
+
                             CALL TRACE$POP()
       DO IKP=1,NKP
         DO I=1,NB
@@ -1959,25 +2021,9 @@ END MODULE
 !EB(:,13)=EBTMP(:,4)
 !EB(:,14)=EBTMP(:,4)
 
-!     ==========================================================================
-!     ==  WRITE PDOS FILE                                                     ==
-!     ==========================================================================
-      CALL FILEHANDLER$UNIT('PDOS',NFILIN)
-      REWIND(NFILIN)
-      CALL PDOS$READ(NFILIN)
-      CALL PDOS$SETI4('NKPT',NKP)
-      CALL PDOS$SETI4('NB',NB)
-      CALL PDOS$SETR8A('XK',3*NKP,XK)
-      
-      CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
-      REWIND NFILOUT
-      CALL PDOS$WRITE(NFILOUT)
-      CALL LIB$FLUSHFILE(NFILOUT)
-      CALL FILEHANDLER$CLOSE('PDOSOUT')
-      
-
-STOP
-
+      !CALL PDOS$SETI4('NB',NB)
+      !CALL PDOS$SETR8A('XK',3*NKP,XK)
+        
 !     ==========================================================================
 !     ==  CALCULATE WEIGHTS                                                   ==
 !     ==========================================================================
