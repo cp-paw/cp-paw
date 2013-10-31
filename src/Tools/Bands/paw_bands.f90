@@ -944,7 +944,7 @@ MODULE KPOINTDIAG_MODULE
       IF(TTIMING)CALL TIMING$CLOCKON('AUGMENTATION')
       PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
       !FIXME: OPTIMIZE THIS BLOCK!!!
-
+!PRINT*,"GWEIGHT",GWEIGHT
       DO I=1,NG
         DO J=1,I
           CSVAR_H=0.0D0
@@ -1026,7 +1026,8 @@ MODULE KPOINTDIAG_MODULE
         DO IAT=1,NAT
           DO IB=1,NB
             DO LN=1,LMNX(ISPECIES(IAT))
-              CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
+              CALL LIB$SCALARPRODUCTC8(.false.,NG*NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
+              !CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
               PROJ(IAT,LN,IB)=CSVAR
             ENDDO
           ENDDO
@@ -1782,14 +1783,14 @@ END MODULE
       ENDIF
 
       !FIXME: TO BE READ FROM BCNTL/DCNTL
-      NKDIV(1)=11
-      NKDIV(2)=11
-      NKDIV(3)=11
+      NKDIV(1)=9
+      NKDIV(2)=9
+      NKDIV(3)=9
       ISHIFT(1)=0
       ISHIFT(2)=0
       ISHIFT(3)=0
       NB=18
-      !EPW=0.5D0*15.D0
+      EPW=0.5D0*15.D0
       IF(NSPIN.eq.1)THEN
         RNTOT=0.5D0*NEL
       ELSE
@@ -1941,7 +1942,26 @@ END MODULE
                             CALL TRACE$POP()
      
       !
-                            CALL TRACE$PUSH('PDOS WRITEK LOOP')
+
+
+      DO IKP=1,NKP
+        DO I=1,NB
+          PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
+        ENDDO
+      ENDDO
+
+
+      !CALL PDOS$SETI4('NB',NB)
+      !CALL PDOS$SETR8A('XK',3*NKP,XK)
+        
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
+      IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
+&      BOTH SPIN DIRECTIONS.'
+      CALL BRILLOUIN$DOS(NSPIN*NB,NKP,EB,WGHT,RNTOT,EF)
+                            
+                        CALL TRACE$PUSH('PDOS WRITEK LOOP')
 !     ==========================================================================
 !     ==  WRITE TO PDOS FILE                                                  ==
 !     ==========================================================================
@@ -1960,13 +1980,18 @@ END MODULE
           ELSE
             PROJTMP(:,:,:)=0.0D0
           ENDIF
+          DO IB=1,NB
+            IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
+              OCC(IKP,IB)=1.0D0/REAL(NKP,KIND=8)
+            ELSE
+              OCC(IKP,IB)=0.0D0
+            ENDIF
+          ENDDO
           CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
       &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
         ENDDO
       ENDDO
       DEALLOCATE(PROJTMP)
-                            CALL TRACE$POP()
-
 !     ==========================================================================
 !     ==  CLOSE PDOS FILE                                                     ==
 !     ==========================================================================
@@ -1974,80 +1999,7 @@ END MODULE
       CALL LIB$FLUSHFILE(NFILOUT)
       CALL FILEHANDLER$CLOSE('PDOSOUT')
                             CALL TRACE$POP()
-
-      DO IKP=1,NKP
-        DO I=1,NB
-          PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
-        ENDDO
-      ENDDO
-
-!bcc Fe, 555
-!ALLOCATE(EBTMP(10,4))        
-!EBTMP(1,1)=8.90519471374423D0
-!EBTMP(2,1)=15.9434033733550D0
-!EBTMP(3,1)=15.9437318985426D0
-!EBTMP(4,1)=15.9439782149963D0
-!EBTMP(5,1)=17.4331464451587D0
-!EBTMP(6,1)=17.4332575780743D0
-!EBTMP(7,1)=42.1940822516814D0
-!EBTMP(8,1)=42.1948986745993D0
-!EBTMP(9,1)=42.1955108417937D0
-!EBTMP(10,1)=47.3335853129882D0
-!EBTMP(1,2)=12.3673809615346D0
-!EBTMP(2,2)=15.1409086127278D0
-!EBTMP(3,2)=15.7856215226624D0
-!EBTMP(4,2)=17.2826678202824D0
-!EBTMP(5,2)=17.5522773569203D0
-!EBTMP(6,2)=17.7871577224451D0
-!EBTMP(7,2)=29.6606949980102D0
-!EBTMP(8,2)=37.2043315559138D0
-!EBTMP(9,2)=39.9091911884596D0
-!EBTMP(10,2)=41.1678488884605D0
-!EBTMP(1,3)=14.5347471996221D0
-!EBTMP(2,3)=14.9176142640354D0
-!EBTMP(3,3)=14.9185269579434D0
-!EBTMP(4,3)=17.5706279784390D0
-!EBTMP(5,3)=17.5748786681166D0
-!EBTMP(6,3)=24.2776710779338D0
-!EBTMP(7,3)=24.2962112814693D0
-!EBTMP(8,3)=27.1274063016807D0
-!EBTMP(9,3)=36.6869486713712D0
-!EBTMP(10,3)=45.8183345525610D0
-!EBTMP(1,4)=13.8692342529125D0
-!EBTMP(2,4)=14.6195957197494D0
-!EBTMP(3,4)=17.0029133195168D0
-!EBTMP(4,4)=17.0710170479733D0
-!EBTMP(5,4)=17.8472980812975D0
-!EBTMP(6,4)=20.5994303387914D0
-!EBTMP(7,4)=31.1501089743446D0
-!EBTMP(8,4)=31.3120829681898D0
-!EBTMP(9,4)=35.6501004998864D0
-!EBTMP(10,4)=36.2712404230226D0
-!
-!EB(:,1)=EBTMP(:,1)
-!EB(:,2)=EBTMP(:,2)
-!EB(:,3)=EBTMP(:,2)
-!EB(:,4)=EBTMP(:,3)
-!EB(:,5)=EBTMP(:,2)
-!EB(:,6)=EBTMP(:,2)
-!EB(:,7)=EBTMP(:,3)
-!EB(:,8)=EBTMP(:,2)
-!EB(:,9)=EBTMP(:,3)
-!EB(:,10)=EBTMP(:,3)
-!EB(:,11)=EBTMP(:,4)
-!EB(:,12)=EBTMP(:,2)
-!EB(:,13)=EBTMP(:,4)
-!EB(:,14)=EBTMP(:,4)
-
-      !CALL PDOS$SETI4('NB',NB)
-      !CALL PDOS$SETR8A('XK',3*NKP,XK)
-        
-!     ==========================================================================
-!     ==  CALCULATE WEIGHTS                                                   ==
-!     ==========================================================================
-      IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
-&      BOTH SPIN DIRECTIONS.'
-      CALL BRILLOUIN$DOS(NSPIN*NB,NKP,EB,WGHT,RNTOT,EF)
+                            CALL TRACE$POP()
 !
 !     ==========================================================================
 !     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
