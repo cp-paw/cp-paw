@@ -2554,7 +2554,6 @@ print*,'a     ',(a(i,i),i=1,nb)
       INTEGER(4)             :: IKPTG
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:)
       CHARACTER(16),ALLOCATABLE :: ATOMID(:)
-      CHARACTER(32)          :: FLAG='011004'
       INTEGER(4)             :: NBX
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       LOGICAL(4)             :: TKGROUP
@@ -2672,7 +2671,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       DEALLOCATE(LOX)
 
       IF(THISTASK.EQ.1) THEN
-        CALL PDOS$WRITE(NFIL)
+        CALL PDOS$WRITE(NFIL,1)
       ENDIF
 !
 !     ==================================================================

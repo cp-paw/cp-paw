@@ -1796,6 +1796,13 @@ END MODULE
         RNTOT=NEL
       ENDIF
 
+
+      METHOD_DIAG=1
+      NE=1000
+      TUSESYM=.false.
+      SPACEGROUP=229
+      TSHIFT=.FALSE. 
+
       !check if NB*NSPIN>RNTOT
       IF(NB*NSPIN.lt.RNTOT)THEN
         CALL ERROR$MSG('NB*NPSIN IS LESS THAN THE NUMBER OF BANDS, PLEASE INCREASE NB')
@@ -1804,13 +1811,6 @@ END MODULE
         CALL ERROR$R8VAL('NUMBER OF BANDS',RNTOT)
         CALL ERROR$STOP('BANDS_DOS')
       ENDIF
-
-      METHOD_DIAG=1
-      NE=1000
-      TUSESYM=.false.
-      SPACEGROUP=229
-      TSHIFT=.FALSE. 
-
 
                             CALL TRACE$PASS('AFTER READ BNCTL')
       IF(TUSESYM)THEN
@@ -1891,6 +1891,11 @@ END MODULE
       REWIND(NFILIN)
       CALL PDOS$READ(NFILIN)
       CALL PDOS$SETI4('NKPT',NKP)
+      CALL PDOS$SETI4A('NKDIV',3,NKDIV)
+      CALL PDOS$SETI4A('ISHIFT',3,ISHIFT)
+      CALL PDOS$SETR8('RNTOT',RNTOT)
+      CALL PDOS$SETR8('NEL',NEL)
+      CALL PDOS$SETL4('TINV',TINV)
 !     ==========================================================================
 !     ==  WRITE BEGINNING OF PDOS FILE                                        ==
 !     ==========================================================================
@@ -1900,37 +1905,55 @@ END MODULE
       
       CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
       REWIND NFILOUT
-      CALL PDOS$WRITE(NFILOUT)
+      CALL PDOS$WRITE(NFILOUT,2)
 
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
-!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN,index,iat,lmn,projtmp)
+      index=1
+!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN,iat,lmn)
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
           KVEC=BK(:,IKP)
 !$omp critical
-          WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          index=index+1
+          CALL FLUSH(NFILO)
 !$omp end critical
           ALLOCATE(PROJ(NAT,LMNXX,NB))
           ALLOCATE(E(NG*NDIM))
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TI_H,TI_S,E,PROJ)
 !$omp critical
-          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)*27.21139D0
-          ALLOCATE(PROJTMP(NDIM,NPRO,NB))
-          
-          
+          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
           IF(TPROJ)THEN
             DO IAT=1,NAT
               DO LMN=1,LMNXX
                 PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)=PROJ(IAT,LMN,1:NB)
               ENDDO         
             ENDDO
+          ENDIF
+!$omp end critical
+          DEALLOCATE(PROJ)
+          DEALLOCATE(E)
+        ENDDO
+      ENDDO
+!$omp end parallel do
+                            CALL TRACE$POP()
+     
+      !
+                            CALL TRACE$PUSH('PDOS WRITEK LOOP')
+!     ==========================================================================
+!     ==  WRITE TO PDOS FILE                                                  ==
+!     ==========================================================================
+      ALLOCATE(PROJTMP(NDIM,NPRO,NB))
+      DO IKP=1,NKP
+        DO ISPIN=1,NSPIN
+          IF(TPROJ)THEN
             !reorder projections
             index=1
             DO IAT=1,NAT
               DO LMN=1,LMNX(ISPECIES(IAT))
-                PROJTMP(1,index,:)=PROJ(IAT,LMN,:)
+                PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
                 index=index+1 
               ENDDO
             ENDDO
@@ -1938,25 +1961,20 @@ END MODULE
             PROJTMP(:,:,:)=0.0D0
           ENDIF
           CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
-      &               WKPT(IKP),E(1:NB),OCC(IKP,1:NB),PROJTMP)
-          DEALLOCATE(PROJTMP)
-!$omp end critical
-          DEALLOCATE(PROJ)
-          DEALLOCATE(E)
+      &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
         ENDDO
       ENDDO
-!$omp end parallel do
-      
+      DEALLOCATE(PROJTMP)
+                            CALL TRACE$POP()
 
 !     ==========================================================================
 !     ==  CLOSE PDOS FILE                                                     ==
 !     ==========================================================================
+                            CALL TRACE$PUSH('PDOS CLOSE')
       CALL LIB$FLUSHFILE(NFILOUT)
       CALL FILEHANDLER$CLOSE('PDOSOUT')
-stop      
-
-
                             CALL TRACE$POP()
+
       DO IKP=1,NKP
         DO I=1,NB
           PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
@@ -2064,7 +2082,7 @@ stop
       EMAX=maxval(EB(:,:))
       allocate(EWGHT(NSPIN*NB,NKP))
       CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
-
+PRINT*,"EWGHT",EWGHT(1,1)%WGHT(1)
       A(:,:)=1.0d0
       ALLOCATE(DOS(NE,NSPIN))
       DOS(:,:)=0.0D0

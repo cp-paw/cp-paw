@@ -7,10 +7,20 @@
 !**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
-MODULE SPINDIR_MODULE
-  REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
-  SAVE
-END MODULE SPINDIR_MODULE
+      MODULE SPINDIR_MODULE
+        REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
+        SAVE
+      END MODULE SPINDIR_MODULE
+      MODULE DOS_WGHT_MODULE
+        USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
+        REAL(8),ALLOCATABLE          :: WGHT(:,:)
+        TYPE(EWGHT_TYPE),ALLOCATABLE :: EWGHT(:,:)
+        INTEGER(4)                   :: NEWGHT
+        REAL(8)                      :: EMINWGHT
+        REAL(8)                      :: EMAXWGHT
+        REAL(8)                      :: EF
+        SAVE
+      END MODULE DOS_WGHT_MODULE
 
       PROGRAM PDOS
       USE PDOS_MODULE, ONLY: STATE,STATEARR
@@ -23,7 +33,7 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: NSPIN
       INTEGER(4)                :: NDIM !=2 for spinor wf; otherwise =1
       INTEGER(4)                :: LENG
-      INTEGER(4)                 :: NSET
+      INTEGER(4)                :: NSET
       INTEGER(4)   ,ALLOCATABLE :: LMX(:)
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
       real(8)                   :: rbas(3,3) ! lattice vectors
@@ -39,6 +49,8 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: NPRO
       INTEGER(4)                :: IKPT,ISPIN,IB
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
+      INTEGER(4)                :: VERSION
+
 !      REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
@@ -83,6 +95,7 @@ END MODULE SPINDIR_MODULE
       CALL PDOS$GETI4('NPRO',NPRO)
       ALLOCATE(NBARR(NKPT,NSPIN))
       CALL PDOS$GETI4A('NB',NKPT*NSPIN,NBARR)
+      CALL PDOS$GETI4('VERSION',VERSION)
       NB=MAXVAL(NBARR)
       DEALLOCATE(NBARR)
       LENG=NPRO
@@ -126,11 +139,16 @@ END MODULE SPINDIR_MODULE
 !     ==========================================================================
 !     ==  MAKE PLOTS                                                          ==
 !     ==========================================================================
+      PRINT*,"VERSION",VERSION
       CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
                             CALL TRACE$PASS('AFTER READCNTL$GRID')
+      IF (VERSION.eq.2)THEN
+        CALL GENERATEWGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+      ENDIF
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,VERSION)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
+
 !
 !     ==========================================================================
 !     ==  CLOSING                                                             ==
@@ -1514,7 +1532,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND,VERSION)
 !     **************************************************************************
 !     **************************************************************************
       USE READCNTL_MODULE
@@ -1533,6 +1551,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN,NSET)
       CHARACTER(32),INTENT(IN) :: LEGEND(NSET)
+      INTEGER(4)   ,INTENT(IN) :: VERSION
       CHARACTER(32)        :: LEGEND1
       CHARACTER(256)       :: FILE
       LOGICAL(4)           :: TIB,TE,TIK,TIS,TCHK
@@ -1694,8 +1713,13 @@ END MODULE READCNTL_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                      ==
 !       ================================================================
         IF(.NOT.(TIB.OR.TE)) THEN
-          CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
-      &                 ,NB,NKPT,NSPIN,ndim,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          IF(VERSION.EQ.0.or.VERSION.eq.1)THEN
+            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &    ,NB,NKPT,NSPIN,ndim,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          ELSE
+            CALL PUTONGRIDWGHT(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &    ,NB,NKPT,NSPIN,ndim,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          ENDIF
         END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
@@ -1905,3 +1929,253 @@ END MODULE READCNTL_MODULE
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE PUTONGRID
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PUTONGRIDWGHT(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,SET,LEGEND)
+!     **************************************************************************
+!     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
+!     **  CONSTRUCTS DOS AND NOS AND WRITES THE RESULT ON FILE                **
+!     **                                                                      **
+!     **  SCALEY MAY BE 'DOS' OR 'NOS' OR 'NONE'                              **
+!     **     SCALEY='DOS' RESCALES THE DENSITY OF STATES TO FIT WINDOW        **
+!     **     SCALEY='NOS' RESCALES THE NUMBER OF STATES TO FIT WINDOW         **
+!     **  NOS(IE,ISPIN,1) IS MULTIPLIED WITH MAX OCCUPATION OF ALL BANDS      **
+!     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
+!     **                                                                      **
+!     **************************************************************************
+      USE DOS_WGHT_MODULE
+      USE PDOS_MODULE, ONLY: STATE,STATEARR,wkpt
+      IMPLICIT NONE
+      INTEGER(4)   ,INTENT(IN) :: NE
+      REAL(8)      ,INTENT(IN) :: EMIN
+      REAL(8)      ,INTENT(IN) :: EMAX
+      REAL(8)      ,INTENT(IN) :: EBROAD
+      CHARACTER(8) ,INTENT(IN) :: SCALEY
+      INTEGER(4)   ,INTENT(IN) :: NB
+      INTEGER(4)   ,INTENT(IN) :: NKPT
+      INTEGER(4)   ,INTENT(IN) :: NSPIN
+      INTEGER(4)   ,INTENT(IN) :: Ndim
+      REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
+      REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN)
+      INTEGER(4)   ,INTENT(IN) :: NFIL
+      CHARACTER(32),INTENT(IN) :: LEGEND
+      REAL(8)              :: DE
+      INTEGER(4)           :: IE1,IE2,IDE,I1,I2
+      INTEGER(4)           :: ND,IOCC
+      REAL(8),allocatable  :: NOS(:,:,:)
+      REAL(8),allocatable  :: DOS(:,:,:)
+      REAL(8)              :: EV
+      REAL(8)              :: W1,W2,X,FAC
+      REAL(8)              :: NOSSMALL(NSPIN,2)
+      REAL(8)              :: WGHTX
+      INTEGER(4)           :: IKPT,ISPIN,IE,IB
+      REAL(8)              :: SVAR
+      REAL(8)              :: E
+      REAL(8)              :: DEWGHT
+      REAL(8)              :: spindeg
+!     **************************************************************************
+                                 CALL TRACE$PUSH('PUTONGRID')
+      CALL CONSTANTS('EV',EV)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
+      DEWGHT=(EMAXWGHT-EMINWGHT)/REAL(NEWGHT-1,KIND=8)   !STEP OF THE ENERGY GRID
+PRINT*,NE,EMIN,EMAX,DE
+PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
+      SPINDEG=1.D0
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
+
+      ALLOCATE(DOS(NEWGHT,NSPIN,2))
+      DOS(:,:,:)=0.0D0
+      DO IKPT=1,NKPT
+        DO IB=1,NB
+          DO ISPIN=1,NSPIN
+            I1=EWGHT(IB+NB*(ISPIN-1),IKPT)%I1
+            I2=EWGHT(IB+NB*(ISPIN-1),IKPT)%I2
+            DO IE=I1,I2
+              !occupied states
+              DOS(IE,ISPIN,1)=DOS(IE,ISPIN,1)+SPINDEG*&
+      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+              !unoccipied states
+              E=EMINWGHT+REAL(IE-1,KIND=8)*DEWGHT
+              IF(E.LE.EF)THEN
+                DOS(IE,ISPIN,2)=DOS(IE,ISPIN,2)+SPINDEG*&
+      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+              ENDIF
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DOS(:,:,:)=DOS(:,:,:)*DEWGHT/EV
+!
+!     ==========================================================================
+!     ==  DETERMINE NOS BY INTEGRATION                                        ==
+!     ==========================================================================
+      !FIXME: THIS INTEGRATION MEIGHT NOT BE PRECISE ENOUGH
+      ALLOCATE(NOS(NEWGHT,NSPIN,2))
+      DO ISPIN=1,NSPIN
+        DO IOCC=1,2
+          NOS(1,ISPIN,IOCC)=0.0D0
+          DO IE=2,NEWGHT
+            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*EV+NOS(IE-1,ISPIN,IOCC)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
+!     ==========================================================================
+      DO ISPIN=1,NSPIN
+        DO IOCC=1,2
+          DO IE=1,NE
+            IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+            IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                          ==
+!     ==========================================================================
+      IF(SCALEY.EQ.'NONE') THEN
+!
+      ELSE IF(SCALEY.EQ.'DOS') THEN
+        SVAR=MAXVAL(DOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN DOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID')
+        END IF
+        DOS=DOS*MAXVAL(NOS)/SVAR
+!
+      ELSE IF(SCALEY.EQ.'NOS') THEN
+        SVAR=MAXVAL(NOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN NOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID')
+        END IF
+        NOS=NOS*MAXVAL(DOS)/SVAR
+!
+      ELSE
+        CALL ERROR$MSG('ILLEGAL VALUE OF SCALEY')
+        CALL ERROR$CHVAL('SCALEY',SCALEY)
+        CALL ERROR$STOP('PUTONGRID')
+      END IF     
+!
+!     ==========================================================================
+!     ==  WRITE RESULT ON PDOSOUT                                             ==
+!     ==========================================================================
+      DO IE=1,NEWGHT
+        E=EMINWGHT+(EMAXWGHT-EMINWGHT)*DBLE(IE-1)/DBLE(NEWGHT-1)
+        IF((E.lt.EMIN).or.(E.GT.EMAX))CYCLE
+        IF(NSPIN.EQ.1) THEN
+          WRITE(NFIL,FMT='(F14.8,4F14.8)') &
+     &          E/EV,DOS(IE,1,1),NOS(IE,1,1),DOS(IE,1,2),NOS(IE,1,2)
+        ELSE
+          WRITE(NFIL,FMT='(F14.8,8F14.8)') &
+     &        E/EV,DOS(IE,1,1),NOS(IE,1,1) &
+     &        ,-DOS(IE,2,1),-NOS(IE,2,1),DOS(IE,1,2),NOS(IE,1,2),&
+     &         -DOS(IE,2,2),-NOS(IE,2,2)
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='("# THIS WAS: ",A)')LEGEND
+                                 CALL TRACE$POP
+      RETURN
+      END SUBROUTINE PUTONGRIDWGHT
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GENERATEWGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+      USE DOS_WGHT_MODULE
+      USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)        :: NFILO
+      INTEGER(4),INTENT(IN)        :: NB
+      INTEGER(4),INTENT(IN)        :: NSPIN
+      INTEGER(4),INTENT(IN)        :: NKPT
+      REAL(8),INTENT(IN)           :: EMIN
+      REAL(8),INTENT(IN)           :: EMAX
+      INTEGER(4),INTENT(IN)        :: NE
+      REAL(8),INTENT(IN)           :: RBAS(3,3)
+      REAL(8),INTENT(IN)           :: EIG(NB,NKPT,NSPIN)
+      INTEGER(4)                   :: ISHIFT(3)
+      INTEGER(4)                   :: NKDIV(3)
+      INTEGER(4)                   :: NKPT2
+      LOGICAL(4)                   :: TINV
+      REAL(8),ALLOCATABLE          :: EB(:,:)
+      REAL(8)                      :: RNTOT,NEL
+      REAL(8)                      :: SUMA,SVAR
+      REAL(8),ALLOCATABLE          :: A(:,:)
+      INTEGER(4)                   :: IB,IKPT,ISPIN
+!     **************************************************************************
+                          CALL TRACE$PUSH('GENERATEWGHT')
+      CALL PDOS$GETI4A('NKDIV',3,NKDIV)
+      CALL PDOS$GETI4A('ISHIFT',3,ISHIFT)
+      CALL PDOS$GETR8('RNTOT',RNTOT)
+      CALL PDOS$GETR8('NEL',NEL)
+      CALL PDOS$GETL4('TINV',TINV)
+                          CALL TRACE$PUSH('BRILLOUIN$MSHNOSYM')
+      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+                          CALL TRACE$POP()
+      CALL BRILLOUIN$GETI4('NK',NKPT2)
+      
+      IF(NKPT2.ne.NKPT)THEN
+        CALL ERROR$MSG('NUMBER OF KPOINT INCONSISTENT')
+        CALL ERROR$I4VAL('NKPT FROM PDOS',NKPT)
+        CALL ERROR$I4VAL('NKPT FROM BRILLOUIN',NKPT2)
+        CALL ERROR$STOP('DOS')
+      ENDIF
+      
+      IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
+  &             BOTH SPIN DIRECTIONS.'
+      
+      ALLOCATE(EB(NB*NSPIN,NKPT))
+      DO IKPT=1,NKPT
+        DO ISPIN=1,NSPIN
+          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKPT)=EIG(1:NB,IKPT,ISPIN) 
+        ENDDO
+      ENDDO
+      ALLOCATE(WGHT(NB*NSPIN,NKPT))
+      CALL BRILLOUIN$DOS(NSPIN*NB,NKPT,EB,WGHT,RNTOT,EF)
+!
+!     ==========================================================================
+!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
+!     ==========================================================================
+      !FIXME TOTAL DENSITY for testing
+      ALLOCATE(A(NB*NSPIN,NKPT))
+      A=1
+      SUMA=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          SUMA=0.0D0
+          DO IKPT=1,NKPT
+            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+          ENDDO
+          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA
+        ENDDO
+      ENDDO
+      
+      A=1
+      SUMA=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          DO IKPT=1,NKPT
+            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+          ENDDO
+        ENDDO
+      ENDDO
+      PRINT*,'INTEGRAL OF A=1 : ',SUMA,' should be ',RNTOT 
+      
+      !FIXME: BRILLOUIN$EWGHT needs EMAX=MAXVAL(EB),EMIN=MINVAL(EB)
+      !choosing NE so that energy intervals are the same
+      SVAR=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+      EMINWGHT=MINVAL(EB)
+      EMAXWGHT=MAXVAL(EB)
+      NEWGHT=INT((EMAXWGHT-EMINWGHT)/SVAR)+1
+      ALLOCATE(EWGHT(NB*NSPIN,NKPT))
+      CALL BRILLOUIN$EWGHT(NKPT,NB*NSPIN,EB,EMINWGHT,EMAXWGHT,NEWGHT,EWGHT)
+                          CALL TRACE$POP()
+      
+      RETURN
+      END SUBROUTINE GENERATEWGHT
+

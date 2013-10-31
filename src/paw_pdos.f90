@@ -1,35 +1,57 @@
 !
 !.......................................................................
-MODULE PDOS_MODULE
-TYPE STATE_TYPE
- INTEGER(4)         :: NB
- REAL(8)   ,POINTER :: EIG(:)
- REAL(8)   ,POINTER :: OCC(:)
- COMPLEX(8),POINTER :: VEC(:,:,:)
-END TYPE STATE_TYPE 
-INTEGER(4)             :: NAT
-INTEGER(4)             :: NSP
-INTEGER(4)             :: NKPT
-INTEGER(4)             :: NSPIN
-INTEGER(4)             :: NDIM
-INTEGER(4)             :: NPRO
-INTEGER(4)             :: LNXX
-REAL(8)                :: RBAS(3,3)
-REAL(8)   ,ALLOCATABLE :: R(:,:)
-INTEGER(4),ALLOCATABLE :: LNX(:)
-INTEGER(4),ALLOCATABLE :: LOX(:,:)
-INTEGER(4),ALLOCATABLE :: ISPECIES(:)
-CHARACTER(16),ALLOCATABLE :: ATOMID(:)
-INTEGER(4),ALLOCATABLE :: IZ(:)
-REAL(8)   ,ALLOCATABLE :: RAD(:)
-REAL(8)   ,ALLOCATABLE :: PHIOFR(:,:)
-REAL(8)   ,ALLOCATABLE :: DPHIDR(:,:)
-REAL(8)   ,ALLOCATABLE :: OV(:,:,:)
-REAL(8)   ,ALLOCATABLE :: XK(:,:)
-REAL(8)   ,ALLOCATABLE :: WKPT(:)
-TYPE(STATE_TYPE),ALLOCATABLE,TARGET :: STATEARR(:,:)
-TYPE(STATE_TYPE),POINTER :: STATE
-END MODULE PDOS_MODULE
+!     ******************************************************************
+!     ** THERE ARE THREE DIFFERENT VERSIONS OF THE PDOS FILE:         **
+!     **  VERSION=0 (VERY OLD) NO FLAG GIVEN                          **
+!     **        - PRODUCED BY PAW DIECTLY                             **
+!     **        - HAS NO OCCUPATIONS                                  **
+!     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
+!     **  VERSION=1 (RECENT) FLAG=011004                              **
+!     **        - PRODUCED BY PAW DIECTLY                             **
+!     **        - HAS OCCUPATIONS                                     **
+!     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
+!     **  VERSION=2 (RECENT) FLAG=311013                              **
+!     **        - PRODUCED BY KPOINT-DIAGONALISATION                  **
+!     **        - HAS OCCUPATIONS                                     **
+!     **        - COMPATIBLE WITH TETRAHEDRON METHOD                  **    
+!     ******************************************************************
+
+      MODULE PDOS_MODULE
+        TYPE STATE_TYPE
+          INTEGER(4)                             :: NB
+          REAL(8)   ,POINTER                     :: EIG(:)
+          REAL(8)   ,POINTER                     :: OCC(:)
+          COMPLEX(8),POINTER                     :: VEC(:,:,:)
+        END TYPE STATE_TYPE 
+        INTEGER(4)                               :: NAT
+        INTEGER(4)                               :: NSP
+        INTEGER(4)                               :: NKPT
+        INTEGER(4)                               :: NSPIN
+        INTEGER(4)                               :: NDIM
+        INTEGER(4)                               :: NPRO
+        INTEGER(4)                               :: NKDIV(3)
+        INTEGER(4)                               :: ISHIFT(3)
+        REAL(8)                                  :: RNTOT
+        REAL(8)                                  :: NEL
+        LOGICAL(4)                               :: TINV
+        INTEGER(4)                               :: LNXX
+        REAL(8)                                  :: RBAS(3,3)
+        REAL(8)   ,ALLOCATABLE                   :: R(:,:)
+        INTEGER(4),ALLOCATABLE                   :: LNX(:)
+        INTEGER(4),ALLOCATABLE                   :: LOX(:,:)
+        INTEGER(4),ALLOCATABLE                   :: ISPECIES(:)
+        CHARACTER(16),ALLOCATABLE                :: ATOMID(:)
+        INTEGER(4),ALLOCATABLE                   :: IZ(:)
+        REAL(8)   ,ALLOCATABLE                   :: RAD(:)
+        REAL(8)   ,ALLOCATABLE                   :: PHIOFR(:,:)
+        REAL(8)   ,ALLOCATABLE                   :: DPHIDR(:,:)
+        REAL(8)   ,ALLOCATABLE                   :: OV(:,:,:)
+        REAL(8)   ,ALLOCATABLE                   :: XK(:,:)
+        REAL(8)   ,ALLOCATABLE                   :: WKPT(:)
+        TYPE(STATE_TYPE),ALLOCATABLE,TARGET      :: STATEARR(:,:)
+        TYPE(STATE_TYPE),POINTER                 :: STATE
+        INTEGER(4)                               :: VERSION
+      END MODULE PDOS_MODULE
 !
 !     ..................................................................
       SUBROUTINE PDOS$GETI4(ID,VAL)
@@ -52,6 +74,8 @@ END MODULE PDOS_MODULE
         VAL=LNXX
       ELSE IF(ID.EQ.'NPRO') THEN
         VAL=NPRO
+      ELSE IF(ID.EQ.'VERSION') THEN
+        VAL=VERSION
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -165,6 +189,23 @@ END MODULE PDOS_MODULE
             STATEARR(IKPT,ISPIN)%NB=VAL(I)
           ENDDO
         ENDDO
+      ELSE IF(ID.EQ.'NKDIV') THEN
+        IF(NKPT.EQ.0) NKPT=VAL(1)*VAL(2)*VAL(3)
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('PDOS$SETI4')
+        END IF
+        NKDIV(1:3)=VAL(1:3)
+      ELSE IF(ID.EQ.'ISHIFT') THEN
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('PDOS$SETI4')
+        END IF
+        ISHIFT(1:3)=VAL(1:3)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -245,10 +286,96 @@ END MODULE PDOS_MODULE
             VAL(I)=STATEARR(IKPT,ISPIN)%NB
           ENDDO
         ENDDO
+      ELSE IF(ID.EQ.'NKDIV') THEN
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETI4')
+        END IF
+        VAL=NKDIV
+      ELSE IF(ID.EQ.'ISHIFT') THEN
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETI4')
+        END IF
+        VAL=ISHIFT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('PDOS$GETI4A')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE PDOS$GETL4(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(OUT):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'TINV') THEN
+        VAL=TINV
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$GETL4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE PDOS$SETL4(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(IN) :: VAL
+!     ******************************************************************
+      IF(ID.EQ.'TINV') THEN
+        TINV=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$SETL4')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE PDOS$GETR8(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(OUT):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'RNTOT') THEN
+        VAL=RNTOT
+      ELSE IF(ID.EQ.'NEL') THEN
+        VAL=NEL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$GETR84')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE PDOS$SETR8(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(IN) :: VAL
+!     ******************************************************************
+      IF(ID.EQ.'RNTOT') THEN
+        RNTOT=VAL
+      ELSE IF(ID.EQ.'NEL') THEN
+        NEL=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$SETR8')
       END IF
       RETURN
       END
@@ -523,13 +650,22 @@ END MODULE PDOS_MODULE
         PRINT*,'WARNING: NO OCCUPATIONS PRESENT IN PDOS FILE'
         PRINT*,'            OCCUPATIONS WILL BE SET TO 0'
         FLAG='OLD VERSION'
+        VERSION=0
         REWIND(NFIL)
         READ(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
       END IF
+      IF(FLAG.eq.'011004')VERSION=1
+      IF(FLAG.eq.'311013')VERSION=2
+
       ALLOCATE(LNX(NSP))
       ALLOCATE(LOX(LNXX,NSP))
       ALLOCATE(ISPECIES(NAT))
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
+      
+      IF(VERSION.eq.2)THEN
+        READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
+      ENDIF
+
 !
 !     ==================================================================
 !     == ATOMIC STRUCTURE                                             ==
@@ -567,7 +703,7 @@ END MODULE PDOS_MODULE
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
           ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
-            IF(FLAG.eq.'011004') THEN
+            IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
             ELSE
@@ -599,25 +735,32 @@ END MODULE PDOS_MODULE
       END SUBROUTINE PDOS$READ
 !
 !     ..................................................................
-      SUBROUTINE PDOS$WRITE(NFIL)
+      SUBROUTINE PDOS$WRITE(NFIL,VERSION_)
 !     ******************************************************************
 !     **  WAVES$GET                                                   **
 !     **  GET                                                         **
 !     ******************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NFIL
-      INTEGER(4)             :: ISP,IKPT,ISPIN,IB
-      INTEGER(4)             :: LNX1,NB
-      CHARACTER(32)          :: FLAG='011004'
+      INTEGER(4),INTENT(IN)        :: NFIL
+      INTEGER(4),INTENT(IN)        :: VERSION_
+      CHARACTER(32)                :: FLAG !'011004' or '311013'
+      INTEGER(4)                   :: ISP,IKPT,ISPIN,IB
+      INTEGER(4)                   :: LNX1,NB
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
+      IF(VERSION_.eq.1)FLAG='011004'
+      IF(VERSION_.eq.2)FLAG='311013'
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
 !     ==================================================================
       WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
+
+      IF(VERSION_.eq.2)THEN
+        WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
+      ENDIF
 !
 !     ==================================================================
 !     == ATOMIC STRUCTURE                                             ==
