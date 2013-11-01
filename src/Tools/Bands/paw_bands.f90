@@ -16,7 +16,7 @@
       TYPE(LL_TYPE)             :: LL_CNTL
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NFIL
-      INTEGER(4)                :: METHOD
+      INTEGER(4)                :: MODE
       LOGICAL(4)                :: TCHK
 !     ******************************************************************
       CALL TIMING$START
@@ -56,23 +56,26 @@
 !     ==========================================================================
 !     ==  SELECT METHOD                                                       ==
 !     ==========================================================================
-      METHOD=1
+      MODE=1
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD',1)
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',0,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MODE',0,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,METHOD)
+        CALL LINKEDLIST$GET(LL_CNTL,'MODE',1,MODE)
       ENDIF
-      IF(METHOD.eq.0)THEN
+      IF(MODE.eq.0)THEN
+        !OLD MODE FOR CALCULATION OF BANDSTRUCTURE
         CALL BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
-      ELSE IF(METHOD.eq.1)then
+      ELSE IF(MODE.EQ.1)THEN
+        !NEW MODE FOR CALCULATION OF BANDSTRUCTURE
         CALL BANDS_DIAG(LL_CNTL,NFIL,NFILO)
-      ELSE IF(METHOD.eq.2)THEN
-        CALL BANDS_DOS(LL_CNTL,NFIL,NFILO)
+      ELSE IF(MODE.EQ.2)THEN
+        !GENERATE A NEW PDOS-FILE WITH A SET OF KPOINTS
+        CALL BANDS_PDOS(LL_CNTL,NFIL,NFILO)
       ELSE
         CALL ERROR$MSG('!METHOD!ID NOT IMPLEMENTED')
-        CALL ERROR$I4VAL('ID',METHOD)
+        CALL ERROR$I4VAL('MODE',MODE)
         CALL ERROR$STOP('MAIN')
       ENDIF
 !
@@ -167,13 +170,6 @@
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
-
-      ID=+'PDOSOUT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PDOSOUT')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
                                    CALL TRACE$POP
       RETURN
@@ -1652,7 +1648,7 @@ END MODULE
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_DOS(LL_CNTL,NFIL,NFILO)
+      SUBROUTINE BANDS_PDOS(LL_CNTL,NFIL,NFILO)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1726,14 +1722,17 @@ END MODULE
       REAL(8),ALLOCATABLE          :: WKPT(:)
       COMPLEX(8),ALLOCATABLE       :: PROJTMP(:,:,:)
       INTEGER(4)                   :: LMN,index,IAT
+
+      INTEGER(4)                   :: NPDOS
+      CHARACTER(512)               :: FILE
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
 !     **************************************************************************
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
-        CALL ERROR$STOP('BANDS_DOS')
+        CALL ERROR$STOP('BANDS_PDOS')
       ENDIF
-                            CALL TRACE$PUSH('BANDS_DOS')
+                            CALL TRACE$PUSH('BANDS_PDOS')
       CALL TIMING$START
 !
 !     ==========================================================================
@@ -1755,11 +1754,11 @@ END MODULE
           CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
         ELSE
           CALL ERROR$MSG('!BCNTL!INPUTFILE!NAME NOT FOUND')
-          CALL ERROR$STOP('BANDS_DOS')
+          CALL ERROR$STOP('BANDS_PDOS')
         ENDIF
       ELSE IF (NFILE.gt.1)then
         CALL ERROR$MSG('MULTIPLE INPUT FILES GIVEN (!BCNTL!INPUTFILE)')
-        CALL ERROR$STOP('BANDS_DOS')
+        CALL ERROR$STOP('BANDS_PDOS')
       ELSE
         ID=+'BANDDATAIN'
         CALL FILEHANDLER$SETFILE(ID,.true.,-'.BANDDATA')
@@ -1779,30 +1778,134 @@ END MODULE
 !     ==========================================================================
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
-        CALL ERROR$STOP('BANDS_DOS')
+        CALL ERROR$STOP('BANDS_PDOS')
       ENDIF
 
-      !FIXME: TO BE READ FROM BCNTL/DCNTL
-      NKDIV(1)=9
-      NKDIV(2)=9
-      NKDIV(3)=9
-      ISHIFT(1)=0
-      ISHIFT(2)=0
-      ISHIFT(3)=0
-      NB=18
-      EPW=0.5D0*15.D0
+!
+!     ==========================================================================
+!     ==  READ BCNTL                                                          ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD')
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'METHOD_DIAG',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'METHOD_DIAG',1,METHOD_DIAG)
+      ELSE
+        METHOD_DIAG=1
+      ENDIF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
+        WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
+        !input is in Hartree
+        EPW=0.5D0*EPW
+      ENDIF
+!
+!     ==========================================================================
+!     ==  READ BCNTL: PDOS BLOCK                                              ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'PDOS',NPDOS)
+      IF(NPDOS.gt.1)THEN
+        CALL ERROR$MSG('TOO MANY PDOS-BLOCK GIVEN, JUST ONE BLOCK ALLOWED')
+        CALL ERROR$I4VAL('NPDOS',NPDOS)
+        CALL ERROR$STOP('BANDS_PDOS')
+      ENDIF
+      IF(NPDOS.eq.0)THEN
+        CALL ERROR$MSG('NO PDOS-BLOCK GIVEN')
+        CALL ERROR$I4VAL('NPDOS',NPDOS)
+        CALL ERROR$STOP('BANDS_PDOS')
+      ENDIF
+      CALL LINKEDLIST$SELECT(LL_CNTL,'PDOS',NPDOS)
+
+      !PDOSINFILE
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSINFILE',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        CALL FILEHANDLER$SETFILE('PDOS',.FALSE.,FILE)
+      ELSE
+        CALL FILEHANDLER$SETFILE('PDOS',.TRUE.,-'.PDOS')
+      ENDIF
+      CALL FILEHANDLER$SETSPECIFICATION('PDOS','STATUS','OLD')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOS','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOS','ACTION','READ')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOS','FORM','UNFORMATTED')
+
+      !PDOSOUTFILE
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSOUTFILE',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
+      ELSE
+        CALL FILEHANDLER$SETFILE('PDOSOUT',.TRUE.,-'.PDOSOUT')
+      ENDIF
+      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','FORM','UNFORMATTED')
+      
+      !NB
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NB',0,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'NB',1,NB)
+      ELSE
+        CALL ERROR$MSG('NB NOT GIVEN')
+        CALL ERROR$STOP('BANDS_PDOS')
+      ENDIF
+      
+      !NKDIV
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NKDIV',1,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'NKDIV',1,NKDIV)
+      ELSE
+        CALL ERROR$MSG('NKDIV NOT GIVEN')
+        CALL ERROR$STOP('BANDS_PDOS')
+      ENDIF
+      
+      !ISHIFT
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ISHIFT',1,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'ISHIFT',1,ISHIFT)
+      ELSE
+        ISHIFT(1)=0
+        ISHIFT(2)=0
+        ISHIFT(3)=0
+      ENDIF
+
+      !TUSESYM
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TUSESYM',0,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'TUSESYM',1,TUSESYM)
+      ELSE
+        TUSESYM=.FALSE.
+      ENDIF
+      
+      !SPACEGROUP
+      IF(TUSESYM)THEN
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPACEGROUP',0,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'SPACEGROUP',1,SPACEGROUP)
+        ELSE
+          CALL ERROR$MSG('TUSESYM=TRUE, BUT SPACEGROUP NOT GIVEN')
+          CALL ERROR$STOP('BANDS_PDOS')
+        ENDIF
+      ENDIF
+      
+      !TSHIFT
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TSHIFT',0,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'TSHIFT',1,TSHIFT)
+      ELSE
+        TSHIFT=.FALSE.
+      ENDIF
+
       IF(NSPIN.eq.1)THEN
         RNTOT=0.5D0*NEL
       ELSE
         RNTOT=NEL
       ENDIF
-
-
-      METHOD_DIAG=1
-      NE=1000
-      TUSESYM=.false.
-      SPACEGROUP=229
-      TSHIFT=.FALSE. 
 
       !check if NB*NSPIN>RNTOT
       IF(NB*NSPIN.lt.RNTOT)THEN
@@ -1810,7 +1913,7 @@ END MODULE
         CALL ERROR$I4VAL('NB',NB)
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$R8VAL('NUMBER OF BANDS',RNTOT)
-        CALL ERROR$STOP('BANDS_DOS')
+        CALL ERROR$STOP('BANDS_PDOS')
       ENDIF
 
                             CALL TRACE$PASS('AFTER READ BNCTL')
@@ -1940,19 +2043,12 @@ END MODULE
       ENDDO
 !$omp end parallel do
                             CALL TRACE$POP()
-     
       !
-
-
       DO IKP=1,NKP
         DO I=1,NB
           PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
         ENDDO
       ENDDO
-
-
-      !CALL PDOS$SETI4('NB',NB)
-      !CALL PDOS$SETR8A('XK',3*NKP,XK)
         
 !     ==========================================================================
 !     ==  CALCULATE WEIGHTS                                                   ==
@@ -1999,63 +2095,6 @@ END MODULE
       CALL LIB$FLUSHFILE(NFILOUT)
       CALL FILEHANDLER$CLOSE('PDOSOUT')
                             CALL TRACE$POP()
-                            CALL TRACE$POP()
-!
-!     ==========================================================================
-!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
-!     ==========================================================================
-      !FIXME TOTAL DENSITY for testing
-      ALLOCATE(A(NB*NSPIN,NKP))
-      A=1
-      SUMA=0.D0
-      DO IB=1,NB
-        DO ISPIN=1,NSPIN
-          SUMA=0.0D0
-          DO IKP=1,NKP
-            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKP)*A(IB+NB*(ISPIN-1),IKP)
-          ENDDO
-          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA
-        ENDDO
-      ENDDO
-      
-      A=1
-      SUMA=0.D0
-      DO IB=1,NB
-        DO ISPIN=1,NSPIN
-          DO IKP=1,NKP
-            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKP)*A(IB+NB*(ISPIN-1),IKP)
-          ENDDO
-        ENDDO
-      ENDDO
-      PRINT*,'INTEGRAL OF A : ',SUMA,' should be ',RNTOT 
- 
-      !TOTAL DENSITY OF STATES
-      EMIN=minval(EB(:,:))
-      EMAX=maxval(EB(:,:))
-      allocate(EWGHT(NSPIN*NB,NKP))
-      CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
-PRINT*,"EWGHT",EWGHT(1,1)%WGHT(1)
-      A(:,:)=1.0d0
-      ALLOCATE(DOS(NE,NSPIN))
-      DOS(:,:)=0.0D0
-      DO IKP=1,NKP
-        DO IB=1,NB
-          DO ISPIN=1,NSPIN
-            I1=EWGHT(IB+NB*(ISPIN-1),IKP)%I1
-            I2=EWGHT(IB+NB*(ISPIN-1),IKP)%I2
-            DO IE=I1,I2
-              DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB+NB*(ISPIN-1),IKP)%WGHT(IE)*A(IB+NB*(ISPIN-1),IKP)
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-
-      !FIXME: make output nice
-      open(101,file='dos.dat')
-      do ie=1,ne
-      write(101,*)emin+real(ie-1,kind=8)*(emax-emin)/real(ne-1,kind=8),(DOS(ie,ISPIN),ISPIN=1,NSPIN)
-      enddo
-      close(101)
                             CALL TRACE$POP()
       RETURN
       END SUBROUTINE
