@@ -706,7 +706,6 @@
             IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
-IF(IKPT.eq.1)PRINT*,"GAMMA",IB,STATE%EIG(IB),STATE%OCC(IB),STATE%VEC(:,:,IB)
             ELSE
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
