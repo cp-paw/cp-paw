@@ -3178,7 +3178,8 @@ print*,'a     ',(a(i,i),i=1,nb)
           NBH=THIS%NBH
           NB=THIS%NB
           CALL PLANEWAVE$GETI4('NGG',NGG)
-          CALL PLANEWAVE$GETL4('TINV',TSUPER)
+!bugfix pb Nov.2,2013        CALL PLANEWAVE$GETL4('TINV',TSUPER)
+          CALL PLANEWAVE$GETL4('SUPER',TSUPER)
         END IF
 !       
 !       ========================================================================
@@ -5099,7 +5100,8 @@ END MODULE TOTALSPIN_MODULE
           NGL=GSET%NGL
           NBH=THIS%NBH
           CALL PLANEWAVE$GETI4('NGG',NGG)
-          CALL PLANEWAVE$GETL4('TINV',TSUPER)
+!BUGFIX PB NOV.2, 2013          CALL PLANEWAVE$GETL4('TINV',TSUPER)
+          CALL PLANEWAVE$GETL4('SUPER',TSUPER)
         ELSE
           IKPTL=0
           NGG=1
