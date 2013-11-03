@@ -5148,10 +5148,14 @@ END MODULE TOTALSPIN_MODULE
       INTEGER(4)              :: NWAVE
       INTEGER(4)              :: nfilo
       LOGICAL(4)              :: TKGROUP
+      REAL(8)    ,ALLOCATABLE :: XK(:,:) !K-POINTS IN RELATIVE COORDINATES
 !     **************************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
+!
+      ALLOCATE(XK(3,NKPT))
+      CALL DYNOCC$GETR8A('XK',3*NKPT,XK)
 !
 !     ==================================================================
 !     ==  READ SIZES                                                  ==
@@ -5228,6 +5232,22 @@ END MODULE TOTALSPIN_MODULE
 !
           ALLOCATE(IGVECG_(3,NGG_))
           READ(NFIL)K_,IGVECG_ !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+PRINT*,'READPSI (K ON FILE):  ',IKPTG,K_
+PRINT*,'READPSI (INTERNAL K): ',IKPTG,XK(:,IKPTG),GSET%ID
+IF(SUM(ABS(K_(:)-XK(:,IKPTG))).NE.0) THEN
+  CALL ERROR$MSG('INCONSISTENT K-POINTS')
+  CALL ERROR$CHVAL('GSET%ID',GSET%ID)
+  CALL ERROR$L4VAL('TKGROUP',TKGROUP)
+  CALL ERROR$I4VAL('IKPTG',IKPTG)
+  CALL ERROR$I4VAL('IKPTL',IKPTL)
+  CALL ERROR$R8VAL('XK(1) ON FILE',K_(1))
+  CALL ERROR$R8VAL('XK(2) ON FILE',K_(2))
+  CALL ERROR$R8VAL('XK(3) ON FILE',K_(3))
+  CALL ERROR$R8VAL('INTERNAL XK(1) ',XK(1,IKPTG))
+  CALL ERROR$R8VAL('INTERNAL XK(2) ',XK(2,IKPTG))
+  CALL ERROR$R8VAL('INTERNAL XK(3) ',XK(3,IKPTG))
+  CALL ERROR$STOP('WAVES_READPSI')
+END IF
 !
           CALL GBASS(RBAS,GBAS_,SVAR)
           ALLOCATE(GVECG_(3,NGG_))
@@ -5344,6 +5364,9 @@ END MODULE TOTALSPIN_MODULE
               CALL ERROR$MSG('... AND SUPER WAVE FUNCTIONS NOT IMPLEMENTED')
               CALL ERROR$L4VAL('TSUPER_ ON FILE',TSUPER_)
               CALL ERROR$L4VAL('TSUPER  EXPECTED',TSUPER)
+              CALL ERROR$I4VAL('IKPTG',IKPTG)
+              CALL ERROR$I4VAL('IKPTL',IKPTL)
+              CALL ERROR$I4VAL('IWAVE',IWAVE)
               CALL ERROR$STOP('WAVES_READPSI')
             END IF
 

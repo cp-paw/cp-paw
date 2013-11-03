@@ -826,24 +826,28 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_REDUZ(N,NMSHP,ISHIFT,NSYM,IO,NUM)
-!     **                                                              **
-!     **  REDUZ CREATES THE RELATION BETWEEN THE MESHPOINTS AND       **
-!     **  THE POINTS IN THE "IRREDUCIBLE ZONE"                        **
-!     **  INPUT :                                                     **
-!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS   **
-!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND        **
-!     **                ON ALL FACES OF A REC. UNIT CELL              **
-!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                 **
-!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)*
-!     **  OUTPUT :                                                    **
-!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE       **
-!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)         **
-!     **  REMARKS :                                                   **
-!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :     **
-!     **   (X,Y,Z)=RBAS*(I,J,K)                                       **
-!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1     **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  REDUZ CREATES THE RELATION BETWEEN THE MESHPOINTS AND               **
+!     **  THE POINTS IN THE "IRREDUCIBLE ZONE"                                **
+!     **  INPUT :                                                             **
+!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS           **
+!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND                **
+!     **                ON ALL FACES OF A REC. UNIT CELL                      **
+!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                         **
+!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)       **
+!     **  OUTPUT :                                                            **
+!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE               **
+!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)                 **
+!     **  REMARKS :                                                           **
+!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :             **
+!     **   (X,Y,Z)=RBAS*(I,J,K)                                               **
+!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1             **
+!     **                                                                      **
+!     **  remark: a change from 5b51787 to b86ae50 resulted in a change of the**
+!     **    order of irreducible k-points, which rendered previous restart    **
+!     **    files unreadable                                                  **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N(3)
       INTEGER(4),INTENT(IN) :: NMSHP
@@ -852,81 +856,108 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4),INTENT(IN) :: IO(3,3,NSYM)
       INTEGER(4),INTENT(OUT):: NUM(NMSHP)
       LOGICAL(4),PARAMETER  :: TSHIFT=.TRUE.
-      INTEGER(4)            :: I,J
+      integer(4)            :: isym(nmshp)  ! symmetry from irr. p. or zero
+      INTEGER(4)            :: I,J,jprime
       INTEGER(4)            :: I1,I2,I3,J1,J2,J3
-      INTEGER(4)            :: IX1,IX2,IX3,IND,IND1,IND2
+      INTEGER(4)            :: IX1,IX2,IX3,IND,IND1
       LOGICAL(4)            :: TCHK
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('BRILLOUIN_REDUZ')
       CALL BRILLOUIN_CHECKSHIFT(ISHIFT,NSYM,IO,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('SHIFT INCOMPATIBLE WITH SYMMETRY')
         CALL ERROR$STOP('BRILLOUIN_REDUZ')
       END IF
-!     ==================================================================
-!     ==  INITIALIZE                                                  ==
-!     ==================================================================
-      DO I=1,NMSHP                                                   
-        IND=I-1    ! I1 RUNS FASTEST
-        I1=IND/((N(3)+1)*(N(2)+1))      
-        IND=IND-I1*(N(3)+1)*(N(2)+1)
-        I2=IND/(N(3)+1)
-        I3=IND-I2*(N(3)+1)
-        J1=MODULO(I1,N(1))
-        J2=MODULO(I2,N(2))
-        J3=MODULO(I3,N(3))
-        NUM(I)=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
-      ENDDO
+!
 !     ==========================================================================
 !     ==  REDUCTION OF REDUCIBLE K-POINTS                                     ==
 !     ==  APPLY THE FULL POINT GROUP ON EACH K-POINT. THE K-POINT WITH THE    ==
 !     ==  MINIMUM INDEX IN THE RESULTING STAR IS THE IRRDUCIBLE POINT         ==
+!     ==                                                                      ==
+!     ==  POSITION IS ENCODED AS NUM(I1,I2,I3)=1+I3+(N(3)+1)*(I2+(N(2)+1)*I1) ==
+!     ==  WHERE UM RUNS FROM 1 TO NMSHP                                       ==
 !     ==========================================================================
-      DO J=1,NMSHP                                                   
-        IF(NUM(J).LT.J) THEN
-!         == POINT IS NOT IRREDUCIBLE. USE MAPPING TO DIRECT TO IRREDUCIBLE 
-!         == K-POINT
-          NUM(J)=NUM(NUM(J))
-          CYCLE
-        END IF
+!     == SCAN ALL POINTS INSIDE THE FIRST UNIT CELL (EXCLUDING OUTER BOUNDARIES)
+!     == THE ORDER OF THE POINTS DETERMINES THE ORDER AND THE CHOICE OF 
+!     == IRREDUCIBLE K-POINTS.
+      NUM(:)=0
+      DO IND1=1,N(1)*N(2)*N(3)
+!       == INVERT IND1=1+I1+N(1)*(I2+N(2)*I3) ==================================
+        IND=IND1-1
+        I3=IND/(N(1)*N(2))
+        IND=IND-I3*N(1)*N(2)
+        I2=IND/N(1)
+        I1=IND-I2*N(1)
+!       == ENCODE POSITION AND CHECK IF POINT IS ALREADY REDUCIBLE ============
+        J=1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)  ! ENCODES POSITION
+        IF(NUM(J).ne.0) CYCLE  ! NO IRREDUCIBLE POINT
+!
+!       == PLACE ON A GRID THAT IS TWICE AS FINE TO ACCOUNT FOR THE SHIFT=======
+        I1=2*I1+ISHIFT(1)                                            
+        I2=2*I2+ISHIFT(2)                                            
+        I3=2*I3+ISHIFT(3)                                            
+!
+!       == CONSTRUCT THE STAR OF EQUIVALENT K-POINTS ===========================
         DO I=1,NSYM                                                    
-          IND=NUM(J)-1
-          I1=IND/((N(3)+1)*(N(2)+1))
-          IND=IND-I1*(N(3)+1)*(N(2)+1)
-          I2=IND/(N(3)+1)
-          I3=IND-I2*(N(3)+1)
-          IND1=1+I1+N(1)*(I2+N(2)*I3)
-!         == PLACE ON A GRID THAT IS DOUBLE AS FINE
-          I1=2*I1+ISHIFT(1)                                            
-          I2=2*I2+ISHIFT(2)                                            
-          I3=2*I3+ISHIFT(3)                                            
-!         == APPLY SYMMETRY ============================================
+!         == APPLY SYMMETRY ====================================================
           J1=IO(1,1,I)*I1+IO(1,2,I)*I2+IO(1,3,I)*I3             
           J2=IO(2,1,I)*I1+IO(2,2,I)*I2+IO(2,3,I)*I3             
           J3=IO(3,1,I)*I1+IO(3,2,I)*I2+IO(3,3,I)*I3             
-!         == CHECK IF THE POINT FALLS ONTO THE ORIGINAL SHIFTED GRID ===
+!         == CHECK IF THE POINT FALLS ONTO THE ORIGINAL SHIFTED GRID ===========
           IX1=MODULO(J1-ISHIFT(1),2)                                           
           IX2=MODULO(J2-ISHIFT(2),2)                                           
           IX3=MODULO(J3-ISHIFT(3),2)                                           
           IF(IX1.NE.0.OR.IX2.NE.0.OR.IX3.NE.0) CYCLE  
-!         == COARSEN GRID AGAIN ======================================
+!         == COARSEN GRID AGAIN ================================================
           J1=(J1-ISHIFT(1))/2                                               
           J2=(J2-ISHIFT(2))/2                                               
           J3=(J3-ISHIFT(3))/2                                               
-!         == DO NOT CONSIDER POINTS AT THE OUTER BOUNDARY AS 
+!         == TRANSLATE TARGET POINT INTO FIRST UNIT CELL =======================
           J1=MODULO(J1,N(1))
           J2=MODULO(J2,N(2))
           J3=MODULO(J3,N(3))
-          IND2=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
-!         == IDENTIFY WITH ONE OF THE TWO SYMMETRY RELATED K-POINTS
-          IF(IND2.LT.J) THEN
-!           == IF IND2<J,  NUM(IND2) POINTS TO AN IRREDUCIBLE K-POINT
-!           == IF IND2.GE.J FOR ALL SYMMETRY OPERATIONS, IT IS IRREDUCIBLE
-            NUM(J)=NUM(IND2)
-            EXIT
-          ELSE IF(IND2.GT.J) THEN
-            NUM(IND2)=J
-          END IF
+!         == NEW POSITION ======================================================
+          JPRIME=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
+!         == POINT TO IRREDUCIBLE POINT AND SPECIFY SYMMETRY  ==================
+          NUM(JPRIME)=J   !POINTER TOWARDS IRREDICIBLE POINT
+          ISYM(JPRIME)=I  !SYMMETRY OPERATION FROM IRREDUCEBLE POINT TO JPRIME
+        ENDDO
+!       == ENFORCE THAT THE IDENTITY IS USED TO MAP THE POINT ON ITSELF ========
+        NUM(J)=J
+        ISYM(J)=0
+      ENDDO
+!
+!     ==========================================================================
+!     == COMNPLETE OUTER BOUNDARIES                                           ==
+!     ==========================================================================
+      DO I1=0,N(1)-1
+        DO I2=0,N(2)-1
+          I3=0
+          J3=N(3)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+J3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
+        ENDDO
+      ENDDO
+      DO I1=0,N(1)-1
+        DO I3=0,N(3)
+          I2=0
+          J2=N(2)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+I3+(N(3)+1)*(J2+(N(2)+1)*I1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
+        ENDDO
+      ENDDO
+      DO I2=0,N(2)
+        DO I3=0,N(3)
+          I1=0
+          J1=N(1)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+I3+(N(3)+1)*(I2+(N(2)+1)*J1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
         ENDDO
       ENDDO
 !
@@ -937,6 +968,9 @@ END MODULE BRILLOUIN_MODULE
       DO I=1,NMSHP
         IF(NUM(I).NE.NUM(NUM(I))) THEN
           CALL ERROR$MSG('MAPPING FAILED')
+          CALL ERROR$I4VAL('I',I)
+          CALL ERROR$I4VAL('NUM(I)',NUM(I))
+          CALL ERROR$I4VAL('NUM(num(I))',NUM(num(I)))
           CALL ERROR$STOP('BRILLOUIN_REDUZ')
         END IF
       ENDDO
