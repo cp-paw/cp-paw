@@ -2047,10 +2047,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
       SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
-!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM        **
+!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM     **
 !     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
 !     **                                                                      **
-!     ** REMARK: H AND S MUST BE HERMITEANC                                   **
+!     ** REMARK: H AND S MUST BE HERMITEAN                                    **
 !     **         S MUST BE POSITIVE DEFINITE                                  **
 !     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
 !     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY                **
@@ -2089,9 +2089,88 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ========================================================================
 #IF DEFINED(CPPVAR_LAPACK_ESSL)
       CALL ERROR$MSG('GENERALEIGENVALUE PROBLEM NOT IMPLEMENTED FOR ESSL')
-      CALL ERROR$STOP('GENERALEIGENVALUER8')  
+      CALL ERROR$STOP('GENERALEIGENVALUEC8')  
 #ELSE
       CALL LIB_LAPACK_ZHEGV(N,H,S,E,U)
+#ENDIF
+!
+!     ========================================================================
+!     == TEST RESULT OF THE ROUTINE                                         ==
+!     ========================================================================
+      IF(TTEST) THEN
+        S1=MATMUL(TRANSPOSE(CONJG(U)),MATMUL(S,U))
+        DEV=0.D0
+        DO I=1,N
+          S1(I,I)=S1(I,I)-(1.D0,0.D0)
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*S,U(:,I)))))
+        ENDDO
+        IF(DEV.GT.1.D-6) THEN
+          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+        END IF
+        DEV=SUM(ABS(S1))
+        IF(DEV.GT.1.D-7) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT ORTHONORMAL')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+        END IF
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$GENERALEIGENVALUEC8_D(N,TEV,H,S,E,U)
+!     **************************************************************************
+!     **                                                                      **
+!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM     **
+!     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
+!     ** IT USES ZHEGVD INSTEAD IF ZHEGV USED BY LIB$GENERALEIGENVALUEC8 AND  **
+!     ** CALCULATES THE EIGENVECTORS ONLY OPTIONAL (PARAMETER TEV)            **
+!     **                                                                      **
+!     ** REMARK: H AND S MUST BE HERMITEAN                                    **
+!     **         S MUST BE POSITIVE DEFINITE                                  **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
+!     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY                **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      LOGICAL(4),INTENT(IN) :: TEV
+      COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
+      COMPLEX(8),INTENT(IN) :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
+      COMPLEX(8),INTENT(OUT):: U(N,N)  ! EIGENVECTORS
+      COMPLEX(8)            :: S1(N,N)
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      REAL(8)               :: DEV
+      INTEGER               :: I
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                                 ==
+!     ==========================================================================
+      DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
+      IF(DEV.GT.1.D-8) THEN
+        CALL ERROR$MSG('HAMILTON MATRIX NOT HERMITEAN')
+        CALL ERROR$R8VAL('DEV',DEV)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+      END IF
+      DEV=SUM(ABS(S-TRANSPOSE(CONJG(S))))
+      IF(DEV.GT.1.D-8) THEN
+        CALL ERROR$MSG('OVERLAP MATRIX NOT HERMITEAN')
+        CALL ERROR$R8VAL('DEV',DEV)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+      END IF
+!
+!     ========================================================================
+!     == CALL LAPACK ROUTINE                                                ==
+!     ========================================================================
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('GENERALEIGENVALUE PROBLEM NOT IMPLEMENTED FOR ESSL')
+      CALL ERROR$STOP('GENERALEIGENVALUEC8_D')  
+#ELSE
+      CALL LIB_LAPACK_ZHEGVD(N,TEV,H,S,E,U)
 #ENDIF
 !
 !     ========================================================================
@@ -3495,7 +3574,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ========================================================================
       VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
       S1=S
-      !DO WORKSPAVE QUERY
+      !DO WORKSPACE QUERY
       allocate(WORK(1))
       LDWORK=-1
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
@@ -3537,7 +3616,135 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END IF
       RETURN
       END
+!
+!     ......................................................................
+      SUBROUTINE LIB_LAPACK_ZHEGVD(N,TEV,H,S,E,VEC)
+!     **                                                                 **
+!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
+!     **                                                                 **
+!     ** REMARK: H AND S MUST BE HERMITEANC                              **
+!     **         S MUST BE POSITIVE DEFINITE                             **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
+!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
+!     **                                                                 **
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)        :: N
+      LOGICAL(4),INTENT(IN)        :: TEV
+      COMPLEX(8),INTENT(IN)        :: H(N,N)    ! HAMITON MATRIX
+      COMPLEX(8),INTENT(IN)        :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT)       :: E(N)      ! EIGENVALUES
+      COMPLEX(8),INTENT(OUT)       :: VEC(N,N)  ! EIGENVECTORS
+      COMPLEX(8)                   :: S1(N,N)
+      LOGICAL   ,PARAMETER         :: TTEST=.FALSE.
+      REAL(8)                      :: DEV
+      INTEGER                      :: I
+      INTEGER(4)                   :: LWORK,LRWORK,LIWORK,INFO
+      COMPLEX(8),ALLOCATABLE       :: WORK(:)
+      REAL(8)   ,ALLOCATABLE       :: RWORK(:)
+      INTEGER(4),ALLOCATABLE       :: IWORK(:)
+      CHARACTER(1)                 :: JOBZ
+!     *********************************************************************
+!
+!     ========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
+!     ========================================================================
+      IF(TTEST) THEN
+        DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('HAMILTON MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+        DEV=SUM(ABS(S-TRANSPOSE(CONJG(S))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('OVERLAP MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+      END IF
+!
+!     ========================================================================
+!     == CALL LAPACK ROUTINE                                                ==
+!     ========================================================================
+      IF(TEV)THEN
+        JOBZ='V'
+      ELSE
+        JOBZ='N'
+      ENDIF
 
+      !VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      VEC=H
+      S1=S
+      !DO WORKSPACE QUERY
+      LWORK=-1
+      LRWORK=-1
+      LIWORK=-1
+      Allocate(WORK(1))!complex(8)
+      Allocate(RWORK(1))!real(8)
+      Allocate(IWORK(1))!integer(4)
+      
+      CALL ZHEGVD(1,JOBZ,'U',N,VEC,N,S1,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      IF(INFO.ne.0)THEN
+        CALL ERROR$MSG('ZHEGVD WORKSPACE QUERY FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      LWORK=INT(WORK(1))
+      LRWORK=INT(RWORK(1))
+      LIWORK=INT(IWORK(1))
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+      allocate(WORK(LWORK)) 
+      allocate(RWORK(LRWORK)) 
+      allocate(IWORK(LIWORK)) 
+      CALL ZHEGVD(1,JOBZ,'U',N,VEC,N,S1,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      deallocate(WORK)
+      deallocate(RWORK)
+      deallocate(IWORK)
+
+      IF(INFO.ne.0)THEN
+        CALL ERROR$MSG('ZHEGVD FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      
+
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('ITH ARGUMENT OF ZHGEVD HAS ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+      END IF
+!
+!     ========================================================================
+!     == TEST RESULT OF THE ROUTINE                                         ==
+!     ========================================================================
+      IF(TTEST) THEN
+        S1=MATMUL(TRANSPOSE(CONJG(VEC)),MATMUL(S,VEC))
+        DEV=0.D0
+        DO I=1,N
+          S1(I,I)=S1(I,I)-(1.D0,0.D0)
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*S,VEC(:,I)))))
+        ENDDO
+        IF(DEV.GT.1.D-6) THEN
+          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+        DEV=SUM(ABS(S1))
+        IF(DEV.GT.1.D-7) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT ORTHONORMAL')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+      END IF
+      RETURN
+      END
 #ENDIF
 ! 
 !*******************************************************************************

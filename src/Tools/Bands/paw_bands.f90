@@ -723,13 +723,13 @@ print*,'nb ',nb
       RETURN
       END
 
-MODULE KPOINTDIAG_MODULE
-  IMPLICIT NONE
-  CONTAINS
+      MODULE KPOINTDIAG_MODULE
+      IMPLICIT NONE
+      CONTAINS
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      SUBROUTINE BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !     **************************************************************************
 !     **  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                         **
 !     **************************************************************************
@@ -738,6 +738,7 @@ MODULE KPOINTDIAG_MODULE
       USE RADIAL_MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
       IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)               :: TFIXSYMMETRYBREAK
       INTEGER(4),INTENT(OUT)              :: NG
       REAL(8),allocatable,INTENT(INOUT)   :: GVEC(:,:)   !G
       REAL(8),allocatable,INTENT(INOUT)   :: G2(:)
@@ -749,8 +750,12 @@ MODULE KPOINTDIAG_MODULE
       TYPE(GSET_TYPE)                     :: GSET
       COMPLEX(8),allocatable              :: PSI1(:,:,:)
       COMPLEX(8),allocatable              :: HPSI1(:,:,:)
-      INTEGER(4)                          :: ISPIN,I,IDIM1,IDIM2,I1
+      INTEGER(4)                          :: ISPIN,I,IDIM1,IDIM2
       LOGICAL(4)                          :: TPRINT=.true.
+      REAL(8)                             :: GMAX
+      REAL(8)                             :: GDIFF(3,3,3)
+      INTEGER(4)                          :: I1,I2,I3,J
+      REAL(8)                             :: EPW2
 !
 !     == GENERATE G-GRID ==================================================
       KVEC(1)=0.0D0
@@ -761,15 +766,31 @@ MODULE KPOINTDIAG_MODULE
 !     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
 !     ==========================================================================
       CALL MPE$INIT
-
-      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA','~',RBAS,KVEC,.false.,EPW &
+      IF(TFIXSYMMETRYBREAK)THEN
+        IF(TPRINT)PRINT*,"EPW FROM INPUT=",EPW
+        GMAX=sqrt(2.0D0*EPW)
+        !FIND LONGEST DIAGONAL
+        DO I1=-1,1
+          DO I2=-1,1
+            DO I3=-1,1
+              GDIFF(I1+2,I2+2,I3+2)=SQRT(SUM((REAL(I1,KIND=8)*GBAS(:,1)+REAL(I2,KIND=8)*GBAS(:,2)+REAL(I3,KIND=8)*GBAS(:,3))**2))
+            ENDDO
+          ENDDO
+        ENDDO
+        IF(TPRINT)PRINT*,"LONGEST DIAGONAL=",MAXVAL(GDIFF(:,:,:)),MAXLOC(GDIFF(:,:,:))
+        EPW2=0.5D0*(GMAX+MAXVAL(GDIFF(:,:,:)))**2
+        IF(TPRINT)PRINT*,"EPW MODIFIED FOR PROPER CUTOFF=",EPW2
+      ELSE
+        EPW2=EPW
+      ENDIF
+      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA','~',RBAS,KVEC,.false.,EPW2 &
      &                               ,0,NR1,NR2,NR3)
-      CALL PLANEWAVE$SELECT('WAVE GAMMA')      
+      CALL PLANEWAVE$SELECT('WAVE GAMMA')     
 
-      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW,NG)
+
+      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
       GSET%NGL=NG
-      IF(TPRINT)PRINT*,"EPW NG",EPW,NG
-      
+      IF(TPRINT)PRINT*,"EPW2 NG",EPW2,NG
       ALLOCATE(GVEC(3,NG))
       ALLOCATE(G2(NG))
       CALL PLANEWAVE$GETR8A('GVEC',3*NG,GVEC)
@@ -827,7 +848,8 @@ MODULE KPOINTDIAG_MODULE
       END SUBROUTINE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_KPOINT(NG,NB,ISPIN,METHOD,GIDG_PROTO,TPROJ,KVEC,GVEC,TI_H,TI_S,E,PROJ)
+      SUBROUTINE BANDS_KPOINT(NG,NB,ISPIN,METHOD,GIDG_PROTO,TPROJ,&
+     &               KVEC,GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ** COMPUTES EIGENVALUES[H] AND PROJECTIONS FOR A GIVEN KVEC     **
@@ -844,20 +866,21 @@ MODULE KPOINTDIAG_MODULE
       LOGICAL(4)  ,INTENT(IN)  :: TPROJ
       REAL(8)     ,INTENT(IN)  :: KVEC(3)
       REAL(8)     ,INTENT(IN)  :: GVEC(3,NG)
+      LOGICAL(4)  ,INTENT(IN)  :: TFIXSYMMETRYBREAK
       COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
       COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
-      REAL(8)     ,INTENT(OUT) :: E(NG*NDIM)
+      REAL(8)     ,INTENT(OUT),allocatable :: E(:)
       COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,LMNXX,NB)
       COMPLEX(8),allocatable   :: TI_HK(:,:)
       COMPLEX(8),allocatable   :: TI_SK(:,:)
       COMPLEX(8),allocatable   :: U(:,:)
       REAL(8)                  :: GVECPK(3,NG)
       REAL(8)                  :: G2(NG)
-      COMPLEX(8)               :: EIGR(NG)
-      COMPLEX(8)               :: FOFG(NG)
-      COMPLEX(8)               :: PRO(NAT,NG,LMNXX)
-      REAL(8)                  :: BAREPRO(NG,NBAREPRO)
-      REAL(8)                  :: YLM(NG,LMX)
+      COMPLEX(8),allocatable   :: EIGR(:)
+      COMPLEX(8),allocatable   :: FOFG(:)
+      COMPLEX(8),allocatable   :: PRO(:,:,:)
+      REAL(8),allocatable      :: BAREPRO(:,:)
+      REAL(8),allocatable      :: YLM(:,:)
       REAL(8)                  :: YLM_(LMX)
       INTEGER(4)               :: LOX_(LNXX)
       INTEGER(4)               :: ISP,IND,LN,IAT,IDIM1,IDIM2,IBPRO
@@ -868,6 +891,8 @@ MODULE KPOINTDIAG_MODULE
       REAL(8)                  :: SVAR
       COMPLEX(8)               :: CSVAR,CSVAR_H,CSVAR_S
       LOGICAL(4)               :: TTIMING
+      INTEGER(4)               :: NG2
+      INTEGER(4)               :: NGARR(NG)
 !     ******************************************************************
       if(omp_get_num_threads().eq.1)then
         TTIMING=.true.
@@ -875,20 +900,66 @@ MODULE KPOINTDIAG_MODULE
         TTIMING=.false.
       endif
       IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
-      allocate(TI_HK(NG*NDIM,NG*NDIM))
-      allocate(TI_SK(NG*NDIM,NG*NDIM))
-      TI_HK(:,:)=TI_H(:,:,ISPIN)
-      TI_SK(:,:)=TI_S(:,:,ISPIN)
       
       CALL GBASS(RBAS,GBAS,GWEIGHT)
       CELLVOL=GWEIGHT
 
       !COMPUTE G+K and (G+K)^2
       IF(TTIMING) CALL TIMING$CLOCKON('G+K,G2')
-      DO I=1,NG
-        GVECPK(:,I)=GVEC(:,I)+KVEC(:)
-        G2(I)=sum(GVECPK(:,I)**2)
-      ENDDO
+      
+      IF(TFIXSYMMETRYBREAK)THEN
+        IF(NDIM.NE.1)THEN
+          CALL ERROR$MSG('NDIM.NE.1 NOT PROPERLY IMPLEMENTED YET')
+          CALL ERROR$STOP('BANDS_KPOINT')
+        ENDIF
+        NG2=1
+        DO I=1,NG
+          IF(0.5D0*sum((GVEC(:,I)+KVEC(:))**2).le.EPW)THEN
+            GVECPK(:,NG2)=GVEC(:,I)+KVEC(:)
+            G2(NG2)=sum(GVECPK(:,NG2)**2)
+            NGARR(I)=NG2
+            NG2=NG2+1
+          ELSE
+            NGARR(I)=0
+          ENDIF
+        ENDDO
+        NG2=NG2-1
+
+        allocate(TI_HK(NG2*NDIM,NG2*NDIM))
+        allocate(TI_SK(NG2*NDIM,NG2*NDIM))
+        N=1
+        DO I=1,NG
+          IF(NGARR(I).ne.0)THEN
+            M=1
+            DO J=1,NG
+              if(NGARR(J).ne.0)THEN
+                TI_HK(N,M)=TI_H(I,J,ISPIN)
+                TI_SK(N,M)=TI_S(I,J,ISPIN)
+                M=M+1
+              ENDIF
+            ENDDO
+            N=N+1
+          ENDIF
+        ENDDO
+      ELSE
+        DO I=1,NG
+          GVECPK(:,I)=GVEC(:,I)+KVEC(:)
+          G2(I)=sum(GVECPK(:,I)**2)
+        ENDDO
+        NG2=NG
+        allocate(TI_HK(NG2*NDIM,NG2*NDIM))
+        allocate(TI_SK(NG2*NDIM,NG2*NDIM))
+        TI_HK(1:NG2*NDIM,1:NG2*NDIM)=TI_H(1:NG2*NDIM,1:NG2*NDIM,ISPIN)
+        TI_SK(1:NG2*NDIM,1:NG2*NDIM)=TI_S(1:NG2*NDIM,1:NG2*NDIM,ISPIN)
+      ENDIF
+      ALLOCATE(E(NG2*NDIM))    
+      ALLOCATE(EIGR(NG2))      
+      ALLOCATE(FOFG(NG2))      
+      ALLOCATE(PRO(NAT,NG2,LMNXX))
+      ALLOCATE(BAREPRO(NG2,NBAREPRO))
+      ALLOCATE(YLM(NG2,LMX)) 
+
+
       IF(TTIMING)CALL TIMING$CLOCKOFF('G+K,G2')
 
       IF(TTIMING)CALL TIMING$CLOCKON('PROJECTORS')
@@ -897,12 +968,12 @@ MODULE KPOINTDIAG_MODULE
         DO LN=1,LNX(ISP)
           IND=IND+1
           !BANDS_GETFOFG IS A MODIFIED VERSION OF SETUP$GETFOFG
-          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG,G2,CELLVOL,BAREPRO(:,IND))
+          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG2,G2,CELLVOL,BAREPRO(:,IND))
         ENDDO
       ENDDO
       
-      DO I=1,NG
-        CALL GETYLM(LMX,GVECPK(1,I),YLM_)
+      DO I=1,NG2
+        CALL GETYLM(LMX,GVECPK(:,I),YLM_)
         YLM(I,:)=YLM_(:) 
       ENDDO        
       
@@ -914,11 +985,11 @@ MODULE KPOINTDIAG_MODULE
         LMNX_=LMNX(ISP)
         LOX_=LOX(ISP,:)
         IBPRO=1+SUM(LNX(1:ISP-1))
-        DO I=1,NG
+        DO I=1,NG2
           SVAR=SUM(GVECPK(:,I)*R(:,IAT))
           EIGR(I)=CMPLX(cos(SVAR),-sin(SVAR))
         ENDDO
-        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG,GVECPK &
+        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK &
      &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
       ENDDO
       IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
@@ -931,7 +1002,7 @@ MODULE KPOINTDIAG_MODULE
 !      ENDDO
 
       !add (G+k)^2/2 and augmentation to TI_HK
-      DO I=1,NG
+      DO I=1,NG2
         DO IDIM1=1,NDIM
           I1=I*(NDIM)+(IDIM1-1)
           TI_HK(I1,I1)=TI_HK(I1,I1)+0.5D0*G2(I)
@@ -941,7 +1012,7 @@ MODULE KPOINTDIAG_MODULE
       PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
       !FIXME: OPTIMIZE THIS BLOCK!!!
 !PRINT*,"GWEIGHT",GWEIGHT
-      DO I=1,NG
+      DO I=1,NG2
         DO J=1,I
           CSVAR_H=0.0D0
           CSVAR_S=0.0D0
@@ -969,8 +1040,8 @@ MODULE KPOINTDIAG_MODULE
       ENDDO
      
 !      !check if TI_HK is hermitian
-!      DO I=1,NG
-!        DO J=I,NG
+!      DO I=1,NG2
+!        DO J=I,NG2
 !          IF(abs(TI_HK(I,J)-CONJG(TI_HK(J,I))).gt.1d-10)THEN
 !            PRINT*,"H",I,J
 !            STOP
@@ -983,13 +1054,13 @@ MODULE KPOINTDIAG_MODULE
 !      ENDDO
 
       !complete TI_HK and TI_SK
-      DO I=1,NG
-        DO J=I+1,NG
+      DO I=1,NG2
+        DO J=I+1,NG2
           TI_HK(I,J)=CONJG(TI_HK(J,I))
           TI_SK(I,J)=CONJG(TI_SK(J,I))
         ENDDO
       ENDDO
-
+      
       IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
       IF(TTIMING)CALL TRACE$POP
 
@@ -997,17 +1068,14 @@ MODULE KPOINTDIAG_MODULE
       !SOLVE GENERALIZED EIGENVALUE PROBLEM
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
-        IF(TTIMING)CALL TRACE$PUSH('LAPACK_ZHEGVD')
-        IF(TPROJ)THEN
-          U(:,:)=TI_HK(:,:)
-          CALL LAPACK_ZHEGVD(NG,'V',U,TI_SK,E)            
-        ELSE
-          CALL LAPACK_ZHEGVD(NG,'N',TI_HK,TI_SK,E)            
-        ENDIF
+        !USING ZHEGVD
+        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8_D')
+        CALL LIB$GENERALEIGENVALUEC8_D(NG2*NDIM,TPROJ,TI_HK,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$POP
       ELSE IF(METHOD.eq.2)then
+        !USING ZHEGV
         IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
-        CALL LIB$GENERALEIGENVALUEC8(NG*NDIM,TI_HK,TI_SK,E,U)
+        CALL LIB$GENERALEIGENVALUEC8(NG2*NDIM,TI_HK,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$POP
       ELSE 
         CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
@@ -1022,8 +1090,8 @@ MODULE KPOINTDIAG_MODULE
         DO IAT=1,NAT
           DO IB=1,NB
             DO LN=1,LMNX(ISPECIES(IAT))
-              CALL LIB$SCALARPRODUCTC8(.false.,NG*NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
-              !CALL PLANEWAVE$SCALARPRODUCT(' ',NG,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
+              CALL LIB$SCALARPRODUCTC8(.false.,NG2*NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
+              !CALL PLANEWAVE$SCALARPRODUCT(' ',NG2,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
               PROJ(IAT,LN,IB)=CSVAR
             ENDDO
           ENDDO
@@ -1089,102 +1157,6 @@ MODULE KPOINTDIAG_MODULE
       F=F/CELLVOL
       RETURN
       END SUBROUTINE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: N
-      Character(1),INTENT(IN)  :: JOBZ
-      COMPLEX(8),INTENT(INOUT) :: H(N,N)
-      COMPLEX(8),INTENT(INOUT) :: S(N,N)
-      REAL(8),INTENT(OUT)      :: E(N)
-      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
-      COMPLEX(8),ALLOCATABLE   :: WORK(:)
-      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
-      INTEGER(4),ALLOCATABLE   :: IWORK(:)
-!     ******************************************************************
-
-      LWORK=-1
-      LRWORK=-1
-      LIWORK=-1
-      Allocate(WORK(1))!complex(8)
-      Allocate(RWORK(1))!real(8)
-      Allocate(IWORK(1))!integer(4)
-      
-      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
-      IF(INFO.ne.0)THEN
-        CALL ERROR$MSG('ZHEGVD WORKSPACE QUERY FAILED')
-        CALL ERROR$I4VAL('INFO',INFO)
-        CALL ERROR$STOP('LAPACK_ZHEGVD')
-      ENDIF
-      LWORK=INT(WORK(1))
-      LRWORK=INT(RWORK(1))
-      LIWORK=INT(IWORK(1))
-      deallocate(WORK)
-      deallocate(RWORK)
-      deallocate(IWORK)
-      allocate(WORK(LWORK)) 
-      allocate(RWORK(LRWORK)) 
-      allocate(IWORK(LIWORK)) 
-      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
-      deallocate(WORK)
-      deallocate(RWORK)
-      deallocate(IWORK)
-
-      IF(INFO.ne.0)THEN
-        CALL ERROR$MSG('ZHEGVD FAILED')
-        CALL ERROR$I4VAL('INFO',INFO)
-        CALL ERROR$STOP('LAPACK_ZHEGVD')
-      ENDIF
-      return
-      END SUBROUTINE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LAPACK_ZGGEV(N,JOBZ,H,S,E)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: N
-      Character(1),INTENT(IN)  :: JOBZ
-      COMPLEX(8),INTENT(INOUT) :: H(N,N)
-      COMPLEX(8),INTENT(INOUT) :: S(N,N)
-      REAL(8),INTENT(OUT)      :: E(N)
-      INTEGER(4)               :: LWORK,LRWORK,LIWORK,info
-      COMPLEX(8),ALLOCATABLE   :: WORK(:)
-      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
-      Character(1)             :: JOBVL,JOBVR
-      COMPLEX(8)               :: ALPHA(N),BETA(N)
-      COMPLEX(8)               :: VL(N,N),VR(N,N)
-!     ******************************************************************
-
-      LWORK=-1
-      Allocate(WORK(1))!complex(8)
-      Allocate(RWORK(8*N))!complex(8)
-      JOBVL='N'
-      JOBVR=JOBZ
-!      ( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHA, BETA,
-!         22 *                         VL, LDVL, VR, LDVR, WORK, LWORK, RWORK,
-!         INFO )
-      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
-      LWORK=WORK(1)
-      deallocate(WORK)
-      allocate(WORK(LWORK)) 
-      CALL ZGGEV(JOBVL,JOBVR,N,H,N,S,N,ALPHA,BETA,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
-      deallocate(WORK)
-
-!      IF(INFO.ne.0)THEN
-!        CALL ERROR$MSG('ZGGEV FAILED')
-!        CALL ERROR$I4VAL('INFO',INFO)
-!        CALL ERROR$STOP('LAPACK_ZGGEV')
-!      ENDIF
-      E=REAL(ALPHA/BETA)
-      return
-      END SUBROUTINE
-
 END MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1253,6 +1225,7 @@ END MODULE
       REAL(8),ALLOCATABLE       :: FATBANDMAXWIDTH(:)
       CHARACTER(512),ALLOCATABLE:: FATBANDFILE(:)
       REAL(8)                   :: FATBANDMAX,SVAR1,SVAR2
+      LOGICAL(4)                :: TFIXSYMMETRYBREAK
 !     **************************************************************************
                             CALL TRACE$PUSH('BANDS_DIAG')
       CALL TIMING$START
@@ -1315,6 +1288,12 @@ END MODULE
       ELSE
         METHOD_DIAG=1
       ENDIF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TFIXSYMMETRYBREAK',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'TFIXSYMMETRYBREAK',1,TFIXSYMMETRYBREAK)
+      ELSE
+        TFIXSYMMETRYBREAK=.true.
+      ENDIF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
@@ -1326,7 +1305,7 @@ END MODULE
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
-      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !
 !     =========================================================================
 !     ==  CONSTRUCT BAND STRUCTURE                                           ==
@@ -1557,7 +1536,7 @@ END MODULE
 !$omp end critical
 
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
-      &              GVEC,TI_H,TI_S,E,PROJ)
+      &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
 !$omp critical
           IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
 
@@ -1686,7 +1665,7 @@ END MODULE
       REAL(8)                      :: RNTOT
       REAL(8)                      :: EF
       REAL(8)                      :: SUMA
-      REAL(8)                      :: EMIN,EMAX
+      REAL(8)                      :: EMIN,EMAX,EMIN2,EMAX2
       INTEGER(4)                   :: NE
       REAL(8),ALLOCATABLE          :: DOS(:,:)
      
@@ -1706,7 +1685,7 @@ END MODULE
 
       LOGICAL(4)                   :: TUSESYM
       INTEGER(4)                   :: SPACEGROUP
-      REAL(8)                      :: A0,B0,C0,ALPHA,BETA,GAMMA
+      REAL(8)                      :: A0,B0,C0,ALPHA,BETA,GAMMA,EI
       INTEGER(4)                   :: NSYM,NOP
       INTEGER(4),parameter         :: NSYMX=48
       INTEGER(4),parameter         :: NOPX=48
@@ -1727,6 +1706,7 @@ END MODULE
       CHARACTER(512)               :: FILE
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
+      LOGICAL(4)                   :: TFIXSYMMETRYBREAK
 !     **************************************************************************
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
@@ -1794,6 +1774,12 @@ END MODULE
       ELSE
         METHOD_DIAG=1
       ENDIF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TFIXSYMMETRYBREAK',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'TFIXSYMMETRYBREAK',1,TFIXSYMMETRYBREAK)
+      ELSE
+        TFIXSYMMETRYBREAK=.true.
+      ENDIF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
@@ -1823,7 +1809,7 @@ END MODULE
       !PDOSINFILE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSINFILE',0,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        CALL LINKEDLIST$GET(LL_CNTL,'PDOSINFILE',1,FILE)
         CALL FILEHANDLER$SETFILE('PDOS',.FALSE.,FILE)
       ELSE
         CALL FILEHANDLER$SETFILE('PDOS',.TRUE.,-'.PDOS')
@@ -1836,7 +1822,7 @@ END MODULE
       !PDOSOUTFILE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSOUTFILE',0,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        CALL LINKEDLIST$GET(LL_CNTL,'PDOSOUTFILE',1,FILE)
         CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
       ELSE
         CALL FILEHANDLER$SETFILE('PDOSOUT',.TRUE.,-'.PDOSOUT')
@@ -1921,6 +1907,7 @@ END MODULE
 !     ==========================================================================
 !     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                            ==
 !     ==========================================================================
+        TPROJ=.false.
         IARB=1
         IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
          IARB(1)=1
@@ -1980,7 +1967,7 @@ END MODULE
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
-      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
       ALLOCATE(EB(NB*NSPIN,NKP))        
       ALLOCATE(WGHT(NB*NSPIN,NKP))
       
@@ -2006,10 +1993,15 @@ END MODULE
       
       ALLOCATE(OCC(NKP,NB))
       OCC(:,:)=1.0D0
-      
-      CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
-      REWIND NFILOUT
-      CALL PDOS$WRITE(NFILOUT,2)
+      IF(.NOT.TUSESYM)THEN
+        CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
+        REWIND NFILOUT
+        CALL PDOS$WRITE(NFILOUT,2)
+      ELSE
+        WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE TUSESYM=T'
+        WRITE(NFILO,*)'AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!!!!'
+        CALL FLUSH(NFILO)
+      ENDIF
 
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
@@ -2026,7 +2018,7 @@ END MODULE
           ALLOCATE(PROJ(NAT,LMNXX,NB))
           ALLOCATE(E(NG*NDIM))
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
-      &              GVEC,TI_H,TI_S,E,PROJ)
+      &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
 !$omp critical
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
           IF(TPROJ)THEN
@@ -2061,43 +2053,111 @@ END MODULE
 !     ==========================================================================
 !     ==  WRITE TO PDOS FILE                                                  ==
 !     ==========================================================================
-      ALLOCATE(PROJTMP(NDIM,NPRO,NB))
-      DO IKP=1,NKP
-        DO ISPIN=1,NSPIN
-          IF(TPROJ)THEN
-            !reorder projections
-            index=1
-            DO IAT=1,NAT
-              DO LMN=1,LMNX(ISPECIES(IAT))
-                PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
-                index=index+1 
+      IF(.NOT.TUSESYM)THEN
+        ALLOCATE(PROJTMP(NDIM,NPRO,NB))
+        DO IKP=1,NKP
+          DO ISPIN=1,NSPIN
+            IF(TPROJ)THEN
+              !reorder projections
+              index=1
+              DO IAT=1,NAT
+                DO LMN=1,LMNX(ISPECIES(IAT))
+                  PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
+                  index=index+1 
+                ENDDO
               ENDDO
-            ENDDO
-          ELSE
-            PROJTMP(:,:,:)=0.0D0
-          ENDIF
-          DO IB=1,NB
-            IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
-              OCC(IKP,IB)=1.0D0/REAL(NKP,KIND=8)
             ELSE
-              OCC(IKP,IB)=0.0D0
+              PROJTMP(:,:,:)=0.0D0
             ENDIF
+            DO IB=1,NB
+              IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
+                OCC(IKP,IB)=1.0D0/REAL(NKP,KIND=8)
+              ELSE
+                OCC(IKP,IB)=0.0D0
+              ENDIF
+            ENDDO
+            CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
+        &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
           ENDDO
-          CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
-      &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
         ENDDO
-      ENDDO
-      DEALLOCATE(PROJTMP)
+        DEALLOCATE(PROJTMP)
+      ENDIF
 !     ==========================================================================
 !     ==  CLOSE PDOS FILE                                                     ==
 !     ==========================================================================
+      IF(.NOT.TUSESYM)THEN
                             CALL TRACE$PUSH('PDOS CLOSE')
-      CALL LIB$FLUSHFILE(NFILOUT)
-      CALL FILEHANDLER$CLOSE('PDOSOUT')
-                            CALL TRACE$POP()
+        CALL LIB$FLUSHFILE(NFILOUT)
+        CALL FILEHANDLER$CLOSE('PDOSOUT')
+                            CALL TRACE$POP()     
+      ENDIF
+
+!     ==========================================================================
+!     ==  CALCULATE AND WRITE TOTAL DENSITY OF STATES                         ==
+!     ==  THE FOLLOWING CODE WILL BE REMOVED, WHEN SYMMETRIES ARE DONE!       ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'DOS',NPDOS)
+      IF(NPDOS.eq.1)THEN
+                        CALL TRACE$PUSH('TOTAL DOS')
+        CALL LINKEDLIST$SELECT(LL_CNTL,'DOS',1)
+        EMIN=minval(EB(:,:))
+        EMAX=maxval(EB(:,:))
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMIN',0,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'EMIN',1,EMIN2)
+        ELSE
+          EMIN2=EMIN*27.211D0
+        ENDIF
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX',0,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'EMAX',1,EMAX2)
+        ELSE
+          EMAX2=EMAX*27.211D0
+        ENDIF
+        
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'NE',0,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'NE',1,NE)
+        ELSE
+          NE=1000
+        ENDIF
+        
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
+        IF(TCHK)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        ELSE
+          CALL ERROR$MSG('FILE IN DOS-BLOCK NOT GIVEN')
+          CALL ERROR$STOP('BANDS_PDOS')
+        ENDIF
+        allocate(EWGHT(NSPIN*NB,NKP))
+        CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
+
+        ALLOCATE(DOS(NE,NSPIN))
+        DOS(:,:)=0.0D0
+        DO IKP=1,NKP
+          DO IB=1,NB
+            DO ISPIN=1,NSPIN
+              I1=EWGHT(IB+NB*(ISPIN-1),IKP)%I1
+              I2=EWGHT(IB+NB*(ISPIN-1),IKP)%I2
+              DO IE=I1,I2
+                DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB+NB*(ISPIN-1),IKP)%WGHT(IE)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+
+        OPEN(101,FILE=FILE)
+        DO IE=1,NE
+          EI=27.211D0*(EMIN+REAL(IE-1,KIND=8)*(EMAX-EMIN)/REAL(NE-1,KIND=8))
+          IF((EI.ge.EMIN2).and.(EI.LE.EMAX2))THEN
+            WRITE(101,*)EI,(DOS(IE,ISPIN),ISPIN=1,NSPIN)
+          ENDIF
+        ENDDO
+        CLOSE(101)        
+                        CALL TRACE$POP()
+      ENDIF
                             CALL TRACE$POP()
       RETURN
       END SUBROUTINE
-
-
-

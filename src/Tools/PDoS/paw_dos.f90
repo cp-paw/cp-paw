@@ -1454,7 +1454,7 @@ END MODULE READCNTL_MODULE
      &                                               *STATE%VEC(2,IPRO2+M,IB))
                       END IF
                     ENDDO
-                    sum    =sum    *ov(ln1,ln2,isp) !ROBERT: SHOULDN'T HERE BE OV**2?
+                    sum    =sum    *ov(ln1,ln2,isp)
                     sum_(:)=sum_(:)*ov(ln1,ln2,isp)
                     IF(TRIM(SPIN).EQ.'TOTAL') THEN
                       SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM
