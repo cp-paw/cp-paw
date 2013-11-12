@@ -2812,8 +2812,11 @@ print*,'a     ',(a(i,i),i=1,nb)
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$REPORTEIG(NFIL)
 !     **************************************************************************
+!     **  produces a printout of one-particle energies as well as information **
+!     **  on homo/lumo etc.                                                   **
 !     **                                                                      **
-!     **                                                                      **
+!     **  remark: this routine is only used with fixed occupations            **
+!     **         , i.e. when dynocc$getl4('dyn',tchk) returns tchk=.false.    **
 !     **************************************************************************
       USE WAVES_MODULE
       USE MPE_MODULE
@@ -2829,6 +2832,7 @@ print*,'a     ',(a(i,i),i=1,nb)
       REAL(8)  ,ALLOCATABLE :: EIG(:)
       INTEGER(4)            :: NTASKS,THISTASK
       real(8)  ,allocatable :: occ(:,:,:)
+      real(8)  ,allocatable :: wkpt(:)
       real(8)               :: espinhomo(nspin)
       real(8)               :: espinlumo(nspin)
       integer(4)            :: ibspinhomo(nspin)
@@ -2847,7 +2851,9 @@ print*,'a     ',(a(i,i),i=1,nb)
 !     ==========================================================================
       CALL DYNOCC$GETI4('NB',NB)
       ALLOCATE(occ(NB,NKPT,NSPIN))
-      CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,occ)
+      CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+      ALLOCATE(WKPT(NKPT))
+      CALL DYNOCC$GETR8A('WKPT',nkpt,WKPT) !K-POINT WEIGHT
       egdirect    =+1.d+10
       ehomo       =-1.d+10
       elumo       =+1.d+10
@@ -2967,6 +2973,8 @@ print*,'a     ',(a(i,i),i=1,nb)
       FORMAT='(T10," FROM BAND=",I5," AT IK=",I5," WITH ISPIN=",I1 &
      &              ," TO BAND ",I5," AT IK=",I5," WITH ISPIN=",I1)'
       WRITE(NFIL,FMT=FORMAT)IBHOMO,IKHOMO,ISHOMO,IBLUMO,IKLUMO,ISLUMO
+      CALL REPORT$R8VAL(NFIL,'HOMO-ENERGY',EHOMO/EV,'EV')
+      CALL REPORT$R8VAL(NFIL,'LUMO-ENERGY',ELUMO/EV,'EV')
       IF(ELUMO-EHOMO.LT.0.D0) THEN
         CALL REPORT$STRING(NFIL,'MATERIAL IS A METAL: USE VARIABLE OCCUPATIONS')
       END IF
