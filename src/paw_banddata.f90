@@ -642,7 +642,7 @@
       INTEGER(4)             :: I,IKPT,ISPIN,IB
       INTEGER(4)             :: LNX1,NB
       LOGICAL(4)             :: SET
-      LOGICAL(4)             :: TPRINT=.FALSE.
+      LOGICAL(4)             :: TPRINT=.TRUE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_WRITE')
       SET=.true.
@@ -716,7 +716,7 @@
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
       CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
-      LOGICAL(4)             :: TPRINT=.FALSE.
+      LOGICAL(4)             :: TPRINT=.true.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_READ')
 !
@@ -760,7 +760,7 @@
       IF(TPRINT)PRINT*,"LNX ",LNX(:)
       IF(TPRINT)PRINT*,"LOX ",LOX(:,:)
       IF(TPRINT)PRINT*,"LMNX ",LMNX(:)
-      IF(TPRINT)PRINT*,"R ",R(1,1)
+      IF(TPRINT)PRINT*,"R ",R(:,:)
       IF(TPRINT)PRINT*,"ATOMID ",ATOMID(:)
       IF(TPRINT)PRINT*,"PROOFG ",PROOFG(1,1,:)
       IF(TPRINT)PRINT*,"DH ",DH(1,1,1,1)
