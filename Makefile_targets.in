@@ -184,6 +184,15 @@ lib_new:
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpaw.a
 #
 #---------------------------------------------------------------------------
+#--          PAW library libppaw.a                                       --
+#---------------------------------------------------------------------------
+lib_parallel:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}_parallel/libppaw.a
+#
+lib_new_parallel:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}_parallel/libppaw.a
+#
+#---------------------------------------------------------------------------
 #--          PAW library libpawfull.a                                     --
 #---------------------------------------------------------------------------
 libfull:
@@ -193,10 +202,21 @@ libfull_new:
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}/libpawfull.a EXCLUDE="${EXCLUDE}"
 #
 #---------------------------------------------------------------------------
+#--          PAW library libppawfull.a                                    --
+#---------------------------------------------------------------------------
+libfull_parallel:
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}_parallel/libppawfull.a EXCLUDE="${EXCLUDE}"
+#
+libfull_new_parallel:
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${OBJDIR}/${TOOLCOMP}_parallel/libppawfull.a EXCLUDE="${EXCLUDE}"
+#
+#---------------------------------------------------------------------------
 #--          Tools and scripts                                            --
 #---------------------------------------------------------------------------
 ${TOOLS}: lib_new
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_$@.x 
+bands_parallel: lib_new_parallel
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${BINDIR}/ppaw_bands.x 
 #
 $(addprefix clean_,${TOOLS}):
 	cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile $@

@@ -141,6 +141,8 @@ endif
 # MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
 export PAWLIB= ${OBJDIR}/libpaw.a#
 export PAWLIBFULL= ${OBJDIR}/libpawfull.a#
+export PPAWLIB= ${OBJDIR}/libppaw.a#
+export PPAWLIBFULL= ${OBJDIR}/libppawfull.a#
 #
 #########################################################################
 ## Definition of the targets                                           ##
@@ -362,6 +364,8 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 #########################################################################
 ${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build full paw library and optionally exclude objects              ##
@@ -376,6 +380,10 @@ ${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}
 	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
+${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PPAWLIBFULL} paw.o
+	for EX in ${EXCLUDE}; do ar -dv ${PPAWLIBFULL} $$EX;done
 #
 #########################################################################
 ##  build Tools                                                        ##
@@ -461,6 +469,8 @@ clean_dos:
 #
 ${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIBFULL}
 	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpawfull ${LIBS}
+${BINDIR}/ppaw_bands.x: ${OBJBANDS} ${PPAWLIBFULL}
+	${LINK} -o ${BINDIR}/ppaw_bands.x ${OBJBANDS} -L${OBJDIR}  -lppawfull ${LIBS}
 #
 clean_bands:
 	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
