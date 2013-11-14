@@ -2827,7 +2827,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)               :: EPW_
       REAL(8)               :: RBAS_(3,3)
       REAL(8)               :: GBAS_(3,3)
-      INTEGER(4)            :: NRL_
       LOGICAL(4)            :: SET
       REAL(8),ALLOCATABLE   :: R_(:,:)
       REAL(8),ALLOCATABLE   :: PROOFG_(:,:,:)

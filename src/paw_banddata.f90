@@ -15,8 +15,8 @@
         REAL(8)                :: GBAS(3,3)
         LOGICAL(4)             :: GBAS_SET !PLANEWAVE$INITIALIZE
 
-        INTEGER(4)             :: NRL
-        LOGICAL(4)             :: NRL_SET
+        INTEGER(4)             :: NRG
+        LOGICAL(4)             :: NRG_SET
         INTEGER(4)             :: NR1
         LOGICAL(4)             :: NR1_SET
         INTEGER(4)             :: NR2
@@ -204,7 +204,7 @@
 !          CALL ERROR$STOP('BANDDATA$GETR84')        
 !        ENDIF
 !      ELSE IF(ID.EQ.'VOFR') THEN
-!        IF(LEN.NE.NRL*NDIMD) THEN
+!        IF(LEN.NE.NRG*NDIMD) THEN
 !          CALL ERROR$MSG('INCONSISTENT SIZE')
 !          CALL ERROR$CHVAL('ID',ID)
 !          CALL ERROR$STOP('BANDDATA$GETR8A')
@@ -214,7 +214,7 @@
 !          CALL ERROR$CHVAL('ID',ID)
 !          CALL ERROR$STOP('BANDDATA$GETR8A')
 !        END IF
-!        VAL=RESHAPE(VOFR,(/NRL*NDIMD/))
+!        VAL=RESHAPE(VOFR,(/NRG*NDIMD/))
 !      ELSE IF(ID.EQ.'R') THEN
 !        IF(LEN.NE.3*NAT) THEN
 !          CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -260,9 +260,9 @@
       ELSE IF(ID.EQ.'NR3') THEN
         NR3=VAL
         NR3_SET=.true.
-      ELSE IF(ID.EQ.'NRL') THEN
-        NRL=VAL
-        NRL_SET=.true.
+      ELSE IF(ID.EQ.'NRG') THEN
+        NRG=VAL
+        NRG_SET=.true.
       ELSE IF(ID.EQ.'NAT') THEN
         NAT=VAL
         NAT_SET=.true.
@@ -442,8 +442,8 @@
         GBAS(:,3)=VAL(7:9)
         GBAS_SET=.true.
       ELSE IF(ID.EQ.'VOFR') THEN
-        IF(.not.NRL_SET)THEN
-          CALL ERROR$MSG('NRL NOT SET')
+        IF(.not.NRG_SET)THEN
+          CALL ERROR$MSG('NRG NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
@@ -452,13 +452,13 @@
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(LEN.NE.NRL*NDIMD)THEN
+        IF(LEN.NE.NRG*NDIMD)THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         END IF
-        IF(.not.allocated(VOFR))allocate(VOFR(NRL,NDIMD))
-        VOFR=RESHAPE(VAL,(/NRL,NDIMD/))
+        IF(.not.allocated(VOFR))allocate(VOFR(NRG,NDIMD))
+        VOFR=RESHAPE(VAL,(/NRG,NDIMD/))
       ELSE IF(ID.EQ.'R') THEN
         IF(.not.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
@@ -650,8 +650,8 @@
       IF(TPRINT)PRINT*,NDIM_SET,NSPIN_SET,NDIMD_SET
       SET=SET.and.EPW_SET.and.GBAS_SET.and.RBAS_SET
       IF(TPRINT)PRINT*,EPW_SET,GBAS_SET,RBAS_SET
-      SET=SET.and.NR1_SET.and.NR2_SET.and.NR3_SET.and.NRL_SET.and.allocated(VOFR)
-      IF(TPRINT)PRINT*,NR1_SET,NR2_SET,NR3_SET,NRL_SET,allocated(VOFR)
+      SET=SET.and.NR1_SET.and.NR2_SET.and.NR3_SET.and.NRG_SET.and.allocated(VOFR)
+      IF(TPRINT)PRINT*,NR1_SET,NR2_SET,NR3_SET,NRG_SET,allocated(VOFR)
       SET=SET.and.NAT_SET.and.NSP_SET.and.NPRO_SET.and.LNXX_SET.and.LMNXX_set
       IF(TPRINT)PRINT*,NAT_SET,NSP_SET,NPRO_SET,LNXX_SET,LMNXX_set
       SET=SET.and.NBAREPRO_SET.and.LMX_SET
@@ -686,7 +686,7 @@
 !     ==================================================================
 !     == POTENTIAL                                                    ==
 !     ==================================================================
-      WRITE(NFIL)NR1,NR2,NR3,NRL
+      WRITE(NFIL)NR1,NR2,NR3,NRG
       WRITE(NFIL)VOFR(:,:)
 !
 !     ==================================================================
@@ -729,11 +729,11 @@
       READ(NFIL)EPW,GBAS,RBAS
       IF(TPRINT)PRINT*,"EPW,GBAS,RBAS",EPW,GBAS,RBAS
       
-      READ(NFIL)NR1,NR2,NR3,NRL
-      IF(TPRINT)PRINT*,"NR123, NRL",NR1,NR2,NR3,NRL
-      IF(.not.allocated(VOFR))allocate(VOFR(NRL,NDIMD))
+      READ(NFIL)NR1,NR2,NR3,NRG
+      IF(TPRINT)PRINT*,"NR123, NRG",NR1,NR2,NR3,NRG
+      IF(.not.allocated(VOFR))allocate(VOFR(NRG,NDIMD))
       READ(NFIL)VOFR(:,:)
-      IF(TPRINT)PRINT*,'POTENTIAL',NRL,VOFR(1,1)
+      IF(TPRINT)PRINT*,'POTENTIAL',NRG,VOFR(1,1)
       
       READ(NFIL)NAT,NSP,NPRO,LNXX,LMNXX,LMX,NBAREPRO
       IF(TPRINT)PRINT*,"NAT...",NAT,NSP,NPRO,LNXX,LMNXX,LMX,NBAREPRO

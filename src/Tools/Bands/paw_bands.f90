@@ -11,14 +11,21 @@
       PROGRAM MAIN
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      USE OMP_LIB
       IMPLICIT NONE
       TYPE(LL_TYPE)             :: LL_CNTL
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NFIL
       INTEGER(4)                :: MODE
       LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: THISTASK,NTASKS
 !     ******************************************************************
+!
+!     ==========================================================================
+!     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
+!     ==========================================================================
+      CALL MPE$INIT
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
+      CALL PAW_VERSION
       CALL TIMING$START
       CALL TRACE$PUSH('MAIN')
 !
@@ -34,24 +41,25 @@
       CALL FILEHANDLER$UNIT('BCNTL',NFIL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
 !
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      IF(THISTASK.EQ.1)THEN
+        CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
-!     ==========================================================================
-!     ==  WRITE HEADER                                                        ==
-!     ==========================================================================
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+!       ==========================================================================
+!       ==  WRITE HEADER                                                        ==
+!       ==========================================================================
+        WRITE(NFILO,FMT='(72("*"))')
+        WRITE(NFILO,FMT='(72("*"),T15 &
      &             ,"           BANDS ANALYSIS TOOL                ")')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+        WRITE(NFILO,FMT='(72("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(T28 &
+        WRITE(NFILO,FMT='(72("*"))')
+        WRITE(NFILO,FMT='(T28 &
      &           ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
-      WRITE(NFILO,FMT='(T10 &
+        WRITE(NFILO,FMT='(T10 &
      &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
      &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
-      WRITE(NFILO,*)
-       
+        WRITE(NFILO,*)
+      ENDIF  
 !
 !     ==========================================================================
 !     ==  SELECT METHOD                                                       ==
@@ -82,11 +90,13 @@
 !     ==========================================================================
 !     ==  CLOSING                                                             ==
 !     ==========================================================================
-      CALL FILEHANDLER$REPORT(NFILO,'USED')
-      WRITE(NFILO,FMT='(72("="))')
-      WRITE(NFILO,FMT='(72("="),T20,"  PAW_BANDS TOOL FINISHED  ")')
-      WRITE(NFILO,FMT='(72("="))')
+      IF(THISTASK.EQ.1)THEN
+        CALL FILEHANDLER$REPORT(NFILO,'USED')
+        WRITE(NFILO,FMT='(72("="))')
+        WRITE(NFILO,FMT='(72("="),T20,"  PAW_BANDS TOOL FINISHED  ")')
+        WRITE(NFILO,FMT='(72("="))')
                             CALL TRACE$PASS('AFTER CLOSING')
+      ENDIF
 !
 !     ==========================================================================
 !     ==  CLOSE FILES                                                         ==
@@ -737,6 +747,8 @@ print*,'nb ',nb
       USE BANDDATA_MODULE
       USE RADIAL_MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
+      USE PLANEWAVE_MODULE, ONLY : THIS
+      USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN)               :: TFIXSYMMETRYBREAK
       INTEGER(4),INTENT(OUT)              :: NG
@@ -756,20 +768,19 @@ print*,'nb ',nb
       REAL(8)                             :: GDIFF(3,3,3)
       INTEGER(4)                          :: I1,I2,I3,J
       REAL(8)                             :: EPW2
+      INTEGER(4)                          :: THISTASK,NTASKS,index,NGL
+      INTEGER(4),allocatable              :: ICOLOR(:)
+      CHARACTER(512)                      :: FFTCID
 !
 !     == GENERATE G-GRID ==================================================
       KVEC(1)=0.0D0
       KVEC(2)=0.0D0
       KVEC(3)=0.0D0
-!
-!     ==========================================================================
-!     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
-!     ==========================================================================
-      CALL MPE$INIT
+      
       IF(TFIXSYMMETRYBREAK)THEN
         IF(TPRINT)PRINT*,"EPW FROM INPUT=",EPW
         GMAX=sqrt(2.0D0*EPW)
-        !FIND LONGEST DIAGONAL
+        !FIND LONGEST DIAGONAL IN GSPACE GRID
         DO I1=-1,1
           DO I2=-1,1
             DO I3=-1,1
@@ -783,18 +794,36 @@ print*,'nb ',nb
       ELSE
         EPW2=EPW
       ENDIF
-      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA','~',RBAS,KVEC,.false.,EPW2 &
+
+      !CREATE COMMUNICATOR WITH ONE TASK
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
+      allocate(ICOLOR(NTASKS))
+      ICOLOR(1:NTASKS)=(/ (I,I=1,NTASKS) /)
+      WRITE(FFTCID,'(a,i4)')"FFT",THISTASK
+      CALL MPE$NEW('~',FFTCID,NTASKS,ICOLOR)
+      CALL MPE$QUERY(FFTCID,NTASKS,THISTASK)
+!      PRINT*,"FFTCID",NTASKS,THISTASK
+      
+      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA',FFTCID,RBAS,KVEC,.false.,EPW2 &
      &                               ,0,NR1,NR2,NR3)
       CALL PLANEWAVE$SELECT('WAVE GAMMA')     
 
-
-      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
-      GSET%NGL=NG
+!      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
+      CALL PLANEWAVE$GETI4('NGG',NG)
       IF(TPRINT)PRINT*,"EPW2 NG",EPW2,NG
       ALLOCATE(GVEC(3,NG))
       ALLOCATE(G2(NG))
-      CALL PLANEWAVE$GETR8A('GVEC',3*NG,GVEC)
-      CALL PLANEWAVE$GETR8A('G2',NG,G2)
+
+      !COLLECT GVECTORS
+      NGL=NG
+      GSET%NGL=NG
+
+      GVEC(:,:)=0.0D0
+      G2(:)=0.0D0
+
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+      
       CALL GBASS(RBAS,GBAS,GWEIGHT)
 
 !     == GENERATE G-GRID FOR PROJECTORS ========================================
@@ -822,9 +851,11 @@ print*,'nb ',nb
           DO IDIM1=1,NDIM
             I1=I*(NDIM)+(IDIM1-1)
             PSI1(:,:,:)=0.0D0
-            PSI1(I,IDIM1,1)=1.0D0
+            PSI1(I,IDIM1,1)=CMPLX(1.0D0,0.0D0)
             HPSI1(:,:,:)=0.0D0
-            call WAVES_VPSI(GSET,NG,NDIM,1,NRL,PSI1,VOFR(:,ISPIN),HPSI1)
+            index=SUM(THIS%NGLARR(1:THISTASK-1))
+            call WAVES_VPSI(GSET,NGL,NDIM,1,NRG,PSI1(:,:,:),&
+      &                     VOFR(:,ISPIN),HPSI1(:,:,:))
          
             DO IDIM2=1,NDIM
               TI_H(I1,1+(IDIM2-1)*NG:IDIM2*NG,ISPIN)=HPSI1(:,IDIM2,1)
@@ -1097,7 +1128,6 @@ print*,'nb ',nb
       ENDiF
 
       IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
-!$omp critical
       IF(TPROJ)THEN
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
@@ -1111,7 +1141,6 @@ print*,'nb ',nb
         ENDDO
         IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTIONS')
       ENDIF
-!$omp end critical
       DEALLOCATE(TI_HK)
       DEALLOCATE(TI_SK)
       DEALLOCATE(U)
@@ -1183,6 +1212,7 @@ END MODULE
       USE RADIAL_MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
       USE KPOINTDIAG_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(INOUT):: LL_CNTL
       INTEGER(4)   ,INTENT(IN)  :: NFIL
@@ -1241,8 +1271,10 @@ END MODULE
       LOGICAL(4)                :: TFIXSYMMETRYBREAK
       LOGICAL(4)                :: TATTACH
       REAL(8)                   :: coord,coord0
+      INTEGER(4)                :: THISTASK,NTASKS,index
 !     **************************************************************************
                             CALL TRACE$PUSH('BANDS_DIAG')
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       CALL TIMING$START
 !
 !     ==========================================================================
@@ -1312,7 +1344,7 @@ END MODULE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
-        WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
+        IF(THISTASK.eq.1)WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
         !input is in Hartree
         EPW=0.5D0*EPW
       ENDIF
@@ -1337,9 +1369,9 @@ END MODULE
       CALL LINKEDLIST$NLISTS(LL_CNTL,'LINE',NLINE)
       
       DO ILINE=1,NLINE
-        WRITE(NFILO,FMT='(72("="))')
-        WRITE(NFILO,*)'LINE-BLOCK:',ILINE,' of ',NLINE
-        WRITE(NFILO,FMT='(72("="))')
+        IF(THISTASK.eq.1)WRITE(NFILO,FMT='(72("="))')
+        IF(THISTASK.eq.1)WRITE(NFILO,*)'LINE-BLOCK:',ILINE,' of ',NLINE
+        IF(THISTASK.eq.1)WRITE(NFILO,FMT='(72("="))')
         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
         CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
         CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
@@ -1351,26 +1383,28 @@ END MODULE
           TATTACH=.FALSE.
         ENDIF
 
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
-          CALL FILEHANDLER$SETFILE('BANDS',.FALSE.,FILE)
-          IF(TATTACH)THEN
-            WRITE(NFILO,*)'ATTACHING OUTPUT FOR LINE-BLOCK',ILINE,' TO EXISTING FILE ',TRIM(FILE)
-            CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','OLD')
+        IF(THISTASK.eq.1)THEN
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+            CALL FILEHANDLER$SETFILE('BANDS',.FALSE.,FILE)
+            IF(TATTACH)THEN
+              WRITE(NFILO,*)'ATTACHING OUTPUT FOR LINE-BLOCK',ILINE,' TO EXISTING FILE ',TRIM(FILE)
+              CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','OLD')
+            ELSE
+              WRITE(NFILO,*)'WRITING OUTPUT FOR LINE-BLOCK',ILINE,' TO NEW FILE ',TRIM(FILE)
+              CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','REPLACE')
+            ENDIF
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','POSITION','APPEND')
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','ACTION','WRITE')
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','FORM','FORMATTED')
+            WRITE(NFILO,*)'OUTPUT FILE: ',trim(FILE)
           ELSE
-            WRITE(NFILO,*)'WRITING OUTPUT FOR LINE-BLOCK',ILINE,' TO NEW FILE ',TRIM(FILE)
-            CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','REPLACE')
-          ENDIF
-          CALL FILEHANDLER$SETSPECIFICATION('BANDS','POSITION','APPEND')
-          CALL FILEHANDLER$SETSPECIFICATION('BANDS','ACTION','WRITE')
-          CALL FILEHANDLER$SETSPECIFICATION('BANDS','FORM','FORMATTED')
-          WRITE(NFILO,*)'OUTPUT FILE: ',trim(FILE)
-        ELSE
-          CALL ERROR$MSG('NO OUTPUT FILE GIVEN')
-          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
-          CALL ERROR$STOP('BANDS_DIAG')
-        END IF
+            CALL ERROR$MSG('NO OUTPUT FILE GIVEN')
+            CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+            CALL ERROR$STOP('BANDS_DIAG')
+          END IF
+        ENDIF
 !
         !INPUT OF K-VECTORS
         CALL LIB$INVERTR8(3,GBAS,GBASINV) 
@@ -1379,16 +1413,16 @@ END MODULE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC1',0,TCHK2)
         IF(TCHK1)THEN
           CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
-          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          IF(THISTASK.eq.1)WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN RELATIVE COORDINATES'
           KVEC1=MATMUL(GBAS,XK1)
         ELSE IF (TCHK2)THEN
           CALL LINKEDLIST$GET(LL_CNTL,'KVEC1',1,KVEC1)
-          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+          IF(THISTASK.eq.1)WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
 
           CALL LINKEDLIST$EXISTD(LL_CNTL,'KVECSCALE',0,TCHK)
           IF(TCHK)THEN
             CALL LINKEDLIST$GET(LL_CNTL,'KVECSCALE',1,KVECSCALE)
-            WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
+            IF(THISTASK.eq.1)WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
             KVEC1=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE*KVEC1
           ENDIF
           XK1=MATMUL(GBASINV,KVEC1)
@@ -1402,16 +1436,16 @@ END MODULE
         CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC2',0,TCHK2)
         IF(TCHK1)THEN
           CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
-          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          IF(THISTASK.eq.1)WRITE(NFILO,*)'LAST K-POINT: GIVEN IN RELATIVE COORDINATES'
           KVEC2=MATMUL(GBAS,XK2)
         ELSE IF (TCHK2)THEN
           CALL LINKEDLIST$GET(LL_CNTL,'KVEC2',1,KVEC2)
-          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+          IF(THISTASK.eq.1)WRITE(NFILO,*)'LAST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
 
           CALL LINKEDLIST$EXISTD(LL_CNTL,'KVECSCALE',0,TCHK)
           IF(TCHK)THEN
             CALL LINKEDLIST$GET(LL_CNTL,'KVECSCALE',1,KVECSCALE)
-            WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
+            IF(THISTASK.eq.1)WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
             KVEC2=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE*KVEC2
           ENDIF
           XK2=MATMUL(GBASINV,KVEC2)
@@ -1421,11 +1455,13 @@ END MODULE
           CALL ERROR$STOP('BANDS_DIAG')
         ENDIF
 
-        WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
-        WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
+        IF(THISTASK.eq.1)THEN
+          WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
+          WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
 
-        WRITE(NFILO,*)'LAST K-POINT IN RELATIVE COORDINATES:',XK2
-        WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
+          WRITE(NFILO,*)'LAST K-POINT IN RELATIVE COORDINATES:',XK2
+          WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
+        ENDIF
         
         !NK is number of points for output
         !if NKDIAG<NK: do 1D-fft interpoaltion
@@ -1544,28 +1580,35 @@ END MODULE
         ALLOCATE(XKVAL(3,NKDIAG))
         ALLOCATE(FATBANDVAL(NFATBAND,NKDIAG,NB))
         TPROJ=NFATBAND.GE.1
+        EIGVAL(:,:)=0.0D0
+        KVECVAL(:,:)=0.0D0
+        XKVAL(:,:)=0.0D0
+        FATBANDVAL(:,:,:)=0.0D0
 
 !       == ITERATE K-POINTS =================================================
-!$omp parallel do private(IKDIAG,XK,KVEC,E,PROJ)
+        CALL MPE$SYNC('~')
+                            CALL TRACE$PUSH('ITERATE KPOINTS')
+        index=1
         DO IKDIAG=0,NKDIAG-1
+          index=index+1
+          if(index.gt.NTASKS)index=1
+          if(index.ne.THISTASK)CYCLE
+
           ALLOCATE(PROJ(NAT,NB,LMNXX))
           ALLOCATE(E(NG*NDIM))
-!$omp critical
           IF(TPRINT)PRINT*,"IKDIAG",IKDIAG
           XK=XK1+(XK2-XK1)*REAL(IKDIAG,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
           KVEC=MATMUL(GBAS,XK)
           KVECVAL(:,IKDIAG+1)=KVEC
           XKVAL(:,IKDIAG+1)=XK
           
-          WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
+          IF(TPRINT)WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
             &NKDIAG-1,' IN RELATIVE COORDINATES ',XK
-          WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
+          IF(TPRINT)WRITE(NFILO,*)'LINE ',ILINE,' OF ',NLINE,' K-POINT ',IKDIAG,' OF ',&
             &NKDIAG-1,' IN ABSOLUTE COORDINATES ',KVEC
-!$omp end critical
 
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
-!$omp critical
           IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
 
           EIGVAL(1:NB,IKDIAG+1)=E(1:NB)*27.21139D0
@@ -1588,62 +1631,69 @@ END MODULE
           ELSE
             FATBANDVAL(:,:,:)=0.0D0 
           ENDIF
-!$omp end critical
           DEALLOCATE(PROJ)
           DEALLOCATE(E)
         ENDDO
-!$omp end parallel do
+        CALL MPE$SYNC('~')
+        CALL MPE$COMBINE('~','+',EIGVAL)
+        CALL MPE$COMBINE('~','+',KVECVAL)
+        CALL MPE$COMBINE('~','+',XKVAL)
+        CALL MPE$COMBINE('~','+',FATBANDVAL)
+                            CALL TRACE$POP()
 !
 !       =========================================================================
 !       ==  WRITE BANDS                                                        ==
 !       =========================================================================
-                            CALL TRACE$PUSH('WRITE_BANDS')
-        CALL FILEHANDLER$UNIT('BANDS',NFILBAND)
-        IF(NB.GT.100) THEN
-          CALL ERROR$MSG('NUMBER OF BANDS EXCEEDS LIMIT OF 100')
-          CALL ERROR$I4VAL('NB ',NB)
-          CALL ERROR$STOP('BANDS_PLOTBANDS')
-        END IF
+        IF(THISTASK.eq.1)THEN
+                              CALL TRACE$PUSH('WRITE_BANDS')
+          CALL FILEHANDLER$UNIT('BANDS',NFILBAND)
+          IF(NB.GT.100) THEN
+            CALL ERROR$MSG('NUMBER OF BANDS EXCEEDS LIMIT OF 100')
+            CALL ERROR$I4VAL('NB ',NB)
+            CALL ERROR$STOP('BANDS_PLOTBANDS')
+          END IF
 
-        !ITERATE K-POINTS
-        WRITE(NFILBAND,*)'#DATA FOR LINE BLOCK',ILINE
-        WRITE(NFILBAND,*)'#FIRST K-POINT IN ABSOLUTE COORDINATES ',KVECVAL(:,1)
-        WRITE(NFILBAND,*)'#FIRST K-POINT IN RELATIVE COORDINATES ',XKVAL(:,1)
-        WRITE(NFILBAND,*)'#LAST  K-POINT IN ABSOLUTE COORDINATES ',KVECVAL(:,NKDIAG)
-        WRITE(NFILBAND,*)'#LAST  K-POINT IN RELATIVE COORDINATES ',XKVAL(:,NKDIAG)
-        DO IKDIAG=1,NKDIAG
-          !WRITE EIGENVALUES
-          IF(IKDIAG.eq.1.and..not.TATTACH)coord0=0.0D0
-          coord=coord0+sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
-          WRITE(NFILBAND,FMT='(103F10.5)')coord,EIGVAL(:,IKDIAG)
-        ENDDO
-        CALL LIB$FLUSHFILE(NFILBAND)
-        CALL FILEHANDLER$CLOSE('BANDS')
-        coord0=coord
-        !WRITE FATBANDS
-        DO IFATBAND=1,NFATBAND
-          CALL FILEHANDLER$SETFILE('FATBANDS',.FALSE.,FATBANDFILE(IFATBAND))
-          CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','STATUS','REPLACE')
-          CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','POSITION','APPEND')
-          CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','ACTION','WRITE')
-          CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','FORM','FORMATTED')
-          CALL FILEHANDLER$UNIT('FATBANDS',NFILFATBAND)
           !ITERATE K-POINTS
+          WRITE(NFILBAND,*)'#DATA FOR LINE BLOCK',ILINE
+          WRITE(NFILBAND,*)'#NUMBER OF K-POINTS',NKDIAG
+          WRITE(NFILBAND,*)'#FIRST K-POINT IN ABSOLUTE COORDINATES ',KVECVAL(:,1)
+          WRITE(NFILBAND,*)'#FIRST K-POINT IN RELATIVE COORDINATES ',XKVAL(:,1)
+          WRITE(NFILBAND,*)'#LAST  K-POINT IN ABSOLUTE COORDINATES ',KVECVAL(:,NKDIAG)
+          WRITE(NFILBAND,*)'#LAST  K-POINT IN RELATIVE COORDINATES ',XKVAL(:,NKDIAG)
           DO IKDIAG=1,NKDIAG
-            WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")&
-            &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
-
-            FATBANDMAX=MAXVAL(FATBANDVAL(IFATBAND,:,:))
-            IF(TPRINT)PRINT*,"FATBAND FATBANDMAX",FATBANDMAX
-            DO ILINESPERBAND=0,LINESPERBAND(IFATBAND)-1
-              SVAR1=2.0D0/REAL(LINESPERBAND(IFATBAND)-1,KIND=8)*REAL(ILINESPERBAND,KIND=8)-1.0D0
-              SVAR2=0.5D0*SVAR1*FATBANDMAXWIDTH(IFATBAND)/FATBANDMAX
-              WRITE(NFILFATBAND,FMT='(100F10.5)',advance="no")EIGVAL(:,IKDIAG)+SVAR2*FATBANDVAL(IFATBAND,IKDIAG,:) 
-            ENDDO
-            WRITE(NFILFATBAND,FMT='(a)')" "
+            !WRITE EIGENVALUES
+            IF(IKDIAG.eq.1.and..not.TATTACH)coord0=0.0D0
+            coord=coord0+sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
+            WRITE(NFILBAND,FMT='(103F10.5)')coord,EIGVAL(:,IKDIAG)
           ENDDO
-        ENDDO
-                            CALL TRACE$POP
+          CALL LIB$FLUSHFILE(NFILBAND)
+          CALL FILEHANDLER$CLOSE('BANDS')
+          coord0=coord
+          !WRITE FATBANDS
+          DO IFATBAND=1,NFATBAND
+            CALL FILEHANDLER$SETFILE('FATBANDS',.FALSE.,FATBANDFILE(IFATBAND))
+            CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','STATUS','REPLACE')
+            CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','POSITION','APPEND')
+            CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','ACTION','WRITE')
+            CALL FILEHANDLER$SETSPECIFICATION('FATBANDS','FORM','FORMATTED')
+            CALL FILEHANDLER$UNIT('FATBANDS',NFILFATBAND)
+            !ITERATE K-POINTS
+            DO IKDIAG=1,NKDIAG
+              WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")&
+              &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
+
+              FATBANDMAX=MAXVAL(FATBANDVAL(IFATBAND,:,:))
+              IF(TPRINT)PRINT*,"FATBAND FATBANDMAX",FATBANDMAX
+              DO ILINESPERBAND=0,LINESPERBAND(IFATBAND)-1
+                SVAR1=2.0D0/REAL(LINESPERBAND(IFATBAND)-1,KIND=8)*REAL(ILINESPERBAND,KIND=8)-1.0D0
+                SVAR2=0.5D0*SVAR1*FATBANDMAXWIDTH(IFATBAND)/FATBANDMAX
+                WRITE(NFILFATBAND,FMT='(100F10.5)',advance="no")EIGVAL(:,IKDIAG)+SVAR2*FATBANDVAL(IFATBAND,IKDIAG,:) 
+              ENDDO
+              WRITE(NFILFATBAND,FMT='(a)')" "
+            ENDDO
+          ENDDO
+                              CALL TRACE$POP
+        ENDIF
         DEALLOCATE(EIGVAL)
         DEALLOCATE(FATBANDVAL)
         DEALLOCATE(KVECVAL)
@@ -1656,7 +1706,6 @@ END MODULE
           DEALLOCATE(FATBANDFILE)
         ENDIF
       ENDDO
-      CALL TIMING$PRINT('ALL',NFILO)
                             CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDS_DIAG
@@ -1674,6 +1723,7 @@ END MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
       USE KPOINTDIAG_MODULE
       USE BRILLOUIN_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(INOUT)  :: LL_CNTL
       INTEGER(4)   ,INTENT(IN)     :: NFIL
@@ -1743,12 +1793,16 @@ END MODULE
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
       LOGICAL(4)                   :: TFIXSYMMETRYBREAK
+
+      INTEGER(4)                   :: THISTASK,NTASKS
+      INTEGER(4),ALLOCATABLE       :: JOBLIST(:,:)
 !     **************************************************************************
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
         CALL ERROR$STOP('BANDS_PDOS')
       ENDIF
                             CALL TRACE$PUSH('BANDS_PDOS')
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       CALL TIMING$START
 !
 !     ==========================================================================
@@ -1819,7 +1873,7 @@ END MODULE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
-        WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
+        IF(THISTASK.eq.1)WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
         !input is in Hartree
         EPW=0.5D0*EPW
       ENDIF
@@ -1856,17 +1910,21 @@ END MODULE
       CALL FILEHANDLER$SETSPECIFICATION('PDOS','FORM','UNFORMATTED')
 
       !PDOSOUTFILE
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSOUTFILE',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'PDOSOUTFILE',1,FILE)
-        CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
-      ELSE
-        CALL FILEHANDLER$SETFILE('PDOSOUT',.TRUE.,-'.PDOSOUT')
+      IF(THISTASK.eq.1)THEN
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'PDOSOUTFILE',0,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'PDOSOUTFILE',1,FILE)
+          CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
+        ELSE
+          CALL FILEHANDLER$SETFILE('PDOSOUT',.TRUE.,-'.PDOSOUT')
+        ENDIF
+        CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','STATUS','UNKNOWN')
+        CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','FORM','UNFORMATTED')
+        CALL FILEHANDLER$FILENAME('PDOSOUT',FILE)
+        WRITE(NFILO,*)'WRITING NEW PDOS-FILE TO FILE:',TRIM(FILE)
       ENDIF
-      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('PDOSOUT','FORM','UNFORMATTED')
       
       !NB
       CALL LINKEDLIST$EXISTD(LL_CNTL,'NB',0,TCHK)
@@ -1966,9 +2024,9 @@ END MODULE
 
 !        CALL BRILLOUIN_TESTCOMPLETE()
         CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
-        WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
+        IF(THISTASK.eq.1)WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
         DO I=1,NOP
-          WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,IIO(:,:,I)
+          IF(THISTASK.eq.1)WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,IIO(:,:,I)
         ENDDO
         CALL BRILLOUIN$MSH(RBAS,NKP,NOP,IIO,IARB,TSHIFT)
                             CALL TRACE$POP()
@@ -2006,9 +2064,10 @@ END MODULE
       CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
       ALLOCATE(EB(NB*NSPIN,NKP))        
       ALLOCATE(WGHT(NB*NSPIN,NKP))
-      
+      EB(:,:)=0.0D0 
       IF(TPROJ)THEN
         ALLOCATE(PROJK(NAT,NB*NSPIN,LMNXX,NKP))
+        PROJK(:,:,:,:)=CMPLX(0.0D0,0.0D0)
       ENDIF
 
 !     ==========================================================================
@@ -2027,35 +2086,47 @@ END MODULE
 !     ==  WRITE BEGINNING OF PDOS FILE                                        ==
 !     ==========================================================================
       
-      ALLOCATE(OCC(NKP,NB))
-      OCC(:,:)=1.0D0
-      IF(.NOT.TUSESYM)THEN
-        CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
-        REWIND NFILOUT
-        CALL PDOS$WRITE(NFILOUT,2)
-      ELSE
-        WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE TUSESYM=T'
-        WRITE(NFILO,*)'AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!!!!'
-        CALL FLUSH(NFILO)
+      IF(THISTASK.eq.1)THEN
+        ALLOCATE(OCC(NKP,NB))
+        OCC(:,:)=1.0D0
+        IF(.NOT.TUSESYM)THEN
+          CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
+          REWIND NFILOUT
+          CALL PDOS$WRITE(NFILOUT,2)
+        ELSE
+          WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE TUSESYM=T'
+          WRITE(NFILO,*)'AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!!!!'
+          CALL FLUSH(NFILO)
+        ENDIF
       ENDIF
 
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
+      
+      ALLOCATE(JOBLIST(NKP,NSPIN))
       index=1
-!$omp parallel do private(IKP,KVEC,E,PROJ,ISPIN,iat,lmn)
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
+          JOBLIST(IKP,ISPIN)=index
+          index=index+1
+          if(index.gt.NTASKS)index=1
+        ENDDO
+      ENDDO
+      
+      CALL MPE$SYNC('~')
+
+      index=1
+      DO IKP=1,NKP
+        DO ISPIN=1,NSPIN
+          IF(THISTASK.ne.JOBLIST(IKP,ISPIN))CYCLE
           KVEC=BK(:,IKP)
-!$omp critical
-          WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
           index=index+1
           CALL FLUSH(NFILO)
-!$omp end critical
           ALLOCATE(PROJ(NAT,LMNXX,NB))
           ALLOCATE(E(NG*NDIM))
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
-!$omp critical
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
           IF(TPROJ)THEN
             DO IAT=1,NAT
@@ -2064,14 +2135,17 @@ END MODULE
               ENDDO         
             ENDDO
           ENDIF
-!$omp end critical
           DEALLOCATE(PROJ)
           DEALLOCATE(E)
         ENDDO
       ENDDO
-!$omp end parallel do
+      CALL MPE$SYNC('~')
+      CALL MPE$COMBINE('~','+',EB)
+      CALL MPE$COMBINE('~','+',PROJK)
                             CALL TRACE$POP()
       !
+      IF(THISTASK.ne.1)return
+
       DO IKP=1,NKP
         DO I=1,NB
           PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
@@ -2093,6 +2167,7 @@ END MODULE
         ALLOCATE(PROJTMP(NDIM,NPRO,NB))
         DO IKP=1,NKP
           DO ISPIN=1,NSPIN
+            WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
             IF(TPROJ)THEN
               !reorder projections
               index=1
@@ -2184,7 +2259,9 @@ END MODULE
           ENDDO
         ENDDO
 
+        WRITE(NFILO,*)'WRITING TOTAL DOS TO FILE:', FILE
         OPEN(101,FILE=FILE)
+        
         DO IE=1,NE
           EI=27.211D0*(EMIN+REAL(IE-1,KIND=8)*(EMAX-EMIN)/REAL(NE-1,KIND=8))
           IF((EI.ge.EMIN2).and.(EI.LE.EMAX2))THEN
