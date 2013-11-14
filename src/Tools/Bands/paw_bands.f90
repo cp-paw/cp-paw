@@ -893,6 +893,7 @@ print*,'nb ',nb
       LOGICAL(4)               :: TTIMING
       INTEGER(4)               :: NG2
       INTEGER(4)               :: NGARR(NG)
+      LOGICAL(4),PARAMETER     :: TTEST_POSITIVE_DEFINITE=.FALSE.
 !     ******************************************************************
       if(omp_get_num_threads().eq.1)then
         TTIMING=.true.
@@ -983,12 +984,13 @@ print*,'nb ',nb
         ISP=ISPECIES(IAT)
         LNX_=LNX(ISP)
         LMNX_=LMNX(ISP)
-        LOX_=LOX(ISP,:)
+        LOX_=LOX(:,ISP)
         IBPRO=1+SUM(LNX(1:ISP-1))
         DO I=1,NG2
           SVAR=SUM(GVECPK(:,I)*R(:,IAT))
           EIGR(I)=CMPLX(cos(SVAR),-sin(SVAR))
         ENDDO
+!PRINT*,"LOX",IAT,ISP,LNX_,LOX_(1:LNX_)
         CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK &
      &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
       ENDDO
@@ -1065,11 +1067,7 @@ print*,'nb ',nb
       IF(TTIMING)CALL TRACE$POP
 
       allocate(U(NG*NDIM,NG*NDIM))
-      !SOLVE GENERALIZED EIGENVALUE PROBLEM
-      IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
-      IF(METHOD.eq.1)then
-        !USING ZHEGVD
-        CALL LIB$DIAGC8(NG2*NDIM,TI_SK,E,U)
+      if(TTEST_POSITIVE_DEFINITE)THEN
         print*,"EIGENVALUES OF OVERLAPP MATRIX"
         DO I=1,NG2
           PRINT*,I,E(I)
@@ -1078,6 +1076,12 @@ print*,'nb ',nb
             CALL ERROR$STOP('BANDS_KPOINT')        
           ENDIF
         ENDDO
+      ENDIF
+      !SOLVE GENERALIZED EIGENVALUE PROBLEM
+      IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
+      IF(METHOD.eq.1)then
+        !USING ZHEGVD
+        CALL LIB$DIAGC8(NG2*NDIM,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8_D')
         CALL LIB$GENERALEIGENVALUEC8_D(NG2*NDIM,TPROJ,TI_HK,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$POP

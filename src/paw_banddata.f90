@@ -642,7 +642,7 @@
       INTEGER(4)             :: I,IKPT,ISPIN,IB
       INTEGER(4)             :: LNX1,NB
       LOGICAL(4)             :: SET
-      LOGICAL(4)             :: TPRINT=.TRUE.
+      LOGICAL(4)             :: TPRINT=.FALSE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_WRITE')
       SET=.true.
@@ -716,7 +716,7 @@
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
       CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
-      LOGICAL(4)             :: TPRINT=.true.
+      LOGICAL(4)             :: TPRINT=.FALSE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_READ')
 !
@@ -744,7 +744,7 @@
       IF(.not.allocated(ISPECIES))allocate(ISPECIES(NAT))
       IF(.not.allocated(LNX))     allocate(LNX(NSP))
       IF(.not.allocated(LMNX))    allocate(LMNX(NSP))
-      IF(.not.allocated(LOX))     allocate(LOX(NSP,LNXX))
+      IF(.not.allocated(LOX))     allocate(LOX(LNXX,NSP))
       IF(.not.allocated(R))       allocate(R(3,NAT))
       IF(.not.allocated(ATOMID))  allocate(ATOMID(NAT))
       IF(.not.allocated(PROOFG))  allocate(PROOFG(NG_PROTO,LNXX,NSP))
