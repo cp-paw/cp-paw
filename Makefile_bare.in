@@ -1041,6 +1041,7 @@ endif
  ${OBJDIR}/paw_bands.o : PDOS_MODULE.mod
  ${OBJDIR}/paw_bands.o : STRINGS_MODULE.mod
  ${OBJDIR}/paw_bands.o : LINKEDLIST_MODULE.mod
+ ${OBJDIR}/paw_bands.o : PLANEWAVE_MODULE.mod
  SPINDIR_MODULE.mod : ${OBJDIR}/paw_bands.o
  ORBITALS_MODULE.mod : ${OBJDIR}/paw_bands.o
  READCNTL_MODULE.mod : ${OBJDIR}/paw_bands.o

@@ -802,18 +802,17 @@ print*,'nb ',nb
       WRITE(FFTCID,'(a,i4)')"FFT",THISTASK
       CALL MPE$NEW('~',FFTCID,NTASKS,ICOLOR)
       CALL MPE$QUERY(FFTCID,NTASKS,THISTASK)
-!      PRINT*,"FFTCID",NTASKS,THISTASK
       
       CALL PLANEWAVE$INITIALIZE('WAVE GAMMA',FFTCID,RBAS,KVEC,.false.,EPW2 &
      &                               ,0,NR1,NR2,NR3)
       CALL PLANEWAVE$SELECT('WAVE GAMMA')     
 
-!      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
+      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
       CALL PLANEWAVE$GETI4('NGG',NG)
       IF(TPRINT)PRINT*,"EPW2 NG",EPW2,NG
       ALLOCATE(GVEC(3,NG))
       ALLOCATE(G2(NG))
-
+      
       !COLLECT GVECTORS
       NGL=NG
       GSET%NGL=NG
@@ -838,7 +837,6 @@ print*,'nb ',nb
       allocate(TI_S(NG*NDIM,NG*NDIM,NSPIN))
       TI_H=0.0D0
       TI_S=0.0D0
-       
 !     == COMPUTE K_INDEPENDET ARRAYS ===========================================
                             CALL TRACE$PUSH('COMPUTE K_INDEPENDET ARRAYS')
       CALL TIMING$CLOCKON('PS_POTENTIAL')
@@ -887,7 +885,6 @@ print*,'nb ',nb
 !     **                                                              **
 !     ******************************************************************
       USE BANDDATA_MODULE
-      use omp_lib
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: NG
       INTEGER(4)  ,INTENT(IN)  :: NB
@@ -926,11 +923,7 @@ print*,'nb ',nb
       INTEGER(4)               :: NGARR(NG)
       LOGICAL(4),PARAMETER     :: TTEST_POSITIVE_DEFINITE=.FALSE.
 !     ******************************************************************
-      if(omp_get_num_threads().eq.1)then
-        TTIMING=.true.
-      else
-        TTIMING=.false.
-      endif
+      TTIMING=.false.
       IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
       
       CALL GBASS(RBAS,GBAS,GWEIGHT)
@@ -1097,8 +1090,9 @@ print*,'nb ',nb
       IF(TTIMING)CALL TIMING$CLOCKOFF('AUGMENTATION')
       IF(TTIMING)CALL TRACE$POP
 
-      allocate(U(NG*NDIM,NG*NDIM))
+      allocate(U(NG2*NDIM,NG2*NDIM))
       if(TTEST_POSITIVE_DEFINITE)THEN
+        CALL LIB$DIAGC8(NG2*NDIM,TI_SK,E,U)
         print*,"EIGENVALUES OF OVERLAPP MATRIX"
         DO I=1,NG2
           PRINT*,I,E(I)
@@ -1112,7 +1106,6 @@ print*,'nb ',nb
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
         !USING ZHEGVD
-        CALL LIB$DIAGC8(NG2*NDIM,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8_D')
         CALL LIB$GENERALEIGENVALUEC8_D(NG2*NDIM,TPROJ,TI_HK,TI_SK,E,U)
         IF(TTIMING)CALL TRACE$POP
@@ -1144,6 +1137,11 @@ print*,'nb ',nb
       DEALLOCATE(TI_HK)
       DEALLOCATE(TI_SK)
       DEALLOCATE(U)
+      DEALLOCATE(EIGR)      
+      DEALLOCATE(FOFG)      
+      DEALLOCATE(PRO)
+      DEALLOCATE(BAREPRO)
+      DEALLOCATE(YLM) 
       RETURN
       end subroutine
 !
@@ -1226,6 +1224,7 @@ END MODULE
       REAL(8)                   :: KVEC1(3)  !initial k-point in absolute coordinates
       REAL(8)                   :: KVEC2(3)  !final k-point in abolute coordinates
       REAL(8)                   :: KVECSCALE
+      REAL(8)                   :: SCALE
       REAL(8)                   :: GBASINV(3,3)
       INTEGER(4)                :: NK,NKDIAG
       INTEGER(4)                :: NB
@@ -1663,7 +1662,8 @@ END MODULE
           DO IKDIAG=1,NKDIAG
             !WRITE EIGENVALUES
             IF(IKDIAG.eq.1.and..not.TATTACH)coord0=0.0D0
-            coord=coord0+sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
+            SCALE=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE
+            coord=coord0+sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))/SCALE
             WRITE(NFILBAND,FMT='(103F10.5)')coord,EIGVAL(:,IKDIAG)
           ENDDO
           CALL LIB$FLUSHFILE(NFILBAND)
@@ -1679,8 +1679,9 @@ END MODULE
             CALL FILEHANDLER$UNIT('FATBANDS',NFILFATBAND)
             !ITERATE K-POINTS
             DO IKDIAG=1,NKDIAG
+              SCALE=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE
               WRITE(NFILFATBAND,FMT='(103F10.5)',advance="no")&
-              &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))
+              &  sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))/SCALE
 
               FATBANDMAX=MAXVAL(FATBANDVAL(IFATBAND,:,:))
               IF(TPRINT)PRINT*,"FATBAND FATBANDMAX",FATBANDMAX
@@ -2062,6 +2063,7 @@ END MODULE
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
       CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+
       ALLOCATE(EB(NB*NSPIN,NKP))        
       ALLOCATE(WGHT(NB*NSPIN,NKP))
       EB(:,:)=0.0D0 
@@ -2099,10 +2101,9 @@ END MODULE
           CALL FLUSH(NFILO)
         ENDIF
       ENDIF
-
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
-      
+      CALL MPE$QUERY('~',NTASKS,THISTASK)
       ALLOCATE(JOBLIST(NKP,NSPIN))
       index=1
       DO IKP=1,NKP
@@ -2112,19 +2113,16 @@ END MODULE
           if(index.gt.NTASKS)index=1
         ENDDO
       ENDDO
+      PRINT*,"JOBLIST",JOBLIST(:,:)
       
-      CALL MPE$SYNC('~')
-
-      index=1
+      ALLOCATE(PROJ(NAT,LMNXX,NB))
+      ALLOCATE(E(NG*NDIM))
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
           IF(THISTASK.ne.JOBLIST(IKP,ISPIN))CYCLE
           KVEC=BK(:,IKP)
           IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
-          index=index+1
-          CALL FLUSH(NFILO)
-          ALLOCATE(PROJ(NAT,LMNXX,NB))
-          ALLOCATE(E(NG*NDIM))
+          IF(TPRINT)CALL FLUSH(NFILO)
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
@@ -2135,13 +2133,12 @@ END MODULE
               ENDDO         
             ENDDO
           ENDIF
-          DEALLOCATE(PROJ)
-          DEALLOCATE(E)
         ENDDO
       ENDDO
-      CALL MPE$SYNC('~')
-      CALL MPE$COMBINE('~','+',EB)
-      CALL MPE$COMBINE('~','+',PROJK)
+      DEALLOCATE(PROJ)
+      DEALLOCATE(E)
+      CALL MPE$COMBINER8R2('~','+',EB)
+      CALL MPE$COMBINEC8R4('~','+',PROJK)
                             CALL TRACE$POP()
       !
       IF(THISTASK.ne.1)return

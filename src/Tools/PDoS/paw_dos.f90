@@ -2006,7 +2006,8 @@ PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
           ENDDO
         ENDDO
       ENDDO
-      DOS(:,:,:)=DOS(:,:,:)*DEWGHT/EV
+      !FIXME: STILL NOT SURE ABOUT THIS
+      !DOS(:,:,:)=DOS(:,:,:)!*DEWGHT/EV**2
 !
 !     ==========================================================================
 !     ==  DETERMINE NOS BY INTEGRATION                                        ==
@@ -2017,7 +2018,7 @@ PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
         DO IOCC=1,2
           NOS(1,ISPIN,IOCC)=0.0D0
           DO IE=2,NEWGHT
-            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*EV+NOS(IE-1,ISPIN,IOCC)
+            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*DEWGHT+NOS(IE-1,ISPIN,IOCC)
           ENDDO
         ENDDO
       ENDDO
