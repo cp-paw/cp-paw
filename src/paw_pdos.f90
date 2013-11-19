@@ -706,6 +706,7 @@
             IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
+print*,"STATE%VEC(:,:,IB)",STATE%VEC(:,:,IB)
             ELSE
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
@@ -811,7 +812,7 @@
       INTEGER(4)                   :: IB1
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITEK')
-      WRITE(NFIL)XK,NB,wkpt
+      WRITE(NFIL)XK,NB,WKPT
       DO IB1=1,NB
         WRITE(NFIL)EIG(IB1),OCC(IB1),VECTOR(:,:,IB1)
       ENDDO

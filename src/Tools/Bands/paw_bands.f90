@@ -1125,7 +1125,10 @@ print*,'nb ',nb
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
         DO IAT=1,NAT
           DO IB=1,NB
-            DO LN=1,LMNX(ISPECIES(IAT))
+            ISP=ISPECIES(IAT)
+            LNX_=LNX(ISP)
+            LMNX_=LMNX(ISP)
+            DO LN=1,LMNX_
               CALL LIB$SCALARPRODUCTC8(.false.,NG2*NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
               !CALL PLANEWAVE$SCALARPRODUCT(' ',NG2,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
               PROJ(IAT,LN,IB)=CSVAR
@@ -1797,6 +1800,8 @@ END MODULE
 
       INTEGER(4)                   :: THISTASK,NTASKS
       INTEGER(4),ALLOCATABLE       :: JOBLIST(:,:)
+
+      INTEGER(4)                   :: LMNX_,LNX_,ISP
 !     **************************************************************************
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
@@ -2169,7 +2174,10 @@ END MODULE
               !reorder projections
               index=1
               DO IAT=1,NAT
-                DO LMN=1,LMNX(ISPECIES(IAT))
+                ISP=ISPECIES(IAT)
+                LNX_=LNX(ISP)
+                LMNX_=LMNX(ISP)
+                DO LMN=1,LMNX_
                   PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
                   index=index+1 
                 ENDDO
@@ -2184,6 +2192,7 @@ END MODULE
                 OCC(IKP,IB)=0.0D0
               ENDIF
             ENDDO
+PRINT*,"PROJTMP",PROJTMP
             CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
         &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
           ENDDO
