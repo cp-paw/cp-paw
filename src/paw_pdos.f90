@@ -706,7 +706,6 @@
             IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
-print*,"STATE%VEC(:,:,IB)",STATE%VEC(:,:,IB)
             ELSE
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
@@ -775,7 +774,6 @@ print*,"STATE%VEC(:,:,IB)",STATE%VEC(:,:,IB)
         LNX1=LNX(ISP)
         WRITE(NFIL)IZ(ISP),RAD(ISP),PHIOFR(1:LNX1,ISP) &
      &       ,DPHIDR(1:LNX1,ISP),OV(1:LNX1,1:LNX1,ISP)
-        CALL FLUSH(NFIL)
       ENDDO
 !!
 !!     ==================================================================

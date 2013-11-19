@@ -2192,7 +2192,6 @@ END MODULE
                 OCC(IKP,IB)=0.0D0
               ENDIF
             ENDDO
-PRINT*,"PROJTMP",PROJTMP
             CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
         &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
           ENDDO
