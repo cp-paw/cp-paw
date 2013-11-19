@@ -2620,8 +2620,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       ALLOCATE(LOX(LNXX))
       ALLOCATE(IZ(NSP))
       ALLOCATE(RAD(NSP))
+      OV(:,:,:)=0.D0
       DO ISP=1,NSP
-        OV(:,:,:)=0.D0
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)
         CALL RADIAL$GETI4(GID,'NR',NR)

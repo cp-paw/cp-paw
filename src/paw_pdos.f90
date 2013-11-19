@@ -418,7 +418,7 @@
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('PDOS$GETR8A')
         END IF
-        VAL=RESHAPE(RAD,(/NAT/))
+        VAL=RESHAPE(RAD,(/NSP/))
       ELSE IF(ID.EQ.'PHI') THEN
         IF(LEN.NE.LNXX*NSP) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -766,7 +766,7 @@ print*,"STATE%VEC(:,:,IB)",STATE%VEC(:,:,IB)
 !     ==================================================================
 !     == ATOMIC STRUCTURE                                             ==
 !     ==================================================================
-      WRITE(NFIL)RBAS(:,:),R(:,:),ATOMID(:)
+      WRITE(NFIL)RBAS,R,ATOMID
 !
 !     ==================================================================
 !     == ELEMENT SPECIFIC QUANTITIES                                  ==
@@ -774,7 +774,8 @@ print*,"STATE%VEC(:,:,IB)",STATE%VEC(:,:,IB)
       DO ISP=1,NSP
         LNX1=LNX(ISP)
         WRITE(NFIL)IZ(ISP),RAD(ISP),PHIOFR(1:LNX1,ISP) &
-     &            ,DPHIDR(1:LNX1,ISP),OV(1:LNX1,1:LNX1,ISP)
+     &       ,DPHIDR(1:LNX1,ISP),OV(1:LNX1,1:LNX1,ISP)
+        CALL FLUSH(NFIL)
       ENDDO
 !!
 !!     ==================================================================
