@@ -1,0 +1,28 @@
+#!/bin/sh
+export PROJECT=$1
+if [ -z $1 ]; then
+  echo error in paw_get_homo: missing argument
+  echo specify root name of the paw_project
+  exit 1
+fi
+#
+# Does protocoll file exist?
+#
+if [ ! -e $PROJECT.prot ]; then
+  echo error in paw_get_homo: protocoll file does not exist
+  echo specified: $PROJECT.prot
+  exit 1
+fi
+#
+#  extract result
+#
+export RESULT=`grep "HOMO-ENERGY" $PROJECT.prot | tail -n1 | awk -F: '{print $2}' `
+if [ -z  "$RESULT" ] ; then
+  echo error in paw_get_homo: no HOMO energy listed
+  exit 1
+fi
+#
+#  report result
+#
+echo $RESULT
+exit 0
