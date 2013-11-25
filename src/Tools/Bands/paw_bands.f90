@@ -2169,6 +2169,7 @@ END MODULE
         ALLOCATE(PROJTMP(NDIM,NPRO,NB))
         DO IKP=1,NKP
           DO ISPIN=1,NSPIN
+            KVEC=BK(:,IKP)
             WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
             IF(TPROJ)THEN
               !reorder projections
