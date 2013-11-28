@@ -285,6 +285,7 @@
       integer                   :: st
       character(82)             :: msg
 !     **************************************************************************
+#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
 !     == fortran 2008 statement ================================================
       CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
       IF(ST.NE.0) THEN
@@ -293,16 +294,16 @@
         CALL ERROR$CHVAL('ERROR MSG',CMDMSG)
         CALL ERROR$STOP('LIB$SYSTEM')
       END IF
+#ELSE
+      call LIB$SYSTEMrc(COMMAND,rc)
+      IF(RC.NE.0) THEN
+        CALL ERROR$MSG('SYSTEM CALL FAILED')
+        CALL ERROR$CHVAL('COMMAND',COMMAND)
+        CALL ERROR$I4VAL('RC',RC)
+        CALL ERROR$STOP('LIB$SYSTEM')
+      End IF
+#ENDIF
       RETURN
-
-!!$      call LIB$SYSTEMrc(COMMAND,rc)
-!!$      IF(RC.NE.0) THEN
-!!$        CALL ERROR$MSG('SYSTEM CALL FAILED')
-!!$        CALL ERROR$CHVAL('COMMAND',COMMAND)
-!!$        CALL ERROR$I4VAL('RC',RC)
-!!$        CALL ERROR$STOP('LIB$SYSTEM')
-!!$      End IF
-!!$      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8

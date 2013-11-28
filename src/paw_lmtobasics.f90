@@ -577,9 +577,9 @@
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RPOS(3,NAT)
       INTEGER(4),INTENT(IN) :: LX(NAT)
+      INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: QBAR(N)
       REAL(8)   ,INTENT(IN) :: K2
-      INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: NORB
       REAL(8)   ,INTENT(INOUT):: SBAR(norb,N)
       INTEGER(4)            :: I1,I2
