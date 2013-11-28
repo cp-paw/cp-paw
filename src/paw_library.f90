@@ -196,7 +196,15 @@
       REAL(8)   ,INTENT(OUT) :: SYSTIME
       REAL                   :: TARRAY(2),RESULT
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
+#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
+!!$      call cpu_time(cputime)  !cpu time in seconds
+!!$      call system_clock(count,count_rate,count_max)
+!!$      systime=count/countrate
+!
+      call etime(tarray,result)
+      usrtime=tarray(1)
+      systime=tarray(2)
+#ELIF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_ETIME(USRTIME,SYSTIME)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
       CALL LIB_IFC_ETIME(USRTIME,SYSTIME)
