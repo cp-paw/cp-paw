@@ -100,8 +100,8 @@ CONTAINS
 !     .............................................................................
       SUBROUTINE MPE_CHARTOASCII(LENCH,STRING,LENI,IASCII)
       IMPLICIT  NONE
-      CHARACTER(*),INTENT(IN) :: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENCH
+      CHARACTER(*),INTENT(IN) :: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENI
       INTEGER(4)  ,INTENT(OUT):: IASCII(LENI)
       INTEGER(4)              :: LENG,I,J,K
@@ -124,8 +124,8 @@ CONTAINS
 !     .............................................................................
       SUBROUTINE MPE_CHARFROMASCII(LENCH,STRING,LENI,IASCII)
       IMPLICIT  NONE
-      CHARACTER(*),INTENT(OUT):: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENCH
+      CHARACTER(*),INTENT(OUT):: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENI
       INTEGER(4)  ,INTENT(IN) :: IASCII(LENI)
       INTEGER(4)              :: LENG,I,J,K
