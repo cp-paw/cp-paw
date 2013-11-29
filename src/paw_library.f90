@@ -294,26 +294,6 @@
         CALL ERROR$CHVAL('ERROR MSG',CMDMSG)
         CALL ERROR$STOP('LIB$SYSTEM')
       END IF
-#ELSE
-      call LIB$SYSTEMrc(COMMAND,rc)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$CHVAL('COMMAND',COMMAND)
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB$SYSTEM')
-      End IF
-#ENDIF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$SYSTEMrc(COMMAND,rc)
-!     **************************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!     **************************************************************************
-      CHARACTER(*),INTENT(IN)   :: COMMAND
-      integer(4)  ,intent(out)  :: rc   ! return code
-!     *********************************************************************
 #IF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -332,7 +312,9 @@
       CALL LIB_SUN_SYSTEM(COMMAND,rc)
 #ELSE
       ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      RC=SYSTEM(COMMAND)
+      CALL ERROR$MSG('NO COMPILER-UNSPECIFIC IMPLEMENTATION AVAILABLE')
+      CALL ERROR$MSG('CALLING ROUTINE SHOULD USE FORTRAN 2008 IMPLEMENTATION')
+      CALL ERROR$STOP('LIB$SYSTEM')
 #ENDIF
       RETURN
       END
