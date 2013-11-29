@@ -449,7 +449,7 @@ END MODULE FILEHANDLER_MODULE
 !     ==========================================================================
 !     == CLOSE FILE IF IT DOES NOT EXIST                                      ==
 !     ==========================================================================
-      INQUIRE(UNIT=NFIL,EXIST=TCHK)
+      INQUIRE(FILE=FILE(IFIL)%NAME,EXIST=TCHK)
       IF(.NOT.TCHK) RETURN
       OPEN(UNIT=NFIL,FILE=FILE(IFIL)%NAME,STATUS='OLD')
       CLOSE(UNIT=NFIL,STATUS='DELETE')
