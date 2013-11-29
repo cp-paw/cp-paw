@@ -287,6 +287,10 @@
       integer                   :: st
       character(82)             :: msg
 !     **************************************************************************
+      CALL ERROR$MSG('LIB$SYSTEM IS DISABLED')
+      CALL ERROR$MSG('IT SHOULD NOT BE USED UNTIL FORTRAN2008 IS AVAILABLE')
+      CALL ERROR$STOP('LIB$SYSTEM')
+#
 #IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
 !     == fortran 2008 statement ================================================
       CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
@@ -296,7 +300,7 @@
         CALL ERROR$CHVAL('ERROR MSG',MSG)
         CALL ERROR$STOP('LIB$SYSTEM')
       END IF
-#IF DEFINED(CPPVAR_COMPILER_G95)
+#ELIF DEFINED(CPPVAR_COMPILER_G95)
       CALL LIB_G95_SYSTEM(COMMAND,rc)
 #ELIF DEFINED(CPPVAR_COMPILER_IFC)
       CALL LIB_IFC_SYSTEM(COMMAND,rc)
