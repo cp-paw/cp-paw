@@ -16,13 +16,13 @@ fi
 #
 #  extract result
 #
-export RESULT=`grep "LUMO-ENERGY" $PROJECT.prot | tail -n1 | awk -F: '{print $2}' `
-if [ -z  "$RESULT" ] ; then
+export RES=`grep "LUMO-ENERGY" $PROJECT.prot | tail -n1 | awk -F: '{print $2}' `
+if [ -z  "$RES" ] ; then
   echo error in paw_get_lumo: no LUMO energy listed
   exit 1
 fi
 #
 #  report result
 #
-echo $RESULT
+echo $RES
 exit 0
