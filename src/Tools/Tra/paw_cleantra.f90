@@ -11,9 +11,15 @@
       INTEGER(4)     :: NFIL2
       INTEGER(4)     :: I
       LOGICAL(4)     :: TCHK
+      INTEGER(4)     :: NARGS
 !     **************************************************************
                           CALL TRACE$PUSH('MAIN')
-      CALL GETARG(1,FILE)
+      CALL LIB$NARGS(NARGS)
+      IF(NARGS.LT.1)THEN
+        CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
+        CALL ERROR$STOP('INITIALIZEFILEANDLER')
+      ENDIF
+      CALL LIB$GETARG(1,FILE)
 !
 !     ==================================================================
 !     ==  DEFINE FILES                                                ==
