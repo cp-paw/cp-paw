@@ -1848,7 +1848,8 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ==========================================================================
       PI=4.D0*ATAN(1.D0)
       IF(X.LT.35.D0) THEN
-        F0=SQRT(PI/(4.D0*X))*ERF(SQRT(X))  ! BOYS FUNCTION F0
+        call lib$erfr8(sqrt(x),svar)
+        F0=SQRT(PI/(4.D0*X))*svar  ! BOYS FUNCTION F0
       ELSE
         F0=SQRT(PI/(4.D0*X))              ! LARGE ARGUMENT LIMIT OF F0
       END IF
