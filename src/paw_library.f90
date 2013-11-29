@@ -17,6 +17,30 @@
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
+!****         
+!****  select one compiler flag       
+!****     CPPVAR_COMPILER_G95            
+!****     CPPVAR_COMPILER_IFC            
+!****     CPPVAR_COMPILER_IFC7           
+!****     CPPVAR_COMPILER_ABSOFT         
+!****     CPPVAR_COMPILER_XLF            
+!****     CPPVAR_COMPILER_PGI            
+!****     CPPVAR_COMPILER_PATHSCALE      
+!****     CPPVAR_COMPILER_SUN            
+!****     CPPVAR_COMPILER_GFORTRAN       
+!****         
+!****     CPPVAR_LAPACK_ESSL        
+!****     CPPVAR_BLAS_ESSL          
+!****     CPPVAR_FFT_ESSL           
+!****     CPPVAR_FFT_FFTW           
+!****     CPPVAR_FFT_FFTW3          
+!****     CPPVAR_FFT_ACML           
+!****     CPPVAR_FFT_PACK           
+!****                               
+!****     CPPVAR_USAGE_EXIST        
+!****         
+!*******************************************************************************
+!*******************************************************************************
 ! 
 !*******************************************************************************
 !*******************************************************************************
@@ -291,37 +315,37 @@
       CALL ERROR$MSG('IT SHOULD NOT BE USED UNTIL FORTRAN2008 IS AVAILABLE')
       CALL ERROR$STOP('LIB$SYSTEM')
 #
-#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
-!     == fortran 2008 statement ================================================
-      CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
-      IF(ST.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$CHVAL('COMMAND',COMMAND)
-        CALL ERROR$CHVAL('ERROR MSG',MSG)
-        CALL ERROR$STOP('LIB$SYSTEM')
-      END IF
-#ELIF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_SYSTEM(COMMAND,rc)
-#ELSE
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      CALL ERROR$MSG('NO COMPILER-UNSPECIFIC IMPLEMENTATION AVAILABLE')
-      CALL ERROR$MSG('CALLING ROUTINE SHOULD USE FORTRAN 2008 IMPLEMENTATION')
-      CALL ERROR$STOP('LIB$SYSTEM')
-#ENDIF
+!!$#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
+!!$!     == fortran 2008 statement ================================================
+!!$      CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
+!!$      IF(ST.NE.0) THEN
+!!$        CALL ERROR$MSG('SYSTEM CALL FAILED')
+!!$        CALL ERROR$CHVAL('COMMAND',COMMAND)
+!!$        CALL ERROR$CHVAL('ERROR MSG',MSG)
+!!$        CALL ERROR$STOP('LIB$SYSTEM')
+!!$      END IF
+!!$#ELIF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_SYSTEM(COMMAND,rc)
+!!$#ELSE
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      CALL ERROR$MSG('NO COMPILER-UNSPECIFIC IMPLEMENTATION AVAILABLE')
+!!$      CALL ERROR$MSG('CALLING ROUTINE SHOULD USE FORTRAN 2008 IMPLEMENTATION')
+!!$      CALL ERROR$STOP('LIB$SYSTEM')
+!!$#ENDIF
       RETURN
       END
 !
@@ -5150,35 +5174,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
-#IF DEFINED(CPPVAR_LANGEXT_XLF)
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$ERFR8(X,Y)
-!     **************************************************************************
-!     **  ERROR FUNCTION                                                      **
-!     **    Y=2/SQRT(PI)  INT_0^X DZ EXP(-Z**2)                               **
-!     **    Y=(INFINITY)=1                                                    **
-!     **************************************************************************
-      REAL(8),INTENT(IN) :: X
-      REAL(8),INTENT(OUT):: Y
-!     **************************************************************************
-      Y=DERF(X) 
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$ERFCR8(X,Y)
-!     **************************************************************************
-!     **  COMPLEMENTARY ERROR FUNCTION                                        **
-!     **  Y=1-ERF(X)                                                          **
-!     **************************************************************************
-      REAL(8),INTENT(IN) :: X
-      REAL(8),INTENT(OUT):: Y
-!     **************************************************************************
-      Y=DERFC(X)
-      RETURN
-      END
-#ELSE
-!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$ERFR8(X,Y)
 !     **************************************************************************
@@ -5356,7 +5351,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       IF (X .LT. 0) Y = 2 - Y
       RETURN
       END
-#ENDIF
 !
 !.......................................................................
 MODULE RANDOM_MODULE
