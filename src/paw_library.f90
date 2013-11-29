@@ -234,6 +234,7 @@
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
+      implicit none
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
       INTEGER(4)                :: status
@@ -280,6 +281,7 @@
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
+      implicit none
       CHARACTER(*),INTENT(IN)   :: COMMAND
       integer(4)                :: rc   ! return code
       integer                   :: st
@@ -291,7 +293,7 @@
       IF(ST.NE.0) THEN
         CALL ERROR$MSG('SYSTEM CALL FAILED')
         CALL ERROR$CHVAL('COMMAND',COMMAND)
-        CALL ERROR$CHVAL('ERROR MSG',CMDMSG)
+        CALL ERROR$CHVAL('ERROR MSG',MSG)
         CALL ERROR$STOP('LIB$SYSTEM')
       END IF
 #IF DEFINED(CPPVAR_COMPILER_G95)
@@ -324,6 +326,7 @@
 !     **************************************************************************
 !     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
 !     **************************************************************************
+      implicit none
       INTEGER(4),INTENT(IN) :: N
 !     **************************************************************************
       flush(n) ! fortran 2003
