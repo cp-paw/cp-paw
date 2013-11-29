@@ -5347,7 +5347,7 @@ EXCLUDE(7,20,17)=.true.
               PRINT*,"DYDX=",DYDX
               PRINT*,"DYDX_REF=",REFDATA_DYDX(FUNC,I,J)
               PRINT*,"Log10(|(VAL-REF)/REF|)=",log10(diffY)
-              CALL EXIT(1)
+              STOP 1
             ENDIF
             IF(log10(diffDYDX).GT.LOG10RELTOL)THEN
               PRINT*,"TEST FAILED"
@@ -5361,7 +5361,7 @@ EXCLUDE(7,20,17)=.true.
               PRINT*,"DYDX=",DYDX
               PRINT*,"DYDX_REF=",REFDATA_DYDX(FUNC,I,J)
               PRINT*,"Log10(|(VAL-REF)/REF|)=",log10(diffDYDX)
-              CALL EXIT(1)
+              STOP 1
             ENDIF
           ENDDO
         ENDDO
