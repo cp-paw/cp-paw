@@ -43,22 +43,20 @@
       INTEGER(4),INTENT(IN) :: NFIL
       REAL(8)               :: MBYTE=2.D0**20
       INTEGER(4)            :: NTASKS,THISTASK
-      INTEGER(4)            :: NITEM=6
-      REAL(8)   ,ALLOCATABLE:: LOCARRAY(:)
+      INTEGER(4),parameter  :: NITEM=4
+      REAL(8)               :: LOCARRAY(nitem)
       REAL(8)   ,ALLOCATABLE:: GLOBARRAY(:,:)
       REAL(8)               :: CPUTIME
 !     *****************************************************************
       CALL MPE$QUERY('~',NTASKS,THISTASK)
-      ALLOCATE(LOCARRAY(NITEM))
 !
 !     =================================================================
 !     == COLLECT ON EACH NODE                                        == 
 !     =================================================================
-      CALL LIB$ETIME(LOCARRAY(2),LOCARRAY(3))
-      LOCARRAY(1)=LOCARRAY(2)+LOCARRAY(3)
-      CALL LIB$GETUSAGE('MAXMEM',LOCARRAY(4))
-      CALL LIB$GETUSAGE('SWAPRATE',LOCARRAY(5))
-      CALL LIB$GETUSAGE('SWITCHRATE',LOCARRAY(6))
+      CALL CPU_TIME(LOCARRAY(1))
+      CALL LIB$GETUSAGE('MAXMEM',LOCARRAY(2))
+      CALL LIB$GETUSAGE('SWAPRATE',LOCARRAY(3))
+      CALL LIB$GETUSAGE('SWITCHRATE',LOCARRAY(4))
 !
 !     =================================================================
 !     == AVERAGE OVER ALL NODES                                      == 
@@ -76,12 +74,9 @@
         WRITE(NFIL,FMT='(/"USAGE OF SYSTEM RESOURCES"/25("="))')
         WRITE(NFIL,FMT='(30("."),T1,"#(PROCESSORS)",T30,I10)')NTASKS
         WRITE(NFIL,FMT='(30("."),T1,"CPU TIME PER CPU",T30,F10.2," SEC")')LOCARRAY(1)
-        WRITE(NFIL,FMT='(30("."),T1,"%(USER TIME)",T30,F10.5)')LOCARRAY(2)/CPUTIME
-        WRITE(NFIL,FMT='(30("."),T1,"%(SYSTEM TIME)",T30,F10.5)')LOCARRAY(2)/CPUTIME
-        WRITE(NFIL,FMT='(30("."),T1,"MAX. MEMORY",T30,F10.5," MBYTE")')LOCARRAY(4)/MBYTE
-        WRITE(NFIL,FMT='(30("."),T1,"#(SWAPS)/SEC",T30,F10.5)')LOCARRAY(5)
-        WRITE(NFIL,FMT='(30("."),T1,"#(CONTEXT SWITCHES)/SEC",T30,F10.5)')LOCARRAY(6)
+        WRITE(NFIL,FMT='(30("."),T1,"MAX. MEMORY",T30,F10.5," MBYTE")')LOCARRAY(2)/MBYTE
+        WRITE(NFIL,FMT='(30("."),T1,"#(SWAPS)/SEC",T30,F10.5)')LOCARRAY(3)
+        WRITE(NFIL,FMT='(30("."),T1,"#(CONTEXT SWITCHES)/SEC",T30,F10.5)')LOCARRAY(4)
       END IF
-      DEALLOCATE(LOCARRAY)
       RETURN
       END
