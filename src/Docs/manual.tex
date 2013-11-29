@@ -2570,7 +2570,17 @@ relative to the real-space grid used in the calculation.}
 \block{!CONTROL!ANALYSE!EELS}
 %----------------------------------------------------------------------
 \brules{optional,multiple} 
-\bdescr{Construct EELS (Electron energy Loss) spectra.}  
+\bdescr{Construct EELS (Electron-Energy Loss Spectra).}  
+
+In an EELS experiment, the material is exposed to a highly-energetic
+electron beam. Due to inelastic interactions with the probe the
+transmitted electrons have a lower energy. The resulting energy loss
+spectrum is this a measure of the inelastic collisions in the
+probe. One important effect is the excitation of a core electron into
+an empty orbital of the probe. Because the core electrons are very
+localized, the loss spectrum measures the density of states of the
+conduction band projected onto the orbitals on the same atom with
+angular momentum raised or lowered by $\Delta\ell=\pm 1$.
 
 Following Wooten\cite{wooten72_book}, we calculate
  the loss function $L(\hbar\omega)$.
