@@ -1827,10 +1827,11 @@ END SUBROUTINE FORCEFIELD$TIP3PNEW
 
      SUBROUTINE TIP3PNABLAG(NMOL,IMOL,R,nablag1,nablag2,nablag3)
        IMPLICIT NONE
+       INTEGER(4),INTENT(IN)  :: nmol
+       INTEGER(4),INTENT(IN)  :: imol
        REAL(8),INTENT(IN)     :: R(3,3,nmol)
        REAL(8),INTENT(OUT)    :: nablag1(9), nablag2(9), nablag3(9)
        INTEGER(4)             :: i
-       INTEGER(4),INTENT(IN)  :: nmol, imol
 
        DO i=1,3
           nablag1(i) = 2.0d0 * (R(i,1,imol) - R(i,2,imol))
