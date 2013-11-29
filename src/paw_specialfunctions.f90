@@ -121,10 +121,9 @@
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: X
       REAL(8),INTENT(OUT):: VAL
+      real(8),external ::derf
 !     **************************************************************************
-      VAL=ERF(X)
-!     CALL SPECIALFUNCTION$GAMMP(X**2,0.5D0,VAL)
-!     IF(X.LT.0.D0) VAL=-VAL
+      call lib$erfr8(x,val)
       RETURN
       END
 !

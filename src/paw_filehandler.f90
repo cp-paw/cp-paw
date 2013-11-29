@@ -389,6 +389,73 @@ END MODULE FILEHANDLER_MODULE
       RETURN
       END
 !
+!     ..........................................................................
+      SUBROUTINE FILEHANDLER$DELETE(ID_)
+!     **************************************************************************
+!     **  DELETE THE FILE                                                     **
+!     **************************************************************************
+      USE FILEHANDLER_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+      INTEGER(4)              :: IFIL
+      INTEGER(4)              :: I
+      INTEGER(4)              :: NFIL
+      INTEGER(4)              :: IOS
+      CHARACTER(128)          :: IOMSG
+      LOGICAL                 :: OD
+      LOGICAL                 :: TCHK
+!     **************************************************************************
+      IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
+!
+!     ==========================================================================
+!     == IDENTIFY ENTRY FOR THIS FILE-ID                                      ==
+!     ==========================================================================
+      CALL FILEHANDLER_LOOKUP(ID_,IFIL)
+      IF(IFIL.EQ.0) THEN
+        CALL ERROR$MSG('FILE IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('STRING=',ID_)
+        CALL ERROR$STOP('FILEHANDLER$CLOSE')
+      END IF
+!
+!     ==========================================================================
+!     == CLOSE FILE IF IT IS OPEN                                             ==
+!     ==========================================================================
+      CALL FILEHANDLER_CLOSE(FILE(IFIL))
+!
+!     ==========================================================================
+!     == FIND AVAILABLE FORTRAN UNIT                                          ==
+!     ==========================================================================
+      NFIL=-1
+      DO I=1000,10000
+        INQUIRE(UNIT=I,OPENED=OD,IOSTAT=IOS,IOMSG=IOMSG)
+        IF(IOS.NE.0) THEN
+          CALL ERROR$MSG('ERROR WHILE SCANNING FOR AVALIABLE FORTRAN FILE UNIT')
+          CALL ERROR$MSG('ERROR INQUIRING ABOUT A FILE')
+          CALL ERROR$CHVAL('UNIT',I)
+          CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
+          CALL ERROR$CHVAL('FILE ID',FILE(IFIL)%ID)
+          CALL ERROR$CHVAL('FILENAME ',FILE(IFIL)%NAME)
+          CALL ERROR$STOP('FILEHANDLER$DELETE')
+        END IF
+        IF(.NOT.OD) NFIL=I
+      ENDDO
+      IF(NFIL.EQ.-1) THEN
+        CALL ERROR$MSG('NO FORTRAN FILE UNIT NUMBER AVAILABLE')
+        CALL ERROR$CHVAL('FILE ID',FILE(IFIL)%ID)
+        CALL ERROR$CHVAL('FILENAME ',FILE(IFIL)%NAME)
+        CALL ERROR$STOP('FILEHANDLER$DELETE')
+      END IF
+!
+!     ==========================================================================
+!     == CLOSE FILE IF IT DOES NOT EXIST                                      ==
+!     ==========================================================================
+      INQUIRE(FILE=FILE(IFIL)%NAME,EXIST=TCHK)
+      IF(.NOT.TCHK) RETURN
+      OPEN(UNIT=NFIL,FILE=FILE(IFIL)%NAME,STATUS='OLD')
+      CLOSE(UNIT=NFIL,STATUS='DELETE')
+      RETURN
+      END
+!
 !     .................................................................
       SUBROUTINE FILEHANDLER$PRINTFILEOFUNIT(UNIT_)
 !     ==================================================================
