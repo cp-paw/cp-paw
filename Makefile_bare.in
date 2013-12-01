@@ -300,6 +300,9 @@ OBJGRAB=  \
 # Objects for paw_dos.x
 OBJDOS=  \
           ${OBJDIR}/paw_dos.o
+# Objects for paw_dosplot.x
+OBJDOSPLOT=  \
+          ${OBJDIR}/paw_dosplot.o
 # Objects for paw_bands.x
 OBJBANDS=  \
           ${OBJDIR}/paw_bands.o
@@ -455,6 +458,12 @@ ${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 #
 clean_dos:
 	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
+#
+${BINDIR}/paw_dosplot.x: ${OBJDOSPLOT} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_dosplot.x ${OBJDOSPLOT} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_dosplot:
+	rm -f ${OBJDOSPLOT}; rm -f ${BINDIR}/paw_dosplot.x
 #
 ${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpaw ${LIBS}
@@ -616,6 +625,10 @@ ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJDOSPLOT}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
