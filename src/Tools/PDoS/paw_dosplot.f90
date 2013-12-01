@@ -8,7 +8,7 @@
       INTEGER(4)      :: NFILO,NFIL
       LOGICAL(4),PARAMETER :: TPR=.TRUE.
 !     **************************************************************************
-      CALL TRACE$SETL4('ON',.FALSE.)
+      CALL TRACE$SETL4('ON',.false.)
       CALL TRACE$PUSH('MAIN')
  !
 !     ==========================================================================
@@ -68,11 +68,12 @@ TYPE DOSSET_TYPE
   CHARACTER(32) :: FILLCOLOR
   LOGICAL(4)    :: STACK
   REAL(8)       :: SCALE
+  REAL(8)       :: Xzero
   TYPE(DOSSET_TYPE),POINTER :: NEXT
 END TYPE DOSSET_TYPE
 TYPE(DOSSET_TYPE),TARGET  :: FIRSTDOSSET
 TYPE(DOSSET_TYPE),POINTER :: DOSSET
-REAL(8)                   :: XMIN,XMAX,YMIN,YMAX,XZERO
+REAL(8)                   :: XMIN,XMAX,YMIN,YMAX
 END MODULE DOSSETS_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -80,21 +81,21 @@ END MODULE DOSSETS_MODULE
 !     **************************************************************************
 !     ** RESOLVE CONTROLE FILE                                                **
 !     **************************************************************************
-      USE DOSSETS_MODULE , ONLY : FIRSTDOSSET,DOSSET &
-     &                            ,XMIN,XMAX,YMIN,YMAX,XZERO
+      USE DOSSETS_MODULE , ONLY : FIRSTDOSSET,DOSSET,XMIN,XMAX,YMIN,YMAX
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)   :: LL_CNTL
-      CHARACTER(256)  :: STRING
       LOGICAL(4)      :: TCHK
       INTEGER(4)      :: NGRAPH
       INTEGER(4)      :: NSET
       INTEGER(4)      :: IG,IS,IS1,IS2,I
       LOGICAL(4),ALLOCATABLE :: TARR(:)
       INTEGER(4),ALLOCATABLE :: ISARR(:)
-      CHARACTER(256) :: PREFIX
-      REAL(8)       :: SCALE
+      CHARACTER(256)  :: PREFIX
+      REAL(8)         :: SCALE
+      REAL(8)         :: xzeroglob
+      REAL(8)         :: xzero
 !     **************************************************************************
                                      CALL TRACE$PUSH('READCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -104,21 +105,9 @@ END MODULE DOSSETS_MODULE
 !     == READ FILES                                                           ==
 !     ==========================================================================
                                      CALL TRACE$PASS('READ FILES')
-!     == DEFAULT IS ROOTNAME.EPS
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('!DPCNTL:NAME IS MANDATORY INPUT')
-        CALL ERROR$STOP('READCNTL')
-      END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'NAME',0,STRING)
-      STRING=ADJUSTL(STRING)
-      CALL FILEHANDLER$SETFILE('EPS',.FALSE.,TRIM(STRING)//-'.EPS')
-      CALL FILEHANDLER$SETFILE('PDF',.FALSE.,TRIM(STRING)//-'.PDF')
-      CALL FILEHANDLER$SETFILE('AGR',.FALSE.,TRIM(STRING)//-'.AGR')
-!
-      XZERO=0.D0
+      XZEROglob=0.D0
       CALL LINKEDLIST$EXISTD(LL_CNTL,'XZERO',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',0,XZERO)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',0,XZEROglob)
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'XMIN',1,TCHK)
       IF(.NOT.TCHK) THEN
@@ -167,6 +156,11 @@ END MODULE DOSSETS_MODULE
         SCALE=1.D0
         CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'SCALE',0,SCALE)
+!
+!       == GET DEFAULT SCALE FOR THIS GRAPH ===================================
+        XZERO=XZEROGLOB
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'XZERO',1,TCHK)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',0,XZERO)
 !
 !       ========================================================================
 !       == LOOP OVER SETS                                                     ==
@@ -244,6 +238,11 @@ END MODULE DOSSETS_MODULE
           CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALE',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'SCALE',1,DOSSET%SCALE)
 !
+!         == GET xzero =========================================================
+          DOSSET%XZERO=XZERO
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'XZERO',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',1,DOSSET%XZERO)
+!
 !         == GET FILLCOLOR =====================================================
           CALL LINKEDLIST$EXISTD(LL_CNTL,'FILLCOLOR',1,TCHK)
           IF(.NOT.TCHK) THEN
@@ -265,7 +264,7 @@ END MODULE DOSSETS_MODULE
       SUBROUTINE CUMMULATEDDOS()
       USE STRINGS_MODULE
       USE DOSSETS_MODULE , ONLY : FIRSTDOSSET,DOSSET,DOSSET_TYPE &
-     &                            ,XMIN,XMAX,YMIN,YMAX,XZERO
+     &                            ,XMIN,XMAX,YMIN,YMAX
       IMPLICIT NONE
       TYPE(DOSSET_TYPE),POINTER:: DOSSET1
       INTEGER(4)               :: NGRAPH
@@ -308,7 +307,7 @@ END MODULE DOSSETS_MODULE
 !         == SCALE SET =========================================================
           CALL GRACE_SCALESET(NFIL,DOSSET%IG-1,IS,DOSSET%SCALE)
 !         == POSITION ZERO AT XZERO ============================================
-          CALL GRACE_SHIFTSET(NFIL,DOSSET%IG-1,IS,-XZERO,0.D0)
+          CALL GRACE_SHIFTSET(NFIL,DOSSET%IG-1,IS,-dosset%XZERO,0.D0)
         ENDDO
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
         DOSSET=>DOSSET%NEXT
@@ -400,7 +399,7 @@ END MODULE DOSSETS_MODULE
 !     =========================================================================
                                      CALL TRACE$PASS('BEFORE EXECUTE')
       CALL GRACE_EXECUTE(NFIL)
-      CALL FILEHANDLER$CLOSE(NFIL)
+      CALL FILEHANDLER$CLOSE('GRACEBATCH')
                                      CALL TRACE$POP()
       RETURN
       END

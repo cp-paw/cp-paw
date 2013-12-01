@@ -6628,18 +6628,12 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \mbax{\key{XZERO}
 \vdescr{shifts the energy axis of all graphs so the value given is the
   new zero. (Often this is chosen as the highest occupied state,
-  respectively the Fermi level.)}
+  respectively the Fermi level.) may be overwritten by xzero in !graph
+  and !set}
 \vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
+\vrules{optional}
+\vdefault{0.}}
 
-\mbax{\key{XZERO}
-\vdescr{shifts the energy axis of all graphs so the value given is the
-  new zero. (Often this is chosen as the highest occupied state,
-  respectively the Fermi level.)}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
 
 \mbax{\key{XMIN}
 \vdescr{lower bound in eV of the energy interval shown}
@@ -6678,7 +6672,8 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \bdescr{Defines a graph.}
 
 \mbax{\key{PREFIX} 
-\vdescr{Default for the prefix used in this graph. The name of the density of states data
+\vdescr{Default for the prefix used in this graph. The name of the 
+  density of states data
   produced by paw\_dos are constructed by appending the prefix
   specified here to the set-id, and by appending the extension
   '.dos'.}
@@ -6687,10 +6682,18 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \vdefault{''}}
 
 \mbax{\key{SCALE}
-\vdescr{default value for the scale factor of the Density of States used in this graph}
+\vdescr{default value for the scale factor of the Density of States 
+used in this graph}
 \vformat{real} 
 \vrules{optional}
 \vdefault{1.}}
+
+\mbax{\key{XZERO}
+\vdescr{shifts the energy axis of sets in this graph so the value given is the
+  new zero.  May be overwritten by XZERO in !SET.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DPCNTL:XZERO}}
 
 %----------------------------------------------------------------------
 \block{!DPCNTL!GRAPH!SET}
@@ -6721,13 +6724,20 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
   '.dos'.}
 \vformat{character} 
 \vrules{optional}
-\vdefault{Default is defined by !DCNTL!GRAPH:PREFIX}}
+\vdefault{is set by !DCNTL!GRAPH:PREFIX}}
 
 \mbax{\key{SCALE}
 \vdescr{scale factor of the Density of States used in this graph}
 \vformat{real} 
 \vrules{optional}
-\vdefault{Default is defined by !DCNTL!GRAPH:SCALE}}
+\vdefault{set by !DCNTL!GRAPH:SCALE}}
+
+\mbax{\key{XZERO}
+\vdescr{shifts the energy axis for this set so the value given is the
+  new zero. }
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DPCNTL!GRAPH:XZERO}}
 
 \mbax{\key{STACK}
 \vdescr{If true, this set is added ontop of an existing stack. 
