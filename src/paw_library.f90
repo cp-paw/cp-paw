@@ -258,12 +258,12 @@
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
-      INTEGER(4)                :: status
+      INTEGER(4)                :: STATUS
 !     **************************************************************************
-      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS)
+      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
         IF(STATUS.EQ.-1) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
