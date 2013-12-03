@@ -1297,7 +1297,7 @@ END MODULE WAVES_MODULE
         CALL MPE$BROADCAST('K',1,VAL)
 !
       ELSE IF(ID.EQ.'WKPT') THEN
-!       == THIS OPTION IS used in dmft module  =================================
+!       == THIS OPTION IS USED IN DMFT MODULE  =================================
         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
         ALLOCATE(VALG(NKPT))
         CALL DYNOCC$GETR8A('WKPT',NKPT,VALG)
@@ -1399,7 +1399,7 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: RHO(:,:)  ! CHARGE DENSITY
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
-      complex(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
+      COMPLEX(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
@@ -1422,7 +1422,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: ISVAR
       REAL(8)                :: SVAR1,SVAR2
-      complex(8)             :: csvar1,csvar2
+      COMPLEX(8)             :: CSVAR1,CSVAR2
       COMPLEX(8),ALLOCATABLE :: HAMILTON(:,:)
       REAL(8)   ,ALLOCATABLE :: EIG(:,:,:)
       LOGICAL(4)             :: TSTRESS
@@ -1706,7 +1706,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$          CYCLE
 !!$        END IF
 !!$        WRITE(*,FMT='("=",I2,10E10.3)') &
-!!$             LN,(real(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
+!!$             LN,(REAL(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
 !!$        LMN1=LMN1+2*L+1
 !!$      ENDDO
 !!$    ENDDO
@@ -1739,7 +1739,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$!          CYCLE
 !!$        END IF
 !!$!        WRITE(*,FMT='("=",I2,10E10.3)') &
-!!$!             LN,(real(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
+!!$!             LN,(REAL(DH(LMN1+M,LMN1+M,ISPIN,IAT)),M=1,2*L+1)
 !!$        LMN1=LMN1+2*L+1
 !!$      ENDDO
 !!$    ENDDO
@@ -1764,10 +1764,10 @@ CALL ERROR$STOP('WAVES$ETOT')
           LMNX=MAP%LMNX(ISP)
           DO LMN1=1,LMNX
             DO LMN2=1,LMNX
-              cSVAR1=DH(LMN1,LMN2,1,IAT)
-              cSVAR2=DH(LMN1,LMN2,2,IAT)
-              DH(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
-              DH(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
+              CSVAR1=DH(LMN1,LMN2,1,IAT)
+              CSVAR2=DH(LMN1,LMN2,2,IAT)
+              DH(LMN1,LMN2,1,IAT)=CSVAR1+CSVAR2
+              DH(LMN1,LMN2,2,IAT)=CSVAR1-CSVAR2
             ENDDO
           ENDDO
         ENDDO
@@ -3509,7 +3509,7 @@ RETURN
       COMPLEX(8),INTENT(IN)  :: DENMAT(LMNXX,LMNXX,NDIMD_,NAT)
       COMPLEX(8),INTENT(IN)  :: EDENMAT(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(INOUT):: VQLM(LMRXX,NAT)
-      complex(8),INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
+      COMPLEX(8),INTENT(OUT) :: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: DO(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(OUT) :: POTB 
       REAL(8)                :: POTB1
@@ -3520,7 +3520,7 @@ RETURN
       INTEGER(4)             :: NTASKS,THISTASK
       COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: EDENMAT1(:,:,:)
-      complex(8),ALLOCATABLE :: DH1(:,:,:)  !(LMNX,LMNX,NDIMD)
+      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:)  !(LMNX,LMNX,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DOV1(:,:,:) !(LMNX,LMNX,NDIMD)
       REAL(8)                :: RBAS(3,3)
       REAL(8)                :: GBAS(3,3)
@@ -3536,7 +3536,7 @@ RETURN
 !     ===================================================================
 !     ==  EVALUATE ONE-CENTER HAMILTONIAN                              ==
 !     ===================================================================
-      DH(:,:,:,:)=(0.D0,0.d0)
+      DH(:,:,:,:)=(0.D0,0.D0)
       DO(:,:,:,:)=0.D0
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       POTB=0
@@ -3598,7 +3598,7 @@ RETURN
       INTEGER(4),INTENT(IN)   :: NDIMD_
       INTEGER(4),INTENT(IN)   :: NAT
       REAL(8)   ,INTENT(IN)   :: DO(LMNXX,LMNXX,NDIMD_,NAT)
-      complex(8),INTENT(INOUT):: DH(LMNXX,LMNXX,NDIMD_,NAT)
+      COMPLEX(8),INTENT(INOUT):: DH(LMNXX,LMNXX,NDIMD_,NAT)
       REAL(8)   ,INTENT(INOUT):: RHO(NRL,NDIMD_)
       INTEGER(4)              :: ISP
       INTEGER(4)              :: IAT
@@ -3620,7 +3620,7 @@ RETURN
             IF(L2.EQ.L1) THEN
               DO M=1,2*L1+1
                 DH(LMN1+M,LMN2+M,1,IAT)=DH(LMN1+M,LMN2+M,1,IAT) &
-     &                                 +cmplx(POTB*DO(LMN1+M,LMN2+M,1,IAT),0.d0)
+     &                                 +CMPLX(POTB*DO(LMN1+M,LMN2+M,1,IAT),0.D0)
               ENDDO
             END IF
             LMN2=LMN2+2*L2+1
@@ -3646,7 +3646,7 @@ RETURN
       INTEGER(4),INTENT(IN)  :: NAT
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD_
-      complex(8),INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD,NAT)
+      COMPLEX(8),INTENT(IN)  :: DH(LMNXX,LMNXX,NDIMD,NAT)
       REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT)
       REAL(8)   ,INTENT(OUT) :: STRESS(3,3)
       INTEGER(4)             :: IKPT,ISPIN
@@ -3662,7 +3662,7 @@ RETURN
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)   ! (3,NGL)    
       REAL(8)   ,ALLOCATABLE :: GIJ(:,:)    ! (6,NGL)    
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)    ! (LNX,LNX)    
-      complex(8),ALLOCATABLE :: DH1(:,:,:)  ! (LMNX,LMNX,NDIM**2)    
+      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:)  ! (LMNX,LMNX,NDIM**2)    
       COMPLEX(8),ALLOCATABLE :: DEDPROJ(:,:,:) ! (NDIM,NBH,LMNX)
       COMPLEX(8),ALLOCATABLE :: DEDPRO(:,:) ! (NGL,LMNX)
       COMPLEX(8),ALLOCATABLE :: EIGR(:)     ! (NGL)
@@ -3859,15 +3859,15 @@ RETURN
 !     **                                                                      **
 !     ********************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
       USE MPE_MODULE
-      USE WAVES_MODULE, only : ndimd,ndim,nkptl,nspin,map,gset,this &
-     &                        ,waves_selectwv
+      USE WAVES_MODULE, ONLY : NDIMD,NDIM,NKPTL,NSPIN,MAP,GSET,THIS &
+     &                        ,WAVES_SELECTWV
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NRL
       INTEGER(4),INTENT(IN) :: NDIMD_
       INTEGER(4),INTENT(IN) :: LMNXX
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
-      complex(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
+      COMPLEX(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
@@ -3877,7 +3877,7 @@ RETURN
       INTEGER(4)             :: ISP
       INTEGER(4)             :: IAT
       INTEGER(4)             :: LMNX
-      complex(8),ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
+      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
       COMPLEX(8),ALLOCATABLE :: HPROJ(:,:,:)    ! DH*PROJ
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
@@ -3980,14 +3980,14 @@ END IF
       INTEGER(4),INTENT(IN)  :: NDIM
       INTEGER(4),INTENT(IN)  :: NB
       INTEGER(4),INTENT(IN)  :: LMNX
-      complex(8),INTENT(IN)  :: DH(LMNX,LMNX,NDIM**2)
+      COMPLEX(8),INTENT(IN)  :: DH(LMNX,LMNX,NDIM**2)
       COMPLEX(8),INTENT(IN)  :: PROJ(NDIM,NB,LMNX)
       COMPLEX(8),INTENT(OUT) :: HPROJ(NDIM,NB,LMNX)
       INTEGER(4)             :: IB
       INTEGER(4)             :: LMN1,LMN2
-      complex(8)             :: DHUPUP,DHDNDN
+      COMPLEX(8)             :: DHUPUP,DHDNDN
       COMPLEX(8)             :: DHUPDN,DHDNUP
-      COMPLEX(8),parameter   :: ci=(0.d0,1.d0)
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
 !     **************************************************************************
       HPROJ(:,:,:)=(0.D0,0.D0)
 !
@@ -4049,10 +4049,10 @@ END IF
       REAL(8)        ,INTENT(IN) :: POT(NRL,NDIM**2) !RHO(1,ISPIN)
       REAL(8)        ,INTENT(IN) :: R(3,NAT)
       COMPLEX(8)     ,INTENT(IN) :: PROJ(NDIM,NBH,NPRO)!(NDIM,NBH,NPRO)<PSPSI|P>
-      complex(8)     ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD,NAT)
+      COMPLEX(8)     ,INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD,NAT)
       COMPLEX(8)     ,INTENT(OUT):: HPSI(NGL,NDIM,NBH)
       COMPLEX(8)     ,ALLOCATABLE:: HPROJ(:,:,:)  
-      complex(8)     ,ALLOCATABLE:: DH1(:,:,:)
+      COMPLEX(8)     ,ALLOCATABLE:: DH1(:,:,:)
       INTEGER(4)                 :: IPRO,IAT,ISP,LMNX
 !     **************************************************************************
 CALL TIMING$CLOCKON('W:HPSI.VPSI')
@@ -4175,19 +4175,19 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     ==========================================================================
 !     ==  MULTIPLY WAVE FUNCTIONS WITH THE POTENTIAL                          ==
 !     ==                                                                      ==
-!     ==  the ffts are done for each wave function indiviudally to avoid      ==
-!     ==  a memory spike. There may be a loss of speed because doing the      ==
-!     ==  ffts and the multiplication in one shot would be more efficient.    ==
-!     ==  in the previous implementation this had not been exploited anyway.  ==
+!     ==  THE FFTS ARE DONE FOR EACH WAVE FUNCTION INDIVIUDALLY TO AVOID      ==
+!     ==  A MEMORY SPIKE. THERE MAY BE A LOSS OF SPEED BECAUSE DOING THE      ==
+!     ==  FFTS AND THE MULTIPLICATION IN ONE SHOT WOULD BE MORE EFFICIENT.    ==
+!     ==  IN THE PREVIOUS IMPLEMENTATION THIS HAD NOT BEEN EXPLOITED ANYWAY.  ==
 !     ==========================================================================
       ALLOCATE(PSIOFR(NRL,NDIM))
       IF(NDIM.EQ.1) THEN
         DO IB=1,NBH
-          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI(:,:,ib),NRL,PSIOFR)
+          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI(:,:,IB),NRL,PSIOFR)
           DO IR=1,NRL
             PSIOFR(IR,1)=V(IR,1)*PSIOFR(IR,1)
           ENDDO
-          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI(:,:,ib),NRL,PSIOFR)
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI(:,:,IB),NRL,PSIOFR)
         ENDDO
       ELSE
         ALLOCATE(VUPUP(NRL))
@@ -4199,14 +4199,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           VUPDN(IR)=CMPLX(V(IR,2),-V(IR,3),8)
         ENDDO
         DO IB=1,NBH
-          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI(:,:,ib),NRL,PSIOFR)
+          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI(:,:,IB),NRL,PSIOFR)
           DO IR=1,NRL
             PSIUP=PSIOFR(IR,1)
             PSIDN=PSIOFR(IR,2)
             PSIOFR(IR,1)=VUPUP(IR)*PSIUP+      VUPDN(IR) *PSIDN
             PSIOFR(IR,2)=VDNDN(IR)*PSIDN+CONJG(VUPDN(IR))*PSIUP
           ENDDO
-          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI(:,:,ib),NRL,PSIOFR)
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,HPSI(:,:,IB),NRL,PSIOFR)
         ENDDO
         DEALLOCATE(VUPUP)
         DEALLOCATE(VUPDN)
@@ -4591,7 +4591,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4),INTENT(IN)   :: LMNX      ! #(PROJECTORS ON THIS SITE)
       REAL(8)   ,INTENT(IN)   :: OCC(NB)   ! OCCUPATIONS
       COMPLEX(8),INTENT(IN)   :: PROJ(NDIM,NBH,LMNX) ! <P|PSI>
-      complex(8),INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
+      COMPLEX(8),INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
       INTEGER(4),INTENT(IN)   :: LNX
       INTEGER(4),INTENT(IN)   :: LOX(LNX)
       REAL(8)   ,INTENT(IN)   :: DO(LNX,LNX) ! DO/DD
@@ -5151,7 +5151,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             CALL SETUP$GETFOFG('PRO',.FALSE.,LN,NGL,G2,CELLVOL,GSET%PRO(:,IND))
             CALL SETUP$GETFOFG('PRO',.TRUE.,LN,NGL,G2,CELLVOL,GSET%DPRO(:,IND))
           ENDDO
-          CALL SETUP$unSELECT()
+          CALL SETUP$UNSELECT()
         ENDDO
 !
 !       ================================================================
