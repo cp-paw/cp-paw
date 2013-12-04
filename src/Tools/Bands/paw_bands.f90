@@ -1803,6 +1803,8 @@ END MODULE
       INTEGER(4),ALLOCATABLE       :: JOBLIST(:,:)
 
       INTEGER(4)                   :: LMNX_,LNX_,ISP
+
+      REAL(8)                      :: T1,T2
 !     **************************************************************************
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
@@ -2120,6 +2122,8 @@ END MODULE
       ENDDO
       PRINT*,"JOBLIST",JOBLIST(:,:)
       
+
+
       ALLOCATE(PROJ(NAT,LMNXX,NB))
       ALLOCATE(E(NG*NDIM))
       DO IKP=1,NKP
@@ -2127,8 +2131,11 @@ END MODULE
           IF(THISTASK.ne.JOBLIST(IKP,ISPIN))CYCLE
           KVEC=BK(:,IKP)
           IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          CALL CPU_TIME(T1)
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
+          CALL CPU_TIME(T2)
+          PRINT*,"CPU-TIME FOR KPOINT: NODE=",THISTASK," KPOINT:",IKP," SPIN=",ISPIN,"TIME=",T2-T1
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
           IF(TPROJ)THEN
             DO IAT=1,NAT
