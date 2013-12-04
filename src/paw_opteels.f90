@@ -1008,7 +1008,9 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
          CALL WAVES$SETI4('IKPT',IKPT)
          DO ISPIN=1,NSPIN
            CALL WAVES$SETI4('ISPIN',ISPIN)
-
+           CALL WAVES$SETI4('IB',1)
+           CALL WAVES$STATESELECTED(TKGROUP) 
+           if(.not.tkgroup) cycle
            CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
            ENBMIN=MIN(ENBMIN,EIGVAL(NB))
            DO IB=1,NB
@@ -1043,9 +1045,14 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
          DO ISPIN=1,NSPIN 
            CALL WAVES$SETI4('ISPIN',ISPIN)
            CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
-           DO IB=1,NB   !PARALLELIZE!
-!FOR PARALLELIZATION  IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
-!FOR PARALLELIZATION  BUT COLLECT DATA AND MOVE TO FIRST NODE FOR WRITING
+           CALL WAVES$SETI4('IB',1)
+           CALL WAVES$STATESELECTED(TKGROUP)
+           DO IB=1,NB   
+!            == parallelization: k-points will be selected with ================
+!            == WAVES$STATESELECTED(TKGROUP). States will be distributed on ====
+!            == the nodes for one k-point using modulo. The result is summed ===
+!            == over all states ================================================
+             IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
 !
 !            ===================================================================
 !            == WGHT=(1-F)*WKPT ====== REMARK: NSPIN=1:NON-SPINPOL:OCC=2!=====
@@ -1063,7 +1070,7 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
 !            == CALCULATE OSCILLATOR STRENGTHS =================================
 !            ===================================================================
              CALL WAVES$SETI4('IB',IB)
-             CALL WAVES$STATESELECTED(TKGROUP)
+     
              STRENGTH=0.D0
              DO IREALIMAG=1,2
                IF(IREALIMAG.EQ.1) THEN
