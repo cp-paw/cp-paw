@@ -867,6 +867,8 @@ END MODULE OPTEELS_MODULE
        REAL(8)       ,PARAMETER  :: SQPI43=SQRT(4.D0*PI/3.D0)
 !      *************************************************************************
                           CALL TRACE$PUSH('OPTEELS_EELS')
+       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) 
+       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
       CALL CONSTANTS('EV',EV)
        CALL CONSTANTS('METER',METER)
        NANOMETER=1.D-9*METER
@@ -990,22 +992,12 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
 !      == EMAX IS THE MINIMUM OF THE TOP MOST ENERGY BAND                     ==
 !      ===    (BOTH SPINS CONSIDERED)                                         ==
 !      =========================================================================
-!       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) !SAME AS STATE SELECTED?
-       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
-       IF(NTASKS.NE.1) THEN
-         CALL ERROR$MSG('EELS CALCULATION IS NOT YET PARALLELIZED')
-         CALL ERROR$MSG('DO A NON-PARALLEL CALCULATION')
-         CALL ERROR$STOP('OPTEELS_EELS')
-       END IF
- 
-!CAREFUL WHEN PARALLELIZING! NKPT FOR OCCUPATIONS IS GLOBAL, THAT FOR THE
-!WAVES IS LOCAL!
        EFERMI=0.D0
        EMIN=+1.D+12
        EMAX=-1.D+12
        ENBMIN=+1.D+12
        DO IKPT=1,NKPT
-         CALL WAVES$SETI4('IKPT',IKPT)
+         CALL WAVES$SETI4('IKPT',IKPT) !refers to global ikpt 
          DO ISPIN=1,NSPIN
            CALL WAVES$SETI4('ISPIN',ISPIN)
            CALL WAVES$SETI4('IB',1)
