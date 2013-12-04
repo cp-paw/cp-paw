@@ -185,7 +185,7 @@ CONTAINS
 END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$STATESELECTED(IB,IKPT,ISPIN,TCHK)
+      SUBROUTINE WAVES$STATESELECTED(TCHK)
 !     **************************************************************************
 !     **  WAVES$STATESELECTED                                                 **
 !     **  TESTS IF THE EXTERNAL POINTER SELECTS A STATE THAT IS               **
@@ -193,9 +193,6 @@ END MODULE WAVES_MODULE
 !     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: IB
-      INTEGER(4),INTENT(IN) :: IKPT
-      INTEGER(4),INTENT(IN) :: ISPIN
       LOGICAL(4),INTENT(OUT):: TCHK
 !     **************************************************************************
       TCHK=.TRUE.
@@ -774,7 +771,7 @@ END MODULE WAVES_MODULE
       IF(ID.EQ.'SPINORDIM') THEN
         NDIM=VAL
 !
-      ELSE IF(ID.EQ.'IKPT') THEN
+      ELSE IF(ID.EQ.'IKPT') THEN   ! global ikpt
         IKPT=VAL
 !       == CHECK IF K-POINT IS PRESENT ===============================
         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -824,7 +821,7 @@ END MODULE WAVES_MODULE
         CALL WAVES_SELECTWV(EXTPNTR%IKPT,EXTPNTR%ISPIN)
         VAL=THIS%NB
       ELSE IF(ID.EQ.'NKPT') THEN
-        VAL=NKPT
+        VAL=NKPT   !global nkpt
       ELSE IF(ID.EQ.'NR1') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
