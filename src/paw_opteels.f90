@@ -997,13 +997,15 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
        EMAX=-1.D+12
        ENBMIN=+1.D+12
        DO IKPT=1,NKPT
-         CALL WAVES$SETI4('IKPT',IKPT) !refers to global ikpt 
+         CALL WAVES$SETI4('IKPT',IKPT) !REFERS TO GLOBAL IKPT 
          DO ISPIN=1,NSPIN
            CALL WAVES$SETI4('ISPIN',ISPIN)
            CALL WAVES$SETI4('IB',1)
            CALL WAVES$STATESELECTED(TKGROUP) 
-           if(.not.tkgroup) cycle
+           IF(.NOT.TKGROUP) CYCLE
+PRINT*,'BEFORE EIGVAL ',THISTASK,THISTASK_K,ISPIN,IKPT,TKGROUP
            CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
+PRINT*,'AFTER EIGVAL '
            ENBMIN=MIN(ENBMIN,EIGVAL(NB))
            DO IB=1,NB
              EMIN=MIN(EMIN,EIGVAL(IB))
@@ -1036,14 +1038,15 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
          CALL WAVES$SETI4('IKPT',IKPT)
          DO ISPIN=1,NSPIN 
            CALL WAVES$SETI4('ISPIN',ISPIN)
-           CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
            CALL WAVES$SETI4('IB',1)
            CALL WAVES$STATESELECTED(TKGROUP)
+           IF(.NOT.TKGROUP) CYCLE
+           CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
            DO IB=1,NB   
-!            == parallelization: k-points will be selected with ================
-!            == WAVES$STATESELECTED(TKGROUP). States will be distributed on ====
-!            == the nodes for one k-point using modulo. The result is summed ===
-!            == over all states ================================================
+!            == PARALLELIZATION: K-POINTS WILL BE SELECTED WITH ================
+!            == WAVES$STATESELECTED(TKGROUP). STATES WILL BE DISTRIBUTED ON ====
+!            == THE NODES FOR ONE K-POINT USING MODULO. THE RESULT IS SUMMED ===
+!            == OVER ALL STATES ================================================
              IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
 !
 !            ===================================================================
