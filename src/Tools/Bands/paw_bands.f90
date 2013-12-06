@@ -899,7 +899,7 @@ print*,'nb ',nb
       COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
       COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
       REAL(8)     ,INTENT(OUT),allocatable :: E(:)
-      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,LMNXX,NB)
+      COMPLEX(8)  ,INTENT(OUT) :: PROJ(NAT,NB,LMNXX)
       COMPLEX(8),allocatable   :: TI_HK(:,:)
       COMPLEX(8),allocatable   :: TI_SK(:,:)
       COMPLEX(8),allocatable   :: U(:,:)
@@ -994,7 +994,7 @@ print*,'nb ',nb
         DO LN=1,LNX(ISP)
           IND=IND+1
           !BANDS_GETFOFG IS A MODIFIED VERSION OF SETUP$GETFOFG
-          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG2,G2,CELLVOL,BAREPRO(:,IND))
+          CALL BANDS_GETFOFG(GIDG_PROTO,LN,ISP,NG2,G2(1:NG2),CELLVOL,BAREPRO(1:NG2,IND))
         ENDDO
       ENDDO
       
@@ -1003,7 +1003,6 @@ print*,'nb ',nb
         YLM(I,:)=YLM_(:) 
       ENDDO        
       
-      IPRO=1
       PRO(:,:,:)=0.0D0
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
@@ -1015,9 +1014,10 @@ print*,'nb ',nb
           SVAR=SUM(GVECPK(:,I)*R(:,IAT))
           EIGR(I)=CMPLX(cos(SVAR),-sin(SVAR))
         ENDDO
-!PRINT*,"LOX",IAT,ISP,LNX_,LOX_(1:LNX_)
-        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK &
-     &         ,BAREPRO(:,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR,PRO(IAT,:,:))
+
+!PRINT*,"LOX",IAT,ISP,LNX_,LMNX_,LOX_(1:LNX_),IBPRO,R(:,IAT)
+        CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK(1:3,1:NG2) &
+     & ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
       ENDDO
       IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
 
@@ -1124,15 +1124,33 @@ print*,'nb ',nb
       IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
       IF(TPROJ)THEN
         IF(TTIMING)CALL TIMING$CLOCKON('PROJECTIONS')
+        PRO(:,:,:)=0.0D0
         DO IAT=1,NAT
-          DO IB=1,NB
-            ISP=ISPECIES(IAT)
-            LNX_=LNX(ISP)
-            LMNX_=LMNX(ISP)
-            DO LN=1,LMNX_
+          ISP=ISPECIES(IAT)
+          LNX_=LNX(ISP)
+          LMNX_=LMNX(ISP)
+          LOX_=LOX(:,ISP)
+          IBPRO=1+SUM(LNX(1:ISP-1))
+          DO I=1,NG2
+            SVAR=SUM(GVECPK(:,I)*R(:,IAT))
+            EIGR(I)=1.0D0!CMPLX(cos(SVAR),-sin(SVAR))
+          ENDDO
+
+          CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK(1:3,1:NG2) &
+       & ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
+        ENDDO
+        PRO(:,:,:)=sqrt(GWEIGHT)*PRO(:,:,:)
+        DO IAT=1,NAT
+          ISP=ISPECIES(IAT)
+          LNX_=LNX(ISP)
+          LMNX_=LMNX(ISP)
+          DO LN=1,LMNX_
+            DO IB=1,NB
+              !FIXME: COMPUTE MULTIPLE SCALARPRODUCTS WITH ONE CALL
               CALL LIB$SCALARPRODUCTC8(.false.,NG2*NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
-              !CALL PLANEWAVE$SCALARPRODUCT(' ',NG2,NDIM,1,PRO(IAT,:,LN),1,U(:,IB),CSVAR)
-              PROJ(IAT,LN,IB)=CSVAR
+              !CSVAR=SUM(CONJG(PRO(IAT,1:NG2,LN))*U(1:NG2,IB))
+              PROJ(IAT,IB,LN)=CSVAR
+!print*,"PROJ",KVEC,IAT,ISP,IB,LN,abs(CSVAR)
             ENDDO
           ENDDO
         ENDDO
@@ -2086,7 +2104,12 @@ END MODULE
       CALL FILEHANDLER$UNIT('PDOS',NFILIN)
       REWIND(NFILIN)
       CALL PDOS$READ(NFILIN)
+      CALL PDOS$SETI4('NSP',NSP)
+      CALL PDOS$SETI4('NAT',NAT)
       CALL PDOS$SETI4('NKPT',NKP)
+      CALL PDOS$SETI4('NSPIN',NSPIN)
+      CALL PDOS$SETI4('NDIM',NDIM)
+      CALL PDOS$SETI4('NPRO',NPRO)
       CALL PDOS$SETI4A('NKDIV',3,NKDIV)
       CALL PDOS$SETI4A('ISHIFT',3,ISHIFT)
       CALL PDOS$SETR8('RNTOT',RNTOT)
@@ -2124,13 +2147,13 @@ END MODULE
       
 
 
-      ALLOCATE(PROJ(NAT,LMNXX,NB))
+      ALLOCATE(PROJ(NAT,NB,LMNXX))
       ALLOCATE(E(NG*NDIM))
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
           IF(THISTASK.ne.JOBLIST(IKP,ISPIN))CYCLE
           KVEC=BK(:,IKP)
-          IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
           CALL CPU_TIME(T1)
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
       &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
@@ -2140,7 +2163,7 @@ END MODULE
           IF(TPROJ)THEN
             DO IAT=1,NAT
               DO LMN=1,LMNXX
-                PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)=PROJ(IAT,LMN,1:NB)
+                PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)=PROJ(IAT,1:NB,LMN)
               ENDDO         
             ENDDO
           ENDIF
@@ -2182,19 +2205,19 @@ END MODULE
               index=1
               DO IAT=1,NAT
                 ISP=ISPECIES(IAT)
-                LNX_=LNX(ISP)
                 LMNX_=LMNX(ISP)
                 DO LMN=1,LMNX_
                   PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
                   index=index+1 
                 ENDDO
               ENDDO
+!print*,"NPRO",NPRO,index-1
             ELSE
               PROJTMP(:,:,:)=0.0D0
             ENDIF
             DO IB=1,NB
               IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
-                OCC(IKP,IB)=1.0D0/REAL(NKP,KIND=8)
+                OCC(IKP,IB)=WKPT(IKP)*2.0D0/REAL(NSPIN,KIND=8)!1.0D0/REAL(NKP*NSPIN,KIND=8)
               ELSE
                 OCC(IKP,IB)=0.0D0
               ENDIF

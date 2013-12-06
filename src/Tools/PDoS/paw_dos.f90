@@ -2107,7 +2107,7 @@ PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
       LOGICAL(4)                   :: TINV
       REAL(8),ALLOCATABLE          :: EB(:,:)
       REAL(8)                      :: RNTOT,NEL
-      REAL(8)                      :: SUMA,SVAR
+      REAL(8)                      :: SUMA(2),SVAR
       REAL(8),ALLOCATABLE          :: A(:,:)
       INTEGER(4)                   :: IB,IKPT,ISPIN
 !     **************************************************************************
@@ -2147,27 +2147,29 @@ PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
       !FIXME TOTAL DENSITY for testing
       ALLOCATE(A(NB*NSPIN,NKPT))
       A=1
-      SUMA=0.D0
+      SUMA(:)=0.D0
       DO IB=1,NB
         DO ISPIN=1,NSPIN
-          SUMA=0.0D0
+          SUMA(ISPIN)=0.0D0
           DO IKPT=1,NKPT
-            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+            SUMA(ISPIN)=SUMA(ISPIN)+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
           ENDDO
-          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA
+          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA(ISPIN)
         ENDDO
       ENDDO
       
-      A=1
-      SUMA=0.D0
+      A=1.0D0
+      SUMA(:)=0.D0
       DO IB=1,NB
         DO ISPIN=1,NSPIN
           DO IKPT=1,NKPT
-            SUMA=SUMA+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+            SUMA(ISPIN)=SUMA(ISPIN)+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
           ENDDO
         ENDDO
       ENDDO
-      PRINT*,'INTEGRAL OF A=1 : ',SUMA,' should be ',RNTOT 
+      PRINT*,'INTEGRAL OF A=1 :             ',SUM(SUMA(:)),' should be ',RNTOT 
+      PRINT*,'INTEGRAL OF A=1 (SPIN UP) :   ',SUMA(1) 
+      PRINT*,'INTEGRAL OF A=1 (SPIN DOWN) : ',SUMA(2)
       
       !FIXME: BRILLOUIN$EWGHT needs EMAX=MAXVAL(EB),EMIN=MINVAL(EB)
       !choosing NE so that energy intervals are the same

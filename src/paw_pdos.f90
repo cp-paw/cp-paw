@@ -636,6 +636,7 @@
       CHARACTER(82)          :: IOSTATMSG
       CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
       LOGICAL(4)             :: TCHK
+      REAL(8)                :: OCCSUM
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$READ')
 !
@@ -656,7 +657,7 @@
       END IF
       IF(FLAG.eq.'011004')VERSION=1
       IF(FLAG.eq.'311013')VERSION=2
-
+      
       ALLOCATE(LNX(NSP))
       ALLOCATE(LOX(LNXX,NSP))
       ALLOCATE(ISPECIES(NAT))
@@ -691,6 +692,7 @@
 !     ==================================================================
 !     ==  NOW READ PROJECTIONS                                       ==
 !     ==================================================================
+      OCCSUM=0.0D0
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(WKPT(NKPT))
       ALLOCATE(STATEARR(NKPT,NSPIN))
@@ -698,6 +700,7 @@
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
           READ(NFIL,ERR=9998,END=9998)XK(:,IKPT),NB,WKPT(IKPT)
+!print*,"XK",IKPT,ISPIN,XK(:,IKPT),NB,WKPT(IKPT)
           STATE%NB=NB
           ALLOCATE(STATE%EIG(NB))
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
@@ -706,6 +709,9 @@
             IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
     &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
+!print*,"OCC",IKPT,ISPIN,IB,STATE%EIG(IB),STATE%OCC(IB)
+!print*,"PROJ",abs(STATE%VEC(:,:,IB))
+OCCSUM=OCCSUM+STATE%OCC(IB)
             ELSE
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
@@ -713,6 +719,7 @@
           ENDDO
         ENDDO
       ENDDO
+print*,"OCCSUM",OCCSUM
                              CALL TRACE$POP
       RETURN
  9999 CONTINUE
