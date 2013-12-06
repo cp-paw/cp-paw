@@ -1133,7 +1133,7 @@ print*,'nb ',nb
           IBPRO=1+SUM(LNX(1:ISP-1))
           DO I=1,NG2
             SVAR=SUM(GVECPK(:,I)*R(:,IAT))
-            EIGR(I)=1.0D0!CMPLX(cos(SVAR),-sin(SVAR))
+            EIGR(I)=CMPLX(cos(SVAR),sin(SVAR))
           ENDDO
 
           CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK(1:3,1:NG2) &
