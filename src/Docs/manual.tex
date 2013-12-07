@@ -6751,22 +6751,44 @@ If STACK is non-existent or has the value .false. the stack is reset to the actu
     color. The colors to the left of the following table may be
     used. The corresponding colors on the right will be used for the
     empty density of states.
+\definecolor{black     }{RGB}{0  ,0,0}      
+\definecolor{red       }{RGB}{255,0,0}    
+\definecolor{green     }{RGB}{0  ,230,0}    
+\definecolor{blue      }{RGB}{0,0,255}    
+\definecolor{yellow    }{RGB}{230,230,  0} 
+\definecolor{cyan      }{RGB}{  0,230,230} 
+\definecolor{magenta   }{RGB}{255,  0,255} 
+\definecolor{orange    }{RGB}{255,165,  0} 
+\definecolor{brown     }{RGB}{200,150,150} 
+\definecolor{gold      }{RGB}{170,130,  0} 
+\definecolor{darkgreen }{RGB}{  0,155,  0} 
+\definecolor{lblack    }{RGB}{ 150,150,150} 
+\definecolor{lred      }{RGB}{ 255,150,150} 
+\definecolor{lgreen    }{RGB}{ 170,255,170} 
+\definecolor{lblue}{RGB}{150,150,255} 
+\definecolor{lyellow   }{RGB}{ 255,255,150} 
+\definecolor{lcyan     }{RGB}{ 150,255,255} 
+\definecolor{lmagenta  }{RGB}{ 255,150,255} 
+\definecolor{lorange   }{RGB}{ 255,210,120}
+\definecolor{lbrown    }{RGB}{ 255,180,180} 
+\definecolor{lgold     }{RGB}{ 210,180,100} 
+\definecolor{ldarkgreen}{RGB}{ 120,220,120} 
 \begin{center}
 \begin{tabular}{|l|c|l|c|}
 \hline
 name   &RGB &name   &RGB \\
 \hline
-black     & (0,0,0)     & lblack & (150,150,150) \\
-red       & (255,0,0)   & lred   & (255,150,150) \\
-green     & (0,255,0)   & lgreen  & (150,255,150) \\
-blue      & (0,0,255)   & lblue  & (150,150,255) \\
-yellow    & (240,240,  0)   & lyellow     & (255,255,150) \\
-cyan      & (  0,240,240)   & lcyan       & (150,255,255) \\
-magenta   & (255,  0,255)   & lmagenta    & (255,150,255) \\
-orange    & (255,165,  0)   & lorange     & (255,165,150,) \\
-brown     & (200,150,150)   & lbrown      & (255,200,200) \\
-gold      & (155,155,  0)   & lgold       & (155,155,100) \\
-darkgreen & (  0,155,  0)   & ldarkgreen  & (100,155,100) \\
+black     & \colorbox{black     }{\textcolor{white}{(000,000,000)}}  & lblack &  \colorbox{lblack  }{(150,150,150)} \\
+red       & \colorbox{red       }{(255,000,000)}     & lred        & \colorbox{lred      }{(255,150,150)} \\
+green     & \colorbox{green     }{(000,230,000)}   & lgreen      & \colorbox{lgreen    }{(150,255,150)} \\
+blue      & \colorbox{blue      }{\textcolor{white}{(000,000,255)}}     & lblue       & \colorbox{lblue}{(150,150,255)} \\
+yellow    & \colorbox{yellow    }{(230,230,000)} & lyellow     & \colorbox{lyellow   }{(255,255,150)} \\
+cyan      & \colorbox{cyan      }{(000,230,230)} & lcyan       & \colorbox{lcyan     }{(150,255,255)} \\
+magenta   & \colorbox{magenta   }{(255,000,255)} & lmagenta    & \colorbox{lmagenta  }{(255,150,255)} \\
+orange    & \colorbox{orange    }{(255,165,000)} & lorange     & \colorbox{lorange   }{(255,210,120)}  \\
+brown     & \colorbox{brown     }{(200,150,150)} & lbrown      & \colorbox{lbrown    }{(255,180,180)} \\
+gold      & \colorbox{gold      }{(170,130,000)} & lgold       & \colorbox{lgold     }{(210,180,100)} \\
+darkgreen & \colorbox{darkgreen }{(000,155,000)} & ldarkgreen  & \colorbox{ldarkgreen}{(120,220,120)} \\
 \hline
 \end{tabular}
 \end{center}
@@ -6774,6 +6796,7 @@ darkgreen & (  0,155,  0)   & ldarkgreen  & (100,155,100) \\
 \vformat{character} 
 \vrules{optional}
 \vdefault{''}}
+
 
 
 
