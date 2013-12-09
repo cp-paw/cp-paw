@@ -7391,74 +7391,39 @@ The calling sequence is
 \bigskip\fbox{{\tt paw\_collect\ }}
 
 %==========================================================================
-\subsection{Collect energies ``paw\_get\_energy''}
+\subsection{Collect energies ``paw\_get''}
 %==========================================================================
-paw\_get\_energy produces the last total energies from the protocoll files
-of a given  project
-
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_energy\ }\textit{ROOTNAME}}
-
-The command prints the last total energy including its unit to the
-screen.
-
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_gap''}
-%==========================================================================
-paw\_get\_energy produces the last total energies from the protocoll
-file of a given project
+paw\_get extracts the final result of various energies from the
+protocoll file.
 
 %==========================================================================
 \subsubsection{Command}
 %==========================================================================
 The calling sequence is
 
-\bigskip\fbox{{\tt paw\_get\_gap\ }\textit{ROOTNAME}}
+\bigskip\fbox{{\tt paw\_get} \textit{options} \textit{ROOTNAME}}
+\vspace{0.5cm}
 
-The command prints the last total energy including its unit to the
-screen.
+\noindent Options:\\
+\hspace*{1.cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h]help message
+\item[?]help message
+\item[-etot]prints total energy in Hartree (default)
+\item[-gap]prints fundamental band gap in eV
+\item[-homo]prints energy of the highest occupied state in eV
+\item[-lumo]prints energy of the lowest unoccupied state in eV
+\item[-n]prints the result as number 
+\item[-t]prints the result as text
+\end{description}
+\end{minipage}}
 
-Remark: exits with an error if variable occupations are used.
 
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_homo''}
-%==========================================================================
-paw\_get\_homo produces the last energy of the highest occupied state
-from the protocoll file of a given project
+The command scans the file \textit{rootname}\verb|.prot| and
+prints the last occurance of the corresponding variable 
 
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_homo\ }\textit{ROOTNAME}}
-
-The command prints the last energy of the highest occupied state
-including its unit to the screen.
-
-Remark: exits with an error if variable occupations are used.
-
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_lumo''}
-%==========================================================================
-paw\_get\_homo produces the last energy of the highest occupied state
-from the protocoll file of a given project
-
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_lumo\ }\textit{ROOTNAME}}
-
-The command prints the last energy of the highest occupied state
-including its unit to the screen.
-
-Remark: exits with an error if variable occupations are used.
+Remark: -gap -homo and -lumo do not work with variable occupations
+and will provide an error message.
 
 %==========================================================================
 \subsection{Murnaghan fit ``paw\_murnagan.x''}
