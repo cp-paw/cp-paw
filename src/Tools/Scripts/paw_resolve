@@ -1,22 +1,79 @@
 #!/bin/bash
 #########################################################################
-## replaces every line containing @file@ by the content of ${PRE}/file
-##  insspecies -p. pro2.strc
+#
+#  given a file "infile" that contains lines of the form @file@,
+#  paw_resolve replaces these lines with the contents of file. If the
+#  option -p PRE is present, the prefix $PRE is added to file.  The
+#  prefix can be used to specify a directory that holds the
+#  insertions.
+#
+#    paw_resolve -pInsertions/ infile >outfile
+#
 #########################################################################
-PRE=$1
-IN=$2
-PRE=${PRE#-p}
-# collect
+#
+# description of usage
+#
+USAGE="Usage: \n\n"
+USAGE="$USAGE paw_resolve options infile > outfile \n\n"
+USAGE="$USAGE Options:\n"
+USAGE="$USAGE -p prefix prefix to be added to the filename in @file@\n"
+USAGE="$USAGE -h this help message\n"
+#
+# resolve argument list
+#
+IN=""
+PRE=""
+while [ ! -z $1 ] ; do
+  case $1  in
+    -h)
+       echo -e $USAGE
+       exit 1
+       ;;
+    -p) 
+       shift
+       PRE=$1
+       ;;
+    -p*) 
+       PRE=$1
+       PRE=${PRE#-p}  #strip preceeding -p 
+       shift
+       ;;
+    -*)
+       echo in $0: unknown option $1
+       exit 1
+       ;;
+    *) 
+       IN=$1
+       shift
+       ;;
+  esac
+done
+#
+if [ -z $IN ] ; then
+  echo error in $0: argument infile not supplied
+  exit 1
+fi
+#
+# collect all lines containing @*@ in infile ($IN) and obtain the file
+# names in @file@ as $LIST
+#
 VAR=`sed -n -e '/@*@/p' $IN`
+# collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
   X=${X%@}
   X=${X#@}
   LIST="$LIST $X"
 done
+#  
+# replace @file@ with file and then remove the corresponding entries
+# @file@ removal follows all replacements to deal properly with
+# multiple occurances.  The $IN is processed and the result is written
+# to standard out.
+#
 CHS1=""
 for X in $LIST; do
-   CHS1="$CHS1 -e/@$X@/r$PRE/$X "
+   CHS1="$CHS1 -e/@$X@/r $PRE/$X "
 done
 #
 CHS2=""
@@ -24,6 +81,6 @@ for X in $LIST; do
    CHS2="$CHS2 -e/@$X@/d " 
 done
 sed $CHS1 ${IN} |sed $CHS2 
-exit
+exit 0
 
 
