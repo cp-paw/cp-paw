@@ -5,7 +5,7 @@
 #
 #        USAGE:  paw_resolve options infile > outfile
 #
-#      OPTIONS: -h, -p prefix, -r rule
+#      OPTIONS: -h, -p prefix, -r rule -f frule
 #
 #  DESCRIPTION: 
 #
@@ -16,7 +16,12 @@
 #  to the argument with the -r option, @string@ is replaced by the
 #  specified replacement.
 #
-#  2) if string is not specified as a rule, it is considered the name
+#  2) if a string is a keyword that occurs in an frule (file-rule)
+#  supplied to the argument with the -f option, @string@ is replaced
+#  by the contents of the specified file. CAUTION: the complete line
+#  containing $string$ is removed in the process
+#
+#  3) if string is not specified as a rule, it is considered the name
 #  of a file, after adding the prefix supplied with the option -p.
 #  The line containing @string@ is removed and replaced by the
 #  contents of the file ${PRE}string.  The prefix can be used to
@@ -73,8 +78,17 @@ while [ ! -z $1 ] ; do
        RULES="$RULES ${1#-r}" # strip preceeding -r from $1
        shift
        ;;
+    -f)
+       shift
+       FRULES="$FRULES $1"
+       shift
+       ;;
+    -f*)
+       FRULES="$FRULES ${1#-f}" # strip preceeding -f from $1
+       shift
+       ;;
     -*)
-       echo in $0: unknown option $1
+       echo error in $0: unknown option $1
        exit 1
        ;;
     *) 
@@ -89,14 +103,30 @@ if [ -z $IN ] ; then
   exit 1
 fi
 #-------------------------------------------------------------------------------
-# string replacement rules
+# explicit string replacement rules
 #-------------------------------------------------------------------------------
 CHS0=""
+CHS1=""
+CHS2=""
 for X in $RULES; do
    A=${X%=*}
    B=${X##*=}
-   CHS0="$CHS0 -e s/@$A@/$B/g "
+   CHS0="$CHS0-e s/@$A@/$B/g "
 done
+#-------------------------------------------------------------------------------
+# explicit file replacement rules
+#-------------------------------------------------------------------------------
+for X in $FRULES; do
+   A=${X%=*}
+   B=${X##*=}
+   if [ ! -e $B ] ; then 
+     echo error in $0: file of file rule $X does not exist
+     exit 1
+   fi
+   CHS0="$CHS0 -e/@$A@/r${B} "
+   CHS2="$CHS2 -e /@$A@/d " 
+done
+#
 #-------------------------------------------------------------------------------
 # collect all lines containing @*@ in infile ($IN) and obtain the file
 # names in @file@ as $LIST
@@ -109,15 +139,24 @@ for X in $VAR; do
   X=${X%@*}
   X=${X#*@}
   if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
+  #
   #   check if $X corresponds to a direct replacement (-r). otherwise clear it
   for Y in $RULES ; do
     A=${Y%=*}
     if [ "$A" = "$X" ] ; then X="" ; fi
   done
+  for Y in $FRULES ; do
+    A=${Y%=*}
+    if [ "$A" = "$X" ] ; then X="" ; fi
+  done
+  #
   # avoid double counting
   for Y in $LIST; do
     if [ "$Y" = "$X" ] ; then X="" ; fi
   done
+  #
+  #
+  #
   if [ ! -z "$X" ] ; then
     # check if there $X is the name of an existing file
     if [ ! -e ${PRE}${X} ] ; then
@@ -145,12 +184,10 @@ done
 # multiple occurances.  The $IN is processed and the result is written
 # to standard out.
 #-------------------------------------------------------------------------------
-CHS1=""
 for X in $LIST; do
   CHS1="${CHS1}-e/@$X@/r${PRE}${X}"
 done
 #
-CHS2=""
 for X in $LIST; do
    CHS2="$CHS2 -e /@$X@/d " 
 done
@@ -166,6 +203,7 @@ if [ -n "${CHS1}" ] ; then CMD="$CMD | sed ${CHS1}" ; fi
 if [ -n "${CHS2}" ] ; then CMD="$CMD | sed ${CHS2}" ; fi
 eval ${CMD}
 #-------------------------------------------------------------------------------
+#echo $CMD
 exit 0
 
 
