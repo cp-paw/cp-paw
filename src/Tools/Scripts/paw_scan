@@ -35,7 +35,7 @@ export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/#  palau
 export NNODES=19       # number of nodes / scalar with NNODES=0
 export NCOREPERNODE=2  # number of cores per node (2)
 export PAR1NAME="HFW"  # name for the variable to be replaced @$PAR1NAME@
-export PAR1VALUES='100 125'  # list of values to be scanned
+export PAR1VALS='100 125'  # list of values to be scanned
 #-------------------------------------------------------------------------------
 # help message
 #-------------------------------------------------------------------------------
