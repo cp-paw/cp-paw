@@ -22,6 +22,11 @@
 #  contents of the file ${PRE}string.  The prefix can be used to
 #  specify a directory that holds the insertions.
 #
+#  Remark: @string@ must not contain any spaces. Two neighboring
+#  occurances must be separated by a space or a newline.
+#
+#
+#
 #  Example:
 #
 #    paw_resolve -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
@@ -96,12 +101,14 @@ done
 # collect all lines containing @*@ in infile ($IN) and obtain the file
 # names in @file@ as $LIST
 #-------------------------------------------------------------------------------
-VAR=$(sed -n -e '/@*@/p' $IN)
+VAR=$(sed -n -e '/@*@/p' < $IN)
 # collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
+  Y=$X
   X=${X%@*}
   X=${X#*@}
+  if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
   #   check if $X corresponds to a direct replacement (-r). otherwise clear it
   for Y in $RULES ; do
     A=${Y%=*}
