@@ -31,7 +31,8 @@
 #  individual data
 #-------------------------------------------------------------------------------
 # name of the bin directory holding the executable ppaw_fast.x or paw_fast.x
-export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/#  palau
+# name do not allow any trailing blanks in PAWXDIR!
+export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/
 export NNODES=19       # number of nodes / scalar with NNODES=0
 export NCOREPERNODE=2  # number of cores per node (2)
 export PAR1NAME="HFW"  # name for the variable to be replaced @$PAR1NAME@
@@ -125,6 +126,7 @@ for PAR1VAL in $PAR1VALS; do
   DIR=${BASIS}/${NAME}
   ROOT=${BASIS}/${NAME}/${NAME}
   SAMPLEDIR=${BASIS}/Samples
+  PROJECTDIR=$THISDIR/$DIR
   #
   # create project directory
   #
@@ -204,25 +206,25 @@ for PAR1VAL in $PAR1VALS; do
   #
   case $TODO in
     run)
-      cd ${DIR}
-      if [ ! -e ${PROJECTDIR}/${NAME}.rstrt ] ; then 
-         echo start a calculation without restart file 
-         cp ${PROJECTDIR}/${NAME}.cntl_start ${PROJECTDIR}/${NAME}.cntl 
-         cp ${PROJECTDIR}/${NAME}.strc_start ${PROJECTDIR}/${NAME}.strc ;
+      cd ${PROJECTDIR}
+      if [ ! -e ${NAME}.rstrt ] ; then 
+        echo start a calculation without restart file 
+        cp ${NAME}.cntl_start ${NAME}.cntl 
+        cp ${NAME}.strc_start ${NAME}.strc ;
       else echo continue a calculation from an existing restart file 
-        cp ${PROJECTDIR}/${NAME}.cntl_run ${PROJECTDIR}/${NAME}.cntl 
-        cp ${PROJECTDIR}/${NAME}.strc_run ${PROJECTDIR}/${NAME}.strc 
+        cp ${NAME}.cntl_run ${NAME}.cntl 
+        cp ${NAME}.strc_run ${NAME}.strc 
       fi
       if [ ${NNODES} = 0 ] ; then
         echo submitting scalar job ${PROJECTDIR}/${NAME}
         if [ $DRYRUN = no ] ; then
           waittillempty
-          ${PAWXDIR}/paw_fast.x ${PROJECTDIR}/Eels/${NAME}.cntl 1>out 2>&1 &
+          ${PAWXDIR}/paw_fast.x Eels/${NAME}.cntl 1>out 2>&1 &
         fi
       else
         echo submitting parallel job ${PROJECTDIR}/${NAME}
         if [ $DRYRUN = no ] ; then
-          doppaw ${PROJECTDIR}/${NAME} ${NNODES} ${NCOREPERNODE}
+          doppaw ${NAME} ${NNODES} ${NCOREPERNODE}
         fi
       fi
       echo job submitted
@@ -230,17 +232,16 @@ for PAR1VAL in $PAR1VALS; do
       ;;
     #
     eels)
-      cd $DIR
-      if [ ! -d ${PROJECTDIR}/Eels ] ; then mkdir ${PROJECTDIR}/Eels; fi
-      paw_resolve -r NAME=${NAME} ${PROJECTDIR}/${NAME}.cntl_eels 
-                                > ${PROJECTDIR}/Eels/${NAME}.cntl
-      RC=$?
-      if [ $RC -ne 0 ] ; then
+      cd ${PROJECTDIR}
+      if [ ! -d Eels ] ; then mkdir Eels; fi
+      if [ -e ${NAME}.cntl_eels ] ; then 
+        cp ${NAME}.cntl_eels  Eels/${NAME}.cntl
+      else
         echo error in $0:
-        echo paw_resolve failed to expand ${PROJECTDIR}/${NAME}.cntl_eels 
+        echo file ${PROJECTDIR}/${NAME}.cntl_eels does not exist
         exit 1
       fi
-      cd ${PROJECTDIR}/Eels/ 
+      cd Eels
       if [ ${NNODES} = 0 ] ; then
         if [ $DRYRUN = no ] ; then
           waittillempty
@@ -255,12 +256,12 @@ for PAR1VAL in $PAR1VALS; do
       ;;
     #
     dos)
-      cd $DIR
-      echo executing make-dos $DIR ....
-      if [ ! -d ${PROJECTDIR}/Dos ] ; then mkdir ${PROJECTDIR}/Dos; fi
-      cp ${PROJECTDIR}/${NAME}.dcntl ${PROJECTDIR}/Dos/
-      cp ${PROJECTDIR}/${NAME}.strc_out ${PROJECTDIR}/Dos/
-      cp ${PROJECTDIR}/${NAME}.pdos ${PROJECTDIR}/Dos/
+      cd ${PROJECTDIR}
+      echo executing make-dos $PROJECTDIR ....
+      if [ ! -d Dos ] ; then mkdir Dos; fi
+      cp ${NAME}.dcntl Dos/
+      cp ${NAME}.strc_out Dos/
+      cp ${NAME}.pdos Dos/
       if [ $DRYRUN = no ] ; then
         ${PAWXDIR}/paw_dos.x ${NAME}.dcntl
         RC=$?
@@ -269,13 +270,14 @@ for PAR1VAL in $PAR1VALS; do
           echo paw_resolve failed to expand ${PROJECTDIR}/${NAME}.cntl_eels 
           exit 1 
         fi
-        ${PAWXDIR}/paw_stripnos ${PROJECTDIR}/Dos/*.dos
+        ${PAWXDIR}/paw_stripnos Dos/*.dos
       fi
       echo ..... make-dos $DIR done
       cd $THISDIR
       ;;
     #
     wrapup)
+      cd ${THISDIR}
       paw_get -gap -t ${ROOT} >> ${BASIS}/homolumogap.dat
       RESULT=`paw_get -gap -n ${ROOT}` 
       echo "$PAR1VAL $RESULT" >> ${BASIS}/gap.dat
@@ -291,13 +293,19 @@ for PAR1VAL in $PAR1VALS; do
       paw_get -etot -t ${ROOT} >> ${BASIS}/homolumogap.dat
       RESULT=`paw_get -etot -n ${ROOT}` 
       echo "$PAR1VAL $RESULT" >> ${BASIS}/etot.dat
+      #
+      #-- structure output -----------------------------------------------------
+      cd ${THISDIR}
+      paw_strc.x -c ${ROOT}    
+      #
       #--  add up eels spectra -------------------------------------------------
-      cd $DIR
       gfortran -o ${PROJECTDIR}/Eels/addeels.x  ${PROJECTDIR}/addeels.f90
+      RC=$?
+      if [ $RC -ne 0 ] ; then 
+        echo "error in $0: compilation of ${PROJECTDIR}/addeels.f90 failed"
+      fi
       cd ${PROJECTDIR}/Eels
       addeels.x
-      #-- structure output -----------------------------------------------------
-      paw_strc.x ${ROOT}    
       cd $THISDIR
       ;;
     esac
