@@ -2589,8 +2589,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       IF(THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('PDOS',NFIL)
         REWIND NFIL
-        !WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
-        !WRITE(NFIL)MAP%LNX(:),MAP%LOX(:,:),MAP%ISP(:)
       END IF
 !
 !     ==================================================================
@@ -2605,11 +2603,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL PDOS$SETR8A('RBAS',9,RBAS)
       CALL PDOS$SETR8A('R',3*NAT,R)
       CALL PDOS$SETCHA('ATOMID',NAT,ATOMID)
-
-!      IF(THISTASK.EQ.1) THEN
-!        WRITE(NFIL)RBAS,R,ATOMID
-!      END IF
-!      DEALLOCATE(ATOMID)
 !
 !     ==================================================================
 !     == ELEMENT SPECIFIC QUANTITIES                                  ==
@@ -2649,10 +2642,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
             OV(LN2,LN1,ISP)=OV(LN1,LN2,ISP)
           ENDDO
         ENDDO
-!        IF(THISTASK.EQ.1) THEN
-!          WRITE(NFIL)IZ(ISP),RAD(ISP),VAL(1:LNX,ISP),DER(1:LNX,ISP) &
-!     &              ,OV(1:LNX,1:LNX,ISP)
-!        END IF
         DEALLOCATE(RI)
         DEALLOCATE(WORK)
         DEALLOCATE(WORK1)
@@ -2671,7 +2660,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       DEALLOCATE(LOX)
 
       IF(THISTASK.EQ.1) THEN
-        CALL PDOS$WRITE(NFIL,1)
+        CALL PDOS$WRITE(NFIL,'PDOS_FROM_MAIN_PAW_CODE')
       ENDIF
 !
 !     ==================================================================
@@ -2791,18 +2780,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !         == ARE ALREADY IN TASK 1.                                     ==
 !         ================================================================
           IF(THISTASK.EQ.1) THEN
-            !WRITE(NFIL)XK(:,IKPTG),NB,wkpt(ikptg)
             CALL PDOS$WRITEK(NFIL,XK(:,IKPTG),NB,NDIM,NPRO,&
       &              WKPT(IKPTG),EIG,OCC(:,IKPTG,ISPIN),VECTOR1(:,:,:))
-!            DO IB1=1,NB
-!              IF(FLAG.EQ.'011004') THEN
-!!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-!                WRITE(NFIL)EIG(IB1),OCC(IB1,IKPTg,ISPIN),VECTOR1(:,:,ib1)
-!              ELSE
-!!               == EIG CAN BE THE EIGENVALUE OR THE EXPECTATION VALUE....
-!                WRITE(NFIL)EIG(IB1),VECTOR1(:,:,ib1)
-!              END IF
-!            ENDDO
             DEALLOCATE(EIG)
             DEALLOCATE(VECTOR1)
           END IF

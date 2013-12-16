@@ -2,15 +2,15 @@
 !.......................................................................
 !     ******************************************************************
 !     ** THERE ARE THREE DIFFERENT VERSIONS OF THE PDOS FILE:         **
-!     **  VERSION=0 (VERY OLD) NO FLAG GIVEN                          **
+!     **  MODE='PDOS_FROM_MAIN_PAW_CODE_OLD' (VERY OLD) NO FLAG GIVEN **
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS NO OCCUPATIONS                                  **
 !     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
-!     **  VERSION=1 (RECENT) FLAG=011004                              **
+!     **  MODE='PDOS_FROM_MAIN_PAW_CODE' (RECENT) FLAG=011004         **
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS OCCUPATIONS                                     **
 !     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
-!     **  VERSION=2 (RECENT) FLAG=311013                              **
+!     **  MODE='PDOS_FROM_PAW_BANDS' (RECENT) FLAG=311013             **
 !     **        - PRODUCED BY KPOINT-DIAGONALISATION                  **
 !     **        - HAS OCCUPATIONS                                     **
 !     **        - COMPATIBLE WITH TETRAHEDRON METHOD                  **    
@@ -50,7 +50,7 @@
         REAL(8)   ,ALLOCATABLE                   :: WKPT(:)
         TYPE(STATE_TYPE),ALLOCATABLE,TARGET      :: STATEARR(:,:)
         TYPE(STATE_TYPE),POINTER                 :: STATE
-        INTEGER(4)                               :: VERSION
+        CHARACTER(32)                            :: MODE
       END MODULE PDOS_MODULE
 !
 !     ..................................................................
@@ -74,8 +74,6 @@
         VAL=LNXX
       ELSE IF(ID.EQ.'NPRO') THEN
         VAL=NPRO
-      ELSE IF(ID.EQ.'VERSION') THEN
-        VAL=VERSION
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -362,6 +360,23 @@
       END
 !
 !     ..................................................................
+      SUBROUTINE PDOS$GETCH(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(32),INTENT(OUT):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'MODE') THEN
+        VAL=MODE
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$GETCH')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE PDOS$SETR8(ID,VAL)
       USE PDOS_MODULE
       IMPLICIT NONE
@@ -612,11 +627,27 @@
         END IF
         IF(.NOT.ALLOCATED(ATOMID)) ALLOCATE(ATOMID(NAT))
         ATOMID(:)=VAL(:)
-!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('PDOS$SETCHA')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
+      SUBROUTINE PDOS$SETCH(ID,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(32),INTENT(IN):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'MODE') THEN
+        MODE=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$SETCH')
       END IF
       RETURN
       END
@@ -634,7 +665,7 @@
       INTEGER(4)             :: LNX1,NB
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
-      CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
+      CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION/MODE
       LOGICAL(4)             :: TCHK
       REAL(8)                :: OCCSUM
 !     ******************************************************************
@@ -651,19 +682,19 @@
         PRINT*,'WARNING: NO OCCUPATIONS PRESENT IN PDOS FILE'
         PRINT*,'            OCCUPATIONS WILL BE SET TO 0'
         FLAG='OLD VERSION'
-        VERSION=0
+        MODE='PDOS_FROM_MAIN_PAW_CODE_OLD'
         REWIND(NFIL)
         READ(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
       END IF
-      IF(FLAG.eq.'011004')VERSION=1
-      IF(FLAG.eq.'311013')VERSION=2
+      IF(FLAG.eq.'011004')MODE='PDOS_FROM_MAIN_PAW_CODE'
+      IF(FLAG.eq.'311013')MODE='PDOS_FROM_PAW_BANDS'
       
       ALLOCATE(LNX(NSP))
       ALLOCATE(LOX(LNXX,NSP))
       ALLOCATE(ISPECIES(NAT))
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
       
-      IF(VERSION.eq.2)THEN
+      IF(MODE.EQ.'PDOS_FROM_PAW_BANDS')THEN
         READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
       ENDIF
 
@@ -742,22 +773,33 @@ print*,"OCCSUM",OCCSUM
       END SUBROUTINE PDOS$READ
 !
 !     ..................................................................
-      SUBROUTINE PDOS$WRITE(NFIL,VERSION_)
+      SUBROUTINE PDOS$WRITE(NFIL,MODE_)
 !     ******************************************************************
-!     **  WAVES$GET                                                   **
-!     **  GET                                                         **
+!     **  WRITES FIRST PART OF PDOS FILE TO NFIL, MODE INDICATES IF   **
+!     **  THE CALL TO THIS FUNCTION COMES FROM THE MAIN PAW CODE OR   **
+!     **  THE PAW_BANDS TOOL. THE DATA TO BE WRITTEN, E.G. NAT,NSP,...**
+!     **  HAVE TO BE TRANSFERED TO THE PDOS-MODULE BEFORE CALLING THIS**
+!     **  FUNCTION. THE KPOINTS, ENERGIES, PROJECTIONS AND OCCUPATIONS**
+!     **  ARE NOT WRITTEN WITH THIS FUNCTION, BUT WITH PDOS$WRITEK    **
 !     ******************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFIL
-      INTEGER(4),INTENT(IN)        :: VERSION_
-      CHARACTER(32)                :: FLAG !'011004' or '311013'
+      CHARACTER(32),INTENT(IN)     :: MODE_
+      CHARACTER(32)                :: FLAG
       INTEGER(4)                   :: ISP,IKPT,ISPIN,IB
       INTEGER(4)                   :: LNX1,NB
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
-      IF(VERSION_.eq.1)FLAG='011004'
-      IF(VERSION_.eq.2)FLAG='311013'
+      IF(MODE_.EQ.'PDOS_FROM_MAIN_PAW_CODE')THEN
+        FLAG='011004'
+      ELSE IF(MODE_.EQ.'PDOS_FROM_PAW_BANDS')THEN
+        FLAG='311013'
+      ELSE
+        CALL ERROR$MSG('MODE UNKNOWN')
+        CALL ERROR$CHVAL('MODE',MODE_)
+        CALL ERROR$STOP('PDOS$WRITE')
+      ENDIF
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
@@ -765,7 +807,7 @@ print*,"OCCSUM",OCCSUM
       WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
 
-      IF(VERSION_.eq.2)THEN
+      IF(MODE_.EQ.'PDOS_FROM_PAW_BANDS')THEN
         WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
       ENDIF
 !
@@ -782,20 +824,6 @@ print*,"OCCSUM",OCCSUM
         WRITE(NFIL)IZ(ISP),RAD(ISP),PHIOFR(1:LNX1,ISP) &
      &       ,DPHIDR(1:LNX1,ISP),OV(1:LNX1,1:LNX1,ISP)
       ENDDO
-!!
-!!     ==================================================================
-!!     ==  NOW WRITE PROJECTIONS                                       ==
-!!     ==================================================================
-!      DO IKPT=1,NKPT
-!        DO ISPIN=1,NSPIN
-!          STATE=>STATEARR(IKPT,ISPIN)
-!          NB=STATE%NB
-!          WRITE(NFIL)XK(:,IKPT),NB
-!          DO IB=1,NB
-!            WRITE(NFIL)STATE%EIG(NB),STATE%VEC(:,:,IB)
-!          ENDDO
-!        ENDDO
-!      ENDDO
                              CALL TRACE$POP
       RETURN
       END
@@ -803,7 +831,7 @@ print*,"OCCSUM",OCCSUM
 !     ..................................................................
       SUBROUTINE PDOS$WRITEK(NFIL,XK,NB,NDIM,NPRO,WKPT,EIG,OCC,VECTOR)
 !     ******************************************************************
-!     **  WRITE EIG,OCC,PROJ FOR ONE KPOINT                           **
+!     **  WRITE EIG,OCC,PROJ FOR ONE KPOINT TO NFIL                   **
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFIL

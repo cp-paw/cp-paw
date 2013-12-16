@@ -1694,7 +1694,6 @@ CALL ERROR$STOP('WAVES$ETOT')
 !        END IF
 !        CALL OPTICS$WRITEOUT_PARTIALS(NSPIN,NAT,LMNXX,DH,DO)
 !      END IF
-!      DEALLOCATE(DO)  ! DO NOT USED YET....; EXCEPT IN OPTICS
 !
 !     ==================================================================
 !     == PRINTOUT FOR TESTING 
@@ -1785,21 +1784,14 @@ CALL ERROR$STOP('WAVES$ETOT')
           LMNX=MAP%LMNX(ISP)
           DO LMN1=1,LMNX
             DO LMN2=1,LMNX
-<<<<<<< HEAD
-              cSVAR1=DH(LMN1,LMN2,1,IAT)
-              cSVAR2=DH(LMN1,LMN2,2,IAT)
-              DH(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
-              DH(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
-              cSVAR1=DO(LMN1,LMN2,1,IAT)
-              cSVAR2=DO(LMN1,LMN2,2,IAT)
-              DO(LMN1,LMN2,1,IAT)=cSVAR1+cSVAR2
-              DO(LMN1,LMN2,2,IAT)=cSVAR1-cSVAR2
-=======
               CSVAR1=DH(LMN1,LMN2,1,IAT)
               CSVAR2=DH(LMN1,LMN2,2,IAT)
               DH(LMN1,LMN2,1,IAT)=CSVAR1+CSVAR2
               DH(LMN1,LMN2,2,IAT)=CSVAR1-CSVAR2
->>>>>>> pbloechl/devel
+              CSVAR1=DO(LMN1,LMN2,1,IAT)
+              CSVAR2=DO(LMN1,LMN2,2,IAT)
+              DO(LMN1,LMN2,1,IAT)=CSVAR1+CSVAR2
+              DO(LMN1,LMN2,2,IAT)=CSVAR1-CSVAR2
             ENDDO
           ENDDO
         ENDDO
