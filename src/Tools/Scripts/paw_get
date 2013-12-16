@@ -1,0 +1,111 @@
+#!/bin/bash
+############################################################################
+#
+#  command: paw_get 
+#
+#  instances: paw_get_energy|paw_get_gap|paw_get_homo|paw_get_lumo
+#
+#  extracts the last value for etot|gap|homo|lumo from the specified
+#  protocoll file and prints either text or number
+#
+#  Remark: when changing this command change all instances!
+#
+############################################################################
+#
+#  set up help message $USAGE
+#
+export USAGE="\n"
+USAGE="$USAGE Usage of $0:\n"
+USAGE="$USAGE     paw_get-energy options rootname\n"
+USAGE="$USAGE extracts data from file rootname.prot\n"
+USAGE="$USAGE Options \n"
+USAGE="$USAGE -h|? help message \n"
+USAGE="$USAGE -etot   prints total energy in Hartree (default)\n"
+USAGE="$USAGE -gap    prints fundamental band gap in eV\n"
+USAGE="$USAGE -homo   prints energy of the highest occupied state in eV\n"
+USAGE="$USAGE -lumo   prints energy of the lowest unoccupied state in eV\n"
+USAGE="$USAGE -n   prints the result as number (levels in eV, total energies in Hartree)\n"
+USAGE="$USAGE -t   prints the result as text (default)\n"
+#
+#  resolve input arguments
+#  $TN is "T" fort text output and "N" for number output
+#
+export TN=T
+export WHAT="TOTAL ENERGY"
+for X in $* ; do
+  case $1 in 
+    -h|?)
+       echo -e $USAGE
+       exit 0
+       ;;
+    -etot)
+       export WHAT="TOTAL ENERGY"
+       shift
+       ;;
+    -gap)
+       export WHAT="ABSOLUTE GAP"
+       shift
+       ;;
+    -homo)
+       export WHAT="HOMO-ENERGY" 
+       shift
+       ;;
+    -lumo)
+       export WHAT="LUMO-ENERGY" 
+       shift
+       ;;
+    -n) 
+       export TN=N
+       shift
+       ;;
+    -t)
+       export TN=T
+       shift
+       ;;
+     *)
+       export ROOT=$1
+       shift
+       ;;
+  esac
+done
+#
+# is rootname defined
+#
+if [ -z $ROOT ]; then
+  echo -e $USAGE
+  echo error: missing argument. specify root name of the paw_project
+  exit 1
+fi
+#
+# Does protocoll file exist?
+#
+if [ ! -e $ROOT.prot ]; then
+  echo error in $0: protocoll file does not exist
+  echo specified protocoll file: $ROOT.prot
+  exit 1
+fi
+export RESULT=`grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+#
+#  test if result is non-empty
+#
+if [ -z  "$RESULT" ] ; then
+  echo error in $0: no result found in $ROOT.prot
+  exit 1
+fi
+#
+#  switch between number and text output and edit result
+#
+case $TN in
+  N) 
+    RESULT=${RESULT%H*}
+    RESULT=${RESULT%EV*}
+    ;;
+  *) 
+    RESULT=`echo "$WHAT = $RESULT for $ROOT"`
+    ;;
+esac
+#
+#  report result
+#
+echo $RESULT
+exit 0

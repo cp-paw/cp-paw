@@ -257,24 +257,26 @@
       SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **  if hostname not available, return 'unknown hostname'                **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
-      INTEGER(4)                :: status
+      INTEGER(4)                :: STATUS
 !     **************************************************************************
-      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS)
+      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
-        IF(STATUS.EQ.-1) THEN
-          CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
-        ELSE IF(STATUS.EQ.1) THEN
-          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-        ELSE IF(STATUS.EQ.2) THEN
-          CALL ERROR$MSG('PROCESSOR DOES NOT SUPPORT ENVIRONMENT VARIABLES')
-        END IF
-        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
-        CALL ERROR$I4VAL('STATUS',status)
-        CALL ERROR$STOP('LIB$GETHOSTNAME')
+        HOSTNAME='UNKNOWN HOSTNAME'
+!!$        IF(STATUS.EQ.-1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
+!!$        ELSE IF(STATUS.EQ.1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+!!$        ELSE IF(STATUS.EQ.2) THEN
+!!$          CALL ERROR$MSG('PROCESSOR DOES NOT SUPPORT ENVIRONMENT VARIABLES')
+!!$        END IF
+!!$        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
+!!$        CALL ERROR$I4VAL('STATUS',status)
+!!$        CALL ERROR$STOP('LIB$GETHOSTNAME')
       END IF
 
 !!$#IF DEFINED(CPPVAR_COMPILER_G95)

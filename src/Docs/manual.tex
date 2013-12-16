@@ -6540,6 +6540,272 @@ ID in block !DCNTL!WEIGHT or !DCNTL!COOP}
 
 %==========================================================================
 \newpage
+\section{The Density of States Plotting Tool: paw\_dosplot.x}
+%==========================================================================
+The paw\_dosplot tool prepares a batch file for the plotting software
+``Grace''.\cite{xmgrace}. It refers to the output files of paw\_dos
+and arranges the data in one or more graphs stacked below each
+other. Within a graph several density of states data can be drawne
+color coded and stacked ontop of each other
+
+
+Each \textbf{graph}
+is a rectangle containing its own x- and y-axis and it may contain
+several sets of Density-of-States.  Graphs are stacked vertically from
+top to bottom. All graphs have the same range and ticmarks for the
+x-axis.
+
+A \textbf{set} is the content of a \textbf{DoS-file}. The dos file has
+the extension '.dos'. Thus a set named 's1' is on the file 's1.dos'.
+The x-data are given in eV. 
+A DoS-file contains typically four x-y datasets
+\begin{enumerate}
+\item up-spin filled-and-empty density-of-states,
+\item down-spin filled-and-empty density-of-states
+\item up-spin filled density-of-states, 
+\item down-spin filled density-of-states.
+\end{enumerate}
+The down-spin density of states has the opposite sign, i.e. it is
+multiplied with -1 before it is written to file. The empty density of states
+is plotted in lighter color.
+
+The sets are drawn into a graph in sequence, so that the later set
+covers the former. With the variable \texttt{STACK=T} the line is
+stacked ontop of an existing stack and it is itself added to a
+stack. The stack contains at least by the preceeding set.
+
+
+%==========================================================================
+\subsection{Command}
+%==========================================================================
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_dosplot} {\it controlfile}}\bigskip
+
+\noindent
+where {\it controlfile} is the file name of the control input file for
+the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
+
+
+
+
+%==========================================================================
+\subsection{Example for the control input file}
+%==========================================================================
+
+\begin{verbatim}
+!DPCNTL
+  NAME='MYPLOT'   XMIN=-7. XMAX=25.  YMIN=-0.0 YMAX=0.5  XZERO=14.
+  !GRAPH PREFIX='DOS/'
+    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
+    !SET ID='MN_EG'  FILLCOLOR='YELLOW'  !END
+    !SET ID='MN_T2G' FILLCOLOR='GREEN' STACK=T !END
+    !SET ID='PR_F'   FILLCOLOR='MAGENTA' STACK=T !END
+    !SET ID='PR_D'   FILLCOLOR='BLUE' STACK=T !END
+    !SET ID='O'      FILLCOLOR='RED' STACK=T !END
+  !END
+  !GRAPH PREFIX='DOS/' 
+    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
+    !SET ID='MN_EG'  FILLCOLOR='YELLOW'  SCALE=2. !END
+    !SET ID='MN_T2G' FILLCOLOR='GREEN' STACK=T SCALE=2. !END
+  !END
+  !GRAPH PREFIX='DOS/'
+    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
+    !SET ID='MN_T2G' FILLCOLOR='GREEN'  !END
+  !END
+!END
+!EOB
+\end{verbatim}
+
+%==========================================================================
+\newpage
+\subsection{Argument description for the control input file}
+%==========================================================================
+
+%----------------------------------------------------------------------
+\block{!DPCNTL}
+%----------------------------------------------------------------------
+\brules{mandatory}
+\bdescr{containes direwctions on what the tool shall do}
+
+\mbax{\key{XZERO}
+\vdescr{shifts the energy axis of all graphs so the value given is the
+  new zero. (Often this is chosen as the highest occupied state,
+  respectively the Fermi level.) may be overwritten by xzero in !graph
+  and !set}
+\vformat{real} 
+\vrules{optional}
+\vdefault{0.}}
+
+
+\mbax{\key{XMIN}
+\vdescr{lower bound in eV of the energy interval shown}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{XMAX}
+\vdescr{upper bound in eV of the energy interval shown}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{YMIN}
+\vdescr{lower bound of the density-of-states interval shown.  A
+  negative value allows to also show the opposite spin direction.
+  Caution: The density of states prepared by the dos tool is given in
+  atomic units, even though the energies are expressed in eV.}
+\vformat{real} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{YMAX}
+\vdescr{upper bound of the density-of-states interval shown. Caution:
+  The density of states prepared by the dos tool is given in atomic
+  units, even though the energies are expressed in eV.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+
+%----------------------------------------------------------------------
+\block{!DPCNTL!GRAPH}
+%----------------------------------------------------------------------
+\brules{optional, multiple}
+\bdescr{Defines a graph.}
+
+\mbax{\key{PREFIX} 
+\vdescr{Default for the prefix used in this graph. The name of the 
+  density of states data
+  produced by paw\_dos are constructed by appending the prefix
+  specified here to the set-id, and by appending the extension
+  '.dos'.}
+\vformat{character} 
+\vrules{optional}
+\vdefault{''}}
+
+\mbax{\key{SCALE}
+\vdescr{default value for the scale factor of the Density of States 
+used in this graph}
+\vformat{real} 
+\vrules{optional}
+\vdefault{1.}}
+
+\mbax{\key{XZERO}
+\vdescr{shifts the energy axis of sets in this graph so the value given is the
+  new zero.  May be overwritten by XZERO in !SET.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DPCNTL:XZERO}}
+
+%----------------------------------------------------------------------
+\block{!DPCNTL!GRAPH!SET}
+%----------------------------------------------------------------------
+\brules{optional, multiple}
+\bdescr{Defines a set of density of states. A set contains the 
+\begin{enumerate}
+\item empty and full, spin-up density of states
+\item empty and full, spin-down density of states
+\item full, spin-up density of states
+\item full, spin-down density of states
+\end{enumerate}
+}
+
+\mbax{\key{ID} 
+\vdescr{identifier for set. The name of the density of states data
+  produced by paw\_dos are constructed by appending the prefix 
+  to the set-id, and by appending the extension
+  '.dos'.}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{PREFIX} 
+\vdescr{Prefix used for this set. The name of the density of states data
+  produced by paw\_dos are constructed by appending the prefix
+  specified here to the set-id, and by appending the extension
+  '.dos'.}
+\vformat{character} 
+\vrules{optional}
+\vdefault{is set by !DCNTL!GRAPH:PREFIX}}
+
+\mbax{\key{SCALE}
+\vdescr{scale factor of the Density of States used in this graph}
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DCNTL!GRAPH:SCALE}}
+
+\mbax{\key{XZERO}
+\vdescr{shifts the energy axis for this set so the value given is the
+  new zero. }
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DPCNTL!GRAPH:XZERO}}
+
+\mbax{\key{STACK}
+\vdescr{If true, this set is added ontop of an existing stack. 
+This redefines the new set and the stack.
+If STACK is non-existent or has the value .false. the stack is reset to the actual set.}
+\vformat{logical} 
+\vrules{optional}
+\vdefault{F}}
+
+\mbax{\key{FILLCOLOR} \vdescr{Fills the density of states with
+    color. The colors to the left of the following table may be
+    used. The corresponding colors on the right will be used for the
+    empty density of states.
+\definecolor{black     }{RGB}{0  ,0,0}      
+\definecolor{red       }{RGB}{255,0,0}    
+\definecolor{green     }{RGB}{0  ,230,0}    
+\definecolor{blue      }{RGB}{0,0,255}    
+\definecolor{yellow    }{RGB}{230,230,  0} 
+\definecolor{cyan      }{RGB}{  0,230,230} 
+\definecolor{magenta   }{RGB}{255,  0,255} 
+\definecolor{orange    }{RGB}{255,165,  0} 
+\definecolor{brown     }{RGB}{200,150,150} 
+\definecolor{gold      }{RGB}{170,130,  0} 
+\definecolor{darkgreen }{RGB}{  0,155,  0} 
+\definecolor{lblack    }{RGB}{ 150,150,150} 
+\definecolor{lred      }{RGB}{ 255,150,150} 
+\definecolor{lgreen    }{RGB}{ 170,255,170} 
+\definecolor{lblue}{RGB}{150,150,255} 
+\definecolor{lyellow   }{RGB}{ 255,255,150} 
+\definecolor{lcyan     }{RGB}{ 150,255,255} 
+\definecolor{lmagenta  }{RGB}{ 255,150,255} 
+\definecolor{lorange   }{RGB}{ 255,210,120}
+\definecolor{lbrown    }{RGB}{ 255,180,180} 
+\definecolor{lgold     }{RGB}{ 210,180,100} 
+\definecolor{ldarkgreen}{RGB}{ 120,220,120} 
+\begin{center}
+\begin{tabular}{|l|c|l|c|}
+\hline
+name   &RGB &name   &RGB \\
+\hline
+black     & \colorbox{black     }{\textcolor{white}{(000,000,000)}}  & lblack &  \colorbox{lblack  }{(150,150,150)} \\
+red       & \colorbox{red       }{(255,000,000)}     & lred        & \colorbox{lred      }{(255,150,150)} \\
+green     & \colorbox{green     }{(000,230,000)}   & lgreen      & \colorbox{lgreen    }{(150,255,150)} \\
+blue      & \colorbox{blue      }{\textcolor{white}{(000,000,255)}}     & lblue       & \colorbox{lblue}{(150,150,255)} \\
+yellow    & \colorbox{yellow    }{(230,230,000)} & lyellow     & \colorbox{lyellow   }{(255,255,150)} \\
+cyan      & \colorbox{cyan      }{(000,230,230)} & lcyan       & \colorbox{lcyan     }{(150,255,255)} \\
+magenta   & \colorbox{magenta   }{(255,000,255)} & lmagenta    & \colorbox{lmagenta  }{(255,150,255)} \\
+orange    & \colorbox{orange    }{(255,165,000)} & lorange     & \colorbox{lorange   }{(255,210,120)}  \\
+brown     & \colorbox{brown     }{(200,150,150)} & lbrown      & \colorbox{lbrown    }{(255,180,180)} \\
+gold      & \colorbox{gold      }{(170,130,000)} & lgold       & \colorbox{lgold     }{(210,180,100)} \\
+darkgreen & \colorbox{darkgreen }{(000,155,000)} & ldarkgreen  & \colorbox{ldarkgreen}{(120,220,120)} \\
+\hline
+\end{tabular}
+\end{center}
+}
+\vformat{character} 
+\vrules{optional}
+\vdefault{''}}
+
+
+
+
+%==========================================================================
+\newpage
 \section{The Band Structure Analysis Tool: paw\_bands}
 %==========================================================================
 The paw\_bands tool allows one prepare the files for plotting bands
@@ -7265,74 +7531,39 @@ The calling sequence is
 \bigskip\fbox{{\tt paw\_collect\ }}
 
 %==========================================================================
-\subsection{Collect energies ``paw\_get\_energy''}
+\subsection{Collect energies ``paw\_get''}
 %==========================================================================
-paw\_get\_energy produces the last total energies from the protocoll files
-of a given  project
-
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_energy\ }\textit{ROOTNAME}}
-
-The command prints the last total energy including its unit to the
-screen.
-
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_gap''}
-%==========================================================================
-paw\_get\_energy produces the last total energies from the protocoll
-file of a given project
+paw\_get extracts the final result of various energies from the
+protocoll file.
 
 %==========================================================================
 \subsubsection{Command}
 %==========================================================================
 The calling sequence is
 
-\bigskip\fbox{{\tt paw\_get\_gap\ }\textit{ROOTNAME}}
+\bigskip\fbox{{\tt paw\_get} \textit{options} \textit{ROOTNAME}}
+\vspace{0.5cm}
 
-The command prints the last total energy including its unit to the
-screen.
+\noindent Options:\\
+\hspace*{1.cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h]help message
+\item[?]help message
+\item[-etot]prints total energy in Hartree (default)
+\item[-gap]prints fundamental band gap in eV
+\item[-homo]prints energy of the highest occupied state in eV
+\item[-lumo]prints energy of the lowest unoccupied state in eV
+\item[-n]prints the result as number 
+\item[-t]prints the result as text
+\end{description}
+\end{minipage}}
 
-Remark: exits with an error if variable occupations are used.
 
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_homo''}
-%==========================================================================
-paw\_get\_homo produces the last energy of the highest occupied state
-from the protocoll file of a given project
+The command scans the file \textit{rootname}\verb|.prot| and
+prints the last occurance of the corresponding variable 
 
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_homo\ }\textit{ROOTNAME}}
-
-The command prints the last energy of the highest occupied state
-including its unit to the screen.
-
-Remark: exits with an error if variable occupations are used.
-
-%==========================================================================
-\subsection{Collect energies ``paw\_get\_lumo''}
-%==========================================================================
-paw\_get\_homo produces the last energy of the highest occupied state
-from the protocoll file of a given project
-
-%==========================================================================
-\subsubsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_get\_lumo\ }\textit{ROOTNAME}}
-
-The command prints the last energy of the highest occupied state
-including its unit to the screen.
-
-Remark: exits with an error if variable occupations are used.
+Remark: -gap -homo and -lumo do not work with variable occupations
+and will provide an error message.
 
 %==========================================================================
 \subsection{Murnaghan fit ``paw\_murnagan.x''}
