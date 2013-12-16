@@ -5,7 +5,7 @@
 #
 #        USAGE:  paw_resolve options infile > outfile
 #
-#      OPTIONS: -h, -p prefix, -r rule -f frule
+#      OPTIONS: -h, -p prefix, -r rule, -f frule
 #
 #  DESCRIPTION: 
 #
@@ -29,8 +29,6 @@
 #
 #  Remark: @string@ must not contain any spaces. Two neighboring
 #  occurances must be separated by a space or a newline.
-#
-#
 #
 #  Example:
 #
