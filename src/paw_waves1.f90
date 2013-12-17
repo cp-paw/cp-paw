@@ -1809,7 +1809,6 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL BANDDATA$SETR8A('VOFR',NRL*NDIMD,RHO(:,:))
       CALL BANDDATA$SETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH(:,:,:,:))
       CALL BANDDATA$SETR8A('DO',LMNXX*LMNXX*NDIMD*NAT,DO(:,:,:,:))
-      CALL WAVES$COLLECTBANDDATA
       DEALLOCATE(DO)
 !
 !     ==================================================================

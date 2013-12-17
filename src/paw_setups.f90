@@ -727,10 +727,11 @@ END MODULE SETUP_MODULE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
-      INTEGER(4)               :: NR
+      INTEGER(4)               :: NR,NG
       INTEGER(4)               :: i
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
 !
 !     ==========================================================================
 !     == PROJECTOR FUNCTIONS                                                  ==
@@ -742,6 +743,13 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PRO,(/LEN/))
+      ELSE IF(ID.EQ.'PROOFG') THEN
+        IF(LEN.NE.THIS%LNX*NG) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%PROOFG,(/LEN/))
 ! 
 !     ==========================================================================
 !     ==  ENERGIES FOR PARTIAL WAVE CONSTRUCTION                              ==

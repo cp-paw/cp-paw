@@ -610,6 +610,140 @@
       END
 !
 !     ..................................................................
+      SUBROUTINE BANDDATA$COLLECTBANDDATA
+!     ******************************************************************
+!     **  THIS FUNCTION COLLECTS MOST DATA NEEDED FOR THE BANDDATA    **
+!     **  OBJECT (SEE ALSO WAVES$ETOT, BECAUSE SOME STUFF IS ONLY     **
+!     **  ACCESSIBLE THERE)
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)            :: IAT,ISP,LN
+      INTEGER(4)            :: NDIM_
+      INTEGER(4)            :: NSPIN_
+      INTEGER(4)            :: NDIMD_
+      REAL(8)               :: EPW_
+      REAL(8)               :: RBAS_(3,3)
+      REAL(8)               :: GBAS_(3,3)
+      LOGICAL(4)            :: SET_
+      REAL(8),ALLOCATABLE   :: R_(:,:)
+      REAL(8),ALLOCATABLE   :: PROOFG_(:,:,:)
+      CHARACTER(16),ALLOCATABLE :: ATOMID_(:)
+      INTEGER(4)            :: NG_PROTO_
+      INTEGER(4)            :: NR1_
+      INTEGER(4)            :: NR2_
+      INTEGER(4)            :: NR3_
+      REAL(8)               :: NEL_
+      REAL(8)               :: SPIN_
+      INTEGER(4)            :: NAT_
+      INTEGER(4)            :: NSP_
+      INTEGER(4)            :: LNXX_
+      INTEGER(4)            :: LMX_
+      INTEGER(4)            :: NBAREPRO_
+      INTEGER(4)            :: NPRO_
+      INTEGER(4),ALLOCATABLE:: ISPECIES_(:)
+      INTEGER(4),ALLOCATABLE:: LNX_(:)
+      INTEGER(4),ALLOCATABLE:: LMNX_(:)
+      INTEGER(4),ALLOCATABLE:: LOX_(:,:)
+!     ******************************************************************
+      !GENERAL QUANTITIES
+      CALL WAVES$GETI4('NDIM',NDIM_)
+      CALL WAVES$GETI4('NSPIN',NSPIN_)
+      CALL WAVES$GETI4('NDIMD',NDIMD_)
+      CALL BANDDATA$SETI4('NDIM' ,NDIM_)
+      CALL BANDDATA$SETI4('NSPIN',NSPIN_)
+      CALL BANDDATA$SETI4('NDIMD',NDIMD_)
+      
+      CALL DYNOCC$GETR8('NEL',NEL_)
+      CALL BANDDATA$SETR8('NEL',NEL_)
+      CALL DYNOCC$GETR8('SPIN',SPIN_)
+      CALL BANDDATA$SETR8('SPIN',SPIN_)
+
+      CALL WAVES$GETR8('EPWPSI',EPW_)
+      CALL BANDDATA$SETR8('EPW',EPW_)
+      CALL WAVES$GETI4('NR1',NR1_)
+      CALL WAVES$GETI4('NR2',NR2_)
+      CALL WAVES$GETI4('NR3',NR3_)
+      CALL BANDDATA$SETI4('NR1',NR1_)
+      CALL BANDDATA$SETI4('NR2',NR2_)
+      CALL BANDDATA$SETI4('NR3',NR3_)
+      
+      !LATTICE PARAMETERS
+      CALL CELL$GETR8A('T0',9,RBAS_)
+      CALL BANDDATA$SETR8A('RBAS',9,RBAS_)
+      
+      CALL PLANEWAVE$GETR8A('GBAS',9,GBAS_)
+      CALL BANDDATA$SETR8A('GBAS',9,GBAS_)
+     
+      !SETUPS (MODIFIED CODE FROM WAVES$INITIALIZE)
+      CALL SETUP$GETI4('NSP',NSP_)
+      CALL BANDDATA$SETI4('NSP',NSP_)
+      CALL SETUP$GETI4('LNXX',LNXX_) 
+      CALL BANDDATA$SETI4('LNXX',LNXX_)
+      CALL ATOMLIST$NATOM(NAT_)
+      ALLOCATE(ISPECIES_(NAT_))
+      ALLOCATE(LNX_(NSP_))
+      ALLOCATE(LMNX_(NSP_))
+      ALLOCATE(LOX_(LNXX_,NSP_))
+      CALL ATOMLIST$GETI4A('ISPECIES',0,NAT_,ISPECIES_)
+
+      LMX_=0
+      LOX_(:,:)=0
+      NBAREPRO_=0
+      DO ISP=1,NSP_
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX_(ISP))
+        CALL SETUP$GETI4A('LOX',LNX_(ISP),LOX_(1:LNX_(ISP),ISP))
+        LMNX_(ISP)=0
+        DO LN=1,LNX_(ISP)
+          LMNX_(ISP)=LMNX_(ISP)+2*LOX_(LN,ISP)+1
+          LMX_=MAX(LMX_,(LOX_(LN,ISP)+1)**2)
+        ENDDO
+        NBAREPRO_=NBAREPRO_+LNX_(ISP)
+        CALL SETUP$UNSELECT()
+      ENDDO
+      NPRO_=0
+      DO IAT=1,NAT_
+        ISP=ISPECIES_(IAT)
+        NPRO_=NPRO_+LMNX_(ISP)
+      ENDDO
+      CALL BANDDATA$SETI4('NPRO',NPRO_)
+      CALL BANDDATA$SETI4('LMNXX',MAXVAL(LMNX_))
+      
+      ALLOCATE(R_(3,NAT_))
+      ALLOCATE(ATOMID_(NAT_))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT_,R_)
+      CALL ATOMLIST$GETCHA('NAME',0,NAT_,ATOMID_)
+      CALL BANDDATA$SETR8A('R',3*NAT_,R_)
+      CALL BANDDATA$SETCHA('ATOMID',NAT_,ATOMID_)
+      DEALLOCATE(R_)
+      DEALLOCATE(ATOMID_)
+
+      CALL BANDDATA$SETI4('LMX',LMX_)
+      CALL BANDDATA$SETI4('NBAREPRO',NBAREPRO_)
+      CALL BANDDATA$SETI4A('LNX',NSP_,LNX_)
+      CALL BANDDATA$SETI4A('LMNX',NSP_,LMNX_)
+      CALL BANDDATA$SETI4A('LOX',LNXX_*NSP_,LOX_)
+      CALL BANDDATA$SETI4A('ISPECIES',NAT_,ISPECIES_)
+      
+      CALL BANDDATA$GETI4('NG_PROTO',NG_PROTO_)
+      ALLOCATE(PROOFG_(NG_PROTO_,LNXX_,NSP_))
+      DO ISP=1,NSP_
+        CALL SETUP$ISELECT(ISP)
+        PROOFG_(:,:,ISP)=0.0D0
+        CALL SETUP$GETR8A('PROOFG',NG_PROTO_*LNX_(ISP),&
+    &         PROOFG_(:,1:LNX_(ISP),ISP))
+        CALL SETUP$UNSELECT()
+      ENDDO
+      CALL BANDDATA$SETR8A('PROOFG',NG_PROTO_*LNXX_*NSP_,PROOFG_)
+      DEALLOCATE(PROOFG_)
+      DEALLOCATE(ISPECIES_)
+      DEALLOCATE(LNX_)
+      DEALLOCATE(LMNX_)
+      DEALLOCATE(LOX_)
+      RETURN
+      END SUBROUTINE BANDDATA$COLLECTBANDDATA
+!
+!     ..................................................................
       SUBROUTINE BANDDATA$WRITEFILE
 !     ******************************************************************
 !     **  THIS FUNCTION CREATES AN OUTPUT-FILEHANDLER FOR THE         **
@@ -621,6 +755,7 @@
       INTEGER(4)            :: NFIL
 !     *****************************************************************
                              CALL TRACE$PUSH('BANDDATA$WRITEFILE')
+      CALL BANDDATA$COLLECTBANDDATA
       CALL FILEHANDLER$UNIT('BANDDATA',NFIL)
       REWIND NFIL
       CALL BANDDATA_WRITE(NFIL)
@@ -670,19 +805,33 @@
                              CALL TRACE$PUSH('BANDDATA_WRITE')
       SET=.TRUE.
       SET=SET.AND.NDIM_SET.AND.NSPIN_SET.AND.NDIMD_SET
+      PRINT*,SET
       SET=SET.AND.EPW_SET.AND.GBAS_SET.AND.RBAS_SET
+      PRINT*,SET
       SET=SET.AND.NR1_SET.AND.NR2_SET.AND.NR3_SET.AND.NRG_SET
+      PRINT*,SET
       SET=SET.AND.ALLOCATED(VOFR)
+      PRINT*,SET
       SET=SET.AND.NAT_SET.AND.NSP_SET.AND.NPRO_SET
+      PRINT*,SET
       SET=SET.AND.LNXX_SET.AND.LMNXX_SET
+      PRINT*,SET
       SET=SET.AND.NBAREPRO_SET.AND.LMX_SET
+      PRINT*,SET
       SET=SET.AND.NG_PROTO_SET.AND.TYPEID_PROTO_SET.AND.GMAX_PROTO_SET
+      PRINT*,SET
       SET=SET.AND.G1_PROTO_SET.AND.DEX_PROTO_SET
+      PRINT*,SET
       SET=SET.AND.ALLOCATED(ISPECIES).AND.ALLOCATED(LNX)
+      PRINT*,SET
       SET=SET.AND.ALLOCATED(LOX).AND.ALLOCATED(LMNX)
+      PRINT*,SET
       SET=SET.AND.ALLOCATED(R).AND.ALLOCATED(ATOMID)
+      PRINT*,SET
       SET=SET.AND.ALLOCATED(PROOFG)
+      PRINT*,SET
       SET=SET.AND.NEL_SET.AND.SPIN_SET
+      PRINT*,SET
       IF(.NOT.SET)THEN
         CALL ERROR$MSG('ERROR WRITING BANDDATA FILE')
         CALL ERROR$MSG('NOT ALL QUANTITIES SET')

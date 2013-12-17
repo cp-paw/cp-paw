@@ -2,7 +2,7 @@
 !.......................................................................
 !     ******************************************************************
 !     ** THERE ARE DIFFERENT VERSIONS OF THE PDOS FILE:               **
-!     **   FLAG=OLD VERSION                                           ** 
+!     **   FLAG=LEGACY                                                ** 
 !     **        - NO FLAG PRESENT IN PDOS FILE, BT SET IN PDOS$READ   **
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS NO OCCUPATIONS                                  **
@@ -51,7 +51,7 @@
         REAL(8)   ,ALLOCATABLE                   :: WKPT(:)
         TYPE(STATE_TYPE),ALLOCATABLE,TARGET      :: STATEARR(:,:)
         TYPE(STATE_TYPE),POINTER                 :: STATE
-        CHARACTER(32)                            :: FLAG
+        CHARACTER(6)                             :: FLAG
       END MODULE PDOS_MODULE
 !
 !     ..................................................................
@@ -365,7 +365,7 @@
       USE PDOS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      CHARACTER(32),INTENT(OUT):: VAL
+      CHARACTER(6),INTENT(OUT):: VAL
 !     ******************************************************************
       IF(ID.EQ.'FLAG') THEN
         VAL=FLAG
@@ -641,7 +641,7 @@
       USE PDOS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      CHARACTER(32),INTENT(IN):: VAL
+      CHARACTER(6),INTENT(IN) :: VAL
 !     ******************************************************************
       IF(ID.EQ.'FLAG') THEN
         FLAG=VAL
@@ -680,7 +680,7 @@
       IF(.NOT.TCHK) THEN
         PRINT*,'WARNING: NO OCCUPATIONS PRESENT IN PDOS FILE'
         PRINT*,'            OCCUPATIONS WILL BE SET TO 0'
-        FLAG='OLD VERSION'
+        FLAG='LEGACY'
         REWIND(NFIL)
         READ(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
       END IF
@@ -732,7 +732,7 @@
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
           ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
-            IF(FLAG.eq.'OLD VERSION') THEN
+            IF(FLAG.eq.'LEGACY') THEN
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
             ELSE
@@ -783,7 +783,7 @@ print*,"OCCSUM",OCCSUM
       USE PDOS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFIL
-      CHARACTER(32),INTENT(IN)     :: FLAG_
+      CHARACTER(6),INTENT(IN)      :: FLAG_
       INTEGER(4)                   :: ISP,IKPT,ISPIN,IB
       INTEGER(4)                   :: LNX1,NB
 !     ******************************************************************
