@@ -49,7 +49,7 @@
       INTEGER(4)                :: NPRO
       INTEGER(4)                :: IKPT,ISPIN,IB
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
-      CHARACTER(32)             :: MODE
+      CHARACTER(32)             :: FLAG
 
 !      REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
 !     **************************************************************************
@@ -95,7 +95,7 @@
       CALL PDOS$GETI4('NPRO',NPRO)
       ALLOCATE(NBARR(NKPT,NSPIN))
       CALL PDOS$GETI4A('NB',NKPT*NSPIN,NBARR)
-      CALL PDOS$GETCH('MODE',MODE)
+      CALL PDOS$GETCH('FLAG',FLAG)
       NB=MAXVAL(NBARR)
       DEALLOCATE(NBARR)
       LENG=NPRO
@@ -138,14 +138,14 @@
 !     ==========================================================================
 !     ==  MAKE PLOTS                                                          ==
 !     ==========================================================================
-      PRINT*,"MODE=",MODE
+      PRINT*,"FLAG OF PDOS FILE=",FLAG
       CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
                             CALL TRACE$PASS('AFTER READCNTL$GRID')
-      IF (MODE.EQ.'PDOS_FROM_PAW_BANDS')THEN
+      IF (FLAG.EQ.'311013')THEN
         CALL GENERATEWGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
       ENDIF
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,MODE)
+     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,FLAG)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 
 !
@@ -1532,7 +1532,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND,MODE)
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND,FLAG)
 !     **************************************************************************
 !     **************************************************************************
       USE READCNTL_MODULE
@@ -1551,7 +1551,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN,NSET)
       CHARACTER(32),INTENT(IN) :: LEGEND(NSET)
-      CHARACTER(32),INTENT(IN) :: MODE
+      CHARACTER(32),INTENT(IN) :: FLAG
       CHARACTER(32)        :: LEGEND1
       CHARACTER(256)       :: FILE
       LOGICAL(4)           :: TIB,TE,TIK,TIS,TCHK
@@ -1713,16 +1713,15 @@ END MODULE READCNTL_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                      ==
 !       ================================================================
         IF(.NOT.(TIB.OR.TE)) THEN
-          IF(MODE.EQ.'PDOS_FROM_MAIN_PAW_CODE'.OR. &
-            & MODE.EQ.'PDOS_FROM_MAIN_PAW_CODE_OLD')THEN
+          IF(FLAG.EQ.'011004'.OR.FLAG.EQ.'OLD VERSION')THEN
             CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
       &    ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
-          ELSE IF(MODE.EQ.'PDOS_FROM_PAW_BANDS')THEN
+          ELSE IF(FLAG.EQ.'311013')THEN
             CALL PUTONGRIDWGHT(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
       &    ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
           ELSE
-            CALL ERROR$MSG('MODE UNKNOWN')
-            CALL ERROR$CHVAL('MODE',MODE)
+            CALL ERROR$MSG('FLAG OF PDOS FILE UNKNOWN')
+            CALL ERROR$CHVAL('FLAG',FLAG)
             CALL ERROR$STOP('READCNTL$OUTPUT')
           ENDIF
         END IF

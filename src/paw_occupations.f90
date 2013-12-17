@@ -1,3 +1,11 @@
+!*******************************************************************************
+!**  TODO:                                                                    **
+!**     - DYNOCC$GETR8: WHEN TOTCHA IS REQUESTED THE DIFFERENCE BETWEEN THE   **
+!**           NUMBER OF ELECTRON (INTERNALLY ALSO CALLED TOTCHA) AND SUMOFZ   **
+!**           IS RETURNED, THIS IS THE TOTAL CHARGE OF THE SYSTEM, NOT THE    ** 
+!**           NUMBER OF ELECTRONS                                             **
+!*******************************************************************************
+!
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE DYNOCC_MODULE
 !*******************************************************************************

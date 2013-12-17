@@ -23,7 +23,7 @@
         LOGICAL(4)             :: NR2_SET
         INTEGER(4)             :: NR3
         LOGICAL(4)             :: NR3_SET
-        REAL(8),allocatable    :: VOFR(:,:)
+        REAL(8),ALLOCATABLE    :: VOFR(:,:)
 
         INTEGER(4)             :: NAT
         LOGICAL(4)             :: NAT_SET
@@ -43,8 +43,8 @@
         !THE FOLLOWING IS INCLUDED IN CASE OF GRID CHANGES
         INTEGER(4)             :: NG_PROTO
         LOGICAL(4)             :: NG_PROTO_SET
-        INTEGER(4)             :: TYPE_PROTO
-        LOGICAL(4)             :: TYPE_PROTO_SET
+        CHARACTER(6)           :: TYPEID_PROTO
+        LOGICAL(4)             :: TYPEID_PROTO_SET
         REAL(8)                :: GMAX_PROTO
         LOGICAL(4)             :: GMAX_PROTO_SET
         REAL(8)                :: G1_PROTO
@@ -52,15 +52,15 @@
         REAL(8)                :: DEX_PROTO
         LOGICAL(4)             :: DEX_PROTO_SET
         
-        INTEGER(4),allocatable :: ISPECIES(:) !NAT
-        INTEGER(4),allocatable :: LNX(:) !NSP
-        INTEGER(4),allocatable :: LMNX(:) !NSP
-        INTEGER(4),allocatable :: LOX(:,:) !NSP,LNXX
-        REAL(8)   ,allocatable :: R(:,:) !NAT
+        INTEGER(4),ALLOCATABLE :: ISPECIES(:) !NAT
+        INTEGER(4),ALLOCATABLE :: LNX(:) !NSP
+        INTEGER(4),ALLOCATABLE :: LMNX(:) !NSP
+        INTEGER(4),ALLOCATABLE :: LOX(:,:) !NSP,LNXX
+        REAL(8)   ,ALLOCATABLE :: R(:,:) !NAT
         CHARACTER(16),ALLOCATABLE :: ATOMID(:) !NAT
-        REAL(8)   ,allocatable :: PROOFG(:,:,:) !
-        COMPLEX(8),allocatable :: DH(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
-        REAL(8)   ,allocatable :: DO(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
+        REAL(8)   ,ALLOCATABLE :: PROOFG(:,:,:) !
+        COMPLEX(8),ALLOCATABLE :: DH(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
+        REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
 
         REAL(8)                :: NEL
         LOGICAL(4)             :: NEL_SET
@@ -244,52 +244,49 @@
 !     ******************************************************************
       IF(ID.EQ.'NDIM') THEN
         NDIM=VAL
-        NDIM_SET=.true.
+        NDIM_SET=.TRUE.
       ELSE IF(ID.EQ.'NSPIN') THEN
         NSPIN=VAL
-        NSPIN_SET=.true.
+        NSPIN_SET=.TRUE.
       ELSE IF(ID.EQ.'NDIMD') THEN
         NDIMD=VAL
-        NDIMD_SET=.true.
+        NDIMD_SET=.TRUE.
       ELSE IF(ID.EQ.'NR1') THEN
         NR1=VAL
-        NR1_SET=.true.
+        NR1_SET=.TRUE.
       ELSE IF(ID.EQ.'NR2') THEN
         NR2=VAL
-        NR2_SET=.true.
+        NR2_SET=.TRUE.
       ELSE IF(ID.EQ.'NR3') THEN
         NR3=VAL
-        NR3_SET=.true.
+        NR3_SET=.TRUE.
       ELSE IF(ID.EQ.'NRG') THEN
         NRG=VAL
-        NRG_SET=.true.
+        NRG_SET=.TRUE.
       ELSE IF(ID.EQ.'NAT') THEN
         NAT=VAL
-        NAT_SET=.true.
+        NAT_SET=.TRUE.
       ELSE IF(ID.EQ.'NSP') THEN
         NSP=VAL
-        NSP_SET=.true.
+        NSP_SET=.TRUE.
       ELSE IF(ID.EQ.'NPRO') THEN
         NPRO=VAL
-        NPRO_SET=.true.
+        NPRO_SET=.TRUE.
       ELSE IF(ID.EQ.'LNXX') THEN
         LNXX=VAL
-        LNXX_SET=.true.
+        LNXX_SET=.TRUE.
       ELSE IF(ID.EQ.'LMNXX') THEN
         LMNXX=VAL
-        LMNXX_SET=.true.
+        LMNXX_SET=.TRUE.
       ELSE IF(ID.EQ.'LMX') THEN
         LMX=VAL
-        LMX_SET=.true.
+        LMX_SET=.TRUE.
       ELSE IF(ID.EQ.'NBAREPRO') THEN
         NBAREPRO=VAL
-        NBAREPRO_SET=.true.
+        NBAREPRO_SET=.TRUE.
       ELSE IF(ID.EQ.'NG_PROTO') THEN
         NG_PROTO=VAL
-        NG_PROTO_SET=.true.
-      ELSE IF(ID.EQ.'TYPE_PROTO') THEN
-        TYPE_PROTO=VAL
-        TYPE_PROTO_SET=.true.
+        NG_PROTO_SET=.TRUE.
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -307,11 +304,11 @@
       INTEGER(4)  ,INTENT(IN) :: VAL(LEN)
 !     ******************************************************************
       IF(ID.EQ.'ISPECIES') THEN
-        IF(.not.NAT_SET)then
+        IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETI4A')
-        endif
+        ENDIF
         IF(LEN.NE.NAT) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -322,11 +319,11 @@
         IF(.NOT.ALLOCATED(ISPECIES))ALLOCATE(ISPECIES(NAT))
         ISPECIES=VAL
       ELSE IF(ID.EQ.'LNX') THEN
-        IF(.not.NSP_SET)then
+        IF(.NOT.NSP_SET)THEN
           CALL ERROR$MSG('NSP NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETI4A')
-        endif
+        ENDIF
         IF(LEN.NE.NSP) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -337,11 +334,11 @@
         IF(.NOT.ALLOCATED(LNX))ALLOCATE(LNX(NSP))
         LNX=VAL
       ELSE IF(ID.EQ.'LMNX') THEN
-        IF(.not.NSP_SET)then
+        IF(.NOT.NSP_SET)THEN
           CALL ERROR$MSG('NSP NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETI4A')
-        endif
+        ENDIF
         IF(LEN.NE.NSP) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -352,16 +349,16 @@
         IF(.NOT.ALLOCATED(LMNX))ALLOCATE(LMNX(NSP))
         LMNX=VAL
       ELSE IF(ID.EQ.'LOX') THEN
-        IF(.not.NSP_SET)then
+        IF(.NOT.NSP_SET)THEN
           CALL ERROR$MSG('NSP NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETI4AA')
-        endif
-        IF(.not.LNXX_SET)then
+        ENDIF
+        IF(.NOT.LNXX_SET)THEN
           CALL ERROR$MSG('LNXX NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETI4A')
-        endif
+        ENDIF
         IF(LEN.NE.NSP*LNXX) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -389,22 +386,22 @@
 !     ******************************************************************
       IF(ID.EQ.'EPW') THEN
         EPW=VAL
-        EPW_SET=.true.
+        EPW_SET=.TRUE.
       ELSE IF(ID.EQ.'GMAX_PROTO') THEN
         GMAX_PROTO=VAL
-        GMAX_PROTO_SET=.true.
+        GMAX_PROTO_SET=.TRUE.
       ELSE IF(ID.EQ.'G1_PROTO') THEN
         G1_PROTO=VAL
-        G1_PROTO_SET=.true.
+        G1_PROTO_SET=.TRUE.
       ELSE IF(ID.EQ.'DEX_PROTO') THEN
         DEX_PROTO=VAL
-        DEX_PROTO_SET=.true.
+        DEX_PROTO_SET=.TRUE.
       ELSE IF(ID.EQ.'NEL') THEN
         NEL=VAL
-        NEL_SET=.true.
+        NEL_SET=.TRUE.
       ELSE IF(ID.EQ.'SPIN') THEN
         SPIN=VAL
-        SPIN_SET=.true.
+        SPIN_SET=.TRUE.
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -430,7 +427,7 @@
         RBAS(:,1)=VAL(1:3)
         RBAS(:,2)=VAL(4:6)
         RBAS(:,3)=VAL(7:9)
-        RBAS_SET=.true.
+        RBAS_SET=.TRUE.
       ELSE IF(ID.EQ.'GBAS') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -440,14 +437,14 @@
         GBAS(:,1)=VAL(1:3)
         GBAS(:,2)=VAL(4:6)
         GBAS(:,3)=VAL(7:9)
-        GBAS_SET=.true.
+        GBAS_SET=.TRUE.
       ELSE IF(ID.EQ.'VOFR') THEN
-        IF(.not.NRG_SET)THEN
+        IF(.NOT.NRG_SET)THEN
           CALL ERROR$MSG('NRG NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(.not.NDIMD_SET)THEN
+        IF(.NOT.NDIMD_SET)THEN
           CALL ERROR$MSG('NDIMD NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
@@ -457,10 +454,10 @@
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         END IF
-        IF(.not.allocated(VOFR))allocate(VOFR(NRG,NDIMD))
+        IF(.NOT.ALLOCATED(VOFR))ALLOCATE(VOFR(NRG,NDIMD))
         VOFR=RESHAPE(VAL,(/NRG,NDIMD/))
       ELSE IF(ID.EQ.'R') THEN
-        IF(.not.NAT_SET)THEN
+        IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
@@ -473,17 +470,17 @@
         IF(.NOT.ALLOCATED(R)) ALLOCATE(R(3,NAT))
         R=RESHAPE(VAL,(/3,NAT/))
       ELSE IF(ID.EQ.'PROOFG') THEN
-        IF(.not.NSP_SET)THEN
+        IF(.NOT.NSP_SET)THEN
           CALL ERROR$MSG('NSP NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(.not.LNXX_SET)THEN
+        IF(.NOT.LNXX_SET)THEN
           CALL ERROR$MSG('LNXX NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(.not.NG_PROTO_SET)THEN
+        IF(.NOT.NG_PROTO_SET)THEN
           CALL ERROR$MSG('NG_PROTO NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
@@ -496,17 +493,17 @@
         IF(.NOT.ALLOCATED(PROOFG)) ALLOCATE(PROOFG(NG_PROTO,LNXX,NSP))
         PROOFG=RESHAPE(VAL,(/NG_PROTO,LNXX,NSP/))
       ELSE IF(ID.EQ.'DO') THEN
-        IF(.not.LMNXX_SET)THEN
+        IF(.NOT.LMNXX_SET)THEN
           CALL ERROR$MSG('LMNXX NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(.not.NDIMD_SET)THEN
+        IF(.NOT.NDIMD_SET)THEN
           CALL ERROR$MSG('NDIMD NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(.not.NAT_SET)THEN
+        IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
@@ -535,17 +532,17 @@
       COMPLEX(8)  ,INTENT(IN) :: VAL(LEN)
 !     ******************************************************************
       IF(ID.EQ.'DH') THEN
-        IF(.not.LMNXX_SET)THEN
+        IF(.NOT.LMNXX_SET)THEN
           CALL ERROR$MSG('LMNXX NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETC8A')
         ENDIF
-        IF(.not.NDIMD_SET)THEN
+        IF(.NOT.NDIMD_SET)THEN
           CALL ERROR$MSG('NDIMD NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETC8A')
         ENDIF
-        IF(.not.NAT_SET)THEN
+        IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETC8A')
@@ -566,18 +563,33 @@
       END
 !
 !     ..................................................................
+      SUBROUTINE BANDDATA$SETCH(ID,VAL)
+      USE BANDDATA_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(IN) :: VAL
+!     *****************************************************************
+      IF(ID.EQ.'TYPEID_PROTO')THEN
+        TYPEID_PROTO=VAL
+        TYPEID_PROTO_SET=.TRUE.
+      ELSE 
+        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('BANDDATA$SETCH')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE BANDDATA$SETCHA(ID,LEN,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       CHARACTER(*),INTENT(IN) :: VAL(LEN)
-!     ******************************************************************
-      IF(ID.eq.'ATOMID')THEN
-        IF(.not.NAT_SET)THEN
+!     *****************************************************************
+      IF(ID.EQ.'ATOMID')THEN
+        IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETCHA')
@@ -587,7 +599,7 @@
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETCHA')
         END IF
-        IF(.not.ALLOCATED(ATOMID))allocate(ATOMID(NAT))
+        IF(.NOT.ALLOCATED(ATOMID))ALLOCATE(ATOMID(NAT))
         ATOMID(:)=VAL(:)
       ELSE 
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
@@ -599,10 +611,15 @@
 !
 !     ..................................................................
       SUBROUTINE BANDDATA$WRITEFILE
+!     ******************************************************************
+!     **  THIS FUNCTION CREATES AN OUTPUT-FILEHANDLER FOR THE         **
+!     **  BANDDATA-FILE AND AND CALLS BANDDATA_WRITE WHICH DOES THE   **
+!     **  ACTUAL WRITING                                              **
+!     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: NFIL
-!     ..................................................................
+!     *****************************************************************
                              CALL TRACE$PUSH('BANDDATA$WRITEFILE')
       CALL FILEHANDLER$UNIT('BANDDATA',NFIL)
       REWIND NFIL
@@ -615,10 +632,15 @@
 !
 !     ..................................................................
       SUBROUTINE BANDDATA$READFILE
+!     ******************************************************************
+!     **  THIS FUNCTION CREATES AN INPUT-FILEHANDLER FOR THE          **
+!     **  BANDDATA-FILE AND AND CALLS BANDDATA_READ WHICH DOES THE    **
+!     **  ACTUAL READING                                              **
+!     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: NFIL
-!     ..................................................................
+!     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA$READFILE')
       CALL FILEHANDLER$UNIT('BANDDATAIN',NFIL)
       REWIND NFIL
@@ -627,14 +649,15 @@
                              CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDDATA$READFILE
-!     ..................................................................
-    
 !
 !     ..................................................................
       SUBROUTINE BANDDATA_WRITE(NFIL)
 !     ******************************************************************
-!     **  WAVES$GET                                                   **
-!     **  GET                                                         **
+!     ** THIS FUNCTION WRITES THE BANDDATA-FILE TO NFIL               **
+!     ** FOR THAT THE *_SET-VARIABLES IN THE BANDDATA-MODULE ARE      **
+!     ** CHECKED AND WHEN SOME VARIABLE, WHICH IS SUPPOSED TO BE      **
+!     ** WRITTEN TO THE FILE HAS NOT BEEN SET, IT WILL STOP WITH AN   ** 
+!     ** ERROR                                                        **
 !     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
@@ -645,32 +668,25 @@
       LOGICAL(4)             :: TPRINT=.FALSE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_WRITE')
-      SET=.true.
-      SET=SET.and.NDIM_SET.and.NSPIN_SET.and.NDIMD_SET
-      IF(TPRINT)PRINT*,NDIM_SET,NSPIN_SET,NDIMD_SET
-      SET=SET.and.EPW_SET.and.GBAS_SET.and.RBAS_SET
-      IF(TPRINT)PRINT*,EPW_SET,GBAS_SET,RBAS_SET
-      SET=SET.and.NR1_SET.and.NR2_SET.and.NR3_SET.and.NRG_SET.and.allocated(VOFR)
-      IF(TPRINT)PRINT*,NR1_SET,NR2_SET,NR3_SET,NRG_SET,allocated(VOFR)
-      SET=SET.and.NAT_SET.and.NSP_SET.and.NPRO_SET.and.LNXX_SET.and.LMNXX_set
-      IF(TPRINT)PRINT*,NAT_SET,NSP_SET,NPRO_SET,LNXX_SET,LMNXX_set
-      SET=SET.and.NBAREPRO_SET.and.LMX_SET
-      IF(TPRINT)PRINT*,NBAREPRO_SET,LMX_SET
-      SET=SET.and.NG_PROTO_SET.and.TYPE_PROTO_SET.and.GMAX_PROTO_SET
-      SET=SET.and.G1_PROTO_SET.and.DEX_PROTO_SET
-      IF(TPRINT)PRINT*,NG_PROTO_SET,TYPE_PROTO_SET,GMAX_PROTO_SET,G1_PROTO_SET,DEX_PROTO_SET
-      SET=SET.and.ALLOCATED(ISPECIES).and.allocated(LNX)
-      IF(TPRINT)PRINT*,ALLOCATED(ISPECIES),allocated(LNX)
-      SET=SET.and.ALLOCATED(LOX).and.allocated(LMNX)
-      IF(TPRINT)PRINT*,ALLOCATED(LOX),allocated(LMNX)
-      SET=SET.and.ALLOCATED(R).and.allocated(ATOMID).and.allocated(PROOFG)
-      IF(TPRINT)PRINT*,ALLOCATED(R),allocated(ATOMID),allocated(PROOFG)
-      SET=SET.and.NEL_SET.and.SPIN_SET
-      IF(TPRINT)PRINT*,NEL_SET,SPIN_SET
-      IF(.not.set)THEN
+      SET=.TRUE.
+      SET=SET.AND.NDIM_SET.AND.NSPIN_SET.AND.NDIMD_SET
+      SET=SET.AND.EPW_SET.AND.GBAS_SET.AND.RBAS_SET
+      SET=SET.AND.NR1_SET.AND.NR2_SET.AND.NR3_SET.AND.NRG_SET
+      SET=SET.AND.ALLOCATED(VOFR)
+      SET=SET.AND.NAT_SET.AND.NSP_SET.AND.NPRO_SET
+      SET=SET.AND.LNXX_SET.AND.LMNXX_SET
+      SET=SET.AND.NBAREPRO_SET.AND.LMX_SET
+      SET=SET.AND.NG_PROTO_SET.AND.TYPEID_PROTO_SET.AND.GMAX_PROTO_SET
+      SET=SET.AND.G1_PROTO_SET.AND.DEX_PROTO_SET
+      SET=SET.AND.ALLOCATED(ISPECIES).AND.ALLOCATED(LNX)
+      SET=SET.AND.ALLOCATED(LOX).AND.ALLOCATED(LMNX)
+      SET=SET.AND.ALLOCATED(R).AND.ALLOCATED(ATOMID)
+      SET=SET.AND.ALLOCATED(PROOFG)
+      SET=SET.AND.NEL_SET.AND.SPIN_SET
+      IF(.NOT.SET)THEN
         CALL ERROR$MSG('ERROR WRITING BANDDATA FILE')
         CALL ERROR$MSG('NOT ALL QUANTITIES SET')
-        CALL ERROR$STOP('BANDDATA$WRITE')
+        CALL ERROR$STOP('BANDDATA_WRITE')
       ENDIF
 !
 !     ==================================================================
@@ -693,7 +709,7 @@
 !     == SETUPS                                                       ==
 !     ==================================================================
       WRITE(NFIL)NAT,NSP,NPRO,LNXX,LMNXX,LMX,NBAREPRO
-      WRITE(NFIL)NG_PROTO,TYPE_PROTO,GMAX_PROTO,G1_PROTO,DEX_PROTO
+      WRITE(NFIL)NG_PROTO,TYPEID_PROTO,GMAX_PROTO,G1_PROTO,DEX_PROTO
       WRITE(NFIL)ISPECIES(:),LNX(:),LOX(:,:),LMNX(:),R(:,:),ATOMID(:)
       WRITE(NFIL)PROOFG(:,:,:)
       WRITE(NFIL)DH(:,:,:,:)
@@ -706,7 +722,7 @@
 !     ..................................................................
       SUBROUTINE BANDDATA_READ(NFIL)
 !     ******************************************************************
-!     **                                                              **
+!     ** THIS FUNCTION READS THE BANDDATA-FILE FROM NFIL              **
 !     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
@@ -714,59 +730,29 @@
       INTEGER(4)             :: ISPIN,IB
       INTEGER(4)             :: LNX1,NB
       INTEGER(4)             :: IOS
-      CHARACTER(82)          :: IOSTATMSG
-      CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION
-      LOGICAL(4)             :: TPRINT=.FALSE.
 !     ******************************************************************
                              CALL TRACE$PUSH('BANDDATA_READ')
-!
-!     ==================================================================
-!     == GENERAL QUANTITIES                                           ==
-!     ==================================================================
       READ(NFIL)NDIM,NSPIN,NDIMD
-      IF(TPRINT)PRINT*,NDIM,NSPIN,NDIMD
-      
       READ(NFIL)EPW,GBAS,RBAS
-      IF(TPRINT)PRINT*,"EPW,GBAS,RBAS",EPW,GBAS,RBAS
-      
       READ(NFIL)NR1,NR2,NR3,NRG
-      IF(TPRINT)PRINT*,"NR123, NRG",NR1,NR2,NR3,NRG
-      IF(.not.allocated(VOFR))allocate(VOFR(NRG,NDIMD))
+      IF(.NOT.ALLOCATED(VOFR))ALLOCATE(VOFR(NRG,NDIMD))
       READ(NFIL)VOFR(:,:)
-      IF(TPRINT)PRINT*,'POTENTIAL',NRG,VOFR(1,1)
-      
       READ(NFIL)NAT,NSP,NPRO,LNXX,LMNXX,LMX,NBAREPRO
-      IF(TPRINT)PRINT*,"NAT...",NAT,NSP,NPRO,LNXX,LMNXX,LMX,NBAREPRO
-      
-      READ(NFIL)NG_PROTO,TYPE_PROTO,GMAX_PROTO,G1_PROTO,DEX_PROTO
-      IF(TPRINT)PRINT*,"NG_PROTO...",NG_PROTO,TYPE_PROTO,GMAX_PROTO,G1_PROTO,DEX_PROTO
-      
-      IF(.not.allocated(ISPECIES))allocate(ISPECIES(NAT))
-      IF(.not.allocated(LNX))     allocate(LNX(NSP))
-      IF(.not.allocated(LMNX))    allocate(LMNX(NSP))
-      IF(.not.allocated(LOX))     allocate(LOX(LNXX,NSP))
-      IF(.not.allocated(R))       allocate(R(3,NAT))
-      IF(.not.allocated(ATOMID))  allocate(ATOMID(NAT))
-      IF(.not.allocated(PROOFG))  allocate(PROOFG(NG_PROTO,LNXX,NSP))
-      IF(.not.allocated(DH))      allocate(DH(LMNXX,LMNXX,NDIMD,NAT))
-      IF(.not.allocated(DO))      allocate(DO(LMNXX,LMNXX,NDIMD,NAT))
-
+      READ(NFIL)NG_PROTO,TYPEID_PROTO,GMAX_PROTO,G1_PROTO,DEX_PROTO
+      IF(.NOT.ALLOCATED(ISPECIES))ALLOCATE(ISPECIES(NAT))
+      IF(.NOT.ALLOCATED(LNX))     ALLOCATE(LNX(NSP))
+      IF(.NOT.ALLOCATED(LMNX))    ALLOCATE(LMNX(NSP))
+      IF(.NOT.ALLOCATED(LOX))     ALLOCATE(LOX(LNXX,NSP))
+      IF(.NOT.ALLOCATED(R))       ALLOCATE(R(3,NAT))
+      IF(.NOT.ALLOCATED(ATOMID))  ALLOCATE(ATOMID(NAT))
+      IF(.NOT.ALLOCATED(PROOFG))  ALLOCATE(PROOFG(NG_PROTO,LNXX,NSP))
+      IF(.NOT.ALLOCATED(DH))      ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
+      IF(.NOT.ALLOCATED(DO))      ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
       READ(NFIL)ISPECIES(:),LNX(:),LOX(:,:),LMNX(:),R(:,:),ATOMID(:)
       READ(NFIL)PROOFG(:,:,:)
       READ(NFIL)DH(:,:,:,:)
       READ(NFIL)DO(:,:,:,:)
       READ(NFIL)NEL,SPIN
-      IF(TPRINT)PRINT*,"ISPECIES ",ISPECIES(:)
-      IF(TPRINT)PRINT*,"LNX ",LNX(:)
-      IF(TPRINT)PRINT*,"LOX ",LOX(:,:)
-      IF(TPRINT)PRINT*,"LMNX ",LMNX(:)
-      IF(TPRINT)PRINT*,"R ",R(:,:)
-      IF(TPRINT)PRINT*,"ATOMID ",ATOMID(:)
-      IF(TPRINT)PRINT*,"PROOFG ",PROOFG(1,1,:)
-      IF(TPRINT)PRINT*,"DH ",DH(1,1,1,1)
-      IF(TPRINT)PRINT*,"DO ",DO(1,1,1,1)
-      IF(TPRINT)PRINT*,"NEL ",NEL
-      IF(TPRINT)PRINT*,"SPIN ",SPIN
-      CALL TRACE$POP
+                            CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDDATA_READ

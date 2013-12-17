@@ -2660,7 +2660,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       DEALLOCATE(LOX)
 
       IF(THISTASK.EQ.1) THEN
-        CALL PDOS$WRITE(NFIL,'PDOS_FROM_MAIN_PAW_CODE')
+        CALL PDOS$WRITE(NFIL,'011004')
       ENDIF
 !
 !     ==================================================================
@@ -2801,8 +2801,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !
 !     ..................................................................
       SUBROUTINE WAVES$COLLECTBANDDATA
-      USE WAVES_MODULE
+      USE WAVES_MODULE, ONLY: MAP  
       IMPLICIT NONE
+      INTEGER(4)            :: NDIM_
+      INTEGER(4)            :: NSPIN_
+      INTEGER(4)            :: NDIMD_
       REAL(8)               :: EPW_
       REAL(8)               :: RBAS_(3,3)
       REAL(8)               :: GBAS_(3,3)
@@ -2814,10 +2817,20 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       INTEGER(4)            :: NR1_
       INTEGER(4)            :: NR2_
       INTEGER(4)            :: NR3_
+      REAL(8)               :: NEL_
+      REAL(8)               :: SPIN_
 !     ..................................................................
-      CALL BANDDATA$SETI4('NDIM' ,NDIM)
-      CALL BANDDATA$SETI4('NSPIN',NSPIN)
-      CALL BANDDATA$SETI4('NDIMD',NDIMD)
+      CALL WAVES$GETI4('NDIM',NDIM_)
+      CALL WAVES$GETI4('NSPIN',NSPIN_)
+      CALL WAVES$GETI4('NDIMD',NDIMD_)
+      CALL BANDDATA$SETI4('NDIM' ,NDIM_)
+      CALL BANDDATA$SETI4('NSPIN',NSPIN_)
+      CALL BANDDATA$SETI4('NDIMD',NDIMD_)
+      
+      CALL DYNOCC$GETR8('NEL',NEL_)
+      CALL BANDDATA$SETR8('NEL',NEL_)
+      CALL DYNOCC$GETR8('SPIN',SPIN_)
+      CALL BANDDATA$SETR8('SPIN',SPIN_)
 
       CALL WAVES$GETR8('EPWPSI',EPW_)
       CALL BANDDATA$SETR8('EPW',EPW_)
@@ -2827,7 +2840,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL BANDDATA$SETI4('NR1',NR1_)
       CALL BANDDATA$SETI4('NR2',NR2_)
       CALL BANDDATA$SETI4('NR3',NR3_)
-    
       
       CALL CELL$GETR8A('T0',9,RBAS_)
       CALL BANDDATA$SETR8A('RBAS',9,RBAS_)

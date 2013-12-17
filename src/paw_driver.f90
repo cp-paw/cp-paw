@@ -1117,7 +1117,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==   BANDDATA                                                           ==
 !     ==========================================================================
       IF(TPRINT)THEN
-        CALL WAVES$COLLECTBANDDATA
         CALL BANDDATA$WRITEFILE
       ENDIF
 !   

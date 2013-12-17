@@ -1,17 +1,18 @@
 !
 !.......................................................................
 !     ******************************************************************
-!     ** THERE ARE THREE DIFFERENT VERSIONS OF THE PDOS FILE:         **
-!     **  MODE='PDOS_FROM_MAIN_PAW_CODE_OLD' (VERY OLD) NO FLAG GIVEN **
+!     ** THERE ARE DIFFERENT VERSIONS OF THE PDOS FILE:               **
+!     **   FLAG=OLD VERSION                                           ** 
+!     **        - NO FLAG PRESENT IN PDOS FILE, BT SET IN PDOS$READ   **
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS NO OCCUPATIONS                                  **
 !     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
-!     **  MODE='PDOS_FROM_MAIN_PAW_CODE' (RECENT) FLAG=011004         **
+!     **   FLAG=011004                                                **
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS OCCUPATIONS                                     **
 !     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
-!     **  MODE='PDOS_FROM_PAW_BANDS' (RECENT) FLAG=311013             **
-!     **        - PRODUCED BY KPOINT-DIAGONALISATION                  **
+!     **   FLAG=311013                                                **
+!     **        - PRODUCED BY KPOINT-DIAGONALISATION WITH PAW_BANDS   **
 !     **        - HAS OCCUPATIONS                                     **
 !     **        - COMPATIBLE WITH TETRAHEDRON METHOD                  **    
 !     ******************************************************************
@@ -50,7 +51,7 @@
         REAL(8)   ,ALLOCATABLE                   :: WKPT(:)
         TYPE(STATE_TYPE),ALLOCATABLE,TARGET      :: STATEARR(:,:)
         TYPE(STATE_TYPE),POINTER                 :: STATE
-        CHARACTER(32)                            :: MODE
+        CHARACTER(32)                            :: FLAG
       END MODULE PDOS_MODULE
 !
 !     ..................................................................
@@ -366,8 +367,8 @@
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(32),INTENT(OUT):: VAL
 !     ******************************************************************
-      IF(ID.EQ.'MODE') THEN
-        VAL=MODE
+      IF(ID.EQ.'FLAG') THEN
+        VAL=FLAG
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -642,8 +643,8 @@
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(32),INTENT(IN):: VAL
 !     ******************************************************************
-      IF(ID.EQ.'MODE') THEN
-        MODE=VAL
+      IF(ID.EQ.'FLAG') THEN
+        FLAG=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -655,8 +656,7 @@
 !     ..................................................................
       SUBROUTINE PDOS$READ(NFIL)
 !     ******************************************************************
-!     **  WAVES$GET                                                   **
-!     **  GET                                                         **
+!     ** READS PDOS FILE FROM NFIL INTO THE PDOS MODULE               **
 !     ******************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
@@ -665,7 +665,6 @@
       INTEGER(4)             :: LNX1,NB
       INTEGER(4)             :: IOS
       CHARACTER(82)          :: IOSTATMSG
-      CHARACTER(32)          :: FLAG   ! DATE SPECIFYING A VERSION/MODE
       LOGICAL(4)             :: TCHK
       REAL(8)                :: OCCSUM
 !     ******************************************************************
@@ -682,19 +681,16 @@
         PRINT*,'WARNING: NO OCCUPATIONS PRESENT IN PDOS FILE'
         PRINT*,'            OCCUPATIONS WILL BE SET TO 0'
         FLAG='OLD VERSION'
-        MODE='PDOS_FROM_MAIN_PAW_CODE_OLD'
         REWIND(NFIL)
         READ(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX
       END IF
-      IF(FLAG.eq.'011004')MODE='PDOS_FROM_MAIN_PAW_CODE'
-      IF(FLAG.eq.'311013')MODE='PDOS_FROM_PAW_BANDS'
       
       ALLOCATE(LNX(NSP))
       ALLOCATE(LOX(LNXX,NSP))
       ALLOCATE(ISPECIES(NAT))
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
       
-      IF(MODE.EQ.'PDOS_FROM_PAW_BANDS')THEN
+      IF(FLAG.EQ.'311013')THEN
         READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
       ENDIF
 
@@ -731,21 +727,18 @@
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
           READ(NFIL,ERR=9998,END=9998)XK(:,IKPT),NB,WKPT(IKPT)
-!print*,"XK",IKPT,ISPIN,XK(:,IKPT),NB,WKPT(IKPT)
           STATE%NB=NB
           ALLOCATE(STATE%EIG(NB))
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
           ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
-            IF(FLAG.eq.'011004'.or.FLAG.eq.'311013') THEN
-              READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
-    &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
-!print*,"OCC",IKPT,ISPIN,IB,STATE%EIG(IB),STATE%OCC(IB)
-!print*,"PROJ",abs(STATE%VEC(:,:,IB))
-OCCSUM=OCCSUM+STATE%OCC(IB)
-            ELSE
+            IF(FLAG.eq.'OLD VERSION') THEN
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
+            ELSE
+              READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB) &
+    &                          ,STATE%OCC(IB),STATE%VEC(:,:,IB)
+              OCCSUM=OCCSUM+STATE%OCC(IB)
             END IF
           ENDDO
         ENDDO
@@ -773,33 +766,28 @@ print*,"OCCSUM",OCCSUM
       END SUBROUTINE PDOS$READ
 !
 !     ..................................................................
-      SUBROUTINE PDOS$WRITE(NFIL,MODE_)
+      SUBROUTINE PDOS$WRITE(NFIL,FLAG_)
 !     ******************************************************************
-!     **  WRITES FIRST PART OF PDOS FILE TO NFIL, MODE INDICATES IF   **
-!     **  THE CALL TO THIS FUNCTION COMES FROM THE MAIN PAW CODE OR   **
-!     **  THE PAW_BANDS TOOL. THE DATA TO BE WRITTEN, E.G. NAT,NSP,...**
-!     **  HAVE TO BE TRANSFERED TO THE PDOS-MODULE BEFORE CALLING THIS**
-!     **  FUNCTION. THE KPOINTS, ENERGIES, PROJECTIONS AND OCCUPATIONS**
-!     **  ARE NOT WRITTEN WITH THIS FUNCTION, BUT WITH PDOS$WRITEK    **
+!     ** WRITES FIRST PART OF PDOS FILE TO NFIL. THE DATA TO BE       **
+!     ** WRITTEN, E.G. NAT,NSP,... HAS TO BE TRANSFERED TO THE        **
+!     ** PDOS-MODULE BEFORE CALLING THIS FUNCTION. THE KPOINTS,       **
+!     ** ENERGIES, PROJECTIONS AND OCCUPATIONS ARE NOT WRITTEN WITH   **
+!     ** THIS FUNCTION, BUT WITH PDOS$WRITEK                          **
+!     **                                                              **
+!     ** FIXME: THE FLAG IS STILL AN INPUT VARIABLE, BECAUSE FOR THE  ** 
+!     ** THE MAIN PAW CODE WILL WRITE ITS PDOS FILE IN THE MODE       **
+!     ** REPRESENTED BY FLAG='011004'.                                **
+!     ** LATER FLAG=011004 AND FLAG=311013 WILL BE UNIFIED AND THE    **
+!     ** INPUT ARGUMENT FLAG_ REMOVED                                 **
 !     ******************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFIL
-      CHARACTER(32),INTENT(IN)     :: MODE_
-      CHARACTER(32)                :: FLAG
+      CHARACTER(32),INTENT(IN)     :: FLAG_
       INTEGER(4)                   :: ISP,IKPT,ISPIN,IB
       INTEGER(4)                   :: LNX1,NB
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
-      IF(MODE_.EQ.'PDOS_FROM_MAIN_PAW_CODE')THEN
-        FLAG='011004'
-      ELSE IF(MODE_.EQ.'PDOS_FROM_PAW_BANDS')THEN
-        FLAG='311013'
-      ELSE
-        CALL ERROR$MSG('MODE UNKNOWN')
-        CALL ERROR$CHVAL('MODE',MODE_)
-        CALL ERROR$STOP('PDOS$WRITE')
-      ENDIF
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
@@ -807,7 +795,7 @@ print*,"OCCSUM",OCCSUM
       WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
 
-      IF(MODE_.EQ.'PDOS_FROM_PAW_BANDS')THEN
+      IF(FLAG_.EQ.'311013')THEN
         WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
       ENDIF
 !

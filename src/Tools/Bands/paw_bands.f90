@@ -740,15 +740,14 @@ print*,'nb ',nb
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      SUBROUTINE BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,&
+     &   GIDG_PROTO,TI_H,TI_S)
 !     **************************************************************************
 !     **  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                         **
 !     **************************************************************************
       USE STRINGS_MODULE
       USE BANDDATA_MODULE
-      USE RADIAL_MODULE
       USE WAVES_MODULE, ONLY : GSET_TYPE
-      USE PLANEWAVE_MODULE, ONLY : THIS
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN)               :: TFIXSYMMETRYBREAK
@@ -769,7 +768,7 @@ print*,'nb ',nb
       REAL(8)                             :: GDIFF(3,3,3)
       INTEGER(4)                          :: I1,I2,I3,J
       REAL(8)                             :: EPW2
-      INTEGER(4)                          :: THISTASK,NTASKS,index,NGL
+      INTEGER(4)                          :: THISTASK,NTASKS,NGL
       INTEGER(4),allocatable              :: ICOLOR(:)
       CHARACTER(512)                      :: FFTCID
 !
@@ -808,7 +807,6 @@ print*,'nb ',nb
      &                               ,0,NR1,NR2,NR3)
       CALL PLANEWAVE$SELECT('WAVE GAMMA')     
 
-      CALL PLANEWAVE_COUNTG(GBAS,KVEC,EPW2,NG)
       CALL PLANEWAVE$GETI4('NGG',NG)
       IF(TPRINT)PRINT*,"EPW2 NG",EPW2,NG
       ALLOCATE(GVEC(3,NG))
@@ -827,7 +825,7 @@ print*,'nb ',nb
       CALL GBASS(RBAS,GBAS,GWEIGHT)
 
 !     == GENERATE G-GRID FOR PROJECTORS ========================================
-      CALL RADIAL$NEW(GRIDTYPE(TYPE_PROTO),GIDG_PROTO)
+      CALL RADIAL$NEW(TYPEID_PROTO,GIDG_PROTO)
       !DEX_PROTO=LOG(GMAX_PROTO/G1_PROTO)/REAL(NG_PROTO-1,KIND=8)
       CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG_PROTO)
       CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1_PROTO)
@@ -844,7 +842,7 @@ print*,'nb ',nb
       allocate(HPSI1(NG,NDIM,1))
       allocate(PSI1(NG,NDIM,1))
       !EVALUATE MATRIX-ELEMENTS OF PS-POTENTIAL
-      !FIXME: introduce G-G', this part could use some work
+      !FIXME: INTRODUCE G-G' AS OPTIMIZATION
       DO ISPIN=1,NSPIN
         DO I=1,NG
           DO IDIM1=1,NDIM
@@ -852,7 +850,6 @@ print*,'nb ',nb
             PSI1(:,:,:)=0.0D0
             PSI1(I,IDIM1,1)=CMPLX(1.0D0,0.0D0)
             HPSI1(:,:,:)=0.0D0
-            index=SUM(THIS%NGLARR(1:THISTASK-1))
             call WAVES_VPSI(GSET,NGL,NDIM,1,NRG,PSI1(:,:,:),&
       &                     VOFR(:,ISPIN),HPSI1(:,:,:))
          
@@ -1106,20 +1103,18 @@ print*,'nb ',nb
       !SOLVE GENERALIZED EIGENVALUE PROBLEM
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.eq.1)then
-        !USING ZHEGVD
-        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8_D')
-        CALL LIB$GENERALEIGENVALUEC8_D(NG2*NDIM,TPROJ,TI_HK,TI_SK,E,U)
-        IF(TTIMING)CALL TRACE$POP
+        CALL LAPACKOPTIONS$SETCH('GENERALEIGENVALUER8_MODE','ZHEGVD')
       ELSE IF(METHOD.eq.2)then
-        !USING ZHEGV
-        IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8')
-        CALL LIB$GENERALEIGENVALUEC8(NG2*NDIM,TI_HK,TI_SK,E,U)
-        IF(TTIMING)CALL TRACE$POP
+        CALL LAPACKOPTIONS$SETCH('GENERALEIGENVALUER8_MODE','ZHEGV')
       ELSE 
         CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
         CALL ERROR$I4VAL('METHOD_DIAG',METHOD)
         CALL ERROR$STOP('BANDS_KPOINT')
-      ENDiF
+      ENDIF
+      
+      IF(TTIMING)CALL TRACE$PUSH('LIB$GENERALEIGENVALUEC8_ZHEGVD')
+      CALL LIB$GENERALEIGENVALUEC8(NG2*NDIM,TPROJ,TI_HK,TI_SK,E,U,'ZHEGVD')
+      IF(TTIMING)CALL TRACE$POP
 
       IF(TTIMING)CALL TIMING$CLOCKOFF('DIAG')
       IF(TPROJ)THEN
@@ -2120,10 +2115,10 @@ END MODULE
         IF(.NOT.TUSESYM)THEN
           CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
           REWIND NFILOUT
-          CALL PDOS$WRITE(NFILOUT,'PDOS_FROM_PAW_BANDS')
+          CALL PDOS$WRITE(NFILOUT,'311013')
         ELSE
-          WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE TUSESYM=T'
-          WRITE(NFILO,*)'AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!!!!'
+          WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE'
+          WRITE(NFILO,*)'TUSESYM=T AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!'
         ENDIF
       ENDIF
 !       == ITERATE K-POINTS =================================================

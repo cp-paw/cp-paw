@@ -367,6 +367,7 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 #########################################################################
 ${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+
 ${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PPAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 #
@@ -383,6 +384,7 @@ ${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}
 	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
+
 ${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PPAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PPAWLIBFULL} paw.o
@@ -1054,7 +1056,6 @@ endif
  ${OBJDIR}/paw_bands.o : PDOS_MODULE.mod
  ${OBJDIR}/paw_bands.o : STRINGS_MODULE.mod
  ${OBJDIR}/paw_bands.o : LINKEDLIST_MODULE.mod
- ${OBJDIR}/paw_bands.o : PLANEWAVE_MODULE.mod
  SPINDIR_MODULE.mod : ${OBJDIR}/paw_bands.o
  ORBITALS_MODULE.mod : ${OBJDIR}/paw_bands.o
  READCNTL_MODULE.mod : ${OBJDIR}/paw_bands.o

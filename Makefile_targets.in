@@ -215,6 +215,12 @@ libfull_new_parallel:
 #---------------------------------------------------------------------------
 ${TOOLS}: lib_new
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}; ${MAKE} -f Makefile ${BINDIR}/paw_$@.x 
+#
+#---------------------------------------------------------------------------
+#--          separate target for bands_parallel, which is the only tool,  --
+#--          which is the only tool that can also be build as a parallel  --
+#--          version                                                      --
+#---------------------------------------------------------------------------
 bands_parallel: lib_new_parallel
 	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/${TOOLCOMP}_parallel; ${MAKE} -f Makefile ${BINDIR}/ppaw_bands.x 
 #
