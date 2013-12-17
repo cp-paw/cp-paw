@@ -480,11 +480,13 @@ clean_dosplot:
 #
 ${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIBFULL}
 	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpawfull ${LIBS}
+#
 ${BINDIR}/ppaw_bands.x: ${OBJBANDS} ${PPAWLIBFULL}
 	${LINK} -o ${BINDIR}/ppaw_bands.x ${OBJBANDS} -L${OBJDIR}  -lppawfull ${LIBS}
 #
 clean_bands:
 	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
+	rm -f ${OBJBANDS}; rm -f ${BINDIR}/ppaw_bands.x
 #
 ${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR}  -lpaw ${LIBS}

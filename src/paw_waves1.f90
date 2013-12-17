@@ -1801,6 +1801,8 @@ CALL ERROR$STOP('WAVES$ETOT')
 !
 !     ==================================================================
 !     ==  SEND DATA TO BANDDATA MODULE                                ==
+!     ==  THIS HAS TO BE DONE HERE, BECAUSE VOFR, DH AND DO ARE ONLY  ==
+!     ==  AVAILABLE HERE                                              ==
 !     ================================================================== 
       CALL BANDDATA$SETI4('LMNXX',LMNXX)
       CALL BANDDATA$SETI4('NAT',NAT)
@@ -1809,7 +1811,6 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL BANDDATA$SETR8A('VOFR',NRL*NDIMD,RHO(:,:))
       CALL BANDDATA$SETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH(:,:,:,:))
       CALL BANDDATA$SETR8A('DO',LMNXX*LMNXX*NDIMD*NAT,DO(:,:,:,:))
-      DEALLOCATE(DO)
 !
 !     ==================================================================
 !     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==
@@ -1849,6 +1850,7 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH)
       DEALLOCATE(RHO)
       DEALLOCATE(DH)
+      DEALLOCATE(DO)
 !
 !     ==========================================================================
 !     ==  ADD CONTRIBUTION FROM DMFT INTERFACE                                ==
