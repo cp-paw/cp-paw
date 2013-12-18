@@ -71,6 +71,8 @@ MODULE DYNOCC_MODULE
 CHARACTER(1):: STARTTYPE       ! CAN BE 'N','E','X'
 INTEGER(4)  :: NB=0            ! #(BANDS)
 INTEGER(4)  :: NKPT=0          ! #(K-POINTS)
+INTEGER(4)  :: NKDIV(3)        ! #NKDIV
+INTEGER(4)  :: ISHIFT(3)       ! #ISHIFT
 INTEGER(4)  :: NSPIN=0         ! #(SPINS)
 LOGICAL(4)  :: TDYN=.FALSE.    ! DYNAMICAL/STATIC OCCUPATION
 LOGICAL(4)  :: RESET=.TRUE.    ! SETS OUTPUT MODE OF DYNOCC$REPORT
@@ -454,6 +456,39 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !
+!     ..................................................................
+      SUBROUTINE DYNOCC$SETI4A(ID,LEN,VAL)
+      USE DYNOCC_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: VAL(LEN)
+!     ******************************************************************
+      IF(ID.EQ.'NKDIV') THEN
+        IF(NKPT.EQ.0) NKPT=VAL(1)*VAL(2)*VAL(3)
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('DYNOCC$SETI4')
+        END IF
+        NKDIV(1:3)=VAL(1:3)
+      ELSE IF(ID.EQ.'ISHIFT') THEN
+        IF(LEN.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('DYNOCC$SETI4')
+        END IF
+        ISHIFT(1:3)=VAL(1:3)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('DYNOCC$SETI4A')
+      END IF
+      RETURN
+      END
+!
 !      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC$SETR8A(ID_,LEN_,VAL)
 !      *************************************************************************
@@ -715,19 +750,35 @@ END MODULE DYNOCC_MODULE
        END IF
        RETURN
        END
-!      .................................................................
-       SUBROUTINE DYNOCC$GETI4A(ID_,LEN_,VAL)
-!      *****************************************************************
-!      **  SET INTEGER PARAMETERS                                     **
-!      *****************************************************************
-       USE DYNOCC_MODULE
-       IMPLICIT NONE
-       CHARACTER(*),INTENT(IN) :: ID_
-       INTEGER(4)  ,INTENT(IN)::  LEN_
-       INTEGER(4)  ,INTENT(OUT):: VAL(LEN_)
-!      *****************************************************************
-       IF(ID_.EQ.'') THEN
+!     .................................................................
+      SUBROUTINE DYNOCC$GETI4A(ID_,LEN_,VAL)
+!     *****************************************************************
+!     **  SET INTEGER PARAMETERS                                     **
+!     *****************************************************************
+      USE DYNOCC_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+      INTEGER(4)  ,INTENT(IN) :: LEN_
+      INTEGER(4)  ,INTENT(OUT):: VAL(LEN_)
+!     *****************************************************************
+      IF(ID_.EQ.'') THEN
          VAL(:)=0
+      ELSE IF(ID_.EQ.'NKDIV') THEN
+        IF(LEN_.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$I4VAL('LEN',LEN_)
+          CALL ERROR$STOP('DYNOCC$GETI4')
+        END IF
+        VAL(1:3)=NKDIV(1:3)
+      ELSE IF(ID_.EQ.'ISHIFT') THEN
+        IF(LEN_.NE.3) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID_)
+          CALL ERROR$I4VAL('LEN',LEN_)
+          CALL ERROR$STOP('DYNOCC$GETI4')
+        END IF
+        VAL(1:3)=ISHIFT(1:3)
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)

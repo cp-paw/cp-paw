@@ -2558,6 +2558,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       LOGICAL(4)             :: TKGROUP
       INTEGER(4)             :: GID
       REAL(8)   ,ALLOCATABLE :: RI(:)
+      INTEGER(4)             :: NKDIV(3)
+      INTEGER(4)             :: ISHIFT(3)
+      REAL(8)                :: NEL
+      REAL(8)                :: RNTOT
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES$WRITEPDOS')
       IF(.NOT.THAMILTON) THEN
@@ -2577,6 +2581,18 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL PDOS$SETI4('NAT',NAT)
       CALL PDOS$SETI4('NSP',NSP)
       CALL PDOS$SETI4('NKPT',NKPT)
+      CALL DYNOCC$GETI4A('NKDIV',3,NKDIV)
+      CALL PDOS$SETI4A('NKDIV',3,NKDIV)
+      CALL DYNOCC$GETI4A('ISHIFT',3,NKDIV)
+      CALL PDOS$SETI4A('ISHIFT',3,ISHIFT)
+      CALL DYNOCC$GETR8('NEL',NEL)
+      CALL PDOS$SETR8('NEL',NEL)
+      IF(NSPIN.eq.1)THEN
+        RNTOT=0.5D0*NEL
+      ELSE
+        RNTOT=NEL
+      ENDIF
+      CALL PDOS$SETR8('RNTOT',RNTOT)
       CALL PDOS$SETI4('NSPIN',NSPIN)
       CALL PDOS$SETI4('NDIM',NDIM)
       CALL PDOS$SETI4('NPRO',NPRO)
@@ -2584,11 +2600,15 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL PDOS$SETI4A('LNX',NSP,MAP%LNX)
       CALL PDOS$SETI4A('LOX',LNXX*NSP,MAP%LOX)
       CALL PDOS$SETI4A('ISPECIES',NAT,MAP%ISP)
-
-      IF(THISTASK.EQ.1) THEN
-        CALL FILEHANDLER$UNIT('PDOS',NFIL)
-        REWIND NFIL
-      END IF
+      IF(TINV)THEN
+        !TRICLINIC WITH INVERSION SYMMETRY
+        CALL PDOS$SETI4('SPACEGROUP',2)
+      ELSE
+        !TRICLINIC WITHOUT INVERSION SYMMETRY
+        CALL PDOS$SETI4('SPACEGROUP',1)
+      ENDIF
+      CALL PDOS$SETL4('TSHIFT',.FALSE.)
+      CALL PDOS$SETL4('TINV',TINV)
 !
 !     ==================================================================
 !     == ATOMIC STRUCTURE                                             ==
@@ -2659,7 +2679,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       DEALLOCATE(LOX)
 
       IF(THISTASK.EQ.1) THEN
-        CALL PDOS$WRITE(NFIL,'011004')
+        CALL FILEHANDLER$UNIT('PDOS',NFIL)
+        REWIND NFIL
+        CALL PDOS$WRITE(NFIL,'181213')
       ENDIF
 !
 !     ==================================================================

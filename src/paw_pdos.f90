@@ -11,10 +11,12 @@
 !     **        - PRODUCED BY PAW DIECTLY                             **
 !     **        - HAS OCCUPATIONS                                     **
 !     **        - NOT COMPATIBLE WITH TETRAHEDRON METHOD              **    
-!     **   FLAG=311013                                                **
-!     **        - PRODUCED BY KPOINT-DIAGONALISATION WITH PAW_BANDS   **
+!     **   FLAG=181213                                                **
+!     **        - PRODUCED BY KPOINT-DIAGONALISATION WITH PAW_BANDS OR**
+!     **             OR PAW DIRECTLY                                  **
 !     **        - HAS OCCUPATIONS                                     **
-!     **        - COMPATIBLE WITH TETRAHEDRON METHOD                  **    
+!     **        - COMPATIBLE WITH TETRAHEDRON METHOD                  **
+!     **        - HAS SYMMETRY INFORMATIONS (SPACEGROUP)              **
 !     ******************************************************************
 
       MODULE PDOS_MODULE
@@ -24,6 +26,7 @@
           REAL(8)   ,POINTER                     :: OCC(:)
           COMPLEX(8),POINTER                     :: VEC(:,:,:)
         END TYPE STATE_TYPE 
+        CHARACTER(6)                             :: FLAG
         INTEGER(4)                               :: NAT
         INTEGER(4)                               :: NSP
         INTEGER(4)                               :: NKPT
@@ -51,7 +54,8 @@
         REAL(8)   ,ALLOCATABLE                   :: WKPT(:)
         TYPE(STATE_TYPE),ALLOCATABLE,TARGET      :: STATEARR(:,:)
         TYPE(STATE_TYPE),POINTER                 :: STATE
-        CHARACTER(6)                             :: FLAG
+        INTEGER(4)                               :: SPACEGROUP
+        LOGICAL(4)                               :: TSHIFT
       END MODULE PDOS_MODULE
 !
 !     ..................................................................
@@ -75,6 +79,8 @@
         VAL=LNXX
       ELSE IF(ID.EQ.'NPRO') THEN
         VAL=NPRO
+      ELSE IF(ID.EQ.'SPACEGROUP') THEN
+        VAL=SPACEGROUP
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -105,6 +111,8 @@
         LNXX=VAL
       ELSE IF(ID.EQ.'NPRO') THEN
         NPRO=VAL
+      ELSE IF(ID.EQ.'SPACEGROUP') THEN
+        SPACEGROUP=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -316,6 +324,8 @@
 !     ******************************************************************
       IF(ID.EQ.'TINV') THEN
         VAL=TINV
+      ELSE IF(ID.EQ.'TSHIFT') THEN
+        VAL=TSHIFT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -333,6 +343,8 @@
 !     ******************************************************************
       IF(ID.EQ.'TINV') THEN
         TINV=VAL
+      ELSE IF(ID.EQ.'TSHIFT') THEN
+        TSHIFT=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -690,10 +702,10 @@
       ALLOCATE(ISPECIES(NAT))
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
       
-      IF(FLAG.EQ.'311013')THEN
+      IF(FLAG.EQ.'181213')THEN
         READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
+        READ(NFIL)SPACEGROUP,TSHIFT
       ENDIF
-
 !
 !     ==================================================================
 !     == ATOMIC STRUCTURE                                             ==
@@ -774,11 +786,6 @@ print*,"OCCSUM",OCCSUM
 !     ** ENERGIES, PROJECTIONS AND OCCUPATIONS ARE NOT WRITTEN WITH   **
 !     ** THIS FUNCTION, BUT WITH PDOS$WRITEK                          **
 !     **                                                              **
-!     ** FIXME: THE FLAG IS STILL AN INPUT VARIABLE, BECAUSE FOR THE  ** 
-!     ** THE MAIN PAW CODE WILL WRITE ITS PDOS FILE IN THE MODE       **
-!     ** REPRESENTED BY FLAG='011004'.                                **
-!     ** LATER FLAG=011004 AND FLAG=311013 WILL BE UNIFIED AND THE    **
-!     ** INPUT ARGUMENT FLAG_ REMOVED                                 **
 !     ******************************************************************
       USE PDOS_MODULE
       IMPLICIT NONE
@@ -788,15 +795,17 @@ print*,"OCCSUM",OCCSUM
       INTEGER(4)                   :: LNX1,NB
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
+      FLAG=FLAG_
 !
 !     ==================================================================
 !     == GENERAL QUANTITIES                                           ==
 !     ==================================================================
-      WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG
+      WRITE(NFIL)NAT,NSP,NKPT,NSPIN,NDIM,NPRO,LNXX,FLAG_
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
 
-      IF(FLAG_.EQ.'311013')THEN
+      IF(FLAG_.EQ.'181213')THEN
         WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
+        WRITE(NFIL)SPACEGROUP,TSHIFT
       ENDIF
 !
 !     ==================================================================

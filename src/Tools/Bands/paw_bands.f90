@@ -15,9 +15,10 @@
       TYPE(LL_TYPE)             :: LL_CNTL
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NFIL
-      INTEGER(4)                :: MODE
       LOGICAL(4)                :: TCHK
       INTEGER(4)                :: THISTASK,NTASKS
+      CHARACTER(32)             :: MODE
+      INTEGER(4)                :: NBANDS,NPDOS
 !     ******************************************************************
 !
 !     ==========================================================================
@@ -64,27 +65,46 @@
 !     ==========================================================================
 !     ==  SELECT METHOD                                                       ==
 !     ==========================================================================
-      MODE=1
+      !DO BANDSTRUCTURE
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD',1)
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'MODE',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'MODE',1,MODE)
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'BANDSTRUCTURE',NBANDS)
+      IF(NBANDS.EQ.1)THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
+        !READ MODE
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'MODE',0,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'MODE',1,MODE)
+        ELSE
+          MODE='DIAGONALISATION'
+        ENDIF
+        IF(MODE.EQ.'DIAGONALISATION')THEN
+          CALL BANDS_BANDSTRUCTURE_DIAG(LL_CNTL,NFIL,NFILO)
+        ELSE IF(MODE.EQ.'LINEARINTERPOLATION')THEN
+          IF(THISTASK.EQ.1)THEN
+            CALL BANDS_BANDSTRUCTURE_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
+          ENDIF
+        ELSE
+          CALL ERROR$MSG('BANDS: MODE UNKNOWN')
+          CALL ERROR$CHVAL('MODE',MODE)
+          CALL ERROR$STOP('PAW_BANDS')
+        ENDIF
+      ELSE IF(NBANDS.GT.1)THEN
+        CALL ERROR$MSG('TOO MANY BANDSTRCTURE-BLOCKS GIVEN, JUST ONE BLOCK ALLOWED')
+        CALL ERROR$I4VAL('NBANDS',NBANDS)
+        CALL ERROR$STOP('PAW_BANDS')
       ENDIF
-      IF(MODE.eq.0)THEN
-        !OLD MODE FOR CALCULATION OF BANDSTRUCTURE
-        CALL BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
-      ELSE IF(MODE.EQ.1)THEN
-        !NEW MODE FOR CALCULATION OF BANDSTRUCTURE
-        CALL BANDS_DIAG(LL_CNTL,NFIL,NFILO)
-      ELSE IF(MODE.EQ.2)THEN
-        !GENERATE A NEW PDOS-FILE WITH A SET OF KPOINTS
+      
+      !DO PDOS
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'PDOS',NPDOS)
+      IF(NPDOS.EQ.1)THEN
         CALL BANDS_PDOS(LL_CNTL,NFIL,NFILO)
-      ELSE
-        CALL ERROR$MSG('!METHOD!ID NOT IMPLEMENTED')
-        CALL ERROR$I4VAL('MODE',MODE)
-        CALL ERROR$STOP('MAIN')
+      ELSE IF(NPDOS.GT.1)THEN
+        CALL ERROR$MSG('TOO MANY PDOS-BLOCKS GIVEN, JUST ONE BLOCK ALLOWED')
+        CALL ERROR$I4VAL('NPDOS',NPDOS)
+        CALL ERROR$STOP('PAW_BANDS')
       ENDIF
 !
 !     ==========================================================================
@@ -187,7 +207,7 @@
       END SUBROUTINE STANDARDFILES_BANDS
 !
 !      ..1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
+      SUBROUTINE BANDS_BANDSTRUCTURE_LINEAR_INTERPOLATION(LL_CNTL,NFIL,NFILO)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -205,7 +225,9 @@
       INTEGER(4)                :: NSPIN
       INTEGER(4)                :: NDIM !=2 FOR SPINOR WF; OTHERWISE =1
       REAL(8)                   :: RBAS(3,3) ! REAL-SPACE LATTICE VECTORS
-      REAL(8)                   :: GBAS(3,3) ! REAL-SPACE LATTICE VECTORS
+      REAL(8)                   :: GBAS(3,3) ! G-SPACE LATTICE VECTORS
+      REAL(8)                   :: GBASINV(3,3) ! INVERTED G-SPACE LATTICE VECTORS
+      REAL(8)                   :: KVECSCALE
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
       REAL(8)      ,ALLOCATABLE :: XK(:,:) ! K IN RELATIVE COORDINATES
       REAL(8)      ,ALLOCATABLE :: EB(:,:,:)
@@ -223,13 +245,16 @@
       INTEGER(4)                :: IND
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
       REAL(8)                   :: XK1(3),XK2(3),XQ(3)
+      REAL(8)                   :: KVEC1(3),KVEC2(3)
       CHARACTER(512)            :: FILE
       INTEGER(4)                :: NLINE,ILINE
       INTEGER(4)                :: NQ
       INTEGER(4)                :: NP
       REAL(8)                   :: X1,X2
       REAL(8)                   :: SVAR,svar1
-      LOGICAL(4)                :: TCHK,TCHK1
+      LOGICAL(4)                :: TCHK,TCHK1,TCHK2
+      LOGICAL(4)                :: TAPPEND
+      REAL(8)                   :: SCALE
       LOGICAL(4),PARAMETER      :: TREFINE=.FALSE.
 !     **************************************************************************
 !
@@ -362,28 +387,109 @@ PRINT*,'N1B ',N1B,N2B,N3B
 !
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+       CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
        CALL LINKEDLIST$NLISTS(LL_CNTL,'LINE',NLINE)
        X2=0.D0
        DO ILINE=1,NLINE
+         WRITE(NFILO,FMT='(72("="))')
+         WRITE(NFILO,*)'LINE-BLOCK:',ILINE,' of ',NLINE
+         WRITE(NFILO,FMT='(72("="))')
+!
+         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+         CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
          CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
 !
-         CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'TAPPEND',0,TCHK)
          IF(TCHK) THEN
-           CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
-           CALL FILEHANDLER$SETFILE('BANDS',.FALSE.,FILE)
-           CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','REPLACE')
-           CALL FILEHANDLER$SETSPECIFICATION('BANDS','POSITION','APPEND')
-           CALL FILEHANDLER$SETSPECIFICATION('BANDS','ACTION','WRITE')
-           CALL FILEHANDLER$SETSPECIFICATION('BANDS','FORM','FORMATTED')
-           X1=0.D0
-           X2=1.D0
+           CALL LINKEDLIST$GET(LL_CNTL,'TAPPEND',1,TAPPEND)
          ELSE
-           X1=X2
-           X2=X1+1.D0
-         END IF
+           TAPPEND=.FALSE.
+         ENDIF
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
+          IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+            CALL FILEHANDLER$SETFILE('BANDS',.FALSE.,FILE)
+            IF(TAPPEND)THEN
+              WRITE(NFILO,*)'ATTACHING OUTPUT FOR LINE-BLOCK',ILINE,' TO EXISTING FILE ',TRIM(FILE)
+              CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','OLD')
+            ELSE
+              WRITE(NFILO,*)'WRITING OUTPUT FOR LINE-BLOCK',ILINE,' TO NEW FILE ',TRIM(FILE)
+              CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','REPLACE')
+            ENDIF
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','POSITION','APPEND')
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','ACTION','WRITE')
+            CALL FILEHANDLER$SETSPECIFICATION('BANDS','FORM','FORMATTED')
+            WRITE(NFILO,*)'OUTPUT FILE: ',trim(FILE)
+          ELSE
+            CALL ERROR$MSG('NO OUTPUT FILE GIVEN')
+            CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+            CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
+          END IF
 !
-         CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
-         CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
+        !INPUT OF K-VECTORS
+        CALL LIB$INVERTR8(3,GBAS,GBASINV) 
+
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'XK1',0,TCHK1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC1',0,TCHK2)
+        IF(TCHK1)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK1',1,XK1)
+          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          KVEC1=MATMUL(GBAS,XK1)
+        ELSE IF (TCHK2)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'KVEC1',1,KVEC1)
+          WRITE(NFILO,*)'FIRST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'KVECSCALE',0,TCHK)
+          IF(TCHK)THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'KVECSCALE',1,KVECSCALE)
+            WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
+            KVEC1=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE*KVEC1
+          ENDIF
+          XK1=MATMUL(GBASINV,KVEC1)
+        ELSE
+          CALL ERROR$MSG('NO XK1 OR KVEC1 GIVEN')
+          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
+        ENDIF
+
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'XK2',0,TCHK1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'KVEC2',0,TCHK2)
+        IF(TCHK1)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'XK2',1,XK2)
+          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN RELATIVE COORDINATES'
+          KVEC2=MATMUL(GBAS,XK2)
+        ELSE IF (TCHK2)THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'KVEC2',1,KVEC2)
+          WRITE(NFILO,*)'LAST K-POINT: GIVEN IN ABSOLUTE COORDINATES'
+
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'KVECSCALE',0,TCHK)
+          IF(TCHK)THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'KVECSCALE',1,KVECSCALE)
+            WRITE(NFILO,*)'INPUT SCALE FACTOR (KVEC=KVECINPUT*(2*PI)/SCALE): ',KVECSCALE
+            KVEC2=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE*KVEC2
+          ENDIF
+          XK2=MATMUL(GBASINV,KVEC2)
+        ELSE
+          CALL ERROR$MSG('NO XK2 OR KVEC2 GIVEN')
+          CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
+        ENDIF
+
+        WRITE(NFILO,*)'FIRST K-POINT IN RELATIVE COORDINATES:',XK1
+        WRITE(NFILO,*)'FIRST K-POINT IN ABSOLUTE COORDINATES:',KVEC1
+
+        WRITE(NFILO,*)'LAST K-POINT IN RELATIVE COORDINATES:',XK2
+        WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
+        SCALE=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE
+        IF(TAPPEND)THEN
+          X1=X2
+          X2=X2+sqrt(sum((KVEC2-KVEC1)**2))/SCALE
+        ELSE
+          X1=0.0D0
+          X2=sqrt(sum((KVEC2-KVEC1)**2))/SCALE
+        ENDIF
+         
          NP=100
          CALL LINKEDLIST$EXISTD(LL_CNTL,'NK',0,TCHK)
          IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'NK',1,NP)
@@ -436,7 +542,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
         PRINT*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
       END IF
       RETURN
-      END SUBROUTINE BANDS_LINEAR_INTERPOLATION
+      END SUBROUTINE BANDS_BANDSTRUCTURE_LINEAR_INTERPOLATION
 !
 !      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NK,NB,EB,PROPSI &
@@ -465,7 +571,8 @@ PRINT*,'N1B ',N1B,N2B,N3B
        INTEGER(4)            :: IP,IQ
        INTEGER(4)            :: NFIL=11
 !      *************************************************************************
-print*,'nb ',nb
+       PRINT*,'NB ',NB
+       PRINT*,'X1X2 ',X1,X2
        CALL FILEHANDLER$UNIT('BANDS',NFIL)
        DO IQ=1,NQ
          IF(NQ.EQ.1) THEN
@@ -485,9 +592,11 @@ print*,'nb ',nb
              CALL ERROR$I4VAL('NB ',NB)
              CALL ERROR$STOP('BANDS_PLOTBANDS')
            END IF
-           WRITE(NFIL,FMT='(100F9.5)')sqrt(sum(KI**2)),X1+D2*(X2-X1),sqrt(sum(KI**2)),EBI,PROPSII
+           WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI,PROPSII
          ENDDO
        ENDDO
+       CALL LIB$FLUSHFILE(NFIL)
+       CALL FILEHANDLER$CLOSE('BANDS')
        RETURN 
        END
 !
@@ -740,8 +849,7 @@ print*,'nb ',nb
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,&
-     &   GIDG_PROTO,TI_H,TI_S)
+      SUBROUTINE BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !     **************************************************************************
 !     **  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                         **
 !     **************************************************************************
@@ -750,7 +858,6 @@ print*,'nb ',nb
       USE WAVES_MODULE, ONLY : GSET_TYPE
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),INTENT(IN)               :: TFIXSYMMETRYBREAK
       INTEGER(4),INTENT(OUT)              :: NG
       REAL(8),allocatable,INTENT(INOUT)   :: GVEC(:,:)   !G
       REAL(8),allocatable,INTENT(INOUT)   :: G2(:)
@@ -771,6 +878,11 @@ print*,'nb ',nb
       INTEGER(4)                          :: THISTASK,NTASKS,NGL
       INTEGER(4),allocatable              :: ICOLOR(:)
       CHARACTER(512)                      :: FFTCID
+      CHARACTER(512)                      :: FFTID
+      LOGICAL(4),PARAMETER                :: TFIXSYMMETRYBREAK=.TRUE.
+      INTEGER(4),SAVE                     :: COUNT=0
+!     **************************************************************************
+      COUNT=COUNT+1 
 !
 !     == GENERATE G-GRID ==================================================
       KVEC(1)=0.0D0
@@ -784,11 +896,12 @@ print*,'nb ',nb
         DO I1=-1,1
           DO I2=-1,1
             DO I3=-1,1
-              GDIFF(I1+2,I2+2,I3+2)=SQRT(SUM((REAL(I1,KIND=8)*GBAS(:,1)+REAL(I2,KIND=8)*GBAS(:,2)+REAL(I3,KIND=8)*GBAS(:,3))**2))
+              GDIFF(I1+2,I2+2,I3+2)=SQRT(SUM((REAL(I1,KIND=8)*GBAS(:,1)&
+      &              +REAL(I2,KIND=8)*GBAS(:,2)+REAL(I3,KIND=8)*GBAS(:,3))**2))
             ENDDO
           ENDDO
         ENDDO
-        IF(TPRINT)PRINT*,"LONGEST DIAGONAL=",MAXVAL(GDIFF(:,:,:)),MAXLOC(GDIFF(:,:,:))
+        !IF(TPRINT)PRINT*,"LONGEST DIAGONAL=",MAXVAL(GDIFF(:,:,:)),MAXLOC(GDIFF(:,:,:))
         EPW2=0.5D0*(GMAX+MAXVAL(GDIFF(:,:,:)))**2
         IF(TPRINT)PRINT*,"EPW MODIFIED FOR PROPER CUTOFF=",EPW2
       ELSE
@@ -799,13 +912,15 @@ print*,'nb ',nb
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       allocate(ICOLOR(NTASKS))
       ICOLOR(1:NTASKS)=(/ (I,I=1,NTASKS) /)
-      WRITE(FFTCID,'(a,i4)')"FFT",THISTASK
+      WRITE(FFTCID,'(a,i4,a,i4)')"FFT ",COUNT," ",THISTASK
       CALL MPE$NEW('~',FFTCID,NTASKS,ICOLOR)
       CALL MPE$QUERY(FFTCID,NTASKS,THISTASK)
       
-      CALL PLANEWAVE$INITIALIZE('WAVE GAMMA',FFTCID,RBAS,KVEC,.false.,EPW2 &
+      WRITE(FFTID,'(a,i4)')"WAVE GAMMA ",COUNT
+       
+      CALL PLANEWAVE$INITIALIZE(FFTID,FFTCID,RBAS,KVEC,.FALSE.,EPW2 &
      &                               ,0,NR1,NR2,NR3)
-      CALL PLANEWAVE$SELECT('WAVE GAMMA')     
+      CALL PLANEWAVE$SELECT(FFTID)     
 
       CALL PLANEWAVE$GETI4('NGG',NG)
       IF(TPRINT)PRINT*,"EPW2 NG",EPW2,NG
@@ -876,7 +991,7 @@ print*,'nb ',nb
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BANDS_KPOINT(NG,NB,ISPIN,METHOD,GIDG_PROTO,TPROJ,&
-     &               KVEC,GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
+     &               KVEC,GVEC,TI_H,TI_S,E,PROJ)
 !     ******************************************************************
 !     **                                                              **
 !     ** COMPUTES EIGENVALUES[H] AND PROJECTIONS FOR A GIVEN KVEC     **
@@ -892,7 +1007,6 @@ print*,'nb ',nb
       LOGICAL(4)  ,INTENT(IN)  :: TPROJ
       REAL(8)     ,INTENT(IN)  :: KVEC(3)
       REAL(8)     ,INTENT(IN)  :: GVEC(3,NG)
-      LOGICAL(4)  ,INTENT(IN)  :: TFIXSYMMETRYBREAK
       COMPLEX(8)  ,INTENT(IN)  :: TI_H(NG*NDIM,NG*NDIM,NSPIN)
       COMPLEX(8)  ,INTENT(IN)  :: TI_S(NG*NDIM,NG*NDIM,NSPIN)
       REAL(8)     ,INTENT(OUT),allocatable :: E(:)
@@ -920,6 +1034,7 @@ print*,'nb ',nb
       INTEGER(4)               :: NG2
       INTEGER(4)               :: NGARR(NG)
       LOGICAL(4),PARAMETER     :: TTEST_POSITIVE_DEFINITE=.FALSE.
+      LOGICAL(4),PARAMETER     :: TFIXSYMMETRYBREAK=.TRUE.
 !     ******************************************************************
       TTIMING=.false.
       IF(TTIMING)CALL TRACE$PUSH('COMPUTE K_DEPENDENT ARRAY')
@@ -1217,7 +1332,7 @@ print*,'nb ',nb
 END MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BANDS_DIAG(LL_CNTL,NFIL,NFILO)
+      SUBROUTINE BANDS_BANDSTRUCTURE_DIAG(LL_CNTL,NFIL,NFILO)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1235,7 +1350,7 @@ END MODULE
       INTEGER(4)                :: NFILN
       LOGICAL(4)                :: TPRINT=.FALSE.
       LOGICAL(4)                :: TCHK,TCHK1,TCHK2
-      INTEGER(4)                :: METHOD_DIAG !1=LAPACK,2=LANCZOS
+      INTEGER(4)                :: METHOD_DIAG
       REAL(8)                   :: XK1(3)  !initial k-point in relative coordinates
       REAL(8)                   :: XK2(3)  !final k-point in relative coordinates
       REAL(8)                   :: KVEC1(3)  !initial k-point in absolute coordinates
@@ -1284,12 +1399,11 @@ END MODULE
       REAL(8),ALLOCATABLE       :: FATBANDMAXWIDTH(:)
       CHARACTER(512),ALLOCATABLE:: FATBANDFILE(:)
       REAL(8)                   :: FATBANDMAX,SVAR1,SVAR2
-      LOGICAL(4)                :: TFIXSYMMETRYBREAK
-      LOGICAL(4)                :: TATTACH
+      LOGICAL(4)                :: TAPPEND
       REAL(8)                   :: coord,coord0
       INTEGER(4)                :: THISTASK,NTASKS,index
 !     **************************************************************************
-                            CALL TRACE$PUSH('BANDS_DIAG')
+                            CALL TRACE$PUSH('BANDS_BANDSTRUCTURE_DIAG')
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       CALL TIMING$START
 !
@@ -1312,11 +1426,11 @@ END MODULE
           CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
         ELSE
           CALL ERROR$MSG('!BCNTL!INPUTFILE!NAME NOT FOUND')
-          CALL ERROR$STOP('BANDS_DIAG')
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
         ENDIF
       ELSE IF (NFILE.gt.1)then
         CALL ERROR$MSG('MULTIPLE INPUT FILES GIVEN (!BCNTL!INPUTFILE)')
-        CALL ERROR$STOP('BANDS_DIAG')
+        CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
       ELSE
         ID=+'BANDDATAIN'
         CALL FILEHANDLER$SETFILE(ID,.true.,-'.BANDDATA')
@@ -1336,7 +1450,7 @@ END MODULE
 !     ==========================================================================
       IF(NDIM.eq.2)THEN
         CALL ERROR$MSG('ONLY NDIM=1 AND NSPIN=1 OR 2 IMPLEMENTED AND TESTED')
-        CALL ERROR$STOP('BANDS_DIAG')
+        CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
       ENDIF
 !
 !     ==========================================================================
@@ -1344,31 +1458,25 @@ END MODULE
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'METHOD_DIAG',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'METHOD_DIAG',1,METHOD_DIAG)
       ELSE
         METHOD_DIAG=1
       ENDIF
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TFIXSYMMETRYBREAK',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'TFIXSYMMETRYBREAK',1,TFIXSYMMETRYBREAK)
-      ELSE
-        TFIXSYMMETRYBREAK=.true.
-      ENDIF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'EPWPSI',1,EPW)
-        IF(THISTASK.eq.1)WRITE(NFILO,*)'WARNING: EPWPSI set to',EPW,' Ry!'
-        !input is in Hartree
+        IF(THISTASK.EQ.1)WRITE(NFILO,*)'WARNING: EPWPSI SET TO',EPW,' RY!'
+        !INPUT IS IN RYDBERG, WE NEED HARTREE
         EPW=0.5D0*EPW
       ENDIF
 !
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
-      CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 !
 !     =========================================================================
 !     ==  CONSTRUCT BAND STRUCTURE                                           ==
@@ -1382,21 +1490,24 @@ END MODULE
 !
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_CNTL,'LINE',NLINE)
       
       DO ILINE=1,NLINE
         IF(THISTASK.eq.1)WRITE(NFILO,FMT='(72("="))')
         IF(THISTASK.eq.1)WRITE(NFILO,*)'LINE-BLOCK:',ILINE,' of ',NLINE
         IF(THISTASK.eq.1)WRITE(NFILO,FMT='(72("="))')
+!        
         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
         CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+        CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
         CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
 !
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'TATTACH',0,TCHK)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'TAPPEND',0,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'TATTACH',1,TATTACH)
+          CALL LINKEDLIST$GET(LL_CNTL,'TAPPEND',1,TAPPEND)
         ELSE
-          TATTACH=.FALSE.
+          TAPPEND=.FALSE.
         ENDIF
 
         IF(THISTASK.eq.1)THEN
@@ -1404,7 +1515,7 @@ END MODULE
           IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
             CALL FILEHANDLER$SETFILE('BANDS',.FALSE.,FILE)
-            IF(TATTACH)THEN
+            IF(TAPPEND)THEN
               WRITE(NFILO,*)'ATTACHING OUTPUT FOR LINE-BLOCK',ILINE,' TO EXISTING FILE ',TRIM(FILE)
               CALL FILEHANDLER$SETSPECIFICATION('BANDS','STATUS','OLD')
             ELSE
@@ -1418,7 +1529,7 @@ END MODULE
           ELSE
             CALL ERROR$MSG('NO OUTPUT FILE GIVEN')
             CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
-            CALL ERROR$STOP('BANDS_DIAG')
+            CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
           END IF
         ENDIF
 !
@@ -1445,7 +1556,7 @@ END MODULE
         ELSE
           CALL ERROR$MSG('NO XK1 OR KVEC1 GIVEN')
           CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
-          CALL ERROR$STOP('BANDS_DIAG')
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
         ENDIF
 
         CALL LINKEDLIST$EXISTD(LL_CNTL,'XK2',0,TCHK1)
@@ -1468,7 +1579,7 @@ END MODULE
         ELSE
           CALL ERROR$MSG('NO XK2 OR KVEC2 GIVEN')
           CALL ERROR$I4VAL('LINE BLOCK NUMBER',ILINE)
-          CALL ERROR$STOP('BANDS_DIAG')
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
         ENDIF
 
         IF(THISTASK.eq.1)THEN
@@ -1479,10 +1590,10 @@ END MODULE
           WRITE(NFILO,*)'LAST K-POINT IN ABSOLUTE COORDINATES:',KVEC2
         ENDIF
         
-        !NK is number of points for output
-        !if NKDIAG<NK: do 1D-fft interpoaltion
-        !if NKDIAG=NK: use results from diagonalisation directly
-        !if NKDIAG>NK: error
+        !NK IS NUMBER OF POINTS FOR OUTPUT
+        !IF NKDIAG<NK: DO 1D-FFT INTERPOALTION
+        !IF NKDIAG=NK: USE RESULTS FROM DIAGONALISATION DIRECTLY
+        !IF NKDIAG>NK: ERROR
         NB=10
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NB',0,TCHK)
         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'NB',1,NB)
@@ -1497,14 +1608,14 @@ END MODULE
           CALL ERROR$MSG('NKDIAG>NK')
           CALL ERROR$I4VAL('NK',NK)
           CALL ERROR$I4VAL('NKDIAG',NKDIAG)
-          CALL ERROR$STOP('BANDS_DIAG')
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
         ENDIF
-        !FIXME: IMPLEMENT 1D FFT INTERPOATION
+        !FIXME: IMPLEMENT 1D FFT INTERPOLATION
         IF(NKDIAG.lt.NK)THEN
           CALL ERROR$MSG('1D FFT INTERPOLATION NOT YET IMPLEMENTED!!')
           CALL ERROR$I4VAL('NK',NK)
           CALL ERROR$I4VAL('NKDIAG',NKDIAG)
-          CALL ERROR$STOP('BANDS_DIAG')
+          CALL ERROR$STOP('BANDS_BANDSTRUCTURE_DIAG')
         ENDIF
         IF(TPRINT)PRINT*,XK1,XK2,NB,NK,NKDIAG,X1,X2,TRIM(FILE)
 !       == SPECIFY SPIN DIRECTION =============================================
@@ -1518,6 +1629,7 @@ END MODULE
 !       == SPECIFY FATBAND ===================================================
         CALL LINKEDLIST$SELECT(LL_CNTL,'~')
         CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+        CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
         CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
         CALL LINKEDLIST$NLISTS(LL_CNTL,'FATBAND',NFATBAND)
 
@@ -1531,6 +1643,7 @@ END MODULE
           DO IFATBAND=1,NFATBAND
             CALL LINKEDLIST$SELECT(LL_CNTL,'~')
             CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+            CALL LINKEDLIST$SELECT(LL_CNTL,'BANDSTRUCTURE')
             CALL LINKEDLIST$SELECT(LL_CNTL,'LINE',ILINE)
             CALL LINKEDLIST$SELECT(LL_CNTL,'FATBAND',IFATBAND)
             !FILE
@@ -1624,7 +1737,7 @@ END MODULE
             &NKDIAG-1,' IN ABSOLUTE COORDINATES ',KVEC
 
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
-      &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
+      &              GVEC,TI_H,TI_S,E,PROJ)
           IF(TPRINT)PRINT*,'DIAGBANDS_EIG',sqrt(sum(KVEC**2)),E(1:NB)*27.21139D0
 
           EIGVAL(1:NB,IKDIAG+1)=E(1:NB)*27.21139D0
@@ -1639,7 +1752,7 @@ END MODULE
               IF(TPRINT)PRINT*,"FATBAND IAT",FATBANDIAT(IFATBAND)
               IF(TPRINT)PRINT*,"FATBAND IPRO",FATBANDIPRO(IFATBAND)
               DO IB=1,NB
-                !FIXME: integrate pdos interface here
+                !FIXME: INTEGRATE PDOS INTERFACE HERE
                 CSVAR=PROJ(FATBANDIAT(IFATBAND),IB,FATBANDIPRO(IFATBAND))
                 FATBANDVAL(IFATBAND,IKDIAG+1,IB)=ABS(CSVAR)**2
               ENDDO
@@ -1678,14 +1791,14 @@ END MODULE
           WRITE(NFILBAND,*)'#LAST  K-POINT IN RELATIVE COORDINATES ',XKVAL(:,NKDIAG)
           DO IKDIAG=1,NKDIAG
             !WRITE EIGENVALUES
-            IF(IKDIAG.eq.1.and..not.TATTACH)coord0=0.0D0
+            IF(IKDIAG.EQ.1.AND..NOT.TAPPEND)COORD0=0.0D0
             SCALE=2.0D0*(4.0D0*ATAN(1.0D0))/KVECSCALE
-            coord=coord0+sqrt(sum((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))/SCALE
-            WRITE(NFILBAND,FMT='(103F10.5)')coord,EIGVAL(:,IKDIAG)
+            COORD=COORD0+SQRT(SUM((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))/SCALE
+            WRITE(NFILBAND,FMT='(103F10.5)')COORD,EIGVAL(:,IKDIAG)
           ENDDO
           CALL LIB$FLUSHFILE(NFILBAND)
           CALL FILEHANDLER$CLOSE('BANDS')
-          coord0=coord
+          COORD0=COORD
           !WRITE FATBANDS
           DO IFATBAND=1,NFATBAND
             CALL FILEHANDLER$SETFILE('FATBANDS',.FALSE.,FATBANDFILE(IFATBAND))
@@ -1726,7 +1839,7 @@ END MODULE
       ENDDO
                             CALL TRACE$POP
       RETURN
-      END SUBROUTINE BANDS_DIAG
+      END SUBROUTINE BANDS_BANDSTRUCTURE_DIAG
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1787,11 +1900,9 @@ END MODULE
       COMPLEX(8),ALLOCATABLE       :: PROJK(:,:,:,:)
       REAL(8)                      :: GWEIGHT
 
-      LOGICAL(4)                   :: TUSESYM
       INTEGER(4)                   :: SPACEGROUP
       REAL(8)                      :: A0,B0,C0,ALPHA,BETA,GAMMA,EI
       INTEGER(4)                   :: NSYM,NOP
-      INTEGER(4),parameter         :: NSYMX=48
       INTEGER(4),parameter         :: NOPX=48
       INTEGER(4)                   :: IARB(3)
       CHARACTER(3)                 :: BRAVAIS
@@ -1810,7 +1921,6 @@ END MODULE
       CHARACTER(512)               :: FILE
      
       LOGICAL(4)                   :: TPRINT=.FALSE.
-      LOGICAL(4)                   :: TFIXSYMMETRYBREAK
 
       INTEGER(4)                   :: THISTASK,NTASKS
       INTEGER(4),ALLOCATABLE       :: JOBLIST(:,:)
@@ -1879,18 +1989,12 @@ END MODULE
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'METHOD')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'PDOS')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'METHOD_DIAG',0,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'METHOD_DIAG',1,METHOD_DIAG)
       ELSE
         METHOD_DIAG=1
-      ENDIF
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TFIXSYMMETRYBREAK',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'TFIXSYMMETRYBREAK',1,TFIXSYMMETRYBREAK)
-      ELSE
-        TFIXSYMMETRYBREAK=.true.
       ENDIF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EPWPSI',0,TCHK)
       IF(TCHK) THEN
@@ -1907,7 +2011,7 @@ END MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
       CALL LINKEDLIST$NLISTS(LL_CNTL,'PDOS',NPDOS)
       IF(NPDOS.gt.1)THEN
-        CALL ERROR$MSG('TOO MANY PDOS-BLOCK GIVEN, JUST ONE BLOCK ALLOWED')
+        CALL ERROR$MSG('TOO MANY PDOS-BLOCKS GIVEN, JUST ONE BLOCK ALLOWED')
         CALL ERROR$I4VAL('NPDOS',NPDOS)
         CALL ERROR$STOP('BANDS_PDOS')
       ENDIF
@@ -1976,23 +2080,12 @@ END MODULE
         ISHIFT(3)=0
       ENDIF
 
-      !TUSESYM
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TUSESYM',0,TCHK)
-      IF(TCHK)THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'TUSESYM',1,TUSESYM)
-      ELSE
-        TUSESYM=.FALSE.
-      ENDIF
-      
       !SPACEGROUP
-      IF(TUSESYM)THEN
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPACEGROUP',0,TCHK)
-        IF(TCHK)THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'SPACEGROUP',1,SPACEGROUP)
-        ELSE
-          CALL ERROR$MSG('TUSESYM=TRUE, BUT SPACEGROUP NOT GIVEN')
-          CALL ERROR$STOP('BANDS_PDOS')
-        ENDIF
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'SPACEGROUP',0,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'SPACEGROUP',1,SPACEGROUP)
+      ELSE
+        SPACEGROUP=1 !NO SYMMETRY
       ENDIF
       
       !TSHIFT
@@ -2019,11 +2112,14 @@ END MODULE
       ENDIF
 
                             CALL TRACE$PASS('AFTER READ BNCTL')
-      IF(TUSESYM)THEN
+      IF(.TRUE.)THEN
 !     ==========================================================================
 !     ==  FIND IRREDUCIBLE K-POINTS AND TETRAHEDRA                            ==
 !     ==========================================================================
-        TPROJ=.false.
+        NKP=NKDIV(1)*NKDIV(2)*NKDIV(3)
+        CALL SPACEGROUP$SETI4('SPACEGROUP',SPACEGROUP)
+        CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
+        CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
         IARB=1
         IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
          IARB(1)=1
@@ -2039,10 +2135,6 @@ END MODULE
          IARB(3)=0
         ENDIF 
                             CALL TRACE$PUSH('BRILLOUIN$MSH')
-        NKP=NKDIV(1)*NKDIV(2)*NKDIV(3)
-        CALL SPACEGROUP$SETI4('SPACEGROUP',SPACEGROUP)
-        CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
-        CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
 
         CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
         IF(THISTASK.eq.1)WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
@@ -2078,7 +2170,7 @@ END MODULE
 !     =========================================================================
 !     ==  CONSTRUCT K-INDEPENDENT PART OF HAMILTONIAN                        ==
 !     =========================================================================
-      CALL BANDS_KINDEP(TFIXSYMMETRYBREAK,NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
+      CALL BANDS_KINDEP(NG,GVEC,G2,GWEIGHT,GIDG_PROTO,TI_H,TI_S)
 
       ALLOCATE(EB(NB*NSPIN,NKP))        
       ALLOCATE(WGHT(NB*NSPIN,NKP))
@@ -2105,32 +2197,29 @@ END MODULE
       CALL PDOS$SETR8('RNTOT',RNTOT)
       CALL PDOS$SETR8('NEL',NEL)
       CALL PDOS$SETL4('TINV',TINV)
+      CALL PDOS$SETI4('SPACEGROUP',SPACEGROUP)
+      CALL PDOS$SETL4('TSHIFT',TSHIFT)
 !     ==========================================================================
 !     ==  WRITE BEGINNING OF PDOS FILE                                        ==
 !     ==========================================================================
       
-      IF(THISTASK.eq.1)THEN
+      IF(THISTASK.EQ.1)THEN
         ALLOCATE(OCC(NKP,NB))
         OCC(:,:)=1.0D0
-        IF(.NOT.TUSESYM)THEN
-          CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
-          REWIND NFILOUT
-          CALL PDOS$WRITE(NFILOUT,'311013')
-        ELSE
-          WRITE(NFILO,*)'WARNING: PDOSOUT-FILE WILL NOT BE WRITTEN, BECAUSE'
-          WRITE(NFILO,*)'TUSESYM=T AND SYMMETRY NOT YET COMPLETELY IMPLEMENTED!'
-        ENDIF
+        CALL FILEHANDLER$UNIT('PDOSOUT',NFILOUT)
+        REWIND NFILOUT
+        CALL PDOS$WRITE(NFILOUT,'181213')
       ENDIF
 !       == ITERATE K-POINTS =================================================
                             CALL TRACE$PUSH('ITERATE KPOINTS')
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       ALLOCATE(JOBLIST(NKP,NSPIN))
-      index=1
+      INDEX=1
       DO IKP=1,NKP
         DO ISPIN=1,NSPIN
-          JOBLIST(IKP,ISPIN)=index
-          index=index+1
-          if(index.gt.NTASKS)index=1
+          JOBLIST(IKP,ISPIN)=INDEX
+          INDEX=INDEX+1
+          IF(INDEX.GT.NTASKS)INDEX=1
         ENDDO
       ENDDO
       PRINT*,"JOBLIST",JOBLIST(:,:)
@@ -2143,12 +2232,14 @@ END MODULE
         DO ISPIN=1,NSPIN
           IF(THISTASK.ne.JOBLIST(IKP,ISPIN))CYCLE
           KVEC=BK(:,IKP)
-          IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
+          IF(TPRINT)WRITE(NFILO,*)'K-POINT ',IKP,'(',index,') OF ',NKP,&
+     &        ' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
           CALL CPU_TIME(T1)
           CALL BANDS_KPOINT(NG,NB,ISPIN,METHOD_DIAG,GIDG_PROTO,TPROJ,KVEC,&
-      &              GVEC,TFIXSYMMETRYBREAK,TI_H,TI_S,E,PROJ)
+     &              GVEC,TI_H,TI_S,E,PROJ)
           CALL CPU_TIME(T2)
-          PRINT*,"CPU-TIME FOR KPOINT: NODE=",THISTASK," KPOINT:",IKP," SPIN=",ISPIN,"TIME=",T2-T1
+          PRINT*,'CPU-TIME FOR KPOINT: NODE=',THISTASK,' KPOINT:',IKP,&
+     &         ' SPIN=',ISPIN,'TIME=',T2-T1
           EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP)=E(1:NB)
           IF(TPROJ)THEN
             DO IAT=1,NAT
@@ -2169,7 +2260,7 @@ END MODULE
 
       DO IKP=1,NKP
         DO I=1,NB
-          PRINT*,"EB(",I,",",IKP,")=",EB(I,IKP)          
+          PRINT*,'EB(',I,',',IKP,')=',EB(I,IKP)          
         ENDDO
       ENDDO
         
@@ -2177,125 +2268,122 @@ END MODULE
 !     ==  CALCULATE WEIGHTS                                                   ==
 !     ==========================================================================
       IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
-&      BOTH SPIN DIRECTIONS.'
+     &      BOTH SPIN DIRECTIONS.'
       CALL BRILLOUIN$DOS(NSPIN*NB,NKP,EB,WGHT,RNTOT,EF)
                             
                         CALL TRACE$PUSH('PDOS WRITEK LOOP')
 !     ==========================================================================
 !     ==  WRITE TO PDOS FILE                                                  ==
 !     ==========================================================================
-      IF(.NOT.TUSESYM)THEN
-        ALLOCATE(PROJTMP(NDIM,NPRO,NB))
-        DO IKP=1,NKP
-          DO ISPIN=1,NSPIN
-            KVEC=BK(:,IKP)
-            WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,' IN ABSOLUTE COORDINATES ',KVEC
-            IF(TPROJ)THEN
-              !reorder projections
-              index=1
-              DO IAT=1,NAT
-                ISP=ISPECIES(IAT)
-                LMNX_=LMNX(ISP)
-                DO LMN=1,LMNX_
-                  PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),LMN,IKP)
-                  index=index+1 
-                ENDDO
+      ALLOCATE(PROJTMP(NDIM,NPRO,NB))
+      DO IKP=1,NKP
+        DO ISPIN=1,NSPIN
+          KVEC=BK(:,IKP)
+          WRITE(NFILO,*)'K-POINT ',IKP,' OF ',NKP*NSPIN,' FOR SPIN ',ISPIN,&
+     &               ' IN ABSOLUTE COORDINATES ',KVEC
+          IF(TPROJ)THEN
+            !reorder projections
+            index=1
+            DO IAT=1,NAT
+              ISP=ISPECIES(IAT)
+              LMNX_=LMNX(ISP)
+              DO LMN=1,LMNX_
+                PROJTMP(1,index,:)=PROJK(IAT,1+NB*(ISPIN-1):NB+NB*(ISPIN-1),&
+      &                            LMN,IKP)
+                index=index+1 
               ENDDO
-!print*,"NPRO",NPRO,index-1
-            ELSE
-              PROJTMP(:,:,:)=0.0D0
-            ENDIF
-            DO IB=1,NB
-              IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
-                OCC(IKP,IB)=WKPT(IKP)*2.0D0/REAL(NSPIN,KIND=8)!1.0D0/REAL(NKP*NSPIN,KIND=8)
-              ELSE
-                OCC(IKP,IB)=0.0D0
-              ENDIF
             ENDDO
-            CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
-        &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
+          ELSE
+            PROJTMP(:,:,:)=0.0D0
+          ENDIF
+          DO IB=1,NB
+            IF(EB(IB+NB*(ISPIN-1),IKP).LE.EF)THEN
+              OCC(IKP,IB)=WKPT(IKP)*2.0D0/REAL(NSPIN,KIND=8)
+            ELSE
+              OCC(IKP,IB)=0.0D0
+            ENDIF
           ENDDO
+          CALL PDOS$WRITEK(NFILOUT,XK(:,IKP),NB,NDIM,NPRO,&
+      &  WKPT(IKP),EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKP),OCC(IKP,1:NB),PROJTMP)
         ENDDO
-        DEALLOCATE(PROJTMP)
-      ENDIF
+      ENDDO
+      DEALLOCATE(PROJTMP)
 !     ==========================================================================
 !     ==  CLOSE PDOS FILE                                                     ==
 !     ==========================================================================
-      IF(.NOT.TUSESYM)THEN
                             CALL TRACE$PUSH('PDOS CLOSE')
-        CALL LIB$FLUSHFILE(NFILOUT)
-        CALL FILEHANDLER$CLOSE('PDOSOUT')
+      CALL LIB$FLUSHFILE(NFILOUT)
+      CALL FILEHANDLER$CLOSE('PDOSOUT')
                             CALL TRACE$POP()     
-      ENDIF
-
-!     ==========================================================================
-!     ==  CALCULATE AND WRITE TOTAL DENSITY OF STATES                         ==
-!     ==  THE FOLLOWING CODE WILL BE REMOVED, WHEN SYMMETRIES ARE DONE!       ==
-!     ==========================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
-      CALL LINKEDLIST$NLISTS(LL_CNTL,'DOS',NPDOS)
-      IF(NPDOS.eq.1)THEN
-                        CALL TRACE$PUSH('TOTAL DOS')
-        CALL LINKEDLIST$SELECT(LL_CNTL,'DOS',1)
-        EMIN=minval(EB(:,:))
-        EMAX=maxval(EB(:,:))
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMIN',0,TCHK)
-        IF(TCHK)THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'EMIN',1,EMIN2)
-        ELSE
-          EMIN2=EMIN*27.211D0
-        ENDIF
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX',0,TCHK)
-        IF(TCHK)THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'EMAX',1,EMAX2)
-        ELSE
-          EMAX2=EMAX*27.211D0
-        ENDIF
-        
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'NE',0,TCHK)
-        IF(TCHK)THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NE',1,NE)
-        ELSE
-          NE=1000
-        ENDIF
-        
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
-        IF(TCHK)THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
-        ELSE
-          CALL ERROR$MSG('FILE IN DOS-BLOCK NOT GIVEN')
-          CALL ERROR$STOP('BANDS_PDOS')
-        ENDIF
-        allocate(EWGHT(NSPIN*NB,NKP))
-        CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
-
-        ALLOCATE(DOS(NE,NSPIN))
-        DOS(:,:)=0.0D0
-        DO IKP=1,NKP
-          DO IB=1,NB
-            DO ISPIN=1,NSPIN
-              I1=EWGHT(IB+NB*(ISPIN-1),IKP)%I1
-              I2=EWGHT(IB+NB*(ISPIN-1),IKP)%I2
-              DO IE=I1,I2
-                DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB+NB*(ISPIN-1),IKP)%WGHT(IE)
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-
-        WRITE(NFILO,*)'WRITING TOTAL DOS TO FILE:', FILE
-        OPEN(101,FILE=FILE)
-        
-        DO IE=1,NE
-          EI=27.211D0*(EMIN+REAL(IE-1,KIND=8)*(EMAX-EMIN)/REAL(NE-1,KIND=8))
-          IF((EI.ge.EMIN2).and.(EI.LE.EMAX2))THEN
-            WRITE(101,*)EI,(DOS(IE,ISPIN),ISPIN=1,NSPIN)
-          ENDIF
-        ENDDO
-        CLOSE(101)        
-                        CALL TRACE$POP()
-      ENDIF
+!$!
+!$!     ==========================================================================
+!$!     ==  CALCULATE AND WRITE TOTAL DENSITY OF STATES                         ==
+!$!     ==  THE FOLLOWING CODE WILL BE REMOVED, WHEN SYMMETRIES ARE DONE!       ==
+!$!     ==========================================================================
+!$      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+!$      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+!$      CALL LINKEDLIST$NLISTS(LL_CNTL,'DOS',NPDOS)
+!$      IF(NPDOS.eq.1)THEN
+!$                        CALL TRACE$PUSH('TOTAL DOS')
+!$        CALL LINKEDLIST$SELECT(LL_CNTL,'DOS',1)
+!$        EMIN=minval(EB(:,:))
+!$        EMAX=maxval(EB(:,:))
+!$        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMIN',0,TCHK)
+!$        IF(TCHK)THEN
+!$          CALL LINKEDLIST$GET(LL_CNTL,'EMIN',1,EMIN2)
+!$        ELSE
+!$          EMIN2=EMIN*27.211D0
+!$        ENDIF
+!$        CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX',0,TCHK)
+!$        IF(TCHK)THEN
+!$          CALL LINKEDLIST$GET(LL_CNTL,'EMAX',1,EMAX2)
+!$        ELSE
+!$          EMAX2=EMAX*27.211D0
+!$        ENDIF
+!$        
+!$        CALL LINKEDLIST$EXISTD(LL_CNTL,'NE',0,TCHK)
+!$        IF(TCHK)THEN
+!$          CALL LINKEDLIST$GET(LL_CNTL,'NE',1,NE)
+!$        ELSE
+!$          NE=1000
+!$        ENDIF
+!$        
+!$        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',0,TCHK)
+!$        IF(TCHK)THEN
+!$          CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+!$        ELSE
+!$          CALL ERROR$MSG('FILE IN DOS-BLOCK NOT GIVEN')
+!$          CALL ERROR$STOP('BANDS_PDOS')
+!$        ENDIF
+!$        allocate(EWGHT(NSPIN*NB,NKP))
+!$        CALL BRILLOUIN$EWGHT(NKP,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
+!$
+!$        ALLOCATE(DOS(NE,NSPIN))
+!$        DOS(:,:)=0.0D0
+!$        DO IKP=1,NKP
+!$          DO IB=1,NB
+!$            DO ISPIN=1,NSPIN
+!$              I1=EWGHT(IB+NB*(ISPIN-1),IKP)%I1
+!$              I2=EWGHT(IB+NB*(ISPIN-1),IKP)%I2
+!$              DO IE=I1,I2
+!$                DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB+NB*(ISPIN-1),IKP)%WGHT(IE)
+!$              ENDDO
+!$            ENDDO
+!$          ENDDO
+!$        ENDDO
+!$
+!$        WRITE(NFILO,*)'WRITING TOTAL DOS TO FILE:', FILE
+!$        OPEN(101,FILE=FILE)
+!$        
+!$        DO IE=1,NE
+!$          EI=27.211D0*(EMIN+REAL(IE-1,KIND=8)*(EMAX-EMIN)/REAL(NE-1,KIND=8))
+!$          IF((EI.ge.EMIN2).and.(EI.LE.EMAX2))THEN
+!$            WRITE(101,*)EI,(DOS(IE,ISPIN),ISPIN=1,NSPIN)
+!$          ENDIF
+!$        ENDDO
+!$        CLOSE(101)        
+!$                        CALL TRACE$POP()
+!$      ENDIF
                             CALL TRACE$POP()
       RETURN
       END SUBROUTINE
