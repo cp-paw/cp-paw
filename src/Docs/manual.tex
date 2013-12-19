@@ -6194,6 +6194,14 @@ date to a file, so that they can be plotted.
 \bdescr{defines the operations done on the system; 
 largely independent of the system}
 
+\mbax{\key{MODE}
+\vdescr{defines the mode for the calculation of the density of states: GAUSSIAN
+defines the calculation via a simple gaussian broadening of the energy states.
+TETRA denotes the calculation using the tetrahedron integration.}
+\vformat{character} 
+\vrules{optional}
+\vdefault{GAUSSIAN}}
+
 %----------------------------------------------------------------------
 \block{!DCNTL!GRID}
 %----------------------------------------------------------------------
@@ -6885,20 +6893,19 @@ An example for the input control file is given here
 \subsection{Description}
 
 The two main tasks that can be accomplished with the paw\_bands-tools are:
-\begin{itemize}
-  \item calculation of bandstructures including fat bands and projected 
-    bandstructures from paw-calculations with either a simple linear 
-    interpolation scheme on the k-point grid or by a direct 
-    diagonalisation of the paw hamiltonian
+\begin{itemize} 
+  \item calculation of bandstructures including fat bands and
+      projected bandstructures from paw-calculations with either a simple linear
+      interpolation scheme on the k-point grid or by a direct diagonalisation of
+      the paw hamiltonian
   \item calculation of a new pdos-file with different k-points than 
     the ones used in the paw calculation inclusing symmetries
 \end{itemize}
 
-For that purpose the control input file is split up into two main 
-sections: BANDSTRUCTURE and PDOS. Which are connected by the fact
-that both use the diagonalisation of the paw hamiltonian.\\
-Non-collinear calculations are currently only partially
-implemented and  are untested.
+For that purpose the control input file is split up into two main sections:
+BANDSTRUCTURE and PDOS. Which are connected by the fact that both use the
+diagonalisation of the paw hamiltonian.\\ Non-collinear calculations are
+currently only partially implemented and  are untested.
 
 \subsubsection{BANDSTRUCTURE}
 There are two modes available for the calculation of bandstructures in 
@@ -6907,18 +6914,17 @@ paw\_bands:
   \item linear interpolation (LINEARINTERPOLATION)
   \item diagonalisation of the paw hamiltonian (DIAGONALISATION)
 \end{enumerate}
-The first mode one uses a linear interpolation of the energy eigenvalues on the 
-k-point grid by using the data in the pdos-file, which makes is very fast, 
-but rather inaccurate. \\
-The second one uses an explicit calculation of the 
-energy eigenvalues of the paw hamiltonian at given k-points. That means that
-at the chosen k-points the bandstructure is represented exactly within the
-accuracy of the underlying paw calculation. This mode produces very nice 
-bandstructures, but has a much higher computational demand than the 
-interpolation method, because a large generalized eigenproblem has to be 
-solved for every k-point. Because of the high computational demand of 
-diagonalisation, there is also a mpi-parallelized variant, which is 
-called ppaw\_bands.x and can be compiled separately with 
+The first mode one uses a linear interpolation of the energy eigenvalues on the
+k-point grid by using the data in the pdos-file, which makes is very fast, but
+rather inaccurate. \\ The second one uses an explicit calculation of the energy
+eigenvalues of the paw hamiltonian at given k-points. That means that at the
+chosen k-points the bandstructure is represented exactly within the accuracy of
+the underlying paw calculation. This mode produces very nice bandstructures, but
+has a much higher computational demand than the interpolation method, because a
+large generalized eigenproblem has to be solved for every k-point. Because of
+the high computational demand of diagonalisation, there is also a
+mpi-parallelized variant, which is called ppaw\_bands.x and can be compiled
+separately with 
 
 \bigskip\fbox{{\tt make bands\_parallel} }\bigskip
 
@@ -6997,8 +7003,9 @@ largely independent of the system}
 \bdescr{defines the bandstructure to be computed and plotted including fatbands}
 
 \mbax{\key{mode}
-  \vdescr{defines the mode of the calculation of the bandstructure. The two 
-  possible values are 'LINEARINTERPOLATION'' and 'DIAGONALISATION', which are described below.}
+\vdescr{defines the mode of the calculation of the bandstructure. The two
+  possible values are 'LINEARINTERPOLATION'' and 'DIAGONALISATION', which are
+described below.}
 \vformat{character} 
 \vrules{optional}
 \vdefault{LINEARINTERPOLATION}}
@@ -7073,7 +7080,9 @@ calculation the parameter can have the values 1 or 2.}
 \vdefault{10}}
 
 \mbax{\key{NKDIAG}
-\vdescr{number of grid points along the line segment for diagonalisation. IF NKDIAG$<$NK the bands obtained from the diagonalisation of the paw hamiltonian will be interpolated using a 1D-FFT. NKDIAG$>$NK causes an error.}
+\vdescr{number of grid points along the line segment for diagonalisation. IF
+NKDIAG$<$NK the bands obtained from the diagonalisation of the paw hamiltonian
+will be interpolated using a 1D-FFT. NKDIAG$>$NK causes an error.}
 \vformat{integer} 
 \vrules{optional}
 \vdefault{NK}}
@@ -7085,8 +7094,9 @@ calculation the parameter can have the values 1 or 2.}
 \vdefault{20}}
 
 \mbax{\key{XKPROJECT}
-\vdescr{direction for the projection for 2-d band structures 
-in relative coordinates of the reciprocal lattice vectors. Not yet implemented for METHOD=1.}
+\vdescr{direction for the projection for 2-d band structures in relative
+coordinates of the reciprocal lattice vectors. Not yet implemented for
+METHOD=1.}
 \vformat{real(3)} 
 \vrules{optional}
 \vdefault{(0.,0.,0.)}}
@@ -7132,13 +7142,15 @@ respect to their relative magnitude.
 \vdefault{none}}
 
 \mbax{\key{IPRO}
-\vdescr{number of projector for the calculation of the projected band structure.}
+\vdescr{number of projector for the calculation of the projected band
+structure.} 
 \vformat{integer} 
 \vrules{mandatory}
 \vdefault{none}}
 
 \mbax{\key{LINESPERBAND}
-\vdescr{number of lines per band to draw in band structure in order to represent the value of the projection.}
+\vdescr{number of lines per band to draw in band structure in order to represent
+the value of the projection.} 
 \vformat{integer} 
 \vrules{optional}
 \vdefault{10}}
@@ -7159,7 +7171,9 @@ respect to their relative magnitude.
 \block{!BCNTL!PDOS}
 %----------------------------------------------------------------------
 \brules{optional}
-\bdescr{defines the calculation of energy eigenvalues and projections, i.e. the calculation of a new PDOS-file, which is compatible with the one produced from the main paw program.}
+\bdescr{defines the calculation of energy eigenvalues and projections, i.e. the
+calculation of a new PDOS-file, which is compatible with the one produced from
+the main paw program.}
 
 \mbax{\key{NKDIV}
 \vdescr{fractions of reciprocal lattice vectors defining the
@@ -7180,8 +7194,11 @@ See also !STRUCTURE!KPOINTS!DIV}
 \vrules{optional}
 \vdefault{\$ROOT.pdosout}}
 
-\mbax{\key{NB}
-\vdescr{number of bands. This parameter does not influence the computational complexity, because the full spectrum of the paw hamiltonian is calculated. It only determines the number of bands in the output files.}
+\mbax{\key{NB} 
+\vdescr{number of bands. This parameter does not influence the computational
+  complexity, because the full spectrum of the paw hamiltonian is calculated. It
+only determines the number of bands in the output files.}
+\vformat{integer} 
 \vformat{integer} 
 \vrules{optional}
 \vdefault{20}}
@@ -7199,8 +7216,9 @@ See also !STRUCTURE!KPOINTS!DIV}
 \vdefault{value from paw calculation (from banddata-file)}}
 
 \mbax{\key{SPACEGROUP}
-\vdescr{Symmetry of the crystal used for reducing the number of k-points 
-that have to be calculated. See description below.}
+\vdescr{Symmetry of the crystal used for reducing the number of k-points that
+have to be calculated. Sequential number according to International Tables for
+Crystallography, Vol. A. See description below.}
 \vformat{integer} 
 \vrules{optional}
 \vdefault{1}}
@@ -7214,7 +7232,7 @@ that have to be calculated. See description below.}
 
 \mbax{\key{ISHIFT}
 \vdescr{defines a shift of the k-point grid.}
-  \vformat{integer(3)} 
+\vformat{integer(3)} 
 \vrules{optional}
 \vdefault{(0,0,0)}}
 
@@ -7224,11 +7242,11 @@ that have to be calculated. See description below.}
 
 \subsection{Diagonalisation}
 The banddata-file contains all necessary information to build up the paw
-hamiltonian $\hat {\tilde H}$ in the plane wave basis. To calculate the 
-eigenvalues $\epsilon_n $
-and eigenstates $|\tilde \psi_n\rangle$, which are necessary for the 
-projections $|\langle\tilde p_{IPRO} |\tilde \psi_i\rangle|^2$, we 
-have to solve the Kohn-Sham equation for the pseudo wave functions:
+hamiltonian $\hat {\tilde H}$ in the plane wave basis. To calculate the
+eigenvalues $\epsilon_n $ and eigenstates $|\tilde \psi_n\rangle$, which are
+necessary for the projections $|\langle\tilde p_{IPRO} |\tilde
+\psi_i\rangle|^2$, we have to solve the Kohn-Sham equation for the pseudo wave
+functions:
 \begin{equation}
   \hat{\tilde H}|\tilde \psi_n\rangle=\epsilon_n \hat{\tilde S} |\tilde \psi_n\rangle,
 \end{equation}
@@ -7240,23 +7258,50 @@ and the overlap operator can be written as
 \begin{equation}
   \hat{\tilde S}=1+\sum_{i,j}|\tilde p_i\rangle[\langle \phi_i|\phi_j\rangle-\langle \tilde\phi_i|\tilde\phi_j\rangle]\langle \tilde p_j|.
 \end{equation}
-(For details please refer to Peter Bloechls main publication about 
-the paw formalism.)\\For the calculation of the eigenvalues and 
-eigenstates we build up the operators 
-$\hat{\tilde H}$ and $\hat{\tilde S}$ is a finite plane wave 
-basis and then solve the resulting generalized eigenvalue problem, 
-where $\tilde H$ is hermitian and $\tilde S$ is positive definite.\\
-...
+(For details please refer to Peter Bloechls main publication about the paw
+formalism.)\\For the calculation of the eigenvalues and eigenstates we build up
+the operators $\hat{\tilde H}$ and $\hat{\tilde S}$ is a finite plane wave basis
+and then solve the resulting generalized eigenvalue problem, where $\tilde H$ is
+hermitian and $\tilde S$ is positive definite.\\
 
+%====================================================================
+\paragraph{Matrix dimensions}
+%====================================================================
+The main part of the computational demand arises from the need to solve the
+generalized eigenvalue problem in the plane waves basis. The number of plane
+waves, i.e. the dimension $N$ of the matrices of the paw hamilton operator and the
+overlap operator scale like $E_{max}^{\frac{3}{2}}$, where $E_{max}$ is the
+plane wave energy cutoff (EPWPSI). Also the volume of the simulation cell has a
+strong influence. The number of plane waves grows linearly with the real space
+volume $V$, i.e. cubic with the lattice parameter.
+%====================================================================
+\paragraph{Computational demand}
+%====================================================================
+The computational effect for the full exact diagonalisation of the generalized
+eigenvalue problem goes as $N^3$, so that we get an overall runtime of
+\begin{equation}
+T \in \Theta(E_{max}^{4.5}V^3)
+\end{equation}
+That means that reducing the plane wave cutoff can dramatically reduce the
+computational effort at the expense of accuracy.
+
+\paragraph{Memory demand}
+The amount of computer memory need is dominated by the storage requirements for
+the matrices, which is $N^2$, because we are using a dense storage format.  So
+we get for the memory needed:
+\begin{equation}
+  M\in \Theta(E_{max}^{3}V^2).
+\end{equation}
 
 \subsection{Symmetry}
+To reduce the computational effort for the k-point calculations we use the
+symmetry of the system, so that only irreducible k-points have to be calculated.
+The symmetry group is determined by the parameter SPACEGROUP given in the
+PDOS-block, which denotes the three-dimesnional spacegroup according to
+International Tables for Crystallography, Vol. A. \\
+A table of space group-definitions and the corresponding bravais lattice vectors
+can be found in appendix \ref{section:symmetry_tables}.
 
-The dimension of the matrix, which has to be diagonalized depends 
-quadratically on this parameter. So at the expense of precision a 
-lowering of this value greatly speeds up the bandsstructure calculation 
-with paw\_bands.
-SPACEGROUP
-...
 
 
 %==========================================================================
@@ -7280,7 +7325,7 @@ visualize this information.
 The calling sequence is
 \begin{center}
 \verb|paw_stpa.x| 
- \quad-s\quad\textit{selection}\quad\textrm{-o}\quad\textit{outfile} \quad\textit{file}
+\quad-s\quad\textit{selection}\quad\textrm{-o}\quad\textit{outfile} \quad\textit{file}
 \end{center}
 where ``\textit{selection}'' is a keyword selecting the information to
 be visualized.  The parameter ``\textit{outfile}'' specifies the file
@@ -9356,7 +9401,115 @@ specified if E is specified. }
 
 %}{} % end of \ifthenelse
 
-
+\newpage
+%====================================================================
+\section{Symmetry tables}\label{section:symmetry_tables}
+%====================================================================
+%====================================================================
+\subsection{Bravais lattices}
+%====================================================================
+Unit cells definitions by Bradley and Cracknell\cite{bradley72_book}:
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\multicolumn{2}{|c|}{Bravais Lattice} & $\vec{T}_1$& $\vec{T}_2$& $\vec{T}_3$\\
+\hline
+\hline
+\multicolumn{5}{|c|}{triclinic}\\
+\hline
+primitive & $\Gamma_1$ & & &\\
+\hline
+%
+\hline
+\multicolumn{5}{|c|}{monoclinic}\\
+\hline
+primitive & $\Gamma_m$ & 
+$(0,-b,0)$ & 
+$(a\sin(\gamma),-a\cos(\gamma),0)$ 
+&$(0,0,c)$ \\
+base centered & $\Gamma_m^b$ & 
+$(0,-b,0)$ & 
+$\frac{1}{2}(a\sin(\gamma),-a\cos(\gamma),-c)$ &
+$\frac{1}{2}(a\sin(\gamma),-a\cos(\gamma),c)$ \\
+\hline
+%
+\hline
+\hline
+\multicolumn{5}{|c|}{orthorhombic}\\
+\hline
+primitive & $\Gamma_o$ & 
+$(0,-b,0)$ & 
+$(a,0,0)$ 
+&$(0,0,c)$ \\
+base centered & $\Gamma_o^b$ & 
+$(\frac{1}{2}a,-\frac{1}{2}b,0)$ & 
+$(\frac{1}{2}a,\frac{1}{2}b,0)$ & 
+$(0,0,c)$ \\
+body centered & $\Gamma_o^v$ & 
+$\frac{1}{2}(a,b,c)$ & 
+$\frac{1}{2}(-a,-b,c)$ & 
+$\frac{1}{2}(a,-b,-c)$ \\
+face centered & $\Gamma_o^f$ & 
+$\frac{1}{2}(a,0,c)$ & 
+$\frac{1}{2}(0,-b,c)$ & 
+$\frac{1}{2}(a,-b,0)$ \\
+\hline
+%
+\hline
+\multicolumn{5}{|c|}{tetragonal}\\
+\hline
+primitive & $\Gamma_q$ & 
+$(a,0,0)$ & 
+$(0,a,0)$ 
+&$(0,0,c)$ \\
+\hline
+body centered &$\Gamma_q^v$ & 
+$\frac{1}{2}(-a,a,c)$ & 
+$\frac{1}{2}(a,-a,c)$ & 
+$\frac{1}{2}(a,a,-c)$ \\
+\hline
+%
+\hline
+\multicolumn{5}{|c|}{trigonal}\\
+\hline
+primitive & $\Gamma_{rh}$ & 
+$(0,a,c)$ & 
+$(\frac{1}{2}\sqrt{3}a,\frac{1}{2}a,c)$ &
+$(-\frac{1}{2}\sqrt{3}a,\frac{1}{2}a,c)$ \\
+\hline
+%
+\hline
+\multicolumn{5}{|c|}{hexagonal}\\
+\hline
+primitive & $\Gamma_h$ & 
+$(0,-1,0)a$ & 
+$(\frac{1}{2}\sqrt{3},\frac{1}{2},0)a$ &
+$(0,0,1)c$\\
+\hline
+%
+\hline
+\multicolumn{5}{|c|}{cubic}\\
+\hline
+primitive & $\Gamma_c$ & 
+$(1,0,0)a$ & 
+$(0,1,0)a$ & 
+$(0,0,1)a$ \\
+face centered & $\Gamma_c^f$ & 
+$\frac{1}{2}a(0,1,1)$ & 
+$\frac{1}{2}a(1,0,1)$ & 
+$\frac{1}{2}a(1,1,0)$ \\
+body centered & $\Gamma_c^v$ & 
+$\frac{1}{2}a(-1,1,1)$ & 
+$\frac{1}{2}a(1,-1,1)$ & 
+$\frac{1}{2}a(1,1,-1)$ \\
+\hline
+\end{tabular}
+\end{center}
+%====================================================================
+\subsection{Spacegroups}
+%====================================================================
+We refer the user to International Tables for Crystallography, Vol. A chapter
+12.2.
 %====================================================================
 \newpage
 \bibliographystyle{unsrtnat}

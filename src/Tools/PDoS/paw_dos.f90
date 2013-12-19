@@ -22,7 +22,15 @@
         INTEGER(4)                   :: SPACEGROUP
         SAVE
       END MODULE DOS_WGHT_MODULE
-
+      !
+      !..................................................................
+      MODULE READCNTL_MODULE
+      USE LINKEDLIST_MODULE
+        TYPE(LL_TYPE)   :: LL_CNTL
+        SAVE
+      END MODULE READCNTL_MODULE
+      !
+      !..................................................................
       PROGRAM PDOS
       USE PDOS_MODULE, ONLY: STATE,STATEARR
       USE SPINDIR_MODULE
@@ -1002,13 +1010,6 @@
       END IF
       RETURN
       END
-!
-!     ..................................................................
-MODULE READCNTL_MODULE
-USE LINKEDLIST_MODULE
-TYPE(LL_TYPE)   :: LL_CNTL
-SAVE
-END MODULE READCNTL_MODULE
 !
 !     ..................................................................
       SUBROUTINE READCNTL
