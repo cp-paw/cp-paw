@@ -667,7 +667,7 @@ CALL TRACE$PASS('DONE')
 !     ==  READ BLOCK !ANALYSE!OPTIC                                   ==
 !     ==================================================================
       CALL READIN_ANALYSE_OPTIC(LL_CNTL)
-      call READIN_ANALYSE_OPTEELS(LL_CNTL)
+      CALL READIN_ANALYSE_OPTEELS(LL_CNTL)
 !
 !     ==================================================================
 !     ==  CHECK TIME TO STOP                                          ==
@@ -1086,7 +1086,7 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$EXISTD(LL_CNTL,'OFFSITE',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'OFFSITE',1,TCHK2)
-          IF(tchk2.and.MODUS.NE.'HYBRID') THEN
+          IF(TCHK2.AND.MODUS.NE.'HYBRID') THEN
             CALL ERROR$MSG('INCONSISTENT SETTING')
             CALL ERROR$MSG('OFFSITE=T IS COMPATIBLE ONLY WITH MODUS "HYBRID"')
             CALL ERROR$L4VAL('OFFSITE',TCHK2)
@@ -1112,7 +1112,7 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$EXISTD(LL_CNTL,'PICK',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'PICK',1,TCHK2)
-          IF(tchk2.and.MODUS.NE.'OLDDMFT') THEN
+          IF(TCHK2.AND.MODUS.NE.'OLDDMFT') THEN
             CALL ERROR$MSG('INCONSISTENT SETTINGE')
             CALL ERROR$MSG('PICK=T IS COMPATIBLE ONLY WITH MODUS "OLDDMFT"')
             CALL ERROR$L4VAL('DROP',TCHK2)
@@ -2697,7 +2697,7 @@ CALL TRACE$PASS('DONE')
       SUBROUTINE READIN_ANALYSE_OPTEELS(LL_CNTL_)
 !     **************************************************************************
 !     **  INPUT DATA FOR OPTICAL ABSORPTION AND EELS SPECTRA                  **
-!     **  currently used to set the opteels object                            **
+!     **  CURRENTLY USED TO SET THE OPTEELS OBJECT                            **
 !     **                                                                      **
 !     **  FILE=FILENAME                                                       **
 !     **                 MATTHE A. UIJTTEWAAL 2011 (ADJUSTED P.BLOECHL 2012)  **
@@ -2719,11 +2719,11 @@ CALL TRACE$PASS('DONE')
       CHARACTER(256)           :: CH256
       CHARACTER(32)            :: CH32
       CHARACTER(8)             :: CH8
-      REAL(8)                  :: svar
+      REAL(8)                  :: SVAR
       REAL(8)                  :: ZI,ZF
       REAL(8)                  :: EMAX
-      REAL(8)                  :: EV     ! electron volt
-      REAL(8)                  :: ANGSTROM  ! angstrom
+      REAL(8)                  :: EV     ! ELECTRON VOLT
+      REAL(8)                  :: ANGSTROM  ! ANGSTROM
 !     **************************************************************************
                            CALL TRACE$PUSH('READIN_ANALYSE_OPT')  
       CALL CONSTANTS$GET('EV',EV)
@@ -2774,7 +2774,7 @@ CALL TRACE$PASS('DONE')
         CALL OPTEELS$SETCH('FILE',TRIM(CH256))
 !
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      enddo
+      ENDDO
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -2800,7 +2800,7 @@ CALL TRACE$PASS('DONE')
           CALL ERROR$STOP('READIN_ANALAYSE_OPT')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',1,EMAX)
-        emax=emax*ev
+        EMAX=EMAX*EV
         IF(EMAX.LT.0.) THEN
           CALL ERROR$MSG('EXCITATION ENERGY SHOULD BE POSITIVE')
           CALL ERROR$STOP('READIN_ANALAYSE_OPT')
@@ -2832,7 +2832,7 @@ CALL TRACE$PASS('DONE')
         ZF=ZF*ANGSTROM
         CALL OPTEELS$SETR8('ZF',ZF)
 !
-!       == restrict opt to specified group =====================================
+!       == RESTRICT OPT TO SPECIFIED GROUP =====================================
         CH256='ALL' !DEFAULT NO RESTRICTION
         CALL LINKEDLIST$EXISTD(LL_CNTL,'GROUP',1,TCHK) !RESTRICT OPT TO GROUP!
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'GROUP',1,CH256) 
@@ -3197,10 +3197,10 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'OPTIC',1,TON)
-      IF(.NOT.TON) then
+      IF(.NOT.TON) THEN
         CALL TRACE$POP
         RETURN
-      end if
+      END IF
       CALL ERROR$MSG('OPTIC MODULE HAS BEEN REMOVED TEMPORARILY IN THIS VERSION')
       CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 
@@ -3640,14 +3640,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ****************************************** P.E. BLOECHL, 1995 ************
       USE IO_MODULE
       USE LINKEDLIST_MODULE
-      use constants_module
+      USE CONSTANTS_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
-      LOGICAL(4)            :: TCHK,tchk1
+      LOGICAL(4)            :: TCHK,TCHK1
       INTEGER(4)            :: NKPT
-      real(8)               :: angstrom
-      real(8)               :: svar
+      REAL(8)               :: ANGSTROM
+      REAL(8)               :: SVAR
 !     **************************************************************************
                           CALL TRACE$PUSH('STRCIN')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -3705,7 +3705,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==========================================================================
 !     ==  READ BLOCK !STRUCTURE!NTBO                                          ==
 !     ==========================================================================
-      call STRCIN_LMTO(LL_STRC)
+      CALL STRCIN_LMTO(LL_STRC)
 !
       CALL SETUP$READ()
 !    
@@ -3942,9 +3942,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==========================================================================
 !     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                           ==
 !     ==========================================================================
-!!$print*,'fudge warning! kpoint selection disregards inversion symmetry!'
-!!$print*,'in strcin_kpoints'
-!!$tinv=.false.
+!!$PRINT*,'FUDGE WARNING! KPOINT SELECTION DISREGARDS INVERSION SYMMETRY!'
+!!$PRINT*,'IN STRCIN_KPOINTS'
+!!$TINV=.FALSE.
       CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(WGHT(NKPT))
@@ -3992,7 +3992,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: MAINLN(2)
       LOGICAL(4)               :: TLDAPLUSU
       LOGICAL(4)               :: THYBRID
-      LOGICAL(4)               :: Tntbo
+      LOGICAL(4)               :: TNTBO
       LOGICAL(4)               :: TINTERNALSETUP
       REAL(8)                  :: EV
 !     **************************************************************************
@@ -4317,25 +4317,25 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_LMTO(LL_STRC_)
 !     **************************************************************************
-!     **  DEFINES THE parameters for the LMTO object                          **
+!     **  DEFINES THE PARAMETERS FOR THE LMTO OBJECT                          **
 !     **                                                                      **
-!     **  !species must be finished before this is called                     **
-!     **          (uses nsp from atomtypelist)                                **
+!     **  !SPECIES MUST BE FINISHED BEFORE THIS IS CALLED                     **
+!     **          (USES NSP FROM ATOMTYPELIST)                                **
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
-      integer(4)               :: isp
+      INTEGER(4)               :: ISP
       CHARACTER(32)            :: SPNAME
-      LOGICAL(4)               :: TCHK,tchk1
+      LOGICAL(4)               :: TCHK,TCHK1
       INTEGER(4)               :: NSP
       REAL(8)                  :: SVAR
-      LOGICAL(4)               :: Tntbo
-      integer(4)               :: leng
+      LOGICAL(4)               :: TNTBO
+      INTEGER(4)               :: LENG
       LOGICAL(4),ALLOCATABLE   :: TORB(:)
-      real(8)   ,ALLOCATABLE   :: work(:)
+      REAL(8)   ,ALLOCATABLE   :: WORK(:)
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES_NTBO')
       LL_STRC=LL_STRC_
@@ -4346,16 +4346,16 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
 !
 !       ========================================================================
-!       ==  skip if ntbo block is not present                                 ==
+!       ==  SKIP IF NTBO BLOCK IS NOT PRESENT                                 ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TNTBO)
-        IF(.NOT.TNTBO) then
-          CALL LINKEDLIST$SELECT(LL_STRC,'..') !leave species block
-          cycle
-        end if
+        IF(.NOT.TNTBO) THEN
+          CALL LINKEDLIST$SELECT(LL_STRC,'..') !LEAVE SPECIES BLOCK
+          CYCLE
+        END IF
 !
 !       ========================================================================
-!       ==  check conflict with ldaplusu and hybrid                           ==
+!       ==  CHECK CONFLICT WITH LDAPLUSU AND HYBRID                           ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,TCHK)
         IF(TCHK) THEN
@@ -4401,8 +4401,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !   
         CALL LINKEDLIST$EXISTD(LL_STRC,'LHFWEIGHT',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'LHFWEIGHT',1,svar)
-          CALL LMTO$SETR8('LHFWEIGHT',svar)
+          CALL LINKEDLIST$GET(LL_STRC,'LHFWEIGHT',1,SVAR)
+          CALL LMTO$SETR8('LHFWEIGHT',SVAR)
         END IF
 !   
         CALL LINKEDLIST$EXISTD(LL_STRC,'NDDO',1,TCHK)
@@ -4433,11 +4433,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           ALLOCATE(WORK(2))
           CALL LINKEDLIST$GET(LL_STRC,'TAILLAMBDA',1,WORK)
-          if(work(1).le.0.d0.or.work(2).le.0.d0) then
+          IF(WORK(1).LE.0.D0.OR.WORK(2).LE.0.D0) THEN
             CALL ERROR$MSG('INVALID INPUT IN !STRUCTURE!SPECIES!NTBO')
             CALL ERROR$MSG('TAILLAMBDA MUST BE POSITIVE')
-            call error$stop('STRCIN_LMTO')
-          end if
+            CALL ERROR$STOP('STRCIN_LMTO')
+          END IF
           CALL LMTO$SETR8('TAILLAMBDA1',WORK(1))
           CALL LMTO$SETR8('TAILLAMBDA2',WORK(2))
           DEALLOCATE(WORK)
@@ -4464,12 +4464,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         END IF        
     
         CALL LMTO$SETI4('ISP',0)
-        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! leave ntbo block
-        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! leave species block
-      enddo
-                                   call trace$pop()
-      return
-      end
+        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE NTBO BLOCK
+        CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
+      ENDDO
+                                   CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ATOM(LL_STRC_)
@@ -4626,7 +4626,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$EXISTD(LL_STRC,'NF',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'NF',0,3)
       CALL LINKEDLIST$GET(LL_STRC,'NF',1,NFCT)
-      CALL ISOLATE$SETi4('NFCT',NFCT)
+      CALL ISOLATE$SETI4('NFCT',NFCT)
 
       CALL LINKEDLIST$EXISTD(LL_STRC,'RC',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'RC',0,0.5D0)
@@ -4714,7 +4714,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                 :: FMAX
       INTEGER(4)              :: NFILO
       INTEGER(4)              :: NEMPTY,NOCC
-      INTEGER(4)              :: isp
+      INTEGER(4)              :: ISP
       LOGICAL(4)              :: TNONCOLL
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_OCCUP')
@@ -4941,12 +4941,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       TYPE(LL_TYPE)            :: LL_STRC
       LOGICAL(4)               :: TCHK
       LOGICAL(4)               :: TON
-      CHARACTER(32)            :: ATOM,name
+      CHARACTER(32)            :: ATOM,NAME
       INTEGER(4)               :: NTH,ITH
       CHARACTER(32)            :: TYPE
       INTEGER(4)               :: ISPIN
-      INTEGER(4)               :: nat
-      INTEGER(4)               :: Iat
+      INTEGER(4)               :: NAT
+      INTEGER(4)               :: IAT
       REAL(8)                  :: VALUE
       REAL(8)                  :: RC
       REAL(8)                  :: PWR
@@ -6045,10 +6045,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$EXISTL(LL_STRC,'QM-MM',1,TCHK)
-      IF(.NOT.TCHK) then
-        call trace$pop()
+      IF(.NOT.TCHK) THEN
+        CALL TRACE$POP()
         RETURN
-      end if
+      END IF
       CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
 !     CALL LINKEDLIST$REPORT(LL_STRC,6)
 !
