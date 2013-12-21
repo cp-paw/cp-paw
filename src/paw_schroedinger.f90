@@ -341,7 +341,7 @@ DO IR=1,NR
     CALL ERROR$R8VAL('PHI(IR)',PHI(IR))
     CALL ERROR$I4VAL('L',L)
     CALL ERROR$I4VAL('SO',SO)
-    CALL ERROR$r8VAL('E',E)
+    CALL ERROR$R8VAL('E',E)
     CALL ERROR$I4VAL('IDIR',IDIR)
     CALL ERROR$STOP('SHROEDINGER$SPHERICAL')
  END IF
@@ -2246,32 +2246,32 @@ CHARACTER(32):: FILE
       INTEGER(4),INTENT(IN)   :: GID      ! GRID ID
       INTEGER(4),INTENT(IN)   :: NR       ! #(RADIAL GRID POINTS)
       REAL(8)   ,INTENT(IN)   :: XMAX     ! MAXIMUM TOLERABLE RATIO OF PHI 
-      REAL(8)   ,INTENT(INout):: pot(NR)  ! RADIAL SPHERICAL POTENTIAL
+      REAL(8)   ,INTENT(INOUT):: POT(NR)  ! RADIAL SPHERICAL POTENTIAL
       REAL(8)   ,INTENT(IN)   :: E        ! ENERGY
-      real(8)                 :: pi
-      real(8)                 :: y0
-      real(8)                 :: svar
-      real(8)                 :: r(nr)
-      real(8)                 :: f(nr)
-      real(8)                 :: g(nr)
-      integer(4)              :: ir
+      REAL(8)                 :: PI
+      REAL(8)                 :: Y0
+      REAL(8)                 :: SVAR
+      REAL(8)                 :: R(NR)
+      REAL(8)                 :: F(NR)
+      REAL(8)                 :: G(NR)
+      INTEGER(4)              :: IR
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
-      f(:)=sqrt(max(pot(:)*y0-e,0.d0))
-      call radial$integrate(gid,nr,f,g)
-      g=g+f*(r(nr)-r(:))-log(xmax)
-      do ir=2,nr-1
-        if(g(ir).gt.0.d0) then
-          svar=g(ir)/(g(ir+1)-g(ir))
-          svar=(1.d0-svar)*pot(ir)+svar*pot(ir-1)
-          pot(ir:)=svar
-          exit
-        end if
-      enddo
-      return 
-      end
+      F(:)=SQRT(MAX(POT(:)*Y0-E,0.D0))
+      CALL RADIAL$INTEGRATE(GID,NR,F,G)
+      G=G+F*(R(NR)-R(:))-LOG(XMAX)
+      DO IR=2,NR-1
+        IF(G(IR).GT.0.D0) THEN
+          SVAR=G(IR)/(G(IR+1)-G(IR))
+          SVAR=(1.D0-SVAR)*POT(IR)+SVAR*POT(IR-1)
+          POT(IR:)=SVAR
+          EXIT
+        END IF
+      ENDDO
+      RETURN 
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,V00,E,IRCL,IROUT)
@@ -2666,7 +2666,7 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: PHI(NR)     ! LARGE COMPONENT
       REAL(8)   ,INTENT(OUT):: SPHI(NR)    ! SMALL COMPONENT
       REAL(8)               :: LAMBDA      ! =L FOR LS>0; -L-1 FOR LS<0
-      REAL(8)               :: kappa       ! =-l-1 FOR LS>0; l FOR LS<0
+      REAL(8)               :: KAPPA       ! =-L-1 FOR LS>0; L FOR LS<0
       REAL(8)               :: SGNLAMBDA   !SGN(LAMBDA)
       REAL(8)               :: SPEEDOFLIGHT! SPEED OF LIGHT
       REAL(8)               :: R(NR)       ! RADIAL GRID
@@ -2677,16 +2677,16 @@ CHARACTER(32):: FILE
         RETURN
       END IF
 !
-      IF(ISO.EQ.1) THEN   !parallel spin and orbit
-        LAMBDA=REAL(L,KIND=8)   ! lambda=-(kappa+1)
-        kappa=real(-l-1,kind=8)
-        SGNLAMBDA=1.D0          ! sgnlambda=-sgnkappa
-      ELSE IF(ISO.EQ.-1) THEN !anti parallel spin and orbit
+      IF(ISO.EQ.1) THEN   !PARALLEL SPIN AND ORBIT
+        LAMBDA=REAL(L,KIND=8)   ! LAMBDA=-(KAPPA+1)
+        KAPPA=REAL(-L-1,KIND=8)
+        SGNLAMBDA=1.D0          ! SGNLAMBDA=-SGNKAPPA
+      ELSE IF(ISO.EQ.-1) THEN !ANTI PARALLEL SPIN AND ORBIT
         LAMBDA=REAL(-L-1,KIND=8)
-        kappa=real(l,kind=8)
+        KAPPA=REAL(L,KIND=8)
         SGNLAMBDA=-1.D0
-      ELSE IF(ISO.EQ.0) THEN ! scalar relativistic
-        kappa=real(-1,kind=8)
+      ELSE IF(ISO.EQ.0) THEN ! SCALAR RELATIVISTIC
+        KAPPA=REAL(-1,KIND=8)
         LAMBDA=0.D0
         SGNLAMBDA=1.D0
       ELSE
@@ -2819,13 +2819,13 @@ CHARACTER(32):: FILE
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
       EKIN(:)=E-POT(:)*Y0
-      EKIN(:)=MAX(ekin,-c**2)   ! fix to avoid a divide by zero.
+      EKIN(:)=MAX(EKIN,-C**2)   ! FIX TO AVOID A DIVIDE BY ZERO.
       DREL(:)=-EKIN(:)/(EKIN(:)+2.D0*C**2)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SCHROEDINGER$PHASESHIFT(GID,NR,PHI,rmin,RC,PHASE)
+      SUBROUTINE SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMIN,RC,PHASE)
 !     **************************************************************************
 !     **  CALCULATES THE PHASE SHIFT FOR A RADIAL FUNCTION AT RADIUS RC       **
 !     **                                                                      **
@@ -2842,8 +2842,8 @@ CHARACTER(32):: FILE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: PHI(NR)
-      REAL(8)   ,INTENT(IN) :: Rmin  ! nodes inside rmin are not counted
-      REAL(8)   ,INTENT(IN) :: RC    ! phaseshift calculated at rc
+      REAL(8)   ,INTENT(IN) :: RMIN  ! NODES INSIDE RMIN ARE NOT COUNTED
+      REAL(8)   ,INTENT(IN) :: RC    ! PHASESHIFT CALCULATED AT RC
       REAL(8)   ,INTENT(OUT):: PHASE
       REAL(8)               :: PI
       REAL(8)               :: R(NR)

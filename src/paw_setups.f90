@@ -108,7 +108,7 @@ INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA
 INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
                                        !      = 1 FOR 1ST SCATTERING STATE (PHIDOT)
-logical(4),pointer     :: torb(:)      ! selector for U-tensor
+LOGICAL(4),POINTER     :: TORB(:)      ! SELECTOR FOR U-TENSOR
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
 REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
@@ -129,7 +129,7 @@ REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
-REAL(8)   ,POINTER     :: corevalencex(:,:)  !(LNX,LNX) core valence exchange
+REAL(8)   ,POINTER     :: COREVALENCEX(:,:)  !(LNX,LNX) CORE VALENCE EXCHANGE
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
@@ -266,11 +266,11 @@ END MODULE SETUP_MODULE
       REAL(8)     ,PARAMETER  :: GMAX=15.D0 ! <-> EPW OF ABOUT 200 RY
       REAL(8)     ,PARAMETER  :: G1=1.D-3
       INTEGER(4)  ,PARAMETER  :: NG=512
-!!$!     ==  The radial grid has been changed between revision 857 and 1079 
-!!$!     ==  in the devel branch. This caused small differences in the results
-!!$!     ==  Here the previous parameters:
-!!$      Real(8)     ,PARAMETER  :: GMAX=30.D0 ! <-> EPW OF ABOUT 200 RY
-!!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299d-4
+!!$!     ==  THE RADIAL GRID HAS BEEN CHANGED BETWEEN REVISION 857 AND 1079 
+!!$!     ==  IN THE DEVEL BRANCH. THIS CAUSED SMALL DIFFERENCES IN THE RESULTS
+!!$!     ==  HERE THE PREVIOUS PARAMETERS:
+!!$      REAL(8)     ,PARAMETER  :: GMAX=30.D0 ! <-> EPW OF ABOUT 200 RY
+!!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299D-4
 !!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
       CHARACTER(6)            :: TYPEID
@@ -343,7 +343,7 @@ END MODULE SETUP_MODULE
       THIS%PSG4  =0.D0
       THIS%SOFTCORETYPE='NONE'
       NULLIFY(THIS%LOX)     !(LNX)
-      NULLIFY(THIS%torb)    !(LNX)
+      NULLIFY(THIS%TORB)    !(LNX)
       NULLIFY(THIS%VADD)    !(NRX)
       NULLIFY(THIS%AECORE)  !(NRX)
       NULLIFY(THIS%PSCORE)  !(NRX)
@@ -597,7 +597,7 @@ END MODULE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
-      LOGICAL(4)  ,INTENT(out)  :: VAL(LEN)
+      LOGICAL(4)  ,INTENT(OUT)  :: VAL(LEN)
 !     **************************************************************************
       IF(ID.EQ.'TORB') THEN
         IF(LEN.NE.THIS%LNX) THEN
@@ -606,7 +606,7 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$SETL4A')
         END IF
         IF(ASSOCIATED(THIS%TORB)) THEN
-          val=THIS%TORB
+          VAL=THIS%TORB
         ELSE
           VAL=.TRUE.
         END IF
@@ -728,7 +728,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR,NG
-      INTEGER(4)               :: i
+      INTEGER(4)               :: I
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
       CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
@@ -934,7 +934,7 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
 !
 !     ==========================================================================
-!     ==  matrix elements for core valence exchange with partial waves        ==
+!     ==  MATRIX ELEMENTS FOR CORE VALENCE EXCHANGE WITH PARTIAL WAVES        ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'CVX') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
@@ -1011,7 +1011,7 @@ END MODULE SETUP_MODULE
         VAL=THIS%ATOM%EOFI
 !
 !     ==========================================================================
-!     ==  atomic density                                                      ==
+!     ==  ATOMIC DENSITY                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'AERHO') THEN
         IF(LEN.NE.NR) THEN
@@ -1407,10 +1407,10 @@ PRINT*,'RCSM ',THIS%RCSM
 !CALL ERROR$STOP('FORCED STOP IN SETUP')
 !
 !     ==================================================================
-!     == default selector for local orbitals is true (in atomtypelist) =========
+!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
 !     ==================================================================
       ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
+      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
 !     
 !     ==================================================================
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
@@ -1494,7 +1494,7 @@ PRINT*,'RCSM ',THIS%RCSM
     &                              ,NG,THIS%PROOFG(:,LN))
         THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
       ENDDO
-!CALL SETUP_WRITEPHI('proofg.dat',GIDg,Ng,lnx,THIS%PROOFG)
+!CALL SETUP_WRITEPHI('PROOFG.DAT',GIDG,NG,LNX,THIS%PROOFG)
 !     == COMPENSATION GAUSSIAN =========================================
       ALLOCATE(THIS%NHATPRIMEOFG(NG))
       ALLOCATE(THIS%VHATOFG(NG))
@@ -1548,7 +1548,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
-      LOGICAL(4)            :: TCHK,tchk1
+      LOGICAL(4)            :: TCHK,TCHK1
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L,IB1
@@ -1660,7 +1660,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !
       CALL LMTO$GETL4('ON',TCHK)
       IF(TCHK) THEN
-        CALL LMTO$SETI4('ISP',this%i)
+        CALL LMTO$SETI4('ISP',THIS%I)
         CALL LMTO$GETL4('FOCKSETUP',TCHK1)
         IF(TCHK1) THEN
           CALL LMTO$GETR8('LHFWEIGHT',THIS%SETTING%FOCK)
@@ -1841,7 +1841,7 @@ PRINT*,'RCSM ',THIS%RCSM
       ENDDO
 !
       CALL TIMING$CLOCKON('MAKEPARTIALWAVES')
-      CALL setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
+      CALL SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
      &          ,VFOCK,NB,NC &
      &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
@@ -1852,7 +1852,7 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &          ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%QPHIDOT &
      &          ,THIS%AEPHIDOT,THIS%PSPHIDOT,THIS%PSG2,THIS%PSG4)
-call trace$pass('after makepartialwaves')
+CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
@@ -1861,9 +1861,9 @@ call trace$pass('after makepartialwaves')
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
 !     
 !     ==========================================================================
-!     ==  DETERMINE core-valence exchange matrix elements                     ==
+!     ==  DETERMINE CORE-VALENCE EXCHANGE MATRIX ELEMENTS                     ==
 !     ==========================================================================
-      call setups_CVXSETUP()
+      CALL SETUPS_CVXSETUP()
 !     
 !     ==========================================================================
 !     ==  DETERMINE MATRIX ELEMENTS BETWEEN PROJECTOR FUNCTIONS               ==
@@ -1889,7 +1889,7 @@ call trace$pass('after makepartialwaves')
 !     ==========================================================================
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
-call trace$pass('marke 1')
+CALL TRACE$PASS('MARKE 1')
       CALL TIMING$CLOCKON('TEST SCATTERING')
       CALL SETUP_TESTSCATTERING(LL_STP)
       CALL TIMING$CLOCKOFF('TEST SCATTERING')
@@ -1901,7 +1901,7 @@ call trace$pass('marke 1')
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
 !     ==========================================================================
-call trace$pass('marke 2')
+CALL TRACE$PASS('MARKE 2')
       CALL TIMING$CLOCKON('BESSELTRANSFORMS')
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
@@ -1934,17 +1934,17 @@ call trace$pass('marke 2')
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
 !
 !     ==================================================================
-!     == default selector for local orbitals is true (in atomtypelist) =========
+!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
 !     ==================================================================
-call trace$pass('marke 3')
+CALL TRACE$PASS('MARKE 3')
       ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
+      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
 !
 !     ==========================================================================
 !     == WRITE REPORT
 !     ==========================================================================
       CALL SETUP_REPORTFILE(LL_STP)
-call trace$pass('before pop in setup_read_new')
+CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
                             CALL TRACE$POP
       RETURN
       END
@@ -2084,7 +2084,7 @@ call trace$pass('before pop in setup_read_new')
         CALL LINKEDLIST$WRITE(LL_STP,NFIL,'MONOMER')
         CALL FILEHANDLER$CLOSE('STP_REPORT')
       END IF
-      call trace$pass('SETUP REPORT FILE WRITTEN')
+      CALL TRACE$PASS('SETUP REPORT FILE WRITTEN')
 !
 !     ==========================================================================
 !     == REMOVE LINKED LIST                                                   ==
@@ -2933,7 +2933,7 @@ call trace$pass('before pop in setup_read_new')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
+      SUBROUTINE SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,QN,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
@@ -2998,12 +2998,12 @@ call trace$pass('before pop in setup_read_new')
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
-      LOGICAL   ,PARAMETER  :: TWRITE=.false.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
-      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.true.
-      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.false.
-      LOGICAL(4),PARAMETER  :: Tcuttail=.true.
+      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.TRUE.
+      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
+      LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3043,7 +3043,7 @@ call trace$pass('before pop in setup_read_new')
       REAL(8)               :: RC1
       REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO,jb
+      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO,JB
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: X0,Z0,DX,XM,ZM
@@ -3152,7 +3152,7 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
             IF(LOFI(IB).NE.L) CYCLE
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.d0,ROUT,TVARDREL &
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.D0,ROUT,TVARDREL &
      &                             ,DREL,G,0,AEPOT,E,UOFI(:,IB))
             IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
@@ -3222,7 +3222,7 @@ PRINT*,'EOFI1 ',EOFI1
             PHIPHASE=1.D0   ! NODE AT ROUT
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
-            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND,PHIPHASE)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND,PHIPHASE)
 !           == FIX SIZE OF FIRST PARTIAL WAVE ABOUT EQUAL TO UOFI   ============
             IF(NCL(L).EQ.0) THEN
               DO IR1=1,NR
@@ -3652,7 +3652,7 @@ PRINT*,'EOFI1 A ',EOFI1
                       CALL TRACE$PASS('CONSTRUCT PROJECTOR FUNCTIONS')
       DO LN=1,LNX
         BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!PRO(:,LN)=Tqn(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*qn(:,LN)
+!PRO(:,LN)=TQN(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*QN(:,LN)
       ENDDO
 !!$!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
 !!$!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
@@ -3761,22 +3761,22 @@ PRINT*,'EOFI1 A ',EOFI1
 ! END OF THE GRID. HOWEVER THE EXPONENTIALLY GROWING TAIL OF THE PARTIAL 
 ! WAVES MAY INTRODUCE NUMERICAL ERRORS
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
-!AUX(:)=R(:)**2*(aephi(:,LN1)*Taephi(:,LN2)-psphi(:,LN1)*Tpsphi(:,LN2))
+!AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DT(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
@@ -4030,8 +4030,8 @@ GOTO 10001
 !     ==========================================================================
 !     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
 !     ==========================================================================
-      if(tcuttail) then
-!!$! old variant
+      IF(TCUTTAIL) THEN
+!!$! OLD VARIANT
 !!$        DO IR=1,NR
 !!$!          IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
 !!$           IF(R(IR).GT.MAX(4.D0*RCOV,RNORM)) THEN
@@ -4049,29 +4049,29 @@ GOTO 10001
 !!$        QNDOT(IR:,:)=0.D0
 !!$        PSPHIDOT(IR:,:)=0.D0
 !!$        PRO(IR:,:)=0.D0
-! new variant
-        do ln=1,lnx
-          svar=0.d0
-          do ir=1,nr
-            if(r(ir).le.rcov) then
-               svar=max(svar,abs(psphi(ir,ln)))
-            else
-              if(abs(psphi(ir,ln)).gt.10.d0*svar) then
-                AEPHI(IR:,ln)=0.D0
-                PSPHI(IR:,ln)=0.D0
-                NLPHI(IR:,ln)=0.D0
-                QN(IR:,ln)=0.D0
-                AEPHIDOT(IR:,ln)=0.D0
-                NLPHIDOT(IR:,ln)=0.D0
-                QNDOT(IR:,ln)=0.D0
-                PSPHIDOT(IR:,ln)=0.D0
-                PRO(IR:,ln)=0.D0
-                exit
-              end if
-            end if
-          enddo
-        enddo
-      end if
+! NEW VARIANT
+        DO LN=1,LNX
+          SVAR=0.D0
+          DO IR=1,NR
+            IF(R(IR).LE.RCOV) THEN
+               SVAR=MAX(SVAR,ABS(PSPHI(IR,LN)))
+            ELSE
+              IF(ABS(PSPHI(IR,LN)).GT.10.D0*SVAR) THEN
+                AEPHI(IR:,LN)=0.D0
+                PSPHI(IR:,LN)=0.D0
+                NLPHI(IR:,LN)=0.D0
+                QN(IR:,LN)=0.D0
+                AEPHIDOT(IR:,LN)=0.D0
+                NLPHIDOT(IR:,LN)=0.D0
+                QNDOT(IR:,LN)=0.D0
+                PSPHIDOT(IR:,LN)=0.D0
+                PRO(IR:,LN)=0.D0
+                EXIT
+              END IF
+            END IF
+          ENDDO
+        ENDDO
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
@@ -4122,7 +4122,7 @@ GOTO 10001
 !         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
 !         ======================================================================
           G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.d0,ROUT,TVARDREL &
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
        &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
        &                              ,ROUT,E,AEPSIF(:,IB-NC))
@@ -4290,7 +4290,7 @@ GOTO 10001
         PSPHI=MATMUL(PSPHI,TRANSPHI)
         AEPHI=MATMUL(AEPHI,TRANSPHI)
         NLPHI=MATMUL(NLPHI,TRANSPHI)
-        qn=MATMUL(qn,TRANSPHI)
+        QN=MATMUL(QN,TRANSPHI)
         PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
         DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
         DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
@@ -4314,9 +4314,9 @@ GOTO 10001
           SVAR=0.5D0*(DT(LN1,LN2)+DT(LN2,LN1))
           DT(LN1,LN2)=SVAR
           DT(LN2,LN1)=SVAR
-          SVAR=0.5D0*(DOver(LN1,LN2)+DOver(LN2,LN1))
-          DOver(LN1,LN2)=SVAR
-          DOver(LN2,LN1)=SVAR
+          SVAR=0.5D0*(DOVER(LN1,LN2)+DOVER(LN2,LN1))
+          DOVER(LN1,LN2)=SVAR
+          DOVER(LN2,LN1)=SVAR
         ENDDO
       ENDDO
 !
@@ -4789,7 +4789,7 @@ GOTO 10001
           END IF
           G(:)=0.D0          
           CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOM%AEPOT,DREL,0,G,L,E,1,PHI)
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,AEPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RCOV,AEPHASE(L+1,IE))
           IF(NPRO.GT.0) THEN
             G(:)=0.D0          
             CALL ATOMLIB_PAWDER(GID,NR,L,E,THIS%PSPOT,NPRO,PRO,DH,DO,G,PHI)
@@ -4798,7 +4798,7 @@ GOTO 10001
             DREL(:)=0.D0
             CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%PSPOT,DREL,0,G,L,E,1,PHI)
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,PAWPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RCOV,PAWPHASE(L+1,IE))
           PAWPHASE(L+1,IE)=PAWPHASE(L+1,IE)+DPHASE
         ENDDO
         DEALLOCATE(DH)
@@ -5207,7 +5207,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)                   :: R(NR)
       REAL(8)                   :: X0,XM,Z0,ZM,DX
       REAL(8)                   :: PHIPHASE
-      INTEGER(4)                :: IRBND,irbnd2
+      INTEGER(4)                :: IRBND,IRBND2
       INTEGER(4)                :: ISTART,IBI
       INTEGER(4)                :: L
       INTEGER(4)                :: LN,ITER,IR,II(1)
@@ -5241,7 +5241,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         C(IRBND:)=0.D0
 !
 !       ========================================================================
-!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THe     ==
+!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THE     ==
 !       == THE POTENTIALS BEYOND RBND ARE EQUAL                               ==
 !       ==   1. START WITH POINT WHERE IZ ZERO                                ==
 !       ==   2. EXPAND IF AE AND PS POTENTIALS DEVIATE ATE RBND               ==
@@ -5257,15 +5257,15 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !!$            EXIT
 !!$          END IF
 !!$        ENDDO
-        RBND2=max(rbnd,R(IRBND))
-        do ir=1,nr
-          if(r(ir).ge.rbnd2) then
-            irbnd2=ir
-            exit
-          end if
-        enddo
-        irbnd=irbnd2   !! critical change!!: the matching radius is rbnd2 but 
-                       !! scaling and tail replacement start at irbnd
+        RBND2=MAX(RBND,R(IRBND))
+        DO IR=1,NR
+          IF(R(IR).GE.RBND2) THEN
+            IRBND2=IR
+            EXIT
+          END IF
+        ENDDO
+        IRBND=IRBND2   !! CRITICAL CHANGE!!: THE MATCHING RADIUS IS RBND2 BUT 
+                       !! SCALING AND TAIL REPLACEMENT START AT IRBND
 !
 !       == THE CUTOFF CAN BE LARGE, IN PARTICULAR WHEN THE PARTIAL WAVES ARE  ==
 !       == MATCHED TO THE NODELESS PARTIAL WAVES. IF THIS IS UNACCEPTABLE, =====
@@ -5305,7 +5305,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !       ==  CORRECT FOR NODES LYING WITHIN 0.3. THEY CAN OCCUR                ==
 !       ==  WITH A (NONLOCAL) FOCK POTENTIAL AND UPSET THE FORMALISM          ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),0.d0,RBND2,PHIPHASE)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),0.D0,RBND2,PHIPHASE)
 PRINT*,'L ',L,' E=',E,'PHIPHASE BEFORE ADJUSTMENT= ',PHIPHASE
         DO IR=1,IRBND
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
@@ -5335,7 +5335,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
             CALL ERROR$MSG('OVERFLOW OF WAVE FUNCTION ENCOUNTERED')
             CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND2,Z0)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND2,Z0)
           Z0=PHIPHASE-Z0
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
@@ -5371,13 +5371,13 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
         PHI(:)=PHI(:)*SVAR
 !
 !       == OVERWRITE NODELESS INPUT PARTIAL WAVE BY PSEUDO PARTIAL WAVE
-!       == the partial wave outside rbnd is set to the input function
-!       == to avoid an exponentially growing deviation. tpsphi is not 
-!       == constructed from the input tpsphi to avoid picking up ??
+!       == THE PARTIAL WAVE OUTSIDE RBND IS SET TO THE INPUT FUNCTION
+!       == TO AVOID AN EXPONENTIALLY GROWING DEVIATION. TPSPHI IS NOT 
+!       == CONSTRUCTED FROM THE INPUT TPSPHI TO AVOID PICKING UP ??
 !!$        PSPHI(:IRBND,LN) =PHI(:IRBND)
 !!$        TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
-        PSPHI(:irbnd2,LN) =PHI(:irbnd2)
-        TPSPHI(:,LN)=(E-POT(:)*Y0)*psPHI(:,ln)
+        PSPHI(:IRBND2,LN) =PHI(:IRBND2)
+        TPSPHI(:,LN)=(E-POT(:)*Y0)*PSPHI(:,LN)
       ENDDO
                                 CALL TRACE$POP()
       RETURN
@@ -5490,7 +5490,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !     ==========================================================================
 !     == DETERMINE OFFSET IN THE NUMBER OF NODES                              ==
 !     ==========================================================================
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),0.d0,RC,SHIFT)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),0.D0,RC,SHIFT)
       OFFSETNN=REAL(INT(SHIFT),KIND=8)
 !     
 !     ==========================================================================
@@ -5500,7 +5500,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !       ========================================================================
 !       == DETERMINE K-VALUES FOR WHICH THE LOGARITHIC DERIVATIVE MATCHES     ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),0.d0,RC,SHIFT)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),0.D0,RC,SHIFT)
         SHIFT=SHIFT-OFFSETNN
         IF(SHIFT.LT.PHASE(1)) THEN
           CALL ERROR$MSG('MATCHING INCLUDING FIRST BESSEL FUNCTION NOT POSSIBLE')
