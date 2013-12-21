@@ -108,7 +108,7 @@ INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA
 INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
                                        !      = 1 FOR 1ST SCATTERING STATE (PHIDOT)
-logical(4),pointer     :: torb(:)      ! selector for U-tensor
+LOGICAL(4),POINTER     :: TORB(:)      ! SELECTOR FOR U-TENSOR
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
 REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
@@ -129,7 +129,7 @@ REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
-REAL(8)   ,POINTER     :: corevalencex(:,:)  !(LNX,LNX) core valence exchange
+REAL(8)   ,POINTER     :: COREVALENCEX(:,:)  !(LNX,LNX) CORE VALENCE EXCHANGE
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
 REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
 REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
@@ -266,11 +266,11 @@ END MODULE SETUP_MODULE
       REAL(8)     ,PARAMETER  :: GMAX=15.D0 ! <-> EPW OF ABOUT 200 RY
       REAL(8)     ,PARAMETER  :: G1=1.D-3
       INTEGER(4)  ,PARAMETER  :: NG=512
-!!$!     ==  The radial grid has been changed between revision 857 and 1079 
-!!$!     ==  in the devel branch. This caused small differences in the results
-!!$!     ==  Here the previous parameters:
-!!$      Real(8)     ,PARAMETER  :: GMAX=30.D0 ! <-> EPW OF ABOUT 200 RY
-!!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299d-4
+!!$!     ==  THE RADIAL GRID HAS BEEN CHANGED BETWEEN REVISION 857 AND 1079 
+!!$!     ==  IN THE DEVEL BRANCH. THIS CAUSED SMALL DIFFERENCES IN THE RESULTS
+!!$!     ==  HERE THE PREVIOUS PARAMETERS:
+!!$      REAL(8)     ,PARAMETER  :: GMAX=30.D0 ! <-> EPW OF ABOUT 200 RY
+!!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299D-4
 !!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
       CHARACTER(6)            :: TYPEID
@@ -343,7 +343,7 @@ END MODULE SETUP_MODULE
       THIS%PSG4  =0.D0
       THIS%SOFTCORETYPE='NONE'
       NULLIFY(THIS%LOX)     !(LNX)
-      NULLIFY(THIS%torb)    !(LNX)
+      NULLIFY(THIS%TORB)    !(LNX)
       NULLIFY(THIS%VADD)    !(NRX)
       NULLIFY(THIS%AECORE)  !(NRX)
       NULLIFY(THIS%PSCORE)  !(NRX)
@@ -597,7 +597,7 @@ END MODULE SETUP_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
-      LOGICAL(4)  ,INTENT(out)  :: VAL(LEN)
+      LOGICAL(4)  ,INTENT(OUT)  :: VAL(LEN)
 !     **************************************************************************
       IF(ID.EQ.'TORB') THEN
         IF(LEN.NE.THIS%LNX) THEN
@@ -606,7 +606,7 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$SETL4A')
         END IF
         IF(ASSOCIATED(THIS%TORB)) THEN
-          val=THIS%TORB
+          VAL=THIS%TORB
         ELSE
           VAL=.TRUE.
         END IF
@@ -728,7 +728,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
       INTEGER(4)               :: NR,NG
-      INTEGER(4)               :: i
+      INTEGER(4)               :: I
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
       CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
@@ -934,7 +934,7 @@ END MODULE SETUP_MODULE
         VAL=RESHAPE(THIS%DOVER,(/LEN/))
 !
 !     ==========================================================================
-!     ==  matrix elements for core valence exchange with partial waves        ==
+!     ==  MATRIX ELEMENTS FOR CORE VALENCE EXCHANGE WITH PARTIAL WAVES        ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'CVX') THEN
         IF(LEN.NE.THIS%LNX**2) THEN
@@ -1011,7 +1011,7 @@ END MODULE SETUP_MODULE
         VAL=THIS%ATOM%EOFI
 !
 !     ==========================================================================
-!     ==  atomic density                                                      ==
+!     ==  ATOMIC DENSITY                                                      ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'AERHO') THEN
         IF(LEN.NE.NR) THEN
@@ -1407,10 +1407,10 @@ PRINT*,'RCSM ',THIS%RCSM
 !CALL ERROR$STOP('FORCED STOP IN SETUP')
 !
 !     ==================================================================
-!     == default selector for local orbitals is true (in atomtypelist) =========
+!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
 !     ==================================================================
       ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
+      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
 !     
 !     ==================================================================
 !     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
@@ -1494,7 +1494,7 @@ PRINT*,'RCSM ',THIS%RCSM
     &                              ,NG,THIS%PROOFG(:,LN))
         THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
       ENDDO
-!CALL SETUP_WRITEPHI('proofg.dat',GIDg,Ng,lnx,THIS%PROOFG)
+!CALL SETUP_WRITEPHI('PROOFG.DAT',GIDG,NG,LNX,THIS%PROOFG)
 !     == COMPENSATION GAUSSIAN =========================================
       ALLOCATE(THIS%NHATPRIMEOFG(NG))
       ALLOCATE(THIS%VHATOFG(NG))
@@ -1548,7 +1548,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
-      LOGICAL(4)            :: TCHK,tchk1
+      LOGICAL(4)            :: TCHK,TCHK1
       REAL(8)               :: PI,FOURPI,Y0,C0LL
       REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L,IB1
@@ -1660,7 +1660,7 @@ PRINT*,'RCSM ',THIS%RCSM
 !
       CALL LMTO$GETL4('ON',TCHK)
       IF(TCHK) THEN
-        CALL LMTO$SETI4('ISP',this%i)
+        CALL LMTO$SETI4('ISP',THIS%I)
         CALL LMTO$GETL4('FOCKSETUP',TCHK1)
         IF(TCHK1) THEN
           CALL LMTO$GETR8('LHFWEIGHT',THIS%SETTING%FOCK)
@@ -1841,7 +1841,7 @@ PRINT*,'RCSM ',THIS%RCSM
       ENDDO
 !
       CALL TIMING$CLOCKON('MAKEPARTIALWAVES')
-      CALL setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
+      CALL SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,THIS%ATOM%AEPOT &
      &          ,VFOCK,NB,NC &
      &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
@@ -1852,7 +1852,7 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &          ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%QPHIDOT &
      &          ,THIS%AEPHIDOT,THIS%PSPHIDOT,THIS%PSG2,THIS%PSG4)
-call trace$pass('after makepartialwaves')
+CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
@@ -1861,9 +1861,9 @@ call trace$pass('after makepartialwaves')
       CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
 !     
 !     ==========================================================================
-!     ==  DETERMINE core-valence exchange matrix elements                     ==
+!     ==  DETERMINE CORE-VALENCE EXCHANGE MATRIX ELEMENTS                     ==
 !     ==========================================================================
-      call setups_CVXSETUP()
+      CALL SETUPS_CVXSETUP()
 !     
 !     ==========================================================================
 !     ==  DETERMINE MATRIX ELEMENTS BETWEEN PROJECTOR FUNCTIONS               ==
@@ -1889,7 +1889,7 @@ call trace$pass('after makepartialwaves')
 !     ==========================================================================
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
-call trace$pass('marke 1')
+CALL TRACE$PASS('MARKE 1')
       CALL TIMING$CLOCKON('TEST SCATTERING')
       CALL SETUP_TESTSCATTERING(LL_STP)
       CALL TIMING$CLOCKOFF('TEST SCATTERING')
@@ -1901,7 +1901,7 @@ call trace$pass('marke 1')
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
 !     ==========================================================================
-call trace$pass('marke 2')
+CALL TRACE$PASS('MARKE 2')
       CALL TIMING$CLOCKON('BESSELTRANSFORMS')
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
@@ -1934,17 +1934,17 @@ call trace$pass('marke 2')
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
 !
 !     ==================================================================
-!     == default selector for local orbitals is true (in atomtypelist) =========
+!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
 !     ==================================================================
-call trace$pass('marke 3')
+CALL TRACE$PASS('MARKE 3')
       ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETl4a('TORB',lnx,THIS%TORB)
+      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
 !
 !     ==========================================================================
 !     == WRITE REPORT
 !     ==========================================================================
       CALL SETUP_REPORTFILE(LL_STP)
-call trace$pass('before pop in setup_read_new')
+CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
                             CALL TRACE$POP
       RETURN
       END
@@ -2084,7 +2084,7 @@ call trace$pass('before pop in setup_read_new')
         CALL LINKEDLIST$WRITE(LL_STP,NFIL,'MONOMER')
         CALL FILEHANDLER$CLOSE('STP_REPORT')
       END IF
-      call trace$pass('SETUP REPORT FILE WRITTEN')
+      CALL TRACE$PASS('SETUP REPORT FILE WRITTEN')
 !
 !     ==========================================================================
 !     == REMOVE LINKED LIST                                                   ==
@@ -2933,7 +2933,7 @@ call trace$pass('before pop in setup_read_new')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE setup_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
+      SUBROUTINE SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
      &                  ,AEPHI,PSPHI,NLPHI,QN,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
@@ -2998,13 +2998,13 @@ call trace$pass('before pop in setup_read_new')
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
-      LOGICAL   ,PARAMETER  :: TWRITE=.false.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
-      LOGICAL(4),PARAMETER  :: Tnew=.true.
-      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.not.tnew
-      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.false.
-      LOGICAL(4),PARAMETER  :: Tcuttail=.true.
+      LOGICAL(4),PARAMETER  :: TNEW=.TRUE.
+      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.NOT.TNEW
+      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
+      LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -3075,7 +3075,7 @@ call trace$pass('before pop in setup_read_new')
       TYPE(VPAW_TYPE)       :: VPAW
       LOGICAL(4)            :: TFIRST
       LOGICAL(4)            :: TVARDREL
-      real(8)   ,allocatable :: ecore(:),ucore(:,:),tucore(:,:)
+      REAL(8)   ,ALLOCATABLE :: ECORE(:),UCORE(:,:),TUCORE(:,:)
 REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
@@ -3135,11 +3135,11 @@ IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
-print*,'pow ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
+PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
 !     ==========================================================================
-!     == alternate PROJECTOR CONSTRUCTION                                     ==
+!     == ALTERNATE PROJECTOR CONSTRUCTION                                     ==
 !     ==========================================================================
       IF(TNEW) GOTO 2000
 !
@@ -3160,7 +3160,7 @@ print*,'pow ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
             IF(LOFI(IB).NE.L) CYCLE
             IF(SOFI(IB).NE.ISO) CYCLE
             E=EOFI1(IB)
-            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.d0,ROUT,TVARDREL &
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,ISO,0.D0,ROUT,TVARDREL &
      &                             ,DREL,G,0,AEPOT,E,UOFI(:,IB))
             IF(TREL.AND.(.NOT.TZORA)) THEN
               CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
@@ -3231,7 +3231,7 @@ PRINT*,'EOFI1 ',EOFI1
             PHIPHASE=1.D0   ! NODE AT ROUT
             CALL ATOMLIB$PHASESHIFTSTATE(GID,NR,L,ISO,DREL,G,AEPOT &
      &                                ,ROUT,PHIPHASE,E,PHI)
-            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND,PHIPHASE)
+            CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND,PHIPHASE)
 !           == FIX SIZE OF FIRST PARTIAL WAVE ABOUT EQUAL TO UOFI   ============
             IF(NCL(L).EQ.0) THEN
               DO IR1=1,NR
@@ -3661,7 +3661,7 @@ PRINT*,'EOFI1 A ',EOFI1
                       CALL TRACE$PASS('CONSTRUCT PROJECTOR FUNCTIONS')
       DO LN=1,LNX
         BAREPRO(:,LN)=TPSPHI(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*PSPHI(:,LN)
-!PRO(:,LN)=Tqn(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*qn(:,LN)
+!PRO(:,LN)=TQN(:,LN)+(PSPOT(:)*Y0-EOFLN(LN))*QN(:,LN)
       ENDDO
 !!$!     ==  CLEANUP OF NUMERICAL ERRORS INDUCED BY A TOO COARSE GRID AT LARGE ====
 !!$!     ==  RADII. 2.D0*RCOV IS CHOSEN ARBITRARILY ===============================
@@ -3770,22 +3770,22 @@ PRINT*,'EOFI1 A ',EOFI1
 ! END OF THE GRID. HOWEVER THE EXPONENTIALLY GROWING TAIL OF THE PARTIAL 
 ! WAVES MAY INTRODUCE NUMERICAL ERRORS
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
-!AUX(:)=R(:)**2*(aephi(:,LN1)*Taephi(:,LN2)-psphi(:,LN1)*Tpsphi(:,LN2))
+!AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DT(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
-!CALL RADIAL$VALUE(GID,NR,AUX1,Rout,VAL)
+!CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
@@ -4039,8 +4039,8 @@ GOTO 10001
 !     ==========================================================================
 !     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
 !     ==========================================================================
-      if(tcuttail) then
-!!$! old variant
+      IF(TCUTTAIL) THEN
+!!$! OLD VARIANT
 !!$        DO IR=1,NR
 !!$!          IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
 !!$           IF(R(IR).GT.MAX(4.D0*RCOV,RNORM)) THEN
@@ -4058,53 +4058,53 @@ GOTO 10001
 !!$        QNDOT(IR:,:)=0.D0
 !!$        PSPHIDOT(IR:,:)=0.D0
 !!$        PRO(IR:,:)=0.D0
-! new variant
-        do ln=1,lnx
-          svar=0.d0
-          do ir=1,nr
-            if(r(ir).le.rcov) then
-               svar=max(svar,abs(psphi(ir,ln)))
-            else
-              if(abs(psphi(ir,ln)).gt.10.d0*svar) then
-                AEPHI(IR:,ln)=0.D0
-                PSPHI(IR:,ln)=0.D0
-                NLPHI(IR:,ln)=0.D0
-                QN(IR:,ln)=0.D0
-                AEPHIDOT(IR:,ln)=0.D0
-                NLPHIDOT(IR:,ln)=0.D0
-                QNDOT(IR:,ln)=0.D0
-                PSPHIDOT(IR:,ln)=0.D0
-                PRO(IR:,ln)=0.D0
-                exit
-              end if
-            end if
-          enddo
-        enddo
-      end if
+! NEW VARIANT
+        DO LN=1,LNX
+          SVAR=0.D0
+          DO IR=1,NR
+            IF(R(IR).LE.RCOV) THEN
+               SVAR=MAX(SVAR,ABS(PSPHI(IR,LN)))
+            ELSE
+              IF(ABS(PSPHI(IR,LN)).GT.10.D0*SVAR) THEN
+                AEPHI(IR:,LN)=0.D0
+                PSPHI(IR:,LN)=0.D0
+                NLPHI(IR:,LN)=0.D0
+                QN(IR:,LN)=0.D0
+                AEPHIDOT(IR:,LN)=0.D0
+                NLPHIDOT(IR:,LN)=0.D0
+                QNDOT(IR:,LN)=0.D0
+                PSPHIDOT(IR:,LN)=0.D0
+                PRO(IR:,LN)=0.D0
+                EXIT
+              END IF
+            END IF
+          ENDDO
+        ENDDO
+      END IF
 !
 !     ==========================================================================
-!     == feed in bypass                                                       ==
+!     == FEED IN BYPASS                                                       ==
 !     ==========================================================================
-2000  continue
+2000  CONTINUE
       IF(TNEW) THEN
-!!$        CALL SETUP_WRITEPHI(-'old_pro',GID,NR,lnx,pro)
-!!$        CALL SETUP_WRITEPHI(-'old_qn',GID,NR,lnx,qn)
-!!$        CALL SETUP_WRITEPHI(-'old_aephi',GID,NR,lnx,aephi)
-!!$        CALL SETUP_WRITEPHI(-'old_psphi',GID,NR,lnx,psphi)
-!!$        do ln1=1,lnx
-!!$          write(*,fmt='(a,100e10.3)')'dh   ',dh(ln1,:)
-!!$        enddo
-!!$        do ln1=1,lnx
-!!$          write(*,fmt='(a,100e10.3)')'dt   ',dt(ln1,:)
-!!$        enddo
-!!$        do ln1=1,lnx
-!!$          write(*,fmt='(a,100e10.3)')'dover',dover(ln1,:)
-!!$        enddo
+!!$        CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
+!!$        CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
+!!$        CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
+!!$        CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
+!!$        DO LN1=1,LNX
+!!$          WRITE(*,FMT='(A,100E10.3)')'DH   ',DH(LN1,:)
+!!$        ENDDO
+!!$        DO LN1=1,LNX
+!!$          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
+!!$        ENDDO
+!!$        DO LN1=1,LNX
+!!$          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
+!!$        ENDDO
 !
         CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
-      &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,vfock &
+      &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
       &                   ,QN,AEPHI,PSPHI,PRO,DT,DOVER)
-        eofi1=eofi
+        EOFI1=EOFI
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
@@ -4115,35 +4115,35 @@ GOTO 10001
           CALL ERRRO$STOP('SETUP_MAKEPARTIALWAVES')
         END IF
 !
-!       == calculate dh =======================================================
-        do ln1=1,lnx
-          do ln2=ln1,lnx
-            if(lox(ln1).ne.lox(ln2)) cycle
-!!$            aux=aepot*(aephi(:,ln1)*aephi(:,ln2)+aephism(:,ln1)*aephism(:,ln2))&
-!!$     &         -pspot*(psphi(:,ln1)*psphi(:,ln2)+psphism(:,ln1)*psphism(:,ln2))
-!small component not passed on...
- aux=aepot*(aephi(:,ln1)*aephi(:,ln2))-pspot*(psphi(:,ln1)*psphi(:,ln2))
-            aux=y0*r**2*aux  !y0 for the potential
-            call radial$integrate(gid,nr,aux,aux1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,Rout,SVAR)
-            dh(ln1,ln2)=dt(ln1,ln2)+svar
-            dh(ln2,ln1)=dh(ln1,ln2)
-          enddo
-        enddo
+!       == CALCULATE DH =======================================================
+        DO LN1=1,LNX
+          DO LN2=LN1,LNX
+            IF(LOX(LN1).NE.LOX(LN2)) CYCLE
+!!$            AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2))&
+!!$     &         -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2))
+!SMALL COMPONENT NOT PASSED ON...
+ AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2))-PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2))
+            AUX=Y0*R**2*AUX  !Y0 FOR THE POTENTIAL
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR)
+            DH(LN1,LN2)=DT(LN1,LN2)+SVAR
+            DH(LN2,LN1)=DH(LN1,LN2)
+          ENDDO
+        ENDDO
 !
-        do ln1=1,lnx
-          write(*,fmt='(a,100e10.3)')'dh   ',dh(ln1,:)
-        enddo
-        do ln1=1,lnx
-          write(*,fmt='(a,100e10.3)')'dt   ',dt(ln1,:)
-        enddo
-        do ln1=1,lnx
-          write(*,fmt='(a,100e10.3)')'dover',dover(ln1,:)
-        enddo
-        CALL SETUP_WRITEPHI(-'new_pro',GID,NR,lnx,pro)
-        CALL SETUP_WRITEPHI(-'new_qn',GID,NR,lnx,qn)
-        CALL SETUP_WRITEPHI(-'new_aephi',GID,NR,lnx,aephi)
-        CALL SETUP_WRITEPHI(-'new_psphi',GID,NR,lnx,psphi)
+        DO LN1=1,LNX
+          WRITE(*,FMT='(A,100E10.3)')'DH   ',DH(LN1,:)
+        ENDDO
+        DO LN1=1,LNX
+          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
+        ENDDO
+        DO LN1=1,LNX
+          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
+        ENDDO
+        CALL SETUP_WRITEPHI(-'NEW_PRO',GID,NR,LNX,PRO)
+        CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
+        CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
+        CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
       END IF
 !
 !     ==========================================================================
@@ -4195,7 +4195,7 @@ GOTO 10001
 !         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
 !         ======================================================================
           G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.d0,ROUT,TVARDREL &
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
        &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
        &                              ,ROUT,E,AEPSIF(:,IB-NC))
@@ -4208,8 +4208,8 @@ GOTO 10001
 !         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
 !         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
-print*,'nn ',nn,' rout=',rout,' npro= ',npro
-print*,'dh= ',dh1,' do=',do1
+PRINT*,'NN ',NN,' ROUT=',ROUT,' NPRO= ',NPRO
+PRINT*,'DH= ',DH1,' DO=',DO1
           G(:)=0.D0
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
@@ -4365,7 +4365,7 @@ print*,'dh= ',dh1,' do=',do1
         PSPHI=MATMUL(PSPHI,TRANSPHI)
         AEPHI=MATMUL(AEPHI,TRANSPHI)
         NLPHI=MATMUL(NLPHI,TRANSPHI)
-        qn=MATMUL(qn,TRANSPHI)
+        QN=MATMUL(QN,TRANSPHI)
         PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
         DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
         DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
@@ -4389,9 +4389,9 @@ print*,'dh= ',dh1,' do=',do1
           SVAR=0.5D0*(DT(LN1,LN2)+DT(LN2,LN1))
           DT(LN1,LN2)=SVAR
           DT(LN2,LN1)=SVAR
-          SVAR=0.5D0*(DOver(LN1,LN2)+DOver(LN2,LN1))
-          DOver(LN1,LN2)=SVAR
-          DOver(LN2,LN1)=SVAR
+          SVAR=0.5D0*(DOVER(LN1,LN2)+DOVER(LN2,LN1))
+          DOVER(LN1,LN2)=SVAR
+          DOVER(LN2,LN1)=SVAR
         ENDDO
       ENDDO
 !
@@ -4864,7 +4864,7 @@ print*,'dh= ',dh1,' do=',do1
           END IF
           G(:)=0.D0          
           CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%ATOM%AEPOT,DREL,0,G,L,E,1,PHI)
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,AEPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RCOV,AEPHASE(L+1,IE))
           IF(NPRO.GT.0) THEN
             G(:)=0.D0          
             CALL ATOMLIB_PAWDER(GID,NR,L,E,THIS%PSPOT,NPRO,PRO,DH,DO,G,PHI)
@@ -4873,7 +4873,7 @@ print*,'dh= ',dh1,' do=',do1
             DREL(:)=0.D0
             CALL SCHROEDINGER$SPHERICAL(GID,NR,THIS%PSPOT,DREL,0,G,L,E,1,PHI)
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RCOV,PAWPHASE(L+1,IE))
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RCOV,PAWPHASE(L+1,IE))
           PAWPHASE(L+1,IE)=PAWPHASE(L+1,IE)+DPHASE
         ENDDO
         DEALLOCATE(DH)
@@ -5282,7 +5282,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)                   :: R(NR)
       REAL(8)                   :: X0,XM,Z0,ZM,DX
       REAL(8)                   :: PHIPHASE
-      INTEGER(4)                :: IRBND,irbnd2
+      INTEGER(4)                :: IRBND,IRBND2
       INTEGER(4)                :: ISTART,IBI
       INTEGER(4)                :: L
       INTEGER(4)                :: LN,ITER,IR,II(1)
@@ -5316,7 +5316,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
         C(IRBND:)=0.D0
 !
 !       ========================================================================
-!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THe     ==
+!       == DETERMINE RBND TO MATCH THE PSEUDO PARTIAL WAVE. REQUIRING THE     ==
 !       == THE POTENTIALS BEYOND RBND ARE EQUAL                               ==
 !       ==   1. START WITH POINT WHERE IZ ZERO                                ==
 !       ==   2. EXPAND IF AE AND PS POTENTIALS DEVIATE ATE RBND               ==
@@ -5332,15 +5332,15 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !!$            EXIT
 !!$          END IF
 !!$        ENDDO
-        RBND2=max(rbnd,R(IRBND))
-        do ir=1,nr
-          if(r(ir).ge.rbnd2) then
-            irbnd2=ir
-            exit
-          end if
-        enddo
-        irbnd=irbnd2   !! critical change!!: the matching radius is rbnd2 but 
-                       !! scaling and tail replacement start at irbnd
+        RBND2=MAX(RBND,R(IRBND))
+        DO IR=1,NR
+          IF(R(IR).GE.RBND2) THEN
+            IRBND2=IR
+            EXIT
+          END IF
+        ENDDO
+        IRBND=IRBND2   !! CRITICAL CHANGE!!: THE MATCHING RADIUS IS RBND2 BUT 
+                       !! SCALING AND TAIL REPLACEMENT START AT IRBND
 !
 !       == THE CUTOFF CAN BE LARGE, IN PARTICULAR WHEN THE PARTIAL WAVES ARE  ==
 !       == MATCHED TO THE NODELESS PARTIAL WAVES. IF THIS IS UNACCEPTABLE, =====
@@ -5380,7 +5380,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
 !       ==  CORRECT FOR NODES LYING WITHIN 0.3. THEY CAN OCCUR                ==
 !       ==  WITH A (NONLOCAL) FOCK POTENTIAL AND UPSET THE FORMALISM          ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),0.d0,RBND2,PHIPHASE)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PSPHI(:,LN),0.D0,RBND2,PHIPHASE)
 PRINT*,'L ',L,' E=',E,'PHIPHASE BEFORE ADJUSTMENT= ',PHIPHASE
         DO IR=1,IRBND
           IF(PSPHI(IR,LN)*PSPHI(IR+1,LN).LT.0.D0) THEN
@@ -5410,7 +5410,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
             CALL ERROR$MSG('OVERFLOW OF WAVE FUNCTION ENCOUNTERED')
             CALL ERROR$STOP('ATOMIC_MAKEPSPHI_HBS')
           END IF
-          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.d0,RBND2,Z0)
+          CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND2,Z0)
           Z0=PHIPHASE-Z0
           CONVG=(ABS(2.D0*DX).LE.TOL)
           IF(CONVG) EXIT
@@ -5446,13 +5446,13 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
         PHI(:)=PHI(:)*SVAR
 !
 !       == OVERWRITE NODELESS INPUT PARTIAL WAVE BY PSEUDO PARTIAL WAVE
-!       == the partial wave outside rbnd is set to the input function
-!       == to avoid an exponentially growing deviation. tpsphi is not 
-!       == constructed from the input tpsphi to avoid picking up ??
+!       == THE PARTIAL WAVE OUTSIDE RBND IS SET TO THE INPUT FUNCTION
+!       == TO AVOID AN EXPONENTIALLY GROWING DEVIATION. TPSPHI IS NOT 
+!       == CONSTRUCTED FROM THE INPUT TPSPHI TO AVOID PICKING UP ??
 !!$        PSPHI(:IRBND,LN) =PHI(:IRBND)
 !!$        TPSPHI(:IRBND,LN)=(E-POT(:IRBND)*Y0)*PHI(:IRBND)
-        PSPHI(:irbnd2,LN) =PHI(:irbnd2)
-        TPSPHI(:,LN)=(E-POT(:)*Y0)*psPHI(:,ln)
+        PSPHI(:IRBND2,LN) =PHI(:IRBND2)
+        TPSPHI(:,LN)=(E-POT(:)*Y0)*PSPHI(:,LN)
       ENDDO
                                 CALL TRACE$POP()
       RETURN
@@ -5565,7 +5565,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !     ==========================================================================
 !     == DETERMINE OFFSET IN THE NUMBER OF NODES                              ==
 !     ==========================================================================
-      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),0.d0,RC,SHIFT)
+      CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,1),0.D0,RC,SHIFT)
       OFFSETNN=REAL(INT(SHIFT),KIND=8)
 !     
 !     ==========================================================================
@@ -5575,7 +5575,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !       ========================================================================
 !       == DETERMINE K-VALUES FOR WHICH THE LOGARITHIC DERIVATIVE MATCHES     ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),0.d0,RC,SHIFT)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,SUPPHI(:,IB),0.D0,RC,SHIFT)
         SHIFT=SHIFT-OFFSETNN
         IF(SHIFT.LT.PHASE(1)) THEN
           CALL ERROR$MSG('MATCHING INCLUDING FIRST BESSEL FUNCTION NOT POSSIBLE')
@@ -5729,9 +5729,9 @@ PRINT*,'KI ',KI
       INTEGER(4) ,INTENT(IN)     :: GID
       INTEGER(4) ,INTENT(IN)     :: NR
       REAL(8)    ,INTENT(IN)     :: POW    !POWER
-      LOGICAL(4) ,INTENT(IN)     :: TVAL   ! value at the origin prescribed
-      REAL(8)    ,INTENT(IN)     :: VAL0_  ! value of pseudized function at r=0
-      REAL(8)    ,INTENT(IN)     :: RC     ! matching radius
+      LOGICAL(4) ,INTENT(IN)     :: TVAL   ! VALUE AT THE ORIGIN PRESCRIBED
+      REAL(8)    ,INTENT(IN)     :: VAL0_  ! VALUE OF PSEUDIZED FUNCTION AT R=0
+      REAL(8)    ,INTENT(IN)     :: RC     ! MATCHING RADIUS
       REAL(8)    ,INTENT(IN)     :: AEF(NR)
       REAL(8)    ,INTENT(OUT)    :: PSF(NR)
       REAL(8)                    :: A,B,C
@@ -6202,9 +6202,9 @@ PRINT*,'KI ',KI
       END      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine setups_outernewprowrapper(gid,nr,rout &
-     &                   ,nb,nc,lofi,sofi,eofi,lnx,lox,rc,aepot,pspot,vfock &
-     &                   ,g_qnphi,g_aephi,g_psphi,g_pro,g_dtkin,g_dover)
+      SUBROUTINE SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
+     &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
+     &                   ,G_QNPHI,G_AEPHI,G_PSPHI,G_PRO,G_DTKIN,G_DOVER)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
@@ -6212,240 +6212,240 @@ PRINT*,'KI ',KI
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: GID    ! GRID ID
-      INTEGER(4),INTENT(IN)  :: nr
-      real(8)   ,intent(in)  :: rout   ! radius of enclosing sphere
-      INTEGER(4),INTENT(IN)  :: nb
-      INTEGER(4),INTENT(IN)  :: nc
-      INTEGER(4),INTENT(IN)  :: lofi(nb)
-      INTEGER(4),INTENT(IN)  :: sofi(nb)
-      real(8)   ,intent(in)  :: eofi(nb)
-      integer(4),intent(in)  :: lnx
-      integer(4),intent(in)  :: lox(lnx)
-      real(8)   ,intent(in)  :: rc(lnx)  !only the first per l is used!!
-      real(8)   ,intent(in)  :: aepot(nr)
-      real(8)   ,intent(in)  :: pspot(nr)
-      TYPE(VFOCK_TYPE),intent(in) :: VFOCK
+      INTEGER(4),INTENT(IN)  :: NR
+      REAL(8)   ,INTENT(IN)  :: ROUT   ! RADIUS OF ENCLOSING SPHERE
+      INTEGER(4),INTENT(IN)  :: NB
+      INTEGER(4),INTENT(IN)  :: NC
+      INTEGER(4),INTENT(IN)  :: LOFI(NB)
+      INTEGER(4),INTENT(IN)  :: SOFI(NB)
+      REAL(8)   ,INTENT(IN)  :: EOFI(NB)
+      INTEGER(4),INTENT(IN)  :: LNX
+      INTEGER(4),INTENT(IN)  :: LOX(LNX)
+      REAL(8)   ,INTENT(IN)  :: RC(LNX)  !ONLY THE FIRST PER L IS USED!!
+      REAL(8)   ,INTENT(IN)  :: AEPOT(NR)
+      REAL(8)   ,INTENT(IN)  :: PSPOT(NR)
+      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
 
-      real(8)   ,intent(out) :: g_qnphi(nr,lnx)
-      real(8)   ,intent(out) :: g_aephi(nr,lnx)
-      real(8)   ,intent(out) :: g_psphi(nr,lnx)
-      real(8)   ,intent(out) :: g_pro(nr,lnx)
-      real(8)   ,intent(out) :: g_dtkin(lnx,lnx)
-      real(8)   ,intent(out) :: g_dover(lnx,lnx)
-      real(8)   ,allocatable :: ec(:)
-      real(8)   ,allocatable :: ucore(:,:)
-      real(8)   ,allocatable :: ucoresm(:,:)
-      real(8)   ,allocatable :: aecore(:,:)
-      real(8)   ,allocatable :: aecoresm(:,:)
-      real(8)   ,allocatable :: pscore(:,:)
-      real(8)   ,allocatable :: pscoresm(:,:)
-      real(8)   ,allocatable :: qn(:,:)
-      real(8)   ,allocatable :: qnsm(:,:)
-      real(8)   ,allocatable :: aephi(:,:)
-      real(8)   ,allocatable :: aephism(:,:)
-      real(8)   ,allocatable :: psphi(:,:)
-      real(8)   ,allocatable :: psphism(:,:)
-      real(8)   ,allocatable :: qndot(:,:)
-      real(8)   ,allocatable :: pro(:,:)
-      real(8)   ,allocatable :: dtkin(:,:)
-      real(8)   ,allocatable :: dover(:,:)
-      real(8)   ,allocatable :: eofphi(:)
-      integer(4)             :: nbl
-      integer(4)             :: ncl  
-      integer(4)             :: nphi !#(partial waves for this l)
-      integer(4)             :: lx
-      integer(4)             :: l,so,ib,ibl,iphi,jphi,ln,ln1,ln2
-      character(16)          :: reltype
-      real(8)                :: rcl  !pseudization radius for this l
-      real(8)                :: enu  !expansion energy for taylor expansion
-      real(8)                :: pi,y0
+      REAL(8)   ,INTENT(OUT) :: G_QNPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_PSPHI(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_PRO(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_DTKIN(LNX,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_DOVER(LNX,LNX)
+      REAL(8)   ,ALLOCATABLE :: EC(:)
+      REAL(8)   ,ALLOCATABLE :: UCORE(:,:)
+      REAL(8)   ,ALLOCATABLE :: UCORESM(:,:)
+      REAL(8)   ,ALLOCATABLE :: AECORE(:,:)
+      REAL(8)   ,ALLOCATABLE :: AECORESM(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSCORE(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSCORESM(:,:)
+      REAL(8)   ,ALLOCATABLE :: QN(:,:)
+      REAL(8)   ,ALLOCATABLE :: QNSM(:,:)
+      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: AEPHISM(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSPHISM(:,:)
+      REAL(8)   ,ALLOCATABLE :: QNDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: PRO(:,:)
+      REAL(8)   ,ALLOCATABLE :: DTKIN(:,:)
+      REAL(8)   ,ALLOCATABLE :: DOVER(:,:)
+      REAL(8)   ,ALLOCATABLE :: EOFPHI(:)
+      INTEGER(4)             :: NBL
+      INTEGER(4)             :: NCL  
+      INTEGER(4)             :: NPHI !#(PARTIAL WAVES FOR THIS L)
+      INTEGER(4)             :: LX
+      INTEGER(4)             :: L,SO,IB,IBL,IPHI,JPHI,LN,LN1,LN2
+      CHARACTER(16)          :: RELTYPE
+      REAL(8)                :: RCL  !PSEUDIZATION RADIUS FOR THIS L
+      REAL(8)                :: ENU  !EXPANSION ENERGY FOR TAYLOR EXPANSION
+      REAL(8)                :: PI,Y0
 !     **************************************************************************
-print*,'starting setups_outernewprowrapper...'
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      g_qnphi=0.d0
-      g_aephi=0.d0
-      g_psphi=0.d0
-      g_pro=0.d0
-      g_dtkin=0.d0
-      g_dover=0.d0
+PRINT*,'STARTING SETUPS_OUTERNEWPROWRAPPER...'
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      G_QNPHI=0.D0
+      G_AEPHI=0.D0
+      G_PSPHI=0.D0
+      G_PRO=0.D0
+      G_DTKIN=0.D0
+      G_DOVER=0.D0
 
 !     RELTYPE='NONREL'
       RELTYPE='ZORA'
 !     RELTYPE='SPINORBIT'
 !
-      lx=max(maxval(lofi),maxval(lox))
-      do l=0,lx
-        do so=minval(sofi),1,2  
-          write(*,fmt='(82("-"),t20," l=",i2," so=",i2)')l,so
+      LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
+      DO L=0,LX
+        DO SO=MINVAL(SOFI),1,2  
+          WRITE(*,FMT='(82("-"),T20," L=",I2," SO=",I2)')L,SO
 !
 !         ======================================================================
-!         == count number of bands and number of core states                  ==
+!         == COUNT NUMBER OF BANDS AND NUMBER OF CORE STATES                  ==
 !         ======================================================================
-          nbl=0
-          ncl=0
-          do ib=1,nb
-            if(lofi(ib).ne.l) cycle
-            if(sofi(ib).ne.so) cycle
-            nbl=nbl+1
-            if(ib.le.nc)ncl=ncl+1
-          enddo
+          NBL=0
+          NCL=0
+          DO IB=1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            IF(SOFI(IB).NE.SO) CYCLE
+            NBL=NBL+1
+            IF(IB.LE.NC)NCL=NCL+1
+          ENDDO
 !
 !         ======================================================================
-!         == count number of partial waves
+!         == COUNT NUMBER OF PARTIAL WAVES
 !         ======================================================================
-          nphi=0
-          do ln=1,lnx
-            if(lox(ln).ne.l) cycle
-            nphi=nphi+1
-          enddo
+          NPHI=0
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            NPHI=NPHI+1
+          ENDDO
 !
-!         == collect pseudization radius =======================================
-          do ln=1,lnx
-            if(lox(ln).ne.l) cycle
-            rcl=rc(lnx)
-            exit
-          enddo
-!
-!         ======================================================================
-!         == collect core energies and enu                                    ==
-!         ======================================================================
-          allocate(ec(ncl))
-          ibl=0
-          do ib=1,nc
-            if(lofi(ib).ne.l) cycle
-            if(sofi(ib).ne.so) cycle
-            ibl=ibl+1
-            ec(ibl)=eofi(ib)
-          enddo
-!
-!         == collect enu =======================================================
-          allocate(eofphi(nphi))
-          eofphi=maxval(aepot*y0)-1.d-2  ! only bound states are allowed
-          ibl=0
-          do ib=nc+1,nb
-            if(lofi(ib).ne.l) cycle
-            if(sofi(ib).ne.so) cycle
-            ibl=ibl+1
-            eofphi(ibl:)=eofi(ib)
-          enddo
+!         == COLLECT PSEUDIZATION RADIUS =======================================
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+            RCL=RC(LNX)
+            EXIT
+          ENDDO
 !
 !         ======================================================================
-!         == calculate partial waves etc
+!         == COLLECT CORE ENERGIES AND ENU                                    ==
 !         ======================================================================
-          allocate(ucore(nr,ncl))
-          allocate(ucoresm(nr,ncl))
-          allocate(aecore(nr,ncl))
-          allocate(aecoresm(nr,ncl))
-          allocate(pscore(nr,ncl))
-          allocate(pscoresm(nr,ncl))
-          allocate(qn(nr,nphi))
-          allocate(qnsm(nr,nphi))
-          allocate(aephi(nr,nphi))
-          allocate(aephism(nr,nphi))
-          allocate(psphi(nr,nphi))
-          allocate(psphism(nr,nphi))
-          allocate(qndot(nr,nphi))
-          allocate(pro(nr,nphi))
-          allocate(dtkin(nphi,nphi))
-          allocate(dover(nphi,nphi))
-print*,'------------- input data for setups_newpro-----------'
-print*,'reltype  ',trim(reltype)
-print*,'rout     ',rout
-print*,'rcl      ',rcl
-print*,'ncl,nphi ',ncl,nphi
-print*,'ec       ',ec
-print*,'eofphi   ',eofphi
-print*,'-----------------------------------------------------'
-          CALL SETUPS_NEWPRO(reltype,GID,NR,ROUT,L,SO,NCl,NPHI,RCl,eofphi,EC &
-     &                  ,AEPOT,PSPOT,vfock &
+          ALLOCATE(EC(NCL))
+          IBL=0
+          DO IB=1,NC
+            IF(LOFI(IB).NE.L) CYCLE
+            IF(SOFI(IB).NE.SO) CYCLE
+            IBL=IBL+1
+            EC(IBL)=EOFI(IB)
+          ENDDO
+!
+!         == COLLECT ENU =======================================================
+          ALLOCATE(EOFPHI(NPHI))
+          EOFPHI=MAXVAL(AEPOT*Y0)-1.D-2  ! ONLY BOUND STATES ARE ALLOWED
+          IBL=0
+          DO IB=NC+1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            IF(SOFI(IB).NE.SO) CYCLE
+            IBL=IBL+1
+            EOFPHI(IBL:)=EOFI(IB)
+          ENDDO
+!
+!         ======================================================================
+!         == CALCULATE PARTIAL WAVES ETC
+!         ======================================================================
+          ALLOCATE(UCORE(NR,NCL))
+          ALLOCATE(UCORESM(NR,NCL))
+          ALLOCATE(AECORE(NR,NCL))
+          ALLOCATE(AECORESM(NR,NCL))
+          ALLOCATE(PSCORE(NR,NCL))
+          ALLOCATE(PSCORESM(NR,NCL))
+          ALLOCATE(QN(NR,NPHI))
+          ALLOCATE(QNSM(NR,NPHI))
+          ALLOCATE(AEPHI(NR,NPHI))
+          ALLOCATE(AEPHISM(NR,NPHI))
+          ALLOCATE(PSPHI(NR,NPHI))
+          ALLOCATE(PSPHISM(NR,NPHI))
+          ALLOCATE(QNDOT(NR,NPHI))
+          ALLOCATE(PRO(NR,NPHI))
+          ALLOCATE(DTKIN(NPHI,NPHI))
+          ALLOCATE(DOVER(NPHI,NPHI))
+PRINT*,'------------- INPUT DATA FOR SETUPS_NEWPRO-----------'
+PRINT*,'RELTYPE  ',TRIM(RELTYPE)
+PRINT*,'ROUT     ',ROUT
+PRINT*,'RCL      ',RCL
+PRINT*,'NCL,NPHI ',NCL,NPHI
+PRINT*,'EC       ',EC
+PRINT*,'EOFPHI   ',EOFPHI
+PRINT*,'-----------------------------------------------------'
+          CALL SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
+     &                  ,AEPOT,PSPOT,VFOCK &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-print*,'... setups newpro done'
-print*,'dtkin',dtkin
+PRINT*,'... SETUPS NEWPRO DONE'
+PRINT*,'DTKIN',DTKIN
 !
 !         ======================================================================
-!         == tests                                                            ==
+!         == TESTS                                                            ==
 !         ======================================================================
-          CALL SETUPS_test_NEWPRO(reltype,GID,NR,ROUT,L,SO,NCl,NPHI,RCl,ENU,EC &
+          CALL SETUPS_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC &
      &                  ,AEPOT,PSPOT &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-print*,'... setups_test_newpro done'
+PRINT*,'... SETUPS_TEST_NEWPRO DONE'
 !
 !         ======================================================================
-!         == sort into the array                                              ==
+!         == SORT INTO THE ARRAY                                              ==
 !         ======================================================================
-          iphi=0
-          do ln=1,lnx
-            if(lox(ln).ne.l) cycle
-if(so.ne.0) then
-  call error$msg('spin orbit implementation not complete')
-  call error$stop('setups_outernewprowrapper')
-end if         
-            iphi=iphi+1
-            G_aephi(:,ln)=aephi(:,iphi)
-            G_psphi(:,ln)=psphi(:,iphi)
-            G_qnphi(:,ln)=qn(:,iphi)
-            G_pro(:,ln)=pro(:,iphi)
-!!$            if(iphi.lt.nphi) then
-!!$              G_qndot(:,ln)=qn(:,iphi+1)
-!!$            else
-!!$              G_qndot(:,ln)=qndot(:)
-!!$            end if
-          enddo            
+          IPHI=0
+          DO LN=1,LNX
+            IF(LOX(LN).NE.L) CYCLE
+IF(SO.NE.0) THEN
+  CALL ERROR$MSG('SPIN ORBIT IMPLEMENTATION NOT COMPLETE')
+  CALL ERROR$STOP('SETUPS_OUTERNEWPROWRAPPER')
+END IF         
+            IPHI=IPHI+1
+            G_AEPHI(:,LN)=AEPHI(:,IPHI)
+            G_PSPHI(:,LN)=PSPHI(:,IPHI)
+            G_QNPHI(:,LN)=QN(:,IPHI)
+            G_PRO(:,LN)=PRO(:,IPHI)
+!!$            IF(IPHI.LT.NPHI) THEN
+!!$              G_QNDOT(:,LN)=QN(:,IPHI+1)
+!!$            ELSE
+!!$              G_QNDOT(:,LN)=QNDOT(:)
+!!$            END IF
+          ENDDO            
 !
-!         == matrix elements ===================================================
-print*,'dtkin x1:',dtkin
-          iphi=0
-          do ln1=1,lnx
-            if(lox(ln1).ne.l) cycle
-            iphi=iphi+1
-            jphi=0
-            do ln2=1,lnx
-              if(lox(ln2).ne.l) cycle
-              jphi=jphi+1
-              g_dtkin(ln1,ln2)=dtkin(iphi,jphi)
-              g_dover(ln1,ln2)=dover(iphi,jphi)
-            enddo
-          enddo
-print*,'dtkin x2:',g_dtkin
+!         == MATRIX ELEMENTS ===================================================
+PRINT*,'DTKIN X1:',DTKIN
+          IPHI=0
+          DO LN1=1,LNX
+            IF(LOX(LN1).NE.L) CYCLE
+            IPHI=IPHI+1
+            JPHI=0
+            DO LN2=1,LNX
+              IF(LOX(LN2).NE.L) CYCLE
+              JPHI=JPHI+1
+              G_DTKIN(LN1,LN2)=DTKIN(IPHI,JPHI)
+              G_DOVER(LN1,LN2)=DOVER(IPHI,JPHI)
+            ENDDO
+          ENDDO
+PRINT*,'DTKIN X2:',G_DTKIN
 !
 !         ======================================================================
-!         == sort into the array                                              ==
+!         == SORT INTO THE ARRAY                                              ==
 !         ======================================================================
-          deallocate(ec)
-          deallocate(eofphi)
-          deallocate(ucore)
-          deallocate(ucoresm)
-          deallocate(aecore)
-          deallocate(aecoresm)
-          deallocate(pscore)
-          deallocate(pscoresm)
-          deallocate(qn)
-          deallocate(qnsm)
-          deallocate(aephi)
-          deallocate(aephism)
-          deallocate(psphi)
-          deallocate(psphism)
-          deallocate(qndot)
-          deallocate(pro)
-          deallocate(dtkin)
-          deallocate(dover)
-        enddo
-      enddo
-print*,'... setups_outernewprowrapper finished'
-      write(*,fmt='(82("="))')
-      return
-      end
+          DEALLOCATE(EC)
+          DEALLOCATE(EOFPHI)
+          DEALLOCATE(UCORE)
+          DEALLOCATE(UCORESM)
+          DEALLOCATE(AECORE)
+          DEALLOCATE(AECORESM)
+          DEALLOCATE(PSCORE)
+          DEALLOCATE(PSCORESM)
+          DEALLOCATE(QN)
+          DEALLOCATE(QNSM)
+          DEALLOCATE(AEPHI)
+          DEALLOCATE(AEPHISM)
+          DEALLOCATE(PSPHI)
+          DEALLOCATE(PSPHISM)
+          DEALLOCATE(QNDOT)
+          DEALLOCATE(PRO)
+          DEALLOCATE(DTKIN)
+          DEALLOCATE(DOVER)
+        ENDDO
+      ENDDO
+PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
+      WRITE(*,FMT='(82("="))')
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,Eofphi &
-     &                        ,ECOREin,AEPOT,PSPOT,vfock &
-     &                        ,UCORE,aecore,pscore,QN,AEPHI,PSPHI,QNDOT &
-     &                        ,UCORESM,aecoresm,pscoresm,QNSM,AEPHISM,psphism &
+      SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,EOFPHI &
+     &                        ,ECOREIN,AEPOT,PSPOT,VFOCK &
+     &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
+     &                        ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                        ,PRO,DTKIN,DOVER)
 !     **************************************************************************
 !     **  THE CORE STATES SOLVE                                               **
@@ -6455,11 +6455,11 @@ print*,'... setups_outernewprowrapper finished'
 !     **                                                                      **
 !     **  RELTYPE='NONREL', 'ZORA', 'SCALAR', 'SPINORBIT'                     **
 !     **                                                                      **
-!     **  for the small component, we use the model that also the pseudo-     **
-!     **  partial waves carry a small compoment, which is identical to that   **
-!     **  of the node-reduced partial waves qn. dtkin and dover are done      **
-!     **  on this basis, which ensures that there are no expoentially growing **
-!     **  contributions in the integrals.                                     **
+!     **  FOR THE SMALL COMPONENT, WE USE THE MODEL THAT ALSO THE PSEUDO-     **
+!     **  PARTIAL WAVES CARRY A SMALL COMPOMENT, WHICH IS IDENTICAL TO THAT   **
+!     **  OF THE NODE-REDUCED PARTIAL WAVES QN. DTKIN AND DOVER ARE DONE      **
+!     **  ON THIS BASIS, WHICH ENSURES THAT THERE ARE NO EXPOENTIALLY GROWING **
+!     **  CONTRIBUTIONS IN THE INTEGRALS.                                     **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE STRINGS_MODULE
@@ -6474,32 +6474,32 @@ print*,'... setups_outernewprowrapper finished'
       INTEGER(4),INTENT(IN) :: NC        ! #(CORE STATES)
       INTEGER(4),INTENT(IN) :: NJ        ! #(PARTIAL WAVES)
       REAL(8)   ,INTENT(IN) :: RC        ! PSEUDIZATION RADIUS
-      REAL(8)   ,INTENT(INout) :: eofphi(nj)! EXPANSION ENERGY FOR PARTIAL WAVES
-      REAL(8)   ,INTENT(IN) :: ECOREin(NC) ! CORE LEVEL ENERGIES
+      REAL(8)   ,INTENT(INOUT) :: EOFPHI(NJ)! EXPANSION ENERGY FOR PARTIAL WAVES
+      REAL(8)   ,INTENT(IN) :: ECOREIN(NC) ! CORE LEVEL ENERGIES
       REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
       REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
-      TYPE(VFOCK_TYPE),intent(in) :: VFOCK
+      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
 !
-      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)  ! nodeless CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(OUT):: aeCORE(NR,NC) ! all-electron CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(OUT):: psCORE(NR,NC) ! pseudo CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: UCORE(NR,NC)  ! NODELESS CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: AECORE(NR,NC) ! ALL-ELECTRON CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: PSCORE(NR,NC) ! PSEUDO CORE WAVE FUNCTIONS
       REAL(8)   ,INTENT(OUT):: UCORESM(NR,NC) ! SMALL COMPONENT OF CORE STATES
-      REAL(8)   ,INTENT(OUT):: aeCOREsm(NR,NC) ! small ae CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(OUT):: psCOREsm(NR,NC) ! small ps CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: AECORESM(NR,NC) ! SMALL AE CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT):: PSCORESM(NR,NC) ! SMALL PS CORE WAVE FUNCTIONS
 !
       REAL(8)   ,INTENT(OUT):: QN(NR,NJ)      ! NODE REDUCED PARTIAL WAVES
       REAL(8)   ,INTENT(OUT):: QNSM(NR,NJ)    ! SMALL QN
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,NJ)
       REAL(8)   ,INTENT(OUT):: AEPHISM(NR,NJ)
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,NJ)
-      REAL(8)   ,INTENT(OUT):: psPHISM(NR,NJ)
+      REAL(8)   ,INTENT(OUT):: PSPHISM(NR,NJ)
 !
       REAL(8)   ,INTENT(OUT):: QNDOT(NR)      
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
-      real(8)   ,parameter  :: rnscore=0.07d0
-      real(8)   ,parameter  :: rnsphi=0.09d0
+      REAL(8)   ,PARAMETER  :: RNSCORE=0.07D0
+      REAL(8)   ,PARAMETER  :: RNSPHI=0.09D0
       INTEGER(4),PARAMETER  :: SWITCH=2 ! BIORTHOGONALIZATION METHOD
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
@@ -6509,10 +6509,10 @@ print*,'... setups_outernewprowrapper finished'
       REAL(8)               :: KAPPA
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: ALPHA    ! 1/C (=FINE-STRUCTURE CONSTANT IN A.U.)
-      REAL(8)               :: ecore(NC)
+      REAL(8)               :: ECORE(NC)
       REAL(8)               :: TUCORE(NR,NC)
-      REAL(8)               :: TaeCORE(NR,NC)
-      REAL(8)               :: TpsCORE(NR,NC)
+      REAL(8)               :: TAECORE(NR,NC)
+      REAL(8)               :: TPSCORE(NR,NC)
       REAL(8)               :: TQN(NR,NJ)
       REAL(8)               :: TAEPHI(NR,NJ)
       REAL(8)               :: TPSPHI(NR,NJ)
@@ -6522,28 +6522,28 @@ print*,'... setups_outernewprowrapper finished'
       REAL(8)               :: G(NR),GSM(NR)
       REAL(8)               :: MAT(NJ,NJ),MATINV(NJ,NJ)
       REAL(8)               :: PI,Y0
-      REAL(8)               :: A(Nc,Nj),B(nc,NJ)
-      REAL(8)               :: cfac(nc,NJ)
-      REAL(8)               :: SVAR,svar1,svar2
-      REAL(8)               :: rns
-      integer(4)            :: iphiscale  
-      REAL(8)               :: scale  
-      REAL(8)               :: e
-      REAL(8)               :: enu   !  max(eofphi)
-      INTEGER(4)            :: ircl ! grid point beyond classical turning point
+      REAL(8)               :: A(NC,NJ),B(NC,NJ)
+      REAL(8)               :: CFAC(NC,NJ)
+      REAL(8)               :: SVAR,SVAR1,SVAR2
+      REAL(8)               :: RNS
+      INTEGER(4)            :: IPHISCALE  
+      REAL(8)               :: SCALE  
+      REAL(8)               :: E
+      REAL(8)               :: ENU   !  MAX(EOFPHI)
+      INTEGER(4)            :: IRCL ! GRID POINT BEYOND CLASSICAL TURNING POINT
       INTEGER(4)            :: JP,J,IR,K,M,I,IB
 !     **************************************************************************
-                                       call trace$push('setups_newpro')
+                                       CALL TRACE$PUSH('SETUPS_NEWPRO')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      ecore=ecorein
+      ECORE=ECOREIN
 !     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =========
       KAPPA=REAL( -1+SO*(-L+(SO-1)/2) ,KIND=8)
       CALL RADIAL$R(GID,NR,R)
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       ALPHA=1.D0/SPEEDOFLIGHT ! FINE STRUCTURE CONSTANT IN A.U.
-      enu=maxval(eofphi)
-      iphiscale=0
+      ENU=MAXVAL(EOFPHI)
+      IPHISCALE=0
 !
 !     ==========================================================================
 !     == RESOLVE RELTYPE                                                      ==
@@ -6581,27 +6581,27 @@ print*,'... setups_outernewprowrapper finished'
 !     ==========================================================================
       IRCL=0
       DO IR=1,NR
-        IF(AEPOT(IR).GT.enu/Y0) THEN
+        IF(AEPOT(IR).GT.ENU/Y0) THEN
           IRCL=IR
           EXIT
         END IF
       ENDDO
       IF(IRCL.EQ.0) THEN
         CALL ERROR$MSG('NO CLASSICAL TURNING POINT ENCOUNTERED')
-        CALL ERROR$MSG('enu=max(eofphi) MUST LIE BELOW MAXIMUM OF POTENTIAL')
-        CALL ERROR$R8VAL('enu',enu)
+        CALL ERROR$MSG('ENU=MAX(EOFPHI) MUST LIE BELOW MAXIMUM OF POTENTIAL')
+        CALL ERROR$R8VAL('ENU',ENU)
         CALL ERROR$R8VAL('MAX(POT)',MAXVAL(AEPOT)*Y0)
         CALL ERROR$STOP('SETUPS_NEWPRO')
       END IF
 !
 !     ==========================================================================
-!     == CONSTRUCT relativistic factor                                        ==
+!     == CONSTRUCT RELATIVISTIC FACTOR                                        ==
 !     ==========================================================================
       DREL=0.D0   !NON-RELATIVISTIC CASE
-      IF(TREL) then
+      IF(TREL) THEN
         CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
-        drel(ircl:)=0.d0
-      end if
+        DREL(IRCL:)=0.D0
+      END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS CORE STATES                                       ==
@@ -6610,42 +6610,42 @@ print*,'... setups_outernewprowrapper finished'
       GSM(:)=0.D0
       DO IB=1,NC
         E=ECORE(IB)
-        IF(TREL.AND.(.NOT.TZORA)) then
+        IF(TREL.AND.(.NOT.TZORA)) THEN
           CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
-          drel(ircl:)=0.d0
-        end if
+          DREL(IRCL:)=0.D0
+        END IF
 !
 !       == PREPARE INHOMOGENEITY ===============================================
         IF(TSMALL) THEN
           AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
-          aux=AUX1+(1.D0-KAPPA)/R*AUX  
-          aux(1)=aux(2)
-          G=G-AUx !gsm=-fsm(ib-1)
+          AUX=AUX1+(1.D0-KAPPA)/R*AUX  
+          AUX(1)=AUX(2)
+          G=G-AUX !GSM=-FSM(IB-1)
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
-        rns=0.d0
-        if(ib.gt.1.and.tsmall) rns=rnscore ! avoid spurious zeros near origin
-        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,TVARDREL &
+        RNS=0.D0
+        IF(IB.GT.1.AND.TSMALL) RNS=RNSCORE ! AVOID SPURIOUS ZEROS NEAR ORIGIN
+        CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RNS,ROUT,TVARDREL &
      &                         ,DREL,G,0,AEPOT,E,UCORE(:,IB))
         TUCORE(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)
-        ecore(ib)=e
+        ECORE(IB)=E
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
         IF(TSMALL) THEN
-          drel(ircl:)=0.d0  ! may have been reset in atomlib$boundstate
+          DREL(IRCL:)=0.D0  ! MAY HAVE BEEN RESET IN ATOMLIB$BOUNDSTATE
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
      &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
-          ucoresm(ircl:,ib)=0.d0
+          UCORESM(IRCL:,IB)=0.D0
         ELSE
           UCORESM(:,IB)=0.D0
         END IF
 !
 !       ========================================================================
-        scale=1.d0/maxval(abs(ucore(:,ib)))
-!       PRINT*,'CORE STATE ENERGY ',L,IB,Ecore(ib) &
-!                               ,' OLD ',ECOREin(IB),ECORE(IB)-ECOREin(IB)
+        SCALE=1.D0/MAXVAL(ABS(UCORE(:,IB)))
+!       PRINT*,'CORE STATE ENERGY ',L,IB,ECORE(IB) &
+!                               ,' OLD ',ECOREIN(IB),ECORE(IB)-ECOREIN(IB)
 !
 !       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
         G=-UCORE(:,IB)
@@ -6656,16 +6656,16 @@ print*,'... setups_outernewprowrapper finished'
 !     == NODE-REDUCED PARTIAL WAVES                                           ==
 !     ==========================================================================
 !     == GO BACK TO THE DIRAC EQUATION TO SEE HOW THE INHOMGENEITY TRANSLATES
-      IF(TREL) then
+      IF(TREL) THEN
         CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
-        drel(ircl:)=0.d0
-      end if
+        DREL(IRCL:)=0.D0
+      END IF
       G=0.D0
       GSM=0.D0
-      IF(NC.NE.0) then
+      IF(NC.NE.0) THEN
         G=-UCORE(:,NC)
-        Gsm=-UCOREsm(:,NC)
-      end if
+        GSM=-UCORESM(:,NC)
+      END IF
       DO JP=1,NJ
         J=JP-1
 !
@@ -6677,35 +6677,35 @@ print*,'... setups_outernewprowrapper finished'
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
-!        if(jp.eq.1) then
-        if(jp.gt.0) then
-          rns=rnsphi ! avoid spurious zeros near origin
-          e=eofphi(jp)
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,rns,ROUT,.false. &
-     &                           ,DREL,G,0,AEPOT,E,qn(:,jp))
-          eofphi(jp)=e
-        else
-          e=eofphi(jp)
-          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,e,IDIR,QN(:,JP))
-        end if
+!        IF(JP.EQ.1) THEN
+        IF(JP.GT.0) THEN
+          RNS=RNSPHI ! AVOID SPURIOUS ZEROS NEAR ORIGIN
+          E=EOFPHI(JP)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RNS,ROUT,.FALSE. &
+     &                           ,DREL,G,0,AEPOT,E,QN(:,JP))
+          EOFPHI(JP)=E
+        ELSE
+          E=EOFPHI(JP)
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,E,IDIR,QN(:,JP))
+        END IF
         TQN(:,JP)=G-(AEPOT*Y0-E)*QN(:,JP)
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
         IF(TSMALL) THEN
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
      &                                      ,DREL,GSM,QN(:,JP),QNSM(:,JP))
-          qnsm(ircl:,jp)=0.d0
+          QNSM(IRCL:,JP)=0.D0
         ELSE
           QNSM(:,JP)=0.D0
         END IF
 !  
 !       ========================================================================
-        scale=1.d0/maxval(abs(qn(:,jp)))
-        iphiscale=jp
+        SCALE=1.D0/MAXVAL(ABS(QN(:,JP)))
+        IPHISCALE=JP
 !
 !       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
         G=-QN(:,JP)
-        GSM=-qNSM(:,JP)
+        GSM=-QNSM(:,JP)
       ENDDO
 !
 !     ==========================================================================
@@ -6735,7 +6735,7 @@ print*,'... setups_outernewprowrapper finished'
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,SO,DREL,G,AEPOT,VFOCK &
      &                                    ,ROUT,E,UCORE(:,IB))
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,UCORE(:,IB),AUX)
-          TUcore(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)-AUX(:)
+          TUCORE(:,IB)=G+(E-AEPOT(:)*Y0)*UCORE(:,IB)-AUX(:)
           ECORE(IB)=E
 !
 !         == CONSTRUCT SMALL COMPONENT =========================================
@@ -6744,12 +6744,12 @@ print*,'... setups_outernewprowrapper finished'
      &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
             UCORESM(IRCL:,IB)=0.D0
           ELSE
-            UcoreSM(:,IB)=0.D0
+            UCORESM(:,IB)=0.D0
           END IF
 !
 !         == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ================
-          G(:) =-Ucore(:,IB) 
-          GSm(:)=-UcoreSM(:,IB) 
+          G(:) =-UCORE(:,IB) 
+          GSM(:)=-UCORESM(:,IB) 
         ENDDO
       END IF
 !
@@ -6757,17 +6757,17 @@ print*,'... setups_outernewprowrapper finished'
 !     == UPDATE NODELESS PARTIAL WAVES WITH FOCK POTENTIAL                    ==
 !     ==========================================================================
       IF(VFOCK%TON) THEN
-        IF(TREL) then
+        IF(TREL) THEN
           CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
-          drel(ircl:)=0.d0
-        end if
+          DREL(IRCL:)=0.D0
+        END IF
         G(:)=0.D0
-        Gsm(:)=0.D0
-        IF(NC.NE.0) then
-          G(:)=Ucore(:,NC)
-          Gsm(:)=Ucoresm(:,NC)
-        end if
-        DO jp=1,nj
+        GSM(:)=0.D0
+        IF(NC.NE.0) THEN
+          G(:)=UCORE(:,NC)
+          GSM(:)=UCORESM(:,NC)
+        END IF
+        DO JP=1,NJ
 !
 !         == PREPARE INHOMOGENEITY =============================================
           IF(TSMALL) THEN
@@ -6777,39 +6777,39 @@ print*,'... setups_outernewprowrapper finished'
           END IF
 !
 !         == OBTAIN LARGE COMPONENT ============================================
-          rns=rnsphi ! avoid spurious zeros near origin
-          e=eofphi(jp)
+          RNS=RNSPHI ! AVOID SPURIOUS ZEROS NEAR ORIGIN
+          E=EOFPHI(JP)
           CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,SO,DREL,G,AEPOT,VFOCK &
-    &                                    ,ROUT,E,qn(:,jp))
-          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,qn(:,jp),AUX)
-          Tqn(:,jp)=G(:)+(E-AEPOT(:)*Y0)*qn(:,jp)-AUX(:)
-          eofphi(jp)=e
+    &                                    ,ROUT,E,QN(:,JP))
+          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,QN(:,JP),AUX)
+          TQN(:,JP)=G(:)+(E-AEPOT(:)*Y0)*QN(:,JP)-AUX(:)
+          EOFPHI(JP)=E
 !
 !         == CONSTRUCT SMALL COMPONENT =========================================
           IF(TSMALL) THEN
             CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
      &                                      ,DREL,GSM,QN(:,JP),QNSM(:,JP))
-            qnsm(ircl:,jp)=0.d0
+            QNSM(IRCL:,JP)=0.D0
           ELSE
             QNSM(:,JP)=0.D0
           END IF
 !
 !         == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ================
-          G(:)=-qn(:,jp)
-          Gsm(:)=-qnsm(:,jp)
+          G(:)=-QN(:,JP)
+          GSM(:)=-QNSM(:,JP)
         ENDDO
       END IF
 !
 !     ==========================================================================
-!     == rescale consistently                                                 ==
+!     == RESCALE CONSISTENTLY                                                 ==
 !     ==========================================================================
-      qn=qn*scale
-      tqn=tqn*scale
-      qnsm=qnsm*scale
-      ucore=ucore*scale
-      tucore=tucore*scale
-      ucoresm=ucoresm*scale
-      scale=1.d0
+      QN=QN*SCALE
+      TQN=TQN*SCALE
+      QNSM=QNSM*SCALE
+      UCORE=UCORE*SCALE
+      TUCORE=TUCORE*SCALE
+      UCORESM=UCORESM*SCALE
+      SCALE=1.D0
 !
 !     ==========================================================================
 !     == CONSTRUCT QNDOT FUNCTION                                             ==
@@ -6828,11 +6828,11 @@ print*,'... setups_outernewprowrapper finished'
 !     ==========================================================================
       PSCORE=UCORE
       TPSCORE=TUCORE
-      PSCOREsm=UCOREsm
+      PSCORESM=UCORESM
       DO IB=1,NC
-        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,ib-1,PSCORE(:,IB),TPSCORE(:,IB))
+        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORE(:,IB),TPSCORE(:,IB))
         AUX=0.D0
-        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,ib-1,PSCORESM(:,IB),AUX)
+        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORESM(:,IB),AUX)
       ENDDO
 !
 !     ==========================================================================
@@ -6843,37 +6843,37 @@ print*,'... setups_outernewprowrapper finished'
       PSPHISM=QNSM
 !     == ONLY THE FIRST PARTIAL WAVE IS PSEUDIZED ==============================
 !     == TAILS OF THE PSEUD CORE FUNCTIONS WILL BE ADDED LATER  ================
-      CALL SETUPS_MAKEPSPHI_flat(GID,NR,RC,L,PSPHI,TPSPHI)
+      CALL SETUPS_MAKEPSPHI_FLAT(GID,NR,RC,L,PSPHI,TPSPHI)
 !
 !     ==========================================================================
-!     == core-orthogonalization
+!     == CORE-ORTHOGONALIZATION
 !     ==========================================================================
-      aephi=qn
-      taephi=tqn
-      aephism=qnsm
-      do i=nc,1,-1
-        aux(:)=r**2*(ucore(:,i)*ucore(:,i)+ucoresm(:,i)*ucoresm(:,i))
-        call radial$integral(gid,nr,aux,svar1)
-        do jp=1,nj
-          aux(:)=r**2*(ucore(:,i)*aephi(:,jp)+ucoresm(:,i)*aephism(:,jp))/svar1
-          call radial$integral(gid,nr,aux,svar2)
-          aephi(:,jp)=aephi(:,jp)-ucore(:,i)*svar2
-          taephi(:,jp)=taephi(:,jp)-tucore(:,i)*svar2
-          aephism(:,jp)=aephism(:,jp)-ucoresm(:,i)*svar2
-        enddo
-      enddo
+      AEPHI=QN
+      TAEPHI=TQN
+      AEPHISM=QNSM
+      DO I=NC,1,-1
+        AUX(:)=R**2*(UCORE(:,I)*UCORE(:,I)+UCORESM(:,I)*UCORESM(:,I))
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+        DO JP=1,NJ
+          AUX(:)=R**2*(UCORE(:,I)*AEPHI(:,JP)+UCORESM(:,I)*AEPHISM(:,JP))/SVAR1
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+          AEPHI(:,JP)=AEPHI(:,JP)-UCORE(:,I)*SVAR2
+          TAEPHI(:,JP)=TAEPHI(:,JP)-TUCORE(:,I)*SVAR2
+          AEPHISM(:,JP)=AEPHISM(:,JP)-UCORESM(:,I)*SVAR2
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
-!     == rescale consistently                                                 ==
+!     == RESCALE CONSISTENTLY                                                 ==
 !     ==========================================================================
-print*,'iphiscale ',iphiscale
+PRINT*,'IPHISCALE ',IPHISCALE
       IF(IPHISCALE.NE.0) THEN
         AUX=R**2*(AEPHI(:,IPHISCALE)**2+AEPHISM(:,IPHISCALE)**2)
-        CALL RADIAL$INTEGRAte(GID,NR,AUX,aux1)
-        call radial$value(gid,nr,aux1,rout,scale)
+        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+        CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SCALE)
 !!$AUX=R**2*AEPHI(:,IPHISCALE)**2
-!!$CALL RADIAL$INTEGRAte(GID,NR,AUX,aux1)
-!!$call radial$value(gid,nr,aux1,3.7983493397406152d0,scale)
+!!$CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$CALL RADIAL$VALUE(GID,NR,AUX1,3.7983493397406152D0,SCALE)
         SCALE=1.D0/SQRT(SCALE)
         QN=QN*SCALE
         TQN=TQN*SCALE
@@ -6890,14 +6890,14 @@ print*,'iphiscale ',iphiscale
         PSCORE=PSCORE*SCALE
         TPSCORE=TPSCORE*SCALE
         PSCORESM=PSCORESM*SCALE
-        qndot=qndot*SCALE
+        QNDOT=QNDOT*SCALE
       END IF
 !
 !     ==========================================================================
-!     == MAKE ALL-ELECTRON core states                                        ==
+!     == MAKE ALL-ELECTRON CORE STATES                                        ==
 !     ==========================================================================
       AECORE(:,:)  =UCORE(:,:)
-      AECOREsm(:,:)=UCOREsm(:,:)
+      AECORESM(:,:)=UCORESM(:,:)
       DO IB=2,NC
         SVAR=1.D0
         DO M=IB-1,1,-1
@@ -6914,11 +6914,11 @@ print*,'iphiscale ',iphiscale
 !     ==========================================================================
 !     == CONSTRUCT BARE PROJECTOR FUNCTIONS                                   ==
 !     ==========================================================================
-      PRO(:,1)=TPSPHI(:,1)+(PSPOT*Y0-eofphi(1))*PSPHI(:,1)
+      PRO(:,1)=TPSPHI(:,1)+(PSPOT*Y0-EOFPHI(1))*PSPHI(:,1)
       DO JP=2,NJ
         PRO(:,JP)=(PSPOT-AEPOT)*Y0*QN(:,JP)
       ENDDO
-      if(nj.ge.2) PRO(:,2)=PRO(:,2)+(PSPHI(:,1)-QN(:,1))  ! |k>
+      IF(NJ.GE.2) PRO(:,2)=PRO(:,2)+(PSPHI(:,1)-QN(:,1))  ! |K>
 !
 !     ==========================================================================
 !     == UNBARE PROJECTOR FUNCTIONS                                           ==
@@ -6947,7 +6947,7 @@ print*,'iphiscale ',iphiscale
      &                    -TPSPHI(:,J)*AEPHI(:,JP) &
      &                    +2.D0*SPEEDOFLIGHT**2*PSPHISM(:,J)*PSPHISM(:,JP)
           END IF
-          CALL RADIAL$INTEGRAL(GID,NR,AUX*r**2,DTKIN(J,JP))
+          CALL RADIAL$INTEGRAL(GID,NR,AUX*R**2,DTKIN(J,JP))
         ENDDO
       ENDDO
 !
@@ -6957,12 +6957,12 @@ print*,'iphiscale ',iphiscale
 !     == WAVE.                                                                ==
 !     ==========================================================================
       DTKIN=0.5D0*(DTKIN+TRANSPOSE(DTKIN))
-                                       call trace$pop()
+                                       CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_MAKEPSPHI_flat(GID,NR,RC,L,PHI,TPHI)
+      SUBROUTINE SETUPS_MAKEPSPHI_FLAT(GID,NR,RC,L,PHI,TPHI)
 !     **************************************************************************
 !     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
@@ -6997,7 +6997,7 @@ print*,'iphiscale ',iphiscale
       REAL(8)               :: C1,C2,C3,DET
       INTEGER(4)            :: IR
       REAL(8)               :: PI,Y0
-      REAL(8)               :: WORK(NR,2),svar
+      REAL(8)               :: WORK(NR,2),SVAR
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -7022,8 +7022,8 @@ print*,'iphiscale ',iphiscale
 !     == EXTRACT POTENTIAL FROM INPUT PARTIAL WAVE                            ==
 !     ==========================================================================
       DREL(:)=0.D0
-      svar=10.d0*tiny(phi)  !evoid divide-by-zero
-      POT(:)=-TPHI/(PHI+svar)/Y0
+      SVAR=10.D0*TINY(PHI)  !EVOID DIVIDE-BY-ZERO
+      POT(:)=-TPHI/(PHI+SVAR)/Y0
       G(:)=0.D0
       ENU=0.D0
 !
@@ -7100,11 +7100,11 @@ print*,'iphiscale ',iphiscale
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: RC
       INTEGER(4),INTENT(IN) :: L
-      INTEGER(4),INTENT(IN) :: n  !wave function starts with r**(l+2n)
+      INTEGER(4),INTENT(IN) :: N  !WAVE FUNCTION STARTS WITH R**(L+2N)
       REAL(8)   ,INTENT(INOUT) :: PHI(NR)
       REAL(8)   ,INTENT(INOUT) :: TPHI(NR)
       LOGICAL(4),PARAMETER  :: T3PAR=.TRUE.
-      LOGICAL(4),PARAMETER  :: TWRITE=.false.
+      LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
       INTEGER(4)            :: IRC
       REAL(8)               :: R(NR)
       REAL(8)               :: F(NR)
@@ -7118,7 +7118,7 @@ print*,'iphiscale ',iphiscale
       REAL(8)               :: DERPHI,DERF,DERFDOT,DERFDDOT
       REAL(8)               :: C1,C2,C3,DET
       INTEGER(4)            :: IR
-      INTEGER(4)            :: j
+      INTEGER(4)            :: J
       REAL(8)               :: WORK(NR,2)
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
@@ -7194,10 +7194,10 @@ print*,'iphiscale ',iphiscale
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_test_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
+      SUBROUTINE SETUPS_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
      &                        ,ECORE,AEPOT,PSPOT &
-     &                        ,UCORE,aecore,pscore,QN,AEPHI,PSPHI,QNDOT &
-     &                        ,UCORESM,aecoresm,pscoresm,QNSM,AEPHISM,psphism &
+     &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
+     &                        ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                        ,PRO,DTKIN,DOVER)
 !     **************************************************************************
 !     **  THE CORE STATES SOLVE                                               **
@@ -7230,35 +7230,35 @@ print*,'iphiscale ',iphiscale
       REAL(8)   ,INTENT(IN) :: AEPOT(NR) ! ALL-ELECTRON POTENTIAL
       REAL(8)   ,INTENT(IN) :: PSPOT(NR) ! PSEUDO POTENTIAL
 !
-      REAL(8)   ,INTENT(IN) :: UCORE(NR,NC)  ! nodeless CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(IN) :: aeCORE(NR,NC) ! all-electron CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(IN) :: psCORE(NR,NC) ! pseudo CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: UCORE(NR,NC)  ! NODELESS CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: AECORE(NR,NC) ! ALL-ELECTRON CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: PSCORE(NR,NC) ! PSEUDO CORE WAVE FUNCTIONS
       REAL(8)   ,INTENT(IN) :: UCORESM(NR,NC) ! SMALL COMPONENT OF CORE STATES
-      REAL(8)   ,INTENT(IN) :: aeCOREsm(NR,NC) ! small ae CORE WAVE FUNCTIONS
-      REAL(8)   ,INTENT(IN) :: psCOREsm(NR,NC) ! small ps CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: AECORESM(NR,NC) ! SMALL AE CORE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(IN) :: PSCORESM(NR,NC) ! SMALL PS CORE WAVE FUNCTIONS
 !
       REAL(8)   ,INTENT(IN) :: QN(NR,NJ)      ! NODE REDUCED PARTIAL WAVES
       REAL(8)   ,INTENT(IN) :: QNSM(NR,NJ)    ! SMALL QN
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,NJ)
       REAL(8)   ,INTENT(IN) :: AEPHISM(NR,NJ)
       REAL(8)   ,INTENT(IN) :: PSPHI(NR,NJ)
-      REAL(8)   ,INTENT(IN) :: psPHISM(NR,NJ)
+      REAL(8)   ,INTENT(IN) :: PSPHISM(NR,NJ)
 !
       REAL(8)   ,INTENT(IN) :: QNDOT(NR)      
       REAL(8)   ,INTENT(IN) :: PRO(NR,NJ)
       REAL(8)   ,INTENT(IN) :: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(IN) :: DTKIN(NJ,NJ)
-      real(8)               :: r(nr)
-      real(8)               :: pi,y0
-      real(8)               :: aux(nr),svar,svar1,svar2,svar3
-      real(8)               :: mat(nj,nj)
-      integer(4)            :: nfil
-      character(16)         :: lstring
-      integer(4)            :: jp,i,j
+      REAL(8)               :: R(NR)
+      REAL(8)               :: PI,Y0
+      REAL(8)               :: AUX(NR),SVAR,SVAR1,SVAR2,SVAR3
+      REAL(8)               :: MAT(NJ,NJ)
+      INTEGER(4)            :: NFIL
+      CHARACTER(16)         :: LSTRING
+      INTEGER(4)            :: JP,I,J
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
-      y0=1.d0/sqrt(4.d0*pi)
-      call radial$r(gid,nr,r)
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL RADIAL$R(GID,NR,R)
       NFIL=11
       WRITE(LSTRING,*)L
       LSTRING=ADJUSTL(LSTRING)
@@ -7291,42 +7291,42 @@ print*,'iphiscale ',iphiscale
       ENDDO
 !
 !     ==========================================================================
-!     == test orthogonality of core wave functions
+!     == TEST ORTHOGONALITY OF CORE WAVE FUNCTIONS
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T20," check orthogonality of core states  ")')
-      DO i=1,NC
-        DO J=i+1,NC
-          AUX(:)=R(:)**2*(aecore(:,i)*aecore(:,j)+aecoresm(:,i)*aecoresm(:,j))
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar1)
-          AUX(:)=R(:)**2*(aecore(:,i)**2+aecoresm(:,i)**2)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar2)
-          AUX(:)=R(:)**2*(aecore(:,j)**2+aecoresm(:,j)**2)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar3)
-          print*,'overlap :',i,j,svar1/sqrt(svar2*svar3)
+      WRITE(*,FMT='(82("="),T20," CHECK ORTHOGONALITY OF CORE STATES  ")')
+      DO I=1,NC
+        DO J=I+1,NC
+          AUX(:)=R(:)**2*(AECORE(:,I)*AECORE(:,J)+AECORESM(:,I)*AECORESM(:,J))
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+          AUX(:)=R(:)**2*(AECORE(:,I)**2+AECORESM(:,I)**2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+          AUX(:)=R(:)**2*(AECORE(:,J)**2+AECORESM(:,J)**2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR3)
+          PRINT*,'OVERLAP :',I,J,SVAR1/SQRT(SVAR2*SVAR3)
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     == test orthogonality of valence and core wave functions
+!     == TEST ORTHOGONALITY OF VALENCE AND CORE WAVE FUNCTIONS
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T20," check orthogonality between core states and partial waves ")')
-      DO i=1,NC
-        DO J=1,nj
-          AUX(:)=R(:)**2*(aecore(:,i)*aephi(:,j)+aecoresm(:,i)*aephism(:,j))
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar1)
-          AUX(:)=R(:)**2*(aecore(:,i)**2+aecoresm(:,i)**2)
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar2)
-          svar3=1.d0
-          print*,'overlap :',i,j,svar1/sqrt(svar2*svar3)
+      WRITE(*,FMT='(82("="),T20," CHECK ORTHOGONALITY BETWEEN CORE STATES AND PARTIAL WAVES ")')
+      DO I=1,NC
+        DO J=1,NJ
+          AUX(:)=R(:)**2*(AECORE(:,I)*AEPHI(:,J)+AECORESM(:,I)*AEPHISM(:,J))
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
+          AUX(:)=R(:)**2*(AECORE(:,I)**2+AECORESM(:,I)**2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+          SVAR3=1.D0
+          PRINT*,'OVERLAP :',I,J,SVAR1/SQRT(SVAR2*SVAR3)
         ENDDO
       ENDDO
 !
 !     ==========================================================================
-!     == exlore size of nodeless wave functions
+!     == EXLORE SIZE OF NODELESS WAVE FUNCTIONS
 !     ==========================================================================
       DO I=1,NC
-        PRINT*,'(MAX(UCORE) ib=',i,MAXVAL(UCORE(:,I)),MAXVAL(UCORESM(:,I)) &
-     &                      ,ecore(i)
+        PRINT*,'(MAX(UCORE) IB=',I,MAXVAL(UCORE(:,I)),MAXVAL(UCORESM(:,I)) &
+     &                      ,ECORE(I)
       ENDDO
 !
 !     ==========================================================================
@@ -7341,17 +7341,17 @@ print*,'iphiscale ',iphiscale
 !
 !     == WRITE PARTIAL WAVES AN PROJECTORS =====================================
       CALL SETUP_WRITEPHI(-'MYQN'//TRIM(LSTRING),GID,NR,NJ,QN)
-      CALL SETUP_WRITEPHI(-'MYQNsm'//TRIM(LSTRING),GID,NR,NJ,QNsm)
+      CALL SETUP_WRITEPHI(-'MYQNSM'//TRIM(LSTRING),GID,NR,NJ,QNSM)
       CALL SETUP_WRITEPHI(-'MYPS'//TRIM(LSTRING),GID,NR,NJ,PSPHI)
-      CALL SETUP_WRITEPHI(-'MYPSsm'//TRIM(LSTRING),GID,NR,NJ,PSPHIsm)
+      CALL SETUP_WRITEPHI(-'MYPSSM'//TRIM(LSTRING),GID,NR,NJ,PSPHISM)
       CALL SETUP_WRITEPHI(-'MYAE'//TRIM(LSTRING),GID,NR,NJ,AEPHI)
-      CALL SETUP_WRITEPHI(-'MYAEsm'//TRIM(LSTRING),GID,NR,NJ,AEPHIsm)
-      CALL SETUP_WRITEPHI(-'MYuCORE'//TRIM(LSTRING),GID,NR,NC,UCORE)
-      CALL SETUP_WRITEPHI(-'MYuCOREsm'//TRIM(LSTRING),GID,NR,NC,UCOREsm)
-      CALL SETUP_WRITEPHI(-'MYpsCORE'//TRIM(LSTRING),GID,NR,NC,psCORE)
-      CALL SETUP_WRITEPHI(-'MYpsCOREsm'//TRIM(LSTRING),GID,NR,NC,psCOREsm)
-      CALL SETUP_WRITEPHI(-'MYaeCORE'//TRIM(LSTRING),GID,NR,NC,aeCORE)
-      CALL SETUP_WRITEPHI(-'MYaeCOREsm'//TRIM(LSTRING),GID,NR,NC,aeCOREsm)
+      CALL SETUP_WRITEPHI(-'MYAESM'//TRIM(LSTRING),GID,NR,NJ,AEPHISM)
+      CALL SETUP_WRITEPHI(-'MYUCORE'//TRIM(LSTRING),GID,NR,NC,UCORE)
+      CALL SETUP_WRITEPHI(-'MYUCORESM'//TRIM(LSTRING),GID,NR,NC,UCORESM)
+      CALL SETUP_WRITEPHI(-'MYPSCORE'//TRIM(LSTRING),GID,NR,NC,PSCORE)
+      CALL SETUP_WRITEPHI(-'MYPSCORESM'//TRIM(LSTRING),GID,NR,NC,PSCORESM)
+      CALL SETUP_WRITEPHI(-'MYAECORE'//TRIM(LSTRING),GID,NR,NC,AECORE)
+      CALL SETUP_WRITEPHI(-'MYAECORESM'//TRIM(LSTRING),GID,NR,NC,AECORESM)
       CALL SETUP_WRITEPHI(-'MYPRO'//TRIM(LSTRING),GID,NR,NJ,PRO)
       CALL SETUP_WRITEPHI(-'DEPOT.DAT',GID,NR,1,(PSPOT-AEPOT)*Y0)
 !
@@ -7360,8 +7360,8 @@ PRINT*,'BEFORE NEWPROANALYZE1'
 !      CALL SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE(:,NC),AEPOT,PSPOT,ENU,NJ,QN)
 PRINT*,'BEFORE NEWPROANALYZE2'
       CALL SETUPS_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE,AEPOT,PSPOT,ENU,NJ,QN)
