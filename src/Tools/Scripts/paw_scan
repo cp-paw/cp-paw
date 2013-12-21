@@ -32,11 +32,15 @@
 #-------------------------------------------------------------------------------
 # name of the bin directory holding the executable ppaw_fast.x or paw_fast.x
 # name do not allow any trailing blanks in PAWXDIR!
-export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/
-export NNODES=19       # number of nodes / scalar with NNODES=0
+export NNODES=0       # number of nodes / scalar with NNODES=0
 export NCOREPERNODE=2  # number of cores per node (2)
-export PAR1NAME="HFW"  # name for the variable to be replaced @$PAR1NAME@
-export PAR1VALS='100 125'  # list of values to be scanned
+export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
+export SELECTEDHOST=palau
+#export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/
+#export NNODES=19       # number of nodes / scalar with NNODES=0
+#export NCOREPERNODE=2  # number of cores per node (2)
+#export PAR1NAME="HFW"  # name for the variable to be replaced @$PAR1NAME@
+#export PAR1VALS='100 125'  # list of values to be scanned
 #-------------------------------------------------------------------------------
 # help message
 #-------------------------------------------------------------------------------
@@ -45,11 +49,13 @@ USAGE="$USAGE do_paw_scan options PREROOT\n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE -h print this help message \n"
 USAGE="$USAGE -? print this help message \n"
+USAGE="$USAGE -rule "name value1 value2 ..." replacement rule \n"
 USAGE="$USAGE -run run paw_simulation \n"
 USAGE="$USAGE -eels make EELS data \n"
 USAGE="$USAGE -dos make Density of States \n"
 USAGE="$USAGE -dosplot make xmgrace batch file for Density of States plots\n"
 USAGE="$USAGE -wrapup: make files with etot,homo,lumo,gap\n"
+USAGE="$USAGE -nproc n: submit with n processes in parallel\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE PREROOT is the common part of the root name for all projects.\n"
 USAGE="$USAGE The root names of individual projects will be formed "
@@ -67,12 +73,45 @@ for X in $* ;do
       echo -e $USAGE
       exit 1
       ;;
+    -rule)
+      RULE="${1#-rule}"
+      if [ -z "$RULE" ] ; then
+        shift
+        RULE="$1"
+      fi
+      PAR1NAME=""
+      PAR1VALS=""
+      for X in $RULE ; do
+        if [ -z $PAR1NAME ] ; then
+          PAR1NAME=${X}
+        else
+          PAR1VALS="$PAR1VALS $X"
+        fi
+      done
+      shift
+      ;;
     -run|-eels|-dos|-wrapup|-dosplot) 
       TODO=${1#-}
       shift
       ;;
     --dry-run)
       DRYRUN=yes
+      shift
+      ;;
+    -nproc|-nproc*)
+      NNODES=${1#-nproc}
+      if [ -z  $NNODES ] ; then
+        shift
+        NNODES=$1
+      fi
+      shift
+      ;;
+    -host|-host*)
+      SELECTEDHOST=${1#-host}
+      if [ -z  $SELECTEDHOST ] ; then
+        shift
+        SELECTEDHOST=$1
+      fi
       shift
       ;;
     -*)
@@ -88,6 +127,14 @@ for X in $* ;do
       ;;
   esac
 done
+if [ -z $PAR1NAME ] ; then 
+  echo -e $USAGE
+  echo -e "\n error in $0: missing or incomplete argument RULE"
+  echo -e "RULE=$RULE"
+  echo -e "PAR1NAME=$PAR1NAME"
+  echo -e "PAR1VALS=$PAR1VALS"
+  exit
+fi
 if [ -z $TODO ] ; then 
   echo -e $USAGE
   echo -e "\n error in $0: missing argument TODO"
@@ -99,9 +146,9 @@ if [ -z $PREROOT ] ; then
   exit
 fi
 # run only on palau
-if [ $HOSTNAME != palau ] ; then
+if [ $HOSTNAME != $SELECTEDHOST ] ; then
   if [ $DRYRUN = no ] ; then
-    echo error in $0: not on palau
+    echo error in $0: not on $SELECTEDHOST
     exit 1
   fi
 fi
