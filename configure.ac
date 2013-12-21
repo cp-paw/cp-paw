@@ -157,6 +157,11 @@ if test "$PARMFILE" != notset; then
   FFTDIR=`grep '^FFTDIR' $PARMFILE | cut -d'"' -f2`
   MPIDIR=`grep '^MPIDIR' $PARMFILE | cut -d'"' -f2`
   FFT_HEADER=`grep '^FFT_HEADER' $PARMFILE | cut -d'"' -f2`
+  LIBAR=`grep '^LIBAR' $PARMFILE | cut -d'"' -f2`
+  if [[ "$LIBAR" = "" ]]; 
+  then
+    LIBAR="ar"
+  fi
   MPI_HEADER=`grep '^MPI_HEADER' $PARMFILE | cut -d'"' -f2`
   SPECIAL=`grep '^SPECIAL' $PARMFILE | cut -d'"' -f2`
   #  
@@ -262,6 +267,7 @@ AC_SUBST(LAPACKDIR)
 AC_SUBST(FFTDIR)     
 AC_SUBST(MPIDIR)     
 AC_SUBST(FFT_HEADER)     
+AC_SUBST(LIBAR)     
 AC_SUBST(MPI_HEADER)     
 #
 #########################################################################

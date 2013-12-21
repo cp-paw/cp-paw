@@ -7,14 +7,35 @@
 !**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
-MODULE SPINDIR_MODULE
-  REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
-  SAVE
-END MODULE SPINDIR_MODULE
-
+      MODULE SPINDIR_MODULE
+        REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
+        SAVE
+      END MODULE SPINDIR_MODULE
+      MODULE DOS_WGHT_MODULE
+        USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
+        REAL(8),ALLOCATABLE          :: WGHT(:,:)
+        TYPE(EWGHT_TYPE),ALLOCATABLE :: EWGHT(:,:)
+        INTEGER(4)                   :: NEWGHT
+        REAL(8)                      :: EMINWGHT
+        REAL(8)                      :: EMAXWGHT
+        REAL(8)                      :: EF
+        INTEGER(4)                   :: SPACEGROUP
+        SAVE
+      END MODULE DOS_WGHT_MODULE
+      !
+      !..................................................................
+      MODULE READCNTL_MODULE
+      USE LINKEDLIST_MODULE
+        TYPE(LL_TYPE)   :: LL_CNTL
+        SAVE
+      END MODULE READCNTL_MODULE
+      !
+      !..................................................................
       PROGRAM PDOS
       USE PDOS_MODULE, ONLY: STATE,STATEARR
       USE SPINDIR_MODULE
+      USE READCNTL_MODULE
+      USE DOS_WGHT_MODULE
       IMPLICIT NONE
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NAT
@@ -23,7 +44,7 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: NSPIN
       INTEGER(4)                :: NDIM !=2 for spinor wf; otherwise =1
       INTEGER(4)                :: LENG
-      INTEGER(4)                 :: NSET
+      INTEGER(4)                :: NSET
       INTEGER(4)   ,ALLOCATABLE :: LMX(:)
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
       real(8)                   :: rbas(3,3) ! lattice vectors
@@ -39,6 +60,9 @@ END MODULE SPINDIR_MODULE
       INTEGER(4)                :: NPRO
       INTEGER(4)                :: IKPT,ISPIN,IB
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
+      CHARACTER(6)              :: FLAG
+      CHARACTER(32)             :: MODE
+      LOGICAL(4)                :: TCHK
 !      REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
@@ -83,6 +107,7 @@ END MODULE SPINDIR_MODULE
       CALL PDOS$GETI4('NPRO',NPRO)
       ALLOCATE(NBARR(NKPT,NSPIN))
       CALL PDOS$GETI4A('NB',NKPT*NSPIN,NBARR)
+      CALL PDOS$GETCH('FLAG',FLAG)
       NB=MAXVAL(NBARR)
       DEALLOCATE(NBARR)
       LENG=NPRO
@@ -97,7 +122,6 @@ END MODULE SPINDIR_MODULE
           STATE=>STATEARR(IKPT,ISPIN)
           DO IB=1,NB
             EIG(IB,IKPT,ISPIN)=STATE%EIG(IB)
-!PRINT*,'STATE ',STATE%VEC(:,:,IB)
           ENDDO
         ENDDO
       ENDDO
@@ -118,18 +142,46 @@ END MODULE SPINDIR_MODULE
       CALL READCNTL$SETNUMBER(NSET)
       ALLOCATE(SET(NB,NKPT,NSPIN,NSET))
       ALLOCATE(LEGEND(NSET))
-      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,rbas,RPOS,LENG,SET,LEGEND)
+      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
       DEALLOCATE(LMX)
 
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
+      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
+                            CALL TRACE$PASS('AFTER READCNTL$GRID')
+!
+!     ==========================================================================
+!     ==  CHOOSE CALCULATION MODE                                             ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'MODE',1,TCHK)
+      IF(TCHK)THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'MODE',1,MODE)
+        IF(MODE.NE.'GAUSSIAN'.AND.MODE.NE.'TETRA')THEN
+          CALL ERROR$MSG('MODE UNKNOWN (SHOULD BE GAUSSIAN OR TETRA)')
+          CALL ERROR$CHVAL('MODE ',MODE)
+          CALL ERROR$STOP('PDOS MAIN')
+        ENDIF
+      ELSE
+        MODE='GAUSSIAN'
+      ENDIF
+      PRINT*,"FLAG OF PDOS FILE=",FLAG
+      !USE TETRAHEDRON METHOD
+      IF(MODE.EQ.'TETRA')THEN
+        IF(FLAG.EQ.'181213')THEN 
+          CALL GENERATE_TETRA_WGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+        ELSE
+          CALL ERROR$MSG('THE PDOS-FILE IS TOO OLD FOR MODE=TETRA')
+          CALL ERROR$CHVAL('FLAG ',FLAG)
+          CALL ERROR$STOP('PDOS MAIN')
+        ENDIF
+      ENDIF
 !
 !     ==========================================================================
 !     ==  MAKE PLOTS                                                          ==
 !     ==========================================================================
-      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD,SCALEY)
-                            CALL TRACE$PASS('AFTER READCNTL$GRID')
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,MODE)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
 !     ==========================================================================
@@ -376,14 +428,15 @@ END MODULE SPINDIR_MODULE
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: PDOSINNAME
       INTEGER(4)     :: ISVAR
-      INTEGER(4)     :: IARGC
+      INTEGER(4)     :: NARGS
 !     ******************************************************************
-      IF(IARGC().LT.1) THEN
+      CALL LIB$NARGS(NARGS)
+      IF(NARGS.LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE OF THE PDOS TOOL IS MANDATORY')
         CALL ERROR$STOP('INITIALIZEFILEANDLER')
       END IF
-      CALL GETARG(1,PDOSINNAME)
+      CALL LIB$GETARG(1,PDOSINNAME)
       ISVAR=INDEX(PDOSINNAME,-'.DCNTL',BACK=.TRUE.)
       IF(ISVAR.NE.0) THEN
         ROOTNAME=PDOSINNAME(1:ISVAR-1)
@@ -959,13 +1012,6 @@ END MODULE SPINDIR_MODULE
       END
 !
 !     ..................................................................
-MODULE READCNTL_MODULE
-USE LINKEDLIST_MODULE
-TYPE(LL_TYPE)   :: LL_CNTL
-SAVE
-END MODULE READCNTL_MODULE
-!
-!     ..................................................................
       SUBROUTINE READCNTL
       USE LINKEDLIST_MODULE
       USE READCNTL_MODULE
@@ -1129,7 +1175,7 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$SETS(NB,NKPT,NSPIN,NSET &
-     &                        ,NAT,LMX,rbas,RPOS,LENG,SET,LEGEND)
+     &                        ,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -1514,11 +1560,12 @@ END MODULE READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,SCALEY &
-     &                    ,NB,NKPT,NSPIN,ndim,EIG,NSET,SET,LEGEND)
+     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,MODE)
 !     **************************************************************************
 !     **************************************************************************
       USE READCNTL_MODULE
       USE ORBITALS_MODULE
+      USE DOS_WGHT_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
@@ -1533,6 +1580,7 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN,NSET)
       CHARACTER(32),INTENT(IN) :: LEGEND(NSET)
+      CHARACTER(32),INTENT(IN) :: MODE
       CHARACTER(32)        :: LEGEND1
       CHARACTER(256)       :: FILE
       LOGICAL(4)           :: TIB,TE,TIK,TIS,TCHK
@@ -1694,8 +1742,21 @@ END MODULE READCNTL_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                      ==
 !       ================================================================
         IF(.NOT.(TIB.OR.TE)) THEN
-          CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
-      &                 ,NB,NKPT,NSPIN,ndim,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          IF(MODE.EQ.'GAUSSIAN')THEN
+            CALL PUTONGRID(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &      ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          ELSE IF(MODE.EQ.'TETRA')THEN
+            IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
+      &       MINVAL(SET(:,:,:,ISET)).NE.1.0D0).AND.SPACEGROUP.NE.1)THEN
+              CALL ERROR$MSG('TETRAEDRON METHOD ONLY IMPLEMENTED FOR')
+              CALL ERROR$MSG('SPACEGROUP=1 OR TOTAL DENSITY OF STATES')
+              CALL ERROR$I4VAL('ISET',ISET)   
+              CALL ERROR$I4VAL('SPACEGROUP',SPACEGROUP)   
+              CALL ERROR$STOP('READCNTL$OUTPUT')
+            ENDIF
+            CALL PUTONGRID_TETRA(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+      &      ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          ENDIF
         END IF
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
@@ -1721,7 +1782,7 @@ END MODULE READCNTL_MODULE
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
 !     **************************************************************************
-      USE PDOS_MODULE, ONLY: STATE,STATEARR,wkpt
+      USE PDOS_MODULE, ONLY: STATE,STATEARR,WKPT
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
@@ -1753,14 +1814,14 @@ END MODULE READCNTL_MODULE
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
-      DE=(EMAX-EMIN)/real(NE-1,kind=8)   !step of the energy grid
-      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))  !broadening extends over 2N steps
-      spindeg=1.d0
-      if(nspin.eq.1.and.ndim.eq.1) spindeg=2.d0
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
+      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))  !BROADENING EXTENDS OVER 2N STEPS
+      SPINDEG=1.D0
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
 !
-!     == this is a dirty fix that was necessary before the k-point weight was
-!     == available on the pdos file 
-      if(sum(wkpt).eq.0.d0) then
+!     == THIS IS A DIRTY FIX THAT WAS NECESSARY BEFORE THE K-POINT WEIGHT WAS
+!     == AVAILABLE ON THE PDOS FILE 
+      IF(SUM(WKPT).EQ.0.D0) THEN
         DO IKPT=1,NKPT
           WKPT(IKPT)=0.D0
           DO ISPIN=1,NSPIN
@@ -1774,11 +1835,11 @@ END MODULE READCNTL_MODULE
             CALL ERROR$STOP('PUTONGRID')
           END IF
         ENDDO       
-      end if
+      END IF
 !
 !     ==========================================================================
-!     ==  map contribution from each state) onto the energy grid.             ==
-!     ==  (it is divided proportionally to the two enclosing grid points)     ==
+!     ==  MAP CONTRIBUTION FROM EACH STATE) ONTO THE ENERGY GRID.             ==
+!     ==  (IT IS DIVIDED PROPORTIONALLY TO THE TWO ENCLOSING GRID POINTS)     ==
 !     ==========================================================================
       NOS(:,:,:)=0.D0
       NOSSMALL(:,:)=0.D0
@@ -1786,8 +1847,8 @@ END MODULE READCNTL_MODULE
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
 !         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
-!         == FROM THE MAX OCCUPATION, WHIch MAY BE INCORRECT
-          WGHTX=WKPT(IKPT)*spindeg
+!         == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
+          WGHTX=WKPT(IKPT)*SPINDEG
           DO IB=1,NB
             X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE+1.D0
             IE1=INT(X)
@@ -1836,7 +1897,7 @@ END MODULE READCNTL_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     ==  determine nos by integration                                        ==
+!     ==  DETERMINE NOS BY INTEGRATION                                        ==
 !     ==========================================================================
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
@@ -1905,3 +1966,292 @@ END MODULE READCNTL_MODULE
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE PUTONGRID
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PUTONGRID_TETRA(NFIL,EMIN,EMAX,NE,EBROAD,SCALEY &
+     &                    ,NB,NKPT,NSPIN,ndim,EIG,SET,LEGEND)
+!     **************************************************************************
+!     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
+!     **  CONSTRUCTS DOS AND NOS WITH THE TETRAHEDRON METHOD AND WRITES THE   **
+!     **  RESULT ON FILE                                                      **
+!     **                                                                      **
+!     **  SCALEY MAY BE 'DOS' OR 'NOS' OR 'NONE'                              **
+!     **     SCALEY='DOS' RESCALES THE DENSITY OF STATES TO FIT WINDOW        **
+!     **     SCALEY='NOS' RESCALES THE NUMBER OF STATES TO FIT WINDOW         **
+!     **  NOS(IE,ISPIN,1) IS MULTIPLIED WITH MAX OCCUPATION OF ALL BANDS      **
+!     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
+!     **                                                                      **
+!     **************************************************************************
+      USE DOS_WGHT_MODULE
+      USE PDOS_MODULE, ONLY: STATE,STATEARR,wkpt
+      IMPLICIT NONE
+      INTEGER(4)   ,INTENT(IN) :: NE
+      REAL(8)      ,INTENT(IN) :: EMIN
+      REAL(8)      ,INTENT(IN) :: EMAX
+      REAL(8)      ,INTENT(IN) :: EBROAD
+      CHARACTER(8) ,INTENT(IN) :: SCALEY
+      INTEGER(4)   ,INTENT(IN) :: NB
+      INTEGER(4)   ,INTENT(IN) :: NKPT
+      INTEGER(4)   ,INTENT(IN) :: NSPIN
+      INTEGER(4)   ,INTENT(IN) :: Ndim
+      REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
+      REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN)
+      INTEGER(4)   ,INTENT(IN) :: NFIL
+      CHARACTER(32),INTENT(IN) :: LEGEND
+      REAL(8)              :: DE
+      INTEGER(4)           :: IE1,IE2,IDE,I1,I2
+      INTEGER(4)           :: ND,IOCC
+      REAL(8),allocatable  :: NOS(:,:,:)
+      REAL(8),allocatable  :: DOS(:,:,:)
+      REAL(8)              :: EV
+      REAL(8)              :: W1,W2,X,FAC
+      REAL(8)              :: NOSSMALL(NSPIN,2)
+      REAL(8)              :: WGHTX
+      INTEGER(4)           :: IKPT,ISPIN,IE,IB
+      REAL(8)              :: SVAR
+      REAL(8)              :: E
+      REAL(8)              :: DEWGHT
+      REAL(8)              :: spindeg
+!     **************************************************************************
+                                 CALL TRACE$PUSH('PUTONGRID')
+      CALL CONSTANTS('EV',EV)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
+      DEWGHT=(EMAXWGHT-EMINWGHT)/REAL(NEWGHT-1,KIND=8)   !STEP OF THE ENERGY GRID
+!$PRINT*,NE,EMIN,EMAX,DE
+!$PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
+      SPINDEG=1.D0
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
+
+      ALLOCATE(DOS(NEWGHT,NSPIN,2))
+      DOS(:,:,:)=0.0D0
+      DO IKPT=1,NKPT
+        DO IB=1,NB
+          DO ISPIN=1,NSPIN
+            STATE=>STATEARR(IKPT,ISPIN)
+            I1=EWGHT(IB+NB*(ISPIN-1),IKPT)%I1
+            I2=EWGHT(IB+NB*(ISPIN-1),IKPT)%I2
+            DO IE=I1,I2
+              !occupied states
+              DOS(IE,ISPIN,1)=DOS(IE,ISPIN,1)+SPINDEG*&
+      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+              !unoccupied states
+              E=EMINWGHT+REAL(IE-1,KIND=8)*DEWGHT
+              IF(E.LE.EF)THEN
+                DOS(IE,ISPIN,2)=DOS(IE,ISPIN,2)+SPINDEG*&
+      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+              ENDIF
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  DETERMINE NOS BY INTEGRATION                                        ==
+!     ==========================================================================
+      !FIXME: THIS INTEGRATION MEIGHT NOT BE PRECISE ENOUGH
+      ALLOCATE(NOS(NEWGHT,NSPIN,2))
+      DO ISPIN=1,NSPIN
+        DO IOCC=1,2
+          NOS(1,ISPIN,IOCC)=0.0D0
+          DO IE=2,NEWGHT
+            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*DEWGHT+NOS(IE-1,ISPIN,IOCC)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
+!     ==========================================================================
+      DO ISPIN=1,NSPIN
+        DO IOCC=1,2
+          DO IE=1,NEWGHT
+            IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
+            IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ROUND NOS AND DOS TO OBTAIN PROPER EDITING                          ==
+!     ==========================================================================
+      IF(SCALEY.EQ.'NONE') THEN
+!
+      ELSE IF(SCALEY.EQ.'DOS') THEN
+        SVAR=MAXVAL(DOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN DOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID_TETRA')
+        END IF
+        DOS=DOS*MAXVAL(NOS)/SVAR
+!
+      ELSE IF(SCALEY.EQ.'NOS') THEN
+        SVAR=MAXVAL(NOS)
+        IF(SVAR.LT.1.D-99) THEN
+          CALL ERROR$MSG('NO VALUES IN NOS ARRAY')
+          CALL ERROR$STOP('PUTONGRID_TETRA')
+        END IF
+        NOS=NOS*MAXVAL(DOS)/SVAR
+!
+      ELSE
+        CALL ERROR$MSG('ILLEGAL VALUE OF SCALEY')
+        CALL ERROR$CHVAL('SCALEY',SCALEY)
+        CALL ERROR$STOP('PUTONGRID_TETRA')
+      END IF     
+!
+!     ==========================================================================
+!     ==  WRITE RESULT ON PDOSOUT                                             ==
+!     ==========================================================================
+      DO IE=1,NEWGHT
+        E=EMINWGHT+(EMAXWGHT-EMINWGHT)*DBLE(IE-1)/DBLE(NEWGHT-1)
+        IF((E.lt.EMIN).or.(E.GT.EMAX))CYCLE
+        IF(NSPIN.EQ.1) THEN
+          WRITE(NFIL,FMT='(F18.8,4F18.8)') &
+     &          E/EV,DOS(IE,1,1),NOS(IE,1,1),DOS(IE,1,2),NOS(IE,1,2)
+        ELSE
+          WRITE(NFIL,FMT='(F18.8,8F18.8)') &
+     &        E/EV,DOS(IE,1,1),NOS(IE,1,1) &
+     &        ,-DOS(IE,2,1),-NOS(IE,2,1),DOS(IE,1,2),NOS(IE,1,2),&
+     &         -DOS(IE,2,2),-NOS(IE,2,2)
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='("# THIS WAS: ",A)')LEGEND
+                                 CALL TRACE$POP
+      RETURN
+      END SUBROUTINE PUTONGRID_TETRA
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+      USE DOS_WGHT_MODULE
+      USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)        :: NFILO
+      INTEGER(4),INTENT(IN)        :: NB
+      INTEGER(4),INTENT(IN)        :: NSPIN
+      INTEGER(4),INTENT(IN)        :: NKPT
+      REAL(8),INTENT(IN)           :: EMIN
+      REAL(8),INTENT(IN)           :: EMAX
+      INTEGER(4),INTENT(IN)        :: NE
+      REAL(8),INTENT(IN)           :: RBAS(3,3)
+      REAL(8),INTENT(IN)           :: EIG(NB,NKPT,NSPIN)
+      INTEGER(4)                   :: ISHIFT(3)
+      INTEGER(4)                   :: NKDIV(3)
+      INTEGER(4)                   :: NKPT2
+      LOGICAL(4)                   :: TINV
+      REAL(8),ALLOCATABLE          :: EB(:,:)
+      REAL(8)                      :: RNTOT,NEL
+      REAL(8)                      :: SUMA(2),SVAR
+      REAL(8),ALLOCATABLE          :: A(:,:)
+      INTEGER(4)                   :: IB,IKPT,ISPIN
+      REAL(8)                      :: A0,B0,C0,ALPHA,BETA,GAMMA
+      INTEGER(4)                   :: NSYM,NOP
+      INTEGER(4),parameter         :: NOPX=48
+      INTEGER(4)                   :: IARB(3)
+      CHARACTER(3)                 :: BRAVAIS
+      INTEGER(4)                   :: IIO(3,3,NOPX)
+      REAL(8)                      :: C(3,NOPX)
+      INTEGER(4)                   :: ISYM
+      LOGICAL(4)                   :: TSHIFT
+!     **************************************************************************
+                          CALL TRACE$PUSH('GENERATE_TETRA_WGHT')
+      CALL PDOS$GETI4A('NKDIV',3,NKDIV)
+      CALL PDOS$GETI4A('ISHIFT',3,ISHIFT)
+      CALL PDOS$GETR8('RNTOT',RNTOT)
+      CALL PDOS$GETR8('NEL',NEL)
+      CALL PDOS$GETL4('TINV',TINV)
+      CALL PDOS$GETI4('SPACEGROUP',SPACEGROUP)
+      CALL PDOS$GETL4('TSHIFT',TSHIFT)
+     
+      PRINT*,"SPACEGROUP",SPACEGROUP
+      PRINT*,"TINV",TINV
+      PRINT*,"TSHIFT",TSHIFT
+
+      CALL SPACEGROUP$SETI4('SPACEGROUP',SPACEGROUP)
+      CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
+     
+      IARB=1
+      IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
+       IARB(1)=1
+       IARB(2)=0
+       IARB(3)=0
+      ENDIF 
+      IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
+        IARB=0
+      ENDIF 
+      IF(BRAVAIS.EQ.'GMB') THEN
+       IARB(1)=0
+       IARB(2)=1
+       IARB(3)=0
+      ENDIF 
+      CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+
+      CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
+      CALL BRILLOUIN$MSH(RBAS,NKDIV(1)*NKDIV(2)*NKDIV(3),NOP,IIO,IARB,TSHIFT)
+!$      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+      
+      CALL BRILLOUIN$GETI4('NK',NKPT2)
+      
+      IF(NKPT2.ne.NKPT)THEN
+        CALL ERROR$MSG('NUMBER OF KPOINTS INCONSISTENT')
+        CALL ERROR$I4VAL('NKPT FROM PDOS',NKPT)
+        CALL ERROR$I4VAL('NKPT FROM BRILLOUIN',NKPT2)
+        CALL ERROR$STOP('DOS')
+      ENDIF
+      
+      IF(NSPIN.eq.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
+  &             BOTH SPIN DIRECTIONS.'
+      
+      ALLOCATE(EB(NB*NSPIN,NKPT))
+      DO IKPT=1,NKPT
+        DO ISPIN=1,NSPIN
+          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKPT)=EIG(1:NB,IKPT,ISPIN) 
+        ENDDO
+      ENDDO
+      ALLOCATE(WGHT(NB*NSPIN,NKPT))
+      CALL BRILLOUIN$DOS(NSPIN*NB,NKPT,EB,WGHT,RNTOT,EF)
+!
+!     ==========================================================================
+!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
+!     ==========================================================================
+      !FIXME TOTAL DENSITY FOR TESTING
+      ALLOCATE(A(NB*NSPIN,NKPT))
+      A=1
+      SUMA(:)=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          SUMA(ISPIN)=0.0D0
+          DO IKPT=1,NKPT
+            SUMA(ISPIN)=SUMA(ISPIN)+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+          ENDDO
+          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA(ISPIN)
+        ENDDO
+      ENDDO
+      
+      A=1.0D0
+      SUMA(:)=0.D0
+      DO IB=1,NB
+        DO ISPIN=1,NSPIN
+          DO IKPT=1,NKPT
+            SUMA(ISPIN)=SUMA(ISPIN)+WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+          ENDDO
+        ENDDO
+      ENDDO
+      PRINT*,'INTEGRAL OF A=1 :             ',SUM(SUMA(:)),' should be ',RNTOT 
+      PRINT*,'INTEGRAL OF A=1 (SPIN UP) :   ',SUMA(1) 
+      PRINT*,'INTEGRAL OF A=1 (SPIN DOWN) : ',SUMA(2)
+      
+      !FIXME: BRILLOUIN$EWGHT NEEDS EMAX=MAXVAL(EB),EMIN=MINVAL(EB)
+      !CHOOSING NE SO THAT ENERGY INTERVALS ARE THE SAME
+      SVAR=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+      EMINWGHT=MINVAL(EB)-0.01D0
+      EMAXWGHT=MAXVAL(EB)+0.01D0
+      NEWGHT=INT((EMAXWGHT-EMINWGHT)/SVAR)+1
+      ALLOCATE(EWGHT(NB*NSPIN,NKPT))
+      CALL BRILLOUIN$EWGHT(NKPT,NB*NSPIN,EB,EMINWGHT,EMAXWGHT,NEWGHT,EWGHT)
+                          CALL TRACE$POP()
+      
+      RETURN
+      END SUBROUTINE GENERATE_TETRA_WGHT
+

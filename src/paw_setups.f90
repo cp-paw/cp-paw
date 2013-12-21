@@ -273,6 +273,7 @@ END MODULE SETUP_MODULE
 !!$      REAL(8)     ,PARAMETER  :: G1=1.175316829807299d-4
 !!$      INTEGER(4)  ,PARAMETER  :: NG=250
       REAL(8)                 :: DEX
+      CHARACTER(6)            :: TYPEID
 !     **************************************************************************
       IF(SELECTED) THEN
         CALL ERROR$MSG('SAFEGUARD FUNCTION:')
@@ -312,11 +313,19 @@ END MODULE SETUP_MODULE
 !     == CREATE NEW
 !     ==========================================================================
       IF(GIDG_PROTO.EQ.0) THEN
-        CALL RADIAL$NEW('LOG',GIDG_PROTO)
+        TYPEID='LOG'
+        CALL RADIAL$NEW(TYPEID,GIDG_PROTO)
         DEX=LOG(GMAX/G1)/REAL(NG-1,KIND=8)
         CALL RADIAL$SETI4(GIDG_PROTO,'NR',NG)
         CALL RADIAL$SETR8(GIDG_PROTO,'R1',G1)
         CALL RADIAL$SETR8(GIDG_PROTO,'DEX',DEX)
+
+        !WRITE GRID FOR PROJECTORS TO BANDDATA MODULE
+        CALL BANDDATA$SETI4('NG_PROTO',NG)
+        CALL BANDDATA$SETCH('TYPEID_PROTO',TYPEID)
+        CALL BANDDATA$SETR8('GMAX_PROTO',GMAX)
+        CALL BANDDATA$SETR8('G1_PROTO',G1)
+        CALL BANDDATA$SETR8('DEX_PROTO',DEX)
       END IF
 !
 !     ==========================================================================
@@ -718,10 +727,11 @@ END MODULE SETUP_MODULE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       REAL(8)     ,INTENT(OUT) :: VAL(LEN)
-      INTEGER(4)               :: NR
+      INTEGER(4)               :: NR,NG
       INTEGER(4)               :: i
 !     **************************************************************************
       CALL RADIAL$GETI4(THIS%GID,'NR',NR)
+      CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
 !
 !     ==========================================================================
 !     == PROJECTOR FUNCTIONS                                                  ==
@@ -733,6 +743,13 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PRO,(/LEN/))
+      ELSE IF(ID.EQ.'PROOFG') THEN
+        IF(LEN.NE.THIS%LNX*NG) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=RESHAPE(THIS%PROOFG,(/LEN/))
 ! 
 !     ==========================================================================
 !     ==  ENERGIES FOR PARTIAL WAVE CONSTRUCTION                              ==

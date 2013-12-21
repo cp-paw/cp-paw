@@ -1,3 +1,8 @@
+!*******************************************************************************
+!**  TODO:                                                                    **
+!**     - STANDARDFILES: DO CLEANUP                                           **
+!*******************************************************************************
+!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
 !     ==========================================================================
 !     ==========================================================================
@@ -960,17 +965,17 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  BANDS ======================================================
-      ID=+'BANDS'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.BANDS')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-!
 !     ==  PDOS  ======================================================
       ID=+'PDOS'
       CALL FILEHANDLER$SETFILE(ID,T,-'.PDOS')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
+!
+!     ==  BANDDATA====================================================
+      ID=+'BANDDATA'
+      CALL FILEHANDLER$SETFILE(ID,T,-'.BANDDATA')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -3947,6 +3952,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !
 !     ==  PERFORM ACTIONS  =====================================================
       CALL DYNOCC$SETI4('NKPT',NKPT)
+      CALL DYNOCC$SETI4A('NKDIV',3,NKDIV)
+      CALL DYNOCC$SETI4A('ISHIFT',3,ISHIFT)
       CALL DYNOCC$SETR8A('XK',3*NKPT,XK) 
       CALL DYNOCC$SETR8A('WKPT',NKPT,WGHT)
       DEALLOCATE(XK)

@@ -703,15 +703,17 @@ END MODULE STOPIT_MODULE
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
         IF(.NOT.EXITFILEREMOVED) THEN
-          CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
-          INQUIRE(FILE=EXITFILE,EXIST=TCHK)
-          IF(TCHK) THEN
-!           == CHAR(114)//CHAR(109)='RM'  (LOWERCASE)
-            CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
-!           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
-!           CALL ERROR$STOP('STOPIT$UPDATE')
-            CALL LIB$SYSTEM(CMD)
-          END IF
+          CALL FILEHANDLER$DELETE('EXIT')
+!!$ this code can be removed after testing. replaced by filehandler$delete.
+!!$          CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
+!!$          INQUIRE(FILE=EXITFILE,EXIST=TCHK)
+!!$          IF(TCHK) THEN
+!!$!           == CHAR(114)//CHAR(109)='RM'  (LOWERCASE)
+!!$            CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
+!!$!           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
+!!$!           CALL ERROR$STOP('STOPIT$UPDATE')
+!!$            CALL LIB$SYSTEM(CMD)
+!!$          END IF
           EXITFILEREMOVED=.TRUE.
         END IF
       ELSE
@@ -1110,6 +1112,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL QMMM$REPORT(NFILO)
       ENDIF
                               CALL TRACE$PASS('AFTER STATEANALYSIS')
+!   
+!     ==========================================================================
+!     ==   BANDDATA                                                           ==
+!     ==========================================================================
+      IF(TPRINT)THEN
+        CALL BANDDATA$WRITEFILE
+      ENDIF
 !   
 !     ==========================================================================
 !     ==   WRITE FILE FOR COSMOTHERM                                          ==

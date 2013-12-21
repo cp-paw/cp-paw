@@ -8,6 +8,7 @@ s/#IF/#if/g
 s/#ELSE/#else/g
 s/#ENDIF/#endif/g
 s/[$]/__/g
+s/!__omp /!$omp /g
 s/FFTW_F77.I/fftw_f77.i/g
 s/MPIF.H/mpif.h/g
 

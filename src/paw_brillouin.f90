@@ -83,6 +83,11 @@ TYPE THIS_TYPE
   INTEGER(4)    ,POINTER :: IRRKP(:)  !(NMSHP) POINTER TO IRR. K-POINT
 END TYPE THIS_TYPE
 TYPE(THIS_TYPE) :: THIS
+TYPE EWGHT_TYPE
+  INTEGER(4)             :: I1
+  INTEGER(4)             :: I2
+  REAL(8),pointer        :: WGHT(:)
+END TYPE EWGHT_TYPE
 END MODULE BRILLOUIN_MODULE
 !
 !-------------------------------------------------------------------------------
@@ -482,7 +487,7 @@ END MODULE BRILLOUIN_MODULE
 !     == EXPAND GENERATORS TO COMPLETE FULL POINT GROUP                       ==
 !     ==========================================================================
       NOP=NSYM
-      OP(:,:,NSYM)=IIO(:,:,NSYM)
+      OP(:,:,1:NSYM)=IIO(:,:,1:NSYM)
       CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
 !
 !     ==========================================================================
@@ -821,24 +826,28 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_REDUZ(N,NMSHP,ISHIFT,NSYM,IO,NUM)
-!     **                                                              **
-!     **  REDUZ CREATES THE RELATION BETWEEN THE MESHPOINTS AND       **
-!     **  THE POINTS IN THE "IRREDUCIBLE ZONE"                        **
-!     **  INPUT :                                                     **
-!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS   **
-!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND        **
-!     **                ON ALL FACES OF A REC. UNIT CELL              **
-!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                 **
-!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)*
-!     **  OUTPUT :                                                    **
-!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE       **
-!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)         **
-!     **  REMARKS :                                                   **
-!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :     **
-!     **   (X,Y,Z)=RBAS*(I,J,K)                                       **
-!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1     **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  REDUZ CREATES THE RELATION BETWEEN THE MESHPOINTS AND               **
+!     **  THE POINTS IN THE "IRREDUCIBLE ZONE"                                **
+!     **  INPUT :                                                             **
+!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS           **
+!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND                **
+!     **                ON ALL FACES OF A REC. UNIT CELL                      **
+!     **    NSYM        NUMBER OF SYMMETRY OPERATIONS                         **
+!     **    IO          SYMMETRY OPERATIONS (BASIS ARE REC. LATT. VEC.)       **
+!     **  OUTPUT :                                                            **
+!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE               **
+!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)                 **
+!     **  REMARKS :                                                           **
+!     **    THE MAPPING FROM COORDINATES TO NUMBERS IS GIVEN BY :             **
+!     **   (X,Y,Z)=RBAS*(I,J,K)                                               **
+!     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1             **
+!     **                                                                      **
+!     **  remark: a change from 5b51787 to b86ae50 resulted in a change of the**
+!     **    order of irreducible k-points, which rendered previous restart    **
+!     **    files unreadable                                                  **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N(3)
       INTEGER(4),INTENT(IN) :: NMSHP
@@ -847,81 +856,108 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4),INTENT(IN) :: IO(3,3,NSYM)
       INTEGER(4),INTENT(OUT):: NUM(NMSHP)
       LOGICAL(4),PARAMETER  :: TSHIFT=.TRUE.
-      INTEGER(4)            :: I,J
+      integer(4)            :: isym(nmshp)  ! symmetry from irr. p. or zero
+      INTEGER(4)            :: I,J,jprime
       INTEGER(4)            :: I1,I2,I3,J1,J2,J3
-      INTEGER(4)            :: IX1,IX2,IX3,IND,IND1,IND2
+      INTEGER(4)            :: IX1,IX2,IX3,IND,IND1
       LOGICAL(4)            :: TCHK
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('BRILLOUIN_REDUZ')
       CALL BRILLOUIN_CHECKSHIFT(ISHIFT,NSYM,IO,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('SHIFT INCOMPATIBLE WITH SYMMETRY')
         CALL ERROR$STOP('BRILLOUIN_REDUZ')
       END IF
-!     ==================================================================
-!     ==  INITIALIZE                                                  ==
-!     ==================================================================
-      DO I=1,NMSHP                                                   
-        IND=I-1    ! I1 RUNS FASTEST
-        I1=IND/((N(3)+1)*(N(2)+1))      
-        IND=IND-I1*(N(3)+1)*(N(2)+1)
-        I2=IND/(N(3)+1)
-        I3=IND-I2*(N(3)+1)
-        J1=MODULO(I1,N(1))
-        J2=MODULO(I2,N(2))
-        J3=MODULO(I3,N(3))
-        NUM(I)=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
-      ENDDO
+!
 !     ==========================================================================
 !     ==  REDUCTION OF REDUCIBLE K-POINTS                                     ==
 !     ==  APPLY THE FULL POINT GROUP ON EACH K-POINT. THE K-POINT WITH THE    ==
 !     ==  MINIMUM INDEX IN THE RESULTING STAR IS THE IRRDUCIBLE POINT         ==
+!     ==                                                                      ==
+!     ==  POSITION IS ENCODED AS NUM(I1,I2,I3)=1+I3+(N(3)+1)*(I2+(N(2)+1)*I1) ==
+!     ==  WHERE UM RUNS FROM 1 TO NMSHP                                       ==
 !     ==========================================================================
-      DO J=1,NMSHP                                                   
-        IF(NUM(J).LT.J) THEN
-!         == POINT IS NOT IRREDUCIBLE. USE MAPPING TO DIRECT TO IRREDUCIBLE 
-!         == K-POINT
-          NUM(J)=NUM(NUM(J))
-          CYCLE
-        END IF
+!     == SCAN ALL POINTS INSIDE THE FIRST UNIT CELL (EXCLUDING OUTER BOUNDARIES)
+!     == THE ORDER OF THE POINTS DETERMINES THE ORDER AND THE CHOICE OF 
+!     == IRREDUCIBLE K-POINTS.
+      NUM(:)=0
+      DO IND1=1,N(1)*N(2)*N(3)
+!       == INVERT IND1=1+I1+N(1)*(I2+N(2)*I3) ==================================
+        IND=IND1-1
+        I3=IND/(N(1)*N(2))
+        IND=IND-I3*N(1)*N(2)
+        I2=IND/N(1)
+        I1=IND-I2*N(1)
+!       == ENCODE POSITION AND CHECK IF POINT IS ALREADY REDUCIBLE ============
+        J=1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)  ! ENCODES POSITION
+        IF(NUM(J).ne.0) CYCLE  ! NO IRREDUCIBLE POINT
+!
+!       == PLACE ON A GRID THAT IS TWICE AS FINE TO ACCOUNT FOR THE SHIFT=======
+        I1=2*I1+ISHIFT(1)                                            
+        I2=2*I2+ISHIFT(2)                                            
+        I3=2*I3+ISHIFT(3)                                            
+!
+!       == CONSTRUCT THE STAR OF EQUIVALENT K-POINTS ===========================
         DO I=1,NSYM                                                    
-          IND=NUM(J)-1
-          I1=IND/((N(3)+1)*(N(2)+1))
-          IND=IND-I1*(N(3)+1)*(N(2)+1)
-          I2=IND/(N(3)+1)
-          I3=IND-I2*(N(3)+1)
-          IND1=1+I1+N(1)*(I2+N(2)*I3)
-!         == PLACE ON A GRID THAT IS DOUBLE AS FINE
-          I1=2*I1+ISHIFT(1)                                            
-          I2=2*I2+ISHIFT(2)                                            
-          I3=2*I3+ISHIFT(3)                                            
-!         == APPLY SYMMETRY ============================================
+!         == APPLY SYMMETRY ====================================================
           J1=IO(1,1,I)*I1+IO(1,2,I)*I2+IO(1,3,I)*I3             
           J2=IO(2,1,I)*I1+IO(2,2,I)*I2+IO(2,3,I)*I3             
           J3=IO(3,1,I)*I1+IO(3,2,I)*I2+IO(3,3,I)*I3             
-!         == CHECK IF THE POINT FALLS ONTO THE ORIGINAL SHIFTED GRID ===
+!         == CHECK IF THE POINT FALLS ONTO THE ORIGINAL SHIFTED GRID ===========
           IX1=MODULO(J1-ISHIFT(1),2)                                           
           IX2=MODULO(J2-ISHIFT(2),2)                                           
           IX3=MODULO(J3-ISHIFT(3),2)                                           
           IF(IX1.NE.0.OR.IX2.NE.0.OR.IX3.NE.0) CYCLE  
-!         == COARSEN GRID AGAIN ======================================
+!         == COARSEN GRID AGAIN ================================================
           J1=(J1-ISHIFT(1))/2                                               
           J2=(J2-ISHIFT(2))/2                                               
           J3=(J3-ISHIFT(3))/2                                               
-!         == DO NOT CONSIDER POINTS AT THE OUTER BOUNDARY AS 
+!         == TRANSLATE TARGET POINT INTO FIRST UNIT CELL =======================
           J1=MODULO(J1,N(1))
           J2=MODULO(J2,N(2))
           J3=MODULO(J3,N(3))
-          IND2=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
-!         == IDENTIFY WITH ONE OF THE TWO SYMMETRY RELATED K-POINTS
-          IF(IND2.LT.J) THEN
-!           == IF IND2<J,  NUM(IND2) POINTS TO AN IRREDUCIBLE K-POINT
-!           == IF IND2.GE.J FOR ALL SYMMETRY OPERATIONS, IT IS IRREDUCIBLE
-            NUM(J)=NUM(IND2)
-            EXIT
-          ELSE IF(IND2.GT.J) THEN
-            NUM(IND2)=J
-          END IF
+!         == NEW POSITION ======================================================
+          JPRIME=1+J3+(N(3)+1)*(J2+(N(2)+1)*J1)
+!         == POINT TO IRREDUCIBLE POINT AND SPECIFY SYMMETRY  ==================
+          NUM(JPRIME)=J   !POINTER TOWARDS IRREDICIBLE POINT
+          ISYM(JPRIME)=I  !SYMMETRY OPERATION FROM IRREDUCEBLE POINT TO JPRIME
+        ENDDO
+!       == ENFORCE THAT THE IDENTITY IS USED TO MAP THE POINT ON ITSELF ========
+        NUM(J)=J
+        ISYM(J)=0
+      ENDDO
+!
+!     ==========================================================================
+!     == COMNPLETE OUTER BOUNDARIES                                           ==
+!     ==========================================================================
+      DO I1=0,N(1)-1
+        DO I2=0,N(2)-1
+          I3=0
+          J3=N(3)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+J3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
+        ENDDO
+      ENDDO
+      DO I1=0,N(1)-1
+        DO I3=0,N(3)
+          I2=0
+          J2=N(2)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+I3+(N(3)+1)*(J2+(N(2)+1)*I1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
+        ENDDO
+      ENDDO
+      DO I2=0,N(2)
+        DO I3=0,N(3)
+          I1=0
+          J1=N(1)
+          J     =1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)
+          JPRIME=1+I3+(N(3)+1)*(I2+(N(2)+1)*J1)
+          NUM(JPRIME)=NUM(J)
+          ISYM(JPRIME)=ISYM(J)
         ENDDO
       ENDDO
 !
@@ -932,6 +968,9 @@ END MODULE BRILLOUIN_MODULE
       DO I=1,NMSHP
         IF(NUM(I).NE.NUM(NUM(I))) THEN
           CALL ERROR$MSG('MAPPING FAILED')
+          CALL ERROR$I4VAL('I',I)
+          CALL ERROR$I4VAL('NUM(I)',NUM(I))
+          CALL ERROR$I4VAL('NUM(num(I))',NUM(num(I)))
           CALL ERROR$STOP('BRILLOUIN_REDUZ')
         END IF
       ENDDO
@@ -1743,6 +1782,7 @@ END MODULE BRILLOUIN_MODULE
         CALL ERROR$R8VAL('NUMBER OF STATES AT THE UPPER BOUND',NOS(NP))        
         CALL ERROR$R8VAL('NUMBER OF STATES REQUESTED',RNTOT)          
         CALL ERROR$R8VAL('ADD ',ADD)
+        CALL ERROR$MSG('YOU PROBABLY HAVE TO INCREASE THE NUMBER OF BANDS NB')
         CALL ERROR$STOP('BRILLOUIN_EFI')
       END IF                                                            
       IPUP=NP                                                           
@@ -2735,6 +2775,7 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TESTCOMPLETE()
+      IMPLICIT NONE
 !     **************************************************************************
 !     ** TESTROUTINE FOR THE ROUTINE BRILLOUIN_COMPLETE                       **
 !     **************************************************************************
@@ -2742,6 +2783,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)           :: NOP
       INTEGER(4)           :: OP(3,3,NOPX)
       INTEGER(4),DIMENSION(3,3) :: C2Z,C2X,C2A,C31P,INV
+      INTEGER(4)           :: I
 !     **************************************************************************
 !     == LIST OF GENERATORS ====================================================
 !     == GROUP 228 ==GAMMA^F_C==================================================
@@ -2802,7 +2844,7 @@ END MODULE BRILLOUIN_MODULE
       LOGICAL(4)               :: TOLD
 !     **************************************************************************
       NGENERATOR=NOP
-      GENERATOR(:,:,:NOP)=OP(:,:,:NOP)
+      GENERATOR(:,:,1:NOP)=OP(:,:,1:NOP)
 !
 !     == IDENTITY ==============================================================
       OP(:,:,:)=0
@@ -3121,7 +3163,7 @@ END MODULE SPACEGROUP_MODULE
       CALL SPACEGROUP_INI()
       IF(ID.EQ.'SPACEGROUP') THEN
         ISPACEGROUP=VAL
-        IF(ISPACEGROUP.LE.1.OR.ISPACEGROUP.GT.230) THEN
+        IF(ISPACEGROUP.LT.1.OR.ISPACEGROUP.GT.230) THEN
           CALL ERROR$MSG('SPACE GROUP NUMBER OUT OF RANGE')
           CALL ERROR$I4VAL('ISPACEGROUP',ISPACEGROUP)
           CALL ERROR$STOP('SPACEGROUP$SETI4')
@@ -3227,7 +3269,7 @@ END MODULE SPACEGROUP_MODULE
       C31P=0; C32P=0;C33P=0;C34P=0; C31M=0;C32M=0;C33M=0;C34M=0
 
       E(:,1)=(/1,0,0/); E(:,3)=(/0,1,0/); E(:,3)=(/0,0,1/); 
-      INV(:,1)=(/-1,0,0/); INV(:,3)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
+      INV(:,1)=(/-1,0,0/); INV(:,2)=(/0,-1,0/); INV(:,3)=(/0,0,-1/); 
 !
       IF(BRAVAIS.EQ.'G1') THEN ! MONOCLINIC
         CONTINUE
@@ -3372,7 +3414,7 @@ END MODULE SPACEGROUP_MODULE
         C2F(:,1)=(/-1,0,0/); C2F(:,2)=(/0,0,-1/); C2F(:,3)=(/0,-1,0/)
       ELSE
         CALL ERROR$MSG('LATTICE SYMBOL NOT RECOGNIZED')
-        CALL ERROR$STOP('XXX')
+        CALL ERROR$STOP('SPACEGROUP$GENERATORS')
       END IF
 !
 !     ==========================================================================
@@ -4369,7 +4411,6 @@ END MODULE SPACEGROUP_MODULE
         NOP=NOP+1; OPERATION(:,:,NOP)=C2A; C(:,NOP)=(/0.5D0,0.D0,0.D0/)
         NOP=NOP+1; OPERATION(:,:,NOP)=C31P
         NOP=NOP+1; OPERATION(:,:,NOP)=INV
-
       END IF
 !
 !     ==========================================================================
@@ -4404,18 +4445,19 @@ END MODULE SPACEGROUP_MODULE
 !     ==========================================================================
 !     ==  CHECK CONSISTENCY OF POINT GROUP OPERATIONS                         ==
 !     ==========================================================================
-        DO I=1,NOP
-          IF(SUM(ABS(OPERATION(:,:,I))).GT.0) THEN
-            CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
-            CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
-            CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
-            CALL ERROR$I4VAL('SPACE GROUP NUMBER',ISPACEGROUP)
-            CALL ERROR$CHVAL('BRAVAIS LATTICE',BRAVAIS)
-            CALL ERROR$I4VAL('NUMBER OF GENERATORS',NOP)
-            CALL ERROR$STOP('BRILLOUIN$GENERATORS')
-          END IF
-        ENDDO
-        RETURN
+      DO I=1,NOP
+        IF(SUM(ABS(OPERATION(:,:,I))).EQ.0) THEN
+          CALL ERROR$MSG('INTERNAL ERROR: INVALID SYMMETRY OPERATION')
+          CALL ERROR$MSG('SPACE GROUP NUMBER INCONSISTENT WTH BRAVAIS LATT.')
+          CALL ERROR$MSG('SPACE GROUP NUMBER POINT GROUP OPERATIONS')
+          CALL ERROR$I4VAL('SPACE GROUP NUMBER',ISPACEGROUP)
+          CALL ERROR$CHVAL('BRAVAIS LATTICE',BRAVAIS)
+          CALL ERROR$I4VAL('NUMBER OF GENERATORS',NOP)
+          CALL ERROR$I4VAL('PROBLEM WITH GENERATOR',I)
+          CALL ERROR$STOP('BRILLOUIN$GENERATORS')
+        END IF
+      ENDDO
+      RETURN
       END SUBROUTINE SPACEGROUP$GENERATORS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -4708,7 +4750,7 @@ END MODULE SPACEGROUP_MODULE
             CALL ERROR$MSG('NUMBER OF OPERATIONS EXCEEDS MAXIMUM')
             CALL ERROR$I4VAL('NOP',NOP)
             CALL ERROR$I4VAL('NOPX',NOPX)
-            CALL ERROR$STOP('BRILLOUIN_COMPLETE')
+            CALL ERROR$STOP('SPACEGROUP$COMPLETE')
           END IF
           OP(:,:,NOP)=OPNEW
           c(:,nop)=cnew
@@ -4718,3 +4760,223 @@ END MODULE SPACEGROUP_MODULE
       ENDDO !END OF LOOP OVER OPERATIONS
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$EWGHT(NKP,NB,EB,EMIN,EMAX,NE,EWGHT)
+!     **************************************************************************
+!     ** GENERATES ENERGY DEPENDENT WEIGHTS FOR DOS AND PDOS                  **
+!     **************************************************************************
+      USE BRILLOUIN_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NKP
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NE
+      REAL(8)   ,INTENT(IN) :: EB(NB,NKP)
+      REAL(8)   ,INTENT(IN) :: EMIN
+      REAL(8)   ,INTENT(IN) :: EMAX
+      TYPE(EWGHT_TYPE),INTENT(INOUT) :: EWGHT(NB,NKP)
+      INTEGER(4)            :: IKP(4)
+      REAL(8)               :: VOL
+      REAL(8)               :: E(4)
+      REAL(8)               :: EF
+      REAL(8)               :: WGHT0(4)
+      REAL(8)               :: AE,BE,DE
+      REAL(8)               :: SVARM,SVARP
+      INTEGER(4)            :: NTET  !#(TETRAHEDRA)
+      INTEGER(4)            :: ITET,IK,IB,I,IE
+      INTEGER(4)            :: I1,I2
+!     **************************************************************************
+      NTET=THIS%NTET
+!
+!     ==========================================================================
+!     == PARAMETERS FOR THE ENERGY GRID                                       ==
+!     ==  E=EMIN+(EMAX-EMIN)/(NE-1)*(IE-1)  ====================================
+!     ==  IE=1+(NE-1)*(E-EMIN)/(EMAX-EMIN) =====================================
+!     ==  IE=[(NE-1)/(EMAX-EMIN)] * E + [1-(NE-1)*EMIN/(EMAX-EMIN)]
+!     ==  IE=AE * E + BE
+!     ==========================================================================
+      AE=REAL(NE-1,KIND=8)/(EMAX-EMIN)
+      BE=1.D0-REAL(NE-1,KIND=8)*EMIN/(EMAX-EMIN)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+!
+!     ==========================================================================
+!     == DETERMINE GRID RANGE FOR EACH BAND AND K-POINT                       ==
+!     ==========================================================================
+      EWGHT(:,:)%I1=NE
+      EWGHT(:,:)%I2=1
+      DO ITET=1,NTET
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+!         == WGHT(I2) CONTAINS THE COMPLETE INTEGRAL ===========================
+          I1=INT(AE*MINVAL(EB(IB,IKP(:)))+BE)
+          I2=1+INT(AE*MAXVAL(EB(IB,IKP(:)))+BE)
+          EWGHT(IB,IKP)%I1=MIN(EWGHT(IB,IKP)%I1,I1)
+          EWGHT(IB,IKP)%I2=MAX(EWGHT(IB,IKP)%I2,I2)
+        ENDDO
+      ENDDO
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          I1=MAX(I1,1)
+          I2=MIN(I2,NE)
+          EWGHT(IB,IK)%I1=I1
+          EWGHT(IB,IK)%I2=I2
+          ALLOCATE(EWGHT(IB,IK)%WGHT(I1:I2))
+          EWGHT(IB,IK)%WGHT(:)=0.D0
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == ADD UP INTEGRATION WEIGHTS                                           ==
+!     ==========================================================================
+      DO ITET=1,NTET
+        VOL=THIS%VOL*THIS%MULT(ITET)
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+          I1=NE
+          I2=1
+          DO I=1,4                                                      
+            E(I)=EB(IB,IKP(I))                                                
+            I1=MIN(I1,1+INT(AE*E(I)+BE))
+            I2=MAX(I2,INT(AE*E(I)+BE))
+          ENDDO
+          DO IE=I1,I2          
+            EF=EMIN+REAL(IE-1,KIND=8)*DE
+            WGHT0(:)=0.D0
+            CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
+            DO I=1,4                                                      
+              EWGHT(IB,IKP(I))%WGHT(IE)=EWGHT(IB,IKP(I))%WGHT(IE)+WGHT0(I)
+            ENDDO
+          ENDDO
+          DO I=1,4                                                      
+            EWGHT(IB,IKP(I))%WGHT(I2+1:)=EWGHT(IB,IKP(I))%WGHT(I2+1:)+0.25D0*VOL
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DIFFERENTIATE INTEGRATION WEIGHTS                                    ==
+!     ==========================================================================
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          SVARM=0.5D0*EWGHT(IB,IK)%WGHT(I1)/DE
+          DO IE=I1,I2-1
+            SVARP=0.5D0*(EWGHT(IB,IK)%WGHT(IE+1)-EWGHT(IB,IK)%WGHT(IE))/DE
+            EWGHT(IB,IK)%WGHT(IE)=SVARM+SVARP
+            SVARM=SVARP
+          ENDDO
+          EWGHT(IB,IK)%WGHT(I2)=SVARM
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE BRILLOUIN$EWGHT
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+!     **************************************************************************
+!     ** THIS FUNCTION CHECKS IF THE GIVEN LATTICE VECTORS RBAS ARE           **
+!     ** COMPATIBLE WITH THE GIVEN TYPE OF BRAVAIS LATTICE WITHIN A TOLERANCE **
+!     ** TOL AND RETURNS THE LATTICE PARAMETERS A,B,C,ALPHA,BETA,GAMMA        **
+!     ** ACCORDING TO BRADLEY AND CRACKNELL                                   **
+!     ******************************************************ROBERT SCHADE 2013**
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER         :: NSYMX=48
+      CHARACTER(3),INTENT(IN)      :: BRAVAIS
+      REAL(8),INTENT(IN)           :: RBAS(3,3)
+      REAL(8),INTENT(OUT)          :: A0,B0,C0,ALPHA,BETA,GAMMA
+      INTEGER(4)                   :: ISYM,I,J,NB,IKP,IB,K
+      REAL(8)                      :: RBASBRAVAIS(3,3)
+      REAL(8),PARAMETER            :: TOL=1.D-6
+!     **************************************************************************
+      !CUBIC
+      IF(BRAVAIS.EQ.'GC') THEN
+        A0=RBAS(1,1)
+      ENDIF
+      IF(BRAVAIS.EQ.'GCF') THEN
+        A0=2.0D0*RBAS(2,1)
+      ENDIF
+      IF(BRAVAIS.EQ.'GCV') THEN
+        A0=-2.0D0*RBAS(1,1)
+      ENDIF
+      !MONOCLIN PRIMITIVE
+      IF(BRAVAIS.EQ.'GM') THEN
+        A0=SQRT(RBAS(1,2)**2+RBAS(2,2)**2)
+        B0=-RBAS(2,1)
+        C0=RBAS(3,3)
+        GAMMA=ASIN(RBAS(2,1)/A0)
+      ENDIF
+      !MONOCLIN BASE-CENTRED
+      IF(BRAVAIS.EQ.'GMB') THEN
+        A0=SQRT((2.0D0*RBAS(2,1))**2+(2.0D0*RBAS(2,2))**2)
+        B0=-RBAS(1,2)
+        C0=2.0D0*RBAS(3,3)
+        GAMMA=ASIN(RBAS(2,1)/(0.5D0*A0))
+      ENDIF
+      !ORTHORHOMBIC PRIMITIVE
+      IF(BRAVAIS.EQ.'GO') THEN
+        A0=RBAS(1,2)
+        B0=-RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !ORTHORHOMBIC BASE-CENTRED
+      IF(BRAVAIS.EQ.'GOB') THEN
+        A0=2.0D0*RBAS(1,1)
+        B0=-2.0D0*RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !ORTHORHOMBIC BODY-CENTRED
+      IF(BRAVAIS.EQ.'GOV') THEN
+        A0=2.0D0*RBAS(1,1)
+        B0=2.0D0*RBAS(2,1)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+      !ORTHORHOMBIC FACE-CENTRED
+      IF(BRAVAIS.EQ.'GOF') THEN
+        A0=2.0D0*RBAS(1,1)
+        B0=-2.0D0*RBAS(2,2)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+      !TETRAGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GQ') THEN
+        A0=RBAS(1,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !TETRAGONAL BODY-CENTRED
+      IF(BRAVAIS.EQ.'GQV') THEN
+        A0=-2.0D0*RBAS(1,1)
+        C0=2.0D0*RBAS(3,1)
+      ENDIF
+      !TRIGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GRH') THEN
+        A0=-RBAS(2,1)
+        C0=RBAS(3,1)
+      ENDIF
+      !HEXAGONAL PRIMITIVE
+      IF(BRAVAIS.EQ.'GH') THEN
+        A0=-RBAS(2,1)
+        C0=RBAS(3,3)
+      ENDIF
+      !TRICLINIC
+      IF(BRAVAIS.EQ.'G1') THEN
+        RETURN !DO NOT CHECK IF TRICLINIC
+      ENDIF
+
+      CALL SPACEGROUP$RBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBASBRAVAIS)
+      IF(MAXVAL(ABS(RBAS(:,:)-RBASBRAVAIS(:,:))).gt.TOL)THEN
+        CALL ERROR$MSG('LATTICE VECTORS FROM PAW CALCULATION AND')
+        CALL ERROR$MSG('GIVEN BRAVAIS LATTICE ARE NOT CONSISTENT')
+        CALL ERROR$CHVAL("BRAVAIS TYPE",BRAVAIS)
+        CALL ERROR$R8VAL("MAXIMAL ALLOWED TOLERANCE",TOL)
+        CALL ERROR$R8VAL("MAX(RBAS-RBASBRAVAIS)",MAXVAL(ABS(RBAS-RBASBRAVAIS)))
+        DO I=1,3
+          WRITE(*,*)"RBAS       ",I,RBAS(I,:)
+          WRITE(*,*)"RBASBRAVAIS",I,RBASBRAVAIS(I,:)
+        ENDDO
+        CALL ERROR$STOP('BRILLOUIN$CHECKRBAS')
+      ENDIF
+      RETURN
+      END SUBROUTINE BRILLOUIN$CHECKRBAS

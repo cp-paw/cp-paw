@@ -23,7 +23,7 @@
       character(256)            :: outfile
       integer(4)                :: i
 !     **************************************************************************
-      call getarg(1,infile)
+      call lib$getarg(1,infile)
       i=index(infile,'.',.true.)
       outfile=infile(1:i)//'cmcv'
 !

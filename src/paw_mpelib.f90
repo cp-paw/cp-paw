@@ -100,8 +100,8 @@ CONTAINS
 !     .............................................................................
       SUBROUTINE MPE_CHARTOASCII(LENCH,STRING,LENI,IASCII)
       IMPLICIT  NONE
-      CHARACTER(*),INTENT(IN) :: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENCH
+      CHARACTER(*),INTENT(IN) :: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENI
       INTEGER(4)  ,INTENT(OUT):: IASCII(LENI)
       INTEGER(4)              :: LENG,I,J,K
@@ -124,8 +124,8 @@ CONTAINS
 !     .............................................................................
       SUBROUTINE MPE_CHARFROMASCII(LENCH,STRING,LENI,IASCII)
       IMPLICIT  NONE
-      CHARACTER(*),INTENT(OUT):: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENCH
+      CHARACTER(*),INTENT(OUT):: STRING(LENCH)
       INTEGER     ,INTENT(IN) :: LENI
       INTEGER(4)  ,INTENT(IN) :: IASCII(LENI)
       INTEGER(4)              :: LENG,I,J,K
@@ -1601,12 +1601,9 @@ END MODULE MPE_MODULE
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
       TYPE(MPECLOCKTYPE),INTENT(INOUT):: CLOCK
-      REAL(8)                         :: USRTIME
-      REAL(8)                         :: SYSTIME
       REAL(8)                         :: CPUTIME
 !     **************************************************************************
-      CALL LIB$ETIME(USRTIME,SYSTIME)
-      CPUTIME=USRTIME+SYSTIME
+      CALL CPU_TIME(CPUTIME)
       CLOCK%STARTTIME=CPUTIME
       RETURN
       END
@@ -1647,15 +1644,14 @@ END MODULE MPE_MODULE
       CLOCK%SIZESQUARE=CLOCK%SIZESQUARE+SIZE1**2
       CLOCK%MAXSIZE   =MAX(CLOCK%MAXSIZE,SIZE1)
       CLOCK%MINSIZE   =MIN(CLOCK%MINSIZE,SIZE1)
-      CALL LIB$ETIME(USRTIME,SYSTIME)
-      CPUTIME         =USRTIME+SYSTIME-CLOCK%STARTTIME
+      CALL CPU_TIME(CPUTIME)
+      CPUTIME         =CPUTIME-CLOCK%STARTTIME
       CLOCK%TIME      =CLOCK%TIME+CPUTIME
       CLOCK%TIMESQUARE=CLOCK%TIMESQUARE+CPUTIME**2
       CLOCK%MAXTIME   =MAX(CLOCK%MAXTIME,CPUTIME)
       CLOCK%MINTIME   =MIN(CLOCK%MINTIME,CPUTIME)
       RETURN
       END
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE$CLOCKREPORT(NFIL)

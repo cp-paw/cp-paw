@@ -19,16 +19,15 @@
        LOGICAL(4)                :: TCHK
        INTEGER(4)                :: I
        INTEGER(4)                :: NLISTS
-       INTEGER(4)                :: IARGC
 !      ******************************************************************
-       I=IARGC()
+       CALL LIB$NARGS(I)
        IF(I.NE.1) THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE.X [FILE]'
          WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
          WRITE(*,FMT='(A)')'SEE PAW_MANUAL FOR FURTHER DESCRIPTION'
          CALL ERROR$NORMALSTOP
        END IF
-       CALL GETARG(1,FILE)
+       CALL LIB$GETARG(1,FILE)
        IF(FILE.EQ.'?'.OR.FILE.EQ.-'-H') THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE [FILE]'
          WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'

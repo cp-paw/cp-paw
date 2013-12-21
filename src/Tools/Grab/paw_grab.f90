@@ -290,15 +290,16 @@ END MODULE SUBSTANCE_MODULE
       implicit none
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: PDOSINNAME
-      integer(4)     :: isvar
-      integer(4)     :: iargc
+      INTEGER(4)     :: ISVAR
+      INTEGER(4)     :: NARGS
 !     *******************************************************************
-      IF(IARGC().LT.1) THEN
+      CALL LIB$NARGS(NARGS)
+      IF(NARGS.LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE NAME MUST BE PROVIDED')
         CALL ERROR$STOP('INITIALIZEFILEANDLER')
       END IF
-      CALL GETARG(1,PDOSINNAME)
+      CALL LIB$GETARG(1,PDOSINNAME)
       ISVAR=INDEX(PDOSINNAME,-'.gCNTL',BACK=.TRUE.)
       IF(ISVAR.ne.0) THEN
         ROOTNAME=PDOSINNAME(1:ISVAR-1)

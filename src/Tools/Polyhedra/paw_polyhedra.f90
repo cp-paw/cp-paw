@@ -405,9 +405,9 @@
 !     __ use convention of dagotto, "nanoscale phase separation...",2003
       WRITE(*,FMT='("Q2=[D(+X)-D(+Y)]/SQRT(2)")')
       WRITE(*,FMT='("Q3=[-D(+X)-D(+Y)+2D(+Z)]/sqrt(6)")')
-      WRITE(*,FMT='("JAHN-TELLER DISTORTION (Q2,Q3)",T30,2F10.5" AA")') &
+      WRITE(*,FMT='("JAHN-TELLER DISTORTION (Q2,Q3)",T30,2F10.5," AA")') &
      &                                                  Q2/ANGSTROM,Q3/ANGSTROM
-      WRITE(*,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T30,F10.5" AA")') &
+      WRITE(*,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T30,F10.5," AA")') &
      &                                               SQRT(Q2**2+Q3**2)/ANGSTROM
       SVAR=ACOS(Q2/SQRT(Q2**2+Q3**2))
       IF(Q3.LT.0.D0)SVAR=-SVAR

@@ -1567,24 +1567,25 @@ The Intel architecture uses the little-endian format
 =\sum_{j=1}^{32} i_j\cdot 2^{j-1}
 \end{eqnarray}
 
-%================================================================================
+%===============================================================================
 \section{Information about your system}
-%================================================================================
+%===============================================================================
 In order to download the correct compilers and libraries, or to obtain
 certain licenses, you need to know some information about your current
 system.
 
-%================================================================================
-\subsection{Rechnername}
-%================================================================================
+%===============================================================================
+\subsection{Name of the computer}
+%===============================================================================
 \begin{itemize}
 \item  ``\mytt{hostname}'' provides the computer name.
-\item  ``\mytt{hostname -i}'' provides the computer name. provides the IP addresses
-\item  ``\mytt{hostname -d}'' provides the internet domain name.
+\item  ``\mytt{hostname -i}'' provides the IP addresses (not on OSX)
+\item  ``\mytt{hostname -d}'' provides the internet domain name. (not on OSX)
 \end{itemize}
 
+%===============================================================================
 \subsection{MAC Adress}
-
+%===============================================================================
 The Media Access Control (MAC) adress or Ethernet ID is sometimes used
 to request a license for a particular computer. The MAC address is a
 unique identifier for each networkcard. The MAC address consists of 6
@@ -1598,7 +1599,9 @@ In order to obtain the  MAC adress, execute
 One obtaines a list for all network cards. The number of the ethernet
 hardware address is the MAC address of the computer.
 
-\subsection{Rechnerarchitektur}
+%===============================================================================
+\subsection{Architecture of the computer}
+%===============================================================================
 The Linux command ``\mytt{arch}'' or ``\mytt{uname -m}'' supplies the
 machine architecture, such as. x86\_64.
 
@@ -1616,14 +1619,41 @@ used in the Itanium prozessors. IA-64 stands for ``Intel Architecture
 Power stands for ``Performance Optimized With Enhanced RISC''
 \end{itemize}
 
-\subsection{Linux version}
+Further information can be obtained using the command
+``\mytt{lscpu}''. It may give information such as
+\begin{verbatim}
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                8
+On-line CPU(s) list:   0-7
+Thread(s) per core:    2
+Core(s) per socket:    4
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 42
+Stepping:              7
+CPU MHz:               1600.000
+BogoMIPS:              6800.05
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              8192K
+NUMA node0 CPU(s):     0-7
+\end{verbatim}
 
+%===============================================================================
+\subsection{Linux version}
+%===============================================================================
 In the Suse distribution of linux one obtains the versionsnumber using
 \verb+cat /etc/SuSE-release+.  The kernel version is obtained using
 \verb+uname -r+
 
 %==================================================================================
-\section{Hintergrund zum Configure Skript}
+\section{Background to the configure script}
 \label{sec:configurebackground}
 %==================================================================================
 It may be of interest to understand what the configure script does,

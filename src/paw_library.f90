@@ -17,6 +17,30 @@
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
+!****         
+!****  select one compiler flag       
+!****     CPPVAR_COMPILER_G95            
+!****     CPPVAR_COMPILER_IFC            
+!****     CPPVAR_COMPILER_IFC7           
+!****     CPPVAR_COMPILER_ABSOFT         
+!****     CPPVAR_COMPILER_XLF            
+!****     CPPVAR_COMPILER_PGI            
+!****     CPPVAR_COMPILER_PATHSCALE      
+!****     CPPVAR_COMPILER_SUN            
+!****     CPPVAR_COMPILER_GFORTRAN       
+!****         
+!****     CPPVAR_LAPACK_ESSL        
+!****     CPPVAR_BLAS_ESSL          
+!****     CPPVAR_FFT_ESSL           
+!****     CPPVAR_FFT_FFTW           
+!****     CPPVAR_FFT_FFTW3          
+!****     CPPVAR_FFT_ACML           
+!****     CPPVAR_FFT_PACK           
+!****                               
+!****     CPPVAR_USAGE_EXIST        
+!****         
+!*******************************************************************************
+!*******************************************************************************
 ! 
 !*******************************************************************************
 !*******************************************************************************
@@ -179,77 +203,102 @@
 !!$#ENDIF
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM TIME OF THE CURRENT PROCESS             **
-!     **                                                                      **
-!     **    USRTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY THE USER CODE  **
-!     **    SYSTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY                **
-!     **                                          CALLS TO THE OPERATING SYSTEM**
-!     **                                                                      **
-!     **    TIME FOR IO, WHERE THE PROCESSOR IS IDLE IS NOT ACCOUNTED FOR!!!  **
-!     **************************************************************************
-      IMPLICIT NONE
-      REAL(8)   ,INTENT(OUT) :: USRTIME
-      REAL(8)   ,INTENT(OUT) :: SYSTIME
-      REAL                   :: TARRAY(2),RESULT
-!     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_ETIME(USRTIME,SYSTIME)
-#ELSE  
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-#ENDIF
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB$ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM TIME OF THE CURRENT PROCESS             **
+!!$!     **                                                                      **
+!!$!     **    USRTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY THE USER CODE  **
+!!$!     **    SYSTIME IS THE ELAPSED CPU TIME IN SECONDS USED BY                **
+!!$!     **                                          CALLS TO THE OPERATING SYSTEM**
+!!$!     **                                                                      **
+!!$!     **    TIME FOR IO, WHERE THE PROCESSOR IS IDLE IS NOT ACCOUNTED FOR!!!  **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      REAL(8)   ,INTENT(OUT) :: USRTIME
+!!$      REAL(8)   ,INTENT(OUT) :: SYSTIME
+!!$      REAL                   :: TARRAY(2),RESULT
+!!$!     **************************************************************************
+!!$#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
+!!$      call cpu_time(cputime)  !cpu time in seconds
+!!$      call system_clock(count,count_rate,count_max)
+!!$      systime=count/countrate
+!!$!
+!!$      call etime(tarray,result)
+!!$      usrtime=tarray(1)
+!!$      systime=tarray(2)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_ETIME(USRTIME,SYSTIME)
+!!$#ELSE  
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$#ENDIF
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!     **  if hostname not available, return 'unknown hostname'                **
 !     **************************************************************************
+      IMPLICIT NONE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
       INTEGER(4)                :: RC
+      INTEGER(4)                :: STATUS
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_GETHOSTNAME(HOSTNAME)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_GETHOSTNAME(HOSTNAME)
-#ELSE
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      RC=HOSTNM(HOSTNAME)    
-      IF(RC.NE.0)HOSTNAME='UNKNOWN'
-#ENDIF
+      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        HOSTNAME='UNKNOWN HOSTNAME'
+!!$        IF(STATUS.EQ.-1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
+!!$        ELSE IF(STATUS.EQ.1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+!!$        ELSE IF(STATUS.EQ.2) THEN
+!!$          CALL ERROR$MSG('PROCESSOR DOES NOT SUPPORT ENVIRONMENT VARIABLES')
+!!$        END IF
+!!$        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
+!!$        CALL ERROR$I4VAL('STATUS',status)
+!!$        CALL ERROR$STOP('LIB$GETHOSTNAME')
+      END IF
+
+!!$#IF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_GETHOSTNAME(HOSTNAME)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_GETHOSTNAME(HOSTNAME)
+!!$#ELSE
+!!$      RC=HOSTNM(HOSTNAME)    
+!!$      IF(RC.NE.0)HOSTNAME='UNKNOWN'
+!!$#ENDIF
       RETURN
       END
 !
@@ -258,47 +307,47 @@
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
+      implicit none
       CHARACTER(*),INTENT(IN)   :: COMMAND
       integer(4)                :: rc   ! return code
-!     *********************************************************************
-      call LIB$SYSTEMrc(COMMAND,rc)
-      IF(RC.NE.0) THEN
-        CALL ERROR$MSG('SYSTEM CALL FAILED')
-        CALL ERROR$CHVAL('COMMAND',COMMAND)
-        CALL ERROR$I4VAL('RC',RC)
-        CALL ERROR$STOP('LIB$SYSTEM')
-      End IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$SYSTEMrc(COMMAND,rc)
+      integer                   :: st
+      character(82)             :: msg
 !     **************************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!     **************************************************************************
-      CHARACTER(*),INTENT(IN)   :: COMMAND
-      integer(4)  ,intent(out)  :: rc   ! return code
-!     *********************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_SYSTEM(COMMAND,rc)
-#ELSE
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      RC=SYSTEM(COMMAND)
-#ENDIF
+      CALL ERROR$MSG('LIB$SYSTEM IS DISABLED')
+      CALL ERROR$MSG('IT SHOULD NOT BE USED UNTIL FORTRAN2008 IS AVAILABLE')
+      CALL ERROR$STOP('LIB$SYSTEM')
+#
+!!$#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
+!!$!     == fortran 2008 statement ================================================
+!!$      CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
+!!$      IF(ST.NE.0) THEN
+!!$        CALL ERROR$MSG('SYSTEM CALL FAILED')
+!!$        CALL ERROR$CHVAL('COMMAND',COMMAND)
+!!$        CALL ERROR$CHVAL('ERROR MSG',MSG)
+!!$        CALL ERROR$STOP('LIB$SYSTEM')
+!!$      END IF
+!!$#ELIF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_SYSTEM(COMMAND,rc)
+!!$#ELSE
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      CALL ERROR$MSG('NO COMPILER-UNSPECIFIC IMPLEMENTATION AVAILABLE')
+!!$      CALL ERROR$MSG('CALLING ROUTINE SHOULD USE FORTRAN 2008 IMPLEMENTATION')
+!!$      CALL ERROR$STOP('LIB$SYSTEM')
+!!$#ENDIF
       RETURN
       END
 !
@@ -307,28 +356,31 @@
 !     **************************************************************************
 !     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
 !     **************************************************************************
+      implicit none
       INTEGER(4),INTENT(IN) :: N
 !     **************************************************************************
-#IF DEFINED(CPPVAR_COMPILER_G95)
-      CALL LIB_G95_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-      CALL LIB_IFC_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-      CALL LIB_IFC7_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-      CALL LIB_ABSOFT_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-      CALL LIB_XLF_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-      CALL LIB_PGI_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-      CALL LIB_PATHSCALE_FLUSH(N)   
-#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-      CALL LIB_SUN_FLUSH(N)   
-#ELSE
-      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-      FLUSH(N)  ! fortran 2003
-#ENDIF
+      flush(n) ! fortran 2003
+
+!!$#IF DEFINED(CPPVAR_COMPILER_G95)
+!!$      CALL LIB_G95_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
+!!$      CALL LIB_IFC_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
+!!$      CALL LIB_IFC7_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
+!!$      CALL LIB_ABSOFT_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
+!!$      CALL LIB_XLF_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
+!!$      CALL LIB_PGI_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
+!!$      CALL LIB_PATHSCALE_FLUSH(N)   
+!!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
+!!$      CALL LIB_SUN_FLUSH(N)   
+!!$#ELSE
+!!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
+!!$      FLUSH(N)  ! fortran 2003
+!!$#ENDIF
       RETURN
       END 
 
@@ -391,29 +443,29 @@
       CALL GETENV(NAME,VAL)
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
-!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
-!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
-!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
-!     **************************************************************************
-      USE IFPORT
-      IMPLICIT NONE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL(4)             :: TARRAY(2)
-      REAL(4)             :: RESULT
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_IFC_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER                             **
+!!$!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC10. THERE IS A CHANGE FROM **
+!!$!     **           IFC7, THEREFORE THERE IS AN EXPLICIT INTERFACE IFC7)       **
+!!$!     **  THE MODULE IFPORT IS SUPPLIED BY THE IFC COMPILER                   **
+!!$!     **************************************************************************
+!!$      USE IFPORT
+!!$      IMPLICIT NONE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL(4)             :: TARRAY(2)
+!!$      REAL(4)             :: RESULT
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC_SYSTEM(COMMAND,RC) 
@@ -475,32 +527,32 @@
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC7_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
-!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
-!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTERFACE 
-        REAL(4) FUNCTION ETIME(TARRAY)
-        REAL(4),OPTIONAL,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL(4)             :: TARRAY(2)
-      REAL(4)             :: RESULT      
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END SUBROUTINE LIB_IFC7_ETIME
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_IFC7_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     ** RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS      **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE IFC COMPILER  (IFC7 AND EARLIER)         **
+!!$!     **  (REMARK: THIS INTERFACE IS ADAPTED TO IFC7. THERE IS A CHANGE TO    **
+!!$!     **           IFC10, THEREFORE THERE IS ANOTHER EXPLICIT INTERFACE IFC)  **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTERFACE 
+!!$        REAL(4) FUNCTION ETIME(TARRAY)
+!!$        REAL(4),OPTIONAL,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL(4)             :: TARRAY(2)
+!!$      REAL(4)             :: RESULT      
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END SUBROUTINE LIB_IFC7_ETIME
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_IFC7_GETARG(IPOS,ARG)
@@ -623,25 +675,25 @@
 !     ** SOME OF THE ROUTINES ARE ALSO AVAILABLE AS INTRINSIC FUNCTIONS OF    **
 !     ** FORTRAN 2003.                                                        **
 !     **************************************************************************
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
-!     **************************************************************************
-      IMPLICIT NONE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL                :: TARRAY(2)
-      REAL                :: RESULT      
-!     **************************************************************************
-      call etime(tarray,result)
-      usrtime=tarray(1)
-      systime=tarray(2)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_G95_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE G95 COMPILER                             **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL                :: TARRAY(2)
+!!$      REAL                :: RESULT      
+!!$!     **************************************************************************
+!!$      call etime(tarray,result)
+!!$      usrtime=tarray(1)
+!!$      systime=tarray(2)
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_G95_GETARG(IPOS,ARG)
@@ -796,30 +848,30 @@
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTERFACE 
-        REAL*4 FUNCTION ETIME(TARRAY)
-        REAL*4,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL*4              :: TARRAY(2)
-      REAL*4              :: RESULT      
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_ABSOFT_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE ABSOFT COMPILER                          **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTERFACE 
+!!$        REAL*4 FUNCTION ETIME(TARRAY)
+!!$        REAL*4,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL*4              :: TARRAY(2)
+!!$      REAL*4              :: RESULT      
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_ABSOFT_GETARG(IPOS,ARG)
@@ -944,40 +996,40 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_XLF)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_XLF_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
-!     **************************************************************************
-      IMPLICIT NONE
-      TYPE TB_TYPE
-        SEQUENCE
-        REAL(4) :: USRTIME
-        REAL(4) :: SYSTIME
-      END TYPE TB_TYPE
-!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
-!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
-!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
-!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
-!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
-      INTERFACE 
-        REAL*4 FUNCTION ETIME(TARRAY)
-        REAL*4,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      TYPE(TB_TYPE)       :: ETIME_STRUCT
-      REAL*4              :: RESULT      
-!     **************************************************************************
-      RESULT=ETIME_(ETIME_STRUCT)
-      USRTIME=ETIME_STRUCT%USRTIME
-      SYSTIME=ETIME_STRUCT%SYSTIME
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_XLF_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE XLF COMPILER                             **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      TYPE TB_TYPE
+!!$        SEQUENCE
+!!$        REAL(4) :: USRTIME
+!!$        REAL(4) :: SYSTIME
+!!$      END TYPE TB_TYPE
+!!$!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!!$!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!!$!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!!$!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!!$!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+!!$      INTERFACE 
+!!$        REAL*4 FUNCTION ETIME(TARRAY)
+!!$        REAL*4,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      TYPE(TB_TYPE)       :: ETIME_STRUCT
+!!$      REAL*4              :: RESULT      
+!!$!     **************************************************************************
+!!$      RESULT=ETIME_(ETIME_STRUCT)
+!!$      USRTIME=ETIME_STRUCT%USRTIME
+!!$      SYSTIME=ETIME_STRUCT%SYSTIME
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_XLF_GETARG(IPOS,ARG)
@@ -1082,37 +1134,37 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_PGI)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PGI_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
-!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
-!     **************************************************************************
-!      USE DFPORT
-      IMPLICIT NONE
-!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
-!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
-!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
-!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
-!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
-      INTERFACE 
-        REAL FUNCTION ETIME(TARRAY)
-        REAL,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL                :: RESULT      
-      REAL                :: TARRAY(2)   
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_PGI_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!!$!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!!$!     **************************************************************************
+!!$!      USE DFPORT
+!!$      IMPLICIT NONE
+!!$!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!!$!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!!$!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!!$!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!!$!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+!!$      INTERFACE 
+!!$        REAL FUNCTION ETIME(TARRAY)
+!!$        REAL,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL                :: RESULT      
+!!$      REAL                :: TARRAY(2)   
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_PGI_GETARG(IPOS,ARG)
@@ -1226,37 +1278,37 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
-!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
-!     **************************************************************************
-!      USE DFPORT
-      IMPLICIT NONE
-!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
-!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
-!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
-!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
-!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
-      INTERFACE 
-        REAL FUNCTION ETIME(TARRAY)
-        REAL,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL                :: RESULT      
-      REAL                :: TARRAY(2)   
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_PATHSCALE_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE PGI COMPILER                             **
+!!$!     **  THE MODULE DFPORT IS SUPPLIED BY THE PGI COMPILER                   **
+!!$!     **************************************************************************
+!!$!      USE DFPORT
+!!$      IMPLICIT NONE
+!!$!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!!$!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!!$!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!!$!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!!$!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+!!$      INTERFACE 
+!!$        REAL FUNCTION ETIME(TARRAY)
+!!$        REAL,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL                :: RESULT      
+!!$      REAL                :: TARRAY(2)   
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_PATHSCALE_GETARG(IPOS,ARG)
@@ -1368,35 +1420,35 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 #ELIF DEFINED(CPPVAR_COMPILER_SUN)
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_SUN_ETIME(USRTIME,SYSTIME)
-!     **************************************************************************
-!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
-!     **                                                                      **
-!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
-!     **************************************************************************
-      IMPLICIT NONE
-!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
-!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
-!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
-!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
-!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
-      INTERFACE 
-        REAL FUNCTION ETIME(TARRAY)
-        REAL,INTENT(OUT) :: TARRAY(2)
-        END FUNCTION ETIME
-      END INTERFACE
-      REAL(8),INTENT(OUT) :: USRTIME
-      REAL(8),INTENT(OUT) :: SYSTIME
-      REAL                :: RESULT      
-      REAL                :: TARRAY(2)   
-!     **************************************************************************
-      RESULT=ETIME(TARRAY)
-      USRTIME=TARRAY(1)
-      SYSTIME=TARRAY(2)
-      RETURN
-      END SUBROUTINE LIB_SUN_ETIME
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB_SUN_ETIME(USRTIME,SYSTIME)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE USER AND SYSTEM ELAPSED TIME OF THE CURRENT PROCESS     **
+!!$!     **                                                                      **
+!!$!     **  SPECIFIC INTERFACE FOR THE SUN COMPILER                             **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$!     **  THE ETIME_ FUNCTION SETS THE USER-ELAPSED TIME AND SYSTEM-ELAPSED   **
+!!$!     **  TIME IN ETIME_STRUCT SINCE THE START OF THE EXECUTION OF A PROCESS. **
+!!$!     **  THE RETURNED VALUE, ELAPSED, IS THE SUM OF THE USER-ELAPSED TIME    **
+!!$!     **  AND THE SYSTEM-ELAPSED TIME. THE RESOLUTION FOR ALL TIMING IS 1/100 **
+!!$!     **  OF A SECOND. THE OUTPUT APPEARS IN UNITS OF SECONDS.                **
+!!$      INTERFACE 
+!!$        REAL FUNCTION ETIME(TARRAY)
+!!$        REAL,INTENT(OUT) :: TARRAY(2)
+!!$        END FUNCTION ETIME
+!!$      END INTERFACE
+!!$      REAL(8),INTENT(OUT) :: USRTIME
+!!$      REAL(8),INTENT(OUT) :: SYSTIME
+!!$      REAL                :: RESULT      
+!!$      REAL                :: TARRAY(2)   
+!!$!     **************************************************************************
+!!$      RESULT=ETIME(TARRAY)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
+!!$      RETURN
+!!$      END SUBROUTINE LIB_SUN_ETIME
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_SUN_GETARG(IPOS,ARG)
@@ -1526,6 +1578,26 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
+      MODULE LAPACKOPTIONS_MODULE
+        CHARACTER(6)               :: GENERALEIGENVALUEC8_MODE='ZHEGV'
+      END MODULE LAPACKOPTIONS_MODULE
+!
+!     ..................................................................
+      SUBROUTINE LAPACKOPTIONS$SETCH(ID,VAL)
+      USE LAPACKOPTIONS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(6),INTENT(IN):: VAL
+!     ******************************************************************
+      IF(ID.EQ.'GENERALEIGENVALUEC8_MODE') THEN
+        GENERALEIGENVALUEC8_MODE=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LAPACKOPTIONS$SETCH')
+      END IF
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$INVERTR8(N,A,AINV)
@@ -2047,25 +2119,26 @@ PRINT*,'NARGS ',NARGS,IARGC()
       SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
-!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM        **
+!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM     **
 !     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
 !     **                                                                      **
-!     ** REMARK: H AND S MUST BE HERMITEANC                                   **
+!     ** REMARK: H AND S MUST BE HERMITEAN                                    **
 !     **         S MUST BE POSITIVE DEFINITE                                  **
 !     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
 !     **             MATMUL(TRANSPOSE(U),MATMUL(S,U))=IDENTITY                **
 !     **                                                                      **
 !     **************************************************************************
+      USE LAPACKOPTIONS_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N
-      COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
-      COMPLEX(8),INTENT(IN) :: S(N,N)    ! OVERLAP MATRIX
-      REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
-      COMPLEX(8),INTENT(OUT):: U(N,N)  ! EIGENVECTORS
-      COMPLEX(8)            :: S1(N,N)
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      REAL(8)               :: DEV
-      INTEGER               :: I
+      INTEGER(4),INTENT(IN)               :: N         ! DIMENSION
+      COMPLEX(8),INTENT(IN)               :: H(N,N)    ! HAMITON MATRIX
+      COMPLEX(8),INTENT(IN)               :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT)              :: E(N)      ! EIGENVALUES
+      COMPLEX(8),INTENT(OUT)              :: U(N,N)    ! EIGENVECTORS
+      COMPLEX(8)                          :: S1(N,N)
+      LOGICAL   ,PARAMETER                :: TTEST=.FALSE.
+      REAL(8)                             :: DEV
+      INTEGER                             :: I
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -2089,9 +2162,17 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ========================================================================
 #IF DEFINED(CPPVAR_LAPACK_ESSL)
       CALL ERROR$MSG('GENERALEIGENVALUE PROBLEM NOT IMPLEMENTED FOR ESSL')
-      CALL ERROR$STOP('GENERALEIGENVALUER8')  
+      CALL ERROR$STOP('GENERALEIGENVALUEC8')  
 #ELSE
-      CALL LIB_LAPACK_ZHEGV(N,H,S,E,U)
+      IF(GENERALEIGENVALUEC8_MODE.EQ.'ZHEGV')THEN
+        CALL LIB_LAPACK_ZHEGV(N,H,S,E,U)
+      ELSE IF(GENERALEIGENVALUEC8_MODE.EQ.'ZHEGVD')THEN
+        CALL LIB_LAPACK_ZHEGVD(N,H,S,E,U)
+      ELSE
+        CALL ERROR$MSG('GENERALEIGENVALUEC8_MODE UNKNOWN')
+        CALL ERROR$CHVAL('MODE',GENERALEIGENVALUEC8_MODE)
+        CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
+      ENDIF
 #ENDIF
 !
 !     ========================================================================
@@ -3445,8 +3526,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END SUBROUTINE LIB_LAPACK_DSYGV
 !
-!     ......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_LAPACK_ZHEGV(N,H,S,E,VEC)
+!     *********************************************************************
 !     **                                                                 **
 !     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
 !     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
@@ -3456,6 +3538,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
 !     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
 !     **                                                                 **
+!     *********************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
@@ -3463,7 +3546,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(OUT):: E(N)      ! EIGENVALUES
       COMPLEX(8),INTENT(OUT):: VEC(N,N)  ! EIGENVECTORS
       INTEGER               :: LDWORK
-      COMPLEX(8)            :: WORK(N*N)
+      COMPLEX(8),ALLOCATABLE:: WORK(:)
       COMPLEX(8)            :: S1(N,N)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER               :: INFO
@@ -3493,9 +3576,16 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ========================================================================
 !     == CALL LAPACK ROUTINE                                                ==
 !     ========================================================================
-      LDWORK=N*N
-      VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  
       S1=S
+      !DO WORKSPACE QUERY
+      ALLOCATE(WORK(1))
+      LDWORK=-1
+      CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
+      LDWORK=WORK(1)
+      DEALLOCATE(WORK)
+      ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
@@ -3531,7 +3621,135 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END IF
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_LAPACK_ZHEGVD(N,H,S,E,VEC)
+!     *********************************************************************
+!     **                                                                 **
+!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
+!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
+!     **                                                                 **
+!     ** REMARK: H AND S MUST BE HERMITEANC                              **
+!     **         S MUST BE POSITIVE DEFINITE                             **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
+!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
+!     **                                                                 **
+!     *********************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)        :: N
+      COMPLEX(8),INTENT(IN)        :: H(N,N)    ! HAMITON MATRIX
+      COMPLEX(8),INTENT(IN)        :: S(N,N)    ! OVERLAP MATRIX
+      REAL(8)   ,INTENT(OUT)       :: E(N)      ! EIGENVALUES
+      COMPLEX(8),INTENT(OUT)       :: VEC(N,N)  ! EIGENVECTORS
+      COMPLEX(8)                   :: S1(N,N)
+      LOGICAL   ,PARAMETER         :: TTEST=.FALSE.
+      REAL(8)                      :: DEV
+      INTEGER                      :: I
+      INTEGER(4)                   :: LWORK,LRWORK,LIWORK,INFO
+      COMPLEX(8),ALLOCATABLE       :: WORK(:)
+      REAL(8)   ,ALLOCATABLE       :: RWORK(:)
+      INTEGER(4),ALLOCATABLE       :: IWORK(:)
+      CHARACTER(1)                 :: JOBZ
+!     *********************************************************************
+!
+!     ========================================================================
+!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
+!     ========================================================================
+      IF(TTEST) THEN
+        DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('HAMILTON MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+        DEV=SUM(ABS(S-TRANSPOSE(CONJG(S))))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('OVERLAP MATRIX NOT HERMITEAN')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+      END IF
+!
+!     ========================================================================
+!     == CALL LAPACK ROUTINE                                                ==
+!     ========================================================================
+      JOBZ='V' !COMPUTE EIGENVALUES AND EIGENVECTORS
 
+      ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
+      !VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  
+      VEC=H
+      S1=S
+      !DO WORKSPACE QUERY
+      LWORK=-1
+      LRWORK=-1
+      LIWORK=-1
+      ALLOCATE(WORK(1))
+      ALLOCATE(RWORK(1))
+      ALLOCATE(IWORK(1))
+      
+      CALL ZHEGVD(1,JOBZ,'U',N,VEC,N,S1,N,E,WORK,LWORK,RWORK,&
+     &        LRWORK,IWORK,LIWORK,INFO)
+      IF(INFO.NE.0)THEN
+        CALL ERROR$MSG('ZHEGVD WORKSPACE QUERY FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      LWORK=INT(WORK(1))
+      LRWORK=INT(RWORK(1))
+      LIWORK=INT(IWORK(1))
+      DEALLOCATE(WORK)
+      DEALLOCATE(RWORK)
+      DEALLOCATE(IWORK)
+      ALLOCATE(WORK(LWORK)) 
+      ALLOCATE(RWORK(LRWORK)) 
+      ALLOCATE(IWORK(LIWORK)) 
+      CALL ZHEGVD(1,JOBZ,'U',N,VEC,N,S1,N,E,WORK,LWORK,RWORK,&
+     &               LRWORK,IWORK,LIWORK,INFO)
+      DEALLOCATE(WORK)
+      DEALLOCATE(RWORK)
+      DEALLOCATE(IWORK)
+
+      IF(INFO.ne.0)THEN
+        CALL ERROR$MSG('ZHEGVD FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      
+
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('ITH ARGUMENT OF ZHGEVD HAS ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+      END IF
+!
+!     ========================================================================
+!     == TEST RESULT OF THE ROUTINE                                         ==
+!     ========================================================================
+      IF(TTEST) THEN
+        S1=MATMUL(TRANSPOSE(CONJG(VEC)),MATMUL(S,VEC))
+        DEV=0.D0
+        DO I=1,N
+          S1(I,I)=S1(I,I)-(1.D0,0.D0)
+          DEV=MAX(DEV,MAXVAL(ABS(MATMUL(H-E(I)*S,VEC(:,I)))))
+        ENDDO
+        IF(DEV.GT.1.D-6) THEN
+          CALL ERROR$MSG('GENERAL EIGENVALUE TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+        DEV=SUM(ABS(S1))
+        IF(DEV.GT.1.D-7) THEN
+          CALL ERROR$MSG('EIGENSTATES NOT ORTHONORMAL')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB_LAPACK_ZHEGVD')
+        END IF
+      END IF
+      RETURN
+      END
 #ENDIF
 ! 
 !*******************************************************************************
@@ -4400,68 +4618,75 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      COMPLEX(8)              :: YDUMMY(LEN)
-      COMPLEX(8)              :: XDUMMY(LEN)
+      CHARACTER(4),SAVE       :: DIRSAVE=''
+      INTEGER(4)  ,SAVE       :: LENSAVE=0
+      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       REAL(8)     ,SAVE       :: SCALE
+      INTEGER     ,SAVE       :: ISIGN
+      COMPLEX(8)              :: XDUMMY(LEN)
+      COMPLEX(8)              :: YDUMMY(LEN)
+      INTEGER(4),SAVE         :: NP=0
+      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
+      type(C_PTR),SAVE        :: PLANS2(NPX),PLAN
+      INTEGER(4),SAVE         :: PLANS1(NPX)
+      LOGICAL                 :: DEF
       INTEGER(4)              :: I
-      type(C_PTR)             :: plan
-      INTEGER(4),pointer      :: planf
-      LOGICAL(4),PARAMETER    :: T_GENERATE_FFTW_WISDOM=.TRUE.
-      integer(C_INT)          :: GENERATE_FFTW_WISDOM_MODE
       include 'fftw3.f03'
 !     **************************************************************************
-      !FIXME: include recycling of plans as in LIB_FFTW
-      IF(T_GENERATE_FFTW_WISDOM)THEN
-        !CHECK IF WISDOM EXISTS (GENERATE_FFTW_WISDOM_MODE CAN BE ONE OF:
-        !FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE)
-        GENERATE_FFTW_WISDOM_MODE=FFTW_MEASURE
-        IF(DIR.EQ.'RTOG') THEN
-          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
-       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
-        ELSE IF (DIR.EQ.'GTOR') THEN
-          plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
-       &         IOR(FFTW_WISDOM_ONLY,GENERATE_FFTW_WISDOM_MODE))
+      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
+        IF (DIR.EQ.'GTOR') THEN
+          ISIGN=1
+        ELSE IF (DIR.EQ.'RTOG') THEN
+          ISIGN=-1
         ELSE
           CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
           CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
           CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('LIB_FFTW3')
-        END IF 
-        CALL C_F_POINTER(plan,planf)
-        if(.not.associated(planf))then
+          CALL ERROR$STOP('1D-FFTW')
+        END IF
+!
+!       == FIND PLAN IN THE LIST ===============================================
+        DEF=.FALSE.
+        DO I=1,NP
+          IF((LEN*ISIGN).EQ.PLANS1(I)) THEN
+            DEF=.TRUE.
+            PLAN=PLANS2(I)
+            EXIT
+          END IF
+        END DO
+!
+!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
+        IF(.NOT.DEF) THEN
+          WRITE(*,*) 'LIB_FFTW: CREATE PLAN FOR: ',TRIM(DIR),ISIGN,LEN,NP
+          NP=NP+1
+          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
           IF(DIR.EQ.'RTOG') THEN
-            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
-       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
+              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE IF (DIR.EQ.'GTOR') THEN
-            plan = fftw_plan_dft_1d(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
-       &               IOR(FFTW_UNALIGNED,GENERATE_FFTW_WISDOM_MODE))
+            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
+              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE
             CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
             CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
             CALL ERROR$CHVAL('DIR',TRIM(DIR))
             CALL ERROR$STOP('LIB_FFTW3')
-          END IF  
-        endif
-      else
-        IF(DIR.EQ.'RTOG') THEN
-          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_FORWARD,FFTW_ESTIMATE)
-        ELSE IF (DIR.EQ.'GTOR') THEN
-          plan = fftw_plan_dft_1d(LEN,X(:,1),Y(:,1),FFTW_BACKWARD,FFTW_ESTIMATE)
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('LIB_FFTW3')
-        END IF 
-      endif
+          END IF 
+
+          PLANS1(NP)=ISIGN*LEN
+          PLAN=PLANS2(NP)
+        END IF
+        LENSAVE=LEN
+        DIRSAVE=DIR
+      END IF
 !
 !     ==========================================================================
-!     ==  EXECUTE FOURIER TRANSFORM                                           ==
+!     ==  NOW PERFORM FFT                                                     ==
 !     ==========================================================================
       DO I=1,NFFT
-        call fftw_execute_dft(plan, X(:,I), Y(:,I))
-      enddo
-      call fftw_destroy_plan(plan)
+        XDUMMY=X(:,I)
+        CALL FFTW_EXECUTE_DFT(PLAN, XDUMMY, Y(:,I))
+      ENDDO
 !
 !     ==========================================================================
 !     ==  SCALE RESULT                                                        ==
@@ -4904,35 +5129,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 !
-#IF DEFINED(CPPVAR_LANGEXT_XLF)
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$ERFR8(X,Y)
-!     **************************************************************************
-!     **  ERROR FUNCTION                                                      **
-!     **    Y=2/SQRT(PI)  INT_0^X DZ EXP(-Z**2)                               **
-!     **    Y=(INFINITY)=1                                                    **
-!     **************************************************************************
-      REAL(8),INTENT(IN) :: X
-      REAL(8),INTENT(OUT):: Y
-!     **************************************************************************
-      Y=DERF(X) 
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$ERFCR8(X,Y)
-!     **************************************************************************
-!     **  COMPLEMENTARY ERROR FUNCTION                                        **
-!     **  Y=1-ERF(X)                                                          **
-!     **************************************************************************
-      REAL(8),INTENT(IN) :: X
-      REAL(8),INTENT(OUT):: Y
-!     **************************************************************************
-      Y=DERFC(X)
-      RETURN
-      END
-#ELSE
-!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$ERFR8(X,Y)
 !     **************************************************************************
@@ -5110,7 +5306,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       IF (X .LT. 0) Y = 2 - Y
       RETURN
       END
-#ENDIF
 !
 !.......................................................................
 MODULE RANDOM_MODULE

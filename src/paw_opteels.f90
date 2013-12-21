@@ -45,7 +45,7 @@ END MODULE OPTEELS_MODULE
            CALL ERROR$CHVAL('ID',ID)
            CALL ERROR$STOP('OPTEELS$SETR8')
          END IF           
-         EELS(IEELS)%INSTRUMENTALFWHM=val
+         EELS(IEELS)%INSTRUMENTALFWHM=VAL
 !
 !      =========================================================================
        ELSE IF(ID.EQ.'EMAX') THEN
@@ -475,7 +475,7 @@ END MODULE OPTEELS_MODULE
 !            == SELECT STATE AND CHECK IF PRESENT ON CURRENT NODE ==============
              CALL WAVES$SETI4('IB',IB)
 !            CALL PLANEWAVE$SELECT(GSET%ID) !???,FROM WAVES
-             CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP) !IB SUFFICES
+             CALL WAVES$STATESELECTED(TKGROUP) !IB SUFFICES
              CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) !TWICE OUTPUT
 ! CALL PE$QUERY('MONOMER',NTASKS,THISTASK) !NOT RELEVANT
 ! SENDTSK=0 !1??
@@ -696,7 +696,7 @@ END MODULE OPTEELS_MODULE
        ALLOCATE(PROJ1(LMNXX),PROJ2(LMNXX),PROI1(LMNXX),PROI2(LMNXX))
        CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI) !FOR ISP
        CALL SETUP$GETR8A('PSPHI',NR*LNX,PSPHI) 
-       CALL SETUP$unSELECT()
+       CALL SETUP$UNSELECT()
        
 !      =========================================================================
 !      == GET OCCUPATIONS                                                     ==
@@ -796,7 +796,7 @@ END MODULE OPTEELS_MODULE
        CHARACTER(512),INTENT(IN) :: FILE
        CHARACTER(32) ,INTENT(IN) :: ATOM ! ATOM NAME
        INTEGER(4)    ,INTENT(IN) :: IC 
-       real(8)       ,INTENT(IN) :: INSTRUMENTALFWHM  ! INSTRUMENTAL BROADENING 
+       REAL(8)       ,INTENT(IN) :: INSTRUMENTALFWHM  ! INSTRUMENTAL BROADENING 
        INTEGER(4)    ,PARAMETER  :: NE=1000
        COMPLEX(8)    ,PARAMETER  :: CI=(0.D0,1.D0)
        REAL(8)       ,PARAMETER  :: TOL=1.D-3
@@ -861,20 +861,15 @@ END MODULE OPTEELS_MODULE
        REAL(8)                   :: SADD
        REAL(8)                   :: HBAROMEGA
        REAL(8)                   :: BANDLEVEL
-       REAL(8)                   :: enbmin
+       REAL(8)                   :: ENBMIN
        INTEGER(4)                :: NDEL,IDEL
        REAL(8)       ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
        REAL(8)       ,PARAMETER  :: SQPI43=SQRT(4.D0*PI/3.D0)
 !      *************************************************************************
                           CALL TRACE$PUSH('OPTEELS_EELS')
-!       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) !SAME AS STATE SELECTED?
+       CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) 
        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
-       IF(NTASKS.NE.1) THEN
-         CALL ERROR$MSG('EELS CALCULATION IS NOT YET PARALLELIZED')
-         CALL ERROR$MSG('DO A NON-PARALLEL CALCULATION')
-         CALL ERROR$STOP('OPTEELS_EELS')
-       END IF
-       CALL CONSTANTS('EV',EV)
+      CALL CONSTANTS('EV',EV)
        CALL CONSTANTS('METER',METER)
        NANOMETER=1.D-9*METER
 !
@@ -937,7 +932,7 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
 !      == CALCULATE MATRIX ELEMENTS <PSI_C|X_J|\PHI_ALPHA>                    ==
 !      =========================================================================
        CALL SETUP$GETR8('RBOX',RBOX)
-       CALL SETUP$unSELECT()
+       CALL SETUP$UNSELECT()
        ALLOCATE(R(NR))
        CALL RADIAL$R(GID,NR,R)
        ALLOCATE(XVAL(LMNX,3,2*LC+1))
@@ -965,7 +960,7 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
            LMN=LMN+2*L+1
          END IF
        ENDDO
-       deallocate(work)
+       DEALLOCATE(WORK)
 !       
 !      =========================================================================
 !      == CALCULATE SITE DENSITY OF THIS ATOM                                 ==
@@ -997,18 +992,21 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
 !      == EMAX IS THE MINIMUM OF THE TOP MOST ENERGY BAND                     ==
 !      ===    (BOTH SPINS CONSIDERED)                                         ==
 !      =========================================================================
-!CAREFUL WHEN PARALLELIZING! NKPT FOR OCCUPATIONS IS GLOBAL, THAT FOR THE
-!WAVES IS LOCAL!
        EFERMI=0.D0
        EMIN=+1.D+12
        EMAX=-1.D+12
-       Enbmin=+1.D+12
+       ENBMIN=+1.D+12
        DO IKPT=1,NKPT
-         CALL WAVES$SETI4('IKPT',IKPT)
+         CALL WAVES$SETI4('IKPT',IKPT) !REFERS TO GLOBAL IKPT 
          DO ISPIN=1,NSPIN
            CALL WAVES$SETI4('ISPIN',ISPIN)
+           CALL WAVES$SETI4('IB',1)
+           CALL WAVES$STATESELECTED(TKGROUP) 
+           IF(.NOT.TKGROUP) CYCLE
+PRINT*,'BEFORE EIGVAL ',THISTASK,THISTASK_K,ISPIN,IKPT,TKGROUP
            CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
-           enbmin=min(enbmin,eigval(nb))
+PRINT*,'AFTER EIGVAL '
+           ENBMIN=MIN(ENBMIN,EIGVAL(NB))
            DO IB=1,NB
              EMIN=MIN(EMIN,EIGVAL(IB))
              EMAX=MAX(EMAX,EIGVAL(IB))
@@ -1021,8 +1019,8 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
          ENDDO
        ENDDO
        EMAX=EMAX+5.D0*EV
-       EMAX=enbmin
-       EMIN=efermi-5.D0*EV
+       EMAX=ENBMIN
+       EMIN=EFERMI-5.D0*EV
        CALL MPE$COMBINE('MONOMER','MAX',EMAX)
        CALL MPE$COMBINE('MONOMER','MIN',EMIN)
 PRINT*,'EFERMI[EV]     ',EFERMI/EV
@@ -1040,10 +1038,16 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
          CALL WAVES$SETI4('IKPT',IKPT)
          DO ISPIN=1,NSPIN 
            CALL WAVES$SETI4('ISPIN',ISPIN)
+           CALL WAVES$SETI4('IB',1)
+           CALL WAVES$STATESELECTED(TKGROUP)
+           IF(.NOT.TKGROUP) CYCLE
            CALL WAVES$GETR8A('EIGVAL',NB,EIGVAL) !1KP,SPIN!!
-           DO IB=1,NB   !PARALLELIZE!
-!FOR PARALLELIZATION  IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
-!FOR PARALLELIZATION  BUT COLLECT DATA AND MOVE TO FIRST NODE FOR WRITING
+           DO IB=1,NB   
+!            == PARALLELIZATION: K-POINTS WILL BE SELECTED WITH ================
+!            == WAVES$STATESELECTED(TKGROUP). STATES WILL BE DISTRIBUTED ON ====
+!            == THE NODES FOR ONE K-POINT USING MODULO. THE RESULT IS SUMMED ===
+!            == OVER ALL STATES ================================================
+             IF(MODULO(IB,NTASKS_K).NE.0) CYCLE
 !
 !            ===================================================================
 !            == WGHT=(1-F)*WKPT ====== REMARK: NSPIN=1:NON-SPINPOL:OCC=2!=====
@@ -1061,7 +1065,7 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
 !            == CALCULATE OSCILLATOR STRENGTHS =================================
 !            ===================================================================
              CALL WAVES$SETI4('IB',IB)
-             CALL WAVES$STATESELECTED(IB,IKPT,ISPIN,TKGROUP)
+     
              STRENGTH=0.D0
              DO IREALIMAG=1,2
                IF(IREALIMAG.EQ.1) THEN
@@ -1084,7 +1088,7 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
 !            == PLACE MATRIX ELEMENTS ON ENERGY GRID                          ==
 !            ===================================================================
              DELTAE=EIGVAL(IB)
-             SVAR=1.D0+(deltae-EMIN)/(EMAX-EMIN)*REAL(NE-1)
+             SVAR=1.D0+(DELTAE-EMIN)/(EMAX-EMIN)*REAL(NE-1)
              IE=INT(SVAR)
              SVAR=SVAR-REAL(IE)
              EELSDOS(IE  )=EELSDOS(IE)  +WGHT*STRENGTH*(1.D0-SVAR)
@@ -1140,25 +1144,25 @@ PRINT*,'UPPER LIMIT OF ENERGY RANGE[EV] ',ENBMIN/EV
 !      =========================================================================
 !      == SMEAR WITH A GAUSSIAN 
 !      == WITH FULL WIDTH HALF MAXIMUM = INSTRUMENTALFWHM
-print*,'INSTRUMENTALFWHM ',INSTRUMENTALFWHM,emax,emin
-       SVAR1=2.D0*(EMAX-EMIN)/REAL(NE-1,kind=8)/INSTRUMENTALFWHM
+PRINT*,'INSTRUMENTALFWHM ',INSTRUMENTALFWHM,EMAX,EMIN
+       SVAR1=2.D0*(EMAX-EMIN)/REAL(NE-1,KIND=8)/INSTRUMENTALFWHM
        SVAR1=LOG(2.D0)*SVAR1**2
        NDEL=NINT(SQRT(-LOG(TOL)/SVAR1))
        BLOSS(:)=LOSS(:)   !IDEL=0
        SADD=1.D0
-       allocate(work(ne))
-       work(:)=0.d0
+       ALLOCATE(WORK(NE))
+       WORK(:)=0.D0
        DO IDEL=1,NDEL
-         SVAR=EXP(-SVAR1*REAL(IDEL,kind=8)**2)
+         SVAR=EXP(-SVAR1*REAL(IDEL,KIND=8)**2)
          BLOSS(1+IDEL:NE)=BLOSS(1+IDEL:NE)+SVAR*LOSS(1:NE-IDEL)
          BLOSS(1:NE-IDEL)=BLOSS(1:NE-IDEL)+SVAR*LOSS(1+IDEL:NE)
          SADD=SADD+2.D0*SVAR
-         work(1+idel:ne)=work(1+idel:ne)+svar
-         work(1:ne-idel)=work(1:ne-idel)+svar
+         WORK(1+IDEL:NE)=WORK(1+IDEL:NE)+SVAR
+         WORK(1:NE-IDEL)=WORK(1:NE-IDEL)+SVAR
        ENDDO
 !       BLOSS(:)=BLOSS(:)/SADD
-       BLOSS(:)=BLOSS(:)/work(:)
-       deallocate(work)
+       BLOSS(:)=BLOSS(:)/WORK(:)
+       DEALLOCATE(WORK)
 !
 !      =========================================================================
 !      == CONVERT TO LOSS FUNCTION AND PRINT

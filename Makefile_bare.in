@@ -47,6 +47,8 @@ export LAPACKDIR=@LAPACKDIR@
 export FFTDIR=@FFTDIR@
 #___________________________ directory with MPI library
 export MPIDIR=@MPIDIR@
+#___________________________ library archiver
+export LIBAR=@LIBAR@
 #___________________________header file for fft
 export FFT_HEADER=@FFT_HEADER@
 #___________________________header file for MPI
@@ -139,6 +141,8 @@ endif
 # MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
 export PAWLIB= ${OBJDIR}/libpaw.a#
 export PAWLIBFULL= ${OBJDIR}/libpawfull.a#
+export PPAWLIB= ${OBJDIR}/libppaw.a#
+export PPAWLIBFULL= ${OBJDIR}/libppawfull.a#
 #
 #########################################################################
 ## Definition of the targets                                           ##
@@ -181,6 +185,7 @@ export LOBJS = \
         ${OBJDIR}/paw_strcio.o \
         ${OBJDIR}/paw_cell.o \
         ${OBJDIR}/paw_pdos.o \
+        ${OBJDIR}/paw_banddata.o \
         ${OBJDIR}/paw_library.o \
         ${OBJDIR}/paw_polynom.o \
         ${OBJDIR}/paw_dimer.o  \
@@ -300,6 +305,9 @@ OBJGRAB=  \
 # Objects for paw_dos.x
 OBJDOS=  \
           ${OBJDIR}/paw_dos.o
+# Objects for paw_dosplot.x
+OBJDOSPLOT=  \
+          ${OBJDIR}/paw_dosplot.o
 # Objects for paw_bands.x
 OBJBANDS=  \
           ${OBJDIR}/paw_bands.o
@@ -357,8 +365,11 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJ
 #########################################################################
 ##  build paw library                                                  ##
 #########################################################################
-${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+
+${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
 ##  build full paw library and optionally exclude objects              ##
@@ -369,10 +380,15 @@ ${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
 ##  main program.                                                      ##
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
-${PAWLIBFULL}: ${OBJECTS} $(OBJVERSION) ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o
-	ar -rus $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
-	ar -dv ${PAWLIBFULL} paw.o
+${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
+
+${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PPAWLIBFULL} paw.o
+	for EX in ${EXCLUDE}; do ar -dv ${PPAWLIBFULL} $$EX;done
 #
 #########################################################################
 ##  build Tools                                                        ##
@@ -456,11 +472,21 @@ ${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
 clean_dos:
 	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
 #
-${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIB}
-	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpaw ${LIBS}
+${BINDIR}/paw_dosplot.x: ${OBJDOSPLOT} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_dosplot.x ${OBJDOSPLOT} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_dosplot:
+	rm -f ${OBJDOSPLOT}; rm -f ${BINDIR}/paw_dosplot.x
+#
+${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIBFULL}
+	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpawfull ${LIBS}
+#
+${BINDIR}/ppaw_bands.x: ${OBJBANDS} ${PPAWLIBFULL}
+	${LINK} -o ${BINDIR}/ppaw_bands.x ${OBJBANDS} -L${OBJDIR}  -lppawfull ${LIBS}
 #
 clean_bands:
 	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
+	rm -f ${OBJBANDS}; rm -f ${BINDIR}/ppaw_bands.x
 #
 ${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
 	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR}  -lpaw ${LIBS}
@@ -616,6 +642,10 @@ ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJDOSPLOT}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
@@ -894,6 +924,8 @@ endif
  ${OBJDIR}/paw_pairpotential.o : MPE_MODULE.mod
  ## file:src/paw_pdos.f90
  PDOS_MODULE.mod : ${OBJDIR}/paw_pdos.o
+ ## file:src/paw_banddata.f90
+ BANDDATA_MODULE.mod : ${OBJDIR}/paw_banddata.o
  ## file:src/paw_periodictable.f90
  ${OBJDIR}/paw_periodictable.o : STRINGS_MODULE.mod
  PERIODICTABLE_MODULE.mod : ${OBJDIR}/paw_periodictable.o
@@ -965,6 +997,7 @@ endif
  WAVES_MODULE.mod : ${OBJDIR}/paw_waves1.o
  ## file:src/paw_waves2.f90
  ${OBJDIR}/paw_waves2.o : MPE_MODULE.mod
+ ${OBJDIR}/paw_waves2.o : SETUP_MODULE.mod
  ${OBJDIR}/paw_waves2.o : WAVES_MODULE.mod
  ${OBJDIR}/paw_waves2.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_waves2.o : RESTART_INTERFACE.mod
