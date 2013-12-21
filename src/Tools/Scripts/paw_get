@@ -32,7 +32,7 @@ USAGE="$USAGE -t   prints the result as text (default)\n"
 #
 export TN=T
 export WHAT="TOTAL ENERGY"
-for X in $* ; do
+while [ $1 ] ; do
   case $1 in 
     -h|?)
        echo -e $USAGE

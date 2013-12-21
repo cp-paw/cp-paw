@@ -210,7 +210,7 @@
 !     == RMAX DETERMINES THE MAXIMUM PLANE WAVE CONSIDERED
 !     == RC DETERMINES THE DECAYB OF THE GAUSSIAN
       IF(TPR) THEN
-        WRITE(*,FMT='("NF=",I2," RC0=",F5.3," RCFAC=",F5.3' &
+        WRITE(*,FMT='("NF=",I2," RC0=",F6.3," RCFAC=",F6.3' &
      &              //'," G2MAX ",F10.3)')NFCT,RC0,RCFAC,G2MAX
       END IF
       CALL GBASS(RBAS,GBAS,OMEGA)
@@ -246,7 +246,7 @@
 !     ==================================================================
 !     == CALCULATE FIT FUNCTIONS                                      ==
 !     ==================================================================
-      ALLOCATE(F(max(NGS,1),NFCT,NAT))
+      ALLOCATE(F(MAX(NGS,1),NFCT,NAT))
       ALLOCATE(EIGR(NG))
       DO IAT=1,NAT
         CALL PLANEWAVE$STRUCTUREFACTOR(POS(1,IAT),NG,EIGR)
@@ -290,9 +290,9 @@
 !     ==================================================================
 !     ==  ADD CORRECTION TO POTENTIAL                                 ==
 !     ==================================================================
-      if(tisolate) then
+      IF(TISOLATE) THEN
         RHOB=0.D0
-      end if
+      END IF
       E=ET
       DO IAT=1,NAT
         DO I=1,3
@@ -456,9 +456,9 @@
           DO I=1,NAT*NFCT
             CSVAR=CSVAR-QI(I)*F(IG,I)
           ENDDO
-          SUM=SUM+real(CSVAR*CONJG(CSVAR))
+          SUM=SUM+REAL(CSVAR*CONJG(CSVAR))
         ENDDO
-        SUM=SQRT(SUM)/(real(NGS)+1.d-10)
+        SUM=SQRT(SUM)/(REAL(NGS)+1.D-10)
         PRINT*,'LEAST SQUARE ',SUM
       END IF
 !
@@ -565,7 +565,7 @@
           QMAD(IAT)=QMAD(IAT)+XQI(IFCT,IAT)
         ENDDO
       ENDDO
-print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vol
+PRINT*,'ISOLATE TOTAL CHARGE ',QMAD,'QLM',QLM(1,1)/Y0,'RHOGAMMA*VOL',RHOGAMMA*VOL
       CALL ATOMLIST$SETR8A('Q',0,NAT,QMAD)
 !
 !     ==================================================================
@@ -576,7 +576,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ==================================================================
 !     == CONTRIBUTION FROM THE POSITIVE BACKGROUND                    ==
 !     ==================================================================
-      if(tisolate) then
+      IF(TISOLATE) THEN
         FAC=-0.5D0*PI/VOL
         SUM=0.D0
         DO IAT1=1,NAT
@@ -594,10 +594,10 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
         ENDDO
         EBACKGROUND=SUM
         E=E+EBACKGROUND
-!       == first part of isolate energy is added in isolate_interface
-        CALL ENERGYLIST$add('ISOLATE ENERGY',ebackground)
-        CALL ENERGYLIST$ADD('TOTAL ENERGY',Ebackground)
-      end if
+!       == FIRST PART OF ISOLATE ENERGY IS ADDED IN ISOLATE_INTERFACE
+        CALL ENERGYLIST$ADD('ISOLATE ENERGY',EBACKGROUND)
+        CALL ENERGYLIST$ADD('TOTAL ENERGY',EBACKGROUND)
+      END IF
 !
 !     ==================================================================
 !     ==  BACK TRANSFORM                                              ==
@@ -708,8 +708,8 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     **  CAUTION! ASSURE THAT FORCES POTENTIALS AND ENERGIES         **
 !     **  ARE PROPERLY ADDED AND NOT RESET BY EXTERNAL ROUTINES       **
 !     **                                                              **
-!     **  the energies are added already here to the total energy     **
-!     **  the intent out argument energy is not used lateron          **
+!     **  THE ENERGIES ARE ADDED ALREADY HERE TO THE TOTAL ENERGY     **
+!     **  THE INTENT OUT ARGUMENT ENERGY IS NOT USED LATERON          **
 !     **                                                              **
 !     ******************************************************************
       USE ISOLATE_MODULE, ONLY : TISOLATE
@@ -724,8 +724,8 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
       REAL(8)   ,INTENT(OUT):: FORCE(3,NAT)  ! FORCE
       REAL(8)   ,INTENT(OUT):: VI(NG,NAT)    ! POTENTIAL OF THE GAUSSIAN CHARGES
       REAL(8)               :: VI1(NG,NAT)   
-      REAL(8)               :: epot1         ! potential ENERGY contribution
-      REAL(8)               :: ekin1         ! kinetic ENERGY contribution 
+      REAL(8)               :: EPOT1         ! POTENTIAL ENERGY CONTRIBUTION
+      REAL(8)               :: EKIN1         ! KINETIC ENERGY CONTRIBUTION 
       REAL(8)               :: FORCE1(3,NAT) ! FORCE
       REAL(8)               :: POT1(NAT)     ! POT
       REAL(8)               :: CHARGE(NAT)   ! ATOMIC POINT CHARGES
@@ -749,8 +749,8 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     == ISOLATE PERIODIC IMAGES                                      ==
 !     ==================================================================
       IF(TISOLATE) THEN
-        CALL ISOLATE_DECOUPLEPERIODIC(RBAS,NAT,POS,CHARGE,Epot1,POT1,FORCE1)
-        ENERGY=ENERGY+Epot1
+        CALL ISOLATE_DECOUPLEPERIODIC(RBAS,NAT,POS,CHARGE,EPOT1,POT1,FORCE1)
+        ENERGY=ENERGY+EPOT1
         DO IAT=1,NAT
           FORCE(:,IAT)=FORCE(:,IAT)+FORCE1(:,IAT)
           DO IG=1,NG
@@ -786,7 +786,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
 !
 !     ==================================================================
-!     ==  COUPLE COsmo                                                ==
+!     ==  COUPLE COSMO                                                ==
 !     ==================================================================
       CALL COSMO$INTERFACE(NAT,POS,NG,RC,QI,EPOT1,EKIN1,VI1,FORCE1)
       ENERGY=ENERGY+EPOT1
@@ -866,7 +866,7 @@ print*,'isolate total charge ',qmad,'qlm',qlm(1,1)/y0,'rhogamma*vol',rhogamma*vo
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ISOLATE_LOWERNUMBER(G2MAX,NG,G2,NGS)
 !     **************************************************************************
-!     ** DETERMINES THE NUMBER OF g-VECTOR WITHIN A GIVEN RADIUS              **
+!     ** DETERMINES THE NUMBER OF G-VECTOR WITHIN A GIVEN RADIUS              **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: G2MAX

@@ -3480,7 +3480,7 @@ END IF
 !
         IF(TPR) THEN
           WRITE(*,FMT='(72("="))')
-          WRITE(*,FMT='("VEC IN ",10E8.2)')(VEC(IC1),IC1=1,NC)
+          WRITE(*,FMT='("VEC IN ",10E9.2)')(VEC(IC1),IC1=1,NC)
         END IF
 !
 !       ==  TEST CONVERGENCE
@@ -3513,7 +3513,7 @@ END IF
         END IF
 !
         IF(TPR) THEN
-          WRITE(*,FMT='("VEC OUT",10E8.2)')(VEC(IC1),IC1=1,NC)
+          WRITE(*,FMT='("VEC OUT",10E9.2)')(VEC(IC1),IC1=1,NC)
         END IF
  
 !       == UPDATE RLAM =================================================
@@ -3522,7 +3522,7 @@ END IF
           RLAM(IC)=RLAM(IC)-VEC(IC)
         ENDDO 
         IF(TPR) THEN
-          WRITE(*,FMT='("RLAM   ",10E8.2)')(RLAM(IC1),IC1=1,NC)
+          WRITE(*,FMT='("RLAM   ",10E9.2)')(RLAM(IC1),IC1=1,NC)
         END IF
       ENDDO
       CALL ERROR$MSG('LOOP NOT CONVERGED')

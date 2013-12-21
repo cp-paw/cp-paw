@@ -68,7 +68,7 @@ USAGE="$USAGE PREROOT may contain the relative or the full path."
 THISDIR=`pwd`
 DRYRUN=no
 #
-while [ -n $1 ] ; do
+while [ $1 ] ; do
   case $1 in
     -h|?)
       echo -e $USAGE

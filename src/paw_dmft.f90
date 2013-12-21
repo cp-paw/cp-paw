@@ -113,7 +113,7 @@ END MODULE DMFT_MODULE
       END IF
 PRINT*,'KBT=',KBT,' KBT[EV]=',KBT*27.211D0
 !!$KBT=0.333D0*27.211D0
-!!$print*,'kbt=',kbt,' kbt[ev]=',kbt*27.211d0
+!!$PRINT*,'KBT=',KBT,' KBT[EV]=',KBT*27.211D0
 !
 !     ==========================================================================
 !     == COLLECT PERMANENT DATA                                               ==
@@ -1968,7 +1968,7 @@ CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       DO I=1,NORB
         WRITE(*,FMT='(100("(",2F10.5,")"))')RHO(I,:)
       ENDDO
-      return
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1979,8 +1979,8 @@ CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NLOC
       INTEGER(4),INTENT(IN)  :: NDIMD
-      COMPLEX(8),INTENT(OUT) :: RHO(NLOC,NLOC,NDIMD)
-      REAL(8)   ,INTENT(OUT) :: UCHI(NLOC,NLOC,NLOC,NLOC)
+      COMPLEX(8),INTENT(IN)  :: RHO(NLOC,NLOC,NDIMD)
+      REAL(8)   ,INTENT(IN)  :: UCHI(NLOC,NLOC,NLOC,NLOC)
       REAL(8)   ,INTENT(OUT) :: ETOT
       COMPLEX(8),INTENT(OUT) :: HAM(NLOC,NLOC,NDIMD)
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
