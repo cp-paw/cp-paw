@@ -134,7 +134,7 @@ for PAR1VAL in $PAR1VALS; do
   #
   #   copy input files
   #
-  for X in cntl_start cntl_run cntl_eels strc dcntl ; do
+  for X in cntl_start cntl_run cntl_eels strc_run dcntl ; do
     SOURCE=${SAMPLEDIR}/$PRENAME.$X
     TARGET=${ROOT}.$X
     # check if source exists
@@ -153,10 +153,10 @@ for PAR1VAL in $PAR1VALS; do
     fi
   done
   #
-  #   convert structure file into start and run versions
+  #   convert (run) structure file into start structure file
   #
-  cp ${ROOT}.strc ${ROOT}.strc_run
-  sed -e 's/!ORBPOT_X/!ORBPOT/' <${ROOT}.strc_run >${ROOT}.strc_start
+  sed -e 's/!ORBPOT_X/!ORBPOT/' \
+      -e 's/EMPTY=/EMPTY_X=/'   <${ROOT}.strc_run  >${ROOT}.strc_start
   #
   #   copy restart file
   #
