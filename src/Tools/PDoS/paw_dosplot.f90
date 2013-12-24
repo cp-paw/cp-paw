@@ -301,9 +301,9 @@ END MODULE DOSSETS_MODULE
                                      CALL TRACE$PASS('READ DOS DATA FILES')
       DOSSET=>FIRSTDOSSET
       DO 
-        STRING=TRIM(DOSSET%PREFIX)//TRIM(DOSSET%ID)//-'.DDOS'
+        STRING=TRIM(DOSSET%PREFIX)//TRIM(DOSSET%ID)//-'.DOS'
         CALL GRACE_READ(NFIL,DOSSET%IG-1,STRING)
-        DO IS=4*(DOSSET%IS-1),4*(DOSSET%IS-1)+3
+        DO IS=2*(DOSSET%IS-1),2*(DOSSET%IS-1)+1  !is= 0,1, 2,3, 4,5, ...
 !         == SCALE SET =========================================================
           CALL GRACE_SCALESET(NFIL,DOSSET%IG-1,IS,DOSSET%SCALE)
 !         == POSITION ZERO AT XZERO ============================================
@@ -334,9 +334,9 @@ END MODULE DOSSETS_MODULE
           DO WHILE (ASSOCIATED(DOSSET1%NEXT))
             DOSSET1=>DOSSET1%NEXT
             IF(DOSSET1%IG.NE.DOSSET%IG) EXIT
-            IS1=4*(DOSSET%IS-1)
-            IS2=4*(DOSSET1%IS-1)
-            DO I=0,3
+            IS1=2*(DOSSET%IS-1)
+            IS2=2*(DOSSET1%IS-1)
+            DO I=0,1
               CALL GRACE_ADDSET(NFIL,IG-1,IS1+I,IG-1,IS2+I,1.D0)
             ENDDO
             IF(.NOT.DOSSET1%STACK) EXIT
@@ -347,15 +347,11 @@ END MODULE DOSSETS_MODULE
         LW=0.5D0 !LINEWIDTH
         LC='black'   ! linecolor
         FC=DOSSET%FILLCOLOR
-!       __SPIN-UP FILLED AND EMPTY_____________________________________________
+!       __FILLED AND EMPTY______________________________________________________
         CALL GRACE_LINE(NFIL,IG-1,IS+0,LW,LC,'L'//TRIM(FC))
-!       __SPIN-DN FILLED AND EMPTY_____________________________________________
-        CALL GRACE_LINE(NFIL,IG-1,IS+1,LW,LC,'L'//TRIM(FC))
-!       __SPIN-UP FILLED_______________________________________________________
-        CALL GRACE_LINE(NFIL,IG-1,IS+2,LW,LC,FC)
-!       __SPIN-DN FILLED_______________________________________________________
-        CALL GRACE_LINE(NFIL,IG-1,IS+3,LW,LC,FC)
-        IS=IS+4
+!       __FILLED only___________________________________________________________
+        CALL GRACE_LINE(NFIL,IG-1,IS+1,LW,LC,FC)
+        IS=IS+2
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
         DOSSET=>DOSSET%NEXT
       ENDDO
