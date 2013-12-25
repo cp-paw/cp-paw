@@ -644,7 +644,7 @@ END MODULE ORBITALS_MODULE
       CHARACTER(32)            :: ORBITALNAME1 
       CHARACTER(8)             :: TYPE
       INTEGER(4)               :: IT3(3),IT3Z(3),IT3X(3)
-      REAL(8)                  :: FAC
+      complex(8)               :: CFAC
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: DRZ(3)
       REAL(8)                  :: DRX(3)
@@ -658,9 +658,10 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FAC',1,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'FAC',1,FAC)
+        CALL LINKEDLIST$CONVERT(LL_CNTL,'FAC',1,'C(8)')
+        CALL LINKEDLIST$GET(LL_CNTL,'FAC',1,CFAC)
       ELSE
-        FAC=1.D0
+        CFAC=(1.D0,0.d0)
       END IF
 !
 !     ==========================================================================
@@ -681,7 +682,7 @@ END MODULE ORBITALS_MODULE
         CALL RESOLVEATOM(ATOM1,IAT,IT3)
         CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
         TYPE=+TYPE
-        CALL RESOLVETYPE(LMXX,TYPE,FAC,ORB)
+        CALL RESOLVETYPE(LMXX,TYPE,ORB)
 !       
 !       ========================================================================
 !       ==  FIND NEAREST NEIGHBOUR DIRECTIONS                                 ==
@@ -725,54 +726,56 @@ END MODULE ORBITALS_MODULE
         ORB=MATMUL(YLMROT,ORB)
         DEALLOCATE(YLMROT)
         CALL MAKEORBITAL(ATOM1,LMXX,ORB,NPRO,ORBITAL)
+        ORBITAL=ORBITAL*CFAC
       END IF
       RETURN
       CONTAINS
 !
 !       .1.........2.........3.........4.........5.........6.........7.........8
-        SUBROUTINE RESOLVETYPE(LMX,TYPE,FAC,ORBITAL)
+        SUBROUTINE RESOLVETYPE(LMX,TYPE,ORBITAL)
 !       ************************************************************************
+!       ** constructs the prefactors of an orbital in an expansion of         **
+!       ** real spherical harmonics                                           **
 !       ************************************************************************
         IMPLICIT NONE
         INTEGER(4)  ,INTENT(IN)   :: LMX
         CHARACTER(*),INTENT(IN)   :: TYPE
-        REAL(8)     ,INTENT(IN)   :: FAC
-        REAL(8)     ,INTENT(INOUT):: ORBITAL(LMX)
+        REAL(8)     ,INTENT(OUT)  :: ORBITAL(LMX)
         REAL(8)                   :: ORB(9)
         INTEGER(4)                :: LM
 !       ************************************************************************
+        ORB(:)=0.D0
 !
 !       ========================================================================
-!       ==  S-ONLY                                                            ==
+!       ==  SET ORBITAL COEFFICIENTS                                          ==
 !       ========================================================================
-        ORB(:)=0.D0
         IF(TRIM(TYPE).EQ.'S') THEN
-          ORB(1)=FAC
+          ORB(1)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'PX') THEN
-          ORB(2)=FAC
+          ORB(2)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'PZ') THEN
-          ORB(3)=FAC
+          ORB(3)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'PY') THEN
-          ORB(4)=FAC
+          ORB(4)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'SP1') THEN
-          ORB(1)=FAC*SQRT(1.D0/2.D0)
-          ORB(3)=FAC*SQRT(1.D0/2.D0)
+          ORB(1)=SQRT(1.D0/2.D0)
+          ORB(3)=SQRT(1.D0/2.D0)
         ELSE IF(TRIM(TYPE).EQ.'SP2') THEN
-          ORB(1)=FAC*SQRT(1.D0/3.D0)
-          ORB(3)=FAC*SQRT(2.D0/3.D0)
+          ORB(1)=SQRT(1.D0/3.D0)
+          ORB(3)=SQRT(2.D0/3.D0)
         ELSE IF(TRIM(TYPE).EQ.'SP3') THEN
-          ORB(1)=FAC*SQRT(1.D0/4.D0)
-          ORB(3)=FAC*SQRT(3.D0/4.D0)
+          ORB(1)=SQRT(1.D0/4.D0)
+          ORB(3)=SQRT(3.D0/4.D0)
         ELSE IF(TRIM(TYPE).EQ.'DX2-Y2') THEN
-          ORB(5)=FAC
+          ORB(5)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'DXZ') THEN
-          ORB(6)=FAC
+          ORB(6)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'D3Z2-R2') THEN
-          ORB(7)=FAC
+          ORB(7)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'DYZ') THEN
-          ORB(8)=FAC
+          ORB(8)=1.d0
         ELSE IF(TRIM(TYPE).EQ.'DXY') THEN
-          ORB(9)=FAC
+          ORB(9)=1.d0
         ELSE
           CALL ERROR$MSG('TYPE NOT IDENTIFIED')
           CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
@@ -781,6 +784,8 @@ END MODULE ORBITALS_MODULE
         DO LM=LMX+1,9
           IF(ORB(LM).NE.0) THEN
             CALL ERROR$MSG('LMX TOO SMALL')
+            CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
+            CALL ERROR$I4VAL('LMX',LMX)
             CALL ERROR$STOP('RESOLVETYPE')
           END IF
         ENDDO

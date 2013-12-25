@@ -266,8 +266,8 @@ for PAR1VAL in $PAR1VALS; do
       if [ ${NNODES} = 0 ] ; then
         echo submitting scalar job ${PROJECTDIR}/${NAME}
         if [ $DRYRUN = no ] ; then
-          waittillempty
-          ${PAWXDIR}/paw_fast.x Eels/${NAME}.cntl 1>out 2>&1 &
+          waittillempty 3
+          ${PAWXDIR}/paw_fast.x ${NAME}.cntl 1>out 2>&1 &
         fi
       else
         echo submitting parallel job ${PROJECTDIR}/${NAME}
