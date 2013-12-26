@@ -8,7 +8,7 @@
       INTEGER(4)      :: NFILO,NFIL
       LOGICAL(4),PARAMETER :: TPR=.TRUE.
 !     **************************************************************************
-      CALL TRACE$SETL4('ON',.false.)
+      CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
  !
 !     ==========================================================================
@@ -68,7 +68,7 @@ TYPE DOSSET_TYPE
   CHARACTER(32) :: FILLCOLOR
   LOGICAL(4)    :: STACK
   REAL(8)       :: SCALE
-  REAL(8)       :: Xzero
+  REAL(8)       :: XZERO
   TYPE(DOSSET_TYPE),POINTER :: NEXT
 END TYPE DOSSET_TYPE
 TYPE(DOSSET_TYPE),TARGET  :: FIRSTDOSSET
@@ -94,8 +94,8 @@ END MODULE DOSSETS_MODULE
       INTEGER(4),ALLOCATABLE :: ISARR(:)
       CHARACTER(256)  :: PREFIX
       REAL(8)         :: SCALE
-      REAL(8)         :: xzeroglob
-      REAL(8)         :: xzero
+      REAL(8)         :: XZEROGLOB
+      REAL(8)         :: XZERO
 !     **************************************************************************
                                      CALL TRACE$PUSH('READCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -105,9 +105,9 @@ END MODULE DOSSETS_MODULE
 !     == READ FILES                                                           ==
 !     ==========================================================================
                                      CALL TRACE$PASS('READ FILES')
-      XZEROglob=0.D0
+      XZEROGLOB=0.D0
       CALL LINKEDLIST$EXISTD(LL_CNTL,'XZERO',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',0,XZEROglob)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',0,XZEROGLOB)
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'XMIN',1,TCHK)
       IF(.NOT.TCHK) THEN
@@ -238,7 +238,7 @@ END MODULE DOSSETS_MODULE
           CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALE',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'SCALE',1,DOSSET%SCALE)
 !
-!         == GET xzero =========================================================
+!         == GET XZERO =========================================================
           DOSSET%XZERO=XZERO
           CALL LINKEDLIST$EXISTD(LL_CNTL,'XZERO',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'XZERO',1,DOSSET%XZERO)
@@ -303,11 +303,11 @@ END MODULE DOSSETS_MODULE
       DO 
         STRING=TRIM(DOSSET%PREFIX)//TRIM(DOSSET%ID)//-'.DOS'
         CALL GRACE_READ(NFIL,DOSSET%IG-1,STRING)
-        DO IS=2*(DOSSET%IS-1),2*(DOSSET%IS-1)+1  !is= 0,1, 2,3, 4,5, ...
+        DO IS=2*(DOSSET%IS-1),2*(DOSSET%IS-1)+1  !IS= 0,1, 2,3, 4,5, ...
 !         == SCALE SET =========================================================
           CALL GRACE_SCALESET(NFIL,DOSSET%IG-1,IS,DOSSET%SCALE)
 !         == POSITION ZERO AT XZERO ============================================
-          CALL GRACE_SHIFTSET(NFIL,DOSSET%IG-1,IS,-dosset%XZERO,0.D0)
+          CALL GRACE_SHIFTSET(NFIL,DOSSET%IG-1,IS,-DOSSET%XZERO,0.D0)
         ENDDO
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
         DOSSET=>DOSSET%NEXT
@@ -345,11 +345,11 @@ END MODULE DOSSETS_MODULE
 !
 !       == DRAW LINES ==========================================================
         LW=0.5D0 !LINEWIDTH
-        LC='black'   ! linecolor
+        LC='BLACK'   ! LINECOLOR
         FC=DOSSET%FILLCOLOR
 !       __FILLED AND EMPTY______________________________________________________
         CALL GRACE_LINE(NFIL,IG-1,IS+0,LW,LC,'L'//TRIM(FC))
-!       __FILLED only___________________________________________________________
+!       __FILLED ONLY___________________________________________________________
         CALL GRACE_LINE(NFIL,IG-1,IS+1,LW,LC,FC)
         IS=IS+2
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT

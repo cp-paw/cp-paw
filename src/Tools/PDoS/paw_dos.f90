@@ -644,7 +644,7 @@ END MODULE ORBITALS_MODULE
       CHARACTER(32)            :: ORBITALNAME1 
       CHARACTER(8)             :: TYPE
       INTEGER(4)               :: IT3(3),IT3Z(3),IT3X(3)
-      complex(8)               :: CFAC
+      COMPLEX(8)               :: CFAC
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: DRZ(3)
       REAL(8)                  :: DRX(3)
@@ -661,7 +661,7 @@ END MODULE ORBITALS_MODULE
         CALL LINKEDLIST$CONVERT(LL_CNTL,'FAC',1,'C(8)')
         CALL LINKEDLIST$GET(LL_CNTL,'FAC',1,CFAC)
       ELSE
-        CFAC=(1.D0,0.d0)
+        CFAC=(1.D0,0.D0)
       END IF
 !
 !     ==========================================================================
@@ -734,8 +734,8 @@ END MODULE ORBITALS_MODULE
 !       .1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE RESOLVETYPE(LMX,TYPE,ORBITAL)
 !       ************************************************************************
-!       ** constructs the prefactors of an orbital in an expansion of         **
-!       ** real spherical harmonics                                           **
+!       ** CONSTRUCTS THE PREFACTORS OF AN ORBITAL IN AN EXPANSION OF         **
+!       ** REAL SPHERICAL HARMONICS                                           **
 !       ************************************************************************
         IMPLICIT NONE
         INTEGER(4)  ,INTENT(IN)   :: LMX
@@ -750,13 +750,13 @@ END MODULE ORBITALS_MODULE
 !       ==  SET ORBITAL COEFFICIENTS                                          ==
 !       ========================================================================
         IF(TRIM(TYPE).EQ.'S') THEN
-          ORB(1)=1.d0
+          ORB(1)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'PX') THEN
-          ORB(2)=1.d0
+          ORB(2)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'PZ') THEN
-          ORB(3)=1.d0
+          ORB(3)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'PY') THEN
-          ORB(4)=1.d0
+          ORB(4)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'SP1') THEN
           ORB(1)=SQRT(1.D0/2.D0)
           ORB(3)=SQRT(1.D0/2.D0)
@@ -767,15 +767,15 @@ END MODULE ORBITALS_MODULE
           ORB(1)=SQRT(1.D0/4.D0)
           ORB(3)=SQRT(3.D0/4.D0)
         ELSE IF(TRIM(TYPE).EQ.'DX2-Y2') THEN
-          ORB(5)=1.d0
+          ORB(5)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'DXZ') THEN
-          ORB(6)=1.d0
+          ORB(6)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'D3Z2-R2') THEN
-          ORB(7)=1.d0
+          ORB(7)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'DYZ') THEN
-          ORB(8)=1.d0
+          ORB(8)=1.D0
         ELSE IF(TRIM(TYPE).EQ.'DXY') THEN
-          ORB(9)=1.d0
+          ORB(9)=1.D0
         ELSE
           CALL ERROR$MSG('TYPE NOT IDENTIFIED')
           CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
@@ -1091,7 +1091,7 @@ END MODULE ORBITALS_MODULE
       USE LINKEDLIST_MODULE
       USE READCNTL_MODULE, ONLY: LL_CNTL
       IMPLICIT NONE
-      CHARACTER(*),INTENT(OUT) :: MODE    ! "GAUSS" OR "TETRA"
+      CHARACTER(*),INTENT(OUT) :: MODE    ! "SAMPLE" OR "TETRA"
       CHARACTER(*),INTENT(OUT) :: PREFIX  ! PREFIX FOR DOS AND NOS FILES
       LOGICAL(4)  ,INTENT(OUT) :: TDOS    ! DENSITY OF STATES WILL BE PRINTED
       LOGICAL(4)  ,INTENT(OUT) :: TNOS    ! NUMBER OF STATES WILL BE PRINTED
@@ -1100,7 +1100,7 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     == SET DEFAULT VALUES                                                   ==
 !     ==========================================================================
-      MODE='GAUSS'
+      MODE='TETRA'
       TDOS=.TRUE.
       TNOS=.FALSE.
       PREFIX=''
@@ -1117,8 +1117,8 @@ END MODULE ORBITALS_MODULE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'MODE',1,TCHK)
       IF(TCHK)THEN
         CALL LINKEDLIST$GET(LL_CNTL,'MODE',1,MODE)
-        IF(MODE.NE.'GAUSS'.AND.MODE.NE.'TETRA')THEN
-          CALL ERROR$MSG('MODE UNKNOWN (SHOULD BE "GAUSS" OR "TETRA")')
+        IF(MODE.NE.'SAMPLE'.AND.MODE.NE.'TETRA')THEN
+          CALL ERROR$MSG('MODE UNKNOWN (SHOULD BE "SAMPLE" OR "TETRA")')
           CALL ERROR$CHVAL('MODE ',MODE)
           CALL ERROR$STOP('PDOS MAIN')
         ENDIF
@@ -1147,18 +1147,20 @@ END MODULE ORBITALS_MODULE
       REAL(8)     ,INTENT(OUT) :: EMIN   ! MINIMUM OF ENERGY GRID
       REAL(8)     ,INTENT(OUT) :: EMAX   ! MAXIMMUM OF ENERGY GRID
       INTEGER(4)  ,INTENT(OUT) :: NE     ! NUMBER OF ENERGY GRID POINTS
-      REAL(8)     ,INTENT(OUT) :: EBROAD ! GAUSSIAN ENERGY BROADENING
+      REAL(8)     ,INTENT(OUT) :: EBROAD ! THERMAL ENERGY BROADENING
+      REAL(8)                  :: EV     ! ELECTRON VOLT
+      REAL(8)                  :: KB     ! BOLTZMANN CONSTANT
       REAL(8)                  :: DE
-      REAL(8)                  :: EV
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,TCHK1
 !     **************************************************************************
 !     ==========================================================================
 !     == SET DEFAULT VALUES                                                   ==
 !     ==========================================================================
       CALL CONSTANTS('EV',EV)
+      CALL CONSTANTS('KB',KB)
       EMIN=-20.D0*EV
       EMAX=+20.D0*EV
-      EBROAD=1.D-1*EV
+      EBROAD=KB*300.D0
       DE=1.D-3*EV
       NE=INT((EMAX-EMIN)/DE)+1
 !
@@ -1189,9 +1191,20 @@ END MODULE ORBITALS_MODULE
       END IF
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'BROADENING[EV]',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'BROADENING[K]',1,TCHK1)
+      IF(TCHK.AND.TCHK1) THEN
+        CALL ERROR$MSG('SELECT ONLY ONE OF THE ALTERNATIVE OPTIONS, ')
+        CALL ERROR$MSG('EITHER !DCNTL!GENERIC:BROADENING[EV]')
+        CALL ERROR$MSG('    OR !DCNTL!GENERIC:BROADENING[K]')
+        CALL ERROR$STOP('READCNTL$GRID')
+      END IF
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'BROADENING[EV]',1,EBROAD)
         EBROAD=EBROAD*EV
+      END IF
+      IF(TCHK1) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'BROADENING[K]',1,EBROAD)
+        EBROAD=EBROAD*KB
       END IF
 
       CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALEY',1,TCHK)
@@ -1763,23 +1776,30 @@ END MODULE ORBITALS_MODULE
 !       ========================================================================
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                              ==
 !       ========================================================================
-        IF(MODE.EQ.'GAUSS')THEN
+        IF(MODE.EQ.'SAMPLE')THEN
           CALL PUTONGRID(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE IF(MODE.EQ.'TETRA')THEN
-          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
-      &     MINVAL(SET(:,:,:,ISET)).NE.1.0D0).AND.SPACEGROUP.NE.1)THEN
-            CALL ERROR$MSG('TETRAEDRON METHOD ONLY IMPLEMENTED FOR')
-            CALL ERROR$MSG('SPACEGROUP=1 OR TOTAL DENSITY OF STATES')
-            CALL ERROR$I4VAL('ISET',ISET)   
-            CALL ERROR$I4VAL('SPACEGROUP',SPACEGROUP)   
-            CALL ERROR$STOP('READCNTL$OUTPUT')
-          ENDIF
+!!$          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
+!!$      &       MINVAL(SET(:,:,:,ISET)).NE.1.0D0).AND.SPACEGROUP.NE.1)THEN
+!!$            CALL ERROR$MSG('TETRAEDRON METHOD ONLY IMPLEMENTED FOR')
+!!$            CALL ERROR$MSG('SPACEGROUP=1 OR TOTAL DENSITY OF STATES')
+!!$            CALL ERROR$I4VAL('ISET',ISET)   
+!!$            CALL ERROR$I4VAL('SPACEGROUP',SPACEGROUP)   
+!!$            CALL ERROR$STOP('READCNTL$OUTPUT')
+!!$          ENDIF
+          CALL FILEHANDLER$UNIT('PROT',NFILO)
+          WRITE(NFILO,*)'WARNING!!' 
+          WRITE(NFILO,*)'PROJECTED DENSITY OF STATES WILL BE IN ERROR'
+          WRITE(NFILO,*)'UNLESS THEY TRANSFORM LIKE THE IDENTITY UNDER THE'
+          WRITE(NFILO,*)'POINTGROUP OF THE CRYSTAL EMPLOYED IN THE CALCULATION'
+          WRITE(NFILO,*)'THE SPACE GROUP CURRENTLY USED IS NR. ',SPACEGROUP
+!
           CALL PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE
           CALL ERROR$MSG('VALUE FOR "MODE" NOT RECOGNIZED')
-          CALL ERROR$MSG('MUST BE "GAUSS" OR "TETRA"')
+          CALL ERROR$MSG('MUST BE "SAMPLE" OR "TETRA"')
           CALL ERROR$CHVAL('MDOE',MODE)   
           CALL ERROR$STOP('READCNTL$OUTPUT')
         ENDIF
@@ -1961,11 +1981,13 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFILDOS  ! UNIT FOR DOS FILE OR "-1"
       INTEGER(4)   ,INTENT(IN) :: NFILNOS  ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
+      REAL(8)      ,PARAMETER  :: TOL=1.D-2
       REAL(8)              :: DE
       INTEGER(4)           :: IE1,IE2,IDE
       INTEGER(4)           :: ND,IOCC
       REAL(8)              :: NOS(NE,NSPIN,2)
       REAL(8)              :: DOS(NE,NSPIN,2)
+      REAL(8),ALLOCATABLE  :: SMEAR(:)
       REAL(8)              :: EV
       REAL(8)              :: W1,W2,X,FAC
       REAL(8)              :: NOSSMALL(NSPIN,2)
@@ -1980,13 +2002,15 @@ END MODULE ORBITALS_MODULE
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
-      ND=NINT(EBROAD/DE*SQRT(-LOG(1.D-3)))  !BROADENING EXTENDS OVER 2N STEPS
       SPINDEG=1.D0
       IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
 !
 !     == THIS IS A DIRTY FIX THAT WAS NECESSARY BEFORE THE K-POINT WEIGHT WAS
 !     == AVAILABLE ON THE PDOS FILE 
       IF(SUM(WKPT).EQ.0.D0) THEN
+        CALL ERROR$MSG('NO K-POINT WEIGHTS AVAILABLE: OLD VERSION OF PDOS FILE')
+        CALL ERROR$MSG('RERUN ONE PAW ITERATION WITH NEW CODE')
+        CALL ERROR$STOP('PUTONGRID')
         DO IKPT=1,NKPT
           WKPT(IKPT)=0.D0
           DO ISPIN=1,NSPIN
@@ -2005,6 +2029,8 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     ==  MAP CONTRIBUTION FROM EACH STATE) ONTO THE ENERGY GRID.             ==
 !     ==  (IT IS DIVIDED PROPORTIONALLY TO THE TWO ENCLOSING GRID POINTS)     ==
+!     == THE SUM OVER ALL NOS-DATA ADDS TO THE TOTAL NUMBER OF STATES         ==
+!     == STATES LYING BELOW EMIN ARE MAPPED INTO NOSSMALL                     ==
 !     ==========================================================================
       NOS(:,:,:)=0.D0
       NOSSMALL(:,:)=0.D0
@@ -2018,7 +2044,7 @@ END MODULE ORBITALS_MODULE
             X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE+1.D0
             IE1=INT(X)
             IE2=IE1+1
-            W2=(X-DBLE(IE1))
+            W2=(X-REAL(IE1,KIND=8))
             W1=1.D0-W2
             IF (IE1.LT.1) THEN
               NOSSMALL(ISPIN,1)=NOSSMALL(ISPIN,1)+SET(IB,IKPT,ISPIN)*WGHTX
@@ -2043,20 +2069,25 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     ==  CALCULATE DOS                                                       ==
 !     ==========================================================================
-!     == NORM OF THE GAUSSIAN USED TO BROADEN THE RESULT
-      FAC=0.D0
+!     == DETERMINE SMEARING FUNCTION (DERIVATIVE OF FERMI FUNCTION) ============
+      ND=EBROAD/DE * LOG(4.D0/TOL)
+      ALLOCATE(SMEAR(-ND:ND))
       DO IDE=-ND,ND
-        FAC=FAC+EXP(-(DE*DBLE(IDE)/EBROAD)**2)
+        SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
-      FAC=1.D0/FAC
-!     ==  DETERMINE DOS ========================================================
+      SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
+!     ==  SMEAR DENSITY OF STATES ==============================================
       DOS(:,:,:)=0.D0
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
           DO IDE=-ND,ND
             IE1=MAX(1,1-IDE)
             IE2=MIN(NE,NE-IDE)
-            W1=FAC*EXP(-(DE*DBLE(IDE)/EBROAD)**2)
+            W1=SMEAR(IDE)
+            DO IE=-IDE+1,IE1-1
+              NOSSMALL(ISPIN,IOCC)=NOSSMALL(ISPIN,IOCC) &
+    &                             +NOS(IE+IDE,ISPIN,IOCC)*W1
+            ENDDO
             DO IE=IE1,IE2
               DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)+NOS(IE+IDE,ISPIN,IOCC)*W1
             ENDDO
@@ -2065,8 +2096,9 @@ END MODULE ORBITALS_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     ==  DETERMINE NOS BY INTEGRATION                                        ==
+!     ==  DETERMINE NOS BY SUMMATION                                          ==
 !     ==========================================================================
+      NOS=DOS
       DO ISPIN=1,NSPIN
         DO IOCC=1,2
           NOS(1,ISPIN,IOCC)=NOS(1,ISPIN,IOCC)+NOSSMALL(ISPIN,IOCC)
@@ -2075,6 +2107,11 @@ END MODULE ORBITALS_MODULE
           ENDDO
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     ==  RESCALE DOS                                                         ==
+!     ==========================================================================
+      DOS=DOS/DE
 !
 !     ==========================================================================
 !     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
@@ -2098,8 +2135,8 @@ END MODULE ORBITALS_MODULE
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
           DO IE=1,NE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1) &
-                                                   ,SIG*DOS(IE,ISPIN,2)
+            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
+                                                   ,SIG*DOS(IE,ISPIN,2)*EV
           ENDDO
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
@@ -2139,7 +2176,7 @@ END MODULE ORBITALS_MODULE
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
 !     **************************************************************************
-      USE DOS_WGHT_MODULE
+      USE DOS_WGHT_MODULE, ONLY: NEWGHT,EMINWGHT,EMAXWGHT,EF,EWGHT
       USE PDOS_MODULE, ONLY: STATE,STATEARR,WKPT
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
@@ -2155,11 +2192,13 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFILDOS ! UNIT FOR DOS FILE OR "-1"
       INTEGER(4)   ,INTENT(IN) :: NFILNOS ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
+      REAL(8)      ,PARAMETER  :: TOL=1.D-2
       REAL(8)              :: DE
       INTEGER(4)           :: IE1,IE2,IDE,I1,I2
       INTEGER(4)           :: ND,IOCC
       REAL(8),ALLOCATABLE  :: NOS(:,:,:)
       REAL(8),ALLOCATABLE  :: DOS(:,:,:)
+      REAL(8),ALLOCATABLE  :: SMEAR(:)
       REAL(8)              :: EV
       REAL(8)              :: W1,W2,X,FAC
       REAL(8)              :: NOSSMALL(NSPIN,2)
@@ -2168,13 +2207,11 @@ END MODULE ORBITALS_MODULE
       REAL(8)              :: SVAR
       REAL(8)              :: SIG
       REAL(8)              :: E
-      REAL(8)              :: DEWGHT
       REAL(8)              :: SPINDEG
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
-      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
-      DEWGHT=(EMAXWGHT-EMINWGHT)/REAL(NEWGHT-1,KIND=8)  !STEP OF THE ENERGY GRID
+      DE=(EMAXWGHT-EMINWGHT)/REAL(NEWGHT-1,KIND=8)  !STEP OF THE ENERGY GRID
 !$PRINT*,NE,EMIN,EMAX,DE
 !$PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
       SPINDEG=1.D0
@@ -2190,13 +2227,13 @@ END MODULE ORBITALS_MODULE
             I2=EWGHT(IB+NB*(ISPIN-1),IKPT)%I2
             DO IE=I1,I2
               !OCCUPIED STATES
-              DOS(IE,ISPIN,1)=DOS(IE,ISPIN,1)+SPINDEG*&
-      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+              DOS(IE,ISPIN,1)=DOS(IE,ISPIN,1)+SPINDEG &
+      &            *EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
               !UNOCCUPIED STATES
-              E=EMINWGHT+REAL(IE-1,KIND=8)*DEWGHT
+              E=EMINWGHT+REAL(IE-1,KIND=8)*DE
               IF(E.LE.EF)THEN
-                DOS(IE,ISPIN,2)=DOS(IE,ISPIN,2)+SPINDEG*&
-      &              EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
+                DOS(IE,ISPIN,2)=DOS(IE,ISPIN,2)+SPINDEG &
+      &              *EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
               ENDIF
             ENDDO
           ENDDO
@@ -2206,14 +2243,14 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     ==  BROADEN RESULT                                                      ==
 !     ==========================================================================
-!
-!     == NORM OF THE GAUSSIAN USED TO BROADEN THE RESULT =======================
-      ND=NINT(EBROAD/DEWGHT*SQRT(-LOG(1.D-3))) !BROADENING EXTENDS OVER 2N STEPS
-      FAC=0.D0
+!     == DETERMINE SMEARING FUNCTION (DERIVATIVE OF FERMI FUNCTION) ============
+!     == BROADENING EXTENDS OVER 2N+1 STEPS
+      ND=EBROAD/DE * LOG(4.D0/TOL)
+      ALLOCATE(SMEAR(-ND:ND))
       DO IDE=-ND,ND
-        FAC=FAC+EXP(-(DEWGHT*REAL(IDE,KIND=8)/EBROAD)**2)
+        SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
-      FAC=1.D0/FAC
+      SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
 !
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
       ALLOCATE(NOS(NEWGHT,NSPIN,2))
@@ -2224,7 +2261,7 @@ END MODULE ORBITALS_MODULE
           DO IDE=-ND,ND
             IE1=MAX(1,1-IDE)
             IE2=MIN(NEWGHT,NEWGHT-IDE)
-            W1=FAC*EXP(-(DE*DBLE(IDE)/EBROAD)**2)
+            W1=SMEAR(IDE)
             DO IE=IE1,IE2
               DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)+NOS(IE+IDE,ISPIN,IOCC)*W1
             ENDDO
@@ -2239,7 +2276,7 @@ END MODULE ORBITALS_MODULE
         DO IOCC=1,2
           NOS(1,ISPIN,IOCC)=0.0D0
           DO IE=2,NEWGHT
-            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*DEWGHT+NOS(IE-1,ISPIN,IOCC)
+            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*DE+NOS(IE-1,ISPIN,IOCC)
           ENDDO
         ENDDO
       ENDDO
@@ -2267,8 +2304,8 @@ END MODULE ORBITALS_MODULE
           DO IE=1,NEWGHT
             E=EMINWGHT+(EMAXWGHT-EMINWGHT)*REAL(IE-1,KIND=8)/REAL(NEWGHT-1)
             IF((E.LT.EMIN).OR.(E.GT.EMAX))CYCLE
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1) &
-                                                   ,SIG*DOS(IE,ISPIN,2)
+            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
+                                                   ,SIG*DOS(IE,ISPIN,2)*EV
           ENDDO
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO

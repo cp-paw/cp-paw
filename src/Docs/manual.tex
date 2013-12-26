@@ -6146,6 +6146,63 @@ date to a file, so that they can be plotted.
 \item The values of a given state can be written to a protocol.
 \end{itemize}
 
+%===============================================================================
+\subsubsection{Thermal broadening of the Density-of-States}
+\label{sec:thermoalbroadening}
+%===============================================================================
+The rationale for the thermal broadeing of the density of states is
+the following: An expectation value of an observable $A$ can be
+written in the form
+\begin{eqnarray}
+A(\mu)&=&\int_{-\infty}^\infty d\epsilon\; D_A(\epsilon) f_\beta(\epsilon-\mu)
+\label{eq:aofmu}
+\end{eqnarray}
+where $D_A(\epsilon)=\sum_n\frac{1}{V_G}\int d^3k\;
+A_n(k)\delta(\epsilon-\epsilon_n(k))$ is a density of states
+weighted with the matrix element of $A$ and $f_{\beta}(\epsilon-\mu)$
+is the Fermi distribution function.
+
+At zero  temperature, the expectation  value is simply the  integral of
+the density of states up to  the Fermi level. A similar expression can
+be obtained also for finite temperatures,  if the density of states is
+given a thermal broadening.
+\begin{eqnarray}
+A(\mu)
+&=&\int_{-\infty}^\mu d\mu'\;\left.\frac{dA}{d\mu}\right|_{\mu'}
+\nonumber\\
+&\stackrel{Eq.~\ref{eq:aofmu}}{=}&
+\int_{-\infty}^\mu d\mu'\;
+\int_{-\infty}^\infty d\epsilon\; D_A(\epsilon) \partial_\mu 
+f_\beta(\epsilon-\mu')
+\nonumber\\
+&=&\int_{-\infty}^\mu d\epsilon\;
+\underbrace{
+\int_{-\infty}^\infty d\epsilon'\; D_A(\epsilon') \partial_\epsilon 
+f_\beta(\epsilon'-\epsilon)}
+_{D_A^{\beta}(\epsilon)}
+\nonumber\\
+&=&\int_{-\infty}^\mu d\epsilon\;D^\beta_A(\epsilon)
+\end{eqnarray}
+
+The derivative of the Fermi distribution is
+\begin{eqnarray}
+\partial_\mu f_\beta(\epsilon-\mu)
+=\beta\Bigl[\frac{1}{2}
+\cosh\Bigl(\frac{1}{2}\beta(\epsilon-\mu)\Bigr)\Bigr]^{-2}
+\end{eqnarray}
+
+The thermal broadeing as a second practical reason, naemly to smoothen
+delta-function like spikes in the density of states resulting from
+accidental degeneracies of energies within a tetrahedron, when the
+tetrahedron method is used.
+
+If the energies are sampled (MODE='SAMPLE') the result without
+broadeing is a series of spikes with equal height. Here the broadening
+is important to produce a sensible density at the cost of loss of
+energy resolution. If sampling is used in a solid, the thermal
+broadeing shall mimick an interpolation. Then the broadeing should be
+comparible to the typical energy distance of neighboring k-points for
+in a typical band.
 
 %===============================================================================
 \subsubsection{Format of the Density-of-States and Number-of-States files}
@@ -6212,12 +6269,13 @@ largely independent of the system}
 
 \mbax{\key{MODE}
 \vdescr{defines the mode for the calculation of the density of states:
-  ``GAUSS'' defines the calculation via a simple gaussian broadening
-  of the energy states.  ``TETRA'' denotes the calculation using the
-  tetrahedron integration.}
+  ``SAMPLE'' uses only the calculated energies on the diskrete k-point
+  lattice.  ``TETRA'' denotes the calculation using the tetrahedron
+  method.\cite{jepsen71_ssc9_1763, lehmann72_pssb54_469,
+    bloechl94_prb49_16223}.}
 \vformat{character} 
 \vrules{optional}
-\vdefault{GAUSSIAN}}
+\vdefault{'TETRA'}}
 
 \mbax{\key{DOS} 
 \vdescr{Density of states will be written to file per default}
@@ -6241,8 +6299,9 @@ largely independent of the system}
 %----------------------------------------------------------------------
 \block{!DCNTL!GRID}
 %----------------------------------------------------------------------
-\brules{optional}
-\bdescr{defines the energy grid and energy broadening}
+\brules{optional} \bdescr{defines the energy grid and termal energy
+  broadening.  Read section~\ref{sec:thermoalbroadening} for the
+  background of the thermal broadening.  }
 
 \mbax{\key{EMIN[EV]}
 \vdescr{lower bound in eV of the energy interval for density 
@@ -6265,11 +6324,17 @@ of number of states}
 \vdefault{10$^{-3}$}}
 
 \mbax{\key{BROADENING[EV]}
-\vdescr{density of states are broadened by a Gaussian of the form
-$ \exp{-(e/b)^2} $, where $b$ is the broadening.}
+\vdescr{Thermal broading $k_BT$ of the density of states expressed in eV. }
 \vformat{real} 
-\vrules{optional}
-\vdefault{0.1}}
+\vrules{optional, mutually exclusive with BROADENING[K]}
+\vdefault{300 Kelvin/eV}}
+
+\mbax{\key{BROADENING[K]}
+\vdescr{Thermal broading $k_BT$ of the density of states with $T$
+  expressed in Kelvin.}
+\vformat{real} 
+\vrules{optional, mutually exclusive with BROADENING[EV]}
+\vdefault{300.}}
 
 \mbax{\key{SCALEY} 
 \vdescr{Obsolete!}
