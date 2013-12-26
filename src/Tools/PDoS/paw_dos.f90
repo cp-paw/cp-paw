@@ -19,9 +19,6 @@ MODULE DOS_WGHT_MODULE
 USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
 REAL(8),ALLOCATABLE          :: WGHT(:,:)
 TYPE(EWGHT_TYPE),ALLOCATABLE :: EWGHT(:,:)
-INTEGER(4)                   :: NEWGHT
-REAL(8)                      :: EMINWGHT
-REAL(8)                      :: EMAXWGHT
 REAL(8)                      :: EF
 INTEGER(4)                   :: SPACEGROUP
 SAVE
@@ -88,18 +85,27 @@ END MODULE READCNTL_MODULE
 !     ==========================================================================
 !     ==  WRITE HEADER                                                        ==
 !     ==========================================================================
-      WRITE(NFILO,FMT='(82("*"))')
-      WRITE(NFILO,FMT='(82("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"           PDOS ANALYSIS TOOL                ")')
-      WRITE(NFILO,FMT='(82("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-      WRITE(NFILO,FMT='(82("*"))')
-      WRITE(NFILO,FMT='(T30 &
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(T20 &
      &               ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
-      WRITE(NFILO,FMT='(T30 &
+      WRITE(NFILO,FMT='(T20 &
      &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &      /T30,"ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+     &      /T20,"ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
+!
+!     ==========================================================================
+!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
+!     ==========================================================================
+      CALL READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
+                            CALL TRACE$PASS('AFTER READCNTL$GENERIC')
+      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
+                            CALL TRACE$PASS('AFTER READCNTL$GRID')
+      CALL READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
 !
 !     ==========================================================================
 !     ==  READ PDOSFILE                                                       ==
@@ -114,7 +120,6 @@ END MODULE READCNTL_MODULE
       CALL PDOS$GETI4('NPRO',NPRO)
       ALLOCATE(NBARR(NKPT,NSPIN))
       CALL PDOS$GETI4A('NB',NKPT*NSPIN,NBARR)
-      CALL PDOS$GETCH('FLAG',FLAG)
       NB=MAXVAL(NBARR)
       DEALLOCATE(NBARR)
       LENG=NPRO
@@ -132,26 +137,18 @@ END MODULE READCNTL_MODULE
           ENDDO
         ENDDO
       ENDDO
-                            CALL TRACE$PASS('AFTER READPDOS')
-
-      CALL REPORT(NFILO,EIG)
-                            CALL TRACE$PASS('AFTER REPORT')
-!
-!     ==========================================================================
-!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
-!     ==========================================================================
-      CALL READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
-                            CALL TRACE$PASS('AFTER READCNTL$GENERIC')
-      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
-                            CALL TRACE$PASS('AFTER READCNTL$GRID')
-      PRINT*,"FLAG OF PDOS FILE=",FLAG
 !
 !     == CHECK IF PDOS FILE CONTAINS DATA FOR THE TETRAHEDRON METHOD ===========
+      CALL PDOS$GETCH('FLAG',FLAG)
+      CALL REPORT$CHVAL(NFILO,"FLAG OF PDOS FILE=",FLAG)
       IF(MODE.EQ.'TETRA'.AND.FLAG.NE.'181213')THEN 
         CALL ERROR$MSG('THE PDOS-FILE IS TOO OLD FOR MODE=TETRA')
         CALL ERROR$CHVAL('FLAG ',FLAG)
         CALL ERROR$STOP('PDOS MAIN')
       ENDIF
+                            CALL TRACE$PASS('AFTER READPDOS')
+      CALL REPORT(NFILO,EIG)
+                            CALL TRACE$PASS('AFTER REPORT')
 !
 !     ==========================================================================
 !     ==  READ PREDEFINED ORBITALS                                            ==
@@ -185,9 +182,9 @@ END MODULE READCNTL_MODULE
 !     ==  CLOSING                                                             ==
 !     ==========================================================================
       CALL FILEHANDLER$REPORT(NFILO,'USED')
-      WRITE(NFILO,FMT='(72("="))')
-      WRITE(NFILO,FMT='(72("="),T20,"  PAW_DOS TOOL FINISHED  ")')
-      WRITE(NFILO,FMT='(72("="))')
+      WRITE(NFILO,FMT='(80("="))')
+      WRITE(NFILO,FMT='(80("="),T20,"  PAW_DOS TOOL FINISHED  ")')
+      WRITE(NFILO,FMT='(80("="))')
                             CALL TRACE$PASS('AFTER CLOSING')
 !
 !     ==========================================================================
@@ -303,14 +300,14 @@ END MODULE READCNTL_MODULE
 !     ==========================================================================
 !     == REPORT IN CHARGE DISTRIBUTION                                        ==
 !     ==========================================================================
-      WRITE(NFILO,FMT='(82("="))')
-      WRITE(NFILO,FMT='(82("="),T30," PROJECTED CHARGE ANALYSIS  ")')
-      WRITE(NFILO,FMT='(82("="))')
-      WRITE(NFILO,FMT='(A,T38,"ALL",T48,"S",T58,"P",T68,"D",T78,"F")') &
-     &                 'CHARGE PROJECTED ON'
+      CALL REPORT$TITLE(NFILO,'PROJECTED CHARGE ANALYSIS')
+      WRITE(NFILO,FMT='(T11,"|",T28,"CHARGE[-E] PROJECTED ON")')
+      WRITE(NFILO &
+     &     ,FMT='(T3,"ATOM",T11,"|",T18,"ALL",T28,"S",T38,"P",T48,"D",T58,"F")')
+      WRITE(NFILO,FMT='(65("-"))')
       DO IAT=1,NAT
         L1=1+MAXVAL(LOX(:,ISPECIES(IAT)))
-        WRITE(NFILO,FMT='("CHARGE[-E] ON ATOM",T20,A10,":",10F10.3)')  &
+        WRITE(NFILO,FMT='(A10,"|",10F10.3)')  &
      &       ATOMID(IAT),SUM(ANGWGHT(:L1,:,IAT)) &
      &                  ,(SUM(ANGWGHT(IDIR,:,IAT)),IDIR=1,L1)
       END DO
@@ -319,17 +316,14 @@ END MODULE READCNTL_MODULE
 !     == SPIN REPORT FOR COLLINEAR CALCULATION                                ==
 !     ==========================================================================
       IF(NSPIN.EQ.2) THEN
-!
-!       == SPIN  FOR NSPIN=2 ===================================================
-        WRITE(NFILO,*)
-        WRITE(NFILO,FMT='(82("="))')
-        WRITE(NFILO,FMT='(82("="),T30," SPIN ANALYSIS  ")')
-        WRITE(NFILO,FMT='(82("="))')
-        WRITE(NFILO,FMT='(A,T38,"ALL",T48,"S",T58,"P",T68,"D",T78,"F")') &
-     &                   'SPIN PROJECTED ON'
+        CALL REPORT$TITLE(NFILO,'PROJECTED SPIN ANALYSIS')
+        WRITE(NFILO,FMT='(T11,"|",T28,"SPIN[HBAR/2] PROJECTED ON")')
+        WRITE(NFILO &
+     &     ,FMT='(T3,"ATOM",T11,"|",T18,"ALL",T28,"S",T38,"P",T48,"D",T58,"F")')
+        WRITE(NFILO,FMT='(65("-"))')
         DO IAT=1,NAT
           L1=1+MAXVAL(LOX(:,ISPECIES(IAT)))
-          WRITE(NFILO,FMT='("SPIN[HBAR/2] IN ATOM",T22,A8,":",10F10.3)') &
+          WRITE(NFILO,FMT='(A10,"|",10F10.3)') &
      &         ATOMID(IAT),SUM(ANGWGHT(:,1,IAT))-SUM(ANGWGHT(:,2,IAT)) &
      &                    ,(ANGWGHT(IDIR,1,IAT)-ANGWGHT(IDIR,2,IAT),IDIR=1,L1)
         END DO
@@ -1132,7 +1126,6 @@ END MODULE ORBITALS_MODULE
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'PREFIX',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PREFIX',1,PREFIX)
-!
       RETURN
       END SUBROUTINE READCNTL$GENERIC
 !
@@ -1217,6 +1210,35 @@ END MODULE ORBITALS_MODULE
 !
       RETURN
       END SUBROUTINE READCNTL$GRID
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: MODE    ! "SAMPLE" OR "TETRA"
+      CHARACTER(*),INTENT(IN) :: PREFIX  ! PREFIX FOR DOS AND NOS FILES
+      LOGICAL(4)  ,INTENT(IN) :: TDOS    ! DENSITY OF STATES WILL BE PRINTED
+      LOGICAL(4)  ,INTENT(IN) :: TNOS    ! NUMBER OF STATES WILL BE PRINTED
+      REAL(8)     ,INTENT(IN) :: EMIN   ! MINIMUM OF ENERGY GRID
+      REAL(8)     ,INTENT(IN) :: EMAX   ! MAXIMMUM OF ENERGY GRID
+      INTEGER(4)  ,INTENT(IN) :: NE     ! NUMBER OF ENERGY GRID POINTS
+      REAL(8)     ,INTENT(IN) :: EBROAD ! THERMAL ENERGY BROADENING
+      INTEGER(4)              :: NFILO
+      REAL(8)                 :: EV
+!     **************************************************************************
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+      CALL CONSTANTS('EV',EV)
+      CALL REPORT$CHVAL(NFILO,'INTEGRATION METHOD',MODE)
+      CALL REPORT$CHVAL(NFILO,'PREFIX FOR DOS AND NOS FILES',PREFIX)
+      CALL REPORT$L4VAL(NFILO,'DENSITY OF STATES ARE WRITTEN?',TDOS)
+      CALL REPORT$L4VAL(NFILO,'NUMBER OF STATES ARE WRITTEN?',TNOS)
+      CALL REPORT$R8VAL(NFILO,'ENERGY GRID STARTS AT',EMIN/EV,'EV')
+      CALL REPORT$R8VAL(NFILO,'ENERGY GRID ENDS AT',EMAX/EV,'EV')
+      CALL REPORT$R8VAL(NFILO,'SPACING OF THE ENERGY GRID',(EMAX-EMIN)/REAL(NE-1)/EV,'EV')
+      WRITE(NFILO,*)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$ORBITAL(NPRO,NAT,LMX,RBAS,RPOS)
@@ -1788,12 +1810,6 @@ END MODULE ORBITALS_MODULE
 !!$            CALL ERROR$I4VAL('SPACEGROUP',SPACEGROUP)   
 !!$            CALL ERROR$STOP('READCNTL$OUTPUT')
 !!$          ENDIF
-          CALL FILEHANDLER$UNIT('PROT',NFILO)
-          WRITE(NFILO,*)'WARNING!!' 
-          WRITE(NFILO,*)'PROJECTED DENSITY OF STATES WILL BE IN ERROR'
-          WRITE(NFILO,*)'UNLESS THEY TRANSFORM LIKE THE IDENTITY UNDER THE'
-          WRITE(NFILO,*)'POINTGROUP OF THE CRYSTAL EMPLOYED IN THE CALCULATION'
-          WRITE(NFILO,*)'THE SPACE GROUP CURRENTLY USED IS NR. ',SPACEGROUP
 !
           CALL PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
@@ -2176,7 +2192,7 @@ END MODULE ORBITALS_MODULE
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
 !     **************************************************************************
-      USE DOS_WGHT_MODULE, ONLY: NEWGHT,EMINWGHT,EMAXWGHT,EF,EWGHT
+      USE DOS_WGHT_MODULE, ONLY: EF,EWGHT,WGHT
       USE PDOS_MODULE, ONLY: STATE,STATEARR,WKPT
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
@@ -2193,48 +2209,48 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFILNOS ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
-      REAL(8)              :: DE
-      INTEGER(4)           :: IE1,IE2,IDE,I1,I2
-      INTEGER(4)           :: ND,IOCC
-      REAL(8),ALLOCATABLE  :: NOS(:,:,:)
-      REAL(8),ALLOCATABLE  :: DOS(:,:,:)
-      REAL(8),ALLOCATABLE  :: SMEAR(:)
-      REAL(8)              :: EV
-      REAL(8)              :: W1,W2,X,FAC
-      REAL(8)              :: NOSSMALL(NSPIN,2)
-      REAL(8)              :: WGHTX
-      INTEGER(4)           :: IKPT,ISPIN,IE,IB
-      REAL(8)              :: SVAR
-      REAL(8)              :: SIG
-      REAL(8)              :: E
-      REAL(8)              :: SPINDEG
+      REAL(8)    ,ALLOCATABLE  :: NOS(:,:)
+      REAL(8)    ,ALLOCATABLE  :: NOSMIN(:)
+      REAL(8)    ,ALLOCATABLE  :: DOS(:,:)
+      REAL(8)    ,ALLOCATABLE  :: SMEAR(:)
+      REAL(8)                  :: DE
+      INTEGER(4)               :: IE1,IE2,IDE,I1,I2,IBIS
+      INTEGER(4)               :: ND,IOCC
+      REAL(8)                  :: EV
+      REAL(8)                  :: W1,W2,X,FAC
+      REAL(8)                  :: NOSSMALL(NSPIN,2)
+      REAL(8)                  :: WGHTX
+      INTEGER(4)               :: IKPT,ISPIN,IE,IB
+      REAL(8)                  :: SVAR
+      REAL(8)                  :: SIG
+      REAL(8)                  :: E
+      REAL(8)                  :: SPINDEG
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID')
       CALL CONSTANTS('EV',EV)
-      DE=(EMAXWGHT-EMINWGHT)/REAL(NEWGHT-1,KIND=8)  !STEP OF THE ENERGY GRID
-!$PRINT*,NE,EMIN,EMAX,DE
-!$PRINT*,NEWGHT,EMINWGHT,EMAXWGHT,DEWGHT
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)  !STEP OF THE ENERGY GRID
       SPINDEG=1.D0
       IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
 
-      ALLOCATE(DOS(NEWGHT,NSPIN,2))
-      DOS(:,:,:)=0.0D0
+!
+!     ==========================================================================
+!     ==  CALCULATE NUMBER OF STATES FOR EACH ENERGY INTERVAL                 ==
+!     ==========================================================================
+      ALLOCATE(DOS(NE,NSPIN))
+      ALLOCATE(NOSMIN(NSPIN))
+      DOS(:,:)=0.D0
+      NOSMIN(:)=0.D0
       DO IKPT=1,NKPT
-        DO IB=1,NB
-          DO ISPIN=1,NSPIN
+        DO ISPIN=1,NSPIN
+          DO IB=1,NB
             STATE=>STATEARR(IKPT,ISPIN)
+            IBIS=IB+NB*(ISPIN-1)
+            SVAR=SPINDEG*SET(IB,IKPT,ISPIN)*DE
+            NOSMIN(ISPIN)=NOSMIN(ISPIN)+WGHT(IBIS,IKPT)*SVAR
             I1=EWGHT(IB+NB*(ISPIN-1),IKPT)%I1
             I2=EWGHT(IB+NB*(ISPIN-1),IKPT)%I2
             DO IE=I1,I2
-              !OCCUPIED STATES
-              DOS(IE,ISPIN,1)=DOS(IE,ISPIN,1)+SPINDEG &
-      &            *EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
-              !UNOCCUPIED STATES
-              E=EMINWGHT+REAL(IE-1,KIND=8)*DE
-              IF(E.LE.EF)THEN
-                DOS(IE,ISPIN,2)=DOS(IE,ISPIN,2)+SPINDEG &
-      &              *EWGHT(IB+NB*(ISPIN-1),IKPT)%WGHT(IE)*SET(IB,IKPT,ISPIN)
-              ENDIF
+              DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IBIS,IKPT)%WGHT(IE)*SVAR
             ENDDO
           ENDDO
         ENDDO
@@ -2253,31 +2269,34 @@ END MODULE ORBITALS_MODULE
       SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
 !
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
-      ALLOCATE(NOS(NEWGHT,NSPIN,2))
       NOS=DOS
-      DOS(:,:,:)=0.D0
+      DOS(:,:)=0.D0
       DO ISPIN=1,NSPIN
-        DO IOCC=1,2
-          DO IDE=-ND,ND
-            IE1=MAX(1,1-IDE)
-            IE2=MIN(NEWGHT,NEWGHT-IDE)
-            W1=SMEAR(IDE)
-            DO IE=IE1,IE2
-              DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)+NOS(IE+IDE,ISPIN,IOCC)*W1
-            ENDDO
+        DO IDE=-ND,ND
+          IE1=MAX(1,1-IDE)
+          IE2=MIN(NE,NE-IDE)
+          W1=SMEAR(IDE)
+          DO IE=1-IDE,IE1-1
+            NOSMIN(ISPIN)=NOSMIN(ISPIN)+NOS(IE+IDE,ISPIN)*W1
+          ENDDO
+          DO IE=IE1,IE2
+            DOS(IE,ISPIN)=DOS(IE,ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
         ENDDO
       ENDDO
 !
 !     ==========================================================================
+!     ==  CONVERT DELTA-NOS INTO DOS                                          ==
+!     ==========================================================================
+      DOS=DOS/DE
+!
+!     ==========================================================================
 !     ==  DETERMINE NOS BY INTEGRATION                                        ==
 !     ==========================================================================
       DO ISPIN=1,NSPIN
-        DO IOCC=1,2
-          NOS(1,ISPIN,IOCC)=0.0D0
-          DO IE=2,NEWGHT
-            NOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)*DE+NOS(IE-1,ISPIN,IOCC)
-          ENDDO
+        NOS(1,ISPIN)=NOSMIN(ISPIN)
+        DO IE=2,NE
+          NOS(IE,ISPIN)=NOS(IE-1,ISPIN)+DOS(IE,ISPIN)*DE
         ENDDO
       ENDDO
 !
@@ -2285,11 +2304,9 @@ END MODULE ORBITALS_MODULE
 !     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
 !     ==========================================================================
       DO ISPIN=1,NSPIN
-        DO IOCC=1,2
-          DO IE=1,NEWGHT
-            IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
-            IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
-          ENDDO
+        DO IE=1,NE
+          IF(ABS(NOS(IE,ISPIN)).LE.1.D-99) NOS(IE,ISPIN)=0.D0
+          IF(ABS(DOS(IE,ISPIN)).LE.1.D-99) DOS(IE,ISPIN)=0.D0
         ENDDO
       ENDDO
 !
@@ -2301,11 +2318,12 @@ END MODULE ORBITALS_MODULE
         DO ISPIN=1,NSPIN
           SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          DO IE=1,NEWGHT
-            E=EMINWGHT+(EMAXWGHT-EMINWGHT)*REAL(IE-1,KIND=8)/REAL(NEWGHT-1)
-            IF((E.LT.EMIN).OR.(E.GT.EMAX))CYCLE
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
-                                                   ,SIG*DOS(IE,ISPIN,2)*EV
+          DO IE=1,NE
+            E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
+            SVAR=1.D0
+            IF(E.GT.EF) SVAR=0.D0
+            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
+                                              ,SIG*DOS(IE,ISPIN)*SVAR*EV
           ENDDO
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
@@ -2317,11 +2335,12 @@ END MODULE ORBITALS_MODULE
         DO ISPIN=1,NSPIN
           SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
           WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          DO IE=1,NEWGHT
-            E=EMINWGHT+(EMAXWGHT-EMINWGHT)*REAL(IE-1,KIND=8)/REAL(NEWGHT-1)
-            IF((E.LT.EMIN).OR.(E.GT.EMAX))CYCLE
-            WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN,1) &
-                                                   ,SIG*NOS(IE,ISPIN,2)
+          IE1=1
+          DO IE=1,NE
+            E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
+            IF(E.LT.EF)IE1=IE
+            WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN) &
+                                                   ,SIG*NOS(IE1,ISPIN)
           ENDDO
           WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
@@ -2333,7 +2352,7 @@ END MODULE ORBITALS_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
-      USE DOS_WGHT_MODULE
+      USE DOS_WGHT_MODULE, ONLY: EF,SPACEGROUP,WGHT,EWGHT
       USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
 !     **************************************************************************
 !     **                                                                      **
@@ -2366,8 +2385,14 @@ END MODULE ORBITALS_MODULE
       REAL(8)                      :: C(3,NOPX)
       INTEGER(4)                   :: ISYM
       LOGICAL(4)                   :: TSHIFT
+      REAL(8)                      :: EV
 !     **************************************************************************
                           CALL TRACE$PUSH('GENERATE_TETRA_WGHT')
+      CALL CONSTANTS('EV',EV)
+!     
+!     ==========================================================================
+!     == COLLECT TETRAHEDRON METHOD RELATED INFORMATION FROM PDOS FILE        ==
+!     ==========================================================================
       CALL PDOS$GETI4A('NKDIV',3,NKDIV)
       CALL PDOS$GETI4A('ISHIFT',3,ISHIFT)
       CALL PDOS$GETR8('RNTOT',RNTOT)
@@ -2375,27 +2400,37 @@ END MODULE ORBITALS_MODULE
       CALL PDOS$GETL4('TINV',TINV)
       CALL PDOS$GETI4('SPACEGROUP',SPACEGROUP)
       CALL PDOS$GETL4('TSHIFT',TSHIFT)
-     
-      PRINT*,"SPACEGROUP",SPACEGROUP
-      PRINT*,"TINV",TINV
-      PRINT*,"TSHIFT",TSHIFT
-
       CALL SPACEGROUP$SETI4('SPACEGROUP',SPACEGROUP)
       CALL SPACEGROUP$GETCH('BRAVAIS',BRAVAIS)
-     
-      IARB=1
+!     
+!     ==========================================================================
+!     == REPORT INFORMATION ON THE PDOS FILE RELATED TO THE TETRAHEDRON METHOD==
+!     ==========================================================================
+      CALL REPORT$TITLE(NFILO,'TETRAHEDRON METHOD')
+      CALL REPORT$STRING(NFILO,'WARNING!!')
+      CALL REPORT$STRING(NFILO,'PROJECTED DENSITY OF STATES WILL BE IN ERROR')         
+      CALL REPORT$STRING(NFILO,'UNLESS THEY TRANSFORM LIKE THE IDENTITY')
+      CALL REPORT$STRING(NFILO,'UNDER THE POINTGROUP OF THE CRYSTAL EMPLOYED')
+      CALL REPORT$STRING(NFILO,'IN THE CALCULATION')
+      CALL REPORT$I4VAL(NFILO,"SPACEGROUP",SPACEGROUP,'')
+      CALL REPORT$CHVAL(NFILO,"BRAVAIS LATTICE",BRAVAIS)
+      CALL REPORT$L4VAL(NFILO,"TIME REVERSAL SYMMETRY EXPLOITED?",TINV)
+      CALL REPORT$L4VAL(NFILO,"TSHIFT",TSHIFT)
+      CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G1",NKDIV(1),'')
+      CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G2",NKDIV(2),'')
+      CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G3",NKDIV(3),'')
+!     
+!     ==========================================================================
+!     == CONSTRUCT IRREDUCIBLE K-POINTS                                       ==
+!     ==========================================================================
       IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
-       IARB(1)=1
-       IARB(2)=0
-       IARB(3)=0
-      ENDIF 
-      IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
-        IARB=0
-      ENDIF 
-      IF(BRAVAIS.EQ.'GMB') THEN
-       IARB(1)=0
-       IARB(2)=1
-       IARB(3)=0
+        IARB=(/1,0,0/)
+      ELSE IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
+        IARB=(/0,0,0/)
+      ELSE IF(BRAVAIS.EQ.'GMB') THEN
+        IARB=(/0,1,0/)
+      ELSE
+        IARB=(/1,1,1/)
       ENDIF 
       CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
 
@@ -2404,17 +2439,16 @@ END MODULE ORBITALS_MODULE
 !$      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
       
       CALL BRILLOUIN$GETI4('NK',NKPT2)
-      
       IF(NKPT2.NE.NKPT)THEN
         CALL ERROR$MSG('NUMBER OF KPOINTS INCONSISTENT')
         CALL ERROR$I4VAL('NKPT FROM PDOS',NKPT)
         CALL ERROR$I4VAL('NKPT FROM BRILLOUIN',NKPT2)
         CALL ERROR$STOP('DOS')
       ENDIF
-      
-      IF(NSPIN.EQ.2) WRITE(NFILO,*)'WARNING: USING THE SAME FERMI ENERGY FOR&
-  &             BOTH SPIN DIRECTIONS.'
-      
+!     
+!     ==========================================================================
+!     == CONSTRUCT K-INTEGRATION WEIGHTS                                      ==
+!     ==========================================================================
       ALLOCATE(EB(NB*NSPIN,NKPT))
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
@@ -2425,11 +2459,11 @@ END MODULE ORBITALS_MODULE
       CALL BRILLOUIN$DOS(NSPIN*NB,NKPT,EB,WGHT,RNTOT,EF)
 !
 !     ==========================================================================
-!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K)                          ==
+!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
 !     ==========================================================================
       !FIXME TOTAL DENSITY FOR TESTING
       ALLOCATE(A(NB*NSPIN,NKPT))
-      A=1
+      A=1.D0
       SUMA(:)=0.D0
       DO IB=1,NB
         DO ISPIN=1,NSPIN
@@ -2455,15 +2489,18 @@ END MODULE ORBITALS_MODULE
       PRINT*,'INTEGRAL OF A=1 :             ',SUM(SUMA(:)),' SHOULD BE ',RNTOT 
       PRINT*,'INTEGRAL OF A=1 (SPIN UP) :   ',SUMA(1) 
       PRINT*,'INTEGRAL OF A=1 (SPIN DOWN) : ',SUMA(2)
-      
-      !FIXME: BRILLOUIN$EWGHT NEEDS EMAX=MAXVAL(EB),EMIN=MINVAL(EB)
-      !CHOOSING NE SO THAT ENERGY INTERVALS ARE THE SAME
-      SVAR=(EMAX-EMIN)/REAL(NE-1,KIND=8)
-      EMINWGHT=MINVAL(EB)-0.01D0
-      EMAXWGHT=MAXVAL(EB)+0.01D0
-      NEWGHT=INT((EMAXWGHT-EMINWGHT)/SVAR)+1
+!     
+!     ==========================================================================
+!     == CALCULATE ENERGY DEPENDENT INTEGRATION WEIGHTS                       ==
+!     ==========================================================================
       ALLOCATE(EWGHT(NB*NSPIN,NKPT))
-      CALL BRILLOUIN$EWGHT(NKPT,NB*NSPIN,EB,EMINWGHT,EMAXWGHT,NEWGHT,EWGHT)
+      CALL BRILLOUIN$WGHT(NKPT,NB*NSPIN,EMIN,EB,WGHT)
+      CALL BRILLOUIN$EWGHT(NKPT,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
+!     
+!     ==========================================================================
+!     == REPORT INFORMATION                                                   ==
+!     ==========================================================================
+      CALL REPORT$R8VAL(NFILO,"FERMI LEVEL",EF/EV,'EV')
                           CALL TRACE$POP()
       RETURN
       END SUBROUTINE GENERATE_TETRA_WGHT

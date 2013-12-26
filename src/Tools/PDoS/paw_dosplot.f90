@@ -625,19 +625,22 @@ END MODULE DOSSETS_MODULE
        IMPLICIT NONE
        INTEGER(4)  ,INTENT(IN) :: NFIL  ! FILE UNIT OF THE BATCHFILE
        CHARACTER(250)          :: GRBFILE
+       CHARACTER(250)          :: ROOT  
+       INTEGER(4)              :: IPOS
 !      *************************************************************************
                                      CALL TRACE$PUSH('GRACE_EXECUTE')
        CALL FILEHANDLER$UNIT('GRACEBATCH',NFIL)
        CALL FILEHANDLER$FILENAME('GRACEBATCH',GRBFILE)
+       IPOS=INDEX(GRBFILE,-'.BAT',.TRUE.)
+       ROOT=GRBFILE(1:IPOS-1)
        PRINT*,'EXECUTE WITH THE FOLLOWING COMMANDS:'
        PRINT*,-'XMGRACE -NOSAFE -BATCH ',TRIM(GRBFILE)
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'EPS'//-' -BATCH ',TRIM(GRBFILE) &
-      &         ,-' -HARDCOPY -PRINTFILE FILE.EPS'
+      &      ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.EPS'
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'PDF'//-' -BATCH ',TRIM(GRBFILE) &
-      &         ,-' -HARDCOPY -PRINTFILE FILE.PDF'
+      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.PDF'
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'SVG'//-' -BATCH ',TRIM(GRBFILE) &
-      &         ,-' -HARDCOPY -PRINTFILE FILE.SVG'
-       
+      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.SVG'
 !
 !      =========================================================================
 !      == CALL SYSTEM TO PRODUCE A PLOT FILE                                  ==
