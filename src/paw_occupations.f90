@@ -2,7 +2,7 @@
 !**  TODO:                                                                    **
 !**     - DYNOCC$GETR8: WHEN TOTCHA IS REQUESTED THE DIFFERENCE BETWEEN THE   **
 !**           NUMBER OF ELECTRON (INTERNALLY ALSO CALLED TOTCHA) AND SUMOFZ   **
-!**           IS RETURNED, THIS IS THE TOTAL CHARGE OF THE SYSTEM, NOT THE    ** 
+!**           IS RETURNED, THIS IS THE TOTAL CHARGE OF THE SYSTEM, NOT THE    **
 !**           NUMBER OF ELECTRONS                                             **
 !*******************************************************************************
 !
@@ -500,7 +500,7 @@ END MODULE DYNOCC_MODULE
        INTEGER(4)  ,INTENT(IN) :: LEN_
        REAL(8)     ,INTENT(IN) :: VAL(LEN_)
        REAL(8)                 :: SVAR
-       integer(4)              :: i,ib,ikpt,ispin,ind
+       INTEGER(4)              :: I,IB,IKPT,ISPIN,IND
 !      *************************************************************************
        IF(ID_.EQ.'XK') THEN
          IF(NKPT.EQ.0) THEN
@@ -512,7 +512,7 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
          IF(.NOT.ALLOCATED(XK))ALLOCATE(XK(3,NKPT))
-!== reshape has been disabled: gfortran produces unpredictable results
+!== RESHAPE HAS BEEN DISABLED: GFORTRAN PRODUCES UNPREDICTABLE RESULTS
 !XK(:,:)=RESHAPE(VAL,(/3,NKPT/))
          IND=0
          DO IKPT=1,NKPT
@@ -549,8 +549,8 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$I4VAL('NB*NKPT*NSPIN',NB*NKPT*NSPIN)
            CALL ERROR$STOP('DYNOCC$SETR8A')
          END IF
-!== reshape has been disabled: gfortran produces unpredictable results
-!print*,'allocated(epsilon) ',allocated(eps0),allocated(epsm),allocated(epsp),allocated(epsilon)
+!== RESHAPE HAS BEEN DISABLED: GFORTRAN PRODUCES UNPREDICTABLE RESULTS
+!PRINT*,'ALLOCATED(EPSILON) ',ALLOCATED(EPS0),ALLOCATED(EPSM),ALLOCATED(EPSP),ALLOCATED(EPSILON)
 !EPSILON=RESHAPE(VAL,(/NB,NKPT,NSPIN/))
 !PRINT*,'DYNOCC_SETR8A',TRIM(ID_),NB,NB*NKPT*NSPIN,LEN_
 !PRINT*,'DYNOCC_SETR8A',MINVAL(VAL),MAXVAL(VAL),MINVAL(EPSILON),MAXVAL(EPSILON)
@@ -590,7 +590,7 @@ END MODULE DYNOCC_MODULE
            MPSIDOT2(:,:,:)=0.5D0*MPSIDOT2(:,:,:)
            SVAR=0.5D0
          END IF
-!== reshape has been disabled: gfortran produces unpredictable results
+!== RESHAPE HAS BEEN DISABLED: GFORTRAN PRODUCES UNPREDICTABLE RESULTS
 !MPSIDOT2=MPSIDOT2+SVAR*RESHAPE(VAL,(/NB,NKPT,NSPIN/))
 !PRINT*,'DYNOCC_SETR8A',TRIM(ID_),NB,NB*NKPT*NSPIN,LEN_
 !PRINT*,'DYNOCC_SETR8A',MINVAL(VAL),MAXVAL(VAL),MINVAL(MPSIDOT2),MAXVAL(MPSIDOT2)
@@ -599,7 +599,7 @@ END MODULE DYNOCC_MODULE
            DO IKPT=1,NKPT
              DO IB=1,NB
                IND=IND+1
-               mpsidot2(IB,IKPT,ISPIN)=mpsidot2(IB,IKPT,ISPIN)+svar*VAL(IND)
+               MPSIDOT2(IB,IKPT,ISPIN)=MPSIDOT2(IB,IKPT,ISPIN)+SVAR*VAL(IND)
              ENDDO
            ENDDO
          ENDDO
@@ -811,7 +811,7 @@ END MODULE DYNOCC_MODULE
        ELSE IF(ID_.EQ.'TEMP') THEN
          VAL=TEMP
        ELSE IF(ID_.EQ.'EFERMI') THEN
-         val=TOTPOT
+         VAL=TOTPOT
        ELSE
          CALL ERROR$MSG('ID NOT RECOGNIZED')
          CALL ERROR$CHVAL('ID_',ID_)
@@ -829,7 +829,7 @@ END MODULE DYNOCC_MODULE
        CHARACTER(*),INTENT(IN) :: ID
        INTEGER(4)  ,INTENT(IN) :: LEN
        REAL(8)     ,INTENT(OUT):: VAL(LEN)
-       integer(4)              :: ind,i,ib,ikpt,ispin
+       INTEGER(4)              :: IND,I,IB,IKPT,ISPIN
 !      *****************************************************************
 !
 !      =================================================================
@@ -844,13 +844,13 @@ END MODULE DYNOCC_MODULE
            CALL ERROR$STOP('DYNOCC$GETR8A')
          END IF
 !  VAL=RESHAPE(XK,(/3*NKPT/))
-         ind=0
-         do ikpt=1,nkpt
-           do i=1,3
-             ind=ind+1
-             val(ind)=xk(i,ikpt)
-           enddo
-         enddo
+         IND=0
+         DO IKPT=1,NKPT
+           DO I=1,3
+             IND=IND+1
+             VAL(IND)=XK(I,IKPT)
+           ENDDO
+         ENDDO
 !
 !      =================================================================
 !      ==  K-POINT GEOMETRIC INTEGRATION WEIGHTS                      ==
@@ -878,18 +878,18 @@ END MODULE DYNOCC_MODULE
          END IF
          CALL DYNOCC_WGHT()  ! RECALCULATES WEIGHTS WHEN NEEDED
 ! VAL=RESHAPE(WGHT,(/NB*NKPT*NSPIN/))
-         ind=0
-         do ispin=1,nspin
-           do ikpt=1,nkpt
-             do ib=1,nb
-               ind=ind+1
-               val(ind)=wght(ib,ikpt,ispin)
-             enddo
-           enddo
-         enddo
+         IND=0
+         DO ISPIN=1,NSPIN
+           DO IKPT=1,NKPT
+             DO IB=1,NB
+               IND=IND+1
+               VAL(IND)=WGHT(IB,IKPT,ISPIN)
+             ENDDO
+           ENDDO
+         ENDDO
 !
 !      =========================================================================
-!      ==  one-particle energies 'epsilon' (force on occupation)              ==
+!      ==  ONE-PARTICLE ENERGIES 'EPSILON' (FORCE ON OCCUPATION)              ==
 !      =========================================================================
        ELSE IF(ID.EQ.'EPSILON') THEN
          IF(LEN.NE.NB*NKPT*NSPIN) THEN
@@ -934,13 +934,13 @@ END MODULE DYNOCC_MODULE
       TYPE(SEPARATOR_TYPE),PARAMETER :: OLDSEPARATOR &
           =SEPARATOR_TYPE(3,'OCCUPATIONS','NONE','AUG1996',' ')
       INTEGER(4)                   :: NTASKS,THISTASK
-      integer(4)       ,parameter  :: formattype=1
+      INTEGER(4)       ,PARAMETER  :: FORMATTYPE=1
 !     **************************************************************************
-                          CALL TRACE$PUSH('dynocc$WRITE')
-      tchk=.false.
+                          CALL TRACE$PUSH('DYNOCC$WRITE')
+      TCHK=.FALSE.
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
-      IF(formattype.eq.1) THEN
+      IF(FORMATTYPE.EQ.1) THEN
         IF(THISTASK.EQ.1) THEN
           CALL RESTART$WRITESEPARATOR(MYSEPARATOR,NFIL,NFILO,TCHK)
           WRITE(NFIL)NB,NKPT,NSPIN
@@ -973,7 +973,7 @@ END MODULE DYNOCC_MODULE
         END IF
       ELSE
         CALL ERROR$MSG('INVALID VALUE OF FORMATTYPE')
-        CALL ERROR$stop('DYNOCC$WRITE')
+        CALL ERROR$STOP('DYNOCC$WRITE')
       END IF
                            CALL TRACE$POP
       RETURN
@@ -1001,7 +1001,7 @@ END MODULE DYNOCC_MODULE
       REAL(8)            ,ALLOCATABLE:: TMP0(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPM(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPE0(:,:,:)
-      REAL(8)            ,ALLOCATABLE:: TMPEm(:,:,:)
+      REAL(8)            ,ALLOCATABLE:: TMPEM(:,:,:)
       REAL(8)            ,ALLOCATABLE:: TMPE(:,:,:)
       INTEGER(4)                     :: NB1,NKPT1,NSPIN1
       INTEGER(4)                     :: NTASKS,THISTASK
@@ -1009,7 +1009,7 @@ END MODULE DYNOCC_MODULE
       REAL(8)                        :: SVAR,DSVAR
       LOGICAL(4)                     :: TOLD
       INTEGER(4)                     :: NFIL1
-      character(8)                   :: formattype
+      CHARACTER(8)                   :: FORMATTYPE
 !     **************************************************************************
                           CALL TRACE$PUSH('DYNOCC$READ')
       IF(STARTTYPE.EQ.' ') THEN
@@ -1022,7 +1022,7 @@ END MODULE DYNOCC_MODULE
       END IF
 !
 !     ==========================================================================
-!     == check if file is positioned at the correct position                  ==
+!     == CHECK IF FILE IS POSITIONED AT THE CORRECT POSITION                  ==
 !     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       SEPARATOR=MYSEPARATOR
@@ -1034,23 +1034,23 @@ END MODULE DYNOCC_MODULE
       TRESTARTFILEPRESENT=.TRUE.
 !
 !     ==========================================================================
-!     == identify version of the restart file                                 ==
+!     == IDENTIFY VERSION OF THE RESTART FILE                                 ==
 !     ==========================================================================
-      formattype=separator%version
-      if(formattype.EQ.'MAR2008') then
-      else if(formattype.EQ.'OCT2003') then
-      else if(formattype.EQ.'AUG1996') then
-      else 
-        CALL ERROR$MSG('could not identify VALUE OF FORMATTYPE')
-        CALL ERROR$STOP('DYNOCC$read')
-      end if
+      FORMATTYPE=SEPARATOR%VERSION
+      IF(FORMATTYPE.EQ.'MAR2008') THEN
+      ELSE IF(FORMATTYPE.EQ.'OCT2003') THEN
+      ELSE IF(FORMATTYPE.EQ.'AUG1996') THEN
+      ELSE 
+        CALL ERROR$MSG('COULD NOT IDENTIFY VALUE OF FORMATTYPE')
+        CALL ERROR$STOP('DYNOCC$READ')
+      END IF
 !
 !     ==========================================================================
-!     == catch inconsistencies                                                ==
+!     == CATCH INCONSISTENCIES                                                ==
 !     ==========================================================================
 !     == CHECK IF RESTART FILE FORMAT FROM AUGUST 1996 =================
       TOLD=(SEPARATOR%VERSION.EQ.'AUG1996')
-      IF ((STARTTYPE.EQ.'E').AND.(formattype.eq.'AUG1996')) THEN
+      IF ((STARTTYPE.EQ.'E').AND.(FORMATTYPE.EQ.'AUG1996')) THEN
         CALL FILEHANDLER$UNIT('PROT',NFIL1)
         WRITE(NFIL1,*)
         WRITE(NFIL1,'("**********************************************")')
@@ -1080,7 +1080,7 @@ END MODULE DYNOCC_MODULE
         ALLOCATE(TMPM(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPE(NB1,NKPT1,NSPIN1))
         ALLOCATE(TMPE0(NB1,NKPT1,NSPIN1))
-        ALLOCATE(TMPEm(NB1,NKPT1,NSPIN1))
+        ALLOCATE(TMPEM(NB1,NKPT1,NSPIN1))
         NB1=MIN(NB1,NB)
         NKPT1=MIN(NKPT1,NKPT)
         NSPIN1=MIN(NSPIN1,NSPIN)
@@ -1093,8 +1093,8 @@ END MODULE DYNOCC_MODULE
           X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
           XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
           EPS0(1:NB1,1:NKPT1,1:NSPIN1)=TMPE0(1:NB1,1:NKPT1,1:NSPIN1)
-          EPSm(1:NB1,1:NKPT1,1:NSPIN1)=TMPEm(1:NB1,1:NKPT1,1:NSPIN1)
-          epsp(:,:,:)=eps0(:,:,:)
+          EPSM(1:NB1,1:NKPT1,1:NSPIN1)=TMPEM(1:NB1,1:NKPT1,1:NSPIN1)
+          EPSP(:,:,:)=EPS0(:,:,:)
           EPSILON(1:NB1,1:NKPT1,1:NSPIN1)=TMPE(1:NB1,1:NKPT1,1:NSPIN1)
         ELSE IF(FORMATTYPE.EQ.'OCT2003') THEN
           READ(NFIL)TMP0(:,:,:)
@@ -1117,7 +1117,7 @@ END MODULE DYNOCC_MODULE
         END IF
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
-        DEALLOCATE(TMPEm)
+        DEALLOCATE(TMPEM)
         DEALLOCATE(TMPE0)
         DEALLOCATE(TMPE)
 !
@@ -1129,14 +1129,14 @@ END MODULE DYNOCC_MODULE
           XM(:,IKPT,:)=XM(:,1,:)
           EPSILON(:,IKPT,:)=EPSILON(:,1,:)
           EPS0(:,IKPT,:)=EPS0(:,1,:)
-          EPSm(:,IKPT,:)=EPSm(:,1,:)
+          EPSM(:,IKPT,:)=EPSM(:,1,:)
         ENDDO
         IF(NSPIN1.EQ.1.AND.NSPIN.EQ.2) THEN
           X0(:,:,2)=X0(:,:,1)
           XM(:,:,2)=XM(:,:,1)
           EPSILON(:,:,2)=EPSILON(:,:,1)
           EPS0(:,:,2)=EPS0(:,:,1)
-          EPSm(:,:,2)=EPSm(:,:,1)
+          EPSM(:,:,2)=EPSM(:,:,1)
         END IF
       END IF
 !
@@ -1147,7 +1147,7 @@ END MODULE DYNOCC_MODULE
       CALL MPE$BROADCAST('MONOMER',1,XM)
       CALL MPE$BROADCAST('MONOMER',1,EPSILON)
       CALL MPE$BROADCAST('MONOMER',1,EPS0)
-      CALL MPE$BROADCAST('MONOMER',1,EPSm)
+      CALL MPE$BROADCAST('MONOMER',1,EPSM)
 !
 !     ==================================================================
 !     == CONVERT ENERGIES INTO OCCUPATIONS                            ==
@@ -1477,21 +1477,21 @@ END MODULE DYNOCC_MODULE
        END
 !
 !      ..1.........2.........3.........4.........5.........6.........7.........8
-       SUBROUTINE DYNOCC_printepsilon(teps0,tepsilon1,twght)
+       SUBROUTINE DYNOCC_PRINTEPSILON(TEPS0,TEPSILON1,TWGHT)
 !      *************************************************************************
-!      ** routine is used as helper for testing                               **
-!      ** prints epsilon or wght                                              **
+!      ** ROUTINE IS USED AS HELPER FOR TESTING                               **
+!      ** PRINTS EPSILON OR WGHT                                              **
 !      **                                                                     **
 !      **                                                                     **
 !      *************************************************************************
        USE DYNOCC_MODULE
        IMPLICIT NONE
-       logical(4),intent(in):: teps0
-       logical(4),intent(in):: tepsilon1
-       logical(4),intent(in):: twght
-       real(8)              :: ev
-       integer(4)           :: ikpt,ispin
-       integer(4)           :: nfil=6
+       LOGICAL(4),INTENT(IN):: TEPS0
+       LOGICAL(4),INTENT(IN):: TEPSILON1
+       LOGICAL(4),INTENT(IN):: TWGHT
+       REAL(8)              :: EV
+       INTEGER(4)           :: IKPT,ISPIN
+       INTEGER(4)           :: NFIL=6
 !      *************************************************************************
        CALL CONSTANTS('EV',EV)
        DO ISPIN=1,NSPIN
@@ -1558,7 +1558,7 @@ END MODULE DYNOCC_MODULE
 !      =========================================================================
        IF(TADIABATIC) THEN
          IF(BZITYPE.EQ.'TETRA+') THEN
-!!$PRINT*,'ENERGIES WITH ALLOCATED EPS0=== min=',minval(eps0),' max=',maxval(eps0)
+!!$PRINT*,'ENERGIES WITH ALLOCATED EPS0=== MIN=',MINVAL(EPS0),' MAX=',MAXVAL(EPS0)
 !!$DO ISPIN=1,NSPIN
 !!$  DO IKPT=1,NKPT
 !!$    PRINT*,'-------------------------EPS0 ',IKPT,ISPIN,'-------------------------'
@@ -1571,7 +1571,7 @@ END MODULE DYNOCC_MODULE
 !!$DO ISPIN=1,NSPIN
 !!$  DO IKPT=1,NKPT
 !!$PRINT*,'-------------------------WGHT ',IKPT,ISPIN,'-------------------------'
-!!$WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)/wkpt(ikpt)
+!!$WRITE(*,FMT='(10F8.3)')WGHT(:,IKPT,ISPIN)/WKPT(IKPT)
 !!$  ENDDO
 !!$ENDDO
          ELSE IF(BZITYPE.EQ.'SAMP') THEN
@@ -1704,14 +1704,14 @@ END MODULE DYNOCC_MODULE
 !      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC$PROPAGATE()
 !      *************************************************************************
-!      ** propagate occupation variables                                      **
+!      ** PROPAGATE OCCUPATION VARIABLES                                      **
 !      **                                                                     **
-!      ** Two different modes of operation:                                   **
-!      ** 1)tadiabatic=true: uses epsm/0/p as variables and propagates        **
-!      **     using retardation                                               **
+!      ** TWO DIFFERENT MODES OF OPERATION:                                   **
+!      ** 1)TADIABATIC=TRUE: USES EPSM/0/P AS VARIABLES AND PROPAGATES        **
+!      **     USING RETARDATION                                               **
 !      **                                                                     **
-!      ** 2)tadiabatic=.false: uses xm/0/p as variables and propagates        **
-!      **     dynamically using mermin functional                             **
+!      ** 2)TADIABATIC=.FALSE: USES XM/0/P AS VARIABLES AND PROPAGATES        **
+!      **     DYNAMICALLY USING MERMIN FUNCTIONAL                             **
 !      **                                                                     **
 !      *************************************************************************
        USE DYNOCC_MODULE
@@ -1828,16 +1828,16 @@ END MODULE DYNOCC_MODULE
 !      ==  PROPAGATE ENERGIES FOR ADIABATIC CALCULATION                       ==
 !      =========================================================================
        EPSP=EPS0+(EPSILON-EPS0)/RETARD
-IF(MAXVAL(EPSP).GT.1.D+2.or.minval(epsp).lt.-1.d+2) THEN
-  CALL ERROR$msg('extreme values are indicative of error')
+IF(MAXVAL(EPSP).GT.1.D+2.OR.MINVAL(EPSP).LT.-1.D+2) THEN
+  CALL ERROR$MSG('EXTREME VALUES ARE INDICATIVE OF ERROR')
   CALL ERROR$R8VAL('RETARD',RETARD)
-  CALL ERROR$R8VAL('Min(MPSIDOT2)',minVAL(MPSIDOT2))
-  CALL ERROR$R8VAL('Max(MPSIDOT2)',maxVAL(MPSIDOT2))
-  CALL ERROR$R8VAL('Min(EPSILON)',minVAL(EPSILON))
-  CALL ERROR$R8VAL('max(EPSILON)',MAXVAL(EPSILON))
-  CALL ERROR$R8VAL('Min(EPS0)',minVAL(EPS0))
+  CALL ERROR$R8VAL('MIN(MPSIDOT2)',MINVAL(MPSIDOT2))
+  CALL ERROR$R8VAL('MAX(MPSIDOT2)',MAXVAL(MPSIDOT2))
+  CALL ERROR$R8VAL('MIN(EPSILON)',MINVAL(EPSILON))
+  CALL ERROR$R8VAL('MAX(EPSILON)',MAXVAL(EPSILON))
+  CALL ERROR$R8VAL('MIN(EPS0)',MINVAL(EPS0))
   CALL ERROR$R8VAL('MAX(EPS0)',MAXVAL(EPS0))
-  CALL ERROR$R8VAL('Min(EPSP)',MinVAL(EPSP))
+  CALL ERROR$R8VAL('MIN(EPSP)',MINVAL(EPSP))
   CALL ERROR$R8VAL('MAX(EPSP)',MAXVAL(EPSP))
   CALL ERROR$STOP('DYNOCC$PROPAGATE')
 END IF
@@ -2137,7 +2137,7 @@ END IF
        SUBROUTINE DYNOCC_TETRAINTERFACE(NSPIN,NKPT,NB,TFIXTOT,TFIXSPIN &
       &                ,FMAX,TOTCHA,SPINCHA,TOTPOT,SPINPOT,EPSILON,WGHT)
 !      *************************************************************************
-!      **  evaluates the integration weights from known energy eigenvalues    **
+!      **  EVALUATES THE INTEGRATION WEIGHTS FROM KNOWN ENERGY EIGENVALUES    **
 !      *************************************************************************
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NSPIN
@@ -2177,12 +2177,12 @@ END IF
            SPINPOT=0.D0
            DO ISPIN=1,NSPIN
              SIGMA=REAL(3-2*ISPIN,KIND=8)
-             WORK1(:nb,:)=EPSILON(:,:,ISPIN)
+             WORK1(:NB,:)=EPSILON(:,:,ISPIN)
              Q0=0.5D0*(TOTCHA+SIGMA*SPINCHA)
-             CALL BRILLOUIN$DOS(NB,NKPT,WORK1(1:nb,:),WORK2(:nb,:),Q0,V0)
+             CALL BRILLOUIN$DOS(NB,NKPT,WORK1(1:NB,:),WORK2(:NB,:),Q0,V0)
              TOTPOT=TOTPOT+0.5D0*V0
              SPINPOT=SPINPOT-0.5D0*SIGMA*V0
-             WGHT(:,:,ISPIN)=FMAX*WORK2(:nb,:)
+             WGHT(:,:,ISPIN)=FMAX*WORK2(:NB,:)
            ENDDO
 !
          ELSE IF(TFIXTOT.AND..NOT.TFIXSPIN) THEN
@@ -2425,7 +2425,7 @@ END IF
            ENDDO
          ENDDO
        ENDDO
-                                  CALL TRACE$Pop()
+                                  CALL TRACE$POP()
        RETURN
        END
 !PB031019END
@@ -2442,7 +2442,7 @@ END IF
 !     **                                                              **
 !     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
-      LOGICAL(4) ,PARAMETER  :: TPR=.false.
+      LOGICAL(4) ,PARAMETER  :: TPR=.FALSE.
       INTEGER(4) ,PARAMETER  :: ITERX=1000   ! MAX #(ITERATIONS)
       REAL(8)    ,PARAMETER  :: TOL=1.D-10    ! TOLERANCE IN #(ELECTRONS)
       INTEGER(4) ,INTENT(IN) :: NBANDS       ! #(BANDS)
@@ -2559,7 +2559,7 @@ END IF
      &               //'/"# ELECTRONS(OUT)=",F10.5)')TOTCHA,CHMPOT/EV,TOTCHA+DQ
         DO ISPIN=1,NSPIN
           DO IKPT=1,NKPT
-            WRITE(*,FMT='(5("(",F8.3,";",F4.2,")"))') &
+            WRITE(*,FMT='(5("(",F8.3,";",F5.2,")"))') &
      &         (EIG(IB,IKPT,ISPIN)/EV,F(IB,IKPT,ISPIN),IB=1,NBANDS)
           ENDDO
         ENDDO
@@ -2652,7 +2652,7 @@ END MODULE OCCUPATION_MODULE
             ENDDO
           ENDDO
           WRITE(NFIL,FMT='(" K",I4' &
-     &             //'," = (",F7.5," * G1, ",F7.5," * G2, ",F7.5,"* G3)"' &
+     &             //'," = (",F7.4," * G1, ",F7.4," * G2, ",F7.4,"* G3)"' &
      &             //'," = (", F8.5,", ",F8.5,",", F8.5,");")') &
      &             IKPT,(XK(I,IKPT),I=1,3) &
      &             ,(DWORK(I),I=1,3)

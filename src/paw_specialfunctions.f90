@@ -1048,7 +1048,7 @@
         Y = 1.D0
         DYDX=1.D0
       ELSE
-        FAC=1.D0
+        FAC=1
         DO I=1, 2*L+1, 2
           FAC = FAC*I
         END DO
@@ -1118,7 +1118,7 @@
         CALL ERROR$MSG('NOT DEFINED FOR ZERO OR NEGATIVE ARGUMENTS')
         CALL ERROR$STOP('SPFUNCTION$NEUMANN0')
       END IF
-      FAC=1.D0
+      FAC=1
       DO I=1,2*L-1,2
          FAC=FAC*I
       END DO

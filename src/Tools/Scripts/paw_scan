@@ -49,13 +49,14 @@ USAGE="$USAGE do_paw_scan options PREROOT\n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE -h print this help message \n"
 USAGE="$USAGE -? print this help message \n"
-USAGE="$USAGE -rule "name value1 value2 ..." replacement rule \n"
+USAGE="$USAGE -rule \"name value1 value2 ...\" replacement rule \n"
 USAGE="$USAGE -run run paw_simulation \n"
 USAGE="$USAGE -eels make EELS data \n"
 USAGE="$USAGE -dos make Density of States \n"
 USAGE="$USAGE -dosplot make xmgrace batch file for Density of States plots\n"
 USAGE="$USAGE -wrapup: make files with etot,homo,lumo,gap\n"
 USAGE="$USAGE -nproc n: submit with n processes in parallel\n"
+USAGE="$USAGE -host: limit execution to the specified host\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE PREROOT is the common part of the root name for all projects.\n"
 USAGE="$USAGE The root names of individual projects will be formed "
@@ -67,8 +68,8 @@ USAGE="$USAGE PREROOT may contain the relative or the full path."
 THISDIR=`pwd`
 DRYRUN=no
 #
-for X in $* ;do
-  case $X in
+while [ $1 ] ; do
+  case $1 in
     -h|?)
       echo -e $USAGE
       exit 1
@@ -108,7 +109,7 @@ for X in $* ;do
       ;;
     -host|-host*)
       SELECTEDHOST=${1#-host}
-      if [ -z  $SELECTEDHOST ] ; then
+      if [ -z $SELECTEDHOST ] ; then
         shift
         SELECTEDHOST=$1
       fi
@@ -265,8 +266,8 @@ for PAR1VAL in $PAR1VALS; do
       if [ ${NNODES} = 0 ] ; then
         echo submitting scalar job ${PROJECTDIR}/${NAME}
         if [ $DRYRUN = no ] ; then
-          waittillempty
-          ${PAWXDIR}/paw_fast.x Eels/${NAME}.cntl 1>out 2>&1 &
+          waittillempty 3
+          ${PAWXDIR}/paw_fast.x ${NAME}.cntl 1>out 2>&1 &
         fi
       else
         echo submitting parallel job ${PROJECTDIR}/${NAME}

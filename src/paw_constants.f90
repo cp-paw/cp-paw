@@ -57,7 +57,7 @@ MODULE CONSTANTS_MODULE
 !**          0.2*10**-6 NEWTON WHEN TWO INFINITESIMAL THIN,           **
 !**          1M LONG WIRES ARE PLACED IN A DISTACE OF 1 M             **
 !**                                                                   **
-!** 1 KELVIN IS 1/273.16 TIMES THE THERMODYNAMIC TEMERPEATURE         **
+!** 1 KELVIN IS 1/273.16 TIMES THE THERMODYNAMIC TEMPERATURE          **
 !**          OF THE TRIPLE POINT OF WATER                             **
 !**                                                                   **
 !** 1 MOLE   IS THE NUMBER OF C^12 ATOMS IN 12G                       **

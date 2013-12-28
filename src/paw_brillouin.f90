@@ -82,12 +82,15 @@ TYPE THIS_TYPE
   INTEGER(4)    ,POINTER :: MULT(:)   !(NTET) MULTIPLICITY OF THE TETRAHEDRON
   INTEGER(4)    ,POINTER :: IRRKP(:)  !(NMSHP) POINTER TO IRR. K-POINT
 END TYPE THIS_TYPE
-TYPE(THIS_TYPE) :: THIS
+!
+! THE EWGHT STRUCTURE KEEPS DATA ON THE RELEVANT PROTION OF THE ENERGY GRID.
+! THE FIRST AND LAST GRID POINTS ARE SPECIFIED BY I1 AND I2.
 TYPE EWGHT_TYPE
   INTEGER(4)             :: I1
   INTEGER(4)             :: I2
-  REAL(8),pointer        :: WGHT(:)
+  REAL(8),POINTER        :: WGHT(:)
 END TYPE EWGHT_TYPE
+TYPE(THIS_TYPE) :: THIS
 END MODULE BRILLOUIN_MODULE
 !
 !-------------------------------------------------------------------------------
@@ -253,22 +256,60 @@ END MODULE BRILLOUIN_MODULE
       ENDDO
       RETURN
       END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE BRILLOUIN_OPTIMIZE(NKP_,EKP_,WGHT_)
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: NKP_
-!!$      REAL(8)    :: EKP_(NKP_)
-!!$      REAL(8)    :: WGHT_(NKP_)
-!!$!     **************************************************************************
-!!$      CALL ERROR$MSG('BRILLOUIN_OPTIMIZE IS NOT YET TO BE USED')
-!!$      CALL ERROR$STOP('BRILLOUIN_OPTIMIZE')
-!!$
-!!$      RETURN
-!!$      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN_TESTCOMPLETE()
+!     **************************************************************************
+!     ** TESTROUTINE FOR THE ROUTINE BRILLOUIN_COMPLETE                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: NOPX=48
+      INTEGER(4)           :: NOP
+      INTEGER(4)           :: OP(3,3,NOPX)
+      INTEGER(4),DIMENSION(3,3) :: C2Z,C2X,C2A,C31P,INV
+      INTEGER(4)           :: I
+!     **************************************************************************
+!     == LIST OF GENERATORS ====================================================
+!     == GROUP 228 ==GAMMA^F_C==================================================
+      C2Z(:,1)=(/0,1,0/)   ; C2Z(:,2)=(/1,0,0/)  ; C2Z(:,3)=(/-1,-1,-1/) 
+      C2X(:,1)=(/-1,-1,-1/); C2X(:,2)=(/0,0,1/)  ; C2X(:,3)=(/0,1,0/)
+      C2A(:,1)=(/-1,0,0/)  ; C2A(:,2)=(/0,-1,0/) ; C2A(:,3)=(/1,1,1/)
+      C31P(:,1)=(/0,1,0/)  ; C31P(:,2)=(/0,0,1/) ; C31P(:,3)=(/1,0,0/)
+      INV(:,1)=(/-1,0,0/)  ; INV(:,2)=(/0,-1,0/) ; INV(:,3)=(/0,0,-1/)
+!
+!     ==========================================================================
+!     == PUT GENERATORS ONTO INPUT ARRAY                                      ==
+!     ==========================================================================
+      NOP=5
+      OP(:,:,1)=C2Z
+      OP(:,:,2)=C2X
+      OP(:,:,3)=C2A
+      OP(:,:,4)=C31P
+      OP(:,:,5)=INV
+      WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
+      DO I=1,NOP
+        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  RUN BRILLOUIN_COMPLETE
+!     ==========================================================================
+      CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
+!
+!     ==========================================================================
+!     ==  RUN BRILLOUIN_COMPLETE
+!     ==========================================================================
+      WRITE(*,FMT='(82("="),T10," FULL POINT GROUP ")')
+      DO I=1,NOP
+        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$SETR8A(ID,LENG,VAL)
+!     **************************************************************************
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -292,6 +333,8 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$GETR8A(ID,LENG,VAL)
+!     **************************************************************************
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -300,7 +343,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)              :: I
       REAL(8)                 :: GBAS(3,3)
       REAL(8)                 :: SVAR
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'K') THEN
         IF(3*THIS%NKP.NE.LENG) THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
@@ -326,8 +369,8 @@ END MODULE BRILLOUIN_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BRILLOUIN$GETR8A')
         END IF
-!       == CALCULATES WEIGHTS FOR A COMPLETELY FILLED BAND.            ==
-!       == ATTENTION DEPENDS ON ACTUAL RBAS                            ==
+!       == CALCULATES WEIGHTS FOR A COMPLETELY FILLED BAND. ====================
+!       == ATTENTION DEPENDS ON ACTUAL RBAS ====================================
         CALL BRILLOUIN_SAMFAC(1,THIS%NKP,(/(0.D0,I=1,THIS%NKP)/),1.D0,VAL,THIS)
         IF(ABS(SUM(VAL)-1.D0).GT.1.D-9) THEN
           CALL ERROR$MSG('K-POINT WEIGHTS DO NOT SUM UP TO ONE')
@@ -345,6 +388,8 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$GETI4(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -362,6 +407,8 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$GETI4A(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
       USE BRILLOUIN_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -534,7 +581,7 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
       END IF                                                            
 !     ==========================================================================
-!     ==  PRINTOUT OF MAPPING TO IRREDUCIBLE K-POINTS                         == 
+!     ==  PRINTOUT OF MAPPING TO IRREDUCIBLE K-POINTS                         ==
 !     ==========================================================================
       IF(IWNUM.EQ.1.AND.N(3)+1.LE.25) THEN                              
         DO I=0,N(1)                                                  
@@ -566,7 +613,7 @@ END MODULE BRILLOUIN_MODULE
 !     ==========================================================================
       CALL BRILLOUIN_TETDIV(N,GBAS,TET0)                                      
       IF(TPR) THEN                                                 
-        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')1,2,3                      
+        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')1,2,3
         WRITE(*,FMT='(4I5,5X,4I5,5X,4I5)') &
      &         (((TET0(J,K,I),K=1,4),I=1,3),J=1,3)    
         WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')4,5,6
@@ -608,7 +655,7 @@ END MODULE BRILLOUIN_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TINV       ! FLAG FOR TIME INVERSION SYMMETRY
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)  ! LATTICE VECTORS (REAL SPACE)
-      INTEGER(4),INTENT(IN) :: NKDIV(3)   ! DIVISIONS OF RECIPROCAL LATTICE VECTORS
+      INTEGER(4),INTENT(IN) :: NKDIV(3)   ! DIVISIONS OF RECIPR. LATTICE VECTORS
       INTEGER(4),INTENT(IN) :: ISHIFT(3)  ! GRID IS SHIFTED 
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       REAL(8)   ,ALLOCATABLE:: XK(:,:)   !(3,NGKP) K-POINTS
@@ -626,7 +673,7 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)               :: DUMMY
       INTEGER(4)            :: IIO(3,3,2)
       INTEGER(4)            :: NSYM  !#(SYMMETRY OPERATIONS) 1 OR 2
-!     ******************************************************************
+!     **************************************************************************
                                    CALL TRACE$PUSH('BRILLOUIN$MSHNOSYM')
       THIS%RBAS=RBAS
 !
@@ -644,14 +691,14 @@ END MODULE BRILLOUIN_MODULE
       NGKP=NKDIV(1)*NKDIV(2)*NKDIV(3)
       THIS%ISHIFT(:)=ISHIFT(:)
       THIS%NKDIV(:)=NKDIV(:)
-!     ------------------------------------------------------------------
-!     -- DEFINE MESH                                                  --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     == DEFINE MESH                                                          ==
+!     ==========================================================================
       NMSHP=(NKDIV(1)+1)*(NKDIV(2)+1)*(NKDIV(3)+1)
       CALL GBASS(RBAS,GBAS,DUMMY)                                             
-!     ------------------------------------------------------------------
-!     -- FIND IRREDUCIBLE K-POINTS                                    --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     == FIND IRREDUCIBLE K-POINTS                                            ==
+!     ==========================================================================
       ALLOCATE(NUM(NMSHP))
       CALL BRILLOUIN_REDUZ(NKDIV,NMSHP,ISHIFT,NSYM,IIO,NUM)
 !     == INV=1 EXPLOITS TIME INVERSION SYMMETRY FOR UNSHIFTED GRIDS  ==
@@ -659,9 +706,9 @@ END MODULE BRILLOUIN_MODULE
       IF(ISHIFT(1).NE.0.OR.ISHIFT(2).NE.0.OR.ISHIFT(3).NE.0)INV=0   
       IF(.NOT.TINV) INV=0
 !
-!     ==================================================================
-!     ==  DETERMINE IRREDUCIBLE K-POINTS                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DETERMINE IRREDUCIBLE K-POINTS                                      ==
+!     ==========================================================================
       ALLOCATE(XK(3,NGKP))
       CALL BRILLOUIN_ZUORD(NMSHP,NUM,NKDIV,ISHIFT,NGKP,NKP,XK)            
       THIS%NKP=NKP
@@ -673,36 +720,36 @@ END MODULE BRILLOUIN_MODULE
 !     == CONSTRUCT MAPPING ONTO IRREDUCIBLE K-POINTS                          ==
 !     ==========================================================================
 !     __ THE GENERAL POSITION IS ENCODED ACCORDING TO __________________________
-!     __IND=1+IP(3)+(THIS%NKDIV(3)+1)*(IP(2)+(THIS%NKDIV(2)+1)*IP(1))___________  
+!     __IND=1+IP(3)+(THIS%NKDIV(3)+1)*(IP(2)+(THIS%NKDIV(2)+1)*IP(1))___________
 !     __ THIS MAPPING ALSO INCLUDES ALL BOUNDARIES OF THE UNIT CELL! ___________
       ALLOCATE(THIS%IRRKP(NMSHP))
       THIS%IRRKP(:)=NUM(:)
 !
-!     ------------------------------------------------------------------
-!     -- PRINTOUT OF SYMMETRY OPERATIONS                              --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     == PRINTOUT OF SYMMETRY OPERATIONS                                      ==
+!     ==========================================================================
       IF(TPR) THEN
         DO ISYM=1,NSYM                                             
           WRITE(*,FMT='("SYMMETRYMATRIX NR. : ",I5/3(" ",3I10/))') &
      &            ISYM,((IIO(I,J,ISYM),J=1,3),I=1,3)                 
         ENDDO
       END IF                                                            
-!     ----------------------------------------------------------------- 
-!     --  PRINTOUT OF MAPPING TO IRREDUCIBLE K-POINTS                -- 
-!     ----------------------------------------------------------------- 
+!     ==========================================================================
+!     ==  PRINTOUT OF MAPPING TO IRREDUCIBLE K-POINTS                         ==
+!     ==========================================================================
       IF(IWNUM.EQ.1.AND.NKDIV(3)+1.LE.25) THEN                              
         DO I=0,NKDIV(1)                                                  
           DO J=NKDIV(2),0,-1                                               
-            INDEX1=I*(NKDIV(2)+1)*(NKDIV(3)+1)+J*(NKDIV(3)+1)+1                         
+            INDEX1=I*(NKDIV(2)+1)*(NKDIV(3)+1)+J*(NKDIV(3)+1)+1
             INDEX2=INDEX1+NKDIV(3)                                              
             WRITE(*,FMT='(25I5)')(NUM(K),K=INDEX1,INDEX2)                      
           ENDDO
           WRITE(*,FMT='(/)')
         ENDDO
       END IF      
-!     ----------------------------------------------------------------- 
+!     ==========================================================================
 !     --  PRINT IREDUCIBLE K-POINTS                                  -- 
-!     ----------------------------------------------------------------- 
+!     ==========================================================================
       WRITE(*,FMT='("NO. OF INEQUIVALENT K-POINTS ",I5)')NKP
       IF(IWBK.NE.0) THEN                                                
         WRITE(*,FMT='("INEQUIVALENT BLOCH VECTORS")')                       
@@ -715,21 +762,23 @@ END MODULE BRILLOUIN_MODULE
      &          (K,(XK(J,K),J=1,3),K=NDI1,NDI2)                    
         ENDDO
       END IF                                                            
-!     ----------------------------------------------------------------- 
-!     --  CHOOSE TETRAHEDRA                                          -- 
-!     ----------------------------------------------------------------- 
-      CALL BRILLOUIN_TETDIV(NKDIV,GBAS,TET0)                                      
+!
+!     ==========================================================================
+!     ==  CHOOSE TETRAHEDRA                                                   ==
+!     ==========================================================================
+      CALL BRILLOUIN_TETDIV(NKDIV,GBAS,TET0)
       IF(TPR) THEN                                                 
-        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')1,2,3                      
+        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')1,2,3
         WRITE(*,FMT='(4I5,5X,4I5,5X,4I5)') &
      &         (((TET0(J,K,I),K=1,4),I=1,3),J=1,3)    
         WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')4,5,6
         WRITE(*,FMT='(4I5,5X,4I5,5X,4I5)') &
      &         (((TET0(J,K,I),K=1,4),I=4,6),J=1,3)    
       END IF                                                            
-!     ----------------------------------------------------------------- 
-!     --  FIND INEQUIVALENT TETRAHEDRA                               -- 
-!     ----------------------------------------------------------------- 
+!
+!     ==========================================================================
+!     ==  FIND INEQUIVALENT TETRAHEDRA                                        ==
+!     ==========================================================================
       CALL BRILLOUIN_TETCNT(NMSHP,NUM,TET0,NKDIV,INV,THIS)
       DEALLOCATE(NUM)
                                    CALL TRACE$POP
@@ -737,27 +786,27 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_BASDIV(N,NMSHP,GBAS,IARB)                              
-!     **                                                              **
-!     **  BASDIV DETERMINES DIVISION OF BASEVECTORS OF REC. LATT.     **
-!     **  SO THAT THE NUMBER OF MESHPOINTS IS JUST BELOW NMSHP AND    **
-!     **  TAKES INTO ACCOUNT THE DEPENDENCY BY POINTSYMMETRY          **
-!     **  INPUT :                                                     **
-!     **    GBAS        RECIPROCAL LATTICE VECTORS                    **
-!     **    IARB        DEPENDENCIES FOR DIVISIONS                    **
-!     **                OF RECIPROCAL LATTICE VECTORS                 **
-!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE       **
-!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;     **
-!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;     **
-!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)     **
-!     **    NMSHP       TOTAL NUMBER OF GRID POINTS                   **
-!     **  OUTPUT:                                                     **
-!     **    N           NUMBER OF DIVISIONS OF RECIPROCAL LATTICE     **
-!     **                VECTORS FOR DEFINITION OF SUBLATTICE          **
-!     **    NMSHP       NUMBER OF SUBLATTICE POINTS IN A REC. UNIT CELL*
-!     **                AND ON ALL ITS FACES                          **
-!     **                                                              **
-!     ******************************************************************
+      SUBROUTINE BRILLOUIN_BASDIV(N,NMSHP,GBAS,IARB)
+!     **************************************************************************
+!     **  BASDIV DETERMINES DIVISION OF BASEVECTORS OF REC. LATT.             **
+!     **  SO THAT THE NUMBER OF MESHPOINTS IS JUST BELOW NMSHP AND            **
+!     **  TAKES INTO ACCOUNT THE DEPENDENCY BY POINTSYMMETRY                  **
+!     **  INPUT :                                                             **
+!     **    GBAS        RECIPROCAL LATTICE VECTORS                            **
+!     **    IARB        DEPENDENCIES FOR DIVISIONS                            **
+!     **                OF RECIPROCAL LATTICE VECTORS                         **
+!     **                ( IF IARB(1)=1 THEN 1ST AND 2ND LATTICE               **
+!     **                  VECTORS ARE DIVIDED BY AN EQUAL NUMBER;             **
+!     **                  IF IARB(2)=1 THEN SAME FOR 2ND AND 3RD;             **
+!     **                  IF IARB(3)=1 THEN SAME FOR 3RD AND 1ST)             **
+!     **    NMSHP       TOTAL NUMBER OF GRID POINTS                           **
+!     **  OUTPUT:                                                             **
+!     **    N           NUMBER OF DIVISIONS OF RECIPROCAL LATTICE             **
+!     **                VECTORS FOR DEFINITION OF SUBLATTICE                  **
+!     **    NMSHP       NUMBER OF SUBLATTICE POINTS IN A REC. UNIT CEL        L*
+!     **                AND ON ALL ITS FACES                                  **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT)   :: N(3)
       INTEGER(4),INTENT(INOUT) :: NMSHP
@@ -768,10 +817,10 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)   ,PARAMETER     :: OPAR=1.D-6
       INTEGER(4)               :: I
       REAL(8)                  :: SVAR
-!     ******************************************************************
-!     ==================================================================
-!     == FIND UPPER LIMIT FOR THE LENGTH OF SUBLATTICE VECTORS        ==
-!     ==================================================================
+!     **************************************************************************
+!     ==========================================================================
+!     == FIND UPPER LIMIT FOR THE LENGTH OF SUBLATTICE VECTORS                ==
+!     ==========================================================================
       DO I=1,3                                                       
         BETR(I)=SQRT(GBAS(I,1)**2+GBAS(I,2)**2+GBAS(I,3)**2)             
       ENDDO
@@ -779,9 +828,10 @@ END MODULE BRILLOUIN_MODULE
       DO I=1,3                                                       
         RN(I)=BETR(I)*SVAR                                                
       ENDDO
-!     ==================================================================
-!     == FIND DIVISIONS OF LATTICE VECTORS                            ==
-!     ==================================================================
+!
+!     ==========================================================================
+!     == FIND DIVISIONS OF LATTICE VECTORS                                    ==
+!     ==========================================================================
       IF(IARB(1).EQ.1.AND.IARB(2).EQ.1)THEN                             
         N(1)=INT((RN(1)*RN(2)*RN(3))**(1.D0/3.D0)+OPAR)                 
         N(2)=N(1)                                                       
@@ -806,16 +856,16 @@ END MODULE BRILLOUIN_MODULE
       N(1)=MAX(1,N(1))                                                 
       N(2)=MAX(1,N(2))                                                 
       N(3)=MAX(1,N(3))                                                 
-!     ==================================================================
-!     == USE THIS TO FIX THE K-MESH PY HAND                           ==
-!     ==================================================================
+!     ==========================================================================
+!     == USE THIS TO FIX THE K-MESH PY HAND                                   ==
+!     ==========================================================================
 !     PRINT*,' K-MESH PUT IN BY HAND!!!!!!!!!!'                         
 !     N(1)=12                                                           
 !     N(2)=12                                                           
 !     N(3)=2                                                            
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       NMSHP=(N(1)+1)*(N(2)+1)*(N(3)+1)                                  
       WRITE(*,FMT='("NO. OF MESH POINTS IN THE BRILLOUIN ZONE =",I6)') &
      &            N(1)*N(2)*N(3)      
@@ -843,9 +893,9 @@ END MODULE BRILLOUIN_MODULE
 !     **   (X,Y,Z)=RBAS*(I,J,K)                                               **
 !     **   (I,J,K)  <->  NUM = I*(N(2)+1)*(N(3)+1)+J*(N(3)+1)+K+1             **
 !     **                                                                      **
-!     **  remark: a change from 5b51787 to b86ae50 resulted in a change of the**
-!     **    order of irreducible k-points, which rendered previous restart    **
-!     **    files unreadable                                                  **
+!     **  REMARK: A CHANGE FROM 5B51787 TO B86AE50 RESULTED IN A CHANGE OF THE**
+!     **    ORDER OF IRREDUCIBLE K-POINTS, WHICH RENDERED PREVIOUS RESTART    **
+!     **    FILES UNREADABLE                                                  **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -856,8 +906,8 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4),INTENT(IN) :: IO(3,3,NSYM)
       INTEGER(4),INTENT(OUT):: NUM(NMSHP)
       LOGICAL(4),PARAMETER  :: TSHIFT=.TRUE.
-      integer(4)            :: isym(nmshp)  ! symmetry from irr. p. or zero
-      INTEGER(4)            :: I,J,jprime
+      INTEGER(4)            :: ISYM(NMSHP)  ! SYMMETRY FROM IRR. P. OR ZERO
+      INTEGER(4)            :: I,J,JPRIME
       INTEGER(4)            :: I1,I2,I3,J1,J2,J3
       INTEGER(4)            :: IX1,IX2,IX3,IND,IND1
       LOGICAL(4)            :: TCHK
@@ -890,7 +940,7 @@ END MODULE BRILLOUIN_MODULE
         I1=IND-I2*N(1)
 !       == ENCODE POSITION AND CHECK IF POINT IS ALREADY REDUCIBLE ============
         J=1+I3+(N(3)+1)*(I2+(N(2)+1)*I1)  ! ENCODES POSITION
-        IF(NUM(J).ne.0) CYCLE  ! NO IRREDUCIBLE POINT
+        IF(NUM(J).NE.0) CYCLE  ! NO IRREDUCIBLE POINT
 !
 !       == PLACE ON A GRID THAT IS TWICE AS FINE TO ACCOUNT FOR THE SHIFT=======
         I1=2*I1+ISHIFT(1)                                            
@@ -961,16 +1011,16 @@ END MODULE BRILLOUIN_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
+!     ==========================================================================
 !     == THE FOLLOWING IS NEEDED BECAUSE THE OPERATIONS MAY NOT COMMUTE?
 !     == A STAR IS CHARACTERIZED BY HAVING THE SAME VALUE OF NUM(I)    
-!     ==================================================================
+!     ==========================================================================
       DO I=1,NMSHP
         IF(NUM(I).NE.NUM(NUM(I))) THEN
           CALL ERROR$MSG('MAPPING FAILED')
           CALL ERROR$I4VAL('I',I)
           CALL ERROR$I4VAL('NUM(I)',NUM(I))
-          CALL ERROR$I4VAL('NUM(num(I))',NUM(num(I)))
+          CALL ERROR$I4VAL('NUM(NUM(I))',NUM(NUM(I)))
           CALL ERROR$STOP('BRILLOUIN_REDUZ')
         END IF
       ENDDO
@@ -1004,7 +1054,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)            :: IN(3,8)      
       INTEGER(4)            :: I,J,K,L
       INTEGER(4)            :: I1,I2,I3,J1,J2,J3
-!     ******************************************************************
+!     **************************************************************************
 !
 !     ==================================================================
 !     ==  TEST IF SUBMESH SHIFT IS COMPATIBLE WITH THE POINT GROUP    ==
@@ -1024,7 +1074,7 @@ END MODULE BRILLOUIN_MODULE
           J3=IO(3,1,I)*I1+IO(3,2,I)*I2+IO(3,3,I)*I3                         
           IF(MOD(REAL(J1-ISHIFT(1),KIND=8),2.D0).NE.0.D0.OR. &
      &       MOD(REAL(J2-ISHIFT(2),KIND=8),2.D0).NE.0.D0.OR. &
-     &       MOD(REAL(J3-ISHIFT(3),KIND=8),2.D0).NE.0.D0) THEN                    
+     &       MOD(REAL(J3-ISHIFT(3),KIND=8),2.D0).NE.0.D0) THEN
              TCHK=.FALSE.
              PRINT*,'SUBMESH SHIFT CONFLICTS WITH POINTGROUP'                
              WRITE(6,FMT="('SHIFT=',3I5)")ISHIFT
@@ -1101,13 +1151,16 @@ END MODULE BRILLOUIN_MODULE
             IF(I.EQ.NUM(I))THEN                                               
               NDIM=NDIM+1                                                     
               IF(NDIM.GT.IDKP) THEN                                           
-                CALL ERROR$MSG('NUMBER OF INEQUIVALENT POINTS ECCEEDS IDKP')      
+                CALL ERROR$MSG('NUMBER OF INEQUIVALENT POINTS ECCEEDS IDKP')
                 CALL ERROR$STOP('BRILLOUIN_ZUORD')
               END IF                                                          
               MAP(I)=NDIM    
-              XK(1,NDIM)=(REAL(I1-1,KIND=8)+REAL(ISHIFT(1),KIND=8)/2.D0)/REAL(N(1),KIND=8)              
-              XK(2,NDIM)=(REAL(I2-1,KIND=8)+REAL(ISHIFT(2),KIND=8)/2.D0)/REAL(N(2),KIND=8)              
-              XK(3,NDIM)=(REAL(I3-1,KIND=8)+REAL(ISHIFT(3),KIND=8)/2.D0)/REAL(N(3),KIND=8)              
+              XK(1,NDIM)=(REAL(I1-1,KIND=8)+REAL(ISHIFT(1),KIND=8)/2.D0) &
+     &                                     /REAL(N(1),KIND=8)              
+              XK(2,NDIM)=(REAL(I2-1,KIND=8)+REAL(ISHIFT(2),KIND=8)/2.D0) &
+     &                                     /REAL(N(2),KIND=8)              
+              XK(3,NDIM)=(REAL(I3-1,KIND=8)+REAL(ISHIFT(3),KIND=8)/2.D0) &
+     &                                     /REAL(N(3),KIND=8)              
             END IF
           ENDDO
         ENDDO
@@ -1125,12 +1178,11 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_TETDIV(N,GBAS,TET0)                                    
-!     ******************************************************************
-!     **                                                             ** 
-!     **  TETDIV DETERMINES THE DIVISION OF THE PARALLELEPIPEDS      ** 
-!     **  IN TETRAHEDRONS ACCORDING TO THE SHORTEST DIAGONAL         ** 
-!     **                                                             ** 
+      SUBROUTINE BRILLOUIN_TETDIV(N,GBAS,TET0)
+!     **************************************************************************
+!     **  TETDIV DETERMINES THE DIVISION OF THE PARALLELEPIPEDS               **
+!     **  IN TETRAHEDRONS ACCORDING TO THE SHORTEST DIAGONAL                  **
+!     **                                                                      **
 !     **  INPUT:                                                      **
 !     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS   **
 !     **    GBAS        RECIPROCAL LATTICE VECTORS                    **
@@ -1139,7 +1191,7 @@ END MODULE BRILLOUIN_MODULE
 !     **                VECTORS, OF THE 4 CORNERS (J) OF A           ** 
 !     **                TETRAHEDRON (K) IN A SUBLATTICE UNIT CELL    ** 
 !     **                                                             ** 
-!     ******************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N(3)
       REAL(8)   ,INTENT(IN) :: GBAS(3,3)
@@ -1151,7 +1203,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)            :: I,J,K,L
       INTEGER(4)            :: MNDG
       INTEGER(4)            :: ISVAR
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('BRILLOUIN_TETDIV')
 !     ------------------------------------------------------------------
 !     -- SEARCH FOR THE SHORTEST DIAGONAL                             --
@@ -1293,8 +1345,8 @@ END MODULE BRILLOUIN_MODULE
               DO J=1,4    ! SUM OVER TETRAHEDRON EDGES
                 IXX=TET0(1,J,I)*(N(2)+1)*(N(3)+1)  &
      &             +TET0(2,J,I)*(N(3)+1) &
-     &             +TET0(3,J,I)                                                   
-                ITET(J,IND)=IP+IXX                                                
+     &             +TET0(3,J,I)
+                ITET(J,IND)=IP+IXX
               ENDDO
             ENDDO
           ENDDO
@@ -1310,10 +1362,10 @@ END MODULE BRILLOUIN_MODULE
           DO K=1,3                                                       
             DO J=K+1,4                                                     
               DO L=1,N(3)*6                                                  
-                ISVAR1=ITET(K,L)                                                  
-                ISVAR2=ITET(J,L)                                                  
-                ITET(K,L)=MIN(ISVAR1,ISVAR2)                                     
-                ITET(J,L)=MAX(ISVAR1,ISVAR2)                                     
+                ISVAR1=ITET(K,L)
+                ISVAR2=ITET(J,L)
+                ITET(K,L)=MIN(ISVAR1,ISVAR2)
+                ITET(J,L)=MAX(ISVAR1,ISVAR2)
               ENDDO
             ENDDO
           ENDDO
@@ -1506,8 +1558,8 @@ END MODULE BRILLOUIN_MODULE
             ENDDO
             DO I=I1C,I2C-1
               DO J=I+1,I2C
-                ISVAR1=IX(4,I)                                                    
-                ISVAR2=IX(4,J)                                                    
+                ISVAR1=IX(4,I)
+                ISVAR2=IX(4,J)
                 IF(ISVAR2.LT.ISVAR1) THEN
                   IX1(:)=IX(:,I)
                   IX(:,I)=IX(:,J)
@@ -1537,25 +1589,28 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$DOS(NB,NKP,EB,WGHT,RNTOT,EF)
-!     **                                                              **
-!     **  CALCULATES THE SAMPLING WEIGHTS FROM TETRAHEDRON INTEGRATION**
-!     **                                                              **
-!     **  INPUT :                                                     **
-!     **    NB          NUMBER OF BANDS                               **
-!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                **
-!     **    EB          ENERGIES ( DETERMINE FERMI SURFACE )          **
-!     **    RNTOT       NUMBER OF OCCUPIED STATES                     **
-!     **  OUTPUT :                                                    **
-!     **    WGHT        SAMPLING WEIGHTS                              **
-!     **    EF          FERMI LEVEL                                   **
-!     **                                                              **
-!     **  AUTHOR : PETER E. BLOECHL                                   **
-!     **                                                              **
-!     **  SUBROUTINES USED:                                           **
-!     **  EFERMI,SAMFAC,TOTNOS,EFI,WEIGHT                             **
-!     **                                                              **
-!     ******************************************************************
-      USE BRILLOUIN_MODULE
+!     **************************************************************************
+!     **  CALCULATES THE SAMPLING WEIGHTS FROM TETRAHEDRON INTEGRATION        **
+!     **                                                                      **
+!     **  INPUT :                                                             **
+!     **    NB          NUMBER OF BANDS                                       **
+!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                        **
+!     **    EB          ENERGIES ( DETERMINE FERMI SURFACE )                  **
+!     **    RNTOT       NUMBER OF OCCUPIED STATES                             **
+!     **  OUTPUT :                                                            **
+!     **    WGHT        SAMPLING WEIGHTS                                      **
+!     **    EF          FERMI LEVEL                                           **
+!     **                                                                      **
+!     **  USES THE TETRAHEDRON INFORMATION ON THE BRILLOUIN_MODULE            **
+!     **  PRODUCED BY BRILLOUIN$MSG OR BRILLOUIN$MSHNOSYM                     **
+!     **                                                                      **
+!     **  AUTHOR : PETER E. BLOECHL                                           **
+!     **                                                                      **
+!     **  SUBROUTINES USED:                                                   **
+!     **  EFERMI,SAMFAC,TOTNOS,EFI,WEIGHT                                     **
+!     **                                                                      **
+!     **************************************************************************
+      USE BRILLOUIN_MODULE, ONLY : THIS
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NB          ! #(BANDS)
       INTEGER(4),INTENT(IN) :: NKP         ! #(IRREDUCIBLE K-POINTS)
@@ -1565,23 +1620,24 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)   ,INTENT(OUT):: EF          ! FERMI LEVEL
       REAL(8)   ,PARAMETER  :: TOLMAX=1.D-5
       LOGICAL(4)            :: TCHECK=.TRUE.      
-!     ******************************************************************
+!     **************************************************************************
                        CALL TRACE$PUSH('BRILLOUIN$DOS')
 !
-!     ------------------------------------------------------------------
+!     ==========================================================================
 !     --  CALCULATE FERMI LEVEL                                       --
-!     ------------------------------------------------------------------
+!     ==========================================================================
       CALL BRILLOUIN_EFERMI(RNTOT,EF,TOLMAX,NB,NKP,EB,THIS)
-                                                                        
       PRINT*,'FERMI ENERGY AT ',EF                                      
-!     ------------------------------------------------------------------
-!     --  CALCULATE WEIGHTS                                           --
-!     ------------------------------------------------------------------
+!
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
       CALL BRILLOUIN_SAMFAC(NB,NKP,EB,EF,WGHT,THIS)
-                                                                        
-!     ------------------------------------------------------------------
+!      CALL BRILLOUIN$WGHT(NKP,NB,EF,EB,WGHT)  ! NEW VERSION. NEEDS TO BE TESTED
+!                                                                       
+!     ==========================================================================
 !     --  CHECK WHETHER SUMRULE IS FULLFILLED                         --
-!     ------------------------------------------------------------------
+!     ==========================================================================
       IF(TCHECK) THEN 
         IF(ABS(SUM(WGHT)-RNTOT).GT.TOLMAX) THEN                                
           CALL ERROR$MSG('INTEGRATION FAILED')
@@ -1626,9 +1682,9 @@ END MODULE BRILLOUIN_MODULE
 !     **************************************************************************
                        CALL TRACE$PUSH('BRILLOUIN$WDOS')
 !
-!     ------------------------------------------------------------------
-!     --  CALCULATE WEIGHTS                                           --
-!     ------------------------------------------------------------------
+!     ==========================================================================
+!     ==  CALCULATE WEIGHTS                                                   ==
+!     ==========================================================================
       CALL BRILLOUIN_SAMDOS(NB,NKP,EB,EF,WGHT,THIS)
                                CALL TRACE$POP()
       RETURN                                                            
@@ -1636,20 +1692,20 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_EFERMI(RNTOT,EF,TOLMAX,NB,NKP,EB,THIS)
-!     **                                                              **
-!     **  CALCUALTES THE FERMILEVEL BY INTEGRATION OF THE TOTAL       **
-!     **  DENSITY OF STATES                                           **
-!     **                                                              **
-!     **  INPUT :                                                     **
-!     **    RNTOT       NUMBER OF OCCUPIED STATES                     **
-!     **    NB          NUMBER OF BANDS                               **
-!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                **
-!     **    EB          ENERGIES ( DETERMINE FERMI SURFACE )          **
-!     **    TOLMAX      TOLERANCE IN THE NUMBER OF STATES AT EF       **
-!     **  OUTPUT :                                                    **
-!     **    EF          FERMI LEVEL                                   **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  CALCUALTES THE FERMILEVEL BY INTEGRATION OF THE TOTAL               **
+!     **  DENSITY OF STATES                                                   **
+!     **                                                                      **
+!     **  INPUT :                                                             **
+!     **    RNTOT       NUMBER OF OCCUPIED STATES                             **
+!     **    NB          NUMBER OF BANDS                                       **
+!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                        **
+!     **    EB          ENERGIES ( DETERMINE FERMI SURFACE )                  **
+!     **    TOLMAX      TOLERANCE IN THE NUMBER OF STATES AT EF               **
+!     **  OUTPUT :                                                            **
+!     **    EF          FERMI LEVEL                                           **
+!     **                                                                      **
+!     **************************************************************************
       USE BRILLOUIN_MODULE,ONLY : THIS_TYPE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NB
@@ -1672,7 +1728,7 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)               :: TOL
       REAL(8)               :: VOL
       REAL(8)               :: ESTEP
-!     ******************************************************************
+!     **************************************************************************
                        CALL TRACE$PUSH('BRILLOUIN_EFERMI')
 !     ------------------------------------------------------------------
 !     --  FIND EMIN EMAX     (ENERGYBANDS ARE ASSUMED                 --
@@ -1751,7 +1807,9 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_EFI(RNTOT,TOL,EFERMI,EMIN,EMAX,NP,NOS,SOS)             
+      SUBROUTINE BRILLOUIN_EFI(RNTOT,TOL,EFERMI,EMIN,EMAX,NP,NOS,SOS)
+!     **************************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NP     ! #(ENERGY GRID POINTS)
       REAL(8)   ,INTENT(IN)   :: RNTOT  ! #(ELECTRONS)
@@ -1766,7 +1824,7 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)                 :: ESTEP,EMIN,EMAX
       INTEGER(4)              :: IP,IPUP,IPLOW
       INTEGER(4)              :: IFIND,I
-!     ******************************************************************
+!     **************************************************************************
                        CALL TRACE$PUSH('BRILLOUIN_EFI')
       ADD=0.D0                                                          
       DO I=1,NP                                                     
@@ -1819,25 +1877,26 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_TOTNOS(VOL,E_,EMIN,EMAX,NP,NOS,SOS)                     
-!     **                                                              **
-!     **  CALCULATES THE INTEGRATED DOS                               **
-!     **  FOR ONE TETRAHEDRON ON THE ENERGYMESH                       **
-!     **  INPUT :                                                     **
-!     **    VOL         WEIGHT OF THIS TETRAHEDRON                    **
-!     **    E           ENERGIES AT THE EDGEPOINTS                    **
-!     **    EMIN        MINIMUM VALUE OF ENERGY MESH FOR NOS AND SOS  **
-!     **    EMAX        MAXIMUM VALUE OF ENERGY MESH FOR NOS AND SOS  **
-!     **    NP          NUMBER OF POINTS ON THE ENERGY MESH           **
-!     **  OUTPUT:                                                     **
-!     **    SOS         > NOS(E)+ SUM OVER E: SOS(E) =                **
-!     **    NOS         > NUMBER OF STATES BELOW E                    **
-!     **                                                              **
-!     **    SOS(I) CONTAINS THE WEIGHTS OFF ALL TETRAHEDRA WITH THE   **
-!     **    HIGHEST ENERGY EX IN THE WINDOW E(I-1)<EX<E(I).           **
-!     **    SOS(1) CONTAINS THE WEIGHTS OF ALL TETRAHEDRA WITH THEIR  **
-!     **    HIGHEST ENERGY EX BELOW E(I)                              **
-!     **                                                              **
+      SUBROUTINE BRILLOUIN_TOTNOS(VOL,E_,EMIN,EMAX,NP,NOS,SOS)
+!     **************************************************************************
+!     **  CALCULATES THE INTEGRATED DOS                                       **
+!     **  FOR ONE TETRAHEDRON ON THE ENERGYMESH                               **
+!     **  INPUT :                                                             **
+!     **    VOL         WEIGHT OF THIS TETRAHEDRON                            **
+!     **    E           ENERGIES AT THE EDGEPOINTS                            **
+!     **    EMIN        MINIMUM VALUE OF ENERGY MESH FOR NOS AND SOS          **
+!     **    EMAX        MAXIMUM VALUE OF ENERGY MESH FOR NOS AND SOS          **
+!     **    NP          NUMBER OF POINTS ON THE ENERGY MESH                   **
+!     **  OUTPUT:                                                             **
+!     **    SOS         > NOS(E)+ SUM OVER E: SOS(E) =                        **
+!     **    NOS         > NUMBER OF STATES BELOW E                            **
+!     **                                                                      **
+!     **    SOS(I) CONTAINS THE WEIGHTS OFF ALL TETRAHEDRA WITH THE           **
+!     **    HIGHEST ENERGY EX IN THE WINDOW E(I-1)<EX<E(I).                   **
+!     **    SOS(1) CONTAINS THE WEIGHTS OF ALL TETRAHEDRA WITH THEIR          **
+!     **    HIGHEST ENERGY EX BELOW E(I)                                      **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: VOL
       REAL(8)   ,INTENT(IN)   :: E_(4)
@@ -1855,7 +1914,7 @@ END MODULE BRILLOUIN_MODULE
       INTEGER(4)              :: I,J
       REAL(8)                 :: EIND(4)
       INTEGER(4)              :: IND(4)
-!     ******************************************************************
+!     **************************************************************************
       E(:)=E_(:)
 !
 !     ------------------------------------------------------------------
@@ -1901,8 +1960,8 @@ END MODULE BRILLOUIN_MODULE
       E43=E(4)-E(3)                                                     
 !     == ENERGY WINDOW FROM E1 TO E2 ====================================
       IMIN=IND(1)+1                !E(IMIN) IS THE FIRST POINT IN [E1,E2]
-      IMAX=IND(2)                  !E(IMAX) IS THE LAST POINT IN [E1,E2]                                    
-      EN=EMIN+ESTEP*REAL(IMIN-1,KIND=8)                                            
+      IMAX=IND(2)                  !E(IMAX) IS THE LAST POINT IN [E1,E2]
+      EN=EMIN+ESTEP*REAL(IMIN-1,KIND=8)
       IF(IMAX.GE.IMIN) THEN                                             
         A=VOL/(E21*E31*E41)                                             
         DO I=IMIN,IMAX                                              
@@ -1927,7 +1986,7 @@ END MODULE BRILLOUIN_MODULE
       END IF                                                            
 !     == ENERGY WINDOW FROM E3 TO E4 ====================================
       IMIN=IND(3)+1                !E(IMIN) IS THE FIRST POINT IN [E3,E4]
-      IMAX=IND(4)                  !E(IMAX) IS THE LAST POINT IN [E3,E4]                                     
+      IMAX=IND(4)                  !E(IMAX) IS THE LAST POINT IN [E3,E4]
       IF(E43.GT.0.D0) THEN                                              
         A=VOL                                                           
         D=VOL/(E41*E42*E43)                                             
@@ -1981,7 +2040,7 @@ END MODULE BRILLOUIN_MODULE
             E(I)=EB(IB,IKP(I))                                                
             WGHT0(I)=0.D0
           ENDDO
-          CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)                                       
+          CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
           DO I=1,4                                                      
             WGHT(IB,IKP(I))=WGHT(IB,IKP(I))+WGHT0(I)                          
           ENDDO
@@ -2082,11 +2141,11 @@ END MODULE BRILLOUIN_MODULE
             WGHT0(I)=0.D0
             DWGHT0(I,:)=0.D0
           ENDDO
-          CALL BRILLOUIN_WEIGHTANDDER(VOL,E,EF,WGHT0,DWGHT0)                                       
+          CALL BRILLOUIN_WEIGHTANDDER(VOL,E,EF,WGHT0,DWGHT0)
           DO I=1,4                                                      
             WGHT(IB,IKP(I))=WGHT(IB,IKP(I))+WGHT0(I)                          
             DO J=1,4
-              DWGHT(IB,IKP(I),IKP(J))=DWGHT(IB,IKP(I),IKP(J))+DWGHT0(I,J)                          
+              DWGHT(IB,IKP(I),IKP(J))=DWGHT(IB,IKP(I),IKP(J))+DWGHT0(I,J)
             ENDDO
           ENDDO
         ENDDO
@@ -2097,7 +2156,6 @@ END MODULE BRILLOUIN_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_WEIGHT(VOL,E_,EF,WGHT)
 !     **************************************************************************
-!     **                                                                      **
 !     **  CALCULATES THE WEIGHTS FOR TETRAHEDRON-SAMPLING                     **
 !     **  CORRESPONDING TO INTEGRATION OVER ONE TETRAHEDRON                   **
 !     **                                                                      **
@@ -2181,19 +2239,19 @@ END MODULE BRILLOUIN_MODULE
         DE2=EF-E(2)                                                     
         DE3=E(3)-EF                                                     
         DE4=E(4)-EF                                                     
-!       ------  TETRAHEDRON X1,X2,X13',X14'                             
+!       ------  TETRAHEDRON X1,X2,X13P,X14P                             
         VPRIME=VOL*DE1**2/(E41*E31)*.25D0                               
         WGHT(2)=VPRIME                                                  
         WGHT(3)=VPRIME*(DE1/E31)                                        
         WGHT(4)=VPRIME*(DE1/E41)                                        
         WGHT(1)=VPRIME*(3.D0-DE1/E41-DE1/E31)                           
-!       ------  TETRAHEDRON X2,X13',X23',X14'                           
+!       ------  TETRAHEDRON X2,X13P,X23P,X14P                           
         VPRIME=.25D0*VOL*DE2*DE3*DE1/(E32*E31*E41)                      
         WGHT(1)=WGHT(1)+VPRIME*(2.D0-DE1/E31-DE1/E41)                   
         WGHT(2)=WGHT(2)+VPRIME*(2.D0-DE2/E32)                           
         WGHT(3)=WGHT(3)+VPRIME*(DE2/E32+DE1/E31)                        
         WGHT(4)=WGHT(4)+VPRIME*(DE1/E41)                                
-!       ------  TETRAHEDRON X2,X23',X24',X14'                           
+!       ------  TETRAHEDRON X2,X23P,X24P,X14P                           
         VPRIME=.25D0*VOL*DE2**2*DE4/(E42*E32*E41)                       
         WGHT(1)=WGHT(1)+VPRIME*(1.D0-DE1/E41)                           
         WGHT(2)=WGHT(2)+VPRIME*(3.D0-DE2/E32-DE2/E42)                   
@@ -2344,7 +2402,7 @@ END MODULE BRILLOUIN_MODULE
         DE2=EF-E(2)                                                     
         DE3=E(3)-EF                                                     
         DE4=E(4)-EF                                                     
-!       ------  TETRAHEDRON X1,X2,X13',X14'                             
+!       ------  TETRAHEDRON X1,X2,X13P,X14P                             
         VPRIME=VOL*DE1**2/(E41*E31)*.25D0                               
         DVPRIME=VOL*2.D0*DE1/(E41*E31)*.25D0                               
         WGHT(2)=VPRIME                                                  
@@ -2355,7 +2413,7 @@ END MODULE BRILLOUIN_MODULE
         DWGHT(3)=DVPRIME*(DE1/E31)+VPRIME/E31
         DWGHT(4)=DVPRIME*(DE1/E41)+VPRIME/E41
         DWGHT(1)=DVPRIME*(3.D0-DE1/E41-DE1/E31)+VPRIME*(-1.D0/E41-1.D0/E31)
-!       ------  TETRAHEDRON X2,X13',X23',X14'                           
+!       ------  TETRAHEDRON X2,X13P,X23P,X14P                           
         VPRIME=.25D0*VOL*DE2*DE3*DE1/(E32*E31*E41)                      
         DVPRIME=.25D0*VOL*(DE3*DE1-DE2*DE1+DE2*DE3)/(E32*E31*E41)
         WGHT(1)=WGHT(1)+VPRIME*(2.D0-DE1/E31-DE1/E41)                   
@@ -2367,9 +2425,9 @@ END MODULE BRILLOUIN_MODULE
         DWGHT(2)=DWGHT(2)+DVPRIME*(2.D0-DE2/E32)   +VPRIME*(-1.D0/E32)
         DWGHT(3)=DWGHT(3)+DVPRIME*(DE2/E32+DE1/E31)+VPRIME*(1.D0/E32+1.D0/E31)
         DWGHT(4)=DWGHT(4)+DVPRIME*(DE1/E41)        +VPRIME*(1.D0/E41)
-!       ------  TETRAHEDRON X2,X23',X24',X14'                           
+!       ------  TETRAHEDRON X2,X23P,X24P,X14P  ---------------------------------
         VPRIME=.25D0*VOL*DE2**2*DE4/(E42*E32*E41)                       
-        DVPRIME=.25D0*VOL*(2.D0*DE2*DE4-DE2**2)/(E42*E32*E41)                       
+        DVPRIME=.25D0*VOL*(2.D0*DE2*DE4-DE2**2)/(E42*E32*E41)
         WGHT(1)=WGHT(1)+VPRIME*(1.D0-DE1/E41)                           
         WGHT(2)=WGHT(2)+VPRIME*(3.D0-DE2/E32-DE2/E42)                   
         WGHT(3)=WGHT(3)+VPRIME*(DE2/E32)                                
@@ -2379,7 +2437,7 @@ END MODULE BRILLOUIN_MODULE
        &                                           +VPRIME*(-1.D0/E32-1.D0/E42)
         DWGHT(3)=DWGHT(3)+DVPRIME*(DE2/E32)        +VPRIME*(1.D0/E32)
         DWGHT(4)=DWGHT(4)+DVPRIME*(DE2/E42+DE1/E41)+VPRIME*(1.D0/E42+1.D0/E41)
-!       ------  DOS=A+B*(EF-E2)+C*(EF-E2)**2                            
+!       ------  DOS=A+B*(EF-E2)+C*(EF-E2)**2  ----------------------------------
         DA=3.D0*VOL*E21/(E31*E41)                                       
         DB=6.D0*VOL/(E31*E41)                                           
         DC=-3.D0*VOL/(E32*E41*E31*E42)*(E31+E42)                        
@@ -2388,7 +2446,7 @@ END MODULE BRILLOUIN_MODULE
       ELSE IF(EF.GE.E(3).AND.EF.LT.E(4)) THEN                           
         DE=E(4)-EF                                                      
         VPRIME=.25D0*VOL*DE**3/(E41*E42*E43)                            
-        DVPRIME=.25D0*VOL*(-3.D0*DE**2)/(E41*E42*E43)                            
+        DVPRIME=.25D0*VOL*(-3.D0*DE**2)/(E41*E42*E43)
         VOL14=.25D0*VOL                                                 
         WGHT(1)=VOL14-VPRIME*DE/E41                                     
         WGHT(2)=VOL14-VPRIME*DE/E42                                     
@@ -2400,7 +2458,7 @@ END MODULE BRILLOUIN_MODULE
         DWGHT(4)=-DVPRIME*(4.D0-DE/E41-DE/E42-DE/E43) &
        &                      -VPRIME*(1.D0/E41+1.D0/E42+1.D0/E43)
 !       ------  PARAMETERS FOR CORRECION                                
-        DOS=3.D0*VPRIME*4.D0/(E(4)-EF)                                  
+        DOS=3.D0*VPRIME*4.D0/(E(4)-EF)
         DDOS=DOS/(E(4)-EF)                                  
       ELSE                                                              
 !        CALL ERROR$MSG('ERROR')
@@ -2434,11 +2492,11 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_WEIGHTANDDER(VOL,E_,EF,WGHT,DWGHT)                                  
+      SUBROUTINE BRILLOUIN_WEIGHTANDDER(VOL,E_,EF,WGHT,DWGHT)
 !     **************************************************************************
-!     **                                                                      **
 !     **  CALCULATES THE WEIGHTS FOR TETRAHEDRON-SAMPLING                     **
 !     **  CORRESPONDING TO INTEGRATION OVER ONE TETRAHEDRON                   **
+!     **  AND THEIR DERIVATIVES WITH RESPECT TO THE ENERGIES AT THE CORNERS   **
 !     **                                                                      **
 !     **  CORRECTION FOR THE NONLINEAR SHAPE INCLUDED IF ICOR=1               **
 !     **                                                                      **
@@ -2567,7 +2625,7 @@ END MODULE BRILLOUIN_MODULE
         DE2=EF-E(2)                                                     
         DE3=E(3)-EF                                                     
         DE4=E(4)-EF                                                     
-!       ------  TETRAHEDRON X1,X2,X13',X14'                             
+!       ------  TETRAHEDRON X1,X2,X13P,X14P                             
         VPRIME=0.25D0*VOL*DE1**2/(E41*E31)
         DVPRIME(1)=-0.5D0*VOL*DE1/(E41*E31)+VPRIME*(1.D0/E41+1.D0/E31)
         DVPRIME(2)=0.D0
@@ -2599,7 +2657,7 @@ END MODULE BRILLOUIN_MODULE
         DO I=1,4        
           DWGHT(:,I)=DVPRIME(I)*WGHTFAC(:)+VPRIME*DWGHTFAC(:,I)
         ENDDO
-!       ------  TETRAHEDRON X2,X13',X23',X14'                           
+!       ------  TETRAHEDRON X2,X13P,X23P,X14P                           
         VPRIME=.25D0*VOL*DE2*DE3*DE1/(E32*E31*E41)                      
         DVPRIME(1)=VPRIME*(-1.D0/DE1+1.D0/E31+1.D0/E41)
         DVPRIME(2)=VPRIME*(-1.D0/DE2+1.D0/E32)
@@ -2635,7 +2693,7 @@ END MODULE BRILLOUIN_MODULE
           DWGHT(:,I)=DWGHT(:,I)+DVPRIME(I)*WGHTFAC(:)+VPRIME*DWGHTFAC(:,I)
         ENDDO
 !
-!       ------  TETRAHEDRON X2,X23',X24',X14'                           
+!       ------  TETRAHEDRON X2,X23P,X24P,X14P  ---------------------------------
         VPRIME=.25D0*VOL*DE2**2*DE4/(E42*E32*E41)                       
         DVPRIME(1)=VPRIME/E41
         DVPRIME(2)=VPRIME*(-2.D0/DE2+1.D0/E42+1.D0/E32)
@@ -2774,53 +2832,174 @@ END MODULE BRILLOUIN_MODULE
       END                                                               
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN_TESTCOMPLETE()
+      SUBROUTINE BRILLOUIN$WGHT(NKP,NB,EF,EB,WGHT)
+!     **************************************************************************
+!     ** CALCULATE BRILLOUIN INTEGRATION WEIGHTS FOR SPECIFIED BANDS AND      **
+!     ** A GIVEN FERMI LEVEL                                                  **
+!     **                                                                      **
+!     ** IS BASICALLY IDENTICAL TO BRILLOUIN_SAMFAC                           **
+!     **************************************************************************
+      USE BRILLOUIN_MODULE, ONLY : THIS
       IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NKP
+      INTEGER(4),INTENT(IN)  :: NB
+      REAL(8)   ,INTENT(IN)  :: EF
+      REAL(8)   ,INTENT(IN)  :: EB(NB,NKP)
+      REAL(8)   ,INTENT(OUT) :: WGHT(NB,NKP)
+      REAL(8)                :: E(4)
+      REAL(8)                :: WGHT0(4)
+      REAL(8)                :: VOL
+      INTEGER(4)             :: IKP(4)
+      INTEGER(4)             :: ITET,NTET
+      INTEGER(4)             :: IB,I
 !     **************************************************************************
-!     ** TESTROUTINE FOR THE ROUTINE BRILLOUIN_COMPLETE                       **
-!     **************************************************************************
-      INTEGER(4),PARAMETER :: NOPX=48
-      INTEGER(4)           :: NOP
-      INTEGER(4)           :: OP(3,3,NOPX)
-      INTEGER(4),DIMENSION(3,3) :: C2Z,C2X,C2A,C31P,INV
-      INTEGER(4)           :: I
-!     **************************************************************************
-!     == LIST OF GENERATORS ====================================================
-!     == GROUP 228 ==GAMMA^F_C==================================================
-      C2Z(:,1)=(/0,1,0/)   ; C2Z(:,2)=(/1,0,0/)  ; C2Z(:,3)=(/-1,-1,-1/) 
-      C2X(:,1)=(/-1,-1,-1/); C2X(:,2)=(/0,0,1/)  ; C2X(:,3)=(/0,1,0/)
-      C2A(:,1)=(/-1,0,0/)  ; C2A(:,2)=(/0,-1,0/) ; C2A(:,3)=(/1,1,1/)
-      C31P(:,1)=(/0,1,0/)  ; C31P(:,2)=(/0,0,1/) ; C31P(:,3)=(/1,0,0/)
-      INV(:,1)=(/-1,0,0/)  ; INV(:,2)=(/0,-1,0/) ; INV(:,3)=(/0,0,-1/)
-!
-!     ==========================================================================
-!     == PUT GENERATORS ONTO INPUT ARRAY                                      ==
-!     ==========================================================================
-      NOP=5
-      OP(:,:,1)=C2Z
-      OP(:,:,2)=C2X
-      OP(:,:,3)=C2A
-      OP(:,:,4)=C31P
-      OP(:,:,5)=INV
-      WRITE(*,FMT='(82("="),T10," GENERATORS OF THE GROUP ")')
-      DO I=1,NOP
-        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
+                                        CALL TRACE$PUSH('BRILLOUIN$WGHT')
+      WGHT(:,:)=0.D0
+      NTET=THIS%NTET
+      DO ITET=1,NTET                                                
+        VOL=THIS%VOL*THIS%MULT(ITET)
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB                                                    
+          DO I=1,4                                                      
+            E(I)=EB(IB,IKP(I))                                                
+            WGHT0(I)=0.D0
+          ENDDO
+          CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
+          DO I=1,4                                                      
+            WGHT(IB,IKP(I))=WGHT(IB,IKP(I))+WGHT0(I)                          
+          ENDDO
+        ENDDO
       ENDDO
-!
-!     ==========================================================================
-!     ==  RUN BRILLOUIN_COMPLETE
-!     ==========================================================================
-      CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
-!
-!     ==========================================================================
-!     ==  RUN BRILLOUIN_COMPLETE
-!     ==========================================================================
-      WRITE(*,FMT='(82("="),T10," FULL POINT GROUP ")')
-      DO I=1,NOP
-        WRITE(*,FMT='(I5,T20,3("|",3I5,"|"))')I,OP(:,:,I)
-      ENDDO
+                                        CALL TRACE$POP()
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$EWGHT(NKP,NB,EB,EMIN,EMAX,NE,EWGHT)
+!     **************************************************************************
+!     ** GENERATES ENERGY DEPENDENT WEIGHTS FOR DOS AND PDOS                  **
+!     **                                                                      **
+!     ** THE DENSITY OF STATES FOR A MATRIX ELEMENT A IS GIVEN                **
+!     **      D_A(E)=SUM_N SUM_K V_N(K,E)*A_N(K)                              **
+!     ** WHERE V_N(K)=EWGHT(N,K)%WGHT(E) ARE THE ENERGY DERIVATIVES           **
+!     ** OF THE INTEGRATION WEIGHTS.                                          **
+!     **                                                                      **
+!     ** THE NUMBER OF STATES IS OBTAINED FROM WEIGHTS AT THE MINIMUM ENERGY  **
+!     ** AND THE ENERGY INTEGRAL OF THE DENSITY OF STATES                     **
+!     **     N_A(E)=SUM_N SUM_K W_N(K,E)*A_N(K)                               **
+!     ** WHERE W_N(K,E)=W_N(K,EMIN)+SUM_{E<EMIN} V_N(K,E)*DE                  **
+!     ** AND W_N(K,EMIN) FOR THE MINIMUM ENERGY IS CALCULATED WITH            **
+!     ** BRILLOUIN_SAMFAC                                                     **
+!     **************************************************************************
+      USE BRILLOUIN_MODULE, ONLY : THIS,EWGHT_TYPE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NKP
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NE
+      REAL(8)   ,INTENT(IN) :: EB(NB,NKP)
+      REAL(8)   ,INTENT(IN) :: EMIN
+      REAL(8)   ,INTENT(IN) :: EMAX
+      TYPE(EWGHT_TYPE),INTENT(INOUT) :: EWGHT(NB,NKP)
+      INTEGER(4)            :: IKP(4)
+      REAL(8)               :: VOL
+      REAL(8)               :: E(4)
+      REAL(8)               :: EF
+      REAL(8)               :: WGHT0(4)
+      REAL(8)               :: AE,BE,DE
+      REAL(8)               :: SVARM,SVARP
+      INTEGER(4)            :: NTET  !#(TETRAHEDRA)
+      INTEGER(4)            :: ITET,IK,IB,I,IE
+      INTEGER(4)            :: I1,I2
+!     **************************************************************************
+      NTET=THIS%NTET
+!
+!     ==========================================================================
+!     == PARAMETERS FOR THE ENERGY GRID                                       ==
+!     ==  E=EMIN+(EMAX-EMIN)/(NE-1)*(IE-1)  ====================================
+!     ==  IE=1+(NE-1)*(E-EMIN)/(EMAX-EMIN) =====================================
+!     ==  IE=[(NE-1)/(EMAX-EMIN)] * E + [1-(NE-1)*EMIN/(EMAX-EMIN)]
+!     ==  IE=AE * E + BE
+!     ==========================================================================
+      AE=REAL(NE-1,KIND=8)/(EMAX-EMIN)
+      BE=1.D0-REAL(NE-1,KIND=8)*EMIN/(EMAX-EMIN)
+      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
+!
+!     ==========================================================================
+!     == DETERMINE GRID RANGE FOR EACH BAND AND K-POINT                       ==
+!     ==========================================================================
+      EWGHT(:,:)%I1=NE
+      EWGHT(:,:)%I2=1
+      DO ITET=1,NTET
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+!         == WGHT(I2) CONTAINS THE COMPLETE INTEGRAL ===========================
+          I1=INT(AE*MINVAL(EB(IB,IKP(:)))+BE)
+          I2=1+INT(AE*MAXVAL(EB(IB,IKP(:)))+BE)
+          EWGHT(IB,IKP)%I1=MIN(EWGHT(IB,IKP)%I1,I1)
+          EWGHT(IB,IKP)%I2=MAX(EWGHT(IB,IKP)%I2,I2)
+        ENDDO
+      ENDDO
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          I1=MAX(I1,1)
+          I2=MIN(I2,NE)
+          EWGHT(IB,IK)%I1=I1
+          EWGHT(IB,IK)%I2=I2
+          ALLOCATE(EWGHT(IB,IK)%WGHT(I1:I2))
+          EWGHT(IB,IK)%WGHT(:)=0.D0
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == ADD UP INTEGRATION WEIGHTS                                           ==
+!     ==========================================================================
+      DO ITET=1,NTET
+        VOL=THIS%VOL*THIS%MULT(ITET)
+        IKP(:)=THIS%IKP(:,ITET)
+        DO IB=1,NB
+          I1=NE
+          I2=1
+          DO I=1,4                                                      
+            E(I)=EB(IB,IKP(I))                                                
+            I1=MIN(I1,1+INT(AE*E(I)+BE))
+            I2=MAX(I2,INT(AE*E(I)+BE))
+          ENDDO
+          I1=MAX(I1,1)
+          I2=MIN(I2,NE)
+          DO IE=I1,I2          
+            EF=EMIN+REAL(IE-1,KIND=8)*DE
+            WGHT0(:)=0.D0
+            CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
+            DO I=1,4                                                      
+              EWGHT(IB,IKP(I))%WGHT(IE)=EWGHT(IB,IKP(I))%WGHT(IE)+WGHT0(I)
+            ENDDO
+          ENDDO
+          DO I=1,4                                                      
+            EWGHT(IB,IKP(I))%WGHT(I2+1:)=EWGHT(IB,IKP(I))%WGHT(I2+1:)+0.25D0*VOL
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DIFFERENTIATE INTEGRATION WEIGHTS                                    ==
+!     ==========================================================================
+      DO IK=1,NKP
+        DO IB=1,NB
+          I1=EWGHT(IB,IK)%I1
+          I2=EWGHT(IB,IK)%I2
+          SVARM=0.5D0*EWGHT(IB,IK)%WGHT(I1)/DE
+          DO IE=I1,I2-1
+            SVARP=0.5D0*(EWGHT(IB,IK)%WGHT(IE+1)-EWGHT(IB,IK)%WGHT(IE))/DE
+            EWGHT(IB,IK)%WGHT(IE)=SVARM+SVARP
+            SVARM=SVARP
+          ENDDO
+          EWGHT(IB,IK)%WGHT(I2)=SVARM
+        ENDDO
+      ENDDO
+      RETURN
+      END SUBROUTINE BRILLOUIN$EWGHT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_COMPLETE(NOPX,NOP,OP)
@@ -2891,11 +3070,11 @@ END MODULE BRILLOUIN_MODULE
 MODULE SPACEGROUP_MODULE
 !*******************************************************************************
 !
-!** the translation T0 of SG_Type is the translation of the origin that,      **
-!** substituted in Eq.32.5.11 of bradley+Cracknell changes the                **
-!** elements {R|v} that we use into the elements {R'|v'} of the               **
-!** International Tables of Crystallography. (see footnote V of table         **
-!** 3.7 of bradley cracknell.)                                                **
+!** THE TRANSLATION T0 OF SG_TYPE IS THE TRANSLATION OF THE ORIGIN THAT,      **
+!** SUBSTITUTED IN EQ.32.5.11 OF BRADLEY+CRACKNELL CHANGES THE                **
+!** ELEMENTS {R|V} THAT WE USE INTO THE ELEMENTS {R'|V'} OF THE               **
+!** INTERNATIONAL TABLES OF CRYSTALLOGRAPHY. (SEE FOOTNOTE V OF TABLE         **
+!** 3.7 OF BRADLEY CRACKNELL.)                                                **
 !*******************************************************************************
 TYPE SG_TYPE  !SPACE-GROUP TYPE
   CHARACTER(3) :: BRAVAIS
@@ -3207,8 +3386,8 @@ END MODULE SPACEGROUP_MODULE
 !     **   IMPLEMENTS TABLE 3.4 OF BRADLEY CRACKNELL                          **
 !     ** SYMMETRY ELEMENTS EXPLAINED IN TABLE 1.2 OF BRADLEY CRACKNELL        **
 !     **                                                                      **
-!     ** the transofrmation of relative coordinates is                        **
-!     **    R' = operation*R + C                                              **
+!     ** THE TRANSOFRMATION OF RELATIVE COORDINATES IS                        **
+!     **    RPRIME = OPERATION*R + C                                          **
 !     **                                                                      **
 !     **************************************************************************
       USE SPACEGROUP_MODULE, ONLY : ISPACEGROUP
@@ -3239,9 +3418,9 @@ END MODULE SPACEGROUP_MODULE
       INTEGER(4)              :: C21SS(3,3), C22SS(3,3), C23SS(3,3)
       INTEGER(4)              :: C31P(3,3),C32P(3,3),C33P(3,3),C34P(3,3) 
       INTEGER(4)              :: C31M(3,3),C32M(3,3),C33M(3,3),C34M(3,3)
-      real(8)                 :: mat(3,3)
-      real(8)                 :: pi, pih ! pih=pi/2
-      real(8)                 :: rbas(3,3),ttaut(3,3),ttautinv(3,3)
+      REAL(8)                 :: MAT(3,3)
+      REAL(8)                 :: PI, PIH ! PIH=PI/2
+      REAL(8)                 :: RBAS(3,3),TTAUT(3,3),TTAUTINV(3,3)
       INTEGER(4)              :: I
       CHARACTER(3)            :: BRAVAIS
 !     **************************************************************************
@@ -4703,25 +4882,25 @@ END MODULE SPACEGROUP_MODULE
       INTEGER(4),INTENT(IN)    :: NOPX ! MAX #(POINT GROUP OPERATIONS)
       INTEGER(4),INTENT(INOUT) :: NOP  ! IN: #(GENERATORS) OUT:  #(OPERATIONS)
       INTEGER(4),INTENT(INOUT) :: OP(3,3,NOPX) ! IN: GENERATORS OUT: OPERATIONS
-      real(8)   ,INTENT(INOUT) :: c(3,NOPX)    ! IN: GENERATORS OUT: OPERATIONS
+      REAL(8)   ,INTENT(INOUT) :: C(3,NOPX)    ! IN: GENERATORS OUT: OPERATIONS
       INTEGER(4)               :: GENERATOR(3,3,NOPX) ! COPY OF THE GENERATORS
-      real(8)                  :: cgenerator(3,nopx)
+      REAL(8)                  :: CGENERATOR(3,NOPX)
       INTEGER(4)               :: OPNEW(3,3)
-      real(8)                  :: cnew(3)
+      REAL(8)                  :: CNEW(3)
       INTEGER(4)               :: NGENERATOR
       INTEGER(4)               :: I,IOP,IOP2
       LOGICAL(4)               :: TOLD
 !     **************************************************************************
       NGENERATOR=NOP
       GENERATOR(:,:,:NOP)=OP(:,:,:NOP)
-      cGENERATOR(:,:NOP)=c(:,:NOP)
+      CGENERATOR(:,:NOP)=C(:,:NOP)
 !
 !     == IDENTITY ==============================================================
       OP(:,:,:)=0
       OP(1,1,1)=1
       OP(2,2,1)=1
       OP(3,3,1)=1
-      c(:,1)=0.d0
+      C(:,1)=0.D0
       NOP=1
 !
 !     ==========================================================================
@@ -4735,13 +4914,13 @@ END MODULE SPACEGROUP_MODULE
 !WRITE(*,FMT='("OLD OPERATION ",I5,T20,3("|",3I5,"|"))')IOP,OP(:,:,IOP)
         DO I=1,NGENERATOR
           OPNEW=MATMUL(GENERATOR(:,:,I),OP(:,:,IOP))
-          cnew=matmul(real(generator(:,:,i)),c(:,iop))+cgenerator(:,i)
+          CNEW=MATMUL(REAL(GENERATOR(:,:,I)),C(:,IOP))+CGENERATOR(:,I)
 !WRITE(*,FMT='("OPNEW ",T20,3("|",3I5,"|"))') OPNEW
 !         == CHECK IF OPNEW ALREADY PRESENT IN OP ============================
           TOLD=.FALSE.
           DO IOP2=1,NOP
             TOLD=(SUM(ABS(OPNEW-OP(:,:,IOP2))).EQ.0) &
-     &           .and.(maxval(abs(cnew-c(:,iop2))).gt.1.d-6)
+     &           .AND.(MAXVAL(ABS(CNEW-C(:,IOP2))).GT.1.D-6)
             IF(TOLD) EXIT
           ENDDO
           IF(TOLD) CYCLE
@@ -4753,126 +4932,13 @@ END MODULE SPACEGROUP_MODULE
             CALL ERROR$STOP('SPACEGROUP$COMPLETE')
           END IF
           OP(:,:,NOP)=OPNEW
-          c(:,nop)=cnew
+          C(:,NOP)=CNEW
 !WRITE(*,FMT='("NEW OP: ",I5,T20,3("|",3I5,"|"))')NOP,OP(:,:,NOP)
         ENDDO ! END OF LOOP OVER GENERATORS
         IOP=IOP+1
       ENDDO !END OF LOOP OVER OPERATIONS
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE BRILLOUIN$EWGHT(NKP,NB,EB,EMIN,EMAX,NE,EWGHT)
-!     **************************************************************************
-!     ** GENERATES ENERGY DEPENDENT WEIGHTS FOR DOS AND PDOS                  **
-!     **************************************************************************
-      USE BRILLOUIN_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NKP
-      INTEGER(4),INTENT(IN) :: NB
-      INTEGER(4),INTENT(IN) :: NE
-      REAL(8)   ,INTENT(IN) :: EB(NB,NKP)
-      REAL(8)   ,INTENT(IN) :: EMIN
-      REAL(8)   ,INTENT(IN) :: EMAX
-      TYPE(EWGHT_TYPE),INTENT(INOUT) :: EWGHT(NB,NKP)
-      INTEGER(4)            :: IKP(4)
-      REAL(8)               :: VOL
-      REAL(8)               :: E(4)
-      REAL(8)               :: EF
-      REAL(8)               :: WGHT0(4)
-      REAL(8)               :: AE,BE,DE
-      REAL(8)               :: SVARM,SVARP
-      INTEGER(4)            :: NTET  !#(TETRAHEDRA)
-      INTEGER(4)            :: ITET,IK,IB,I,IE
-      INTEGER(4)            :: I1,I2
-!     **************************************************************************
-      NTET=THIS%NTET
-!
-!     ==========================================================================
-!     == PARAMETERS FOR THE ENERGY GRID                                       ==
-!     ==  E=EMIN+(EMAX-EMIN)/(NE-1)*(IE-1)  ====================================
-!     ==  IE=1+(NE-1)*(E-EMIN)/(EMAX-EMIN) =====================================
-!     ==  IE=[(NE-1)/(EMAX-EMIN)] * E + [1-(NE-1)*EMIN/(EMAX-EMIN)]
-!     ==  IE=AE * E + BE
-!     ==========================================================================
-      AE=REAL(NE-1,KIND=8)/(EMAX-EMIN)
-      BE=1.D0-REAL(NE-1,KIND=8)*EMIN/(EMAX-EMIN)
-      DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)
-!
-!     ==========================================================================
-!     == DETERMINE GRID RANGE FOR EACH BAND AND K-POINT                       ==
-!     ==========================================================================
-      EWGHT(:,:)%I1=NE
-      EWGHT(:,:)%I2=1
-      DO ITET=1,NTET
-        IKP(:)=THIS%IKP(:,ITET)
-        DO IB=1,NB
-!         == WGHT(I2) CONTAINS THE COMPLETE INTEGRAL ===========================
-          I1=INT(AE*MINVAL(EB(IB,IKP(:)))+BE)
-          I2=1+INT(AE*MAXVAL(EB(IB,IKP(:)))+BE)
-          EWGHT(IB,IKP)%I1=MIN(EWGHT(IB,IKP)%I1,I1)
-          EWGHT(IB,IKP)%I2=MAX(EWGHT(IB,IKP)%I2,I2)
-        ENDDO
-      ENDDO
-      DO IK=1,NKP
-        DO IB=1,NB
-          I1=EWGHT(IB,IK)%I1
-          I2=EWGHT(IB,IK)%I2
-          I1=MAX(I1,1)
-          I2=MIN(I2,NE)
-          EWGHT(IB,IK)%I1=I1
-          EWGHT(IB,IK)%I2=I2
-          ALLOCATE(EWGHT(IB,IK)%WGHT(I1:I2))
-          EWGHT(IB,IK)%WGHT(:)=0.D0
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     == ADD UP INTEGRATION WEIGHTS                                           ==
-!     ==========================================================================
-      DO ITET=1,NTET
-        VOL=THIS%VOL*THIS%MULT(ITET)
-        IKP(:)=THIS%IKP(:,ITET)
-        DO IB=1,NB
-          I1=NE
-          I2=1
-          DO I=1,4                                                      
-            E(I)=EB(IB,IKP(I))                                                
-            I1=MIN(I1,1+INT(AE*E(I)+BE))
-            I2=MAX(I2,INT(AE*E(I)+BE))
-          ENDDO
-          DO IE=I1,I2          
-            EF=EMIN+REAL(IE-1,KIND=8)*DE
-            WGHT0(:)=0.D0
-            CALL BRILLOUIN_WEIGHT(VOL,E,EF,WGHT0)
-            DO I=1,4                                                      
-              EWGHT(IB,IKP(I))%WGHT(IE)=EWGHT(IB,IKP(I))%WGHT(IE)+WGHT0(I)
-            ENDDO
-          ENDDO
-          DO I=1,4                                                      
-            EWGHT(IB,IKP(I))%WGHT(I2+1:)=EWGHT(IB,IKP(I))%WGHT(I2+1:)+0.25D0*VOL
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     == DIFFERENTIATE INTEGRATION WEIGHTS                                    ==
-!     ==========================================================================
-      DO IK=1,NKP
-        DO IB=1,NB
-          I1=EWGHT(IB,IK)%I1
-          I2=EWGHT(IB,IK)%I2
-          SVARM=0.5D0*EWGHT(IB,IK)%WGHT(I1)/DE
-          DO IE=I1,I2-1
-            SVARP=0.5D0*(EWGHT(IB,IK)%WGHT(IE+1)-EWGHT(IB,IK)%WGHT(IE))/DE
-            EWGHT(IB,IK)%WGHT(IE)=SVARM+SVARP
-            SVARM=SVARP
-          ENDDO
-          EWGHT(IB,IK)%WGHT(I2)=SVARM
-        ENDDO
-      ENDDO
-      RETURN
-      END SUBROUTINE BRILLOUIN$EWGHT
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -4966,7 +5032,7 @@ END MODULE SPACEGROUP_MODULE
       ENDIF
 
       CALL SPACEGROUP$RBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBASBRAVAIS)
-      IF(MAXVAL(ABS(RBAS(:,:)-RBASBRAVAIS(:,:))).gt.TOL)THEN
+      IF(MAXVAL(ABS(RBAS(:,:)-RBASBRAVAIS(:,:))).GT.TOL)THEN
         CALL ERROR$MSG('LATTICE VECTORS FROM PAW CALCULATION AND')
         CALL ERROR$MSG('GIVEN BRAVAIS LATTICE ARE NOT CONSISTENT')
         CALL ERROR$CHVAL("BRAVAIS TYPE",BRAVAIS)
