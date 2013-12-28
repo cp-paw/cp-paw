@@ -45,9 +45,9 @@
       IF(THISTASK.EQ.1)THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
-!       ==========================================================================
-!       ==  WRITE HEADER                                                        ==
-!       ==========================================================================
+!       ========================================================================
+!       ==  WRITE HEADER                                                      ==
+!       ========================================================================
         WRITE(NFILO,FMT='(72("*"))')
         WRITE(NFILO,FMT='(72("*"),T15 &
      &             ,"           BANDS ANALYSIS TOOL                ")')
@@ -527,8 +527,9 @@ PRINT*,'N1B ',N1B,N2B,N3B
 !      &                        ,NKPTBIG,NB,EBBIG(:,:,ISPIN) &
 !      &                        ,NP,X1,XK1,X2,XK2,NQ,XQ)
          ELSE
-           CALL BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NKPT,NB,EB(:,:,ISPIN),PROPSI(:,:,ISPIN) &
-      &                      ,NP,X1,XK1,X2,XK2,NQ,XQ)
+           CALL BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NKPT,NB,EB(:,:,ISPIN) &
+      &                        ,PROPSI(:,:,ISPIN) &
+      &                        ,NP,X1,XK1,X2,XK2,NQ,XQ)
          END IF
 !
          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
@@ -592,7 +593,9 @@ PRINT*,'N1B ',N1B,N2B,N3B
              CALL ERROR$I4VAL('NB ',NB)
              CALL ERROR$STOP('BANDS_PLOTBANDS')
            END IF
-           WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI,PROPSII
+!          WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI,PROPSII
+!          == pbbloechl: removed propsii
+           WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI 
          ENDDO
        ENDDO
        CALL LIB$FLUSHFILE(NFIL)

@@ -5540,9 +5540,9 @@ END MODULE RANDOM_MODULE
 !     == TEST RESULT =================================================
       DEV=MAXVAL(ABS(MATMUL(ASQ,XSQ)-BSQ))
       IF(DEV.LT.TOL) THEN
-        WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"OK: DEV=",E12.5)')DEV
       ELSE
-        WRITE(*,FMT='(T5,"FAILED: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"FAILED: DEV=",E12.5)')DEV
       END IF        
 !
 !     ================================================================
@@ -5578,9 +5578,9 @@ END MODULE RANDOM_MODULE
 !     == TEST RESULT =================================================
       DEV=MAXVAL(ABS(MATMUL(A,X)-B))
       IF(DEV.LT.TOL) THEN
-        WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"OK: DEV=",E12.5)')DEV
       ELSE
-        WRITE(*,FMT='(T5,"FAILED: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"FAILED: DEV=",E12.5)')DEV
       END IF        
       RETURN
       END
@@ -5646,9 +5646,9 @@ END MODULE RANDOM_MODULE
 !     == TEST RESULT =================================================
       DEV=MAXVAL(ABS(MATMUL(ASQ,XSQ)-B))
       IF(DEV.LT.TOL) THEN
-        WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"OK: DEV=",E12.5)')DEV
       ELSE
-        WRITE(*,FMT='(T5,"FAILED: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"FAILED: DEV=",E12.5)')DEV
       END IF        
 !
 !     ================================================================
@@ -5691,9 +5691,9 @@ END MODULE RANDOM_MODULE
       DEV=MAXVAL(ABS(MATMUL(A,X)-B))
 !      DEV=MAX(MAXVAL(ABS(REAL(MATMUL(A,X)-B))),MAXVAL(ABS(REAL(CI*(MATMUL(A,X)-B)))))
       IF(DEV.LT.TOL) THEN
-        WRITE(*,FMT='(T5,"OK: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"OK: DEV=",E12.5)')DEV
       ELSE
-        WRITE(*,FMT='(T5,"FAILED: DEV=",E10.5)')DEV
+        WRITE(*,FMT='(T5,"FAILED: DEV=",E12.5)')DEV
       END IF  
       RETURN
       END
@@ -5768,9 +5768,9 @@ END MODULE RANDOM_MODULE
       ENDDO
       DEV=MAXVAL(ABS(MATMUL(H,U)-MATMUL(S,MATMUL(U,EMAT))))
       IF(DEV.LT.TOL) THEN
-        WRITE(*,FMT='(T5,"OK: DEV=",E10.3)')DEV
+        WRITE(*,FMT='(T5,"OK: DEV=",E12.3)')DEV
       ELSE
-        WRITE(*,FMT='(T5,"FAILED: DEV=",E10.3)')DEV
+        WRITE(*,FMT='(T5,"FAILED: DEV=",E12.3)')DEV
       END IF        
       RETURN
       END

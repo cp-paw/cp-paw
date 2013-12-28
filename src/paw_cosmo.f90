@@ -2053,9 +2053,9 @@ END IF
       DO IAT=1,NAT
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        call setup$iselect(isp)
+        CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETR8('AEZ',AEZ) !FORMER CALL SETUP$AEZ(ISP,AEZ)
-        call setup$unselect()
+        CALL SETUP$UNSELECT()
         IZ(IAT)=NINT(AEZ)
         CALL PERIODICTABLE$GET(IZ(IAT),'SYMBOL',SYMBOL(IAT))
         IF(SYMBOL(IAT)(2:2).EQ.'_') SYMBOL(IAT)(2:2)=' '
@@ -2196,7 +2196,7 @@ END IF
 
       WRITE(NFIL,'("  NPPA=",I5)')     NPPA
       WRITE(NFIL,'("  NSPA=",I5)')     NSPA
-      WRITE(NFIL,'("  DISEX=",G12.6)') DISEX/ANGSTROM
+      WRITE(NFIL,'("  DISEX=",G14.6)') DISEX/ANGSTROM
       WRITE(NFIL,'("  RSOLV=",F5.2)')  RSOLV/ANGSTROM
       WRITE(NFIL,'("  ROUTF=",F5.2)')  ROUTF
       IF (LCAVITY .EQ. 0) THEN
@@ -2213,7 +2213,7 @@ END IF
 !     *****************************************************************************
       WRITE(NFIL,FMT='(A)')DOLLAR//'COSMO_DATA'
       WRITE(NFIL,FMT="('  FEPSI=',F14.7)")  FEPSI
-      WRITE(NFIL,FMT="('  DISEX2=',G12.6)") DISEX2
+      WRITE(NFIL,FMT="('  DISEX2=',G14.6)") DISEX2
       WRITE(NFIL,FMT="('  NSPH=',I5)")      NSPH
       WRITE(NFIL,FMT="('  NPS=',I5)")       NPS
       WRITE(NFIL,FMT="('  NPSD=',I5)")      NPSD

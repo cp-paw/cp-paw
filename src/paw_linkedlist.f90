@@ -1978,12 +1978,9 @@ CONTAINS
 !     ..................................................................
       SUBROUTINE LINKEDLIST$CONVERT(LL,ID,NTH_,TYPE)
 !     ******************************************************************
+!     **  TYPE CONVERSION INTO THE SPECIFIED TYPE                     **
 !     **                                                              **
-!     **  CREATES A HOME DIRECTORY FOR THE LIST                       **
-!     **  IF LIST IS ASSOCIATED ALREADY, ITS CONNECTION IS BROKEN     **
-!     **                                                              **
-!     **  ERROR CONDITIONS: NONE                                      **
-!     **                                                              **
+!     **  only specified conversions are allowed                      **
 !     ******************************************************************
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
@@ -1995,6 +1992,7 @@ CONTAINS
       CHARACTER(1)    ,POINTER    :: NEWVAL(:)
       TYPE(LLIST_TYPE),POINTER    :: LIST
       INTEGER(4)                  :: LENG
+      complex(8)      ,ALLOCATABLE:: C8ARRAY(:)
       REAL(8)         ,ALLOCATABLE:: R8ARRAY(:)
       REAL(4)         ,ALLOCATABLE:: R4ARRAY(:)
       INTEGER(4)      ,ALLOCATABLE:: I4ARRAY(:)
@@ -2027,6 +2025,24 @@ CONTAINS
         END IF
         NEWVAL=TRANSFER(R8ARRAY,NEWVAL)
         DEALLOCATE(R8ARRAY)
+!
+!     ==================================================================
+!     ==  CONVERSION TO COMPLEX(8)                                    ==
+!     ==================================================================
+      ELSE IF(TYPE.EQ.'C(8)') THEN
+        ALLOCATE(NEWVAL(C8TYPE%NBYTE*LENG))
+        ALLOCATE(C8ARRAY(LENG))
+        IF(OLDTYPE.EQ.R8TYPE%NAME) THEN
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R8ARRAY),KIND=8))
+        ELSE IF(OLDTYPE.EQ.R4TYPE%NAME) THEN
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R4ARRAY),KIND=8))
+        ELSE IF(OLDTYPE.EQ.I4TYPE%NAME) THEN
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,I4ARRAY),KIND=8))
+        ELSE
+          UNDEF=.TRUE.
+        END IF
+        NEWVAL=TRANSFER(C8ARRAY,NEWVAL)
+        DEALLOCATE(C8ARRAY)
 !
 !     ==================================================================
 !     ==  CONVERSION TO INTEGER(4)                                    ==

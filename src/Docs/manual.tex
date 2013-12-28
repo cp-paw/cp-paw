@@ -6146,22 +6146,93 @@ date to a file, so that they can be plotted.
 \item The values of a given state can be written to a protocol.
 \end{itemize}
 
+%===============================================================================
+\subsubsection{Thermal broadening of the Density-of-States}
+\label{sec:thermoalbroadening}
+%===============================================================================
+The rationale for the thermal broadeing of the density of states is
+the following: An expectation value of an observable $A$ can be
+written in the form
+\begin{eqnarray}
+A(\mu)&=&\int_{-\infty}^\infty d\epsilon\; D_A(\epsilon) f_\beta(\epsilon-\mu)
+\label{eq:aofmu}
+\end{eqnarray}
+where $D_A(\epsilon)=\sum_n\frac{1}{V_G}\int d^3k\;
+A_n(k)\delta(\epsilon-\epsilon_n(k))$ is a density of states
+weighted with the matrix element of $A$ and $f_{\beta}(\epsilon-\mu)$
+is the Fermi distribution function.
 
+At zero  temperature, the expectation  value is simply the  integral of
+the density of states up to  the Fermi level. A similar expression can
+be obtained also for finite temperatures,  if the density of states is
+given a thermal broadening.
+\begin{eqnarray}
+A(\mu)
+&=&\int_{-\infty}^\mu d\mu'\;\left.\frac{dA}{d\mu}\right|_{\mu'}
+\nonumber\\
+&\stackrel{Eq.~\ref{eq:aofmu}}{=}&
+\int_{-\infty}^\mu d\mu'\;
+\int_{-\infty}^\infty d\epsilon\; D_A(\epsilon) \partial_\mu 
+f_\beta(\epsilon-\mu')
+\nonumber\\
+&=&\int_{-\infty}^\mu d\epsilon\;
+\underbrace{
+\int_{-\infty}^\infty d\epsilon'\; D_A(\epsilon') \partial_\epsilon 
+f_\beta(\epsilon'-\epsilon)}
+_{D_A^{\beta}(\epsilon)}
+\nonumber\\
+&=&\int_{-\infty}^\mu d\epsilon\;D^\beta_A(\epsilon)
+\end{eqnarray}
 
+The derivative of the Fermi distribution is
+\begin{eqnarray}
+\partial_\mu f_\beta(\epsilon-\mu)
+=\beta\Bigl[\frac{1}{2}
+\cosh\Bigl(\frac{1}{2}\beta(\epsilon-\mu)\Bigr)\Bigr]^{-2}
+\end{eqnarray}
+
+The thermal broadeing as a second practical reason, naemly to smoothen
+delta-function like spikes in the density of states resulting from
+accidental degeneracies of energies within a tetrahedron, when the
+tetrahedron method is used.
+
+If the energies are sampled (MODE='SAMPLE') the result without
+broadeing is a series of spikes with equal height. Here the broadening
+is important to produce a sensible density at the cost of loss of
+energy resolution. If sampling is used in a solid, the thermal
+broadeing shall mimick an interpolation. Then the broadeing should be
+comparible to the typical energy distance of neighboring k-points for
+in a typical band.
+
+%===============================================================================
+\subsubsection{Format of the Density-of-States and Number-of-States files}
+\label{sec:formatdosfile}
+%===============================================================================
+The density of states file contains the following columns
+\begin{enumerate}
+\item energy in eV.
+\item Density of states. 
+\item Density of states weightd with occupations 
+\end{enumerate}
+For non-collinear spin-polarized calculations, the 
+contribution of the spin-$\uparrow$ electrons is drawn first, followed
+by that of the spin-$\downarrow$ electrons, drawn with opposite sign. 
+
+The format for the number of states files is analogous.
 
 %==========================================================================
 \subsection{Example for the control input file}
 %==========================================================================
-
 \begin{verbatim}
 !DCNTL
   !FILES 
     !FILE ID='PDOS' EXT=F NAME='~/xx.pdos' !END
     !FILE ID='PROT' EXT=F NAME='stdout'  !END
   !END
+  !generic mode='tetra' DOS=T NOS=F prefix='Dos/' !END
+  !GRID    EMIN[EV]=-18. EMAX[EV]=0. DE[EV]=0.1 BROADENING[EV]=0.1 !END
   !ORBITAL NAME='SP3(C1-H2)'
-    !ORB ATOM='C_1' TYPE='SP3' 
-         NNZ='H_2' FAC=1.0 !END
+    !ORB ATOM='C_1' TYPE='SP3' NNZ='H_2' FAC=1.0 !END
   !END
   !WEIGHT ID='TOTAL' TYPE='TOTAL' !END
   !WEIGHT ID='W(1)'
@@ -6174,11 +6245,6 @@ date to a file, so that they can be plotted.
     !ORB1  NAME='SP3(C1-H2)' !END
     !ORB2  ATOM='H_2' TYPE='S' !END
   !END
-  !GRID  EMIN[EV]=-18. EMAX[EV]=0. DE[EV]=0.1 
-         BROADENING[EV]=0.1 !END
-  !OUTPUT ID='W(1)' FILE='~/xx.sp2a' !END
-  !OUTPUT ID='W(2)' FILE='~/xx.sp2b' !END
-  !OUTPUT ID='W(3)' FILE='~/xx.sp2c' !END
 !END
 \end{verbatim}
 
@@ -6194,54 +6260,86 @@ date to a file, so that they can be plotted.
 \bdescr{defines the operations done on the system; 
 largely independent of the system}
 
+
+%----------------------------------------------------------------------
+\block{!DCNTL!GENERIC}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{defines generic settings}
+
 \mbax{\key{MODE}
-\vdescr{defines the mode for the calculation of the density of states: GAUSSIAN
-defines the calculation via a simple gaussian broadening of the energy states.
-TETRA denotes the calculation using the tetrahedron integration.}
+\vdescr{defines the mode for the calculation of the density of states:
+  ``SAMPLE'' uses only the calculated energies on the diskrete k-point
+  lattice.  ``TETRA'' denotes the calculation using the tetrahedron
+  method.\cite{jepsen71_ssc9_1763, lehmann72_pssb54_469,
+    bloechl94_prb49_16223}.}
 \vformat{character} 
 \vrules{optional}
-\vdefault{GAUSSIAN}}
+\vdefault{'TETRA'}}
+
+\mbax{\key{DOS} 
+\vdescr{Density of states will be written to file per default}
+\vformat{logical} 
+\vrules{optional}
+\vdefault{true}}
+
+\mbax{\key{NOS} 
+\vdescr{Number of states will be written to file per default}
+\vformat{logical} 
+\vrules{optional}
+\vdefault{true}}
+
+\mbax{\key{PREFIX} 
+\vdescr{String will be prepended to the file names of density of
+  states and number of states files}
+\vformat{character} 
+\vrules{optional}
+\vdefault{''}}
 
 %----------------------------------------------------------------------
 \block{!DCNTL!GRID}
 %----------------------------------------------------------------------
-\brules{optional}
-\bdescr{defines the energy grid and energy broadening}
+\brules{optional} \bdescr{defines the energy grid and termal energy
+  broadening.  Read section~\ref{sec:thermoalbroadening} for the
+  background of the thermal broadening.  }
 
 \mbax{\key{EMIN[EV]}
 \vdescr{lower bound in eV of the energy interval for density 
 of number of states}
 \vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
+\vrules{optional}
+\vdefault{-20.}}
 
 \mbax{\key{EMAX[EV]}
-\vdescr{upper bound in eV}
+\vdescr{upper bound of the energy grid in eV}
 \vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
+\vrules{optional}
+\vdefault{20.}}
 
 \mbax{\key{DE[EV]}
-\vdescr{spacing of the grid points}
+\vdescr{spacing of the grid points on the energy grid in eV. The value
+  will be adjusted consistent with an integer number of grid points.}
 \vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
+\vrules{optional}
+\vdefault{10$^{-3}$}}
 
 \mbax{\key{BROADENING[EV]}
-\vdescr{density of states are broadened by a Gaussian of the form
-$ \exp{-(e/b)^2} $, where $b$ is the broadening.}
+\vdescr{Thermal broading $k_BT$ of the density of states expressed in eV. }
 \vformat{real} 
-\vrules{optional}
-\vdefault{none}}
+\vrules{optional, mutually exclusive with BROADENING[K]}
+\vdefault{300 Kelvin/eV}}
+
+\mbax{\key{BROADENING[K]}
+\vdescr{Thermal broading $k_BT$ of the density of states with $T$
+  expressed in Kelvin.}
+\vformat{real} 
+\vrules{optional, mutually exclusive with BROADENING[EV]}
+\vdefault{300.}}
 
 \mbax{\key{SCALEY} 
-\vdescr{Allows to scale either the Number of States (NoS) or the
-Density of States (DoS) to the same height as the corresponding other
-function. Possible values are 'NONE', 'DOS', and 'NOS'. For 'NONE' no 
-rescaling takes place. with 'DOS' the DoS is rescaled and for 'NOS', 
-the NoS is rescaled.}
+\vdescr{Obsolete!}
 \vformat{character} 
-\vrules{optional}
+\vrules{not used}
 \vdefault{'none'}}
 
 %----------------------------------------------------------------------
@@ -6268,8 +6366,6 @@ the NoS is rescaled.}
  \item['PDOS'] data file produced by the simulation code. Input for
    paw\_dos tool
    \hfill\break Standard extension:'.pdos'
- \item['PDOSOUT']data files ready for plotting.
-   \hfill\break Standard extension:'.pdosout'
  \end{description}
 }
 \vformat{character} 
@@ -6331,17 +6427,10 @@ the NoS is rescaled.}
   specified.}
 \vdefault{none}}
 
-\mbax{\key{IMAG} 
-\vdescr{selects the imaginary part of the wave function}
-\vformat{logical} 
-\vrules{optional}
-  specified.}
-\vdefault{.false.}}
-
 \mbax{\key{FAC}
-\vdescr{Orbital coefficient, with which it contributes the orbital to
-be built.}
-\vformat{real} 
+\vdescr{Orbital coefficient, with which it contributes to the orbital
+  to be built.}
+\vformat{complex (real and integer allowed)} 
 \vrules{optional}
 \vdefault{1.0}}
 
@@ -6394,9 +6483,12 @@ The selection type is not compatible with the other two possibilities.
 }
 
 \mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements}
+\vdescr{defines the name for this set of matrix elements. Note that
+  the file name for the DoS and NoS files will becomposed from this ID
+  as PREFIX//ID//'.dos' and PREFIX//ID//'.nos'. The file format is
+  described in section~\ref{sec:formatdosfile}}
 \vformat{character} 
-\vrules{mandatory}
+\vrules{mandatory} 
 \vdefault{none}}
 
 \mbax{\key{TYPE}
@@ -6409,6 +6501,26 @@ The selection type is not compatible with the other two possibilities.
 \vformat{character} 
 \vrules{optional; if type is specified, no blocks !atom or !orbs must
 be present}
+\vdefault{none}}
+
+\mbax{\key{ID}
+\vdescr{defines the name for this set of matrix elements}
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{SPIN}
+\vdescr{specifies the spin projection for non-collinear calculations
+\begin{description}
+\item[``TOTAL''] total density
+\item[``X'']   spin density in $x$-direction
+\item[``Y'']   spin density in $y$-direction
+\item[``Z'']   spin density in $z$-direction
+\item[``MAIN'']   spin density in the main spin direction of this atom
+\end{description}}
+\vformat{character} 
+\vrules{optional; only used when ``type'' is present. 
+       Not allowed for collinear calculations.}
 \vdefault{none}}
 
 %----------------------------------------------------------------------
@@ -6430,7 +6542,9 @@ be present}
 \item[``S'']   angular momentum weight for $\ell=0$
 \item[``P'']   angular momentum weight for $\ell=1$
 \item[``D'']   angular momentum weight for $\ell=2$
+\item[``F'']   angular momentum weight for $\ell=3$
 \end{description}
+or a combination of S,P,D,F, such as ``SD''.
 }
 \vformat{character} 
 \vrules{optional}
@@ -6465,7 +6579,10 @@ be present}
   the one hand and in !DCNTL!COOP!ORB2 on the other hand.}
 
 \mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements}
+\vdescr{defines the name for this set of matrix elements. Note that
+  the file name for the DoS and NoS files will becomposed from this ID
+  as PREFIX//ID//'.dos' and PREFIX//ID//'.nos'. The file format is
+  described in section~\ref{sec:formatdosfile}}
 \vformat{character} 
 \vrules{mandatory}
 \vdefault{none}}
@@ -6496,24 +6613,7 @@ be present}
 \brules{optional,multiple}
 \bdescr{selects output of the data; if neither E[EV] nor B are given,
 the density of states and the number of states are mapped onto the
-energy grid.
-
-The format of the file produced is as follows: Each file have 5
-columns with the following content.
-\begin{enumerate}
-\item energy in eV.
-\item density of states (scaled fitting to the sum
-of states)
-\item integrated density of states (number of states below a given energy).
-\item density of states multiplied with actual occupations
-\item integrated density of states multiplied with actual occupations
-(number of occupied states below a given energy).
-\end{enumerate}
-In spin-polarized calculations, columns 2-5 refer to spin up. There
-are corresponding columns 6-9 for spin down electrons. In
-non-collinear calculations there are only 5 columns, which refer to
-the total density of states, unless a spin direction has been
-explicitely specified.}
+energy grid.}
 
 \mbax{\key{ID}
 \vdescr{defines the name for this set of matrix elements; refers to
@@ -6521,12 +6621,6 @@ ID in block !DCNTL!WEIGHT or !DCNTL!COOP}
 \vformat{character} 
 \vrules{mandatory}
 \vdefault{none}}
-
-\mbax{\key{FILE}
-\vdescr{defines the file to which the result shall be written}
-\vformat{character} 
-\vrules{optional}
-\vdefault{the file identified by 'pdosout'}}
 
 \mbax{\key{B}
 \vdescr{band index}
