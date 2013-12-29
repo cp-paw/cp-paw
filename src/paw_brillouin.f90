@@ -470,6 +470,55 @@ END MODULE BRILLOUIN_MODULE
 !===============================================================================
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$GRID(RBAS,NSYM,IIO,NKTARGET,TSHIFT,NKDIV,ISHIFT)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4),INTENT(IN) :: NSYM       ! #(SYMMETRY OPERATIONS)
+      INTEGER(4),INTENT(IN) :: IIO(3,3,NSYM) !SYMMETRY OPERATIONS
+      LOGICAL(4),INTENT(IN) :: TSHIFT   ! ATTEMPT GRID SHIFT
+      INTEGER(4),INTENT(IN) :: NKTARGET
+      INTEGER(4),INTENT(OUT):: NKDIV(3)
+      INTEGER(4),INTENT(OUT):: ISHIFT(3)
+      REAL(8)               :: GBAS(3,3)
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: IARB(3)
+      INTEGER(4)            :: I,nmshp
+      logical(4)            :: tchk
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == CALCULATE IARB                                                       ==
+!     ==========================================================================
+      IARB=(/0,0,0/)
+      DO I=1,NSYM
+        IF(IIO(2,3,I).NE.0.OR.IIO(3,2,I).NE.0) IARB(1)=1
+        IF(IIO(1,3,I).NE.0.OR.IIO(3,1,I).NE.0) IARB(2)=1
+        IF(IIO(1,2,I).NE.0.OR.IIO(2,1,I).NE.0) IARB(3)=1
+      ENDDO       
+!
+!     ==========================================================================
+!     == DEFINE GRID                                                          ==
+!     ==========================================================================
+      CALL GBASS(RBAS,GBAS,SVAR)                                             
+      NMSHP=NKTARGET
+      CALL BRILLOUIN_BASDIV(NKDIV,NMSHP,GBAS,IARB)
+!
+!     ==========================================================================
+!     == ATTEMPT TO SHIFT GRID                                                ==
+!     ==========================================================================
+      IF(TSHIFT) THEN
+        ISHIFT(:)=1
+        CALL BRILLOUIN_CHECKSHIFT(ISHIFT,NSYM,IIO,TCHK)
+        IF(.NOT.TCHK) ISHIFT(:)=0
+      ELSE
+        ISHIFT(:)=0
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN$MSH(RBAS,NGKP,NSYM,IIO,IARB,TSHIFT)
 !     **************************************************************************
 !     **                                                                      **
@@ -520,6 +569,9 @@ END MODULE BRILLOUIN_MODULE
       LOGICAL(4)            :: TCHK
 !     **************************************************************************
                                    CALL TRACE$PUSH('BRILLOUIN$MSH') 
+      CALL ERROR$MSG('OBSOLETE ROUTINE')
+      CALL ERROR$MSG('USE BRILLOUIN$GRID AND BRILLOUIN$MSHSYM INSTEAD')
+      CALL ERROR$STOP('BRILLOUIN$MSH')
       THIS%RBAS=RBAS
       INV=0
 !     ==========================================================================
@@ -624,6 +676,166 @@ END MODULE BRILLOUIN_MODULE
 !     ==  FIND INEQUIVALENT TETRAHEDRA                                        ==
 !     ==========================================================================
       CALL BRILLOUIN_TETCNT(NMSHP,NUM,TET0,N,INV,THIS)
+      DEALLOCATE(NUM)
+                                   CALL TRACE$POP
+      RETURN                                                            
+      END                                                               
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE BRILLOUIN$MSHSYM(RBAS,NKDIV,ISHIFT,TINV,NSYM,IIO)
+!     **************************************************************************
+!     **  CALCULATE IRREDUCIBLE K-POINTS AND INEQUIVALENT TETRAHEDRA          **
+!     **  FOR BRILLOUIN ZONE INTEGRATION                                      **
+!     **                                                                      **
+!     **  IIO ARE THE GENERATORS OF THE SPATIAL SYMMETRY OPERATIONS.          **
+!     **  ADD TIME INVERSION SYMMETRY USING TINV=.TRUE.                       **
+!     **                                                                      **
+!     **   SUBROUTINES USED:                                                  **
+!     **     GBASS,REDUZ,ZUORD,TETDIV,TETCNT,ORD1                             **
+!     **                                                                      **
+!     ********************************PETER E. BLOECHL, STUTTGART, GOSLAR*******
+      USE BRILLOUIN_MODULE
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)  ! LATTICE VECTORS (REAL SPACE)
+      INTEGER(4),INTENT(IN) :: NKDIV(3)   ! DIV. OF THE REC. LATTICE VECTORS
+      INTEGER(4),INTENT(IN) :: ISHIFT(3)  ! GRID DOSPLACEMENT FROM GAMMA
+      LOGICAL(4),INTENT(IN) :: TINV       ! TIME INVERSION SYMMETRY?
+      INTEGER(4),INTENT(IN) :: NSYM       ! #(SYMMETRY OPERATIONS (GENERATORES))
+      INTEGER(4),INTENT(IN) :: IIO(3,3,NSYM) !GENERATORS OF THE SYMMETRY GROUP
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      REAL(8)   ,ALLOCATABLE:: XK(:,:)    ! (3,NKP) K-POINTS
+      INTEGER(4),PARAMETER  :: NOPX=48    ! MAX #(POINT GROUP OPERATIONS)
+      INTEGER(4)            :: NOP        ! #(POINT GROUP OPERATIONS)
+      INTEGER(4)            :: OP(3,3,NOPX)  ! POINT GROUP OPERATIONS
+      REAL(8)               :: GBAS(3,3)
+      INTEGER(4)            :: IWBK=0
+      INTEGER(4)            :: IWNUM=0
+      INTEGER(4)            :: NMSHP    ! #(KPOINTS IN CELL+BOUNDARIES)
+      INTEGER(4),ALLOCATABLE:: NUM(:)   ! POINTS FROM GENERAL TO IRR. K-POINT
+      INTEGER(4)            :: ISYM,I,J,K
+      INTEGER(4)            :: NKP      !#(IRRED. K-POINTS)
+      INTEGER(4)            :: INDEX1,INDEX2,NDIMM,NDI1,NDI2
+      INTEGER(4)            :: TET0(3,4,6)
+      INTEGER(4)            :: INV      ! ?? IS ALWAYS 0. IS USED IN TETCNT
+      REAL(8)               :: DUMMY
+      LOGICAL(4)            :: TCHK
+!     **************************************************************************
+                                   CALL TRACE$PUSH('BRILLOUIN$MSH') 
+      THIS%RBAS=RBAS
+      CALL GBASS(RBAS,GBAS,DUMMY)                                             
+      NMSHP=(NKDIV(1)+1)*(NKDIV(2)+1)*(NKDIV(3)+1)
+      THIS%NKDIV(:)=NKDIV(:)
+      THIS%ISHIFT(:)=ISHIFT
+!
+!     ==========================================================================
+!     == EXPAND GENERATORS TO COMPLETE FULL POINT GROUP                       ==
+!     ==========================================================================
+      NOP=NSYM
+      OP(:,:,1:NSYM)=IIO(:,:,:)
+      IF(TINV) THEN
+!       == ADD TIME INVERSION UNLESS THERE IS ALREADY A SPATIAL INVERSION.
+        TCHK=.FALSE.  ! SPATIAL INVERSION PRESENT?
+        DO I=1,NSYM
+          IF(IIO(1,1,I).NE.-1) CYCLE
+          IF(IIO(2,2,I).NE.-1) CYCLE
+          IF(IIO(3,3,I).NE.-1) CYCLE
+          IF(IIO(1,2,I).NE.0) CYCLE
+          IF(IIO(2,3,I).NE.0) CYCLE
+          IF(IIO(3,1,I).NE.0) CYCLE
+          IF(IIO(1,3,I).NE.0) CYCLE
+          IF(IIO(3,2,I).NE.0) CYCLE
+          IF(IIO(2,1,I).NE.0) CYCLE
+          TCHK=.TRUE. ! SPATIAL INVERSION FOUND!
+          EXIT
+        ENDDO
+        IF(.NOT.TCHK) THEN
+          NOP=NOP+1
+          OP(:,1,NOP)=(/-1,0,0/)
+          OP(:,2,NOP)=(/0,-1,0/)
+          OP(:,3,NOP)=(/0,0,-1/)
+        END IF
+      ENDIF
+      CALL BRILLOUIN_COMPLETE(NOPX,NOP,OP)
+!
+!     ==========================================================================
+!     == FIND IRREDUCIBLE K-POINTS                                            ==
+!     ==========================================================================
+      ALLOCATE(NUM(NMSHP))
+      CALL BRILLOUIN_REDUZ(NKDIV,NMSHP,ISHIFT,NOP,OP,NUM)
+      ALLOCATE(XK(3,NMSHP))
+      CALL BRILLOUIN_ZUORD(NMSHP,NUM,NKDIV,ISHIFT,NMSHP,NKP,XK)            
+      THIS%NKP=NKP
+      ALLOCATE(THIS%XK(3,NKP))
+      THIS%XK(:,:)=XK(:,1:NKP)
+      DEALLOCATE(XK)
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ONTO IRREDUCIBLE K-POINTS                          ==
+!     ==========================================================================
+!     __ THE GENERAL POSITION IS ENCODED ACCORDING TO __________________________
+!     __IND=1+IP(3)+(THIS%NKDIV(3)+1)*(IP(2)+(THIS%NKDIV(2)+1)*IP(1))___________
+!     __ THIS MAPPING ALSO INCLUDES ALL BOUNDARIES OF THE UNIT CELL! ___________
+      ALLOCATE(THIS%IRRKP(NMSHP))
+      THIS%IRRKP(:)=NUM(:)
+!
+!     ==========================================================================
+!     -- PRINTOUT OF SYMMETRY OPERATIONS                                      ==
+!     ==========================================================================
+      IF(TPR) THEN
+        DO ISYM=1,NOP                                             
+          WRITE(*,FMT='("SYMMETRYMATRIX NR. : ",I5/3(" ",3I10/))') &
+     &            ISYM,((OP(I,J,ISYM),J=1,3),I=1,3)                 
+        ENDDO
+      END IF                                                            
+!
+!     ==========================================================================
+!     ==  PRINTOUT OF MAPPING TO IRREDUCIBLE K-POINTS                         ==
+!     ==========================================================================
+      IF(IWNUM.EQ.1.AND.NKDIV(3)+1.LE.25) THEN                              
+        DO I=0,NKDIV(1)
+          DO J=NKDIV(2),0,-1
+            INDEX1=I*(NKDIV(2)+1)*(NKDIV(3)+1)+J*(NKDIV(3)+1)+1
+            INDEX2=INDEX1+NKDIV(3)                                              
+            WRITE(*,FMT='(25I5)')(NUM(K),K=INDEX1,INDEX2)                      
+          ENDDO
+          WRITE(*,FMT='(/)')
+        ENDDO
+      END IF                                                            
+!
+!     ==========================================================================
+!     ==  PRINT IREDUCIBLE K-POINTS                                           ==
+!     ==========================================================================
+      WRITE(*,FMT='("NO. OF INEQUIVALENT K-POINTS ",I5)')NKP
+      IF(IWBK.NE.0) THEN                                                
+        WRITE(*,FMT='("INEQUIVALENT BLOCH VECTORS")')                       
+        NDIMM=NKP/2+1                                                   
+        DO I=1,NDIMM                                                 
+          NDI1=(I-1)*2+1                                                  
+          NDI2=NDI1+1                                                     
+          IF(I.EQ.NDIMM)NDI2=NKP                                          
+          WRITE(6,FMT='(I4,"(",3F10.6,")",I4," (",3F10.6,")")') &
+     &          (K,(XK(J,K),J=1,3),K=NDI1,NDI2)                    
+        ENDDO
+      END IF                                                            
+!
+!     ==========================================================================
+!     ==  CHOOSE TETRAHEDRA                                                   ==
+!     ==========================================================================
+      CALL BRILLOUIN_TETDIV(NKDIV,GBAS,TET0)
+      IF(TPR) THEN                                                 
+        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')1,2,3
+        WRITE(*,FMT='(4I5,5X,4I5,5X,4I5)') &
+     &         (((TET0(J,K,I),K=1,4),I=1,3),J=1,3)    
+        WRITE(*,FMT='(3(I2,"-TES NORMTETRAHEDRON "))')4,5,6
+        WRITE(*,FMT='(4I5,5X,4I5,5X,4I5)') &
+     &         (((TET0(J,K,I),K=1,4),I=4,6),J=1,3)    
+      END IF                                                            
+!
+!     ==========================================================================
+!     ==  FIND INEQUIVALENT TETRAHEDRA                                        ==
+!     ==========================================================================
+      INV=0
+      CALL BRILLOUIN_TETCNT(NMSHP,NUM,TET0,NKDIV,INV,THIS)
       DEALLOCATE(NUM)
                                    CALL TRACE$POP
       RETURN                                                            
@@ -1291,23 +1503,23 @@ END MODULE BRILLOUIN_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BRILLOUIN_TETCNT(NMSHP,NUM,TET0,N,INV,THIS)
-!     **                                                              **
-!     **  TETCNT CALCULATES ALL DIFFERENT TETRAHEDRA AND COUNTS THEM  **
-!     **  INPUT :                                                     **
-!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND        **
-!     **                ON ALL FACES OF A REC. UNIT CELL              **
-!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE       **
-!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)         **
-!     **    TET0(I,J,K) COORDINATES (I) IN THE BASIS OF SUBLATTICE    ** 
-!     **                VECTORS, OF THE 4 CORNERS (J) OF A            ** 
-!     **                TETRAHEDRON (K) IN A SUBLATTICE UNIT CELL     ** 
-!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS   **
-!     **    INV         DUMMY NUMBER (MUST BE 0)                      **
-!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                **
-!     **    MWRIT       INFORMATION FOR MWRIT TETRAHEDRA ARE WRITTEN  **
-!     **                AT ONE TIME.                                  **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  TETCNT CALCULATES ALL DIFFERENT TETRAHEDRA AND COUNTS THEM          **
+!     **  INPUT :                                                             **
+!     **    NMSHP       NUMBER OF SUBLATTICE POINTS INSIDE AND                **
+!     **                ON ALL FACES OF A REC. UNIT CELL                      **
+!     **    NUM(I)      MAPPING FROM A GENERAL POINT (I) TO THE               **
+!     **                CORRESPONDING IRREDUCIBLE POINT (NUM)                 **
+!     **    TET0(I,J,K) COORDINATES (I) IN THE BASIS OF SUBLATTICE            **
+!     **                VECTORS, OF THE 4 CORNERS (J) OF A                    **
+!     **                TETRAHEDRON (K) IN A SUBLATTICE UNIT CELL             **
+!     **    N           NUMBER OF DIVISIONS OF REC. LATTICE VECTORS           **
+!     **    INV         DUMMY NUMBER (MUST BE 0)                              **
+!     **    NKP         NUMBER OF IRREDUCIBLE K-POINTS                        **
+!     **    MWRIT       INFORMATION FOR MWRIT TETRAHEDRA ARE WRITTEN          **
+!     **                AT ONE TIME.                                          **
+!     **                                                                      **
+!     **************************************************************************
       USE BRILLOUIN_MODULE, ONLY : THIS_TYPE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NMSHP        ! #(GENERAL K-POINTS +FACES)

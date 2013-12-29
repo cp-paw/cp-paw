@@ -2408,7 +2408,7 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
       CALL REPORT$TITLE(NFILO,'TETRAHEDRON METHOD')
       CALL REPORT$STRING(NFILO,'WARNING!!')
-      CALL REPORT$STRING(NFILO,'PROJECTED DENSITY OF STATES WILL BE IN ERROR')         
+      CALL REPORT$STRING(NFILO,'PROJECTED DENSITY OF STATES WILL BE IN ERROR')
       CALL REPORT$STRING(NFILO,'UNLESS THEY TRANSFORM LIKE THE IDENTITY')
       CALL REPORT$STRING(NFILO,'UNDER THE POINTGROUP OF THE CRYSTAL EMPLOYED')
       CALL REPORT$STRING(NFILO,'IN THE CALCULATION')
@@ -2419,30 +2419,41 @@ END MODULE ORBITALS_MODULE
       CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G1",NKDIV(1),'')
       CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G2",NKDIV(2),'')
       CALL REPORT$I4VAL(NFILO,"NUMBER OF K-GRID POINTS ALONG G3",NKDIV(3),'')
+      CALL REPORT$I4VAL(NFILO,"SHIFT ALONG G1",ISHIFT(1),'')
+      CALL REPORT$I4VAL(NFILO,"SHIFT ALONG G2",ISHIFT(2),'')
+      CALL REPORT$I4VAL(NFILO,"SHIFT ALONG G3",ISHIFT(3),'')
+!     
+!     ==========================================================================
+!     == CONSTRUCT SYMMETRY OPERATIONS                                        ==
+!     ==========================================================================
+      CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+      CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
 !     
 !     ==========================================================================
 !     == CONSTRUCT IRREDUCIBLE K-POINTS                                       ==
 !     ==========================================================================
-      IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
-        IARB=(/1,0,0/)
-      ELSE IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
-        IARB=(/0,0,0/)
-      ELSE IF(BRAVAIS.EQ.'GMB') THEN
-        IARB=(/0,1,0/)
-      ELSE
-        IARB=(/1,1,1/)
-      ENDIF 
-      CALL BRILLOUIN$CHECKRBAS(BRAVAIS,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
-
-      CALL SPACEGROUP$GENERATORS('RECI',NOPX,NOP,IIO,C)
-      CALL BRILLOUIN$MSH(RBAS,NKDIV(1)*NKDIV(2)*NKDIV(3),NOP,IIO,IARB,TSHIFT)
-!$      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
-      
+!!$      IF(BRAVAIS.EQ.'GH'.OR.BRAVAIS.EQ.'GQ'.OR.BRAVAIS.EQ.'GOB') THEN
+!!$        IARB=(/1,0,0/)
+!!$      ELSE IF(BRAVAIS.EQ.'GOF'.OR.BRAVAIS.EQ.'GO'.OR.BRAVAIS.EQ.'GM') THEN
+!!$        IARB=(/0,0,0/)
+!!$      ELSE IF(BRAVAIS.EQ.'GMB') THEN
+!!$        IARB=(/0,1,0/)
+!!$      ELSE
+!!$        IARB=(/1,1,1/)
+!!$      ENDIF 
+!!$      NKPT2=(NKDIV(1)+1)*(NKDIV(2)+1)*(NKDIV(3)+1)
+!!$      CALL BRILLOUIN$MSH(RBAS,NKPT2,NOP,IIO,IARB,TSHIFT)
+!!$      CALL BRILLOUIN$MSHNOSYM(TINV,RBAS,NKDIV,ISHIFT)
+      CALL BRILLOUIN$MSHSYM(RBAS,NKDIV,ISHIFT,TINV,NOP,IIO)
       CALL BRILLOUIN$GETI4('NK',NKPT2)
+!
       IF(NKPT2.NE.NKPT)THEN
         CALL ERROR$MSG('NUMBER OF KPOINTS INCONSISTENT')
         CALL ERROR$I4VAL('NKPT FROM PDOS',NKPT)
         CALL ERROR$I4VAL('NKPT FROM BRILLOUIN',NKPT2)
+        CALL ERROR$I4VAL('NKDIV(1)',NKDIV(1))
+        CALL ERROR$I4VAL('NKDIV(2)',NKDIV(2))
+        CALL ERROR$I4VAL('NKDIV(3)',NKDIV(3))
         CALL ERROR$STOP('DOS')
       ENDIF
 !     
@@ -2457,38 +2468,38 @@ END MODULE ORBITALS_MODULE
       ENDDO
       ALLOCATE(WGHT(NB*NSPIN,NKPT))
       CALL BRILLOUIN$DOS(NSPIN*NB,NKPT,EB,WGHT,RNTOT,EF)
-!
-!     ==========================================================================
-!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
-!     ==========================================================================
-      !FIXME TOTAL DENSITY FOR TESTING
-      ALLOCATE(A(NB*NSPIN,NKPT))
-      A=1.D0
-      SUMA(:)=0.D0
-      DO IB=1,NB
-        DO ISPIN=1,NSPIN
-          SUMA(ISPIN)=0.0D0
-          DO IKPT=1,NKPT
-            SUMA(ISPIN)=SUMA(ISPIN) &
-     &                 +WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
-          ENDDO
-          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA(ISPIN)
-        ENDDO
-      ENDDO
-      
-      A=1.0D0
-      SUMA(:)=0.D0
-      DO IB=1,NB
-        DO ISPIN=1,NSPIN
-          DO IKPT=1,NKPT
-            SUMA(ISPIN)=SUMA(ISPIN) &
-     &                 +WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
-          ENDDO
-        ENDDO
-      ENDDO
-      PRINT*,'INTEGRAL OF A=1 :             ',SUM(SUMA(:)),' SHOULD BE ',RNTOT 
-      PRINT*,'INTEGRAL OF A=1 (SPIN UP) :   ',SUMA(1) 
-      PRINT*,'INTEGRAL OF A=1 (SPIN DOWN) : ',SUMA(2)
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
+!!$!     ==========================================================================
+!!$      !FIXME TOTAL DENSITY FOR TESTING
+!!$      ALLOCATE(A(NB*NSPIN,NKPT))
+!!$      A=1.D0
+!!$      SUMA(:)=0.D0
+!!$      DO IB=1,NB
+!!$        DO ISPIN=1,NSPIN
+!!$          SUMA(ISPIN)=0.0D0
+!!$          DO IKPT=1,NKPT
+!!$            SUMA(ISPIN)=SUMA(ISPIN) &
+!!$     &                 +WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+!!$          ENDDO
+!!$          PRINT*,"IB=",IB," ISPIN=",ISPIN," SUMA=",SUMA(ISPIN)
+!!$        ENDDO
+!!$      ENDDO
+!!$      
+!!$      A=1.0D0
+!!$      SUMA(:)=0.D0
+!!$      DO IB=1,NB
+!!$        DO ISPIN=1,NSPIN
+!!$          DO IKPT=1,NKPT
+!!$            SUMA(ISPIN)=SUMA(ISPIN) &
+!!$     &                 +WGHT(IB+NB*(ISPIN-1),IKPT)*A(IB+NB*(ISPIN-1),IKPT)
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$      PRINT*,'INTEGRAL OF A=1 :             ',SUM(SUMA(:)),' SHOULD BE ',RNTOT 
+!!$      PRINT*,'INTEGRAL OF A=1 (SPIN UP) :   ',SUMA(1) 
+!!$      PRINT*,'INTEGRAL OF A=1 (SPIN DOWN) : ',SUMA(2)
 !     
 !     ==========================================================================
 !     == CALCULATE ENERGY DEPENDENT INTEGRATION WEIGHTS                       ==
