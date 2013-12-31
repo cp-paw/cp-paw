@@ -324,18 +324,16 @@ for PAR1VAL in $PAR1VALS; do
       cd ${PROJECTDIR}
       echo executing make-dos $PROJECTDIR ....
       if [ ! -d Dos ] ; then mkdir Dos; fi
-      cp ${NAME}.dcntl Dos/
-      cp ${NAME}.strc_out Dos/
-      cp ${NAME}.pdos Dos/
+#      cp ${NAME}.strc_out Dos/
+#      cp ${NAME}.pdos Dos/
       if [ $DRYRUN = no ] ; then
         ${PAWXDIR}/paw_dos.x ${NAME}.dcntl
         RC=$?
         if [ $RC -ne 0 ] ; then 
           echo error in $0:
-          echo paw_resolve failed to expand ${PROJECTDIR}/${NAME}.cntl_eels 
+          echo paw_dos failed on ${PROJECTDIR}/Dos/${NAME}.dcntl 
           exit 1 
         fi
-        ${PAWXDIR}/paw_stripnos Dos/*.dos
       fi
       echo ..... make-dos $DIR done
       cd $THISDIR

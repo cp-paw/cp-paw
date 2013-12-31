@@ -22,6 +22,7 @@ USAGE="$USAGE Options \n"
 USAGE="$USAGE -h|? help message \n"
 USAGE="$USAGE -etot   prints total energy in Hartree (default)\n"
 USAGE="$USAGE -gap    prints fundamental band gap in eV\n"
+USAGE="$USAGE -efermi prints fermi level eV\n"
 USAGE="$USAGE -homo   prints energy of the highest occupied state in eV\n"
 USAGE="$USAGE -lumo   prints energy of the lowest unoccupied state in eV\n"
 USAGE="$USAGE -n   prints the result as number (levels in eV, total energies in Hartree)\n"
@@ -54,6 +55,10 @@ while [ $1 ] ; do
        export WHAT="LUMO-ENERGY" 
        shift
        ;;
+    -efermi)
+       export WHAT="CHEMICAL POTENTIAL" 
+       shift
+       ;;
     -n) 
        export TN=N
        shift
@@ -62,6 +67,11 @@ while [ $1 ] ; do
        export TN=T
        shift
        ;;
+    -*)
+       echo error in $0: illegal option $1
+       exit 1
+       ;;
+
      *)
        export ROOT=$1
        shift
@@ -85,6 +95,30 @@ if [ ! -e $ROOT.prot ]; then
   exit 1
 fi
 export RESULT=`grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+#
+#  correction for mermin vs. non-mermin output
+#
+if [ -z  "$RESULT" ] ; then
+  if test  "$WHAT" = "CHEMICAL POTENTIAL"  ; then 
+    export WHAT1="HOMO-ENERGY" 
+    export RESULT1=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+    RESULT1=${RESULT1%EV*}
+    export WHAT2="LUMO-ENERGY" 
+    export RESULT2=`grep "$WHAT2" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+    RESULT2=${RESULT2%EV*}
+    RESULT=$(echo " scale=5; ( $RESULT1 + $RESULT2 ) / 2 " | bc)
+    RESULT="$RESULT EV"  
+    if [ -z $RESULT1 ] ; then RESULT='';  fi
+    if [ -z $RESULT2 ] ; then RESULT='';  fi
+  elif test  "$WHAT" = "HOMO-ENERGY" ; then
+    export WHAT1="CHEMICAL POTENTIAL" 
+    export RESULT=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+  elif test  "$WHAT" = "LUMO-ENERGY" ; then
+    export WHAT1="CHEMICAL POTENTIAL" 
+    export RESULT=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+  fi
+fi
+
 #
 #  test if result is non-empty
 #
