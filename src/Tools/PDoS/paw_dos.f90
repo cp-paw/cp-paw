@@ -2282,7 +2282,7 @@ print*,'ide ',w1
           DO IE=1-IDE,IE1-1
             NOSMIN(ISPIN)=NOSMIN(ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
-PRINT*,'MARKE 3c'
+PRINT*,'MARKE 3c',ie1,ie2,ie1+ide,ie2+ide
           DO IE=IE1,IE2
             DOS(IE,ISPIN)=DOS(IE,ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
