@@ -2231,7 +2231,6 @@ END MODULE ORBITALS_MODULE
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)  !STEP OF THE ENERGY GRID
       SPINDEG=1.D0
       IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
-PRINT*,'MARKE 1'
 !
 !     ==========================================================================
 !     ==  CALCULATE NUMBER OF STATES FOR EACH ENERGY INTERVAL                 ==
@@ -2255,7 +2254,6 @@ PRINT*,'MARKE 1'
           ENDDO
         ENDDO
       ENDDO
-PRINT*,'MARKE 2'
 !
 !     ==========================================================================
 !     ==  BROADEN RESULT                                                      ==
@@ -2268,22 +2266,27 @@ PRINT*,'MARKE 2'
         SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
       SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
-PRINT*,'MARKE 3'
+PRINT*,'MARKE 3 ',nd,ispin,ne
 !
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
       NOS=DOS
       DOS(:,:)=0.D0
       DO ISPIN=1,NSPIN
         DO IDE=-ND,ND
+PRINT*,'MARKE 3a ',ispin,ide
           IE1=MAX(1,1-IDE)
           IE2=MIN(NE,NE-IDE)
+PRINT*,'MARKE 3b'
           W1=SMEAR(IDE)
+print*,'ide ',w1
           DO IE=1-IDE,IE1-1
             NOSMIN(ISPIN)=NOSMIN(ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
+PRINT*,'MARKE 3c'
           DO IE=IE1,IE2
             DOS(IE,ISPIN)=DOS(IE,ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
+PRINT*,'MARKE 3d'
         ENDDO
       ENDDO
 PRINT*,'MARKE 4'
