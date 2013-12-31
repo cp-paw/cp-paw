@@ -327,7 +327,7 @@ for PAR1VAL in $PAR1VALS; do
 #      cp ${NAME}.strc_out Dos/
 #      cp ${NAME}.pdos Dos/
       if [ $DRYRUN = no ] ; then
-        ${PAWXDIR}/paw_dos.x ${NAME}.dcntl
+        ${PAWXDIR}/paw_dos.x ${PROJECTDIR}/${NAME}.dcntl
         RC=$?
         if [ $RC -ne 0 ] ; then 
           echo error in $0:

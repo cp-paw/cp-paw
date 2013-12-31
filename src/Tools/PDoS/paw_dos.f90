@@ -1799,7 +1799,7 @@ END MODULE ORBITALS_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                              ==
 !       ========================================================================
         IF(MODE.EQ.'SAMPLE')THEN
-          CALL PUTONGRID(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+          CALL PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE IF(MODE.EQ.'TETRA')THEN
 !!$          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
@@ -1965,7 +1965,7 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL$OUTPUT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PUTONGRID(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+      SUBROUTINE PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
      &                    ,NB,NKPT,NSPIN,NDIM,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
@@ -2015,7 +2015,7 @@ END MODULE ORBITALS_MODULE
       REAL(8)              :: E
       REAL(8)              :: SPINDEG
 !     **************************************************************************
-                                 CALL TRACE$PUSH('PUTONGRID')
+                                 CALL TRACE$PUSH('PUTONGRID_SAMPLE')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
       SPINDEG=1.D0
@@ -2026,7 +2026,7 @@ END MODULE ORBITALS_MODULE
       IF(SUM(WKPT).EQ.0.D0) THEN
         CALL ERROR$MSG('NO K-POINT WEIGHTS AVAILABLE: OLD VERSION OF PDOS FILE')
         CALL ERROR$MSG('RERUN ONE PAW ITERATION WITH NEW CODE')
-        CALL ERROR$STOP('PUTONGRID')
+        CALL ERROR$STOP('PUTONGRID_SAMPLE')
         DO IKPT=1,NKPT
           WKPT(IKPT)=0.D0
           DO ISPIN=1,NSPIN
@@ -2037,7 +2037,7 @@ END MODULE ORBITALS_MODULE
           ENDDO
           IF(WKPT(IKPT).EQ.0.D0) THEN
             CALL ERROR$MSG('NO ELECTRONS FOR THIS K-POINT. GOT CONFUSED')
-            CALL ERROR$STOP('PUTONGRID')
+            CALL ERROR$STOP('PUTONGRID_SAMPLE')
           END IF
         ENDDO       
       END IF
@@ -2175,7 +2175,7 @@ END MODULE ORBITALS_MODULE
       END IF
                                  CALL TRACE$POP
       RETURN
-      END SUBROUTINE PUTONGRID
+    END SUBROUTINE PUTONGRID_SAMPLE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
@@ -2226,12 +2226,12 @@ END MODULE ORBITALS_MODULE
       REAL(8)                  :: E
       REAL(8)                  :: SPINDEG
 !     **************************************************************************
-                                 CALL TRACE$PUSH('PUTONGRID')
+                                 CALL TRACE$PUSH('PUTONGRID_TETRA')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)  !STEP OF THE ENERGY GRID
       SPINDEG=1.D0
       IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
-
+PRINT*,'MARKE 1'
 !
 !     ==========================================================================
 !     ==  CALCULATE NUMBER OF STATES FOR EACH ENERGY INTERVAL                 ==
@@ -2255,6 +2255,7 @@ END MODULE ORBITALS_MODULE
           ENDDO
         ENDDO
       ENDDO
+PRINT*,'MARKE 2'
 !
 !     ==========================================================================
 !     ==  BROADEN RESULT                                                      ==
@@ -2267,6 +2268,7 @@ END MODULE ORBITALS_MODULE
         SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
       SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
+PRINT*,'MARKE 3'
 !
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
       NOS=DOS
@@ -2284,6 +2286,7 @@ END MODULE ORBITALS_MODULE
           ENDDO
         ENDDO
       ENDDO
+PRINT*,'MARKE 4'
 !
 !     ==========================================================================
 !     ==  CONVERT DELTA-NOS INTO DOS                                          ==
