@@ -1309,10 +1309,6 @@ END MODULE ORBITALS_MODULE
      &                        ,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
 !     **************************************************************************
 !     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
 !     ** REMARK: THE STRING VARIABLE SPIN DESCRIBES THE SPIN PROJECTION FOR   **
 !     ** NON-COLLINEAR CALCULATIONS. IN THIS CASE, NSPIN=1.                   **
 !     **    SPIN='TOTAL' CALCULATES TOTAL ELECTRON DENSITY                    **
@@ -2237,6 +2233,7 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
       ALLOCATE(DOS(NE,NSPIN))
       ALLOCATE(NOSMIN(NSPIN))
+      ALLOCATE(NOS(NE,NSPIN))
       DOS(:,:)=0.D0
       NOSMIN(:)=0.D0
       DO IKPT=1,NKPT
@@ -2266,30 +2263,23 @@ END MODULE ORBITALS_MODULE
         SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
       SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
-PRINT*,'MARKE 3 ',nd,ispin,ne
 !
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
       NOS=DOS
       DOS(:,:)=0.D0
       DO ISPIN=1,NSPIN
         DO IDE=-ND,ND
-PRINT*,'MARKE 3a ',ispin,ide
           IE1=MAX(1,1-IDE)
           IE2=MIN(NE,NE-IDE)
-PRINT*,'MARKE 3b'
           W1=SMEAR(IDE)
-print*,'ide ',w1
           DO IE=1-IDE,IE1-1
             NOSMIN(ISPIN)=NOSMIN(ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
-PRINT*,'MARKE 3c',ie1,ie2,ie1+ide,ie2+ide
           DO IE=IE1,IE2
             DOS(IE,ISPIN)=DOS(IE,ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
-PRINT*,'MARKE 3d'
         ENDDO
       ENDDO
-PRINT*,'MARKE 4'
 !
 !     ==========================================================================
 !     ==  CONVERT DELTA-NOS INTO DOS                                          ==
