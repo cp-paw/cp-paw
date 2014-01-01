@@ -6813,12 +6813,11 @@ used in this graph}
 \brules{optional, multiple}
 \bdescr{Defines a set of density of states. A set contains the 
 \begin{enumerate}
-\item empty and full, spin-up density of states
-\item empty and full, spin-down density of states
-\item full, spin-up density of states
-\item full, spin-down density of states
+\item density of states (irrespective of their occupation)
+\item density of states weighted with occupation
 \end{enumerate}
-}
+For collinear spin polarized calculation, the spin-up density is
+written first followed by the spin down density.  }
 
 \mbax{\key{ID} 
 \vdescr{identifier for set. The name of the density of states data
@@ -6859,7 +6858,7 @@ If STACK is non-existent or has the value .false. the stack is reset to the actu
 \vrules{optional}
 \vdefault{F}}
 
-\mbax{\key{FILLCOLOR} \vdescr{Fills the density of states with
+\mbax{\key{COLOR} \vdescr{Fills the density of states with
     color. The colors to the left of the following table may be
     used. The corresponding colors on the right will be used for the
     empty density of states.
