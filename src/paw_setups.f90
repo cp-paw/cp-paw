@@ -115,8 +115,6 @@ REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
 REAL(8)   ,POINTER     :: PSCORE(:)    !(NR)  PSEUDIZED ELECTRON DENSITY
 REAL(8)   ,POINTER     :: PRO(:,:)     !(NR,LNX)  PROJECTOR FUNCTIONS
 REAL(8)                :: RBOX         ! PARTIAL WAVES HAVE OUTER NODE AT RBOX
-REAL(8)   ,POINTER     :: EOFLN(:)     !(LNX)  ENERGIES FOR PARTIAL WAVE CONSTRUCTION
-REAL(8)   ,POINTER     :: ESCATT(:)    !(LNX)  ENERGIES FOR SCATTERING WAVE FUNCTIONS
 REAL(8)   ,POINTER     :: AEPHI(:,:)   !(NR,LNX)  AE PARTIAL WAVES
 REAL(8)   ,POINTER     :: PSPHI(:,:)   !(NR,LNX)  PS PARTIAL WAVES
 REAL(8)   ,POINTER     :: UPHI(:,:)    !(NR,LNX)  NODELESS PARTIAL WAVES
@@ -750,28 +748,6 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%PROOFG,(/LEN/))
-! 
-!     ==========================================================================
-!     ==  ENERGIES FOR PARTIAL WAVE CONSTRUCTION                              ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'EOFLN') THEN
-        IF(LEN.NE.THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=THIS%EOFLN
-! 
-!     ==========================================================================
-!     ==  ENERGIES FOR SCATTERING PARTIAL WAVE CONSTRUCTION                   ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'ESCATT') THEN
-        IF(LEN.NE.THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=THIS%ESCATT
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -1820,8 +1796,6 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(THIS%TUPHI(NR,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
-      ALLOCATE(THIS%EOFLN(LNX))
-      ALLOCATE(THIS%ESCATT(LNX))
       ALLOCATE(THIS%NLPHIDOT(NR,LNX))
       ALLOCATE(THIS%QPHIDOT(NR,LNX))
       ALLOCATE(THIS%PSPHIDOT(NR,LNX))
@@ -1845,7 +1819,7 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,VFOCK,NB,NC &
      &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
-     &          ,THIS%ISCATT,THIS%EOFLN,THIS%ESCATT &
+     &          ,THIS%ISCATT &
      &         ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%QPHI,THIS%PRO &
      &          ,THIS%DTKIN,THIS%DOVER,THIS%AECORE,THIS%PSCORE &
      &          ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
@@ -2935,7 +2909,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
-     &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT,EOFLN,ESCATT &
+     &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                  ,AEPHI,PSPHI,NLPHI,QN,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
      &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD &
      &                  ,NLPHIDOT,QNDOT,AEPHIDOT,PSPHIDOT,PSG2,PSG4)
@@ -2982,8 +2956,6 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,INTENT(IN) :: PSCORE(NR)
       REAL(8)   ,INTENT(OUT):: VADD(NR)
       REAL(8)   ,INTENT(OUT):: PSPOT(NR)
-      REAL(8)   ,INTENT(OUT):: EOFLN(LNX)   ! ENERGY OF PARTIAL WAVE
-      REAL(8)   ,INTENT(OUT):: ESCATT(LNX)  ! ENERGY OF SCATTERING PARTIAL WAVE
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX)
@@ -3149,8 +3121,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
-        EOFLN=0.D0
-        ESCATT=0.D0
         IF(TSEQUENTIALAUGMENT) THEN
           CALL ERRRO$MSG('TSEQUENTIALAUGMENT=.TRUE. INCOMPATIBLE WITH NEW PRO')
           CALL ERRRO$STOP('SETUP_MAKEPARTIALWAVES')
@@ -3174,8 +3144,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
-        EOFLN=0.D0
-        ESCATT=0.D0
 !!$        CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
 !!$        CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
 !!$        CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
