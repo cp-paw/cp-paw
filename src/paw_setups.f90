@@ -1504,7 +1504,6 @@ PRINT*,'RCSM ',THIS%RCSM
       REAL(8)               :: EOFI(NBX)
       INTEGER(4)            :: GID
       INTEGER(4)            :: GIDG
-      REAL(8)               :: DEX
       INTEGER(4)            :: NG
       INTEGER(4)            :: NR
       INTEGER(4)            :: LX,LNX
@@ -1532,8 +1531,6 @@ PRINT*,'RCSM ',THIS%RCSM
       CHARACTER(64)         :: STRING
       TYPE(VFOCK_TYPE)      :: VFOCK
       REAL(8)   ,ALLOCATABLE:: AUX(:)
-      INTEGER(4)            :: NFIL
-      INTEGER(4)            :: NTASKS,THISTASK
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
@@ -2604,7 +2601,6 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)     ,INTENT(OUT):: RC_CORE
       LOGICAL(4)  ,INTENT(OUT):: TVAL0_CORE
       REAL(8)     ,INTENT(OUT):: VAL0_CORE
-      INTEGER(4)              :: NFIL
       TYPE(LL_TYPE)           :: LL_SCNTL
       INTEGER(4)              :: ITH
       LOGICAL(4)              :: TCHK,TCHK1,TCHK2,TCHK3
@@ -2977,19 +2973,10 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)               :: DH(LNX,LNX)
       REAL(8)               :: TRANSPHI(LNX,LNX)
       REAL(8)               :: TRANSPHIINV(LNX,LNX)
-      REAL(8)               :: TRANSPRO(LNX,LNX)
-      REAL(8)               :: TRANSU(LNX,LNX)
-      REAL(8)               :: TRANSUINV(LNX,LNX)
       REAL(8)               :: EOFI1(NB)
       REAL(8)               :: EOFICOMP(2,NB-NC)
       REAL(8)               :: UOFI(NR,NB)   ! NODELESS WAVE FUNCTION
       REAL(8)               :: UOFISM(NR,NB) ! SMALL COMPONENT
-      REAL(8)               :: TUOFI(NR,NB)
-      REAL(8)               :: AEPSI(NR,NB)
-      REAL(8)               :: QNP(NR,LNX)
-      REAL(8)               :: PSPHIP(NR,LNX)
-      REAL(8)               :: BAREPRO(NR,LNX)
-      REAL(8)               :: PHITEST1(NR,LNX)
       REAL(8)               :: PHISCALE(LNX)
       REAL(8)               :: PSISCALE(NB)
       REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
@@ -2998,16 +2985,16 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
       REAL(8)               :: AERHO(NR),PSRHO(NR),AUGRHO(NR),PAWRHO(NR)
-      REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
+      REAL(8)               :: G(NR),DREL(NR),PHI(NR)
       REAL(8)               :: E
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO
-      INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
+      INTEGER(4)            :: L,IB,LN,IR,LN1,LN2,I
+      INTEGER(4)            :: NPRO,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
-      REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER,VAL1,VAL2
+      REAL(8)               :: VAL,VAL1,VAL2
       REAL(8)               :: SVAR,SVAR1,SVAR2
       LOGICAL(4)            :: TREL,TSO,TZORA
       REAL(8)   ,ALLOCATABLE:: A(:,:)
@@ -3015,9 +3002,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
       REAL(8)               :: AUGPSIF(NR,NB-NC)
-      REAL(8)               :: EH,EXC
       INTEGER(4)            :: NN,NN0
-      INTEGER(4)            :: NFIL
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
@@ -3124,7 +3109,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !
 !  transphi,transphiinv
 !  psiscale, phiscale
-!
+!  aephidot,psphidot,nlphidot,qndot
 
 
 
@@ -4280,7 +4265,7 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)   ,PARAMETER      :: RBNDX=6.D0
       REAL(8)                   :: E
       REAL(8)                   :: PI,Y0
-      REAL(8)                   :: AUX(NR),DREL(NR),G(NR),POT(NR),PHI(NR)
+      REAL(8)                   :: DREL(NR),G(NR),POT(NR),PHI(NR)
       REAL(8)                   :: C(NR)
       REAL(8)                   :: R(NR)
       REAL(8)                   :: X0,XM,Z0,ZM,DX
@@ -4293,7 +4278,6 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)                   :: SVAR,SVAR1
       REAL(8)                   :: ARR1(5),ARR2(5)
       REAL(8)                   :: RBND2
-      CHARACTER(64)  :: STRING
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPSPHI_HBS')
       PI=4.D0*ATAN(1.D0)
@@ -4482,7 +4466,7 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
 !     **  THE TAYLOR EXPANSION CAN CREATE TWO NODES AT ONCE, WHICH            **
 !     **  CAUSES DIFFICULTIES.                                                **
 !     **                                                                      **
-!     **                                                                      ** 
+!     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2010******************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: GID
@@ -4501,22 +4485,16 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
       INTEGER(4)                :: IR,I,J,ITER
       REAL(8)                   :: TOL=1.D-12
       REAL(8)                   :: PI
-      REAL(8)                   :: VAL,VALT,DERT,VALJ,VALTJ
+      REAL(8)                   :: VAL
       REAL(8)                   :: X(NX)
-      REAL(8)                   :: JL(NX),DJLDR(NX),D2JLDR2(NX),PHASE(NX)
-      REAL(8)                   :: TJL(NX)
+      REAL(8)                   :: JL(NX),DJLDR(NX),PHASE(NX)
       REAL(8)                   :: JLOFKR(NR,NZEROS),TJLOFKR(NR,NZEROS)
-      REAL(8)                   :: DJLOFKR(NR,NZEROS),D2JLOFKR(NR,NZEROS),RDUMMY(NR,NZEROS)
       REAL(8)                   :: AUX1(NR),AUX2(NR)
       REAL(8)                   :: NN
       INTEGER(4)                :: ISTART,IBI
       REAL(8)                   :: X0,Y0,DX,XM,YM
       REAL(8)                   :: KI(NZEROS)
-      REAL(8)                   :: A11,A12,A21,A22,DET
-      REAL(8)                   :: AINV11,AINV12,AINV21,AINV22
-      REAL(8)                   :: V1,V2,C1,C2,C3,C1A,C2A,C1B,C2B
-      REAL(8)                   :: DTJ1,DTJ2,DTJ3
-      REAL(8)                   :: SVAR1,SVAR2,FAC,SVAR
+      REAL(8)                   :: SVAR
       INTEGER(4)                :: IB
       REAL(8)                   :: SUPPHI(NR,NB)
       REAL(8)                   :: SUPTPHI(NR,NB)
@@ -5119,7 +5097,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,ALLOCATABLE:: FACTOR(:,:,:)
       INTEGER(4)            :: LMCA
       INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
-      INTEGER(4)            :: LN1,L1,IC,LN2,L2,LM2
+      INTEGER(4)            :: LN1,L1,IC,LN2,L2
       LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       REAL(8)               :: PI
 !     **************************************************************************
@@ -6578,7 +6556,6 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       REAL(8)               :: MAT(NJ,NJ),MATINV(NJ,NJ)
       REAL(8)               :: PI,Y0
       REAL(8)               :: A(NC,NJ),B(NC,NJ)
-      REAL(8)               :: CFAC(NC,NJ)
       REAL(8)               :: SVAR,SVAR1,SVAR2
       REAL(8)               :: RNS
       INTEGER(4)            :: IPHISCALE  
@@ -7052,7 +7029,7 @@ PRINT*,'IPHISCALE ',IPHISCALE
       REAL(8)               :: C1,C2,C3,DET
       INTEGER(4)            :: IR
       REAL(8)               :: PI,Y0
-      REAL(8)               :: WORK(NR,2),SVAR
+      REAL(8)               :: SVAR
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -7168,13 +7145,11 @@ PRINT*,'IPHISCALE ',IPHISCALE
       REAL(8)               :: TFDOT(NR)
       REAL(8)               :: FDDOT(NR)
       REAL(8)               :: TFDDOT(NR)
-      REAL(8)               :: ENU
-      REAL(8)               :: VALPHI,VALF,VALFDOT,VALFDDOT,VAL
+      REAL(8)               :: VALPHI,VALF,VALFDOT,VALFDDOT
       REAL(8)               :: DERPHI,DERF,DERFDOT,DERFDDOT
       REAL(8)               :: C1,C2,C3,DET
       INTEGER(4)            :: IR
       INTEGER(4)            :: J
-      REAL(8)               :: WORK(NR,2)
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
