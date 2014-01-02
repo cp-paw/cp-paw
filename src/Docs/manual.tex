@@ -6707,7 +6707,7 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 
 \begin{verbatim}
 !DPCNTL
-  XMIN[EV]=-7. XMAX[EV]=25.  YMIN[EV]=-0.0 YMAX[EV]=0.5  XZERO[EV]=14.
+  EMIN[EV]=-7. EMAX[EV]=25.  YMIN=-0.0 YMAX=0.5  EZERO[EV]=14.
   !GRAPH PREFIX='DOS/'
     !SET ID='TOTAL'  COLOR='BLACK'           !END
     !SET ID='MN_EG'  COLOR='YELLOW'          !END
@@ -6740,41 +6740,37 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \brules{mandatory}
 \bdescr{containes direwctions on what the tool shall do}
 
-\mbax{\key{XZERO[EV]}
-\vdescr{shifts the energy axis of all graphs so the value given (in
-  eV) is the new zero. (Often this is chosen as the highest occupied
-  state, respectively the Fermi level.) may be overwritten by xzero in
-  !graph and !set}
+\mbax{\key{EZERO[EV]}
+\vdescr{shifts the energy axis of all graphs so the specified value
+  (in eV) is the new energy zero. (Often this is chosen as the highest
+  occupied state, respectively the Fermi level.) may be overwritten by
+  EZERO in !graph and !set}
 \vformat{real} 
 \vrules{optional}
 \vdefault{0.}}
 
 
-\mbax{\key{XMIN[EV]}
-\vdescr{lower bound in eV of the energy interval shown}
+\mbax{\key{EMIN[EV]}
+\vdescr{lower bound (in eV) of the energy interval shown}
 \vformat{real} 
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{XMAX[EV]}
-\vdescr{upper bound in eV of the energy interval shown}
+\mbax{\key{EMAX[EV]}
+\vdescr{upper bound (in eV) of the energy interval shown}
 \vformat{real} 
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{YMIN[EV]}
-\vdescr{lower bound in eV of the density-of-states interval shown.  A
-  negative value allows to also show the opposite spin direction.
-  Caution: The density of states prepared by the dos tool is given in
-  atomic units, even though the energies are expressed in eV.}
+\mbax{\key{YMIN}
+\vdescr{lower bound in 1/eV of the density-of-states interval shown.  A
+  negative value allows to also show the opposite spin direction.}
 \vformat{real} 
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{YMAX[EV]}
-\vdescr{upper bound of the density-of-states interval shown. Caution:
-  The density of states prepared by the dos tool is given in atomic
-  units, even though the energies are expressed in eV.}
+\mbax{\key{YMAX}
+\vdescr{upper bound in 1/eV of the density-of-states interval shown.}
 \vformat{real}
 \vrules{mandatory}
 \vdefault{none}}
@@ -6803,9 +6799,10 @@ used in this graph}
 \vrules{optional}
 \vdefault{1.}}
 
-\mbax{\key{XZERO[EV]}
-\vdescr{shifts the energy axis of sets in this graph so the value given is the
-  new zero.  May be overwritten by XZERO in !SET.}
+\mbax{\key{EZERO[EV]}
+\vdescr{shifts the energy axis of sets in this graph so the specified
+  value (in eV) is the new energy zero.  May be overwritten by EZERO
+  in !SET.}
 \vformat{real} 
 \vrules{optional}
 \vdefault{set by !DPCNTL:XZERO}}
@@ -6846,9 +6843,9 @@ written first followed by the spin down density.  }
 \vrules{optional}
 \vdefault{set by !DCNTL!GRAPH:SCALE}}
 
-\mbax{\key{XZERO[EV]}
-\vdescr{shifts the energy axis for this set so the value given is the
-  new zero. }
+\mbax{\key{EZERO[EV]}
+\vdescr{shifts the energy axis for this set so the specified value (in
+  eV) is the new energy zero. }
 \vformat{real} 
 \vrules{optional}
 \vdefault{set by !DPCNTL!GRAPH:XZERO}}
