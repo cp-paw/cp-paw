@@ -166,10 +166,11 @@ ${TESTS}:
 #-- (none,fast,dbg,prof,none_parallel,fast_parallel,dbg_parallel,prof_parallel)
 #---------------------------------------------------------------------------
 ${OBJTYPES}:
-	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/$@; ${MAKE} 
+	ALLDEP=F; export ALLDEP; cd ${OBJDIR}/$@; ${MAKE} f90pp; ${MAKE} 
 #
 $(addsuffix _new,${OBJTYPES}):
-	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/$(subst _new,,$@); ${MAKE} 
+	ALLDEP=T; export ALLDEP; cd ${OBJDIR}/$(subst _new,,$@); \
+                                                        ${MAKE} f90pp; ${MAKE} 
 #
 $(addprefix clean_,${OBJTYPES}):
 	cd ${OBJDIR}/$(subst clean_,,$@); ${MAKE} clean

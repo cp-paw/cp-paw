@@ -99,16 +99,8 @@ END MODULE READCNTL_MODULE
       WRITE(NFILO,*)
 !
 !     ==========================================================================
-!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
-!     ==========================================================================
-      CALL READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
-                            CALL TRACE$PASS('AFTER READCNTL$GENERIC')
-      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
-                            CALL TRACE$PASS('AFTER READCNTL$GRID')
-      CALL READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
-!
-!     ==========================================================================
 !     ==  READ PDOSFILE                                                       ==
+!     == ( DONE BEFORE READING FROM DCNTL TO SUGGEST RANGE FOR ENERGY GRID)   ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('PDOS',NFILIN)
       REWIND(NFILIN)
@@ -138,7 +130,19 @@ END MODULE READCNTL_MODULE
         ENDDO
       ENDDO
 !
+!     ==========================================================================
+!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
+!     ==========================================================================
+      CALL READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
+!     == DEFAULT VALUES FOR RANGE OF ENERGY GRID ===============================
+      EMIN=MINVAL(EIG)-1.D-1
+      EMAX=MINVAL(EIG(NB,:,:)) 
+      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
+      CALL READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
+!
+!     ==========================================================================
 !     == CHECK IF PDOS FILE CONTAINS DATA FOR THE TETRAHEDRON METHOD ===========
+!     ==========================================================================
       CALL PDOS$GETCH('FLAG',FLAG)
       CALL REPORT$CHVAL(NFILO,"FLAG OF PDOS FILE=",FLAG)
       IF(MODE.EQ.'TETRA'.AND.FLAG.NE.'181213')THEN 
@@ -1137,10 +1141,10 @@ END MODULE ORBITALS_MODULE
       USE LINKEDLIST_MODULE
       USE READCNTL_MODULE, ONLY: LL_CNTL
       IMPLICIT NONE
-      REAL(8)     ,INTENT(OUT) :: EMIN   ! MINIMUM OF ENERGY GRID
-      REAL(8)     ,INTENT(OUT) :: EMAX   ! MAXIMMUM OF ENERGY GRID
-      INTEGER(4)  ,INTENT(OUT) :: NE     ! NUMBER OF ENERGY GRID POINTS
-      REAL(8)     ,INTENT(OUT) :: EBROAD ! THERMAL ENERGY BROADENING
+      REAL(8)   ,INTENT(INOUT) :: EMIN   ! MINIMUM OF ENERGY GRID
+      REAL(8)   ,INTENT(INOUT) :: EMAX   ! MAXIMMUM OF ENERGY GRID
+      INTEGER(4),INTENT(OUT)   :: NE     ! NUMBER OF ENERGY GRID POINTS
+      REAL(8)   ,INTENT(OUT)   :: EBROAD ! THERMAL ENERGY BROADENING
       REAL(8)                  :: EV     ! ELECTRON VOLT
       REAL(8)                  :: KB     ! BOLTZMANN CONSTANT
       REAL(8)                  :: DE
@@ -1148,11 +1152,10 @@ END MODULE ORBITALS_MODULE
 !     **************************************************************************
 !     ==========================================================================
 !     == SET DEFAULT VALUES                                                   ==
+!     == (DEFAULT FOR EMIN/EMAX IS INPUT)                                     ==
 !     ==========================================================================
       CALL CONSTANTS('EV',EV)
       CALL CONSTANTS('KB',KB)
-      EMIN=-20.D0*EV
-      EMAX=+20.D0*EV
       EBROAD=KB*300.D0
       DE=1.D-3*EV
       NE=INT((EMAX-EMIN)/DE)+1
