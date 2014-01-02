@@ -2923,7 +2923,6 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       USE RADIALFOCK_MODULE,ONLY: VFOCK_TYPE
-      USE RADIALPAW_MODULE,ONLY: VPAW_TYPE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: TYPE
       INTEGER(4)  ,INTENT(IN) :: GID
@@ -2972,11 +2971,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
-      LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
-      LOGICAL(4),PARAMETER  :: TNEW=.TRUE.
-      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.NOT.TNEW
-      LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
-      LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
+      LOGICAL(4)            :: TSEQUENTIALAUGMENT
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
@@ -2991,46 +2986,31 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)               :: UOFISM(NR,NB) ! SMALL COMPONENT
       REAL(8)               :: TUOFI(NR,NB)
       REAL(8)               :: AEPSI(NR,NB)
-      REAL(8)               :: TNLPHI(NR,LNX)
-      REAL(8)               :: TAEPHI(NR,LNX)
-      REAL(8)               :: TPSPHI(NR,LNX)
-      REAL(8)               :: TQN(NR,LNX)
       REAL(8)               :: QNP(NR,LNX)
       REAL(8)               :: PSPHIP(NR,LNX)
       REAL(8)               :: BAREPRO(NR,LNX)
       REAL(8)               :: PHITEST1(NR,LNX)
       REAL(8)               :: PHISCALE(LNX)
       REAL(8)               :: PSISCALE(NB)
-      REAL(8)   ,ALLOCATABLE:: PHITEST(:,:)
-      REAL(8)   ,ALLOCATABLE:: TPHITEST(:,:)
       REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
       REAL(8)   ,ALLOCATABLE:: PSPHI1(:,:)
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-      REAL(8)               :: UBYQ(LNX)
       REAL(8)               :: AERHO(NR),PSRHO(NR),AUGRHO(NR),PAWRHO(NR)
-      REAL(8)   ,ALLOCATABLE:: DENMAT(:,:)
       REAL(8)               :: G(NR),GS(NR),DREL(NR),G1(NR),PHI(NR),PHI1(NR)
       REAL(8)               :: E
-      REAL(8)               :: RC1
-      REAL(8)               :: EHOMO
       INTEGER(4)            :: LX
       INTEGER(4)            :: L,IB,LN,IR,IR1,IB1,IB2,LN1,LN2,I,ISO
       INTEGER(4)            :: NV,NPRO,IV,IPRO,IPRO1,IPRO2
       REAL(8)               :: PI,Y0,C0LL
-      REAL(8)               :: X0,Z0,DX,XM,ZM
-      INTEGER(4)            :: ISTART,IBI
-      INTEGER(4)            :: NITER=100
-      INTEGER(4)            :: LNLAST
-      REAL(8)               :: PHIPHASE
       REAL(8)               :: R(NR)
-      REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
+      REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
       REAL(8)               :: VAL,DER,JVAL,JDER,KVAL,KDER,VAL1,VAL2
       REAL(8)               :: SVAR,SVAR1,SVAR2
       LOGICAL(4)            :: TREL,TSO,TZORA
-      REAL(8)   ,ALLOCATABLE:: A(:,:),AINV(:,:)
+      REAL(8)   ,ALLOCATABLE:: A(:,:)
       REAL(8)   ,ALLOCATABLE:: PROJ(:)
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
@@ -3041,36 +3021,24 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
-      REAL(8)               :: RBND   !RADIUS FOR BOUNDARY CONDITIONS
-      REAL(8)               :: SPEEDOFLIGHT
-      REAL(8)               :: E1
-      TYPE(VPAW_TYPE)       :: VPAW
-      LOGICAL(4)            :: TFIRST
       LOGICAL(4)            :: TVARDREL
-      REAL(8)   ,ALLOCATABLE :: ECORE(:),UCORE(:,:),TUCORE(:,:)
-REAL(8) :: PHITEST2(NR,LNX),PHITEST3(NR,LNX),PHITEST4(NR,LNX)
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
-      CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
       RNORM=RBOX
-      RBND=RNORM
-      PHIPHASE=1.D0    !NODE AT R=RBND!
 PRINT*,'R(NR)   ',R(NR),' OUTERMOST GRIDPOINT'
 PRINT*,'R(NR-1) ',R(NR-1),' SECOND TO OUTERMOST GRIDPOINT'
 PRINT*,'R(NR-2) ',R(NR-2),' THIRD TOOUTERMOST GRIDPOINT'
 PRINT*,'ROUT    ',ROUT,' HARD SPHERE RADIUS FOR ATOMIC CALCULATION'
 PRINT*,'RBOX    ',RBOX,' RADIUS FOR BOUNDARY CONDITIONS FOR PARTIAL WAVES'
-PRINT*,'RBND    ',RBND,' RADIUS FOR BOUNDARY CONDITION FOR PARTIAL WAVERS'
 PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
 PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
-IF(TSMALLBOX)PRINT*,'PARTIAL WAVES DETERMINED WITH SMALL-BOX BOUNDARY CONDITIONS'
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -3121,10 +3089,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
-        IF(TSEQUENTIALAUGMENT) THEN
-          CALL ERRRO$MSG('TSEQUENTIALAUGMENT=.TRUE. INCOMPATIBLE WITH NEW PRO')
-          CALL ERRRO$STOP('SETUP_MAKEPARTIALWAVES')
-        END IF
         DO LN1=1,LNX
           WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
         ENDDO
@@ -3155,6 +3119,15 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !!$          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
 !!$        ENDDO
       END IF
+!
+!  missing variables:
+!
+!  transphi,transphiinv
+!  psiscale, phiscale
+!
+
+
+
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
@@ -3387,6 +3360,7 @@ PRINT*,'DH= ',DH1,' DO=',DO1
 !     ==========================================================================
 !     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
 !     ==========================================================================
+      TSEQUENTIALAUGMENT=TYPE.NE.'NDLSS'
       IF(TSEQUENTIALAUGMENT) THEN
 !!$CALL SETUP_WRITEPHI('NLPHI_1.DAT',GID,NR,LNX,NLPHI)
 !!$CALL SETUP_WRITEPHI('AEPHI_1.DAT',GID,NR,LNX,AEPHI)
