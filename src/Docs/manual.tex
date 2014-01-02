@@ -6299,7 +6299,8 @@ largely independent of the system}
 %----------------------------------------------------------------------
 \block{!DCNTL!GRID}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{defines the energy grid and termal energy
+\brules{optional} 
+  \bdescr{defines the energy grid and termal energy
   broadening.  Read section~\ref{sec:thermoalbroadening} for the
   background of the thermal broadening.  }
 
@@ -6308,13 +6309,15 @@ largely independent of the system}
 of number of states}
 \vformat{real} 
 \vrules{optional}
-\vdefault{-20.}}
+\vdefault{minimum of all energy bands specified on the PDOS file minus
+  0.1/eV.}}
 
 \mbax{\key{EMAX[EV]}
 \vdescr{upper bound of the energy grid in eV}
 \vformat{real} 
 \vrules{optional}
-\vdefault{20.}}
+\vdefault{minimum of the highest energy band specified on the PDOS
+  file.}}
 
 \mbax{\key{DE[EV]}
 \vdescr{spacing of the grid points on the energy grid in eV. The value
@@ -6704,23 +6707,23 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 
 \begin{verbatim}
 !DPCNTL
-  NAME='MYPLOT'   XMIN=-7. XMAX=25.  YMIN=-0.0 YMAX=0.5  XZERO=14.
+  XMIN[EV]=-7. XMAX[EV]=25.  YMIN[EV]=-0.0 YMAX[EV]=0.5  XZERO[EV]=14.
   !GRAPH PREFIX='DOS/'
-    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
-    !SET ID='MN_EG'  FILLCOLOR='YELLOW'  !END
-    !SET ID='MN_T2G' FILLCOLOR='GREEN' STACK=T !END
-    !SET ID='PR_F'   FILLCOLOR='MAGENTA' STACK=T !END
-    !SET ID='PR_D'   FILLCOLOR='BLUE' STACK=T !END
-    !SET ID='O'      FILLCOLOR='RED' STACK=T !END
+    !SET ID='TOTAL'  COLOR='BLACK'           !END
+    !SET ID='MN_EG'  COLOR='YELLOW'          !END
+    !SET ID='MN_T2G' COLOR='GREEN'   STACK=T !END
+    !SET ID='PR_F'   COLOR='MAGENTA' STACK=T !END
+    !SET ID='PR_D'   COLOR='BLUE'    STACK=T !END
+    !SET ID='O'      COLOR='RED'     STACK=T !END
   !END
   !GRAPH PREFIX='DOS/' 
-    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
-    !SET ID='MN_EG'  FILLCOLOR='YELLOW'  SCALE=2. !END
-    !SET ID='MN_T2G' FILLCOLOR='GREEN' STACK=T SCALE=2. !END
+    !SET ID='TOTAL'  COLOR='BLACK'                  !END
+    !SET ID='MN_EG'  COLOR='YELLOW'        SCALE=2. !END
+    !SET ID='MN_T2G' COLOR='GREEN' STACK=T SCALE=2. !END
   !END
   !GRAPH PREFIX='DOS/'
-    !SET ID='TOTAL'  FILLCOLOR='BLACK' !END
-    !SET ID='MN_T2G' FILLCOLOR='GREEN'  !END
+    !SET ID='TOTAL'  COLOR='BLACK' !END
+    !SET ID='MN_T2G' COLOR='GREEN' !END
   !END
 !END
 !EOB
@@ -6737,30 +6740,30 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \brules{mandatory}
 \bdescr{containes direwctions on what the tool shall do}
 
-\mbax{\key{XZERO}
-\vdescr{shifts the energy axis of all graphs so the value given is the
-  new zero. (Often this is chosen as the highest occupied state,
-  respectively the Fermi level.) may be overwritten by xzero in !graph
-  and !set}
+\mbax{\key{XZERO[EV]}
+\vdescr{shifts the energy axis of all graphs so the value given (in
+  eV) is the new zero. (Often this is chosen as the highest occupied
+  state, respectively the Fermi level.) may be overwritten by xzero in
+  !graph and !set}
 \vformat{real} 
 \vrules{optional}
 \vdefault{0.}}
 
 
-\mbax{\key{XMIN}
+\mbax{\key{XMIN[EV]}
 \vdescr{lower bound in eV of the energy interval shown}
 \vformat{real} 
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{XMAX}
+\mbax{\key{XMAX[EV]}
 \vdescr{upper bound in eV of the energy interval shown}
 \vformat{real} 
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{YMIN}
-\vdescr{lower bound of the density-of-states interval shown.  A
+\mbax{\key{YMIN[EV]}
+\vdescr{lower bound in eV of the density-of-states interval shown.  A
   negative value allows to also show the opposite spin direction.
   Caution: The density of states prepared by the dos tool is given in
   atomic units, even though the energies are expressed in eV.}
@@ -6768,7 +6771,7 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \vrules{mandatory}
 \vdefault{none}}
 
-\mbax{\key{YMAX}
+\mbax{\key{YMAX[EV]}
 \vdescr{upper bound of the density-of-states interval shown. Caution:
   The density of states prepared by the dos tool is given in atomic
   units, even though the energies are expressed in eV.}
@@ -6800,7 +6803,7 @@ used in this graph}
 \vrules{optional}
 \vdefault{1.}}
 
-\mbax{\key{XZERO}
+\mbax{\key{XZERO[EV]}
 \vdescr{shifts the energy axis of sets in this graph so the value given is the
   new zero.  May be overwritten by XZERO in !SET.}
 \vformat{real} 
@@ -6843,7 +6846,7 @@ written first followed by the spin down density.  }
 \vrules{optional}
 \vdefault{set by !DCNTL!GRAPH:SCALE}}
 
-\mbax{\key{XZERO}
+\mbax{\key{XZERO[EV]}
 \vdescr{shifts the energy axis for this set so the value given is the
   new zero. }
 \vformat{real} 
