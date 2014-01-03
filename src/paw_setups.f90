@@ -2967,25 +2967,14 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
-      LOGICAL(4)            :: TSEQUENTIALAUGMENT
-      INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: DH(LNX,LNX)
-      REAL(8)               :: TRANSPHI(LNX,LNX)
-      REAL(8)               :: TRANSPHIINV(LNX,LNX)
-      REAL(8)               :: EOFI1(NB)
-      REAL(8)               :: EOFICOMP(2,NB-NC)
       REAL(8)               :: UOFI(NR,NB)   ! NODELESS WAVE FUNCTION
       REAL(8)               :: UOFISM(NR,NB) ! SMALL COMPONENT
       REAL(8)               :: PHISCALE(LNX)
       REAL(8)               :: PSISCALE(NB)
-      REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: PSPHI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
-      REAL(8)   ,ALLOCATABLE:: DH1(:,:)
-      REAL(8)   ,ALLOCATABLE:: DO1(:,:)
-      REAL(8)               :: AERHO(NR),PSRHO(NR),AUGRHO(NR),PAWRHO(NR)
-      REAL(8)               :: G(NR),DREL(NR),PHI(NR)
+      REAL(8)               :: PSRHO(NR),PAWRHO(NR)
+      REAL(8)               :: G(NR),PHI(NR)
       REAL(8)               :: E
       INTEGER(4)            :: LX
       INTEGER(4)            :: L,IB,LN,IR,LN1,LN2,I
@@ -2995,14 +2984,12 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
       REAL(8)               :: VAL,VAL1,VAL2
-      REAL(8)               :: SVAR,SVAR1,SVAR2
+      REAL(8)               :: SVAR
       LOGICAL(4)            :: TREL,TSO,TZORA
       REAL(8)   ,ALLOCATABLE:: A(:,:)
-      REAL(8)   ,ALLOCATABLE:: PROJ(:)
       REAL(8)               :: AEPSIF(NR,NB-NC)
       REAL(8)               :: PSPSIF(NR,NB-NC)
       REAL(8)               :: AUGPSIF(NR,NB-NC)
-      INTEGER(4)            :: NN,NN0
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
@@ -3049,14 +3036,6 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
         NCL(L)=MAX(NCL(L),IB)
       ENDDO
 !
-!     == DETERMINE NUMBER OF PROJECTORS FOR EACH ANGULAR MOMENTUM ==============
-      ALLOCATE(NPROL(0:LX))
-      NPROL(:)=0
-      DO LN=1,LNX
-        L=LOX(LN)
-        NPROL(L)=NPROL(L)+1
-      ENDDO
-!
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
@@ -3070,7 +3049,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
       &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
       &                   ,QN,AEPHI,PSPHI,PRO,DT,DOVER)
-        EOFI1=EOFI
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
@@ -3089,7 +3067,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
      &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER,TREL,TZORA)
-        EOFI1=EOFI
         NLPHI=QN
         PSPHIDOT=0.D0
         AEPHIDOT=0.D0
@@ -3107,12 +3084,8 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !
 !  missing variables:
 !
-!  transphi,transphiinv
 !  psiscale, phiscale
 !  aephidot,psphidot,nlphidot,qndot
-
-
-
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
@@ -3137,198 +3110,11 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
-      AERHO(:)=AECORE(:)
-      AUGRHO(:)=AECORE(:)
-      PSRHO(:)=PSCORE(:)
-      PAWRHO(:)=AECORE(:)-PSCORE(:)
-      EOFICOMP(:,:)=0.D0
-      DO L=0,LX
-        NPRO=NPROL(L)
-        IF(NPRO.EQ.0) CYCLE
-        ALLOCATE(DH1(NPRO,NPRO))
-        ALLOCATE(DO1(NPRO,NPRO))
-        ALLOCATE(PRO1(NR,NPRO))
-        ALLOCATE(AEPHI1(NR,NPRO))
-        ALLOCATE(PSPHI1(NR,NPRO))
-        ALLOCATE(PROJ(NPRO))
-        IPRO1=0
-        DO LN1=1,LNX
-          IF(LOX(LN1).NE.L) CYCLE
-          IPRO1=IPRO1+1
-          PRO1(:,IPRO1)=PRO(:,LN1)
-          AEPHI1(:,IPRO1)=AEPHI(:,LN1)
-          PSPHI1(:,IPRO1)=PSPHI(:,LN1)
-          IPRO2=0
-          DO LN2=1,LNX
-            IF(LOX(LN2).NE.L) CYCLE
-            IPRO2=IPRO2+1
-            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
-            DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
-          ENDDO
-        ENDDO
-!
-        DREL=0.D0
-        TVARDREL=TREL.AND.(.NOT.TZORA) 
-        IF(TREL.AND.TZORA)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
-!
-        NN0=-1
-        G(:)=0.D0
-        DO IB=NC+1,NB
-          IF(LOFI(IB).NE.L) CYCLE
-          IF(NN0.EQ.-1)NN0=NNOFI(IB)
-          E=EOFI1(IB)
-!
-!         ======================================================================
-!         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
-!         ======================================================================
-          G(:)=0.D0
-          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
-       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
-          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
-       &                              ,ROUT,E,AEPSIF(:,IB-NC))
-          SVAR1=E
-          EOFICOMP(1,IB-NC)=E
-!
-!         ======================================================================
-!         ==  CONSTRUCT PAW PSEUDO WAVE FUNCTION                              ==
-!         ======================================================================
-!         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
-!         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
-          NN=NNOFI(IB)-NN0
-PRINT*,'NN ',NN,' ROUT=',ROUT,' NPRO= ',NPRO
-PRINT*,'DH= ',DH1,' DO=',DO1
-          G(:)=0.D0
-          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
-     &                              ,G,E,PSPSIF(:,IB-NC))
-!
-!!$          E=EOFI1(IB)
-!!$          DO I=1,100
-!!$            G=0.D0
-!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
-!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.D-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
-!!$            AUX1(:)=1.D+2*(AUX1(:)-AUX(:))
-!!$            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
-!!$!           == THE FACTOR 0.5 IS A FUDGE AND SHOULD NOT BE THERE. 
-!!$!           == HOWEVER IT IS NEEDED FOR CONVERGENCE
-!!$            E=E-VAL1/VAL2
-!!$            IF(ABS(VAL1/VAL2).LT.1.D-8) EXIT
-!!$            IF(I.EQ.100) THEN
-!!$              CALL ERROR$MSG('LOOP NOT CONVERGED')
-!!$              CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
-!!$            END IF
-!!$          ENDDO
-!!$          PSPSIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/VAL2
-          SVAR2=E
-!
-          EOFICOMP(2,IB-NC)=E
-          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-1) THEN
-            CALL SETUP_WRITEPHI(-'ERROR_UOFI',GID,NR,1,UOFI(:,IB-NC))
-            CALL SETUP_WRITEPHI(-'ERROR_AEPSIF',GID,NR,1,AEPSIF(:,IB-NC))
-            CALL SETUP_WRITEPHI(-'ERROR_PSPSIF',GID,NR,1,PSPSIF(:,IB-NC))
-            CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
-            CALL ERROR$MSG('ONE-PARTICLE ENERGIES OBTAINED FROM PAW ')
-            CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
-            CALL ERROR$I4VAL('L',L)
-            CALL ERROR$I4VAL('IB',IB)
-            CALL ERROR$I4VAL('NN',NN)
-            CALL ERROR$I4VAL('NNOFI(IB)',NNOFI(IB))
-            CALL ERROR$I4VAL('NN0',NN0)
-            CALL ERROR$R8VAL('ROUT',ROUT)
-            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI1(IB)*27.211D0)
-            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI(IB)*27.211D0)
-            CALL ERROR$R8VAL('AE:     E[EV]',SVAR1*27.211D0)
-            CALL ERROR$R8VAL('PAW:    E[EV]',SVAR2*27.211D0)
-            CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
-            CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
-            CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
-            CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
-          END IF
-          IF(TTEST) THEN
-             WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
-             WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
-             WRITE(6,FMT='("DEVIATION PROBABLY DUE TO INCONSISTENCEY OF RELATIVISTIC EFFECTS")')
-             WRITE(6,FMT='("DEVIATION AE-REF DUE TO DIFFERENCE OF NODAL AND NODELESS CONSTRUCTION")')
-             WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
-         &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
-          END IF
-!
-!         ==  ENSURE THAT THE TAILS OF AE AND PS WAVE FUNCTION HAVE SAME SIGN ==
-          DO IR=1,NR-2
-            IF(R(IR).LT.ROUT) CYCLE
-            PSPSIF(IR+2:,IB-NC)=0.D0
-            AEPSIF(IR+2:,IB-NC)=0.D0
-            IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
-     &                                       AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
-            EXIT
-          ENDDO
-!
-!         == CALCULATE PROJECTIONS PROJ=<P|PS-PSI>  ============================
-          DO IPRO=1,NPRO
-            AUX(:)=R(:)**2*PSPSIF(:,IB-NC)*PRO1(:,IPRO)
-            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,PROJ(IPRO))
-          ENDDO
-!
-!         == NORMALIZE PS WAVE FUNCTION=========================================
-          AUX(:)=R(:)**2*PSPSIF(:,IB-NC)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
-          DO IPRO1=1,NPRO
-            DO IPRO2=1,NPRO
-              VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
-            ENDDO
-          ENDDO
-          PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
-          PROJ=PROJ/SQRT(VAL)
-    PRINT*,'PROJ ',L,PROJ
-!
-!         == ADD TO AUGMENTATION DENSITY =======================================
-          DO IPRO1=1,NPRO
-            DO IPRO2=1,NPRO
-              SVAR=FOFI(IB)*PROJ(IPRO1)*PROJ(IPRO2)*C0LL
-              PAWRHO(:)=PAWRHO(:)+SVAR*AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2) &
-                                 -SVAR*PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2)
-!!$AUX(:)=4.D0*PI*R(:)**2*Y0*C0LL*(AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2)-PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2))
-!!$CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
-!!$PRINT*,'DOVER ',L,IPRO1,IPRO2,VAL,DO1(IPRO1,IPRO2),VAL-DO1(IPRO1,IPRO2)
-            ENDDO
-          ENDDO
-!
-!         == AUGMENT PS WAVE FUNCTIONS =========================================
-          AUGPSIF(:,IB-NC)=PSPSIF(:,IB-NC)
-          DO IPRO=1,NPRO
-             AUGPSIF(:,IB-NC)=AUGPSIF(:,IB-NC) &
-       &                     +(AEPHI1(:,IPRO)-PSPHI1(:,IPRO))*PROJ(IPRO)
-          ENDDO
-!
-!         == NORMALIZE AE WAVE FUNCTION=========================================
-          AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
-          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
-          AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
-!
-          PSRHO(:) =PSRHO(:) +FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
-          AUGRHO(:)=AUGRHO(:)+FOFI(IB)*AUGPSIF(:,IB-NC)**2*Y0
-          AERHO(:) =AERHO(:) +FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
-        ENDDO
-        DEALLOCATE(DH1)
-        DEALLOCATE(DO1)
-        DEALLOCATE(PRO1)
-        DEALLOCATE(AEPHI1)
-        DEALLOCATE(PSPHI1)
-        DEALLOCATE(PROJ)
-      ENDDO      
-      PAWRHO(:)=PAWRHO(:)+PSRHO(:)
-!
-!     == REPORT ===============================================================
-      WRITE(6,FMT='(82("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
-      DO IB=NC+1,NB
-        WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
-     &                                 ," PS-ENERGY:",F10.5," EV")') &
-     &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
-      ENDDO
+      call SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,lofi,nnofi,eofi,fofi &
+     &                            ,AECORE,PSCORE &
+     &                            ,aephi,psphi,pro,dh,dover,aepot,pspot,vfock &
+     &                            ,rout,TREL,TZORA &
+     &                            ,pawrho,psrho,aepsif,pspsif,augpsif)
 !
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
@@ -3341,27 +3127,6 @@ PRINT*,'DH= ',DH1,' DO=',DO1
           EXIT
         END IF
       ENDDO
-!
-!     ==========================================================================
-!     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
-!     ==========================================================================
-      TSEQUENTIALAUGMENT=TYPE.NE.'NDLSS'
-      IF(TSEQUENTIALAUGMENT) THEN
-!!$CALL SETUP_WRITEPHI('NLPHI_1.DAT',GID,NR,LNX,NLPHI)
-!!$CALL SETUP_WRITEPHI('AEPHI_1.DAT',GID,NR,LNX,AEPHI)
-!!$CALL SETUP_WRITEPHI('PSPHI_1.DAT',GID,NR,LNX,PSPHI)
-        PSPHI=MATMUL(PSPHI,TRANSPHI)
-        AEPHI=MATMUL(AEPHI,TRANSPHI)
-        NLPHI=MATMUL(NLPHI,TRANSPHI)
-        QN=MATMUL(QN,TRANSPHI)
-        PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
-        DT=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DT,TRANSPHI))
-        DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
-!!$CALL SETUP_WRITEPHI('NLPHI_2.DAT',GID,NR,LNX,NLPHI)
-!!$CALL SETUP_WRITEPHI('AEPHI_2.DAT',GID,NR,LNX,AEPHI)
-!!$CALL SETUP_WRITEPHI('PSPHI_2.DAT',GID,NR,LNX,PSPHI)
-!!$CALL ERROR$STOP('FORCED IN PAW_SETUP')
-      END IF
 !
 !     ==========================================================================
 !     == MAKE DT AND DO SYMMETRIC                                             ==
@@ -3555,6 +3320,282 @@ PRINT*,'DH= ',DH1,' DO=',DO1
                                 CALL TRACE$POP()
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
+     &                            ,AECORE,PSCORE &
+     &                            ,AEPHI,PSPHI,PRO,DH,DOVER,AEPOT,PSPOT,VFOCK &
+     &                            ,ROUT,TREL,TZORA &
+     &                            ,PAWRHO,PSRHO,aepsif,pspsif,augpsif)
+      USE RADIALFOCK_MODULE,ONLY: VFOCK_TYPE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NC
+      INTEGER(4),INTENT(IN) :: LOFI(NB)
+      INTEGER(4),INTENT(IN) :: NNOFI(NB)
+      REAL(8)   ,INTENT(IN) :: EOFI(NB)
+      REAL(8)   ,INTENT(IN) :: FOFI(NB)
+      REAL(8)   ,INTENT(IN) :: ROUT
+      REAL(8)   ,INTENT(IN) :: AECORE(NR)
+      REAL(8)   ,INTENT(IN) :: PSCORE(NR)
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN) :: PSPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN) :: PRO(NR,LNX)
+      REAL(8)   ,INTENT(IN) :: DH(LNX,LNX)
+      REAL(8)   ,INTENT(IN) :: DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR)
+      REAL(8)   ,INTENT(IN) :: PSPOT(NR)
+      TYPE(VFOCK_TYPE),INTENT(INOUT) :: VFOCK
+      LOGICAL(4),INTENT(IN) :: TREL
+      LOGICAL(4),INTENT(IN) :: TZORA
+      REAL(8)   ,INTENT(OUT):: PAWRHO(NR)
+      REAL(8)   ,INTENT(OUT):: PSRHO(NR)
+      REAL(8)   ,INTENT(OUT):: AEPSIF(NR,NB-NC)
+      REAL(8)   ,INTENT(OUT):: PSPSIF(NR,NB-NC)
+      REAL(8)   ,INTENT(OUT):: AUGPSIF(NR,NB-NC)
+      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL(4)            :: TVARDREL
+      REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: PSPHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
+      REAL(8)   ,ALLOCATABLE:: DH1(:,:)
+      REAL(8)   ,ALLOCATABLE:: DO1(:,:)
+      REAL(8)               :: E
+      REAL(8)               :: EOFI1(NB)
+      REAL(8)               :: EOFICOMP(2,NB-NC)
+      REAL(8)               :: AERHO(NR)
+      REAL(8)               :: AUGRHO(NR)
+      REAL(8)   ,ALLOCATABLE:: PROJ(:)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: DREL(NR)
+      REAL(8)               :: AUX(NR),AUX1(NR),SVAR,SVAR1,SVAR2,VAL
+      REAL(8)               :: G(NR)
+      INTEGER(4),ALLOCATABLE:: NPROL(:)
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: L,LN,LN1,LN2,IPRO,IPRO1,IPRO2,IB,IR
+      INTEGER(4)            :: NN,NN0,NPRO
+      REAL(8)               :: PI,Y0,C0LL
+!     **************************************************************************
+                            CALL TRACE$PUSH('SETUPS_PAWDENSITY')
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      C0LL=Y0
+      LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
+      CALL RADIAL$R(GID,NR,R)
+      EOFI1=EOFI
+!
+!     == DETERMINE NUMBER OF PROJECTORS FOR EACH ANGULAR MOMENTUM ==============
+      ALLOCATE(NPROL(0:LX))
+      NPROL(:)=0
+      DO LN=1,LNX
+        L=LOX(LN)
+        NPROL(L)=NPROL(L)+1
+      ENDDO
+
+
+      AERHO(:)=AECORE(:)
+      AUGRHO(:)=AECORE(:)
+      PSRHO(:)=PSCORE(:)
+      PAWRHO(:)=AECORE(:)-PSCORE(:)
+      EOFICOMP(:,:)=0.D0
+      DO L=0,LX
+print*,'=================== l=',l,' ================================='
+        NPRO=NPROL(L)
+        IF(NPRO.EQ.0) CYCLE
+        ALLOCATE(DH1(NPRO,NPRO))
+        ALLOCATE(DO1(NPRO,NPRO))
+        ALLOCATE(PRO1(NR,NPRO))
+        ALLOCATE(AEPHI1(NR,NPRO))
+        ALLOCATE(PSPHI1(NR,NPRO))
+        ALLOCATE(PROJ(NPRO))
+        IPRO1=0
+        DO LN1=1,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          IPRO1=IPRO1+1
+          PRO1(:,IPRO1)=PRO(:,LN1)
+          AEPHI1(:,IPRO1)=AEPHI(:,LN1)
+          PSPHI1(:,IPRO1)=PSPHI(:,LN1)
+          IPRO2=0
+          DO LN2=1,LNX
+            IF(LOX(LN2).NE.L) CYCLE
+            IPRO2=IPRO2+1
+            DH1(IPRO1,IPRO2)=DH(LN1,LN2)
+            DO1(IPRO1,IPRO2)=DOVER(LN1,LN2)
+          ENDDO
+        ENDDO
+!
+        DREL=0.D0
+        TVARDREL=TREL.AND.(.NOT.TZORA) 
+        IF(TREL.AND.TZORA)CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
+!
+        NN0=-1
+        G(:)=0.D0
+        DO IB=NC+1,NB
+          IF(LOFI(IB).NE.L) CYCLE
+print*,'        ---- IB=',ib,' --------------------------------'
+          IF(NN0.EQ.-1)NN0=NNOFI(IB)
+          E=EOFI1(IB)
+!
+!         ======================================================================
+!         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
+!         ======================================================================
+          G(:)=0.D0
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
+       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
+          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
+       &                              ,ROUT,E,AEPSIF(:,IB-NC))
+          SVAR1=E
+          EOFICOMP(1,IB-NC)=E
+PRINT*,'EOFI1(IB)', EOFI1(IB),'E FROM AE CALC ',E
+!
+!         ======================================================================
+!         ==  CONSTRUCT PAW PSEUDO WAVE FUNCTION                              ==
+!         ======================================================================
+!         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
+!         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
+          NN=NNOFI(IB)-NN0
+PRINT*,'L=',l,' NN=',NN,' ROUT=',ROUT,' NPRO= ',NPRO
+PRINT*,'DH=',DH1,' DO=',DO1
+          G(:)=0.D0
+          CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
+     &                              ,G,E,PSPSIF(:,IB-NC))
+!
+!!$          E=EOFI1(IB)
+!!$          DO I=1,100
+!!$            G=0.D0
+!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
+!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.D-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
+!!$            AUX1(:)=1.D+2*(AUX1(:)-AUX(:))
+!!$            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
+!!$            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
+!!$!           == THE FACTOR 0.5 IS A FUDGE AND SHOULD NOT BE THERE. 
+!!$!           == HOWEVER IT IS NEEDED FOR CONVERGENCE
+!!$            E=E-VAL1/VAL2
+!!$            IF(ABS(VAL1/VAL2).LT.1.D-8) EXIT
+!!$            IF(I.EQ.100) THEN
+!!$              CALL ERROR$MSG('LOOP NOT CONVERGED')
+!!$              CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
+!!$            END IF
+!!$          ENDDO
+!!$          PSPSIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/VAL2
+          SVAR2=E
+!
+          EOFICOMP(2,IB-NC)=E
+          IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-1) THEN
+!            CALL SETUP_WRITEPHI(-'ERROR_UOFI',GID,NR,1,UOFI(:,IB-NC))
+            CALL SETUP_WRITEPHI(-'ERROR_AEPSIF',GID,NR,1,AEPSIF(:,IB-NC))
+            CALL SETUP_WRITEPHI(-'ERROR_PSPSIF',GID,NR,1,PSPSIF(:,IB-NC))
+            CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
+            CALL ERROR$MSG('ONE-PARTICLE ENERGIES OBTAINED FROM PAW ')
+            CALL ERROR$MSG('DISAGREE WITH THOSE FROM THE AE CALCULATION')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('IB',IB)
+            CALL ERROR$I4VAL('NN',NN)
+            CALL ERROR$I4VAL('NNOFI(IB)',NNOFI(IB))
+            CALL ERROR$I4VAL('NN0',NN0)
+            CALL ERROR$R8VAL('ROUT',ROUT)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI1(IB)*27.211D0)
+            CALL ERROR$R8VAL('TARGET: E[EV]',EOFI(IB)*27.211D0)
+            CALL ERROR$R8VAL('AE:     E[EV]',SVAR1*27.211D0)
+            CALL ERROR$R8VAL('PAW:    E[EV]',SVAR2*27.211D0)
+            CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
+            CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
+            CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
+            CALL ERROR$STOP('SETUPS_PAWDENSITY')
+          END IF
+          IF(TTEST) THEN
+             WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
+             WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
+             WRITE(6,FMT='("DEVIATION PROBABLY DUE TO INCONSISTENCEY OF RELATIVISTIC EFFECTS")')
+             WRITE(6,FMT='("DEVIATION AE-REF DUE TO DIFFERENCE OF NODAL AND NODELESS CONSTRUCTION")')
+             WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
+         &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
+          END IF
+!
+!         ==  ENSURE THAT THE TAILS OF AE AND PS WAVE FUNCTION HAVE SAME SIGN ==
+          DO IR=1,NR-2
+            IF(R(IR).LT.ROUT) CYCLE
+            PSPSIF(IR+2:,IB-NC)=0.D0
+            AEPSIF(IR+2:,IB-NC)=0.D0
+            IF(PSPSIF(IR-2,IB-NC)*AEPSIF(IR-2,IB-NC).LT.0.D0) &
+     &                                       AEPSIF(:,IB-NC)=-AEPSIF(:,IB-NC)
+            EXIT
+          ENDDO
+!
+!         == CALCULATE PROJECTIONS PROJ=<P|PS-PSI>  ============================
+          DO IPRO=1,NPRO
+            AUX(:)=R(:)**2*PSPSIF(:,IB-NC)*PRO1(:,IPRO)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,PROJ(IPRO))
+          ENDDO
+!
+!         == NORMALIZE PS WAVE FUNCTION=========================================
+          AUX(:)=R(:)**2*PSPSIF(:,IB-NC)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          DO IPRO1=1,NPRO
+            DO IPRO2=1,NPRO
+              VAL=VAL+PROJ(IPRO1)*DO1(IPRO1,IPRO2)*PROJ(IPRO2)
+            ENDDO
+          ENDDO
+          PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
+          PROJ=PROJ/SQRT(VAL)
+    PRINT*,'PROJ ',L,PROJ
+!
+!         == ADD TO AUGMENTATION DENSITY =======================================
+          DO IPRO1=1,NPRO
+            DO IPRO2=1,NPRO
+              SVAR=FOFI(IB)*PROJ(IPRO1)*PROJ(IPRO2)*C0LL
+              PAWRHO(:)=PAWRHO(:)+SVAR*AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2) &
+                                 -SVAR*PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2)
+!!$AUX(:)=4.D0*PI*R(:)**2*Y0*C0LL*(AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2)-PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2))
+!!$CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+!!$PRINT*,'DOVER ',L,IPRO1,IPRO2,VAL,DO1(IPRO1,IPRO2),VAL-DO1(IPRO1,IPRO2)
+            ENDDO
+          ENDDO
+!
+!         == AUGMENT PS WAVE FUNCTIONS =========================================
+          AUGPSIF(:,IB-NC)=PSPSIF(:,IB-NC)
+          DO IPRO=1,NPRO
+             AUGPSIF(:,IB-NC)=AUGPSIF(:,IB-NC) &
+       &                     +(AEPHI1(:,IPRO)-PSPHI1(:,IPRO))*PROJ(IPRO)
+          ENDDO
+!
+!         == NORMALIZE AE WAVE FUNCTION=========================================
+          AUX(:)=R(:)**2*AEPSIF(:,IB-NC)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          AEPSIF(:,IB-NC)=AEPSIF(:,IB-NC)/SQRT(VAL)
+!
+          PSRHO(:) =PSRHO(:) +FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
+          AUGRHO(:)=AUGRHO(:)+FOFI(IB)*AUGPSIF(:,IB-NC)**2*Y0
+          AERHO(:) =AERHO(:) +FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
+        ENDDO
+        DEALLOCATE(DH1)
+        DEALLOCATE(DO1)
+        DEALLOCATE(PRO1)
+        DEALLOCATE(AEPHI1)
+        DEALLOCATE(PSPHI1)
+        DEALLOCATE(PROJ)
+      ENDDO      
+      PAWRHO(:)=PAWRHO(:)+PSRHO(:)
+!
+!     == REPORT ===============================================================
+      WRITE(6,FMT='(82("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
+      DO IB=NC+1,NB
+        WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
+     &                                 ," PS-ENERGY:",F10.5," EV")') &
+     &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
+      ENDDO
+                            call trace$pop()
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_PARMSMASSRENORMALIZATION(GID,NR,RBOX,NB &
@@ -4161,18 +4202,18 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)    ,INTENT(IN)     :: PRO(NR,LNX)
       REAL(8)    ,INTENT(OUT)    :: TRANSPHI(LNX,LNX)
       REAL(8)    ,INTENT(OUT)    :: TRANSPRO(LNX,LNX)
+      LOGICAL(4),PARAMETER       :: TTEST=.TRUE.
       INTEGER(4)                 :: LN,LN1,LN2
       REAL(8)                    :: AUX(NR),AUX1(NR)
       REAL(8)                    :: R(NR)
       REAL(8)                    :: SVAR
-      LOGICAL(4),PARAMETER       :: TTEST=.TRUE.
       REAL(8)                    :: PROPSI(LNX,LNX)
       REAL(8)                    :: TRANSPROPSI(LNX,LNX)
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
-!     == CALCULATE INITIAL VIOLATION OF BIORTHOGONALITY                       ==
+!     == CALCULATE INITIAL VIOLATION <PSPHI|BARE-PRO> OF BIORTHOGONALITY      ==
 !     ==========================================================================
       PROPSI(:,:)=0.D0
       DO LN1=1,LNX
@@ -5222,6 +5263,7 @@ PRINT*,'KI ',KI
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      LOGICAL(4)            :: TSEQUENTIALAUGMENT=.true.
       REAL(8)               :: R(NR)
       REAL(8)               :: DREL(NR)
       REAL(8)               :: EOFI1(NB)
@@ -6230,6 +6272,26 @@ GOTO 10001
             END IF
           ENDDO
         ENDDO
+      END IF
+!
+!     ==========================================================================
+!     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
+!     ==========================================================================
+      IF(TSEQUENTIALAUGMENT) THEN
+!!$CALL SETUP_WRITEPHI('NLPHI_1.DAT',GID,NR,LNX,NLPHI)
+!!$CALL SETUP_WRITEPHI('AEPHI_1.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI('PSPHI_1.DAT',GID,NR,LNX,PSPHI)
+        PSPHI=MATMUL(PSPHI,TRANSPHI)
+        AEPHI=MATMUL(AEPHI,TRANSPHI)
+        NLPHI=MATMUL(NLPHI,TRANSPHI)
+        QN=MATMUL(QN,TRANSPHI)
+        PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
+        DTkin=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DTkin,TRANSPHI))
+        DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
+!!$CALL SETUP_WRITEPHI('NLPHI_2.DAT',GID,NR,LNX,NLPHI)
+!!$CALL SETUP_WRITEPHI('AEPHI_2.DAT',GID,NR,LNX,AEPHI)
+!!$CALL SETUP_WRITEPHI('PSPHI_2.DAT',GID,NR,LNX,PSPHI)
+!!$CALL ERROR$STOP('FORCED IN PAW_SETUP')
       END IF
       RETURN
       END
