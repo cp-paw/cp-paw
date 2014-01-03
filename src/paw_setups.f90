@@ -116,14 +116,19 @@ REAL(8)   ,POINTER     :: PSCORE(:)    !(NR)  PSEUDIZED ELECTRON DENSITY
 REAL(8)   ,POINTER     :: PRO(:,:)     !(NR,LNX)  PROJECTOR FUNCTIONS
 REAL(8)                :: RBOX         ! PARTIAL WAVES HAVE OUTER NODE AT RBOX
 REAL(8)   ,POINTER     :: AEPHI(:,:)   !(NR,LNX)  AE PARTIAL WAVES
+REAL(8)   ,POINTER     :: AEPHISM(:,:) !(NR,LNX)  
 REAL(8)   ,POINTER     :: PSPHI(:,:)   !(NR,LNX)  PS PARTIAL WAVES
+REAL(8)   ,POINTER     :: PSPHISM(:,:) !(NR,LNX)  
 REAL(8)   ,POINTER     :: UPHI(:,:)    !(NR,LNX)  NODELESS PARTIAL WAVES
-REAL(8)   ,POINTER     :: TUPHI(:,:)   !(NR,LNX)  KINETIC ENERGY OF ABOVE
+REAL(8)   ,POINTER     :: UPHISM(:,:)  !(NR,LNX)  
 REAL(8)   ,POINTER     :: QPHI(:,:)    !(NR,LNX)  REDUCED-NODE PARTIAL WAVES
+REAL(8)   ,POINTER     :: QPHISM(:,:)  !(NR,LNX)
 REAL(8)   ,POINTER     :: QPHIDOT(:,:) !(NR,LNX)  R-N SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: NLPHIDOT(:,:)!(NR,LNX)  NL SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: PSPHIDOT(:,:)!(NR,LNX)  PS SCATTERING PARTIAL WAVES
+REAL(8)   ,POINTER     :: PSPHIDOTSM(:,:)!(NR,LNX)  
 REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
+REAL(8)   ,POINTER     :: AEPHIDOTSM(:,:)!(NR,LNX)  
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
@@ -616,67 +621,6 @@ END MODULE SETUP_MODULE
       RETURN
       END
 !
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$SETR8(ID,VAL)
-!     **************************************************************************
-!     **                                                                      **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
-!     **                                                                      **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: ID
-      REAL(8)     ,INTENT(IN)  :: VAL
-!     **************************************************************************
-      IF(ID.EQ.'RADCHI') THEN
-        CALL ERROR$MSG('ID RADCHI IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$SETR8')
-!!$!       == EXTENT OF LOCAL ORBITALS
-!!$        THIS%LOCORBINI=.FALSE.
-!!$        THIS%LOCORBRAD(:)=VAL
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$SETR8')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$SETR8A(ID,LENG,VAL)
-!     **************************************************************************
-!     **                                                                      **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
-!     **                                                                      **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: ID
-      INTEGER(4)  ,INTENT(IN)  :: LENG
-      REAL(8)     ,INTENT(IN)  :: VAL(LENG)
-!     **************************************************************************
-      IF(ID.EQ.'RADCHI') THEN
-        CALL ERROR$MSG('ID RADCHI IS MARKED FOR DELETION')
-        CALL ERROR$STOP('SETUP$SETR8A')
-!!$!       == EXTENT OF LOCAL ORBITALS
-!!$        THIS%LOCORBINI=.FALSE.
-!!$        IF(LENG.GT.4) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT SIZE')
-!!$          CALL ERROR$MSG('DIMENSION OF ARRAY MUST NOT BE LARGER THAN 4')
-!!$          CALL ERROR$I4VAL('LENG',LENG)
-!!$          CALL ERROR$CHVAL('ID',ID)
-!!$          CALL ERROR$STOP('SETUP$SETR8')
-!!$        END IF
-!!$        THIS%LOCORBRAD(:)=0.D0
-!!$        THIS%LOCORBRAD(:)=VAL(1:LENG)
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$SETR8')
-      END IF
-      RETURN
-      END
-!
 !     ..........................................................................
       SUBROUTINE SETUP$GETR8(ID,VAL)
 !     **************************************************************************
@@ -792,22 +736,6 @@ END MODULE SETUP_MODULE
           CALL ERROR$STOP('SETUP$GETR8A')
         END IF
         VAL=RESHAPE(THIS%QPHI,(/LEN/))
-!
-!     ==========================================================================
-!     ==  KINETIC ENERGY OPERATOR APPLIED TO NODELESS PARTIAL WAVES           ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'NLTPHI') THEN
-!       == DO NOT FORGET TO CLEAN UP THIS%TUPHI!!!
-        CALL ERROR$MSG('OPTION IS MARKED FOR DELETION')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$GETR8A')
-!
-        IF(LEN.NE.THIS%LNX*NR) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$GETR8A')
-        END IF
-        VAL=RESHAPE(THIS%TUPHI,(/LEN/))
 !
 !     ==========================================================================
 !     ==  NODELESS SCATTERING PARTIAL WAVES                                   ==
@@ -1226,7 +1154,6 @@ END MODULE SETUP_MODULE
       ALLOCATE(THIS%AEPHI(NRX,LNX))
       ALLOCATE(THIS%PSPHI(NRX,LNX))
       ALLOCATE(THIS%UPHI(NRX,LNX))
-      ALLOCATE(THIS%TUPHI(NRX,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
       THIS%VADD=0.D0
@@ -1251,7 +1178,6 @@ END MODULE SETUP_MODULE
         CALL SETUPREAD$GETR8A('AEPHI',NR*LNX,THIS%AEPHI)
         CALL SETUPREAD$GETR8A('PRO',NR*LNX,THIS%PRO)
         CALL SETUPREAD$GETR8A('NDLSPHI',NR*LNX,THIS%UPHI)
-        CALL SETUPREAD$GETR8A('NDLSTPHI',NR*LNX,THIS%TUPHI)
         CALL SETUPREAD$GETR8A('VADD',NR,THIS%VADD)
         CALL SETUPREAD$GETR8('RCSM',THIS%RCSM)
         CALL SETUPREAD$GETR8A('DT',LNX*LNX,THIS%DTKIN)
@@ -1316,19 +1242,16 @@ PRINT*,'RCSM ',THIS%RCSM
       DWORK(:,:,2)=THIS%AEPHI(:,:)
       DWORK(:,:,3)=THIS%PSPHI(:,:)
       DWORK(:,:,4)=THIS%UPHI(:,:)
-      DWORK(:,:,5)=THIS%TUPHI(:,:)
       IWORK(:)=THIS%LOX(:)
       DEALLOCATE(THIS%PRO)
       DEALLOCATE(THIS%AEPHI)
       DEALLOCATE(THIS%PSPHI)
       DEALLOCATE(THIS%UPHI)
-      DEALLOCATE(THIS%TUPHI)
       DEALLOCATE(THIS%LOX)
       ALLOCATE(THIS%PRO(NRX,THIS%LNX))
       ALLOCATE(THIS%AEPHI(NRX,THIS%LNX))
       ALLOCATE(THIS%PSPHI(NRX,THIS%LNX))
       ALLOCATE(THIS%UPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%TUPHI(NRX,THIS%LNX))
       ALLOCATE(THIS%LOX(THIS%LNX))
       ISVAR=0
       DO LN=1,LNOLD
@@ -1338,7 +1261,6 @@ PRINT*,'RCSM ',THIS%RCSM
         THIS%AEPHI(:,ISVAR)=DWORK(:,LN,2)
         THIS%PSPHI(:,ISVAR)=DWORK(:,LN,3)
         THIS%UPHI(:,ISVAR)=DWORK(:,LN,4)
-        THIS%TUPHI(:,ISVAR)=DWORK(:,LN,5)
         THIS%LOX(ISVAR)=IWORK(LN)
       ENDDO
       DEALLOCATE(DWORK)
@@ -1411,7 +1333,6 @@ PRINT*,'RCSM ',THIS%RCSM
           THIS%AEPHI(IR,LN)=0.D0
           THIS%PSPHI(IR,LN)=0.D0
           THIS%UPHI(IR,LN)=0.D0
-          THIS%TUPHI(IR,LN)=0.D0
         ENDDO
       ENDDO
 !     
@@ -1787,16 +1708,19 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(THIS%PSPOT(NR))
       ALLOCATE(THIS%PRO(NR,LNX))
       ALLOCATE(THIS%AEPHI(NR,LNX))
+      ALLOCATE(THIS%AEPHISM(NR,LNX))
       ALLOCATE(THIS%PSPHI(NR,LNX))
+      ALLOCATE(THIS%PSPHISM(NR,LNX))
       ALLOCATE(THIS%UPHI(NR,LNX))
+      ALLOCATE(THIS%UPHISM(NR,LNX))
       ALLOCATE(THIS%QPHI(NR,LNX))
-      ALLOCATE(THIS%TUPHI(NR,LNX))
+      ALLOCATE(THIS%QPHISM(NR,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
-      ALLOCATE(THIS%NLPHIDOT(NR,LNX))
-      ALLOCATE(THIS%QPHIDOT(NR,LNX))
       ALLOCATE(THIS%PSPHIDOT(NR,LNX))
+      ALLOCATE(THIS%PSPHIDOTSM(NR,LNX))
       ALLOCATE(THIS%AEPHIDOT(NR,LNX))
+      ALLOCATE(THIS%AEPHIDOTSM(NR,LNX))
       THIS%VADD=0.D0
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
@@ -1817,13 +1741,20 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,LOFI(1:NB),SOFI(1:NB),NNOFI(1:NB),EOFI(1:NB),FOFI(1:NB) &
      &          ,RBOX,ROUT,LNX,LOX,THIS%PARMS%TYPE,RC,LAMBDA &
      &          ,THIS%ISCATT &
-     &         ,THIS%AEPHI,THIS%PSPHI,THIS%UPHI,THIS%QPHI,THIS%PRO &
-     &          ,THIS%DTKIN,THIS%DOVER,THIS%AECORE,THIS%PSCORE &
+     &          ,THIS%AEPHI,THIS%AEPHISM,THIS%PSPHI,THIS%PSPHISM &
+     &          ,THIS%UPHI,THIS%UPHISM,THIS%QPHI,THIS%QPHISM &
+     &          ,THIS%AEPHIDOT,THIS%AEPHIDOTSM,THIS%PSPHIDOT,THIS%PSPHIDOTSM &
+     &          ,THIS%PRO,THIS%DTKIN,THIS%DOVER,THIS%AECORE,THIS%PSCORE &
      &          ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
-     &          ,THIS%RCSM,THIS%VADD,THIS%NLPHIDOT,THIS%QPHIDOT &
-     &          ,THIS%AEPHIDOT,THIS%PSPHIDOT,THIS%PSG2,THIS%PSG4)
+     &          ,THIS%RCSM,THIS%VADD,THIS%PSG2,THIS%PSG4)
 CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
+
+      ALLOCATE(THIS%NLPHIDOT(NR,LNX))
+      ALLOCATE(THIS%QPHIDOT(NR,LNX))
+      THIS%NLPHIDOT=THIS%PSPHIDOT
+      THIS%QPHIDOT=THIS%PSPHIDOT
+
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
@@ -2610,8 +2541,6 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)                 :: DEX
       INTEGER(4)              :: NR
       INTEGER(4)              :: LENG
-      INTEGER(4)              :: L,LN
-      INTEGER(4)              :: IZ
       REAL(8)     ,ALLOCATABLE:: R(:)
       REAL(8)     ,ALLOCATABLE:: RCL1(:)
       REAL(8)     ,ALLOCATABLE:: LAMBDA1(:)
@@ -2906,9 +2835,10 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       SUBROUTINE SETUP_MAKEPARTIALWAVES(GID,NR,KEY,LL_STP,AEZ,AEPOT,VFOCK &
      &                  ,NB,NC,LOFI,SOFI,NNOFI,EOFI,FOFI &
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
-     &                  ,AEPHI,PSPHI,NLPHI,QN,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
-     &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD &
-     &                  ,NLPHIDOT,QNDOT,AEPHIDOT,PSPHIDOT,PSG2,PSG4)
+     &                  ,AEPHI,AEPHISM,PSPHI,PSPHISM,NLPHI,NLPHISM,QN,QNSM &
+     &                  ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM &
+     &                  ,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
+     &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD,PSG2,PSG4)
 !     **************************************************************************
 !     **  CONSTRUCTS  THE SETUP                                               **
 !     **                                                                      **
@@ -2951,17 +2881,15 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,INTENT(IN) :: PSCORE(NR)
       REAL(8)   ,INTENT(OUT):: VADD(NR)
       REAL(8)   ,INTENT(OUT):: PSPOT(NR)
-      REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
-      REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX)
-      REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX)
-      REAL(8)   ,INTENT(OUT):: QN(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX),AEPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: PSPHI(NR,LNX),PSPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: NLPHI(NR,LNX),NLPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: QN(NR,LNX),QNSM(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
-      REAL(8)   ,INTENT(OUT):: NLPHIDOT(NR,LNX)  
-      REAL(8)   ,INTENT(OUT):: QNDOT(NR,LNX)  
-      REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX)  
-      REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)  
+      REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX),PSPHIDOTSM(NR,LNX)  
+      REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX),AEPHIDOTSM(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
@@ -2974,11 +2902,8 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)               :: PHISCALE(LNX)
       REAL(8)               :: PSISCALE(NB)
       REAL(8)               :: PSRHO(NR),PAWRHO(NR)
-      REAL(8)               :: G(NR),PHI(NR)
-      REAL(8)               :: E
       INTEGER(4)            :: LX
-      INTEGER(4)            :: L,IB,LN,IR,LN1,LN2,I
-      INTEGER(4)            :: NPRO,IPRO,IPRO1,IPRO2
+      INTEGER(4)            :: L,IB,LN,IR,LN1,LN2
       REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR)
@@ -2993,7 +2918,6 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
-      LOGICAL(4)            :: TVARDREL
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
@@ -3048,10 +2972,10 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       IF(TYPE.EQ.'NDLSS') THEN
         CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
       &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
-      &                   ,QN,AEPHI,PSPHI,PRO,DT,DOVER)
+      &                   ,QN,QNSM,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO,DT,DOVER &
+      &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
         NLPHI=QN
-        PSPHIDOT=0.D0
-        AEPHIDOT=0.D0
+        NLPHISM=QNSM
         DO LN1=1,LNX
           WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
         ENDDO
@@ -3066,26 +2990,30 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         CALL SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
-     &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER,TREL,TZORA)
+     &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER &
+     &                    ,AEPHIDOT,PSPHIDOT,TREL,TZORA)
         NLPHI=QN
-        PSPHIDOT=0.D0
-        AEPHIDOT=0.D0
-!!$        CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
-!!$        CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
-!!$        CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
-!!$        CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
-!!$        DO LN1=1,LNX
-!!$          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
-!!$        ENDDO
-!!$        DO LN1=1,LNX
-!!$          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
-!!$        ENDDO
+        NLPHISM=0.D0
+        QNSM=0.D0
+        AEPHISM=0.D0
+        PSPHISM=0.D0
+        AEPHIDOTSM=0.D0
+        PSPHIDOTSM=0.D0
+        CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
+        CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
+        CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
+        CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
+        DO LN1=1,LNX
+          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
+        ENDDO
+        DO LN1=1,LNX
+          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
+        ENDDO
       END IF
 !
 !  MISSING VARIABLES:
 !
 !  PSISCALE, PHISCALE
-!  AEPHIDOT,PSPHIDOT,NLPHIDOT,QNDOT
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
@@ -3224,12 +3152,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !       == PROJECTOR FUNCTIONS =================================================
         CALL SETUP_WRITEPHI(-'PRO'//TRIM(STRING),GID,NR,LNX,PRO)
 !
-!       == NODELESS SCATTERING PARTIAL WAVES ===================================
-        CALL SETUP_WRITEPHI(-'NLPHIDOT'//TRIM(STRING),GID,NR,LNX,NLPHIDOT)
-!
-!       == NODE-REDUCED SCATTERING PARTIAL WAVES ===============================
-        CALL SETUP_WRITEPHI(-'QPHIDOT'//TRIM(STRING),GID,NR,LNX,QNDOT)
-!
 !       == SCATTERING PSEUDO PARTIAL WAVES =====================================
         CALL SETUP_WRITEPHI(-'PSPHIDOT'//TRIM(STRING),GID,NR,LNX,PSPHIDOT)
 !
@@ -3286,7 +3208,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         CALL LINKEDLIST$SET(LL_STP,'PRO',-1,PRO(:,LN)/PHISCALE(LN))
         CALL LINKEDLIST$SET(LL_STP,'AEPHIDOT',-1,AEPHIDOT(:,LN)*PHISCALE(LN))
         CALL LINKEDLIST$SET(LL_STP,'PSPHIDOT',-1,PSPHIDOT(:,LN)*PHISCALE(LN))
-        CALL LINKEDLIST$SET(LL_STP,'NLPHIDOT',-1,NLPHIDOT(:,LN)*PHISCALE(LN))
+!!$        CALL LINKEDLIST$SET(LL_STP,'NLPHIDOT',-1,NLPHIDOT(:,LN)*PHISCALE(LN))
       ENDDO
       CALL LINKEDLIST$SET(LL_STP,'NV',0,NB-NC)
       DO IB=1,NB-NC  
@@ -4758,7 +4680,6 @@ PRINT*,'KI ',KI
       REAL(8)    ,INTENT(OUT)    :: PSF(NR)
       REAL(8)                    :: A,B,C
       REAL(8)                    :: VAL,DER
-      REAL(8)                    :: PSVAL,PSDER
       INTEGER(4)                 :: IR,IR0
       REAL(8)                    :: R(NR)
       LOGICAL(4),PARAMETER       :: TTEST=.FALSE.
@@ -5227,7 +5148,7 @@ PRINT*,'KI ',KI
       SUBROUTINE SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
-     &                    ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,TREL,TZORA)
+     &             ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,AEPHIDOT,PSPHIDOT,TREL,TZORA)
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -5255,6 +5176,8 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT):: DTKIN(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)
+      REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX)
       TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
       LOGICAL(4),INTENT(IN) :: TREL
       LOGICAL(4),INTENT(IN) :: TZORA
@@ -5279,8 +5202,6 @@ PRINT*,'KI ',KI
       REAL(8)               :: TPSPHI(NR,LNX)
       REAL(8)               :: TQN(NR,LNX)
       REAL(8)               :: QNDOT(NR,LNX)
-      REAL(8)               :: PSPHIDOT(NR,LNX)
-      REAL(8)               :: AEPHIDOT(NR,LNX)
       REAL(8)               :: BAREPRO(NR,LNX)
       REAL(8)               :: PHI(NR)
       REAL(8)   ,ALLOCATABLE::  PHITEST(:,:),TPHITEST(:,:)
@@ -6207,15 +6128,16 @@ GOTO 10001
             IF(LOX(LN2).NE.L) CYCLE
             PSPHI(:,LN2)   =   PSPHI(:,LN2)*VAL
             TPSPHI(:,LN2)  =  TPSPHI(:,LN2)*VAL
+            PSPHIDOT(:,LN2)=PSPHIDOT(:,LN2)*VAL
             AEPHI(:,LN2)   =   AEPHI(:,LN2)*VAL
             TAEPHI(:,LN2)  =  TAEPHI(:,LN2)*VAL
+            AEPHIDOT(:,LN2)=AEPHIDOT(:,LN2)*VAL
             NLPHI(:,LN2)   =   NLPHI(:,LN2)*VAL
             TNLPHI(:,LN2)  =  TNLPHI(:,LN2)*VAL
-            PSPHIDOT(:,LN2)=PSPHIDOT(:,LN2)*VAL
-            AEPHIDOT(:,LN2)=AEPHIDOT(:,LN2)*VAL
             NLPHIDOT(:,LN2)=NLPHIDOT(:,LN2)*VAL
             QN(:,LN2)      =      QN(:,LN2)*VAL
             TQN(:,LN2)     =     TQN(:,LN2)*VAL
+            QNDOT(:,LN2)   =   QNDOT(:,LN2)*VAL
             PRO(:,LN2)     =     PRO(:,LN2)/VAL
             DH(LN2,:)      =      DH(LN2,:)*VAL
             DTKIN(LN2,:)   =      DTKIN(LN2,:)*VAL
@@ -6232,25 +6154,6 @@ GOTO 10001
 !     == CUT OFF THE EXPONENTIALLY GROWING TAIL OF THE PARTIALWAVES
 !     ==========================================================================
       IF(TCUTTAIL) THEN
-!!$! OLD VARIANT
-!!$        DO IR=1,NR
-!!$!          IF(R(IR).GT.MAX(2.D0*RCOV,RNORM)) THEN
-!!$           IF(R(IR).GT.MAX(4.D0*RCOV,RNORM)) THEN
-!!$            I=IR+1
-!!$            EXIT
-!!$          END IF
-!!$        ENDDO
-!!$        IR=I
-!!$        AEPHI(IR:,:)=0.D0
-!!$        PSPHI(IR:,:)=0.D0
-!!$        NLPHI(IR:,:)=0.D0
-!!$        QN(IR:,:)=0.D0
-!!$        AEPHIDOT(IR:,:)=0.D0
-!!$        NLPHIDOT(IR:,:)=0.D0
-!!$        QNDOT(IR:,:)=0.D0
-!!$        PSPHIDOT(IR:,:)=0.D0
-!!$        PRO(IR:,:)=0.D0
-! NEW VARIANT
         DO LN=1,LNX
           SVAR=0.D0
           DO IR=1,NR
@@ -6298,8 +6201,10 @@ GOTO 10001
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
-     &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
-     &                   ,G_QNPHI,G_AEPHI,G_PSPHI,G_PRO,G_DTKIN,G_DOVER)
+     &                  ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
+     &                  ,G_QNPHI,G_QNPHISM,G_AEPHI,G_AEPHISM,G_PSPHI,G_PSPHISM &
+     &                  ,G_PRO,G_DTKIN,G_DOVER &
+     &                  ,G_AEPHIDOT,G_AEPHIDOTSM,G_QNPHIDOT,G_QNPHIDOTSM)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
@@ -6327,6 +6232,14 @@ GOTO 10001
       REAL(8)   ,INTENT(OUT) :: G_PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT) :: G_DTKIN(LNX,LNX)
       REAL(8)   ,INTENT(OUT) :: G_DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_QNPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_AEPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_PSPHISM(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_QNPHIDOT(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_QNPHIDOTSM(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_AEPHIDOT(NR,LNX)
+      REAL(8)   ,INTENT(OUT) :: G_AEPHIDOTSM(NR,LNX)
+
       REAL(8)   ,ALLOCATABLE :: EC(:)
       REAL(8)   ,ALLOCATABLE :: UCORE(:,:)
       REAL(8)   ,ALLOCATABLE :: UCORESM(:,:)
@@ -6340,7 +6253,10 @@ GOTO 10001
       REAL(8)   ,ALLOCATABLE :: AEPHISM(:,:)
       REAL(8)   ,ALLOCATABLE :: PSPHI(:,:)
       REAL(8)   ,ALLOCATABLE :: PSPHISM(:,:)
-      REAL(8)   ,ALLOCATABLE :: QNDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: QNDOT(:)
+      REAL(8)   ,ALLOCATABLE :: QNDOTSM(:)
+      REAL(8)   ,ALLOCATABLE :: AEPHIDOT(:)
+      REAL(8)   ,ALLOCATABLE :: AEPHIDOTSM(:)
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       REAL(8)   ,ALLOCATABLE :: DTKIN(:,:)
       REAL(8)   ,ALLOCATABLE :: DOVER(:,:)
@@ -6440,7 +6356,10 @@ PRINT*,'STARTING SETUPS_OUTERNEWPROWRAPPER...'
           ALLOCATE(AEPHISM(NR,NPHI))
           ALLOCATE(PSPHI(NR,NPHI))
           ALLOCATE(PSPHISM(NR,NPHI))
-          ALLOCATE(QNDOT(NR,NPHI))
+          ALLOCATE(QNDOT(NR))
+          ALLOCATE(QNDOTSM(NR))
+          ALLOCATE(AEPHIDOT(NR))
+          ALLOCATE(AEPHIDOTSM(NR))
           ALLOCATE(PRO(NR,NPHI))
           ALLOCATE(DTKIN(NPHI,NPHI))
           ALLOCATE(DOVER(NPHI,NPHI))
@@ -6454,7 +6373,8 @@ PRINT*,'EOFPHI   ',EOFPHI
 PRINT*,'-----------------------------------------------------'
           CALL SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
      &                  ,AEPOT,PSPOT,VFOCK &
-     &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
+     &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
+     &                  ,QNDOT,QNDOTSM,AEPHIDOT,AEPHIDOTSM &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
 PRINT*,'... SETUPS NEWPRO DONE'
@@ -6484,12 +6404,21 @@ END IF
             G_AEPHI(:,LN)=AEPHI(:,IPHI)
             G_PSPHI(:,LN)=PSPHI(:,IPHI)
             G_QNPHI(:,LN)=QN(:,IPHI)
-            G_PRO(:,LN)=PRO(:,IPHI)
-!!$            IF(IPHI.LT.NPHI) THEN
-!!$              G_QNDOT(:,LN)=QN(:,IPHI+1)
-!!$            ELSE
-!!$              G_QNDOT(:,LN)=QNDOT(:)
-!!$            END IF
+            G_PRO(:,LN) =PRO(:,IPHI)
+            G_AEPHISM(:,LN)=AEPHISM(:,IPHI)
+            G_PSPHISM(:,LN)=PSPHISM(:,IPHI)
+            G_QNPHISM(:,LN)=QNSM(:,IPHI)
+            IF(IPHI.LT.NPHI) THEN
+              G_QNPHIDOT(:,LN)  =QN(:,IPHI+1)
+              G_QNPHIDOTSM(:,LN)=QNSM(:,IPHI+1)
+              G_AEPHIDOT(:,LN)  =AEPHI(:,IPHI+1)
+              G_AEPHIDOTSM(:,LN)=AEPHISM(:,IPHI+1)
+            ELSE
+              G_QNPHIDOT(:,LN)  =QNDOT(:)
+              G_QNPHIDOTSM(:,LN)=QNDOTSM(:)
+              G_AEPHIDOT(:,LN)  =AEPHIDOT(:)
+              G_AEPHIDOTSM(:,LN)=AEPHIDOTSM(:)
+            END IF
           ENDDO            
 !
 !         == MATRIX ELEMENTS ===================================================
@@ -6526,6 +6455,9 @@ PRINT*,'DTKIN X2:',G_DTKIN
           DEALLOCATE(PSPHI)
           DEALLOCATE(PSPHISM)
           DEALLOCATE(QNDOT)
+          DEALLOCATE(QNDOTSM)
+          DEALLOCATE(AEPHIDOT)
+          DEALLOCATE(AEPHIDOTSM)
           DEALLOCATE(PRO)
           DEALLOCATE(DTKIN)
           DEALLOCATE(DOVER)
@@ -6539,7 +6471,8 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,EOFPHI &
      &                        ,ECOREIN,AEPOT,PSPOT,VFOCK &
-     &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
+     &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
+     &                        ,QNDOT,QNDOTSM,AEPHIDOT,AEPHIDOTSM &
      &                        ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                        ,PRO,DTKIN,DOVER)
 !     **************************************************************************
@@ -6551,7 +6484,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !     **  RELTYPE='NONREL', 'ZORA', 'SCALAR', 'SPINORBIT'                     **
 !     **                                                                      **
 !     **  FOR THE SMALL COMPONENT, WE USE THE MODEL THAT ALSO THE PSEUDO-     **
-!     **  PARTIAL WAVES CARRY A SMALL COMPOMENT, WHICH IS IDENTICAL TO THAT   **
+!     **  PARTIAL WAVES CARRY A SMALL COMPONENT, WHICH IS IDENTICAL TO THAT   **
 !     **  OF THE NODE-REDUCED PARTIAL WAVES QN. DTKIN AND DOVER ARE DONE      **
 !     **  ON THIS BASIS, WHICH ENSURES THAT THERE ARE NO EXPOENTIALLY GROWING **
 !     **  CONTRIBUTIONS IN THE INTEGRALS.                                     **
@@ -6590,6 +6523,9 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       REAL(8)   ,INTENT(OUT):: PSPHISM(NR,NJ)
 !
       REAL(8)   ,INTENT(OUT):: QNDOT(NR)      
+      REAL(8)   ,INTENT(OUT):: QNDOTSM(NR)      
+      REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR)      
+      REAL(8)   ,INTENT(OUT):: AEPHIDOTSM(NR)      
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
@@ -6747,7 +6683,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       ENDDO
 !
 !     ==========================================================================
-!     == NODE-REDUCED PARTIAL WAVES                                           ==
+!     == NODE-LESS PARTIAL WAVES                                              ==
 !     ==========================================================================
 !     == GO BACK TO THE DIRAC EQUATION TO SEE HOW THE INHOMGENEITY TRANSLATES
       IF(TREL) THEN
@@ -6916,6 +6852,12 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
         G=G-AUX1-(1.D0-KAPPA)/R*AUX
       END IF
       CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,ENU,IDIR,QNDOT)
+      IF(TSMALL) THEN
+        CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO,DREL,GSM,QNDOT,QNDOTSM)
+        QNDOTSM(IRCL:)=0.D0
+      ELSE
+        QNDOTSM(:)=0.D0
+      END IF
 !
 !     ==========================================================================
 !     == PSEUDO CORE WAVE FUNCTIONS                                           ==
@@ -6945,6 +6887,8 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       AEPHI=QN
       TAEPHI=TQN
       AEPHISM=QNSM
+      AEPHIDOT=QNDOT
+      AEPHIDOTSM=QNDOTSM
       DO I=NC,1,-1
         AUX(:)=R**2*(UCORE(:,I)*UCORE(:,I)+UCORESM(:,I)*UCORESM(:,I))
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
@@ -6955,6 +6899,10 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
           TAEPHI(:,JP)=TAEPHI(:,JP)-TUCORE(:,I)*SVAR2
           AEPHISM(:,JP)=AEPHISM(:,JP)-UCORESM(:,I)*SVAR2
         ENDDO
+        AUX(:)=R**2*(UCORE(:,I)*AEPHIDOT+UCORESM(:,I)*AEPHIDOTSM(:))/SVAR1
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
+        AEPHIDOT(:)=AEPHIDOT(:)-UCORE(:,I)*SVAR2
+        AEPHIDOTSM(:)=AEPHIDOTSM(:)-UCORESM(:,I)*SVAR2
       ENDDO
 !
 !     ==========================================================================
@@ -6985,6 +6933,9 @@ PRINT*,'IPHISCALE ',IPHISCALE
         TPSCORE=TPSCORE*SCALE
         PSCORESM=PSCORESM*SCALE
         QNDOT=QNDOT*SCALE
+        QNDOTSM=QNDOTSM*SCALE
+        AEPHIDOT=AEPHIDOT*SCALE
+        AEPHIDOTSM=AEPHIDOTSM*SCALE
       END IF
 !
 !     ==========================================================================
