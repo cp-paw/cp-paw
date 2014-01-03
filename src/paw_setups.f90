@@ -3082,10 +3082,10 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !!$        ENDDO
       END IF
 !
-!  missing variables:
+!  MISSING VARIABLES:
 !
-!  psiscale, phiscale
-!  aephidot,psphidot,nlphidot,qndot
+!  PSISCALE, PHISCALE
+!  AEPHIDOT,PSPHIDOT,NLPHIDOT,QNDOT
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
@@ -3110,11 +3110,11 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
-      call SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,lofi,nnofi,eofi,fofi &
+      CALL SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
      &                            ,AECORE,PSCORE &
-     &                            ,aephi,psphi,pro,dh,dover,aepot,pspot,vfock &
-     &                            ,rout,TREL,TZORA &
-     &                            ,pawrho,psrho,aepsif,pspsif,augpsif)
+     &                            ,AEPHI,PSPHI,PRO,DH,DOVER,AEPOT,PSPOT,VFOCK &
+     &                            ,ROUT,TREL,TZORA &
+     &                            ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
 !
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
@@ -3326,7 +3326,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
      &                            ,AECORE,PSCORE &
      &                            ,AEPHI,PSPHI,PRO,DH,DOVER,AEPOT,PSPOT,VFOCK &
      &                            ,ROUT,TREL,TZORA &
-     &                            ,PAWRHO,PSRHO,aepsif,pspsif,augpsif)
+     &                            ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
       USE RADIALFOCK_MODULE,ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -3404,7 +3404,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       PAWRHO(:)=AECORE(:)-PSCORE(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
-print*,'=================== l=',l,' ================================='
+PRINT*,'=================== L=',L,' ================================='
         NPRO=NPROL(L)
         IF(NPRO.EQ.0) CYCLE
         ALLOCATE(DH1(NPRO,NPRO))
@@ -3437,7 +3437,7 @@ print*,'=================== l=',l,' ================================='
         G(:)=0.D0
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
-print*,'        ---- IB=',ib,' --------------------------------'
+PRINT*,'        ---- IB=',IB,' --------------------------------'
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
           E=EOFI1(IB)
 !
@@ -3459,7 +3459,7 @@ PRINT*,'EOFI1(IB)', EOFI1(IB),'E FROM AE CALC ',E
 !         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
 !         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
-PRINT*,'L=',l,' NN=',NN,' ROUT=',ROUT,' NPRO= ',NPRO
+PRINT*,'L=',L,' NN=',NN,' ROUT=',ROUT,' NPRO= ',NPRO
 PRINT*,'DH=',DH1,' DO=',DO1
           G(:)=0.D0
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
@@ -3593,9 +3593,9 @@ PRINT*,'DH=',DH1,' DO=',DO1
      &                                 ," PS-ENERGY:",F10.5," EV")') &
      &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
       ENDDO
-                            call trace$pop()
-      return
-      end
+                            CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_PARMSMASSRENORMALIZATION(GID,NR,RBOX,NB &
@@ -5263,7 +5263,7 @@ PRINT*,'KI ',KI
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
-      LOGICAL(4)            :: TSEQUENTIALAUGMENT=.true.
+      LOGICAL(4)            :: TSEQUENTIALAUGMENT=.TRUE.
       REAL(8)               :: R(NR)
       REAL(8)               :: DREL(NR)
       REAL(8)               :: EOFI1(NB)
@@ -6286,7 +6286,7 @@ GOTO 10001
         NLPHI=MATMUL(NLPHI,TRANSPHI)
         QN=MATMUL(QN,TRANSPHI)
         PRO=MATMUL(PRO,TRANSPOSE(TRANSPHIINV))
-        DTkin=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DTkin,TRANSPHI))
+        DTKIN=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DTKIN,TRANSPHI))
         DOVER=MATMUL(TRANSPOSE(TRANSPHI),MATMUL(DOVER,TRANSPHI))
 !!$CALL SETUP_WRITEPHI('NLPHI_2.DAT',GID,NR,LNX,NLPHI)
 !!$CALL SETUP_WRITEPHI('AEPHI_2.DAT',GID,NR,LNX,AEPHI)
