@@ -1782,14 +1782,14 @@ END MODULE ORBITALS_MODULE
 !     == AND NEED NOT BE PRINTED. DEADZONES MUST BE THE SAME FOR ALL SETS     ==
 !     == TO ALLOW DATASET OPERATIONS, FOR EXAMPLE WITH XMGRACE.               ==
 !     ==========================================================================
-      ALLOCATE(DEADZONE(NE,ISPIN))
+      ALLOCATE(DEADZONE(NE,NSPIN))
       DEADZONE(:,:)=.TRUE.
       DO ISPIN=1,NSPIN
         DO IB=1,NB
           E1=MINVAL(EIG(IB,:,ISPIN))-1.D0*EV
           E2=MAXVAL(EIG(IB,:,ISPIN))+1.D0*EV
-          IE1=1+NINT((E1-EMIN)/(EMAX-EMIN)*REAL(NE-1))
-          IE2=1+NINT((E2-EMIN)/(EMAX-EMIN)*REAL(NE-1))
+          IE1=max(1, 1+NINT((E1-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
+          IE2=min(ne,1+NINT((E2-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
           DEADZONE(IE1:IE2,ISPIN)=.FALSE.
         ENDDO
       ENDDO
