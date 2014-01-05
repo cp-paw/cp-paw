@@ -3021,10 +3021,11 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       DO LN1=1,LNX
         DO LN2=LN1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-!!$          AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2))&
-!!$  &         -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2))
-!SMALL COMPONENT NOT PASSED ON...
- AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2))-PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2))
+          AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2))&
+     &       -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2))
+!!$!SMALL COMPONENT NOT PASSED ON...
+!!$
+!!$ AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2))-PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2))
           AUX=Y0*R**2*AUX  !Y0 FOR THE POTENTIAL
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
           CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR)
@@ -3040,7 +3041,8 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
       CALL SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
      &                            ,AECORE,PSCORE &
-     &                            ,AEPHI,PSPHI,PRO,DH,DOVER,AEPOT,PSPOT,VFOCK &
+     &                            ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
+     &                            ,DH,DOVER,AEPOT,PSPOT,VFOCK &
      &                            ,ROUT,TREL,TZORA &
      &                            ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
 !
@@ -3246,9 +3248,16 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
      &                            ,AECORE,PSCORE &
-     &                            ,AEPHI,PSPHI,PRO,DH,DOVER,AEPOT,PSPOT,VFOCK &
+     &                            ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
+     &                            ,DH,DOVER,AEPOT,PSPOT,VFOCK &
      &                            ,ROUT,TREL,TZORA &
      &                            ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
+!     **************************************************************************
+!     ** PERFORM A PAW CALCULATION FOR A GIVEN SET OF ALL-ELECTRON AND PSEUDO **
+!     ** POTENTIALS AND PROVIDE THE ALL-ELECTRON AND PSEUDO DENSITIES USED    **
+!     ** FOR UNSCREENING (I.E. THE EXTRACTION OF VADD)                        **
+!     **                                                                      **
+!     **************************************************************************
       USE RADIALFOCK_MODULE,ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -3266,7 +3275,9 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       REAL(8)   ,INTENT(IN) :: AECORE(NR)
       REAL(8)   ,INTENT(IN) :: PSCORE(NR)
       REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN) :: AEPHISM(NR,LNX)
       REAL(8)   ,INTENT(IN) :: PSPHI(NR,LNX)
+      REAL(8)   ,INTENT(IN) :: PSPHISM(NR,LNX)
       REAL(8)   ,INTENT(IN) :: PRO(NR,LNX)
       REAL(8)   ,INTENT(IN) :: DH(LNX,LNX)
       REAL(8)   ,INTENT(IN) :: DOVER(LNX,LNX)
@@ -3275,7 +3286,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       TYPE(VFOCK_TYPE),INTENT(INOUT) :: VFOCK
       LOGICAL(4),INTENT(IN) :: TREL
       LOGICAL(4),INTENT(IN) :: TZORA
-      REAL(8)   ,INTENT(OUT):: PAWRHO(NR)
+      REAL(8)   ,INTENT(OUT):: PAWRHO(NR)        ! 
       REAL(8)   ,INTENT(OUT):: PSRHO(NR)
       REAL(8)   ,INTENT(OUT):: AEPSIF(NR,NB-NC)
       REAL(8)   ,INTENT(OUT):: PSPSIF(NR,NB-NC)
@@ -3283,7 +3294,9 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
       LOGICAL(4)            :: TVARDREL
       REAL(8)   ,ALLOCATABLE:: AEPHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: AEPHISM1(:,:)
       REAL(8)   ,ALLOCATABLE:: PSPHI1(:,:)
+      REAL(8)   ,ALLOCATABLE:: PSPHISM1(:,:)
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
@@ -3318,14 +3331,26 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         L=LOX(LN)
         NPROL(L)=NPROL(L)+1
       ENDDO
-
-
+!
+!     ==========================================================================
+!     ==  ACCUMULATE DENSITY                                                  ==
+!     ==     PSRHO IS THE DENSITY OF THE PSEUDO PARTIAL WAVES                 ==
+!     ==     PAWRHO IS AT FIRST JUST THE AUGMENTATION DENSITY, BUT LATER, THE ==
+!     ==            PSEUDO DENSITY PSRHO IS ADDED                             ==
+!     ==     AERHO IS THE ALL-ELECTRON DENSITY OBTAINED WITHOUT PAW           ==
+!     ==     AUGRHO IS USED FOR TESTING. IT IS THE DENSITY OF THE ALL-ELECTRON==
+!     ==            WACE FUNCTIONS OBTAINED FROM THE PAW CONSTRUCTION         ==
+!     ==                                                                      ==
+!     ==  PAWRHO AND PSRHO DIFFER BY THE AUGMENTATION. BOTH DO NOT CONSIDER   ==
+!     ==  THE FOCK POTENTIAL VFOCK!                                           ==
+!     ==========================================================================
       AERHO(:)=AECORE(:)
       AUGRHO(:)=AECORE(:)
       PSRHO(:)=PSCORE(:)
       PAWRHO(:)=AECORE(:)-PSCORE(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
+        iso=0
 PRINT*,'=================== L=',L,' ================================='
         NPRO=NPROL(L)
         IF(NPRO.EQ.0) CYCLE
@@ -3333,7 +3358,9 @@ PRINT*,'=================== L=',L,' ================================='
         ALLOCATE(DO1(NPRO,NPRO))
         ALLOCATE(PRO1(NR,NPRO))
         ALLOCATE(AEPHI1(NR,NPRO))
+        ALLOCATE(AEPHISM1(NR,NPRO))
         ALLOCATE(PSPHI1(NR,NPRO))
+        ALLOCATE(PSPHISM1(NR,NPRO))
         ALLOCATE(PROJ(NPRO))
         IPRO1=0
         DO LN1=1,LNX
@@ -3358,22 +3385,29 @@ PRINT*,'=================== L=',L,' ================================='
         NN0=-1
         G(:)=0.D0
         DO IB=NC+1,NB
+          ivb=ib-nc
           IF(LOFI(IB).NE.L) CYCLE
 PRINT*,'        ---- IB=',IB,' --------------------------------'
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
           E=EOFI1(IB)
 !
 !         ======================================================================
-!         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION                            ==
+!         ==  CONSTRUCT ALL-ELECTRON WAVE FUNCTION AEPSIF                     ==
 !         ======================================================================
           G(:)=0.D0
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
-       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IB-NC))
-          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
-       &                              ,ROUT,E,AEPSIF(:,IB-NC))
+       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IvB))
+!!$          IF(TREL.AND.(.NOT.TZORA)) THEN
+!!$            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
+!!$     &                                    ,DREL,G,AEPSIF(:,IVB),AEPSIFSM(:,IVB))
+!!$          ELSE
+!!$            AEPSIFSM(:,IB-NC)=0.D0
+!!$          END IF
+!         == LEAVE OUT THE FOCK POTENTIAL FOR CONSISTENCY ======================
+!!$          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
+!!$       &                              ,ROUT,E,AEPSIF(:,IB-NC))
           SVAR1=E
           EOFICOMP(1,IB-NC)=E
-PRINT*,'EOFI1(IB)', EOFI1(IB),'E FROM AE CALC ',E
 !
 !         ======================================================================
 !         ==  CONSTRUCT PAW PSEUDO WAVE FUNCTION                              ==
@@ -3381,35 +3415,16 @@ PRINT*,'EOFI1(IB)', EOFI1(IB),'E FROM AE CALC ',E
 !         == THIS DOES NOT WORK WITH THE FOCK POTENTIAL BECAUSE THE NUMBER OF 
 !         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
-PRINT*,'L=',L,' NN=',NN,' ROUT=',ROUT,' NPRO= ',NPRO
-PRINT*,'DH=',DH1,' DO=',DO1
           G(:)=0.D0
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
-!
-!!$          E=EOFI1(IB)
-!!$          DO I=1,100
-!!$            G=0.D0
-!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX)
-!!$            CALL ATOMLIB_PAWDER(GID,NR,L,E+1.D-2,PSPOT,NPRO,PRO1,DH1,DO1,G,AUX1)
-!!$            AUX1(:)=1.D+2*(AUX1(:)-AUX(:))
-!!$            CALL RADIAL$VALUE(GID,NR,AUX,ROUT,VAL1)
-!!$            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL2)
-!!$!           == THE FACTOR 0.5 IS A FUDGE AND SHOULD NOT BE THERE. 
-!!$!           == HOWEVER IT IS NEEDED FOR CONVERGENCE
-!!$            E=E-VAL1/VAL2
-!!$            IF(ABS(VAL1/VAL2).LT.1.D-8) EXIT
-!!$            IF(I.EQ.100) THEN
-!!$              CALL ERROR$MSG('LOOP NOT CONVERGED')
-!!$              CALL ERROR$STOP('ATOMLIB_MAKEPARTIALWAVES')
-!!$            END IF
-!!$          ENDDO
-!!$          PSPSIF(:,IB-NC)=AUX(:)-AUX1(:)*VAL1/VAL2
           SVAR2=E
-!
           EOFICOMP(2,IB-NC)=E
+!
+!         ======================================================================
+!         ==  COMPARE PSEUDO AND ALL-ELECTRON RESULT                          ==
+!         ======================================================================
           IF(ABS(SVAR2-EOFI1(IB)).GT.1.D-1) THEN
-!            CALL SETUP_WRITEPHI(-'ERROR_UOFI',GID,NR,1,UOFI(:,IB-NC))
             CALL SETUP_WRITEPHI(-'ERROR_AEPSIF',GID,NR,1,AEPSIF(:,IB-NC))
             CALL SETUP_WRITEPHI(-'ERROR_PSPSIF',GID,NR,1,PSPSIF(:,IB-NC))
             CALL ERROR$MSG('INACCURACY WHILE UNSCREENING PS POTENTIAL')
@@ -3433,13 +3448,16 @@ PRINT*,'DH=',DH1,' DO=',DO1
           IF(TTEST) THEN
              WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
              WRITE(6,FMT='("OBTAINED ONCE WITH PAW AND THE AE CALCULATION")')
-             WRITE(6,FMT='("DEVIATION PROBABLY DUE TO INCONSISTENCEY OF RELATIVISTIC EFFECTS")')
-             WRITE(6,FMT='("DEVIATION AE-REF DUE TO DIFFERENCE OF NODAL AND NODELESS CONSTRUCTION")')
-             WRITE(6,FMT='("L",I2," PAW-REF ",F10.5,"EV; AE-REF ",F10.5," EV")') &
+             WRITE(6,FMT='("DEVIATION PROBABLY DUE TO INCONSISTENCY..")')
+             WRITE(6,FMT='("...OF RELATIVISTIC EFFECTS")')
+             WRITE(6,FMT='("DEVIATION AE-REF DUE TO DIFFERENCE OF NODAL ...")')
+             WRITE(6,FMT='("..AND NODELESS CONSTRUCTION")')
+             WRITE(6,FMT='("L",I2," PAW-REF",F10.5,"EV; AE-REF ",F10.5," EV")')&
          &          L,(SVAR2-EOFI1(IB))*27.211D0,(SVAR1-EOFI1(IB))*27.211D0
           END IF
 !
 !         ==  ENSURE THAT THE TAILS OF AE AND PS WAVE FUNCTION HAVE SAME SIGN ==
+!         == AND CUT OFF WAVE FUNCTION TWO GRID-POINTS OUTSIDE ROUT ============
           DO IR=1,NR-2
             IF(R(IR).LT.ROUT) CYCLE
             PSPSIF(IR+2:,IB-NC)=0.D0
@@ -3473,12 +3491,11 @@ PRINT*,'DH=',DH1,' DO=',DO1
           DO IPRO1=1,NPRO
             DO IPRO2=1,NPRO
               SVAR=FOFI(IB)*PROJ(IPRO1)*PROJ(IPRO2)*C0LL
-              PAWRHO(:)=PAWRHO(:)+SVAR*AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2) &
-                                 -SVAR*PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2)
-!!$AUX(:)=4.D0*PI*R(:)**2*Y0*C0LL*(AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2)-PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2))
-!!$CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
-!!$PRINT*,'DOVER ',L,IPRO1,IPRO2,VAL,DO1(IPRO1,IPRO2),VAL-DO1(IPRO1,IPRO2)
+              AUX= AEPHI1(:,IPRO1)*AEPHI1(:,IPRO2) &
+       &         + AEPHISM1(:,IPRO1)*AEPHISM1(:,IPRO2) &
+       &         - PSPHI1(:,IPRO1)*PSPHI1(:,IPRO2) &
+       &         - PSPHISM1(:,IPRO1)*PSPHISM1(:,IPRO2) 
+              PAWRHO(:)=PAWRHO(:)+SVAR*AUX(:)
             ENDDO
           ENDDO
 !
@@ -3503,7 +3520,9 @@ PRINT*,'DH=',DH1,' DO=',DO1
         DEALLOCATE(DO1)
         DEALLOCATE(PRO1)
         DEALLOCATE(AEPHI1)
+        DEALLOCATE(AEPHISM1)
         DEALLOCATE(PSPHI1)
+        DEALLOCATE(PSPHISM1)
         DEALLOCATE(PROJ)
       ENDDO      
       PAWRHO(:)=PAWRHO(:)+PSRHO(:)
@@ -6206,6 +6225,11 @@ GOTO 10001
      &                  ,G_PRO,G_DTKIN,G_DOVER &
      &                  ,G_AEPHIDOT,G_AEPHIDOTSM,G_QNPHIDOT,G_QNPHIDOTSM)
 !     **************************************************************************
+!     **  CONSTRUCT ALL-ELECTRON AND PSEUDO WAVE FUNCTIONS USING THE NODE-LESS**
+!     **  CONSTRUCTION.                                                       **
+!     **                                                                      **
+!     **  ONLY THE RADIUS RC FOR THE FIRST LN PER L IS USED TO DEFINE THE     **
+!     **  PSEUDO PARTIAL WAVES.                                               **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
@@ -6873,6 +6897,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !
 !     ==========================================================================
 !     == MAKE PSEUDO PARTIAL WAVE                                             ==
+!     == (ONLY THE FIRST PSEUDO PARTIAL WAVE DIFFERS FROM THE QN)             ==
 !     ==========================================================================
       PSPHI=QN
       TPSPHI=TQN
@@ -7011,6 +7036,12 @@ PRINT*,'IPHISCALE ',IPHISCALE
 !     **************************************************************************
 !     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
+!     **  THE PSEUDIZATION RADIUS IS THE GRID POINT JUST OUTSIDE RC.          **
+!     **  REPLACE THE POTENTIAL INSIDE RC BY A CONSTANT WITH POT(IRC) AND     **
+!     **  FIND THE PARTIAL WAVE AND ITS FIRST TWO ENERGY DERIVATIVES.         **
+!     **  MATCH THEM WITH VALUE AND DERIVATIVE AND (FOR T3PAR=TRUE) ALSO      **
+!     **  WITH KINETIC ENERGY                                                 **
+!     **                                                                      **
 !     **  NOTE, THAT FDDOT IS 1/2 OF THE SECOND DERIVATIVE                    **
 !     **       (H-E)|F^J>=J|F^{J-1}>.  WE DROP THE FACTOR J                   **
 !     ******************************PETER BLOECHL, GOSLAR 2013 *****************
@@ -7049,7 +7080,7 @@ PRINT*,'IPHISCALE ',IPHISCALE
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
-        IRC=IR
+        IRC=IR         !R(IRC)>RC
         IF(R(IR).GT.RC) EXIT
       ENDDO
 
@@ -7067,7 +7098,7 @@ PRINT*,'IPHISCALE ',IPHISCALE
 !     == EXTRACT POTENTIAL FROM INPUT PARTIAL WAVE                            ==
 !     ==========================================================================
       DREL(:)=0.D0
-      SVAR=10.D0*TINY(PHI)  !EVOID DIVIDE-BY-ZERO
+      SVAR=10.D0*TINY(PHI)  !AVOID DIVIDE-BY-ZERO
       POT(:)=-TPHI/(PHI+SVAR)/Y0
       G(:)=0.D0
       ENU=0.D0
