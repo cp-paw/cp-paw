@@ -2223,6 +2223,7 @@ END MODULE ORBITALS_MODULE
       REAL(8)                  :: SVAR
       REAL(8)                  :: SIG
       REAL(8)                  :: E
+      LOGICAL(4)               :: TSKIP
       REAL(8)                  :: SPINDEG
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID_TETRA')
@@ -2321,9 +2322,23 @@ END MODULE ORBITALS_MODULE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
             SVAR=1.D0
             IF(E.GT.EF) SVAR=0.D0
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
+!
+!           == AVOID WRITING LINES WITH ZERO DENSITY OF STATES =================
+!           == UNLESS THEY ARE THE FIRST OR LAST POINTS WITH ZERO VALUE ========
+            TSKIP=(ABS(DOS(IE,ISPIN)).LT.1.D-8)
+            IF(TSKIP) THEN
+              IF(IE.GT.1.AND.IE.LT.NE) THEN
+                TSKIP=TSKIP.AND.(ABS(DOS(IE-1,ISPIN)).LT.1.D-8) &
+                           .AND.(ABS(DOS(IE+1,ISPIN)).LT.1.D-8) 
+              ELSE
+                TSKIP=.FALSE.
+              END IF
+            END IF
+            IF(.NOT.TSKIP) THEN
+              WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
                                               ,SIG*DOS(IE,ISPIN)*SVAR*EV
-          ENDDO
+            END IF  
+        ENDDO
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
         WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
