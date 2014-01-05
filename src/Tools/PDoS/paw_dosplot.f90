@@ -6,7 +6,7 @@
       SAVE
       TYPE(LL_TYPE)   :: LL_CNTL
       INTEGER(4)      :: NFILO,NFIL
-      LOGICAL(4),PARAMETER :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER :: TPR=.FALSE.
 !     **************************************************************************
       CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
@@ -451,7 +451,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  ERROR FILE ===================================================
       ID=+'ERR'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DERR')
+      CALL FILEHANDLER$SETFILE(ID,T,-'.DPERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -459,7 +459,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  PROTOCOLL FILE================================================
       ID=+'PROT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DPROT')
+      CALL FILEHANDLER$SETFILE(ID,T,-'.DPPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -563,7 +563,6 @@ END MODULE DOSSETS_MODULE
 !      *************************************************************************
        IMPLICIT NONE
        INTEGER(4)    ,INTENT(IN) :: NFIL
-!       CHARACTER(512)            :: PALETTE='THANKYOU!'
        CHARACTER(512)            :: PALETTE=''
        INTEGER(4)                :: I
 !      *************************************************************************
@@ -684,20 +683,56 @@ END MODULE DOSSETS_MODULE
        SUBROUTINE GRACE_READ(NFIL,IGRAPH,FILE)
 !      *************************************************************************
 !      ** READ DATA FROM A X,Y1,Y2,Y3... FILE                                 **
+!      **                                                                     **
+!      ** THE BATCH FILE MAY CONTAIN EITHER A READ COMMAND OR THE FILE CAN BE **
+!      ** INSERTED DIRECTLY. DECIDE WITH HARD-WIRED PARAMETER 'TINSERT'       **
+!      ** CAUTION: THE OPTION 'TINSERT=.TRUE.' DOES NOT WORK!!!               **
 !      *************************************************************************
        USE STRINGS_MODULE
        IMPLICIT NONE
        INTEGER(4)  ,INTENT(IN) :: NFIL
        INTEGER(4)  ,INTENT(IN) :: IGRAPH
        CHARACTER(*),INTENT(IN) :: FILE
+       LOGICAL(4)  ,PARAMETER  :: TINSERT=.FALSE.
+       INTEGER(4)              :: NFILFROM
+       INTEGER(4)              :: I
+       LOGICAL(4)              :: TOPEN
        CHARACTER(128)          :: STRING
        CHARACTER(128)          :: GRAPH
+       CHARACTER(1024)          :: LINE
 !      *************************************************************************
        WRITE(STRING,*)IGRAPH
        STRING=ADJUSTL(STRING)
        GRAPH='G'//TRIM(STRING)
        WRITE(NFIL,FMT=-'("WITH ",A)')TRIM(GRAPH)
-       WRITE(NFIL,FMT=-'("READ NXY ",A)')'"'//TRIM(ADJUSTL(FILE))//'"'
+       IF(TINSERT) THEN
+         WRITE(NFIL,FMT=-'("TYPE NXY")')
+!        == FIND FILE UNIT FOR THE FILE TO INSERT ==============================
+         NFILFROM=-1
+         DO I=1000,2000
+           INQUIRE(I,OPENED=TOPEN)
+           IF(TOPEN) CYCLE
+           NFILFROM=I
+           EXIT
+         ENDDO
+         IF(NFILFROM.EQ.-1) THEN
+           CALL ERROR$MSG('NO OPEN FILE UNIT FOUND')
+           CALL ERROR$STOP('GRACE_READ')
+         END IF
+!        == OPEN FILE, COPY LINE-BY-LINE AND CLOSE FILE AGAIN ==================
+         OPEN(UNIT=NFILFROM,FILE=TRIM(FILE))
+         DO 
+           READ(NFILFROM,FMT='(A)',END=1000)LINE
+           IF(LEN_TRIM(LINE).EQ.0) CYCLE ! DISREGARD EMPTY LINES
+           WRITE(NFIL,FMT='(A)')TRIM(LINE)
+         ENDDO
+1000     CONTINUE
+         CLOSE(NFILFROM)
+!        == ADD TERMINATION SYMBOL =============================================
+         WRITE(NFIL,FMT=-'("&")')
+       ELSE
+         WRITE(NFIL,FMT=-'("READ NXY ",A)')'"'//TRIM(ADJUSTL(FILE))//'"'
+       END IF
        RETURN 
        END
 !
