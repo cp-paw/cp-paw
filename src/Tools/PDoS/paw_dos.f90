@@ -1768,11 +1768,31 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)           :: IB0,IK0,IS0
       REAL(8)              :: EV
       REAL(8)              :: ENERGY
+      REAL(8)              :: E1,E2
+      INTEGER(4)           :: IE1,IE2
       REAL(8)              :: SUM,SUMS,SVAR 
+      LOGICAL(4),ALLOCATABLE :: DEADZONE(:,:) !(NE,ISPIN)
 !     **************************************************************************
                          CALL TRACE$PUSH('READCNTL$OUTPUT')
       CALL CONSTANTS('EV',EV)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
+!
+!     ==========================================================================
+!     ==  DETERMINE DEAD ZONES. IN A DEADZONE THE DENSITY OF STATES VANISHES  ==
+!     == AND NEED NOT BE PRINTED. DEADZONES MUST BE THE SAME FOR ALL SETS     ==
+!     == TO ALLOW DATASET OPERATIONS, FOR EXAMPLE WITH XMGRACE.               ==
+!     ==========================================================================
+      ALLOCATE(DEADZONE(NE,ISPIN))
+      DEADZONE(:,:)=.TRUE.
+      DO ISPIN=1,NSPIN
+        DO IB=1,NB
+          E1=MINVAL(EIG(IB,:,ISPIN))-1.D0*EV
+          E2=MAXVAL(EIG(IB,:,ISPIN))+1.D0*EV
+          IE1=1+NINT((E1-EMIN)/(EMAX-EMIN)*REAL(NE-1))
+          IE2=1+NINT((E2-EMIN)/(EMAX-EMIN)*REAL(NE-1))
+          DEADZONE(IE1:IE2,ISPIN)=.FALSE.
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -1798,7 +1818,7 @@ END MODULE ORBITALS_MODULE
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                              ==
 !       ========================================================================
         IF(MODE.EQ.'SAMPLE')THEN
-          CALL PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+          CALL PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE IF(MODE.EQ.'TETRA')THEN
 !!$          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
@@ -1810,7 +1830,7 @@ END MODULE ORBITALS_MODULE
 !!$            CALL ERROR$STOP('READCNTL$OUTPUT')
 !!$          ENDIF
 !
-          CALL PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+          CALL PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
       &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE
           CALL ERROR$MSG('VALUE FOR "MODE" NOT RECOGNIZED')
@@ -1964,7 +1984,7 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL$OUTPUT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+      SUBROUTINE PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
      &                    ,NB,NKPT,NSPIN,NDIM,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
@@ -1996,6 +2016,7 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFILDOS  ! UNIT FOR DOS FILE OR "-1"
       INTEGER(4)   ,INTENT(IN) :: NFILNOS  ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
+      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE,NSPIN)
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
       REAL(8)              :: DE
       INTEGER(4)           :: IE1,IE2,IDE
@@ -2149,6 +2170,7 @@ END MODULE ORBITALS_MODULE
           SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
           DO IE=1,NE
+            IF(DEADZONE(IE,ISPIN)) CYCLE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
             WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
                                                    ,SIG*DOS(IE,ISPIN,2)*EV
@@ -2164,6 +2186,7 @@ END MODULE ORBITALS_MODULE
           SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
           WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
           DO IE=1,NE
+            IF(DEADZONE(IE,ISPIN)) CYCLE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
             WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN,1) &
                                                    ,SIG*NOS(IE,ISPIN,2)
@@ -2177,7 +2200,7 @@ END MODULE ORBITALS_MODULE
     END SUBROUTINE PUTONGRID_SAMPLE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD &
+      SUBROUTINE PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
      &                    ,NB,NKPT,NSPIN,NDIM,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
@@ -2207,6 +2230,7 @@ END MODULE ORBITALS_MODULE
       INTEGER(4)   ,INTENT(IN) :: NFILDOS ! UNIT FOR DOS FILE OR "-1"
       INTEGER(4)   ,INTENT(IN) :: NFILNOS ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
+      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE,NSPIN)
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
       REAL(8)    ,ALLOCATABLE  :: NOS(:,:)
       REAL(8)    ,ALLOCATABLE  :: NOSMIN(:)
@@ -2319,26 +2343,13 @@ END MODULE ORBITALS_MODULE
           SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
           DO IE=1,NE
+            IF(DEADZONE(IE,ISPIN)) CYCLE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
             SVAR=1.D0
             IF(E.GT.EF) SVAR=0.D0
-!
-!           == AVOID WRITING LINES WITH ZERO DENSITY OF STATES =================
-!           == UNLESS THEY ARE THE FIRST OR LAST POINTS WITH ZERO VALUE ========
-            TSKIP=(ABS(DOS(IE,ISPIN)).LT.1.D-8)
-            IF(TSKIP) THEN
-              IF(IE.GT.1.AND.IE.LT.NE) THEN
-                TSKIP=TSKIP.AND.(ABS(DOS(IE-1,ISPIN)).LT.1.D-8) &
-                           .AND.(ABS(DOS(IE+1,ISPIN)).LT.1.D-8) 
-              ELSE
-                TSKIP=.FALSE.
-              END IF
-            END IF
-            IF(.NOT.TSKIP) THEN
-              WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
+            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
                                               ,SIG*DOS(IE,ISPIN)*SVAR*EV
-            END IF  
-        ENDDO
+          ENDDO
           WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
         WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
@@ -2351,10 +2362,11 @@ END MODULE ORBITALS_MODULE
           WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
           IE1=1
           DO IE=1,NE
+            IF(DEADZONE(IE,ISPIN)) CYCLE
             E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
             IF(E.LT.EF)IE1=IE
             WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN) &
-                                                   ,SIG*NOS(IE1,ISPIN)
+      &                                            ,SIG*NOS(IE1,ISPIN)
           ENDDO
           WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
         ENDDO
