@@ -371,7 +371,7 @@ END MODULE DOSSETS_MODULE
         WRITE(NFIL,FMT='("XAXIS TICK ON")')
 !       == DISTANCE OF MAJOR TICKS (WITH LABELS) ==============================
 !       == CALCULATE SUITABLE TICKSPACING FROM THE INTERVAL BOUNDS
-        SVAR=LOG10((XMAX-XMIN)/3.D0)   
+        SVAR=LOG10((XMAX-XMIN)/5.D0)   
         TICKSPACING=10.D0**FLOOR(SVAR)
         SVAR=MODULO(SVAR,1.D0)
         IF(SVAR.LT.LOG10(2.D0)) THEN
@@ -692,7 +692,7 @@ END MODULE DOSSETS_MODULE
 !      =========================================================================
 !      =========================================================================
        DO IGRAPH=1,NGRAPHS
-         WRITE(STRING,*)IGRAPH
+         WRITE(STRING,*)IGRAPH-1
          GRAPH='G'//TRIM(ADJUSTL(STRING))
          WRITE(NFIL,FMT=-'("WITH ",A)')TRIM(GRAPH)
          FMT=-'("FRAME BACKGROUND COLOR 0")'
