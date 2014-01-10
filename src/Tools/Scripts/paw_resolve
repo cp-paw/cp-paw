@@ -44,7 +44,10 @@
 USAGE="Usage: \n\n"
 USAGE="$USAGE paw_resolve options infile > outfile \n\n"
 USAGE="$USAGE Options:\n"
-USAGE="$USAGE -p prefix prefix to be added to the filename in @file@\n"
+USAGE="$USAGE -p prefix: prefix to be added to the filename in @file@\n"
+USAGE="$USAGE -r id=value: rule to convert @id@ into value\n"
+USAGE="$USAGE -f id=file: rule to replace lines containing  @id@ \n"
+USAGE="$USAGE       by the contents of file \n"
 USAGE="$USAGE -h this help message\n"
 #-------------------------------------------------------------------------------
 # resolve argument list

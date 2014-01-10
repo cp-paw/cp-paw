@@ -561,10 +561,12 @@ END MODULE DOSSETS_MODULE
 !      *************************************************************************
 !
 !      *************************************************************************
+       USE STRINGS_MODULE
        IMPLICIT NONE
        INTEGER(4)    ,INTENT(IN) :: NFIL
        CHARACTER(512)            :: PALETTE=''
        INTEGER(4)                :: I
+       CHARACTER(64)             :: FMT
 !      *************************************************************************
        I=0
        CALL GRACE_MAPCOLOR(NFIL,I,255,255,255,'WHITE') ; I=I+1
@@ -617,6 +619,12 @@ END MODULE DOSSETS_MODULE
          CALL GRACE_MAPCOLOR(NFIL,I,150,150,150,'LBLACK')   ; I=I+1
        END IF
        CALL GRACE_MAPCOLOR(NFIL,I,220,220,220,'GREY')
+!
+!      =========================================================================
+!      == SWITCH BACKGROUND FILLING OFF                                       ==
+!      =========================================================================
+       FMT=-'("PAGE BACKGROUND FILL OFF")'
+       WRITE(NFIL,FMT=FMT)
        RETURN
        END
 !
@@ -673,9 +681,25 @@ END MODULE DOSSETS_MODULE
        INTEGER(4)  ,INTENT(IN) :: NFIL
        INTEGER(4)  ,INTENT(IN) :: NGRAPHS
        CHARACTER(64)           :: FMT
+       CHARACTER(128)          :: STRING
+       CHARACTER(128)          :: GRAPH
+       integer(4)              :: igraph
 !      *************************************************************************
        FMT=-'("ARRANGE(",I5,",1,0.1,0.0,0.0)")'
        WRITE(NFIL,FMT=FMT)NGRAPHS
+!
+!      =========================================================================
+!      =========================================================================
+!      =========================================================================
+       DO IGRAPH=1,NGRAPHS
+         WRITE(STRING,*)IGRAPH
+         GRAPH='G'//TRIM(ADJUSTL(STRING))
+         WRITE(NFIL,FMT=-'("WITH ",A)')TRIM(GRAPH)
+         FMT=-'("FRAME BACKGROUND COLOR 0)")'
+         WRITE(NFIL,FMT=FMT)
+         FMT=-'("FRAME BACKGROUND PATTERN 1)")'
+         WRITE(NFIL,FMT=FMT)
+       ENDDO
        RETURN 
        END
 !
