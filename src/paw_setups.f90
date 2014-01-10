@@ -5925,9 +5925,9 @@ PRINT*,'KI ',KI
 !       ========================================================================
 !       == CONSTRUCT ID  SI_.75_6.0                                           ==
 !       ========================================================================
-        WRITE(STRING,FMT='(F3.2)')FACTOR
+        WRITE(STRING,FMT='(F5.2)')FACTOR
         ID=TRIM(SY)//'_'//ADJUSTL(STRING)
-        WRITE(STRING,FMT='(F3.1)')LAMBDA
+        WRITE(STRING,FMT='(F4.1)')LAMBDA
         ID=TRIM(ID)//'_'//ADJUSTL(STRING)
 !
 !       ========================================================================

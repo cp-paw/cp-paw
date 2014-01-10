@@ -1157,7 +1157,7 @@ END MODULE ORBITALS_MODULE
       CALL CONSTANTS('EV',EV)
       CALL CONSTANTS('KB',KB)
       EBROAD=KB*300.D0
-      DE=1.D-3*EV
+      DE=1.D-2*EV
       NE=INT((EMAX-EMIN)/DE)+1
 !
 !     ==========================================================================
