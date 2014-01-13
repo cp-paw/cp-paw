@@ -1,6 +1,8 @@
 #!/bin/bash
 PAWVERSIONFILE="$1"
+echo "==================getversion.sh start==================================="
 echo "File to modify: $PAWVERSIONFILE"
+echo "Current directory=$(pwd)"
 
 srcdir="../../../../src"
 if [ "$PAWVERSIONFILE" = "" ] ;
@@ -41,6 +43,7 @@ else
       #git is installed and we are in a git repo
       echo "inside git repo: YES"    
       ##all remotes--> too long
+      # VER1 is a ;-separated list of the remote repositories
       VER1=`git remote -v | awk 'BEGIN { FS = " " } ; { print $2 }' | uniq | tr '\n' ';'`
       ##only remote that hast tracking branch
       #branch=$(git symbolic-ref HEAD)
@@ -50,6 +53,7 @@ else
       #remoteBranch=${remoteBranch##refs/heads/}
       #VER1=`git remote show -n ${remote:?} | grep "Fetch URL:" | sed "s/[ ]*Fetch URL://g" | tr -d '\n'`
       #banchname
+      # VER2 is the name of the actual branch (with an unintended line number in front)
       VER2=`git branch | grep "*" | sed "s/* //"`
       #short revision number
       VER3=`git rev-list $VER2 | wc -l`
@@ -94,6 +98,8 @@ fi
 if [ "$PAWVERSIONFILE" = "" ]
 then
   echo "not changing version information in paw-code, just writing it to $verinfo"
+  echo "pwd=$(pwd)"
+  echo "verinfo=${verinfo}"
   echo "$VER1" > ${verinfo}
   echo "$VER2" >> ${verinfo}
   echo "$VER3" >> ${verinfo}
@@ -111,10 +117,18 @@ else
   #VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
   #VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
   #VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
-  VERINF2=`echo "$VERINF" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/"`
-  VERREV2=`echo "$VERREV" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/"`
-  VERAUT2=`echo "$VERAUT" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/"`
-  VERDAT2=`echo "$VERDAT" |  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/"`
+#  VERINF2=`echo "$VERINF" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
+#  VERREV2=`echo "$VERREV" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
+#  VERAUT2=`echo "$VERAUT" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
+#  VERDAT2=`echo "$VERDAT" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
+
+# $(command) is the output of teh command as text string
+# \n is a newline character to brak over-long lines in the fortran code
+# // concatenates the strings on the two separate lines
+  VERINF2=$(echo "$VERINF" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|")
+  VERREV2=$(echo "$VERREV" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|")
+  VERAUT2=$(echo "$VERAUT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|")
+  VERDAT2=$(echo "$VERDAT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|")
   echo "MODULE VERSION_MODULE" > $PAWVERSIONFILE.tmp
   echo "CHARACTER(256):: VERINF=$VERINF2" >> $PAWVERSIONFILE.tmp
   echo "CHARACTER(256):: VERREV=$VERREV2" >> $PAWVERSIONFILE.tmp
@@ -131,5 +145,6 @@ else
   #sed -i "s/_VERAUT/${VERAUT2}/g" $PAWVERSIONFILE
   #sed -i "s/_VERDAT/${VERDAT2}/g" $PAWVERSIONFILE
 fi
+echo "==================getversion.sh end==================================="
 
 

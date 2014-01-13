@@ -228,9 +228,9 @@ fi
 #  fft directory
 if test -n "$FFTDIR" ; then
   AC_MSG_RESULT(check FFT directory)
-  AC_CHECK_FILES($FFTDIR,ERROR=F,ERROR=T)
+  AC_CHECK_FILE($FFTDIR,ERROR=F,ERROR=T)
   if test ["$ERROR" = "T"]; then
-    AC_MSG_RESULT(name of the FFT directory: $FFTDIR)
+    AC_MSG_RESULT(name of the FFT directory: FFTDIR=$FFTDIR)
     AC_MSG_ERROR(FFT directory not found)
   fi
 ##  AC_MSG_RESULT(check FFT include file)
