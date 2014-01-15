@@ -216,7 +216,7 @@ end subroutine dimer_init_files
       CELLKIN2=0.0d0
 
 
-      ALPHA=ANNER!DO WE NEED THIS??? DON'T THINK SO! check it!
+      ALPHA=ANNER!DO WE NEED THIS??? DONT THINK SO! check it!
       IF(.NOT.TSTRESS) THEN
          call MPE$QUERY('~',NTASKS,world_id)
          call MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -319,7 +319,6 @@ end subroutine dimer_init_files
       ELSE 
          
          CALL ERROR$MSG('IN DIMER PROPAGATE TSTRESS=TRUE TALK ABOUT THIS WITH PETER')
-         !CALL ERROR$CHVAL('',NAME(IAT))
          CALL ERROR$STOP('DIMER$PROPAGATE')
          
       END IF
@@ -432,7 +431,7 @@ end subroutine dimer_init_files
 
 
          !this should be done in paw_atoms
-         !KDLENGTH=.false. !we don't need to place the dimer any more
+         !KDLENGTH=.false. !we dont need to place the dimer any more
          !placedimer=.false.
          return !do not propagate!!!
       end if
@@ -557,7 +556,7 @@ end subroutine dimer_init_files
 
 
       !=========================================================
-      !==========  THE DIMER'S PARALLEL MOTION       ===========
+      !==========  THE DIMERS PARALLEL MOTION       ===========
       !=========================================================
  !     RC=R1NC+(R2NC-R1NC)/2.0d0
  !     RCDIFF=sqrt(dot_product((R2-R1),(R2-R1))) 
@@ -569,8 +568,8 @@ end subroutine dimer_init_files
 
 
       !=========================================================
-      !==========   THE DIMER'S actual DIRECTION         =======
-      !==========   AND ANGULAR CHANGE IN °              =======
+      !==========   THE DIMERS actual DIRECTION         =======
+      !==========   AND ANGULAR CHANGE IN               =======
       !=========================================================
         !prepare monitoring (hardwired)
         if(.not.treadam) then
@@ -621,16 +620,16 @@ end subroutine dimer_init_files
         !write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER ACTUAL DIRECTION: '
         !write(dprotfil,*)SVARV
 
-        write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER ANGLE CHANGE IN °: ',&
-             &acos(dot_product(svarv,dirm))&
-             &*180.d0/(4.0*atan(1.0d0))
+        write(dprotfil,*) &
+       &     'DIMER: DIMER_PROPAGATE: DIMER ANGLE CHANGE in degrees: ', &
+       &      acos(dot_product(svarv,dirm))*180.d0/(4.0*atan(1.0d0))
 
        dirm=svarv
 
         !monitoring
-        write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER ANGLE MONITORING °: ',&
-             &acos(dot_product(svarv,angledir))&
-             &*180.d0/(4.0*atan(1.0d0))
+        write(dprotfil,*) &
+      &    'DIMER: DIMER_PROPAGATE: DIMER ANGLE MONITORING in degrees : ', &
+      &     acos(dot_product(svarv,angledir))*180.d0/(4.0*atan(1.0d0))
 
 
         !=========================================================

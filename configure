@@ -2364,18 +2364,14 @@ eval ac_res=\$$as_ac_File
 	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
 $as_echo "$ac_res" >&6; }
 if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
-
-cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$FFTDIR" | $as_tr_cpp` 1
-_ACEOF
-ERROR=F
+  ERROR=F
 else
   ERROR=T
 fi
 
   if test "$ERROR" = "T"; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: name of the FFT directory: $FFTDIR" >&5
-$as_echo "name of the FFT directory: $FFTDIR" >&6; }
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: name of the FFT directory: FFTDIR=$FFTDIR" >&5
+$as_echo "name of the FFT directory: FFTDIR=$FFTDIR" >&6; }
     as_fn_error $? "FFT directory not found" "$LINENO" 5
   fi
 ##  AC_MSG_RESULT(check FFT include file)

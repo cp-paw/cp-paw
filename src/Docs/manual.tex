@@ -3003,7 +3003,7 @@ natural tight binding orbitals. \textbf{Experimental option!}}
    atom calculated by a hybrid functional}
 \vformat{logical} 
 \vrules{Optional} 
-\vdefault{true}}
+\vdefault{false}}
 
 \mbax{\key{CV} 
  \vdescr{Switch for core-valence exchange}
@@ -6324,7 +6324,7 @@ of number of states}
   will be adjusted consistent with an integer number of grid points.}
 \vformat{real} 
 \vrules{optional}
-\vdefault{10$^{-3}$}}
+\vdefault{10$^{-2}$}}
 
 \mbax{\key{BROADENING[EV]}
 \vdescr{Thermal broading $k_BT$ of the density of states expressed in eV. }
@@ -7126,40 +7126,40 @@ Details are described below.}
 \brules{optional,multiple}
 \bdescr{defines one line seqment in k-space, i.e. a part of a bandstructure}
 
-\mbax{\key{xk1}
+\mbax{\key{XK1}
 \vdescr{First point of the line segment in relative coordinates 
 of the reciprocal lattice vectors. kvec1=GBAS*xk1}
 \vformat{real(3)} 
 \vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
 
-\mbax{\key{kvec1}
+\mbax{\key{KVEC1}
 \vdescr{First point of the line segment in absolute coordinates.}
 \vformat{real(3)} 
 \vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
 
-\mbax{\key{xk2}
+\mbax{\key{XK2}
 \vdescr{Last point of the line segment in relative coordinates 
 of the reciprocal lattice vectors. kvec2=GBAS*xk2}
 \vformat{real(3)} 
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
 
-\mbax{\key{kvec2}
+\mbax{\key{KVEC2}
 \vdescr{Last point of the line segment in absolute coordinates.}
 \vformat{real(3)} 
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
 
-\mbax{\key{kvecscale}
+\mbax{\key{KVECSCALE}
 \vdescr{scale factor for kvec1 and kvec2 so that they can be given in 
 common coordinates, i.e. $\vec k=\frac{2\pi}{kvecscale}\vec k_{input}$.}
 \vformat{real} 
 \vrules{optional}
 \vdefault{$2\pi$}}
 
-\mbax{\key{spin}
+\mbax{\key{SPIN}
 \vdescr{spin direction. In a spin-polarized collinear 
 calculation the parameter can have the values 1 or 2.}
 \vformat{integer} 
