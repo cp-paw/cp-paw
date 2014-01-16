@@ -108,19 +108,32 @@ then
   echo "$AUTHOR" >> ${verinfo}
   echo "$DATE" >> ${verinfo}
 else
-  #build version module
-  #echo "VERINF=$VERINF"
-  #echo "VERREV=$VERREV"
-  #echo "VERAUT=$VERAUT"
-  #echo "VERDAT=$VERDAT"
-  #VERINF2=`echo "$VERINF" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
-  #VERREV2=`echo "$VERREV" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
-  #VERAUT2=`echo "$VERAUT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
-  #VERDAT2=`echo "$VERDAT" | sed 's/\//\\\\\//g'|  sed "s/.\{50\}/&\\\' \/\/ \&\n\\\'/g"`
-#  VERINF2=`echo "$VERINF" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
-#  VERREV2=`echo "$VERREV" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
-#  VERAUT2=`echo "$VERAUT" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
-#  VERDAT2=`echo "$VERDAT" |  sed "s/.\{50\}/&\\\' \/\/ \&\\\n\\\'/"`
+
+#fixing line end if length is multiple of separation length
+l=`echo "$VERINF" | wc -c`
+m=`echo "($l-1)%50==0" | bc`
+if [ "$m" = "1" ];
+then
+  VERINF=`echo "$VERINF" | sed "s/'$/ '/g"`
+fi
+l=`echo "$VERREV" | wc -c`
+m=`echo "($l-1)%50==0" | bc`
+if [ "$m" = "1" ];
+then
+  VERREV=`echo "$VERREV" | sed "s/'$/ '/g"`
+fi
+l=`echo "$VERAUT" | wc -c`
+m=`echo "($l-1)%50==0" | bc`
+if [ "$m" = "1" ];
+then
+  VERAUT=`echo "$VERAUT" | sed "s/'$/ '/g"`
+fi
+l=`echo "$VERDAT" | wc -c`
+m=`echo "($l-1)%50==0" | bc`
+if [ "$m" = "1" ];
+then
+  VERDAT=`echo "$VERDAT" | sed "s/'$/ '/g"`
+fi
 
 # $(command) is the output of teh command as text string
 # \n is a newline character to brak over-long lines in the fortran code
@@ -130,20 +143,14 @@ else
   VERAUT2=$(echo "$VERAUT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
   VERDAT2=$(echo "$VERDAT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
   echo "MODULE VERSION_MODULE" > $PAWVERSIONFILE.tmp
-  echo "CHARACTER(256):: VERINF=$VERINF2" >> $PAWVERSIONFILE.tmp
-  echo "CHARACTER(256):: VERREV=$VERREV2" >> $PAWVERSIONFILE.tmp
-  echo "CHARACTER(256):: VERAUT=$VERAUT2" >> $PAWVERSIONFILE.tmp
-  echo "CHARACTER(256):: VERDAT=$VERDAT2" >> $PAWVERSIONFILE.tmp
+  echo -e "CHARACTER(256):: VERINF=$VERINF2" >> $PAWVERSIONFILE.tmp
+  echo -e "CHARACTER(256):: VERREV=$VERREV2" >> $PAWVERSIONFILE.tmp
+  echo -e "CHARACTER(256):: VERAUT=$VERAUT2" >> $PAWVERSIONFILE.tmp
+  echo -e "CHARACTER(256):: VERDAT=$VERDAT2" >> $PAWVERSIONFILE.tmp
   echo "END MODULE VERSION_MODULE" >> $PAWVERSIONFILE.tmp
   cat $PAWVERSIONFILE.tmp $PAWVERSIONFILE > $PAWVERSIONFILE.tmp2
   rm $PAWVERSIONFILE.tmp
   mv $PAWVERSIONFILE.tmp2 $PAWVERSIONFILE
-
-  #modify in file
-  #sed -i "s/_VERINF/${VERINF2}/g" $PAWVERSIONFILE
-  #sed -i "s/_VERREV/${VERREV2}/g" $PAWVERSIONFILE
-  #sed -i "s/_VERAUT/${VERAUT2}/g" $PAWVERSIONFILE
-  #sed -i "s/_VERDAT/${VERDAT2}/g" $PAWVERSIONFILE
 fi
 echo "==================getversion.sh end==================================="
 
