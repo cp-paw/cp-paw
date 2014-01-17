@@ -2986,12 +2986,17 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
         CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
         CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
+        !
+        !  MISSING VARIABLES:
+        !
+        phiscale=1.d0
+        psiscale=1.d0
       ELSE 
         CALL SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
      &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER &
-     &                    ,AEPHIDOT,PSPHIDOT,TREL,TZORA)
+     &                    ,AEPHIDOT,PSPHIDOT,TREL,TZORA,psiscale,phiscale)
         NLPHI=QN
         NLPHISM=0.D0
         QNSM=0.D0
@@ -3010,10 +3015,6 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
           WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
         ENDDO
       END IF
-!
-!  MISSING VARIABLES:
-!
-!  PSISCALE, PHISCALE
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
@@ -3312,6 +3313,8 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       REAL(8)               :: G(NR)
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4)            :: LX
+      INTEGER(4)            :: iso
+      INTEGER(4)            :: ivb
       INTEGER(4)            :: L,LN,LN1,LN2,IPRO,IPRO1,IPRO2,IB,IR
       INTEGER(4)            :: NN,NN0,NPRO
       REAL(8)               :: PI,Y0,C0LL
@@ -5165,9 +5168,10 @@ PRINT*,'KI ',KI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
-     &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
-     &                    ,AEPOT,PSPOT,VFOCK &
-     &             ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,AEPHIDOT,PSPHIDOT,TREL,TZORA)
+     &            ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
+     &            ,AEPOT,PSPOT,VFOCK &
+     &            ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,AEPHIDOT,PSPHIDOT,TREL,TZORA &
+     &            ,psiscale,phiscale)
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -5188,6 +5192,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(IN) :: LAMBDA(LNX)
       INTEGER(4),INTENT(IN) :: ISCATT(LNX)
       REAL(8)   ,INTENT(IN) :: AEPOT(NR)
+      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
       REAL(8)   ,INTENT(IN) :: PSPOT(NR)
       REAL(8)   ,INTENT(OUT):: QN(NR,LNX)
       REAL(8)   ,INTENT(OUT):: AEPHI(NR,LNX)
@@ -5197,7 +5202,8 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX)
       REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX)
-      TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
+      REAL(8)   ,INTENT(OUT):: PHISCALE(LNX)
+      REAL(8)   ,INTENT(OUT):: PSISCALE(NB)
       LOGICAL(4),INTENT(IN) :: TREL
       LOGICAL(4),INTENT(IN) :: TZORA
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
@@ -5231,8 +5237,6 @@ PRINT*,'KI ',KI
       REAL(8)               :: ESCATT(LNX)
       REAL(8)               :: RBND,RNORM
       REAL(8)               :: PHIPHASE
-      REAL(8)               :: PHISCALE(LNX)
-      REAL(8)               :: PSISCALE(NB)
       REAL(8)               :: AUX(NR),AUX1(NR),VAL,SVAR,SVAR1,SVAR2,RC1
       REAL(8)               :: SPEEDOFLIGHT
       REAL(8)               :: EOFLN(LNX)
