@@ -561,7 +561,7 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
 # generate version information __________________________________________
 $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
-	sh ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
+	bash ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 # generate source blob __________________________________________________
