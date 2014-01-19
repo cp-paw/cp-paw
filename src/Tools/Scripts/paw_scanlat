@@ -7,7 +7,7 @@
 #               ni_atom.strc
 #               o_atom.strc
 #
-#  nio is to be replaced by the name of the substace and 
+#  nio is to be replaced by the name of the substance and 
 #  ni and o must be replaced by the corresponding atom ids.
 #
 #  nio.strc must contain exactly one line containing "LUNIT=" 
@@ -19,10 +19,69 @@
 #               gap.dat
 #
 #==============================================================================
-# SET THESE VARIABLES. THE STRING ALAT0 must match with all digits the value
-# given in the structure file
+# initialize variables and scan argument list
 #==============================================================================
-NAME=$1
+export USAGE="Usage of $0 \n"
+USAGE="$USAGE \n"
+USAGE="$USAGE paw_scanlat options projectname\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Options:\n"
+USAGE="$USAGE -b directory containing the paw executables (binaries)\n"
+USAGE="$USAGE -0 dry-run\n"
+USAGE="$USAGE -h print this help message \n"
+USAGE="$USAGE \n"
+USAGE="$USAGE preconditions: \n" 
+USAGE="$USAGE    projectname.cntl \n" 
+USAGE="$USAGE    projectname.strc \n" 
+USAGE="$USAGE \n"
+#
+THISDIR=`pwd`   # current directory
+# PAWXDIR is the directory holding the paw executables
+export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
+#
+#-------------------------------------------------------------------------------
+#  resolve argument list
+#-------------------------------------------------------------------------------
+DRYRUN=no
+while getopts :h0b:p: OPT ; do
+  case $OPT in
+    b)
+      PAWXDIR=$OPTARG
+      echo option xdir=${PAWXDIR}
+      shift
+      ;; 
+    p)
+      NAME=$OPTARG
+      echo argument projectname=${NAME}
+      shift
+      ;;
+    0)
+      DRYRUN=yes
+      echo option dry-run=${DRYRUN}
+      shift
+      ;;
+    h)
+      echo -e $USAGE
+      exit 1
+      ;;
+    \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
+      echo "error in $0" >&2
+      echo "invalid option -$OPTARG" >&2
+      echo "retrieve argument list with:" >&2
+      echo "$0 -h" >&2
+      exit 1
+      ;;
+    :)    # no argument passed to option requiring one
+      echo "error in $0" >&2
+      echo "option -$OPTARG requires an additional argument" >&2
+      exit 1
+      ;;  esac
+done
+#
+if [ -z $NAME ] ; then
+  echo "error in $0: mandatory option -p missing" >&2
+  exit 1
+fi
 #
 #==============================================================================
 # pick out the equilibrium lattice constant from the structure file
@@ -47,38 +106,24 @@ for X in 96 97 98 99 100 101 102 103 104; do
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
   #============================================================================
   cp ${NAME}.cntl ${NAME}_${X}.cntl
-  rm ${NAME}_${X}.prot
-  paw_fast.x ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1
-  grep "ABSOLUTE GAP" ${NAME}_${X}.prot \
-      | tail -n 1 \
-      | awk '{print '${X}'  " " $3}' >> gap.dat
-  grep "TOTAL ENERGY" ${NAME}_${X}.prot \
-      | tail -n 1 \
-      | awk '{print '${X}'  " " $4}' >>etot.dat
-  rm ${NAME}_${X}_constr.report
-  rm ${NAME}_${X}_r.tra
-  rm ${NAME}_${X}.pdos
-  rm ${NAME}_${X}.strc_out
+  if [ "$DRYRUN" = "no" ] ; then
+    rm ${NAME}_${X}.prot
+    ${PAWXDIR}/paw_fast.x ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1
+  else
+    echo "rm ${NAME}_${X}.prot"
+    echo "${PAWXDIR}/paw_fast.x ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
+  fi
+  echo ${X} $(paw_get -gap -n ${NAME}_${X})  >>gap.dat
+  echo ${X} $(paw_get -etot -n ${NAME}_${X}) >>etot.dat
+  #
+  #  clean up
+  # 
+  LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
+        ${NAME}_${X}.strc_out "
+  for Y in $LIST ; do
+    echo cleaning $Y
+    if [ -e $Y ] ; then rm $Y ; fi
+  done
   rm ${NAME}_${X}_stpfor*.myxml
 done
-#
-#==============================================================================
-# do atomic calculations                                                     ==
-#==============================================================================
-echo 'doing isolated atoms....'
-rm atometot.dat
-for X in *_atom.strc; do
-  ATOM=${X%_atom.strc}_atom
-  echo $ATOM
-  rm ${ATOM}.prot
-  cp ${NAME}.cntl ${ATOM}.cntl
-  paw_fast.x ${ATOM}.cntl 1>${ATOM}.out 2>&1
-  grep "TOTAL ENERGY" ${ATOM}.prot \
-      | tail -n 1 \
-      | awk '{print "atom " $4}' >>atometot.dat
-  rm ${ATOM}_constr.report
-  rm ${ATOM}_r.tra
-  rm ${ATOM}.pdos
-done
-echo '.....done'
 exit
