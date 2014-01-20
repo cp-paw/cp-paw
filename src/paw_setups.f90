@@ -1748,12 +1748,11 @@ PRINT*,'RCSM ',THIS%RCSM
      &          ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &          ,THIS%RCSM,THIS%VADD,THIS%PSG2,THIS%PSG4)
-CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
-
       ALLOCATE(THIS%NLPHIDOT(NR,LNX))
       ALLOCATE(THIS%QPHIDOT(NR,LNX))
       THIS%NLPHIDOT=THIS%PSPHIDOT
       THIS%QPHIDOT=THIS%PSPHIDOT
+CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 
       CALL TIMING$CLOCKOFF('MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
@@ -2963,7 +2962,6 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
-PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
 !     ==========================================================================
@@ -2976,27 +2974,23 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
         NLPHI=QN
         NLPHISM=QNSM
-        DO LN1=1,LNX
-          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
-        ENDDO
-        DO LN1=1,LNX
-          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
-        ENDDO
         CALL SETUP_WRITEPHI(-'NEW_PRO',GID,NR,LNX,PRO)
         CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
         CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
         CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
+        CALL SETUP_WRITEPHI(-'NEW_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
+        CALL SETUP_WRITEPHI(-'NEW_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
         !
         !  MISSING VARIABLES:
         !
-        phiscale=1.d0
-        psiscale=1.d0
+        PHISCALE=1.D0
+        PSISCALE=1.D0
       ELSE 
         CALL SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
      &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER &
-     &                    ,AEPHIDOT,PSPHIDOT,TREL,TZORA,psiscale,phiscale)
+     &                    ,AEPHIDOT,PSPHIDOT,TREL,TZORA,PSISCALE,PHISCALE)
         NLPHI=QN
         NLPHISM=0.D0
         QNSM=0.D0
@@ -3008,44 +3002,57 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
         CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
         CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
-        DO LN1=1,LNX
-          WRITE(*,FMT='(A,100E10.3)')'DT   ',DT(LN1,:)
-        ENDDO
-        DO LN1=1,LNX
-          WRITE(*,FMT='(A,100E10.3)')'DOVER',DOVER(LN1,:)
-        ENDDO
+        CALL SETUP_WRITEPHI(-'OLD_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
+        CALL SETUP_WRITEPHI(-'OLD_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
       END IF
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
 !     ==========================================================================
+PRINT*,'ROUT ',ROUT
       DO LN1=1,LNX
         DO LN2=LN1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
           AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2))&
      &       -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2))
-!!$!SMALL COMPONENT NOT PASSED ON...
-!!$
-!!$ AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2))-PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2))
           AUX=Y0*R**2*AUX  !Y0 FOR THE POTENTIAL
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!         == IN THE OLDER VERSION RBOX IS USED INSTEAD OF RBOX, WHICH IS 
+!         == INCONSISTENT. 
+!         == ROUT IS THE SIZE OF THE BOX IN WHICH THE ATOM "LIVES", WHILE 
+!         == RBOX SELECTS THE "EXCITED" PARTIAL WAVES
           CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR)
           DH(LN1,LN2)=DT(LN1,LN2)+SVAR
-          DH(LN2,LN1)=DH(LN1,LN2)
+          DH(LN2,LN1)=DT(LN2,LN1)+SVAR
         ENDDO
       ENDDO
-!
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DT   ',DT(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DOVER',DOVER(LN1,:)
+ENDDO
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
       CALL SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
-     &                            ,AECORE,PSCORE &
-     &                            ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
-     &                            ,DH,DOVER,AEPOT,PSPOT,VFOCK &
-     &                            ,ROUT,TREL,TZORA &
-     &                            ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
+     &                      ,AECORE,PSCORE &
+     &                      ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
+     &                      ,DH,DOVER,AEPOT,PSPOT,VFOCK &
+     &                      ,ROUT,TREL,TZORA &
+     &                      ,PAWRHO,PSRHO,AEPSIF,PSPSIF,AUGPSIF)
+!!$PRINT*,'GID,NR(3) ',GID,NR,R(1:3),'...',R(NR)
+!!$PRINT*,'ROUT=',ROUT
+!!$CALL SETUP_WRITEPHI('AECORE',GID,NR,1,AECORE)
+!!$CALL SETUP_WRITEPHI('PAWVALRHO',GID,NR,1,PAWRHO-AECORE)
+!!$CALL SETUP_WRITEPHI('PAWRHO',GID,NR,1,PAWRHO)
+!!$CALL SETUP_WRITEPHI('PSRHO',GID,NR,1,PSRHO)
+!!$STOP 'FORCED IN PAW_SETUPS.F90 AFTER PAWDENSITY'
 !
 !     ==========================================================================
 !     == UNSCREENING                                                          ==
@@ -3313,8 +3320,8 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       REAL(8)               :: G(NR)
       INTEGER(4),ALLOCATABLE:: NPROL(:)
       INTEGER(4)            :: LX
-      INTEGER(4)            :: iso
-      INTEGER(4)            :: ivb
+      INTEGER(4)            :: ISO
+      INTEGER(4)            :: IVB
       INTEGER(4)            :: L,LN,LN1,LN2,IPRO,IPRO1,IPRO2,IB,IR
       INTEGER(4)            :: NN,NN0,NPRO
       REAL(8)               :: PI,Y0,C0LL
@@ -3353,7 +3360,7 @@ PRINT*,'POW ',POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       PAWRHO(:)=AECORE(:)-PSCORE(:)
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
-        iso=0
+        ISO=0
 PRINT*,'=================== L=',L,' ================================='
         NPRO=NPROL(L)
         IF(NPRO.EQ.0) CYCLE
@@ -3371,7 +3378,9 @@ PRINT*,'=================== L=',L,' ================================='
           IPRO1=IPRO1+1
           PRO1(:,IPRO1)=PRO(:,LN1)
           AEPHI1(:,IPRO1)=AEPHI(:,LN1)
+          AEPHISM1(:,IPRO1)=AEPHISM(:,LN1)
           PSPHI1(:,IPRO1)=PSPHI(:,LN1)
+          PSPHISM1(:,IPRO1)=PSPHISM(:,LN1)
           IPRO2=0
           DO LN2=1,LNX
             IF(LOX(LN2).NE.L) CYCLE
@@ -3388,7 +3397,7 @@ PRINT*,'=================== L=',L,' ================================='
         NN0=-1
         G(:)=0.D0
         DO IB=NC+1,NB
-          ivb=ib-nc
+          IVB=IB-NC
           IF(LOFI(IB).NE.L) CYCLE
 PRINT*,'        ---- IB=',IB,' --------------------------------'
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
@@ -3399,7 +3408,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
 !         ======================================================================
           G(:)=0.D0
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
-       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IvB))
+       &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IVB))
 !!$          IF(TREL.AND.(.NOT.TZORA)) THEN
 !!$            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
 !!$     &                                    ,DREL,G,AEPSIF(:,IVB),AEPSIFSM(:,IVB))
@@ -3518,7 +3527,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
           PSRHO(:) =PSRHO(:) +FOFI(IB)*PSPSIF(:,IB-NC)**2*Y0
           AUGRHO(:)=AUGRHO(:)+FOFI(IB)*AUGPSIF(:,IB-NC)**2*Y0
           AERHO(:) =AERHO(:) +FOFI(IB)*AEPSIF(:,IB-NC)**2*Y0
-        ENDDO
+        ENDDO !END OF LOOP OVER VALENCE STATES
         DEALLOCATE(DH1)
         DEALLOCATE(DO1)
         DEALLOCATE(PRO1)
@@ -5171,7 +5180,7 @@ PRINT*,'KI ',KI
      &            ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &            ,AEPOT,PSPOT,VFOCK &
      &            ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,AEPHIDOT,PSPHIDOT,TREL,TZORA &
-     &            ,psiscale,phiscale)
+     &            ,PSISCALE,PHISCALE)
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -5211,7 +5220,7 @@ PRINT*,'KI ',KI
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
-      LOGICAL(4)            :: TSEQUENTIALAUGMENT=.TRUE.
+      LOGICAL(4)            :: TSEQUENTIALAUGMENT=.FALSE.
       REAL(8)               :: R(NR)
       REAL(8)               :: DREL(NR)
       REAL(8)               :: EOFI1(NB)
@@ -5235,7 +5244,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,ALLOCATABLE:: DH1(:,:),DO1(:,:),PRO1(:,:)
       REAL(8)               :: E
       REAL(8)               :: ESCATT(LNX)
-      REAL(8)               :: RBND,RNORM
+      REAL(8)               :: RBND
       REAL(8)               :: PHIPHASE
       REAL(8)               :: AUX(NR),AUX1(NR),VAL,SVAR,SVAR1,SVAR2,RC1
       REAL(8)               :: SPEEDOFLIGHT
@@ -5262,7 +5271,6 @@ PRINT*,'KI ',KI
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
       CALL RADIAL$R(GID,NR,R)
       RBND=RBOX
-      RNORM=RBOX
 !
       ALLOCATE(NCL(0:LX))
       NCL(:)=0
@@ -5486,7 +5494,6 @@ PRINT*,'EOFI1 A ',EOFI1
             ELSE
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
     &                                    ,ROUT,EOFLN(LN),NLPHI(:,LN))
-!    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
             END IF
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
@@ -5533,7 +5540,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !         == NORMALIZATION FACTOR  =============================================
           AUX(:)=R(:)**2*PHI(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           VAL=1.D0/SQRT(VAL)
           CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),SVAR)
           VAL=SIGN(VAL,SVAR)
@@ -5908,19 +5915,19 @@ PRINT*,'EOFI1 A ',EOFI1
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
 !AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DTKIN(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,RBND,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DH(LN1,LN2)=DTKIN(LN1,LN2)+VAL
         ENDDO
@@ -5950,7 +5957,7 @@ PRINT*,'EOFI1 A ',EOFI1
             IF(LOX(LN1).NE.LOX(LN)) CYCLE
             AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
             PROJ(LN1)=VAL
           ENDDO
           WRITE(6,FMT='("LN=",I2," <P|PSPHI>=",10F10.5)')LN,PROJ
@@ -6077,10 +6084,10 @@ PRINT*,'EOFI1 A ',EOFI1
             IF(LOFI(IB).NE.L) CYCLE
             AUX=R(:)**2*UOFI(:,IB)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR1)
             AUX=R(:)**2*UOFI(:,IB)*AEPHIDOT(:,LN)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR2)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR2)
             AEPHIDOT(:,LN)=AEPHIDOT(:,LN)-UOFI(:,IB)*SVAR2/SVAR1
           ENDDO
           LNLAST=LN
@@ -6143,7 +6150,7 @@ GOTO 10001
           IF(ISCATT(LN).LE.0) THEN    ! NORMALIZE VALENCE AND SEMI-CORE STATES
             AUX(:)=R(:)**2*PSPHI(:,LN)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
             VAL=VAL+DOVER(LN,LN)
             VAL=1.D0/SQRT(VAL)
           END IF
@@ -6184,6 +6191,7 @@ GOTO 10001
                SVAR=MAX(SVAR,ABS(PSPHI(IR,LN)))
             ELSE
               IF(ABS(PSPHI(IR,LN)).GT.10.D0*SVAR) THEN
+PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
                 AEPHI(IR:,LN)=0.D0
                 PSPHI(IR:,LN)=0.D0
                 NLPHI(IR:,LN)=0.D0
@@ -6202,6 +6210,12 @@ GOTO 10001
 !
 !     ==========================================================================
 !     == TRANSFORM ONTO SEQUENTIAL RESPRESENTATION                            ==
+!     ==========================================================================
+!     == CHANGES INDIVIDUAL ENERGY CONTRIBUTIONS LESS THAN 1.E-7 HARTREE
+!     == THE SEQUENTIAL REPRESENTATION ALLOWS TO TRUNCATE THE SET OF 
+!     ==  PARTIAL WAVES AND PROJECTOR FUNCTIONS AT EVERY NUMBER OF PROJECTORS 
+!     == WHICH WAS HISTORICALLY RELEVANT WHEN THE SETUPS WERE STORED ON FILE.
+!     == NOW IT MAY BE RELEVANT FOR THE MAPPING ON LOCAL ORBITALS. PLEASE CHECK!
 !     ==========================================================================
       IF(TSEQUENTIALAUGMENT) THEN
 !!$CALL SETUP_WRITEPHI('NLPHI_1.DAT',GID,NR,LNX,NLPHI)
@@ -6305,6 +6319,13 @@ PRINT*,'STARTING SETUPS_OUTERNEWPROWRAPPER...'
       G_QNPHI=0.D0
       G_AEPHI=0.D0
       G_PSPHI=0.D0
+      G_QNPHISM=0.D0
+      G_AEPHISM=0.D0
+      G_PSPHISM=0.D0
+      G_QNPHIDOT=0.D0
+      G_AEPHIDOT=0.D0
+      G_QNPHIDOTSM=0.D0
+      G_AEPHIDOTSM=0.D0
       G_PRO=0.D0
       G_DTKIN=0.D0
       G_DOVER=0.D0
@@ -6504,6 +6525,8 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
      &                        ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                        ,PRO,DTKIN,DOVER)
 !     **************************************************************************
+!     ** CALCULATES PARTIAL WAVES AND PROJECTOR FUNCTIONS FOR A GIVEN L AND SO**
+!     **                                                                      **
 !     **  THE CORE STATES SOLVE                                               **
 !     **     (H-E(I))|U_I>=|U_{I-1}>   WITH |U_0>=|0>                         **
 !     **  THE NODE-REDUCED VALENCE STATES OBEY                                **
@@ -6514,9 +6537,8 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !     **  FOR THE SMALL COMPONENT, WE USE THE MODEL THAT ALSO THE PSEUDO-     **
 !     **  PARTIAL WAVES CARRY A SMALL COMPONENT, WHICH IS IDENTICAL TO THAT   **
 !     **  OF THE NODE-REDUCED PARTIAL WAVES QN. DTKIN AND DOVER ARE DONE      **
-!     **  ON THIS BASIS, WHICH ENSURES THAT THERE ARE NO EXPOENTIALLY GROWING **
+!     **  ON THIS BASIS, WHICH ENSURES THAT THERE ARE NO EXPONENTIALLY GROWING**
 !     **  CONTRIBUTIONS IN THE INTEGRALS.                                     **
-!     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE STRINGS_MODULE
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
@@ -6557,8 +6579,8 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       REAL(8)   ,INTENT(OUT):: PRO(NR,NJ)
       REAL(8)   ,INTENT(OUT):: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(OUT):: DTKIN(NJ,NJ)
-      REAL(8)   ,PARAMETER  :: RNSCORE=0.07D0
-      REAL(8)   ,PARAMETER  :: RNSPHI=0.09D0
+      REAL(8)   ,PARAMETER  :: RNSCORE=0.07D0 !SEE MASTERS THESIS ROBERT SCHADE
+      REAL(8)   ,PARAMETER  :: RNSPHI=0.09D0  !SEE MASTERS THESIS ROBERT SCHADE
       INTEGER(4),PARAMETER  :: SWITCH=2 ! BIORTHOGONALIZATION METHOD
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
@@ -6609,13 +6631,18 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       IF(RELTYPE.EQ.'NONREL') THEN
         TREL=.FALSE.
         TZORA=.FALSE.
-        TSMALL=.FALSE.
+        TSMALL=.FALSE.   !SMALL COMPONENT IS ZERO
         TVARDREL=.FALSE.
       ELSE IF(RELTYPE.EQ.'ZORA') THEN
         TREL=.TRUE.
         TZORA=.TRUE.
         TSMALL=.FALSE.
         TVARDREL=.FALSE.
+!!$      ELSE IF(RELTYPE.EQ.'SCALAR') THEN
+!!$        TREL=.TRUE.
+!!$        TZORA=.FALSE.
+!!$        TSMALL=.TRUE.
+!!$        TVARDREL=.FALSE.
       ELSE IF(RELTYPE.EQ.'SPINORBIT') THEN
         TREL=.TRUE.
         TZORA=.FALSE.
@@ -6935,7 +6962,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       ENDDO
 !
 !     ==========================================================================
-!     == RESCALE CONSISTENTLY                                                 ==
+!     == RESCALE CONSISTENTLY: WAVE FUNCTION PHI(IPHISCALE) WILL HAVE NORM 1  ==
 !     ==========================================================================
 PRINT*,'IPHISCALE ',IPHISCALE
       IF(IPHISCALE.NE.0) THEN
