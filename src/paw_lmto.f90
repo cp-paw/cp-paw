@@ -141,7 +141,7 @@ END TYPE OFFSITEX_TYPE
 !== PARAMETER SECTION                                                         ==
 !===============================================================================
 LOGICAL(4)            :: TON=.FALSE.       
-LOGICAL(4)            :: TOFFSITE=.false.  !INCLUDE OFFSITE EXCHANGE
+LOGICAL(4)            :: TOFFSITE=.FALSE.  !INCLUDE OFFSITE EXCHANGE
 LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 
@@ -173,7 +173,7 @@ REAL(8)               :: HFWEIGHT=0.25D0
 LOGICAL(4)              :: TINI=.FALSE.
 LOGICAL(4)              :: TINISTRUC=.FALSE.
 LOGICAL(4)              :: THTBC=.FALSE. ! HTBC CALCULATED
-CHARACTER(32)           :: modus='NONE'
+CHARACTER(32)           :: MODUS='NONE'
 INTEGER(4)              :: NSP=-1
 INTEGER(4)              :: ISPSELECTOR=-1 ! USED ONLY FOR HYBRIDSETTING
 TYPE(HYBRIDSETTING_TYPE),ALLOCATABLE :: HYBRIDSETTING(:)
@@ -605,7 +605,7 @@ END MODULE LMTO_MODULE
 CALL SETUP$ISELECT(1)
 CALL SETUP$ISELECT(0)
 !
-!     == lmto interface works only with internal setups ========================
+!     == LMTO INTERFACE WORKS ONLY WITH INTERNAL SETUPS ========================
       CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
       IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
@@ -1371,7 +1371,7 @@ INTEGER(4)             :: LN3,LN4
         DO LN=1,LNX(ISP)
           LOXT(:LN)=LOX(:LN,ISP)  ! FOR THE HANKEL FUNCTIONS
           IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
-!         == this loops over the scattering waves ==============================
+!         == THIS LOOPS OVER THE SCATTERING WAVES ==============================
           LNT=LNT+1
           LOXT(LNT)=LOX(LN,ISP)   ! FOR THE BESSEL FUNCTIONS
           LNDOT(LN)=LNT
@@ -3081,7 +3081,7 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
                                  CALL TRACE$PUSH('LMTO_NTBODENMATDER')
       PI=4.D0*ATAN(1.D0)
-      THTBC=.TRUE.   ! htbc will be calculated
+      THTBC=.TRUE.   ! HTBC WILL BE CALCULATED
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -3180,11 +3180,11 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,THIS,WAVES_SELECTWV
-      use lmto_module, only: thtbc
+      USE LMTO_MODULE, ONLY: THTBC
       IMPLICIT NONE
       INTEGER(4) :: IKPT,ISPIN
 !     **************************************************************************
-      thtbc=.false. ! htbc will be reset set to zero
+      THTBC=.FALSE. ! HTBC WILL BE RESET SET TO ZERO
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -4252,7 +4252,7 @@ PRINT*,'MARKE 7'
 !     **************************************************************************
                                            CALL TRACE$PUSH('LMTO_DROPPICK_HTBC')
       IF(.NOT.TPICK) RETURN
-      THTBC=.TRUE.  !htbc will be calculated
+      THTBC=.TRUE.  !HTBC WILL BE CALCULATED
       CALL LMTO_DROPICK_INI()
       CALL LMTO_DROPPICK_MAKET()
       NAT=SIZE(ISPECIES)
@@ -5747,7 +5747,7 @@ PRINT*,'DH READ '
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,MODUS
 USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
@@ -5760,18 +5760,18 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START ")')
-      IF((TDROP.OR.TPICK).NEQV.(modus.EQ.'OLDDMFT')) THEN
+      IF((TDROP.OR.TPICK).NEQV.(MODUS.EQ.'OLDDMFT')) THEN
         CALL ERROR$MSG('INCONSISTENT OPTIONS')
-        CALL ERROR$MSG('(TDROP.OR.TPICK).NEQV.(modus.EQ."OLDDMFT")')
+        CALL ERROR$MSG('(TDROP.OR.TPICK).NEQV.(MODUS.EQ."OLDDMFT")')
         CALL ERROR$STOP('LMTO$STOP')
       END IF
 !
 !     ==========================================================================
-!     ==  Select choices                                                      ==
+!     ==  SELECT CHOICES                                                      ==
 !     ==========================================================================
-print*,'in lmto$etot: modus=',trim(modus)
+PRINT*,'IN LMTO$ETOT: MODUS=',TRIM(MODUS)
       CALL LMTO$SETHTBCTOZERO()
-      IF(modus.EQ.'DMFT') THEN
+      IF(MODUS.EQ.'DMFT') THEN
         CALL DMFT$GREEN()
 ! 
       ELSE IF(MODUS.EQ.'OLDDMFT') THEN
@@ -5789,8 +5789,8 @@ print*,'in lmto$etot: modus=',trim(modus)
           RETURN  ! IF DROP OR PICK IS TRUE INTERFACE DMFT IS USED.
         END IF
 
-      ELSE IF(modus.EQ.'HYBRID') then
-        call LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+      ELSE IF(MODUS.EQ.'HYBRID') THEN
+        CALL LMTO_HYBRID(LMNXX_,NDIMD_,NAT_,DENMAT_)
 
       ELSE
         CALL ERROR$MSG('MODUS NOT RECOGNIZED')
@@ -5802,7 +5802,7 @@ print*,'in lmto$etot: modus=',trim(modus)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_hybrid(LMNXX_,NDIMD_,NAT_,DENMAT_)
+      SUBROUTINE LMTO_HYBRID(LMNXX_,NDIMD_,NAT_,DENMAT_)
 !     **************************************************************************
 !     **                                                                      **
 !     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
@@ -5811,7 +5811,7 @@ print*,'in lmto$etot: modus=',trim(modus)
 !     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : TON
-USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,modus
+USE LMTO_MODULE, ONLY : TDROP,TPICK,DENMAT,HAMIL,TOFFSITE,MODUS
 USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
@@ -5972,7 +5972,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       USE LMTO_MODULE, ONLY : ISPECIES,DENMAT,HAMIL,LNX,LOX,POTPAR,TOFFSITE &
      &                       ,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.true.
+      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NAT
@@ -6001,11 +6001,11 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       REAL(8)               :: QSPIN(4)
       REAL(8)               :: SVAR
       INTEGER(4)            :: IDFTTYPE
-INTEGER(4)            :: idimd
+INTEGER(4)            :: IDIMD
 CHARACTER(128) :: STRING
 REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       REAL(8)               :: HFSCALE
-      logical(4)            :: tactive ! does this atom contribute?
+      LOGICAL(4)            :: TACTIVE ! DOES THIS ATOM CONTRIBUTE?
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
 PRINT*,'============ ENERGYTEST2 ============================='
@@ -6033,11 +6033,11 @@ PRINT*,'============ ENERGYTEST2 ============================='
       EXTOT=0.D0
       EHTOT=0.D0
       DO IAT=1,NAT
-        isp=ispecies(iat)
-        tactive=.false.
-        do ln=1,size(potpar(isp)%torb)
-          tactive=tactive.or.potpar(isp)%torb(ln)
-        enddo
+        ISP=ISPECIES(IAT)
+        TACTIVE=.FALSE.
+        DO LN=1,SIZE(POTPAR(ISP)%TORB)
+          TACTIVE=TACTIVE.OR.POTPAR(ISP)%TORB(LN)
+        ENDDO
 !
 !       == FIND LOCAL DENSITY MATRIX ===========================================
         IND=-1
@@ -6121,11 +6121,11 @@ PRINT*,'IAT=',IAT,' LOCAL HFSCALE=',HFSCALE
         ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
         CALL LMTO_BLOWUPDENMATNL(IAT,IAT,NDIMD,LMNX,LMNX,D,LMNXT,LMNXT,DT)
-if(tactive) then
+IF(TACTIVE) THEN
 DO I=1,NDIMD,3
   WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
   DO LMN=1,LMNX
-    WRITE(*,FMT='(200F10.5)')D(LMN,:,i)
+    WRITE(*,FMT='(200F10.5)')D(LMN,:,I)
   ENDDO
 ENDDO
 DO I=1,NDIMD,3
@@ -6167,9 +6167,9 @@ END IF
 !               ================================================================
 !               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION INTO TOTAL AND SPIN
                 SVAR=-0.25D0*U(I,J,K,L)
-                EX=EX+SVAR*SUM(DT(K,J,:)*DT(l,i,:))
-                HT(K,J,:)=HT(K,J,:)+SVAR*DT(l,i,:) 
-                HT(l,i,:)=HT(l,i,:)+SVAR*DT(K,J,:) 
+                EX=EX+SVAR*SUM(DT(K,J,:)*DT(L,I,:))
+                HT(K,J,:)=HT(K,J,:)+SVAR*DT(L,I,:) 
+                HT(L,I,:)=HT(L,I,:)+SVAR*DT(K,J,:) 
               ENDDO
             ENDDO
           ENDDO
@@ -6181,15 +6181,15 @@ PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,QSPIN(1)
 PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=           ',IAT,QSPIN(2:NDIMD)
 PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
 
-if(tactive) then 
-print*,'iat=',iat,ndimd
-WRITE(*,FMT='(82("="),T10,"  h before dc ")')
-do idimd=1,ndimd
-  do lmn=1,lmnx
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
-  enddo
-enddo
-end if
+IF(TACTIVE) THEN 
+PRINT*,'IAT=',IAT,NDIMD
+WRITE(*,FMT='(82("="),T10,"  H BEFORE DC ")')
+DO IDIMD=1,NDIMD
+  DO LMN=1,LMNX
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
+  ENDDO
+ENDDO
+END IF
 !
 !       ========================================================================
 !       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
@@ -6207,29 +6207,29 @@ CALL TIMING$CLOCKON('ENERGYTEST:DC')
      &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HTALL,LMNX,LMNX,H)
 !!$!
-if(tactive) then 
-print*,'iat=',iat,ndimd
-WRITE(*,FMT='(82("="),T10,"  h(1) from simpledc ")')
-do idimd=1,ndimd
-  do lmn=1,lmnx
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
-  enddo
-enddo
-end if
+IF(TACTIVE) THEN 
+PRINT*,'IAT=',IAT,NDIMD
+WRITE(*,FMT='(82("="),T10,"  H(1) FROM SIMPLEDC ")')
+DO IDIMD=1,NDIMD
+  DO LMN=1,LMNX
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
+  ENDDO
+ENDDO
+END IF
 !
         POTPAR(ISP)%TALLORB=.FALSE.  ! DO NOT FORGET THIS!!!!!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,NDIMD,LMNXT,LMNXT,HT,LMNX,LMNX,H)
 !!$!
-if(tactive) then
-print*,'iat=',iat
-WRITE(*,FMT='(82("="),T10,"  h(2) from simpledc ")')
-do idimd=1,ndimd
-  do lmn=1,lmnx
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,h(lmn,:,IDIMD)
-  enddo
-enddo
-end if
+IF(TACTIVE) THEN
+PRINT*,'IAT=',IAT
+WRITE(*,FMT='(82("="),T10,"  H(2) FROM SIMPLEDC ")')
+DO IDIMD=1,NDIMD
+  DO LMN=1,LMNX
+    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
+  ENDDO
+ENDDO
+END IF
 !!$!
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
@@ -6279,7 +6279,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
         DEALLOCATE(D)
         DEALLOCATE(AECORE)
         DEALLOCATE(LOXT)
-      ENDDO !end of loop over atoms
+      ENDDO !END OF LOOP OVER ATOMS
 !
 !     ==========================================================================
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
@@ -6370,8 +6370,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
             WRITE(*,FMT='(82("-"))')
           ENDDO
         ENDDO
-!!$print*,'stopping after printing'
-!!$stop 'forced stop'
+!!$PRINT*,'STOPPING AFTER PRINTING'
+!!$STOP 'FORCED STOP'
       END IF
 !
                             CALL TRACE$POP()
@@ -6426,7 +6426,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !       ==  DETERMINE SIZE OF STRUCTURE CONSTANT ARRAY                        ==
 !       ========================================================================
         ISP=ISPECIES(IAT)
-!       == determine n2=#(partial waves) n1=%(scattering waves) ================
+!       == DETERMINE N2=#(PARTIAL WAVES) N1=%(SCATTERING WAVES) ================
         N1=0
         N2=0
         DO LN=1,LNX(ISP)
@@ -6775,7 +6775,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     **   VXTOT=MU(RHOTOT)-MU(RHOTOT-RHOCOR)                                 **
 !     **   VXCOR=MU(RHOTOT-RHOCOR)                                            **
 !     **                                                                      **
-!     **  the density matrix is in a (t,x,y,z) representation                 **
+!     **  THE DENSITY MATRIX IS IN A (T,X,Y,Z) REPRESENTATION                 **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -10194,29 +10194,29 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        SUBROUTINE LMTO_TWOCENTER(L1_,M1_,GID1_,NR1_,F1_ &
       &                         ,L2_,M2_,GID2_,NR2_,F2_,DIS_,TOLERANCE,OVERLAP)
 !      *************************************************************************
-!      ** determines the two-center integral of two functions specified       **
-!      ** on a radial grid and real spherical harmonics. the two functions    **
-!      ** are displaced in z-direction                                        **
+!      ** DETERMINES THE TWO-CENTER INTEGRAL OF TWO FUNCTIONS SPECIFIED       **
+!      ** ON A RADIAL GRID AND REAL SPHERICAL HARMONICS. THE TWO FUNCTIONS    **
+!      ** ARE DISPLACED IN Z-DIRECTION                                        **
 !      **                                                                     **
-!      ** see Z. Romanowski, int.J.Quant.Chem.108, 249 (2008),                **
-!      **     Z. Romanowski, int.J.Quant.Chem.108, 487 (2008) and             **
-!      **     Z. Romanowski and A. F. Jalbot, J. math. chem. 46, 97 (2009)    **
+!      ** SEE Z. ROMANOWSKI, INT.J.QUANT.CHEM.108, 249 (2008),                **
+!      **     Z. ROMANOWSKI, INT.J.QUANT.CHEM.108, 487 (2008) AND             **
+!      **     Z. ROMANOWSKI AND A. F. JALBOT, J. MATH. CHEM. 46, 97 (2009)    **
 !      *************************************************************************
        USE LMTO_TWOCENTER_MODULE
        IMPLICIT NONE
-       INTEGER(4),INTENT(IN) :: L1_       ! main angular momentum of f1
-       INTEGER(4),INTENT(IN) :: M1_       ! m-index of real sph. harmonics of f1
-       INTEGER(4),INTENT(IN) :: GID1_     ! grid id of f1 (see paw_radial.f90)
-       INTEGER(4),INTENT(IN) :: NR1_      ! #(radial grid points for f1)
-       REAL(8)   ,INTENT(IN) :: F1_(NR1_) ! radial part of f1
-       INTEGER(4),INTENT(IN) :: L2_       ! main angular momentum of f2
-       INTEGER(4),INTENT(IN) :: M2_       ! m-index of real sph. harmonics of f2
-       INTEGER(4),INTENT(IN) :: GID2_     ! grid id of f2 (see paw_radial.f90)
-       INTEGER(4),INTENT(IN) :: NR2_      ! #(radial grid points for f2)
-       REAL(8)   ,INTENT(IN) :: F2_(NR2_) ! radial part of f2
-       REAL(8)   ,INTENT(IN) :: DIS_      ! distance in z-direction
-       REAL(8)   ,INTENT(IN) :: TOLERANCE ! allowed deviation from exact result
-       REAL(8)   ,INTENT(OUT):: OVERLAP   ! resulting two-center integral
+       INTEGER(4),INTENT(IN) :: L1_       ! MAIN ANGULAR MOMENTUM OF F1
+       INTEGER(4),INTENT(IN) :: M1_       ! M-INDEX OF REAL SPH. HARMONICS OF F1
+       INTEGER(4),INTENT(IN) :: GID1_     ! GRID ID OF F1 (SEE PAW_RADIAL.F90)
+       INTEGER(4),INTENT(IN) :: NR1_      ! #(RADIAL GRID POINTS FOR F1)
+       REAL(8)   ,INTENT(IN) :: F1_(NR1_) ! RADIAL PART OF F1
+       INTEGER(4),INTENT(IN) :: L2_       ! MAIN ANGULAR MOMENTUM OF F2
+       INTEGER(4),INTENT(IN) :: M2_       ! M-INDEX OF REAL SPH. HARMONICS OF F2
+       INTEGER(4),INTENT(IN) :: GID2_     ! GRID ID OF F2 (SEE PAW_RADIAL.F90)
+       INTEGER(4),INTENT(IN) :: NR2_      ! #(RADIAL GRID POINTS FOR F2)
+       REAL(8)   ,INTENT(IN) :: F2_(NR2_) ! RADIAL PART OF F2
+       REAL(8)   ,INTENT(IN) :: DIS_      ! DISTANCE IN Z-DIRECTION
+       REAL(8)   ,INTENT(IN) :: TOLERANCE ! ALLOWED DEVIATION FROM EXACT RESULT
+       REAL(8)   ,INTENT(OUT):: OVERLAP   ! RESULTING TWO-CENTER INTEGRAL
        REAL(8)               :: SVAR1,SVAR2
 !      *************************************************************************
        IF(ABS(M1_).GT.L1_.OR.ABS(M2_).GT.L2_) THEN
@@ -15018,7 +15018,7 @@ STOP 'FORCED IN LMTO_TESTTAILEDP'
       SUBROUTINE EXPINTEGRAL(N,E,RES)
 !     **************************************************************************
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: E
       LOGICAL(4)            :: TEVEN
