@@ -2998,10 +2998,10 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)   ,INTENT(OUT):: PSG2
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
-      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.TRUE.
+      LOGICAL(4),PARAMETER  :: TSEQUENTIALAUGMENT=.FALSE.
       LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       INTEGER(4),ALLOCATABLE:: NPROL(:)
@@ -3315,8 +3315,10 @@ PRINT*,'EOFI1 A ',EOFI1
 !     ==========================================================================
 !     == UPDATE NODELESS PARTIAL WAVES WITH FOCK POTENTIAL                    ==
 !     ==========================================================================
+PRINT*,'VFOCK%TON ',VFOCK%TON
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO PARTIAL WAVES')
+PRINT*,'EOFLN BEFORE VFOCK',EOFLN
         DO L=0,LX
           TFIRST=.TRUE.
           ISO=0
@@ -3339,14 +3341,14 @@ PRINT*,'EOFI1 A ',EOFI1
               TFIRST=.FALSE. 
             ELSE
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-    &                                    ,ROUT,EOFLN(LN),NLPHI(:,LN))
-!    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
+    &                                    ,RBND,EOFLN(LN),NLPHI(:,LN))
             END IF
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
             G(:)=NLPHI(:,LN)
           ENDDO
         ENDDO
+PRINT*,'EOFLN AFTER VFOCK',EOFLN
       END IF
 !
 !     ==========================================================================
@@ -3780,6 +3782,17 @@ PRINT*,'EOFI1 A ',EOFI1
           DH(LN1,LN2)=DT(LN1,LN2)+VAL
         ENDDO
       ENDDO
+PRINT*,'VFOCK%TON  ',VFOCK%TON
+PRINT*,'RBND       ',RBND
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DT   ',DT(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DO   ',DOVER(LN1,:)
+ENDDO
       IF(TTEST) THEN
 !       == THE NON-HERMIEANITY COMES (FOR SILICON) TO 85 PERCENT FROM         ==
 !       == THE ADMIXTURE OF THE CORE WAVE FUNCTIONS, WHEN AEPHI IS OBTAINED.  ==
@@ -4072,6 +4085,15 @@ GOTO 10001
           ENDDO
         ENDDO
       END IF
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DT   ',DT(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DOVER',DOVER(LN1,:)
+ENDDO
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
