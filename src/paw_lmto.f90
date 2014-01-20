@@ -2513,17 +2513,17 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
-PRINT*,'NPRO ',NPRO,'NRL ',NRL
-PRINT*,'A ',A
-PRINT*,'B ',B
-PRINT*,'C ',C
-PRINT*,'D ',D
-PRINT*,'E ',E
-PRINT*,'F ',F
-PRINT*,'G ',G
-PRINT*,'H ',H
-PRINT*,'SBARATOMI1 ',SBARATOMI1
-PRINT*,'SBARLI1    ',SBARLI1
+!!$PRINT*,'NPRO ',NPRO,'NRL ',NRL
+!!$PRINT*,'A ',A
+!!$PRINT*,'B ',B
+!!$PRINT*,'C ',C
+!!$PRINT*,'D ',D
+!!$PRINT*,'E ',E
+!!$PRINT*,'F ',F
+!!$PRINT*,'G ',G
+!!$PRINT*,'H ',H
+!!$PRINT*,'SBARATOMI1 ',SBARATOMI1
+!!$PRINT*,'SBARLI1    ',SBARLI1
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -2554,8 +2554,8 @@ PRINT*,'SBARLI1    ',SBARLI1
           ENDDO
         ENDDO
       ENDDO
-PRINT*,'PROJCONTR1 ',PROJCONTR1
-PRINT*,'PROJCONTR2 ',PROJCONTR2
+!!$PRINT*,'PROJCONTR1 ',PROJCONTR1
+!!$PRINT*,'PROJCONTR2 ',PROJCONTR2
 !
 !     ==========================================================================
 !     == MATRIX MULTIPLICATION                                                ==
@@ -2571,7 +2571,7 @@ PRINT*,'PROJCONTR2 ',PROJCONTR2
       PROJCONTR1(:,:,:)=PROJCONTR3(:,:,:)
       DEALLOCATE(PROJCONTR3)
       DEALLOCATE(PROJCONTR2)
-PRINT*,'PROJCONTR3 ',PROJCONTR1
+!!$PRINT*,'PROJCONTR3 ',PROJCONTR1
 !
 !     ==========================================================================
 !     == EXPAND AGAIN
@@ -2590,8 +2590,8 @@ PRINT*,'PROJCONTR3 ',PROJCONTR1
           ENDDO
         ENDDO
       ENDDO
-PRINT*,'PROJ AFTER',PROJ
-STOP 'FORCED IN LMTO$PROJTONTBO'
+!!$PRINT*,'PROJ AFTER',PROJ
+!!$STOP 'FORCED IN LMTO$PROJTONTBO'
                                CALL TRACE$POP()
       RETURN
       END

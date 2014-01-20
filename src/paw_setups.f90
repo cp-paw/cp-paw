@@ -2917,6 +2917,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       CHARACTER(64)         :: STRING
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
+      REAL(8)               :: RBNDOUT
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
@@ -2927,6 +2928,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       CALL RADIAL$R(GID,NR,R)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
       RNORM=RBOX
+      RBNDOUT=RBOX  ! SHOULD BE EQUAL TO ROUT
 PRINT*,'R(NR)   ',R(NR),' OUTERMOST GRIDPOINT'
 PRINT*,'R(NR-1) ',R(NR-1),' SECOND TO OUTERMOST GRIDPOINT'
 PRINT*,'R(NR-2) ',R(NR-2),' THIRD TOOUTERMOST GRIDPOINT'
@@ -3011,19 +3013,20 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 PRINT*,'ROUT ',ROUT
       DO LN1=1,LNX
-        DO LN2=LN1,LNX
+        DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
-          AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2))&
-     &       -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2))
+          CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
+          AUX=AEPOT*(AEPHI(:,LN1)*AEPHI(:,LN2)+AEPHISM(:,LN1)*AEPHISM(:,LN2)) &
+     &       -PSPOT*(PSPHI(:,LN1)*PSPHI(:,LN2)+PSPHISM(:,LN1)*PSPHISM(:,LN2)) &
+     &       +AEPHI(:,LN1)*AUX1(:)/Y0
           AUX=Y0*R**2*AUX  !Y0 FOR THE POTENTIAL
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
 !         == IN THE OLDER VERSION RBOX IS USED INSTEAD OF RBOX, WHICH IS 
 !         == INCONSISTENT. 
 !         == ROUT IS THE SIZE OF THE BOX IN WHICH THE ATOM "LIVES", WHILE 
 !         == RBOX SELECTS THE "EXCITED" PARTIAL WAVES
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,SVAR)
           DH(LN1,LN2)=DT(LN1,LN2)+SVAR
-          DH(LN2,LN1)=DT(LN2,LN1)+SVAR
         ENDDO
       ENDDO
 DO LN1=1,LNX
@@ -3409,6 +3412,8 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
           G(:)=0.D0
           CALL ATOMLIB$BOUNDSTATE(GID,NR,L,0,0.D0,ROUT,TVARDREL &
        &                         ,DREL,G,NNOFI(IB),AEPOT,E,AEPSIF(:,IVB))
+          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
+       &                              ,ROUT,E,AEPSIF(:,IB-NC))
 !!$          IF(TREL.AND.(.NOT.TZORA)) THEN
 !!$            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,ISO &
 !!$     &                                    ,DREL,G,AEPSIF(:,IVB),AEPSIFSM(:,IVB))
@@ -3416,8 +3421,6 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
 !!$            AEPSIFSM(:,IB-NC)=0.D0
 !!$          END IF
 !         == LEAVE OUT THE FOCK POTENTIAL FOR CONSISTENCY ======================
-!!$          CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,0,DREL,G,AEPOT,VFOCK &
-!!$       &                              ,ROUT,E,AEPSIF(:,IB-NC))
           SVAR1=E
           EOFICOMP(1,IB-NC)=E
 !
@@ -5218,7 +5221,7 @@ PRINT*,'KI ',KI
       LOGICAL(4),PARAMETER  :: TSMALLBOX=.FALSE.
       LOGICAL(4),PARAMETER  :: TMATCHTOALLELECTRON=.FALSE.
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
-      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       LOGICAL(4)            :: TSEQUENTIALAUGMENT=.FALSE.
       REAL(8)               :: R(NR)
@@ -5244,7 +5247,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,ALLOCATABLE:: DH1(:,:),DO1(:,:),PRO1(:,:)
       REAL(8)               :: E
       REAL(8)               :: ESCATT(LNX)
-      REAL(8)               :: RBND
+      REAL(8)               :: RBND,RBNDOUT
       REAL(8)               :: PHIPHASE
       REAL(8)               :: AUX(NR),AUX1(NR),VAL,SVAR,SVAR1,SVAR2,RC1
       REAL(8)               :: SPEEDOFLIGHT
@@ -5271,6 +5274,7 @@ PRINT*,'KI ',KI
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
       CALL RADIAL$R(GID,NR,R)
       RBND=RBOX
+      RBNDOUT=RBND  !SHOULD BE ROUT. USE RBND TO PROVE COMPATIBILITY WITH DEVEL
 !
       ALLOCATE(NCL(0:LX))
       NCL(:)=0
@@ -5469,8 +5473,10 @@ PRINT*,'EOFI1 A ',EOFI1
 !     ==========================================================================
 !     == UPDATE NODELESS PARTIAL WAVES WITH FOCK POTENTIAL                    ==
 !     ==========================================================================
+PRINT*,'VFOCK%TON ',VFOCK%TON
       IF(VFOCK%TON) THEN
                       CALL TRACE$PASS('APPLY FOCK CORRECTION TO PARTIAL WAVES')
+PRINT*,'EOFLN BEFORE VFOCK',EOFLN
         DO L=0,LX
           TFIRST=.TRUE.
           ISO=0
@@ -5493,13 +5499,14 @@ PRINT*,'EOFI1 A ',EOFI1
               TFIRST=.FALSE. 
             ELSE
               CALL ATOMLIB$UPDATESTATEWITHHF(GID,NR,L,ISO,DREL,G,AEPOT,VFOCK &
-    &                                    ,ROUT,EOFLN(LN),NLPHI(:,LN))
+    &                                    ,RBNDOUT,EOFLN(LN),NLPHI(:,LN))
             END IF
             CALL RADIALFOCK$VPSI(GID,NR,VFOCK,L,NLPHI(:,LN),AUX)
             TNLPHI(:,LN)=G(:)+(EOFLN(LN)-AEPOT(:)*Y0)*NLPHI(:,LN)-AUX(:)
             G(:)=NLPHI(:,LN)
           ENDDO
         ENDDO
+PRINT*,'EOFLN AFTER VFOCK',EOFLN
       END IF
 !
 !     ==========================================================================
@@ -5540,7 +5547,7 @@ PRINT*,'EOFI1 A ',EOFI1
 !         == NORMALIZATION FACTOR  =============================================
           AUX(:)=R(:)**2*PHI(:)**2
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
           VAL=1.D0/SQRT(VAL)
           CALL RADIAL$VALUE(GID,NR,PHI,MAXVAL(RC),SVAR)
           VAL=SIGN(VAL,SVAR)
@@ -5915,23 +5922,34 @@ PRINT*,'EOFI1 A ',EOFI1
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
 !AUX(:)=R(:)**2*(AEPHI(:,LN1)*TAEPHI(:,LN2)-PSPHI(:,LN1)*TPSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DTKIN(LN1,LN2)=VAL
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*AEPHI(:,LN2)-PSPHI(:,LN1)*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DOVER(LN1,LN2)=VAL
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN2),AEPHI(:,LN2),AUX1)
           AUX(:)=R(:)**2*(AEPHI(:,LN1)*(AEPOT(:)*Y0*AEPHI(:,LN2)+AUX1(:)) &
       &                  -PSPHI(:,LN1)*PSPOT(:)*Y0*PSPHI(:,LN2))
           CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-          CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
 !CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
           DH(LN1,LN2)=DTKIN(LN1,LN2)+VAL
         ENDDO
       ENDDO
+PRINT*,'VFOCK%TON  ',VFOCK%TON
+PRINT*,'RBND       ',RBND
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DT   ',DTKIN(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
+ENDDO
+DO LN1=1,LNX
+  WRITE(*,FMT='(A,100E12.5)')'DO   ',DOVER(LN1,:)
+ENDDO
       IF(TTEST) THEN
 !       == THE NON-HERMIEANITY COMES (FOR SILICON) TO 85 PERCENT FROM         ==
 !       == THE ADMIXTURE OF THE CORE WAVE FUNCTIONS, WHEN AEPHI IS OBTAINED.  ==
@@ -5957,7 +5975,7 @@ PRINT*,'EOFI1 A ',EOFI1
             IF(LOX(LN1).NE.LOX(LN)) CYCLE
             AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
             PROJ(LN1)=VAL
           ENDDO
           WRITE(6,FMT='("LN=",I2," <P|PSPHI>=",10F10.5)')LN,PROJ
@@ -6084,10 +6102,10 @@ PRINT*,'EOFI1 A ',EOFI1
             IF(LOFI(IB).NE.L) CYCLE
             AUX=R(:)**2*UOFI(:,IB)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,SVAR1)
             AUX=R(:)**2*UOFI(:,IB)*AEPHIDOT(:,LN)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR2)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,SVAR2)
             AEPHIDOT(:,LN)=AEPHIDOT(:,LN)-UOFI(:,IB)*SVAR2/SVAR1
           ENDDO
           LNLAST=LN
@@ -6150,7 +6168,7 @@ GOTO 10001
           IF(ISCATT(LN).LE.0) THEN    ! NORMALIZE VALENCE AND SEMI-CORE STATES
             AUX(:)=R(:)**2*PSPHI(:,LN)**2
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBNDOUT,VAL)
             VAL=VAL+DOVER(LN,LN)
             VAL=1.D0/SQRT(VAL)
           END IF
