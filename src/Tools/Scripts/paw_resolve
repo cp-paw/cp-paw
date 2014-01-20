@@ -41,68 +41,71 @@
 #
 # description of usage
 #
-USAGE="Usage: \n\n"
-USAGE="$USAGE paw_resolve options infile > outfile \n\n"
+USAGE="Usage of $0:\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE \t paw_resolve options infile > outfile \n"
+USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
-USAGE="$USAGE -p prefix: prefix to be added to the filename in @file@\n"
-USAGE="$USAGE -r id=value: rule to convert @id@ into value\n"
-USAGE="$USAGE -f id=file: rule to replace lines containing  @id@ \n"
+USAGE="$USAGE \t -p prefix: prefix to be added to the filename in @file@\n"
+USAGE="$USAGE \t -r id=value: rule to convert @id@ into value\n"
+USAGE="$USAGE \t -f id=file: rule to replace lines containing  @id@ "
 USAGE="$USAGE       by the contents of file \n"
-USAGE="$USAGE -h this help message\n"
+USAGE="$USAGE \t -h this help message\n"
+USAGE="$USAGE \t -v verbose\n"
 #-------------------------------------------------------------------------------
 # resolve argument list
 #-------------------------------------------------------------------------------
 IN=""      # input file
 PRE=""     # prefix for file insertions (such as a path)
 RULES=""   # string replacement rules  A=B: @A@ -> B
-while [ ! -z $1 ] ; do
-  case $1  in
-    -h)
-       echo -e $USAGE
-       exit 1
-       ;;
-    -p) 
-       shift
-       PRE=$1
-       shift
-       ;;
-    -p*) 
-       PRE=${1#-p}  # strip preceeding -p from $1
-       shift
-       ;;
-    -r)
-       shift
-       RULES="$RULES $1"
-       shift
-       ;;
-    -r*)
-       RULES="$RULES ${1#-r}" # strip preceeding -r from $1
-       shift
-       ;;
-    -f)
-       shift
-       FRULES="$FRULES $1"
-       shift
-       ;;
-    -f*)
-       FRULES="$FRULES ${1#-f}" # strip preceeding -f from $1
-       shift
-       ;;
-    -*)
-       echo error in $0: unknown option $1
-       exit 1
-       ;;
-    *) 
-       IN=$1
-       shift
-       ;;
+VERBOSE=no
+while getopts :hp:r:f:v OPT ; do
+  case $OPT  in
+    p)
+      PRE="$OPTARG"
+      ;;
+    r)
+      RULES="$RULES $OPTARG"
+      ;;
+    f)
+      FRULES="$FRULES $OPTARG"
+      ;;
+    v)
+      VERBOSE=yes
+      ;;
+    h)
+      echo -e $USAGE
+      ;;
+    \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
+      echo "error in $0" >&2
+      echo "invalid option -$OPTARG" >&2
+      echo "retrieve argument list with:" >&2
+      echo "$0 -h" >&2
+      exit 1
+      ;;
+    :)    # no argument passed to option requiring one
+      echo "error in $0" >&2
+      echo "option -$OPTARG requires an additional argument" >&2
+      exit 1
+      ;;  
   esac
 done
-#
-if [ -z $IN ] ; then
-  echo error in $0: no infile supplied
+shift $(($OPTIND - 1))
+if [ -z $1 ] ; then
+  echo "error in $0: no infile supplied" >&2
   exit 1
 fi
+IN=$1
+#
+#   report setting of parameters
+#
+if [ $VERBOSE = yes ] ; then
+ echo input file : $IN
+ if [ -n "$PRE" ]      ; then echo "prefix: $PRE"; fi
+ if [ -n "$RULES" ]  ; then echo "rules: $RULES"; fi
+ if [ -n "$FRULES" ] ; then echo "file rules: $FRULES" ; fi
+fi
+#
 #-------------------------------------------------------------------------------
 # explicit string replacement rules
 #-------------------------------------------------------------------------------
@@ -121,7 +124,7 @@ for X in $FRULES; do
    A=${X%=*}
    B=${X##*=}
    if [ ! -e $B ] ; then 
-     echo error in $0: file of file rule $X does not exist
+     echo "error in $0: file of file rule $X does not exist" >&2
      exit 1
    fi
    CHS0="$CHS0 -e/@$A@/r${B} "
@@ -161,7 +164,7 @@ for X in $VAR; do
   if [ ! -z "$X" ] ; then
     # check if there $X is the name of an existing file
     if [ ! -e ${PRE}${X} ] ; then
-      echo error in $0: no rule or file to replace @$X@
+      echo "error in $0: no rule or file to replace @$X@" >&2
       exit 1
     fi
     # check if the lines containing file replacements are alone on one line
@@ -170,8 +173,8 @@ for X in $VAR; do
       LINE=$(sed -n -e ${Y}p < $IN)
       for Z in $LINE ; do
         if [ "@$X@" != "$Z" ] ; then
-          echo error in $0: file replacement @$X@ is not alone in the line
-          echo LINENO=$Y LINE=$LINE
+          echo "error in $0: file replacement @$X@ is not alone in the line" >&2
+          echo "LINENO=$Y LINE=$LINE" >&2
           exit 1
         fi
       done
