@@ -16,7 +16,9 @@ for DIR in . * */* */*/* ; do
    if test -d $DIR ; then
      for FILE in $DIR/*.prot; do
        if test -e $FILE ; then
-         ENERGY=`grep -i 'Total energy' $FILE | tail -1 |sed s/H//g |sed s/TOTAL//g |sed s/ENERGY//g |sed s/://g`
+         ENERGY=$(grep -i 'Total energy' $FILE \
+                 | tail -1 |sed s/H//g |sed s/TOTAL//g \
+                 |sed s/ENERGY//g |sed s/://g)
          echo $FILE: $ENERGY
        fi
      done

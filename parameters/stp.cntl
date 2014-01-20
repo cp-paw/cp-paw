@@ -3226,7 +3226,7 @@
 
   !SETUP  ID='SI_NDLSS' EL='SI' ZV=   4.
           TYPE='NDLSS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
-          RCL/RCOV= 0.75 0.75 0.75 0.75 0.75 0.75 0.75 0.75
+          RCL/RCOV= 1.0 1.0 1.0 1.0 1.0 1.0 1.0 1.0 
           LAMBDA= 6. 6. 6. 6. 6. 6. 6. 6.
     !GRID DMIN=1.E-6 DMAX=0.1 RMAX= 20. !END
     !POT  POW=3. RC/RCOV=   0.702 !END
