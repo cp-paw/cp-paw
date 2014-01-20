@@ -1179,6 +1179,16 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
           CALL RADIAL$DERIVATIVE(GID,NR,NLPHI(:,LN),RAD,PHIDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+
+PRINT*,'LN=',LN,'================================='
+PRINT*,'PHIVAL ',PHIVAL
+PRINT*,'PHIDER ',PHIDER
+PRINT*,'PHIDOTVAL ',PHIDOTVAL
+PRINT*,'PHIDOTDER ',PHIDOTDER
+PRINT*,'JVAL ',JVAL
+PRINT*,'JDER ',JDER
+PRINT*,'KVAL ',KVAL
+PRINT*,'KDER ',KDER
 !
 !         ====================================================================
 !         == CALCULATE POTENTIAL PARAMETERS                                 ==
@@ -1190,6 +1200,13 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
           WPHIPHIDOT=PHIVAL*PHIDOTDER-PHIDER*PHIDOTVAL
           QBAR=WJPHIDOT/WKPHIDOT
           WJBARPHI=WJPHI-WKPHI*QBAR
+PRINT*,'WJPHI     ',WJPHI     
+PRINT*,'WJPHIDOT  ',WJPHIDOT  
+PRINT*,'WKPHI     ',WKPHI     
+PRINT*,'WKPHIDOT  ',WKPHIDOT  
+PRINT*,'WPHIPHIDOT',WPHIPHIDOT
+PRINT*,'QBAR      ',QBAR      
+PRINT*,'WJBARPHI  ',WJBARPHI  
 !
 !         ====================================================================
 !         == K    -> |PHI>KTOPHI+|PHIBARDOT> KTOPHIDOT =======================
@@ -1203,6 +1220,9 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !         ==  <PRO|PSPHIDOT> =================================================
           CALL RADIAL$INTEGRAL(GID,NR,R**2*PRO(:,LN)*PSPHIDOT(:,LN),SVAR)
           POTPAR(ISP)%PHIDOTPROJ(LN)=SVAR
+PRINT*,'KTOPHI       ',POTPAR(ISP)%KTOPHI(LN)    
+PRINT*,'KTOPHIDOT    ',POTPAR(ISP)%KTOPHIDOT(LN)
+PRINT*,'JBARTOPHIDOT ',POTPAR(ISP)%JBARTOPHIDOT(LN)
 !         == CROSSCHECK BIOTHOGONALITY =======================================
           DO LN2=1,LNX(ISP)
             IF(LOX(LN2,ISP).NE.L) CYCLE
@@ -2493,16 +2513,27 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
+!!$PRINT*,'NPRO ',NPRO,'NRL ',NRL
+!!$PRINT*,'A ',A
+!!$PRINT*,'B ',B
+!!$PRINT*,'C ',C
+!!$PRINT*,'D ',D
+!!$PRINT*,'E ',E
+!!$PRINT*,'F ',F
+!!$PRINT*,'G ',G
+!!$PRINT*,'H ',H
+!!$PRINT*,'SBARATOMI1 ',SBARATOMI1
+!!$PRINT*,'SBARLI1    ',SBARLI1
 !
 !     ==========================================================================
-!     == CONTRACT PROJECTIONS SO THAT FOR EACH ANGULAR MOMENTUM ONE TERM REMAINS
+!     ==                                                                      ==
 !     ==========================================================================
       DO I=1,NPRO
         PROJ(:,:,I)=PROJ(:,:,I)*A(I)
       ENDDO
 !
 !     ==========================================================================
-!     == CONTRACT PROJECTIONS SO THAT FRO EACH ANGULAR MOMENTUM ONE TERM REMAINS
+!     == CONTRACT PROJECTIONS SO THAT FOR EACH ANGULAR MOMENTUM ONE TERM REMAINS
 !     ==========================================================================
       ALLOCATE(PROJCONTR1(NDIM,NBH,NRL))      
       ALLOCATE(PROJCONTR2(NDIM,NBH,NRL))      
@@ -2523,6 +2554,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
           ENDDO
         ENDDO
       ENDDO
+!!$PRINT*,'PROJCONTR1 ',PROJCONTR1
+!!$PRINT*,'PROJCONTR2 ',PROJCONTR2
 !
 !     ==========================================================================
 !     == MATRIX MULTIPLICATION                                                ==
@@ -2538,6 +2571,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       PROJCONTR1(:,:,:)=PROJCONTR3(:,:,:)
       DEALLOCATE(PROJCONTR3)
       DEALLOCATE(PROJCONTR2)
+!!$PRINT*,'PROJCONTR3 ',PROJCONTR1
 !
 !     ==========================================================================
 !     == EXPAND AGAIN
@@ -2556,6 +2590,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
           ENDDO
         ENDDO
       ENDDO
+!!$PRINT*,'PROJ AFTER',PROJ
+!!$STOP 'FORCED IN LMTO$PROJTONTBO'
                                CALL TRACE$POP()
       RETURN
       END
