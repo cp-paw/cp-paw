@@ -8,6 +8,15 @@
 !**                                                                           **
 !*******************************************************************************
 !*******************************************P.E.BLOECHL, GOSLAR JUNE 20,2010****
+module refcell_module
+real(8)      :: Gref(3,3)
+character(3) :: bravais ! id of th the bravais lattice
+                        ! see bradley cracknell table 3.3
+integer(4)               :: np=0
+real(8)     ,allocatable :: p(:,:)   !(3,np)  gvector of highsymmetry point
+character(1),allocatable :: pname(:) !(np)
+end module refcell_module
+
       PROGRAM MAIN
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
@@ -127,6 +136,162 @@
       CALL ERROR$NORMALSTOP
       END PROGRAM MAIN
 !      
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL_REFCELL(LL_CNTL)
+!     **************************************************************************
+!     ** READS A REFERENCE UNIT CELL FOR THE INTERPRETATION OF K-POINT        **
+!     ** COORDINATES. K-POINTS ARE SPECIFIED IN RELATIVE COORDINATES          **
+!     ** AND WILL BE TRANSFORMED INTO CARTESIAN COORDINATES BY MULTIPLICATION **
+!     ** WITH GREF                                                            **
+!
+!     !refcell lunit= t= g= id= !end
+!     !kpoint id='g' grel= 0. 0. 0.5 !end
+!     !line points= 'g' 'x' 'n' '/' 'u' 'g' !end
+!
+!     **************************************************************************
+      USE REFCELL_MODULE, ONLY : GREF,bravais,np,p,pname
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE)             :: LL_CNTL
+      LOGICAL(4)                :: TCHK,TCHK1,TCHK2
+      REAL(8)                   :: TREF(3,3)
+      REAL(8)                   :: LUNIT
+      REAL(8)                   :: DET
+      INTEGER(4)                :: I
+      integer(4),parameter      :: npx=20
+      real(8)                   :: p1(3,npx)
+      character(1)              :: pname1(npx)
+!     **************************************************************************
+!
+!     ==========================================================================
+!     ==  SET DEFAULTS                                                        ==
+!     ==========================================================================
+      TREF=0.D0
+      GREF=0.D0
+      DO I=1,3
+        TREF(I,I)=1.D0
+        GREF(I,I)=1.D0
+      ENDDO
+!
+!     ==========================================================================
+!     == read  reference unit cell gref                                       ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'REFCELL',0,TCHK)
+      IF(.NOT.TCHK) RETURN
+      CALL LINKEDLIST$SELECT(LL_CNTL,'REFCELL')
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'LUNIT',0,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'LUNIT',1,LUNIT)
+
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'T',0,TCHK1)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'G',0,TCHK2)
+      IF(TCHK1.AND.TCHK2) THEN
+        CALL ERROR$MSG('!BCNTL!REFCELL:T AND G ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$STOP('READCNTL_REFCELL')
+      END IF
+      IF(TCHK1) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'T',1,TREF)
+        TREF=TREF*LUNIT
+        CALL GBASS(TREF,GREF,DET)
+      ELSE IF(TCHK2) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'G',1,GREF)
+        GREF=GREF/LUNIT
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'BRAVAIS',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,BRAVAIS)
+        CALL SPACEGROUP$SYMMETRYPOINTS(BRAVAIS,NPX,NP,PNAME1,P1)
+        ALLOCATE(PNAME(NP))
+        ALLOCATE(P(3,NP))
+        PNAME(:)=PNAME1(:NP)
+        DO I=1,NP
+          P(:,I)=MATMUL(GREF,P1(:,I))
+        ENDDO
+      ELSE
+        NP=0
+      END IF
+      RETURN
+      END     
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine spacegroup$symmetrypoints(bravais,npx,np,name,g)
+!     **************************************************************************
+!     ** not finished!!!!                                                     **
+!     ** high-symmetry points in the Brillouin zone in relative coordinates   **
+!     ** following bradley Cracknell Fig.3.2-Fig 3.15                         **
+!     **                                                                      **
+!     ** gamma is denote g                                                    **
+!     ** an element '/' in path identifies a interruption of the path         **
+!     **                                                                      **
+!     ** the path is selected according to                                    **
+!     **                http://en.wikipedia.org/wiki/Brillouin_zone           **
+!     **************************************************************************
+      implicit none
+      character(*),intent(in) :: bravais
+      integer(4)  ,intent(in) :: npx
+      integer(4)  ,intent(out):: np
+      character(*),intent(out):: name(npx)
+      real(8)     ,intent(out):: g(3,npx)
+      character(1)            :: path(20) ! path from high symmetry points
+!     **************************************************************************
+      NP=1;  NAME='G' ; G(:,NP)=(/0.D0,0.D0,0.D0/)
+      IF(BRAVAIS.EQ.'GT') THEN
+        NP=NP+1; NAME(NP)='B';  G(:,np)=(/0.5D0,0.D0,0.D0/)
+        NP=NP+1; NAME(NP)='F';  G(:,np)=(/0.D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='G';  G(:,np)=(/0.D0,0.0D0,0.5D0/)
+      ELSE IF(BRAVAIS.EQ.'GM') THEN
+        NP=NP+1; NAME(NP)='B';  G(:,np)=(/-0.5D0,0.D0,0.D0/)
+        NP=NP+1; NAME(NP)='Y';  G(:,np)=(/0.D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='Z';  G(:,np)=(/0.D0,0.0D0,0.5D0/)
+        NP=NP+1; NAME(NP)='C';  G(:,np)=(/0.D0,0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='D';  G(:,np)=(/-0.5D0,0.D0,0.5D0/)
+        NP=NP+1; NAME(NP)='A';  G(:,np)=(/-0.5D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='E';  G(:,np)=(/-0.5D0,0.5D0,0.5D0/)
+      ELSE IF(BRAVAIS.EQ.'GMB') THEN
+        NP=NP+1; NAME(NP)='A';  G(:,np)=(/-0.5D0,0.D0,0.D0/)
+        NP=NP+1; NAME(NP)='Z';  G(:,np)=(/0.D0,-0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='M';  G(:,np)=(/-0.5D0,-0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='L';  G(:,np)=(/-0.5D0,0.D0,0.5D0/)
+        NP=NP+1; NAME(NP)='V';  G(:,np)=(/0.D0,0.D0,0.5D0/)
+      ELSE IF(BRAVAIS.EQ.'GO') THEN
+        NP=NP+1; NAME(NP)='Y';  G(:,np)=(/-0.5D0,0.D0,0.D0/)
+        NP=NP+1; NAME(NP)='X';  G(:,np)=(/0.D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='Z';  G(:,np)=(/0.D0,0.D0,0.5D0/)
+        NP=NP+1; NAME(NP)='U';  G(:,np)=(/0.D0,0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='T';  G(:,np)=(/-0.5D0,0.D0,0.5D0/)
+        NP=NP+1; NAME(NP)='S';  G(:,np)=(/-0.5D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='R';  G(:,np)=(/-0.5D0,0.5D0,0.5D0/)
+
+
+
+
+      ELSE IF(BRAVAIS.EQ.'GC') THEN
+        NP=NP+1; NAME(NP)='X';  G(:,np)=(/0.D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='M';  G(:,np)=(/0.5D0,0.5D0,0.D0/)
+        NP=NP+1; NAME(NP)='R';  G(:,np)=(/0.5D0,0.5D0,0.5D0/)
+        PATH(1:9)=(/'G','X','M','G','R','X','/','M','R'/)
+      ELSE IF(BRAVAIS.EQ.'GCF') THEN
+        NP=NP+1; NAME(NP)='X';  G(:,np)=(/0.5D0,0.D0,0.5D0/)
+        NP=NP+1; NAME(NP)='L';  G(:,np)=(/0.5D0,0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='W';  G(:,np)=(/0.5D0,0.25D0,0.75D0/)
+        PATH(1:13)=(/'G','X','W','K','G','L','U','W','L','K','/','U','X'/)
+      ELSE IF(BRAVAIS.EQ.'GCV') THEN
+        NP=NP+1; NAME(NP)='H';  G(:,np)=(/0.5D0,-0.5D0,0.5D0/)
+        NP=NP+1; NAME(NP)='P';  G(:,np)=(/0.25D0,0.25D0,0.25D0/)
+        NP=NP+1; NAME(NP)='N';  G(:,np)=(/0.D0,0.D0,0.5D0/)
+        PATH(1:7)=(/'G','H','N','G','/','P','N'/)
+      ELSE
+        CALL ERROR$MSG('ID FOR BRAVAIS LATTICE NOT RECOGNIZED')
+        CALL ERROR$MSG('SPACEGROUP$SYMMETRYPOINTS')
+      END IF
+      RETURN
+      END     
+        
+!
 !      ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE INITIALIZEFILEHANDLER
       USE STRINGS_MODULE
@@ -1709,6 +1874,7 @@ END MODULE
         ENDIF
                             CALL TRACE$PASS('AFTER READ BNCTL')
         
+
         ALLOCATE(EIGVAL(NB,NKDIAG))
         ALLOCATE(KVECVAL(3,NKDIAG))
         ALLOCATE(XKVAL(3,NKDIAG))
@@ -1732,6 +1898,7 @@ END MODULE
           ALLOCATE(E(NG*NDIM))
           IF(TPRINT)PRINT*,"IKDIAG",IKDIAG
           XK=XK1+(XK2-XK1)*REAL(IKDIAG,KIND=8)/REAL(MAX(NKDIAG-1,1),KIND=8)
+!HERE THE K-POINT 
           KVEC=MATMUL(GBAS,XK)
           KVECVAL(:,IKDIAG+1)=KVEC
           XKVAL(:,IKDIAG+1)=XK
