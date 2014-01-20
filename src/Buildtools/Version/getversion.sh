@@ -138,10 +138,10 @@ fi
 # $(command) is the output of teh command as text string
 # \n is a newline character to brak over-long lines in the fortran code
 # // concatenates the strings on the two separate lines
-  VERINF2=$(echo "$VERINF" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'g|")
-  VERREV2=$(echo "$VERREV" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'g|")
-  VERAUT2=$(echo "$VERAUT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'g|")
-  VERDAT2=$(echo "$VERDAT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'g|")
+  VERINF2=$(echo "$VERINF" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
+  VERREV2=$(echo "$VERREV" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
+  VERAUT2=$(echo "$VERAUT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
+  VERDAT2=$(echo "$VERDAT" |  sed "s|.\{50\}|&\' \/\/ \& \\\n  \'|g")
   echo "MODULE VERSION_MODULE" > $PAWVERSIONFILE.tmp
   echo -e "CHARACTER(256):: VERINF=$VERINF2" >> $PAWVERSIONFILE.tmp
   echo -e "CHARACTER(256):: VERREV=$VERREV2" >> $PAWVERSIONFILE.tmp
