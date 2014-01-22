@@ -2785,7 +2785,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
-       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
+!       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
 !!$PRINT*,'NPRO ',NPRO,'NRL ',NRL
 !!$PRINT*,'A ',A
 !!$PRINT*,'B ',B
@@ -2797,7 +2797,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !!$PRINT*,'H ',H
 !!$PRINT*,'SBARATOMI1 ',SBARATOMI1
 !!$PRINT*,'SBARLI1    ',SBARLI1
-!      call LMTO_PREPARE1_withpotpar1(NPRO,NRL,A,B,C,D,E,F)
+      call LMTO_PREPARE1_withpotpar1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
 !
 !     ==========================================================================
@@ -2866,7 +2866,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         ENDDO
       ENDDO
 !!$PRINT*,'PROJ AFTER',PROJ
-STOP 'FORCED IN LMTO$PROJTONTBO'
+!!$STOP 'FORCED IN LMTO$PROJTONTBO'
                                CALL TRACE$POP()
       RETURN
       END
@@ -2904,8 +2904,8 @@ STOP 'FORCED IN LMTO$PROJTONTBO'
          RETURN
       END IF
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
-      CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
-!      CALL LMTO_PREPARE1_WITHPOTPAR1(NPRO,NRL,A,B,C,D,E,F)
+!      CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
+      CALL LMTO_PREPARE1_WITHPOTPAR1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
       G=CONJG(G)
       H=CONJG(H)
@@ -3024,7 +3024,16 @@ STOP 'FORCED IN LMTO$PROJTONTBO'
             IRL=IRL+1
             A(IPRO)=1.D0/POTPAR(ISP)%KTOPHI(LN)
             B(IPRO)=POTPAR(ISP)%KTOPHIDOT(LN)
-            C(IRL)=C(IRL)-POTPAR(ISP)%JBARTOPHIDOT(LN)
+!           ====================================================================
+!           == THE SUM, USED EARLIER, WAS INCORRECT!!!                        ==
+!           == IF C IS ATTRIBUTED TO PARTIAL WAVE INDICES SUCH AS LN, IT      ==
+!           == MUST BE CONSIDERED AS NONZERO ONLY FOR THE FIRST PARTIAL WAVE  ==
+!           == FOR EACH RL. SEE ALSO THE DEFINITION OF G AND H                ==
+!           ==  WRONG: C(IRL)=C(IRL)-POTPAR(ISP)%JBARTOPHIDOT(LN)             ==
+!           == THE ABOVE IS COFRRECT IF JBARTOPHIDOT IS ZERO FOR HIGHER       ==
+!           == WAVES, BUT THEN THE FORM BELOW IS INCORRECT!                   ==
+!           ====================================================================
+            C(IRL)  =-POTPAR(ISP)%JBARTOPHIDOT(LN)
             D(IPRO)=A(IPRO)*POTPAR(ISP)%PHIDOTPROJ(LN)
             E(IRL)=E(IRL)+B(IPRO)*D(IPRO)
             F(IRL)=F(IRL)+D(IPRO)
@@ -3080,7 +3089,6 @@ STOP 'FORCED IN LMTO$PROJTONTBO'
           L=POTPAR1(ISP)%L(IH)
           IPRO=IPRO0+SUM(2*LOX(:LN-1,ISP)+1)
           IRL=SBARATOMI1(IAT)-1+SBARLI1(L+1,ISP)-1
-print*,'ipro ',ipro,irl
           DO IM=1,2*L+1
             IPRO=IPRO+1
             irl=irl+1
