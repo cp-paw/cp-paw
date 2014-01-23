@@ -1,3 +1,11 @@
+! 1) type potpar1_type and tailed1_type shall replace the 
+!    types potpar_type and tailed.
+!
+! the subroutines
+!      LMTO_MAKEPOTPAR1()
+!      LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
+!      LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
+
 MODULE LMTO_MODULE
 TYPE HYBRIDSETTING_TYPE
   !== ATOM-SPECIFIC SETTINGS ==
@@ -58,22 +66,41 @@ END TYPE ORBITALSPHHARM_TYPE
 !!$  REAL(8)   ,POINTER :: DOVERLAPKJ(:,:)
 !!$  REAL(8)   ,POINTER :: DOVERLAPJJ(:,:)
 !!$END TYPE POTPARRED_TYPE
+TYPE TAILED1_TYPE
+  INTEGER(4)         :: GID
+  INTEGER(4)         :: LNX
+  INTEGER(4)         :: LMNX
+  INTEGER(4),POINTER :: LOX(:)           ! (LNX)
+  REAL(8)   ,POINTER :: AEF(:,:)         ! (NR,LNX)
+  REAL(8)   ,POINTER :: PSF(:,:)         ! (NR,LNX)
+  REAL(8)   ,POINTER :: NLF(:,:)         ! (NR,LNX)
+  REAL(8)   ,POINTER :: U(:,:,:,:)       ! (LMNX,LMNX,LMNX,LMNX)
+  REAL(8)   ,POINTER :: OVERLAP(:,:) !(LMNX,LMNX) OVERLAP MATRIX ELEMENTS
+  REAL(8)   ,POINTER :: QLN(:,:,:)   !(2,LNX,LNX) MONO- AND DIPOLE MATRIX ELEMENTS
+!!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSNLF
+!!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: PRODRHO
+!!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: PRODPOT
+!!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: TRIPLE
+!!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: SINGLE
+END TYPE TAILED1_TYPE
 !
 !== HOLDS THE POTENTIAL PARAMETER FOR ONE ATOM TYPE ============================
 TYPE POTPAR1_TYPE
-! THE NUMBER OF ACTIVE HEAD FUNCTIONS IS NPHI. 
-! THE NUMBER OF TAIL FUNCTIONS IS LX.
-! EACH HEAD FUNCTION IS RELATED TO A PARTIAL WAVE IDENTIFIED BY LN.
-INTEGER(4)         :: LX              ! X(ANGULAR MOMENTUM)
-INTEGER(4)         :: NHEAD           ! #(HEAD FUNCTIONS)
-INTEGER(4),POINTER :: L(:)            !(NHEAD) MAIN ANGULAR MOMENTUM
-INTEGER(4),POINTER :: LN(:)           !(NHEAD) PARTIAL WAVE ID
-REAL(8)   ,POINTER :: KTOPHI(:)       !(NHEAD) |K> = |PHI>    * KTOPHI
-REAL(8)   ,POINTER :: KTOPHIDOT(:)    !(NHEAD)     + |PHIDOT> * KTOPHIDOT
-REAL(8)   ,POINTER :: PHIDOTPROJ(:)   !(LNX)   <P(LN)|PHIDOT(L+1)>
-INTEGER(4),POINTER :: LNDOT(:)        !(LX+1)  PARTIAL WAVE ID FOR PHIDOT
-REAL(8)   ,POINTER :: QBAR(:)         !(LX+1)  |JBAR>=|J>-|K>QBAR
-REAL(8)   ,POINTER :: JBARTOPHIDOT(:) !(LX+1)  |JBAR> = |PHIBARDOT> JBARTOPHIDOT
+  ! THE NUMBER OF ACTIVE HEAD FUNCTIONS IS NPHI. 
+  ! THE NUMBER OF TAIL FUNCTIONS IS LX.
+  ! EACH HEAD FUNCTION IS RELATED TO A PARTIAL WAVE IDENTIFIED BY LN.
+  real(8)            :: rad             !matching radius
+  INTEGER(4)         :: LX              ! X(ANGULAR MOMENTUM)
+  INTEGER(4)         :: NHEAD           ! #(HEAD FUNCTIONS)
+  INTEGER(4),POINTER :: L(:)            !(NHEAD) MAIN ANGULAR MOMENTUM
+  INTEGER(4),POINTER :: LN(:)           !(NHEAD) PARTIAL WAVE ID
+  REAL(8)   ,POINTER :: KTOPHI(:)       !(NHEAD) |K> = |PHI>    * KTOPHI
+  REAL(8)   ,POINTER :: KTOPHIDOT(:)    !(NHEAD)     + |PHIDOT> * KTOPHIDOT
+  REAL(8)   ,POINTER :: PHIDOTPROJ(:)   !(LNX)   <P(LN)|PHIDOT(L+1)>
+  INTEGER(4),POINTER :: LNDOT(:)        !(LX+1)  PARTIAL WAVE ID FOR PHIDOT
+  REAL(8)   ,POINTER :: QBAR(:)         !(LX+1)  |JBAR>=|J>-|K>QBAR
+  REAL(8)   ,POINTER :: JBARTOPHIDOT(:) !(LX+1)|JBAR> = |PHIBARDOT> JBARTOPHIDOT
+  TYPE(TAILED1_TYPE) :: TAILED
 END TYPE POTPAR1_TYPE
 
 !== HOLDS THE POTENTIAL PARAMETER FOR ONE ATOM TYPE ============================
@@ -90,7 +117,7 @@ TYPE POTPAR_TYPE
 !!$  REAL(8)   ,POINTER :: DOVERLAPJJ(:,:) !(LNX,LNX)
   LOGICAL(4)         :: TALLORB=.FALSE.  ! LIKE TORB(:)=TRUE, TEMPORARY SWITCH
   LOGICAL(4),POINTER :: TORB(:)         !(LNX)
-  TYPE(TAILED_TYPE)            :: TAILED
+  TYPE(TAILED_TYPE)  :: TAILED
 !!$  TYPE(POTPARRED_TYPE)         :: SMALL
 !!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSKPRIME
 !!$  TYPE(ORBITALGAUSSCOEFF_TYPE) :: GAUSSTAILEDK
@@ -902,6 +929,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !     == ATTACH EXPONENTIAL TAILS TO AUGMENTED HANKEL AND BESSEL FUNCTIONS    ==
 !     ==========================================================================
       CALL LMTO_MAKETAILEDPARTIALWAVES()
+      CALL LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
+      CALL LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
       IF(.NOT.TON) RETURN
 !
 !     ==========================================================================
@@ -1224,7 +1253,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !         ==  <PRO|PSPHIDOT> =================================================
           CALL RADIAL$INTEGRAL(GID,NR,R**2*PRO(:,LN)*PSPHIDOT(:,LN),SVAR)
           POTPAR(ISP)%PHIDOTPROJ(LN)=SVAR
-
 !!$PRINT*,'LN=',LN,'================================='
 !!$PRINT*,'PHIVAL ',PHIVAL
 !!$PRINT*,'PHIDER ',PHIDER
@@ -1260,6 +1288,19 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
             END IF
           ENDDO
         ENDDO        
+!
+!       ======================================================================
+!       == set potential parameters for excluded partial waves to zero      ==
+!       ======================================================================
+        do ln=1,lnx(isp)
+          if(.not.potpar(isp)%torb(ln)) then
+          POTPAR(ISP)%qbar(LN)        =0.d0
+          POTPAR(ISP)%KTOPHI(LN)      =0.d0
+          POTPAR(ISP)%KTOPHIDOT(LN)   =0.d0
+          POTPAR(ISP)%JBARTOPHIDOT(LN)=0.d0
+
+          end if
+        enddo
 !
         DEALLOCATE(NLPHI)
         DEALLOCATE(AEPHI)
@@ -1360,7 +1401,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !       == MATCHING RADIUS =====================================================
         CALL SETUP$GETR8('AEZ',AEZ)
         CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD) 
-
+        POTPAR1(ISP)%rad=rad
+!
 !       == PARTIAL WAVES AND PROJECTORS ========================================
         ALLOCATE(NLPHI(NR,LNX1))
         ALLOCATE(NLPHIDOT(NR,LNX1))
@@ -1730,6 +1772,7 @@ INTEGER(4)             :: LN3,LN4
 !
 !       == TAIL PART ===========================================================
         DO LN=1,LNX(ISP)
+          LN1=POTPAR(ISP)%lnscatt(ln)  
           L=LOX(LN,ISP)
           RAD=POTPAR(ISP)%RAD
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
@@ -1747,7 +1790,10 @@ INTEGER(4)             :: LN3,LN4
             SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
             SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
             POTPAR(ISP)%TAILED%NLF(IR,LN)       =A1*SVAR1+A2*SVAR2
-            POTPAR(ISP)%TAILED%NLF(IR,LNDOT(LN))=B1*SVAR1+B2*SVAR2
+! critical bugfix!!!!!
+            if(ln.eq.ln1) then
+              POTPAR(ISP)%TAILED%NLF(IR,LNDOT(LN))=B1*SVAR1+B2*SVAR2
+            end if
           ENDDO
         ENDDO
 !
@@ -1756,7 +1802,9 @@ INTEGER(4)             :: LN3,LN4
           L=LOX(LN,ISP)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
-          LN1=POTPAR(ISP)%LNSCATT(LN)
+!         == ln1 points to the corresponding partial wave aephidot(ln1)
+!         == lndot(ln) points to the corresponding wave function aef(lndot(ln))
+          LN1=POTPAR(ISP)%lnscatt(ln)  
           A1=POTPAR(ISP)%KTOPHI(LN)
           A2=POTPAR(ISP)%KTOPHIDOT(LN)
           POTPAR(ISP)%TAILED%NLF(:IRAD-1,LN)=NLPHI(:IRAD-1,LN)*A1 &
@@ -1770,7 +1818,7 @@ INTEGER(4)             :: LN3,LN4
           &   +(PSPHI(:,LN)-NLPHI(:,LN))*A1+(PSPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
 !
           IF(LN.EQ.LN1) THEN
-            A2=POTPAR(ISP)%JBARTOPHIDOT(LN)
+            A2=POTPAR(ISP)%JBARTOPHIDOT(LN1)
             POTPAR(ISP)%TAILED%NLF(:IRAD-1,LNDOT(LN))=NLPHIDOT(:IRAD-1,LN1)*A2
 !           == THE COMPLEX ADDITION OF DIFFERENCES IN THE FOLLOWING IS =========
 !           == NECESSARY, IF THE AE, PS AND NL PARTIAL WAVES DIFFER AT THE =====
@@ -1783,13 +1831,27 @@ INTEGER(4)             :: LN3,LN4
       &                           +(PSPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
 !
           END IF
-        ENDDO
+        ENDDO ! end of loop over partial waves
         DEALLOCATE(AEPHI)
         DEALLOCATE(AEPHIDOT)
         DEALLOCATE(PSPHI)
         DEALLOCATE(PSPHIDOT)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
+!
+!       ========================================================================
+!       == set orbitals not included in the tb set to Zero =====================
+!       ========================================================================
+        DO LN=1,LNX(isp)
+          IF(.NOT.potpar(isp)%TORB(LN)) THEN
+            POTPAR(ISP)%TAILED%NLF(:,LN)=0.D0
+            POTPAR(ISP)%TAILED%AEF(:,LN)=0.D0
+            POTPAR(ISP)%TAILED%PSF(:,LN)=0.D0
+          END IF
+        ENDDO
+call LMTO_WRITEPHI('0_aef.dat',GID,NR,lnxt,potpar(isp)%tailed%aef)
+call LMTO_WRITEPHI('0_psf.dat',GID,NR,lnxt,potpar(isp)%tailed%psf)
+call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
 !
 !       ========================================================================
 !       ==  CUT OFF TAILS FOR STABILITY                                       ==
@@ -1876,6 +1938,318 @@ INTEGER(4)             :: LN3,LN4
         DEALLOCATE(LOXT)
         CALL SETUP$UNSELECT()
       ENDDO
+                              CALL TRACE$POP() 
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_MAKETAILEDPARTIALWAVES_withpotpar1()
+!     **************************************************************************
+!     ** CONSTRUCTS AUGMENTED HANKEL END BESSEL FUNCTIONS WITH                **
+!     ** TWO EXPONENTIALS ATTACHED AT THE MATCHING RADIUS RAD                 **
+!     **                                                                      **
+!     ** HANKEL AND BESSEL FUNCTIONS ARE TREATED INDEPENDENTLY FORMING A      **
+!     ** A LARGER ARRAY. AUGMENTED LMTOS ARE CONSTRUCTED AS SUPERPOSITION OF  **
+!     ** HANKEL AND SCREENED BESSEL FUNCTIONS WITH ONSITE-ONLY STRUCTURE      **
+!     ** CONSTANTS                                                            **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY : K2,POTPAR1,NSP,LNX,LOX,HYBRIDSETTING
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TCUT=.FALSE.
+      LOGICAL(4),PARAMETER   :: Tprint=.true.
+      REAL(8)                :: LAMBDA1
+      REAL(8)                :: LAMBDA2
+      INTEGER(4)             :: GID
+      INTEGER(4)             :: NR
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)                :: RAD
+      REAL(8)                :: AEZ
+      REAL(8)                :: RCOV
+      INTEGER(4)             :: IRAD ! FIRST POINT BEYOND RAD
+      REAL(8)                :: QBAR
+      REAL(8)                :: JVAL,JDER,KVAL,KDER
+      REAL(8)                :: SVAR1,SVAR2,A1,A2,B1,B2
+      INTEGER(4)             :: L
+      INTEGER(4)             :: LRX,LMRX
+      INTEGER(4)             :: LNXT
+      INTEGER(4)             :: LMNXT
+      INTEGER(4)             :: nhead ! #(head functions)-1
+      INTEGER(4)             :: Lx    ! #(tail functions)-1
+      INTEGER(4),ALLOCATABLE :: LOXT(:)
+      INTEGER(4)             :: ISP,LN,LN1,LN2,LNT,LMN,LMN1,LMN2,IM,IR,ih,lndot
+      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: AEPHIDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: PSPHIDOT(:,:)
+      REAL(8)   ,ALLOCATABLE :: NLPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)
+!     **************************************************************************
+                              CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
+      DO ISP=1,NSP
+        LAMBDA1=HYBRIDSETTING(ISP)%TAILEDLAMBDA1
+        LAMBDA2=HYBRIDSETTING(ISP)%TAILEDLAMBDA2
+!
+        CALL SETUP$ISELECT(ISP)
+!       == RADIAL GRID =========================================================
+        CALL SETUP$GETI4('GID',GID)
+        CALL SETUP$GETI4('NR',NR)
+        ALLOCATE(R(NR))
+        CALL RADIAL$R(GID,NR,R)
+        RAD=POTPAR1(ISP)%RAD
+        DO IR=1,NR
+          IRAD=IR
+          IF(R(IR).GT.RAD) EXIT
+        ENDDO
+        POTPAR1(ISP)%TAILED%GID=GID
+        nhead=potpar1(isp)%nhead
+        lx=potpar1(isp)%lx
+!
+!       == count partial waves head+tail =======================================
+        LNXT=0
+        LMNXT=0
+        DO IH=1,NHEAD
+          LNXT=LNXT+1
+          LMNXT=LMNXT+2*POTPAR1(ISP)%L(IH)+1
+        ENDDO
+        DO L=0,POTPAR1(ISP)%LX
+          LNXT=LNXT+1
+          LMNXT=LMNXT+2*L+1
+        ENDDO
+        POTPAR1(ISP)%TAILED%LNX=LNXt
+        POTPAR1(ISP)%TAILED%LMNX=LMNXt
+!
+!       == fix angular momenta for head+tail representation ====================
+        ALLOCATE(LOXT(LNXT))
+        DO IH=1,NHEAD
+          LOXT(IH)=POTPAR1(ISP)%L(IH)
+        ENDDO
+        LNT=NHEAD
+        DO L=0,LX
+          LNT=LNT+1
+          LOXT(LNT)=L
+        ENDDO
+        ALLOCATE(POTPAR1(ISP)%TAILED%LOX(LNXT))
+        POTPAR1(ISP)%TAILED%LOX(:)=LOXT
+!
+!       ========================================================================
+!       == AUGMENTED HANKEL AND BESSEL FUNCTIONS WITH TAILS ATTACHED          ==
+!       ========================================================================
+        ALLOCATE(POTPAR1(ISP)%TAILED%AEF(NR,LNXT))
+        ALLOCATE(POTPAR1(ISP)%TAILED%PSF(NR,LNXT))
+        ALLOCATE(POTPAR1(ISP)%TAILED%NLF(NR,LNXT))
+!
+!       ========================================================================
+!       == TAIL PART: CONSTRUCT EXPONENTIAL TAILS OF THE TAILED ORBITALS      ==
+!       == THE HEAD FUNCTIONS ARE PURE HANKEL FUNCTIONS                       ==
+!       == THE TAIL FUNCTIONS ARE SCREENED BESSEL FUNCTIONS                   ==
+!       ========================================================================
+        POTPAR1(ISP)%TAILED%NLF(:,:)=0.D0
+!       == HEAD FUNCTIONS ======================================================
+        DO IH=1,NHEAD
+          LNT=IH
+          L=POTPAR1(ISP)%L(IH)
+          CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+!         -- DETERMINE VALUE AND LOGARITHMIC DERIVATIVE OF PHI AND PHIBARDOT----
+          A1=KVAL*(KDER/KVAL+LAMBDA2)/(LAMBDA2-LAMBDA1)
+          A2=KVAL*(KDER/KVAL+LAMBDA1)/(LAMBDA1-LAMBDA2)
+          DO IR=IRAD,NR
+            SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
+            SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
+            POTPAR1(ISP)%TAILED%NLF(IR,LNT)=A1*SVAR1+A2*SVAR2
+          ENDDO
+        ENDDO
+!
+!       == TAIL FUNCTIONS ======================================================
+        DO L=0,LX
+          LNT=NHEAD+L+1
+          CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+          CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
+!         -- TRANSFORM UNSCREENED BESSEL FUNCTION TO SCREENED BESSEL FUNCTION
+          QBAR=POTPAR1(ISP)%QBAR(l+1)
+          JVAL=JVAL-KVAL*QBAR
+          JDER=JDER-KDER*QBAR
+!         -- DETERMINE VALUE AND LOGARITHMIC DERIVATIVE OF PHI AND PHIBARDOT----
+          B1=JVAL*(JDER/JVAL+LAMBDA2)/(LAMBDA2-LAMBDA1)
+          B2=JVAL*(JDER/JVAL+LAMBDA1)/(LAMBDA1-LAMBDA2)
+          DO IR=IRAD,NR
+            SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
+            SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
+            POTPAR1(ISP)%TAILED%NLF(IR,LNT)=B1*SVAR1+B2*SVAR2
+          ENDDO
+        ENDDO  
+!
+!       ========================================================================
+!       == Augmentation ========================================================
+!       ========================================================================
+!
+!       == NODELESS SPHERE PART. RESULTS IN CONTINUOUS ORBITAL =================
+        ALLOCATE(AEPHI(NR,LNX(ISP)))
+        ALLOCATE(AEPHIDOT(NR,LNX(ISP)))
+        ALLOCATE(NLPHI(NR,LNX(ISP)))
+        ALLOCATE(NLPHIDOT(NR,LNX(ISP)))
+        ALLOCATE(PSPHI(NR,LNX(ISP)))
+        ALLOCATE(PSPHIDOT(NR,LNX(ISP)))
+        CALL SETUP$GETR8A('AEPHI',NR*LNX(ISP),AEPHI)
+        CALL SETUP$GETR8A('AEPHIDOT',NR*LNX(ISP),AEPHIDOT)
+        CALL SETUP$GETR8A('QPHI',NR*LNX(ISP),NLPHI)
+        CALL SETUP$GETR8A('QPHIDOT',NR*LNX(ISP),NLPHIDOT)
+        CALL SETUP$GETR8A('PSPHI',NR*LNX(ISP),PSPHI)
+        CALL SETUP$GETR8A('PSPHIDOT',NR*LNX(ISP),PSPHIDOT)
+        DO IH=1,NHEAD
+          LN=POTPAR1(ISP)%LN(IH)
+          L=POTPAR1(ISP)%L(IH)
+          LNDOT=POTPAR1(ISP)%LNDOT(L+1)  ! partial wave index for phidot
+          A1=POTPAR1(ISP)%KTOPHI(IH)
+          A2=POTPAR1(ISP)%KTOPHIDOT(IH)
+!         == nodesless wave functions inserted only up to matching radius
+          POTPAR1(ISP)%TAILED%NLF(:IRAD-1,IH)=   NLPHI(:IRAD-1,LN)   *A1 &
+       &                                     +NLPHIDOT(:IRAD-1,LNdot)*A2
+!         ==  add difference to full wave functions ============================
+          POTPAR1(ISP)%TAILED%AEF(:,ih)=POTPAR1(ISP)%TAILED%NLF(:,ih) &
+       &                             +(   AEPHI(:,LN)   -   NLPHI(:,LN)   )*A1 &
+       &                             +(AEPHIDOT(:,LNdot)-NLPHIDOT(:,LNdot))*A2
+          POTPAR1(ISP)%TAILED%PSF(:,ih)=POTPAR1(ISP)%TAILED%NLF(:,ih) &
+       &                             +(   PSPHI(:,LN)   -   NLPHI(:,LN)   )*A1 &
+       &                             +(PSPHIDOT(:,LNdot)-NLPHIDOT(:,LNdot))*A2
+        ENDDO
+        DO L=0,LX
+          LNT=NHEAD+L+1
+          LNdot=POTPAR1(ISP)%LNDOT(L+1)
+          A2=POTPAR1(ISP)%JBARTOPHIDOT(L+1)
+!         == NODESLESS WAVE FUNCTIONS INSERTED ONLY UP TO MATCHING RADIUS
+          POTPAR1(ISP)%TAILED%NLF(:IRAD-1,LNT)=NLPHIDOT(:IRAD-1,LNDOT)*A2
+!         ==  ADD DIFFERENCE TO FULL WAVE FUNCTIONS ============================
+          POTPAR1(ISP)%TAILED%AEF(:,LNT)=POTPAR1(ISP)%TAILED%NLF(:,LNT) &
+      &                              +(AEPHIDOT(:,LNDOT)-NLPHIDOT(:,LNDOT))*A2
+          POTPAR1(ISP)%TAILED%PSF(:,LNT)=POTPAR1(ISP)%TAILED%NLF(:,LNT) &
+      &                              +(PSPHIDOT(:,LNDOT)-NLPHIDOT(:,LNDOT))*A2
+        ENDDO
+        DEALLOCATE(AEPHI)
+        DEALLOCATE(AEPHIDOT)
+        DEALLOCATE(PSPHI)
+        DEALLOCATE(PSPHIDOT)
+        DEALLOCATE(NLPHI)
+        DEALLOCATE(NLPHIDOT)
+!
+!       ========================================================================
+!       ==  CUT OFF TAILS FOR STABILITY                                       ==
+!       ========================================================================
+        IF(TCUT) THEN
+          CALL SETUP$GETR8('AEZ',AEZ)
+          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+          DO IR=1,NR
+            IF(R(IR).GT.2.D0*RCOV) THEN  ! 2*RCOV IS A BIT ARBITRARY
+              POTPAR1(ISP)%TAILED%NLF(IR:,:)=0.D0
+              POTPAR1(ISP)%TAILED%AEF(IR:,:)=0.D0
+              POTPAR1(ISP)%TAILED%PSF(IR:,:)=0.D0
+              EXIT
+            END IF
+          ENDDO
+        END IF
+
+call LMTO_WRITEPHI('1_aef.dat',GID,NR,lnxt,potpar1(isp)%tailed%aef)
+call LMTO_WRITEPHI('1_psf.dat',GID,NR,lnxt,potpar1(isp)%tailed%psf)
+call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
+        CALL SETUP$UNSELECT()
+      enddo ! end of loop over atom types
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
+!     **************************************************************************
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY : POTPAR1,NSP
+!      USE LMTO_MODULE, ONLY : K2,POTPAR1,NSP,LNX,LOX,HYBRIDSETTING
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      logical(4),parameter   :: tprint=.true.
+      INTEGER(4)             :: GID   ! GRID ID
+      INTEGER(4)             :: NR    ! #(RADIAL GRID POINTS)
+      INTEGER(4)             :: LMRX  ! #(ANGULAR MOMENTUM FOR DENSITY)
+      INTEGER(4)             :: LRX   ! X(ANGULAR MOMENTUM FOR DENSITY)
+      INTEGER(4)             :: LMNXT
+      INTEGER(4)             :: LNXT
+      INTEGER(4),allocatable :: LoXT(:)
+      REAL(8)   ,ALLOCATABLE :: ULITTLE(:,:,:,:,:)
+      INTEGER(4)             :: ISP,lmnt,lnt
+!     **************************************************************************
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('GID',GID)
+        CALL SETUP$GETI4('NR',NR)
+        CALL SETUP$GETI4('LMRX',LMRX)
+        LMNXT=POTPAR1(ISP)%TAILED%LMNX
+        LNXT=POTPAR1(ISP)%TAILED%LNX
+        ALLOCATE(LOXT(LNXT))
+        LOXT(:)=POTPAR1(ISP)%TAILED%LOX(:)
+!
+!       ========================================================================
+!       == ONSITE U-TENSOR OF TAILED PARTIAL WAVES                            ==
+!       ========================================================================
+        LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
+        ALLOCATE(ULITTLE(LRX+1,LNXT,LNXT,LNXT,LNXT))
+        CALL LMTO_ULITTLE(GID,NR,LRX,LNXT,LOXT,POTPAR1(ISP)%TAILED%AEF,ULITTLE)
+
+!!$DO L=1,LRX+1
+!!$  DO LN1=1,LNXT
+!!$    DO LN2=LN1,LNXT
+!!$      DO LN3=1,LNXT
+!!$        DO LN4=LN3,LNXT
+!!$          IF(ABS(ULITTLE(L,LN1,LN2,LN3,LN4)).LT.1.D-5) CYCLE
+!!$          WRITE(*,FMT='(5I4,F10.5)')L,LN1,LN2,LN3,LN4,ULITTLE(L,LN1,LN2,LN3,LN4)
+!!$        ENDDO
+!!$      ENDDO
+!!$    ENDDO
+!!$  ENDDO
+!!$ENDDO
+!!$STOP 'FORCED'
+        ALLOCATE(POTPAR1(ISP)%TAILED%U(LMNXT,LMNXT,LMNXT,LMNXT))
+        CALL LMTO_UTENSOR(LRX,LMNXT,LNXT,LOXT,ULITTLE,POTPAR1(ISP)%TAILED%U)
+        DEALLOCATE(ULITTLE)
+!
+!       ========================================================================
+!       == ONSITE OVERLAP MATRIX                                              ==
+!       ========================================================================
+        ALLOCATE(POTPAR1(ISP)%TAILED%OVERLAP(LMNXT,LMNXT))
+        CALL LMTO_ONECENTEROVERLAP(GID,NR,LNXT,LOXT,POTPAR1(ISP)%TAILED%AEF &
+     &                            ,LMNXT,POTPAR1(ISP)%TAILED%OVERLAP)
+!
+!       ========================================================================
+!       == MONO- AND DIPOLE MATRIX ELEMENTS                                   ==
+!       == USED FOR LONG-DISTANCE MATRIX ELEMENTS                             ==
+!       ========================================================================
+        ALLOCATE(POTPAR1(ISP)%TAILED%QLN(2,LNXT,LNXT))
+        CALL LMTO_ONECENTERQLN(GID,NR,LNXT,LOXT,POTPAR1(ISP)%TAILED%AEF &
+     &                            ,POTPAR1(ISP)%TAILED%QLN)
+        DEALLOCATE(LOXT)
+        CALL SETUP$UNSELECT()
+      ENDDO ! END OF LOOP OVER ATOM TYPES
+!
+!     ==========================================================================
+!     == printout                                                             ==
+!     ==========================================================================
+      IF(TPRINT) THEN
+        WRITE(*,FMT='(82("="),T10," LMTO_MAKETAILEDMATRIXELEMENTS  ")')
+        DO ISP=1,NSP
+          WRITE(*,FMT='(82("-"),T10," ATOM TYPE=",I3,"  ")')
+          DO LMNT=1,POTPAR1(ISP)%TAILED%LMNX
+            WRITE(*,FMT='("LMN=",I3,"O=",100F10.5)') &
+     &                     LMNT,POTPAR1(ISP)%TAILED%OVERLAP(:,LMNT)
+          ENDDO
+          DO LNT=1,POTPAR1(ISP)%TAILED%LNX
+            WRITE(*,FMT='("LN=",I3,"MONIPOLE=",100F10.5)') &
+     &                     LNT,POTPAR1(ISP)%TAILED%QlN(1,:,LNT)
+          ENDDO
+          DO LNT=1,POTPAR1(ISP)%TAILED%LNX
+            WRITE(*,FMT='("LN=",I3,"DIPOLE=",100F10.5)') &
+     &                     LNT,POTPAR1(ISP)%TAILED%QlN(2,:,LNT)
+          ENDDO
+        ENDDO
+      END IF
                               CALL TRACE$POP() 
       RETURN
       END
@@ -2056,8 +2430,9 @@ INTEGER(4)             :: LN3,LN4
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       REAL(8)   ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: OVERLAP(LMNX,LMNX)
+      LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       INTEGER(4)            :: LN1,LN2
-      INTEGER(4)            :: LMN10,LMN20
+      INTEGER(4)            :: LMN10,LMN20,lmn
       INTEGER(4)            :: L1,L2,IM
       REAL(8)               :: AUX(NR),SVAR
       REAL(8)               :: R(NR)
@@ -2083,6 +2458,16 @@ INTEGER(4)             :: LN3,LN4
         ENDDO
         LMN10=LMN10+2*L1+1
       ENDDO
+!
+!     ==========================================================================
+!     == diagnostic printout                                                  ==
+!     ==========================================================================
+      if(tprint) then
+        write(*,fmt='(80("="),T20," Tailed overlap matrix ")')
+        do lmn=1,lmnx
+          write(*,fmt='(10f10.5)')overlap(lmn,:)
+        enddo
+      end if      
                             CALL TRACE$POP()
       RETURN
       END
