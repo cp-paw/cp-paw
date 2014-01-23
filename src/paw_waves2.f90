@@ -1623,7 +1623,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       LOGICAL(4)               :: TESSL=.TRUE.
       COMPLEX(8)               :: CSVAR
       REAL(8)                  :: OCCI,OCCJ
-      INTEGER(4),EXTERNAL      :: IDAMAX
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_X_C')
       ALLOCATE(GAMN(NB,NB))
@@ -1851,13 +1850,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)   ,INTENT(IN)    :: CHICHI(NB,NB)
       REAL(8)   ,ALLOCATABLE   :: GAMN(:,:)  
       REAL(8)                  :: EIG(NB)
-      INTEGER(4)               :: I0,J0,IMAX
       INTEGER(4)               :: ITER,I,J ! RUNNING VARIABLES
       REAL(8)                  :: DIGAM,SVAR,EIGI ! AUXILARY VARIABLES
       REAL(8)                  :: HAUX(NB,NB)    
       REAL(8)                  :: U(NB,NB)       
       REAL(8)                  :: OCCI,OCCJ
-      INTEGER(4),EXTERNAL      :: IDAMAX
 !     ******************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_X')
       ALLOCATE(GAMN(NB,NB))
@@ -1915,11 +1912,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ================================================================
 !       == FIND LARGEST ELEMENT OF THE OVERLAP MATRIX                 ==
 !       ================================================================
-        IMAX=IDAMAX(NB*NB,GAMN(1,1),1)
-        J0=(IMAX-1)/NB+1
-        I0=IMAX-(J0-1)*NB
-        DIGAM=ABS(GAMN(I0,J0))
-!       PRINT*,'ITER ',ITER,I0,J0,DIGAM,NCON
+        DIGAM=MAXVAL(ABS(GAMN))
         IF(DIGAM.LT.EPS) GOTO 9000
 !PRINT*,'ITER ',ITER,DIGAM
 !
