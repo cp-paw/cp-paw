@@ -6928,12 +6928,13 @@ PRINT*,'============ ENERGYTEST2 ============================='
         NDIMD=DENMAT(IND)%N3
 !
 !       == ADJUSTMENT IF LOCAL HFWEIGHT IS DIFFERENT FROM GLOBAL HFWEIGHT ======
-        IF(HYBRIDSETTING(ISP)%LHFWEIGHT.GE.0.D0) THEN
+        IF(HFWEIGHT.GT.0.D0) THEN
           HFSCALE=HYBRIDSETTING(ISP)%LHFWEIGHT/HFWEIGHT
         ELSE
           HFSCALE=1.D0
         END IF
 PRINT*,'IAT=',IAT,' LOCAL HFSCALE=',HFSCALE
+PRINT*,'LHFW/GHFW ',HYBRIDSETTING(ISP)%LHFWEIGHT,HFWEIGHT
 !
 !       ========================================================================
 !       == CALCULATE U-TENSOR                                                 ==
