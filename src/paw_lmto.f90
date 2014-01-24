@@ -901,6 +901,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       IMPLICIT NONE
       INTEGER(4) :: NAT,ISP
 !     **************************************************************************
+                          CALL TRACE$PUSH('LMTO_INITIALIZE')
       IF(TINI) RETURN
       TINI=.TRUE.
 !
@@ -961,6 +962,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !!$!     ==========================================================================
 !!$      CALL LMTO_GAUSSFITKJTAILS()
 !!$      CALL LMTO_ONSITEOVERLAP()
+                          CALL TRACE$Pop()
       RETURN
       END
 !
@@ -1129,6 +1131,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       REAL(8)                :: WPHIPHIDOT
       REAL(8)                :: QBAR
       REAL(8)                :: SVAR
+      INTEGER(4)             :: lx,lndot
       INTEGER(4)             :: ISP,LN,L,LN1,LN2
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO_MAKEPOTPAR')
@@ -1177,31 +1180,67 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         CALL SETUP$GETI4A('ISCATT',LNX1,ISCATT)
 !       == DETERIMINE SELECTION MAP ============================================
         ALLOCATE(POTPAR(ISP)%LNSCATT(LNX1))
-        POTPAR(ISP)%LNSCATT(:)=-1
-        DO LN=1,LNX1
-          IF(POTPAR(ISP)%LNSCATT(LN).NE.-1) CYCLE  ! ALREADY DONE
-!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =======================
-!         == AEPHIDOT(LNSCATT(LN)) IS THE SCATTERING WAVE FUNCTION (PHIBARDOT) =
-!         == THUS LNSCATT(LN) POINTS TO THE VALENCE WAVE FUNCTION ==============
-          POTPAR(ISP)%LNSCATT(LN)=LN
-          DO LN1=LN+1,LNX1
-            IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
-!           == SELECT LN OF HIGHEST NON-SCATTERING PARTIAL WAVE INDEX ==========
-            IF(ISCATT(LN1).GT.ISCATT(LN).AND.ISCATT(LN1).LE.0) THEN
-              POTPAR(ISP)%LNSCATT(LN)=LN1
+        LX=-1
+        do ln=1,lnx(isp)
+          if(.not.potpar(isp)%torb(ln)) cycle
+          lx=max(LX,lox(LN,ISP))
+        ENDDO
+        IF(LX.EQ.-1) THEN
+          CALL ERROR$MSG('NO TB ORBITALS SELECTED')
+          CALL ERROR$MSG('FAILED TO IDENTIFY LX')
+          CALL ERROR$STOP('LMTO_MAKEPOTPARLWAVES')
+        END IF
+        DO L=0,LX
+          LNDOT=0
+          DO LN=1,LNX(ISP)
+            IF(LOX(LN,ISP).NE.L) CYCLE
+            IF(.NOT.potpar(isp)%TORB(LN)) CYCLE
+            IF(LNDOT.EQ.0) THEN
+              LNDOT=LN
+            ELSE
+              IF(ISCATT(LN).GT.ISCATT(LNDOT)) THEN
+                LNDOT=LN
+              END IF
             END IF
           ENDDO
-!         == DISTRIBUTE CHANNEL FOR SCATTERING WAVE FUNCTION =================
-          DO LN1=LN,LNX1
-            IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
-            POTPAR(ISP)%LNSCATT(LN1)=LN
-          ENDDO
+          IF(LNDOT.EQ.0) THEN
+            CALL ERROR$MSG('NO PHIDOT FUNCTION FOR THIS ANGULAR MOMENTUM')
+            CALL ERROR$MSG('ISP',ISP)
+            CALL ERROR$MSG('L',L)
+            CALL ERROR$STOP('LMTO_MAKEPOTPAR1')
+          END IF
+          do ln=1,lnx(isp)
+            IF(LOX(LN,ISP).NE.L) CYCLE
+            POTPAR(ISP)%LNscatt(ln)=LNDOT
+          enddo
         ENDDO
+!!$        POTPAR(ISP)%LNSCATT(:)=-1
+!!$        DO LN=1,LNX1
+!!$          IF(POTPAR(ISP)%LNSCATT(LN).NE.-1) CYCLE  ! ALREADY DONE
+!!$!         == SELECT CHANNEL FOR SCATTERING WAVE FUNCTION =======================
+!!$!         == AEPHIDOT(LNSCATT(LN)) IS THE SCATTERING WAVE FUNCTION (PHIBARDOT) =
+!!$!         == THUS LNSCATT(LN) POINTS TO THE VALENCE WAVE FUNCTION ==============
+!!$          POTPAR(ISP)%LNSCATT(LN)=LN
+!!$          DO LN1=LN+1,LNX1
+!!$            IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
+!!$!           == SELECT LN OF HIGHEST NON-SCATTERING PARTIAL WAVE INDEX ==========
+!!$!           == CORRECTION: LINEAR DEPENDENCY FOR NEW PROJECTOR CONSTRUCTION
+!!$!           == BECAUSE PHIDOT(N)=PHI(N+1)
+!!$!           ==  IF(ISCATT(LN1).GT.ISCATT(LN).AND.ISCATT(LN1).LE.0) THEN
+!!$            IF(ISCATT(LN1).GT.ISCATT(LN)) THEN
+!!$              POTPAR(ISP)%LNSCATT(LN)=LN1
+!!$            END IF
+!!$          ENDDO
+!!$!         == DISTRIBUTE CHANNEL FOR SCATTERING WAVE FUNCTION =================
+!!$          DO LN1=LN,LNX1
+!!$            IF(LOX(LN1,ISP).NE.LOX(LN,ISP)) CYCLE
+!!$            POTPAR(ISP)%LNSCATT(LN1)=LN
+!!$          ENDDO
+!!$        ENDDO
         DEALLOCATE(ISCATT)
 !       == MAP =================================================================
         DO LN=1,LNX1
           LN1=POTPAR(ISP)%LNSCATT(LN)
-          IF(LN1.EQ.LN) CYCLE
           AEPHIDOT(:,LN)=AEPHIDOT(:,LN1)
           PSPHIDOT(:,LN)=PSPHIDOT(:,LN1)
           NLPHIDOT(:,LN)=NLPHIDOT(:,LN1)
@@ -1228,6 +1267,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
           CALL RADIAL$DERIVATIVE(GID,NR,NLPHI(:,LN),RAD,PHIDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
+print*,'oldphi',ln,phival,phider,phidotval,phidotder
 !
 !         ====================================================================
 !         == CALCULATE POTENTIAL PARAMETERS                                 ==
@@ -1359,7 +1399,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       USE LMTO_MODULE, ONLY : K2,POTPAR1,NSP,LNX,LOX
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),ALLOCATABLE :: ISCATT(:)
       INTEGER(4)             :: LNX1
       INTEGER(4)             :: GID
       INTEGER(4)             :: NR
@@ -1369,6 +1408,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       REAL(8)   ,ALLOCATABLE :: PSPHIDOT(:,:)
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       LOGICAL(4),ALLOCATABLE :: TORB(:)
+      integer(4),ALLOCATABLE :: iscatt(:)
       LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       REAL(8)                :: AEZ
       REAL(8)                :: RAD
@@ -1384,7 +1424,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       INTEGER(4)             :: LX    !X(ANGULAR MOMENTUM)
       INTEGER(4)             :: ISP,LN,LNDOT,L,IHEAD
 !     **************************************************************************
-                             CALL TRACE$PUSH('LMTO_MAKEPOTPAR')
+                             CALL TRACE$PUSH('LMTO_MAKEPOTPAR1')
       ALLOCATE(POTPAR1(NSP))
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
@@ -1401,7 +1441,12 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !       == MATCHING RADIUS =====================================================
         CALL SETUP$GETR8('AEZ',AEZ)
         CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD) 
-        POTPAR1(ISP)%rad=rad
+        POTPAR1(ISP)%RAD=RAD
+!       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
+        ALLOCATE(TORB(LNX1))
+        CALL SETUP$GETL4A('TORB',LNX1,TORB)
+        ALLOCATE(ISCATT(LNX1))
+        CALL SETUP$GETI4A('ISCATT',LNX1,ISCATT)
 !
 !       == PARTIAL WAVES AND PROJECTORS ========================================
         ALLOCATE(NLPHI(NR,LNX1))
@@ -1412,9 +1457,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         CALL SETUP$GETR8A('QPHIDOT',NR*LNX1,NLPHIDOT)
         CALL SETUP$GETR8A('PSPHIDOT',NR*LNX1,PSPHIDOT)
         CALL SETUP$GETR8A('PRO',NR*LNX1,PRO)
-!       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
-        ALLOCATE(TORB(LNX1))
-        CALL SETUP$GETL4A('TORB',LNX1,TORB)
 !
 !       ========================================================================
 !       ==  COUNT NUMBER OF ACTIVE ORBITALS
@@ -1422,7 +1464,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         LX=-1
         NHEAD=0
         DO LN=1,LNX1
-          IF(TORB(LN)) NHEAD=NHEAD+1
+          IF(.not.TORB(LN))cycle
+          NHEAD=NHEAD+1
           LX=MAX(LX,LOX(LN,ISP))
         ENDDO
         POTPAR1(ISP)%LX=LX
@@ -1533,6 +1576,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
           ENDDO !END OF LOOP OVER HEAD FUNCTIONS
         ENDDO !END OF LOOP OVER ANGULAR MOMENTA
 !
+        DEALLOCATE(iscatt)
         DEALLOCATE(TORB)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
