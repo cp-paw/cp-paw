@@ -1,7 +1,7 @@
-! 1) type potpar1_type and tailed1_type shall replace the 
-!    types potpar_type and tailed.
+! 1) TYPE POTPAR1_TYPE AND TAILED1_TYPE SHALL REPLACE THE 
+!    TYPES POTPAR_TYPE AND TAILED.
 !
-! the subroutines
+! THE SUBROUTINES
 !      LMTO_MAKEPOTPAR1()
 !      LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
 !      LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
@@ -89,7 +89,7 @@ TYPE POTPAR1_TYPE
   ! THE NUMBER OF ACTIVE HEAD FUNCTIONS IS NPHI. 
   ! THE NUMBER OF TAIL FUNCTIONS IS LX.
   ! EACH HEAD FUNCTION IS RELATED TO A PARTIAL WAVE IDENTIFIED BY LN.
-  real(8)            :: rad             !matching radius
+  REAL(8)            :: RAD             !MATCHING RADIUS
   INTEGER(4)         :: LX              ! X(ANGULAR MOMENTUM)
   INTEGER(4)         :: NHEAD           ! #(HEAD FUNCTIONS)
   INTEGER(4),POINTER :: L(:)            !(NHEAD) MAIN ANGULAR MOMENTUM
@@ -962,7 +962,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !!$!     ==========================================================================
 !!$      CALL LMTO_GAUSSFITKJTAILS()
 !!$      CALL LMTO_ONSITEOVERLAP()
-                          CALL TRACE$Pop()
+                          CALL TRACE$POP()
       RETURN
       END
 !
@@ -1131,7 +1131,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       REAL(8)                :: WPHIPHIDOT
       REAL(8)                :: QBAR
       REAL(8)                :: SVAR
-      INTEGER(4)             :: lx,lndot
+      INTEGER(4)             :: LX,LNDOT
       INTEGER(4)             :: ISP,LN,L,LN1,LN2
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO_MAKEPOTPAR')
@@ -1180,21 +1180,13 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         CALL SETUP$GETI4A('ISCATT',LNX1,ISCATT)
 !       == DETERIMINE SELECTION MAP ============================================
         ALLOCATE(POTPAR(ISP)%LNSCATT(LNX1))
-        LX=-1
-        do ln=1,lnx(isp)
-          if(.not.potpar(isp)%torb(ln)) cycle
-          lx=max(LX,lox(LN,ISP))
-        ENDDO
-        IF(LX.EQ.-1) THEN
-          CALL ERROR$MSG('NO TB ORBITALS SELECTED')
-          CALL ERROR$MSG('FAILED TO IDENTIFY LX')
-          CALL ERROR$STOP('LMTO_MAKEPOTPARLWAVES')
-        END IF
+!
+        LX=MAXVAL(LOX(:LNX(ISP),ISP))
         DO L=0,LX
           LNDOT=0
           DO LN=1,LNX(ISP)
             IF(LOX(LN,ISP).NE.L) CYCLE
-            IF(.NOT.potpar(isp)%TORB(LN)) CYCLE
+            IF(.NOT.POTPAR(ISP)%TORB(LN)) CYCLE
             IF(LNDOT.EQ.0) THEN
               LNDOT=LN
             ELSE
@@ -1204,16 +1196,25 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
             END IF
           ENDDO
           IF(LNDOT.EQ.0) THEN
-            CALL ERROR$MSG('NO PHIDOT FUNCTION FOR THIS ANGULAR MOMENTUM')
-            CALL ERROR$MSG('ISP',ISP)
-            CALL ERROR$MSG('L',L)
-            CALL ERROR$STOP('LMTO_MAKEPOTPAR1')
+!           == FALL BACK SOLUTION PICK ANY 
+            DO LN=1,LNX(ISP)
+              IF(LOX(LN,ISP).NE.L) CYCLE
+              LNDOT=LN
+              EXIT
+            ENDDO
+            IF(LNDOT.EQ.0) THEN
+              CALL ERROR$MSG('NO PHIDOT FUNCTION FOR THIS ANGULAR MOMENTUM')
+              CALL ERROR$MSG('ISP',ISP)
+              CALL ERROR$MSG('L',L)
+              CALL ERROR$STOP('LMTO_MAKEPOTPAR1')
+            END IF
           END IF
-          do ln=1,lnx(isp)
+          DO LN=1,LNX(ISP)
             IF(LOX(LN,ISP).NE.L) CYCLE
-            POTPAR(ISP)%LNscatt(ln)=LNDOT
-          enddo
+            POTPAR(ISP)%LNSCATT(LN)=LNDOT
+          ENDDO
         ENDDO
+
 !!$        POTPAR(ISP)%LNSCATT(:)=-1
 !!$        DO LN=1,LNX1
 !!$          IF(POTPAR(ISP)%LNSCATT(LN).NE.-1) CYCLE  ! ALREADY DONE
@@ -1267,7 +1268,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
           CALL RADIAL$DERIVATIVE(GID,NR,NLPHI(:,LN),RAD,PHIDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
-print*,'oldphi',ln,phival,phider,phidotval,phidotder
 !
 !         ====================================================================
 !         == CALCULATE POTENTIAL PARAMETERS                                 ==
@@ -1330,28 +1330,28 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
         ENDDO        
 !
 !       ======================================================================
-!       == set potential parameters for excluded partial waves to zero      ==
+!       == SET POTENTIAL PARAMETERS FOR EXCLUDED PARTIAL WAVES TO ZERO      ==
 !       ======================================================================
-        do ln=1,lnx(isp)
-          if(.not.potpar(isp)%torb(ln)) then
-          POTPAR(ISP)%qbar(LN)        =0.d0
-          POTPAR(ISP)%KTOPHI(LN)      =0.d0
-          POTPAR(ISP)%KTOPHIDOT(LN)   =0.d0
-          POTPAR(ISP)%JBARTOPHIDOT(LN)=0.d0
-
-          end if
-        enddo
+        DO LN=1,LNX(ISP)
+          IF(.NOT.POTPAR(ISP)%TORB(LN)) THEN
+            POTPAR(ISP)%QBAR(LN)        =0.D0
+            POTPAR(ISP)%KTOPHI(LN)      =0.D0
+            POTPAR(ISP)%KTOPHIDOT(LN)   =0.D0
+            POTPAR(ISP)%JBARTOPHIDOT(LN)=0.D0
+          END IF
+        ENDDO
 !
         DEALLOCATE(NLPHI)
         DEALLOCATE(AEPHI)
+        DEALLOCATE(PSPHI)
         DEALLOCATE(NLPHIDOT)
         DEALLOCATE(AEPHIDOT)
         DEALLOCATE(PSPHIDOT)
-        DEALLOCATE(PSPHI)
         DEALLOCATE(PRO)
         DEALLOCATE(R)
         CALL SETUP$UNSELECT()
       ENDDO
+
 !
 !     ==========================================================================
 !     == PRINTOUT                                                             ==
@@ -1387,7 +1387,7 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
 !     **************************************************************************
 !     **  SIMILAR TO LMTO_MAKEPOTPAR BUT WITH ANOTHER DATA STRUCTURE          **
 !     **  ORGANIZED ACCORDING TO HEADS AND TAILS INSTEAD OF PARTIAL WAVES.    **
-!     **  It is intended that this routine replaces lmto_makepotpar.          **
+!     **  IT IS INTENDED THAT THIS ROUTINE REPLACES LMTO_MAKEPOTPAR.          **
 !     **                                                                      **
 !     **  POTPAR(ISP)%RAD              : ASA RADIUS                           **
 !     **  POTPAR(ISP)%PHIDOTPROJ(LN)   : <PS-PRO|PS-PHIBARDOT>                **
@@ -1408,7 +1408,7 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
       REAL(8)   ,ALLOCATABLE :: PSPHIDOT(:,:)
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       LOGICAL(4),ALLOCATABLE :: TORB(:)
-      integer(4),ALLOCATABLE :: iscatt(:)
+      INTEGER(4),ALLOCATABLE :: ISCATT(:)
       LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       REAL(8)                :: AEZ
       REAL(8)                :: RAD
@@ -1464,7 +1464,7 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
         LX=-1
         NHEAD=0
         DO LN=1,LNX1
-          IF(.not.TORB(LN))cycle
+          IF(.NOT.TORB(LN))CYCLE
           NHEAD=NHEAD+1
           LX=MAX(LX,LOX(LN,ISP))
         ENDDO
@@ -1502,6 +1502,15 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
               END IF
             END IF
           ENDDO
+!
+          IF(LNDOT.EQ.0) THEN
+            DO LN=1,LNX(ISP)
+              IF(LOX(LN,ISP).NE.L) CYCLE
+              LNDOT=LN
+              EXIT
+            ENDDO
+          END IF
+
           IF(LNDOT.EQ.0) THEN
             CALL ERROR$MSG('NO PHIDOT FUNCTION FOR THIS ANGULAR MOMENTUM')
             CALL ERROR$MSG('ISP',ISP)
@@ -1576,7 +1585,7 @@ print*,'oldphi',ln,phival,phider,phidotval,phidotder
           ENDDO !END OF LOOP OVER HEAD FUNCTIONS
         ENDDO !END OF LOOP OVER ANGULAR MOMENTA
 !
-        DEALLOCATE(iscatt)
+        DEALLOCATE(ISCATT)
         DEALLOCATE(TORB)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
@@ -1816,7 +1825,7 @@ INTEGER(4)             :: LN3,LN4
 !
 !       == TAIL PART ===========================================================
         DO LN=1,LNX(ISP)
-          LN1=POTPAR(ISP)%lnscatt(ln)  
+          LN1=POTPAR(ISP)%LNSCATT(LN)  
           L=LOX(LN,ISP)
           RAD=POTPAR(ISP)%RAD
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
@@ -1834,10 +1843,10 @@ INTEGER(4)             :: LN3,LN4
             SVAR1=EXP(-LAMBDA1*(R(IR)-RAD))
             SVAR2=EXP(-LAMBDA2*(R(IR)-RAD))
             POTPAR(ISP)%TAILED%NLF(IR,LN)       =A1*SVAR1+A2*SVAR2
-! critical bugfix!!!!!
-            if(ln.eq.ln1) then
+! CRITICAL BUGFIX!!!!!
+            IF(LN.EQ.LN1) THEN
               POTPAR(ISP)%TAILED%NLF(IR,LNDOT(LN))=B1*SVAR1+B2*SVAR2
-            end if
+            END IF
           ENDDO
         ENDDO
 !
@@ -1846,9 +1855,9 @@ INTEGER(4)             :: LN3,LN4
           L=LOX(LN,ISP)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
-!         == ln1 points to the corresponding partial wave aephidot(ln1)
-!         == lndot(ln) points to the corresponding wave function aef(lndot(ln))
-          LN1=POTPAR(ISP)%lnscatt(ln)  
+!         == LN1 POINTS TO THE CORRESPONDING PARTIAL WAVE AEPHIDOT(LN1)
+!         == LNDOT(LN) POINTS TO THE CORRESPONDING WAVE FUNCTION AEF(LNDOT(LN))
+          LN1=POTPAR(ISP)%LNSCATT(LN)  
           A1=POTPAR(ISP)%KTOPHI(LN)
           A2=POTPAR(ISP)%KTOPHIDOT(LN)
           POTPAR(ISP)%TAILED%NLF(:IRAD-1,LN)=NLPHI(:IRAD-1,LN)*A1 &
@@ -1875,7 +1884,7 @@ INTEGER(4)             :: LN3,LN4
       &                           +(PSPHIDOT(:,LN1)-NLPHIDOT(:,LN1))*A2
 !
           END IF
-        ENDDO ! end of loop over partial waves
+        ENDDO ! END OF LOOP OVER PARTIAL WAVES
         DEALLOCATE(AEPHI)
         DEALLOCATE(AEPHIDOT)
         DEALLOCATE(PSPHI)
@@ -1884,18 +1893,18 @@ INTEGER(4)             :: LN3,LN4
         DEALLOCATE(NLPHIDOT)
 !
 !       ========================================================================
-!       == set orbitals not included in the tb set to Zero =====================
+!       == SET ORBITALS NOT INCLUDED IN THE TB SET TO ZERO =====================
 !       ========================================================================
-        DO LN=1,LNX(isp)
-          IF(.NOT.potpar(isp)%TORB(LN)) THEN
+        DO LN=1,LNX(ISP)
+          IF(.NOT.POTPAR(ISP)%TORB(LN)) THEN
             POTPAR(ISP)%TAILED%NLF(:,LN)=0.D0
             POTPAR(ISP)%TAILED%AEF(:,LN)=0.D0
             POTPAR(ISP)%TAILED%PSF(:,LN)=0.D0
           END IF
         ENDDO
-call LMTO_WRITEPHI('0_aef.dat',GID,NR,lnxt,potpar(isp)%tailed%aef)
-call LMTO_WRITEPHI('0_psf.dat',GID,NR,lnxt,potpar(isp)%tailed%psf)
-call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
+CALL LMTO_WRITEPHI('0_AEF.DAT',GID,NR,LNXT,POTPAR(ISP)%TAILED%AEF)
+CALL LMTO_WRITEPHI('0_PSF.DAT',GID,NR,LNXT,POTPAR(ISP)%TAILED%PSF)
+CALL LMTO_WRITEPHI('0_BNLF.DAT',GID,NR,LNXT,POTPAR(ISP)%TAILED%NLF)
 !
 !       ========================================================================
 !       ==  CUT OFF TAILS FOR STABILITY                                       ==
@@ -1987,7 +1996,7 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_MAKETAILEDPARTIALWAVES_withpotpar1()
+      SUBROUTINE LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
 !     **************************************************************************
 !     ** CONSTRUCTS AUGMENTED HANKEL END BESSEL FUNCTIONS WITH                **
 !     ** TWO EXPONENTIALS ATTACHED AT THE MATCHING RADIUS RAD                 **
@@ -2002,7 +2011,7 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TCUT=.FALSE.
-      LOGICAL(4),PARAMETER   :: Tprint=.true.
+      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       REAL(8)                :: LAMBDA1
       REAL(8)                :: LAMBDA2
       INTEGER(4)             :: GID
@@ -2019,10 +2028,10 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
       INTEGER(4)             :: LRX,LMRX
       INTEGER(4)             :: LNXT
       INTEGER(4)             :: LMNXT
-      INTEGER(4)             :: nhead ! #(head functions)-1
-      INTEGER(4)             :: Lx    ! #(tail functions)-1
+      INTEGER(4)             :: NHEAD ! #(HEAD FUNCTIONS)-1
+      INTEGER(4)             :: LX    ! #(TAIL FUNCTIONS)-1
       INTEGER(4),ALLOCATABLE :: LOXT(:)
-      INTEGER(4)             :: ISP,LN,LN1,LN2,LNT,LMN,LMN1,LMN2,IM,IR,ih,lndot
+      INTEGER(4)             :: ISP,LN,LN1,LN2,LNT,LMN,LMN1,LMN2,IM,IR,IH,LNDOT
       REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)
       REAL(8)   ,ALLOCATABLE :: AEPHIDOT(:,:)
       REAL(8)   ,ALLOCATABLE :: PSPHI(:,:)
@@ -2047,10 +2056,10 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
           IF(R(IR).GT.RAD) EXIT
         ENDDO
         POTPAR1(ISP)%TAILED%GID=GID
-        nhead=potpar1(isp)%nhead
-        lx=potpar1(isp)%lx
+        NHEAD=POTPAR1(ISP)%NHEAD
+        LX=POTPAR1(ISP)%LX
 !
-!       == count partial waves head+tail =======================================
+!       == COUNT PARTIAL WAVES HEAD+TAIL =======================================
         LNXT=0
         LMNXT=0
         DO IH=1,NHEAD
@@ -2061,10 +2070,10 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
           LNXT=LNXT+1
           LMNXT=LMNXT+2*L+1
         ENDDO
-        POTPAR1(ISP)%TAILED%LNX=LNXt
-        POTPAR1(ISP)%TAILED%LMNX=LMNXt
+        POTPAR1(ISP)%TAILED%LNX=LNXT
+        POTPAR1(ISP)%TAILED%LMNX=LMNXT
 !
-!       == fix angular momenta for head+tail representation ====================
+!       == FIX ANGULAR MOMENTA FOR HEAD+TAIL REPRESENTATION ====================
         ALLOCATE(LOXT(LNXT))
         DO IH=1,NHEAD
           LOXT(IH)=POTPAR1(ISP)%L(IH)
@@ -2111,7 +2120,7 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
           CALL LMTO$SOLIDHANKELRAD(L,RAD,K2,KVAL,KDER)
           CALL LMTO$SOLIDBESSELRAD(L,RAD,K2,JVAL,JDER)
 !         -- TRANSFORM UNSCREENED BESSEL FUNCTION TO SCREENED BESSEL FUNCTION
-          QBAR=POTPAR1(ISP)%QBAR(l+1)
+          QBAR=POTPAR1(ISP)%QBAR(L+1)
           JVAL=JVAL-KVAL*QBAR
           JDER=JDER-KDER*QBAR
 !         -- DETERMINE VALUE AND LOGARITHMIC DERIVATIVE OF PHI AND PHIBARDOT----
@@ -2125,7 +2134,7 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
         ENDDO  
 !
 !       ========================================================================
-!       == Augmentation ========================================================
+!       == AUGMENTATION ========================================================
 !       ========================================================================
 !
 !       == NODELESS SPHERE PART. RESULTS IN CONTINUOUS ORBITAL =================
@@ -2144,23 +2153,23 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
         DO IH=1,NHEAD
           LN=POTPAR1(ISP)%LN(IH)
           L=POTPAR1(ISP)%L(IH)
-          LNDOT=POTPAR1(ISP)%LNDOT(L+1)  ! partial wave index for phidot
+          LNDOT=POTPAR1(ISP)%LNDOT(L+1)  ! PARTIAL WAVE INDEX FOR PHIDOT
           A1=POTPAR1(ISP)%KTOPHI(IH)
           A2=POTPAR1(ISP)%KTOPHIDOT(IH)
-!         == nodesless wave functions inserted only up to matching radius
+!         == NODESLESS WAVE FUNCTIONS INSERTED ONLY UP TO MATCHING RADIUS
           POTPAR1(ISP)%TAILED%NLF(:IRAD-1,IH)=   NLPHI(:IRAD-1,LN)   *A1 &
-       &                                     +NLPHIDOT(:IRAD-1,LNdot)*A2
-!         ==  add difference to full wave functions ============================
-          POTPAR1(ISP)%TAILED%AEF(:,ih)=POTPAR1(ISP)%TAILED%NLF(:,ih) &
+       &                                     +NLPHIDOT(:IRAD-1,LNDOT)*A2
+!         ==  ADD DIFFERENCE TO FULL WAVE FUNCTIONS ============================
+          POTPAR1(ISP)%TAILED%AEF(:,IH)=POTPAR1(ISP)%TAILED%NLF(:,IH) &
        &                             +(   AEPHI(:,LN)   -   NLPHI(:,LN)   )*A1 &
-       &                             +(AEPHIDOT(:,LNdot)-NLPHIDOT(:,LNdot))*A2
-          POTPAR1(ISP)%TAILED%PSF(:,ih)=POTPAR1(ISP)%TAILED%NLF(:,ih) &
+       &                             +(AEPHIDOT(:,LNDOT)-NLPHIDOT(:,LNDOT))*A2
+          POTPAR1(ISP)%TAILED%PSF(:,IH)=POTPAR1(ISP)%TAILED%NLF(:,IH) &
        &                             +(   PSPHI(:,LN)   -   NLPHI(:,LN)   )*A1 &
-       &                             +(PSPHIDOT(:,LNdot)-NLPHIDOT(:,LNdot))*A2
+       &                             +(PSPHIDOT(:,LNDOT)-NLPHIDOT(:,LNDOT))*A2
         ENDDO
         DO L=0,LX
           LNT=NHEAD+L+1
-          LNdot=POTPAR1(ISP)%LNDOT(L+1)
+          LNDOT=POTPAR1(ISP)%LNDOT(L+1)
           A2=POTPAR1(ISP)%JBARTOPHIDOT(L+1)
 !         == NODESLESS WAVE FUNCTIONS INSERTED ONLY UP TO MATCHING RADIUS
           POTPAR1(ISP)%TAILED%NLF(:IRAD-1,LNT)=NLPHIDOT(:IRAD-1,LNDOT)*A2
@@ -2176,6 +2185,8 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
         DEALLOCATE(PSPHIDOT)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
+        DEALLOCATE(R)
+        DEALLOCATE(LOXT)
 !
 !       ========================================================================
 !       ==  CUT OFF TAILS FOR STABILITY                                       ==
@@ -2193,13 +2204,13 @@ call LMTO_WRITEPHI('0_bnlf.dat',GID,NR,lnxt,potpar(isp)%tailed%nlf)
           ENDDO
         END IF
 
-call LMTO_WRITEPHI('1_aef.dat',GID,NR,lnxt,potpar1(isp)%tailed%aef)
-call LMTO_WRITEPHI('1_psf.dat',GID,NR,lnxt,potpar1(isp)%tailed%psf)
-call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
+CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
+CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
+CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
         CALL SETUP$UNSELECT()
-      enddo ! end of loop over atom types
-      return
-      end
+      ENDDO ! END OF LOOP OVER ATOM TYPES
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
@@ -2210,16 +2221,16 @@ call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
 !      USE LMTO_MODULE, ONLY : K2,POTPAR1,NSP,LNX,LOX,HYBRIDSETTING
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      logical(4),parameter   :: tprint=.true.
+      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       INTEGER(4)             :: GID   ! GRID ID
       INTEGER(4)             :: NR    ! #(RADIAL GRID POINTS)
       INTEGER(4)             :: LMRX  ! #(ANGULAR MOMENTUM FOR DENSITY)
       INTEGER(4)             :: LRX   ! X(ANGULAR MOMENTUM FOR DENSITY)
       INTEGER(4)             :: LMNXT
       INTEGER(4)             :: LNXT
-      INTEGER(4),allocatable :: LoXT(:)
+      INTEGER(4),ALLOCATABLE :: LOXT(:)
       REAL(8)   ,ALLOCATABLE :: ULITTLE(:,:,:,:,:)
-      INTEGER(4)             :: ISP,lmnt,lnt
+      INTEGER(4)             :: ISP,LMNT,LNT
 !     **************************************************************************
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
@@ -2274,7 +2285,7 @@ call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
       ENDDO ! END OF LOOP OVER ATOM TYPES
 !
 !     ==========================================================================
-!     == printout                                                             ==
+!     == PRINTOUT                                                             ==
 !     ==========================================================================
       IF(TPRINT) THEN
         WRITE(*,FMT='(82("="),T10," LMTO_MAKETAILEDMATRIXELEMENTS  ")')
@@ -2286,11 +2297,11 @@ call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
           ENDDO
           DO LNT=1,POTPAR1(ISP)%TAILED%LNX
             WRITE(*,FMT='("LN=",I3,"MONIPOLE=",100F10.5)') &
-     &                     LNT,POTPAR1(ISP)%TAILED%QlN(1,:,LNT)
+     &                     LNT,POTPAR1(ISP)%TAILED%QLN(1,:,LNT)
           ENDDO
           DO LNT=1,POTPAR1(ISP)%TAILED%LNX
             WRITE(*,FMT='("LN=",I3,"DIPOLE=",100F10.5)') &
-     &                     LNT,POTPAR1(ISP)%TAILED%QlN(2,:,LNT)
+     &                     LNT,POTPAR1(ISP)%TAILED%QLN(2,:,LNT)
           ENDDO
         ENDDO
       END IF
@@ -2476,7 +2487,7 @@ call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
       REAL(8)   ,INTENT(OUT):: OVERLAP(LMNX,LMNX)
       LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       INTEGER(4)            :: LN1,LN2
-      INTEGER(4)            :: LMN10,LMN20,lmn
+      INTEGER(4)            :: LMN10,LMN20,LMN
       INTEGER(4)            :: L1,L2,IM
       REAL(8)               :: AUX(NR),SVAR
       REAL(8)               :: R(NR)
@@ -2504,14 +2515,14 @@ call LMTO_WRITEPHI('1_nlf.dat',GID,NR,lnxt,potpar1(isp)%tailed%nlf)
       ENDDO
 !
 !     ==========================================================================
-!     == diagnostic printout                                                  ==
+!     == DIAGNOSTIC PRINTOUT                                                  ==
 !     ==========================================================================
-      if(tprint) then
-        write(*,fmt='(80("="),T20," Tailed overlap matrix ")')
-        do lmn=1,lmnx
-          write(*,fmt='(10f10.5)')overlap(lmn,:)
-        enddo
-      end if      
+      IF(TPRINT) THEN
+        WRITE(*,FMT='(80("="),T20," TAILED OVERLAP MATRIX ")')
+        DO LMN=1,LMNX
+          WRITE(*,FMT='(10F10.5)')OVERLAP(LMN,:)
+        ENDDO
+      END IF      
                             CALL TRACE$POP()
       RETURN
       END
@@ -3226,7 +3237,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !!$PRINT*,'H ',H
 !!$PRINT*,'SBARATOMI1 ',SBARATOMI1
 !!$PRINT*,'SBARLI1    ',SBARLI1
-      call LMTO_PREPARE1_withpotpar1(NPRO,NRL,A,B,C,D,E,F)
+      CALL LMTO_PREPARE1_WITHPOTPAR1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
 !
 !     ==========================================================================
@@ -3473,7 +3484,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PREPARE1_withpotpar1(NPRO,NRL_,A,B,C,D,E,F)
+      SUBROUTINE LMTO_PREPARE1_WITHPOTPAR1(NPRO,NRL_,A,B,C,D,E,F)
 !     **************************************************************************
 !     **  PREPARE ARRAYS NEEDED FOR THE TRANSFORMATION                        **
 !     **  TO NATURAL TIGHT-BINDING ORBITALS                                   **
@@ -3488,10 +3499,10 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       REAL(8)   ,INTENT(OUT) :: D(NPRO)
       REAL(8)   ,INTENT(OUT) :: E(NRL_)
       REAL(8)   ,INTENT(OUT) :: F(NRL_)
-      logical(4),parameter   :: tprint=.true.
+      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       INTEGER(4)             :: NAT
-      INTEGER(4)             :: ipro0,ipro1,ipro2,irl1,irl2
-      INTEGER(4)             :: ISP,IAT,L,LN,IM,IPRO,IRL,ih
+      INTEGER(4)             :: IPRO0,IPRO1,IPRO2,IRL1,IRL2
+      INTEGER(4)             :: ISP,IAT,L,LN,IM,IPRO,IRL,IH
 !     **************************************************************************
       IF(NRL_.NE.NRL) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
@@ -3520,17 +3531,17 @@ CHARACTER(128) :: STRING,STRING1,STRING2
           IRL=SBARATOMI1(IAT)-1+SBARLI1(L+1,ISP)-1
           DO IM=1,2*L+1
             IPRO=IPRO+1
-            irl=irl+1
+            IRL=IRL+1
             A(IPRO)=1.D0/POTPAR1(ISP)%KTOPHI(IH)
             B(IPRO)=POTPAR1(ISP)%KTOPHIDOT(IH)
 !           ====================================================================
 !           == THE SUM, USED EARLIER, WAS INCORRECT!!!                        ==
 !           == IF C IS ATTRIBUTED TO PARTIAL WAVE INDICES SUCH AS LN, IT      ==
 !           == MUST BE CONSIDERED AS NONZERO ONLY FOR THE FIRST PARTIAL WAVE  ==
-!           == FOR EACH RL. see also the definition of G and H                ==
-!           ==  wrong: C(IRL)=C(IRL)-POTPAR1(ISP)%JBARTOPHIDOT(L+1)           ==
+!           == FOR EACH RL. SEE ALSO THE DEFINITION OF G AND H                ==
+!           ==  WRONG: C(IRL)=C(IRL)-POTPAR1(ISP)%JBARTOPHIDOT(L+1)           ==
 !           ====================================================================
-            C(IRL)=-POTPAR1(ISP)%JBARTOPHIDOT(L+1)  ! the sum, used earlier, was incorrect!!!
+            C(IRL)=-POTPAR1(ISP)%JBARTOPHIDOT(L+1)  ! THE SUM, USED EARLIER, WAS INCORRECT!!!
             D(IPRO)=A(IPRO)*POTPAR1(ISP)%PHIDOTPROJ(IH)
             E(IRL)=E(IRL)+B(IPRO)*D(IPRO)
             F(IRL)=F(IRL)+D(IPRO)
@@ -3543,7 +3554,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     == PRINTOUT                                                             ==
 !     ==========================================================================
       IF(TPRINT) THEN
-        WRITE(*,'(70("="),T10," lmto_prepare1_withpotpar1  ")')
+        WRITE(*,'(70("="),T10," LMTO_PREPARE1_WITHPOTPAR1  ")')
         IPRO1=1
         IPRO2=0
         DO IAT=1,NAT
