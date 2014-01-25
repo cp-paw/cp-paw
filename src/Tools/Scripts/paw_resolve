@@ -91,7 +91,7 @@ while getopts :hp:r:f:v OPT ; do
   esac
 done
 shift $(($OPTIND - 1))
-if [ -z $1 ] ; then
+if [[ -z $1 ]] ; then
   echo "error in $0: no infile supplied" >&2
   exit 1
 fi
@@ -99,11 +99,11 @@ IN=$1
 #
 #   report setting of parameters
 #
-if [ $VERBOSE = yes ] ; then
+if [[ $VERBOSE = yes ]] ; then
  echo input file : $IN
- if [ -n "$PRE" ]      ; then echo "prefix: $PRE"; fi
- if [ -n "$RULES" ]  ; then echo "rules: $RULES"; fi
- if [ -n "$FRULES" ] ; then echo "file rules: $FRULES" ; fi
+ if [[ -n "$PRE" ]]    ; then echo "prefix: $PRE"        ; fi
+ if [[ -n "$RULES" ]]  ; then echo "rules: $RULES"       ; fi
+ if [[ -n "$FRULES" ]] ; then echo "file rules: $FRULES" ; fi
 fi
 #
 #-------------------------------------------------------------------------------
@@ -112,7 +112,7 @@ fi
 CHS0=""
 CHS1=""
 CHS2=""
-for X in $RULES; do
+for X in $RULES ; do
    A=${X%=*}
    B=${X##*=}
    CHS0="$CHS0-e s/@$A@/$B/g "
@@ -120,7 +120,7 @@ done
 #-------------------------------------------------------------------------------
 # explicit file replacement rules
 #-------------------------------------------------------------------------------
-for X in $FRULES; do
+for X in $FRULES ; do
    A=${X%=*}
    B=${X##*=}
    if [ ! -e $B ] ; then 
@@ -161,9 +161,9 @@ for X in $VAR; do
   #
   #
   #
-  if [ ! -z "$X" ] ; then
+  if [[ ! -z "$X" ]] ; then
     # check if there $X is the name of an existing file
-    if [ ! -e ${PRE}${X} ] ; then
+    if [[ ! -e ${PRE}${X} ]] ; then
       echo "error in $0: no rule or file to replace @$X@" >&2
       exit 1
     fi
@@ -172,7 +172,7 @@ for X in $VAR; do
     for Y in $LINES ; do
       LINE=$(sed -n -e ${Y}p < $IN)
       for Z in $LINE ; do
-        if [ "@$X@" != "$Z" ] ; then
+        if [[ "@$X@" != "$Z" ]] ; then
           echo "error in $0: file replacement @$X@ is not alone in the line" >&2
           echo "LINENO=$Y LINE=$LINE" >&2
           exit 1
@@ -202,9 +202,9 @@ done
  # echo CHS1=$CHS1
  # echo CHS2=$CHS2
 CMD="cat ${IN}"
-if [ -n "${CHS0}" ] ; then CMD="$CMD | sed ${CHS0}" ; fi
-if [ -n "${CHS1}" ] ; then CMD="$CMD | sed ${CHS1}" ; fi
-if [ -n "${CHS2}" ] ; then CMD="$CMD | sed ${CHS2}" ; fi
+if [[ -n "${CHS0}" ]] ; then CMD="$CMD | sed ${CHS0}" ; fi
+if [[ -n "${CHS1}" ]] ; then CMD="$CMD | sed ${CHS1}" ; fi
+if [[ -n "${CHS2}" ]] ; then CMD="$CMD | sed ${CHS2}" ; fi
 eval ${CMD}
 #-------------------------------------------------------------------------------
 #echo $CMD

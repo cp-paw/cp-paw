@@ -122,7 +122,7 @@ while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
       PAR1NAME=""
       PAR1VALS=""
       for X in $RULE ; do
-        if [ -z $PAR1NAME ] ; then
+        if [[ -z $PAR1NAME ]] ; then
           PAR1NAME=${X}
         else
           PAR1VALS="$PAR1VALS $X"
@@ -170,7 +170,7 @@ SRCROOT=$1  #  Directory containing all subprojects relative to THISDIR
 #===================================================================
 # check arguments
 #===================================================================
-if [ -z $SRCROOT ] ; then 
+if [[ -z $SRCROOT ]] ; then 
   echo "error in $0: missing argument SRCROOT" >&2
   exit
 fi
@@ -179,7 +179,7 @@ SRCDIR=${SRCROOT%/*}
 #
 #
 #
-if [ -z $PAR1NAME ] ; then 
+if [[ -z $PAR1NAME ]] ; then 
   echo  "error in $0: missing or incomplete argument -r" >&2
   echo  "rule=$RULE" >&2
   echo  "PAR1NAME=$PAR1NAME" >&2
@@ -187,7 +187,7 @@ if [ -z $PAR1NAME ] ; then
   exit
 fi
 
-if [ -z $WHAT ] ; then 
+if [[ -z $WHAT ]] ; then 
   echo "error in $0: option -w not specified" >&2
   exit 1
 fi
@@ -220,9 +220,9 @@ EXECTBLE=$PAWXDIR/$EXECTBLE
 #
 # run only on selected host
 #
-if [ -n $SELECTEDHOST ] ; then 
-  if [ ${HOSTNAME%%.*} != $SELECTEDHOST ] ; then
-    if [ $DRYRUN = no ] ; then
+if [[ -n $SELECTEDHOST ]] ; then 
+  if [[ ${HOSTNAME%%.*} != $SELECTEDHOST ]] ; then
+    if [[ $DRYRUN = no ]] ; then
       echo "error in $0: not on $SELECTEDHOST" >&2
       echo "actual host name: ${HOSTNAME%%.*}" >&2
       exit 1
@@ -240,7 +240,7 @@ fi
 #-------------------------------------------------------------------------------
 #    report arguments
 #-------------------------------------------------------------------------------
-if [ $VERBOSE = yes ] ; then
+if [[ $VERBOSE = yes ]] ; then
   echo ========================================================
   echo "WHAT........: $WHAT"
   echo "SRCROOT.....: $SRCROOT"
@@ -264,7 +264,7 @@ for PAR1VAL in $PAR1VALS; do
   TARGETNAME=${SRCNAME}'_'${PAR1VAL}
   TARGETDIR=${SRCDIR}/${TARGETNAME}
   TARGETROOT=${TARGETDIR}/$TARGETNAME
-  if [ $VERBOSE = yes ] ; then
+  if [[ $VERBOSE = yes ]] ; then
     echo "========================================================"
     echo "parval.......: ${PAR1VAL}"
     echo "targetname...: ${TARGETNAME}"
@@ -280,13 +280,13 @@ for PAR1VAL in $PAR1VALS; do
   for EXT in $FILES; do
      SOURCE=${SRCROOT}.$EXT
      TARGET=${TARGETROOT}.$EXT
-     if [ ! -e ${SOURCE} ]; then 
+     if [[ ! -e ${SOURCE} ]]; then 
        echo "error in $0: missing file ${SOURCE}" >&2; exit 1
      fi
      #
      # copy if target does not exist or is older than source
      #
-     if [ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ] ; then
+     if [[ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ]] ; then
        echo copying file into $TARGET
        paw_resolve -r "${PAR1NAME}=$PAR1VAL" \
                    -r "SRCROOT=$SRCROOT" ${SOURCE} > ${TARGET}
@@ -303,8 +303,8 @@ for PAR1VAL in $PAR1VALS; do
   if [[ $WHAT = run ]] ; then
     SOURCE=${SOURCEROOT}.rstrt  
     TARGET=${TARGETROOT}.rstrt  
-    if [ ! -e ${TARGET} ]; then  # copy only if target does not exist
-      if [ -e ${SOURCE} ] ; then # copy only if source exists
+    if [[ ! -e ${TARGET} ]] ; then  # copy only if target does not exist
+      if [[ -e ${SOURCE} ]] ; then # copy only if source exists
         echo copying file into ${TARGET}
         cp ${SOURCE} ${TARGET}
         echo 'restart file copied...' `date`

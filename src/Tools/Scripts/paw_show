@@ -8,94 +8,126 @@
 ##  usage:                                                       ##
 ##    pawshow option rootname [outfile]                          ##
 ##                                                               ##
-##    (exactly one option must be given)                         ##
-##                                                               ##
 ##  options:                                                     ##
-##     ?        help                                             ##
 ##     -h       help                                             ##
 ##     -e       static total energy                              ##
 ##     -t       atomic temperature                               ##
 ##     -c       constant energy (constant of motion)             ##
 ##     -f       fictitios kinetic energy of the wave functions   ##
-##     -ar      friction acting on nuclei                        ##
-##     -ap      friction acting on wave functions                ##
+##     -a type: friction                                         ##
+##         type=r   friction acting on nuclei                    ##
+##         type=p   friction acting on wave functions            ##
 ##                                                               ##
 ##  dpendency:                                                   ##
 ##    uses xmgr as plotting routine                              ##
 ##                                                               ##
 ###################################################################
 TEMPDIR=/tmp/
-USAGE='\n
-usage: "pawshow option rootname [outfile]"\n\n
-1)rootname  is paw protocol file name without the ".prot" ending\n
-2)option (exactly one must be given) can be one of the following\n
-\t  ?: give info about use\n
-\t -h: give info about use\n
-\t -e: plot static total energy\n
-\t -t: plot temperature in kelvin\n
-\t -c+e: plot conserved energy and total energy\n
-\t -c: plot conserved energy\n
-\t -f: plot fictitious kinetic wave function energy\n
-\t -ar: plot friction acting on the nuclei\n
-\t -ap: plot friction acting on the wavefunctions\n
-use the following for qm-mm calculations:\n
-\t -qe: plot static total energy of the environmet\n
-\t -qc: plot conserved energy of the environment\n
-\t -qt: plot temperature in kelvin of the environment\n
-\t -tqt: both temperatures\n
-\t -cqc: both conserved energies\n
-3) optional argument outfile redirects output into file outfile\n
-\t if this argument is absent, output is shown with xmgrace'
-if (( $# < 2 )) ;then echo -e ${USAGE} ; exit; fi
-NAME=$2 
-case $1 in 
-"-e")# show static total energy
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $6}' >${TEMPDIR}tmp2
-    ;;
-"-t")# show temperature
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1'| sed 's/-/ -/g' | awk '{print $3 " " $4}' >${TEMPDIR}tmp2
-    ;;
-"-f")# show fictitious kinetic energy
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $5}' >${TEMPDIR}tmp2
-    ;;
-"-c")# show conserved energy 
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $7}' >${TEMPDIR}tmp2
-    ;;
-"-c+e")# show conserved energy and total energy
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $7 " " $6}' >${TEMPDIR}tmp2
-    ;;
-"-ap")# show friction acting on the wavefunctions
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $8}' >${TEMPDIR}tmp2
-    ;;
-"-ar")# show friction actin on the nuclei
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{print $3 " " $9}' >${TEMPDIR}tmp2
-    ;;
-"-qe")# show static total energy of environment
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($11 != "") print $3, " ", $11}' >${TEMPDIR}tmp2
-    ;;
-"-qc")# show conserved energy of environment
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($12 != "") print $3, " ", $12}' >${TEMPDIR}tmp2
-    ;;
-"-qt")# show temperature in kelvin of the environment
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $10}' >${TEMPDIR}tmp2
-    ;;
-"-tqt")# show temperature in kelvin of the environment
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $4, " " ,$10}' >${TEMPDIR}tmp2
-    ;;
-"-cqc")# show temperature in kelvin of the environment
-    grep "!>" ${NAME}.prot |sed 's/!>/!> /1' | sed 's/-/ -/g' | awk '{if ($10 != "") print $3, " ", $7, " " ,$12}' >${TEMPDIR}tmp2
-    ;;
-*)
-    echo -e ${USAGE} ; exit
-    ;;
-esac
-if (( $# == 3 )) ;then
-  cp ${TEMPDIR}tmp2 $3
+USAGE="
+usage: pawshow option rootname [outfile]\n
+1)rootname  is paw protocol file name without the .prot ending
+2)option (exactly one must be given) can be one of the following
+\t -h: give info about use
+\t -u unit: unit selection (must preceed quantity selection!)
+\t\t unit=ev|kj/mol/kcal/mol|h
+\t -e: plot static total energy
+\t -t: plot temperature in kelvin
+\t -c: plot conserved energy
+\t -f: plot fictitious kinetic wave function energy
+\t -a: type: plot friction 
+\t\t     type=p: phi
+\t\t     type=r: atoms
+3) optional argument outfile: redirects output into file outfile
+\t if this argument is absent, output is shown with xmgrace
+\n"
+# use the following for qm-mm calculations:\n
+# \t -qe: plot static total energy of the environmet\n
+# \t -qc: plot conserved energy of the environment\n
+# \t -qt: plot temperature in kelvin of the environment\n
+# \t -tqt: both temperatures\n
+# \t -cqc: both conserved energies\n
+#===================================================================
+#  resolve argument list                                          ==
+#===================================================================
+EUNIT=1.
+AWKSTRING=""
+while getopts :hetfca:u: OPT ; do
+  case $OPT in 
+    u) #unit
+       case $OPTARG in
+         ev) 
+             EUNIT=$(echo "$EUNIT * 27.211" | bc -l)
+             ;;
+         kj/mol) 
+             EUNIT=$(echo "$EUNIT * 0.0003808798" | bc -l)
+             ;;
+         kcal/mol) 
+             EUNIT=$(echo "$EUNIT * 0.001593601" | bc -l)
+             ;;
+         h)  
+             ;;
+         *) echo "error in $0: argument $OPTARG not for -u recognized" >&2
+            exit 1
+            ;;
+       esac
+       ;;
+    t) AWKSTRING="$AWKSTRING \" \" \$4 * $TUNIT " ;; # temperature
+    f) AWKSTRING="$AWKSTRING \" \" \$5 " ;; # fict. kinetic energy
+    e) AWKSTRING="$AWKSTRING \" \" \$6 * $EUNIT " ;; # static total energy
+    c) AWKSTRING="$AWKSTRING \" \" \$7 * $EUNIT " ;; # conserved energy
+    a) #friction
+       case $OPTARG in
+         p) AWKSTRING="$AWKSTRING \" \" \$8" ;; # wave functions
+         r) AWKSTRING="$AWKSTRING \" \" \$9" ;; # atomic positions
+         *) echo "error in $0: argument $OPTARG not recognized" >&2
+            exit 1
+            ;;
+       esac
+       ;;
+    h) 
+       echo -e "$USAGE"
+       ;;
+    \?) # unknown option
+       echo "error in $0: invalid option -$OPTARG" >&2
+       echo "retrieve argument list with:" >&2
+       echo "$0 -h" >&2
+       exit 1
+       ;;
+    :)    # no argument passed to option requiring one
+       echo "error in $0" >&2
+       echo "option -$OPTARG requires an additional argument" >&2
+       exit 1
+       ;;  
+  esac
+done
+shift $(($OPTIND - 1))
+#
+ROOT=$1
+if [[ -z $ROOT ]] ; then
+  echo "error in $0: argument ROOT not specified" >&2
+  exit 1
+fi
+OUT=$2
+#
+#===================================================================
+#  extract data from protocoll file                               ==
+#===================================================================
+AWKSTRING="{print \$3 $AWKSTRING}"
+grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
+                       | sed 's/-/ -/g' \
+                       | awk "$AWKSTRING" \
+                       > ${TEMPDIR}tmp2
+#
+#===================================================================
+#  print or present via xmgrace
+#===================================================================
+if [[ -n $OUT ]] ; then
+  cp ${TEMPDIR}tmp2 $OUT
 else
   xmgrace -free -noask -nxy ${TEMPDIR}tmp2
 fi
 rm ${TEMPDIR}tmp2
-exit
+exit 0
 
 
 

@@ -12,7 +12,7 @@
 #
 export USAGE="\n"
 USAGE="$USAGE Usage of $0:\n"
-USAGE="$USAGE \t paw_get-energy options rootname\n"
+USAGE="$USAGE \t paw_get options rootname\n"
 USAGE="$USAGE extracts data from file rootname.prot\n"
 USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -w whatid\n"
@@ -23,11 +23,12 @@ USAGE="$USAGE \t\t whatid=homo  \t prints energy of the highest occupied \
                                           state in eV\n"
 USAGE="$USAGE \t\t whatid=lumo  \t prints energy of the lowest unoccupied \
                                           state in eV\n"
-USAGE="$USAGE \t -n   prints the result as number (levels in eV, total \
-                            energies in Hartree)\n"
-USAGE="$USAGE \t -t   prints the result as text (default)\n"
-USAGE="$USAGE \t -v   verbose\n"
-USAGE="$USAGE \t -h   prints this help message\n"
+USAGE="$USAGE \t -n prints the result as number (levels in eV, total \
+                            energies in Hartree) or accordung to -u\n"
+USAGE="$USAGE \t -t prints the result as text (default)\n"
+USAGE="$USAGE \t -u unit: ev|kj/mol|kcal/mol|h (only for -n) \n"
+USAGE="$USAGE \t -v verbose\n"
+USAGE="$USAGE \t -h prints this help message\n"
 #
 #  resolve input arguments
 #  $TN is "T" fort text output and "N" for number output
@@ -35,23 +36,15 @@ USAGE="$USAGE \t -h   prints this help message\n"
 export TN=T
 export WHATID="etot"
 export VERBOSE=no
-while getopts :hw:tnp:v OPT ; do
+export UNIT=""
+while getopts :hw:tnp:vu: OPT ; do
   case $OPT in 
-    w)
-      WHATID="$OPTARG"
-      ;;
-    n) 
-      TN=N
-      ;;
-    t)
-      TN=T
-      ;;
-    v)
-      VERBOSE=yes
-      ;;
-    h)
-      echo -e $USAGE
-      ;;
+    w) WHATID="$OPTARG" ;;
+    n) TN=N             ;;
+    t) TN=T             ;;
+    u) UNIT=$OPTARG     ;;
+    v) VERBOSE=yes      ;;
+    h) echo -e $USAGE   ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
       echo "error in $0" >&2
       echo "invalid option -$OPTARG" >&2
@@ -72,80 +65,97 @@ ROOT=$1
 #   scan for allowed values of WHATID
 #
 case $WHATID in
-  etot)
-    WHAT="TOTAL ENERGY"
-    ;;
-  gap)
-    WHAT="ABSOLUTE GAP"
-    ;;
-  homo)
-    WHAT="HOMO-ENERGY" 
-    ;;
-  lumo)
-    WHAT="LUMO-ENERGY" 
-    ;;
-  efermi)
-    WHAT="CHEMICAL POTENTIAL" 
-    ;;
+  etot)   WHAT="TOTAL ENERGY" ;;
+  gap)    WHAT="ABSOLUTE GAP" ;;
+  homo)   WHAT="HOMO-ENERGY"  ;;
+  lumo)   WHAT="LUMO-ENERGY"  ;;
+  efermi) WHAT="CHEMICAL POTENTIAL"  ;;
   *)
     echo "error in $0: illegal argument $WHATID of option -w" >&2
     exit 1
     ;;
 esac
 #
+if [[ -n $UNIT ]] ; then
+  case $WHATID in
+    etot)   EUNIT=1. ;;
+    gap)    EUNIT=0.0367498438 ;;
+    homo)   EUNIT=0.0367498438 ;;
+    lumo)   EUNIT=0.0367498438 ;;
+    efermi) EUNIT=0.0367498438 ;;
+    *)
+      echo "error in $0: illegal argument $WHATID of option -w" >&2
+      exit 1
+      ;;
+  esac
+  #
+  case $UNIT in 
+     ev)       EUNIT=$(echo "$EUNIT * 27.211" | bc -l)   ;;
+     kj/mol)   EUNIT=$(echo "$EUNIT * 2625.500223430069" | bc -l) ;;
+     kcal/mol) EUNIT=$(echo "$EUNIT * 627.5096463920391" | bc -l) ;;
+     h)   ;;
+     *) echo "error in $0: argument $OPTARG for -u not recognized" >&2
+        exit 1
+        ;;
+  esac
+fi
+#
 # is rootname defined
 #
-if [ -z $ROOT ]; then
+if [[ -z $ROOT ]] ; then
   echo error: missing argument. specify root name of the paw_project
   exit 1
 fi
 #
 # report input variables
 #
-if [ $VERBOSE = yes ] ; then
+if [[ $VERBOSE = yes ]] ; then
   echo WHATID..................: $WHATID
   echo WHAT....................: $WHAT
   echo PROJECT NAME............: $ROOT
+  echo UNIT....................: $UNIT
   echo VERBOSE.................: $VERBOSE
   echo text or numerical output: $TN
 fi
 #
 # Does protocoll file exist?
 #
-if [ ! -e $ROOT.prot ]; then
+if [[ ! -e $ROOT.prot ]] ; then
   echo "error in $0: protocoll file does not exist" >&2
   echo "specified protocoll file: $ROOT.prot" >&2
   exit 1
 fi
-export RESULT=`grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
 #
 #  correction for mermin vs. non-mermin output
 #
-if [ -z  "$RESULT" ] ; then
-  if test  "$WHAT" = "CHEMICAL POTENTIAL"  ; then 
+if [[ -z  "$RESULT" ]] ; then
+  if [[ "$WHAT" = "CHEMICAL POTENTIAL" ]]  ; then 
     export WHAT1="HOMO-ENERGY" 
-    export RESULT1=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+    export RESULT1=$(grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
     RESULT1=${RESULT1%EV*}
     export WHAT2="LUMO-ENERGY" 
-    export RESULT2=`grep "$WHAT2" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+    export RESULT2=$(grep "$WHAT2" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
     RESULT2=${RESULT2%EV*}
     RESULT=$(echo " scale=5; ( $RESULT1 + $RESULT2 ) / 2 " | bc)
     RESULT="$RESULT EV"  
-    if [ -z $RESULT1 ] ; then RESULT='';  fi
-    if [ -z $RESULT2 ] ; then RESULT='';  fi
-  elif test  "$WHAT" = "HOMO-ENERGY" ; then
+    if [[ -z $RESULT1 ]] ; then RESULT='';  fi
+    if [[ -z $RESULT2 ]] ; then RESULT='';  fi
+  #
+  elif [[ "$WHAT" = "HOMO-ENERGY" ]] ; then
     export WHAT1="CHEMICAL POTENTIAL" 
-    export RESULT=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
-  elif test  "$WHAT" = "LUMO-ENERGY" ; then
+    export RESULT=$(grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+  #
+  elif [[ "$WHAT" = "LUMO-ENERGY" ]] ; then
     export WHAT1="CHEMICAL POTENTIAL" 
-    export RESULT=`grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}' `
+    export RESULT=$(grep "$WHAT1" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
   fi
 fi
 
 #
 #  test if result is non-empty
 #
-if [ -z  "$RESULT" ] ; then
+if [[ -z  "$RESULT" ]] ; then
   echo error in $0: no result found in $ROOT.prot
   exit 1
 fi
@@ -156,9 +166,12 @@ case $TN in
   N) 
     RESULT=${RESULT%H*}
     RESULT=${RESULT%EV*}
+    if [[ -n UNIT ]] ; then 
+      RESULT=$(echo "$RESULT * $EUNIT" | bc -l)
+    fi
     ;;
   *) 
-    RESULT=`echo "$WHAT = $RESULT for $ROOT"`
+    RESULT=$(echo "$WHAT = $RESULT for $ROOT")
     ;;
 esac
 #

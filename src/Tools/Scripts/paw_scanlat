@@ -122,7 +122,7 @@ for X in $ALATLIST; do
   #============================================================================
   # construct structure control file from template by replacing lattice constant
   #============================================================================
-  ALAT=`echo "$X /100 * $ALAT0 " | bc -l`
+  ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
   sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
   #============================================================================
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
