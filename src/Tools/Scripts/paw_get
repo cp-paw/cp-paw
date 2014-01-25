@@ -166,7 +166,7 @@ case $TN in
   N) 
     RESULT=${RESULT%H*}
     RESULT=${RESULT%EV*}
-    if [[ -n UNIT ]] ; then 
+    if [[ -n $UNIT ]] ; then 
       RESULT=$(echo "$RESULT * $EUNIT" | bc -l)
     fi
     ;;
