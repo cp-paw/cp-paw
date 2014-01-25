@@ -3,25 +3,48 @@
 #
 #          NAME: paw_scan
 #
-#         USAGE: paw_scan1 options preroot
+#         USAGE: paw_scan options SRCROOT
 #
-#       OPTIONS: -run, -eels, -dos, -dosplot, -wrapup, --dry-run
+#       OPTIONS: mandatory: wr optional: hnm0bv
 #
-#   DESCRIPTION:
+#   DESCRIPTION: perform a sequence of paw calculations with different
+#                input parameters.
 #
-#   a series of files specified by -f 
-#   is converted by the replacement rule specified by -r
-#   and copied into their own directory. 
-#   the executable specified by -x in directory specified by -b is executed
-#   in each directory with the corresponding control file.
-#   preroot contains the relative or absolute path of the projects
-#   including the common part of the rootname. The complete rootname
-#   will be constructed by appending the corresponding parameter
-#   separated by an underscore. preroot must contain at least one slash.
-#   Use ./string if run in the local directory.
+#       OPTIONS:
+#          -h    print this help message
+#          -r "name value1 value2 ...": replacement rule.
+#                Every occurance of @name@ will be replaced by one of the 
+#                specified values in thefiles with rootname $SRCROOT.
+#                Each calculation will be performed in its own directory 
+#                $SRCROOT_$value.
+#          -w whatid:
+#                whatid=run:  Perform CP-PAW simulation. 
+#                             Requires .cntl and .strc files
+#                whatid=fast: Perform CP-PAW simulation.
+#                             Requires .cntl and .strc files
+#                whatid=dos:  Make density-of-states. Requires .dcntl file.
+#        -n nnodes: submit parallel job with the specified number of processes
+#        -m hostname: limit execution to the specified host
+#        -0: dry-run
+#        -b: directory containing the paw executables
+#        -v: verbose
 #
-#   REQUIREMENTS: doppaw, paw_resolve, waittillempty, paw_get
-#                  paw_dos.x, paw_dosplot.x, gracebat
+# SRCROOT is the rootname of the source files and the common part of
+# the root name for all projects. It must contain the a relative or
+# absolute path (i.e. one "/").. The root names of individual projects
+# will be formed as TARGETROOT=$SRCROOT_$VALUE/$PROJECT_$VALUE, where
+# PROJECT is $SRCROOT stripped of the directory part and VALUE is
+# assigned by the rule specified by option -r.
+#
+# If the target directory does not contain a restart file, a source
+# restart file $SRCROOT.rstrt, if present and needed, will be copied
+# into the target directory.
+#
+#  Example:
+#       paw_scan -w run -r "EPW 20 30 40" ./si2
+#
+#   REQUIREMENTS: doppaw, paw_resolve, paw_waittillempty, paw_get
+#                  paw_dos.x
 #
 #         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
 #
@@ -35,39 +58,47 @@ export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE \tpaw_scan options SRCROOT\n"
 USAGE="$USAGE \n"
+USAGE="$USAGE Purpose:\n"
+USAGE="$USAGE \t perform a sequence of paw calculations with different \
+                 input parameters."
+USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -h \t print this help message \n"
-USAGE="$USAGE \t -r \"name value1 value2 ...\" replacement rule \n"
-USAGE="$USAGE \t -w whatid \n"
-USAGE="$USAGE \t\t whatid=eels make EELS data \n"
-USAGE="$USAGE \t\t whatid=dos make Density of States \n"
-USAGE="$USAGE \t\t whatid=dosplot make xmgrace batch file for Density \
-                                  of States plots\n"
-USAGE="$USAGE \t\t whatid=wrapup: make files with etot,homo,lumo,gap\n"
-USAGE="$USAGE \t -n NN submit with $NN processes in parallel\n"
+USAGE="$USAGE \t -r \"name value1 value2 ...\": replacement rule. \n"
+USAGE="$USAGE \t\t  every occurance of @name@ will be replaced by \
+                    one of the specified values\n"
+USAGE="$USAGE \t\t  in the files with rootname \$SRCROOT. \n"
+USAGE="$USAGE \t\t  Each calculation will be performed in its own directory \
+                    \$SRCROOT_\$value. \n"
+USAGE="$USAGE \t -w whatid: \n"
+USAGE="$USAGE \t\t whatid=run perform CP-PAW simulation. \
+                   Requires .cntl and .strc files\n"
+USAGE="$USAGE \t\t whatid=fast perform CP-PAW simulation\
+                   Requires .cntl and .strc files\n"
+USAGE="$USAGE \t\t whatid=dos make density-of-states.
+                   Requires .dcntl file.\n"
+USAGE="$USAGE \t -n nnodes: submit parallel job with the specified number \
+                             of processes\n"
 USAGE="$USAGE \t -m hostname: limit execution to the specified host\n"
 USAGE="$USAGE \t -0: dry-run\n"
 USAGE="$USAGE \t -b: directory containing the paw executables\n"
+USAGE="$USAGE \t -v: verbose\n"
 USAGE="$USAGE \n"
-USAGE="$USAGE PREROOT is the common part of the root name for all projects.\n"
+USAGE="$USAGE the argument SRCROOT is the rootname of the source files and\n"
+USAGE="$USAGE the common part of the root name for all projects.\n"
+USAGE="$USAGE It must contain the a relative or absolute path \
+              (i.e. one \"/\")..\n"
 USAGE="$USAGE The root names of individual projects will be formed as\n "
-USAGE="$USAGE ROOT=BASIS/PRENAME_NAME/PRENAME_NAME.\n"
-USAGE="$USAGE where PRENAME is PREROOT stripped of the directory part\n"
-USAGE="$USAGE and BASIS is the directory part of PREROOT.\n"
+USAGE="$USAGE TARGETROOT=\$SRCROOT_\$VALUE/\$PROJECT_\$VALUE.\n"
+USAGE="$USAGE where PROJECT is \$SRCROOT stripped of the directory part\n"
+USAGE="$USAGE and VALUE is assigned by the rule specified by option -r.\n"
 USAGE="$USAGE \n"
-USAGE="$USAGE prepare the following files:\n"
-USAGE="$USAGE BASIS/Samples/PRENAME.cntl_start\n"
-USAGE="$USAGE BASIS/Samples/PRENAME.cntl_run\n"
-USAGE="$USAGE BASIS/Samples/PRENAME.cntl_eels\n"
-USAGE="$USAGE BASIS/Samples/PRENAME.strc_run\n"
-USAGE="$USAGE BASIS/Samples/PRENAME.dcntl\n"
-USAGE="$USAGE BASIS/Samples/dosplot.dpcntl\n"
-USAGE="$USAGE BASIS/Samples/addeels.f90\n"
-USAGE="$USAGE addeels.f90 is a fortran code that sums up the EELS data"
-USAGE="$USAGE as desired.\n"
-USAGE="$USAGE during start, the _X will be stripped from !ORBPOT_X.\n"
-USAGE="$USAGE If there is a restart file BASIS/PRENAME.rstrt,\n"
-USAGE="$USAGE it will be used before starting from scratch\n"
+USAGE="$USAGE If the target directory does not contain a restart file,\n"
+USAGE="$USAGE a source restart file \$SRCROOT.rstrt, if present and needed, \n"
+USAGE="$USAGE will be copied into the target directory.\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Example:\n"
+USAGE="$USAGE \t paw_scan -w run -r \"EPW 20 30 40\" ./si2 \n"
 USAGE="$USAGE \n"
 #-------------------------------------------------------------------------------
 #  individual data
@@ -86,7 +117,7 @@ export VERBOSE=no
 #-------------------------------------------------------------------------------
 while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
   case $OPT in
-    r)
+    r)  #rule:   "id val1 val2 val3 ....". Use apostrophes!
       RULE="$OPTARG"
       PAR1NAME=""
       PAR1VALS=""
@@ -98,28 +129,25 @@ while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
         fi
       done
       ;;
-    w)   # run|eels|dos|wrapup|dosplot) 
-      TODO=$OPTARG
+    w)   # what: run|fast|dos) 
+      WHAT=$OPTARG
       ;;
-    f)
-      FILES="$FILES $OPTARG"
-      ;;
-    n)
+    n)   #nodes:
       NNODES=$OPTARG
       ;;
-    m)
+    m)   #machine:
       SELECTEDHOST=$OPTARG
       ;;
-    b)
+    b)   #builddirectory:
       PAWXDIR=$OPTARG
       ;;
-    0)
+    0)   #nothing:
       DRYRUN=yes
       ;;
-    v)
+    v)   #verbose
       VERBOSE=yes
       ;;
-    h)
+    h)   # help
       echo -e $USAGE
       ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
@@ -137,26 +165,19 @@ while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
   esac
 done
 shift $(($OPTIND - 1))
-SRCROOT=$1
-#  Directory containing all subprojects relative to THISDIR
-#BASIS=${SRCROOT%/*} 
-#SRCNAME=${PREROOT##*/}   # e.g. pmo,cmo,pcmo etc
+SRCROOT=$1  #  Directory containing all subprojects relative to THISDIR
+#
 #===================================================================
 # check arguments
 #===================================================================
-if [ -z $TODO ] ; then 
-  echo "error in $0: option -w not specified" >&2
-  exit 1
+if [ -z $SRCROOT ] ; then 
+  echo "error in $0: missing argument SRCROOT" >&2
+  exit
 fi
+SRCNAME=${SRCROOT##*/}
+SRCDIR=${SRCROOT%/*}
 #
-case $TODO in 
-  run)
-   ;;
-  *)
-    echo "error in $0: illegal argument $WHATID of option -w" >&2
-    exit 1
-    ;;
-esac
+#
 #
 if [ -z $PAR1NAME ] ; then 
   echo  "error in $0: missing or incomplete argument -r" >&2
@@ -165,15 +186,40 @@ if [ -z $PAR1NAME ] ; then
   echo  "PAR1VALS=$PAR1VALS" >&2
   exit
 fi
-if [ -z $TODO ] ; then 
-  echo -e "error in $0: missing argument -w"
-  exit
+
+if [ -z $WHAT ] ; then 
+  echo "error in $0: option -w not specified" >&2
+  exit 1
 fi
-if [ -z $SRCROOT ] ; then 
-  echo "error in $0: missing argument SRCROOT" >&2
-  exit
-fi
+#
+#
+#
+case $WHAT in
+  fast|run)
+    EXECTBLE=paw_fast.x
+    if [[ $NNODES != 0 ]] ; then
+      EXECTBLE=ppaw_fast.x
+    fi
+    CNTL=cntl
+    FILES="cntl strc"
+    # needs strc 
+    WHAT=run
+    ;;
+  dos)
+    EXECTBLE=paw_dos.x
+    CNTL=dcntl
+    FILES="dcntl"
+    # needs strc_out? pdos 
+   ;;
+  *) 
+    echo "error in $0: illegal value $WHAT for WHAT" >&1
+    exit 1
+    ;;
+esac
+EXECTBLE=$PAWXDIR/$EXECTBLE
+#
 # run only on selected host
+#
 if [ -n $SELECTEDHOST ] ; then 
   if [ ${HOSTNAME%%.*} != $SELECTEDHOST ] ; then
     if [ $DRYRUN = no ] ; then
@@ -184,29 +230,19 @@ if [ -n $SELECTEDHOST ] ; then
   fi
 fi
 #
-case $TODO in
-  fast|run)
-    EXECTBLE=paw_fast.x
-    CNTL=cntl
-    ;;
-  dos)
-    EXECTBLE=paw_dos.x
-    CNTL=dcntl
-    ;;
-  *) 
-    echo "error in $0: illegal value $TODO for TODO" >&1
-    exit 1
-    ;;
-esac
-EXECTBLE=$PAWXDIR/$EXECTBLE
+#  variables defined: 
+#    SRCROOT
+#    SELECTEDHOST EXECTBLE CNTL
+#    PAR1NAME PAR1RULES
+#    SRCROOT
+#    DRYRUN VERBOSE
+#
 #-------------------------------------------------------------------------------
 #    report arguments
 #-------------------------------------------------------------------------------
-SRCNAME=${SRCROOT##*/}
-SRCDIR=${SRCROOT%/*}
 if [ $VERBOSE = yes ] ; then
   echo ========================================================
-  echo "TODO........: $TODO"
+  echo "WHAT........: $WHAT"
   echo "SRCROOT.....: $SRCROOT"
   echo "SRCNAME.....: $SRCNAME"
   echo "SRCDIR......: $SRCDIR"
@@ -252,8 +288,8 @@ for PAR1VAL in $PAR1VALS; do
      #
      if [ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ] ; then
        echo copying file into $TARGET
-       paw_resolve -r ${PAR1NAME}=$PAR1VAL \
-                   -r NAME=$NAME ${SOURCE} > ${TARGET}
+       paw_resolve -r "${PAR1NAME}=$PAR1VAL" \
+                   -r "SRCROOT=$SRCROOT" ${SOURCE} > ${TARGET}
        RC=$?
        if [ $RC -ne 0 ] ; then
          echo "error in $0: paw_resolve failed to expand ${SOURCE}" >&2
@@ -264,27 +300,39 @@ for PAR1VAL in $PAR1VALS; do
   #
   #   copy restart file
   #
-  SOURCE=${SOURCEROOT}.rstrt  
-  TARGET=${TARGETROOT}.rstrt  
-  if [ ! -e ${TARGET} ]; then  # copy only if target does not exist
-    if [ -e ${SOURCE} ] ; then # copy only if source exists
-      echo copying file into ${TARGET}
-      cp ${SOURCE} ${TARGET}
-      echo 'restart file copied...' `date`
+  if [[ $WHAT = run ]] ; then
+    SOURCE=${SOURCEROOT}.rstrt  
+    TARGET=${TARGETROOT}.rstrt  
+    if [ ! -e ${TARGET} ]; then  # copy only if target does not exist
+      if [ -e ${SOURCE} ] ; then # copy only if source exists
+        echo copying file into ${TARGET}
+        cp ${SOURCE} ${TARGET}
+        echo 'restart file copied...' `date`
+      fi
     fi
   fi
   #
   # EXECUTE
   #
-  if [ $VERBOSE = yes ] ; then 
+  if [[ $VERBOSE = yes ]] ; then 
     echo "cd $TARGETDIR"
-    echo "$EXECTBLE $CNTL 1>out 2>&1"
+    echo "$EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1"
     echo "cd $THISDIR"
   fi
-  if [ $DRYRUN = no ] ; then 
+  if [[ $DRYRUN = no ]] ; then 
     cd $TARGETDIR
-    waittillempty
-    $EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &
+    if [[ $NNODES = 0 ]] ; then
+      paw_waittillempty
+      $EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &
+    else
+      if [[ WHAT != run ]] ; then
+        echo "error in $0: only -w run can be executed parallel" >&2
+        echo "WHAT (-w)=$WHAT" >&2
+        echo "number of nodes requersted: $NNODES" >&2
+        exit 1
+      fi
+      doppaw ${TARGETNAME} ${NNODES}
+    fi
     cd $THISDIR
   fi
 done

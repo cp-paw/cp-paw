@@ -1,14 +1,10 @@
 #!/bin/bash
 ############################################################################
 #
-#  command: paw_get 
+#  command: paw_get options ROOTNAME
 #
-#  instances: paw_get_energy|paw_get_gap|paw_get_homo|paw_get_lumo
-#
-#  extracts the last value for etot|gap|homo|lumo from the specified
-#  protocoll file and prints either text or number
-#
-#  Remark: when changing this command change all instances!
+#  extracts the last value for etot|gap|homo|lumo|efermi from the
+#  specified protocoll file and prints either text or number
 #
 ############################################################################
 #

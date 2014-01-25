@@ -7796,8 +7796,35 @@ are used which are ignored by the main simulation code. The keyword
  
 %==========================================================================
 \newpage
-\section{Tools}
+\section{Scripts}
 %==========================================================================
+The scripts are small bash shell scripts that simplify recurring operations
+with the CP-PAW code. 
+
+The following table provides an overview:\\
+\begin{center}
+\begin{tabular}{ll}
+\verb|paw_scan|    & perform sequence paw calculation \\
+\verb|paw_scanlat| & scan lattice constants. \\
+\verb|paw_show|    & show energies vs iterations. \\
+\verb|paw_collect| & collect total energies. \\
+\verb|paw_copy|    & copy files with a different root name.\\
+\verb|paw_get|     & extract the last value of certain data from simulation.\\
+\verb|paw_resolve| & expand text files according to replacement rules.\\
+\end{tabular}
+\end{center}
+
+%==========================================================================
+\subsubsection{Options and \textit{getopts}}
+%==========================================================================
+While there are currently a few exceptions, the options are scanned by
+the bash command \textit{getopts}. This implies that the options have
+the form of a single letter followed by an optional one-word
+argument. If the one-word argument is a sequence, enclose them by
+apostrophes. The string ``word1 word2 word3'' is treated as one-word
+argument.  The option id's can be arranged in arbitrary order and they
+can be grouped together. The optional argument may directly follow its
+option id or it may be separated from it by spaces.
 
 %==========================================================================
 \subsection{The Energy Analysis Tool: ``paw\_show''}
@@ -7879,20 +7906,24 @@ The calling sequence is
 \bigskip\fbox{{\tt paw\_get} \textit{options} \textit{ROOTNAME}}
 \vspace{0.5cm}
 
-\noindent Options:\\
-\hspace*{1.cm}\fbox{\begin{minipage}{0.9\linewidth}
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
 \begin{description}
-\item[-h]help message
-\item[?]help message
-\item[-etot]prints total energy in Hartree (default)
-\item[-gap]prints fundamental band gap in eV
-\item[-homo]prints energy of the highest occupied state in eV
-\item[-lumo]prints energy of the lowest unoccupied state in eV
-\item[-n]prints the result as number 
-\item[-t]prints the result as text
+\item[-h:] print help message
+\item[-w whatid:] Specify the quantity to be extracted. whatid may be one of
+\begin{description}
+\item[etot:] total energy in Hartree (default)
+\item[gap:]  fundamental band gap in eV
+\item[homo:] energy of the highest occupied state in eV
+\item[lumo:] energy of the lowest unoccupied state in eV
+\item[efermi:] energy of the fermi level in eV
+\end{description}
+\item[-n:] prints the result as number 
+\item[-t:] prints the result as text
+\item[-v:] verbose
 \end{description}
 \end{minipage}}
-
+\bigskip
 
 The command scans the file \textit{rootname}\verb|.prot| and
 prints the last occurance of the corresponding variable 
