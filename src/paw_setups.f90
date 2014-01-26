@@ -3013,8 +3013,8 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
 !     ==========================================================================
-PRINT*,'ROUT ',ROUT,' rbndout',rbndout
-      dh=0.d0
+PRINT*,'ROUT ',ROUT,' RBNDOUT',RBNDOUT
+      DH=0.D0
       DO LN1=1,LNX
         DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
@@ -5085,6 +5085,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
       INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
       REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
+      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
       INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
       INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
       INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
@@ -5097,7 +5098,6 @@ PRINT*,'KI ',KI
       INTEGER(4)            :: LMCA
       INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2
-      LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -6987,7 +6987,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !PB THIS MAY BE NUMERICALLY PROBLEMATIC.
         AUX(:)=R**2*(UCORE(:,I)*AEPHIDOT+UCORESM(:,I)*AEPHIDOTSM(:))/SVAR1
         CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,rout,SVAR2)
+        CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,SVAR2)
         AEPHIDOT(:)=AEPHIDOT(:)-UCORE(:,I)*SVAR2
         AEPHIDOTSM(:)=AEPHIDOTSM(:)-UCORESM(:,I)*SVAR2
       ENDDO
@@ -6996,11 +6996,11 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
 !     == RESCALE CONSISTENTLY: WAVE FUNCTION PHI(IPHISCALE) WILL HAVE NORM 1  ==
 !     ==========================================================================
 PRINT*,'IPHISCALE ',IPHISCALE
-iphiscale=1
+IPHISCALE=1
       IF(IPHISCALE.NE.0) THEN
         AUX=R**2*(AEPHI(:,IPHISCALE)**2+AEPHISM(:,IPHISCALE)**2)
         CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-        CALL RADIAL$VALUE(GID,NR,AUX1,3.d0,SCALE)
+        CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,SCALE)
 !PB THIS NORMALIZATION RADIUS IS PHYSICALLY INSIGNIFICANT. THE RADIUS OF 3 A.U
 !PB ALLOWS BETTER COMPARISON.
         SCALE=1.D0/SQRT(SCALE)
