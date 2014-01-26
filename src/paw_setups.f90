@@ -3013,7 +3013,8 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
 !     ==========================================================================
-PRINT*,'ROUT ',ROUT
+PRINT*,'ROUT ',ROUT,' rbndout',rbndout
+      dh=0.d0
       DO LN1=1,LNX
         DO LN2=1,LNX
           IF(LOX(LN1).NE.LOX(LN2)) CYCLE
