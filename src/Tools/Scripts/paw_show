@@ -71,7 +71,7 @@ while getopts :hetfca:u: OPT ; do
             ;;
        esac
        ;;
-    t) AWKSTRING="$AWKSTRING \" \" \$4 * $TUNIT " ;; # temperature
+    t) AWKSTRING="$AWKSTRING \" \" \$4 " ;; # temperature (Kelvin)
     f) AWKSTRING="$AWKSTRING \" \" \$5 " ;; # fict. kinetic energy
     e) AWKSTRING="$AWKSTRING \" \" \$6 * $EUNIT " ;; # static total energy
     c) AWKSTRING="$AWKSTRING \" \" \$7 * $EUNIT " ;; # conserved energy
