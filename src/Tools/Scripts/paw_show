@@ -22,7 +22,6 @@
 ##    uses xmgr as plotting routine                              ##
 ##                                                               ##
 ###################################################################
-TEMPDIR=/tmp/
 USAGE="
 usage: pawshow option rootname [outfile]\n
 1)rootname  is paw protocol file name without the .prot ending
@@ -110,23 +109,40 @@ fi
 OUT=$2
 #
 #===================================================================
+#  make a temporary file
+#===================================================================
+# check if environment variable TMPDIR is set
+if [[ -z ${TMPDIR} ]] ; then TMPDIR=/tmp ; fi
+if [[ ! -d ${TMPDIR} ]] ; then
+  echo "error in $0: temp directory does not exist"
+  echo "TMPDIR=$TMPDIR"
+  exit 1
+fi
+TMPFILE=$(mktemp ${TMPDIR}/pawshowfile.XXXXXX)
+RC=$?
+if [[ $RC -ne 0 ]]; then
+  echo "error in $0: Can't create temp file, exiting..."
+  exit 1
+fi
+#
+#===================================================================
 #  extract data from protocoll file                               ==
 #===================================================================
 AWKSTRING="{print \$3 $AWKSTRING}"
 grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
                        | sed 's/-/ -/g' \
                        | awk "$AWKSTRING" \
-                       > ${TEMPDIR}tmp2
+                       > ${TMPFILE}
 #
 #===================================================================
 #  print or present via xmgrace
 #===================================================================
 if [[ -n $OUT ]] ; then
-  cp ${TEMPDIR}tmp2 $OUT
+  cp ${TMPFILE} $OUT
 else
-  xmgrace -free -noask -nxy ${TEMPDIR}tmp2
+  xmgrace -free -noask -nxy ${TMPFILE}
 fi
-rm ${TEMPDIR}tmp2
+rm ${TMPFILE}
 exit 0
 
 

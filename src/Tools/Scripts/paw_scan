@@ -80,7 +80,7 @@ USAGE="$USAGE \t\t whatid=dos make density-of-states.
 USAGE="$USAGE \t -n nnodes: submit parallel job with the specified number \
                              of processes\n"
 USAGE="$USAGE \t -m hostname: limit execution to the specified host\n"
-USAGE="$USAGE \t -0: dry-run\n"
+USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
 USAGE="$USAGE \t -b: directory containing the paw executables\n"
 USAGE="$USAGE \t -v: verbose\n"
 USAGE="$USAGE \n"
@@ -113,9 +113,22 @@ export SELECTEDHOST=""
 export DRYRUN=no
 export VERBOSE=no
 #-------------------------------------------------------------------------------
+#  implement dry-run
+#-------------------------------------------------------------------------------
+function execute(){
+    if [ ${DRYRUN} = yes -o ${VERBOSE} = yes ] ; then
+      echo "${@}"
+    fi
+    if [[ ${DRYRUN} = no ]] ; then
+      eval "$@"
+    fi
+}
+
+#-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
 while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
+  echo OPT=$OPT
   case $OPT in
     r)  #rule:   "id val1 val2 val3 ....". Use apostrophes!
       RULE="$OPTARG"
@@ -143,9 +156,12 @@ while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
       ;;
     0)   #nothing:
       DRYRUN=yes
+#      set -n
       ;;
     v)   #verbose
       VERBOSE=yes
+#      set -v
+#      set -x
       ;;
     h)   # help
       echo -e $USAGE
@@ -274,24 +290,30 @@ for PAR1VAL in $PAR1VALS; do
   #
   # create target directory
   #
-  if [ ! -d $TARGETDIR ] ; then mkdir $TARGETDIR; fi
+  if [[ ! -d $TARGETDIR ]] ; then mkdir $TARGETDIR; fi
   #
   #
   for EXT in $FILES; do
      SOURCE=${SRCROOT}.$EXT
      TARGET=${TARGETROOT}.$EXT
-     if [[ ! -e ${SOURCE} ]]; then 
+     if [[ ! -e ${SOURCE} ]] ; then 
        echo "error in $0: missing file ${SOURCE}" >&2; exit 1
+     fi
+     #
+     # remove target if older than source
+     #
+     if [[ -e $TARGET ]] ; then
+       if [ ${TARGET} -ot ${SOURCE} ] ; then rm $TARGET; fi
      fi
      #
      # copy if target does not exist or is older than source
      #
-     if [[ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ]] ; then
+     if [[ ! -e ${TARGET} ]] ; then
        echo copying file into $TARGET
        paw_resolve -r "${PAR1NAME}=$PAR1VAL" \
                    -r "SRCROOT=$SRCROOT" ${SOURCE} > ${TARGET}
        RC=$?
-       if [ $RC -ne 0 ] ; then
+       if [[ $RC -ne 0 ]] ; then
          echo "error in $0: paw_resolve failed to expand ${SOURCE}" >&2
          exit 1
        fi
@@ -301,12 +323,12 @@ for PAR1VAL in $PAR1VALS; do
   #   copy restart file
   #
   if [[ $WHAT = run ]] ; then
-    SOURCE=${SOURCEROOT}.rstrt  
+    SOURCE=${SRCROOT}.rstrt  
     TARGET=${TARGETROOT}.rstrt  
     if [[ ! -e ${TARGET} ]] ; then  # copy only if target does not exist
       if [[ -e ${SOURCE} ]] ; then # copy only if source exists
         echo copying file into ${TARGET}
-        cp ${SOURCE} ${TARGET}
+        execute "cp ${SOURCE} ${TARGET}"
         echo 'restart file copied...' `date`
       fi
     fi
@@ -314,26 +336,19 @@ for PAR1VAL in $PAR1VALS; do
   #
   # EXECUTE
   #
-  if [[ $VERBOSE = yes ]] ; then 
-    echo "cd $TARGETDIR"
-    echo "$EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1"
-    echo "cd $THISDIR"
-  fi
-  if [[ $DRYRUN = no ]] ; then 
-    cd $TARGETDIR
-    if [[ $NNODES = 0 ]] ; then
-      paw_waittillempty
-      $EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &
-    else
-      if [[ WHAT != run ]] ; then
-        echo "error in $0: only -w run can be executed parallel" >&2
-        echo "WHAT (-w)=$WHAT" >&2
-        echo "number of nodes requersted: $NNODES" >&2
-        exit 1
-      fi
-      doppaw ${TARGETNAME} ${NNODES}
+  cd $TARGETDIR
+  if [[ $NNODES = 0 ]] ; then
+    execute "paw_waittillempty"
+    execute "$EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &"
+  else
+    if [[ WHAT != run ]] ; then
+      echo "error in $0: only -w run can be executed parallel" >&2
+      echo "WHAT (-w)=$WHAT" >&2
+      echo "number of nodes requested: $NNODES" >&2
+      exit 1
     fi
-    cd $THISDIR
+    execute "doppaw ${TARGETNAME} ${NNODES}"
   fi
+  cd $THISDIR
 done
 exit 0

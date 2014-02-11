@@ -3569,9 +3569,8 @@ PRINT*,' BEFORE SPINOR$PRINTL'
 !     **************************************************************************
 !     **  C=A*B                                                               **
 !     **                                                                      **
-!     **  DERIVATION IN METHODS: SECTION "SECOND QUANTIZATION WITH            **
-!     **  NON-ORTHONORMAL BVAIS SETS, SUBSECTION "INVERSION OF A MATRIX IN    **
-!     **  SPINOR REPRESENTATION                                               **
+!     **  DERIVATION IN METHODS: SECTION "WORKING WITH SPIN ORBITALS",        **
+!     **  SUBSECTION "INVERSION OF A MATRIX IN SPINOR REPRESENTATION          **
 !     **************************************PETER BLOECHL GOSLAR 2013***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NCHI

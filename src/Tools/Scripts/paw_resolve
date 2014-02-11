@@ -30,6 +30,9 @@
 #  Remark: @string@ must not contain any spaces. Two neighboring
 #  occurances must be separated by a space or a newline.
 #
+#  Remark: colons are used instead of slashes as separators in sed to allow
+#  replacements with path names.
+#
 #  Example:
 #
 #    paw_resolve -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
@@ -115,7 +118,7 @@ CHS2=""
 for X in $RULES ; do
    A=${X%=*}
    B=${X##*=}
-   CHS0="$CHS0-e s/@$A@/$B/g "
+   CHS0="$CHS0-e s:@$A@:$B:g "
 done
 #-------------------------------------------------------------------------------
 # explicit file replacement rules
@@ -127,15 +130,15 @@ for X in $FRULES ; do
      echo "error in $0: file of file rule $X does not exist" >&2
      exit 1
    fi
-   CHS0="$CHS0 -e/@$A@/r${B} "
-   CHS2="$CHS2 -e /@$A@/d " 
+   CHS0="$CHS0 -e:@$A@:r${B} "
+   CHS2="$CHS2 -e :@$A@:d " 
 done
 #
 #-------------------------------------------------------------------------------
 # collect all lines containing @*@ in infile ($IN) and obtain the file
 # names in @file@ as $LIST
 #-------------------------------------------------------------------------------
-VAR=$(sed -n -e '/@*@/p' < $IN)
+VAR=$(sed -n -e ':@*@:p' < $IN)
 # collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
@@ -168,7 +171,7 @@ for X in $VAR; do
       exit 1
     fi
     # check if the lines containing file replacements are alone on one line
-    LINES=$(sed -n -e "/@$X@/=" $IN)
+    LINES=$(sed -n -e ":@$X@:=" $IN)
     for Y in $LINES ; do
       LINE=$(sed -n -e ${Y}p < $IN)
       for Z in $LINE ; do
@@ -189,11 +192,11 @@ done
 # to standard out.
 #-------------------------------------------------------------------------------
 for X in $LIST; do
-  CHS1="${CHS1}-e/@$X@/r${PRE}${X}"
+  CHS1="${CHS1}-e:@$X@:r${PRE}${X}"
 done
 #
 for X in $LIST; do
-   CHS2="$CHS2 -e /@$X@/d " 
+   CHS2="$CHS2 -e :@$X@:d " 
 done
 #-------------------------------------------------------------------------------
 # compose and execute command
