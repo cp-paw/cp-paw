@@ -121,9 +121,9 @@
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: X
       REAL(8),INTENT(OUT):: VAL
-      real(8),external ::derf
+      REAL(8),EXTERNAL ::DERF
 !     **************************************************************************
-      call lib$erfr8(x,val)
+      CALL LIB$ERFR8(X,VAL)
       RETURN
       END
 !
@@ -263,7 +263,7 @@
         END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPECIALFUNCTION$BESSELold(L,X,Y)
+      SUBROUTINE SPECIALFUNCTION$BESSELOLD(L,X,Y)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                            **
@@ -370,7 +370,7 @@
 !===============================================================================
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$BESSELold(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$BESSELOLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION                            **
@@ -475,7 +475,7 @@
         RETURN
       END IF
       RETURN
-      END SUBROUTINE SPFUNCTION$BESSELold
+      END SUBROUTINE SPFUNCTION$BESSELOLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$BESSEL(L,X,Y,DYDX)
@@ -484,13 +484,13 @@
 !     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! BESSL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
-      REAL(8)               :: Jlphalb,Jlmhalb,Jlpdreihalb
+      REAL(8)               :: JLPHALB,JLMHALB,JLPDREIHALB
       REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
       REAL(8),PARAMETER     :: XMIN=1.D-30
 !     **************************************************************************
@@ -498,34 +498,34 @@
         CALL ERROR$MSG('BESSEL FUNCTION FOR NEGATIVE ARG UNDEFINED')
         CALL ERROR$STOP('SPFUNCTION$BESSEL')
       ELSE IF(X.LT.XMIN)THEN
-        IF(L.eq.0)THEN
+        IF(L.EQ.0)THEN
           Y=1.0D0
         ELSE
           Y=0.0D0
         ENDIF
-        IF(L.eq.1)THEN
+        IF(L.EQ.1)THEN
           DYDX=1.0D0/3.0D0
         ELSE
           DYDX=0.0D0
         ENDIF
       ELSE
-        CALL LIB$DBESJ(REAL(L,KIND=8)+0.5D0,X,Jlphalb)
-        Y=0.5d0*sqrt(2.d0*PI/X)*Jlphalb
-        IF(L.eq.0)THEN
-          CALL LIB$DBESJ(REAL(L,KIND=8)+1.5D0,X,Jlpdreihalb)
-          DYDX=-sqrt(0.5D0*PI/X)*Jlpdreihalb
-          !DYDX=(cos(X)-sin(x)/X)/x
+        CALL LIB$DBESJ(REAL(L,KIND=8)+0.5D0,X,JLPHALB)
+        Y=0.5D0*SQRT(2.D0*PI/X)*JLPHALB
+        IF(L.EQ.0)THEN
+          CALL LIB$DBESJ(REAL(L,KIND=8)+1.5D0,X,JLPDREIHALB)
+          DYDX=-SQRT(0.5D0*PI/X)*JLPDREIHALB
+          !DYDX=(COS(X)-SIN(X)/X)/X
         ELSE
-          CALL LIB$DBESJ(REAL(L,KIND=8)-0.5D0,X,Jlmhalb)
-          CALL LIB$DBESJ(REAL(L,KIND=8)+1.5D0,X,Jlpdreihalb)
-          DYDX=-0.25d0*sqrt(2.0D0*PI/x)*(Jlphalb/x-Jlmhalb+Jlpdreihalb) 
+          CALL LIB$DBESJ(REAL(L,KIND=8)-0.5D0,X,JLMHALB)
+          CALL LIB$DBESJ(REAL(L,KIND=8)+1.5D0,X,JLPDREIHALB)
+          DYDX=-0.25D0*SQRT(2.0D0*PI/X)*(JLPHALB/X-JLMHALB+JLPDREIHALB) 
         ENDIF
       END IF
       RETURN
       END SUBROUTINE SPFUNCTION$BESSEL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$NEUMANNold(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$NEUMANNOLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  SPHERICAL BESSEL FUNCTION OF THE SECOND KIND Y_L(X)                 **
@@ -625,7 +625,7 @@
         ENDDO
       END IF
       RETURN
-      END SUBROUTINE SPFUNCTION$NEUMANNold
+      END SUBROUTINE SPFUNCTION$NEUMANNOLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$NEUMANN(L,X,Y,DYDX)
@@ -637,13 +637,17 @@
 !     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     **  CAUTION: THE NEUMANN FUNCTION IS DEFINED WITH AN OPPOSITE SIGN!!!   **
+!     **    THIS IS THE NEUMANN FUNCTION MULTIPLIED WITH -1!!                 **
+!     **    NEUMANN FUNCTION AND BESSEL FUNCTION OF THE SECOND KIND ARE       **
+!     **    DEFINED WITH OPPOSITE SIGN.  (REMARK PBLOECHL FEB. 15,2014)       **
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE OF NEUMANN FUNCTION AT X
-      REAL(8)               :: Ylphalb,Ylmhalb,Ylpdreihalb
+      REAL(8)               :: YLPHALB,YLMHALB,YLPDREIHALB
       REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
       REAL(8),PARAMETER     :: XMIN=1.D-30
 !     **************************************************************************
@@ -672,7 +676,7 @@
       END SUBROUTINE SPFUNCTION$NEUMANN
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$MODBESSELold(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$MODBESSELOLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE MODIFIED SPHERICAL BESSEL FUNCTION                   **
@@ -748,7 +752,7 @@
         CALL ERROR$STOP('SPFUNCTION$MODBESSEL')
       END IF
       RETURN
-      END SUBROUTINE SPFUNCTION$MODBESSELold
+      END SUBROUTINE SPFUNCTION$MODBESSELOLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$MODBESSEL(L,X,Y,DYDX)
@@ -757,13 +761,13 @@
 !     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED BESSEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
-      REAL(8)               :: Ilphalb,Ilmhalb,Ilpdreihalb
+      REAL(8)               :: ILPHALB,ILMHALB,ILPDREIHALB
       REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
       REAL(8),PARAMETER     :: XMIN=1.D-30
 !     **************************************************************************
@@ -779,22 +783,22 @@
           DYDX=0.0D0
         ENDIF
       ELSE
-        CALL LIB$DBESI(REAL(L,KIND=8)+0.5D0,X,Ilphalb)
-        Y=0.5d0*sqrt(2.d0*PI/X)*Ilphalb
-        IF(L.eq.0)THEN
-          CALL LIB$DBESI(1.5D0,X,Ilmhalb)
-          DYDX=0.5d0*sqrt(2.0D0*PI/x)*Ilmhalb
+        CALL LIB$DBESI(REAL(L,KIND=8)+0.5D0,X,ILPHALB)
+        Y=0.5D0*SQRT(2.D0*PI/X)*ILPHALB
+        IF(L.EQ.0)THEN
+          CALL LIB$DBESI(1.5D0,X,ILMHALB)
+          DYDX=0.5D0*SQRT(2.0D0*PI/X)*ILMHALB
         ELSE
-          CALL LIB$DBESI(REAL(L,KIND=8)-0.5D0,X,Ilmhalb)
-          CALL LIB$DBESI(REAL(L,KIND=8)+1.5D0,X,Ilpdreihalb)
-          DYDX=-0.25d0*sqrt(2.0D0*PI/x)*(Ilphalb/x-Ilmhalb-Ilpdreihalb)  
+          CALL LIB$DBESI(REAL(L,KIND=8)-0.5D0,X,ILMHALB)
+          CALL LIB$DBESI(REAL(L,KIND=8)+1.5D0,X,ILPDREIHALB)
+          DYDX=-0.25D0*SQRT(2.0D0*PI/X)*(ILPHALB/X-ILMHALB-ILPDREIHALB)  
         ENDIF
       ENDIF
       RETURN
       END SUBROUTINE SPFUNCTION$MODBESSEL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$MODNEUMANNold(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$MODNEUMANNOLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE MODIFIED SPHERICAL NEUMANN FUNCTION                  **
@@ -876,7 +880,7 @@
         ENDDO
       END IF
       RETURN
-      END SUBROUTINE SPFUNCTION$MODNEUMANNold
+      END SUBROUTINE SPFUNCTION$MODNEUMANNOLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$MODNEUMANN(L,X,Y,DYDX)
@@ -885,7 +889,7 @@
 !     **  ACCORDING TO ABRAMOWITZ AND STEGUN                                  **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -895,7 +899,7 @@
       REAL(8),PARAMETER     :: XMIN=1.D-30
       REAL(8)               :: MODHANKEL_Y,MODHANKEL_DYDX
       REAL(8)               :: MODBESSEL_Y,MODBESSEL_DYDX
-!     *****************************************r.schade, 2013*******************
+!     *****************************************R.SCHADE, 2013*******************
       IF(X.LT.0.D0) THEN
         CALL ERROR$MSG('NEUMANN FUNCTION NOT DEEFINED FOR NEGATIVE ARG')
         CALL ERROR$I4VAL('L',L)
@@ -907,7 +911,7 @@
         CALL ERROR$R8VAL('X',X)
         CALL ERROR$STOP('SPFUNCTION$NEUMANN')
       ELSE
-        !stegun 10.2.4
+        !STEGUN 10.2.4
         CALL SPFUNCTION$MODHANKEL(L,X,MODHANKEL_Y,MODHANKEL_DYDX)
         CALL SPFUNCTION$MODBESSEL(L,X,MODBESSEL_Y,MODBESSEL_DYDX)
         Y   =-2.0D0/PI*(-1)**(L+1)*MODHANKEL_Y   +MODBESSEL_Y
@@ -938,7 +942,7 @@
 !!$      END SUBROUTINE SPFUNCTION$HANKEL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$MODHANKELold(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$MODHANKELOLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **  MODIFIED SPHERICAL BESSEL FUNCTION OF THE THIRD KIND K_L(X)         **
 !     **  AS DEFINED IN ABRAMOWITZ/STEGUN EQ. 10.2.4                          **
@@ -993,7 +997,7 @@
         ENDDO
       END IF
       RETURN
-      END SUBROUTINE SPFUNCTION$MODHANKELold
+      END SUBROUTINE SPFUNCTION$MODHANKELOLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$MODHANKEL(L,X,Y,DYDX)
@@ -1002,7 +1006,7 @@
 !     **  AS DEFINED IN ABRAMOWITZ/STEGUN EQ. 10.2.4                          **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -1010,27 +1014,27 @@
       REAL(8)   ,INTENT(OUT):: DYDX ! MODIFIED HANKEL FUNCTION AT X
       REAL(8)   ,PARAMETER  :: PI=3.141592653589793238462643383279502884197169D0
       REAL(8)   ,PARAMETER  :: XMIN=1.D-30
-      REAL(8)               :: Klphalb,Klmhalb,Klpdreihalb
+      REAL(8)               :: KLPHALB,KLMHALB,KLPDREIHALB
 !     **************************************************************************
       IF(X.LE.0.D0) THEN
         CALL ERROR$MSG('UNDEFINED FOR NEGATIVE OR ZERO ARGUMENTS')
         CALL ERROR$STOP('SPFUNCTION$MODHANKEL')
       ELSE 
-        CALL LIB$DBESK(REAL(L,KIND=8)+0.5D0,X,Klphalb)
-        Y=0.5d0*sqrt(2.d0*PI/X)*Klphalb
-        IF(L.eq.0)THEN
-          DYDX=-0.5D0*PI*exp(-X)*(1.0D0/x+1.0D0/x**2)
+        CALL LIB$DBESK(REAL(L,KIND=8)+0.5D0,X,KLPHALB)
+        Y=0.5D0*SQRT(2.D0*PI/X)*KLPHALB
+        IF(L.EQ.0)THEN
+          DYDX=-0.5D0*PI*EXP(-X)*(1.0D0/X+1.0D0/X**2)
         ELSE
-          CALL LIB$DBESK(REAL(L,KIND=8)-0.5D0,X,Klmhalb)
-          CALL LIB$DBESK(REAL(L,KIND=8)+1.5D0,X,Klpdreihalb)
-          DYDX=-0.25d0*sqrt(2.0D0*PI/x)*(Klphalb/x+Klmhalb+Klpdreihalb)  
+          CALL LIB$DBESK(REAL(L,KIND=8)-0.5D0,X,KLMHALB)
+          CALL LIB$DBESK(REAL(L,KIND=8)+1.5D0,X,KLPDREIHALB)
+          DYDX=-0.25D0*SQRT(2.0D0*PI/X)*(KLPHALB/X+KLMHALB+KLPDREIHALB)  
         ENDIF
       END IF
       RETURN
       END SUBROUTINE SPFUNCTION$MODHANKEL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$BESSEL0old(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$BESSEL0OLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION FOR K=0.                   **
@@ -1055,7 +1059,7 @@
         Y = X**L / REAL(FAC,KIND=8)
         DYDX=REAL(L,KIND=8)*X**(L-1)/REAL(FAC,KIND=8)
       END IF
-      END SUBROUTINE SPFUNCTION$BESSEL0old
+      END SUBROUTINE SPFUNCTION$BESSEL0OLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$BESSEL0(L,X,Y,DYDX)
@@ -1063,7 +1067,7 @@
 !     **  CALCULATES THE SPHERICAL BESSEL FUNCTION FOR K=0.                   **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
@@ -1100,7 +1104,7 @@
       END SUBROUTINE SPFUNCTION$BESSEL0
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SPFUNCTION$NEUMANN0old(L,X,Y,DYDX)
+      SUBROUTINE SPFUNCTION$NEUMANN0OLD(L,X,Y,DYDX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATES THE SPHERICAL NEUMANN FUNCTION FOR K=0.                  **
@@ -1125,15 +1129,15 @@
       Y = -REAL(FAC,KIND=8) / X**(L+1)
       DYDX = -REAL(L+1,KIND=8)*Y/X
       RETURN
-      END SUBROUTINE SPFUNCTION$NEUMANN0old
+      END SUBROUTINE SPFUNCTION$NEUMANN0OLD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPFUNCTION$NEUMANN0(L,X,Y,DYDX)
 !     **************************************************************************
-!     **  CALCULATES THE SPHERICAL NEUMANN FUNCTION FOR Kappa=0.              **
+!     **  CALCULATES THE SPHERICAL NEUMANN FUNCTION FOR KAPPA=0.              **
 !     **  ALSO SEE NOTES IN 13_04_29_TEST_SPECIAL_FUNCTIONS.PDF               **
 !     **                                                                      **
-!     ******************************************R. Schade, 2013*****************
+!     ******************************************R. SCHADE, 2013*****************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT

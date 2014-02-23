@@ -25,7 +25,7 @@
       REAL(8)              :: DIS
       CHARACTER(64)        :: FILE
       REAL(8)              :: MAXDEV
-      LOGICAL    ,PARAMETER:: TPR=.false.
+      LOGICAL    ,PARAMETER:: TPR=.FALSE.
 !     **************************************************************************
 !     == THE BARE HANKEL FUNCTION IS CENTERED AT THE ORIGIN AND CALCULATED 
 !     == ALONG A LINE FROM CENTER-DR TO CENTER+DR.
@@ -33,7 +33,7 @@
       CENTER(:)=(/0.D0,1.D0,5.D0/)
       DR(:)=(/0.D0,1.D0,1.D0/)
       MAXDEV=0.D0
-      DO IK=-1,1   ! try negative, positive and zero kappa
+      DO IK=-1,1   ! TRY NEGATIVE, POSITIVE AND ZERO KAPPA
         K2=REAL(IK,KIND=8)
         IF(TPR) THEN
           WRITE(FILE,*)IK
@@ -46,7 +46,7 @@
           CALL LMTO$SOLIDHANKEL(R,1.D-3,K2,(L1X+1)**2,H)
           CALL LMTO$STRUCTURECONSTANTS(CENTER,K2,L1X,L2X,S)
           CALL LMTO$SOLIDBESSEL(R-CENTER,K2,(L2X+1)**2,J)
-          MINUSJS=-MATMUL(J,transpose(S)) 
+          MINUSJS=-MATMUL(J,TRANSPOSE(S)) 
           MAXDEV=MAX(MAXDEV,MAXVAL(ABS(H-MINUSJS)))
 !
 !         ==PRINT ==============================================================
@@ -168,7 +168,7 @@
           DYDX=DYDX*2.D0/PI*K**(L+2)
         ELSE
 !         ==  Y(X)= 1/(2L-1)!! * X**(-L-1) 
-          CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.5
+          CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.6
           Y=-Y     !
           DYDX=-DYDX 
         END IF 
@@ -418,8 +418,8 @@
         L1=LOFLM(LM1)
         DO LM2=1,LM2X
           L2=LOFLM(LM2)
-          LM3A=(ABS(L2-L1))**2+1
-          LM3B=(L1+L2+1)**2
+!          LM3A=(ABS(L2-L1))**2+1
+!          LM3B=(L1+L2+1)**2
 !          DO LM3=LM3A,LM3B
           DO LM3=1,LM3X
             L3=LOFLM(LM3)
@@ -469,13 +469,13 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$SCREEN(TSTART,norb,N,QBAR,S,SBAR)
+      SUBROUTINE LMTO$SCREEN(TSTART,NORB,N,QBAR,S,SBAR)
 !     **************************************************************************
 !     **  DETERMINES SCREENED STRUCTURE CONSTANTS FOR A CLUSTER               **
-!     **      |KBAR_I>=SUM_J |K_J> (DELTA_ij+SBAR_ij*QBAR_J)^\dagger          **
+!     **      |KBAR_I>=SUM_J |K_J> (DELTA_IJ+SBAR_IJ*QBAR_J)^\DAGGER          **
 !     **                                                                      **
-!     **  remark:                                                             **
-!     **    s(:norb,:) connects the same orbitals as sbar(:,:)                **
+!     **  REMARK:                                                             **
+!     **    S(:NORB,:) CONNECTS THE SAME ORBITALS AS SBAR(:,:)                **
 !     **                                                                      **
 !     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **
@@ -488,19 +488,21 @@
       INTEGER(4),INTENT(IN) :: NORB         ! #(ORBITALS ON CENTRAL SITE
       REAL(8)   ,INTENT(IN) :: QBAR(N)      !
       REAL(8)   ,INTENT(IN) :: S(N,N)       ! UNSCREENED-STRUCTURE CONSTANTS
-      REAL(8)   ,INTENT(INOUT):: SBAR(norb,N) !SCREENED STRUCTURE CONSTANTS
+      REAL(8)   ,INTENT(INOUT):: SBAR(NORB,N) !SCREENED STRUCTURE CONSTANTS
       REAL(8)   ,PARAMETER  :: TOL=1.D-5    ! TOLERANCE FOR CONVERENCE
       INTEGER(4),PARAMETER  :: NITER=1000   ! X#(ITERATIONS)
+      LOGICAL(4),PARAMETER  :: TNEW=.TRUE.
+      LOGICAL(4)            :: TEST=.FALSE.
       REAL(8)               :: ALPHA=0.5D0  ! MIXING FACTOR
-      REAL(8)               :: DSBAR(norb,N)
-      REAL(8)               :: S0(norb,N)
-      REAL(8)               :: Sbart(n,norb)
+      REAL(8)               :: DSBAR(NORB,N)
+      REAL(8)               :: SQ(N,NORB)
+      REAL(8)               :: S0(NORB,N)
+      REAL(8)               :: SBART(N,NORB)
       REAL(8)               :: A(N,N)
-      INTEGER(4)            :: I,j
+      INTEGER(4)            :: I,J
       REAL(8)               :: DELTA
       INTEGER(4)            :: ITER
       LOGICAL(4)            :: CONVG
-      LOGICAL(4)            :: test=.false.
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$SCREEN')
 !
@@ -509,16 +511,26 @@
 !     ==========================================================================
       IF(TSTART) THEN
         DO I=1,N
-          A(i,:)=-QBAR(:)*S(:,i)
-          A(I,I)=A(I,I)+1.D0    !A=transpose(1-qbar*s0)
+          A(I,:)=-QBAR(:)*S(:,I)
+          A(I,I)=A(I,I)+1.D0    !A=TRANSPOSE(1-QBAR*S0)
         ENDDO
-!       == sbar(1-qbar*s)=s  <=> transpose(1-qbar*s)*transpose(sbar)=tanspose(s)
-        CALL LIB$MATRIXSOLVER8(N,N,NORB,A,SBART,TRANSPOSE(S(:NORB,:)))
-        SBAR=TRANSPOSE(SBART)
+        IF(TNEW) THEN ! THE OLD CONSTRUCTION HAS BEEN QUESTIONED. PB
+          SBART(:,:)=0.D0
+          DO I=1,NORB
+            SBART(I,I)=1.D0
+          ENDDO
+          CALL LIB$MATRIXSOLVER8(N,N,NORB,A,SQ,SBART)
+          SBART=MATMUL(TRANSPOSE(S),SQ)
+          SBAR=TRANSPOSE(SBART)
+        ELSE
+!         == SBAR(1-QBAR*S)=S <=>TRANSPOSE(1-QBAR*S)*TRANSPOSE(SBAR)=TANSPOSE(S)
+          CALL LIB$MATRIXSOLVER8(N,N,NORB,A,SBART,TRANSPOSE(S(:NORB,:)))
+          SBAR=TRANSPOSE(SBART)
+        END IF
 !
 !       == TEST ================================================================
         IF(TEST) THEN
-!         ==  TEST sbar*(1-QBAR*s0)=S0 =========================================
+!         ==  TEST SBAR*(1-QBAR*S0)=S0 =========================================
           DO I=1,N
             A(:,I)=-QBAR(:)*S(:,I)
             A(I,I)=A(I,I)+1.D0
@@ -535,13 +547,13 @@
         END IF
 !
 !     ==========================================================================
-!     == solve equation iteratively                                           ==
+!     == SOLVE EQUATION ITERATIVELY                                           ==
 !     ==========================================================================
       ELSE
         S0(:,:)=S(:NORB,:)
         DO ITER=1,NITER
           DO I=1,NORB
-            DSBAR(I,:)=SBAR(i,:)*QBAR(:)
+            DSBAR(I,:)=SBAR(I,:)*QBAR(:)
             DSBAR(I,I)=1.D0+DSBAR(I,I)
           ENDDO
           DSBAR=MATMUL(DSBAR,S)-SBAR
@@ -560,7 +572,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,norb,N,SBAR)
+      SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,NORB,N,SBAR)
 !     **************************************************************************
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
 !     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
@@ -570,18 +582,16 @@
 !     ** REMARK: INITIALIZE SBAR WITH ZERO OR A BETTER ESTIMATE               **
 !     **                                                                      **
 !     **                                                                      **
-!     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
-!     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT
-      REAL(8)   ,INTENT(IN) :: RPOS(3,NAT)
-      INTEGER(4),INTENT(IN) :: LX(NAT)
+      REAL(8)   ,INTENT(IN) :: K2
+      INTEGER(4),INTENT(IN) :: NAT         ! NUMBER OF ATOMS ON THE CLUSTER
+      REAL(8)   ,INTENT(IN) :: RPOS(3,NAT) ! ATOMIC POSITIONS ON THE CLUSTER
+      INTEGER(4),INTENT(IN) :: LX(NAT)     ! X(ANGULAR MOMENTUM ON EACH CLUSTER)
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: QBAR(N)
-      REAL(8)   ,INTENT(IN) :: K2
       INTEGER(4),INTENT(IN) :: NORB
-      REAL(8)   ,INTENT(INOUT):: SBAR(norb,N)
+      REAL(8)   ,INTENT(INOUT):: SBAR(NORB,N)
       INTEGER(4)            :: I1,I2
       INTEGER(4)            :: IAT1,IAT2
       REAL(8)               :: R1(3),R2(3)
@@ -597,7 +607,7 @@
 !     ==========================================================================
       IF(SUM((LX+1)**2).NE.N) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-        CALL ERROR$MSG('...  (lx+1)**2.ne.n')
+        CALL ERROR$MSG('...  SUM[(LX(IAT)+1)**2].NE.N')
         CALL ERROR$I4VAL('LX',LX)
         CALL ERROR$I4VAL('N',N)
         CALL ERROR$I4VAL('(LX+1)**2',(LX+1)**2)
@@ -622,7 +632,7 @@
         L1X=LX(IAT1)
         LMN1=(L1X+1)**2
         LMN2=(MAXVAL(LX(:))+1)**2
-        ALLOCATE(S1(lmn1,LMN2))
+        ALLOCATE(S1(LMN1,LMN2))
         I2=0
         DO IAT2=1,NAT
           IF(IAT2.EQ.IAT1) THEN
@@ -647,31 +657,31 @@
 !     == THE FIRST PARAMETER SWITCHES BETWEEN AN ITERATIVE AND A DIRECT SOLUTION
 !     == OF THE EQUATION. THE ITERATIVE APPROACH MAY BE MORE EFFICIENT IN AN
 !     == CAR-PARRINELLO LIKE APPROACH.
-      CALL LMTO$SCREEN(.TRUE.,norb,N,QBAR,S0,SBAR)
+      CALL LMTO$SCREEN(.TRUE.,NORB,N,QBAR,S0,SBAR)
                                CALL TRACE$POP()
       RETURN
       END
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,Rad,NNX,NNB,NNLIST)
+      SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,RAD,NNX,NNB,NNLIST)
 !     **************************************************************************
 !     **  THIS IS A SIMPLE NEIGHBORLIST ROUTINE                               **
 !     **                                                                      **
 !     **  - EVERY BOND OCCURS TWICE, THAT IS THE BOND IS DIRECTIONAL.         **
 !     **  - THE ONSITE ELEMENT IS FIRST IN EACH GROUP WITH SAME FIRST ATOM.   **
-!     **  - THE FIRST ATOM IS IN SEQuENCE                                     **
+!     **  - THE FIRST ATOM IS IN SEQUENCE                                     **
 !     **  - THE LATTICE TRANSLATION ACTS ON THE SECOND ATOM.                  **
 !     ******************************PETER BLOECHL, GOSLAR 2009******************
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NAT       ! #(ATOMS)
       REAL(8)      ,INTENT(IN) :: RBAS(3,3) ! LATTICE VECTORS
       REAL(8)      ,INTENT(IN) :: R(3,NAT)  ! ATOM POSITIONS
-      REAL(8)      ,INTENT(IN) :: Rad(nat)  ! CUTOFF RADIUS FOR THE NEIGHORLIST
+      REAL(8)      ,INTENT(IN) :: RAD(NAT)  ! CUTOFF RADIUS FOR THE NEIGHORLIST
       INTEGER(4)   ,INTENT(IN) :: NNX       ! X#(NEIGHBORS PER ATOM)
       INTEGER(4)   ,INTENT(OUT):: NNB       ! #(NEIGHBORS)
       INTEGER(4)   ,INTENT(OUT):: NNLIST(5,NNX) ! NEIGHBORLIST (IAT1,IAT2,IT(3))
-      REAL(8)                  :: Rc
+      REAL(8)                  :: RC
       REAL(8)                  :: RBASINV(3,3)
       REAL(8)                  :: RFOLD(3,NAT)
       REAL(8)                  :: X(3)      ! RELATIVE COORDINATES
@@ -761,10 +771,10 @@
 !!$  IAT2=NNLIST(2,I)
 !!$  ITVEC(:)=NNLIST(3:5,I)
 !!$  D(:)=R(:,IAT2)-R(:,IAT1)+MATMUL(RBAS,REAL(ITVEC,KIND=8))
-!!$  WRITE(*,FMT='(I5,",iat1",i3," iat2 ",i3" DIS ",F10.5," D ",3F10.5," r1+r2",f10.5)') &
-!!$ &             I,iat1,iat2,SQRT(SUM(D**2)),D(:),rad(iat1)+rad(iat2)
+!!$  WRITE(*,FMT='(I5,",IAT1",I3," IAT2 ",I3" DIS ",F10.5," D ",3F10.5," R1+R2",F10.5)') &
+!!$ &             I,IAT1,IAT2,SQRT(SUM(D**2)),D(:),RAD(IAT1)+RAD(IAT2)
 !!$ENDDO
-!!$PRINT*,'Rad ',Rad
+!!$PRINT*,'RAD ',RAD
 !!$STOP
       RETURN
       END

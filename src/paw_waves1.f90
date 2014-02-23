@@ -86,12 +86,14 @@ TYPE WVSET_TYPE  !==============================================================
   TYPE(GSET_TYPE),POINTER :: GSET
   INTEGER(4)         :: NB
   INTEGER(4)         :: NBH
-  COMPLEX(8),POINTER :: PSI0(:,:,:)     !(NGL,NDIM,NBH)  PSPSI(0)
-  COMPLEX(8),POINTER :: PSIM(:,:,:)     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
-  COMPLEX(8),POINTER :: PROJ(:,:,:)     !(NDIM,NBH,NPRO) <PSPSI|P>
-  COMPLEX(8),POINTER :: TBC(:,:,:)      !(NDIM,NBH,NPRO) |PSI>=|CHI>*TBC
-  COMPLEX(8),POINTER :: HTBC(:,:,:)      !(NDIM,NBH,NPRO) DE/DTBC
-  COMPLEX(8),POINTER :: HPSI(:,:,:)     !(NGWLX,NB,IDIM)
+  COMPLEX(8),POINTER :: PSI0(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(0)
+  COMPLEX(8),POINTER :: PSIM(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
+  COMPLEX(8),POINTER :: PROJ(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) <PSPSI|P>
+  COMPLEX(8),POINTER :: TBC(:,:,:)=>NULL()      !(NDIM,NBH,NPRO) |PSI>=|CHI>*TBC
+  COMPLEX(8),POINTER :: TBC_NEW(:,:,:)=>NULL()  !(NDIM,NBH,NORB) |PSI>=|CHI>*TBC
+  COMPLEX(8),POINTER :: HTBC(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) DE/DTBC
+  COMPLEX(8),POINTER :: HTBC_NEW(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) DE/DTBC
+  COMPLEX(8),POINTER :: HPSI(:,:,:)=>NULL()     !(NGWLX,NB,IDIM)
                                         ! +(WAVES$HPSI)-(WAVES$PROPAGATE)
   COMPLEX(8),POINTER :: OPSI(:,:,:)     !(NGWLX,NB,IDIM)
                                         ! +(WAVES$HPSI)-(WAVES$PROPAGATE)
@@ -1085,7 +1087,9 @@ END MODULE WAVES_MODULE
           NULLIFY(THISARRAY(IKPT,ISPIN)%PSIM)
           NULLIFY(THISARRAY(IKPT,ISPIN)%PROJ)
           NULLIFY(THISARRAY(IKPT,ISPIN)%TBC)
+          NULLIFY(THISARRAY(IKPT,ISPIN)%TBC_NEW)
           NULLIFY(THISARRAY(IKPT,ISPIN)%HTBC)
+          NULLIFY(THISARRAY(IKPT,ISPIN)%HTBC_NEW)
           NULLIFY(THISARRAY(IKPT,ISPIN)%HPSI)
           NULLIFY(THISARRAY(IKPT,ISPIN)%OPSI)
           NULLIFY(THISARRAY(IKPT,ISPIN)%RLAM0)
@@ -2823,6 +2827,7 @@ END IF
       INTEGER(4)             :: ISPIN,IKPT,IB
       LOGICAL(4)             :: TON
       INTEGER(4)             :: NTASKS,THISTASK,COUNT
+      INTEGER(4)             :: NORB
 !     **************************************************************************
       CALL LMTO$GETL4('ON',TON)
       IF(.NOT.TON) RETURN
@@ -2839,6 +2844,7 @@ END IF
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
+      CALL LMTO$GETI4('NLOCORB',NORB)
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2846,6 +2852,10 @@ END IF
           IF(.NOT.ASSOCIATED(THIS%TBC))ALLOCATE(THIS%TBC(NDIM,NBH,NPRO))
           THIS%TBC=THIS%PROJ
           CALL LMTO$PROJTONTBO(XK(:,IKPT),NDIM,NBH,NPRO,THIS%TBC)
+!
+          IF(.NOT.ASSOCIATED(THIS%TBC_NEW))ALLOCATE(THIS%TBC_NEW(NDIM,NBH,NORB))
+          CALL LMTO$PROJTONTBO_NEW('FWRD',XK(:,IKPT),NDIM,NBH,NPRO,THIS%PROJ &
+     &                                            ,NORB,THIS%TBC_NEW)
         ENDDO
       ENDDO
 !
@@ -2893,6 +2903,7 @@ END IF
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TOLD=.TRUE.
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: NPRO   !#(PROJECTOR FUNCTIONS)
@@ -2918,11 +2929,22 @@ END IF
 !     ==  TRANSFORM THIS$HTBC FROM NTBO'S TO PAW PARTIAL WAVES                ==
 !     ==========================================================================
 !!!! PARALLELIZE LOOP WITH RESPECT TO STATES.
+      CALL LMTO$GETI4('NLOCORB',NORB)
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
+          IF(TOLD) THEN
+            CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
+          ELSE
+            ALLOCATE(HPROJ(NDIM,NBH,NPRO))
+            CALL LMTO$PROJTONTBO_NEW('BACK',XK(:,IKPT),NDIM,NBH,NPRO,HPROJ &
+     &                                                       ,NORB,THIS%HTBC)
+            DEALLOCATE(THIS%HTBC)
+            ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
+            THIS%HTBC=HPROJ
+            DEALLOCATE(HPROJ(NDIM,NBH,NPRO)
+          END IF
         ENDDO
       ENDDO
 !
