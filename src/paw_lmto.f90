@@ -817,8 +817,10 @@ CALL SETUP$ISELECT(0)
 PRINT*,'DOING LMTO$CLUSTERSTRUCTURECONSTANTS.....'
        IF(MOD(IAT1-1,NTASKS).EQ.THISTASK-1) THEN
           CALL TIMING$CLOCKON('STRUCTURE CONSTANTS')
+!!$QBAR=0.D0
+!!$K2=0.D0
           CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT1,RPOS,LX1,QBAR &
-       &                                                      ,NORB,N,SBAR1)
+       &                                                          ,NORB,N,SBAR1)
           CALL TIMING$CLOCKOFF('STRUCTURE CONSTANTS')
        ELSE
          SBAR1=0.D0
@@ -889,6 +891,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         SBAR_NEW(NN)%MAT=SBAR(NN)%MAT
       ENDDO
       CALL LMTO_EXPANDSBAR()
+!!$CALL LMTO$REPORTPERIODICMAT(6,'NEW STRUCTURE CONSTANTS (TRANSPSD)',NNS,SBAR_NEW)
+!!$STOP 'FORCED'
 !
 !     ==========================================================================
 !     == CALCULATE <PRO|CHI> FROM STRUCTURE CONSTANTS                         ==
@@ -3627,9 +3631,9 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       INTEGER(4)  ,INTENT(IN) :: NBH
       INTEGER(4)  ,INTENT(IN) :: NPRO  ! #(PARTIAL WAVES)
       INTEGER(4)  ,INTENT(IN) :: NORB  ! #(LOCAL ORBITALS)
-      COMPLEX(8)  ,INTENT(IN) :: PROJ(NDIM,NBH,NPRO)
-      COMPLEX(8),INTENT(OUT)  :: PIPSI(NDIM,NBH,NORB)
-      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
+      COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
+      COMPLEX(8),INTENT(INOUT):: PIPSI(NDIM,NBH,NORB)
+      LOGICAL(4),PARAMETER    :: TPR=.TRUE.
       COMPLEX(8),ALLOCATABLE  :: PCHIOFK(:,:)
       COMPLEX(8),ALLOCATABLE  :: OPCHIOFK(:,:)
       COMPLEX(8),ALLOCATABLE  :: MAT(:,:)
@@ -3759,9 +3763,9 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     ==========================================================================
       IF(TPR) THEN
         IF(ID.EQ.'FWRD') THEN
-          WRITE(*,FMT='(80("="),T10," PROJECTIONS ")')
+          WRITE(*,FMT='(80("="),T10," PROJECTIONS (NEW) ")')
         ELSE
-          WRITE(*,FMT='(80("="),T10," DE/D-PROJECTIONS ")')
+          WRITE(*,FMT='(80("="),T10," DE/D-PROJECTIONS (NEW)")')
         END IF
         DO IBH=1,NBH
           DO IDIM=1,NDIM
@@ -3771,9 +3775,9 @@ CHARACTER(128) :: STRING,STRING1,STRING2
           ENDDO
         ENDDO
         IF(ID.EQ.'FWRD') THEN
-          WRITE(*,FMT='(80("="),T10," TIGHT-BINDIG COEFFICIENTS ")')
+          WRITE(*,FMT='(80("="),T10," TIGHT-BINDIG COEFFICIENTS (NEW) ")')
         ELSE
-          WRITE(*,FMT='(80("="),T10," DE/D-TIGHT-BINDIG COEFFICIENTS ")')
+          WRITE(*,FMT='(80("="),T10," DE/D-TIGHT-BINDIG COEFFICIENTS (NEW) ")')
         END IF
         DO IBH=1,NBH
           DO IDIM=1,NDIM
@@ -3782,8 +3786,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
             WRITE(*,FMT='("IM:",10F20.5)')AIMAG(PIPSI(IDIM,IBH,:))
           ENDDO
         ENDDO
-        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
-        CALL ERROR$STOP('LMTO$PROJTONTBO_NEW')
+!!$        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
+!!$        CALL ERROR$STOP('LMTO$PROJTONTBO_NEW')
       END IF
       RETURN
       END
@@ -3806,7 +3810,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       INTEGER(4),INTENT(IN)   :: NBH
       INTEGER(4),INTENT(IN)   :: NPRO
       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
-      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER    :: TPR=.TRUE.
       REAL(8)                 :: A(NPRO)
       REAL(8)                 :: B(NPRO)
       REAL(8)                 :: C(NRL)
@@ -3823,6 +3827,18 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
+      IF(TPR) THEN
+        WRITE(*,FMT='(80("="),T10," PROJECTIONS (OLD) ")')
+        DO IBH=1,NBH
+          DO IDIM=1,NDIM
+            WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+            WRITE(*,FMT='("RE:",10F20.5)')REAL(PROJ(IDIM,IBH,:))
+            WRITE(*,FMT='("IM:",10F20.5)')AIMAG(PROJ(IDIM,IBH,:))
+          ENDDO
+        ENDDO
+      END IF
+
+
 !       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE1_WITHPOTPAR1(NPRO,NRL,A,B,C,D,E,F)
       CALL LMTO_PREPARE2(XK,NRL,C,E,F,G,H)
@@ -3916,8 +3932,8 @@ CHARACTER(128) :: STRING,STRING1,STRING2
             WRITE(*,FMT='("IM:",10F20.5)')AIMAG(PROJ(IDIM,IBH,:))
           ENDDO
         ENDDO
-        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
-        CALL ERROR$STOP('LMTO$PROJTONTBO')
+!!$        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
+!!$        CALL ERROR$STOP('LMTO$PROJTONTBO')
       END IF
                                CALL TRACE$POP()
       RETURN
@@ -4324,7 +4340,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                              ,ISPECIES
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
@@ -4446,6 +4462,9 @@ COMPLEX(8)  :: PHASE
         &                            +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
         &                                   +(F1-F2)*C1(:)*C2(JDIM))
                     ENDDO
+IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
+  PRINT*,'--',IKPT,I,J,IBH,C1,C2,F1,F2,CSVAR22
+END IF
                   ENDDO
                   CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
                                         !  DUE TO SUPER WAVE FUNCTIONS
@@ -4458,6 +4477,9 @@ COMPLEX(8)  :: PHASE
                     DO JDIM=1,NDIM
                       CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+F1*C1(:)*CONJG(C2(JDIM))
                     ENDDO
+IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
+  PRINT*,'--NEW--',IKPT,I,J,IB,C1,C2,F1,CSVAR22
+END IF
                   ENDDO
                 END IF
 !
@@ -4664,8 +4686,12 @@ COMPLEX(8)  :: PHASE
         &                            +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
         &                                   +(F1-F2)*C1(:)*C2(JDIM))
                     ENDDO
+IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
+  PRINT*,'--OLD--',IKPT,I,J,IB,C1,C2,F1,F2,CSVAR22
+END IF
                   ENDDO
                   CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP DUE TO SUPER WAVE FUNCTIONS
+
                 ELSE
                   CSVAR22=(0.D0,0.D0)
                   DO IB=1,NB
@@ -4675,6 +4701,9 @@ COMPLEX(8)  :: PHASE
                     DO JDIM=1,NDIM
                       CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+F1*C1(:)*CONJG(C2(JDIM))
                     ENDDO
+IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
+  PRINT*,'--OLD--',IKPT,I,J,IB,C1,C2,F1,CSVAR22
+END IF
                   ENDDO
                 END IF
 !
@@ -4761,7 +4790,8 @@ COMPLEX(8)  :: PHASE
      &                       ,GSET
       USE LMTO_MODULE, ONLY : SBAR=>SBAR_NEW &
      &                       ,HAMIL=>HAMIL_NEW &
-     &                       ,LOX,LNX,ISPECIES
+     &                       ,POTPAR1 &
+     &                       ,LOX,LNX,ISPECIES &
      &                       ,THTBC !LOGICAL VARIABLE
       IMPLICIT NONE
       INTEGER(4)             :: NAT
@@ -5117,6 +5147,24 @@ COMPLEX(8)  :: PHASE
       ENDDO
 
                                             CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_CLEANDENMAT_NEW()
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW,HAMIL=>HAMIL_NEW
+      IMPLICIT NONE
+      INTEGER(4)  ::NN,NND
+!     **************************************************************************
+      NND=SIZE(DENMAT)
+      DO NN=1,NND
+        DEALLOCATE(DENMAT(NN)%MAT)
+        DEALLOCATE(HAMIL(NN)%MAT)
+      ENDDO
+      DEALLOCATE(DENMAT)
+      DEALLOCATE(HAMIL)
       RETURN
       END
 !
@@ -7730,7 +7778,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
 !       == TAILED, NONSPHERICAL ORBITALS =======================================
 CALL LMTO_SIMPLEENERGYTEST2_NEW()
         CALL LMTO_SIMPLEENERGYTEST2()
-STOP 'FORCED AFTER LMTO_SIMPLEENERGYTEST2'
+!STOP 'FORCED AFTER LMTO_SIMPLEENERGYTEST2'
       ELSE IF(SWITCH.EQ.2) THEN
         CALL LMTO_SIMPLEENERGYTEST()
       ELSE IF(SWITCH.EQ.3) THEN
@@ -7764,6 +7812,7 @@ STOP 'FORCED AFTER LMTO_SIMPLEENERGYTEST2'
 !     ==  CLEAN DENMAT AND HAMIL                                              ==
 !     ==========================================================================
       CALL LMTO_CLEANDENMAT()
+      CALL LMTO_CLEANDENMAT_NEW()
       RETURN
       END
 !!$!
@@ -14887,6 +14936,35 @@ PRINT*,'N1,N2 ',N1,N2
                              CALL TRACE$POP()
       RETURN
       END SUBROUTINE LMTO$REPORTSBAR
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$REPORTPERIODICMAT(NFIL,NAME,NNS,SBAR)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE,ONLY: PERIODICMAT_TYPE
+      IMPLICIT NONE
+      INTEGER(4)            ,INTENT(IN) :: NFIL
+      CHARACTER(*)          ,INTENT(IN) :: NAME
+      INTEGER(4)            ,INTENT(IN) :: NNS
+      TYPE(PERIODICMAT_TYPE),INTENT(IN) :: SBAR(NNS)
+      INTEGER(4)                        :: NN,LM1
+!     **************************************************************************
+                             CALL TRACE$PUSH('LMTO$REPORTPERIODICMAT')
+      WRITE(NFIL,FMT='(80("="))')
+      WRITE(NFIL,FMT='(80("="),T10,"  ",A,"   ")')TRIM(NAME)
+      WRITE(NFIL,FMT='(80("="))')
+      DO NN=1,NNS
+        WRITE(NFIL,FMT='(80("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
+     &                 SBAR(NN)%IAT1,SBAR(NN)%IAT2,SBAR(NN)%IT
+        DO LM1=1,SBAR(NN)%N1
+          WRITE(NFIL,FMT='(20F10.5)')SBAR(NN)%MAT(LM1,:)
+        ENDDO
+        WRITE(NFIL,FMT='(80("="))')
+      ENDDO
+                             CALL TRACE$POP()
+      RETURN
+      END SUBROUTINE LMTO$REPORTPERIODICMAT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$REPORTORTHODENMAT(NFIL)

@@ -2851,6 +2851,7 @@ END IF
           NBH=THIS%NBH
           IF(.NOT.ASSOCIATED(THIS%TBC))ALLOCATE(THIS%TBC(NDIM,NBH,NPRO))
           THIS%TBC=THIS%PROJ
+WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
           CALL LMTO$PROJTONTBO(XK(:,IKPT),NDIM,NBH,NPRO,THIS%TBC)
 !
           IF(.NOT.ASSOCIATED(THIS%TBC_NEW))ALLOCATE(THIS%TBC_NEW(NDIM,NBH,NORB))
@@ -2907,7 +2908,9 @@ END IF
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: NPRO   !#(PROJECTOR FUNCTIONS)
+      INTEGER(4)             :: NORB  
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      COMPLEX(8),ALLOCATABLE :: HPROJ(:,:,:)
       INTEGER(4)             :: ISPIN,IKPT,IB
       LOGICAL(4)             :: TON
 !     **************************************************************************
@@ -2943,7 +2946,7 @@ END IF
             DEALLOCATE(THIS%HTBC)
             ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
             THIS%HTBC=HPROJ
-            DEALLOCATE(HPROJ(NDIM,NBH,NPRO)
+            DEALLOCATE(HPROJ)
           END IF
         ENDDO
       ENDDO

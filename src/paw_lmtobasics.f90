@@ -492,6 +492,7 @@
       REAL(8)   ,PARAMETER  :: TOL=1.D-5    ! TOLERANCE FOR CONVERENCE
       INTEGER(4),PARAMETER  :: NITER=1000   ! X#(ITERATIONS)
       LOGICAL(4),PARAMETER  :: TNEW=.TRUE.
+      INTEGER(4),PARAMETER  :: VERSION=3
       LOGICAL(4)            :: TEST=.FALSE.
       REAL(8)               :: ALPHA=0.5D0  ! MIXING FACTOR
       REAL(8)               :: DSBAR(NORB,N)
@@ -505,6 +506,25 @@
       LOGICAL(4)            :: CONVG
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$SCREEN')
+IF(VERSION.EQ.3) THEN
+      IF(TSTART) THEN
+        DO I=1,N
+          A(I,:)=-QBAR(I)*S(:,I)
+          A(I,I)=A(I,I)+1.D0    !A=TRANSPOSE(1-QBAR*S0)=1-TRANSPOSE(S0)*QBAR
+        ENDDO
+        SBART(:,:)=0.D0
+        DO I=1,NORB
+          SBART(I,I)=1.D0
+        ENDDO
+        CALL LIB$MATRIXSOLVER8(N,N,NORB,A,SQ,SBART)
+        SBART=MATMUL(TRANSPOSE(S),SQ)
+        SBAR=TRANSPOSE(SBART)
+      ELSE
+        CALL ERROR$MSG('VERSION 3 IS ONLY IMPLEMENTED NON-ITERATIVELY')
+        CALL ERROR$STOP('LMTO$SCREEN')
+      END IF
+      RETURN
+END IF
 !
 !     ==========================================================================
 !     == DETERMINE SBAR FROM MATRIX EQUATION                                  ==
@@ -512,7 +532,7 @@
       IF(TSTART) THEN
         DO I=1,N
           A(I,:)=-QBAR(:)*S(:,I)
-          A(I,I)=A(I,I)+1.D0    !A=TRANSPOSE(1-QBAR*S0)
+          A(I,I)=A(I,I)+1.D0    !A=TRANSPOSE(1-QBAR*S0)=1-TRANSPOSE(S0)*QBAR
         ENDDO
         IF(TNEW) THEN ! THE OLD CONSTRUCTION HAS BEEN QUESTIONED. PB
           SBART(:,:)=0.D0
