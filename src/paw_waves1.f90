@@ -2904,7 +2904,7 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TOLD=.TRUE.
+      LOGICAL(4),PARAMETER   :: TOLD=.FALSE.
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH   !#(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: NPRO   !#(PROJECTOR FUNCTIONS)
@@ -2942,7 +2942,7 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
           ELSE
             ALLOCATE(HPROJ(NDIM,NBH,NPRO))
             CALL LMTO$PROJTONTBO_NEW('BACK',XK(:,IKPT),NDIM,NBH,NPRO,HPROJ &
-     &                                                       ,NORB,THIS%HTBC)
+     &                                                   ,NORB,THIS%HTBC_NEW)
             DEALLOCATE(THIS%HTBC)
             ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
             THIS%HTBC=HPROJ
@@ -2960,10 +2960,11 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             NBH=THIS%NBH
-            WRITE(*,FMT='(82("="),T20,"  IKPT ",I5,"ISPIN=",I2,"  ")')IKPT,ISPIN
+            WRITE(*,FMT='(80("="),T20," IKPT=",I5," ISPIN=",I2," ")')IKPT,ISPIN
             DO IB=1,NBH
-              WRITE(*,FMT='("HTBC ",I5,100F10.5)')2*IB-1,REAL(THIS%HTBC(1,IB,:))
-              WRITE(*,FMT='("HTBC ",I5,100F10.5)')2*IB,AIMAG(THIS%HTBC(1,IB,:))
+              WRITE(*,FMT='(80("-"),T20,"  IB=",I5,"  ")')IB
+              WRITE(*,FMT='("RE(HTBC) ",100F10.5)')REAL(THIS%HTBC(1,IB,:))
+              WRITE(*,FMT='("IM(HTBC) ",100F10.5)')AIMAG(THIS%HTBC(1,IB,:))
             ENDDO
           ENDDO
         ENDDO

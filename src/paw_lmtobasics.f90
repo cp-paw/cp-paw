@@ -472,10 +472,13 @@
       SUBROUTINE LMTO$SCREEN(TSTART,NORB,N,QBAR,S,SBAR)
 !     **************************************************************************
 !     **  DETERMINES SCREENED STRUCTURE CONSTANTS FOR A CLUSTER               **
-!     **      |KBAR_I>=SUM_J |K_J> (DELTA_IJ+SBAR_IJ*QBAR_J)^\DAGGER          **
+!     **      |KBAR_I>=SUM_J |K_J> (DELTA_IJ+QBAR_J*SBARDAGGER_JI)            **
+!     **      |KBAR_I>=-SUM_J |JBAR_J> SBARDAGGER_JI    (VALID OFFSITE)       **
 !     **                                                                      **
 !     **  REMARK:                                                             **
-!     **    S(:NORB,:) CONNECTS THE SAME ORBITALS AS SBAR(:,:)                **
+!     **    ON INPUT AND OUTPUT, THE FIRST INDEX REFERS TO THE ORBITALS       **
+!     **    ON THE CENTRAL SITE AND THE SECOND REFERS TO ALL ORBITALS ON      **
+!     **    THE CLUSTER. (SBAR IS NOT TRANSPOSED)                             **
 !     **                                                                      **
 !     **  START WITH SBAR=0 OR GIVE BETTER ESTIMATE                           **
 !     **                                                                      **

@@ -195,8 +195,9 @@ LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
-!REAL(8)               :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 REAL(8)               :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
+! RCSCALE=5. IS GOOD FOR THE HUBBARD MODEL WITH LATTICE CONSTANT=3\AA
+!REAL(8)               :: RCSCALE=5.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 !         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
 REAL(8)               :: HFWEIGHT=0.25D0
 !
@@ -813,12 +814,10 @@ CALL SETUP$ISELECT(0)
 !       ========================================================================
         ALLOCATE(SBAR1(NORB,N))
 !NORB=(LX1(1)+1)**2
-!N=(LX(1)+2)**2?
+!N=SUM((LX(1)+1)**2)
 PRINT*,'DOING LMTO$CLUSTERSTRUCTURECONSTANTS.....'
        IF(MOD(IAT1-1,NTASKS).EQ.THISTASK-1) THEN
           CALL TIMING$CLOCKON('STRUCTURE CONSTANTS')
-!!$QBAR=0.D0
-!!$K2=0.D0
           CALL LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT1,RPOS,LX1,QBAR &
        &                                                          ,NORB,N,SBAR1)
           CALL TIMING$CLOCKOFF('STRUCTURE CONSTANTS')
@@ -891,7 +890,8 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         SBAR_NEW(NN)%MAT=SBAR(NN)%MAT
       ENDDO
       CALL LMTO_EXPANDSBAR()
-!!$CALL LMTO$REPORTPERIODICMAT(6,'NEW STRUCTURE CONSTANTS (TRANSPSD)',NNS,SBAR_NEW)
+!!$CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR)
+!!$CALL LMTO$REPORTPERIODICMAT(6,'NEW STRUCTURE CONSTANTS ',NNS,SBAR_NEW)
 !!$STOP 'FORCED'
 !
 !     ==========================================================================
@@ -921,7 +921,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
      &                       ,NSP      & ! NUMBER OF ATOM TYPES
      &                       ,LNX,LOX  
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER :: TTRANSPOSE=.FALSE.
       LOGICAL(4),PARAMETER :: TPR=.FALSE. 
       INTEGER(4),PARAMETER :: NFIL=6
       INTEGER(4) :: NNS  ! #(NEIGBOR PAIRS)
@@ -945,15 +944,6 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
       ENDDO
       NNS=SIZE(SBAR_NEW)
       DO NN=1,NNS
-IF(TTRANSPOSE) THEN  !TTRANSPOSE DOES NOT MAKE A DIFFERENCE. IS SBAR HERMITEAN?
-        IAT2=SBAR_NEW(NN)%IAT1
-        IAT1=SBAR_NEW(NN)%IAT2
-        N2=SBAR_NEW(NN)%N1
-        N1=SBAR_NEW(NN)%N2
-        ALLOCATE(MAT(N1,N2))
-        MAT=TRANSPOSE(SBAR_NEW(NN)%MAT)
-        DEALLOCATE(SBAR_NEW(NN)%MAT)
-ELSE
         IAT1=SBAR_NEW(NN)%IAT1
         IAT2=SBAR_NEW(NN)%IAT2
         N1=SBAR_NEW(NN)%N1
@@ -961,27 +951,26 @@ ELSE
         ALLOCATE(MAT(N1,N2))
         MAT=SBAR_NEW(NN)%MAT
         DEALLOCATE(SBAR_NEW(NN)%MAT)
-END IF
 !
         ISP1=ISPECIES(IAT1)
         ISP2=ISPECIES(IAT2)
-        NTAIL=POTPAR1(ISP1)%NTAIL
-        NHEAD=POTPAR1(ISP2)%NHEAD
-        LM1X=SUM(2*POTPAR1(ISP1)%LOFT+1)
-        LM2X=SUM(2*POTPAR1(ISP1)%LOFH+1)
+        NTAIL=POTPAR1(ISP2)%NTAIL
+        NHEAD=POTPAR1(ISP1)%NHEAD
+        LM1X=SUM(2*POTPAR1(ISP1)%LOFH+1)
+        LM2X=SUM(2*POTPAR1(ISP2)%LOFT+1)
         SBAR_NEW(NN)%N1=LM1X
         SBAR_NEW(NN)%N2=LM2X
         ALLOCATE(SBAR_NEW(NN)%MAT(LM1X,LM2X))
         LM1A=0
-        DO I1=1,NTAIL
-          L1=POTPAR1(ISP1)%LOFT(I1)
+        DO I1=1,NHEAD
+          L1=POTPAR1(ISP1)%LOFH(I1)
           LM1B=SBARLI1(L1+1,ISP1)-1
           DO M1=1,2*L1+1
             LM1A=LM1A+1
             LM1B=LM1B+1
             LM2A=0
-            DO I2=1,NHEAD
-              L2=POTPAR1(ISP2)%LOFH(I2)
+            DO I2=1,NTAIL
+              L2=POTPAR1(ISP2)%LOFT(I2)
               LM2B=SBARLI1(L2+1,ISP2)-1
               DO M2=1,2*L2+1
                 LM2A=LM2A+1
@@ -3573,6 +3562,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
             END IF
           ENDDO
         ENDDO
+        DEALLOCATE(LMNP0)
       ENDDO
 !
 !     ==========================================================================
@@ -3581,8 +3571,9 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       NNS=SIZE(SBAR_NEW)
       ALLOCATE(PCHI(NNS))
       DO NN=1,NNS
-        IAT1=SBAR_NEW(NN)%IAT1
-        IAT2=SBAR_NEW(NN)%IAT2
+!       == SVAR ENTERS TRANSPOSED. THE FIRST ATOM OF SBAR IS THE SECOND OF PCHI.
+        IAT1=SBAR_NEW(NN)%IAT2
+        IAT2=SBAR_NEW(NN)%IAT1
         ISP1=ISPECIES(IAT1)
         ISP2=ISPECIES(IAT2)
         LMNPX=SUM(2*LOX(:LNX(ISP1),ISP1)+1)
@@ -3590,13 +3581,13 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         ALLOCATE(PCHI(NN)%MAT(LMNPX,LMNHX))
         PCHI(NN)%IAT1=IAT1
         PCHI(NN)%IAT2=IAT2
-        PCHI(NN)%IT=SBAR_NEW(NN)%IT
-        PCHI(NN)%MAT=-MATMUL(PKJ(ISP1)%PROJBAR,SBAR_NEW(NN)%MAT)
+        PCHI(NN)%IT=-SBAR_NEW(NN)%IT
+!       == <P_I|CHI_J>=<P_I|PHIK_J>-SUM_K <P_I|PHIJBAR_K> SBAR_JK ==============
+        PCHI(NN)%MAT=-MATMUL(PKJ(ISP1)%PROJBAR,TRANSPOSE(SBAR_NEW(NN)%MAT))
         IF(IAT1.EQ.IAT2.AND.SUM(ABS(SBAR_NEW(NN)%IT)).EQ.0) THEN
           PCHI(NN)%MAT=PCHI(NN)%MAT+PKJ(ISP1)%PROK
         END IF
       ENDDO
-
 !
 !     ==========================================================================
 !     == CLEAN UP
@@ -3633,7 +3624,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       INTEGER(4)  ,INTENT(IN) :: NORB  ! #(LOCAL ORBITALS)
       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
       COMPLEX(8),INTENT(INOUT):: PIPSI(NDIM,NBH,NORB)
-      LOGICAL(4),PARAMETER    :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       COMPLEX(8),ALLOCATABLE  :: PCHIOFK(:,:)
       COMPLEX(8),ALLOCATABLE  :: OPCHIOFK(:,:)
       COMPLEX(8),ALLOCATABLE  :: MAT(:,:)
@@ -3687,7 +3678,6 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         I2=NPRO2(IAT1)
         J1=NORB1(IAT2)
         J2=NORB2(IAT2)
-!PRINT*,'NN ',NN,IAT1,IAT2,EIKR,PCHI(NN)%IT
         PCHIOFK(I1:I2,J1:J2)=PCHIOFK(I1:I2,J1:J2)+PCHI(NN)%MAT*EIKR
       ENDDO
 !
@@ -3743,12 +3733,12 @@ CHARACTER(128) :: STRING,STRING1,STRING2
         PROJ(:,:,:)=(0.D0,0.D0)
         DO I=1,NORB
           DO J=1,NPRO
-            PROJ(:,:,I)=PROJ(:,:,I)+MAT(J,I)*PIPSI(:,:,J)
+            PROJ(:,:,J)=PROJ(:,:,J)+PIPSI(:,:,I)*CONJG(MAT(I,J))
           ENDDO
         ENDDO
 !
       ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED. (MAY BE FWRD OR BACK)')
+        CALL ERROR$MSG('ID NOT RECOGNIZED. (ALLOWED IS "FWRD" OR "BACK")')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('LMTO$PROJTONTBO_NEW')
       END IF
@@ -3803,14 +3793,15 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **   WHILE NRL REFERS TO THE NUMBER OF DIFFERENT (R,L,M) SETS           **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : NRL & !DIMENSION OF STRUCTURE CONSTANTS IN K-SPACE
-     &                       ,SBARATOMI1,SBARLI1,ISPECIES,LNX,LOX,TON
+     &                       ,SBARATOMI1,SBARLI1,ISPECIES,LNX,LOX,TON &
+     &                       ,POTPAR,POTPAR1
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: XK(3)
       INTEGER(4),INTENT(IN)   :: NDIM
       INTEGER(4),INTENT(IN)   :: NBH
       INTEGER(4),INTENT(IN)   :: NPRO
       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
-      LOGICAL(4),PARAMETER    :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       REAL(8)                 :: A(NPRO)
       REAL(8)                 :: B(NPRO)
       REAL(8)                 :: C(NRL)
@@ -3819,6 +3810,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
       REAL(8)                 :: F(NRL)
       COMPLEX(8)              :: G(NRL,NRL)
       COMPLEX(8)              :: H(NRL,NRL)
+COMPLEX(8)              :: X(NRL,NRL)
       COMPLEX(8),ALLOCATABLE  :: PROJCONTR1(:,:,:)
       COMPLEX(8),ALLOCATABLE  :: PROJCONTR2(:,:,:)
       COMPLEX(8),ALLOCATABLE  :: PROJCONTR3(:,:,:)
@@ -3827,16 +3819,16 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                CALL TRACE$PUSH('LMTO$PROJTONTBO')
-      IF(TPR) THEN
-        WRITE(*,FMT='(80("="),T10," PROJECTIONS (OLD) ")')
-        DO IBH=1,NBH
-          DO IDIM=1,NDIM
-            WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
-            WRITE(*,FMT='("RE:",10F20.5)')REAL(PROJ(IDIM,IBH,:))
-            WRITE(*,FMT='("IM:",10F20.5)')AIMAG(PROJ(IDIM,IBH,:))
-          ENDDO
-        ENDDO
-      END IF
+!!$      IF(TPR) THEN
+!!$        WRITE(*,FMT='(80("="),T10," PROJECTIONS (OLD) ")')
+!!$        DO IBH=1,NBH
+!!$          DO IDIM=1,NDIM
+!!$            WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+!!$            WRITE(*,FMT='("RE:",10F20.5)')REAL(PROJ(IDIM,IBH,:))
+!!$            WRITE(*,FMT='("IM:",10F20.5)')AIMAG(PROJ(IDIM,IBH,:))
+!!$          ENDDO
+!!$        ENDDO
+!!$      END IF
 
 
 !       CALL LMTO_PREPARE1(NPRO,NRL,A,B,C,D,E,F)
@@ -3853,6 +3845,32 @@ CHARACTER(128) :: STRING,STRING1,STRING2
 !!$PRINT*,'H ',H
 !!$PRINT*,'SBARATOMI1 ',SBARATOMI1
 !!$PRINT*,'SBARLI1    ',SBARLI1
+!!$WRITE(*,FMT='("<P|PHIDOT>",20F10.5)')POTPAR1(1)%PHIDOTPROJ
+!!$WRITE(*,FMT='("<P|K>     ",20F10.5)')POTPAR1(1)%PHIDOTPROJ*POTPAR1(1)%KTOPHIDOT+POTPAR1(1)%KTOPHI
+!!$WRITE(*,FMT='("<P|JBAR>  ",20F10.5)')POTPAR1(1)%PHIDOTPROJ*POTPAR1(1)%JBARTOPHIDOT
+!!$WRITE(*,FMT='("<P|K>     ",20F10.5)')POTPAR1(1)%PROK
+!!$WRITE(*,FMT='("<P|JBAR>  ",20F10.5)')POTPAR1(1)%PROJBAR
+!!$
+!!$WRITE(*,FMT='("(1+D*B)/A ",20F10.5)')(1.D0+D*B)/A !=PROK
+!!$WRITE(*,FMT='("-D*C/A     ",20F10.5)')-D*C/A      !=PROJBAR
+!!$
+!!$! SBAR(-K)=CONJG(SBAR(K))
+!!$! TRANSPOSE(SBAR(K))=CONJG(SBAR(K))  HERMITEAN
+!!$CALL LMTO_SOFK(XK,NRL,X)
+!!$X=TRANSPOSE(CONJG(X))
+!!$DO I=1,NRL
+!!$  X(I,:)=D(I)*C(I)*X(I,:)
+!!$ENDDO
+!!$DO I=1,NRL
+!!$  X(I,I)=X(I,I)+1.D0+D(I)*B(I)
+!!$ENDDO
+!!$DO I=1,NRL
+!!$  X(I,:)=1.D0/A(I)*X(I,:)
+!!$ENDDO
+!!$WRITE(*,FMT='(80("="),T10," <P|CHI> OLD FOR ",3F10.5,"  ")')XK
+!!$DO I=1,NRL
+!!$  WRITE(*,FMT='(20F10.5)')X(I,:)
+!!$ENDDO
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -4340,7 +4358,7 @@ CHARACTER(128) :: STRING,STRING1,STRING2
                              ,ISPECIES
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
@@ -4462,9 +4480,6 @@ COMPLEX(8)  :: PHASE
         &                            +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
         &                                   +(F1-F2)*C1(:)*C2(JDIM))
                     ENDDO
-IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
-  PRINT*,'--',IKPT,I,J,IBH,C1,C2,F1,F2,CSVAR22
-END IF
                   ENDDO
                   CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
                                         !  DUE TO SUPER WAVE FUNCTIONS
@@ -4477,9 +4492,6 @@ END IF
                     DO JDIM=1,NDIM
                       CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+F1*C1(:)*CONJG(C2(JDIM))
                     ENDDO
-IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
-  PRINT*,'--NEW--',IKPT,I,J,IB,C1,C2,F1,CSVAR22
-END IF
                   ENDDO
                 END IF
 !
@@ -4584,7 +4596,7 @@ END IF
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       REAL(8)                :: PI
-      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
 COMPLEX(8)  :: PHASE
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
 !     **************************************************************************
@@ -4686,11 +4698,9 @@ COMPLEX(8)  :: PHASE
         &                            +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
         &                                   +(F1-F2)*C1(:)*C2(JDIM))
                     ENDDO
-IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
-  PRINT*,'--OLD--',IKPT,I,J,IB,C1,C2,F1,F2,CSVAR22
-END IF
                   ENDDO
-                  CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP DUE TO SUPER WAVE FUNCTIONS
+                  CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
+                                        ! DUE TO SUPER WAVE FUNCTIONS
 
                 ELSE
                   CSVAR22=(0.D0,0.D0)
@@ -4701,9 +4711,6 @@ END IF
                     DO JDIM=1,NDIM
                       CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+F1*C1(:)*CONJG(C2(JDIM))
                     ENDDO
-IF(IAT1.EQ.1.AND.IAT2.EQ.1.AND.SUM(ABS(IT)).EQ.0) THEN
-  PRINT*,'--OLD--',IKPT,I,J,IB,C1,C2,F1,CSVAR22
-END IF
                   ENDDO
                 END IF
 !
@@ -4780,20 +4787,18 @@ END IF
 !     **  CONSTRUCT HTBC FROM THE DERIVATIVE OF THE ENERGY WITH RESPECT TO    **
 !     **  THE DENSITY MATRIX                                                  **
 !     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: WVSET_TYPE,NKPTL,NSPIN,NDIM &
      &                       ,THIS &
      &                       ,MAP &
      &                       ,WAVES_SELECTWV &
      &                       ,GSET
-      USE LMTO_MODULE, ONLY : SBAR=>SBAR_NEW &
-     &                       ,HAMIL=>HAMIL_NEW &
+      USE LMTO_MODULE, ONLY : HAMIL=>HAMIL_NEW &
      &                       ,POTPAR1 &
      &                       ,LOX,LNX,ISPECIES &
      &                       ,THTBC !LOGICAL VARIABLE
       IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
       INTEGER(4)             :: NND
@@ -4853,7 +4858,8 @@ END IF
           CALL PLANEWAVE$GETL4('TINV',TINV)
           NBH=THIS%NBH
           NB=THIS%NB
-          IF(.NOT.ASSOCIATED(THIS%HTBC_NEW))ALLOCATE(THIS%HTBC_NEW(NDIM,NBH,NPRO))
+          IF(.NOT.ASSOCIATED(THIS%HTBC_NEW)) &
+     &              ALLOCATE(THIS%HTBC_NEW(NDIM,NBH,NPRO))
           THIS%HTBC_NEW(:,:,:)=(0.D0,0.D0)
           DO NN=1,NND
             IAT1=HAMIL(NN)%IAT1
@@ -4872,21 +4878,21 @@ END IF
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1),0.D0,KIND=8)
                   ELSE ! NONCOLLINEAR
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                     CSVAR22(1,2)=CMPLX(HAMIL(NN)%MAT(I,J,2) &
-          &                          ,-HAMIL(NN)%MAT(I,J,3),KIND=8)
+     &                               ,-HAMIL(NN)%MAT(I,J,3),KIND=8)
                     CSVAR22(2,1)=CMPLX(HAMIL(NN)%MAT(I,J,2) &
-          &                          ,+HAMIL(NN)%MAT(I,J,3),KIND=8)
+     &                               ,+HAMIL(NN)%MAT(I,J,3),KIND=8)
                     CSVAR22(2,2)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                   END IF
                 ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
                   IF(ISPIN.EQ.1) THEN
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           +HAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
+     &                                +HAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
                   ELSE
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           -HAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
+     &                                -HAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
                   END IF
                 END IF
                 CSVAR22(:,:)=CSVAR22(:,:)*EIKR
@@ -4908,6 +4914,38 @@ END IF
           ENDDO
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     == PRINT FOR TESTING                                                    ==
+!     ==========================================================================
+      IF(TPR) THEN
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            NBH=THIS%NBH
+            WRITE(*,FMT='(80("="),T10," HTBC(OLD) FOR XK=",3F10.5,"  ")') &
+     &                                                                XK(:,IKPT)
+            DO IBH=1,NBH
+              DO IDIM=1,NDIM
+                WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+                WRITE(*,FMT='("RE:",10F20.5)')REAL(THIS%HTBC(IDIM,IBH,:))
+                WRITE(*,FMT='("IM:",10F20.5)')AIMAG(THIS%HTBC(IDIM,IBH,:))
+              ENDDO
+            ENDDO
+            WRITE(*,FMT='(80("="),T10," HTBC(NEW) FOR XK=",3F10.5,"  ")') &
+     &                                                                XK(:,IKPT)
+            DO IBH=1,NBH
+              DO IDIM=1,NDIM
+                WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+                WRITE(*,FMT='("RE:",10F20.5)')REAL(THIS%HTBC_NEW(IDIM,IBH,:))
+                WRITE(*,FMT='("IM:",10F20.5)')AIMAG(THIS%HTBC_NEW(IDIM,IBH,:))
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
+        CALL ERROR$STOP('LMTO_NTBODENMATDER_NEW')
+      END IF
                                  CALL TRACE$POP()
       RETURN
       END
@@ -4992,27 +5030,27 @@ END IF
             DO I=1,NPROAT(IAT1)
               DO J=1,NPROAT(IAT2)
 !
-!               == CONVERT FROM TOTAL/SPIN INTO UP-DOWN REPRESENTATION =====
+!               == CONVERT FROM TOTAL/SPIN INTO UP-DOWN REPRESENTATION =========
                 IF(NSPIN.EQ.1) THEN
                   IF(NDIM.EQ.1) THEN !NON-SPIN-POLARIZED
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1),0.D0,KIND=8)
                   ELSE ! NONCOLLINEAR
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                     CSVAR22(1,2)=CMPLX(HAMIL(NN)%MAT(I,J,2) &
-          &                          ,-HAMIL(NN)%MAT(I,J,3),KIND=8)
+     &                               ,-HAMIL(NN)%MAT(I,J,3),KIND=8)
                     CSVAR22(2,1)=CMPLX(HAMIL(NN)%MAT(I,J,2) &
-          &                          ,+HAMIL(NN)%MAT(I,J,3),KIND=8)
+     &                               ,+HAMIL(NN)%MAT(I,J,3),KIND=8)
                     CSVAR22(2,2)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                   END IF
                 ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
                   IF(ISPIN.EQ.1) THEN
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                +HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                   ELSE
                     CSVAR22(1,1)=CMPLX(HAMIL(NN)%MAT(I,J,1) &
-          &                           -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+     &                                -HAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
                   END IF
                 END IF
                 CSVAR22(:,:)=CSVAR22(:,:)*EIKR
@@ -5025,7 +5063,7 @@ END IF
 !!$      &                              +CSVAR22(JDIM,IDIM)*THIS%TBC(IDIM,IB,I0+I)
 ! THIS SHOULD BE CORRECT.(NO!)
                       THIS%HTBC(IDIM,IB,I0+I)=THIS%HTBC(IDIM,IB,I0+I) &
-      &                           +CSVAR22(IDIM,JDIM)*THIS%TBC(JDIM,IB,J0+J)
+                                      +CSVAR22(IDIM,JDIM)*THIS%TBC(JDIM,IB,J0+J)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -7910,12 +7948,12 @@ CALL LMTO_SIMPLEENERGYTEST2_NEW()
         ALLOCATE(OVERLAP(LMNH,LMNH))
         OVERLAP=POTPAR1(ISP)%TAILED%OVERLAP(:LMNH,:LMNH)                   &
      &         -MATMUL(POTPAR1(ISP)%TAILED%OVERLAP(:LMNH,LMNH+1:)          &
-     &                ,SBAR_NEW(NNS)%MAT)                                   &
-     &         -MATMUL(TRANSPOSE(SBAR_NEW(NNS)%MAT)                         &
+     &                ,TRANSPOSE(SBAR_NEW(NNS)%MAT))                       &
+     &         -MATMUL(SBAR_NEW(NNS)%MAT                                   &
      &                ,POTPAR1(ISP)%TAILED%OVERLAP(LMNH+1:,:LMNH))         &
-     &         +MATMUL(TRANSPOSE(SBAR_NEW(NNS)%MAT)                         &
+     &         +MATMUL(SBAR_NEW(NNS)%MAT                                   &
      &                ,MATMUL(POTPAR1(ISP)%TAILED%OVERLAP(LMNH+1:,LMNH+1:) &
-     &                       ,SBAR_NEW(NNS)%MAT))
+     &                       ,TRANSPOSE(SBAR_NEW(NNS)%MAT)))
         WRITE(*,FMT='(80("="),T10," ONSITE OVERLAP FOR ATOM ",I3,"  ")')IAT
         DO I=1,LMNH
           WRITE(*,FMT='(10F10.5)')OVERLAP(I,:)
@@ -7965,7 +8003,7 @@ CALL LMTO_SIMPLEENERGYTEST2_NEW()
      &                       ,POTPAR &
      &                       ,TOFFSITE,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNS
@@ -8236,12 +8274,7 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
 !     ==========================================================================
       IF(TOFFSITE) THEN
-        PRINT*,'NOW INTO OFFSITEX'
-        IF(1.EQ.0) THEN
-          CALL LMTO_OFFSITEX(EX)      ! USING GAUSS INTERPOLATION
-        ELSE
-          CALL LMTO_OFFSITEXEVAL(EX)  ! USING NUMERICAL MATRIX ELEMENTS
-        END IF
+        CALL LMTO_OFFSITEXEVAL_NEW(EX)  ! USING NUMERICAL MATRIX ELEMENTS
         PRINT*,'+-+-+-+  OFFSITE EX=',EX
         EXTOT=EXTOT+EX
       END IF
@@ -8400,7 +8433,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)  ,INTENT(IN)    :: NDIMD
       INTEGER(4)  ,INTENT(IN)    :: LMNX
       INTEGER(4)  ,INTENT(IN)    :: LMNXT
-      REAL(8)     ,INTENT(IN)    :: SBAR(LMNXT-LMNX,LMNX) !STRUCTURE CONSTANTS
+      REAL(8)     ,INTENT(IN)    :: SBAR(LMNX,LMNXT-LMNX) !STRUCTURE CONSTANTS
       REAL(8)     ,INTENT(INOUT) :: X(LMNX,LMNX,NDIMD)
       REAL(8)     ,INTENT(INOUT) :: XT(LMNXT,LMNXT,NDIMD)
       INTEGER(4)                 :: IDIMD
@@ -8408,19 +8441,62 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       IF(ID.EQ.'FWRD') THEN
         DO IDIMD=1,NDIMD
           XT(:LMNX,:LMNX,IDIMD)    =X(:,:,IDIMD)
-          XT(LMNX+1:,:LMNX,IDIMD)  =-MATMUL(SBAR,X(:,:,IDIMD))
-          XT(:LMNX,LMNX+1:,IDIMD)  =-MATMUL(X(:,:,IDIMD),TRANSPOSE(SBAR))
-          XT(LMNX+1:,LMNX+1:,IDIMD)=MATMUL(SBAR &
-     &                                    ,MATMUL(X(:,:,IDIMD),TRANSPOSE(SBAR)))
+          XT(LMNX+1:,:LMNX,IDIMD)  =-MATMUL(TRANSPOSE(SBAR),X(:,:,IDIMD))
+          XT(:LMNX,LMNX+1:,IDIMD)  =-MATMUL(X(:,:,IDIMD),SBAR)
+          XT(LMNX+1:,LMNX+1:,IDIMD)=MATMUL(TRANSPOSE(SBAR) &
+     &                                    ,MATMUL(X(:,:,IDIMD),SBAR))
         ENDDO
 !
       ELSE IF(ID.EQ.'BACK') THEN
         DO IDIMD=1,NDIMD
           X(:,:,IDIMD)=XT(:LMNX,:LMNX,IDIMD)                           &
-      &               -MATMUL(TRANSPOSE(SBAR),XT(LMNX+1:,:LMNX,IDIMD)) &
-      &               -MATMUL(XT(:LMNX,LMNX+1:,IDIMD),SBAR)            &
-      &               +MATMUL(TRANSPOSE(SBAR)                          & 
-      &                      ,MATMUL(XT(LMNX+1:,LMNX+1:,IDIMD),SBAR))
+      &               -MATMUL(SBAR,XT(LMNX+1:,:LMNX,IDIMD))            &
+      &               -MATMUL(XT(:LMNX,LMNX+1:,IDIMD),TRANSPOSE(SBAR)) &
+      &               +MATMUL(SBAR,MATMUL(XT(LMNX+1:,LMNX+1:,IDIMD)    &
+      &                                  ,TRANSPOSE(SBAR)))
+        ENDDO
+      ELSE
+        CALL ERROR$STOP('LMTO_EXPANDLOCAL')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_EXPANDNONLOCAL(ID,NDIMD,LMNX1,LMNX2,LMNXT1,LMNXT2 &
+     &                              ,SBAR1,SBAR2,X,XT)
+!     **************************************************************************
+!     ** BLOW DENSITY MATRIX UP INTO A REPRESENTATION OF HEAD AND TAIL STATES **
+!     ** AND SHRINK HAMILTOINIAN DOWN TO HEAD-ONLY REPRESENTATION             **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: ID     ! CAN BE 'FWRD' AND 'BACK'
+      INTEGER(4)  ,INTENT(IN)    :: NDIMD
+      INTEGER(4)  ,INTENT(IN)    :: LMNX1
+      INTEGER(4)  ,INTENT(IN)    :: LMNX2
+      INTEGER(4)  ,INTENT(IN)    :: LMNXT1
+      INTEGER(4)  ,INTENT(IN)    :: LMNXT2
+      REAL(8)     ,INTENT(IN)    :: SBAR1(LMNX1,LMNXT1-LMNX1) !STRUCTURE CNSTNTS
+      REAL(8)     ,INTENT(IN)    :: SBAR2(LMNX2,LMNXT2-LMNX2) !STRUCTURE CNSTNTS
+      REAL(8)     ,INTENT(INOUT) :: X(LMNX1,LMNX2,NDIMD)
+      REAL(8)     ,INTENT(INOUT) :: XT(LMNXT1,LMNXT2,NDIMD)
+      INTEGER(4)                 :: IDIMD
+!     **************************************************************************
+      IF(ID.EQ.'FWRD') THEN
+        DO IDIMD=1,NDIMD
+          XT(:LMNX1,:LMNX2,IDIMD)    =X(:,:,IDIMD)
+          XT(LMNX1+1:,:LMNX2,IDIMD)  =-MATMUL(TRANSPOSE(SBAR1),X(:,:,IDIMD))
+          XT(:LMNX1,LMNX2+1:,IDIMD)  =-MATMUL(X(:,:,IDIMD),SBAR2)
+          XT(LMNX1+1:,LMNX2+1:,IDIMD)=MATMUL(TRANSPOSE(SBAR1) &
+     &                                    ,MATMUL(X(:,:,IDIMD),SBAR2))
+        ENDDO
+!
+      ELSE IF(ID.EQ.'BACK') THEN
+        DO IDIMD=1,NDIMD
+          X(:,:,IDIMD)=XT(:LMNX1,:LMNX2,IDIMD)                           &
+      &               -MATMUL(SBAR1,XT(LMNX1+1:,:LMNX2,IDIMD))            &
+      &               -MATMUL(XT(:LMNX1,LMNX2+1:,IDIMD),TRANSPOSE(SBAR2)) &
+      &               +MATMUL(SBAR1,MATMUL(XT(LMNX1+1:,LMNX2+1:,IDIMD)    &
+      &                                  ,TRANSPOSE(SBAR2)))
         ENDDO
       ELSE
         CALL ERROR$STOP('LMTO_EXPANDLOCAL')
@@ -10965,6 +11041,433 @@ PRINT*,'NOT ALLOCATE OVERLAP ',NND,SIZE(OVERLAP)
 !!$CALL LMTO$REPORTDENMAT(6)
 !!$CALL LMTO$REPORTOVERLAP(6)
 !!$STOP 'FORCED'
+                            CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_OFFSITEXEVAL_NEW(EX)
+!     **************************************************************************
+!     **  WORK OUT THE ENERGY USING THE LOCAL APPROXIMATION                   **
+!     **  TAILED PARTIAL WAVES                                                **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                       ,POTPAR=>POTPAR1 &
+     &                       ,DENMAT=>DENMAT_NEW &
+     &                       ,HAMIL=>HAMIL_NEW &
+     &                       ,SBAR=>SBAR_NEW &
+     &                       ,NSP &
+     &                       ,OFFSITEX &
+     &                       ,HYBRIDSETTING
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(OUT) :: EX
+      REAL(8)                :: RBAS(3,3)
+      INTEGER(4)             :: NAT
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)
+      INTEGER(4)             :: ISP
+      INTEGER(4)             :: LNX
+      INTEGER(4)             :: LMNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      INTEGER(4)             :: NND
+      INTEGER(4)             :: NNS
+      INTEGER(4)             :: NN,NNA,NNB
+      INTEGER(4)             :: ISPA,ISPB
+      INTEGER(4)             :: LMN1A,LMN2A,LMN1B,LMN2B,LMN3A,LMN3B
+      INTEGER(4)             :: LMNXA,LMNXB
+      INTEGER(4)             :: LMNXTA,LMNXTB
+      INTEGER(4)             :: LNXA,LNXB
+      INTEGER(4),ALLOCATABLE :: NNAT(:)    !(NAT) POINTER TO ONSITE DENMAT
+      INTEGER(4),ALLOCATABLE :: INS(:)     !(NAT) POINTER TO ONSITE SBAR
+      INTEGER(4)             :: IAT,IATA,IATB
+      REAL(8)                :: RA(3),RB(3)
+      INTEGER(4)             :: NA,NB
+      INTEGER(4)             :: NDIMD
+      INTEGER(4)             :: I,L,LN,LM,LMN,LMX
+      REAL(8)                :: SVAR
+      REAL(8)                :: DR(3)
+      REAL(8)                :: DIS
+      REAL(8)                :: ROT(3,3)
+      REAL(8)   ,ALLOCATABLE :: YLMROT(:,:)
+      REAL(8)   ,ALLOCATABLE :: UROTA(:,:)
+      REAL(8)   ,ALLOCATABLE :: UROTB(:,:)
+      REAL(8)   ,ALLOCATABLE :: U22(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DU22(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: U3A1B(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DU3A1B(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: U3B1A(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DU3B1A(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: BONDU(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DBONDU(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: D(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: H(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HB(:,:,:)
+INTEGER(4) :: J,K,I1,J1,K1
+REAL(8) :: SVAR1,SVAR2
+INTEGER(4) :: IX,IND1,IND2,IND3
+REAL(8)    :: XDELTA,XSVAR
+REAL(8) :: EX1
+TYPE H1_TYPE
+  INTEGER(4)         :: N
+  REAL(8)   ,POINTER :: MAT(:,:,:)
+END TYPE H1_TYPE
+TYPE(H1_TYPE),ALLOCATABLE :: H1(:)
+REAL(8),ALLOCATABLE :: H1A(:,:,:)
+REAL(8),ALLOCATABLE :: H1B(:,:,:)
+!     **************************************************************************
+                            CALL TRACE$PUSH('LMTO_OFFSITEXEVAL')
+PRINT*,'============ OFFSITEXEVAL ============================='
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     == COLLECT POINTERS NNAT TO ONSITE DENSITY MATRIX ELEMENTS              ==
+!     ==========================================================================
+      ALLOCATE(INS(NAT))
+      INS=0
+      NNS=SIZE(SBAR)
+      DO NN=1,NNS
+        IATA=SBAR(NN)%IAT1
+        IATB=SBAR(NN)%IAT2
+        IF(IATA.EQ.IATB.AND.SUM(ABS(SBAR(NN)%IT)).EQ.0) INS(IATA)=NN
+      ENDDO
+      ALLOCATE(NNAT(NAT))
+      NNAT=0
+      NND=SIZE(DENMAT)
+      DO NN=1,NND
+        IATA=DENMAT(NN)%IAT1
+        IATB=DENMAT(NN)%IAT2
+        IF(IATA.EQ.IATB.AND.SUM(DENMAT(NN)%IT**2).EQ.0) NNAT(IATA)=NN
+      ENDDO
+!
+      DO IAT=1,NAT
+        IF(INS(IAT).LE.0) THEN
+          CALL ERROR$MSG('INDEX ARRAY FOR ONSITE STRUCTURE CONSTANTS')
+          CALL ERROR$MSG('NO ONSITE TERMS FOUND FOR ATOM')
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$STOP('LMTO_OFFSITEX')
+        END IF
+        IF(NNAT(IAT).LE.0) THEN
+          CALL ERROR$MSG('INDEX ARRAY FOR ONSITE DENSITY MATRIX')
+          CALL ERROR$MSG('NO ONSITE TERMS FOUND FOR ATOM')
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$STOP('LMTO_OFFSITEX')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == LOOP OVER PAIRS                                                      ==
+!     ==========================================================================
+      IF(SIZE(HAMIL).NE.NND) THEN
+        CALL ERROR$MSG('SIZE OF DENSITY MATRIX AND HAMILTONIAN INONSISTENT')
+        CALL ERROR$STOP('LMTO_OFFSITEX')
+      END IF
+      EX=0.D0
+      DO NN=1,NND
+        IATA=DENMAT(NN)%IAT1
+        IATB=DENMAT(NN)%IAT2
+!       == CONSIDER ONLY OFFSITE TERMS =========================================
+        IF(IATA.EQ.IATB.AND.SUM(DENMAT(NN)%IT**2).EQ.0) CYCLE
+!!$CALL LMTO$REPORTDENMAT(6)
+!!$STOP
+!!$IND1=1
+!!$IND2=1
+!!$IND3=1
+!!$XSVAR=DENMAT(NN)%MAT(IND1,IND2,IND3)
+!!$XDELTA=1.D-2
+!!$IX=-3
+!!$1000 CONTINUE
+!!$IX=IX+1
+!!$DENMAT(NN)%MAT(IND1,IND2,IND3)=XSVAR+XDELTA*REAL(IX,KIND=8)
+!!$HAMIL(NN)%MAT(IND1,IND2,IND3)=0.D0
+!!$EX=0.D0
+        ISPA=ISPECIES(IATA)
+        ISPB=ISPECIES(IATB)
+        RA(:)=R0(:,IATA)
+        RB(:)=R0(:,IATB)+MATMUL(RBAS,REAL(DENMAT(NN)%IT(:),KIND=8))
+        NNA=NNAT(IATA)
+        NNB=NNAT(IATB)
+!
+!       ========================================================================
+!       == BLOW UP DENSITY MATRIX                                             ==
+!       ========================================================================
+        LMNXTA=POTPAR(ISPA)%TAILED%LMNX
+        LMNXTB=POTPAR(ISPB)%TAILED%LMNX
+        NDIMD=DENMAT(NN)%N3
+        LMNXA=DENMAT(NN)%N1
+        LMNXB=DENMAT(NN)%N2
+        ALLOCATE(D(LMNXTA,LMNXTB,NDIMD))
+        ALLOCATE(DA(LMNXTA,LMNXTA,NDIMD))
+        ALLOCATE(DB(LMNXTB,LMNXTB,NDIMD))
+        CALL LMTO_EXPANDNONLOCAL('FWRD',NDIMD,LMNXA,LMNXB,LMNXTA,LMNXTB &
+     &                          ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
+     &                          ,DENMAT(NN)%MAT,D)
+        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXA,LMNXTA,SBAR(INS(IATA))%MAT &
+     &                          ,DENMAT(NNA)%MAT,DA)
+        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXB,LMNXTB,SBAR(INS(IATB))%MAT &
+     &                          ,DENMAT(NNB)%MAT,DB)
+ !
+!       ========================================================================
+!       == ROTATE DENSITY MATRIX SO THAT DISTANCE VECTOR POINTS IN Z-DIRECTION=
+!       ========================================================================
+!       == CONSTRUCT ROTATION MATRIX ===========================================
+!       == DISTANCE VECTOR WILL BE NEW Z-DIRECTION =============================
+        DR(:)=RB(:)-RA(:)
+        DIS=SQRT(SUM(DR**2))
+        ROT(:,3)=DR(:)/DIS
+!       == FIRST VECTOR IS VECTOR PRODUCT OF THE THE MOST ORTHOGNAL UNIT VECTOR
+        I=MINLOC(ABS(DR),1)
+        ROT(:,2)=0.D0
+        ROT(I,2)=1.D0
+        ROT(1,1)=ROT(2,2)*ROT(3,3)-ROT(3,2)*ROT(2,3)
+        ROT(2,1)=ROT(3,2)*ROT(1,3)-ROT(1,2)*ROT(3,3)
+        ROT(3,1)=ROT(1,2)*ROT(2,3)-ROT(2,2)*ROT(1,3)
+        ROT(:,1)=ROT(:,1)/SQRT(SUM(ROT(:,1)**2))
+        ROT(1,2)=ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)
+        ROT(2,2)=ROT(3,3)*ROT(1,1)-ROT(1,3)*ROT(3,1)
+        ROT(3,2)=ROT(1,3)*ROT(2,1)-ROT(2,3)*ROT(1,1)
+!       == REMOVE INVERSION, IF PRESENT
+        SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(3,2)*ROT(2,3)) &
+       &    +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)) &
+       &    +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(3,1)*ROT(2,2))
+        IF(SVAR.LE.0.D0) ROT(:,1)=-ROT(:,1)
+!
+!       == CONSTRUCT TRANSFORMATION MATRIX FOR REAL SPHERICAL HARMONICS ========
+        LMX=MAX(MAXVAL(POTPAR(ISPA)%TAILED%LOX),MAXVAL(POTPAR(ISPB)%TAILED%LOX))
+        LMX=(LMX+1)**2
+        ALLOCATE(YLMROT(LMX,LMX))
+        CALL SPHERICAL$ROTATEYLM(LMX,ROT,YLMROT)
+!
+!       == CONSTRUCT ROTATION MATRIX OF TAILED ORBITALS ========================
+        ALLOCATE(UROTA(LMNXTA,LMNXTA))
+        ALLOCATE(UROTB(LMNXTB,LMNXTB))
+        LNXA=POTPAR(ISPA)%TAILED%LNX
+        UROTA(:,:)=0.D0
+        LMN=1
+        DO LN=1,LNXA
+          L=POTPAR(ISPA)%TAILED%LOX(LN)
+          LM=L**2+1
+          UROTA(LMN:LMN+2*L,LMN:LMN+2*L)=YLMROT(LM:LM+2*L,LM:LM+2*L)
+          LMN=LMN+2*L+1
+        ENDDO
+        LNXB=POTPAR(ISPB)%TAILED%LNX
+        UROTB(:,:)=0.D0
+        LMN=1
+        DO LN=1,LNXB
+          L=POTPAR(ISPB)%TAILED%LOX(LN)
+          LM=L**2+1
+          UROTB(LMN:LMN+2*L,LMN:LMN+2*L)=YLMROT(LM:LM+2*L,LM:LM+2*L)
+          LMN=LMN+2*L+1
+        ENDDO
+        DEALLOCATE(YLMROT)
+!
+!       == ROTATE DENSITY MATRIX ===============================================
+        !SUGGESTION: SPEED UP BY EXPLOITING THAT UROT IS SPARSE
+        DO I=1,NDIMD
+          DA(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DA(:,:,I),UROTA))
+          D(:,:,I) =MATMUL(TRANSPOSE(UROTA),MATMUL(D(:,:,I) ,UROTB))
+          DB(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DB(:,:,I),UROTB))
+        ENDDO
+!
+!       ========================================================================
+!       == CALCULATE 22-U-TENSOR                                              ==
+!       ========================================================================
+        ALLOCATE(U22   (LMNXTA,LMNXTA,LMNXTB,LMNXTB))
+        ALLOCATE(DU22  (LMNXTA,LMNXTA,LMNXTB,LMNXTB))
+        ALLOCATE(U3A1B (LMNXTA,LMNXTA,LMNXTA,LMNXTB))
+        ALLOCATE(DU3A1B(LMNXTA,LMNXTA,LMNXTA,LMNXTB))
+        ALLOCATE(U3B1A (LMNXTB,LMNXTB,LMNXTB,LMNXTA))
+        ALLOCATE(DU3B1A(LMNXTB,LMNXTB,LMNXTB,LMNXTA))
+        ALLOCATE(BONDU (LMNXTA,LMNXTB,LMNXTA,LMNXTB))
+        ALLOCATE(DBONDU(LMNXTA,LMNXTB,LMNXTA,LMNXTB))
+        DIS=SQRT(SUM((RB-RA)**2))
+        CALL LMTO_OFFSITEX22U(ISPA,ISPB, DIS,LMNXTA,LMNXTB,U22,DU22)
+        CALL LMTO_OFFSITEX31U(ISPA,ISPB, DIS,LMNXTA,LMNXTB,U3A1B,DU3A1B)
+        CALL LMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXTB,LMNXTA,U3B1A,DU3B1A)
+!       == BONDU(1,2,3,4)=INT DX INT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|  ==
+        CALL LMTO_OFFSITEXBONDU(ISPA,ISPB,DIS,LMNXTA,LMNXTB,BONDU,DBONDU)
+!
+!       ========================================================================
+!       == SWITCH SELECTED TERMS OFF                                          ==
+!       ========================================================================
+        IF(.NOT.(HYBRIDSETTING(ISPA)%TNDDO.OR.HYBRIDSETTING(ISPB)%TNDDO)) THEN
+          U22=0.D0
+          DU22=0.D0
+        END IF
+        IF(.NOT.(HYBRIDSETTING(ISPA)%T31.OR.HYBRIDSETTING(ISPB)%T31)) THEN
+!         == FOR EACH BOND ALL 31 TERMS OR NONE ARE CONSIDERED TO ENSURE =======
+!         == THAT THE HAMILTONIAN IS HERMITEAN =================================
+          U3A1B=0.D0
+          DU3A1B=0.D0
+          U3B1A=0.D0
+          DU3B1A=0.D0
+        END IF
+        IF(.NOT.(HYBRIDSETTING(ISPA)%TBONDX.OR.HYBRIDSETTING(ISPB)%TBONDX)) THEN
+!         == FOR EACH BOND ALL 31 TERMS OR NONE ARE CONSIDERED TO ENSURE =======
+!         == THAT THE HAMILTONIAN IS HERMITEAN =================================
+          BONDU=0.D0
+          DBONDU=0.D0
+        END IF
+!
+!       ========================================================================
+!       == ADD UP EXCHANGE ENERGY                                             ==
+!       ========================================================================
+        ALLOCATE(H (LMNXTA,LMNXTB,NDIMD))
+        ALLOCATE(HA(LMNXTA,LMNXTA,NDIMD))
+        ALLOCATE(HB(LMNXTB,LMNXTB,NDIMD))
+        H=0.D0
+        HA=0.D0
+        HB=0.D0
+!
+!       ========================================================================
+!       == NDDO TERM:                                                         ==
+!       == U22(1,2,3,4)=INT DX1 INT DX2: A1(X1)*A2(X1)][B3(X2)*B4(X2)]/|R1-R2|==
+!       == LMN1A,LMN2A TIED TO COORDINATE X, LMN1B,LMN2B TO X'                ==
+!       ========================================================================
+        DO LMN1B=1,LMNXTB
+          DO LMN2B=1,LMNXTB
+            DO LMN1A=1,LMNXTA
+              DO LMN2A=1,LMNXTA
+                SVAR=-0.25D0*U22(LMN1A,LMN2A,LMN2B,LMN1B)
+                EX=EX+SVAR*SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
+                H(LMN1A,LMN1B,:)=H(LMN1A,LMN1B,:)+SVAR*D(LMN2A,LMN2B,:)
+                H(LMN2A,LMN2B,:)=H(LMN2A,LMN2B,:)+SVAR*D(LMN1A,LMN1B,:)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!PRINT*,'EX  2',EX
+!
+!       ========================================================================
+!       == 3-1 TERMS:                                                         ==
+!       == U3A1B(1,2,3,4)=INT DX1 INT DX2:                                    ==
+!       ==                          * [A1(X1)*A2(X1)][A3(X2)*B4(X2)]/|X1-X2|  ==
+!       == LMN1A,LMN2A TIED TO COORDINATE X, LMN3A,LMN1B TO X'                ==
+!       ========================================================================
+        DO LMN1A=1,LMNXTA
+          DO LMN2A=1,LMNXTA
+            DO LMN3A=1,LMNXTA 
+              DO LMN1B=1,LMNXTB
+                SVAR=-0.25D0*U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+                EX=EX+SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN1A,LMN3A,:))
+                HA(LMN1A,LMN3A,:)=HA(LMN1A,LMN3A,:)+SVAR*D(LMN2A,LMN1B,:)
+                H(LMN2A,LMN1B,:) =H(LMN2A,LMN1B,:) +SVAR*DA(LMN1A,LMN3A,:)
+                EX=EX+SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN3A,LMN1A,:))
+                HA(LMN3A,LMN1A,:)=HA(LMN3A,LMN1A,:)+SVAR*D(LMN2A,LMN1B,:)
+                H(LMN2A,LMN1B,:) =H(LMN2A,LMN1B,:) +SVAR*DA(LMN3A,LMN1A,:)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO               
+!PRINT*,'EX  3',EX
+        DO LMN1B=1,LMNXTB
+          DO LMN2B=1,LMNXTB
+            DO LMN3B=1,LMNXTB 
+              DO LMN1A=1,LMNXTA
+                SVAR=-0.25D0*U3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
+                EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN1B,LMN3B,:))
+                HB(LMN1B,LMN3B,:)=HB(LMN1B,LMN3B,:)+SVAR*D(LMN1A,LMN2B,:)
+                H(LMN1A,LMN2B,:) =H(LMN1A,LMN2B,:) +SVAR*DB(LMN1B,LMN3B,:)
+                EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN3B,LMN1B,:))
+                HB(LMN3B,LMN1B,:)=HB(LMN3B,LMN1B,:)+SVAR*D(LMN1A,LMN2B,:)
+                H(LMN1A,LMN2B,:) =H(LMN1A,LMN2B,:) +SVAR*DB(LMN3B,LMN1B,:)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!PRINT*,'EX  4',EX
+!
+!       ========================================================================
+!       == 2ND ORDER DIFFERENTIAL OVERLAP TERMS:                              ==
+!       == BONDU(1,2,3,4)=INT DX1 INT DX2:                                    ==
+!       ==                          * [A1(X1)*B2(X1)][A3(X2)*B4(X2)]/|X1-X2|  ==
+!       == LMN1A,LMN1B TIED TO COORDINATE X1, LMN2A,LMN2B TO X2               ==
+!       ========================================================================
+        DO LMN1A=1,LMNXTA
+          DO LMN1B=1,LMNXTB
+            DO LMN2A=1,LMNXTA 
+              DO LMN2B=1,LMNXTB
+                SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                EX=EX+SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
+                HA(LMN1A,LMN2A,:)=HA(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
+                HB(LMN1B,LMN2B,:)=HB(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
+!!$SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+!!$EX1=EX1+SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
+!!$H1A(LMN1A,LMN2A,:)=H1A(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
+!!$H1B(LMN1B,LMN2B,:)=H1B(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
+                SVAR=-0.25D0*BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*D(LMN2A,LMN1B,:))
+                H(LMN1A,LMN2B,:)=H(LMN1A,LMN2B,:)+SVAR*D(LMN2A,LMN1B,:)
+                H(LMN2A,LMN1B,:)=H(LMN2A,LMN1B,:)+SVAR*D(LMN1A,LMN2B,:)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!PRINT*,'EX  5',EX
+        DEALLOCATE(U22)
+        DEALLOCATE(DU22)
+        DEALLOCATE(U3A1B)
+        DEALLOCATE(DU3A1B)
+        DEALLOCATE(U3B1A)
+        DEALLOCATE(DU3B1A)
+        DEALLOCATE(BONDU)
+        DEALLOCATE(DBONDU)
+!
+!       ========================================================================
+!       == ROTATE HAMILTONIAN BACK                                            ==
+!       ========================================================================
+        DO I=1,NDIMD
+          HA(:,:,I)=MATMUL(UROTA,MATMUL(HA(:,:,I),TRANSPOSE(UROTA)))
+          H(:,:,I) =MATMUL(UROTA,MATMUL(H(:,:,I) ,TRANSPOSE(UROTB)))
+          HB(:,:,I)=MATMUL(UROTB,MATMUL(HB(:,:,I),TRANSPOSE(UROTB)))
+!!$H1A(:,:,I)=MATMUL(UROTA,MATMUL(H1A(:,:,I),TRANSPOSE(UROTA)))
+!!$H1B(:,:,I)=MATMUL(UROTB,MATMUL(H1B(:,:,I),TRANSPOSE(UROTB)))
+        ENDDO
+        DEALLOCATE(UROTA)
+        DEALLOCATE(UROTB)
+!
+!       ========================================================================
+!       == SHRINK DOWN HAMILTONIAN                                            ==
+!       ========================================================================
+!       __D,DA IS RE-USED AS WORK ARRAY TO COLLECT HAMILTONIANS______________
+        D=0.D0
+        DA=0.D0
+        DB=0.D0
+        CALL LMTO_EXPANDNONLOCAL('FWRD',NDIMD,LMNXA,LMNXB,LMNXTA,LMNXTB &
+     &                          ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
+     &                          ,D(:LMNXA,:LMNXB,:),H)
+        HAMIL(NN)%MAT(:,:,:)=HAMIL(NN)%MAT(:,:,:)+D(:LMNXA,:LMNXB,:)
+        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXA,LMNXTA,SBAR(INS(IATA))%MAT &
+     &                          ,D(:LMNXA,:LMNXA,:),HA)
+        HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+DA(:LMNXA,:LMNXA,:)
+        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXB,LMNXTB,SBAR(INS(IATB))%MAT &
+     &                          ,D(:LMNXB,:LMNXB,:),HB)
+        HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+DB(:LMNXB,:LMNXB,:)
+        DEALLOCATE(D)
+        DEALLOCATE(H)
+        DEALLOCATE(DA)
+        DEALLOCATE(HA)
+        DEALLOCATE(DB)
+        DEALLOCATE(HB)
+!!$WRITE(*,*)XDELTA*REAL(IX,8),EX,HAMIL(NN)%MAT(IND1,IND2,IND3)
+!!$IF(IX.EQ.3) STOP 'FORCED'
+!!$GOTO 1000
+      ENDDO
+!
+!     ==========================================================================
+!     == CLEAN UP TO AVOID MEMORY LEAK                                        ==
+!     ==========================================================================
+      DEALLOCATE(NNAT)
+      DEALLOCATE(INS)
                             CALL TRACE$POP()
       RETURN
       END
