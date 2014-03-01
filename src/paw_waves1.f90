@@ -89,9 +89,7 @@ TYPE WVSET_TYPE  !==============================================================
   COMPLEX(8),POINTER :: PSI0(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(0)
   COMPLEX(8),POINTER :: PSIM(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
   COMPLEX(8),POINTER :: PROJ(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) <PSPSI|P>
-  COMPLEX(8),POINTER :: TBC(:,:,:)=>NULL()      !(NDIM,NBH,NPRO) |PSI>=|CHI>*TBC
   COMPLEX(8),POINTER :: TBC_NEW(:,:,:)=>NULL()  !(NDIM,NBH,NORB) |PSI>=|CHI>*TBC
-  COMPLEX(8),POINTER :: HTBC(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) DE/DTBC
   COMPLEX(8),POINTER :: HTBC_NEW(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) DE/DTBC
   COMPLEX(8),POINTER :: HPSI(:,:,:)=>NULL()     !(NGWLX,NB,IDIM)
                                         ! +(WAVES$HPSI)-(WAVES$PROPAGATE)
@@ -1086,9 +1084,7 @@ END MODULE WAVES_MODULE
           NULLIFY(THISARRAY(IKPT,ISPIN)%PSI0)
           NULLIFY(THISARRAY(IKPT,ISPIN)%PSIM)
           NULLIFY(THISARRAY(IKPT,ISPIN)%PROJ)
-          NULLIFY(THISARRAY(IKPT,ISPIN)%TBC)
           NULLIFY(THISARRAY(IKPT,ISPIN)%TBC_NEW)
-          NULLIFY(THISARRAY(IKPT,ISPIN)%HTBC)
           NULLIFY(THISARRAY(IKPT,ISPIN)%HTBC_NEW)
           NULLIFY(THISARRAY(IKPT,ISPIN)%HPSI)
           NULLIFY(THISARRAY(IKPT,ISPIN)%OPSI)
@@ -1855,11 +1851,6 @@ CALL ERROR$STOP('WAVES$ETOT')
       DEALLOCATE(RHO)
       DEALLOCATE(DH)
       DEALLOCATE(DO)
-!
-!     ==========================================================================
-!     ==  ADD CONTRIBUTION FROM DMFT INTERFACE                                ==
-!     ==========================================================================
-!      CALL LMTO$DMFTINTERFACE_PICK()
 !
 !     ==================================================================
 !     ==  EVALUATE ENERGY EXPECTATION VALUES                          ==
@@ -2849,14 +2840,9 @@ END IF
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          IF(.NOT.ASSOCIATED(THIS%TBC))ALLOCATE(THIS%TBC(NDIM,NBH,NPRO))
-          THIS%TBC=THIS%PROJ
-WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
-          CALL LMTO$PROJTONTBO(XK(:,IKPT),NDIM,NBH,NPRO,THIS%TBC)
-!
           IF(.NOT.ASSOCIATED(THIS%TBC_NEW))ALLOCATE(THIS%TBC_NEW(NDIM,NBH,NORB))
           CALL LMTO$PROJTONTBO_NEW('FWRD',XK(:,IKPT),NDIM,NBH,NPRO,THIS%PROJ &
-     &                                            ,NORB,THIS%TBC_NEW)
+     &                                                       ,NORB,THIS%TBC_NEW)
         ENDDO
       ENDDO
 !
@@ -2875,13 +2861,14 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
               WRITE(*,FMT='("PROJ",I5,100F10.5)')2*IB,AIMAG(THIS%PROJ(1,IB,:))
             ENDDO
             DO IB=1,NBH
-              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB-1,REAL(THIS%TBC(1,IB,:))
-              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB,AIMAG(THIS%TBC(1,IB,:))
+              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB-1,REAL(THIS%TBC_NEW(1,IB,:))
+              WRITE(*,FMT='("TBC ",I5,100F10.5)')2*IB,AIMAG(THIS%TBC_NEW(1,IB,:))
             ENDDO
           ENDDO
         ENDDO
-!!$        WRITE(*,*)'FORCED STOP IN WAVES$TONTBO'
-!!$        STOP 'FORCED STOP IN WAVES$TONTBO'
+        CALL ERROR$MSG('REGULAR TERMINATION AFTER PRINTOUT')
+        CALL ERROR$MSG('UNDO BY SETTING TPRINT=.FALSE.')
+        CALL ERROR$STOP('WAVES$TONTBO')
       END IF
                               CALL TIMING$CLOCKOFF('W:TONTBO')
                               CALL TRACE$POP
@@ -2937,17 +2924,13 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
-          IF(TOLD) THEN
-            CALL LMTO$NTBOTOPROJ(XK(:,IKPT),NDIM,NBH,NPRO,THIS%HTBC)
-          ELSE
-            ALLOCATE(HPROJ(NDIM,NBH,NPRO))
-            CALL LMTO$PROJTONTBO_NEW('BACK',XK(:,IKPT),NDIM,NBH,NPRO,HPROJ &
-     &                                                   ,NORB,THIS%HTBC_NEW)
-            DEALLOCATE(THIS%HTBC)
-            ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
-            THIS%HTBC=HPROJ
-            DEALLOCATE(HPROJ)
-          END IF
+          ALLOCATE(HPROJ(NDIM,NBH,NPRO))
+          CALL LMTO$PROJTONTBO_NEW('BACK',XK(:,IKPT),NDIM,NBH,NPRO,HPROJ &
+     &                                                      ,NORB,THIS%HTBC_NEW)
+          DEALLOCATE(THIS%HTBC_NEW)
+          ALLOCATE(THIS%HTBC_NEW(NDIM,NBH,NPRO))
+          THIS%HTBC_NEW=HPROJ
+          DEALLOCATE(HPROJ)
         ENDDO
       ENDDO
 !
@@ -2963,8 +2946,8 @@ WRITE(*,FMT='(80("="),T10," K-POINT :",I3,"  ")')IKPT
             WRITE(*,FMT='(80("="),T20," IKPT=",I5," ISPIN=",I2," ")')IKPT,ISPIN
             DO IB=1,NBH
               WRITE(*,FMT='(80("-"),T20,"  IB=",I5,"  ")')IB
-              WRITE(*,FMT='("RE(HTBC) ",100F10.5)')REAL(THIS%HTBC(1,IB,:))
-              WRITE(*,FMT='("IM(HTBC) ",100F10.5)')AIMAG(THIS%HTBC(1,IB,:))
+              WRITE(*,FMT='("RE(HTBC) ",100F10.5)')REAL(THIS%HTBC_NEW(1,IB,:))
+              WRITE(*,FMT='("IM(HTBC) ",100F10.5)')AIMAG(THIS%HTBC_NEW(1,IB,:))
             ENDDO
           ENDDO
         ENDDO
@@ -3825,9 +3808,9 @@ RETURN
             DEALLOCATE(DO1)
 !
 !           == ADD CONTRIBUTION FROM NTBO'S ====================================
-            IF(ASSOCIATED(THIS%HTBC)) THEN
+            IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
               CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
-     &                                ,THIS%HTBC(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
+     &                                ,THIS%HTBC_NEW(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
             END IF
 
 !           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================
@@ -4006,10 +3989,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !         ==============================================================
 !         ==  ADD POTENTIAL FROM LMTO INTERFACE                      ==
 !         ==============================================================
-          IF(ASSOCIATED(THIS%HTBC)) THEN
-            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC(:,:,:)
-            DEALLOCATE(THIS%HTBC)
-            NULLIFY(THIS%HTBC)
+!         == HTBC CONTAINS ALREADY HPROJ IN TERMS OF PARTIAL WAVE 
+!         == PROJECTOR FUNCTIONS.
+          IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
+            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC_NEW(:,:,:)
+            DEALLOCATE(THIS%HTBC_NEW)
+            NULLIFY(THIS%HTBC_NEW)
           END IF
 !
 !         ==============================================================
