@@ -890,7 +890,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         SBAR_NEW(NN)%MAT=SBAR(NN)%MAT
       ENDDO
       CALL LMTO_EXPANDSBAR()
-!!$CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR)
+CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR)
 !!$CALL LMTO$REPORTPERIODICMAT(6,'NEW STRUCTURE CONSTANTS ',NNS,SBAR_NEW)
 !!$STOP 'FORCED'
 !
@@ -8062,9 +8062,9 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
         HAMIL(NN)%MAT=0.D0
       ENDDO
 !
-!     ===========================================================================
-!     == LOOP OVER ALL ATOMS
-!     ===========================================================================
+!     ==========================================================================
+!     == LOOP OVER ALL ATOMS                                                  ==
+!     ==========================================================================
       EXTOT=0.D0
       EHTOT=0.D0
       DO IAT=1,NAT
@@ -8088,10 +8088,14 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
         ELSE
           HFSCALE=1.D0
         END IF
-PRINT*,'IAT=',IAT,' LOCAL HFSCALE=',HFSCALE
-PRINT*,'LHFW/GHFW ',HYBRIDSETTING(ISP)%LHFWEIGHT,HFWEIGHT
+!       == IF NOT SET, LHFWEIGT IS SET TO -1.D0
+        IF(HYBRIDSETTING(ISP)%LHFWEIGHT.LE.0.D0) THEN
+          HFSCALE=1.D0
+        END IF
+PRINT*,'IAT=',IAT,' LOCAL HFSCALE * GLOBAL HFWEIGHT= ',HFSCALE*HFWEIGHT
+PRINT*,'LHFW=',HYBRIDSETTING(ISP)%LHFWEIGHT,' GHFW=',HFWEIGHT
 !
-!       == FIND ELEMENTS FOR DENSITY MATRIX, HAMILTONIAN AND STFRUCTURE CONSTANTS
+!       == FIND ELEMENTS FOR DENSITY MATRIX, HAMILTONIAN AND STRUCTURE CONSTANTS
         NND=SIZE(DENMAT)
         NNS=SIZE(SBAR)
         CALL LMTO_INDEXLOCAL2(IAT,NND,DENMAT,IND)
@@ -8242,8 +8246,12 @@ DO IDIMD=1,NDIMD
 ENDDO
 END IF
 !!$!
+print*,'------------------------------------'
+PRINT*,'EXTOT',EXTOT,EX,HFSCALE
+print*,'------------------------------------'
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
+
         DEALLOCATE(DTALL)
         DEALLOCATE(HTALL)
 PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
@@ -8858,9 +8866,10 @@ PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
 !     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
 !     ==========================================================================
 PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
-      CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
-      CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
+PRINT*,'OBSOLETE VERSION: ENERGIES NOT ADDED TO ENERGYLIST'
+!!$      CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
+!!$      CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
+!!$      CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS                                                  ==
@@ -11442,14 +11451,14 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         D=0.D0
         DA=0.D0
         DB=0.D0
-        CALL LMTO_EXPANDNONLOCAL('FWRD',NDIMD,LMNXA,LMNXB,LMNXTA,LMNXTB &
+        CALL LMTO_EXPANDNONLOCAL('BACK',NDIMD,LMNXA,LMNXB,LMNXTA,LMNXTB &
      &                          ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
      &                          ,D(:LMNXA,:LMNXB,:),H)
         HAMIL(NN)%MAT(:,:,:)=HAMIL(NN)%MAT(:,:,:)+D(:LMNXA,:LMNXB,:)
-        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXA,LMNXTA,SBAR(INS(IATA))%MAT &
+        CALL LMTO_EXPANDLOCAL('BACK',1,LMNXA,LMNXTA,SBAR(INS(IATA))%MAT &
      &                          ,D(:LMNXA,:LMNXA,:),HA)
         HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+DA(:LMNXA,:LMNXA,:)
-        CALL LMTO_EXPANDLOCAL('FWRD',1,LMNXB,LMNXTB,SBAR(INS(IATB))%MAT &
+        CALL LMTO_EXPANDLOCAL('BACK',1,LMNXB,LMNXTB,SBAR(INS(IATB))%MAT &
      &                          ,D(:LMNXB,:LMNXB,:),HB)
         HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+DB(:LMNXB,:LMNXB,:)
         DEALLOCATE(D)
