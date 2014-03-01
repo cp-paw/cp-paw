@@ -8246,9 +8246,9 @@ DO IDIMD=1,NDIMD
 ENDDO
 END IF
 !!$!
-print*,'------------------------------------'
+PRINT*,'------------------------------------'
 PRINT*,'EXTOT',EXTOT,EX,HFSCALE
-print*,'------------------------------------'
+PRINT*,'------------------------------------'
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE
 
@@ -11456,10 +11456,10 @@ PRINT*,'============ OFFSITEXEVAL ============================='
      &                          ,D(:LMNXA,:LMNXB,:),H)
         HAMIL(NN)%MAT(:,:,:)=HAMIL(NN)%MAT(:,:,:)+D(:LMNXA,:LMNXB,:)
         CALL LMTO_EXPANDLOCAL('BACK',1,LMNXA,LMNXTA,SBAR(INS(IATA))%MAT &
-     &                          ,D(:LMNXA,:LMNXA,:),HA)
+     &                          ,DA(:LMNXA,:LMNXA,:),HA)
         HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+DA(:LMNXA,:LMNXA,:)
         CALL LMTO_EXPANDLOCAL('BACK',1,LMNXB,LMNXTB,SBAR(INS(IATB))%MAT &
-     &                          ,D(:LMNXB,:LMNXB,:),HB)
+     &                          ,DB(:LMNXB,:LMNXB,:),HB)
         HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+DB(:LMNXB,:LMNXB,:)
         DEALLOCATE(D)
         DEALLOCATE(H)
