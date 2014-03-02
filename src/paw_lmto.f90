@@ -2165,7 +2165,7 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
       USE LMTO_MODULE, ONLY : NSP &
-     &                       ,POTPAR=>potpar1
+     &                       ,POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),PARAMETER   :: NPOWPAR=4   !X#(POWERS), R^(L+2N)
       INTEGER(4),PARAMETER   :: NX=2*(NPOWPAR-1) !HIGHEST POWER 
@@ -2285,7 +2285,7 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1,NSP
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,NSP
       IMPLICIT NONE
       INTEGER(4)             :: LX         !X(ANGULAR MOMENTUM)
       INTEGER(4)             :: NPOWX      !X#(DOUBLE POWERS)
@@ -2428,8 +2428,8 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !     ** OF THE OVERLAPS IN THE BOND CENTER                                   **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE LMTO_MODULE, ONLY : nsp &
-     &                       ,POTPAR=>potpar1 &
+      USE LMTO_MODULE, ONLY : NSP &
+     &                       ,POTPAR=>POTPAR1 &
      &                       ,OFFSITEX
       USE MPE_MODULE
       IMPLICIT NONE
@@ -3356,7 +3356,6 @@ IF(TTEST)CALL LMTO_LOCNATORB()
 !!$      CALL LMTO_PLOTNTBO('FULL,STAR',1,1)   !(TYPE,IAT,LMN)
 !!$STOP 'FORCED AFTER PLOTNTBO'
 
-!!$      CALL LMTO$REPORTPOTBAR(6)
 !!$      CALL LMTO$REPORTSBAR(6)
 
 !!$PRINT*,'FUDGE WARNING!!!!! DENSITY MATRIX OVERWRITTEN FOR H2 TEST'
@@ -3566,7 +3565,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
      &                       ,TOFFSITE,HYBRIDSETTING,HFWEIGHT
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER  :: TPLOT=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNS
       INTEGER(4)            :: NAT
@@ -4869,8 +4868,8 @@ PRINT*,'----EXC  ',ETOT
       SUBROUTINE LMTO_OVERLAPEVAL()
 !     **************************************************************************
 !     **  CALCULATEDS OFF-SITE OVERLAP MATRIX "OVERLAP"                       **
-!     **  overlap uses the same data structure as denmat and inherits         **
-!     **  the same neighborlist.                                              **
+!     **  OVERLAP USES THE SAME DATA STRUCTURE AS DENMAT AND INHERITS         **
+!     **  THE SAME NEIGHBORLIST.                                              **
 !     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : ISPECIES &
@@ -5498,7 +5497,7 @@ PRINT*,'============ OFFSITEXEVAL ============================='
 !     ** COMPUTES OFFSITE MATRIX ELEMENTS 
 !     ** WATCH PARALLELIZATION!!!
 !     **************************************************************************
-      USE LMTO_MODULE,ONLY : POTPAR=>potpar1 &
+      USE LMTO_MODULE,ONLY : POTPAR=>POTPAR1 &
      &                      ,OFFSITEX &
      &                      ,NSP
       IMPLICIT NONE
@@ -5622,7 +5621,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
 !     ** GRID                                                                 **
 !     ** ROUTINE IS PARALLELIZED OVER 'MONOMER'                               **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1,OFFSITEX
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,OFFSITEX
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
@@ -5740,7 +5739,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       SUBROUTINE LMTO_OFFSITEX22SETUP(ISP1,ISP2,NR1,NR2,TOLERANCE)
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1,OFFSITEX
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,OFFSITEX
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
@@ -5929,7 +5928,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1,OFFSITEX
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,OFFSITEX
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
@@ -6079,7 +6078,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
 !     ** INTO EXPANSION COEFFICIENTS FOR THE INTERPOLATING FUNCTION           **
 !     ** F_J(X)=SUM_I=1^NDIS X22(I,J)*EXP(-LAMBDA(I)*X)                       **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : OFFSITEX,POTPAR=>potpar1,NSP
+      USE LMTO_MODULE, ONLY : OFFSITEX,POTPAR=>POTPAR1,NSP
       IMPLICIT NONE
       INTEGER(4)            :: ISP1,ISP2
       INTEGER(4)            :: NDIS   !#(GRID POINTS)
@@ -6265,7 +6264,7 @@ INTEGER(4) :: J
       SUBROUTINE LMTO_PRBONDU()
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1,OFFSITEX
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,OFFSITEX
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: ISP1=1
       INTEGER(4),PARAMETER :: ISP2=1
@@ -6312,7 +6311,7 @@ STOP 'FORCED'
 !     ** U-TENSOR FOR TWO ATOMS                                               **
 !     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
@@ -6395,7 +6394,7 @@ STOP 'FORCED'
 !     ** U-TENSOR FOR TWO ATOMS                                               **
 !     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
@@ -6555,7 +6554,7 @@ STOP 'FORCED'
 !     ** U-TENSOR FOR TWO ATOMS 
 !     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
@@ -6702,7 +6701,7 @@ STOP 'FORCED'
 !     ** U-TENSOR FOR TWO ATOMS 
 !     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>potpar1
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
@@ -7346,263 +7345,6 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
        END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTTAILED()
-!     **************************************************************************
-!     **  PLOTS THE LOCAL ORBITALS REPRESENTED BY TAILED ORBITALS,            **
-!     **  THAT IS USING THE ONSITE STRUCTURE CONSTANTS AND EXTRAPOLATING      **
-!     **  TAILS.                                                              **
-!     **                                                                      **
-!     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR
-      IMPLICIT NONE
-      INTEGER(4)             :: NAT
-      INTEGER(4)             :: LMNX
-      INTEGER(4)             :: LMNXT
-      INTEGER(4)             :: LMNXS
-      INTEGER(4)             :: LX
-      INTEGER(4)             :: LMX
-      INTEGER(4)             :: GID
-      INTEGER(4)             :: NR
-      REAL(8)   ,ALLOCATABLE :: C(:)
-      REAL(8)   ,ALLOCATABLE :: CT(:)
-      REAL(8)   ,ALLOCATABLE :: F(:,:)
-      REAL(8)                :: SVAR
-      INTEGER(4)             :: ISP,IAT,LM
-      INTEGER(4)             :: LN,L,LMN,IM
-      INTEGER(4)             :: LNT,LT,LMNT,IMT
-      INTEGER(4)             :: LNXT
-      CHARACTER(5)           :: CHIAT,CHORB
-      CHARACTER(128)         :: STRING
-!     **************************************************************************
-
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      NAT=SIZE(ISPECIES)
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        GID=POTPAR(ISP)%TAILED%GID
-        CALL RADIAL$GETI4(GID,'NR',NR)
-        LX=MAXVAL(LOX(:LNX(ISP),ISP))
-        LMX=(LX+1)**2
-        LMNX=SUM(2*LOX(:LNX(ISP),ISP)+1)
-        LNXT=POTPAR(ISP)%TAILED%LNX
-        LMNXT=POTPAR(ISP)%TAILED%LMNX
-        ALLOCATE(C(LMNX))
-        ALLOCATE(CT(LMNXT))
-        ALLOCATE(F(NR,LMX))
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          DO IM=1,2*L+1
-            LMN=LMN+1
-            C(:)=0.D0
-            C(LMN)=1.D0
-            CALL LMTO_BLOWUPPSINL(IAT,LMNX,C,LMNXT,CT)
-WRITE(*,FMT='("ORBITAL ",I3," WITH L=",I3," AN M=",I3)')LMN,L,IM-L-1
-WRITE(*,FMT='(25F10.3)')CT
-            F(:,:)=0.D0
-            LMNT=0
-            DO LNT=1,LNXT
-              LT=POTPAR(ISP)%TAILED%LOX(LNT)
-              LM=LT**2
-              DO IMT=1,2*LT+1
-                LMNT=LMNT+1
-                LM=LM+1
-                IF(ABS(CT(LMNT)).LT.1.D-8) CYCLE
-                F(:,LM)=F(:,LM)+POTPAR(ISP)%TAILED%AEF(:,LNT)*CT(LMNT)
-              ENDDO
-            ENDDO
-            WRITE(CHIAT,FMT='(I5)')IAT
-            WRITE(CHORB,FMT='(I5)')LMN
-            STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
-            CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,F)
-          ENDDO  ! END LOOP OVER IM OF ORBITALS
-        ENDDO    ! END LOOP OVER LN OF ORBITALS
-        DEALLOCATE(C)
-        DEALLOCATE(CT)
-        DEALLOCATE(F)
-      ENDDO  !END LOOP OVER ATOMS
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTTAILED_OLD()
-!     **************************************************************************
-!     **  PLOTS THE LOCAL ORBITALS REPRESENTED BY TAILED ORBITALS,            **
-!     **  THAT IS USING THE ONSITE STRUCTURE CONSTANTS AND EXTRAPOLATING      **
-!     **  TAILS.                                                              **
-!     **                                                                      **
-!     ******************************PETER BLOECHL, GOSLAR 2011******************
-      USE LMTO_MODULE, ONLY: K2,ISPECIES,LNX,LOX,POTPAR,SBAR,SBARLI1
-      IMPLICIT NONE
-      INTEGER(4)             :: NAT
-      INTEGER(4)             :: LMNX
-      INTEGER(4)             :: LMNXT
-      INTEGER(4)             :: LMNXS
-      INTEGER(4)             :: LMX
-      INTEGER(4)             :: GID
-      INTEGER(4)             :: NR
-      INTEGER(4)             :: LX
-      INTEGER(4)             :: NNS
-      REAL(8)   ,ALLOCATABLE :: SBARLOC(:,:)
-      REAL(8)   ,ALLOCATABLE :: F(:,:)
-      INTEGER(4),ALLOCATABLE :: LMARR(:)
-      REAL(8)                :: SVAR
-      INTEGER(4)             :: IAT,ISP,LN,L,NN,LMN,IM,I1,IORB,LM,I0
-      INTEGER(4)             :: LNDOT,LMNDOT
-      CHARACTER(5)           :: CHIAT,CHORB
-      CHARACTER(128)         :: STRING
-!     **************************************************************************
-
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==========================================================================
-      NAT=SIZE(ISPECIES)
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        GID=POTPAR(ISP)%TAILED%GID
-        CALL RADIAL$GETI4(GID,'NR',NR)
-        LX=MAXVAL(LOX(:LNX(ISP),ISP))
-        LMX=(LX+1)**2
-!
-!       ========================================================================
-!       ==  DETERMINE SIZE OF STRUCTURE CONSTANT ARRAY                        ==
-!       ========================================================================
-        LMNXS=0 ! #(SCATTERING STATES)
-        LMNX=0  ! #(VALENCE STATES)
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          LMNX=LMNX+2*L+1
-          IF(POTPAR(ISP)%LNSCATT(LN).EQ.LN) LMNXS=LMNXS+2*L+1
-        ENDDO
-        LMNXT=LMNX+LMNXS ! #(VALENCE + SCATTERING STATES)
-        ALLOCATE(SBARLOC(LMNX,LMNXS))           !C
-        ALLOCATE(LMARR(LMNXT))
-!    
-!       ========================================================================
-!       ==  COLLECT LOCAL STRUCTURE CONSTANTS                                 ==
-!       ========================================================================
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          DO IM=1,2*L+1
-            LMN=LMN+1
-            LMARR(LMN)=L**2+IM           
-          ENDDO
-        ENDDO
-        DO LN=1,LNX(ISP)
-          IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
-          L=LOX(LN,ISP)
-          DO IM=1,2*L+1
-            LMN=LMN+1
-            LMARR(LMN)=L**2+IM           
-          ENDDO
-        ENDDO
-!    
-!       ========================================================================
-!       ==  COLLECT LOCAL STRUCTURE CONSTANTS                                 ==
-!       ========================================================================
-        NNS=SIZE(SBAR)
-        DO NN=1,NNS
-          IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
-          IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
-          IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
-          IF(SBAR(NN)%N1.NE.LMNXS.OR.SBAR(NN)%N2.NE.LMNXS) THEN
-            CALL ERROR$MSG('INCONSISTENT ARRAY SIZES N1,N2')
-            CALL ERROR$I4VAL('N1',LMNXS)
-            CALL ERROR$I4VAL('SBAR%N1',SBAR(NN)%N1)
-            CALL ERROR$I4VAL('SBAR%N2',SBAR(NN)%N2)
-            CALL ERROR$STOP('LMTO_PLOTTAILED_OLD')
-          END IF
-          LMN=0
-          DO LN=1,LNX(ISP)
-            L=LOX(LN,ISP)
-            I1=SBARLI1(L+1,ISP)-1
-            DO IM=1,2*L+1 
-              SBARLOC(LMN+IM,:)=SBAR(NN)%MAT(I1+IM,:)  !C
-            ENDDO
-            LMN=LMN+2*L+1
-          ENDDO
-          EXIT
-        ENDDO
-!
-!       ========================================================================
-!       ==  CALCULATE ORBITALS                                                ==
-!       ========================================================================
-        ALLOCATE(F(NR,LMX))
-PRINT*,'LMARR ',LMARR
-        DO IORB=1,LMNX
-WRITE(*,FMT='("SBARLOC",10F10.5)')SBARLOC(IORB,:)  !C
-          F(:,:)=0.D0
-          LMN=0
-          DO LN=1,LNX(ISP)
-            L=LOX(LN,ISP)
-            DO IM=1,2*L+1
-              LMN=LMN+1
-              LM=LMARR(LMN)
-!             == ADD HEAD FUNCTION
-              IF(LMN.EQ.IORB) THEN
-                F(:,LMARR(LMN))=F(:,LMARR(LMN))+POTPAR(ISP)%TAILED%AEF(:,LN)
-              END IF
-!             == ADD TAIL FUNCTION FUNCTION
-              IF(POTPAR(ISP)%LNSCATT(LN).NE.LN) CYCLE
-              LNDOT=POTPAR(ISP)%TAILED%LNDOT(LN)
-              LMNDOT=POTPAR(ISP)%TAILED%LMNDOT(LMN)
-              F(:,LMARR(LMN))=F(:,LMARR(LMN)) &
-      &               -POTPAR(ISP)%TAILED%AEF(:,LNDOT)*SBARLOC(IORB,LMNDOT-LMNX) !C
-            ENDDO
-          ENDDO
-          WRITE(CHIAT,FMT='(I5)')IAT
-          WRITE(CHORB,FMT='(I5)')IORB
-          STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
-          CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,F)
-          F(:,:)=0.D0
-          LMN=0
-          DO LN=1,LNX(ISP)
-            L=LOX(LN,ISP)
-            DO IM=1,2*L+1
-              LMN=LMN+1
-              LM=LMARR(LMN)
-!             == ADD HEAD FUNCTION
-              IF(LMN.EQ.IORB) THEN
-                F(:,LMARR(LMN))=F(:,LMARR(LMN))+POTPAR(ISP)%TAILED%AEF(:,LN)
-              END IF
-            ENDDO
-          ENDDO
-          WRITE(CHIAT,FMT='(I5)')IAT
-          WRITE(CHORB,FMT='(I5)')IORB
-          STRING='XCHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
-          CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,F)
-        ENDDO
-        DEALLOCATE(F)
-!
-!       ========================================================================
-!       ==  REPORT SOME OTHER DATA                                            ==
-!       ========================================================================
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          I0=SBARLI1(L+1,ISP)-1
-          DO IM=1,2*L+1
-            LMN=LMN+1
-            SVAR=POTPAR(ISP)%KTOPHIDOT(LN) &
-       &      -POTPAR(ISP)%JBARTOPHIDOT(LN)*SBARLOC(LMN,I0+IM)
-            SVAR=SVAR/POTPAR(ISP)%KTOPHI(LN) 
-            WRITE(*,FMT='("CPHIDOT:",I5,2F10.5)')LMN,K2,SVAR
-          ENDDO
-        ENDDO
-!
-!       ========================================================================
-!       ==  CLEAN UP AFTER ITERATION                                          ==
-!       ========================================================================
-        DEALLOCATE(LMARR)
-        DEALLOCATE(SBARLOC)               
-      ENDDO
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_DOUBLECOUNTING(IAT,NDIMD,NORB,D,EX,H)
 !     **************************************************************************
 !     **                                                                      **
@@ -8142,37 +7884,6 @@ PRINT*,'N1,N2 ',N1,N2
       END SUBROUTINE LMTO$SYMMETRIZEHAMIL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO$REPORTPOTBAR(NFIL)
-!     **************************************************************************
-!     ** WRITE INFORMATION RELATED TO POTENTIAL PARAMETERS                    **
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR,NSP,LNX,LOX
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NFIL
-      CHARACTER(64)         :: TITLE
-      INTEGER(4)            :: ISP,LN
-!     **************************************************************************
-                             CALL TRACE$PUSH('LMTO$REPORTPOTPAR')
-      DO ISP=1,NSP
-        DO LN=1,LNX(ISP)
-          WRITE(TITLE,FMT='(I3," LN=",I3," L=",I2)')ISP,LN,LOX(LN,ISP)
-          TITLE='POTENTIAL PARAMETERS FOR ATOM TYPE '//TRIM(ADJUSTL(TITLE))
-          CALL REPORT$TITLE(NFIL,TITLE)
-          CALL REPORT$R8VAL(NFIL,'RAD',POTPAR(ISP)%RAD,'ABOHR')
-          CALL REPORT$I4VAL(NFIL,'LNSCATT',POTPAR(ISP)%LNSCATT(LN),'')
-          CALL REPORT$R8VAL(NFIL,'QBAR',POTPAR(ISP)%QBAR(LN),'')
-          CALL REPORT$R8VAL(NFIL,'KTOPHI',POTPAR(ISP)%KTOPHI(LN),'')
-          CALL REPORT$R8VAL(NFIL,'KTOPHIDOT',POTPAR(ISP)%KTOPHIDOT(LN),'')
-          CALL REPORT$R8VAL(NFIL,'JBARTOPHIDOT',POTPAR(ISP)%JBARTOPHIDOT(LN),'')
-          CALL REPORT$R8VAL(NFIL,'<PRO|PSPHIDOT>',POTPAR(ISP)%PHIDOTPROJ(LN),'')
-        ENDDO
-        WRITE(NFIL,FMT='(82("="))')
-      ENDDO
-                                                 CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_WRITEPHI(FILE,GID,NR,NPHI,PHI)
 !     **                                                                      **
 !     **                                                                      **
@@ -8202,17 +7913,219 @@ PRINT*,'N1,N2 ',N1,N2
 !===============================================================================
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_TAILEDORBLM(IAT,IORB,NR,LMX,ORB)
+!     **************************************************************************
+!     ** CALCULATE SPHERICAL HARMONICS CONTRIBUTION OF THE THE TAILED ORBITAL **
+!     ** NUMBER IORB ON ATOM IAT                                              **
+!     **                                                                      **
+!     ** CHI(R)=SUM_LM=1^LMX ORB(R,LM)*YLM(R)                                 **
+!     **                                                                      **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY: ISPECIES &
+     &                      ,POTPAR=>POTPAR1 &
+     &                      ,SBAR=>SBAR_NEW
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IAT
+      INTEGER(4),INTENT(IN) :: IORB
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LMX
+      REAL(8)   ,INTENT(OUT):: ORB(NR,LMX)
+      INTEGER(4)            :: ISP      
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: NNS
+      INTEGER(4)            :: INS
+      INTEGER(4)            :: NN
+      INTEGER(4)            :: NHEAD,NTAIL
+      INTEGER(4)            :: I,L,M,LM,LMN
+!     **************************************************************************
+      ISP=ISPECIES(IAT)
+      IF(SIZE(ORB(:,1)).NE.SIZE(POTPAR(ISP)%TAILED%AEF(:,1))) THEN
+        CALL ERROR$MSG('INCONSISTENT ARGUMENT NR')
+        CALL ERROR$STOP('LMTO_TAILEDORBLM')
+      END IF
+      LX=MAX(MAXVAL(POTPAR(ISP)%LOFH),MAXVAL(POTPAR(ISP)%LOFT))
+      IF(LMX.LE.(LX+1)**2) THEN
+        CALL ERROR$MSG('DIMENSION LMX SMALLER THAN REQUIRED')
+        CALL ERROR$STOP('LMTO_TAILEDORBLM')
+      END IF
+!
+!     ==========================================================================
+!     == DETERMINE INDEX OF ONSITE STRUCTURE CONSTANTS                        ==
+!     ==========================================================================
+      NNS=SIZE(SBAR)
+      INS=0
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
+        IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
+        IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
+        INS=NN
+        EXIT
+      ENDDO
+!
+!     ==========================================================================
+!     == COLLECT HEAD CONTRIBUTION                                            ==
+!     ==========================================================================
+      ORB(:,:)=0.D0
+      NHEAD=POTPAR(ISP)%NHEAD
+      LMN=0
+      DO I=1,NHEAD
+        L=POTPAR(ISP)%LOFH(I)
+        DO M=1,2*L+1
+          LMN=LMN+1
+          IF(LMN.NE.IORB) CYCLE
+          LM=L**2+M
+          ORB(:,LM)=POTPAR(ISP)%TAILED%AEF(:,I)
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ADD TAIL CONTRIBUTIONS                                              ==
+!     ==========================================================================
+      NTAIL=POTPAR(ISP)%NTAIL
+      LMN=0
+      DO I=1,NTAIL
+        L=POTPAR(ISP)%LOFT(I)
+        DO M=1,2*L+1
+          LMN=LMN+1
+          LM=L**2+M
+          ORB(:,LM)=ORB(:,LM)-POTPAR(ISP)%TAILED%AEF(:,NHEAD+I) &
+     &                       *SBAR(INS)%MAT(IORB,LMN)
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_PLOTTAILED()
+!     **************************************************************************
+!     **  PLOTS THE LOCAL ORBITALS REPRESENTED BY TAILED ORBITALS,            **
+!     **  THAT IS USING THE ONSITE STRUCTURE CONSTANTS AND EXTRAPOLATING      **
+!     **  TAILS.                                                              **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE LMTO_MODULE, ONLY: ISPECIES &
+     &                      ,POTPAR=>POTPAR1
+      IMPLICIT NONE
+      INTEGER(4)             :: NAT  !#(ATOMS)
+      INTEGER(4)             :: LX   !X(ANGULAR MOMENTUM)
+      INTEGER(4)             :: LMX  !#(ANGULAR MOMENTA FOR THE ORBITAL)
+      INTEGER(4)             :: GID  !GRID ID FOR RADIAL GRID
+      INTEGER(4)             :: NR   !#(RADIAL GRID POINTS)
+      REAL(8)   ,ALLOCATABLE :: ORB(:,:)  !(NR,LMX)
+      INTEGER(4)             :: ISP ! ATOM-TYPE INDEX
+      INTEGER(4)             :: NHEAD ! #(RADIAL HEAD FUNCTIONS)
+      INTEGER(4)             :: IAT
+      INTEGER(4)             :: IORB  ! ORBITAL INDEX
+      INTEGER(4)             :: IH,LH,MH
+      CHARACTER(5)           :: CHIAT,CHORB
+      CHARACTER(128)         :: STRING
+!     **************************************************************************
+
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        GID=POTPAR(ISP)%TAILED%GID
+        CALL RADIAL$GETI4(GID,'NR',NR)
+        NHEAD=POTPAR(ISP)%NHEAD
+        LX=MAX(MAXVAL(POTPAR(ISP)%LOFH),MAXVAL(POTPAR(ISP)%LOFT))
+        LMX=(LX+1)**2
+        ALLOCATE(ORB(NR,LMX))
+        IORB=0
+        DO IH=1,NHEAD
+          LH=POTPAR(ISP)%LOFH(IH)
+          DO MH=1,2*LH+1
+            IORB=IORB+1
+            CALL LMTO_TAILEDORBLM(IAT,IORB,NR,LMX,ORB)
+            WRITE(CHIAT,FMT='(I5)')IAT
+            WRITE(CHORB,FMT='(I5)')IORB
+            STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
+            CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,ORB)
+          ENDDO !END OF LOOP OVER MH (MAGNETIC QUANTUM NUMBER OF HEAD FUNCTION)
+        ENDDO !END OF LOOP OVER HEAD FUNCTIONS (WITHOUT M-MULTIPLICITY)
+        DEALLOCATE(ORB)
+      ENDDO  !END OF LOOP OVER ATOMS
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_TAILED_NTBOOFR(IAT,IORB,NP,P,CHI)
+!     **************************************************************************
+!     **  MAPS THE SCREENED ORBITAL LMNORB AT ATOM IATORB                     **
+!     **  ONTO THE GRID P                                                     **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                       ,POTPAR=>POTPAR1
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: IAT     ! INDEX OF CENTRAL ATOM
+      INTEGER(4)  ,INTENT(IN) :: IORB    ! ORBITAL INDEX
+      INTEGER(4)  ,INTENT(IN) :: NP      ! #(GRID POINTS)
+      REAL(8)     ,INTENT(OUT):: CHI(NP) ! SCREENED ENVELOPE FUNCTIONS
+      REAL(8)     ,INTENT(IN) :: P(3,NP) ! GRIDPOINT POSITIONS
+      INTEGER(4)              :: NAT     ! #(ATOMS)
+      REAL(8)   ,ALLOCATABLE  :: R0(:,:) ! ATOMIC POSITIONS
+      INTEGER(4)              :: GID     ! GRID ID
+      INTEGER(4)              :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4)              :: LX,LMX
+      REAL(8)                 :: DR(3) ! DISTANCE VECTOR OF GRID POINT TO ATOM
+      REAL(8)                 :: DIS   ! DISTANCE OF GRID POINT TO ATOM
+      REAL(8)  ,ALLOCATABLE   :: YLM(:)    ! SPHERICAL HARMONICS
+      REAL(8)  ,ALLOCATABLE   :: ORB(:,:)  ! RADIAL PARTS OF THE ORBITAL
+      REAL(8)                 :: VAL
+      INTEGER(4)              :: IP,LM
+      INTEGER(4)              :: ISP
+!     **************************************************************************
+      ISP=ISPECIES(IAT)
+!
+!     ==========================================================================
+!     == COLLECT ATOMIC STRUCTURE                                             ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     == CALCULATE SPHERICAL HARMONICS REPRESENTATION OF THE ORBITAL          ==
+!     ==========================================================================
+      LX=MAX(MAXVAL(POTPAR(ISP)%LOFH),MAXVAL(POTPAR(ISP)%LOFT))
+      LMX=(LX+1)**2
+      GID=POTPAR(ISP)%TAILED%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(ORB(NR,LMX))
+      CALL LMTO_TAILEDORBLM(IAT,IORB,NR,LMX,ORB)
+!
+!     ==========================================================================
+!     == LOOP OVER REAL SPACE GRID                                            ==
+!     ==========================================================================
+      ALLOCATE(YLM(LMX))
+      CHI(:)=0.D0
+      DO IP=1,NP
+        DR(:)=P(:,IP)-R0(:,IAT)
+        CALL SPHERICAL$YLM(LMX,DR,YLM)
+        DIS=SQRT(SUM(DR**2))
+        DO LM=1,LMX
+          CALL RADIAL$VALUE(GID,NR,ORB,DIS,VAL)
+          CHI(IP)=CHI(IP)+VAL*YLM(LM)
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_GRIDPLOT_TAILED(IAT0)
 !     **************************************************************************
-!     **  WRITES THE ENVELOPE FUNCTIONS CENTERED AT ATOM IAT0 TO FILE         **
+!     **  WRITES THE TAILED ORBITALS CENTERED AT ATOM IAT0 TO FILE            **
 !     **                                                                      **
 !     **  SET N1,N2,N3 EQUAL TO THE NUMBER OF GRIDPOINTS IN EACH DIRECTION    **
-!     **                                                                      **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009-2014********
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
-      USE LMTO_MODULE, ONLY : ISPECIES,SBAR,POTPAR
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                       ,SBAR=>SBAR_NEW &
+     &                       ,POTPAR=>POTPAR1
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IAT0
       INTEGER(4),PARAMETER  :: N1=40,N2=40,N3=40 !GRID (1D?)
@@ -8261,31 +8174,10 @@ PRINT*,'N1,N2 ',N1,N2
       NAT=SIZE(ISPECIES)
       ALLOCATE(R0(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-      ALLOCATE(RAD(NAT))
-      NORB=0
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETR8('AEZ',AEZ)
-        RAD(IAT)=POTPAR(ISP)%RAD
-!
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        ALLOCATE(ISCATT(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        CALL SETUP$GETI4A('ISCATT',LNX,ISCATT)
-        DO LN=1,LNX
-          IF(ISCATT(LN).NE.0) CYCLE
-          L=LOX(LN)
-          IF(IAT.EQ.IAT0)NORB=MAX(NORB,(L+1)**2)
-        ENDDO
-        DEALLOCATE(LOX)
-        DEALLOCATE(ISCATT)
-        CALL SETUP$ISELECT(0)
-      ENDDO
 !
 !     ==========================================================================
 !     == DEFINE ATOMS ON THE CLUSTER OF NEIGHBORS                             ==
+!     == NEEDED FOR BALL STICK MODEL IN CUBE FILE                             ==
 !     ==========================================================================
       NATCLUSTER=0
       NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
@@ -8344,8 +8236,11 @@ PRINT*,'N1,N2 ',N1,N2
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION AT THE GRID POINTS                       ==
 !     ==========================================================================
+      NORB=SUM(2*POTPAR(ISP)%LOFH+1)
       ALLOCATE(ORB(NP,NORB))
-      CALL LMTO_LMTO_GRIDPLOT_TAILEDINNER(NAT,R0,IAT0,NP,P,NORB,ORB)
+      DO IORB=1,NORB
+        CALL LMTO_TAILED_NTBOOFR(IAT,IORB,NP,P,ORB(:,IORB))
+      ENDDO
 !
 !     ==========================================================================
 !     == WRITE ORBITALS TO FILE                                               ==
@@ -8412,121 +8307,6 @@ PRINT*,'N1,N2 ',N1,N2
       DEALLOCATE(P)
       DEALLOCATE(ORB)
                                               CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_LMTO_GRIDPLOT_TAILEDINNER(NAT,R0,IAT1,NP,P,NORB,ORB)
-!     **************************************************************************
-!     ** MAPS THE SCREENED ENVELOPE FUNCTION AT ATOM IAT1 ONTO THE GRID P     **
-!     ** THE SCREENED ENVELOPE FUNCTION IS DESCRIBED BY THE ONSITE            **
-!     ** CONTRIBUTION WITH MATCHING EXPONENTIAL TAILS                         **
-!     **                                                                      **
-!     ** ATTENTION: SCREENING IS DETERMINED BY ISCATT                         **
-!     **                                                                      **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2010 ************
-      USE LMTO_MODULE, ONLY : SBAR,POTPAR,LNX,LOX,ISPECIES,SBARLI1,K2
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT       ! #(ATOMS)
-      REAL(8)   ,INTENT(IN) :: R0(3,NAT) ! ATOMIC POSITIONS
-      INTEGER(4),INTENT(IN) :: IAT1      ! INDEX OF CENTRAL ATOM
-      INTEGER(4),INTENT(IN) :: NP        ! #(GRID POINTS)
-      REAL(8)   ,INTENT(IN) :: P(3,NP)   ! GRIDPOINT POSITIONS
-      INTEGER(4),INTENT(IN) :: NORB      !#(ORBITALS ON CENTRAL ATOM)
-      REAL(8)   ,INTENT(OUT):: ORB(NP,NORB)  ! SCREENED ENVELOPE FUNCTIONS
-      INTEGER(4)            :: NNS
-      REAL(8)               :: SBARMAT(NORB,NORB)
-      INTEGER(4)            :: ISP  ! SPECIES ID OF ATOM IAT1
-      INTEGER(4)            :: LMNXS,LMNX
-      INTEGER(4)            :: LX
-      INTEGER(4)            :: LMX
-      REAL(8)   ,ALLOCATABLE:: YLM(:)
-      REAL(8)   ,ALLOCATABLE:: SBARLOC(:,:)
-      REAL(8)   ,ALLOCATABLE:: R(:)
-      REAL(8)               :: RX
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: NR
-      REAL(8)               :: DR(3),DRLEN
-      REAL(8)               :: VAL
-      INTEGER(4)            :: NN,L,IM,IP,LN,LM,LMN,I0
-!     **************************************************************************
-      ISP=ISPECIES(IAT1)
-      GID=POTPAR(ISP)%TAILED%GID
-      CALL RADIAL$GETI4(GID,'NR',NR)
-      ALLOCATE(R(NR))
-      CALL RADIAL$R(GID,NR,R)
-      RX=R(NR)
-      DEALLOCATE(R)
-      LX=MAXVAL(LOX(:LNX(ISP),ISP))
-      LMX=(LX+1)**2
-!
-!     ==========================================================================
-!     == SIZE OF SBARLOC                                                      **
-!     ==========================================================================
-      LMNXS=0
-      LMNX=0
-      DO LN=1,LNX(ISP)
-        L=LOX(LN,ISP)
-        LMNX=LMNX+2*L+1
-        IF(POTPAR(ISP)%LNSCATT(LN).EQ.LN) LMNXS=LMNXS+2*L+1
-      ENDDO
-      ALLOCATE(SBARLOC(LMNX,LMNXS))  !C
-!
-!     ==========================================================================
-!     == COLLECT SCREENED STRUCTURE CONSTANTS FOR ATOM IAT1 ====================
-!     ==========================================================================
-      NNS=SIZE(SBAR)  !SBAR STRUCCONS. (GLOBAL)
-      DO NN=1,NNS
-        IF(SBAR(NN)%IAT1.NE.IAT1) CYCLE
-        IF(SBAR(NN)%IAT2.NE.IAT1) CYCLE
-        IF(MAXVAL(ABS(SBAR(NN)%IT(:))).NE.0) CYCLE
-        IF(SBAR(NN)%N1.NE.LMNXS.OR.SBAR(NN)%N2.NE.LMNXS) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF ORBITALS ')
-          CALL ERROR$STOP('LMTO_LMTO_GRIDPLOT_TAILEDINNER')
-        END IF
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          I0=SBARLI1(L+1,ISP)-1
-          DO IM=1,2*L+1 
-            SBARLOC(LMN+IM,:)=SBAR(NN)%MAT(I0+IM,:)  !C
-          ENDDO
-          LMN=LMN+2*L+1
-        ENDDO
-        EXIT
-      ENDDO
-!
-!     ==========================================================================
-!     == CALCULATE ORBITALS                                                   ==
-!     ==========================================================================
-      ORB(:,:)=0.D0
-      ALLOCATE(YLM(LMX))
-      DO IP=1,NP
-!       == DR IS THE DISTANCE FROM THE SECOND ATOM =============================
-        DR(:)=P(:,IP)-R0(:,IAT1)
-        DRLEN=SQRT(SUM(DR**2))
-        IF(DRLEN.GT.RX) CYCLE
-        CALL SPHERICAL$YLM(LMX,DR,YLM)
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          CALL RADIAL$VALUE(GID,NR,POTPAR(ISP)%TAILED%AEF(:,LN),DRLEN,VAL)
-          DO IM=1,2*L+1
-            LMN=LMN+1
-            LM=L**2+IM
-            ORB(IP,LMN)=ORB(IP,LMN)+VAL*YLM(LM)
-          ENDDO
-        ENDDO
-        DO LN=LNX(ISP)+1,POTPAR(ISP)%TAILED%LNX
-          CALL RADIAL$VALUE(GID,NR,POTPAR(ISP)%TAILED%AEF(:,LN),DRLEN,VAL)
-          L=POTPAR(ISP)%TAILED%LOX(LN)
-          I0=SBARLI1(L+1,ISP)-1
-          DO IM=1,2*L+1
-            LM=L**2+IM
-            ORB(IP,:)=ORB(IP,:)+VAL*YLM(LM)*SBARLOC(:,I0+IM)
-          ENDDO
-        ENDDO
-      ENDDO
       RETURN
       END
 !
@@ -9715,13 +9495,16 @@ PRINT*,'MARKE 1G'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_TAILED_NTBOOFR(TYPE,IATORB,LMNORB,NP,P,ORB)
+      SUBROUTINE LMTO_TAILED_NTBOOFROLD(TYPE,IATORB,LMNORB,NP,P,ORB)
 !     **************************************************************************
 !     **  MAPS THE SCREENED ORBITAL LMNORB AT ATOM IATORB                     **
 !     **  ONTO THE GRID P                                                     **
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
-      USE LMTO_MODULE, ONLY : ISPECIES,NSP,LNX,LOX,SBAR,K2,POTPAR,SBARLI1
+      USE LMTO_MODULE, ONLY : ISPECIES,NSP,LNX,LOX,K2 &
+     &                       ,SBAR &
+     &                       ,POTPAR &
+     &                       ,SBARLI1
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: TYPE    !
       INTEGER(4)  ,INTENT(IN) :: IATORB  ! INDEX OF CENTRAL ATOM
@@ -10253,46 +10036,6 @@ REAL(8) :: X(10)
         WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*SCALE
       ENDDO  
       WRITE(NFIL,FMT='(6(E12.5," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTRADIAL()
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTO_MODULE, ONLY: GAUSSORBAUG
-      IMPLICIT NONE
-      REAL(8)    ,PARAMETER :: RAD=5.D0
-      INTEGER(4)            :: NIJK
-      INTEGER(4)            :: NE
-      INTEGER(4)            :: NORB
-      INTEGER(4)            :: NAT
-      REAL(8)   ,ALLOCATABLE:: E(:)
-      REAL(8)   ,ALLOCATABLE:: C(:,:)
-      INTEGER(4)            :: IAT,IORB
-      CHARACTER(128)        :: FILE
-      CHARACTER(128)        :: STRING
-!     **************************************************************************
-      CALL ATOMLIST$NATOM(NAT)
-      DO IAT=1,NAT
-        NORB=GAUSSORBAUG(IAT)%NORB
-        NIJK=GAUSSORBAUG(IAT)%NIJK
-        NE=GAUSSORBAUG(IAT)%NE
-        ALLOCATE(E(NE))
-        ALLOCATE(C(NIJK,NE))
-        E=GAUSSORBAUG(IAT)%E
-        DO IORB=1,NORB
-          WRITE(STRING,*)IAT
-          FILE='PLOTRADIAL_'//TRIM(ADJUSTL(STRING))
-          WRITE(STRING,*)IORB
-          FILE=TRIM(ADJUSTL(FILE))//'_'//TRIM(ADJUSTL(STRING))//'.DAT'
-          C(:,:)=GAUSSORBAUG(IAT)%C(:,:,IORB)
-!4*PI*R^2*F^2 IS THE NORM OF THE ORBITAL AS IN THE OVERLAP MATRIX.
-          CALL GAUSSIAN$PLOTRADIAL(FILE,RAD,NIJK,NE,E,C)
-        ENDDO
-        DEALLOCATE(E)
-        DEALLOCATE(C)
-      ENDDO
       RETURN
       END
 !
