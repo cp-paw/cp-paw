@@ -635,6 +635,7 @@ END MODULE LMTO_MODULE
       USE PERIODICTABLE_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TPLOT=.FALSE.
       INTEGER(4),PARAMETER   :: NNXPERATOM=100
       INTEGER(4)             :: NAT       !#(ATOMS)
       REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
@@ -844,6 +845,18 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
 !     == CALCULATE <PRO|CHI> FROM STRUCTURE CONSTANTS                         ==
 !     ==========================================================================
       CALL LMTO_PCHI()
+!
+!     ==========================================================================
+!     == PLOT WAVE FUNCTIONS                                                  ==
+!     ==========================================================================
+      IF(TPLOT) THEN
+        PRINT*,'BEFORE LMTO_PLOTTAILED'
+        CALL LMTO_PLOTTAILED()
+        PRINT*,'BEFORE LMTO_GRIDPLOT_TAILED'
+        CALL LMTO_GRIDPLOT_TAILED(1)
+        CALL ERROR$MSG('PLANNED EXIT AFTER PLOTTING FOR ANALYSIS')
+        CALL ERROR$STOP('LMTO$MAKESTRUCTURECONSTANTS')
+      END IF
                               CALL TIMING$CLOCKOFF('LMTO STRUCTURECONSTANTS')
                               CALL TRACE$POP()
       RETURN
@@ -1715,7 +1728,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !       ========================================================================
 !       == AUGMENTATION ========================================================
 !       ========================================================================
-!
 !       == NODELESS SPHERE PART. RESULTS IN CONTINUOUS ORBITAL =================
         ALLOCATE(AEPHI(NR,LNX(ISP)))
         ALLOCATE(AEPHIDOT(NR,LNX(ISP)))
@@ -3852,18 +3864,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
-!
-!     ==========================================================================
-!     == PLOT WAVE FUNCTIONS                                                  ==
-!     ==========================================================================
-      IF(TPLOT) THEN
-        PRINT*,'BEFORE PLOTTAILED'
-        CALL LMTO_PLOTTAILED()
-        PRINT*,'LMTO_GRIDPLOT_TAILED'
-        CALL LMTO_GRIDPLOT_TAILED(1)
-        CALL ERROR$MSG('PLANNED EXIT AFTER PLOTTING FOR ANALYSIS')
-        CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2')
-      END IF
 !
 !     ==========================================================================
 !     == PRINT FOR TEST                                                       ==
@@ -7944,8 +7944,10 @@ PRINT*,'N1,N2 ',N1,N2
         CALL ERROR$STOP('LMTO_TAILEDORBLM')
       END IF
       LX=MAX(MAXVAL(POTPAR(ISP)%LOFH),MAXVAL(POTPAR(ISP)%LOFT))
-      IF(LMX.LE.(LX+1)**2) THEN
+      IF(LMX.LT.(LX+1)**2) THEN
         CALL ERROR$MSG('DIMENSION LMX SMALLER THAN REQUIRED')
+        CALL ERROR$I4VAL('LMX ON INPUT',LMX)
+        CALL ERROR$I4VAL('LX ON POTPAR',LX)
         CALL ERROR$STOP('LMTO_TAILEDORBLM')
       END IF
 !
@@ -8107,7 +8109,7 @@ PRINT*,'N1,N2 ',N1,N2
         CALL SPHERICAL$YLM(LMX,DR,YLM)
         DIS=SQRT(SUM(DR**2))
         DO LM=1,LMX
-          CALL RADIAL$VALUE(GID,NR,ORB,DIS,VAL)
+          CALL RADIAL$VALUE(GID,NR,ORB(:,LM),DIS,VAL)
           CHI(IP)=CHI(IP)+VAL*YLM(LM)
         ENDDO
       ENDDO
@@ -8236,10 +8238,11 @@ PRINT*,'N1,N2 ',N1,N2
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION AT THE GRID POINTS                       ==
 !     ==========================================================================
+      ISP=ISPECIES(IAT0)
       NORB=SUM(2*POTPAR(ISP)%LOFH+1)
       ALLOCATE(ORB(NP,NORB))
       DO IORB=1,NORB
-        CALL LMTO_TAILED_NTBOOFR(IAT,IORB,NP,P,ORB(:,IORB))
+        CALL LMTO_TAILED_NTBOOFR(IAT0,IORB,NP,P,ORB(:,IORB))
       ENDDO
 !
 !     ==========================================================================
@@ -11546,3 +11549,4 @@ INTEGER(4)             :: LN3,LN4
 
       RETURN
       END
+
