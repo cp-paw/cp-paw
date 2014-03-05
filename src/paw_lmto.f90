@@ -17,7 +17,6 @@ TYPE HYBRIDSETTING_TYPE
   LOGICAL(4)  :: TFOCKSETUP ! CALCULATE ATOM WITH FOCK TERM
   REAL(8)     :: LHFWEIGHT  ! LOCAL EXCHANGE TERMS ARE TREATED WITH
                             ! LHFWEIGHT, EXCEPT WHEN IT IS NEGATIVE
-!  REAL(8)     :: K2
   REAL(8)     :: TAILEDLAMBDA1  ! LARGER DECAY CONSTANT FOR THE NTBO TAILS
   REAL(8)     :: TAILEDLAMBDA2  ! SMALLER DECAY CONSTANT FOR THE NTBO TAILS
 !  REAL(8)     :: RANGESCALE ! DETERMINES RANGE OF NEAREST NEIGHBOR LIST
@@ -184,7 +183,7 @@ LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
 !REAL(8)               :: K2=0.D0    ! 0.5*K2 IS THE KINETIC ENERGY
-REAL(8)               :: RCSCALE=1.2D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
+REAL(8)               :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 ! RCSCALE=5. IS GOOD FOR THE HUBBARD MODEL WITH LATTICE CONSTANT=3\AA
 !REAL(8)               :: RCSCALE=5.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
 !         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
@@ -223,10 +222,10 @@ TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: SBAR_NEW(:)!(NNS) SCREENED STRUCT. CONST.
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: PCHI(:)    !(NNS) <PTILDE|CHITILDE>
 TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: DENMAT_NEW(:)  !(NND) DENSITY MATRIX
 TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: HAMIL_NEW(:)   !(NND) DERIVATIVE OF ENERGY
-! overlap is only used for testdenmat
+! OVERLAP IS ONLY USED FOR TESTDENMAT
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: OVERLAP(:) !(NNS) OVERLAP MATRIX ONLY MAIN
 !
-!  these two data shall be made obsolete =======================================
+!  THESE TWO DATA SHALL BE MADE OBSOLETE =======================================
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: SBAR(:)    !(NNS) SCREEND STRUCTURE CONST.
 TYPE(POTPAR_TYPE)     ,ALLOCATABLE :: POTPAR(:) !POTENTIAL PARAMETERS
 END MODULE LMTO_MODULE
@@ -417,9 +416,6 @@ END MODULE LMTO_MODULE
           HYBRIDSETTING(:)%TBONDX=.TRUE.
           HYBRIDSETTING(:)%TAILEDLAMBDA1=4.D0
           HYBRIDSETTING(:)%TAILEDLAMBDA2=2.D0
-!          HYBRIDSETTING(:)%HFWEIGHT=0.25D0
-!          HYBRIDSETTING(:)%K2=-0.25D0
-!          HYBRIDSETTING(:)%RANGESCALE=1.2D0
         END IF
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -802,6 +798,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
             ENDDO
             LMN2=LMN2+2*L2+1
           ENDDO
+          LX=LX1(NN-NN1+1)
           I=I+(LX+1)**2
         ENDDO
         DEALLOCATE(LX1)
@@ -827,9 +824,9 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
       CALL LMTO_PCHI()
 !
 !     ==========================================================================
-!     == PLOT WAVE FUNCTIONS for testing (usually inactive)                   ==
+!     == PLOT WAVE FUNCTIONS FOR TESTING (USUALLY INACTIVE)                   ==
 !     ==========================================================================
-      call lmto_plotorbs()
+      CALL LMTO_PLOTORBS()
                               CALL TIMING$CLOCKOFF('LMTO STRUCTURECONSTANTS')
                               CALL TRACE$POP()
       RETURN
@@ -3313,7 +3310,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
 
 
 !!$      CALL LMTO_TESTDENMAT_1CDENMAT(LMNXX_,NDIMD_,NAT_,DENMAT_)
-        print*,'toffsite',toffsite
+        PRINT*,'TOFFSITE',TOFFSITE
         IF(TOFFSITE) CALL LMTO_TESTDENMAT()
 !STOP 'FORCED'
 
@@ -3424,7 +3421,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
      &                      ,DENMAT_NEW &
      &                      ,SBAR_NEW &
      &                      ,POTPAR1 &
-     &                      ,hybridsetting
+     &                      ,HYBRIDSETTING
       IMPLICIT NONE
       INTEGER(4)              :: NAT
       INTEGER(4)              :: NNX
@@ -7398,11 +7395,11 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     **  CALCULATE TRACE[DENMAT*OBERLAP] TO CHECK THE SUM-RULE               **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : toffsite &
+      USE LMTO_MODULE, ONLY : TOFFSITE &
      &                       ,OVERLAP &
      &                       ,DENMAT=>DENMAT_NEW
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: Ton=.true.
+      LOGICAL(4),PARAMETER  :: TON=.TRUE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNO
       INTEGER(4)            :: IAT1,IAT2,IT(3)
@@ -7410,15 +7407,15 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)            :: NN,MM,I,J
       REAL(8)               :: SVAR1,SVAR2
 !     **************************************************************************
-      IF(.NOT.Ton) RETURN
+      IF(.NOT.TON) RETURN
                                            CALL TRACE$PUSH('LMTO_TESTDENMAT')
-    
       IF(.NOT.TOFFSITE) THEN
         CALL ERROR$MSG('OVERLAP CAN ONLY BE CALCULATED WITH TOFFSITE=TRUE')
         CALL ERROR$STOP('LMTO_TESTDENMAT')
       END IF
-      call LMTO_OVERLAPEVAL()
-      write(*,fmt='(80("="),t20,"  Tr[denmat*overlap] ")')
+      CALL LMTO_OVERLAPEVAL()
+      WRITE(*,FMT='(80("="),T20,"  TR[DENMAT*OVERLAP] ")')
+      WRITE(*,FMT='(80("="),T20,"  CHARGE CONTRIBUTION DQ FROM EACH PAIR  ")')
       NND=SIZE(DENMAT)
       NNO=SIZE(OVERLAP)
       SVAR1=0.D0
@@ -7426,26 +7423,27 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         IAT1=DENMAT(NN)%IAT1
         IAT2=DENMAT(NN)%IAT2
         IT=DENMAT(NN)%IT
-        WRITE(*,FMT='(82("="),T10," IAT1 ",I4," IAT2=",I4," IT=",3I3)') &
-     &                                                             IAT1,IAT2,IT
         DO MM=1,NNO
-          IF(OVERLAP(MM)%IAT1.NE.IAT1) CYCLE
-          IF(OVERLAP(MM)%IAT2.NE.IAT2) CYCLE
-          IF(OVERLAP(MM)%IT(1).NE.IT(1)) CYCLE
-          IF(OVERLAP(MM)%IT(2).NE.IT(2)) CYCLE
-          IF(OVERLAP(MM)%IT(3).NE.IT(3)) CYCLE
+          IF(OVERLAP(MM)%IAT1.NE.IAT2) CYCLE
+          IF(OVERLAP(MM)%IAT2.NE.IAT1) CYCLE
+          IF(OVERLAP(MM)%IT(1).NE.-IT(1)) CYCLE
+          IF(OVERLAP(MM)%IT(2).NE.-IT(2)) CYCLE
+          IF(OVERLAP(MM)%IT(3).NE.-IT(3)) CYCLE
           N1=DENMAT(NN)%N1
           N2=DENMAT(NN)%N2
           SVAR2=0.D0
-          DO J=1,N1 
+          DO J=1,N2
 !!$            WRITE(*,FMT='("D ",200F10.3)')DENMAT(NN)%MAT(J,:,1)
 !!$            WRITE(*,FMT='("O ",200F10.3)')OVERLAP(MM)%MAT(:,J)
-            DO I=1,N2
+            DO I=1,N1
               SVAR2=SVAR2+DENMAT(NN)%MAT(I,J,1)*OVERLAP(MM)%MAT(J,I)
             ENDDO
           ENDDO
           SVAR1=SVAR1+SVAR2
-          PRINT*,'#PARTICLES FROM THIS PAIR ',SVAR2,' SUM=',SVAR1
+!         __SVAR2=NUMBER OF ELECTRONS FROM THIS PAIR____________________________
+!         __SVAR1=SUM OF CHARGES OVER ALL PAIRS PROCESSED SO FAR________________
+          WRITE(*,FMT='("IAT1=",I4," IAT2=",I4," IT=",3I3' &
+     &                //'," DQ=",F10.5," SUMQ=",F10.5)')IAT1,IAT2,IT,SVAR2,SVAR1
         ENDDO
       ENDDO
       PRINT*,'TOTAL #PARTICLES ',SVAR1
@@ -7476,7 +7474,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)             :: LNX
       INTEGER(4)             :: LMNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
-      INTEGER(4)             :: NND,nns
+      INTEGER(4)             :: NND,NNS
       INTEGER(4)             :: NN
       INTEGER(4)             :: ISPA,ISPB
       INTEGER(4)             :: LMNXA,LMNXB
@@ -7496,7 +7494,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       REAL(8)   ,ALLOCATABLE :: UROTB(:,:)
       REAL(8)   ,ALLOCATABLE :: OV(:,:)
       REAL(8)   ,ALLOCATABLE :: DOV(:,:)
-      integer(4),allocatable :: ins(:)
+      INTEGER(4),ALLOCATABLE :: INS(:)
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_OVERLAPEVAL')
       IF(.NOT.TOFFSITE) THEN
@@ -7517,14 +7515,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     == ALLOCATE OVERLAP                                                     ==
 !     ==========================================================================
 !
-!     == deallocate first ======================================================
-      if(allocated(overlap)) then
-        NND=SIZE(overlap)
-        do nn=1,nnd
-          deallocate(overlap(nn)%mat)
-        enddo
-        deallocate(overlap)
-      end if
+!     == DEALLOCATE FIRST ======================================================
+      IF(ALLOCATED(OVERLAP)) THEN
+        NND=SIZE(OVERLAP)
+        DO NN=1,NND
+          DEALLOCATE(OVERLAP(NN)%MAT)
+        ENDDO
+        DEALLOCATE(OVERLAP)
+      END IF
 
       NND=SIZE(DENMAT)
       IF(.NOT.ALLOCATED(OVERLAP)) THEN
@@ -7549,7 +7547,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       END IF
 !
 !     ==========================================================================
-!     == COLLECT POINTERS NNAT TO ONSITE DENSITY MATRIX ELEMENTS              ==
+!     == COLLECT POINTERS INS(IAT) TO ONSITE STRUCTURE CONSTANTS              ==
 !     ==========================================================================
       ALLOCATE(INS(NAT))
       INS=0
@@ -7575,7 +7573,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       DO NN=1,NND
         IATA=OVERLAP(NN)%IAT1
         IATB=OVERLAP(NN)%IAT2
-!       == CONSIDER ONLY OFFSITE TERMS =========================================
         ISPA=ISPECIES(IATA)
         ISPB=ISPECIES(IATB)
         RA(:)=R0(:,IATA)
@@ -7585,15 +7582,17 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         NA=OVERLAP(NN)%N1
         NB=OVERLAP(NN)%N2
 !
-!       == ONSITE ELEMENT
+!       == ONSITE ELEMENT=======================================================
         IF(IATA.EQ.IATB.AND.SUM(OVERLAP(NN)%IT**2).EQ.0)  THEN
           ALLOCATE(OV(LMNXA,LMNXB))
           OV=POTPAR(ISPA)%TAILED%OVERLAP
-          CALL LMTO_EXPANDLOCAL('BACK',1,na,LMNXA,SBAR(INS(IATA))%MAT &
-     &                          ,overlap(nn)%mat,ov)
+          CALL LMTO_EXPANDLOCAL('BACK',1,NA,LMNXA,SBAR(INS(IATA))%MAT &
+     &                          ,OVERLAP(NN)%MAT,OV)
           DEALLOCATE(OV)
           CYCLE
         END IF
+!
+!       == CONSIDER ONLY OFFSITE TERMS =========================================
 !
 !       ========================================================================
 !       == CALCULATE OVERLAP MATRIX WITH Z ATONG THE BOND AXIS                ==
@@ -7667,9 +7666,9 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !       ========================================================================
 !       == SHRINK DOWN HAMILTONIAN                                            ==
 !       ========================================================================
-        CALL LMTO_EXPANDNONLOCAL('BACK',1,na,nb,LMNXA,LMNXB &
+        CALL LMTO_EXPANDNONLOCAL('BACK',1,NA,NB,LMNXA,LMNXB &
      &                          ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
-     &                          ,OVERLAP(NN)%MAT,ov)
+     &                          ,OVERLAP(NN)%MAT,OV)
         DEALLOCATE(OV)
         DEALLOCATE(DOV)
       ENDDO
@@ -7902,19 +7901,22 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !===============================================================================
 !     
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_plotorbs()
+      SUBROUTINE LMTO_PLOTORBS()
 !     **************************************************************************
 !     **************************************************************************
-      use lmto_module, only : ispecies &
-     &                        ,potpar=>potpar1
-      implicit none
-      logical(4),parameter :: ton=.false.
-      integer(4) :: iat,isp,iorb,ih,l,im
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                        ,POTPAR=>POTPAR1
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER :: TON=.FALSE.
+      LOGICAL(4),SAVE      :: TINI=.FALSE. !EXECUTE ONLY ONCE
+      INTEGER(4) :: IAT,ISP,IORB,IH,L,IM
 !     **************************************************************************
-      if(.not.ton) return
+      IF(.NOT.TON) RETURN
+      IF(TINI) RETURN
+      TINI=.TRUE.
 !
 !     ==========================================================================
-!     == calculate all orbitals into cube files                               ==
+!     == CALCULATE ALL ORBITALS INTO CUBE FILES                               ==
 !     ==========================================================================
       PRINT*,'BEFORE LMTO_PLOTTAILED'
       CALL LMTO_PLOTTAILED()
@@ -7930,15 +7932,16 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
           L=POTPAR(ISP)%LOFH(IH)
           DO IM=1,2*L+1
             IORB=IORB+1
-            CALL LMTO_PLOTNTBO('TAILEDNTBO',IAT,IORB)
-            CALL LMTO_PLOTNTBO('NTBO',IAT,IORB)
+            CALL LMTO_PLOTNTBO(IAT,IORB,'1C','1D')
+            CALL LMTO_PLOTNTBO(IAT,IORB,'MC','1D')
           ENDDO
         ENDDO
       ENDDO
-      CALL ERROR$MSG('PLANNED EXIT AFTER PLOTTING FOR ANALYSIS')
-      CALL ERROR$STOP('LMTO_plotorbs')
-      stop
-      end
+      PRINT*,'PLOTORBS FINISHED'
+!!$      CALL ERROR$MSG('PLANNED EXIT AFTER PLOTTING FOR ANALYSIS')
+!!$      CALL ERROR$STOP('LMTO_PLOTORBS')
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PLOTTAILED()
@@ -7996,9 +7999,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_PLOTNTBO(TYPE,IAT0,IORB)
+      SUBROUTINE LMTO_PLOTNTBO(IAT0,IORB,TYPE,ID)
 !     **************************************************************************
-!     **  WRITES THE TAILED ORBITALS CENTERED AT ATOM IAT0 TO FILE            **
+!     **  WRITES THE ORBITAL IORB ON ATOM IAT0 TO FILE.                       **
+!     **                                                                      **
+!     **  SELECT TAILED REPRESENTATION USING TYPE='1C' (ONE-CENTER)           **
+!     **  OR THE MULTICENTER EXPANSION USING BARE HANKEL FUNCTION USING 'MC'  **
+!     **                                                                      **
+!     **  SELECT A CUBE FILE FOR SURFACE PLOTS WITH ID='3D'                   **
 !     **                                                                      **
 !     **  SET N1,N2,N3 EQUAL TO THE NUMBER OF GRIDPOINTS IN EACH DIRECTION    **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009-2014********
@@ -8008,14 +8016,15 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
      &                       ,SBAR=>SBAR_NEW &
      &                       ,POTPAR=>POTPAR1
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: IAT0
-      INTEGER(4),INTENT(IN) :: IORB
-      CHARACTER(*),INTENT(IN):: TYPE  ! 'TAILEDNTBO' OR 'NTBO'
-      INTEGER(4),PARAMETER  :: N1=40,N2=40,N3=40 !GRID (1D?)
-      INTEGER(4),PARAMETER  :: NRAD=200
-      INTEGER(4),PARAMETER  :: NDIRX=100
-      REAL(8)   ,PARAMETER  :: RANGE=8.D0
-      CHARACTER(32),PARAMETER :: STARTYPE='CUBEAXIS'
+      INTEGER(4)  ,INTENT(IN) :: IAT0
+      INTEGER(4)  ,INTENT(IN) :: IORB
+      CHARACTER(*),INTENT(IN) :: TYPE  ! '1C' OR 'MC'
+      CHARACTER(*),INTENT(IN) :: ID    ! '1D', '2D', OR '3D'
+      INTEGER(4),PARAMETER    :: N1=40,N2=40,N3=40 !GRID (1D?)
+      INTEGER(4),PARAMETER    :: NRAD=200
+      INTEGER(4),PARAMETER    :: NDIRX=100
+      REAL(8)   ,PARAMETER    :: RANGE=8.D0
+      CHARACTER(32),PARAMETER :: STARTYPE='CUBEAXES'
 !      CHARACTER(32),PARAMETER :: STARTYPE='NEIGHBORS'
       REAL(8)               :: DIR(3,NDIRX)
       REAL(8)               :: ORIGIN(3)
@@ -8047,9 +8056,8 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)            :: NP,IP
       REAL(8)  ,ALLOCATABLE :: P(:,:)
       LOGICAL(4),PARAMETER  :: TGAUSS=.TRUE.
-      CHARACTER(2),PARAMETER :: ID='3D'
 !     **************************************************************************
-                                         CALL TRACE$PUSH('LMTO_GRIDPLOT')
+                                         CALL TRACE$PUSH('LMTO_PLOTNTBO')
 !
 !     ==========================================================================
 !     == COLLECT INFORMATION                                                  ==
@@ -8128,9 +8136,9 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
           DIR(:,13)=(/1.D0,1.D0,-1.D0/)
         ELSE
           CALL ERROR$MSG('STARTYPE NOT RECOGNIZED')
-          CALL ERROR$MSG('MAY BE EITHER "NEIGHBORS" OR "CUBEAXIS"')
+          CALL ERROR$MSG('MAY BE EITHER "NEIGHBORS" OR "CUBEAXES"')
           CALL ERROR$CHVAL('STARTYPE',STARTYPE)
-          CALL ERROR$STOP('LMTO_GRIDPLOT')
+          CALL ERROR$STOP('LMTO_PLOTNTBO')
         END IF
         NP=NRAD*NDIR
         ALLOCATE(P(3,NP))
@@ -8139,22 +8147,22 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         CALL ERROR$MSG('INVALID ID')
         CALL ERROR$MSG('MUST BE "1D", "2D", OR "3D"')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTO_GRIDPLOT')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
       END IF
 !
 !     ==========================================================================
-!     == DETERMINE orbital on THE specified GRID POINTS                       ==
+!     == DETERMINE ORBITAL ON THE SPECIFIED GRID POINTS                       ==
 !     ==========================================================================
       ISP=ISPECIES(IAT0)
       ALLOCATE(ORB(NP))
-      IF(TYPE.EQ.'TAILEDNTBO') THEN
+      IF(TYPE.EQ.'1C') THEN
         CALL LMTO_TAILED_NTBOOFR(IAT0,IORB,NP,P,ORB)
-      ELSE IF(TYPE.EQ.'NTBO') THEN
+      ELSE IF(TYPE.EQ.'MC') THEN
         CALL LMTO_NTBOOFR(IAT0,IORB,NP,P,ORB)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
         CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('LMTO_GRIDPLOT')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
       END IF
 !
 !     ==========================================================================
@@ -8169,14 +8177,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       FILE=TRIM(ADJUSTL(FILE))//'_ORB'//TRIM(ADJUSTL(STRING))
 !
 !     ==  TAILED OR MULTICENTER EXPANSION ======================================
-      IF(TYPE.EQ.'NTBO') THEN
+      IF(TYPE.EQ.'MC') THEN
         FILE=TRIM(ADJUSTL(FILE))//'_'//'MC'  !MULTI CENTER
-      ELSE IF(TYPE.EQ.'TAILEDNTBO') THEN
+      ELSE IF(TYPE.EQ.'1C') THEN
         FILE=TRIM(ADJUSTL(FILE))//'_'//'1C'  !1-CENTER (TAILED REPRESENTATION)
       ELSE
         CALL ERROR$MSG('TYPE NOT RECOGNIZED')
         CALL ERROR$CHVAL('TYPE',TYPE)
-        CALL ERROR$STOP('LMTO_GRIDPLOT')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
       END IF
 !
 !     == DIMENSION OF PLOT =====================================================
@@ -8190,7 +8198,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         CALL ERROR$MSG('INVALID ID')
         CALL ERROR$MSG('MUST BE "1D", "2D", OR "3D"')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTO_GRIDPLOT')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
       END IF
 !
 !     ==========================================================================
@@ -8213,7 +8221,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         CALL ERROR$MSG('INVALID ID')
         CALL ERROR$MSG('MUST BE "1D", "2D", OR "3D"')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTO_GRIDPLOT')
+        CALL ERROR$STOP('LMTO_PLOTNTBO')
       END IF
       CALL FILEHANDLER$CLOSE('HOOK')
       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,-'.FORGOTTOASSIGNFILETOHOOK')
@@ -8553,11 +8561,11 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         CALL SETUP$ISELECT(0)
 !
 !       == CONSTRUCT HEAD AND TAIL FUNCTIONS FROM PARTIAL WAVES ===============
+        NTAIL=POTPAR(ISP2)%NTAIL
+        NHEAD=POTPAR(ISP2)%NHEAD
         ALLOCATE(K0ARR(NR))
         ALLOCATE(DK0ARR(NR))
         ALLOCATE(JBARARR(NR,NTAIL))
-        NTAIL=POTPAR(ISP2)%NTAIL
-        NHEAD=POTPAR(ISP2)%NHEAD
         DO IT=1,NTAIL
           L=POTPAR(ISP2)%LOFT(IT)
           LNDOT=POTPAR(ISP2)%LNOFT(IT)
@@ -8565,7 +8573,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
           IF(POTPAR(ISP2)%LOFH(IHORB).EQ.L) THEN
             LN=POTPAR(ISP2)%LNOFH(IHORB)
             K0ARR(:)=NLPHI(:,LN)   *POTPAR(ISP2)%KTOPHI(IHORB) &
-                    +NLPHI(:,LNDOT)*POTPAR(ISP2)%KTOPHIDOT(IHORB) 
+                    +NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%KTOPHIDOT(IHORB) 
             DK0ARR(:)=(AEPHI(:,LN)-NLPHI(:,LN))*POTPAR(ISP2)%KTOPHI(IHORB) 
           END IF
         ENDDO

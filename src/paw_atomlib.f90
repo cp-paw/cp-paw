@@ -734,7 +734,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)   ,PARAMETER       :: XAVTOL=1.D-8
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      LOGICAL(4),PARAMETER       :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER       :: TPR=.FALSE.
       REAL(8)                    :: R(NR)
       REAL(8)                    :: RHO(NR)
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
@@ -754,7 +754,7 @@ USE PERIODICTABLE_MODULE
       LOGICAL(4)                 :: TSO     ! CALCULATE WITH SPIN ORBIT COUPLING
       LOGICAL(4)                 :: TZORA   ! CALCULATE ZEROTH ORDER RELATIVISTIC CORRECTIONS
       LOGICAL(4)                 :: TFOCK   ! CALCULATE WITH FOCK EXCHANGE
-      INTEGER(4)          :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
+!      INTEGER(4)          :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
       INTEGER(4),PARAMETER       :: ZCORES(6)=(/2,10,18,36,54,86/)
       REAL(8)                    :: FTOT
       REAL(8)                    :: PI,Y0,C0LL
@@ -912,11 +912,22 @@ USE PERIODICTABLE_MODULE
           END IF
         ENDDO
         NB=IB
-        FTOT=SUM(FOFI(:NB))
+!
+!       ========================================================================
+!       == SPECIAL TREATMENT OR EMPTY ATOMS                                   ==
+!       ========================================================================
+        IF(NB.EQ.0) THEN
+          NB=1
+          FOFI(NB)=0.D0
+          LOFI(NB)=0
+          SOFI(NB)=0
+          IF(TSO)SOFI(NB)=1
+        END IF
 !
 !       == CORRECT FOR NON-INTEGER ATOMIC NUMBERS ==============================
 !       == THIS IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY A FRACTIONAL =
 !       == NUCLEAR AND ELECTRONIC CHARGE =======================================
+        FTOT=SUM(FOFI(:NB))
         SVAR=AEZ-FTOT
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
@@ -927,14 +938,15 @@ USE PERIODICTABLE_MODULE
               SVAR=FOFI(IB)
               FOFI(IB)=0.D0
             END IF
-         ENDDO
+          ENDDO
         END IF
 !
-!       == CONSISTENCY CHECK                                                 ==
+!       == CONSISTENCY CHECK  ==================================================
         FTOT=SUM(FOFI(:NB))
         IF(ABS(FTOT-AEZ).GT.1.D-8) THEN
           DO IB=1,NB
-            WRITE(*,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
+            WRITE(* &
+        &       ,'("IB=",I2," L=",I1," SOFI=",I2," F=",F8.2," SUM(F)=",F8.2)') &
         &           IB,LOFI(IB),SOFI(IB),FOFI(IB),SUM(FOFI(:IB))
           ENDDO
           CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
@@ -1189,7 +1201,8 @@ ENDDO
       END IF
 
 CALL RADIALFOCK$PRINTVFOCK('VFOCK.DAT',VFOCK)
-PRINT*,'FINAL CONVERGENCE'
+
+WRITE(*,FMT='("FINAL ONE-PARTICLE ENERGIES FROM AESCF  ")')
 WRITE(*,FMT='(3A4,A10,A5,A20)')'IB','L','SO','F','#NODE','E'
 DO I=1,NB
   WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
