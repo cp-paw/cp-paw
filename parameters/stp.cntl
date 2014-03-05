@@ -1,4 +1,6 @@
 !SCNTL
+  VERSION="_VERSION_"
+
   !SETUP  ID='H_.75_6.0' EL='H' ZV=   1.
           TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
           RCL/RCOV= 0.75 0.75 0.75 0.75

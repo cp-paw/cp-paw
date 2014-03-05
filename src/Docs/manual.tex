@@ -2795,6 +2795,17 @@ types, electronic occupations, atomic masses. etc...}
 \vrules{optional, LUNIT and LUNIT[AA] are mutually exclusive}
 \vdefault{none}}
 
+\mbax{\key{STPVERSION} 
+\vdescr{overwrites the required version of the setup parameters file
+(parameters/stp.cntl). Background: Since version 2.0.0 of the paw code
+there is an internal check in the release versions of the program that 
+makes sure that the version of the paw code (see -{}-version command line argument) 
+is the same as the version of the setup parameters file that is 
+loaded at runtime (see PAWDIR environment variable or PARMS\_STP-option).}
+\vformat{Character} 
+\vrules{optional}
+\vdefault{none}}
+
 %----------------------------------------------------------------------
 \block{!STRUCTURE!LATTICE}
 %----------------------------------------------------------------------

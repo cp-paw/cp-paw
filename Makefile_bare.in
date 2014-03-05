@@ -957,6 +957,7 @@ endif
  ${OBJDIR}/paw_setups.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_setups.o : LMTO_MODULE.mod
  ${OBJDIR}/paw_setups.o : LINKEDLIST_MODULE.mod
+ ${OBJDIR}/paw_setups.o : VERSION_MODULE.mod
  SETUP_MODULE.mod : ${OBJDIR}/paw_setups.o
  ## file:src/paw_softcore.f90
  CORE_MODULE.mod : ${OBJDIR}/paw_softcore.o

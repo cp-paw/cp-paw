@@ -169,6 +169,7 @@ TYPE FASTACCESS_TYPE
 END TYPE FASTACCESS_TYPE
 TYPE(FASTACCESS_TYPE),ALLOCATABLE :: FASTACCESS(:)
 LOGICAL(4)             :: TINTERNALSETUPS=.TRUE.
+CHARACTER(128)         :: STPVERSION !REQUIRED SETUP VERSION
 END MODULE SETUP_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -383,6 +384,7 @@ END MODULE SETUP_MODULE
 !     **  COLLECTS INTERNAL DATA                                              **
 !     **                                                                      **
 !     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **  REMARK: GETTING STPVERSION DOES NOT REQUIRE SETUP TO BE SELECTED    **
 !     **                                                                      **
 !     **************************************************************************
       USE SETUP_MODULE
@@ -394,6 +396,30 @@ END MODULE SETUP_MODULE
         VAL=THIS%ID
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=THIS%SOFTCORETYPE
+      ELSE IF(ID.EQ.'STPVERSION') THEN
+        VAL=STPVERSION
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$STOP('SETUP$GETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$SETCH(ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
+!     **  REMARK: SETTING STPVERSION DOES NOT REQUIRE SETUP TO BE SELECTED    **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      CHARACTER(*),INTENT(IN)  :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'STPVERSION') THEN
+        STPVERSION=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SETUP$GETCH')
@@ -2512,6 +2538,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
+      USE VERSION_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: SETUPID
       INTEGER(4)  ,INTENT(OUT):: GID
@@ -2546,12 +2573,45 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)                 :: RCOV
       REAL(8)                 :: DMIN,DMAX,RX
       REAL(8)                 :: PI,Y0
+      CHARACTER(128)          :: VERSION
+      CHARACTER(128)          :: STPVERSION
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL ATOMLIB$READSCNTL(LL_SCNTL)
       CALL LINKEDLIST$SELECT(LL_SCNTL,'~')
       CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL')
+!
+!     ======================================================================
+!     == CHECK VERSION                                                    ==
+!     ======================================================================
+      CALL LINKEDLIST$EXISTD(LL_SCNTL,'VERSION',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SCNTL!VERSION NOT SPECIFIED')
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
+      ELSE
+        CALL LINKEDLIST$GET(LL_SCNTL,'VERSION',1,VERSION)
+        IF(VERTYP.NE."RELEASE VERSION")THEN
+          PRINT*,'WARNING: NOT USING A RELEASE VERSION, CHECK OF VERSION ',&
+     &               'OF SETUP PARAMETERS FILE DISABLED!'
+        ELSE
+          CALL SETUP$GETCH('STPVERSION',STPVERSION)
+          IF(STPVERSION.NE.VERSION)THEN
+            CALL ERROR$MSG('REQUIRED SETUP VERSION AND VERSION OF SETUP')
+            CALL ERROR$MSG('PARAMETERS FILE ARE DIFFERENT.')
+            CALL ERROR$MSG('CHECK THE ENVIRONMENT VARIABLE PAWDIR.')
+            CALL ERROR$MSG('CHECK PARMS_STP (IF GIVEN) IN CNTL FILE.')
+            CALL ERROR$MSG('USE STPVERSION TO FORCE A SPECIFIC VERSION.')
+            CALL ERROR$CHVAL('REQUIRED SETUP VERSION',STPVERSION)
+            CALL ERROR$CHVAL('VERSION OF SETUP PARAMETERS FILE',VERSION)
+            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
+          ENDIF
+        ENDIF
+      END IF
+!
+!     ======================================================================
+!     == LOOP OVER SETUPS                                                 ==
+!     ======================================================================
       ITH=0
       DO 
         ITH=ITH+1

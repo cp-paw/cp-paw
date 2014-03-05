@@ -1,4 +1,5 @@
 !      MODULE VERSION_MODULE
+!        CHARACTER(256):: VERTYP=_VERTYP
 !        CHARACTER(256):: VERINF=_VERINF
 !        CHARACTER(256):: VERREV=_VERREV
 !        CHARACTER(256):: VERAUT=_VERAUT
@@ -64,6 +65,7 @@
      &              //',"  CP-PAW VERSION INFO: ")')
         WRITE(*,FMT='(72("*"))')
 
+        WRITE(*,FMT='(A)')TRIM(VERTYP)
         WRITE(*,FMT='(A)')TRIM(VERINF)
         WRITE(*,FMT='(A)')TRIM(VERREV)
         WRITE(*,FMT='(A)')TRIM(VERAUT)
