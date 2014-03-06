@@ -19,7 +19,6 @@ TYPE HYBRIDSETTING_TYPE
                             ! LHFWEIGHT, EXCEPT WHEN IT IS NEGATIVE
   REAL(8)     :: TAILEDLAMBDA1  ! LARGER DECAY CONSTANT FOR THE NTBO TAILS
   REAL(8)     :: TAILEDLAMBDA2  ! SMALLER DECAY CONSTANT FOR THE NTBO TAILS
-!  REAL(8)     :: RANGESCALE ! DETERMINES RANGE OF NEAREST NEIGHBOR LIST
 END TYPE HYBRIDSETTING_TYPE
 !
 TYPE ORBITALGAUSSCOEFF_TYPE
@@ -6046,7 +6045,8 @@ INTEGER(4) :: J
       ENDDO
       DO LMN2=1,LMNXB
         DO LMN1=1,LMNXA
-          WRITE(*,FMT='(82("="),T20," BONDU FOR LMN1=",I3," AND LMN2=",I3)')LMN1,LMN2
+          WRITE(*,FMT='(82("="),T20," BONDU FOR LMN1=",I3," AND LMN2=",I3)') &
+    &                         LMN1,LMN2
           DO LMN3=1,LMNXA
             WRITE(*,FMT='(I3,50F10.5)')LMN3,UABCD(LMN1,LMN2,LMN3,:)
           ENDDO
@@ -7189,9 +7189,9 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
         ETOTC=0.D0
       END IF
 !
-!     ========================================================================
-!     == CALCULATE TOTAL ENERGY                                             ==
-!     ========================================================================
+!     ==========================================================================
+!     == CALCULATE TOTAL ENERGY                                               ==
+!     ==========================================================================
 !
 !== CALCULATE HARTREE ENERGY FOR TEST ==========================================
 AUX1=0.D0
@@ -7989,7 +7989,8 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
             CALL LMTO_TAILEDORBLM(IAT,IORB,NR,LMX,ORB)
             WRITE(CHIAT,FMT='(I5)')IAT
             WRITE(CHORB,FMT='(I5)')IORB
-            STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT))//'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
+            STRING='CHI_FORATOM'//TRIM(ADJUSTL(CHIAT)) &
+     &                          //'_'//TRIM(ADJUSTL(CHORB))//'.DAT'
             CALL SETUP_WRITEPHI(TRIM(STRING),GID,NR,LMX,ORB)
           ENDDO !END OF LOOP OVER MH (MAGNETIC QUANTUM NUMBER OF HEAD FUNCTION)
         ENDDO !END OF LOOP OVER HEAD FUNCTIONS (WITHOUT M-MULTIPLICITY)
@@ -8430,7 +8431,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)            :: NHEAD,NTAIL ! #(HEAD/TAIL FUNCTIONS)
       INTEGER(4)            :: LMNX  ! X#(TAIL FUNCTIONS) OF ALL ATOM TYPES
       INTEGER(4)            :: LMX   ! X#(ANGULAR MOMENTA) OF ALL ATOM TYPES
-      INTEGER(4)            :: NN,IP,ISP,ISP2,L,LM,IM,LN,LMN,IH,IT  !LOOP INDICES
+      INTEGER(4)            :: NN,IP,ISP,ISP2,L,LM,IM,LN,LMN,IH,IT !LOOP INDICES
       INTEGER(4)            :: IAT2,L2X,LM2X,LMN2X,LM2,LMN2,LNDOT
 !     **************************************************************************
 !
