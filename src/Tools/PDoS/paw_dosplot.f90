@@ -46,12 +46,12 @@
       WRITE(NFILO,*)
 !
 !     ==========================================================================
-!     ==  RESOLVE CONTROL FILE: RESULT IS ENCODESD IN DOSSET_MODULE
+!     ==  RESOLVE CONTROL FILE: RESULT IS ENCODED IN DOSSET_MODULE
 !     ==========================================================================
       CALL READCNTL(LL_CNTL)
 !
 !     ==========================================================================
-!     ==  RESOLVE CONTROL FILE: RESULT IS ENCODESD IN DOSSET_MODULE
+!     ==  RESOLVE CONTROL FILE: RESULT IS ENCODED IN DOSSET_MODULE
 !     ==========================================================================
       CALL CUMMULATEDDOS()
       CALL TRACE$POP()
@@ -71,9 +71,12 @@ TYPE DOSSET_TYPE
   REAL(8)       :: XZERO
   TYPE(DOSSET_TYPE),POINTER :: NEXT
 END TYPE DOSSET_TYPE
-TYPE(DOSSET_TYPE),TARGET  :: FIRSTDOSSET
-TYPE(DOSSET_TYPE),POINTER :: DOSSET
-REAL(8)                   :: XMIN,XMAX,YMIN,YMAX
+TYPE(DOSSET_TYPE)  ,TARGET  :: FIRSTDOSSET
+TYPE(DOSSET_TYPE)  ,POINTER :: DOSSET
+REAL(8), ALLOCATABLE  :: XMIN(:) !(NGRAPH)
+REAL(8), ALLOCATABLE  :: XMAX(:) !(NGRAPH)
+REAL(8), ALLOCATABLE  :: YMIN(:) !(NGRAPH)
+REAL(8), ALLOCATABLE  :: YMAX(:) !(NGRAPH)
 END MODULE DOSSETS_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -81,7 +84,8 @@ END MODULE DOSSETS_MODULE
 !     **************************************************************************
 !     ** RESOLVE CONTROLE FILE                                                **
 !     **************************************************************************
-      USE DOSSETS_MODULE , ONLY : FIRSTDOSSET,DOSSET,XMIN,XMAX,YMIN,YMAX
+      USE DOSSETS_MODULE , ONLY : FIRSTDOSSET,DOSSET &
+     &                           ,XMIN,XMAX,YMIN,YMAX
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -96,6 +100,10 @@ END MODULE DOSSETS_MODULE
       REAL(8)         :: SCALE
       REAL(8)         :: XZEROGLOB
       REAL(8)         :: XZERO
+      REAL(8)         :: YMINGLOB
+      REAL(8)         :: YMAXGLOB
+      REAL(8)         :: XMINGLOB
+      REAL(8)         :: XMAXGLOB
 !     **************************************************************************
                                      CALL TRACE$PUSH('READCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -114,36 +122,40 @@ END MODULE DOSSETS_MODULE
         CALL ERROR$MSG('!DPCNTL:EMIN[EV] IS MANDATORY INPUT')
         CALL ERROR$STOP('READCNTL')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'EMIN[EV]',0,XMIN)
+      CALL LINKEDLIST$GET(LL_CNTL,'EMIN[EV]',0,XMINGLOB)
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX[EV]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('!DPCNTL:EMAX[EV] IS MANDATORY INPUT')
         CALL ERROR$STOP('READCNTL')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',0,XMAX)
-
+      CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',0,XMAXGLOB)
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'YMIN',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('!DPCNTL:YMIN IS MANDATORY INPUT')
         CALL ERROR$STOP('READCNTL')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'YMIN',0,YMIN)
-
+      CALL LINKEDLIST$GET(LL_CNTL,'YMIN',0,YMINGLOB)
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'YMAX',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('!DPCNTL:YMAX IS MANDATORY INPUT')
         CALL ERROR$STOP('READCNTL')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'YMAX',0,YMAX)
+      CALL LINKEDLIST$GET(LL_CNTL,'YMAX',0,YMAXGLOB)
 !
 !     ==========================================================================
 !     == READ GRAPHS AND SETS                                                 ==
 !     ==========================================================================
                                      CALL TRACE$PASS('READ GRAPHS')
       CALL LINKEDLIST$NLISTS(LL_CNTL,'GRAPH',NGRAPH)
+      ALLOCATE(YMIN(NGRAPH))
+      ALLOCATE(YMAX(NGRAPH))
+      ALLOCATE(XMIN(NGRAPH))
+      ALLOCATE(XMAX(NGRAPH))
+      XMIN=XMINGLOB
+      XMAX=XMAXGLOB
       DO IG=1,NGRAPH
         CALL LINKEDLIST$SELECT(LL_CNTL,'GRAPH',IG)
 !
@@ -161,6 +173,14 @@ END MODULE DOSSETS_MODULE
         XZERO=XZEROGLOB
         CALL LINKEDLIST$EXISTD(LL_CNTL,'EZERO[EV]',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'EZERO[EV]',0,XZERO)
+!
+        YMIN(IG)=YMINGLOB
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'YMIN',1,TCHK)
+        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'YMIN',0,YMIN(IG))
+!
+        YMIN(IG)=YMINGLOB
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'YMAX',1,TCHK)
+        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'YMAX',0,YMAX(IG))
 !
 !       ========================================================================
 !       == LOOP OVER SETS                                                     ==
@@ -328,8 +348,8 @@ END MODULE DOSSETS_MODULE
         IF(DOSSET%IG.GT.IG) THEN
 !         == NEW GRAPH
           IG=DOSSET%IG
-          CALL GRACE_WORLD(NFIL,IG-1,XMIN,XMAX,YMIN,YMAX)
-          CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.TRUE.)
+          CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG),XMAX(IG),YMIN(IG),YMAX(IG))
+          CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
           IS=0
         END IF
 !
@@ -371,7 +391,7 @@ END MODULE DOSSETS_MODULE
         WRITE(NFIL,FMT='("XAXIS TICK ON")')
 !       == DISTANCE OF MAJOR TICKS (WITH LABELS) ==============================
 !       == CALCULATE SUITABLE TICKSPACING FROM THE INTERVAL BOUNDS
-        SVAR=LOG10((XMAX-XMIN)/5.D0)   
+        SVAR=LOG10((XMAX(IG+1)-XMIN(IG+1))/5.D0)   
         TICKSPACING=10.D0**FLOOR(SVAR)
         SVAR=MODULO(SVAR,1.D0)
         IF(SVAR.LT.LOG10(2.D0)) THEN
@@ -382,8 +402,7 @@ END MODULE DOSSETS_MODULE
           SVAR=2.D0
         END IF
         TICKSPACING=TICKSPACING*SVAR
-
-        WRITE(NFIL,FMT='("XAXIS TICK MAJOR ",F10.5)')TICKSPACING
+        WRITE(NFIL,FMT='("XAXIS TICK MAJOR ",F20.5)')TICKSPACING
 !       == LENGTH OF TICKS
         WRITE(NFIL,FMT='("XAXIS TICK MAJOR SIZE ",F10.3)')0.3D0
         WRITE(NFIL,FMT='("XAXIS TICKLABEL OFF")')
@@ -683,7 +702,7 @@ END MODULE DOSSETS_MODULE
        CHARACTER(64)           :: FMT
        CHARACTER(128)          :: STRING
        CHARACTER(128)          :: GRAPH
-       integer(4)              :: igraph
+       INTEGER(4)              :: IGRAPH
 !      *************************************************************************
        FMT=-'("ARRANGE(",I5,",1,0.1,0.0,0.0)")'
        WRITE(NFIL,FMT=FMT)NGRAPHS
@@ -921,9 +940,13 @@ END MODULE DOSSETS_MODULE
 !      *************************************************************************
        IF(TXAXIS) THEN
          WRITE(NFIL,FMT='("XAXIS TYPE ZERO TRUE")')
+       ELSE
+         WRITE(NFIL,FMT='("XAXIS TYPE ZERO FALSE")')
        END IF
        IF(TYAXIS) THEN
          WRITE(NFIL,FMT='("YAXIS TYPE ZERO TRUE")')
+       ELSE
+         WRITE(NFIL,FMT='("YAXIS TYPE ZERO FALSE")')
        END IF
        RETURN
        END

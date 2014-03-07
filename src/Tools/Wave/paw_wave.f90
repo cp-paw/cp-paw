@@ -1462,7 +1462,7 @@
         WRITE(NFIL,*)-'ROT_X=0'
         WRITE(NFIL,*)-'ROT_Z=0'
       END IF
-      WRITE(NFIL,*)-'SCALE=1'
+      WRITE(NFIL,*)-'SCALE=1.8'
       WRITE(NFIL,*)-'SCALE_Z=1.'
       WRITE(NFIL,*)'#'                                                     
       WRITE(NFIL,*)'#=========================================================='
@@ -1485,7 +1485,7 @@
       WRITE(NFIL,*)'# SURFACE PLOT                                           =='
       WRITE(NFIL,*)'#=========================================================='
       WRITE(NFIL,*)-'SET SURFACE'                                           
-      WRITE(NFIL,*)-'SET HIDDEN3D'                                          
+      WRITE(NFIL,*)-'#SET HIDDEN3D'                                          
       WRITE(NFIL,*)-'SET XYPLANE AT 0.','      # PLACE Z=0 INTO THE XY PLANE'
       WRITE(NFIL,*)-'UNSET BORDER','           # REMOVE AXES'
       WRITE(NFIL,*)-'UNSET XTICS','            # REMOVE TICS FROM THE AXES'
