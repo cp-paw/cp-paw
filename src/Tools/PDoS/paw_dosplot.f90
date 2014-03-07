@@ -348,7 +348,8 @@ END MODULE DOSSETS_MODULE
         IF(DOSSET%IG.GT.IG) THEN
 !         == NEW GRAPH
           IG=DOSSET%IG
-          CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG),XMAX(IG),YMIN(IG),YMAX(IG))
+          CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG+1),XMAX(IG+1) &
+    &                               ,YMIN(IG+1),YMAX(IG+1))
           CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
           IS=0
         END IF
