@@ -1098,6 +1098,9 @@ CALL TRACE$PASS('DONE')
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'DROP',1,TCHK1)
         IF(TCHK1) THEN
+          CALL ERROR$MSG('OPTION DROP IS OBSOLETE')
+          CALL ERROR$STOP('READIN_DFT')
+!
           CALL LINKEDLIST$GET(LL_CNTL,'DROP',1,TCHK2)
           IF(TCHK2.AND.MODUS.NE.'OLDDMFT') THEN
             CALL ERROR$MSG('INCONSISTENT SETTINGE')
@@ -1111,6 +1114,8 @@ CALL TRACE$PASS('DONE')
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'PICK',1,TCHK1)
         IF(TCHK1) THEN
+          CALL ERROR$MSG('OPTION PICK IS OBSOLETE')
+          CALL ERROR$STOP('READIN_DFT')
           CALL LINKEDLIST$GET(LL_CNTL,'PICK',1,TCHK2)
           IF(TCHK2.AND.MODUS.NE.'OLDDMFT') THEN
             CALL ERROR$MSG('INCONSISTENT SETTINGE')
@@ -1122,6 +1127,8 @@ CALL TRACE$PASS('DONE')
           CALL LMTO$SETL4('PICK',TCHK2)
           CALL LINKEDLIST$EXISTD(LL_CNTL,'DHOFK',1,TCHK2)
           IF(TCHK2) THEN
+            CALL ERROR$MSG('OPTION DHOFK IS OBSOLETE')
+            CALL ERROR$STOP('READIN_DFT')
             CALL LINKEDLIST$GET(LL_CNTL,'DHOFK',1,TCHK2)
             CALL LMTO$SETL4('DHOFK',TCHK2)
           END IF
@@ -3908,6 +3915,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END IF    
 !
 !     ==========================================================================
+!     == FIRST SET FOR ISOLATED MOLECULE, THEN OVERWRITE FRO K-POINTS         ==
+!     ==========================================================================
+      CALL KPOINTS$SETL4('TINV',TINV)
+      CALL KPOINTS$SETI4A('DIV',3,(/1,1,1/))
+      CALL KPOINTS$SETI4A('SHIFT',3,(/0,0,0/))
+!
+!     ==========================================================================
 !     == NOW ENTER K-POINT BLOCK                                              ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -3924,6 +3938,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       ISHIFT(:)=0
       CALL LINKEDLIST$EXISTD(LL_STRC,'SHIFT',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'SHIFT',1,ISHIFT)
+      CALL KPOINTS$SETI4A('SHIFT',3,ISHIFT)
 !
       CALL LINKEDLIST$NDATA(LL_STRC,'K',NKPT)
       IF(NKPT.NE.0) THEN
@@ -3954,17 +3969,20 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       ELSE
         NKDIV(:)=2
       END IF
+      CALL KPOINTS$SETI4A('DIV',3,NKDIV)
 !
 !     ==========================================================================
 !     == DETERMINE K-POINTS AND INTEGRATION WEIGHTS                           ==
 !     ==========================================================================
-!!$PRINT*,'FUDGE WARNING! KPOINT SELECTION DISREGARDS INVERSION SYMMETRY!'
-!!$PRINT*,'IN STRCIN_KPOINTS'
-!!$TINV=.FALSE.
-      CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
+      CALL KPOINTS$MAKEGRID()
+      CALL KPOINTS$GETI4('NKPT',NKPT)
+
+!      CALL KPOINTS_NKPT(TINV,NKDIV,ISHIFT,NKPT)
       ALLOCATE(XK(3,NKPT))
       ALLOCATE(WGHT(NKPT))
-      CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
+!      CALL KPOINTS_KPOINTS(TINV,NKDIV,ISHIFT,NKPT,XK,WGHT)
+      CALL KPOINTS$GETR8A('XK',3*NKPT,XK)
+      CALL KPOINTS$GETR8A('WKPT',NKPT,WGHT)
 !
 !     ==  PERFORM ACTIONS  =====================================================
       CALL DYNOCC$SETI4('NKPT',NKPT)

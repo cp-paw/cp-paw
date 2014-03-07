@@ -1489,6 +1489,9 @@ PRINT*,'RCSM ',THIS%RCSM
         CALL ERROR$MSG('NO SETUP SELECTED')
         CALL ERROR$STOP('SETUP_READ')
       END IF
+      WRITE(*,'(80("="))')
+      WRITE(*,'(80("="),T20,"  SETUP CONSTRUCTION FOR ",A,"  ")')TRIM(THIS%ID)
+      WRITE(*,'(80("="))')
       CALL LINKEDLIST$NEW(LL_STP)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',0)
 !
@@ -1550,7 +1553,6 @@ PRINT*,'RCSM ',THIS%RCSM
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
       ROUT=R(NR-3)
-
 !     
 !     ==========================================================================
 !     ==  PERFORM ALL-ELECTRON CALCULATION FOR THE ATOM IN A BOX              ==
@@ -1871,6 +1873,9 @@ CALL TRACE$PASS('MARKE 3')
 !     == WRITE REPORT
 !     ==========================================================================
       CALL SETUP_REPORTFILE(LL_STP)
+      WRITE(*,'(80("="))')
+      WRITE(*,'(80("="),T20,"  SETUP CONSTRUCTION FINISHED  ")')
+      WRITE(*,'(80("="))')
 CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
                             CALL TRACE$POP
       RETURN
@@ -6421,6 +6426,7 @@ PRINT*,'STARTING SETUPS_OUTERNEWPROWRAPPER...'
 !     RELTYPE='SPINORBIT'
 !
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
+PRINT*,'LX ',LX,' LOX ',LOX,' LOFI ',LOFI
       DO L=0,LX
         DO SO=MINVAL(SOFI),1,2  
           WRITE(*,FMT='(82("-"),T20," L=",I2," SO=",I2)')L,SO
@@ -6757,12 +6763,14 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
           EXIT
         END IF
       ENDDO
+!
+!     == IF NO CLASSICAL TURNING POINT IS FOUND, THE KINETIC ENERGY IS ALWAYS ==
+!     == POSITIVE. IN THIS CASE, SET RC TO 1 ABOHR =============================
       IF(IRCL.EQ.0) THEN
-        CALL ERROR$MSG('NO CLASSICAL TURNING POINT ENCOUNTERED')
-        CALL ERROR$MSG('ENU=MAX(EOFPHI) MUST LIE BELOW MAXIMUM OF POTENTIAL')
-        CALL ERROR$R8VAL('ENU',ENU)
-        CALL ERROR$R8VAL('MAX(POT)',MAXVAL(AEPOT)*Y0)
-        CALL ERROR$STOP('SETUPS_NEWPRO')
+        DO IR=1,NR
+          IRCL=IR
+          IF(R(IR).GT.1.D0) EXIT
+        ENDDO
       END IF
 !
 !     ==========================================================================
@@ -6859,6 +6867,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
           E=EOFPHI(JP)
           CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,E,IDIR,QN(:,JP))
         END IF
+PRINT*,'NJ ',NJ,SO,L,E,IDIR
         TQN(:,JP)=G-(AEPOT*Y0-E)*QN(:,JP)
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================

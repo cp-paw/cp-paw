@@ -23,11 +23,11 @@
 ##                                                               ##
 ###################################################################
 USAGE="
-usage: pawshow option rootname [outfile]\n
+usage: paw_show option rootname [outfile]\n
 1)rootname  is paw protocol file name without the .prot ending
 2)option (exactly one must be given) can be one of the following
 \t -h: give info about use
-\t -u unit: unit selection (must preceed quantity selection!)
+\t -u unit: unit selection (must precede quantity selection!)
 \t\t unit=ev|kj/mol/kcal/mol|h
 \t -e: plot static total energy
 \t -t: plot temperature in kelvin

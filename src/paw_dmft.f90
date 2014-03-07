@@ -8,11 +8,11 @@ MODULE DMFT_MODULE
 !**                                                                           **
 !*******************************************************************************
 TYPE DENMAT_TYPE   ! CONSIDERS ALL ORBITALS ON THIS SITE
-INTEGER(4)          :: LNX              !#(RADIAL PARTIAL WAVES)
-INTEGER(4),POINTER  :: LOX(:) => NULL() !(LNX)
-INTEGER(4),POINTER  :: LMN(:) => NULL() !(NLOC) MAPS LOCAL ORBITALS 
-                                        !ONTO PROJECTOR ARRAY
-INTEGER(4)          :: LMNX
+!!$INTEGER(4)          :: LNX              !#(RADIAL PARTIAL WAVES)
+!!$INTEGER(4),POINTER  :: LOX(:) => NULL() !(LNX)
+!!$INTEGER(4),POINTER  :: LMN(:) => NULL() !(NLOC) MAPS LOCAL ORBITALS 
+!!$                                        !ONTO PROJECTOR ARRAY
+!!$INTEGER(4)          :: LMNX
 COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
 COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
 END TYPE DENMAT_TYPE
@@ -82,7 +82,7 @@ END MODULE DMFT_MODULE
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: NLOC
       INTEGER(4)             :: L
-      INTEGER(4)             :: NU,ISP,IAT,LN,IM,IKPTL,IKPT,ICHI,IPRO,I
+      INTEGER(4)             :: NU,ISP,IAT,LN,IM,IKPTL,IKPT,ICHI,IPRO,I,LN1
       INTEGER(4)             :: LMN
       INTEGER(4)             :: I1,I2 ! BOUNDS ON CHI-ARRAY FOR EACH ATOM
       REAL(8)   ,ALLOCATABLE :: WKPT(:) !(NKPT) K-POINT WEIGHTS
@@ -164,44 +164,40 @@ PRINT*,'KBT=',KBT,' KBT[EV]=',KBT*27.211D0
         CALL SETUP$GETI4A('LOX',LNX,LOX)
         CALL SETUP$GETL4A('TORB',LNX,TORB)
         CALL SETUP$UNSELECT()
-        I1=NCHI+1   ! FIRST ICHI FOR THIS ATOM
+!       == REMOVE ORBITALS WITH TORB=FALSE
+        LN1=0
         DO LN=1,LNX
-          L=LOX(LN)
-          IF(TORB(LN)) THEN
-            NCHI=NCHI+2*L+1
-          END IF
+          IF(.NOT.TORB(LN)) CYCLE
+          LN1=LN1+1
+          LOX(LN1)=LOX(LN)
         ENDDO
-        I2=NCHI
-PRINT*,'TORB ',IAT,TORB
+        LNX=LN1
 !
 !       == SAVE BOUNDS TO ATOMSET ==============================================
-        NLOC=I2-I1+1
+        NLOC=SUM(2*LOX(:LNX)+1)
         ATOMSET(IAT)%NLOC=NLOC
-        ATOMSET(IAT)%ICHI1=I1
-        ATOMSET(IAT)%ICHI2=I2
+        ATOMSET(IAT)%ICHI1=NCHI+1      ! FIRST ICHI FOR THIS ATOM
+        ATOMSET(IAT)%ICHI2=NCHI+NLOC   ! LAST ICHI FOR THIS ATOM
+        NCHI=NCHI+NLOC
 !
 !       == NOW DETERMINE SUBSTRUCTURE DENMAT ==================================
-        ATOMSET(IAT)%DENMAT%LNX=LNX
-        ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
-        ATOMSET(IAT)%DENMAT%LOX=LOX
-        LMNX=SUM(2*LOX+1)
-        ATOMSET(IAT)%DENMAT%LMNX=LMNX
-        NLOC=ATOMSET(IAT)%NLOC
-        ALLOCATE(ATOMSET(IAT)%DENMAT%LMN(NLOC))
-        LMN=0
-        I=0
-        DO LN=1,LNX
-          L=LOX(LN)
-          IF(TORB(LN)) THEN
-            DO IM=1,2*L+1
-              I=I+1
-              LMN=LMN+1
-              ATOMSET(IAT)%DENMAT%LMN(I)=LMN
-            ENDDO
-          ELSE
-            LMN=LMN+2*L+1
-          END IF
-        ENDDO
+!!$ THIS IS NO MORE REQUIRED
+!!$        ATOMSET(IAT)%DENMAT%LNX=LNX
+!!$        ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
+!!$        ATOMSET(IAT)%DENMAT%LOX=LOX(:LNX)
+!!$        ATOMSET(IAT)%DENMAT%LMNX=NLOC
+!!$        NLOC=ATOMSET(IAT)%NLOC
+!!$        ALLOCATE(ATOMSET(IAT)%DENMAT%LMN(NLOC))
+!!$        LMN=0
+!!$        I=0
+!!$        DO LN=1,LNX
+!!$          L=LOX(LN)
+!!$          DO IM=1,2*L+1
+!!$            I=I+1
+!!$            LMN=LMN+1
+!!$            ATOMSET(IAT)%DENMAT%LMN(I)=LMN
+!!$          ENDDO
+!!$        ENDDO
 !
 !       ========================================================================
 !       == INHERIT SCREENING FACTOR  FROM LMTO_MODULE                         ==
@@ -220,9 +216,9 @@ PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',ATOMSET(IAT)%LHFWEIGHT
         ALLOCATE(ATOMSET(IAT)%GLOCLAUR(NLOC,NLOC,NDIMD,3))
         ALLOCATE(ATOMSET(IAT)%SLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%SLOCLAUR(NLOC,NLOC,NDIMD,3))
-        ALLOCATE(ATOMSET(IAT)%SMAT(LMNX,LMNX,NDIMD))
-        ALLOCATE(ATOMSET(IAT)%DENMAT%RHO(LMNX,LMNX,NDIMD))
-        ALLOCATE(ATOMSET(IAT)%DENMAT%H(LMNX,LMNX,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%SMAT(NLOC,NLOC,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%DENMAT%RHO(NLOC,NLOC,NDIMD))
+        ALLOCATE(ATOMSET(IAT)%DENMAT%H(NLOC,NLOC,NDIMD))
         ATOMSET(IAT)%U=0.D0
         ATOMSET(IAT)%GLOC=(0.D0,0.D0)
         ATOMSET(IAT)%GLOCLAUR=(0.D0,0.D0)
@@ -651,15 +647,14 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           KSET(IKPT)%TADDMINUSK=(NDIMD.NE.4).AND.(.NOT.GSET%TINV)
 !
           DO ICHI=1,NCHI
-            IPRO=IPROOFCHI(ICHI)
             DO IBH=1,NBH
               IF(NBH.NE.NB) THEN
                 KSET(IKPT)%PIPSI(:,ICHI,2*IBH-1,ISPIN) &
-     &                                              = REAL(THIS%TBC(:,IBH,IPRO))
+     &                                          = REAL(THIS%TBC_NEW(:,IBH,ICHI))
                 KSET(IKPT)%PIPSI(:,ICHI,2*IBH  ,ISPIN)& 
-     &                                              =AIMAG(THIS%TBC(:,IBH,IPRO))
+     &                                          =AIMAG(THIS%TBC_NEW(:,IBH,ICHI))
               ELSE
-                KSET(IKPT)%PIPSI(:,ICHI,IBH,ISPIN)=THIS%TBC(:,IBH,IPRO)
+                KSET(IKPT)%PIPSI(:,ICHI,IBH,ISPIN)=THIS%TBC_NEW(:,IBH,ICHI)
               END IF
             ENDDO
           ENDDO
@@ -773,7 +768,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4)             :: NBH     !#(SUPER STATES)
-      INTEGER(4)             :: LMNX
+      INTEGER(4)             :: NLOC
       INTEGER(4)             :: I1,I2
       COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: NB_,NSPIN_
@@ -829,13 +824,13 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !         ======================================================================
           IPRO=0
           DO IAT=1,NAT
-            LMNX=ATOMSET(IAT)%DENMAT%LMNX
-            IF(ATOMSET(IAT)%NLOC.LE.0) THEN
-              IPRO=IPRO+LMNX
+            NLOC=ATOMSET(IAT)%NLOC
+            IF(NLOC.LE.0) THEN
+              IPRO=IPRO+NLOC
               CYCLE
             END IF   
             I1=IPRO+1         
-            I2=IPRO+LMNX
+            I2=IPRO+NLOC
             DO IBH=1,NBH
               IF(NBH.NE.NB) THEN
 !               == THIS IS FOR GENERAL SPECIAL K-POINTS ========================
@@ -844,17 +839,17 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
                 DO IDIM2=1,NDIM
                   DO IDIM1=1,NDIM
                     IDIMD=IDIM1+NDIM*(IDIM2-1)+(ISPIN-1)
-                    DO LMN=1,LMNX
+                    DO LMN=1,NLOC
                       I=IPRO+LMN
-                      CSVAR=REAL(THIS%TBC(IDIM1,IBH,I))*OCC(2*IBH-1,IKPT,ISPIN)
+                      CSVAR=REAL(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(2*IBH-1,IKPT,ISPIN)
                       ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
      &                               =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                               +REAL(THIS%TBC(IDIM2,IBH,I1:I2))*CSVAR
+     &                               +REAL(THIS%TBC_NEW(IDIM2,IBH,I1:I2))*CSVAR
 !
-                      CSVAR=AIMAG(THIS%TBC(IDIM1,IBH,I))*OCC(2*IBH,IKPT,ISPIN)
+                      CSVAR=AIMAG(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(2*IBH,IKPT,ISPIN)
                       ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
      &                             =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             +AIMAG(THIS%TBC(IDIM2,IBH,I1:I2))*CSVAR
+     &                             +AIMAG(THIS%TBC_NEW(IDIM2,IBH,I1:I2))*CSVAR
                     ENDDO
                   ENDDO
                 ENDDO
@@ -863,18 +858,18 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
                 DO IDIM2=1,NDIM
                   DO IDIM1=1,NDIM
                     IDIMD=IDIM1+NDIM*(IDIM2-1)+(ISPIN-1)
-                    DO LMN=1,LMNX
+                    DO LMN=1,NLOC
                       I=IPRO+LMN
-                      CSVAR=CONJG(THIS%TBC(IDIM1,IBH,I))*OCC(IBH,IKPT,ISPIN)
+                      CSVAR=CONJG(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(IBH,IKPT,ISPIN)
                       ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
      &                             =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             +THIS%TBC(IDIM2,IBH,I1:I2)*CSVAR
+     &                             +THIS%TBC_NEW(IDIM2,IBH,I1:I2)*CSVAR
                     ENDDO
                   ENDDO
                 ENDDO
               END IF
             ENDDO  ! END OF LOOP OVER BANDS
-            IPRO=IPRO+LMNX
+            IPRO=IPRO+NLOC
           ENDDO ! END OF LOOP OVER ATOMS
         ENDDO ! END OF LOOP OVER SPIN
       ENDDO ! END OF LOOP OVER K-POINTS
@@ -896,9 +891,9 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ==  TRANSFORM TO (T,X,Y,Z) REPRESENTATION AND MAKE HERMITEAN            ==
 !     ==========================================================================
       DO IAT=1,NAT
-        IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
-        LMNX=ATOMSET(IAT)%DENMAT%LMNX
-        CALL SPINOR$CONVERT('FWRD',LMNX,NDIMD,ATOMSET(IAT)%DENMAT%RHO)
+        NLOC=ATOMSET(IAT)%NLOC
+        IF(NLOC.LE.0) CYCLE
+        CALL SPINOR$CONVERT('FWRD',NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO)
         DO IDIMD=1,NDIMD
           ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD) &
     &              =0.5D0*(ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD) &
@@ -912,11 +907,11 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       IF(TPRINT) THEN
         PRINT*,'DENSITY MATRIX REPOST FROM DMFT_COLLECTFULLDENMAT'
         DO IAT=1,NAT
-          IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
-          LMNX=ATOMSET(IAT)%DENMAT%LMNX
+          NLOC=ATOMSET(IAT)%NLOC
+          IF(NLOC.LE.0) CYCLE
           WRITE(*,FMT='(82("="),T10," DENSITY MATRIX FOR ATOM ",I3," ")')IAT
           DO IDIMD=1,NDIMD
-            DO LMN=1,LMNX
+            DO LMN=1,NLOC
               WRITE(*,FMT='("IDIMD=",I1,":",100("(",2F10.5,")"))')IDIMD &
        &              ,ATOMSET(IAT)%DENMAT%RHO(LMN,:,IDIMD)
             ENDDO
@@ -1205,26 +1200,10 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !       ========================================================================
 !       == DETERMINE HARTREE FOCK CONTRIBUTION                                ==
 !       ========================================================================
-        ALLOCATE(RHO(NLOC,NLOC,NDIMD))
-        ALLOCATE(HAM(NLOC,NLOC,NDIMD))
-        DO I=1,NLOC
-          DO J=1,NLOC
-            LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
-            LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
-            RHO(I,J,:)=ATOMSET(IAT)%DENMAT%RHO(LMN1,LMN2,:)
-          ENDDO
-        ENDDO
-        CALL DMFT_FOCK(NLOC,NDIMD,RHO,ATOMSET(IAT)%U,PHILW,HAM)
+        CALL DMFT_FOCK(NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO,ATOMSET(IAT)%U &
+     &                                             ,PHILW,ATOMSET(IAT)%DENMAT%H)
         ETOT=ETOT+PHILW  !SCREENING DONE ALREADY IN U-TENSOR
 PRINT*,'AFTER FOCK ',IAT,ETOT,PHILW
-        DO I=1,NLOC
-          DO J=1,NLOC
-            LMN1=ATOMSET(IAT)%DENMAT%LMN(I)
-            LMN2=ATOMSET(IAT)%DENMAT%LMN(J)
-            ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:) &
-     &                            =ATOMSET(IAT)%DENMAT%H(LMN1,LMN2,:)+HAM(I,J,:)
-          ENDDO
-        ENDDO
 !
 !       == PRINT IF DESIRED ====================================================
         IF(TPRINT) THEN
@@ -1232,22 +1211,19 @@ PRINT*,'AFTER FOCK ',IAT,ETOT,PHILW
        &                        'FOCK HAMILTONIAN',IAT
           DO IDIMD=1,NDIMD
             DO I=1,NLOC
-              WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I,HAM(I,:,IDIMD)
+              WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I &
+      &                                   ,ATOMSET(IAT)%DENMAT%H(I,:,IDIMD)
             ENDDO
           ENDDO
         END IF
-!
-        DEALLOCATE(RHO)
-        DEALLOCATE(HAM)
 !
 !       ========================================================================
 !       == SUBTRACT DOUBLE COUNTING TERM                                      ==
 !       ========================================================================
 !       == COLLECT LOCAL HF WEIGHT =============================================
         LHFWEIGHT=ATOMSET(IAT)%LHFWEIGHT
-        LMNX=ATOMSET(IAT)%DENMAT%LMNX
-        ALLOCATE(HAM(LMNX,LMNX,NDIMD))
-        CALL DMFT_DC(IAT,LMNX,NDIMD,ATOMSET(IAT)%DENMAT%RHO,EDC,HAM)
+        ALLOCATE(HAM(NLOC,NLOC,NDIMD))
+        CALL DMFT_DC(IAT,NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO,EDC,HAM)
         ETOT=ETOT+LHFWEIGHT*EDC
 PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
         ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+LHFWEIGHT*HAM
@@ -1289,7 +1265,7 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
 !     **                                                                      **
 !     ** REMARK: SOME ROUTINES ONLY WORK IN THE NON-COLLINEAR MODE            **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR
+      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR=>POTPAR1,SBAR=>SBAR_NEW
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT
       INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
@@ -1297,9 +1273,7 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
       REAL(8)   ,INTENT(OUT) :: EDC           ! -E_(DFT-EXCHANGE)
       COMPLEX(8),INTENT(IN)  :: RHO(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
       COMPLEX(8),INTENT(OUT) :: HAM(LMNX,LMNX,NDIMD) ! HAMILTONIAN CONTRIB.
-      REAL(8)                :: D(LMNX,LMNX,4)
-      REAL(8)                :: H(LMNX,LMNX,4)
-      REAL(8)                :: HALL(LMNX,LMNX,4)
+      REAL(8)                :: HALL(LMNX,LMNX,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DT(:,:,:)    !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DTALL(:,:,:) !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: HT(:,:,:)    !(LMNXT,LMNXT,NDIMD)
@@ -1315,6 +1289,9 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
       INTEGER(4)             :: NR      ! #(GRID POINTS)
       REAL(8)   ,ALLOCATABLE :: AECORE(:) !(NR) CORE DENSITY
       INTEGER(4)             :: ISP
+      INTEGER(4)             :: NNS
+      INTEGER(4)             :: INS
+      INTEGER(4)             :: NN
 !     **************************************************************************
       HAM=0.D0
       CALL DFT$GETI4('TYPE',IDFTTYPE)
@@ -1337,47 +1314,44 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
       LNXT=POTPAR(ISP)%TAILED%LNX  
       ALLOCATE(LOXT(LNXT))
       LOXT=POTPAR(ISP)%TAILED%LOX  
-!
-!     ==========================================================================
-!     ==  MAP INTO NON-COLLINEAR ARRAYS, KEEP ONLY REAL PART                  ==
-!     ==========================================================================
-      D(:,:,:)=0.D0
-      D(:,:,1)=REAL(RHO(:,:,1))
-      IF(NDIMD.EQ.2) THEN 
-        D(:,:,4)=REAL(RHO(:,:,2))
-      ELSE IF(NDIMD.EQ.4) THEN
-        D(:,:,2:4)=REAL(RHO(:,:,2:4))
-      END IF
+      NNS=SIZE(SBAR)
+      DO NN=1,NNS
+        IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
+        IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
+        IF(SUM(ABS(SBAR(NN)%IT)).NE.0) CYCLE
+        INS=NN
+        EXIT
+      ENDDO
 !
 !     ==========================================================================
 !     ==  MAP ONTO REAL ARRAY. (T,X,Y,Z) REPRESENTATION                       ==
 !     ==========================================================================
-      ALLOCATE(DTALL(LMNXT,LMNXT,4))
-      ALLOCATE(DT(LMNXT,LMNXT,4))
-      ALLOCATE(HTALL(LMNXT,LMNXT,4))
-      ALLOCATE(HT(LMNXT,LMNXT,4))
-      CALL LMTO_BLOWUPDENMATNL(IAT,IAT,4,LMNX,LMNX,D,LMNXT,LMNXT,DT)
-      POTPAR(ISP)%TALLORB=.TRUE.
-      CALL LMTO_BLOWUPDENMATNL(IAT,IAT,4,LMNX,LMNX,D,LMNXT,LMNXT,DTALL)
-      CALL LMTO_SIMPLEDC(GID,NR,LMNXT,LNXT,LOXT,POTPAR(ISP)%TAILED%AEF &
-     &                  ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
-      CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,4,LMNXT,LMNXT,HTALL,LMNX,LMNX,HALL)
-      POTPAR(ISP)%TALLORB=.FALSE.  ! DO NOT FORGET THIS!!!!!
-      CALL LMTO_SHRINKDOWNHTNL(IAT,IAT,4,LMNXT,LMNXT,HT,LMNX,LMNX,H)
-      EDC=-EX
-      H=-(H+HALL)
-PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
+!  CAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTION
 !
-!     ==========================================================================
-!     ==  MAP BACK FROM  NON-COLLINEAR ARRAYS                                 ==
-!     ==========================================================================
-      HAM=0.D0
-      HAM(:,:,1)=CMPLX(H(:,:,1))
-      IF(NDIMD.EQ.2) THEN
-         HAM(:,:,2)=CMPLX(H(:,:,4))
-      ELSE IF(NDIMD.EQ.4) THEN
-         HAM(:,:,2:4)=CMPLX(H(:,:,2:4))
-      END IF
+!  THE DOUBLE COUNTING TERM IS NOT CALCULATED CORRECTLY. DTALL SHALL DESCRIBE 
+!  THE FULL DENSITY INCLUDING PARTIAL WAVES THAT HAVE NO CORRESPONDING LOCAL 
+!  ORBITALS. CHECK WITH PBLOECHL C611D05
+!
+!  CAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTION
+
+      ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
+      ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
+      ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
+      ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
+      CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT &
+     &                     ,RHO,DT)
+      DTALL=DT
+      CALL LMTO_SIMPLEDC_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
+     &                  ,POTPAR(ISP)%TAILED%AEF &
+     &                  ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
+      CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,HALL,HTALL)
+      CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,HAM,HT)
+      EDC=-EX
+      HAM=-(HAM+HALL)
+      DEALLOCATE(DTALL)
+      DEALLOCATE(HTALL)
+      DEALLOCATE(HT)
+PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
       RETURN
       END
 !
@@ -3175,7 +3149,7 @@ IF(MAXVAL(EIG).GT.0.D0) PRINT*,'WARNING!!!',MAXVAL(EIG)
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)     !(NCHI,NCHI,NDIMD)
       LOGICAL(4)             :: TCHK,TRESET
       INTEGER(4)             :: NBH
-      INTEGER(4)             :: LMNX
+      INTEGER(4)             :: NLOC
       INTEGER(4)             :: NFIL
       INTEGER(4)             :: NPRO
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IDIM1,IDIM2,IDIMD,IAT
@@ -3204,11 +3178,11 @@ PRINT*,'RESET? ',TRESET
         WRITE(NFIL,FMT='(82("-"),T10," ",A," ")')'FROM DMFT_ADDTOHPSI'
         WRITE(NFIL,*)'LOCAL HAMILTONIAN (FOCK+DC)' 
         DO IAT=1,NAT
-          IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
-          LMNX=ATOMSET(IAT)%DENMAT%LMNX
-          PRINT*,'ATOM ',IAT,' LMNX=',LMNX
-          CALL SPINOR_PRINTMATRIX(NFIL,'DC HAMILTONIAN(TXYZ)',1,LMNX &
-    &                            ,NDIMD,LMNX,ATOMSET(IAT)%DENMAT%H)
+          NLOC=ATOMSET(IAT)%NLOC
+          IF(NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
+          PRINT*,'ATOM ',IAT,' NLOC=',NLOC
+          CALL SPINOR_PRINTMATRIX(NFIL,'DC HAMILTONIAN(TXYZ)',1,NLOC &
+    &                            ,NDIMD,NLOC,ATOMSET(IAT)%DENMAT%H)
         ENDDO
       END IF
 !
@@ -3223,10 +3197,10 @@ PRINT*,'RESET? ',TRESET
 !     ==  CONVERT ON-SITE TERMS FROM (TXYZ) TO UPDOWN                         ==
 !     ==========================================================================
       DO IAT=1,NAT
-        IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
-        LMNX=ATOMSET(IAT)%DENMAT%LMNX
-!CALL SPINOR_PRINTMATRIX(6,'ATOMSET%H',1,LMNX,NDIMD,LMNX,ATOMSET(IAT)%DENMAT%H)
-        CALL SPINOR$CONVERT('BACK',LMNX,NDIMD,ATOMSET(IAT)%DENMAT%H)
+        NLOC=ATOMSET(IAT)%NLOC
+        IF(NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
+!CALL SPINOR_PRINTMATRIX(6,'ATOMSET%H',1,NLOC,NDIMD,NLOC,ATOMSET(IAT)%DENMAT%H)
+        CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,ATOMSET(IAT)%DENMAT%H)
         ATOMSET(IAT)%DENMAT%H=2.D0*ATOMSET(IAT)%DENMAT%H
       ENDDO
 !
@@ -3249,8 +3223,8 @@ PRINT*,'RESET? ',TRESET
 !         == ALLOCATE THIS%HTBC IF NECESSARY                                  ==
 !         ======================================================================
           IF(TRESET) THEN
-            IF(.NOT.ASSOCIATED(THIS%HTBC))ALLOCATE(THIS%HTBC(NDIM,NBH,NPRO))
-            THIS%HTBC=(0.D0,0.D0)
+            IF(.NOT.ASSOCIATED(THIS%HTBC_NEW))ALLOCATE(THIS%HTBC_NEW(NDIM,NBH,NPRO))
+            THIS%HTBC_NEW=(0.D0,0.D0)
           END IF
 !
 !         ======================================================================
@@ -3291,9 +3265,8 @@ PRINT*,'RESET? ',TRESET
 !         ==  EXPAND TO ALL PROJECTOR FUNCTIONS                               ==
 !         ======================================================================
           DO ICHI=1,NCHI
-            IPRO=IPROOFCHI(ICHI)
-!           == PIPSI(ICHI,IBH,IKPT,ISPIN)  =THIS%TBC(1,IBH,IPRO) ===============
-            THIS%HTBC(:,:,IPRO)=THIS%HTBC(:,:,IPRO)+DHPIPSI(:,ICHI,:NBH)
+!           == PIPSI(ICHI,IBH,IKPT,ISPIN)=THIS%TBC(1,IBH,ICHI) =================
+            THIS%HTBC_NEW(:,:,ICHI)=THIS%HTBC_NEW(:,:,ICHI)+DHPIPSI(:,ICHI,:NBH)
           ENDDO
 !
 !         ======================================================================
@@ -3301,19 +3274,19 @@ PRINT*,'RESET? ',TRESET
 !         ======================================================================
           IPRO=0
           DO IAT=1,NAT
-            LMNX=ATOMSET(IAT)%DENMAT%LMNX
+            NLOC=ATOMSET(IAT)%NLOC
             I1=IPRO+1
-            I2=IPRO+LMNX
-            IPRO=IPRO+LMNX
-            IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
+            I2=IPRO+NLOC
+            IPRO=IPRO+NLOC
+            IF(NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
 !
             DO IDIM2=1,NDIM
               DO IDIM1=1,NDIM
                 IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
 !               == HTBC=HAM*TBC ================================================
 !               == HTBC(IB,I)=HTBC(IB,I)+HAM(I,J)*TBC(IB,J) ====================
-                THIS%HTBC(IDIM1,:,I1:I2)=THIS%HTBC(IDIM1,:,I1:I2) &
-         &                +MATMUL(THIS%TBC(IDIM1,:,I1:I2) &
+                THIS%HTBC_NEW(IDIM1,:,I1:I2)=THIS%HTBC_NEW(IDIM1,:,I1:I2) &
+         &                +MATMUL(THIS%TBC_NEW(IDIM1,:,I1:I2) &
          &                       ,TRANSPOSE(ATOMSET(IAT)%DENMAT%H(:,:,IDIMD)))
               ENDDO
             ENDDO
@@ -3401,7 +3374,7 @@ PRINT*,' STARTING SPINOR TEST'
           DO J=1,NCHI
             CALL RANDOM_NUMBER(RAN1)
             CALL RANDOM_NUMBER(RAN2)
-            A(I,J,IDIMD)=CMPLX(RAN1,RAN2)
+            A(I,J,IDIMD)=CMPLX(RAN1,RAN2,KIND=8)
           ENDDO
         ENDDO
       ENDDO
@@ -3410,7 +3383,7 @@ PRINT*,' STARTING SPINOR TEST'
           DO J=1,NCHI
             CALL RANDOM_NUMBER(RAN1)
             CALL RANDOM_NUMBER(RAN2)
-            B(I,J,IDIMD)=CMPLX(RAN1,RAN2)
+            B(I,J,IDIMD)=CMPLX(RAN1,RAN2,KIND=8)
           ENDDO
         ENDDO
       ENDDO

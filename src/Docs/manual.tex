@@ -1022,6 +1022,60 @@ at short distances.}
 
 
 %----------------------------------------------------------------------
+\block{!CONTROL!DFT!NTBO}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{Experimental option. Do not use!  Constructs
+  wave function representation in natural tight-binding orbitals.
+  Enables to add the additional terms for the hybrid functionals or
+  the interface for a solver for the dynamical mean-field theory.}
+
+\mbax{\key{MODUS} 
+%
+\vdescr{switch betwee different energy contributions. May be 'HYBRID'
+  or 'DMFT'.}
+%
+\vformat{character} 
+\vrules{optional} 
+\vdefault{'HYBRID'}}
+
+\mbax{\key{OFFSITE} 
+%
+\vdescr{Calculates off-site U-tensor. OFFSITE=T is only compatible
+  with MODUS='HYBRID'.}
+%
+\vformat{logical} 
+\vrules{optional} 
+\vdefault{false}}
+
+\mbax{\key{HFWEIGHT} 
+%
+\vdescr{Mixing Factor for replacement of the Fock term.}
+%
+\vformat{real} 
+\vrules{optional} 
+\vdefault{0.25}}
+
+\mbax{\key{k2} 
+%
+\vdescr{k2=2*ekin[H] of the envelope function. The bare Hankel
+  function decay faster with decreasing k2.}
+%
+\vformat{real} 
+\vrules{optional} 
+\vdefault{-0.25}}
+
+\mbax{\key{SCALERCUT} 
+%
+\vdescr{Atom pairs are included in the neighborlist for structure
+  constants, if their distance is less than the sum of covalent radii
+  multiplied with SCALERCUT. (The covalent radius of an empty sphere
+  is set to 1~a$_0$.}
+%
+\vformat{real} 
+\vrules{optional} 
+\vdefault{2.}}
+
+%----------------------------------------------------------------------
 \block{!CONTROL!FOURIER}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{Plane wave cutoffs
@@ -3049,8 +3103,6 @@ tails of the orbitals.}
 \vformat{2$\times$real}
 \vrules{optional} 
 \vdefault{(/4.,2./)}}
-
-
 
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!LDAPLUSU}
@@ -6817,6 +6869,20 @@ used in this graph}
 \vformat{real} 
 \vrules{optional}
 \vdefault{set by !DPCNTL:XZERO}}
+
+\mbax{\key{YMIN}
+\vdescr{lower bound in 1/eV of the density-of-states interval shown.  A
+  negative value allows to also show the opposite spin direction.}
+\vformat{real} 
+\vrules{optional}
+\vdefault{set by !DPCNTL:YMIN}}
+
+\mbax{\key{YMAX}
+\vdescr{upper bound in 1/eV of the density-of-states interval shown.}
+\vformat{real}
+\vrules{optional}
+\vdefault{set by !DPCNTL:YMAX}}
+
 
 %----------------------------------------------------------------------
 \block{!DPCNTL!GRAPH!SET}
