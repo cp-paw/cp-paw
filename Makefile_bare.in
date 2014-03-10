@@ -834,7 +834,7 @@ endif
  ## file:src/paw.f90
  ${OBJDIR}/paw.o : CLOCK_MODULE.mod
  ${OBJDIR}/paw.o : MPE_MODULE.mod
- VERSION_MODULE.mod : ${OBJDIR}/paw.o
+ VERSION_MODULE.mod : ${OBJDIR}/paw_version.o
  TIMESTEP_MODULE.mod : ${OBJDIR}/paw.o
  STOPIT_MODULE.mod : ${OBJDIR}/paw.o
  ## file:src/paw_fft.f90
