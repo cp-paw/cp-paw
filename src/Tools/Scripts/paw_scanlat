@@ -30,6 +30,7 @@ USAGE="$USAGE \t -p rootname of the project to be considered (mandatory)\n"
 USAGE="$USAGE \t -l list of percent changes of the lattice constant\
               (enter in apostrophes \"...\")\n"
 USAGE="$USAGE \t -b directory containing the paw executables (binaries)\n"
+USAGE="$USAGE \t -e name of the executable\n"
 USAGE="$USAGE \t -0 dry-run\n"
 USAGE="$USAGE \t -h print this help message \n"
 USAGE="$USAGE \n"
@@ -38,7 +39,7 @@ USAGE="$USAGE \t projectname.cntl \n"
 USAGE="$USAGE \t projectname.strc \n" 
 USAGE="$USAGE \n"
 #
-THISDIR=`pwd`   # current directory
+THISDIR=$(pwd)   # current directory
 # PAWXDIR is the directory holding the paw executables
 export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
 #
@@ -87,8 +88,9 @@ while getopts :h0b:p:l:v OPT ; do
   esac
 done
 shift $(($OPTIND - 1))
-if [ -n $1 ] ; then echo "error in $0: argument present. none expected" >&2; fi
-if [ -z $NAME ] ; then
+echo argument= $1
+if [[ -e $1 ]] ; then echo "error in $0: argument present. none expected" >&2; fi
+if [[ -z $NAME ]] ; then
   echo "error in $0: mandatory option -p missing" >&2
   exit 1
 fi
@@ -107,18 +109,23 @@ fi
 #==============================================================================
 # pick out the equilibrium lattice constant from the structure file
 #==============================================================================
-X=`grep 'LUNIT=' $NAME.strc`  #pick the line containing LUNIT
-X=${X#*LUNIT=}
+if [[ -n $(grep 'LUNIT\[AA\]=' $NAME.strc) ]]; then
+  X=$(grep 'LUNIT\[AA\]=' $NAME.strc)  #pick the line containing LUNIT
+  X=${X#*LUNIT\[AA\]=}
+else
+  X=$(grep 'LUNIT=' $NAME.strc)  #pick the line containing LUNIT
+  X=${X#*LUNIT=}
+fi
 X=${X%%!END*}
 ALAT0=$X
 #
 #==============================================================================
 # loop crystal calculation through different lattic constants                ==
 #==============================================================================
-if [ -e etot.dat ] ; then rm etot.dat; fi
-if [ -e gap.dat ]  ; then rm gap.dat; fi
+if [[ -e etot.dat ]] ; then rm etot.dat; fi
+if [[ -e gap.dat ]]  ; then rm gap.dat; fi
 for X in $ALATLIST; do
- if [$VERBOSE = yes ] ; then echo doing $X ; fi
+ if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi
   #============================================================================
   # construct structure control file from template by replacing lattice constant
   #============================================================================
@@ -128,9 +135,9 @@ for X in $ALATLIST; do
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
   #============================================================================
   cp ${NAME}.cntl ${NAME}_${X}.cntl
-  if [ "$DRYRUN" = "no" ] ; then
+  if [[ "$DRYRUN" = "no" ]] ; then
     #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
-    if [$VERBOSE = yes ] ; then
+    if [[ $VERBOSE = yes ]] ; then
       echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
     fi
     ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 
@@ -138,16 +145,16 @@ for X in $ALATLIST; do
     echo "rm ${NAME}_${X}.prot"
     echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
   fi
-  echo ${X} $(paw_get -gap -n ${NAME}_${X})  >>gap.dat
-  echo ${X} $(paw_get -etot -n ${NAME}_${X}) >>etot.dat
+  echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
+  echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
   #
   #  clean up
   # 
   LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
         ${NAME}_${X}.strc_out "
   for Y in $LIST ; do
-    if [ $VERBOSE = yes ] ; then echo cleaning $Y ; fi
-    if [ -e $Y ] ; then rm $Y ; fi
+    if [[ $VERBOSE = yes ]] ; then echo cleaning $Y ; fi
+    if [[ -e $Y ]] ; then rm $Y ; fi
   done
   rm ${NAME}_${X}_stpfor*.myxml
 done
