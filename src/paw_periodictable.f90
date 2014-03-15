@@ -161,7 +161,7 @@ CONTAINS
       SET( 28)=SET_TYPE('NI',58.34    ,1.15,2.834,1.91,(/2,0,8,0/),'AR')
       SET( 29)=SET_TYPE('CU',63.546   ,1.17,3.495,1.90,(/1,0,10,0/),'AR')
       SET( 30)=SET_TYPE('ZN',65.39    ,1.25,2.763,1.65,(/2,0,10,0/),'AR')
-!     ==  4P   ===================='============================================
+!     ==  4P   =================================================================
       SET( 31)=SET_TYPE('GA',60.723   ,1.26,4.383,1.81,(/2,1,10,0/),'AR')
       SET( 32)=SET_TYPE('GE',72.61    ,1.22,4.280,2.01,(/2,2,10,0/),'AR')
       SET( 33)=SET_TYPE('AS',74.92159 ,1.20,4.230,2.18,(/2,3,10,0/),'AR')
@@ -510,7 +510,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       C1=1.D0-C2
       iz2=min(iz2,nel)
       TSUBALKALI=.FALSE.
-      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'H '
+!      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'H '
       TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'LI'
       TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'NA'
       TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'K '

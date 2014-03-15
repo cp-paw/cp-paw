@@ -2965,7 +2965,6 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdefault{Atomic mass, as obtained from !STRUCTURE!SPECIES:Z  or, if not
   present, from !STRUCTURE!SPECIES:NAME}}
 
-
 \mbax{\key{LRHOX}
 \vdescr{One center expansion for the density is limited to a maximum
   angular momentum of lrhox. If the value of LRHOX is larger
@@ -2987,6 +2986,14 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vrules{Mandatory}
 \vdefault{None}}
 
+\mbax{\key{RAD} 
+ \vdescr{Atomic radius in a$_0$ used to evaluate the integration
+    volume for the projected density of states etc.}
+\vformat{real}
+\vrules{optional}
+\vdefault{R(ASA) from periodictable object. Equals $1.10533$ times the
+  covalent radius.}}
+
 \mbax{\key{Z}
 \vdescr{Atomic number. This number is used only to set the default value for the
   mass.}
@@ -3001,7 +3008,6 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vformat{Character} 
 \vrules{Optional, deprecated option.} 
 \vdefault{information will be created on the fly using the parameter file paramters/stp.cntl}}
-
 
 \mbax{\key{ZV}
 \vdescr{Number of valence electrons}
@@ -3047,14 +3053,24 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 natural tight binding orbitals. \textbf{Experimental option!}}
 
 \mbax{\key{TORB} 
-   \vdescr{selects the shells of orbitals that shall be
+   \vdescr{Obsolete! selects the shells of orbitals that shall be
     treated as correlated orbitals. TORB refers to NPRO in the parent
     block. The number values in TORB must be equal to the sum in NPRO.
     For a given angular momentum the correlated orbitals must come
     before the uncorrelated orbitals}
 \vformat{logical(*)} 
-\vrules{mandatory} 
+\vrules{optional. obsolete. Is replaced by
+  !STRUCTURE!SPECIES!NTBO:NTBO}
 \vdefault{none}}
+
+\mbax{\key{NTBO} 
+   \vdescr{Number of tight-binding orbitals per angular momentum. The
+     number of tight-binding orbitals per angular momentum must not
+     exceed the number of projector functions. The latter is the
+     default for the number of tight-binding orbitals.}
+\vformat{integer array} 
+\vrules{optional. Overwrites the data of TORB.} 
+\vdefault{values from !STRUCTURE!SPECIES:NPRO}}
 
 \mbax{\key{LHFWEIGHT} 
  \vdescr{Overwrites the generic mixing factor for 

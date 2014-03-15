@@ -3648,7 +3648,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       USE CONSTANTS_MODULE
-      USE VERSION_MODULE, only : VERINF
+      USE VERSION_MODULE, ONLY : VERINF
       IMPLICIT NONE
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
@@ -4064,7 +4064,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
 !
 !       ========================================================================
-!       ==  CHECJK IF SETUPFILE OR INTERNAL SETUP CONSTRUCTION IS USED        ==
+!       ==  CHECK IF SETUPFILE OR INTERNAL SETUP CONSTRUCTION IS USED         ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'FILE',1,TCHK)
         TINTERNALSETUP=.NOT.TCHK
@@ -4167,6 +4167,20 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
         CALL ATOMTYPELIST$SETMASS(SPNAME,SVAR*PROTONMASS)
+!
+!       ========================================================================
+!       ==  ATOMIC RADIUS FOR PDOS ETC.                                       ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
+          CALL LINKEDLIST$SET(LL_STRC,'RAD',0,SVAR)
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,SVAR)
+
+        CALL ATOMTYPELIST$SELECT(SPNAME)
+        CALL ATOMTYPELIST$SETR8('RAD',SVAR)
+        CALL ATOMTYPELIST$UNSELECT
 !
 !       ========================================================================
 !       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
@@ -4370,6 +4384,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: LENG
       LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)   ,ALLOCATABLE   :: WORK(:)
+      integer(4),ALLOCATABLE   :: iWORK(:)
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES_NTBO')
       LL_STRC=LL_STRC_
@@ -4483,19 +4498,44 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !!$          CALL LMTO$SETR8('SCALERCUT',SVAR)
 !!$        END IF
 !   
-!       ======================================================================
-!       ==  SELECTOR FOR LOCAL ORBITALS                                     ==
-!       ======================================================================
+!       ========================================================================
+!       ==  SELECTOR FOR LOCAL ORBITALS: #(ORBITALS PER L)                    ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$SIZE(LL_STRC,'NTBO',1,LENG)
+           ALLOCATE(IWORK(LENG))
+          CALL LINKEDLIST$GET(LL_STRC,'NTBO',1,IWORK)
+        ELSE
+          ALLOCATE(IWORK(1))   ! THE ARRAY WILL BE EXTENDED
+          IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
+        END IF        
+        CALL ATOMTYPELIST$SELECT(SPNAME)
+        CALL ATOMTYPELIST$SETI4A('NTBO',LENG,IWORK)
+        CALL ATOMTYPELIST$UNSELECT
+        DEALLOCATE(IWORK)
+!   
+!       ========================================================================
+!       ==  SELECTOR FOR LOCAL ORBITALS   (WILL BECOME OBSOLETE)              ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$SIZE(LL_STRC,'TORB',1,LENG)
           ALLOCATE(TORB(LENG))
           CALL LINKEDLIST$GET(LL_STRC,'TORB',1,TORB)
-          CALL ATOMTYPELIST$SELECT(SPNAME)
-          CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
-          CALL ATOMTYPELIST$UNSELECT
-          DEALLOCATE(TORB)
+          CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK1)
+          IF(TCHK1) THEN
+            CALL ERROR$MSG('"TORB=" AND "NTBO=" ARE MUTUALLY EXCLUSIVE"')
+            CALL ERROR$STOP('STRCIN_LMTO')
+          END IF
+        ELSE
+          ALLOCATE(TORB(1))
+          TORB(1)=.FALSE.
         END IF        
+        CALL ATOMTYPELIST$SELECT(SPNAME)
+        CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
+        CALL ATOMTYPELIST$UNSELECT
+        DEALLOCATE(TORB)
     
         CALL LMTO$SETI4('ISP',0)
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE NTBO BLOCK
@@ -4815,10 +4855,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$EXISTD(LL_STRC,'NBAND',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'NBAND',1,NB)
 !
-      NEMPTY=0
+      NEMPTY=1
       CALL LINKEDLIST$EXISTD(LL_STRC,'EMPTY',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'EMPTY',1,NEMPTY)
-!    
+!     
 !     ==================================================================
 !     ==  DETERMINE TOTAL NUCLEAR CHARGE                              ==
 !     ==================================================================

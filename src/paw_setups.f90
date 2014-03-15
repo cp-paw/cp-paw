@@ -98,6 +98,7 @@ CHARACTER(32)          :: ID           ! IDENTIFIER (SPECIES-NAME)
 INTEGER(4)             :: GID          ! GRID ID FOR R-SPACE GRID
 INTEGER(4)             :: GIDG         ! GRID ID FOR G-SPACE GRID
 REAL(8)                :: AEZ          ! ATOMIC NUMBER
+REAL(8)                :: RAD          ! ATOMIC SPHERE RADIUS FOR PDOS ETC.
 REAL(8)                :: RCBG
 REAL(8)                :: RCSM         ! GAUSSIAN DECAY FOR COMPENSATION CHARGE
 INTEGER(4)             :: LX           ! HIGHEST ANGULAR MOMENTUM
@@ -675,6 +676,8 @@ END MODULE SETUP_MODULE
         VAL=THIS%PSG4
       ELSE IF(ID.EQ.'RBOX') THEN
         VAL=THIS%RBOX  ! OUTER NODE OF PARTIAL WAVES
+      ELSE IF(ID.EQ.'RAD') THEN
+        VAL=THIS%RAD  ! ATOM-RADIUS FOR PDOS ETC.
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -1472,12 +1475,13 @@ PRINT*,'RCSM ',THIS%RCSM
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
       LOGICAL(4)            :: TCHK,TCHK1
       REAL(8)               :: PI,FOURPI,Y0,C0LL
-      REAL(8)               :: SVAR
       INTEGER(4)            :: IR,IB,LN,L,IB1
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
       TYPE(VFOCK_TYPE)      :: VFOCK
       REAL(8)   ,ALLOCATABLE:: AUX(:)
+      REAL(8)               :: SVAR
+      INTEGER(4),ALLOCATABLE:: IWORK(:)
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
@@ -1498,6 +1502,7 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
       CALL ATOMTYPELIST$SELECT(THIS%ID)
       CALL ATOMTYPELIST$GETR8('M',THIS%M)
+      CALL ATOMTYPELIST$GETR8('RAD',THIS%RAD)
       CALL ATOMTYPELIST$GETCH('SOFTCORETYPE',THIS%SOFTCORETYPE)
 !
 !     ==========================================================================
@@ -1862,12 +1867,35 @@ CALL TRACE$PASS('MARKE 2')
       CALL TIMING$CLOCKOFF('BESSELTRANSFORMS')
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
 !
-!     ==================================================================
-!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
-!     ==================================================================
-CALL TRACE$PASS('MARKE 3')
+!     ==========================================================================
+!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST)        ==
+!     ==========================================================================
+!     == TORB IN ATOMTYPELIST IS OBSOLETE ======================================
       ALLOCATE(THIS%TORB(LNX))
       CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
+!
+!     == NTBO SPECIFIES THE NUMBER OF TB-ORBITALS FOR EACH ANGULAR MOMENTUM ====
+!     == IT OVERWRITES TORB, IF SET, TO KEEP BACKWARD COMPATIBILITY ============
+!     == CAUTION: THE USER MAY NOT KNOW IF HE USES SEMI-CORE STATES OR NOT    ==
+!     ==          LATER, WE MAY USE ISCATT AS DEFAULT                         ==
+      LX=MAXVAL(THIS%LOX)
+      ALLOCATE(IWORK(LX+1))
+      CALL ATOMTYPELIST$GETI4A('NTBO',LX+1,IWORK)
+      IF(SUM(IWORK).NE.0) THEN   ! TORB IS SPECIFIED VIA NTBO
+        DO LN=1,THIS%LNX
+          L=THIS%LOX(LN)
+          THIS%TORB(LN)=(IWORK(L+1).GT.0)
+          IF(THIS%TORB(LN)) IWORK(L+1)=IWORK(L+1)-1
+        ENDDO
+        IF(SUM(IWORK).GT.0) THEN
+          CALL ERROR$MSG('NTBO MUST NOT EXCEED NPRO')
+          CALL ERROR$STOP('SETUP_READ_NEW')
+        END IF
+      END IF
+      DEALLOCATE(IWORK)
+!
+!     == UNSELECT ATOMTYPELIST =================================================
+      CALL ATOMTYPELIST$UNSELECT
 !
 !     ==========================================================================
 !     == WRITE REPORT
@@ -2543,7 +2571,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      USE VERSION_MODULE , only : VERTYP
+      USE VERSION_MODULE , ONLY : VERTYP
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: SETUPID
       INTEGER(4)  ,INTENT(OUT):: GID
@@ -2739,6 +2767,8 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
               CALL PERIODICTABLE$GET(EL,'Z',AEZ)
             END IF
           END IF
+          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+PRINT*,'AEZ=',AEZ,' RCOV=',RCOV
 !
 !         == COLLECT #VALENCE ELECTRONS ========================================
           CALL LINKEDLIST$EXISTD(LL_SCNTL,'ZV',1,TCHK)
