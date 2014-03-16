@@ -3888,7 +3888,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)    ,ALLOCATABLE  :: XK(:,:)
       REAL(8)    ,ALLOCATABLE  :: WGHT(:)
       LOGICAL(4)               :: TINV     ! EXPLOIT TIME INVERSION SYMMETRY
-      INTEGER(4)               :: NSPIN
+      INTEGER(4)               :: NSPIN,IKPT
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_KPOINT')
       LL_STRC=LL_STRC_
@@ -4384,7 +4384,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)               :: LENG
       LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)   ,ALLOCATABLE   :: WORK(:)
-      integer(4),ALLOCATABLE   :: iWORK(:)
+      INTEGER(4),ALLOCATABLE   :: IWORK(:)
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES_NTBO')
       LL_STRC=LL_STRC_
@@ -4507,7 +4507,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
            ALLOCATE(IWORK(LENG))
           CALL LINKEDLIST$GET(LL_STRC,'NTBO',1,IWORK)
         ELSE
-          ALLOCATE(IWORK(1))   ! THE ARRAY WILL BE EXTENDED
+          LENG=1
+          ALLOCATE(IWORK(LENG))   ! THE ARRAY WILL BE EXTENDED
           IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
         END IF        
         CALL ATOMTYPELIST$SELECT(SPNAME)
@@ -4529,7 +4530,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL ERROR$STOP('STRCIN_LMTO')
           END IF
         ELSE
-          ALLOCATE(TORB(1))
+          LENG=1
+          ALLOCATE(TORB(LENG))
           TORB(1)=.FALSE.
         END IF        
         CALL ATOMTYPELIST$SELECT(SPNAME)

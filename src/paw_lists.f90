@@ -945,7 +945,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
             CALL ERROR$I4VAL('ACTUAL ARRAY SIZE',LEN1)
             CALL ERROR$STOP('ATOMTYPELIST$GETI4')
           END IF
-        else
+        ELSE
           LEN1=SIZE(XXX(THISTYPE)%NTBO) 
           IF(LEN.GE.LEN1) THEN
             VAL(:)=0
@@ -1017,6 +1017,7 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       LOGICAL(4)  ,INTENT(OUT):: VAL(LEN)
+      INTEGER(4)              :: LEN1
 !     ******************************************************************
       IF(.NOT.TINI) THEN
         CALL ERROR$MSG('ATOMTYPELIST NOT INITIALIZED')
@@ -1034,14 +1035,16 @@ ALLOCATE(XXX(ITYPE)%NPRO(1))
 !     ==========================================================================
       IF(ID.EQ.'TORB') THEN
         IF(ASSOCIATED(XXX(THISTYPE)%TORB)) THEN 
-          IF(LEN.NE.SIZE(XXX(THISTYPE)%TORB)) THEN 
-            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          LEN1=SIZE(XXX(THISTYPE)%TORB)
+          IF(LEN.LT.SIZE(XXX(THISTYPE)%TORB)) THEN 
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE (ARRAY TO SMALL)')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$I4VAL('SIZE EXPECTED',LEN)
-            CALL ERROR$I4VAL('CURRENT SIZE',SIZE(XXX(THISTYPE)%TORB))
+            CALL ERROR$I4VAL('CURRENT SIZE',LEN1)
             CALL ERROR$STOP('ATOMTYPELIST$GETL4')
           END IF
-          VAL=XXX(THISTYPE)%TORB
+          VAL=.FALSE.
+          VAL(:LEN1)=XXX(THISTYPE)%TORB
         ELSE
           VAL=.TRUE.  ! RETURN DEFAULT
         END IF

@@ -1173,7 +1173,6 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
       LOGICAL(4),ALLOCATABLE :: TORB(:)
       INTEGER(4),ALLOCATABLE :: ISCATT(:)
       LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
-      REAL(8)                :: AEZ
       REAL(8)                :: RAD
       REAL(8)                :: PHIVAL,PHIDER
       REAL(8)                :: PHIDOTVAL,PHIDOTDER
@@ -1205,8 +1204,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
         ALLOCATE(AUX(NR))
 
 !       == MATCHING RADIUS =====================================================
-        CALL SETUP$GETR8('AEZ',AEZ)
-        CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD) 
+        CALL SETUP$GETR8('RAD',RAD)
         POTPAR1(ISP)%RAD=RAD
 !       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
         ALLOCATE(TORB(LNX1))
@@ -3414,7 +3412,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
       SUBROUTINE LMTO_LOCNATORB()
 !     **************************************************************************
 !     ** CALCULATE LOCAL NATURAL ORBITALS AND THEIR OCCUPATIONS               **
-!     ** AND PRINT THEM                                                       **
+!     ** AND PRINT THEM. THE OVERLAP MATRIX IS CALCULATED FROM TAILED ORBITALS**
 !     **************************************************************************
       USE LMTO_MODULE, ONLY: ISPECIES &
      &                      ,DENMAT_NEW &
@@ -7903,6 +7901,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_PLOTORBS()
 !     **************************************************************************
+!     ** PLOT TIGHT-BINDING ORBITALS                                          **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : ISPECIES &
      &                        ,POTPAR=>POTPAR1
@@ -9477,7 +9476,6 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR)
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-      REAL(8)                :: AEZ
       REAL(8)                :: RAD
       REAL(8)                :: PHIVAL,PHIDER
       REAL(8)                :: PHIDOTVAL,PHIDOTDER
@@ -9505,8 +9503,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR)
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
 !       == MATCHING RADIUS =====================================================
-        CALL SETUP$GETR8('AEZ',AEZ)
-        CALL PERIODICTABLE$GET(NINT(AEZ),'R(ASA)',RAD) 
+        CALL SETUP$GETR8('RAD',RAD)
         POTPAR(ISP)%RAD=RAD
 !       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
         ALLOCATE(POTPAR(ISP)%TORB(LNX1))

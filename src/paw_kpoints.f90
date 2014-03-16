@@ -74,7 +74,7 @@ END MODULE KPOINTS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: VAL
+      INTEGER(4)  ,INTENT(IN) :: VAL(LEN)
 !     **************************************************************************
       IF(ID.EQ.'DIV') THEN
         IF(LEN.NE.3) THEN
@@ -235,6 +235,7 @@ END MODULE KPOINTS_MODULE
       USE KPOINTS_MODULE, ONLY : TINV,NKDIV,ISHIFT,NKPT,XK,WKPT
       IMPLICIT NONE
       REAL(8)               :: DUMMYRBAS(3,3)
+      INTEGER(4) :: IKPT
 !     ******************************************************************
                                CALL TRACE$PUSH('KPOINTS$MAKEGRID')
 !     USE SIC UNIT CELL TO OBTAIN RELATIVE COORDINATES
