@@ -3263,8 +3263,8 @@
  !END
  !SETUP  ID='H_NDLSS' EL='H' ZV= 1.
          TYPE='NDLSS' RBOX/RCOV=2.86 RCSM/RCOV=0.25
-         RCL/RCOV= 1.0 1.0 1.0 1.0
-         LAMBDA= 6. 6. 6. 6.
+         RCL/RCOV= 1.0 1.0 1.0 1.0 1.
+         LAMBDA= 6. 6. 6. 6. 6.
    !GRID DMIN=1.E-6 DMAX=0.1 RMAX= 9. !END
    !POT  POW=3.  RC/RCOV=0.67 !END
    !CORE POW=3.  RC/RCOV=0.67 !END
