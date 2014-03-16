@@ -27,12 +27,10 @@ usage: paw_show option rootname [outfile]\n
 1)rootname  is paw protocol file name without the .prot ending
 2)option (exactly one must be given) can be one of the following
 \t -h: give info about use
-\t -u unit: unit selection (must precede quantity selection!)
-\t\t unit=ev|kj/mol/kcal/mol|h
-\t -e: plot static total energy
-\t -t: plot temperature in kelvin
-\t -c: plot conserved energy
-\t -f: plot fictitious kinetic wave function energy
+\t -e: plot static total energy in Hartree
+\t -t: plot temperature in Kelvin
+\t -c: plot conserved energy in Hartree
+\t -f: plot fictitious kinetic wave function energy in Hartree
 \t -a: type: plot friction 
 \t\t     type=p: phi
 \t\t     type=r: atoms
@@ -48,32 +46,13 @@ usage: paw_show option rootname [outfile]\n
 #===================================================================
 #  resolve argument list                                          ==
 #===================================================================
-EUNIT=1.
 AWKSTRING=""
-while getopts :hetfca:u: OPT ; do
+while getopts :hetfca: OPT ; do
   case $OPT in 
-    u) #unit
-       case $OPTARG in
-         ev) 
-             EUNIT=$(echo "$EUNIT * 27.211" | bc -l)
-             ;;
-         kj/mol) 
-             EUNIT=$(echo "$EUNIT * 0.0003808798" | bc -l)
-             ;;
-         kcal/mol) 
-             EUNIT=$(echo "$EUNIT * 0.001593601" | bc -l)
-             ;;
-         h)  
-             ;;
-         *) echo "error in $0: argument $OPTARG not for -u recognized" >&2
-            exit 1
-            ;;
-       esac
-       ;;
     t) AWKSTRING="$AWKSTRING \" \" \$4 " ;; # temperature (Kelvin)
     f) AWKSTRING="$AWKSTRING \" \" \$5 " ;; # fict. kinetic energy
-    e) AWKSTRING="$AWKSTRING \" \" \$6 * $EUNIT " ;; # static total energy
-    c) AWKSTRING="$AWKSTRING \" \" \$7 * $EUNIT " ;; # conserved energy
+    e) AWKSTRING="$AWKSTRING \" \" \$6 " ;; # static total energy
+    c) AWKSTRING="$AWKSTRING \" \" \$7 " ;; # conserved energy
     a) #friction
        case $OPTARG in
          p) AWKSTRING="$AWKSTRING \" \" \$8" ;; # wave functions
@@ -128,10 +107,10 @@ fi
 #===================================================================
 #  extract data from protocoll file                               ==
 #===================================================================
-AWKSTRING="{print \$3 $AWKSTRING}"
+AWKSTRING="{print  \$3 $AWKSTRING}"
 grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
                        | sed 's/-/ -/g' \
-                       | awk "$AWKSTRING" \
+                       | gawk "$AWKSTRING" \
                        > ${TMPFILE}
 #
 #===================================================================
