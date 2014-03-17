@@ -2973,12 +2973,12 @@ COMPLEX(8)  :: PHASE
                   IF(ISPIN.EQ.1) THEN
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
           &                                  +REAL(CSVAR22(1,1))
-                    DENMAT_NEW(NN)%MAT(I,J,4)=DENMAT_NEW(NN)%MAT(I,J,4) &
+                    DENMAT_NEW(NN)%MAT(I,J,2)=DENMAT_NEW(NN)%MAT(I,J,2) &
           &                                  +REAL(CSVAR22(1,1))
                   ELSE
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
           &                                  +REAL(CSVAR22(1,1))
-                    DENMAT_NEW(NN)%MAT(I,J,4)=DENMAT_NEW(NN)%MAT(I,J,4) &
+                    DENMAT_NEW(NN)%MAT(I,J,2)=DENMAT_NEW(NN)%MAT(I,J,2) &
           &                                  -REAL(CSVAR22(1,1))
                   END IF
                 END IF
@@ -3434,6 +3434,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
       REAL(8)   ,ALLOCATABLE  :: F(:)
       REAL(8)   ,ALLOCATABLE  :: ORB(:,:)
 !     **************************************************************************
+                                   CALL TRACE$PUSH('LMTO_LOCNATORB')
       NAT=SIZE(ISPECIES)
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
@@ -3507,6 +3508,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
       ENDDO
 !!$CALL ERROR$MSG('FORCED STOP')
 !!$CALL ERROR$STOP('LMTO_LOCNATORB')
+                                   CALL TRACE$POP()
       RETURN
       END
 !
@@ -7906,6 +7908,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       USE LMTO_MODULE, ONLY : ISPECIES &
      &                        ,POTPAR=>POTPAR1
       IMPLICIT NONE
+!      LOGICAL(4),PARAMETER :: TON=.TRUE.
       LOGICAL(4),PARAMETER :: TON=.FALSE.
       LOGICAL(4),SAVE      :: TINI=.FALSE. !EXECUTE ONLY ONCE
       INTEGER(4) :: IAT,ISP,IORB,IH,L,IM
@@ -8562,19 +8565,21 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !
 !       == CONSTRUCT HEAD AND TAIL FUNCTIONS FROM PARTIAL WAVES ===============
         NTAIL=POTPAR(ISP2)%NTAIL
-        NHEAD=POTPAR(ISP2)%NHEAD
         ALLOCATE(K0ARR(NR))
         ALLOCATE(DK0ARR(NR))
         ALLOCATE(JBARARR(NR,NTAIL))
+        TONSITE=(ISP2.EQ.ISPECIES(IATORB))
         DO IT=1,NTAIL
           L=POTPAR(ISP2)%LOFT(IT)
           LNDOT=POTPAR(ISP2)%LNOFT(IT)
           JBARARR(:,IT)=NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%JBARTOPHIDOT(IT)
-          IF(POTPAR(ISP2)%LOFH(IHORB).EQ.L) THEN
-            LN=POTPAR(ISP2)%LNOFH(IHORB)
-            K0ARR(:)=NLPHI(:,LN)   *POTPAR(ISP2)%KTOPHI(IHORB) &
-                    +NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%KTOPHIDOT(IHORB) 
-            DK0ARR(:)=(AEPHI(:,LN)-NLPHI(:,LN))*POTPAR(ISP2)%KTOPHI(IHORB) 
+          IF(TONSITE) THEN
+            IF(POTPAR(ISP2)%LOFH(IHORB).EQ.L) THEN
+              LN=POTPAR(ISP2)%LNOFH(IHORB)
+              K0ARR(:)=NLPHI(:,LN)   *POTPAR(ISP2)%KTOPHI(IHORB) &
+                      +NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%KTOPHIDOT(IHORB) 
+              DK0ARR(:)=(AEPHI(:,LN)-NLPHI(:,LN))*POTPAR(ISP2)%KTOPHI(IHORB) 
+            END IF
           END IF
         ENDDO
         DEALLOCATE(AEPHI)
