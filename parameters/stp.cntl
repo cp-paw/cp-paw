@@ -3278,6 +3278,15 @@
    !CORE POW=3.  RC/RCOV=0.67 !END
  !END
 
+  !SETUP  ID='FE_.75_6.0_v0' EL='FE' ZV=   8.
+          TYPE='HBS'  RBOX/RCOV=1.2  RCSM/RCOV=0.25
+          RCL/RCOV= 1.0 1.0 0.75 0.75
+          LAMBDA= 6. 6. 6. 6.
+    !GRID DMIN=1.E-6 DMAX=0.1 RMAX= 10. !END
+    !POT  POW=3. RC/RCOV=   0.705 !END
+    !CORE POW=3. RC/RCOV=   0.705 !END
+  !END
+
 !End
 !EOB
 
