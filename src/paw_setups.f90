@@ -1905,52 +1905,53 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
      &                        ,THIS1%PSG4,'H')
 !
 !       == REPORT SETTINGS FOR THE SETUP CONSTRUCTION ==========================
-        IF(THIS1%PARMS%POW_POT.NE.0.D0) THEN
-          CALL REPORT$CHVAL(NFIL,'SETUP ID',THIS1%PARMS%ID)
-          IF(THIS1%PARMS%TYPE.EQ.'KERKER') THEN
-            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','KERKER TYPE')
-          ELSE IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
-            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD' &
-     &                            ,'HAMANN-BACHELET-SCHLUETER TYPE')
-          ELSE
-            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','UNKNOWN')
-          END IF
-          DO L=0,MAXVAL(THIS1%LOX)
-            WRITE(STRING,*)L
-            STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L=' &
-     &            //ADJUSTL(STRING)
-            CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%RCL(L+1),'ABOHR')
-            IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
-              WRITE(STRING,*)L
-              STRING='PARTIAL WAVE PSEUDIZATION PARAMETER LAMBDA FOR L=' &
-     &                                                         //ADJUSTL(STRING)
-              CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1) &
-     &                                           ,'ABOHR')
-            END IF 
-         ENDDO
-          IF(THIS1%PARMS%TVAL0_POT) THEN
-            CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
-     &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
-          ELSE
-            CALL REPORT$CHVAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
-     &                            ,'NOT DETERMINED')
-          END IF
-          CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
-     &                            ,THIS1%PARMS%RC_POT,'ABOHR')
-          CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
-     &                            ,THIS1%PARMS%POW_POT,'')
-          IF(THIS1%PARMS%TVAL0_CORE) THEN
-            CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' &
-     &                            //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'H')
-          ELSE
-            CALL REPORT$CHVAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' & 
-     &                            //' VAL(0)','NOT DETERMINED')
-          END IF
-          CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: RC' &
-     &                           ,THIS1%PARMS%RC_CORE,'ABOHR')
-          CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: POWER' &
-     &                           ,THIS1%PARMS%POW_CORE,'')
+        CALL REPORT$CHVAL(NFIL,'SETUP ID',THIS1%PARMS%ID)
+        IF(THIS1%PARMS%TYPE.EQ.'KERKER') THEN
+          CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','KERKER TYPE')
+        ELSE IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
+          CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD' &
+     &                          ,'HAMANN-BACHELET-SCHLUETER TYPE')
+        ELSE IF(THIS1%PARMS%TYPE.EQ.'NDLSS') THEN
+          CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD' &
+     &                          ,'NODELESS ORBITALS')
+        ELSE
+          CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD',THIS1%PARMS%TYPE)
         END IF
+        DO L=0,MAXVAL(THIS1%LOX)
+          WRITE(STRING,*)L
+          STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L=' &
+     &          //ADJUSTL(STRING)
+          CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%RCL(L+1),'ABOHR')
+          IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
+            WRITE(STRING,*)L
+            STRING='PARTIAL WAVE PSEUDIZATION PARAMETER LAMBDA FOR L=' &
+     &                                                       //ADJUSTL(STRING)
+            CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1) &
+     &                                         ,'ABOHR')
+          END IF 
+        ENDDO
+        IF(THIS1%PARMS%TVAL0_POT) THEN
+          CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
+     &                          ,THIS1%PARMS%VAL0_POT*Y0,'H')
+        ELSE
+          CALL REPORT$CHVAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
+     &                          ,'NOT DETERMINED')
+        END IF
+        CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
+     &                          ,THIS1%PARMS%RC_POT,'ABOHR')
+        CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
+     &                          ,THIS1%PARMS%POW_POT,'')
+        IF(THIS1%PARMS%TVAL0_CORE) THEN
+          CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' &
+     &                          //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'H')
+        ELSE
+          CALL REPORT$CHVAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' & 
+     &                          //' VAL(0)','NOT DETERMINED')
+        END IF
+        CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: RC' &
+     &                         ,THIS1%PARMS%RC_CORE,'ABOHR')
+        CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: POWER' &
+     &                         ,THIS1%PARMS%POW_CORE,'')
         IF(.NOT.ASSOCIATED(THIS1%NEXT)) EXIT
         THIS1=>THIS1%NEXT
       ENDDO
@@ -2230,18 +2231,11 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
 !       ========================================================================
 !       == IDENTIFY SETUP ID                                                  ==
 !       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
-        ID='NONAME'
-        IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'ID',1,ID)
-        THIS%PARMS%ID=ID       
-!
-!       ========================================================================
-!       == IDENTIFY SETUP ID                                                  ==
-!       ========================================================================
-        CALL SETUP_LOOKUPSETUP(LL_STRC,AEZ,ZV,RBOX,LX,TYPE,RCL,LAMBDA &
+        CALL SETUP_LOOKUPSETUP(LL_STRC,ID,AEZ,ZV,RBOX,LX,TYPE,RCL,LAMBDA &
      &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
      &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
      &                              ,DMIN,DMAX,RMAX)
+        THIS%PARMS%ID=ID       
         THIS%AEZ=AEZ      !ATOMIC NUMBER
         THIS%RCSM=RCSM    ! DECAY RADIUS FOR COMPENSATION CHARGE
         THIS%RBOX=RBOX    
@@ -2298,7 +2292,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_LOOKUPSETUP(LL_STP_,AEZ,ZV,RBOX,LX,TYPE,RCL &
+      SUBROUTINE SETUP_LOOKUPSETUP(LL_STP_,ID,AEZ,ZV,RBOX,LX,TYPE,RCL &
      &                              ,LAMBDA &
      &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
      &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
@@ -2309,32 +2303,32 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN):: LL_STP_
-      INTEGER(4)  ,INTENT(IN) :: LX
-      REAL(8)     ,INTENT(OUT):: AEZ
-      REAL(8)     ,INTENT(OUT):: ZV
-      REAL(8)     ,INTENT(OUT):: RBOX
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STP_
+      INTEGER(4)   ,INTENT(IN) :: LX
+      CHARACTER(*) ,INTENT(OUT):: ID
+      REAL(8)      ,INTENT(OUT):: AEZ
+      REAL(8)      ,INTENT(OUT):: ZV
+      REAL(8)      ,INTENT(OUT):: RBOX
       CHARACTER(32),INTENT(OUT):: TYPE
-      REAL(8)     ,INTENT(OUT):: RCL(LX+1)
-      REAL(8)     ,INTENT(OUT):: LAMBDA(LX+1)
-      REAL(8)     ,INTENT(OUT):: RCSM
-      REAL(8)     ,INTENT(OUT):: POW_POT
-      REAL(8)     ,INTENT(OUT):: RC_POT
-      LOGICAL(4)  ,INTENT(OUT):: TVAL0_POT
-      REAL(8)     ,INTENT(OUT):: VAL0_POT
-      REAL(8)     ,INTENT(OUT):: POW_CORE
-      REAL(8)     ,INTENT(OUT):: RC_CORE
-      LOGICAL(4)  ,INTENT(OUT):: TVAL0_CORE
-      REAL(8)     ,INTENT(OUT):: VAL0_CORE
-      REAL(8)     ,INTENT(OUT):: DMIN
-      REAL(8)     ,INTENT(OUT):: DMAX
-      REAL(8)     ,INTENT(OUT):: RMAX
-      TYPE(LL_TYPE)           :: LL_STP
-      LOGICAL(4)              :: TCHK
-      CHARACTER(128)          :: ID
-      CHARACTER(64)           :: STRING
-      REAL(8)                 :: RCOV
-      REAL(8)                 :: PI,Y0
+      REAL(8)      ,INTENT(OUT):: RCL(LX+1)
+      REAL(8)      ,INTENT(OUT):: LAMBDA(LX+1)
+      REAL(8)      ,INTENT(OUT):: RCSM
+      REAL(8)      ,INTENT(OUT):: POW_POT
+      REAL(8)      ,INTENT(OUT):: RC_POT
+      LOGICAL(4)   ,INTENT(OUT):: TVAL0_POT
+      REAL(8)      ,INTENT(OUT):: VAL0_POT
+      REAL(8)      ,INTENT(OUT):: POW_CORE
+      REAL(8)      ,INTENT(OUT):: RC_CORE
+      LOGICAL(4)   ,INTENT(OUT):: TVAL0_CORE
+      REAL(8)      ,INTENT(OUT):: VAL0_CORE
+      REAL(8)      ,INTENT(OUT):: DMIN
+      REAL(8)      ,INTENT(OUT):: DMAX
+      REAL(8)      ,INTENT(OUT):: RMAX
+      TYPE(LL_TYPE)            :: LL_STP
+      LOGICAL(4)               :: TCHK
+      CHARACTER(64)            :: STRING
+      REAL(8)                  :: RCOV
+      REAL(8)                  :: PI,Y0
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -4869,7 +4863,7 @@ PRINT*,'KI ',KI
 !
 !       == SETUP BLOCK HAS HIGHEST PRIORITY ====================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'SETUP',0,TCHK)
-        IF(TCHK) CYCLE
+        IF(TCHK)CYCLE
 !
 !       == RESOLVE SETUP ID FROM EITHER INTERNAL SET OF STP.CNTL FILE ==========
         CALL LINKEDLIST$EXISTD(LL_STRC,'ID',0,TCHK)
