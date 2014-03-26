@@ -139,7 +139,6 @@ END MODULE VEXT_MODULE
 !      =================================================================
        DO IAT=1,NAT
          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-         CALL ATOMTYPELIST$SELECTI4(ISP)
          CALL SETUP$ISELECT(ISP)
          CALL SETUP$GETR8('AEZ',AEZ)
          CALL SETUP$unSELECT()

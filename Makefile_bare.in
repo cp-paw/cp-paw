@@ -233,7 +233,6 @@ OBJECTS2 = \
 #
 OBJECTS3 = \
            ${OBJDIR}/paw_setups.o \
-           ${OBJDIR}/paw_setupread.o \
            ${OBJDIR}/paw_potential.o \
            ${OBJDIR}/paw_occupations.o \
            ${OBJDIR}/paw_pairpotential.o \

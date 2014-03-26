@@ -71,8 +71,8 @@ TYPE SETUPPARMS_TYPE
   REAL(8)         :: VAL0_CORE
   REAL(8)         :: RC_CORE
   CHARACTER(32)   :: TYPE
-  REAL(8),POINTER :: RCL(:)
-  REAL(8),POINTER :: LAMBDA(:)
+  REAL(8),POINTER :: RCL(:)    !(LX+1)
+  REAL(8),POINTER :: LAMBDA(:) !(LX+1)
 END TYPE SETUPPARMS_TYPE
 TYPE ATOMWAVES_TYPE
   INTEGER(4)         :: NB=-1
@@ -108,7 +108,8 @@ INTEGER(4)             :: LMRX         ! #(ANGULAR MOMENTA FOR 1C-DENSITY)
 INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA 
 INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
-                                       !      = 1 FOR 1ST SCATTERING STATE (PHIDOT)
+                                       !   = 1 FOR 1ST SCATTERING STATE (PHIDOT)
+INTEGER(4),POINTER     :: NTBO(:)      !#(LOCAL ORBITALS PER L)
 LOGICAL(4),POINTER     :: TORB(:)      ! SELECTOR FOR U-TENSOR
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
 REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
@@ -157,6 +158,7 @@ TYPE(SETUPPARMS_TYPE)  :: PARMS
 TYPE(ATOMWAVES_TYPE)   :: ATOM
 TYPE(THIS_TYPE),POINTER:: NEXT
 END TYPE THIS_TYPE
+!
 INTEGER(4)              :: GIDG_PROTO=0 !PROTOTYPE G-GRID
 INTEGER(4)              :: NSP=0
 LOGICAL,SAVE            :: SELECTED=.FALSE. ! CONTAINER FOR ACTUAL SETTING
@@ -170,7 +172,6 @@ TYPE FASTACCESS_TYPE
 END TYPE FASTACCESS_TYPE
 TYPE(FASTACCESS_TYPE),ALLOCATABLE :: FASTACCESS(:)
 LOGICAL(4)             :: TINTERNALSETUPS=.TRUE.
-CHARACTER(128)         :: STPVERSION !REQUIRED SETUP VERSION
 END MODULE SETUP_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -287,6 +288,7 @@ END MODULE SETUP_MODULE
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('SETUP$SELECT')
       END IF
+      SELECTED=.TRUE.    ! THIS FUNCTION WILL SELECT AN INSTANCE
 !
 !     ==========================================================================
 !     == CHECK IF ALREADY SELECTED                                            ==
@@ -296,7 +298,7 @@ END MODULE SETUP_MODULE
       END IF
 !
 !     ==========================================================================
-!     == CHECK IF PRESENT ===
+!     == CHECK IF PRESENT                                                     ==
 !     ==========================================================================
       IF(ASSOCIATED(FIRST)) THEN
         THIS=>FIRST
@@ -338,25 +340,44 @@ END MODULE SETUP_MODULE
 !     ==========================================================================
       IF(ALLOCATED(FASTACCESS)) DEALLOCATE(FASTACCESS)
       THIS%ID    =ID
+      THIS%GID   =0
+      THIS%GIDG   =0
       THIS%AEZ   =0.D0
+      THIS%RAD   =0.D0
       THIS%RCBG  =0.D0
       THIS%RCSM  =0.D0
+      THIS%LX    =0
       THIS%LNX   =0
       THIS%LMNX  =0
       THIS%LMRX  =0
-      THIS%PSG2  =0.D0
-      THIS%PSG4  =0.D0
-      THIS%SOFTCORETYPE='NONE'
       NULLIFY(THIS%LOX)     !(LNX)
+      NULLIFY(THIS%ISCATT)  !(LNX)
+      NULLIFY(THIS%NTBO)    
       NULLIFY(THIS%TORB)    !(LNX)
       NULLIFY(THIS%VADD)    !(NRX)
+      NULLIFY(THIS%PSPOT)  !(NRX)
       NULLIFY(THIS%AECORE)  !(NRX)
       NULLIFY(THIS%PSCORE)  !(NRX)
       NULLIFY(THIS%PRO)     !(NRX,LNX)
+      THIS%RBOX  =0.D0
       NULLIFY(THIS%AEPHI)   !(NRX,LNX)
+      NULLIFY(THIS%AEPHISM) !(NRX,LNX)
       NULLIFY(THIS%PSPHI)   !(NRX,LNX)
+      NULLIFY(THIS%PSPHISM) !(NRX,LNX)
+      NULLIFY(THIS%UPHI)    !(NRX,LNX)
+      NULLIFY(THIS%UPHISM)  !(NRX,LNX)
+      NULLIFY(THIS%QPHI)    !(NRX,LNX)
+      NULLIFY(THIS%QPHISM)  !(NRX,LNX)
+      NULLIFY(THIS%QPHIDOT) !(NRX,LNX)
+      NULLIFY(THIS%NLPHIDOT)!(NRX,LNX)
+      NULLIFY(THIS%PSPHIDOT)!(NRX,LNX)
+      NULLIFY(THIS%PSPHIDOTSM)!(NRX,LNX)
+      NULLIFY(THIS%AEPHIDOT)!(NRX,LNX)
+      NULLIFY(THIS%AEPHIDOTSM)!(NRX,LNX)
       NULLIFY(THIS%DTKIN)   !(LNXX,LNX)
       NULLIFY(THIS%DOVER)   !(LNXX,LNX)
+      NULLIFY(THIS%PROPHIDOT)!(LNX,LNX)
+      NULLIFY(THIS%COREVALENCEX)!(LNX,LNX)
       NULLIFY(THIS%VADDOFG) !(NGX)
       NULLIFY(THIS%PSCOREOFG) !(NGX)
       NULLIFY(THIS%VHATOFG) !(NGX)
@@ -369,10 +390,25 @@ END MODULE SETUP_MODULE
       NULLIFY(THIS%LOCORBLOX)  !(LOCORBLNX)  L FOR EACH LOCAL ORBITAL-SHELL
       NULLIFY(THIS%LOCORBAMAT) !(LNX,LOCORBLNX) |CHI>=|PHI>*AMAT
       NULLIFY(THIS%LOCORBBMAT) !(LOCORBLNX,LNX) |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
-
-      NULLIFY(THIS%NEXT)
+      THIS%M     =0.D0
+      THIS%ZV     =0.D0
+      THIS%PSG2  =0.D0
+      THIS%PSG4  =0.D0
+      THIS%SOFTCORETYPE='NONE'
+      THIS%SETTING%TREL=.TRUE.
+      THIS%SETTING%SO=.FALSE.
+      THIS%SETTING%ZORA=.FALSE.
+      THIS%SETTING%FOCK=0.D0
+      THIS%PARMS%ID=''
+      THIS%PARMS%POW_POT=0.D0
+      THIS%PARMS%TVAL0_POT=.FALSE.
+      THIS%PARMS%VAL0_POT=0.D0
+      THIS%PARMS%RC_POT=0.D0
+       
+!      THIS%ATOM%
       WRITE(THIS%FILEID,*)THIS%I
       THIS%FILEID='ATOM'//ADJUSTL(THIS%FILEID)
+      NULLIFY(THIS%NEXT)
 !
 !     == INITIALIZE DEFAULT VALUES
       THIS%RCBG  =1.D0/SQRT(0.218D0)
@@ -385,7 +421,6 @@ END MODULE SETUP_MODULE
 !     **  COLLECTS INTERNAL DATA                                              **
 !     **                                                                      **
 !     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
-!     **  REMARK: GETTING STPVERSION DOES NOT REQUIRE SETUP TO BE SELECTED    **
 !     **                                                                      **
 !     **************************************************************************
       USE SETUP_MODULE
@@ -397,30 +432,6 @@ END MODULE SETUP_MODULE
         VAL=THIS%ID
       ELSE IF(ID.EQ.'SOFTCORETYPE') THEN
         VAL=THIS%SOFTCORETYPE
-      ELSE IF(ID.EQ.'STPVERSION') THEN
-        VAL=STPVERSION
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$STOP('SETUP$GETCH')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$SETCH(ID,VAL)
-!     **************************************************************************
-!     **                                                                      **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
-!     **  REMARK: SETTING STPVERSION DOES NOT REQUIRE SETUP TO BE SELECTED    **
-!     **                                                                      **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: ID
-      CHARACTER(*),INTENT(IN)  :: VAL
-!     **************************************************************************
-      IF(ID.EQ.'STPVERSION') THEN
-        STPVERSION=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SETUP$GETCH')
@@ -510,7 +521,12 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: VAL(LEN)
       INTEGER(4)               :: I
 !     **************************************************************************
-      IF(ID.EQ.'NOFLCHI') THEN
+      IF(ID.EQ.'NTBO') THEN
+        IF(ASSOCIATED(THIS%NTBO)) DEALLOCATE(THIS%NTBO)
+        ALLOCATE(THIS%NTBO(LEN))
+        THIS%NTBO=VAL
+!     __________________________________________________________________________
+      ELSE IF(ID.EQ.'NOFLCHI') THEN
         IF(LEN.NE.4) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -670,12 +686,12 @@ END MODULE SETUP_MODULE
         VAL=THIS%ZV
       ELSE IF(ID.EQ.'M') THEN
         VAL=THIS%M
-      ELSE IF(ID.EQ.'<G2>') THEN
+      ELSE IF(ID.EQ.'PS<G2>') THEN
         VAL=THIS%PSG2
-      ELSE IF(ID.EQ.'<G4>') THEN
+      ELSE IF(ID.EQ.'PS<G4>') THEN
         VAL=THIS%PSG4
       ELSE IF(ID.EQ.'RBOX') THEN
-        VAL=THIS%RBOX  ! OUTER NODE OF PARTIAL WAVES
+        VAL=THIS%RBOX  ! USED IN PAW_OPTEELS.F90
       ELSE IF(ID.EQ.'RAD') THEN
         VAL=THIS%RAD  ! ATOM-RADIUS FOR PDOS ETC.
       ELSE
@@ -1101,343 +1117,8 @@ END MODULE SETUP_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_READ
-!     ******************************************************************
-!     **  READ SELECTED SETUP                                         **
-!     **  REQUIRES INFORMATION FROM ATOMTYPELIST                      **
-!     **    NAME; LRHOX                                               **
-!     **  REQUIRES THE FILEHANDLER TO KNOW THE SETUP FILE             **
-!     ******************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      REAL(8)   ,PARAMETER  :: TOL=1.D-6
-      INTEGER(4)            :: LMRXCUT
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: GIDG
-      INTEGER(4)            :: NFIL
-      REAL(8)               :: R1,DEX
-      INTEGER(4)            :: NR,NRX
-      INTEGER(4)            :: NG   ! #(RECIPROCAL GRIDPOINTS )
-      INTEGER(4)            :: IR
-      INTEGER(4)            :: LN
-      LOGICAL(4)            :: TCHK
-      INTEGER(4)            :: IRMAX
-      INTEGER(4)            :: L,LX,ISVAR,LNOLD,LNX
-      INTEGER(4)            :: LN1,LN2,LN1A,LN2A
-      INTEGER(4),ALLOCATABLE:: NPRO(:)
-      INTEGER(4),ALLOCATABLE:: IWORK(:)
-      REAL(8)   ,ALLOCATABLE:: DWORK(:,:,:) 
-      REAL(8)               :: PI,FOURPI,Y0
-      LOGICAL(4)            :: TNEWFORMAT
-      REAL(8)   ,ALLOCATABLE:: R(:)
-      REAL(8)               :: SVAR
-      REAL(8)               :: PSZ   ! LEGACY ONLY
-!     ******************************************************************
-                            CALL TRACE$PUSH('SETUP_READ')
-!     == CERTAIN OPTIONS ONLY WORK IF ALL SETUPS ARE CALCULATED  =======
-!     == INTERNALLY USING SETUP_READ_NEW. THIS SWITCH ALLOWS TO ========
-!     == LOCK OPTIONS THAT DO NOT WORK =================================
-      TINTERNALSETUPS=.FALSE.
-!
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      IF(.NOT.ASSOCIATED(THIS)) THEN
-        CALL ERROR$MSG('NO SETUP SELECTED')
-        CALL ERROR$STOP('SETUP_READ')
-      END IF
-!
-      CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETR8('M',THIS%M)
-      CALL ATOMTYPELIST$GETR8('ZV',THIS%ZV)
-      CALL ATOMTYPELIST$GETR8('PS<G2>',THIS%PSG2)
-      CALL ATOMTYPELIST$GETR8('PS<G4>',THIS%PSG4)
-      CALL ATOMTYPELIST$GETCH('SOFTCORETYPE',THIS%SOFTCORETYPE)
-!
-      CALL FILEHANDLER$UNIT(THIS%FILEID,NFIL)
-      CALL SETUPREAD$NEW(NFIL,TNEWFORMAT)
-!
-      IF(TNEWFORMAT) THEN
-        CALL SETUPREAD$GETI4('LNX',LNX)
-        CALL SETUPREAD$GETI4('GID',THIS%GID)
-        GID=THIS%GID
-        CALL SETUPREAD$GETI4('NR',NR)
-        NRX=NR
-        THIS%LNX=LNX
-      ELSE
-        CALL INPOT$GRID(NFIL,R1,DEX,NR)
-        CALL RADIAL$NEW('LOG',GID)
-        THIS%GID=GID
-        NRX=NR
-        CALL RADIAL$SETI4(GID,'NR',NR)
-        CALL RADIAL$SETR8(GID,'DEX',DEX)
-        CALL RADIAL$SETR8(GID,'R1',R1)
-        CALL INPOT$LNX(NFIL,LNX)
-        THIS%LNX=LNX
-      END IF
-      ALLOCATE(THIS%LOX(LNX))
-      ALLOCATE(THIS%VADD(NRX))
-      ALLOCATE(THIS%AECORE(NRX))
-      ALLOCATE(THIS%PSCORE(NRX))
-      ALLOCATE(THIS%PRO(NRX,LNX))
-      ALLOCATE(THIS%AEPHI(NRX,LNX))
-      ALLOCATE(THIS%PSPHI(NRX,LNX))
-      ALLOCATE(THIS%UPHI(NRX,LNX))
-      ALLOCATE(THIS%DTKIN(LNX,LNX))
-      ALLOCATE(THIS%DOVER(LNX,LNX))
-      THIS%VADD=0.D0
-      THIS%AECORE=0.D0
-      THIS%PSCORE=0.D0
-      THIS%PRO=0.D0
-      THIS%AEPHI=0.D0
-      THIS%PSPHI=0.D0
-!     
-!     ==================================================================
-!     ==  READ PSEUDOPOTENTIALS AND PSEUDO WAVE FUNCTIONS             ==
-!     ==================================================================
-                            CALL TRACE$PASS('READ SETUP FILES')
-!      CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
-!     &         ,THIS%AEZ,THIS%PSZ,THIS%PSPHI,THIS%AEPHI &
-!     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-!     &         ,IRCCOR,THIS%AECORE,THIS%PSCORE,THIS%PRO)
-      IF(TNEWFORMAT) THEN
-        CALL SETUPREAD$GETI4A('LOX',LNX,THIS%LOX)
-        CALL SETUPREAD$GETR8('AEZ',THIS%AEZ)
-        CALL SETUPREAD$GETR8A('PSPHI',NR*LNX,THIS%PSPHI)
-        CALL SETUPREAD$GETR8A('AEPHI',NR*LNX,THIS%AEPHI)
-        CALL SETUPREAD$GETR8A('PRO',NR*LNX,THIS%PRO)
-        CALL SETUPREAD$GETR8A('NDLSPHI',NR*LNX,THIS%UPHI)
-        CALL SETUPREAD$GETR8A('VADD',NR,THIS%VADD)
-        CALL SETUPREAD$GETR8('RCSM',THIS%RCSM)
-        CALL SETUPREAD$GETR8A('DT',LNX*LNX,THIS%DTKIN)
-        CALL SETUPREAD$GETR8A('DO',LNX*LNX,THIS%DOVER)
-        CALL SETUPREAD$GETR8A('PSCORE',NR,THIS%PSCORE)
-        CALL SETUPREAD$GETR8A('AECORE',NR,THIS%AECORE)
-        CALL SETUPREAD$GETR8A('AEPOT',NR,THIS%ATOM%AEPOT)
-      ELSE
-        CALL INPOT$READALL(NFIL,NRX,R1,DEX,NR,THIS%LNX,THIS%LOX &
-     &         ,THIS%AEZ,PSZ,THIS%PSPHI,THIS%AEPHI &
-     &         ,THIS%VADD,THIS%RCSM,THIS%DTKIN,THIS%DOVER &
-     &         ,THIS%AECORE,THIS%PSCORE,THIS%PRO)
-      END IF
-      CALL FILEHANDLER$CLOSE(THIS%FILEID)
-PRINT*,'NEW FORMAT?',TNEWFORMAT
-ALLOCATE(R(NR))
-CALL RADIAL$R(GID,NR,R)
-CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%AECORE*Y0*R**2,SVAR)
-PRINT*,'INT AECORE ',SVAR
-CALL RADIAL$INTEGRAL(GID,NR,4.D0*PI*THIS%PSCORE*Y0*R**2,SVAR)
-PRINT*,'INT PSCORE ',SVAR
-PRINT*,'AEZ ',THIS%AEZ
-PRINT*,'RCSM ',THIS%RCSM
-!STOP
-!     
-!     ==================================================================
-!     == LIMIT NUMBER OF PROJECTORS FOR EACH L                        ==
-!     ==================================================================
-      LX=0
-      DO LN=1,THIS%LNX
-        LX=MAX(LX,THIS%LOX(LN))
-      ENDDO
-      ALLOCATE(NPRO(LX+1)) 
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETI4A('NPRO',LX+1,NPRO)
-      DO L=0,LX
-        ISVAR=0
-        DO LN=1,THIS%LNX
-          IF(THIS%LOX(LN).NE.L)CYCLE
-          ISVAR=ISVAR+1
-          IF(ISVAR.GT.NPRO(L+1)) THEN
-            THIS%LOX(LN)=-1     ! MARK PROJECTORS TO BE DELETED BY LOX=-1
-            ISVAR=ISVAR-1
-          END IF
-        ENDDO
-        NPRO(L+1)=ISVAR
-      ENDDO
-      CALL ATOMTYPELIST$SETI4A('NPRO',LX+1,NPRO)
-      DEALLOCATE(NPRO)
-!
-      LNOLD=THIS%LNX
-      LNX=0
-      DO LN=1,LNOLD
-        IF(THIS%LOX(LN).NE.-1) LNX=LNX+1
-      ENDDO
-      THIS%LNX=LNX
-!
-!     == FOLD DOWN ARRAYS FOR PROJECTORS AND PARTIALWAVES, LOX =========
-      ALLOCATE(DWORK(NRX,LNOLD,5))
-      ALLOCATE(IWORK(LNOLD))
-      DWORK(:,:,1)=THIS%PRO(:,:)
-      DWORK(:,:,2)=THIS%AEPHI(:,:)
-      DWORK(:,:,3)=THIS%PSPHI(:,:)
-      DWORK(:,:,4)=THIS%UPHI(:,:)
-      IWORK(:)=THIS%LOX(:)
-      DEALLOCATE(THIS%PRO)
-      DEALLOCATE(THIS%AEPHI)
-      DEALLOCATE(THIS%PSPHI)
-      DEALLOCATE(THIS%UPHI)
-      DEALLOCATE(THIS%LOX)
-      ALLOCATE(THIS%PRO(NRX,THIS%LNX))
-      ALLOCATE(THIS%AEPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%PSPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%UPHI(NRX,THIS%LNX))
-      ALLOCATE(THIS%LOX(THIS%LNX))
-      ISVAR=0
-      DO LN=1,LNOLD
-        IF(IWORK(LN).EQ.-1) CYCLE
-        ISVAR=ISVAR+1
-        THIS%PRO(:,ISVAR)=DWORK(:,LN,1)
-        THIS%AEPHI(:,ISVAR)=DWORK(:,LN,2)
-        THIS%PSPHI(:,ISVAR)=DWORK(:,LN,3)
-        THIS%UPHI(:,ISVAR)=DWORK(:,LN,4)
-        THIS%LOX(ISVAR)=IWORK(LN)
-      ENDDO
-      DEALLOCATE(DWORK)
-!
-!     == FOLD DOWN ARRAYS FOR DTKIN AND DOVER ==========================
-      ALLOCATE(DWORK(LNOLD,LNOLD,2))
-      DWORK(:,:,1)=THIS%DTKIN(:,:)
-      DWORK(:,:,2)=THIS%DOVER(:,:)
-      DEALLOCATE(THIS%DTKIN)
-      DEALLOCATE(THIS%DOVER)
-      ALLOCATE(THIS%DTKIN(LNX,LNX))
-      ALLOCATE(THIS%DOVER(LNX,LNX))
-      LN1A=0
-      DO LN1=1,LNOLD
-        IF(IWORK(LN1).EQ.-1) CYCLE
-        LN1A=LN1A+1
-        LN2A=0
-        DO LN2=1,LNOLD
-          IF(IWORK(LN2).EQ.-1) CYCLE
-          LN2A=LN2A+1
-          THIS%DTKIN(LN1A,LN2A)=DWORK(LN1,LN2,1)
-          THIS%DOVER(LN1A,LN2A)=DWORK(LN1,LN2,2)
-        ENDDO
-      ENDDO
-      DEALLOCATE(DWORK)
-!
-      DEALLOCATE(IWORK)
-
-!!$PRINT*,'=============================================================='
-!!$PRINT*,'AEZ  ',THIS%AEZ
-!!$PRINT*,'RCSM ',THIS%RCSM
-!!$PRINT*,'LNX  ',THIS%LNX
-!!$PRINT*,'LOX  ',THIS%LOX
-!!$PRINT*,'PRO  ',THIS%PRO
-!!$PRINT*,'AEPHI',THIS%AEPHI
-!!$PRINT*,'PSPHI',THIS%PSPHI
-!!$PRINT*,'VADD ',THIS%VADD
-!!$PRINT*,'PSCORE',THIS%PSCORE
-!!$PRINT*,'AECORE',THIS%AECORE
-!!$PRINT*,'DOVER',THIS%DOVER
-!!$PRINT*,'DTKIN',THIS%DTKIN
-!CALL ERROR$STOP('FORCED STOP IN SETUP')
-!
-!     ==================================================================
-!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST) =========
-!     ==================================================================
-      ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
-!     
-!     ==================================================================
-!     == SET VALUES BEYOND A CERTAIN RADIUS EXACTLY TO ZERO           ==
-!     ==================================================================
-                            CALL TRACE$PASS('CHECK MAX. RADIUS')
-      CALL RADIAL$R(GID,NR,R)
-      IRMAX=0
-      DO IR=1,NR
-        TCHK=(ABS(THIS%VADD(IR)).LT.TOL)
-        TCHK=TCHK.AND.(ABS(THIS%PSCORE(IR)-THIS%AECORE(IR)).LT.TOL)
-        DO LN=1,THIS%LNX
-          TCHK=TCHK.AND. &
-     &           (ABS(THIS%AEPHI(IR,LN)-THIS%PSPHI(IR,LN)).LT.TOL)
-        ENDDO
-!       == LDAPLUSU REQUIRES A SOMEWHAT LARGER RADIUS ==================
-        TCHK=TCHK.AND.(R(IR).GE.6.D0)  
-        IF(.NOT.TCHK) IRMAX=IR
-      ENDDO
-      DO IR=IRMAX+1,NR
-        THIS%VADD(IR)=0.D0
-        DO LN=1,THIS%LNX
-          THIS%AEPHI(IR,LN)=0.D0
-          THIS%PSPHI(IR,LN)=0.D0
-          THIS%UPHI(IR,LN)=0.D0
-        ENDDO
-      ENDDO
-!     
-!     ================================================================
-!     ==  DEFINE ARRAYS                                             ==
-!     ================================================================
-                            CALL TRACE$PASS('DEFINE ARRAYS')
-!
-!     == SELECT NATURAL VALUES =======================================
-      THIS%LMNX=0
-      THIS%LMRX=0
-      DO LN=1,THIS%LNX
-        THIS%LMNX=THIS%LMNX+2*THIS%LOX(LN)+1
-        THIS%LMRX=MAX(THIS%LMRX,(2*THIS%LOX(LN)+1)**2)
-      ENDDO
-!
-!     == LIMIT MAX ANGULAR MOMENTUM FOR THE DENSITY TO MAX VALUE =======
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETI4('LRHOX',LMRXCUT)
-      LMRXCUT=(LMRXCUT+1)**2
-      THIS%LMRX=MIN(THIS%LMRX,LMRXCUT)
-      CALL ATOMTYPELIST$UNSELECT
-!     
-!     ==================================================================
-!     ==  UPDATE GLOBAL VARIABLES                                     ==
-!     ==================================================================
-      LMNXX=MAX(LMNXX,THIS%LMNX)
-      LMRXX=MAX(LMRXX,THIS%LMRX)
-      LNXX=MAX(LNXX,THIS%LNX)
-!     
-!     ==================================================================
-!     ==  PERFORM BESSELTRANSFORMS                                    ==
-!     ==================================================================
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
-      GID=THIS%GID
-      CALL RADIAL$GETI4(GID,'NR',NR)
-      GIDG=GIDG_PROTO  ! USE PROTOTYPE G-GRID
-      THIS%GIDG=GIDG
-      CALL RADIAL$GETI4(GIDG,'NR',NG)
-!       
-!     == VADD (VBAR) ===================================================
-      ALLOCATE(THIS%VADDOFG(NG))
-      CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%VADD,GIDG,NG,THIS%VADDOFG)
-      THIS%VADDOFG(:)=FOURPI*THIS%VADDOFG(:)
-!     == PSCORE (VBAR) =================================================
-      ALLOCATE(THIS%PSCOREOFG(NG))
-      CALL RADIAL$BESSELTRANSFORM(0,GID,NR,THIS%PSCORE,GIDG,NG,THIS%PSCOREOFG)
-      THIS%PSCOREOFG(:)=FOURPI*THIS%PSCOREOFG(:)
-!     == PROJECTORS ====================================================
-      ALLOCATE(THIS%PROOFG(NG,LNX))
-      DO LN=1,LNX
-        L=THIS%LOX(LN)
-        CALL RADIAL$BESSELTRANSFORM(L,GID,NR,THIS%PRO(:,LN),GIDG &
-    &                              ,NG,THIS%PROOFG(:,LN))
-        THIS%PROOFG(:,LN)=FOURPI*THIS%PROOFG(:,LN)
-      ENDDO
-!CALL SETUP_WRITEPHI('PROOFG.DAT',GIDG,NG,LNX,THIS%PROOFG)
-!     == COMPENSATION GAUSSIAN =========================================
-      ALLOCATE(THIS%NHATPRIMEOFG(NG))
-      ALLOCATE(THIS%VHATOFG(NG))
-      CALL SETUP_COMPOFG(THIS%RCBG,THIS%RCSM,GIDG,NG &
-     &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
-!      
-                            CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_READ_NEW
 !     **************************************************************************
-!     **  READ SELECTED SETUP                                                 **
-!     **  REQUIRES INFORMATION FROM ATOMTYPELIST                              **
-!     **    NAME; LRHOX                                                       **
-!     **  REQUIRES THE FILEHANDLER TO KNOW THE SETUP FILE                     **
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE STRINGS_MODULE
@@ -1475,7 +1156,7 @@ PRINT*,'RCSM ',THIS%RCSM
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
       LOGICAL(4)            :: TCHK,TCHK1
       REAL(8)               :: PI,FOURPI,Y0,C0LL
-      INTEGER(4)            :: IR,IB,LN,L,IB1
+      INTEGER(4)            :: IR,IB,LN,L,IB1,LENG
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
       TYPE(VFOCK_TYPE)      :: VFOCK
@@ -1499,41 +1180,64 @@ PRINT*,'RCSM ',THIS%RCSM
       CALL LINKEDLIST$NEW(LL_STP)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',0)
 !
-      CALL ATOMTYPELIST$NAME(THIS%I,THIS%ID)
-      CALL ATOMTYPELIST$SELECT(THIS%ID)
-      CALL ATOMTYPELIST$GETR8('M',THIS%M)
-      CALL ATOMTYPELIST$GETR8('RAD',THIS%RAD)
-      CALL ATOMTYPELIST$GETCH('SOFTCORETYPE',THIS%SOFTCORETYPE)
+!     ==========================================================================
+!     ==  THE FOLLOWING DATA HAVE BEEN SET IN SETUP$READSTRCIN                ==
+!     ==  NSP                                                                 ==
+!     ==  THIS%I,ID,GID,AEZ,ZV,M,RAD,RCSM,LNX,LOX,LMNX,LMRX                   ==
+!     ==  THIS%PARMS%ID,TYPE,RCL,LAMBDA                                       ==
+!     ==  THIS%PARMS%POW_POT ,RC_POT ,TVAL0_POT ,VAL0_POT                     ==
+!     ==  THIS%PARMS%POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE                    ==
+!     ==========================================================================
+      THIS%SOFTCORETYPE='NONE'   ! OBSOLETE
+!
+      AEZ=THIS%AEZ
+      GID=THIS%GID
+      ZV=THIS%ZV
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOX      
+      LX=MAXVAL(LOX)
+      RBOX=THIS%RBOX
+!
+!     ==========================================================================
+!     == SELECTOR FOR LOCAL ORBITALS                                          ==
+!     ==========================================================================
+!     == NTBO SPECIFIES THE NUMBER OF TB-ORBITALS FOR EACH ANGULAR MOMENTUM ====
+!     == CAUTION: THE USER MAY NOT KNOW IF HE USES SEMI-CORE STATES OR NOT    ==
+!     ==          LATER, WE MAY USE ISCATT AS DEFAULT                         ==
+!
+!     == SET DEFAULT (TRUE) IF NOT SET ALREADY =================================
+      IF(.NOT.ASSOCIATED(THIS%NTBO)) THEN
+        ALLOCATE(THIS%NTBO(MAXVAL(LOX)+1))
+        THIS%NTBO=0
+        DO LN=1,LNX
+          THIS%NTBO(LOX(LN)+1)=THIS%NTBO(LOX(LN)+1)+1
+        ENDDO
+      END IF
+!
+!     == CONVERT NTBO INTO TORB  ===============================================
+      IF(ASSOCIATED(THIS%TORB)) THEN
+        CALL ERROR$MSG('TORB MUST NOT BE ALLOCATED AT TIS POINT')
+        CALL ERROR$STOP('SETUP_READ_NEW')
+      END IF
+      ALLOCATE(THIS%TORB(LNX))
+      LENG=SIZE(THIS%NTBO)
+      ALLOCATE(IWORK(LENG))
+      IWORK=THIS%NTBO
+      DO LN=1,LNX
+        L=LOX(LN)
+        THIS%TORB(LN)=(IWORK(L+1).GT.0)
+        IF(THIS%TORB(LN)) IWORK(L+1)=IWORK(L+1)-1
+      ENDDO
+      IF(SUM(IWORK).GT.0) THEN
+        CALL ERROR$MSG('NTBO MUST NOT EXCEED NPRO')
+        CALL ERROR$STOP('SETUP_READ_NEW')
+      END IF
+      DEALLOCATE(IWORK)
 !
 !     ==========================================================================
 !     == EXTRACT LNX,LOX,LX FROM NPRO AS DEFINED IN STRC INPUT FILE           ==
 !     ==========================================================================
-      ALLOCATE(NPRO(10)) 
-      CALL ATOMTYPELIST$GETI4A('NPRO',10,NPRO)
-      LNX=SUM(NPRO)
-      ALLOCATE(LOX(LNX))
-      LN=0
-      DO L=0,SIZE(NPRO)-1
-        DO WHILE (NPRO(L+1).GT.0)
-          LN=LN+1
-          NPRO(L+1)=NPRO(L+1)-1
-          LOX(LN)=L
-        ENDDO
-      ENDDO
-      LX=MAXVAL(LOX)
-      DEALLOCATE(NPRO)
-      THIS%LMNX=SUM(2*LOX(:)+1)
-      THIS%LNX=LNX
-      ALLOCATE(THIS%LOX(LNX))
-      THIS%LOX(:)=LOX(:LNX)
-!
-!     == LIMIT LRHOX TO THE MAXIMUM CONSISTENT WITH WAVE FUNCTION CUTOFF
-      CALL ATOMTYPELIST$GETI4('LRHOX',LRHOX)
-      LRHOX=MIN(2*LX,LRHOX)
-      CALL ATOMTYPELIST$SETI4('LRHOX',LRHOX)
-      THIS%LMRX=(LRHOX+1)**2
-!     
-!     ==  UPDATE GLOBAL VARIABLES ==============================================
       LMNXX=MAX(LMNXX,THIS%LMNX)
       LMRXX=MAX(LMRXX,THIS%LMRX)
       LNXX=MAX(LNXX,THIS%LNX)
@@ -1541,19 +1245,6 @@ PRINT*,'RCSM ',THIS%RCSM
 !     ==========================================================================
 !     == READ SETUP INFORMATION FROM PARAMETER FILE                           ==
 !     ==========================================================================
-      ALLOCATE(THIS%PARMS%RCL(LX+1))
-      ALLOCATE(THIS%PARMS%LAMBDA(LX+1))
-      CALL ATOMTYPELIST$GETCH('ID',THIS%PARMS%ID)
-      CALL ATOMLIB$SCNTLLOOKUP(THIS%PARMS%ID,GID,AEZ,ZV,RBOX,LX &
-     &             ,THIS%PARMS%TYPE,THIS%PARMS%RCL,THIS%PARMS%LAMBDA &
-     &             ,THIS%RCSM &
-     &             ,THIS%PARMS%POW_POT,THIS%PARMS%RC_POT,THIS%PARMS%TVAL0_POT &
-     &             ,THIS%PARMS%VAL0_POT &
-     &             ,THIS%PARMS%POW_CORE,THIS%PARMS%RC_CORE &
-     &             ,THIS%PARMS%TVAL0_CORE,THIS%PARMS%VAL0_CORE)
-      THIS%GID=GID
-      THIS%AEZ=AEZ
-      THIS%ZV=ZV
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
       CALL RADIAL$R(GID,NR,R)
@@ -1758,7 +1449,6 @@ PRINT*,'RCSM ',THIS%RCSM
       THIS%PRO=0.D0
       THIS%AEPHI=0.D0
       THIS%PSPHI=0.D0
-      THIS%RBOX=RBOX  ! OUTER NODE OF PARTIAL WAVES
 !
       ALLOCATE(RC(LNX))
       ALLOCATE(LAMBDA(LNX))
@@ -1791,20 +1481,18 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       IF(THIS%SETTING%FOCK.NE.0.D0) THEN
         CALL RADIALFOCK$CLEANVFOCK(VFOCK)
       END IF
-      CALL ATOMTYPELIST$SETR8('PS<G2>',THIS%PSG2)
-      CALL ATOMTYPELIST$SETR8('PS<G4>',THIS%PSG4)
 !     
 !     ==========================================================================
 !     ==  DETERMINE CORE-VALENCE EXCHANGE MATRIX ELEMENTS                     ==
 !     ==========================================================================
-      CALL SETUPS_CVXSETUP()
+      CALL SETUP_CVXSETUP()
 !     
 !     ==========================================================================
 !     ==  DETERMINE MATRIX ELEMENTS BETWEEN PROJECTOR FUNCTIONS               ==
 !     ==  AND ENERGY DERIVATIVE PSEUDO PARTIAL WAVES
 !     ==========================================================================
       ALLOCATE(THIS%PROPHIDOT(LNX,LNX))
-      CALL SETUPS$PROPHIDOT(GID,NR,LNX,THIS%LOX,THIS%PRO,THIS%PSPHIDOT &
+      CALL SETUP$PROPHIDOT(GID,NR,LNX,THIS%LOX,THIS%PRO,THIS%PSPHIDOT &
      &                     ,THIS%PROPHIDOT)
 !!$!     
 !!$!     =======================================================================
@@ -1866,36 +1554,6 @@ CALL TRACE$PASS('MARKE 2')
      &                  ,THIS%NHATPRIMEOFG,THIS%VHATOFG)
       CALL TIMING$CLOCKOFF('BESSELTRANSFORMS')
       CALL TIMING$CLOCKOFF('SETUP CONSTRUCTION')
-!
-!     ==========================================================================
-!     == DEFAULT SELECTOR FOR LOCAL ORBITALS IS TRUE (IN ATOMTYPELIST)        ==
-!     ==========================================================================
-!     == TORB IN ATOMTYPELIST IS OBSOLETE ======================================
-      ALLOCATE(THIS%TORB(LNX))
-      CALL ATOMTYPELIST$GETL4A('TORB',LNX,THIS%TORB)
-!
-!     == NTBO SPECIFIES THE NUMBER OF TB-ORBITALS FOR EACH ANGULAR MOMENTUM ====
-!     == IT OVERWRITES TORB, IF SET, TO KEEP BACKWARD COMPATIBILITY ============
-!     == CAUTION: THE USER MAY NOT KNOW IF HE USES SEMI-CORE STATES OR NOT    ==
-!     ==          LATER, WE MAY USE ISCATT AS DEFAULT                         ==
-      LX=MAXVAL(THIS%LOX)
-      ALLOCATE(IWORK(LX+1))
-      CALL ATOMTYPELIST$GETI4A('NTBO',LX+1,IWORK)
-      IF(SUM(IWORK).NE.0) THEN   ! TORB IS SPECIFIED VIA NTBO
-        DO LN=1,THIS%LNX
-          L=THIS%LOX(LN)
-          THIS%TORB(LN)=(IWORK(L+1).GT.0)
-          IF(THIS%TORB(LN)) IWORK(L+1)=IWORK(L+1)-1
-        ENDDO
-        IF(SUM(IWORK).GT.0) THEN
-          CALL ERROR$MSG('NTBO MUST NOT EXCEED NPRO')
-          CALL ERROR$STOP('SETUP_READ_NEW')
-        END IF
-      END IF
-      DEALLOCATE(IWORK)
-!
-!     == UNSELECT ATOMTYPELIST =================================================
-      CALL ATOMTYPELIST$UNSELECT
 !
 !     ==========================================================================
 !     == WRITE REPORT
@@ -2058,7 +1716,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS$PROPHIDOT(GID,NR,LNX,LOX,PRO,PSPHIDOT,PROPHIDOT)
+      SUBROUTINE SETUP$PROPHIDOT(GID,NR,LNX,LOX,PRO,PSPHIDOT,PROPHIDOT)
 !     **************************************************************************
 !     ** DETERMINES <PRO|PSPHIDOT>                                            **
 !     **************************************************************************
@@ -2115,7 +1773,7 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       INTEGER(4)             :: IP(0:15)=(/0,0,0,1,1,0,0,0,1,1,1,1,0,0,1,1/)
       INTEGER(4)             :: ID(0:15)=(/0,0,0,0,0,1,1,0,1,1,0,0,1,1,1,1/)
       INTEGER(4)             :: IF(0:15)=(/0,0,0,0,0,0,0,1,0,0,1,1,1,1,1,1/)
-      INTEGER(4)             :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
+      INTEGER(4)           :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
       INTEGER(4)             :: I,IB,L,ISO,IB0,ISVAR,NEL
       INTEGER(4)             :: IZ1,IZ2
       INTEGER(4)             :: ION(0:3)
@@ -2239,8 +1897,8 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
      &                        ,THIS1%LMRX,' ')
         CALL REPORT$R8VAL(NFIL,'GAUSSIAN DECAY FOR COMPENSATION DENSITY ' &
      &                        ,THIS1%RCSM,'ABOHR ')
-        CALL REPORT$R8VAL(NFIL,'GAUSSIAN DECAY FOR EXTENDED COMPENSATION DENSITY' &
-     &                        ,THIS1%RCBG,'ABOHR ')
+        CALL REPORT$R8VAL(NFIL,'GAUSSIAN DECAY FOR EXTENDED COMPENSATION' &
+     &                        //' DENSITY',THIS1%RCBG,'ABOHR ')
         CALL REPORT$R8VAL(NFIL,'PARAMETER PS<G2> FOR MASS RENORMALIZATION' &
      &                        ,THIS1%PSG2,'H')
         CALL REPORT$R8VAL(NFIL,'PARAMETER PS<G4> FOR MASS RENORMALIZATION' &
@@ -2252,42 +1910,46 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
           IF(THIS1%PARMS%TYPE.EQ.'KERKER') THEN
             CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','KERKER TYPE')
           ELSE IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
-            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','HAMANN-BACHELET-SCHLUETER TYPE')
+            CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD' &
+     &                            ,'HAMANN-BACHELET-SCHLUETER TYPE')
           ELSE
             CALL REPORT$CHVAL(NFIL,'CONSTRUCTION METHOD','UNKNOWN')
           END IF
           DO L=0,MAXVAL(THIS1%LOX)
             WRITE(STRING,*)L
-            STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L='//ADJUSTL(STRING)
+            STRING='PARTIAL WAVE PSEUDIZATION PARAMETER RC FOR L=' &
+     &            //ADJUSTL(STRING)
             CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%RCL(L+1),'ABOHR')
             IF(THIS1%PARMS%TYPE.EQ.'HBS') THEN
               WRITE(STRING,*)L
-              STRING='PARTIAL WAVE PSEUDIZATION PARAMETER LAMBDA FOR L='//ADJUSTL(STRING)
-              CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1),'ABOHR')
+              STRING='PARTIAL WAVE PSEUDIZATION PARAMETER LAMBDA FOR L=' &
+     &                                                         //ADJUSTL(STRING)
+              CALL REPORT$R8VAL(NFIL,TRIM(STRING),THIS1%PARMS%LAMBDA(L+1) &
+     &                                           ,'ABOHR')
             END IF 
          ENDDO
           IF(THIS1%PARMS%TVAL0_POT) THEN
             CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
+     &                            ,THIS1%PARMS%VAL0_POT*Y0,'H')
           ELSE
             CALL REPORT$CHVAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,'NOT DETERMINED')
+     &                            ,'NOT DETERMINED')
           END IF
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
-    &                            ,THIS1%PARMS%RC_POT,'ABOHR')
+     &                            ,THIS1%PARMS%RC_POT,'ABOHR')
           CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
-    &                            ,THIS1%PARMS%POW_POT,'')
+     &                            ,THIS1%PARMS%POW_POT,'')
           IF(THIS1%PARMS%TVAL0_CORE) THEN
-            CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,THIS1%PARMS%VAL0_CORE*Y0,'H')
+            CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' &
+     &                            //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'H')
           ELSE
-            CALL REPORT$CHVAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: VAL(0)' &
-    &                            ,'NOT DETERMINED')
+            CALL REPORT$CHVAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' & 
+     &                            //' VAL(0)','NOT DETERMINED')
           END IF
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: RC' &
-    &                            ,THIS1%PARMS%RC_CORE,'ABOHR')
+     &                           ,THIS1%PARMS%RC_CORE,'ABOHR')
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: POWER' &
-    &                            ,THIS1%PARMS%POW_CORE,'')
+     &                           ,THIS1%PARMS%POW_CORE,'')
         END IF
         IF(.NOT.ASSOCIATED(THIS1%NEXT)) EXIT
         THIS1=>THIS1%NEXT
@@ -2299,42 +1961,19 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$READ()
 !     **************************************************************************
-!     **  READ SETUP                                                          **
+!     **  WORK OUT SETUP INFORMATION FROM THE PARAMETERS, WHICH HAVE ALREADY  **
+!     **  BEEN SET                                                            **
 !     **************************************************************************
+      USE SETUP_MODULE, ONLY : NSP
       IMPLICIT NONE
-      INTEGER(4)               :: ISP,NSP1
-      CHARACTER(32)            :: NAME
-      LOGICAL     ,ALLOCATABLE :: TNEW(:) ! SWITCH BETWEEN INTERNAL ATOM 
-                                          ! PROGRAM AND READING THE FILE
+      INTEGER(4)              :: ISP
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP$READ')
-!
-!     ==========================================================================
-!     ==  CREATE SETUPS                                                       ==
-!     ==========================================================================
-      CALL ATOMTYPELIST$LENGTH(NSP1)
-      ALLOCATE(TNEW(NSP1))
-      DO ISP=1,NSP1
-        CALL ATOMTYPELIST$NAME(ISP,NAME)
-        CALL ATOMTYPELIST$SELECT(NAME)
-        CALL ATOMTYPELIST$GETL4('TID',TNEW(ISP))
-        CALL ATOMTYPELIST$UNSELECT
-        CALL SETUP$SELECT(NAME)
-      ENDDO
-!
-!     ==========================================================================
-!     ==  READ SETUP FILES                                                    ==
-!     ==========================================================================
-      DO ISP=1,NSP1
+      DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
-        IF(TNEW(ISP)) THEN
-          CALL SETUP_READ_NEW
-        ELSE
-          CALL SETUP_READ
-        END IF
+        CALL SETUP_READ_NEW
         CALL SETUP$UNSELECT()
       ENDDO
-      DEALLOCATE(TNEW)
                             CALL TRACE$POP
       RETURN
       END
@@ -2376,209 +2015,23 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       RETURN  
       END
 !
-!     ..................................................................
-      SUBROUTINE SETUP_CHECKGAUSS(CELLVOL,RC,TOL,GMAX,RMAX,TCHKR,TCHKG)
-!     **                                                              **
-!     **                                                              **
-      IMPLICIT NONE
-      REAL(8)    ,INTENT(IN) :: CELLVOL
-      REAL(8)    ,INTENT(IN) :: RC
-      REAL(8)    ,INTENT(IN) :: TOL
-      REAL(8)    ,INTENT(IN) :: GMAX
-      REAL(8)    ,INTENT(IN) :: RMAX
-      LOGICAL(4) ,INTENT(OUT):: TCHKR
-      LOGICAL(4) ,INTENT(OUT):: TCHKG
-      REAL(8)                :: CHECK
-!     ******************************************************************
-      TCHKG=.TRUE.
-      TCHKR=.TRUE.
-      CHECK=-1.D0/CELLVOL*EXP(-0.25D0*(RC*GMAX)**2)
-      IF(ABS(CHECK).GT.TOL) TCHKG=.FALSE. 
-      CHECK=-EXP(-(RMAX/RC)**2)
-      IF(ABS(CHECK).GT.TOL) TCHKR=.FALSE. 
-      RETURN
-      END
-!
-!     ...........................................INPOT..................
-      SUBROUTINE INPOT$LNX(NFIL,LNX)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
-      INTEGER(4),INTENT(IN)  :: NFIL
-      INTEGER(4),INTENT(OUT) :: LNX
-      REAL(8)                :: R1,DEX
-      INTEGER(4)             :: NR
-!     ******************************************************************
-                              CALL TRACE$PUSH('INPOT$LNX')
-      REWIND NFIL
-      READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR,LNX
-                              CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...........................................INPOT..................
-      SUBROUTINE INPOT$GRID(NFIL,R1,DEX,NR)
-!     ******************************************************************
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
-      INTEGER(4),INTENT(IN)  :: NFIL
-      INTEGER(4),INTENT(OUT) :: NR
-      REAL(8)   ,INTENT(OUT) :: R1
-      REAL(8)   ,INTENT(OUT) :: DEX
-!     ******************************************************************
-                              CALL TRACE$PUSH('INPOT$GRID')
-      REWIND NFIL
-      READ(NFIL,FMT='(F15.10,F10.5,2I4)')R1,DEX,NR
-                              CALL TRACE$POP
-      RETURN
-      END
-!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE INPOT$NC(NFIL,NC)
-!     **************************************************************************
-!     **                                                                      **
-!     **                                                                      **
-!     **************************************************************************
-      INTEGER(4),INTENT(IN)  :: NFIL
-      INTEGER(4),INTENT(OUT) :: NC
-      REAL(8)                :: R1,DEX,PSZ,AEZ,RCSM
-      INTEGER(4)             :: NR,LNX
-!     **************************************************************************
-                              CALL TRACE$PUSH('INPOT$LNX')
-      REWIND NFIL
-      NC=0
-      READ(NFIL,ERR=1000,FMT='(F15.10,F10.5,2I4,2F5.2,F15.12,I5)') &
-     &               R1,DEX,NR,LNX,PSZ,AEZ,RCSM,NC
-1000 CONTINUE
-                              CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE INPOT$READALL(NFIL,NRX,R1,DEX,NR,LNX,LOX,AEZ,PSZ &
-     &         ,PSPHI,AEPHI,VADD,RCSM &
-     &         ,DTKIN,DOVER,RHOCOR,PSCORR,PRO)
-!     **************************************************************************
-!     **                                                                      **
-!     ******************************************* P.E. BLOECHL, 1991 ***********
-      IMPLICIT NONE
-      INTEGER(4) ,INTENT(IN)  :: NFIL
-      INTEGER(4) ,INTENT(IN)  :: NRX
-      REAL(8)    ,INTENT(IN)  :: R1
-      REAL(8)    ,INTENT(IN)  :: DEX
-      INTEGER(4) ,INTENT(IN)  :: NR
-      INTEGER(4) ,INTENT(IN)  :: LNX
-      REAL(8)    ,INTENT(OUT) :: AEZ
-      REAL(8)    ,INTENT(OUT) :: PSZ
-      REAL(8)    ,INTENT(OUT) :: RCSM
-      REAL(8)    ,INTENT(OUT) :: VADD(NRX)
-      REAL(8)    ,INTENT(OUT) :: PRO(NRX,LNX)
-      INTEGER(4) ,INTENT(OUT) :: LOX(LNX)
-!INTEGER(4) ,INTENT(OUT) :: IRCCOR
-      REAL(8)    ,INTENT(OUT) :: DTKIN(LNX,LNX)
-      REAL(8)    ,INTENT(OUT) :: DOVER(LNX,LNX)
-      REAL(8)    ,INTENT(OUT) :: AEPHI(NRX,LNX)
-      REAL(8)    ,INTENT(OUT) :: PSPHI(NRX,LNX)
-      REAL(8)    ,INTENT(OUT) :: RHOCOR(NRX)
-      REAL(8)    ,INTENT(OUT) :: PSCORR(NRX)
-      REAL(8)                 :: R11,DEX1
-      INTEGER(4)              :: NR1,LNX1,I,IR,LN1,LN2,LN
-!     **************************************************************************
-                              CALL TRACE$PUSH('INPOT$READALL')
-      REWIND NFIL
-!     == OPTIONAL VALUE NC FOLLOWING RCSM IS NOT READ 
-      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM
-!      READ(NFIL,6000)R11,DEX1,NR1,LNX1,PSZ,AEZ,RCSM,IRCCOR
-6000  FORMAT(F15.10,F10.5,2I4,2F5.2,F15.12,I5)
-      IF(R11.NE.R1.OR.DEX1.NE.DEX.OR.NR1.NE.NR) THEN
-        CALL ERROR$MSG('ONLY ONE TYPE OF RADIAL GRID ALLOWED')
-        CALL ERROR$STOP('INPOT')
-      END IF
-
-
-!      IF(IRCCOR.LE.0.OR.IRCCOR.GT.NR) THEN
-!      PRINT*,'WARNING! NO MT-RADIUS SPECIFIED FOR ATOM WITH Z=',AEZ
-!       IRCCOR=NR-2
-!      END IF
-      IF(LNX.NE.LNX1) THEN
-        CALL ERROR$MSG('LNX OUT OF RANGE')
-        CALL ERROR$I4VAL('LNX ON INPUT',LNX)
-        CALL ERROR$I4VAL('LNX ON FILE',LNX1)
-        CALL ERROR$STOP('INPOT')
-      END IF
-                              CALL TRACE$PASS('BEFORE LOX')
-      READ(NFIL,6020)(LOX(I),I=1,LNX)
-6020  FORMAT(14I5)
-                              CALL TRACE$PASS('BEFORE VADD')
-      READ(NFIL,6100)(VADD(IR),IR=1,NR)
-!     ====  RHOCOR = CORE CHARGE DENSITY  ======================================
-                              CALL TRACE$PASS('BEFORE RHOCOR')
-      READ(NFIL,6100)(RHOCOR(IR),IR=1,NR)
-!     ====  PSCORR = PSEUDO CORE CHARGE DENSITY ================================
-                              CALL TRACE$PASS('BEFORE PSCORR')
-      READ(NFIL,6100)(PSCORR(IR),IR=1,NR)
-!     ====  DTKIN = <AEPHI|-DELTA/2|AEPHI> - <PSPHI|-DELTA/2|PSPHI> ============
-                              CALL TRACE$PASS('BEFORE DTKIN')
-      READ(NFIL,6100)((DTKIN(LN1,LN2),LN1=1,LNX),LN2=1,LNX)
-!     PRINT*,'DTKIN ',(DTKIN(LN,LN),LN=1,LNX)
-!     ====  DOVER = <AEPHI|AEPHI> - <PSPHI|PSPHI> ==============================
-                              CALL TRACE$PASS('BEFORE DOVER')
-      READ(NFIL,6100)((DOVER(LN1,LN2),LN1=1,LNX),LN2=1,LNX)
-                              CALL TRACE$PASS('BEFORE PROJECTORS')
-      DO LN=1,LNX
-        READ(NFIL,6100)(PRO(IR,LN),IR=1,NR)
-        READ(NFIL,6100)(AEPHI(IR,LN),IR=1,NR)
-        READ(NFIL,6100)(PSPHI(IR,LN),IR=1,NR)
-6100    FORMAT(SP,5E15.8)
-      ENDDO
-                              CALL TRACE$POP
-      RETURN
-      END
-!
-!     ..........................................................................
-      SUBROUTINE ATOMLIB$READSCNTL(LL_SCNTL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LINKEDLIST_MODULE
-      USE STRINGS_MODULE
-      IMPLICIT NONE
-      TYPE(LL_TYPE) ,INTENT(OUT) :: LL_SCNTL
-      TYPE(LL_TYPE) ,SAVE        :: LL_SCNTL_SAVE
-      INTEGER(4)                 :: NFIL
-      LOGICAL(4)    ,SAVE        :: TINI=.FALSE.
-!     **************************************************************************
-      IF(TINI) THEN
-        LL_SCNTL=LL_SCNTL_SAVE
-        RETURN
-      END IF
-      TINI=.TRUE.
-      CALL LINKEDLIST$NEW(LL_SCNTL)
-      CALL FILEHANDLER$UNIT('PARMS_STP',NFIL)
-      CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
-      LL_SCNTL_SAVE=LL_SCNTL
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$SCNTLLOOKUP(SETUPID,GID,AEZ,ZV,RBOX,LX,TYPE,RCL &
+      SUBROUTINE ATOMLIB$SCNTLLOOKUPONE(LL_STP_,AEZ,ZV,RBOX,LX,TYPE,RCL &
      &                              ,LAMBDA &
      &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
-     &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE)
+     &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
+     &                              ,DMIN,DMAX,RMAX)
 !     **************************************************************************
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      USE VERSION_MODULE , ONLY : VERTYP
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: SETUPID
-      INTEGER(4)  ,INTENT(OUT):: GID
+      TYPE(LL_TYPE),INTENT(IN):: LL_STP_
+      INTEGER(4)  ,INTENT(IN) :: LX
       REAL(8)     ,INTENT(OUT):: AEZ
       REAL(8)     ,INTENT(OUT):: ZV
       REAL(8)     ,INTENT(OUT):: RBOX
-      INTEGER(4)  ,INTENT(IN) :: LX
       CHARACTER(*),INTENT(OUT):: TYPE
       REAL(8)     ,INTENT(OUT):: RCL(LX+1)
       REAL(8)     ,INTENT(OUT):: LAMBDA(LX+1)
@@ -2591,337 +2044,812 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
       REAL(8)     ,INTENT(OUT):: RC_CORE
       LOGICAL(4)  ,INTENT(OUT):: TVAL0_CORE
       REAL(8)     ,INTENT(OUT):: VAL0_CORE
-      TYPE(LL_TYPE)           :: LL_SCNTL
-      INTEGER(4)              :: ITH
-      LOGICAL(4)              :: TCHK,TCHK1,TCHK2,TCHK3
+      REAL(8)     ,INTENT(OUT):: DMIN
+      REAL(8)     ,INTENT(OUT):: DMAX
+      REAL(8)     ,INTENT(OUT):: RMAX
+      TYPE(LL_TYPE)           :: LL_STP
+      LOGICAL(4)              :: TCHK
       CHARACTER(128)          :: ID
-      CHARACTER(2)            :: EL
-      REAL(8)                 :: R1
-      REAL(8)                 :: DEX
-      INTEGER(4)              :: NR
-      INTEGER(4)              :: LENG
-      REAL(8)     ,ALLOCATABLE:: R(:)
-      REAL(8)     ,ALLOCATABLE:: RCL1(:)
-      REAL(8)     ,ALLOCATABLE:: LAMBDA1(:)
       REAL(8)                 :: RCOV
-      REAL(8)                 :: DMIN,DMAX,RX
       REAL(8)                 :: PI,Y0
-      CHARACTER(128)          :: VERSION
-      CHARACTER(128)          :: STPVERSION
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
-      CALL ATOMLIB$READSCNTL(LL_SCNTL)
-      CALL LINKEDLIST$SELECT(LL_SCNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL')
-!
-!     ======================================================================
-!     == CHECK VERSION                                                    ==
-!     ======================================================================
-      CALL LINKEDLIST$EXISTD(LL_SCNTL,'VERSION',1,TCHK)
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+
+      CALL LINKEDLIST$EXISTD(LL_STP,'ID',1,TCHK)
       IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('!SCNTL!VERSION NOT SPECIFIED')
-        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
+        CALL ERROR$MSG('!SETUP:ID NOT SPECIFIED')
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'ID',1,ID)
+!
+!     ==========================================================================
+!     == IDENTIFY ATOM                                                        ==
+!     ==========================================================================
+      CALL SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM)
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+!
+!     ==========================================================================
+!     == PARAMETER FOR PARTIALWAVE CONSTRUCTION                               ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'TYPE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('SETUP TYPE NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'TYPE',1,TYPE)
+!
+      IF(TYPE.EQ.'KERKER') THEN
+        CALL SETUP_LOOKUP_KERKER(LL_STP_,ID,RCOV,LX,RCL,RBOX)
+      ELSE IF(TYPE.EQ.'HBS') THEN
+        CALL SETUP_LOOKUP_HBS(LL_STP_,ID,RCOV,LX,RCL,LAMBDA,RBOX)
+      ELSE IF(TYPE.EQ.'NDLSS') THEN
+        CALL SETUP_LOOKUP_NDLSS(LL_STP_,ID,RCOV,LX,RCL,RBOX)
       ELSE
-        CALL LINKEDLIST$GET(LL_SCNTL,'VERSION',1,VERSION)
-        IF(VERTYP.NE.'RELEASE VERSION')THEN
-          PRINT*,'WARNING: NOT USING A RELEASE VERSION, CHECK OF VERSION ',&
-     &               'OF SETUP PARAMETERS FILE DISABLED!'
-        ELSE
-          CALL SETUP$GETCH('STPVERSION',STPVERSION)
-          IF(STPVERSION.NE.VERSION)THEN
-            CALL ERROR$MSG('REQUIRED SETUP VERSION AND VERSION OF SETUP')
-            CALL ERROR$MSG('PARAMETERS FILE ARE DIFFERENT.')
-            CALL ERROR$MSG('CHECK THE ENVIRONMENT VARIABLE PAWDIR.')
-            CALL ERROR$MSG('CHECK PARMS_STP (IF GIVEN) IN CNTL FILE.')
-            CALL ERROR$MSG('USE STPVERSION TO FORCE A SPECIFIC VERSION.')
-            CALL ERROR$CHVAL('REQUIRED SETUP VERSION',STPVERSION)
-            CALL ERROR$CHVAL('VERSION OF SETUP PARAMETERS FILE',VERSION)
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          ENDIF
-        ENDIF
+        CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
+        CALL ERROR$CHVAL('TYPE',TYPE)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
       END IF
 !
-!     ======================================================================
-!     == LOOP OVER SETUPS                                                 ==
-!     ======================================================================
-      ITH=0
-      DO 
-        ITH=ITH+1
-        CALL LINKEDLIST$EXISTL(LL_SCNTL,'SETUP',ITH,TCHK)
+!     ==========================================================================
+!     == COLLECT RADIAL GRID                                                  ==
+!     ==========================================================================
+      CALL SETUP_LOOKUP_GRID(LL_STP_,ID,DMIN,DMAX,RMAX)
+!
+!     ==========================================================================
+!     == DEFINE POTENTIAL PSEUDIZATION                                        ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      CALL SETUP_LOOKUP_PSPOT(LL_STP_,ID,RCOV,POW_POT,RC_POT,TVAL0_POT,VAL0_POT)
+!
+!     ==========================================================================
+!     == DEFINE CORE PSEUDIZATION                                             ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      CALL SETUP_LOOKUP_PSCORE(LL_STP_,ID,RCOV &
+     &                       ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP$READSTRCIN(LL_STRC_)
+!     **************************************************************************
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      USE SETUP_MODULE, ONLY: NSP,THIS
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN):: LL_STRC_
+      TYPE(LL_TYPE)           :: LL_STRC
+      INTEGER(4)   ,PARAMETER :: LX=3
+      REAL(8)                 :: AEZ     ! ATOMIC NUMBER
+      REAL(8)                 :: ZV      ! #(VALENCE ELECTRONS)
+      REAL(8)                 :: RBOX
+      CHARACTER(32)           :: TYPE    ! SETUP TYPE
+      CHARACTER(32)           :: SPNAME  ! SPECIES NAME
+      REAL(8)                 :: RCL(LX+1)
+      REAL(8)                 :: LAMBDA(LX+1)
+      REAL(8)                 :: RCSM
+      REAL(8)                 :: POW_POT
+      REAL(8)                 :: RC_POT
+      LOGICAL(4)              :: TVAL0_POT
+      REAL(8)                 :: VAL0_POT
+      REAL(8)                 :: POW_CORE
+      REAL(8)                 :: RC_CORE
+      LOGICAL(4)              :: TVAL0_CORE
+      REAL(8)                 :: VAL0_CORE
+      REAL(8)                 :: DMIN
+      REAL(8)                 :: DMAX
+      REAL(8)                 :: RMAX
+      REAL(8)                 :: R1
+      REAL(8)                 :: DEX
+      INTEGER(4)              :: NR
+      INTEGER(4)              :: GID
+      LOGICAL(4)              :: TCHK
+      CHARACTER(128)          :: ID
+      REAL(8)                 :: RCOV
+      REAL(8)                 :: PI,Y0
+      REAL(8)                 :: PROTONMASS
+      REAL(8)                 :: EV
+      REAL(8)                 :: SVAR
+      INTEGER(4),ALLOCATABLE  :: NPRO(:)
+      INTEGER(4)              :: IND,L,ISP
+      INTEGER(4)              :: LENG
+      INTEGER(4)              :: LRHOX
+!     **************************************************************************
+      LL_STRC=LL_STRC_  !AVOID REPOSITIONING OF THE POINTER
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      CALL CONSTANTS('U',PROTONMASS)
+      CALL CONSTANTS('EV',EV)
+!
+!     ==========================================================================
+!     == RESOLVE SETUPID AND EXPAND SPECIES BY A SETUP BLOCK IN THE LINKEDLIST==
+!     ==  THE KEYWORD "ID" BECOMES MEANINGLESS AND EVERY SPECIES MUST         ==
+!     ==  WILL HAVE A SUB BLOCK !SETUP WHEN FINISHED
+!     ==========================================================================
+      CALL SETUP_RESOLVESETUPID(LL_STRC)
+!
+!     ==========================================================================
+!     == NOW ANALYZE THE SPECIES BLOCK
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
+      DO ISP=1,NSP
+        CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
+!
+!       ========================================================================
+!       ==  SPECIES NAME:  CREATE AND SELECT NEW SETUP INSTANCE               ==
+!       ========================================================================
+        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
+        CALL SETUP$SELECT(SPNAME)
+        THIS%ID=SPNAME
+        THIS%I=ISP
+!
+!       ========================================================================
+!       ==  #(PARTIAL WAVES PER MAIN ANGULAR MOMENTUM)                        ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
         IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('SETUP DATA NOT FOUND')
-          CALL ERROR$I4VAL('ITH',ITH)
-          CALL ERROR$CHVAL('SETUPID',SETUPID)
-          CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
+          CALL ERROR$MSG('VARIABLE !STRUCTURE!SPERCIES:NPRO IS MANDATORY')
+          CALL ERROR$STOP('STRCIN_SPECIES')
         END IF
-        CALL LINKEDLIST$SELECT(LL_SCNTL,'SETUP',ITH)
-        CALL LINKEDLIST$EXISTD(LL_SCNTL,'ID',1,TCHK)
+        CALL LINKEDLIST$SIZE(LL_STRC,'NPRO',1,LENG)
+        ALLOCATE(NPRO(LENG))
+        CALL LINKEDLIST$GET(LL_STRC,'NPRO',1,NPRO)
+!       __ DEFINE LNX___________________________________________________________
+        THIS%LNX=SUM(NPRO)
+!       __ DEFINE LOX___________________________________________________________
+        ALLOCATE(THIS%LOX(THIS%LNX))
+        IND=0
+        DO L=0,LENG-1
+          THIS%LOX(IND+1:IND+NPRO(L+1))=L
+          IND=IND+NPRO(L+1)
+        ENDDO
+        DEALLOCATE(NPRO)
+!       __LMNX__________________________________________________________________
+        THIS%LMNX=SUM(2*THIS%LOX(:)+1)
+!
+!       ========================================================================
+!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'LRHOX',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'LRHOX',1,LRHOX)
+          LRHOX=MIN(2*MAXVAL(THIS%LOX),LRHOX)
+        ELSE
+          LRHOX=2*MAXVAL(THIS%LOX)
+        END IF
+        THIS%LMRX=(LRHOX+1)**2
+!
+!       ========================================================================
+!       == IDENTIFY SETUP ID                                                  ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
+        ID='NONAME'
+        IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'ID',1,ID)
+        THIS%PARMS%ID=ID       
+!
+!       ========================================================================
+!       == IDENTIFY SETUP ID                                                  ==
+!       ========================================================================
+        CALL SETUP_LOOKUPSETUP(LL_STRC,AEZ,ZV,RBOX,LX,TYPE,RCL,LAMBDA &
+     &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
+     &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
+     &                              ,DMIN,DMAX,RMAX)
+        THIS%AEZ=AEZ      !ATOMIC NUMBER
+        THIS%RCSM=RCSM    ! DECAY RADIUS FOR COMPENSATION CHARGE
+        THIS%RBOX=RBOX    
+        THIS%ZV=ZV        ! #(VALENCE ELECTRONS)
+!       __ PARTIAL WAVES________________________________________________________
+        THIS%PARMS%TYPE     =TYPE         ! PARTIAL WAVE PSEUDIZATION METHOD
+        ALLOCATE(THIS%PARMS%RCL(LX+1))    
+        ALLOCATE(THIS%PARMS%LAMBDA(LX+1))
+        THIS%PARMS%RCL      =RCL          ! PARTIAL WAVE RADIUS
+        THIS%PARMS%LAMBDA   =LAMBDA
+!       __PSEUDO POTENTIAL______________________________________________________
+        THIS%PARMS%POW_POT  =POW_POT
+        THIS%PARMS%RC_POT   =RC_POT
+        THIS%PARMS%TVAL0_POT=TVAL0_POT
+        THIS%PARMS%VAL0_POT =VAL0_POT
+!       __PSEUDO POTENTIAL______________________________________________________
+        THIS%PARMS%POW_CORE  =POW_POT
+        THIS%PARMS%RC_CORE   =RC_POT
+        THIS%PARMS%TVAL0_CORE=TVAL0_POT
+        THIS%PARMS%VAL0_CORE =VAL0_POT
+!       __ RADIAL GRID__________________________________________________________
+        CALL RADIAL$GRIDPARAMETERS(DMIN,DMAX,RMAX,R1,DEX,NR)
+        CALL RADIAL$NEW('SHLOG',GID)
+        CALL RADIAL$SETR8(GID,'R1',R1)
+        CALL RADIAL$SETR8(GID,'DEX',DEX)
+        CALL RADIAL$SETI4(GID,'NR',NR)
+        THIS%GID=GID
+!
+!       ========================================================================
+!       ==  ATOMIC MASS                                                       ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
         IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('!SCNTL!SETUP:ID NOT SPECIFIED')
-          CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
+          CALL PERIODICTABLE$GET(AEZ,'MASS',SVAR)
+          CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
         END IF
-        CALL LINKEDLIST$GET(LL_SCNTL,'ID',1,ID)
-        IF(ID.EQ.SETUPID) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
+        THIS%M=SVAR*PROTONMASS
 !
-!         ======================================================================
-!         == COLLECT RADIAL GRID                                              ==
-!         ======================================================================
-          CALL LINKEDLIST$EXISTL(LL_SCNTL,'GRID',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP!GRID NOT SPECIFIED')
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          END IF
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'GRID')
-
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'DMIN',1,TCHK)
-          IF(TCHK) THEN
-!           == R1 ==============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'DMIN',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:DMIN NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'DMIN',1,DMIN)
-!           == R1 ==============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'DMAX',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:DMAX NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'DMAX',1,DMAX)
-!           == R1 ==============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'RMAX',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:RMAX NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'RMAX',1,RX)
-!
-            CALL RADIAL$GRIDPARAMETERS(DMIN,DMAX,RX,R1,DEX,NR)
-!
-!           == CHECK FOR CONFLICT ==============================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'R1',1,TCHK1)
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'DEX',1,TCHK2)
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'NR',1,TCHK3)
-            IF(TCHK1.OR.TCHK2.OR.TCHK3) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:R1,DEX,NR AND DMIN,DMAX,RX')
-              CALL ERROR$MSG('ARE NOT COMPATIBLE')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-          ELSE
-!           == R1 ==============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'R1',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:R1 NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'R1',1,R1)
-!           == DEX =============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'DEX',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:DEX NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'DEX',1,DEX)
-!           === NR =============================================================
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'NR',1,TCHK)
-            IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:R NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'NR',1,NR)
-          END IF
-!
-!         == CREATE GRID =======================================================
-          CALL RADIAL$NEW('SHLOG',GID)
-          CALL RADIAL$SETR8(GID,'R1',R1)
-          CALL RADIAL$SETR8(GID,'DEX',DEX)
-          CALL RADIAL$SETI4(GID,'NR',NR)
-!
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'..')
-!
-!         ======================================================================
-!         == IDENTIFY ATOM                                                    ==
-!         ======================================================================
-!         == COLLECT ATOMIC NUMBER =============================================
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'EL',1,TCHK)
-          EL='XX'
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'EL',1,EL)
-!
-!         == COLLECT ATOMIC NUMBER =============================================
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'Z',1,TCHK)
-          IF(TCHK) THEN
-            IF(EL.EQ.'XX') THEN 
-              CALL ERROR$MSG('!SCNTL!SETUP:AEZ AND EL="XX"')
-              CALL ERROR$MSG('MUST NOT BE SPECIFIED SIMULTANEOUSLY')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-            CALL LINKEDLIST$GET(LL_SCNTL,'Z',1,AEZ)
-          ELSE
-            IF(EL.EQ.'XX') THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:AEZ NOT SPECIFIED')
-              CALL ERROR$MSG('AND ELEMENT NOT SPECIFIED')
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            ELSE
-              CALL PERIODICTABLE$GET(EL,'Z',AEZ)
-            END IF
-          END IF
-          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-PRINT*,'AEZ=',AEZ,' RCOV=',RCOV
-!
-!         == COLLECT #VALENCE ELECTRONS ========================================
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'ZV',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP:ZV NOT SPECIFIED')
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          END IF
-          CALL LINKEDLIST$GET(LL_SCNTL,'ZV',1,ZV)
-!
-!         == COLLECT BOX RADIUS ================================================
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'RBOX/RCOV',1,TCHK)
-          ALLOCATE(R(NR))
-          CALL RADIAL$R(GID,NR,R)
-          IF(.NOT.TCHK) THEN
-            RBOX=R(NR-3)
-          ELSE
-            CALL LINKEDLIST$GET(LL_SCNTL,'RBOX/RCOV',1,RBOX)
-            CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-            RBOX=RBOX*RCOV 
-            IF(RBOX.GT.R(NR-3)) THEN
-              CALL ERROR$MSG('!SCNTL!SETUP:RBOX EXCEEDS GRID DIMENSIONS')
-              CALL ERROR$R8VAL('AEZ ',AEZ)
-              CALL ERROR$CHVAL('SETUPID ',SETUPID)
-              CALL ERROR$R8VAL('RBOX ',RBOX)
-              CALL ERROR$R8VAL('RCOV ',RCOV)
-              CALL ERROR$R8VAL('R(NR-3)',R(NR-3))
-              CALL ERROR$R8VAL('R(NR)',R(NR))
-              CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-            END IF
-          END IF
-          DEALLOCATE(R)
-!
-!         ======================================================================
-!         == PARAMETER FOR PARTIALWAVE CONSTRUCTION                           ==
-!         ======================================================================
-          TYPE='KERKER'
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'TYPE',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'TYPE',1,TYPE)
-!
-!         == MATCHING RADIUS ===================================================
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'RCL/RCOV',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP:RCL NOT SPECIFIED')
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          END IF
-          CALL LINKEDLIST$SIZE(LL_SCNTL,'RCL/RCOV',1,LENG)
-          ALLOCATE(RCL1(LENG))
-          CALL LINKEDLIST$GET(LL_SCNTL,'RCL/RCOV',1,RCL1)
-          IF(LENG.LT.LX+1) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP:RCL ARRAY TOO SHORT')
-            CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
-            CALL ERROR$I4VAL('MAX L REQUESTED',LX)
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          END IF
-          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-          LENG=MIN(SIZE(RCL),LENG)
-          RCL=RCL1(1:LENG)*RCOV
-          DEALLOCATE(RCL1)
-!
-!         == ADDITIONAL LAMBDA PARAMETER REQUIRED FOR 'HBS' TYPE CONSTRUCTION ==
-          LAMBDA(:)=0.D0
-          IF(TYPE.EQ.'HBS') THEN
-            LAMBDA(:)=6.D0    !DEFAULT FOR HBS CONSTRUCTION
-            CALL LINKEDLIST$EXISTD(LL_SCNTL,'LAMBDA',1,TCHK)
-            IF(TCHK) THEN
-              CALL LINKEDLIST$SIZE(LL_SCNTL,'LAMBDA',1,LENG)
-              ALLOCATE(LAMBDA1(LENG))
-              CALL LINKEDLIST$GET(LL_SCNTL,'LAMBDA',1,LAMBDA1)
-              IF(LENG.LT.LX+1) THEN
-                CALL ERROR$MSG('!SCNTL!SETUP:LAMBDA ARRAY TOO SHORT')
-                CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
-                CALL ERROR$I4VAL('MAX L REQUESTED',LX)
-                CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-              END IF
-              LENG=MIN(SIZE(LAMBDA),LENG)
-              LAMBDA=LAMBDA1(1:LENG)
-              DEALLOCATE(LAMBDA1)
-            END IF
-          END IF
-!
-!         == DECAY CONSTANT FOR SHORT-RANGED COMPENSATION CHARGE DENSITY ======       
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'RCSM/RCOV',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_SCNTL,'RCSM/RCOV',1,RCSM)
-            RCSM=RCSM*RCOV
-          ELSE
-            CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-            RCSM=0.25D0*RCOV
-          END IF
-!
-!         ======================================================================
-!         == DEFINE POTENTIAL PSEUDIZATION                                    ==
-!         ======================================================================
-          CALL LINKEDLIST$EXISTL(LL_SCNTL,'POT',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP!POT NOT SPECIFIED')
-            CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUP')
-          END IF
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'POT')
-!  
-          POW_POT=2.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'POW',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'POW',1,POW_POT)
-!
-          VAL0_POT=0.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'VAL0',1,TCHK)
-          TVAL0_POT=TCHK
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'VAL0',1,VAL0_POT)
-          VAL0_POT=VAL0_POT/Y0
-!
-          RC_POT=1.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'RC/RCOV',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'RC/RCOV',1,RC_POT)
-          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-          RC_POT=RC_POT*RCOV
-
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'..')
-!
-!         ======================================================================
-!         == DEFINE CORE PSEUDIZATION                                         ==
-!         ======================================================================
-          CALL LINKEDLIST$EXISTL(LL_SCNTL,'CORE',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP!CORE NOT SPECIFIED')
-            CALL ERROR$STOP('ATOMLIB$READCNTL')
-          END IF
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'CORE')
-!  
-          POW_CORE=2.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'POW',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'POW',1,POW_CORE)
-!
-          VAL0_CORE=0.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'VAL0',1,TCHK)
-          TVAL0_CORE=TCHK
-          IF(TCHK)CALL LINKEDLIST$GET(LL_SCNTL,'VAL0',1,VAL0_CORE)
-          VAL0_CORE=VAL0_CORE/Y0
-!
-          RC_CORE=1.D0
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'RC/RCOV',1,TCHK)
-          IF(TCHK) CALL LINKEDLIST$GET(LL_SCNTL,'RC/RCOV',1,RC_CORE)
-          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-          RC_CORE=RC_CORE*RCOV
-!
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'..')
-!
-!         ======================================================================
-!         == DONE                                                             ==
-!         ======================================================================
-          EXIT        
+!       ========================================================================
+!       ==  ATOMIC RADIUS FOR PDOS ETC.                                       ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL PERIODICTABLE$GET(AEZ,'R(ASA)',SVAR)
+          CALL LINKEDLIST$SET(LL_STRC,'RAD',0,SVAR)
         END IF
-        CALL LINKEDLIST$SELECT(LL_SCNTL,'..')
-      ENDDO
+        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,THIS%RAD)
+!
+        CALL SETUP$UNSELECT()
+        CALL LINKEDLIST$SELECT(LL_STRC,'..')
+      ENDDO   ! END OF LOOP OVER SPEECIES
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUPSETUP(LL_STP_,AEZ,ZV,RBOX,LX,TYPE,RCL &
+     &                              ,LAMBDA &
+     &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
+     &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
+     &                              ,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN):: LL_STP_
+      INTEGER(4)  ,INTENT(IN) :: LX
+      REAL(8)     ,INTENT(OUT):: AEZ
+      REAL(8)     ,INTENT(OUT):: ZV
+      REAL(8)     ,INTENT(OUT):: RBOX
+      CHARACTER(32),INTENT(OUT):: TYPE
+      REAL(8)     ,INTENT(OUT):: RCL(LX+1)
+      REAL(8)     ,INTENT(OUT):: LAMBDA(LX+1)
+      REAL(8)     ,INTENT(OUT):: RCSM
+      REAL(8)     ,INTENT(OUT):: POW_POT
+      REAL(8)     ,INTENT(OUT):: RC_POT
+      LOGICAL(4)  ,INTENT(OUT):: TVAL0_POT
+      REAL(8)     ,INTENT(OUT):: VAL0_POT
+      REAL(8)     ,INTENT(OUT):: POW_CORE
+      REAL(8)     ,INTENT(OUT):: RC_CORE
+      LOGICAL(4)  ,INTENT(OUT):: TVAL0_CORE
+      REAL(8)     ,INTENT(OUT):: VAL0_CORE
+      REAL(8)     ,INTENT(OUT):: DMIN
+      REAL(8)     ,INTENT(OUT):: DMAX
+      REAL(8)     ,INTENT(OUT):: RMAX
+      TYPE(LL_TYPE)           :: LL_STP
+      LOGICAL(4)              :: TCHK
+      CHARACTER(128)          :: ID
+      CHARACTER(64)           :: STRING
+      REAL(8)                 :: RCOV
+      REAL(8)                 :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+
+      CALL LINKEDLIST$EXISTL(LL_STP,'SETUP',0,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('BLOCK !SETUP MISSING')
+        CALL ERROR$STOP('SETUP_LOOKUPSETUP')
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUP')
+      CALL LINKEDLIST$EXISTD(LL_STP,'ID',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:ID NOT SPECIFIED')
+        CALL ERROR$STOP('SETUP_LOOKUPSETUP')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'ID',1,ID)
+!
+!     ==========================================================================
+!     == IDENTIFY ATOM                                                        ==
+!     ==========================================================================
+      CALL SETUP_LOOKUP_GENERIC(LL_STP,ID,AEZ,ZV,RCSM)
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+!
+!     ==========================================================================
+!     == PARAMETER FOR PARTIALWAVE CONSTRUCTION                               ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'TYPE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('SETUP TYPE NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'TYPE',1,STRING)
+      TYPE=STRING   ! COPY REQUIRED BECAUSE OF MAPPING FROM CH(64) TO CH(32)
+!
+      IF(TYPE.EQ.'KERKER') THEN
+        CALL SETUP_LOOKUP_KERKER(LL_STP,ID,RCOV,LX,RCL,RBOX)
+      ELSE IF(TYPE.EQ.'HBS') THEN
+        CALL SETUP_LOOKUP_HBS(LL_STP,ID,RCOV,LX,RCL,LAMBDA,RBOX)
+      ELSE IF(TYPE.EQ.'NDLSS') THEN
+        CALL SETUP_LOOKUP_NDLSS(LL_STP,ID,RCOV,LX,RCL,RBOX)
+      ELSE
+        CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
+        CALL ERROR$CHVAL('TYPE',TYPE)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+!     ==========================================================================
+!     == COLLECT RADIAL GRID                                                  ==
+!     ==========================================================================
+      CALL SETUP_LOOKUP_GRID(LL_STP,ID,DMIN,DMAX,RMAX)
+!
+!     ==========================================================================
+!     == DEFINE POTENTIAL PSEUDIZATION                                        ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      CALL SETUP_LOOKUP_PSPOT(LL_STP,ID,RCOV,POW_POT,RC_POT,TVAL0_POT,VAL0_POT)
+!
+!     ==========================================================================
+!     == DEFINE CORE PSEUDIZATION                                             ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      CALL SETUP_LOOKUP_PSCORE(LL_STP,ID,RCOV &
+     &                       ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE)
+      CALL LINKEDLIST$SELECT(LL_STP,'..')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(OUT) :: AEZ
+      REAL(8)      ,INTENT(OUT) :: ZV
+      REAL(8)      ,INTENT(OUT) :: RCSM
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK,TCHK1,TCHK2
+      CHARACTER(2)              :: EL
+      REAL(8)                   :: RCOV
+!     **************************************************************************
+      LL_STP=LL_STP_ !AVOID REPOSITIONING OF THE POINTER
+!
+!     ==========================================================================
+!     == IDENTIFY ATOM                                                        ==
+!     ==========================================================================
+!     == COLLECT ATOMIC NUMBER =================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'EL',1,TCHK1)
+      CALL LINKEDLIST$EXISTD(LL_STP,'Z',1,TCHK2)
+      IF(TCHK1.AND.TCHK2) THEN
+        CALL ERROR$MSG('!SETUP:AEZ AND EL="XX"')
+        CALL ERROR$MSG('MUST NOT BE SPECIFIED SIMULTANEOUSLY')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGENERIC')
+      END IF 
+      IF(.NOT.(TCHK1.OR.TCHK2)) THEN
+        CALL ERROR$MSG('NEITHER EL NOR AEZ SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGENERIC')
+      END IF 
+      IF(TCHK1) THEN
+        CALL LINKEDLIST$GET(LL_STP,'EL',1,EL)
+        CALL PERIODICTABLE$GET(EL,'Z',AEZ)
+      ELSE 
+        CALL LINKEDLIST$GET(LL_STP,'Z',1,AEZ)
+      END IF
+!
+!     == COLLECT #VALENCE ELECTRONS ============================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'ZV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('ZV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGENERIC')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'ZV',1,ZV)
+!
+!     == DECAY CONSTANT FOR SHORT-RANGED COMPENSATION CHARGE DENSITY ===========
+      CALL LINKEDLIST$EXISTD(LL_STP,'RCSM/RCOV',1,TCHK)
+      RCSM=0.25D0
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STP,'RCSM/RCOV',1,RCSM)
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      RCSM=RCSM*RCOV
+!
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_HBS(LL_STP_,ID,RCOV,LX,RC,LAMBDA,RBOX)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(IN)  :: RCOV
+      INTEGER(4)   ,INTENT(IN)  :: LX
+      REAL(8)      ,INTENT(OUT) :: RC(LX+1)
+      REAL(8)      ,INTENT(OUT) :: LAMBDA(LX+1)
+      REAL(8)      ,INTENT(OUT) :: RBOX
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: LENG
+      REAL(8)      ,ALLOCATABLE :: WORK(:)
+!     **************************************************************************
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+!     == COLLECT BOX RADIUS ====================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RBOX/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RBOX/RCOV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUP_KERKER')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RBOX/RCOV',1,RBOX)
+      RBOX=RBOX*RCOV 
+!
+!     == ARRAY OF CUTOFF RADII RC ==============================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RCL/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RCL NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      CALL LINKEDLIST$SIZE(LL_STP,'RCL/RCOV',1,LENG)
+      IF(LENG.LT.LX+1) THEN
+        CALL ERROR$MSG('!SETUP:RCL ARRAY TOO SHORT')
+        CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
+        CALL ERROR$I4VAL('MAX L REQUESTED',LX) 
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      ALLOCATE(WORK(LENG))
+      CALL LINKEDLIST$GET(LL_STP,'RCL/RCOV',1,WORK)
+      RC=WORK(:LX+1)*RCOV
+      DEALLOCATE(WORK)
+!
+!     == ADDITIONAL LAMBDA PARAMETER REQUIRED FOR 'HBS' TYPE CONSTRUCTION ======
+      CALL LINKEDLIST$EXISTD(LL_STP,'LAMBDA',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:LAMBDA NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!     ___CHECK LENGTH OF ARRAY__________________________________________________
+      CALL LINKEDLIST$SIZE(LL_STP,'LAMBDA',1,LENG)
+      IF(LENG.LT.LX+1) THEN
+        CALL ERROR$MSG('!SETUP:RCL ARRAY TOO SHORT')
+        CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
+        CALL ERROR$I4VAL('MAX L REQUESTED',LX) 
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      ALLOCATE(WORK(LENG))
+      CALL LINKEDLIST$GET(LL_STP,'LAMBDA',1,WORK)
+      LAMBDA=WORK(:LX+1)
+      DEALLOCATE(WORK)
+!
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_KERKER(LL_STP_,ID,RCOV,LX,RC,RBOX)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(IN)  :: RCOV
+      INTEGER(4)   ,INTENT(IN)  :: LX
+      REAL(8)      ,INTENT(OUT) :: RC(LX+1)
+      REAL(8)      ,INTENT(OUT) :: RBOX
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: LENG
+      REAL(8)      ,ALLOCATABLE :: WORK(:)
+!     **************************************************************************
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+!     == COLLECT BOX RADIUS ====================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RBOX/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RBOX/RCOV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUP_KERKER')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RBOX/RCOV',1,RBOX)
+      RBOX=RBOX*RCOV 
+!
+!     == ARRAY OF CUTOFF RADII RC ==============================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RCL/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RCL NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      CALL LINKEDLIST$SIZE(LL_STP,'RCL/RCOV',1,LENG)
+      IF(LENG.LT.LX+1) THEN
+        CALL ERROR$MSG('!SETUP:RCL ARRAY TOO SHORT')
+        CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
+        CALL ERROR$I4VAL('MAX L REQUESTED',LX) 
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      ALLOCATE(WORK(LENG))
+      CALL LINKEDLIST$GET(LL_STP,'RCL/RCOV',1,WORK)
+      RC=WORK(:LX+1)*RCOV
+      DEALLOCATE(WORK)
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_NDLSS(LL_STP_,ID,RCOV,LX,RC,RBOX)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(IN)  :: RCOV
+      INTEGER(4)   ,INTENT(IN)  :: LX
+      REAL(8)      ,INTENT(OUT) :: RC(LX+1)
+      REAL(8)      ,INTENT(OUT) :: RBOX
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: LENG
+      REAL(8)      ,ALLOCATABLE :: WORK(:)
+!     **************************************************************************
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+!     == COLLECT BOX RADIUS ====================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RBOX/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RBOX/RCOV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUP_KERKER')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RBOX/RCOV',1,RBOX)
+      RBOX=RBOX*RCOV 
+!
+!     == ARRAY OF CUTOFF RADII RC ==============================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RCL/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RCL NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      CALL LINKEDLIST$SIZE(LL_STP,'RCL/RCOV',1,LENG)
+      IF(LENG.LT.LX+1) THEN
+        CALL ERROR$MSG('!SETUP:RCL ARRAY TOO SHORT')
+        CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
+        CALL ERROR$I4VAL('MAX L REQUESTED',LX) 
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('ATOMLIB$SCNTLLOOKUPONE')
+      END IF
+!
+      ALLOCATE(WORK(LENG))
+      CALL LINKEDLIST$GET(LL_STP,'RCL/RCOV',1,WORK)
+      RC=WORK(:LX+1)*RCOV
+      DEALLOCATE(WORK)
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_PSPOT(LL_STP_,ID,RCOV,POW,RC,TVAL0,VAL0)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(IN)  :: RCOV
+      REAL(8)      ,INTENT(OUT) :: POW
+      REAL(8)      ,INTENT(OUT) :: RC
+      LOGICAL(4)   ,INTENT(OUT) :: TVAL0
+      REAL(8)      ,INTENT(OUT) :: VAL0
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+      REAL(8)                   :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+      CALL LINKEDLIST$EXISTL(LL_STP,'POT',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!POT NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSPOT')
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STP,'POT')
+!  
+!     == POW ===================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'POW',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!POT:POW NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSPOT')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'POW',1,POW)
+
+!     == RC ====================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RC/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!POT:RC/RCOV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSPOT')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RC/RCOV',1,RC)
+      RC=RC*RCOV
+!
+      VAL0=0.D0
+      CALL LINKEDLIST$EXISTD(LL_STP,'VAL0',1,TCHK)
+      TVAL0=TCHK
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STP,'VAL0',1,VAL0)
+      VAL0=VAL0/Y0
+      CALL LINKEDLIST$SELECT(LL_STP,'..')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_PSCORE(LL_STP_,ID,RCOV,POW,RC,TVAL0,VAL0)
+!     **************************************************************************
+!     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **                                                                      **
+!     **  CAUTION: VAL0 IS THE VALUE OF THE PSEUDO CORE NOT ITS RADIAL PART   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(IN)  :: RCOV
+      REAL(8)      ,INTENT(OUT) :: POW
+      REAL(8)      ,INTENT(OUT) :: RC
+      LOGICAL(4)   ,INTENT(OUT) :: TVAL0
+      REAL(8)      ,INTENT(OUT) :: VAL0
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+      REAL(8)                   :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+      CALL LINKEDLIST$EXISTL(LL_STP,'CORE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!CORE NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSCORE')
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STP,'CORE')
+!  
+!     == POW ===================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'POW',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!CORE:POW NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSCORE')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'POW',1,POW)
+
+!     == RC ====================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RC/RCOV',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!CORE:RC/RCOV NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPPSCORE')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RC/RCOV',1,RC)
+      RC=RC*RCOV
+!
+      VAL0=0.D0
+      CALL LINKEDLIST$EXISTD(LL_STP,'VAL0',1,TCHK)
+      TVAL0=TCHK
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STP,'VAL0',1,VAL0)
+      VAL0=VAL0/Y0
+      CALL LINKEDLIST$SELECT(LL_STP,'..')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_LOOKUP_GRID(LL_STP_,ID,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     **  COLLECT GRID INFORMATION FROM GRID BLOCK                            **
+!     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
+!     **  GRID BLOCK                                                          **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN)  :: LL_STP_
+      CHARACTER(*) ,INTENT(IN)  :: ID      !SETUP ID (USED ONLY FOR ERROR MSG)
+      REAL(8)      ,INTENT(OUT) :: DMIN
+      REAL(8)      ,INTENT(OUT) :: DMAX
+      REAL(8)      ,INTENT(OUT) :: RMAX
+      TYPE(LL_TYPE)             :: LL_STP
+      LOGICAL(4)                :: TCHK
+!     **************************************************************************
+      LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
+!
+      CALL LINKEDLIST$EXISTL(LL_STP,'GRID',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!GRID NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGRID')
+      END IF
+      CALL LINKEDLIST$SELECT(LL_STP,'GRID')   ! ENTER GRID BLOCK
+
+!     == DMIN ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'DMIN',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:DMIN NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGRID')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'DMIN',1,DMIN)
+!
+!     == DMAX ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'DMAX',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:DMAX NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGRID')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'DMAX',1,DMAX)
+!
+!     == RMAX ==================================================================
+      CALL LINKEDLIST$EXISTD(LL_STP,'RMAX',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('!SETUP:RMAX NOT SPECIFIED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_LOOKUPGRID')
+      END IF
+      CALL LINKEDLIST$GET(LL_STP,'RMAX',1,RMAX)
+      CALL LINKEDLIST$SELECT(LL_STP,'..')  ! LEAVE !GRID BLOCK
       RETURN
       END
 !
@@ -3061,13 +2989,14 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
+PRINT*,'NR',NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
 !     ==========================================================================
 !     == ALTERNATE PROJECTOR CONSTRUCTION                                     ==
 !     ==========================================================================
       IF(TYPE.EQ.'NDLSS') THEN
-        CALL SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
+        CALL SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT &
       &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
       &                   ,QN,QNSM,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO,DT,DOVER &
       &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
@@ -3085,7 +3014,7 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
         PHISCALE=1.D0
         PSISCALE=1.D0
       ELSE 
-        CALL SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
+        CALL SETUP_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &                    ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                    ,AEPOT,PSPOT,VFOCK &
      &                    ,QN,AEPHI,PSPHI,PRO,DT,DOVER &
@@ -3141,7 +3070,7 @@ ENDDO
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
 !     ==========================================================================
                       CALL TRACE$PASS('CONSTRUCT DENSITY OR UNSCREENING')
-      CALL SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
+      CALL SETUP_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
      &                      ,AECORE,PSCORE &
      &                      ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
      &                      ,DH,DOVER,AEPOT,PSPOT,VFOCK &
@@ -3355,7 +3284,7 @@ ENDDO
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
+      SUBROUTINE SETUP_PAWDENSITY(GID,NR,LNX,LOX,NB,NC,LOFI,NNOFI,EOFI,FOFI &
      &                            ,AECORE,PSCORE &
      &                            ,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO &
      &                            ,DH,DOVER,AEPOT,PSPOT,VFOCK &
@@ -3427,7 +3356,7 @@ ENDDO
       INTEGER(4)            :: NN,NN0,NPRO
       REAL(8)               :: PI,Y0,C0LL
 !     **************************************************************************
-                            CALL TRACE$PUSH('SETUPS_PAWDENSITY')
+                            CALL TRACE$PUSH('SETUP_PAWDENSITY')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
@@ -3556,7 +3485,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
             CALL ERROR$R8VAL('( PAW-AE)[EV]',(SVAR2-SVAR1)*27.211D0)
             CALL ERROR$R8VAL('(PAW-REF)[EV]',(SVAR2-EOFI1(IB))*27.211D0)
             CALL ERROR$R8VAL('( AE-REF)[EV]',(SVAR1-EOFI1(IB))*27.211D0)
-            CALL ERROR$STOP('SETUPS_PAWDENSITY')
+            CALL ERROR$STOP('SETUP_PAWDENSITY')
           END IF
           IF(TTEST) THEN
              WRITE(6,FMT='("DEVIATION OF THE ATOMIC ENERGY LEVELS IN EV")')
@@ -4874,425 +4803,992 @@ PRINT*,'KI ',KI
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_BUILDPARMS_NDLSS()
+      SUBROUTINE SETUP_RESOLVESETUPID(LL_STRC)
+!     **************************************************************************
+!     ** SCANS THE LINKEDLIST FROM THE STRUCTURE INPUT FILE                   **
+!     ** AND INSERTS A SETUP BLOCK FOR EVERY KNOWN SETUP ID.                  **
+!     ** IT DOES NOT EXPAND SETUPS FOR WHICH THE ID IS UNKNOWN.               **
+!     ** IT SHOULD BE EXECUTED BEFORE THE SETUP PARAMTERS ARE USED.           **
+!     **                                                                      **
+!     ** THERE ARE THREE ALLOWED CHANNELS TO PROVIDE SETUP PARAMETERS:        **
+!     ** (1) PARAMETER SET SPECIFIED IN THE SPECIES BLOCK OF THE STRC FILE    **
+!     ** (2) INTERNAL PARAMETER SETS FROM SETUP_BUILDPARMSONE_...             **
+!     ** (3) STP.CNTL FILE                                                    **
+!     **                                                                      **
+!     ** THIS ROUTINE IS CALLED BY STRCIN PAW_IOROUTINES.F90 BEFORE           **
+!     ** STRUCTURE INPUT FILE IS SCANNED (BEFORE STRCIN_SPECIES)              **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      USE PERIODICTABLE_MODULE
+      USE CONSTANTS_MODULE
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STRC
+      INTEGER(4)   ,PARAMETER  :: LX=3
+      CHARACTER(64)            :: ID
+      CHARACTER(64)            :: ID1
+      INTEGER(4)               :: NSP
+      INTEGER(4)               :: ISP
+      LOGICAL(4)               :: TCHK
+      INTEGER(4)               :: I
+      INTEGER(4)               :: NFIL
+      CHARACTER(64)            :: STPTYPE
+      CHARACTER(2)             :: EL
+      REAL(8)                  :: AEZ    ! ATOMIC NUMBER
+      REAL(8)                  :: ZV     ! NUMBER OF VALENCE ELECTRONS
+      CHARACTER(64)            :: TYPE
+      REAL(8)                  :: RBOX
+      REAL(8)                  :: RCOV   !COVALENT RADIUS
+      REAL(8)                  :: RCSM
+      REAL(8)                  :: RCL(LX+1)
+      REAL(8)                  :: LAMBDA(LX+1)
+      REAL(8)                  :: POTPOW,POTVAL,POTRC
+      REAL(8)                  :: CORPOW,CORVAL,CORRC
+      LOGICAL(4)               :: TCORVAL,TPOTVAL
+      REAL(8)                  :: DMIN,DMAX,RMAX
+      LOGICAL(4)               :: TFOUND
+      TYPE(LL_TYPE)            :: LL_SCNTL
+      INTEGER(4)               :: NENTRY
+!     **************************************************************************
+                                    CALL TRACE$PUSH('SETUP$RESOLVESETUPID')
+!     ==========================================================================
+!     == READ SETUP PARAMETER FILE                                            ==
+!     ==========================================================================
+      CALL LINKEDLIST$NEW(LL_SCNTL)
+      CALL FILEHANDLER$UNIT('PARMS_STP',NFIL)
+      CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
+
+!     ==========================================================================
+!     == READ SETUP PARAMETER FILE                                            ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE',0)
+      CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
+      DO ISP=1,NSP
+        CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
+!
+!       == SETUP BLOCK HAS HIGHEST PRIORITY ====================================
+        CALL LINKEDLIST$EXISTL(LL_STRC,'SETUP',0,TCHK)
+        IF(TCHK) CYCLE
+!
+!       == RESOLVE SETUP ID FROM EITHER INTERNAL SET OF STP.CNTL FILE ==========
+        CALL LINKEDLIST$EXISTD(LL_STRC,'ID',0,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('NO SETUP PARAMETER AVAILABLE')
+          CALL ERROR$MSG('!SPECIES:ID AND !SPECIES!SETUP ARE MISSING')
+          CALL ERROR$STOP('SETUP$RESOLVESETUPID')
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'ID',0,ID)  
+!    
+!       ========================================================================
+!       == ID HAS THE STRUCTURE EL_TYPE                                       ==
+!       ========================================================================
+        TFOUND=.TRUE.
+        I=INDEX(ID,'_')
+        STPTYPE=ID(I+1:)
+        EL=ID(1:2)
+!    
+!       ========================================================================
+!       == PARSE INTERNAL SETUPS                                              ==
+!       ========================================================================
+        IF(STPTYPE.EQ.'NDLSS_V0') THEN
+          CALL SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM,RCL &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+          LAMBDA=0.D0   !NOT USED
+        ELSE IF(STPTYPE.EQ.'NDLSS_SC_V0') THEN
+          CALL SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM,RCL &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+          LAMBDA=0.D0   !NOT USED
+        ELSE IF(STPTYPE.EQ.'HBS') THEN
+          CALL SETUP_BUILDPARMSONE_HBS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+        ELSE IF(STPTYPE.EQ.'HBS_SC') THEN
+          CALL SETUP_BUILDPARMSONE_HBS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+        ELSE IF(STPTYPE.EQ.'.75_6.0') THEN
+          CALL SETUP_BUILDPARMSONE_7560(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+        ELSE
+          TFOUND=.FALSE.
+          CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
+          CALL ERROR$CHVAL('STPTYPE',STPTYPE)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP_BUILDPARMS')
+        END IF
+!    
+!       ========================================================================
+!       == PARSE SETUP FILE                                                   ==
+!       ========================================================================
+        CALL LINKEDLIST$SELECT(LL_SCNTL,'~',0)
+        CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL',0)
+        CALL LINKEDLIST$NLISTS(LL_SCNTL,'SETUP',NENTRY)
+        DO I=1,NENTRY
+          CALL LINKEDLIST$SELECT(LL_SCNTL,'SETUP',I)
+          CALL LINKEDLIST$EXISTD(LL_SCNTL,'ID',1,TCHK)
+          IF(.NOT.TCHK) THEN
+            CALL ERROR$MSG('!SCNTL!SETUP:ID NOT SPECIFIED')
+            CALL ERROR$STOP('SETUP$RESOLVESETUPID')
+          END IF
+          CALL LINKEDLIST$GET(LL_SCNTL,'ID',1,ID1)
+          IF(ID1.EQ.ID) THEN
+!           == CHECK IF THE SAME NAME HAS ALREADY BEEN FOUND ===================
+            IF(TFOUND) THEN
+              CALL ERROR$MSG('SETUP ID IS AMBIGOUS')
+              CALL ERROR$MSG('IT HAS BEEN ENCOUNTERED TWICE')
+              CALL ERROR$CHVAL('ID',ID)
+              CALL ERROR$STOP('SETUP$RESOLVESETUPID')
+            END IF
+            TFOUND=.TRUE.
+            CALL ATOMLIB$SCNTLLOOKUPONE(LL_SCNTL,AEZ,ZV,RBOX,LX,TYPE,RCL &
+     &                              ,LAMBDA &
+     &                              ,RCSM,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                              ,DMIN,DMAX,RMAX)
+            EXIT
+          END IF
+          CALL LINKEDLIST$SELECT(LL_SCNTL,'..',0)
+        ENDDO
+!    
+!       ========================================================================
+!       == PLACE INFORMATION INTO LINKEDLIST                                  ==
+!       ========================================================================
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+        CALL LINKEDLIST$SELECT(LL_STRC,'SETUP',0)
+        CALL LINKEDLIST$SET(LL_STRC,'ID',0,ID)
+        CALL LINKEDLIST$SET(LL_STRC,'EL',0,EL)
+        CALL LINKEDLIST$SET(LL_STRC,'ZV',0,ZV)
+        CALL LINKEDLIST$SET(LL_STRC,'TYPE',0,TYPE)
+        CALL LINKEDLIST$SET(LL_STRC,'RBOX/RCOV',0,RBOX/RCOV)
+        CALL LINKEDLIST$SET(LL_STRC,'RCSM/RCOV',0,RCSM/RCOV)
+        CALL LINKEDLIST$SET(LL_STRC,'RCL/RCOV',0,RCL/RCOV)
+        CALL LINKEDLIST$SET(LL_STRC,'LAMBDA',0,LAMBDA)
+!   
+        CALL LINKEDLIST$SELECT(LL_STRC,'GRID',0)
+        CALL LINKEDLIST$SET(LL_STRC,'DMIN',0,DMIN)
+        CALL LINKEDLIST$SET(LL_STRC,'DMAX',0,DMAX)
+        CALL LINKEDLIST$SET(LL_STRC,'RMAX',0,RMAX)
+        CALL LINKEDLIST$SELECT(LL_STRC,'..',0)
+!   
+        CALL LINKEDLIST$SELECT(LL_STRC,'POT',0)
+        CALL LINKEDLIST$SET(LL_STRC,'POW',0,POTPOW)
+!       == POTVAL>1.D+6 IMPLIES THAT VAL0 SHALL BE UNSPECIFIED =================
+        IF(TPOTVAL)CALL LINKEDLIST$SET(LL_STRC,'VAL0',0,POTVAL)
+        CALL LINKEDLIST$SET(LL_STRC,'RC/RCOV',0,POTRC/RCOV)
+        CALL LINKEDLIST$SELECT(LL_STRC,'..',0)
+!   
+        CALL LINKEDLIST$SELECT(LL_STRC,'CORE',0)
+        CALL LINKEDLIST$SET(LL_STRC,'POW',0,CORPOW)
+        IF(TCORVAL) CALL LINKEDLIST$SET(LL_STRC,'VAL0',0,CORVAL)
+        CALL LINKEDLIST$SET(LL_STRC,'RC/RCOV',0,CORRC/RCOV)
+        CALL LINKEDLIST$SELECT(LL_STRC,'..',0)
+!   
+        CALL LINKEDLIST$SELECT(LL_STRC,'..',0)  !RETURN FROM !SETUP
+      ENDDO ! END OF LOOP OVER SPECIES TYPES
+
+!!$CALL LINKEDLIST$SELECT(LL_STRC,'~',0)  !RETURN FROM !SETUP
+!!$CALL LINKEDLIST$REPORT(LL_STRC,6)
+!CALL SETUP_BUILDPARMS()
+!!$CALL SETUP_BUILDPARMS_NDLSS()
+!!$!CALL SETUP_IDENTIFYRMAX()
+!STOP
+                                    CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_BUILDPARMS()
 !     **************************************************************************
 !     ** GENERATES AUTOMATICALLY A PARAMETER FILE FOR THE SETUP CONSTRUCTION  **
-!     ** type: ndlss                                                          **
+!     ** TYPE: NDLSS                                                          **
 !     ******************************PETER BLOECHL, GOSLAR 2014******************
       USE PERIODICTABLE_MODULE
       USE CONSTANTS_MODULE
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: NFIL=1001
       INTEGER(4),PARAMETER :: NFIL2=1002
+      INTEGER(4),PARAMETER :: LX=4
+      INTEGER(4),PARAMETER :: NSTPTYPES=5
+      CHARACTER(20)        :: STPTYPE(NSTPTYPES)
+      INTEGER(4)           :: IZ,ISTPTYPE
       CHARACTER(2)         :: EL
-      CHARACTER(12)        :: ID
-      CHARACTER(14)        :: SY
-      CHARACTER(5)         :: TYPE="'NDLSS'"
-      REAL(8)              :: RMAX=7.D0
-      INTEGER(4)           :: I
-      REAL(8)              :: AEZ,ZCORE,ZV,RCOV,ANGSTROM
-      CHARACTER(1)         :: ATOMTYPE
+      CHARACTER(128)       :: ID
+      REAL(8)              :: AEZ
+      REAL(8)              :: ZV
+      REAL(8)              :: RBOX
+      REAL(8)              :: RCSM
+      REAL(8)              :: RCL(LX+1)
+      REAL(8)              :: LAMBDA(LX+1)
+      REAL(8)              :: POTPOW
+      REAL(8)              :: POTRC
+      LOGICAL(4)           :: TPOTVAL
+      REAL(8)              :: POTVAL
+      REAL(8)              :: CORPOW
+      REAL(8)              :: CORRC
+      LOGICAL(4)           :: TCORVAL
+      REAL(8)              :: CORVAL
+      REAL(8)              :: DMIN
+      REAL(8)              :: DMAX
+      REAL(8)              :: RMAX
+      CHARACTER(12)        :: TYPE
 !     **************************************************************************
-      CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      OPEN(NFIL,FILE='STP.CNTL_NDLSSAUTOMATIC')
-      OPEN(NFIL2,FILE='TEST.STRC_NDLSSAUTOMATIC')
+!
+!     ==========================================================================
+!     == DEFINE STRINGS FOR DIFFERENT SETUP CONSTRUCTION TYPES                ==
+!     ==========================================================================
+      STPTYPE(1)='NDLSS_V0'
+      STPTYPE(2)='NDLSS_SC_V0'
+      STPTYPE(3)='.75_6.0'
+      STPTYPE(4)='HBS'
+      STPTYPE(5)='HBS_SC'
+!
+!     ==========================================================================
+!     == LOOP OVER ALL SETUPS                                                 ==
+!     ==========================================================================
+      OPEN(NFIL,FILE='STP.CNTL_AUTOMATIC_NEW')
+      OPEN(NFIL2,FILE='TEST.STRC_AUTOMATIC_NEW')
       REWIND NFIL
       REWIND NFIL2
       WRITE(NFIL,FMT='("!SCNTL")')
-      DO I=1,105
-        CALL PERIODICTABLE$GET(I,'SYMBOL',EL)
-        CALL PERIODICTABLE$GET(I,'Z',AEZ)
-        CALL PERIODICTABLE$GET(I,'ZCORE',ZCORE)
-        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-        ZV=AEZ-ZCORE
-        ID="'"//TRIM(EL)//'_NDLSS'//"'"
-        SY="'"//EL//"'"
-        IF(SY(3:3).EQ.' ')SY(3:3)='_'
-        IF(I.GE.  1.AND.I.LE. 2) ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
-        IF(I.GE.  3.AND.I.LE. 4) ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
-        IF(I.GE.  5.AND.I.LE.10) ATOMTYPE='M'   ! MAIN GROUP
-        IF(I.GE. 11.AND.I.LE.12) ATOMTYPE='A'   
-        IF(I.GE. 13.AND.I.LE.18) ATOMTYPE='M'   
-        IF(I.GE. 19.AND.I.LE.20) ATOMTYPE='A'   
-        IF(I.GE. 21.AND.I.LE.30) ATOMTYPE='T'  !TRANSITION METAL AND POOR METALS
-        IF(I.GE. 31.AND.I.LE.36) ATOMTYPE='M'   
-        IF(I.GE. 37.AND.I.LE.38) ATOMTYPE='A'   
-        IF(I.GE. 39.AND.I.LE.48) ATOMTYPE='T'   
-        IF(I.GE. 49.AND.I.LE.54) ATOMTYPE='M'   
-        IF(I.GE. 55.AND.I.LE.56) ATOMTYPE='A'   
-        IF(I.GE. 57.AND.I.LE.71) ATOMTYPE='F'   
-        IF(I.GE. 72.AND.I.LE.80) ATOMTYPE='T'   
-        IF(I.GE. 81.AND.I.LE.86) ATOMTYPE='M'   
-        IF(I.GE. 87.AND.I.LE.88) ATOMTYPE='A'   
-        IF(I.GE. 89.AND.I.LE.103)ATOMTYPE='F'   !f-electron metal
-        IF(I.GE.104.AND.I.LE.112)ATOMTYPE='T'   
-        IF(I.GE.113.AND.I.LE.118)ATOMTYPE='M'   
+      DO IZ=0,105
+        DO ISTPTYPE=1,NSTPTYPES
+          CALL PERIODICTABLE$GET(IZ,'SYMBOL',EL)
+          ID=TRIM(EL)//'_'//TRIM(STPTYPE(ISTPTYPE))
 !
-!       == RMAX MUST BE LARGER THAN THE BOX RADIUS AND SHOULD AT LEAST BE AS ===
-!       == LARGE AS THE BOND DISTANCE TO OXYGEN ================================
-        RMAX=MAX(2.D0*RCOV+0.5D0,RCOV+0.73D0*ANGSTROM)
-!
-!       ========================================================================
-!       == VALENCE-ONLY SETUPS                                                ==
-!       ========================================================================
-!       == EXCLUDE D AND F-SHELLS FOR MAINGROUP ELEMENTS (S-P)
-        ZV=AEZ-ZCORE
-        IF(I.GE.31.AND.I.LE.36) ZV=ZV-10.D0
-        IF(I.GE.49.AND.I.LE.54) ZV=ZV-10.D0
-        IF(I.GE.72.AND.I.LE.80) ZV=ZV-14.D0
-        IF(I.GE.81.AND.I.LE.86) ZV=ZV-24.D0
-        IF(I.GE.104) ZV=ZV-14.D0
-        WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
-     &     TRIM(ID),TRIM(SY),ZV
-        WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=2.0 RCSM/RCOV=0.25")') &
-           TYPE
-        WRITE(NFIL,FMT='(T10,"RCL/RCOV= 1.0 1.0 1.0 1.0")') 
-        WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
-        WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
-        WRITE(NFIL,FMT='(T4,"!POT  POW=3.  RC/RCOV=0.67 !END")') 
-        WRITE(NFIL,FMT='(T4,"!CORE POW=3.  RC/RCOV=0.67 !END")') 
-        WRITE(NFIL,FMT='(T2,"!END")') 
-        WRITE(NFIL,*) 
-!
-!       == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
-        WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
-        IF(I.LE.2) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
-        ELSE IF(I.LE.18) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 0  LRHOX=2")')
-        ELSE IF(I.LT.56) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1  LRHOX=2")')
-        ELSE      
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1 1 LRHOX=2")')
-        END IF
-        IF(ATOMTYPE.EQ.'A') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 0 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'M') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 1 0 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'T') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'F') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 1 CV=T HFWEIGHT=0.25 !END")')
-        END IF
-        WRITE(NFIL2,FMT='(T2,"!END")')
-!
-!       ========================================================================
-!       == SEMI-CORE SETUPS                                                   ==
-!       ========================================================================
-!       == INCLUDE CORE-S-P SHELL INTO THE VALENCE SO THAT ALL STATES 
-!       == WITH A MINIMUM MAIN QUANTUM NUMBER ARE INCLUDED
-        IF(AEZ.GE.11) THEN
-          ZV=AEZ-ZCORE+8.D0
-!       == F-STATES ARE INCLUDED ONLY FOR F-ELEMENTS
-!          IF(I.GE.72.AND.I.LE.86) ZV=ZV-14.D0
-!          IF(I.GE.104.AND.I.LE.118) ZV=ZV-14.D0
-          ID="'"//TRIM(EL)//'_NDLSS_SC'//"'"
-          SY="'"//EL//"'"
-          IF(SY(3:3).EQ.' ')SY(3:3)='_'
-          WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
-       &     TRIM(ID),TRIM(SY),ZV
-          WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=1.2 RCSM/RCOV=0.25")') &
-               TYPE
-          WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.5 0.5 0.5 0.5")') 
-          WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
-          WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
-          WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-2.2 RC/RCOV=0.5  !END")') 
-          WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL= 0.1 RC/RCOV=0.5  !END")') 
-          WRITE(NFIL,FMT='(T2,"!END")') 
-          WRITE(NFIL,*) 
-!
-!         == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
-          SY="'"//EL//"_SC'"
-          WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
-          IF(I.LE.2) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
-          ELSE IF(I.LE.18) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 0  LRHOX=2")')
-          ELSE IF(I.LT.56) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1  LRHOX=2")')
-          ELSE      
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1 1 LRHOX=2")')
+          IF(STPTYPE(ISTPTYPE).EQ.'NDLSS_V0') THEN
+            CALL SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM,RCL &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+            LAMBDA=0.D0   !NOT USED FOR NDLSS CONSTRUCTION
+          ELSE IF(STPTYPE(ISTPTYPE).EQ.'NDLSS_SC_V0') THEN
+            CALL SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM,RCL &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+            LAMBDA=0.D0   !NOT USED FOR NDLSS CONSTRUCTION
+          ELSE IF(STPTYPE(ISTPTYPE).EQ.'HBS') THEN
+            CALL SETUP_BUILDPARMSONE_HBS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+          ELSE IF(STPTYPE(ISTPTYPE).EQ.'HBS_SC') THEN
+            CALL SETUP_BUILDPARMSONE_HBS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+          ELSE IF(STPTYPE(ISTPTYPE).EQ.'.75_6.0') THEN
+            CALL SETUP_BUILDPARMSONE_7560(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &              ,RCL,LAMBDA &
+     &              ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &              ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &              ,DMIN,DMAX,RMAX)
+          ELSE
+            CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
+            CALL ERROR$CHVAL('STPTYPE',STPTYPE(ISTPTYPE))
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('SETUP_BUILDPARMS')
           END IF
-          IF(ATOMTYPE.EQ.'A') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 0 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'M') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 2 0 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'T') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'F') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 1 CV=T HFWEIGHT=0.25 !END")')
-          END IF
-          WRITE(NFIL2,FMT='(T2,"!END")')
-        END IF
+!
+!         ======================================================================
+!         == WRITE SPECIESBLOCKS FOR SETUPFILE                                ==
+!         ======================================================================
+          CALL SETUP_WRITEPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &                           ,RCL,LAMBDA &
+     &                           ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                           ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                           ,DMIN,DMAX,RMAX)
+!
+!         ======================================================================
+!         == WRITE TO MODEL STRUCTURE INPUT FILE FOR TEST                     ==
+!         ======================================================================
+          CALL SETUP_MKSPECIESINPUT(NFIL2,ID)
+        ENDDO
       ENDDO
       WRITE(NFIL,FMT='("!END")') 
       WRITE(NFIL,FMT='("!EOB")') 
       WRITE(NFIL,*)
       CLOSE(NFIL)
+      CLOSE(NFIL2)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_BUILDPARMS_2()
+      SUBROUTINE SETUP_WRITEPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &                             ,RCL,LAMBDA &
+     &                             ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                             ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                             ,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     ** WRITES THE PARAMETERS FOR A SPECIFIC SETUP FOR THE SETUP INPUT FILE  **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: ID       ! SETUP ID
+      REAL(8)     ,INTENT(IN) :: AEZ      ! ELEMENT SYMBOL
+      REAL(8)     ,INTENT(IN) :: ZV       ! #(VALENCE ELECTRONS)
+      CHARACTER(*),INTENT(IN) :: TYPE     ! PSEUDIZATION TYPE
+      REAL(8)     ,INTENT(IN) :: RBOX     ! RBOX
+      REAL(8)     ,INTENT(IN) :: RCSM     ! RCSM
+      INTEGER(4)  ,INTENT(IN) :: LX       ! HIGHEST ANGULAR MOMENTUM ON FILE
+      REAL(8)     ,INTENT(IN) :: RCL(LX+1)!RC(PHI)
+      REAL(8)     ,INTENT(IN) :: LAMBDA(LX+1) !LAMBDA
+      REAL(8)     ,INTENT(IN) :: POTPOW   ! LEADING POWER FOR PSEUDO POTENTIAL
+      REAL(8)     ,INTENT(IN) :: POTRC    ! RC FOR PSEUDO POTENTIAL
+      LOGICAL(4)  ,INTENT(IN) :: TPOTVAL  ! CORVAL SHALL BE SET
+      REAL(8)     ,INTENT(IN) :: POTVAL   ! PSEUD POT VALUE AT R=0
+      REAL(8)     ,INTENT(IN) :: CORPOW   ! LEADING POWER FOR PSEUDO CORE
+      REAL(8)     ,INTENT(IN) :: CORRC    ! RC FOR PSEUDO CORE
+      LOGICAL(4)  ,INTENT(IN) :: TCORVAL  ! CORVAL SHALL BE SET
+      REAL(8)     ,INTENT(IN) :: CORVAL   ! PSEUD CORE VALUE AT R=0
+      REAL(8)     ,INTENT(IN) :: DMIN     ! SMALLEST GRID SPACING
+      REAL(8)     ,INTENT(IN) :: DMAX     ! LARGEST GRID SPACING
+      REAL(8)     ,INTENT(IN) :: RMAX     ! OUTERMOST GRID POINT 
+      REAL(8)                 :: RCOV     ! COVALENT RADIUS
+!     **************************************************************************
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+!
+      WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," Z=",F10.5," ZV=",F3.0)') &
+     &                            "'"//TRIM(ID)//"'",AEZ,ZV
+      WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=",F7.3," RCSM/RCOV=",F7.3)') &
+     &                              "'"//TRIM(TYPE)//"'",RBOX/RCOV,RCSM/RCOV
+!
+!     == SET PARAMETERS FOR PARTIAL WAVE PSEUDIZATION ==========================
+      WRITE(NFIL,FMT='(T10,"RCL/RCOV=",20F7.3)')RCL/RCOV
+      WRITE(NFIL,FMT='(T10,"LAMBDA=",20F7.3)')LAMBDA 
+!
+!     == SET RADIAL GRID =======================================================
+      WRITE(NFIL,FMT='(T4,"!GRID DMIN=",E12.3," DMAX=",F10.3," RMAX=",F10.3' &
+     &                      //'," !END")')DMIN,DMAX,RMAX 
+!
+!     == SET PARAMETERS FOR PSEUDO POTENTIAL ===================================
+      IF(TPOTVAL) THEN
+        WRITE(NFIL,FMT='(T4,"!POT  POW=",F7.3," VAL0=",F12.3' &
+     &               //'," RC/RCOV=",F7.3," !END")') &
+     &                             POTPOW,POTVAL,POTRC/RCOV
+      ELSE
+        WRITE(NFIL,FMT='(T4,"!POT  POW=",F7.3," RC/RCOV=",F7.3," !END")') &
+     &                             POTPOW,POTRC/RCOV
+      END IF
+!
+!     == SET PARAMETERS FOR PSEUDO CORE ========================================
+      IF(TPOTVAL) THEN
+         WRITE(NFIL,FMT='(T4,"!CORE POW=",F7.3," VAL0=",F12.3' &
+     &                //'," RC/RCOV=",F7.3," !END")') &
+     &                             CORPOW,CORVAL,CORRC/RCOV
+      ELSE
+         WRITE(NFIL,FMT='(T4,"!CORE POW=",F7.3," RC/RCOV=",F7.3," !END")') &
+     &                             CORPOW,CORRC/RCOV
+      END IF
+      WRITE(NFIL,FMT='(T2,"!END")') 
+      WRITE(NFIL,*) 
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_ELEMENTTYPE(IZ,ELEMENTTYPE)
+!     **************************************************************************
+!     ** CLASSIFIES THE ATOMS ACCORDING TO SPECIAL ELEMENT TYPES           **
+!     **    A  : ALKALI OR EARTH ALKALI ATOM                                  **
+!     **    M  : MAIN GROUP ELEMENT                                           **
+!     **    T  : TRANSITION METAL ELEMENT                                     **
+!     **    F  : F-ELECTRON METAL: LANTHANIDE OR ACTINIDE                     **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: IZ              ! ATOMIC NUMBER
+      CHARACTER(1),INTENT(OUT) :: ELEMENTTYPE     ! ELEMENT TYPE
+!     **************************************************************************
+      ELEMENTTYPE=' '
+      IF(IZ.GE.  1.AND.IZ.LE. 2) ELEMENTTYPE='A'   ! H,HE
+      IF(IZ.GE.  3.AND.IZ.LE. 4) ELEMENTTYPE='A'   ! ALKALI AND EARTH ALKALI
+      IF(IZ.GE.  5.AND.IZ.LE.10) ELEMENTTYPE='M'   ! MAIN GROUP
+      IF(IZ.GE. 11.AND.IZ.LE.12) ELEMENTTYPE='A'   ! LI, BE
+      IF(IZ.GE. 13.AND.IZ.LE.18) ELEMENTTYPE='M'   ! OTHER 1-ST GROUP ELEMENTS
+      IF(IZ.GE. 19.AND.IZ.LE.20) ELEMENTTYPE='A'   ! K, CA
+      IF(IZ.GE. 21.AND.IZ.LE.30) ELEMENTTYPE='T'   ! 3D TRANSITION METALS
+      IF(IZ.GE. 31.AND.IZ.LE.36) ELEMENTTYPE='M'   
+      IF(IZ.GE. 37.AND.IZ.LE.38) ELEMENTTYPE='A'   ! RB, SR
+      IF(IZ.GE. 39.AND.IZ.LE.48) ELEMENTTYPE='T'   ! 4D TRANSITION METALS
+      IF(IZ.GE. 49.AND.IZ.LE.54) ELEMENTTYPE='M'   
+      IF(IZ.GE. 55.AND.IZ.LE.56) ELEMENTTYPE='A'   ! CS, BA
+      IF(IZ.GE. 57.AND.IZ.LE.71) ELEMENTTYPE='F'   ! LANTHANIDES
+      IF(IZ.GE. 72.AND.IZ.LE.80) ELEMENTTYPE='T'   ! 5D TRANSITION METALS
+      IF(IZ.GE. 81.AND.IZ.LE.86) ELEMENTTYPE='M'   
+      IF(IZ.GE. 87.AND.IZ.LE.88) ELEMENTTYPE='A'   ! FR, RD
+      IF(IZ.GE. 89.AND.IZ.LE.103)ELEMENTTYPE='F'   ! ACTINIDES
+      IF(IZ.GE.104.AND.IZ.LE.112)ELEMENTTYPE='T'   ! 6D TRANSITION METALS
+      IF(IZ.GE.113.AND.IZ.LE.118)ELEMENTTYPE='M'   
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_RADNDLSSMAX(AEZ,N,RAD)
+!     **************************************************************************
+!     ** ESTIMATE THE POSITION OF THE MAXIMUM OF THE NODELESS WAVE FUNCTION   **
+!     ** FOR A GIVEN ATOMIC NUMBER AND MAIN QUANTUM NUMBER N.                 **
+!     **                                                                      **
+!     ** THE POSITION OF THE OUTERMOST MAXIMUM HAS BEEN CALCULATED FOR ALL    **
+!     ** ATOMS IN THE PERIODIC TABLE USING PBE0, AND SCALAR RELATIVISTIC      **
+!     ** THE VALUES WITH 0.1 A.U.<RAD<5 A.U. HAVE BEEN FITTED AS LINEAR       **
+!     ** FUNCTION LN(RAD)=A+B*LN(AEZ).                                        **
+!     **                                                                      **
+!     ** SET (1) CONSIDERS THE MAXIMUM OF |U(R)|                              **
+!     ** SET (2) CONSIDERS THE MAXIMUM OF |R*U(R)|                            **
+!     **                                                                      **
+!     ** THE 1S FUNCTION HAS ITS MAXIMUM AT R=0 AND DOES NOT GIVE A MEANINGFUL**
+!     ** FIT.                                                                 **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2013******************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN)  :: AEZ  ! ATOMIC NUMBER
+      INTEGER(4),INTENT(IN)  :: N    ! MAIN QUANTUM NUMBER
+      REAL(8)   ,INTENT(OUT) :: RAD  ! RADIUS OF MAXIMAL VALIE
+      INTEGER(4),PARAMETER   :: NX=7
+      REAL(8)   ,PARAMETER   :: A1(NX)=(/0.D0,1.4027D0,3.5632D0,5.6558D0 &
+     &                                  ,6.9208D0,9.1717D0,9.9144D0/)
+      REAL(8)   ,PARAMETER   :: B1(NX)=(/0.D0,-1.1004D0,-1.3410D0,-1.5993D0 &
+     &                                  ,-1.6762D0,-1.9976D0,-1.9896D0/)
+      REAL(8)   ,PARAMETER   :: A2(NX)=(/0.072414D0,2.3212D0,4.1957D0,6.2388D0 &
+     &                                  ,7.6373D0,10.068D0,10.03D0/)
+      REAL(8)   ,PARAMETER   :: B2(NX)=(/-1.0164D0,-1.2082D0,-1.4017D0 &
+     &                                ,-1.6617D0,-1.7762D0,-2.1334D0,-1.9469D0/)
+!     **************************************************************************
+      IF(N.LT.1.OR.N.GT.7) THEN
+        CALL ERROR$MSG('VALUE FOR MAIN QUANTUM NUMBER OUT OF RANGE')
+        CALL ERROR$I4VAL('N',N)
+        CALL ERROR$STOP('SETUP_RADNDLSSMAX')
+      END IF
+      IF(AEZ.LE.0.D0) THEN
+        CALL ERROR$MSG('VALUE FOR ATOMIC NUMBER OUT OF RANGE')
+        CALL ERROR$I4VAL('AEZ',AEZ)
+        CALL ERROR$STOP('SETUP_RADNDLSSMAX')
+      END IF
+
+!     RAD=EXP(A1(N)+B1(N)*LOG(AEZ))  ! MAX(U(R))  N=1 NOT AVAILABLE
+      RAD=EXP(A2(N)+B2(N)*LOG(AEZ))  ! MAX(R*U(R))
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_MKSPECIESINPUT(NFIL,ID)
 !     **************************************************************************
 !     ** GENERATES AUTOMATICALLY A PAERAMETER FILE FOR THE SETUP CONSTRUCTION **
-!     **************************************************************************
 !     ******************************PETER BLOECHL, GOSLAR 2010******************
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(2)            :: EL
+      CHARACTER(1)            :: ATOMTYPE
+      LOGICAL(4)              :: TSC   ! SEMI-CORE?
+      CHARACTER(64)           :: STRING
+      INTEGER(4)              :: IZ
+!     **************************************************************************
+      EL=ID(1:2)
+      TSC=INDEX(ID,'_SC').NE.0
+      CALL PERIODICTABLE$GET(EL,'Z',IZ)
+      CALL SETUP_ELEMENTTYPE(IZ,ATOMTYPE)
+      WRITE(NFIL,FMT='(T2,"!SPECIES NAME=",A," ID=",A)') &
+     &                               "'"//EL//"'","'"//TRIM(ID)//"'"
+      IF(.NOT.TSC) THEN
+        IF(IZ.LE.2) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=2")')
+        ELSE IF(IZ.LE.18) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 0  LRHOX=2")')
+        ELSE IF(IZ.LT.56) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1  LRHOX=2")')
+        ELSE      
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1 1 LRHOX=2")')
+        END IF
+      ELSE
+        IF(IZ.LE.2) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=2")')
+        ELSE IF(IZ.LE.18) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 0  LRHOX=2")')
+        ELSE IF(IZ.LT.56) THEN
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1  LRHOX=2")')
+        ELSE      
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1 1 LRHOX=2")')
+        END IF
+      END IF
+!
+!     ==========================================================================
+!     == ENTER THE HYBRID BLOCK 
+!     ==========================================================================
+      IF(.NOT.TSC) THEN
+        IF(ATOMTYPE.EQ.'A') THEN
+          STRING='NCORROFL= 1 0 0 0'
+        ELSE IF(ATOMTYPE.EQ.'M') THEN
+          STRING='NCORROFL= 1 2 0 0'
+        ELSE IF(ATOMTYPE.EQ.'T') THEN
+          STRING='NCORROFL= 1 0 1 0'
+        ELSE IF(ATOMTYPE.EQ.'F') THEN
+          STRING='NCORROFL= 1 0 1 1'
+        END IF
+      ELSE
+        IF(ATOMTYPE.EQ.'A') THEN
+          STRING='NCORROFL= 2 1 0 0'
+        ELSE IF(ATOMTYPE.EQ.'M') THEN
+          STRING='NCORROFL= 2 2 0 0'
+        ELSE IF(ATOMTYPE.EQ.'T') THEN
+          STRING='NCORROFL= 2 1 1 0'
+        ELSE IF(ATOMTYPE.EQ.'F') THEN
+          STRING='NCORROFL= 2 1 1 1'
+        END IF
+      END IF
+      WRITE(NFIL,FMT='(T4,"!HYBRID_X ",A," CV=T HFWEIGHT=0.25 !END")')
+!
+      WRITE(NFIL,FMT='(T2,"!END")')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &                    ,RCL,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                    ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                    ,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     ** GENERATES AUTOMATICALLY A PARAMETER FILE FOR THE SETUP CONSTRUCTION  **
+!     ** TYPE: NDLSS                                                          **
+!     **                                                                      **
+!     ** RADII RELATIVE TO RCOV ARE LIMITED BY A MINIMUM AND A MAXIMUM        **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
       USE PERIODICTABLE_MODULE
       USE CONSTANTS_MODULE
       IMPLICIT NONE
-      INTEGER(4),PARAMETER :: NFIL=1001
-      INTEGER(4),PARAMETER :: NFIL2=1002
-      CHARACTER(2)     :: EL
-      CHARACTER(12)    :: ID
-      CHARACTER(14)    :: SY
-      CHARACTER(5)     :: TYPE="'HBS'"
-      REAL(8)          :: RMAX=7.D0
-      INTEGER(4)       :: I
-      REAL(8)          :: AEZ,ZCORE,ZV,RCOV,ANGSTROM
-      CHARACTER(1)     :: ATOMTYPE
+      CHARACTER(*),INTENT(IN)  :: ID       ! SETUP ID
+      INTEGER(4)  ,INTENT(IN)  :: LX       ! RC PRODUCED UP TO ANGULAR MOM LX.
+      REAL(8)     ,INTENT(OUT) :: AEZ      ! ATOMIC NUMBER
+      REAL(8)     ,INTENT(OUT) :: ZV       ! #(VALENCE ELECTRONS)
+      CHARACTER(*),INTENT(OUT) :: TYPE     ! PSEUDIZATION TYPE
+      REAL(8)     ,INTENT(OUT) :: RBOX     ! RBOX
+      REAL(8)     ,INTENT(OUT) :: RCSM     ! RCSM
+      REAL(8)     ,INTENT(OUT) :: RCL(LX+1)! RC(PHI)
+      REAL(8)     ,INTENT(OUT) :: POTPOW   ! LEADING POWER FOR PSEUDO POTENTIAL
+      REAL(8)     ,INTENT(OUT) :: POTRC    ! RC FOR PSEUDO POTENTIAL
+      LOGICAL(4)  ,INTENT(OUT) :: TPOTVAL  ! CONSIDER POTVAL?
+      REAL(8)     ,INTENT(OUT) :: POTVAL   ! PSEUDO POTENTIAL VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: CORPOW   ! LEADING POWER FOR PSEUDO CORE
+      REAL(8)     ,INTENT(OUT) :: CORRC    ! RC FOR PSEUDO CORE
+      LOGICAL(4)  ,INTENT(OUT) :: TCORVAL  ! CONSIDER CORVAL?
+      REAL(8)     ,INTENT(OUT) :: CORVAL   ! PSEUDO CORE VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: DMIN     ! SMALLEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: DMAX     ! LARGEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: RMAX     ! OUTERMOST GRID POINT 
+      REAL(8)     ,PARAMETER   :: SCALE=1.D0 
+      CHARACTER(32)            :: STPTYPE
+      CHARACTER(2)             :: EL       ! ELEMENT SYMBOL
+      INTEGER(4)               :: I,L
+      INTEGER(4)               :: IZ
+      LOGICAL(4)               :: TSC
+      REAL(8)                  :: ZCORE
+      REAL(8)                  :: RCOV
+      REAL(8)                  :: ANGSTROM
+      INTEGER(4)               :: NMAIN(0:LX)
 !     **************************************************************************
+                      CALL TRACE$PUSH('SETUP_BUILDPARMSONE_NDLSS')
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      OPEN(NFIL,FILE='STP.CNTL_HBSAUTOMATIC')
-      OPEN(NFIL2,FILE='TEST.STRC_HBSAUTOMATIC')
-      REWIND NFIL
-      REWIND NFIL2
-      WRITE(NFIL,FMT='("!SCNTL")')
-      DO I=1,105
-        CALL PERIODICTABLE$GET(I,'SYMBOL',EL)
-        CALL PERIODICTABLE$GET(I,'Z',AEZ)
-        CALL PERIODICTABLE$GET(I,'ZCORE',ZCORE)
-        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-        ZV=AEZ-ZCORE
-        ID="'"//TRIM(EL)//'_HBS'//"'"
-        SY="'"//EL//"'"
-        IF(SY(3:3).EQ.' ')SY(3:3)='_'
-        IF(I.GE.1.AND.I.LE.2)   ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
-        IF(I.GE.3.AND.I.LE.4)   ATOMTYPE='A'   ! ALKALI AND EARTH ALKALI
-        IF(I.GE.5.AND.I.LE.10)  ATOMTYPE='M'   ! MAIN GROUP
-        IF(I.GE.11.AND.I.LE.12) ATOMTYPE='A'   
-        IF(I.GE.13.AND.I.LE.18) ATOMTYPE='M'   
-        IF(I.GE.19.AND.I.LE.20) ATOMTYPE='A'   
-        IF(I.GE.21.AND.I.LE.30) ATOMTYPE='T'   !TRANSITION METAL AND POOR METALS  
-        IF(I.GE.31.AND.I.LE.36) ATOMTYPE='M'   
-        IF(I.GE.37.AND.I.LE.38) ATOMTYPE='A'   
-        IF(I.GE.39.AND.I.LE.48) ATOMTYPE='T'   
-        IF(I.GE.49.AND.I.LE.54) ATOMTYPE='M'   
-        IF(I.GE.55.AND.I.LE.56) ATOMTYPE='A'   
-        IF(I.GE.57.AND.I.LE.71) ATOMTYPE='F'   
-        IF(I.GE.72.AND.I.LE.80) ATOMTYPE='T'   
-        IF(I.GE.81.AND.I.LE.86) ATOMTYPE='M'   
-        IF(I.GE.87.AND.I.LE.88) ATOMTYPE='A'   
-        IF(I.GE.89.AND.I.LE.103) ATOMTYPE='F'   
-        IF(I.GE.104.AND.I.LE.112) ATOMTYPE='T'   
-        IF(I.GE.113.AND.I.LE.118) ATOMTYPE='M'   
+      TYPE='NDLSS'
 !
-!       == RMAX MUST BE LARGER THAN THE BOX RADIUS AND SHOULD AT LEAST BE AS ===
-!       == LARGE AS THE BOND DISTANCE TO OXYGEN ================================
-        RMAX=MAX(2.D0*RCOV+0.5D0,RCOV+0.73D0*ANGSTROM)
+!     ==========================================================================
+!     == CHECK ID AND PREPARE SOME DATA                                      ==
+!     ==========================================================================
+      I=INDEX(ID,'_')
+      STPTYPE=ID(I+1:)
+      IF(STPTYPE.EQ.'NDLSS_V0') THEN
+        TSC=.FALSE.
+      ELSE IF(STPTYPE.EQ.'NDLSS_SC_V0') THEN
+        TSC=.TRUE.
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$MSG('ID MUST END ON "NDLSS" OR "NDLSS_SC"')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_BUILDPARMSONE_NDLSS')
+      END IF
+      EL=ID(1:2)
+      CALL PERIODICTABLE$GET(EL,'Z',IZ)
+      CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
 !
-!       ========================================================================
-!       == VALENCE-ONLY SETUPS                                                ==
-!       ========================================================================
-!       == EXCLUDE D AND F-SHELLS FOR MAINGROUP ELEMENTS (S-P)
-        ZV=AEZ-ZCORE
-        IF(I.GE.31.AND.I.LE.36) ZV=ZV-10.D0
-        IF(I.GE.49.AND.I.LE.54) ZV=ZV-10.D0
-        IF(I.GE.72.AND.I.LE.80) ZV=ZV-14.D0
-        IF(I.GE.81.AND.I.LE.86) ZV=ZV-24.D0
-        IF(I.GE.104) ZV=ZV-14.D0
-        WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
-     &     TRIM(ID),TRIM(SY),ZV
-        WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=2.0 RCSM/RCOV=0.25")') &
-           TYPE
-        WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.75 0.75 0.75 0.75")') 
-        WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
-        WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
-        WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-1.2 RC/RCOV=0.67 !END")') 
-        WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL=0.1  RC/RCOV=0.67 !END")') 
-        WRITE(NFIL,FMT='(T2,"!END")') 
-        WRITE(NFIL,*) 
+!     ==========================================================================
+!     == DETERMINE NUMBER OF VALENCE ELECTRONS                                ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
+      CALL PERIODICTABLE$GET(IZ,'ZCORE',ZCORE)
+      ZV=AEZ-ZCORE
 !
-!       == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
-        WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
-        IF(I.LE.2) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
-        ELSE IF(I.LE.18) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 0  LRHOX=2")')
-        ELSE IF(I.LT.56) THEN
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1  LRHOX=2")')
-        ELSE      
-          WRITE(NFIL2,FMT='(T4,"NPRO=1 1 1 1 LRHOX=2")')
-        END IF
-        IF(ATOMTYPE.EQ.'A') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 0 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'M') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 1 0 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'T') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 0 CV=T HFWEIGHT=0.25 !END")')
-        ELSE IF(ATOMTYPE.EQ.'F') THEN
-          WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 1 0 1 1 CV=T HFWEIGHT=0.25 !END")')
-        END IF
-        WRITE(NFIL2,FMT='(T2,"!END")')
-!
-!       ========================================================================
-!       == SEMI-CORE SETUPS                                                   ==
-!       ========================================================================
-!       == INCLUDE CORE-S-P SHELL INTO THE VALENCE SO THAT ALL STATES 
-!       == WITH A MINIMUM MAIN QUANTUM NUMBER ARE INCLUDED
-        IF(AEZ.GE.11) THEN
-          ZV=AEZ-ZCORE+8.D0
-!       == F-STATES ARE INCLUDED ONLY FOR F-ELEMENTS
-!          IF(I.GE.72.AND.I.LE.86) ZV=ZV-14.D0
-!          IF(I.GE.104.AND.I.LE.118) ZV=ZV-14.D0
-          ID="'"//TRIM(EL)//'_HBS_SC'//"'"
-          SY="'"//EL//"'"
-          IF(SY(3:3).EQ.' ')SY(3:3)='_'
-          WRITE(NFIL,FMT='(T2,"!SETUP  ID=",A," EL=",A," ZV=",F3.0)') &
-       &     TRIM(ID),TRIM(SY),ZV
-          WRITE(NFIL,FMT='(T10,"TYPE=",A," RBOX/RCOV=1.2 RCSM/RCOV=0.25")') &
-               TYPE
-          WRITE(NFIL,FMT='(T10,"RCL/RCOV= 0.5 0.5 0.5 0.5")') 
-          WRITE(NFIL,FMT='(T10,"LAMBDA= 6. 6. 6. 6.")') 
-          WRITE(NFIL,FMT='(T4,"!GRID DMIN=5.E-6 DMAX=0.1 RMAX=",F4.1," !END")')RMAX 
-          WRITE(NFIL,FMT='(T4,"!POT  POW=3. VAL=-2.2 RC/RCOV=0.5  !END")') 
-          WRITE(NFIL,FMT='(T4,"!CORE POW=3. VAL= 0.1 RC/RCOV=0.5  !END")') 
-          WRITE(NFIL,FMT='(T2,"!END")') 
-          WRITE(NFIL,*) 
-!
-!         == NOW PREPARE INPUT FOR TEST STRUCTURE FILE
-          SY="'"//EL//"_SC'"
-          WRITE(NFIL2,FMT='(T2,"!SPECIES NAME=",A," ID=",A)')TRIM(SY),TRIM(ID)
-          IF(I.LE.2) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=1  LRHOX=2")')
-          ELSE IF(I.LE.18) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 0  LRHOX=2")')
-          ELSE IF(I.LT.56) THEN
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1  LRHOX=2")')
-          ELSE      
-            WRITE(NFIL2,FMT='(T4,"NPRO=2 2 1 1 LRHOX=2")')
-          END IF
-          IF(ATOMTYPE.EQ.'A') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 0 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'M') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 2 0 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'T') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 0 CV=T HFWEIGHT=0.25 !END")')
-          ELSE IF(ATOMTYPE.EQ.'F') THEN
-            WRITE(NFIL2,FMT='(T4,"!HYBRID_X NCORROFL= 2 1 1 1 CV=T HFWEIGHT=0.25 !END")')
-          END IF
-          WRITE(NFIL2,FMT='(T2,"!END")')
-        END IF
+!     ==========================================================================
+!     == DETERMINE MAIN QUANTUM NUMBERS ACCORDIG TO PERIODIC TABLE            ==
+!     ==========================================================================
+!     == START WITH LOWEST POSSIBLE VALUE
+      DO L=0,LX
+        NMAIN(L)=L+1
       ENDDO
-      WRITE(NFIL,FMT='("!END")') 
-      WRITE(NFIL,FMT='("!EOB")') 
-      WRITE(NFIL,*)
-      CLOSE(NFIL)
+!     == INCREASE ACCORDING TO NORMAL SHELLS
+      IF(IZ.GE. 3) NMAIN(:)=MAX(NMAIN,2)
+      IF(IZ.GE.11) NMAIN(:)=MAX(NMAIN,3)
+      IF(IZ.GE.19) NMAIN(:)=MAX(NMAIN,4)
+      IF(IZ.GE.37) NMAIN(:)=MAX(NMAIN,5)
+      IF(IZ.GE.55) NMAIN(:)=MAX(NMAIN,6)
+      IF(IZ.GE.87) NMAIN(:)=MAX(NMAIN,7)
+!     == TAKE INTO ACCOUNT D AND F ANOMALIES
+      IF(IZ.GE.19) NMAIN(2)=3    ! 3D SHELL
+      IF(IZ.GE.37) NMAIN(2)=4    ! 4D SHELL
+      IF(IZ.GE.55) NMAIN(2)=5    ! 5D SHELL
+      IF(IZ.GE.87) NMAIN(2)=6    ! 6D SHELL
+      IF(IZ.GT.55) NMAIN(3)=4    ! 4F SHELL
+      IF(IZ.GT.87) NMAIN(3)=5    ! 4F SHELL
+!
+!     ==========================================================================
+!     ==  SPECIFY CORE AND VALENCE SHELLS FOR NORMAL AND SEMI-CORE SETUPS     ==
+!     ==========================================================================
+      IF(TSC) THEN
+!       == SETUPS WITH SEMICORE ================================================
+        IF(IZ.GE.19.AND.IZ.LE.30) THEN      ! PUT 3SP SHELL IN VALENCE
+          NMAIN(0)=NMAIN(0)-1
+          NMAIN(1)=NMAIN(1)-1
+          ZV=ZV+8
+        ELSE IF(IZ.GE.37.AND.IZ.LE.48) THEN ! PUT 4SP SHELL IN VALENCE
+          NMAIN(0)=NMAIN(0)-1
+          NMAIN(1)=NMAIN(1)-1
+          ZV=ZV+8
+        ELSE IF(IZ.GE.55.AND.IZ.LE.80) THEN ! PUT 5SP SHELL IN VALENCE
+          NMAIN(0)=NMAIN(0)-1
+          NMAIN(1)=NMAIN(1)-1
+          ZV=ZV+8
+          IF(IZ.GT.72) THEN                 ! PUT 4F INTO CORE
+            NMAIN(3)=NMAIN(3)+1
+            ZV=ZV-14
+          END IF
+        ELSE IF(IZ.GE.97.AND.IZ.LE.112) THEN ! PUT 6SP SHELL IN VALENCE
+          NMAIN(0)=NMAIN(0)-1
+          NMAIN(1)=NMAIN(1)-1
+          ZV=ZV+8
+          IF(IZ.GT.104) THEN                 ! PUT 5F INTO CORE
+            NMAIN(3)=NMAIN(3)+1
+            ZV=ZV-14
+          END IF
+        END IF
+      ELSE
+!       == SETUPS WITHOUT SEMICORE =============================================
+        IF(IZ.GE.31.AND.IZ.LE.36) THEN     ! PUT 3D-SHELL IN CORE
+          NMAIN(2)=4
+          ZV=ZV-10
+        ELSE IF(IZ.GE.49.AND.IZ.LE.54) THEN  ! PUT 4D-SHELL IN CORE
+          NMAIN(2)=5
+          ZV=ZV-10
+        ELSE IF(IZ.GE.72.AND.IZ.LE.80) THEN  ! PUT 4F SHELL IN CORE
+          NMAIN(3)=5
+          ZV=ZV-14
+        ELSE IF(IZ.GE.81.AND.IZ.LE.86) THEN  ! PUT 4F AND 5D SHELLS IN CORE
+          NMAIN(2)=6
+          NMAIN(3)=5
+          ZV=ZV-24
+        ELSE IF(IZ.GE.104.AND.IZ.LE.112) THEN ! PUT 5F SHELL IN CORE
+          NMAIN(3)=6
+          ZV=ZV-14
+        END IF  
+      END IF
+!
+!     ==========================================================================
+!     == DETERMINE RADIAL GRID
+!     ==========================================================================
+      DO L=0,LX
+        IF(AEZ.EQ.0) THEN
+          CALL SETUP_RADNDLSSMAX(1.D0,NMAIN(L),RCL(L+1))
+        ELSE
+          CALL SETUP_RADNDLSSMAX(AEZ,NMAIN(L),RCL(L+1))
+        END IF
+        RCL(L+1)=MIN(1.4D0*RCOV,RCL(L+1))
+        RCL(L+1)=MAX(0.5D0*RCOV,RCL(L+1))
+      ENDDO
+      RCL(:)=RCL(:)*SCALE  ! APPLY SCALE FACTOR
+RCL=RCOV
+!
+!     ==========================================================================
+!     == OTHER PARAMETERS
+!     ==========================================================================
+      RBOX     =1.2D0*RCOV
+      RCSM     =0.25D0*RCOV
+      POTPOW   =3.D0
+      TPOTVAL  =.FALSE.    ! POTVAL NOT USED
+      POTVAL   =0.D0
+      POTRC    =0.702D0*RCOV
+      CORPOW   =3.D0
+      TCORVAL  =.FALSE.    ! CORVAL NOT USED
+      CORVAL   =0.D0
+      CORRC    =0.702D0*RCOV
+!
+!     ==========================================================================
+!     == DETERMINE RADIAL GRID
+!     ==========================================================================
+      DMIN=1.D-6
+      DMAX=1.D-1
+!     == RMAX MUST BE LARGER THAN THE BOX RADIUS AND SHOULD AT LEAST BE AS ===
+!     == LARGE AS THE BOND DISTANCE TO OXYGEN ================================
+      RMAX=20.D0
+                            CALL TRACE$POP()
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_BUILDPARMS_1()
+      SUBROUTINE SETUP_BUILDPARMSONE_HBS(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &               ,RCL,LAMBDA &
+     &               ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &               ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &               ,DMIN,DMAX,RMAX)
 !     **************************************************************************
-!     **************************************************************************
-!     **************************************************************************
-!     ******************************PETER BLOECHL, GOSLAR 2010******************
-      USE STRINGS_MODULE
+!     ** GENERATES AUTOMATICALLY A PARAMETER FILE FOR THE SETUP CONSTRUCTION  **
+!     ** TYPE: HBS AND HBS_SC                                                 **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
       USE PERIODICTABLE_MODULE
+      USE CONSTANTS_MODULE
       IMPLICIT NONE
-      INTEGER(4)           :: IZ
-      CHARACTER(2)         :: SY
-      CHARACTER(32)        :: ID
-      CHARACTER(32)        :: STRING
-      REAL(8)   ,PARAMETER :: FACTOR=0.75D0  !RC=FACTOR*RCOV
-      REAL(8)   ,PARAMETER :: LAMBDA=6.D0  !RC=FACTOR*RCOV
-      INTEGER(4)           :: NS,NP,ND,NF
-      INTEGER(4)           :: NFIL
-      REAL(8)              :: RCOV 
-      REAL(8)              :: ZV
-      CHARACTER(1),PARAMETER:: APOSTROPHE="'"  !'
-      CHARACTER(120)       :: LINE      
+      CHARACTER(*),INTENT(IN)  :: ID       ! SETUP ID
+      INTEGER(4)  ,INTENT(IN)  :: LX       ! RC PRODUCED UP TO ANGULAR MOM LX.
+      REAL(8)     ,INTENT(OUT) :: AEZ      ! ATOMIC NUMBER
+      REAL(8)     ,INTENT(OUT) :: ZV       ! #(VALENCE ELECTRONS)
+      CHARACTER(*),INTENT(OUT) :: TYPE     ! PSEUDIZATION TYPE
+      REAL(8)     ,INTENT(OUT) :: RBOX     ! RBOX
+      REAL(8)     ,INTENT(OUT) :: RCSM     ! RCSM
+      REAL(8)     ,INTENT(OUT) :: RCL(LX+1)! RC(PHI)
+      REAL(8)     ,INTENT(OUT) :: LAMBDA(LX+1) ! LAMBDA
+      REAL(8)     ,INTENT(OUT) :: POTPOW   ! LEADING POWER FOR PSEUDO POTENTIAL
+      REAL(8)     ,INTENT(OUT) :: POTRC    ! RC FOR PSEUDO POTENTIAL
+      LOGICAL(4)  ,INTENT(OUT) :: TPOTVAL  ! POTVAL RELEVANT?
+      REAL(8)     ,INTENT(OUT) :: POTVAL   ! PSEUDO POTENTIAL VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: CORPOW   ! LEADING POWER FOR PSEUDO CORE
+      REAL(8)     ,INTENT(OUT) :: CORRC    ! RC FOR PSEUDO CORE
+      LOGICAL(4)  ,INTENT(OUT) :: TCORVAL  ! CORVAL RELEVANT?
+      REAL(8)     ,INTENT(OUT) :: CORVAL   ! PSEUDO CORE VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: DMIN     ! SMALLEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: DMAX     ! LARGEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: RMAX     ! OUTERMOST GRID POINT 
+      CHARACTER(32)            :: STPTYPE
+      CHARACTER(2)             :: EL       ! ELEMENT SYMBOL
+      INTEGER(4)               :: I
+      INTEGER(4)               :: IZ
+      LOGICAL(4)               :: TSC
+      REAL(8)                  :: ZCORE
+      REAL(8)                  :: RCOV
+      REAL(8)                  :: ANGSTROM
 !     **************************************************************************
+                      CALL TRACE$PUSH('SETUP_BUILDPARMSONE_HBS')
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+!
 !     ==========================================================================
-!     == SPECIFY FILE                                                         ==
+!     == CHECK ID AND PREPARE SOME DATA                                      ==
 !     ==========================================================================
-      CALL FILEHANDLER$SETFILE('TMP',.FALSE.,'STP.PARMS_AUTO')
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','STATUS','UNKNOWN')
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION('TMP','FORM','FORMATTED')
-      CALL FILEHANDLER$UNIT('TMP',NFIL)
-
-      DO IZ=1,105
-        CALL PERIODICTABLE$GET(IZ,'SYMBOL',SY)
-        CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
-        CALL PERIODICTABLE$GET(IZ,'OCC(S)',NS)
-        CALL PERIODICTABLE$GET(IZ,'OCC(P)',NP)
-        CALL PERIODICTABLE$GET(IZ,'OCC(D)',ND)
-        CALL PERIODICTABLE$GET(IZ,'OCC(F)',NF)
-        ZV=REAL(NS+NP+ND+NF)
+      I=INDEX(ID,'_')
+      STPTYPE=ID(I+1:)
+      IF(STPTYPE.EQ.'HBS') THEN
+        TSC=.FALSE.
+      ELSE IF(STPTYPE.EQ.'HBS_SC') THEN
+        TSC=.TRUE.
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$MSG('ID MUST END ON "HBS" OR "HBS_SC"')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_BUILDPARMSONE_HBS')
+      END IF
+      EL=ID(1:2)
+      CALL PERIODICTABLE$GET(EL,'Z',IZ)
+      CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
+      TYPE='HBS'
 !
-!       ========================================================================
-!       == CONSTRUCT ID  SI_.75_6.0                                           ==
-!       ========================================================================
-        WRITE(STRING,FMT='(F5.2)')FACTOR
-        ID=TRIM(SY)//'_'//ADJUSTL(STRING)
-        WRITE(STRING,FMT='(F4.1)')LAMBDA
-        ID=TRIM(ID)//'_'//ADJUSTL(STRING)
+!     ==========================================================================
+!     == DETERMINE NUMBER OF VALENCE ELECTRONS                                ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
+      CALL PERIODICTABLE$GET(IZ,'ZCORE',ZCORE)
+      ZV=AEZ-ZCORE
+      IF(IZ.GE.31.AND.IZ.LE.36) ZV=ZV-10.D0
+      IF(IZ.GE.49.AND.IZ.LE.54) ZV=ZV-10.D0
+      IF(IZ.GE.72.AND.IZ.LE.80) ZV=ZV-14.D0
+      IF(IZ.GE.81.AND.IZ.LE.86) ZV=ZV-24.D0
+      IF(IZ.GE.104) ZV=ZV-14.D0
+      IF(TSC) THEN
+        IF(AEZ.GE.11)ZV=AEZ-ZCORE+8.D0
+      END IF
 !
-!       ========================================================================
-!       == WRITE INPUT FILE                                                  ==
-!       ========================================================================
-        LINE='  !SETUP'
-        LINE(11:)='ID='//APOSTROPHE//TRIM(ID)//APOSTROPHE
-        LINE=TRIM(LINE)//' EL='//APOSTROPHE//TRIM(SY)//APOSTROPHE
-        WRITE(STRING,FMT='(F5.0)')ZV
-        LINE=TRIM(LINE)//' ZV='//TRIM(STRING)
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
+!     ==========================================================================
+!     == DETERMINE CUTOFF RADII ETC.
+!     ==========================================================================
+      IF(.NOT.TSC) THEN
+        RBOX     =1.2D0*RCOV
+        RCSM     =0.25D0*RCOV
+        RCL(:)   =0.75D0*RCOV
+        LAMBDA(:)=6.D0
+        POTPOW   =3.D0
+        POTRC    =0.67D0*RCOV
+        TPOTVAL  =.FALSE.
+        POTVAL   =0.D0
+        CORPOW   =3.D0
+        CORRC    =0.67D0*RCOV
+        TCORVAL  =.FALSE.
+        CORVAL   =0.D0
+      ELSE
+        RBOX     =2.D0*RCOV
+        RCSM     =0.25D0*RCOV
+        RCL(:)   =0.5D0*RCOV
+        LAMBDA(:)=6.D0
+        POTPOW   =3.D0
+        POTRC    =0.5D0*RCOV
+        TPOTVAL  =.FALSE.
+        POTVAL   =-2.2D0  
+        CORPOW   =3.D0
+        CORRC    =0.5D0*RCOV
+        TCORVAL  =.FALSE.
+        CORVAL   =0.1D0   
+      END IF
+!     __ROUND POTRC/RCOV TO THREE DIGITS TO BE CONSISTENT WITH SETUP FILE_______
+      POTRC=REAL(INT(1.D+3*POTRC/RCOV),KIND=8)*RCOV*1.D-3
+!     __ROUND CORRC/RCOV TO THREE DIGITS TO BE CONSISTENT WITH SETUP FILE_______
+      CORRC=REAL(INT(1.D+3*CORRC/RCOV),KIND=8)*RCOV*1.D-3
 !
-!       =================================================================
-        LINE=''
-        LINE(11:)='TYPE='//APOSTROPHE//'HBS'//APOSTROPHE
-        LINE=TRIM(LINE)//'  RBOX/RCOV=2.0'
-        LINE=TRIM(LINE)//'  RCSM/RCOV=0.25'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
+!     ==========================================================================
+!     == DETERMINE RADIAL GRID
+!     ==========================================================================
+      DMIN=1.D-6
+      DMAX=1.D-1
+!     == RMAX MUST BE LARGER THAN THE BOX RADIUS AND SHOULD AT LEAST BE AS ===
+!     == LARGE AS THE BOND DISTANCE TO OXYGEN ================================
+      RMAX=9.D0
 !
-!       =================================================================
-        LINE=''
-        LINE(11:)='RCL/RCOV= 0.75 0.75 0.75 0.75'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
-!
-!       =================================================================
-        LINE=''
-        LINE(11:)='LAMBDA= 6. 6. 6. 6.'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
-!
-!       =================================================================
-        LINE=''
-        LINE(5:)='!GRID DMIN=5.E-6 DMAX=0.1 RMAX= 20. !END'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
-!
-!       =================================================================
-        LINE=''
-        WRITE(STRING,FMT='(F8.3)')FACTOR-0.1D0/RCOV
-        LINE(5:)='!POT  POW=3. RC/RCOV='//TRIM(STRING)//' !END'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
-!
-!       =================================================================
-        LINE=''
-        WRITE(STRING,FMT='(F8.3)')FACTOR-0.1D0/RCOV
-        LINE(5:)='!CORE POW=3. RC/RCOV='//TRIM(STRING)//' !END'
-        WRITE(NFIL,FMT='(A)')+TRIM(LINE)
-!
-!       =================================================================
-        WRITE(NFIL,FMT='("  !END")')
-        WRITE(NFIL,*)
-      ENDDO
-      CALL FILEHANDLER$CLOSE('TMP')
-      STOP
+!     ========================================================================
+!     == SEMI-CORE SETUPS                                                   ==
+!     ========================================================================
+!     == INCLUDE CORE-S-P SHELL INTO THE VALENCE SO THAT ALL STATES 
+!     == WITH A MINIMUM MAIN QUANTUM NUMBER ARE INCLUDED
+      IF(TSC.AND.AEZ.GE.11) THEN
+        ZV=AEZ-ZCORE+8.D0
+!       == F-STATES ARE INCLUDED ONLY FOR F-ELEMENTS
+!       IF(IZ.GE.72.AND.IZ.LE.86) ZV=ZV-14.D0
+!       IF(IZ.GE.104.AND.IZ.LE.118) ZV=ZV-14.D0
+      END IF
+                      CALL TRACE$POP()
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_CVXSETUP()
+      SUBROUTINE SETUP_BUILDPARMSONE_7560(ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &                                   ,RCL,LAMBDA &
+     &                                   ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                                   ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                                   ,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     ** GENERATES AUTOMATICALLY A PARAMETER FILE FOR THE SETUP CONSTRUCTION  **
+!     ** TYPE: .75_6.0                                                        **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      USE PERIODICTABLE_MODULE
+      USE CONSTANTS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID       ! SETUP ID
+      INTEGER(4)  ,INTENT(IN)  :: LX       ! RC PRODUCED UP TO ANGULAR MOM LX.
+      REAL(8)     ,INTENT(OUT) :: AEZ      ! ATOMIC NUMBER
+      REAL(8)     ,INTENT(OUT) :: ZV       ! #(VALENCE ELECTRONS)
+      CHARACTER(*),INTENT(OUT) :: TYPE     ! PSEUDIZATION TYPE
+      REAL(8)     ,INTENT(OUT) :: RBOX     ! RBOX
+      REAL(8)     ,INTENT(OUT) :: RCSM     ! RCSM
+      REAL(8)     ,INTENT(OUT) :: RCL(LX+1)! RC(PHI)
+      REAL(8)     ,INTENT(OUT) :: LAMBDA(LX+1) ! LAMBDA
+      REAL(8)     ,INTENT(OUT) :: POTPOW   ! LEADING POWER FOR PSEUDO POTENTIAL
+      REAL(8)     ,INTENT(OUT) :: POTRC    ! RC FOR PSEUDO POTENTIAL
+      LOGICAL(4)  ,INTENT(OUT) :: TPOTVAL  ! POTVAL RELEVANT?
+      REAL(8)     ,INTENT(OUT) :: POTVAL   ! PSEUDO POTENTIAL VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: CORPOW   ! LEADING POWER FOR PSEUDO CORE
+      REAL(8)     ,INTENT(OUT) :: CORRC    ! RC FOR PSEUDO CORE
+      LOGICAL(4)  ,INTENT(OUT) :: TCORVAL ! CORVAL RELEVANT?
+      REAL(8)     ,INTENT(OUT) :: CORVAL   ! PSEUDO CORE VALUE AT R=0
+      REAL(8)     ,INTENT(OUT) :: DMIN     ! SMALLEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: DMAX     ! LARGEST GRID SPACING
+      REAL(8)     ,INTENT(OUT) :: RMAX     ! OUTERMOST GRID POINT 
+      CHARACTER(32)            :: STPTYPE
+      CHARACTER(2)             :: EL       ! ELEMENT SYMBOL
+      INTEGER(4)               :: NS,NP,ND,NF
+      INTEGER(4)               :: I
+      INTEGER(4)               :: IZ
+      LOGICAL(4)               :: TSC
+      REAL(8)                  :: ZCORE
+      REAL(8)                  :: RCOV
+!     **************************************************************************
+                      CALL TRACE$PUSH('SETUP_BUILDPARMSONE_NDLSS')
+!
+!     ==========================================================================
+!     == CHECK ID AND PREPARE SOME DATA                                      ==
+!     ==========================================================================
+      I=INDEX(ID,'_')
+      STPTYPE=ID(I+1:)
+      IF(STPTYPE.EQ.'.75_6.0') THEN
+        TSC=.FALSE.
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$MSG('ID MUST END ON ".75_6.0"')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP_BUILDPARMSONE_NDLSS')
+      END IF
+      TYPE='HBS'
+      EL=ID(1:2)
+      CALL PERIODICTABLE$GET(EL,'Z',IZ)
+      CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
+      CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
+!
+!     ==========================================================================
+!     == DETERMINE NUMBER OF VALENCE ELECTRONS                                ==
+!     ==========================================================================
+      CALL PERIODICTABLE$GET(IZ,'OCC(S)',NS)
+      CALL PERIODICTABLE$GET(IZ,'OCC(P)',NP)
+      CALL PERIODICTABLE$GET(IZ,'OCC(D)',ND)
+      CALL PERIODICTABLE$GET(IZ,'OCC(F)',NF)
+      ZV=REAL(NS+NP+ND+NF)
+!
+!     ==========================================================================
+!     == DETERMINE CUTOFF RADII ETC.
+!     ==========================================================================
+      RBOX     =1.2D0*RCOV
+      RCSM     =0.25D0*RCOV
+      RCL(:)   =0.75D0*RCOV
+      LAMBDA(:)=6.D0
+      POTPOW   =3.D0
+      POTRC    =0.75D0*RCOV-0.1D0
+!     __ROUND POTRC/RCOV TO THREE DIGITS TO BE CONSISTENT WITH SETUP FILE_______
+      POTRC=REAL(INT(1.D+3*POTRC/RCOV),KIND=8)*RCOV*1.D-3
+      TPOTVAL  =.FALSE.
+      POTVAL   =999.999D0  !APPARENTLY INCORRECT NUMBER
+      CORPOW   =3.D0
+      CORRC    =0.75D0*RCOV-0.1D0
+!     __ROUND CORRC/RCOV TO THREE DIGITS TO BE CONSISTENT WITH SETUP FILE_______
+      CORRC=REAL(INT(1.D+3*CORRC/RCOV),KIND=8)*RCOV*1.D-3
+      TCORVAL  =.FALSE.
+      CORVAL   =999.999D0  !APPARENTLY INCORRECT NUMBER
+!
+!     ==========================================================================
+!     == DETERMINE RADIAL GRID
+!     ==========================================================================
+      DMIN=1.D-6
+      DMAX=1.D-1
+      RMAX=20.
+                      CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_CVXSETUP()
 !     **************************************************************************
 !     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
 !     **                                                                      **
@@ -5313,7 +5809,7 @@ PRINT*,'KI ',KI
       NC=THIS%ATOM%NC
       LNX=THIS%LNX
       ALLOCATE(THIS%COREVALENCEX(LNX,LNX))
-      CALL SETUPS_CVXMAT(GID,NR &
+      CALL SETUP_CVXMAT(GID,NR &
      &              ,LNX,THIS%LOX,THIS%AEPHI &
      &              ,NC,THIS%ATOM%LOFI(:NC),THIS%ATOM%AEPSI(:,:NC) &
      &              ,LRHOX,THIS%COREVALENCEX)
@@ -5321,7 +5817,7 @@ PRINT*,'KI ',KI
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
+      SUBROUTINE SETUP_CVXMAT(GID,NR,LNX,LOX,AEPHI,NC,LOFC,PSIC,LRHOX,MAT)
 !     **************************************************************************
 !     **  CORE-VALENCE EXCHANGE MATRIX ELEMENTS                               **
 !     **                                                                      **
@@ -5436,7 +5932,7 @@ PRINT*,'KI ',KI
       END      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
+      SUBROUTINE SETUP_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &            ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &            ,AEPOT,PSPOT,VFOCK &
      &            ,QN,AEPHI,PSPHI,PRO,DTKIN,DOVER,AEPHIDOT,PSPHIDOT,TREL,TZORA &
@@ -5525,6 +6021,19 @@ PRINT*,'KI ',KI
       INTEGER(4),ALLOCATABLE :: NPROL(:)
       REAL(8)               :: PI,Y0
 !     **************************************************************************
+PRINT*,'IN OUTEROLDPROWRAPPER'
+PRINT*,'GID,NR,RUT,RBOX,RCOV,NB,NC',GID,NR,ROUT,RBOX,RCOV,NB,NC
+PRINT*,'LOFI=',LOFI
+PRINT*,'SOFI=',SOFI
+PRINT*,'EOFI=',EOFI
+PRINT*,'LNX,LOX=',LNX,LOX
+PRINT*,'TYPE=',TYPE
+PRINT*,'RC=',RC
+PRINT*,'LAMBDA=',LAMBDA
+PRINT*,'ISCATT=',ISCATT
+PRINT*,'AEPOT=',AEPOT
+PRINT*,'PSPOT=',PSPOT
+
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
@@ -5615,6 +6124,8 @@ PRINT*,'EOFI1 ',EOFI1
         ISO=0
 !       == GET ENERGY OF THE LOWEST VALENCE STATE WITH THIS L ==================
         E=0.D0
+PRINT*,'NB,NC,EOFI1',NB,NC,EOFI1
+
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
           E=EOFI1(IB)
@@ -6517,7 +7028,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_OUTERNEWPROWRAPPER(GID,NR,ROUT &
+      SUBROUTINE SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT &
      &                  ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
      &                  ,G_QNPHI,G_QNPHISM,G_AEPHI,G_AEPHISM,G_PSPHI,G_PSPHISM &
      &                  ,G_PRO,G_DTKIN,G_DOVER &
@@ -6593,7 +7104,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)                :: ENU  !EXPANSION ENERGY FOR TAYLOR EXPANSION
       REAL(8)                :: PI,Y0
 !     **************************************************************************
-PRINT*,'STARTING SETUPS_OUTERNEWPROWRAPPER...'
+PRINT*,'STARTING SETUP_OUTERNEWPROWRAPPER...'
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       G_QNPHI=0.D0
@@ -6693,7 +7204,7 @@ PRINT*,'LX ',LX,' LOX ',LOX,' LOFI ',LOFI
           ALLOCATE(PRO(NR,NPHI))
           ALLOCATE(DTKIN(NPHI,NPHI))
           ALLOCATE(DOVER(NPHI,NPHI))
-PRINT*,'------------- INPUT DATA FOR SETUPS_NEWPRO-----------'
+PRINT*,'------------- INPUT DATA FOR SETUP_NEWPRO-----------'
 PRINT*,'RELTYPE  ',TRIM(RELTYPE)
 PRINT*,'ROUT     ',ROUT
 PRINT*,'RCL      ',RCL
@@ -6701,7 +7212,7 @@ PRINT*,'NCL,NPHI ',NCL,NPHI
 PRINT*,'EC       ',EC
 PRINT*,'EOFPHI   ',EOFPHI
 PRINT*,'-----------------------------------------------------'
-          CALL SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
+          CALL SETUP_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
      &                  ,AEPOT,PSPOT,VFOCK &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
      &                  ,QNDOT,QNDOTSM,AEPHIDOT,AEPHIDOTSM &
@@ -6713,12 +7224,12 @@ PRINT*,'DTKIN',DTKIN
 !         ======================================================================
 !         == TESTS                                                            ==
 !         ======================================================================
-          CALL SETUPS_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC &
+          CALL SETUP_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC &
      &                  ,AEPOT,PSPOT &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-PRINT*,'... SETUPS_TEST_NEWPRO DONE'
+PRINT*,'... SETUP_TEST_NEWPRO DONE'
 !
 !         ======================================================================
 !         == SORT INTO THE ARRAY                                              ==
@@ -6728,7 +7239,7 @@ PRINT*,'... SETUPS_TEST_NEWPRO DONE'
             IF(LOX(LN).NE.L) CYCLE
 IF(SO.NE.0) THEN
   CALL ERROR$MSG('SPIN ORBIT IMPLEMENTATION NOT COMPLETE')
-  CALL ERROR$STOP('SETUPS_OUTERNEWPROWRAPPER')
+  CALL ERROR$STOP('SETUP_OUTERNEWPROWRAPPER')
 END IF         
             IPHI=IPHI+1
             G_AEPHI(:,LN)=AEPHI(:,IPHI)
@@ -6793,13 +7304,13 @@ PRINT*,'DTKIN X2:',G_DTKIN
           DEALLOCATE(DOVER)
         ENDDO
       ENDDO
-PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
+PRINT*,'... SETUP_OUTERNEWPROWRAPPER FINISHED'
       WRITE(*,FMT='(82("="))')
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,EOFPHI &
+      SUBROUTINE SETUP_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,EOFPHI &
      &                        ,ECOREIN,AEPOT,PSPOT,VFOCK &
      &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
      &                        ,QNDOT,QNDOTSM,AEPHIDOT,AEPHIDOTSM &
@@ -6894,7 +7405,7 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
       INTEGER(4)            :: IRCL ! GRID POINT BEYOND CLASSICAL TURNING POINT
       INTEGER(4)            :: JP,J,IR,K,M,I,IB
 !     **************************************************************************
-                                       CALL TRACE$PUSH('SETUPS_NEWPRO')
+                                       CALL TRACE$PUSH('SETUP_NEWPRO')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       ECORE=ECOREIN
@@ -6933,13 +7444,13 @@ PRINT*,'... SETUPS_OUTERNEWPROWRAPPER FINISHED'
         CALL ERROR$MSG('RELTYPE NOT RECOGNIZED')
         CALL ERROR$MSG('MUST BE "NONREL", "ZORA", OR "SPINORBIT"')
         CALL ERROR$CHVAL('RELTYPE',RELTYPE)
-        CALL ERROR$STOP('SETUPS_NEWPRO')
+        CALL ERROR$STOP('SETUP_NEWPRO')
       END IF
       IF(.NOT.TSMALL.AND.SO.NE.0) THEN
         CALL ERROR$MSG('SPIN ORBIT REQUIRES SMALL COMPONENTS')
         CALL ERROR$CHVAL('RELTYPE',RELTYPE)
         CALL ERROR$I4VAL('SO',SO)
-        CALL ERROR$STOP('SETUPS_NEWPRO')
+        CALL ERROR$STOP('SETUP_NEWPRO')
       END IF
 !
 !     ==========================================================================
@@ -7205,9 +7716,9 @@ PRINT*,'NJ ',NJ,SO,L,E,IDIR
       TPSCORE=TUCORE
       PSCORESM=UCORESM
       DO IB=1,NC
-        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORE(:,IB),TPSCORE(:,IB))
+        CALL SETUP_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORE(:,IB),TPSCORE(:,IB))
         AUX=0.D0
-        CALL SETUPS_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORESM(:,IB),AUX)
+        CALL SETUP_MAKEPSCORE(GID,NR,RC,L,IB-1,PSCORESM(:,IB),AUX)
       ENDDO
 !
 !     ==========================================================================
@@ -7219,7 +7730,7 @@ PRINT*,'NJ ',NJ,SO,L,E,IDIR
       PSPHISM=QNSM
 !     == ONLY THE FIRST PARTIAL WAVE IS PSEUDIZED ==============================
 !     == TAILS OF THE PSEUD CORE FUNCTIONS WILL BE ADDED LATER  ================
-      CALL SETUPS_MAKEPSPHI_FLAT(GID,NR,RC,L,PSPHI,TPSPHI)
+      CALL SETUP_MAKEPSPHI_FLAT(GID,NR,RC,L,PSPHI,TPSPHI)
 !
 !     ==========================================================================
 !     == CORE-ORTHOGONALIZATION
@@ -7352,7 +7863,7 @@ IPHISCALE=1
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_MAKEPSPHI_FLAT(GID,NR,RC,L,PHI,TPHI)
+      SUBROUTINE SETUP_MAKEPSPHI_FLAT(GID,NR,RC,L,PHI,TPHI)
 !     **************************************************************************
 !     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
@@ -7484,7 +7995,7 @@ IPHISCALE=1
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_MAKEPSCORE(GID,NR,RC,L,N,PHI,TPHI)
+      SUBROUTINE SETUP_MAKEPSCORE(GID,NR,RC,L,N,PHI,TPHI)
 !     **************************************************************************
 !     **  REPLACES PHI BY ITS PSEUDIZED VERSION                               **
 !     **                                                                      **
@@ -7588,7 +8099,7 @@ IPHISCALE=1
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
+      SUBROUTINE SETUP_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NC,NJ,RC,ENU &
      &                        ,ECORE,AEPOT,PSPOT &
      &                        ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                        ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
@@ -7751,14 +8262,14 @@ IPHISCALE=1
 !
 !     ==  
 PRINT*,'BEFORE NEWPROANALYZE1'
-!      CALL SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE(:,NC),AEPOT,PSPOT,ENU,NJ,QN)
+!      CALL SETUP_NEWPROANALYZE1(GID,NR,L,UCORE(:,NC),AEPOT,PSPOT,ENU,NJ,QN)
 PRINT*,'BEFORE NEWPROANALYZE2'
-      CALL SETUPS_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
+      CALL SETUP_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_NEWPROANALYZE1(GID,NR,L,UCORE,AEPOT,PSPOT,ENU,NJ,QN)
+      SUBROUTINE SETUP_NEWPROANALYZE1(GID,NR,L,UCORE,AEPOT,PSPOT,ENU,NJ,QN)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
@@ -7863,7 +8374,7 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUPS_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
+      SUBROUTINE SETUP_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
 !     **************************************************************************
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
@@ -7913,3 +8424,164 @@ PRINT*,'BEFORE NEWPROANALYZE2'
       CALL SETUP_WRITEPHI(-'CORECONTRIB'//TRIM(LSTRING),GID,NR,NE,FCORE)
       RETURN
       END
+
+
+!
+!     ..........................................................................
+      SUBROUTINE SETUP_IDENTIFYRMAX()
+      USE PERIODICTABLE_MODULE
+      USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER  :: NR=1300
+      REAL(8)   ,PARAMETER  :: R1=1.D-4
+      REAL(8)   ,PARAMETER  :: DEX=1.D-2
+      INTEGER(4),PARAMETER  :: NBX=20
+      REAL(8)   ,PARAMETER  :: RNSCORE=0.07D0 !SEE MASTERS THESIS ROBERT SCHADE
+      REAL(8)   ,PARAMETER  :: RNSPHI=0.09D0  !SEE MASTERS THESIS ROBERT SCHADE
+      CHARACTER(32),PARAMETER  :: KEY='START,REL,NONSO,NONZORA'
+      LOGICAL(4),PARAMETER  :: TSMALL=.TRUE.
+      LOGICAL(4),PARAMETER  :: TVARDREL=.TRUE.
+      INTEGER(4),PARAMETER  :: SO=0
+!     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =====
+      REAL(8)   ,PARAMETER  :: KAPPA=-1  ! NO SPIN ORBIT
+      INTEGER(4),PARAMETER  :: LX=3
+      INTEGER(4),PARAMETER  :: NFILX=7
+      INTEGER(4)            :: NB
+      INTEGER(4)            :: LOFI(NBX)
+      INTEGER(4)            :: SOFI(NBX)
+      REAL(8)               :: FOFI(NBX)
+      INTEGER(4)            :: NNOFI(NBX)
+      REAL(8)               :: EOFI(NBX),ECORE(NBX)
+      TYPE(VFOCK_TYPE)      :: VFOCK
+      INTEGER(4)            :: NFIL
+      INTEGER(4)            :: IZ
+      INTEGER(4)            :: GID
+      INTEGER(4)            :: IB,IR,L,IND,IRARR(1),IRCL,I
+      REAL(8)               :: R(NR)
+      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)               :: DREL(NR)
+      REAL(8)               :: G(NR)
+      REAL(8)               :: GSM(NR)
+      REAL(8)               :: ROUT
+      REAL(8)               :: RAD(NBX)
+      REAL(8)               :: AEPOT(NR)
+      REAL(8)               :: PSI(NR,NBX)
+      REAL(8)               :: PSISM(NR,NBX)
+      REAL(8)               :: UCORE(NR,NBX)
+      REAL(8)               :: UCORESM(NR,NBX)
+      REAL(8)               :: ETOT,AEZ
+      REAL(8)               :: RNS
+      REAL(8)               :: E,X,Y
+      CHARACTER(20)         :: NAME(NFILX)
+      REAL(8)               :: SPEEDOFLIGHT,ALPHA
+      REAL(8)               :: RCOV
+!     **************************************************************************
+      CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
+      ALPHA=1.D0/SPEEDOFLIGHT ! FINE STRUCTURE CONSTANT IN A.U.
+      DO I=1,NFILX
+        WRITE(NAME(I),*)I
+        NAME(I)='MYTESY'//TRIM(ADJUSTL(NAME(I)))
+        CALL FILEHANDLER$SETFILE(NAME(I),.FALSE.,TRIM(NAME(I))//'.DAT')
+        CALL FILEHANDLER$SETSPECIFICATION(NAME(I),'FORM','FORMATTED')
+        CALL FILEHANDLER$UNIT(NAME(I),NFIL)
+        REWIND(NFIL)
+      ENDDO
+!
+!     ==========================================================================
+!     == DEFINE RADIAL GRID                                                   ==
+!     ==========================================================================
+      CALL RADIAL$NEW('SHLOG',GID)
+      CALL RADIAL$SETR8(GID,'R1',R1)
+      CALL RADIAL$SETR8(GID,'DEX',DEX)
+      CALL RADIAL$SETI4(GID,'NR',NR)
+      CALL RADIAL$R(GID,NR,R)
+      ROUT=R(NR-3)
+      DO IR=1,NR
+        IRCL=IR
+        IF(R(IR).GT.3.D0) EXIT
+      ENDDO
+!
+!     ==========================================================================
+!     == LOOP OVER ALL ELEMENTS                                               ==
+!     ==========================================================================
+      DO IZ=1,105
+        CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
+        CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
+    &                   ,ETOT,AEPOT,VFOCK,EOFI,PSI,PSISM)
+!
+!       ========================================================================
+!       ==  COLLECT RADII                                                     ==
+!       ========================================================================
+        DO L=0,LX
+          G(:)=0.D0
+          GSM(:)=0.D0
+          DO IB=1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            E=EOFI(IB)
+            CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+!
+!           == PREPARE INHOMOGENEITY ===========================================
+            AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
+            CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
+            AUX=AUX1+(1.D0-KAPPA)/R*AUX  
+            AUX(1)=AUX(2)
+            G=G-AUX !GSM=-FSM(IB-1)
+!
+!           == OBTAIN LARGE COMPONENT ==========================================
+            RNS=0.D0
+            IF(IB.GT.1.AND.TSMALL) RNS=RNSCORE !AVOID SPURIOUS ZEROS NEAR ORIGIN
+            CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RNS,ROUT,TVARDREL &
+     &                         ,DREL,G,0,AEPOT,E,UCORE(:,IB))
+            ECORE(IB)=E
+!
+!           == CONSTRUCT SMALL COMPONENT =======================================
+            DREL(IRCL:)=0.D0  ! MAY HAVE BEEN RESET IN ATOMLIB$BOUNDSTATE
+            CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
+     &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
+            UCORESM(IRCL:,IB)=0.D0
+!
+!           == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==============
+            G=-UCORE(:,IB)
+            GSM=-UCORESM(:,IB)
+          ENDDO
+        ENDDO
+
+!       ========================================================================
+!       ==  COLLECT RADII                                                     ==
+!       ========================================================================
+        CALL PERIODICTABLE$GET(IZ,'R(COV)',RCOV)
+        DO L=0,LX
+          RAD=5.1D0
+          IND=L
+          DO IB=1,NB
+            IF(LOFI(IB).NE.L) CYCLE
+            IND=IND+1
+            IRARR=MAXLOC(ABS(R*UCORE(:,IB)))
+            RAD(IND)=MIN(5.D0,R(IRARR(1)))
+            X=AEZ
+            Y=R(IRARR(1))
+            IF(Y.GT.5.D0) CYCLE
+            IF(Y.LT.1.D-1) CYCLE
+            Y=LOG(Y)
+            X=LOG(X)
+            CALL FILEHANDLER$UNIT(NAME(IND),NFIL)
+            WRITE(NFIL,FMT='(2F10.5)')X,Y
+          ENDDO
+        ENDDO
+      ENDDO
+      DO I=1,NFILX
+        CALL FILEHANDLER$CLOSE(NAME(I))
+      ENDDO
+      RETURN
+      END
+
+!!$POSITION OF THE MAXIMUM RAD(Z)=EXP[A+B*LN(Z)]  0.1<Y<5.
+!!$ N=1  ---     ---     0.072414   -1.0164
+!!$ N=2 1.4027 -1.1004   2.3212     -1.2082
+!!$ N=3 3.5632 -1.3410   4.1957     -1.4017
+!!$ N=4 5.6558 -1.5993   6.2388     -1.6617
+!!$ N=5 6.9208 -1.6762   7.6373     -1.7762
+!!$ N=6 9.1717 -1.9976  10.068      -2.1334 
+!!$ N=7 9.9144 -1.9896  10.03       -1.9469
+
+

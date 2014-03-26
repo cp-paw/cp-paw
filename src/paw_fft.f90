@@ -1962,7 +1962,6 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
-                                 CALL TRACE$PUSH('PLANEWAVE$FFT')
                                  CALL TIMING$CLOCKON('PLANEWAVE$FFT')
       IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
         CALL ERROR$MSG('SIZE OF F(G) INCONSISTENT')
@@ -2006,7 +2005,6 @@ END MODULE PLANEWAVE_MODULE
         CALL ERROR$STOP('PLANEWAVE$FFT')
       END IF
                                  CALL TIMING$CLOCKOFF('PLANEWAVE$FFT')
-                                 CALL TRACE$POP
       RETURN
       END      
 !

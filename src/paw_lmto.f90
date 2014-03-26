@@ -389,9 +389,9 @@ END MODULE LMTO_MODULE
 !       == THE ATOM TYPE SELECTOR ISP IS USED ONLY FOR SETTINGS               ==
 !       ========================================================================
         ISPSELECTOR=VAL
-        CALL ATOMTYPELIST$LENGTH(NSP)
+        CALL SETUP$GETI4('NSP',NSP)
         IF(NSP.LE.0) THEN
-          CALL ERROR$MSG('NUMBER OF ATOM TYPES UNKNOWN BY ATOMTYPELIST')
+          CALL ERROR$MSG('NUMBER OF ATOM TYPES UNKNOWN BY SETUP OBJECT')
           CALL ERROR$I4VAL('NSP',NSP)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('LMTO$SETI4')

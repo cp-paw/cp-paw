@@ -161,7 +161,6 @@ CALL TRACE$PASS('LDAPLUSU')
 !     == ATOM SPECIES                                                 ==
 !     ==================================================================
 CALL TRACE$PASS('SPECIES')
-      CALL ATOMTYPELIST$REPORT(NFILO)
       CALL SETUP$REPORT(NFILO)
 !
 !     ==================================================================
@@ -3705,32 +3704,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       END IF
       CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,1.D0)
-!
-!     ==  READ STPVERSION ======================================================
-      CALL LINKEDLIST$EXISTD(LL_STRC,'STPVERSION',1,TCHK)
-      IF(TCHK) THEN
-        !SET STPVERSION TO VERSION GIVEN IN STRUCTURE FILE
-        CALL LINKEDLIST$GET(LL_STRC,'STPVERSION',1,STPVERSION)
-        PRINT*,'WARNING: FORCING STPVERSION TO BE ',STPVERSION
-        CALL SETUP$SETCH("STPVERSION",STPVERSION)  
-      ELSE
-        !SET STPVERSION TO VERSION GIVEN IN PAW VERSION INFORMATION: VERINF
-        CALL SETUP$SETCH("STPVERSION",VERINF)  
-      ENDIF
-!
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !    
 !     ==========================================================================
 !     ==  READ BLOCK !STRUCTURE!SPECIES                                       ==
 !     ==========================================================================
       CALL STRCIN_SPECIES(LL_STRC)
-!    
-!     ==========================================================================
-!     ==  READ BLOCK !STRUCTURE!NTBO                                          ==
-!     ==========================================================================
-      CALL STRCIN_LMTO(LL_STRC)
-!
-      CALL SETUP$READ()
 !    
 !     ==========================================================================
 !     ==  READ BLOCK !STRUCTURE!LATTICE                                       ==
@@ -3999,7 +3978,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_SPECIES(LL_STRC_)
 !     **************************************************************************
-!     **  DEFINES THE ATOMTYPELIST                                            **
 !     **                                                                      **
 !     **  REQUIRES PREDEFINED: NOTHING                                        **
 !     **************************************************************************
@@ -4011,354 +3989,219 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       LOGICAL(4)               :: TCHK
       INTEGER(4)               :: NSP
       INTEGER(4)               :: ISP
-      CHARACTER(8)             :: CH8SVAR1
-      CHARACTER(32)            :: SPNAME
-      CHARACTER(256)           :: SETUPFILE
-      CHARACTER(32)            :: SOFTCORETYPE
-      CHARACTER(32)            :: KEY
-      INTEGER(4)               :: ISVAR
-      REAL(8)                  :: Z
-      REAL(8)                  :: SVAR
-      REAL(8)                  :: PROTONMASS
-      INTEGER(4),ALLOCATABLE   :: NPRO(:)
-      INTEGER(4)               :: LENG   
-      INTEGER(4),ALLOCATABLE   :: NCORROFL(:)
-      INTEGER(4)               :: MAINLN(2)
       LOGICAL(4)               :: TLDAPLUSU
       LOGICAL(4)               :: THYBRID
-      LOGICAL(4)               :: TNTBO
-      LOGICAL(4)               :: TINTERNALSETUP
-      REAL(8)                  :: EV
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
       LL_STRC=LL_STRC_
-      CALL CONSTANTS('U',PROTONMASS)
-      CALL CONSTANTS('EV',EV)
 !
+!     ==========================================================================
+!     == NOW ANALYZE THE SPECIES BLOCKS AND CONFIGURE SETUP INSTANCE
+!     ==========================================================================
+      CALL SETUP$READSTRCIN(LL_STRC)
+!
+!     ==========================================================================
+!     == NOW COLLECT INFORMATION FOR LDAPLUSU OPJECT                          ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
-      CALL ATOMTYPELIST$INITIALIZE(NSP)
       CALL LDAPLUSU$NEW(NSP)
       DO ISP=1,NSP
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
 !
 !       ========================================================================
-!       ==  SPECIES NAME                                                      ==
 !       ========================================================================
-        CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
-             CALL ATOMTYPELIST$ADD(SPNAME)
-!
-!       ========================================================================
-!       ==  ATOMIC NUMBER                                                     ==
-!       ========================================================================
-        Z=-1.D0
-        CALL LINKEDLIST$EXISTD(LL_STRC,'Z',1,TCHK)
-        IF(.NOT.TCHK)  THEN
-!         == EXTRACT ATOMIC NUMBER FROM ELEMENT NAME ===========================
-          CH8SVAR1=SPNAME(1:2)
-          IF(CH8SVAR1(2:2).EQ.'_') CH8SVAR1(2:2)=' '
-          CALL PERIODICTABLE$GET(CH8SVAR1(1:2),'Z',Z)
-          CALL LINKEDLIST$SET(LL_STRC,'Z',0,Z)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'Z',1,Z)
-!
-!       ========================================================================
-!       ==  CHECK IF SETUPFILE OR INTERNAL SETUP CONSTRUCTION IS USED         ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'FILE',1,TCHK)
-        TINTERNALSETUP=.NOT.TCHK
-!
-!       ========================================================================
-!       ==  CONNECT SETUP FILE                                                ==
-!       ========================================================================
-        IF(.NOT.TINTERNALSETUP) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'FILE',1,SETUPFILE)
-          CALL ATOMTYPELIST$INDEX(SPNAME,ISP)
-          CH8SVAR1=' '
-          WRITE(CH8SVAR1,FMT='(I8)')ISP
-          CH8SVAR1=ADJUSTL(CH8SVAR1)
-          CH8SVAR1='ATOM'//TRIM(CH8SVAR1(1:4))
-          CALL ATOMTYPELIST$SETFILE(SPNAME,CH8SVAR1(1:5))
-!
-          CALL FILEHANDLER$SETFILE(CH8SVAR1(1:5),.FALSE.,SETUPFILE)
-          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'STATUS','OLD')
-          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'POSITION','REWIND')
-          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'ACTION','READ')
-          CALL FILEHANDLER$SETSPECIFICATION(CH8SVAR1(1:5),'FORM','FORMATTED')
-!
-!         ======================================================================
-!         ==  #(VALENCE ELECTRONS)                                            ==
-!         ======================================================================
-          CALL LINKEDLIST$EXISTD(LL_STRC,'ZV',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!STRUCTURE!SPECIES:ZV IS MANDATORY')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$GET(LL_STRC,'ZV',1,SVAR)
-               CALL ATOMTYPELIST$SETVALENCE(SPNAME,SVAR)
-        ELSE
-          CALL LINKEDLIST$EXISTD(LL_STRC,'ID',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('ID MUST BE SPECIFIED, IF NO SETUP FILES ARE USED')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$GET(LL_STRC,'ID',1,KEY)
-          CALL ATOMTYPELIST$SELECT(SPNAME)
-          CALL ATOMTYPELIST$SETCH('ID',KEY)
-          CALL ATOMTYPELIST$UNSELECT
-        END IF
-!
-!       ========================================================================
-!       ==  KINETIC ENERGY OF THE PSEUDO WAVE FUNCTIONS                       ==
-!       ========================================================================
-        IF(.NOT.TINTERNALSETUP) THEN
-          CALL ATOMTYPELIST$SELECT(SPNAME)
-          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL LINKEDLIST$EXISTD(LL_STRC,'PSEKIN',1,TCHK)
-            IF(TCHK) THEN
-              CALL LINKEDLIST$GET(LL_STRC,'PSEKIN',1,SVAR)
-              CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,2.D0*SVAR)
-            ELSE
-              CALL LINKEDLIST$SET(LL_STRC,'PS<G2>',0,0.D0)
-            END IF
-          END IF
-          CALL LINKEDLIST$GET(LL_STRC,'PS<G2>',1,SVAR)
-          CALL ATOMTYPELIST$SETR8('PS<G2>',SVAR)
-          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G4>',1,TCHK)
-          IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'PS<G4>',0,0.D0)
-          CALL LINKEDLIST$GET(LL_STRC,'PS<G4>',1,SVAR)
-          CALL ATOMTYPELIST$SETR8('PS<G4>',SVAR)
-          CALL ATOMTYPELIST$UNSELECT
-        END IF
-!
-        IF(TINTERNALSETUP) THEN
-          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G2>',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('VARIABLE PS<G2> MUST NOT BE SPECIFIED, ...')
-            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
-            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$EXISTD(LL_STRC,'PS<G4>',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('VARIABLE PS<G4> MUST NOT BE SPECIFIED, ...')
-            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
-            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$EXISTD(LL_STRC,'PSEKIN',1,TCHK)
-          IF(TCHK) THEN
-            CALL ERROR$MSG('VARIABLE PSEKIN MUST NOT BE SPECIFIED, ...')
-            CALL ERROR$MSG('..., IF SETUPS ARE CONSTRUCTED INTERNALLY')
-            CALL ERROR$MSG('VALUE IS CALCULATED INTERNALLY')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-        END IF
-!
-!       ========================================================================
-!       ==  ATOMIC MASS                                                       ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL PERIODICTABLE$GET(Z,'MASS',SVAR)
-          CALL LINKEDLIST$SET(LL_STRC,'M',0,SVAR/PROTONMASS)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'M',1,SVAR)
-        CALL ATOMTYPELIST$SETMASS(SPNAME,SVAR*PROTONMASS)
-!
-!       ========================================================================
-!       ==  ATOMIC RADIUS FOR PDOS ETC.                                       ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
-          CALL LINKEDLIST$SET(LL_STRC,'RAD',0,SVAR)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,SVAR)
-
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETR8('RAD',SVAR)
-        CALL ATOMTYPELIST$UNSELECT
-!
-!       ========================================================================
-!       ==  MAX. #(ANGULAR MOMENTA) FOR ONE-CENTER DENSITY                    ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'LRHOX',1,TCHK)
-        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'LRHOX',0,2)
-        CALL LINKEDLIST$GET(LL_STRC,'LRHOX',1,ISVAR)
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETI4('LRHOX',ISVAR)
-        CALL ATOMTYPELIST$UNSELECT
-!
-!       ========================================================================
-!       ==  #(PARTIAL WAVES PER MAIN ANGULAR MOMENTUM)                        ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'NPRO',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VARIABLE !STRUCTURE!SPERCIES:NPRO IS MANDATORY')
-          CALL ERROR$STOP('STRCIN_SPECIES')
-        END IF
-        CALL LINKEDLIST$SIZE(LL_STRC,'NPRO',1,LENG)
-        ALLOCATE(NPRO(LENG))
-        CALL LINKEDLIST$GET(LL_STRC,'NPRO',1,NPRO)
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETI4A('NPRO',LENG,NPRO)
-        CALL ATOMTYPELIST$UNSELECT
-        DEALLOCATE(NPRO)
-!
-!       ========================================================================
-!       ==  SOFTCORE TYPE                                                     ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'SOFTCORE',1,TCHK)
-        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_STRC,'SOFTCORE',0,'NONE')
-        CALL LINKEDLIST$GET(LL_STRC,'SOFTCORE',1,SOFTCORETYPE)
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETCH('SOFTCORETYPE',SOFTCORETYPE)
-        CALL ATOMTYPELIST$UNSELECT
-!
-!       ========================================================================
-!       ========================================================================
-!       ==  LDAPLUSU                                                          ==
+!       ==  LDAPLUSU AND HYBRID                                               ==
 !       ========================================================================
 !       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TLDAPLUSU)
         CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,THYBRID)
         IF(THYBRID.AND.TLDAPLUSU) THEN
-          CALL ERROR$MSG('LDAPLUSU AND HYBRID FUNCTIONAL ARE MUTUALLY EXCLUSIVE')
+         CALL ERROR$MSG('LDAPLUSU AND HYBRID FUNCTIONAL ARE MUTUALLY EXCLUSIVE')
           CALL ERROR$MSG('STRCIN_SPECIES')
-        END IF
-        IF(THYBRID.OR.TLDAPLUSU) THEN
-          CALL LDAPLUSU$SETL4('ON',.TRUE.)
         END IF
 !
         IF(TLDAPLUSU) THEN
-          CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
-          CALL LDAPLUSU$SELECTTYPE(ISP)
-          CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
-          CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U')
-
-          CALL LINKEDLIST$EXISTD(LL_STRC,'OLD',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'OLD',1,TCHK)
-            CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U(OLD)')
-          END IF
-!
-!         == RANGE OF LOCAL ORBITALS ===========================================
-          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
-          CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
-          CALL LDAPLUSU$SETR8('RCUT',SVAR)
-!            
-          CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
-          ALLOCATE(NCORROFL(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
-          CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
-          DEALLOCATE(NCORROFL)
-!            
-          CALL LINKEDLIST$EXISTD(LL_STRC,'DIEL',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
-            CALL LDAPLUSU$SETR8('DIEL',SVAR)
-          END IF
-!
-          CALL LINKEDLIST$EXISTD(LL_STRC,'UPAR[EV]',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
-            CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
-          END IF
-!
-          CALL LINKEDLIST$EXISTD(LL_STRC,'JPAR[EV]',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
-            CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
-          END IF
-
-          CALL LINKEDLIST$EXISTD(LL_STRC,'F4/F2',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'F4/F2',1,SVAR)
-            CALL LDAPLUSU$SETR8('F4/F2',SVAR)
-          END IF
-!
-          CALL LINKEDLIST$EXISTD(LL_STRC,'F6/F2',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'F6/F2',1,SVAR)
-            CALL LDAPLUSU$SETR8('F4/F2',SVAR)
-          END IF
-!
-          CALL LINKEDLIST$EXISTD(LL_STRC,'MAINLN',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'MAINLN',1,MAINLN)
-            CALL LDAPLUSU$SETI4A('MAINLN',2,MAINLN)
-          END IF
-!
-!         == CORE-VALENCE EXCHANGE   ===========================================
-!         == NOT ALLOWED FOR LDA+U    ==========================================
-          CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',.FALSE.)
-!
-!         == GET OUT OF LDAPLUSU-BLOCK
-          CALL LDAPLUSU$SELECTTYPE(0)
-          CALL LINKEDLIST$SELECT(LL_STRC,'..')
-        END IF
-!
-!       ========================================================================
-!       ========================================================================
-!       ==  HYBRID FUNCTIONAL                                                 ==
-!       ========================================================================
-!       ========================================================================
-        IF(THYBRID) THEN
-          CALL LINKEDLIST$SELECT(LL_STRC,'HYBRID')
-          CALL LDAPLUSU$SELECTTYPE(ISP)
-          CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
-          CALL LDAPLUSU$SETCH('FUNCTIONALID','HYBRID')
-!
-!         == RANGE OF LOCAL ORBITALS ===========================================
-!          CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
-!          CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
-!          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
-!          CALL LDAPLUSU$SETR8('RCUT',SVAR)
-!
-!         == DEFINE SHELLS IN THE CORRELATED SUB-SPACE =========================            
-          CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
-            CALL ERROR$STOP('STRCIN_SPECIES')
-          END IF
-          CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
-          ALLOCATE(NCORROFL(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
-          CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
-          DEALLOCATE(NCORROFL)
-!
-!         == CORE-VALENCE EXCHANGE   ===========================================
-          CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK)
-          ELSE
-            TCHK=.TRUE.  ! DEFAULT IS TO INCLUDE CORE-VALENCE INTERACTION
-          END IF
-          CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',TCHK)
-!
-!         == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
-          SVAR=0.25D0
-          CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
-          IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
-          CALL LDAPLUSU$SETR8('HFWEIGHT',SVAR)
-!
-!         == GET OUT OF HYBRID-BLOCK ===========================================
-          CALL LDAPLUSU$SELECTTYPE(0)
-          CALL LINKEDLIST$SELECT(LL_STRC,'..')
+          CALL LDAPLUSU$SETL4('ON',.TRUE.)
+          CALL STRCIN_LDAPLUSU(LL_STRC,ISP)
+        ELSE IF(THYBRID) THEN
+          CALL LDAPLUSU$SETL4('ON',.TRUE.)
+          CALL STRCIN_HYBRID(LL_STRC,ISP)
         END IF
 !
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
+!    
+!     ==========================================================================
+!     ==  READ BLOCK !STRUCTURE!NTBO                                          ==
+!     ==========================================================================
+      CALL STRCIN_LMTO(LL_STRC)
+!    
+!     ==========================================================================
+!     ==  configure setup object  (the name is misleading)                    ==
+!     ==========================================================================
+      CALL SETUP$READ()
                            CALL TRACE$POP
+      RETURN
+      END
+!     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE STRCIN_LDAPLUSU(LL_STRC_,ISP)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
+      INTEGER(4)   ,INTENT(IN) :: ISP
+      TYPE(LL_TYPE)            :: LL_STRC
+      LOGICAL(4)               :: TCHK
+      REAL(8)                  :: SVAR
+      INTEGER(4)               :: LENG
+      INTEGER(4)   ,ALLOCATABLE:: NCORROFL(:)
+      INTEGER(4)               :: MAINLN(2)
+      REAL(8)                  :: EV
+      REAL(8)                  :: AEZ
+!     **************************************************************************
+      LL_STRC=LL_STRC_
+      CALL CONSTANTS('EV',EV)
+      CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
+      CALL LDAPLUSU$SELECTTYPE(ISP)
+      CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
+      CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U')
+
+      CALL LINKEDLIST$EXISTD(LL_STRC,'OLD',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'OLD',1,TCHK)
+        CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U(OLD)')
+      END IF
+!
+!     == RANGE OF LOCAL ORBITALS ===========================================
+      CALL SETUP$SELECT(ISP)
+      CALL SETUP$GETR8('AEZ',AEZ)
+      CALL SETUP$UNSELECT()
+      CALL PERIODICTABLE$GET(AEZ,'R(ASA)',SVAR)
+      CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
+      CALL LDAPLUSU$SETR8('RCUT',SVAR)
+!        
+      CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
+        CALL ERROR$STOP('STRCIN_SPECIES')
+      END IF
+      CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
+      ALLOCATE(NCORROFL(LENG))
+      CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
+      CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
+      DEALLOCATE(NCORROFL)
+!        
+      CALL LINKEDLIST$EXISTD(LL_STRC,'DIEL',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
+        CALL LDAPLUSU$SETR8('DIEL',SVAR)
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_STRC,'UPAR[EV]',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
+        CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_STRC,'JPAR[EV]',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
+        CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
+      END IF
+
+      CALL LINKEDLIST$EXISTD(LL_STRC,'F4/F2',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'F4/F2',1,SVAR)
+        CALL LDAPLUSU$SETR8('F4/F2',SVAR)
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_STRC,'F6/F2',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'F6/F2',1,SVAR)
+        CALL LDAPLUSU$SETR8('F4/F2',SVAR)
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_STRC,'MAINLN',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'MAINLN',1,MAINLN)
+        CALL LDAPLUSU$SETI4A('MAINLN',2,MAINLN)
+      END IF
+!
+!     == CORE-VALENCE EXCHANGE   ===========================================
+!     == NOT ALLOWED FOR LDA+U    ==========================================
+      CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',.FALSE.)
+!
+!     == GET OUT OF LDAPLUSU-BLOCK
+      CALL LDAPLUSU$SELECTTYPE(0)
+      CALL LINKEDLIST$SELECT(LL_STRC,'..')
+
+      RETURN
+      END
+!     
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE STRCIN_HYBRID(LL_STRC_,ISP)
+!     **************************************************************************
+!     ** 
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
+      INTEGER(4)   ,INTENT(IN) :: ISP
+      TYPE(LL_TYPE)            :: LL_STRC
+      LOGICAL(4)               :: TCHK
+      INTEGER(4)               :: LENG
+      INTEGER(4)   ,ALLOCATABLE:: NCORROFL(:)
+      REAL(8)                  :: SVAR
+!     **************************************************************************
+      LL_STRC=LL_STRC_
+      CALL LINKEDLIST$SELECT(LL_STRC,'HYBRID')
+      CALL LDAPLUSU$SELECTTYPE(ISP)
+      CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
+      CALL LDAPLUSU$SETCH('FUNCTIONALID','HYBRID')
+!
+!     == RANGE OF LOCAL ORBITALS ===============================================
+!      CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
+!      CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
+!      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
+!      CALL LDAPLUSU$SETR8('RCUT',SVAR)
+!
+!     == DEFINE SHELLS IN THE CORRELATED SUB-SPACE =============================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
+        CALL ERROR$STOP('STRCIN_SPECIES')
+      END IF
+      CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
+      ALLOCATE(NCORROFL(LENG))
+      CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
+      CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
+      DEALLOCATE(NCORROFL)
+!
+!     == CORE-VALENCE EXCHANGE   ===========================================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK)
+      ELSE
+        TCHK=.TRUE.  ! DEFAULT IS TO INCLUDE CORE-VALENCE INTERACTION
+      END IF
+      CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',TCHK)
+!
+!     == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
+      SVAR=0.25D0
+      CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
+      CALL LDAPLUSU$SETR8('HFWEIGHT',SVAR)
+!
+!     == GET OUT OF HYBRID-BLOCK ===========================================
+      CALL LDAPLUSU$SELECTTYPE(0)
+      CALL LINKEDLIST$SELECT(LL_STRC,'..')
       RETURN
       END
 !     
@@ -4368,7 +4211,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     **  DEFINES THE PARAMETERS FOR THE LMTO OBJECT                          **
 !     **                                                                      **
 !     **  !SPECIES MUST BE FINISHED BEFORE THIS IS CALLED                     **
-!     **          (USES NSP FROM ATOMTYPELIST)                                **
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
@@ -4511,9 +4353,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           ALLOCATE(IWORK(LENG))   ! THE ARRAY WILL BE EXTENDED
           IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
         END IF        
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETI4A('NTBO',LENG,IWORK)
-        CALL ATOMTYPELIST$UNSELECT
+        CALL SETUP$SELECT(SPNAME)
+        CALL SETUP$SETI4A('NTBO',LENG,IWORK)
+        CALL SETUP$UNSELECT()
         DEALLOCATE(IWORK)
 !   
 !       ========================================================================
@@ -4521,25 +4363,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$SIZE(LL_STRC,'TORB',1,LENG)
-          ALLOCATE(TORB(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'TORB',1,TORB)
-          CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK1)
-          IF(TCHK1) THEN
-            CALL ERROR$MSG('"TORB=" AND "NTBO=" ARE MUTUALLY EXCLUSIVE"')
-            CALL ERROR$STOP('STRCIN_LMTO')
-          END IF
-        ELSE
-          LENG=1
-          ALLOCATE(TORB(LENG))
-          TORB(1)=.FALSE.
-        END IF        
-        CALL ATOMTYPELIST$SELECT(SPNAME)
-        CALL ATOMTYPELIST$SETL4A('TORB',LENG,TORB)
-        CALL ATOMTYPELIST$UNSELECT
-        DEALLOCATE(TORB)
-    
-        CALL LMTO$SETI4('ISP',0)
+          CALL ERROR$MSG('TORB IS OBSOLETE. USE NTBO TO SET NUMBER OF ORBITALS')
+          CALL ERROR$STOP('STRCIN_LMTO')
+        END IF
+        CALL LMTO$SETI4('ISP',0)             ! unselect lmto instance
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE NTBO BLOCK
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
       ENDDO
@@ -4552,7 +4379,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ******************************************************************
 !     **  DEFINES THE ATOMLIST                                        **
 !     **                                                              **
-!     **  REQUIRES PREDEFINED: ATOMTYPELIST                           **
 !     **  MODIFIES           : ATOMLIST                               **
 !     ******************************************************************
       USE LINKEDLIST_MODULE
@@ -4574,7 +4400,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
                            CALL TRACE$PUSH('STRCIN_ATOM')
       LL_STRC=LL_STRC_
       CALL CONSTANTS('U',PROTONMASS)
-      CALL ATOMTYPELIST$LENGTH(NSP)
+      CALL SETUP$GETI4('NSP',NSP)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !STRUCTURE!GENERIC                               ==
@@ -4606,23 +4432,19 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !
         TCHK=.FALSE.
         DO ISP=1,NSP
-          CALL ATOMTYPELIST$NAME(ISP,STRING)
+          CALL SETUP$ISELECT(ISP)
+          CALL SETUP$GETCH('ID',STRING)
           IF(STRING.EQ.SPECIES) THEN
             TCHK=.TRUE.
-            CALL ATOMTYPELIST$SELECT(SPECIES)
             CALL ATOMLIST$SETI4('ISPECIES',IAT,ISP)
-!            CALL ATOMTYPELIST$GETR8('Z',SVAR)
-!            CALL ATOMLIST$SETR8('Z',IAT,SVAR)
-!            CALL ATOMTYPELIST$GETR8('ZV',SVAR)
-!            CALL ATOMLIST$SETR8('ZVALENCE',IAT,SVAR)
-            CALL ATOMTYPELIST$GETR8('M',SVAR)
+            CALL SETUP$GETR8('M',SVAR)
             CALL ATOMLIST$SETR8('MASS',IAT,SVAR)
-            CALL ATOMTYPELIST$GETR8('PS<G2>',SVAR)
+            CALL SETUP$GETR8('PS<G2>',SVAR)
             CALL ATOMLIST$SETR8('PS<G2>',IAT,SVAR)
-            CALL ATOMTYPELIST$GETR8('PS<G4>',SVAR)
+            CALL SETUP$GETR8('PS<G4>',SVAR)
             CALL ATOMLIST$SETR8('PS<G4>',IAT,SVAR)
-            CALL ATOMTYPELIST$UNSELECT
           END IF
+          CALL SETUP$UNSELECT()
         ENDDO 
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('NO SPECIES FOR ATOM')
@@ -5170,7 +4992,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$NLISTS(LL_STRC,'GROUP',NGRP)
       CALL ATOMLIST$NATOM(NAT)
-      CALL ATOMTYPELIST$LENGTH(NSP)
+      CALL SETUP$GETI4('NSP',NSP)
       CALL GROUPLIST$INITIALIZE(NAT,NGRP+1+NSP)
 !
 !     ==================================================================
@@ -5182,8 +5004,9 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       DO IAT=1,NAT
         CALL GROUPLIST$ADD('ALL',IAT)
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL ATOMTYPELIST$SELECTI4(ISP)
-        CALL ATOMTYPELIST$GETCH('NAME',NAME)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETCH('ID',NAME)
+        CALL SETUP$UNSELECT
         CALL GROUPLIST$ADD(NAME,IAT)
       ENDDO
 !
