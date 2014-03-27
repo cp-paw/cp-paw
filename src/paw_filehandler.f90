@@ -180,6 +180,23 @@ END MODULE FILEHANDLER_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE FILEHANDLER$ATTACHED(ID_,TCHK)
+!     **************************************************************************
+!     **  CHECK IF A FILE IS ATTACHED FOR THE ENTRY WITH ID                   **
+!     **************************************************************************
+      USE FILEHANDLER_MODULE, ONLY : FILE,FILEHANDLER_CREATE,FILEHANDLER_LOOKUP
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+      LOGICAL(4)  ,INTENT(OUT):: TCHK
+      INTEGER(4)              :: IFIL
+!     **************************************************************************
+      IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
+      CALL FILEHANDLER_LOOKUP(ID_,IFIL)
+      TCHK=(IFIL.NE.0) 
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       RECURSIVE SUBROUTINE FILEHANDLER$UNIT(ID_,UNIT_)
 !     **************************************************************************
 !     **  RETURN FILE UNIT FOR A GIVEN FILE (OPEN IF NECCESARY)               **

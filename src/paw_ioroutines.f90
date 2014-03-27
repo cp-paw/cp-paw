@@ -808,6 +808,8 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STANDARDFILES
+!     **************************************************************************
+!     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: T=.TRUE.
@@ -816,19 +818,19 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
       CHARACTER(512)       :: PAWDIR=''
-!     ******************************************************************
+!     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
       CALL LIB$GETENV('PAWDIR',PAWDIR)
 !  
-!     ==================================================================
-!     == SET STANDARD FILENAMES                                       ==
-!     ==================================================================
+!     ==========================================================================
+!     == SET STANDARD FILENAMES                                               ==
+!     ==========================================================================
 !
-!     ==  EXIT FILE ===================================================
+!     ==  EXIT FILE ============================================================
       ID=+'EXIT'
       CALL FILEHANDLER$SETFILE(ID,T,-'.EXIT')
 !
-!     ==  ERROR FILE ===================================================
+!     ==  ERROR FILE ===========================================================
       ID=+'ERR'
       CALL FILEHANDLER$SETFILE(ID,T,-'.ERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -836,7 +838,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOLL FILE========================================================
 !     ==  EACH MONOMER HAS ITS OWN PROTOCOLL FILE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ID=+'PROT'
@@ -850,7 +852,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  STRUCTURE FILE   =============================================
+!     ==  STRUCTURE FILE   =====================================================
       ID=+'STRC'
       CALL FILEHANDLER$SETFILE(ID,T,-'.STRC')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
@@ -858,41 +860,41 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  STRUCTURE FILE   =============================================
+!     ==  STRUCTURE FILE   =====================================================
       ID=+'STRC_OUT'
       CALL FILEHANDLER$SETFILE(ID,T,-'.STRC_OUT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!!$!
+!!$!     ==  SETUP PARAMETER FILE ==============================================
+!!$      ID=+'PARMS_STP'
+!!$      IF(LEN_TRIM(PAWDIR).EQ.0) THEN
+!!$        CALL FILEHANDLER$SETFILE(ID,F,-'STP.CNTL')
+!!$      ELSE
+!!$        CALL FILEHANDLER$SETFILE(ID,F,TRIM(PAWDIR)//-'/PARAMETERS/STP.CNTL')
+!!$      END IF
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  SETUP PARAMETER FILE ==========================================
-      ID=+'PARMS_STP'
-      IF(LEN_TRIM(PAWDIR).EQ.0) THEN
-        CALL FILEHANDLER$SETFILE(ID,F,-'STP.CNTL')
-      ELSE
-        CALL FILEHANDLER$SETFILE(ID,F,TRIM(PAWDIR)//-'/PARAMETERS/STP.CNTL')
-      END IF
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-!
-!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS =======================
+!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS ===============================
       CALL FILEHANDLER$SETFILE('MMMOVIE',.TRUE.,-'.MMMOVIE.XYZ')
       CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('MMMOVIE','FORM','FORMATTED')
 !
-!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS =======================
+!     ==  MOVIE FILE FOR QMMM MULTIPLE TIMESTEPS ===============================
       CALL FILEHANDLER$SETFILE('SMOVIE',.TRUE.,-'.SMOVIE.XYZ')
       CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('SMOVIE','FORM','FORMATTED')
 !
-!     ==  SCRAP FILE FOR TEST PURPOSES, THAT ALLOWS TO WRITE OUT TEST DATA===
+!     ==  SCRAP FILE FOR TEST PURPOSES, THAT ALLOWS TO WRITE OUT TEST DATA======
       ID=+'INFO'
       CALL FILEHANDLER$SETFILE(ID,T,-'.INFO')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -908,7 +910,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  RESTART_IN FILE ==============================================
+!     ==  RESTART_IN FILE ======================================================
       ID=+'RESTART_IN'
       CALL FILEHANDLER$SETFILE(ID,T,-'.RSTRT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
@@ -916,7 +918,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
-!     ==  RESTART_OUT FILE =============================================
+!     ==  RESTART_OUT FILE =====================================================
       ID=+'RESTART_OUT'
       CALL FILEHANDLER$SETFILE(ID,T,-'.RSTRT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -924,39 +926,37 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READWRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
-!     ==  ENERGY TRAJECTORY ============================================
+!     ==  ENERGY TRAJECTORY ====================================================
       CALL TRAJECTORYIO$NEW(+'ENERGY-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('ENERGY-TRAJECTORY')
       CALL TRAJECTORYIO$SETCH('FILE',-'*_E.TRA')
       CALL TRAJECTORYIO$SELECT('NONE')
 !
-!     ==  BANDS  TRAJECTORY ============================================
+!     ==  BANDS  TRAJECTORY ====================================================
       CALL TRAJECTORYIO$NEW(+'BANDS-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('BANDS-TRAJECTORY')
       CALL TRAJECTORYIO$SETCH('FILE',-'*_B.TRA')
       CALL TRAJECTORYIO$SELECT('NONE')
-
 !
-!     ==  BANDS  TRAJECTORY ============================================
+!     ==  POSITION TRAJECTORY ==================================================
       CALL TRAJECTORYIO$NEW(+'POSITION-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('POSITION-TRAJECTORY')
       CALL TRAJECTORYIO$SETCH('FILE',-'*_R.TRA')
       CALL TRAJECTORYIO$SELECT('NONE')
 !
-!     ==  BANDS  TRAJECTORY ============================================
+!     ==  QM-MM POSITION TRAJECTORY ============================================
       CALL TRAJECTORYIO$NEW(+'QMMM-POS-TRA')
       CALL TRAJECTORYIO$SELECT('QMMM-POS-TRA')
       CALL TRAJECTORYIO$SETCH('FILE',-'*_RQMMM.TRA')
       CALL TRAJECTORYIO$SELECT('NONE')
 !
-!     ==  FORCE TRAJECTORY ============================================
+!     ==  FORCE TRAJECTORY =====================================================
       CALL TRAJECTORYIO$NEW(+'FORCE-TRAJECTORY')
       CALL TRAJECTORYIO$SELECT('FORCE-TRAJECTORY')
       CALL TRAJECTORYIO$SETCH('FILE',-'*_F.TRA')
       CALL TRAJECTORYIO$SELECT('NONE')
-
 !
-!     ==  FORCE TRAJECTORY ============================================
+!     ==  CONSTRAINTS TRAJECTORY ===============================================
       ID=+'CONSTRAINTS'
       CALL FILEHANDLER$SETFILE(ID,T,-'_CONSTR.REPORT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -964,7 +964,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PDOS  ======================================================
+!     ==  PDOS  ================================================================
       ID=+'PDOS'
       CALL FILEHANDLER$SETFILE(ID,T,-'.PDOS')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -972,7 +972,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
-!     ==  BANDDATA====================================================
+!     ==  BANDDATA==============================================================
       ID=+'BANDDATA'
       CALL FILEHANDLER$SETFILE(ID,T,-'.BANDDATA')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
@@ -980,7 +980,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','UNFORMATTED')
 !
-!     ==  BALLSTICK ==================================================
+!     ==  BALLSTICK ============================================================
       ID=+'BALLSTICK.DX'
       CALL FILEHANDLER$SETFILE(ID,T,-'_BALLSTICK.DX')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -988,7 +988,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  DENSITY  ===================================================
+!     ==  DENSITY  =============================================================
       ID=+'DENSITY.DX'
       CALL FILEHANDLER$SETFILE(ID,T,-'_RHO.DX')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -996,7 +996,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  DENSITY  ===================================================
+!     ==  DENSITY  =============================================================
       ID=+'POTENTIAL.DX'
       CALL FILEHANDLER$SETFILE(ID,T,-'_POT.DX')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -1004,7 +1004,7 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  DENSITY  ===================================================
+!     ==  DENSITY  =============================================================
       ID=+'PATH.DX'
       CALL FILEHANDLER$SETFILE(ID,T,-'_PATH.DX')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
@@ -1026,14 +1026,14 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: MODUS
-!     ******************************************************************
+!     **************************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'DFT')
 !
-!     == GET NON-DEFAULT VALUES ========================================
+!     == GET NON-DEFAULT VALUES ================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'TYPE',0,1)
@@ -4039,7 +4039,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL STRCIN_LMTO(LL_STRC)
 !    
 !     ==========================================================================
-!     ==  configure setup object  (the name is misleading)                    ==
+!     ==  CONFIGURE SETUP OBJECT  (THE NAME IS MISLEADING)                    ==
 !     ==========================================================================
       CALL SETUP$READ()
                            CALL TRACE$POP
@@ -4366,7 +4366,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$MSG('TORB IS OBSOLETE. USE NTBO TO SET NUMBER OF ORBITALS')
           CALL ERROR$STOP('STRCIN_LMTO')
         END IF
-        CALL LMTO$SETI4('ISP',0)             ! unselect lmto instance
+        CALL LMTO$SETI4('ISP',0)             ! UNSELECT LMTO INSTANCE
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE NTBO BLOCK
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
       ENDDO

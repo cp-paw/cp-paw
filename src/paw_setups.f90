@@ -4843,14 +4843,18 @@ PRINT*,'KI ',KI
       LOGICAL(4)               :: TFOUND
       TYPE(LL_TYPE)            :: LL_SCNTL
       INTEGER(4)               :: NENTRY
+      LOGICAL(4)               :: TSTPFILE
 !     **************************************************************************
                                     CALL TRACE$PUSH('SETUP$RESOLVESETUPID')
 !     ==========================================================================
 !     == READ SETUP PARAMETER FILE                                            ==
 !     ==========================================================================
-      CALL LINKEDLIST$NEW(LL_SCNTL)
-      CALL FILEHANDLER$UNIT('PARMS_STP',NFIL)
-      CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
+      CALL FILEHANDLER$ATTACHED('PARMS.STP',TSTPFILE)
+      IF(TSTPFILE) THEN
+        CALL LINKEDLIST$NEW(LL_SCNTL)
+        CALL FILEHANDLER$UNIT('PARMS_STP',NFIL)
+        CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
+      END IF
 
 !     ==========================================================================
 !     == READ SETUP PARAMETER FILE                                            ==
@@ -4926,35 +4930,37 @@ PRINT*,'KI ',KI
 !       ========================================================================
 !       == PARSE SETUP FILE                                                   ==
 !       ========================================================================
-        CALL LINKEDLIST$SELECT(LL_SCNTL,'~',0)
-        CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL',0)
-        CALL LINKEDLIST$NLISTS(LL_SCNTL,'SETUP',NENTRY)
-        DO I=1,NENTRY
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'SETUP',I)
-          CALL LINKEDLIST$EXISTD(LL_SCNTL,'ID',1,TCHK)
-          IF(.NOT.TCHK) THEN
-            CALL ERROR$MSG('!SCNTL!SETUP:ID NOT SPECIFIED')
-            CALL ERROR$STOP('SETUP$RESOLVESETUPID')
-          END IF
-          CALL LINKEDLIST$GET(LL_SCNTL,'ID',1,ID1)
-          IF(ID1.EQ.ID) THEN
-!           == CHECK IF THE SAME NAME HAS ALREADY BEEN FOUND ===================
-            IF(TFOUND) THEN
-              CALL ERROR$MSG('SETUP ID IS AMBIGOUS')
-              CALL ERROR$MSG('IT HAS BEEN ENCOUNTERED TWICE')
-              CALL ERROR$CHVAL('ID',ID)
+        IF(TSTPFILE) THEN
+          CALL LINKEDLIST$SELECT(LL_SCNTL,'~',0)
+          CALL LINKEDLIST$SELECT(LL_SCNTL,'SCNTL',0)
+          CALL LINKEDLIST$NLISTS(LL_SCNTL,'SETUP',NENTRY)
+          DO I=1,NENTRY
+            CALL LINKEDLIST$SELECT(LL_SCNTL,'SETUP',I)
+            CALL LINKEDLIST$EXISTD(LL_SCNTL,'ID',1,TCHK)
+            IF(.NOT.TCHK) THEN
+              CALL ERROR$MSG('!SCNTL!SETUP:ID NOT SPECIFIED')
               CALL ERROR$STOP('SETUP$RESOLVESETUPID')
             END IF
-            TFOUND=.TRUE.
-            CALL ATOMLIB$SCNTLLOOKUPONE(LL_SCNTL,AEZ,ZV,RBOX,LX,TYPE,RCL &
-     &                              ,LAMBDA &
-     &                              ,RCSM,POTPOW,POTRC,TPOTVAL,POTVAL &
-     &                              ,CORPOW,CORRC,TCORVAL,CORVAL &
-     &                              ,DMIN,DMAX,RMAX)
-            EXIT
-          END IF
-          CALL LINKEDLIST$SELECT(LL_SCNTL,'..',0)
-        ENDDO
+            CALL LINKEDLIST$GET(LL_SCNTL,'ID',1,ID1)
+            IF(ID1.EQ.ID) THEN
+!             == CHECK IF THE SAME NAME HAS ALREADY BEEN FOUND =================
+              IF(TFOUND) THEN
+                CALL ERROR$MSG('SETUP ID IS AMBIGOUS')
+                CALL ERROR$MSG('IT HAS BEEN ENCOUNTERED TWICE')
+                CALL ERROR$CHVAL('ID',ID)
+                CALL ERROR$STOP('SETUP$RESOLVESETUPID')
+              END IF
+              TFOUND=.TRUE.
+              CALL ATOMLIB$SCNTLLOOKUPONE(LL_SCNTL,AEZ,ZV,RBOX,LX,TYPE,RCL &
+       &                              ,LAMBDA &
+       &                              ,RCSM,POTPOW,POTRC,TPOTVAL,POTVAL &
+       &                              ,CORPOW,CORRC,TCORVAL,CORVAL &
+       &                              ,DMIN,DMAX,RMAX)
+              EXIT
+            END IF
+            CALL LINKEDLIST$SELECT(LL_SCNTL,'..',0)
+          ENDDO
+        END IF
 !    
 !       ========================================================================
 !       == PLACE INFORMATION INTO LINKEDLIST                                  ==
