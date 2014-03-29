@@ -4272,12 +4272,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       == SELECT ATOMTYPE AS ACTIVE (HYBRID CONTRIBUTIONS ARE NOT SWITCHED OFF)
         CALL LMTO$SETL4('ACTIVE',.TRUE.)
 !   
-!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
-!!$        IF(TCHK) THEN
-!!$          CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
-!!$          CALL LMTO$SETR8('HFWEIGHT',SVAR)
-!!$        END IF
-!   
         CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK1)
@@ -4314,12 +4308,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LMTO$SETL4('BONDX',TCHK1)
         END IF
 !   
-!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'K2',1,TCHK)
-!!$        IF(TCHK) THEN
-!!$          CALL LINKEDLIST$GET(LL_STRC,'K2',1,SVAR)
-!!$          CALL LMTO$SETR8('K2',SVAR)
-!!$        END IF
-!   
         CALL LINKEDLIST$EXISTD(LL_STRC,'TAILLAMBDA',1,TCHK)
         IF(TCHK) THEN
           ALLOCATE(WORK(2))
@@ -4334,36 +4322,52 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           DEALLOCATE(WORK)
         END IF
 !   
-!!$        CALL LINKEDLIST$EXISTD(LL_STRC,'SCALERCUT',1,TCHK)
-!!$        IF(TCHK) THEN
-!!$          CALL LINKEDLIST$GET(LL_STRC,'SCALERCUT',1,SVAR)
-!!$          CALL LMTO$SETR8('SCALERCUT',SVAR)
-!!$        END IF
+!       == RADIUS FOR MATCHING PARTIAL WAVES TO ENVELOPE FUNCTIONS =============
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RMATCH',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'RMATCH',1,SVAR)
+          CALL LMTO$SETR8('RMATCH',SVAR)
+        END IF
+!   
+!       == RADIUS FOR MATCHING EXPONENTIAL TAILS ===============================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RTAIL',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'RTAIL',1,SVAR)
+          CALL LMTO$SETR8('RTAIL',SVAR)
+        END IF
 !   
 !       ========================================================================
 !       ==  SELECTOR FOR LOCAL ORBITALS: #(ORBITALS PER L)                    ==
 !       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK)
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NOFL',1,TCHK)
         IF(TCHK) THEN
-          CALL LINKEDLIST$SIZE(LL_STRC,'NTBO',1,LENG)
+          CALL LINKEDLIST$SIZE(LL_STRC,'NOFL',1,LENG)
            ALLOCATE(IWORK(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'NTBO',1,IWORK)
+          CALL LINKEDLIST$GET(LL_STRC,'NOFL',1,IWORK)
         ELSE
           LENG=1
           ALLOCATE(IWORK(LENG))   ! THE ARRAY WILL BE EXTENDED
           IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
         END IF        
-        CALL SETUP$SELECT(SPNAME)
-        CALL SETUP$SETI4A('NTBO',LENG,IWORK)
-        CALL SETUP$UNSELECT()
+        CALL LMTO$SETI4A('NOFL',IWORK)
+
+!!$        CALL SETUP$SELECT(SPNAME)
+!!$        CALL SETUP$SETI4A('NTBO',LENG,IWORK)
+!!$        CALL SETUP$UNSELECT()
         DEALLOCATE(IWORK)
 !   
 !       ========================================================================
 !       ==  SELECTOR FOR LOCAL ORBITALS   (WILL BECOME OBSOLETE)              ==
 !       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('ntbo IS OBSOLETE. USE Nofl TO SET NUMBER OF ORBITALS')
+          CALL ERROR$STOP('STRCIN_LMTO')
+        END IF
+
         CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
         IF(TCHK) THEN
-          CALL ERROR$MSG('TORB IS OBSOLETE. USE NTBO TO SET NUMBER OF ORBITALS')
+          CALL ERROR$MSG('TORB IS OBSOLETE. USE nofl TO SET NUMBER OF ORBITALS')
           CALL ERROR$STOP('STRCIN_LMTO')
         END IF
         CALL LMTO$SETI4('ISP',0)             ! UNSELECT LMTO INSTANCE

@@ -19,6 +19,9 @@ TYPE HYBRIDSETTING_TYPE
                             ! LHFWEIGHT, EXCEPT WHEN IT IS NEGATIVE
   REAL(8)     :: TAILEDLAMBDA1  ! LARGER DECAY CONSTANT FOR THE NTBO TAILS
   REAL(8)     :: TAILEDLAMBDA2  ! SMALLER DECAY CONSTANT FOR THE NTBO TAILS
+  REAL(8)     :: RAUGMENT   ! AUGMENTATION RADIUS
+  REAL(8)     :: RTAIL      ! RADIUS FOR MATCHING TAILS
+  REAL(8),POINTER :: NORBOFL(:) ! #(LOCAL ORBITALS PER ANGULAR MOMENTUM)
 END TYPE HYBRIDSETTING_TYPE
 !
 TYPE ORBITALGAUSSCOEFF_TYPE
@@ -376,6 +379,37 @@ END MODULE LMTO_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$SETI4A(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : ISPECIES & !(NAT)
+     &                       ,POTPAR1   !(NSP)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: ID
+      INTEGER(4)  ,INTENT(IN)  :: LEN
+      INTEGER(4)  ,INTENT(IN)  :: VAL(LEN)
+      INTEGER(4)               :: IAT,ISP
+!     **************************************************************************
+      IF(ID.EQ.'NORBOFL') THEN
+        IF(ISPSELECTOR.LE.0) THEN
+          CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO$SETI4A')
+        END IF
+        ALLOCATE(HYBRIDSETTING(ISPSELECTOR)%NORBOFL(LEN))
+        HYBRIDSETTING(ISPSELECTOR)%NORBOFL=VAL
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO$SETI4A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$SETI4(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
@@ -406,15 +440,18 @@ END MODULE LMTO_MODULE
         IF(.NOT.ALLOCATED(HYBRIDSETTING)) THEN
 !         == ALLOCATE AND SET DEFAULT VALUES ===================================
           ALLOCATE(HYBRIDSETTING(NSP))
-          HYBRIDSETTING(:)%ACTIVE=.FALSE.
-          HYBRIDSETTING(:)%TCV=.TRUE.
+          HYBRIDSETTING(:)%ACTIVE    =.FALSE.
+          HYBRIDSETTING(:)%TCV       =.TRUE.
           HYBRIDSETTING(:)%TFOCKSETUP=.FALSE.
-          HYBRIDSETTING(:)%LHFWEIGHT=-1.D0
-          HYBRIDSETTING(:)%TNDDO=.TRUE.
-          HYBRIDSETTING(:)%T31=.TRUE.
-          HYBRIDSETTING(:)%TBONDX=.TRUE.
+          HYBRIDSETTING(:)%LHFWEIGHT =-1.D0
+          HYBRIDSETTING(:)%TNDDO     =.TRUE.
+          HYBRIDSETTING(:)%T31       =.TRUE.
+          HYBRIDSETTING(:)%TBONDX    =.TRUE.
           HYBRIDSETTING(:)%TAILEDLAMBDA1=4.D0
           HYBRIDSETTING(:)%TAILEDLAMBDA2=2.D0
+          HYBRIDSETTING(:)%RAUGMENT     =0.D0
+          HYBRIDSETTING(:)%RTAIL        =0.D0
+          NULLIFY(HYBRIDSETTING(:)%NORBOFL)
         END IF
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -464,6 +501,26 @@ END MODULE LMTO_MODULE
           CALL ERROR$STOP('LMTO$SETR8')
         END IF
         HYBRIDSETTING(ISPSELECTOR)%TAILEDLAMBDA2=VAL
+!
+      ELSE IF(ID.EQ.'RAUGMENT') THEN
+        IF(ISPSELECTOR.LE.0) THEN
+          CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO$SETR8')
+        END IF
+        HYBRIDSETTING(ISPSELECTOR)%RAUGMENT=VAL
+!
+      ELSE IF(ID.EQ.'RTAIL') THEN
+        IF(ISPSELECTOR.LE.0) THEN
+          CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO$SETR8')
+        END IF
+        HYBRIDSETTING(ISPSELECTOR)%RTAIL=VAL
 !
       ELSE IF(ID.EQ.'SCALERCUT') THEN
         RCSCALE=VAL
@@ -1186,8 +1243,14 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
       INTEGER(4)             :: NTAIL !#(TAIL FUNCTIONS)
       INTEGER(4)             :: LX    !X(ANGULAR MOMENTUM)
       INTEGER(4)             :: ISP,LN,L,LNOFH,LNOFT,IHEAD,ITAIL
+      INTEGER(4)             :: ISVAR
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO_MAKEPOTPAR1')
+      IF(.NOT.ASSOCIATED(HYBRIDSETTING) THEN
+        CALL ERROR$MSG('HYBRIDSETTING NOT ALLOCATED')
+        CALL ERROR$STOP('LMTO_MAKEPOTPAR1')
+      END IF
+
       ALLOCATE(POTPAR1(NSP))
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
@@ -1202,15 +1265,35 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
         ALLOCATE(AUX(NR))
-
-!       == MATCHING RADIUS =====================================================
-        CALL SETUP$GETR8('RAD',RAD)
-        POTPAR1(ISP)%RAD=RAD
-!       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
-        ALLOCATE(TORB(LNX1))
-        CALL SETUP$GETL4A('TORB',LNX1,TORB)
         ALLOCATE(ISCATT(LNX1))
         CALL SETUP$GETI4A('ISCATT',LNX1,ISCATT)
+
+!       == MATCHING RADIUS =====================================================
+        IF(HYBRIDSETTING(ISP)%RAD.GE.0.D0) THEN
+          RAD=HYBRIDSETTING(ISP)%RAUGMENT
+        ELSE
+          POTPAR1(ISP)%RAD=RAD
+          CALL SETUP$GETR8('RAD',RAD)
+        ENDDO
+        POTPAR1(ISP)%RAD=RAD
+!
+!       == SELECTION OF LOCAL ORBITALS CONSIDERED IN THE U-TENSOR ==============
+        ALLOCATE(TORB(LNX1))
+        TORB=.FALSE.
+        IF(ASSOCIATED(HYBRIDSETTING%NORBOFL)) THEN
+          LX=SIZE(HYBRIDSETTING%NORBOFL)-1  ! CAUTION! THIS LX IS SPECIAL
+          DO L=0,LX
+            ISVAR=HYBRIDSETTING%NORBOFL(L+1)
+            DO LN=1,LNX1
+              IF(LOX(LN,ISP).NE.L) CYCLE
+              IF(ISVAR.EQ.0) EXIT  ! NO MORE ORBITALS REQUESTED
+              TORB(LN)=.TRUE.
+              ISVAR=ISVAR-1
+            ENDDO  ! END OF LN-LOOP
+          ENDDO    ! END OF L-LOOP
+        END IF
+!       __ AVOID CONFUSION WITH THE SETTING ABOVE_______________________________
+        LX=MAXVAL(LOX(:LNX1,ISP))  ! SET GENERAL DEFINITION OF LX
 !
 !       == PARTIAL WAVES AND PROJECTORS ========================================
         ALLOCATE(NLPHI(NR,LNX1))
@@ -1602,6 +1685,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       DO ISP=1,NSP
         LAMBDA1=HYBRIDSETTING(ISP)%TAILEDLAMBDA1
         LAMBDA2=HYBRIDSETTING(ISP)%TAILEDLAMBDA2
+        RTAIL=HYBRIDSETTING(ISP)%RTAIL
 !
         CALL SETUP$ISELECT(ISP)
 !       == RADIAL GRID =========================================================
@@ -1609,7 +1693,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         CALL SETUP$GETI4('NR',NR)
         ALLOCATE(R(NR))
         CALL RADIAL$R(GID,NR,R)
-        RAD=POTPAR1(ISP)%RAD
+        RAD=POTPAR1(ISP)%RAD    !AUGMENTATION RADIUS
         DO IR=1,NR
           IRAD=IR
           IF(R(IR).GT.RAD) EXIT
