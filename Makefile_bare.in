@@ -203,7 +203,6 @@ OBJECTS1 = \
            ${OBJDIR}/paw_thermostat.o \
            ${OBJDIR}/paw_isolate.o \
            ${OBJDIR}/paw_assist.o \
-           ${OBJDIR}/paw_ldaplusu.o \
            ${OBJDIR}/paw_lists.o \
            ${OBJDIR}/paw_constraints.o \
            ${OBJDIR}/paw_lmto.o \
@@ -714,7 +713,6 @@ ifeq ($(ALLDEP),T)
  ${OBJDIR}/paw_dimer.o:         ${OBJDIR}/paw_mpelib${MODE}.o
 
 
- ${OBJDIR}/paw_ldaplusu.o:      ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_atomlib.o:       ${OBJDIR}/paw_periodictable.o
  ${OBJDIR}/paw_schroedinger.o:  ${OBJDIR}/paw_periodictable.o
@@ -872,10 +870,6 @@ endif
  ${OBJDIR}/paw_isolate.o : MPE_MODULE.mod
  ISOLATE_MODULE.mod : ${OBJDIR}/paw_isolate.o
  ## file:src/paw_kpoints.f90
- ## file:src/paw_ldaplusu.f90
- LDAPLUSU_MODULE.mod : ${OBJDIR}/paw_ldaplusu.o
- ${OBJDIR}/paw_ldaplusu.o :  CI_MODULE.mod
- ${OBJDIR}/paw_ldaplusu.o :  LMTO_MODULE.mod
  ## file:src/paw_ci.f90
  CI_MODULE.mod : ${OBJDIR}/paw_ci.o
  ## file:src/paw_library.f90

@@ -10,7 +10,7 @@
 !**                                                                   **
 !**  MODULES USED: MPE                                                **
 !**  USES: MPE; SETUP; HYPERFINE, ENERGYLIST, ATOMLIST                **
-!**    EXTERNAL1CPOT, LDAPLUSU                                        **
+!**    EXTERNAL1CPOT
 !**    CLEBSCH, RADIAL, DFT, GAUSSN                                   **
 !**    SELFTEST, TRACE, FILEHANDLER, ERROR                            **
 !**                                                                   **
@@ -543,17 +543,6 @@ END MODULE AUGMENTATION_MODULE
 !     ==  CI                                                        ==
 !     ================================================================
 !      CALL PAW_CI(ISP,LMNX,NDIMD,DENMAT)
-!
-!     ================================================================
-!     ==  LDA + U                                                   ==
-!     ================================================================
-      ALLOCATE(DATP(LMNX,LMNX,NDIMD))
-      DETOT=0.D0
-      DATP=0.D0
-      CALL LDAPLUSU$ETOT(IAT,LMNX,NDIMD,DENMAT,DETOT,DATP)
-      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0)
-      DEALLOCATE(DATP)
-      CALL AUGMENTATION_ADD('LDA+U EXCHANGE',DETOT)
 !
 !     ================================================================
 !     ==  APPLY EXTERNAL POTENTIAL                                  ==

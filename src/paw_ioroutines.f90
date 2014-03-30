@@ -152,12 +152,6 @@ CALL TRACE$PASS('DFT')
       CALL DFT$REPORT(NFILO)
 !
 !     ==================================================================
-!     == LDAPLUSU                                                     ==
-!     ==================================================================
-CALL TRACE$PASS('LDAPLUSU')
-      CALL LDAPLUSU$REPORT(NFILO)
-!
-!     ==================================================================
 !     == ATOM SPECIES                                                 ==
 !     ==================================================================
 CALL TRACE$PASS('SPECIES')
@@ -3989,8 +3983,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       LOGICAL(4)               :: TCHK
       INTEGER(4)               :: NSP
       INTEGER(4)               :: ISP
-      LOGICAL(4)               :: TLDAPLUSU
-      LOGICAL(4)               :: THYBRID
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES')
       LL_STRC=LL_STRC_
@@ -3999,39 +3991,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     == NOW ANALYZE THE SPECIES BLOCKS AND CONFIGURE SETUP INSTANCE
 !     ==========================================================================
       CALL SETUP$READSTRCIN(LL_STRC)
-!
-!     ==========================================================================
-!     == NOW COLLECT INFORMATION FOR LDAPLUSU OPJECT                          ==
-!     ==========================================================================
-      CALL LINKEDLIST$SELECT(LL_STRC,'~')
-      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
-      CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
-      CALL LDAPLUSU$NEW(NSP)
-      DO ISP=1,NSP
-        CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
-!
-!       ========================================================================
-!       ========================================================================
-!       ==  LDAPLUSU AND HYBRID                                               ==
-!       ========================================================================
-!       ========================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TLDAPLUSU)
-        CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,THYBRID)
-        IF(THYBRID.AND.TLDAPLUSU) THEN
-         CALL ERROR$MSG('LDAPLUSU AND HYBRID FUNCTIONAL ARE MUTUALLY EXCLUSIVE')
-          CALL ERROR$MSG('STRCIN_SPECIES')
-        END IF
-!
-        IF(TLDAPLUSU) THEN
-          CALL LDAPLUSU$SETL4('ON',.TRUE.)
-          CALL STRCIN_LDAPLUSU(LL_STRC,ISP)
-        ELSE IF(THYBRID) THEN
-          CALL LDAPLUSU$SETL4('ON',.TRUE.)
-          CALL STRCIN_HYBRID(LL_STRC,ISP)
-        END IF
-!
-        CALL LINKEDLIST$SELECT(LL_STRC,'..')
-      ENDDO
 !    
 !     ==========================================================================
 !     ==  READ BLOCK !STRUCTURE!NTBO                                          ==
@@ -4039,169 +3998,31 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL STRCIN_LMTO(LL_STRC)
 !    
 !     ==========================================================================
-!     ==  CONFIGURE SETUP OBJECT  (THE NAME IS MISLEADING)                    ==
+!     ==  CONFIGURE SETUP OBJECT  (THE NAME "READ" IS MISLEADING)             ==
 !     ==========================================================================
       CALL SETUP$READ()
+!
+!     ==========================================================================
+!     == WARN BECAUSE OF OBSOLETE KEYWORDS LDAPLUSU AND HYBRID                ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
+      DO ISP=1,NSP
+        CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
+        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('!STRUCTURE!SPECIES:LDAPLUSU IS OBSOLETE')
+          CALL ERROR$MSG('STRCIN_SPECIES')
+        END IF
+        CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('!STRUCTURE!SPECIES:HYBRID IS OBSOLETE')
+          CALL ERROR$MSG('STRCIN_SPECIES')
+        END IF
+        CALL LINKEDLIST$SELECT(LL_STRC,'..')
+      ENDDO
                            CALL TRACE$POP
-      RETURN
-      END
-!     
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE STRCIN_LDAPLUSU(LL_STRC_,ISP)
-!     **************************************************************************
-!     **************************************************************************
-      USE LINKEDLIST_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
-      INTEGER(4)   ,INTENT(IN) :: ISP
-      TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK
-      REAL(8)                  :: SVAR
-      INTEGER(4)               :: LENG
-      INTEGER(4)   ,ALLOCATABLE:: NCORROFL(:)
-      INTEGER(4)               :: MAINLN(2)
-      REAL(8)                  :: EV
-      REAL(8)                  :: AEZ
-!     **************************************************************************
-      LL_STRC=LL_STRC_
-      CALL CONSTANTS('EV',EV)
-      CALL LINKEDLIST$SELECT(LL_STRC,'LDAPLUSU')
-      CALL LDAPLUSU$SELECTTYPE(ISP)
-      CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
-      CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U')
-
-      CALL LINKEDLIST$EXISTD(LL_STRC,'OLD',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'OLD',1,TCHK)
-        CALL LDAPLUSU$SETCH('FUNCTIONALID','LDA+U(OLD)')
-      END IF
-!
-!     == RANGE OF LOCAL ORBITALS ===========================================
-      CALL SETUP$SELECT(ISP)
-      CALL SETUP$GETR8('AEZ',AEZ)
-      CALL SETUP$UNSELECT()
-      CALL PERIODICTABLE$GET(AEZ,'R(ASA)',SVAR)
-      CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
-      CALL LDAPLUSU$SETR8('RCUT',SVAR)
-!        
-      CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
-        CALL ERROR$STOP('STRCIN_SPECIES')
-      END IF
-      CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
-      ALLOCATE(NCORROFL(LENG))
-      CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
-      CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
-      DEALLOCATE(NCORROFL)
-!        
-      CALL LINKEDLIST$EXISTD(LL_STRC,'DIEL',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'DIEL',1,SVAR)
-        CALL LDAPLUSU$SETR8('DIEL',SVAR)
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_STRC,'UPAR[EV]',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'UPAR[EV]',1,SVAR)
-        CALL LDAPLUSU$SETR8('UPAR',SVAR*EV)
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_STRC,'JPAR[EV]',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'JPAR[EV]',1,SVAR)
-        CALL LDAPLUSU$SETR8('JPAR',SVAR*EV)
-      END IF
-
-      CALL LINKEDLIST$EXISTD(LL_STRC,'F4/F2',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'F4/F2',1,SVAR)
-        CALL LDAPLUSU$SETR8('F4/F2',SVAR)
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_STRC,'F6/F2',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'F6/F2',1,SVAR)
-        CALL LDAPLUSU$SETR8('F4/F2',SVAR)
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_STRC,'MAINLN',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'MAINLN',1,MAINLN)
-        CALL LDAPLUSU$SETI4A('MAINLN',2,MAINLN)
-      END IF
-!
-!     == CORE-VALENCE EXCHANGE   ===========================================
-!     == NOT ALLOWED FOR LDA+U    ==========================================
-      CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',.FALSE.)
-!
-!     == GET OUT OF LDAPLUSU-BLOCK
-      CALL LDAPLUSU$SELECTTYPE(0)
-      CALL LINKEDLIST$SELECT(LL_STRC,'..')
-
-      RETURN
-      END
-!     
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE STRCIN_HYBRID(LL_STRC_,ISP)
-!     **************************************************************************
-!     ** 
-!     **************************************************************************
-      USE LINKEDLIST_MODULE
-      USE PERIODICTABLE_MODULE
-      IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
-      INTEGER(4)   ,INTENT(IN) :: ISP
-      TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK
-      INTEGER(4)               :: LENG
-      INTEGER(4)   ,ALLOCATABLE:: NCORROFL(:)
-      REAL(8)                  :: SVAR
-!     **************************************************************************
-      LL_STRC=LL_STRC_
-      CALL LINKEDLIST$SELECT(LL_STRC,'HYBRID')
-      CALL LDAPLUSU$SELECTTYPE(ISP)
-      CALL LDAPLUSU$SETL4('ACTIVE',.TRUE.)
-      CALL LDAPLUSU$SETCH('FUNCTIONALID','HYBRID')
-!
-!     == RANGE OF LOCAL ORBITALS ===============================================
-!      CALL PERIODICTABLE$GET(Z,'R(ASA)',SVAR)
-!      CALL LINKEDLIST$EXISTD(LL_STRC,'RCUT',1,TCHK)
-!      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RCUT',1,SVAR)
-!      CALL LDAPLUSU$SETR8('RCUT',SVAR)
-!
-!     == DEFINE SHELLS IN THE CORRELATED SUB-SPACE =============================
-      CALL LINKEDLIST$EXISTD(LL_STRC,'NCORROFL',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('NCORROFL IS MANDATORY BUT HAS NOT BEEN SET')
-        CALL ERROR$STOP('STRCIN_SPECIES')
-      END IF
-      CALL LINKEDLIST$SIZE(LL_STRC,'NCORROFL',1,LENG)
-      ALLOCATE(NCORROFL(LENG))
-      CALL LINKEDLIST$GET(LL_STRC,'NCORROFL',1,NCORROFL)
-      CALL LDAPLUSU$SETI4A('NCORROFL',LENG,NCORROFL)
-      DEALLOCATE(NCORROFL)
-!
-!     == CORE-VALENCE EXCHANGE   ===========================================
-      CALL LINKEDLIST$EXISTD(LL_STRC,'CV',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK)
-      ELSE
-        TCHK=.TRUE.  ! DEFAULT IS TO INCLUDE CORE-VALENCE INTERACTION
-      END IF
-      CALL LDAPLUSU$SETL4('COREVALENCEEXCHANGE',TCHK)
-!
-!     == DEFINE MIXING FOR HYBRID FUNCTIONAL ===============================
-      SVAR=0.25D0
-      CALL LINKEDLIST$EXISTD(LL_STRC,'HFWEIGHT',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'HFWEIGHT',1,SVAR)
-      CALL LDAPLUSU$SETR8('HFWEIGHT',SVAR)
-!
-!     == GET OUT OF HYBRID-BLOCK ===========================================
-      CALL LDAPLUSU$SELECTTYPE(0)
-      CALL LINKEDLIST$SELECT(LL_STRC,'..')
       RETURN
       END
 !     
@@ -4213,20 +4034,21 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     **  !SPECIES MUST BE FINISHED BEFORE THIS IS CALLED                     **
 !     **                                                                      **
 !     **************************************************************************
+      USE PERIODICTABLE_MODULE
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
       INTEGER(4)               :: ISP
-      CHARACTER(32)            :: SPNAME
+      CHARACTER(32)            :: SPNAME     !SPECIES NAME
       LOGICAL(4)               :: TCHK,TCHK1
-      INTEGER(4)               :: NSP
+      INTEGER(4)               :: NSP        !#(SPECIES)
       REAL(8)                  :: SVAR
-      LOGICAL(4)               :: TNTBO
       INTEGER(4)               :: LENG
-      LOGICAL(4),ALLOCATABLE   :: TORB(:)
       REAL(8)   ,ALLOCATABLE   :: WORK(:)
       INTEGER(4),ALLOCATABLE   :: IWORK(:)
+      REAL(8)                  :: AEZ       ! ATOMIC NUMBER
+      REAL(8)                  :: RCOV      ! COVALENT RADIUS
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_SPECIES_NTBO')
       LL_STRC=LL_STRC_
@@ -4239,33 +4061,24 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
 !       ==  SKIP IF NTBO BLOCK IS NOT PRESENT                                 ==
 !       ========================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TNTBO)
-        IF(.NOT.TNTBO) THEN
+        CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TCHK)
+        IF(.NOT.TCHK) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'..') !LEAVE SPECIES BLOCK
           CYCLE
         END IF
 !
 !       ========================================================================
-!       ==  CHECK CONFLICT WITH LDAPLUSU AND HYBRID                           ==
-!       ========================================================================
-        CALL LINKEDLIST$EXISTL(LL_STRC,'HYBRID',1,TCHK)
-        IF(TCHK) THEN
-          CALL ERROR$MSG('OPTIONS !NTBO AND !HYBRID ARE INCOMPATIBLE')
-          CALL ERROR$MSG('IN !STRUCTURE!SPECIES')
-          CALL ERROR$STOP('STRCIN_LMTO')
-        END IF
-        CALL LINKEDLIST$EXISTL(LL_STRC,'LDAPLUSU',1,TCHK)
-        IF(TCHK) THEN
-          CALL ERROR$MSG('OPTIONS !NTBO AND !LDAPLUSU ARE INCOMPATIBLE')
-          CALL ERROR$MSG('IN !STRUCTURE!SPECIES')
-          CALL ERROR$STOP('STRCIN_LMTO')
-        END IF
-!
-!       ========================================================================
-!       ==  SPECIES NAME                                                      ==
+!       ==  SPECIES NAME / COLLECT INFORMATION FROM SETUP OBJECT              ==
 !       ========================================================================
         CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
+        CALL SETUP$SELECT(SPNAME)
+        CALL SETUP$GETR8('AEZ',AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+        CALL SETUP$UNSELECT()
 !
+!       ========================================================================
+!       ==  ENTER !SPECIES!NTBO BLOCK                                         ==
+!       ========================================================================
         CALL LMTO$SETI4('ISP ',ISP)
         CALL LINKEDLIST$SELECT(LL_STRC,'NTBO')
 !   
@@ -4323,18 +4136,18 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         END IF
 !   
 !       == RADIUS FOR MATCHING PARTIAL WAVES TO ENVELOPE FUNCTIONS =============
-        CALL LINKEDLIST$EXISTD(LL_STRC,'RMATCH',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'RMATCH',1,SVAR)
-          CALL LMTO$SETR8('RMATCH',SVAR)
-        END IF
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAUG/RCOV',1,TCHK)
+        SVAR=1.D0
+        IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RAUG/RCOV',1,SVAR)
+        SVAR=SVAR*RCOV
+        CALL LMTO$SETR8('RAUG',SVAR)
 !   
 !       == RADIUS FOR MATCHING EXPONENTIAL TAILS ===============================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'RTAIL',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_STRC,'RTAIL',1,SVAR)
-          CALL LMTO$SETR8('RTAIL',SVAR)
-        END IF
+        SVAR=1.D0
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RTAIL/RCOV',1,TCHK)
+        IF(TCHK) CALL LINKEDLIST$GET(LL_STRC,'RTAIL/RCOV',1,SVAR)
+        SVAR=SVAR*RCOV
+        CALL LMTO$SETR8('RTAIL',SVAR)
 !   
 !       ========================================================================
 !       ==  SELECTOR FOR LOCAL ORBITALS: #(ORBITALS PER L)                    ==
@@ -4343,17 +4156,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$SIZE(LL_STRC,'NOFL',1,LENG)
            ALLOCATE(IWORK(LENG))
-          CALL LINKEDLIST$GET(LL_STRC,'NOFL',1,IWORK)
+           CALL LINKEDLIST$GET(LL_STRC,'NOFL',1,IWORK)
         ELSE
           LENG=1
           ALLOCATE(IWORK(LENG))   ! THE ARRAY WILL BE EXTENDED
           IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
         END IF        
-        CALL LMTO$SETI4A('NOFL',IWORK)
-
-!!$        CALL SETUP$SELECT(SPNAME)
-!!$        CALL SETUP$SETI4A('NTBO',LENG,IWORK)
-!!$        CALL SETUP$UNSELECT()
+        CALL LMTO$SETI4A('NORBOFL',LENG,IWORK)
         DEALLOCATE(IWORK)
 !   
 !       ========================================================================
@@ -4361,13 +4170,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'NTBO',1,TCHK)
         IF(TCHK) THEN
-          CALL ERROR$MSG('ntbo IS OBSOLETE. USE Nofl TO SET NUMBER OF ORBITALS')
+          CALL ERROR$MSG('NTBO IS OBSOLETE. USE NOFL TO SET NUMBER OF ORBITALS')
           CALL ERROR$STOP('STRCIN_LMTO')
         END IF
 
         CALL LINKEDLIST$EXISTD(LL_STRC,'TORB',1,TCHK)
         IF(TCHK) THEN
-          CALL ERROR$MSG('TORB IS OBSOLETE. USE nofl TO SET NUMBER OF ORBITALS')
+          CALL ERROR$MSG('TORB IS OBSOLETE. USE NOFL TO SET NUMBER OF ORBITALS')
           CALL ERROR$STOP('STRCIN_LMTO')
         END IF
         CALL LMTO$SETI4('ISP',0)             ! UNSELECT LMTO INSTANCE

@@ -2511,7 +2511,7 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: ntasks,THISTASK
 !     ******************************************************************
       CALL MPE$QUERY(this%cid,NTASKS,THISTASK)
-                              CALL TRACE$PUSH('PLANEWAVE$DISTRIBUTE')
+!                              CALL TRACE$PUSH('PLANEWAVE$DISTRIBUTE')
       IF (.NOT.TINI) THEN
         CALL ERROR$MSG('LIST NOT INITIALIZED')
         CALL ERROR$STOP('PLANEWAVE$DISTRIBUTE<TYPEID>')
@@ -2565,7 +2565,7 @@ END MODULE PLANEWAVE_MODULE
       ELSE
         CALL MPE$RECEIVE(THIS%CID,1,10,XLOC)
       ENDIF
-                     CALL TRACE$POP
+!                     CALL TRACE$POP
       RETURN
       END
 #END TEMPLATE PLANEWAVE$DISTRIBUTE

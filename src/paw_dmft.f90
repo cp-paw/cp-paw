@@ -1,7 +1,6 @@
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE DMFT_MODULE
 !*******************************************************************************
-!** IPROOFCHI(NCHI) IS A POINTER THAT SELECTS A PARTICULAR LOCAL ORBITAL      **
 !**                                                                           **
 !**  DESCRIPTION OF VARIABLES                                                 **
 !**    GLOCLAUR1,1,2 EXPANSION OF SPIN-AVERAGED GLOC IN 1/(CI*HBAR*OMEGA)     **
@@ -58,7 +57,6 @@ INTEGER(4)             :: NDIM          ! #(SPINOR COMPONENTS)
 INTEGER(4)             :: NDIMD         ! CAN BE 1,2,4
 INTEGER(4)             :: NAT           ! #(ATOMS)
 REAL(8)   ,ALLOCATABLE :: OMEGA(:)      ! MATSUBARA FREQUENCIES
-INTEGER(4),ALLOCATABLE :: IPROOFCHI(:)  !(NCHI) MAP ICHI TO IPRO
 REAL(8)                :: KBT           ! TEMPERATURE (K_B*T)
 REAL(8)   ,PARAMETER   :: MU=0.D0       ! CHEMICAL POTENTIAL
 !== KSET =======================================================================
@@ -69,10 +67,10 @@ END MODULE DMFT_MODULE
       SUBROUTINE DMFT_INI()
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TINI,NDIM,NDIMD,NSPIN,NKPTL,NB,NAT,NCHI &
-     &                       ,NOMEGA,KBT,MU,OMEGA,IPROOFCHI &
+     &                       ,NOMEGA,KBT,MU,OMEGA &
      &                       ,KSET,ATOMSET
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
-      USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT
+      USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT,potpar1
       IMPLICIT NONE
       REAL(8)                :: PI
       INTEGER(4)             :: NTASKS_K,THISTASK_K
@@ -157,47 +155,13 @@ PRINT*,'KBT=',KBT,' KBT[EV]=',KBT*27.211D0
       NCHI=0
       DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        ALLOCATE(TORB(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        CALL SETUP$GETL4A('TORB',LNX,TORB)
-        CALL SETUP$UNSELECT()
-!       == REMOVE ORBITALS WITH TORB=FALSE
-        LN1=0
-        DO LN=1,LNX
-          IF(.NOT.TORB(LN)) CYCLE
-          LN1=LN1+1
-          LOX(LN1)=LOX(LN)
-        ENDDO
-        LNX=LN1
 !
 !       == SAVE BOUNDS TO ATOMSET ==============================================
-        NLOC=SUM(2*LOX(:LNX)+1)
+        NLOC=SUM(2*POTPAR1(ISP)%LOFH+1)
         ATOMSET(IAT)%NLOC=NLOC
         ATOMSET(IAT)%ICHI1=NCHI+1      ! FIRST ICHI FOR THIS ATOM
         ATOMSET(IAT)%ICHI2=NCHI+NLOC   ! LAST ICHI FOR THIS ATOM
         NCHI=NCHI+NLOC
-!
-!       == NOW DETERMINE SUBSTRUCTURE DENMAT ==================================
-!!$ THIS IS NO MORE REQUIRED
-!!$        ATOMSET(IAT)%DENMAT%LNX=LNX
-!!$        ALLOCATE(ATOMSET(IAT)%DENMAT%LOX(LNX))
-!!$        ATOMSET(IAT)%DENMAT%LOX=LOX(:LNX)
-!!$        ATOMSET(IAT)%DENMAT%LMNX=NLOC
-!!$        NLOC=ATOMSET(IAT)%NLOC
-!!$        ALLOCATE(ATOMSET(IAT)%DENMAT%LMN(NLOC))
-!!$        LMN=0
-!!$        I=0
-!!$        DO LN=1,LNX
-!!$          L=LOX(LN)
-!!$          DO IM=1,2*L+1
-!!$            I=I+1
-!!$            LMN=LMN+1
-!!$            ATOMSET(IAT)%DENMAT%LMN(I)=LMN
-!!$          ENDDO
-!!$        ENDDO
 !
 !       ========================================================================
 !       == INHERIT SCREENING FACTOR  FROM LMTO_MODULE                         ==
@@ -227,43 +191,8 @@ PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',ATOMSET(IAT)%LHFWEIGHT
         ATOMSET(IAT)%SMAT=(0.D0,0.D0)
         ATOMSET(IAT)%DENMAT%RHO =(0.D0,0.D0)
         ATOMSET(IAT)%DENMAT%H   =(0.D0,0.D0)
-!
-        DEALLOCATE(LOX)
-        DEALLOCATE(TORB)
       ENDDO
 PRINT*,'NCHI ',NCHI
-!
-!     ==========================================================================
-!     == ACCUMULATE IPROOFCHI                                                 ==
-!     ==========================================================================
-      ALLOCATE(IPROOFCHI(NCHI))
-      ICHI=0
-      IPRO=0
-      DO IAT=1,NAT
-        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        ALLOCATE(TORB(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        CALL SETUP$GETL4A('TORB',LNX,TORB)
-        DO LN=1,LNX
-          L=LOX(LN)
-          IF(TORB(LN)) THEN
-            DO IM=1,2*L+1
-              ICHI=ICHI+1
-              IPRO=IPRO+1
-              IPROOFCHI(ICHI)=IPRO
-            ENDDO
-          ELSE
-            IPRO=IPRO+2*L+1
-          END IF
-        ENDDO
-        DEALLOCATE(LOX)
-        DEALLOCATE(TORB)
-        CALL SETUP$UNSELECT()
-      ENDDO
-PRINT*,'IPROOFCHI ',IPROOFCHI
 !
 !     ==========================================================================
 !     == COLLECT K-POINT WEIGHTS                                              ==
@@ -604,7 +533,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ** COLLECTS THE HAMILTONIAN AND STORES IT ON THE MODULE                 **
 !     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,IPROOFCHI &
+      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD &
      &                      ,NAT,KSET,ATOMSET
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
@@ -1477,101 +1406,24 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     **************************************************************************
 !     ** CALCULATE THE U-TENSOR OF THE CORRELATED ORBITALS IN THE SELECTED SET
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR
+      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR1
       USE DMFT_MODULE, ONLY: NAT,ATOMSET
       IMPLICIT NONE
       REAL(8)  ,ALLOCATABLE :: UB(:,:,:,:)
       INTEGER(4)            :: ISP ! ATOM TYPE
-      INTEGER(4)            :: L,LN,LMN,ICHI
       INTEGER(4)            :: LMNX
-      INTEGER(4)            :: NCHI1        ! #(SELECTED ORBITALS ON THIS ATOM)
       INTEGER(4)            :: IAT
+      INTEGER(4)            :: nh
 !     **************************************************************************
                                           CALL TRACE$PUSH('DMFT_UTENSOR')
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
-!
-!       ========================================================================
-!       == CALCULATE LOCAL DIMENSIONS LMNX AND NCHI1 ===========================
-!       ========================================================================
-        LMN=0
-        ICHI=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          IF(POTPAR(ISP)%TORB(LN)) ICHI=ICHI+2*L+1
-          LMN=LMN+2*L+1
-        ENDDO
-        LMNX=LMN
-        NCHI1=ICHI
-        IF(NCHI1.EQ.0) CYCLE
-        IF(NCHI1.NE.ATOMSET(IAT)%NLOC) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-          CALL ERROR$STOP('DMFT_UTENSOR')
-        END IF
+        nh=atomset(iat)%nloc
 !
 !       ========================================================================
 !       ==  CALCULATE U-TENSOR IN THE BASIS OF LOCAL ORBITALS IGNORING TORB   ==
 !       ========================================================================
-        ALLOCATE(UB(LMNX,LMNX,LMNX,LMNX))
-        CALL DMFT_ULOCAL(IAT,LMNX,UB)
-!
-!       ========================================================================
-!       ==  THROW OUT ELEMENTS THAT ARE NOT USED                              ==
-!       ========================================================================
-        LMN=0
-        ICHI=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          IF(POTPAR(ISP)%TORB(LN)) THEN
-            UB(:,:,:,ICHI+1:ICHI+2*L+1)=UB(:,:,:,LMN+1:LMN+2*L+1)
-            ICHI=ICHI+2*L+1
-          END IF
-          LMN=LMN+2*L+1
-        ENDDO
-!  
-!       ========================================================================
-        LMN=0
-        ICHI=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          IF(POTPAR(ISP)%TORB(LN)) THEN
-            UB(:,:,ICHI+1:ICHI+2*L+1,:NCHI1)=UB(:,:,LMN+1:LMN+2*L+1,:NCHI1)
-            ICHI=ICHI+2*L+1
-          END IF
-          LMN=LMN+2*L+1
-        ENDDO
-!  
-!       ========================================================================
-        LMN=0
-        ICHI=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          IF(POTPAR(ISP)%TORB(LN)) THEN
-            UB(:,ICHI+1:ICHI+2*L+1,:NCHI1,:NCHI1) &
-      &                                     =UB(:,LMN+1:LMN+2*L+1,:NCHI1,:NCHI1)
-            ICHI=ICHI+2*L+1
-          END IF
-          LMN=LMN+2*L+1
-        ENDDO
-!  
-!       ========================================================================
-        LMN=0
-        ICHI=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          IF(POTPAR(ISP)%TORB(LN)) THEN
-            UB(ICHI+1:ICHI+2*L+1,:NCHI1,:NCHI1,:NCHI1) &
-       &                               =UB(LMN+1:LMN+2*L+1,:NCHI1,:NCHI1,:NCHI1)
-            ICHI=ICHI+2*L+1
-          END IF
-          LMN=LMN+2*L+1
-        ENDDO  
-!
-!       ========================================================================
-!       ==  PUT ONTO ATOMSET                                                  ==
-!       ========================================================================
-        ATOMSET(IAT)%U=UB(:NCHI1,:NCHI1,:NCHI1,:NCHI1)
-        DEALLOCATE(UB)
+        CALL DMFT_ULOCAL(IAT,nh,ATOMSET(IAT)%U)
 !
 !       ========================================================================
 !       == SCREEN U-TENSOR BY LOCAL HF-WEIGHT                                 ==
@@ -1588,7 +1440,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     **************************************************************************
 !     **  CALCULATES THE U-TENSOR OF THE NATURAL TIGHT-BINDING ORBITALS       **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR,SBAR,SBARLI1,LNX,LOX
+      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR1,SBAR_NEW,SBARLI1,LNX,LOX
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT
       INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
@@ -1597,129 +1449,90 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       REAL(8)   ,ALLOCATABLE :: UT(:,:,:,:)
       INTEGER(4)             :: ISP     ! ATOM TYPE
       INTEGER(4)             :: LMNXT   ! #(VALENCE+SCATTERING WAVES)
-      INTEGER(4)             :: LMX     ! #(SCATTERING WAVES)
+      INTEGER(4)             :: NT      ! #(TAIL FUNCTIONS(LMN))
+      INTEGER(4)             :: NH      ! #(HEAD FUNCTIONS (LMN))
       INTEGER(4)             :: NNS     ! #(PAIRS FOR STRUCTURE CONSTANTS)
-      REAL(8)                :: SVAR
-      INTEGER(4)             :: LMN,L,LM,LN,IM,NN,NN0,J
+      INTEGER(4)             :: IH,IT,NN,NN0
 !     **************************************************************************
       ISP=ISPECIES(IAT)
-      LMNXT=POTPAR(ISP)%TAILED%LMNX  ! SIZE OF U-TENSOR ON POTPAR
+      LMNXT=POTPAR1(ISP)%TAILED%LMNX  ! SIZE OF U-TENSOR ON POTPAR
+      NH=SUM(2*POTPAR1(ISP)%LOFH+1)     
+      NT=SUM(2*POTPAR1(ISP)%LOFT+1)     
+      IF(NH+NT.NE.LMNXT) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+        CALL ERROR$MSG('LMNXT=NH+NT MUST BE OBEYED')
+        CALL ERROR$I4VAL('LMNXT',LMNXT)
+        CALL ERROR$I4VAL('NH',NH)
+        CALL ERROR$I4VAL('nt',NT)
+        CALL ERROR$I4VAL('isp',isp)
+        CALL ERROR$STOP('DMFT_ULOCAL')
+      END IF
+      IF(NH.NE.LMNX) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+        CALL ERROR$MSG('LMNX=NH MUST BE OBEYED')
+        CALL ERROR$I4VAL('LMNX',LMNX)
+        CALL ERROR$I4VAL('NH',NH)
+        CALL ERROR$I4VAL('isp',isp)
+        CALL ERROR$STOP('DMFT_ULOCAL')
+      END IF
 !
 !     ==========================================================================
 !     == COLLECT U-TENSOR IN EXPANDED BASIS                                   ==
 !     ==========================================================================
       ALLOCATE(UT(LMNXT,LMNXT,LMNXT,LMNXT))
-      UT=POTPAR(ISP)%TAILED%U
-!
-!     ==========================================================================
-!     == TEST CONSISTENCY OF ARRAY DIMENSIONS                                 ==
-!     ==========================================================================
-      IF(TTEST) THEN
-        LMN=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          LMN=LMN+2*L+1 
-        ENDDO
-        IF(LMN.NE.LMNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-          CALL ERROR$I4VAL('CALCULATED LMNX',LMN)
-          CALL ERROR$I4VAL('INPUT LMNX',LMNX)
-          CALL ERROR$STOP('DMFT_ULOCAL')
-        END IF
-        LM=0
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          LM=MAX(LM,SBARLI1(L+1,ISP)-1+(2*L+1))
-        ENDDO
-        IF(LMNX+LM.NE.LMNXT) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
-          CALL ERROR$I4VAL('CALCULATED LMNXT',LMNX+LM)
-          CALL ERROR$I4VAL('LMNX FROM POTPAR%TAILED',LMNXT)
-          CALL ERROR$STOP('DMFT_ULOCAL')
-        END IF
-      END IF
+      UT=POTPAR1(ISP)%TAILED%U
 !
 !     ==========================================================================
 !     == COLLECT STRUCTURE CONSTANTS                                          ==
 !     ==========================================================================
-      LMX=LMNXT-LMNX
-      NNS=SIZE(SBAR)
+      NNS=SIZE(SBAR_new)
       DO NN=1,NNS
-        IF(SBAR(NN)%IAT1.NE.IAT) CYCLE
-        IF(SBAR(NN)%IAT2.NE.IAT) CYCLE
-        IF(SUM(SBAR(NN)%IT(:)**2).NE.0) CYCLE
-        IF(SBAR(NN)%N1.NE.LMX.OR.SBAR(NN)%N2.NE.LMX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS FOR SBAR')
-          CALL ERROR$I4VAL('LMX=LMNXT-LMNX',LMX)
-          CALL ERROR$I4VAL('SBAR%N1',SBAR(NN)%N1)
-          CALL ERROR$I4VAL('SBAR%N2',SBAR(NN)%N2)
-          CALL ERROR$STOP('DMFT_ULOCAL')
-        END IF
+        IF(SBAR_NEW(NN)%IAT1.NE.IAT) CYCLE
+        IF(SBAR_NEW(NN)%IAT2.NE.IAT) CYCLE
+        IF(SUM(SBAR_new(NN)%IT(:)**2).NE.0) CYCLE
         NN0=NN
         EXIT
       ENDDO
       NN=NN0
 !
+!     __ CHECK DIMENSIONS_______________________________________________________
+      IF(SBAR_NEW(NN)%N1.NE.NH.OR.SBAR_NEW(NN)%N2.NE.NT) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS FOR SBAR')
+        CALL ERROR$MSG('NH=SBAR%N1 AND NT=SBAR%N2 MUST BE OBEYD')
+        CALL ERROR$I4VAL('NH',NH) ! INDEX OF HEAD FUNCTIONS
+        CALL ERROR$I4VAL('NT',NT) ! INDEX OF HEAD FUNCTIONS
+        CALL ERROR$I4VAL('SBAR%N1',SBAR_NEW(NN)%N1) 
+        CALL ERROR$I4VAL('SBAR%N2',SBAR_NEW(NN)%N2) 
+        CALL ERROR$STOP('DMFT_ULOCAL')
+      END IF
+!
 !     ==========================================================================
 !     == DOWNFOLD UTENSOR
 !     ==   |KBAR_I>=|K_I>-\SUM_J |JBAR_J> SBAR(I,J)                           ==
 !     ==========================================================================
-!      U(:,:,::)=POTPAR(ISP)%TAILED%U(:LMNX,:LMNX,:LMNX,:LMNX)
-      LMN=0
-      DO LN=1,LNX(ISP)
-        L=LOX(LN,ISP)
-        LM=SBARLI1(L+1,ISP)-1
-        DO IM=1,2*L+1 
-          LMN=LMN+1
-          LM=LM+1
-          DO J=1,LMX
-            SVAR=SBAR(NN)%MAT(LM,J)   
-            UT(:,:,:,LMN)=UT(:,:,:,LMN)-SVAR*UT(:,:,:,LMNX+J)
-          ENDDO
+!     U(:,:,::)=POTPAR(ISP)%TAILED%U(:LMNX,:LMNX,:LMNX,:LMNX)
+
+      DO IH=1,NH
+        DO IT=1,NT
+          UT(:,:,:,IH)=UT(:,:,:,IH)-SBAR_NEW(NN)%MAT(IH,IT)*UT(:,:,:,NH+IT)
         ENDDO
       ENDDO
-!
-      LMN=0
-      DO LN=1,LNX(ISP)
-        L=LOX(LN,ISP)
-        LM=SBARLI1(L+1,ISP)-1
-        DO IM=1,2*L+1 
-          LMN=LMN+1
-          LM=LM+1
-          DO J=1,LMX
-            SVAR=SBAR(NN)%MAT(LM,J)   
-            UT(:,:,LMN,:LMNX)=UT(:,:,LMN,:LMNX)-SVAR*UT(:,:,LMNX+J,:LMNX)
-          ENDDO
+      DO IH=1,NH
+        DO IT=1,NT
+          UT(:,:,IH,:NH)=UT(:,:,IH,:NH) &
+     &                   -SBAR_NEW(NN)%MAT(IH,IT)*UT(:,:,NH+IT,:NH)
         ENDDO
       ENDDO
-!
-      LMN=0
-      DO LN=1,LNX(ISP)
-        L=LOX(LN,ISP)
-        LM=SBARLI1(L+1,ISP)-1
-        DO IM=1,2*L+1 
-          LMN=LMN+1
-          LM=LM+1
-          DO J=1,LMX
-            SVAR=SBAR(NN)%MAT(LM,J)   
-            UT(:,LMN,:LMNX,:LMNX)=UT(:,LMN,:LMNX,:LMNX) &
-      &                         -SVAR*UT(:,LMNX+J,:LMNX,:LMNX)
-          ENDDO
+      DO IH=1,NH
+        DO IT=1,NT
+          UT(:,IH,:NH,:NH)=UT(:,IH,:NH,:NH) &
+     &                    -SBAR_NEW(NN)%MAT(IH,IT)*UT(:,NH+IT,:NH,:NH)
         ENDDO
       ENDDO
-!
-      LMN=0
-      DO LN=1,LNX(ISP)
-        L=LOX(LN,ISP)
-        LM=SBARLI1(L+1,ISP)-1
-        DO IM=1,2*L+1 
-          LMN=LMN+1
-          LM=LM+1
-          DO J=1,LMX
-            SVAR=SBAR(NN)%MAT(LM,J)   
-            UT(LMN,:LMNX,:LMNX,:LMNX)=UT(LMN,:LMNX,:LMNX,:LMNX) &
-                                     -SVAR*UT(LMNX+J,:LMNX,:LMNX,:LMNX)
-          ENDDO
+      DO IH=1,NH
+        DO IT=1,NT
+          UT(IH,:NH,:NH,:NH)=UT(IH,:NH,:NH,:NH) &
+     &                     -SBAR_NEW(NN)%MAT(IH,IT)*UT(NH+IT,:NH,:NH,:NH)
         ENDDO
       ENDDO
 !
@@ -3140,7 +2953,7 @@ IF(MAXVAL(EIG).GT.0.D0) PRINT*,'WARNING!!!',MAXVAL(EIG)
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY  : TON,NKPTL,NSPIN,NDIM,NDIMD,NB,NCHI,NAT &
-     &                        ,IPROOFCHI,ATOMSET,KSET
+     &                        ,ATOMSET,KSET
       USE WAVES_MODULE, ONLY : GSET,WAVES_SELECTWV,THIS,MAP
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
@@ -3646,7 +3459,7 @@ PRINT*,' BEFORE SPINOR$PRINTL'
            CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT)
            DO IDIMD=1,NDIMD,NDIMD-1 ! (1), (1,2), (1,4)
              DO I=1,NCHI
-               MAT(I,I,IDIMD)=MAT(I,I,IDIMD)-CMPLX(1.D0,0.D0)
+               MAT(I,I,IDIMD)=MAT(I,I,IDIMD)-(1.D0,0.D0)
              ENDDO
            ENDDO
            CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,MAT)

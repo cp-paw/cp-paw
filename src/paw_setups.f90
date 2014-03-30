@@ -109,8 +109,6 @@ INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA
 INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
                                        !      = 0 FOR VALENCE STATE   (PHI)
                                        !   = 1 FOR 1ST SCATTERING STATE (PHIDOT)
-INTEGER(4),POINTER     :: NTBO(:)      !#(LOCAL ORBITALS PER L)
-LOGICAL(4),POINTER     :: TORB(:)      ! SELECTOR FOR U-TENSOR
 REAL(8)   ,POINTER     :: VADD(:)      !(NR)
 REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
 REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
@@ -352,8 +350,6 @@ END MODULE SETUP_MODULE
       THIS%LMRX  =0
       NULLIFY(THIS%LOX)     !(LNX)
       NULLIFY(THIS%ISCATT)  !(LNX)
-      NULLIFY(THIS%NTBO)    
-      NULLIFY(THIS%TORB)    !(LNX)
       NULLIFY(THIS%VADD)    !(NRX)
       NULLIFY(THIS%PSPOT)  !(NRX)
       NULLIFY(THIS%AECORE)  !(NRX)
@@ -521,12 +517,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: VAL(LEN)
       INTEGER(4)               :: I
 !     **************************************************************************
-      IF(ID.EQ.'NTBO') THEN
-        IF(ASSOCIATED(THIS%NTBO)) DEALLOCATE(THIS%NTBO)
-        ALLOCATE(THIS%NTBO(LEN))
-        THIS%NTBO=VAL
-!     __________________________________________________________________________
-      ELSE IF(ID.EQ.'NOFLCHI') THEN
+      IF(ID.EQ.'NOFLCHI') THEN
         IF(LEN.NE.4) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -617,13 +608,9 @@ END MODULE SETUP_MODULE
       LOGICAL(4)  ,INTENT(IN)  :: VAL(LEN)
 !     **************************************************************************
       IF(ID.EQ.'TORB') THEN
-        IF(LEN.NE.THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$SETL4A')
-        END IF
-        IF(.NOT.ASSOCIATED(THIS%TORB))ALLOCATE(THIS%TORB(LEN))
-        THIS%TORB=VAL
+        CALL ERROR$MSG('ID="TORB" IS OBSOLETE')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('SETUP$SETL4A')
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -646,16 +633,8 @@ END MODULE SETUP_MODULE
       LOGICAL(4)  ,INTENT(OUT)  :: VAL(LEN)
 !     **************************************************************************
       IF(ID.EQ.'TORB') THEN
-        IF(LEN.NE.THIS%LNX) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP$SETL4A')
-        END IF
-        IF(ASSOCIATED(THIS%TORB)) THEN
-          VAL=THIS%TORB
-        ELSE
-          VAL=.TRUE.
-        END IF
+        CALL ERROR$MSG('ID="TORB" IS OBSOLETE')
+        CALL ERROR$STOP('SETUP$SETL4A')
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -1200,42 +1179,6 @@ END MODULE SETUP_MODULE
       RBOX=THIS%RBOX
 !
 !     ==========================================================================
-!     == SELECTOR FOR LOCAL ORBITALS                                          ==
-!     ==========================================================================
-!     == NTBO SPECIFIES THE NUMBER OF TB-ORBITALS FOR EACH ANGULAR MOMENTUM ====
-!     == CAUTION: THE USER MAY NOT KNOW IF HE USES SEMI-CORE STATES OR NOT    ==
-!     ==          LATER, WE MAY USE ISCATT AS DEFAULT                         ==
-!
-!     == SET DEFAULT (TRUE) IF NOT SET ALREADY =================================
-      IF(.NOT.ASSOCIATED(THIS%NTBO)) THEN
-        ALLOCATE(THIS%NTBO(MAXVAL(LOX)+1))
-        THIS%NTBO=0
-        DO LN=1,LNX
-          THIS%NTBO(LOX(LN)+1)=THIS%NTBO(LOX(LN)+1)+1
-        ENDDO
-      END IF
-!
-!     == CONVERT NTBO INTO TORB  ===============================================
-      IF(ASSOCIATED(THIS%TORB)) THEN
-        CALL ERROR$MSG('TORB MUST NOT BE ALLOCATED AT TIS POINT')
-        CALL ERROR$STOP('SETUP_READ_NEW')
-      END IF
-      ALLOCATE(THIS%TORB(LNX))
-      LENG=SIZE(THIS%NTBO)
-      ALLOCATE(IWORK(LENG))
-      IWORK=THIS%NTBO
-      DO LN=1,LNX
-        L=LOX(LN)
-        THIS%TORB(LN)=(IWORK(L+1).GT.0)
-        IF(THIS%TORB(LN)) IWORK(L+1)=IWORK(L+1)-1
-      ENDDO
-      IF(SUM(IWORK).GT.0) THEN
-        CALL ERROR$MSG('NTBO MUST NOT EXCEED NPRO')
-        CALL ERROR$STOP('SETUP_READ_NEW')
-      END IF
-      DEALLOCATE(IWORK)
-!
-!     ==========================================================================
 !     == EXTRACT LNX,LOX,LX FROM NPRO AS DEFINED IN STRC INPUT FILE           ==
 !     ==========================================================================
       LMNXX=MAX(LMNXX,THIS%LMNX)
@@ -1266,15 +1209,6 @@ END MODULE SETUP_MODULE
 !THIS%SETTING%ZORA=.FALSE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
-      CALL LDAPLUSU$SELECTTYPE(THIS%I)
-      CALL LDAPLUSU$GETL4('ACTIVE',TCHK)
-      IF(TCHK) THEN
-        CALL LDAPLUSU$GETCH('FUNCTIONALID',STRING)
-        IF(STRING.EQ.'HYBRID') THEN
-          CALL LDAPLUSU$GETR8('HFWEIGHT',THIS%SETTING%FOCK)
-        END IF
-      END IF
-      CALL LDAPLUSU$SELECTTYPE(0)
 !
       CALL LMTO$GETL4('ON',TCHK)
       IF(TCHK) THEN
@@ -3095,7 +3029,7 @@ ENDDO
 !     ==========================================================================
 !     == MAKE DT AND DO SYMMETRIC                                             ==
 !     ==========================================================================
-      WRITE(6,FMT='(82("="),T20,"  DTKIN BEFORE SYMMETRIZATION ")')
+      WRITE(6,FMT='(80("="),T20,"  DTKIN BEFORE SYMMETRIZATION ")')
       DO LN1=1,LNX
         WRITE(6,FMT='(20F12.3)')DT(LN1,:)
       ENDDO
@@ -3116,20 +3050,20 @@ ENDDO
 !     == WRITE INFORMATION TO FILE                                            ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20,"  DTKIN  ")')
+        WRITE(6,FMT='(80("="),T20,"  DTKIN  ")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F12.3)')DT(LN1,:)
         ENDDO
-        WRITE(6,FMT='(82("="),T20,"  DOVERLAP  ")')
+        WRITE(6,FMT='(80("="),T20,"  DOVERLAP  ")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F12.3)')DOVER(LN1,:)
         ENDDO
-        WRITE(6,FMT='(82("="),T20,"  DHAMILTONIAN ")')
+        WRITE(6,FMT='(80("="),T20,"  DHAMILTONIAN ")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F12.3)')DH(LN1,:)
         ENDDO
 !
-        WRITE(6,FMT='(82("="),T20,"  AE-OVERLAP ")')
+        WRITE(6,FMT='(80("="),T20,"  AE-OVERLAP ")')
         ALLOCATE(A(LNX,LNX))
         A(:,:)=0.D0
         DO LN1=1,LNX
@@ -3144,7 +3078,7 @@ ENDDO
         ENDDO
         DEALLOCATE(A)
 !
-        WRITE(6,FMT='(82("="),T20," <PRO|PSPHI> ")')
+        WRITE(6,FMT='(80("="),T20," <PRO|PSPHI> ")')
         ALLOCATE(A(LNX,LNX))
         A(:,:)=0.D0
         DO LN1=1,LNX
@@ -3566,7 +3500,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
       PAWRHO(:)=PAWRHO(:)+PSRHO(:)
 !
 !     == REPORT ===============================================================
-      WRITE(6,FMT='(82("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
+      WRITE(6,FMT='(80("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
       DO IB=NC+1,NB
         WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
      &                                 ," PS-ENERGY:",F10.5," EV")') &
@@ -3747,12 +3681,12 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
           ENDDO
           CALL ERROR$STOP('SETUP_TESTGHOST1')
         ELSE
-          WRITE(*,FMT='(82("="))')
-          WRITE(*,FMT='(82("="),T10,A)') &
+          WRITE(*,FMT='(80("="))')
+          WRITE(*,FMT='(80("="),T10,A)') &
      &                          ' THIS SETUP IS LIKELY TO PRODUCE GHOST STATES '
-          WRITE(*,FMT='(82("="),T10," SPECIES=",A5," Z=",F6.1," ")') &
+          WRITE(*,FMT='(80("="),T10," SPECIES=",A5," Z=",F6.1," ")') &
      &                               TRIM(THIS%ID),THIS%AEZ
-          WRITE(*,FMT='(82("="))')
+          WRITE(*,FMT='(80("="))')
         END IF
       END IF
       RETURN
@@ -6026,19 +5960,7 @@ RCL=RCOV
       INTEGER(4),ALLOCATABLE :: NPROL(:)
       REAL(8)               :: PI,Y0
 !     **************************************************************************
-PRINT*,'IN OUTEROLDPROWRAPPER'
-PRINT*,'GID,NR,RUT,RBOX,RCOV,NB,NC',GID,NR,ROUT,RBOX,RCOV,NB,NC
-PRINT*,'LOFI=',LOFI
-PRINT*,'SOFI=',SOFI
-PRINT*,'EOFI=',EOFI
-PRINT*,'LNX,LOX=',LNX,LOX
-PRINT*,'TYPE=',TYPE
-PRINT*,'RC=',RC
-PRINT*,'LAMBDA=',LAMBDA
-PRINT*,'ISCATT=',ISCATT
-PRINT*,'AEPOT=',AEPOT
-PRINT*,'PSPOT=',PSPOT
-
+                                     CALL TRACE$PUSH('SETUP_OUTEROLDPROWRAPPER')
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
@@ -6287,10 +6209,10 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 !     == REPORT SETTINGS ON WAVE FUNCTIONS                                    ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
-        WRITE(6,FMT='(82("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
-        WRITE(6,FMT='(82("="),T20," NEW: NODELESS EQUATION                 ")')
-        WRITE(6,FMT='(82("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
+        WRITE(6,FMT='(80("="),T20," ENERGIES FOR ATOMIC WAVE FUNCTIONS ")')
+        WRITE(6,FMT='(80("="),T20," OLD: AE SCHRODINGER EQUATION           ")')
+        WRITE(6,FMT='(80("="),T20," NEW: NODELESS EQUATION                 ")')
+        WRITE(6,FMT='(80("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
         DO IB=1,NB
           WRITE(6,FMT='("IB=",I3," L=",I2," E[NEW]=",F15.5 &
      &                                   ," E[OLD]=",F15.5)') &
@@ -6383,7 +6305,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 !     == REPORT SETTINGS ON PARTIAL WAVES                                     ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
+        WRITE(6,FMT='(80("="),T20," ENERGIES FOR PARTIAL-WAVE CONSTRUCTION")')
         WRITE(6,FMT='("RBOX=",F9.5)')RBOX
         DO LN=1,LNX
           WRITE(6,FMT='("LN=",I2," L=",I2," E=",F10.5," RC=",F6.3)') &
@@ -6432,11 +6354,11 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
       CALL LIB$INVERTR8(LNX,TRANSU,TRANSUINV)
 !
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20,"  TRANSU ")')
+        WRITE(6,FMT='(80("="),T20,"  TRANSU ")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F15.10)')TRANSU(LN1,:)
         ENDDO
-        WRITE(6,FMT='(82("="),T20,"  TRANSU^(-1) ")')
+        WRITE(6,FMT='(80("="),T20,"  TRANSU^(-1) ")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F15.10)')TRANSUINV(LN1,:)
         ENDDO
@@ -6456,7 +6378,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 !     == TEST EQUATION FOR QN                                                 ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20,"  TEST QN EQ.  ")')
+        WRITE(6,FMT='(80("="),T20,"  TEST QN EQ.  ")')
         DO L=0,LX
           IPRO=0
           DO LN=1,LNX
@@ -6510,9 +6432,9 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
             A(LN,IB)=A(LN,IB)/SQRT(VAL)
           ENDDO
         ENDDO
-        WRITE(6,FMT='(82("="),T20," <UC|AEPHI>/SQRT(<UC|UC>  ")')
-        WRITE(6,FMT='(82("="),T10," DEVIATION DUE NEGLECT OF SMALL COMPONENT")')
-        WRITE(6,FMT='(82("="),T10," ORTHOGONALIZATION DONE BASED ON ENERGIES")')
+        WRITE(6,FMT='(80("="),T20," <UC|AEPHI>/SQRT(<UC|UC>  ")')
+        WRITE(6,FMT='(80("="),T10," DEVIATION DUE NEGLECT OF SMALL COMPONENT")')
+        WRITE(6,FMT='(80("="),T10," ORTHOGONALIZATION DONE BASED ON ENERGIES")')
         DO LN1=1,LNX
           WRITE(6,FMT='(20F10.5)')A(LN1,:)
         ENDDO
@@ -6523,7 +6445,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 !     == TEST EQUATION FOR ALL-ELECTRON PARTIAL WAVES AEPHI                   ==
 !     ==========================================================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20,"  TEST AEPHI EQ.  ")')
+        WRITE(6,FMT='(80("="),T20,"  TEST AEPHI EQ.  ")')
         DO LN=1,LNX
           CALL RADIALFOCK$VPSI(GID,NR,VFOCK,LOX(LN),AEPHI(:,LN),AUX)
           PRO(:,LN)=TAEPHI(:,LN)+(AEPOT(:)*Y0-EOFLN(LN))*AEPHI(:,LN)+AUX(:)
@@ -6626,7 +6548,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 
         ENDDO
 !
-        WRITE(6,FMT='(82("="),T20,"  TEST RAW PAW EQUATION  ")')
+        WRITE(6,FMT='(80("="),T20,"  TEST RAW PAW EQUATION  ")')
         DO LN=1,LNX
           WRITE(6,FMT='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5 &
      &                                 ," SCHR. EQ.",F10.5)') &
@@ -6774,7 +6696,7 @@ ENDDO
             PHITEST1(:,LN)=PHITEST1(:,LN)+PRO(:,LN1)*SVAR
           ENDDO
         ENDDO
-        WRITE(6,FMT='(82("="),T20,"  TEST PAW EQUATION  ")')
+        WRITE(6,FMT='(80("="),T20,"  TEST PAW EQUATION  ")')
         DO LN=1,LNX
           WRITE(6,FMT='("LN=",I2," L=",I2," PAW EQ.",F20.5' &
      &                                //'," SCHR. EQ.",F20.5," DPRO ",F20.5)') &
@@ -6922,7 +6844,7 @@ GOTO 100
 !
 !     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
       IF(TTEST) THEN
-        WRITE(6,FMT='(82("="),T20,"  TEST BACK TRANSFORM  ")')
+        WRITE(6,FMT='(80("="),T20,"  TEST BACK TRANSFORM  ")')
         DO LN=1,LNX
           WRITE(6,FMT='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5 &
      &                                 ," DIFF. KIN.OP NDLSS. PHI ",F10.5)') &
@@ -7029,6 +6951,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
 !!$CALL SETUP_WRITEPHI('PSPHI_2.DAT',GID,NR,LNX,PSPHI)
 !!$CALL ERROR$STOP('FORCED IN PAW_SETUP')
       END IF
+                                     CALL TRACE$POP()
       RETURN
       END
 !
@@ -7109,6 +7032,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)                :: ENU  !EXPANSION ENERGY FOR TAYLOR EXPANSION
       REAL(8)                :: PI,Y0
 !     **************************************************************************
+                                     CALL TRACE$PUSH('SETUP_OUTERNEWPROWRAPPER')
 PRINT*,'STARTING SETUP_OUTERNEWPROWRAPPER...'
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
@@ -7134,7 +7058,7 @@ PRINT*,'STARTING SETUP_OUTERNEWPROWRAPPER...'
 PRINT*,'LX ',LX,' LOX ',LOX,' LOFI ',LOFI
       DO L=0,LX
         DO SO=MINVAL(SOFI),1,2  
-          WRITE(*,FMT='(82("-"),T20," L=",I2," SO=",I2)')L,SO
+          WRITE(*,FMT='(80("-"),T20," L=",I2," SO=",I2)')L,SO
 !
 !         ======================================================================
 !         == COUNT NUMBER OF BANDS AND NUMBER OF CORE STATES                  ==
@@ -7310,7 +7234,8 @@ PRINT*,'DTKIN X2:',G_DTKIN
         ENDDO
       ENDDO
 PRINT*,'... SETUP_OUTERNEWPROWRAPPER FINISHED'
-      WRITE(*,FMT='(82("="))')
+      WRITE(*,FMT='(80("="))')
+                                     CALL TRACE$POP()
       RETURN
       END
 !
@@ -8176,12 +8101,12 @@ IPHISCALE=1
 !     ==========================================================================
 !     == WRITE DTKIN AND DOVER                                                ==
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T20," DTKIN  ")')
+      WRITE(*,FMT='(80("="),T20," DTKIN  ")')
       DO JP=1,NJ
         WRITE(*,FMT='(100F25.5)')DTKIN(JP,:)
       ENDDO
 !
-      WRITE(*,FMT='(82("="),T20," DOVER  ")')
+      WRITE(*,FMT='(80("="),T20," DOVER  ")')
       DO JP=1,NJ
         WRITE(*,FMT='(100F25.5)')DOVER(JP,:)
       ENDDO
@@ -8195,7 +8120,7 @@ IPHISCALE=1
           CALL RADIAL$INTEGRAL(GID,NR,AUX,MAT(J,JP))
         ENDDO
       ENDDO
-      WRITE(*,FMT='(82("="),T20," <PTILDE|PSPHI>  ")')
+      WRITE(*,FMT='(80("="),T20," <PTILDE|PSPHI>  ")')
       DO JP=1,NJ
         WRITE(*,FMT='(100F15.10)')MAT(JP,:)
       ENDDO
@@ -8203,7 +8128,7 @@ IPHISCALE=1
 !     ==========================================================================
 !     == TEST ORTHOGONALITY OF CORE WAVE FUNCTIONS
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T20," CHECK ORTHOGONALITY OF CORE STATES  ")')
+      WRITE(*,FMT='(80("="),T20," CHECK ORTHOGONALITY OF CORE STATES  ")')
       DO I=1,NC
         DO J=I+1,NC
           AUX(:)=R(:)**2*(AECORE(:,I)*AECORE(:,J)+AECORESM(:,I)*AECORESM(:,J))
@@ -8219,7 +8144,7 @@ IPHISCALE=1
 !     ==========================================================================
 !     == TEST ORTHOGONALITY OF VALENCE AND CORE WAVE FUNCTIONS
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T20," CHECK ORTHOGONALITY BETWEEN CORE STATES AND PARTIAL WAVES ")')
+      WRITE(*,FMT='(80("="),T20," CHECK ORTHOGONALITY BETWEEN CORE STATES AND PARTIAL WAVES ")')
       DO I=1,NC
         DO J=1,NJ
           AUX(:)=R(:)**2*(AECORE(:,I)*AEPHI(:,J)+AECORESM(:,I)*AEPHISM(:,J))
