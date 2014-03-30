@@ -12,6 +12,7 @@
 \usepackage{color}
 \usepackage{shadow}
 \usepackage{makeidx}
+\usepackage{amsmath}
 \makeindex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
@@ -129,7 +130,7 @@ the code more secure to use.
 Any other suggestions on how to improve the clarity of this description
 or the code are most welcome.
 
-Programs become outdated nearly as quickly as newspapers. Note that
+Programs become outdated nearly as quickly as newspapers. Note, that
 the executable of this code may also have an expiration date.  The
 code will print a warning about a month before it expires. Please make
 sure that you know the expiration date when you receive an executable.
@@ -287,7 +288,7 @@ for example, on how to optimize a FFT.  The latter will be done by
 experts who continually adapt this library to modern computer
 architectures.
 
-One programming principle I try to follow is the German engineering
+One programming principle, I try to follow, is the engineering
 motto {\bf ``Fewer Parts!''}. For the user this implies that he will
 find few instances where two options provide the same functionality. I
 hope that the limitations will be offset by clarity.
@@ -577,13 +578,6 @@ prepared:
 \item The {\bf control input file} (sometimes abbreviated as CNTL)
   describes what the program shall do, such as optimizing the wave
   functions, relaxing the atoms or simlating at finite temperature.
-\item The {\bf setup files} contain element-specific information about
-  the augmentation, i.e. partial waves and projector functions, and
-  the core density.  Currently, these files are supplied by the
-  author.  The setups depend via the core density on the functional
-  used in their construction. It is also important to be consistent
-  regarding the 
-  division of electrons into  core and valence electrons.
 \end{enumerate}
 
 After the simlation has finished, the program writes a restart file, which
@@ -1055,9 +1049,9 @@ at short distances.}
 \vrules{optional} 
 \vdefault{0.25}}
 
-\mbax{\key{k2} 
+\mbax{\key{K2} 
 %
-\vdescr{k2=2*ekin[H] of the envelope function. The bare Hankel
+\vdescr{K2=2 Ekin[H] of the envelope function. The bare Hankel
   function decay faster with decreasing k2.}
 %
 \vformat{real} 
@@ -2945,16 +2939,19 @@ shifting the grid.}
   with the two-character element symbol, where a whitespace as second
   character can be replaced by an underscore. This allows the program
   to select certain default values form the periodic table.}
-\vformat{Character}
-\vrules{Mandatory}
-\vdefault{None}}
+\vformat{character}
+\vrules{mandatory}
+\vdefault{none}}
 
-\mbax{\key{ID}
-\vdescr{identifier for the setup type on the parameter 
-file stp.cntl in the parameters directory.}
-\vformat{Character}
-\vrules{Optional. Used only if FILE is not specified}
-\vdefault{first two letters of NAME}}
+\mbax{\key{ID} 
+\vdescr{Identifier for the setup type. Allows to select
+    parameterset defining the augmentation (e.g. partial waves and
+    projector functions). The ID must be recognized by internally or
+    it must identify a parameter set on a parameter file specified by
+    !CNTL!FILES!FILE with name=PARMS\_STP.}
+\vformat{character}
+\vrules{optional. not used when !STRUCTURE!SPECIES!SETUP is present.}
+\vdefault{none}}
 
 \mbax{\key{M}
 \vdescr{Atomic mass in mass units
@@ -2965,14 +2962,6 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdefault{Atomic mass, as obtained from !STRUCTURE!SPECIES:Z  or, if not
   present, from !STRUCTURE!SPECIES:NAME}}
 
-\mbax{\key{LRHOX}
-\vdescr{One center expansion for the density is limited to a maximum
-  angular momentum of lrhox. If the value of LRHOX is larger
-  $2\ell_{max}$, where $\ell_{max}$ is the maximum angular momentum in
-  the set of partial waves, LRHOX is reset internally to $2\ell_{max}$.}
-\vformat{integer}
-\vrules{Optional}
-\vdefault{2}}
 
 \mbax{\key{NPRO} 
   \vdescr{Array which determines the maximum number of projector
@@ -2986,6 +2975,15 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vrules{Mandatory}
 \vdefault{None}}
 
+\mbax{\key{LRHOX}
+\vdescr{One center expansion for the density is limited to a maximum
+  angular momentum of lrhox. If the value of LRHOX is larger
+  $2\ell_{max}$, where $\ell_{max}$ is the maximum angular momentum in
+  the set of partial waves, LRHOX is reset internally to $2\ell_{max}$.}
+\vformat{integer}
+\vrules{Optional}
+\vdefault{2}}
+
 \mbax{\key{RAD} 
  \vdescr{Atomic radius in a$_0$ used to evaluate the integration
     volume for the projected density of states etc.}
@@ -2994,83 +2992,224 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \vdefault{R(ASA) from periodictable object. Equals $1.10533$ times the
   covalent radius.}}
 
-\mbax{\key{Z}
-\vdescr{Atomic number. This number is used only to set the default value for the
-  mass.}
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!AUGMENT}
+%----------------------------------------------------------------------
+\brules{optional, mandatory, if !STRUCTURE!SPECIES:ID is not present} 
+\bdescr{Defines the augmentation, (e.g. partial waves and projector functions).}
+
+\mbax{\key{ID} 
+ \vdescr{Setup identifier. Will be reported in the protocoll file.}
+\vformat{character}
+\vrules{optional}
+\vdefault{'NONAME'}}
+
+\mbax{\key{EL} 
+ \vdescr{Element symbol.}
+\vformat{character}
+\vrules{optional, mandatory if keyword Z is not specified.}
+\vdefault{none}}
+
+\mbax{\key{Z} 
+ \vdescr{Atomic number}
+\vformat{real}
+\vrules{optional, mandatory if keyword EL is not specified.}
+\vdefault{none}}
+
+\mbax{\key{ZV} 
+ \vdescr{Number of valence electrons.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RCSM/RCOV} 
+ \vdescr{Radius for the compensation charge in units of the covalent radius.}
 \vformat{real}
 \vrules{optional}
-\vdefault{atomic number as deduced from !STRUCTURE!SPECIES:NAME, if the latter starts
-  with an element symbol}} 
+\vdefault{0.25}}
 
-\mbax{\key{FILE} 
-\vdescr{name of the file containing the partial waves
-    and projector functions etc. for this atom.}
-\vformat{Character} 
-\vrules{Optional, deprecated option.} 
-\vdefault{information will be created on the fly using the parameter file paramters/stp.cntl}}
+\mbax{\key{TYPE} 
+ \vdescr{Augmentation method. Allowed values are 'NDLSS', 'HBS' and 'KERKER'.}
+\vformat{character}
+\vrules{mandatory}
+\vdefault{none}}
 
-\mbax{\key{ZV}
-\vdescr{Number of valence electrons}
+\mbax{\key{RCL/RCOV} 
+ \vdescr{Radius parameter array for the construction of pseudo partial
+   waves in units of the covalent radius.}
+\vformat{real array}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{LAMBDA} 
+ \vdescr{Second parameter array for the construction of pseudo partial
+   waves. Currently used only for TYPE='HBS'.}
+\vformat{real array}
+\vrules{mandatory for TYPE='HBS'. Not used otherwise.}
+\vdefault{none}}
+
+\mbax{\key{RBOX/RCOV} 
+ \vdescr{......to be completed................}.
 \vformat{real}
-\vrules{Mandatory, if FILE has been specified. Otherwise not used}
-\vdefault{None}} 
+\vrules{mandatory}
+\vdefault{none}}
 
-\mbax{\key{PS$<$G2$>$} 
-  \vdescr{Parameter used for determining the effective mass of the
-    electron cloud at an atom.
-    $$\sum_n f_n\int d^3G G^2 |\tilde{\Psi}_n^{at}(G)|^2$$
-    The value is twice the pseudo-kinetic-energy of the atom.}
-  \vformat{real}
-  \vrules{Optional, if FILE has been specified. Otherwise not used}
-\vdefault{0}}
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!AUGMENT!POT}
+%----------------------------------------------------------------------
+\brules{mandatory in !STRUCTURE!SPECIES!AUGMENT} \bdescr{Defines
+  auxiliary potential. The radial component of the potential
+  $v(|\vec{r}|)Y_s(\vec{r})$ is given by
+\begin{eqnarray}
+\tilde{v}(r)=
+\begin{cases}
+a +br^{\alpha}+cr^{\alpha+2} &\text{for $r<r_c$}\\
+v(r) & \text{for $r> r_c$}\\
+\end{cases}
+\end{eqnarray}
+where $v(r)$ is tha radial component of the true atomic potential.
+}
 
-\mbax{\key{PSEKIN} 
-\vdescr{[Do not use this option. It works but may be removed in later
-  versions. Please use ``PS$\langle$G2$\rangle$'' and ``PS$\langle$G4$\rangle$'' instead].
-   Kinetic energy of the pseudo wave functions
-    of the atom. This term is used to renormalize the atomic masses to
-    account for the effective mass of the wave function cloud. When
-    this term is set the estimate of the Born-Oppenheimer wave
-    function kinetic energy is subtracted from the kinetic energy of
-    the wave functions in the protocoll.} \vformat{real}
-  \vrules{Optional, if FILE has been specified. Otherwise not used} 
-\vdefault{None}}
+\mbax{\key{POW} 
+ \vdescr{Power $\alpha$ in the Taylor expansion. A higher value leads
+   to a flatter potential at the origin.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
 
-\mbax{\key{PS$<$G4$>$} 
-  \vdescr{Parameter used for determining the effective mass of the
-    electron cloud at an atom.
-    $$\sum_n f_n\int d^3G G^4 |\tilde{\Psi}_n^{at}(G)|^2$$
-    This value is needed only in combination with a G-dependend
-    electron mass.}
-  \vformat{real} 
-\vrules{Optional, if FILE has been specified. Otherwise not used}
-\vdefault{0}}
+\mbax{\key{RC/RCOV} 
+ \vdescr{Matching radius $r_c$ in units of the covalent radius.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{VAL0} 
+ \vdescr{Value of the auxiliary potential at the origin VAL0=$a
+   Y_s$. If not specified, the parameter $c$ is set to zero and the
+   value $a$ is obtained from the differentiability at $r_c$.}
+\vformat{real}
+\vrules{optional}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!AUGMENT!CORE}
+%----------------------------------------------------------------------
+\brules{mandatory in !STRUCTURE!SPECIES!AUGMENT} \bdescr{Defines
+  auxiliary core density. The radial component of the density
+  $n^c(|\vec{r}|)Y_s(\vec{r})$ is given by
+\begin{eqnarray}
+\tilde{n}^c(r)=
+\begin{cases}
+a +br^{\alpha}+cr^{\alpha+2} &\text{for $r<r_c$}\\
+n^c(r) & \text{for $r> r_c$}\\
+\end{cases}
+\end{eqnarray}
+where $n^c(r)$ is the radial component of the true core density.}
+
+\mbax{\key{POW} 
+ \vdescr{Power $\alpha$ in the Taylor expansion. A higher value leads
+   to a flatter density at the origin.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RC/RCOV} 
+ \vdescr{Matching radius $r_c$ in units of the covalent radius.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{VAL0} 
+ \vdescr{Value of the auxiliary core density at the origin VAL0=$a
+   Y_s$. If not specified, the parameter $c$ is set to zero and the
+   value $a$ is obtained from the differentiability at $r_c$.}
+\vformat{real}
+\vrules{optional}
+\vdefault{none}}
+
+%----------------------------------------------------------------------
+{\block{!STRUCTURE!SPECIES!AUGMENT!GRID}
+%----------------------------------------------------------------------
+\brules{mandatory in !STRUCTURE!SPECIES!AUGMENT} \bdescr{Defines the
+  radial grid for the one center expansions. The radial grid is a
+  shifted logarithmic grid
+\begin{eqnarray}
+r(x)=r_1\Bigl(\mathrm{e}^{\alpha (x-1)}-1\Bigr)
+\end{eqnarray}
+with $x=1,2,3,\ldots,N$.}
+
+\mbax{\key{DMIN} 
+ \vdescr{Smallest spacing (at the origin).}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{DMAX} 
+ \vdescr{Largest spacing (at the end of the grid).}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{RMAX} 
+ \vdescr{Outermost grid point.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
+
 
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!NTBO}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{sets the parameters for Hybrid calculations using
-natural tight binding orbitals. \textbf{Experimental option!}}
+\brules{optional} \bdescr{Defines a set of local orbitals, called
+  natural tight-binding orbitals (NTBOs). The NTBOs exhibit only
+  scattering character in the context of nodeless wave
+  functions\cite{bloechl12_arxiv1210_5937} except for the head. NTBOs
+  are represented as screened LMTO's.  The screened envelope function
+  is constructed atom-by-atom as a multicenter expansion of
+  atom-centered Hankel functions on a cluster of atoms. Interaction
+  matrix elements are calculated from a tailed representation of the
+  NTBOs, which is a one-center expansion.  The region beyond a
+  specified tail-matching radius is replaced differentiably by
+  superposition of two exponential functions.
 
-\mbax{\key{TORB} 
-   \vdescr{Obsolete! selects the shells of orbitals that shall be
-    treated as correlated orbitals. TORB refers to NPRO in the parent
-    block. The number values in TORB must be equal to the sum in NPRO.
-    For a given angular momentum the correlated orbitals must come
-    before the uncorrelated orbitals}
-\vformat{logical(*)} 
-\vrules{optional. obsolete. Is replaced by
-  !STRUCTURE!SPECIES!NTBO:NTBO}
-\vdefault{none}}
+ The interaction is projected on the natural tight-binding
+ orbitals. The U-tensor is limited matrix elements where all orbitals
+ reside on a bond, respectively a pair on a neighborlist, and can be
+ further restricted by setting the keywords below.}
 
-\mbax{\key{NTBO} 
+\mbax{\key{NOFL} 
    \vdescr{Number of tight-binding orbitals per angular momentum. The
      number of tight-binding orbitals per angular momentum must not
      exceed the number of projector functions. The latter is the
      default for the number of tight-binding orbitals.}
 \vformat{integer array} 
-\vrules{optional. Overwrites the data of TORB.} 
+\vrules{optional.} 
 \vdefault{values from !STRUCTURE!SPECIES:NPRO}}
+
+
+\mbax{\key{RAUG/RCOV} 
+\vdescr{Augmentation radius in units of the covalent radius of the
+  atom.  The augmentation radius defines where the partial waves are
+  matched to the envelope function.}
+\vformat{real}
+\vrules{optional} 
+\vdefault{1.}}
+
+\mbax{\key{RTAIL/RCOV} 
+\vdescr{Tail-matching radius in units of the covalent radius of the
+  atom. At the tail-matching radius the exponential tails are matched
+  differentiably to the envelope function. The tail-matching radius
+  may be larger or smaller than the augmentation radius.}
+\vformat{real}
+\vrules{optional} 
+\vdefault{1.}}
+
+\mbax{\key{TAILLAMBDA} 
+\vdescr{Decay constants of the two exponentials, that replace the 
+tails of the orbitals.}
+\vformat{2$\times$real}
+\vrules{optional} 
+\vdefault{(/4.,2./)}}
 
 \mbax{\key{LHFWEIGHT} 
  \vdescr{Overwrites the generic mixing factor for 
@@ -3093,161 +3232,27 @@ natural tight binding orbitals. \textbf{Experimental option!}}
 \vdefault{true}}
 
 \mbax{\key{NDDO} 
-\vdescr{Exchange term with three orbitals on one site
-    and one on the opposite side of a bond.}  
+\vdescr{Exchange term where the density of two orbitals of one atom interacts 
+with the density of two orbitals of a bond partner}
 \vformat{logical}
 \vrules{optional} 
 \vdefault{true}}
 
 \mbax{\key{31} 
-\vdescr{Exchange term with three orbitals on one site
-    and one on the opposite side of a bond.}  
-\vformat{logical}
-\vrules{optional} 
-\vdefault{true}}
+\vdescr{Exchange term with three orbitals on one site and one on the
+  opposite side of a bond. That is, the density of two orbitals of one
+  atom interacts with the overlap density of two orbitals, one from
+  each of the bond partners.}
+ \vformat{logical} \vrules{optional}
+ \vdefault{true}}
 
 \mbax{\key{BONDX} 
-\vdescr{Exchange term with three orbitals on one site
-    and one on the opposite side of a bond.}  
+\vdescr{Exchange term of between two overlap densities from the same
+  bond.  Each overlap density is made from two orbitals centered at
+  differnt bond partners.}
 \vformat{logical}
 \vrules{optional} 
 \vdefault{true}}
-
-\mbax{\key{TAILLAMBDA} 
-\vdescr{Decay constants of the two exponentials, that replace the 
-tails of the orbitals.}
-\vformat{2$\times$real}
-\vrules{optional} 
-\vdefault{(/4.,2./)}}
-
-%----------------------------------------------------------------------
-{\block{!STRUCTURE!SPECIES!LDAPLUSU}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{sets the parameters for lda+U
-    calculation\cite{anisimov91_prb44_943,anisimov91_prb44_943}.. Only
-    used when !CONTROL!DFT:LDA+U=T.}
-
-\mbax{\key{NCORROFL} 
-\vdescr{number of correlated orbital shells per angular momentum.  The
-array elements correspond to s,p,d,f shells. For one shell of
-correlated d-orbitals use (0,0,1,0). The number of correlated orbitals
-is reduced to the number of partial waves for this angular momentum
-minus one.  If there is only one partial wave, this one is used as
-correlated orbital. This is however not recommended.}
-\vformat{integer(*)} 
-\vrules{Mandatory} 
-\vdefault{none}}
-
-\mbax{\key{RCUT} 
-\vdescr{Correlated orbitals are constructed so that 
-they have a note at the radius RCUT.}
-\vformat{real} 
-\vrules{optional} 
-\vdefault{covalent radius plus 15\%}}
-
-\mbax{\key{DIEL} 
-\vdescr{relative dielectric constant. The interaction matrix elements are 
-scaled with $1/\epsilon_r$.}
-\vformat{real} 
-\vrules{optional, incompatible with UPAR and JPAR} 
-\vdefault{none}}
-
-\mbax{\key{UPAR[EV]} \vdescr{U-parameter for the orbital shell
-    specified by MAINLN. The entire interaction matrix is scaled so
-    that the U-parameter of the specified shell has the value UPAR.
-    (The U-parameter is identical to the Slater integral $F^0$}
-  \vformat{real} \vrules{optional, incompatible with DIEL}
-  \vdefault{none}}
-
-\mbax{\key{JPAR[EV]} \vdescr{J-parameter for the orbital shell
-    specified by MAINLN.  The Slater integrals $F^2,F^4,\ldots$ are
-    rescaled. The U and J-parameters are defined as
-\begin{eqnarray*}
-U&=&\frac{1}{(2\ell+1)^2}\sum_{m_1,m_2}U_{m_1,m_2,m_1,m_2}
-\\
-J&=&U-\frac{1}{2\ell(2\ell+1)}\sum_{m_1,m_2}\left(U_{m_1,m_2,m_1,m_2}-
-U_{m_1,m_2,m_2,m_1}\right)
-\end{eqnarray*}
-and the U-tensor matrix elements are defined from the correlated
-orbitals $\chi_i(\vec{r})$ as
-\begin{eqnarray*}
-U_{i,j,k,l}=\int d^3r\int d^3r'\;
-\frac{e^2\chi_i^*(\vec{r})\chi_j^*(\vec{r'})\chi_k(\vec{r})\chi_l(\vec{r'})}
-{4\pi\epsilon_0|\vec{r}-\vec{r'}|}
-\end{eqnarray*}
-This expression defines the default value.
-}
-\vformat{real} 
-  \vrules{optional, incompatible with DIEL} 
-\vdefault{none}}
-
-\mbax{\key{F4/F2} \vdescr{changes the Slater integral $F^4$ of the
-    main shell relative to $F^2$. The Slater integrals are rescaled to
-    leave the J-parameter untouched.}
-\vformat{real} 
-  \vrules{optional, incompatible with DIEL} 
-\vdefault{none}}
-
-\mbax{\key{F6/F2} \vdescr{Changes the Slater integral $F^6$ of the
-    main shell relative to $F^2$. The Slater integrals are rescaled to
-    leave the J-parameter untouched.}
-\vformat{real} 
-  \vrules{optional, incompatible with DIEL} 
-\vdefault{none}}
-
-\mbax{\key{MAINLN} \vdescr{Specify the main correlatd orbital shell by
-angular momentum $\ell$ (first value) and the index (second) of this
-shell. Example: MAINLN= 3 1 specifies the first correlated orbital
-shell in the f-angular momentum channel.}  
-\vformat{integer(2)}
-\vrules{optional, mandatory with UPAR and JPAR} 
-\vdefault{none}}
-
-\mbax{\key{OLD} \vdescr{Switches to the old formulation of LDA+U
-according to Bengone et al., Phys. Rev. B. 62, 16392 (1992). Specify
-exactly one angular momentum shell as correlated orbitals. Specify
-RCUT to the muffin tin or atomic sphere radius if you want compare to
-LAPW or LMTO results. Specify UPAE[EV]. (This option is used for
-comparisons only. It is not fully supported or compatible with all other options.} 
-\vformat{integer(2)}
-\vrules{optional, mandatory with UPAR and JPAR} 
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-{\block{!STRUCTURE!SPECIES!HYBRID}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{sets the parameters for lda+U
-calculation. \textbf{Experimental option!}}
-
-\mbax{\key{NCORROFL} 
-\vdescr{number of correlated orbital shells per angular momentum.  The
-array elements correspond to s,p,d,f shells. For one shell of
-correlated d-orbitals use (0,0,1,0). The number of correlated orbitals
-is reduced to the number of partial waves for this angular momentum
-minus one.  If there is only one partial wave, this one is used as
-correlated orbital. This is however not recommended.}
-\vformat{integer(*)} 
-\vrules{Mandatory} 
-\vdefault{none}}
-
-%\mbax{\key{RCUT} 
-%\vdescr{Correlated orbitals are constructed so that 
-%they have a node at the radius RCUT.}
-%\vformat{real} 
-%\vrules{optional} 
-%\vdefault{covalent radius plus 15\%}}
-
-\mbax{\key{CV} 
-\vdescr{Switch to include core valence exchange contribution}
-\vformat{logical} 
-\vrules{optional} 
-\vdefault{.true.}}
-
-\mbax{\key{HFWEIGHT} 
-\vdescr{weight of HF fock exchange.}
-\vformat{real} 
-\vrules{optional} 
-\vdefault{1/4}}
 
 
 %----------------------------------------------------------------------
@@ -9302,321 +9307,6 @@ The directory structure will have the following form
 \item check if paw\_dos tool treats spin-polarized calculations properly
 \end{itemize}
 }{} % end of \ifthenelse
-%==========================================================================
-\newpage
-%\ifthenelse{\boolean{private}}{
-\section{The Atomic-Setup program: ``paw\_atom''}
-%==========================================================================
-The external atomic program is marked for deletion. 
-
-
-The atomic-setup program performs a calculation for an isolated atom
-and determines the augmentation-transformation for this atom.
-
-
-
-
-%==========================================================================
-\subsection{Command}
-%==========================================================================
-The calling sequence is
-
-\bigskip\fbox{{\tt paw\_atom} {\it name}}\bigskip
-
-\noindent
-where {\it name} is a specifier for the setup. 
-
-%==========================================================================
-\subsection{Example for the control input file}
-%==========================================================================
-
-\begin{verbatim}
-!ACNTL
- !GENERIC ELEMENT='N ' RAUG=2.D0 RBOX=20.D0 !END
- !DFT     TYPE=1 !END
- !GRID    R1=1.056D-4 DEX=0.05 NR=250 !END
- !AECORE
-   !STATE L=0 N=1 F=2 !END
- !END
- !VALENCE
-   !STATE L=0 N=2 F=2. !END
-   !STATE L=1 N=2 F=3. !END
-   !STATE L=0 N=3 F=0. !END
- !END
- !VTILDE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 POT(0)=-2.58 !END
- !COMPENSATE RC=0.3 !END
- !PSCORE  TYPE='POLYNOMIAL' RC=1.0 POWER=3 RHO(0)=0.05 !END
- !WAVE L=0 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
- !WAVE L=1 N=2       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
- !WAVE L=0 N=3       PSTYPE='HBS' RC=1.0 LAMBDA=6 !END
-!END
-!EOB
-\end{verbatim}
-
-
-
-%==========================================================================
-\subsection{Argument description for the control input file ACNTL}
-%==========================================================================
-
-%----------------------------------------------------------------------
-\block{!ACNTL}
-%----------------------------------------------------------------------
-\brules{mandatory}
-\bdescr{}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!GENERIC}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{}
-
-\mbax{\key{ELEMENT}
-\vdescr{element symbol.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RAUG}
-\vdescr{maximum radius where augmentation operates.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RBOX}
-\vdescr{the atom sits in a spherical box with hard walls at r=RBOX.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!DFT}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{}
-
-\mbax{\key{TYPE}
-\vdescr{functional type index. see ``!CNTL!DFT''}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!GRID}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{Specifies the logarithmic radial grid. It is
-  recommended that the default parameters be left as they are, because
-  the simulation program can only work with one grid for all setups.}
-
-\mbax{\key{R1}
-\vdescr{innermost grid point}
-\vformat{real} 
-\vrules{optional}
-\vdefault{$1.056\times10^{-4}$}}
-
-\mbax{\key{DEX}
-\vdescr{logarithmic spacing $\ln(r(i+1)/r(i))$.}
-\vformat{real} 
-\vrules{optional}
-\vdefault{0.05}}
-
-\mbax{\key{NR}
-\vdescr{number of grid points}
-\vformat{integer} 
-\vrules{optional}
-\vdefault{250}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!AECORE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines core states}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!AECORE!STATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines one state.}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N}
-\vdescr{main radial quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{F}
-\vdescr{Occupation. number of electrons in this state}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VALENCE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines valence states}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VALENCE!STATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines one state.}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{intger} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N}
-\vdescr{main radial quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{F}
-\vdescr{Occupation. number of electrons in this state}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!VTILDE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines pseudo-protential. (Do not confuse with the
-  pseudopotential of the pseudopotential method.)}
-
-\mbax{\key{TYPE}
-\vdescr{pseudization type. Can be ``Polynomial'' or 'HBS'.
-\begin{itemize}
-\item Polynomial uses a polynomial
-$\tilde{v}_{at}(r<r_c)=Ar^n+Br^{n+1}$ and
-$\tilde{v}_{at}(r>r_c)=v_{at}(r)$ so that it is differentiable 
-and the value at the origin has the value specified by POT(0).
-\item HBS uses a cutoff function $k(r)=e^{-(\frac{r}{r_c})^\lambda}$
-to obtain the pseudopotential as
-$\tilde{v}_{at}(r)=\tilde{v}_0k(r)+[1-k(r)]v_{at}(r)$.
-\end{itemize}
-}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{for POLYNOMIAL: matching radius. For HBS: parameter $r_c$.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POWER} 
-\vdescr{for POLYNOMIAL: Order of the polynom used for
-  pseudization. For HBS: Parameter $\lambda$. }
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POT(0)}
-  \vdescr{Value of the pseudo potential at the origin}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!COMPENSATE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines compensation density.}
-
-\mbax{\key{RC}
-\vdescr{Gaussian decay parameter $g=\exp(-(\frac{r}{r_c})^2)$.}
-\vformat{real} 
-\vrules{optional}
-\vdefault{0.3}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!PSCORE}
-%----------------------------------------------------------------------
-\brules{optional}
-\bdescr{Defines pseudo core.}
-
-\mbax{\key{TYPE}
-\vdescr{pseudization type. Can be ``Polynomial''.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{matching radius.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POWER}
-  \vdescr{Order of the polynom used for pseudization}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{POT(0)}
-  \vdescr{Value of the pseudo potential at the origin}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%----------------------------------------------------------------------
-\block{!ACNTL!WAVE}
-%----------------------------------------------------------------------
-\brules{optional} \bdescr{Defines pseudo wave function. The order of
-the states is relevant. (Increasing $n$ and within each n increasing
-$\ell$)}
-
-\mbax{\key{L}
-\vdescr{main angular momentum quantum number.}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{N} 
-\vdescr{main radial quantum number. Use only for bound states.}
-\vformat{integer} 
-\vrules{mandatory if E is not specified. Must not be
-specified if E is specified. } 
-\vdefault{none}}
-
-\mbax{\key{E}
-\vdescr{Energy at which the partial waves are obtained.}
-\vformat{integer} 
-\vrules{mandatory if N is not specified. Must not be specified if N
-  is specified. }
-\vdefault{none}}
-
-\mbax{\key{PSTYPE}
-\vdescr{pseudization type. Can be ``HBS''. The potential is varied by
-  a potential $\exp(-(r/r_c)^\lambda$ with a variable scaling factor.}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{RC}
-\vdescr{matching radius.}
-\vformat{real} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{LAMBDA}
-  \vdescr{}
-\vformat{integer} 
-\vrules{mandatory}
-\vdefault{none}}
-
-%}{} % end of \ifthenelse
 
 \newpage
 %====================================================================
