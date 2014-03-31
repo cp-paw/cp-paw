@@ -8886,7 +8886,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       REAL(8)   ,PARAMETER :: RAD=2.D0
       INTEGER(4),PARAMETER :: NP=38
       REAL(8)              :: DIR(3,NP)
-      CHARACTER(8)         :: TYPE='='
       REAL(8)              :: P(3,NP)
       REAL(8)              :: ORB(NP)
       REAL(8)              :: ORBTAILED(NP)

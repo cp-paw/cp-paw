@@ -7,11 +7,6 @@ MODULE DMFT_MODULE
 !**                                                                           **
 !*******************************************************************************
 TYPE DENMAT_TYPE   ! CONSIDERS ALL ORBITALS ON THIS SITE
-!!$INTEGER(4)          :: LNX              !#(RADIAL PARTIAL WAVES)
-!!$INTEGER(4),POINTER  :: LOX(:) => NULL() !(LNX)
-!!$INTEGER(4),POINTER  :: LMN(:) => NULL() !(NLOC) MAPS LOCAL ORBITALS 
-!!$                                        !ONTO PROJECTOR ARRAY
-!!$INTEGER(4)          :: LMNX
 COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
 COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
 END TYPE DENMAT_TYPE
@@ -76,16 +71,9 @@ END MODULE DMFT_MODULE
       INTEGER(4)             :: NTASKS_K,THISTASK_K
       INTEGER(4)             :: NTASKS_M,THISTASK_M
       INTEGER(4)             :: NKPT
-      INTEGER(4)             :: LNX
-      INTEGER(4)             :: LMNX
       INTEGER(4)             :: NLOC
-      INTEGER(4)             :: L
-      INTEGER(4)             :: NU,ISP,IAT,LN,IM,IKPTL,IKPT,ICHI,IPRO,I,LN1
-      INTEGER(4)             :: LMN
-      INTEGER(4)             :: I1,I2 ! BOUNDS ON CHI-ARRAY FOR EACH ATOM
+      INTEGER(4)             :: NU,ISP,IAT,IKPTL,IKPT
       REAL(8)   ,ALLOCATABLE :: WKPT(:) !(NKPT) K-POINT WEIGHTS
-      INTEGER(4),ALLOCATABLE :: LOX(:)  !(LNX)
-      LOGICAL(4),ALLOCATABLE :: TORB(:) !(LNX)
 !     **************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
@@ -542,7 +530,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:) !(NCHI,NCHI,NDIMD)
       INTEGER(4)             :: NBH     !#(SUPER STATES)
-      INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IPRO,IB,J,IAT,IDIM1,IDIM2
+      INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IB,J,IAT,IDIM1,IDIM2
       INTEGER(4)             :: IDIMD
       INTEGER(4)             :: I1,I2
       REAL(8)                :: F(NB,NKPTL,NSPIN)
@@ -1107,8 +1095,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: LMNX  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: IAT
-      INTEGER(4)             :: IDIMD,I,J,LMN1,LMN2,NU
-      COMPLEX(8),ALLOCATABLE :: RHO(:,:,:)
+      INTEGER(4)             :: IDIMD,I,NU
       COMPLEX(8),ALLOCATABLE :: HAM(:,:,:)
 !     **************************************************************************
                                       CALL TRACE$PUSH('DMFT_SOLVER')
@@ -1406,12 +1393,10 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     **************************************************************************
 !     ** CALCULATE THE U-TENSOR OF THE CORRELATED ORBITALS IN THE SELECTED SET
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY: ISPECIES,LNX,LOX,POTPAR1
+      USE LMTO_MODULE, ONLY: ISPECIES
       USE DMFT_MODULE, ONLY: NAT,ATOMSET
       IMPLICIT NONE
-      REAL(8)  ,ALLOCATABLE :: UB(:,:,:,:)
       INTEGER(4)            :: ISP ! ATOM TYPE
-      INTEGER(4)            :: LMNX
       INTEGER(4)            :: IAT
       INTEGER(4)            :: nh
 !     **************************************************************************
@@ -1440,7 +1425,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     **************************************************************************
 !     **  CALCULATES THE U-TENSOR OF THE NATURAL TIGHT-BINDING ORBITALS       **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR1,SBAR_NEW,SBARLI1,LNX,LOX
+      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR1,SBAR_NEW
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT
       INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
@@ -1573,7 +1558,6 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       COMPLEX(8)             :: S(2*NLOC,2*NLOC,NOMEGA)
       COMPLEX(8)             :: SLAUR(2*NLOC,2*NLOC,3)
       INTEGER(4)             :: NU,I,J
-      INTEGER(4)             :: NFIL
 !     **************************************************************************
                                      CALL TRACE$PUSH('DMFT$HFSOLVER')
 !
@@ -1842,7 +1826,6 @@ CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       COMPLEX(8)               :: GLAUR1(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: GLAUR2(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: GLAUR3(NCHI,NCHI,NDIMD)
-!      COMPLEX(8)               :: S(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: SLAUR1(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: SLAUR2(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: SLAUR3(NCHI,NCHI,NDIMD)
@@ -1856,13 +1839,6 @@ CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       INTEGER(4)               :: I1,I2
       LOGICAL(4)               :: TH0
       INTEGER(4)               :: LX4 ! FIRST DIMENSION OF X4
-COMPLEX(8),ALLOCATABLE   :: X4SAVE(:,:,:)
-COMPLEX(8),ALLOCATABLE   :: X4VEC(:)
-REAL(8) :: AMP=1.D-3
-COMPLEX(8)               :: DHAM1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: DHAM2(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: DRHO1(NCHI,NCHI,NDIMD)
-COMPLEX(8)               :: DRHO2(NCHI,NCHI,NDIMD)
 INTEGER(4) :: ISPIN
 REAL(8)    :: EIG(NCHI)
 COMPLEX(8) :: U(NCHI,NCHI)
@@ -1894,16 +1870,6 @@ DO ISPIN=1,NSPIN
     PRINT*,'EIGENVALUES OF RHO ',ISPIN,EIG(:NCHI)
   ENDDO
 ENDDO
-
-
-!!$DHAM1=(0.D0,0.D0)
-!!$DHAM1(3,5,1)=AMP
-!!$DHAM1(2,5,2)=AMP
-!!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DHAM1) ! CONVERT TO 0XYZ
-!!$CALL DMFT_TESTRHO(TYPE,NCHI,NDIMD,DHAM1,DRHO1)
-!!$CALL DMFT_TESTRHO(TYPE,NCHI,NDIMD,-DHAM1,DRHO2)
-!!$DHAM2=(DRHO2-DRHO1)/(2.D0*AMP)
-!!$CALL SPINOR_PRINTMATRIX(6,'HAM NUMERICAL ',1,NCHI,NDIMD,NCHI,DHAM2)
 !       
 !     ========================================================================
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                              ==
@@ -1962,11 +1928,6 @@ ENDDO
               ENDDO
             END IF
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
-!!$CALL SPINOR_PRINTMATRIX(6,'G DIRECT ',1,NCHI,NDIMD,NCHI,G)
-!!$CALL SPINOR_PRINTMATRIX(6,'G TEST ',1,NCHI,NDIMD,NCHI &
-!!$&                   ,KSET(IKPT)%SINV/(CI*OMEGA(NU)))
-!!$PRINT*,'KBT ',KBT
-!!$STOP 'FORCED'
 !           == SUBTRACT LAURENT EXPANSION TO IMPROVE OMEGA-CONVERGENCE =========
             CSVAR=1.D0/(CI*OMEGA(NU))
             DEVRHO=DEVRHO+KBT*(G-CSVAR*(GLAUR1+CSVAR*(GLAUR2+CSVAR*GLAUR3)))
@@ -1985,17 +1946,6 @@ ENDDO
           ENDDO
 !         == ADD TAILS (GLAUR3 DOES NOT CONTRIBUTE) ============================
           DEVRHO=DEVRHO+0.5D0*GLAUR1-0.25D0/KBT*GLAUR2
-!RHO0=0.5D0*KET(IKPT)%SINV
-
-!!$CALL SPINOR_PRINTMATRIX(6,'DEVRHO DIRECT ',1,NCHI,NDIMD,NCHI,DEVRHO)
-!!$CALL SPINOR_PRINTMATRIX(6,'DEVRHO TEST ',1,NCHI,NDIMD,NCHI &
-!!$&                   ,KSET(IKPT)%SINV/2.D0)
-!!$PRINT*,'KBT ',KBT
-!!$STOP 'FORCED'
-!
-!         == SUBTRACT TARGET DENSITY ===========================================
-!!$CALL SPINOR_PRINTMATRIX(6,'RHO FROM G ',1,NCHI,NDIMD,NCHI,DEVRHO)
-!!$CALL SPINOR_PRINTMATRIX(6,'KSET%RHO   ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%RHO)
           DEVRHO=DEVRHO-KSET(IKPT)%RHO
 !
 !         == REGULARIZE X4 =====================================================
@@ -2006,43 +1956,6 @@ ENDDO
           CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,GLAUR(:,:,:,2)) ! CNVRTTO UPDOWN
           CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,GLAUR(:,:,:,3)) ! CNVRTTO UPDOWN
           CALL DMFT_ADDX4LAUR(NDIMD,NCHI,KBT,NOMEGA,OMEGA,GLAUR,LX4,NSPIN,X4)
-IF(.NOT.ALLOCATED(X4SAVE)) THEN
-ALLOCATE(X4SAVE(LX4,LX4,NSPIN))
-  X4SAVE=X4
-!!$  DO ISPIN=1,NSPIN
-!!$    DO I1=1,NCHI**2
-!!$      DO I2=1,NCHI**2
-!!$        IF(ABS(X4(I1,I2,ISPIN)).GT.1.D-3) THEN
-!!$          PRINT*,'X4 ',I1,I2,ISPIN,X4(I1,I2,ISPIN)
-!!$        END IF
-!!$      ENDDO
-!!$    ENDDO
-!!$  ENDDO
-ELSE
-  X4=X4SAVE
-END IF
-
-!
-DO ISPIN=1,NSPIN
-    CALL LIB$DIAGC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN)+DEVRHO(:,:,ISPIN),EIG(:NCHI),U)
-    PRINT*,'EIGENVALUES OF RHO ',ISPIN,EIG(:NCHI)
-IF(MINVAL(EIG).LT.0.D0.OR.MAXVAL(EIG).GT.1.D0) THEN
-   CALL ERROR$MSG('OCCUPATIONS OUT OF RANGE')
-   CALL ERROR$R8VAL('MAX(F)',MAXVAL(EIG))
-   CALL ERROR$R8VAL('MIN(F)',MINVAL(EIG))
-   CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
-END IF
-ENDDO
-!
-CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DEVRHO) ! CONVERT TO UPDOWN
-MAXDEV=MAXVAL(ABS(DEVRHO))
-DO IDIMD=1,NDIMD
-    PRINT*,'ITER=',ITER,' IKPT=',IKPT,' IDIMD=',IDIMD &
-  &       ,' MAXVAL(ABS(X4))  ',MAXVAL(ABS(X4(:,:,IDIMD))) &
-  &       ,' MAX(DEVRHO) ',MAXVAL(ABS(DEVRHO(:,:,IDIMD)))
-ENDDO
-CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
-!
 !          MIXTYPE='MIX'
 !          MIXTYPE='LINEAR'
           MIXTYPE='LINEAR0'
@@ -2050,24 +1963,6 @@ CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
             DH0=AMIX*DEVRHO
           ELSE IF(MIXTYPE.EQ.'LINEAR') THEN
 !
-!!$ALLOCATE(X4VEC(LX4))
-!!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DHAM1) ! CONVERT TO UPDOWN
-!!$DO ISPIN=1,NSPIN
-!!$  DO I1=1,NCHI
-!!$    DO I2=1,NCHI
-!!$      X4VEC(I1+NCHI*(I2-1))=DHAM1(I1,I2,ISPIN)
-!!$    ENDDO
-!!$  ENDDO
-!!$  X4VEC=MATMUL(X4(:,:,ISPIN),X4VEC)
-!!$  DO I1=1,NCHI
-!!$    DO I2=1,NCHI
-!!$      DRHO2(I1,I2,ISPIN)=X4VEC(I1+NCHI*(I2-1))
-!!$    ENDDO
-!!$  ENDDO
-!!$ENDDO
-!!$DRHO2=DRHO2/AMP
-!!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DRHO2) ! CONVERT TO 0XYZ
-!!$CALL SPINOR_PRINTMATRIX(6,'DRHO ANALYTICAL ',1,NCHI,NDIMD,NCHI,DRHO2)
 
             CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DEVRHO) ! CONVERT TO UPDOWN
 !           == DEVRHO+X4*DH0=0 -> DH0
@@ -2075,24 +1970,14 @@ CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DEVRHO) ! CONVERT TO TXYZ
             CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DH0)    ! CONVERT TO TXYZ
 !            DH0=0.5D0*DH0   !PART OF THE CONVERSION FOR HAMILTONIANS
           ELSE IF(MIXTYPE.EQ.'LINEAR0') THEN
-!!$PRINT*,'X4SAVE ',X4SAVE(1,1,1)
-!!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%SINV) ! CONVERT TO UPDOWN
-!!$PRINT*,'X4NEW ',-1.D0/(4.D0*KBT)*KSET(IKPT)%SINV(1,1,1)**2
-!!$STOP
             CALL SPINOR$MATMUL(NDIMD,NCHI,DEVRHO,KSET(IKPT)%SMAT,MAT)
             CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
             DH0=4.D0*KBT*DH0
    DH0=0.5D0*DH0
-!!$CALL SPINOR_PRINTMATRIX(6,'DH0 A',1,NCHI,NDIMD,NCHI,DH0)
-!!$CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,DEVRHO) ! CONVERT TO UPDOWN
-!!$CALL DMFT_SOLVEX4(NDIMD,NCHI,DEVRHO,LX4,NSPIN,X4,DH0)
-!!$CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,DH0)    ! CONVERT TO TXYZ
-!!$CALL SPINOR_PRINTMATRIX(6,'DH0 B',1,NCHI,NDIMD,NCHI,DH0)
           ELSE
             CALL ERROR$MSG('MIXTYPE NOT RECOGNIZED')
             CALL ERROR$STOP('DMFT_CONSTRAINTS_WITHKSET')
           END IF
-PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
 !
 !         ======================================================================
 !         == ADD DH                                                           ==
@@ -2125,7 +2010,6 @@ PRINT*,'MAXVAL OF DH ',MAXVAL(ABS(DH0)),MAXLOC(ABS(DH0))
           KSET(IKPT)%HRHO=KSET(IKPT)%H0
         ENDDO
       END IF
-PRINT*,'TH0 ',TH0
 
                               CALL TRACE$POP()
       RETURN
@@ -2312,7 +2196,7 @@ PRINT*,'TH0 ',TH0
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NSPIN,NDIMD,NAT,NOMEGA &
+      USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NDIMD,NAT,NOMEGA &
      &                      ,OMEGA,KBT,MU,KSET,ATOMSET
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: TYPE  ! CAN BE 'HRHO','H0'
@@ -3355,8 +3239,8 @@ PRINT*,' BEFORE SPINOR$PRINTL'
 !     **************************************************************************
 !     **  C=A*B                                                               **
 !     **                                                                      **
-!     **  DERIVATION IN METHODS: SECTION "WORKING WITH SPIN ORBITALS",        **
-!     **  SUBSECTION "INVERSION OF A MATRIX IN SPINOR REPRESENTATION          **
+!     **  DERIVATION IN METHODS: SECTION: WORKING WITH SPIN ORBITALS,         **
+!     **  SUBSECTION: INVERSION OF A MATRIX IN SPINOR REPRESENTATION          **
 !     **************************************PETER BLOECHL GOSLAR 2013***********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NCHI
