@@ -88,7 +88,6 @@ while getopts :h0b:p:l:v OPT ; do
   esac
 done
 shift $(($OPTIND - 1))
-echo argument= $1
 if [[ -e $1 ]] ; then echo "error in $0: argument present. none expected" >&2; fi
 if [[ -z $NAME ]] ; then
   echo "error in $0: mandatory option -p missing" >&2
@@ -112,9 +111,11 @@ fi
 if [[ -n $(grep 'LUNIT\[AA\]=' $NAME.strc) ]]; then
   X=$(grep 'LUNIT\[AA\]=' $NAME.strc)  #pick the line containing LUNIT
   X=${X#*LUNIT\[AA\]=}
+  AA=$(echo "1. / 0.529177" | bc -l )   # conversion factor into atomic units
 else
   X=$(grep 'LUNIT=' $NAME.strc)  #pick the line containing LUNIT
   X=${X#*LUNIT=}
+  AA=$(echo "1." | bc -l )
 fi
 X=${X%%!END*}
 ALAT0=$X
@@ -124,6 +125,7 @@ ALAT0=$X
 #==============================================================================
 if [[ -e etot.dat ]] ; then rm etot.dat; fi
 if [[ -e gap.dat ]]  ; then rm gap.dat; fi
+if [[ -e murn.in ]]  ; then rm murn.in; fi
 for X in $ALATLIST; do
  if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi
   #============================================================================
@@ -147,6 +149,9 @@ for X in $ALATLIST; do
   fi
   echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
   echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
+  Y=$(echo "$ALAT * $AA" | bc -l)
+  Y=$(echo "$Y * $Y * $Y " | bc -l)
+  echo ${Y} $(paw_get -w etot -n ${NAME}_${X}) >>murn.in
   #
   #  clean up
   # 

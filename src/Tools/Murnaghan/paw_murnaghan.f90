@@ -4,26 +4,27 @@
 !    ** FROM A MURNAGHAN FIT TO A SET OF (VOLUME,ENERGY) DATA RECEIVED FROM   **
 !    ** STANDARD INPUT                                                        **
 !    ***************************MATTHE UITTEVAAL AND PETER E. BLOECHL***********
+     use strings_module
      IMPLICIT NONE
-     integer(4),parameter :: npx=100
-     REAL(8)    :: V(npx), E(npx)     ! INPUT VOLUMES, ENERGIES
-     INTEGER(4) :: np                 ! #(datasets)
+     INTEGER(4),PARAMETER :: NPX=100
+     REAL(8)    :: V(NPX), E(NPX)     ! INPUT VOLUMES, ENERGIES
+     INTEGER(4) :: NP                 ! #(DATASETS)
      INTEGER(4) :: HIGH,LOW,I         ! INDICES, 
      INTEGER(4) :: IARRAY(1)          ! 1D ARRAY FOR MIN INDEX
-     REAL(8)    :: x                  ! penalty
-     REAL(8)    :: PARMS(4)           ! fit paramers (E0,V0,B0,Bprime)
-     REAL(8)    :: GRAD(4)            ! gradients of penalty function
+     REAL(8)    :: X                  ! PENALTY
+     REAL(8)    :: PARMS(4)           ! FIT PARAMERS (E0,V0,B0,BPRIME)
+     REAL(8)    :: GRAD(4)            ! GRADIENTS OF PENALTY FUNCTION
      REAL(8)    :: VI,EFIT            ! VOLUME IN, ENERGY OUT
      REAL(8)    :: EUNIT              ! ENERGY UNIT IN HARTREE
      REAL(8)    :: LUNIT              ! LENGTH UNIT IN ATOMIC UNITS
      REAL(8)    :: VBYL3              ! VOLUME IS VBYL3*L**3
-     REAL(8)    :: svar               ! auxiliary variable
+     REAL(8)    :: SVAR               ! AUXILIARY VARIABLE
      CHARACTER(64) :: ARG     
-     logical(4) :: tl                 ! input is length instead of volume
-     real(8)   ,parameter :: angstrom=1.d0/0.52917721092d0
-     real(8)   ,parameter :: joule=1.d0/4.35974434d-18
-     real(8)   ,parameter :: meter=angstrom*1.d+10
-     real(8)   ,parameter :: GPascal=1.d+9*joule/meter**3
+     LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
+     REAL(8)   ,PARAMETER :: ANGSTROM=1.D0/0.52917721092D0
+     REAL(8)   ,PARAMETER :: JOULE=1.D0/4.35974434D-18
+     REAL(8)   ,PARAMETER :: METER=ANGSTROM*1.D+10
+     REAL(8)   ,PARAMETER :: GPASCAL=1.D+9*JOULE/METER**3
 !    ***************************************************************************
 !    ==========================================================================
 !    == START WITH PRINTING HEADER                                           ==
@@ -37,68 +38,68 @@
     &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
 !
 !    ==========================================================================
-!    == collect units from command line                                       ==
+!    == COLLECT UNITS FROM COMMAND LINE                                       ==
 !    ==========================================================================
-     eunit=1.d0
-     lunit=1.d0
-     tl=.false.
-     vbyl3=1.d0
-     i=0
-     do 
-       i=i+1
-       call get_command_argument(i,arg)
-       if(len_trim(arg).eq.0) exit
-       arg=adjustl(arg)
-       if(arg.eq.'-h') then
-         WRITE(*,FMT='("paw_murnaghan.x options < input")')
+     EUNIT=1.D0
+     LUNIT=1.D0
+     TL=.FALSE.
+     VBYL3=1.D0
+     I=0
+     DO 
+       I=I+1
+       CALL GET_COMMAND_ARGUMENT(I,ARG)
+       IF(LEN_TRIM(ARG).EQ.0) EXIT
+       ARG=ADJUSTL(ARG)
+       IF(ARG.EQ.-'-H') THEN
+         WRITE(*,FMT=-'("PAW_MURNAGHAN.X OPTIONS < INPUT")')
          WRITE(*,FMT='("OPTIONS:")')
-         WRITE(*,FMT='(T5,"-l",T30,"FIRST COLUMN IS A LATTICE CONSTANT")')
-         WRITE(*,FMT='(T5,"-v",T30,"FIRST COLUMN IS A VOLUME (DEFAULT)")')
-         WRITE(*,FMT='(T5,"-eu VALUE",T30 &
+         WRITE(*,FMT=-'(T5,"-L",T30,"FIRST COLUMN IS A LATTICE CONSTANT")')
+         WRITE(*,FMT=-'(T5,"-V",T30,"FIRST COLUMN IS A VOLUME (DEFAULT)")')
+         WRITE(*,FMT=-'(T5,"-EU VALUE",T30 &
     &                    ,"ENERGY UNIT OF SECOND COLUMN IN HARTREE")')
-         WRITE(*,FMT='(T5,"-lu VALUE",T30 &
+         WRITE(*,FMT=-'(T5,"-LU VALUE",T30 &
     &                    ,"LENGTH UNIT OF FIRST COLUMN IN ABOHR")')
-         WRITE(*,FMT='(T5,"-vbl VALUE",T30 &
+         WRITE(*,FMT=-'(T5,"-VBL VALUE",T30 &
     &                    ,"VOLUME / LATTICE CONSTANT^3")')
          WRITE(*,FMT='("INPUT CONTAINS TWO COLUMNS WITH DATA:")')
-         WRITE(*,FMT='(T5,"FIRST COLUMN:",T30,"LATTICE CONSTANT OR VOLUME")')
-         WRITE(*,FMT='(T5,"SECOND COLUMN:",T30,"ENERGY")')
-         stop 'stopping after reporting help information'
-       else if(arg.eq.'-l') then
-         tl=.true.
-       else if(arg.eq.'-v') then
-         tl=.false.
-       else if(arg.eq.'-eu') then
-         i=i+1
-         call get_command_argument(i,arg)
-         read(arg,*) eunit
-       else if(arg.eq.'-lu') then
-         i=i+1
-         call get_command_argument(i,arg)
-         read(arg,*) Lunit
-       else if(arg.eq.'-vbl') then
-         i=i+1
-         call get_command_argument(i,arg)
-         read(arg,*)vbyl3
-       else
+         WRITE(*,FMT=-'(T5,"FIRST COLUMN:",T30,"LATTICE CONSTANT OR VOLUME")')
+         WRITE(*,FMT=-'(T5,"SECOND COLUMN:",T30,"ENERGY")')
+         STOP 'STOPPING AFTER REPORTING HELP INFORMATION'
+       ELSE IF(ARG.EQ.-'-L') THEN
+         TL=.TRUE.
+       ELSE IF(ARG.EQ.-'-V') THEN
+         TL=.FALSE.
+       ELSE IF(ARG.EQ.-'-EU') THEN
+         I=I+1
+         CALL GET_COMMAND_ARGUMENT(I,ARG)
+         READ(ARG,*) EUNIT
+       ELSE IF(ARG.EQ.-'-LU') THEN
+         I=I+1
+         CALL GET_COMMAND_ARGUMENT(I,ARG)
+         READ(ARG,*) LUNIT
+       ELSE IF(ARG.EQ.-'-VBL') THEN
+         I=I+1
+         CALL GET_COMMAND_ARGUMENT(I,ARG)
+         READ(ARG,*)VBYL3
+       ELSE
          WRITE(*,*) I,'TH ARGUMENT NOT RECOGNIZED'
          WRITE(*,*) 'ARGUMENT VALUE: ',TRIM(ARG)
          STOP 'IN MAIN'
        END IF
-     enddo
-     write(*,fmt='(50("."),t1,"energy unit in Hartree",t50,f10.5)')eunit
-     write(*,fmt='(50("."),t1,"length unit in bohr radii",t50,f10.5)')lunit
-     if(tl) then
-       write(*,fmt='("first column interpreted as length")')
-     else
-       write(*,fmt='("first column interpreted as volume")')
-     end if
-     write(*,fmt='(50("."),t1,"cell-volume / length**3",t50,f10.5)')vbyl3
+     ENDDO
+     WRITE(*,FMT='(50("."),T1,"ENERGY UNIT IN HARTREE",T50,F10.5)')EUNIT
+     WRITE(*,FMT='(50("."),T1,"LENGTH UNIT IN BOHR RADII",T50,F10.5)')LUNIT
+     IF(TL) THEN
+       WRITE(*,FMT='("FIRST COLUMN INTERPRETED AS LENGTH")')
+     ELSE
+       WRITE(*,FMT='("FIRST COLUMN INTERPRETED AS VOLUME")')
+     END IF
+     WRITE(*,FMT='(50("."),T1,"CELL-VOLUME / LENGTH**3",T50,F10.5)')VBYL3
 !
 !    ==========================================================================
 !    == READ DATA UNTIL ERROR THEN RESET NP                                  ==
 !    ==========================================================================
-     np=0
+     NP=0
      DO 
        NP=NP+1
        IF (NP.EQ.101) THEN
@@ -115,18 +116,18 @@
      END IF
 !
 !    ==========================================================================
-!    == convert units according to command line arguments                    ==
+!    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
 !    ==========================================================================
-     if(tl) then
-       v(:)=v(:)**3
-     end if
-     e(:)=e(:)*eunit
-     v(:)=v(:)*vbyl3*lunit**3
+     IF(TL) THEN
+       V(:)=V(:)**3
+     END IF
+     E(:)=E(:)*EUNIT
+     V(:)=V(:)*VBYL3*LUNIT**3
 !
 !    == REPORT INPUT DATA =====================================================
      DO I=1,NP
-       svar=(v(i)/vbyl3)**(1.d0/3.d0)
-       WRITE(*,FMT='(I5," L=",F10.5," V=",F10.5," E=",F10.5)')I,svar,V(I),E(I)
+       SVAR=(V(I)/VBYL3)**(1.D0/3.D0)
+       WRITE(*,FMT='(I5," L=",F10.5," V=",F10.5," E=",F10.5)')I,SVAR,V(I),E(I)
      ENDDO
 !
 !    ==========================================================================
@@ -152,21 +153,15 @@
 !    ==========================================================================
      WRITE(*,*)
      WRITE(*,FMT='(80("="),T10,"FIT PARAMETERS OF MURNGAHAN EQUATION OF STATE")')
-     WRITE(*,FMT='("EQUILIBRIUM ENERGY E0",T50,F10.5)')PARMS(1)
-     WRITE(*,FMT='("EQUILIBRIUM VOLUME V0",T50,F10.5)')PARMS(2)
-     SVAR=PARMS(2)
-     SVAR=SVAR/(VBYL3*LUNIT**3)
-     IF(TL) THEN 
-       SVAR=SVAR**(1.D0/3.D0)     
-       WRITE(*,FMT='("EQUILIBRIUM LATTICE CONSTANT IN INPUT UNITS",T50,F10.5)')SVAR
-     ELSE
-       WRITE(*,FMT='("EQUILIBRIUM VOLUME V0 IN INPUT UNITS",T50,F10.5)')SVAR
-     END IF
-     SVAR=(parms(2)/VBYL3)**(1.d0/3.d0)/angstrom
-     WRITE(*,FMT='("EQUILIBRIUM LATTICE CONSTANT IN angstrom",T50,F10.5)')svar
-     WRITE(*,FMT='("EQUILIBRIUM BULK MODULUS B0",T50,F10.5)')PARMS(3)
-     svar=parms(3)/gpascal
-     WRITE(*,FMT='("EQUILIBRIUM BULK MODULUS B0 in GPa",T50,F10.5)')svar
+     WRITE(*,FMT='("EQUILIBRIUM ENERGY E0 IN HARTREE",T50,F10.5)')PARMS(1)
+     WRITE(*,FMT='("EQUILIBRIUM VOLUME V0 IN ABOHR^3",T50,F10.5)')PARMS(2)
+     WRITE(*,FMT='("EQUILIBRIUM VOLUME V0 IN ANGSTROM^3",T50,F10.5)') &
+    &                                    PARMS(2)/ANGSTROM**3
+     SVAR=(PARMS(2)/VBYL3)**(1.D0/3.D0)/ANGSTROM
+     WRITE(*,FMT='("EQUILIBRIUM LATTICE CONSTANT IN ANGSTROM",T50,F10.5)')SVAR
+     WRITE(*,FMT='("EQUILIBRIUM BULK MODULUS B0 IN A.U.",T50,F10.5)')PARMS(3)
+     SVAR=PARMS(3)/GPASCAL
+     WRITE(*,FMT='("EQUILIBRIUM BULK MODULUS B0 IN GPA",T50,F10.5)')SVAR
      WRITE(*,FMT='("PRESSURE DERIVATIVE OF BULK MODULUS BPRIME",T50,F10.5)') &
    &       PARMS(4)
 !
@@ -177,18 +172,25 @@
      WRITE(*,FMT='(80("="),T10,"COMPARE ORIGINAL AND INTERPOLATED DATA")')
      DO I=1,NP
        CALL MURNAGHAN(PARMS,V(I),EFIT,GRAD)
-       WRITE(*,FMT='(I5," V=",F10.5," E(IN)=",F10.5," E(FIT)=",F10.5," E(FIT)-E(IN))=",F10.5)') &
+       WRITE(*,FMT='(I5," V=",F10.5," E(IN)=",F10.5," E(FIT)=",F10.5' &
+    &            //'," E(FIT)-E(IN))=",F10.5)') &
     &        I,V(I),E(I),EFIT,EFIT-E(I)
      ENDDO
 !
 !    ===========================================================================
 !    == WRITE EQUIDISTANT ENERGY VOLUME CURVE (INPUT RANGE +10%)              ==
 !    ===========================================================================
-     WRITE(*,FMT='(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN TO FILE MURN.DAT")')
-     OPEN(UNIT=8,FILE='MURN.DAT')
+     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
+    &                         //-' TO FILE MURN.DAT")')
+     OPEN(UNIT=8,FILE=-'MURN.DAT')
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
+!      __ convert consistent with the input data________________________________
+       EFIT=EFIT/EUNIT
+       VI=VI/VBYL3/LUNIT**3
+       IF(TL)VI=VI**(1.d0/3.d0)
+!      __ write_________________________________________________________________
        WRITE(8,FMT='(2F10.5)')VI,EFIT
      ENDDO
      STOP
@@ -297,7 +299,7 @@
 !    **   $B'=\FRAC{\PARTIAL B}{\PARTIAL P}\EQUIV B_0'\APPROX 3.5$            **
 !    **   SUBROUTINE RETURNS ENERGY AND GRADIENT AT REQUESTED VOLUME          **
 !    **                                                                       **
-!    **   SEE BLOECHL LECTURE NOTES FOR THE PAW hands-on FOR DERIVATION       **
+!    **   SEE BLOECHL LECTURE NOTES FOR THE PAW HANDS-ON FOR DERIVATION       **
 !    *************************PETER BLOECHL, GOSLAR 2010************************
      IMPLICIT NONE
      REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0, V0, B0, B'

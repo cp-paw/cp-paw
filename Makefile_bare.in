@@ -392,8 +392,8 @@ ${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR
 ##  build Tools                                                        ##
 #########################################################################
 #
-${BINDIR}/paw_murnaghan.x: ${OBJMURNAGHAN} 
-	${LINK} -o ${BINDIR}/paw_murnaghan.x ${OBJMURNAGHAN} 
+${BINDIR}/paw_murnaghan.x: ${OBJMURNAGHAN} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_murnaghan.x ${OBJMURNAGHAN} -L${OBJDIR} -lpaw ${LIBS}
 #
 clean_murnaghan:
 	rm -f ${OBJMURNAGHAN} ${BINDIR}/paw_murnaghan.x
