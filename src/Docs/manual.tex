@@ -9143,7 +9143,9 @@ option must be enabled in the code.
 \section{Troubleshooting}
 %==========================================================================
 
+%==========================================================================
 \subsection{Errors in the input data}
+%==========================================================================
 
 \begin{itemize}
 \item A common mistake is to enter data with the wrong data type.
@@ -9187,6 +9189,8 @@ STOP IN STRCIN; !STRUCTURE!LATTICE
 
 \end{itemize}
 
+
+
 \subsection{Runtime errors}
 
 This is a list of nontrivial user errors from which the program is not
@@ -9203,8 +9207,6 @@ keep this list as short as possible.
   \begin{itemize}
   \item The atomic positions have been chosen with unreasonably short
     distances, or with atoms lying on top of each other.
-  \item The number of valence electrons in the .strc file are not
-    consistent with the setup files.
   \item Some setups produce this behavior in the first few time steps.
     In this case reduce the plane wave cutoff to a small value such as
     5, 10 or 20 Ry. If this alone does not help, also reduce the time
@@ -9219,9 +9221,6 @@ keep this list as short as possible.
     original values.
   \item If all this does not help, you are in trouble!
   \end{itemize}
-\item{The number of valence electrons have not been chosen consistent with
-    the atomic setup. The number of valence electrons for each atom is
-    not printed in the protocol.}
 \item If the program produces a coredump, increase first the stack size
   using the ``ulimit'' command. You can also control the size of the stack
   array using the compiler option -bmaxstack.
@@ -9233,12 +9232,12 @@ keep this list as short as possible.
   environment or SP2 Software are not on the same level, 
   used during compilation.
 \item If you find that the program crashes without providing an error
-  message, and if you have the source code, you can set
-  ``TOFF=.false'' in the source file paw\_trace.f, and recompile. The
-  program will then continuously write information on subroutines
-  entered and left, which often allows one to locate the problem. Note that, in
-  order to avoid producing files too large to be useful, not all
-  routines result in a trace message.  \ifthenelse{\boolean{private}}{
+  message, and if you have the source code, specify
+  \verb|!CONTROL!GENERIC:TRACE=T|. The program will then
+  continuously write information on subroutines entered and left,
+  which often allows one to locate the problem. Note that, in order to
+  avoid producing files that are too large to be useful, not all routines
+  result in a trace message.  \ifthenelse{\boolean{private}}{
 \item The routine "MADELUNG" chooses itself the range of real and
     reciprocal space summations. It has not been sufficiently tested
     whether these choices are accurate. It may affect the result of
@@ -9250,28 +9249,79 @@ keep this list as short as possible.
   singularity in the functional form. This may happen for a fully spin
   polarized system. The cure is to pick another density functional, which does
   not contain the Becke88 functional.
-\item In the compiler xlf5.1.1 the code creates a segmentation fault
-  in a parallel-synchonization routine. In that case an empirical
-  solution is to reduce the optimization from O3 to O. There is no
-  problem of this type in the scalar version.
 }{} %end of ifthenelse
 \end{enumerate}
 
-%=========================================================
-\subsection{Porting}
-%=========================================================
-\begin{itemize}
-\item Your system may not have the Korn shell available. In that case
-  change the first line of any shell scripts, namely {\tt \#!/bin/ksh}, to
-    {\tt \#!/bin/bash}. Most shell scripts are in the main paw directory.
-   There may be some commands that do not work with bash yet.
-\item Adaptions of the preprocessor {\tt F90PP/f90pp}. (This is a self
-  made preprocessor.
-\item use the option {\bf -arch} when compiling the code with {\tt
-    paw\_compile} to use settings for a compiler different from the
-  IBM xlf compiler. To see if your compiler is included and what value
-  to set use {\tt paw\_compile ?} to obtain the command line syntax.
-\end{itemize}
+
+%==========================================================================
+\subsection{Overcompleteness of projector functions}
+%==========================================================================
+Using too many partial waves leads to so-called
+\textbf{overcompleteness}\index{overcompleteness} of projector
+functions.  This is counterintitive because one would think that more
+terms would make the description more accurate. 
+
+The origin of the problem is that, with a finite plane wave cutoff,
+the wave function has only a limited number of degrees of freedom
+inside the atomic region. If the numbert of projector functions
+exceeds this number of degrees of freedom, there is atleast one
+partial wave with a prefactor that is not fixed by the wave function.
+If this partial wave increases the energy, it will be projected
+out. If it, however, lowers the energy the calculation becomes
+unstable and the results unphysical.
+
+\begin{eqnarray}
+N&=&\frac{4\pi}{3}G_x^3\frac{1}{V_G}
+\stackrel{V_G=(2\pi)^3/V_R}{=}
+\frac{4\pi}{3}G_x^3\frac{V_R}{(2\pi)^3}
+\nonumber\\
+&\stackrel{E_{PW}=\frac{1}{2}G_x^2}{=}&
+\frac{4\pi}{3}\Bigl(2 E_{PW}\Bigr)^\frac{3}{2}\frac{V_R}{(2\pi)^3}
+\nonumber\\
+\Rightarrow\qquad
+\frac{N}{V_R}&=&\frac{4\pi}{3}\Bigl(
+\frac{\sqrt{2E_{PW}}}{2\pi}
+\Bigr)^3
+\nonumber\\
+\sum_{\ell=0}(2\ell+1)n_\ell&<&
+\frac{4\pi}{3}r_{cov}^3\frac{4\pi}{3}\Bigl(
+\frac{\sqrt{2E_{PW}}}{2\pi}
+\Bigr)^3
+=\underbrace{\frac{2}{9\pi}}_{\approx 1/30}\Bigl(r_{cov}\sqrt{2E_{PW}}\Bigr)^3
+\end{eqnarray}
+Here $N$ is the number of plane waves, or the number of real-space
+grid points respectively. $n_\ell$ is the number of different radial
+partial waves for the main angular momentum $\ell$.  $G_x$ is the
+maximum size for the wave vectors considered. $V_R$ is the real-space
+unit-cell volume. $V_G$ is the reciprocal-space unit-cell
+volume. $E_{PW}=\frac{1}{2}G_x^2$ is the plane wave cutoff and
+$r_{cov}$ is the covalent radius.
+
+
+We obtain
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+  &$r_{cov}$ & 20~Ry & 30~Ry & 50~Ry\\
+\hline
+H & 0.32~\AA &  1.4 & 2.5  &  5.5\\
+O & 0.73~\AA & 16.6 & 30.5 & 65.6\\ 
+Si& 1.11~\AA & 58.4 & 107.2 & 230.8\\
+\hline
+\end{tabular}
+\end{center}
+On the right-hand side the estimated number of degrees of freedom are
+listed. It should be considered that the effective augmentation radius
+is usually smaller than the covalent radius. This ratio enters to the
+third power. Hence, if the augmentation radius is 20~\% smaller than
+the covalent radius only half the number of degrees of freedom are
+present.
+
+This table indicates that for hydrogen, only the s-type projector
+should be used. For second-row elements the choice of the number of
+projectors appears fairly uncritical. For first-row elements, however,
+insdtabilities may already be present if only one projector function
+is used for s, p, and d-type angular momenta.
 
 \appendix
 %==========================================================================
@@ -9286,27 +9336,6 @@ The directory structure will have the following form
 \end{center}
 
 
-\ifthenelse{\boolean{private}}{
-%==========================================================================
-\section{Suggestions}
-%==========================================================================
-\begin{itemize}
-\item print the creation date of the executable. This could be done by
-  small subroutine which simply prints the time. This subroutine is on
-  a separate file paw\_date.f, which ``depends'' on the executable. A
-  small shell script modifies paw\_date.f first by replacing a
-  characteristic string by the current date and then compiles is. It
-  is always compiled before the program is linked.
-\item replace the covalent radii by the bond radii of UFF. give the
-  reference in the manual.
-\item make criterion for drawing bonds in the paw\_tra and the paw\_wave
-  file user defineable. Instead of fixing it to 1.2 times the covalent
-  radius, read the factor in.
-\item check plotting eigenstates, versus wave functions
-\item make selection for PDOS scaling in the paw\_dos tool
-\item check if paw\_dos tool treats spin-polarized calculations properly
-\end{itemize}
-}{} % end of \ifthenelse
 
 \newpage
 %====================================================================
