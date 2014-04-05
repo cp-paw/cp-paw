@@ -1,3 +1,6 @@
+!TAILED_TYPE REFERS TO THE ORIGINAL TAILED TYPE BEFORE
+!COMMIT   C4E8FD5B386D229804A4B4E068F50BD4337A8EB0
+!FROM APRIL 4, 2014 AT 13:25:01 GMT+2
 ! 1) TYPE POTPAR1_TYPE AND TAILED1_TYPE SHALL REPLACE THE 
 !    TYPES POTPAR_TYPE AND TAILED.
 !
@@ -1207,6 +1210,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
       INTEGER(4)             :: LX    !X(ANGULAR MOMENTUM)
       INTEGER(4)             :: ISP,LN,L,LNOFH,LNOFT,IHEAD,ITAIL
       INTEGER(4)             :: ISVAR
+      LOGICAL(4)             :: TCHK
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO_MAKEPOTPAR1')
       IF(.NOT.ALLOCATED(HYBRIDSETTING)) THEN
@@ -1312,15 +1316,17 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
         POTPAR1(ISP)%PROJBAR(:,:)=0.D0
         ITAIL=0
         DO L=0,LX
+          ITAIL=ITAIL+1
+          TCHK=.FALSE.
           DO IHEAD=1,NHEAD
             IF(POTPAR1(ISP)%LOFH(IHEAD).NE.L) CYCLE
-            ITAIL=ITAIL+1
+            TCHK=.TRUE.
             POTPAR1(ISP)%LOFT(ITAIL)=L
             POTPAR1(ISP)%LNOFT(ITAIL)=POTPAR1(ISP)%LNOFH(IHEAD)  !PLACEHOLDER
-            EXIT
           ENDDO
+          IF(.NOT.TCHK) ITAIL=ITAIL-1  ! NO TAIL FORT THIS L/ DO NOT COUNT UP          
         ENDDO
-!       == LINK CORRESPONDING PHIDOT TO EACH PHI
+!       == LINK CORRESPONDING PHIDOT TO EACH PHI ===============================
         DO IHEAD=1,NHEAD
           L=POTPAR1(ISP)%LOFH(IHEAD)
           DO ITAIL=1,NTAIL
@@ -1680,7 +1686,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         DO IH=1,NHEAD
           LNT=IH
           L=POTPAR1(ISP)%LOFH(IH)
-          DO IR=1,NR
+          DO IR=IRAD,NR   ! WILL BE AUGMENTED FROM 1 TO IRAD-1
             IF(R(IR).GT.RTAIL) EXIT
             CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KVAL,KDER)
             POTPAR1(ISP)%TAILED%NLF(IR,LNT)=KVAL
@@ -1690,7 +1696,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
           LNT=NHEAD+IT
           L=POTPAR1(ISP)%LOFT(IT)
           QBAR=POTPAR1(ISP)%QBAR(IT)
-          DO IR=1,NR
+          DO IR=IRAD,NR ! WILL BE AUGMENTED FROM 1 TO IRAD-1
             IF(R(IR).GT.RTAIL) EXIT
             CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KVAL,KDER)
             CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
@@ -1903,7 +1909,7 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
      &                     LMNT,POTPAR1(ISP)%TAILED%OVERLAP(:,LMNT)
           ENDDO
           DO LNT=1,POTPAR1(ISP)%TAILED%LNX
-            WRITE(*,FMT='("LN=",I3,"MONIPOLE=",100F10.5)') &
+            WRITE(*,FMT='("LN=",I3,"MONOPOLE=",100F10.5)') &
      &                     LNT,POTPAR1(ISP)%TAILED%QLN(1,:,LNT)
           ENDDO
           DO LNT=1,POTPAR1(ISP)%TAILED%LNX
@@ -1911,6 +1917,8 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
      &                     LNT,POTPAR1(ISP)%TAILED%QLN(2,:,LNT)
           ENDDO
         ENDDO
+        CALL ERROR$MSG('STOPPING AFTER PRINTOUT')
+        CALL ERROR$STOP('LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1')
       END IF
                               CALL TRACE$POP() 
       RETURN
@@ -2081,9 +2089,10 @@ CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_ONECENTEROVERLAP(GID,NR,LNX,LOX,CHI,LMNX,OVERLAP)
+!     **************************************************************************
+!     **  ONSITE OVERLAP MATRIX IN THE TAILED REPRESENTATION                  **
 !     **                                                                      **
-!     ** SLATER INTEGRALS.                                                    **
-!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -3541,6 +3550,10 @@ IF(TTEST)CALL LMTO_LOCNATORB()
      &         +MATMUL(SBAR_NEW(NNS)%MAT                                   &
      &                ,MATMUL(POTPAR1(ISP)%TAILED%OVERLAP(LMNH+1:,LMNH+1:) &
      &                       ,TRANSPOSE(SBAR_NEW(NNS)%MAT)))
+!!$PRINT*,'POTPAR1/OVERLAP(HH) ',POTPAR1(ISP)%TAILED%OVERLAP(:LMNH,:LMNH)
+!!$PRINT*,'POTPAR1/OVERLAP(HT) ',POTPAR1(ISP)%TAILED%OVERLAP(:LMNH,LMNH+1:)
+!!$PRINT*,'POTPAR1/OVERLAP(TH) ',POTPAR1(ISP)%TAILED%OVERLAP(LMNH+1:,:LMNH)
+!!$PRINT*,'POTPAR1/OVERLAP(TT) ',POTPAR1(ISP)%TAILED%OVERLAP(LMNH+1:,LMNH+1:)
         WRITE(*,FMT='(80("="),T10," ONSITE OVERLAP FOR ATOM ",I3,"  ")')IAT
         DO I=1,LMNH
           WRITE(*,FMT='(10F10.5)')OVERLAP(I,:)

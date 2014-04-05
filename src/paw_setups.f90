@@ -7497,7 +7497,6 @@ PRINT*,'... SETUP_OUTERNEWPROWRAPPER FINISHED'
           E=EOFPHI(JP)
           CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,E,IDIR,QN(:,JP))
         END IF
-PRINT*,'NJ ',NJ,SO,L,E,IDIR
         TQN(:,JP)=G-(AEPOT*Y0-E)*QN(:,JP)
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
@@ -7788,6 +7787,7 @@ IPHISCALE=1
 !     == WAVE.                                                                ==
 !     ==========================================================================
       DTKIN=0.5D0*(DTKIN+TRANSPOSE(DTKIN))
+PRINT*,'MARKE 8 END OF ROUTINE'
                                        CALL TRACE$POP()
       RETURN
       END
@@ -7895,6 +7895,9 @@ IPHISCALE=1
 !     ==========================================================================
 !     == DETERMINE RADIAL FUNCTIONS  FOR PSEUDO PARTIAL WAVES                 ==
 !     ==========================================================================
+!     == SOLUTIONS WILL ONLY BE USED UP TO MATCHING RADIUS. CUTTING THE ========
+!     == THE POTENTIAL OFF EARLY, AVOIDS OVERFLOW ==============================
+      POT(IRC+5:)=0.D0
       G=0.D0
       CALL SCHROEDINGER$SPHERICAL(GID,NR,POT,DREL,SO,G,L,ENU,IDIR,F)
       TF=G-(POT*Y0-ENU)*F
@@ -7970,8 +7973,8 @@ IPHISCALE=1
         DET=VALTFDDOT*DERTFDDDOT-VALTFDDDOT*DERTFDDOT
         C3=( DERTFDDDOT*VALTPHI-VALTFDDDOT*DERTPHI)/DET
         C4=(-DERTFDDOT *VALTPHI+VALTFDDOT *DERTPHI)/DET
-           PHI(:IRC) = PHI(:IRC)- FDDOT(:IRC)*C3- FDDDOT(:IRC)*C4
-           TPHI(:IRC)=TPHI(:IRC)-TFDDOT(:IRC)*C3-TFDDDOT(:IRC)*C4
+        PHI(:IRC) = PHI(:IRC)- FDDOT(:IRC)*C3- FDDDOT(:IRC)*C4
+        TPHI(:IRC)=TPHI(:IRC)-TFDDOT(:IRC)*C3-TFDDDOT(:IRC)*C4
       ELSE 
         IF(T3PAR) THEN
           C3=TPHI(IRC)/TFDDOT(IRC)
