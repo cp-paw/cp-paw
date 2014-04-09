@@ -775,7 +775,6 @@ CALL SETUP$ISELECT(0)
 !       ========================================================================
 !NORB=(LX1(1)+1)**2
 !N=SUM((LX(1)+1)**2)
-PRINT*,'DOING LMTO$CLUSTERSTRUCTURECONSTANTS.....'
         ALLOCATE(SBAR1(NORB,N))
         IF(MOD(IAT1-1,NTASKS).EQ.THISTASK-1) THEN
           CALL TIMING$CLOCKON('STRUCTURE CONSTANTS')
@@ -785,7 +784,6 @@ PRINT*,'DOING LMTO$CLUSTERSTRUCTURECONSTANTS.....'
         ELSE
           SBAR1=0.D0
         END IF
-PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
 !
 !       ========================================================================
 !       == MAP ONTO SBAR                                                      ==
@@ -836,9 +834,7 @@ PRINT*,'..... LMTO$CLUSTERSTRUCTURECONSTANTS  DONE'
         FROMTASK=1+MOD(IAT-1,NTASKS)
         CALL MPE$BROADCAST('MONOMER',FROMTASK,SBAR_NEW(NN)%MAT)
       ENDDO
-!      CALL LMTO_MAKEOLDSBAR()
-CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
-!!$CALL LMTO$REPORTPERIODICMAT(6,'NEW STRUCTURE CONSTANTS ',NNS,SBAR_NEW)
+!!$CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
 !!$STOP 'FORCED'
 !
 !     ==========================================================================
@@ -854,101 +850,6 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
                               CALL TRACE$POP()
       RETURN
       END
-!!$!     
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LMTO_MAKEOLDSBAR()
-!!$!     **************************************************************************
-!!$!     **  THE SCREENED STRUCTURE CONSTANTS ARE INITIALLY GIVEN IN THE SPACE   **
-!!$!     **  WITH DIMENSIONS RELATED TO THE ANGULAR MOMENTA.                     **
-!!$!     **  HERE THEY ARE CONVERTED SO THAT THE RIGHT INDEX IS THE NUMBER OF    **
-!!$!     **  HEAD FUNCTIONS AND THE LEFT IS THE NUMBER OF TAIL FUNCTIONS         **
-!!$!     **                                                                      **
-!!$!     **  P_{R'}|K_{RL}> = - \SUM_{L'} |JBAR_{R'L'}> S_{RL,R'L'}              **
-!!$!     **                                                                      **
-!!$!     **************************************************************************
-!!$      USE LMTO_MODULE, ONLY : POTPAR1  &
-!!$     &                       ,SBAR_NEW & ! SCREENED STRUCTURE CONSTANTS
-!!$     &                       ,SBAR     & ! SCREENED STRUCTURE CONSTANTS
-!!$     &                       ,SBARLI1  &
-!!$     &                       ,ISPECIES & ! ISP=ISPECIES(IAT)
-!!$     &                       ,NSP        ! NUMBER OF ATOM TYPES
-!!$      IMPLICIT NONE
-!!$      LOGICAL(4),PARAMETER :: TPR=.FALSE. 
-!!$      INTEGER(4),PARAMETER :: NFIL=6
-!!$      INTEGER(4) :: NNS  ! #(NEIGBOR PAIRS)
-!!$      INTEGER(4) :: IAT1,IAT2
-!!$      INTEGER(4) :: ISP1,ISP2
-!!$      INTEGER(4) :: LMX(NSP)
-!!$      INTEGER(4) :: LX
-!!$      INTEGER(4) :: NHEAD,NTAIL
-!!$      INTEGER(4) :: N1,N2
-!!$      INTEGER(4) :: NN,ISP,L
-!!$      INTEGER(4) :: I1,L1,M1,LM1A,LM1B,LM1X
-!!$      INTEGER(4) :: I2,L2,M2,LM2A,LM2B,LM2X
-!!$      REAL(8)   ,ALLOCATABLE :: MAT(:,:)
-!!$!     **************************************************************************
-!!$      NNS=SIZE(SBAR_NEW)
-!!$      ALLOCATE(SBAR(NNS))
-!!$      DO NN=1,NNS
-!!$        SBAR(NN)%IAT1=SBAR_NEW(NN)%IAT1
-!!$        SBAR(NN)%IAT2=SBAR_NEW(NN)%IAT2
-!!$        SBAR(NN)%IT=SBAR_NEW(NN)%IT
-!!$        IAT1=SBAR_NEW(NN)%IAT1
-!!$        IAT2=SBAR_NEW(NN)%IAT2
-!!$        ISP1=ISPECIES(IAT1)
-!!$        ISP2=ISPECIES(IAT2)
-!!$        NTAIL=POTPAR1(ISP2)%NTAIL
-!!$        NHEAD=POTPAR1(ISP1)%NHEAD
-!!$        LX=MAXVAL(POTPAR1(ISP1)%LOFT)
-!!$        LM1X=SBARLI1(LX+1,ISP1)+2*LX
-!!$        LX=MAXVAL(POTPAR1(ISP2)%LOFT)
-!!$        LM2X=SBARLI1(LX+1,ISP2)+2*LX
-!!$        SBAR(NN)%N1=LM1X 
-!!$        SBAR(NN)%N2=LM2X 
-!!$        ALLOCATE(SBAR(NN)%MAT(LM1X,LM2X))
-!!$        LM1A=0
-!!$        DO I1=1,NHEAD
-!!$          L1=POTPAR1(ISP1)%LOFH(I1)
-!!$          LM1B=SBARLI1(L1+1,ISP1)-1
-!!$          DO M1=1,2*L1+1
-!!$            LM1A=LM1A+1
-!!$            LM1B=LM1B+1
-!!$            LM2A=0
-!!$            DO I2=1,NTAIL
-!!$              L2=POTPAR1(ISP2)%LOFT(I2)
-!!$              LM2B=SBARLI1(L2+1,ISP2)-1
-!!$              DO M2=1,2*L2+1
-!!$                LM2A=LM2A+1
-!!$                LM2B=LM2B+1
-!!$                SBAR(NN)%MAT(LM1B,LM2B)=SBAR_NEW(NN)%MAT(LM1A,LM2A)
-!!$              ENDDO
-!!$            ENDDO
-!!$          ENDDO
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==========================================================================
-!!$!     ==  PRINT RESULT                                                        ==
-!!$!     ==========================================================================
-!!$      IF(TPR) THEN
-!!$        CALL LMTO$REPORTSBAR(NFIL)
-!!$        WRITE(NFIL,FMT='(82("="))')
-!!$        WRITE(NFIL,FMT='(82("="),T10,"  SCREENED STRUCTURE CONSTANTS(NEW)  ")')
-!!$        WRITE(NFIL,FMT='(82("="))')
-!!$        DO NN=1,NNS
-!!$          WRITE(NFIL &
-!!$     &         ,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
-!!$     &                 SBAR_NEW(NN)%IAT1,SBAR_NEW(NN)%IAT2,SBAR_NEW(NN)%IT
-!!$          DO LM1A=1,SBAR_NEW(NN)%N1
-!!$            WRITE(NFIL,FMT='(20F10.5)')SBAR_NEW(NN)%MAT(LM1A,:)
-!!$          ENDDO
-!!$          WRITE(NFIL,FMT='(82("="))')
-!!$        ENDDO 
-!!$        CALL ERROR$MSG('PLANNED STOP AFTER WRITING SBAR_NEW')
-!!$        CALL ERROR$STOP('LMTO_EXPANDSBAR')
-!!$      END IF
-!!$      RETURN
-!!$      END
 !     
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_STRUCRESET()
@@ -1195,7 +1096,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
       REAL(8)   ,ALLOCATABLE :: PRO(:,:)
       LOGICAL(4),ALLOCATABLE :: TORB(:)
       INTEGER(4),ALLOCATABLE :: ISCATT(:)
-      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       REAL(8)                :: RAD
       REAL(8)                :: PHIVAL,PHIDER
       REAL(8)                :: PHIDOTVAL,PHIDOTDER
@@ -1458,9 +1359,9 @@ CALL LMTO$REPORTPERIODICMAT(6,'STRUCTURE CONSTANTS',NNS,SBAR_NEW)
 !     == PRINTOUT                                                             ==
 !     ==========================================================================
       IF(TPRINT) THEN
-        WRITE(*,FMT='(82("="),T10," LMTO_MAKEPOTPAR1  ")')
+        WRITE(*,FMT='(80("="),T10," LMTO_MAKEPOTPAR1  ")')
         DO ISP=1,NSP
-          WRITE(*,FMT='(82("-"),T10," ATOM TYPE ",I2," ")')ISP
+          WRITE(*,FMT='(80("-"),T10," ATOM TYPE ",I2," ")')ISP
           NTAIL=POTPAR1(ISP)%NTAIL
           DO ITAIL=1,NTAIL
             L=POTPAR1(ISP)%LOFT(ITAIL)
@@ -1745,7 +1646,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
             POTPAR1(ISP)%TAILED%NLF(IR,LNT)=B1*SVAR1+B2*SVAR2
           ENDDO
         ENDDO  
-CALL LMTO_WRITEPHI('0_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
+!CALL LMTO_WRITEPHI('0_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !
 !       ========================================================================
 !       == AUGMENTATION ========================================================
@@ -1817,9 +1718,9 @@ CALL LMTO_WRITEPHI('0_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
           ENDDO
         END IF
 
-CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
-CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
-CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
+!!$CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
+!!$CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
+!!$CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
         CALL SETUP$UNSELECT()
       ENDDO ! END OF LOOP OVER ATOM TYPES
       RETURN
@@ -4272,6 +4173,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
      &                     ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHOWC(:,:,IDIM))
       ENDDO
       RHOWC(:,1,1)=RHOWC(:,1,1)+AECORE(:)
+!
 !     ==  POTENTIAL FOR THE FULL DENSITY =====================================
       ALLOCATE(POT(NR,LMRX,NDIMD))
       CALL LMTO_RADXC(GID,NR,LMRX,NDIMD,RHOWC,FXC,POT)

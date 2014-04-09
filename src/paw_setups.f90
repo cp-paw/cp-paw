@@ -1330,11 +1330,12 @@ END MODULE SETUP_MODULE
 !     == REPORT ENERGIES                                                      ==
 !     ==========================================================================
       WRITE(6,FMT='("TOTAL ENERGY=",F25.7)')ETOT
+      WRITE(6,FMT='(4A4,A20,2A10)')"IB","N","L","SO","E","F","#(REM. EL.)"
       SVAR=0.D0
       DO IB=1,NB
         SVAR=SVAR+FOFI(IB)  
-        WRITE(6,FMT='("IB=",4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB)&
-     &                                      ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
+        WRITE(6,FMT='(4I4,F20.4,2F10.5)')IB,NNOFI(IB)+LOFI(IB)+1,LOFI(IB)&
+     &                                  ,SOFI(IB),EOFI(IB),FOFI(IB),AEZ-SVAR
       ENDDO
 !
 !     ==========================================================================
@@ -1445,7 +1446,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !     ==========================================================================
 !     ==  CALCULATE AND PRINT SCATTERING PROPERTIES                           ==
 !     ==========================================================================
-CALL TRACE$PASS('MARKE 1')
       CALL TIMING$CLOCKON('TEST SCATTERING')
       CALL SETUP_TESTSCATTERING(LL_STP)
       CALL TIMING$CLOCKOFF('TEST SCATTERING')
@@ -1457,7 +1457,6 @@ CALL TRACE$PASS('MARKE 1')
 !     ==========================================================================
 !     ==  PERFORM BESSELTRANSFORMS                                            ==
 !     ==========================================================================
-CALL TRACE$PASS('MARKE 2')
       CALL TIMING$CLOCKON('BESSELTRANSFORMS')
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
@@ -1496,7 +1495,6 @@ CALL TRACE$PASS('MARKE 2')
       WRITE(*,'(80("="))')
       WRITE(*,'(80("="),T20,"  SETUP CONSTRUCTION FINISHED  ")')
       WRITE(*,'(80("="))')
-CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
                             CALL TRACE$POP
       RETURN
       END
@@ -2884,13 +2882,15 @@ CALL TRACE$PASS('BEFORE POP IN SETUP_READ_NEW')
 !     == RBNDOUT HAS EARLIER BEEN SET EQUAL TO RBOX. IT SHOULD BE EQUAL TO ROUT.
 !     == THIS VARIABLE IS USED TO TRACK THE CHANGES.
       RBNDOUT=ROUT  
-PRINT*,'R(NR)   ',R(NR),' OUTERMOST GRIDPOINT'
-PRINT*,'R(NR-1) ',R(NR-1),' SECOND TO OUTERMOST GRIDPOINT'
-PRINT*,'R(NR-2) ',R(NR-2),' THIRD TOOUTERMOST GRIDPOINT'
-PRINT*,'ROUT    ',ROUT,' HARD SPHERE RADIUS FOR ATOMIC CALCULATION'
-PRINT*,'RBOX    ',RBOX,' RADIUS FOR BOUNDARY CONDITIONS FOR PARTIAL WAVES'
-PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
-PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
+if(twrite) then
+ PRINT*,'R(NR)   ',R(NR),' OUTERMOST GRIDPOINT'
+ PRINT*,'R(NR-1) ',R(NR-1),' SECOND TO OUTERMOST GRIDPOINT'
+ PRINT*,'R(NR-2) ',R(NR-2),' THIRD TOOUTERMOST GRIDPOINT'
+ PRINT*,'ROUT    ',ROUT,' HARD SPHERE RADIUS FOR ATOMIC CALCULATION'
+ PRINT*,'RBOX    ',RBOX,' RADIUS FOR BOUNDARY CONDITIONS FOR PARTIAL WAVES'
+ PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
+ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
+end if
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -2919,7 +2919,6 @@ PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
 !     ==========================================================================
 !     == CONSTRUCT PSEUDO POTENTIAL                                           ==
 !     ==========================================================================
-PRINT*,'NR',NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       CALL ATOMIC_PSEUDIZE(GID,NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,AEPOT,PSPOT)
 !
 !     ==========================================================================
@@ -2932,12 +2931,14 @@ PRINT*,'NR',NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT
       &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
         NLPHI=QN
         NLPHISM=QNSM
-        CALL SETUP_WRITEPHI(-'NEW_PRO',GID,NR,LNX,PRO)
-        CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
-        CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
-        CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
-        CALL SETUP_WRITEPHI(-'NEW_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
-        CALL SETUP_WRITEPHI(-'NEW_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
+        if(twrite) then
+          CALL SETUP_WRITEPHI(-'NEW_PRO',GID,NR,LNX,PRO)
+          CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
+          CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
+          CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
+          CALL SETUP_WRITEPHI(-'NEW_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
+          CALL SETUP_WRITEPHI(-'NEW_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
+        end if
         !
         !  MISSING VARIABLES:
         !
@@ -2956,18 +2957,19 @@ PRINT*,'NR',NR,POW_POT,TVAL0_POT,VAL0_POT,RC_POT
         PSPHISM=0.D0
         AEPHIDOTSM=0.D0
         PSPHIDOTSM=0.D0
-        CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
-        CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
-        CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
-        CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
-        CALL SETUP_WRITEPHI(-'OLD_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
-        CALL SETUP_WRITEPHI(-'OLD_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
+        if(twrite) then
+          CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
+          CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
+          CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
+          CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
+          CALL SETUP_WRITEPHI(-'OLD_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
+          CALL SETUP_WRITEPHI(-'OLD_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
+        end if
       END IF
 !
 !     ==========================================================================
 !     == CALCULATE DH                                                         ==
 !     ==========================================================================
-PRINT*,'ROUT ',ROUT,' RBNDOUT',RBNDOUT
       DH=0.D0
       DO LN1=1,LNX
         DO LN2=1,LNX
@@ -2986,15 +2988,15 @@ PRINT*,'ROUT ',ROUT,' RBNDOUT',RBNDOUT
           DH(LN1,LN2)=DT(LN1,LN2)+SVAR
         ENDDO
       ENDDO
-DO LN1=1,LNX
-  WRITE(*,FMT='(A,100E12.5)')'DT   ',DT(LN1,:)
-ENDDO
-DO LN1=1,LNX
-  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
-ENDDO
-DO LN1=1,LNX
-  WRITE(*,FMT='(A,100E12.5)')'DOVER',DOVER(LN1,:)
-ENDDO
+!!$DO LN1=1,LNX
+!!$  WRITE(*,FMT='(A,100E12.5)')'DT   ',DT(LN1,:)
+!!$ENDDO
+!!$DO LN1=1,LNX
+!!$  WRITE(*,FMT='(A,100E12.5)')'DH   ',DH(LN1,:)
+!!$ENDDO
+!!$DO LN1=1,LNX
+!!$  WRITE(*,FMT='(A,100E12.5)')'DOVER',DOVER(LN1,:)
+!!$ENDDO
 !
 !     ==========================================================================
 !     == CALCULATE DENSITY FOR UNSCREENING                                    ==
@@ -3321,7 +3323,7 @@ ENDDO
       EOFICOMP(:,:)=0.D0
       DO L=0,LX
         ISO=0
-PRINT*,'=================== L=',L,' ================================='
+!PRINT*,'=================== L=',L,' ================================='
         NPRO=NPROL(L)
         IF(NPRO.EQ.0) CYCLE
         ALLOCATE(DH1(NPRO,NPRO))
@@ -3359,7 +3361,7 @@ PRINT*,'=================== L=',L,' ================================='
         DO IB=NC+1,NB
           IVB=IB-NC
           IF(LOFI(IB).NE.L) CYCLE
-PRINT*,'        ---- IB=',IB,' --------------------------------'
+!PRINT*,'        ---- IB=',IB,' --------------------------------'
           IF(NN0.EQ.-1)NN0=NNOFI(IB)
           E=EOFI1(IB)
 !
@@ -3457,7 +3459,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
           ENDDO
           PSPSIF(:,IB-NC)=PSPSIF(:,IB-NC)/SQRT(VAL)
           PROJ=PROJ/SQRT(VAL)
-    PRINT*,'PROJ ',L,PROJ
+!PRINT*,'PROJ ',L,PROJ
 !
 !         == ADD TO AUGMENTATION DENSITY =======================================
           DO IPRO1=1,NPRO
@@ -3542,7 +3544,7 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
       REAL(8)               :: R(NR)
       INTEGER(4)            :: IRBOX ! FIRST GRID POINT BEYOND BOX RADIUS
       REAL(8)               :: PI
-      LOGICAL               :: TTEST=.TRUE.
+      LOGICAL               :: TTEST=.FALSE.
       REAL(8)               :: CHARGE1,EKIN1
       INTEGER(4)            :: L,IB,IR
 !     **************************************************************************
@@ -3609,8 +3611,10 @@ PRINT*,'        ---- IB=',IB,' --------------------------------'
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
           EKIN1=EKIN1+FOFI(IB)*0.5D0*VAL
         ENDDO
-        WRITE(*,*)'PS CHARGE IN G-SPACE ',CHARGE,' IN R-SPACE ',CHARGE1
-        WRITE(*,*)'PS EKIN   IN G-SPACE ',EKIN,' IN R-SPACE ',EKIN1
+        WRITE(*,fmt='("PS CHARGE IN G-SPACE ",f10.6,:" IN R-SPACE ",f10.5)') &
+     &             charge,charge1
+        WRITE(*,fmt='("PS ekin   IN G-SPACE ",f10.6,:" IN R-SPACE ",f10.5)') &
+     &             ekin,ekin1
       END IF
                       CALL TRACE$POP()
       RETURN
@@ -6037,8 +6041,8 @@ RCL=RCOV
           ENDDO
         ENDDO
       ENDDO
-PRINT*,'EOFI ',EOFI
-PRINT*,'EOFI1 ',EOFI1
+!!$PRINT*,'EOFI ',EOFI
+!!$PRINT*,'EOFI1 ',EOFI1
       IF(TTEST.AND.TWRITE)CALL SETUP_WRITEPHI('UOFI1.DAT',GID,NR,NB,UOFI)
 
 !
@@ -6051,7 +6055,7 @@ PRINT*,'EOFI1 ',EOFI1
         ISO=0
 !       == GET ENERGY OF THE LOWEST VALENCE STATE WITH THIS L ==================
         E=0.D0
-PRINT*,'NB,NC,EOFI1',NB,NC,EOFI1
+!!$PRINT*,'NB,NC,EOFI1',NB,NC,EOFI1
 
         DO IB=NC+1,NB
           IF(LOFI(IB).NE.L) CYCLE
@@ -7022,6 +7026,8 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)   ,ALLOCATABLE :: DTKIN(:,:)
       REAL(8)   ,ALLOCATABLE :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE :: EOFPHI(:)
+      logical(4),parameter   :: ttest=.false.
+      logical(4),parameter   :: twrite=.false.
       INTEGER(4)             :: NBL
       INTEGER(4)             :: NCL  
       INTEGER(4)             :: NPHI !#(PARTIAL WAVES FOR THIS L)
@@ -7033,7 +7039,6 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)                :: PI,Y0
 !     **************************************************************************
                                      CALL TRACE$PUSH('SETUP_OUTERNEWPROWRAPPER')
-PRINT*,'STARTING SETUP_OUTERNEWPROWRAPPER...'
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       G_QNPHI=0.D0
@@ -7055,10 +7060,9 @@ PRINT*,'STARTING SETUP_OUTERNEWPROWRAPPER...'
 !     RELTYPE='SPINORBIT'
 !
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
-PRINT*,'LX ',LX,' LOX ',LOX,' LOFI ',LOFI
       DO L=0,LX
         DO SO=MINVAL(SOFI),1,2  
-          WRITE(*,FMT='(80("-"),T20," L=",I2," SO=",I2)')L,SO
+!WRITE(*,FMT='(80("-"),T20," L=",I2," SO=",I2)')L,SO
 !
 !         ======================================================================
 !         == COUNT NUMBER OF BANDS AND NUMBER OF CORE STATES                  ==
@@ -7133,32 +7137,34 @@ PRINT*,'LX ',LX,' LOX ',LOX,' LOFI ',LOFI
           ALLOCATE(PRO(NR,NPHI))
           ALLOCATE(DTKIN(NPHI,NPHI))
           ALLOCATE(DOVER(NPHI,NPHI))
+if(twrite) then
 PRINT*,'------------- INPUT DATA FOR SETUP_NEWPRO-----------'
-PRINT*,'RELTYPE  ',TRIM(RELTYPE)
+print*,'l        ',l
+print*,'so        ',so
 PRINT*,'ROUT     ',ROUT
 PRINT*,'RCL      ',RCL
 PRINT*,'NCL,NPHI ',NCL,NPHI
 PRINT*,'EC       ',EC
 PRINT*,'EOFPHI   ',EOFPHI
 PRINT*,'-----------------------------------------------------'
+end if
           CALL SETUP_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
      &                  ,AEPOT,PSPOT,VFOCK &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
      &                  ,QNDOT,QNDOTSM,AEPHIDOT,AEPHIDOTSM &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-PRINT*,'... SETUPS NEWPRO DONE'
-PRINT*,'DTKIN',DTKIN
 !
 !         ======================================================================
 !         == TESTS                                                            ==
 !         ======================================================================
-          CALL SETUP_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC &
+          if(ttest) then
+            CALL SETUP_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC&
      &                  ,AEPOT,PSPOT &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-PRINT*,'... SETUP_TEST_NEWPRO DONE'
+          end if
 !
 !         ======================================================================
 !         == SORT INTO THE ARRAY                                              ==
@@ -7192,7 +7198,6 @@ END IF
           ENDDO            
 !
 !         == MATRIX ELEMENTS ===================================================
-PRINT*,'DTKIN X1:',DTKIN
           IPHI=0
           DO LN1=1,LNX
             IF(LOX(LN1).NE.L) CYCLE
@@ -7205,7 +7210,6 @@ PRINT*,'DTKIN X1:',DTKIN
               G_DOVER(LN1,LN2)=DOVER(IPHI,JPHI)
             ENDDO
           ENDDO
-PRINT*,'DTKIN X2:',G_DTKIN
 !
 !         ======================================================================
 !         == SORT INTO THE ARRAY                                              ==
@@ -7233,8 +7237,6 @@ PRINT*,'DTKIN X2:',G_DTKIN
           DEALLOCATE(DOVER)
         ENDDO
       ENDDO
-PRINT*,'... SETUP_OUTERNEWPROWRAPPER FINISHED'
-      WRITE(*,FMT='(80("="))')
                                      CALL TRACE$POP()
       RETURN
       END
@@ -7693,7 +7695,7 @@ PRINT*,'... SETUP_OUTERNEWPROWRAPPER FINISHED'
 !     ==========================================================================
 !     == RESCALE CONSISTENTLY: WAVE FUNCTION PHI(IPHISCALE) WILL HAVE NORM 1  ==
 !     ==========================================================================
-PRINT*,'IPHISCALE ',IPHISCALE
+!!$PRINT*,'IPHISCALE ',IPHISCALE
 IPHISCALE=1
       IF(IPHISCALE.NE.0) THEN
         AUX=R**2*(AEPHI(:,IPHISCALE)**2+AEPHISM(:,IPHISCALE)**2)
@@ -7787,7 +7789,6 @@ IPHISCALE=1
 !     == WAVE.                                                                ==
 !     ==========================================================================
       DTKIN=0.5D0*(DTKIN+TRANSPOSE(DTKIN))
-PRINT*,'MARKE 8 END OF ROUTINE'
                                        CALL TRACE$POP()
       RETURN
       END
@@ -8155,6 +8156,7 @@ PRINT*,'MARKE 8 END OF ROUTINE'
       REAL(8)   ,INTENT(IN) :: PRO(NR,NJ)
       REAL(8)   ,INTENT(IN) :: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(IN) :: DTKIN(NJ,NJ)
+      logical(4),parameter  :: tpr=.false.
       REAL(8)               :: R(NR)
       REAL(8)               :: PI,Y0
       REAL(8)               :: AUX(NR),SVAR,SVAR1,SVAR2,SVAR3
@@ -8169,6 +8171,7 @@ PRINT*,'MARKE 8 END OF ROUTINE'
       NFIL=11
       WRITE(LSTRING,*)L
       LSTRING=ADJUSTL(LSTRING)
+      WRITE(*,FMT='(80("="),T20," SETUP_TEST_NEWPRO START  ")')
 !
 !     ==========================================================================
 !     == WRITE DTKIN AND DOVER                                                ==
@@ -8267,6 +8270,8 @@ PRINT*,'BEFORE NEWPROANALYZE1'
 !      CALL SETUP_NEWPROANALYZE1(GID,NR,L,UCORE(:,NC),AEPOT,PSPOT,ENU,NJ,QN)
 PRINT*,'BEFORE NEWPROANALYZE2'
       CALL SETUP_NEWPROANALYZE2(GID,NR,L,NC,ECORE,UCORE)
+!
+      WRITE(*,FMT='(80("="),T20," SETUP_TEST_NEWPRO END  ")')
       RETURN
       END
 !

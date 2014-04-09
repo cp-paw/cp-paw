@@ -1072,20 +1072,24 @@ USE PERIODICTABLE_MODULE
 !
 !         == PRINT ENERGIES ====================================================
           ETOT=EKIN+EH+EXC+SCALE*(EFOCK-EX)
-          WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
-          WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.6)')ETOT
-          WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
-          WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
-          IF(TFOCK.AND.TSECOND) THEN
-            WRITE(*,FMT='(30("."),T1,"EXACT XC MIXING FACTOR:",T30,F15.6)')SCALE
-            WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F15.6)') &
+          IF(TPR) THEN
+            WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
+            WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.6)')ETOT
+            WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
+            WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
+            IF(TFOCK.AND.TSECOND) THEN
+              WRITE(*,FMT='(30("."),T1,"EXACT XC MIXING FACTOR:",T30,F15.6)') &
+     &                     SCALE
+              WRITE(*,FMT='(30("."),T1,"MIXED XC ENERGY:",T30,F15.6)') &
      &                                                      EXC+SCALE*(EFOCK-EX)
-            WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F15.6)')EXC
-            WRITE(*,FMT='(30("."),T1,"100% DFT EXCHANGE ENERGY:",T30,F15.6)')EX
-            WRITE(*,FMT='(30("."),T1,"100% FOCK EXCHANGE ENERGY:",T30,F15.6)') &
-     &                                                                     EFOCK
-          ELSE
-            WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F15.6)')EXC
+              WRITE(*,FMT='(30("."),T1,"100% DFT XC ENERGY:",T30,F15.6)')EXC
+              WRITE(*,FMT='(30("."),T1,"100% DFT EXCHANGE ENERGY:",T30' &
+     &                                                      //',F15.6)') EX
+            WRITE(*,FMT='(30("."),T1,"100% FOCK EXCHANGE ENERGY:",T30' &
+     &                                                       //',F15.6)') EFOCK
+            ELSE
+              WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F15.6)')EXC
+            END IF
           END IF
 
           POT=POTIN  ! RECOVER POT AS INPUT POTENTIAL
@@ -1101,7 +1105,7 @@ USE PERIODICTABLE_MODULE
           ELSE
 !           == FINAL EXIT IS DONE HERE SO THAT THE POTENTIAL AND FOCK POTENTIAL
 !           == CORRESPONDS TO INPUT POTENTIAL
-            WRITE(*,FMT='("... SELFCONFISTENCY OBTAINED")')
+            WRITE(*,FMT='("... SELFCONSISTENCY OBTAINED")')
             EXIT
           END IF
         END IF
@@ -1192,23 +1196,26 @@ USE PERIODICTABLE_MODULE
       IF(TFOCK.AND.(.NOT.TSECOND)) THEN
         TSECOND=.TRUE.
         CONVG=.FALSE.
-PRINT*,'FIRST CONVERGENCE BEFORE APPLYING FOCK TERM'
-WRITE(*,FMT='(3A4,A10,A5,A20)')'IB','L','SO','F','#NODE','E'
-DO I=1,NB
-  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
-ENDDO
+IF(TPR) THEN
+  PRINT*,'FIRST CONVERGENCE BEFORE APPLYING FOCK TERM'
+  WRITE(*,FMT='(3A4,A10,A5,A20)')'IB','L','SO','F','#NODE','E'
+  DO I=1,NB
+    WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I) &
+ &                                   ,EOFI(I)
+  ENDDO
+END IF
         GOTO 1000
       END IF
-
-CALL RADIALFOCK$PRINTVFOCK('VFOCK.DAT',VFOCK)
-
-WRITE(*,FMT='("FINAL ONE-PARTICLE ENERGIES FROM AESCF  ")')
-WRITE(*,FMT='(3A4,A10,A5,A20)')'IB','L','SO','F','#NODE','E'
-DO I=1,NB
-  WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I),NNOFI(I),EOFI(I)
-ENDDO
-PRINT*,'#ITERATIONS ',ITER
-!STOP
+IF(TPR) THEN
+  CALL RADIALFOCK$PRINTVFOCK('VFOCK.DAT',VFOCK)
+  WRITE(*,FMT='("FINAL ONE-PARTICLE ENERGIES FROM AESCF  ")')
+  WRITE(*,FMT='(3A4,A10,A5,A20)')'IB','L','SO','F','#NODE','E'
+  DO I=1,NB
+    WRITE(*,FMT='(3I4,F10.2,I5,F20.3)')I,LOFI(I),SOFI(I),FOFI(I) &
+ &   ,NNOFI(I),EOFI(I)
+  ENDDO
+  PRINT*,'#ITERATIONS ',ITER
+END IF
 !
 !     ==========================================================================
 !     == REORDER STATES ACCORDING TO ENERGY                                   ==

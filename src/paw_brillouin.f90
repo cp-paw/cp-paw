@@ -2008,7 +2008,7 @@ END MODULE BRILLOUIN_MODULE
           CALL ERROR$R8VAL('NOS(EMAX)',NOS(IP+1))
           CALL ERROR$STOP('BRILLOUIN_EFERMI')
         END IF                                                          
-        PRINT*,'ILOOP ',ILOOP                                           
+!        PRINT*,'ILOOP ',ILOOP                                           
         GOTO 1000                                                       
       END IF                                                            
 2000  CONTINUE                                                          
