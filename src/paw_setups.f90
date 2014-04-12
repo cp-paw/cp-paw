@@ -2596,7 +2596,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       CALL LINKEDLIST$GET(LL_STP,'RCL/RCOV',1,WORK)
       RC=WORK(:LX+1)*RCOV
       DEALLOCATE(WORK)
-
       RETURN
       END
 !
@@ -2882,7 +2881,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !     == RBNDOUT HAS EARLIER BEEN SET EQUAL TO RBOX. IT SHOULD BE EQUAL TO ROUT.
 !     == THIS VARIABLE IS USED TO TRACK THE CHANGES.
       RBNDOUT=ROUT  
-if(twrite) then
+IF(TWRITE) THEN
  PRINT*,'R(NR)   ',R(NR),' OUTERMOST GRIDPOINT'
  PRINT*,'R(NR-1) ',R(NR-1),' SECOND TO OUTERMOST GRIDPOINT'
  PRINT*,'R(NR-2) ',R(NR-2),' THIRD TOOUTERMOST GRIDPOINT'
@@ -2890,7 +2889,7 @@ if(twrite) then
  PRINT*,'RBOX    ',RBOX,' RADIUS FOR BOUNDARY CONDITIONS FOR PARTIAL WAVES'
  PRINT*,'RNORM   ',RNORM,' NORMALIZATION WILL BE DONE UP TO RNORM'
  PRINT*,'RCOV    ',RCOV,' COVALENT RADIUS'
-end if
+END IF
 !
 !     ==========================================================================
 !     == RESOLVE KEY                                                          ==
@@ -2931,14 +2930,16 @@ end if
       &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
         NLPHI=QN
         NLPHISM=QNSM
-        if(twrite) then
-          CALL SETUP_WRITEPHI(-'NEW_PRO',GID,NR,LNX,PRO)
-          CALL SETUP_WRITEPHI(-'NEW_QN',GID,NR,LNX,QN)
-          CALL SETUP_WRITEPHI(-'NEW_AEPHI',GID,NR,LNX,AEPHI)
-          CALL SETUP_WRITEPHI(-'NEW_PSPHI',GID,NR,LNX,PSPHI)
-          CALL SETUP_WRITEPHI(-'NEW_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
-          CALL SETUP_WRITEPHI(-'NEW_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
-        end if
+        IF(TWRITE) THEN
+          WRITE(STRING,FMT='(F3.0)')AEZ
+          STRING=-'_FORZ'//TRIM(ADJUSTL(STRING))//-'DAT'
+          CALL SETUP_WRITEPHI(-'NEW_PRO'//TRIM(STRING),GID,NR,LNX,PRO)
+          CALL SETUP_WRITEPHI(-'NEW_QN'//TRIM(STRING),GID,NR,LNX,QN)
+          CALL SETUP_WRITEPHI(-'NEW_AEPHI'//TRIM(STRING),GID,NR,LNX,AEPHI)
+          CALL SETUP_WRITEPHI(-'NEW_PSPHI'//TRIM(STRING),GID,NR,LNX,PSPHI)
+          CALL SETUP_WRITEPHI(-'NEW_AEPHIDOT'//TRIM(STRING),GID,NR,LNX,AEPHIDOT)
+          CALL SETUP_WRITEPHI(-'NEW_PSPHIDOT'//TRIM(STRING),GID,NR,LNX,PSPHIDOT)
+        END IF
         !
         !  MISSING VARIABLES:
         !
@@ -2957,14 +2958,14 @@ end if
         PSPHISM=0.D0
         AEPHIDOTSM=0.D0
         PSPHIDOTSM=0.D0
-        if(twrite) then
+        IF(TWRITE) THEN
           CALL SETUP_WRITEPHI(-'OLD_PRO',GID,NR,LNX,PRO)
           CALL SETUP_WRITEPHI(-'OLD_QN',GID,NR,LNX,QN)
           CALL SETUP_WRITEPHI(-'OLD_AEPHI',GID,NR,LNX,AEPHI)
           CALL SETUP_WRITEPHI(-'OLD_PSPHI',GID,NR,LNX,PSPHI)
           CALL SETUP_WRITEPHI(-'OLD_AEPHIDOT',GID,NR,LNX,AEPHIDOT)
           CALL SETUP_WRITEPHI(-'OLD_PSPHIDOT',GID,NR,LNX,PSPHIDOT)
-        end if
+        END IF
       END IF
 !
 !     ==========================================================================
@@ -3611,10 +3612,10 @@ end if
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
           EKIN1=EKIN1+FOFI(IB)*0.5D0*VAL
         ENDDO
-        WRITE(*,fmt='("PS CHARGE IN G-SPACE ",f10.6,:" IN R-SPACE ",f10.5)') &
-     &             charge,charge1
-        WRITE(*,fmt='("PS ekin   IN G-SPACE ",f10.6,:" IN R-SPACE ",f10.5)') &
-     &             ekin,ekin1
+        WRITE(*,FMT='("PS CHARGE IN G-SPACE ",F10.6,:" IN R-SPACE ",F10.5)') &
+     &             CHARGE,CHARGE1
+        WRITE(*,FMT='("PS EKIN   IN G-SPACE ",F10.6,:" IN R-SPACE ",F10.5)') &
+     &             EKIN,EKIN1
       END IF
                       CALL TRACE$POP()
       RETURN
@@ -7026,8 +7027,8 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)   ,ALLOCATABLE :: DTKIN(:,:)
       REAL(8)   ,ALLOCATABLE :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE :: EOFPHI(:)
-      logical(4),parameter   :: ttest=.false.
-      logical(4),parameter   :: twrite=.false.
+      LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
+      LOGICAL(4),PARAMETER   :: TWRITE=.FALSE.
       INTEGER(4)             :: NBL
       INTEGER(4)             :: NCL  
       INTEGER(4)             :: NPHI !#(PARTIAL WAVES FOR THIS L)
@@ -7088,7 +7089,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
 !         == COLLECT PSEUDIZATION RADIUS =======================================
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
-            RCL=RC(LNX)
+            RCL=RC(LN)
             EXIT
           ENDDO
 !
@@ -7137,17 +7138,17 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
           ALLOCATE(PRO(NR,NPHI))
           ALLOCATE(DTKIN(NPHI,NPHI))
           ALLOCATE(DOVER(NPHI,NPHI))
-if(twrite) then
+IF(TWRITE) THEN
 PRINT*,'------------- INPUT DATA FOR SETUP_NEWPRO-----------'
-print*,'l        ',l
-print*,'so        ',so
+PRINT*,'L        ',L
+PRINT*,'SO        ',SO
 PRINT*,'ROUT     ',ROUT
 PRINT*,'RCL      ',RCL
 PRINT*,'NCL,NPHI ',NCL,NPHI
 PRINT*,'EC       ',EC
 PRINT*,'EOFPHI   ',EOFPHI
 PRINT*,'-----------------------------------------------------'
-end if
+END IF
           CALL SETUP_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,EOFPHI,EC &
      &                  ,AEPOT,PSPOT,VFOCK &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI &
@@ -7158,13 +7159,13 @@ end if
 !         ======================================================================
 !         == TESTS                                                            ==
 !         ======================================================================
-          if(ttest) then
+          IF(TTEST) THEN
             CALL SETUP_TEST_NEWPRO(RELTYPE,GID,NR,ROUT,L,SO,NCL,NPHI,RCL,ENU,EC&
      &                  ,AEPOT,PSPOT &
      &                  ,UCORE,AECORE,PSCORE,QN,AEPHI,PSPHI,QNDOT &
      &                  ,UCORESM,AECORESM,PSCORESM,QNSM,AEPHISM,PSPHISM &
      &                  ,PRO,DTKIN,DOVER)
-          end if
+          END IF
 !
 !         ======================================================================
 !         == SORT INTO THE ARRAY                                              ==
@@ -8156,7 +8157,7 @@ IPHISCALE=1
       REAL(8)   ,INTENT(IN) :: PRO(NR,NJ)
       REAL(8)   ,INTENT(IN) :: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(IN) :: DTKIN(NJ,NJ)
-      logical(4),parameter  :: tpr=.false.
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       REAL(8)               :: R(NR)
       REAL(8)               :: PI,Y0
       REAL(8)               :: AUX(NR),SVAR,SVAR1,SVAR2,SVAR3
