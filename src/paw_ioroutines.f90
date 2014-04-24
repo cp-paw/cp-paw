@@ -4054,13 +4054,15 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL LINKEDLIST$NLISTS(LL_STRC,'SPECIES',NSP)
       DO ISP=1,NSP
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
+        CALL LMTO$SETI4('ISP ',ISP)
 !
 !       ========================================================================
 !       ==  SKIP IF NTBO BLOCK IS NOT PRESENT                                 ==
 !       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TCHK)
         IF(.NOT.TCHK) THEN
-          CALL LINKEDLIST$SELECT(LL_STRC,'..') !LEAVE SPECIES BLOCK
+          CALL LMTO$SETR8('LHFWEIGHT',0.D0)    ! SWITCH CONTRIBUTION OFF
+          CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
           CYCLE
         END IF
 !
@@ -4076,11 +4078,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
 !       ==  ENTER !SPECIES!NTBO BLOCK                                         ==
 !       ========================================================================
-        CALL LMTO$SETI4('ISP ',ISP)
         CALL LINKEDLIST$SELECT(LL_STRC,'NTBO')
-!   
-!       == SELECT ATOMTYPE AS ACTIVE (HYBRID CONTRIBUTIONS ARE NOT SWITCHED OFF)
-        CALL LMTO$SETL4('ACTIVE',.TRUE.)
 !   
 !       ========================================================================
 !       == DEFINE LOCAL ORBITALS                                              ==
