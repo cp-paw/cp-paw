@@ -65,7 +65,7 @@ END MODULE DMFT_MODULE
      &                       ,NOMEGA,KBT,MU,OMEGA &
      &                       ,KSET,ATOMSET
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
-      USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT,potpar1
+      USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT,POTPAR1
       IMPLICIT NONE
       REAL(8)                :: PI
       INTEGER(4)             :: NTASKS_K,THISTASK_K
@@ -84,7 +84,7 @@ END MODULE DMFT_MODULE
 !     ==========================================================================
 !     == HARDWIRED VARIABLES                                                  ==
 !     ==========================================================================
-      NOMEGA=50
+      NOMEGA=100
 !
 !     ==========================================================================
 !     == INHERIT KBT FROM OCCUPATIONS OBJECT                                  ==
@@ -275,6 +275,7 @@ WRITE(*,FMT='(82("="),T20," ENTERING DMFT$GREEN ")')
 !     ==  CONSTRUCT NON-INTERACTING HAMILTONIAN THAT PRODUCES THE CORRECT     ==
 !     ==  ONE-PARTICLE DENSITY MATRIX                                         ==
 !     ==========================================================================
+!CALL DMFT_EXPLOREMODULE()
       CALL DMFT_HRHO()
       CALL DMFT_CONSTRAINTS('HRHO')
 !
@@ -982,6 +983,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
             CALL SPINOR_PRINTMATRIX(6,'RHO[HRHO]-RHO',1,NCHI &
      &                           ,NDIMD,NCHI,MAT)
             CALL ERROR$MSG('TEST OF HRHO FAILED')
+            CALL ERROR$MSG('INCREASE THE NUMBER OF MATSUBARA FREQUENCIES')
             CALL ERROR$R8VAL('MAX DEV OF RHO',MAXVAL(ABS(MAT)))
             CALL ERROR$STOP('DMFT_HRHO')
           END IF
@@ -1398,17 +1400,17 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
       IMPLICIT NONE
       INTEGER(4)            :: ISP ! ATOM TYPE
       INTEGER(4)            :: IAT
-      INTEGER(4)            :: nh
+      INTEGER(4)            :: NH
 !     **************************************************************************
                                           CALL TRACE$PUSH('DMFT_UTENSOR')
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
-        nh=atomset(iat)%nloc
+        NH=ATOMSET(IAT)%NLOC
 !
 !       ========================================================================
 !       ==  CALCULATE U-TENSOR IN THE BASIS OF LOCAL ORBITALS IGNORING TORB   ==
 !       ========================================================================
-        CALL DMFT_ULOCAL(IAT,nh,ATOMSET(IAT)%U)
+        CALL DMFT_ULOCAL(IAT,NH,ATOMSET(IAT)%U)
 !
 !       ========================================================================
 !       == SCREEN U-TENSOR BY LOCAL HF-WEIGHT                                 ==
@@ -1448,8 +1450,8 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
         CALL ERROR$MSG('LMNXT=NH+NT MUST BE OBEYED')
         CALL ERROR$I4VAL('LMNXT',LMNXT)
         CALL ERROR$I4VAL('NH',NH)
-        CALL ERROR$I4VAL('nt',NT)
-        CALL ERROR$I4VAL('isp',isp)
+        CALL ERROR$I4VAL('NT',NT)
+        CALL ERROR$I4VAL('ISP',ISP)
         CALL ERROR$STOP('DMFT_ULOCAL')
       END IF
       IF(NH.NE.LMNX) THEN
@@ -1457,7 +1459,7 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
         CALL ERROR$MSG('LMNX=NH MUST BE OBEYED')
         CALL ERROR$I4VAL('LMNX',LMNX)
         CALL ERROR$I4VAL('NH',NH)
-        CALL ERROR$I4VAL('isp',isp)
+        CALL ERROR$I4VAL('ISP',ISP)
         CALL ERROR$STOP('DMFT_ULOCAL')
       END IF
 !
@@ -1470,11 +1472,11 @@ PRINT*,'ETOT FROM DMFT_DETOT: ',ETOT
 !     ==========================================================================
 !     == COLLECT STRUCTURE CONSTANTS                                          ==
 !     ==========================================================================
-      NNS=SIZE(SBAR_new)
+      NNS=SIZE(SBAR_NEW)
       DO NN=1,NNS
         IF(SBAR_NEW(NN)%IAT1.NE.IAT) CYCLE
         IF(SBAR_NEW(NN)%IAT2.NE.IAT) CYCLE
-        IF(SUM(SBAR_new(NN)%IT(:)**2).NE.0) CYCLE
+        IF(SUM(SBAR_NEW(NN)%IT(:)**2).NE.0) CYCLE
         NN0=NN
         EXIT
       ENDDO
@@ -3510,5 +3512,42 @@ PRINT*,' BEFORE SPINOR$PRINTL'
     &                    IDIMD,A(I,I1:I2,IDIMD)
         ENDDO
       ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_EXPLOREMODULE()
+!     **************************************************************************
+!     ** TESTR ROUTINE TO EXPLORE THE CONTENT OF THE DMFT MODULE              **
+!     ** THIS ROUTINE SHALL NOT CHANGE THE STATE OF THE OBJECT.               **
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY :NAT,NKPTL,NDIMD,NCHI,KSET,ATOMSET
+      INTEGER(4)  :: NLOC
+      INTEGER(4)  :: IKPT,ISPIN,IAT
+      INTEGER(4)  :: I,J,K,L
+!     **************************************************************************
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NDIMD
+          DO I=1,NCHI
+            DO J=1,NCHI
+              WRITE(*,FMT='("IK=",I4," IS=",I2," IJ=",2I4," RHO=",2F20.10)') &
+     &                            IKPT,ISPIN,I,J,KSET(IKPT)%RHO(I,J,ISPIN)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DO IAT=1,NAT
+        NLOC=ATOMSET(IAT)%NLOC
+        DO I=1,NLOC
+          DO J=1,NLOC
+            DO K=1,NLOC
+              DO L=1,NLOC
+                WRITE(*,FMT='("IAT=",I4," IJKL=",4I4," U=",F20.10)') &
+     &                   IAT,I,J,K,L,ATOMSET(IAT)%U(I,J,K,L)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO     
       RETURN
       END

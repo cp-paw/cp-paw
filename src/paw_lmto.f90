@@ -3589,8 +3589,8 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
         ELSE
           HFSCALE=1.D0
         END IF
-!       == IF NOT SET, LHFWEIGT IS SET TO -1.D0
-        IF(HYBRIDSETTING(ISP)%LHFWEIGHT.LE.0.D0) THEN
+!       == IF NOT SET, LHFWEIGT IS SET TO -1.D0 ================================
+        IF(ABS(HYBRIDSETTING(ISP)%LHFWEIGHT+1.D0).LT.1.D-6) THEN
           HFSCALE=1.D0
         END IF
 PRINT*,'IAT=',IAT,' LOCAL HFSCALE * GLOBAL HFWEIGHT= ',HFSCALE*HFWEIGHT
@@ -3665,7 +3665,8 @@ END IF
 !               ================================================================
 !               == EXCHANGE ENERGY =============================================
 !               ================================================================
-!               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION INTO TOTAL AND SPIN
+!               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION ==========
+!               == INTO TOTAL AND SPIN
                 SVAR=-0.25D0*U(I,J,K,L)
                 EX=EX+SVAR*SUM(DT(K,J,:)*DT(L,I,:))
                 HT(K,J,:)=HT(K,J,:)+SVAR*DT(L,I,:) 
