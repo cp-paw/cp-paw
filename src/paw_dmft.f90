@@ -307,6 +307,12 @@ PRINT*,'ETOT AFTER DMFT_SOLVER ',ETOT
       ENDDO ! END OF LOOP OVER ITERATIONS TO ENFORCE CONSTRAINT
 !
 !     ==========================================================================
+!     ==  ADD HARTREE FOCK AND DFT DOUBLE COUNTING                            ==
+!     ==========================================================================
+      CALL DMFT_STATICSOLVER(SVAR)
+      ETOT=ETOT+SVAR
+! 
+!     ==========================================================================
 !     ==  CALCULATE MISSING TOTAL ENERGY CONTRIBUTION                         ==
 !     ==========================================================================
       CALL DMFT_DETOT(SVAR)
@@ -895,7 +901,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     **  CALCULATES A STATIC HAMILTONIAN HRHO SUCH THAT THE RESULTING        **
 !     **  DENSITY MATRIX IS RHO=[1+EXP(BETA*HRHO)]^(-1)                       **
 !     **************************************************************************
-      USE DMFT_MODULE ,ONLY: NKPTL,NCHI,NDIMD,NOMEGA,OMEGA,KBT,KSET
+      USE DMFT_MODULE ,ONLY: NKPTL,NCHI,NDIMD,NOMEGA,OMEGA,KBT,MU,KSET
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       REAL(8)   ,PARAMETER   :: TOL=1.D-5  ! TOLERANCE FOR THE DENSITY MATRIX
@@ -936,6 +942,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
             B=TRANSPOSE(CONJG(U))
             DO I=1,NCHI
               CALL DMFT_EOFF(KBT,F(I),SVAR)
+              SVAR=MU+SVAR
               B(I,:)=SVAR*B(I,:)
             ENDDO
             KSET(IKPT)%HRHO(:,:,ISPIN)=MATMUL(U,B)
@@ -962,6 +969,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           B=TRANSPOSE(CONJG(U))
           DO I=1,N
             CALL DMFT_EOFF(KBT,F(I),SVAR)
+            SVAR=MU+SVAR
             B(I,:)=SVAR*B(I,:)
           ENDDO
           A=MATMUL(U,B)
@@ -1089,14 +1097,55 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_SOLVER(ETOT)
 !     **************************************************************************
-!     ** MIMICKS A DMFT SOLVER                                                **
-!     **  E=1/BETA * SUM_NU E(IOMEGA_NU0+) TR[ DV * GLOC^\DAGGER]             **
+!     **  CALL DMFT INTERFACE FOR DYNAMIC CORRELATIONS (LOOP OVER ATOMS)      **
+!     **  PRODUCES ETOT                                                       **
+!     **           ATOMSET(IAT)%DPHIDG                                        **
+!     **           ATOMSET(IAT)%DPHIDGLAUR                                    **
+!     **           ATOMSET(IAT)%DEDU                                          **
+!     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,KBT,ATOMSET
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: ETOT
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-      REAL(8)                :: EV
+      REAL(8)                :: PHILW
+      INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
+      INTEGER(4)             :: IAT
+!     **************************************************************************
+                                      CALL TRACE$PUSH('DMFT_SOLVER')
+      ETOT=0.D0
+      DO IAT=1,NAT
+        NLOC=ATOMSET(IAT)%NLOC
+        IF(NLOC.LE.0) CYCLE
+!
+!       ========================================================================
+!       == ADD DYNAMIC CONTRIBUTIONS  (WITHOUT HF CONTRIBUTION)               ==
+!       == HFWEIGHT IS ABSORBED IN THE LOCAL U-TENSOR                         ==
+!       ========================================================================
+        CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,KBT &
+     &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
+     &                         ,ATOMSET(IAT)%U,PHILW &
+     &                         ,ATOMSET(IAT)%DPHIDG,ATOMSET(IAT)%DPHIDGLAUR &
+     &                         ,ATOMSET(IAT)%DEDU &
+     &                         ,ATOMSET(IAT)%NATORB%PIPHI &
+     &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
+        ETOT=ETOT+PHILW !SCREENING ALREADY CONTAINED IN U-TENSOR
+      ENDDO ! END OF LOOP OVER ATOMS (IAT)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_STATICSOLVER(ETOT)
+!     **************************************************************************
+!     **  ENERGY AND SELF ENERGY FROM HARTREE FOCK AND DFT DOUBLE COUNTING    **
+!     **  PRODUCES ETOT                                                       **
+!     **           ATOMSET(IAT)%DENMAT%H                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE DMFT_MODULE ,ONLY: NAT,NDIMD,NOMEGA,KBT,ATOMSET
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(OUT) :: ETOT
+      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       REAL(8)                :: PHILW
       REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EDC
@@ -1106,8 +1155,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4)             :: IDIMD,I,NU
       COMPLEX(8),ALLOCATABLE :: HAM(:,:,:)
 !     **************************************************************************
-                                      CALL TRACE$PUSH('DMFT_SOLVER')
-      CALL CONSTANTS('EV',EV)
+                                      CALL TRACE$PUSH('DMFT_STATICSOLVER')
 !
 !     ==========================================================================
 !     == LOOP OVER ATOMS                                                      ==
@@ -1117,12 +1165,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         NLOC=ATOMSET(IAT)%NLOC
         IF(NLOC.LE.0) CYCLE
 !
-        ATOMSET(IAT)%DENMAT%H=(0.D0,0.D0)
-        ATOMSET(IAT)%SLOC=(0.D0,0.D0)
-        ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
-!
 !       ========================================================================
-!       == DETERMINE HARTREE FOCK CONTRIBUTION                                ==
+!       == DETERMINE HARTREE-FOCK CONTRIBUTION                                ==
 !       ========================================================================
         CALL DMFT_FOCK(NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO,ATOMSET(IAT)%U &
      &                                             ,PHILW,ATOMSET(IAT)%DENMAT%H)
@@ -1142,7 +1186,7 @@ PRINT*,'AFTER FOCK ',IAT,ETOT,PHILW
         END IF
 !
 !       ========================================================================
-!       == SUBTRACT DOUBLE COUNTING TERM                                      ==
+!       == SUBTRACT DFT DOUBLE COUNTING TERM                                  ==
 !       ========================================================================
 !       == COLLECT LOCAL HF WEIGHT =============================================
         LHFWEIGHT=ATOMSET(IAT)%LHFWEIGHT
@@ -1164,20 +1208,6 @@ PRINT*,'AFTER DC ',IAT,ETOT,LHFWEIGHT*EDC
         END IF
 !
         DEALLOCATE(HAM)
-!
-!       ========================================================================
-!       == ADD DYNAMIC CONTRIBUTIONS                                          ==
-!       == HFWEIGHT IS ABSORBED IN THE LOCAL U-TENSOR
-!       ========================================================================
-        CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,KBT &
-     &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
-     &                         ,ATOMSET(IAT)%U,PHILW &
-     &                         ,ATOMSET(IAT)%DPHIDG,ATOMSET(IAT)%DPHIDGLAUR &
-     &                         ,ATOMSET(IAT)%DEDU &
-     &                         ,ATOMSET(IAT)%NATORB%PIPHI &
-     &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
-        ETOT=ETOT+PHILW !SCREENING ALREADY CONTAINED IN U-TENSOR
-!
       ENDDO ! END OF LOOP OVER ATOMS (IAT)
       RETURN
       END
@@ -1720,6 +1750,10 @@ CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TESTG(NORB,NOMEGA,KBT,G,GLAUR)
+!     **************************************************************************
+!     ** PRINTS THE LOCAL DENSITY MATRIX FROM THE LOCAL GREENS FUNCTION       **
+!     ** FOR TESTING PURPOSES ONLY                                            **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
       INTEGER(4),INTENT(IN) :: NOMEGA   !#(POSITIVE MATSUBARA FREQUENCIES
