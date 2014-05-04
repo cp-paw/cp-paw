@@ -1150,7 +1150,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       USE DMFT_MODULE ,ONLY: NAT,NDIMD,ATOMSET
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: ETOT
-      LOGICAL(4),PARAMETER   :: staticoff=.false.
+      LOGICAL(4),PARAMETER   :: STATICOFF=.FALSE.
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       REAL(8)                :: PHILW
       REAL(8)                :: LHFWEIGHT
@@ -1167,7 +1167,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         DO IAT=1,NAT
           ATOMSET(IAT)%DENMAT%H=(0.D0,0.D0)
         ENDDO
-                                      CALL TRACE$Pop()
+                                      CALL TRACE$POP()
         RETURN
       END IF
 !
@@ -1225,7 +1225,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !
         DEALLOCATE(HAM)
       ENDDO ! END OF LOOP OVER ATOMS (IAT)
-                                      CALL TRACE$Pop()
+                                      CALL TRACE$POP()
       RETURN
       END
 !
@@ -1251,7 +1251,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       REAL(8)   ,ALLOCATABLE :: HT(:,:,:)    !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: HTALL(:,:,:) !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: H(:,:,:)  !(LMNX,LMNX,NDIMD)
-      REAL(8)   ,ALLOCATABLE :: Hall(:,:,:)  !(LMNX,LMNX,NDIMD)
+      REAL(8)   ,ALLOCATABLE :: HALL(:,:,:)  !(LMNX,LMNX,NDIMD)
       REAL(8)                :: EX
       INTEGER(4)             :: IDFTTYPE
       INTEGER(4)             :: LMNXT   ! #(VALENCE+SCATTERING WAVES)
@@ -1267,7 +1267,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4)             :: INS
       INTEGER(4)             :: NN
 !     **************************************************************************
-      edc=0.d0
+      EDC=0.D0
       HAM=0.D0
       CALL DFT$GETI4('TYPE',IDFTTYPE)
 !      PRINT*,'IDFTTYPE ',IDFTTYPE
@@ -1310,13 +1310,13 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !  CAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTION
 
       ALLOCATE(D(LMNX,LMNX,NDIMD))
-      ALLOCATE(h(LMNX,LMNX,NDIMD))
-      ALLOCATE(hall(LMNX,LMNX,NDIMD))
+      ALLOCATE(H(LMNX,LMNX,NDIMD))
+      ALLOCATE(HALL(LMNX,LMNX,NDIMD))
       ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
       ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
       ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
       ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
-      d=real(rho)
+      D=REAL(RHO)
       CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
       DTALL=DT
       CALL LMTO_SIMPLEDC_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
@@ -1325,14 +1325,14 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,HALL,HTALL)
       CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
       EDC=-EX
-      HAM=-cmplx(h+HALL)
+      HAM=-CMPLX(H+HALL)
       DEALLOCATE(D)
       DEALLOCATE(DT)
       DEALLOCATE(DTALL)
       DEALLOCATE(HTALL)
       DEALLOCATE(HT)
       DEALLOCATE(H)
-      DEALLOCATE(Hall)
+      DEALLOCATE(HALL)
 !PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
       RETURN
       END
@@ -1789,7 +1789,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8),INTENT(IN) :: G(NORB,NORB,NOMEGA)    !GREENS FUNCTION
       COMPLEX(8),INTENT(IN) :: GLAUR(NORB,NORB,3)     !LAURENT EXPANSION OF G
       REAL(8)               :: PI
-      REAL(8)               :: svar
+      REAL(8)               :: SVAR
       INTEGER(4)            :: NU,I
       REAL(8)               :: OMEGA(NOMEGA)
       COMPLEX(8)            :: RHO(NORB,NORB)
@@ -1811,11 +1811,11 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       DO I=1,NORB
         WRITE(*,FMT='(100("(",2F10.5,")"))')RHO(I,:)
       ENDDO
-      svar=0.d0
-      do i=1,norb
-        svar=svar+real(rho(i,i))
-      enddo
-      WRITE(*,FMT='("number of electrons in G: ",F10.5)')svar
+      SVAR=0.D0
+      DO I=1,NORB
+        SVAR=SVAR+REAL(RHO(I,I))
+      ENDDO
+      WRITE(*,FMT='("NUMBER OF ELECTRONS IN G: ",F10.5)')SVAR
       RETURN
       END
 !
@@ -1895,7 +1895,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MATX(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: dMATX(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: DMATX(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: G(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: GLAUR1(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: GLAUR2(NCHI,NCHI,NDIMD)
@@ -1930,25 +1930,25 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           SLAUR2(I1:I2,I1:I2,:)=ATOMSET(IAT)%SLOCLAUR(:,:,:,2)
           SLAUR3(I1:I2,I1:I2,:)=ATOMSET(IAT)%SLOCLAUR(:,:,:,3)
         ENDDO
-        GLAUR1=0.d0
+        GLAUR1=0.D0
 !       
 !       ========================================================================
 !       ==  ADJUST H0 TO OBEY DENSITY MATRIX CONSTRAINT                       ==
 !       ========================================================================
         DO ITER=1,NITER
-!         == MATX=-MU*S+HRHO ; dmatx=SLAUR1-gamma ==============================
+!         == MATX=-MU*S+HRHO ; DMATX=SLAUR1-GAMMA ==============================
           MATX=-MU*KSET(IKPT)%SMAT+KSET(IKPT)%HRHO
-          dmatx=SLAUR1-KSET(IKPT)%GAMMA 
+          DMATX=SLAUR1-KSET(IKPT)%GAMMA 
 !         == GLAUR2=SINV*MATX*SINV =============================================
-          CALL SPINOR$MATMUL(NDIMD,NCHI,dMATX,KSET(IKPT)%SINV,MAT)
+          CALL SPINOR$MATMUL(NDIMD,NCHI,DMATX,KSET(IKPT)%SINV,MAT)
           CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SINV,MAT,GLAUR2)
-!         == MAT2=(MATX+dmatx)*(SINV*(MATX+dmatx))+SLAUR2-MATX*(SINV*MATX) =====
-          CALL SPINOR$MATMUL(NDIMD,NCHI,MATX+dmatx,KSET(IKPT)%SINV,MAT)
-          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,matx+dMATX,MAT2)
+!         == MAT2=(MATX+DMATX)*(SINV*(MATX+DMATX))+SLAUR2-MATX*(SINV*MATX) =====
+          CALL SPINOR$MATMUL(NDIMD,NCHI,MATX+DMATX,KSET(IKPT)%SINV,MAT)
+          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,MATX+DMATX,MAT2)
           MAT2=MAT2+SLAUR2(:,:,:)
           CALL SPINOR$MATMUL(NDIMD,NCHI,MATX,KSET(IKPT)%SINV,MAT)
-          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,matx,dmatx)
-          MAT2=MAT2-dmatx !subtract non-interacting Greens function gbar
+          CALL SPINOR$MATMUL(NDIMD,NCHI,MAT,MATX,DMATX)
+          MAT2=MAT2-DMATX !SUBTRACT NON-INTERACTING GREENS FUNCTION GBAR
 !         == GLAUR3=SINV*(MAT2*SINV) ===========================================
           CALL SPINOR$MATMUL(NDIMD,NCHI,MAT2,KSET(IKPT)%SINV,MAT)
           CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SINV,MAT,GLAUR3)
@@ -1960,7 +1960,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
             MAT=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT-KSET(IKPT)%HRHO &
      &                  +KSET(IKPT)%GAMMA
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
-            RHO=RHO-KBT*G  ! subtract noninteracting G
+            RHO=RHO-KBT*G  ! SUBTRACT NONINTERACTING G
             DO IAT=1,NAT
               I1=ATOMSET(IAT)%ICHI1
               I2=ATOMSET(IAT)%ICHI2
@@ -1988,7 +1988,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
-IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.d0*kbt*MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
+IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
           MAXDEV=MAXVAL(ABS(DEVRHO))
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
@@ -2009,7 +2009,7 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.d0*kbt*MAXVAL(ABS(DH0)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_CONSTRAINTS_old()
+      SUBROUTINE DMFT_CONSTRAINTS_OLD()
 !     **************************************************************************
 !     **  ADJUSTS GAMMA(:,:,IKPT,IPSIN) SUCH THAT                             **
 !     **                                                                      **
@@ -2119,7 +2119,7 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.d0*kbt*MAXVAL(ABS(DH0)
 !         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
-IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.d0*kbt*MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
+IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
           MAXDEV=MAXVAL(ABS(DEVRHO))
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
@@ -2148,23 +2148,31 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.d0*kbt*MAXVAL(ABS(DH0)
       USE DMFT_MODULE, ONLY: TON,NAT,NOMEGA,OMEGA,ATOMSET
       IMPLICIT NONE
       REAL(8)  ,PARAMETER :: MSMALLNU=1.D-2
-      REAL(8)  ,PARAMETER :: MLARGENU=1.D0
+      REAL(8)  ,PARAMETER :: MLARGENU=1.D+15
       REAL(8)             :: SVAR
       INTEGER(4)          :: IAT,NU,I
 !     **************************************************************************
       DO IAT=1,NAT
+!       == DIFFERNCE OUT-IN, WHICH WILL BE SCALED AND ADDED TO CURRENT VALUES ==
+        ATOMSET(IAT)%DPHIDG    =ATOMSET(IAT)%DPHIDG    -ATOMSET(IAT)%SLOC
+        ATOMSET(IAT)%DPHIDGLAUR=ATOMSET(IAT)%DPHIDGLAUR-ATOMSET(IAT)%SLOCLAUR
+!
+!       == MIX FREQUENCY DEPENDEND SELF ENERGY =================================
         DO NU=1,NOMEGA
           SVAR=1.D0/MSMALLNU+OMEGA(NU)**2/MLARGENU
-          ATOMSET(IAT)%SLOC(:,:,:,NU)=(1.D0-SVAR)*ATOMSET(IAT)%SLOC(:,:,:,NU) &
-     &                                      +SVAR*ATOMSET(IAT)%DPHIDG(:,:,:,NU)
+          ATOMSET(IAT)%SLOC(:,:,:,NU)=ATOMSET(IAT)%SLOC(:,:,:,NU) &
+     &                          +SVAR*ATOMSET(IAT)%DPHIDG(:,:,:,NU)
         ENDDO
+!       == MIX IN WITH FREQUENCY INDEPENDENT MASS ==============================
+        SVAR=1.D0/MSMALLNU
+        ATOMSET(IAT)%SLOCLAUR=ATOMSET(IAT)%SLOCLAUR+SVAR*ATOMSET(IAT)%DPHIDGLAUR
+!       == MIX WITH FREQUENCY DEPENDENT BUT AVOID TERMS INCREASING WITH OMEGA ==
         SVAR=1.D0/MLARGENU
-        DO I=1,3
-          ATOMSET(IAT)%SLOCLAUR(:,:,:,I) &
-     &                             =(1.D0-SVAR)*ATOMSET(IAT)%SLOCLAUR(:,:,:,I) &
-     &                                    +SVAR*ATOMSET(IAT)%DPHIDGLAUR(:,:,:,I)
-        ENDDO
+        ATOMSET(IAT)%SLOCLAUR(:,:,:,1)=ATOMSET(IAT)%SLOCLAUR(:,:,:,1) &
+     &                           +SVAR*ATOMSET(IAT)%DPHIDGLAUR(:,:,:,3)
       ENDDO
+      ATOMSET(IAT)%DPHIDG=(0.D0,0.D0)
+      ATOMSET(IAT)%DPHIDGLAUR=(0.D0,0.D0)
       RETURN
       END
 !
