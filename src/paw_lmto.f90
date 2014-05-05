@@ -3231,6 +3231,8 @@ COMPLEX(8)  :: PHASE
         CALL DMFT$GREEN()
       ELSE IF(MODUS.EQ.'HYBRID') THEN
         CALL LMTO_HYBRID(LMNXX_,NDIMD_,NAT_,DENMAT_)
+      ELSE IF(MODUS.EQ.'ROBERT') THEN
+        CALL LMTO_ROBERT()
       ELSE
         CALL ERROR$MSG('MODUS NOT RECOGNIZED')
         CALL ERROR$MSG('ALLOWED VALUES ARE "DMFT", "OLDDMFT", "HYBRID"')
@@ -3238,6 +3240,254 @@ COMPLEX(8)  :: PHASE
         CALL ERROR$STOP('LMTO$ETOT')
       END IF
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY DONE ")')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_ROBERT()
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW &
+     &                       ,HAMIL=>HAMIL_NEW &
+     &                       ,POTPAR=>POTPAR1  &
+     &                       ,ISPECIES &
+     &                       ,HFWEIGHT &
+     &                       ,HYBRIDSETTING
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)                :: ETOT,ETOT1
+      INTEGER(4)             :: ISP ! ATOM TYPE
+      INTEGER(4)             :: LMNX
+      INTEGER(4)             :: NND
+      INTEGER(4)             :: NDIMD
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: N1,N2,N3
+      INTEGER(4)             :: NORBCL
+      INTEGER(4)             :: IND1,IND2
+      INTEGER(4)             :: I1UP,F1UP,I1DN,F1DN !INITIAL AND FINAL INDEX
+      INTEGER(4)             :: I2UP,F2UP,I2DN,F2DN
+      REAL(8)   ,ALLOCATABLE :: UNS(:,:,:,:) ! NON-SPIN U-TENSOR
+      REAL(8)   ,ALLOCATABLE :: U(:,:,:,:)   ! SPINOR U-TENSOR
+      REAL(8)   ,ALLOCATABLE :: DEDU(:,:,:,:)! DERIVATIVE W.R.T.SPINOR U-TENSOR
+      COMPLEX(8),ALLOCATABLE :: D(:,:)   ! SPINOR CLUSTER DENSITY MATRIX
+      COMPLEX(8),ALLOCATABLE :: H(:,:)   ! SPINOR CLUSTER HAMILTONIAN
+      REAL(8)                :: LHFWEIGHT
+      INTEGER(4)             :: IAT,NN
+!     **************************************************************************
+      NAT=SIZE(ISPECIES)
+!
+!     ==========================================================================
+!     == CALCULATE DENSITY MATRIX                                             ==
+!     ==========================================================================
+      CALL LMTO_NTBODENMAT_NEW()
+      NND=SIZE(DENMAT)
+      NDIMD=DENMAT(1)%N3
+!
+!     ==========================================================================
+!     == ALLOCATE HAMILTONIAN                                                 ==
+!     ==========================================================================
+      IF(ALLOCATED(HAMIL)) THEN
+        CALL ERROR$MSG('HAMIL IS ALLOCATED')
+        CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2_NEW')
+      END IF
+      ALLOCATE(HAMIL(NND))
+      DO NN=1,NND
+        HAMIL(NN)%IAT1=DENMAT(NN)%IAT1
+        HAMIL(NN)%IAT2=DENMAT(NN)%IAT2
+        HAMIL(NN)%IT=DENMAT(NN)%IT
+        N1=DENMAT(NN)%N1
+        N2=DENMAT(NN)%N2
+        N3=DENMAT(NN)%N3
+        HAMIL(NN)%N1=N1
+        HAMIL(NN)%N2=N2
+        HAMIL(NN)%N3=N3
+        ALLOCATE(HAMIL(NN)%MAT(N1,N2,N3))
+        HAMIL(NN)%MAT=0.D0
+      ENDDO
+
+      ETOT=0.D0
+      DO IAT=1,NAT      
+        ISP=ISPECIES(IAT)
+        IF(.NOT.(POTPAR(ISP)%NHEAD.GT.0)) CYCLE  ! NO CORRELATED ORBITALS
+!
+!       ========================================================================
+!       == ADJUSTMENT IF LOCAL HFWEIGHT IS DIFFERENT FROM GLOBAL HFWEIGHT ======
+!       ========================================================================
+        IF(HFWEIGHT.GT.0.D0) THEN
+          LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
+        ELSE
+          LHFWEIGHT=HFWEIGHT
+        END IF
+!
+!       ========================================================================
+!       ==  DETERMINE U-TENSOR                                                ==
+!       ========================================================================
+        LMNX=SUM(2*POTPAR(ISP)%LOFH+1)
+        ALLOCATE(UNS(LMNX,LMNX,LMNX,LMNX))
+        CALL DMFT_ULOCAL(IAT,LMNX,UNS)
+        ALLOCATE(U(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
+        U=0.D0
+        U(:LMNX,:LMNX,:LMNX,:LMNX)=UNS
+        U(LMNX+1:,LMNX+1:,LMNX+1:,LMNX+1:)=UNS
+        DEALLOCATE(UNS)
+!
+!       ========================================================================
+!       ==  EXTRACT DENSITY MATRIX ON THE CLUSTER                             ==
+!       ========================================================================
+        NORBCL=0
+        DO NN=1,NND
+          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+          NORBCL=NORBCL+DENMAT(NN)%N2
+        ENDDO
+        ALLOCATE(D(2*LMNX,2*NORBCL))
+        I1UP=1
+        F1UP=LMNX
+        I1DN=LMNX+1
+        F1DN=2*LMNX
+        IND1=0
+        DO NN=1,NND
+          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
+          IND2=IND1+DENMAT(NN)%N2
+          IND1=IND1+1
+          I2UP=IND1
+          F2UP=IND2
+          I2DN=NORBCL+IND1
+          F2DN=NORBCL+IND2
+          IF(NDIMD.EQ.1) THEN
+            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1)
+            D(I1DN:F1DN,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,1)
+          ELSE IF(NDIMD.EQ.2) THEN
+            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
+       &                          +0.5D0*DENMAT(NN)%MAT(:,:,2)
+            D(I1DN:F1DN,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
+       &                          -0.5D0*DENMAT(NN)%MAT(:,:,2)
+          ELSE IF(NDIMD.EQ.4) THEN
+            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
+       &                          +0.5D0*DENMAT(NN)%MAT(:,:,4)
+            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
+       &                          +0.5D0*DENMAT(NN)%MAT(:,:,4)
+            D(I1UP:F1UP,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,2) &
+       &                       -CI*0.5D0*DENMAT(NN)%MAT(:,:,3)
+            D(I1DN:F1DN,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,2) &
+       &                       +CI*0.5D0*DENMAT(NN)%MAT(:,:,3)
+          ELSE
+            CALL ERROR$MSG('INTERNAL ERROR: INCONSISTENT VALUE OF NDIMD')
+            CALL ERROR$STOP('LMTO_ROBERT')
+          END IF 
+          IND1=IND2
+        ENDDO
+!
+!       ========================================================================
+!       ==  DETERMINE DENSITY MATRIX FUNCTIONAL                               ==
+!       ========================================================================
+        ALLOCATE(H(2*LMNX,2*NORBCL))
+        ALLOCATE(DEDU(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
+        CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,ETOT1,H,DEDU)
+        ETOT=ETOT+ETOT1
+        DEALLOCATE(D)
+        DEALLOCATE(U)
+!
+!       ========================================================================
+!       ==  TRANSFORM HAMILTONIAN
+!       ========================================================================
+        I1UP=1
+        F1UP=LMNX
+        I1DN=LMNX+1
+        F1DN=2*LMNX
+        IND1=0
+        DO NN=1,NND
+          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
+          IND2=IND1+DENMAT(NN)%N2
+          IND1=IND1+1
+          I2UP=IND1
+          F2UP=IND2
+          I2DN=NORBCL+IND1
+          F2DN=NORBCL+IND2
+          IF(NDIMD.EQ.1) THEN
+            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
+       &                                   +H(I1DN:F1DN,I2DN:F2DN))
+          ELSE IF(NDIMD.EQ.2) THEN
+            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
+       &                                   +H(I1DN:F1DN,I2DN:F2DN))
+            HAMIL(NN)%MAT(:,:,2)=HAMIL(NN)%MAT(:,:,2)         &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
+       &                                   -H(I1DN:F1DN,I2DN:F2DN))
+          ELSE IF(NDIMD.EQ.4) THEN
+            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
+       &                                   +H(I1DN:F1DN,I2DN:F2DN))
+            HAMIL(NN)%MAT(:,:,4)=HAMIL(NN)%MAT(:,:,4)         &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
+       &                                   -H(I1DN:F1DN,I2DN:F2DN))
+            HAMIL(NN)%MAT(:,:,2)=HAMIL(NN)%MAT(:,:,2)              &
+       &                        +0.5D0*REAL(H(I1UP:F1UP,I2DN:F2DN) &
+       &                                   +H(I1DN:F1DN,I2UP:F2UP))
+            HAMIL(NN)%MAT(:,:,3)=HAMIL(NN)%MAT(:,:,3)              &
+       &                       +0.5D0*AIMAG(H(I1UP:F1UP,I2DN:F2DN) &
+       &                                   -H(I1DN:F1DN,I2UP:F2UP))
+          ELSE
+            CALL ERROR$MSG('INTERNAL ERROR: INCONSISTENT VALUE OF NDIMD')
+            CALL ERROR$STOP('LMTO_ROBERT')
+          END IF 
+          IND1=IND2
+        ENDDO
+!
+!       ========================================================================
+!       ==  TRANSFORM DERIVATIVE OF U-TENSOR                                  ==
+!       ========================================================================
+!       == ATTENTION: THIS TERM IS NOT IMPLEMENTED!!!!!        
+!
+!       ========================================================================
+!       ==  CLOSE DOWN                                                        ==
+!       ========================================================================
+        DEALLOCATE(H)
+        DEALLOCATE(DEDU)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  MAP HAMILTONIAN CONTRIBUTION ON THIS%HTBC OF WAVES OBJECT           ==
+!     ==========================================================================
+      CALL LMTO_NTBODENMATDER_NEW()
+      CALL LMTO_CLEANDENMAT_NEW()
+!
+!     ==========================================================================
+!     ==  REPORT ENERGY TO ENERGY LIST                                        ==
+!     ==========================================================================
+PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
+      CALL ENERGYLIST$SET('LMTO INTERFACE',ETOT)
+      CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,E,H,DEDU)
+!     **************************************************************************
+!     **  PROVIDES THE NON-HARTREE FOCK CONTRIBUTION OF THE 1-PARTICLE REDUCED**
+!     **  DENSITY MATRIX FUNCTIONAL FOR AN IMPURITY IN A CLUSTER              **
+!     **                                                                      **
+!     **  THE DENSITY-MATRIX ELEMENTS FROM THE IMPURITY SITE TO ALL ORBITALS  **
+!     **  ON THE CLUSTER ARE USED. THE ORBITALS ARE ORDERED SUCH THAT ALL THE **
+!     **  SPIN-UP ORBITALS ARE ARRANGED FIRST AND FOLLOWED BY THE SPIN-DOWN   **
+!     **  ORBITALS                                                            **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: N1               ! #(IMPURITY ORBITALS)
+      INTEGER(4),INTENT(IN)  :: N2               ! #(CLUSTER ORBITALS)
+      REAL(8)   ,INTENT(IN)  :: U(N1,N1,N1,N1)   ! U-TENSOR
+      COMPLEX(8),INTENT(IN)  :: D(N1,N2)         ! DENSITY MATRIX
+      REAL(8)   ,INTENT(OUT) :: E                ! ENERGY
+      COMPLEX(8),INTENT(OUT) :: H(N1,N2)         ! DEDD
+      REAL(8)   ,INTENT(OUT) :: DEDU(N1,N1,N1,N1)! DEDU
+!     **************************************************************************
+      E=0.D0
+      H=0.D0
+      DEDU=0.D0
       RETURN
       END
 !
@@ -7166,18 +7416,11 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
       REAL(8)   ,INTENT(IN) :: D(NORB,NORB,NDIMD)
       REAL(8)   ,INTENT(OUT):: EX
       REAL(8)   ,INTENT(OUT):: H(NORB,NORB,NDIMD)
-      INTEGER(4)            :: NND
-      INTEGER(4)            :: NNH
-      INTEGER(4)            :: NAT
-      INTEGER(4)            :: IND,INH
-      INTEGER(4)            :: IT(3)
-      INTEGER(4)            :: N1,N2,N3
       INTEGER(4)            :: GID
       INTEGER(4)            :: NR
       INTEGER(4)            :: LMX
       INTEGER(4)            :: LMRX
       REAL(8)   ,ALLOCATABLE:: R(:)
-      REAL(8)   ,ALLOCATABLE:: AECORE(:)
       REAL(8)   ,ALLOCATABLE:: AUX(:)
       REAL(8)   ,ALLOCATABLE:: AUX1(:)
       REAL(8)   ,ALLOCATABLE:: RHO(:,:,:)  !(NR,LMR,IDIMD) DENSITY
@@ -7186,7 +7429,7 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
       REAL(8)               :: EH,ETOTC
       REAL(8)               :: SVAR
       REAL(8)               :: CG ! GAUNT COEFFICIENT
-      INTEGER(4)            :: I,J,ISP,L
+      INTEGER(4)            :: ISP,L
       INTEGER(4)            :: IORB1,IORB2,LM1,LM2,LM3,IDIMD
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       LOGICAL(4),PARAMETER  :: TCV=.TRUE. ! CORE-VALENCE CONTRIBUTION
