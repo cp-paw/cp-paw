@@ -1633,6 +1633,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ==========================================================================
       U(  :NLOC,  :NLOC,  :NLOC,  :NLOC)=UCHI                              
       U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:)=UCHI                              
+      U(  :NLOC,nloc+1:,  :NLOC,nloc+1:)=UCHI                              
+      U(NLOC+1:,  :NLOC,NLOC+1:,  :NLOC)=UCHI                              
       DO I=1,2*NLOC
         V=(0.D0,0.D0)
         DO J=1,2*NLOC
@@ -1718,7 +1720,9 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         ENDDO
       ENDDO
       DEDUCHI=REAL(U(  :NLOC,  :NLOC,  :NLOC,  :NLOC) &
-     &            +U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:))
+     &            +U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:) &
+     &            +U(NLOC+1:,  :NLOC,NLOC+1:,  :NLOC) &
+     &            +U(  :NLOC,NLOC+1:,  :NLOC,NLOC+1:) )
                                      CALL TRACE$POP()
       RETURN
       END

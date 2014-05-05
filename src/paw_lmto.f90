@@ -3327,8 +3327,10 @@ COMPLEX(8)  :: PHASE
         CALL DMFT_ULOCAL(IAT,LMNX,UNS)
         ALLOCATE(U(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
         U=0.D0
-        U(:LMNX,:LMNX,:LMNX,:LMNX)=UNS
+        U(  :LMNX,  :LMNX,  :LMNX,  :LMNX)=UNS
         U(LMNX+1:,LMNX+1:,LMNX+1:,LMNX+1:)=UNS
+        U(LMNX+1:,  :LMNX,LMNX+1:,  :LMNX)=UNS
+        U(  :LMNX,LMNX+1:,  :LMNX,LMNX+1:)=UNS
         DEALLOCATE(UNS)
 !
 !       ========================================================================
