@@ -24,7 +24,7 @@ TYPE HYBRIDSETTING_TYPE
   REAL(8)     :: TAILEDLAMBDA2  ! SMALLER DECAY CONSTANT FOR THE NTBO TAILS
   REAL(8)     :: RAUG       ! AUGMENTATION RADIUS
   REAL(8)     :: RTAIL      ! RADIUS FOR MATCHING TAILS
-  REAL(8),POINTER :: NORBOFL(:) ! #(LOCAL ORBITALS PER ANGULAR MOMENTUM)
+  INTEGER(4),POINTER :: NORBOFL(:) ! #(LOCAL ORBITALS PER ANGULAR MOMENTUM)
 END TYPE HYBRIDSETTING_TYPE
 !
 TYPE ORBITALGAUSSCOEFF_TYPE
@@ -3254,25 +3254,31 @@ COMPLEX(8)  :: PHASE
      &                       ,HFWEIGHT &
      &                       ,HYBRIDSETTING
       IMPLICIT NONE
-      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      TYPE NLIST_TYPE
+        INTEGER(4) :: IAT
+        INTEGER(4) :: IT(3)
+        INTEGER(4) :: I1
+      END TYPE NLIST_TYPE
       REAL(8)                :: ETOT,ETOT1
       INTEGER(4)             :: ISP ! ATOM TYPE
       INTEGER(4)             :: LMNX
       INTEGER(4)             :: NND
       INTEGER(4)             :: NDIMD
       INTEGER(4)             :: NAT
-      INTEGER(4)             :: N1,N2,N3
-      INTEGER(4)             :: NORBCL
-      INTEGER(4)             :: IND1,IND2
-      INTEGER(4)             :: I1UP,F1UP,I1DN,F1DN !INITIAL AND FINAL INDEX
-      INTEGER(4)             :: I2UP,F2UP,I2DN,F2DN
+      INTEGER(4)             :: NATCL    ! #(ATOMS IN THE CLUSTER)
+      INTEGER(4)             :: NORBCL     !#(ORBITALS W/O SPIN ON THE CLUSTER)
       REAL(8)   ,ALLOCATABLE :: UNS(:,:,:,:) ! NON-SPIN U-TENSOR
       REAL(8)   ,ALLOCATABLE :: U(:,:,:,:)   ! SPINOR U-TENSOR
       REAL(8)   ,ALLOCATABLE :: DEDU(:,:,:,:)! DERIVATIVE W.R.T.SPINOR U-TENSOR
       COMPLEX(8),ALLOCATABLE :: D(:,:)   ! SPINOR CLUSTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: H(:,:)   ! SPINOR CLUSTER HAMILTONIAN
       REAL(8)                :: LHFWEIGHT
-      INTEGER(4)             :: IAT,NN
+      TYPE(NLIST_TYPE),ALLOCATABLE :: NLIST(:)
+      INTEGER(4)             :: I1UP,F1UP,I1DN,F1DN !INITIAL AND FINAL INDEX
+      INTEGER(4)             :: I2UP,F2UP,I2DN,F2DN
+      INTEGER(4)             :: N1,N2,N3
+      INTEGER(4)             :: IND,IND1,IND2
+      INTEGER(4)             :: IAT,IATA,IATB,IAT1,IAT2,NN,IT(3)
 !     **************************************************************************
       NAT=SIZE(ISPECIES)
 !
@@ -3334,56 +3340,81 @@ COMPLEX(8)  :: PHASE
         DEALLOCATE(UNS)
 !
 !       ========================================================================
-!       ==  EXTRACT DENSITY MATRIX ON THE CLUSTER                             ==
+!       == DEFINE CLUSTER AND SET UP MAPPING                                  ==
 !       ========================================================================
+        NATCL=0
+        DO NN=1,NND
+          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+          NATCL=NATCL+1
+        ENDDO
+!
+        ALLOCATE(NLIST(NATCL))
+        IND=0
         NORBCL=0
         DO NN=1,NND
           IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+          IND=IND+1
+          NLIST(IND)%IAT=DENMAT(NN)%IAT2
+          NLIST(IND)%IT=DENMAT(NN)%IT
+          NLIST(IND)%I1=NORBCL+1       ! POSITION ON DENSITY MATRIX ARRAY
           NORBCL=NORBCL+DENMAT(NN)%N2
         ENDDO
-        ALLOCATE(D(2*LMNX,2*NORBCL))
-        I1UP=1
-        F1UP=LMNX
-        I1DN=LMNX+1
-        F1DN=2*LMNX
+!
+!       ========================================================================
+!       ==  EXTRACT DENSITY MATRIX ON THE CLUSTER                             ==
+!       ========================================================================
+!        ALLOCATE(D(2*LMNX,2*NORBCL))  ! THIS IS FOR STAR-LIKE CONSTRAINTS
+        ALLOCATE(D(2*NORBCL,2*NORBCL))
+        D(:,:)=(0.D0,0.D0)
+!
+!       == ADD THE TERMS CONNECTING THE IMPURITY WITH BATH SITES ==============
+!       == THIS WILL BE OVERWRITTEN BY THE LOOP OVER BATH SITES. I LEAVE IT  ==
+!       == IN FOR TESTING PURPOSES AND FOR LATER USE, IN CASE THE STAR-LIKE  ==
+!       == CHOICE OF DENSITY MATRIX CONSTRAINTS TURNS OUT TO BE BETTER. =======
+!       == THE STAR-LIKE CHOICE IS IMPLEMENTED MUCH MORE EFFICIENTLY ==========
         IND1=0
         DO NN=1,NND
           IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
 !         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
-          IND2=IND1+DENMAT(NN)%N2
-          IND1=IND1+1
-          I2UP=IND1
-          F2UP=IND2
-          I2DN=NORBCL+IND1
-          F2DN=NORBCL+IND2
-          IF(NDIMD.EQ.1) THEN
-            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1)
-            D(I1DN:F1DN,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,1)
-          ELSE IF(NDIMD.EQ.2) THEN
-            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
-       &                          +0.5D0*DENMAT(NN)%MAT(:,:,2)
-            D(I1DN:F1DN,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
-       &                          -0.5D0*DENMAT(NN)%MAT(:,:,2)
-          ELSE IF(NDIMD.EQ.4) THEN
-            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
-       &                          +0.5D0*DENMAT(NN)%MAT(:,:,4)
-            D(I1UP:F1UP,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,1) &
-       &                          +0.5D0*DENMAT(NN)%MAT(:,:,4)
-            D(I1UP:F1UP,I2DN:F2DN)=0.5D0*DENMAT(NN)%MAT(:,:,2) &
-       &                       -CI*0.5D0*DENMAT(NN)%MAT(:,:,3)
-            D(I1DN:F1DN,I2UP:F2UP)=0.5D0*DENMAT(NN)%MAT(:,:,2) &
-       &                       +CI*0.5D0*DENMAT(NN)%MAT(:,:,3)
-          ELSE
-            CALL ERROR$MSG('INTERNAL ERROR: INCONSISTENT VALUE OF NDIMD')
-            CALL ERROR$STOP('LMTO_ROBERT')
-          END IF 
-          IND1=IND2
+          N1=DENMAT(NN)%N1
+          N2=DENMAT(NN)%N2
+          I1UP=1
+          I1DN=LMNX+1
+          I2UP=IND1+1
+          I2DN=NORBCL+IND1+1
+          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
+          IND1=IND1+N2
         ENDDO
+!
+!       == CONNECT BATH SITES WITH BATH SITES ==================================
+        DO IATA=1,NATCL
+          DO IATB=1,NATCL
+            IAT1=NLIST(IATA)%IAT
+            IAT2=NLIST(IATB)%IAT
+            IT=NLIST(IATB)%IT-NLIST(IATA)%IT
+            DO NN=1,NND
+              IF(DENMAT(NN)%IAT1.NE.IAT1) CYCLE
+              IF(DENMAT(NN)%IAT2.NE.IAT2) CYCLE
+              IF(SUM(ABS(DENMAT(NN)%IT(1)-IT)).NE.0) CYCLE
+              N1=DENMAT(NN)%N1
+              N2=DENMAT(NN)%N2
+              I1UP=NLIST(IATA)%I1
+              I2UP=NLIST(IATB)%I1
+              I1DN=I1UP+NORBCL
+              I2DN=I2UP+NORBCL
+              CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
+              EXIT
+            ENDDO ! NN
+          ENDDO   ! IATB
+        ENDDO     ! IATA
 !
 !       ========================================================================
 !       ==  DETERMINE DENSITY MATRIX FUNCTIONAL                               ==
 !       ========================================================================
-        ALLOCATE(H(2*LMNX,2*NORBCL))
+!        ALLOCATE(H(2*LMNX,2*NORBCL))
+        ALLOCATE(H(2*NORBCL,2*NORBCL))
         ALLOCATE(DEDU(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
         CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,ETOT1,H,DEDU)
         ETOT=ETOT+ETOT1
@@ -3393,50 +3424,49 @@ COMPLEX(8)  :: PHASE
 !       ========================================================================
 !       ==  TRANSFORM HAMILTONIAN
 !       ========================================================================
-        I1UP=1
-        F1UP=LMNX
-        I1DN=LMNX+1
-        F1DN=2*LMNX
+!
+!       == ADD THE TERMS CONNECTING THE IMPURITY WITH BATH SITES ==============
+!       == THIS WILL BE OVERWRITTEN BY THE LOOP OVER BATH SITES. I LEAVE IT  ==
+!       == IN FOR TESTING PURPOSES AND FOR LATER USE, IN CASE THE STAR-LIKE  ==
+!       == CHOICE OF DENSITY MATRIX CONSTRAINTS TURNS OUT TO BE BETTER. =======
+!       == THE STAR-LIKE CHOICE IS IMPLEMENTED MUCH MORE EFFICIENTLY ==========
         IND1=0
         DO NN=1,NND
-          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+          IF(HAMIL(NN)%IAT1.NE.IAT) CYCLE
 !         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
-          IND2=IND1+DENMAT(NN)%N2
-          IND1=IND1+1
-          I2UP=IND1
-          F2UP=IND2
-          I2DN=NORBCL+IND1
-          F2DN=NORBCL+IND2
-          IF(NDIMD.EQ.1) THEN
-            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
-       &                                   +H(I1DN:F1DN,I2DN:F2DN))
-          ELSE IF(NDIMD.EQ.2) THEN
-            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
-       &                                   +H(I1DN:F1DN,I2DN:F2DN))
-            HAMIL(NN)%MAT(:,:,2)=HAMIL(NN)%MAT(:,:,2)         &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
-       &                                   -H(I1DN:F1DN,I2DN:F2DN))
-          ELSE IF(NDIMD.EQ.4) THEN
-            HAMIL(NN)%MAT(:,:,1)=HAMIL(NN)%MAT(:,:,1)         &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
-       &                                   +H(I1DN:F1DN,I2DN:F2DN))
-            HAMIL(NN)%MAT(:,:,4)=HAMIL(NN)%MAT(:,:,4)         &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2UP:F2UP) &
-       &                                   -H(I1DN:F1DN,I2DN:F2DN))
-            HAMIL(NN)%MAT(:,:,2)=HAMIL(NN)%MAT(:,:,2)              &
-       &                        +0.5D0*REAL(H(I1UP:F1UP,I2DN:F2DN) &
-       &                                   +H(I1DN:F1DN,I2UP:F2UP))
-            HAMIL(NN)%MAT(:,:,3)=HAMIL(NN)%MAT(:,:,3)              &
-       &                       +0.5D0*AIMAG(H(I1UP:F1UP,I2DN:F2DN) &
-       &                                   -H(I1DN:F1DN,I2UP:F2UP))
-          ELSE
-            CALL ERROR$MSG('INTERNAL ERROR: INCONSISTENT VALUE OF NDIMD')
-            CALL ERROR$STOP('LMTO_ROBERT')
-          END IF 
-          IND1=IND2
+          N1=HAMIL(NN)%N1
+          N2=HAMIL(NN)%N2
+          I1UP=1
+          I1DN=LMNX+1
+          I2UP=IND1+1
+          I2DN=NORBCL+IND1+1
+          CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,HAMIL(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,H)
+          IND1=IND1+N2
         ENDDO
+!
+!       == CONNECT BATH SITES WITH BATH SITES ==================================
+        DO IATA=1,NATCL
+          DO IATB=1,NATCL
+            IAT1=NLIST(IATA)%IAT
+            IAT2=NLIST(IATB)%IAT
+            IT=NLIST(IATB)%IT-NLIST(IATA)%IT
+            DO NN=1,NND
+              IF(HAMIL(NN)%IAT1.NE.IAT1) CYCLE
+              IF(HAMIL(NN)%IAT2.NE.IAT2) CYCLE
+              IF(SUM(ABS(HAMIL(NN)%IT(1)-IT)).NE.0) CYCLE
+              N1=HAMIL(NN)%N1
+              N2=HAMIL(NN)%N2
+              I1UP=NLIST(IATA)%I1
+              I2UP=NLIST(IATB)%I1
+              I1DN=I1UP+NORBCL
+              I2DN=I2UP+NORBCL
+              CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,HAMIL(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,H)
+              EXIT
+            ENDDO ! NN
+          ENDDO   ! IATB
+        ENDDO     ! IATA
 !
 !       ========================================================================
 !       ==  TRANSFORM DERIVATIVE OF U-TENSOR                                  ==
@@ -3446,6 +3476,7 @@ COMPLEX(8)  :: PHASE
 !       ========================================================================
 !       ==  CLOSE DOWN                                                        ==
 !       ========================================================================
+        DEALLOCATE(NLIST)
         DEALLOCATE(H)
         DEALLOCATE(DEDU)
       ENDDO
@@ -3463,6 +3494,124 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',ETOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_ROBERT_MAP(ID,N1,N2,NDIMD,MAT &
+     &                          ,I1UP,I1DN,I2UP,I2DN,NB1,NB2,CLMAT)
+!     **************************************************************************
+!     **  ID='FWRD': MAPS A BLOCK OF THE DENSITY MATRIX INTO THE MATRIX       **
+!     **             OF THE ENTIRE CLUSTER.                                   **
+!     **  ID='BACK': MAPS A BLOCK OF THE HAMILTONIAN MATRIX INTO THE BLOCK    **
+!     **             ON THE NEIGHBOR LIST                                     **
+!     **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4),INTENT(IN) :: N1  ! SIZE OF 1ST DIMENSION OF THE BLOCK
+      INTEGER(4),INTENT(IN) :: N2  ! SIZE OF 2ND DIMENSION OF THE BLOECK
+      INTEGER(4),INTENT(IN) :: NDIMD !1,2,4 FOR NON-SPIN, COLLINEAR AND NONCOLL/
+      REAL(8)   ,INTENT(INOUT) :: MAT(N1,N2,NDIMD) ! DENMAT OR H ON NGHBORLIST
+      INTEGER(4),INTENT(IN) :: I1UP  !INSERTION POINT FOR 1ST INDEX UP-SPIN
+      INTEGER(4),INTENT(IN) :: I1DN  !INSERTION POINT FOR 1ST INDEX DOWN-SPIN
+      INTEGER(4),INTENT(IN) :: I2UP  !INSERTION POINT FOR 2ND INDEX UP-SPIN
+      INTEGER(4),INTENT(IN) :: I2DN  !INSERTION POINT FOR 2ND INDEX DOWN-SPIN
+      INTEGER(4),INTENT(IN) :: NB1
+      INTEGER(4),INTENT(IN) :: NB2
+      COMPLEX(8),INTENT(INOUT):: CLMAT(NB1,NB2) ! DENMAT OR H ON THE CLUSTER
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      INTEGER(4)            :: F1UP,F2UP,F1DN,F2DN,I,J
+!     **************************************************************************
+      F1UP=I1UP-1+N1
+      F1DN=I1DN-1+N1
+      F2UP=I2UP-1+N2
+      F2DN=I2DN-1+N2
+      IF(F1UP.GT.NB1.OR.F1DN.GT.NB1.OR.F2UP.GT.NB2.OR.F2DN.GT.NB2) THEN
+        CALL ERROR$MSG('INCONSISTEN ARRAY SIZES')
+        CALL ERROR$I4VAL('N1',N1)
+        CALL ERROR$I4VAL('N2',N2)
+        CALL ERROR$I4VAL('NB1',NB1)
+        CALL ERROR$I4VAL('NB2',NB2)
+        CALL ERROR$I4VAL('I1UP',I1UP)
+        CALL ERROR$I4VAL('I2UP',I2UP)
+        CALL ERROR$I4VAL('I1DN',I1DN)
+        CALL ERROR$I4VAL('I2DN',I2DN)
+        CALL ERROR$I4VAL('F1UP',F1UP)
+        CALL ERROR$I4VAL('F2UP',F2UP)
+        CALL ERROR$I4VAL('F1DN',F1DN)
+        CALL ERROR$I4VAL('F2DN',F2DN)
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO_ROBERT_MAP')
+      END IF
+!
+!     ==========================================================================
+!     == FORWARD TRANSFORM OF THE DENSITY MATRIX                              ==
+!     ==========================================================================
+      IF(ID.EQ.'FWRD') THEN
+        IF(NDIMD.EQ.1) THEN
+          CLMAT(I1UP:F1UP,I2UP:F2UP)=0.5D0*MAT(:,:,1)
+          CLMAT(I1DN:F1DN,I2DN:F2DN)=0.5D0*MAT(:,:,1)
+        ELSE IF(NDIMD.EQ.2) THEN
+          CLMAT(I1UP:F1UP,I2UP:F2UP)=0.5D0*( MAT(:,:,1)+MAT(:,:,2) )
+          CLMAT(I1DN:F1DN,I2DN:F2DN)=0.5D0*( MAT(:,:,1)-MAT(:,:,2) )
+        ELSE IF(NDIMD.EQ.4) THEN
+          CLMAT(I1UP:F1UP,I2UP:F2UP)=0.5D0*( MAT(:,:,1)+   MAT(:,:,4) )
+          CLMAT(I1UP:F1UP,I2UP:F2UP)=0.5D0*( MAT(:,:,1)+   MAT(:,:,4) )
+          CLMAT(I1UP:F1UP,I2DN:F2DN)=0.5D0*( MAT(:,:,2)-CI*MAT(:,:,3) )
+          CLMAT(I1DN:F1DN,I2UP:F2UP)=0.5D0*( MAT(:,:,2)+CI*MAT(:,:,3) )
+        ELSE
+          CALL ERROR$MSG('INVALID VALUE OF NDIMD')
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO_ROBERT_MAP')
+        END IF
+!
+!     ==========================================================================
+!     == BACK TRANSFORM OF THE HAMULTONIAN                                    ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'BACK') THEN
+        IF(NDIMD.EQ.1) THEN
+          DO J=1,N2
+            DO I=1,N1
+              MAT(I,J,1)=MAT(I,J,1)+0.5D0*REAL(CLMAT(I1UP-1+I,I2UP-1+J) &
+       &                                      +CLMAT(I1DN-1+I,I2DN-1+J))
+            ENDDO
+          ENDDO
+        ELSE IF(NDIMD.EQ.2) THEN
+          DO J=1,N2
+            DO I=1,N1
+              MAT(I,J,1)=MAT(I,J,1)+0.5D0*REAL( CLMAT(I1UP-1+I,I2UP-1+J) &
+       &                                       +CLMAT(I1DN-1+I,I2DN-1+J))
+              MAT(I,J,2)=MAT(I,J,2)+0.5D0*REAL( CLMAT(I1UP-1+I,I2UP-1+J) &
+       &                                       -CLMAT(I1DN-1+I,I2DN-1+J))
+            ENDDO
+          ENDDO
+        ELSE IF(NDIMD.EQ.4) THEN
+          DO J=1,N2
+            DO I=1,N1
+              MAT(I,J,1)=MAT(I,J,1)+0.5D0*REAL( CLMAT(I1UP-1+I,I2UP-1+J) &
+       &                                       +CLMAT(I1DN-1+I,I2DN-1+J))
+              MAT(I,J,4)=MAT(I,J,4)+0.5D0*REAL( CLMAT(I1UP-1+I,I2UP-1+J) &
+       &                                       -CLMAT(I1DN-1+I,I2DN-1+J))
+              MAT(I,J,2)=MAT(I,J,2)+0.5D0*REAL( CLMAT(I1UP-1+I,I2DN-1+J) &
+       &                                       +CLMAT(I1DN-1+I,I2UP-1+J))
+              MAT(I,J,3)=MAT(I,J,3)+0.5D0*AIMAG(CLMAT(I1UP-1+I,I2DN-1+J) &
+       &                                       -CLMAT(I1DN-1+I,I2UP-1+J))
+            ENDDO
+          ENDDO
+        ELSE
+          CALL ERROR$MSG('INVALID VALUE OF NDIMD')
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO_ROBERT_MAP')
+        END IF 
+      ELSE
+        CALL ERROR$MSG('INVALID VALUE OF ID')
+        CALL ERROR$MSG('MUST BE "FWRD" OR "BACK" (UPPERCASE)')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTO_ROBERT_MAP')
+      END IF
       RETURN
       END
 !
@@ -4523,7 +4672,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
               DO ISPIN=1,NDIMD
                 DWORK1(:)=AEDMU(:,ISPIN)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
                 CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
-                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+CMPLX(SVAR,0.D0)
+                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN) &
+    &                                +CMPLX(SVAR,0.D0,KIND=8)
               ENDDO
             ENDDO
           ENDDO
@@ -9491,4 +9641,3 @@ PRINT*,'IKPT ',IKPT0,' ISPIN=',ISPIN0,' IB=',IB,' IB0 ',IB0,' XK ',XK
       END IF
       RETURN
       END
-
