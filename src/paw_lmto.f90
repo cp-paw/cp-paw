@@ -188,6 +188,8 @@ TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: DENMAT_NEW(:)  !(NND) DENSITY MATRIX
 TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: HAMIL_NEW(:)   !(NND) DERIVATIVE OF ENERGY
 ! OVERLAP IS ONLY USED FOR TESTDENMAT
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: OVERLAP(:) !(NNS) OVERLAP MATRIX ONLY MAIN
+!== INVOVERLAP CALCULATED AS SUM_N <PI|PSI_N><PSI_N|PI>
+TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: INVOVERLAP(:) !(NNS) OVERLAP MATRIX ONLY MAIN
 END MODULE LMTO_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -2781,11 +2783,11 @@ INTEGER(4) :: J,K,L
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       USE LMTO_MODULE, ONLY : DENMAT_NEW &
-                             ,SBAR_NEW &
-                             ,POTPAR1  &
-                             ,LOX &
-                             ,LNX &
-                             ,ISPECIES
+     &                       ,SBAR_NEW &
+     &                       ,POTPAR1  &
+     &                       ,LOX &
+     &                       ,LNX &
+     &                       ,ISPECIES
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPR=.FALSE.
@@ -2907,8 +2909,8 @@ COMPLEX(8)  :: PHASE
                     C2(:)=THIS%TBC_NEW(:,IBH,J0+J)*EIKR   ! EXP(-I*K*T)
                     DO JDIM=1,NDIM
                       CSVAR22(:,JDIM)=CSVAR22(:,JDIM) &
-        &                            +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
-        &                                   +(F1-F2)*C1(:)*C2(JDIM))
+     &                               +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
+     &                                      +(F1-F2)*C1(:)*C2(JDIM))
                     ENDDO
                   ENDDO
                   CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
@@ -2932,28 +2934,28 @@ COMPLEX(8)  :: PHASE
                 IF(NSPIN.EQ.1) THEN
                   IF(NDIM.EQ.1) THEN !NON-SPIN-POLARIZED
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
-          &                              +REAL(CSVAR22(1,1))
+     &                                       +REAL(CSVAR22(1,1))
                   ELSE ! NONCOLLINEAR
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
-          &                              +REAL(CSVAR22(1,1)+CSVAR22(2,2))
+     &                                  +REAL(CSVAR22(1,1)+CSVAR22(2,2))
                     DENMAT_NEW(NN)%MAT(I,J,2)=DENMAT_NEW(NN)%MAT(I,J,2) &
-          &                              +REAL(CSVAR22(1,2)+CSVAR22(2,1))
+     &                                  +REAL(CSVAR22(1,2)+CSVAR22(2,1))
                     DENMAT_NEW(NN)%MAT(I,J,3)=DENMAT_NEW(NN)%MAT(I,J,3) &
-          &                              -AIMAG(CSVAR22(1,2)-CSVAR22(2,1))
+     &                                  -AIMAG(CSVAR22(1,2)-CSVAR22(2,1))
                     DENMAT_NEW(NN)%MAT(I,J,4)=DENMAT_NEW(NN)%MAT(I,J,4) &
-          &                              +REAL(CSVAR22(1,1)-CSVAR22(2,2))
+     &                                  +REAL(CSVAR22(1,1)-CSVAR22(2,2))
                   END IF
                 ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
                   IF(ISPIN.EQ.1) THEN
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
-          &                                  +REAL(CSVAR22(1,1))
+     &                                       +REAL(CSVAR22(1,1))
                     DENMAT_NEW(NN)%MAT(I,J,2)=DENMAT_NEW(NN)%MAT(I,J,2) &
-          &                                  +REAL(CSVAR22(1,1))
+     &                                       +REAL(CSVAR22(1,1))
                   ELSE
                     DENMAT_NEW(NN)%MAT(I,J,1)=DENMAT_NEW(NN)%MAT(I,J,1) &
-          &                                  +REAL(CSVAR22(1,1))
+     &                                       +REAL(CSVAR22(1,1))
                     DENMAT_NEW(NN)%MAT(I,J,2)=DENMAT_NEW(NN)%MAT(I,J,2) &
-          &                                  -REAL(CSVAR22(1,1))
+     &                                       -REAL(CSVAR22(1,1))
                   END IF
                 END IF
               ENDDO
@@ -2980,7 +2982,7 @@ COMPLEX(8)  :: PHASE
           IAT2=DENMAT_NEW(NN)%IAT2
           IT=DENMAT_NEW(NN)%IT
           WRITE(*,FMT='(82("="),T10," IAT1 ",I4," IAT2=",I4," IT=",3I3)') &
-       &                                                       IAT1,IAT2,IT
+     &                                                         IAT1,IAT2,IT
           N1=DENMAT_NEW(NN)%N1
           N2=DENMAT_NEW(NN)%N2
           DO I=1,1 !DENMAT_NEW(NN)%N3
@@ -2992,6 +2994,217 @@ COMPLEX(8)  :: PHASE
         ENDDO
         CALL ERROR$MSG('FORCED STOP AFTER PRINTING DENSITY MATRIX')
         CALL ERROR$STOP('LMTO_NTBODENMAT_NEW')
+      END IF
+                                           CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_NTBOINVOVERLAP()
+!     **************************************************************************
+!     **  CONSTRUCT THE INVERSE OVERLAP FROM THE NTBO PROJECTIONS AS          **
+!     **    SUM_N <PI_A|\PSI_N><\PSI_N|\PI_B>                                 **
+!     **  THE OVERLAP CAN LATER BE OBTAINED BY INVERSION IN K-SPACE           **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
+      USE LMTO_MODULE, ONLY : INVOVERLAP &
+     &                       ,SBAR_NEW &
+     &                       ,POTPAR1  &
+     &                       ,ISPECIES
+      USE MPE_MODULE
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: N1,N2
+      INTEGER(4)             :: NNS
+      INTEGER(4)             :: NND
+      INTEGER(4)             :: NPRO
+      INTEGER(4)             :: NB,NBH,NBX
+      INTEGER(4)             :: NDIMD
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      INTEGER(4),ALLOCATABLE :: IPRO1(:)
+      INTEGER(4),ALLOCATABLE :: NPROAT(:)
+      REAL(8)   ,ALLOCATABLE :: WKPTL(:)
+      INTEGER(4)             :: IAT,NN,II,ISP,IPRO,IKPT,ISPIN,I,J,IBH,IB
+      REAL(8)                :: SVAR
+      REAL(8)                :: F1,F2
+      LOGICAL(4)             :: TINV
+      INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
+      COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
+      REAL(8)                :: PI
+COMPLEX(8)  :: PHASE
+      INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
+!     **************************************************************************
+                                          CALL TRACE$PUSH('LMTO_NTBOINVOVERLAP')
+      PI=4.D0*ATAN(1.D0)
+      IF(.NOT.ASSOCIATED(THIS%TBC_NEW)) THEN
+        CALL ERROR$MSG('THIS%TBC_NEW NOT ASSOCIATED (1)')
+        CALL ERROR$STOP('LMTO_NTBOINVOVERLAP')
+      END IF
+      IF(NDIM.EQ.1) THEN
+        NDIMD=NSPIN
+      ELSE IF(NDIM.EQ.2) THEN
+        NDIMD=4
+      END IF
+!
+!     ==========================================================================
+!     == ALLOCATE DENSITY MATRIX
+!     ==========================================================================
+      NNS=SIZE(SBAR_NEW)
+      NND=NNS
+      IF(ALLOCATED(INVOVERLAP)) THEN
+        CALL ERROR$MSG('INVOVERLAP ALREADY ALLOCATED')
+        CALL ERROR$STOP('LMTO_NTBOINVOVERLAP')
+      END IF
+      ALLOCATE(INVOVERLAP(NND))
+      DO NN=1,NNS
+        IAT1=SBAR_NEW(NN)%IAT1
+        IAT2=SBAR_NEW(NN)%IAT2
+        IT(:)=SBAR_NEW(NN)%IT(:)
+        ISP=ISPECIES(IAT1)
+        N1=SUM(2*POTPAR1(ISP)%LOFH+1)
+        ISP=ISPECIES(IAT2)
+        N2=SUM(2*POTPAR1(ISP)%LOFH+1)
+        INVOVERLAP(NN)%IAT1=IAT1
+        INVOVERLAP(NN)%IAT2=IAT2
+        INVOVERLAP(NN)%IT=IT
+        INVOVERLAP(NN)%N1=N1
+        INVOVERLAP(NN)%N2=N2
+        ALLOCATE(INVOVERLAP(NN)%MAT(N1,N2))
+        INVOVERLAP(NN)%MAT(:,:)=0.D0
+      ENDDO
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(WKPTL(NKPTL))
+      CALL WAVES_DYNOCCGETR8A('WKPT',NKPTL,WKPTL)
+!
+!     ==========================================================================
+!     ==  CONSTRUCT INDEX ARRAYS                                              ==
+!     ==========================================================================
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=SUM(2*POTPAR1(ISP)%LOFH+1)
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ADD UP DENSITY MATRIX                                               ==
+!     ==========================================================================
+      NND=SIZE(INVOVERLAP)
+      NPRO=MAP%NPRO
+      CALL MPE$QUERY('K',NTASKS,THISTASK)
+      ICOUNT=0
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETL4('TINV',TINV)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          DO NN=1,NND
+            ICOUNT=ICOUNT+1
+            IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
+            IAT1=INVOVERLAP(NN)%IAT1
+            IAT2=INVOVERLAP(NN)%IAT2
+            IT  =INVOVERLAP(NN)%IT
+!            SVAR=-2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
+            SVAR=2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
+            EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
+            I0=IPRO1(IAT1)-1
+            J0=IPRO1(IAT2)-1
+
+            DO I=1,NPROAT(IAT1)
+              DO J=1,NPROAT(IAT2)
+                IF(TINV) THEN
+                  CSVAR22=(0.D0,0.D0)
+                  DO IBH=1,NBH
+                    C1(:)=THIS%TBC_NEW(:,IBH,I0+I)
+                    C2(:)=THIS%TBC_NEW(:,IBH,J0+J)*EIKR   ! EXP(-I*K*T)
+                    DO JDIM=1,NDIM
+                      CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+C1(:)*CONJG(C2(JDIM)) 
+                    ENDDO
+                  ENDDO
+                  CSVAR22=WKPTL(IKPT)*CSVAR22
+                  CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
+                                        !  DUE TO SUPER WAVE FUNCTIONS
+                ELSE
+                  CSVAR22=(0.D0,0.D0)
+                  DO IB=1,NB
+                    C1(:)=THIS%TBC_NEW(:,IB,I0+I)
+                    C2(:)=THIS%TBC_NEW(:,IB,J0+J)*EIKR ! EXP(-I*K*T)
+                    DO JDIM=1,NDIM
+                      CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+C1(:)*CONJG(C2(JDIM))
+                    ENDDO
+                  ENDDO
+                  CSVAR22=WKPTL(IKPT)*CSVAR22
+                END IF
+!
+!           == DISTRIBUTE ONTO DENSITY MATRIX ENTRIES ==========================
+!           == D(IDIMD)=SUM_{IDIM,JDIM} D(IDIM,JDIM)*PAULI_{IDIMD}(JDIM,IDIM) ==
+!           == IDIMD IN {TOTAL,X,Y,Z}; IDIM IN {UP,DOWN} =======================
+!           == TRANSFORMATION MUST BE CONSISTENT WITH WAVES_DENMAT =============
+                IF(NSPIN.EQ.1) THEN
+                  IF(NDIM.EQ.1) THEN !NON-SPIN-POLARIZED
+                    INVOVERLAP(NN)%MAT(I,J)=INVOVERLAP(NN)%MAT(I,J) &
+     &                                       +REAL(CSVAR22(1,1))
+                  ELSE ! NONCOLLINEAR
+                    INVOVERLAP(NN)%MAT(I,J)=INVOVERLAP(NN)%MAT(I,J) &
+     &                                      +REAL(CSVAR22(1,1)+CSVAR22(2,2))
+                  END IF
+                ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
+                  IF(ISPIN.EQ.1) THEN
+                    INVOVERLAP(NN)%MAT(I,J)=INVOVERLAP(NN)%MAT(I,J) &
+     &                                       +REAL(CSVAR22(1,1))
+                  ELSE
+                    INVOVERLAP(NN)%MAT(I,J)=INVOVERLAP(NN)%MAT(I,J) &
+     &                                       +REAL(CSVAR22(1,1))
+                  END IF
+                END IF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
+!     ==========================================================================
+      DO NN=1,NND
+        CALL MPE$COMBINE('MONOMER','+',INVOVERLAP(NN)%MAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      IF(TPR) THEN
+        WRITE(*,FMT='(82("="),T10," INVERSE OVERLAP MATRIX IN A NTBO BASIS ")')
+        WRITE(*,FMT='(82("="),T10," FROM LMTO_NTBOINVOVERLAP  ")')
+        DO NN=1,NND
+          IAT1=INVOVERLAP(NN)%IAT1
+          IAT2=INVOVERLAP(NN)%IAT2
+          IT=INVOVERLAP(NN)%IT
+          WRITE(*,FMT='(82("="),T10," IAT1 ",I4," IAT2=",I4," IT=",3I3)') &
+       &                                                       IAT1,IAT2,IT
+          N1=INVOVERLAP(NN)%N1
+          N2=INVOVERLAP(NN)%N2
+          DO J=1,N1 
+            WRITE(*,FMT='(I3,300F10.3)')I,INVOVERLAP(NN)%MAT(J,:)
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER PRINTING INVERSE OVERLAP MATRIX')
+        CALL ERROR$STOP('LMTO_NTBOINVOVERLAP')
       END IF
                                            CALL TRACE$POP()
       RETURN
@@ -3189,7 +3402,9 @@ COMPLEX(8)  :: PHASE
       SUBROUTINE LMTO_CLEANDENMAT_NEW()
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW,HAMIL=>HAMIL_NEW
+      USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW &
+     &                       ,HAMIL=>HAMIL_NEW &
+     &                       ,INVOVERLAP
       IMPLICIT NONE
       INTEGER(4)  ::NN,NND
 !     **************************************************************************
@@ -3200,6 +3415,17 @@ COMPLEX(8)  :: PHASE
       ENDDO
       DEALLOCATE(DENMAT)
       DEALLOCATE(HAMIL)
+!
+!     ==========================================================================
+!     ==  CLEAN UP INVOVERLAP
+!     ==========================================================================
+      IF(ALLOCATED(INVOVERLAP)) THEN
+        NND=SIZE(INVOVERLAP)
+        DO NN=1,NND
+          DEALLOCATE(INVOVERLAP(NN)%MAT)
+        ENDDO
+      END IF
+      DEALLOCATE(INVOVERLAP)
       RETURN
       END
 !
@@ -3207,9 +3433,10 @@ COMPLEX(8)  :: PHASE
       SUBROUTINE LMTO$ETOT(LMNXX_,NDIMD_,NAT_,DENMAT_)
       USE LMTO_MODULE, ONLY : TON
 !     **************************************************************************
-!     **                                                                      **
 !     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
 !     **  IS USED IN THE AUGMENTATION                                         **
+!     **                                                                      **
+!     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
@@ -3249,6 +3476,7 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW &
      &                       ,HAMIL=>HAMIL_NEW &
+     &                       ,INVOVERLAP &
      &                       ,POTPAR=>POTPAR1  &
      &                       ,ISPECIES &
      &                       ,HFWEIGHT &
@@ -3270,8 +3498,9 @@ COMPLEX(8)  :: PHASE
       REAL(8)   ,ALLOCATABLE :: UNS(:,:,:,:) ! NON-SPIN U-TENSOR
       REAL(8)   ,ALLOCATABLE :: U(:,:,:,:)   ! SPINOR U-TENSOR
       REAL(8)   ,ALLOCATABLE :: DEDU(:,:,:,:)! DERIVATIVE W.R.T.SPINOR U-TENSOR
-      COMPLEX(8),ALLOCATABLE :: D(:,:)   ! SPINOR CLUSTER DENSITY MATRIX
-      COMPLEX(8),ALLOCATABLE :: H(:,:)   ! SPINOR CLUSTER HAMILTONIAN
+      COMPLEX(8),ALLOCATABLE :: D(:,:)       ! SPINOR CLUSTER DENSITY MATRIX
+      COMPLEX(8),ALLOCATABLE :: OINV(:,:)    ! SPINOR CLUSTER DENSITY MATRIX
+      COMPLEX(8),ALLOCATABLE :: H(:,:)       ! SPINOR CLUSTER HAMILTONIAN
       REAL(8)                :: LHFWEIGHT
       TYPE(NLIST_TYPE),ALLOCATABLE :: NLIST(:)
       INTEGER(4)             :: I1UP,F1UP,I1DN,F1DN !INITIAL AND FINAL INDEX
@@ -3286,6 +3515,7 @@ COMPLEX(8)  :: PHASE
 !     == CALCULATE DENSITY MATRIX                                             ==
 !     ==========================================================================
       CALL LMTO_NTBODENMAT_NEW()
+      CALL LMTO_NTBOINVOVERLAP()!CALCULATE INVOVERLAP=SUM_N<PI|PSI_N><PSI_N|PI>
       NND=SIZE(DENMAT)
       NDIMD=DENMAT(1)%N3
 !
@@ -3365,6 +3595,7 @@ COMPLEX(8)  :: PHASE
 !       ========================================================================
 !        ALLOCATE(D(2*LMNX,2*NORBCL))  ! THIS IS FOR STAR-LIKE CONSTRAINTS
         ALLOCATE(D(2*NORBCL,2*NORBCL))
+        ALLOCATE(OINV(2*NORBCL,2*NORBCL))
         D(:,:)=(0.D0,0.D0)
 !
 !       == ADD THE TERMS CONNECTING THE IMPURITY WITH BATH SITES ==============
@@ -3384,6 +3615,8 @@ COMPLEX(8)  :: PHASE
           I2DN=NORBCL+IND1+1
           CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
       &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
+          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,1,INVOVERLAP(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,OINV)
           IND1=IND1+N2
         ENDDO
 !
@@ -3405,6 +3638,8 @@ COMPLEX(8)  :: PHASE
               I2DN=I2UP+NORBCL
               CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
       &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
+              CALL LMTO_ROBERT_MAP('FWRD',N1,N2,1,INVOVERLAP(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,OINV)
               EXIT
             ENDDO ! NN
           ENDDO   ! IATB
@@ -3416,7 +3651,7 @@ COMPLEX(8)  :: PHASE
 !        ALLOCATE(H(2*LMNX,2*NORBCL))
         ALLOCATE(H(2*NORBCL,2*NORBCL))
         ALLOCATE(DEDU(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
-        CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,ETOT1,H,DEDU)
+        CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,OINV,ETOT1,H,DEDU)
         ETOT=ETOT+ETOT1
         DEALLOCATE(D)
         DEALLOCATE(U)
@@ -3478,6 +3713,7 @@ COMPLEX(8)  :: PHASE
 !       ========================================================================
         DEALLOCATE(NLIST)
         DEALLOCATE(H)
+        DEALLOCATE(OINV)
         DEALLOCATE(DEDU)
       ENDDO
 !
@@ -3616,7 +3852,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,E,H,DEDU)
+      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,oinv,E,H,DEDU)
 !     **************************************************************************
 !     **  PROVIDES THE NON-HARTREE FOCK CONTRIBUTION OF THE 1-PARTICLE REDUCED**
 !     **  DENSITY MATRIX FUNCTIONAL FOR AN IMPURITY IN A CLUSTER              **
@@ -3632,6 +3868,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       INTEGER(4),INTENT(IN)  :: N2               ! #(CLUSTER ORBITALS)
       REAL(8)   ,INTENT(IN)  :: U(N1,N1,N1,N1)   ! U-TENSOR
       COMPLEX(8),INTENT(IN)  :: D(N1,N2)         ! DENSITY MATRIX
+      COMPLEX(8),INTENT(IN)  :: OINV(N1,N2)      ! INVERSE OVERLAP
       REAL(8)   ,INTENT(OUT) :: E                ! ENERGY
       COMPLEX(8),INTENT(OUT) :: H(N1,N2)         ! DEDD
       REAL(8)   ,INTENT(OUT) :: DEDU(N1,N1,N1,N1)! DEDU
