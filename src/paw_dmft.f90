@@ -1625,37 +1625,40 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8)             :: GLAUR(2*NLOC,2*NLOC,3)
       COMPLEX(8)             :: S(2*NLOC,2*NLOC,NOMEGA)
       COMPLEX(8)             :: SLAUR(2*NLOC,2*NLOC,3)
-      INTEGER(4)             :: NU,I,J
+      INTEGER(4)             :: NU,I,J,K,L
 !     **************************************************************************
                                      CALL TRACE$PUSH('DMFT_DYNAMICSOLVER')
 !
 !     ==========================================================================
 !     == CONVERT U-TENSOR                                                     ==
 !     ==========================================================================
-      U(  :NLOC,  :NLOC,  :NLOC,  :NLOC)=UCHI                              
-      U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:)=UCHI                              
-      U(  :NLOC,NLOC+1:,  :NLOC,NLOC+1:)=UCHI                              
-      U(NLOC+1:,  :NLOC,NLOC+1:,  :NLOC)=UCHI                              
+      U(  :NLOC,  :NLOC,  :NLOC,  :NLOC)=CMPLX(UCHI,KIND=8)
+      U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:)=CMPLX(UCHI,KIND=8)
+      U(  :NLOC,NLOC+1:,  :NLOC,NLOC+1:)=CMPLX(UCHI,KIND=8)
+      U(NLOC+1:,  :NLOC,NLOC+1:,  :NLOC)=CMPLX(UCHI,KIND=8)
+      V=(0.D0,0.D0)
       DO I=1,2*NLOC
-        V=(0.D0,0.D0)
         DO J=1,2*NLOC
           V(I,:,:,:)=V(I,:,:,:)+CONJG(PIPHI(J,I))*U(J,:,:,:)
         ENDDO
       ENDDO
+!
+      U=(0.D0,0.D0)
       DO I=1,2*NLOC
-        U=(0.D0,0.D0)
         DO J=1,2*NLOC
           U(:,I,:,:)=U(:,I,:,:)+CONJG(PIPHI(J,I))*V(:,J,:,:)
         ENDDO
       ENDDO
+!
+      V=(0.D0,0.D0)
       DO I=1,2*NLOC
-        V=(0.D0,0.D0)
         DO J=1,2*NLOC
           V(:,:,I,:)=V(:,:,I,:)+U(:,:,J,:)*PIPHI(J,I)
         ENDDO
       ENDDO
+!
+      U=(0.D0,0.D0)
       DO I=1,2*NLOC
-        U=(0.D0,0.D0)
         DO J=1,2*NLOC
           U(:,:,:,I)=U(:,:,:,I)+V(:,:,:,J)*PIPHI(J,I)
         ENDDO
