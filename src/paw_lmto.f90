@@ -926,9 +926,9 @@ CALL SETUP$ISELECT(0)
       IMPLICIT NONE
       INTEGER(4) :: NAT,ISP
 !     **************************************************************************
-                          CALL TRACE$PUSH('LMTO_INITIALIZE')
       IF(TINI) RETURN
       TINI=.TRUE.
+                          CALL TRACE$PUSH('LMTO_INITIALIZE')
 !
 !     ==========================================================================
 !     == COLLECT NSP,LNX,LOX,ISPECIES                                         ==

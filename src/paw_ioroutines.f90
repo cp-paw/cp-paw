@@ -4980,7 +4980,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)            :: CH32SVAR1
       REAL(8)     ,ALLOCATABLE :: VEC1(:,:) !(3,NAT)
 !     ******************************************************************
-                           CALL TRACE$PASS('STRCIN_CONSTRAINTS_LINEAR')
+                           CALL TRACE$PUSH('STRCIN_CONSTRAINTS_LINEAR')
       LL_STRC=LL_STRC_
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(VEC1(3,NAT))

@@ -526,6 +526,7 @@ IF(VERSION.EQ.3) THEN
         CALL ERROR$MSG('VERSION 3 IS ONLY IMPLEMENTED NON-ITERATIVELY')
         CALL ERROR$STOP('LMTO$SCREEN')
       END IF
+                            CALL TRACE$POP()
       RETURN
 END IF
 !
@@ -684,7 +685,6 @@ END IF
                                CALL TRACE$POP()
       RETURN
       END
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$NEIGHBORLIST(RBAS,NAT,R,RAD,NNX,NNB,NNLIST)

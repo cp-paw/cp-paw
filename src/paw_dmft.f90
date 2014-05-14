@@ -1754,7 +1754,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       S=(0.D0,0.D0)
       SLAUR=(0.D0,0.D0)
       DEDU=(0.D0,0.D0)
-      RETURN
+CALL TRACE$POP()
+RETURN
 !
 !     ==========================================================================
 !     == WRITE DATA
