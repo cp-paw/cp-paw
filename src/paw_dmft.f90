@@ -1136,6 +1136,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       WRITE(*,FMT='(50("."),T1'&
      &        //',"LW FUNCTIONAL FOR DYNAMIC CORRELATION OF ATOM ",I3,T50,":"' &
      &        //',F20.10)')IAT,ETOT
+                                      CALL TRACE$POP()
       RETURN
       END
 !
@@ -1325,7 +1326,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,HALL,HTALL)
       CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
       EDC=-EX
-      HAM=-CMPLX(H+HALL)
+      HAM=-CMPLX(H+HALL,KIND=8)
       DEALLOCATE(D)
       DEALLOCATE(DT)
       DEALLOCATE(DTALL)
@@ -1626,14 +1627,14 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8)             :: SLAUR(2*NLOC,2*NLOC,3)
       INTEGER(4)             :: NU,I,J
 !     **************************************************************************
-                                     CALL TRACE$PUSH('DMFT$HFSOLVER')
+                                     CALL TRACE$PUSH('DMFT_DYNAMICSOLVER')
 !
 !     ==========================================================================
 !     == CONVERT U-TENSOR                                                     ==
 !     ==========================================================================
       U(  :NLOC,  :NLOC,  :NLOC,  :NLOC)=UCHI                              
       U(NLOC+1:,NLOC+1:,NLOC+1:,NLOC+1:)=UCHI                              
-      U(  :NLOC,nloc+1:,  :NLOC,nloc+1:)=UCHI                              
+      U(  :NLOC,NLOC+1:,  :NLOC,NLOC+1:)=UCHI                              
       U(NLOC+1:,  :NLOC,NLOC+1:,  :NLOC)=UCHI                              
       DO I=1,2*NLOC
         V=(0.D0,0.D0)
@@ -1747,6 +1748,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4)            :: NORB_,NOMEGA_
       INTEGER(4)            :: NFIL
 !     **************************************************************************
+                                     CALL TRACE$PUSH('DMFT_SOLVERIO')
 !CALL TESTG(NORB,NOMEGA,KBT,G,GLAUR)
       ETOT=0.D0
       S=(0.D0,0.D0)
@@ -1777,6 +1779,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       READ(NFIL,FMT='(2F20.10)')SLAUR
       READ(NFIL,FMT='(2F20.10)')DEDU
       CALL FILEHANDLER$CLOSE(NFIL)
+                                     CALL TRACE$POP()
       RETURN
       END
 !
@@ -2051,7 +2054,7 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)
       INTEGER(4)               :: I1,I2
       REAL(8)                  :: FN(2)
 !     **************************************************************************
-                              CALL TRACE$PUSH('DMFT_CONSTRAINTS')
+                              CALL TRACE$PUSH('DMFT_CONSTRAINTS_OLD')
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
 !       
 !     ========================================================================
@@ -2154,9 +2157,14 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)
       REAL(8)  ,PARAMETER :: MSMALLNU=1.D-2
       REAL(8)  ,PARAMETER :: MLARGENU=1.D+15
       REAL(8)             :: SVAR
-      INTEGER(4)          :: IAT,NU,I
+      INTEGER(4)          :: NLOC
+      INTEGER(4)          :: IAT,NU
 !     **************************************************************************
+                              CALL TRACE$PUSH('DMFT_MIX')
       DO IAT=1,NAT
+        NLOC=ATOMSET(IAT)%NLOC
+        IF(NLOC.LE.0) CYCLE
+!
 !       == DIFFERNCE OUT-IN, WHICH WILL BE SCALED AND ADDED TO CURRENT VALUES ==
         ATOMSET(IAT)%DPHIDG    =ATOMSET(IAT)%DPHIDG    -ATOMSET(IAT)%SLOC
         ATOMSET(IAT)%DPHIDGLAUR=ATOMSET(IAT)%DPHIDGLAUR-ATOMSET(IAT)%SLOCLAUR
@@ -2167,16 +2175,20 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)
           ATOMSET(IAT)%SLOC(:,:,:,NU)=ATOMSET(IAT)%SLOC(:,:,:,NU) &
      &                          +SVAR*ATOMSET(IAT)%DPHIDG(:,:,:,NU)
         ENDDO
+!
 !       == MIX IN WITH FREQUENCY INDEPENDENT MASS ==============================
         SVAR=1.D0/MSMALLNU
         ATOMSET(IAT)%SLOCLAUR=ATOMSET(IAT)%SLOCLAUR+SVAR*ATOMSET(IAT)%DPHIDGLAUR
+!
 !       == MIX WITH FREQUENCY DEPENDENT BUT AVOID TERMS INCREASING WITH OMEGA ==
         SVAR=1.D0/MLARGENU
         ATOMSET(IAT)%SLOCLAUR(:,:,:,1)=ATOMSET(IAT)%SLOCLAUR(:,:,:,1) &
      &                           +SVAR*ATOMSET(IAT)%DPHIDGLAUR(:,:,:,3)
+!
+        ATOMSET(IAT)%DPHIDG=(0.D0,0.D0)
+        ATOMSET(IAT)%DPHIDGLAUR=(0.D0,0.D0)
       ENDDO
-      ATOMSET(IAT)%DPHIDG=(0.D0,0.D0)
-      ATOMSET(IAT)%DPHIDGLAUR=(0.D0,0.D0)
+                               CALL TRACE$POP()
       RETURN
       END
 !
