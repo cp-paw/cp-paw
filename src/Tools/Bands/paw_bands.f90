@@ -1873,7 +1873,6 @@ END MODULE
           ENDDO
         ENDIF
                             CALL TRACE$PASS('AFTER READ BNCTL')
-        
 
         ALLOCATE(EIGVAL(NB,NKDIAG))
         ALLOCATE(KVECVAL(3,NKDIAG))
@@ -1942,9 +1941,9 @@ END MODULE
         CALL MPE$COMBINE('~','+',FATBANDVAL)
                             CALL TRACE$POP()
 !
-!       =========================================================================
-!       ==  WRITE BANDS                                                        ==
-!       =========================================================================
+!       ========================================================================
+!       ==  WRITE BANDS                                                       ==
+!       ========================================================================
         IF(THISTASK.eq.1)THEN
                               CALL TRACE$PUSH('WRITE_BANDS')
           CALL FILEHANDLER$UNIT('BANDS',NFILBAND)
