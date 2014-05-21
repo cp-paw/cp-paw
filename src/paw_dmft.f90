@@ -65,7 +65,7 @@ END MODULE DMFT_MODULE
       SUBROUTINE DMFT_INI()
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TINI,NDIM,NDIMD,NSPIN,NKPTL,NB,NAT,NCHI &
-     &                       ,NOMEGA,nlau,KBT,MU,OMEGA &
+     &                       ,NOMEGA,NLAU,KBT,MU,OMEGA &
      &                       ,KSET,ATOMSET
       USE WAVES_MODULE, ONLY : KMAP,NDIM_W=>NDIM,NKPTL_W=>NKPTL,NSPIN_W=>NSPIN
       USE LMTO_MODULE, ONLY: HYBRIDSETTING,HFWEIGHT,POTPAR1
@@ -1101,7 +1101,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     **  CALCULATES A STATIC HAMILTONIAN HRHO SUCH THAT THE RESULTING        **
 !     **  DENSITY MATRIX IS RHO=[1+EXP(BETA*HRHO)]^(-1)                       **
 !     **************************************************************************
-      USE DMFT_MODULE ,ONLY: NKPTL,NCHI,NDIMD,NOMEGA,nlau,OMEGA,KBT,MU,KSET
+      USE DMFT_MODULE ,ONLY: NKPTL,NCHI,NDIMD,NOMEGA,NLAU,OMEGA,KBT,MU,KSET
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       REAL(8)   ,PARAMETER   :: TOL=1.D-5  ! TOLERANCE FOR THE DENSITY MATRIX
@@ -1189,7 +1189,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         IF(.NOT.ALLOCATED(MAT))ALLOCATE(MAT(NCHI,NCHI,NDIMD))
         DO IKPT=1,NKPTL
 !         == CALCULATE THE DENSITY MATRIX FROM THE GREENS FUNCTION WITH HRHO ===
-          CALL DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,nlau,OMEGA,KBT &
+          CALL DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,NLAU,OMEGA,KBT &
      &                       ,KSET(IKPT)%SMAT,KSET(IKPT)%HRHO,MAT) !MAT=RHO
 !         == CALCULATE DEVIATION FROM TARGET DENSITY MATRIX ====================
           MAT=MAT-KSET(IKPT)%RHO
@@ -1236,7 +1236,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,nlau,OMEGA,KBT,S,H,RHO)
+      SUBROUTINE DMFT_HRHO_TEST(NCHI,NDIMD,NOMEGA,NLAU,OMEGA,KBT,S,H,RHO)
 !     **************************************************************************
 !     ** CALCULATES THE DENSITY MATRIX FROM THE GREENS FUNCTION FOR           **
 !     ** A SPECIFIED HAMILTONIAN H AND OVERLAP MATRIX S                       **
@@ -1248,7 +1248,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4),INTENT(IN)    :: NCHI
       INTEGER(4),INTENT(IN)    :: NDIMD
       INTEGER(4),INTENT(IN)    :: NOMEGA
-      INTEGER(4),INTENT(IN)    :: Nlau
+      INTEGER(4),INTENT(IN)    :: NLAU
       REAL(8)   ,INTENT(IN)    :: KBT
       REAL(8)   ,INTENT(IN)    :: OMEGA(NOMEGA)        ! MATSUBARA FREQUENCIES
       COMPLEX(8),INTENT(IN)    :: S(NCHI,NCHI,NDIMD)   ! OVERLAP MATRIX
@@ -1317,7 +1317,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8)               :: SLAUR(NCHI,NCHI,NDIMD,NLAU)
       COMPLEX(8)               :: G(NCHI,NCHI,NDIMD)
       REAL(8)                  :: WKPTL
-      INTEGER(4)               :: IKPT,NU,IAT,I1,I2,IDIMD,ilau
+      INTEGER(4)               :: IKPT,NU,IAT,I1,I2,IDIMD,ILAU
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_GLOC')
       IF(NLAU.GT.1) THEN
@@ -1338,7 +1338,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       DO IAT=1,NAT
         I1=ATOMSET(IAT)%ICHI1
         I2=ATOMSET(IAT)%ICHI2
-        DO Ilau=1,NLAU
+        DO ILAU=1,NLAU
           SLAUR(I1:I2,I1:I2,:,ILAU)=ATOMSET(IAT)%SLOCLAUR(:,:,:,ILAU)
         ENDDO
       ENDDO
@@ -1624,6 +1624,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       COMPLEX(8),INTENT(OUT):: DEDU(NORB,NORB,NORB,NORB) 
       INTEGER(4)            :: NORB_,NOMEGA_
       INTEGER(4)            :: NFIL
+      CHARACTER(32),PARAMETER :: TYPE='LINEAR' ! 'NONE','LINEAR'
 !     **************************************************************************
                                      CALL TRACE$PUSH('DMFT_SOLVERIO')
 !CALL TESTG(NORB,NOMEGA,NLAU,KBT,G,GLAUR)
@@ -1631,8 +1632,18 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       S=(0.D0,0.D0)
       SLAUR=(0.D0,0.D0)
       DEDU=(0.D0,0.D0)
-CALL TRACE$POP()
-RETURN
+      IF(TYPE.EQ.'NONE') THEN
+        PRINT*,'USING STATIC LUTTINGER WARD FUNCTIONAL'
+        PRINT*,'(NO DYNAMIC CORRECTION. FOR TESTING PURPOSES ONLY)'
+        CALL TRACE$POP()
+        RETURN
+      ELSE IF(TYPE.EQ.'LINEAR') THEN
+        PRINT*,'USING LINEAR LUTTINGER-WARD FUNCTIONAL'
+        PRINT*,'(USE FOR TESTING PURPOSES ONLY)'
+        CALL DMFT_SOLVER_LINEAR(NORB,NOMEGA,KBT,G,ETOT,S)  
+        CALL TRACE$POP()
+        RETURN
+      END IF
 !
 !     ==========================================================================
 !     == WRITE DATA
@@ -1658,6 +1669,41 @@ RETURN
       READ(NFIL,FMT='(2F20.10)')DEDU
       CALL FILEHANDLER$CLOSE(NFIL)
                                      CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_SOLVER_LINEAR(NORB,NOMEGA,KBT,G,ETOT,S)  
+!     **************************************************************************
+!     ** MIMICKS A SOLVER FOR THE LUTTINGER WARD FUNCTIONAL AND SELF ENERGY   **
+!     ** ON THE BASIS OF A LINEAR LUTTINGER WARD FUNCTIONAL, WHICH IS         **
+!     ** DEFINED BY A FROZEN SELF ENERGY.                                     **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NORB     !#(SPIN ORBITALS)
+      INTEGER(4),INTENT(IN) :: NOMEGA   !#(POSITIVE MATSUBARA FREQUENCIES
+      REAL(8)   ,INTENT(IN) :: KBT      
+      COMPLEX(8),INTENT(IN) :: G(NORB,NORB,NOMEGA)    !GREENS FUNCTION
+      REAL(8)   ,INTENT(OUT):: ETOT                   !LUTTINGER WARD FUNCTIONAL
+      COMPLEX(8),INTENT(OUT):: S(NORB,NORB,NOMEGA)    !SELF ENERGY
+      REAL(8)               :: PI
+      REAL(8)               :: OMEGA
+      INTEGER(4)            :: NU,I
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      S=(0.D0,0.D0)
+      ETOT=0.D0
+      DO NU=1,NOMEGA
+        OMEGA=REAL(2*NU-1,KIND=8)*PI*KBT
+        SVAR=0.D0
+        DO I=1,NORB
+          S(I,I,NU)=1.D-4*CI*OMEGA/(1.D0-OMEGA**2)
+          SVAR=SVAR+REAL(S(I,I,NU)*G(I,I,NU),KIND=8)
+        ENDDO
+        ETOT=ETOT+KBT*SVAR
+      ENDDO      
       RETURN
       END
 !
@@ -1693,7 +1739,7 @@ RETURN
       LOGICAL(4)               :: CONVG
       REAL(8)                  :: MAXDEV
       INTEGER(4)               :: IKPT,ITER,IDIMD,NU,IAT
-      INTEGER(4)               :: I1,I2,ilau
+      INTEGER(4)               :: I1,I2,ILAU
       REAL(8)                  :: FN(2)
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
@@ -1746,15 +1792,14 @@ RETURN
           RHO=(0.D0,0.D0)
           DO NU=1,NOMEGA
 !           == CONSTRUCT LATTICE GREENS FUNCTION =============================
-            MAT=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT-KSET(IKPT)%HRHO &
-     &                  +KSET(IKPT)%GAMMA
+            MAT=(CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT-KSET(IKPT)%HRHO 
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
             RHO=RHO-KBT*G  ! SUBTRACT NONINTERACTING G
+            MAT=MAT+KSET(IKPT)%GAMMA
             DO IAT=1,NAT
               I1=ATOMSET(IAT)%ICHI1
               I2=ATOMSET(IAT)%ICHI2
-              MAT(I1:I2,I1:I2,:)=MAT(I1:I2,I1:I2,:) &
-     &                          -ATOMSET(IAT)%SLOC(:,:,:,NU)
+              MAT(I1:I2,I1:I2,:)=MAT(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
             ENDDO
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
             RHO=RHO+KBT*G
