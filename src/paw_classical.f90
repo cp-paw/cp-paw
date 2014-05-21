@@ -3712,6 +3712,93 @@ integer(4) :: nfilinfo
 !      D3FDX=D3FDX/POT%DX**3
       RETURN
       END 
+! 
+!     .................................................................
+      SUBROUTINE VALUE3(POT,X,F,DFDX,D2FDX2,D3FDX3)
+!     ******************************************************************
+!     **                                                             **
+!     **  OBTAIN VALUE F AND first 3 DERIVATIVEs OF A FUNCTION       **
+!     **  WHOSE VALUE ARRAY(1,I) AND DERIVATIVE ARRAY(2,I)           **
+!     **  ARE GIVEN ON A LINEAR GRID  X(I)=X1+DX*(I-1)               **
+!     **                                                             **
+!     ******************************************************************
+      USE CLASSICAL_MODULE, ONLY: POT_TYPE
+      IMPLICIT NONE
+      TYPE(POT_TYPE),INTENT(IN) :: POT
+      REAL(8)       ,INTENT(IN) :: X
+      REAL(8)       ,INTENT(OUT):: F
+      REAL(8)       ,INTENT(OUT):: DFDX
+      REAL(8)       ,INTENT(OUT):: DFDX
+      REAL(8)       ,INTENT(OUT):: D2fdX2
+      REAL(8)       ,INTENT(OUT):: D3fDX3
+      REAL(8)                   :: XI
+      INTEGER(4)                :: IX
+      REAL(8)                   :: F1V,F1D,F2V,F2D,DY,SVAR1
+      INTEGER(4)                :: NX
+      REAL(8)                   :: X1 ! FIRST GRID POINT
+      REAL(8)                   :: XN ! LAST GRID POINT
+!     ******************************************************************
+call error$msg('routine needs to be checked')
+call error$stop('value3')
+!
+!     ===================================================================
+!     == LINEARLY EXTRAPOLATE IF POINT FALLS OUT OF THE GRID RANGE     ==
+!     ===================================================================
+      NX=POT%NX
+      X1=POT%X1
+      XN=POT%X1+REAL(NX-1,KIND=8)*POT%DX
+!     == LINEAR EXTRAPOLATION ON THE LEFT SIDE
+      IF(X.LT.X1) THEN
+        F=POT%VAL(1)+(X-X1)*POT%DER(1)        
+        DFDX=POT%DER(1)
+        RETURN
+!     == LINEAR EXTRAPOLATION ON THE RIGHT SIDE
+      ELSE IF(X.GT.XN) THEN
+        F=POT%VAL(NX)+(X-XN)*POT%DER(NX)        
+        DFDX=POT%DER(NX)
+        RETURN
+      END IF
+!
+!     ===================================================================
+!     == POINT IS WITHIN RANGE:  SPLINE INTERPOLATION                  ==
+!     ===================================================================
+      XI=(X-POT%X1)/POT%DX+1.D0
+      IX=INT(XI)
+      IX=MAX(1,IX)
+      IX=MIN(IX,POT%NX-1)
+      F1V=POT%VAL(IX)
+      F2V=POT%VAL(IX+1)
+      F1D=POT%DER(IX)*POT%DX
+      F2D=POT%DER(IX+1)*POT%DX
+      XI=XI-REAL(IX,KIND=8)
+      DY=1.D0-XI
+!
+!     == STRAIGHT LINE THROUGH END POINTS =============================
+      F=DY*F1V+XI*F2V
+      DFDX=F2V-F1V
+      F1D=F1D-DFDX
+      F2D=F2D-DFDX
+! 
+!     == SECOND ORDER =================================================
+      D2FDX2=F2D-F1D
+      F=F-0.5D0*XI*DY*D2FDX2
+      DFDX=DFDX-0.5D0*(DY-XI)*D2FDX2
+      F1D=F1D+0.5D0*D2FDX2
+      F2D=F2D-0.5D0*D2FDX2
+!
+!     == THIRD ORDER ===================================================
+      SVAR1=-2.D0*F1D
+      F=F+XI*DY*(XI-0.5D0)*SVAR1
+      DFDX=DFDX+(-3.D0*XI*(XI-1)-0.5D0)*SVAR1
+      D2FDX2=D2FDX2+(-6.D0*XI+3.D0)*SVAR1
+      D3FDX3=-6.D0*SVAR1
+!
+!     ==   DF/DX=DF/DI / DX/DI ========================================
+      DFDX=DFDX/POT%DX
+      D2FDX2=D2FDX2/POT%DX**2
+      D3FDX3=D3FDX3/POT%DX**3
+      RETURN
+      END 
 !
 !.......................................................................
 MODULE UFFTABLE_MODULE
