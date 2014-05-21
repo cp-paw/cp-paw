@@ -1373,7 +1373,6 @@ call error$stop('CLASSICAL$GETI4A')
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: EPOT
       INTEGER(4)             :: IAT,I
-      REAL(8)                :: SIGMA
 !     *****************************************************************      
                                CALL TRACE$PUSH('CLASSICAL$ETOT')
       IF(.NOT.SELECTED) THEN
@@ -1490,7 +1489,7 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
       DO IAT=1,NAT
         IF(TYPE(IAT).NE.'CPR'.AND.TYPE(IAT).NE.'CPR_B'.AND. &
      &     TYPE(IAT).NE.'PIR'.AND.TYPE(IAT).NE.'CIR') CYCLE
-        NN=0.D0
+        NN=0
         DO IBOND=1,NBOND
           IAT1=BOND(IBOND)%IAT1
           IAT2=BOND(IBOND)%IAT2
@@ -1828,12 +1827,11 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
       REAL(8)                :: ANGSTROM
       REAL(8)                :: PI
       INTEGER(4)             :: IAT,I,IB,IA,IPOT
-      INTEGER(4)             :: IAT1,IAT2,IAT3,IAT4
+      INTEGER(4)             :: IAT1,IAT2,IAT3
       REAL(8)                :: D,A
       REAL(8)                :: DX1,DY1,DZ1
       REAL(8)                :: DX2,DY2,DZ2
       REAL(8)                :: D11,D22,D12
-      REAL(8)                :: X
       REAL(8)                :: dr(3),dr1(3),dr2(3)
       INTEGER(4)             :: NTASKS,THISTASK
 !     *****************************************************************      
@@ -1968,7 +1966,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
      &               ,NNB,NBLIST,NPOT,POT)
 !     *****************************************************************
 !     *****************************************************************
-      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE, MD &
+      USE CLASSICAL_MODULE, ONLY : POT_TYPE,NONBOND_TYPE &
      &                ,BOND_TYPE,ANGLE_TYPE,TORSION_TYPE,INVERSION_TYPE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -2196,7 +2194,6 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
 !     ==================================================================
 !     ==  ADD RESULTS FROM ALL TASKS                                  ==
 !     ==================================================================
- 9999 CONTINUE
       CALL MPE$COMBINE('MONOMER','+',ETOT)
       CALL MPE$COMBINE('MONOMER','+',F)
       CALL MPE$COMBINE('MONOMER','+',V)
@@ -2591,7 +2588,6 @@ LOGICAL(4) :: TONEFOUR
       TYPE(POT_TYPE),INTENT(IN)    :: POT
       REAL(8)       ,INTENT(OUT)   :: E
       REAL(8)       ,INTENT(OUT)   :: F1(3),F2(3),F3(3),F4(3)
-      REAL(8)                      :: D1(3),D2(3),V(3),U(3)
       REAL(8)                      :: R21X,R21Y,R21Z
       REAL(8)                      :: R31X,R31Y,R31Z
       REAL(8)                      :: R41X,R41Y,R41Z,R41L
@@ -2710,7 +2706,6 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)   ,INTENT(OUT)  :: NPOT
       TYPE(POT_TYPE),INTENT(INOUT) :: POT(NPOTX)
       LOGICAL(4)                 :: TCHK
-      CHARACTER(64)              :: STRING
       CHARACTER(64)              :: ID
       CHARACTER(5)               :: TYPE1,TYPE2,TYPE3,TYPE4
 !     INTEGER(4)   ,ALLOCATABLE  :: IWORK(:)
@@ -2722,10 +2717,8 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)                 :: IAT1,IAT2,IAT3,IAT4,NN1,NN2,NN3
       INTEGER(4)                 :: IN2,IN3
       INTEGER(4)                 :: IT1(3),IT2(3),IT3(3),IT4(3)
-      INTEGER(4)                 :: NTORS
       REAL(8)                    :: BO1,BO2,BO3,BO12,BO23,BO34,BO13,BO14
-      REAL(8)                    :: SVAR
-      INTEGER(4)                 :: NN,II,ISVAR,II1,II3,I1,I2,NIJ
+      INTEGER(4)                 :: NN,II,II1,II3,I1,I2,NIJ
       REAL(8)                    :: X,K,D
       logical(4),parameter       :: tfourier=.false.
 !     ******************************************************************
@@ -2751,7 +2744,7 @@ LOGICAL(4) :: TONEFOUR
         CALL CLASSICAL_COULOMBPOTA(POT(NPOT))   ! PURE COULOMB
         POT(NPOT)%VAL(:)=POT(NPOT)%VAL(:)/1.2D0
         POT(NPOT)%DER(:)=POT(NPOT)%DER(:)/1.2D0
-        POT(NPOT)%ID=POT(NPOT)%ID//'(SCALED BY 5/6)'
+        POT(NPOT)%ID=TRIM(POT(NPOT)%ID)//'(SCALED BY 5/6)'
       END IF
 !
 !     ================================================================== 
@@ -2953,7 +2946,6 @@ LOGICAL(4) :: TONEFOUR
 !
 !     == TORSIONS ====================================================
 !     PRINT*,'BEFORE TORSION-LOOP: NANGLE=',NANGLE
-!GOTO 1235
       NTORSION=0
       DO IB=1,NBOND
         IAT2=BOND(IB)%IAT1
@@ -3066,13 +3058,11 @@ LOGICAL(4) :: TONEFOUR
           ENDDO
         ENDDO
       ENDDO
-1235  CONTINUE
 !
 !     == INVERSION =================================================
 !     == AMBER APPARENTLY DOES NOT USE INVERSIONS....
       IF(TRIM(ADJUSTL(MD%FF)).NE.'AMBER') THEN
         NINVERSION=0
-!       GOTO 1234  
         DO IAT=1,NAT
           NN=NNEIGH(IAT)
           IT1(:)=0
@@ -3139,7 +3129,6 @@ LOGICAL(4) :: TONEFOUR
           END IF
         ENDDO
       END IF
- 1234 CONTINUE
 !
 !     ================================================================== 
 !     ==   DEFINE POINTER TO ATOM TYPES USED                          ==
@@ -3217,7 +3206,7 @@ LOGICAL(4) :: TONEFOUR
       REAL(8)       ,PARAMETER   :: X1=0.D0
       REAL(8)       ,PARAMETER   :: X2=5.D0
       INTEGER(4)                 :: I
-      REAL(8)                    :: X,R,DRDX,SVAR,ALPHA
+      REAL(8)                    :: X
       REAL(8)                    :: PI
       REAL(8)                    :: ERFX
 !     ******************************************************************
@@ -3269,10 +3258,9 @@ LOGICAL(4) :: TONEFOUR
       REAL(8)       ,PARAMETER   :: X1=0.D0
       REAL(8)       ,PARAMETER   :: X2=5.D0
       INTEGER(4)                 :: I
-      REAL(8)                    :: X,R,DRDX,SVAR,ALPHA
+      REAL(8)                    :: X
       REAL(8)                    :: PI
       REAL(8)                    :: ERFX
-integer(4) :: nfilinfo
 !     ******************************************************************
       PI=4.D0*DATAN(1.D0)
       POT%ID='COULOMB WITH GAUSS CUTOFF'
@@ -3519,7 +3507,7 @@ integer(4) :: nfilinfo
       REAL(8)       ,PARAMETER   :: X1=-1.D0
       REAL(8)       ,PARAMETER   :: X2=1.D0
       INTEGER(4)                 :: I
-      REAL(8)                    :: X0,GAMMA,X,FAC
+      REAL(8)                    :: X0,X,FAC
       REAL(8)                    :: C0,C1,C2,PI
 !     ******************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -3572,7 +3560,6 @@ integer(4) :: nfilinfo
       REAL(8)      ,PARAMETER   :: X2=1.D0
       INTEGER(4)   ,PARAMETER   :: NX=100
       LOGICAL(4)   ,PARAMETER   :: TLENNARDJONES=.TRUE.
-      REAL(8)                   :: A,B,ALPHA
       INTEGER(4)                :: I
       REAL(8)                   :: SVAR,SVAR6,SVAR1,SVAR2
       REAL(8)                   :: R,X,DRDX
@@ -3644,8 +3631,7 @@ integer(4) :: nfilinfo
       REAL(8)       ,INTENT(IN) :: X
       REAL(8)       ,INTENT(OUT):: F
       REAL(8)       ,INTENT(OUT):: DFDX
-      REAL(8)                   :: D2FDX  ,D3FDX
-!      REAL(8)                   :: D3FDX 
+      REAL(8)                   :: D2FDX
       REAL(8)                   :: XI
       INTEGER(4)                :: IX
       REAL(8)                   :: F1V,F1D,F2V,F2D,DY,SVAR1
@@ -3703,13 +3689,9 @@ integer(4) :: nfilinfo
       SVAR1=-2.D0*F1D
       F=F+XI*DY*(XI-0.5D0)*SVAR1
       DFDX=DFDX+(-3.D0*XI*(XI-1)-0.5D0)*SVAR1
-!      D2FDX=D2FDX+(-6.D0*XI+3.D0)*SVAR1
-!      D3FDX=-6.D0*SVAR1
 !
 !     ==   DF/DX=DF/DI / DX/DI ========================================
       DFDX=DFDX/POT%DX
-!      D2FDX=D2FDX/POT%DX**2
-!      D3FDX=D3FDX/POT%DX**3
       RETURN
       END 
 ! 
@@ -3727,7 +3709,6 @@ integer(4) :: nfilinfo
       TYPE(POT_TYPE),INTENT(IN) :: POT
       REAL(8)       ,INTENT(IN) :: X
       REAL(8)       ,INTENT(OUT):: F
-      REAL(8)       ,INTENT(OUT):: DFDX
       REAL(8)       ,INTENT(OUT):: DFDX
       REAL(8)       ,INTENT(OUT):: D2fdX2
       REAL(8)       ,INTENT(OUT):: D3fDX3
@@ -3983,7 +3964,7 @@ END MODULE UFFTABLE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: TYPE_
       LOGICAL(4)  ,INTENT(OUT):: EXIST
-      CHARACTER(5),INTENT(OUT):: SUGGESTION
+      CHARACTER(*),INTENT(OUT):: SUGGESTION
       INTEGER(4)              :: ITYPE
 !     ******************************************************************
       CALL UFFTABLE_INI
@@ -3992,7 +3973,7 @@ END MODULE UFFTABLE_MODULE
 !     ==  FIND ATOM TYPE                                              ==
 !     ==================================================================
       ITYPE=1
-      SUGGESTION=''
+      SUGGESTION=' '
       EXIST=.FALSE.
       DO ITYPE=1,NTYPE
          IF(TYPE_.EQ.PAR(ITYPE)%NAME) THEN
@@ -4125,7 +4106,6 @@ END MODULE UFFTABLE_MODULE
       REAL(8)                    :: ZI,ZJ
       REAL(8)                    :: ANGSTROM
       REAL(8)                    :: KCALBYMOL
-      INTEGER(4)                 :: I
       LOGICAL(4)                 :: TCHK1
 !     ******************************************************************
 !
@@ -4418,7 +4398,8 @@ END MODULE UFFTABLE_MODULE
       LOGICAL(4)                :: TPR
       INTEGER(4)    ,PARAMETER  :: NDATA=20 ! # OF DATA ENTRIES
       CHARACTER(3)              :: CHEL(NDATA)
-      REAL(8)                   :: USP3(NDATA),IGRP(NDATA),IPER(NDATA),USP2(5)
+      REAL(8)                   :: USP3(NDATA),USP2(5)
+      integer(4)                :: IPER(NDATA),IGRP(NDATA)
       INTEGER(4)                :: NTORSION
       REAL(8)                   :: PI
       REAL(8)                   :: SVAR1,SVAR2
@@ -4426,7 +4407,7 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)                :: I
       REAL(8)                   :: VSP3,VSP2
       INTEGER(4)                :: IHYB2,IHYB3
-      REAL(8)                   :: PHI,X,KCALBYMOL,DPHIDX,VJK,SVAR11,FAC,PHIJK,SVAR12
+      REAL(8)                   :: KCALBYMOL,SVAR11,SVAR12
 !     ******************************************************************
       PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
@@ -4676,10 +4657,8 @@ END MODULE UFFTABLE_MODULE
       REAL(8)       ,INTENT(OUT) :: GAMMA0
       REAL(8)       ,INTENT(OUT) :: K
       LOGICAL(4)    ,INTENT(OUT) :: TCHK
-      REAL(8)                    :: X,KCALBYMOL
-      REAL(8)                    :: BARRIER
+      REAL(8)                    :: KCALBYMOL
       REAL(8)                    :: PI
-      INTEGER(4)                 :: I
 !     ******************************************************************
       PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
@@ -4822,19 +4801,15 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)                    :: EXCLUSION
       REAL(8)                       :: RMAX2
       INTEGER(4)                    :: iat,IAT1,IAT2,iat2a,iat2b,NN,i
-      INTEGER(4)                    :: THISTASK,NTASKS,ICOUNT
+      INTEGER(4)                    :: THISTASK,NTASKS
       INTEGER(4)                    :: IEX
-      LOGICAL(4)                    :: TEXCLUSION
       LOGICAL(4)                    :: Tchk
       REAL(8)                       :: D(3),D2
-      INTEGER(4)                    :: IT,IT0,IT1,IT2,IT3
+      INTEGER(4)                    :: IT1,IT2,IT3
       INTEGER(4)                    :: I1,i2,i3
       INTEGER(4)                    :: j1,j2,j3
       integer(4)                    :: itvec(3)
-      INTEGER(4)                    :: ITI(3,(1+2*MAXDIV)**3)
-      REAL(8)                       :: TI(3,(1+2*MAXDIV)**3)
-      LOGICAL(4)                    :: TT((1+2*MAXDIV)**3)
-      INTEGER(4)        ,PARAMETER  :: NDIV(3)=(/3,3,3/) ! SHALL BE CALCULATED LATER
+      INTEGER(4)        ,PARAMETER  :: NDIV(3)=(/3,3,3/) !SHALL BE CALCULATED LATER
       REAL(8)                       :: X(3)
       INTEGER(4)                    :: IDIV(3,NAT),ITr(3,NAT)
       INTEGER(4)                    :: IATPNT(NAT)
@@ -5062,10 +5037,9 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)       ,INTENT(OUT):: NEXCLUSION
       INTEGER(4)       ,INTENT(OUT):: IEXCLUSION(2,NEXCLUSIONX)
       INTEGER(4)       ,INTENT(OUT):: I2first(nat)
-      LOGICAL(4)            :: TCHK
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LARGEST    ! LARGEST NUMBER ON EXLCUSION FILE
-      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,I2,IMAX,ISVAR,ITORSION
+      INTEGER(4)            :: IB,IANGLE,IAT1,IAT2,I,I1,IMAX,ISVAR,ITORSION
       integer(4)            :: it(3),it1(3),it3(3),IT4(3)
       REAL(8)               :: WORK(NEXCLUSIONX)
       INTEGER(4)            :: FROM, TO, ISVAR1, ISVAR2
