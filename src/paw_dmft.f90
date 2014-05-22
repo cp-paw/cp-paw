@@ -1825,7 +1825,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
 IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)),MAXVAL(ABS(DEVRHO))
-          MAXDEV=MAXVAL(ABS(DEVRHO))
+          MAXDEV=MAXVAL(ABS(DEVRHO))*REAL(NKPTL,KIND=8)
           CONVG=MAXDEV.LT.TOL
           IF(CONVG) EXIT
         ENDDO ! END OF LOOP OVER ITERATIONS
@@ -1854,11 +1854,16 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)
       IMPLICIT NONE
       REAL(8)  ,PARAMETER :: MIX1=1.D-2
       REAL(8)  ,PARAMETER :: MIX2=1.D0
+      INTEGER  ,PARAMETER :: NUH=50
       REAL(8)             :: SVAR
       INTEGER(4)          :: NLOC
       INTEGER(4)          :: IAT,NU
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_MIX')
+      IF(NUH.GT.NOMEGA) THEN
+        CALL ERROR$MSG('NUH MUST NOT BE LARGER THAN NOMEGA')
+        CALL ERROR$STOP('DMFT_MIX')
+      END IF
       DO IAT=1,NAT
         NLOC=ATOMSET(IAT)%NLOC
         IF(NLOC.LE.0) CYCLE
@@ -1869,7 +1874,8 @@ IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER,4.D0*KBT*MAXVAL(ABS(DH0)
 !
 !       == MIX FREQUENCY DEPENDENT SELF ENERGY =================================
         DO NU=1,NOMEGA
-          SVAR=1.D0/(1.D0-MIX1/(MIX1-1.D0)+MIX2*OMEGA(NU)**2)
+!          SVAR=1.D0/(1.D0-MIX1/(MIX1-1.D0)+MIX2*OMEGA(NU)**2)
+          SVAR=1.D0/(1.D0+(1.D0-MIX1)/(MIX1+(OMEGA(NU)/OMEGA(NUH))**2))
           ATOMSET(IAT)%SLOC(:,:,:,NU)=ATOMSET(IAT)%SLOC(:,:,:,NU) &
      &                          +SVAR*ATOMSET(IAT)%DPHIDG(:,:,:,NU)
         ENDDO
