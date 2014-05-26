@@ -1388,7 +1388,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
             DO IDIMD=1,NDIMD
               MAT(:,:,IDIMD)=2.D0*CI*OMEGA(NU) &
       &                          *TRANSPOSE(CONJG(KSET(IKPT)%SMAT(:,:,IDIMD))) &
-      &                          -TRANSPOSE(CONJG(MAT(:,:,IDIMD)))
+      &                          +TRANSPOSE(CONJG(MAT(:,:,IDIMD)))
             ENDDO
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,MAT2)
             G=0.5D0*(G+MAT2)
