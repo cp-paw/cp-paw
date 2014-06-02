@@ -3447,6 +3447,7 @@ COMPLEX(8)  :: PHASE
       COMPLEX(8),INTENT(IN) :: DENMAT_(LMNXX_,LMNXX_,NDIMD_,NAT_)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
+                                    CALL TRACE$PUSH('LMTO$ETOT')
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY START. MODUS=",A," ")')TRIM(MODUS)
 !
 !     ==========================================================================
@@ -3466,6 +3467,7 @@ COMPLEX(8)  :: PHASE
         CALL ERROR$STOP('LMTO$ETOT')
       END IF
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY DONE ")')
+                                    CALL TRACE$POP()
       RETURN
       END
 !
@@ -3851,7 +3853,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,oinv,E,H,DEDU)
+      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,OINV,E,H,DEDU)
 !     **************************************************************************
 !     **  PROVIDES THE NON-HARTREE FOCK CONTRIBUTION OF THE 1-PARTICLE REDUCED**
 !     **  DENSITY MATRIX FUNCTIONAL FOR AN IMPURITY IN A CLUSTER              **

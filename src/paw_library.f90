@@ -18,7 +18,7 @@
 !*******************************************************************************
 !*******************************************************************************
 !****         
-!****  select one compiler flag       
+!****  SELECT ONE COMPILER FLAG       
 !****     CPPVAR_COMPILER_G95            
 !****     CPPVAR_COMPILER_IFC            
 !****     CPPVAR_COMPILER_IFC7           
@@ -74,8 +74,8 @@
       INTEGER(4)  ,INTENT(IN)  :: IPOS
       CHARACTER(*),INTENT(OUT) :: ARG
       INTEGER                  :: IPOSSTD
-      integer                  :: leng
-      integer                  :: st
+      INTEGER                  :: LENG
+      INTEGER                  :: ST
 !     **************************************************************************
 !     == USE FORTRAN 2003 INTRINSIC SUBROUTINE
       CALL GET_COMMAND_ARGUMENT(IPOS,ARG,LENG,ST)
@@ -87,7 +87,7 @@
         CALL ERROR$STOP('LIB$GETARG')
       END IF
 !
-!     == use the commented lines below if fortran 2003 is not implemented
+!     == USE THE COMMENTED LINES BELOW IF FORTRAN 2003 IS NOT IMPLEMENTED
 !!$#IF DEFINED(CPPVAR_COMPILER_G95)
 !!$      CALL LIB_G95_GETARG(IPOS,ARG)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -120,10 +120,10 @@
       INTEGER(4),INTENT(OUT) :: NARGS
 !     **************************************************************************
 !
-!     == use fortran 2003 intrinsic function ===================================
+!     == USE FORTRAN 2003 INTRINSIC FUNCTION ===================================
       NARGS=COMMAND_ARGUMENT_COUNT()
 !
-!     == use commented lines if Fortran 2003 is not available
+!     == USE COMMENTED LINES IF FORTRAN 2003 IS NOT AVAILABLE
 !!$#IF DEFINED(CPPVAR_COMPILER_G95)
 !!$      CALL LIB_G95_NARGS(NARGS)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -163,16 +163,16 @@
         CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE')
         CALL ERROR$CHVAL('NAME',NAME)
         IF(ST.EQ.1) THEN
-          val=''
+          VAL=''
 !         CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-          return
+          RETURN
         ELSE IF(ST.EQ.-1) THEN
           CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
         END IF
         CALL ERROR$STOP('LIB$GETENV')
-      end if
+      END IF
 !
-!     == use commented lines if Fortran 2003 is not available
+!     == USE COMMENTED LINES IF FORTRAN 2003 IS NOT AVAILABLE
 ! #IF DEFINED(CPPVAR_COMPILER_G95)
 !       CALL LIB_G95_GETENV(NAME,VAL)
 ! #ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -222,13 +222,13 @@
 !!$      REAL                   :: TARRAY(2),RESULT
 !!$!     **************************************************************************
 !!$#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
-!!$      call cpu_time(cputime)  !cpu time in seconds
-!!$      call system_clock(count,count_rate,count_max)
-!!$      systime=count/countrate
+!!$      CALL CPU_TIME(CPUTIME)  !CPU TIME IN SECONDS
+!!$      CALL SYSTEM_CLOCK(COUNT,COUNT_RATE,COUNT_MAX)
+!!$      SYSTIME=COUNT/COUNTRATE
 !!$!
-!!$      call etime(tarray,result)
-!!$      usrtime=tarray(1)
-!!$      systime=tarray(2)
+!!$      CALL ETIME(TARRAY,RESULT)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_G95)
 !!$      CALL LIB_G95_ETIME(USRTIME,SYSTIME)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
@@ -258,7 +258,7 @@
       SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!     **  if hostname not available, return 'unknown hostname'                **
+!     **  IF HOSTNAME NOT AVAILABLE, RETURN 'UNKNOWN HOSTNAME'                **
 !     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(OUT)  :: HOSTNAME
@@ -276,7 +276,7 @@
 !!$          CALL ERROR$MSG('PROCESSOR DOES NOT SUPPORT ENVIRONMENT VARIABLES')
 !!$        END IF
 !!$        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
-!!$        CALL ERROR$I4VAL('STATUS',status)
+!!$        CALL ERROR$I4VAL('STATUS',STATUS)
 !!$        CALL ERROR$STOP('LIB$GETHOSTNAME')
       END IF
 
@@ -308,18 +308,18 @@
 !     **************************************************************************
 !     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: COMMAND
-      integer(4)                :: rc   ! return code
-      integer                   :: st
-      character(82)             :: msg
+      INTEGER(4)                :: RC   ! RETURN CODE
+      INTEGER                   :: ST
+      CHARACTER(82)             :: MSG
 !     **************************************************************************
       CALL ERROR$MSG('LIB$SYSTEM IS DISABLED')
       CALL ERROR$MSG('IT SHOULD NOT BE USED UNTIL FORTRAN2008 IS AVAILABLE')
       CALL ERROR$STOP('LIB$SYSTEM')
 #
 !!$#IF DEFINED(CPPVAR_COMPILER_GFORTRAN)
-!!$!     == fortran 2008 statement ================================================
+!!$!     == FORTRAN 2008 STATEMENT ================================================
 !!$      CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
 !!$      IF(ST.NE.0) THEN
 !!$        CALL ERROR$MSG('SYSTEM CALL FAILED')
@@ -328,21 +328,21 @@
 !!$        CALL ERROR$STOP('LIB$SYSTEM')
 !!$      END IF
 !!$#ELIF DEFINED(CPPVAR_COMPILER_G95)
-!!$      CALL LIB_G95_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_G95_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC)
-!!$      CALL LIB_IFC_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_IFC_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_IFC7)
-!!$      CALL LIB_IFC7_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_IFC7_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_ABSOFT)
-!!$      CALL LIB_ABSOFT_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_ABSOFT_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_XLF)
-!!$      CALL LIB_XLF_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_XLF_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_PGI)
-!!$      CALL LIB_PGI_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_PGI_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_PATHSCALE)
-!!$      CALL LIB_PATHSCALE_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_PATHSCALE_SYSTEM(COMMAND,RC)
 !!$#ELIF DEFINED(CPPVAR_COMPILER_SUN)
-!!$      CALL LIB_SUN_SYSTEM(COMMAND,rc)
+!!$      CALL LIB_SUN_SYSTEM(COMMAND,RC)
 !!$#ELSE
 !!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
 !!$      CALL ERROR$MSG('NO COMPILER-UNSPECIFIC IMPLEMENTATION AVAILABLE')
@@ -357,10 +357,10 @@
 !     **************************************************************************
 !     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
 !     **************************************************************************
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
 !     **************************************************************************
-      flush(n) ! fortran 2003
+      FLUSH(N) ! FORTRAN 2003
 
 !!$#IF DEFINED(CPPVAR_COMPILER_G95)
 !!$      CALL LIB_G95_FLUSH(N)   
@@ -380,7 +380,7 @@
 !!$      CALL LIB_SUN_FLUSH(N)   
 !!$#ELSE
 !!$      ! NO EXPLICIT INTERFACE; LET US HOPE FOR THE BEST....
-!!$      FLUSH(N)  ! fortran 2003
+!!$      FLUSH(N)  ! FORTRAN 2003
 !!$#ENDIF
       RETURN
       END 
@@ -481,7 +481,7 @@
       USE IFPORT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: COMMAND
-      INTEGER(4)  ,intent(out) :: RC
+      INTEGER(4)  ,INTENT(OUT) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -599,7 +599,7 @@
       END SUBROUTINE LIB_IFC7_NARGS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_IFC7_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_IFC7_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -614,7 +614,7 @@
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)  ,intent(out) :: RC
+      INTEGER(4)  ,INTENT(OUT) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -690,9 +690,9 @@
 !!$      REAL                :: TARRAY(2)
 !!$      REAL                :: RESULT      
 !!$!     **************************************************************************
-!!$      call etime(tarray,result)
-!!$      usrtime=tarray(1)
-!!$      systime=tarray(2)
+!!$      CALL ETIME(TARRAY,RESULT)
+!!$      USRTIME=TARRAY(1)
+!!$      SYSTIME=TARRAY(2)
 !!$      RETURN
 !!$      END
 !
@@ -778,16 +778,16 @@
 !!$        END FUNCTION IARGC
 !!$      END INTERFACE
       INTEGER(4),INTENT(OUT) :: NARGS
-      INTEGER                :: count
+      INTEGER                :: COUNT
 !     **************************************************************************
 !!$      NARGS=IARGC()
-      count=COMMAND_ARGUMENT_COUNT()
-      nargs=count
+      COUNT=COMMAND_ARGUMENT_COUNT()
+      NARGS=COUNT
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_G95_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_G95_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -800,7 +800,7 @@
 !!$        END FUNCTION SYSTEM
 !!$      END INTERFACE
       CHARACTER(*),INTENT(IN)  :: COMMAND
-      INTEGER(4)  ,intent(out) :: RC
+      INTEGER(4)  ,INTENT(OUT) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -917,7 +917,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_absoft_GETENV(NAME,VAL)
+      SUBROUTINE LIB_ABSOFT_GETENV(NAME,VAL)
 !     **************************************************************************
 !     **  RETURNS THE VALUE OF AN ENVIRONMENT VARIABLE                        **
 !     **                                                                      **
@@ -935,7 +935,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_ABSOFT_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -948,7 +948,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)  ,intent(out):: RC
+      INTEGER(4)  ,INTENT(OUT):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -1072,7 +1072,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_XLF_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_XLF_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1085,7 +1085,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN)  :: COMMAND
-      INTEGER(4)  ,intent(out) :: RC
+      INTEGER(4)  ,INTENT(OUT) :: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -1212,7 +1212,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PGI_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_PGI_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1227,7 +1227,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)  ,intent(out):: RC
+      INTEGER(4)  ,INTENT(OUT):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -1356,7 +1356,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_PATHSCALE_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_PATHSCALE_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1371,7 +1371,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)  ,intent(out):: RC
+      INTEGER(4)  ,INTENT(OUT):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -1492,7 +1492,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_SUN_SYSTEM(COMMAND,rc)
+      SUBROUTINE LIB_SUN_SYSTEM(COMMAND,RC)
 !     **************************************************************************
 !     **  ISSUES A SHELL COMMAND                                              **
 !     **                                                                      **
@@ -1506,7 +1506,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END FUNCTION SYSTEM
       END INTERFACE
       CHARACTER(*),INTENT(IN) :: COMMAND
-      INTEGER(4)  ,intent(out):: RC
+      INTEGER(4)  ,INTENT(OUT):: RC
 !     **************************************************************************
       RC=SYSTEM(COMMAND)
       RETURN
@@ -1644,14 +1644,14 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$INVERTC8(N,A,AINV)
 !     **************************************************************************
-!     **  INVERTS THE complex, SQUARE MATRIX A                                **
+!     **  INVERTS THE COMPLEX, SQUARE MATRIX A                                **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
-      complex(8),INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
-      complex(8),INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
+      COMPLEX(8),INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
+      COMPLEX(8),INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      complex(8),ALLOCATABLE:: RES(:,:)
+      COMPLEX(8),ALLOCATABLE:: RES(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
 !     **************************************************************************
@@ -1661,62 +1661,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !      CALL LIB_ESSL_ZGETRI(N,A,AINV)
 #ELSE 
       CALL LIB_LAPACK_ZGETRI(N,A,AINV)
-#ENDIF
-!
-!     ==========================================================================
-!     == TEST                                                                 ==
-!     ==========================================================================
-      IF(TTEST) THEN
-        ALLOCATE(RES(N,N))
-        RES=MATMUL(A,AINV)
-        DO I=1,N
-          RES(I,I)=RES(I,I)-(1.D0,0.d0)
-        ENDDO
-        DEV=MAXVAL(ABS(RES))
-        IF(DEV.GT.1.D-8) THEN
-          CALL ERROR$MSG('TEST FAILED')
-          CALL ERROR$R8VAL('DEV',DEV)
-          CALL ERROR$STOP('LIB$INVERTR8')
-        END IF
-        DEALLOCATE(RES)
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$PSEUDOINVERTR8(N,A,smin,AINV)
-!     **************************************************************************
-!     **  CONSTRUCTS PSEUDO INVERSE OF A USING SINGULAR VALUE DECOMPOSITION   **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
-      REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
-      REAL(8)   ,INTENT(IN) :: smin      ! min singular value to be considered
-      REAL(8)   ,INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
-      LOGICAL   ,PARAMETER  :: TTEST=.true.
-      COMPLEX(8),ALLOCATABLE:: RES(:,:)
-      REAL(8)               :: DEV
-      INTEGER(4)            :: I
-      REAL(8)               :: U(N,N)
-      REAL(8)               :: V(N,N)
-      REAL(8)               :: S(N)
-!     **************************************************************************
-#IF DEFINED(CPPVAR_LAPACK_ESSL)
-      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
-#ELSE 
-      CALL LIB_LAPACK_DGESVD(N,N,A,U,S,V)
-!print*,'s ',s
-      DO I=1,N
-        IF(ABS(S(i)).GT.SMIN) THEN
-          S(i)=1.D0/S(i)
-        ELSE
-          S(i)=0.D0
-        END IF
-      ENDDO
-      DO I=1,N
-        U(:,I)=U(:,I)*S(I)
-      ENDDO
-      AINV(:,:)=transpose(MATMUL(U,V))
 #ENDIF
 !
 !     ==========================================================================
@@ -1740,23 +1684,79 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$SVDR8(M,N,A,U,S,Vt)
+      SUBROUTINE LIB$PSEUDOINVERTR8(N,A,SMIN,AINV)
 !     **************************************************************************
-!     **  SINGULAR VALUE DECOMPOSITION OF THE MXN MATRIX A                    **
-!     **  a = u * s * vt
+!     **  CONSTRUCTS PSEUDO INVERSE OF A USING SINGULAR VALUE DECOMPOSITION   **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: m         ! DIMENSION OF THE MATRIX
       INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
-      REAL(8)   ,INTENT(IN) :: A(m,n)    ! MATRIX TO BE INVERTED
-      REAL(8)   ,INTENT(OUT):: u(m,m)    ! left hand orthogonal vectors
-      REAL(8)   ,INTENT(OUT):: s(m)      ! singular vectors
-      REAL(8)   ,INTENT(OUT):: vt(n,n)   ! transposed right-hand orthogonal vectors
+      REAL(8)   ,INTENT(IN) :: A(N,N)    ! MATRIX TO BE INVERTED
+      REAL(8)   ,INTENT(IN) :: SMIN      ! MIN SINGULAR VALUE TO BE CONSIDERED
+      REAL(8)   ,INTENT(OUT):: AINV(N,N) ! INVERTED MATRIX
+      LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
+      COMPLEX(8),ALLOCATABLE:: RES(:,:)
+      REAL(8)               :: DEV
+      INTEGER(4)            :: I
+      REAL(8)               :: U(N,N)
+      REAL(8)               :: V(N,N)
+      REAL(8)               :: S(N)
 !     **************************************************************************
 #IF DEFINED(CPPVAR_LAPACK_ESSL)
       CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
 #ELSE 
-      CALL LIB_LAPACK_DGESVD(m,N,A,U,S,Vt)
+      CALL LIB_LAPACK_DGESVD(N,N,A,U,S,V)
+!PRINT*,'S ',S
+      DO I=1,N
+        IF(ABS(S(I)).GT.SMIN) THEN
+          S(I)=1.D0/S(I)
+        ELSE
+          S(I)=0.D0
+        END IF
+      ENDDO
+      DO I=1,N
+        U(:,I)=U(:,I)*S(I)
+      ENDDO
+      AINV(:,:)=TRANSPOSE(MATMUL(U,V))
+#ENDIF
+!
+!     ==========================================================================
+!     == TEST                                                                 ==
+!     ==========================================================================
+      IF(TTEST) THEN
+        ALLOCATE(RES(N,N))
+        RES=MATMUL(A,AINV)
+        DO I=1,N
+          RES(I,I)=RES(I,I)-(1.D0,0.D0)
+        ENDDO
+        DEV=MAXVAL(ABS(RES))
+        IF(DEV.GT.1.D-8) THEN
+          CALL ERROR$MSG('TEST FAILED')
+          CALL ERROR$R8VAL('DEV',DEV)
+          CALL ERROR$STOP('LIB$INVERTR8')
+        END IF
+        DEALLOCATE(RES)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$SVDR8(M,N,A,U,S,VT)
+!     **************************************************************************
+!     **  SINGULAR VALUE DECOMPOSITION OF THE MXN MATRIX A                    **
+!     **  A = U * S * VT
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: M         ! DIMENSION OF THE MATRIX
+      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
+      REAL(8)   ,INTENT(IN) :: A(M,N)    ! MATRIX TO BE INVERTED
+      REAL(8)   ,INTENT(OUT):: U(M,M)    ! LEFT HAND ORTHOGONAL VECTORS
+      REAL(8)   ,INTENT(OUT):: S(M)      ! SINGULAR VECTORS
+      REAL(8)   ,INTENT(OUT):: VT(N,N)   ! TRANSPOSED RIGHT-HAND ORTHOGONAL VECTORS
+!     **************************************************************************
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
+#ELSE 
+      CALL LIB_LAPACK_DGESVD(M,N,A,U,S,VT)
 #ENDIF
       RETURN
       END
@@ -1970,7 +1970,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)            :: I
 !     **************************************************************************
       IF(N.EQ.1) THEN
-        E(1)=real(H(1,1),kind=8)
+        E(1)=REAL(H(1,1),KIND=8)
         U(1,1)=(1.D0,0.D0)
         RETURN
       END IF
@@ -2120,7 +2120,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       SUBROUTINE LIB$GENERALEIGENVALUEC8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
-!     ** SOLVES THE GENERALIZED, complex NON-SYMMETRIC EIGENVALUE PROBLEM     **
+!     ** SOLVES THE GENERALIZED, COMPLEX NON-SYMMETRIC EIGENVALUE PROBLEM     **
 !     **      [H(:,:)-E(I)*S(:,:)]*U(:,I)=0                                   **
 !     **                                                                      **
 !     ** REMARK: H AND S MUST BE HERMITEAN                                    **
@@ -2801,7 +2801,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END SUBROUTINE LIB_LAPACK_DGETRI
 !
 !     ..................................................................
-      SUBROUTINE LIB_LAPACK_zGETRI(N,A,AINV)
+      SUBROUTINE LIB_LAPACK_ZGETRI(N,A,AINV)
 !     ******************************************************************
 !     **                                                              **
 !     **  INVERTS THE REAL, SQUARE MATRIX A                           **
@@ -2812,10 +2812,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
-      complex(8),INTENT(IN) :: A(N,N)
-      complex(8),INTENT(OUT):: AINV(N,N)
+      COMPLEX(8),INTENT(IN) :: A(N,N)
+      COMPLEX(8),INTENT(OUT):: AINV(N,N)
       INTEGER(4)            :: NAUX
-      complex(8)            :: AUX(100*N)
+      COMPLEX(8)            :: AUX(100*N)
       INTEGER               :: IPIV(N)
       INTEGER               :: INFO
 !     ******************************************************************
@@ -2825,12 +2825,12 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==================================================================
 !     == PERFORM LU FACTORIZATION OF A                                ==
 !     ==================================================================
-      CALL zGETRF(N,N,AINV,N,IPIV,INFO) !LAPACK
+      CALL ZGETRF(N,N,AINV,N,IPIV,INFO) !LAPACK
 !
 !     ==================================================================
 !     == INVERT A USING THE LU FACTORIZATION                          ==
 !     ==================================================================
-      CALL zGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+      CALL ZGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -2851,10 +2851,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END SUBROUTINE LIB_LAPACK_ZGETRI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,Vt)
+      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,VT)
 !     **************************************************************************
 !     ** SINGULAR VALUE DECOMPOSITION OF THE NON-SQUARE MATRIX A              **
-!     ** A=U*SIGMA*Vt  
+!     ** A=U*SIGMA*VT  
 !     **  SIGMA IS AN M-TIMES-N DIAGONAL MATRIX WITH DIAGONAL ELEMENTS S(I)   **
 !     **************************************************************************
       IMPLICIT NONE
@@ -2862,7 +2862,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4),INTENT(IN)  :: N
       REAL(8)   ,INTENT(IN)  :: A(M,N)
       REAL(8)   ,INTENT(OUT) :: U(M,M)
-      REAL(8)   ,INTENT(OUT) :: Vt(N,N)
+      REAL(8)   ,INTENT(OUT) :: VT(N,N)
       REAL(8)   ,INTENT(OUT) :: S(M)     ! SINGULAR VALUES IN DESCENDING ORDER
       REAL(8)   ,ALLOCATABLE :: WORK(:)
       REAL(8)                :: ACOPY(M,N)
@@ -2875,9 +2875,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
       S=0.D0
       U=0.D0
-      Vt=0.D0
+      VT=0.D0
       WORK=0.D0
-      CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,Vt,N,WORK,LWORK,INFO)
+      CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
@@ -2912,7 +2912,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(OUT):: X(M,NEQ)
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-      REAL(8)   ,allocatable:: A1(:,:)
+      REAL(8)   ,ALLOCATABLE:: A1(:,:)
       INTEGER               :: INFO
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
@@ -2934,16 +2934,16 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==================================================================
 !     == NOW CALL LAPACK ROUTINE                                      ==
 !     ==================================================================
-      allocate(a1(n,m))
+      ALLOCATE(A1(N,M))
       A1=A
       X=B
       CALL DGESV(N,NEQ,A1,N,IPIV,X,N,INFO )
-      deallocate(a1)
+      DEALLOCATE(A1)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ERROR EXIT FROM DGESV')
         CALL ERROR$MSG('THE I-TH ARGUMENT HAD AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
-        CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+        CALL ERROR$STOP('LIB_LAPACK_DGESV')
       ELSE IF(INFO.GT.0) THEN
         CALL ERROR$MSG('ERROR EXIT FROM DGESV')
         CALL ERROR$MSG('U(I,I) IS EXACTLY ZERO.')
@@ -2951,7 +2951,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         CALL ERROR$MSG('BUT THE FACTOR U IS EXACTLY SINGULAR,')
         CALL ERROR$MSG('SO THE SOLUTION COULD NOT BE COMPUTED.')
         CALL ERROR$I4VAL('I',INFO)
-        CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+        CALL ERROR$STOP('LIB_LAPACK_DGESV')
       END IF
 !
 !     ==================================================================
@@ -2964,7 +2964,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
           CALL ERROR$R8VAL('SVAR1',SVAR1)
           CALL ERROR$R8VAL('SVAR2',SVAR2)
           CALL ERROR$R8VAL('SVAR1/SVAR2',SVAR1/SVAR2)
-          CALL ERROR$STOP('LIB$MATRIXSOLVENEW')
+          CALL ERROR$STOP('LIB_LAPACK_DGESV')
         END IF
       END IF
 
@@ -2989,17 +2989,17 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(OUT):: X(M,NEQ)
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-      double precision            :: A1(N,M)
-      double precision,ALLOCATABLE:: B1(:,:)
-      double precision            :: S(N)        ! SINGULAR VALUES
-      double precision,PARAMETER  :: RCOND=-1.D0 ! USE MACHINE PRECISION
+      DOUBLE PRECISION            :: A1(N,M)
+      DOUBLE PRECISION,ALLOCATABLE:: B1(:,:)
+      DOUBLE PRECISION            :: S(N)        ! SINGULAR VALUES
+      DOUBLE PRECISION,PARAMETER  :: RCOND=-1.D0 ! USE MACHINE PRECISION
       INTEGER                     :: RANK
       INTEGER                     :: LWORK
-      double precision,ALLOCATABLE:: WORK(:)
+      DOUBLE PRECISION,ALLOCATABLE:: WORK(:)
       INTEGER         ,ALLOCATABLE:: IWORK(:)
       INTEGER                     :: LIWORK
       INTEGER                     :: INFO
-      INTEGER                     :: nrhs
+      INTEGER                     :: NRHS
       INTEGER                     :: LDA,LDB
       INTEGER                     :: N1,M1,SMLSIZ,MINMN,MAXMN,NLVL
       INTEGER                     :: ILAENV
@@ -3007,7 +3007,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       LOGICAL         ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)         ,PARAMETER  :: TOL=1.D-5
       REAL(8)                     :: SVAR1,SVAR2
-      character(6)    ,parameter  :: type='dgels'
+      CHARACTER(6)    ,PARAMETER  :: TYPE='DGELS'
 !     **************************************************************************
       IF(N.LT.1.OR.M.LT.1) THEN
         CALL ERROR$MSG('DIMENSIONS MUST BE NONZERO AND POSITIVE')
@@ -3017,16 +3017,16 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END IF
       M1=N    ! LAPACK USES M AND N OPPOSITE 
       N1=M
-      nrhs=neq
+      NRHS=NEQ
       MINMN=MIN(M1,N1)
       MAXMN=MAX(M1,N1)
 !
 !     ==========================================================================
-!     == interface to dgelsD                                                  ==
+!     == INTERFACE TO DGELSD                                                  ==
 !     ==========================================================================
-      if(type.eq.'dgelsd') then
+      IF(TYPE.EQ.'DGELSD') THEN
         SMLSIZ=ILAENV(9,'DGELSD',' ',0,0,0,0 )
-        NLVL = MAX(0,INT(LOG(REAL(MINMN,kind=8)/real(SMLSIZ+1,KIND=8))/LOG(2.D0))+1)
+        NLVL = MAX(0,INT(LOG(REAL(MINMN,KIND=8)/REAL(SMLSIZ+1,KIND=8))/LOG(2.D0))+1)
         LIWORK=MAX(1,3*MINMN*NLVL+11*MINMN)
         LWORK=12*MINMN+2*MINMN*SMLSIZ+8*MINMN*NLVL+MINMN*NEQ+(SMLSIZ+1)**2
         ALLOCATE(WORK(LWORK))
@@ -3036,12 +3036,12 @@ PRINT*,'NARGS ',NARGS,IARGC()
         B1=0.D0
         B1(1:M1,:)=B(:,:)
         A1=A
-! the call to dgelsd failed using mkl
-        CALL DGELSD(M1,N1,Nrhs,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
-        deallocate(iwork)
-        deallocate(work)
+! THE CALL TO DGELSD FAILED USING MKL
+        CALL DGELSD(M1,N1,NRHS,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
+        DEALLOCATE(IWORK)
+        DEALLOCATE(WORK)
         X=B1(1:N1,:)
-        deallocate(B1)
+        DEALLOCATE(B1)
         IF(INFO.NE.0) THEN
           IF(INFO.LT.0) THEN
             CALL ERROR$MSG('I-TH ARGUMENT HAD AN ILLEGAL VALUE')
@@ -3057,16 +3057,16 @@ PRINT*,'NARGS ',NARGS,IARGC()
         END IF
 !
 !     ==========================================================================
-!     == interface to dgels                                                   ==
+!     == INTERFACE TO DGELS                                                   ==
 !     ==========================================================================
-      else if(type.eq.'dgels') then
+      ELSE IF(TYPE.EQ.'DGELS') THEN
         LDA=MAX(1,M1)
         LDB=MAX(1,MAXMN)
         ALLOCATE(B1(LDB,NEQ))
         B1=0.D0
         B1(1:M1,:)=B(:,:)
         A1=A
-        LWORK=MINMN+max(1,max(NRHS,maxMN))
+        LWORK=MINMN+MAX(1,MAX(NRHS,MAXMN))
         ALLOCATE(WORK(LWORK))
         CALL DGELS('N',M1,N1,NRHS,A1,LDA,B1,LDB,WORK,LWORK,INFO)
         DEALLOCATE(WORK)
@@ -3074,25 +3074,25 @@ PRINT*,'NARGS ',NARGS,IARGC()
         DEALLOCATE(B1)
 !
 !     ==========================================================================
-!     == interface to dgelsS                                                  ==
+!     == INTERFACE TO DGELSS                                                  ==
 !     ==========================================================================
-      else if(type.eq.'dgelss') then
+      ELSE IF(TYPE.EQ.'DGELSS') THEN
         LDA=MAX(1,M1)
         LDB=MAX(1,MAX(M1,N1))
         ALLOCATE(B1(LDB,NEQ))
         B1=0.D0
         B1(1:M1,:)=B(:,:)
         A1=A
-        LWORK=3*MINMN+max(2*MINMN,max(NRHS,maxMN))
+        LWORK=3*MINMN+MAX(2*MINMN,MAX(NRHS,MAXMN))
         ALLOCATE(WORK(LWORK))
         CALL DGELSS(M1,N1,NRHS,A1,LDA,B1,LDB,S,RCOND,RANK,WORK,LWORK,INFO)
         DEALLOCATE(WORK)
         X=B1(1:N1,:)
         DEALLOCATE(B1)
-      else
-        call error$msg('type not recognized') 
-        call error$stop('lib_lapack_dgelsd')
-      end if
+      ELSE
+        CALL ERROR$MSG('TYPE NOT RECOGNIZED') 
+        CALL ERROR$STOP('LIB_LAPACK_DGELSD')
+      END IF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -3373,16 +3373,16 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8),INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
-      integer(4),parameter  :: lwmax=2000
-      COMPLEX(8)            :: CWORK(lwmax)
+      INTEGER(4),PARAMETER  :: LWMAX=2000
+      COMPLEX(8)            :: CWORK(LWMAX)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER(4)            :: I
-      LOGICAL   ,PARAMETER  :: TTEST=.false.
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
-      INTEGER(4)            :: lwork
+      INTEGER(4)            :: LWORK
       INTEGER(4)            :: INFO
-      COMPLEX(8)            :: ch(n,n)
-      external zheev
+      COMPLEX(8)            :: CH(N,N)
+      EXTERNAL ZHEEV
 !     ******************************************************************
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
@@ -3393,11 +3393,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
         CALL ERROR$I4VAL('2*N',2*N)
         CALL ERROR$STOP('LIB_LAPACK_ZHEEV')
       END IF
-      u=0.5d0*(h+transpose(conjg(h)))
+      U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       LWORK=-1
-      CALL ZHEEV('V','L',N,u,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
+      CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
       LWORK=MIN(LWMAX,INT(CWORK(1)))
-      CALL ZHEEV('V','L',N,u,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
+      CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
 !
       IF(INFO.NE.0) THEN
         IF(INFO.LT.0) THEN
@@ -3710,7 +3710,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       DEALLOCATE(RWORK)
       DEALLOCATE(IWORK)
 
-      IF(INFO.ne.0)THEN
+      IF(INFO.NE.0)THEN
         CALL ERROR$MSG('ZHEGVD FAILED')
         CALL ERROR$I4VAL('INFO',INFO)
         CALL ERROR$STOP('LAPACK_ZHEGVD')
@@ -4612,7 +4612,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
 !     **                                                                      **
 !     **************************************************************************
-      use, intrinsic :: iso_c_binding
+      USE, INTRINSIC :: ISO_C_BINDING
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -4628,11 +4628,11 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8)              :: YDUMMY(LEN)
       INTEGER(4),SAVE         :: NP=0
       INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
-      type(C_PTR),SAVE        :: PLANS2(NPX),PLAN
+      TYPE(C_PTR),SAVE        :: PLANS2(NPX),PLAN
       INTEGER(4),SAVE         :: PLANS1(NPX)
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
-      include 'fftw3.f03'
+      INCLUDE 'FFTW3.F03'
 !     **************************************************************************
       IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
         IF (DIR.EQ.'GTOR') THEN
@@ -4709,21 +4709,21 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     **    USES THE 3D FFTW ROUTINES                                         **
 !     **                                        CLEMENS FOERST, 2001          **
 !     **************************************************************************
-      use, intrinsic :: iso_c_binding
+      USE, INTRINSIC :: ISO_C_BINDING
       IMPLICIT NONE
       CHARACTER(4)            :: DIR
       INTEGER(4)              :: N1,N2,N3
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
-      type(C_PTR) :: plan
+      TYPE(C_PTR) :: PLAN
       REAL(8)     ,SAVE       :: SCALE
-      include 'fftw3.f03'
+      INCLUDE 'FFTW3.F03'
 !     **************************************************************************
-      print*,"3dfftw3",N1,N2,N3
+      PRINT*,"3DFFTW3",N1,N2,N3
       IF(DIR.EQ.'RTOG') THEN
-        plan = fftw_plan_dft_3d(N3,N2,N1,X,Y,FFTW_FORWARD,FFTW_ESTIMATE)
+        PLAN = FFTW_PLAN_DFT_3D(N3,N2,N1,X,Y,FFTW_FORWARD,FFTW_ESTIMATE)
       ELSE IF (DIR.EQ.'GTOR') THEN
-        plan = fftw_plan_dft_3d(N3,N2,N1,X,Y,FFTW_BACKWARD,FFTW_ESTIMATE)
+        PLAN = FFTW_PLAN_DFT_3D(N3,N2,N1,X,Y,FFTW_BACKWARD,FFTW_ESTIMATE)
       ELSE
         CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
         CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
@@ -4734,8 +4734,8 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !     ==========================================================================
 !     ==  EXECUTE FOURIER TRANSFORM                                           ==
 !     ==========================================================================
-      call fftw_execute_dft(plan, X, Y)
-      call fftw_destroy_plan(plan)
+      CALL FFTW_EXECUTE_DFT(PLAN, X, Y)
+      CALL FFTW_DESTROY_PLAN(PLAN)
 !
 !     ==========================================================================
 !     ==  SCALE RESULT                                                        ==

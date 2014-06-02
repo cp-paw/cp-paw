@@ -968,7 +968,8 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     **************************************************************************
       USE DMFT_MODULE, ONLY : NAT,NKPTL,NDIMD,ATOMSET,KSET
       IMPLICIT NONE
-      LOGICAL(4)             :: NATORB=.TRUE.
+      CHARACTER(16),PARAMETER:: ORBTYPE='QUAMBO' ! CAN BE 'NAT','QUAMBO','ORTHO'
+      LOGICAL(4)             :: NATORB
       INTEGER(4)             :: NLOC
       COMPLEX(8),ALLOCATABLE :: RHO(:,:,:)
       COMPLEX(8),ALLOCATABLE :: SINV(:,:,:)
@@ -979,6 +980,19 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       INTEGER(4)             :: I1,I2
       INTEGER(4)             :: IAT,ISPIN,IKPT,I
 !     **************************************************************************
+      IF(ORBTYPE.EQ.'NATORB') THEN
+        NATORB=.TRUE.
+      ELSE IF(ORBTYPE.EQ.'QUAMBO') THEN
+        NATORB=.TRUE.
+      ELSE IF(ORBTYPE.EQ.'ORTHO') THEN
+        NATORB=.FALSE.
+      ELSE
+        CALL ERROR$MSG('ORBTYPE NOT RECOGNIZED')
+        CALL ERROR$MSG('ALLOWED VALUES ARE "NATORB", "QUAMBO" AND "ORTHO"')
+        CALL ERROR$CHVAL('ORBTYPE',ORBTYPE)
+        CALL ERROR$STOP('DMFT_NATORB')
+      END IF
+
       DO IAT=1,NAT
         NLOC=ATOMSET(IAT)%NLOC
         IF(NLOC.LE.0) CYCLE
@@ -1013,6 +1027,21 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !       ========================================================================
         CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,RHO) 
         CALL SPINOR$CONVERT('BACK',NLOC,NDIMD,SINV) 
+!
+!       ========================================================================
+!       == OVERWRITE RHO FOR QUAMBO CONSTRUCTION                              ==
+!       ========================================================================
+        IF(ORBTYPE.EQ.'QUAMBO') THEN
+          RHO=(0.D0,0.D0)
+          DO I=1,NLOC
+            RHO(I,I,1)=CMPLX(I,KIND=8)
+          ENDDO
+          IF(NDIMD.GT.1) THEN
+            DO I=1,NLOC
+              RHO(I,I,NDIMD)=-CMPLX(I,KIND=8)
+            ENDDO
+          END IF
+        END IF
 !
 !       ========================================================================
 !       == DETERMINE OCCUPATIONS AND EIGENVALUES                              ==
@@ -1385,10 +1414,16 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
 !         == ACCOUNT FOR K-POINT (-K) ==========================================
           IF(KSET(IKPT)%TADDMINUSK) THEN
+!           == TRANSPOSE SMAT,HRHO,GAMMA, BUT NEITHER CI NOR SLOC ==============
+            MAT=(-CI*OMEGA(NU)+MU)*KSET(IKPT)%SMAT
+            MAT=MAT-KSET(IKPT)%HRHO+KSET(IKPT)%GAMMA
             DO IDIMD=1,NDIMD
-              MAT(:,:,IDIMD)=2.D0*CI*OMEGA(NU) &
-      &                          *TRANSPOSE(CONJG(KSET(IKPT)%SMAT(:,:,IDIMD))) &
-      &                          +TRANSPOSE(CONJG(MAT(:,:,IDIMD)))
+              MAT(:,:,IDIMD)=TRANSPOSE(CONJG(MAT(:,:,IDIMD)))
+            ENDDO
+            DO IAT=1,NAT
+              I1=ATOMSET(IAT)%ICHI1
+              I2=ATOMSET(IAT)%ICHI2
+              MAT(I1:I2,I1:I2,:)=MAT(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
             ENDDO
             CALL SPINOR$INVERT(NDIMD,NCHI,MAT,MAT2)
             G=0.5D0*(G+MAT2)
@@ -1699,8 +1734,9 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         OMEGA=REAL(2*NU-1,KIND=8)*PI*KBT
         SVAR=0.D0
         DO I=1,NORB
-          S(I,I,NU)=1.D-4*CI*OMEGA/(1.D0-OMEGA**2)
-          SVAR=SVAR+REAL(S(I,I,NU)*G(I,I,NU),KIND=8)
+          S(I,I,NU)=0.007D0*EXP(-0.1D0/ABS(OMEGA))/(CI*OMEGA)
+!         == FACTOR 2 FROM -OMEGA_NU ===========================================
+          SVAR=SVAR+2.D0*REAL(S(I,I,NU)*G(I,I,NU),KIND=8)
         ENDDO
         ETOT=ETOT+KBT*SVAR
       ENDDO      

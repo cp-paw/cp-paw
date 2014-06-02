@@ -421,11 +421,11 @@ PRINT*,'FUNC ',FUNCTIONAL
            & CC6IJ(NPAIR), DCC6IJ(NPAIR,2), R2(3), C9, RCP !FOR 3RD ORDER TERMS
   REAL(8) :: FCN(3,NAT) !USEFULL FOR SMALL NUMBERS???
 ! ..........................................................................
-                       CALL TRACE$PUSH('DFTD3_INTERFACE')
   E=0.D0
   F(:,:)=0.D0
   FCN(:,:)=0.D0
   IF(.NOT.TON) RETURN
+                       CALL TRACE$PUSH('DFTD3_INTERFACE')
 ! *** INITIALIZE DFTD3: ALLOCATE AND FILL PARAMETER ARRAYS *****************
   CALL SETUP$GETI4('NSP',NSP)
   IF(.NOT.TINI) CALL DFTD3_INITIALIZE(NSP) 
