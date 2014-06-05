@@ -2917,6 +2917,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
+integer(4) :: i,j
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('WORKS ONLY FOR SQUARE MATRICES')
@@ -2937,6 +2938,26 @@ PRINT*,'NARGS ',NARGS,IARGC()
       ALLOCATE(A1(N,M))
       A1=A
       X=B
+
+print*,'====info von dgesv anfang ===='
+print*,'n=',n
+print*,'neq=',neq
+do i=1,n
+  do j=1,n
+   print*,'a1=',i,j,a1(i,j)
+  enddo
+enddo
+do i=1,n
+  print*,'ipiv=',i,ipiv(i)
+enddo
+do i=1,n
+  do j=1,neq
+   print*,'x=',i,j,x(i,j)
+  enddo
+enddo
+print*,'info=',info
+print*,'====info von dgesv ende ===='
+
       CALL DGESV(N,NEQ,A1,N,IPIV,X,N,INFO )
       DEALLOCATE(A1)
       IF(INFO.LT.0) THEN
