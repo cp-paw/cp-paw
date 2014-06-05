@@ -375,6 +375,7 @@ PRINT*,'ETOT AFTER DMFT_SOLVER ',ETOT
 !     ==========================================================================
 !     ==  CALCULATE MISSING TOTAL ENERGY CONTRIBUTION                         ==
 !     ==========================================================================
+!print*,'warning! dmft_detot switched off!!!!'
       CALL DMFT_DETOT(SVAR)
       ETOT=ETOT+SVAR      
       CALL ENERGYLIST$SET('DMFT INTERFACE',ETOT)

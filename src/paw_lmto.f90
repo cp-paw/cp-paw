@@ -3424,6 +3424,7 @@ COMPLEX(8)  :: PHASE
         DO NN=1,NND
           DEALLOCATE(INVOVERLAP(NN)%MAT)
         ENDDO
+        DEALLOCATE(INVOVERLAP)
       END IF
       RETURN
       END
@@ -3510,6 +3511,7 @@ COMPLEX(8)  :: PHASE
       INTEGER(4)             :: IND,IND1,IND2
       INTEGER(4)             :: IAT,IATA,IATB,IAT1,IAT2,NN,IT(3)
 !     **************************************************************************
+                               CALL TRACE$PUSH('LMTO_ROBERT')
       NAT=SIZE(ISPECIES)
 !
 !     ==========================================================================
@@ -3731,6 +3733,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',ETOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',ETOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+                               CALL TRACE$POP()
       RETURN
       END
 !
@@ -3868,10 +3871,10 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       INTEGER(4),INTENT(IN)  :: N1               ! #(IMPURITY ORBITALS)
       INTEGER(4),INTENT(IN)  :: N2               ! #(CLUSTER ORBITALS)
       REAL(8)   ,INTENT(IN)  :: U(N1,N1,N1,N1)   ! U-TENSOR
-      COMPLEX(8),INTENT(IN)  :: D(N1,N2)         ! DENSITY MATRIX
-      COMPLEX(8),INTENT(IN)  :: OINV(N1,N2)      ! INVERSE OVERLAP
+      COMPLEX(8),INTENT(IN)  :: D(N2,N2)         ! DENSITY MATRIX
+      COMPLEX(8),INTENT(IN)  :: OINV(N2,N2)      ! INVERSE OVERLAP
       REAL(8)   ,INTENT(OUT) :: E                ! ENERGY
-      COMPLEX(8),INTENT(OUT) :: H(N1,N2)         ! DEDD
+      COMPLEX(8),INTENT(OUT) :: H(N2,N2)         ! DEDD
       REAL(8)   ,INTENT(OUT) :: DEDU(N1,N1,N1,N1)! DEDU
 !     **************************************************************************
       E=0.D0
