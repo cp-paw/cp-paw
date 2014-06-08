@@ -3521,6 +3521,9 @@ COMPLEX(8)  :: PHASE
       CALL LMTO_NTBOINVOVERLAP()!CALCULATE INVOVERLAP=SUM_N<PI|PSI_N><PSI_N|PI>
       NND=SIZE(DENMAT)
       NDIMD=DENMAT(1)%N3
+!CALL LMTO$REPORTDENMAT(6)
+!CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
+!STOP
 !
 !     ==========================================================================
 !     == ALLOCATE HAMILTONIAN                                                 ==
@@ -3600,28 +3603,29 @@ COMPLEX(8)  :: PHASE
         ALLOCATE(D(2*NORBCL,2*NORBCL))
         ALLOCATE(OINV(2*NORBCL,2*NORBCL))
         D(:,:)=(0.D0,0.D0)
+        OINV(:,:)=(0.D0,0.D0)
 !
 !       == ADD THE TERMS CONNECTING THE IMPURITY WITH BATH SITES ==============
 !       == THIS WILL BE OVERWRITTEN BY THE LOOP OVER BATH SITES. I LEAVE IT  ==
 !       == IN FOR TESTING PURPOSES AND FOR LATER USE, IN CASE THE STAR-LIKE  ==
 !       == CHOICE OF DENSITY MATRIX CONSTRAINTS TURNS OUT TO BE BETTER. =======
 !       == THE STAR-LIKE CHOICE IS IMPLEMENTED MUCH MORE EFFICIENTLY ==========
-        IND1=0
-        DO NN=1,NND
-          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
-!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
-          N1=DENMAT(NN)%N1
-          N2=DENMAT(NN)%N2
-          I1UP=1
-          I1DN=LMNX+1
-          I2UP=IND1+1
-          I2DN=NORBCL+IND1+1
-          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
-      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
-          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,1,INVOVERLAP(NN)%MAT &
-      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,OINV)
-          IND1=IND1+N2
-        ENDDO
+!!$        IND1=0
+!!$        DO NN=1,NND
+!!$          IF(DENMAT(NN)%IAT1.NE.IAT) CYCLE
+!!$!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
+!!$          N1=DENMAT(NN)%N1
+!!$          N2=DENMAT(NN)%N2
+!!$          I1UP=1
+!!$          I1DN=LMNX+1
+!!$          I2UP=IND1+1
+!!$          I2DN=NORBCL+IND1+1
+!!$          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,NDIMD,DENMAT(NN)%MAT &
+!!$      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,D)
+!!$          CALL LMTO_ROBERT_MAP('FWRD',N1,N2,1,INVOVERLAP(NN)%MAT &
+!!$      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,OINV)
+!!$          IND1=IND1+N2
+!!$        ENDDO
 !
 !       == CONNECT BATH SITES WITH BATH SITES ==================================
         DO IATA=1,NATCL
@@ -3632,7 +3636,7 @@ COMPLEX(8)  :: PHASE
             DO NN=1,NND
               IF(DENMAT(NN)%IAT1.NE.IAT1) CYCLE
               IF(DENMAT(NN)%IAT2.NE.IAT2) CYCLE
-              IF(SUM(ABS(DENMAT(NN)%IT(1)-IT)).NE.0) CYCLE
+              IF(SUM(ABS(DENMAT(NN)%IT-IT)).NE.0) CYCLE
               N1=DENMAT(NN)%N1
               N2=DENMAT(NN)%N2
               I1UP=NLIST(IATA)%I1
@@ -3668,20 +3672,20 @@ COMPLEX(8)  :: PHASE
 !       == IN FOR TESTING PURPOSES AND FOR LATER USE, IN CASE THE STAR-LIKE  ==
 !       == CHOICE OF DENSITY MATRIX CONSTRAINTS TURNS OUT TO BE BETTER. =======
 !       == THE STAR-LIKE CHOICE IS IMPLEMENTED MUCH MORE EFFICIENTLY ==========
-        IND1=0
-        DO NN=1,NND
-          IF(HAMIL(NN)%IAT1.NE.IAT) CYCLE
-!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
-          N1=HAMIL(NN)%N1
-          N2=HAMIL(NN)%N2
-          I1UP=1
-          I1DN=LMNX+1
-          I2UP=IND1+1
-          I2DN=NORBCL+IND1+1
-          CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,HAMIL(NN)%MAT &
-      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,H)
-          IND1=IND1+N2
-        ENDDO
+!!$        IND1=0
+!!$        DO NN=1,NND
+!!$          IF(HAMIL(NN)%IAT1.NE.IAT) CYCLE
+!!$!         = ASSUMES THAT CLUSTER ELEMENTS ARE TOGETHER
+!!$          N1=HAMIL(NN)%N1
+!!$          N2=HAMIL(NN)%N2
+!!$          I1UP=1
+!!$          I1DN=LMNX+1
+!!$          I2UP=IND1+1
+!!$          I2DN=NORBCL+IND1+1
+!!$          CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,HAMIL(NN)%MAT &
+!!$      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,H)
+!!$          IND1=IND1+N2
+!!$        ENDDO
 !
 !       == CONNECT BATH SITES WITH BATH SITES ==================================
         DO IATA=1,NATCL
@@ -3692,7 +3696,7 @@ COMPLEX(8)  :: PHASE
             DO NN=1,NND
               IF(HAMIL(NN)%IAT1.NE.IAT1) CYCLE
               IF(HAMIL(NN)%IAT2.NE.IAT2) CYCLE
-              IF(SUM(ABS(HAMIL(NN)%IT(1)-IT)).NE.0) CYCLE
+              IF(SUM(ABS(HAMIL(NN)%IT-IT)).NE.0) CYCLE
               N1=HAMIL(NN)%N1
               N2=HAMIL(NN)%N2
               I1UP=NLIST(IATA)%I1
@@ -3876,10 +3880,28 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       REAL(8)   ,INTENT(OUT) :: E                ! ENERGY
       COMPLEX(8),INTENT(OUT) :: H(N2,N2)         ! DEDD
       REAL(8)   ,INTENT(OUT) :: DEDU(N1,N1,N1,N1)! DEDU
+      INTEGER(4) :: I,J
+      COMPLEX(8) :: CSVAR
 !     **************************************************************************
       E=0.D0
       H=0.D0
       DEDU=0.D0
+
+PRINT*,'CHECK IF HERMITEAN...'
+DO I=1,N2
+  DO J=I,N2
+    CSVAR=OINV(I,J)-CONJG(OINV(J,I)) 
+    IF(ABS(CSVAR).GT.1.D-12) PRINT*,'I,J',I,J,OINV(I,J),OINV(J,I) 
+  ENDDO
+ENDDO    
+DO I=1,N2
+  DO J=I,N2
+    CSVAR=D(I,J)-CONJG(D(J,I)) 
+    IF(ABS(CSVAR).GT.1.D-12) PRINT*,'I,J',I,J,D(I,J),D(J,I) 
+  ENDDO
+ENDDO    
+PRINT*,'...CHECK COMPLETED.'
+STOP
       RETURN
       END
 !
@@ -8460,6 +8482,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       WRITE(NFIL,FMT='(80("="),T10,"  ",A,"   ")')TRIM(NAME)
       WRITE(NFIL,FMT='(80("="))')
       DO NN=1,NNS
+        IF(SBAR(NN)%N1*SBAR(NN)%N2.EQ.0) CYCLE
         WRITE(NFIL,FMT='(80("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
      &                 SBAR(NN)%IAT1,SBAR(NN)%IAT2,SBAR(NN)%IT
         DO LM1=1,SBAR(NN)%N1
@@ -8480,7 +8503,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: NND
-      INTEGER(4)            :: NN,LM1
+      INTEGER(4)            :: NN,LM1,NDIMD
 !     **************************************************************************
                              CALL TRACE$PUSH('LMTO$REPORTDENMAT')
       NND=SIZE(DENMAT)
@@ -8488,17 +8511,19 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       WRITE(NFIL,FMT='(82("="),T10,"   DENSITY MATRIX   ")')
       WRITE(NFIL,FMT='(82("="))')
       DO NN=1,NND
+        IF(DENMAT(NN)%N1*DENMAT(NN)%N2.EQ.0) CYCLE
         WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
      &                 DENMAT(NN)%IAT1,DENMAT(NN)%IAT2,DENMAT(NN)%IT
         DO LM1=1,DENMAT(NN)%N1
           WRITE(NFIL,FMT='(20F10.5)')DENMAT(NN)%MAT(LM1,:,1)
         ENDDO
-        WRITE(NFIL,FMT='(82("-"),T10," SPIN SZ CONTRIBTION ")')
-
-        DO LM1=1,DENMAT(NN)%N1
-          WRITE(NFIL,FMT='(20F10.5)')DENMAT(NN)%MAT(LM1,:,4)
-        ENDDO
-
+        NDIMD=DENMAT(NN)%N3
+        IF(NDIMD.GT.1) THEN
+          WRITE(NFIL,FMT='(82("-"),T10," SPIN SZ CONTRIBTION ")')
+          DO LM1=1,DENMAT(NN)%N1
+            WRITE(NFIL,FMT='(20F10.5)')DENMAT(NN)%MAT(LM1,:,NDIMD)
+          ENDDO
+        END IF
         WRITE(NFIL,FMT='(82("="))')
       ENDDO
                              CALL TRACE$POP()
