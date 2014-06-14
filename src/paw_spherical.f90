@@ -172,6 +172,11 @@ END MODULE spherical_MODULE
 !     ==========================================================================
 !     == CHECK CONSISTENCY OF INDICES                                         ==
 !     ==========================================================================
+      IF(LX.LT.0) THEN
+        CALL ERROR$MSG('INDEX LX MUST NOT BE NEGATIVE')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('SPHERICAL$YLMPOLYNOMIALS')
+      END IF
       IF(LMX.LT.(LX+1)**2) THEN
         CALL ERROR$MSG('INDEX LMX TOO SMALL FOR SPECIFIED MAX ANGULAR MOMENTUM')
         CALL ERROR$I4VAL('LX',LX)

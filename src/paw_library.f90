@@ -2816,9 +2816,10 @@ PRINT*,'NARGS ',NARGS,IARGC()
       COMPLEX(8),INTENT(OUT):: AINV(N,N)
       INTEGER(4)            :: NAUX
       COMPLEX(8)            :: AUX(100*N)
-      INTEGER               :: IPIV(N)
+      INTEGER(4)               :: IPIV(N)
       INTEGER               :: INFO
 !     ******************************************************************
+      IF(N.LE.0) RETURN
       NAUX=100*N
       AINV(1:N,1:N)=A(1:N,1:N)
 !
@@ -2844,7 +2845,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
           CALL ERROR$MSG('U(I,I) IS EXACTLY ZERO')
           CALL ERROR$MSG('MATRIX IS SINGULAR AND ITS INVERSE COULD NOT BE COMPUTED.')
           CALL ERROR$I4VAL('I',INFO)
-          CALL ERROR$STOP('LIB_LAPACK_DGETRI')
+          CALL ERROR$STOP('LIB_LAPACK_ZGETRI')
         END IF
       END IF
       RETURN

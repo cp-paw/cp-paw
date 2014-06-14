@@ -114,36 +114,46 @@
       INTEGER(4),INTENT(IN) :: LX
       REAL(8)   ,INTENT(OUT):: YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2)
 !     **************************************************************************
-      call spherical$ylmpolynomials(lx,(LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2,ylmpol)
-      return
-      end
+      IF(LX.LT.0) THEN
+        CALL ERROR$MSG('LX MUST NOT BE NEGATIVE')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('GAUSSIAN_YLMPOL')
+      END IF
+      CALL SPHERICAL$YLMPOLYNOMIALS(LX,(LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2,YLMPOL)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN_ylmfrompol(LX,ylmfrompol)
+      SUBROUTINE GAUSSIAN_YLMFROMPOL(LX,YLMFROMPOL)
 !     **************************************************************************
 !     ** EXPANDS THE ANGULAR PART OF CARTESIAN GAUSSIANS INTO REAL SPHERICAL  **
 !     ** HARMONICS                                                            **
 !     **  IND->(I,J,K) ;                                                      **
 !     **  (X/R)^I * (Y/R)^J * (Z/R)^K                                         **
-!     **         =SUM YLM(R) * |R|^(l+2N) * YLMFROMPOL(N+1,LM,IND)            **
+!     **         =SUM YLM(R) * |R|^(L+2N) * YLMFROMPOL(N+1,LM,IND)            **
 !     **  (DESCRIPTION IN CHAPTER "WORKING WITH GAUSSIANS")                   **
 !     ***************************************PETER BLOECHL, GOSLAR 2010*********
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LX
-      REAL(8)   ,INTENT(OUT):: ylmfrompol(lx/2+1,(LX+1)**2 &
-     &                                          ,(lX+1)*(lX+2)*(lX+3)/6)
+      REAL(8)   ,INTENT(OUT):: YLMFROMPOL(LX/2+1,(LX+1)**2 &
+     &                                          ,(LX+1)*(LX+2)*(LX+3)/6)
       REAL(8)               :: YLMPOL((LX+1)*(LX+2)*(LX+3)/6,(LX+1)**2)
-      REAL(8)               :: amat((LX+1)*(LX+2)*(LX+3)/6 &
+      REAL(8)               :: AMAT((LX+1)*(LX+2)*(LX+3)/6 &
      &                             ,(LX+1)*(LX+2)*(LX+3)/6)
-      REAL(8)               :: ainv((LX+1)*(LX+2)*(LX+3)/6 &
+      REAL(8)               :: AINV((LX+1)*(LX+2)*(LX+3)/6 &
      &                             ,(LX+1)*(LX+2)*(LX+3)/6)
-      integer(4)            :: indx
-      integer(4)            :: lmx,lmx1,lx1,indx1
-      integer(4)            :: i0a,i0b
-      integer(4)            :: n,ind,ind1,i,j,k,ip2,jp2,kp2
-      integer(4)            :: lm,l,m
-      logical(4)            :: twrite=.false.
+      INTEGER(4)            :: INDX
+      INTEGER(4)            :: LMX,LMX1,LX1,INDX1
+      INTEGER(4)            :: I0A,I0B
+      INTEGER(4)            :: N,IND,IND1,I,J,K,IP2,JP2,KP2
+      INTEGER(4)            :: LM,L,M
+      LOGICAL(4)            :: TWRITE=.FALSE.
 !     **************************************************************************
+      IF(LX.LT.0) THEN
+        CALL ERROR$MSG('LX MUST NOT BE NEGATIVE')
+        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$STOP('GAUSSIAN_YLMFROMPOL')
+      END IF
       INDX=(LX+1)*(LX+2)*(LX+3)/6
       LMX=(LX+1)**2
       CALL SPHERICAL$YLMPOLYNOMIALS(LX,INDX,LMX,YLMPOL)
@@ -152,22 +162,22 @@
       I0A=0
       I0B=LMX
       DO N=1,LX/2
-        lx1=lx-2*n
-        LMX1=(Lx1+1)**2
-        indx1=(LX-1)*(LX)*(LX+1)/6  ! leave space for r^2
-!print*,'n=',n,'i0a,i0b=',i0a+1,i0a+lmx1,i0b+1,i0b+lmx1,'lx1,lmx1,indx1',lx1,lmx1,indx1
+        LX1=LX-2*N
+        LMX1=(LX1+1)**2
+        INDX1=(LX-1)*(LX)*(LX+1)/6  ! LEAVE SPACE FOR R^2
+!PRINT*,'N=',N,'I0A,I0B=',I0A+1,I0A+LMX1,I0B+1,I0B+LMX1,'LX1,LMX1,INDX1',LX1,LMX1,INDX1
         DO IND=1,INDX1
           CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
-          ip2=i+2
-          jp2=j+2
-          kp2=k+2
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,Ip2,J,K)
+          IP2=I+2
+          JP2=J+2
+          KP2=K+2
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,IP2,J,K)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,Jp2,K)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,JP2,K)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
-          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J,Kp2)
+          CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',IND1,I,J,KP2)
           AMAT(IND1,I0B+1:I0B+LMX1)=AMAT(IND1,I0B+1:I0B+LMX1) &
      &                             +AMAT(IND,I0A+1:I0A+LMX1)
         ENDDO
@@ -176,31 +186,31 @@
       ENDDO
 !
 !     ==========================================================================
-!     == write power series expansion                                         ==
+!     == WRITE POWER SERIES EXPANSION                                         ==
 !     ==========================================================================
       IF(TWRITE) THEN
-        ind1=0
-        do n=0,lx/2
+        IND1=0
+        DO N=0,LX/2
           LM=0
-          DO L=0,LX-2*n
+          DO L=0,LX-2*N
             DO M=-L,L
               LM=LM+1
-              ind1=ind1+1
-              WRITE(*,*)'=== L=',L,' M=',M,' LM=',LM,' n=',n,' ind1=',ind1,'==='
+              IND1=IND1+1
+              WRITE(*,*)'=== L=',L,' M=',M,' LM=',LM,' N=',N,' IND1=',IND1,'==='
               DO IND=1,INDX
-                IF(amat(ind,ind1).EQ.0.D0) CYCLE
+                IF(AMAT(IND,IND1).EQ.0.D0) CYCLE
                 CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
-                WRITE(*,*)I,J,K,amat(ind,ind1)
-              enddo
+                WRITE(*,*)I,J,K,AMAT(IND,IND1)
+              ENDDO
             ENDDO
           ENDDO
         ENDDO
       END IF
 !
 !     ==========================================================================
-!     ==  invert matrix                                                       ==
+!     ==  INVERT MATRIX                                                       ==
 !     ==========================================================================
-      call lib$invertr8(indx,amat,ainv)
+      CALL LIB$INVERTR8(INDX,AMAT,AINV)
 !
 !     ==========================================================================
 !     ==  RESOLVE                                                             ==
@@ -209,8 +219,8 @@
       YLMFROMPOL(1,:LMX,:)=AINV(:LMX,:)
       I0A=LMX
       DO N=1,LX/2
-        LMX1=(Lx-2*N+1)**2
-        YLMFROMPOL(N+1,:LMX1,:)=Ainv(I0A+1:I0A+LMX1,:)
+        LMX1=(LX-2*N+1)**2
+        YLMFROMPOL(N+1,:LMX1,:)=AINV(I0A+1:I0A+LMX1,:)
         I0A=I0A+LMX1
       ENDDO              
       RETURN
@@ -346,7 +356,7 @@
       REAL(8)     ,INTENT(IN) :: R(3)    ! POSITION RELATIVE TO THE CENTER
       REAL(8)     ,INTENT(IN) :: C(NIJK) ! COEFFICIENT ARRAY 
       REAL(8)     ,INTENT(OUT):: G       ! VALUE OF THE FUNCTION
-      INTEGER(4)              :: N,M,I,J,K,IND,nijk1
+      INTEGER(4)              :: N,M,I,J,K,IND,NIJK1
       REAL(8)                 :: GX,GY,GZ
 !     **************************************************************************
       IF(ID.EQ.'CARTESIAN') THEN
@@ -359,7 +369,7 @@
         RETURN
       END IF 
 !
-      nijk1=nijk  !avoid mapping intent(in) onto intent(inout)
+      NIJK1=NIJK  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJK1,N,J,K)
       G=0.D0
       IND=0
@@ -433,8 +443,8 @@
 !     ** 
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID   ! grid id
-      INTEGER(4),INTENT(IN) :: NR    ! #(radial grid points)
+      INTEGER(4),INTENT(IN) :: GID   ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR    ! #(RADIAL GRID POINTS)
       INTEGER(4),INTENT(IN) :: L     ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: W(NR) ! WEIGHTING FOR FIT
       REAL(8)   ,INTENT(IN) :: F(NR) ! FUNCTION TO BE FITTED
@@ -450,10 +460,10 @@
       REAL(8)               :: SCALE(NPOW,NEP)
       REAL(8)               :: WR2(NR)
       INTEGER(4)            :: I,J,I1,J1,I2,J2
-      LOGICAL(4),PARAMETER  :: TTEST=.false.
+      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
 !     **************************************************************************
       CALL RADIAL$R(GID,NR,R2)
-      RL(:)=R2(:)**L   ! r2 is still r and will be squared only in the next line
+      RL(:)=R2(:)**L   ! R2 IS STILL R AND WILL BE SQUARED ONLY IN THE NEXT LINE
       R2(:)=R2(:)**2
       WR2(:)=W(:) !*R2(:)
 !
@@ -595,27 +605,27 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
       INTEGER(4)            :: INDP,MP,IP,JP,KP
-      INTEGER(4)            :: nijka1,nijkb1,nijkp1
-      real(8)               :: svar,svar1
+      INTEGER(4)            :: NIJKA1,NIJKB1,NIJKP1
+      REAL(8)               :: SVAR,SVAR1
 !     **************************************************************************
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      NIJKA1=NIJKA  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKA',NIJKA)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      NIJKB1=NIJKB  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKB',NIJKB)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      nijkp1=nijkp  !avoid mapping intent(in) onto intent(inout)
+      NIJKP1=NIJKP  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKP1,NP,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
@@ -673,52 +683,52 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN_CONTRACT2GAUSSMAT(NIJKA,NEA,EA,RA,NIJKB,NEB,EB,RB &
-     &                                     ,NIJKP,NEP,EP,RP,CPab)
+     &                                     ,NIJKP,NEP,EP,RP,CPAB)
 !     **************************************************************************
 !     ** 
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NIJKA
-      INTEGER(4),INTENT(IN) :: Nea
-      REAL(8)   ,INTENT(IN) :: EA(nea)
+      INTEGER(4),INTENT(IN) :: NEA
+      REAL(8)   ,INTENT(IN) :: EA(NEA)
       REAL(8)   ,INTENT(IN) :: RA(3)
       INTEGER(4),INTENT(IN) :: NIJKB
-      INTEGER(4),INTENT(IN) :: Neb
-      REAL(8)   ,INTENT(IN) :: EB(neb)
+      INTEGER(4),INTENT(IN) :: NEB
+      REAL(8)   ,INTENT(IN) :: EB(NEB)
       REAL(8)   ,INTENT(IN) :: RB(3)
       INTEGER(4),INTENT(IN) :: NIJKP
-      INTEGER(4),INTENT(IN) :: Nep
-      REAL(8)   ,INTENT(OUT):: EP(nep)
-      REAL(8)   ,INTENT(OUT):: RP(3,nep)
-      REAL(8)   ,INTENT(OUT):: CPab(nijka,nijkb,NIJKP,nea,neb)
+      INTEGER(4),INTENT(IN) :: NEP
+      REAL(8)   ,INTENT(OUT):: EP(NEP)
+      REAL(8)   ,INTENT(OUT):: RP(3,NEP)
+      REAL(8)   ,INTENT(OUT):: CPAB(NIJKA,NIJKB,NIJKP,NEA,NEB)
       INTEGER(4)            :: NA,NB,NP
       INTEGER(4)            :: NABX
       INTEGER(4)            :: J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
-      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
-      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
-      INTEGER(4)            :: INDP,MP,IP,JP,KP,iep
-      INTEGER(4)            :: nijka1,nijkb1,nijkp1
-      real(8)               :: svar,svar1
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
+      INTEGER(4)            :: INDP,MP,IP,JP,KP,IEP
+      INTEGER(4)            :: NIJKA1,NIJKB1,NIJKP1
+      REAL(8)               :: SVAR,SVAR1
 !     **************************************************************************
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
+      NIJKA1=NIJKA  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKA',NIJKA)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
+      NIJKB1=NIJKB  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$I4VAL('NIJKB',NIJKB)
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
-      nijkp1=nijkp  !avoid mapping intent(in) onto intent(inout)
+      NIJKP1=NIJKP  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKP1,NP,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
@@ -726,19 +736,19 @@ PRINT*,'SQUARE DEVIATION ',SVAR
         CALL ERROR$STOP('GAUSSIAN_CONTRACTHGAUSS')
       END IF
 !
-      nabx=max(na,nb)
+      NABX=MAX(NA,NB)
       ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
-      iep=0
-      do iea=1,nea
-        do ieb=1,neb
-          iep=iep+1
-          EP(iep)=EA(iea)+EB(ieb)
-          RP(:,iep)=(RA(:)*EA(iea)+RB(:)*EB(ieb))/EP(iep)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(iea),EB(ieb),HX)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieb),HY)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieb),HZ)
+      IEP=0
+      DO IEA=1,NEA
+        DO IEB=1,NEB
+          IEP=IEP+1
+          EP(IEP)=EA(IEA)+EB(IEB)
+          RP(:,IEP)=(RA(:)*EA(IEA)+RB(:)*EB(IEB))/EP(IEP)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(IEA),EB(IEB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(IEA),EB(IEB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(IEA),EB(IEB),HZ)
 
           INDP=0
           DO MP=0,NP
@@ -762,7 +772,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                           DO JA=0,MA-IA
                             KA=MA-IA-JA
                             INDA=INDA+1
-                            cpab(inda,indb,indp,iea,ieb)=HX(IA,IB,IP) &
+                            CPAB(INDA,INDB,INDP,IEA,IEB)=HX(IA,IB,IP) &
          &                                              *HY(JA,JB,JP) &
          &                                              *HZ(KA,KB,KP)
                           ENDDO
@@ -772,8 +782,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                     ENDDO
                   ENDDO
                 ENDDO
-              enddo
-            enddo
+              ENDDO
+            ENDDO
           ENDDO
         ENDDO
       ENDDO
@@ -804,10 +814,10 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: primov(:,:)
+      REAL(8)   ,ALLOCATABLE:: PRIMOV(:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
-      INTEGER(4)            :: nijka1,nijkb1
+      INTEGER(4)            :: NIJKA1,NIJKB1
       REAL(8)               :: PI
       REAL(8)               :: SVAR
 !     **************************************************************************
@@ -816,15 +826,15 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,Ja,Ka)
-      IF(Ja.NE.0.OR.Ka.NE.0) THEN
+      NIJKA1=NIJKA  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,JA,KA)
+      IF(JA.NE.0.OR.KA.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,Jb,Kb)
-      IF(Jb.NE.0.OR.Kb.NE.0) THEN
+      NIJKB1=NIJKB  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,JB,KB)
+      IF(JB.NE.0.OR.KB.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
@@ -843,8 +853,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  WORK OUT OVERLAP MATRIX                                             ==
 !     ==========================================================================
-      ALLOCATE(primov(nijka,nijkb))
-      primov(:,:)=0.d0
+      ALLOCATE(PRIMOV(NIJKA,NIJKB))
+      PRIMOV(:,:)=0.D0
       SAB(:,:)=0.D0
       INDA=0
       DO MA=0,NA
@@ -861,7 +871,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                   INDB=INDB+1
 !
                   SVAR=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
-                  primov(inda,indb)=svar
+                  PRIMOV(INDA,INDB)=SVAR
 !!$                  DO J=1,NCB
 !!$                    DO I=1,NCA
 !!$                      SAB(I,J)=SAB(I,J)+SVAR*CA(INDA,I)*CB(INDB,J)
@@ -874,9 +884,9 @@ PRINT*,'SQUARE DEVIATION ',SVAR
           ENDDO
         ENDDO
       ENDDO
-      primov(:,:)=primov(:,:)*(PI/(EA+EB))**1.5D0
+      PRIMOV(:,:)=PRIMOV(:,:)*(PI/(EA+EB))**1.5D0
 !      SAB(:,:)=SAB(:,:)*(PI/(EA+EB))**1.5D0
-      sab=matmul(transpose(ca(:,:)),matmul(primov,cb))
+      SAB=MATMUL(TRANSPOSE(CA(:,:)),MATMUL(PRIMOV,CB))
 !
 !!$DO I=1,NIJKA
 !!$  WRITE(*,FMT='("CA",I8,20E10.2)')I,CA(I,:),CB(I,:)
@@ -884,13 +894,13 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !!$DO J=1,NCB
 !!$  WRITE(*,FMT='("S",20E10.2)')SAB(:,J)
 !!$ENDDO
-!!$STOP 'forced in gaussian$overlap'
+!!$STOP 'FORCED IN GAUSSIAN$OVERLAP'
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN$newOVERLAP(NIJKA,NCA,nea,EA,RA,CA &
-     &                           ,NIJKB,NCB,neb,EB,RB,CB,SAB)
+      SUBROUTINE GAUSSIAN$NEWOVERLAP(NIJKA,NCA,NEA,EA,RA,CA &
+     &                           ,NIJKB,NCB,NEB,EB,RB,CB,SAB)
 !     **************************************************************************
 !     ** EVALUATES THE OVERLAP OF TWO SETS OF FUNCTIONS REPRESENTED BY        **
 !     ** CARTESIAN GAUSSIANS.                                                 **
@@ -900,25 +910,25 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NIJKA
-      INTEGER(4),INTENT(IN) :: Nca
-      INTEGER(4),INTENT(IN) :: Nea
-      REAL(8)   ,INTENT(IN) :: EA(nea)
+      INTEGER(4),INTENT(IN) :: NCA
+      INTEGER(4),INTENT(IN) :: NEA
+      REAL(8)   ,INTENT(IN) :: EA(NEA)
       REAL(8)   ,INTENT(IN) :: RA(3)
-      REAL(8)   ,INTENT(IN) :: CA(NIJKA,nea,NCA)
+      REAL(8)   ,INTENT(IN) :: CA(NIJKA,NEA,NCA)
       INTEGER(4),INTENT(IN) :: NIJKB
-      INTEGER(4),INTENT(IN) :: Neb
-      INTEGER(4),INTENT(IN) :: Ncb
-      REAL(8)   ,INTENT(IN) :: EB(neb)
+      INTEGER(4),INTENT(IN) :: NEB
+      INTEGER(4),INTENT(IN) :: NCB
+      REAL(8)   ,INTENT(IN) :: EB(NEB)
       REAL(8)   ,INTENT(IN) :: RB(3)
-      REAL(8)   ,INTENT(IN) :: Cb(NIJKb,neb,NCb)
-      REAL(8)   ,INTENT(OUT) :: SAB(nca,ncb)
+      REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NCB)
+      REAL(8)   ,INTENT(OUT) :: SAB(NCA,NCB)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: primov(:,:)
-      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
-      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
-      INTEGER(4)            :: nijka1,nijkb1
+      REAL(8)   ,ALLOCATABLE:: PRIMOV(:,:)
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
+      INTEGER(4)            :: NIJKA1,NIJKB1
       REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -926,15 +936,15 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      nijka1=nijka  !avoid mapping intent(in) onto intent(inout)
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,Ja,Ka)
-      IF(Ja.NE.0.OR.Ka.NE.0) THEN
+      NIJKA1=NIJKA  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,JA,KA)
+      IF(JA.NE.0.OR.KA.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      nijkb1=nijkb  !avoid mapping intent(in) onto intent(inout)
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,Jb,Kb)
-      IF(Jb.NE.0.OR.Kb.NE.0) THEN
+      NIJKB1=NIJKB  !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,JB,KB)
+      IF(JB.NE.0.OR.KB.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
@@ -946,13 +956,13 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
-      allocate(primov(nijka,nijkb))
+      ALLOCATE(PRIMOV(NIJKA,NIJKB))
       SAB(:,:)=0.D0
-      do iea=1,nea
-        do ieb=1,neb
-          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+      DO IEA=1,NEA
+        DO IEB=1,NEB
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(IEA),EB(IEB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(IEA),EB(IEB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(IEA),EB(IEB),HZ)
 !
 !         ======================================================================
 !         ==  WORK OUT OVERLAP MATRIX                                         ==
@@ -970,7 +980,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                     DO JB=0,MB-IB
                       KB=MB-IB-JB
                       INDB=INDB+1
-                      primov(inda,indb)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                      PRIMOV(INDA,INDB)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -978,10 +988,10 @@ PRINT*,'SQUARE DEVIATION ',SVAR
               ENDDO
             ENDDO
           ENDDO
-          primov(:,:)=primov(:,:)*(PI/(EA(iea)+EB(ieb)))**1.5D0
-          sab=sab+matmul(transpose(ca(:,iea,:)),matmul(primov,cb(:,ieb,:)))
-        enddo
-      enddo  
+          PRIMOV(:,:)=PRIMOV(:,:)*(PI/(EA(IEA)+EB(IEB)))**1.5D0
+          SAB=SAB+MATMUL(TRANSPOSE(CA(:,IEA,:)),MATMUL(PRIMOV,CB(:,IEB,:)))
+        ENDDO
+      ENDDO  
       RETURN
       END
 !
@@ -1015,15 +1025,15 @@ PRINT*,'SQUARE DEVIATION ',SVAR
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,Ja,Ka)
-      IF(Ja.NE.0.OR.Ka.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,JA,KA)
+      IF(JA.NE.0.OR.KA.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_gaussOVERLAP')
+        CALL ERROR$STOP('GAUSSIAN_GAUSSOVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,Jb,Kb)
-      IF(Jb.NE.0.OR.Kb.NE.0) THEN
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,JB,KB)
+      IF(JB.NE.0.OR.KB.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
-        CALL ERROR$STOP('GAUSSIAN_gaussOVERLAP')
+        CALL ERROR$STOP('GAUSSIAN_GAUSSOVERLAP')
       END IF
 !
 !     ==========================================================================
@@ -1034,11 +1044,11 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
       SAB(:,:,:,:)=0.D0
-      do iea=1,nea
-        do ieb=1,neb
-          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+      DO IEA=1,NEA
+        DO IEB=1,NEB
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(IEA),EB(IEB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(IEA),EB(IEB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(IEA),EB(IEB),HZ)
 !
 !         ======================================================================
 !         ==  WORK OUT OVERLAP MATRIX                                         ==
@@ -1056,7 +1066,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                     DO JB=0,MB-IB
                       KB=MB-IB-JB
                       INDB=INDB+1
-                      sab(inda,iea,indb,ieb)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                      SAB(INDA,IEA,INDB,IEB)=HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -1064,44 +1074,44 @@ PRINT*,'SQUARE DEVIATION ',SVAR
               ENDDO
             ENDDO
           ENDDO
-          sab(:,iea,:,ieb)=sab(:,iea,:,ieb)*(PI/(EA(iea)+EB(ieb)))**1.5D0
-        enddo
-      enddo  
+          SAB(:,IEA,:,IEB)=SAB(:,IEA,:,IEB)*(PI/(EA(IEA)+EB(IEB)))**1.5D0
+        ENDDO
+      ENDDO  
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN$gausspsi(NIJKA,nea,EA,RA,NIJKB,neb,EB,RB,ncb,CB,gcb)
+      SUBROUTINE GAUSSIAN$GAUSSPSI(NIJKA,NEA,EA,RA,NIJKB,NEB,EB,RB,NCB,CB,GCB)
 !     **************************************************************************
-!     ** EVALUATES THE matrix elements <g(i,ie)|psi_n> of a function |psi_n>  **
-!     ** at rb with Gaussians centered at ra                                  **
+!     ** EVALUATES THE MATRIX ELEMENTS <G(I,IE)|PSI_N> OF A FUNCTION |PSI_N>  **
+!     ** AT RB WITH GAUSSIANS CENTERED AT RA                                  **
 !     ** SET "A" WITH NCA FUNCTIONS HAS THE EXPONENT EA AND IS CENTERED AT RA **
 !     ** SET "B" WITH NCB FUNCTIONS HAS THE EXPONENT EB AND IS CENTERED AT RB **
 !     ** THE RESULTING OVERLAP MATRIX IS S_IJ=<A_I|B_J>                       **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NIJKA
-      INTEGER(4),INTENT(IN) :: Nea
-      REAL(8)   ,INTENT(IN) :: EA(nea)
+      INTEGER(4),INTENT(IN) :: NEA
+      REAL(8)   ,INTENT(IN) :: EA(NEA)
       REAL(8)   ,INTENT(IN) :: RA(3)
       INTEGER(4),INTENT(IN) :: NIJKB
-      INTEGER(4),INTENT(IN) :: Neb
-      REAL(8)   ,INTENT(IN) :: EB(neb)
+      INTEGER(4),INTENT(IN) :: NEB
+      REAL(8)   ,INTENT(IN) :: EB(NEB)
       REAL(8)   ,INTENT(IN) :: RB(3)
-      INTEGER(4),INTENT(IN) :: Ncb
-      REAL(8)   ,INTENT(IN) :: Cb(NIJKb,neb,NCb)   ! |psi_n>=sum_j:|gb_j>cb(j,n)
-      REAL(8)   ,INTENT(OUT):: gcb(nijka,nea,ncb)  ! <ga_i|psi_n>
+      INTEGER(4),INTENT(IN) :: NCB
+      REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NCB)   ! |PSI_N>=SUM_J:|GB_J>CB(J,N)
+      REAL(8)   ,INTENT(OUT):: GCB(NIJKA,NEA,NCB)  ! <GA_I|PSI_N>
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       INTEGER(4)            :: J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
-      INTEGER(4)            :: INDA,MA,IA,JA,KA,iea
-      INTEGER(4)            :: INDB,MB,IB,JB,KB,ieb
+      INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
+      INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
       REAL(8)               :: PI
-      REAL(8)               :: SVAR,fac
+      REAL(8)               :: SVAR,FAC
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
-      gcb(:,:,:)=0.D0
+      GCB(:,:,:)=0.D0
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
@@ -1124,16 +1134,16 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       ALLOCATE(HX(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HY(0:NABX,0:NABX,0:2*NABX))
       ALLOCATE(HZ(0:NABX,0:NABX,0:2*NABX))
-      do iea=1,nea
-        do ieb=1,neb
-          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),Ea(iea),Eb(ieB),HX)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(iea),EB(ieB),HY)
-          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(iea),EB(ieB),HZ)
+      DO IEA=1,NEA
+        DO IEB=1,NEB
+          CALL GAUSSIAN_HERMITEC(NABX,RA(1),RB(1),EA(IEA),EB(IEB),HX)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(2),RB(2),EA(IEA),EB(IEB),HY)
+          CALL GAUSSIAN_HERMITEC(NABX,RA(3),RB(3),EA(IEA),EB(IEB),HZ)
 !
 !         ======================================================================
-!         ==  WORK OUT OVERLAP <g|psi_n>                                      ==
+!         ==  WORK OUT OVERLAP <G|PSI_N>                                      ==
 !         ======================================================================
-          fac=(PI/(EA(iea)+EB(ieb)))**1.5D0
+          FAC=(PI/(EA(IEA)+EB(IEB)))**1.5D0
           INDA=0
           DO MA=0,NA
             DO IA=0,MA
@@ -1147,8 +1157,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
                     DO JB=0,MB-IB
                       KB=MB-IB-JB
                       INDB=INDB+1
-                      svar=fac*HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
-                      gcb(inda,iea,:)=gcb(inda,iea,:)+svar*cb(indb,ieb,:)
+                      SVAR=FAC*HX(IA,IB,0)*HY(JA,JB,0)*HZ(KA,KB,0)
+                      GCB(INDA,IEA,:)=GCB(INDA,IEA,:)+SVAR*CB(INDB,IEB,:)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -1156,8 +1166,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
               ENDDO
             ENDDO
           ENDDO
-        enddo
-      enddo  
+        ENDDO
+      ENDDO  
       RETURN
       END
 !
@@ -1177,7 +1187,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: I,J,IJSUM,T,I1,I2
 !     **************************************************************************
       IF(N.LT.0) THEN
-        CALL ERROR$MSG('N MUST BE A non-negative INTEGER')
+        CALL ERROR$MSG('N MUST BE A NON-NEGATIVE INTEGER')
         CALL ERROR$I4VAL('N',N)
         CALL ERROR$STOP('GAUSSIAN_HERMITEC')
       END IF
@@ -1189,7 +1199,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       PA=XP-XA
       PB=XP-XB
       H(0,0,0)=EXP(-MU*(XB-XA)**2)
-      if(n.lt.1) return
+      IF(N.LT.1) RETURN
 !     == INITIALIZE UP TO I+J=1 TO AVOID REFERRING TO INDICES OUT OF RANGE
       H(1,0,0)=PA*H(0,0,0)
       H(1,0,1)=ONEBY2P*H(0,0,0)
@@ -1229,10 +1239,10 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN$FOURCENTER(NIJKA,nea,norba,EA,RA,CA &
-     &                              ,NIJKB,neb,norbb,EB,RB,CB &
-     &                              ,NIJKC,nec,norbc,EC,RC,CC &
-     &                              ,NIJKD,ned,norbd,ED,RD,CD,UABCD)
+      SUBROUTINE GAUSSIAN$FOURCENTER(NIJKA,NEA,NORBA,EA,RA,CA &
+     &                              ,NIJKB,NEB,NORBB,EB,RB,CB &
+     &                              ,NIJKC,NEC,NORBC,EC,RC,CC &
+     &                              ,NIJKD,NED,NORBD,ED,RD,CD,UABCD)
 !     **************************************************************************
 !     ** 
 !     **************************************************************************
@@ -1241,27 +1251,27 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4),INTENT(IN) :: NIJKB
       INTEGER(4),INTENT(IN) :: NIJKC
       INTEGER(4),INTENT(IN) :: NIJKD
-      INTEGER(4),INTENT(IN) :: Nea
-      INTEGER(4),INTENT(IN) :: Neb
-      INTEGER(4),INTENT(IN) :: NeC
-      INTEGER(4),INTENT(IN) :: NeD
-      INTEGER(4),INTENT(IN) :: Norba
-      INTEGER(4),INTENT(IN) :: Norbb
-      INTEGER(4),INTENT(IN) :: NorbC
-      INTEGER(4),INTENT(IN) :: NorbD
-      REAL(8)   ,INTENT(IN) :: EA(nea)
-      REAL(8)   ,INTENT(IN) :: EB(neb)
-      REAL(8)   ,INTENT(IN) :: EC(nec)
-      REAL(8)   ,INTENT(IN) :: ED(ned)
+      INTEGER(4),INTENT(IN) :: NEA
+      INTEGER(4),INTENT(IN) :: NEB
+      INTEGER(4),INTENT(IN) :: NEC
+      INTEGER(4),INTENT(IN) :: NED
+      INTEGER(4),INTENT(IN) :: NORBA
+      INTEGER(4),INTENT(IN) :: NORBB
+      INTEGER(4),INTENT(IN) :: NORBC
+      INTEGER(4),INTENT(IN) :: NORBD
+      REAL(8)   ,INTENT(IN) :: EA(NEA)
+      REAL(8)   ,INTENT(IN) :: EB(NEB)
+      REAL(8)   ,INTENT(IN) :: EC(NEC)
+      REAL(8)   ,INTENT(IN) :: ED(NED)
       REAL(8)   ,INTENT(IN) :: RA(3)
       REAL(8)   ,INTENT(IN) :: RB(3)
       REAL(8)   ,INTENT(IN) :: RC(3)
       REAL(8)   ,INTENT(IN) :: RD(3)
-      REAL(8)   ,INTENT(IN) :: CA(nijka,nea,norba)
-      REAL(8)   ,INTENT(IN) :: CB(nijkb,neb,norbb)
-      REAL(8)   ,INTENT(IN) :: CC(nijkc,nec,norbc)
-      REAL(8)   ,INTENT(IN) :: CD(nijkd,ned,norbd)
-      REAL(8)   ,INTENT(OUT) :: UABCD(norba,norbb,norbc,norbd)
+      REAL(8)   ,INTENT(IN) :: CA(NIJKA,NEA,NORBA)
+      REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NORBB)
+      REAL(8)   ,INTENT(IN) :: CC(NIJKC,NEC,NORBC)
+      REAL(8)   ,INTENT(IN) :: CD(NIJKD,NED,NORBD)
+      REAL(8)   ,INTENT(OUT) :: UABCD(NORBA,NORBB,NORBC,NORBD)
       INTEGER(4)             :: NIJKP,NIJKQ
       REAL(8)                :: EP,EQ
       REAL(8)                :: RP(3),RQ(3)
@@ -1270,11 +1280,11 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)             :: J,K
       REAL(8)   ,ALLOCATABLE :: HI(:,:,:)
       REAL(8)                :: SIGN
-      REAL(8)                :: uabcd1
+      REAL(8)                :: UABCD1
       INTEGER(4)             :: INDP,INDQ,MP,MQ,IP,IQ,JP,JQ,KP,KQ
-      INTEGER(4)             :: iorba,iorbb,iorbc,iorbd
-      INTEGER(4)             :: iea,ieb,iec,ied
-      REAL(8)                :: PI,sgn
+      INTEGER(4)             :: IORBA,IORBB,IORBC,IORBD
+      INTEGER(4)             :: IEA,IEB,IEC,IED
+      REAL(8)                :: PI,SGN
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
@@ -1304,38 +1314,38 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       CALL GAUSSIAN_GAUSSINDEX('INDFROMIJK',NIJKQ,NQ,0,0)
       ALLOCATE(CP(NIJKP))
       ALLOCATE(CQ(NIJKQ))
-      N=np+nq
+      N=NP+NQ
       ALLOCATE(HI(0:N,0:N,0:N))
       UABCD(:,:,:,:)=0.D0
-      do iorba=1,norba
-        do iorbb=1,norbb
-          do iea=1,nea
-            do ieb=1,neb
-      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKA,EA(iea),RA,CA(:,iea,iorba) &
-     &                            ,NIJKB,EB(ieb),RB,CB(:,ieb,iorbb) &
+      DO IORBA=1,NORBA
+        DO IORBB=1,NORBB
+          DO IEA=1,NEA
+            DO IEB=1,NEB
+      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKA,EA(IEA),RA,CA(:,IEA,IORBA) &
+     &                            ,NIJKB,EB(IEB),RB,CB(:,IEB,IORBB) &
      &                            ,NIJKP,EP,RP,CP)
-print*,'marke 1',iorba,iorbb,iea,ieb
-              do iorbc=1,norbc
-                do iorbd=1,norbd
-                  do iec=1,nec
-                    do ied=1,ned
-      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKC,EC(iec),RC,CC(:,iec,iorbc) &
-     &                            ,NIJKD,ED(ied),RD,CD(:,ied,iorbd) &
+PRINT*,'MARKE 1',IORBA,IORBB,IEA,IEB
+              DO IORBC=1,NORBC
+                DO IORBD=1,NORBD
+                  DO IEC=1,NEC
+                    DO IED=1,NED
+      CALL GAUSSIAN_CONTRACT2GAUSS(NIJKC,EC(IEC),RC,CC(:,IEC,IORBC) &
+     &                            ,NIJKD,ED(IED),RD,CD(:,IED,IORBD) &
      &                            ,NIJKQ,EQ,RQ,CQ)
       CALL GAUSSIAN_HERMITEINTEGRAL(N,EP*EQ/(EP+EQ),RP-RQ,HI)
-      uabcd1=0.d0
+      UABCD1=0.D0
       INDP=0
       DO MP=0,NP      
         DO IP=0,MP
           DO JP=0,MP-IP
             KP=MP-IP-JP
             INDP=INDP+1
-            if(abs(cp(indp)).lt.1.d-6) cycle
+            IF(ABS(CP(INDP)).LT.1.D-6) CYCLE
 !         
             INDQ=0
-            sgn=-1.d0
+            SGN=-1.D0
             DO MQ=0,NQ      
-              sgn=-sgn     !sgn=(-1)^(iq+jq+kq)=(-1)^mq
+              SGN=-SGN     !SGN=(-1)^(IQ+JQ+KQ)=(-1)^MQ
               DO IQ=0,MQ
                 DO JQ=0,MQ-IQ
                   KQ=MQ-IQ-JQ
@@ -1349,15 +1359,15 @@ print*,'marke 1',iorba,iorbb,iea,ieb
         ENDDO
       ENDDO
       UABCD1=2.D0*PI**2.5D0/(EP*EQ*SQRT(EP+EQ))*UABCD1
-      uabcd(iorba,iorbb,iorbc,iorbd)=uabcd(iorba,iorbb,iorbc,iorbd)+uabcd1
-                    enddo
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
+      UABCD(IORBA,IORBB,IORBC,IORBD)=UABCD(IORBA,IORBB,IORBC,IORBD)+UABCD1
+                    ENDDO
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
       RETURN
       END
 !
@@ -1368,7 +1378,7 @@ print*,'marke 1',iorba,iorbb,iea,ieb
 !     ** CALCULATES FOUR-CENTER MATRIX ELEMENTS FOR CARTESIAN GAUSSIANS       **
 !     ** LOCATED AT THE ENDS OF A SINGLE BOND ORIENTED IN Z-DIRECTION         **
 !     ** U(1,2,3,4)=INT DX INT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|        **
-!     ** the order of indices deviates from the convention for the utensor!   **
+!     ** THE ORDER OF INDICES DEVIATES FROM THE CONVENTION FOR THE UTENSOR!   **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NIJKA
@@ -1593,75 +1603,75 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ** USE STARBURST MESH AND WRITE MEAN, MAX, AND MIN                      **
 !     **************************************************************************
       IMPLICIT NONE
-      character(*),intent(in) :: file   ! filename of output
+      CHARACTER(*),INTENT(IN) :: FILE   ! FILENAME OF OUTPUT
       REAL(8)   ,INTENT(IN) :: RAD      ! RADIUS OF SPHERE ENCLOSED BY GRID
       INTEGER(4),INTENT(IN) :: NIJK     ! #(GAUSS COEFFICIENTS)
-      INTEGER(4),INTENT(IN) :: Ne       ! #(GAUSS COEFFICIENTS)
-      REAL(8)   ,INTENT(IN) :: E(ne)    ! EXPONENT OF GAUSS EXPANSION
-      REAL(8)   ,INTENT(IN) :: C(NIJK,ne) ! GAUSS COEFFICIENTS
-      integer(4),parameter  :: nr=200
-      integer(4),parameter  :: ndir=26
-      real(8)               :: exarr(ne)
-      real(8)               :: vec(3,ndir)
-      real(8)               :: f(ndir)
-      real(8)               :: svar,ri
-      integer(4)            :: ind,i,j,k
-      integer(4)            :: ir,idir,ie
-      integer(4)            :: nfil
+      INTEGER(4),INTENT(IN) :: NE       ! #(GAUSS COEFFICIENTS)
+      REAL(8)   ,INTENT(IN) :: E(NE)    ! EXPONENT OF GAUSS EXPANSION
+      REAL(8)   ,INTENT(IN) :: C(NIJK,NE) ! GAUSS COEFFICIENTS
+      INTEGER(4),PARAMETER  :: NR=200
+      INTEGER(4),PARAMETER  :: NDIR=26
+      REAL(8)               :: EXARR(NE)
+      REAL(8)               :: VEC(3,NDIR)
+      REAL(8)               :: F(NDIR)
+      REAL(8)               :: SVAR,RI
+      INTEGER(4)            :: IND,I,J,K
+      INTEGER(4)            :: IR,IDIR,IE
+      INTEGER(4)            :: NFIL
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == fcc/sic/bcc-type starburst mesh                                      ==
+!     == FCC/SIC/BCC-TYPE STARBURST MESH                                      ==
 !     ==========================================================================
-!     == fcc directions ========================================================
-      svar=1.d0/sqrt(2.d0)
-      vec(:, 1)=(/+1.d0,+0.d0,+1.d0/)*svar
-      vec(:, 2)=(/-1.d0,+0.d0,+1.d0/)*svar
-      vec(:, 3)=(/+0.d0,+1.d0,+1.d0/)*svar
-      vec(:, 4)=(/+0.d0,-1.d0,+1.d0/)*svar
-      vec(:, 5)=(/+1.d0,+1.d0,+0.d0/)*svar
-      vec(:, 6)=(/+1.d0,-1.d0,+0.d0/)*svar
-      vec(:, 7)=(/-1.d0,+1.d0,+0.d0/)*svar
-      vec(:, 8)=(/-1.d0,-1.d0,+0.d0/)*svar
-      vec(:, 9)=(/+1.d0,+0.d0,-1.d0/)*svar
-      vec(:,10)=(/-1.d0,+0.d0,-1.d0/)*svar
-      vec(:,11)=(/+0.d0,+1.d0,-1.d0/)*svar
-      vec(:,12)=(/+0.d0,-1.d0,-1.d0/)*svar
-!     == sic directions ========================================================
-      vec(:,13)=(/+1.d0,+0.d0,+0.d0/)
-      vec(:,14)=(/-1.d0,+0.d0,+0.d0/)
-      vec(:,15)=(/+0.d0,+1.d0,+0.d0/)
-      vec(:,16)=(/+0.d0,-1.d0,+0.d0/)
-      vec(:,17)=(/+0.d0,+0.d0,+1.d0/)
-      vec(:,18)=(/+0.d0,+0.d0,-1.d0/)
-!     == bcc directions ========================================================
-      svar=1.d0/sqrt(3.d0)
-      vec(:,19)=(/+1.d0,+1.d0,+1.d0/)*svar
-      vec(:,20)=(/-1.d0,+1.d0,+1.d0/)*svar
-      vec(:,21)=(/+1.d0,-1.d0,+1.d0/)*svar
-      vec(:,22)=(/-1.d0,-1.d0,+1.d0/)*svar
-      vec(:,23)=(/+1.d0,+1.d0,-1.d0/)*svar
-      vec(:,24)=(/-1.d0,+1.d0,-1.d0/)*svar
-      vec(:,25)=(/+1.d0,-1.d0,-1.d0/)*svar
-      vec(:,26)=(/-1.d0,-1.d0,-1.d0/)*svar
+!     == FCC DIRECTIONS ========================================================
+      SVAR=1.D0/SQRT(2.D0)
+      VEC(:, 1)=(/+1.D0,+0.D0,+1.D0/)*SVAR
+      VEC(:, 2)=(/-1.D0,+0.D0,+1.D0/)*SVAR
+      VEC(:, 3)=(/+0.D0,+1.D0,+1.D0/)*SVAR
+      VEC(:, 4)=(/+0.D0,-1.D0,+1.D0/)*SVAR
+      VEC(:, 5)=(/+1.D0,+1.D0,+0.D0/)*SVAR
+      VEC(:, 6)=(/+1.D0,-1.D0,+0.D0/)*SVAR
+      VEC(:, 7)=(/-1.D0,+1.D0,+0.D0/)*SVAR
+      VEC(:, 8)=(/-1.D0,-1.D0,+0.D0/)*SVAR
+      VEC(:, 9)=(/+1.D0,+0.D0,-1.D0/)*SVAR
+      VEC(:,10)=(/-1.D0,+0.D0,-1.D0/)*SVAR
+      VEC(:,11)=(/+0.D0,+1.D0,-1.D0/)*SVAR
+      VEC(:,12)=(/+0.D0,-1.D0,-1.D0/)*SVAR
+!     == SIC DIRECTIONS ========================================================
+      VEC(:,13)=(/+1.D0,+0.D0,+0.D0/)
+      VEC(:,14)=(/-1.D0,+0.D0,+0.D0/)
+      VEC(:,15)=(/+0.D0,+1.D0,+0.D0/)
+      VEC(:,16)=(/+0.D0,-1.D0,+0.D0/)
+      VEC(:,17)=(/+0.D0,+0.D0,+1.D0/)
+      VEC(:,18)=(/+0.D0,+0.D0,-1.D0/)
+!     == BCC DIRECTIONS ========================================================
+      SVAR=1.D0/SQRT(3.D0)
+      VEC(:,19)=(/+1.D0,+1.D0,+1.D0/)*SVAR
+      VEC(:,20)=(/-1.D0,+1.D0,+1.D0/)*SVAR
+      VEC(:,21)=(/+1.D0,-1.D0,+1.D0/)*SVAR
+      VEC(:,22)=(/-1.D0,-1.D0,+1.D0/)*SVAR
+      VEC(:,23)=(/+1.D0,+1.D0,-1.D0/)*SVAR
+      VEC(:,24)=(/-1.D0,+1.D0,-1.D0/)*SVAR
+      VEC(:,25)=(/+1.D0,-1.D0,-1.D0/)*SVAR
+      VEC(:,26)=(/-1.D0,-1.D0,-1.D0/)*SVAR
 !
       CALL FILEHANDLER$SETFILE('HOOK',.FALSE.,FILE)
       CALL FILEHANDLER$UNIT('HOOK',NFIL)
-      do ir=1,nr
-        ri=rad*real(ir-1)/real(nr-1)
-        exarr(:)=exp(-e(:)*ri**2)
-        f(:)=0.d0
-        do ind=1,nijk
-          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',ind,I,J,K)
-          do idir=1,ndir
-            do ie=1,ne
-              f(idir)=f(idir)+vec(1,idir)**i*vec(2,idir)**j*vec(3,idir)**k &
-     &                       *ri**(i+j+k)*exarr(ie)*c(ind,ie)
-            enddo
-          enddo
-        enddo
-        write(nfil,*)ri,sum(f)/real(ndir),maxval(f),minval(f)
-      enddo
+      DO IR=1,NR
+        RI=RAD*REAL(IR-1)/REAL(NR-1)
+        EXARR(:)=EXP(-E(:)*RI**2)
+        F(:)=0.D0
+        DO IND=1,NIJK
+          CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',IND,I,J,K)
+          DO IDIR=1,NDIR
+            DO IE=1,NE
+              F(IDIR)=F(IDIR)+VEC(1,IDIR)**I*VEC(2,IDIR)**J*VEC(3,IDIR)**K &
+     &                       *RI**(I+J+K)*EXARR(IE)*C(IND,IE)
+            ENDDO
+          ENDDO
+        ENDDO
+        WRITE(NFIL,*)RI,SUM(F)/REAL(NDIR),MAXVAL(F),MINVAL(F)
+      ENDDO
       CALL FILEHANDLER$CLOSE('HOOK')
       CALL FILEHANDLER$SETFILE('HOOK',.TRUE.,'.FORGOTTOASSIGNFILETOHOOK')
       RETURN
@@ -1671,19 +1681,19 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       SUBROUTINE GAUSSIAN_HERMITEINTEGRAL(N,E,R,H0)
 !     **************************************************************************
 !     ** EVALUATES A HERMITE COULOMB INTEGRALS                                **
-!     ** only integrals with t+u+v.le.N are calculated. others remain empty.  **
+!     ** ONLY INTEGRALS WITH T+U+V.LE.N ARE CALCULATED. OTHERS REMAIN EMPTY.  **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: E
       REAL(8)   ,INTENT(IN) :: R(3)
       REAL(8)   ,INTENT(OUT):: H0(0:N,0:N,0:N)
-      REAL(8)               :: Hp(0:N,0:N,0:N)
+      REAL(8)               :: HP(0:N,0:N,0:N)
       REAL(8)               :: F(0:3*N)
-      INTEGER(4)            :: T,U,V,i
+      INTEGER(4)            :: T,U,V,I
       INTEGER(4)            :: M
       REAL(8)               :: X
-      real(8)               :: fac,svar
+      REAL(8)               :: FAC,SVAR
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1702,7 +1712,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ==  USE RECURSION TO CONSTRUCT HERMITE COULOMB INTEGRALS                ==
 !     ==========================================================================
       H0(:,:,:)=0.D0
-      DO I=0,N  ! only determine elements with t+u+v < n+1
+      DO I=0,N  ! ONLY DETERMINE ELEMENTS WITH T+U+V < N+1
         M=N-I
 !       == ASSUME THAT ALL ELEMENTS WITH UPPER INDEX M+1 ARE THERE
 !       == NON-ZERO ELEMENTS OF H0 HAVE T+U+V<I ================================
@@ -1739,7 +1749,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
         ENDDO
 !
 !       == RAISE FIRST INDEX ===================================================
-        IF(I.Ge.1) THEN  ! AVOID ACCESSING ELEMENTS WITH INDICES <0
+        IF(I.GE.1) THEN  ! AVOID ACCESSING ELEMENTS WITH INDICES <0
           T=1
           HP(T,0,0)=R(1)*H0(T-1,0,0)
         END IF
@@ -1770,7 +1780,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       INTEGER(4)            :: T,U,V
       INTEGER(4)            :: M
       REAL(8)               :: X
-      real(8)               :: fac,svar
+      REAL(8)               :: FAC,SVAR
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1781,18 +1791,18 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       FAC=-2.D0*E
       SVAR=1.D0
       DO M=1,3*N
-        F(M)=SVAR*F(M)    !(-2*E)^m * Fm
-        SVAR=SVAR*FAC     !(-2*e)^m
+        F(M)=SVAR*F(M)    !(-2*E)^M * FM
+        SVAR=SVAR*FAC     !(-2*E)^M
       ENDDO
 !
 !     ==========================================================================
 !     ==  USE RECURSION TO CONSTRUCT HERMITE COULOMB INTEGRALS                ==
 !     ==========================================================================
       DO M=1,3*N
-        HI(0,0,0)=F(M)       ! level m produces all integrals with t+u+v=m
-        DO T=MIN(M,N),2,-1   ! 2 .le. t .le. min(m,n)
-          DO U=0,M-T         ! 0 .le. u .le. m-t 
-            V=M-T-U          ! t+u+v=m
+        HI(0,0,0)=F(M)       ! LEVEL M PRODUCES ALL INTEGRALS WITH T+U+V=M
+        DO T=MIN(M,N),2,-1   ! 2 .LE. T .LE. MIN(M,N)
+          DO U=0,M-T         ! 0 .LE. U .LE. M-T 
+            V=M-T-U          ! T+U+V=M
             HI(T,U,V)=REAL(T-1)*HI(T-2,U,V)+R(1)*HI(T-1,U,V)
           ENDDO
         ENDDO
@@ -1848,8 +1858,8 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ==========================================================================
       PI=4.D0*ATAN(1.D0)
       IF(X.LT.35.D0) THEN
-        call lib$erfr8(sqrt(x),svar)
-        F0=SQRT(PI/(4.D0*X))*svar  ! BOYS FUNCTION F0
+        CALL LIB$ERFR8(SQRT(X),SVAR)
+        F0=SQRT(PI/(4.D0*X))*SVAR  ! BOYS FUNCTION F0
       ELSE
         F0=SQRT(PI/(4.D0*X))              ! LARGE ARGUMENT LIMIT OF F0
       END IF
@@ -1884,65 +1894,65 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE Gaussian$ylmtimesrn(j,lm,nijk,c)
+      SUBROUTINE GAUSSIAN$YLMTIMESRN(J,LM,NIJK,C)
 !     **************************************************************************
-!     **  produce coefficient array for a polynomial r^(l+2*j)*y_lm           **
+!     **  PRODUCE COEFFICIENT ARRAY FOR A POLYNOMIAL R^(L+2*J)*Y_LM           **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
-      implicit none
-      integer(4),intent(in)   :: j
-      integer(4),intent(in)   :: lm
-      integer(4),intent(in)   :: nijk
-      real(8)   ,intent(out)  :: c(nijk)
-      logical(4),save         :: tini=.false.
-      integer(4),save         :: nx=-1
-      integer(4),save         :: lmx=-1
-      integer(4),save         :: nijkx=-1
-      integer(4)              :: nf
-      real(8)   ,pointer,save :: cmat(:,:)
-      integer(4),pointer,save :: map(:,:)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: J
+      INTEGER(4),INTENT(IN)   :: LM
+      INTEGER(4),INTENT(IN)   :: NIJK
+      REAL(8)   ,INTENT(OUT)  :: C(NIJK)
+      LOGICAL(4),SAVE         :: TINI=.FALSE.
+      INTEGER(4),SAVE         :: NX=-1
+      INTEGER(4),SAVE         :: LMX=-1
+      INTEGER(4),SAVE         :: NIJKX=-1
+      INTEGER(4)              :: NF
+      REAL(8)   ,POINTER,SAVE :: CMAT(:,:)
+      INTEGER(4),POINTER,SAVE :: MAP(:,:)
 !     **************************************************************************
 !     ==========================================================================
-!     == check size of table
+!     == CHECK SIZE OF TABLE
 !     ==========================================================================
-      if(2*j.gt.nx.or.lm.gt.lmx.or.nijk.gt.nijkx) then
-        if(tini) then
-          deallocate(cmat)
-          deallocate(map)
-          tini=.false.
-        end if
-      end if
+      IF(2*J.GT.NX.OR.LM.GT.LMX.OR.NIJK.GT.NIJKX) THEN
+        IF(TINI) THEN
+          DEALLOCATE(CMAT)
+          DEALLOCATE(MAP)
+          TINI=.FALSE.
+        END IF
+      END IF
 !
 !     ==========================================================================
-!     == rebuild table if needed                                              ==
+!     == REBUILD TABLE IF NEEDED                                              ==
 !     ==========================================================================
-      if(.not.tini) then
-        nx=max(4,2*j) ! the 4 is to avoid building unlikely small table sizes
-        do 
-          nijkx=(NX+1)*(NX+2)*(NX+3)/6
-          lmx=(nx+1)**2
-          if(nijkx.ge.nijk.and.lmx.ge.lm) exit
-          nx=nx+1
-        enddo
+      IF(.NOT.TINI) THEN
+        NX=MAX(4,2*J) ! THE 4 IS TO AVOID BUILDING UNLIKELY SMALL TABLE SIZES
+        DO 
+          NIJKX=(NX+1)*(NX+2)*(NX+3)/6
+          LMX=(NX+1)**2
+          IF(NIJKX.GE.NIJK.AND.LMX.GE.LM) EXIT
+          NX=NX+1
+        ENDDO
         NF=(NX+2)*((NX+2)**2-1)/6
-        allocate(cmat(nijkx,nf))
-        allocate(map(nx+1,lmx))
-        call Gaussian_expandmat(NX,NIJKx,NF,Cmat,MAP)
-        tini=.true.
-      end if
+        ALLOCATE(CMAT(NIJKX,NF))
+        ALLOCATE(MAP(NX+1,LMX))
+        CALL GAUSSIAN_EXPANDMAT(NX,NIJKX,NF,CMAT,MAP)
+        TINI=.TRUE.
+      END IF
 !
 !     ==========================================================================
-!     == collect result                                                       ==
+!     == COLLECT RESULT                                                       ==
 !     ==========================================================================
-      c(:)=cmat(:nijk,map(j+1,lm))
-      return
-      end
+      C(:)=CMAT(:NIJK,MAP(J+1,LM))
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE Gaussian_expandmat(NX,NIJK,NF,C,MAP)
+      SUBROUTINE GAUSSIAN_EXPANDMAT(NX,NIJK,NF,C,MAP)
 !     **************************************************************************
-!     **  express fUNCTIONs R^(L+2*j)*Y_L(R) in a gauss representation        **
-!     **  (L,M,N)-> C(:NIJK,map(j+1,lm))                                      **
+!     **  EXPRESS FUNCTIONS R^(L+2*J)*Y_L(R) IN A GAUSS REPRESENTATION        **
+!     **  (L,M,N)-> C(:NIJK,MAP(J+1,LM))                                      **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -1956,7 +1966,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       INTEGER(4)            :: IND1X
       REAL(8)               :: R2N(NIJK)
       REAL(8)               :: YLMPOL(NIJK,(NX+1)**2)
-      INTEGER(4)            :: jN,n,I,J,K,I1,J1,K1,IORB,L,iM,LM,IND,IND1,IND2
+      INTEGER(4)            :: JN,N,I,J,K,I1,J1,K1,IORB,L,IM,LM,IND,IND1,IND2
       REAL(8)               :: SVAR1,SVAR2
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
 !                            CALL TRACE$PUSH('GAUSSIAN_EXPANDMAT')
@@ -1981,7 +1991,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ==  DETERMINE EXPANSION COEFFICIENTS                                    ==
 !     ==========================================================================
       IORB=0
-      DO n=0,NX/2
+      DO N=0,NX/2
 !
 !       ========================================================================
 !       ==  MULTIPLY WITH (X^2+Y^2+Z^2)^N                                     ==
@@ -2003,11 +2013,11 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !       ========================================================================
 !       == MULTIPLY WITH SPHERICAL HARMONICS                                  ==
 !       ========================================================================
-        DO L=0,NX-2*n
+        DO L=0,NX-2*N
           DO IM=1,2*L+1
             LM=L**2+IM
             IORB=IORB+1
-            MAP(n+1,LM)=IORB   ! LOOKUPTABLE
+            MAP(N+1,LM)=IORB   ! LOOKUPTABLE
             IND1X=SIZE(YLMPOL(:,LM))
             DO IND1=1,IND1X
               IF(YLMPOL(IND1,LM).EQ.0.D0) CYCLE
@@ -2024,7 +2034,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
             ENDDO
           ENDDO ! END OF LOOP OVER MAGNETIC QUANTUM NUMBERS
         ENDDO  ! END OF LOOP OVER POWERS N
-      ENDDO  ! END OF LOOP OVER MAIN AnGULAR MOMENTUM L
+      ENDDO  ! END OF LOOP OVER MAIN ANGULAR MOMENTUM L
 !                            CALL TRACE$POP()
       RETURN
       END
@@ -2049,73 +2059,73 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GAUSSIAN_TEST_hermiteintegral()
+      SUBROUTINE GAUSSIAN_TEST_HERMITEINTEGRAL()
 !     **************************************************************************
-!     ** TESTROUTINE FOR gaussian_hermiteintegral                             **
+!     ** TESTROUTINE FOR GAUSSIAN_HERMITEINTEGRAL                             **
 !     **************************************************************************
-      implicit none
-      integer(4),parameter :: n=2
-      real(8)              :: e=1.3d0
-      real(8)              :: r(3)
-      real(8)              :: hi(0:n,0:n,0:n)
-      real(8)              :: hiref1(0:n,0:n,0:n)
-      real(8)              :: hiref2(0:n,0:n,0:n)
-      real(8)              :: f0(0:3*n),fp(0:3*n),fm(0:3*n)
-      real(8)              :: df(0:3*n),d2f(0:3*n)
-      real(8)              :: df2(0:3*n),d2f2(0:3*n)
-      real(8)  ,parameter  :: delta=1.d-3
-      real(8)              :: x
-      integer(4)           :: i,j,k
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: N=2
+      REAL(8)              :: E=1.3D0
+      REAL(8)              :: R(3)
+      REAL(8)              :: HI(0:N,0:N,0:N)
+      REAL(8)              :: HIREF1(0:N,0:N,0:N)
+      REAL(8)              :: HIREF2(0:N,0:N,0:N)
+      REAL(8)              :: F0(0:3*N),FP(0:3*N),FM(0:3*N)
+      REAL(8)              :: DF(0:3*N),D2F(0:3*N)
+      REAL(8)              :: DF2(0:3*N),D2F2(0:3*N)
+      REAL(8)  ,PARAMETER  :: DELTA=1.D-3
+      REAL(8)              :: X
+      INTEGER(4)           :: I,J,K
 !     **************************************************************************
-      CALL RANDOM_NUMBER(r(1))
-      CALL RANDOM_NUMBER(r(2))
-      CALL RANDOM_NUMBER(r(3))
-      x=e*sum(r(:)**2)
+      CALL RANDOM_NUMBER(R(1))
+      CALL RANDOM_NUMBER(R(2))
+      CALL RANDOM_NUMBER(R(3))
+      X=E*SUM(R(:)**2)
       CALL GAUSSIAN_BOYS(3*N,X,F0)
-      CALL GAUSSIAN_BOYS(3*N,X+1.d0*delta,Fp)
-      CALL GAUSSIAN_BOYS(3*N,X-1.d0*delta,Fm)
-      df =(fp-fm)/(2.d0*delta)
-      d2f=(fp-2.d0*f0+fm)/delta**2
-      CALL GAUSSIAN_BOYS(3*N,X+2.d0*delta,Fp)
-      CALL GAUSSIAN_BOYS(3*N,X-2.d0*delta,Fm)
-      df2 =(fp-fm)/(4.d0*delta)
-      d2f2=(fp-2.d0*f0+fm)/(2.d0*delta)**2
+      CALL GAUSSIAN_BOYS(3*N,X+1.D0*DELTA,FP)
+      CALL GAUSSIAN_BOYS(3*N,X-1.D0*DELTA,FM)
+      DF =(FP-FM)/(2.D0*DELTA)
+      D2F=(FP-2.D0*F0+FM)/DELTA**2
+      CALL GAUSSIAN_BOYS(3*N,X+2.D0*DELTA,FP)
+      CALL GAUSSIAN_BOYS(3*N,X-2.D0*DELTA,FM)
+      DF2 =(FP-FM)/(4.D0*DELTA)
+      D2F2=(FP-2.D0*F0+FM)/(2.D0*DELTA)**2
 !
-      hiref1(0,0,0)=f0(0)
-      hiref1(1,0,0)=2.d0*e*r(1)*df(0)      
-      hiref1(0,1,0)=2.d0*e*r(2)*df(0)      
-      hiref1(0,0,1)=2.d0*e*r(3)*df(0)      
-      hiref1(2,0,0)=2.d0*e*df(0)+(2.d0*e*r(1))**2*d2f(0)      
-      hiref1(0,2,0)=2.d0*e*df(0)+(2.d0*e*r(2))**2*d2f(0)      
-      hiref1(0,0,2)=2.d0*e*df(0)+(2.d0*e*r(3))**2*d2f(0)      
-      hiref1(1,1,0)=(2.d0*e)**2*r(1)*r(2)*d2f(0)      
-      hiref1(1,0,1)=(2.d0*e)**2*r(1)*r(3)*d2f(0)      
-      hiref1(0,1,1)=(2.d0*e)**2*r(2)*r(3)*d2f(0)      
+      HIREF1(0,0,0)=F0(0)
+      HIREF1(1,0,0)=2.D0*E*R(1)*DF(0)      
+      HIREF1(0,1,0)=2.D0*E*R(2)*DF(0)      
+      HIREF1(0,0,1)=2.D0*E*R(3)*DF(0)      
+      HIREF1(2,0,0)=2.D0*E*DF(0)+(2.D0*E*R(1))**2*D2F(0)      
+      HIREF1(0,2,0)=2.D0*E*DF(0)+(2.D0*E*R(2))**2*D2F(0)      
+      HIREF1(0,0,2)=2.D0*E*DF(0)+(2.D0*E*R(3))**2*D2F(0)      
+      HIREF1(1,1,0)=(2.D0*E)**2*R(1)*R(2)*D2F(0)      
+      HIREF1(1,0,1)=(2.D0*E)**2*R(1)*R(3)*D2F(0)      
+      HIREF1(0,1,1)=(2.D0*E)**2*R(2)*R(3)*D2F(0)      
 !
-      hiref2(0,0,0)=f0(0)
-      hiref2(1,0,0)=2.d0*e*r(1)*df2(0)      
-      hiref2(0,1,0)=2.d0*e*r(2)*df2(0)      
-      hiref2(0,0,1)=2.d0*e*r(3)*df2(0)      
-      hiref2(2,0,0)=2.d0*e*df2(0)+(2.d0*e*r(1))**2*d2f2(0)      
-      hiref2(0,2,0)=2.d0*e*df2(0)+(2.d0*e*r(2))**2*d2f2(0)      
-      hiref2(0,0,2)=2.d0*e*df2(0)+(2.d0*e*r(3))**2*d2f2(0)      
-      hiref2(1,1,0)=(2.d0*e)**2*r(1)*r(2)*d2f2(0)      
-      hiref2(1,0,1)=(2.d0*e)**2*r(1)*r(3)*d2f2(0)      
-      hiref2(0,1,1)=(2.d0*e)**2*r(2)*r(3)*d2f2(0)      
+      HIREF2(0,0,0)=F0(0)
+      HIREF2(1,0,0)=2.D0*E*R(1)*DF2(0)      
+      HIREF2(0,1,0)=2.D0*E*R(2)*DF2(0)      
+      HIREF2(0,0,1)=2.D0*E*R(3)*DF2(0)      
+      HIREF2(2,0,0)=2.D0*E*DF2(0)+(2.D0*E*R(1))**2*D2F2(0)      
+      HIREF2(0,2,0)=2.D0*E*DF2(0)+(2.D0*E*R(2))**2*D2F2(0)      
+      HIREF2(0,0,2)=2.D0*E*DF2(0)+(2.D0*E*R(3))**2*D2F2(0)      
+      HIREF2(1,1,0)=(2.D0*E)**2*R(1)*R(2)*D2F2(0)      
+      HIREF2(1,0,1)=(2.D0*E)**2*R(1)*R(3)*D2F2(0)      
+      HIREF2(0,1,1)=(2.D0*E)**2*R(2)*R(3)*D2F2(0)      
 
       CALL GAUSSIAN_HERMITEINTEGRAL(N,E,R,HI)
 
-      do i=0,n
-        do j=0,n
-          do k=0,n
-            if(i+j+k.gt.2) cycle
-            write(*,fmt='(3i3,f10.5,3e10.3)')i,j,k,hi(i,j,k) &
-    &                    ,hiref1(i,j,k)-hi(i,j,k),hiref2(i,j,k)-hi(i,j,k)
-          enddo
-        enddo
-      enddo
-      return
-      end
+      DO I=0,N
+        DO J=0,N
+          DO K=0,N
+            IF(I+J+K.GT.2) CYCLE
+            WRITE(*,FMT='(3I3,F10.5,3E10.3)')I,J,K,HI(I,J,K) &
+    &                    ,HIREF1(I,J,K)-HI(I,J,K),HIREF2(I,J,K)-HI(I,J,K)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSIAN_TEST_FOURCENTER()
@@ -2381,11 +2391,11 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
 !     ==========================================================================
       DO I=1,N1
         CALL GAUSSIAN_BOYS(M1(I),X1(I),F)
-        DEV=ABS((F(m1(i))-F1(I))/F1(I))
+        DEV=ABS((F(M1(I))-F1(I))/F1(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M1(I),X1(I),F(m1(i)),F1(I),DEV
+     &        M1(I),X1(I),F(M1(I)),F1(I),DEV
         IF(DEV.GT.TOL) THEN
-print*,'error================'
+PRINT*,'ERROR================'
 !!$          CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
 !!$          CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')
         END IF
@@ -2394,11 +2404,11 @@ print*,'error================'
 !     ==========================================================================
       DO I=1,N2
         CALL GAUSSIAN_BOYS(M2(I),X2(I),F)
-        DEV=ABS((F(m2(i))-F2(I))/F2(I))
+        DEV=ABS((F(M2(I))-F2(I))/F2(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M2(I),X2(I),F(m2(i)),F2(I),DEV
+     &        M2(I),X2(I),F(M2(I)),F2(I),DEV
         IF(DEV.GT.TOL) THEN
-print*,'error================'
+PRINT*,'ERROR================'
 !!$          CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
 !!$          CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')
         END IF
@@ -2407,16 +2417,16 @@ print*,'error================'
 !     ==========================================================================
       DO I=1,N3
         CALL GAUSSIAN_BOYS(M3(I),X3(I),F)
-        DEV=ABS((F(m3(i))-F3(I))/F3(I))
+        DEV=ABS((F(M3(I))-F3(I))/F3(I))
         WRITE(*,FMT='("N=",I4," X=",F10.3," F=",2E25.10," DEV= ",E10.1)') &
-     &        M3(I),X3(I),F(m3(i)),F3(I),DEV
+     &        M3(I),X3(I),F(M3(I)),F3(I),DEV
         IF(DEV.GT.TOL) THEN
-print*,'error================'
+PRINT*,'ERROR================'
 !!$          CALL ERROR$MSG('TEST OF GAUSSIAN_BOYS FAILED')
 !!$          CALL ERROR$STOP('GAUSSIAN_TEST_BOYS')
         END IF
       ENDDO
-stop 'forced'
+STOP 'FORCED'
       RETURN
       END
 !
