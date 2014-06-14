@@ -1488,6 +1488,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !       == ADD DYNAMIC CONTRIBUTIONS  (WITHOUT HF CONTRIBUTION)               ==
 !       == HFWEIGHT IS ABSORBED IN THE LOCAL U-TENSOR                         ==
 !       ========================================================================
+!if(iat.eq.2)call dmft_solvertest(iat)
         CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
      &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
      &                         ,ATOMSET(IAT)%U,PHILW &
@@ -1505,7 +1506,64 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
+      subroutine dmft_solvertest(iat)
+      USE DMFT_MODULE ,ONLY: NDIMD,NOMEGA,NLAU,KBT,ATOMSET
+      implicit none
+      integer(4),intent(in) :: iat
+      integer(4),parameter  :: nscale=3
+      real(8)               :: scale(nscale)
+      real(8)               :: y0 
+      real(8)               :: philw
+      integer(4)            :: nloc       
+      real(8)               :: sign
+      complex(8),allocatable:: glocsave(:,:,:,:)
+      complex(8),allocatable:: dgloc(:,:,:,:)
+      complex(8),allocatable:: sigma(:,:,:,:)
+      integer(4)            :: i,ipm
+!     **************************************************************************
+      NLOC=ATOMSET(IAT)%NLOC
+      allocate(glocsave(nloc,nloc,ndimd,nomega))
+      allocate(sigma(nloc,nloc,ndimd,nomega))
+      CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
+     &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
+     &                         ,ATOMSET(IAT)%U,PHILW &
+     &                         ,ATOMSET(IAT)%DPHIDG,ATOMSET(IAT)%DPHIDGLAUR &
+     &                         ,ATOMSET(IAT)%DEDU &
+     &                         ,ATOMSET(IAT)%NATORB%PIPHI &
+     &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
+      sigma=atomset(iat)%dphidg
+      glocsave=ATOMSET(IAT)%GLOC
+!
+      allocate(dgloc(nloc,nloc,ndimd,nomega))
+      dgloc=(0.d0,0.d0)
+      dgloc(1,1,1,1)=(0.d0,1.d0)
+
+      y0=2.d0*kBT*real(sum(sigma*dgloc))
+write(*,fmt='("y(",i3,")=",2f20.10)')0,y0
+!
+      scale=(/1.d0,2.d0,4.d0/)
+      do i=1,nscale
+        y0=0.d0
+        do ipm=-1,1,2
+          sign=real(ipm,kind=8)
+          ATOMSET(IAT)%GLOC=glocsave+dgloc*scale(i)*sign
+          CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
+     &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
+     &                         ,ATOMSET(IAT)%U,PHILW &
+     &                         ,ATOMSET(IAT)%DPHIDG,ATOMSET(IAT)%DPHIDGLAUR &
+     &                         ,ATOMSET(IAT)%DEDU &
+     &                         ,ATOMSET(IAT)%NATORB%PIPHI &
+     &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
+          y0=y0+philw*sign/(2.d0*scale(i))
+        enddo
+write(*,fmt='("y(",i3,")=",2f20.10)')i,y0
+      enddo
+stop 'forced'
+      return
+      end
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
      &                        ,GLOC,GLOCLAUR,UCHI,ETOT,SLOC,SLOCLAUR,DEDUCHI &
      &                        ,PIPHI,CHIPHI)
 !     **************************************************************************
@@ -1594,15 +1652,19 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ==========================================================================
 !     == CONVERT GREENS FUNCTION                                              ==
 !     ==========================================================================
+!     == THE FACTOR 1/2 IS NEEDED SO THAT 
+!     ==        DPHI=BETA*SUM_NU TR[SUM_IDIM SIGMA(IDIMD)*DG(IDIMD)]
       DO NU=1,NOMEGA
         S(:,:,NU)=MATMUL(CHIPHI,MATMUL(S(:,:,NU),CONJG(TRANSPOSE(CHIPHI))))
         CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,S(:,:,NU),SLOC(:,:,:,NU))
       ENDDO
+      SLOC=0.5D0*SLOC
       DO I=1,NLAU
         SLAUR(:,:,I)=MATMUL(CHIPHI,MATMUL(SLAUR(:,:,I) &
      &                                   ,CONJG(TRANSPOSE(CHIPHI))))
         CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,SLAUR(:,:,I),SLOCLAUR(:,:,:,I))
       ENDDO
+      SLAUR=0.5D0*sLAUR
 !
 !     ==========================================================================
 !     == CONVERT DERIVATIVE OF U-TENSOR                                       ==
