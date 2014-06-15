@@ -317,11 +317,11 @@ WRITE(*,FMT='(82("="),T20," ENTERING DMFT$GREEN ")')
 !     ==  COLLECT DFT HAMILTONIAN                                             ==
 !     ==========================================================================
       CALL DMFT_COLLECTNATORB()
+!
+!     ==========================================================================
+!     ==  DENSITY MATRIX AND OVERLAP MATRIX IN K-SPACE                        ==
+!     ==========================================================================
       CALL DMFT_RHOOFK()
-      CALL DMFT_RHOLOCAL()
-
-!     CALL DMFT_COLLECTHAMILTONIAN()   ! ABSORBED IN COLLECTNATORB AND RHOOFK
-!     CALL DMFT_COLLECTFULLDENMAT()   !ABSORBED IN RHOLOCAL
 !
 !     ==========================================================================
 !     ==  OBTAIN BARE U-TENSOR FROM LMTO OBJECT.                              ==
@@ -329,11 +329,6 @@ WRITE(*,FMT='(82("="),T20," ENTERING DMFT$GREEN ")')
 !     ==     ORBITALS ARE SELECTED BY TORB.                                   ==
 !     ==========================================================================
       CALL DMFT_UTENSOR() 
-!
-!     ==========================================================================
-!     ==  OVERLAP MATRIX IN K-SPACE                                           ==
-!     ==========================================================================
-!      CALL DMFT_SMAT()   ! ABSORBED IN DMFT_RHOOFK
 !
 !     ==========================================================================
 !     ==  CONSTRUCT NON-INTERACTING HAMILTONIAN THAT PRODUCES THE CORRECT     ==
@@ -376,6 +371,7 @@ PRINT*,'ETOT AFTER DMFT_SOLVER ',ETOT
 !     ==========================================================================
 !     ==  ADD HARTREE FOCK AND DFT DOUBLE COUNTING                            ==
 !     ==========================================================================
+      CALL DMFT_RHOLOCAL() ! LOCAL DENSITY MATRIX USED IN STATICSOLVER
       CALL DMFT_STATICSOLVER(SVAR)
       ETOT=ETOT+SVAR
 ! 
@@ -428,7 +424,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NB',NB)
         CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_COLLECTNATORB')
       END IF
 !
       CALL DYNOCC$GETI4('NSPIN',NSPIN_)
@@ -436,7 +432,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
         CALL ERROR$I4VAL('NSPIN',NSPIN)
         CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
+        CALL ERROR$STOP('DMFT_COLLECTNATORB')
       END IF
 !
 !     ==========================================================================
@@ -471,7 +467,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
             CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
             CALL ERROR$I4VAL('NB IN DYNOCC',NB)
             CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT_COLLECTHAMILTONIAN')
+            CALL ERROR$STOP('DMFT_COLLECTNATORB')
           END IF
           NBH=THIS%NBH
 !
@@ -676,7 +672,7 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     ==  PRINT
 !     ==========================================================================
       IF(TPRINT) THEN
-        PRINT*,'DENSITY MATRIX REPOST FROM DMFT_COLLECTFULLDENMAT'
+        PRINT*,'DENSITY MATRIX REPOST FROM DMFT_RHOLOCAL'
         DO IAT=1,NAT
           NLOC=ATOMSET(IAT)%NLOC
           IF(NLOC.LE.0) CYCLE
@@ -689,373 +685,6 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
           ENDDO
         ENDDO
       END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_COLLECTHAMILTONIAN()
-!     **************************************************************************
-!     ** COLLECTS THE HAMILTONIAN AND STORES IT ON THE MODULE                 **
-!     **                                                                      **
-!     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD &
-     &                      ,NAT,KSET,ATOMSET
-      USE MPE_MODULE
-      USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
-      IMPLICIT NONE
-      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
-      COMPLEX(8),ALLOCATABLE :: RHO(:,:,:) !(NCHI,NCHI,NDIMD)
-      INTEGER(4)             :: NBH     !#(SUPER STATES)
-      INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IB,J,IAT,IDIM1,IDIM2
-      INTEGER(4)             :: IDIMD
-      INTEGER(4)             :: I1,I2
-      REAL(8)                :: F(NB,NKPTL,NSPIN)
-      COMPLEX(8)             :: MAT(NCHI,NCHI)
-      COMPLEX(8)             :: CSVAR
-!     **************************************************************************
-      IF(.NOT.TON) RETURN
-                                      CALL TRACE$PUSH('DMFT_COLLECTHAMILTONIAN')
-!
-!     ==========================================================================
-!     ==  EXTRACT <PSI|PSI>
-!     ==========================================================================
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)      
-          IF(THIS%NB.NE.NB) THEN
-            CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
-            CALL ERROR$I4VAL('NB IN DYNOCC',NB)
-            CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT_COLLECTHAMILTONIAN')
-          END IF
-          NBH=THIS%NBH
-!
-!         ======================================================================
-!         ==  DETERMINE ORBITAL PROJECTIONS                                   ==
-!         ======================================================================
-!         == SPECIFY IF SECOND K-POINT IS OBTAINED FROM TIME-INVERSION.
-!         == NON-COLLINEAR: NO, BECAUSE THERE IS NO TIME INVERSION SYMMETRY
-!         == TINV: NO, K-POINT FALLS ONTO ITSELF UNDER TIME-INVERSION SYMMETRY.
-          KSET(IKPT)%TADDMINUSK=(NDIMD.NE.4).AND.(.NOT.GSET%TINV)
-!
-          DO ICHI=1,NCHI
-            DO IBH=1,NBH
-              IF(NBH.NE.NB) THEN
-                KSET(IKPT)%PIPSI(:,ICHI,2*IBH-1,ISPIN) &
-     &                                          = REAL(THIS%TBC_NEW(:,IBH,ICHI))
-                KSET(IKPT)%PIPSI(:,ICHI,2*IBH  ,ISPIN)& 
-     &                                          =AIMAG(THIS%TBC_NEW(:,IBH,ICHI))
-              ELSE
-                KSET(IKPT)%PIPSI(:,ICHI,IBH,ISPIN)=THIS%TBC_NEW(:,IBH,ICHI)
-              END IF
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     ==                                                                      ==
-!     ==   RHO(A,S1,B,S2,K)=SUM_N <PI(A,S1)|PSI(N,K)>F_N <PSI(N,K)|PI(B,S2)>  ==
-!     ==                                                                      ==
-!     ==   NON-SPIN POLARIZED:                                                ==
-!     ==     RHO(S1,S2)=1/2*[ RHO(1)*(1,0/0,1) ]                              ==
-!     ==   COLLINEAR SPIN-POLARIZED                                           ==
-!     ==     RHO(S1,S2)=1/2*[ RHO(1)*(1,0/0,1)+RHO(2)*(1,0/0,-1) ]            ==
-!     ==   NON-COLLINEAR SPIN-POLARIZED                                       ==
-!     ==     RHO(S1,S2)=1/2*[ RHO(1)*(1,0/0,1)+RHO(2)*(0,1/1,0)               ==
-!     ==                      +RHO(3)*(0,-I/I,0)+RHO(2)*(1,0/0,-1) ]          ==
-!     ==   WHERE                                                              ==
-!     ==     RHO(1)=   RHO(1,1)+RHO(2,2)                                      ==
-!     ==     RHO(2)=   RHO(2,1)+RHO(1,2)                                      ==
-!     ==     RHO(3)=-I(RHO(2,1)-RHO(1,2))                                     ==
-!     ==     RHO(4)=   RHO(1,1)-RHO(2,2)  !FOR NSPIN=2 THIS IS SIMV(2)        ==
-!     ==                                                                      ==
-!     ==  CAUTION! MATRICES ARE ARRANGED IN A FORTRAN-STYLE NOTATION WITH THE ==
-!     ==     FIRST INDEX RUNNING FIRST. THE NOTATION (A,B/C,D) HOWEVER IS A   ==
-!     ==     LATEX STYLE NOTATION WITH THE SECOND INDEX RUNNING FIRST!        ==
-!     ==                                                                      ==
-!     ==========================================================================
-!     ==  NDIM=1,NSPIN=1  NDIMD=1: (T)                                        ==
-!     ==  NDIM=1,NSPIN=2  NDIMD=2: (T,Z)                                      ==
-!     ==  NDIM=2,NSPIN=1  NDIMD=4: (T,X,Y,Z)                                  ==
-!     ==========================================================================
-!
-!     ==  COLLECT OCCUPATIONS W/O K-POINT WEIGHT ===============================
-      CALL DMFT_COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
-!
-!     == SUM UP DENSITY MATRIX =================================================
-      DO IKPT=1,NKPTL
-        KSET(IKPT)%RHO=(0.D0,0.D0)
-        DO ISPIN=1,NSPIN
-          DO IDIM1=1,NDIM
-            DO IDIM2=1,NDIM
-              MAT(:,:)=(0.D0,0.D0)
-              DO IB=1,NB
-                DO J=1,NCHI
-                  CSVAR=F(IB,IKPT,ISPIN) &
-       &               *CONJG(KSET(IKPT)%PIPSI(IDIM2,J,IB,ISPIN))
-                  MAT(:,J)=MAT(:,J) &
-       &                  +KSET(IKPT)%PIPSI(IDIM1,:,IB,ISPIN)*CSVAR
-                ENDDO
-              ENDDO
-!
-!             ==================================================================
-!             == DISTRIBUTE DENSITY MATRIX ONTO VARIOUS SPIN COMPONENTS       ==
-!             == USING THE UP-DOWN NOTATION (1=UU,2=DU,3=UD,4=DD)             ==
-!             == NSPIN=1,2: IDIM1=IDIM2=NDIM=1 =>IDIMD=ISPIN                  ==
-!             == NSPIN=1,NDIM=2,ISPIN=1: (1,2,3,4)                            ==
-!             ==================================================================
-              IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
-              KSET(IKPT)%RHO(:,:,IDIMD)=MAT
-            ENDDO
-          ENDDO
-        ENDDO
-!
-!       ========================================================================
-!       == CONVERT FROM UP-DOWN REPRESENTATION INTO (TXYZ)                    ==
-!       ========================================================================
-        CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,KSET(IKPT)%RHO)
-      ENDDO
-
-!
-!     ==========================================================================
-!     ==  CALCULATE LOCAL DENSITY MATRIX FOR TESTING 
-!     ==========================================================================
-      IF(TTEST) THEN
-!       == CALCULATE DENSITY MATRIX FOR TESTING ================================
-        ALLOCATE(RHO(NCHI,NCHI,NDIMD))
-        RHO(:,:,:)=(0.D0,0.D0)
-        DO IKPT=1,NKPTL
-          RHO=RHO+KSET(IKPT)%WKPT*KSET(IKPT)%RHO
-        ENDDO
-!       == MAKE HERMITEAN ======================================================
-        DO IDIMD=1,NDIMD
-          RHO(:,:,IDIMD)=0.5D0*(RHO(:,:,IDIMD)+CONJG(TRANSPOSE(RHO(:,:,IDIMD))))
-        ENDDO
-!       == PRINT ===============================================================
-        PRINT*,' IN DMFT_COLLECTHAMILTONIAN'
-        DO IAT=1,NAT
-          IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE
-          I1=ATOMSET(IAT)%ICHI1
-          I2=ATOMSET(IAT)%ICHI2
-          CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(UPDOWN)','UPDOWN' &
-      &                          ,I1,I2,NDIMD,NCHI,RHO)
-          CALL SPINOR$PRINTMATRIX(6,'DENSITY MATRIX(TXYZ)','TXYZ' &
-      &                          ,I1,I2,NDIMD,NCHI,RHO)
-        ENDDO
-        DEALLOCATE(RHO)
-      END IF
-                                      CALL TRACE$POP()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_COLLECTFULLDENMAT()
-!     **************************************************************************
-!     ==  EXTRACT ONSITE DENSITY MATRICES WITH ALL PROJECTOR FUNCTIONS        ==
-!     ==  FOR DOUBLE COUNTING                                                 ==
-!     **************************************************************************
-      USE DMFT_MODULE, ONLY: NKPTL,NSPIN,NAT,NDIM,NDIMD,NB,ATOMSET
-      USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
-      IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
-      INTEGER(4)             :: NBH     !#(SUPER STATES)
-      INTEGER(4)             :: NLOC
-      INTEGER(4)             :: I1,I2
-      COMPLEX(8)             :: CSVAR
-      INTEGER(4)             :: NB_,NSPIN_
-      INTEGER(4)             :: IAT,IKPT,ISPIN,IPRO,IBH,IDIM1,IDIM2,IDIMD,I
-      INTEGER(4)             :: LMN
-      REAL(8)                :: OCC(NB,NKPTL,NSPIN)
-!     **************************************************************************
-!
-!     ==========================================================================
-!     == COLLECT OCCUPATIONS                                                  ==
-!     ==========================================================================
-      CALL DYNOCC$GETI4('NB',NB_)
-      IF(NB_.NE.NB) THEN
-        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-        CALL ERROR$I4VAL('NB',NB)
-        CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
-      END IF
-!
-      CALL DYNOCC$GETI4('NSPIN',NSPIN_)
-      IF(NSPIN_.NE.NSPIN) THEN
-        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-        CALL ERROR$I4VAL('NSPIN',NSPIN)
-        CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
-      END IF
-      CALL WAVES_DYNOCCGETR8A('OCC',NB*NKPTL*NSPIN,OCC)
-!
-!     ==========================================================================
-!     == SET DENSITY MATRIX TO ZERO
-!     ==========================================================================
-      DO IAT=1,NAT
-        ATOMSET(IAT)%DENMAT%RHO=(0.D0,0.D0)
-      ENDDO        
-!
-!     ==========================================================================
-!     == ADD UP DENSITY MATRIX                                                ==
-!     ==========================================================================
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          CALL WAVES_SELECTWV(IKPT,ISPIN)
-          CALL PLANEWAVE$SELECT(GSET%ID)      
-          IF(THIS%NB.NE.NB) THEN
-            CALL ERROR$MSG('INCONSISTENT NUMBER OF STATES IN WAVES AND DYNOCC')
-            CALL ERROR$I4VAL('NB IN DYNOCC',NB)
-            CALL ERROR$I4VAL('NB IN WAVES ',THIS%NB)
-            CALL ERROR$STOP('DMFT_COLLECTFULLDENMAT')
-          END IF
-          NBH=THIS%NBH
-!
-!         ======================================================================
-!         ==  DETERMINE ORBITAL PROJECTIONS                                   ==
-!         ======================================================================
-          IPRO=0
-          DO IAT=1,NAT
-            NLOC=ATOMSET(IAT)%NLOC
-            IF(NLOC.LE.0) THEN
-              IPRO=IPRO+NLOC
-              CYCLE
-            END IF   
-            I1=IPRO+1         
-            I2=IPRO+NLOC
-            DO IBH=1,NBH
-              IF(NBH.NE.NB) THEN
-!               == THIS IS FOR GENERAL SPECIAL K-POINTS ========================
-!               == TBC IS FROM A SUPER WAVE FUNCTION AND CONTAINS TWO WAVE =====
-!               == FUNCTIONS.
-                DO IDIM2=1,NDIM
-                  DO IDIM1=1,NDIM
-                    IDIMD=IDIM1+NDIM*(IDIM2-1)+(ISPIN-1)
-                    DO LMN=1,NLOC
-                      I=IPRO+LMN
-                      CSVAR=REAL(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(2*IBH-1,IKPT,ISPIN)
-                      ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                               =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                               +REAL(THIS%TBC_NEW(IDIM2,IBH,I1:I2))*CSVAR
-!
-                      CSVAR=AIMAG(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(2*IBH,IKPT,ISPIN)
-                      ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             +AIMAG(THIS%TBC_NEW(IDIM2,IBH,I1:I2))*CSVAR
-                    ENDDO
-                  ENDDO
-                ENDDO
-              ELSE
-!               == THIS IS FOR GENERAL K-POINTS ================================
-                DO IDIM2=1,NDIM
-                  DO IDIM1=1,NDIM
-                    IDIMD=IDIM1+NDIM*(IDIM2-1)+(ISPIN-1)
-                    DO LMN=1,NLOC
-                      I=IPRO+LMN
-                      CSVAR=CONJG(THIS%TBC_NEW(IDIM1,IBH,I))*OCC(IBH,IKPT,ISPIN)
-                      ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             =ATOMSET(IAT)%DENMAT%RHO(:,LMN,IDIMD) &
-     &                             +THIS%TBC_NEW(IDIM2,IBH,I1:I2)*CSVAR
-                    ENDDO
-                  ENDDO
-                ENDDO
-              END IF
-            ENDDO  ! END OF LOOP OVER BANDS
-            IPRO=IPRO+NLOC
-          ENDDO ! END OF LOOP OVER ATOMS
-        ENDDO ! END OF LOOP OVER SPIN
-      ENDDO ! END OF LOOP OVER K-POINTS
-!
-!     ==========================================================================
-!     ==  INCLUDE CONTRIBUTION FROM -K FOR NON-SPINPOLARIZED AND COLLINEAR    ==
-!     ==  FOR TIME INVERSION W/O SPIN PSI(-K)=CONJG(PSI(+K))                  ==
-!     ==========================================================================
-      IF(NDIMD.LT.4) THEN
-        DO IAT=1,NAT
-          DO IDIMD=1,NDIMD
-            ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD) &
-     &                           =REAL(ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD))
-          ENDDO        
-        ENDDO   
-      END IF
-!
-!     ==========================================================================
-!     ==  TRANSFORM TO (T,X,Y,Z) REPRESENTATION AND MAKE HERMITEAN            ==
-!     ==========================================================================
-      DO IAT=1,NAT
-        NLOC=ATOMSET(IAT)%NLOC
-        IF(NLOC.LE.0) CYCLE
-        CALL SPINOR$CONVERT('FWRD',NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO)
-        DO IDIMD=1,NDIMD
-          ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD) &
-    &              =0.5D0*(ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD) &
-    &                     +CONJG(TRANSPOSE(ATOMSET(IAT)%DENMAT%RHO(:,:,IDIMD))))
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     ==  PRINT
-!     ==========================================================================
-      IF(TPRINT) THEN
-        PRINT*,'DENSITY MATRIX REPOST FROM DMFT_COLLECTFULLDENMAT'
-        DO IAT=1,NAT
-          NLOC=ATOMSET(IAT)%NLOC
-          IF(NLOC.LE.0) CYCLE
-          WRITE(*,FMT='(82("="),T10," DENSITY MATRIX FOR ATOM ",I3," ")')IAT
-          DO IDIMD=1,NDIMD
-            DO LMN=1,NLOC
-              WRITE(*,FMT='("IDIMD=",I1,":",100("(",2F10.5,")"))')IDIMD &
-       &              ,ATOMSET(IAT)%DENMAT%RHO(LMN,:,IDIMD)
-            ENDDO
-          ENDDO
-        ENDDO
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_COLLECTOCCUPATIONS(NKPTL,NSPIN,NB,F)
-!     **************************************************************************
-!     ** COLLECTS THE OCCUPATIONS FOR THIS NODE AND REMOVES THE K-POINT       **
-!     ** WEIGHT                                                               **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NKPTL
-      INTEGER(4),INTENT(IN)  :: NSPIN
-      INTEGER(4),INTENT(IN)  :: NB
-      REAL(8)   ,INTENT(OUT) :: F(NB,NKPTL,NSPIN)
-      INTEGER(4)             :: NB_,NSPIN_
-      REAL(8)                :: WKPT(NKPTL)
-      INTEGER(4)             :: IKPT,ISPIN
-!     **************************************************************************
-      CALL DYNOCC$GETI4('NB',NB_)
-      IF(NB_.NE.NB) THEN
-        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-        CALL ERROR$I4VAL('NB',NB)
-        CALL ERROR$I4VAL('NB_',NB_)
-        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
-      END IF
-!
-      CALL DYNOCC$GETI4('NSPIN',NSPIN_)
-      IF(NSPIN_.NE.NSPIN) THEN
-        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-        CALL ERROR$I4VAL('NSPIN',NSPIN)
-        CALL ERROR$I4VAL('NSPIN_',NSPIN_)
-        CALL ERROR$STOP('DMFT_COLLECTOCCUPATIONS')
-      END IF
-!
-      CALL WAVES_DYNOCCGETR8A('OCC',NB*NKPTL*NSPIN,F)
-      CALL WAVES_DYNOCCGETR8A('WKPT',NKPTL,WKPT)
-!
-!     == MULTIPLY WITH SPIN MULTIPLICITY =======================================
-      IF(NSPIN.EQ.1) WKPT=2.D0*WKPT
-      DO IKPT=1,NKPTL
-        DO ISPIN=1,NSPIN
-          F(:,IKPT,ISPIN)=F(:,IKPT,ISPIN)/WKPT(IKPT)
-        ENDDO
-      ENDDO
       RETURN
       END
 !
