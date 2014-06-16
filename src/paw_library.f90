@@ -2016,6 +2016,55 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$EIGVALNONHERMITEANC8(N,H,E)
+!     **************************************************************************
+!     **                                                                      **
+!     **  DIAGONALIZES THE NONHERMITEAN, SQUARE MATRIX H                      **
+!     **  AND RETURNS EIGENVALUES ONLY
+!     **                                                                      **
+!     **      U(K,I)^(-1)*H(K,L)*U(L,J)=E(I)                                  **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: H(N,N)
+      COMPLEX(8),INTENT(OUT):: E(N)
+      COMPLEX(8)            :: WORK(2*N)
+      REAL(8)               :: RWORK(2*N)
+      COMPLEX(8)            :: VL(1,1),VR(1,1)
+      INTEGER(4)            :: INFO
+!     **************************************************************************
+      IF(N.EQ.1) THEN
+        E(1)=H(1,1)
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == DIAGONALIZE                                                          ==
+!     ==========================================================================
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('ESSL INTERFACE NOT IMPLENTED')
+      CALL ERROR$STOP('LIB$DIAGNONHERMITEANC8')
+#ELSE
+      CALL ZGEEV('N','N',N,H,N,E,VL,1,VR,1,WORK,2*N,RWORK,INFO)
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('THE I-TH ARGUMENT HAD AN ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('THE QR ALGORITHM FAILED TO COMPUTE ALL THE EIGENVALUES')
+        CALL ERROR$MSG('AND NO EIGENVECTORS HAVE BEEN COMPUTED;')
+        CALL ERROR$MSG('ELEMENTS AND I+1:N OF W CONTAIN EIGENVALUES,')
+        CALL ERROR$MSG('WHICH HAVE CONVERGED.')
+        CALL ERROR$I4VAL('I',INFO)
+        CALL ERROR$I4VAL('N',N)
+        CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
+      END IF
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GENERALEIGENVALUER8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
@@ -2918,7 +2967,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
-integer(4) :: i,j
+INTEGER(4) :: I,J
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('WORKS ONLY FOR SQUARE MATRICES')

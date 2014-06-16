@@ -174,10 +174,10 @@ CONTAINS
       END SUBROUTINE RESTART$READSEPARATOR
 !
 !     ..................................................................
-      SUBROUTINE restart$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
+      SUBROUTINE RESTART$WRITESEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
 !     ******************************************************************
 !     **  READS SEPARATOR FROM FILE NFIL                              **
-!     **  TCHK is not used                                            **
+!     **  TCHK IS NOT USED                                            **
 !     ******************************************************************
       IMPLICIT NONE
       TYPE (SEPARATOR_TYPE),INTENT(IN)   :: SEPARATOR
@@ -223,22 +223,23 @@ CONTAINS
       END SUBROUTINE RESTART$SKIP
 !
 !     ..................................................................
-      SUBROUTINE restart$CHECK(NFIL)
+      SUBROUTINE RESTART$CHECK(NFIL)
 !     ******************************************************************
 !     ******************************************************************
       IMPLICIT NONE
       INTEGER(4)           ,INTENT(IN)   :: NFIL
       TYPE (SEPARATOR_TYPE)              :: SEPARATOR
       INTEGER(4)                         :: NREC,I
-      INTEGER(4)                         :: item
+      INTEGER(4)                         :: ITEM
 !     ******************************************************************
       ITEM=0
       REWIND NFIL
       DO 
         ITEM=ITEM+1
         READ(NFIL,END=1000)SEPARATOR
-        WRITE(*,FMT='("CHECKING RESTART FILE: ",A10,I5)')SEPARATOR%ID,SEPARATOR%NREC
-        IF(ITEM.EQ.1.AND.SePARATOR%ID.NE.HEADER%ID) THEN
+        WRITE(*,FMT='("CHECKING RESTART FILE: ",A10,I5)')SEPARATOR%ID &
+     &                                                  ,SEPARATOR%NREC
+        IF(ITEM.EQ.1.AND.SEPARATOR%ID.NE.HEADER%ID) THEN
           CALL ERROR$MSG('FILE STRUCTURE IS CORRUPTED')
           CALL ERROR$MSG('FILE DOES NOT BEGIN WITH THE HEADER')
           CALL ERROR$CHVAL('ID',SEPARATOR%ID)
@@ -248,7 +249,7 @@ CONTAINS
         NREC=SEPARATOR%NREC
         IF(NREC.LT.0.OR.NREC.GT.10000000) THEN
           CALL ERROR$MSG('FILE STRUCTURE CORRUPTED')
-          CALL ERROR$CHVAL('NAME',SEPARATOR%id)
+          CALL ERROR$CHVAL('NAME',SEPARATOR%ID)
           CALL ERROR$I4VAL('NREC',NREC)
           CALL ERROR$STOP('RESTART$CHECK')
         END IF
@@ -262,7 +263,7 @@ CONTAINS
       CALL ERROR$STOP('RESTART$CHECK')
 2000  CONTINUE
       CALL ERROR$MSG('FILE STRUCTURE IS CORRUPTED')
-      CALL ERROR$MSG('FILE ENDS BEFORE RECORD ARE FINISHED')
+      CALL ERROR$MSG('FILE ENDS BEFORE ALL RECORDS ARE FINISHED')
       CALL ERROR$STOP('RESTART$CHECK')
       RETURN
     END SUBROUTINE RESTART$CHECK
