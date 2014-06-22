@@ -351,6 +351,7 @@ PRINT*,'NCHI ',NCHI
 !     ==  CONSTRUCT LOCAL NATURAL ORBITALS                                    ==
 !     ==========================================================================
       CALL DMFT_NATORB()
+!      CALL DMFT_NININTSPECTALDENSITY() ! USED FOR TESTING
 !
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
@@ -589,7 +590,7 @@ PRINT*,'WKPT ',KSET(:)%WKPT
     &                      ,1,NCHI,NDIMD,NCHI,KSET(I)%GAMMA)
       ENDDO
       IF(ISTEP.EQ.0) THEN
-        DETOT=KSET(IKPT)%GAMMA(ICHI1,ICHI2,IDIMD)
+        DETOT=REAL(KSET(IKPT)%GAMMA(ICHI1,ICHI2,IDIMD),KIND=8)
       ELSE IF(ISTEP.EQ.1) THEN
         ETOT(1)=ETOTIN
       ELSE IF(ISTEP.EQ.2) THEN
@@ -3322,5 +3323,89 @@ PRINT*,' BEFORE SPINOR$PRINTL'
           ENDDO
         ENDDO
       ENDDO     
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_NININTSPECTRALDENSITY()
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NDIMD,NAT,MU &
+     &                      ,KSET,ATOMSET
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      LOGICAL(4),PARAMETER     :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER     :: TTEST=.FALSE.
+      INTEGER(4),PARAMETER     :: NE=2000
+      REAL(8)   ,PARAMETER     :: EMIN=-2.5D0/27.211D0,EMAX=2.5D0/27.211D0
+      REAL(8)   ,PARAMETER     :: DELTA=1.D-3
+      REAL(8)                  :: EGRID(NE)
+      REAL(8)                  :: A(NCHI,NCHI,NDIMD) ! SPECTRAL FUNCTION
+                                ! LOCAL SPECTRAL FUNCTION
+      REAL(8)   ,ALLOCATABLE   :: ALOC(:,:,:)  !(NLOC,NLOCM,NDIMD) 
+      COMPLEX(8)               :: MATX(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: G(NCHI,NCHI,NDIMD)
+      REAL(8)                  :: WKPTL
+      INTEGER(4)               :: IKPT,NU,IAT,I1,I2,IDIMD,ILAU
+      REAL(8)                  :: PI
+      INTEGER(4)               :: NFIL
+      INTEGER(4)               :: IE,I
+      INTEGER(4)               :: NLOC
+!     **************************************************************************
+                              CALL TRACE$PUSH('DMFT_NINTSPECTRALDENSITY')
+      PI=4.D0*ATAN(1.D0)
+      DO IE=1,NE
+        EGRID(IE)=EMIN+(EMAX-EMIN)/REAL(NE-1,KIND=8)*REAL(IE-1,KIND=8)
+      ENDDO
+      NFIL=986
+      OPEN(UNIT=NFIL,FILE='SPECTR.DAT',FORM='FORMATTED')
+!
+!     ==========================================================================
+!     == STEP THROUGH ENERGY GRID                                             ==
+!     ==========================================================================
+      DO IE=1,NE
+!
+!       ========================================================================
+!       == PERFORM BRILLOUIN-ZONE SAMPLING                                      
+!       ========================================================================
+        A=0.D0
+        DO IKPT=1,NKPTL
+          WKPTL=KSET(IKPT)%WKPT
+!         == CONSTRUCT LATTICE GREENS FUNCTION =================================
+          MAT=(EGRID(IE)+CI*DELTA+MU)*KSET(IKPT)%SMAT
+          MAT=MAT-KSET(IKPT)%HRHO
+          CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
+!         == ACCOUNT FOR K-POINT (-K) ==========================================
+          IF(KSET(IKPT)%TADDMINUSK) THEN
+!           == TRANSPOSE SMAT,HRHO,GAMMA, BUT NEITHER CI NOR SLOC ==============
+            MAT=((EGRID(IE)-CI*DELTA)+MU)*KSET(IKPT)%SMAT
+            MAT=MAT-KSET(IKPT)%HRHO
+            DO IDIMD=1,NDIMD
+              MAT(:,:,IDIMD)=TRANSPOSE(CONJG(MAT(:,:,IDIMD)))
+            ENDDO
+            CALL SPINOR$INVERT(NDIMD,NCHI,MAT,MAT2)
+            G=0.5D0*(G+MAT2)
+          END IF
+!         == MAP ONTO SPECTRAL FUNCTION ========================================
+          A=A-WKPTL*AIMAG(G)/PI
+        ENDDO   ! END OF LOOP OVER KPOINTS
+
+        DO IAT=1,NAT
+          I1=ATOMSET(IAT)%ICHI1
+          I2=ATOMSET(IAT)%ICHI2
+          NLOC=I2-I1+1
+          if(nloc.eq.0) cycle
+          ALLOCATE(ALOC(NLOC,NLOC,NDIMD))
+          ALOC(:,:,:)=A(I1:I2,I1:I2,:)
+          WRITE(NFIL,*)EGRID(IE),IAT,(ALOC(I,I,1),I=1,NLOC)
+          DEALLOCATE(ALOC)
+        ENDDO
+!
+      ENDDO ! END OF LOOP OVER ENERGIES
+      CLOSE(NFIL)
+STOP 'FORCED IN SPECTRALFUNCTION'
+                              CALL TRACE$POP()
       RETURN
       END
