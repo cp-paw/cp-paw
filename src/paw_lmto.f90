@@ -159,6 +159,7 @@ REAL(8)               :: HFWEIGHT=0.25D0
 LOGICAL(4)              :: TINI=.FALSE.
 LOGICAL(4)              :: TINISTRUC=.FALSE.
 LOGICAL(4)              :: THTBC=.FALSE. ! HTBC CALCULATED
+LOGICAL(4)              :: TOTBC=.FALSE. ! OTBC CALCULATED
 CHARACTER(32)           :: MODUS='NONE'
 INTEGER(4)              :: NSP=-1
 INTEGER(4)              :: ISPSELECTOR=-1 ! USED ONLY FOR HYBRIDSETTING
@@ -185,7 +186,10 @@ LOGICAL(4)                  ,PARAMETER :: TSPHERICAL=.FALSE.
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: SBAR_NEW(:)!(NNS) SCREENED STRUCT. CONST.
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: PCHI(:)    !(NNS) <PTILDE|CHITILDE>
 TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: DENMAT_NEW(:)  !(NND) DENSITY MATRIX
+! DERIVATIVE OF THE ENERGY WITH RESPECT TO THE DENSITY MATRIX
 TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: HAMIL_NEW(:)   !(NND) DERIVATIVE OF ENERGY
+! DERIVATIGVE OF THE ENERGY WITH RESPECT TO THE INVERSE OVERLAP MATRIX
+TYPE(PERIODICMAT2_TYPE),ALLOCATABLE:: DEDOI(:)   !(NND) DERIVATIVE OF ENERGY
 ! OVERLAP IS ONLY USED FOR TESTDENMAT
 TYPE(PERIODICMAT_TYPE),ALLOCATABLE :: OVERLAP(:) !(NNS) OVERLAP MATRIX ONLY MAIN
 !== INVOVERLAP CALCULATED AS SUM_N <PI|PSI_N><PSI_N|PI>
@@ -3441,7 +3445,8 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW &
      &                       ,HAMIL=>HAMIL_NEW &
-     &                       ,INVOVERLAP
+     &                       ,INVOVERLAP &
+     &                       ,DEDOI
       IMPLICIT NONE
       INTEGER(4)  ::NN,NND
 !     **************************************************************************
@@ -3462,6 +3467,17 @@ COMPLEX(8)  :: PHASE
           DEALLOCATE(INVOVERLAP(NN)%MAT)
         ENDDO
         DEALLOCATE(INVOVERLAP)
+      END IF
+!
+!     ==========================================================================
+!     ==  CLEAN UP DEDOI
+!     ==========================================================================
+      IF(ALLOCATED(DEDOI)) THEN
+        NND=SIZE(DEDOI)
+        DO NN=1,NND
+          DEALLOCATE(DEDOI(NN)%MAT)
+        ENDDO
+        DEALLOCATE(DEDOI)
       END IF
       RETURN
       END
@@ -3539,6 +3555,7 @@ COMPLEX(8)  :: PHASE
       REAL(8)   ,ALLOCATABLE :: DEDU(:,:,:,:)! DERIVATIVE W.R.T.SPINOR U-TENSOR
       COMPLEX(8),ALLOCATABLE :: D(:,:)       ! SPINOR CLUSTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: OINV(:,:)    ! SPINOR CLUSTER DENSITY MATRIX
+      COMPLEX(8),ALLOCATABLE :: DEDOINV(:,:)    
       COMPLEX(8),ALLOCATABLE :: H(:,:)       ! SPINOR CLUSTER HAMILTONIAN
       REAL(8)                :: LHFWEIGHT
       TYPE(NLIST_TYPE),ALLOCATABLE :: NLIST(:)
@@ -3567,9 +3584,14 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
 !     ==========================================================================
       IF(ALLOCATED(HAMIL)) THEN
         CALL ERROR$MSG('HAMIL IS ALLOCATED')
-        CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2_NEW')
+        CALL ERROR$STOP('LMTO_ROBERT')
+      END IF
+      IF(ALLOCATED(DEDOI)) THEN
+        CALL ERROR$MSG('DEDOI IS ALLOCATED')
+        CALL ERROR$STOP('LMTO_ROBERT')
       END IF
       ALLOCATE(HAMIL(NND))
+      ALLOCATE(DEDOI(NND))
       DO NN=1,NND
         HAMIL(NN)%IAT1=DENMAT(NN)%IAT1
         HAMIL(NN)%IAT2=DENMAT(NN)%IAT2
@@ -3582,6 +3604,18 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
         HAMIL(NN)%N3=N3
         ALLOCATE(HAMIL(NN)%MAT(N1,N2,N3))
         HAMIL(NN)%MAT=0.D0
+!
+        DEDOI(NN)%IAT1=DENMAT(NN)%IAT1
+        DEDOI(NN)%IAT2=DENMAT(NN)%IAT2
+        DEDOI(NN)%IT=DENMAT(NN)%IT
+        N1=DENMAT(NN)%N1
+        N2=DENMAT(NN)%N2
+        N3=DENMAT(NN)%N3
+        DEDOI(NN)%N1=N1
+        DEDOI(NN)%N2=N2
+        DEDOI(NN)%N3=N3
+        ALLOCATE(DEDOI(NN)%MAT(N1,N2,N3))
+        DEDOI(NN)%MAT=0.D0
       ENDDO
 
       ETOT=0.D0
@@ -3694,8 +3728,9 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
 !       ========================================================================
 !        ALLOCATE(H(2*LMNX,2*NORBCL))
         ALLOCATE(H(2*NORBCL,2*NORBCL))
+        ALLOCATE(DEDOINV(2*NORBCL,2*NORBCL))
         ALLOCATE(DEDU(2*LMNX,2*LMNX,2*LMNX,2*LMNX))
-        CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,OINV,ETOT1,H,DEDU)
+        CALL LMTO_CLUSTERRDMFT(2*LMNX,2*NORBCL,U,D,OINV,ETOT1,H,DEDOINV,DEDU)
         ETOT=ETOT+ETOT1
         DEALLOCATE(D)
         DEALLOCATE(U)
@@ -3742,6 +3777,8 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
               I2DN=I2UP+NORBCL
               CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,HAMIL(NN)%MAT &
       &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,H)
+              CALL LMTO_ROBERT_MAP('BACK',N1,N2,NDIMD,DEDOI(NN)%MAT &
+      &                       ,I1UP,I1DN,I2UP,I2DN,2*NORBCL,2*NORBCL,DEDOINV)
               EXIT
             ENDDO ! NN
           ENDDO   ! IATB
@@ -3758,6 +3795,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
         DEALLOCATE(NLIST)
         DEALLOCATE(H)
         DEALLOCATE(OINV)
+        DEALLOCATE(DEDOINV)
         DEALLOCATE(DEDU)
       ENDDO
 !
@@ -3765,6 +3803,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
 !     ==  MAP HAMILTONIAN CONTRIBUTION ON THIS%HTBC OF WAVES OBJECT           ==
 !     ==========================================================================
       CALL LMTO_NTBODENMATDER_NEW()
+      CALL LMTO_NTBOINVOVERLAPDER_()
       CALL LMTO_CLEANDENMAT_NEW()
 !
 !     ==========================================================================
@@ -3897,7 +3936,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,OINV,E,H,DEDU)
+      SUBROUTINE LMTO_CLUSTERRDMFT(N1,N2,U,D,OINV,E,H,DEDOINV,DEDU)
 !     **************************************************************************
 !     **  PROVIDES THE NON-HARTREE FOCK CONTRIBUTION OF THE 1-PARTICLE REDUCED**
 !     **  DENSITY MATRIX FUNCTIONAL FOR AN IMPURITY IN A CLUSTER              **
@@ -3916,13 +3955,15 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',ETOT
       COMPLEX(8),INTENT(IN)  :: OINV(N2,N2)      ! INVERSE OVERLAP
       REAL(8)   ,INTENT(OUT) :: E                ! ENERGY
       COMPLEX(8),INTENT(OUT) :: H(N2,N2)         ! DEDD
+      COMPLEX(8),INTENT(OUT) :: DEDOINV(N2,N2)   ! DEDOINV
       REAL(8)   ,INTENT(OUT) :: DEDU(N1,N1,N1,N1)! DEDU
       INTEGER(4) :: I,J
       COMPLEX(8) :: CSVAR
       REAL(8)    :: EW(N2)
 !     **************************************************************************
       E=0.D0
-      H=0.D0
+      H=(0.D0,0.D0)
+      DEDOINV=(0.D0,0.D0)
       DEDU=0.D0
 
 PRINT*,'CHECK IF HERMITEAN...'
