@@ -3531,6 +3531,7 @@ COMPLEX(8)  :: PHASE
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : DENMAT=>DENMAT_NEW &
      &                       ,HAMIL=>HAMIL_NEW &
+     &                       ,DEDOI &
      &                       ,INVOVERLAP &
      &                       ,POTPAR=>POTPAR1  &
      &                       ,ISPECIES &
@@ -3803,7 +3804,7 @@ CALL LMTO$REPORTPERIODICMAT(6,'INVERSE OVERLAP',NND,INVOVERLAP)
 !     ==  MAP HAMILTONIAN CONTRIBUTION ON THIS%HTBC OF WAVES OBJECT           ==
 !     ==========================================================================
       CALL LMTO_NTBODENMATDER_NEW()
-      CALL LMTO_NTBOINVOVERLAPDER_()
+!      CALL LMTO_NTBOINVOVERLAPDER_()
       CALL LMTO_CLEANDENMAT_NEW()
 !
 !     ==========================================================================
