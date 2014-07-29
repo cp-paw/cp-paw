@@ -1920,6 +1920,12 @@ RCL=RCOV
       CALL PERIODICTABLE$GET(IZ,'OCC(P)',NP)
       CALL PERIODICTABLE$GET(IZ,'OCC(D)',ND)
       CALL PERIODICTABLE$GET(IZ,'OCC(F)',NF)
+!     == DO NOT USE D OR F-STATES IN THE VALENCE IF AT LEAST TWO OTHER
+!     == ELECTRONS ARE PRESENT.
+      IF(ND.EQ.10.AND.NS.EQ.2.AND.NP.GT.0) THEN
+        NF=0
+        ND=0
+      END IF
       ZV=REAL(NS+NP+ND+NF)
 !
 !     ==========================================================================

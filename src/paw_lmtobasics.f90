@@ -389,6 +389,8 @@
       REAL(8)               :: CG     ! GAUNT COEFFICIENT
       COMPLEX(8)            :: KAPPA
 !     **************************************************************************
+      if(l1x.eq.-1.or.l2x.eq.-1) return  ! no return values
+!
       PI=4.D0*ATAN(1.D0)
       L3X=L1X+L2X
       LM1X=(L1X+1)**2
@@ -640,7 +642,7 @@ END IF
       IF((LX(1)+1)**2.NE.NORB) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
         CALL ERROR$MSG('.....  (LX(1)+1)**2.NE.NORB')
-        CALL ERROR$I4VAL('LX',LX)
+        CALL ERROR$I4VAL('LX(1)',LX(1))
         CALL ERROR$I4VAL('NORB',NORB)
         CALL ERROR$I4VAL('(LX(1)+1)**2',(LX(1)+1)**2)
         CALL ERROR$STOP('LMTO$CLUSTERSTRUCTURECONSTANTS')
