@@ -510,6 +510,7 @@
       INTEGER(4)            :: ITER
       LOGICAL(4)            :: CONVG
 !     **************************************************************************
+      IF(N.EQ.0.OR.NORB.EQ.0) RETURN
                             CALL TRACE$PUSH('LMTO$SCREEN')
 IF(VERSION.EQ.3) THEN
       IF(TSTART) THEN
