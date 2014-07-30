@@ -2903,7 +2903,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END SUBROUTINE LIB_LAPACK_ZGETRI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_LAPACK_DGESVD(N,M,A,U,S,VT)
+      SUBROUTINE LIB_LAPACK_DGESVD(M,N,A,U,S,VT)
 !     **************************************************************************
 !     ** SINGULAR VALUE DECOMPOSITION OF THE NON-SQUARE MATRIX A              **
 !     ** A=U*SIGMA*VT  
@@ -2944,6 +2944,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         CALL ERROR$STOP('LIB_LAPACK_DGESVD')
       END IF
       DEALLOCATE(WORK)
+      s(n+1:m)=0.d0
       RETURN
       END SUBROUTINE LIB_LAPACK_DGESVD
 !
