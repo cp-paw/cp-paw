@@ -9,7 +9,7 @@
 #
 export USAGE="Usage of $0 \n"
 export USAGE="$USAGE \n"
-export USAGE="$USAGE waittillempty options njobx\n "
+export USAGE="$USAGE paw_waittillempty options\n "
 export USAGE="$USAGE \n"
 export USAGE="$USAGE pauses until the number of paw-related jobs \n"
 export USAGE="$USAGE falls below njobx\n"
@@ -18,6 +18,7 @@ export USAGE="$USAGE njobx=max number of allowed paw jobs\n"
 export USAGE="$USAGE \n"
 export USAGE="$USAGE options:\n"
 export USAGE="$USAGE -h|?: help\n"
+export USAGE="$USAGE -n njobx: specify the maximum of allowed paw jobs\n"
 export USAGE="$USAGE \n"
 #-------------------------------------------------------------------------------
 #  resolve argument list

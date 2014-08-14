@@ -1,0 +1,98 @@
+\contentsline {chapter}{\numberline {1}Preface}{4}
+\contentsline {chapter}{\numberline {2}Installation Guide}{5}
+\contentsline {section}{\numberline {2.1}Obtain the PAW distribution}{5}
+\contentsline {subsection}{\numberline {2.1.1}Download the Setup files}{6}
+\contentsline {section}{\numberline {2.2}Installation of Compiler und Libraries}{6}
+\contentsline {section}{\numberline {2.3}Adapt the parameter file}{6}
+\contentsline {section}{\numberline {2.4}Konfigurieren}{6}
+\contentsline {section}{\numberline {2.5}Make}{7}
+\contentsline {chapter}{\numberline {3}Required software}{8}
+\contentsline {section}{\numberline {3.1}FORTRAN Compiler}{8}
+\contentsline {subsection}{\numberline {3.1.1}G95}{8}
+\contentsline {subsection}{\numberline {3.1.2}PGI Fortran Compiler}{8}
+\contentsline {subsection}{\numberline {3.1.3}IFORT}{9}
+\contentsline {subsection}{\numberline {3.1.4}XLF Compiler}{9}
+\contentsline {subsection}{\numberline {3.1.5}GFORTRAN}{9}
+\contentsline {subsection}{\numberline {3.1.6}Absoft Fortran}{9}
+\contentsline {section}{\numberline {3.2}Utility Library}{9}
+\contentsline {section}{\numberline {3.3}Numerical Libraries}{10}
+\contentsline {subsection}{\numberline {3.3.1}ATLAS-BLAS}{10}
+\contentsline {subsection}{\numberline {3.3.2}LAPACK}{11}
+\contentsline {subsection}{\numberline {3.3.3}FFTW}{11}
+\contentsline {subsection}{\numberline {3.3.4}ACML}{12}
+\contentsline {subsection}{\numberline {3.3.5}MKL}{12}
+\contentsline {subsubsection}{FFTW der MKL}{12}
+\contentsline {subsection}{\numberline {3.3.6}ESSL}{13}
+\contentsline {section}{\numberline {3.4}Message Passing Interface}{14}
+\contentsline {subsection}{\numberline {3.4.1}MPICH}{14}
+\contentsline {subsection}{\numberline {3.4.2}MVAPICH}{15}
+\contentsline {chapter}{\numberline {4}The Parameter File}{16}
+\contentsline {section}{\numberline {4.1}Example for a Parameter File}{16}
+\contentsline {section}{\numberline {4.2}Explanation of the Variables in the Parameter File}{17}
+\contentsline {subsection}{\numberline {4.2.1}{\tt ARCH}}{17}
+\contentsline {subsection}{\numberline {4.2.2}{\tt TUPPERCASEMOD}}{17}
+\contentsline {subsection}{\numberline {4.2.3}{\tt TPARALELL}}{17}
+\contentsline {subsection}{\numberline {4.2.4}{\tt SPECIAL}}{17}
+\contentsline {subsection}{\numberline {4.2.5}{\tt BLASDIR}, {\tt LAPACKDIR}, {\tt FFTDIR}, {\tt MPIDIR}}{17}
+\contentsline {subsection}{\numberline {4.2.6}{\tt FFT\_HEADER}}{18}
+\contentsline {subsection}{\numberline {4.2.7}{\tt MPI\_HEADER}}{18}
+\contentsline {subsection}{\numberline {4.2.8}{\tt COMPILER\_SCALAR}, {\tt COMPILER\_PARALLEL}}{18}
+\contentsline {subsection}{\numberline {4.2.9}{\tt FCFLAGS\_NONE}, {\tt FCFLAGS\_OPT}, {\tt FCFLAGS\_DBG}, {\tt FCFLAGS\_PROF}}{18}
+\contentsline {subsection}{\numberline {4.2.10}{\tt LDFLAGS\_SCALAR},{\tt LDFLAGS\_PARALLEL}}{19}
+\contentsline {subsection}{\numberline {4.2.11}{\tt LIBS\_SCALAR},{\tt LIBS\_PARALLEL}}{19}
+\contentsline {subsection}{\numberline {4.2.12}{\tt CPPFLAGS}}{19}
+\contentsline {subsection}{\numberline {4.2.13}{\tt FEXT}}{20}
+\contentsline {chapter}{\numberline {5}List of Targets of the Make file}{21}
+\contentsline {chapter}{\numberline {6}Problems and miscellaneous remarks}{22}
+\contentsline {section}{\numberline {6.1}Missing symbols in paw\_library\_d.f90}{22}
+\contentsline {section}{\numberline {6.2}Generic subroutine inconsistent with specific subroutine interface}{22}
+\contentsline {section}{\numberline {6.3}Stack-size exceeded}{22}
+\contentsline {section}{\numberline {6.4}No core dump}{23}
+\contentsline {section}{\numberline {6.5}Second underscore}{23}
+\contentsline {section}{\numberline {6.6}Symbol tables of object files and libraries}{23}
+\contentsline {section}{\numberline {6.7}Runtime error in viacheck.c, {\tt code=VAPI\_RETRY\_EXC\_ERR}}{23}
+\contentsline {section}{\numberline {6.8}Missing library pthread}{23}
+\contentsline {section}{\numberline {6.9}Missing library g2c}{24}
+\contentsline {section}{\numberline {6.10}MPI: rsh versus ssh}{24}
+\contentsline {section}{\numberline {6.11}Dynamic versus static linking}{24}
+\contentsline {section}{\numberline {6.12}Multiple definition of \ldots }{24}
+\contentsline {section}{\numberline {6.13}Cannot find lf77blas}{24}
+\contentsline {section}{\numberline {6.14}PMPI\_Allreduce}{24}
+\contentsline {section}{\numberline {6.15}Linker flag -I does not work}{24}
+\contentsline {section}{\numberline {6.16}cannot find -lvapi}{25}
+\contentsline {section}{\numberline {6.17}Cannot find library gcc\_s}{25}
+\contentsline {section}{\numberline {6.18}{\tt P4\_GLOBMEMSIZE}}{25}
+\contentsline {section}{\numberline {6.19}Resources exhausted}{25}
+\contentsline {section}{\numberline {6.20}FFTW}{25}
+\contentsline {section}{\numberline {6.21}Logical not treated correctly}{25}
+\contentsline {section}{\numberline {6.22}File format: Little- and Big-Endian}{26}
+\contentsline {section}{\numberline {6.23}Information about your system}{26}
+\contentsline {subsection}{\numberline {6.23.1}Name of the computer}{26}
+\contentsline {subsection}{\numberline {6.23.2}MAC Adress}{26}
+\contentsline {subsection}{\numberline {6.23.3}Architecture of the computer}{26}
+\contentsline {subsection}{\numberline {6.23.4}Linux version}{27}
+\contentsline {section}{\numberline {6.24}Background to the configure script}{27}
+\contentsline {subsection}{\numberline {6.24.1}What does the configure script do}{27}
+\contentsline {subsection}{\numberline {6.24.2}How the configure script is constructed}{28}
+\contentsline {chapter}{\numberline {A}Output produced by the configure script}{29}
+\contentsline {chapter}{\numberline {B}Examples for Parameter Files}{31}
+\contentsline {subsection}{\numberline {B.0.3}Example of a Parameter File for a Simple Installation}{31}
+\contentsline {section}{\numberline {B.1}Parameter File for G95}{32}
+\contentsline {section}{\numberline {B.2}Parameter File for IFORT}{33}
+\contentsline {section}{\numberline {B.3}Parameter File for PGI}{34}
+\contentsline {section}{\numberline {B.4}Parameter File for PATHSCALE}{35}
+\contentsline {section}{\numberline {B.5}Parameter File for ABSOFT (OSX)}{36}
+\contentsline {chapter}{\numberline {C}Input Data Files}{37}
+\contentsline {section}{\numberline {C.1}Control Input File}{37}
+\contentsline {section}{\numberline {C.2}Structure Input File}{37}
+\contentsline {chapter}{\numberline {D}Bugs reports for compilers and Libraries}{38}
+\contentsline {section}{\numberline {D.1}Bugs in the acml library}{38}
+\contentsline {section}{\numberline {D.2}PGI compiler bugs}{41}
+\contentsline {subsubsection}{Ticket 071105001: minloc}{41}
+\contentsline {subsubsection}{Ticket 071105002: logical error}{41}
+\contentsline {section}{\numberline {D.3}Absoft compiler bugs}{42}
+\contentsline {subsection}{\numberline {D.3.1}-Rn problem}{42}
+\contentsline {subsection}{\numberline {D.3.2}-Ra problem}{43}
+\contentsline {subsection}{\numberline {D.3.3}I/O-problem}{44}
+\contentsline {subsection}{\numberline {D.3.4}Compiler option -Rp and do while(associated(...))}{45}
+\contentsline {subsection}{\numberline {D.3.5}Compiler options -Ra and -Rn and module procedure}{46}

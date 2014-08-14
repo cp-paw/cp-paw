@@ -1,0 +1,219 @@
+#!/bin/sh
+#################################################################
+##                                                             ##
+##  Name: paw_run                                              ##
+##                                                             ##
+##  purpose: execute the PAW simulation code                   ##
+##                                                             ##
+##  dependencies:                                              ##
+##    sccs                                                     ##
+##                                                             ##
+##  command line options                                       ##
+##    are obtained using the command "paw_run ?"               ##
+##                                                             ##
+##                                                             ##
+##                                                             ##
+##                                                             ##
+#################################################################
+#==============================================================
+#==  PARAMETERS  (hardwired)  =================================
+#==  adjust these parameters once to your environment  ========
+#==============================================================
+#PAWDIR=/u/blo/PAW  (is already defined in ~/.profile)
+#    PPAWX      standard name of the parallel executable
+EXEDIR=${PAWDIR}/X
+#    HOSTLIST is a file containing the processor names (only for -P option)
+HOSTLIST=${PAWDIR}/hostlist
+#    CONTROLWORKSTATION is the control work station of the parallel computer
+CONTROLWORKSTATION=lag
+#    OBJDIR provides the location of the source files for debugging
+#################################################################
+##  define usage                                               ##
+#################################################################
+USAGE='\n
+Usage: "paw_run options"\n
+Options can be any combination of the following\n
+\t  ?\t\t          give info about use\n
+\t -h\t\t          give info about use\n
+\t -c name\t       name of the control input file (mandatory)\n
+\t -g name \t\t    execute with debugger name. name is optional\n
+\t -n\t\t          execute safe executable\n
+\t -o\t\t          execute optimized executable (default)\n
+\t -p N\t\t        parallel processing N=number of processors. Default: 1\n
+\t -t name\t       name of the host-list file\n\t\t\t (mandatory for parallel execution)\n
+\t -x name\t       non-default file name for executable\n'
+#################################################################
+##  analyze command line options                               ##
+#################################################################
+# Save all arguments.
+typeset -i NOPTIONS="$#"
+set -A OPTIONS -- "$@"
+echo Hello! this is paw_run
+echo You selected the the options: $@
+PATH=.:$PATH
+#
+# Check options.
+#
+CONTROL=""
+NTASK=""
+while (( $# )); do
+  case "$1" in
+  ?|-h)
+     echo -e $USAGE
+     exit 0
+    ;;
+  -c|-c*)
+     CONTROL=${1#-c}     
+     if [ -z "${CONTROL}" ] ; then shift ; CONTROL=$1 ; fi
+     shift
+    ;;
+  -x|-x*)
+     PAWX=${1#-x}
+     if [ -z "${PAWX}" ] ; then shift ; PAWX=$1 ; fi
+     shift
+    ;;
+  -p|-p*)
+     NTASK=${1#-p}     
+     if [ -z "${NTASK}" ] ; then shift ; NTASK=$1 ; fi
+     shift
+    ;;
+  -t)
+     HOSTLIST=${1#-t}     
+     if [ -z "${HOSTLIST}" ] ; then shift ; HOSTLIST=$1 ; fi
+     shift
+    ;;
+  -g|-g*)            # follow with the name of the debugger
+     DEBUG=${1#-g}     
+     TYPE=G
+     shift
+    ;;
+  -n)
+     TYPE=N
+     shift
+    ;;
+  -o)
+     TYPE=O
+     shift
+    ;;
+  --)
+    shift
+    break
+    ;;
+  -*)
+    echo "Unknown option $1."
+    echo -e $USAGE
+    exit 1
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+#
+#################################################################
+##  set defaults                                               ##
+#################################################################
+if [[ -z ${CONTROL} ]] ; then 
+   echo "the controlfile must be specified"
+   echo -e $USAGE
+   exit 1
+fi  
+if [[ -z ${TYPE} ]] ; then TYPE=O ; fi  
+#==   define name of the executable  ==========================
+if [ -z "${PAWX}" ] ;then
+  if [ -n "$NTASK" ] ; then  
+    PAWX=$EXEDIR/ppaw 
+  else
+    PAWX=$EXEDIR/paw  
+  fi
+  case "$TYPE" in  
+    G) PAWX=${PAWX}_dbg.x 
+       OBJDIR=${PAWDIR}/Objects/dbg ;; 
+    N) PAWX=${PAWX}.x ;; 
+    O) PAWX=${PAWX}_fast.x ;; 
+    *) echo "coding error: TYPE not set"; exit 1 ;;
+  esac
+fi
+#
+#################################################################
+##  set stack size, heap size and memory size to unlimited     ##
+#################################################################
+ulimit -s unlimited    # max stack size
+ulimit -d unlimited    # max. heap size
+ulimit -m unlimited    # max. memory size
+#
+#################################################################
+##  set environment variables for MPI                          ##
+#################################################################
+# use this for sp3
+#export  MP_EUIDEVELOP=no   # switch to yes for debugging only
+#export  MP_LABELIO=yes     # labels stdout messages by task number
+#export  MP_PROCS=${NTASK}  # number of tasks
+#export  MP_INFOLEVEL=0     # level of debug information
+#export  MP_RMPOOL=1
+#export  MP_PREFIX=/usr/lpp
+#export  MP_EUILIB=us       # "us" for sp-computers/ "ip" otherwise
+#export  MP_RESD=NO         # "YES" for SP or loadleveler
+#export  MP_HOSTFILE=${HOSTLIST}   #list of processor names
+#export  MP_Cs
+#export  MP_CONTROL_WORKSTATION=${CONTROLWORKSTATION}
+#export  MP_EUIDEVICE=css0 
+#================================================================
+export  MP_EUIDEVELOP=no   # switch to yes for debugging only
+export  MP_LABELIO=yes     # labels stdout messages by task number
+export  MP_PROCS=${NTASK}  # number of tasks
+export  MP_INFOLEVEL=2     # level of debug information
+export  MP_EUILIB=ip       # "us" for sp-computers/ "ip" otherwise
+export  MP_RESD=NO         # "YES" for SP or loadleveler
+export  MP_HOSTFILE=${HOSTLIST}   #list of processor names
+export  MP_INFOLEVEL=0
+export  MP_NEWJOB=no
+#
+#################################################################
+##  report settings                                            ##
+#################################################################
+typeset -i RC
+echo The name of the executable is $PAWX
+echo The name of the control file is $CONTROL
+if [ -n "${NTASK}" ] ; then 
+  echo "parallel execution with" $NTASK "tasks"
+  echo "The processors are selected from $HOSTLIST"
+fi
+if [ -n "${DEBUG}" ] ; then 
+  echo "run with debugger $DEBUG"
+fi
+#
+#################################################################
+##  ececute                                                    ##
+#################################################################
+if [ -z "${NTASK}" ] ; then 
+  if [ -n "${DEBUG}" ] ; then 
+    case ${DEBUG} in
+      xldb|*) xldb -bw ${PAWX} ${CONTROL} -x -I ${OBJDIR}; RC=$? ;;
+    esac
+  else       
+    ${PAWX} ${CONTROL}; RC=$?
+  fi
+#===parallel execution
+else
+  if [ -n "${DEBUG}" ] ; then 
+    case ${DEBUG} in
+     pedb|*) pedb ${PAWX} ${CONTROL} -procs ${NTASK} -hostfile ${HOSTLIST} -eulib=ip -I ${OBJDIR}; RC=$? ;;
+    esac
+  else
+   poe ${PAWX} ${CONTROL}; RC=$?
+  fi
+fi
+#
+#=============================================================================
+#==  report and capture error codes                                         ==
+#=============================================================================
+if [ $RC -ne 0 ] ; then  echo "paw runtime error!" ;  exit 1 ; fi  
+echo "paw finished  - no errors detected  ..."
+exit $RC
+
+
+
+
+
+

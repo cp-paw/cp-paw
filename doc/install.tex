@@ -1,0 +1,2796 @@
+\documentclass[a4paper,10pt]{report}
+%\usepackage[T1]{fontenc} % on some systems T1 looks ugly
+%\usepackage[cyr]{aeguill}
+\usepackage[utf8]{inputenc} 
+\usepackage{url} 
+\usepackage{ucs} 
+\usepackage{times} 
+\usepackage{graphicx} 
+\usepackage{makeidx}
+\makeindex
+%\usepackage{german}
+\usepackage{color}
+\pagestyle{empty}
+\defä{\"a} \defÄ{\"A} \defü{\"u} \defÜ{\"U} \defö{\"o} \defÖ{\"O} \defß{\ss}
+\addtolength{\topmargin}{-.5in}        % repairing LaTeX's huge margins...
+\addtolength{\textheight}{1in}        % more margin hacking
+\addtolength{\textwidth}{1.5in}
+\addtolength{\oddsidemargin}{-0.75in}
+\addtolength{\evensidemargin}{-0.75in}
+\newcommand{\myspec}[1]{\textbf{\textit{#1}}}
+\newcommand{\mytt}[1]{{\tt #1}}
+
+
+% \usepackage[pdftex]{graphicx}
+% \DeclareGraphicsExtensions{.png,.pdf,.jpg,.jpeg}
+% \usepackage[pdftex,
+% bookmarks=true,
+% bookmarksnumbered=true,
+% pdfpagemode=None,
+% pdfstartview=FitH,
+% pdfpagelayout=SinglePage,
+% colorlinks=true,
+% urlcolor=magenta,
+% pdfborder={0 0 0}
+% ]{hyperref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%interesting settings for the page layout
+
+%\setlength{\hoffset}{-18pt}
+%\setlength{\oddsidemargin}{0pt}  % left margin, odd pages
+%\setlength{\evensidemargin}{9pt}  % left margin, even pages
+%\setlength{\marginparwidth}{54pt} 
+%\setlength{\textwidth}{481pt}  % set the text width to about 17cm
+%\setlength{\marginparsep}{7pt}
+%\setlength{\topmargin}{0pt}  % no margin on top
+%\setlength{\headheight}{13pt}
+%\setlength{\headsep}{10pt} 
+%\setlength{\footskip}{27pt}
+%\setlength{\textheight}{700pt}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% miscalleneous packages
+
+% \usepackage[frenchb]{babel} % use this if you are French
+% \usepackage{verbatim} % include eg: source code easily
+% \usepackage[utf8]{inputenc} or \usepackage[latin1]{inputenc}
+
+% If you are on Fedora Core you may have problems with accents
+% in this case replace the accentuated characters like this :
+%
+%  é -> \'e
+%  è -> \`e
+%  ê -> \^e and so on
+%
+% To automate the replacement you can make yourself a script
+% here is a handy command-line for doing this :
+% perl -pi -e "s/é/\\\'e/g" main.tex
+
+\usepackage{amsmath}
+% math extension - one probably wants to use symbols like '[' (written as '$[$')
+% or $\epsilon$
+
+% see mymacros.sty - print nice chapter headers
+%\usepackage{mymacros}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% headers and footers for your document
+%\usepackage{fancyheadings}
+\usepackage{fancyhdr}
+
+% count the number of pages for display on footer
+\usepackage{lastpage}
+
+% width of the line for headers and footers
+%\headrulewidth 0.5pt
+%\footrulewidth 0.5pt
+%\addtolength{\headwidth}{\marginparsep}
+
+% uncomment the following lines for headers
+% the following command need picture files : "logo-school.jpg" 
+% and "logo-company.jpg" in the project directory
+%
+%        \lhead{\sl \includegraphics[height=1.1cm]{logo-school}}
+%        \chead{}
+%        \rhead{\sl \includegraphics[height=1.2cm]{logo-company}}
+
+
+\usepackage{ucs}
+\usepackage[utf8]{inputenc}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%document headers and footers
+\lhead{}
+\chead{}
+\rhead{}
+\lfoot{TU-Clausthal}
+\cfoot{\thepage/\pageref{LastPage}}
+\rfoot{ \today } % -> \rfoot{\number\month/\number\day/\number\year} 
+\pagestyle{fancyplain}
+
+
+
+\title{{\bfseries\Huge
+\hrulefill\\
+\hrulefill CP-PAW\hrulefill\\
+\hrulefill Installation Guide\hrulefill\\
+\hrulefill\\}
+\hfill\\
+\includegraphics[width=9cm]{Figs/big.eps}
+}
+\date{\hrulefill\\Peter~E.~Bl\"ochl, Clausthal University of Technology\\(\today)}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+%======================================================
+\chapter{Preface}
+%======================================================
+This installation guide goes back to a version of Clemens F\"orst, who
+was the first to set up a rather comfortable installation procedure.
+After Clemens left our group, I changed the installation procedure. In
+this process I also undid some goodies that Clemens introduced,
+because I was a complete newcomer to configure scripts.
+
+After changing the installation in 2007, it was necessary to write a
+new installation guide. The first step was taken by Axel Ehrich. Then
+I took over.
+
+As of now the Guide is still written partly in German. The translation
+is still in progress.
+
+I want to thank everybody, who contributed to the installation
+procedure and this guide.
+
+Peter Bl\"ochl
+
+%======================================================
+\chapter{Installation Guide}
+%======================================================
+%======================================================
+\label{sec:vollstinst}
+%=====================================================
+
+%=====================================================
+\section{Obtain the PAW distribution}
+%=====================================================
+The distribution of the CP-PAW code can be obtained from the CP-PAW
+web page\index{CP-PAW web page}
+\begin{center}
+\mytt{https://www2.pt.tu-clausthal.de/paw}
+\end{center}
+following the link ``Download''. Access to the PAW distribution is
+restricted to users with a valid license. You can apply for a license
+on the same web-page. With a valid password you can obtain the codes.
+You will also find so-called ``SETUP-files''\index{setup file}, which
+were required by older PAW versions.
+
+After you have given you Login name and Password you have reached the
+``CP-PAW Download Page''. Following the link ``Sources'' on that page
+you will find the actual distributions. We will denote it in the
+following as \myspec{paw-distribution}\index{paw-distribution}. You
+should always use the newest version. Even though it is called Beta,
+it is currentlt our most safe version. The reason for naming it Beta
+was to leav the option for a more stringent level.)
+
+The \myspec{paw-distribution} is a gzipped tar file. You can see the
+contents using the command
+\begin{center} 
+\mytt{tar tvfz} \myspec{paw-distribution}\mytt{.tgz}
+\end{center}
+The archive is expanded into the current directory exactly the way it
+is listed here with the command
+\begin{center}
+\mytt{tar xvfz }\myspec{paw-distribution}\mytt{.tgz}
+\end{center}
+The directory created this way, whihc may be named ``paw-beta'' will
+be denoted as \myspec{paw-directory}.
+
+
+On other linux systems it may necessary to change the extension of the
+file from \mytt{.tgz} to \mytt{.tar.gz}. Then one can unzip the file
+with the command
+\begin{center}
+\mytt{gunzip } \myspec{paw-distribution}.tar.gz
+\end{center}
+The unzipped file is expanded with the command.
+\begin{center}
+\mytt{tar xvf } \myspec{paw-distribution}.tar
+\end{center}
+
+The directory \myspec{paw-directory} should look like this:
+\begin{verbatim}
+configure
+configure.ac
+dx
+Makefile_bare.in
+Makefile_targets.in
+parameters
+parms.example
+parms.g95
+README
+src
+\end{verbatim}
+
+When the file \verb|configure| is missing, execute the command
+\verb|autoconf| in the PAW directory. This will create a new
+\verb|configure|. For more information see
+section~\ref{sec:constructconfigure} on
+p.~\pageref{sec:constructconfigure}.
+
+
+%=====================================================
+\subsection{Download the Setup files}
+%=====================================================
+Once the PAW distribution has been obtained, download the so-called
+setup files from the PAW Download page. This Tar file is similarly
+expanded into a directory \myspec{paw-setupdir}. These data files will
+be needed later to execute the CP-PAW code.
+
+%=====================================================
+\section{Installation of Compiler und Libraries}
+%=====================================================
+One needs
+\begin{enumerate}
+\item gnu-make (gmake; often simply make)
+\item C-preprocessor (cpp)
+\item a Fortran90 compiler, 
+\item a numerical library for linear algebra, which corresponds to
+BLAS\index{BLAS}. Examples are BLAS, ACML, MKL, ESSL.
+\item a numerical library for linear algebra, which corresponds to
+LAPACK\index{LAPACK}. Examples are LAPACK, ACML, MKL, ESSL.
+\item a numerical library for Fast Fourier Transforms (FFT) such as
+FFTW, ACML, MKL, ESSL.
+\item An implementation of the Message Passing Interface
+MPI\index{Mesasage Passing interface}\index{MPI}. Examples are MPICH
+and MVAPICH.\index{MPICH}\index{MPICH}
+\item depending on the, compiler a separate utility library is required.
+\end{enumerate}
+These items shall be installed. The reader should consult section
+\ref{sec:software}, which contains additional information.
+
+%=====================================================
+\section{Adapt the parameter file}
+%=====================================================
+Now the distribution needs to be configured. The configuration
+creates a set of make files, which are adapted to your system and
+which take care of the final installation. More information about
+configuring in general can be found in section
+\ref{sec:configurebackground}.
+
+The configure script\index{configure} needs a parameter file
+``\myspec{parmfile}''\index{parameter file}\index{parmfile}, which
+needs to be adapted. One should start with one of the examples listed
+in the appendix \ref{sec:parmfiles}. The reader should then proceed to
+section~\ref{sec:parmfile}, which contains a detailed description of
+the parameters.
+
+Note, that the format of the parameter file may not yet be final. Please
+consult the current installation file.
+
+%=====================================================
+\section{Konfigurieren}
+%=====================================================
+Once the parameter file has been set up the configuration is done with the command
+\begin{center}
+\verb+./configure --with-parmfile=+\myspec{parmfile}
+\end{center}
+which is executed in the \myspec{paw-directory}. This process will
+create a set of make files and a subdirectory tree 
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}
+\end{center}
+within \myspec{paw-directory}.  The name \myspec{arch} should be
+unique and allows to maintain several installations simultaneously.
+
+\begin{center}
+\includegraphics[width=0.6\linewidth]{Figs/PAWdirtree/pawdirtree.eps}
+\end{center}
+
+A successful configuration is indicated by a line
+\begin{verbatim}
+----done!---configuration completed successfully!--------------
+\end{verbatim}
+A typical printout of a configuration can be found in
+appendix~\ref{sec:printoutconfigure}.
+
+
+After each change in the \myspec{parmfile} execute \verb+./configure+.
+
+%=====================================================
+\section{Make}
+%=====================================================
+Next, one executes the command
+\begin{center}
+\mytt{make}
+\end{center}
+in the \myspec{paw-directory}. This compiles the sources and prepares
+the executables.
+
+In the beginning it may be wise to do the installation in small steps
+so that Problems are observed early. The following sequence may be sensible
+\begin{verbatim}
+make docs
+make none
+make fast
+make fast_parallel
+make tools
+make 
+\end{verbatim}
+
+The documentation is found in \myspec{paw-directory}\mytt{/doc}.  The
+binaries are, for example,
+\myspec{paw-directory}\mytt{/}\myspec{arch}\mytt{/paw\_fast.x}.
+
+It is possible that optimization creates erroneous results. Therefore
+the results of \mytt{/paw\_fast.x} should be compared once with
+\mytt{/paw\_fast.x}. The latter does not contain optimization flags.
+
+This completes the installation.
+
+
+
+%======================================================
+\chapter{Required software}
+\label{sec:software}
+%======================================================
+\begin{itemize}
+\item In section \ref{sec:compiler} we will provide information on the
+installation of a FORTRAN compiler.
+\item In section \ref{sec:libs} we will describe the installation of
+numerical libraries and the Message Passing Interface.
+\item  In section \ref{sec:utility} we will discuss the Utility library.
+\end{itemize}
+
+\noindent In addition to the above one will need
+\begin{itemize}
+\item a GNU C-preprocessor \mytt{cpp}
+\item the GNU make tool. (Under the AIX operating system , the GNU
+Make is named \mytt{gmake}. The default \mytt{make} of AIX will not
+work with our make files.)
+\end{itemize}
+
+%======================================================
+\section{FORTRAN Compiler}
+\label{sec:compiler}
+%======================================================
+PAW is written in FORTRAN90. Later compiler versions such as FORTRAN95
+and probably FORTRAN2003 can be used as well. 
+
+In the following, we will mention some compilers that we have gained
+experience with.
+ 
+%====================================================
+\subsection{G95}
+\label{sec:g95}
+%====================================================
+\begin{itemize}
+\item License: GPL (Open source)
+\item Source: \textit{http://www.g95.org}
+\item Problems: 
+\begin{itemize}
+\item The -std95 -std2003 compiler flags must be avoided, so that the
+intrinsic function extensions can be used. In that case the g2c
+library is not required. The g2c library is a fortran-to-C converter 
+used for the interface of the support library calls. It is no more 
+supported by GNU.
+\item use the -fno-pic compiler flag under OS X.
+\end{itemize}
+\end{itemize}
+
+%====================================================
+\subsection{PGI Fortran Compiler}
+%====================================================
+\begin{itemize}
+\item Suppplier: The Portland Group
+\item Source: \textit{http://www.pgroup.com/}
+\item Lizense: commercial
+\item Problems: non known Problems
+\item Remarks:
+\begin{itemize}
+\item The distribution of the PGI compiler already contains
+precompiled libraries such as LAPACK, ACML, BLAS, MPICH.
+\end{itemize}
+\end{itemize}
+
+%====================================================
+\subsection{IFORT}
+%====================================================
+\begin{itemize}
+\item Supplier: Intel
+\item Source: Register on the 
+page \textit{https://welcome.intel.com/Login.aspx}.
+Then search for  ``Intel Fortran Compiler''.
+\item License: commercial
+\item Problems: 
+\begin{itemize}
+\item using the interprocedural optimization IPO the IFORT can produce
+very large code. This caused the system to exceed the stack size. The
+result was completely unpredictable behavior. If this is a problem
+increase the stack size with \mytt{ulimit -s unlimited}. The stack
+size can be controlled with \mytt{ulimit -a}.
+\end{itemize}
+\item Remarks:
+\begin{itemize}
+\item Very fast.
+\end{itemize}
+\end{itemize}
+
+
+%====================================================
+\subsection{XLF Compiler}
+%====================================================
+\begin{itemize}
+\item Supplier: IBM
+\item Source: \textit{http://www-306.ibm.com/software/awdtools/fortran/xlfortran/features/xlf-linux.html}
+\item License: commercial
+\item Remark: Only for the Power architecture of IBM
+\item Problems: no known problems
+\end{itemize}
+
+%====================================================
+\subsection{GFORTRAN}
+%====================================================
+\begin{itemize}
+\item Supplier: Free Software Foundation
+\item Source\textit{http://gcc.gnu.org/fortran/}
+\item License: GPL (open source)
+%\item Problems: We did not succed to compile PAW with gfortran.
+\end{itemize}
+
+
+%====================================================
+\subsection{Absoft Fortran}
+%====================================================
+\begin{itemize}
+\item Supplier: Absoft
+\item http://www.absoft.com/
+\item License: commercial
+%\item Problems: We did not succed to compile PAW with an older version of 
+%the Absoft compiler.
+\end{itemize}
+
+
+%====================================================
+\section{Utility Library}
+\label{sec:utility}
+%====================================================
+There are a few routines that are not part of teh fortran standard but
+which are supplied by all compilers in similar form as
+library. Sometimes they are treated like instrinsic functions as
+Fortran extensions without the need to link a library.
+
+The Utility Bibliothek is named differently by different
+suppliers. IBM calls it ``Service and Utility Library'', Intel calls
+it ``Portability Routines''. Traditional it is called Utility Library
+U77, where 77 is related to the Fortran77 Standard.
+
+Even though the library calls are nearly identical, they differ in the
+kind parameter of the arguments. In order to avoid the corresponding
+problems the CP-PAW code contains interfaces to the utility library
+for the individual compilers. The specific interfaces are selected via
+the C-preprocessor, if the corresponding parameters have been set in
+as variable CPPFLAGS the parameter file (see Section~\ref{sec:cppflags}).
+
+Consult the user guide of the corresponding compiler to find out if
+If a utility library needs to be linked.
+
+%====================================================
+\newpage
+\section{Numerical Libraries}
+\label{sec:libs}
+%====================================================
+
+CP-PAW depends on numerical libraries for the following three
+purposes. Often they are combined in asingle library.
+\begin{itemize}
+\item Basic Linear Algebra Subroutines (BLAS)\index{BLAS}:
+mathematical library for elementary vector-matrix operations such as
+vector and matrix multiplications.
+\item Lineare Algebra PACKage (LAPACK)\index{LAPACK}: more complex
+matrix operations such as eigenvalue solvers. (LAPACK relies on BLAS)
+\item Fast Fourier Transformation Library (FFT):
+As the name says: Fast Fourier transformations
+\end{itemize}
+These libraries are to a large part responsible for the efficiency of
+the CP-PAW calculations.
+
+There are standardized packages for the linear algebra routines,
+namely the Linear Algebra PACKage (LAPACK) and the Basic Linear
+Algebra Subprograms (BLAS) . The documentation for the LAPACK-Routines
+can be found at
+\begin{verbatim}
+http://www.netlib.org/lapack/ 
+\end{verbatim}
+and the ones for BLAS at
+\begin{verbatim}
+http://www.netlib.org/blas/
+\end{verbatim}
+These two are a kind of standard for many other packages.
+
+These packages are contained in libraries
+such as
+\begin{itemize}
+\item IBM Engineering and Scientific Software Library (ESSL)
+\item AMD Core Math Library (ACML)
+\item Intel Math Kernel Library (MKL)
+\end{itemize}
+
+It is adviseable, not to use the libraries supplied by the operating system, but to complile them 
+on the hardware, on which one intends to use them. These binaries are usually faster.
+
+We found it useful to place all these libraries, that we created for
+the current hardware into a directory \mytt{/home/tools} on the
+specific computer. The advantage is that it facilitates installation
+on parallel computer clusters, where the libraries are kept only on the
+frontend.
+
+
+The following table lists the combination of libraries that have been
+tested.
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+LAPACK& BLAS & FFT\\
+\hline
+LAPACK & ATLAS & FFTW2\\
+ACML & ACML & FFTW2\\
+ACML & ACML & ACML\\
+MKL & MKL & FFTW2(MKL)\\
+MKL & MKL & FFTW2\\
+ESSL & ESSL & ESSL\\
+\hline
+\end{tabular}
+\end{center}
+
+
+
+
+%====================================================
+\subsection{ATLAS-BLAS}
+%====================================================
+\begin{itemize}
+\item Supplier: Open Source
+\item Name: ATLAS=Automatically Tuned Linear Algebra Software
+\item License: Open Source
+\item Source \textit{http://math-atlas.sourceforge.net/}
+\item Functions: BLAS
+\item Installation:
+\begin{itemize}
+\item 
+After unpacking the ATLAS distribution type make and follow the
+instructions. Always use the default value ([y] or [n] by just typing
+ENTER) until you arrive at
+\begin{verbatim}
+use express setup? [y]:
+\end{verbatim}
+Enter \texttt{no} and proceed taking the defaults if you like so.  Use
+\texttt{f90} as \textsc{Fortran77} compiler (just needed to compile
+the wrappers). As \texttt{F77 FLAGS} use
+\begin{verbatim}
+-YEXT_NAMES=LCS -YEXT_SFX=_ -O
+\end{verbatim}
+to ensure, that the linking works out.
+
+Again take the default values until you reach the 
+\begin{verbatim}
+Enter C Flags (CCFLAGS) [-fomit-frame-pointer -O3 -funroll-all-loops]: 
+\end{verbatim}
+prompt.  Just use \texttt{-fomit-frame-pointer -O} and proceed accepting the defaults.
+
+If you have compiled an ATLAS BLAS for different architectures (e.g. Pentium
+and ATHLON), the corresponding libraries will be in different subdirectories of
+the ATLAS distribution. You find these subdirectories in \texttt{ATLAS/lib}.
+If there is just one, the configure script will chose it
+automatically. 
+\end{itemize}
+\end{itemize}
+
+%====================================================
+\subsection{LAPACK}
+%====================================================
+\begin{itemize}
+\item Name: LAPACK=Linear Algebra PACKage
+\item Source: http://www.netlib.org/lapack/
+\item Functions: LAPACK (The lapack package also contains slow BLAS
+  routines. As the computational efficiency heavily depends on the
+  performance of the BLAS library, one should always link a
+  machine-optimized BLAS library.)
+\item License: Open source
+\item Installation:
+\begin{enumerate}
+\item Download \textit{lapack-lite-3.1.1.tgz} von
+http://www.netlib.org/lapack/index.html
+\item gunzip and untar the file
+\item Copy and edit the file LAPACK/make.inc.example to LAPACK/make.inc.
+\item Edit the file LAPACK/Makefile (see
+http://www.netlib.org/lapack/lawn81/node13.html)
+\item type make
+\end{enumerate}
+\end{itemize}
+
+%====================================================
+\subsection{FFTW}
+\label{sec:FFTWinstall}
+%====================================================
+\begin{itemize}
+\item Supplier: Massachusetts Institute of Technology (MIT)
+\item Name: FFTW=Fastest Fourier Transform in the West
+\item Source: \mytt{http://www.fftw.org/download.html}
+\item License: open source
+\item Remark
+\begin{itemize}
+\item The versions FFTW2 und FFTW3 are not compatible. 
+Currently, the CP-PAW code only works with FFTW2.
+\end{itemize}
+\item Installation: 
+\begin{enumerate}
+\item download FFTW 2.1.5 from \mytt{http://www.fftw.org/download.html}.
+\item Archiv mit \mytt{tar -xvzf Dateiname} entpacken
+ \item Den Befehl \mytt{./configure --enable-i386-hacks} ausf\"uhren.
+ The option \mytt{--enable-i386-hacks} takes advantage of the
+ gcc/x86-specific performance hacks. (For the core2duo the option
+ \mytt{--enable-i386-hacks} must be left out!)
+\item On 32-bit architectures, change the following 
+line in the file \textit{fftw/config.h} (At the end of the file):\\
+\begin{verbatim}
+ \#define F77_FUNC_(name,NAME) name ## __
+\end{verbatim}
+ Remove the last underscore so that the line reads as
+\begin{verbatim}
+  \#define F77_FUNC_(name,NAME) name ## _ 
+\end{verbatim}
+ \item  execute the command \textit{make}
+\end{enumerate}
+\end{itemize}
+
+
+%====================================================
+\subsection{ACML}
+\label{sec:acml}
+%====================================================
+\begin{itemize}
+\item Name: ACML=AMD Core Math Library
+\item Supplier: AMD
+\item Source: \mytt{http://developer.amd.com/acml.jsp}
+\item Contains: FFT, LAPACK, BLAS
+\item License: royalty-free license 
+\item Installation: Untar the archive after downloading and follow
+the installation instructions. 
+\item Remarks: Available for Windows and Linux operating systems, and
+  for the fortran compilers gfortran, ifort, pgi, pathscale, and nag.
+\item Special instructions to use the ACML-internal FFT library:
+\begin{itemize} 
+\item use \verb+-DCPPVAR_FFT_ACML+ in the variable CPPFLAGS of the 
+\myspec{parmfile} (see section~\ref{sec:cppflags}).
+\item set the variable \verb+FFT_HEADER+ in the parameter file to 
+the file gnu64/include/acml.h inside the acml directory.
+\item do not include other FFT, LAPACK or BLAS libraries together 
+with ACML.
+\end{itemize}
+\end{itemize}
+
+
+
+%====================================================
+\subsection{MKL}
+%====================================================
+\begin{itemize}
+\item Supplier: Intel
+\item Name: MKL=Math Kernel Library\index{MKL}
+\item Source: \mytt{http://www.intel.com/cd/software/products/asmo-na/eng/307757.htm}
+\item License: commercial (For Linux: free license for non-commercial entities)
+\item Remarks: as of writing this the MKL 10.x does not yet work with CP-PAW.
+\item Link the following libraries for MKL: mkl\_lapack, guide,
+  pthread.  For i386 architecture also link mkl\_ia32 and for EM64T or
+  AMD64 architectures link mkl\_em64t.œ
+\item Installation:
+\begin{enumerate}
+\item Register at \mytt{https://welcome.intel.com/Login.aspx}
+\item http://www.intel.com/cd/software/products/asmo-na/eng/307757.htm
+\end{enumerate}
+\item When using the MKL, the library ``pthread'' must be linked. (See
+also appendix~\ref{sec:problempthread})
+\end{itemize}
+
+
+%====================================================
+\subsubsection{FFTW der MKL}
+%====================================================
+The MKL contains an interface for FFTW calls and also supplies the
+Routines for Fourier transforms.
+
+In order to be able to use the FFTW of the MKL, one executes the
+command \textit{make} from within the subdirectory
+\textit{interfaces/fftw2xf} of the MKL directory This step requires
+the intel fortran compiler and the intel C compiler.  The make command
+constructs the library \textit{libfftw2xf\_intel.a} in the
+corresponding directory \textit{mkl-libs}. In order to use this
+library the paw-parameter file must be adapted. First one has to
+adjust the value of \mytt{FFTDIR}.  Then one has to replace the value
+\textit{fftw} by \textit{fftw2xf\_intel} in the variables
+\textit{LIBS\_SCALAR } and \textit{LIBS\_PARALLEL}.
+
+%====================================================
+\subsection{ESSL}
+%====================================================
+\begin{itemize}
+\item Name: Engineering and Scientific Subroutine Library (ESSL)
+\item Supplier: IBM
+\item Source: \mytt{http://www-03.ibm.com/systems/p/software/essl/index.html}
+\item License: commercial
+\item Remarks: 
+\begin{itemize}
+\item Only for IBM Hardware. Only for the AIX operating
+system and for  Linux with Power architecture.
+\item ESSL does not use the same calling sequences as LAPACK and
+BLAS. However, PAW has a special interface for ESSL.
+\end{itemize}
+\item Covers: FFT, LAPACK, BLAS
+\end{itemize}
+
+%====================================================
+\newpage
+\section{Message Passing Interface}
+%====================================================
+The MPI (Message Passing Interface) is a protocoll, that allows a
+distributed/parallel computing. The MPI must be compiled such that its
+calls work with a single underscore.
+
+Most hardware suppliers offer their own MPI implementations. 
+There are also freely available MPI implementations, such as  MPICH and Open
+MPI\textit{http://www.open-mpi.org/}. Our experiences are limited to
+ MPICH,  MVAPICH, and the MPI of IBM.
+
+%====================================================
+\subsection{MPICH}
+\label{sec:mpich}
+%====================================================
+MPICH is a free implementation of the MPI for  ethernet networks.
+
+\begin{itemize}
+\item Supplier: Argonne National Laboratory and Missisippi State University
+\item Source http://www-unix.mcs.anl.gov/mpi/mpich1/
+\item License: open source
+\item Remarks:
+\begin{itemize}
+\item There is a new implementation of MPICH called MPICH2. According
+to the supplier this is the currently recommendent implementation.
+MPICH2 can be downloaded from\\
+\centerline{\textit{http://www-unix.mcs.anl.gov/mpi/mpich2/index.htm}.}
+It has not been tested with CP-PAW.
+\end{itemize}
+\item Installation:
+\begin{enumerate}
+\item Download of the most recent version from
+\begin{center}
+\textit{http://www-unix.mcs.anl.gov/mpi/mpich1/}
+\end{center}
+\item After unpacking, one can compile the MPI for PAW using the 
+following script.
+
+For G95
+\begin{verbatim}
+#!/bin/sh
+export F90=g95
+export F90FLAGS=-fno-second-underscore
+export FC=g95
+export FFLAGS=-fno-second-underscore
+export FLINKER=g95
+export RSHCOMMAND=ssh
+./configure --enable-f77
+\end{verbatim}
+For Pathscale
+\begin{verbatim}
+#!/bin/sh
+export CC=pathcc
+export FC=pathf90 
+export F90=pathf90 
+export F90FLAGS=-fno-second-underscore 
+export FFLAGS=-fno-second-underscore
+export FLINKER=pathf90
+export RSHCOMMAND=ssh
+./configure -c++=pathcc -opt=-O3 --enable-f90 --enable-f90modules \
+            --with-romio --disable-weak-symbols 
+\end{verbatim}
+
+\item execute \textit{make}.
+\end{enumerate}
+\end{itemize}
+
+%====================================================
+\subsection{MVAPICH}
+\label{sec:mvapich}
+%====================================================
+MPICH is a free implementation of the MPI for  Infiniband networks.
+\begin{itemize}
+\item Supplier: Ohio State University
+\item Source: \textit{http://mvapich.cse.ohio-state.edu/}
+\item License: Open Source
+\end{itemize}
+
+
+%====================================================
+\chapter{The Parameter File}
+\label{sec:parmfile}
+%====================================================
+
+The parameter file is needed for the configuration of the compilation
+process of CP-PAW. The parameter file selects the compiler, its
+options, the numerical libraries, etc. 
+
+An example is given in the following
+section~\ref{sec:parms.example} and discussed later.
+
+%============================================================================
+\section{Example for a Parameter File}
+\label{sec:parms.example}
+%============================================================================
+\begin{verbatim}
+################################################################################
+##_______________________architecture (arbitrary name)________________________##
+ARCH="g95_guam"
+##______________________flag for uppercase or lower case module file names____##
+TUPPERCASEMOD="F"
+##______________________flag for parallelization______________________________##
+TPARALLEL="T"
+##_______special rules for the configure script and f90 preprocessor__________##
+SPECIAL="none"
+##__________________DIRECTORIES containing LIBRARIES__________________________##
+BLASDIR=""
+LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6/"
+##________________________ include file for fftw______________________________##
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+##_________________________________ include file for mpi "mpif.f90"___________##
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+##_______F90 compiler and linker for scalar executables_______________________##
+COMPILER_SCALAR="g95 -fno-second-underscore "
+##_______F90 compiler and linker for parallel executables_____________________##
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+##__________________standard compiler flags___________________________________##
+FCFLAGS_NONE="-c "
+#_______________________compiler flags for optimization_______________________##
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+##_______________________compiler flags for  profiling________________________##
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+#_______________________compiler flags for debugging__________________________##
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+#_______________________flags for linking_____________________________________##
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}  \
+                 -L${FFTDIR}/fftw/.libs/"
+#_______________________flags for linking_____________________________________##
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                  -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/mpe/lib"
+#________________________external libraries (sequential)______________________##
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+#___________________external libraries (parallel)_____________________________## 
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lmpe \
+               -Wl,-dy -llmpe"
+#________________________preprocessor variables_______________________________## 
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
+#________________________file extension_______________________________________## 
+FEXT="f90"
+################################################################################
+\end{verbatim}
+%$
+
+%============================================================================
+\section{Explanation of the Variables in the  Parameter File}
+%============================================================================
+\subsection{\mytt{ARCH}}
+%
+The value is a directory name, which will be created as
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}
+\end{center}
+This directory will contain all executables. It will also contain
+subdirectories with the object files, module files,etc.
+
+\subsection{\mytt{TUPPERCASEMOD}}
+
+Different compilers name the module files either with uppercase
+letters or lowercase letters. By specifying \mytt{TUPPERCASEMOD='T'}
+for uppercase letters or \mytt{TUPPERCASEMOD='F'} for lowercase
+letters the make files are able to detect the correct dependencies.
+An incorrect setting will result in unnecessary compilation of files
+that are unaffected by a certain change of the source code.
+
+To find out about the proper setting, compile first with an arbitrary value.
+Then inspect the module files created with the command
+\begin{center}
+\mytt{ls} \myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast/*.mod}
+\end{center}
+and adapt the parameter file correspondingly.
+
+\subsection{\mytt{TPARALELL}}
+%
+This logical variable specifies if an executable for parallel computers shall
+be built.  A requirement is a corresponding MPI library.  Specify
+\mytt{TPARALELL='F'} to create only sequential libraries.
+
+\subsection{\mytt{SPECIAL}}
+%
+Leave the setting \mytt{SPECIAL='none'}. It is a flag for special rules
+in the make files.
+
+\subsection{\mytt{BLASDIR}, \mytt{LAPACKDIR}, \mytt{FFTDIR}, \mytt{MPIDIR}}
+
+This set of variables specifies the path for the various
+libraries. These variables can be used within the parameter file. They
+are not used themselfes by the make files.
+
+The reason for this construction is that configure does not recognize
+intermediate variables in the parameter file. The variables defined
+here will be specified in the make files, so that their values can be used.
+
+%========================================================
+\subsection{\mytt{FFT\_HEADER}}
+%========================================================
+Path to the include file \mytt{fftw\_f77.i} for the FFTW library.
+This file contains constants , that need passed to the FFTW routines.
+
+If FFTW2 is used as described in section~\ref{sec:FFTWinstall}, no change is needed.
+
+Note that CP-PAW is not compatible with FFTW3!
+
+%================================================================================
+\subsection{\mytt{MPI\_HEADER}}
+%================================================================================
+Path to the include file \mytt{mpif.h} for MPI. This file must be
+supplied by the MPI Distribution. No change is required if MPICH is
+used.
+
+\textcolor{red}{ Was ist wenn das file nicht existiert, aber auch
+nicht ben\"otigt wird?}
+
+Newer versions such as MPICH-2 offer a module file, which is more
+consistent with the Fortran90 standard. This file includes explicit
+interfaces for the Fortran calls to MPI. Unfortunately, only a small
+subset of the interfaces require by CP-PAW are supported. This is the
+reason to use the more conventional method of an include file to set
+the MPI-specific parameters.
+
+%================================================================================
+\subsection{\mytt{COMPILER\_SCALAR},  \mytt{COMPILER\_PARALLEL}}
+%================================================================================
+This variable specifies the command to call the compiler for the
+sequential and the parallel executables.
+
+Compiler options that are used generally can be integrated here with
+the compiler as in the present example: The G95 compiler used in this
+example requires the option \textit{-fno-second-underscore} in order
+to link the libraries properly.
+
+%================================================================================
+\subsection{\mytt{FCFLAGS\_NONE},  \mytt{FCFLAGS\_OPT}, 
+\mytt{FCFLAGS\_DBG},  \mytt{FCFLAGS\_PROF}}
+%================================================================================
+
+Here the compiler options are specified. Different sets of compiler
+options are used to create different executables.
+\begin{itemize}
+\item FCFLAGS\_NONE: The most simple set of compiler options. The
+executables are to explore the dependency on the compiler options. In
+particular to test the results of a highly optimized version.  
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/none}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/none\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_OPT: This set of compiler options should be the highest
+level of optimization.  The resulting exectubles shall be the ones to
+be used during normal production.  
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_fast.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_fast.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/fast\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_DBG: The is teh set of compiler option for
+debugging. Besides the parameter -g it should include all reasonable tests
+such as array-bound checking. No optimization shall be selected.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_dbg.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_dbg.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/dbg}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/dbg\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\item FCFLAGS\_PROF: This is the set of compiler options for profiling.
+The parameters should include the parameter ``-pg'' and all optimizations.
+\begin{center}
+\begin{tabular}{|l|l|}
+\hline
+sequential executable &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/paw\_prof.x}\\
+ parallel executable: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/ppaw\_prof.x}\\
+sequential object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/prof}\\
+parallel object directory: &
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/prof\_parallel}\\
+\hline
+\end{tabular}
+\end{center}
+\end{itemize}
+The compiler options depend on the compiler. Some, use fro
+optimizations, also depend on the computer architecture and the CPU.
+
+%================================================================================
+\subsection{\mytt{LDFLAGS\_SCALAR},\mytt{LDFLAGS\_PARALLEL}}
+%================================================================================
+\mytt{LDFLAGS\_PARALLEL} is used only, if \mytt{TPARALLEL=''T''}.
+
+These are the parameter sets for the loader. In particular one
+specifies the search paths for the libraries. The libraries may differ
+for the sequential and the parallel executable.
+
+%================================================================================
+\subsection{\mytt{LIBS\_SCALAR},\mytt{LIBS\_PARALLEL}}
+%================================================================================
+\mytt{LIBS\_PARALLEL} is used only, if \mytt{TPARALLEL=''T''}.
+
+This variable specifies the libraries that should be linked.
+
+With \mytt{-Wl,-dn} and \mytt{-Wl-dy} one specifies whether the
+libraries are linked statically or dynamically.  A statically linked
+library -lfoo points to libfoo.a A dynamically linked library -lfoo
+points to libfoo.so The default should be to link dynamically. However
+some libraries cannot be linked dynamically. If the executable is to
+be osed on a different computer, static linking is mandatory.
+
+The library g2c is needed by the G95 compiler. The library is
+contained foer SUSE Linux in the package \textit{compat-g77}.
+
+The MKL library also requires the libraries ``\mytt{libguide}'' and
+``\mytt{libpthread}''. pthread is a native linux library used by
+libguide. libguide provides multithreading support within MKL. It is
+important that pthread is specified as last item in the link line.
+\begin{verbatim}
+-lmkl_lapack -lmkl_em64t -lguide -lpthread
+\end{verbatim}
+
+When linking the atlas blas library, one does need to specify
+\mytt{-lf77blas -latlas}. ATLAS is a C-library and f77blas is a
+Fortran interface to the C-subroutines. 
+
+
+%================================================================================
+\subsection{\mytt{CPPFLAGS}}\label{sec:cppflags}
+%================================================================================
+
+Flags for the C-preprozessor. Using these flags, the C-preprozessor
+selects certain code segments. They are mostly used to select the
+interfaced to external libraries.  The interfaces are located in
+\myspec{PAW-directory}\mytt{/src/paw\_library.f90}.
+
+\begin{itemize}
+\item The variable \mytt{-DCPPVAR\_COMPILER\_}\textit{foo} selects the
+interface to the Utility library. The Utility library contains Fortran
+interfaces to system routines, which are written in C and which are
+part of the operating system Allowed values are
+\begin{itemize}
+\item \verb+CPPVAR_COMPILER_G95+
+\item \verb+CPPVAR_COMPILER_IFC+
+\item \verb+CPPVAR_COMPILER_IFC7+
+\item \verb+CPPVAR_COMPILER_ABSOFT+
+\item \verb+CPPVAR_COMPILER_XLF+
+\item \verb+CPPVAR_COMPILER_PGI+
+\item \verb+CPPVAR_COMPILER_PATHSCALE+
+\end{itemize}
+\item The variable \verb+CPPVAR_FFT_foo+ selects the interfaces to the
+Fourier transform library. Allowed values are:
+\begin{itemize}
+\item \verb+CPPVAR_FFT_FFTW+
+\item \verb+CPPVAR_FFT_ESSL+
+\item \verb+CPPVAR_FFT_ACML+
+\end{itemize}
+\item The variable \verb+CPPVAR_LAPACK_foo+ selects the interfaces to
+the LAPACK routines or equivalent library routines.
+
+Allowed values for \verb+CPPVAR_LAPACK_foo+ are:
+\begin{itemize}
+\item \verb+CPPVAR_LAPACK_ESSL+
+\item \verb+CPPVAR_LAPACK_LAPACK+: Default behavior. The LAPACK interfaces are used.
+\end{itemize}
+\item The variable \verb+CPPVAR_BLAS_foo+ selects the interfaces to
+BLAS routines or equivalenter library routines. 
+
+Allowed values for \verb+CPPVAR_BLAS_foo+ are:
+\begin{itemize}
+\item \verb+CPPVAR_BLAS_ESSL+
+\item \verb+CPPVAR_BLAS_BLAS+: Default behavior. The BLAS interfaces are used.
+\end{itemize}
+\end{itemize}
+
+%================================================================================
+\subsection{\mytt{FEXT}}
+%================================================================================
+Extension expected by the compiler for the source code files. It is
+usually ``f90'' or ``f95''. (The sources of teh CP-PAW code are stored with the 
+extension .f90. However they are transformed before compilation into a file with 
+the extension specified by FEXT. This is the only extension seen by the compiler.)
+
+
+%================================================================================
+\chapter{List of Targets of the Make file}
+%================================================================================
+
+The makefile recognizes the following targets:
+\begin{itemize}
+\item {none} Creates a sequential binary without optimizations. 
+\item {dbg} Creates a sequential binary for debugging
+\item {fast} Creates an optimized, sequential binary.
+\item {prof} Creates an optimized, sequential binary for profiling
+\item {none\_parallel}
+\item {dbg\_parallel}
+\item {fast\_parallel}
+\item {prof\_parallel}
+\item  {clean}
+\item {clean\_none}
+\item {clean\_dbg}
+\item {clean\_fast}
+\item {clean\_prof}
+\item {tools}
+\item {docs}
+\end{itemize}
+
+
+
+% %================================================================================
+% \chapter{Problems}
+% %================================================================================
+% %================================================================================
+% \section{Typical errors during compilation}
+% %================================================================================
+% %================================================================================
+% \section{Typical errors during linking}
+% %================================================================================
+% %================================================================================
+% \section{Typical run-time errors}
+% %================================================================================
+
+
+
+%================================================================================
+\chapter{Problems and miscellaneous remarks}
+%================================================================================
+
+
+%================================================================================
+\section{Missing symbols in paw\_library\_d.f90}
+%================================================================================
+The file paw\_library.f90 contains all calls to external libraries,
+including the support libraries. The interfaces to specific libraries
+or the support libraries to specific compilers are selected by the
+c-preprocessor, which is in turn instructed by the variable CPPFLAGS
+specified in \myspec{parmfile}.
+
+If symbols in this libraries are not recognized, it is likely that
+CPPFLAGS are not properly chosen. See section~\ref{sec:cppflags}.
+
+A typical error message may be
+\begin{verbatim}
+fortcom: Error: /home/tools/PAW/bin/ifc/Objects/fast/paw_library_d.f90, 
+line 94: This name does not have a type, and must have an explicit type.
+\end{verbatim}
+
+%================================================================================
+\section{Generic subroutine inconsistent with specific subroutine interface}
+%================================================================================
+
+If a library expects 4-byte integers and receives 8-byte integers,
+which usually is the size of the default integer on a 64-bit
+architecture, there is a mismatch of interfaces. This hopefully causes
+an error message by the compiler.
+
+It is important that CP-PAW and the libraries have been compiled with
+the same size for the default integer. The problem is usually related
+to paw\_mpelib.f90 or paw\_library.f90. The file paw\_mpelib.f90
+contains all calls to the MPI library (parallelization routines) and
+makes heavy use of integers.
+
+A typical error message may have the form.
+\begin{verbatim}
+CALL MPE__GATHER(CID,1,NAMES,NAMEARRAY)  ! NEED A GATHER ROUTINE FOR STRI 1
+
+Error: Generic subroutine 'mpe__gather' at (1) is not consistent with a specific 
+subroutine interface
+\end{verbatim}
+
+%===============================================================================
+\section{Stack-size exceeded}
+%===============================================================================
+Unpredictable behavior can occur if the stack-size is exceeded. In the
+bash shell the stack size can be increased using the command
+\begin{verbatim}
+ulimit -s unlimited
+\end{verbatim}
+
+On OSX \verb|unlimited| is not allowed. Use \verb|65532| instead,
+which is the hard limit. The hard limits for the computer can be
+printed using \verb|ulimit -H -s|.  It is best to include this command
+in the startup shell, namely .profile or .bashrc. The current value is
+printed with the command
+\begin{verbatim}
+ulimit -s 
+\end{verbatim}
+without a value. The result is the stack size in kB.
+
+
+The problem with the stack size is apparently related to the operating
+system. It can be caused by certain optimizations such as
+inlining. The latter increases the code size. Large automatic arrays
+cause a segmentation fault if the stack is too small.
+
+
+%================================================================================
+\section{No core dump}
+%================================================================================
+If the code crashes without creating a core dump,
+the limit for the core file size must be increased using the command
+\begin{verbatim}
+ulimit -c unlimited
+\end{verbatim}
+
+%================================================================================
+\section{Second underscore}
+%================================================================================
+The compiler translates Fortran names such as subroutine names or
+variable names into internal symbols. Typically the compiler appends a
+single underscore to each name, in order to distinguish them from
+other names. However, some compilers deviate from this standard, if
+the fortran name already contains one underscore. In the latter case
+two underscores are attached instead of one. This is the so-called
+``second-underscore'' convention.
+\begin{center}
+``G95 follows the f2c convention of adding an underscore to public
+names, or two underscores if the name contains an underscore.'' This
+convention can usually be changed by setting the corresponding
+compiler flags.
+\end{center}
+
+In the following table we denote the ``second-underscore'' as ``su''
+and the ``no-second-underscore'' as ``nsu''.
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+Fortran Name & Symbol su & Symbol nsu\\
+\hline
+\verb+abc+ & \verb+abc_+ &\verb+abc_+\\
+\verb+a_b_c+ & \verb+a_b_c__+& \verb+a_b_c_+\\
+\verb+abc_+ & \verb+abc___+& \verb+abc__+ \\
+\verb+a_b_c_+ & \verb+a_b_c___+& \verb+a_b_c__+\\
+\hline
+\end{tabular}
+\end{center}
+
+Apparently there are problems if one links a library, that has been
+created with a different underscoring convention than the rest of the
+code.
+
+Many external libraries are written in C and have a fortran wrapper.
+It is important that this wrapper has been compiled with thes same
+underscoring convention.
+
+In order to explore the symbols that have been created and to check if
+they are matching, one can inspect the symbol tables using the
+command, as described in section~\ref{sec:nm}.
+
+%====================================================
+\section{Symbol tables of object files and libraries}
+\label{sec:nm}
+%====================================================
+In order to explore which library routines are called by an object
+file and which are available in a library one can inspect the symbol
+tables.
+
+The commmand
+\begin{verbatim}
+nm foo.o
+\end{verbatim}
+ prints the symbol table of the object file foo.o.
+Similarly one can inspect a library with 
+\begin{verbatim}
+nm foo.a
+\end{verbatim}
+
+
+
+
+%====================================================
+\section{Runtime error in viacheck.c, \mytt{code=VAPI\_RETRY\_EXC\_ERR}}
+%====================================================
+The routine viacheck.c is part of MVAPICH, the MPI implementation for
+Infiniband networks. The error means that the Infiniband Reliable
+Connection retry Coundf was exceeded. This may occur if there is a bad
+cable or port on the hardware. It may also occur if the code undergoes
+a segmentation fault, so that the job is not stopped on all nodes. On
+those nodes the job fails, because it does not receive the required
+response.
+
+%====================================================
+\section{Missing library pthread}
+\label{sec:problempthread}
+%====================================================
+\mytt{libpthread} is a system library required by the MKL library.
+
+Under the SUSE-Linux we had problems with the pthread library.  The
+static SUSE pthread library\\ (\mytt{/usr/lib/libpthread.a}) is
+buggy. The problem is usually solved by linking the pthread library
+dynamically, that is with ``\mytt{-Wl,-dy -lpthread}''.  Another
+workaround has been to use the pthread library from Debian or Redhat.
+This library is copied to, for example,
+\mytt{/usr/lib/libpthread-debian.a}, and then linked using
+\mytt{-lpthread-debian} instead of \mytt{-lpthread}.
+
+
+%====================================================
+\section{Missing library g2c}
+\label{sec:problemg2c}
+%====================================================
+If the linker complains about ``undefined references'' in
+``\mytt{xerbla.o}'' it is a sign that the g2c library is missing or
+not linked properly.
+
+``\mytt{g2c}'' is the GNU Fortran-to-C converter, which is the basis
+of the G77 compiler. In older times, this converter was called
+``\mytt{f2c}'' (libf2c). The library ``\mytt{g2c} is usually part of
+``\mytt{g77}'' or the ``\mytt{gfortran}'' package.
+
+
+I found the following remark on the WWW.
+
+``Library g2c is the Fortran 77 shared library needed to run Fortran 77
+dynamically linked programs. The library is no longer needed with the
+new family of Fortran (native) compilers like g95.  To correct the
+error, we searched first of all for the shared version of g2c in
+/usr/lib*:''
+
+
+%================================================================================
+\section{MPI: rsh versus ssh}
+%================================================================================
+The parallelization requires a method to communicate between different
+machines.  Two possibilities exist, namely via rsh and ssh. rsh is a
+bit faster and ssh is a lot safer. Therefore the use of ssh is
+strongly recommended.
+
+%================================================================================
+\section{Dynamic versus static linking}
+%================================================================================
+Libraries can be linked dynamically or statically. A statically linked
+library is completely integrated with the binary. If the binary is to
+be used on another computer, it is important to link the libraries statically.
+
+The code size is smaller when the libraries are linked dynamically,
+that is during runtime. In that case only an interface to a shared
+library is integrated into the binary. If one copiesthe executable to
+another machine, it is important that the shared libraries are
+available and identical to those on the original machine.
+
+The preferred mode is dynamic linking.
+
+It is possible to convert a static library into a dynamic library. Use teh command
+\begin{verbatim}
+ls -z allextract *.a *.so
+\end{verbatim}
+
+
+
+%================================================================================
+\section{Multiple definition of \ldots}
+%================================================================================
+\begin{itemize}
+\item (To \mytt{paw\_...} This problem should be absent in the current implementation.
+The possible cause is that paw routines are linked twice, once
+directly and once as part of the paw librart libpaw.a. This may happen
+when linking the PAW tools.
+\item Do not link both, blas and mkl (or blas and acml). Both contain the BLAS routines
+\end{itemize}
+
+
+%================================================================================
+\section{Cannot find lf77blas}
+%================================================================================
+
+Set the correct path to the library libf77blas.a. It is part of the ATLAS package. 
+
+
+%================================================================================
+\section{PMPI\_Allreduce}
+%================================================================================
+This problem is related to the PATHSCALE compiler:
+
+If the linker complains that it does not find routines starting with
+PMPI it helps if one also links the library \verb+libpmpich+. The
+library commands are the
+``\verb+-lfmpich -lmpich -lpmpich+''. (Solution obviously for MPICH
+only.)
+
+%================================================================================
+\section{Linker flag -I does not work}
+%================================================================================
+Some time ago the ABSOFT compiler did not accept the -l flag to set
+the search path include files. The current installation procedure
+takes care of this.
+
+%================================================================================
+\section{cannot find -lvapi}
+%================================================================================
+vapi is a library used by the infiniband drivers. (Infiniband is a
+network protocoll that can be used by MPI). 
+
+The solution is to link vapi dynamically. \mytt{-Wl,-dy -lvapi}.
+
+
+
+%================================================================================
+\section{Cannot find library gcc\_s}
+%================================================================================
+This problem is related to the PATHSCALE compiler:
+
+Simply add ``\verb+-lgcc_s+'' to the list of libraries.It may be
+necessary to supply also the path. On my system itr is in
+``\verb+-L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/+''.
+
+%================================================================================
+\section{\mytt{P4\_GLOBMEMSIZE}}
+%================================================================================
+For a parallel job, I obtain the following error message:
+\begin{verbatim}
+p1_6605: (2.488281) xx_shmalloc: returning NULL; requested 4767920 bytes
+p1_6605: (2.488281) p4_shmalloc returning NULL; request = 4767920 bytes
+You can increase the amount of memory by setting the environment variable
+P4_GLOBMEMSIZE (in bytes); the current size is 4194304
+p1_6605:  p4_error: alloc_p4_msg failed: 0
+\end{verbatim}
+
+Include a statement into your .bashrc file to increase the variable
+\mytt{P4\_GLOBMEMSIZE}
+\begin{verbatim}
+export P4_GLOBMEMSIZE=16777216
+\end{verbatim}
+This seems to be the maximum error one can use under linux.
+
+%The value should not be larger than the kernel predefined max
+%shared memory value. The latter value can be checked by the command
+%\begin{verbatim}
+%/sbin/sysctl kernel.shmmax
+%\end{verbatim}
+%(shmmax may be shmax on other systems.)
+
+%================================================================================
+\section{Resources exhausted}
+%================================================================================
+If many parallel jobs are run ok and suddenly parallel jobs crash run the following script.
+\begin{verbatim}
+#/bin/sh
+ipcs -m | awk '/^ *0x/ {print $2 }' | xargs -n 50 ipcrm shm
+ipcs -s | awk '/^ *0x/ {print $2 }' | xargs -n 50 ipcrm sem
+\end{verbatim}
+
+%================================================================================
+\section{FFTW}
+%================================================================================
+
+FFTW version 3 (FFTW3) is not compatible with older versions
+(FFTW2). FFTW3 cannot yet be used with PAW.
+
+%================================================================================
+\section{Logical not treated correctly}
+%================================================================================
+The implementation of logical variables and their tests are apparently
+not unique between compilers. 
+\begin{itemize}
+\item a logical variable is true if its bit-representation is nonzero
+and it is false if its value is zero
+\item a logical variable is true if its bit-representation is an odd
+number and it is false of it is an even number.
+\end{itemize}
+The first option seems to be the standard.  The PGF compiler provides
+a compiler switch '-Munixlogical' to select the first option over the
+second. The second is a default.
+
+%================================================================================
+\section{File format: Little- and Big-Endian}
+%================================================================================
+Files can be written either in little-endian or in big-endian
+format. These formats define the order with which the bytes of an
+integer are written. In the Big-endian format the bytes are written
+the way we write numbers, namely with the bits orderes in importance
+from right to left. In the big-endian format the bytes are written in
+reverse order. The little-endian format is common for the Intel
+architecture, while the power-PC architecture uses the big-endian
+format by default.
+
+Files written in one format are read incorrectly on an architecture
+that uses the other.
+
+The big-endian format corresponds to the normal binary representation
+with the most significant bits are written to the left of the less
+significant bits.
+\begin{eqnarray}
+\underbrace{i_{32}i_{31}i_{30}i_{9}i_{28}i_{27}i_{26}i_{25}}_{1.Byte}
+\qquad
+\underbrace{i_{24}i_{23}i_{22}i_{21}i_{20}i_{19}i_{18}i_{17}}_{2. Byte}
+\qquad
+\underbrace{i_{16}i_{15}i_{14}i_{13}i_{12}i_{11}i_{10}i_{9}}_{3. Byte}
+\qquad
+\underbrace{i_{8}i_{7}i_{6}i_{5}i_{4}i_{3}i_{2}i_{1}}_{4. Byte}
+\\
+=\sum_{j=1}^{32} i_j\cdot 2^{j-1}
+\end{eqnarray}
+The big-endian is used in the Power-PC architechure as default.
+
+The Intel architecture uses the little-endian format
+\begin{eqnarray}
+\underbrace{i_{8}i_{7}i_{6}i_{5}i_{4}i_{3}i_{2}i_{1}}_{4. Byte}
+\qquad
+\underbrace{i_{16}i_{15}i_{14}i_{13}i_{12}i_{11}i_{10}i_{9}}_{3. Byte}
+\qquad
+\underbrace{i_{24}i_{23}i_{22}i_{21}i_{20}i_{19}i_{18}i_{17}}_{2. Byte}
+\qquad
+\underbrace{i_{32}i_{31}i_{30}i_{9}i_{28}i_{27}i_{26}i_{25}}_{1.Byte}
+\\
+=\sum_{j=1}^{32} i_j\cdot 2^{j-1}
+\end{eqnarray}
+
+%===============================================================================
+\section{Information about your system}
+%===============================================================================
+In order to download the correct compilers and libraries, or to obtain
+certain licenses, you need to know some information about your current
+system.
+
+%===============================================================================
+\subsection{Name of the computer}
+%===============================================================================
+\begin{itemize}
+\item  ``\mytt{hostname}'' provides the computer name.
+\item  ``\mytt{hostname -i}'' provides the IP addresses (not on OSX)
+\item  ``\mytt{hostname -d}'' provides the internet domain name. (not on OSX)
+\end{itemize}
+
+%===============================================================================
+\subsection{MAC Adress}
+%===============================================================================
+The Media Access Control (MAC) adress or Ethernet ID is sometimes used
+to request a license for a particular computer. The MAC address is a
+unique identifier for each networkcard. The MAC address consists of 6
+Byte and is expressed in hexadecimal numbers.  An example is
+\mytt{08:00:20:AE:FD:7E}.
+
+In order to obtain the  MAC adress, execute
+\begin{verbatim}
+/sbin/ifconfig -a
+\end{verbatim}
+One obtaines a list for all network cards. The number of the ethernet
+hardware address is the MAC address of the computer.
+
+%===============================================================================
+\subsection{Architecture of the computer}
+%===============================================================================
+The Linux command ``\mytt{arch}'' or ``\mytt{uname -m}'' supplies the
+machine architecture, such as. x86\_64.
+
+The most important computer architectures are
+\begin{itemize}
+\item IA-32 (Intel Architecture 32bit), i386, x86 is the processor
+architecture used by Intel since 1987 until the 64bit computers have
+been introduced.
+\item x86-64, AMD64, EM64T, IA-32e, x64:  Architecture of the first 64-bit
+prozessors of  AMD. EM64T stands for ``Extended Memory 64 Technology''.
+\item IA-64 is the completely new 64bit architekture of Intel. It is
+used in the Itanium prozessors. IA-64 stands for ``Intel Architecture
+64''.
+\item POWER is the architecture of IBM's RISC prozessors.
+Power stands for ``Performance Optimized With Enhanced RISC''
+\end{itemize}
+
+Further information can be obtained using the command
+``\mytt{lscpu}''. It may give information such as
+\begin{verbatim}
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                8
+On-line CPU(s) list:   0-7
+Thread(s) per core:    2
+Core(s) per socket:    4
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 42
+Stepping:              7
+CPU MHz:               1600.000
+BogoMIPS:              6800.05
+Virtualization:        VT-x
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              8192K
+NUMA node0 CPU(s):     0-7
+\end{verbatim}
+
+%===============================================================================
+\subsection{Linux version}
+%===============================================================================
+In the Suse distribution of linux one obtains the versionsnumber using
+\verb+cat /etc/SuSE-release+.  The kernel version is obtained using
+\verb+uname -r+
+
+%==================================================================================
+\section{Background to the configure script}
+\label{sec:configurebackground}
+%==================================================================================
+It may be of interest to understand what the configure script does,
+which takes care of the configuration.
+
+%==================================================================================
+\subsection{What does the configure script do}
+%================================================================================
+The configuration helps the user to compile the PAW-Code without
+having to find out about a lot of parameters himself.  The configure
+script explores the availability of the compilers and libraries, and
+it sets the corresponding compiler flags and preprocessor
+variables. In the current version, however, we have to specify most
+parameters explicitely in a parameter file.
+
+The configure script uses the parameter file \myspec{parmfile} in
+order to construct the necessary Makefiles from corresponding
+templates. The templates in use are
+\begin{itemize}
+\item \mytt{Makefile\_targets.in} is converted in the \mytt{Makefile}
+located in the \myspec{PAW-directory}. This is the primary makefile
+executed by the user.
+\item \mytt{Makefile\_bare.in} is converted into \mytt{Makefile\_bare}
+located in the \myspec{PAW-directory}. However this make file is never
+executed itself, but it is itself only a template for the makefiles located in the directories
+\begin{center}
+\myspec{paw-directory}\mytt{/bin/}\myspec{arch}\mytt{/Objects/}\myspec{type}
+\end{center}
+where \myspec{type} is one of \mytt{none},\mytt{dbg}, \mytt{fast},
+\mytt{prof}, \mytt{none\_parallel}, \mytt{dbg\_parallel},
+\mytt{fast\_parallel}, \mytt{prof\_parallel}.
+\end{itemize}
+
+The configure script makes a copy of the templates for the Makefiles
+and replaces strings of the type \mytt{@VARIABLE@} in the copy of the
+template by the corresponding value. The variables are identifies by
+the two \mytt{@} at the beginning and the end.
+
+In addition, the configure script constructs a directory Tree that will
+hold the specific makefiles, objects, binaries etc.
+
+%==================================================================================
+\subsection{How the configure script is constructed}
+\label{sec:constructconfigure}
+%==================================================================================
+
+The configure script is constructed with the help of the GNU
+\mytt{autoconf} tool . The \mytt{autoconf} tool uses an input file
+\mytt{configure.ac}, which describes the configuration process in the
+\mytt{autoconf} macro language.
+
+Especially important is the first part with the \emph{user adaptable
+variables}. Here all the values can be set - the rest of the script just uses
+the variables.  This is the place to make permanent changes to the installation
+scheme (e.g. change the default compiler flags).
+
+By invoking
+\begin{center}
+\mytt{autoconf}
+\end{center}
+in the PAW directory the \texttt{configure} file -- which is a
+\texttt{/bin/sh} script -- will be generated.
+
+
+\appendix
+%================================================================================
+\newpage
+\chapter{Output produced by the configure script}
+\label{sec:printoutconfigure}
+%================================================================================
+If the configure script completes successfully, the output looks like this.
+\begin{verbatim}
+checking for parms.g95_guam... yes
+check for make
+checking for gmake... gmake
+checking for cpp... cpp
+checking for g95... yes
+checking for xlf90... no
+checking for ifort... no
+checking for ifc... no
+checking for f90... yes
+checking for fort... no
+resolve parms.g95_guam
+${MPI_HEADER}
+
+=============================
+check MPI directory
+checking for /home/tools/libs/mpich-1.2.6/... yes
+check FFT directory
+checking for /home/tools/libs/fftw-2.1.5_no-second-underscore/... yes
+copy parms.g95_guam to parms.in_use
+creating subdirectories and copying shell scripts
+configure: creating ./config.status
+config.status: creating /home/ptpb/Tree/PAW/main/bin/g95_guam/f90pp
+config.status: creating Makefile
+config.status: creating Makefile_bare
+modify makefile_bare for lowercase module files
+creating Makefile in none
+creating Makefile in none_parallel
+creating Makefile in fast
+creating Makefile_parallel in fast
+creating Makefile in dbg
+creating Makefile_parallel in dbg
+creating Makefile in prof
+creating Makefile_parallel in prof
+---------------------------------------------------------------
+-----------------------SUMMARY---------------------------------
+---------------------------------------------------------------
+directory of distribution      : /home/ptpb/Tree/PAW/main
+directory with binaries        : /home/ptpb/Tree/PAW/main/bin/g95_guam
+architecture                   : g95_guam
+preprocessor variables         : -DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  -DCPPVAR_LAPACK_LAPACK
+architecture name              : g95_guam
+parallel environment           : T
+compile command (scalar)       : g95 -fno-second-underscore
+F90 file extension             : f90
+compile flags (none)           : -c
+compile flags (fast)           : -c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2
+compile flags (dbg)            : -c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check
+compile flags (prof)           : -c -pg -O3 -fshort-circuit -funroll-loops  -msse2
+link command w.flags (scalar)  : g95 -fno-second-underscore  -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/
+external libraries (scalar)    : -Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c
+uppercase module names?        : F
+blas library                   :
+lapack library                 : /home/tools/libs/acml3.0.0_64/gnu64/lib/
+libs for Fourier transforms    : /home/tools/libs/fftw-2.1.5_no-second-underscore/
+parallel envirnment considered : yes
+compile command (parallel)     : g95 -fno-second-underscore
+link command w. flags(parallel): g95 -fno-second-underscore  -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib
+external libraries (parallel)  : -Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lfmpich -Wl,-dy -lmpich
+mpi library                    : /home/tools/libs/mpich-1.2.6/
+MAKE command                   : gmake
+CPP command                    : cpp  -traditional
+---------------------------------------------------------------
+----done!---configuration completed successfully!--------------
+---------------------------------------------------------------
+\end{verbatim}
+%
+%================================================================================
+\newpage
+\chapter{Examples for Parameter Files}
+\label{sec:parmfiles}
+%================================================================================
+
+%=======================================================================
+\subsection{Example of a Parameter File for a Simple Installation}
+\label{sec:parmfilesimple}
+%=======================================================================
+This is a simple example for a parameter file
+\begin{verbatim}
+ARCH="G95_mycomputer"
+TPARALLEL="T"
+TUPPERCASEMOD="F"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/acml4.0.1/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR=""     
+MPIDIR="/opt/mpich-1.2.6/"
+FFT_HEADER=" "   
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="g95 -fno-second-underscore "
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} "
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}  -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lacml -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c \
+            -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_ACML  \
+    -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
+
+%================================================================================
+\newpage
+\section{Parameter File for G95}
+%================================================================================
+\begin{verbatim}
+ARCH="g95_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="g95 -fno-second-underscore "
+COMPILER_PARALLEL="g95 -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -fshort-circuit -funroll-loops -fomit-frame-pointer -msse2"
+FCFLAGS_PROF="-c -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -std=f95 -Wall -ftrace=full  -fimplicit-none -fbounds-check"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR}\
+      -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+        -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c \
+         -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  \
+         -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
+
+%================================================================================
+\newpage
+\section{Parameter  File for IFORT}
+%================================================================================
+\begin{verbatim}
+ARCH="ifc10_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/intel/mkl/9.1/lib/em64t/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/home/tools/libs/mpich-1.2.6_ifc10/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="ifc10"
+COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 -choicemod "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O2 -fast -finline-functions -finline-limit=50"
+FCFLAGS_PROF="-c -pg -O3 "
+FCFLAGS_DBG="-c -g -check bounds -check format -check pointers \
+            -check uninit -debug full -debug-parameters all \
+            -fp-stack-check -ftrapuv -stand f95 -traceback \
+             -warn declarations"
+LDFLAGS_SCALAR="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                  -L${FFTDIR}/fftw/.libs/"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lmkl_lapack -Wl,-dn -lmkl_em64t \
+             -Wl,-dn -lguide  -Wl,-dy -lpthread  -Wl,-dy -lg2c"
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lmkl_lapack -Wl,-dn -lmkl_em64t \
+               -Wl,-dn -lguide  -Wl,-dy -lpthread -Wl,-dy -lg2c "
+CPPFLAGS="-DCPPVAR_COMPILER_IFC -DCPPVAR_FFT_FFTW \
+           -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLASK_BLAS "
+FEXT="f90"
+\end{verbatim}
+%================================================================================
+\newpage
+\section{Parameter File for PGI}
+%================================================================================
+\begin{verbatim}
+ARCH="pgi_guam"
+TUPPERCASEMOD="F"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/pgi/linux86-64/7.1/lib"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/opt/pgi/linux86-64/7.1/mpi/mpich/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="pgf90 -fpic"
+COMPILER_PARALLEL="pgf90 -fpic"
+FCFLAGS_NONE=" -c "
+FCFLAGS_OPT="-c -fast -fastsse -Mipa=fast,inline"
+FCFLAGS_PROF="-c -pg -fast -fastsse -Mipa=fast,inline"
+FCFLAGS_DBG="-c -g -Mlist -m -C -Mbounds "
+LDFLAGS_SCALAR=" -g77libs -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="-g77libs -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+                 -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dy -lacml  "
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dy -lacml  -Wl,-dy -lfmpich -Wl,-dy -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_PGI -DCPPVAR_FFT_FFTW \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
+FEXT="f90"
+\end{verbatim}
+
+%===============================================================================
+\newpage
+\section{Parameter File for PATHSCALE}
+%===============================================================================
+\begin{verbatim}
+ARCH="pathscale_guam"
+TUPPERCASEMOD="T"
+TPARALLEL="T"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/opt/acml4.0.1/pathscale64/lib/"
+FFTDIR="/home/tools/libs/fftw-2.1.5_no-second-underscore/"
+MPIDIR="/opt/mpich-1.2.7p1_pathscale_ssh"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="pathf95 -fno-second-underscore  "
+COMPILER_PARALLEL="pathf95 -fno-second-underscore  "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3   -OPT:Ofast -fno-math-errno -ffast-math "
+FCFLAGS_PROF="-c -pg -O3 -profile "
+FCFLAGS_DBG="-c -C -g -Wall "
+LDFLAGS_SCALAR="-ipa -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+              -L${FFTDIR}/fftw/.libs/ -L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/ "
+LDFLAGS_PARALLEL="-ipa -Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
+           -L${FFTDIR}/fftw/.libs/  -L/usr/lib64/gcc/x86_64-suse-linux/4.1.2/ \
+            -L${MPIDIR}/lib "
+LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lgcc_s "
+LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml  -Wl,-dy -lfmpich \
+               -Wl,-dy -lmpich -lpmpich -Wl,-dy -lgcc_s"
+CPPFLAGS="-DCPPVAR_COMPILER_PATHSCALE -DCPPVAR_FFT_ACML  \
+          -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
+
+%===============================================================================
+\newpage
+\section{Parameter File for ABSOFT (OSX)}
+%===============================================================================
+\begin{verbatim}
+ARCH="absoft_osx"
+TUPPERCASEMOD="F"
+TPARALLEL="F"
+SPECIAL="none"
+BLASDIR=""
+LAPACKDIR="/Applications/Absoft11.0/lib64/"
+FFTDIR="/Users/..../Numerics/fftw-2.1.5/"
+MPIDIR="/Users/..../Numerics/openmpi/"
+FFT_HEADER="${FFTDIR}/fortran/fftw_f77.i"
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+COMPILER_SCALAR="f95 -m32 -osxtarget=10.6"
+COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 -choicemod  -fno-pic -fno-second-underscore "
+FCFLAGS_NONE="-c "
+FCFLAGS_OPT="-c -O3 -safefp -march=host"
+FCFLAGS_PROF="-c -P -pg -O3 -fshort-circuit -funroll-loops  -msse2"
+FCFLAGS_DBG="-c -g -en -Rb -Rc -Rs "
+# absoft Option -en warn of non-standard (FORTRAN95) usage
+# absoft Option -Ra check argument interface (does not compile)
+# absoft Option -Rb generate code to check array boundaries
+# absoft Option -Rc generate code to validate substring indices
+# absoft Option -Rs generate code to check array conformance
+# absoft Option -Rp generate code to check for Null pointers (does not compile)
+# absoft Option -Rn Check argument count (does not compile)
+# absoft Option -p module_path sets path to module files
+LDFLAGS_SCALAR=" -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/"
+LDFLAGS_PARALLEL="--I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/lib"
+LIBS_SCALAR="-lAbsoftLapack -lAbsoftAtlas -lf77blas -lfftw -lU77"
+LIBS_PARALLEL="-lfftw -llapack -latlas -lfmpich -lmpich -lmpich"
+CPPFLAGS="-DCPPVAR_COMPILER_ABSOFT -DCPPVAR_FFT_FFTW  -DCPPVAR_LAPACK_LAPACK "-DCPPVAR_BLAS_BLAS "
+FEXT="f90"
+\end{verbatim}
+
+%===============================================================================
+\newpage
+\chapter{Input Data Files}
+%===============================================================================
+%===============================================================================
+\section{Control Input File}
+%===============================================================================
+\begin{verbatim}
+!CONTROL
+ !GENERIC  TRACE=f DT=10.0 NSTEP=180 NWRITE=100 START=t !END
+ !DFT    TYPE=10 !END
+ !FOURIER EPWPSI=20 CDUAL=2 !END
+ !PSIDYN  FRIC=0.005
+    !AUTO FRIC(-)=0.3 FACT(-)=0.97
+          FRIC(+)=0.3 FACT(+)=1. !END
+ !END
+!END
+!EOB
+\end{verbatim}
+
+%===============================================================================
+\section{Structure Input File}
+%===============================================================================
+\begin{verbatim}
+!STRUCTURE
+  !GENERIC LUNIT=10.26 !END
+  !KPOINTS DIV=1 1 1 !END
+  !OCCUPATIONS EMPTY=5 NSPIN=1  !END
+  !LATTICE T= 0.00000  0.50000  0.50000
+              0.50000  0.00000  0.50000
+              0.50000  0.50000  0.00000 !END
+  !SPECIES NAME= 'Si' ZV=4. M=5.  NPRO= 2 2 1 lrhox=2
+           FILE='si_.75_6.0.out'  
+  !END
+  !ATOM   NAME= 'Si_1'  R= 0.00  0.00 0.00 !END
+  !ATOM   NAME= 'Si_2'  R= 0.25  0.25 0.25 !END
+!END
+!EOB
+\end{verbatim}
+
+The string \mytt{'si\_.75\_6.0.out'} needs to be adjusted. It specifies a setup file.
+
+%===============================================================================
+\newpage
+\chapter{Bugs reports for compilers and Libraries}
+%===============================================================================
+
+
+%===============================================================================
+\section{Bugs in the acml library}
+%===============================================================================
+Ticket: \url{http://devgurus.amd.com/thread/156909}
+
+{\tiny
+\begin{verbatim} 
+program acml_bug
+INTEGER(4),parameter :: LEN=1024
+INTEGER(4),parameter :: NFFT=2
+COMPLEX(8)           :: X(len,nfft)
+COMPLEX(8)           :: COMM(3*len+100)
+INTEGER(4)           :: info
+ x(:,1)=(0.d0,0.d0)      
+ x(:404,1)=cmplx((/ &
+ &     4.5640854984263513E-010 ,   9.6583041564457517E-010 ,   1.0219225465846193E-009 ,   1.0812724049458211E-009  &
+ & ,   1.1440690617092741E-009 ,   1.2105126900863183E-009 ,   1.2808151206300522E-009 ,   1.3552005073691475E-009  &
+ & ,   1.4339058829193618E-009 ,   1.5171822687065628E-009 ,   1.6052950080336359E-009 ,   1.6985249873258113E-009  &
+ & ,   1.7971695243090835E-009 ,   1.9015429231217240E-009 ,   2.0119779176042130E-009 ,   2.1288266704999614E-009  &
+ & ,   2.2524613285668238E-009 ,   2.3832764650677518E-009 ,   2.5216888577261898E-009 ,   2.6681397091721237E-009  &
+ & ,   2.8230959792097110E-009 ,   2.9870512729956999E-009 ,   3.1605287276192939E-009 ,   3.3440810121021514E-009  &
+ & ,   3.5382932139782497E-009 ,   3.7437848376953298E-009 ,   3.9612100266595007E-009 ,   4.1912628923057582E-009  &
+ & ,   4.4346761818303548E-009 ,   4.6922261631721085E-009 ,   4.9647335131908221E-009 ,   5.2530673144701723E-009  &
+ & ,   5.5581459434961289E-009 ,   5.8809423997274735E-009 ,   6.2224856378634286E-009 ,   6.5838645646465466E-009  &
+ & ,   6.9662302593087588E-009 ,   7.3708026349095235E-009 ,   7.7988708824250352E-009 ,   8.2517992439079535E-009  &
+ & ,   8.7310318974687107E-009 ,   9.2380965099891910E-009 ,   9.7746095661932486E-009 ,   1.0342280809538806E-008  &
+ & ,   1.0942919459466793E-008 ,   1.1578440428650083E-008 ,   1.2250869652064011E-008 ,   1.2962351192413735E-008  &
+ & ,   1.3715151681026327E-008 ,   1.4511671864170239E-008 ,   1.5354450155768973E-008 ,   1.6246172407363701E-008  &
+ & ,   1.7189680789897466E-008 ,   1.8187984451856209E-008 ,   1.9244264848339299E-008 ,   2.0361888175557397E-008  &
+ & ,   2.1544417805330340E-008 ,   2.2795623166871337E-008 ,   2.4119492181284841E-008 ,   2.5520243696064426E-008  &
+ & ,   2.7002341695947507E-008 ,   2.8570514842840566E-008 ,   3.0229756475819158E-008 ,   3.1985358361907856E-008  &
+ & ,   3.3842916025150771E-008 ,   3.5808348286536784E-008 ,   3.7887922132995300E-008 ,   4.0088263375537281E-008  &
+ & ,   4.2416388623678358E-008 ,   4.4879715943579868E-008 ,   4.7486100385185637E-008 ,   5.0243844640363022E-008  &
+ & ,   5.3161738122753377E-008 ,   5.6249085389481479E-008 ,   5.9515723904723927E-008 ,   6.2972063119559607E-008  &
+ & ,   6.6629127104533836E-008 ,   7.0498558102372044E-008 ,   7.4592705345821742E-008 ,   7.8924600188656768E-008  &
+ & ,   8.3508062687087659E-008 ,   8.8357694494334282E-008 ,   9.3488957020326779E-008 ,   9.8918192747987632E-008  &
+ & ,   1.0466271760378731E-007 ,   1.1074082806317165E-007 ,   1.1717190062654481E-007 ,   1.2397643445183348E-007  &
+ & ,   1.3117610819790571E-007 ,   1.3879386528969917E-007 ,   1.4685399207792216E-007 ,   1.5538216757704504E-007  &
+ & ,   1.6440556294128328E-007 ,   1.7395294094058045E-007 ,   1.8405471280402708E-007 ,   1.9474309453926253E-007  &
+ & ,   2.0605213535418443E-007 ,   2.1801785976549581E-007 ,   2.3067839549639757E-007 ,   2.4407410137428087E-007  &
+ & ,   2.5824766680671019E-007 ,   2.7324421125740628E-007 ,   2.8911156846334052E-007 ,   3.0590024380217073E-007  &
+ & ,   3.2366378377446381E-007 ,   3.4245874758198624E-007 ,   3.6234504818821733E-007 ,   3.8338598074005859E-007  &
+ & ,   4.0564864889347518E-007 ,   4.2920393639178656E-007 ,   4.5412690496959840E-007 ,   4.8049690803964040E-007  &
+ & ,   5.0839804544011713E-007 ,   5.3791904974787030E-007 ,   5.6915411050795228E-007 ,   6.0220259001653176E-007  &
+ & ,   6.3716987597217667E-007 ,   6.7416721094559762E-007 ,   7.1331254503093078E-007 ,   7.5473053584573790E-007  &
+ & ,   7.9855300327835721E-007 ,   8.4491961160892970E-007 ,   8.9397798319623689E-007 ,   9.4588426691188943E-007  &
+ & ,   1.0008038771047723E-006 ,   1.0589116072878824E-006 ,   1.1203924259461928E-006 ,   1.1854422155010980E-006  &
+ & ,   1.2542679996840889E-006 ,   1.3270889667182928E-006 ,   1.4041366966921487E-006 ,   1.4856567531751352E-006  &
+ & ,   1.5719084558440954E-006 ,   1.6631663584121270E-006 ,   1.7597209307496087E-006 ,   1.8618794683789019E-006  &
+ & ,   1.9699668882822152E-006 ,   2.0843274342041695E-006 ,   2.2053247903386364E-006 ,   2.3333441276918165E-006  &
+ & ,   2.4687924451427534E-006 ,   2.6121008431800874E-006 ,   2.7637249786494067E-006 ,   2.9241473384900019E-006  &
+ & ,   3.0938779218558921E-006 ,   3.2734567412262550E-006 ,   3.4634545045264531E-006 ,   3.6644755709858146E-006  &
+ & ,   3.8771586332586594E-006 ,   4.1021803554031067E-006 ,   4.3402556002547499E-006 ,   4.5921410674054641E-006  &
+ & ,   4.8586371121928096E-006 ,   5.1405909289314877E-006 ,   5.4388974604080431E-006 ,   5.7545048548490740E-006  &
+ & ,   6.0884153754159342E-006 ,   6.4416894929308910E-006 ,   6.8154490691085812E-006 ,   7.2108805397874676E-006  &
+ & ,   7.6292390076559968E-006 ,   8.0718518802314065E-006 ,   8.5401243268279359E-006 ,   9.0355424617882818E-006  &
+ & ,   9.5596760729677044E-006 ,   1.0114188626175746E-005 ,   1.0700838174670935E-005 ,   1.1321484635118395E-005  &
+ & ,   1.1978094335063361E-005 ,   1.2672749107878190E-005 ,   1.3407648111751769E-005 ,   1.4185120562615339E-005  &
+ & ,   1.5007627553131897E-005 ,   1.5877772966632620E-005 ,   1.6798310753074475E-005 ,   1.7772152204997838E-005  &
+ & ,   1.8802380509441718E-005 ,   1.9892249838449061E-005 ,   2.1045207176939584E-005 ,   2.2264897779677995E-005  &
+ & ,   2.3555170628242195E-005 ,   2.4920102077885531E-005 ,   2.6364003133494407E-005 ,   2.7891426725545898E-005  &
+ & ,   2.9507191356969997E-005 ,   3.1216393836075440E-005 ,   3.3024418371496722E-005 ,   3.4936962038045749E-005  &
+ & ,   3.6960049328627065E-005 ,   3.9100043068174273E-005 ,   4.1363677155459300E-005 ,   4.3758071115007624E-005  &
+ & ,   4.6290748286992311E-005 ,   4.8969664931064472E-005 ,   5.1803224778268486E-005 ,   5.4800322686787695E-005  &
+ & ,   5.7970351917902008E-005 ,   6.1323247791733593E-005 ,   6.4869505877140909E-005 ,   6.8620218371506780E-005  &
+ & ,   7.2587121394462883E-005 ,   7.6782605901826173E-005 ,   8.1219768617302179E-005 ,   8.5912455688230693E-005  &
+ & ,   9.0875277237500995E-005 ,   9.6123709226958454E-005 ,   1.0167406435357407E-004 ,   1.0754360118880868E-004  &
+ & ,   1.1375055328244343E-004 ,   1.2031415826641023E-004 ,   1.2725476699415594E-004 ,   1.3459386536851525E-004  &
+ & ,   1.4235413982532918E-004 ,   1.5055955736897886E-004 ,   1.5923542378004640E-004 ,   1.6840845637489110E-004  &
+ & ,   1.7810690042097121E-004 ,   1.8836052913684398E-004 ,   1.9920081831514835E-004 ,   2.1066093177068979E-004  &
+ & ,   2.2277596872299910E-004 ,   2.3558287648484111E-004 ,   2.4912072694860399E-004 ,   2.6343067293055356E-004  &
+ & ,   2.7855622465722263E-004 ,   2.9454322066158056E-004 ,   3.1144003150984645E-004 ,   3.2929767621681094E-004  &
+ & ,   3.4816993866115808E-004 ,   3.6811357131227851E-004 ,   3.8918841164559126E-004 ,   4.1145752766169608E-004  &
+ & ,   4.3498733430169523E-004 ,   4.5984794269315898E-004 ,   4.8611313104629517E-004 ,   5.1386066479608417E-004  &
+ & ,   5.4317247122526169E-004 ,   5.7413475587964058E-004 ,   6.0683849733322859E-004 ,   6.4137915614992380E-004  &
+ & ,   6.7785748979076743E-004 ,   7.1637943619862199E-004 ,   7.5705634662881494E-004 ,   8.0000545131042600E-004  &
+ & ,   8.4535009227693081E-004 ,   8.9321983978152275E-004 ,   9.4375084154307842E-004 ,   9.9708628840744495E-004  &
+ & ,   1.0533764725551009E-003 ,   1.1127793695777655E-003 ,   1.1754606384783983E-003 ,   1.2415943201631308E-003  &
+ & ,   1.3113628374412656E-003 ,   1.3849576935172081E-003 ,   1.4625795884057879E-003 ,   1.5444387681782246E-003  &
+ & ,   1.6307554906234145E-003 ,   1.7217604909092188E-003 ,   1.8176952144131064E-003 ,   1.9188121659681201E-003  &
+ & ,   2.0253756083548069E-003 ,   2.1376614458858967E-003 ,   2.2559578064829111E-003 ,   2.3805659729987383E-003  &
+ & ,   2.5117998011410236E-003 ,   2.6499868836253881E-003 ,   2.7954680845141411E-003 ,   2.9485989362001419E-003  &
+ & ,   3.1097487080842257E-003 ,   3.2793022692203522E-003 ,   3.4576584585011005E-003 ,   3.6452317144721746E-003  &
+ & ,   3.8424520753324032E-003 ,   4.0497644804418087E-003 ,   4.2676301673054695E-003 ,   4.4965255074203014E-003  &
+ & ,   4.7369422391057014E-003 ,   4.9893879331648350E-003 ,   5.2543850615620613E-003 ,   5.5324723944067955E-003  &
+ & ,   5.8242017403244972E-003 ,   6.1301393434405327E-003 ,   6.4508649520576000E-003 ,   6.7869718186557293E-003  &
+ & ,   7.1390639059245586E-003 ,   7.5077563524246216E-003 ,   7.8936731442809105E-003 ,   8.2974471151828766E-003  &
+ & ,   8.7197162210941315E-003 ,   9.1611240059137344E-003 ,   9.6223140135407448E-003 ,   1.0103932581841946E-002  &
+ & ,   1.0606620460748672E-002 ,   1.1131011880934238E-002 ,   1.1677735485136509E-002 ,   1.2247401289641857E-002  &
+ & ,   1.2840607203543186E-002 ,   1.3457925058901310E-002 ,   1.4099903404712677E-002 ,   1.4767057262361050E-002  &
+ & ,   1.5459863469004631E-002 ,   1.6178756952285767E-002 ,   1.6924122348427773E-002 ,   1.7696281895041466E-002  &
+ & ,   1.8495500087738037E-002 ,   1.9321961328387260E-002 ,   2.0175771787762642E-002 ,   2.1056946367025375E-002  &
+ & ,   2.1965395659208298E-002 ,   2.2900925949215889E-002 ,   2.3863214999437332E-002 ,   2.4851812049746513E-002  &
+ & ,   2.5866121053695679E-002 ,   2.6905393227934837E-002 ,   2.7968708425760269E-002 ,   2.9054969549179077E-002  &
+ & ,   3.0162883922457695E-002 ,   3.1290955841541290E-002 ,   3.2437477260828018E-002 ,   3.3600497990846634E-002  &
+ & ,   3.4777835011482239E-002 ,   3.5967051982879639E-002 ,   3.7165440618991852E-002 ,   3.8370020687580109E-002  &
+ & ,   3.9577528834342957E-002 ,   4.0784396231174469E-002 ,   4.1986763477325439E-002 ,   4.3180458247661591E-002  &
+ & ,   4.4360991567373276E-002 ,   4.5523568987846375E-002 ,   4.6663068234920502E-002 ,   4.7774057835340500E-002  &
+ & ,   4.8850800842046738E-002 ,   4.9887254834175110E-002 ,   5.0877083092927933E-002 ,   5.1813688129186630E-002  &
+ & ,   5.2690193057060242E-002 ,   5.3499508649110794E-002 ,   5.4234322160482407E-002 ,   5.4887156933546066E-002  &
+ & ,   5.5450398474931717E-002 ,   5.5916335433721542E-002 ,   5.6277230381965637E-002 ,   5.6525345891714096E-002  &
+ & ,   5.6653037667274475E-002 ,   5.6652825325727463E-002 ,   5.6517459452152252E-002 ,   5.6240037083625793E-002  &
+ & ,   5.5814106017351151E-002 ,   5.5233765393495560E-002 ,   5.4493837058544159E-002 ,   5.3589988499879837E-002  &
+ & ,   5.2518922835588455E-002 ,   5.1278568804264069E-002 ,   4.9868304282426834E-002 ,   4.8289205878973007E-002  &
+ & ,   4.6544339507818222E-002 ,   4.4639073312282562E-002 ,   4.2581442743539810E-002 ,   4.0382567793130875E-002  &
+ & ,   3.8057103753089905E-002 ,   3.5623785108327866E-002 ,   3.3105969429016113E-002 ,   3.0532309785485268E-002  &
+ & ,   2.7937425300478935E-002 ,   2.5362646207213402E-002 ,   2.2856758907437325E-002 ,   2.0476697012782097E-002  &
+ & ,   1.8288116902112961E-002 ,   1.6365643590688705E-002 ,   1.4792550355195999E-002 ,   1.3660120777785778E-002  &
+ & ,   1.3136935420334339E-002 ,  -4.9610220594331622E-004 ,  -8.5412163753062487E-004 ,  -1.1775267776101828E-003  &
+ & ,  -1.4035948552191257E-003 ,  -1.5397631796076894E-003 ,  -1.5940477605909109E-003 ,  -1.5751548344269395E-003  &
+ & ,  -1.4928117161616683E-003 ,  -1.3580409577116370E-003 ,  -1.1832054005935788E-003 ,  -9.8172784782946110E-004  &
+ & ,  -7.6747016282752156E-004 ,  -5.5382447317242622E-004 ,  -3.5265297628939152E-004 ,  -1.7326977103948593E-004  &
+ & ,  -2.1692625523428433E-005 ,   9.9657714599743485E-005 ,   1.9171860185451806E-004 ,   2.5804995675571263E-004  &
+ & ,   3.0377792427316308E-004 ,   3.3447679015807807E-004 ,   3.5524161648936570E-004 ,   3.7011769018135965E-004  &
+ & ,   3.8192706415429711E-004 ,   3.9240196929313242E-004 ,   4.0247497963719070E-004 ,   4.1258495184592903E-004  &
+ & ,   4.2291355202905834E-004 ,   3.9731932338327169E-004 ,   0.0000000000000000      ,   0.0000000000000000       &
+ & /))
+ x(:,2)=(1.d0,0.d0)      
+ x(1024-719:,2)=cmplx((/ &
+ &    1.0000000000000000      ,   1.0000000000000000      ,   1.0000000000000000      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522      ,  0.99999994039535522       &
+ & ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045       &
+ & ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045       &
+ & ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045      ,  0.99999988079071045       &
+ & ,  0.99999988079071045      ,  0.99999982118606567      ,  0.99999982118606567      ,  0.99999982118606567       &
+ & ,  0.99999982118606567      ,  0.99999982118606567      ,  0.99999982118606567      ,  0.99999982118606567       &
+ & ,  0.99999982118606567      ,  0.99999982118606567      ,  0.99999976158142090      ,  0.99999976158142090       &
+ & ,  0.99999976158142090      ,  0.99999976158142090      ,  0.99999976158142090      ,  0.99999976158142090       &
+ & ,  0.99999976158142090      ,  0.99999970197677612      ,  0.99999970197677612      ,  0.99999970197677612       &
+ & ,  0.99999970197677612      ,  0.99999970197677612      ,  0.99999964237213135      ,  0.99999964237213135       &
+ & ,  0.99999964237213135      ,  0.99999964237213135      ,  0.99999964237213135      ,  0.99999958276748657       &
+ & ,  0.99999958276748657      ,  0.99999958276748657      ,  0.99999952316284180      ,  0.99999952316284180       &
+ & ,  0.99999952316284180      ,  0.99999952316284180      ,  0.99999946355819702      ,  0.99999946355819702       &
+ & ,  0.99999946355819702      ,  0.99999940395355225      ,  0.99999940395355225      ,  0.99999934434890747       &
+ & ,  0.99999934434890747      ,  0.99999934434890747      ,  0.99999928474426270      ,  0.99999928474426270       &
+ & ,  0.99999922513961792      ,  0.99999922513961792      ,  0.99999916553497314      ,  0.99999916553497314       &
+ & ,  0.99999910593032837      ,  0.99999910593032837      ,  0.99999904632568359      ,  0.99999898672103882       &
+ & ,  0.99999898672103882      ,  0.99999892711639404      ,  0.99999886751174927      ,  0.99999886751174927       &
+ & ,  0.99999880790710449      ,  0.99999874830245972      ,  0.99999868869781494      ,  0.99999868869781494       &
+ & ,  0.99999862909317017      ,  0.99999856948852539      ,  0.99999850988388062      ,  0.99999845027923584       &
+ & ,  0.99999839067459106      ,  0.99999833106994629      ,  0.99999827146530151      ,  0.99999821186065674       &
+ & ,  0.99999815225601196      ,  0.99999803304672241      ,  0.99999797344207764      ,  0.99999791383743286       &
+ & ,  0.99999785423278809      ,  0.99999773502349854      ,  0.99999767541885376      ,  0.99999755620956421       &
+ & ,  0.99999749660491943      ,  0.99999737739562988      ,  0.99999725818634033      ,  0.99999719858169556       &
+ & ,  0.99999707937240601      ,  0.99999696016311646      ,  0.99999684095382690      ,  0.99999672174453735       &
+ & ,  0.99999660253524780      ,  0.99999648332595825      ,  0.99999630451202393      ,  0.99999618530273438       &
+ & ,  0.99999600648880005      ,  0.99999588727951050      ,  0.99999570846557617      ,  0.99999552965164185       &
+ & ,  0.99999541044235229      ,  0.99999523162841797      ,  0.99999505281448364      ,  0.99999481439590454       &
+ & ,  0.99999463558197021      ,  0.99999445676803589      ,  0.99999421834945679      ,  0.99999397993087769       &
+ & ,  0.99999374151229858      ,  0.99999350309371948      ,  0.99999326467514038      ,  0.99999302625656128       &
+ & ,  0.99999272823333740      ,  0.99999248981475830      ,  0.99999219179153442      ,  0.99999189376831055       &
+ & ,  0.99999159574508667      ,  0.99999123811721802      ,  0.99999094009399414      ,  0.99999058246612549       &
+ & ,  0.99999022483825684      ,  0.99998980760574341      ,  0.99998944997787476      ,  0.99998903274536133       &
+ & ,  0.99998861551284790      ,  0.99998819828033447      ,  0.99998772144317627      ,  0.99998724460601807       &
+ & ,  0.99998676776885986      ,  0.99998623132705688      ,  0.99998575448989868      ,  0.99998515844345093       &
+ & ,  0.99998462200164795      ,  0.99998402595520020      ,  0.99998342990875244      ,  0.99998277425765991       &
+ & ,  0.99998211860656738      ,  0.99998140335083008      ,  0.99998068809509277      ,  0.99997997283935547       &
+ & ,  0.99997919797897339      ,  0.99997842311859131      ,  0.99997758865356445      ,  0.99997669458389282       &
+ & ,  0.99997580051422119      ,  0.99997490644454956      ,  0.99997395277023315      ,  0.99997293949127197       &
+ & ,  0.99997192621231079      ,  0.99997085332870483      ,  0.99996972084045410      ,  0.99996852874755859       &
+ & ,  0.99996733665466309      ,  0.99996608495712280      ,  0.99996477365493774      ,  0.99996346235275269       &
+ & ,  0.99996203184127808      ,  0.99996060132980347      ,  0.99995905160903931      ,  0.99995750188827515       &
+ & ,  0.99995583295822144      ,  0.99995416402816772      ,  0.99995243549346924      ,  0.99995058774948120       &
+ & ,  0.99994868040084839      ,  0.99994671344757080      ,  0.99994468688964844      ,  0.99994254112243652       &
+ & ,  0.99994033575057983      ,  0.99993807077407837      ,  0.99993568658828735      ,  0.99993324279785156       &
+ & ,  0.99993067979812622      ,  0.99992799758911133      ,  0.99992525577545166      ,  0.99992239475250244       &
+ & ,  0.99991941452026367      ,  0.99991631507873535      ,  0.99991309642791748      ,  0.99990975856781006       &
+ & ,  0.99990630149841309      ,  0.99990272521972656      ,  0.99989897012710571      ,  0.99989509582519531       &
+ & ,  0.99989110231399536      ,  0.99988692998886108      ,  0.99988257884979248      ,  0.99987804889678955       &
+ & ,  0.99987339973449707      ,  0.99986851215362549      ,  0.99986350536346436      ,  0.99985826015472412       &
+ & ,  0.99985283613204956      ,  0.99984717369079590      ,  0.99984133243560791      ,  0.99983525276184082       &
+ & ,  0.99982893466949463      ,  0.99982237815856934      ,  0.99981552362442017      ,  0.99980849027633667       &
+ & ,  0.99980109930038452      ,  0.99979346990585327      ,  0.99978560209274292      ,  0.99977737665176392       &
+ & ,  0.99976879358291626      ,  0.99975997209548950      ,  0.99975073337554932      ,  0.99974119663238525       &
+ & ,  0.99973124265670776      ,  0.99972093105316162      ,  0.99971026182174683      ,  0.99969911575317383       &
+ & ,  0.99968761205673218      ,  0.99967563152313232      ,  0.99966317415237427      ,  0.99965029954910278       &
+ & ,  0.99963688850402832      ,  0.99962294101715088      ,  0.99960845708847046      ,  0.99959343671798706       &
+ & ,  0.99957787990570068      ,  0.99956166744232178      ,  0.99954485893249512      ,  0.99952739477157593       &
+ & ,  0.99950927495956421      ,  0.99949049949645996      ,  0.99947094917297363      ,  0.99945068359375000       &
+ & ,  0.99942958354949951      ,  0.99940770864486694      ,  0.99938499927520752      ,  0.99936145544052124       &
+ & ,  0.99933695793151855      ,  0.99931150674819946      ,  0.99928510189056396      ,  0.99925768375396729       &
+ & ,  0.99922925233840942      ,  0.99919968843460083      ,  0.99916899204254150      ,  0.99913716316223145       &
+ & ,  0.99910408258438110      ,  0.99906969070434570      ,  0.99903404712677002      ,  0.99899703264236450       &
+ & ,  0.99895852804183960      ,  0.99891859292984009      ,  0.99887716770172119      ,  0.99883413314819336       &
+ & ,  0.99878942966461182      ,  0.99874299764633179      ,  0.99869483709335327      ,  0.99864476919174194       &
+ & ,  0.99859285354614258      ,  0.99853885173797607      ,  0.99848288297653198      ,  0.99842470884323120       &
+ & ,  0.99836432933807373      ,  0.99830162525177002      ,  0.99823653697967529      ,  0.99816894531250000       &
+ & ,  0.99809873104095459      ,  0.99802583456039429      ,  0.99795019626617432      ,  0.99787163734436035       &
+ & ,  0.99779003858566284      ,  0.99770534038543701      ,  0.99761742353439331      ,  0.99752610921859741       &
+ & ,  0.99743127822875977      ,  0.99733287096023560      ,  0.99723064899444580      ,  0.99712455272674561       &
+ & ,  0.99701434373855591      ,  0.99689996242523193      ,  0.99678117036819458      ,  0.99665784835815430       &
+ & ,  0.99652981758117676      ,  0.99639683961868286      ,  0.99625879526138306      ,  0.99611550569534302       &
+ & ,  0.99596673250198364      ,  0.99581223726272583      ,  0.99565184116363525      ,  0.99548530578613281       &
+ & ,  0.99531239271163940      ,  0.99513286352157593      ,  0.99494647979736328      ,  0.99475294351577759       &
+ & ,  0.99455207586288452      ,  0.99434345960617065      ,  0.99412691593170166      ,  0.99390208721160889       &
+ & ,  0.99366867542266846      ,  0.99342632293701172      ,  0.99317473173141479      ,  0.99291348457336426       &
+ & ,  0.99264234304428101      ,  0.99236077070236206      ,  0.99206846952438354      ,  0.99176508188247681       &
+ & ,  0.99145001173019409      ,  0.99112302064895630      ,  0.99078351259231567      ,  0.99043101072311401       &
+ & ,  0.99006515741348267      ,  0.98968529701232910      ,  0.98929095268249512      ,  0.98888164758682251       &
+ & ,  0.98845672607421875      ,  0.98801559209823608      ,  0.98755764961242676      ,  0.98708236217498779       &
+ & ,  0.98658889532089233      ,  0.98607671260833740      ,  0.98554503917694092      ,  0.98499315977096558       &
+ & ,  0.98442035913467407      ,  0.98382574319839478      ,  0.98320853710174561      ,  0.98256796598434448       &
+ & ,  0.98190301656723022      ,  0.98121291399002075      ,  0.98049664497375488      ,  0.97975319623947144       &
+ & ,  0.97898161411285400      ,  0.97818082571029663      ,  0.97734969854354858      ,  0.97648721933364868       &
+ & ,  0.97559207677841187      ,  0.97466313838958740      ,  0.97369915246963501      ,  0.97269874811172485       &
+ & ,  0.97166067361831665      ,  0.97058349847793579      ,  0.96946573257446289      ,  0.96830588579177856       &
+ & ,  0.96710246801376343      ,  0.96585386991500854      ,  0.96455836296081543      ,  0.96321421861648560       &
+ & ,  0.96181976795196533      ,  0.96037310361862183      ,  0.95887231826782227      ,  0.95731538534164429       &
+ & ,  0.95570039749145508      ,  0.95402520895004272      ,  0.95228755474090576      ,  0.95048528909683228       &
+ & ,  0.94861602783203125      ,  0.94667738676071167      ,  0.94466686248779297      ,  0.94258195161819458       &
+ & ,  0.94041991233825684      ,  0.93817806243896484      ,  0.93585360050201416      ,  0.93344360589981079       &
+ & ,  0.93094503879547119      ,  0.92835485935211182      ,  0.92566984891891479      ,  0.92288666963577271       &
+ & ,  0.92000198364257813      ,  0.91701227426528931      ,  0.91391396522521973      ,  0.91070336103439331       &
+ & ,  0.90737658739089966      ,  0.90392982959747314      ,  0.90035897493362427      ,  0.89665997028350830       &
+ & ,  0.89282846450805664      ,  0.88886016607284546      ,  0.88475060462951660      ,  0.88049513101577759       &
+ & ,  0.87608909606933594      ,  0.87152773141860962      ,  0.86680597066879272      ,  0.86191892623901367       &
+ & ,  0.85686129331588745      ,  0.85162794589996338      ,  0.84621345996856689      ,  0.84061235189437866       &
+ & ,  0.83481907844543457      ,  0.82882791757583618      ,  0.82263320684432983      ,  0.81622898578643799       &
+ & ,  0.80960941314697266      ,  0.80276840925216675      ,  0.79569995403289795      ,  0.78839796781539917       &
+ & ,  0.78085613250732422      ,  0.77306836843490601      ,  0.76502841711044312      ,  0.75672996044158936       &
+ & ,  0.74816679954528809      ,  0.73933273553848267      ,  0.73022156953811646      ,  0.72082716226577759       &
+ & ,  0.71114355325698853      ,  0.70116466283798218      ,  0.69088482856750488      ,  0.68029826879501343       &
+ & ,  0.66939967870712280      ,  0.65818363428115845      ,  0.64664524793624878      ,  0.63477987051010132       &
+ & ,  0.62258303165435791      ,  0.61005085706710815      ,  0.59717965126037598      ,  0.58396643400192261       &
+ & ,  0.57040858268737793      ,  0.55650413036346436      ,  0.54225176572799683      ,  0.52765077352523804       &
+ & ,  0.51270127296447754      ,  0.49740427732467651      ,  0.48176163434982300      ,  0.46577620506286621       &
+ & ,  0.44945192337036133      ,  0.43279385566711426      ,  0.41580832004547119      ,  0.39850297570228577       &
+ & ,  0.38088685274124146      ,  0.36297059059143066      ,  0.34476637840270996      ,  0.32628813385963440       &
+ & ,  0.30755159258842468      ,  0.28857442736625671      ,  0.26937627792358398      ,  0.24997898936271667       &
+ & ,  0.23040655255317688      ,  0.21068532764911652      ,  0.19084405899047852      ,  0.17091400921344757       &
+ & ,  0.15092901885509491      ,  0.13092558085918427      ,  0.11094287782907486      ,   9.1022908687591553E-002  &
+ & ,   7.1210421621799469E-002 ,   5.1553029567003250E-002 ,   3.2101124525070190E-002 ,   1.2907920405268669E-002  &
+ & ,  -5.9706410393118858E-003 ,  -2.4475945159792900E-002 ,  -4.2546823620796204E-002 ,  -6.0119695961475372E-002  &
+ & ,  -7.7128760516643524E-002 ,  -9.3506217002868652E-002 , -0.10918254405260086      , -0.12408681958913803       &
+ & , -0.13814713060855865      , -0.15129095315933228      , -0.16344572603702545      , -0.17453935742378235       &
+ & , -0.18450087308883667      , -0.19326114654541016      , -0.20075361430644989      , -0.20691519975662231       &
+ & , -0.21168711781501770      , -0.21501596271991730      , -0.21685467660427094      , -0.21716369688510895       &
+ & , -0.21591205894947052      , -0.21307866275310516      , -0.20865340530872345      , -0.20263847708702087       &
+ & , -0.19504958391189575      , -0.18591709434986115      , -0.17528724670410156      , -0.16322316229343414       &
+ & , -0.14980579912662506      , -0.13513477146625519      , -0.11932890117168427      , -0.10252661257982254       &
+ & ,  -8.4885999560356140E-002 ,  -6.6584564745426178E-002 ,  -4.7818589955568314E-002 ,  -2.8802091255784035E-002  &
+ & ,  -9.7652617841959000E-003 ,   9.0475799515843391E-003 ,   2.7380604296922684E-002 ,   4.4969689100980759E-002  &
+ & ,   6.1546221375465393E-002 ,   7.6841555535793304E-002 ,   9.0592026710510254E-002 ,  0.10254459083080292       &
+ & ,  0.11246295273303986      ,  0.12013412266969681      ,  0.12537533044815063      ,  0.12804102897644043       &
+ & ,  0.12803006172180176      ,  0.12529231607913971      ,  0.11983517557382584      ,  0.11172898113727570       &
+ & ,  0.10111147910356522      ,   8.8190801441669464E-002 ,   7.3246598243713379E-002 ,   5.6629035621881485E-002  &
+ & ,   3.8755286484956741E-002 ,   2.0103203132748604E-002 ,   1.2019431451335549E-003 ,  -1.7380574718117714E-002  &
+ & ,  -3.5053435713052750E-002 ,  -5.1221564412117004E-002 ,  -6.5307356417179108E-002 ,  -7.6774537563323975E-002  &
+ & ,  -8.5153535008430481E-002 ,  -9.0067408978939056E-002 ,  -9.1257050633430481E-002 ,  -8.8604263961315155E-002  &
+ & ,  -8.2151040434837341E-002 ,  -7.2113387286663055E-002 ,  -5.8887872844934464E-002 ,  -4.3049164116382599E-002  &
+ & ,  -2.5337273254990578E-002 ,  -6.6333203576505184E-003 ,   1.2076538987457752E-002 ,   2.9748760163784027E-002  &
+ & ,   4.5340344309806824E-002 ,   5.7874776422977448E-002 ,   6.6512472927570343E-002 ,   7.0621222257614136E-002  &
+ & ,   6.9840990006923676E-002 ,   6.4136832952499390E-002 ,   5.3833372890949249E-002 ,   3.9624486118555069E-002  &
+ & ,   2.2552903741598129E-002 ,   3.9563276804983616E-003 ,  -1.4620861969888210E-002 ,  -3.1547579914331436E-002  &
+ & ,  -4.5251097530126572E-002 ,  -5.4376222193241119E-002 ,  -5.7943645864725113E-002 ,  -5.5489312857389450E-002  &
+ & ,  -4.7165017575025558E-002 ,  -3.3781040459871292E-002 ,  -1.6775118187069893E-002 ,   1.9014129647985101E-003  &
+ & ,   1.9979795441031456E-002 ,   3.5139676183462143E-002 ,   4.5318696647882462E-002 ,   4.9027435481548309E-002  &
+ & ,   4.5621916651725769E-002 ,   3.5482514649629593E-002 ,   2.0052867010235786E-002 ,   1.7071175388991833E-003  &
+ & ,  -1.6561586409807205E-002 ,  -3.1605914235115051E-002 ,  -4.0681324899196625E-002 ,  -4.2001765221357346E-002  &
+ & ,  -3.5180311650037766E-002 ,  -2.1441159769892693E-002 ,  -3.5157140810042620E-003 ,   1.4809649437665939E-002  &
+ & ,   2.9449854046106339E-002 ,   3.6951173096895218E-002 ,   3.5391427576541901E-002 ,   2.5009864941239357E-002  &
+ & ,   8.3485124632716179E-003 ,  -1.0220930911600590E-002 ,  -2.5555765256285667E-002 ,  -3.3171329647302628E-002  &
+ & ,  -3.0660355463624001E-002 ,  -1.8642846494913101E-002 ,  -8.4642192814499140E-004 ,   1.6863023862242699E-002  &
+ & ,   2.8336230665445328E-002 ,   2.9346158728003502E-002 ,   1.9356068223714828E-002 ,   2.0686087664216757E-003  &
+ & ,  -1.5682686120271683E-002 ,  -2.6512263342738152E-002 ,  -2.5642519816756248E-002 ,  -1.3293654657900333E-002  &
+ & ,   4.9662087112665176E-003 ,   2.0433418452739716E-002 ,   2.5353305041790009E-002 ,   1.7037261277437210E-002  &
+ & ,  -2.3626595793757588E-004 ,  -1.6991050913929939E-002 ,  -2.3575050756335258E-002 ,  -1.5930203720927238E-002  &
+ & ,   1.3969575520604849E-003 ,   1.7428848892450333E-002 ,   2.1512910723686218E-002 ,   1.0701376013457775E-002  &
+ & ,  -7.4800895527005196E-003 ,  -1.9708259031176567E-002 ,  -1.6581213101744652E-002 ,  -4.0926638757809997E-004  &
+ & ,   1.5701986849308014E-002 ,   1.8097767606377602E-002 ,   4.5460122637450695E-003 ,  -1.2794174253940582E-002  &
+ & ,  -1.7662590369582176E-002 ,  -5.2223210223019123E-003 ,   1.2149515561759472E-002 ,   1.6413936391472816E-002  &
+ & ,   2.8906178195029497E-003 ,  -1.3485324569046497E-002 ,  -1.3887624256312847E-002 ,   2.2485840599983931E-003  &
+ & ,   1.5164346434175968E-002 ,   8.4360204637050629E-003 ,  -9.1756321489810944E-003 ,  -1.3821452856063843E-002  &
+ & ,   1.0352282552048564E-003 ,   1.3942544348537922E-002 ,   5.6305113248527050E-003 ,  -1.1097433976829052E-002  &
+ & ,  -9.6425088122487068E-003 ,   7.5819725170731544E-003 ,   1.1407452635467052E-002 ,  -4.7922111116349697E-003  &
+ & ,  -1.1816487647593021E-002 ,   3.2942115794867277E-003 ,   1.1573872528970242E-002 ,  -3.1903141643851995E-003  &
+ & ,  -1.0944334790110588E-002 ,   4.3764254078269005E-003 ,   9.7211003303527832E-003 ,  -6.5468717366456985E-003  &
+ & ,  -7.3248869739472866E-003 ,   8.9530423283576965E-003 ,   3.1449468806385994E-003 ,  -1.0101946070790291E-002  &
+ & ,   2.6591201312839985E-003 ,   7.9494994133710861E-003 ,  -8.0175707116723061E-003 ,  -1.4710703399032354E-003  &
+ & ,   8.7964348495006561E-003 ,  -6.4230556599795818E-003 ,  -2.1619647741317749E-003 ,   8.2368580624461174E-003  &
+ & ,  -6.8918853066861629E-003 ,   2.0397947810124606E-004 ,   6.1693941242992878E-003 ,  -8.0180503427982330E-003  &
+ & ,   4.9512404948472977E-003 ,   5.1115464884787798E-004 ,  -5.2622286602854729E-003 ,   7.3860930278897285E-003  &
+ & ,  -6.6324048675596714E-003 ,   3.9099766872823238E-003 ,  -4.8579834401607513E-004 ,  -2.6125242002308369E-003  &
+ & ,   4.8359925858676434E-003 ,  -6.0760178603231907E-003 ,   6.5018017776310444E-003 ,  -6.3931895419955254E-003  &
+ & ,   6.0254549607634544E-003 ,  -5.6130141019821167E-003 ,   5.2950801327824593E-003 ,  -5.1417113281786442E-003  &
+ & ,   5.1635722629725933E-003 ,  -5.3161233663558960E-003 ,   5.4961536079645157E-003 ,  -5.5358586832880974E-003  &
+ & ,   5.2080838941037655E-003 ,  -4.2650108225643635E-003 ,   2.5351645890623331E-003 ,  -8.6000065493863076E-005  &
+ & ,  -2.5962872896343470E-003 ,   4.5522921718657017E-003 ,  -4.6376013197004795E-003 ,   2.2791356313973665E-003  &
+ & ,   1.5947745414450765E-003 ,  -4.3821334838867188E-003 ,   3.4401421435177326E-003 ,   9.1612630058079958E-004  &
+ & ,  -4.2457724921405315E-003 ,   2.1603892091661692E-003 ,   2.9692847747355700E-003 ,  -3.3115365076810122E-003  &
+ & ,  -2.1149690728634596E-003 ,   3.3287864644080400E-003 ,   2.4012101348489523E-003 ,  -2.4708916898816824E-003  &
+ & ,  -3.4032482653856277E-003 ,   1.4248964725993574E-004 ,   3.2492696773260832E-003 ,   2.9977499507367611E-003  &
+ & ,   4.2869790922850370E-004 ,  -2.0976185332983732E-003 ,  -3.2515907660126686E-003 ,  -3.0572675168514252E-003  &
+ & /))
+CALL ZFFT1M(100,NFFT,LEN,x,COMM,INFO)
+write(*,*) "INFO: ",info
+end program acml_bug
+
+\end{verbatim}
+} % end of {\tiny
+
+%============================================================================
+\section{PGI compiler bugs}
+%============================================================================
+
+%======================================================================
+\subsubsection{Ticket 071105001: minloc}
+%======================================================================
+
+I have an real(8) array with the values set to x=HUge(x). The
+result of minloc(x) is 0, which is not allowed. If I use x=0.9d0*Huge(x)
+the result differs from 0 as it should be (In my case the array is of
+size 1 but that is irrelevant.)
+
+The code huge.f90 creates an array with elements that correspond to the
+larges possible variable. The function minloc fails to obtain the
+position of the smallest element and returns zero. (If it fails, it
+should  terminate and not return an incorrect result.)  If I use smaller
+numbers in the array, the minloc function returns the first element
+which is the desired result. The compilers g95 and ifc deal with this
+problem properly...
+
+
+I am using version 7.1 linux86-64 from oct.19 on suse linux 10.2 (x86-64)
+
+\textbf{Code huge.f90:}
+\begin{verbatim}
+    program main
+    real(8)   :: x(2)
+    x=huge(x)                      !huge(x) is the largest number representable as real(8)
+    print*,'x',x     
+    print*,'minloc(x)',minloc(x)   !minloc does not return the index of the smallest element
+    x=huge(x)*0.9d0                ! now we take a smaller number
+    print*,'x',x
+    print*,'minloc(x)',minloc(x)   !minloc works ok here
+    STOP
+    END
+!p.s.: There are further problems using the result of huge. do loops fail as well....
+\end{verbatim}
+
+\textbf{Output of the code huge.f90:}
+\begin{verbatim}
+[ptpb@guam]PGI$pgf90 huge.f90
+NOTE: your trial license will expire in 13 days, 13.2 hours.
+NOTE: your trial license will expire in 13 days, 13.2 hours.
+[ptpb@guam]PGI$a.out
+x   1.7976931348623167E+308   1.7976931348623167E+308
+minloc(x)            0
+x   1.6179238213760845E+308   1.6179238213760845E+308
+minloc(x)            1
+FORTRAN STOP
+\end{verbatim}
+
+%% communication with Tim Cadenbach
+%% SMB GmbH
+%% Kortumstraße 41
+%% 44787 Bochum
+%% Tel: 0234 / 51 69 92 - 0
+%% Fax: 0234 / 51 69 92 - 29
+%% Tim.Cadenbach@SMB-Net.de
+%% http://www.SMB-Net.de <http://www.smb-net.de/> 
+%%  <http://www.smb-net.de/> 	
+%% Gesellschaft für EDV-System-
+%% Management und -Beratung mbH
+
+%======================================================================
+\subsubsection{Ticket 071105002: logical error}
+%======================================================================
+There are two logical(4) variables A and B, that are both
+set to true. The result of A.eqv.B however is false. The two logical
+variables indeed differ internally, because if I convert them to
+integer(4) variables I obtain 1 for A and -1 for B. One was read from
+file the other set internally
+
+The code log.f90 loops through integer variables to create series of
+bit sequences, that are then interpreted without conversion as logical
+variables. The comparison .eqv. only works ok for logical variables
+constructed from 0 or -1. The comparison .neqv. is always ok. There
+are compilers (g95) that suffer from the same problem and some (ifc)
+that work ok. A bit surprising is, how I ended up with a different bit
+sequences in the first place. I am looking into this.
+
+ I am using version 7.1 linux86-64 from oct.19 on suse linux 10.2 (x86-64)
+
+\textbf{Code log.f90:}
+\begin{verbatim}
+    program main
+    integer(4)   :: I
+    LOGICAL(4)   :: L,true,false
+    logical(4)   :: t=.true.
+    logical(4)   :: F=.false.
+    DO I=-5,5
+      L=TRANSFER(I,L) ! The bit sequence of the integer i is interpreted as logical
+      PRINT*,I,L, l.eqv.T, l.eqv.F, l.neqv.T, l.neqv.F
+! .neqv. works ok alwayws, but 
+! .eqv. works only for logicals derived from -1 and 0. Otherwise it returns F
+    ENDDO
+    STOP
+    END
+\end{verbatim}
+
+
+\textbf{Output of the code log.f90}
+\begin{verbatim}
+[ptpb@guam]PGI$pgf90 log.f90
+NOTE: your trial license will expire in 13 days, 13.3 hours.
+NOTE: your trial license will expire in 13 days, 13.3 hours.
+[ptpb@guam]PGI$a.out
+          -5  T  F  F  F  T
+          -4  F  F  F  T  F
+          -3  T  F  F  F  T
+          -2  F  F  F  T  F
+          -1  T  T  F  F  T
+           0  F  F  T  T  F
+           1  T  F  F  F  T
+           2  F  F  F  T  F
+           3  T  F  F  F  T
+           4  F  F  F  T  F
+           5  T  F  F  F  T
+FORTRAN STOP
+\end{verbatim}
+
+% see email bloechl to Tim Cadenbach <Tim.Cadenbach@smb-net.de> on
+% Nov.3,2007; 10:57.  
+
+% see email to from peter.bloechl@tu-clausthal.de to Thomas Horn
+% <thomas.horn@smb-net.de> on Nov. 5, 2007; 12:29 for tickets
+
+
+%======================================================================
+\section{Absoft compiler bugs}
+%======================================================================
+
+\begin{verbatim}
+!!$ in the declaration of a parameter, the fortan standard allows to use
+!!$ elemental functions of constant expressions. The function real is
+!!$ elemental. The absoft compiler complains as follows
+!!$
+!!$ real(8)   ,parameter :: x=15.d0/real(i)
+!!$                               ^        
+!!$ cf90-587 af90fe: ERROR MAIN, File = bugs.f90, Line = 6, Column = 32 
+!!$ The initialization expression must be a constant to be used 
+!!$ with PARAMETER assignment for object "X".
+program main
+! the following works
+integer(4),parameter :: i=10
+real(8)   ,parameter :: y=15.d0/i
+! the following does not work
+real(8)   ,parameter :: x=15.d0/real(i)
+stop
+end
+\end{verbatim}
+
+
+% email an Ehrich Axel <axel.ehrich@tu-clausthal.de> Aug,. 27,2010; 12:50
+
+
+%====================================================================
+\subsection{-Rn problem}
+%====================================================================
+\begin{verbatim}
+! the following script indicates a problem with the compiler option -Rn
+! execute 
+!           f95 -Rn t.f90 ; a.out
+! The error message is as usual below the source.
+! 
+! The error does not seem to depend on the argument type. By commenting out
+! the call to "sub" the program fails at "sub1"
+!     ..................................................................
+      PROGRAM MAIN
+      IMPLICIT NONE
+      CHARACTER(32)  :: out
+      INTEGER        :: I,iout
+      DO I=1,2
+        print*,'before sub: i=',i
+        call sub('12345',out)
+        print*,'after sub : i=',i
+        call sub1(12345,iout)
+        print*,'after sub1: i=',i
+      ENDDO
+      STOP
+      END
+!     ..................................................................
+      SUBROUTINE sub(in,out)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: in
+      CHARACTER(*),INTENT(OUT):: out
+      out=in
+      RETURN
+      END
+!     ..................................................................
+      SUBROUTINE sub1(in,out)
+      IMPLICIT NONE
+      integer,INTENT(IN) :: in
+      integer,INTENT(OUT):: out
+      out=in
+      RETURN
+      END
+!!$[ptpb@oahu]Dummy$f95 -Rn t.f90 ; a.out
+!!$This demonstration copy of Absoft Fortran 95 expires 11/23/10.
+!!$ before sub: i=  1
+!!$ after sub : i=  1
+!!$ after sub1: i=  1
+!!$ before sub: i=  2
+!!$? FORTRAN Runtime Error:
+!!$? For the entry SUB
+!!$? Count of actual arguments 8388610
+!!$? Count of dummy arguments 2
+!!$File MAIN; Line 8
+!!$[ptpb@oahu]Dummy$
+\end{verbatim}
+
+%email Peter Bloechl to support@absoft.com Nov. 12, 2010, 16:34
+
+%====================================================================
+\subsection{-Ra problem}
+%====================================================================
+
+\begin{verbatim}
+!  here is a small problem of the interface checker. below the result
+!
+!     f95 -c -Ra c.f90 
+!
+MODULE later_MODULE
+INTERFACE OPERATOR (.OP.)
+  MODULE PROCEDURE f
+END INTERFACE
+CONTAINS
+        LOGICAL FUNCTION f(x,y)
+        IMPLICIT NONE
+        real,intent(in) :: x,y
+        f=(x.gt.y)
+        RETURN
+        END FUNCTION F
+END MODULE LATER_MODULE
+!
+      SUBROUTINE sub
+      USE later_MODULE
+      IMPLICIT NONE
+      real :: x=1.d0,y=0.d0
+      IF(1.0.OP.0.0) stop
+      RETURN
+      END
+
+!!$[ptpb@oahu]Clock$f95 -c -Ra c.f90
+!!$This demonstration copy of Absoft Fortran 95 expires 11/23/10.
+!!$
+!!$      USE later_MODULE
+!!$          ^            
+!!$cf90-497 af90fe: ERROR SUB, File = c.f90, Line = 14, Column = 11 
+!!$  The specific interface "F" must have one or two dummy arguments when inside a defined operator interface block.
+!!$
+!!$      IF(1.0.LATER.0.0) stop
+!!$            ^                
+!!$cf90-380 af90fe: ERROR SUB, File = c.f90, Line = 17, Column = 13 
+!!$  No specific match to the defined generic operation "LATER." can be found.
+!!$
+!!$f90: Copyright Absoft Corporation 1994-2010; Absoft Fortran Compiler Version 11.1 
+!!$f90fe: 24 source lines
+!!$f90fe: 2 Errors, 0 Warnings, 0 Other messages, 0 ANSI
+!!$f90fe failed.
+!!$[ptpb@oahu]Clock$
+\end{verbatim}
+
+%email from Peter Bloechl to to support@absoft.com Nov. 11, 2010, 20:10
+
+%====================================================================
+\subsection{I/O-problem}
+%====================================================================
+
+This bug apparently occurs only on Mac, with OS X 10.6 (Snow Leopard),
+and only for 32-bit code. It's apparently a Snow Leopard assembler
+issue. 
+
+\begin{verbatim}
+!     execute with 
+!         f95 star.f90; a.out <text.dat
+!
+! problem: 1) strings in 'A' format are written right-adjusted in a field of 
+!               width of about 500 characters 
+!          2) instead of strings a binary number is printed
+! The problem is removed with minor changes such as adding print statements
+!
+! the output is below the code
+!
+       program main
+       implicit none
+       character(20):: line=''
+!      *************************************************************************
+!      == the following line is in a way right-adjusted in a field of
+!      ==  with with approximate length of 500 characters
+       write(*,fmt='(A)')'1234567890123456789012345678901234567890'
+       do
+!        == replacing '*' by '5' solves the problem 
+         read(*,fmt='(A)',err=100,end=100)line
+!        == replacing '*' by '6' solves the problem 
+         write(*,fmt='(A)')trim(line)  ! this line is not written
+       enddo  
+100    continue
+!      == the following two lines print as binary number =======================
+       write(*,fmt='(A)')'aaaaaaa'    
+       write(*,fmt='(A)')'bbbbbbb'
+       stop
+       end
+!
+!!$
+!!$[ptpb@oahu]Dummy$f95 star.f90; a.out <text.dat
+!!$This demonstration copy of Absoft Fortran 95 expires 11/23/10.
+!!$                                                                                                                                                                                                                                                                                                                                                                1234567890123456789012345678901234567890
+!!$10111111111111111110111001101000
+!!$10111111111111111110111001101000
+!!$[ptpb@oahu]Dummy$
+
+\end{verbatim}
+
+%email from Peter Bloechl to to support@absoft.com Nov. 9, 2010, 12:57
+
+%====================================================================
+\subsection{Compiler option -Rp and do while(associated(...))}
+%====================================================================
+%email from Peter Bloechl to support@absoft.com Oct. 20, 2010; 14:13
+
+\begin{verbatim}
+!**********************************************
+!**  Description of the problem:
+!**  with the compiler option -Rp (check Pointers)
+!**  the "do while(associated(x))" leads to an error
+!**  message because of use of a nullified pointer.
+!**
+!**  excecute the test with "f95 -Rp p.f90; a.out"
+!**  where p.f90 is the name of this file
+!**********************************************
+     Program main
+     real(8), pointer :: x
+     nullify(x)
+     print*,'before the loop ',associated(x)
+     do while(associated(x)) 
+       print*,'in the loop     ',associated(x)
+       exit
+     enddo
+     print*,'after the loop  ',associated(x)
+     stop
+     end
+!**********************************************
+!**  [ptpb@oahu]Absofttest$f95 -Rp p.f90;a.out
+!**  This demonstration copy of Absoft Fortran 95 expires 10/22/10.
+!**   before the loop  F
+!**  ? FORTRAN Runtime Error:
+!**  ? Reference to  a disassociated pointer X
+!**  File p.f90; Line 5
+!**  [ptpb@oahu]Absofttest$
+!**********************************************
+!**  [ptpb@oahu]Absofttest$f95 p.f90;a.out
+!**  This demonstration copy of Absoft Fortran 95 expires 10/22/10.
+!**   before the loop  F
+!**   after the loop   F
+!**  [ptpb@oahu]Absofttest$
+!**********************************************
+\end{verbatim}
+
+%====================================================================
+\subsection{Compiler options -Ra and -Rn and module procedure}
+%====================================================================
+%email from Peter Bloechl to support@absoft.com Oct. 21, 2010; 14:07
+
+\begin{verbatim}
+!***************************************************************
+!** the compiler options -Rn and -Ra for checking the subroutine interfaces
+!** do not seem to analyse module procedures properly.
+!**
+!** execute test with f95 -c -Ra i.f90
+!** or with           f95 -c -Rn i.f90
+!** 
+!** to see an analogous implementation avoiding a module procedure
+!** replace "Use my_module1" by "Use my_module2" and run the test again. 
+!****************************************************************
+!...................................................
+MODULE MY_MODULE1 ! Use of this module causes the error message
+INTERFACE OPERATOR (-)
+  MODULE PROCEDURE my_function1
+END INTERFACE
+CONTAINS
+  FUNCTION my_function1(OLD) RESULT(NEW)
+  IMPLICIT NONE
+  CHARACTER(*), INTENT(IN):: OLD
+  CHARACTER(LEN(OLD))     :: NEW
+  NEW=OLD
+END FUNCTION MY_FUNCTION1
+END MODULE MY_MODULE1
+!...................................................
+MODULE MY_MODULE2 !Use of this module works ok
+INTERFACE OPERATOR (-)
+  FUNCTION my_function2(OLD) RESULT(NEW)
+  IMPLICIT NONE
+  CHARACTER(*), INTENT(IN):: OLD
+  CHARACTER(LEN(OLD))     :: NEW
+  END FUNCTION MY_FUNCTION2
+END INTERFACE
+END MODULE MY_MODULE2
+!...................................................
+FUNCTION my_function2(OLD) RESULT(NEW)
+IMPLICIT NONE
+CHARACTER(*), INTENT(IN):: OLD
+CHARACTER(LEN(OLD))     :: NEW
+NEW=OLD
+END FUNCTION MY_FUNCTION2
+!...................................................
+Program main
+use my_module1
+stop
+end
+!******************************************************************************************************************************************
+!**  
+!**  Here the result of one of the tests
+!**  
+!**  [ptpb@oahu]Absofttest$f95 -c  -Ra  i.f90            
+!**  This demonstration copy of Absoft Fortran 95 expires 10/22/10.
+!**  
+!**  use my_module1
+!**      ^          
+!**  cf90-1071 af90fe: ERROR MAIN, File = i.f90, Line = 43, Column = 5 
+!**    Interface OPERATOR(-) contains procedure "MY_FUNCTION1" which has dummy argument "t$10".  This dummy argument must not be OPTIONAL.
+!**      ^          
+!**  cf90-1072 af90fe: ERROR MAIN, File = i.f90, Line = 43, Column = 5 
+!**    Interface OPERATOR(-) contains procedure "MY_FUNCTION1" which has dummy argument "t$10".  This dummy argument must have INTENT(IN).
+!**  
+!**  f90: Copyright Absoft Corporation 1994-2009; Absoft Fortran Compiler Version 11.0 
+!**  f90fe: 65 source lines
+!**  f90fe: 2 Errors, 0 Warnings, 0 Other messages, 0 ANSI
+!**  f90fe failed.
+!**
+!******************************************************************************************************************************************
+\end{verbatim}
+
+\printindex
+\end{document}
+
+

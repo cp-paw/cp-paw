@@ -1,0 +1,270 @@
+\BOOKMARK [1][-]{section.1}{Initial remarks}{}% 1
+\BOOKMARK [1][-]{section.2}{What is the projector augmented wave method?}{}% 2
+\BOOKMARK [1][-]{section.3}{How the code is built}{}% 3
+\BOOKMARK [1][-]{section.4}{Input data structure}{}% 4
+\BOOKMARK [2][-]{subsection.4.1}{Syntax rules for the input data}{section.4}% 5
+\BOOKMARK [2][-]{subsection.4.2}{Extended notation for atoms}{section.4}% 6
+\BOOKMARK [1][-]{section.5}{Before starting...}{}% 7
+\BOOKMARK [2][-]{subsection.5.1}{The PAW directory}{section.5}% 8
+\BOOKMARK [2][-]{subsection.5.2}{The project data structure}{section.5}% 9
+\BOOKMARK [1][-]{section.6}{The simulation code}{}% 10
+\BOOKMARK [2][-]{subsection.6.1}{How to perform a simulation}{section.6}% 11
+\BOOKMARK [3][-]{subsubsection.6.1.1}{Input files}{subsection.6.1}% 12
+\BOOKMARK [3][-]{subsubsection.6.1.2}{Execute the simulation code}{subsection.6.1}% 13
+\BOOKMARK [3][-]{subsubsection.6.1.3}{Terminate the simulation}{subsection.6.1}% 14
+\BOOKMARK [2][-]{subsection.6.2}{The control input file ``CNTL''}{section.6}% 15
+\BOOKMARK [3][-]{subsubsection.6.2.1}{Examples for the control input file ``CNTL''}{subsection.6.2}% 16
+\BOOKMARK [3][-]{subsubsection.6.2.2}{Argument keywords for the control input file ``CNTL''}{subsection.6.2}% 17
+\BOOKMARK [3][-]{subsubsection.6.2.3}{!CONTROL}{subsection.6.2}% 18
+\BOOKMARK [3][-]{subsubsection.6.2.4}{!CONTROL!FILES}{subsection.6.2}% 19
+\BOOKMARK [3][-]{subsubsection.6.2.5}{!CONTROL!FILES!FILE}{subsection.6.2}% 20
+\BOOKMARK [3][-]{subsubsection.6.2.6}{!CONTROL!GENERIC}{subsection.6.2}% 21
+\BOOKMARK [3][-]{subsubsection.6.2.7}{!CONTROL!DFT}{subsection.6.2}% 22
+\BOOKMARK [3][-]{subsubsection.6.2.8}{!CONTROL!DFT!NTBO}{subsection.6.2}% 23
+\BOOKMARK [3][-]{subsubsection.6.2.9}{!CONTROL!FOURIER}{subsection.6.2}% 24
+\BOOKMARK [3][-]{subsubsection.6.2.10}{!CONTROL!PSIDYN}{subsection.6.2}% 25
+\BOOKMARK [3][-]{subsubsection.6.2.11}{!CONTROL!PSIDYN!AUTO}{subsection.6.2}% 26
+\BOOKMARK [3][-]{subsubsection.6.2.12}{!CONTROL!PSIDYN!THERMOSTAT}{subsection.6.2}% 27
+\BOOKMARK [3][-]{subsubsection.6.2.13}{!CONTROL!RDYN}{subsection.6.2}% 28
+\BOOKMARK [3][-]{subsubsection.6.2.14}{!CONTROL!RDYN!AUTO}{subsection.6.2}% 29
+\BOOKMARK [3][-]{subsubsection.6.2.15}{!CONTROL!RDYN!WARMUP}{subsection.6.2}% 30
+\BOOKMARK [3][-]{subsubsection.6.2.16}{!CONTROL!RDYN!THERMOSTAT}{subsection.6.2}% 31
+\BOOKMARK [3][-]{subsubsection.6.2.17}{!CONTROL!MERMIN}{subsection.6.2}% 32
+\BOOKMARK [3][-]{subsubsection.6.2.18}{!CONTROL!MERMIN!DIAL}{subsection.6.2}% 33
+\BOOKMARK [3][-]{subsubsection.6.2.19}{!CONTROL!CELL}{subsection.6.2}% 34
+\BOOKMARK [3][-]{subsubsection.6.2.20}{!CONTROL!QM-MM}{subsection.6.2}% 35
+\BOOKMARK [3][-]{subsubsection.6.2.21}{!CONTROL!QM-MM!AUTO}{subsection.6.2}% 36
+\BOOKMARK [3][-]{subsubsection.6.2.22}{!CONTROL!QM-MM!THERMOSTAT}{subsection.6.2}% 37
+\BOOKMARK [3][-]{subsubsection.6.2.23}{!CONTROL!COSMO}{subsection.6.2}% 38
+\BOOKMARK [3][-]{subsubsection.6.2.24}{!CONTROL!ANALYSE}{subsection.6.2}% 39
+\BOOKMARK [3][-]{subsubsection.6.2.25}{!CONTROL!ANALYSE!TRA}{subsection.6.2}% 40
+\BOOKMARK [3][-]{subsubsection.6.2.26}{!CONTROL!ANALYSE!HYPERFINE}{subsection.6.2}% 41
+\BOOKMARK [3][-]{subsubsection.6.2.27}{!CONTROL!ANALYSE!CORELEVELS}{subsection.6.2}% 42
+\BOOKMARK [3][-]{subsubsection.6.2.28}{!CONTROL!ANALYSE!WAVE}{subsection.6.2}% 43
+\BOOKMARK [3][-]{subsubsection.6.2.29}{!CONTROL!ANALYSE!DENSITY}{subsection.6.2}% 44
+\BOOKMARK [3][-]{subsubsection.6.2.30}{!CONTROL!ANALYSE!POTENTIAL}{subsection.6.2}% 45
+\BOOKMARK [3][-]{subsubsection.6.2.31}{!CONTROL!ANALYSE!EELS}{subsection.6.2}% 46
+\BOOKMARK [2][-]{subsection.6.3}{The structure input file ``STRC''}{section.6}% 47
+\BOOKMARK [3][-]{subsubsection.6.3.1}{Example for the structure input file ``STRC''}{subsection.6.3}% 48
+\BOOKMARK [3][-]{subsubsection.6.3.2}{Argument description for the structure input file ``STRC''}{subsection.6.3}% 49
+\BOOKMARK [3][-]{subsubsection.6.3.3}{!STRUCTURE}{subsection.6.3}% 50
+\BOOKMARK [3][-]{subsubsection.6.3.4}{!STRUCTURE!GENERIC}{subsection.6.3}% 51
+\BOOKMARK [3][-]{subsubsection.6.3.5}{!STRUCTURE!LATTICE}{subsection.6.3}% 52
+\BOOKMARK [3][-]{subsubsection.6.3.6}{!STRUCTURE!KPOINTS}{subsection.6.3}% 53
+\BOOKMARK [3][-]{subsubsection.6.3.7}{!STRUCTURE!SPECIES}{subsection.6.3}% 54
+\BOOKMARK [3][-]{subsubsection.6.3.8}{!STRUCTURE!SPECIES!AUGMENT}{subsection.6.3}% 55
+\BOOKMARK [3][-]{subsubsection.6.3.9}{!STRUCTURE!SPECIES!AUGMENT!POT}{subsection.6.3}% 56
+\BOOKMARK [3][-]{subsubsection.6.3.10}{!STRUCTURE!SPECIES!AUGMENT!CORE}{subsection.6.3}% 57
+\BOOKMARK [3][-]{subsubsection.6.3.11}{!STRUCTURE!SPECIES!AUGMENT!GRID}{subsection.6.3}% 58
+\BOOKMARK [3][-]{subsubsection.6.3.12}{!STRUCTURE!SPECIES!NTBO}{subsection.6.3}% 59
+\BOOKMARK [3][-]{subsubsection.6.3.13}{!STRUCTURE!ATOM}{subsection.6.3}% 60
+\BOOKMARK [3][-]{subsubsection.6.3.14}{!STRUCTURE!OCCUPATIONS}{subsection.6.3}% 61
+\BOOKMARK [3][-]{subsubsection.6.3.15}{!STRUCTURE!OCCUPATIONS!STATE}{subsection.6.3}% 62
+\BOOKMARK [3][-]{subsubsection.6.3.16}{!STRUCTURE!ISOLATE}{subsection.6.3}% 63
+\BOOKMARK [3][-]{subsubsection.6.3.17}{!STRUCTURE!CONFINE}{subsection.6.3}% 64
+\BOOKMARK [3][-]{subsubsection.6.3.18}{!STRUCTURE!QM-MM}{subsection.6.3}% 65
+\BOOKMARK [3][-]{subsubsection.6.3.19}{!STRUCTURE!QM-MM!ATOM}{subsection.6.3}% 66
+\BOOKMARK [3][-]{subsubsection.6.3.20}{!STRUCTURE!QM-MM!BOND}{subsection.6.3}% 67
+\BOOKMARK [3][-]{subsubsection.6.3.21}{!STRUCTURE!QM-MM!LINK}{subsection.6.3}% 68
+\BOOKMARK [3][-]{subsubsection.6.3.22}{!STRUCTURE!COSMO}{subsection.6.3}% 69
+\BOOKMARK [3][-]{subsubsection.6.3.23}{!STRUCTURE!COSMO!ATOM}{subsection.6.3}% 70
+\BOOKMARK [3][-]{subsubsection.6.3.24}{!STRUCTURE!GROUP}{subsection.6.3}% 71
+\BOOKMARK [3][-]{subsubsection.6.3.25}{!STRUCTURE!VEXT}{subsection.6.3}% 72
+\BOOKMARK [3][-]{subsubsection.6.3.26}{!STRUCTURE!VEXT!UNBIND}{subsection.6.3}% 73
+\BOOKMARK [3][-]{subsubsection.6.3.27}{!STRUCTURE!CONSTRAINTS}{subsection.6.3}% 74
+\BOOKMARK [3][-]{subsubsection.6.3.28}{!STRUCTURE!CONSTRAINTS!RIGID}{subsection.6.3}% 75
+\BOOKMARK [3][-]{subsubsection.6.3.29}{!STRUCTURE!CONSTRAINTS!FREEZE}{subsection.6.3}% 76
+\BOOKMARK [3][-]{subsubsection.6.3.30}{!STRUCTURE!CONSTRAINTS!TRANSLATION}{subsection.6.3}% 77
+\BOOKMARK [3][-]{subsubsection.6.3.31}{!STRUCTURE!CONSTRAINTS!ROTATION}{subsection.6.3}% 78
+\BOOKMARK [3][-]{subsubsection.6.3.32}{!STRUCTURE!CONSTRAINTS!ORIENTATION}{subsection.6.3}% 79
+\BOOKMARK [3][-]{subsubsection.6.3.33}{!STRUCTURE!CONSTRAINTS!BOND}{subsection.6.3}% 80
+\BOOKMARK [3][-]{subsubsection.6.3.34}{!STRUCTURE!CONSTRAINTS!ANGLE}{subsection.6.3}% 81
+\BOOKMARK [3][-]{subsubsection.6.3.35}{!STRUCTURE!CONSTRAINTS!TORSION}{subsection.6.3}% 82
+\BOOKMARK [3][-]{subsubsection.6.3.36}{!STRUCTURE!CONSTRAINTS!COGSEP}{subsection.6.3}% 83
+\BOOKMARK [3][-]{subsubsection.6.3.37}{!STRUCTURE!CONSTRAINTS!MIDPLANE}{subsection.6.3}% 84
+\BOOKMARK [3][-]{subsubsection.6.3.38}{!STRUCTURE!CONSTRAINTS!LINEAR}{subsection.6.3}% 85
+\BOOKMARK [3][-]{subsubsection.6.3.39}{!STRUCTURE!CONSTRAINTS!LINEAR!ATOM}{subsection.6.3}% 86
+\BOOKMARK [3][-]{subsubsection.6.3.40}{!STRUCTURE!ORBPOT}{subsection.6.3}% 87
+\BOOKMARK [3][-]{subsubsection.6.3.41}{!STRUCTURE!ORBPOT!POT}{subsection.6.3}% 88
+\BOOKMARK [1][-]{section.7}{The Energy Grab Tool: paw\137grab}{}% 89
+\BOOKMARK [2][-]{subsection.7.1}{Command}{section.7}% 90
+\BOOKMARK [2][-]{subsection.7.2}{Example for the control input file}{section.7}% 91
+\BOOKMARK [2][-]{subsection.7.3}{Argument description for the control input file}{section.7}% 92
+\BOOKMARK [3][-]{subsubsection.7.3.1}{!GCNTL}{subsection.7.3}% 93
+\BOOKMARK [3][-]{subsubsection.7.3.2}{!GCNTL!GENERIC}{subsection.7.3}% 94
+\BOOKMARK [3][-]{subsubsection.7.3.3}{!GCNTL!SUBSTANCE}{subsection.7.3}% 95
+\BOOKMARK [3][-]{subsubsection.7.3.4}{!GCNTL!REACTION}{subsection.7.3}% 96
+\BOOKMARK [3][-]{subsubsection.7.3.5}{!GCNTL!REACTION!FROM}{subsection.7.3}% 97
+\BOOKMARK [3][-]{subsubsection.7.3.6}{!GCNTL!REACTION!TO}{subsection.7.3}% 98
+\BOOKMARK [1][-]{section.8}{The Atomic Structure Analysis Tool: ``paw\137strc''}{}% 99
+\BOOKMARK [2][-]{subsection.8.1}{Command}{section.8}% 100
+\BOOKMARK [1][-]{section.9}{The Wave Function and Density Analysis Tool: ``paw\137wave''}{}% 101
+\BOOKMARK [2][-]{subsection.9.1}{Command}{section.9}% 102
+\BOOKMARK [2][-]{subsection.9.2}{Example for the control input file}{section.9}% 103
+\BOOKMARK [2][-]{subsection.9.3}{Argument description for the control input file}{section.9}% 104
+\BOOKMARK [3][-]{subsubsection.9.3.1}{!WCNTL}{subsection.9.3}% 105
+\BOOKMARK [3][-]{subsubsection.9.3.2}{!WCNTL!FILES}{subsection.9.3}% 106
+\BOOKMARK [3][-]{subsubsection.9.3.3}{!WCNTL!FILES!FILE}{subsection.9.3}% 107
+\BOOKMARK [3][-]{subsubsection.9.3.4}{!WCNTL!GENERIC}{subsection.9.3}% 108
+\BOOKMARK [3][-]{subsubsection.9.3.5}{!WCNTL!VIEWBOX}{subsection.9.3}% 109
+\BOOKMARK [3][-]{subsubsection.9.3.6}{!WCNTL!PLANE}{subsection.9.3}% 110
+\BOOKMARK [2][-]{subsection.9.4}{View data using OPENDXopendx}{section.9}% 111
+\BOOKMARK [2][-]{subsection.9.5}{View data using FreeWRL}{section.9}% 112
+\BOOKMARK [2][-]{subsection.9.6}{Contour plots using Gnuplot}{section.9}% 113
+\BOOKMARK [2][-]{subsection.9.7}{Rubbersheets using Gnuplot}{section.9}% 114
+\BOOKMARK [1][-]{section.10}{Wave function converter for CryMolCAD: ``paw\137cmcwave''}{}% 115
+\BOOKMARK [1][-]{section.11}{Band-Offset and Work-Function Tool: ``paw\1371davpot''}{}% 116
+\BOOKMARK [1][-]{section.12}{The Trajectory Analysis Tool: ``paw\137tra''}{}% 117
+\BOOKMARK [2][-]{subsection.12.1}{Command}{section.12}% 118
+\BOOKMARK [2][-]{subsection.12.2}{Example for the control input file}{section.12}% 119
+\BOOKMARK [2][-]{subsection.12.3}{Argument description for the control input file ``tcntl''}{section.12}% 120
+\BOOKMARK [3][-]{subsubsection.12.3.1}{!TCNTL}{subsection.12.3}% 121
+\BOOKMARK [3][-]{subsubsection.12.3.2}{!TCNTL!FILES}{subsection.12.3}% 122
+\BOOKMARK [3][-]{subsubsection.12.3.3}{!TCNTL!FILES!FILE}{subsection.12.3}% 123
+\BOOKMARK [3][-]{subsubsection.12.3.4}{!TCNTL!SEQUENCE}{subsection.12.3}% 124
+\BOOKMARK [3][-]{subsubsection.12.3.5}{!TCNTL!MOVIE}{subsection.12.3}% 125
+\BOOKMARK [3][-]{subsubsection.12.3.6}{!TCNTL!MOVIE!VIEWBOX}{subsection.12.3}% 126
+\BOOKMARK [3][-]{subsubsection.12.3.7}{!TCNTL!MOVIE!FILE}{subsection.12.3}% 127
+\BOOKMARK [3][-]{subsubsection.12.3.8}{!TCNTL!MOVIE!SELECT}{subsection.12.3}% 128
+\BOOKMARK [3][-]{subsubsection.12.3.9}{!TCNTL!CORRELATION}{subsection.12.3}% 129
+\BOOKMARK [3][-]{subsubsection.12.3.10}{!TCNTL!CORRELATION!FILE}{subsection.12.3}% 130
+\BOOKMARK [3][-]{subsubsection.12.3.11}{!TCNTL!CORRELATION!CENTER}{subsection.12.3}% 131
+\BOOKMARK [3][-]{subsubsection.12.3.12}{!TCNTL!CORRELATION!CENTER!SELECT}{subsection.12.3}% 132
+\BOOKMARK [3][-]{subsubsection.12.3.13}{!TCNTL!CORRELATION!PARTNER}{subsection.12.3}% 133
+\BOOKMARK [3][-]{subsubsection.12.3.14}{!TCNTL!CORRELATION!PARTNER!SELECT}{subsection.12.3}% 134
+\BOOKMARK [3][-]{subsubsection.12.3.15}{!TCNTL!SNAPSHOT}{subsection.12.3}% 135
+\BOOKMARK [3][-]{subsubsection.12.3.16}{!TCNTL!SNAPSHOT!FILE}{subsection.12.3}% 136
+\BOOKMARK [3][-]{subsubsection.12.3.17}{!TCNTL!SPAGHETTI!SELECT}{subsection.12.3}% 137
+\BOOKMARK [3][-]{subsubsection.12.3.18}{!TCNTL!SPAGHETTI}{subsection.12.3}% 138
+\BOOKMARK [3][-]{subsubsection.12.3.19}{!TCNTL!SPAGHETTI!FILE}{subsection.12.3}% 139
+\BOOKMARK [3][-]{subsubsection.12.3.20}{!TCNTL!SPAGHETTI!SELECT}{subsection.12.3}% 140
+\BOOKMARK [3][-]{subsubsection.12.3.21}{!TCNTL!TEMPERATURE}{subsection.12.3}% 141
+\BOOKMARK [3][-]{subsubsection.12.3.22}{!TCNTL!TEMPERATURE!SELECT}{subsection.12.3}% 142
+\BOOKMARK [3][-]{subsubsection.12.3.23}{!TCNTL!TEMPERATURE!FILE}{subsection.12.3}% 143
+\BOOKMARK [3][-]{subsubsection.12.3.24}{!TCNTL!SOFT}{subsection.12.3}% 144
+\BOOKMARK [3][-]{subsubsection.12.3.25}{!TCNTL!SOFT!SELECT}{subsection.12.3}% 145
+\BOOKMARK [3][-]{subsubsection.12.3.26}{!TCNTL!SOFT!FILE}{subsection.12.3}% 146
+\BOOKMARK [3][-]{subsubsection.12.3.27}{!TCNTL!NEIGHBORS}{subsection.12.3}% 147
+\BOOKMARK [3][-]{subsubsection.12.3.28}{!TCNTL!MODE}{subsection.12.3}% 148
+\BOOKMARK [3][-]{subsubsection.12.3.29}{!TCNTL!MODE!BOND}{subsection.12.3}% 149
+\BOOKMARK [3][-]{subsubsection.12.3.30}{!TCNTL!MODE!ANGLE}{subsection.12.3}% 150
+\BOOKMARK [3][-]{subsubsection.12.3.31}{!TCNTL!MODE!TORSION}{subsection.12.3}% 151
+\BOOKMARK [3][-]{subsubsection.12.3.32}{!TCNTL!MODE!MODE}{subsection.12.3}% 152
+\BOOKMARK [3][-]{subsubsection.12.3.33}{!TCNTL!OUTPUT}{subsection.12.3}% 153
+\BOOKMARK [2][-]{subsection.12.4}{View data using OPENDXopendx}{section.12}% 154
+\BOOKMARK [1][-]{section.13}{The Density of States Analysis Tool: paw\137dos}{}% 155
+\BOOKMARK [2][-]{subsection.13.1}{Command}{section.13}% 156
+\BOOKMARK [2][-]{subsection.13.2}{Theoretical basis for the paw\137dos tool}{section.13}% 157
+\BOOKMARK [3][-]{subsubsection.13.2.1}{Orbitals}{subsection.13.2}% 158
+\BOOKMARK [3][-]{subsubsection.13.2.2}{Matrix elements}{subsection.13.2}% 159
+\BOOKMARK [3][-]{subsubsection.13.2.3}{Operations}{subsection.13.2}% 160
+\BOOKMARK [3][-]{subsubsection.13.2.4}{Thermal broadening of the Density-of-States}{subsection.13.2}% 161
+\BOOKMARK [3][-]{subsubsection.13.2.5}{Format of the Density-of-States and Number-of-States files}{subsection.13.2}% 162
+\BOOKMARK [2][-]{subsection.13.3}{Example for the control input file}{section.13}% 163
+\BOOKMARK [2][-]{subsection.13.4}{Argument description for the control input file}{section.13}% 164
+\BOOKMARK [3][-]{subsubsection.13.4.1}{!DCNTL}{subsection.13.4}% 165
+\BOOKMARK [3][-]{subsubsection.13.4.2}{!DCNTL!GENERIC}{subsection.13.4}% 166
+\BOOKMARK [3][-]{subsubsection.13.4.3}{!DCNTL!GRID}{subsection.13.4}% 167
+\BOOKMARK [3][-]{subsubsection.13.4.4}{!DCNTL!FILES}{subsection.13.4}% 168
+\BOOKMARK [3][-]{subsubsection.13.4.5}{!DCNTL!FILES!FILE}{subsection.13.4}% 169
+\BOOKMARK [3][-]{subsubsection.13.4.6}{!DCNTL!ORBITAL}{subsection.13.4}% 170
+\BOOKMARK [3][-]{subsubsection.13.4.7}{!DCNTL!ORBITAL!ORB}{subsection.13.4}% 171
+\BOOKMARK [3][-]{subsubsection.13.4.8}{!DCNTL!WEIGHT}{subsection.13.4}% 172
+\BOOKMARK [3][-]{subsubsection.13.4.9}{!DCNTL!WEIGHT!ATOM}{subsection.13.4}% 173
+\BOOKMARK [3][-]{subsubsection.13.4.10}{!DCNTL!WEIGHT!ORB}{subsection.13.4}% 174
+\BOOKMARK [3][-]{subsubsection.13.4.11}{!DCNTL!COOP}{subsection.13.4}% 175
+\BOOKMARK [3][-]{subsubsection.13.4.12}{!DCNTL!COOP!ORB1}{subsection.13.4}% 176
+\BOOKMARK [3][-]{subsubsection.13.4.13}{!DCNTL!COOP!ORB2}{subsection.13.4}% 177
+\BOOKMARK [3][-]{subsubsection.13.4.14}{!DCNTL!OUTPUT}{subsection.13.4}% 178
+\BOOKMARK [1][-]{section.14}{The Density of States Plotting Tool: paw\137dosplot.x}{}% 179
+\BOOKMARK [2][-]{subsection.14.1}{Command}{section.14}% 180
+\BOOKMARK [2][-]{subsection.14.2}{Example for the control input file}{section.14}% 181
+\BOOKMARK [2][-]{subsection.14.3}{Argument description for the control input file}{section.14}% 182
+\BOOKMARK [3][-]{subsubsection.14.3.1}{!DPCNTL}{subsection.14.3}% 183
+\BOOKMARK [3][-]{subsubsection.14.3.2}{!DPCNTL!GRAPH}{subsection.14.3}% 184
+\BOOKMARK [3][-]{subsubsection.14.3.3}{!DPCNTL!GRAPH!SET}{subsection.14.3}% 185
+\BOOKMARK [1][-]{section.15}{The Band Structure Analysis Tool: paw\137bands}{}% 186
+\BOOKMARK [2][-]{subsection.15.1}{Command}{section.15}% 187
+\BOOKMARK [2][-]{subsection.15.2}{Example for the control input file}{section.15}% 188
+\BOOKMARK [2][-]{subsection.15.3}{Description}{section.15}% 189
+\BOOKMARK [3][-]{subsubsection.15.3.1}{BANDSTRUCTURE}{subsection.15.3}% 190
+\BOOKMARK [3][-]{subsubsection.15.3.2}{PDOS}{subsection.15.3}% 191
+\BOOKMARK [2][-]{subsection.15.4}{Argument description for the control input file}{section.15}% 192
+\BOOKMARK [3][-]{subsubsection.15.4.1}{!BCNTL}{subsection.15.4}% 193
+\BOOKMARK [3][-]{subsubsection.15.4.2}{!BCNTL!INPUTFILE}{subsection.15.4}% 194
+\BOOKMARK [3][-]{subsubsection.15.4.3}{!BCNTL!BANDSTRUCTURE}{subsection.15.4}% 195
+\BOOKMARK [3][-]{subsubsection.15.4.4}{!BCNTL!BANDSTRUCTURE!LINE}{subsection.15.4}% 196
+\BOOKMARK [3][-]{subsubsection.15.4.5}{!BCNTL!BANDSTRCUTURE!LINE!FATBAND}{subsection.15.4}% 197
+\BOOKMARK [3][-]{subsubsection.15.4.6}{!BCNTL!PDOS}{subsection.15.4}% 198
+\BOOKMARK [2][-]{subsection.15.5}{Theoretical background}{section.15}% 199
+\BOOKMARK [2][-]{subsection.15.6}{Diagonalisation}{section.15}% 200
+\BOOKMARK [2][-]{subsection.15.7}{Symmetry}{section.15}% 201
+\BOOKMARK [1][-]{section.16}{The Setup-Analysis program: ``paw\137stpa.x''}{}% 202
+\BOOKMARK [2][-]{subsection.16.1}{Command}{section.16}% 203
+\BOOKMARK [1][-]{section.17}{The Structure Pre-Optimization Tool: paw\137preopt}{}% 204
+\BOOKMARK [2][-]{subsection.17.1}{Command}{section.17}% 205
+\BOOKMARK [2][-]{subsection.17.2}{Example for the control input file}{section.17}% 206
+\BOOKMARK [2][-]{subsection.17.3}{Argument description for the control input file}{section.17}% 207
+\BOOKMARK [3][-]{subsubsection.17.3.1}{!PCNTL}{subsection.17.3}% 208
+\BOOKMARK [3][-]{subsubsection.17.3.2}{!PCNTL!GENERIC}{subsection.17.3}% 209
+\BOOKMARK [3][-]{subsubsection.17.3.3}{!PCNTL!FILES}{subsection.17.3}% 210
+\BOOKMARK [3][-]{subsubsection.17.3.4}{!PCNTL!FILES!FILE}{subsection.17.3}% 211
+\BOOKMARK [3][-]{subsubsection.17.3.5}{!PCNTL!OUTPUT}{subsection.17.3}% 212
+\BOOKMARK [3][-]{subsubsection.17.3.6}{!PCNTL!FREEZEONLY}{subsection.17.3}% 213
+\BOOKMARK [3][-]{subsubsection.17.3.7}{!PCNTL!MOVEONLY}{subsection.17.3}% 214
+\BOOKMARK [2][-]{subsection.17.4}{Argument description for the structure input file}{section.17}% 215
+\BOOKMARK [3][-]{subsubsection.17.4.1}{!STRC!ATOM}{subsection.17.4}% 216
+\BOOKMARK [3][-]{subsubsection.17.4.2}{!STRC!BOND}{subsection.17.4}% 217
+\BOOKMARK [1][-]{section.18}{Scripts}{}% 218
+\BOOKMARK [2][-]{subsection.18.1}{Options and getopts}{section.18}% 219
+\BOOKMARK [2][-]{subsection.18.2}{The Energy Analysis Tool: ``paw\137show''}{section.18}% 220
+\BOOKMARK [3][-]{subsubsection.18.2.1}{Command}{subsection.18.2}% 221
+\BOOKMARK [2][-]{subsection.18.3}{Copy a project: ``paw\137copy''}{section.18}% 222
+\BOOKMARK [3][-]{subsubsection.18.3.1}{Command}{subsection.18.3}% 223
+\BOOKMARK [2][-]{subsection.18.4}{change the extension of a et of files: ``paw\137ext\137copy''}{section.18}% 224
+\BOOKMARK [3][-]{subsubsection.18.4.1}{Command}{subsection.18.4}% 225
+\BOOKMARK [2][-]{subsection.18.5}{Collect energies ``paw\137collect''}{section.18}% 226
+\BOOKMARK [3][-]{subsubsection.18.5.1}{Command}{subsection.18.5}% 227
+\BOOKMARK [2][-]{subsection.18.6}{Collect energies ``paw\137get''}{section.18}% 228
+\BOOKMARK [3][-]{subsubsection.18.6.1}{Command}{subsection.18.6}% 229
+\BOOKMARK [2][-]{subsection.18.7}{Collect energies ``paw\137resolve''}{section.18}% 230
+\BOOKMARK [3][-]{subsubsection.18.7.1}{Command}{subsection.18.7}% 231
+\BOOKMARK [2][-]{subsection.18.8}{Scan parameters ``paw\137scan''}{section.18}% 232
+\BOOKMARK [3][-]{subsubsection.18.8.1}{Command}{subsection.18.8}% 233
+\BOOKMARK [2][-]{subsection.18.9}{Scan lattice constants ``paw\137scanlat''}{section.18}% 234
+\BOOKMARK [3][-]{subsubsection.18.9.1}{Command}{subsection.18.9}% 235
+\BOOKMARK [2][-]{subsection.18.10}{Murnaghan fit ``paw\137murnagan.x''}{section.18}% 236
+\BOOKMARK [2][-]{subsection.18.11}{``paw\137waittilempty''}{section.18}% 237
+\BOOKMARK [3][-]{subsubsection.18.11.1}{Command}{subsection.18.11}% 238
+\BOOKMARK [2][-]{subsection.18.12}{PAW-snapshot ``paw\137snapshot''}{section.18}% 239
+\BOOKMARK [1][-]{section.19}{Specifications of formatted and unformatted output data files}{}% 240
+\BOOKMARK [2][-]{subsection.19.1}{Protocoll}{section.19}% 241
+\BOOKMARK [2][-]{subsection.19.2}{waveplot}{section.19}% 242
+\BOOKMARK [2][-]{subsection.19.3}{Projected density of states files}{section.19}% 243
+\BOOKMARK [2][-]{subsection.19.4}{Trajectory files}{section.19}% 244
+\BOOKMARK [3][-]{subsubsection.19.4.1}{Position Trajectory}{subsection.19.4}% 245
+\BOOKMARK [1][-]{section.20}{Units and constants}{}% 246
+\BOOKMARK [2][-]{subsection.20.1}{Vibrations}{section.20}% 247
+\BOOKMARK [2][-]{subsection.20.2}{Magnetic hyperfine parameters}{section.20}% 248
+\BOOKMARK [1][-]{section.21}{Periodic Table}{}% 249
+\BOOKMARK [1][-]{section.22}{The Universal Force Field \(UFF\)}{}% 250
+\BOOKMARK [1][-]{section.23}{Methods}{}% 251
+\BOOKMARK [2][-]{subsection.23.1}{Friction dynamics and annealing schedules}{section.23}% 252
+\BOOKMARK [2][-]{subsection.23.2}{Optimum friction scheme}{section.23}% 253
+\BOOKMARK [2][-]{subsection.23.3}{Wave function dynamics}{section.23}% 254
+\BOOKMARK [2][-]{subsection.23.4}{Nuclear dynamics}{section.23}% 255
+\BOOKMARK [2][-]{subsection.23.5}{Thermostats}{section.23}% 256
+\BOOKMARK [2][-]{subsection.23.6}{Occupations}{section.23}% 257
+\BOOKMARK [2][-]{subsection.23.7}{Sawtooth behavior of the total energy.}{section.23}% 258
+\BOOKMARK [2][-]{subsection.23.8}{Overcompleteness problem when using too many projector functions}{section.23}% 259
+\BOOKMARK [2][-]{subsection.23.9}{Constraints acting on atoms}{section.23}% 260
+\BOOKMARK [2][-]{subsection.23.10}{Electrostatic decoupling and coupling of point charges}{section.23}% 261
+\BOOKMARK [2][-]{subsection.23.11}{Non-collinear densities}{section.23}% 262
+\BOOKMARK [1][-]{section.24}{Troubleshooting}{}% 263
+\BOOKMARK [2][-]{subsection.24.1}{Errors in the input data}{section.24}% 264
+\BOOKMARK [2][-]{subsection.24.2}{Runtime errors}{section.24}% 265
+\BOOKMARK [2][-]{subsection.24.3}{Overcompleteness of projector functions}{section.24}% 266
+\BOOKMARK [1][-]{appendix.A}{Installation}{}% 267
+\BOOKMARK [1][-]{appendix.B}{Symmetry tables}{}% 268
+\BOOKMARK [2][-]{subsection.B.1}{Bravais lattices}{appendix.B}% 269
+\BOOKMARK [2][-]{subsection.B.2}{Spacegroups}{appendix.B}% 270

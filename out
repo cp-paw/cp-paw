@@ -1,0 +1,127 @@
+ALLDEP=F; export ALLDEP; cd /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg; make f90pp; make 
+make[1]: Nothing to be done for `f90pp'.
+rm -f paw_srcblob paw_srcblob.o
+tar -czf paw_srcblob /Users/ptpb/Tree/PAW/devel/src /Users/ptpb/Tree/PAW/devel/parms.in_use
+tar: Removing leading '/' from member names
+touch paw_srcblob_dummy.f90
+gfortran -fno-second-underscore -c -g -std=f2003 -fcheck=all -Wall -fbounds-check   -o paw_srcblob_dummy.o paw_srcblob_dummy.f90
+ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin paw_srcblob paw_srcblob_dummy.o
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/f90pp -DCPPVAR_COMPILER_GFORTRAN -DCPPVAR_FFT_FFTW /Users/ptpb/Tree/PAW/devel/src/paw_version.f90 >/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_version_d.f90
+bash /Users/ptpb/Tree/PAW/devel/src/Buildtools/Version/getversion.sh /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_version_d.f90
+==================getversion.sh start===================================
+File to modify: /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_version_d.f90
+Current directory=/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg
+git installed: YES
+inside git repo: YES
+==================getversion.sh end===================================
+gfortran -fno-second-underscore -c -g -std=f2003 -fcheck=all -Wall -fbounds-check   -o /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_version.o /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_version_d.f90
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/f90pp -DCPPVAR_COMPILER_GFORTRAN -DCPPVAR_FFT_FFTW /Users/ptpb/Tree/PAW/devel/src/paw_ldaplusu.f90 >/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90
+<stdin>:9:36: warning: empty character constant [-Winvalid-pp-token]
+CHARACTER(8)           :: ATOMTYPE=''
+                                   ^
+<stdin>:573:63: warning: empty character constant [-Winvalid-pp-token]
+          CALL REPORT__R8VAL(NFIL,'  F4/F2',THISISP1%FRATIO42,'')
+                                                              ^
+<stdin>:574:63: warning: empty character constant [-Winvalid-pp-token]
+          CALL REPORT__R8VAL(NFIL,'  F6/F2',THISISP1%FRATIO62,'')
+                                                              ^
+3 warnings generated.
+gfortran -fno-second-underscore -c -g -std=f2003 -fcheck=all -Wall -fbounds-check   -o /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu.o /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2852.29:
+
+      USE LMTO_MODULE, ONLY : SBAR,POTPAR,SBARLI1,K2
+                             1
+Error: Symbol 'sbar' referenced at (1) not found in module 'lmto_module'
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2852.35:
+
+      USE LMTO_MODULE, ONLY : SBAR,POTPAR,SBARLI1,K2
+                                   1
+Error: Symbol 'potpar' referenced at (1) not found in module 'lmto_module'
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2910.22:
+
+      RAD=POTPAR(ISP)%RAD
+                      1
+Error: Symbol 'potpar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2938.21:
+
+        IF(SBAR(IIB)%IAT1.NE.IAT) CYCLE
+                     1
+Error: Symbol 'sbar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2939.21:
+
+        IF(SBAR(IIB)%IAT2.NE.IAT) CYCLE
+                     1
+Error: Symbol 'sbar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2940.25:
+
+        IF(SUM(SBAR(IIB)%IT**2).NE.0) CYCLE
+                         1
+Error: Symbol 'sbar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2945.46:
+
+            SBARAV(L+1)=SBARAV(L+1)+SBAR(IIB)%MAT(IORB-1+IM,IORB-1+IM)
+                                              1
+Error: Symbol 'sbar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2967.24:
+
+        LN1=POTPAR(ISP)%TAILED%LNDOT(LN)
+                        1
+Error: Symbol 'potpar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2968.32:
+
+        AECHI(:,LN)=POTPAR(ISP)%TAILED%AEF(:,LN) &
+                                1
+Error: Symbol 'potpar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2970.32:
+
+        PSCHI(:,LN)=POTPAR(ISP)%TAILED%PSF(:,LN) &
+                                1
+Error: Symbol 'potpar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2972.32:
+
+        NLCHI(:,LN)=POTPAR(ISP)%TAILED%NLF(:,LN) &
+                                1
+Error: Symbol 'potpar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:545.32:
+
+        THISISP1%ATOMTYPE=STRING
+                                1
+Warning: CHARACTER expression will be truncated in assignment (8/64) at (1)
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:721.4:
+
+1221 CONTINUE
+    1
+Warning: Label 1221 at (1) defined but not used
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2935.19:
+
+      NNS=SIZE(SBAR)
+                   1
+Error: Symbol 'sbar' at (1) has no IMPLICIT type
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2422.66:
+
+                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+CMPLX(SVAR,0.D0)
+                                                                  1
+Warning: Conversion from REAL(8) to default-kind COMPLEX(4) at (1) might loose precision, consider using the KIND argument
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:2632.17:
+
+            ETOT=ETOT+(RHO(LMN1,LMN2,1,1)+RHO(LMN1,LMN2,2,2))*DH(LN2,LN1)
+                 1
+Warning: Possible change of value in conversion from COMPLEX(8) to REAL(8) at (1)
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:1848.48:
+
+            HAM(I,I,IS,IS)=HAM(I,I,IS,IS)+CMPLX(V(IS),0.D0)
+                                                1
+Warning: Conversion from REAL(8) to default-kind COMPLEX(4) at (1) might loose precision, consider using the KIND argument
+/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu_d.f90:896.19:
+
+      DATH_(:,:,:)=(0.D0,0.D0)
+                   1
+Warning: Possible change of value in conversion from COMPLEX(8) to REAL(8) at (1)
+make[1]: *** [/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/Objects/dbg/paw_ldaplusu.o] Error 1
+make: *** [dbg] Error 2
+ERROR OPENING A FILE
+VARIABLE IO MESSAGE HAS THE VALUE File 'fast' does not exist
+VARIABLE INTERNAL ID TO IDENTIFY ERROR LOCATION HAS THE VALUE          5
+VARIABLE FILE ID HAS THE VALUE CNTL
+VARIABLE FILENAME HAS THE VALUE fast
+STOP IN FILEHANDLER_OPEN

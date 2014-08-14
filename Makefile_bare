@@ -1,0 +1,1106 @@
+#
+SHELL=/bin/sh
+#
+#########################################################################
+##                                                                     ##
+##  make a paw executable and a paw library using gmake                ##
+##  ===================================================                ##
+##                                                                     ##
+#########################################################################
+##                                                                     ##
+##  Primary targets:                                                   ##
+##                                                                     ##
+##  directory structure                                                ##
+##    /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl       executables                            ##
+##    /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/none  objects with simple compiler flags     ##
+##    /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/fast  optimized objects                      ##
+##    /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/prof  objects for profiling                  ##
+##    /Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl/dbg   objects for debugging                  ##
+##    /Users/ptpb/Tree/PAW/devel/src              sources for CP-PAW main code           ##
+##    /Users/ptpb/Tree/PAW/devel/src/Tools        directory containing Tools             ##
+##    /Users/ptpb/Tree/PAW/devel/src/Buildtools/F90PP directory preprocessor etc         ##
+##                                                                     ##
+#########################################################################
+## The following block of variables is set by the configure            ##
+## script (AC_SUBST @...@ and sed-Commands var...)                     ##
+#########################################################################
+#
+#___________________________ the hardware architecture
+export ARCH=osx_gfortran_mkl
+#___________________________ root directory of the PAW distribution
+export THISDIR=/Users/ptpb/Tree/PAW/devel
+#___________________________ object type (none,fast,dbg,prof)
+export OBJTYPE=varOBJTYPE
+#___________________________ path to the source files
+export SRCDIR=${THISDIR}/src
+#___________________________ path to the object files
+export OBJDIR=${THISDIR}/bin/${ARCH}/Objects/${OBJTYPE}
+#___________________________ path to the binaries
+export BINDIR=${THISDIR}/bin/${ARCH}
+#___________________________ path to the tool-directory
+export TOOLDIR=${THISDIR}/src/Tools
+#___________________________ directory with blas library
+export BLASDIR=/opt/intel/composer_xe_2011_sp1/mkl/lib/
+#___________________________ directory with lapack library
+export LAPACKDIR=/opt/intel/composer_xe_2011_sp1/mkl/lib/
+#___________________________ directory with fft library
+export FFTDIR=/opt/intel/composer_xe_2011_sp1/mkl/lib/intel64
+#___________________________ directory with MPI library
+export MPIDIR=/opt/openmpi/
+#___________________________ library archiver
+export LIBAR=ar
+#___________________________header file for fft
+export FFT_HEADER=${FFTDIR}/../../include/fftw/fftw_f77.i
+#___________________________header file for MPI
+export MPI_HEADER=${MPIDIR}/include/mpif.h
+#___________________________special treatment
+export SPECIAL=none
+#___________________________ set to T, if this is Makefile.parallel
+export PARALLEL=varPARALLEL
+#___________________________ Fortran90 compiler + compiler flags
+ifeq (${PARALLEL},T)
+  export COMPILE=${MPIDIR}/bin/mpif90 
+  export LINK=${MPIDIR}/bin/mpif90  -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} 
+  export LIBS=${FFTDIR}/libfftw2xf_gnu.a  ${LAPACKDIR}/libmkl_intel_lp64.a ${LAPACKDIR}/libmkl_blas95_lp64.a  ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a /opt/intel/composer_xe_2011_sp1.8.269/compiler/lib/libiomp5.a -lmpi -dynamic -lpthread 
+  export F90PP=${BINDIR}/f90pp -DCPPVAR_COMPILER_GFORTRAN -DCPPVAR_FFT_FFTW -DCPPVARIABLE_PARALLEL
+else
+  export COMPILE=gfortran -fno-second-underscore
+  export LINK=gfortran -fno-second-underscore -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} 
+  export LIBS=${FFTDIR}/libfftw2xf_gnu.a  ${LAPACKDIR}/libmkl_intel_lp64.a ${BLASDIR}/libmkl_blas95_lp64.a  ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a /opt/intel/composer_xe_2011_sp1.8.269/compiler/lib/libiomp5.a -dynamic -lpthread 
+  export F90PP=${BINDIR}/f90pp -DCPPVAR_COMPILER_GFORTRAN -DCPPVAR_FFT_FFTW
+endif
+#___________________________ the PAW-binary (inclusive path)
+export PAWX=/Users/ptpb/Tree/PAW/devel/bin/osx_gfortran_mkl
+#___________________________ the extension of files to be compiled
+export FEXT=f90
+#___________________________ the GNU make utility
+export MAKE=make
+#
+##########################################################################
+##  define parameters                                                   ##
+##########################################################################
+ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
+  export MODE=_p
+else
+  export MODE=_s
+endif
+ifeq (${SPECIAL},IBM)
+  export POE_PREFIX=poe
+  export POE_SUFFIX=-proc 1 -nodes 1 -rmpool 0
+else
+  export POE_PREFIX=
+  export POE_SUFFIX=
+endif
+#
+# out of the file src/paw_mpelib.f a parallel _p and
+# a sequential _s version are produced
+#
+export MPE = ${OBJDIR}/paw_mpelib$(MODE).o
+#
+##########################################################################
+##  include files                                                       ##
+##########################################################################
+#
+# fftw_f77.i is an include file for the FFTW-library
+# in case FFTW is linked, this file has to be copied into the
+# object directory
+#
+ifneq ($(strip ${FFT_HEADER}),)
+  # copy includefile into object directory.
+  # new name is uppercase to allow global uppercasing of fortran code
+  FFTWINCLUDE=cp ${FFT_HEADER} ${OBJDIR}/fftw_f77.i
+else
+  # not there, just create an empty file
+  FFTWINCLUDE= touch ${OBJDIR}/fftw_f77.i
+endif
+#
+# mpif.h is an include file for the MPICH-library
+# for parallel compilation, this file has to be copied into
+# the object directory. Not needed for IBM environment
+# the include file is usually named mpif.f90
+#
+ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
+  ifneq ($(strip ${MPI_HEADER}),)
+    # copy includefile into object directory
+    MPIINCLUDE=cp ${MPI_HEADER} ${OBJDIR}/mpif.h
+  else
+    # not there, just create an empty file
+    MPIINCLUDE= touch ${OBJDIR}/mpif.h
+  endif
+else
+  # not needed, just create an empty file to fool dependencies
+  MPIINCLUDE= touch ${OBJDIR}/mpif.h
+endif
+#
+# paw_mpelib.f holds the subroutines necessary for parallel execution
+# of the code. Via preprocessor variables, this source is split up into
+# two files, one for parallel and one for sequential execution. ($MODE is
+# defined in the if-statement above)
+# libpaw.a holds the object files and can be linked to any code which
+# needs a PAW subroutine (leave the # after libpaw.a)
+# MPE   = ${OBJDIR}/paw_mpelib$(MODE).o
+export PAWLIB= ${OBJDIR}/libpaw.a#
+export PAWLIBFULL= ${OBJDIR}/libpawfull.a#
+export PPAWLIB= ${OBJDIR}/libppaw.a#
+export PPAWLIBFULL= ${OBJDIR}/libppawfull.a#
+#
+#########################################################################
+## Definition of the targets                                           ##
+#########################################################################
+default: ${PAWX}
+#
+clean:
+	find ${OBJDIR}/* -maxdepth 0 \! -name Makefile -exec rm {} \;
+	rm -f ${PAWX}
+	rm -rf ${BINDIR}/*_tests
+#
+##########################################################################
+##  define object files kept in the library                             ##
+##########################################################################
+#
+export LOBJSF77 = \
+	 ${OBJDIR}/slatec.o
+export LOBJS = \
+        ${OBJDIR}/paw_trace.o \
+        ${OBJDIR}/paw_error.o \
+        ${OBJDIR}/paw_filehandler.o \
+        ${OBJDIR}/paw_clock.o \
+        ${OBJDIR}/paw_lock.o \
+        ${OBJDIR}/paw_timing.o \
+        ${OBJDIR}/paw_linkedlist.o \
+        ${OBJDIR}/paw_strings.o \
+        ${OBJDIR}/paw_dft.o \
+        ${OBJDIR}/paw_dftaddendum.o \
+        ${OBJDIR}/paw_constants.o \
+        ${OBJDIR}/paw_spherical.o \
+        ${OBJDIR}/paw_generalpurpose.o \
+        ${OBJDIR}/paw_report.o \
+        ${OBJDIR}/paw_periodictable.o \
+        ${OBJDIR}/paw_radial.o \
+        ${OBJDIR}/paw_schroedinger.o \
+        ${OBJDIR}/paw_atomlib.o \
+        ${OBJDIR}/paw_specialfunctions.o \
+        ${OBJDIR}/paw_usage.o \
+        ${OBJDIR}/paw_selftest.o \
+        ${OBJDIR}/paw_strcio.o \
+        ${OBJDIR}/paw_cell.o \
+        ${OBJDIR}/paw_pdos.o \
+        ${OBJDIR}/paw_banddata.o \
+        ${OBJDIR}/paw_library.o \
+        ${OBJDIR}/paw_polynom.o \
+        ${OBJDIR}/paw_dimer.o  \
+        ${OBJDIR}/paw_lmtobasics.o \
+        ${OBJDIR}/paw_debug.o \
+        ${OBJDIR}/paw_brillouin.o \
+        ${OBJDIR}/paw_gaussian.o 
+#
+##########################################################################
+##  define other objects                                                ##
+##########################################################################
+#
+OBJECTS1 = \
+	    ${OBJDIR}/paw_driver.o \
+           ${OBJDIR}/paw_thermostat.o \
+           ${OBJDIR}/paw_isolate.o \
+           ${OBJDIR}/paw_assist.o \
+           ${OBJDIR}/paw_lists.o \
+           ${OBJDIR}/paw_constraints.o \
+           ${OBJDIR}/paw_lmto.o \
+           ${OBJDIR}/paw_dmft.o \
+           ${OBJDIR}/paw_fft.o 
+#
+OBJECTS2 = \
+           ${OBJDIR}/paw_augmentation.o \
+           ${OBJDIR}/paw_softcore.o \
+           ${OBJDIR}/paw_classical.o \
+           ${OBJDIR}/paw_forcefield.o \
+           ${OBJDIR}/paw_atoms.o \
+           ${OBJDIR}/paw.o \
+           ${OBJDIR}/paw_efg.o \
+           ${OBJDIR}/paw_ioroutines.o \
+           ${OBJDIR}/paw_iotra.o \
+           ${OBJDIR}/paw_ionew.o \
+           ${OBJDIR}/paw_qmmm.o \
+           ${OBJDIR}/paw_cosmo.o \
+           ${OBJDIR}/paw_warmup.o \
+           ${OBJDIR}/paw_optfric.o
+#  the following is for the QMMM of Woo and Margl
+#          ${OBJDIR}/mm_paw_modules.o \
+#          ${OBJDIR}/mm_paw_core_mm.o \
+#          ${OBJDIR}/mm_paw_interface.o
+#          ${OBJDIR}/paw_md
+#
+OBJECTS3 = \
+           ${OBJDIR}/paw_setups.o \
+           ${OBJDIR}/paw_potential.o \
+           ${OBJDIR}/paw_occupations.o \
+           ${OBJDIR}/paw_pairpotential.o \
+           ${OBJDIR}/paw_graphics.o \
+           ${OBJDIR}/paw_waves1.o \
+           ${OBJDIR}/paw_waves2.o \
+           ${OBJDIR}/paw_mixer.o \
+           ${OBJDIR}/paw_cg.o \
+           ${OBJDIR}/paw_kpoints.o \
+           ${OBJDIR}/paw_vext.o \
+           ${OBJDIR}/paw_vdw.o \
+           ${OBJDIR}/paw_ci.o \
+           ${OBJDIR}/paw_opteels.o \
+#           ${OBJDIR}/paw_localize.o  #removed
+#           ${OBJDIR}/paw_pdos.o  #into library
+#          ${OBJDIR}/paw_optic.o \   # removed
+#
+export OBJECTS= ${OBJECTS1} ${OBJECTS2} ${OBJECTS3}
+#
+# Object for version information
+export OBJVERSION = \
+	      ${OBJDIR}/paw_version.o
+#
+# Object for source blob
+export SRCBLOB = \
+	   ${OBJDIR}/paw_srcblob.o
+#
+#
+#
+# Definition of objects for the compilation of the PAW-tools
+#
+# Objects for test code
+OBJMURNAGHAN = \
+          ${OBJDIR}/paw_murnaghan.o
+OBJSTPA = \
+          ${OBJDIR}/paw_stpa.o
+OBJSTPREPORT = \
+          ${OBJDIR}/paw_stpreport.o
+OBJLATTICE = \
+          ${OBJDIR}/paw_lattice.o
+OBJTEST = \
+          ${OBJDIR}/paw_oneatom.o \
+          ${OBJDIR}/paw_test.o \
+          ${OBJDIR}/paw_testlib.o
+
+# Objects for atomic setup tool
+OBJNEWATOM = \
+          ${OBJDIR}/paw_newatom.o
+# Objects for atomic setup tool
+OBJATOM = \
+          ${OBJDIR}/paw_diffgl.o \
+          ${OBJDIR}/paw_oldradial.o \
+          ${OBJDIR}/paw_atom.o
+# Objects for paw_tra.x
+OBJTRA =  \
+          ${OBJDIR}/paw_tra.o
+# Objects for paw_wave.x
+OBJWAVE=  \
+          ${OBJDIR}/paw_wave.o
+# Objects for paw_1davpot.x
+OBJ1DAVPOT=  \
+          ${OBJDIR}/paw_1davpot.o
+# Objects for paw_cmcwave.x
+OBJCMCWAVE=  \
+          ${OBJDIR}/paw_cmcwave.o
+# Objects for paw_grab.x
+OBJGRAB=  \
+          ${OBJDIR}/paw_grab.o
+# Objects for paw_dos.x
+OBJDOS=  \
+          ${OBJDIR}/paw_dos.o
+# Objects for paw_dosplot.x
+OBJDOSPLOT=  \
+          ${OBJDIR}/paw_dosplot.o
+# Objects for paw_bands.x
+OBJBANDS=  \
+          ${OBJDIR}/paw_bands.o
+# Objects for paw_preopt.x
+OBJPRE=  \
+          ${OBJDIR}/paw_preopt.o
+# Objects for paw_converttra.x
+OBJCONVERTTRA=  \
+          ${OBJDIR}/paw_converttra.o
+# Objects for paw_cleantra.x
+OBJCLEANTRA=  \
+          ${OBJDIR}/paw_cleantra.o
+# Objects for paw_strc.x
+OBJSTRC=  \
+          ${OBJDIR}/paw_strc.o
+# Objects for paw_toxyz.x
+OBJTOXYZ=  \
+          ${OBJDIR}/paw_toxyz.o
+# Objects for paw_tostrc.x
+OBJTOSTRC=  \
+          ${OBJDIR}/paw_tostrc.o
+# Objects for paw_tostrc.x
+OBJPOLYHEDRA=  \
+          ${OBJDIR}/paw_polyhedra.o
+
+
+#########################################################################
+##  create preprocessor                                                ##
+#########################################################################
+f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
+${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
+
+${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
+	cat ${THISDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
+	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
+
+${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
+	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
+#
+#########################################################################
+##  link files and produce executable PAWX                             ##
+#########################################################################
+#
+${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
+                ${OBJDIR}/version_writeparmfile.o \
+                ${OBJVERSION} ${OBJECTS} ${MPE}
+	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
+#
+#########################################################################
+##  build paw library                                                  ##
+#########################################################################
+${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+
+${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
+#
+#########################################################################
+##  build full paw library and optionally exclude objects              ##
+##  this target can be used to create a library of all objects         ##
+##  additionally on can exclude objects using the EXCLUDE parameter    ##
+##  for example: make libfull EXCLUDE="paw_classical.o paw_setups.o"   ##
+##  The object paw.o will allways be excluded, because it contains a   ##
+##  main program.                                                      ##
+##  This library can then be linked to a main program, like libpaw.a   ##
+#########################################################################
+${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PAWLIBFULL} paw.o
+	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
+
+${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+	$(LIBAR) cru $(PPAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
+	$(LIBAR) -dv ${PPAWLIBFULL} paw.o
+	for EX in ${EXCLUDE}; do ar -dv ${PPAWLIBFULL} $$EX;done
+#
+#########################################################################
+##  build Tools                                                        ##
+#########################################################################
+#
+${BINDIR}/paw_murnaghan.x: ${OBJMURNAGHAN} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_murnaghan.x ${OBJMURNAGHAN} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_murnaghan:
+	rm -f ${OBJMURNAGHAN} ${BINDIR}/paw_murnaghan.x
+#
+${BINDIR}/paw_stpreport.x: ${OBJSTPREPORT} ${PAWLIB} ${BINDIR}/paw_stpa.x
+	${LINK} -o ${BINDIR}/paw_stpreport.x ${OBJSTPREPORT} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_stpreport:
+	rm -f ${OBJSTPREPORT} ${BINDIR}/paw_stpreport.x
+#
+${BINDIR}/paw_stpa.x: ${OBJSTPA} ${PAWLIB} 
+	${LINK} -o ${BINDIR}/paw_stpa.x ${OBJSTPA} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_stpa:
+	rm -f ${OBJSTPA} ${BINDIR}/paw_stpa.x
+#
+${BINDIR}/paw_test.x: ${OBJTEST} ${PAWLIB} 
+	${LINK} -o ${BINDIR}/paw_test.x ${OBJTEST} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_test:
+	rm -f ${OBJTEST} ${BINDIR}/paw_test.x
+#
+${BINDIR}/paw_lattice.x: ${OBJLATTICE} ${PAWLIB} ${OBJDIR}/paw_setupread.o
+	${LINK} -o ${BINDIR}/paw_lattice.x ${OBJLATTICE} ${OBJDIR}/paw_setupread.o -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_lattice:
+	rm -f ${OBJLATTICE} ${BINDIR}/paw_lattice.x
+#
+${BINDIR}/paw_newatom.x: ${OBJNEWATOM} ${PAWLIB} ${OBJDIR}/paw_setupread.o
+	${LINK} -o ${BINDIR}/paw_newatom.x ${OBJNEWATOM} ${OBJDIR}/paw_setupread.o -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_newatom:
+	rm -f ${OBJNEWATOM} ${BINDIR}/paw_newatom.x
+#
+${BINDIR}/paw_atom.x: ${OBJATOM} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_atom.x ${OBJATOM} -lpaw ${LIBS}
+#
+clean_atom:
+	rm -f ${OBJATOM}; rm -f ${BINDIR}/paw_atom.x
+#
+${BINDIR}/paw_tra.x: ${OBJTRA} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_tra.x ${OBJTRA} ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_tra:
+	rm -f ${OBJTRA}; rm -f ${BINDIR}/paw_tra.x
+#
+${BINDIR}/paw_wave.x: ${OBJWAVE} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_wave.x ${OBJWAVE} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_wave:
+	rm -f ${OBJWAVE}; rm -f ${BINDIR}/paw_wave.x
+#
+${BINDIR}/paw_1davpot.x: ${OBJ1DAVPOT} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_1davpot.x ${OBJ1DAVPOT} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_1davpot:
+	rm -f ${OBJ1DAVPOT}; rm -f ${BINDIR}/paw_1davpot.x
+#
+${BINDIR}/paw_cmcwave.x: ${OBJCMCWAVE} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_cmcwave.x ${OBJCMCWAVE} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_cmcwave:
+	rm -f ${OBJCMCWAVE}; rm -f ${BINDIR}/paw_cmcwave.x
+#
+${BINDIR}/paw_grab.x: ${OBJGRAB} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_grab.x ${OBJGRAB} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_grab:
+	rm -f ${OBJGRAB}; rm -f ${BINDIR}/paw_grab.x
+#
+${BINDIR}/paw_dos.x: ${OBJDOS} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_dos.x ${OBJDOS} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_dos:
+	rm -f ${OBJDOS}; rm -f ${BINDIR}/paw_dos.x
+#
+${BINDIR}/paw_dosplot.x: ${OBJDOSPLOT} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_dosplot.x ${OBJDOSPLOT} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_dosplot:
+	rm -f ${OBJDOSPLOT}; rm -f ${BINDIR}/paw_dosplot.x
+#
+${BINDIR}/paw_bands.x: ${OBJBANDS} ${PAWLIBFULL}
+	${LINK} -o ${BINDIR}/paw_bands.x ${OBJBANDS} -L${OBJDIR}  -lpawfull ${LIBS}
+#
+${BINDIR}/ppaw_bands.x: ${OBJBANDS} ${PPAWLIBFULL}
+	${LINK} -o ${BINDIR}/ppaw_bands.x ${OBJBANDS} -L${OBJDIR}  -lppawfull ${LIBS}
+#
+clean_bands:
+	rm -f ${OBJBANDS}; rm -f ${BINDIR}/paw_bands.x
+	rm -f ${OBJBANDS}; rm -f ${BINDIR}/ppaw_bands.x
+#
+${BINDIR}/paw_preopt.x: ${OBJPRE} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_preopt.x ${OBJPRE}  ${OBJDIR}/paw_forcefield.o ${OBJDIR}/paw_classical.o -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_preopt:
+	rm -f ${OBJPRE}; rm -f ${BINDIR}/paw_preopt.x
+#
+${BINDIR}/paw_converttra.x: ${OBJCONVERTTRA} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_converttra.x ${OBJCONVERTTRA} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_converttra:
+	rm -f ${OBJCONVERTTRA}; rm -f ${BINDIR}/paw_converttra.x
+#
+${BINDIR}/paw_cleantra.x: ${OBJCLEANTRA} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_cleantra.x ${OBJCLEANTRA} -L${OBJDIR}  -lpaw ${LIBS}
+#
+clean_cleantra:
+	rm -f ${OBJCLEANTRA}; rm -f ${BINDIR}/paw_cleantra.x
+#
+${BINDIR}/paw_strc.x: ${OBJSTRC} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_strc.x ${OBJSTRC} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_strc:
+	rm -f ${OBJSTRC}; rm -f ${BINDIR}/paw_strc.x
+#
+${BINDIR}/paw_toxyz.x: ${OBJTOXYZ} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_toxyz.x ${OBJTOXYZ} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_toxyz:
+	rm -f ${OBJTOXYZ}; rm -f ${BINDIR}/paw_toxyz.x
+#
+${BINDIR}/paw_tostrc.x: ${OBJTOSTRC} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_tostrc.x ${OBJTOSTRC} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_tostrc:
+	rm -f ${OBJTOSTRC}; rm -f ${BINDIR}/paw_tostrc.x
+#
+${BINDIR}/paw_polyhedra.x: ${OBJPOLYHEDRA} ${PAWLIB}
+	${LINK} -o ${BINDIR}/paw_polyhedra.x ${OBJPOLYHEDRA} -L${OBJDIR} -lpaw ${LIBS}
+#
+clean_polyhedra:
+	rm -f ${OBJPOLYHEDRA}; rm -f ${BINDIR}/paw_polyhedra.x
+#
+# copy include files if necessary (controlled by if-statements above)
+#
+${OBJDIR}/fftw_f77.i:
+	${FFTWINCLUDE}
+#
+${OBJDIR}/mpif.h:
+	${MPIINCLUDE}
+#
+#########################################################################
+##  execute tests                                                      ##
+#########################################################################
+#
+tests: ${PAWX} varOBJTYPE_tests
+varOBJTYPE_tests: ${PAWX} 
+	rm -rf ${BINDIR}/varOBJTYPE_tests;cp -r ${THISDIR}/tests ${BINDIR}/varOBJTYPE_tests;cd ${BINDIR}/varOBJTYPE_tests;${MAKE} all
+#
+#${OBJDIR}/mm_paw_f77.o
+#########################################################################
+##  compile code files independent of parameter                        ##
+##  and place the objects in OBJDIR                                    ##
+#########################################################################
+.PHONY: ${OBJVERSION} ${SRCBLOB}
+#
+#__special rule for parallel interface because of preprocessor___________
+${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
+	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
+#
+# generate version information __________________________________________
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	bash ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+# generate source blob __________________________________________________
+${SRCBLOB}:
+	rm -f paw_srcblob paw_srcblob.o
+	tar -czf paw_srcblob ${SRCDIR} ${THISDIR}/parms.in_use
+ifeq ($(shell uname -s),Linux) 
+	ld -r -b binary -o paw_srcblob.o paw_srcblob
+endif
+ifeq ($(shell uname -s),Darwin)
+	touch paw_srcblob_dummy.f90
+	${COMPILE} -o paw_srcblob_dummy.o paw_srcblob_dummy.f90
+	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin paw_srcblob paw_srcblob_dummy.o
+endif
+#
+#__general rule for object files_________________________________________
+$(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+#__general rule for object files fortran 77______________________________
+$(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
+	cp $< ${OBJDIR}/$*_d.f
+	$(COMPILE:-fimplicit-none=) -o $@ ${OBJDIR}/$*_d.f
+	#${COMPILE} -o $@ ${OBJDIR}/$*_d.f
+#
+#__compile the tools____________________________________________________
+#
+${OBJMURNAGHAN}: ${OBJDIR}/%.o : ${TOOLDIR}/Murnaghan/%.f90
+#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	echo doing murnaghan
+	cp $< ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
+#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	cp $< ${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJSTPA}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJTEST}: ${OBJDIR}/%.o : ${TOOLDIR}/Test/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJLATTICE}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJNEWATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJ1DAVPOT}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJCMCWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJDOSPLOT}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJBANDS}: ${OBJDIR}/%.o : ${TOOLDIR}/Bands/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJPRE}: ${OBJDIR}/%.o : ${TOOLDIR}/Preopt/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJCONVERTTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJCLEANTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJTOXYZ}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#
+${OBJPOLYHEDRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Polyhedra/%.f90
+	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+#########################################################################
+##  include dependencies through mod files                             ##
+#########################################################################
+ifeq ($(ALLDEP),T)
+ ${OBJDIR}/paw_filehandler.o:   ${OBJDIR}/paw_strings.o
+ ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
+ ${OBJDIR}/paw_periodictable.o: ${OBJDIR}/paw_strings.o
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_strings.o
+ ${OBJDIR}/paw_trace.o:         ${OBJDIR}/paw_strings.o
+#
+ ${OBJDIR}/paw_timing.o:        ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_report.o:        ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_augmentation.o:  ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw.o:               ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_potential.o:     ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_pairpotential.o: ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_isolate.o:       ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_thermostat.o:    ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_occupations.o:   ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_classical.o:     ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_thermostat.o:    ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_debug.o:         ${OBJDIR}/paw_mpelib${MODE}.o
+ ${OBJDIR}/paw_debug.o:          ${OBJDIR}/paw_waves1.o
+ ${OBJDIR}/paw_debug.o:          ${OBJDIR}/paw_waves2.o
+
+ ${OBJDIR}/paw_dimer.o:         ${OBJDIR}/paw_mpelib${MODE}.o
+
+
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_periodictable.o
+ ${OBJDIR}/paw_atomlib.o:       ${OBJDIR}/paw_periodictable.o
+ ${OBJDIR}/paw_schroedinger.o:  ${OBJDIR}/paw_periodictable.o
+
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_constraints.o:   ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_occupations.o:   ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves1.o:        ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_efg.o:           ${OBJDIR}/paw_linkedlist.o
+ ${OBJDIR}/paw_setups.o:        ${OBJDIR}/paw_linkedlist.o
+
+ ${OBJDIR}/paw_atoms.o:         ${OBJDIR}/paw_report.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_report.o
+ ${OBJDIR}/paw_occupations.o:   ${OBJDIR}/paw_report.o
+ ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_report.o
+ ${OBJDIR}/paw_classical.o:     ${OBJDIR}/paw_report.o
+ ${OBJDIR}/paw_thermostat.o:    ${OBJDIR}/paw_report.o
+
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_clock.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves1.o
+ ${OBJDIR}/paw_ionew.o:         ${OBJDIR}/paw_waves2.o
+
+ ${OBJDIR}/paw_waves2.o:        ${OBJDIR}/paw_waves1.o
+
+ ${OBJDIR}/paw_cg.o:               ${OBJDIR}/paw_waves1.o
+
+ ${OBJDIR}/paw_ioroutines.o:    ${OBJDIR}/paw_forcefield.o
+# ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_fft.o
+# ${OBJDIR}/paw_optic.o:		${OBJDIR}/paw_waves.o
+ ${OBJDIR}/paw_qmmm.o:          ${OBJDIR}/paw_report.o
+
+ ${OBJDIR}/paw_dmft.o:          ${OBJDIR}/paw_lmto.o
+ ${OBJDIR}/paw_dmft.o:          ${OBJDIR}/paw_waves1.o
+
+ ${OBJDIR}/paw_library.o:      ${OBJDIR}/fftw_f77.i
+endif
+##########################################################################
+#   machine-generated dependencies
+#
+#   the dependencies are generated by the shell script "finddep"
+#   which must be run in the directory where it lies (src/Buildtools/F90PP)
+#   the resulting file "dependencies" in that directory is copied here...
+###########################################################################
+ ## file:src/paw_assist.f90
+ dials_module.mod :  ${OBJDIR}/paw_assist.o
+ autopilot_module.mod :  ${OBJDIR}/paw_assist.o
+ ## file:src/paw_atomlib.f90
+ ${OBJDIR}/paw_atomlib.o  :  periodictable_module.mod
+ ## file:src/paw_atoms.f90
+ ${OBJDIR}/paw_atoms.o  :  mpe_module.mod
+ ${OBJDIR}/paw_atoms.o  :  restart_interface.mod
+ atoms_module.mod :  ${OBJDIR}/paw_atoms.o
+ ## file:src/paw_augmentation.f90
+ ${OBJDIR}/paw_augmentation.o  :  mpe_module.mod
+ augmentation_module.mod :  ${OBJDIR}/paw_augmentation.o
+ expertnal1cpot_module.mod :  ${OBJDIR}/paw_augmentation.o
+ ## file:src/paw_brillouin.f90
+ brillouin_module.mod :  ${OBJDIR}/paw_brillouin.o
+ ## file:src/paw_cell.f90
+ ${OBJDIR}/paw_cell.o  :  restart_interface.mod
+ ${OBJDIR}/paw_cell.o  :  mpe_module.mod
+ cell_module.mod :  ${OBJDIR}/paw_cell.o
+ ## file:src/paw_cg.f90
+ ${OBJDIR}/paw_cg.o  :  waves_module.mod
+ ${OBJDIR}/paw_cg.o  :  mpe_module.mod
+ cg_interface_module.mod :  ${OBJDIR}/paw_cg.o
+ ## file:src/paw_classical.f90
+ ${OBJDIR}/paw_classical.o  :  mpe_module.mod
+ ${OBJDIR}/paw_classical.o  :  periodictable_module.mod
+ classical_module.mod :  ${OBJDIR}/paw_classical.o
+ ufftable_module.mod :  ${OBJDIR}/paw_classical.o
+ ## file:src/paw_clock.f90
+ clock_module.mod :  ${OBJDIR}/paw_clock.o
+ ## file:src/paw_constants.f90
+ constants_module.mod :  ${OBJDIR}/paw_constants.o
+ ## file:src/paw_constraints.f90
+ ${OBJDIR}/paw_constraints.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_constraints.o  :  mpe_module.mod
+ constraints_module.mod :  ${OBJDIR}/paw_constraints.o
+ symmetrize_module.mod :  ${OBJDIR}/paw_constraints.o
+ ## file:src/paw_cosmo.f90
+ ${OBJDIR}/paw_cosmo.o  :  restart_interface.mod
+ ${OBJDIR}/paw_cosmo.o  :  mpe_module.mod
+ ${OBJDIR}/paw_cosmo.o  :  periodictable_module.mod
+ cosmo_module.mod :  ${OBJDIR}/paw_cosmo.o
+ ## file:src/paw_debug.f90
+ ${OBJDIR}/paw_debug.o  :  mpe_module.mod
+ ${OBJDIR}/paw_debug.o  :  waves_module.mod
+ debug_module.mod :  ${OBJDIR}/paw_debug.o
+ ## file:src/paw_dftaddendum.f90
+ newdft_module.mod :  ${OBJDIR}/paw_dftaddendum.o
+ ## file:src/paw_dft.f90
+ dft_module.mod :  ${OBJDIR}/paw_dft.o
+ table1d_module.mod :  ${OBJDIR}/paw_dft.o
+ exchange_module.mod :  ${OBJDIR}/paw_dft.o
+ perdewzunger_module.mod :  ${OBJDIR}/paw_dft.o
+ barthhedin_module.mod :  ${OBJDIR}/paw_dft.o
+ perdew_module.mod :  ${OBJDIR}/paw_dft.o
+ perdewwang91l_module.mod :  ${OBJDIR}/paw_dft.o
+ perdewwang91g_module.mod :  ${OBJDIR}/paw_dft.o
+ pbe_module.mod :  ${OBJDIR}/paw_dft.o
+ lyp88_module.mod :  ${OBJDIR}/paw_dft.o
+ ## file:src/paw_dimer.f90
+ ${OBJDIR}/paw_dimer.o  :  strings_module.mod
+ ${OBJDIR}/paw_dimer.o  :  mpe_module.mod
+ dimer_module.mod :  ${OBJDIR}/paw_dimer.o
+ dimer_oscillator_module.mod :  ${OBJDIR}/paw_dimer.o
+ ## file:src/paw_efg.f90
+ ${OBJDIR}/paw_efg.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_efg.o  :  mpe_module.mod
+ hyperfine_module.mod :  ${OBJDIR}/paw_efg.o
+ ## file:src/paw_error.f90
+ error_module.mod :  ${OBJDIR}/paw_error.o
+ ## file:src/paw_extpot.f90
+ ## file:src/paw.f90
+ ${OBJDIR}/paw.o  :  clock_module.mod
+ ${OBJDIR}/paw.o  :  mpe_module.mod
+ version_module.mod :  ${OBJDIR}/paw_version.o
+ timestep_module.mod :  ${OBJDIR}/paw.o
+ stopit_module.mod :  ${OBJDIR}/paw.o
+ ## file:src/paw_fft.f90
+ ${OBJDIR}/paw_fft.o  :  mpe_module.mod
+ planewave_module.mod :  ${OBJDIR}/paw_fft.o
+ ## file:src/paw_filehandler.f90
+ ${OBJDIR}/paw_filehandler.o  :  strings_module.mod
+ filehandler_module.mod :  ${OBJDIR}/paw_filehandler.o
+ ## file:src/paw_forcefield.f90
+ ${OBJDIR}/paw_forcefield.o  :  strings_module.mod
+ ${OBJDIR}/paw_forcefield.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_forcefield.o  :  classical_module.mod
+ forcefield_module.mod :  ${OBJDIR}/paw_forcefield.o
+ ## file:src/paw_generalpurpose.f90
+ sort_module.mod :  ${OBJDIR}/paw_generalpurpose.o
+ ## file:src/paw_graphics.f90
+ ${OBJDIR}/paw_graphics.o  :  mpe_module.mod
+ graphics_module.mod :  ${OBJDIR}/paw_graphics.o
+ ## file:src/paw_ionew.f90
+ ${OBJDIR}/paw_ionew.o  :  restart_interface.mod
+ ${OBJDIR}/paw_ionew.o  :  mpe_module.mod
+ ${OBJDIR}/paw_ionew.o  :  strings_module.mod
+ ${OBJDIR}/paw_ionew.o  :  timestep_module.mod
+ ## file:src/paw_ioroutines.f90
+ ${OBJDIR}/paw_ioroutines.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  clock_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  version_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  strings_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  mpe_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_ioroutines.o  :  forcefield_module.mod
+ io_module.mod :  ${OBJDIR}/paw_ioroutines.o
+ ## file:src/paw_iotra.f90
+ trajectoryio_module.mod :  ${OBJDIR}/paw_iotra.o
+ ## file:src/paw_isolate.f90
+ ${OBJDIR}/paw_isolate.o  :  mpe_module.mod
+ isolate_module.mod :  ${OBJDIR}/paw_isolate.o
+ ## file:src/paw_kpoints.f90
+ ## file:src/paw_ci.f90
+ ci_module.mod :  ${OBJDIR}/paw_ci.o
+ ## file:src/paw_library.f90
+ random_module.mod :  ${OBJDIR}/paw_library.o
+ ## file:src/paw_linkedlist.f90
+ ${OBJDIR}/paw_linkedlist.o  :  strings_module.mod
+ ${OBJDIR}/paw_linkedlist.o  :  mpe_module.mod
+ llist_module.mod :  ${OBJDIR}/paw_linkedlist.o
+ linkedlist_module.mod :  ${OBJDIR}/paw_linkedlist.o
+ buffer_module.mod :  ${OBJDIR}/paw_linkedlist.o
+ ## file:src/paw_lists.f90
+ energylist_module.mod :  ${OBJDIR}/paw_lists.o
+ grouplist_module.mod :  ${OBJDIR}/paw_lists.o
+ atomtypelist_module.mod :  ${OBJDIR}/paw_lists.o
+ ## file:src/paw_lmtobasics.f90
+ ${OBJDIR}/paw_lmtobasics.o  :  strings_module.mod
+ ## file:src/paw_lock.f90
+ ${OBJDIR}/paw_lock.o  :  clock_module.mod
+ lock_module.mod :  ${OBJDIR}/paw_lock.o
+ ## file:src/paw_md.f90
+ ## file:src/paw_mixer.f90
+ ${OBJDIR}/paw_mixer.o  :  mpe_module.mod
+ mixpulay_module.mod :  ${OBJDIR}/paw_mixer.o
+ ## file:src/paw_mpelib.f90
+ mpi.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_mpif_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_combine_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_broadcast_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_sendreceive_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_send_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_receive_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_transpose_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_gather_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ mpe_module.mod :  ${OBJDIR}/paw_mpelib${MODE}.o
+ ## file:src/paw_occupations.f90
+ ${OBJDIR}/paw_occupations.o  :  restart_interface.mod
+ ${OBJDIR}/paw_occupations.o  :  mpe_module.mod
+ ${OBJDIR}/paw_occupations.o  :  linkedlist_module.mod
+ dynocc_module.mod :  ${OBJDIR}/paw_occupations.o
+ occupation_module.mod :  ${OBJDIR}/paw_occupations.o
+ ## file:src/paw_optfric.f90
+ optfric_module.mod :  ${OBJDIR}/paw_optfric.o
+ ## file:src/paw_opteels.f90
+ ${OBJDIR}/paw_opteels.o  :  mpe_module.mod
+ ## file:src/paw_pairpotential.f90
+ ${OBJDIR}/paw_pairpotential.o  :  mpe_module.mod
+ ## file:src/paw_pdos.f90
+ pdos_module.mod :  ${OBJDIR}/paw_pdos.o
+ ## file:src/paw_banddata.f90
+ banddata_module.mod :  ${OBJDIR}/paw_banddata.o
+ ## file:src/paw_periodictable.f90
+ ${OBJDIR}/paw_periodictable.o  :  strings_module.mod
+ periodictable_module.mod :  ${OBJDIR}/paw_periodictable.o
+ ## file:src/paw_polynom.f90
+ ## file:src/paw_potential.f90
+ ${OBJDIR}/paw_potential.o  :  mpe_module.mod
+ ${OBJDIR}/paw_potential.o  :  periodictable_module.mod
+ potential_module.mod :  ${OBJDIR}/paw_potential.o
+ ## file:src/paw_qmmm.f90
+ ${OBJDIR}/paw_qmmm.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_qmmm.o  :  restart_interface.mod
+ ${OBJDIR}/paw_qmmm.o  :  mpe_module.mod
+ qmmm_module.mod :  ${OBJDIR}/paw_qmmm.o
+ ## file:src/paw_radial.f90
+ ${OBJDIR}/paw_radial.o  :  periodictable_module.mod
+ radial_module.mod :  ${OBJDIR}/paw_radial.o
+ shlogradial_module.mod :  ${OBJDIR}/paw_radial.o
+ logradial_module.mod :  ${OBJDIR}/paw_radial.o
+ besseltransform_module.mod :  ${OBJDIR}/paw_radial.o
+ ## file:src/paw_report.f90
+ restart_interface.mod :  ${OBJDIR}/paw_report.o
+ ## file:src/paw_schroedinger.f90
+ ## file:src/paw_selftest.f90
+ selftest_module.mod :  ${OBJDIR}/paw_selftest.o
+ ## file:src/paw_setupread.f90
+ ${OBJDIR}/paw_setupread.o  :  linkedlist_module.mod
+ setupread_module.mod :  ${OBJDIR}/paw_setupread.o
+ ## file:src/paw_setups.f90
+ ${OBJDIR}/paw_setups.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_setups.o  :  lmto_module.mod
+ ${OBJDIR}/paw_setups.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_setups.o  :  version_module.mod
+ setup_module.mod :  ${OBJDIR}/paw_setups.o
+ ## file:src/paw_softcore.f90
+ core_module.mod :  ${OBJDIR}/paw_softcore.o
+ ## file:src/paw_specialfunctions.f90
+ ## file:src/paw_spherical.f90
+ clebsch_module.mod :  ${OBJDIR}/paw_spherical.o
+ sphericalccmat_module.mod :  ${OBJDIR}/paw_spherical.o
+ ## file:src/paw_strcio.f90
+ ${OBJDIR}/paw_strcio.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_strcio.o  :  strings_module.mod
+ strcio_module.mod :  ${OBJDIR}/paw_strcio.o
+ ## file:src/paw_strings.f90
+ strings_module.mod :  ${OBJDIR}/paw_strings.o
+ ## file:src/paw_thermostat.f90
+ ${OBJDIR}/paw_thermostat.o  :  restart_interface.mod
+ ${OBJDIR}/paw_thermostat.o  :  mpe_module.mod
+ thermostat_module.mod :  ${OBJDIR}/paw_thermostat.o
+ ## file:src/paw_timing.f90
+ ${OBJDIR}/paw_timing.o  :  mpe_module.mod
+ timing_module.mod :  ${OBJDIR}/paw_timing.o
+ ## file:src/paw_trace.f90
+ ${OBJDIR}/paw_trace.o  :  strings_module.mod
+ trace_module.mod :  ${OBJDIR}/paw_trace.o
+ ## file:src/paw_usage.f90
+ ${OBJDIR}/paw_usage.o  :  mpe_module.mod
+ ## file:src/paw_vdw.f90
+ ${OBJDIR}/paw_vdw.o  :  constants_module.mod
+ ${OBJDIR}/paw_vdw.o  :  strings_module.mod
+ vdw_module.mod :  ${OBJDIR}/paw_vdw.o
+ ## file:src/paw_vext.f90
+ ${OBJDIR}/paw_vext.o  :  periodictable_module.mod
+ vext_module.mod :  ${OBJDIR}/paw_vext.o
+ ## file:src/paw_warmup.f90
+ warmup_module.mod :  ${OBJDIR}/paw_warmup.o
+ ## file:src/paw_waves1.f90
+ ${OBJDIR}/paw_waves1.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_waves1.o  :  mpe_module.mod
+ waves_module.mod :  ${OBJDIR}/paw_waves1.o
+ ## file:src/paw_waves2.f90
+ ${OBJDIR}/paw_waves2.o  :  mpe_module.mod
+ ${OBJDIR}/paw_waves2.o  :  setup_module.mod
+ ${OBJDIR}/paw_waves2.o  :  waves_module.mod
+ ${OBJDIR}/paw_waves2.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_waves2.o  :  restart_interface.mod
+ wavesfixrho_module.mod :  ${OBJDIR}/paw_waves2.o
+ totalspin_module.mod :  ${OBJDIR}/paw_waves2.o
+ ## file:src/paw_waves_add.f90
+ ${OBJDIR}/paw_waves_add.o  :  waves_module.mod
+ ${OBJDIR}/paw_waves_add.o  :  mpe_module.mod
+ ## file:src/Tools/Atom/build.f90
+ ${OBJDIR}/build.o  :  strings_module.mod
+ ${OBJDIR}/build.o  :  periodictable_module.mod
+ ## file:src/Tools/Atom/inboudaryfromkaras.f90
+ ## file:src/Tools/Stpa/paw_stpa.f90
+ ${OBJDIR}/paw_stpa.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_stpa.o  :  strings_module.mod
+ ## file:src/Tools/Test/paw_test.f90
+ ${OBJDIR}/paw_test.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_test.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_test.o  :  strings_module.mod
+ broyden_module.mod :  ${OBJDIR}/paw_test.o
+ ## file:src/Tools/Atomnew/paw_lattice.f90
+ ${OBJDIR}/paw_lattice.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_lattice.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_lattice.o  :  strings_module.mod
+ broyden_module.mod :  ${OBJDIR}/paw_lattice.o
+ ## file:src/Tools/Atomnew/paw_newatom.f90
+ ${OBJDIR}/paw_newatom.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_newatom.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_newatom.o  :  strings_module.mod
+ broyden_module.mod :  ${OBJDIR}/paw_newatom.o
+ ## file:src/Tools/Atom/paw_atom.f90
+ ${OBJDIR}/paw_atom.o  :  strings_module.mod
+ ${OBJDIR}/paw_atom.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_atom.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_atom.o  :  schrgl_interface_module.mod
+ grid.mod :  ${OBJDIR}/paw_atom.o
+ aeatom.mod :  ${OBJDIR}/paw_atom.o
+ projection.mod :  ${OBJDIR}/paw_atom.o
+ ## file:src/Tools/Atom/paw_diffgl.f90
+ schrgl_interface_module.mod :  ${OBJDIR}/paw_diffgl.o
+ ## file:src/Tools/Atom/paw_oldradial.f90
+ besseltransform_module.mod :  ${OBJDIR}/paw_oldradial.o
+ ## file:src/Tools/Convertrstrt/paw_iooldrdwrte.f90
+ ## file:src/Tools/Convertrstrt/read.f90
+ ## file:src/Tools/Grab/paw_grab.f90
+ ${OBJDIR}/paw_grab.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_grab.o  :  strings_module.mod
+ substance_module.mod :  ${OBJDIR}/paw_grab.o
+ readcntl_module.mod :  ${OBJDIR}/paw_grab.o
+ ## file:src/Tools/PDoS/paw_dos.f90
+ ${OBJDIR}/paw_dos.o  :  pdos_module.mod
+ ${OBJDIR}/paw_dos.o  :  strings_module.mod
+ ${OBJDIR}/paw_dos.o  :  linkedlist_module.mod
+ spindir_module.mod :  ${OBJDIR}/paw_dos.o
+ orbitals_module.mod :  ${OBJDIR}/paw_dos.o
+ readcntl_module.mod :  ${OBJDIR}/paw_dos.o
+ ## file:src/Tools/Bands/paw_bands.f90
+ ${OBJDIR}/paw_bands.o  :  pdos_module.mod
+ ${OBJDIR}/paw_bands.o  :  strings_module.mod
+ ${OBJDIR}/paw_bands.o  :  linkedlist_module.mod
+ spindir_module.mod :  ${OBJDIR}/paw_bands.o
+ orbitals_module.mod :  ${OBJDIR}/paw_bands.o
+ readcntl_module.mod :  ${OBJDIR}/paw_bands.o
+ ## file:src/Tools/Preopt/paw_preopt.f90
+ ${OBJDIR}/paw_preopt.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_preopt.o  :  strings_module.mod
+ ${OBJDIR}/paw_preopt.o  :  periodictable_module.mod
+ popt_module.mod :  ${OBJDIR}/paw_preopt.o
+ read_module.mod :  ${OBJDIR}/paw_preopt.o
+ ## file:src/Tools/Strc/paw_strc.f90
+ ${OBJDIR}/paw_strc.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_strc.o  :  strings_module.mod
+ ## file:src/Tools/Strc/paw_tostrc.f90
+ ${OBJDIR}/paw_tostrc.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_tostrc.o  :  strings_module.mod
+ ${OBJDIR}/paw_tostrc.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_tostrc.o  :  forcefield_module.mod
+ ## file:src/Tools/Strc/paw_toxyz.f90
+ ${OBJDIR}/paw_toxyz.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_toxyz.o  :  strings_module.mod
+ ## file:src/Tools/Strc/paw_tozyz.f90
+ ${OBJDIR}/paw_tozyz.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_tozyz.o  :  strings_module.mod
+ ## file:src/Tools/Tra/paw_cleantra.f90
+ ${OBJDIR}/paw_cleantra.o  :  strings_module.mod
+ ${OBJDIR}/paw_cleantra.o  :  linkedlist_module.mod
+ ## file:src/Tools/Tra/paw_converttra.f90
+ ## file:src/Tools/Tra/paw_tra.f90
+ ${OBJDIR}/paw_tra.o  :  strings_module.mod
+ ${OBJDIR}/paw_tra.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_tra.o  :  sort_module.mod
+ ${OBJDIR}/paw_tra.o  :  periodictable_module.mod
+ ${OBJDIR}/paw_tra.o  :  forcefield_module.mod
+ trajectory_module.mod :  ${OBJDIR}/paw_tra.o
+ ## file:src/Tools/Wave/paw_1davpot.f90
+ ## file:src/Tools/Wave/paw_cmcwave.f90
+ ## file:src/Tools/Wave/paw_wave.f90
+ ${OBJDIR}/paw_wave.o  :  strings_module.mod
+ ${OBJDIR}/paw_wave.o  :  linkedlist_module.mod
+ ${OBJDIR}/paw_wave.o  :  periodictable_module.mod
+ ## file:src/Tools/Wave/paw_lmto.f90
+##  ${OBJDIR}/paw_lmto.o  :  atoms_module.mod
+${OBJDIR}/paw_lmto.o  :  periodictable_module.mod
+lmto_module.mod :  ${OBJDIR}/paw_lmto.o
+ ## file:src/Tools/Wave/paw_dmft.f90
+dmft_module.mod :  ${OBJDIR}/paw_dmft.o
+${OBJDIR}/paw_dmft.o  :  lmto_module.mod
+${OBJDIR}/paw_dmft.o  :  waves_module.mod
+${OBJDIR}/paw_dmft.o  :  mpe_module.mod
+${OBJDIR}/paw_dmft.o  :  strings_module.mod
+

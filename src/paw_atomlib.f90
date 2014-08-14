@@ -1647,9 +1647,10 @@ END IF
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      logical(4) ,parameter      :: twrite=.false.
       INTEGER(4) ,PARAMETER      :: NITER=100
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
-      REAL(8)    ,PARAMETER      :: RMATCHN=3.D0 ! MIN MATCHING RADIUS
+      REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)                    :: R(NR)
@@ -1657,17 +1658,38 @@ END IF
       REAL(8)                    :: DREL(NR),GHOM(NR),PHIHOM(NR)
       REAL(8)                    :: PHIINHOM(NR)
       REAL(8)                    :: VAL1,VAL2,SVAR
-      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR
+      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,i,j
       INTEGER(4)                 :: ITER
       LOGICAL                    :: THOM
       REAL(8)                    :: Y2,Y1,X2,X1,DER,DERO
       INTEGER(4)                 :: IRBOX
 !     **************************************************************************
                                  CALL TRACE$PUSH('ATOMLIB$PAWBOUNDSTATE')
+      IF(TWRITE) THEN
+        WRITE(*,FMT='(80("+"),T20," ATOMLIB$PAWBOUNDSTATE ")')
+        WRITE(*,FMT='("L=",I3," NN=",I3," RBOX=",F9.3," NPRO=",I3)') &
+     &              L,NN,RBOX,NPRO
+        WRITE(*,FMT='("E=",F10.5)')E
+        DO I=1,NPRO
+          WRITE(*,FMT='("DH=",10F10.5)')DH(I,:)
+        ENDDO
+        DO I=1,NPRO
+          WRITE(*,FMT='("DO=",10F10.5)')DO(I,:)
+        ENDDO
+      END IF
+!
+      phi=0.d0
       CALL RADIAL$R(GID,NR,R)
 !     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST OUTSIDE THE BOX =================
+      IF(RBOX.GT.R(NR-3)) THEN
+        CALL ERROR$MSG('GRID TOO SMALL FOR CHOSEN BOX RADIUS')
+        CALL ERROR$R8VAL('RBOX',RBOX)
+        CALL ERROR$R8VAL('R(NR)',R(NR))
+        CALL ERROR$R8VAL('R(NR-2)',R(NR-2))
+        CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
+      END IF
       IRBOX=1
-      DO IR=1,NR-2
+      DO IR=1,NR-3
         IRBOX=IR
         IF(R(IR).GE.RBOX) EXIT
       ENDDO
@@ -1683,7 +1705,6 @@ END IF
       DX=1.D-2
       DO ITER=1,NITER
         E=X0
-        
 !       ========================================================================
 !       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
 !       ========================================================================
@@ -1705,7 +1726,6 @@ END IF
         ELSE
           PHI2(:)=PHI(:)
         END IF
-!
         IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
         IF(ITER.EQ.1) DX=SIGN(DX,-Z0)
         XM=X0
@@ -1740,8 +1760,17 @@ END IF
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBOX,Z0)
+!!$print*,'------------------------------------------------'
+!!$print*,'phaseshift ',rbox-r(irbox-1),r(irbox)-rbox,phi(irbox-1),phi(irbox) &
+!!$&   ,(phi(irbox)-phi(irbox-1))/phi(irbox)
+!!$do ir=3,irbox-1
+!!$ if(phi(ir+1)*phi(ir).le.0.d0) print*,'node of phi at ',ir,r(ir),phi(ir),phi(ir+1)
+!!$enddo
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
+        if(twrite)write(*,fmt='("x0=",f10.5," z0=",e12.3)')x0,z0
+!!$write(*,fmt='("x0=",f10.5," z0=",e12.3)')x0,z0
+
         IF(ABS(2.D0*DX).LE.TOL) EXIT
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1758,25 +1787,44 @@ END IF
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
       END IF
+!!$print*,'nn ',nn
+!!$do ir=1,nr-1
+!!$ if(phi1(ir+1)*phi1(ir).le.0.d0) print*,'node of phi1 at ',ir,r(ir),phi1(ir),phi1(ir+1)
+!!$ if(phi2(ir+1)*phi2(ir).le.0.d0) print*,'node of phi2 at ',ir,r(ir),phi2(ir),phi2(ir+1)
+!!$enddo
 !
 !     ==========================================================================
 !     ==  AVERAGE BOTH BOUNDS OF BISECTION                                    ==
 !     ==========================================================================
       X1=R(IRBOX-1)
       X2=R(IRBOX)
+!!$print*,'r ',x1,x2,rbox
       Y1=PHI1(IRBOX-1)
       Y2=PHI1(IRBOX)
       DER=(Y2-Y1)/(X2-X1)
       VAL1=Y1+DER*(RBOX-X1)
+!!$CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI1,0.D0,RBOX,Z0)
+!!$print*,'phi1 ',y1,y2,val1,der,z0-1.d0
       Y1=PHI2(IRBOX-1)
       Y2=PHI2(IRBOX)
       DER=(Y2-Y1)/(X2-X1)
       VAL2=Y1+DER*(RBOX-X1)
+!!$CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI2,0.D0,RBOX,Z0)
+!!$print*,'phi2 ',y1,y2,val2,der,z0-1.d0
 !
+!!$print*,'val1,val2 ',val1,val2
       SVAR=VAL2-VAL1
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR
       PHI=PHI1*VAL2-PHI2*VAL1
+!!$print*,'nn ',nn,val1,val2
+!!$do ir=1,nr-1
+!!$ if(phi(ir+1)*phi(ir).le.0.d0) print*,'a: node at ',ir,r(ir),phi(ir),phi(ir+1)
+!!$enddo
+!!$call atomlib_writephi('phi1.dat',gid,nr,1,phi1)
+!!$call atomlib_writephi('phi2.dat',gid,nr,1,phi2)
+!!$call atomlib_writephi('phi.dat',gid,nr,1,phi)
+return
 !
 !     ==========================================================================
 !     ==  DETERMINE MATCHING POINT                                            ==
@@ -1796,6 +1844,7 @@ END IF
       DREL(:)=0.D0
       SO=0
       IF(IRMATCH.LT.IRBOX) THEN
+print*,'integrate inward',irmatch,irbox,nr
         THOM=MAXVAL(ABS(G(:))).EQ.0.D0
         IDIR=-1
 !       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION   ==
@@ -1834,10 +1883,12 @@ END IF
 !       =======================================================================
         SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
         PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
-        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
-        SVAR=(DERO-DER)/PHI(IRMATCH)
         PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+!
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+!!$        SVAR=(DERO-DER)/PHI(IRMATCH)
+!!$        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
       END IF
                                  CALL TRACE$POP()
       RETURN

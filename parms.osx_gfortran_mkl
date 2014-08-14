@@ -1,0 +1,274 @@
+################################################################################
+##                                                                            ##
+##  parameter file for configuration of PAW environment                       ##
+##     "configure --with-parmfile=...."                                       ##
+##                                                                            ##
+##  for: on Intel Core I7 under Mac OS X 10.7.1 (Lion)                        ##
+##       with Intel Fortran 11.0/ MKL installed                               ##
+##                                                                            ##
+##    compile: $COMPILER $FCLAGS -o object source                             ##
+##    link:    $COMPILER $LDFLAGS -o executable objects $LIBS                 ##
+##                                                                            ##
+## LDFLAGS Options for the linker. should contain options like -s and -L that ##
+##         affect only the behavior of the linker                             ##
+## FCFLAGS Debugging and optimization options for the fortran compiler.       ##
+## CPFLAGS Options for the C-preprocessor CPP. countain options like -I -D    ##
+##         and -U. that affect which parts of the code will be selected       ##
+## LIBS    -l options passed to the linker.                                   ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##________________________________architecture (arbitrary name)_______________##
+##                                                                            ##
+ARCH="osx_gfortran_mkl"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  executables will be placed in bin/$ARCH.                                  ##
+##  recommended use: ARCH=compilername_machinename.                           ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##______________________flag for uppercase or lower case module file names____##
+##                                                                            ##
+TUPPERCASEMOD="F"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+## set to "T" ic compiler produces uppercase module file names with lowercase ##
+##                                                           extension (ifc7) ##
+## set to "F" if compiler produces all lower case module file names(g95,ifc10)##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##_______________________________flag for parallelization_____________________##
+##                                                                            ##
+TPARALLEL="T"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+## set to "T" to allow making parallel executables.                           ##
+## set to "F" if no MPI libraray available                                    ##
+##                                                                            ##
+################################################################################
+#
+#
+################################################################################
+##________________special rules for the configure script and f90 preprocessor_##
+##                                                                            ##
+SPECIAL="none"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  flag for exceptional rules in the make files for specific architectures   ##
+##  use SPECIAL="none" if no special rules are used                           ##
+##  other options                                                             ##
+##    "IBM" : IBM environment is special (ESSL library, MPI automatically     ##
+##            included needs POE)                                             ##
+################################################################################
+#
+################################################################################
+##___________________________DIRECTORIES containing LIBRARIES_________________##
+##
+BLASDIR="/opt/intel/composer_xe_2011_sp1/mkl/lib/"
+LAPACKDIR="/opt/intel/composer_xe_2011_sp1/mkl/lib/"
+FFTDIR="/opt/intel/composer_xe_2011_sp1/mkl/lib/intel64"
+MPIDIR="/opt/openmpi/"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##                                                                            ##
+##  leave empty if not needed. If a library contains the information for two, ##
+##                                                           leave one empty  ##
+## lapack                                                                     ##
+## fft      (do not not fftw version 3)                                       ##
+## mpi      (do not use mpi2)                                                 ##
+##                                                                            ##
+#LAPACKDIR="/home/tools/libs/acml3.0.0_64/gnu64/lib/"
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##_________________________________ include file for fftw_____________________##
+##                                                                            ##
+FFT_HEADER="${FFTDIR}/../../include/fftw/fftw_f77.i"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  include file for fourier transform                                        ##
+##  for FFTW version 1 and 2, the file to include is fortran/fftw_f77.i       ##
+##  for FFTW version 3, the file to include is ...fftw3.f                     ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##_________________________________ include file for mpi "mpif.f90"___________##
+##                                                                            ##
+MPI_HEADER="${MPIDIR}/include/mpif.h"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+## for mpich the file to include is include/mpif.h                            ##
+##             (leave blank for POE, IBM's parallel operating environment)    ##
+################################################################################
+#
+################################################################################
+##________________F90 compiler and linker for scalar executables______________##
+##                                                                            ##
+COMPILER_SCALAR="gfortran -fno-second-underscore"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  compiler call with all options that are identical for compilation and     ##
+##  linking and that are independent of optimization, debugging profiling etc.##
+##                                                                            ##
+##  for the g95 compiler include "g95" and options                            ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##_______________F90 compiler and linker for parallel executables_____________##
+##                                                                            ##
+COMPILER_PARALLEL="${MPIDIR}/bin/mpif90 "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  compiler call with all options that are identical for compilation and     ##
+##  linking and that are independent of optimization, debugging profiling etc.##
+##                                                                            ##
+##  for the g95 compiler include "g95" and options                            ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##___________________________standard compiler flags__________________________##
+##                                                                            ##
+FCFLAGS_NONE="-c -std=f2003"
+LDFLAGS_NONE=" "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  includes generic flags for compilations as opposed to linking.            ##
+##  FLAGS will be attached to COMPILER for all compilations                   ##
+##                                                                            ##
+##  usually the value is simply " -c"                                         ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#________________________________compiler flags for optimization______________##
+##                                                                            ##
+FCFLAGS_OPT="-c -O3 -std=f2003 -ffast-math -funroll-loops --param max-unroll-times=4 -mtune=native -msse4"
+LDFLAGS_OPT=" "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  special compiler options for the fast and fast_parallel executable.       ##
+##  the compile command will be "COMPILER FLAGS OPTIMIZE"                     ##
+##  use here all compiler specific flags that may improve performance         ##
+##                                                                            ##
+##  note that -O2 is usually standard and safe while -O3 can give wrong result##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##________________________________compiler flags for  profiling_______________##
+##                                                                            ##
+FCFLAGS_PROF="-c -pg -O2 -std=f2003"
+LDFLAGS_PROF="-pg "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  special compiler options for the paw_prof and ppaw_prof executable        ##
+##  the compile command will be "COMPILER FLAGS PROF"                         ##
+##  use here all compiler specific flags that may improve performance used in ##
+##  OPTIMIZE and add -pg for profiling                                        ##
+##                                                                            ##
+##  note that -O2 is usually standard and safe while -O3 can give wrong result##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#________________________________compiler flags for debugging_________________##
+##                                                                            ##
+FCFLAGS_DBG="-c -g -std=f2003 -fcheck=all -Wall -fbounds-check "
+LDFLAGS_DBG=" "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  special compiler options for the paw_dbg and ppaw_dbg executable          ##
+##  the compile command will be "COMPILER FLAGS DEBUG"                        ##
+##  use here all compiler specific flags for debugging and that perform checks##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#________________________________flags for linking____________________________##
+LDFLAGS_SCALAR="-I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##                                                                            ##
+##  the link command for scalar exectuable will be:                           ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
+##  the link command for parallel exectuable will be:                                  ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
+##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
+##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#________________________________flags for linking____________________________##
+LDFLAGS_PARALLEL="-I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##                                                                            ##
+##  the link command for scalar executable will be:                           ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIBS"       ##
+##  the link command for parallel executable will be:                                  ##
+##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
+##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
+##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#________________________________external libraries (sequential)______________##
+# g2c is a fortran-to-c compatibility library required by blas and lapack routines
+##                                                                            ##
+LIBS_SCALAR="${FFTDIR}/libfftw2xf_gnu.a  ${LAPACKDIR}/libmkl_intel_lp64.a ${BLASDIR}/libmkl_blas95_lp64.a  ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a /opt/intel/composer_xe_2011_sp1.8.269/compiler/lib/libiomp5.a -dynamic -lpthread "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+#____________________________external libraries (parallel)____________________##
+##                                                                            ##
+LIBS_PARALLEL="${FFTDIR}/libfftw2xf_gnu.a  ${LAPACKDIR}/libmkl_intel_lp64.a ${LAPACKDIR}/libmkl_blas95_lp64.a  ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a ${LAPACKDIR}/libmkl_intel_thread.a ${LAPACKDIR}/libmkl_core.a /opt/intel/composer_xe_2011_sp1.8.269/compiler/lib/libiomp5.a -lmpi -dynamic -lpthread "
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##________________________________preprocessor variables______________________##
+##                                                                            ##
+#CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW  -DCPPVAR_U77 -DCPPVAR_64BIT"
+CPPFLAGS="-DCPPVAR_COMPILER_GFORTRAN -DCPPVAR_FFT_FFTW"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  library selectors for FFT                                                 ##
+##    CPPVAR_FFT_FFTW,CPPVAR_FFT_FFTW3,CPPVAR_FFT_ESSL,CPPVAR_FFT_PACK        ##
+##                   ,CPPVAR_FFT_CXML                                         ##
+##  library selectors for linear algebra routines                             ##
+##    CPPVAR_BLAS_ESSL,                                                       ##
+##  library selector for getrusage                                            ##
+##    cppvar_usage_exist                                                      ##
+##  library of support functions                                              ##
+##    CPPVAR_COMPILER_G95,CPPVAR_COMPILER_IFC,CPPVAR_COMPILER_IFC7            ##
+##    CPPVAR_COMPILER_ABSOFT,CPPVAR_COMPILER_PGI,CPPVAR_COMPILER_XLF          ##
+##                                                                            ##
+################################################################################
+#
+################################################################################
+##________________________________file extension______________________________##
+##                                                                            ##
+FEXT="f90"
+##                                                                            ##
+##----------------------------------------------------------------------------##
+##  file extensions for source files required by the compiler                 ##
+##  may be "f" or "f90"                                                       ##
+##                                                                            ##
+################################################################################
+

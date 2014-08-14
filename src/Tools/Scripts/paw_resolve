@@ -130,15 +130,15 @@ for X in $FRULES ; do
      echo "error in $0: file of file rule $X does not exist" >&2
      exit 1
    fi
-   CHS0="$CHS0 -e:@$A@:r${B} "
-   CHS2="$CHS2 -e :@$A@:d " 
+   CHS0="$CHS0 -e/@$A@/r${B} "
+   CHS2="$CHS2 -e/@$A@/d " 
 done
 #
 #-------------------------------------------------------------------------------
 # collect all lines containing @*@ in infile ($IN) and obtain the file
 # names in @file@ as $LIST
 #-------------------------------------------------------------------------------
-VAR=$(sed -n -e ':@*@:p' < $IN)
+VAR=$(sed -n -e '/@*@/p' < $IN)
 # collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
@@ -208,9 +208,9 @@ CMD="cat ${IN}"
 if [[ -n "${CHS0}" ]] ; then CMD="$CMD | sed ${CHS0}" ; fi
 if [[ -n "${CHS1}" ]] ; then CMD="$CMD | sed ${CHS1}" ; fi
 if [[ -n "${CHS2}" ]] ; then CMD="$CMD | sed ${CHS2}" ; fi
+if [[ $VERBOSE = yes ]] ; then echo $CMD; fi
 eval ${CMD}
 #-------------------------------------------------------------------------------
-#echo $CMD
 exit 0
 
 

@@ -1,0 +1,176 @@
+#!/bin/bash
+################################################################################
+#
+#         FILE: paw_resolve
+#
+#        USAGE:  paw_resolve options infile > outfile
+#
+#      OPTIONS: -h, -p prefix, -r rule
+#
+#  DESCRIPTION: 
+#
+#  parses the input file for occurances of the type @string@ and
+#  replaces them in one of two possible ways:
+#
+#  1) if string is a keyword that occurs in an explicit rule supplied
+#  to the argument with the -r option, @string@ is replaced by the
+#  specified replacement.
+#
+#  2) if string is not specified as a rule, it is considered the name
+#  of a file, after adding the prefix supplied with the option -p.
+#  The line containing @string@ is removed and replaced by the
+#  contents of the file ${PRE}string.  The prefix can be used to
+#  specify a directory that holds the insertions.
+#
+#  Remark: @string@ must not contain any spaces. Two neighboring
+#  occurances must be separated by a space or a newline.
+#
+#
+#
+#  Example:
+#
+#    paw_resolve -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
+#
+#       AUTHOR: Peter Bloechl; peter.bloechl@tu-clausthal.de
+#      CREATED: 14. Dec. 2013
+#
+################################################################################
+#
+# description of usage
+#
+USAGE="Usage: \n\n"
+USAGE="$USAGE paw_resolve options infile > outfile \n\n"
+USAGE="$USAGE Options:\n"
+USAGE="$USAGE -p prefix prefix to be added to the filename in @file@\n"
+USAGE="$USAGE -h this help message\n"
+#-------------------------------------------------------------------------------
+# resolve argument list
+#-------------------------------------------------------------------------------
+IN=""      # input file
+PRE=""     # prefix for file insertions (such as a path)
+RULES=""   # string replacement rules  A=B: @A@ -> B
+while [ ! -z $1 ] ; do
+  case $1  in
+    -h)
+       echo -e $USAGE
+       exit 1
+       ;;
+    -p) 
+       shift
+       PRE=$1
+       shift
+       ;;
+    -p*) 
+       PRE=${1#-p}  # strip preceeding -p from $1
+       shift
+       ;;
+    -r)
+       shift
+       RULES="$RULES $1"
+       shift
+       ;;
+    -r*)
+       RULES="$RULES ${1#-r}" # strip preceeding -r from $1
+       shift
+       ;;
+    -*)
+       echo in $0: unknown option $1
+       exit 1
+       ;;
+    *) 
+       IN=$1
+       shift
+       ;;
+  esac
+done
+#
+if [ -z $IN ] ; then
+  echo error in $0: no infile supplied
+  exit 1
+fi
+#-------------------------------------------------------------------------------
+# string replacement rules
+#-------------------------------------------------------------------------------
+CHS0=""
+for X in $RULES; do
+   A=${X%=*}
+   B=${X##*=}
+   CHS0="$CHS0 -e s/@$A@/$B/g "
+done
+#-------------------------------------------------------------------------------
+# collect all lines containing @*@ in infile ($IN) and obtain the file
+# names in @file@ as $LIST
+#-------------------------------------------------------------------------------
+VAR=$(sed -n -e '/@*@/p' < $IN)
+# collect the filennames enclosed in @file@ in LIST
+LIST=""
+for X in $VAR; do
+  Y=$X
+  X=${X%@*}
+  X=${X#*@}
+  if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
+  #
+  #   check if $X corresponds to a direct replacement (-r). otherwise clear it
+  for Y in $RULES ; do
+    A=${Y%=*}
+    if [ "$A" = "$X" ] ; then X="" ; fi
+  done
+  #
+  # avoid double counting
+  for Y in $LIST; do
+    if [ "$Y" = "$X" ] ; then X="" ; fi
+  done
+  #
+  #
+  #
+  if [ ! -z "$X" ] ; then
+    # check if there $X is the name of an existing file
+    if [ ! -e ${PRE}${X} ] ; then
+      echo error in $0: no rule or file to replace @$X@
+      exit 1
+    fi
+    # check if the lines containing file replacements are alone on one line
+    LINES=$(sed -n -e "/@$X@/=" $IN)
+    for Y in $LINES ; do
+      LINE=$(sed -n -e ${Y}p < $IN)
+      for Z in $LINE ; do
+        if [ "@$X@" != "$Z" ] ; then
+          echo error in $0: file replacement @$X@ is not alone in the line
+          echo LINENO=$Y LINE=$LINE
+          exit 1
+        fi
+      done
+    done
+    LIST="$LIST $X"
+  fi
+done
+#-------------------------------------------------------------------------------
+# replace @file@ with file and then remove the corresponding entries
+# @file@ removal follows all replacements to deal properly with
+# multiple occurances.  The $IN is processed and the result is written
+# to standard out.
+#-------------------------------------------------------------------------------
+CHS1=""
+for X in $LIST; do
+  CHS1="${CHS1}-e/@$X@/r${PRE}${X}"
+done
+#
+CHS2=""
+for X in $LIST; do
+   CHS2="$CHS2 -e /@$X@/d " 
+done
+#-------------------------------------------------------------------------------
+# compose and execute command
+#-------------------------------------------------------------------------------
+ # echo CHS0=$CHS0 ${CHS0[0]}
+ # echo CHS1=$CHS1
+ # echo CHS2=$CHS2
+CMD="cat ${IN}"
+if [ -n "${CHS0}" ] ; then CMD="$CMD | sed ${CHS0}" ; fi
+if [ -n "${CHS1}" ] ; then CMD="$CMD | sed ${CHS1}" ; fi
+if [ -n "${CHS2}" ] ; then CMD="$CMD | sed ${CHS2}" ; fi
+eval ${CMD}
+#-------------------------------------------------------------------------------
+exit 0
+
+
