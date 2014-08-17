@@ -1647,7 +1647,7 @@ END IF
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-      logical(4) ,parameter      :: twrite=.false.
+      LOGICAL(4) ,PARAMETER      :: TWRITE=.FALSE.
       INTEGER(4) ,PARAMETER      :: NITER=100
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
@@ -1658,7 +1658,7 @@ END IF
       REAL(8)                    :: DREL(NR),GHOM(NR),PHIHOM(NR)
       REAL(8)                    :: PHIINHOM(NR)
       REAL(8)                    :: VAL1,VAL2,SVAR
-      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,i,j
+      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,I,J
       INTEGER(4)                 :: ITER
       LOGICAL                    :: THOM
       REAL(8)                    :: Y2,Y1,X2,X1,DER,DERO
@@ -1678,7 +1678,7 @@ END IF
         ENDDO
       END IF
 !
-      phi=0.d0
+      PHI=0.D0
       CALL RADIAL$R(GID,NR,R)
 !     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST OUTSIDE THE BOX =================
       IF(RBOX.GT.R(NR-3)) THEN
@@ -1719,7 +1719,9 @@ END IF
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBOX,Z0)
+!       == NODES WITH R<1 A_BOHR ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1760,16 +1762,11 @@ END IF
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-!!$print*,'------------------------------------------------'
-!!$print*,'phaseshift ',rbox-r(irbox-1),r(irbox)-rbox,phi(irbox-1),phi(irbox) &
-!!$&   ,(phi(irbox)-phi(irbox-1))/phi(irbox)
-!!$do ir=3,irbox-1
-!!$ if(phi(ir+1)*phi(ir).le.0.d0) print*,'node of phi at ',ir,r(ir),phi(ir),phi(ir+1)
-!!$enddo
+!       == NODES WITH R<1 A_BOHR ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
-        if(twrite)write(*,fmt='("x0=",f10.5," z0=",e12.3)')x0,z0
-!!$write(*,fmt='("x0=",f10.5," z0=",e12.3)')x0,z0
+        IF(TWRITE)WRITE(*,FMT='("X0=",F10.5," Z0=",E12.3)')X0,Z0
 
         IF(ABS(2.D0*DX).LE.TOL) EXIT
         IF(Z0.GT.0.D0) THEN
@@ -1787,44 +1784,25 @@ END IF
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
       END IF
-!!$print*,'nn ',nn
-!!$do ir=1,nr-1
-!!$ if(phi1(ir+1)*phi1(ir).le.0.d0) print*,'node of phi1 at ',ir,r(ir),phi1(ir),phi1(ir+1)
-!!$ if(phi2(ir+1)*phi2(ir).le.0.d0) print*,'node of phi2 at ',ir,r(ir),phi2(ir),phi2(ir+1)
-!!$enddo
 !
 !     ==========================================================================
 !     ==  AVERAGE BOTH BOUNDS OF BISECTION                                    ==
 !     ==========================================================================
       X1=R(IRBOX-1)
       X2=R(IRBOX)
-!!$print*,'r ',x1,x2,rbox
       Y1=PHI1(IRBOX-1)
       Y2=PHI1(IRBOX)
       DER=(Y2-Y1)/(X2-X1)
       VAL1=Y1+DER*(RBOX-X1)
-!!$CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI1,0.D0,RBOX,Z0)
-!!$print*,'phi1 ',y1,y2,val1,der,z0-1.d0
       Y1=PHI2(IRBOX-1)
       Y2=PHI2(IRBOX)
       DER=(Y2-Y1)/(X2-X1)
       VAL2=Y1+DER*(RBOX-X1)
-!!$CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI2,0.D0,RBOX,Z0)
-!!$print*,'phi2 ',y1,y2,val2,der,z0-1.d0
-!
-!!$print*,'val1,val2 ',val1,val2
       SVAR=VAL2-VAL1
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR
       PHI=PHI1*VAL2-PHI2*VAL1
-!!$print*,'nn ',nn,val1,val2
-!!$do ir=1,nr-1
-!!$ if(phi(ir+1)*phi(ir).le.0.d0) print*,'a: node at ',ir,r(ir),phi(ir),phi(ir+1)
-!!$enddo
-!!$call atomlib_writephi('phi1.dat',gid,nr,1,phi1)
-!!$call atomlib_writephi('phi2.dat',gid,nr,1,phi2)
-!!$call atomlib_writephi('phi.dat',gid,nr,1,phi)
-return
+RETURN
 !
 !     ==========================================================================
 !     ==  DETERMINE MATCHING POINT                                            ==
@@ -1844,7 +1822,6 @@ return
       DREL(:)=0.D0
       SO=0
       IF(IRMATCH.LT.IRBOX) THEN
-print*,'integrate inward',irmatch,irbox,nr
         THOM=MAXVAL(ABS(G(:))).EQ.0.D0
         IDIR=-1
 !       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION   ==

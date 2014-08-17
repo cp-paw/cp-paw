@@ -60,7 +60,9 @@ USAGE="$USAGE \t -v verbose\n"
 #-------------------------------------------------------------------------------
 IN=""      # input file
 PRE=""     # prefix for file insertions (such as a path)
-RULES=""   # string replacement rules  A=B: @A@ -> B
+declare -a RULES # string replacement rules  A=B: @A@ -> B
+NRULE=0
+FRULES="" # file insertion rules
 VERBOSE=no
 while getopts :hp:r:f:v OPT ; do
   case $OPT  in
@@ -68,7 +70,7 @@ while getopts :hp:r:f:v OPT ; do
       PRE="$OPTARG"
       ;;
     r)
-      RULES="$RULES $OPTARG"
+      RULES=("${RULES[*]}" "$OPTARG")   # $OPTARG is appended the array RULES
       ;;
     f)
       FRULES="$FRULES $OPTARG"
@@ -105,7 +107,9 @@ IN=$1
 if [[ $VERBOSE = yes ]] ; then
  echo input file : $IN
  if [[ -n "$PRE" ]]    ; then echo "prefix: $PRE"        ; fi
- if [[ -n "$RULES" ]]  ; then echo "rules: $RULES"       ; fi
+ for I in ${!RULES[*]} ; do
+    echo RULE $I:${RULES[$I]}
+ done
  if [[ -n "$FRULES" ]] ; then echo "file rules: $FRULES" ; fi
 fi
 #
@@ -115,10 +119,12 @@ fi
 CHS0=""
 CHS1=""
 CHS2=""
-for X in $RULES ; do
-   A=${X%=*}
-   B=${X##*=}
-   CHS0="$CHS0-e s:@$A@:$B:g "
+for I in ${!RULES[*]} ; do
+   A=${RULES[$I]%=*}
+   A=$(echo $A | sed 's/^ *//') #remove preceeding spaces
+   A=$(echo $A | sed 's/ *$//') #remove trailing spaces
+   B=${RULES[$I]##*=}
+   CHS0="$CHS0-e s:@$A@:\"$B\":g "
 done
 #-------------------------------------------------------------------------------
 # explicit file replacement rules
@@ -148,8 +154,10 @@ for X in $VAR; do
   if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
   #
   #   check if $X corresponds to a direct replacement (-r). otherwise clear it
-  for Y in $RULES ; do
-    A=${Y%=*}
+  for I in ${!RULES[*]} ; do
+    A=${RULES[$I]%=*}
+    A=$(echo $A | sed 's/^ *//') #remove preceeding spaces
+    A=$(echo $A | sed 's/ *$//') #remove trailing spaces
     if [ "$A" = "$X" ] ; then X="" ; fi
   done
   for Y in $FRULES ; do
