@@ -60,7 +60,9 @@ USAGE="$USAGE \t -v verbose\n"
 #-------------------------------------------------------------------------------
 IN=""      # input file
 PRE=""     # prefix for file insertions (such as a path)
-RULES=""   # string replacement rules  A=B: @A@ -> B
+declare -a RULES # string replacement rules  A=B: @A@ -> B
+NRULE=0
+FRULES="" # file insertion rules
 VERBOSE=no
 while getopts :hp:r:f:v OPT ; do
   case $OPT  in
@@ -68,7 +70,7 @@ while getopts :hp:r:f:v OPT ; do
       PRE="$OPTARG"
       ;;
     r)
-      RULES="$RULES $OPTARG"
+      RULES=("${RULES[*]}" "$OPTARG")   # $OPTARG is appended the array RULES
       ;;
     f)
       FRULES="$FRULES $OPTARG"
@@ -105,7 +107,9 @@ IN=$1
 if [[ $VERBOSE = yes ]] ; then
  echo input file : $IN
  if [[ -n "$PRE" ]]    ; then echo "prefix: $PRE"        ; fi
- if [[ -n "$RULES" ]]  ; then echo "rules: $RULES"       ; fi
+ for I in ${!RULES[*]} ; do
+    echo RULE $I:${RULES[$I]}
+ done
  if [[ -n "$FRULES" ]] ; then echo "file rules: $FRULES" ; fi
 fi
 #
@@ -115,10 +119,12 @@ fi
 CHS0=""
 CHS1=""
 CHS2=""
-for X in $RULES ; do
-   A=${X%=*}
-   B=${X##*=}
-   CHS0="$CHS0-e s:@$A@:$B:g "
+for I in ${!RULES[*]} ; do
+   A=${RULES[$I]%=*}
+   A=$(echo $A | sed 's/^ *//') #remove preceeding spaces
+   A=$(echo $A | sed 's/ *$//') #remove trailing spaces
+   B=${RULES[$I]##*=}
+   CHS0="$CHS0-e s:@$A@:\"$B\":g "
 done
 #-------------------------------------------------------------------------------
 # explicit file replacement rules
@@ -130,15 +136,15 @@ for X in $FRULES ; do
      echo "error in $0: file of file rule $X does not exist" >&2
      exit 1
    fi
-   CHS0="$CHS0 -e:@$A@:r${B} "
-   CHS2="$CHS2 -e :@$A@:d " 
+   CHS0="$CHS0 -e/@$A@/r${B} "
+   CHS2="$CHS2 -e/@$A@/d " 
 done
 #
 #-------------------------------------------------------------------------------
 # collect all lines containing @*@ in infile ($IN) and obtain the file
 # names in @file@ as $LIST
 #-------------------------------------------------------------------------------
-VAR=$(sed -n -e ':@*@:p' < $IN)
+VAR=$(sed -n -e '/@*@/p' < $IN)
 # collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
@@ -148,8 +154,10 @@ for X in $VAR; do
   if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
   #
   #   check if $X corresponds to a direct replacement (-r). otherwise clear it
-  for Y in $RULES ; do
-    A=${Y%=*}
+  for I in ${!RULES[*]} ; do
+    A=${RULES[$I]%=*}
+    A=$(echo $A | sed 's/^ *//') #remove preceeding spaces
+    A=$(echo $A | sed 's/ *$//') #remove trailing spaces
     if [ "$A" = "$X" ] ; then X="" ; fi
   done
   for Y in $FRULES ; do
@@ -208,9 +216,9 @@ CMD="cat ${IN}"
 if [[ -n "${CHS0}" ]] ; then CMD="$CMD | sed ${CHS0}" ; fi
 if [[ -n "${CHS1}" ]] ; then CMD="$CMD | sed ${CHS1}" ; fi
 if [[ -n "${CHS2}" ]] ; then CMD="$CMD | sed ${CHS2}" ; fi
+if [[ $VERBOSE = yes ]] ; then echo $CMD; fi
 eval ${CMD}
 #-------------------------------------------------------------------------------
-#echo $CMD
 exit 0
 
 

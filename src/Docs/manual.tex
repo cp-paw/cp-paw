@@ -7903,18 +7903,19 @@ with the CP-PAW code.
 The following table provides an overview:\\
 \begin{center}
 \begin{tabular}{ll}
-\verb|paw_scan|    & perform sequence paw calculation \\
-\verb|paw_scanlat| & scan lattice constants. \\
 \verb|paw_show|    & show energies vs iterations. \\
 \verb|paw_collect| & collect total energies. \\
-\verb|paw_copy|    & copy files with a different root name.\\
 \verb|paw_get|     & extract the last value of certain data from simulation.\\
+\verb|paw_copy|    & copy files into ones with a different root name.\\
+\verb|paw_ext_copy|& copies files into ones with a different extension\\
 \verb|paw_resolve| & expand text files according to replacement rules.\\
+\verb|paw_scan|    & perform sequence paw calculation \\
+\verb|paw_scanlat| & scan lattice constants. \\
 \end{tabular}
 \end{center}
 
 %==========================================================================
-\subsubsection{Options and \textit{getopts}}
+\subsection{Options and \textit{getopts}}
 %==========================================================================
 While there are currently a few exceptions, the options are scanned by
 the bash command \textit{getopts}. This implies that the options have
@@ -7979,6 +7980,26 @@ current directory and copies the files with the same name but {\it
 root1} replaced by {\it root2}.
 
 %==========================================================================
+\subsection{change the extension  of a et of files: ``paw\_ext\_copy''}
+%==========================================================================
+paw\_ext\_copy makes a copies of a set of files with a given ending (extension) into files with the same beginning, but a different extension.
+
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_ext\_copy\ } {\it ext1 ext2}}\bigskip
+
+\noindent where {\it ext1} is the extension of the files to be
+copied and \textit{ext2} is the target extension.
+
+Specifically, it takes all files ending with \textit{ext1} in the
+current directory and copies the files with the same name but
+\textit{ext1} replaced by \textit{ext2}.
+
+%==========================================================================
 \subsection{Collect energies ``paw\_collect''}
 %==========================================================================
 paw\_collect collects the last total energies from all protocoll files
@@ -8029,6 +8050,144 @@ prints the last occurance of the corresponding variable
 
 Remark: -gap -homo and -lumo do not work with variable occupations
 and will provide an error message.
+%
+%==========================================================================
+\subsection{Collect energies ``paw\_resolve''}
+%==========================================================================
+paw\_resolve constructs \textit{outfile} from \textit{infile} by
+replacing specific placeholders either by a specific value or by the
+contents of a specified file. 
+
+It is typically used within shell scripts to scan certain variable
+sets in the structure or control files of a PAW calculation.  For
+example a string ``EPW=@X1@'' will be changed with the replacement
+rule ``X1=30'' to ``EPW=30''. Several such rules can be specified.
+
+There are also replacement rules that insert complete files. Here one
+introduces a single line containing the id of the file-replacement
+rule.  This line will be replaced by the content of the file. This
+allows one to exchange for example the setup information consistently
+in a group of projects.
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_resolve} \textit{options} \textit{infile}
+$>$\textit{outfile}}
+\vspace{0.5cm}
+
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h:] print help message
+\item[-p prefix:] prefix to be added to the filename in @file@
+\item[-r id=value:] rule to convert @id@ into value
+\item[-f id=file:] rule to replace lines containing @id@ by the contents of file
+\end{description}
+\end{minipage}}
+\bigskip
+%
+%==========================================================================
+\subsection{Scan parameters ``paw\_scan''}
+%==========================================================================
+A typical application is to scan a certain parameter value
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_scan} \textit{options}  SRCROOT}
+\vspace{0.5cm}
+
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h:] print help message
+\item[-r ``name value1 value2 ...'':] replacement rule
+\item[-w \textit{whatid}:] 
+\begin{description}
+\item[\textit{whatid}=run:] perform CP-PAW simulation. Requires .cntl and .strc files
+\item[\textit{whatid}=fast:] perform CP-PAW simulation Requires .cntl and .strc files
+\item[\textit{whatid}=dos:]make density-of-states. Requires .dcntl file.
+\end{description}
+\item[-n \textit{nnodes}:] submit parallel job with the number of processes specified by \textit{nnodes}.
+\item[-m \textit{hostname}:] limit execution to the specified host
+  \textit{hostname}
+\item[-0:] dry-run (creates files but does not run jobs)
+\item[-b \textit{directory}:] directory containing the paw executables
+\item[-v:] verbose
+\end{description}
+the argument SRCROOT is the rootname of the source files and
+ the common part of the root name for all projects.
+ It must contain the a relative or absolute path (i.e. one "/")..
+ The root names of individual projects will be formed as
+ TARGETROOT=\$SRCROOT\_\$VALUE/\$PROJECT\_\$VALUE.
+ where PROJECT is \$SRCROOT stripped of the directory part
+ and VALUE is assigned by the rule specified by option -r.
+
+ If the target directory does not contain a restart file,
+ a source restart file \$SRCROOT.rstrt, if present and needed,
+ will be copied into the target directory.
+
+ Example:
+%\begin{verbatim}
+ 	 paw\_scan -w run -r "EPW 20 30 40" ./si2
+%\end{verbatim}
+\end{minipage}}
+
+\bigskip
+\noindent Preconditions:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{itemize}
+\item 	 projectname.cntl
+\item 	 projectname.strc
+\end{itemize}
+\end{minipage}}
+\bigskip
+%
+%==========================================================================
+\subsection{Scan lattice constants ``paw\_scanlat''}
+%==========================================================================
+A typical application is to calculate the energy versus volume
+dependence, which yields the equilibrium lattice constant and the bulk
+modulus. 
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_scanlat} \textit{options} }
+\vspace{0.5cm}
+
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h:] print help message
+\item[-p \textit{rootname}:] rootname of the project to be considered
+  (mandatory)
+\item[-l \textit{list}:] list of percent changes of the lattice
+  constant (enter in apostrophes "...")
+\item[-b \textit{directory}:] directory containing the paw executables
+  (binaries)
+\item[-e \textit{executable}:] name of the executable
+\item[-0:] dry run
+\end{description}
+\end{minipage}}\\
+\bigskip
+
+\noindent Preconditions:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{itemize}
+\item 	 projectname.cntl
+\item 	 projectname.strc
+\end{itemize}
+\end{minipage}}
+\bigskip
+
 
 %==========================================================================
 \subsection{Murnaghan fit ``paw\_murnagan.x''}
@@ -8048,6 +8207,33 @@ data.  The first column of {\tt in.dat} holds the volumes and the
 second the corresponding energies, both given in Hartree atomic
 units. In addition a file ``{\tt murn.dat}'' is produced holding the
 interpolated data covering the range of the input volumes +10\%.
+%
+%==========================================================================
+\subsection{``paw\_waittilempty''}
+%==========================================================================
+paw\_waittillempty is a helper script for self-written shell scripts.
+
+If one submits several calculations via a shell script to a computer, the
+computer may run out of memory and become very slow. This script
+introduces a breakpoint in your own shell script that is passed only
+when your computer has resources available.
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_waittillempty} \textit{options}}
+\vspace{0.5cm}
+
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-h:] print help message
+\item[-n \textit{njobx}:] paw\_waittillempty pauses until the number
+  of paw-related calculations on the computer is lower than \textit{njobx}.
+\end{description}
+\end{minipage}}
 
 %==========================================================================
 \subsection{PAW-snapshot ``paw\_snapshot''}
