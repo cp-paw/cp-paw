@@ -1554,6 +1554,247 @@ PRINT*,'NARGS ',NARGS,IARGC()
       RETURN
       END
 #ENDIF
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)
+!     **************************************************************************
+!     **  INTERFACE FOR THE ROUTINE LIB_GETOPTS (ORIGINALLY GETOPTS)          **
+!     **************************************************************************
+      IMPLICIT NONE
+      CHARACTER(*) ,INTENT(IN)   :: OPTIONSTRING
+      CHARACTER(*) ,INTENT(OUT)  :: NAME
+      CHARACTER(*) ,INTENT(OUT)  :: OPTARG
+      INTEGER(4)   ,INTENT(INOUT):: OPTIND
+      INTEGER(4)   ,INTENT(OUT)  :: EXITCODE
+!     **************************************************************************
+      CALL LIB_GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)
+      RETURN
+      END SUBROUTINE LIB$GETOPTS
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)
+!     **************************************************************************
+!     **                                                                      **
+!     ** $$$  SUBPROGRAM DOCUMENTATION BLOCK                                  **
+!     **                                                                      **
+!     **  SUBPROGRAM:  GETOPTS                                                **
+!     **               PROCESS COMMAND LINE ARGUMENTS FOR VALID OPTIONS       **
+!     **    PRGMMR: IREDELL       ORG: W/NP23        DATE: 2000-08-22         **
+!     **                                                                   
+!     **  ABSTRACT: THIS SUBPROGRAM PROCESSES COMMAND-LINE ARGUMENTS FOR      **
+!     **     VALID OPTIONS. IT IS THE FORTRAN EQUIVALENT OF THE BUILT-IN      **
+!     **     SHELL COMMAND GETOPTS.                                           **
+!     **     OPTIONS ON THE COMMAND LINE COME BEFORE THE POSITIONAL ARGUMENTS.**
+!     **     OPTIONS ARE PRECEDED BY A - (MINUS SIGN) OR A + (PLUS SIGN).     **
+!     **     OPTIONS ARE SINGLE CASE-SENSITIVE ALPHANUMERIC CHARACTERS.       **
+!     **     OPTIONS EITHER DO OR DO NOT HAVE AN EXPECTED ARGUMENT.           **
+!     **     OPTIONS WITHOUT AN ARGUMENT MAY BE IMMEDIATELY SUCCEEDED BY      **
+!     **     FURTHER OPTIONS WITHOUT THE ACCOMPANYING - OR + PREFIX.          **
+!     **     OPTIONS WITH AN ARGUMENT MAY BE SEPARATED FROM THEIR ARGUMENT    **
+!     **     BY ZERO OR MORE BLANKS.  THE ARGUMENT CANNOT END WITH A BLANK.   **
+!     **     OPTIONS END WHEN NOT PRECEDED BY A - OR A + OR AFTER -- OR ++.   **
+!     **     THIS SUBPROGRAM PROCESSES ONE OPTION PER INVOCATION.             **
+!     **     THIS SUBPROGRAM IS NOT THREAD-SAFE.                              **
+!     **                                                                      **
+!     **  PROGRAM HISTORY LOG:                                                **
+!     **    2000-08-22  IREDELL                                               **
+!     **                                                                      **
+!     **  USAGE:    CALL GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)    **
+!     **                                                                      **
+!     **    INPUT ARGUMENT LIST:                                              **
+!     **      OPTIONSTRING                                                    **
+!     **        CHARACTER STRING CONTAINING A LIST OF ALL VALID OPTIONS;      **
+!     **        OPTIONS SUCCEEDED BY A : REQUIRE AN ARGUMENT                  **
+!     **                                                                      **
+!     **     INPUT AND OUTPUT ARGUMENT LIST:                                  **
+!     **       OPTIND                                                         **
+!     **         INTEGER INDEX OF THE NEXT ARGUMENT TO BE PROCESSED;          **
+!     **         SET TO 0 BEFORE INITIAL CALL OR TO RESTART PROCESSING        **
+!     **                                                                      **
+!     **     OUTPUT ARGUMENT LIST:                                            **
+!     **       NAME                                                           **
+!     **         CHARACTER STRING CONTAINING THE NAME OF THE NEXT OPTION      **
+!     **         OR ? IF NO OPTION OR AN UNKNOWN OPTION IS FOUND              **
+!     **         OR : IF AN OPTION HAD A MISSING REQUIRED ARGUMENT;           **
+!     **         A + IS PREPENDED TO THE VALUE IN NAME IF THE OPTION BEGINS   **
+!     **                                                             WITH A + **
+!     **       OPTARG                                                         **
+!     **         CHARACTER STRING CONTAINING THE OPTION ARGUMENT IF REQUIRED  **
+!     **         OR NULL IF NOT REQUIRED OR NOT FOUND;                        **
+!     **         OPTARG CONTAINS THE OPTION FOUND IF NAME IS ? OR :.          **
+!     **       EXITCODE                                                       **
+!     **         INTEGER RETURN CODE (0 IF AN OPTION WAS FOUND, 1 IF END OF   **
+!     **         OPTIONS)                                                     **
+!     **       
+!     **   SUBPROGRAMS CALLED:
+!     **     IARGC
+!     **       RETRIEVE NUMBER OF COMMAND-LINE ARGUMENTS
+!     **     GETARG
+!     **       RETRIEVE A COMMAND-LINE ARGUMENT
+!     **     INDEX 
+!     **       RETRIEVE THE STARTING POSITION OF A SUBSTRING WITHIN A STRING
+!     **       
+!     **   REMARKS:
+!     **     HERE IS AN EXAMPLE OF HOW TO USE THIS SUBPROGRAM.
+!     **       IMPLICIT NONE
+!     **       CHARACTER*8 COPT,CARG,CB,CPOS
+!     **       INTEGER IA,IB,IOPT,IRET,NARG,NPOS,IPOS,IARGC
+!     **       IA=0
+!     **       IB=0
+!     **       IOPT=0
+!     **       DO
+!     **         CALL GETOPTS('AB:',COPT,CARG,IOPT,IRET)
+!     **         IF(IRET.NE.0) EXIT
+!     **         SELECT CASE(COPT)
+!     **         CASE('A','+A')
+!     **           IA=1
+!     **         CASE('B','+B')
+!     **           IB=1
+!     **           CB=CARG
+!     **         CASE('?',':')
+!     **           PRINT *,'INVALID OPTION ',CARG(1:1)
+!     **           STOP 1
+!     **         END SELECT
+!     **       ENDDO
+!     **       IF(IA.EQ.1) PRINT *,'OPTION A SELECTED'
+!     **       IF(IB.EQ.1) PRINT *,'OPTION B SELECTED; ARGUMENT=',CB
+!     **       NARG=IARGC()
+!     **       NPOS=NARG-IOPT+1
+!     **       DO IPOS=1,NPOS
+!     **         CALL GETARG(IPOS+IOPT-1,CPOS)
+!     **         PRINT *,'POSITIONAL ARGUMENT ',IPOS,' IS ',CPOS
+!     **       ENDDO
+!     **       END
+!     **  
+!     **   ATTRIBUTES:
+!     **     LANGUAGE: FORTRAN 90
+!     **  
+!     **  $$$
+!     **                                                                      **
+!     **  RETRIEVED FROM HTTP://WWW.NCO.NCEP.NOAA.GOV/PMB/CODES/NWPROD/       **
+!     **                      CFS.V2.1.4/SORC/CFS_SIGAVG.FD/GETOPTS.F         **
+!     **  ON AUG 21, 2014                                                     **
+!     **************************************************************************
+      IMPLICIT NONE
+!     ==  PASSED DATA
+      CHARACTER(*) ,INTENT(IN)   :: OPTIONSTRING
+      CHARACTER(*) ,INTENT(OUT)  :: NAME
+      CHARACTER(*) ,INTENT(OUT)  :: OPTARG
+      INTEGER(4)   ,INTENT(INOUT):: OPTIND
+      INTEGER(4)   ,INTENT(OUT)  :: EXITCODE
+!     ==  SAVED DATA
+      CHARACTER(256),SAVE        :: CARG
+      CHARACTER(1)  ,SAVE        :: CONE
+      INTEGER       ,SAVE        :: NARG,LARG,LCUR
+!     ==  LOCAL DATA
+      CHARACTER(1)               :: COPT
+!      INTEGER                    :: IARGC
+      INTEGER                    :: LNAME,LOPT
+      INTEGER                    :: LENG
+      INTEGER                    :: ST
+!     **************************************************************************
+!     ==========================================================================
+!     == INITIALLY SET SAVED DATA.
+!     ==========================================================================
+      IF(OPTIND.LE.0) THEN
+        OPTIND=0
+!       FORMERLY: NARG=IARGC()
+        NARG=COMMAND_ARGUMENT_COUNT()
+        CARG=''
+        CONE=''
+        LARG=0
+        LCUR=1
+      ENDIF
+!     ==========================================================================
+!     ==  RETRIEVE NEXT COMMAND-LINE ARGUMENT IF NECESSARY;
+!     ==  EXIT IF AT END OF OPTIONS
+!     ==========================================================================
+      IF(LCUR.GT.LARG) THEN
+        OPTIND=OPTIND+1
+        IF(OPTIND.GT.NARG) THEN
+          NAME='?'
+          OPTARG=''
+          EXITCODE=1
+          RETURN
+        END IF
+!       == FORMERLY:  CALL GETARG(OPTIND,CARG)
+        CALL GET_COMMAND_ARGUMENT(OPTIND,CARG,LENG,ST)
+        IF(ST.NE.0) THEN
+          CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+          CALL ERROR$I4VAL('STATUS',ST)
+          CALL ERROR$I4VAL('POSITION',OPTIND)
+          CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
+          CALL ERROR$STOP('LIB_GETOPTS')
+        END IF
+!
+        CONE=CARG(1:1)
+        LARG=LEN_TRIM(CARG)
+        LCUR=2
+        IF(LARG.EQ.1.OR.(CONE.NE.'-'.AND.CONE.NE.'+')) THEN
+          NAME='?'
+          OPTARG=''
+          EXITCODE=1
+          RETURN
+        ELSE IF(LARG.EQ.2.AND.CARG(2:2).EQ.CONE) THEN
+          OPTIND=OPTIND+1
+          NAME='?'
+          OPTARG=''
+          EXITCODE=1
+          RETURN
+        ENDIF
+      ENDIF
+!
+!     ==========================================================================
+!     ==  FIND NEXT OPTION IN THE LIST; EXIT IF OPTION IS UNKNOWN
+!     ==========================================================================
+      EXITCODE=0
+      COPT=CARG(LCUR:LCUR)
+      LCUR=LCUR+1
+      LOPT=INDEX(OPTIONSTRING,COPT)
+      IF(LOPT.EQ.0) THEN
+        NAME='?'
+        OPTARG=COPT
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == OPTION FOUND; RETRIEVE ITS ARGUMENT IF REQUESTED
+!     ==========================================================================
+      IF(CONE.EQ.'-') THEN
+        NAME=""
+        LNAME=1
+      ELSE
+        NAME="+"
+        LNAME=2
+      END IF
+      NAME(LNAME:LNAME)=COPT
+      OPTARG=''
+      IF(LOPT.LT.LEN(OPTIONSTRING).AND.OPTIONSTRING(LOPT+1:LOPT+1).EQ.':') THEN
+      IF(LCUR.GT.LARG) THEN
+        OPTIND=OPTIND+1
+        IF(OPTIND.GT.NARG) THEN
+          NAME=':'
+          OPTARG=COPT
+          RETURN
+        ENDIF
+!       == FORMERLY: CALL GETARG(OPTIND,CARG)
+        CALL GET_COMMAND_ARGUMENT(OPTIND,CARG,LENG,ST)
+        IF(ST.NE.0) THEN
+          CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+          CALL ERROR$I4VAL('STATUS',ST)
+          CALL ERROR$I4VAL('POSITION',OPTIND)
+          CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
+          CALL ERROR$STOP('LIB_GETOPTS')
+        END IF
+!
+        LARG=LEN_TRIM(CARG)
+        LCUR=1
+      ENDIF
+      OPTARG=CARG(LCUR:LARG)
+      LCUR=LARG+1
+    ENDIF
+    RETURN
+    END SUBROUTINE LIB_GETOPTS
 ! 
 !*******************************************************************************
 !*******************************************************************************
@@ -2944,7 +3185,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
         CALL ERROR$STOP('LIB_LAPACK_DGESVD')
       END IF
       DEALLOCATE(WORK)
-      s(n+1:m)=0.d0
+      S(N+1:M)=0.D0
       RETURN
       END SUBROUTINE LIB_LAPACK_DGESVD
 !
