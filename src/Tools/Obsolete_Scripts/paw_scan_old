@@ -1,0 +1,413 @@
+#!/bin/bash 
+###############################################################################
+#
+#          NAME: paw_scan
+#
+#         USAGE: paw_scan options preroot
+#
+#       OPTIONS: -run, -eels, -dos, -dosplot, -wrapup, --dry-run
+#
+#   DESCRIPTION:
+#
+#   performs a set of paw_calculations to scan the dependence on a parameter
+#
+#   preroot contains the relative or absolute path of the projects
+#   including the common part of the rootname. The complete rootname
+#   will be constructed by appending the corresponding parameter
+#   separated by an underscore. preroot must contain at least one slash.
+#   Use ./string if run in the local directory.
+#
+#   specify some fixed parameters below. see "individual data"
+#
+#   REQUIREMENTS: doppaw, paw_resolve, waittillempty, paw_get
+#                  paw_dos.x, paw_dosplot.x, gracebat
+#
+#         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
+#
+#        CREATED: Dec. 15, 2013
+#
+###############################################################################
+#-------------------------------------------------------------------------------
+#  individual data
+#-------------------------------------------------------------------------------
+# name of the bin directory holding the executable ppaw_fast.x or paw_fast.x
+# name do not allow any trailing blanks in PAWXDIR!
+export NNODES=0       # number of nodes / scalar with NNODES=0
+export NCOREPERNODE=2  # number of cores per node (2)
+export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
+export SELECTEDHOST=palau
+#export PAWXDIR=/home/ptpb/Tree/PAW/devel/bin/ifc12_mkl_openmpi164/
+#export NNODES=19       # number of nodes / scalar with NNODES=0
+#export NCOREPERNODE=2  # number of cores per node (2)
+#export PAR1NAME="HFW"  # name for the variable to be replaced @$PAR1NAME@
+#export PAR1VALS='100 125'  # list of values to be scanned
+#-------------------------------------------------------------------------------
+# help message
+#-------------------------------------------------------------------------------
+export USAGE="Usage of $0 \n"
+USAGE="$USAGE paw_scan options PREROOT\n"
+USAGE="$USAGE Options:\n"
+USAGE="$USAGE -h print this help message \n"
+USAGE="$USAGE -? print this help message \n"
+USAGE="$USAGE -rule \"name value1 value2 ...\" replacement rule \n"
+USAGE="$USAGE -run run paw_simulation \n"
+USAGE="$USAGE -eels make EELS data \n"
+USAGE="$USAGE -dos make Density of States \n"
+USAGE="$USAGE -dosplot make xmgrace batch file for Density of States plots\n"
+USAGE="$USAGE -wrapup: make files with etot,homo,lumo,gap\n"
+USAGE="$USAGE -nproc n: submit with n processes in parallel\n"
+USAGE="$USAGE -host: limit execution to the specified host\n"
+USAGE="$USAGE --dry-run\n"
+USAGE="$USAGE -xdir directory containing the paw executables\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE PREROOT is the common part of the root name for all projects.\n"
+USAGE="$USAGE The root names of individual projects will be formed as\n "
+USAGE="$USAGE ROOT=BASIS/PRENAME_NAME/PRENAME_NAME.\n"
+USAGE="$USAGE where PRENAME is PREROOT stripped of the directory part\n"
+USAGE="$USAGE and BASIS is the directory part of PREROOT.\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE prepare the following files:\n"
+USAGE="$USAGE BASIS/Samples/PRENAME.cntl_start\n"
+USAGE="$USAGE BASIS/Samples/PRENAME.cntl_run\n"
+USAGE="$USAGE BASIS/Samples/PRENAME.cntl_eels\n"
+USAGE="$USAGE BASIS/Samples/PRENAME.strc_run\n"
+USAGE="$USAGE BASIS/Samples/PRENAME.dcntl\n"
+USAGE="$USAGE BASIS/Samples/dosplot.dpcntl\n"
+USAGE="$USAGE BASIS/Samples/addeels.f90\n"
+USAGE="$USAGE addeels.f90 is a fortran code that sums up the EELS data"
+USAGE="$USAGE as desired.\n"
+USAGE="$USAGE during start, the _X will be stripped from !ORBPOT_X.\n"
+USAGE="$USAGE If there is a restart file BASIS/PRENAME.rstrt,\n"
+USAGE="$USAGE it will be used before starting from scratch\n"
+USAGE="$USAGE \n"
+#-------------------------------------------------------------------------------
+#  resolve argument list
+#-------------------------------------------------------------------------------
+THISDIR=`pwd`
+DRYRUN=no
+#
+while [[ $1 ]] ; do
+  case $1 in
+    -h|?)
+      echo -e $USAGE
+      exit 1
+      ;;
+    -rule)
+      RULE="${1#-rule}"
+      if [ -z "$RULE" ] ; then
+        shift
+        RULE="$1"
+      fi
+      PAR1NAME=""
+      PAR1VALS=""
+      for X in $RULE ; do
+        if [ -z $PAR1NAME ] ; then
+          PAR1NAME=${X}
+        else
+          PAR1VALS="$PAR1VALS $X"
+        fi
+      done
+      shift
+      ;;
+    -run|-eels|-dos|-wrapup|-dosplot) 
+      TODO=${1#-}
+      shift
+      ;;
+    --dry-run)
+      DRYRUN=yes
+      shift
+      ;;
+    -nproc|-nproc*)
+      NNODES=${1#-nproc}
+      if [ -z  $NNODES ] ; then
+        shift
+        NNODES=$1
+      fi
+      shift
+      ;;
+    -host|-host*)
+      SELECTEDHOST=${1#-host}
+      if [ -z $SELECTEDHOST ] ; then
+        shift
+        SELECTEDHOST=$1
+      fi
+      shift
+      ;;
+    -xdir|-xdir*)
+      PAWXDIR=${1#-xdir}
+      if [ -z $PAWXDIR ] ; then
+        shift
+        PAWXDIR=$1
+      fi
+      shift
+      ;;
+    -*)
+      echo error in $0: invalid argument $1
+      exit 1
+      ;;
+    *)
+      PREROOT=$1
+      #  Directory containing all subprojects relative to THISDIR
+      BASIS=${PREROOT%/*} 
+      PRENAME=${PREROOT##*/}   # e.g. pmo,cmo,pcmo etc
+      shift
+      ;;
+  esac
+done
+if [ -z $PAR1NAME ] ; then 
+  echo -e $USAGE
+  echo -e "\n error in $0: missing or incomplete argument RULE"
+  echo -e "RULE=$RULE"
+  echo -e "PAR1NAME=$PAR1NAME"
+  echo -e "PAR1VALS=$PAR1VALS"
+  exit
+fi
+if [ -z $TODO ] ; then 
+  echo -e $USAGE
+  echo -e "\n error in $0: missing argument TODO"
+  exit
+fi
+if [ -z $PREROOT ] ; then 
+  echo -e $USAGE
+  echo -e "\n error in $0: missing argument PREROOT"
+  exit
+fi
+# run only on palau
+if [ ${HOSTNAME%%.*} != $SELECTEDHOST ] ; then
+  if [ $DRYRUN = no ] ; then
+    echo error in $0: not on $SELECTEDHOST
+    echo actual host name: ${HOSTNAME%%.*}
+    exit 1
+  fi
+fi
+#-------------------------------------------------------------------------------
+#    report arguments
+#-------------------------------------------------------------------------------
+echo ========================================================
+echo TODO=$TODO
+echo PREROOT=$PREROOT
+echo HOSTNAME=$HOSTNAME
+echo BASIS=$BASIS      # directory containing the project directories
+echo PRENAME=$PRENAME  # e.g. pmo
+echo ========================================================
+#
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#    initialize: make directories and copy files
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+for PAR1VAL in $PAR1VALS; do
+  NAME=${PRENAME}'_'${PAR1VAL}
+  DIR=${BASIS}/${NAME}
+  ROOT=${BASIS}/${NAME}/${NAME}
+  SAMPLEDIR=${BASIS}/Samples
+  PROJECTDIR=$THISDIR/$DIR
+  #
+  # create project directory
+  #
+  if [ ! -d $DIR ] ; then mkdir $DIR; fi
+  #
+  #   copy input files
+  #
+  for X in cntl_start cntl_run cntl_eels strc_run dcntl ; do
+    SOURCE=${SAMPLEDIR}/$PRENAME.$X
+    TARGET=${ROOT}.$X
+    # check if source exists
+    if [ ! -e ${SOURCE} ]; then echo error: missing file ${SOURCE}; exit 1; fi
+    # copy if target does not exist or is older than source
+    if [ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ] ; then
+      echo copying file into $TARGET
+      paw_resolve -r ${PAR1NAME}=$PAR1VAL \
+                  -r NAME=$NAME ${SOURCE} > ${TARGET}
+      RC=$?
+      if [ $RC -ne 0 ] ; then
+        echo error in $0:
+        echo paw_resolve failed to expand ${SOURCE}
+        exit 1
+      fi
+    fi
+  done
+  #
+  #   convert (run) structure file into start structure file
+  #
+  sed -e 's/!ORBPOT_X/!ORBPOT/' \
+      -e 's/EMPTY=/EMPTY_X=/'   <${ROOT}.strc_run  >${ROOT}.strc_start
+  #
+  #   copy restart file
+  #
+  SOURCE=${BASIS}/${PRENAME}.rstrt
+  TARGET=${ROOT}.rstrt
+  if [ ! -e ${TARGET} ]; then  # copy only if target does not exist
+    if [ -e ${SOURCE} ] ; then # copy only if source exists
+      echo copying file into ${TARGET}
+      cp ${SOURCE} ${TARGET}
+      echo 'restart file copied...' `date`
+    fi
+  fi
+  #
+  #  addeels.f90
+  #
+  SOURCE=${SAMPLEDIR}/addeels.f90 
+  TARGET=${DIR}/addeels.f90
+  # check if source exists
+  if [ ! -e ${SOURCE} ]; then echo error: missing file ${SOURCE}; exit 1; fi
+  # copy if target does not exist or is older than source
+  if [ ! -e ${TARGET}  -o  ${TARGET} -ot ${SOURCE} ] ; then
+    echo copying file into $TARGET
+    cp ${SOURCE} ${TARGET}
+  fi
+done
+#
+#-------------------------------------------------------------------------------
+#    submit project specific jobs
+#-------------------------------------------------------------------------------
+#  clean data arrays, because information will be added
+cd ${THISDIR}
+cd ${BASIS}
+if [ $TODO = wrapup ] ; then
+  if [ -e homolumogap.dat ] ; then rm homolumogap.dat ; fi
+  if [ -e homo.dat ] ; then rm homo.dat ; fi
+  if [ -e lumo.dat ] ; then rm lumo.dat ; fi
+  if [ -e gap.dat ] ; then rm gap.dat ; fi
+fi
+#   loop over all projects
+cd ${THISDIR}
+for PAR1VAL in $PAR1VALS; do
+  NAME=${PRENAME}'_'${PAR1VAL}
+  DIR=${BASIS}/${NAME}
+  ROOT=${BASIS}/${NAME}/${NAME}
+  SAMPLEDIR=${BASIS}/Samples
+  PROJECTDIR=$THISDIR/$DIR
+  #
+  case $TODO in
+    run)
+      cd ${PROJECTDIR}
+      if [ ! -e ${NAME}.rstrt ] ; then 
+        echo start a calculation without restart file 
+        cp ${NAME}.cntl_start ${NAME}.cntl 
+        cp ${NAME}.strc_start ${NAME}.strc ;
+      else echo continue a calculation from an existing restart file 
+        cp ${NAME}.cntl_run ${NAME}.cntl 
+        cp ${NAME}.strc_run ${NAME}.strc 
+      fi
+      if [ ${NNODES} = 0 ] ; then
+        echo submitting scalar job ${PROJECTDIR}/${NAME}
+        if [ $DRYRUN = no ] ; then
+          waittillempty 3
+          ${PAWXDIR}/paw_fast.x ${NAME}.cntl 1>out 2>&1 &
+        fi
+      else
+        echo submitting parallel job ${PROJECTDIR}/${NAME}
+        if [ $DRYRUN = no ] ; then
+          doppaw ${NAME} ${NNODES} ${NCOREPERNODE}
+        fi
+      fi
+      echo job submitted
+      cd $THISDIR
+      ;;
+    #
+    eels)
+      cd ${PROJECTDIR}
+      if [ ! -d Eels ] ; then mkdir Eels; fi
+      if [ -e ${NAME}.cntl_eels ] ; then 
+        cp ${NAME}.cntl_eels  Eels/${NAME}.cntl
+      else
+        echo error in $0:
+        echo file ${PROJECTDIR}/${NAME}.cntl_eels does not exist
+        exit 1
+      fi
+      cd Eels
+      if [ ${NNODES} = 0 ] ; then
+        if [ $DRYRUN = no ] ; then
+          waittillempty
+          ${PAWXDIR}/paw_fast.x ${PROJECTDIR}/Eels/${NAME}.cntl 1>out 2>&1 &
+        fi
+      else
+        if [ $DRYRUN = no ] ; then
+          doppaw ${PROJECTDIR}/Eels/${NAME} ${NNODES} ${NCOREPERNODE}
+        fi
+      fi
+      cd $THISDIR
+      ;;
+    #
+    dos)
+      cd ${PROJECTDIR}
+      echo executing make-dos $PROJECTDIR ....
+      if [ ! -d Dos ] ; then mkdir Dos; fi
+#      cp ${NAME}.strc_out Dos/
+#      cp ${NAME}.pdos Dos/
+      if [ $DRYRUN = no ] ; then
+        ${PAWXDIR}/paw_dos.x ${PROJECTDIR}/${NAME}.dcntl
+        RC=$?
+        if [ $RC -ne 0 ] ; then 
+          echo error in $0:
+          echo paw_dos failed on ${PROJECTDIR}/Dos/${NAME}.dcntl 
+          exit 1 
+        fi
+      fi
+      echo ..... make-dos $DIR done
+      cd $THISDIR
+      ;;
+    #
+    wrapup)
+      cd ${THISDIR}
+      paw_get -gap -t ${ROOT} >> ${BASIS}/homolumogap.dat
+      RESULT=`paw_get -gap -n ${ROOT}` 
+      echo "$PAR1VAL $RESULT" >> ${BASIS}/gap.dat
+      #
+      paw_get -lumo -t ${ROOT} >> ${BASIS}/homolumogap.dat
+      RESULT=`paw_get -lumo -n ${ROOT}` 
+      echo "$PAR1VAL $RESULT" >> ${BASIS}/lumo.dat
+      #
+      paw_get -homo -t ${ROOT} >> ${BASIS}/homolumogap.dat
+      RESULT=`paw_get -homo -n ${ROOT}` 
+      echo "$PAR1VAL $RESULT" >> ${BASIS}/homo.dat
+      #
+      paw_get -etot -t ${ROOT} >> ${BASIS}/homolumogap.dat
+      RESULT=`paw_get -etot -n ${ROOT}` 
+      echo "$PAR1VAL $RESULT" >> ${BASIS}/etot.dat
+      #
+      #-- structure output -----------------------------------------------------
+      cd ${THISDIR}
+      paw_strc.x -c ${ROOT}    
+      #
+      #--  add up eels spectra -------------------------------------------------
+      gfortran -o ${PROJECTDIR}/Eels/addeels.x  ${PROJECTDIR}/addeels.f90
+      RC=$?
+      if [ $RC -ne 0 ] ; then 
+        echo "error in $0: compilation of ${PROJECTDIR}/addeels.f90 failed"
+      fi
+      cd ${PROJECTDIR}/Eels
+      addeels.x
+      cd $THISDIR
+      ;;
+    esac
+done
+#
+#########################################################################
+##
+##    global operations 
+##
+##########################################################################
+if [ $TODO = dos -o $TODO = dosplot ] ; then
+  cp ${SAMPLEDIR}/dosplot.dpcntl ${BASIS}/dosplot.dpcntl
+  cd ${BASIS}
+  echo proceeding in directory ${BASIS}
+  if [ $DRYRUN = no ] ; then
+    paw_dosplot.x dosplot.dpcntl
+    echo dosplot finished
+    gracebat -nosafe -hdevice EPS -batch dosplot.bat \
+             -hardcopy -printfile dosplot.eps
+    gracebat -nosafe -hdevice PDF -batch dosplot.bat \
+             -hardcopy -printfile dosplot.pdf
+    gracebat -nosafe -hdevice SVG -batch dosplot.bat \
+             -hardcopy -printfile dosplot.svg
+    # xmgrace -nosafe -batch pmo.bat
+   fi
+   cd ${THISDIR}
+fi
+if [ $DRYRUN != no ] ; then
+   echo dry-run of $0 completed
+fi
+exit
+

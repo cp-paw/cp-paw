@@ -1,0 +1,16 @@
+#!/bin/sh
+# This tool removes number of states from the output files of the 
+# dos tool. It searches the current directory for files ending with
+# .dos and creates for each a copy with ending .ddos.
+#
+#   $@ is the list of all input arguments. can use wildcards
+for FILE  in $@ ; do
+ ROOT=${FILE%.dos}
+ FILEIN=$ROOT.dos
+ FILEOUT=$ROOT.ddos
+# echo $FILEIN $FILEOUT
+            # this is to check that only *.dos files are considered
+ if test $FILEIN = $FILE ; then   
+   gawk '{print $1 "  "  $2 "  " $4 " " $6 " " $8}' $FILEIN > $FILEOUT
+ fi
+done
