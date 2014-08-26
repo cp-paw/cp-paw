@@ -189,7 +189,7 @@ fi     # end of block "without parmfile" #--------------------------------------
 #   There the synax is @VARIABLE@
 #
 #ATTENTION CHANGE!!!!
-CPP="$CPP -traditional"
+CPP="$CPP -traditional -nostdinc"
 #
 #########################################################################
 ##                                                                     ##
