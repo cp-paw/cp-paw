@@ -31,7 +31,8 @@ USAGE="$USAGE \t -l list of percent changes of the lattice constant\
               (enter in apostrophes \"...\")\n"
 USAGE="$USAGE \t -b directory containing the paw executables (binaries)\n"
 USAGE="$USAGE \t -e name of the executable\n"
-USAGE="$USAGE \t -0 dry-run\n"
+USAGE="$USAGE \t -j nr. of paw_jobs allowed to run simultaneously\n"
+USAGE="$USAGE \t -0 dry-run (reconstruct *.dat files only)\n"
 USAGE="$USAGE \t -h print this help message \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE preconditions: \n" 
@@ -50,7 +51,8 @@ EXECTBLE=paw_fast.x
 ALATLIST="96 97 98 99 100 101 102 103 104"
 DRYRUN=no
 VERBOSE=no
-while getopts :h0b:p:l:v OPT ; do
+NJOBS=3
+while getopts :h0b:p:l:j:v OPT ; do
   case $OPT in
     p)
       NAME=$OPTARG
@@ -60,6 +62,9 @@ while getopts :h0b:p:l:v OPT ; do
       ;; 
     e)
       EXECTBLE=$OPTARG
+      ;;
+    j)
+      NJOBS=$OPTARG
       ;;
     b)
       PAWXDIR=$OPTARG
@@ -102,8 +107,8 @@ if [ $VERBOSE = yes ] ; then
   echo "executable.................................: $EXECTBLE"
   echo "Directory with holding executable..........: ${PAWXDIR}"
   echo "dry-run....................................: ${DRYRUN}"
+  echo "max. nr. of paw jobs running simultaneously: ${NJOBS}"
 fi
-#
 #
 #==============================================================================
 # pick out the equilibrium lattice constant from the structure file
@@ -132,20 +137,27 @@ for X in $ALATLIST; do
   # construct structure control file from template by replacing lattice constant
   #============================================================================
   ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
+  if [[ $VERBOSE = yes ]] ; then
+    echo "sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
+  fi
+  if [[ "$DRYRUN" = "no" ]] ; then
   sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
+  fi
   #============================================================================
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
   #============================================================================
-  cp ${NAME}.cntl ${NAME}_${X}.cntl
-  if [[ "$DRYRUN" = "no" ]] ; then
-    #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
     if [[ $VERBOSE = yes ]] ; then
+    echo "cp ${NAME}.cntl ${NAME}_${X}.cntl"
+    echo "paw_waittillempty -n $NJOBS"
       echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
     fi
-    ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 
-  else
-    echo "rm ${NAME}_${X}.prot"
-    echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
+  if [[ "$DRYRUN" = "no" ]] ; then
+    #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
+    cp ${NAME}.cntl ${NAME}_${X}.cntl
+    # paw_waitillempty waits if equal ormore than NJOBS paw_jobs are active
+    paw_waittillempty -n $NJOBS 
+    # submit paw calculation in the background
+    ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &
   fi
   echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
   echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
@@ -155,6 +167,7 @@ for X in $ALATLIST; do
   #
   #  clean up
   # 
+  if [[ "$DRYRUN" = "no" ]] ; then
   LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
         ${NAME}_${X}.strc_out "
   for Y in $LIST ; do
@@ -162,5 +175,6 @@ for X in $ALATLIST; do
     if [[ -e $Y ]] ; then rm $Y ; fi
   done
   rm ${NAME}_${X}_stpfor*.myxml
+ fi
 done
 exit
