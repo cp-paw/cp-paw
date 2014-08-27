@@ -132,7 +132,7 @@ if [[ -e etot.dat ]] ; then rm etot.dat; fi
 if [[ -e gap.dat ]]  ; then rm gap.dat; fi
 if [[ -e murn.in ]]  ; then rm murn.in; fi
 for X in $ALATLIST; do
- if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi
+  if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi
   #============================================================================
   # construct structure control file from template by replacing lattice constant
   #============================================================================
@@ -141,16 +141,16 @@ for X in $ALATLIST; do
     echo "sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
   fi
   if [[ "$DRYRUN" = "no" ]] ; then
-  sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
+    sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
   fi
   #============================================================================
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
   #============================================================================
-    if [[ $VERBOSE = yes ]] ; then
+  if [[ $VERBOSE = yes ]] ; then
     echo "cp ${NAME}.cntl ${NAME}_${X}.cntl"
     echo "paw_waittillempty -n $NJOBS"
-      echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
-    fi
+    echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
+  fi
   if [[ "$DRYRUN" = "no" ]] ; then
     #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
     cp ${NAME}.cntl ${NAME}_${X}.cntl
@@ -168,13 +168,13 @@ for X in $ALATLIST; do
   #  clean up
   # 
   if [[ "$DRYRUN" = "no" ]] ; then
-  LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
-        ${NAME}_${X}.strc_out "
-  for Y in $LIST ; do
-    if [[ $VERBOSE = yes ]] ; then echo cleaning $Y ; fi
-    if [[ -e $Y ]] ; then rm $Y ; fi
-  done
-  rm ${NAME}_${X}_stpfor*.myxml
+    LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
+          ${NAME}_${X}.strc_out "
+    for Y in $LIST ; do
+      if [[ $VERBOSE = yes ]] ; then echo cleaning $Y ; fi
+      if [[ -e $Y ]] ; then rm $Y ; fi
+    done
+    rm ${NAME}_${X}_stpfor*.myxml
  fi
 done
 exit
