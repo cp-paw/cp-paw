@@ -138,10 +138,10 @@ for X in $ALATLIST; do
   #============================================================================
   ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
   if [[ $VERBOSE = yes ]] ; then
-    echo "sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
+    echo "sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
   fi
   if [[ "$DRYRUN" = "no" ]] ; then
-    sed "s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
+    sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
   fi
   #============================================================================
   # run paw_fast.x and place data "gap.dat" and "etot.dat"
