@@ -1,23 +1,54 @@
 #!/bin/bash
-#  performs set of calculations for different lattice constants 
-#  and atomic calculations for all files of ending with "_atom.strc"
+###############################################################################
 #
-#  requirement: nio.cntl 
-#               nio.strc 
-#               ni_atom.strc
-#               o_atom.strc
+#          NAME: paw_scanlat
 #
-#  nio is to be replaced by the name of the substance and 
-#  ni and o must be replaced by the corresponding atom ids.
+#         USAGE: paw_scanlat options 
+#
+#       OPTIONS: mandatory: p optional: hlubej0v 
+#
+#   DESCRIPTION: perform a sequence of paw calculations with different
+#                lattice constants or updates data files with its results
+#
+#       OPTIONS:
+#          -h    print this help message
+#          -p    rootname of the project to be considered (mandatory)
+#          -l    list of percent changes of the lattice constant
+#                 (enter in apostrophes such as "98 100 102")
+#                default: "96 97 98 99 100 101 102 103 104"
+#          -u    updates result data files (no paw simulations)
+#          -b directory containing the paw executables (binaries)
+#          -e name of the executable
+#          -j nr. of paw_jobs allowed to run simultaneously
+#          -0 dry-run (reconstruct *.dat files only)
+#          -v verbose
+#
+#  prerequisites: nio.cntl 
+#                 nio.strc 
+#        (nio is to be replaced by the name of the substance )
+#
+#  performs set of calculations for different lattice constants.
 #
 #  nio.strc must contain exactly one line containing "LUNIT=" 
-#  followed by the lattice constant in atomic units, followed by "!END".
+#  followed by the lattice constant in atomic units, or "LUNIT[AA]="
+#  followed by the lattice constant in angstrom, followed by "!END".
 #  this occurrance will be replaced by the varied values for the 
 #  individual runs.
 #
 #  result       etot.dat 
 #               gap.dat
+#               murn.in
 #
+#  Example:
+#       paw_scanlat -p nio -j3 -l "96 98 100 102 104" ./si2
+#
+#   REQUIREMENTS: paw_waittillempty, paw_get, paw_fast.x
+#
+#         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
+#
+#        CREATED: Sept. 2, 2014
+#
+################################################################################
 #==============================================================================
 # initialize variables and scan argument list
 #==============================================================================
@@ -27,12 +58,15 @@ USAGE="$USAGE \t paw_scanlat options\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -p rootname of the project to be considered (mandatory)\n"
-USAGE="$USAGE \t -l list of percent changes of the lattice constant\
-              (enter in apostrophes \"...\")\n"
+USAGE="$USAGE \t -l list of percent changes of the lattice constant\n"
+USAGE="$USAGE \t    (enter in apostrophes \"...\")\n"
+USAGE="$USAGE \t     \"96 97 98 99 100 101 102 103 104\"\n"
+USAGE="$USAGE \t -u updates result data files (no paw simulations)\n"
 USAGE="$USAGE \t -b directory containing the paw executables (binaries)\n"
 USAGE="$USAGE \t -e name of the executable\n"
 USAGE="$USAGE \t -j nr. of paw_jobs allowed to run simultaneously\n"
 USAGE="$USAGE \t -0 dry-run (reconstruct *.dat files only)\n"
+USAGE="$USAGE \t -v verbose\n"
 USAGE="$USAGE \t -h print this help message \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE preconditions: \n" 
@@ -51,8 +85,9 @@ EXECTBLE=paw_fast.x
 ALATLIST="96 97 98 99 100 101 102 103 104"
 DRYRUN=no
 VERBOSE=no
+UPDATE=no
 NJOBS=3
-while getopts :h0b:p:l:j:v OPT ; do
+while getopts :h0b:p:l:j:uv OPT ; do
   case $OPT in
     p)
       NAME=$OPTARG
@@ -62,6 +97,9 @@ while getopts :h0b:p:l:j:v OPT ; do
       ;; 
     e)
       EXECTBLE=$OPTARG
+      ;;
+    u)
+      UPDATE=yes
       ;;
     j)
       NJOBS=$OPTARG
@@ -107,6 +145,7 @@ if [ $VERBOSE = yes ] ; then
   echo "executable.................................: $EXECTBLE"
   echo "Directory with holding executable..........: ${PAWXDIR}"
   echo "dry-run....................................: ${DRYRUN}"
+  echo "update.....................................: ${UPDATE}"
   echo "max. nr. of paw jobs running simultaneously: ${NJOBS}"
 fi
 #
@@ -128,53 +167,67 @@ ALAT0=$X
 #==============================================================================
 # loop crystal calculation through different lattic constants                ==
 #==============================================================================
-if [[ -e etot.dat ]] ; then rm etot.dat; fi
-if [[ -e gap.dat ]]  ; then rm gap.dat; fi
-if [[ -e murn.in ]]  ; then rm murn.in; fi
-for X in $ALATLIST; do
-  if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi
-  #============================================================================
-  # construct structure control file from template by replacing lattice constant
-  #============================================================================
-  ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
-  if [[ $VERBOSE = yes ]] ; then
-    echo "sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
-  fi
-  if [[ "$DRYRUN" = "no" ]] ; then
-    sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
-  fi
-  #============================================================================
-  # run paw_fast.x and place data "gap.dat" and "etot.dat"
-  #============================================================================
-  if [[ $VERBOSE = yes ]] ; then
-    echo "cp ${NAME}.cntl ${NAME}_${X}.cntl"
-    echo "paw_waittillempty -n $NJOBS"
-    echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
-  fi
-  if [[ "$DRYRUN" = "no" ]] ; then
-    #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
-    cp ${NAME}.cntl ${NAME}_${X}.cntl
-    # paw_waitillempty waits if equal ormore than NJOBS paw_jobs are active
-    paw_waittillempty -n $NJOBS 
-    # submit paw calculation in the background
-    ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &
-  fi
-  echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
-  echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
-  Y=$(echo "$ALAT * $AA" | bc -l)
-  Y=$(echo "$Y * $Y * $Y " | bc -l)
-  echo ${Y} $(paw_get -w etot -n ${NAME}_${X}) >>murn.in
-  #
-  #  clean up
-  # 
-  if [[ "$DRYRUN" = "no" ]] ; then
-    LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
-          ${NAME}_${X}.strc_out "
-    for Y in $LIST ; do
-      if [[ $VERBOSE = yes ]] ; then echo cleaning $Y ; fi
-      if [[ -e $Y ]] ; then rm $Y ; fi
-    done
-    rm ${NAME}_${X}_stpfor*.myxml
- fi
-done
-exit
+if [[ $UPDATE = no ]] ; then
+  for X in $ALATLIST; do
+    if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi 
+    #===========================================================================
+    # construct structure control file from template by replacing alat
+    #===========================================================================
+    ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
+    if [[ $VERBOSE = yes ]] ; then
+      echo "sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
+    fi
+    if [[ "$DRYRUN" = "no" ]] ; then
+      sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
+    fi
+    #==========================================================================
+    # run paw_fast.x and place data "gap.dat" and "etot.dat"
+    #==========================================================================
+    if [[ $VERBOSE = yes ]] ; then
+      echo "cp ${NAME}.cntl ${NAME}_${X}.cntl"
+      echo "paw_waittillempty -n $NJOBS"
+      echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
+    fi
+    if [[ "$DRYRUN" = "no" ]] ; then
+      #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
+      cp ${NAME}.cntl ${NAME}_${X}.cntl
+      # paw_waitillempty waits if equal or more than NJOBS paw_jobs are active
+      paw_waittillempty -n $NJOBS 
+      # submit paw calculation in the background
+      ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &
+    fi
+  done
+fi
+#
+#==============================================================================
+# update data files
+#==============================================================================
+if [[ $UPDATE = yes ]] ; then
+  if [[ -e etot.dat ]] ; then rm etot.dat; fi
+  if [[ -e gap.dat ]]  ; then rm gap.dat; fi
+  if [[ -e murn.in ]]  ; then rm murn.in; fi
+  for X in $ALATLIST; do
+    if [[ $VERBOSE = yes ]] ; then echo "collecting ${NAME}_$X" ; fi
+    echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
+    echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
+    ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
+    Y=$(echo "$ALAT * $AA" | bc -l)
+    Y=$(echo "$Y * $Y * $Y " | bc -l)
+    echo ${Y} $(paw_get -w etot -n ${NAME}_${X}) >>murn.in
+    #
+    #  clean up
+    # 
+    if [[ "$DRYRUN" = "no" ]] ; then
+      LIST="${NAME}_${X}_constr.report ${NAME}_${X}_r.tra ${NAME}_${X}.pdos \
+            ${NAME}_${X}.strc_out "
+      for Y in $LIST ; do
+        if [[ $VERBOSE = yes ]] ; then echo cleaning $Y ; fi
+        if [[ -e $Y ]] ; then rm $Y ; fi
+      done
+      for Y in ${NAME}_${X}_stpfor*.myxml; do
+        if [[ -e $Y ]] ; then rm $Y ; fi
+      done
+    fi
+  done
+fi
+exit 0
