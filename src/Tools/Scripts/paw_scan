@@ -131,7 +131,7 @@ function execute(){
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
-while getopts :hv0w:r:b:x:n:m:f: OPT  ; do
+while getopts :hv0w:r:b:x:n:m:f:j: OPT  ; do
   echo OPT=$OPT
   case $OPT in
     r)  #rule:   "id val1 val2 val3 ....". Use apostrophes!
