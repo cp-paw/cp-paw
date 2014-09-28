@@ -120,10 +120,11 @@ export VERBOSE=no
 #  implement dry-run
 #-------------------------------------------------------------------------------
 function execute(){
-    if [ ${DRYRUN} = yes -o ${VERBOSE} = yes ] ; then
+    # || is "or" in [[...]], && is "and" in [[..]] 
+    if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ] ; then
       echo "${@}"
     fi
-    if [[ ${DRYRUN} = no ]] ; then
+    if [[ "${DRYRUN}" = "no" ]] ; then
       eval "$@"
     fi
 }
