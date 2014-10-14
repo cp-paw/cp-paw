@@ -121,7 +121,7 @@ export VERBOSE=no
 #-------------------------------------------------------------------------------
 function execute(){
     # || is "or" in [[...]], && is "and" in [[..]] 
-    if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ] ; then
+    if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
       echo "${@}"
     fi
     if [[ "${DRYRUN}" = "no" ]] ; then
