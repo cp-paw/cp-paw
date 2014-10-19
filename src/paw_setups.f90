@@ -1145,7 +1145,7 @@ END MODULE SETUP_MODULE
       REAL(8)                 :: DEX
       INTEGER(4)              :: NR
       INTEGER(4)              :: GID
-      LOGICAL(4)              :: TCHK
+      LOGICAL(4)              :: TCHK,tchk1
       CHARACTER(128)          :: ID
       REAL(8)                 :: RCOV
       REAL(8)                 :: PI,Y0
@@ -1278,12 +1278,16 @@ END MODULE SETUP_MODULE
 !       ========================================================================
 !       ==  ATOMIC RADIUS FOR PDOS ETC.                                       ==
 !       ========================================================================
-        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL PERIODICTABLE$GET(AEZ,'R(ASA)',SVAR)
-          CALL LINKEDLIST$SET(LL_STRC,'RAD',0,SVAR)
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'RAD',1,THIS%RAD)
+        CALL PERIODICTABLE$GET(AEZ,'R(ASA)',THIS%RAD)  !SET DEFAULT
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD/RCOV',1,TCHK)
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RAD',1,TCHK1)
+        IF(TCHK) THEN
+          CALL PERIODICTABLE$GET(AEZ,'R(COV)',SVAR)
+          CALL LINKEDLIST$GET(LL_STRC,'RAD/RCOV',0,THIS%RAD)
+          THIS%RAD=THIS%RAD*SVAR
+        ELSE IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_STRC,'RAD',0,THIS%RAD)
+        ENDIF
 !
         CALL SETUP$UNSELECT()
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
@@ -2771,6 +2775,13 @@ RCL=RCOV
       CALL TRACE$PASS('BEFORE SCF-ATOM')
       CALL TIMING$CLOCKON('SCF-ATOM')
 !
+!     == THESE VARIABLES ARE INTENT(INOUT) BUT NOT YET DEFINED =================
+      LOFI=-1111
+      SOFI=-1111
+      FOFI=0.D0
+      NNOFI=-1111
+!
+!     == PERFORM ALL-ELECTRON SELF-CONSISTENT CALCULATION OF THE ATOM
       CALL ATOMLIB$AESCF(GID,NR,KEY,ROUT,AEZ,NBX,NB,LOFI,SOFI,FOFI,NNOFI &
     &                   ,ETOT,THIS%ATOM%AEPOT,VFOCK,EOFI,PSI,PSISM)
       CALL TIMING$CLOCKOFF('SCF-ATOM')
@@ -5539,7 +5550,7 @@ PRINT*,'KI ',KI
 !         ======================================================================
 !         == WRITE SPECIESBLOCKS FOR SETUPFILE                                ==
 !         ======================================================================
-!          CALL SETUP_WRITEspeciesPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+!          CALL SETUP_WRITESPECIESPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
           CALL SETUP_WRITEPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
      &                           ,RCL,LAMBDA &
      &                           ,POTPOW,POTRC,TPOTVAL,POTVAL &
@@ -5668,11 +5679,11 @@ PRINT*,'KI ',KI
       REAL(8)     ,INTENT(IN) :: DMAX     ! LARGEST GRID SPACING
       REAL(8)     ,INTENT(IN) :: RMAX     ! OUTERMOST GRID POINT 
       REAL(8)                 :: RCOV     ! COVALENT RADIUS
-      character(2)            :: el
-      logical(4)              :: tsc
-      character(128)          :: string
+      CHARACTER(2)            :: EL
+      LOGICAL(4)              :: TSC
+      CHARACTER(128)          :: STRING
       CHARACTER(1)            :: ATOMTYPE
-      integer(4)              :: iz
+      INTEGER(4)              :: IZ
 !     **************************************************************************
       CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
       EL=ID(1:2)
@@ -5696,17 +5707,17 @@ PRINT*,'KI ',KI
         END IF
       ELSE
         IF(IZ.LE.2) THEN
-          string='" NPRO=1  LRHOX=2 ")'
+          STRING='" NPRO=1  LRHOX=2 ")'
         ELSE IF(IZ.LE.18) THEN
-          string='" NPRO=2 2 0  LRHOX=2 ")'
+          STRING='" NPRO=2 2 0  LRHOX=2 ")'
         ELSE IF(IZ.LT.56) THEN
-          string='" NPRO=2 2 1  LRHOX=2 ")'
+          STRING='" NPRO=2 2 1  LRHOX=2 ")'
         ELSE      
-          string='" NPRO=2 2 1 1 LRHOX=2 ")'
+          STRING='" NPRO=2 2 1 1 LRHOX=2 ")'
         END IF
       END IF
-      string='(T3,"!SPECIES NAME=",A,'//trim(string)
-      write(nfil,fmt=trim(string))"'"//EL//"'"
+      STRING='(T3,"!SPECIES NAME=",A,'//TRIM(STRING)
+      WRITE(NFIL,FMT=TRIM(STRING))"'"//EL//"'"
 !
       WRITE(NFIL,FMT='(T5,"!AUGMENT  ID=",A," Z=",F10.5," ZV=",F3.0)') &
      &                            "'"//TRIM(ID)//"'",AEZ,ZV

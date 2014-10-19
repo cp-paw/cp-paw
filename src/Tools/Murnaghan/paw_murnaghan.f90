@@ -20,6 +20,7 @@
      REAL(8)    :: VBYL3              ! VOLUME IS VBYL3*L**3
      REAL(8)    :: SVAR               ! AUXILIARY VARIABLE
      CHARACTER(64) :: ARG     
+     CHARACTER(250) :: string     
      LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
      REAL(8)   ,PARAMETER :: ANGSTROM=1.D0/0.52917721092D0
      REAL(8)   ,PARAMETER :: JOULE=1.D0/4.35974434D-18
@@ -180,8 +181,11 @@
 !    ===========================================================================
 !    == WRITE EQUIDISTANT ENERGY VOLUME CURVE (INPUT RANGE +10%)              ==
 !    ===========================================================================
-     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
-    &                         //-' TO FILE MURN.DAT")')
+     STRING=-'INTERPOLATED EQUATION OF STATE IS WRITTEN TO FILE MURN.DAT'
+     STRING='(80("="),T10,"'//TRIM(STRING)//'")'
+     WRITE(*,FMT=trim(string))
+!     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
+!    &                         //-' TO FILE MURN.DAT")')
      OPEN(UNIT=8,FILE=-'MURN.DAT')
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)

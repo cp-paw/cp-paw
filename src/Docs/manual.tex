@@ -2944,13 +2944,13 @@ shifting the grid.}
 \vdefault{none}}
 
 \mbax{\key{ID} 
-\vdescr{Identifier for the setup type. Allows to select
-    parameterset defining the augmentation (e.g. partial waves and
-    projector functions). The ID must be recognized by internally or
-    it must identify a parameter set on a parameter file specified by
-    !CNTL!FILES!FILE with name=PARMS\_STP.}
+\vdescr{Identifier for the setup type. Allows to select parameterset
+  defining the augmentation (e.g. partial waves and projector
+  functions). The ID must be one of the internally recognized strings,
+  or it must identify a parameter set on a parameter file specified by
+  !CNTL!FILES!FILE with name=PARMS\_STP.}
 \vformat{character}
-\vrules{optional. not used when !STRUCTURE!SPECIES!SETUP is present.}
+\vrules{optional. not used when !STRUCTURE!SPECIES!AUGMENT is present.}
 \vdefault{none}}
 
 \mbax{\key{M}
@@ -2986,6 +2986,15 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 
 \mbax{\key{RAD} 
  \vdescr{Atomic radius in a$_0$ used to evaluate the integration
+    volume for the projected density of states etc.}
+\vformat{real}
+\vrules{optional, obsolete: is overwritten by RAD/RCOV.}
+\vdefault{R(ASA) from periodictable object. Equals $1.10533$ times the
+  covalent radius.}}
+
+\mbax{\key{RAD/RCOV} 
+ \vdescr{Atomic radius in units of the covalent radius 
+    used to evaluate the integration
     volume for the projected density of states etc.}
 \vformat{real}
 \vrules{optional}
