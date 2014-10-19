@@ -632,6 +632,7 @@ END MODULE SETUP_MODULE
       INTEGER(4)  ,INTENT(IN)  :: LEN
       LOGICAL(4)  ,INTENT(OUT)  :: VAL(LEN)
 !     **************************************************************************
+      VAL(:)=.FALSE.
       IF(ID.EQ.'TORB') THEN
         CALL ERROR$MSG('ID="TORB" IS OBSOLETE')
         CALL ERROR$STOP('SETUP$SETL4A')
@@ -1145,7 +1146,7 @@ END MODULE SETUP_MODULE
       REAL(8)                 :: DEX
       INTEGER(4)              :: NR
       INTEGER(4)              :: GID
-      LOGICAL(4)              :: TCHK,tchk1
+      LOGICAL(4)              :: TCHK,TCHK1
       CHARACTER(128)          :: ID
       REAL(8)                 :: RCOV
       REAL(8)                 :: PI,Y0
