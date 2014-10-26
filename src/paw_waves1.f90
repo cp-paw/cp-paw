@@ -1423,6 +1423,7 @@ END MODULE WAVES_MODULE
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
+      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:,:)     ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
@@ -1662,18 +1663,21 @@ CALL ERROR$STOP('WAVES$ETOT')
 !      DEALLOCATE(QLM)
 !      DEALLOCATE(FORCET)
 !
-!     ==================================================================
-!     == WORK WITH NTBO BASIS                                         ==
-!     ================================================================== 
-      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT)
-!
-!     ==================================================================
-!     == AUGMENTATION                                                 ==
-!     ================================================================== 
+!     ==========================================================================
+!     == AUGMENTATION                                                         ==
+!     ==========================================================================
       ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
       CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
      &                 ,VQLM,DH,DO,POTB)
+!
+!     ==========================================================================
+!     == INTERFACE TO NTBO BASIS                                              ==
+!     ==========================================================================
+      ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
+      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
+      DH=DH+DH1
+      DEALLOCATE(DH1)
 !
 !     ===================================================================
 !     ==  SUBTRACT AVERAGE ELECTROSTATIC POTENTIAL =====================
