@@ -5056,7 +5056,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==========================================================================
 !     ==  TRANSFORM DENSITY MATRIX FROM UP/DOWN TO TOTAL/SPIN                 ==
 !     ==========================================================================
-      DENMAT1=CMPLX(DENMAT,KIND=8)
+      DENMAT1=CMPLX(DENMATB,KIND=8)
 !
 !     ==========================================================================
 !     ==  CALCULATE DENSITY OF CORRELATED ORBITALS (WHICH INCLUDES THE CORE)  ==
@@ -5112,7 +5112,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==========================================================================
       HAM1=(0.D0,0.D0)
       CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
-      HAM=REAL(HAM1)
+      HAMB=REAL(HAM1)
       POT=-POT*HFSCALE
       CALL LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD,POT)
 !PRINT*,'HFSCALE',HFSCALE,FIXCUT
