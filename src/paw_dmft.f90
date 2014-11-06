@@ -23,6 +23,8 @@ TYPE ATOMSET_TYPE
   REAL(8)   ,POINTER   :: DEDU(:,:,:,:)     => NULL() !(NLOC,NLOC,NLOC,NLOC) 
   COMPLEX(8),POINTER   :: GLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: GLOCLAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,NLAU+1)
+  COMPLEX(8),POINTER   :: GNI(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
+  COMPLEX(8),POINTER   :: GNILAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,NLAU+1)
   COMPLEX(8),POINTER   :: DPHIDG(:,:,:,:)   => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: DPHIDGLAUR(:,:,:,:)=> NULL() !(NLOC,NLOC,NDIMD,NLAU)
   COMPLEX(8),POINTER   :: SLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
@@ -36,6 +38,7 @@ TYPE KSET_TYPE
   REAL(8)            :: WKPT
   LOGICAL(4)         :: TADDMINUSK    !ADD  THE TERM FOR -K
   REAL(8)   ,POINTER :: F(:,:)        ! (NB,NSPIN)         
+  REAL(8)   ,POINTER :: E(:,:)        ! (NB,NSPIN)         
   COMPLEX(8),POINTER :: PIPSI(:,:,:,:)!(NDIM,NCHI,NB,NSPIN)
   COMPLEX(8),POINTER :: RHO(:,:,:)    !(NCHI,NCHI,NDIMD)
   COMPLEX(8),POINTER :: GAMMA(:,:,:)  !(NCHI,NCHI,NDIMD)
@@ -170,6 +173,8 @@ PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',ATOMSET(IAT)%LHFWEIGHT
         ALLOCATE(ATOMSET(IAT)%DEDU(NLOC,NLOC,NLOC,NLOC))
         ALLOCATE(ATOMSET(IAT)%GLOC(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%GLOCLAUR(NLOC,NLOC,NDIMD,NLAU+1))
+        ALLOCATE(ATOMSET(IAT)%GNI(NLOC,NLOC,NDIMD,NOMEGA))
+        ALLOCATE(ATOMSET(IAT)%GNILAUR(NLOC,NLOC,NDIMD,NLAU+1))
         ALLOCATE(ATOMSET(IAT)%DPHIDG(NLOC,NLOC,NDIMD,NOMEGA))
         ALLOCATE(ATOMSET(IAT)%DPHIDGLAUR(NLOC,NLOC,NDIMD,NLAU))
         ALLOCATE(ATOMSET(IAT)%SLOC(NLOC,NLOC,NDIMD,NOMEGA))
@@ -180,6 +185,8 @@ PRINT*,'IAT=',IAT,' LOCAL HFWEIGHT=',ATOMSET(IAT)%LHFWEIGHT
         ATOMSET(IAT)%U=0.D0
         ATOMSET(IAT)%GLOC=(0.D0,0.D0)
         ATOMSET(IAT)%GLOCLAUR=(0.D0,0.D0)
+        ATOMSET(IAT)%GNI=(0.D0,0.D0)
+        ATOMSET(IAT)%GNILAUR=(0.D0,0.D0)
         ATOMSET(IAT)%SLOC=(0.D0,0.D0)
         ATOMSET(IAT)%SLOCLAUR=(0.D0,0.D0)
         ATOMSET(IAT)%SMAT=(0.D0,0.D0)
@@ -194,6 +201,7 @@ PRINT*,'NCHI ',NCHI
       ALLOCATE(KSET(NKPTL))
       DO IKPTL=1,NKPTL
         ALLOCATE(KSET(IKPTL)%F(NB,NSPIN))
+        ALLOCATE(KSET(IKPTL)%E(NB,NSPIN))
         ALLOCATE(KSET(IKPTL)%PIPSI(NDIM,NCHI,NB,NSPIN))
         ALLOCATE(KSET(IKPTL)%RHO(NCHI,NCHI,NDIMD))
         ALLOCATE(KSET(IKPTL)%GAMMA(NCHI,NCHI,NDIMD))
@@ -202,6 +210,7 @@ PRINT*,'NCHI ',NCHI
         ALLOCATE(KSET(IKPTL)%SMAT(NCHI,NCHI,NDIMD))
         KSET(IKPTL)%WKPT=0.D0
         KSET(IKPTL)%F=0.D0
+        KSET(IKPTL)%E=0.D0
         KSET(IKPTL)%PIPSI=(0.D0,0.D0)
         KSET(IKPTL)%RHO=(0.D0,0.D0)
         KSET(IKPTL)%HRHO=(0.D0,0.D0)
@@ -322,6 +331,8 @@ PRINT*,'NCHI ',NCHI
 !     ==  COLLECT DFT HAMILTONIAN                                             ==
 !     ==========================================================================
       CALL DMFT_COLLECTNATORB()
+      CALL DMFT_DOSHIST() 
+      CALL DMFT_GNI() 
 !
 1000  IF(TREPEAT) CALL DMFT_STOREKSET() ! STORE AND RESET COMPLETE INPUT 
 !
@@ -429,15 +440,22 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD &
-     &                      ,KSET
+     &                      ,KSET &
+&  ,KBT
       USE MPE_MODULE
       USE WAVES_MODULE, ONLY : GSET,THIS,WAVES_SELECTWV
       IMPLICIT NONE
       INTEGER(4)             :: NBH     !#(SUPER STATES)
       INTEGER(4)             :: IKPT,ISPIN,IBH,ICHI,IB,J
       REAL(8)                :: F(NB,NKPTL,NSPIN)
+      REAL(8)                :: F1(NB,NKPTL,NSPIN)
+      REAL(8)                :: E(NB,NKPTL,NSPIN)
       REAL(8)                :: WKPT(NKPTL)
       INTEGER(4)             :: NB_,NSPIN_
+      INTEGER(4)             :: ISPINDEG
+      REAL(8)                :: SVAR
+      REAL(8)                :: MU1
+      REAL(8)                :: EMERMN
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                       CALL TRACE$PUSH('DMFT_COLLECTNATORB')
@@ -484,9 +502,55 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
 !         == OCCUPATIONS ARE IN [0,1] ==========================================
           IF(NSPIN.EQ.1) KSET(IKPT)%F(:,ISPIN)=0.5D0*KSET(IKPT)%F(:,ISPIN)
 !!$WRITE(*,FMT='(78("="),T10," IKPT=",I5," ISPIN=",I2,"  ")')IKPT,ISPIN
-!!$WRITE(*,FMT='("OCC(1)=",10F10.5)')KSET(IKPT)%F(:,ISPIN)
+!!$WRITE(*,FMT='("OCC(1) =",10F10.5)')KSET(IKPT)%F(:,ISPIN)
+!!$WRITE(*,FMT='("KINDOFE=",10F10.5)') &
+!!$      27.211D0*KBT*LOG((1.D0-KSET(IKPT)%F(:,ISPIN))/KSET(IKPT)%F(:,ISPIN))
         ENDDO
       ENDDO
+!
+!     ==========================================================================
+!     == COLLECT ENERGY EIGENVALUES
+!     ==========================================================================
+      CALL WAVES_DYNOCCGETR8A('EPSILON',NB*NKPTL*NSPIN,E)
+!     == GET NUMBER OF ELECTRONS TO EXTRACT THE FERMI LEVEL ====================
+      SVAR=0.D0
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          SVAR=SVAR+SUM(KSET(IKPT)%F(:,ISPIN))*KSET(IKPT)%WKPT
+        ENDDO
+      ENDDO
+PRINT*,'NUMBER OF ELECTRONS=',SVAR
+!     == FOR PARALLEL CALCULATION THERE MAY BE AN INDIVIDUAL FERMI LEVEL FOR  ==
+!     == EACH  PROCESSOR. THE ENERGY LEVELS ON THIS TASK IS USED CONSISTENTLY ==
+!     == WITH THE NUMBER OF ELECTRONS ON THIS TASK.                           ==
+      ISPINDEG=3-NSPIN
+PRINT*,'ISPINDEG ',ISPINDEG
+PRINT*,'NB=',NB,' NEL=',SVAR,' KBT[EV] ',KBT*27.211D0,' NSPIN ',NSPIN
+      SVAR=SVAR
+      CALL DMFT_MERMIN(NB,NKPTL,NSPIN &
+     &                 ,SVAR,ISPINDEG,KBT,KSET(:)%WKPT,E,F1,MU1,EMERMN)
+!     == SHIFT ENERGIES RELATIVE TO THE FERMI-LEVEL ============================
+      E=E-MU1
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          KSET(IKPT)%E(:,ISPIN)=E(:,IKPT,ISPIN)
+        ENDDO
+      ENDDO
+!!$PRINT*,'START HERE ======================'
+!!$DO IKPT=1,NKPTL
+!!$  DO ISPIN=1,NSPIN
+!!$WRITE(*,FMT='(4F10.5)')-40.D0,0.D0,0.D0,0.D0
+!!$WRITE(*,FMT='(4F10.5)')-40.D0,1.D0,1.D0,1.D0
+!!$    DO IB=1,NB
+!!$SVAR=KSET(IKPT)%E(IB,ISPIN)
+!!$SVAR=1.D0/(1.D0+EXP(SVAR/KBT))
+!!$WRITE(*,FMT='(4F10.5)') &
+!!$&    KSET(IKPT)%E(IB,ISPIN)*27.211D0,SVAR,F1(IB,IKPT,ISPIN),KSET(IKPT)%F(IB,ISPIN) 
+!!$    ENDDO
+!!$WRITE(*,FMT='(4F10.5)')10.D0,0.D0,0.D0,0.D0
+!!$  ENDDO
+!!$ENDDO
+!!$STOP
 !
 !     ==========================================================================
 !     ==  EXTRACT <PI|PSI>                                                    ==
@@ -526,6 +590,296 @@ WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
         ENDDO
       ENDDO
                                       CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_GNI() 
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,NAT,NOMEGA,OMEGA &
+     &                      ,KSET,ATOMSET,MU
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER      :: CI=(0.D0,1.D0)
+      COMPLEX(8)                :: CSVAR
+      INTEGER(4)                :: ICHI1,ICHI2
+      INTEGER(4)                :: NLOC
+      INTEGER(4)                :: NU
+      REAL(8)                   :: WKPTL ! K-POINT WEIGHT
+      REAL(8)                   :: E     ! BAND ENERGY
+      COMPLEX(8),ALLOCATABLE    :: VEC(:,:)
+      COMPLEX(8),ALLOCATABLE    :: MAT(:,:)
+      INTEGER(4)                :: IAT,IKPT,ISPIN,IB,I
+      INTEGER(4)                :: IDIM1,IDIM2,IDIMD
+      INTEGER(4)                :: NFIL
+      CHARACTER(64)             :: FILE='FORBACKES.DAT'
+!     **************************************************************************
+      DO IAT=1,NAT
+        ICHI1=ATOMSET(IAT)%ICHI1
+        ICHI2=ATOMSET(IAT)%ICHI2
+        NLOC=ATOMSET(IAT)%NLOC
+        ALLOCATE(VEC(NDIM,NLOC))
+        ALLOCATE(MAT(NLOC,NLOC))
+        ATOMSET(IAT)%GNI=(0.D0,0.D0)    !(NLOC,NLOC,NDIMD,NOMEGA)
+        DO IKPT=1,NKPTL
+          WKPTL=KSET(IKPT)%WKPT
+          DO ISPIN=1,NSPIN
+             DO IB=1,NB
+              E=KSET(IKPT)%E(IB,ISPIN)
+              VEC(:,:)=KSET(IKPT)%PIPSI(:,ICHI1:ICHI2,IB,ISPIN)
+              DO IDIM1=1,NDIM
+                DO IDIM2=1,NDIM
+                  IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
+                  DO I=1,NLOC
+                    MAT(I,:)=VEC(IDIM1,I)*CONJG(VEC(IDIM2,:))
+                  ENDDO
+                  IF(KSET(IKPT)%TADDMINUSK) THEN
+                    MAT=MAT+CONJG(TRANSPOSE(MAT(:,:)))
+                  END IF
+                  MAT=MAT*WKPTL
+                  DO NU=1,NOMEGA
+                    CSVAR=1.D0/(CI*OMEGA(NU)+MU-E)
+                    ATOMSET(IAT)%GNI(:,:,IDIMD,NU) &
+    &                             =ATOMSET(IAT)%GNI(:,:,IDIMD,NU)+MAT(:,:)*CSVAR
+                  ENDDO 
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        DEALLOCATE(VEC)
+        DEALLOCATE(MAT)
+      ENDDO
+PRINT*,'STARTING TO WRITE'
+OPEN(UNIT=NFIL,FILE=TRIM(FILE))
+IAT=2
+NLOC=ATOMSET(IAT)%NLOC
+DO NU=1,NOMEGA
+  WRITE(NFIL,*)OMEGA(NU),(REAL(ATOMSET(IAT)%GNI(I,I,1,NU)) &
+                      ,AIMAG(ATOMSET(IAT)%GNI(I,I,1,NU)),I=1,NLOC)
+ENDDO
+CLOSE(NFIL)
+STOP 'FORCED AFTER DMFT_GNI'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_DOSHIST() 
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,NAT,NOMEGA,OMEGA &
+     &                      ,KSET,ATOMSET,MU
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER      :: CI=(0.D0,1.D0)
+      COMPLEX(8)                :: CSVAR
+      INTEGER(4)                :: ICHI1,ICHI2
+      INTEGER(4)                :: NLOC
+      INTEGER(4)                :: NU
+      REAL(8)                   :: WKPTL ! K-POINT WEIGHT
+      REAL(8)                   :: E     ! BAND ENERGY
+      COMPLEX(8),ALLOCATABLE    :: VEC(:,:)
+      COMPLEX(8),ALLOCATABLE    :: MAT(:,:)
+      INTEGER(4)                :: IAT,IKPT,ISPIN,IB,I,IE
+      INTEGER(4)                :: IDIM1,IDIM2,IDIMD
+      INTEGER(4)                :: NFIL
+      CHARACTER(64)             :: FILE='FORDOS.DAT'
+      REAL(8)   ,ALLOCATABLE    :: DOS(:,:)
+      INTEGER(4),PARAMETER :: NE=1000
+      REAL(8)   ,PARAMETER :: EMIN=-10.D0/27.211D0
+      REAL(8)   ,PARAMETER :: EMAX=10.D0/27.211D0
+!     **************************************************************************
+      ALLOCATE(DOS(NE,NCHI))
+      DOS=0.D0
+      DO IAT=1,NAT
+        ICHI1=ATOMSET(IAT)%ICHI1
+        ICHI2=ATOMSET(IAT)%ICHI2
+        NLOC=ATOMSET(IAT)%NLOC
+IF(NLOC.LE.0) CYCLE
+PRINT*,'IAT ',ICHI1,ICHI2,NLOC,NDIM,NDIMD
+        ALLOCATE(VEC(NDIM,NLOC))
+        ALLOCATE(MAT(NLOC,NLOC))
+        DOS=(0.D0,0.D0)    !(NLOC,NLOC,NDIMD,NOMEGA)
+        DO IKPT=1,NKPTL
+          WKPTL=KSET(IKPT)%WKPT
+          DO ISPIN=1,NSPIN
+             DO IB=1,NB
+              E=KSET(IKPT)%E(IB,ISPIN)
+              IE=1+INT((E-EMIN)/(EMAX-EMIN)*REAL(NE-1,KIND=8))
+              IF(IE.LT.1.OR.IE.GT.NE) CYCLE
+              VEC(:,:)=KSET(IKPT)%PIPSI(:,ICHI1:ICHI2,IB,ISPIN)
+!PRINT*,'EB?',IAT,IKPT,ISPIN,E,IE,VEC 
+              DO IDIM1=1,NDIM
+                DO IDIM2=1,NDIM
+                  IDIMD=IDIM1+NDIM*(IDIM2-1)+ISPIN-1
+                  DO I=1,NLOC
+                    MAT(I,:)=VEC(IDIM1,I)*CONJG(VEC(IDIM2,:))
+                  ENDDO
+                  IF(KSET(IKPT)%TADDMINUSK) THEN
+                    MAT=MAT+CONJG(TRANSPOSE(MAT(:,:)))
+                  END IF
+                  MAT=MAT*WKPTL
+PRINT*,'MAT ',(MAT(I,I),I=1,NLOC)
+                  DO I=1,NLOC
+                    DOS(IE,ICHI1-1+I)=DOS(IE,ICHI1-1+I)+MAT(I,I)
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        DEALLOCATE(VEC)
+        DEALLOCATE(MAT)
+      ENDDO
+PRINT*,'STARTING TO WRITE'
+OPEN(UNIT=NFIL,FILE=TRIM(FILE))
+IAT=2
+NLOC=ATOMSET(IAT)%NLOC
+DO IE=1,NE
+  E=EMIN+(EMAX-EMIN)/REAL(NE-1,KIND=8)*REAL(IE-1,KIND=8)
+  WRITE(NFIL,*)E,DOS(IE,:)
+ENDDO
+CLOSE(NFIL)
+STOP 'FORCED AFTER DMFT_DOSHIST'
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_MERMIN(NBANDS,NKPT,NSPIN &
+     &                 ,TOTCHA,ISPINDEG,TEMP,WKPT,EIG,F,CHMPOT,EMERMN)
+!      SUBROUTINE DYNOCC_MERMIN(NBANDS,NKPT,NSPIN &
+!     &                 ,TOTCHA,ISPINDEG,TEMP,WKPT,EIG,F,CHMPOT,EMERMN)
+!     ******************************************************************
+!     **  CALCULATES THE OCCUPATIONS OF THE ELECTRONIC LEVELS         **
+!     **  ACCORDING TO THE FERMI DISTRIBUTION;                        **
+!     **  AND CALCULATES THE ENERGY -T*S RELATED TO THE ENTROPY OF    **
+!     **  THE ELECTRONS.                                              **
+!     **                                                              **
+!     **  THE ROUTINE IS A COPY OF DYNOCC_MERMIN                      **
+!     ****************************************** P.E. BLOECHL, 1991 ****
+      IMPLICIT NONE
+      LOGICAL(4) ,PARAMETER  :: TPR=.FALSE.
+      INTEGER(4) ,PARAMETER  :: ITERX=1000   ! MAX #(ITERATIONS)
+      REAL(8)    ,PARAMETER  :: TOL=1.D-10    ! TOLERANCE IN #(ELECTRONS)
+      INTEGER(4) ,INTENT(IN) :: NBANDS       ! #(BANDS)
+      INTEGER(4) ,INTENT(IN) :: NKPT         ! #(K-POINTS)    
+      INTEGER(4) ,INTENT(IN) :: NSPIN        ! #(SPINS)    
+      REAL(8)    ,INTENT(IN) :: TOTCHA       ! TOTAL CHARGE
+      INTEGER(4) ,INTENT(IN) :: ISPINDEG     ! SPIN DEGENERACY (1 OR 2)
+      REAL(8)    ,INTENT(IN) :: TEMP         ! K_B*TEMPERATURE IN HARTREE
+      REAL(8)    ,INTENT(IN) :: WKPT(NKPT)         ! K-POINT WEIGHTS
+      REAL(8)    ,INTENT(IN) :: EIG(NBANDS,NKPT,NSPIN) ! EIGENVALUES
+      REAL(8)    ,INTENT(OUT):: F(NBANDS,NKPT,NSPIN)   ! OCCUPATIONS
+      REAL(8)    ,INTENT(OUT):: CHMPOT               ! CHEMICAL POTENTIAL
+      REAL(8)    ,INTENT(OUT):: EMERMN               ! HEAT OF THE ELECTRONS
+      INTEGER(4)             :: ISTART
+      INTEGER(4)             :: IB,I,ISPIN,IKPT
+      REAL(8)                :: X0,DX,Y0,XM,YM
+      REAL(8)                :: SVAR
+      REAL(8)                :: SUMV
+      INTEGER(4)             :: ITER       ! ITERATION COUNT
+      REAL(8)                :: DQ         ! DEVIATION IN TOTAL CHARGE
+      REAL(8)                :: EV         ! ELECTRON VOLT
+      REAL(8)                :: DE
+      REAL(8)                :: F1
+      INTEGER(4)             :: IBI
+      REAL(8)                :: FMAX         ! #(ELECTRONS PER STATE) 1 OR 2
+!     ******************************************************************
+                           CALL TRACE$PUSH('DYNOCC_MERMIN')
+!
+      IF(ISPINDEG.NE.1.AND.ISPINDEG.NE.2.D0) THEN
+        CALL ERROR$MSG('SPIN-DEGENERACY CAN BE EITHER ONE OR TWO')
+        CALL ERROR$STOP('DYNOCC_MERMIN')
+      END IF
+      FMAX=REAL(ISPINDEG,KIND=8)
+!
+!     ==================================================================
+!     ==  ESTIMATE CHEMICAL POTENTIAL BY AVERAGING THE ONE-PARTICLE   ==
+!     ==  ENERGIES OF THE HIGHEST OCCUPIED BAND                       ==
+!     ==================================================================
+      IB=INT(TOTCHA/FMAX)  
+      IF(IB.GE.NBANDS*NSPIN) THEN
+        CALL ERROR$MSG('TO FEW BANDS FOR THE NUMBER OF ELECTRONS')
+        CALL ERROR$STOP('DYNOCC_MERMIN')
+      END IF
+      IB=MAX(IB,1)
+      I=0
+      CHMPOT=0.D0
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          I=I+1
+          CHMPOT=CHMPOT+EIG(IB,IKPT,ISPIN)
+        ENDDO
+      ENDDO
+      CHMPOT=CHMPOT/DBLE(I) 
+                           CALL TRACE$PASS('A')
+!
+!     ==================================================================
+!     ==  FIND CHEMICAL POTENTIAL BY BISECTION                        ==
+!     ==================================================================
+      X0=CHMPOT
+      DX=1.D-2
+      ISTART=1
+      CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
+      CHMPOT=X0
+      DO ITER=1,ITERX
+        SUMV=0.D0
+        DO ISPIN=1,NSPIN
+          DO IKPT=1,NKPT
+            DO IB=1,NBANDS
+              SVAR=(EIG(IB,IKPT,ISPIN)-CHMPOT)/TEMP
+              IF(SVAR.GT.+50.D0)SVAR=+50.D0
+              IF(SVAR.LT.-50.D0)SVAR=-50.D0
+              F(IB,IKPT,ISPIN)=1.D0/(1.D0+EXP(SVAR))*FMAX
+              SUMV=SUMV+F(IB,IKPT,ISPIN)*WKPT(IKPT)
+            ENDDO
+          ENDDO
+        ENDDO
+        DQ=SUMV-TOTCHA
+        IF(ABS(DQ).LT.TOL) GOTO 110
+        X0=CHMPOT
+        Y0=DQ
+        CALL BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
+        CHMPOT=X0
+      ENDDO
+      CALL ERROR$MSG('OCCUPATIONS NOT CONVERGED')
+      CALL ERROR$MSG('PROBABLY THE TEMPERATURE IS ZERO')
+      CALL ERROR$STOP('DYNOCC_MERMIN')
+ 110  CONTINUE
+                           CALL TRACE$PASS('B')
+!
+!     ==================================================================
+!     ==  CALCULATE HEAT OF THE ELECTRONS                             ==
+!     ==================================================================
+      EMERMN=0.D0
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          DO IB=1,NBANDS
+            F1=F(IB,IKPT,ISPIN)/FMAX
+            IF(F1.NE.0.D0.AND.1.D0-F1.NE.0.D0) THEN
+              DE=+TEMP*(F1*LOG(F1)+(1.D0-F1)*LOG(1.D0-F1))
+              EMERMN=EMERMN+DE*WKPT(IKPT)*FMAX
+            END IF
+          ENDDO
+        ENDDO
+      ENDDO
+                           CALL TRACE$PASS('C')
+!
+!     ==================================================================
+!     ==  PRINT FOR CHECK                                             ==
+!     ==================================================================
+      IF(TPR) THEN
+        CALL CONSTANTS('EV',EV)
+        WRITE(*,FMT='("#ELECTRONS( IN)=",F10.5' &
+     &               //'," CHEMICAL POTENTIAL=",F10.3' &
+     &               //'/"# ELECTRONS(OUT)=",F10.5)')TOTCHA,CHMPOT/EV,TOTCHA+DQ
+        DO ISPIN=1,NSPIN
+          DO IKPT=1,NKPT
+            WRITE(*,FMT='(5("(",F8.3,";",F5.2,")"))') &
+     &         (EIG(IB,IKPT,ISPIN)/EV,F(IB,IKPT,ISPIN),IB=1,NBANDS)
+          ENDDO
+        ENDDO
+      END IF
+                         CALL TRACE$POP
       RETURN
       END
 !
@@ -3396,7 +3750,7 @@ PRINT*,' BEFORE SPINOR$PRINTL'
           I1=ATOMSET(IAT)%ICHI1
           I2=ATOMSET(IAT)%ICHI2
           NLOC=I2-I1+1
-          if(nloc.eq.0) cycle
+          IF(NLOC.EQ.0) CYCLE
           ALLOCATE(ALOC(NLOC,NLOC,NDIMD))
           ALOC(:,:,:)=A(I1:I2,I1:I2,:)
           WRITE(NFIL,*)EGRID(IE),IAT,(ALOC(I,I,1),I=1,NLOC)
