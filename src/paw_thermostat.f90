@@ -203,7 +203,7 @@ END MODULE THERMOSTAT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$REPORT(NFIL)
 !     **************************************************************************
-!     **  write report                                                        **
+!     **  WRITE REPORT                                                        **
 !     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
@@ -314,7 +314,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE THERMOSTAT$PROPAGATE()
 !     **************************************************************************
-!     **  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE              **
+!     **  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE VARIABLE               **
 !     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
@@ -374,7 +374,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       END IF
 !
 !     ==========================================================================
-!     ==  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE' VARIABLE              ==
+!     ==  CALCULATE XNOSP AND THE VELOCITY OF THE NOSE VARIABLE               ==
 !     ==========================================================================
       DT=THIS%DT
       X0=THIS%X0

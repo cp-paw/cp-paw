@@ -389,7 +389,7 @@
       REAL(8)               :: CG     ! GAUNT COEFFICIENT
       COMPLEX(8)            :: KAPPA
 !     **************************************************************************
-      if(l1x.eq.-1.or.l2x.eq.-1) return  ! no return values
+      IF(L1X.EQ.-1.OR.L2X.EQ.-1) RETURN  ! NO RETURN VALUES
 !
       PI=4.D0*ATAN(1.D0)
       L3X=L1X+L2X
@@ -404,9 +404,9 @@
         ENDDO
       ENDDO
       IF(K2.GT.0.D0) THEN
-        KAPPA=CMPLX(0.D0,-SQRT(K2))
+        KAPPA=CMPLX(0.D0,-SQRT(K2),KIND=8)
       ELSE IF(K2.LT.0.D0) THEN
-        KAPPA=CMPLX(SQRT(-K2),0.D0)
+        KAPPA=CMPLX(SQRT(-K2),0.D0,KIND=8)
       ELSE
         KAPPA=(0.D0,0.D0)
       END IF

@@ -26,7 +26,7 @@
 !*******************************************************************************
 MODULE CELL_MODULE
 IMPLICIT NONE
-logical(4) :: tpARRINELLORAHMAN=.TRUE.
+LOGICAL(4) :: TPARRINELLORAHMAN=.TRUE.
 ! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE'
 CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
@@ -62,7 +62,7 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4) :: I
       REAL(8)    :: SVAR
-      REAL(8)    :: mbar
+      REAL(8)    :: MBAR
 !     **************************************************************************
       IF(TINIT) RETURN
       TINIT=.TRUE.
@@ -126,7 +126,7 @@ CONTAINS
       IF(TMASS.LE.0.D0) THEN
         CALL CONSTANTS('BAR',MBAR)
         MBAR=MBAR*1.D+6
-!       == bulk modulus of diamond is 5.45 mbar ================================
+!       == BULK MODULUS OF DIAMOND IS 5.45 MBAR ================================
         CALL CELL$CONVERT(DELTAT,5.45D0*MBAR,TREF,50.D0*DELTAT,TMASS,SVAR)
       END IF
 !
@@ -180,7 +180,7 @@ END MODULE CELL_MODULE
       PI=4.D0*ATAN(1.D0)
       CALL GBASS(TREF,AMAT,VOL)
       OMEGA=2.D0*PI/PERIOD
-      MASS=3.D0*B*vol**(1.d0/3.d0)/omega**2
+      MASS=3.D0*B*VOL**(1.D0/3.D0)/OMEGA**2
       FRICTION=OMEGA*DT
       RETURN
       END
@@ -637,29 +637,29 @@ END MODULE CELL_MODULE
       REAL(8)    :: ALPHADOT(3,3)
       REAL(8)    :: XPMAT(3,3),XMMAT(3,3)
       REAL(8)    :: ONE(3,3)
-      REAL(8)    :: stress_ext(3,3)
+      REAL(8)    :: STRESS_EXT(3,3)
       REAL(8)    :: SVAR1,SVAR2,SVAR3
-      INTEGER(4) :: I,j,ITER,IC1,IC2
-      logical(4),parameter :: donothing=.false.
-      integer(4) :: nconstraint !#(constraints)
-      real(8)   ,ALLOCATABLE :: constraintproject(:,:,:)    ! (3,3,nc)
-      real(8)   ,ALLOCATABLE :: A(:,:),X(:),B(:)
-      REAL(8)                :: smat1(3,3),smat2(3,3),smat3(3,3)
+      INTEGER(4) :: I,J,ITER,IC1,IC2
+      LOGICAL(4),PARAMETER :: DONOTHING=.FALSE.
+      INTEGER(4) :: NCONSTRAINT !#(CONSTRAINTS)
+      REAL(8)   ,ALLOCATABLE :: CONSTRAINTPROJECT(:,:,:)    ! (3,3,NC)
+      REAL(8)   ,ALLOCATABLE :: A(:,:),X(:),B(:)
+      REAL(8)                :: SMAT1(3,3),SMAT2(3,3),SMAT3(3,3)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       IF(.NOT.TMOVE) RETURN
       CALL CELL_INITIALIZE()
-if(donothing) then
-  tmm=t0
-  tm=t0
-  tp=t0
-  ekin=0.d0
-  epot=0.d0
+IF(DONOTHING) THEN
+  TMM=T0
+  TM=T0
+  TP=T0
+  EKIN=0.D0
+  EPOT=0.D0
   TPROPAGATED=.TRUE.
-  return
-end if
+  RETURN
+END IF
       IF(TSTOP) THEN
-        TMm=T0
+        TMM=T0
         TM=T0
         TSTOP=.FALSE.
       END IF
@@ -669,11 +669,11 @@ end if
       ENDDO
 !
 !     ==========================================================================
-!     == ensure that stress-tensor is symmetric                               ==
+!     == ENSURE THAT STRESS-TENSOR IS SYMMETRIC                               ==
 !     ==========================================================================
-!     == the stresses from potential_hartree and from paw_pairpotential are
-!     == not exactly symmetric. The antisymmetric part resuls in a rotation
-!     == therefore we remove it here
+!     == THE STRESSES FROM POTENTIAL_HARTREE AND FROM PAW_PAIRPOTENTIAL ARE
+!     == NOT EXACTLY SYMMETRIC. THE ANTISYMMETRIC PART RESULS IN A ROTATION
+!     == THEREFORE WE REMOVE IT HERE
       STRESS_I=0.5D0*(STRESS_I+TRANSPOSE(STRESS_I))
       KINSTRESS=0.5D0*(KINSTRESS+TRANSPOSE(KINSTRESS))
 !
@@ -681,38 +681,38 @@ end if
 !     == CONSTRAINTS                                                          ==
 !     ==========================================================================
       IF(CONSTRAINTTYPE.EQ.'ISOTROPIC') THEN
-        nconstraint=5
-        allocate(constraintproject(3,3,nconstraint))
-        constraintproject(:,:,:)=0.d0
-        constraintproject(1,2,1)=1.d0
-        constraintproject(2,1,1)=1.d0
-        constraintproject(1,3,2)=1.d0
-        constraintproject(3,1,2)=1.d0
-        constraintproject(2,3,3)=1.d0
-        constraintproject(3,2,3)=1.d0
-        constraintproject(1,1,4)=1.d0
-        constraintproject(2,2,4)=-1.d0
-        constraintproject(2,2,5)=1.d0
-        constraintproject(3,3,5)=-1.d0
+        NCONSTRAINT=5
+        ALLOCATE(CONSTRAINTPROJECT(3,3,NCONSTRAINT))
+        CONSTRAINTPROJECT(:,:,:)=0.D0
+        CONSTRAINTPROJECT(1,2,1)=1.D0
+        CONSTRAINTPROJECT(2,1,1)=1.D0
+        CONSTRAINTPROJECT(1,3,2)=1.D0
+        CONSTRAINTPROJECT(3,1,2)=1.D0
+        CONSTRAINTPROJECT(2,3,3)=1.D0
+        CONSTRAINTPROJECT(3,2,3)=1.D0
+        CONSTRAINTPROJECT(1,1,4)=1.D0
+        CONSTRAINTPROJECT(2,2,4)=-1.D0
+        CONSTRAINTPROJECT(2,2,5)=1.D0
+        CONSTRAINTPROJECT(3,3,5)=-1.D0
 !
-!!$        SVAR1=(STRESS_I(1,1)+STRESS_i(2,2)+STRESS_i(3,3))/3.D0
+!!$        SVAR1=(STRESS_I(1,1)+STRESS_I(2,2)+STRESS_I(3,3))/3.D0
 !!$        SVAR2=(KINSTRESS(1,1)+KINSTRESS(2,2)+KINSTRESS(3,3))/3.D0
-!!$        STRESS_i(:,:)=0.D0
+!!$        STRESS_I(:,:)=0.D0
 !!$        KINSTRESS(:,:)=0.D0
 !!$        DO I=1,3
 !!$          STRESS_I(I,I)=SVAR1
 !!$          KINSTRESS(I,I)=SVAR2
 !!$        ENDDO
       ELSE IF(CONSTRAINTTYPE.EQ.'NOSHEAR') THEN
-        nconstraint=3
-        allocate(constraintproject(3,3,nconstraint))
-        constraintproject(:,:,:)=0.d0
-        constraintproject(1,2,1)=1.d0
-        constraintproject(2,1,1)=1.d0
-        constraintproject(1,3,2)=1.d0
-        constraintproject(3,1,2)=1.d0
-        constraintproject(2,3,3)=1.d0
-        constraintproject(3,2,3)=1.d0
+        NCONSTRAINT=3
+        ALLOCATE(CONSTRAINTPROJECT(3,3,NCONSTRAINT))
+        CONSTRAINTPROJECT(:,:,:)=0.D0
+        CONSTRAINTPROJECT(1,2,1)=1.D0
+        CONSTRAINTPROJECT(2,1,1)=1.D0
+        CONSTRAINTPROJECT(1,3,2)=1.D0
+        CONSTRAINTPROJECT(3,1,2)=1.D0
+        CONSTRAINTPROJECT(2,3,3)=1.D0
+        CONSTRAINTPROJECT(3,2,3)=1.D0
 !!$        DO I=1,3
 !!$          DO J=1,3
 !!$            IF(I.EQ.J) CYCLE
@@ -721,11 +721,11 @@ end if
 !!$          ENDDO
 !!$        ENDDO
       ELSE IF(CONSTRAINTTYPE.EQ.'NOSTRESS') THEN
-        nconstraint=0
+        NCONSTRAINT=0
         STRESS_I(:,:)=0.D0
         KINSTRESS(:,:)=0.D0
       ELSE IF(CONSTRAINTTYPE.EQ.'FREE') THEN
-        nconstraint=0
+        NCONSTRAINT=0
       ELSE
         CALL ERROR$MSG('CONSTRAINTTYPE NOT RECOGNIZED')
         CALL ERROR$CHVAL('CONSTRAINTTYPE',CONSTRAINTTYPE)
@@ -754,16 +754,16 @@ end if
         CALL LIB__INVERTR8(3,T0,T0INV)
         TP=SVAR1*T0+SVAR2*TM &
      &             +SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
-!!$print*,'==cell$propagate nconstraint ',nconstraint
-!!$print*,'==cell$propagate constrainttype ',constrainttype
-!!$print*,'==cell$propagate stress_I ',stress_I
-!!$print*,'==cell$propagate kinstress ',kinstress
-!!$print*,'==cell$propagate stress_ext ',stress_ext
-!!$print*,'==cell$propagate facts ',tmass,fric,deltat,svar1,svar2,svar3
-!!$print*,'==cell$propagate tm ',tm
-!!$print*,'==cell$propagate t0 ',t0
-!!$print*,'==cell$propagate tp ',tp
-!!$print*,'==cell$propagate ft ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+!!$PRINT*,'==CELL$PROPAGATE NCONSTRAINT ',NCONSTRAINT
+!!$PRINT*,'==CELL$PROPAGATE CONSTRAINTTYPE ',CONSTRAINTTYPE
+!!$PRINT*,'==CELL$PROPAGATE STRESS_I ',STRESS_I
+!!$PRINT*,'==CELL$PROPAGATE KINSTRESS ',KINSTRESS
+!!$PRINT*,'==CELL$PROPAGATE STRESS_EXT ',STRESS_EXT
+!!$PRINT*,'==CELL$PROPAGATE FACTS ',TMASS,FRIC,DELTAT,SVAR1,SVAR2,SVAR3
+!!$PRINT*,'==CELL$PROPAGATE TM ',TM
+!!$PRINT*,'==CELL$PROPAGATE T0 ',T0
+!!$PRINT*,'==CELL$PROPAGATE TP ',TP
+!!$PRINT*,'==CELL$PROPAGATE FT ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
 !       == CONSTRAINTS ========================================================
         IF(NCONSTRAINT.GT.0) THEN        
           ALLOCATE(B(NCONSTRAINT))
@@ -799,8 +799,8 @@ end if
         END IF
 !WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'TM',TM
 !WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'T0',T0
-!write(*,fmt='(a10,3f10.5,5x,3f10.5,4x,3f10.5)')'tp',tp
-!write(*,fmt='(a10,3f10.5,5x,3f10.5,4x,3f10.5)')'stress',STRESS_I+KINSTRESS+STRESS_EXT
+!WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'TP',TP
+!WRITE(*,FMT='(A10,3F10.5,5X,3F10.5,4X,3F10.5)')'STRESS',STRESS_I+KINSTRESS+STRESS_EXT
 !       == CALCULATE KINETIC ENERGY 
         EKIN=0.5D0*TMASS*SUM((TP-TM)**2)/(2.D0*DELTAT)**2
       ELSE 
@@ -846,7 +846,7 @@ end if
         ALPHADOT=(ALPHAP-ALPHAM)/(2.D0*DELTAT)
         AMAT=MATMUL(ALPHADOT,TRANSPOSE(ALPHADOT))
         EKIN=0.5D0*TMASS*V0**2*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
-      end if
+      END IF
       TPROPAGATED=.TRUE.
       RETURN
       END SUBROUTINE CELL$PROPAGATE
@@ -947,57 +947,57 @@ end if
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine cell$testme()
-      implicit none
-      character(16),parameter :: type='orthorhombic'
-      real(8)   ,parameter :: dt=10.d0
-      real(8)   ,parameter :: megabar=3.4d-3
-      real(8)   ,parameter :: bulkmodulus=10.d0*megabar
-      real(8)   ,parameter :: alat=10.d0
-      real(8)   ,parameter :: pressure=0.d0
-!                             bulkmodulus=1 Mbar; Poisson ratio=0.25
-      real(8)   ,parameter :: lambda=0.6d0*bulkmodulus ! lame constant
-      real(8)   ,parameter :: mu=lambda                ! lame constant
-      real(8)   ,parameter :: period=500.d0
-      integer(4),parameter :: niter=1000.
-      real(8)              :: straintensor(3,3,3,3)
-      real(8)              :: tref(3,3)
-      real(8)              :: vref
-      real(8)              :: trefin(3,3)
-      real(8)              :: t0(3,3)
-      real(8)              :: one(3,3)
-      real(8)              :: estrain,epot,ekin
-      real(8)              :: strain(3,3)
-      real(8)              :: stress(3,3)
-      real(8)              :: tmass
-      real(8)              :: friction
-      integer(4)           :: i,j,k,l,iter
+      SUBROUTINE CELL$TESTME()
+      IMPLICIT NONE
+      CHARACTER(16),PARAMETER :: TYPE='ORTHORHOMBIC'
+      REAL(8)   ,PARAMETER :: DT=10.D0
+      REAL(8)   ,PARAMETER :: MEGABAR=3.4D-3
+      REAL(8)   ,PARAMETER :: BULKMODULUS=10.D0*MEGABAR
+      REAL(8)   ,PARAMETER :: ALAT=10.D0
+      REAL(8)   ,PARAMETER :: PRESSURE=0.D0
+!                             BULKMODULUS=1 MBAR; POISSON RATIO=0.25
+      REAL(8)   ,PARAMETER :: LAMBDA=0.6D0*BULKMODULUS ! LAME CONSTANT
+      REAL(8)   ,PARAMETER :: MU=LAMBDA                ! LAME CONSTANT
+      REAL(8)   ,PARAMETER :: PERIOD=500.D0
+      INTEGER(4),PARAMETER :: NITER=1000
+      REAL(8)              :: STRAINTENSOR(3,3,3,3)
+      REAL(8)              :: TREF(3,3)
+      REAL(8)              :: VREF
+      REAL(8)              :: TREFIN(3,3)
+      REAL(8)              :: T0(3,3)
+      REAL(8)              :: ONE(3,3)
+      REAL(8)              :: ESTRAIN,EPOT,EKIN
+      REAL(8)              :: STRAIN(3,3)
+      REAL(8)              :: STRESS(3,3)
+      REAL(8)              :: TMASS
+      REAL(8)              :: FRICTION
+      INTEGER(4)           :: I,J,K,L,ITER
 !     **************************************************************************      
-      one(:,:)=0.d0
-      one(1,1)=1.d0
-      one(2,2)=1.d0
-      one(3,3)=1.d0
+      ONE(:,:)=0.D0
+      ONE(1,1)=1.D0
+      ONE(2,2)=1.D0
+      ONE(3,3)=1.D0
 !
       TREF(:,:)=0.D0
       TREF(1,1)=ALAT
       TREF(2,2)=ALAT
       TREF(3,3)=ALAT
-      vref=tref(1,1)*(tref(2,2)*tref(3,3)-tref(3,2)*tref(2,3)) &
-     &    +tref(2,1)*(tref(3,2)*tref(1,3)-tref(1,2)*tref(3,3)) &
-     &    +tref(3,1)*(tref(1,2)*tref(2,3)-tref(2,2)*tref(1,3)) 
-      call lib$invertr8(3,tref,trefin)
+      VREF=TREF(1,1)*(TREF(2,2)*TREF(3,3)-TREF(3,2)*TREF(2,3)) &
+     &    +TREF(2,1)*(TREF(3,2)*TREF(1,3)-TREF(1,2)*TREF(3,3)) &
+     &    +TREF(3,1)*(TREF(1,2)*TREF(2,3)-TREF(2,2)*TREF(1,3)) 
+      CALL LIB$INVERTR8(3,TREF,TREFIN)
 !
-      straintensor(:,:,:,:)=0.d0
-      do i=1,3
-        do j=1,3
-          straintensor(i,i,j,j)=straintensor(i,i,j,j)+lambda
-          straintensor(i,j,i,j)=straintensor(i,j,i,j)+mu
-          straintensor(i,j,j,i)=straintensor(i,j,j,i)+mu
-        enddo
-      enddo
-      straintensor=straintensor*vref
+      STRAINTENSOR(:,:,:,:)=0.D0
+      DO I=1,3
+        DO J=1,3
+          STRAINTENSOR(I,I,J,J)=STRAINTENSOR(I,I,J,J)+LAMBDA
+          STRAINTENSOR(I,J,I,J)=STRAINTENSOR(I,J,I,J)+MU
+          STRAINTENSOR(I,J,J,I)=STRAINTENSOR(I,J,J,I)+MU
+        ENDDO
+      ENDDO
+      STRAINTENSOR=STRAINTENSOR*VREF
       CALL CELL$CONVERT(DT,BULKMODULUS,TREF,PERIOD,TMASS,FRICTION)
-print*,'tmass ',tmass,friction
+PRINT*,'TMASS ',TMASS,FRICTION
       FRICTION=0.D0
       CALL CELL$SETL4('MOVE',.TRUE.)
       CALL CELL$SETL4('STOP',.TRUE.)
@@ -1010,54 +1010,54 @@ print*,'tmass ',tmass,friction
 !      CALL CELL$SETCH('CONSTRAINTTYPE','FREE')
 !      CALL CELL$SETCH('CONSTRAINTTYPE','ISOTROPIC')
 !
-      t0=tref
-      if(type.eq.'isotropic') then
-        t0=t0*1.2d0
-      else if(type.eq.'shear') then
-        t0(1,2)=0.1d0
-        t0(2,1)=0.1d0
-      else if(type.eq.'orthorhombic') then
-        t0(3,:)=t0(3,:)*1.2d0
-      else 
-        call error$msg('type not rcognized')
-        call error$chval('type',type)
-        call error$stop('cell$testme')
-      end if
-      CALL CELL$SETR8A('T(0)',9,t0)
-      CALL CELL$SETR8A('T(-)',9,t0)
+      T0=TREF
+      IF(TYPE.EQ.'ISOTROPIC') THEN
+        T0=T0*1.2D0
+      ELSE IF(TYPE.EQ.'SHEAR') THEN
+        T0(1,2)=0.1D0
+        T0(2,1)=0.1D0
+      ELSE IF(TYPE.EQ.'ORTHORHOMBIC') THEN
+        T0(3,:)=T0(3,:)*1.2D0
+      ELSE 
+        CALL ERROR$MSG('TYPE NOT RCOGNIZED')
+        CALL ERROR$CHVAL('TYPE',TYPE)
+        CALL ERROR$STOP('CELL$TESTME')
+      END IF
+      CALL CELL$SETR8A('T(0)',9,T0)
+      CALL CELL$SETR8A('T(-)',9,T0)
       DO ITER=1,NITER
-        CALL CELL$gETR8A('T(0)',9,T0)
-!print*,'t0 ',t0
-        strain=matmul(t0,trefin)-one
-!print*,'strain',strain
-        estrain=0.d0
-        stress(:,:)=0.d0
-        do i=1,3
-          do j=1,3
-            do k=1,3
-              do l=1,3
-                estrain=estrain+0.5d0*straintensor(i,j,k,l)*strain(i,j)*strain(k,l)
-                stress(i,j)=stress(i,j)-0.5d0*straintensor(i,j,k,l)*strain(k,l)
-                stress(k,l)=stress(k,l)-0.5d0*straintensor(i,j,k,l)*strain(i,j)
-              enddo
-            enddo
-          enddo
-        enddo
-!print*,'stress',stress
-!       == stress = de/dt *transpose(t(0))
-        stress=matmul(matmul(stress,transpose(trefin)),transpose(t0))
-!print*,'stress',stress
+        CALL CELL$GETR8A('T(0)',9,T0)
+!PRINT*,'T0 ',T0
+        STRAIN=MATMUL(T0,TREFIN)-ONE
+!PRINT*,'STRAIN',STRAIN
+        ESTRAIN=0.D0
+        STRESS(:,:)=0.D0
+        DO I=1,3
+          DO J=1,3
+            DO K=1,3
+              DO L=1,3
+                ESTRAIN=ESTRAIN+0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(I,J)*STRAIN(K,L)
+                STRESS(I,J)=STRESS(I,J)-0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(K,L)
+                STRESS(K,L)=STRESS(K,L)-0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(I,J)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+!PRINT*,'STRESS',STRESS
+!       == STRESS = DE/DT *TRANSPOSE(T(0))
+        STRESS=MATMUL(MATMUL(STRESS,TRANSPOSE(TREFIN)),TRANSPOSE(T0))
+!PRINT*,'STRESS',STRESS
         CALL CELL$SETR8A('STRESS_I',9,STRESS)
         CALL CELL$PROPAGATE()
         CALL CELL$GETR8('EKIN',EKIN)
         CALL CELL$GETR8('EPOT',EPOT)
-!print*,'estress',estrain,ekin,epot
+!PRINT*,'ESTRESS',ESTRAIN,EKIN,EPOT
         WRITE(*,FMT='(">>>",I5,5F10.5)')ITER,EKIN,ESTRAIN,EPOT,EKIN+ESTRAIN+EPOT
         CALL CELL$SWITCH()
       ENDDO
 !
-      do i=1,3
-        write(*,fmt='("T=",3f20.5)')t0(i,:)
-      enddo
-      stop
-      end
+      DO I=1,3
+        WRITE(*,FMT='("T=",3F20.5)')T0(I,:)
+      ENDDO
+      STOP
+      END

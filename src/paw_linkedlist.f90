@@ -1980,7 +1980,7 @@ CONTAINS
 !     ******************************************************************
 !     **  TYPE CONVERSION INTO THE SPECIFIED TYPE                     **
 !     **                                                              **
-!     **  only specified conversions are allowed                      **
+!     **  ONLY SPECIFIED CONVERSIONS ARE ALLOWED                      **
 !     ******************************************************************
       IMPLICIT NONE
       TYPE(LL_TYPE)   ,INTENT(IN) :: LL
@@ -1992,7 +1992,7 @@ CONTAINS
       CHARACTER(1)    ,POINTER    :: NEWVAL(:)
       TYPE(LLIST_TYPE),POINTER    :: LIST
       INTEGER(4)                  :: LENG
-      complex(8)      ,ALLOCATABLE:: C8ARRAY(:)
+      COMPLEX(8)      ,ALLOCATABLE:: C8ARRAY(:)
       REAL(8)         ,ALLOCATABLE:: R8ARRAY(:)
       REAL(4)         ,ALLOCATABLE:: R4ARRAY(:)
       INTEGER(4)      ,ALLOCATABLE:: I4ARRAY(:)
@@ -2033,11 +2033,11 @@ CONTAINS
         ALLOCATE(NEWVAL(C8TYPE%NBYTE*LENG))
         ALLOCATE(C8ARRAY(LENG))
         IF(OLDTYPE.EQ.R8TYPE%NAME) THEN
-          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R8ARRAY),KIND=8))
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R8ARRAY),KIND=8),KIND=8)
         ELSE IF(OLDTYPE.EQ.R4TYPE%NAME) THEN
-          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R4ARRAY),KIND=8))
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,R4ARRAY),KIND=8),KIND=8)
         ELSE IF(OLDTYPE.EQ.I4TYPE%NAME) THEN
-          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,I4ARRAY),KIND=8))
+          C8ARRAY=CMPLX(REAL(TRANSFER(OLDVAL,I4ARRAY),KIND=8),KIND=8)
         ELSE
           UNDEF=.TRUE.
         END IF
@@ -2562,7 +2562,7 @@ CONTAINS
  9999 CONTINUE
       CALL ERROR$I4VAL('INPUT FILE MAY BE EMPTY')
       CALL ERROR$I4VAL('IOS',IOS)
-      CALL ERROR$I4VAL('nfil',nfil)
+      CALL ERROR$I4VAL('NFIL',NFIL)
       CALL ERROR$STOP('BUFFER_READTOBUFFER')
       RETURN
       END SUBROUTINE BUFFER_READTOBUFFER

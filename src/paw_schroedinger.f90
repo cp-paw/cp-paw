@@ -30,8 +30,8 @@
       END SUBROUTINE RADIAL$SCHRODINGER
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$NONSPHBOUND_NONSO(GID,NR,LX,LMX,LMRX,TMAINSH,POT,DREL,G,ENU &
-     &                             ,NPHI,EB,PHI,TPHI,TOK)
+      SUBROUTINE RADIAL$NONSPHBOUND_NONSO(GID,NR,LX,LMX,LMRX,TMAINSH &
+     &                                   ,POT,DREL,G,ENU,NPHI,EB,PHI,TPHI,TOK)
 !     **                                                                  **
 !     **  SOLVES THE RELATIVISTIC RADIAL DIRAC EQUATION FOR THE           **
 !     **  LARGE COMPONENT. DREL=1/MREL-1/M0 IS A MEASURE FOR THE          **
@@ -1102,7 +1102,7 @@ ENDDO
 !!$          DO LM=1,LMX
 !!$            CALL RADIAL$DERIVE(GID,NR,REAL(PHI(:,LM,IS,IB)),AUX1)
 !!$            CALL RADIAL$DERIVE(GID,NR,AIMAG(PHI(:,LM,IS,IB)),AUX2)
-!!$            DPHI(:,LM,IS)=CMPLX(AUX1,AUX2)
+!!$            DPHI(:,LM,IS)=CMPLX(AUX1,AUX2,KIND=8)
 !!$          ENDDO
 !!$        ENDDO
 !!$!
@@ -1162,7 +1162,8 @@ ENDDO
       END SUBROUTINE SCHROEDINGER$LBND_FULLYREL
 !
 !     ..................................................................
-      SUBROUTINE SCHROEDINGER_XXXC(GID,NR,NF,IRMATCH,IROUT,LOX,A,B,C,D,NPHI,DE,PHI,TOK)
+      SUBROUTINE SCHROEDINGER_XXXC(GID,NR,NF,IRMATCH,IROUT,LOX,A,B,C,D,NPHI &
+     &                            ,DE,PHI,TOK)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -1231,13 +1232,13 @@ CHARACTER(32):: FILE
       ALLPHIL(:,:,:)=(0.D0,0.D0)
       ALLPHIR(:,:,:)=(0.D0,0.D0)
       DO IF=1,NF
-        ALLPHIL(1:2,IF,IF)=CMPLX(R(1:2)**LOX(IF),0.D0)
-        DHOM(:,:)=CMPLX(0.D0,0.D0)
+        ALLPHIL(1:2,IF,IF)=CMPLX(R(1:2)**LOX(IF),0.D0,KIND=8)
+        DHOM(:,:)=CMPLX(0.D0,0.D0,KIND=8)
         CALL RADIAL$DGLGENC(GID,NR,NF,1,IRC+1,A,B,C,DHOM,ALLPHIL(:,:,IF))
         SVAR=MAXVAL(ABS(ALLPHIL(IRC,:,IF)))
         ALLPHIL(1:IRC+1,:,IF)=ALLPHIL(1:IRC+1,:,IF)/SVAR
 !
-        DHOM(IROUT,IF)=CMPLX(1.D-8,0.D0)
+        DHOM(IROUT,IF)=CMPLX(1.D-8,0.D0,KIND=8)
         CALL RADIAL$DGLGENC(GID,NR,NF,IROUT+1,IRC-1,A,B,C,DHOM,ALLPHIR(:,:,IF))
         SVAR=MAXVAL(ABS(ALLPHIR(IRC,:,IF)))
         ALLPHIR(IRC-1:IROUT+1,:,IF)=ALLPHIR(IRC-1:IROUT+1,:,IF)/SVAR
@@ -1324,7 +1325,7 @@ CHARACTER(32):: FILE
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
           AUX(:)=AIMAG(CAUX)
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-          CSVAR=CMPLX(SVAR1,SVAR2)
+          CSVAR=CMPLX(SVAR1,SVAR2,KIND=8)
           PHIL(:IRC+1,:,I)=PHIL(:IRC+1,:,I)-PHIL(:IRC+1,:,J)*CSVAR
           PHIR(IRC-1:IROUT+1,:,I)=PHIR(IRC-1:IROUT+1,:,I)-PHIR(IRC-1:IROUT+1,:,J)*CSVAR
         ENDDO
@@ -1388,7 +1389,7 @@ CHARACTER(32):: FILE
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
 !!$          AUX(:)=AIMAG(CAUX)
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-!!$          OV(I,J)=CMPLX(SVAR1,SVAR2)
+!!$          OV(I,J)=CMPLX(SVAR1,SVAR2,KIND=8)
 !!$          OV(J,I)=CONJG(OV(I,J))
 !!$        ENDDO
 !!$      ENDDO
@@ -1490,7 +1491,7 @@ CHARACTER(32):: FILE
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
           AUX(:)=AIMAG(CAUX)
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-          CSVAR=CMPLX(SVAR1,SVAR2)
+          CSVAR=CMPLX(SVAR1,SVAR2,KIND=8)
           PHIL_DOT(:IRC+1,:,I)=PHIL_DOT(:IRC+1,:,I)-PHIL(:IRC+1,:,J)*CSVAR
           PHIR_DOT(IRC-1:IROUT+1,:,I)=PHIR_DOT(IRC-1:IROUT+1,:,I)-PHIR(IRC-1:IROUT+1,:,J)*CSVAR
         ENDDO
@@ -1594,7 +1595,7 @@ CHARACTER(32):: FILE
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
 !!$          AUX(:)=AIMAG(CAUX)
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-!!$          OV(I,J)=CMPLX(SVAR1,SVAR2)
+!!$          OV(I,J)=CMPLX(SVAR1,SVAR2,KIND=8)
 !!$          OV(J,I)=CONJG(OV(I,J))
 !!$        ENDDO
 !!$      ENDDO
@@ -1620,7 +1621,7 @@ CHARACTER(32):: FILE
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
           AUX(:)=AIMAG(CAUX)
           CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-          OV(I,J)=CMPLX(SVAR1,SVAR2)
+          OV(I,J)=CMPLX(SVAR1,SVAR2,KIND=8)
           OV(J,I)=CONJG(OV(I,J))
         ENDDO
       ENDDO
@@ -1684,7 +1685,7 @@ CHARACTER(32):: FILE
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR1)
 !!$          AUX=AIMAG(CAUX)
 !!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR2)
-!!$          HAM(I,J)=CMPLX(SVAR1,SVAR2)
+!!$          HAM(I,J)=CMPLX(SVAR1,SVAR2,KIND=8)
 !!$          HAM(J,I)=CONJG(HAM(I,J))
 !!$        ENDDO
 !!$        HAM(I,I)=HAM(I,I)-(1.D0,0.D0)
@@ -2458,15 +2459,15 @@ CHARACTER(32):: FILE
         LM1P=L**2+L+1
         LM1M=LM1P
 !       == M1=M2=0
-        C(LM1M,:,LM1M,:)=CMPLX(C1(LM1M,:,LM1M,:))
+        C(LM1M,:,LM1M,:)=CMPLX(C1(LM1M,:,LM1M,:),KIND=8)
 !       == (M1=0 AND M2.NEQ.0) OR (N1.NEQ.0 AND M2=0)
         LM2P=L**2+L+1
         LM2M=LM2P
         DO M2=1,L
           LM2P=LM2P+1
           LM2M=LM2M-1
-          FAC1=CMPLX(SQR2IN)
-          FAC2=CMPLX(SQR2IN*(-1.D0)**M2)
+          FAC1=CMPLX(SQR2IN,KIND=8)
+          FAC2=CMPLX(SQR2IN*(-1.D0)**M2,KIND=8)
           C(LM1M,:,LM2P,:)=FAC1*C1(LM1M,:,LM2P,:)+FAC2*C1(LM1M,:,LM2M,:)
           C(LM2P,:,LM1M,:)=FAC1*C1(LM2P,:,LM1M,:)+FAC2*C1(LM2M,:,LM1M,:)
           FAC1=-CI*FAC1
@@ -2483,10 +2484,10 @@ CHARACTER(32):: FILE
           DO M2=1,L
             LM2P=LM2P+1
             LM2M=LM2M-1
-            FAC1=CMPLX(0.5D0)
-            FAC2=CMPLX(0.5D0*(-1.D0)**(M1+M2))
-            FAC3=CMPLX(0.5D0*(-1.D0)**M2)
-            FAC4=CMPLX(0.5D0*(-1.D0)**M1)
+            FAC1=CMPLX(0.5D0,KIND=8)
+            FAC2=CMPLX(0.5D0*(-1.D0)**(M1+M2),KIND=8)
+            FAC3=CMPLX(0.5D0*(-1.D0)**M2,KIND=8)
+            FAC4=CMPLX(0.5D0*(-1.D0)**M1,KIND=8)
             C(LM1P,:,LM2P,:)=+FAC1*C1(LM1P,:,LM2P,:)+FAC2*C1(LM1M,:,LM2M,:) &
     &                        +FAC3*C1(LM1P,:,LM2M,:)+FAC3*C1(LM1M,:,LM2P,:)
             C(LM1M,:,LM2M,:)=+FAC1*C1(LM1P,:,LM2P,:)+FAC2*C1(LM1M,:,LM2M,:) &
@@ -2621,10 +2622,10 @@ CHARACTER(32):: FILE
 !     =======================================================================
 !     == DETERMINE THE RADIAL PART CR                                      ==
 !     =======================================================================
-      CR(:,1,:,1)=CMPLX(Z(:,:),0.D0)
-      CR(:,1,:,2)=CMPLX(X(:,:),-Y(:,:))
-      CR(:,2,:,1)=CMPLX(X(:,:),Y(:,:))
-      CR(:,2,:,2)=CMPLX(-Z(:,:),0.D0)
+      CR(:,1,:,1)=CMPLX(Z(:,:),0.D0,KIND=8)
+      CR(:,1,:,2)=CMPLX(X(:,:),-Y(:,:),KIND=8)
+      CR(:,2,:,1)=CMPLX(X(:,:),Y(:,:),KIND=8)
+      CR(:,2,:,2)=CMPLX(-Z(:,:),0.D0,KIND=8)
       CR(:,:,:,:)=0.5D0*CR(:,:,:,:)
 !
 !     =======================================================================
@@ -2732,7 +2733,7 @@ CHARACTER(32):: FILE
           DO LM=1,LMX
             CALL RADIAL$DERIVE(GID,NR,REAL(PHI(:,LM,IS,IB)),AUX1)
             CALL RADIAL$DERIVE(GID,NR,AIMAG(PHI(:,LM,IS,IB)),AUX2)
-            DPHI(:,LM,IS)=CMPLX(AUX1,AUX2)
+            DPHI(:,LM,IS)=CMPLX(AUX1,AUX2,KIND=8)
           ENDDO
         ENDDO
 !
@@ -2810,11 +2811,10 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: POT(NR)     ! POTENTIAL (MULTIPLY WITH Y0!)
       REAL(8)   ,INTENT(IN) :: E           ! ONE-PARTICLE ENERGY
       REAL(8)   ,INTENT(OUT):: DREL(NR)    ! RELATIVISTIC CORRECTION 
-      INTEGER(4)            :: IR
       REAL(8)               :: C           ! SPEED OF LIGHT
       REAL(8)               :: PI,Y0      
       REAL(8)               :: EKIN(NR)
-!     ***************************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
@@ -2931,22 +2931,15 @@ CHARACTER(32):: FILE
       INTEGER(4),PARAMETER :: NB=3
       INTEGER(4),PARAMETER :: NBG=5
       REAL(8)   ,PARAMETER :: AEZ=7.D0
-      INTEGER(4)           :: L
-      INTEGER(4)           :: SO
       INTEGER(4)           :: LOFI(NB)
       INTEGER(4)           :: NN(NB)
       REAL(8)              :: F(NB)  ! OCCUPATION PER SHELL
       REAL(8)              :: E(NB)  
       REAL(8)              :: EBG(NBG)
-      REAL(8)              :: PHIL(NR,LMX,NBG)
-      REAL(8)              :: PHIR(NR,LMX,NBG)
       REAL(8)              :: PHI(NR,LMX,NBG)
       REAL(8)              :: TPHI(NR,LMX,NBG)
-      REAL(8)              :: G(NR)
-      REAL(8)              :: DREL(NR)
       REAL(8)              :: R(NR)
       REAL(8)              :: POT(NR,LMRX)
-      INTEGER(4)           :: IR
       REAL(8)              :: PI,Y0
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)

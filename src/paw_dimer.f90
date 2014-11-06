@@ -4,67 +4,67 @@ REAL(8)                       :: D ! CONSTRAINED DISTANCE BETWEEN DIMERPOINTS
 INTEGER                       :: CALCMULTIPLIERITERMAX ! EMERGENCY EXIT FOR THE ITERATION LOOP AFTER X STEPS
 REAL(8)                       :: DLAMBDA !EXACTNESS OF LAMBDA (= LAGRANGE MULTIPLIER) CALCULATION
 INTEGER                       :: CALCVELOCITYITERMAX !EMERGENCY EXIT FOR THE ITERATION LOOP AFTER X STEPS
-REAL(8)                       :: DVELOCITY !EXACTNESS OF VELOCITY iteration 
-real(8)                       :: energytra !write the energy/distance every n steps
-real(8)                       :: lasttra=0.0d0
-real(8),allocatable            :: RTS(:)      !coordinates of the transition state fromcntl-file               
-real(8),allocatable            :: DIRM(:)
+REAL(8)                       :: DVELOCITY !EXACTNESS OF VELOCITY ITERATION 
+REAL(8)                       :: ENERGYTRA !WRITE THE ENERGY/DISTANCE EVERY N STEPS
+REAL(8)                       :: LASTTRA=0.0D0
+REAL(8),ALLOCATABLE            :: RTS(:)      !COORDINATES OF THE TRANSITION STATE FROMCNTL-FILE               
+REAL(8),ALLOCATABLE            :: DIRM(:)
 
-integer(4)                    :: lcs       !lengthcountershouldbe how many steps with no change of dimercenter before shorten sqd
-integer(4)                    :: lc =0     ! the actuak steps without change
-real(8)                       :: RCDIFFMIN !difference in dimer center position below lc=lc+1
-real(8)                       :: RCDIFF    !difference in dimer center position
-real(8),allocatable,save            :: RC(:)        !dimer center position
-real(8),allocatable,save            :: RCOLD(:)     !dimer center position in last step
-real(8)                       :: DSTEP     !d=d-dstep
-integer(4)                    :: NSTEPS
-real(8)                       :: stepfact
-logical(4)                    :: tinitstepfact=.false.
-real(8)                       :: DMIN    !the minimal dimer length (no further reducement of d)
-real(8)                       :: wdownfact
-real(8),allocatable           :: F1W(:) !the weighted force
-logical(4)                    :: FIRSTTRA=.true.
-logical(4)                    :: dimer !do we use dimer parallelisation? set in readin
-logical(4)                    :: dimerfollowdown !do we follow down with each image to one of the vicinal ground states
+INTEGER(4)                    :: LCS       !LENGTHCOUNTERSHOULDBE HOW MANY STEPS WITH NO CHANGE OF DIMERCENTER BEFORE SHORTEN SQD
+INTEGER(4)                    :: LC =0     ! THE ACTUAK STEPS WITHOUT CHANGE
+REAL(8)                       :: RCDIFFMIN !DIFFERENCE IN DIMER CENTER POSITION BELOW LC=LC+1
+REAL(8)                       :: RCDIFF    !DIFFERENCE IN DIMER CENTER POSITION
+REAL(8),ALLOCATABLE,SAVE            :: RC(:)        !DIMER CENTER POSITION
+REAL(8),ALLOCATABLE,SAVE            :: RCOLD(:)     !DIMER CENTER POSITION IN LAST STEP
+REAL(8)                       :: DSTEP     !D=D-DSTEP
+INTEGER(4)                    :: NSTEPS
+REAL(8)                       :: STEPFACT
+LOGICAL(4)                    :: TINITSTEPFACT=.FALSE.
+REAL(8)                       :: DMIN    !THE MINIMAL DIMER LENGTH (NO FURTHER REDUCEMENT OF D)
+REAL(8)                       :: WDOWNFACT
+REAL(8),ALLOCATABLE           :: F1W(:) !THE WEIGHTED FORCE
+LOGICAL(4)                    :: FIRSTTRA=.TRUE.
+LOGICAL(4)                    :: DIMER !DO WE USE DIMER PARALLELISATION? SET IN READIN
+LOGICAL(4)                    :: DIMERFOLLOWDOWN !DO WE FOLLOW DOWN WITH EACH IMAGE TO ONE OF THE VICINAL GROUND STATES
 
-logical(4)                    :: DLFLEX    !flexible dimer length
-logical(4)                    :: KDLENGTH    !keep the startup length of the dimer
-logical(4)                    :: INHIBITUP   !inhibit upward motion of the dimer
-logical(4)                    :: inhibitperp
-logical(4)                    :: onlyperp
-logical(4)                    :: onlyrot
-logical(4)                    :: wdown       !weight down the dimer image 1
+LOGICAL(4)                    :: DLFLEX    !FLEXIBLE DIMER LENGTH
+LOGICAL(4)                    :: KDLENGTH    !KEEP THE STARTUP LENGTH OF THE DIMER
+LOGICAL(4)                    :: INHIBITUP   !INHIBIT UPWARD MOTION OF THE DIMER
+LOGICAL(4)                    :: INHIBITPERP
+LOGICAL(4)                    :: ONLYPERP
+LOGICAL(4)                    :: ONLYROT
+LOGICAL(4)                    :: WDOWN       !WEIGHT DOWN THE DIMER IMAGE 1
 
 CHARACTER(32)                 :: CENTER_ID
-real(8)                       :: CENTER_COORD(3)
-real(8)                       :: DROT
+REAL(8)                       :: CENTER_COORD(3)
+REAL(8)                       :: DROT
 
 INTEGER                       :: DIM ! DIMONSION =NAT*3
-REAL(8),save                  :: SQD     !SQUARE CONSTRAINED DISTANCE BETWEEN DIMERPOINTS
-REAL(8)                       :: SQDR=0.0d0     !SQUARE CONSTRAINED DISTANCE BETWEEN DIMERPOINTS
-REAL(8)                       :: ALPHA !FRICTION; good:0.0156D0
-LOGICAL(4)                    :: PLACEDIMER=.false.
+REAL(8),SAVE                  :: SQD     !SQUARE CONSTRAINED DISTANCE BETWEEN DIMERPOINTS
+REAL(8)                       :: SQDR=0.0D0     !SQUARE CONSTRAINED DISTANCE BETWEEN DIMERPOINTS
+REAL(8)                       :: ALPHA !FRICTION; GOOD:0.0156D0
+LOGICAL(4)                    :: PLACEDIMER=.FALSE.
 
-logical(4)                    :: TFIRSTSPLIT=.true.
-real(8),allocatable           :: RKEEP(:) 
-real(8),allocatable           :: R2split(:) 
-logical(4)                    :: STRETCH
-real(8)                       :: STRETCHDIST
+LOGICAL(4)                    :: TFIRSTSPLIT=.TRUE.
+REAL(8),ALLOCATABLE           :: RKEEP(:) 
+REAL(8),ALLOCATABLE           :: R2SPLIT(:) 
+LOGICAL(4)                    :: STRETCH
+REAL(8)                       :: STRETCHDIST
 
 
-real(8)                       :: fmpara,fmperp,fmrot,fricpara,fricperp,fricrot
-logical(4)                    :: optfricpara,optfricperp,optfricrot
-logical(4)                    :: fautopara,fautoperp,fautorot
-real(8)                       :: fricautopara,fricautoperp,fricautorot
-real(8),allocatable           :: frotm(:),fperpm(:),fparam(:)
-real(8)                       :: CONSTRSTEP !max step for constraint
-real(8)                       :: ekinparam
-real(8)                       :: ekinperpm
-real(8)                       :: ekinrotm 
-real(8)                       :: Tparam
-real(8)                       :: Tperpm
-real(8)                       :: Trotm 
-real(8)                       :: tfact=2.d0/(3.166679d-6) !per deg. of freedom; to do: get k from paw constants
+REAL(8)                       :: FMPARA,FMPERP,FMROT,FRICPARA,FRICPERP,FRICROT
+LOGICAL(4)                    :: OPTFRICPARA,OPTFRICPERP,OPTFRICROT
+LOGICAL(4)                    :: FAUTOPARA,FAUTOPERP,FAUTOROT
+REAL(8)                       :: FRICAUTOPARA,FRICAUTOPERP,FRICAUTOROT
+REAL(8),ALLOCATABLE           :: FROTM(:),FPERPM(:),FPARAM(:)
+REAL(8)                       :: CONSTRSTEP !MAX STEP FOR CONSTRAINT
+REAL(8)                       :: EKINPARAM
+REAL(8)                       :: EKINPERPM
+REAL(8)                       :: EKINROTM 
+REAL(8)                       :: TPARAM
+REAL(8)                       :: TPERPM
+REAL(8)                       :: TROTM 
+REAL(8)                       :: TFACT=2.D0/(3.166679D-6) !PER DEG. OF FREEDOM; TO DO: GET K FROM PAW CONSTANTS
 
 !========================================================
   TYPE DIMER_CONSTR_TYPE
@@ -73,67 +73,67 @@ real(8)                       :: tfact=2.d0/(3.166679d-6) !per deg. of freedom; 
      TYPE(DIMER_CONSTR_TYPE),POINTER  :: PREV_D      !ELDER BROTHER
   END TYPE DIMER_CONSTR_TYPE
 
-  type(DIMER_CONSTR_TYPE),POINTER  :: ELDEST_D
-  type(DIMER_CONSTR_TYPE),POINTER  :: THIS_D
+  TYPE(DIMER_CONSTR_TYPE),POINTER  :: ELDEST_D
+  TYPE(DIMER_CONSTR_TYPE),POINTER  :: THIS_D
 !========================================================
 
 
 
-  !alex: this is for pclimb-testing!
-  logical(4)               :: climbperp,TFIRSTCLIMBSTEP
-  real(8)                  :: FORCEDSTEP
-  real(8), allocatable     :: PCLIMBDIR(:)
-  !alex: this is for pclimb-testing!
+  !ALEX: THIS IS FOR PCLIMB-TESTING!
+  LOGICAL(4)               :: CLIMBPERP,TFIRSTCLIMBSTEP
+  REAL(8)                  :: FORCEDSTEP
+  REAL(8), ALLOCATABLE     :: PCLIMBDIR(:)
+  !ALEX: THIS IS FOR PCLIMB-TESTING!
   
-  !alex: this is for angle monitoring
-  real(8),allocatable      :: angle1(:)
-  real(8),allocatable      :: angle2(:)
-  real(8),allocatable      :: angledir(:)
-  logical(4)               :: treadam=.false.
-  logical(4)               :: treadamnotthere=.false.
-  !alex: this is for angle monitoring
+  !ALEX: THIS IS FOR ANGLE MONITORING
+  REAL(8),ALLOCATABLE      :: ANGLE1(:)
+  REAL(8),ALLOCATABLE      :: ANGLE2(:)
+  REAL(8),ALLOCATABLE      :: ANGLEDIR(:)
+  LOGICAL(4)               :: TREADAM=.FALSE.
+  LOGICAL(4)               :: TREADAMNOTTHERE=.FALSE.
+  !ALEX: THIS IS FOR ANGLE MONITORING
   
-  !alexp: this comes from merge in new code
-  integer(4)               :: ntasks
-  integer(4)               :: thistask
-  !alexp: this comes from merge in new code
+  !ALEXP: THIS COMES FROM MERGE IN NEW CODE
+  INTEGER(4)               :: NTASKS
+  INTEGER(4)               :: THISTASK
+  !ALEXP: THIS COMES FROM MERGE IN NEW CODE
   
-  integer(4)               :: dprotfil
+  INTEGER(4)               :: DPROTFIL
 
-  real(8),allocatable      :: g1(:)
-  real(8),allocatable      :: g2(:)
-  integer(4)               :: steps=0
+  REAL(8),ALLOCATABLE      :: G1(:)
+  REAL(8),ALLOCATABLE      :: G2(:)
+  INTEGER(4)               :: STEPS=0
 
-  real(8)                  :: etot,etot2 !for ts estimation
-end MODULE DIMER_MODULE
+  REAL(8)                  :: ETOT,ETOT2 !FOR TS ESTIMATION
+END MODULE DIMER_MODULE
 
-module dimer_oscillator_module
-  integer(4)                :: odim=3    !for the dimer: cpara,cperp,crot
-  real(8),allocatable       :: oscm(:)
-  real(8),allocatable       :: osc0(:)
-  real(8),allocatable       :: oscp(:)
-  real(8),allocatable       :: oscmass(:)  
-  real(8),allocatable       :: oscanner(:)
-  real(8),allocatable       :: oscc(:) !the harmonic potential
-end module dimer_oscillator_module
+MODULE DIMER_OSCILLATOR_MODULE
+  INTEGER(4)                :: ODIM=3    !FOR THE DIMER: CPARA,CPERP,CROT
+  REAL(8),ALLOCATABLE       :: OSCM(:)
+  REAL(8),ALLOCATABLE       :: OSC0(:)
+  REAL(8),ALLOCATABLE       :: OSCP(:)
+  REAL(8),ALLOCATABLE       :: OSCMASS(:)  
+  REAL(8),ALLOCATABLE       :: OSCANNER(:)
+  REAL(8),ALLOCATABLE       :: OSCC(:) !THE HARMONIC POTENTIAL
+END MODULE DIMER_OSCILLATOR_MODULE
 
-module dimer_estimatets_module
-  real(8),allocatable       :: z1m(:)                  
-  real(8),allocatable       :: z2m(:)                  
-  real(8),allocatable       :: em(:)                  
-  real(8),allocatable       :: eorthom(:)                  
-  real(8)                   :: fparam
-  real(8)                   :: fperpm
-end module dimer_estimatets_module
-
-
+MODULE DIMER_ESTIMATETS_MODULE
+  REAL(8),ALLOCATABLE       :: Z1M(:)                  
+  REAL(8),ALLOCATABLE       :: Z2M(:)                  
+  REAL(8),ALLOCATABLE       :: EM(:)                  
+  REAL(8),ALLOCATABLE       :: EORTHOM(:)                  
+  REAL(8)                   :: FPARAM
+  REAL(8)                   :: FPERPM
+END MODULE DIMER_ESTIMATETS_MODULE
 
 
-subroutine dimer_init_files()
+
+
+SUBROUTINE DIMER_INIT_FILES()
   USE STRINGS_MODULE
   USE DIMER_MODULE
-  implicit none
-  character(32)                    :: id
+  IMPLICIT NONE
+  CHARACTER(32)                    :: ID
   LOGICAL(4),PARAMETER             :: T=.TRUE.
   LOGICAL(4),PARAMETER             :: F=.FALSE.
 
@@ -152,7 +152,7 @@ subroutine dimer_init_files()
   CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
   CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 
-  CALL FILEHANDLER$UNIT('DPROT',dprotfil)
+  CALL FILEHANDLER$UNIT('DPROT',DPROTFIL)
 
 
 
@@ -173,8 +173,8 @@ subroutine dimer_init_files()
 
 
   
-  return
-end subroutine dimer_init_files
+  RETURN
+END SUBROUTINE DIMER_INIT_FILES
 
 
 
@@ -203,38 +203,38 @@ end subroutine dimer_init_files
       REAL(8)   ,INTENT(IN) :: CELLFRIC(3,3) 
       REAL(8)   ,INTENT(OUT):: CELLKIN(3,3) 
       REAL(8)               :: CELLKIN1(3,3),CELLKIN2(3,3)  
-      REAL(8)               :: MM(nat*3,nat*3) !MASSMATRIX
-      REAL(8)               :: R1_(nat*3),R2_(nat*3) !OLD POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)               :: R1(nat*3),R2(nat*3) !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)               :: R1P(nat*3),R2P(nat*3) !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)               :: F1(nat*3),F2(nat*3) !FORCE FROM POTENTIAL
-      integer(4)            :: NVAL,WORLD_ID
+      REAL(8)               :: MM(NAT*3,NAT*3) !MASSMATRIX
+      REAL(8)               :: R1_(NAT*3),R2_(NAT*3) !OLD POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)               :: R1(NAT*3),R2(NAT*3) !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)               :: R1P(NAT*3),R2P(NAT*3) !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)               :: F1(NAT*3),F2(NAT*3) !FORCE FROM POTENTIAL
+      INTEGER(4)            :: NVAL,WORLD_ID
       INTEGER(4)            :: IAT
 
       CELLKIN=0.D0
-      CELLKIN1=0.0d0
-      CELLKIN2=0.0d0
+      CELLKIN1=0.0D0
+      CELLKIN2=0.0D0
 
 
-      ALPHA=ANNER!DO WE NEED THIS??? DONT THINK SO! check it!
+      ALPHA=ANNER!DO WE NEED THIS??? DONT THINK SO! CHECK IT!
       IF(.NOT.TSTRESS) THEN
-         call MPE$QUERY('~',NTASKS,world_id)
-         call MPE$QUERY('MONOMER',NTASKS,THISTASK)
+         CALL MPE$QUERY('~',NTASKS,WORLD_ID)
+         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 
          CALL DIMER$GETPROCESSLEADER2(NVAL,WORLD_ID)
-         !NVAL now equals the WORLD_ID of the 1st task in dimer2
+         !NVAL NOW EQUALS THE WORLD_ID OF THE 1ST TASK IN DIMER2
          !WORLD_ID EQUALS THE WORLD_ID OF THE CALLING PROCESS
 
 
 
-         if(thistask.eq.1) then
-            !get total energy from last step for TS estimate
-            call ENERGYLIST$RETURN('TOTAL ENERGY',etot)
+         IF(THISTASK.EQ.1) THEN
+            !GET TOTAL ENERGY FROM LAST STEP FOR TS ESTIMATE
+            CALL ENERGYLIST$RETURN('TOTAL ENERGY',ETOT)
             
-            !only 1st task in dimer has to do the following
-            DIM=nat*3 !we need this TO INITIALIZE DIM because nat is read after dimer!
-            MM(:,:)=0.0d0
-            do iat=1 , NAT
+            !ONLY 1ST TASK IN DIMER HAS TO DO THE FOLLOWING
+            DIM=NAT*3 !WE NEED THIS TO INITIALIZE DIM BECAUSE NAT IS READ AFTER DIMER!
+            MM(:,:)=0.0D0
+            DO IAT=1 , NAT
                MM((IAT*3)-2,(IAT*3)-2)=RMASS(IAT)-EFFEMASS(IAT)
                MM((IAT*3)-1,(IAT*3)-1)=RMASS(IAT)-EFFEMASS(IAT)
                MM((IAT*3),(IAT*3))    =RMASS(IAT)-EFFEMASS(IAT)
@@ -250,70 +250,70 @@ end subroutine dimer_init_files
                F1((IAT*3)-2)          =FORCE(1,IAT)
                F1((IAT*3)-1)          =FORCE(2,IAT)
                F1((IAT*3))            =FORCE(3,IAT)
-            end do
+            END DO
 
 
 
 
-            !give WORLD_ID 1 the position and forces on dimer2
-            if(WORLD_ID.ne.1) then 
-               !we are 1st task of dimer2
-               call MPE$SEND('~',1,42,R1_)
-               call MPE$SEND('~',1,43,R1)
-               call MPE$SEND('~',1,44,F1)
-               call MPE$SEND('~',1,45,etot)
+            !GIVE WORLD_ID 1 THE POSITION AND FORCES ON DIMER2
+            IF(WORLD_ID.NE.1) THEN 
+               !WE ARE 1ST TASK OF DIMER2
+               CALL MPE$SEND('~',1,42,R1_)
+               CALL MPE$SEND('~',1,43,R1)
+               CALL MPE$SEND('~',1,44,F1)
+               CALL MPE$SEND('~',1,45,ETOT)
                
-            else
-               !we are WORLD_ID 1
-               call MPE$RECEIVE('~',NVAL,42,R2_)
-               call MPE$RECEIVE('~',NVAL,43,R2)
-               call MPE$RECEIVE('~',NVAL,44,F2)
-               call MPE$RECEIVE('~',NVAL,45,etot2)
-            end if
+            ELSE
+               !WE ARE WORLD_ID 1
+               CALL MPE$RECEIVE('~',NVAL,42,R2_)
+               CALL MPE$RECEIVE('~',NVAL,43,R2)
+               CALL MPE$RECEIVE('~',NVAL,44,F2)
+               CALL MPE$RECEIVE('~',NVAL,45,ETOT2)
+            END IF
 
 
             
-            if(WORLD_ID.eq.1) then
+            IF(WORLD_ID.EQ.1) THEN
                !ONLY THE FIRST TASK MOVES THE DIMER IMAGES
                SQD=D*D !REMEMBER: SQDIMERDIST IS THE *ACTUAL* DISTANCE**2, SQD=D*D IS THE DESIRED DISTANCE**2 
-               call DIMER_PROPAGATE(DT,R1,R2,R1_,R2_,MM,F1,F2,R1P,R2P,CELLKIN1,CELLKIN2)
+               CALL DIMER_PROPAGATE(DT,R1,R2,R1_,R2_,MM,F1,F2,R1P,R2P,CELLKIN1,CELLKIN2)
                CELLKIN=CELLKIN1
-            end if
+            END IF
 
       
-         else
-            !all tasks .ne.1 in dimer
-         end if
+         ELSE
+            !ALL TASKS .NE.1 IN DIMER
+         END IF
 
 
 
 
-  !from now on we have all tasks back
+  !FROM NOW ON WE HAVE ALL TASKS BACK
 
-         !send 1st task in dimer2 the new position and cellkin of image 2
-         if(WORLD_ID.eq.1) then 
-            !we are WORLD_ID 1
-            call MPE$SEND('~',NVAL,45,R2p)
-            call MPE$SEND('~',NVAL,46,CELLKIN2)
-         else if(WORLD_ID.eq.NVAL) then
-            !we are 1st task in dimer2
-            call MPE$RECEIVE('~',1,45,R1p)
-            call MPE$RECEIVE('~',1,46,CELLKIN)
-         end if
+         !SEND 1ST TASK IN DIMER2 THE NEW POSITION AND CELLKIN OF IMAGE 2
+         IF(WORLD_ID.EQ.1) THEN 
+            !WE ARE WORLD_ID 1
+            CALL MPE$SEND('~',NVAL,45,R2P)
+            CALL MPE$SEND('~',NVAL,46,CELLKIN2)
+         ELSE IF(WORLD_ID.EQ.NVAL) THEN
+            !WE ARE 1ST TASK IN DIMER2
+            CALL MPE$RECEIVE('~',1,45,R1P)
+            CALL MPE$RECEIVE('~',1,46,CELLKIN)
+         END IF
 
-         if(thistask.eq.1) then
-            !we are 1st task in dimer group
+         IF(THISTASK.EQ.1) THEN
+            !WE ARE 1ST TASK IN DIMER GROUP
             
-            do iat=1 , NAT
-               RP(1,IAT)=R1p((IAT*3)-2)
-               RP(2,IAT)=R1p((IAT*3)-1)
-               RP(3,IAT)=R1p((IAT*3))    
-            end do
-         end if
+            DO IAT=1 , NAT
+               RP(1,IAT)=R1P((IAT*3)-2)
+               RP(2,IAT)=R1P((IAT*3)-1)
+               RP(3,IAT)=R1P((IAT*3))    
+            END DO
+         END IF
 
-         !send the new position, cellkin to all tasks in the group
-         call MPE$BROADCAST('MONOMER',1,RP)
-         call MPE$BROADCAST('MONOMER',1,CELLKIN)
+         !SEND THE NEW POSITION, CELLKIN TO ALL TASKS IN THE GROUP
+         CALL MPE$BROADCAST('MONOMER',1,RP)
+         CALL MPE$BROADCAST('MONOMER',1,CELLKIN)
 
 
       ELSE 
@@ -327,7 +327,7 @@ end subroutine dimer_init_files
       
 !     ******************************************************************
 
-      end SUBROUTINE DIMER$PROPAGATE
+      END SUBROUTINE DIMER$PROPAGATE
 
 
 !     ..................................................................
@@ -338,219 +338,219 @@ end subroutine dimer_init_files
       USE DIMER_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)    :: DT                    ! TIME STEP
-      REAL(8)   ,intent(in)    :: R1(dim)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: R2(dim)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: R1_(dim)              !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: R2_(dim)              !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: MM(dim,dim)           !MASSMATRIX
-      REAL(8)   ,intent(in)    :: F1(dim)               !FORCE FROM POTENTIAL
-      REAL(8)   ,intent(in)    :: F2(dim)               !FORCE FROM POTENTIAL
+      REAL(8)   ,INTENT(IN)    :: R1(DIM)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: R2(DIM)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: R1_(DIM)              !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: R2_(DIM)              !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: MM(DIM,DIM)           !MASSMATRIX
+      REAL(8)   ,INTENT(IN)    :: F1(DIM)               !FORCE FROM POTENTIAL
+      REAL(8)   ,INTENT(IN)    :: F2(DIM)               !FORCE FROM POTENTIAL
 
-      REAL(8)   ,intent(out)   :: R1P(dim)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(out)   :: R2P(dim)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(OUT)   :: R1P(DIM)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(OUT)   :: R2P(DIM)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
       REAL(8)   ,INTENT(OUT)   :: CELLKIN1(3,3)         ! 
       REAL(8)   ,INTENT(OUT)   :: CELLKIN2(3,3)         ! 
-      REAL(8)                  :: UF1(dim)              !m^-(1/2)*FORCE FROM POTENTIAL
-      REAL(8)                  :: UF2(dim)              !m^-(1/2)*FORCE FROM POTENTIAL
-      REAL(8)                  :: MF1(dim)              !m^(1/2)*FORCE FROM POTENTIAL
-      REAL(8)                  :: MF2(dim)              !m^(1/2)*FORCE FROM POTENTIAL
-      real(8)                  :: sqdimerdist           !current (distance between dimerpoints)**2
-      REAL(8)                  :: R1NC(dim),R2NC(dim)   !POSITION WITHOUT CONSTRAINS
+      REAL(8)                  :: UF1(DIM)              !M^-(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: UF2(DIM)              !M^-(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: MF1(DIM)              !M^(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: MF2(DIM)              !M^(1/2)*FORCE FROM POTENTIAL
+      REAL(8)                  :: SQDIMERDIST           !CURRENT (DISTANCE BETWEEN DIMERPOINTS)**2
+      REAL(8)                  :: R1NC(DIM),R2NC(DIM)   !POSITION WITHOUT CONSTRAINS
       REAL(8)                  :: V1(DIM),V2(DIM)                !VELOCITY
-      real(8)                  :: X1(dim),X2(dim)  !the massweighted coordinates
-      real(8)                  :: x1m(dim),x2m(dim),x1p(dim),x2p(dim)
-      real(8)                  :: RMASS(dim/3)
-      Real(8)                  :: RTS_(dim) !FOR TS ESTIMATION
-      Real(8)                  :: RTSOLD(dim) !FOR TS ESTIMATION (THIS IS DIRTY BECAUSE IT SHOULD BE SAVED!)
-      real(8)                  :: fricusedperp,fricusedpara,fricusedrot
-      real(8)                  :: frot0(dim)  !the rotational part of the forces
-      real(8)                  :: fperp0(dim) !the perp. part of the forces
-      real(8)                  :: fpara0(dim) !the perp. part of the forces
-      real(8)                  :: SVARV(DIM),SVAR
-      integer(4)               :: i,j,IAT
-      logical(4)               :: perpfirst,parafirst,rotfirst
-      real(8)                  :: fp1,fp2
-      real(8)                  :: a,b,c,d_
+      REAL(8)                  :: X1(DIM),X2(DIM)  !THE MASSWEIGHTED COORDINATES
+      REAL(8)                  :: X1M(DIM),X2M(DIM),X1P(DIM),X2P(DIM)
+      REAL(8)                  :: RMASS(DIM/3)
+      REAL(8)                  :: RTS_(DIM) !FOR TS ESTIMATION
+      REAL(8)                  :: RTSOLD(DIM) !FOR TS ESTIMATION (THIS IS DIRTY BECAUSE IT SHOULD BE SAVED!)
+      REAL(8)                  :: FRICUSEDPERP,FRICUSEDPARA,FRICUSEDROT
+      REAL(8)                  :: FROT0(DIM)  !THE ROTATIONAL PART OF THE FORCES
+      REAL(8)                  :: FPERP0(DIM) !THE PERP. PART OF THE FORCES
+      REAL(8)                  :: FPARA0(DIM) !THE PERP. PART OF THE FORCES
+      REAL(8)                  :: SVARV(DIM),SVAR
+      INTEGER(4)               :: I,J,IAT
+      LOGICAL(4)               :: PERPFIRST,PARAFIRST,ROTFIRST
+      REAL(8)                  :: FP1,FP2
+      REAL(8)                  :: A,B,C,D_
       !******************************************************************
 
-      CELLKIN1=0.0d0
-      CELLKIN2=0.0d0
-      R1P=0.0d0
-      R2P=0.0d0
-      IF(.not.ALLOCATED(RC)) allocate(RC(dim))
-      IF(.not.ALLOCATED(RCOLD)) allocate(RCOLD(dim))
-      IF(.not.ALLOCATED(F1W)) allocate(F1W(dim))
+      CELLKIN1=0.0D0
+      CELLKIN2=0.0D0
+      R1P=0.0D0
+      R2P=0.0D0
+      IF(.NOT.ALLOCATED(RC)) ALLOCATE(RC(DIM))
+      IF(.NOT.ALLOCATED(RCOLD)) ALLOCATE(RCOLD(DIM))
+      IF(.NOT.ALLOCATED(F1W)) ALLOCATE(F1W(DIM))
       
       !========================================
-      !== init the massweighted coordinates  ==  
+      !== INIT THE MASSWEIGHTED COORDINATES  ==  
       !========================================
-      call DIMER$GET_massweighted(dim,R1,X1)
-      call DIMER$GET_massweighted(dim,R2,X2)
+      CALL DIMER$GET_MASSWEIGHTED(DIM,R1,X1)
+      CALL DIMER$GET_MASSWEIGHTED(DIM,R2,X2)
 !REMEMBER: SQDIMERDIST IS THE *ACTUAL* DISTANCE**2, SQD=D*D IS THE DESIRED DISTANCE**2
-      SQDIMERDIST=dot_product((X1-X2),(X1-X2)) 
-      write(dprotfil,*)"DIMER PROPAGATE: DIMERDISTANCE= ",sqrt(sqdimerdist) &
-     &                ,"  UNMW= ",sqrt(dot_product(R1-R2,R1-R2))
+      SQDIMERDIST=DOT_PRODUCT((X1-X2),(X1-X2)) 
+      WRITE(DPROTFIL,*)"DIMER PROPAGATE: DIMERDISTANCE= ",SQRT(SQDIMERDIST) &
+     &                ,"  UNMW= ",SQRT(DOT_PRODUCT(R1-R2,R1-R2))
 
 
       !===============================================
       !==========    PLACE THE DIMER  ================
       !===============================================
       !THIS SHOULD ONLY BE DONE IN THE FIRST ITERATION STEP
-      if(placedimer.and..not.KDLENGTH) then !in the first step  
-         CALL PLACE_DIMER(D,X1,X2)!place it so that length-constrain for the massweighted coord.is fulfilled
-         !the coorect start positions (they will be written to R0 and RM in paw_atoms.f90)
-         call DIMER$GET_unmassweighted(dim,X1,R1P)
-         call DIMER$GET_unmassweighted(dim,X2,R2P)
+      IF(PLACEDIMER.AND..NOT.KDLENGTH) THEN !IN THE FIRST STEP  
+         CALL PLACE_DIMER(D,X1,X2)!PLACE IT SO THAT LENGTH-CONSTRAIN FOR THE MASSWEIGHTED COORD.IS FULFILLED
+         !THE COORECT START POSITIONS (THEY WILL BE WRITTEN TO R0 AND RM IN PAW_ATOMS.F90)
+         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X1,R1P)
+         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X2,R2P)
 
          !FOR OUTPUT========================================
-         !init the position of the dimer center
-         RC=R1P+(R2P-R1P)/2.0d0
+         !INIT THE POSITION OF THE DIMER CENTER
+         RC=R1P+(R2P-R1P)/2.0D0
          RCOLD=RC
-         SQDIMERDIST=dot_product((x1-x2),(x1-x2))
-         write(dprotfil,*)"DIMER: DIMER_PROPAGATE: WE PLACED THE DIMER AND NOW HAVE A DISTANCE OF",SQRT(SQDIMERDIST)
+         SQDIMERDIST=DOT_PRODUCT((X1-X2),(X1-X2))
+         WRITE(DPROTFIL,*)"DIMER: DIMER_PROPAGATE: WE PLACED THE DIMER AND NOW HAVE A DISTANCE OF",SQRT(SQDIMERDIST)
          !FOR OUTPUT========================================
 
-         return !do not propagate!!!
-      end if
+         RETURN !DO NOT PROPAGATE!!!
+      END IF
 
       !===============================================
       !======    KEEP THE DIMERS LENGTH   ============
       !===============================================
-      if(KDLENGTH) then !we keep the distance 
-         D=sqrt(SQDIMERDIST)   !d is the constained distance, sqd the squared constrained
-         SQD=SQDIMERDIST       !and sqdimerdist the actual squared distance 
+      IF(KDLENGTH) THEN !WE KEEP THE DISTANCE 
+         D=SQRT(SQDIMERDIST)   !D IS THE CONSTAINED DISTANCE, SQD THE SQUARED CONSTRAINED
+         SQD=SQDIMERDIST       !AND SQDIMERDIST THE ACTUAL SQUARED DISTANCE 
 
          R1P=R1
          R2P=R2
 
 
          !FOR OUTPUT========================================
-         sqdimerdist=dot_product((x1-x2),(x1-x2))
-         write(dprotfil,*)"DIMER: DIMER_PROPAGATE: WE KEPT THE DIMERLENGTH AND NOW HAVE A DISTANCE OF",SQRT(SQDIMERDIST)
+         SQDIMERDIST=DOT_PRODUCT((X1-X2),(X1-X2))
+         WRITE(DPROTFIL,*)"DIMER: DIMER_PROPAGATE: WE KEPT THE DIMERLENGTH AND NOW HAVE A DISTANCE OF",SQRT(SQDIMERDIST)
          !FOR OUTPUT========================================
 
 
-         !this should be done in paw_atoms
-         !KDLENGTH=.false. !we dont need to place the dimer any more
-         !placedimer=.false.
-         return !do not propagate!!!
-      end if
+         !THIS SHOULD BE DONE IN PAW_ATOMS
+         !KDLENGTH=.FALSE. !WE DONT NEED TO PLACE THE DIMER ANY MORE
+         !PLACEDIMER=.FALSE.
+         RETURN !DO NOT PROPAGATE!!!
+      END IF
 
 
       !===============================================
       !======        PCLIMP-TESTING       ============
       !===============================================
-      if(CLIMBPERP) then
-         call dimer_pclimb(R1,R2,F1,F2,R1P,R2P)
-         !do nothing else!
-         return
-      end if
+      IF(CLIMBPERP) THEN
+         CALL DIMER_PCLIMB(R1,R2,F1,F2,R1P,R2P)
+         !DO NOTHING ELSE!
+         RETURN
+      END IF
 
 
 
       !==============================================
       !======    THIS IS THE NEW EQM         ========
       !==============================================
-         call DIMER$GET_massweighted(dim,R1_,X1m)
-         call DIMER$GET_massweighted(dim,R2_,X2m)
+         CALL DIMER$GET_MASSWEIGHTED(DIM,R1_,X1M)
+         CALL DIMER$GET_MASSWEIGHTED(DIM,R2_,X2M)
 
-         call DIMER$GET_unmassweighted(dim,f1,Uf1)
-         call DIMER$GET_unmassweighted(dim,f2,Uf2)
+         CALL DIMER$GET_UNMASSWEIGHTED(DIM,F1,UF1)
+         CALL DIMER$GET_UNMASSWEIGHTED(DIM,F2,UF2)
 
-         call DIMER$GET_massweighted(dim,f1,mf1)
-         call DIMER$GET_massweighted(dim,f2,mf2)
+         CALL DIMER$GET_MASSWEIGHTED(DIM,F1,MF1)
+         CALL DIMER$GET_MASSWEIGHTED(DIM,F2,MF2)
 
-         if(.true..or.optfricperp.or.optfricpara.or.optfricrot) then
-            perpfirst=.false.
-            parafirst=.false.
-            rotfirst=.false.
-            if(.not.allocated(fperpm)) then
-               allocate(fperpm(dim))
-               perpfirst=.true.
-            end if
-            if(.not.allocated(fparam)) then
-               allocate(fparam(dim))
-               parafirst=.true.
-            end if
-            if(.not.allocated(frotm)) then
-               allocate(frotm(dim))
-               rotfirst=.true.
-            end if
+         IF(.TRUE..OR.OPTFRICPERP.OR.OPTFRICPARA.OR.OPTFRICROT) THEN
+            PERPFIRST=.FALSE.
+            PARAFIRST=.FALSE.
+            ROTFIRST=.FALSE.
+            IF(.NOT.ALLOCATED(FPERPM)) THEN
+               ALLOCATE(FPERPM(DIM))
+               PERPFIRST=.TRUE.
+            END IF
+            IF(.NOT.ALLOCATED(FPARAM)) THEN
+               ALLOCATE(FPARAM(DIM))
+               PARAFIRST=.TRUE.
+            END IF
+            IF(.NOT.ALLOCATED(FROTM)) THEN
+               ALLOCATE(FROTM(DIM))
+               ROTFIRST=.TRUE.
+            END IF
 
-            !======    get the optimal friction    ========
-            call dimer$optanner(dim,dt,mf1,mf2,x1,X1m,x2,x2m,fmperp,fmpara,fmrot,&
-                 &fperpm,fparam,frotm,fperp0,fpara0,frot0,fricusedperp,fricusedpara,fricusedrot)
-
-
-            fperpm(:)=fperp0(:)
-            fparam(:)=fpara0(:)
-            frotm(:)=frot0(:)
+            !======    GET THE OPTIMAL FRICTION    ========
+            CALL DIMER$OPTANNER(DIM,DT,MF1,MF2,X1,X1M,X2,X2M,FMPERP,FMPARA,FMROT,&
+                 &FPERPM,FPARAM,FROTM,FPERP0,FPARA0,FROT0,FRICUSEDPERP,FRICUSEDPARA,FRICUSEDROT)
 
 
-            !do we use optfric? 
-            !use the optfric not in the first step (frotm not initialized)
-            !use the userdefined fixed friction instead
-            if((.not.optfricperp).or.perpfirst) fricusedperp=fricperp
-            if((.not.optfricpara).or.parafirst) fricusedpara=fricpara
-            if((.not.optfricrot).or.rotfirst) fricusedrot=fricrot
-         else
-            fricusedperp=fricperp
-            fricusedpara=fricpara
-            fricusedrot=fricrot            
-         end if
-
-         !UF, because subr prop needs the forces in the form f=m^-(1/2)f!
-         !call dimer_prop(dim,x1p,x1,x1m,Uf1,x2p,x2,x2m,Uf2,dt,SQD &
-         !     & ,fricusedpara,fricusedperp,fricusedrot,fmpara,fmperp,fmrot)
-
-         call dimer_prop06new(dim,x1p,x1,x1m,Uf1,x2p,x2,x2m,Uf2,dt,SQD &
-              & ,fricusedpara,fricusedperp,fricusedrot,fmpara,fmperp,fmrot,g1,g2)
+            FPERPM(:)=FPERP0(:)
+            FPARAM(:)=FPARA0(:)
+            FROTM(:)=FROT0(:)
 
 
-      call DIMER$GET_unmassweighted(dim,X1P,R1NC)
-      call DIMER$GET_unmassweighted(dim,X2P,R2NC)
+            !DO WE USE OPTFRIC? 
+            !USE THE OPTFRIC NOT IN THE FIRST STEP (FROTM NOT INITIALIZED)
+            !USE THE USERDEFINED FIXED FRICTION INSTEAD
+            IF((.NOT.OPTFRICPERP).OR.PERPFIRST) FRICUSEDPERP=FRICPERP
+            IF((.NOT.OPTFRICPARA).OR.PARAFIRST) FRICUSEDPARA=FRICPARA
+            IF((.NOT.OPTFRICROT).OR.ROTFIRST) FRICUSEDROT=FRICROT
+         ELSE
+            FRICUSEDPERP=FRICPERP
+            FRICUSEDPARA=FRICPARA
+            FRICUSEDROT=FRICROT            
+         END IF
+
+         !UF, BECAUSE SUBR PROP NEEDS THE FORCES IN THE FORM F=M^-(1/2)F!
+         !CALL DIMER_PROP(DIM,X1P,X1,X1M,UF1,X2P,X2,X2M,UF2,DT,SQD &
+         !     & ,FRICUSEDPARA,FRICUSEDPERP,FRICUSEDROT,FMPARA,FMPERP,FMROT)
+
+         CALL DIMER_PROP06NEW(DIM,X1P,X1,X1M,UF1,X2P,X2,X2M,UF2,DT,SQD &
+              & ,FRICUSEDPARA,FRICUSEDPERP,FRICUSEDROT,FMPARA,FMPERP,FMROT,G1,G2)
+
+
+      CALL DIMER$GET_UNMASSWEIGHTED(DIM,X1P,R1NC)
+      CALL DIMER$GET_UNMASSWEIGHTED(DIM,X2P,R2NC)
 
       !FOR OUTPUT========================================
       !=========================================================
-      !==========  Forces in Dimer Direction         ===========
+      !==========  FORCES IN DIMER DIRECTION         ===========
       !=========================================================
-      !calc unit vector in dimer direction
+      !CALC UNIT VECTOR IN DIMER DIRECTION
 
-        SVAR=dot_product((R1-R2),(R1-R2))
+        SVAR=DOT_PRODUCT((R1-R2),(R1-R2))
         SVARV=(R1-R2)/SVAR
 
-        !project the forces on that direction
-        fp1=dot_product(SVARV,F1)
-        fp2=dot_product(SVARV,F2)
-        write(dprotfil,*)"DIMER FORCES: I1: ",fp1," I2: ",fp2
+        !PROJECT THE FORCES ON THAT DIRECTION
+        FP1=DOT_PRODUCT(SVARV,F1)
+        FP2=DOT_PRODUCT(SVARV,F2)
+        WRITE(DPROTFIL,*)"DIMER FORCES: I1: ",FP1," I2: ",FP2
 
 
-        write(dprotfil,*)"****************************************"
-        write(dprotfil,*)"*               DIMER                  *"
-        write(dprotfil,*)"*     Estimate for TS Coordinates      *"
-        write(dprotfil,*)"****************************************"
-        !alexdebug        RTSOLD=RTS
-        !--- estimate the saddlepoint by the null of the parallel forces
-        !    for fp2>fp1 we have no negative slope and the TS predictes the
-        !    min!
-        if(fp2*fp1.gt.0.d0) then 
-           write(dprotfil,*)"WARNING: POSITIVE SLOPE!"
-        end if
+        WRITE(DPROTFIL,*)"****************************************"
+        WRITE(DPROTFIL,*)"*               DIMER                  *"
+        WRITE(DPROTFIL,*)"*     ESTIMATE FOR TS COORDINATES      *"
+        WRITE(DPROTFIL,*)"****************************************"
+        !ALEXDEBUG        RTSOLD=RTS
+        !--- ESTIMATE THE SADDLEPOINT BY THE NULL OF THE PARALLEL FORCES
+        !    FOR FP2>FP1 WE HAVE NO NEGATIVE SLOPE AND THE TS PREDICTES THE
+        !    MIN!
+        IF(FP2*FP1.GT.0.D0) THEN 
+           WRITE(DPROTFIL,*)"WARNING: POSITIVE SLOPE!"
+        END IF
 
-        RTS_=R1-SVARV*(-fp1*SVAR/(fp2-fp1))
-        do i=1,(dim-2),3
-           write(dprotfil,FMT='(F15.5,A2,F15.5,A2,F15.5)')RTS_(i),',',RTS_(i+1),',',RTS_(i+2)
-        end do
+        RTS_=R1-SVARV*(-FP1*SVAR/(FP2-FP1))
+        DO I=1,(DIM-2),3
+           WRITE(DPROTFIL,FMT='(F15.5,A2,F15.5,A2,F15.5)')RTS_(I),',',RTS_(I+1),',',RTS_(I+2)
+        END DO
         RTSOLD=RTSOLD-RTS_
-        write(dprotfil,*)"TS ESTIMATE FROM DIMER CHANGED ABOUT ",sqrt(dot_product(RTSOLD,RTSOLD))
-        write(dprotfil,*)"****************************************"
+        WRITE(DPROTFIL,*)"TS ESTIMATE FROM DIMER CHANGED ABOUT ",SQRT(DOT_PRODUCT(RTSOLD,RTSOLD))
+        WRITE(DPROTFIL,*)"****************************************"
 
 
 
         !=========================================================
         !========  ESTIMATE TS IN UNMASSWEIGHTED SPACE   =========
         !=========================================================
-        call DIMER$ESTIMATETS(DIM,R1,R2,F1,F2,etot,etot2)
+        CALL DIMER$ESTIMATETS(DIM,R1,R2,F1,F2,ETOT,ETOT2)
 
 
 
@@ -558,203 +558,203 @@ end subroutine dimer_init_files
       !=========================================================
       !==========  THE DIMERS PARALLEL MOTION       ===========
       !=========================================================
- !     RC=R1NC+(R2NC-R1NC)/2.0d0
- !     RCDIFF=sqrt(dot_product((R2-R1),(R2-R1))) 
- !     RCDIFF=dot_product((R2-R1),(RC-RCOLD))/RCDIFF
- !     print*,"DIMER: DIMER_PROPAGATE: DIMER PARALLEL MOTION: ",RCDIFF
+ !     RC=R1NC+(R2NC-R1NC)/2.0D0
+ !     RCDIFF=SQRT(DOT_PRODUCT((R2-R1),(R2-R1))) 
+ !     RCDIFF=DOT_PRODUCT((R2-R1),(RC-RCOLD))/RCDIFF
+ !     PRINT*,"DIMER: DIMER_PROPAGATE: DIMER PARALLEL MOTION: ",RCDIFF
  !     RCOLD=RC
-        write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER PARALLEL MOTION: ',&
-             &dot_product(r1-r2,0.5d0*(r1nc+r2nc)-0.5d0*(r1+r2))/sqrt(dot_product(r1-r2,r1-r2))
+        WRITE(DPROTFIL,*)'DIMER: DIMER_PROPAGATE: DIMER PARALLEL MOTION: ',&
+             &DOT_PRODUCT(R1-R2,0.5D0*(R1NC+R2NC)-0.5D0*(R1+R2))/SQRT(DOT_PRODUCT(R1-R2,R1-R2))
 
 
       !=========================================================
-      !==========   THE DIMERS actual DIRECTION         =======
+      !==========   THE DIMERS ACTUAL DIRECTION         =======
       !==========   AND ANGULAR CHANGE IN               =======
       !=========================================================
-        !prepare monitoring (hardwired)
-        if(.not.treadam) then
-           open(4242,FILE="dimerangle.out",ACTION="WRITE",POSITION='REWIND')
-           do i=1,dim/3
-              write(4242,*)R1NC((i-1)*3+1)
-              write(4242,*)R1NC((i-1)*3+2)
-              write(4242,*)R1NC((i-1)*3+3)
-           end do
-           do i=1,dim/3
-              write(4242,*)R2NC((i-1)*3+1)
-              write(4242,*)R2NC((i-1)*3+2)
-              write(4242,*)R2NC((i-1)*3+3)
-           end do
-           close(4242)
-           !open the file and read the positions
-           allocate(angle1(dim))
-           allocate(angle2(dim))
-           allocate(angledir(dim))
-           INQUIRE (FILE="dimerangle.in", EXIST = treadamnotthere)
-           IF (treadamnotthere) THEN
-              open(4242,FILE="dimerangle.in",ACTION="READ",POSITION='REWIND')
-              do i=1,dim
-                 read(4242,*)angle1(i)
-              end do
-              do i=1,dim
-                 read(4242,*)angle2(i)
-              end do
+        !PREPARE MONITORING (HARDWIRED)
+        IF(.NOT.TREADAM) THEN
+           OPEN(4242,FILE="DIMERANGLE.OUT",ACTION="WRITE",POSITION='REWIND')
+           DO I=1,DIM/3
+              WRITE(4242,*)R1NC((I-1)*3+1)
+              WRITE(4242,*)R1NC((I-1)*3+2)
+              WRITE(4242,*)R1NC((I-1)*3+3)
+           END DO
+           DO I=1,DIM/3
+              WRITE(4242,*)R2NC((I-1)*3+1)
+              WRITE(4242,*)R2NC((I-1)*3+2)
+              WRITE(4242,*)R2NC((I-1)*3+3)
+           END DO
+           CLOSE(4242)
+           !OPEN THE FILE AND READ THE POSITIONS
+           ALLOCATE(ANGLE1(DIM))
+           ALLOCATE(ANGLE2(DIM))
+           ALLOCATE(ANGLEDIR(DIM))
+           INQUIRE (FILE="DIMERANGLE.IN", EXIST = TREADAMNOTTHERE)
+           IF (TREADAMNOTTHERE) THEN
+              OPEN(4242,FILE="DIMERANGLE.IN",ACTION="READ",POSITION='REWIND')
+              DO I=1,DIM
+                 READ(4242,*)ANGLE1(I)
+              END DO
+              DO I=1,DIM
+                 READ(4242,*)ANGLE2(I)
+              END DO
               
-              close(4242)
-              !write(dprotfil,*)angle1
-              !write(dprotfil,*)"-------------------------------------------"
-              !write(dprotfil,*)angle2
-              !the normalized direction from groundstate 1 to groundstate2
-              angledir=(angle2(:)-angle1(:))/sqrt(dot_product(angle2(:)-angle1(:),angle2(:)-angle1(:)))
-           else
-              !choose any direction
-              angledir(:)=0.0d0
-              angledir(1)=1.0d0
-           end IF
-           deallocate(angle1)
-           deallocate(angle2)
-           treadam=.true.
-        end if
+              CLOSE(4242)
+              !WRITE(DPROTFIL,*)ANGLE1
+              !WRITE(DPROTFIL,*)"-------------------------------------------"
+              !WRITE(DPROTFIL,*)ANGLE2
+              !THE NORMALIZED DIRECTION FROM GROUNDSTATE 1 TO GROUNDSTATE2
+              ANGLEDIR=(ANGLE2(:)-ANGLE1(:))/SQRT(DOT_PRODUCT(ANGLE2(:)-ANGLE1(:),ANGLE2(:)-ANGLE1(:)))
+           ELSE
+              !CHOOSE ANY DIRECTION
+              ANGLEDIR(:)=0.0D0
+              ANGLEDIR(1)=1.0D0
+           END IF
+           DEALLOCATE(ANGLE1)
+           DEALLOCATE(ANGLE2)
+           TREADAM=.TRUE.
+        END IF
 
-        if(.not.allocated(dirm))allocate(dirm(dim))
-        svarv=(r2nc-r1nc)/sqrt(dot_product(r2nc-r1nc,r2nc-r1nc))
-        !write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER ACTUAL DIRECTION: '
-        !write(dprotfil,*)SVARV
+        IF(.NOT.ALLOCATED(DIRM))ALLOCATE(DIRM(DIM))
+        SVARV=(R2NC-R1NC)/SQRT(DOT_PRODUCT(R2NC-R1NC,R2NC-R1NC))
+        !WRITE(DPROTFIL,*)'DIMER: DIMER_PROPAGATE: DIMER ACTUAL DIRECTION: '
+        !WRITE(DPROTFIL,*)SVARV
 
-        write(dprotfil,*) &
-       &     'DIMER: DIMER_PROPAGATE: DIMER ANGLE CHANGE in degrees: ', &
-       &      acos(dot_product(svarv,dirm))*180.d0/(4.0*atan(1.0d0))
+        WRITE(DPROTFIL,*) &
+       &     'DIMER: DIMER_PROPAGATE: DIMER ANGLE CHANGE IN DEGREES: ', &
+       &      ACOS(DOT_PRODUCT(SVARV,DIRM))*180.D0/(4.0*ATAN(1.0D0))
 
-       dirm=svarv
+       DIRM=SVARV
 
-        !monitoring
-        write(dprotfil,*) &
-      &    'DIMER: DIMER_PROPAGATE: DIMER ANGLE MONITORING in degrees : ', &
-      &     acos(dot_product(svarv,angledir))*180.d0/(4.0*atan(1.0d0))
+        !MONITORING
+        WRITE(DPROTFIL,*) &
+      &    'DIMER: DIMER_PROPAGATE: DIMER ANGLE MONITORING IN DEGREES : ', &
+      &     ACOS(DOT_PRODUCT(SVARV,ANGLEDIR))*180.D0/(4.0*ATAN(1.0D0))
 
 
         !=========================================================
-        !==========   THE DIMER'S LENGTH CONTROL       ===========
+        !==========   THE DIMERS LENGTH CONTROL       ===========
         !=========================================================
-        write(dprotfil,*)"DIMER: INITIALIZED STEPFACT check ",tinitstepfact
-        if(.not.tinitstepfact) then
-           !init stepfact if needed:
-           if(nsteps.gt.0) then
-              stepfact=(dmin/D)**(real(1,kind=8)/real(nsteps,kind=8))
-              write(dprotfil,*)"DIMER: INITIALIZED STEPFACT TO ",stepfact
-           end if
-           tinitstepfact=.true.
-        end if
+        WRITE(DPROTFIL,*)"DIMER: INITIALIZED STEPFACT CHECK ",TINITSTEPFACT
+        IF(.NOT.TINITSTEPFACT) THEN
+           !INIT STEPFACT IF NEEDED:
+           IF(NSTEPS.GT.0) THEN
+              STEPFACT=(DMIN/D)**(REAL(1,KIND=8)/REAL(NSTEPS,KIND=8))
+              WRITE(DPROTFIL,*)"DIMER: INITIALIZED STEPFACT TO ",STEPFACT
+           END IF
+           TINITSTEPFACT=.TRUE.
+        END IF
 
-        RCDIFF=sqrt(dot_product(R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0),&
-             &R1NC+(R2NC-R1NC)/2.0d0-(R1+(R2-R1)/2.0d0)))
+        RCDIFF=SQRT(DOT_PRODUCT(R1NC+(R2NC-R1NC)/2.0D0-(R1+(R2-R1)/2.0D0),&
+             &R1NC+(R2NC-R1NC)/2.0D0-(R1+(R2-R1)/2.0D0)))
 
-        if(DLFLEX.and.RCDIFF.lt.RCDIFFMIN) lc=lc+1 !increase counter
-        if(DLFLEX.and.RCDIFF.gt.RCDIFFMIN) lc=0 !reset counter
+        IF(DLFLEX.AND.RCDIFF.LT.RCDIFFMIN) LC=LC+1 !INCREASE COUNTER
+        IF(DLFLEX.AND.RCDIFF.GT.RCDIFFMIN) LC=0 !RESET COUNTER
 
-        if(DLFLEX.and.lc.ge.lcs.and.((D-DSTEP).gt.DMIN)) then !shorten the length
-           if(nsteps.eq.0) then !we use dstep as stepsize
-              !shorten dimer
-              sqdimerdist=(D-DSTEP)**2
+        IF(DLFLEX.AND.LC.GE.LCS.AND.((D-DSTEP).GT.DMIN)) THEN !SHORTEN THE LENGTH
+           IF(NSTEPS.EQ.0) THEN !WE USE DSTEP AS STEPSIZE
+              !SHORTEN DIMER
+              SQDIMERDIST=(D-DSTEP)**2
               D=D-DSTEP
               SQD=SQDIMERDIST
-              write(dprotfil,*)"DIMER: DIMER_PROPAGATE: SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
-           else
-              !shorten dimer %-tual such that after nsteps we have DMIN 
-              if((d-d*stepfact).le.dstep) then
-                 sqdimerdist=(D*stepfact)**2
-                 D=D*stepfact
+              WRITE(DPROTFIL,*)"DIMER: DIMER_PROPAGATE: SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
+           ELSE
+              !SHORTEN DIMER %-TUAL SUCH THAT AFTER NSTEPS WE HAVE DMIN 
+              IF((D-D*STEPFACT).LE.DSTEP) THEN
+                 SQDIMERDIST=(D*STEPFACT)**2
+                 D=D*STEPFACT
                  SQD=SQDIMERDIST
-                 write(dprotfil,*)"DIMER: DIMER_PROPAGATE: % SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
-              end if
-           end if
-           !reset counter
-           lc=0
-        end if
+                 WRITE(DPROTFIL,*)"DIMER: DIMER_PROPAGATE: % SHORTEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
+              END IF
+           END IF
+           !RESET COUNTER
+           LC=0
+        END IF
 
-      if(DLFLEX.and.lc.ge.lcs.and.((D+DSTEP).lt.DMIN)) then !lengthen the dimer
-         sqdimerdist=(D+DSTEP)**2
+      IF(DLFLEX.AND.LC.GE.LCS.AND.((D+DSTEP).LT.DMIN)) THEN !LENGTHEN THE DIMER
+         SQDIMERDIST=(D+DSTEP)**2
          D=D*DSTEP
          SQD=SQDIMERDIST 
-         write(dprotfil,*)"DIMER: DIMER_PROPAGATE: LENGTHEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
-         !reset counter
-         lc=0
-      end if
+         WRITE(DPROTFIL,*)"DIMER: DIMER_PROPAGATE: LENGTHEND DIMER LENGTH TO ",SQRT(SQDIMERDIST)
+         !RESET COUNTER
+         LC=0
+      END IF
 
       R1P=R1NC
       R2P=R2NC
 
-      V1=(R1P-R1_)/2.0d0*DT
-      V2=(R2P-R2_)/2.0d0*DT
-      !get RMASS
-      CALL ATOMLIST$GETR8A('MASS',0,(dim/3),RMASS)
+      V1=(R1P-R1_)/2.0D0*DT
+      V2=(R2P-R2_)/2.0D0*DT
+      !GET RMASS
+      CALL ATOMLIST$GETR8A('MASS',0,(DIM/3),RMASS)
       !CALC CELLKIN
-      do IAT=1, dim/3
-         do i=1,3
-            do j=1,3
-               CELLKIN1(i,j)=CELLKIN1(I,J)+RMASS(IAT)*V1(IAT*3-(3-i))*V1(IAT*3-(3-j))
-               CELLKIN2(i,j)=CELLKIN2(I,J)+RMASS(IAT)*V2(IAT*3-(3-i))*V2(IAT*3-(3-j))
-            end do
-         end do
-      end do
+      DO IAT=1, DIM/3
+         DO I=1,3
+            DO J=1,3
+               CELLKIN1(I,J)=CELLKIN1(I,J)+RMASS(IAT)*V1(IAT*3-(3-I))*V1(IAT*3-(3-J))
+               CELLKIN2(I,J)=CELLKIN2(I,J)+RMASS(IAT)*V2(IAT*3-(3-I))*V2(IAT*3-(3-J))
+            END DO
+         END DO
+      END DO
 
 
       
-      return
-    end SUBROUTINE DIMER_PROPAGATE
+      RETURN
+    END SUBROUTINE DIMER_PROPAGATE
 
 
 !##################################################################
-SUBROUTINE DIMER$ESTIMATETS(N,R1,R2,F1,F2,etot,etot2)
+SUBROUTINE DIMER$ESTIMATETS(N,R1,R2,F1,F2,ETOT,ETOT2)
 !##################################################################
-  use dimer_estimatets_module 
-  integer(4),intent(in)          :: N   !the dimensionality
-  real(8),intent(in)             :: r1(n)
-  real(8),intent(in)             :: r2(n)
-  real(8),intent(in)             :: f1(n)
-  real(8),intent(in)             :: f2(n)
-  real(8),intent(in)             :: etot
-  real(8),intent(in)             :: etot2
-  real(8)                        :: z10(n),z20(n)
-  real(8)                        :: e0(n)
-  real(8)                        :: f1ortho(n)
-  real(8)                        :: f2ortho(n)
-  real(8)                        :: eortho0(n)
-  real(8)                        :: cpara,cperp
-  real(8)                        :: fpara0,fperp0
-  real(8)                        :: spara,sperp
-  real(8)                        :: s1,s2,a,b,c,d_
-  real(8)                        :: dist
-  real(8)                        :: rvar1,rvar2
-  real(8)                        :: ets
-  real(8)                        :: xmax
+  USE DIMER_ESTIMATETS_MODULE 
+  INTEGER(4),INTENT(IN)          :: N   !THE DIMENSIONALITY
+  REAL(8),INTENT(IN)             :: R1(N)
+  REAL(8),INTENT(IN)             :: R2(N)
+  REAL(8),INTENT(IN)             :: F1(N)
+  REAL(8),INTENT(IN)             :: F2(N)
+  REAL(8),INTENT(IN)             :: ETOT
+  REAL(8),INTENT(IN)             :: ETOT2
+  REAL(8)                        :: Z10(N),Z20(N)
+  REAL(8)                        :: E0(N)
+  REAL(8)                        :: F1ORTHO(N)
+  REAL(8)                        :: F2ORTHO(N)
+  REAL(8)                        :: EORTHO0(N)
+  REAL(8)                        :: CPARA,CPERP
+  REAL(8)                        :: FPARA0,FPERP0
+  REAL(8)                        :: SPARA,SPERP
+  REAL(8)                        :: S1,S2,A,B,C,D_
+  REAL(8)                        :: DIST
+  REAL(8)                        :: RVAR1,RVAR2
+  REAL(8)                        :: ETS
+  REAL(8)                        :: XMAX
 
 
 
-  if(.not.allocated(z1m)) allocate(z1m(n))
-  if(.not.allocated(z2m)) allocate(z2m(n))
-  if(.not.allocated(em)) allocate(em(n))
-  if(.not.allocated(eorthom)) allocate(eorthom(n))
+  IF(.NOT.ALLOCATED(Z1M)) ALLOCATE(Z1M(N))
+  IF(.NOT.ALLOCATED(Z2M)) ALLOCATE(Z2M(N))
+  IF(.NOT.ALLOCATED(EM)) ALLOCATE(EM(N))
+  IF(.NOT.ALLOCATED(EORTHOM)) ALLOCATE(EORTHOM(N))
 
-  z10(:)=(r1(:)+r2(:))/2.d0
-  z20(:)=r1(:)-r2(:)
-  dist=sqrt(dot_product(z20(:),z20(:)))
+  Z10(:)=(R1(:)+R2(:))/2.D0
+  Z20(:)=R1(:)-R2(:)
+  DIST=SQRT(DOT_PRODUCT(Z20(:),Z20(:)))
 
-  e0(:)=z20(:)/sqrt(dot_product(z20(:),z20(:)))
+  E0(:)=Z20(:)/SQRT(DOT_PRODUCT(Z20(:),Z20(:)))
   
   
   !=====================================================================
-  !==    determine the forces (directions referenced on image1)       ==
-  !==    we project on em directions                                  ==
+  !==    DETERMINE THE FORCES (DIRECTIONS REFERENCED ON IMAGE1)       ==
+  !==    WE PROJECT ON EM DIRECTIONS                                  ==
   !=====================================================================
-  f1ortho(:)=f1(:)-em(:)*dot_product(em(:),f1(:))
-  f2ortho(:)=f2(:)-em(:)*dot_product(em(:),f2(:))
+  F1ORTHO(:)=F1(:)-EM(:)*DOT_PRODUCT(EM(:),F1(:))
+  F2ORTHO(:)=F2(:)-EM(:)*DOT_PRODUCT(EM(:),F2(:))
   
-  eortho0(:)=0.5d0*(f1ortho+f2ortho)/sqrt(dot_product(0.5d0*(f1ortho+f2ortho),&
-       &0.5d0*(f1ortho+f2ortho)))
+  EORTHO0(:)=0.5D0*(F1ORTHO+F2ORTHO)/SQRT(DOT_PRODUCT(0.5D0*(F1ORTHO+F2ORTHO),&
+       &0.5D0*(F1ORTHO+F2ORTHO)))
   
   
-  fpara0=dot_product(em(:),(f1(:)+f2(:)))
-  fperp0=dot_product(eorthom,0.5d0*(f1(:)+f2(:)))
+  FPARA0=DOT_PRODUCT(EM(:),(F1(:)+F2(:)))
+  FPERP0=DOT_PRODUCT(EORTHOM,0.5D0*(F1(:)+F2(:)))
 
 
 
@@ -762,97 +762,97 @@ SUBROUTINE DIMER$ESTIMATETS(N,R1,R2,F1,F2,etot,etot2)
 
 
   !============================================================================
-  !==    estimate etot in between image1 and 2 using a 3rd order polynomial ===
+  !==    ESTIMATE ETOT IN BETWEEN IMAGE1 AND 2 USING A 3RD ORDER POLYNOMIAL ===
   !============================================================================
-  !--- the slope parallel to the dimer
-  s1=-dot_product(e0(:),(f1(:)))
-  s2=-dot_product(e0(:),(f2(:)))
+  !--- THE SLOPE PARALLEL TO THE DIMER
+  S1=-DOT_PRODUCT(E0(:),(F1(:)))
+  S2=-DOT_PRODUCT(E0(:),(F2(:)))
 
-  d_=etot
-  c=s1
-  a=-(2.d0*etot2+s2*dist+c*dist-2.d0*d_)/(-dist)**3
-  b=(s2-c-3.d0*a*dist**2)/(-2.d0*dist)
+  D_=ETOT
+  C=S1
+  A=-(2.D0*ETOT2+S2*DIST+C*DIST-2.D0*D_)/(-DIST)**3
+  B=(S2-C-3.D0*A*DIST**2)/(-2.D0*DIST)
 
-  rvar1=-b/(3.d0*a)
-  if(rvar1**2-(c/(3.d0*a)).lt.0.d0) then
-     print*,'Error: value in sqrt negative!'
-     rvar2=sqrt(rvar1**2-(c/(3.d0*a)))
-  else
-     rvar2=sqrt(rvar1**2-(c/(3.d0*a)))
-  end if
+  RVAR1=-B/(3.D0*A)
+  IF(RVAR1**2-(C/(3.D0*A)).LT.0.D0) THEN
+     PRINT*,'ERROR: VALUE IN SQRT NEGATIVE!'
+     RVAR2=SQRT(RVAR1**2-(C/(3.D0*A)))
+  ELSE
+     RVAR2=SQRT(RVAR1**2-(C/(3.D0*A)))
+  END IF
 
-  if(s1*s2.lt.0.d0) then
-     !forces with opposite sign
-     if(rvar1+rvar2.lt.0.d0.and.rvar1+rvar2.gt.-dist) then
-        xmax=rvar1+rvar2
-     else
-        xmax=rvar1-rvar2
-     end if
-  else
-     !forces with same sign
-     if(s1.gt.0d0) then !both forces negative
-        if((rvar1+rvar2).gt.0.d0) then
-           xmax=rvar1+rvar2
-        else
-           xmax=rvar1-rvar2
-        end if
-     else !both forces positive
-        if((rvar1+rvar2).lt.-dist) then
-           xmax=rvar1+rvar2
-        else
-           xmax=rvar1-rvar2
-        end if
-     end if
-  end if
+  IF(S1*S2.LT.0.D0) THEN
+     !FORCES WITH OPPOSITE SIGN
+     IF(RVAR1+RVAR2.LT.0.D0.AND.RVAR1+RVAR2.GT.-DIST) THEN
+        XMAX=RVAR1+RVAR2
+     ELSE
+        XMAX=RVAR1-RVAR2
+     END IF
+  ELSE
+     !FORCES WITH SAME SIGN
+     IF(S1.GT.0D0) THEN !BOTH FORCES NEGATIVE
+        IF((RVAR1+RVAR2).GT.0.D0) THEN
+           XMAX=RVAR1+RVAR2
+        ELSE
+           XMAX=RVAR1-RVAR2
+        END IF
+     ELSE !BOTH FORCES POSITIVE
+        IF((RVAR1+RVAR2).LT.-DIST) THEN
+           XMAX=RVAR1+RVAR2
+        ELSE
+           XMAX=RVAR1-RVAR2
+        END IF
+     END IF
+  END IF
 
 
-  ets=a*xmax**3+b*xmax**2+c*xmax+d_
-  if(ets.lt.etot.or.ets.lt.etot2) then
-     print*,'Ets is smaller than etot or etot2!'
-  end if
+  ETS=A*XMAX**3+B*XMAX**2+C*XMAX+D_
+  IF(ETS.LT.ETOT.OR.ETS.LT.ETOT2) THEN
+     PRINT*,'ETS IS SMALLER THAN ETOT OR ETOT2!'
+  END IF
 
-  print*,xmax
-  print*,s1,s2
-  print*,'ETOT1&2',etot,etot2
-  print*,'ETS ESTIMATE: ',ets
+  PRINT*,XMAX
+  PRINT*,S1,S2
+  PRINT*,'ETOT1&2',ETOT,ETOT2
+  PRINT*,'ETS ESTIMATE: ',ETS
 
 
 
   !=====================================================================
-  !==    estimate using deltaF - seems not be be exact enough!!!      ==
+  !==    ESTIMATE USING DELTAF - SEEMS NOT BE BE EXACT ENOUGH!!!      ==
   !=====================================================================
 
-  !==    determine the distances (directions referenced on image1)    ==
-  spara=dot_product(em,z10-z1m)
-  sperp=sqrt(dot_product((z10-z1m)-spara*em,(z10-z1m)-spara*em))
+  !==    DETERMINE THE DISTANCES (DIRECTIONS REFERENCED ON IMAGE1)    ==
+  SPARA=DOT_PRODUCT(EM,Z10-Z1M)
+  SPERP=SQRT(DOT_PRODUCT((Z10-Z1M)-SPARA*EM,(Z10-Z1M)-SPARA*EM))
   
-  cpara=-(fpara0-fparam)/spara
-  cperp=-(fperp0-fperpm)/sperp
+  CPARA=-(FPARA0-FPARAM)/SPARA
+  CPERP=-(FPERP0-FPERPM)/SPERP
   
-  print*,fpara0,fparam,spara
-  print*,fperp0,fperpm,sperp
-  print*,'TS ESTIMATION: C VALUES',cpara,cperp
+  PRINT*,FPARA0,FPARAM,SPARA
+  PRINT*,FPERP0,FPERPM,SPERP
+  PRINT*,'TS ESTIMATION: C VALUES',CPARA,CPERP
   
-  !=== estimate F=0
-  print*,'TSDISTPARA',fpara0/cpara
-  print*,'TSDISTPERP',fperp0/cperp
+  !=== ESTIMATE F=0
+  PRINT*,'TSDISTPARA',FPARA0/CPARA
+  PRINT*,'TSDISTPERP',FPERP0/CPERP
   
   
   
-  !=== keep some values for next turn
-  !=== we need to project them now on e0 (which is em for next cycle)
-  z1m=z10
-  z2m=z20
-  em=e0
-  eorthom=eortho0
-  !=== we need to project them now on e0 (which is em for next cycle)
-  fparam=dot_product(e0(:),(f1(:)+f2(:)))
-  fperpm=dot_product(eortho0,0.5d0*(f1(:)+f2(:)))
+  !=== KEEP SOME VALUES FOR NEXT TURN
+  !=== WE NEED TO PROJECT THEM NOW ON E0 (WHICH IS EM FOR NEXT CYCLE)
+  Z1M=Z10
+  Z2M=Z20
+  EM=E0
+  EORTHOM=EORTHO0
+  !=== WE NEED TO PROJECT THEM NOW ON E0 (WHICH IS EM FOR NEXT CYCLE)
+  FPARAM=DOT_PRODUCT(E0(:),(F1(:)+F2(:)))
+  FPERPM=DOT_PRODUCT(EORTHO0,0.5D0*(F1(:)+F2(:)))
   
 
 
 
-end SUBROUTINE DIMER$ESTIMATETS
+END SUBROUTINE DIMER$ESTIMATETS
 
 
 
@@ -862,229 +862,229 @@ end SUBROUTINE DIMER$ESTIMATETS
 SUBROUTINE DIMER$STRETCH(NAT,R1,R0)
 !##################################################################
   USE MPE_MODULE
-!cpversion  USE MPE_COMM_SPACE_MODULE
+!CPVERSION  USE MPE_COMM_SPACE_MODULE
   USE DIMER_MODULE
   IMPLICIT NONE
-  integer(4),intent(in)    :: NAT 
-  real(8),   intent(inout) :: R1(NAT*3) !inout because we set the position!
-  real(8),   intent(in) :: R0(NAT*3) ! only for initialisation of rkeep
-  real(8)              :: SQDIMERDIST
-  integer(4)           :: NVAL,WORLD_ID,IAT
+  INTEGER(4),INTENT(IN)    :: NAT 
+  REAL(8),   INTENT(INOUT) :: R1(NAT*3) !INOUT BECAUSE WE SET THE POSITION!
+  REAL(8),   INTENT(IN) :: R0(NAT*3) ! ONLY FOR INITIALISATION OF RKEEP
+  REAL(8)              :: SQDIMERDIST
+  INTEGER(4)           :: NVAL,WORLD_ID,IAT
   LOGICAL(4)           :: LOOP
-  if(placedimer) then
-     call MPE$BROADCAST('~',1,R1)!both images use the position from 1st dimers strc
-     return
-  else
-     IF(.not.ALLOCATED(RKEEP)) allocate(RKEEP(3*NAT))
-     IF(.not.ALLOCATED(R2SPLIT)) allocate(R2SPLIT(3*NAT))
+  IF(PLACEDIMER) THEN
+     CALL MPE$BROADCAST('~',1,R1)!BOTH IMAGES USE THE POSITION FROM 1ST DIMERS STRC
+     RETURN
+  ELSE
+     IF(.NOT.ALLOCATED(RKEEP)) ALLOCATE(RKEEP(3*NAT))
+     IF(.NOT.ALLOCATED(R2SPLIT)) ALLOCATE(R2SPLIT(3*NAT))
 
-     call MPE$QUERY('MONOMER',NTASKS,THISTASK)
+     CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
      CALL DIMER$GETPROCESSLEADER2(NVAL,WORLD_ID)
-     !NVAL now equals the WORLD_ID of the 1st task in dimer2
+     !NVAL NOW EQUALS THE WORLD_ID OF THE 1ST TASK IN DIMER2
 
-     if(World_id.lt.NVAL) then
-        !ONLY THE FIRST DIMER keeps its Position
-        if(TFIRSTSPLIT) then
-           Rkeep=R0
-           TFIRSTSPLIT=.false.
-        end if
-        R1=Rkeep !keep R1 fixed
-     end if
+     IF(WORLD_ID.LT.NVAL) THEN
+        !ONLY THE FIRST DIMER KEEPS ITS POSITION
+        IF(TFIRSTSPLIT) THEN
+           RKEEP=R0
+           TFIRSTSPLIT=.FALSE.
+        END IF
+        R1=RKEEP !KEEP R1 FIXED
+     END IF
 
-     if(thistask.eq.1) then
-        !give WORLD_ID 1 the position on dimer2
-        if(WORLD_ID.ne.1) then 
-           !we are 1st task of dimer2
-           call MPE$SEND('~',1,42,R1)
-        else
-           !we are WORLD_ID 1
-           call MPE$RECEIVE('~',NVAL,42,R2SPLIT)
-        end if
-        if(WORLD_ID.eq.1) then
+     IF(THISTASK.EQ.1) THEN
+        !GIVE WORLD_ID 1 THE POSITION ON DIMER2
+        IF(WORLD_ID.NE.1) THEN 
+           !WE ARE 1ST TASK OF DIMER2
+           CALL MPE$SEND('~',1,42,R1)
+        ELSE
+           !WE ARE WORLD_ID 1
+           CALL MPE$RECEIVE('~',NVAL,42,R2SPLIT)
+        END IF
+        IF(WORLD_ID.EQ.1) THEN
            !=========APPLY THE COUPLE-CONSTRAINT=========
            IF(ASSOCIATED(ELDEST_D)) THEN
               THIS_D=>ELDEST_D
               LOOP=.TRUE.
-              do while (LOOP)
-                 call ATOMLIST$INDEX(THIS_D%ID,IAT)
+              DO WHILE (LOOP)
+                 CALL ATOMLIST$INDEX(THIS_D%ID,IAT)
                  R2SPLIT((IAT*3)-3+1)=RKEEP((IAT*3)-3+1)
                  R2SPLIT((IAT*3)-3+2)=RKEEP((IAT*3)-3+2)
                  R2SPLIT((IAT*3)-3+3)=RKEEP((IAT*3)-3+3)
                  !FOR THE FOOT CONTROLLED LOOP
-                 IF(associated(THIS_D%NEXT_D)) THEN
+                 IF(ASSOCIATED(THIS_D%NEXT_D)) THEN
                     THIS_D=>THIS_D%NEXT_D
                  ELSE
                     LOOP=.FALSE.
                  END IF
-              end do
+              END DO
            END IF
  
 
-           sqdimerdist=dot_product((Rkeep-R2SPLIT),(Rkeep-R2SPLIT))
-           print *, "DIMER STRETCH : d should be", stretchdist," and is", sqrt(sqdimerdist)
-           if(sqdimerdist.ge.(stretchdist*stretchdist)) then
-              STRETCH=.false. !communicate this to all other tasks
-              !set the new length in dimer_module
-              d=sqrt(sqdimerdist)
-              sqd=sqdimerdist
-           end if
-        end if
-     else
-        !all tasks .ne.1 in dimer
-     end if
+           SQDIMERDIST=DOT_PRODUCT((RKEEP-R2SPLIT),(RKEEP-R2SPLIT))
+           PRINT *, "DIMER STRETCH : D SHOULD BE", STRETCHDIST," AND IS", SQRT(SQDIMERDIST)
+           IF(SQDIMERDIST.GE.(STRETCHDIST*STRETCHDIST)) THEN
+              STRETCH=.FALSE. !COMMUNICATE THIS TO ALL OTHER TASKS
+              !SET THE NEW LENGTH IN DIMER_MODULE
+              D=SQRT(SQDIMERDIST)
+              SQD=SQDIMERDIST
+           END IF
+        END IF
+     ELSE
+        !ALL TASKS .NE.1 IN DIMER
+     END IF
      
-     call MPE$BROADCAST('~',1,stretch)
-     if(.not.stretch) then
-        deallocate(RKEEP)
-        deallocate(R2SPLIT)
-     end if
-     return
-  end if
-end SUBROUTINE DIMER$STRETCH
+     CALL MPE$BROADCAST('~',1,STRETCH)
+     IF(.NOT.STRETCH) THEN
+        DEALLOCATE(RKEEP)
+        DEALLOCATE(R2SPLIT)
+     END IF
+     RETURN
+  END IF
+END SUBROUTINE DIMER$STRETCH
    
 
 !##################################################################
 SUBROUTINE PLACE_DIMER(DIST,X1_,X2_)
 !##################################################################
-!places the second dimer-point according to the length constrain
-!moves it therefore along the dimer axis  
+!PLACES THE SECOND DIMER-POINT ACCORDING TO THE LENGTH CONSTRAIN
+!MOVES IT THEREFORE ALONG THE DIMER AXIS  
   USE DIMER_MODULE
   IMPLICIT NONE
-  real(8),intent(in) :: dist 
-  real(8),intent(in) :: X1_(dim)
-  real(8),intent(inout) :: X2_(dim)
-  integer(4)            :: IAT
+  REAL(8),INTENT(IN) :: DIST 
+  REAL(8),INTENT(IN) :: X1_(DIM)
+  REAL(8),INTENT(INOUT) :: X2_(DIM)
+  INTEGER(4)            :: IAT
   LOGICAL(4)            :: LOOP
 
   !======DO WE HAVE TO USE COUPLE-CONSTRAINTS ?========
   IF(ASSOCIATED(ELDEST_D)) THEN
      THIS_D=>ELDEST_D
      LOOP=.TRUE.
-     do while (LOOP)
-        call ATOMLIST$INDEX(THIS_D%ID,IAT)
+     DO WHILE (LOOP)
+        CALL ATOMLIST$INDEX(THIS_D%ID,IAT)
         X2_((IAT*3)-3+1)=X1_((IAT*3)-3+1)
         X2_((IAT*3)-3+2)=X1_((IAT*3)-3+2)
         X2_((IAT*3)-3+3)=X1_((IAT*3)-3+3)
 
         !FOR THE FOOT CONTROLLED LOOP
-        IF(associated(THIS_D%NEXT_D)) THEN
+        IF(ASSOCIATED(THIS_D%NEXT_D)) THEN
            THIS_D=>THIS_D%NEXT_D
         ELSE
            LOOP=.FALSE.
         END IF
-     end do
+     END DO
   END IF
     !=============PACE THE SECOND IMAGE==============
-  X2_(:)=X1_(:)+DIST*(X2_(:)-X1_(:))/sqrt(dot_product(X2_(:)-X1_(:),X2_(:)-X1_(:)))
-  return
-end SUBROUTINE PLACE_DIMER
+  X2_(:)=X1_(:)+DIST*(X2_(:)-X1_(:))/SQRT(DOT_PRODUCT(X2_(:)-X1_(:),X2_(:)-X1_(:)))
+  RETURN
+END SUBROUTINE PLACE_DIMER
 
 
 
 
 
 !      .................................................................
-       subroutine dimer_prop06new(n,x1p,x10,x1m,f1,x2p,x20,x2m,f2,dt,d2 &
-      &                ,annepara,anneperp,annerot,mpara,mperp,mrot,g1_,g2_)
-!      ** uses mass weighted coordinates                             **
-!      **    x=sqrt(m)*r      f=(-de/dr)/sqrt(m)                     **
-!         use model,only:calcmultiplieritermax,dlambda,itermax
+       SUBROUTINE DIMER_PROP06NEW(N,X1P,X10,X1M,F1,X2P,X20,X2M,F2,DT,D2 &
+      &                ,ANNEPARA,ANNEPERP,ANNEROT,MPARA,MPERP,MROT,G1_,G2_)
+!      ** USES MASS WEIGHTED COORDINATES                             **
+!      **    X=SQRT(M)*R      F=(-DE/DR)/SQRT(M)                     **
+!         USE MODEL,ONLY:CALCMULTIPLIERITERMAX,DLAMBDA,ITERMAX
          USE DIMER_MODULE
-       implicit none
-       integer(4),intent(in) :: n
-       real(8)   ,intent(in) :: dt     ! time step
-       real(8)   ,intent(in) :: d2     ! squared dimer length
-       real(8)   ,intent(out):: x1p(n)
-       real(8)   ,intent(in) :: x10(n)
-       real(8)   ,intent(in) :: x1m(n)
-       real(8)   ,intent(in) :: f1(n)
-       real(8)   ,intent(out):: x2p(n)
-       real(8)   ,intent(in) :: x20(n)
-       real(8)   ,intent(in) :: x2m(n)
-       real(8)   ,intent(in) :: f2(n)
-       real(8)   ,intent(in) :: annepara   
-       real(8)   ,intent(in) :: anneperp
-       real(8)   ,intent(in) :: annerot
-       real(8)   ,intent(in) :: mpara
-       real(8)   ,intent(in) :: mperp
-       real(8)   ,intent(in) :: mrot
-       real(8)   ,intent(inout) :: g1_(n)
-       real(8)   ,intent(inout) :: g2_(n)
-       integer(4),parameter  :: niterx=1000 ! #(iterations)
-       real(8)   ,parameter  :: tol=1.d-8
-       real(8)   ,parameter  :: du=1.d-5
-       real(8)               :: f1used(n),f2used(n)
-       real(8)               :: fsum(n) ! f1+f2
-       real(8)               :: fdiff(n) ! f1-f2
-       real(8)               :: svar1,svar2,svar3,mfrac
-       real(8)               :: vec1(n),vec2(n)
-       real(8)               :: y1p(n),y10(n),y1m(n)
-       real(8)               :: y2p(n),y20(n),y2m(n),y2bar(n)
-       real(8)               :: y1dot(n),y2dot(n)
-       real(8)               :: lambda
-       integer(4)            :: i,j
-       real(8)               :: e(3,3) !the points needed for the hessian
-       real(8)               :: a(2,2)
-       real(8)               :: b(2)
-       logical(4)            :: tconv
-       real(8)               :: eold
-       real(8)               :: g1old(n)
-       real(8)               :: g2old(n)
-       real(8)               :: xcenter(n)
-       real(8)               :: xpara(n)
-       real(8)               :: xperp(n)
-       real(8)               :: xrot(n)
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN) :: N
+       REAL(8)   ,INTENT(IN) :: DT     ! TIME STEP
+       REAL(8)   ,INTENT(IN) :: D2     ! SQUARED DIMER LENGTH
+       REAL(8)   ,INTENT(OUT):: X1P(N)
+       REAL(8)   ,INTENT(IN) :: X10(N)
+       REAL(8)   ,INTENT(IN) :: X1M(N)
+       REAL(8)   ,INTENT(IN) :: F1(N)
+       REAL(8)   ,INTENT(OUT):: X2P(N)
+       REAL(8)   ,INTENT(IN) :: X20(N)
+       REAL(8)   ,INTENT(IN) :: X2M(N)
+       REAL(8)   ,INTENT(IN) :: F2(N)
+       REAL(8)   ,INTENT(IN) :: ANNEPARA   
+       REAL(8)   ,INTENT(IN) :: ANNEPERP
+       REAL(8)   ,INTENT(IN) :: ANNEROT
+       REAL(8)   ,INTENT(IN) :: MPARA
+       REAL(8)   ,INTENT(IN) :: MPERP
+       REAL(8)   ,INTENT(IN) :: MROT
+       REAL(8)   ,INTENT(INOUT) :: G1_(N)
+       REAL(8)   ,INTENT(INOUT) :: G2_(N)
+       INTEGER(4),PARAMETER  :: NITERX=1000 ! #(ITERATIONS)
+       REAL(8)   ,PARAMETER  :: TOL=1.D-8
+       REAL(8)   ,PARAMETER  :: DU=1.D-5
+       REAL(8)               :: F1USED(N),F2USED(N)
+       REAL(8)               :: FSUM(N) ! F1+F2
+       REAL(8)               :: FDIFF(N) ! F1-F2
+       REAL(8)               :: SVAR1,SVAR2,SVAR3,MFRAC
+       REAL(8)               :: VEC1(N),VEC2(N)
+       REAL(8)               :: Y1P(N),Y10(N),Y1M(N)
+       REAL(8)               :: Y2P(N),Y20(N),Y2M(N),Y2BAR(N)
+       REAL(8)               :: Y1DOT(N),Y2DOT(N)
+       REAL(8)               :: LAMBDA
+       INTEGER(4)            :: I,J
+       REAL(8)               :: E(3,3) !THE POINTS NEEDED FOR THE HESSIAN
+       REAL(8)               :: A(2,2)
+       REAL(8)               :: B(2)
+       LOGICAL(4)            :: TCONV
+       REAL(8)               :: EOLD
+       REAL(8)               :: G1OLD(N)
+       REAL(8)               :: G2OLD(N)
+       REAL(8)               :: XCENTER(N)
+       REAL(8)               :: XPARA(N)
+       REAL(8)               :: XPERP(N)
+       REAL(8)               :: XROT(N)
 !      ****************************************************************
-       tconv=.false.
-       f1used(:)=f1(:)
-       f2used(:)=f2(:)
+       TCONV=.FALSE.
+       F1USED(:)=F1(:)
+       F2USED(:)=F2(:)
 
-       !weight down image 1 (use a positive mpara here)
-       if(wdown) then
-          f1used(:)=f1(:)*wdownfact
-       end if
+       !WEIGHT DOWN IMAGE 1 (USE A POSITIVE MPARA HERE)
+       IF(WDOWN) THEN
+          F1USED(:)=F1(:)*WDOWNFACT
+       END IF
           
 
-       y10(:)=0.5d0*(x10(:)+x20(:))
-       y20(:)=x10(:)-x20(:)
-       y1m(:)=0.5d0*(x1m(:)+x2m(:))
-       y2m(:)=x1m(:)-x2m(:)
-       fsum(:)=f1used(:)+f2used(:)
-       fdiff(:)=f1used(:)-f2used(:)
+       Y10(:)=0.5D0*(X10(:)+X20(:))
+       Y20(:)=X10(:)-X20(:)
+       Y1M(:)=0.5D0*(X1M(:)+X2M(:))
+       Y2M(:)=X1M(:)-X2M(:)
+       FSUM(:)=F1USED(:)+F2USED(:)
+       FDIFF(:)=F1USED(:)-F2USED(:)
 
 
-       do i=1,CALCVELOCITYITERMAX
+       DO I=1,CALCVELOCITYITERMAX
           !===================================================================
-          !=== determine y1p
+          !=== DETERMINE Y1P
           !===================================================================
-          svar1=1.d0/(1.d0+anneperp)
-          svar2=1.d0/(1.d0+annepara)
+          SVAR1=1.D0/(1.D0+ANNEPERP)
+          SVAR2=1.D0/(1.D0+ANNEPARA)
           
-          vec1(:)=(0.5d0*fsum(:)+g1_(:))*svar1*dt**2/mperp
-          vec2(:)=(0.5d0*fsum(:)+g1_(:))*dt**2/(mpara*(1.d0+annepara))
+          VEC1(:)=(0.5D0*FSUM(:)+G1_(:))*SVAR1*DT**2/MPERP
+          VEC2(:)=(0.5D0*FSUM(:)+G1_(:))*DT**2/(MPARA*(1.D0+ANNEPARA))
           
-          y1p(:)=(2.d0*svar1)*(y10(:)-y20(:)*dot_product(y20(:),y10(:))/d2)&
-               &+(1.d0-anneperp)*svar1*(-y1m(:)+y20(:)*dot_product(y20(:),y1m(:))/d2)&
-               &+vec1(:)-y20(:)*dot_product(y20(:),vec1(:))/d2&
-               &+y20(:)*dot_product(y20(:),svar2*(2.d0*y10(:)-(1.d0-annepara)*y1m(:)))/d2&
-               &+y20(:)*dot_product(y20(:),vec2(:))/d2
+          Y1P(:)=(2.D0*SVAR1)*(Y10(:)-Y20(:)*DOT_PRODUCT(Y20(:),Y10(:))/D2)&
+               &+(1.D0-ANNEPERP)*SVAR1*(-Y1M(:)+Y20(:)*DOT_PRODUCT(Y20(:),Y1M(:))/D2)&
+               &+VEC1(:)-Y20(:)*DOT_PRODUCT(Y20(:),VEC1(:))/D2&
+               &+Y20(:)*DOT_PRODUCT(Y20(:),SVAR2*(2.D0*Y10(:)-(1.D0-ANNEPARA)*Y1M(:)))/D2&
+               &+Y20(:)*DOT_PRODUCT(Y20(:),VEC2(:))/D2
           
 
 
           
-!print*,'y10:',y10(:)          
-!print*,'y1p:',y1p(:)
+!PRINT*,'Y10:',Y10(:)          
+!PRINT*,'Y1P:',Y1P(:)
 
           
           !===================================================================
-          !=== determine y2p
+          !=== DETERMINE Y2P
           !===================================================================
-          !--- y2bar
+          !--- Y2BAR
           
-          svar1=1.d0+annerot
+          SVAR1=1.D0+ANNEROT
           
-          y2bar(:)=y20(:)*2.d0/svar1-(1.d0-annerot)/svar1*y2m(:)&
-               &+(fdiff(:)+g2_(:))*dt**2/(mrot*svar1)
+          Y2BAR(:)=Y20(:)*2.D0/SVAR1-(1.D0-ANNEROT)/SVAR1*Y2M(:)&
+               &+(FDIFF(:)+G2_(:))*DT**2/(MROT*SVAR1)
           
 
 
@@ -1092,7 +1092,7 @@ end SUBROUTINE PLACE_DIMER
           !---------------------------------------------------------------------
           !-----------   APPLY THE COUPLE CONSTRAINT IF NECESSARY   ------------
           !---------------------------------------------------------------------
-          !do this in paw code, not in testcode
+          !DO THIS IN PAW CODE, NOT IN TESTCODE
          IF(ASSOCIATED(ELDEST_D))THEN
             CALL DIMER_APPL_COUPLE_CONSTRAINT(N,Y2BAR(:))
             !Y1BAR STAYS THE SAME BECAUSE 2*(X1+X2)/2=X1+X2!
@@ -1103,149 +1103,149 @@ end SUBROUTINE PLACE_DIMER
           !---------------------------------------------------------------------
           !-----------   GET RID OF UNWISHED MOTION                 ------------
           !---------------------------------------------------------------------
-          if(onlyrot) then
-             !substract the covered distance of the center of grav.
-             !the cog does not move:
-             y1p(:)=y10(:)
-             !alt. test subtract the parallel and the perp. distance
-          end if
+          IF(ONLYROT) THEN
+             !SUBSTRACT THE COVERED DISTANCE OF THE CENTER OF GRAV.
+             !THE COG DOES NOT MOVE:
+             Y1P(:)=Y10(:)
+             !ALT. TEST SUBTRACT THE PARALLEL AND THE PERP. DISTANCE
+          END IF
           
-          if(inhibitup) then
-             !substract the parallel part of ther covered distance of the center of grav.
-             y1p(:)=y1p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),(y1p(:)-y10(:)))
-          end if
+          IF(INHIBITUP) THEN
+             !SUBSTRACT THE PARALLEL PART OF THER COVERED DISTANCE OF THE CENTER OF GRAV.
+             Y1P(:)=Y1P(:)-(Y20(:)/DOT_PRODUCT(Y20(:),Y20(:)))*DOT_PRODUCT(Y20(:),(Y1P(:)-Y10(:)))
+          END IF
 
 
           
           
           !---------------------------------------------------------------------
-          !-- satisfy constraint svar1*lambda**2+svar2*lambda+svar3-0         --
+          !-- SATISFY CONSTRAINT SVAR1*LAMBDA**2+SVAR2*LAMBDA+SVAR3-0         --
           !---------------------------------------------------------------------
-          mfrac=(2.d0*dt**2)/(mrot*(1.d0+annerot))
+          MFRAC=(2.D0*DT**2)/(MROT*(1.D0+ANNEROT))
           
-          svar1=dot_product(y2bar(:),y20(:))/(2.d0*mfrac*dot_product(y20(:),y20(:)))
-          svar2=(dot_product(y2bar(:),y2bar(:))-d2)/(4.d0*mfrac**2*(dot_product(y20(:),y20(:))))
-          svar3=svar1**2-svar2
+          SVAR1=DOT_PRODUCT(Y2BAR(:),Y20(:))/(2.D0*MFRAC*DOT_PRODUCT(Y20(:),Y20(:)))
+          SVAR2=(DOT_PRODUCT(Y2BAR(:),Y2BAR(:))-D2)/(4.D0*MFRAC**2*(DOT_PRODUCT(Y20(:),Y20(:))))
+          SVAR3=SVAR1**2-SVAR2
           
-          if(svar3.lt.0.d0) then
-             write(dprotfil,*)'======lagrangeparameter: sqrt negative!======='
-             print*,'d2',d2,dot_product(y2bar(:),y2bar(:))-d2,dot_product(y20(:),y20(:))
-             print*,'dprod',dot_product(y2bar(:),y2bar(:))-d2,dot_product(y2bar(:),y2bar(:))
-             print*,'mfrac',mfrac
-             print*,svar1,svar1**2,svar2,svar3
-             stop 'lagrangeparameter negative'
+          IF(SVAR3.LT.0.D0) THEN
+             WRITE(DPROTFIL,*)'======LAGRANGEPARAMETER: SQRT NEGATIVE!======='
+             PRINT*,'D2',D2,DOT_PRODUCT(Y2BAR(:),Y2BAR(:))-D2,DOT_PRODUCT(Y20(:),Y20(:))
+             PRINT*,'DPROD',DOT_PRODUCT(Y2BAR(:),Y2BAR(:))-D2,DOT_PRODUCT(Y2BAR(:),Y2BAR(:))
+             PRINT*,'MFRAC',MFRAC
+             PRINT*,SVAR1,SVAR1**2,SVAR2,SVAR3
+             STOP 'LAGRANGEPARAMETER NEGATIVE'
 
-          end if
+          END IF
           
           ! ATTENTION IT IS IMPORTANT WHICH ROOT IS CHOSEN. 
           ! THW WRONG ROOT ROTATES THE DIMER BY ABOUT 180 DEGREE AND MESSES UP THINGS.
           ! SWITCHING FROM ONE TO THE OTHER MESSES UP THE ITERATION
-          if(svar1.gt.0.d0) then
-             lambda=svar1-sqrt(svar3)
-          else
-             lambda=svar1+sqrt(svar3)
-          end if
-          !should not change!!!y1p(:)=y1bar(:)+y1c(:)*lambda
-          y2p(:)=y2bar(:)-2.d0*mfrac*lambda*y20(:)
+          IF(SVAR1.GT.0.D0) THEN
+             LAMBDA=SVAR1-SQRT(SVAR3)
+          ELSE
+             LAMBDA=SVAR1+SQRT(SVAR3)
+          END IF
+          !SHOULD NOT CHANGE!!!Y1P(:)=Y1BAR(:)+Y1C(:)*LAMBDA
+          Y2P(:)=Y2BAR(:)-2.D0*MFRAC*LAMBDA*Y20(:)
           
           
-          if(abs(dot_product(y2p,y2p)-d2).gt.DLAMBDA) then
-             write(dprotfil,*)' constrain not fulfilled'
-             write(dprotfil,*)'deviation ',dot_product(y2p,y2p),d2,dot_product(y2p,y2p)-d2
-             print*,' constrain not fulfilled'
-             print*,'deviation ',dot_product(y2p,y2p),d2,dot_product(y2p,y2p)-d2
-             stop 'error constraint not fulfilled in paw_dimer.f90'
-          end if
+          IF(ABS(DOT_PRODUCT(Y2P,Y2P)-D2).GT.DLAMBDA) THEN
+             WRITE(DPROTFIL,*)' CONSTRAIN NOT FULFILLED'
+             WRITE(DPROTFIL,*)'DEVIATION ',DOT_PRODUCT(Y2P,Y2P),D2,DOT_PRODUCT(Y2P,Y2P)-D2
+             PRINT*,' CONSTRAIN NOT FULFILLED'
+             PRINT*,'DEVIATION ',DOT_PRODUCT(Y2P,Y2P),D2,DOT_PRODUCT(Y2P,Y2P)-D2
+             STOP 'ERROR CONSTRAINT NOT FULFILLED IN PAW_DIMER.F90'
+          END IF
           
-          
-          
-          !===================================================================
-          !=== determine y1dot, y2dot
-          !===================================================================
-          
-          y1dot(:)=(y1p(:)-y1m(:))/(2.d0*dt)
-          y2dot(:)=(y2p(:)-y2m(:))/(2.d0*dt)
           
           
           !===================================================================
-          !=== determine next guess for g1 and g2
+          !=== DETERMINE Y1DOT, Y2DOT
           !===================================================================
-          g1old(:)=g1_(:)
-          g2old(:)=g2_(:)
+          
+          Y1DOT(:)=(Y1P(:)-Y1M(:))/(2.D0*DT)
+          Y2DOT(:)=(Y2P(:)-Y2M(:))/(2.D0*DT)
+          
+          
+          !===================================================================
+          !=== DETERMINE NEXT GUESS FOR G1 AND G2
+          !===================================================================
+          G1OLD(:)=G1_(:)
+          G2OLD(:)=G2_(:)
 
-          g1_(:)=(mperp-mpara)/d2*(y2dot(:)*dot_product(y20(:),y1dot(:))&
-               &+y20(:)*dot_product(y2dot(:),y1dot(:)))
-          g2_(:)=4.d0*(mpara-mperp)*y1dot(:)*dot_product(y20(:),y1dot(:))/d2
+          G1_(:)=(MPERP-MPARA)/D2*(Y2DOT(:)*DOT_PRODUCT(Y20(:),Y1DOT(:))&
+               &+Y20(:)*DOT_PRODUCT(Y2DOT(:),Y1DOT(:)))
+          G2_(:)=4.D0*(MPARA-MPERP)*Y1DOT(:)*DOT_PRODUCT(Y20(:),Y1DOT(:))/D2
 
-!          print*,'g1diff',g1_-g1old
-!          print*,'g2diff',g2_-g2old
-          svar1=0.d0
-          svar2=0.d0
-          do j=1,n
-             svar1=svar1+abs(g1_(j)-g1old(j))
-             svar2=svar2+abs(g2_(j)-g2old(j))
-          end do
-!          print*,'diffsum',svar1,svar2
-          !if(dot_product(g1_-g1old,g1_-g1old).lt.tol&
-          !     &.and.dot_product(g2_-g2old,g2_-g2old).lt.tol) exit
-          if(svar1.lt.tol.and.svar2.lt.tol) then
-             tconv=.true.
-             exit
-          end if
-       end do
+!          PRINT*,'G1DIFF',G1_-G1OLD
+!          PRINT*,'G2DIFF',G2_-G2OLD
+          SVAR1=0.D0
+          SVAR2=0.D0
+          DO J=1,N
+             SVAR1=SVAR1+ABS(G1_(J)-G1OLD(J))
+             SVAR2=SVAR2+ABS(G2_(J)-G2OLD(J))
+          END DO
+!          PRINT*,'DIFFSUM',SVAR1,SVAR2
+          !IF(DOT_PRODUCT(G1_-G1OLD,G1_-G1OLD).LT.TOL&
+          !     &.AND.DOT_PRODUCT(G2_-G2OLD,G2_-G2OLD).LT.TOL) EXIT
+          IF(SVAR1.LT.TOL.AND.SVAR2.LT.TOL) THEN
+             TCONV=.TRUE.
+             EXIT
+          END IF
+       END DO
 
-       !stop 'debut routine'
-       !iteration ends here
-       if(.not.tconv) then
-          print*,'u,udot itration not converged',e(2,2)
-          stop 'check it!'
-       end if
+       !STOP 'DEBUT ROUTINE'
+       !ITERATION ENDS HERE
+       IF(.NOT.TCONV) THEN
+          PRINT*,'U,UDOT ITRATION NOT CONVERGED',E(2,2)
+          STOP 'CHECK IT!'
+       END IF
 
        
        !-------------------------------------------
-       x1p(:)=(y1p(:)+0.5d0*y2p(:))
-       x2p(:)=(y1p(:)-0.5d0*y2p(:))
+       X1P(:)=(Y1P(:)+0.5D0*Y2P(:))
+       X2P(:)=(Y1P(:)-0.5D0*Y2P(:))
 
 
 
-!!$       vec1(:)=y2p(:)/sqrt(dot_product(y2p(:),y2p(:)))
-!!$       xcenter(:)=y1p(:)-y10(:)
-!!$       xpara(:)=vec1(:)*dot_product(vec1(:),xcenter(:))
-!!$       xperp(:)=xcenter(:)-xpara(:)
-!!$       xrot(:)=x1p(:)-xcenter(:)-x10(:)
+!!$       VEC1(:)=Y2P(:)/SQRT(DOT_PRODUCT(Y2P(:),Y2P(:)))
+!!$       XCENTER(:)=Y1P(:)-Y10(:)
+!!$       XPARA(:)=VEC1(:)*DOT_PRODUCT(VEC1(:),XCENTER(:))
+!!$       XPERP(:)=XCENTER(:)-XPARA(:)
+!!$       XROT(:)=X1P(:)-XCENTER(:)-X10(:)
 !!$
-!!$       print*,'Ekin para',abs(0.5d0*mpara*dot_product(xpara(:),xpara(:)))/dt**2
-!!$       print*,'Ekin perp',abs(0.5d0*mperp*dot_product(xperp(:),xperp(:)))/dt**2
-!!$       print*,'Ekin rot',abs(0.5d0*mrot*dot_product(xrot(:),xrot(:)))/dt**2
+!!$       PRINT*,'EKIN PARA',ABS(0.5D0*MPARA*DOT_PRODUCT(XPARA(:),XPARA(:)))/DT**2
+!!$       PRINT*,'EKIN PERP',ABS(0.5D0*MPERP*DOT_PRODUCT(XPERP(:),XPERP(:)))/DT**2
+!!$       PRINT*,'EKIN ROT',ABS(0.5D0*MROT*DOT_PRODUCT(XROT(:),XROT(:)))/DT**2
 !!$
-!!$       if(abs(0.5d0*mpara*dot_product(xpara(:),xpara(:)))/dt**2.gt.0.5d0) then
-!!$          x1p(:)=x1p(:)-(xpara(:)-xpara(:)/sqrt(dot_product(xpara(:),xpara(:)))*sqrt(2.d0*0.5d0/abs(mpara))*dt)
-!!$          x2p(:)=x2p(:)-(xpara(:)-xpara(:)/sqrt(dot_product(xpara(:),xpara(:)))*sqrt(2.d0*0.5d0/abs(mpara))*dt)
+!!$       IF(ABS(0.5D0*MPARA*DOT_PRODUCT(XPARA(:),XPARA(:)))/DT**2.GT.0.5D0) THEN
+!!$          X1P(:)=X1P(:)-(XPARA(:)-XPARA(:)/SQRT(DOT_PRODUCT(XPARA(:),XPARA(:)))*SQRT(2.D0*0.5D0/ABS(MPARA))*DT)
+!!$          X2P(:)=X2P(:)-(XPARA(:)-XPARA(:)/SQRT(DOT_PRODUCT(XPARA(:),XPARA(:)))*SQRT(2.D0*0.5D0/ABS(MPARA))*DT)
 !!$
-!!$          vec1(:)=y2p(:)/sqrt(dot_product(y2p(:),y2p(:)))
+!!$          VEC1(:)=Y2P(:)/SQRT(DOT_PRODUCT(Y2P(:),Y2P(:)))
 !!$
-!!$          y1p(:)=(x1p(:)+x2p(:))/2.d0
-!!$          xcenter(:)=y1p(:)-y10(:)
-!!$          xpara(:)=vec1(:)*dot_product(vec1(:),xcenter(:))
-!!$          xperp(:)=xcenter(:)-xpara(:)
-!!$          xrot(:)=x1p(:)-xcenter(:)-x10(:)
+!!$          Y1P(:)=(X1P(:)+X2P(:))/2.D0
+!!$          XCENTER(:)=Y1P(:)-Y10(:)
+!!$          XPARA(:)=VEC1(:)*DOT_PRODUCT(VEC1(:),XCENTER(:))
+!!$          XPERP(:)=XCENTER(:)-XPARA(:)
+!!$          XROT(:)=X1P(:)-XCENTER(:)-X10(:)
 !!$          
-!!$          print*,'Ekin para',abs(0.5d0*mpara*dot_product(xpara(:),xpara(:)))/dt**2
-!!$          print*,'Ekin perp',abs(0.5d0*mperp*dot_product(xperp(:),xperp(:)))/dt**2
-!!$          print*,'Ekin rot',abs(0.5d0*mrot*dot_product(xrot(:),xrot(:)))/dt**2
-!!$       end if
+!!$          PRINT*,'EKIN PARA',ABS(0.5D0*MPARA*DOT_PRODUCT(XPARA(:),XPARA(:)))/DT**2
+!!$          PRINT*,'EKIN PERP',ABS(0.5D0*MPERP*DOT_PRODUCT(XPERP(:),XPERP(:)))/DT**2
+!!$          PRINT*,'EKIN ROT',ABS(0.5D0*MROT*DOT_PRODUCT(XROT(:),XROT(:)))/DT**2
+!!$       END IF
 
        
        
-       write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER MASSW. PARALLEL MOTION:',&
-            &dot_product(y20,0.5d0*(x1p+x2p)-0.5d0*(x10+x20))/sqrt(dot_product(y20,y20))
+       WRITE(DPROTFIL,*)'DIMER: DIMER_PROPAGATE: DIMER MASSW. PARALLEL MOTION:',&
+            &DOT_PRODUCT(Y20,0.5D0*(X1P+X2P)-0.5D0*(X10+X20))/SQRT(DOT_PRODUCT(Y20,Y20))
        
 
 
 
-       return
+       RETURN
        
-     end subroutine dimer_prop06new
+     END SUBROUTINE DIMER_PROP06NEW
 
 
 
@@ -1254,207 +1254,207 @@ end SUBROUTINE PLACE_DIMER
 
 
 !!$!      .................................................................
-!!$       subroutine dimer_prop(n,x1p,x10,x1m,f1,x2p,x20,x2m,f2,dt,d2 &
-!!$      &                ,annepara,anneperp,annerot,mpara,mperp,mrot)
-!!$!      ** uses mass weighted coordinates                             **
-!!$!      **    x=sqrt(m)*r      f=(-de/dr)/sqrt(m)                     **
+!!$       SUBROUTINE DIMER_PROP(N,X1P,X10,X1M,F1,X2P,X20,X2M,F2,DT,D2 &
+!!$      &                ,ANNEPARA,ANNEPERP,ANNEROT,MPARA,MPERP,MROT)
+!!$!      ** USES MASS WEIGHTED COORDINATES                             **
+!!$!      **    X=SQRT(M)*R      F=(-DE/DR)/SQRT(M)                     **
 !!$  USE DIMER_MODULE
-!!$       implicit none
-!!$       integer(4),intent(in) :: n
-!!$       real(8)   ,intent(in) :: dt     ! time step
-!!$       real(8)   ,intent(in) :: d2     ! squared dimer length
-!!$       real(8)   ,intent(out):: x1p(n)
-!!$       real(8)   ,intent(in) :: x10(n)
-!!$       real(8)   ,intent(in) :: x1m(n)
-!!$       real(8)   ,intent(in) :: f1(n)
-!!$       real(8)   ,intent(out):: x2p(n)
-!!$       real(8)   ,intent(in) :: x20(n)
-!!$       real(8)   ,intent(in) :: x2m(n)
-!!$       real(8)   ,intent(in) :: f2(n)
-!!$       real(8)   ,intent(in) :: annepara   
-!!$       real(8)   ,intent(in) :: anneperp
-!!$       real(8)   ,intent(in) :: annerot
-!!$       real(8)   ,intent(in) :: mpara
-!!$       real(8)   ,intent(in) :: mperp
-!!$       real(8)   ,intent(in) :: mrot
-!!$       integer(4),parameter  :: niterx=1000 ! #(iterations)
-!!$       real(8)   ,parameter  :: tol=1.d-8
-!!$       real(8)               :: dkin    ! x1dot**1-x2dot**2
-!!$       real(8)               :: dkinold  
-!!$       real(8)               :: fsum(n) ! f1+f2
-!!$       real(8)               :: fdiff(n) ! f1-f2
-!!$       real(8)               :: fsumpara
-!!$       real(8)               :: fdiffpara
-!!$       real(8)               :: svar,svar1,svar2,svar3,mfrac
-!!$       real(8)               :: u,udot  !u=y2*y1dot
-!!$       real(8)               :: ap(2,2),a0(2,2),am(2,2),af(2,2),ac(2),ainv(2,2)
-!!$       real(8)               :: y1p(n),y10(n),y1m(n),y1bar(n),y1c(n)
-!!$       real(8)               :: y2p(n),y20(n),y2m(n),y2bar(n),y2c(n)
-!!$       real(8)               :: qp,q0,qm
-!!$       real(8)               :: lambda
-!!$       real(8)               :: det
-!!$       real(8)               :: p1,g1,p2,g2
-!!$       integer(4)            :: iter
-!!$       real(8)               :: R1p(n),R2p(n),R10(n),R20(n)
-!!$       real(8)               :: CENTER1NC(3),CENTER2NC(3)
-!!$       real(8)               :: CC1(n),CC2(n)
-!!$       real(8)               :: RMASS(n/3)
-!!$       integer(4)            :: IAT
+!!$       IMPLICIT NONE
+!!$       INTEGER(4),INTENT(IN) :: N
+!!$       REAL(8)   ,INTENT(IN) :: DT     ! TIME STEP
+!!$       REAL(8)   ,INTENT(IN) :: D2     ! SQUARED DIMER LENGTH
+!!$       REAL(8)   ,INTENT(OUT):: X1P(N)
+!!$       REAL(8)   ,INTENT(IN) :: X10(N)
+!!$       REAL(8)   ,INTENT(IN) :: X1M(N)
+!!$       REAL(8)   ,INTENT(IN) :: F1(N)
+!!$       REAL(8)   ,INTENT(OUT):: X2P(N)
+!!$       REAL(8)   ,INTENT(IN) :: X20(N)
+!!$       REAL(8)   ,INTENT(IN) :: X2M(N)
+!!$       REAL(8)   ,INTENT(IN) :: F2(N)
+!!$       REAL(8)   ,INTENT(IN) :: ANNEPARA   
+!!$       REAL(8)   ,INTENT(IN) :: ANNEPERP
+!!$       REAL(8)   ,INTENT(IN) :: ANNEROT
+!!$       REAL(8)   ,INTENT(IN) :: MPARA
+!!$       REAL(8)   ,INTENT(IN) :: MPERP
+!!$       REAL(8)   ,INTENT(IN) :: MROT
+!!$       INTEGER(4),PARAMETER  :: NITERX=1000 ! #(ITERATIONS)
+!!$       REAL(8)   ,PARAMETER  :: TOL=1.D-8
+!!$       REAL(8)               :: DKIN    ! X1DOT**1-X2DOT**2
+!!$       REAL(8)               :: DKINOLD  
+!!$       REAL(8)               :: FSUM(N) ! F1+F2
+!!$       REAL(8)               :: FDIFF(N) ! F1-F2
+!!$       REAL(8)               :: FSUMPARA
+!!$       REAL(8)               :: FDIFFPARA
+!!$       REAL(8)               :: SVAR,SVAR1,SVAR2,SVAR3,MFRAC
+!!$       REAL(8)               :: U,UDOT  !U=Y2*Y1DOT
+!!$       REAL(8)               :: AP(2,2),A0(2,2),AM(2,2),AF(2,2),AC(2),AINV(2,2)
+!!$       REAL(8)               :: Y1P(N),Y10(N),Y1M(N),Y1BAR(N),Y1C(N)
+!!$       REAL(8)               :: Y2P(N),Y20(N),Y2M(N),Y2BAR(N),Y2C(N)
+!!$       REAL(8)               :: QP,Q0,QM
+!!$       REAL(8)               :: LAMBDA
+!!$       REAL(8)               :: DET
+!!$       REAL(8)               :: P1,G1,P2,G2
+!!$       INTEGER(4)            :: ITER
+!!$       REAL(8)               :: R1P(N),R2P(N),R10(N),R20(N)
+!!$       REAL(8)               :: CENTER1NC(3),CENTER2NC(3)
+!!$       REAL(8)               :: CC1(N),CC2(N)
+!!$       REAL(8)               :: RMASS(N/3)
+!!$       INTEGER(4)            :: IAT
 !!$!      ****************************************************************
-!!$!to prevent unassigned variable before 'check convergence'
-!!$       p1=42
-!!$       g1=42
+!!$!TO PREVENT UNASSIGNED VARIABLE BEFORE 'CHECK CONVERGENCE'
+!!$       P1=42
+!!$       G1=42
 !!$
-!!$       y10(:)=x10(:)+x20(:)
-!!$       y20(:)=x10(:)-x20(:)
-!!$       y1m(:)=x1m(:)+x2m(:)
-!!$       y2m(:)=x1m(:)-x2m(:)
-!!$       fsum(:)=f1(:)+f2(:)
-!!$       fdiff(:)=f1(:)-f2(:)
-!!$       fsumpara=dot_product(y20(:),fsum(:))
-!!$       fdiffpara=dot_product(y20(:),fdiff(:))
-!!$       qm=dot_product(y20(:),y1m(:))
-!!$       q0=dot_product(y20(:),y10(:))
-!!$       dkin=dot_product(y10(:)-y1m(:),y20(:)-y2m(:))/(4.d0*dt**2)
-!!$       dkinold=dkin
+!!$       Y10(:)=X10(:)+X20(:)
+!!$       Y20(:)=X10(:)-X20(:)
+!!$       Y1M(:)=X1M(:)+X2M(:)
+!!$       Y2M(:)=X1M(:)-X2M(:)
+!!$       FSUM(:)=F1(:)+F2(:)
+!!$       FDIFF(:)=F1(:)-F2(:)
+!!$       FSUMPARA=DOT_PRODUCT(Y20(:),FSUM(:))
+!!$       FDIFFPARA=DOT_PRODUCT(Y20(:),FDIFF(:))
+!!$       QM=DOT_PRODUCT(Y20(:),Y1M(:))
+!!$       Q0=DOT_PRODUCT(Y20(:),Y10(:))
+!!$       DKIN=DOT_PRODUCT(Y10(:)-Y1M(:),Y20(:)-Y2M(:))/(4.D0*DT**2)
+!!$       DKINOLD=DKIN
 !!$
 !!$!
-!!$       do iter=1,CALCMULTIPLIERITERMAX
+!!$       DO ITER=1,CALCMULTIPLIERITERMAX
 !!$!        =====================================================================
-!!$!        == select dkin                                                     ==
+!!$!        == SELECT DKIN                                                     ==
 !!$!        =====================================================================
-!!$         If(iter.gt.2) then
-!!$           dkin=p1-g1*(p1-p2)/(g1-g2)
-!!$         else if(iter.eq.2) then
-!!$           dkin=p1+g1
-!!$         end if
+!!$         IF(ITER.GT.2) THEN
+!!$           DKIN=P1-G1*(P1-P2)/(G1-G2)
+!!$         ELSE IF(ITER.EQ.2) THEN
+!!$           DKIN=P1+G1
+!!$         END IF
 !!$!        =======
-!!$!dkin=(-1.d0+real(iter,8)/real(niterx,8))*2.d0
+!!$!DKIN=(-1.D0+REAL(ITER,8)/REAL(NITERX,8))*2.D0
 !!$!        =====================================================================
-!!$!        == determine u,udot for a given dkin                               ==
+!!$!        == DETERMINE U,UDOT FOR A GIVEN DKIN                               ==
 !!$!        =====================================================================
-!!$         svar=annepara/4.d0
-!!$         svar1=2.d0/(1.d0+svar)
-!!$         svar2=(1.d0-svar)/(1.d0+svar)
-!!$         svar3=dt**2/(mpara*(1.d0+svar))
-!!$         qp=svar1*q0-svar2*qm+svar3*(fsumpara-(mpara-mperp)*dkin)
-!!$         u=(qp-qm)/(2.d0*dt)
-!!$         udot=dkin+(qp-2.d0*q0+qm)/dt**2
-!!$!write(dprotfil,*)'u,udot,dkin ',u,udot,dkin
+!!$         SVAR=ANNEPARA/4.D0
+!!$         SVAR1=2.D0/(1.D0+SVAR)
+!!$         SVAR2=(1.D0-SVAR)/(1.D0+SVAR)
+!!$         SVAR3=DT**2/(MPARA*(1.D0+SVAR))
+!!$         QP=SVAR1*Q0-SVAR2*QM+SVAR3*(FSUMPARA-(MPARA-MPERP)*DKIN)
+!!$         U=(QP-QM)/(2.D0*DT)
+!!$         UDOT=DKIN+(QP-2.D0*Q0+QM)/DT**2
+!!$!WRITE(DPROTFIL,*)'U,UDOT,DKIN ',U,UDOT,DKIN
 !!$!         
 !!$!        =====================================================================
-!!$!        == set up linear system of equations for y1p,y2p                   ==
-!!$!        ==       ap*yp=a0*y0+am*ym+af*f+ac*y2*lambda                       ==
+!!$!        == SET UP LINEAR SYSTEM OF EQUATIONS FOR Y1P,Y2P                   ==
+!!$!        ==       AP*YP=A0*Y0+AM*YM+AF*F+AC*Y2*LAMBDA                       ==
 !!$!        =====================================================================
-!!$         mfrac=(mpara-mperp)/(mperp*d2)
-!!$         ap(1,1)=1.d0+anneperp/2.d0
-!!$         ap(1,2)=0.5d0*mfrac*(u*dt)
-!!$         am(1,1)=-(1.d0-anneperp/2.d0)
-!!$         am(1,2)=ap(1,2)
-!!$         a0(1,1)=2.d0
-!!$         a0(1,2)=-mfrac*(udot*dt**2)-(u*dt)/(2.d0*mperp*d2) &
-!!$        &                              *(annepara*mpara-anneperp*mperp)
-!!$         af(1,1)=dt**2/mperp
-!!$         af(1,2)=0.d0
-!!$         ac(1)=0.d0
-!!$         mfrac=(mpara-mperp)/(mrot*d2)
-!!$         ap(2,2)=1.d0+annerot/4.d0
-!!$         ap(2,1)=-0.5d0*mfrac*(u*dt)
-!!$         a0(2,1)=0.d0
-!!$         a0(2,2)=2.d0
-!!$         am(2,2)=-(1.d0-annerot/4.d0)
-!!$         am(2,1)=ap(2,1)
-!!$         af(2,1)=0.d0
-!!$         af(2,2)=dt**2/mrot
-!!$         ac(2)=4.d0*dt**2/mrot
+!!$         MFRAC=(MPARA-MPERP)/(MPERP*D2)
+!!$         AP(1,1)=1.D0+ANNEPERP/2.D0
+!!$         AP(1,2)=0.5D0*MFRAC*(U*DT)
+!!$         AM(1,1)=-(1.D0-ANNEPERP/2.D0)
+!!$         AM(1,2)=AP(1,2)
+!!$         A0(1,1)=2.D0
+!!$         A0(1,2)=-MFRAC*(UDOT*DT**2)-(U*DT)/(2.D0*MPERP*D2) &
+!!$        &                              *(ANNEPARA*MPARA-ANNEPERP*MPERP)
+!!$         AF(1,1)=DT**2/MPERP
+!!$         AF(1,2)=0.D0
+!!$         AC(1)=0.D0
+!!$         MFRAC=(MPARA-MPERP)/(MROT*D2)
+!!$         AP(2,2)=1.D0+ANNEROT/4.D0
+!!$         AP(2,1)=-0.5D0*MFRAC*(U*DT)
+!!$         A0(2,1)=0.D0
+!!$         A0(2,2)=2.D0
+!!$         AM(2,2)=-(1.D0-ANNEROT/4.D0)
+!!$         AM(2,1)=AP(2,1)
+!!$         AF(2,1)=0.D0
+!!$         AF(2,2)=DT**2/MROT
+!!$         AC(2)=4.D0*DT**2/MROT
 !!$!
 !!$!        =====================================================================
-!!$!        == resolve equations for y1bar,y2bar, y1c y2c                      ==
+!!$!        == RESOLVE EQUATIONS FOR Y1BAR,Y2BAR, Y1C Y2C                      ==
 !!$!        =====================================================================
-!!$         det=ap(1,1)*ap(2,2)-ap(1,2)*ap(2,1)
-!!$!write(dprotfil,*)'ap ',ap
-!!$!write(dprotfil,*)'a0 ',a0
-!!$!write(dprotfil,*)'am ',am
-!!$!write(dprotfil,*)'af ',af
-!!$!write(dprotfil,*)'ac ',ac
-!!$!stop
-!!$         ainv(1,1)= ap(2,2)/det
-!!$         ainv(1,2)=-ap(1,2)/det
-!!$         ainv(2,1)=-ap(2,1)/det
-!!$         ainv(2,2)= ap(1,1)/det
-!!$         a0(:,:)=matmul(ainv(:,:),a0(:,:))
-!!$         am(:,:)=matmul(ainv(:,:),am(:,:))
-!!$         af(:,:)=matmul(ainv(:,:),af(:,:))
-!!$         ac(:)  =matmul(ainv(:,:),ac(:))
-!!$         Y1bar(:)=a0(1,1)*y10(:) +a0(1,2)*y20(:) &
-!!$      &          +am(1,1)*y1m(:) +am(1,2)*y2m(:) &
-!!$      &          +af(1,1)*fsum(:)+af(1,2)*fdiff(:)
-!!$         Y2bar(:)=a0(2,1)*y10(:) +a0(2,2)*y20(:) &
-!!$      &          +am(2,1)*y1m(:) +am(2,2)*y2m(:) &
-!!$      &          +af(2,1)*fsum(:)+af(2,2)*fdiff(:)
-!!$         y1c(:)=ac(1)*y20(:)
-!!$         y2c(:)=ac(2)*y20(:)
+!!$         DET=AP(1,1)*AP(2,2)-AP(1,2)*AP(2,1)
+!!$!WRITE(DPROTFIL,*)'AP ',AP
+!!$!WRITE(DPROTFIL,*)'A0 ',A0
+!!$!WRITE(DPROTFIL,*)'AM ',AM
+!!$!WRITE(DPROTFIL,*)'AF ',AF
+!!$!WRITE(DPROTFIL,*)'AC ',AC
+!!$!STOP
+!!$         AINV(1,1)= AP(2,2)/DET
+!!$         AINV(1,2)=-AP(1,2)/DET
+!!$         AINV(2,1)=-AP(2,1)/DET
+!!$         AINV(2,2)= AP(1,1)/DET
+!!$         A0(:,:)=MATMUL(AINV(:,:),A0(:,:))
+!!$         AM(:,:)=MATMUL(AINV(:,:),AM(:,:))
+!!$         AF(:,:)=MATMUL(AINV(:,:),AF(:,:))
+!!$         AC(:)  =MATMUL(AINV(:,:),AC(:))
+!!$         Y1BAR(:)=A0(1,1)*Y10(:) +A0(1,2)*Y20(:) &
+!!$      &          +AM(1,1)*Y1M(:) +AM(1,2)*Y2M(:) &
+!!$      &          +AF(1,1)*FSUM(:)+AF(1,2)*FDIFF(:)
+!!$         Y2BAR(:)=A0(2,1)*Y10(:) +A0(2,2)*Y20(:) &
+!!$      &          +AM(2,1)*Y1M(:) +AM(2,2)*Y2M(:) &
+!!$      &          +AF(2,1)*FSUM(:)+AF(2,2)*FDIFF(:)
+!!$         Y1C(:)=AC(1)*Y20(:)
+!!$         Y2C(:)=AC(2)*Y20(:)
 !!$!         
 !!$
 
 !!$!        =====================================================================
-!!$!        == ap: project rotation & translation out                              ==
+!!$!        == AP: PROJECT ROTATION & TRANSLATION OUT                              ==
 !!$!        =====================================================================
-!!$!        do this with bar values -> the length constrained positions
-!!$!        do not contain cellrotation/translation
-!!$         x1p(:)=0.5d0*(y1bar(:)+y2bar(:))
-!!$         x2p(:)=0.5d0*(y1bar(:)-y2bar(:))
-!!$         call DIMER$GET_unmassweighted(dim,X1p,R1p)
-!!$         call DIMER$GET_unmassweighted(dim,X2p,R2p)
-!!$         call DIMER$GET_unmassweighted(dim,X10,R10)
-!!$         call DIMER$GET_unmassweighted(dim,X20,R20)
+!!$!        DO THIS WITH BAR VALUES -> THE LENGTH CONSTRAINED POSITIONS
+!!$!        DO NOT CONTAIN CELLROTATION/TRANSLATION
+!!$         X1P(:)=0.5D0*(Y1BAR(:)+Y2BAR(:))
+!!$         X2P(:)=0.5D0*(Y1BAR(:)-Y2BAR(:))
+!!$         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X1P,R1P)
+!!$         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X2P,R2P)
+!!$         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X10,R10)
+!!$         CALL DIMER$GET_UNMASSWEIGHTED(DIM,X20,R20)
 !!$
-!!$write(dprotfil,*)'debug43R1P',R1P
-!!$write(dprotfil,*)'debug43R2P',R2P
-!!$write(dprotfil,*)'debug43R10',R10
-!!$write(dprotfil,*)'debug43R20',R20
-!!$call DIMER$GET_unmassweighted(dim,X1m,R10)
-!!$call DIMER$GET_unmassweighted(dim,X2m,R20)
-!!$write(dprotfil,*)'debug43R1m',R10
-!!$write(dprotfil,*)'debug43R2m',R20
+!!$WRITE(DPROTFIL,*)'DEBUG43R1P',R1P
+!!$WRITE(DPROTFIL,*)'DEBUG43R2P',R2P
+!!$WRITE(DPROTFIL,*)'DEBUG43R10',R10
+!!$WRITE(DPROTFIL,*)'DEBUG43R20',R20
+!!$CALL DIMER$GET_UNMASSWEIGHTED(DIM,X1M,R10)
+!!$CALL DIMER$GET_UNMASSWEIGHTED(DIM,X2M,R20)
+!!$WRITE(DPROTFIL,*)'DEBUG43R1M',R10
+!!$WRITE(DPROTFIL,*)'DEBUG43R2M',R20
 !!$
 !!$         
-!!$         CALL ATOMLIST$GETR8A('MASS',0,(n/3),RMASS)
-!!$         !|_ the same for both images
+!!$         CALL ATOMLIST$GETR8A('MASS',0,(N/3),RMASS)
+!!$         !|_ THE SAME FOR BOTH IMAGES
 !!$         
-!!$         if(CENTER_ID.eq.'COG') then
-!!$            !do nothing
-!!$         else
-!!$            !if we use not the center of gravity for rot. center
-!!$            call ATOMLIST$INDEX(CENTER_ID,IAT)
-!!$            !|_ the same for both images
+!!$         IF(CENTER_ID.EQ.'COG') THEN
+!!$            !DO NOTHING
+!!$         ELSE
+!!$            !IF WE USE NOT THE CENTER OF GRAVITY FOR ROT. CENTER
+!!$            CALL ATOMLIST$INDEX(CENTER_ID,IAT)
+!!$            !|_ THE SAME FOR BOTH IMAGES
 !!$            
-!!$            !the center for the actual coords is m**(1/2)*CENTER_COORD
-!!$            ! the center for NC coords have to be read
-!!$            CENTER1NC(1)=R1p((IAT*3)-3+1)
-!!$            CENTER1NC(2)=R1p((IAT*3)-3+2)
-!!$            CENTER1NC(3)=R1p((IAT*3)-3+3)
+!!$            !THE CENTER FOR THE ACTUAL COORDS IS M**(1/2)*CENTER_COORD
+!!$            ! THE CENTER FOR NC COORDS HAVE TO BE READ
+!!$            CENTER1NC(1)=R1P((IAT*3)-3+1)
+!!$            CENTER1NC(2)=R1P((IAT*3)-3+2)
+!!$            CENTER1NC(3)=R1P((IAT*3)-3+3)
 !!$            
-!!$            CENTER2NC(1)=R2p((IAT*3)-3+1)
-!!$            CENTER2NC(2)=R2p((IAT*3)-3+2)
-!!$            CENTER2NC(3)=R2p((IAT*3)-3+3)
-!!$         end if
+!!$            CENTER2NC(1)=R2P((IAT*3)-3+1)
+!!$            CENTER2NC(2)=R2P((IAT*3)-3+2)
+!!$            CENTER2NC(3)=R2P((IAT*3)-3+3)
+!!$         END IF
 !!$         
-!!$         !                                                       | we placed it there in the last step!
-!!$         call DIMER_PROPCELLCONSTR((dim/3),R10,R1p,RMASS,RMASS,(sqrt(RMASS(IAT))*CENTER_COORD(:)),CENTER1NC,CC1)
-!!$         call DIMER_PROPCELLCONSTR((dim/3),R20,R2p,RMASS,RMASS,(sqrt(RMASS(IAT))*CENTER_COORD(:)),CENTER2NC,CC2)
-!!$write(dprotfil,*)'debug43cc2',CC1
-!!$write(dprotfil,*)'debug43cc1',CC2
+!!$         !                                                       | WE PLACED IT THERE IN THE LAST STEP!
+!!$         CALL DIMER_PROPCELLCONSTR((DIM/3),R10,R1P,RMASS,RMASS,(SQRT(RMASS(IAT))*CENTER_COORD(:)),CENTER1NC,CC1)
+!!$         CALL DIMER_PROPCELLCONSTR((DIM/3),R20,R2P,RMASS,RMASS,(SQRT(RMASS(IAT))*CENTER_COORD(:)),CENTER2NC,CC2)
+!!$WRITE(DPROTFIL,*)'DEBUG43CC2',CC1
+!!$WRITE(DPROTFIL,*)'DEBUG43CC1',CC2
 !!$
-!!$         call DIMER$GET_massweighted(dim,CC1,X1p)
-!!$         call DIMER$GET_massweighted(dim,CC2,X2p)
+!!$         CALL DIMER$GET_MASSWEIGHTED(DIM,CC1,X1P)
+!!$         CALL DIMER$GET_MASSWEIGHTED(DIM,CC2,X2P)
 !!$
-!!$         !reconstruct the ybar vectors (now without cellrotation/translation)
-!!$         y1bar(:)=x1p(:)+x2p(:)
-!!$         y2bar(:)=x1p(:)-x2p(:)
-!!$write(dprotfil,*)'debug42y1bar',y1bar
-!!$write(dprotfil,*)'debug42y2bar',y2bar
-!!$write(dprotfil,*)'debug42i',iter
+!!$         !RECONSTRUCT THE YBAR VECTORS (NOW WITHOUT CELLROTATION/TRANSLATION)
+!!$         Y1BAR(:)=X1P(:)+X2P(:)
+!!$         Y2BAR(:)=X1P(:)-X2P(:)
+!!$WRITE(DPROTFIL,*)'DEBUG42Y1BAR',Y1BAR
+!!$WRITE(DPROTFIL,*)'DEBUG42Y2BAR',Y2BAR
+!!$WRITE(DPROTFIL,*)'DEBUG42I',ITER
 
 !!$!        =====================================================================
 !!$!        ===========   APPLY THE COUPLE CONSTRAINT IF NECESSARY   ============
@@ -1465,120 +1465,120 @@ end SUBROUTINE PLACE_DIMER
 !!$         END IF
 !!$
 !!$!        =====================================================================
-!!$!        == satisfy constraint svar1*lambda**2+svar2*lambda+svar3=0         ==
+!!$!        == SATISFY CONSTRAINT SVAR1*LAMBDA**2+SVAR2*LAMBDA+SVAR3=0         ==
 !!$!        =====================================================================
-!!$         svar1=dot_product(y2c(:),y2c(:))
-!!$         svar2=2.d0*dot_product(y2bar(:),y2c(:))
-!!$         svar3=dot_product(y2bar(:),y2bar(:))-d2
-!!$         svar=svar2**2-4.d0*svar1*svar3
-!!$         if(svar.lt.0.d0) then
-!!$           write(dprotfil,*)'======lagrange parameter could not be found======='
-!!$           write(dprotfil,*)'svar ',svar1,svar2,svar3,svar
-!!$           write(dprotfil,*)'y2bar ',y2bar
-!!$           write(dprotfil,*)'y2c   ',y2c
-!!$           stop '======lagrange parameter could not be found=======errorstop'
-!!$         end if
+!!$         SVAR1=DOT_PRODUCT(Y2C(:),Y2C(:))
+!!$         SVAR2=2.D0*DOT_PRODUCT(Y2BAR(:),Y2C(:))
+!!$         SVAR3=DOT_PRODUCT(Y2BAR(:),Y2BAR(:))-D2
+!!$         SVAR=SVAR2**2-4.D0*SVAR1*SVAR3
+!!$         IF(SVAR.LT.0.D0) THEN
+!!$           WRITE(DPROTFIL,*)'======LAGRANGE PARAMETER COULD NOT BE FOUND======='
+!!$           WRITE(DPROTFIL,*)'SVAR ',SVAR1,SVAR2,SVAR3,SVAR
+!!$           WRITE(DPROTFIL,*)'Y2BAR ',Y2BAR
+!!$           WRITE(DPROTFIL,*)'Y2C   ',Y2C
+!!$           STOP '======LAGRANGE PARAMETER COULD NOT BE FOUND=======ERRORSTOP'
+!!$         END IF
 !!$! ATTENTION IT IS IMPORTANT WHICH ROOT IS CHOSEN. 
 !!$! THW WRONG ROOT ROTATES THE DIMER BY ABOUT 180 DEGREE AND MESSES UP THINGS.
 !!$! SWITCHING FROM ONE TO THE OTHER MESSES UP THE ITERATION
-!!$         if(svar2.gt.0.d0) then
-!!$           lambda=-(svar2-sqrt(svar))/(2.d0*svar1)
-!!$         else
-!!$           lambda=-(svar2+sqrt(svar))/(2.d0*svar1)
-!!$         end if
-!!$         y1p(:)=y1bar(:)+y1c(:)*lambda
-!!$         y2p(:)=y2bar(:)+y2c(:)*lambda
-!!$         if(abs(dot_product(y2p,y2p)-d2).gt.DLAMBDA) then
-!!$           write(dprotfil,*)' constrain not fulfilled'
-!!$           write(dprotfil,*)'deviation ',dot_product(y2p,y2p)-d2
-!!$           stop 'error constraint not fulfilled in paw_dimer.f90'
-!!$         end if
+!!$         IF(SVAR2.GT.0.D0) THEN
+!!$           LAMBDA=-(SVAR2-SQRT(SVAR))/(2.D0*SVAR1)
+!!$         ELSE
+!!$           LAMBDA=-(SVAR2+SQRT(SVAR))/(2.D0*SVAR1)
+!!$         END IF
+!!$         Y1P(:)=Y1BAR(:)+Y1C(:)*LAMBDA
+!!$         Y2P(:)=Y2BAR(:)+Y2C(:)*LAMBDA
+!!$         IF(ABS(DOT_PRODUCT(Y2P,Y2P)-D2).GT.DLAMBDA) THEN
+!!$           WRITE(DPROTFIL,*)' CONSTRAIN NOT FULFILLED'
+!!$           WRITE(DPROTFIL,*)'DEVIATION ',DOT_PRODUCT(Y2P,Y2P)-D2
+!!$           STOP 'ERROR CONSTRAINT NOT FULFILLED IN PAW_DIMER.F90'
+!!$         END IF
 !!$!         
 !!$!        =====================================================================
-!!$!        == Check convergence                                               ==
+!!$!        == CHECK CONVERGENCE                                               ==
 !!$!        =====================================================================
-!!$         p2=p1
-!!$         g2=g1
-!!$         p1=dkin
-!!$         g1=dot_product(y1p(:)-y1m(:),y2p(:)-y2m(:))/(4.d0*dt**2)-dkin
-!!$         write(dprotfil,*)'DIMER:USING HARDCODED TOL!!!'
-!!$         write(dprotfil,*)'DIMER:USING HARDCODED TOL!!!'
-!!$         write(dprotfil,*)'DIMER:USING HARDCODED TOL!!!'
-!!$         write(dprotfil,*)'DIMER:USING HARDCODED TOL!!!'
-!!$         write(dprotfil,*)'DIMER:USING HARDCODED TOL!!!'
-!!$         if(abs(g1).lt.tol) then
-!!$           x1p(:)=0.5d0*(y1p(:)+y2p(:))
-!!$           x2p(:)=0.5d0*(y1p(:)-y2p(:))
+!!$         P2=P1
+!!$         G2=G1
+!!$         P1=DKIN
+!!$         G1=DOT_PRODUCT(Y1P(:)-Y1M(:),Y2P(:)-Y2M(:))/(4.D0*DT**2)-DKIN
+!!$         WRITE(DPROTFIL,*)'DIMER:USING HARDCODED TOL!!!'
+!!$         WRITE(DPROTFIL,*)'DIMER:USING HARDCODED TOL!!!'
+!!$         WRITE(DPROTFIL,*)'DIMER:USING HARDCODED TOL!!!'
+!!$         WRITE(DPROTFIL,*)'DIMER:USING HARDCODED TOL!!!'
+!!$         WRITE(DPROTFIL,*)'DIMER:USING HARDCODED TOL!!!'
+!!$         IF(ABS(G1).LT.TOL) THEN
+!!$           X1P(:)=0.5D0*(Y1P(:)+Y2P(:))
+!!$           X2P(:)=0.5D0*(Y1P(:)-Y2P(:))
 !!$!        =====================================================================
-!!$!        == do we use only the rotation?                                    ==
+!!$!        == DO WE USE ONLY THE ROTATION?                                    ==
 !!$!        =====================================================================
-!!$           if(onlyrot) then
-!!$              !substract the covered distance of the center of grav.
-!!$              x1p(:)=x1p(:)-0.5d0*(y1p(:)-y10(:))
-!!$              x2p(:)=x2p(:)-0.5d0*(y1p(:)-y10(:))
-!!$           end if
+!!$           IF(ONLYROT) THEN
+!!$              !SUBSTRACT THE COVERED DISTANCE OF THE CENTER OF GRAV.
+!!$              X1P(:)=X1P(:)-0.5D0*(Y1P(:)-Y10(:))
+!!$              X2P(:)=X2P(:)-0.5D0*(Y1P(:)-Y10(:))
+!!$           END IF
 !!$!        =====================================================================
-!!$!        == do we inhibit the parallel motion?                              ==
+!!$!        == DO WE INHIBIT THE PARALLEL MOTION?                              ==
 !!$!        =====================================================================
-!!$           if(inhibitup) then
-!!$              !substract the parallel part of ther covered distance of the center of grav.
-!!$              x1p(:)=x1p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),0.5d0*(y1p(:)-y10(:)))
-!!$              x2p(:)=x2p(:)-(y20(:)/dot_product(y20(:),y20(:)))*dot_product(y20(:),0.5d0*(y1p(:)-y10(:)))
-!!$!              x1p(:)=x1p(:)-(((x10-x20)/dot_product(x10-x20,x10-x20))*dot_product(x10-x20,x1p-x10))
-!!$!              x2p(:)=x2p(:)-(((x10-x20)/dot_product(x10-x20,x10-x20))*dot_product(x10-x20,x2p-x20))
-!!$           end if
+!!$           IF(INHIBITUP) THEN
+!!$              !SUBSTRACT THE PARALLEL PART OF THER COVERED DISTANCE OF THE CENTER OF GRAV.
+!!$              X1P(:)=X1P(:)-(Y20(:)/DOT_PRODUCT(Y20(:),Y20(:)))*DOT_PRODUCT(Y20(:),0.5D0*(Y1P(:)-Y10(:)))
+!!$              X2P(:)=X2P(:)-(Y20(:)/DOT_PRODUCT(Y20(:),Y20(:)))*DOT_PRODUCT(Y20(:),0.5D0*(Y1P(:)-Y10(:)))
+!!$!              X1P(:)=X1P(:)-(((X10-X20)/DOT_PRODUCT(X10-X20,X10-X20))*DOT_PRODUCT(X10-X20,X1P-X10))
+!!$!              X2P(:)=X2P(:)-(((X10-X20)/DOT_PRODUCT(X10-X20,X10-X20))*DOT_PRODUCT(X10-X20,X2P-X20))
+!!$           END IF
 !!$
-!!$           write(dprotfil,*)'DIMER: DIMER_PROPAGATE: DIMER MASSW. PARALLEL MOTION:',&
-!!$                &dot_product(y20,0.5d0*(x1p+x2p)-0.5d0*(x10+x20))/sqrt(dot_product(y20,y20))
-!!$          return
-!!$         end if
-!!$       enddo
-!!$!stop
-!!$       stop 'PAW_DIMER: SUBROUTINE DIMER_PROP HARDCODED TOL NOT CONVERGED'
-!!$       return
-!!$     end subroutine dimer_prop
+!!$           WRITE(DPROTFIL,*)'DIMER: DIMER_PROPAGATE: DIMER MASSW. PARALLEL MOTION:',&
+!!$                &DOT_PRODUCT(Y20,0.5D0*(X1P+X2P)-0.5D0*(X10+X20))/SQRT(DOT_PRODUCT(Y20,Y20))
+!!$          RETURN
+!!$         END IF
+!!$       ENDDO
+!!$!STOP
+!!$       STOP 'PAW_DIMER: SUBROUTINE DIMER_PROP HARDCODED TOL NOT CONVERGED'
+!!$       RETURN
+!!$     END SUBROUTINE DIMER_PROP
 !!$
 
 
 !##################################################################
-SUBROUTINE DIMER$WRITEENERGYTRA(dim_,RP)
+SUBROUTINE DIMER$WRITEENERGYTRA(DIM_,RP)
 !##################################################################
   USE DIMER_MODULE
   USE MPE_MODULE
-!cpversion  USE MPE_COMM_SPACE_MODULE
+!CPVERSION  USE MPE_COMM_SPACE_MODULE
   IMPLICIT NONE
-  integer(4),intent(in)      :: dim_ 
-  real(8),intent(in)         :: RP(dim_)
-  real(8)                    :: ENERGY
-  real(8)                    :: dist    !the distance to the transition state
-  integer(4)                 :: nfil
-  real(8)                    :: etot_
+  INTEGER(4),INTENT(IN)      :: DIM_ 
+  REAL(8),INTENT(IN)         :: RP(DIM_)
+  REAL(8)                    :: ENERGY
+  REAL(8)                    :: DIST    !THE DISTANCE TO THE TRANSITION STATE
+  INTEGER(4)                 :: NFIL
+  REAL(8)                    :: ETOT_
 
-  if(firsttra) then
-     firsttra=.false.
-     return
-  end if
+  IF(FIRSTTRA) THEN
+     FIRSTTRA=.FALSE.
+     RETURN
+  END IF
 
-  call MPE$QUERY('MONOMER',NTASKS,THISTASK) 
-  if(thistask.ne.1) return
+  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
+  IF(THISTASK.NE.1) RETURN
  
-  CALL LIB$SCALARPRODUCTR8(.FALSE.,DIM,1,(RP-RTS),1,(RP-RTS),dist)
-  dist=dot_product((RP-RTS),(RP-RTS))
-  dist=sqrt(dist)
+  CALL LIB$SCALARPRODUCTR8(.FALSE.,DIM,1,(RP-RTS),1,(RP-RTS),DIST)
+  DIST=DOT_PRODUCT((RP-RTS),(RP-RTS))
+  DIST=SQRT(DIST)
 
 
-  call MPE$QUERY('~',NTASKS,THISTASK) 
-  if(thistask.eq.1) then !dimer image1
-     write(dprotfil,*)"ENERGYTRA: ACTUAL DISTANCE IMAGE 1= ",dist
-  else
-     write(dprotfil,*)"ENERGYTRA: ACTUAL DISTANCE IMAGE 2= ",dist
-  end if
+  CALL MPE$QUERY('~',NTASKS,THISTASK) 
+  IF(THISTASK.EQ.1) THEN !DIMER IMAGE1
+     WRITE(DPROTFIL,*)"ENERGYTRA: ACTUAL DISTANCE IMAGE 1= ",DIST
+  ELSE
+     WRITE(DPROTFIL,*)"ENERGYTRA: ACTUAL DISTANCE IMAGE 2= ",DIST
+  END IF
 
-  !--- write only in energytra spacing
-  if(lasttra+energytra.gt.dist) then
-    return
-  else
-     lasttra=dist
+  !--- WRITE ONLY IN ENERGYTRA SPACING
+  IF(LASTTRA+ENERGYTRA.GT.DIST) THEN
+    RETURN
+  ELSE
+     LASTTRA=DIST
      !==================================================================
      !== GET FILE UNIT                                                ==
      !==================================================================
@@ -1587,312 +1587,312 @@ SUBROUTINE DIMER$WRITEENERGYTRA(dim_,RP)
         CALL FILEHANDLER$UNIT('ETRA',NFIL)
         CALL ENERGYLIST$RETURN('TOTAL ENERGY',ENERGY)     
      ELSE
-        !all .neq. task 1 in dimer
-        return
+        !ALL .NEQ. TASK 1 IN DIMER
+        RETURN
      END IF
      
-     write(NFIL,FMT='(F15.5,F15.5)')dist,ENERGY
+     WRITE(NFIL,FMT='(F15.5,F15.5)')DIST,ENERGY
      CALL LIB$FLUSHFILE(NFIL)
      
-     return
-  end if
+     RETURN
+  END IF
 
-  return
-end SUBROUTINE DIMER$WRITEENERGYTRA
-
-
+  RETURN
+END SUBROUTINE DIMER$WRITEENERGYTRA
 
 
-       subroutine dimer$optanner(n,dt,f1,f2,x10,x1m,x20,x2m,mperp,mpara,mrot,&
-            &fperpm,fparam,frotm,fperp0,fpara0,frot0,perpanner,paraanner,rotanner)
-!ATTENTION: depends on not massweighted forces!!!         
-!      ** determines the optimal friction                    **
-!      ** supposing an harmonic potential                    **
-         use dimer_module ,only: dprotfil,ekinparam,ekinperpm,ekinrotm,Tparam,Tperpm,Trotm,&
-              &tfact,steps,fautopara,fautoperp,fautorot,fricautopara,fricautoperp,fricautorot
-       implicit none
-       integer(4),intent(in) :: n                                  ! 3*nat
-       real(8)   ,intent(in) :: dt                                 ! timestep
-       real(8)   ,intent(in) :: f1(n),f2(n)                        ! the actual forces
-       real(8)   ,intent(in) :: X10(n),X1m(n),x20(n),X2m(n)        ! squared dimer length
-       real(8)   ,intent(in) :: mperp,mpara,mrot                   ! fict. mass
-       real(8)   ,intent(in) :: fperpm(n),frotm(n),fparam(n)       ! the old forces
-       real(8)   ,intent(out):: fperp0(n),frot0(n),fpara0(n)       ! the forces to be stored outside
-       real(8)   ,intent(out):: perpanner,paraanner,rotanner       ! opt. friction 
-       real(8)               :: f1ortho(n),f2ortho(n) ! the orthogonal part of the forces
-       real(8)               :: e0(n),em(n) !the unity vectors in dimer direction
-       real(8)               :: y10(n),y20(n),y1m(n),y2m(n)            
-       real(8)               :: svar
-       real(8)               :: xpara(n),xperp(n),xcenter(n),xrot(n)   ! the covered distance
-       real(8)               :: spara,sperp,srot   ! the scalar covered distance
 
-       real(8)               :: epara(n),eperp(n),erot(n)
-       real(8)               :: emwpara(n),emwperp(n),emwrot(n)
-       real(8)               :: omega2para,omega2perp,omega2rot
-       real(8)               :: vec1(n)
-       real(8)               :: ekinpara,ekinperp,ekinrot
-       real(8)               :: cpara,cperp,crot
-       real(8)               :: tpara,tperp,trot
-       real(8)               :: tfperp,tfrot
+
+       SUBROUTINE DIMER$OPTANNER(N,DT,F1,F2,X10,X1M,X20,X2M,MPERP,MPARA,MROT,&
+            &FPERPM,FPARAM,FROTM,FPERP0,FPARA0,FROT0,PERPANNER,PARAANNER,ROTANNER)
+!ATTENTION: DEPENDS ON NOT MASSWEIGHTED FORCES!!!         
+!      ** DETERMINES THE OPTIMAL FRICTION                    **
+!      ** SUPPOSING AN HARMONIC POTENTIAL                    **
+         USE DIMER_MODULE ,ONLY: DPROTFIL,EKINPARAM,EKINPERPM,EKINROTM,TPARAM,TPERPM,TROTM,&
+              &TFACT,STEPS,FAUTOPARA,FAUTOPERP,FAUTOROT,FRICAUTOPARA,FRICAUTOPERP,FRICAUTOROT
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN) :: N                                  ! 3*NAT
+       REAL(8)   ,INTENT(IN) :: DT                                 ! TIMESTEP
+       REAL(8)   ,INTENT(IN) :: F1(N),F2(N)                        ! THE ACTUAL FORCES
+       REAL(8)   ,INTENT(IN) :: X10(N),X1M(N),X20(N),X2M(N)        ! SQUARED DIMER LENGTH
+       REAL(8)   ,INTENT(IN) :: MPERP,MPARA,MROT                   ! FICT. MASS
+       REAL(8)   ,INTENT(IN) :: FPERPM(N),FROTM(N),FPARAM(N)       ! THE OLD FORCES
+       REAL(8)   ,INTENT(OUT):: FPERP0(N),FROT0(N),FPARA0(N)       ! THE FORCES TO BE STORED OUTSIDE
+       REAL(8)   ,INTENT(OUT):: PERPANNER,PARAANNER,ROTANNER       ! OPT. FRICTION 
+       REAL(8)               :: F1ORTHO(N),F2ORTHO(N) ! THE ORTHOGONAL PART OF THE FORCES
+       REAL(8)               :: E0(N),EM(N) !THE UNITY VECTORS IN DIMER DIRECTION
+       REAL(8)               :: Y10(N),Y20(N),Y1M(N),Y2M(N)            
+       REAL(8)               :: SVAR
+       REAL(8)               :: XPARA(N),XPERP(N),XCENTER(N),XROT(N)   ! THE COVERED DISTANCE
+       REAL(8)               :: SPARA,SPERP,SROT   ! THE SCALAR COVERED DISTANCE
+
+       REAL(8)               :: EPARA(N),EPERP(N),EROT(N)
+       REAL(8)               :: EMWPARA(N),EMWPERP(N),EMWROT(N)
+       REAL(8)               :: OMEGA2PARA,OMEGA2PERP,OMEGA2ROT
+       REAL(8)               :: VEC1(N)
+       REAL(8)               :: EKINPARA,EKINPERP,EKINROT
+       REAL(8)               :: CPARA,CPERP,CROT
+       REAL(8)               :: TPARA,TPERP,TROT
+       REAL(8)               :: TFPERP,TFROT
 !      ****************************************************************
-       y10(:)=(x10(:)+x20(:))/2.d0
-       y20(:)=x10(:)-x20(:)
-       y2m(:)=x1m(:)-x2m(:)
-       y1m(:)=(x1m(:)+x2m(:))/2.d0
+       Y10(:)=(X10(:)+X20(:))/2.D0
+       Y20(:)=X10(:)-X20(:)
+       Y2M(:)=X1M(:)-X2M(:)
+       Y1M(:)=(X1M(:)+X2M(:))/2.D0
 
  
 
-       e0(:)=y20(:)/sqrt(dot_product(y20(:),y20(:)))
-       em(:)=y2m(:)/sqrt(dot_product(y2m(:),y2m(:)))
+       E0(:)=Y20(:)/SQRT(DOT_PRODUCT(Y20(:),Y20(:)))
+       EM(:)=Y2M(:)/SQRT(DOT_PRODUCT(Y2M(:),Y2M(:)))
 
-       f1ortho(:)=f1(:)-e0(:)*dot_product(e0(:),f1(:))
-       f2ortho(:)=f2(:)-e0(:)*dot_product(e0(:),f2(:))
-
-
-!      =====================================================================
-!      ==    determine the forces (directions referenced on image1)       ==
-!      =====================================================================
-       fpara0(:)=e0(:)*dot_product(e0(:),(0.5d0*(f1(:)+f2(:))))
-       fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
-
-
-!!$       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
-!!$          !antiparallel
-!!$          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
-!!$             frot0(:)=f1ortho(:)
-!!$          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
-!!$             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
-!!$          else
-!!$             frot0(:)=0.0d0
-!!$          end if
-!!$       else
-          !parallel
-          frot0(:)=0.5d0*(f1ortho(:)-f2ortho(:))
-!        end if
-
-       write(dprotfil,*)'perpforces',sqrt(dot_product(fperp0(:),fperp0(:)))
-       write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
-       write(dprotfil,*)'rotforces',sqrt(dot_product(frot0(:),frot0(:)))
-
+       F1ORTHO(:)=F1(:)-E0(:)*DOT_PRODUCT(E0(:),F1(:))
+       F2ORTHO(:)=F2(:)-E0(:)*DOT_PRODUCT(E0(:),F2(:))
 
 
 !      =====================================================================
-!      ==    determine the forces (directions referenced on image1)       ==
+!      ==    DETERMINE THE FORCES (DIRECTIONS REFERENCED ON IMAGE1)       ==
 !      =====================================================================
-       fpara0(:)=e0(:)*dot_product(e0(:),(0.5d0*(f1(:)+f2(:))))
-       fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
+       FPARA0(:)=E0(:)*DOT_PRODUCT(E0(:),(0.5D0*(F1(:)+F2(:))))
+       FPERP0(:)=0.5D0*(F1ORTHO(:)+F2ORTHO(:))
 
 
-       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
-          !antiparallel
-          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=f1ortho(:)
-          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
-          else
-             frot0(:)=f1ortho(:)
-          end if
-       else
-          !parallel
-          frot0(:)=0.5d0*(f1ortho(:)-f2ortho(:))
-       end if
+!!$       IF(DOT_PRODUCT(F1ORTHO(:),F2ORTHO(:)).LT.0.0D0) THEN
+!!$          !ANTIPARALLEL
+!!$          IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).LT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+!!$             FROT0(:)=F1ORTHO(:)
+!!$          ELSE IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).GT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+!!$             FROT0(:)=-F2ORTHO(:)!- BECAUSE WE REFERENCE ALL ON IMAGE ONE!!!
+!!$          ELSE
+!!$             FROT0(:)=0.0D0
+!!$          END IF
+!!$       ELSE
+          !PARALLEL
+          FROT0(:)=0.5D0*(F1ORTHO(:)-F2ORTHO(:))
+!        END IF
 
-       write(dprotfil,*)'perpforces',sqrt(dot_product(fperp0(:),fperp0(:)))
-       write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
-       write(dprotfil,*)'rotforces',sqrt(dot_product(frot0(:),frot0(:)))
+       WRITE(DPROTFIL,*)'PERPFORCES',SQRT(DOT_PRODUCT(FPERP0(:),FPERP0(:)))
+       WRITE(DPROTFIL,*)'PARAFORCES',SQRT(DOT_PRODUCT(FPARA0(:),FPARA0(:)))
+       WRITE(DPROTFIL,*)'ROTFORCES',SQRT(DOT_PRODUCT(FROT0(:),FROT0(:)))
 
-!      =====================================================================
-!      ==determine the covered distances (directions referenced on image1)==
-!      =====================================================================
-       xcenter(:)=y10(:)-y1m(:)
-       xpara(:)=em(:)*dot_product(em(:),xcenter(:))
-       xperp(:)=xcenter(:)-xpara(:)
-       xrot(:)=2.d0*(x10(:)-xcenter(:)-x1m(:))
-
-
-       spara=sqrt(dot_product(xpara(:),xpara(:)))
-       if(spara.lt.1.d-10) then
-          epara(:)=0.d0
-       else
-          epara(:)=xpara(:)/spara
-       end if
-
-       sperp=sqrt(dot_product(xperp(:),xperp(:)))
-       if(sperp.lt.1.d-10) then
-          eperp(:)=0.d0
-       else
-          eperp(:)=xperp(:)/sperp
-       end if
-
-       srot=sqrt(dot_product(xrot(:),xrot(:)))
-       if(srot.lt.1.d-10) then
-          erot(:)=0.d0
-       else
-          erot(:)=xrot(:)/srot
-       end if
-
-
-       write(dprotfil,*)'paradist massweighted!',spara
-       write(dprotfil,*)'perpdist massweighted!',sperp
-       write(dprotfil,*)'rotdist massweighted!',srot
 
 
 !      =====================================================================
-!      ==               determine the optimal friction                    ==
+!      ==    DETERMINE THE FORCES (DIRECTIONS REFERENCED ON IMAGE1)       ==
+!      =====================================================================
+       FPARA0(:)=E0(:)*DOT_PRODUCT(E0(:),(0.5D0*(F1(:)+F2(:))))
+       FPERP0(:)=0.5D0*(F1ORTHO(:)+F2ORTHO(:))
+
+
+       IF(DOT_PRODUCT(F1ORTHO(:),F2ORTHO(:)).LT.0.0D0) THEN
+          !ANTIPARALLEL
+          IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).LT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+             FROT0(:)=F1ORTHO(:)
+          ELSE IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).GT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+             FROT0(:)=-F2ORTHO(:)!- BECAUSE WE REFERENCE ALL ON IMAGE ONE!!!
+          ELSE
+             FROT0(:)=F1ORTHO(:)
+          END IF
+       ELSE
+          !PARALLEL
+          FROT0(:)=0.5D0*(F1ORTHO(:)-F2ORTHO(:))
+       END IF
+
+       WRITE(DPROTFIL,*)'PERPFORCES',SQRT(DOT_PRODUCT(FPERP0(:),FPERP0(:)))
+       WRITE(DPROTFIL,*)'PARAFORCES',SQRT(DOT_PRODUCT(FPARA0(:),FPARA0(:)))
+       WRITE(DPROTFIL,*)'ROTFORCES',SQRT(DOT_PRODUCT(FROT0(:),FROT0(:)))
+
+!      =====================================================================
+!      ==DETERMINE THE COVERED DISTANCES (DIRECTIONS REFERENCED ON IMAGE1)==
+!      =====================================================================
+       XCENTER(:)=Y10(:)-Y1M(:)
+       XPARA(:)=EM(:)*DOT_PRODUCT(EM(:),XCENTER(:))
+       XPERP(:)=XCENTER(:)-XPARA(:)
+       XROT(:)=2.D0*(X10(:)-XCENTER(:)-X1M(:))
+
+
+       SPARA=SQRT(DOT_PRODUCT(XPARA(:),XPARA(:)))
+       IF(SPARA.LT.1.D-10) THEN
+          EPARA(:)=0.D0
+       ELSE
+          EPARA(:)=XPARA(:)/SPARA
+       END IF
+
+       SPERP=SQRT(DOT_PRODUCT(XPERP(:),XPERP(:)))
+       IF(SPERP.LT.1.D-10) THEN
+          EPERP(:)=0.D0
+       ELSE
+          EPERP(:)=XPERP(:)/SPERP
+       END IF
+
+       SROT=SQRT(DOT_PRODUCT(XROT(:),XROT(:)))
+       IF(SROT.LT.1.D-10) THEN
+          EROT(:)=0.D0
+       ELSE
+          EROT(:)=XROT(:)/SROT
+       END IF
+
+
+       WRITE(DPROTFIL,*)'PARADIST MASSWEIGHTED!',SPARA
+       WRITE(DPROTFIL,*)'PERPDIST MASSWEIGHTED!',SPERP
+       WRITE(DPROTFIL,*)'ROTDIST MASSWEIGHTED!',SROT
+
+
+!      =====================================================================
+!      ==               DETERMINE THE OPTIMAL FRICTION                    ==
 !      =====================================================================
 
-       if(spara.lt.1.d-10) then
-          cpara=0.d0
-          omega2para=0.d0
-          paraanner=0.d0
-       else
-          cpara=-(dot_product(fpara0(:),epara(:))-dot_product(fparam(:),epara(:)))/&
-               &spara
-          write(dprotfil,*)'cdirectpara',cpara
-          call dimer_proposcillator(dt,1,cpara) !cpara oscillator uses the dim 1
-          write(dprotfil,*)'cmeanpara',cpara
-          call DIMER$GET_massweighted(n,epara(:),emwpara(:))
-          omega2para=abs(cpara/(mpara*dot_product(emwpara(:),emwpara(:))))
-          paraanner=0.5d0*dt*sqrt(4.d0*omega2para)
-          if(paraanner.gt.1.d0)paraanner=1.d0
-       end if
+       IF(SPARA.LT.1.D-10) THEN
+          CPARA=0.D0
+          OMEGA2PARA=0.D0
+          PARAANNER=0.D0
+       ELSE
+          CPARA=-(DOT_PRODUCT(FPARA0(:),EPARA(:))-DOT_PRODUCT(FPARAM(:),EPARA(:)))/&
+               &SPARA
+          WRITE(DPROTFIL,*)'CDIRECTPARA',CPARA
+          CALL DIMER_PROPOSCILLATOR(DT,1,CPARA) !CPARA OSCILLATOR USES THE DIM 1
+          WRITE(DPROTFIL,*)'CMEANPARA',CPARA
+          CALL DIMER$GET_MASSWEIGHTED(N,EPARA(:),EMWPARA(:))
+          OMEGA2PARA=ABS(CPARA/(MPARA*DOT_PRODUCT(EMWPARA(:),EMWPARA(:))))
+          PARAANNER=0.5D0*DT*SQRT(4.D0*OMEGA2PARA)
+          IF(PARAANNER.GT.1.D0)PARAANNER=1.D0
+       END IF
 
 
-       if(sperp.lt.1.d-10) then
-          cperp=0.d0
-          omega2perp=0.d0
-          perpanner=0.d0
-       else
-          cperp=-(dot_product(fperp0(:),eperp(:))-dot_product(fperpm(:),eperp(:)))/&
-               &sperp
-          write(dprotfil,*)'cdirectperp',cperp
-          call dimer_proposcillator(dt,2,cperp) !cperp oscillator uses the dim 2
-          write(dprotfil,*)'cmeanperp',cperp
-          call DIMER$GET_massweighted(n,eperp(:),emwperp(:))
-          omega2perp=abs(cperp/(mperp*dot_product(emwperp(:),emwperp(:))))
-          perpanner=0.5d0*dt*sqrt(4.d0*omega2perp)
-       end if
+       IF(SPERP.LT.1.D-10) THEN
+          CPERP=0.D0
+          OMEGA2PERP=0.D0
+          PERPANNER=0.D0
+       ELSE
+          CPERP=-(DOT_PRODUCT(FPERP0(:),EPERP(:))-DOT_PRODUCT(FPERPM(:),EPERP(:)))/&
+               &SPERP
+          WRITE(DPROTFIL,*)'CDIRECTPERP',CPERP
+          CALL DIMER_PROPOSCILLATOR(DT,2,CPERP) !CPERP OSCILLATOR USES THE DIM 2
+          WRITE(DPROTFIL,*)'CMEANPERP',CPERP
+          CALL DIMER$GET_MASSWEIGHTED(N,EPERP(:),EMWPERP(:))
+          OMEGA2PERP=ABS(CPERP/(MPERP*DOT_PRODUCT(EMWPERP(:),EMWPERP(:))))
+          PERPANNER=0.5D0*DT*SQRT(4.D0*OMEGA2PERP)
+       END IF
 
 
-       if(srot.lt.1.d-10) then
-          crot=0.d0
-          omega2rot=0.d0
-          rotanner=0.d0
-       else
-          crot=-(dot_product(frot0(:),erot(:))-dot_product(frotm(:),erot(:)))/&
-               &srot
-          write(dprotfil,*)'cdirectrot',crot
-          call dimer_proposcillator(dt,3,crot) !crot oscillator uses the dim 3
-          write(dprotfil,*)'cmeanrot',crot
-          call DIMER$GET_massweighted(n,erot(:),emwrot(:))
-          omega2rot=abs(crot/(dot_product(emwrot(:),emwrot(:))))
+       IF(SROT.LT.1.D-10) THEN
+          CROT=0.D0
+          OMEGA2ROT=0.D0
+          ROTANNER=0.D0
+       ELSE
+          CROT=-(DOT_PRODUCT(FROT0(:),EROT(:))-DOT_PRODUCT(FROTM(:),EROT(:)))/&
+               &SROT
+          WRITE(DPROTFIL,*)'CDIRECTROT',CROT
+          CALL DIMER_PROPOSCILLATOR(DT,3,CROT) !CROT OSCILLATOR USES THE DIM 3
+          WRITE(DPROTFIL,*)'CMEANROT',CROT
+          CALL DIMER$GET_MASSWEIGHTED(N,EROT(:),EMWROT(:))
+          OMEGA2ROT=ABS(CROT/(DOT_PRODUCT(EMWROT(:),EMWROT(:))))
 
-          omega2rot=(omega2rot-omega2para)/mrot
-          if(omega2rot.lt.0.d0) then
-             print*,'omega2rot is negative - check that'
-             print*,omega2rot
-             print*,omega2perp,omega2para,abs(omega2para*2.d0*mpara)
-             omega2rot=abs(omega2rot)
-          end if
-          rotanner=0.5d0*dt*sqrt(4.d0*omega2rot)
-       end if
+          OMEGA2ROT=(OMEGA2ROT-OMEGA2PARA)/MROT
+          IF(OMEGA2ROT.LT.0.D0) THEN
+             PRINT*,'OMEGA2ROT IS NEGATIVE - CHECK THAT'
+             PRINT*,OMEGA2ROT
+             PRINT*,OMEGA2PERP,OMEGA2PARA,ABS(OMEGA2PARA*2.D0*MPARA)
+             OMEGA2ROT=ABS(OMEGA2ROT)
+          END IF
+          ROTANNER=0.5D0*DT*SQRT(4.D0*OMEGA2ROT)
+       END IF
        
 
 !      =====================================================================
-!      ==             determine the friction for max ekin                 ==
+!      ==             DETERMINE THE FRICTION FOR MAX EKIN                 ==
 !      =====================================================================
-       Ekinpara=abs(0.5d0*mpara*dot_product(xpara(:),xpara(:)))/dt**2
-       Ekinperp=abs(0.5d0*mperp*dot_product(xperp(:),xperp(:)))/dt**2
-       Ekinrot=abs(0.5d0*mrot*dot_product(xrot(:),xrot(:)))/dt**2
-       tfperp=tfact/real(n-1,kind=8)
-       tfrot=tfact/real(n,kind=8)
-       Tpara=ekinpara*tfact
-       Tperp=ekinperp*tfperp
-       Trot=ekinrot*tfrot
+       EKINPARA=ABS(0.5D0*MPARA*DOT_PRODUCT(XPARA(:),XPARA(:)))/DT**2
+       EKINPERP=ABS(0.5D0*MPERP*DOT_PRODUCT(XPERP(:),XPERP(:)))/DT**2
+       EKINROT=ABS(0.5D0*MROT*DOT_PRODUCT(XROT(:),XROT(:)))/DT**2
+       TFPERP=TFACT/REAL(N-1,KIND=8)
+       TFROT=TFACT/REAL(N,KIND=8)
+       TPARA=EKINPARA*TFACT
+       TPERP=EKINPERP*TFPERP
+       TROT=EKINROT*TFROT
 
 
-       print*,'Temperature',tpara,tperp,trot
-       print*,'Ekin:',ekinpara,ekinperp,ekinrot
-       print*,'maxt:',tparam,tperpm,trotm
+       PRINT*,'TEMPERATURE',TPARA,TPERP,TROT
+       PRINT*,'EKIN:',EKINPARA,EKINPERP,EKINROT
+       PRINT*,'MAXT:',TPARAM,TPERPM,TROTM
 
-       if(tpara.gt.tparam) then
-          !          paraanner=0.5d0*dt*(ekinpara-ekinparam-dot_product(0.5d0*fpara0(:),xpara(:)))&
-          !               &*dt/dot_product(xpara(:),xpara(:))
-          !new testcode:we have optfric from above and add \Delta E
-          svar=abs(0.5d0*dt*dt*(ekinpara-tparam/tfact)/(dot_product(xpara(:),xpara(:))*mpara))
-          paraanner=paraanner+svar
-          print*,'corrected parallel friction: (value/delta)',paraanner,svar
-       end if
+       IF(TPARA.GT.TPARAM) THEN
+          !          PARAANNER=0.5D0*DT*(EKINPARA-EKINPARAM-DOT_PRODUCT(0.5D0*FPARA0(:),XPARA(:)))&
+          !               &*DT/DOT_PRODUCT(XPARA(:),XPARA(:))
+          !NEW TESTCODE:WE HAVE OPTFRIC FROM ABOVE AND ADD \DELTA E
+          SVAR=ABS(0.5D0*DT*DT*(EKINPARA-TPARAM/TFACT)/(DOT_PRODUCT(XPARA(:),XPARA(:))*MPARA))
+          PARAANNER=PARAANNER+SVAR
+          PRINT*,'CORRECTED PARALLEL FRICTION: (VALUE/DELTA)',PARAANNER,SVAR
+       END IF
 
-       if(tperp.gt.tperpm) then
-          !perpanner=0.5d0*dt*(ekinperp-ekinperpm-dot_product(0.5d0*fperp0(:),xperp(:)))&
-          !     &*dt/dot_product(xperp(:),xperp(:))
-          svar=abs(0.5d0*dt*dt*(ekinperp-tperpm/tfperp)/(dot_product(xperp(:),xperp(:))*mperp))
-          perpanner=perpanner+svar
-          print*,'corrected perp friction: (value/delta)',perpanner,svar
-       end if
+       IF(TPERP.GT.TPERPM) THEN
+          !PERPANNER=0.5D0*DT*(EKINPERP-EKINPERPM-DOT_PRODUCT(0.5D0*FPERP0(:),XPERP(:)))&
+          !     &*DT/DOT_PRODUCT(XPERP(:),XPERP(:))
+          SVAR=ABS(0.5D0*DT*DT*(EKINPERP-TPERPM/TFPERP)/(DOT_PRODUCT(XPERP(:),XPERP(:))*MPERP))
+          PERPANNER=PERPANNER+SVAR
+          PRINT*,'CORRECTED PERP FRICTION: (VALUE/DELTA)',PERPANNER,SVAR
+       END IF
 
-       if(trot.gt.trotm) then
-          !rotanner=0.5d0*dt*(ekinrot-ekinrotm-dot_product(0.5d0*frot0(:),xrot(:)))&
-          !     &*dt/dot_product(xrot(:),xrot(:))
-          svar=abs(0.5d0*dt*dt*(ekinrot-trotm/tfrot)/(dot_product(xrot(:),xrot(:))*mrot))
-          rotanner=rotanner+svar
-          print*,'corrected rot friction: (value/delta)',rotanner,svar
-       end if
+       IF(TROT.GT.TROTM) THEN
+          !ROTANNER=0.5D0*DT*(EKINROT-EKINROTM-DOT_PRODUCT(0.5D0*FROT0(:),XROT(:)))&
+          !     &*DT/DOT_PRODUCT(XROT(:),XROT(:))
+          SVAR=ABS(0.5D0*DT*DT*(EKINROT-TROTM/TFROT)/(DOT_PRODUCT(XROT(:),XROT(:))*MROT))
+          ROTANNER=ROTANNER+SVAR
+          PRINT*,'CORRECTED ROT FRICTION: (VALUE/DELTA)',ROTANNER,SVAR
+       END IF
 
 
 !      =====================================================================
 !      ==                  USE FORCE AUTOPILOT                            ==
 !      =====================================================================
-       !calc 10 steps (do not quench start-up wriggles)
-       if(steps.gt.10) then
-          if(fautopara) then
-             print*,'dirpara',dot_product(xpara,fpara0)
-             if((dot_product(xpara,fpara0).gt.0.d0).and.(paraanner.lt.fricautopara)) then
-                paraanner=fricautopara
-                print*,'force autopilot corrected para friction'
-             end if
-          end if
+       !CALC 10 STEPS (DO NOT QUENCH START-UP WRIGGLES)
+       IF(STEPS.GT.10) THEN
+          IF(FAUTOPARA) THEN
+             PRINT*,'DIRPARA',DOT_PRODUCT(XPARA,FPARA0)
+             IF((DOT_PRODUCT(XPARA,FPARA0).GT.0.D0).AND.(PARAANNER.LT.FRICAUTOPARA)) THEN
+                PARAANNER=FRICAUTOPARA
+                PRINT*,'FORCE AUTOPILOT CORRECTED PARA FRICTION'
+             END IF
+          END IF
 
-          if(fautoperp) then
-             print*,'dirperp',dot_product(xperp,fperp0)
-             if((dot_product(xperp,fperp0).lt.0.d0).and.(perpanner.lt.fricautoperp)) then
-                perpanner=fricautoperp
-                print*,'force autopilot corrected perp friction'
-             end if
-          end if
+          IF(FAUTOPERP) THEN
+             PRINT*,'DIRPERP',DOT_PRODUCT(XPERP,FPERP0)
+             IF((DOT_PRODUCT(XPERP,FPERP0).LT.0.D0).AND.(PERPANNER.LT.FRICAUTOPERP)) THEN
+                PERPANNER=FRICAUTOPERP
+                PRINT*,'FORCE AUTOPILOT CORRECTED PERP FRICTION'
+             END IF
+          END IF
 
-          if(fautorot) then
-             print*,'dirrot',dot_product(xrot,frot0)
-             if((dot_product(xrot,frot0).lt.0.d0).and.(rotanner.lt.fricautorot)) then
-                rotanner=fricautorot
-                print*,'force autopilot corrected rot friction'
-             end if
-          end if
-       else
-          steps=steps+1
-       end if
+          IF(FAUTOROT) THEN
+             PRINT*,'DIRROT',DOT_PRODUCT(XROT,FROT0)
+             IF((DOT_PRODUCT(XROT,FROT0).LT.0.D0).AND.(ROTANNER.LT.FRICAUTOROT)) THEN
+                ROTANNER=FRICAUTOROT
+                PRINT*,'FORCE AUTOPILOT CORRECTED ROT FRICTION'
+             END IF
+          END IF
+       ELSE
+          STEPS=STEPS+1
+       END IF
 
 
 
 
 !      =====================================================================
-!      ==                     estimate TS                                 ==
+!      ==                     ESTIMATE TS                                 ==
 !      =====================================================================
-       call dimer$get_unmassweighted(n,y10,vec1)
-       write(dprotfil,*)'CENTERCOORD,unmassweigted ',y10(:)
-       write(dprotfil,*)'CENTERCOORD,unmassweigted ',vec1(:)
+       CALL DIMER$GET_UNMASSWEIGHTED(N,Y10,VEC1)
+       WRITE(DPROTFIL,*)'CENTERCOORD,UNMASSWEIGTED ',Y10(:)
+       WRITE(DPROTFIL,*)'CENTERCOORD,UNMASSWEIGTED ',VEC1(:)
 
        !TO DO: ADD HERE A CORRECTION FOR A ROTATIONAL FORCE!
 
-       vec1(:)=0.d0
-       if(abs(cpara).gt.1.d-5) vec1(:)=vec1(:)+fpara0(:)/cpara
-       if(abs(cperp).gt.1.d-5) vec1(:)=vec1(:)+fperp0(:)/cperp
-       write(dprotfil,*)'TS estimate',y10(:)+vec1(:)
-       write(dprotfil,*)'TS dist',sqrt(dot_product(vec1(:),vec1(:)))
+       VEC1(:)=0.D0
+       IF(ABS(CPARA).GT.1.D-5) VEC1(:)=VEC1(:)+FPARA0(:)/CPARA
+       IF(ABS(CPERP).GT.1.D-5) VEC1(:)=VEC1(:)+FPERP0(:)/CPERP
+       WRITE(DPROTFIL,*)'TS ESTIMATE',Y10(:)+VEC1(:)
+       WRITE(DPROTFIL,*)'TS DIST',SQRT(DOT_PRODUCT(VEC1(:),VEC1(:)))
 
-       return
-     end subroutine dimer$optanner
+       RETURN
+     END SUBROUTINE DIMER$OPTANNER
 
 
 
@@ -1900,106 +1900,106 @@ end SUBROUTINE DIMER$WRITEENERGYTRA
 
 
 !      .................................................................
-       subroutine dimer$optanner_old(n,dt,f1,f2,x10,x1m,x20,x2m,mperp,mpara,mrot,&
-            &fperpm,fparam,frotm,fperp0,fpara0,frot0,perpanner,paraanner,rotanner)
-!      ** determines the optimal friction                    **
-!      ** supposing an harmonic potential                    **
-         use dimer_module ,only: dprotfil
-       implicit none
-       integer(4),intent(in) :: n                                  ! 3*nat
-       real(8)   ,intent(in) :: dt                                 ! timestep
-       real(8)   ,intent(in) :: f1(n),f2(n)                        ! the actual forces
-       real(8)   ,intent(in) :: X10(n),X1m(n),x20(n),X2m(n)        ! squared dimer length
-       real(8)   ,intent(in) :: mperp,mpara,mrot                   ! fict. mass
-       real(8)   ,intent(in) :: fperpm(n),frotm(n),fparam(n)       ! the old forces
-       real(8)   ,intent(out):: fperp0(n),frot0(n),fpara0(n)       ! the forces to be stored outside
-       real(8)   ,intent(out):: perpanner,paraanner,rotanner       ! opt. friction 
-       real(8)               :: f1ortho(n),f2ortho(n) ! the orthogonal part of the forces
-       real(8)               :: e0(n),em(n) !the unity vectors in dimer direction
-       real(8)               :: y10(n),y20(n),y1m(n),y2m(n)            
-       real(8)               :: svar,svar1 
-       real(8)               :: xpara(n),xperp(n),xcenter(n),xrot(n)   ! the covered distance
+       SUBROUTINE DIMER$OPTANNER_OLD(N,DT,F1,F2,X10,X1M,X20,X2M,MPERP,MPARA,MROT,&
+            &FPERPM,FPARAM,FROTM,FPERP0,FPARA0,FROT0,PERPANNER,PARAANNER,ROTANNER)
+!      ** DETERMINES THE OPTIMAL FRICTION                    **
+!      ** SUPPOSING AN HARMONIC POTENTIAL                    **
+         USE DIMER_MODULE ,ONLY: DPROTFIL
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN) :: N                                  ! 3*NAT
+       REAL(8)   ,INTENT(IN) :: DT                                 ! TIMESTEP
+       REAL(8)   ,INTENT(IN) :: F1(N),F2(N)                        ! THE ACTUAL FORCES
+       REAL(8)   ,INTENT(IN) :: X10(N),X1M(N),X20(N),X2M(N)        ! SQUARED DIMER LENGTH
+       REAL(8)   ,INTENT(IN) :: MPERP,MPARA,MROT                   ! FICT. MASS
+       REAL(8)   ,INTENT(IN) :: FPERPM(N),FROTM(N),FPARAM(N)       ! THE OLD FORCES
+       REAL(8)   ,INTENT(OUT):: FPERP0(N),FROT0(N),FPARA0(N)       ! THE FORCES TO BE STORED OUTSIDE
+       REAL(8)   ,INTENT(OUT):: PERPANNER,PARAANNER,ROTANNER       ! OPT. FRICTION 
+       REAL(8)               :: F1ORTHO(N),F2ORTHO(N) ! THE ORTHOGONAL PART OF THE FORCES
+       REAL(8)               :: E0(N),EM(N) !THE UNITY VECTORS IN DIMER DIRECTION
+       REAL(8)               :: Y10(N),Y20(N),Y1M(N),Y2M(N)            
+       REAL(8)               :: SVAR,SVAR1 
+       REAL(8)               :: XPARA(N),XPERP(N),XCENTER(N),XROT(N)   ! THE COVERED DISTANCE
 !      ****************************************************************
-       y10(:)=x10(:)+x20(:)
-       y20(:)=x10(:)-x20(:)
-       y2m(:)=x1m(:)-x2m(:)
-       y1m(:)=x1m(:)+x2m(:)
+       Y10(:)=X10(:)+X20(:)
+       Y20(:)=X10(:)-X20(:)
+       Y2M(:)=X1M(:)-X2M(:)
+       Y1M(:)=X1M(:)+X2M(:)
 
-       e0(:)=y20(:)/sqrt(dot_product(y20(:),y20(:)))
-       em(:)=y2m(:)/sqrt(dot_product(y2m(:),y2m(:)))
+       E0(:)=Y20(:)/SQRT(DOT_PRODUCT(Y20(:),Y20(:)))
+       EM(:)=Y2M(:)/SQRT(DOT_PRODUCT(Y2M(:),Y2M(:)))
 
-       f1ortho(:)=f1(:)-e0(:)*dot_product(e0(:),f1(:))
-       f2ortho(:)=f2(:)-e0(:)*dot_product(e0(:),f2(:))
-
-!      =====================================================================
-!      ==    determine the forces (directions referenced on image1)       ==
-!      =====================================================================
-       fpara0(:)=e0(:)*dot_product(e0(:),(f1(:)+f2(:))/0.5d0)
-       fperp0(:)=0.5d0*(f1ortho(:)+f2ortho(:))
-
-       if(dot_product(f1ortho(:),f2ortho(:)).lt.0.0d0) then
-          !antiparallel
-          if(dot_product(f1ortho(:),f1ortho(:)).lt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=f1ortho(:)
-          else if(dot_product(f1ortho(:),f1ortho(:)).gt.dot_product(f2ortho(:),f2ortho(:))) then
-             frot0(:)=-f2ortho(:)!- because we reference all on image one!!!
-          else
-             frot0(:)=0.0d0
-          end if
-       else
-          !parallel
-          frot0(:)=0.5d0*(f1ortho(:)-f2ortho(:))
-       end if
-
-       write(dprotfil,*)'perpforces',sqrt(dot_product(fperp0(:),fperp0(:)))
-       write(dprotfil,*)'paraforces',sqrt(dot_product(fpara0(:),fpara0(:)))
-       write(dprotfil,*)'rotforces',sqrt(dot_product(frot0(:),frot0(:)))
-
-write(dprotfil,*)"sum42-splitted forces",2.0d0*dot_product(fperp0(:),fperp0(:))+2.0d0*dot_product(fpara0(:),fpara0(:))+&
-     &2.0d0*dot_product(frot0(:),frot0(:))
-write(dprotfil,*)"sum42",dot_product(f1,f1)+dot_product(f2,f2)
-!      =====================================================================
-!      ==determine the covered distances (directions referenced on image1)==
-!      =====================================================================
-       xcenter(:)=0.5d0*y10(:)-0.5d0*y1m(:)
-       xpara(:)=dot_product(em(:),xcenter(:))
-       xperp(:)=xcenter(:)-xpara(:)
-       xrot(:)=x10(:)-xcenter(:)-x1m(:)
-
-       write(dprotfil,*)'perpdist massweighted!',sqrt(dot_product(xperp(:),xperp(:)))
-       write(dprotfil,*)'paradist massweighted!',sqrt(dot_product(xpara(:),xpara(:)))
-       write(dprotfil,*)'rotdist massweighted!',sqrt(dot_product(xrot(:),xrot(:)))
+       F1ORTHO(:)=F1(:)-E0(:)*DOT_PRODUCT(E0(:),F1(:))
+       F2ORTHO(:)=F2(:)-E0(:)*DOT_PRODUCT(E0(:),F2(:))
 
 !      =====================================================================
-!      ==               determine the optimal friction                    ==
+!      ==    DETERMINE THE FORCES (DIRECTIONS REFERENCED ON IMAGE1)       ==
+!      =====================================================================
+       FPARA0(:)=E0(:)*DOT_PRODUCT(E0(:),(F1(:)+F2(:))/0.5D0)
+       FPERP0(:)=0.5D0*(F1ORTHO(:)+F2ORTHO(:))
+
+       IF(DOT_PRODUCT(F1ORTHO(:),F2ORTHO(:)).LT.0.0D0) THEN
+          !ANTIPARALLEL
+          IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).LT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+             FROT0(:)=F1ORTHO(:)
+          ELSE IF(DOT_PRODUCT(F1ORTHO(:),F1ORTHO(:)).GT.DOT_PRODUCT(F2ORTHO(:),F2ORTHO(:))) THEN
+             FROT0(:)=-F2ORTHO(:)!- BECAUSE WE REFERENCE ALL ON IMAGE ONE!!!
+          ELSE
+             FROT0(:)=0.0D0
+          END IF
+       ELSE
+          !PARALLEL
+          FROT0(:)=0.5D0*(F1ORTHO(:)-F2ORTHO(:))
+       END IF
+
+       WRITE(DPROTFIL,*)'PERPFORCES',SQRT(DOT_PRODUCT(FPERP0(:),FPERP0(:)))
+       WRITE(DPROTFIL,*)'PARAFORCES',SQRT(DOT_PRODUCT(FPARA0(:),FPARA0(:)))
+       WRITE(DPROTFIL,*)'ROTFORCES',SQRT(DOT_PRODUCT(FROT0(:),FROT0(:)))
+
+WRITE(DPROTFIL,*)"SUM42-SPLITTED FORCES",2.0D0*DOT_PRODUCT(FPERP0(:),FPERP0(:))+2.0D0*DOT_PRODUCT(FPARA0(:),FPARA0(:))+&
+     &2.0D0*DOT_PRODUCT(FROT0(:),FROT0(:))
+WRITE(DPROTFIL,*)"SUM42",DOT_PRODUCT(F1,F1)+DOT_PRODUCT(F2,F2)
+!      =====================================================================
+!      ==DETERMINE THE COVERED DISTANCES (DIRECTIONS REFERENCED ON IMAGE1)==
+!      =====================================================================
+       XCENTER(:)=0.5D0*Y10(:)-0.5D0*Y1M(:)
+       XPARA(:)=DOT_PRODUCT(EM(:),XCENTER(:))
+       XPERP(:)=XCENTER(:)-XPARA(:)
+       XROT(:)=X10(:)-XCENTER(:)-X1M(:)
+
+       WRITE(DPROTFIL,*)'PERPDIST MASSWEIGHTED!',SQRT(DOT_PRODUCT(XPERP(:),XPERP(:)))
+       WRITE(DPROTFIL,*)'PARADIST MASSWEIGHTED!',SQRT(DOT_PRODUCT(XPARA(:),XPARA(:)))
+       WRITE(DPROTFIL,*)'ROTDIST MASSWEIGHTED!',SQRT(DOT_PRODUCT(XROT(:),XROT(:)))
+
+!      =====================================================================
+!      ==               DETERMINE THE OPTIMAL FRICTION                    ==
 !      =====================================================================
 
-       svar=sqrt(dot_product(fperp0-fperpm,fperp0-fperpm))
-       svar1=sqrt(dot_product(xperp(:),xperp(:)))
-!original       perpanner=2.0d0*sqrt(mperp*svar/svar1)
-       perpanner=dt*sqrt(mperp*svar/svar1)
+       SVAR=SQRT(DOT_PRODUCT(FPERP0-FPERPM,FPERP0-FPERPM))
+       SVAR1=SQRT(DOT_PRODUCT(XPERP(:),XPERP(:)))
+!ORIGINAL       PERPANNER=2.0D0*SQRT(MPERP*SVAR/SVAR1)
+       PERPANNER=DT*SQRT(MPERP*SVAR/SVAR1)
 
-write(dprotfil,*)"debug42perp","svar",svar,"svar1",svar1,"perpanner",perpanner,"end"
+WRITE(DPROTFIL,*)"DEBUG42PERP","SVAR",SVAR,"SVAR1",SVAR1,"PERPANNER",PERPANNER,"END"
 
-       svar=sqrt(dot_product(fpara0-fparam,fpara0-fparam))
-       svar1=sqrt(dot_product(xpara(:),xpara(:)))
-!original       paraanner=2.0d0*sqrt(abs(mpara)*svar/svar1)
-       paraanner=dt*sqrt(abs(mpara)*svar/svar1)
+       SVAR=SQRT(DOT_PRODUCT(FPARA0-FPARAM,FPARA0-FPARAM))
+       SVAR1=SQRT(DOT_PRODUCT(XPARA(:),XPARA(:)))
+!ORIGINAL       PARAANNER=2.0D0*SQRT(ABS(MPARA)*SVAR/SVAR1)
+       PARAANNER=DT*SQRT(ABS(MPARA)*SVAR/SVAR1)
 
-write(dprotfil,*)"debug42para","svar",svar,"svar1",svar1,"perpanner",paraanner,"end"
-write(dprotfil,*)svar/svar1,mpara
-       svar=sqrt(dot_product(frot0-frotm,frot0-frotm))
-       svar1=sqrt(dot_product(xrot(:),xrot(:)))
-!original       rotanner=2.0d0*sqrt(mrot*svar/svar1)
-       rotanner=dt*sqrt(mrot*svar/svar1)
+WRITE(DPROTFIL,*)"DEBUG42PARA","SVAR",SVAR,"SVAR1",SVAR1,"PERPANNER",PARAANNER,"END"
+WRITE(DPROTFIL,*)SVAR/SVAR1,MPARA
+       SVAR=SQRT(DOT_PRODUCT(FROT0-FROTM,FROT0-FROTM))
+       SVAR1=SQRT(DOT_PRODUCT(XROT(:),XROT(:)))
+!ORIGINAL       ROTANNER=2.0D0*SQRT(MROT*SVAR/SVAR1)
+       ROTANNER=DT*SQRT(MROT*SVAR/SVAR1)
 
-write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"end"
-       write(dprotfil,*)'perpanner',perpanner
-       write(dprotfil,*)'paraanner',paraanner
-       write(dprotfil,*)'rotanner',rotanner
+WRITE(DPROTFIL,*)"DEBUG42ROT","SVAR",SVAR,"SVAR1",SVAR1,"PERPANNER",ROTANNER,"END"
+       WRITE(DPROTFIL,*)'PERPANNER',PERPANNER
+       WRITE(DPROTFIL,*)'PARAANNER',PARAANNER
+       WRITE(DPROTFIL,*)'ROTANNER',ROTANNER
 
-       return
-     end subroutine dimer$optanner_old
+       RETURN
+     END SUBROUTINE DIMER$OPTANNER_OLD
 
 
 
@@ -2014,14 +2014,14 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
       INTEGER                  :: I,IAT
       LOGICAL(4)               :: LOOP
 !     ******************************************************************
-      write(dprotfil,*)"APPLY COUPLE CONSTRAINTS"
+      WRITE(DPROTFIL,*)"APPLY COUPLE CONSTRAINTS"
 
       THIS_D=>ELDEST_D
       LOOP=.TRUE.
-      do while (LOOP)
-         call ATOMLIST$INDEX(THIS_D%ID,IAT)
+      DO WHILE (LOOP)
+         CALL ATOMLIST$INDEX(THIS_D%ID,IAT)
          DO I=1,3
-            write(dprotfil,*)"SEP: ",ABS(Y2((IAT*3)-3+I))
+            WRITE(DPROTFIL,*)"SEP: ",ABS(Y2((IAT*3)-3+I))
             IF(ABS(Y2((IAT*3)-3+I)).LT.CONSTRSTEP) THEN
                !IT'S OK TO SET IT 0
                Y2((IAT*3)-3+I)=0.0D0
@@ -2030,17 +2030,17 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
                IF(Y2((IAT*3)-3+I).LT.0.0D0) Y2((IAT*3)-3+I)=Y2((IAT*3)-3+I)+CONSTRSTEP 
                IF(Y2((IAT*3)-3+I).GT.0.0D0) Y2((IAT*3)-3+I)=Y2((IAT*3)-3+I)-CONSTRSTEP 
             END IF
-            write(dprotfil,*)"SEP NEW: ",ABS(Y2((IAT*3)-3+I))
+            WRITE(DPROTFIL,*)"SEP NEW: ",ABS(Y2((IAT*3)-3+I))
 
          END DO
 
         !FOR THE FOOT CONTROLLED LOOP
-        IF(associated(THIS_D%NEXT_D)) THEN
+        IF(ASSOCIATED(THIS_D%NEXT_D)) THEN
            THIS_D=>THIS_D%NEXT_D
         ELSE
            LOOP=.FALSE.
         END IF
-     end do
+     END DO
 
 
      RETURN
@@ -2098,22 +2098,22 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
       ELSE IF(ID_.EQ.'DLAMBDA') THEN
         DLAMBDA=VAL_
       ELSE IF(ID_.EQ.'TMAXPARA') THEN
-        Tparam=VAL_
+        TPARAM=VAL_
       ELSE IF(ID_.EQ.'TMAXROT') THEN
-        Trotm=VAL_
+        TROTM=VAL_
       ELSE IF(ID_.EQ.'TMAXPERP') THEN
-        Tperpm=VAL_
+        TPERPM=VAL_
       ELSE IF(ID_.EQ.'FRICAUTOPARA') THEN
-        fricautopara=VAL_
+        FRICAUTOPARA=VAL_
       ELSE IF(ID_.EQ.'FRICAUTOPERP') THEN
-        fricautoperp=VAL_
+        FRICAUTOPERP=VAL_
       ELSE IF(ID_.EQ.'FRICAUTOROT') THEN
-        fricautorot=VAL_
+        FRICAUTOROT=VAL_
 
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
       ELSE IF(ID_.EQ.'FORCEDSTEP') THEN
         FORCEDSTEP=VAL_
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
 
       ELSE
         CALL ERROR$MSG('ID_ NOT RECOGNIZED')
@@ -2124,7 +2124,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
     END SUBROUTINE DIMER$SETR8
 !
 !     .................................................................. 
-      SUBROUTINE DImer$GETR8(ID_,VAL_)
+      SUBROUTINE DIMER$GETR8(ID_,VAL_)
 !     ******************************************************************
 !     ******************************************************************
       USE DIMER_MODULE
@@ -2143,7 +2143,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
 !!$        CALL ERROR$CHVAL('ID_',ID_)
 !!$        CALL ERROR$STOP('DIMER$GETR8')
 !!$      END IF
-      val_=0.d0 !just to get rid of compiler warnings
+      VAL_=0.D0 !JUST TO GET RID OF COMPILER WARNINGS
       RETURN
     END SUBROUTINE DIMER$GETR8
 !     .................................................................. 
@@ -2171,7 +2171,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
     END SUBROUTINE DIMER$SETV
 !
 !     .................................................................. 
-!!$      SUBROUTINE DImer$GETV(ID_,VAL_,N_)
+!!$      SUBROUTINE DIMER$GETV(ID_,VAL_,N_)
 !!$!     ******************************************************************
 !!$!     ******************************************************************
 !!$      USE DIMER_MODULE
@@ -2215,7 +2215,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
     END SUBROUTINE DIMER$SETCH
 !
 !     .................................................................. 
-      SUBROUTINE DImer$GETCH(ID_,VAL_)
+      SUBROUTINE DIMER$GETCH(ID_,VAL_)
 !     ******************************************************************
 !     ******************************************************************
       USE DIMER_MODULE
@@ -2234,7 +2234,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
 !!$        CALL ERROR$CHVAL('ID_',ID_)
 !!$        CALL ERROR$STOP('DIMER$GETR8')
 !!$      END IF
-      val_=' ' !
+      VAL_=' ' !
       RETURN
     END SUBROUTINE DIMER$GETCH
 !
@@ -2282,10 +2282,10 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
       ELSE IF(ID_.EQ.'FAUTOROT') THEN
         FAUTOROT=VAL_
 
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
       ELSE IF(ID_.EQ.'CLIMBPERP') THEN
        CLIMBPERP =VAL_
-!alex: this is for pclimb-testing!
+!ALEX: THIS IS FOR PCLIMB-TESTING!
 !      ELSE IF(ID_.EQ.'') THEN
 !        =VAL_
       ELSE
@@ -2369,7 +2369,7 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
 !!$        CALL ERROR$CHVAL('ID_',ID_)
 !!$        CALL ERROR$STOP('DIMER$SETL4')
 !!$      END IF
-      val_=0 !just to get rid of compiler warnings
+      VAL_=0 !JUST TO GET RID OF COMPILER WARNINGS
       RETURN
     END SUBROUTINE DIMER$GETI4
 !
@@ -2379,26 +2379,26 @@ write(dprotfil,*)"debug42rot","svar",svar,"svar1",svar1,"perpanner",rotanner,"en
 SUBROUTINE DIMER$GETPROCESSLEADER2(NVAL,WORLD_ID)
 !##################################################################
   USE MPE_MODULE
-  use dimer_module, only:thistask,ntasks
+  USE DIMER_MODULE, ONLY:THISTASK,NTASKS
   IMPLICIT NONE
-  integer(4),intent(out) :: NVAL !the world_id of processleader on image2
-  integer(4),intent(out) :: WORLD_ID !the world_id of the calling process
-  integer(4)             :: NWORLDTASKS
+  INTEGER(4),INTENT(OUT) :: NVAL !THE WORLD_ID OF PROCESSLEADER ON IMAGE2
+  INTEGER(4),INTENT(OUT) :: WORLD_ID !THE WORLD_ID OF THE CALLING PROCESS
+  INTEGER(4)             :: NWORLDTASKS
 
          NVAL=0
-         call MPE$QUERY('MONOMER',NTASKS,THISTASK)
-         call MPE$QUERY('~',NWORLDTASKS,WORLD_ID)
+         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+         CALL MPE$QUERY('~',NWORLDTASKS,WORLD_ID)
          
-         if(WORLD_ID.ne.1.and.THISTASK.eq.1) then
-            !we are task 1 in dimer2
+         IF(WORLD_ID.NE.1.AND.THISTASK.EQ.1) THEN
+            !WE ARE TASK 1 IN DIMER2
             NVAL=WORLD_ID
-         end if
+         END IF
          
          CALL MPE$COMBINE('~','+',NVAL)
-         !NVAL now equals the WORLD_ID of the 1st task in dimer2
-         !on all machines [the result is known on all machines]
-  return
-end SUBROUTINE DIMER$GETPROCESSLEADER2
+         !NVAL NOW EQUALS THE WORLD_ID OF THE 1ST TASK IN DIMER2
+         !ON ALL MACHINES [THE RESULT IS KNOWN ON ALL MACHINES]
+  RETURN
+END SUBROUTINE DIMER$GETPROCESSLEADER2
 
 
 
@@ -2407,43 +2407,43 @@ end SUBROUTINE DIMER$GETPROCESSLEADER2
 
 
 !##################################################################
-SUBROUTINE DIMER$GET_massweighted(n,R,X)
-!##################################################################
-  IMPLICIT NONE
-  integer(4),intent(in) :: N !the dimensionality
-  real(8), intent(in)   :: R(N) ! the coordinate vector in real space
-  real(8), intent(out)  :: X(N) ! the massweighted coordinate vector  
-  real(8)               :: Rmass(n/3) ! the massvector
-  integer(4)            :: i
-      !get RMASS
-      CALL ATOMLIST$GETR8A('MASS',0,(n/3),RMASS)
-      do i=1,n/3
-         X((i-1)*3+1)=sqrt(RMASS(i))*R((i-1)*3+1)
-         X((i-1)*3+2)=sqrt(RMASS(i))*R((i-1)*3+2)
-         X((i-1)*3+3)=sqrt(RMASS(i))*R((i-1)*3+3)
-      end do
-      return
-    end SUBROUTINE DIMER$GET_massweighted
-
-
-!##################################################################
-SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
+SUBROUTINE DIMER$GET_MASSWEIGHTED(N,R,X)
 !##################################################################
   IMPLICIT NONE
-  integer(4),intent(in) :: N !the dimensionality
-  real(8), intent(out)   :: R(N) ! the coordinate vector in real space
-  real(8), intent(in)  :: X(N) ! the massweighted coordinate vector  
-  real(8)               :: Rmass(n/3) ! the massvector
-  integer(4)            :: i
-      !get RMASS
-      CALL ATOMLIST$GETR8A('MASS',0,(n/3),RMASS)
-      do i=1,n/3
-         R((i-1)*3+1)=(1.0d0/sqrt(RMASS(i)))*X((i-1)*3+1)
-         R((i-1)*3+2)=(1.0d0/sqrt(RMASS(i)))*X((i-1)*3+2)
-         R((i-1)*3+3)=(1.0d0/sqrt(RMASS(i)))*X((i-1)*3+3)
-      end do
-      return
-    end SUBROUTINE DIMER$GET_unmassweighted
+  INTEGER(4),INTENT(IN) :: N !THE DIMENSIONALITY
+  REAL(8), INTENT(IN)   :: R(N) ! THE COORDINATE VECTOR IN REAL SPACE
+  REAL(8), INTENT(OUT)  :: X(N) ! THE MASSWEIGHTED COORDINATE VECTOR  
+  REAL(8)               :: RMASS(N/3) ! THE MASSVECTOR
+  INTEGER(4)            :: I
+      !GET RMASS
+      CALL ATOMLIST$GETR8A('MASS',0,(N/3),RMASS)
+      DO I=1,N/3
+         X((I-1)*3+1)=SQRT(RMASS(I))*R((I-1)*3+1)
+         X((I-1)*3+2)=SQRT(RMASS(I))*R((I-1)*3+2)
+         X((I-1)*3+3)=SQRT(RMASS(I))*R((I-1)*3+3)
+      END DO
+      RETURN
+    END SUBROUTINE DIMER$GET_MASSWEIGHTED
+
+
+!##################################################################
+SUBROUTINE DIMER$GET_UNMASSWEIGHTED(N,X,R)
+!##################################################################
+  IMPLICIT NONE
+  INTEGER(4),INTENT(IN) :: N !THE DIMENSIONALITY
+  REAL(8), INTENT(OUT)   :: R(N) ! THE COORDINATE VECTOR IN REAL SPACE
+  REAL(8), INTENT(IN)  :: X(N) ! THE MASSWEIGHTED COORDINATE VECTOR  
+  REAL(8)               :: RMASS(N/3) ! THE MASSVECTOR
+  INTEGER(4)            :: I
+      !GET RMASS
+      CALL ATOMLIST$GETR8A('MASS',0,(N/3),RMASS)
+      DO I=1,N/3
+         R((I-1)*3+1)=(1.0D0/SQRT(RMASS(I)))*X((I-1)*3+1)
+         R((I-1)*3+2)=(1.0D0/SQRT(RMASS(I)))*X((I-1)*3+2)
+         R((I-1)*3+3)=(1.0D0/SQRT(RMASS(I)))*X((I-1)*3+3)
+      END DO
+      RETURN
+    END SUBROUTINE DIMER$GET_UNMASSWEIGHTED
 
 
 !     ..................................................................
@@ -2453,120 +2453,120 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
 !     **  SHOULD BE CALLED BEFORE DIMER_READIN@PAW_IOROUTINES         **
 !     ******************************************************************
       USE DIMER_MODULE
-      use dimer_oscillator_module
+      USE DIMER_OSCILLATOR_MODULE
       IMPLICIT NONE
       !********************************
-        dimerfollowdown       =  .false.
+        DIMERFOLLOWDOWN       =  .FALSE.
         PLACEDIMER            =  .TRUE.
-        D                     =   1.5d0   ! dimerdistance
+        D                     =   1.5D0   ! DIMERDISTANCE
         CALCMULTIPLIERITERMAX = 1000       ! EMERGENCY EXIT FOR THE ITERATION LOOP AFTER X STEPS
         DLAMBDA               =   1.0D-10 ! EXACTNESS OF LAMBDA (= LAGRANGE MULTIPLIER) CALCULATION
         CALCVELOCITYITERMAX   = 1000       ! EMERGENCY EXIT FOR THE ITERATION LOOP AFTER X STEPS
-!!        DVELOCITY             =   1.0D-10 ! EXACTNESS OF VELOCITY iteration 
-        lcs                   =   1       !how many steps with no ch.of dimercent. bef. shorten sqd
-        RCDIFFMIN             =   0.0001  !difference in dimer center position below lc=lc+1 
-        DSTEP                 =   0.0050   !d=d-dstep
-        NSTEPS                =   0       !if 0 we use dstep
-        DMIN                  =   0.4d0   !the minimal dimer length (no further reducement of d)
-        DLFLEX                =  .false.  !flexible dimer length
-        KDLENGTH              =  .false.   !keep the length of the startup
-        INHIBITUP             =  .false.  !inhibit the upward motion of the dimer
-        INHIBITPERP           =  .false.
-        ONLYPERP              =  .false.
-        ONLYROT               =  .false.
-        WDOWN                 =  .false.  !weight downdimer image 1 (F1=WDOWNFACT*F1)
-        WDOWNFACT             =  10.0d0        
-        ENERGYTRA             =   0.5       ! write energy/distance to RTS all n steps 0 -> never
-        CENTER_ID             = 'COG'  ! center of gravity is default
+!!        DVELOCITY             =   1.0D-10 ! EXACTNESS OF VELOCITY ITERATION 
+        LCS                   =   1       !HOW MANY STEPS WITH NO CH.OF DIMERCENT. BEF. SHORTEN SQD
+        RCDIFFMIN             =   0.0001  !DIFFERENCE IN DIMER CENTER POSITION BELOW LC=LC+1 
+        DSTEP                 =   0.0050   !D=D-DSTEP
+        NSTEPS                =   0       !IF 0 WE USE DSTEP
+        DMIN                  =   0.4D0   !THE MINIMAL DIMER LENGTH (NO FURTHER REDUCEMENT OF D)
+        DLFLEX                =  .FALSE.  !FLEXIBLE DIMER LENGTH
+        KDLENGTH              =  .FALSE.   !KEEP THE LENGTH OF THE STARTUP
+        INHIBITUP             =  .FALSE.  !INHIBIT THE UPWARD MOTION OF THE DIMER
+        INHIBITPERP           =  .FALSE.
+        ONLYPERP              =  .FALSE.
+        ONLYROT               =  .FALSE.
+        WDOWN                 =  .FALSE.  !WEIGHT DOWNDIMER IMAGE 1 (F1=WDOWNFACT*F1)
+        WDOWNFACT             =  10.0D0        
+        ENERGYTRA             =   0.5       ! WRITE ENERGY/DISTANCE TO RTS ALL N STEPS 0 -> NEVER
+        CENTER_ID             = 'COG'  ! CENTER OF GRAVITY IS DEFAULT
 !!        DROT                  =   0.001  
-        STRETCH               = .false.
-        STRETCHDIST           =   0.1d0
-        FMPARA                =  -1.0d0
-        FMPERP                =   1.0d0
-        FMROT                 =   1.0d0
-        fricpara              =   0.1d0
-        fricperp              =   0.1d0
-        fricrot               =   0.1d0
-        optfricpara           = .false.
-        optfricperp           = .false.
-        optfricrot            = .false.  
-        constrstep            = 0.01d0
-        tparam                = 500.d0
-        tperpm                = 500.d0
-        trotm                 = 500.d0
+        STRETCH               = .FALSE.
+        STRETCHDIST           =   0.1D0
+        FMPARA                =  -1.0D0
+        FMPERP                =   1.0D0
+        FMROT                 =   1.0D0
+        FRICPARA              =   0.1D0
+        FRICPERP              =   0.1D0
+        FRICROT               =   0.1D0
+        OPTFRICPARA           = .FALSE.
+        OPTFRICPERP           = .FALSE.
+        OPTFRICROT            = .FALSE.  
+        CONSTRSTEP            = 0.01D0
+        TPARAM                = 500.D0
+        TPERPM                = 500.D0
+        TROTM                 = 500.D0
         
-        FAUTOPARA             =.false.
-        FAUTOPERP             =.false.
-        FAUTOROT              =.false.
-        FRICAUTOPARA          = 0.05d0
-        FRICAUTOPERP          = 0.05d0
-        FRICAUTOROT           = 0.05d0
+        FAUTOPARA             =.FALSE.
+        FAUTOPERP             =.FALSE.
+        FAUTOROT              =.FALSE.
+        FRICAUTOPARA          = 0.05D0
+        FRICAUTOPERP          = 0.05D0
+        FRICAUTOROT           = 0.05D0
 
-!alex: this is for pclimb-testing!
-        CLIMBPERP             = .false.
-        FORCEDSTEP            = 0.001d0
-        TFIRSTCLIMBSTEP       = .true.
-!alex: this is for pclimb-testing!
-
-
-        treadam=.false.
-        treadamnotthere=.false.
+!ALEX: THIS IS FOR PCLIMB-TESTING!
+        CLIMBPERP             = .FALSE.
+        FORCEDSTEP            = 0.001D0
+        TFIRSTCLIMBSTEP       = .TRUE.
+!ALEX: THIS IS FOR PCLIMB-TESTING!
 
 
-        !connect the protocoll files etc.
-        call dimer_init_files()
+        TREADAM=.FALSE.
+        TREADAMNOTTHERE=.FALSE.
 
 
-        !init the oscillator array
-        allocate(oscm(odim))
-        allocate(osc0(odim))
-        allocate(oscp(odim))
-        allocate(oscmass(odim))  
-        allocate(oscanner(odim))
-        allocate(oscc(odim))
+        !CONNECT THE PROTOCOLL FILES ETC.
+        CALL DIMER_INIT_FILES()
 
-        oscp(:)=0.d0
-        oscm(:)=0.d0
-        osc0(:)=0.d0
+
+        !INIT THE OSCILLATOR ARRAY
+        ALLOCATE(OSCM(ODIM))
+        ALLOCATE(OSC0(ODIM))
+        ALLOCATE(OSCP(ODIM))
+        ALLOCATE(OSCMASS(ODIM))  
+        ALLOCATE(OSCANNER(ODIM))
+        ALLOCATE(OSCC(ODIM))
+
+        OSCP(:)=0.D0
+        OSCM(:)=0.D0
+        OSC0(:)=0.D0
         
-        !actually set by hand
-        oscmass(:)=0.1d0*1822.88d0   !100. a.u.
-        oscc(:)=1.d0 
-        oscanner(:)=0.1d0 !we use opt friction in the subroutine (we do not know dt now) 
+        !ACTUALLY SET BY HAND
+        OSCMASS(:)=0.1D0*1822.88D0   !100. A.U.
+        OSCC(:)=1.D0 
+        OSCANNER(:)=0.1D0 !WE USE OPT FRICTION IN THE SUBROUTINE (WE DO NOT KNOW DT NOW) 
 
-        !the code for opt. friction:
-        !do i=1,odim
-           !we use optimized friction here
-        !   oscanner(i)=dt**2*sqrt(oscc(i)/oscmass(i))
-        !end do
+        !THE CODE FOR OPT. FRICTION:
+        !DO I=1,ODIM
+           !WE USE OPTIMIZED FRICTION HERE
+        !   OSCANNER(I)=DT**2*SQRT(OSCC(I)/OSCMASS(I))
+        !END DO
 
-        return
-      end SUBROUTINE DIMER$INIT
+        RETURN
+      END SUBROUTINE DIMER$INIT
 
 
 
 !     ..................................................................
       SUBROUTINE DIMER$INITDIM()
 !     ******************************************************************
-!     **  INITIALIZES THE DIMER DIM Variable and the data structures  **
-!     **  depending thereof. should be called after strcin            **
+!     **  INITIALIZES THE DIMER DIM VARIABLE AND THE DATA STRUCTURES  **
+!     **  DEPENDING THEREOF. SHOULD BE CALLED AFTER STRCIN            **
 !     ******************************************************************
         USE DIMER_MODULE
         IMPLICIT NONE
-        integer(4)                  :: nat_
+        INTEGER(4)                  :: NAT_
         !********************************
 
-        call ATOMLIST$NATOM(NAT_)
-        dim=3*nat_
-        allocate(rts(dim))
-        allocate(g1(dim))
-        allocate(g2(dim))
+        CALL ATOMLIST$NATOM(NAT_)
+        DIM=3*NAT_
+        ALLOCATE(RTS(DIM))
+        ALLOCATE(G1(DIM))
+        ALLOCATE(G2(DIM))
         
-        g1(:)=0.d0
-        g2(:)=0.d0
+        G1(:)=0.D0
+        G2(:)=0.D0
 
-        return
-      end SUBROUTINE DIMER$INITDIM
+        RETURN
+      END SUBROUTINE DIMER$INITDIM
 
 
 !     ..................................................................
@@ -2577,88 +2577,88 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
 !     ******************************************************************
       USE DIMER_MODULE
       IMPLICIT NONE
-      INTEGER(4),intent(in)       :: NFIL  
+      INTEGER(4),INTENT(IN)       :: NFIL  
       LOGICAL(4)                  :: LOOP
       !********************************
       
-      write(nfil,FMT="(A)")"========================================================"
-      write(nfil,FMT="(A)")"=                                                      ="
-      write(nfil,FMT="(A)")"=            SETTINGS FROM !CONTROL!DIMER              ="
-      write(nfil,FMT="(A)")"=                                                      ="
-      write(nfil,FMT="(A)")"========================================================"
-      write(nfil,*)"dimer ",dimer
-      write(nfil,*)"dimerfollowdown",dimerfollowdown      
-      write(nfil,*)"D ",D                      
-      write(nfil,*) "CALCMULTIPLIERITERMAX ",CALCMULTIPLIERITERMAX  
-      write(nfil,*) "DLAMBDA ",DLAMBDA                
-      write(nfil,*) "CALCVELOCITYITERMAX ",CALCVELOCITYITERMAX    
-      write(nfil,*) "DVELOCITY ",DVELOCITY              
-      write(nfil,*) "lcs ",lcs                     
-      write(nfil,*) "RCDIFFMIN ",RCDIFFMIN              
-      write(nfil,*) "DSTEP ",DSTEP                   
-      write(nfil,*) "NSTEPS ",NSTEPS                   
-      write(nfil,*) "DMIN ",DMIN                   
-      write(nfil,*) "DLFLEX ",DLFLEX                  
-      write(nfil,*) "KDLENGTH ",KDLENGTH               
-      write(nfil,*) "INHIBITUP ",INHIBITUP              
-      write(nfil,*) "INHIBITPERP ",INHIBITPERP            
-      write(nfil,*) "ONLYPERP ",ONLYPERP               
-      write(nfil,*) "ONLYROT ",ONLYROT                 
-      write(nfil,*) "WDOWN ",WDOWN                  
-      write(nfil,*) "WDOWNFACT ",WDOWNFACT                     
-      write(nfil,*) "ENERGYTRA ",ENERGYTRA
-      write(nfil,*)"NATOMS ",dim/3
-      write(nfil,*)"STRETCH",stretch
-      write(nfil,*)"STRETCHDIST",stretchdist
-      write(nfil,*)"FMPARA ",fmpara
-      write(nfil,*)"FMPERP ",fMPERP
-      write(nfil,*)"FMROT ",fmrot
-      write(nfil,*)"fricpara ",fricpara
-      write(nfil,*)"fricperp ",fricperp
-      write(nfil,*)"fricrot ",fricrot
-      write(nfil,*)"optfricpara ",optfricpara
-      write(nfil,*)"optfricperp ",optfricperp
-      write(nfil,*)"optfricrot ",optfricrot
-      write(nfil,*)"FAUTOPARA", FAUTOPARA   
-      write(nfil,*)"FAUTOPERP",  FAUTOPERP  
-      write(nfil,*)"FAUTOROT",    FAUTOROT
-      write(nfil,*)"FRICAUTOPARA",FRICAUTOPARA 
-      write(nfil,*)"FRICAUTOPERP",FRICAUTOPERP
-      write(nfil,*)"FRICAUTOROT",FRICAUTOROT
+      WRITE(NFIL,FMT="(A)")"========================================================"
+      WRITE(NFIL,FMT="(A)")"=                                                      ="
+      WRITE(NFIL,FMT="(A)")"=            SETTINGS FROM !CONTROL!DIMER              ="
+      WRITE(NFIL,FMT="(A)")"=                                                      ="
+      WRITE(NFIL,FMT="(A)")"========================================================"
+      WRITE(NFIL,*)"DIMER ",DIMER
+      WRITE(NFIL,*)"DIMERFOLLOWDOWN",DIMERFOLLOWDOWN      
+      WRITE(NFIL,*)"D ",D                      
+      WRITE(NFIL,*) "CALCMULTIPLIERITERMAX ",CALCMULTIPLIERITERMAX  
+      WRITE(NFIL,*) "DLAMBDA ",DLAMBDA                
+      WRITE(NFIL,*) "CALCVELOCITYITERMAX ",CALCVELOCITYITERMAX    
+      WRITE(NFIL,*) "DVELOCITY ",DVELOCITY              
+      WRITE(NFIL,*) "LCS ",LCS                     
+      WRITE(NFIL,*) "RCDIFFMIN ",RCDIFFMIN              
+      WRITE(NFIL,*) "DSTEP ",DSTEP                   
+      WRITE(NFIL,*) "NSTEPS ",NSTEPS                   
+      WRITE(NFIL,*) "DMIN ",DMIN                   
+      WRITE(NFIL,*) "DLFLEX ",DLFLEX                  
+      WRITE(NFIL,*) "KDLENGTH ",KDLENGTH               
+      WRITE(NFIL,*) "INHIBITUP ",INHIBITUP              
+      WRITE(NFIL,*) "INHIBITPERP ",INHIBITPERP            
+      WRITE(NFIL,*) "ONLYPERP ",ONLYPERP               
+      WRITE(NFIL,*) "ONLYROT ",ONLYROT                 
+      WRITE(NFIL,*) "WDOWN ",WDOWN                  
+      WRITE(NFIL,*) "WDOWNFACT ",WDOWNFACT                     
+      WRITE(NFIL,*) "ENERGYTRA ",ENERGYTRA
+      WRITE(NFIL,*)"NATOMS ",DIM/3
+      WRITE(NFIL,*)"STRETCH",STRETCH
+      WRITE(NFIL,*)"STRETCHDIST",STRETCHDIST
+      WRITE(NFIL,*)"FMPARA ",FMPARA
+      WRITE(NFIL,*)"FMPERP ",FMPERP
+      WRITE(NFIL,*)"FMROT ",FMROT
+      WRITE(NFIL,*)"FRICPARA ",FRICPARA
+      WRITE(NFIL,*)"FRICPERP ",FRICPERP
+      WRITE(NFIL,*)"FRICROT ",FRICROT
+      WRITE(NFIL,*)"OPTFRICPARA ",OPTFRICPARA
+      WRITE(NFIL,*)"OPTFRICPERP ",OPTFRICPERP
+      WRITE(NFIL,*)"OPTFRICROT ",OPTFRICROT
+      WRITE(NFIL,*)"FAUTOPARA", FAUTOPARA   
+      WRITE(NFIL,*)"FAUTOPERP",  FAUTOPERP  
+      WRITE(NFIL,*)"FAUTOROT",    FAUTOROT
+      WRITE(NFIL,*)"FRICAUTOPARA",FRICAUTOPARA 
+      WRITE(NFIL,*)"FRICAUTOPERP",FRICAUTOPERP
+      WRITE(NFIL,*)"FRICAUTOROT",FRICAUTOROT
 
-      write(nfil,*)"TMAXPARA ",tparam
-      write(nfil,*)"TMAXPERP ",tperpm
-      write(nfil,*)"TMAXROT ",trotm
-      write(nfil,*)"CONSTRSTEP ",CONSTRSTEP
+      WRITE(NFIL,*)"TMAXPARA ",TPARAM
+      WRITE(NFIL,*)"TMAXPERP ",TPERPM
+      WRITE(NFIL,*)"TMAXROT ",TROTM
+      WRITE(NFIL,*)"CONSTRSTEP ",CONSTRSTEP
       !REPORT THE CONSTRAINTS
       IF(ASSOCIATED(ELDEST_D)) THEN
          THIS_D=>ELDEST_D
          LOOP=.TRUE.
-         do while (LOOP)
-            write(nfil,*)"COUPLED ATOM=",THIS_D%ID
-            IF(associated(THIS_D%NEXT_D)) THEN
+         DO WHILE (LOOP)
+            WRITE(NFIL,*)"COUPLED ATOM=",THIS_D%ID
+            IF(ASSOCIATED(THIS_D%NEXT_D)) THEN
                THIS_D=>THIS_D%NEXT_D
             ELSE
                LOOP=.FALSE.
             END IF
-         end do
-      else
-         write(nfil,*)'NO CONSTRAINTS'
+         END DO
+      ELSE
+         WRITE(NFIL,*)'NO CONSTRAINTS'
       END IF
       
       
-      !alex: this is for pclimb-testing!
-      write(nfil,*)"CLIMBPERP ",CLIMBPERP
-      write(nfil,*)"FORCEDSTEP ",FORCEDSTEP
-      write(nfil,*)"TFIRSTCLIMBSTEP ",TFIRSTCLIMBSTEP
-      !alex: this is for pclimb-testing!
+      !ALEX: THIS IS FOR PCLIMB-TESTING!
+      WRITE(NFIL,*)"CLIMBPERP ",CLIMBPERP
+      WRITE(NFIL,*)"FORCEDSTEP ",FORCEDSTEP
+      WRITE(NFIL,*)"TFIRSTCLIMBSTEP ",TFIRSTCLIMBSTEP
+      !ALEX: THIS IS FOR PCLIMB-TESTING!
 
-      write(nfil,*)"========================================================"
+      WRITE(NFIL,*)"========================================================"
     END SUBROUTINE DIMER$REPORT_SETTINGS
     
 
 !!$MODULE DIMER_CONSTR_MODULE
-!!$  implicit none
+!!$  IMPLICIT NONE
 !!$  TYPE DIMER_CONSTR_TYPE
 !!$     CHARACTER(32)                    :: ID        !KEYWORD
 !!$     TYPE(DIMER_CONSTR_TYPE),POINTER  :: NEXT      !YOUNGER BROTHER
@@ -2667,64 +2667,64 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
 !!$ 
 !!$  END TYPE DIMER_CONSTR_TYPE
 !!$
-!!$  type(DIMER_CONSTR_TYPE),POINTER  :: ELDEST
-!!$  type(DIMER_CONSTR_TYPE),POINTER  :: THIS
-!!$  !logical(4)                       :: CSINI
+!!$  TYPE(DIMER_CONSTR_TYPE),POINTER  :: ELDEST
+!!$  TYPE(DIMER_CONSTR_TYPE),POINTER  :: THIS
+!!$  !LOGICAL(4)                       :: CSINI
 !!$  !*******************************************
 !!$  PUBLIC DIMER$CONSTRLIST_INIT
 !!$  PUBLIC DIMER$CONSTRLIST_ADD
 !!$
 !!$CONTAINS
 !!$
-  subroutine DIMER$CONSTRLIST_INIT(ID)
+  SUBROUTINE DIMER$CONSTRLIST_INIT(ID)
     USE DIMER_MODULE
-    implicit none
-    CHARACTER(32),intent(in)         :: ID
+    IMPLICIT NONE
+    CHARACTER(32),INTENT(IN)         :: ID
     !*******************************************
     ALLOCATE(ELDEST_D)
-    this_D=>eldest_D
+    THIS_D=>ELDEST_D
     NULLIFY(THIS_D%NEXT_D)
     NULLIFY(THIS_D%PREV_D)
-    this_D%id=id
-    return
-  end subroutine DIMER$CONSTRLIST_INIT
+    THIS_D%ID=ID
+    RETURN
+  END SUBROUTINE DIMER$CONSTRLIST_INIT
 
 
 
-  subroutine DIMER$CONSTRLIST_ADD(ID)
+  SUBROUTINE DIMER$CONSTRLIST_ADD(ID)
     USE DIMER_MODULE
-    implicit none
-    character(32),intent(in)        :: ID
+    IMPLICIT NONE
+    CHARACTER(32),INTENT(IN)        :: ID
     !******************************************
    IF(.NOT.ASSOCIATED(ELDEST_D)) THEN
       CALL DIMER$CONSTRLIST_INIT(ID)
    ELSE
-      !go to the top
+      !GO TO THE TOP
       THIS_D=>ELDEST_D
-      if(THIS_D%ID.eq.ID) then
+      IF(THIS_D%ID.EQ.ID) THEN
          CALL ERROR$MSG('CAN NOT USE THE ID FOR DIMER CONSTRAINTS TWICE')
          CALL ERROR$CHVAL('ID',ID)
          CALL ERROR$STOP('DIMER$CONSTRLIST_ADD')  
-      end if
+      END IF
       
-      !descend to the youngest brother
-      !thereby test if the id is already in use 
-      do while (associated(THIS_D%NEXT_D))
-         if(THIS_D%ID.eq.ID) then
+      !DESCEND TO THE YOUNGEST BROTHER
+      !THEREBY TEST IF THE ID IS ALREADY IN USE 
+      DO WHILE (ASSOCIATED(THIS_D%NEXT_D))
+         IF(THIS_D%ID.EQ.ID) THEN
             CALL ERROR$MSG('CAN NOT USE THE ID FOR DIMER CONSTRAINTS TWICE')
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('DIMER$CONSTRLIST_ADD')  
-         end if
+         END IF
          THIS_D=>THIS_D%NEXT_D
-      end do
+      END DO
       
       ALLOCATE(THIS_D%NEXT_D)
       NULLIFY(THIS_D%NEXT_D%NEXT_D)
       THIS_D%NEXT_D%PREV_D=>THIS_D
       THIS_D%NEXT_D%ID=ID
    END IF
-   return
- end subroutine DIMER$CONSTRLIST_ADD
+   RETURN
+ END SUBROUTINE DIMER$CONSTRLIST_ADD
 !!$ 
 !!$END MODULE DIMER_CONSTR_MODULE
 
@@ -2734,50 +2734,50 @@ SUBROUTINE DIMER$GET_unmassweighted(n,X,R)
       !===============================================
 
 
-  subroutine DIMER_PCLIMB(R1,R2,F1,F2,R1P,R2P)
+  SUBROUTINE DIMER_PCLIMB(R1,R2,F1,F2,R1P,R2P)
     USE DIMER_MODULE
-    implicit none
-      REAL(8)   ,intent(in)    :: R1(dim)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: R2(dim)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(in)    :: F1(dim)               !FORCE FROM POTENTIAL
-      REAL(8)   ,intent(in)    :: F2(dim)               !FORCE FROM POTENTIAL
+    IMPLICIT NONE
+      REAL(8)   ,INTENT(IN)    :: R1(DIM)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: R2(DIM)               !CURRRENT POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(IN)    :: F1(DIM)               !FORCE FROM POTENTIAL
+      REAL(8)   ,INTENT(IN)    :: F2(DIM)               !FORCE FROM POTENTIAL
 
-      REAL(8)   ,intent(out)   :: R1P(dim)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
-      REAL(8)   ,intent(out)   :: R2P(dim)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(OUT)   :: R1P(DIM)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
+      REAL(8)   ,INTENT(OUT)   :: R2P(DIM)              !NEW POSITION VECTORS OF DIMERPOINT 1 & 2
 
-      REAL(8)                  :: SVARV(dim)
+      REAL(8)                  :: SVARV(DIM)
       REAL(8)                  :: FSUM(DIM) !F1+F2
     !******************************************
     FSUM=F1+F2
-    if(.not.allocated(PCLIMBDIR)) allocate(PCLIMBDIR(dim))
+    IF(.NOT.ALLOCATED(PCLIMBDIR)) ALLOCATE(PCLIMBDIR(DIM))
 
-    !***** initialize the direction ********
-    if(TFIRSTCLIMBSTEP) then
-       !=== get the normalized parallel direction ===
-       SVARV=(R1(:)-R2(:))/sqrt(dot_product(R1-R2,R1-R2))
+    !***** INITIALIZE THE DIRECTION ********
+    IF(TFIRSTCLIMBSTEP) THEN
+       !=== GET THE NORMALIZED PARALLEL DIRECTION ===
+       SVARV=(R1(:)-R2(:))/SQRT(DOT_PRODUCT(R1-R2,R1-R2))
 
-       !determine the direction
-       PCLIMBDIR(:)=FSUM(:)-SVARV(:)*dot_product(SVARV,FSUM)
+       !DETERMINE THE DIRECTION
+       PCLIMBDIR(:)=FSUM(:)-SVARV(:)*DOT_PRODUCT(SVARV,FSUM)
 
-       !normalize the direction
-       PCLIMBDIR(:)=PCLIMBDIR(:)/sqrt(dot_product(PCLIMBDIR,PCLIMBDIR))
+       !NORMALIZE THE DIRECTION
+       PCLIMBDIR(:)=PCLIMBDIR(:)/SQRT(DOT_PRODUCT(PCLIMBDIR,PCLIMBDIR))
 
-       !we initialized the direction
-       TFIRSTCLIMBSTEP=.false.
-       print *, "PCLIMB : INITIALIZED THE FORCEDIRECTION"
-       print *, "PCLIMB : THE CLIMBFORCE IS",dot_product(PCLIMBDIR,FSUM)
-       R1p(:)=R1
-       R2p(:)=R2
-       return
-    end if
+       !WE INITIALIZED THE DIRECTION
+       TFIRSTCLIMBSTEP=.FALSE.
+       PRINT *, "PCLIMB : INITIALIZED THE FORCEDIRECTION"
+       PRINT *, "PCLIMB : THE CLIMBFORCE IS",DOT_PRODUCT(PCLIMBDIR,FSUM)
+       R1P(:)=R1
+       R2P(:)=R2
+       RETURN
+    END IF
 
 
-    !************* climb up : -FORCEDSTEP*PCLIMBDIR *******
+    !************* CLIMB UP : -FORCEDSTEP*PCLIMBDIR *******
     R1P(:)=R1(:)-FORCEDSTEP*PCLIMBDIR(:)
     R2P(:)=R2(:)-FORCEDSTEP*PCLIMBDIR(:)
-    print *, "PCLIMB : THE CLIMBFORCE IS",dot_product(PCLIMBDIR,FSUM)
-   return
- end subroutine DIMER_PCLIMB
+    PRINT *, "PCLIMB : THE CLIMBFORCE IS",DOT_PRODUCT(PCLIMBDIR,FSUM)
+   RETURN
+ END SUBROUTINE DIMER_PCLIMB
 
 
 
@@ -2794,13 +2794,13 @@ SUBROUTINE DIMER$CELLCONSTRAINT(NAT,RCC)
   USE DIMER_MODULE
   USE MPE_MODULE
   IMPLICIT NONE
-  integer(4),intent(in)  :: NAT
-  real(8)   ,intent(out) :: RCC(NAT*3)
+  INTEGER(4),INTENT(IN)  :: NAT
+  REAL(8)   ,INTENT(OUT) :: RCC(NAT*3)
 
-  integer(4)             :: IAT
-  real(8),allocatable    :: RMASS(:)
-  real(8),allocatable    :: R(:),R2(:)
-  integer(4)             :: NVAL,WORLD_ID,NWORLDTASKS
+  INTEGER(4)             :: IAT
+  REAL(8),ALLOCATABLE    :: RMASS(:)
+  REAL(8),ALLOCATABLE    :: R(:),R2(:)
+  INTEGER(4)             :: NVAL,WORLD_ID,NWORLDTASKS
   REAL(8)                :: RCENTER(3)
 
 
@@ -2811,107 +2811,107 @@ SUBROUTINE DIMER$CELLCONSTRAINT(NAT,RCC)
          !========= CORRECT TRANSLATION ===========
 
 
-         allocate(RMASS(NAT))
-         allocate(R(3*NAT))
+         ALLOCATE(RMASS(NAT))
+         ALLOCATE(R(3*NAT))
 
          CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)         
 
-         if(CENTER_ID.eq.'COG') then
-            !use the center of gravity for rotation
+         IF(CENTER_ID.EQ.'COG') THEN
+            !USE THE CENTER OF GRAVITY FOR ROTATION
             CALL ATOMLIST$GETR8A('MASS',0,NAT,RMASS)
-            !correct the positions
-            call PLACECENTER(NAT,R,RMASS,RCC)
+            !CORRECT THE POSITIONS
+            CALL PLACECENTER(NAT,R,RMASS,RCC)
 
-print *,"centerofgravity"
-         else
-print *,"givenatom"
-            !use a given atom for rotation
-            call ATOMLIST$INDEX(CENTER_ID,IAT)
+PRINT *,"CENTEROFGRAVITY"
+         ELSE
+PRINT *,"GIVENATOM"
+            !USE A GIVEN ATOM FOR ROTATION
+            CALL ATOMLIST$INDEX(CENTER_ID,IAT)
             CALL ATOMLIST$GETR8A('R(0)',IAT,3,RCENTER)
             CALL PLACEATOM(.TRUE.,NAT,R,RCENTER,RCC)
-         end if
+         END IF
 
-         !set the actual Positions
+         !SET THE ACTUAL POSITIONS
          R=RCC
-print *,"drrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
-print *,R
-print *,"drrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+PRINT *,"DRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
+PRINT *,R
+PRINT *,"DRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
 !DO THIS OUTSIDE
-!!$         !set the corrected positions
+!!$         !SET THE CORRECTED POSITIONS
 !!$         CALL ATOMLIST$SETR8A('R(0)',0,3*NAT,RCC)
 !!$         CALL ATOMLIST$SETR8A('R(-)',0,3*NAT,RCC)
-!!$         !NOTE: IF YOU USE THIS CODE ELSEWHERE YOU'LL
+!!$         !NOTE: IF YOU USE THIS CODE ELSEWHERE YOU WILL
 !!$         !HAVE TO CARE ABOUT R(-) !!!
 
 
          !========= CORRECT ROTATION  ===========
          !COMMUNICATE TO DIMER1
-         allocate(R2(3*NAT))
+         ALLOCATE(R2(3*NAT))
 
          NVAL=0
-         call MPE$QUERY('MONOMER',NTASKS,THISTASK)
-         call MPE$QUERY('~',NWORLDTASKS,WORLD_ID)
+         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+         CALL MPE$QUERY('~',NWORLDTASKS,WORLD_ID)
 
-         if(WORLD_ID.ne.1.and.THISTASK.eq.1) then
-            !we are task 1 in dimer2
+         IF(WORLD_ID.NE.1.AND.THISTASK.EQ.1) THEN
+            !WE ARE TASK 1 IN DIMER2
             NVAL=WORLD_ID
-         end if
+         END IF
          
          CALL MPE$COMBINE('~','+',NVAL)
-         !NVAL now equals the WORLD_ID of the 1st task in dimer2
+         !NVAL NOW EQUALS THE WORLD_ID OF THE 1ST TASK IN DIMER2
 
-         if(WORLD_ID.eq.NVAL) then 
-            !we are 1st task of dimer2
-            call MPE$SEND('~',1,42,R)
-         else if(WORLD_ID.eq.1) then
-            !we are WORLD_ID 1
-            call MPE$RECEIVE('~',NVAL,42,R2)
-         end if
-         !we got both vectors on the 1st task
+         IF(WORLD_ID.EQ.NVAL) THEN 
+            !WE ARE 1ST TASK OF DIMER2
+            CALL MPE$SEND('~',1,42,R)
+         ELSE IF(WORLD_ID.EQ.1) THEN
+            !WE ARE WORLD_ID 1
+            CALL MPE$RECEIVE('~',NVAL,42,R2)
+         END IF
+         !WE GOT BOTH VECTORS ON THE 1ST TASK
 
-         if(WORLD_ID.eq.1) then
-            call PLACEROT(NAT,R,R2,DROT,RCC)            
-         end if
+         IF(WORLD_ID.EQ.1) THEN
+            CALL PLACEROT(NAT,R,R2,DROT,RCC)            
+         END IF
 
 
 
-         !Communicate the rot. vector RCC back to dimer2  
-         if(WORLD_ID.eq.1) then 
-            !we are WORLD_ID 1
-            call MPE$SEND('~',NVAL,43,RCC)
-         else if(WORLD_ID.eq.NVAL) then !1st in 2nd dimer r
-            call MPE$RECEIVE('~',1,43,RCC)
-         end if
+         !COMMUNICATE THE ROT. VECTOR RCC BACK TO DIMER2  
+         IF(WORLD_ID.EQ.1) THEN 
+            !WE ARE WORLD_ID 1
+            CALL MPE$SEND('~',NVAL,43,RCC)
+         ELSE IF(WORLD_ID.EQ.NVAL) THEN !1ST IN 2ND DIMER R
+            CALL MPE$RECEIVE('~',1,43,RCC)
+         END IF
          
-         !all tasks back
-         if(WORLD_ID.ge.NVAL) then 
+         !ALL TASKS BACK
+         IF(WORLD_ID.GE.NVAL) THEN 
 
 
-            !only on 2nd dimer
-            call MPE$BROADCAST('MONOMER',1,RCC)
+            !ONLY ON 2ND DIMER
+            CALL MPE$BROADCAST('MONOMER',1,RCC)
             R=RCC
-!!$            !set the corrected positions
+!!$            !SET THE CORRECTED POSITIONS
 !!$            CALL ATOMLIST$SETR8A('R(0)',0,3*NAT,RCC)
 !!$            CALL ATOMLIST$SETR8A('R(-)',0,3*NAT,RCC)
-         end if
-         !NOTE: IF YOU USE THIS CODE ELSEWHERE YOU'LL
+         END IF
+         !NOTE: IF YOU USE THIS CODE ELSEWHERE YOU WILL
          !HAVE TO CARE ABOUT R(-) !!!
 
 
          !========= SET THE CENTER BACK  ===========
-         call PLACEATOM(.false.,NAT,R,CENTER_COORD,RCC)
+         CALL PLACEATOM(.FALSE.,NAT,R,CENTER_COORD,RCC)
 !!$         CALL ATOMLIST$SETR8A('R(0)',0,3*NAT,RCC)
 !!$         CALL ATOMLIST$SETR8A('R(-)',0,3*NAT,RCC)
-print *,"d2rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
-print *,RCC
-print *,"d2rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
+PRINT *,"D2RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
+PRINT *,RCC
+PRINT *,"D2RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"
 
-         deallocate(RMASS)
-         deallocate(R)
-         deallocate(R2)  
+         DEALLOCATE(RMASS)
+         DEALLOCATE(R)
+         DEALLOCATE(R2)  
   
-  return
-end SUBROUTINE DIMER$CELLCONSTRAINT
+  RETURN
+END SUBROUTINE DIMER$CELLCONSTRAINT
 
 
 
@@ -2919,28 +2919,28 @@ end SUBROUTINE DIMER$CELLCONSTRAINT
 !##################################################################
 SUBROUTINE DIMER_PROPCELLCONSTR(NAT,R,R2,RMASS,RMASS2,RCENTER,RCENTER2,RCC)
 !##################################################################
-! TRANSLATES and rotates R2 in such a way (eiter COG or given atom as center)
-! that the distance \sum{(R-R2)^2} is minimized
-! the center of the rotated vector is moved to center_coord from .cntl file
+! TRANSLATES AND ROTATES R2 IN SUCH A WAY (EITER COG OR GIVEN ATOM AS CENTER)
+! THAT THE DISTANCE \SUM{(R-R2)^2} IS MINIMIZED
+! THE CENTER OF THE ROTATED VECTOR IS MOVED TO CENTER_COORD FROM .CNTL FILE
 !
-! this is used to project translation / rotation out of the *not constrained*
-! coords (R1NC,R2NC) before the dimer length constraint is applied
-! (R=R1, R2=R1nc; R=R2, R2=R2NC )
+! THIS IS USED TO PROJECT TRANSLATION / ROTATION OUT OF THE *NOT CONSTRAINED*
+! COORDS (R1NC,R2NC) BEFORE THE DIMER LENGTH CONSTRAINT IS APPLIED
+! (R=R1, R2=R1NC; R=R2, R2=R2NC )
 
 
   USE DIMER_MODULE
   USE MPE_MODULE
   IMPLICIT NONE
-  integer(4),intent(in)  :: NAT
-  real(8)   ,intent(in)  :: R(NAT*3)
-  real(8)   ,intent(in)  :: R2(NAT*3)
-  real(8)   ,intent(in)  :: RMASS(NAT)
-  real(8)   ,intent(in)  :: RMASS2(NAT)
-  REAL(8)   ,intent(in)  :: RCENTER(3)
-  REAL(8)   ,intent(in)  :: RCENTER2(3)
-  real(8)   ,intent(out) :: RCC(NAT*3)
+  INTEGER(4),INTENT(IN)  :: NAT
+  REAL(8)   ,INTENT(IN)  :: R(NAT*3)
+  REAL(8)   ,INTENT(IN)  :: R2(NAT*3)
+  REAL(8)   ,INTENT(IN)  :: RMASS(NAT)
+  REAL(8)   ,INTENT(IN)  :: RMASS2(NAT)
+  REAL(8)   ,INTENT(IN)  :: RCENTER(3)
+  REAL(8)   ,INTENT(IN)  :: RCENTER2(3)
+  REAL(8)   ,INTENT(OUT) :: RCC(NAT*3)
 
-  real(8)                :: RCC1(3*nat),RCC2(3*NAT)
+  REAL(8)                :: RCC1(3*NAT),RCC2(3*NAT)
 
 
 
@@ -2951,33 +2951,33 @@ SUBROUTINE DIMER_PROPCELLCONSTR(NAT,R,R2,RMASS,RMASS2,RCENTER,RCENTER2,RCC)
 !     ==================================================================
 
          !========= CORRECT TRANSLATION ===========
-         ! set both center to the origin
+         ! SET BOTH CENTER TO THE ORIGIN
  
-         if(CENTER_ID.eq.'COG') then
-            !use the center of gravity for rotation
-            !correct the positions
-            call PLACECENTER(NAT,R,RMASS,RCC1)
-            call PLACECENTER(NAT,R2,RMASS,RCC2)
-         else
-            !use a given center for rotation
+         IF(CENTER_ID.EQ.'COG') THEN
+            !USE THE CENTER OF GRAVITY FOR ROTATION
+            !CORRECT THE POSITIONS
+            CALL PLACECENTER(NAT,R,RMASS,RCC1)
+            CALL PLACECENTER(NAT,R2,RMASS,RCC2)
+         ELSE
+            !USE A GIVEN CENTER FOR ROTATION
             CALL PLACEATOM(.TRUE.,NAT,R,RCENTER,RCC1)
             CALL PLACEATOM(.TRUE.,NAT,R2,RCENTER2,RCC2)
-         end if
+         END IF
 
 
          !========= CORRECT ROTATION  ===========
-            call PLACEROT(NAT,RCC1,RCC2,DROT,RCC)            
+            CALL PLACEROT(NAT,RCC1,RCC2,DROT,RCC)            
 
          !========= SET THE CENTER BACK  ===========
          !PLACE ONLY THE SECOND TO THE WISHED CENTER_COORD
-print *, "eeeeeeeeeeeeeeeee"
-print *, RCC
-print *, "eeeeeeeeeeeeeeeee"
+PRINT *, "EEEEEEEEEEEEEEEEE"
+PRINT *, RCC
+PRINT *, "EEEEEEEEEEEEEEEEE"
          RCC2=RCC
-         call PLACEATOM(.false.,NAT,RCC2,CENTER_COORD,RCC)
+         CALL PLACEATOM(.FALSE.,NAT,RCC2,CENTER_COORD,RCC)
   
-  return
-end SUBROUTINE DIMER_PROPCELLCONSTR
+  RETURN
+END SUBROUTINE DIMER_PROPCELLCONSTR
 
 
 !##################################################################
@@ -2985,36 +2985,36 @@ SUBROUTINE PLACECENTER(NAT,R,RMASS,RCC)
 !##################################################################
   USE DIMER_MODULE
   IMPLICIT NONE
-  integer(4), intent(in) :: NAT
-  real(8),intent(in)     :: R(3*NAT)
-  REAL(8),intent(in)     :: RMASS(NAT)
-  real(8),intent(out)    :: RCC(3*NAT)
+  INTEGER(4), INTENT(IN) :: NAT
+  REAL(8),INTENT(IN)     :: R(3*NAT)
+  REAL(8),INTENT(IN)     :: RMASS(NAT)
+  REAL(8),INTENT(OUT)    :: RCC(3*NAT)
 
-  real(8)                :: VAL(3,NAT)
-  real(8)                :: RCOM(3)
-  real(8)                :: SUMM
-  integer                :: i
+  REAL(8)                :: VAL(3,NAT)
+  REAL(8)                :: RCOM(3)
+  REAL(8)                :: SUMM
+  INTEGER                :: I
 
-  RCOM(:)=0.0d0
-  SUMM=0.0d0
+  RCOM(:)=0.0D0
+  SUMM=0.0D0
 
   VAL(:,:)=RESHAPE(R,(/3,NAT/))
   
-  do i=1, NAT
-     RCOM(:)=RCOM(:)+RMASS(i)*VAL(:,i)
-     SUMM=SUMM+RMASS(i)
-  end do
+  DO I=1, NAT
+     RCOM(:)=RCOM(:)+RMASS(I)*VAL(:,I)
+     SUMM=SUMM+RMASS(I)
+  END DO
   
   RCOM=RCOM/SUMM
 
-  do i=1, NAT
-     VAL(:,i)=VAL(:,i)-RCOM(:)
-  end do
+  DO I=1, NAT
+     VAL(:,I)=VAL(:,I)-RCOM(:)
+  END DO
 
   RCC=RESHAPE(VAL,(/3*NAT/))  
   
-  return
-end SUBROUTINE PLACECENTER
+  RETURN
+END SUBROUTINE PLACECENTER
 
 
 !##################################################################
@@ -3022,275 +3022,275 @@ SUBROUTINE PLACEATOM(TO_ZERO,NAT,R,RCENTER,RCC)
 !##################################################################
   USE DIMER_MODULE
   IMPLICIT NONE
-  logical(4), intent(in) :: TO_ZERO !T->RCENTER to zero, F-> zero -RCENTER 
-  integer(4), intent(in) :: NAT
-  real(8),intent(in)     :: R(3*NAT)
-  REAL(8),intent(in)     :: RCENTER(3)
-  real(8),intent(out)    :: RCC(3*NAT)
-  real(8)                :: VAL(3,NAT)
-  integer                :: i
+  LOGICAL(4), INTENT(IN) :: TO_ZERO !T->RCENTER TO ZERO, F-> ZERO -RCENTER 
+  INTEGER(4), INTENT(IN) :: NAT
+  REAL(8),INTENT(IN)     :: R(3*NAT)
+  REAL(8),INTENT(IN)     :: RCENTER(3)
+  REAL(8),INTENT(OUT)    :: RCC(3*NAT)
+  REAL(8)                :: VAL(3,NAT)
+  INTEGER                :: I
 
   VAL(:,:)=RESHAPE(R,(/3,NAT/))
 
-  if(to_ZERO) then
-     do i=1, NAT
-        VAL(:,i)=VAL(:,i)-RCENTER
-     end do
-  else
-     do i=1, NAT
-        VAL(:,i)=VAL(:,i)+RCENTER
-     end do
-  end if
+  IF(TO_ZERO) THEN
+     DO I=1, NAT
+        VAL(:,I)=VAL(:,I)-RCENTER
+     END DO
+  ELSE
+     DO I=1, NAT
+        VAL(:,I)=VAL(:,I)+RCENTER
+     END DO
+  END IF
   
   RCC=RESHAPE(VAL,(/3*NAT/))  
-  return
-end SUBROUTINE PLACEATOM
+  RETURN
+END SUBROUTINE PLACEATOM
 
 !##################################################################
-SUBROUTINE PLACEROT(NAT,R1,R2,rotdif,R2C)
+SUBROUTINE PLACEROT(NAT,R1,R2,ROTDIF,R2C)
 !##################################################################
   USE DIMER_MODULE
   IMPLICIT NONE
-  integer(4),intent(in)  :: NAT
-  real(8),intent(in)     :: R1(3*NAT)
-  real(8),intent(in)     :: R2(3*NAT)
-  real(8),intent(in)     :: rotdif
-  real(8),intent(out)    :: R2C(3*NAT) !only dimer2 will be rotated
-  real(8)     :: VAL1(3,NAT),VAL2(3,NAT),VAL2ROT(3)
-  real(8)     :: a0
-  real(8)     :: aact
-  real(8)     :: amax
-  real(8)     :: astep
-  real(8)     :: b0
-  real(8)     :: bact
-  real(8)     :: bmax
-  real(8)     :: bstep
-  real(8)     :: c0
-  real(8)     :: cact
-  real(8)     :: cmax
-  real(8)     :: cstep
-  real(8)     :: abest
-  real(8)     :: bbest
-  real(8)     :: cbest
-  real(8)     :: rotminv(3)
-  real(8)     :: rotmin
-  real(8)     :: rotminbest
-  real(8)     :: U(3,3)
-  real(8)     :: difact
-  real(8)     :: rotminold,rotminsum
-  logical(4)  :: start,first
-  integer(4)  :: i,j,k,l
-  real(8)     :: pi
+  INTEGER(4),INTENT(IN)  :: NAT
+  REAL(8),INTENT(IN)     :: R1(3*NAT)
+  REAL(8),INTENT(IN)     :: R2(3*NAT)
+  REAL(8),INTENT(IN)     :: ROTDIF
+  REAL(8),INTENT(OUT)    :: R2C(3*NAT) !ONLY DIMER2 WILL BE ROTATED
+  REAL(8)     :: VAL1(3,NAT),VAL2(3,NAT),VAL2ROT(3)
+  REAL(8)     :: A0
+  REAL(8)     :: AACT
+  REAL(8)     :: AMAX
+  REAL(8)     :: ASTEP
+  REAL(8)     :: B0
+  REAL(8)     :: BACT
+  REAL(8)     :: BMAX
+  REAL(8)     :: BSTEP
+  REAL(8)     :: C0
+  REAL(8)     :: CACT
+  REAL(8)     :: CMAX
+  REAL(8)     :: CSTEP
+  REAL(8)     :: ABEST
+  REAL(8)     :: BBEST
+  REAL(8)     :: CBEST
+  REAL(8)     :: ROTMINV(3)
+  REAL(8)     :: ROTMIN
+  REAL(8)     :: ROTMINBEST
+  REAL(8)     :: U(3,3)
+  REAL(8)     :: DIFACT
+  REAL(8)     :: ROTMINOLD,ROTMINSUM
+  LOGICAL(4)  :: START,FIRST
+  INTEGER(4)  :: I,J,K,L
+  REAL(8)     :: PI
   
-  start=.true.
-  first=.true.
-  rotminbest=1.0d42 !something high
-  rotminold=0.0d0
-  pi=4.0d0*atan(1.0d0)
-  difact=rotdif+42.d0
-!write(dprotfil,*)'rotminbestdebug',rotminbest
+  START=.TRUE.
+  FIRST=.TRUE.
+  ROTMINBEST=1.0D42 !SOMETHING HIGH
+  ROTMINOLD=0.0D0
+  PI=4.0D0*ATAN(1.0D0)
+  DIFACT=ROTDIF+42.D0
+!WRITE(DPROTFIL,*)'ROTMINBESTDEBUG',ROTMINBEST
 
 
- DO WHILE(start.or.(difact.gt.rotdif))
-!print *,"We are still in rotations",difact,rotdif
-    if(start) then
-       a0=0.0d0
-       amax=2.0d0*pi
-       astep=(2.d0*pi)/40.0d0
-       b0=0.0d0
-       bmax=pi
-       bstep=(2.d0*pi)/40.0d0
-!       c0=0.0d0
-!       cmax=pi
-!       cstep=pi/20.0d0
-       start=.false.
-    else
-       a0=abest-astep
-       amax=abest+astep
-       astep=astep/10.0d0
+ DO WHILE(START.OR.(DIFACT.GT.ROTDIF))
+!PRINT *,"WE ARE STILL IN ROTATIONS",DIFACT,ROTDIF
+    IF(START) THEN
+       A0=0.0D0
+       AMAX=2.0D0*PI
+       ASTEP=(2.D0*PI)/40.0D0
+       B0=0.0D0
+       BMAX=PI
+       BSTEP=(2.D0*PI)/40.0D0
+!       C0=0.0D0
+!       CMAX=PI
+!       CSTEP=PI/20.0D0
+       START=.FALSE.
+    ELSE
+       A0=ABEST-ASTEP
+       AMAX=ABEST+ASTEP
+       ASTEP=ASTEP/10.0D0
 
-       b0=bbest-bstep
-       bmax=bbest+bstep
-       bstep=bstep/10.0d0
+       B0=BBEST-BSTEP
+       BMAX=BBEST+BSTEP
+       BSTEP=BSTEP/10.0D0
 
-!       c0=cbest-cstep
-!       cmax=cbest+cstep
-!       cstep=cstep/10.0d0
-    end if
-!write(dprotfil,*)'rotminbestdebug',rotminbest    
-!write(dprotfil,*)'R1debug',R1
-!write(dprotfil,*)'R2',R2
-    do j=0,int((amax-a0)/astep)
-           do k=0,int((bmax-b0)/bstep)
-!              do l=0,((cmax-c0)/cstep)
+!       C0=CBEST-CSTEP
+!       CMAX=CBEST+CSTEP
+!       CSTEP=CSTEP/10.0D0
+    END IF
+!WRITE(DPROTFIL,*)'ROTMINBESTDEBUG',ROTMINBEST    
+!WRITE(DPROTFIL,*)'R1DEBUG',R1
+!WRITE(DPROTFIL,*)'R2',R2
+    DO J=0,INT((AMAX-A0)/ASTEP)
+           DO K=0,INT((BMAX-B0)/BSTEP)
+!              DO L=0,((CMAX-C0)/CSTEP)
 
-                 aact=a0+j*astep
-                 bact=b0+k*bstep
-!                 cact=c0+l*cstep
+                 AACT=A0+J*ASTEP
+                 BACT=B0+K*BSTEP
+!                 CACT=C0+L*CSTEP
                  
                  VAL1(:,:)=RESHAPE(R1,(/3,NAT/))
                  VAL2(:,:)=RESHAPE(R2,(/3,NAT/))
                  
-              U(1,1)=cos(aact)*cos(bact)
-              U(1,2)=-sin(aact)
-              U(1,3)=cos(aact)*sin(bact)
-              U(2,1)=sin(aact)*cos(bact)
-              U(2,2)=cos(aact)
-              U(2,3)=sin(aact)*sin(bact)
-              U(3,1)=-sin(bact)
-              U(3,2)=0.0d0
-              U(3,3)=cos(bact)
+              U(1,1)=COS(AACT)*COS(BACT)
+              U(1,2)=-SIN(AACT)
+              U(1,3)=COS(AACT)*SIN(BACT)
+              U(2,1)=SIN(AACT)*COS(BACT)
+              U(2,2)=COS(AACT)
+              U(2,3)=SIN(AACT)*SIN(BACT)
+              U(3,1)=-SIN(BACT)
+              U(3,2)=0.0D0
+              U(3,3)=COS(BACT)
                  
 
 
-!!$                 U(1,1)=cos(aact)*cos(bact)*cos(cact)
-!!$                 U(1,2)=-cos(aact)*cos(bact)*sin(cact)-sin(aact)*cos(cact)
-!!$                 U(1,3)=cos(aact)*sin(bact)
-!!$                 U(2,1)=sin(aact)*cos(bact)*cos(cact)+cos(aact)*sin(cact)
-!!$                 U(2,2)=-sin(aact)*cos(bact)*sin(cact)+cos(aact)*cos(cact)
-!!$                 U(2,3)=sin(aact)*sin(bact)
-!!$                 U(3,1)=-sin(bact)*cos(cact)
-!!$                 U(3,2)=sin(bact)*sin(cact)
-!!$                 U(3,3)=cos(bact)
-!write(dprotfil,*)'rotminbestdebug3',rotminbest                 
-                 rotminsum=0.0d0
-                 do i=1,Nat
-                    call LIB$MATMULR8(3,3,1,U,VAL2(:,i),VAL2rot)
-                    rotminv=(VAL1(:,i)-VAL2rot)
- !                   CALL LIB$SCALARPRODUCTR8(.FALSE.,3,1,rotminv,1,rotminv,rotmin)
-                    rotmin=dot_product(rotminv(:),rotminv(:))
-                   rotminsum=rotminsum+rotmin
-                 end do
-!write(dprotfil,*)'rotminbestdebug4',rotminbest                 
-!write(dprotfil,*)'rotminbest,rotminsum',rotminbest,rotminsum
-                 if(rotminsum.lt.rotminbest) then
-                    rotminbest=rotminsum
-                    abest=aact
-                    bbest=bact
-!write(dprotfil,*)'abest,aact,bbest,bact',abest,aact,bbest,bact
-!write(dprotfil,*)'abest,aact,bbest,bact',bbest,bact
-                 end if
-                 difact=abs(rotminold-rotminsum)
-!write(dprotfil,*)'difact',difact,rotminsum                 
-                 rotminold=rotminsum
-!              end DO
-              end do
-        end do
-!print *,"rotminbest1,abest,bbest",rotminbest,abest,bbest
+!!$                 U(1,1)=COS(AACT)*COS(BACT)*COS(CACT)
+!!$                 U(1,2)=-COS(AACT)*COS(BACT)*SIN(CACT)-SIN(AACT)*COS(CACT)
+!!$                 U(1,3)=COS(AACT)*SIN(BACT)
+!!$                 U(2,1)=SIN(AACT)*COS(BACT)*COS(CACT)+COS(AACT)*SIN(CACT)
+!!$                 U(2,2)=-SIN(AACT)*COS(BACT)*SIN(CACT)+COS(AACT)*COS(CACT)
+!!$                 U(2,3)=SIN(AACT)*SIN(BACT)
+!!$                 U(3,1)=-SIN(BACT)*COS(CACT)
+!!$                 U(3,2)=SIN(BACT)*SIN(CACT)
+!!$                 U(3,3)=COS(BACT)
+!WRITE(DPROTFIL,*)'ROTMINBESTDEBUG3',ROTMINBEST                 
+                 ROTMINSUM=0.0D0
+                 DO I=1,NAT
+                    CALL LIB$MATMULR8(3,3,1,U,VAL2(:,I),VAL2ROT)
+                    ROTMINV=(VAL1(:,I)-VAL2ROT)
+ !                   CALL LIB$SCALARPRODUCTR8(.FALSE.,3,1,ROTMINV,1,ROTMINV,ROTMIN)
+                    ROTMIN=DOT_PRODUCT(ROTMINV(:),ROTMINV(:))
+                   ROTMINSUM=ROTMINSUM+ROTMIN
+                 END DO
+!WRITE(DPROTFIL,*)'ROTMINBESTDEBUG4',ROTMINBEST                 
+!WRITE(DPROTFIL,*)'ROTMINBEST,ROTMINSUM',ROTMINBEST,ROTMINSUM
+                 IF(ROTMINSUM.LT.ROTMINBEST) THEN
+                    ROTMINBEST=ROTMINSUM
+                    ABEST=AACT
+                    BBEST=BACT
+!WRITE(DPROTFIL,*)'ABEST,AACT,BBEST,BACT',ABEST,AACT,BBEST,BACT
+!WRITE(DPROTFIL,*)'ABEST,AACT,BBEST,BACT',BBEST,BACT
+                 END IF
+                 DIFACT=ABS(ROTMINOLD-ROTMINSUM)
+!WRITE(DPROTFIL,*)'DIFACT',DIFACT,ROTMINSUM                 
+                 ROTMINOLD=ROTMINSUM
+!              END DO
+              END DO
+        END DO
+!PRINT *,"ROTMINBEST1,ABEST,BBEST",ROTMINBEST,ABEST,BBEST
 
 
 
-                 !write the correct vector
-!!$                 U(1,1)=cos(abest)*cos(bbest)*cos(cbest)
-!!$                 U(1,2)=-cos(abest)*cos(bbest)*sin(cbest)-sin(abest)*cos(cbest)
-!!$                 U(1,3)=cos(abest)*sin(bbest)
-!!$                 U(2,1)=sin(abest)*cos(bbest)*cos(cbest)+cos(abest)*sin(cbest)
-!!$                 U(2,2)=-sin(abest)*cos(bbest)*sin(cbest)+cos(abest)*cos(cbest)
-!!$                 U(2,3)=sin(abest)*sin(bbest)
-!!$                 U(3,1)=-sin(bbest)*cos(cbest)
-!!$                 U(3,2)=sin(bbest)*sin(cbest)
-!!$                 U(3,3)=cos(bbest)
+                 !WRITE THE CORRECT VECTOR
+!!$                 U(1,1)=COS(ABEST)*COS(BBEST)*COS(CBEST)
+!!$                 U(1,2)=-COS(ABEST)*COS(BBEST)*SIN(CBEST)-SIN(ABEST)*COS(CBEST)
+!!$                 U(1,3)=COS(ABEST)*SIN(BBEST)
+!!$                 U(2,1)=SIN(ABEST)*COS(BBEST)*COS(CBEST)+COS(ABEST)*SIN(CBEST)
+!!$                 U(2,2)=-SIN(ABEST)*COS(BBEST)*SIN(CBEST)+COS(ABEST)*COS(CBEST)
+!!$                 U(2,3)=SIN(ABEST)*SIN(BBEST)
+!!$                 U(3,1)=-SIN(BBEST)*COS(CBEST)
+!!$                 U(3,2)=SIN(BBEST)*SIN(CBEST)
+!!$                 U(3,3)=COS(BBEST)
 
-                 U(1,1)=cos(abest)*cos(bbest)
-                 U(1,2)=-sin(abest)
-                 U(1,3)=cos(abest)*sin(bbest)
-                 U(2,1)=sin(abest)*cos(bbest)
-                 U(2,2)=cos(abest)
-                 U(2,3)=sin(abest)*sin(bbest)
-                 U(3,1)=-sin(bbest)
-                 U(3,2)=0.0d0
-                 U(3,3)=cos(bbest)
+                 U(1,1)=COS(ABEST)*COS(BBEST)
+                 U(1,2)=-SIN(ABEST)
+                 U(1,3)=COS(ABEST)*SIN(BBEST)
+                 U(2,1)=SIN(ABEST)*COS(BBEST)
+                 U(2,2)=COS(ABEST)
+                 U(2,3)=SIN(ABEST)*SIN(BBEST)
+                 U(3,1)=-SIN(BBEST)
+                 U(3,2)=0.0D0
+                 U(3,3)=COS(BBEST)
 
-                 do i=1,Nat
-                    call LIB$MATMULR8(3,3,1,U,VAL2(:,i),VAL2rot)
-                    do j=1,3
-                       R2C(i*3-3+j)=VAL2ROT(j)
-                    end do
-                 end do
-     end DO
+                 DO I=1,NAT
+                    CALL LIB$MATMULR8(3,3,1,U,VAL2(:,I),VAL2ROT)
+                    DO J=1,3
+                       R2C(I*3-3+J)=VAL2ROT(J)
+                    END DO
+                 END DO
+     END DO
 
 
-     return
-end SUBROUTINE PLACEROT
+     RETURN
+END SUBROUTINE PLACEROT
 
-!!$!this is hardwired and only for my use
-!!$subroutine dimer$reread()
-!!$  use DIMER_MODULE
-!!$  implicit none
-!!$  logical(4)                    :: ex
-!!$  integer(4)                    :: nfil,eos
-!!$  character(256)                :: string
-!!$  logical(4)                    :: lvar
-!!$  real(8)                       :: rvar
+!!$!THIS IS HARDWIRED AND ONLY FOR MY USE
+!!$SUBROUTINE DIMER$REREAD()
+!!$  USE DIMER_MODULE
+!!$  IMPLICIT NONE
+!!$  LOGICAL(4)                    :: EX
+!!$  INTEGER(4)                    :: NFIL,EOS
+!!$  CHARACTER(256)                :: STRING
+!!$  LOGICAL(4)                    :: LVAR
+!!$  REAL(8)                       :: RVAR
 !!$
-!!$  nfil=4242
-!!$  INQUIRE (FILE="case.cntlnew", EXIST = EX)
+!!$  NFIL=4242
+!!$  INQUIRE (FILE="CASE.CNTLNEW", EXIST = EX)
 !!$  IF ( EX ) THEN
-!!$     OPEN (nfil, FILE="case.cntlnew", STATUS="OLD", &
+!!$     OPEN (NFIL, FILE="CASE.CNTLNEW", STATUS="OLD", &
 !!$                  &ACCESS="SEQUENTIAL", ACTION="READ", POSITION="REWIND")
-!!$     do 
-!!$        READ (nfil, FMT="(A)" , ADVANCE="YES" ,IOSTAT=eos) string 
-!!$        if(eos.eq.-1) exit
+!!$     DO 
+!!$        READ (NFIL, FMT="(A)" , ADVANCE="YES" ,IOSTAT=EOS) STRING 
+!!$        IF(EOS.EQ.-1) EXIT
 !!$        
-!!$        if(trim(adjustl(string)).eq.'optfricpara') then
-!!$           READ (nfil, FMT="(L1)" , ADVANCE="YES" ,IOSTAT= eos) lvar 
-!!$           call dimer$setl4('OPTFRICPARA',lvar)
-!!$           write(dprotfil,*)'OPTFRICPARA SET TO',lvar
-!!$        else if(trim(adjustl(string)).eq.'fricpara') then
-!!$           READ (nfil, FMT="(F)" , ADVANCE="YES" ,IOSTAT= eos) rvar
-!!$           call dimer$setr8('FRICPARA',rvar)
-!!$           write(dprotfil,*)'FRICPARA SET TO',rvar
-!!$        else
-!!$           write(dprotfil,*)'REREAD CONTROLFILE: IDENTIFIER NOT RECOGNIZED:',trim(adjustl(string))
-!!$           !stop
-!!$        end if
-!!$     end do
-!!$     close(nfil)
-!!$     call system('rm -rf case.cntlnew')
-!!$  end IF
+!!$        IF(TRIM(ADJUSTL(STRING)).EQ.'OPTFRICPARA') THEN
+!!$           READ (NFIL, FMT="(L1)" , ADVANCE="YES" ,IOSTAT= EOS) LVAR 
+!!$           CALL DIMER$SETL4('OPTFRICPARA',LVAR)
+!!$           WRITE(DPROTFIL,*)'OPTFRICPARA SET TO',LVAR
+!!$        ELSE IF(TRIM(ADJUSTL(STRING)).EQ.'FRICPARA') THEN
+!!$           READ (NFIL, FMT="(F)" , ADVANCE="YES" ,IOSTAT= EOS) RVAR
+!!$           CALL DIMER$SETR8('FRICPARA',RVAR)
+!!$           WRITE(DPROTFIL,*)'FRICPARA SET TO',RVAR
+!!$        ELSE
+!!$           WRITE(DPROTFIL,*)'REREAD CONTROLFILE: IDENTIFIER NOT RECOGNIZED:',TRIM(ADJUSTL(STRING))
+!!$           !STOP
+!!$        END IF
+!!$     END DO
+!!$     CLOSE(NFIL)
+!!$     CALL SYSTEM('RM -RF CASE.CNTLNEW')
+!!$  END IF
 !!$
-!!$  return
-!!$end subroutine dimer$reread
+!!$  RETURN
+!!$END SUBROUTINE DIMER$REREAD
 
 
-subroutine dimer_proposcillator(dt,i,force)
-  use dimer_oscillator_module
-  real(8),intent(in)                 :: dt
-  integer(4),intent(in)              :: i       !which array
-  real(8),intent(inout)              :: force   !extra force
-  real(8)                            :: svar1,svar2
+SUBROUTINE DIMER_PROPOSCILLATOR(DT,I,FORCE)
+  USE DIMER_OSCILLATOR_MODULE
+  REAL(8),INTENT(IN)                 :: DT
+  INTEGER(4),INTENT(IN)              :: I       !WHICH ARRAY
+  REAL(8),INTENT(INOUT)              :: FORCE   !EXTRA FORCE
+  REAL(8)                            :: SVAR1,SVAR2
 
-  !desription: we use the incoming value as extra force of a driven oscillator.
-  !the return force value is the value of the actual force of the oscillator 
-  !after propagation.
-  !this is useful, because we suppose to have an incoming value which oscillates 
-  !around a mean value. what we need is the mean value. the actual force of the 
-  !driven oscillator (at steady state) will give us this mean value.
+  !DESRIPTION: WE USE THE INCOMING VALUE AS EXTRA FORCE OF A DRIVEN OSCILLATOR.
+  !THE RETURN FORCE VALUE IS THE VALUE OF THE ACTUAL FORCE OF THE OSCILLATOR 
+  !AFTER PROPAGATION.
+  !THIS IS USEFUL, BECAUSE WE SUPPOSE TO HAVE AN INCOMING VALUE WHICH OSCILLATES 
+  !AROUND A MEAN VALUE. WHAT WE NEED IS THE MEAN VALUE. THE ACTUAL FORCE OF THE 
+  !DRIVEN OSCILLATOR (AT STEADY STATE) WILL GIVE US THIS MEAN VALUE.
 
-  if(i.gt.odim) then
-     stop 'dimer oscillator array out of range'
-  end if
+  IF(I.GT.ODIM) THEN
+     STOP 'DIMER OSCILLATOR ARRAY OUT OF RANGE'
+  END IF
 
-  !we use optimized friction here
-  oscanner(i)=dt**2*sqrt(oscc(i)/oscmass(i))
-
-
-  svar1=(1.d0-oscanner(i))
-  svar2=1.d0/(1.d0+oscanner(i))
-
-  !propagate
-  oscp(i)=(svar2*dt**2/oscmass(i))*force&
-       &-(oscc(i)*dt**2/oscmass(i)-2.d0)*svar2*osc0(i)&
-       &-svar1*svar2*oscm(i)
+  !WE USE OPTIMIZED FRICTION HERE
+  OSCANNER(I)=DT**2*SQRT(OSCC(I)/OSCMASS(I))
 
 
-  !switch
-  oscm(i)=osc0(i)
-  osc0(i)=oscp(i)
+  SVAR1=(1.D0-OSCANNER(I))
+  SVAR2=1.D0/(1.D0+OSCANNER(I))
 
-  !use -1 because we search the steady state
-  force=oscc(i)*osc0(i)
+  !PROPAGATE
+  OSCP(I)=(SVAR2*DT**2/OSCMASS(I))*FORCE&
+       &-(OSCC(I)*DT**2/OSCMASS(I)-2.D0)*SVAR2*OSC0(I)&
+       &-SVAR1*SVAR2*OSCM(I)
 
 
-  return
-end subroutine dimer_proposcillator
+  !SWITCH
+  OSCM(I)=OSC0(I)
+  OSC0(I)=OSCP(I)
+
+  !USE -1 BECAUSE WE SEARCH THE STEADY STATE
+  FORCE=OSCC(I)*OSC0(I)
+
+
+  RETURN
+END SUBROUTINE DIMER_PROPOSCILLATOR

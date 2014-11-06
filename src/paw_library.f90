@@ -2019,7 +2019,6 @@ PRINT*,'NARGS ',NARGS,IARGC()
       REAL(8)   ,INTENT(IN) :: B(N,NEQ)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
-      INTEGER(4)            :: IPIV(N)
 !     ******************************************************************
 !
 !     ==================================================================
@@ -2231,9 +2230,9 @@ PRINT*,'NARGS ',NARGS,IARGC()
       IF(TTEST) THEN
         ALLOCATE(EMAT(N,N))
 !       == TEST EIGENVALUE EQUATION ============================================
-        EMAT(:,:)=CMPLX(0.D0,0.D0)
+        EMAT(:,:)=CMPLX(0.D0,0.D0,KIND=8)
         DO I=1,N
-          EMAT(I,I)=CMPLX(E(I),0.D0)
+          EMAT(I,I)=CMPLX(E(I),0.D0,KIND=8)
         ENDDO
         DEV=MAXVAL(ABS(MATMUL(H,U)-MATMUL(U,EMAT)))
         IF(DEV.GT.1.D-7) THEN
@@ -2244,7 +2243,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
 !       == TEST ORTHONORMALITY OF EIGENVECTORS =================================
         EMAT=MATMUL(TRANSPOSE(CONJG(U)),U)
         DO I=1,N
-          EMAT(I,I)=EMAT(I,I)-CMPLX(1.D0,0.D0)
+          EMAT(I,I)=EMAT(I,I)-CMPLX(1.D0,0.D0,KIND=8)
         ENDDO
         DEV=MAXVAL(ABS(EMAT))
         IF(DEV.GT.1.D-7) THEN
@@ -2713,7 +2712,7 @@ PRINT*,'NARGS ',NARGS,IARGC()
       BMAT(M+1:2*M,:)=REAL(-CI*APLUSB)
       CALL LIB_ESSL_DGESVS(2*N,2*M,NEQ,AMAT,XMAT,BMAT)
 !     CALL LIB_LAPACK_DGESV(2*M,2*M,NEQ,AMAT,XMAT,BMAT)
-      X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:))
+      X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:),KIND=8)
 !     =================================================================
 !     ==  TEST                                                       ==
 !     =================================================================
@@ -3725,7 +3724,7 @@ INTEGER(4) :: I,J
         END IF
         RES=MATMUL(CONJG(TRANSPOSE(U)),U)
         DO I=1,N
-          RES(I,I)=RES(I,I)-CMPLX(1.D0,0.D0)
+          RES(I,I)=RES(I,I)-CMPLX(1.D0,0.D0,KIND=8)
         ENDDO
         IF(MAXVAL(ABS(RES)).GT.1.D-10) THEN
           CALL ERROR$MSG('ORTHONORMALITY  TEST FAILED')
@@ -4726,7 +4725,6 @@ INTEGER(4) :: I,J
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       CHARACTER(4),SAVE       :: DIRSAVE=''
       INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       INTEGER     ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
       COMPLEX(8)              :: XDUMMY(LEN,NFFT)
@@ -4916,7 +4914,6 @@ INTEGER(4) :: I,J
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       CHARACTER(4),SAVE       :: DIRSAVE=''
       INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       REAL(8)     ,SAVE       :: SCALE
       INTEGER     ,SAVE       :: ISIGN
       COMPLEX(8)              :: XDUMMY(LEN)
@@ -5763,7 +5760,7 @@ END MODULE RANDOM_MODULE
         DO J=1,N
           CALL RANDOM_NUMBER(RE)
           CALL RANDOM_NUMBER(IM)
-          H(I,J)=CMPLX(RE,IM)
+          H(I,J)=CMPLX(RE,IM,KIND=8)
         ENDDO
       ENDDO
       H=H+TRANSPOSE(CONJG(H))
@@ -5773,7 +5770,7 @@ END MODULE RANDOM_MODULE
       CALL LIB$DIAGC8(N,H,E,U)
       EMAT=(0.D0,0.D0)
       DO I=1,N
-        EMAT(I,I)=CMPLX(E(I),0.D0)
+        EMAT(I,I)=CMPLX(E(I),0.D0,KIND=8)
       ENDDO
       RES=MATMUL(H,U)-MATMUL(U,EMAT)
 !      PRINT*,'TEST ',RES
@@ -5912,11 +5909,11 @@ END MODULE RANDOM_MODULE
       CALL RANDOM_NUMBER(RASQ)
       ASQ=RASQ
       CALL RANDOM_NUMBER(RASQ)
-      ASQ=ASQ+RASQ*CMPLX(0.D0,1.D0)
+      ASQ=ASQ+RASQ*CI
       CALL RANDOM_NUMBER(RB)
       B=RB
       CALL RANDOM_NUMBER(RB)
-      B=B+RB*CMPLX(0.D0,1.D0)
+      B=B+RB*CI
 
 !
 !     == WRITE INPUT DATA ============================================
@@ -5957,11 +5954,11 @@ END MODULE RANDOM_MODULE
       CALL RANDOM_NUMBER(RA)
       A=RA-0.5D0
       CALL RANDOM_NUMBER(RA)
-      A=A+(RA-0.5D0)*CMPLX(0.D0,1.D0)
+      A=A+(RA-0.5D0)*CI
       CALL RANDOM_NUMBER(RB)
       B=(RB-0.5D0)
       CALL RANDOM_NUMBER(RB)
-      B=B+(RB-0.5D0)*CMPLX(0.D0,1.D0)
+      B=B+(RB-0.5D0)*CI
 !
 !     == WRITE INPUT DATA ============================================
       IF(TPR) THEN
@@ -6084,6 +6081,7 @@ END MODULE RANDOM_MODULE
       INTEGER(4)           :: I
       LOGICAL   ,PARAMETER :: TPR=.FALSE.
       REAL(8)   ,PARAMETER :: TOL=1.D-6
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
 !     ****************************************************************
       WRITE(*,FMT='("LIB_TEST_GENERALEIGENVALUER8")')
 !
@@ -6093,12 +6091,12 @@ END MODULE RANDOM_MODULE
       CALL RANDOM_NUMBER(RANMAT)
       H=RANMAT
       CALL RANDOM_NUMBER(RANMAT)
-      H=H+RANMAT*CMPLX(0.D0,1.D0)
+      H=H+RANMAT*CI
       H=0.5D0*(H+TRANSPOSE(CONJG(H)))
       CALL RANDOM_NUMBER(RANMAT)
       S=RANMAT
       CALL RANDOM_NUMBER(RANMAT)
-      S=S+RANMAT*CMPLX(0.D0,1.D0)
+      S=S+RANMAT*CI
       S=MATMUL(S,TRANSPOSE(CONJG(S)))
 !
 !     ================================================================
@@ -6137,13 +6135,13 @@ END MODULE RANDOM_MODULE
 !     == TEST EIGENVALUE PROBLEM
       EMAT=0.D0
       DO I=1,N
-        EMAT(I,I)=CMPLX(E(I),0.D0)
+        EMAT(I,I)=CMPLX(E(I),0.D0,KIND=8)
       ENDDO
       DEV1=MAXVAL(ABS(MATMUL(H,U)-MATMUL(S,MATMUL(U,EMAT))))
 !     == TEST ORTHONORMALITY
       EMAT=0.D0
       DO I=1,N
-        EMAT(I,I)=CMPLX(1.D0,0.D0)
+        EMAT(I,I)=CMPLX(1.D0,0.D0,KIND=8)
       ENDDO
       DEV2=MAXVAL(ABS(MATMUL(TRANSPOSE(CONJG(U)),MATMUL(S,U))-EMAT))
 !     ==

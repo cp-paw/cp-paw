@@ -16,23 +16,23 @@
 !***********************************************************************
 !
 !..........................................................CLBSCH........
-MODULE spherical_MODULE
+MODULE SPHERICAL_MODULE
 INTEGER(4)          :: LMXX=0
 REAL(8),ALLOCATABLE :: GAUNTMAT(:,:,:)
-END MODULE spherical_MODULE
+END MODULE SPHERICAL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ROTATEYLM(LMX,ROT,YLMROT)
 !     **************************************************************************
-!     ** old interface for spherical$rotateylm                                **
+!     ** OLD INTERFACE FOR SPHERICAL$ROTATEYLM                                **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in) :: lmx
-      real(8)   ,intent(in) :: rot(3,3)
-      real(8)   ,intent(out):: ylmrot(lmx,lmx)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LMX
+      REAL(8)   ,INTENT(IN) :: ROT(3,3)
+      REAL(8)   ,INTENT(OUT):: YLMROT(LMX,LMX)
 !     **************************************************************************
-      call spherical$ROTATEYLM(LMX,ROT,YLMROT)
-      return
+      CALL SPHERICAL$ROTATEYLM(LMX,ROT,YLMROT)
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -58,12 +58,12 @@ END MODULE spherical_MODULE
       INTEGER(4),INTENT(IN) :: LM3
       REAL(8)   ,INTENT(OUT):: CG
 !     ******************************************************************
-      call spherical$gaunt(lm1,lm2,lm3,cg)
-      return
-      end
+      CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE spherical$YLM(LMX,R,YLM)
+      SUBROUTINE SPHERICAL$YLM(LMX,R,YLM)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATE REAL SPHERICAL HARMONICS YLM AT POINT R                   **
@@ -157,16 +157,16 @@ END MODULE spherical_MODULE
 !     **                                                                      **
 !     ********************************PETER BLOECHL, GOSLAR 2011****************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: LX     ! max(angular momentum quantum number)
+      INTEGER(4),INTENT(IN) :: LX     ! MAX(ANGULAR MOMENTUM QUANTUM NUMBER)
       INTEGER(4),INTENT(IN) :: INDX   ! 
       INTEGER(4),INTENT(IN) :: LMX
       REAL(8)   ,INTENT(OUT):: YLMPOL(INDX,LMX) 
       REAL(8)               :: FACTORIAL(0:2*LX)
-      INTEGER(4)            :: L,MPOS,IX,JY,KZ,P,I,J,k,J1,K1,N,IND,LM,m
+      INTEGER(4)            :: L,MPOS,IX,JY,KZ,P,I,J,K,J1,K1,N,IND,LM,M
       REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4,SVAR5,RES
       REAL(8)               :: PI
       INTEGER(4)            :: ISVAR
-      logical(4),parameter  :: twrite=.false.
+      LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -250,7 +250,7 @@ END MODULE spherical_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     == write power series expansion                                         ==
+!     == WRITE POWER SERIES EXPANSION                                         ==
 !     ==========================================================================
       IF(TWRITE) THEN
         LM=0
@@ -310,12 +310,12 @@ END MODULE spherical_MODULE
       SUBROUTINE PLGNDR(LMX,LX,X,PLM)
 !     **************************************************************************
 !     **                                                                      **
-!     **  CALCULATE THE associated legendre POLYNOMIALS multiplied with       **
+!     **  CALCULATE THE ASSOCIATED LEGENDRE POLYNOMIALS MULTIPLIED WITH       **
 !     **  SQRT((L-M)!/(L+M)!).                                                **
 !     **                                                                      **
-!     **  REmark                                                              **
-!     **    1) lm(l,m)=l(l+1)-m+1                                             **
-!     **    2) the routine plays with                                         **
+!     **  REMARK                                                              **
+!     **    1) LM(L,M)=L(L+1)-M+1                                             **
+!     **    2) THE ROUTINE PLAYS WITH                                         **
 !     **                                                                      **
 !     **  THE ASSOCIATED LEGENDRE POLYNOMIALS ARE DEFINED  FOR NON-NEGATIVE M **
 !     **    P_{L,M}=(-1)^M/(2^L*L!) (1-X^2)^{M/2) (D/DX)^{M+L} (1-X^2)^L      **
@@ -323,7 +323,7 @@ END MODULE spherical_MODULE
 !     **    P_{L,-M}=(-1)^M  (L-M)!/(L+M)! P_{L,M}                            **
 !     **                                                                      **
 !     **                                                                      **
-!     **  p_{l,l}=(-1)^l (2l-1)!! (1-x^2)^{l/2}                               **
+!     **  P_{L,L}=(-1)^L (2L-1)!! (1-X^2)^{L/2}                               **
 !     **                                                                      **
 !     **                                                                      **
 !     ****************************************** P.E. BLOECHL, 1991 ************
@@ -338,8 +338,8 @@ END MODULE spherical_MODULE
       REAL(8)                  :: PMM,CM,C0,CP
 !     **************************************************************************
       FACT=1.D0-X**2
-      FACT=MAX(FACT,0.D0)  ! avoid numerical problem that 1-1**2 < 0
-      FACT=SQRT(fact)
+      FACT=MAX(FACT,0.D0)  ! AVOID NUMERICAL PROBLEM THAT 1-1**2 < 0
+      FACT=SQRT(FACT)
       IF(FACT.EQ.0.D0) THEN
         SVAR=-X
         LM=0
@@ -379,8 +379,8 @@ END MODULE spherical_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     ==  multiply factor sqrt[(l+m)!/(l-m)!]
-!     ==  and complete for m<0                                                ==
+!     ==  MULTIPLY FACTOR SQRT[(L+M)!/(L-M)!]
+!     ==  AND COMPLETE FOR M<0                                                ==
 !     ==========================================================================
       DO L=1,LX
         I1=L*(L+1)+1
@@ -389,8 +389,8 @@ END MODULE spherical_MODULE
         DO M=1,L
           LMM=I1+M
           LMP=I1-M
-          FACT=FACT*SQRT(DBLE((L-M+1)*(L+M)))  ! fact=sqrt[(l+m)!/(l-m)!]
-          FAC2=-FAC2                           ! fac2=(-1)^m
+          FACT=FACT*SQRT(DBLE((L-M+1)*(L+M)))  ! FACT=SQRT[(L+M)!/(L-M)!]
+          FAC2=-FAC2                           ! FAC2=(-1)^M
           PLM(LMP)=PLM(LMP)/FACT
           PLM(LMM)=FAC2*PLM(LMP)
         ENDDO
@@ -399,15 +399,15 @@ END MODULE spherical_MODULE
       END
 !
 !     ..................................................................
-      SUBROUTINE spherical$ROTATEYLM(LMX,ROT,YLMROT)
+      SUBROUTINE SPHERICAL$ROTATEYLM(LMX,ROT,YLMROT)
 !     **                                                              **
 !     **  PRODUCES A LMX*LMX MATRIX YLMROT                            **
 !     **  THAT TRANSFORMS A COEFFICIENT VECTOR C_LM                   **
 !     **  OF A FUNCTION EXPRESSED AS F(R)=SUM_LM Y_LM(R)*C_LM         **
-!     **  INTO A COORDINATE SYSTEM R'=ROT*R                           **
-!     **  WITH Y'_LM(R')=Y_LM(R)                                      **
-!     **  SUCH THAT    F(R)=SUM_LM Y'_LM(R)*C'_LM                     **
-!     **  WITH C'_LM1=SUM_LM2 YLMROT_LM1,LM2 C_LM2                    **
+!     **  INTO A COORDINATE SYSTEM RPRIME=ROT*R                       **
+!     **  WITH YPRIME_LM(R')=Y_LM(R)                                  **
+!     **  SUCH THAT    F(R)=SUM_LM YPRIME_LM(R)*CPRIME_LM             **
+!     **  WITH CPRIME_LM1=SUM_LM2 YLMROT_LM1,LM2 C_LM2                **
 !     **  REMAINS INVARIANT UNDER ROTATION                            **
 !     **                                                              **
 !     **  WORKS ONLY FOR REAL HARMONICS  WITH Y_2=C*X;Y_3=C*Z;Y_4=C*Y **
@@ -437,7 +437,7 @@ END MODULE spherical_MODULE
       &      +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(2,2)*ROT(3,1))
          IF(ABS(SVAR-1.D0).GT.1.D-12) THEN
            CALL ERROR$MSG('ROTATION MATRIX NOT UNITARY')
-           CALL ERROR$STOP('spherical$rotatYLM')
+           CALL ERROR$STOP('SPHERICAL$ROTATYLM')
          END IF
        END IF
 !
@@ -450,7 +450,7 @@ END MODULE spherical_MODULE
          CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
          CALL ERROR$I4VAL('LMX',LMX)
          CALL ERROR$I4VAL('LX',LX)
-         CALL ERROR$STOP('spherical$rotatYLM')
+         CALL ERROR$STOP('SPHERICAL$ROTATYLM')
        END IF
        YLMROT(:,:)=(0.D0,0.D0)
        IF(LX.GE.0)YLMROT(1,1)=1.D0
@@ -519,15 +519,15 @@ END MODULE spherical_MODULE
        RETURN
        END
 !
-!     .......................................................................
+!     ..........................................................................
       SUBROUTINE SPHERICAL$YLMTRANS(LMX,C)
-!     **                                                                   **
-!     **  TRANSFORMATION MATRIX FROM REAL SPHERICAL HARMONICS YBAR         **
-!     **  TO ANGULAR MOMENTUM EIGENSTATES Y                                **
-!     **                                                                   **
-!     **   1=\SUM_{LM,LM'} |Y_{LM}><Y_{LM}|YBAR_{LM'}><YBAR_{LM'}|         **
-!     **    =\SUM_{LM,LM'} |Y_{LM}>C_{LM,LM'}<YBAR_{LM'}|                  **
-!     **                                                                   **
+!     **                                                                      **
+!     **  TRANSFORMATION MATRIX FROM REAL SPHERICAL HARMONICS YBAR            **
+!     **  TO ANGULAR MOMENTUM EIGENSTATES Y                                   **
+!     **                                                                      **
+!     **   1=\SUM_{LM,LMPRIME} |Y_{LM}><Y_{LM}|YBAR_{LM'}><YBAR_{LMPRIME}|    **
+!     **    =\SUM_{LM,LMPRIME} |Y_{LM}>C_{LM,LMPRIME}<YBAR_{LMPRIME}|         **
+!     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMX
       COMPLEX(8),INTENT(OUT):: C(LMX,LMX)
@@ -538,7 +538,7 @@ END MODULE spherical_MODULE
       LOGICAL(4)            :: TTEST=.FALSE.
       COMPLEX(8)            :: CTEST(LMX,LMX)
       REAL(8)               :: SVAR
-!     ***********************************************************************
+!     **************************************************************************
       LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
       IF((LMAX+1)**2.NE.LMX) THEN
         CALL ERROR$MSG('LMX MUST SPAN FULL L-SHELLS')
@@ -761,10 +761,10 @@ END MODULE spherical_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
 !     **************************************************************************
-!     **  CALCULATE gaunt COEFFICIENT FOR REAL SPHERICAL HARMONICS.           **
+!     **  CALCULATE GAUNT COEFFICIENT FOR REAL SPHERICAL HARMONICS.           **
 !     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))                    **
 !     ****************************************** P.E. BLOECHL, 1991 ************
-      USE spherical_MODULE
+      USE SPHERICAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1
       INTEGER(4),INTENT(IN) :: LM2
@@ -780,16 +780,16 @@ END MODULE spherical_MODULE
         LMXX=(LMAX+1)**2
         IF(ALLOCATED(GAUNTMAT))DEALLOCATE(GAUNTMAT)
         ALLOCATE(GAUNTMAT(LMXX,LMXX,LMXX))
-        CALL spherical_gauntmatrix(LMXX,LMAX,GAUNTMAT)
+        CALL SPHERICAL_GAUNTMATRIX(LMXX,LMAX,GAUNTMAT)
       END IF
       CG=GAUNTMAT(LM1,LM2,LM3)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE spherical_gauntmatrix(LMXX,LMAX,CG)
+      SUBROUTINE SPHERICAL_GAUNTMATRIX(LMXX,LMAX,CG)
 !     **************************************************************************
-!     **  CALCULATE matrix of gaunt COEFFICIENTS FOR REAL SPHERICAL HARMONICS **
+!     **  CALCULATE MATRIX OF GAUNT COEFFICIENTS FOR REAL SPHERICAL HARMONICS **
 !     **    Y(LM1)*Y(LM2)= SUM(LM3|CG(LM1,LM2,LM3)*Y(LM3))                    **
 !     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
@@ -797,7 +797,7 @@ END MODULE spherical_MODULE
       INTEGER(4),INTENT(IN) :: LMXX
       INTEGER(4),INTENT(IN) :: LMAX
       REAL(8)   ,INTENT(OUT):: CG(LMXX,LMXX,LMXX)
-      REAL(8)               :: FACT(0:170) !upper limit is max in real(8)
+      REAL(8)               :: FACT(0:170) !UPPER LIMIT IS MAX IN REAL(8)
       REAL(8)               :: SQFACT(0:170)
       REAL(8)               :: PI,SQPI,SQ2
       INTEGER(4)            :: I,IMAX
@@ -943,8 +943,8 @@ END MODULE spherical_MODULE
       INTEGER(4),INTENT(IN) :: M2
       INTEGER(4),INTENT(IN) :: L3
       INTEGER(4),INTENT(IN) :: M3
-      REAL(8)   ,INTENT(IN) :: FACT(0:50)
-      REAL(8)   ,INTENT(IN) :: SQFACT(0:50)
+      REAL(8)   ,INTENT(IN) :: FACT(0:170)
+      REAL(8)   ,INTENT(IN) :: SQFACT(0:170)
       REAL(8)               :: R1,R2
       INTEGER(4)            :: KMAX,KMIN,K
       REAL(8)               :: SUM,SVAR
@@ -982,8 +982,8 @@ END MODULE spherical_MODULE
       INTEGER(4),INTENT(IN) :: L1
       INTEGER(4),INTENT(IN) :: L2
       INTEGER(4),INTENT(IN) :: L3
-      REAL(8)   ,INTENT(IN) :: FACT(0:50)
-      REAL(8)   ,INTENT(IN) :: SQFACT(0:50)
+      REAL(8)   ,INTENT(IN) :: FACT(0:170)
+      REAL(8)   ,INTENT(IN) :: SQFACT(0:170)
       INTEGER(4)            :: LT,LTH
 !     ******************************************************************
 !
@@ -1005,120 +1005,120 @@ END MODULE spherical_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE spherical$testgauntrel()
+      SUBROUTINE SPHERICAL$TESTGAUNTREL()
 !     **************************************************************************
-!     ** this routine has no special use other than to test a mathematical    **
-!     ** identity                                                             **
-!     ** routine to test the identity                                         **
-!     **   4*pi*(2*l3+1) sum_{m1,m2} C_{Lm1,lm2,lm3a)C_(lm1,lm2,lm3b)         **
-!     **                                   =Q(l1,l2,l3)*delta(lm3a,lm3b)      **
-!     **  with                                                                **
-!     **    Q(l1,l2,l3)=q(l2,l1,l3)                                           **
-!     **    Q(l1,l2,l3)=q(l2,l3,l1)=q(l3,l1,l2)                               **
-!     **    q(l1,l2,l3)=0 if l1+l2+l3 is odd                                  **
+!     ** THIS ROUTINE HAS NO SPECIAL USE OTHER THAN TO TEST A MATHEMATICAL    **
+!     ** IDENTITY                                                             **
+!     ** ROUTINE TO TEST THE IDENTITY                                         **
+!     **   4*PI*(2*L3+1) SUM_{M1,M2} C_{LM1,LM2,LM3A)C_(LM1,LM2,LM3B)         **
+!     **                                   =Q(L1,L2,L3)*DELTA(LM3A,LM3B)      **
+!     **  WITH                                                                **
+!     **    Q(L1,L2,L3)=Q(L2,L1,L3)                                           **
+!     **    Q(L1,L2,L3)=Q(L2,L3,L1)=Q(L3,L1,L2)                               **
+!     **    Q(L1,L2,L3)=0 IF L1+L2+L3 IS ODD                                  **
 !     **************************************************************************
-      implicit none
-      integer(4),parameter :: lx1=10
-      integer(4),parameter :: lx2=10
-      integer(4),parameter :: lx3=10
-      real(8)              :: coeff(lx1+1,lx2+1,(lx3+1)**2)
-      integer(4)           :: l1,l2,l3,l3a,l3b
-      integer(4)           :: im1,im2,im3,im3a,im3b
-      integer(4)           :: lm1,lm2,lm3,lm3a,lm3b
-      real(8)              :: cg1,cg2,svar
-      real(8)              :: pi
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER :: LX1=10
+      INTEGER(4),PARAMETER :: LX2=10
+      INTEGER(4),PARAMETER :: LX3=10
+      REAL(8)              :: COEFF(LX1+1,LX2+1,(LX3+1)**2)
+      INTEGER(4)           :: L1,L2,L3,L3A,L3B
+      INTEGER(4)           :: IM1,IM2,IM3,IM3A,IM3B
+      INTEGER(4)           :: LM1,LM2,LM3,LM3A,LM3B
+      REAL(8)              :: CG1,CG2,SVAR
+      REAL(8)              :: PI
 !     **************************************************************************
-      pi=4.d0*atan(1.d0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
-!     == take care of angular part                                            ==
+!     == TAKE CARE OF ANGULAR PART                                            ==
 !     ==========================================================================
-print*,'========================================================='
-      coeff(:,:,:)=0.d0
-      do l1=0,lx1
-        do l2=0,lx2
-          do l3a=0,lx3
-            do im3a=1,2*l3a+1
-              lm3a=l3a**2+im3a
-              do l3b=0,lx3
-                do im3b=1,2*l3b+1
-                  lm3b=l3b**2+im3b
+PRINT*,'========================================================='
+      COEFF(:,:,:)=0.D0
+      DO L1=0,LX1
+        DO L2=0,LX2
+          DO L3A=0,LX3
+            DO IM3A=1,2*L3A+1
+              LM3A=L3A**2+IM3A
+              DO L3B=0,LX3
+                DO IM3B=1,2*L3B+1
+                  LM3B=L3B**2+IM3B
 !
-                  svar=0.d0
-                  do im1=1,2*l1+1
-                    lm1=l1**2+im1
-                    do im2=1,2*l2+1
-                      lm2=l2**2+im2
-                      call spherical$gaunt(lm1,lm2,lm3a,cg1)
-                      call spherical$gaunt(lm1,lm2,lm3b,cg2)
-                      svar=svar+4.d0*pi*cg1*cg2/real((2*l1+1)*(2*l2+1))
-                    enddo
-                  enddo
+                  SVAR=0.D0
+                  DO IM1=1,2*L1+1
+                    LM1=L1**2+IM1
+                    DO IM2=1,2*L2+1
+                      LM2=L2**2+IM2
+                      CALL SPHERICAL$GAUNT(LM1,LM2,LM3A,CG1)
+                      CALL SPHERICAL$GAUNT(LM1,LM2,LM3B,CG2)
+                      SVAR=SVAR+4.D0*PI*CG1*CG2/REAL((2*L1+1)*(2*L2+1))
+                    ENDDO
+                  ENDDO
 !
-                  if(lm3a.eq.lm3b) then
-                    coeff(l1+1,l2+1,lm3a)=svar
-                  else
-                    if(abs(svar).gt.1.d-10) then
-                      write(*,fmt='(4i5,f20.10)')l1,l2,lm3a,lm3b,svar
-                      call error$msg('test 1 failed ')
-                      call error$msg('nonzero result for lm3a.ne.lm3b')
-                      call error$stop('spherical$testgauntrel1')
-                    end if
-                    cycle
-                  end if
+                  IF(LM3A.EQ.LM3B) THEN
+                    COEFF(L1+1,L2+1,LM3A)=SVAR
+                  ELSE
+                    IF(ABS(SVAR).GT.1.D-10) THEN
+                      WRITE(*,FMT='(4I5,F20.10)')L1,L2,LM3A,LM3B,SVAR
+                      CALL ERROR$MSG('TEST 1 FAILED ')
+                      CALL ERROR$MSG('NONZERO RESULT FOR LM3A.NE.LM3B')
+                      CALL ERROR$STOP('SPHERICAL$TESTGAUNTREL1')
+                    END IF
+                    CYCLE
+                  END IF
 !
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-!
-!     ==========================================================================
-!     ==  test dependence on m3                                               ==
-!     ==========================================================================
-      do l3=0,lx3
-        do im3=2,2*l3+1
-          svar=maxval(abs(coeff(:,:,l3**2+im3)-coeff(:,:,l3**2+1)))
-          if(svar.gt.1.d-8) then
-            do l2=0,lx2
-              do l1=0,lx1
-                svar=abs(coeff(l1+1,l2+1,l3**2+im3)-coeff(l1+1,l2,l3**2+1))
-                if(svar.lt.1.d-8) cycle
-                write(*,fmt='(3i5,20f15.9)')l1,l2,l3 &
-     &                      ,coeff(l1+1,l2+1,l3**2+1:(l3+1)**2)
-              enddo
-            enddo
-            call error$msg('test 2 failed ')
-            call error$msg('result depends on m3')
-            call error$i4val('l3',l3)
-            call error$i4val('im3',im3)
-            call error$r8val('deviation',svar)
-            call error$stop('spherical$testgauntrel1')
-          end if
-        enddo
-      enddo
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
-!     ==  test if result vanishes for odd l1+l2+l3                            ==
+!     ==  TEST DEPENDENCE ON M3                                               ==
 !     ==========================================================================
-      do l1=0,lx1
-        do l2=0,lx2
-          do l3=0,lx3
-            if(mod(l1+l2+l3,2).eq.0) cycle
-            lm3=l3**2  
-            im3=2*l3+1
-            svar=maxval(abs(coeff(l1+1,l2+1,lm3+1:lm3+im3)))
-            if(svar.gt.1.d-8) then
-              call error$msg('test 3 failed ')
-              call error$msg('result nonzero for odd l1+l2+l3')
-              call error$stop('spherical$testgauntrel')
-            end if
-          enddo
-        enddo
-      enddo
-      stop 'testgauntrel1 completed sucessfully'
-      end
+      DO L3=0,LX3
+        DO IM3=2,2*L3+1
+          SVAR=MAXVAL(ABS(COEFF(:,:,L3**2+IM3)-COEFF(:,:,L3**2+1)))
+          IF(SVAR.GT.1.D-8) THEN
+            DO L2=0,LX2
+              DO L1=0,LX1
+                SVAR=ABS(COEFF(L1+1,L2+1,L3**2+IM3)-COEFF(L1+1,L2,L3**2+1))
+                IF(SVAR.LT.1.D-8) CYCLE
+                WRITE(*,FMT='(3I5,20F15.9)')L1,L2,L3 &
+     &                      ,COEFF(L1+1,L2+1,L3**2+1:(L3+1)**2)
+              ENDDO
+            ENDDO
+            CALL ERROR$MSG('TEST 2 FAILED ')
+            CALL ERROR$MSG('RESULT DEPENDS ON M3')
+            CALL ERROR$I4VAL('L3',L3)
+            CALL ERROR$I4VAL('IM3',IM3)
+            CALL ERROR$R8VAL('DEVIATION',SVAR)
+            CALL ERROR$STOP('SPHERICAL$TESTGAUNTREL1')
+          END IF
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  TEST IF RESULT VANISHES FOR ODD L1+L2+L3                            ==
+!     ==========================================================================
+      DO L1=0,LX1
+        DO L2=0,LX2
+          DO L3=0,LX3
+            IF(MOD(L1+L2+L3,2).EQ.0) CYCLE
+            LM3=L3**2  
+            IM3=2*L3+1
+            SVAR=MAXVAL(ABS(COEFF(L1+1,L2+1,LM3+1:LM3+IM3)))
+            IF(SVAR.GT.1.D-8) THEN
+              CALL ERROR$MSG('TEST 3 FAILED ')
+              CALL ERROR$MSG('RESULT NONZERO FOR ODD L1+L2+L3')
+              CALL ERROR$STOP('SPHERICAL$TESTGAUNTREL')
+            END IF
+          ENDDO
+        ENDDO
+      ENDDO
+      STOP 'TESTGAUNTREL1 COMPLETED SUCESSFULLY'
+      END
 !
 !.......................................................................
 MODULE SPHERICALCCMAT_MODULE

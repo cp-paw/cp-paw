@@ -29,7 +29,7 @@
       REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
       REAL(8)   ,ALLOCATABLE :: DREL(:)
       LOGICAL(4)             :: TREL,TZORA
-      INTEGER(4)             :: IB,N,L,ISO,IR
+      INTEGER(4)             :: IB,N,L,ISO
       REAL(8)                :: JPHALF ! J+1/2
       REAL(8)                :: C      ! SPEED OF LIGHT
       REAL(8)                :: ALPHA  ! FINE STRUCTURE CONSTANT
@@ -1152,7 +1152,7 @@ USE PERIODICTABLE_MODULE
         IF(CONVG) EXIT
 !
 !       ========================================================================
-!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
+!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSONS METHOD              ==
 !       ========================================================================
         XAV=SQRT(SUM(R**3*(POT-POTIN)**2)/SUM(R**3))
         XMAX=MAXVAL(ABS(POT-POTIN))
@@ -1177,7 +1177,7 @@ USE PERIODICTABLE_MODULE
         CONVG=CONVG.OR.(XMAX.LT.TOL).AND.NCONV.GT.5
 !
 !       ========================================================================
-!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSON'S METHOD             ==
+!       ==  GENERATE NEXT ITERATION USING D. G. ANDERSONS METHOD              ==
 !       ========================================================================
         CALL BROYDEN$STEP(NR,POTIN,POT-POTIN)
         POT=POTIN
@@ -1658,10 +1658,10 @@ END IF
       REAL(8)                    :: DREL(NR),GHOM(NR),PHIHOM(NR)
       REAL(8)                    :: PHIINHOM(NR)
       REAL(8)                    :: VAL1,VAL2,SVAR
-      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,I,J
+      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,I
       INTEGER(4)                 :: ITER
       LOGICAL                    :: THOM
-      REAL(8)                    :: Y2,Y1,X2,X1,DER,DERO
+      REAL(8)                    :: Y2,Y1,X2,X1,DER
       INTEGER(4)                 :: IRBOX
 !     **************************************************************************
                                  CALL TRACE$PUSH('ATOMLIB$PAWBOUNDSTATE')

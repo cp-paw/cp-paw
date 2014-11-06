@@ -259,7 +259,7 @@ MODULE DFT_MODULE
         DESCRIPTION(1)='PERDEW-WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
         DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.Lett.77, 3865 (1992))'
+     &                          //'(PHYS.REV.LETT.77, 3865 (1992))'
         DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
      &                          //'(PHYS.REV.B 59, 7413 (1999))'
 !
@@ -277,7 +277,7 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B 46, 6671 (1992))'
 !
 !     ==================================================================
-!     == TYPE 13:  LSD + RevPBE-GC                                     ==
+!     == TYPE 13:  LSD + REVPBE-GC                                     ==
 !     ==================================================================
       ELSE IF (IT.EQ.13) THEN
         TX=.TRUE.
@@ -286,7 +286,7 @@ MODULE DFT_MODULE
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
-        DESCRIPTION(2)='RevPBE of Y. Zhang and W. Yang GGA FOR EXCHANGE AND CORRELATION ' &
+        DESCRIPTION(2)='REVPBE OF Y. ZHANG AND W. YANG GGA FOR EXCHANGE AND CORRELATION ' &
      &                          //'(PHYS.REV.LETT 80, 890 (1998))'
 !
 !     ==================================================================
@@ -303,12 +303,12 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B 37, 785 (1988-I))'
 !
 !     ==========================================================================
-!     == TYPE 5002:  LSD + PBE96-GC with scaled exchange                      ==
+!     == TYPE 5002:  LSD + PBE96-GC WITH SCALED EXCHANGE                      ==
 !     ==========================================================================
       ELSE IF (IT.EQ.5002) THEN
-        TX=.true.
+        TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',3)
-        scalex=0.75d0
+        SCALEX=0.75D0
         TPBE96=.TRUE.
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
@@ -348,7 +348,7 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
 !     ============================================================================
-!     == TYPE 10004:  CORRELATION (RPBE-TYPE11 OR PBE-TYPE10 OR RevPBE-TYPE-13) ==
+!     == TYPE 10004:  CORRELATION (RPBE-TYPE11 OR PBE-TYPE10 OR REVPBE-TYPE-13) ==
 !     ============================================================================
       ELSE IF (IT.EQ.10004) THEN
         TPBE96=.TRUE.
@@ -360,7 +360,7 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B 59, 7413 (1999))'
 !
 !     ==========================================================================
-!     == TYPE 10005:  PBE exchange only                                       ==
+!     == TYPE 10005:  PBE EXCHANGE ONLY                                       ==
 !     ==========================================================================
       ELSE IF (IT.EQ.10005) THEN
         TX=.TRUE.
@@ -382,7 +382,7 @@ MODULE DFT_MODULE
 !   
 !
 !     ==========================================================================
-!     == TYPE 10007:  RPBE exchange only                                       ==
+!     == TYPE 10007:  RPBE EXCHANGE ONLY                                       ==
 !     ==========================================================================
       ELSE IF (IT.EQ.10007) THEN
         TX=.TRUE.
@@ -439,9 +439,9 @@ MODULE DFT_MODULE
       ELSE
         CALL REPORT$STRING(NFIL,'NON-SPIN POLARIZED (LDA) FUNCTIONAL')
       END IF        
-      if(.not.tcorrelation) then
+      IF(.NOT.TCORRELATION) THEN
         CALL REPORT$STRING(NFIL,'CORRELATIONS ARE SWITCHED OFF')
-      end if
+      END IF
       IF(SCALEX.NE.1.D0) THEN
          CALL REPORT$R8VAL(NFIL,'EXCHANGE CONTRIBUTION SCALED BY FACTOR ',SCALEX,'')
       END IF
@@ -534,9 +534,9 @@ MODULE DFT_MODULE
       LOGICAL(4)              :: TCHK
 !     **************************************************************************
 !
-!     == set functional type ===================================================
+!     == SET FUNCTIONAL TYPE ===================================================
       IF(ID.EQ.'TYPE') THEN   
-        TCHK=.true.
+        TCHK=.TRUE.
         IF(VAL.EQ.'PZ') THEN
           CALL  DFT$SETI4('TYPE',1)
         ELSE IF(VAL.EQ.'PERDEW-WANG:LOCAL') THEN
@@ -553,7 +553,7 @@ MODULE DFT_MODULE
           CALL  DFT$SETI4('TYPE',5001)
         ELSE
           TCHK=.FALSE.
-        end if
+        END IF
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('DFT FUNCTIONAL SELECTION INVALID')
           CALL ERROR$CHVAL('ID',VAL)
@@ -701,7 +701,7 @@ MODULE DFT_MODULE
         VAL(1)=RHOTMIN
       END IF
 !
-!     == spin density must not be larger than the total density ========
+!     == SPIN DENSITY MUST NOT BE LARGER THAN THE TOTAL DENSITY ========
       IF(ABS(VAL(2)).GE.VAL(1)-RHOTMIN) THEN
         VAL(2)=MAX(VAL(2),-VAL(1)+RHOTMIN)
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
@@ -712,14 +712,14 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN 
         CALL EXCHANGE$EVAL1(VAL,EXC1,DEXC1)
-        EXC=EXC+EXC1*scalex
-        DEXC=DEXC+DEXC1*scalex
+        EXC=EXC+EXC1*SCALEX
+        DEXC=DEXC+DEXC1*SCALEX
       END IF
 !
 !     ==================================================================
 !     ==  PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION           ==
 !     ==================================================================
-      IF(TPW91L.and.tcorrelation) THEN
+      IF(TPW91L.AND.TCORRELATION) THEN
         CALL PERDEWWANG91L$EVAL1(VAL,EXC1,DEXC1)
         EXC=EXC+EXC1
         DEXC(:)=DEXC(:)+DEXC1(:)
@@ -728,7 +728,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW-ZUNGER PARAMETERIZATION OF LOCAL CORRELATION         ==
 !     ==================================================================
-      IF(TPZ.and.tcorrelation) THEN
+      IF(TPZ.AND.TCORRELATION) THEN
         CALL PERDEWZUNGER$EVAL1(VAL,EXC1,DEXC1)
         EXC=EXC+EXC1
         DEXC(:)=DEXC(:)+DEXC1(:)
@@ -737,7 +737,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW GRADIENT CORRECTION TO CORRELATION                   ==
 !     ==================================================================
-      IF(TPERDEW.and.tcorrelation) THEN
+      IF(TPERDEW.AND.TCORRELATION) THEN
         CALL PERDEW$EVAL1(VAL,EXC1,DEXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -747,7 +747,7 @@ MODULE DFT_MODULE
 !     ==  PERDEW WANG 91 GRADIENT CORRECTION TO CORRELATION           ==
 !     ==  ( INCLUDES ALSO LOCAL CORRELATION)                          ==
 !     ==================================================================
-      IF(TPW91G.and.tcorrelation) THEN
+      IF(TPW91G.AND.TCORRELATION) THEN
         DEXC1=0.D0
         CALL PERDEWWANG91G$EVAL(VAL(1),VAL(2),VAL(3),EXC1 &
      &                         ,DEXC1(1),DEXC1(2),DEXC1(3))
@@ -758,7 +758,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
 !     ==================================================================
-      IF(TPBE96.and.tcorrelation) THEN
+      IF(TPBE96.AND.TCORRELATION) THEN
         CALL PBE$EVAL1(VAL,EXC1,DEXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -767,7 +767,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  LYP88 CORRELATION FUNCTIONAL                                ==
 !     ==================================================================
-      IF(TLYP88.and.tcorrelation) THEN
+      IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL1(VAL,EXC1,DEXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -864,15 +864,15 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN
         CALL EXCHANGE$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
-        EXC=EXC+EXC1*scalex
-        DEXC(:)=DEXC(:)+DEXC1(:)*scalex
-        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*scalex
+        EXC=EXC+EXC1*SCALEX
+        DEXC(:)=DEXC(:)+DEXC1(:)*SCALEX
+        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*SCALEX
       END IF
 !
 !     ==================================================================
 !     ==  PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION           ==
 !     ==================================================================
-      IF(TPW91L.and.tcorrelation) THEN
+      IF(TPW91L.AND.TCORRELATION) THEN
         CALL PERDEWWANG91L$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -882,7 +882,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW ZUNGER PARAMETERIZATION OF LOCAL CORRELATION         ==
 !     ==================================================================
-      IF(TPZ.and.tcorrelation) THEN
+      IF(TPZ.AND.TCORRELATION) THEN
         CALL PERDEWZUNGER$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -892,7 +892,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW GRADIENT CORRECTION TO CORRELATION                   ==
 !     ==================================================================
-      IF(TPERDEW.and.tcorrelation) THEN
+      IF(TPERDEW.AND.TCORRELATION) THEN
         CALL PERDEW$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC(:)=DEXC(:)+DEXC1(:)
@@ -903,7 +903,7 @@ MODULE DFT_MODULE
 !     ==  PERDEW WANG 91 GRADIENT CORRECTION TO CORRELATION           ==
 !     ==  ( INCLUDES ALSO LOCAL CORRELATION)                          ==
 !     ==================================================================
-      IF(TPW91G.and.tcorrelation) THEN
+      IF(TPW91G.AND.TCORRELATION) THEN
         CALL PERDEWWANG91G$EVAL2(VAL(1),VAL(2),VAL(3),EXC1 &
      &       ,DEXC1(1),DEXC1(2),DEXC1(3) &
      &       ,D2EXC1(1,1),D2EXC1(1,2),D2EXC1(1,3) &
@@ -919,7 +919,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
 !     ==================================================================
-      IF(TPBE96.and.tcorrelation) THEN
+      IF(TPBE96.AND.TCORRELATION) THEN
         CALL PBE$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -929,7 +929,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  LEE YANG-PARR 88 CORRELATION                                ==
 !     ==================================================================
-      IF(TLYP88.and.tcorrelation) THEN
+      IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1028,16 +1028,16 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TX) THEN
         CALL EXCHANGE$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
-        EXC=EXC+EXC1*scalex
-        DEXC(:)=DEXC(:)+DEXC1(:)*scalex
-        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*scalex
-        D3EXC(:,:,:)=D3EXC(:,:,:)+D3EXC1(:,:,:)*scalex
+        EXC=EXC+EXC1*SCALEX
+        DEXC(:)=DEXC(:)+DEXC1(:)*SCALEX
+        D2EXC(:,:)=D2EXC(:,:)+D2EXC1(:,:)*SCALEX
+        D3EXC(:,:,:)=D3EXC(:,:,:)+D3EXC1(:,:,:)*SCALEX
       END IF
 !
 !     ==================================================================
 !     ==  PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION           ==
 !     ==================================================================
-      IF(TPW91L.and.tcorrelation) THEN
+      IF(TPW91L.AND.TCORRELATION) THEN
         CALL PERDEWWANG91L$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1048,7 +1048,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW ZUNGER PARAMETERIZATION OF LOCAL CORRELATION         ==
 !     ==================================================================
-      IF(TPZ.and.tcorrelation) THEN
+      IF(TPZ.AND.TCORRELATION) THEN
         CALL PERDEWZUNGER$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1059,7 +1059,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PERDEW GRADIENT CORRECTION TO CORRELATION                   ==
 !     ==================================================================
-      IF(TPERDEW.and.tcorrelation) THEN
+      IF(TPERDEW.AND.TCORRELATION) THEN
         CALL PERDEW$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1071,7 +1071,7 @@ MODULE DFT_MODULE
 !     ==  PERDEW WANG 91 GRADIENT CORRECTION TO CORRELATION           ==
 !     ==  ( INCLUDES ALSO LOCAL CORRELATION)                          ==
 !     ==================================================================
-      IF(TPW91G.and.tcorrelation) THEN
+      IF(TPW91G.AND.TCORRELATION) THEN
         CALL PERDEWWANG91G$EVAL2(VAL(1),VAL(2),VAL(3),EXC1 &
      &       ,DEXC1(1),DEXC1(2),DEXC1(3) &
      &       ,D2EXC1(1,1),D2EXC1(1,2),D2EXC1(1,3) &
@@ -1087,7 +1087,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
 !     ==================================================================
-      IF(TPBE96.and.tcorrelation) THEN
+      IF(TPBE96.AND.TCORRELATION) THEN
         CALL PBE$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1098,7 +1098,7 @@ MODULE DFT_MODULE
 !     ==================================================================
 !     ==  LEE YANG-PARR 88 CORRELATION FUNCTIONAL                     ==
 !     ==================================================================
-      IF(TLYP88.and.tcorrelation) THEN
+      IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
@@ -1314,7 +1314,7 @@ MODULE EXCHANGE_MODULE
 !**  METHODS:                                                         **
 !**                                                                   **
 !***********************************************************************
-USE DFT_MODULE, ONLY: TSAFE,tspin
+USE DFT_MODULE, ONLY: TSAFE,TSPIN
 USE TABLE1D_MODULE
 LOGICAL(4)         :: TINI=.FALSE.
 !=======================================================================
@@ -1396,10 +1396,10 @@ CONTAINS
         FXTYPE='RPBE'
         IPAR=3       ! SELECT PARAMETERS CONSISTENT WITH PBE EXCHANGE
       ELSE IF(ITYPE.EQ.5) THEN
-!       == LOCAL EXCHANGE + revPBE GRADIENT CORRECTION ================        
+!       == LOCAL EXCHANGE + REVPBE GRADIENT CORRECTION ================        
         TGRA=.TRUE.
         FXTYPE='PBE'
-        IPAR=4       ! SELECT PARAMETERS CONSISTENT WITH reVPBE EXCHANGE
+        IPAR=4       ! SELECT PARAMETERS CONSISTENT WITH REVPBE EXCHANGE
       ELSE IF(ITYPE.EQ.32) THEN
 !       == LOCAL EXCHANGE ==============================================
 !       == + PBE96 GRADIENT CORRECTION CORRECT LONG-RANGE SCALING ======
@@ -1447,7 +1447,7 @@ CONTAINS
         KAPPA=0.804D0
       ELSE IF(IPAR.EQ.4) THEN
 !       ================================================================
-!       == PARAMETERS FROM reVPBE PAPER                               ==
+!       == PARAMETERS FROM REVPBE PAPER                               ==
 !       == THE PARAMETERS MAKE SENS ONLY IN CONNECTION WITH THE       ==
 !       == PBE CORRELATION FUNCTIONAL                                 ==
 !       == KAPPA MAKES SENSE ONLY WITH THE SIMPLE FORM                ==
@@ -2245,7 +2245,7 @@ END MODULE EXCHANGE_MODULE
 !     *****************************************************************
       IF(FXTYPE.EQ.'PBE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN PBE'S PAPER               ==
+!       == THIS IS THE EXCHANGE AS USED IN PBES PAPER                ==
 !       == THE SIMPLER FORM                                          ==
 !       == THAT GOES TO A CONSTANT FOR S2->INFTY                     ==
 !       == IT REQUIRES THE FACTORS MU,KAPPA,MUBYKAPPA                ==
@@ -2264,7 +2264,7 @@ END MODULE EXCHANGE_MODULE
         FX_S  =MU*BFAC
       ELSE IF(FXTYPE.EQ.'BECKE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN BECKE'S PAPER             ==
+!       == THIS IS THE EXCHANGE AS USED IN BECKES PAPER              ==
 !       == IT CONTAINS THE ARCUS SINUS HYPERBOLICUS                  ==
 !       == AND FULFILLS E_X(R)->0.5*RHO/R FOR THE EXPONENTIAL        ==
 !       == TAIL OF THE WAVE FUNCTION RHO(R)=A*EXP(-B*R)              ==
@@ -2322,7 +2322,7 @@ END MODULE EXCHANGE_MODULE
 !     *****************************************************************
       IF(FXTYPE.EQ.'PBE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN PBE'S PAPER               ==
+!       == THIS IS THE EXCHANGE AS USED IN PBES PAPER                ==
 !       == THE SIMPLER FORM                                          ==
 !       == THAT GOES TO A CONSTANT FOR S2->INFTY                     ==
 !       == IT REQUIRES THE FACTORS MU,KAPPA,MUBYKAPPA                ==
@@ -2343,7 +2343,7 @@ END MODULE EXCHANGE_MODULE
         FX_SS =-MUBYKAPPA*FX_S
       ELSE IF(FXTYPE.EQ.'BECKE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN BECKE'S PAPER             ==
+!       == THIS IS THE EXCHANGE AS USED IN BECKES PAPER              ==
 !       == IT CONTAINS THE ARCUS SINUS HYPERBOLICUS                  ==
 !       == AND FULFILLS E_X(R)->0.5*RHO/R FOR THE EXPONENTIAL        ==
 !       == TAIL OF THE WAVE FUNCTION RHO(R)=A*EXP(-B*R)              ==
@@ -2409,7 +2409,7 @@ END MODULE EXCHANGE_MODULE
 !     *****************************************************************
       IF(FXTYPE.EQ.'PBE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN PBE'S PAPER               ==
+!       == THIS IS THE EXCHANGE AS USED IN PBES PAPER                ==
 !       == THE SIMPLER FORM                                          ==
 !       == THAT GOES TO A CONSTANT FOR S2->INFTY                     ==
 !       == IT REQUIRES THE FACTORS MU,KAPPA,MUBYKAPPA                ==
@@ -2432,7 +2432,7 @@ END MODULE EXCHANGE_MODULE
         FX_SSS=-MUBYKAPPA*FX_SS
       ELSE IF(FXTYPE.EQ.'BECKE') THEN
 !       ===============================================================
-!       == THIS IS THE EXCHANGE AS USED IN BECKE'S PAPER             ==
+!       == THIS IS THE EXCHANGE AS USED IN BECKES PAPER              ==
 !       == IT CONTAINS THE ARCUS SINUS HYPERBOLICUS                  ==
 !       == AND FULFILLS E_X(R)->0.5*RHO/R FOR THE EXPONENTIAL        ==
 !       == TAIL OF THE WAVE FUNCTION RHO(R)=A*EXP(-B*R)              ==
@@ -3735,7 +3735,7 @@ END MODULE PERDEW_MODULE
       SUBROUTINE PERDEW$EVAL1(VAL,EXC,VXC)
 !     ******************************************************************
 !     **                                                              **
-!     **  CALCULATES PERDEW'S 86 GRADIENT CORRECTION FOR CORRELATION  **
+!     **  CALCULATES PERDEWS 86 GRADIENT CORRECTION FOR CORRELATION   **
 !     **    J.P. PERDEW PHYS. REV. B, 33, 8822 (1986)                 **
 !     **                                                              **
 !     **  REMARKS:                                                    **
@@ -3828,7 +3828,7 @@ END MODULE PERDEW_MODULE
       SUBROUTINE PERDEW$EVAL2(VAL,EXC,VXC,V2XC)
 !     ******************************************************************
 !     **                                                              **
-!     **  CALCULATES PERDEW'S 86 GRADIENT CORRECTION FOR CORRELATION  **
+!     **  CALCULATES PERDEWS 86 GRADIENT CORRECTION FOR CORRELATION   **
 !     **    J.P. PERDEW PHYS. REV. B, 33, 8822 (1986)                 **
 !     **                                                              **
 !     **  REMARKS:                                                    **
@@ -3952,7 +3952,7 @@ END MODULE PERDEW_MODULE
       SUBROUTINE PERDEW$EVAL3(VAL,EXC,VXC,V2XC,V3XC)
 !     ******************************************************************
 !     **                                                              **
-!     **  CALCULATES PERDEW'S 86 GRADIENT CORRECTION FOR CORRELATION  **
+!     **  CALCULATES PERDEWS 86 GRADIENT CORRECTION FOR CORRELATION   **
 !     **    J.P. PERDEW PHYS. REV. B, 33, 8822 (1986)                 **
 !     **                                                              **
 !     **  REMARKS:                                                    **
@@ -4251,7 +4251,7 @@ CONTAINS
        SUBROUTINE PERDEWWANG91L_RHODEP1(RHOT,EC,DEC &
       &                ,A,ALPHA1,BETA1,BETA2,BETA3,BETA4)
 !      *****************************************************************
-!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG'S PAPER**
+!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG PAPER **
 !      **  PW,PRB45,13224(1992-I)                                     **
 !      **  HERE AS FUNCTION OF RHOT AND NOT AS FUNCTION OF RS         **
 !      **  NOTE: RHOT IS A MODULE ROUTINE, FROM WHICH IT USES THE     **
@@ -4309,7 +4309,7 @@ CONTAINS
        SUBROUTINE PERDEWWANG91L_RHODEP2(RHOT,EC,DEC,D2EC &
       &                ,A,ALPHA1,BETA1,BETA2,BETA3,BETA4)
 !      *****************************************************************
-!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG'S PAPER**
+!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG PAPER  **
 !      **  PW,PRB45,13224(1992-I)                                     **
 !      **  HERE AS FUNCTION OF RHOT AND NOT AS FUNCTION OF RS         **
 !      **  NOTE: RHOT IS A MODULE ROUTINE, FROM WHICH IT USES THE     **
@@ -4374,7 +4374,7 @@ CONTAINS
        SUBROUTINE PERDEWWANG91L_RHODEP3(RHOT,EC,DEC,D2EC,D3EC &
       &                ,A,ALPHA1,BETA1,BETA2,BETA3,BETA4)
 !      *****************************************************************
-!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG'S PAPER**
+!      **  IMPLEMENTS FUNCTION DEFINED IN EQ.10 OF PERDEW-WANG PAPER  **
 !      **  PW,PRB45,13224(1992-I)                                     **
 !      **  HERE AS FUNCTION OF RHOT AND NOT AS FUNCTION OF RS         **
 !      **  NOTE: RHOT IS A MODULE ROUTINE, FROM WHICH IT USES THE     **

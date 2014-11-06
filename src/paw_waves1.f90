@@ -2921,7 +2921,7 @@ END IF
       NPRO=MAP%NPRO
 !
 !     ==========================================================================
-!     ==  TRANSFORM THIS$HTBC FROM NTBO'S TO PAW PARTIAL WAVES                ==
+!     ==  TRANSFORM THIS$HTBC FROM NTBOS TO PAW PARTIAL WAVES                 ==
 !     ==========================================================================
 !!!! PARALLELIZE LOOP WITH RESPECT TO STATES.
       CALL LMTO$GETI4('NLOCORB',NORB)
@@ -3674,7 +3674,7 @@ RETURN
             IF(L2.EQ.L1) THEN
               DO M=1,2*L1+1
                 DH(LMN1+M,LMN2+M,1,IAT)=DH(LMN1+M,LMN2+M,1,IAT) &
-     &                                 +CMPLX(POTB*DO(LMN1+M,LMN2+M,1,IAT),0.D0)
+     &                               +CMPLX(POTB*DO(LMN1+M,LMN2+M,1,IAT),KIND=8)
               ENDDO
             END IF
             LMN2=LMN2+2*L2+1
@@ -3812,7 +3812,7 @@ RETURN
             DEALLOCATE(DH1)
             DEALLOCATE(DO1)
 !
-!           == ADD CONTRIBUTION FROM NTBO'S ====================================
+!           == ADD CONTRIBUTION FROM NTBOS  ====================================
             IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
               CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
      &                                ,THIS%HTBC_NEW(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
@@ -4065,8 +4065,8 @@ END IF
             DHUPUP=DH(LMN1,LMN2,1)+DH(LMN1,LMN2,4)
             DHDNDN=DH(LMN1,LMN2,1)-DH(LMN1,LMN2,4)
 !           == HERE, DH=DH/DD AND NOT CONJG(DE/DD) !! 
-!JSC+PEB    DHUPDN=CMPLX(DH(LMN1,LMN2,2),DH(LMN1,LMN2,3),8)
-!            DHUPDN=CMPLX(DH(LMN1,LMN2,2),-DH(LMN1,LMN2,3),8)
+!JSC+PEB    DHUPDN=CMPLX(DH(LMN1,LMN2,2),DH(LMN1,LMN2,3),KIND=8)
+!            DHUPDN=CMPLX(DH(LMN1,LMN2,2),-DH(LMN1,LMN2,3),KIND=8)
             DHUPDN=DH(LMN1,LMN2,2)-CI*DH(LMN1,LMN2,3)
             DHDNUP=CONJG(DHUPDN)
             DO IB=1,NB
@@ -4252,7 +4252,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         DO IR=1,NRL
           VUPUP(IR)=V(IR,1)+V(IR,4)
           VDNDN(IR)=V(IR,1)-V(IR,4)
-          VUPDN(IR)=CMPLX(V(IR,2),-V(IR,3),8)
+          VUPDN(IR)=CMPLX(V(IR,2),-V(IR,3),KIND=8)
         ENDDO
         DO IB=1,NBH
           CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,PSI(:,:,IB),NRL,PSIOFR)

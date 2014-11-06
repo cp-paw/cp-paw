@@ -744,7 +744,7 @@
           ALLOCATE(STATE%VEC(NDIM,NPRO,NB))
           ALLOCATE(STATE%OCC(NB))
           DO IB=1,NB
-            IF(FLAG.eq.'LEGACY') THEN
+            IF(FLAG.EQ.'LEGACY') THEN
               STATE%OCC(:)=0.D0
               READ(NFIL,ERR=9999,IOSTAT=IOS)STATE%EIG(IB),STATE%VEC(:,:,IB)
             ELSE
@@ -755,7 +755,7 @@
           ENDDO
         ENDDO
       ENDDO
-print*,"OCCSUM",OCCSUM
+PRINT*,"OCCSUM",OCCSUM
                              CALL TRACE$POP
       RETURN
  9999 CONTINUE
@@ -768,13 +768,13 @@ print*,"OCCSUM",OCCSUM
       CALL ERROR$I4VAL('ISPIN',ISPIN)
       CALL ERROR$I4VAL('NPRO',NPRO)
       CALL ERROR$STOP('PDOS$READ')
-      stop
- 9998 continue
+      STOP
+ 9998 CONTINUE
       CALL ERROR$MSG('ERROR READING PDOS FILE')
       CALL ERROR$MSG('OLD VERSION: VARIABLE WKPT IS NOT PRESENT')
       CALL ERROR$MSG('PRODUCE NEW PDOS FILE')
       CALL ERROR$STOP('PDOS$READ')
-      stop
+      STOP
       END SUBROUTINE PDOS$READ
 !
 !     ..................................................................
@@ -791,8 +791,8 @@ print*,"OCCSUM",OCCSUM
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFIL
       CHARACTER(6),INTENT(IN)      :: FLAG_
-      INTEGER(4)                   :: ISP,IKPT,ISPIN,IB
-      INTEGER(4)                   :: LNX1,NB
+      INTEGER(4)                   :: ISP,IKPT
+      INTEGER(4)                   :: LNX1
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
       FLAG=FLAG_

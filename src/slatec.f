@@ -7576,12 +7576,12 @@ C   930201  Added DEC Alpha and SGI constants.  (RWC and WRB)
 C***END PROLOGUE  D1MACH
 C
 C
-	external dlamch
+      external dlamch
       DOUBLE PRECISION DMACH(5),dlamch
-	integer iflag
+      integer iflag
 
       SAVE DMACH,iflag
-	data iflag/0/
+      data iflag/0/
 C
 C
 C     MACHINE CONSTANTS FOR THE AMIGA
@@ -7996,15 +7996,15 @@ C***FIRST EXECUTABLE STATEMENT  D1MACH
       IF (I .LT. 1 .OR. I .GT. 5) CALL XERMSG ('SLATEC', 'D1MACH',
      +   'I OUT OF BOUNDS', 1, 2)
 C
-	if (iflag.eq.0) then
-	   iflag=1
-	   dmach(1)=dlamch('u')
-	   dmach(2)=dlamch('o')
-	   dmach(3)=dlamch('e')
-	   dmach(4)=dlamch('p')
-	   dmach(5)=dlamch('b')
-	   dmach(5)=log10(dmach(5))
-	endif
+      if (iflag.eq.0) then
+           iflag=1
+           dmach(1)=dlamch('u')
+           dmach(2)=dlamch('o')
+           dmach(3)=dlamch('e')
+           dmach(4)=dlamch('p')
+           dmach(5)=dlamch('b')
+           dmach(5)=log10(dmach(5))
+      endif
       D1MACH = DMACH(I)
       RETURN
 C

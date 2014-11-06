@@ -158,7 +158,7 @@
       ENDDO
 !     ==================================================================
 !     ==  CALCULATE RECIPROCAL LATTICE VECTORS G1,G2,G3               ==
-!     ==  note that the factor 2pi is dropped                         ==
+!     ==  NOTE THAT THE FACTOR 2PI IS DROPPED                         ==
 !     ==================================================================
       G1(1) = T2(2)*T3(3) - T2(3)*T3(2)
       G1(2) = T2(3)*T3(1) - T2(1)*T3(3)
@@ -626,159 +626,159 @@
        END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE rotation$angletomatrix(phi,tinv,u)
+      SUBROUTINE ROTATION$ANGLETOMATRIX(PHI,TINV,U)
 !     **************************************************************************
-!     **  composes rotation matrix from axis and angle                        **
-!     **  length of phi is the angle, direction of phi is the axis            **
-!     **  the angle is counterclockwise if viewed against the axis            **
-!     **  source: http://en.wikipedia.org/wiki/Rotation_matrix                **
+!     **  COMPOSES ROTATION MATRIX FROM AXIS AND ANGLE                        **
+!     **  LENGTH OF PHI IS THE ANGLE, DIRECTION OF PHI IS THE AXIS            **
+!     **  THE ANGLE IS COUNTERCLOCKWISE IF VIEWED AGAINST THE AXIS            **
+!     **  SOURCE: HTTP://EN.WIKIPEDIA.ORG/WIKI/ROTATION_MATRIX                **
 !     **                                                                      **
-!     ********************************Peter E. Bloechl, Goslar 2011 ************
-      real(8)   ,intent(in)  :: phi(3)
-      real(8)   ,intent(out) :: u(3,3)
-      logical(4),intent(in)  :: tinv ! includes inversion?
-      real(8)                :: c,s
-      real(8)                :: angle,axis(3)
-      integer(4)             :: j
+!     ********************************PETER E. BLOECHL, GOSLAR 2011 ************
+      REAL(8)   ,INTENT(IN)  :: PHI(3)
+      REAL(8)   ,INTENT(OUT) :: U(3,3)
+      LOGICAL(4),INTENT(IN)  :: TINV ! INCLUDES INVERSION?
+      REAL(8)                :: C,S
+      REAL(8)                :: ANGLE,AXIS(3)
+      INTEGER(4)             :: J
 !     **************************************************************************
-      angle=sqrt(sum(phi**2))
-      axis(:)=phi(:)/angle
-      c=cos(angle)
-      s=sin(angle)
-      do j=1,3
-        u(:,j)=axis(:)*axis(j)*(1.d0-c)
-        u(j,j)=u(j,j)+c
-      enddo
-      u(1,2)=u(1,2)-axis(3)*s
-      u(2,3)=u(2,3)-axis(1)*s
-      u(3,1)=u(3,1)-axis(2)*s
-      u(3,2)=u(3,2)+axis(1)*s
-      u(2,1)=u(2,1)+axis(3)*s
-      u(1,3)=u(1,3)+axis(2)*s
-      if(tinv)u=-u
-      return
-      end
+      ANGLE=SQRT(SUM(PHI**2))
+      AXIS(:)=PHI(:)/ANGLE
+      C=COS(ANGLE)
+      S=SIN(ANGLE)
+      DO J=1,3
+        U(:,J)=AXIS(:)*AXIS(J)*(1.D0-C)
+        U(J,J)=U(J,J)+C
+      ENDDO
+      U(1,2)=U(1,2)-AXIS(3)*S
+      U(2,3)=U(2,3)-AXIS(1)*S
+      U(3,1)=U(3,1)-AXIS(2)*S
+      U(3,2)=U(3,2)+AXIS(1)*S
+      U(2,1)=U(2,1)+AXIS(3)*S
+      U(1,3)=U(1,3)+AXIS(2)*S
+      IF(TINV)U=-U
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE rotation$matrixtoangle(u,phi,tinv)
+      SUBROUTINE ROTATION$MATRIXTOANGLE(U,PHI,TINV)
 !     **************************************************************************
-!     **  extracts axis and angle from a rotation matrix                      **
+!     **  EXTRACTS AXIS AND ANGLE FROM A ROTATION MATRIX                      **
 !     **                                                                      **
-!     ********************************Peter E. Bloechl, Goslar 2011 ************
-      real(8),intent(in)     :: u(3,3)
-      real(8),intent(out)    :: phi(3)
-      logical(4),intent(out) :: tinv
-      real(8)                :: trace
-      real(8)                :: det
-      real(8)                :: axis(3)
-      real(8)                :: rot(3,3)
-      real(8)                :: angle
+!     ********************************PETER E. BLOECHL, GOSLAR 2011 ************
+      REAL(8),INTENT(IN)     :: U(3,3)
+      REAL(8),INTENT(OUT)    :: PHI(3)
+      LOGICAL(4),INTENT(OUT) :: TINV
+      REAL(8)                :: TRACE
+      REAL(8)                :: DET
+      REAL(8)                :: AXIS(3)
+      REAL(8)                :: ROT(3,3)
+      REAL(8)                :: ANGLE
 !     **************************************************************************
-      trace=u(1,1)+u(2,2)+u(3,3)
-      det=u(1,1)*(u(2,2)*u(3,3)-u(3,2)*u(2,3)) &
-     &   +u(1,2)*(u(2,3)*u(3,1)-u(3,3)*u(2,1)) &
-     &   +u(1,3)*(u(2,1)*u(3,2)-u(3,1)*u(2,2)) 
-      tinv=det.lt.0.d0
-      if(tinv) then
-         rot=-u
-         trace=-trace
-      else
-         rot=u
-      end if
-      if(trace.eq.3.d0) then
-        angle=0.d0
-        axis(:)=0.d0
-        axis(3)=1.d0
-      else if(trace.eq.-1.d0) then
-        angle=4.d0*atan(1.d0)  !=pi
-        axis(1)=sqrt(0.5d0*(rot(1,1)+1.d0))
-        axis(2)=sqrt(0.5d0*(rot(2,2)+1.d0))
-        axis(3)=sqrt(0.5d0*(rot(3,3)+1.d0))
-      else  
-        angle=acos(0.5d0*(trace-1.d0))
-        axis(1)=rot(3,2)-rot(2,3)
-        axis(2)=rot(1,3)-rot(3,1)
-        axis(3)=rot(2,1)-rot(1,2)
-        axis(:)=axis/sqrt(sum(axis**2))
-      end if
-      phi=axis*angle
-      return
-      end
+      TRACE=U(1,1)+U(2,2)+U(3,3)
+      DET=U(1,1)*(U(2,2)*U(3,3)-U(3,2)*U(2,3)) &
+     &   +U(1,2)*(U(2,3)*U(3,1)-U(3,3)*U(2,1)) &
+     &   +U(1,3)*(U(2,1)*U(3,2)-U(3,1)*U(2,2)) 
+      TINV=DET.LT.0.D0
+      IF(TINV) THEN
+         ROT=-U
+         TRACE=-TRACE
+      ELSE
+         ROT=U
+      END IF
+      IF(TRACE.EQ.3.D0) THEN
+        ANGLE=0.D0
+        AXIS(:)=0.D0
+        AXIS(3)=1.D0
+      ELSE IF(TRACE.EQ.-1.D0) THEN
+        ANGLE=4.D0*ATAN(1.D0)  !=PI
+        AXIS(1)=SQRT(0.5D0*(ROT(1,1)+1.D0))
+        AXIS(2)=SQRT(0.5D0*(ROT(2,2)+1.D0))
+        AXIS(3)=SQRT(0.5D0*(ROT(3,3)+1.D0))
+      ELSE  
+        ANGLE=ACOS(0.5D0*(TRACE-1.D0))
+        AXIS(1)=ROT(3,2)-ROT(2,3)
+        AXIS(2)=ROT(1,3)-ROT(3,1)
+        AXIS(3)=ROT(2,1)-ROT(1,2)
+        AXIS(:)=AXIS/SQRT(SUM(AXIS**2))
+      END IF
+      PHI=AXIS*ANGLE
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE rgb$rainbow(xinv,r,g,b)
+      SUBROUTINE RGB$RAINBOW(XINV,R,G,B)
 !     **************************************************************************
-!     **  maps [0,1] onto the rgb values of a rainbow                         **
-!     **  xinv=0 maps onto violet and xinv=1 maps to red                      **
-!     **  rainbow colors from http://simple.wikipedia.org/wiki/Rainbow        **
+!     **  MAPS [0,1] ONTO THE RGB VALUES OF A RAINBOW                         **
+!     **  XINV=0 MAPS ONTO VIOLET AND XINV=1 MAPS TO RED                      **
+!     **  RAINBOW COLORS FROM HTTP://SIMPLE.WIKIPEDIA.ORG/WIKI/RAINBOW        **
 !     **                                                                      **
-!     ********************************Peter E. Bloechl, Goslar 2011 ************
+!     ********************************PETER E. BLOECHL, GOSLAR 2011 ************
       IMPLICIT NONE
-      real(8)    ,intent(in) :: xinv  ! in[0,1]
-      integer(4),intent(out) :: r
-      integer(4),intent(out) :: g
-      integer(4),intent(out) :: b
-      integer(4),parameter   :: nc=7
-      integer(4)             :: color(3,nc)
-      real(8)                :: x1(nc)=(/0.d0,0.15d0,0.3d0,0.45d0,0.6d0 &
-     &                                  ,0.75d0,0.9d0/)
-      integer(4)             :: i
-      real(8)                :: svar
-      real(8)                :: x
+      REAL(8)    ,INTENT(IN) :: XINV  ! IN[0,1]
+      INTEGER(4),INTENT(OUT) :: R
+      INTEGER(4),INTENT(OUT) :: G
+      INTEGER(4),INTENT(OUT) :: B
+      INTEGER(4),PARAMETER   :: NC=7
+      INTEGER(4)             :: COLOR(3,NC)
+      REAL(8)                :: X1(NC)=(/0.D0,0.15D0,0.3D0,0.45D0,0.6D0 &
+     &                                  ,0.75D0,0.9D0/)
+      INTEGER(4)             :: I
+      REAL(8)                :: SVAR
+      REAL(8)                :: X
 !     **************************************************************************
-      x=1.d0-xinv
-      color(:,1)=(/255,0,0/)   !red
-      color(:,2)=(/255,127,0/) !orange
-      color(:,3)=(/255,255,0/) !yellow
-      color(:,4)=(/0,255,0/)   !green
-      color(:,5)=(/255,0,0/)   !blue
-      color(:,6)=(/111,0,255/) !indigo
-      color(:,7)=(/143,0,255/) !violet
-!     ==  red 255,0,0 orange 255,127,0 yellow 255,255,0 green 0,255,0 ==========
-!     ==  blue 0,0,255 Indigo 111,0,255 violet 143,0,255
-      r=color(1,1)
-      g=color(2,1)
-      b=color(3,1)
-      do i=1,nc-1
-        if(x1(i).le.x.and.x.le.x1(i+1)) then
-          svar=(x-x1(i))/(x1(i+1)-x1(i))
-          r=color(1,i)*(1.d0-svar)+color(1,i+1)*svar
-          g=color(2,i)*(1.d0-svar)+color(2,i+1)*svar
-          b=color(3,i)*(1.d0-svar)+color(3,i+1)*svar
-        end if
-      enddo
-      if(x.gt.x1(nc)) then
-        r=color(1,nc)
-        g=color(2,nc)
-        b=color(3,nc)
-      end if
-      return
-      end
+      X=1.D0-XINV
+      COLOR(:,1)=(/255,0,0/)   !RED
+      COLOR(:,2)=(/255,127,0/) !ORANGE
+      COLOR(:,3)=(/255,255,0/) !YELLOW
+      COLOR(:,4)=(/0,255,0/)   !GREEN
+      COLOR(:,5)=(/255,0,0/)   !BLUE
+      COLOR(:,6)=(/111,0,255/) !INDIGO
+      COLOR(:,7)=(/143,0,255/) !VIOLET
+!     ==  RED 255,0,0 ORANGE 255,127,0 YELLOW 255,255,0 GREEN 0,255,0 ==========
+!     ==  BLUE 0,0,255 INDIGO 111,0,255 VIOLET 143,0,255
+      R=COLOR(1,1)
+      G=COLOR(2,1)
+      B=COLOR(3,1)
+      DO I=1,NC-1
+        IF(X1(I).LE.X.AND.X.LE.X1(I+1)) THEN
+          SVAR=(X-X1(I))/(X1(I+1)-X1(I))
+          R=NINT(COLOR(1,I)*(1.D0-SVAR)+COLOR(1,I+1)*SVAR)
+          G=NINT(COLOR(2,I)*(1.D0-SVAR)+COLOR(2,I+1)*SVAR)
+          B=NINT(COLOR(3,I)*(1.D0-SVAR)+COLOR(3,I+1)*SVAR)
+        END IF
+      ENDDO
+      IF(X.GT.X1(NC)) THEN
+        R=COLOR(1,NC)
+        G=COLOR(2,NC)
+        B=COLOR(3,NC)
+      END IF
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE rgb$blackbody(t,r,g,b)
+      SUBROUTINE RGB$BLACKBODY(T,R,G,B)
 !     **************************************************************************
-!     **  rgb values of a black body with temperature t Kelvin                **
-!     ** source: http://www.physics.sfasu.edu/astro/color/blackbody.html      **
-!     **         Mitchell Charity                                             **
-!     ** height profile from 1000-15000 K                                     **
+!     **  RGB VALUES OF A BLACK BODY WITH TEMPERATURE T KELVIN                **
+!     ** SOURCE: HTTP://WWW.PHYSICS.SFASU.EDU/ASTRO/COLOR/BLACKBODY.HTML      **
+!     **         MITCHELL CHARITY                                             **
+!     ** HEIGHT PROFILE FROM 1000-15000 K                                     **
 !     **                                                                      **
-!     ********************************Peter E. Bloechl, Goslar 2011 ************
+!     ********************************PETER E. BLOECHL, GOSLAR 2011 ************
       IMPLICIT NONE
-      real(8)    ,intent(in) :: t
-      integer(4),intent(out) :: r
-      integer(4),intent(out) :: g
-      integer(4),intent(out) :: b
+      REAL(8)    ,INTENT(IN) :: T
+      INTEGER(4),INTENT(OUT) :: R
+      INTEGER(4),INTENT(OUT) :: G
+      INTEGER(4),INTENT(OUT) :: B
 !     **************************************************************************
-      r=nint(148.d0+56100000.d0*t**(-1.5d0))
-      g=nint(100.04d0*log(t)-623.6d0)
-      if(t.gt.6500.d0) g=nint(184.d0+35200000.d0*t**(-1.5d0))
-      b=nint(194.18d0*log(t)-1448.6d0)
-      r=min(max(r,0),255)
-      g=min(max(g,0),255)
-      b=min(max(b,0),255)
-      return
-      end
+      R=NINT(148.D0+56100000.D0*T**(-1.5D0))
+      G=NINT(100.04D0*LOG(T)-623.6D0)
+      IF(T.GT.6500.D0) G=NINT(184.D0+35200000.D0*T**(-1.5D0))
+      B=NINT(194.18D0*LOG(T)-1448.6D0)
+      R=MIN(MAX(R,0),255)
+      G=MIN(MAX(G,0),255)
+      B=MIN(MAX(B,0),255)
+      RETURN
+      END
 !
 !     ..................................................................
       SUBROUTINE BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
@@ -819,14 +819,14 @@
       REAL(8)   ,INTENT(INOUT) :: DX      ! STEP WIDTH
       REAL(8)   ,INTENT(INOUT) :: YM      ! FUNCTION VALUE AT XM
       REAL(8)   ,INTENT(INOUT) :: XM      ! PREVIOUS ARGUMENT
-      REAL(8)   ,save          :: SLOPE
+      REAL(8)   ,SAVE          :: SLOPE
       REAL(8)                  :: XP
 !     ******************************************************************
 !
 !     ==   STARTUP
-      IF(ISTART.ne.0) THEN
-        slope=-1.d0
-        if(istart.gt.0) slope=1.d0
+      IF(ISTART.NE.0) THEN
+        SLOPE=-1.D0
+        IF(ISTART.GT.0) SLOPE=1.D0
         ISTART=0
         IBI=0
         YM=0.D0
@@ -1050,152 +1050,152 @@ END MODULE BROYDEN_MODULE
       RETURN
       END
 !
-      subroutine cg$test()
+      SUBROUTINE CG$TEST()
 !     **                                                              **
-!     ** test routine for conjugate gradient                          **
+!     ** TEST ROUTINE FOR CONJUGATE GRADIENT                          **
 !     **                                                              **
 !     **                                                              **
-      implicit none
+      IMPLICIT NONE
       INTEGER(4), PARAMETER :: N=2
       REAL(8)               :: R(N),F1(N),F2(N),D1(N),D2(N)
-      REAL(8)               :: e
+      REAL(8)               :: E
       INTEGER(4),PARAMETER  :: NITER=10
-      INTEGER(4)            :: ITER,inner
-      real(8)               :: lambda
-      logical(4)            :: tconv
+      INTEGER(4)            :: ITER,INNER
+      REAL(8)               :: LAMBDA
+      LOGICAL(4)            :: TCONV
 !     ******************************************************************
       R=(/10.D0,2.D0/)
       CALL ETOT(N,R,E,F1)
-write(*,fmt='(i5," e ",f20.15," r=",2f10.5," f= ",2e10.3)')0,E,r,f1
+WRITE(*,FMT='(I5," E ",F20.15," R=",2F10.5," F= ",2E10.3)')0,E,R,F1
       D1=F1
       DO ITER=1,NITER
-        lambda=1.d-2/SQRT(DOT_PRODUCT(F1,F1))
-        do inner=1,100
-          CALL ETOT(N,R+lambda*d1,E,F2)
-          call cg$linesearch(n,f1,d1,f2,lambda,tconv)
-          if(tconv) exit
-        enddo
-        if(.not.tconv) stop 'not converged'
-        R=R+D1*lambda
-write(*,fmt='(i5," e ",f20.15," r=",2f10.5," f= ",2e10.3)')ITER,E,r,f2
-        CALL cg$NEWDIR(n,f1,d1,f2,d2)
+        LAMBDA=1.D-2/SQRT(DOT_PRODUCT(F1,F1))
+        DO INNER=1,100
+          CALL ETOT(N,R+LAMBDA*D1,E,F2)
+          CALL CG$LINESEARCH(N,F1,D1,F2,LAMBDA,TCONV)
+          IF(TCONV) EXIT
+        ENDDO
+        IF(.NOT.TCONV) STOP 'NOT CONVERGED'
+        R=R+D1*LAMBDA
+WRITE(*,FMT='(I5," E ",F20.15," R=",2F10.5," F= ",2E10.3)')ITER,E,R,F2
+        CALL CG$NEWDIR(N,F1,D1,F2,D2)
         F1=F2
         D1=D2
       ENDDO         
-      stop
-      contains
+      STOP
+      CONTAINS
 !     ....................................................................
         SUBROUTINE ETOT(N,R,E,F)
-        integer(4),intent(in) :: n
-        real(8)   ,intent(in) :: R(n)  
-        real(8)   ,intent(OUT):: E
-        real(8)   ,intent(OUT):: F(n)  
+        INTEGER(4),INTENT(IN) :: N
+        REAL(8)   ,INTENT(IN) :: R(N)  
+        REAL(8)   ,INTENT(OUT):: E
+        REAL(8)   ,INTENT(OUT):: F(N)  
         INTEGER(4),PARAMETER  :: NLOC=2
         REAL(8)   ,PARAMETER  :: C=2.D0
         REAL(8)   ,PARAMETER  :: B(NLOC)=(/0.D0,0.D0/)
         REAL(8)               :: A(NLOC,NLOC)
 !       *********************************************************************
-        a(:,1)=(/2.D+1,0.D0/)
-        a(:,2)=(/0.D0,2.D-3/)
+        A(:,1)=(/2.D+1,0.D0/)
+        A(:,2)=(/0.D0,2.D-3/)
         IF(N.NE.NLOC) STOP 'ERROR IN ETOT'
         E=C-DOT_PRODUCT(B,R)+0.5D0*DOT_PRODUCT(R,MATMUL(A,R))
         F=B-MATMUL(A,R)
         RETURN
         END SUBROUTINE ETOT
-      end
+      END
 !
 !     ..................................................................
-      subroutine cg$linesearch(n,f1,d1,f2,dlambda,tconv)
+      SUBROUTINE CG$LINESEARCH(N,F1,D1,F2,DLAMBDA,TCONV)
 !     **                                                              **
-!     ** conjugate gradient line search                               **
+!     ** CONJUGATE GRADIENT LINE SEARCH                               **
 !     **                                                              **
-!     **  adjusts lambda such that the force at x+d1*lambda           **
-!     **  parallel to the search direction d1 converges to zer        **
+!     **  ADJUSTS LAMBDA SUCH THAT THE FORCE AT X+D1*LAMBDA           **
+!     **  PARALLEL TO THE SEARCH DIRECTION D1 CONVERGES TO ZER        **
 !     **                                                              **
-!     **  x(lambda)=x1+d1*lambda                                      **
-!     **  f(lambda)=f1+lambda (f2-f1)/lambda_in                       **
-!     **  f2=f(lambda_in)                                             **
-!     **  f1=f(lambda=0)                                              **
+!     **  X(LAMBDA)=X1+D1*LAMBDA                                      **
+!     **  F(LAMBDA)=F1+LAMBDA (F2-F1)/LAMBDA_IN                       **
+!     **  F2=F(LAMBDA_IN)                                             **
+!     **  F1=F(LAMBDA=0)                                              **
 !     **                                                              **
-      implicit none
-      integer(4),intent(in)   :: n
-      real(8)   ,intent(in)   :: f1(n)  ! force at x1
-      real(8)   ,intent(in)   :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
-      real(8)   ,intent(in)   :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
-      real(8)   ,intent(inout):: dlAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
-      logical(4),intent(out)  :: tconv
-      reAL(8)                 :: SVAR1,svar2
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: N
+      REAL(8)   ,INTENT(IN)   :: F1(N)  ! FORCE AT X1
+      REAL(8)   ,INTENT(IN)   :: D1(N)  ! X(LAMBDA)=X1+LAMBDA*D1
+      REAL(8)   ,INTENT(IN)   :: F2(N)  ! F(LAMBDA) WITH F(LAMBDA)*D1=0
+      REAL(8)   ,INTENT(INOUT):: DLAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
+      LOGICAL(4),INTENT(OUT)  :: TCONV
+      REAL(8)                 :: SVAR1,SVAR2
 !     ******************************************************************
-      svar1=dot_product(d1,f2)
-      svar2=dot_product(d1,f2-f1)
-      if(dlambda*svar2.lt.0.d0) then
-        dlambda=-svar1/svar2*dlambda
-      else
-print*,'svar2 ',svar2,dlambda
-print*,'warning! hessian not positive definite; switch to stepping'
-!       == correction for wrong curvature
-        if(svar2.gt.0.d0) then
-          dlambda=1.d-2/sqrt(dot_product(d1,d1))
-        else
-          dlambda=-1.d-2/sqrt(dot_product(d1,d1))
-        end if
-      end if
-      tconv=(abs(svar2/svar1).lt.1.d-4)
+      SVAR1=DOT_PRODUCT(D1,F2)
+      SVAR2=DOT_PRODUCT(D1,F2-F1)
+      IF(DLAMBDA*SVAR2.LT.0.D0) THEN
+        DLAMBDA=-SVAR1/SVAR2*DLAMBDA
+      ELSE
+PRINT*,'SVAR2 ',SVAR2,DLAMBDA
+PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
+!       == CORRECTION FOR WRONG CURVATURE
+        IF(SVAR2.GT.0.D0) THEN
+          DLAMBDA=1.D-2/SQRT(DOT_PRODUCT(D1,D1))
+        ELSE
+          DLAMBDA=-1.D-2/SQRT(DOT_PRODUCT(D1,D1))
+        END IF
+      END IF
+      TCONV=(ABS(SVAR2/SVAR1).LT.1.D-4)
       RETURN
       END
 !
 !     ..................................................................
-      subroutine cg$linesearch_old(n,f1,d1,f2,lambda,tconv)
+      SUBROUTINE CG$LINESEARCH_OLD(N,F1,D1,F2,LAMBDA,TCONV)
 !     **                                                              **
-!     ** conjugate gradient line search                               **
+!     ** CONJUGATE GRADIENT LINE SEARCH                               **
 !     **                                                              **
-!     **  adjusts lambda such that the force at x+d1*lambda           **
-!     **  parallel to the search direction d1 converges to zer        **
+!     **  ADJUSTS LAMBDA SUCH THAT THE FORCE AT X+D1*LAMBDA           **
+!     **  PARALLEL TO THE SEARCH DIRECTION D1 CONVERGES TO ZER        **
 !     **                                                              **
-!     **  x(lambda)=x1+d1*lambda                                      **
-!     **  f(lambda)=f1+lambda (f2-f1)/lambda_in                       **
-!     **  f2=f(lambda_in)                                             **
-!     **  f1=f(lambda=0)                                              **
+!     **  X(LAMBDA)=X1+D1*LAMBDA                                      **
+!     **  F(LAMBDA)=F1+LAMBDA (F2-F1)/LAMBDA_IN                       **
+!     **  F2=F(LAMBDA_IN)                                             **
+!     **  F1=F(LAMBDA=0)                                              **
 !     **                                                              **
-      implicit none
-      integer(4),intent(in)   :: n
-      real(8)   ,intent(in)   :: f1(n)  ! force at x1
-      real(8)   ,intent(in)   :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
-      real(8)   ,intent(in)   :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
-      real(8)   ,intent(inout):: lAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
-      logical(4),intent(out)  :: tconv
-      reAL(8)                 :: SVAR1,svar2
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: N
+      REAL(8)   ,INTENT(IN)   :: F1(N)  ! FORCE AT X1
+      REAL(8)   ,INTENT(IN)   :: D1(N)  ! X(LAMBDA)=X1+LAMBDA*D1
+      REAL(8)   ,INTENT(IN)   :: F2(N)  ! F(LAMBDA) WITH F(LAMBDA)*D1=0
+      REAL(8)   ,INTENT(INOUT):: LAMBDA  ! NEXT DIRECTION FOR LINE SEARCH
+      LOGICAL(4),INTENT(OUT)  :: TCONV
+      REAL(8)                 :: SVAR1,SVAR2
 !     ******************************************************************
-      svar1=dot_product(d1,f1)
-      svar2=dot_product(d1,f2-f1)
-      if(lambda*svar2.lt.0.d0) then
-        lambda=-svar1/svar2*lambda
-      else
-print*,'warning! hessian not positive definite; switch to stepping'
-!       == correction for wrong curvature
-        if(svar1+svar2.gt.0.d0) then
-          lambda=lambda+1.d-2/sqrt(dot_product(d1,d1))
-        else
-          lambda=lambda-1.d-2/sqrt(dot_product(d1,d1))
-        end if
-      end if
-      tconv=(abs((svar2+svar1)/svar1).lt.1.d-4)
+      SVAR1=DOT_PRODUCT(D1,F1)
+      SVAR2=DOT_PRODUCT(D1,F2-F1)
+      IF(LAMBDA*SVAR2.LT.0.D0) THEN
+        LAMBDA=-SVAR1/SVAR2*LAMBDA
+      ELSE
+PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
+!       == CORRECTION FOR WRONG CURVATURE
+        IF(SVAR1+SVAR2.GT.0.D0) THEN
+          LAMBDA=LAMBDA+1.D-2/SQRT(DOT_PRODUCT(D1,D1))
+        ELSE
+          LAMBDA=LAMBDA-1.D-2/SQRT(DOT_PRODUCT(D1,D1))
+        END IF
+      END IF
+      TCONV=(ABS((SVAR2+SVAR1)/SVAR1).LT.1.D-4)
       RETURN
       END
 !
 !     ..................................................................
-      subroutine cg$newdir(n,f1,d1,f2,d2)
+      SUBROUTINE CG$NEWDIR(N,F1,D1,F2,D2)
 !     **                                                              **
-!     ** conjugate gradient new search direction                      **
+!     ** CONJUGATE GRADIENT NEW SEARCH DIRECTION                      **
 !     **                                                              **
-      implicit none
-      integer(4),intent(in) :: n
-      real(8)   ,intent(in) :: f1(n)  ! force at x1
-      real(8)   ,intent(in) :: d1(n)  ! x(LAMBDA)=x1+lambda*d1
-      real(8)   ,intent(in) :: f2(n)  ! f(LAMBDA) WITH F(LAMBDA)*D1=0
-      real(8)   ,intent(out):: d2(n)  ! NEXT DIRECTION FOR LINE SEARCH
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: F1(N)  ! FORCE AT X1
+      REAL(8)   ,INTENT(IN) :: D1(N)  ! X(LAMBDA)=X1+LAMBDA*D1
+      REAL(8)   ,INTENT(IN) :: F2(N)  ! F(LAMBDA) WITH F(LAMBDA)*D1=0
+      REAL(8)   ,INTENT(OUT):: D2(N)  ! NEXT DIRECTION FOR LINE SEARCH
 !     ******************************************************************
-      d2=f2+d1*dot_product(f2-f1,f2)/dot_product(f1,f1)
+      D2=F2+D1*DOT_PRODUCT(F2-F1,F2)/DOT_PRODUCT(F1,F1)
       RETURN
       END
 !!$!
@@ -1392,20 +1392,20 @@ CONTAINS
 END MODULE SORT_MODULE
 !
 !     ..................................................................
-      SUBROUTINE SORT$indexarray(lEN_,x,ind_)
+      SUBROUTINE SORT$INDEXARRAY(LEN_,X,IND_)
 !     **                                                              **
-!     ** direct interface for heapsort                                **
-!     **    x(ind(i)) increases with inreasing i                      **
+!     ** DIRECT INTERFACE FOR HEAPSORT                                **
+!     **    X(IND(I)) INCREASES WITH INREASING I                      **
 !     **                                                              **
       USE SORT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LEN_
-      real(8)   ,intent(in) :: x(len_)
-      integer(4),intent(out):: ind_(len_)
+      REAL(8)   ,INTENT(IN) :: X(LEN_)
+      INTEGER(4),INTENT(OUT):: IND_(LEN_)
 !     *******************************************************************
-      call HEAPSORT(LEN_,x,IND_)
-      return 
-      end
+      CALL HEAPSORT(LEN_,X,IND_)
+      RETURN 
+      END
 !
 !     ..................................................................
       SUBROUTINE SORT$SET(LEN_,CRIT)
@@ -1423,10 +1423,10 @@ END MODULE SORT_MODULE
       END IF
       TSET=.TRUE.
       LEN=LEN_
-if(len.le.1) then
-  if(len.eq.1) len=0
-  return
-end if
+IF(LEN.LE.1) THEN
+  IF(LEN.EQ.1) LEN=0
+  RETURN
+END IF
       ALLOCATE(IND(LEN))
       ALLOCATE(RANK(LEN))
       CALL HEAPSORT(LEN,CRIT,IND)
@@ -1458,7 +1458,7 @@ end if
         CALL ERROR$MSG('SORT OBJECT NOT INITIALIZED')        
         CALL ERROR$STOP('SORT$RESTART')
       END IF
-if(len.eq.0) return
+IF(LEN.EQ.0) RETURN
       CALL SORTRANK(LEN,IND,RANK)
       I0=1
       IHOLE=0
@@ -1473,9 +1473,9 @@ if(len.eq.0) return
       IMPLICIT NONE
 !     ******************************************************************
       TSET=.FALSE.
-i0=0
-if(len.eq.0)return
-len=0
+I0=0
+IF(LEN.EQ.0)RETURN
+LEN=0
       DEALLOCATE(IND)
       DEALLOCATE(RANK)
       LEN=1
@@ -1514,11 +1514,11 @@ len=0
         CALL ERROR$MSG('SORT OBJECT NOT INITIALIZED')        
         CALL ERROR$STOP('SORT$FLIP')
       END IF
-if(len.eq.0) then
-  from=0
-  to=0
-  return
-end if
+IF(LEN.EQ.0) THEN
+  FROM=0
+  TO=0
+  RETURN
+END IF
       IF(IHOLE.EQ.0) THEN
 !       == FIND ELEMENT WHICH IS ON THE WRONG POSITION ================
         DO WHILE(RANK(I0).EQ.I0)
@@ -1711,7 +1711,7 @@ end if
             GOTO 100
           END IF
         ENDDO
-        CALL ERROR$MSG('G-cutoff NOT FOUND')
+        CALL ERROR$MSG('G-CUTOFF NOT FOUND')
         CALL ERROR$STOP('MADELUNG')
  100    CONTINUE
         SVAR=VOL*TOL/(8.D0*PI*RC**2)
@@ -1728,7 +1728,7 @@ end if
             GOTO 200
           END IF
         ENDDO
-        CALL ERROR$MSG('R-cutoff NOT FOUND')
+        CALL ERROR$MSG('R-CUTOFF NOT FOUND')
         CALL ERROR$STOP('MADELUNG')
  200    CONTINUE
         RC=SQRT(C1/(2.D0*PI*C2))*VOL**(1.D0/3.D0)
@@ -1782,7 +1782,7 @@ end if
           DO IG3=IG3MIN,IG3MAX
 !           ICOUNT=ICOUNT+1
 !           __ SELECTION FOR PARALLEL PROCESSING________________________
-!           IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
+!           IF(MOD(ICOUNT-1,NTASKNUM).NE.ITASK-1) CYCLE
 !
             T3=DBLE(IG3)
             G1=GBAS(1,1)*T1+GBAS(1,2)*T2+GBAS(1,3)*T3  
@@ -1794,8 +1794,8 @@ end if
               SVAR=-0.5D0*GSQUARE*RC**2
               GFAC=FAC*EXP(SVAR)/GSQUARE
 !             ========================================================
-!             == this is the first time-critical part 
-!             == can be streamlined:
+!             == THIS IS THE FIRST TIME-CRITICAL PART 
+!             == CAN BE STREAMLINED:
 !             ========================================================
               DO IR=1,NBAS
                 GR=G1*BAS(1,IR)+G2*BAS(2,IR)+G3*BAS(3,IR) 
@@ -1805,8 +1805,8 @@ end if
                 EIGR1=CONJG(EIGR(IR1)) 
                 SINFAC=0.D0
                 COSFAC=0.D0
-!               == better blas2: sinfac=aimag(eigr1*sum(eigr*q))
-!               ==               cosfac= real(eigr1*sum(eigr*q))
+!               == BETTER BLAS2: SINFAC=AIMAG(EIGR1*SUM(EIGR*Q))
+!               ==               COSFAC= REAL(EIGR1*SUM(EIGR*Q))
                 DO IR2=1,NBAS
                   EIGR12=EIGR1*EIGR(IR2)
                   SINFAC=SINFAC-AIMAG(EIGR12)*Q(IR2)
@@ -1833,13 +1833,13 @@ end if
       DO IR1=1,NBAS
 !       ICOUNT=ICOUNT+1
 !       __ SELECTION FOR PARALLEL PROCESSING__________________________
-!       IF(MOD(ICOUNT-1,NTASKNUM).ne.ITASK-1) cycle
+!       IF(MOD(ICOUNT-1,NTASKNUM).NE.ITASK-1) CYCLE
         DO IR2=1,NBAS
           Q12=Q(IR1)*Q(IR2)
           DR1=BAS(1,IR2)-BAS(1,IR1)
           DR2=BAS(2,IR2)-BAS(2,IR1)
           DR3=BAS(3,IR2)-BAS(3,IR1)
-!         == calling boxsph is too complicated
+!         == CALLING BOXSPH IS TOO COMPLICATED
           CALL BOXSPH(RBAS,-DR1,-DR2,-DR3,RMAX &
      &           ,IT1MIN,IT1MAX,IT2MIN,IT2MAX,IT3MIN,IT3MAX)
           DO IT1=IT1MIN,IT1MAX
@@ -1853,16 +1853,16 @@ end if
                 DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  
                 DLEN=SQRT(DX*DX+DY*DY+DZ*DZ)
                 IF(DLEN.LT.RMAX) THEN
-!                 == this is time critical
+!                 == THIS IS TIME CRITICAL
                   IF(IR1.EQ.IR2 &
      &                   .AND.IT1.EQ.0.AND.IT2.EQ.0.AND.IT3.EQ.0) THEN
                     RFAC1=-SQRT(2.D0/PI)/RC
                     RFAC2=0.D0
                   ELSE
-!                   == table lookup may be faster
-!                   == store spline of p(x):=erfc(x)/x
-!                   ==    rfac1=fac*p(dlen*fac)
-!                   ==    rfac2=[ac**2*dp(dlen*fac)/d(dlen*fac)]/dlen
+!                   == TABLE LOOKUP MAY BE FASTER
+!                   == STORE SPLINE OF P(X):=ERFC(X)/X
+!                   ==    RFAC1=FAC*P(DLEN*FAC)
+!                   ==    RFAC2=[AC**2*DP(DLEN*FAC)/D(DLEN*FAC)]/DLEN
                     CALL LIB$ERFCR8(DLEN*FAC,ERFCX)
                     RFAC1=ERFCX/DLEN
                     RFAC2=-(RFAC1+FAC*2.D0/SQRT(PI) &
@@ -1918,10 +1918,10 @@ end if
       END
 !
 !     ..................................................................
-      subroutine slaterkoster(r,ov,h)
+      SUBROUTINE SLATERKOSTER(R,OV,H)
 !     ******************************************************************
-!     ** slater-Koster energy integrals                               **
-!     **  j.c. slater and G.F. Koster, Phys. Rev. 94, 1498 (1954)     **
+!     ** SLATER-KOSTER ENERGY INTEGRALS                               **
+!     **  J.C. SLATER AND G.F. KOSTER, PHYS. REV. 94, 1498 (1954)     **
 !     **                                                              **
 !     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                **
 !     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                          **
@@ -1934,126 +1934,126 @@ end if
 !     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
 !     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
 !     ******************************************************************
-      implicit none
-      real(8),intent(in)  :: r(3)
-      real(8),intent(in)  :: ov(10)
-      real(8),intent(out) :: h(9,9)
-      real(8)             :: sss,sps,pps,ppp,sds,pds,pdp,dds,ddp,ddd
-      real(8)             :: l,m,n,l2,m2,n2
-      real(8)             :: svar,sq3,p1,p
-      integer(4)          :: i,j
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)  :: R(3)
+      REAL(8),INTENT(IN)  :: OV(10)
+      REAL(8),INTENT(OUT) :: H(9,9)
+      REAL(8)             :: SSS,SPS,PPS,PPP,SDS,PDS,PDP,DDS,DDP,DDD
+      REAL(8)             :: L,M,N,L2,M2,N2
+      REAL(8)             :: SVAR,SQ3,P1,P
+      INTEGER(4)          :: I,J
 !     ******************************************************************
-      sq3=sqrt(3.d0)
-      svar=sqrt(dot_product(r,r))
-      if(svar.lt.1.d-20) then
-        stop 'in slaterkoster: distance=0'
-      end if
-      l=r(1)/svar
-      m=r(2)/svar
-      n=r(3)/svar
-      l2=l**2
-      m2=m**2
-      n2=n**2
-      sss=ov(1)
-      sps=ov(2)
-      pps=ov(3)
-      ppp=ov(4)
-      sds=ov(5)
-      pds=ov(6)
-      pdp=ov(7)
-      dds=ov(8)
-      ddp=ov(9)
-      ddd=ov(10)
-      h(:,:)=0.d0
-!     == s-s block=================================================
-      h(1,1)=sss
-!     == s-p block=================================================
-      h(1,2)=l*sps        
-         h(1,3)=n*sps        
-         h(1,4)=m*sps        
-!     == p-p block=================================================
-      h(2,2)=l2*pps+(1.d0-l2)*ppp
-         h(3,3)=n2*pps+(1.d0-n2)*ppp
-         h(4,4)=m2*pps+(1.d0-m2)*ppp
-      h(2,4)=l*m*(pps-ppp)
-      h(2,3)=l*n*(pps-ppp)
-         h(3,4)=m*n*(pps-ppp)
-!     == s-d block=================================================
-      h(1,9)=sq3*l*m*sds
-         h(1,8)=sq3*m*n*sds
-         h(1,6)=sq3*n*l*sds
-      h(1,5)=0.5d0*sq3*(l2-m2)*sds
-      h(1,7)=(n2-0.5d0*(l2+m2))*sds
-!     == p-d block=================================================
-      h(2,9)=sq3*l2*m*pds+m*(1.d0-2.d0*l2)*pdp        
-        h(4,8)=sq3*m2*n*pds+n*(1.d0-2.d0*m2)*pdp
-        h(3,6)=sq3*n2*l*pds+l*(1.d0-2.d0*n2)*pdp
-      h(2,8)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
-        h(4,6)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
-        h(3,9)=sq3*l*m*n*pds-2.d0*l*m*n*pdp
-      h(2,6)=sq3*l2*n*pds+n*(1.d0-2.d0*l2)*pdp   !x,xz
-        h(4,9)=sq3*m2*l*pds+l*(1.d0-2.d0*m2)*pdp     !y,yx
-        h(3,8)=sq3*n2*m*pds+m*(1.d0-2.d0*n2)*pdp     !z,zy
-      h(2,5)=0.5d0*sq3*l*(l2-m2)*pds+l*(1.d0-l2+m2)*pdp
-      h(4,5)=0.5d0*sq3*m*(l2-m2)*pds-m*(1.d0+l2-m2)*pdp
-      h(3,5)=0.5d0*sq3*n*(l2-m2)*pds-n*(l2-m2)*pdp
-      h(2,7)=l*(n2-0.5d0*(l2+m2))*pds-sq3*l*n2*pdp
-      h(4,7)=m*(n2-0.5d0*(l2+m2))*pds-sq3*m*n2*pdp
-      h(3,7)=n*(n2-0.5d0*(l2+m2))*pds+sq3*n*(l2+m2)*pdp
-!     == d-d block=================================================
+      SQ3=SQRT(3.D0)
+      SVAR=SQRT(DOT_PRODUCT(R,R))
+      IF(SVAR.LT.1.D-20) THEN
+        STOP 'IN SLATERKOSTER: DISTANCE=0'
+      END IF
+      L=R(1)/SVAR
+      M=R(2)/SVAR
+      N=R(3)/SVAR
+      L2=L**2
+      M2=M**2
+      N2=N**2
+      SSS=OV(1)
+      SPS=OV(2)
+      PPS=OV(3)
+      PPP=OV(4)
+      SDS=OV(5)
+      PDS=OV(6)
+      PDP=OV(7)
+      DDS=OV(8)
+      DDP=OV(9)
+      DDD=OV(10)
+      H(:,:)=0.D0
+!     == S-S BLOCK=================================================
+      H(1,1)=SSS
+!     == S-P BLOCK=================================================
+      H(1,2)=L*SPS        
+         H(1,3)=N*SPS        
+         H(1,4)=M*SPS        
+!     == P-P BLOCK=================================================
+      H(2,2)=L2*PPS+(1.D0-L2)*PPP
+         H(3,3)=N2*PPS+(1.D0-N2)*PPP
+         H(4,4)=M2*PPS+(1.D0-M2)*PPP
+      H(2,4)=L*M*(PPS-PPP)
+      H(2,3)=L*N*(PPS-PPP)
+         H(3,4)=M*N*(PPS-PPP)
+!     == S-D BLOCK=================================================
+      H(1,9)=SQ3*L*M*SDS
+         H(1,8)=SQ3*M*N*SDS
+         H(1,6)=SQ3*N*L*SDS
+      H(1,5)=0.5D0*SQ3*(L2-M2)*SDS
+      H(1,7)=(N2-0.5D0*(L2+M2))*SDS
+!     == P-D BLOCK=================================================
+      H(2,9)=SQ3*L2*M*PDS+M*(1.D0-2.D0*L2)*PDP        
+        H(4,8)=SQ3*M2*N*PDS+N*(1.D0-2.D0*M2)*PDP
+        H(3,6)=SQ3*N2*L*PDS+L*(1.D0-2.D0*N2)*PDP
+      H(2,8)=SQ3*L*M*N*PDS-2.D0*L*M*N*PDP
+        H(4,6)=SQ3*L*M*N*PDS-2.D0*L*M*N*PDP
+        H(3,9)=SQ3*L*M*N*PDS-2.D0*L*M*N*PDP
+      H(2,6)=SQ3*L2*N*PDS+N*(1.D0-2.D0*L2)*PDP   !X,XZ
+        H(4,9)=SQ3*M2*L*PDS+L*(1.D0-2.D0*M2)*PDP     !Y,YX
+        H(3,8)=SQ3*N2*M*PDS+M*(1.D0-2.D0*N2)*PDP     !Z,ZY
+      H(2,5)=0.5D0*SQ3*L*(L2-M2)*PDS+L*(1.D0-L2+M2)*PDP
+      H(4,5)=0.5D0*SQ3*M*(L2-M2)*PDS-M*(1.D0+L2-M2)*PDP
+      H(3,5)=0.5D0*SQ3*N*(L2-M2)*PDS-N*(L2-M2)*PDP
+      H(2,7)=L*(N2-0.5D0*(L2+M2))*PDS-SQ3*L*N2*PDP
+      H(4,7)=M*(N2-0.5D0*(L2+M2))*PDS-SQ3*M*N2*PDP
+      H(3,7)=N*(N2-0.5D0*(L2+M2))*PDS+SQ3*N*(L2+M2)*PDP
+!     == D-D BLOCK=================================================
 !     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2      **
 !     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2      **
 !     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2      **
 !     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
 !     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
-      h(9,9)=3.d0*l2*m2*dds+(l2+m2-4.d0*l2*m2)*ddp+(n2+l2*m2)*ddd   !xy,xy
-      h(8,8)=3.d0*m2*n2*dds+(m2+n2-4.d0*m2*n2)*ddp+(l2+m2*n2)*ddd   !yz,yz cyc.perm
-      h(6,6)=3.d0*n2*l2*dds+(n2+l2-4.d0*n2*l2)*ddp+(m2+n2*l2)*ddd   !zx,zx cyc.perm
+      H(9,9)=3.D0*L2*M2*DDS+(L2+M2-4.D0*L2*M2)*DDP+(N2+L2*M2)*DDD   !XY,XY
+      H(8,8)=3.D0*M2*N2*DDS+(M2+N2-4.D0*M2*N2)*DDP+(L2+M2*N2)*DDD   !YZ,YZ CYC.PERM
+      H(6,6)=3.D0*N2*L2*DDS+(N2+L2-4.D0*N2*L2)*DDP+(M2+N2*L2)*DDD   !ZX,ZX CYC.PERM
 
-      h(9,8)=3.d0*l*m2*n*dds+l*n*(1-4.d0*m2)*ddp+l*n*(m2-1.d0)*ddd  !xy,yz
-      h(8,6)=3.d0*m*n2*l*dds+m*l*(1-4.d0*n2)*ddp+m*l*(n2-1.d0)*ddd  !yz,zx cyc.perm
-!     h(6,9)=3.d0*n*l2*m*dds+n*m*(1-4.d0*l2)*ddp+n*m*(l2-1.d0)*ddd  
+      H(9,8)=3.D0*L*M2*N*DDS+L*N*(1-4.D0*M2)*DDP+L*N*(M2-1.D0)*DDD  !XY,YZ
+      H(8,6)=3.D0*M*N2*L*DDS+M*L*(1-4.D0*N2)*DDP+M*L*(N2-1.D0)*DDD  !YZ,ZX CYC.PERM
+!     H(6,9)=3.D0*N*L2*M*DDS+N*M*(1-4.D0*L2)*DDP+N*M*(L2-1.D0)*DDD  
 
-      h(9,6)=3.d0*l2*m*n*dds+m*n*(1-4.d0*l2)*ddp+m*n*(l2-1.d0)*ddd  !xy,xz
-!     h(8,9)=3.d0*m2*n*l*dds+n*l*(1-4.d0*m2)*ddp+n*l*(m2-1.d0)*ddd  !
-!     h(6,8)=3.d0*n2*l*m*dds+l*m*(1-4.d0*n2)*ddp+l*m*(n2-1.d0)*ddd  !
-      h(9,5)=1.5d0*l*m*(l2-m2)*dds+2.d0*l*m*(m2-l2)*ddp &           !xy,x2-y2 
-     &                            +0.5d0*l*m*(l2-m2)*ddd            
-      h(8,5)=1.5d0*m*n*(l2-m2)*dds-m*n*(1.d0+2.d0*(l2-m2))*ddp &    !yz,x2-y2
-     &      +m*n*(1.d0+0.5d0*(l2-m2))*ddd
-      h(6,5)=1.5d0*n*l*(l2-m2)*dds+n*l*(1.d0-2.d0*(l2-m2))*ddp &    !xz,x2-y2
-     &      -n*l*(1.d0-0.5d0*(l2-m2))*ddd
-      h(9,7)=sq3*l*m*(n2-0.5d0*(l2+m2))*dds-2.d0*sq3*l*m*n2*ddp &   !xy,3z2-r2
-     &      +0.5d0*sq3*l*m*(1.d0+n2)*ddd
-      h(8,7)=sq3*m*n*(n2-0.5d0*(l2+m2))*dds+sq3*m*n*(l2+m2-n2)*ddp & !yz,3z2-r2
-     &      -0.5d0*sq3*m*n*(l2+m2)*ddd
-      h(6,7)=sq3*l*n*(n2-0.5d0*(l2+m2))*dds+sq3*l*n*(l2+m2-n2)*ddp & !xz,3z2-r2
-     &      -0.5d0*sq3*l*n*(l2+m2)*ddd
-      h(5,5)=0.75d0*(l2-m2)**2*dds+(l2+m2-(l2-m2)**2)*ddp &          !x2-y2,x2-y2
-     &      +(n2+0.25d0*(l2-m2)**2)*ddd
-      h(5,7)=0.5d0*sq3*(l2-m2)*(n2-0.5d0*(l2+m2))*dds &              !x2-y2,3z2-r2
-     &      +sq3*n2*(m2-l2)*ddp+0.25d0*sq3*(1.d0+n2)*(l2-m2)*ddd
-      h(7,7)=(n2-0.5d0*(l2+m2))**2*dds+3.d0*n2*(l2+m2)*ddp &         !3z2-r2,3z2-r2
-     &      +0.75d0*(l2+m2)**2*ddd
+      H(9,6)=3.D0*L2*M*N*DDS+M*N*(1-4.D0*L2)*DDP+M*N*(L2-1.D0)*DDD  !XY,XZ
+!     H(8,9)=3.D0*M2*N*L*DDS+N*L*(1-4.D0*M2)*DDP+N*L*(M2-1.D0)*DDD  !
+!     H(6,8)=3.D0*N2*L*M*DDS+L*M*(1-4.D0*N2)*DDP+L*M*(N2-1.D0)*DDD  !
+      H(9,5)=1.5D0*L*M*(L2-M2)*DDS+2.D0*L*M*(M2-L2)*DDP &           !XY,X2-Y2 
+     &                            +0.5D0*L*M*(L2-M2)*DDD            
+      H(8,5)=1.5D0*M*N*(L2-M2)*DDS-M*N*(1.D0+2.D0*(L2-M2))*DDP &    !YZ,X2-Y2
+     &      +M*N*(1.D0+0.5D0*(L2-M2))*DDD
+      H(6,5)=1.5D0*N*L*(L2-M2)*DDS+N*L*(1.D0-2.D0*(L2-M2))*DDP &    !XZ,X2-Y2
+     &      -N*L*(1.D0-0.5D0*(L2-M2))*DDD
+      H(9,7)=SQ3*L*M*(N2-0.5D0*(L2+M2))*DDS-2.D0*SQ3*L*M*N2*DDP &   !XY,3Z2-R2
+     &      +0.5D0*SQ3*L*M*(1.D0+N2)*DDD
+      H(8,7)=SQ3*M*N*(N2-0.5D0*(L2+M2))*DDS+SQ3*M*N*(L2+M2-N2)*DDP & !YZ,3Z2-R2
+     &      -0.5D0*SQ3*M*N*(L2+M2)*DDD
+      H(6,7)=SQ3*L*N*(N2-0.5D0*(L2+M2))*DDS+SQ3*L*N*(L2+M2-N2)*DDP & !XZ,3Z2-R2
+     &      -0.5D0*SQ3*L*N*(L2+M2)*DDD
+      H(5,5)=0.75D0*(L2-M2)**2*DDS+(L2+M2-(L2-M2)**2)*DDP &          !X2-Y2,X2-Y2
+     &      +(N2+0.25D0*(L2-M2)**2)*DDD
+      H(5,7)=0.5D0*SQ3*(L2-M2)*(N2-0.5D0*(L2+M2))*DDS &              !X2-Y2,3Z2-R2
+     &      +SQ3*N2*(M2-L2)*DDP+0.25D0*SQ3*(1.D0+N2)*(L2-M2)*DDD
+      H(7,7)=(N2-0.5D0*(L2+M2))**2*DDS+3.D0*N2*(L2+M2)*DDP &         !3Z2-R2,3Z2-R2
+     &      +0.75D0*(L2+M2)**2*DDD
 !
 !     =================================================================
-!     == make h hermitean =============================================
+!     == MAKE H HERMITEAN =============================================
 !     =================================================================
-      do i=1,9
-        p1=(-1.d0)**int(sqrt(real(i)+1.d-6-1.d0))
-        do j=i+1,9
-          p=p1*(-1.d0)**int(sqrt(real(j)+1.d-6-1.d0))
-          h(j,i)=p*h(i,j)+h(j,i)
-          h(i,j)=p*h(j,i)
-        enddo
-      enddo
-      return
-      end
+      DO I=1,9
+        P1=(-1.D0)**INT(SQRT(REAL(I)+1.D-6-1.D0))
+        DO J=I+1,9
+          P=P1*(-1.D0)**INT(SQRT(REAL(J)+1.D-6-1.D0))
+          H(J,I)=P*H(I,J)+H(J,I)
+          H(I,J)=P*H(J,I)
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !*********************************************************************************
 !*********************************************************************************
 !*********************************************************************************
 !****                                                                         ****
-!****   test routines                                                         ****
+!****   TEST ROUTINES                                                         ****
 !****                                                                         ****
 !****                                                                         ****
 !*********************************************************************************
@@ -2061,54 +2061,54 @@ end if
 !*********************************************************************************
 !
 !     ...............................................................................
-      subroutine test_madelung()
+      SUBROUTINE TEST_MADELUNG()
 !     **                                                                        **
 !     **  CALCULATE VARIOUS MADELUNG CONSTANTS AND COMPARE WITH                 **
 !     **  "CONDENSED MATTER PHYSICS" BY M.P.MARDER                              **
 !     **                                                                        **
-      integer(4),parameter :: nbas=2
-      real(8)              :: rbas(3,3)
-      real(8)              :: bas(3,nbas)
-      reAL(8)              :: Q(NBAS)
-      reAL(8)              :: EMAD
-      reAL(8)              :: VMAD(NBAS)
-      reAL(8)              :: FMAD(3,NBAS)
-      reAL(8)              :: D,RS,DET
-      reAL(8)              :: PI
+      INTEGER(4),PARAMETER :: NBAS=2
+      REAL(8)              :: RBAS(3,3)
+      REAL(8)              :: BAS(3,NBAS)
+      REAL(8)              :: Q(NBAS)
+      REAL(8)              :: EMAD
+      REAL(8)              :: VMAD(NBAS)
+      REAL(8)              :: FMAD(3,NBAS)
+      REAL(8)              :: D,RS,DET
+      REAL(8)              :: PI
 !     ******************************************************************************
       PI=4.D0*ATAN(1.D0)
-      q(1)=1.d0
-      q(2)=-1.d0
+      Q(1)=1.D0
+      Q(2)=-1.D0
 !
-!     == sodium chloride: 1.74757 =============================================
+!     == SODIUM CHLORIDE: 1.74757 =============================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
-      bas(:,2) =(/0.5d0,0.0d0,0.0d0/)
-      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
-      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("Nacl structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.74757
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
+      BAS(:,2) =(/0.5D0,0.0D0,0.0D0/)
+      D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
+      CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("NACL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.74757
 !
-!     == CsCl structure: 1.76268 ==============================================
+!     == CSCL STRUCTURE: 1.76268 ==============================================
       RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
       RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
       RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
-      bas(:,2) =(/0.5d0,0.5d0,0.5d0/)
-      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
-      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("cscl structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.76268
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
+      BAS(:,2) =(/0.5D0,0.5D0,0.5D0/)
+      D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
+      CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("CSCL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.76268
 !
-!     == Zns structure: 1.63806 ===============================================
+!     == ZNS STRUCTURE: 1.63806 ===============================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
-      bas(:,2) =(/0.25d0,0.25d0,0.25d0/)
-      d=sqrt(sum((bas(:,2)-bas(:,1))**2))
-      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("zns structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*d,-EMAD*D-1.63806
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
+      BAS(:,2) =(/0.25D0,0.25D0,0.25D0/)
+      D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
+      CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("ZNS STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.63806
 !
 !     ========================================================================
 !     == MADELUNG CONSTANTS FOR METALS                                      ==
@@ -2119,42 +2119,42 @@ end if
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
       DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
      &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
      &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
-      call MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("fcc structure",t30,"e=",f10.5,"  dev=",f10.5)')-2.D0*emad*RS,-2.D0*EMAD*RS-1.79186
+      CALL MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("FCC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-2.D0*EMAD*RS,-2.D0*EMAD*RS-1.79186
 !
 !     == SIC: 1.76012 ========================================================
       RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
       RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
       RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
       DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
      &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
      &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
-      call MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("sic structure",t30,"e=",f10.5,"  dev=",f10.5)')-2.D0*emad*RS,-2.D0*EMAD*RS-1.76012
+      CALL MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("SIC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-2.D0*EMAD*RS,-2.D0*EMAD*RS-1.76012
 !
 !     == DIAMOND: 1.67085 ===================================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
-      bas(:,1) =(/0.0d0,0.0d0,0.0d0/)
-      bas(:,2) =(/0.25d0,0.25d0,0.25d0/)
+      BAS(:,1) =(/0.0D0,0.0D0,0.0D0/)
+      BAS(:,2) =(/0.25D0,0.25D0,0.25D0/)
       DET=RBAS(1,1)*(RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)) &
      &   +RBAS(2,1)*(RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)) &
      &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
       DET=0.5D0*DET
       Q(:)=1.D0
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
-      call MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      write(*,fmt='("diamond structure",t30,"e=",f10.5,"  dev=",f10.5)')-emad*RS,-EMAD*RS-1.67085
-      return
-      end
+      CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
+      WRITE(*,FMT='("DIAMOND STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*RS,-EMAD*RS-1.67085
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RANDOM_MSLNG(RAN)
@@ -2224,13 +2224,13 @@ end if
 !     ==========================================================================
 !     == CALCULATE TABLE OF BINOMIAL COEFFICIENTS                             ==
 !     ==========================================================================
-      B(:,:)=0.D0
+      B(:,:)=0
       DO N=0,NX
-        B(N,0)=1.D0   !INITIAL VALUE (N OVER 0)=1
+        B(N,0)=1     !INITIAL VALUE (N OVER 0)=1
         DO K=1,N-1
           B(N,K)=B(N-1,K-1)+B(N-1,K)   ! RECURSIVE FORMULA
         ENDDO
-        B(N,N)=1.D0   ! INITIAL VALUE (N OVER N)=1
+        B(N,N)=1     ! INITIAL VALUE (N OVER N)=1
       ENDDO
 !
 !     ==========================================================================
@@ -2247,7 +2247,7 @@ end if
 !!$!**    LOCKED STATE   : LOCKFILE EXISTS, UNLOCKFILE DOES NOT EXIST            **
 !!$!**    UNLOCKED STATE : UNLOCKFILE EXISTS, LOCKFILE DOES NOT EXIST            **
 !!$!**                                                                           **
-!!$!**  IT TOGGLES BY MOVING A FILE 'LOCK' TO 'UNLOCK AND VICE VERSA.            **
+!!$!**  IT TOGGLES BY MOVING A FILE LOCK TO UNLOCK AND VICE VERSA.              **
 !!$!**  IT CREATES AN UNLOCK FILE IF NEITHER LOCK OR UNLOCK EXIST.               **
 !!$!**                                                                           **
 !!$!**  IT IS USED VIA SUBROUTINES:                                              **
@@ -2275,7 +2275,7 @@ end if
 !!$!
 !!$!     ..........................................................................
 !!$      SUBROUTINE MYLOCK_INITIALIZE()
-!!$      USE MYLOCK_MODULE,only : tini,lockfile,cmd_unlock,cmd_lock,dir
+!!$      USE MYLOCK_MODULE,ONLY : TINI,LOCKFILE,CMD_UNLOCK,CMD_LOCK,DIR
 !!$      IMPLICIT NONE
 !!$      CHARACTER(128) :: UNLOCKFILE
 !!$      CHARACTER(128) :: CMD_TOUCHUNLOCK
@@ -2295,7 +2295,7 @@ end if
 !!$      INQUIRE(FILE=LOCKFILE,EXIST=TCHK1)
 !!$      INQUIRE(FILE=UNLOCKFILE,EXIST=TCHK2)
 !!$      IF(.NOT.(TCHK1.OR.TCHK2)) THEN
-!!$        CALL lib$SYSTEM(CMD_TOUCHUNLOCK)
+!!$        CALL LIB$SYSTEM(CMD_TOUCHUNLOCK)
 !!$      END IF
 !!$      RETURN
 !!$      END SUBROUTINE MYLOCK_INITIALIZE
@@ -2315,7 +2315,7 @@ end if
 !!$!
 !!$!     ..........................................................................
 !!$      SUBROUTINE MYLOCK$LOCK()
-!!$      USE MYLOCK_MODULE,only : lockfile,cmd_lock,sleep
+!!$      USE MYLOCK_MODULE,ONLY : LOCKFILE,CMD_LOCK,SLEEP
 !!$      IMPLICIT NONE
 !!$      LOGICAL(4)               :: TCHK
 !!$      REAL(8)                  :: TIME1,TIME2
@@ -2324,7 +2324,7 @@ end if
 !!$      DO 
 !!$        INQUIRE(FILE=LOCKFILE,EXIST=TCHK)
 !!$        IF(.NOT.TCHK) THEN
-!!$          CALL lib$SYSTEM(CMD_LOCK)
+!!$          CALL LIB$SYSTEM(CMD_LOCK)
 !!$        END IF
 !!$        CALL CPU_TIME(TIME1) 
 !!$        DO 
@@ -2337,11 +2337,11 @@ end if
 !!$!
 !!$!     ..........................................................................
 !!$      SUBROUTINE MYLOCK$UNLOCK()
-!!$      USE MYLOCK_MODULE, only: cmd_unlock
+!!$      USE MYLOCK_MODULE, ONLY: CMD_UNLOCK
 !!$      IMPLICIT NONE
 !!$      INTEGER(4),PARAMETER :: NFIL=123
 !!$!     **************************************************************************
 !!$      CALL MYLOCK_INITIALIZE()
-!!$      CALL lib$SYSTEM(CMD_UNLOCK)
+!!$      CALL LIB$SYSTEM(CMD_UNLOCK)
 !!$      RETURN
 !!$      END

@@ -185,7 +185,7 @@
 !**    RADIAL$INTEGRATE(R1,DEX,NR,F,FINT)                             **
 !**    RADIAL$INTEGRAL(GID,NR,F,FINT0)                                **
 !**    RADIAL$FFT(ID,R1,DEX,NR,F1,G1,F2)                              **
-!**    RADIAL$POISSON(gid,NR,L,RHO,V)                                 **
+!**    RADIAL$POISSON(GID,NR,L,RHO,V)                                 **
 !**    RADIAL$MOMENT(R1,DEX,NR,L,RHO,QLM)                             **
 !**    BESSELTRANSFORM$CLEAR                                          **
 !**    BESSELTRANSFORM(L,NP,R1,G1,DEX,F,G,DISC)                       **
@@ -1744,11 +1744,11 @@ END MODULE SHLOGRADIAL_MODULE
       XI=1.D0+LOG(R0/R1+1.D0)/DEX
       IR1=INT(XI)-1
 !     == DO NOT EXTRAPOLATE BEYOND GRID END BUT ASSUME A VALUE OF ZERO
-      if(ir1.gt.nr-1) then
-        f0=0.d0
-        return
-      end if
-      IR1=MIN(IR1,NR-3) ! prior statement
+      IF(IR1.GT.NR-1) THEN
+        F0=0.D0
+        RETURN
+      END IF
+      IR1=MIN(IR1,NR-3) ! PRIOR STATEMENT
       IR1=MAX(1,IR1)
       FARR(:)=F(IR1:IR1+3)
       RI=R1*EXP(DEX*REAL(IR1-1,KIND=8))
@@ -2352,10 +2352,10 @@ END MODULE LOGRADIAL_MODULE
         XI=1.D0+LOG(R0/R1)/DEX
         IR1=INT(XI)-1
 !       == DO NOT EXTRAPOLATE BEYOND GRID END BUT ASSUME A VALUE OF ZERO
-        if(ir1.gt.nr-1) then
-          f0=0.d0
-          return
-        end if
+        IF(IR1.GT.NR-1) THEN
+          F0=0.D0
+          RETURN
+        END IF
         IR1=MAX(1,IR1)
         IR1=MIN(IR1,NR-3)
       ELSE
@@ -2678,7 +2678,7 @@ END MODULE LOGRADIAL_MODULE
       INTEGER(4),PARAMETER :: NG=512
       REAL(8)              :: GMAX=20.D0
       REAL(8)              :: DEXG
-      REAL(8)              :: G1=1.D-3 !small G1 -> small oscillations
+      REAL(8)              :: G1=1.D-3 !SMALL G1 -> SMALL OSCILLATIONS
       REAL(8)              :: FOFR(NR)
       REAL(8)              :: FOFG(NG)
       REAL(8)              :: FOFG_OLD(NG)
@@ -2725,7 +2725,7 @@ PRINT*,'G1 ',G1,' XEXPG ',EXP(DEXG),' GX=',G1*EXP(DEXG*(NG-1))
 !     ==========================================================================
 !     == CALL BESSELTRANSFORM                                                 ==
 !     ==========================================================================
-stop 'errorerrorerrorerrorerrorerror!'
+STOP 'ERRORERRORERRORERRORERRORERROR!'
 
 !      CALL RADIAL$BESSELTRANSFORM(L,GID,NR,FOFR,GIDG,NG,FOFG)
 !
@@ -2746,7 +2746,7 @@ stop 'errorerrorerrorerrorerrorerror!'
           CALL ERROR$STOP('TEST_BESSEL')
         END IF
         SVAR=4.D0*PI/(2.D0*PI)**3*SVAR
-        WRITE(NFIL,*)G(I),FOFG(I),SVAR,SVAR-FOFG(I),FOFG_OLD(i)
+        WRITE(NFIL,*)G(I),FOFG(I),SVAR,SVAR-FOFG(I),FOFG_OLD(I)
       ENDDO
       CLOSE(NFIL)
 PRINT*,'DONE'
@@ -2797,12 +2797,12 @@ STOP
       INTEGER(4)            :: ISVAR,I
 !      REAL(8)               :: PI
       REAL(8)               :: DIFF
-      CHARACTER(16),parameter :: TYPE='SIEGMAN'
-!      CHARACTER(16),parameter :: TYPE='TALMAN'
-!      CHARACTER(16),parameter :: TYPE='TALMAN0'
-!      CHARACTER(16),parameter :: TYPE='TALMANL'
+      CHARACTER(16),PARAMETER :: TYPE='SIEGMAN'
+!      CHARACTER(16),PARAMETER :: TYPE='TALMAN'
+!      CHARACTER(16),PARAMETER :: TYPE='TALMAN0'
+!      CHARACTER(16),PARAMETER :: TYPE='TALMANL'
 !     **************************************************************************
-!      call RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,Fofr,GIDg,NG,fofG_OLD)
+!      CALL RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,FOFR,GIDG,NG,FOFG_OLD)
 
 !      PI=4.D0*ATAN(1.D0)
 ! 
@@ -2832,8 +2832,8 @@ STOP
 !     ==================================================================
 !     == CALCULATE RESULTS ACCURATE AT SMALL K VALUES                 ==
 !     ==================================================================
-      fofgl=0.d0
-      fofgs=0.d0
+      FOFGL=0.D0
+      FOFGS=0.D0
       IF(TYPE.EQ.'TALMAN') THEN
         IF (L.GE.2) THEN
           CALL RADIAL_BESSELTRANSF_CONVOLUTION(L,L,R1,G1,DEX,NG,FI,FOFGS)
@@ -2861,13 +2861,13 @@ STOP
 !     == APPLY FACTOR THAT DIFFERS TO TALMAN'S NOTATION              ==
 !     =================================================================
 !      FOFG(:)=4.D0*PI/(2.D0*PI)**3*FOFG(:)
-!!$if(maxval(abs(fofg-fofg_old)).gt.1.d-6*maxval(abs(fofg_old))) then
-!!$print*,'l ',l,r1,g1,dex,ng
-!!$print*,'ratio ', fofg_old(50)/fofg(50)
+!!$IF(MAXVAL(ABS(FOFG-FOFG_OLD)).GT.1.D-6*MAXVAL(ABS(FOFG_OLD))) THEN
+!!$PRINT*,'L ',L,R1,G1,DEX,NG
+!!$PRINT*,'RATIO ', FOFG_OLD(50)/FOFG(50)
 !!$CALL RADIAL_WRITEPHI('FOFG.DAT',G1,DEX,NG,FOFG)
 !!$CALL RADIAL_WRITEPHI('FOFG_OLD.DAT',G1,DEX,NG,FOFG_OLD)
-!!$call error$stop('radial$besseltransform')
-!!$end if
+!!$CALL ERROR$STOP('RADIAL$BESSELTRANSFORM')
+!!$END IF
       RETURN
       END
 !
@@ -2925,13 +2925,13 @@ STOP
       REAL(8)   ,INTENT(IN) :: FOFR(NP)
       REAL(8)   ,INTENT(OUT):: FOFG(NP)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      logical(4)            :: tcorr=.true.
+      LOGICAL(4)            :: TCORR=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: B(NP)
       REAL(8)               :: A(2*NP)
       COMPLEX(8)            :: POFR(2*NP,2)
       COMPLEX(8)            :: POFG(2*NP,2)
-      real(8)               :: fofg1(np)
+      REAL(8)               :: FOFG1(NP)
       REAL(8)               :: XEXP,RI
       INTEGER(4)            :: I,J
       REAL(8)               :: DEVX
@@ -2956,21 +2956,21 @@ STOP
 !     ==========================================================================
 !     == CONVOLUTION BY TWO FAST FOURIER TRANSFORMS                           ==
 !     ==========================================================================
-      POFR(:NP,1)=CMPLX(B(:),0.D0)
-      POFR(NP+1:,1)=CMPLX(0.D0,0.D0)
-      POFR(:,2)=CMPLX(A(:),0.D0)
+      POFR(:NP,1)=CMPLX(B(:),0.D0,KIND=8)
+      POFR(NP+1:,1)=CMPLX(0.D0,0.D0,KIND=8)
+      POFR(:,2)=CMPLX(A(:),0.D0,KIND=8)
       CALL LIB$FFTC8('GTOR',2*NP,2,POFR,POFG)                  
       POFG(:,1)=POFG(:,2)*CONJG(POFG(:,1))
       CALL LIB$FFTC8('RTOG',2*NP,1,POFG(:,1),POFR(:,1))                  
       FOFG(:)=REAL(POFR(:NP,1))
 !
 !     ==========================================================================
-!     ==  add correction for the hole of the log. grid at the origin          ==
+!     ==  ADD CORRECTION FOR THE HOLE OF THE LOG. GRID AT THE ORIGIN          ==
 !     ==========================================================================
-      if(tcorr) then
+      IF(TCORR) THEN
         CALL RADIAL_BESSELTRANSF_FILLHOLE(L,R1,G1,DEX,NP,FOFR,FOFG1)
-        fofg(:)=fofg(:)+fofg1(:)
-      end if
+        FOFG(:)=FOFG(:)+FOFG1(:)
+      END IF
 !
 !     ==========================================================================
 !     == TEST RESULT BY DIRECT CONVOLUTION ON THE GRID                        ==
@@ -3010,12 +3010,12 @@ STOP
       INTEGER(4),INTENT(IN) :: NP
       REAL(8)   ,INTENT(IN) :: FOFR(NP)
       REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      integer(4),parameter  :: nexpand=2
+      INTEGER(4),PARAMETER  :: NEXPAND=2
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
       REAL(8)               :: PHI(NP)
-      COMPLEX(8)            :: POFR(NP*nexpand)
-      COMPLEX(8)            :: POFG(NP*nexpand)
+      COMPLEX(8)            :: POFR(NP*NEXPAND)
+      COMPLEX(8)            :: POFG(NP*NEXPAND)
       REAL(8)               :: XEXP,RI
       REAL(8)               :: T
       REAL(8)               :: PI,TWOPI
@@ -3025,16 +3025,16 @@ STOP
       REAL(8)               :: SVAR
       REAL(8)               :: DT
       REAL(8)               :: RM ! REAL(M)
-      REAL(8)               :: logr1 ! log(r1)
+      REAL(8)               :: LOGR1 ! LOG(R1)
       COMPLEX(8)            :: CVAL,CSVAR1,CSVAR2
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
-      np2=nexpand*np
+      NP2=NEXPAND*NP
       DT=TWOPI/(DEX*REAL(NP2,KIND=8))
       NPH=NINT(0.5D0*REAL(NP2+2))
       RM=REAL(M,KIND=8)
-      logr1=log(r1)
+      LOGR1=LOG(R1)
 !
 !     ==========================================================================
 !     ==  PHI(X)=DEX*R1^3 * EXP((3*DEX-GAMMA)X) * F(R1*EXP(DEX*X))            ==
@@ -3047,20 +3047,20 @@ STOP
         PHI(I)=RI*FOFR(I)
       ENDDO
 !
-!     == terminator for trapezoidal integration ================================
+!     == TERMINATOR FOR TRAPEZOIDAL INTEGRATION ================================
       PHI(1)=0.5D0*PHI(1)
       PHI(NP)=0.5D0*PHI(NP)
 !
 !     ==========================================================================
 !     == FOURIER TRANSFORM                                                    ==
 !     ==========================================================================
-      POFR(:np)=CMPLX(PHI(:),0.D0)
-      pofr(np+1:)=(0.d0,0.d0)
+      POFR(:NP)=CMPLX(PHI(:),0.D0,KIND=8)
+      POFR(NP+1:)=(0.D0,0.D0)
 !     == USE GTOR INSTEAD OF RTOG TO OBTAIN COMPLEX CONJUGATE OF PHI(T) ========
       CALL LIB$FFTC8('GTOR',NP2,1,POFR,POFG)                  
       SVAR=LOGR1*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
-      CSVAR1=CMPLX(DEX/TWOPI,0.D0)
+      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR),KIND=8)
+      CSVAR1=CMPLX(DEX/TWOPI,0.D0,KIND=8)
       DO I=1,NPH
         IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
         POFG(I)=CSVAR1*POFG(I)
@@ -3075,13 +3075,13 @@ STOP
 !     ==========================================================================
       IF(TCORR) THEN
         SVAR=LOGR1*DT
-        CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))   !EXP(I*T*LOG[R1])
+        CSVAR2=CMPLX(COS(SVAR),SIN(SVAR),KIND=8)   !EXP(I*T*LOG[R1])
         SVAR=FOFR(1)/TWOPI*R1**(1.5D0+RM)
-        CSVAR1=CMPLX(SVAR,0.D0)
+        CSVAR1=CMPLX(SVAR,0.D0,KIND=8)
         SVAR=1.5D0+REAL(M+L,KIND=8)
         DO I=1,NPH
           T=DT*REAL(I-1,KIND=8)
-          CVAL=CSVAR1/CMPLX(SVAR,T)
+          CVAL=CSVAR1/CMPLX(SVAR,T,KIND=8)
           IF(I.EQ.NPH) CVAL=REAL(CVAL)
           POFG(I)=POFG(I)+CVAL
           IF(I.NE.1.AND.I.NE.NPH) THEN
@@ -3094,11 +3094,11 @@ STOP
 !     ==========================================================================
 !     == MULTIPLICATION WITH M_{L,M}(T)                                       ==
 !     ==========================================================================
-print*,'nph*dt ',nph*dt,nph,dt
+PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       DO I=1,NPH
         T=DT*REAL(I-1,KIND=8)
         CALL RADIAL_BESSELTRANSF_M(L,M,T,CVAL)
-        IF(I.EQ.NPH) CVAL=0.d0
+        IF(I.EQ.NPH) CVAL=0.D0
         POFG(I)=CVAL*POFG(I)  
         IF(I.NE.1.AND.I.NE.NPH) THEN
           POFG(NP2+2-I)=POFG(NP2+2-I)*CONJG(CVAL)
@@ -3109,7 +3109,7 @@ print*,'nph*dt ',nph*dt,nph,dt
 !     == FOURIER BACK-TRANSFORM                                               ==
 !     ==========================================================================
       SVAR=LOG(G1)*DT
-      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR))
+      CSVAR2=CMPLX(COS(SVAR),SIN(SVAR),KIND=8)
       CSVAR1=(1.D0,0.D0)*DT
       DO I=1,NPH
         IF(I.EQ.NPH) CSVAR1=REAL(CSVAR1)
@@ -3162,8 +3162,8 @@ print*,'nph*dt ',nph*dt,nph,dt
       INTEGER(4),PARAMETER  :: NP=1000
       REAL(8)   ,PARAMETER  :: XMIN=-1.D+1
       REAL(8)   ,PARAMETER  :: XMAX=4.D+1
-      real(8)   ,parameter  :: npreal=np
-      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NPreal-1.d0) 
+      REAL(8)   ,PARAMETER  :: NPREAL=NP
+      REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NPREAL-1.D0) 
       REAL(8)               :: X
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
@@ -3204,11 +3204,11 @@ print*,'nph*dt ',nph*dt,nph,dt
       Z=COSPPIHALF*EIPHIDIFF+SINPPIHALF*EIPHISUM
       DO J=1,P
         SVAR=0.5D0*REAL(2*J-1,KIND=8)
-        Z=Z*CMPLX(SVAR,-T)
+        Z=Z*CMPLX(SVAR,-T,KIND=8)
       ENDDO
       DO J=1,L
         SVAR=0.5D0*REAL(4*J-2*L+2*M-1,KIND=8)
-        Z=Z/CMPLX(SVAR,T)
+        Z=Z/CMPLX(SVAR,T,KIND=8)
       ENDDO
       RES=Z/SQRT(8.D0*PI)
 !
@@ -3224,7 +3224,7 @@ print*,'nph*dt ',nph*dt,nph,dt
           CALL SPECIALFUNCTION$BESSEL(L,EXP(X),SVAR)
           SVAR=SVAR*EXP((1.5D0-REAL(M,KIND=8))*X)
           CSVAR=CSVAR+DX*SVAR*EXP(-CI*T*X)
-          WRITE(100,*)X,REAL(SVAR*EXP(-CI*T*X),8),AIMAG(SVAR*EXP(-CI*T*X))
+          WRITE(100,*)X,REAL(SVAR*EXP(-CI*T*X),KIND=8),AIMAG(SVAR*EXP(-CI*T*X))
         ENDDO
         CSVAR=CSVAR/(2.D0*PI)
         CLOSE(100)
@@ -3270,7 +3270,7 @@ print*,'nph*dt ',nph*dt,nph,dt
 !*******************************************************************************
 !*******************************************************************************
 !*******************************************************************************
-!********************************garbadge  *************************************
+!********************************GARBADGE  *************************************
 !*******************************************************************************
 !*******************************************************************************
 !*******************************************************************************
@@ -3376,7 +3376,7 @@ print*,'nph*dt ',nph*dt,nph,dt
       PI=4.D0*ATAN(1.D0)
       DG=2.D0*PI/REAL(N,KIND=8)
       CSVAR1=1.D0
-      CSVAR2=CMPLX(COS(DG),SIN(DG))
+      CSVAR2=CMPLX(COS(DG),SIN(DG),KIND=8)
       DO I=1,N
         EI(I)=CSVAR1
         CSVAR1=CSVAR1*CSVAR2
@@ -3471,7 +3471,7 @@ CONTAINS
         AA=DBLE(2*JJ)-0.5D0
         T=0.D0
         DO I=1,NH
-          XA(I)=XA(I)/CMPLX(AA,T,8)
+          XA(I)=XA(I)/CMPLX(AA,T,KIND=8)
           T=T+DT
         ENDDO
       ENDDO
@@ -3531,7 +3531,7 @@ CONTAINS
         XX=RI3*F(2*I-1) 
         RI3=RI3*XEXP3 
         YY=RI3*F(2*I) 
-        XA(I)=CMPLX(XX,YY,8) 
+        XA(I)=CMPLX(XX,YY,KIND=8) 
         RI3=RI3*XEXP3 
       ENDDO
       CALL NLOGN(N,XA,WW,NP) 
@@ -3616,7 +3616,7 @@ CONTAINS
           BB=JJ-0.5D0
           T=0.D0 
           DO I=1,NH 
-            XA(I)=XA(I)*CMPLX(BB,-T,8)/CMPLX(AA,T,8) 
+            XA(I)=XA(I)*CMPLX(BB,-T,KIND=8)/CMPLX(AA,T,KIND=8) 
             T=T+DT 
           ENDDO
         ENDDO
@@ -3706,7 +3706,7 @@ CONTAINS
       DT=2.D0*PI/(H*DBLE(NP))
       Y1=1.D0 
       AA=(RHOMIN+KAPMIN)*DT 
-      Y2=CMPLX(COS(AA),SIN(AA),8) 
+      Y2=CMPLX(COS(AA),SIN(AA),KIND=8) 
       DO I=1,NH 
         T=(I-1)*DT 
         S=0.D0 
@@ -3721,9 +3721,9 @@ CONTAINS
         XX=EXP(PI*T) 
         XX=ATAN((XX-1.D0)/(XX+1.D0)) !PHI2
         CC=S-XX 
-        TA(I)=Y1*CMPLX(COS(CC),SIN(CC),8) 
+        TA(I)=Y1*CMPLX(COS(CC),SIN(CC),KIND=8) 
         CC=S+XX 
-        TA(I+NH)=Y1*CMPLX(COS(CC),SIN(CC),8) 
+        TA(I+NH)=Y1*CMPLX(COS(CC),SIN(CC),KIND=8) 
         Y1=Y1*Y2 
       ENDDO
       TA(1)=TA(1)/2.D0 
@@ -3756,9 +3756,9 @@ CONTAINS
       AN=DBLE(NP)
       DO I=1,NH 
         XX=(I-1)*PI/AN 
-        WW(I+NH)=CMPLX(-SIN(XX),COS(XX),8) 
+        WW(I+NH)=CMPLX(-SIN(XX),COS(XX),KIND=8) 
         XX=2.D0*XX 
-        WW(I)=CMPLX(COS(XX),SIN(XX),8) 
+        WW(I)=CMPLX(COS(XX),SIN(XX),KIND=8) 
       ENDDO
       RETURN 
       END SUBROUTINE MAKEWW
@@ -3799,7 +3799,7 @@ CONTAINS
         AA=SIN(XX)/XX
         XX=XEXP*XX
         BB=SIN(XX)/XX
-        XA(I)=CMPLX(AA,BB,8) 
+        XA(I)=CMPLX(AA,BB,KIND=8) 
         IF (XX.GT.1.D+8) EXIT
         XX=XX*XEXP
       ENDDO
@@ -3826,7 +3826,7 @@ CONTAINS
           AA=(SIN(XX)/XX-COS(XX))/XX 
           XX=XEXP*XX 
           BB=(SIN(XX)/XX-COS(XX))/XX 
-          XA(I)=CMPLX(AA,BB,8) 
+          XA(I)=CMPLX(AA,BB,KIND=8) 
           IF (XX.GT.1.D+8) EXIT
         ELSE
           CC=XX*XX/2.D0 
@@ -3836,7 +3836,7 @@ CONTAINS
           CC=XX*XX/2.D0 
           CD=1.D0-CC/5.D0+CC*CC/70.D0-CC*CC*CC/1890.D0+CC**4/83160.D0 
           BB=XX*CD/3.D0 
-          XA(I)=CMPLX(AA,BB,8) 
+          XA(I)=CMPLX(AA,BB,KIND=8) 
         END IF
         XX=XX*XEXP 
       ENDDO
