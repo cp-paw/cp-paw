@@ -5539,6 +5539,7 @@ PRINT*,'KI ',KI
 !         ======================================================================
 !         == WRITE SPECIESBLOCKS FOR SETUPFILE                                ==
 !         ======================================================================
+!          CALL SETUP_WRITEspeciesPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
           CALL SETUP_WRITEPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
      &                           ,RCL,LAMBDA &
      &                           ,POTPOW,POTRC,TPOTVAL,POTVAL &
@@ -5629,6 +5630,118 @@ PRINT*,'KI ',KI
      &                             CORPOW,CORRC/RCOV
       END IF
       WRITE(NFIL,FMT='(T2,"!END")') 
+      WRITE(NFIL,*) 
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_WRITESPECIESPARMSET(NFIL,ID,LX,AEZ,ZV,TYPE,RBOX,RCSM &
+     &                             ,RCL,LAMBDA &
+     &                             ,POTPOW,POTRC,TPOTVAL,POTVAL &
+     &                             ,CORPOW,CORRC,TCORVAL,CORVAL &
+     &                             ,DMIN,DMAX,RMAX)
+!     **************************************************************************
+!     ** WRITES THE PARAMETERS FOR A SPECIFIC SETUP FOR THE SETUP INPUT FILE  **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2014******************
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: ID       ! SETUP ID
+      REAL(8)     ,INTENT(IN) :: AEZ      ! ELEMENT SYMBOL
+      REAL(8)     ,INTENT(IN) :: ZV       ! #(VALENCE ELECTRONS)
+      CHARACTER(*),INTENT(IN) :: TYPE     ! PSEUDIZATION TYPE
+      REAL(8)     ,INTENT(IN) :: RBOX     ! RBOX
+      REAL(8)     ,INTENT(IN) :: RCSM     ! RCSM
+      INTEGER(4)  ,INTENT(IN) :: LX       ! HIGHEST ANGULAR MOMENTUM ON FILE
+      REAL(8)     ,INTENT(IN) :: RCL(LX+1)!RC(PHI)
+      REAL(8)     ,INTENT(IN) :: LAMBDA(LX+1) !LAMBDA
+      REAL(8)     ,INTENT(IN) :: POTPOW   ! LEADING POWER FOR PSEUDO POTENTIAL
+      REAL(8)     ,INTENT(IN) :: POTRC    ! RC FOR PSEUDO POTENTIAL
+      LOGICAL(4)  ,INTENT(IN) :: TPOTVAL  ! CORVAL SHALL BE SET
+      REAL(8)     ,INTENT(IN) :: POTVAL   ! PSEUD POT VALUE AT R=0
+      REAL(8)     ,INTENT(IN) :: CORPOW   ! LEADING POWER FOR PSEUDO CORE
+      REAL(8)     ,INTENT(IN) :: CORRC    ! RC FOR PSEUDO CORE
+      LOGICAL(4)  ,INTENT(IN) :: TCORVAL  ! CORVAL SHALL BE SET
+      REAL(8)     ,INTENT(IN) :: CORVAL   ! PSEUD CORE VALUE AT R=0
+      REAL(8)     ,INTENT(IN) :: DMIN     ! SMALLEST GRID SPACING
+      REAL(8)     ,INTENT(IN) :: DMAX     ! LARGEST GRID SPACING
+      REAL(8)     ,INTENT(IN) :: RMAX     ! OUTERMOST GRID POINT 
+      REAL(8)                 :: RCOV     ! COVALENT RADIUS
+      character(2)            :: el
+      logical(4)              :: tsc
+      character(128)          :: string
+      CHARACTER(1)            :: ATOMTYPE
+      integer(4)              :: iz
+!     **************************************************************************
+      CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+      EL=ID(1:2)
+      TSC=INDEX(ID,'_SC').NE.0
+      CALL PERIODICTABLE$GET(EL,'Z',IZ)
+      CALL SETUP_ELEMENTTYPE(IZ,ATOMTYPE)
+
+      IF(.NOT.TSC) THEN
+        IF(IZ.LE.2) THEN
+          STRING='" NPRO=1  LRHOX=2 ")'
+        ELSE IF(IZ.LE.4) THEN
+          STRING='" NPRO=1 1 0  LRHOX=2 ")'
+        ELSE IF(IZ.LE.10) THEN
+          STRING='" NPRO=1 1 1  LRHOX=2 ")'
+        ELSE IF(IZ.LE.18) THEN
+          STRING='" NPRO=2 2 1  LRHOX=2 ")'
+        ELSE IF(IZ.LT.56) THEN
+          STRING='" NPRO=1 1 1  LRHOX=2 ")'
+        ELSE      
+          STRING='" NPRO=1 1 1 1 LRHOX=2 ")'
+        END IF
+      ELSE
+        IF(IZ.LE.2) THEN
+          string='" NPRO=1  LRHOX=2 ")'
+        ELSE IF(IZ.LE.18) THEN
+          string='" NPRO=2 2 0  LRHOX=2 ")'
+        ELSE IF(IZ.LT.56) THEN
+          string='" NPRO=2 2 1  LRHOX=2 ")'
+        ELSE      
+          string='" NPRO=2 2 1 1 LRHOX=2 ")'
+        END IF
+      END IF
+      string='(T3,"!SPECIES NAME=",A,'//trim(string)
+      write(nfil,fmt=trim(string))"'"//EL//"'"
+!
+      WRITE(NFIL,FMT='(T5,"!AUGMENT  ID=",A," Z=",F10.5," ZV=",F3.0)') &
+     &                            "'"//TRIM(ID)//"'",AEZ,ZV
+      WRITE(NFIL,FMT='(T14,"TYPE=",A," RBOX/RCOV=",F7.3," RCSM/RCOV=",F7.3)') &
+     &                              "'"//TRIM(TYPE)//"'",RBOX/RCOV,RCSM/RCOV
+!
+!     == SET PARAMETERS FOR PARTIAL WAVE PSEUDIZATION ==========================
+      WRITE(NFIL,FMT='(T14,"RCL/RCOV=",20F7.3)')RCL/RCOV
+      WRITE(NFIL,FMT='(T14,"LAMBDA=",20F7.3)')LAMBDA 
+!
+!     == SET RADIAL GRID =======================================================
+      WRITE(NFIL,FMT='(T7,"!GRID DMIN=",E12.3," DMAX=",F10.3," RMAX=",F10.3' &
+     &                      //'," !END")')DMIN,DMAX,RMAX 
+!
+!     == SET PARAMETERS FOR PSEUDO POTENTIAL ===================================
+      IF(TPOTVAL) THEN
+        WRITE(NFIL,FMT='(T7,"!POT  POW=",F7.3," VAL0=",F12.3' &
+     &               //'," RC/RCOV=",F7.3," !END")') &
+     &                             POTPOW,POTVAL,POTRC/RCOV
+      ELSE
+        WRITE(NFIL,FMT='(T7,"!POT  POW=",F7.3," RC/RCOV=",F7.3," !END")') &
+     &                             POTPOW,POTRC/RCOV
+      END IF
+!
+!     == SET PARAMETERS FOR PSEUDO CORE ========================================
+      IF(TPOTVAL) THEN
+         WRITE(NFIL,FMT='(T7,"!CORE POW=",F7.3," VAL0=",F12.3' &
+     &                //'," RC/RCOV=",F7.3," !END")') &
+     &                             CORPOW,CORVAL,CORRC/RCOV
+      ELSE
+         WRITE(NFIL,FMT='(T7,"!CORE POW=",F7.3," RC/RCOV=",F7.3," !END")') &
+     &                             CORPOW,CORRC/RCOV
+      END IF
+      WRITE(NFIL,FMT='(T5,"!END")') 
+      WRITE(NFIL,FMT='(T3,"!END")') 
       WRITE(NFIL,*) 
       RETURN 
       END
