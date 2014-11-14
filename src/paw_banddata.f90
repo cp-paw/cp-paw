@@ -2,55 +2,58 @@
 !.......................................................................
       MODULE BANDDATA_MODULE
         INTEGER(4)             :: NDIM
-        LOGICAL(4)             :: NDIM_SET
+        LOGICAL(4)             :: NDIM_SET=.FALSE.
         INTEGER(4)             :: NSPIN
-        LOGICAL(4)             :: NSPIN_SET
+        LOGICAL(4)             :: NSPIN_SET=.FALSE.
         INTEGER(4)             :: NDIMD
-        LOGICAL(4)             :: NDIMD_SET
+        LOGICAL(4)             :: NDIMD_SET=.FALSE.
 
         REAL(8)                :: EPW !IN HARTREE
-        LOGICAL(4)             :: EPW_SET
+        LOGICAL(4)             :: EPW_SET=.FALSE.
         REAL(8)                :: RBAS(3,3)
-        LOGICAL(4)             :: RBAS_SET
+        LOGICAL(4)             :: RBAS_SET=.FALSE.
         REAL(8)                :: GBAS(3,3)
-        LOGICAL(4)             :: GBAS_SET !PLANEWAVE$INITIALIZE
+        LOGICAL(4)             :: GBAS_SET=.FALSE. !PLANEWAVE$INITIALIZE
 
         INTEGER(4)             :: NRG
-        LOGICAL(4)             :: NRG_SET
+        LOGICAL(4)             :: NRG_SET=.FALSE.
+        INTEGER(4)             :: NRL
+        LOGICAL(4)             :: NRL_SET=.FALSE.
         INTEGER(4)             :: NR1
-        LOGICAL(4)             :: NR1_SET
+        LOGICAL(4)             :: NR1_SET=.FALSE.
         INTEGER(4)             :: NR2
-        LOGICAL(4)             :: NR2_SET
+        LOGICAL(4)             :: NR2_SET=.FALSE.
         INTEGER(4)             :: NR3
-        LOGICAL(4)             :: NR3_SET
-        REAL(8),ALLOCATABLE    :: VOFR(:,:)
-
+        LOGICAL(4)             :: NR3_SET=.FALSE.
+        REAL(8),ALLOCATABLE    :: VOFRL(:,:) ! ONLY LOCAL POINTS 
+        REAL(8),ALLOCATABLE    :: VOFR(:,:)  ! COMPLETE GLOBAL ARRAY
+     
         INTEGER(4)             :: NAT
-        LOGICAL(4)             :: NAT_SET
+        LOGICAL(4)             :: NAT_SET=.FALSE.
         INTEGER(4)             :: NSP
-        LOGICAL(4)             :: NSP_SET
+        LOGICAL(4)             :: NSP_SET=.FALSE.
         INTEGER(4)             :: NPRO
-        LOGICAL(4)             :: NPRO_SET
+        LOGICAL(4)             :: NPRO_SET=.FALSE.
         INTEGER(4)             :: LNXX
-        LOGICAL(4)             :: LNXX_SET
+        LOGICAL(4)             :: LNXX_SET=.FALSE.
         INTEGER(4)             :: LMNXX
-        LOGICAL(4)             :: LMNXX_SET
+        LOGICAL(4)             :: LMNXX_SET=.FALSE.
         INTEGER(4)             :: LMX
-        LOGICAL(4)             :: LMX_SET
+        LOGICAL(4)             :: LMX_SET=.FALSE.
         INTEGER(4)             :: NBAREPRO
-        LOGICAL(4)             :: NBAREPRO_SET
+        LOGICAL(4)             :: NBAREPRO_SET=.FALSE.
         
         !THE FOLLOWING IS INCLUDED IN CASE OF GRID CHANGES
         INTEGER(4)             :: NG_PROTO
-        LOGICAL(4)             :: NG_PROTO_SET
+        LOGICAL(4)             :: NG_PROTO_SET=.FALSE.
         CHARACTER(6)           :: TYPEID_PROTO
-        LOGICAL(4)             :: TYPEID_PROTO_SET
+        LOGICAL(4)             :: TYPEID_PROTO_SET=.FALSE.
         REAL(8)                :: GMAX_PROTO
-        LOGICAL(4)             :: GMAX_PROTO_SET
+        LOGICAL(4)             :: GMAX_PROTO_SET=.FALSE.
         REAL(8)                :: G1_PROTO
-        LOGICAL(4)             :: G1_PROTO_SET
+        LOGICAL(4)             :: G1_PROTO_SET=.FALSE.
         REAL(8)                :: DEX_PROTO
-        LOGICAL(4)             :: DEX_PROTO_SET
+        LOGICAL(4)             :: DEX_PROTO_SET=.FALSE.
         
         INTEGER(4),ALLOCATABLE :: ISPECIES(:) !NAT
         INTEGER(4),ALLOCATABLE :: LNX(:) !NSP
@@ -63,9 +66,9 @@
         REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)!LMNXX,LMNXX,NDIMD,NAT
 
         REAL(8)                :: NEL
-        LOGICAL(4)             :: NEL_SET
+        LOGICAL(4)             :: NEL_SET=.FALSE.
         REAL(8)                :: SPIN
-        LOGICAL(4)             :: SPIN_SET
+        LOGICAL(4)             :: SPIN_SET=.FALSE.
       END MODULE BANDDATA_MODULE
 !
 !     ..................................................................
@@ -260,6 +263,9 @@
       ELSE IF(ID.EQ.'NR3') THEN
         NR3=VAL
         NR3_SET=.TRUE.
+      ELSE IF(ID.EQ.'NRL') THEN
+        NRL=VAL
+        NRL_SET=.TRUE.
       ELSE IF(ID.EQ.'NRG') THEN
         NRG=VAL
         NRG_SET=.TRUE.
@@ -438,9 +444,9 @@
         GBAS(:,2)=VAL(4:6)
         GBAS(:,3)=VAL(7:9)
         GBAS_SET=.TRUE.
-      ELSE IF(ID.EQ.'VOFR') THEN
-        IF(.NOT.NRG_SET)THEN
-          CALL ERROR$MSG('NRG NOT SET')
+      ELSE IF(ID.EQ.'VOFRL') THEN
+        IF(.NOT.NRL_SET)THEN
+          CALL ERROR$MSG('NRL NOT SET')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
@@ -449,13 +455,13 @@
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         ENDIF
-        IF(LEN.NE.NRG*NDIMD)THEN
+        IF(LEN.NE.NRL*NDIMD)THEN
           CALL ERROR$MSG('INCONSISTENT SIZE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('BANDDATA$SETR8A')
         END IF
-        IF(.NOT.ALLOCATED(VOFR))ALLOCATE(VOFR(NRG,NDIMD))
-        VOFR=RESHAPE(VAL,(/NRG,NDIMD/))
+        IF(.NOT.ALLOCATED(VOFRL))ALLOCATE(VOFRL(NRL,NDIMD))
+        VOFRL=RESHAPE(VAL,(/NRL,NDIMD/))
       ELSE IF(ID.EQ.'R') THEN
         IF(.NOT.NAT_SET)THEN
           CALL ERROR$MSG('NAT NOT SET')
@@ -632,6 +638,7 @@
       INTEGER(4)            :: NR1_
       INTEGER(4)            :: NR2_
       INTEGER(4)            :: NR3_
+      INTEGER(4)            :: NRG_
       REAL(8)               :: NEL_
       REAL(8)               :: SPIN_
       INTEGER(4)            :: NAT_
@@ -673,7 +680,12 @@
       
       CALL PLANEWAVE$GETR8A('GBAS',9,GBAS_)
       CALL BANDDATA$SETR8A('GBAS',9,GBAS_)
-     
+
+      !POTENTIAL
+      NRG_=NR1_*NR2_*NR3_
+      CALL BANDDATA$SETI4('NRG',NRG_)
+      CALL BANDDATA_COLLECTPOTENTIAL
+      
       !SETUPS (MODIFIED CODE FROM WAVES$INITIALIZE)
       CALL SETUP$GETI4('NSP',NSP_)
       CALL BANDDATA$SETI4('NSP',NSP_)
@@ -744,6 +756,42 @@
       END SUBROUTINE BANDDATA$COLLECTBANDDATA
 !
 !     ..................................................................
+      SUBROUTINE BANDDATA_COLLECTPOTENTIAL
+!     ******************************************************************
+!     **  THIS FUNCTION COLLETS THE REAL SPACE POTENTIAL FROM ALL     **
+!     **  PROCESSES SO THAT IS IT AVAIABLE ON THE FIRST NODE IN VOFR  **
+!     ******************************************************************
+      USE BANDDATA_MODULE
+      INTEGER(4)            :: IDIMD
+      INTEGER(4)            :: NTASKS,THISTASK
+!     *****************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(.NOT.NDIMD_SET)THEN
+        CALL ERROR$MSG('NDIMD NOT SET')
+        CALL ERROR$STOP('BANDDATA_COLLECTPOTENTIAL')
+      ENDIF
+      IF(.NOT.NRL_SET)THEN
+        CALL ERROR$MSG('NRL NOT SET')
+        CALL ERROR$STOP('BANDDATA_COLLECTPOTENTIAL')
+      ENDIF
+      IF(.NOT.NRG_SET)THEN
+        CALL ERROR$MSG('NRG NOT SET')
+        CALL ERROR$STOP('BANDDATA_COLLECTPOTENTIAL')
+      ENDIF
+      IF(.NOT.ALLOCATED(VOFRL))THEN
+        CALL ERROR$MSG('VOFRL NOT ALLOCATED')
+        CALL ERROR$STOP('BANDDATA_COLLECTPOTENTIAL')
+      ENDIF
+      IF(THISTASK.EQ.1) THEN
+        ALLOCATE(VOFR(NRG,NDIMD))
+      ENDIF
+      DO IDIMD=1,NDIMD
+        CALL PLANEWAVE$RSPACECOLLECTR8(NRL,VOFRL(:,IDIMD),NRG,VOFR(:,IDIMD))
+      ENDDO
+      RETURN
+      END SUBROUTINE BANDDATA_COLLECTPOTENTIAL
+!
+!     ..................................................................
       SUBROUTINE BANDDATA$WRITEFILE
 !     ******************************************************************
 !     **  THIS FUNCTION CREATES AN OUTPUT-FILEHANDLER FOR THE         **
@@ -752,15 +800,28 @@
 !     ******************************************************************
       USE BANDDATA_MODULE
       IMPLICIT NONE
-      INTEGER(4)            :: NFIL
+      INTEGER(4)              :: NFIL
+      INTEGER(4)              :: NTASKS,THISTASK
 !     *****************************************************************
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
                              CALL TRACE$PUSH('BANDDATA$WRITEFILE')
       CALL BANDDATA$COLLECTBANDDATA
-      CALL FILEHANDLER$UNIT('BANDDATA',NFIL)
-      REWIND NFIL
-      CALL BANDDATA_WRITE(NFIL)
-      CALL LIB$FLUSHFILE(NFIL)
-      CALL FILEHANDLER$CLOSE('BANDDATA')
+      
+      IF(.NOT.NRG_SET)THEN
+        CALL ERROR$MSG('NRG NOT SET')
+        CALL ERROR$STOP('BANDDATA$WRITEFILE')
+      ENDIF
+      
+      IF(THISTASK.EQ.1) THEN
+        CALL FILEHANDLER$UNIT('BANDDATA',NFIL)
+        REWIND NFIL
+        CALL BANDDATA_WRITE(NFIL)
+        CALL LIB$FLUSHFILE(NFIL)
+        CALL FILEHANDLER$CLOSE('BANDDATA')
+      ENDIF
+      IF(THISTASK.EQ.1) THEN
+        DEALLOCATE(VOFR) !ALLOCATED IN BANDDATA_COLLECTPOTENTIAL
+      ENDIF
                              CALL TRACE$POP
       RETURN
       END SUBROUTINE BANDDATA$WRITEFILE
