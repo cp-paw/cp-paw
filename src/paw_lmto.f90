@@ -4298,7 +4298,7 @@ IF(TTEST)CALL LMTO_LOCNATORB()
       REAL(8)   ,ALLOCATABLE:: U(:,:,:,:)
       REAL(8)   ,ALLOCATABLE:: D(:,:,:)
       REAL(8)   ,ALLOCATABLE:: H(:,:,:)
-      REAL(8)               :: EH,EX,EXTOT,EHTOT,EHDC,EXDC,Q
+      REAL(8)               :: EH,EX,EXTOT,EHTOT,EHDC,EXDC,Q,EAT
       INTEGER(4)            :: NN,IAT,I,J,K,L,IS,IAT1,IAT2,ISP
       INTEGER(4)            :: LMN,LN,IM
       REAL(8)               :: QSPIN(4)
@@ -4418,6 +4418,7 @@ END IF
         HAMIL(INH)%MAT=0.D0
         EH=0.D0
         EX=0.D0
+        EAT=0.D0
         QSPIN=0.D0
         HT(:,:,:)=0.D0
         DO I=1,LMNXT
@@ -4448,81 +4449,11 @@ END IF
         CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
         HAMIL(INH)%MAT=HAMIL(INH)%MAT+H*HFSCALE
         EXTOT=EXTOT+EX*HFSCALE
-PRINT*,'TOTAL CHARGE ON ATOM=                 ',IAT,QSPIN(1)
-PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=           ',IAT,QSPIN(2:NDIMD)
-PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM=       ',IAT,EX
-
-IF(TACTIVE) THEN 
-PRINT*,'IAT=',IAT,NDIMD
-WRITE(*,FMT='(82("="),T10,"  H BEFORE DC ")')
-DO IDIMD=1,NDIMD
-  DO LMN=1,LMNX
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
-  ENDDO
-ENDDO
-END IF
-!
-!       ========================================================================
-!       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
-!       ========================================================================
-CALL DFT$GETI4('TYPE',IDFTTYPE)
-PRINT*,'IDFTTYPE ',IDFTTYPE
-IF(IDFTTYPE.NE.5002) THEN
-! THIS IS THE TIME CONSUMING PART OF ENERGYTEST
-CALL TIMING$CLOCKON('ENERGYTEST:DC')      
-        ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
-        ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
-        CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DTALL)
-IF(.TRUE.) THEN
-        CALL DFT$SETL4('XCONLY',.TRUE.)
-        CALL LMTOAUGMENTATION$SETI4('IAT',IAT)
-        CALL LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
-     &                    ,POTPAR1(ISP)%TAILED%AEF &
-     &                    ,LRX,AECORE,DT,DTALL,HFSCALE*HFWEIGHT,EX,HT,HTALL)
-        CALL LMTOAUGMENTATION$SETI4('IAT',0) !UNSET ATOM INDEX
-        CALL DFT$SETL4('XCONLY',.FALSE.)
-ELSE
-        CALL LMTO_SIMPLEDC_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
-     &                    ,POTPAR1(ISP)%TAILED%AEF &
-     &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
-END IF
-        CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HTALL)
-!
-IF(TACTIVE) THEN 
-PRINT*,'IAT=',IAT,NDIMD
-WRITE(*,FMT='(82("="),T10,"  H(1) FROM SIMPLEDC ")')
-DO IDIMD=1,NDIMD
-  DO LMN=1,LMNX
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
-  ENDDO
-ENDDO
-END IF
-!
-        HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
-        CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
-!!$!
-IF(TACTIVE) THEN
-PRINT*,'IAT=',IAT
-WRITE(*,FMT='(82("="),T10,"  H(2) FROM SIMPLEDC ")')
-DO IDIMD=1,NDIMD
-  DO LMN=1,LMNX
-    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
-  ENDDO
-ENDDO
-END IF
-!!$!
-PRINT*,'------------------------------------'
-PRINT*,'EXTOT',EXTOT,EX,HFSCALE
-PRINT*,'------------------------------------'
-        HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
-        EXTOT=EXTOT-EX*HFSCALE
-
-        DEALLOCATE(DTALL)
-        DEALLOCATE(HTALL)
-PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
-CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
-END IF
-!
+PRINT*,'TOTAL CHARGE ON ATOM=......................',IAT,QSPIN(1)
+PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=................',IAT,QSPIN(2:NDIMD)
+PRINT*,'EXACT VALENCE EXCHANGE ENERGY FOR ATOM=....',IAT,EX
+        EAT=EAT+EX
+        EX=0.D0
 !       ========================================================================
 !       == ADD CORE VALENCE EXCHANGE                                          ==
 !       ========================================================================
@@ -4530,10 +4461,66 @@ END IF
           CALL LMTO_EXPANDLOCAL('FWRD',1,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
           CALL LMTO_CVX_NEW(ISP,LMNXT,EX,DT(:,:,1),HT(:,:,1))
           CALL LMTO_EXPANDLOCAL('BACK',1,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
-          EXTOT=EXTOT+EX*HFSCALE
           HAMIL(INH)%MAT(:,:,1)=HAMIL(INH)%MAT(:,:,1)+H(:,:,1)*HFSCALE
-PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=',IAT,EX
+          EXTOT=EXTOT+EX*HFSCALE
+PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
+          EAT=EAT+EX
+          EX=0.D0
         END IF
+!
+!       ========================================================================
+!       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
+!       == THIS IS THE TIME CONSUMING PART                                    ==
+!       ========================================================================
+        CALL TIMING$CLOCKON('ENERGYTEST:DC')      
+!!$IF(TACTIVE) THEN 
+!!$PRINT*,'IAT=',IAT,NDIMD
+!!$WRITE(*,FMT='(82("="),T10,"  H BEFORE DC ")')
+!!$DO IDIMD=1,NDIMD
+!!$  DO LMN=1,LMNX
+!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
+!!$  ENDDO
+!!$ENDDO
+!!$END IF
+!
+IF(.TRUE.) THEN
+        CALL DFT$SETL4('XCONLY',.TRUE.)
+        CALL LMTOAUGMENTATION$SETI4('IAT',IAT)
+        CALL LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
+     &                    ,POTPAR1(ISP)%TAILED%AEF &
+     &                    ,LRX,AECORE,DT,HFSCALE*HFWEIGHT,EX,HT)
+        CALL LMTOAUGMENTATION$SETI4('IAT',0) !UNSET ATOM INDEX
+        CALL DFT$SETL4('XCONLY',.FALSE.)
+ELSE
+        ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
+        ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
+        CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DTALL)
+        CALL LMTO_SIMPLEDC_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
+     &                    ,POTPAR1(ISP)%TAILED%AEF &
+     &                    ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
+        CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HTALL)
+        HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
+        DEALLOCATE(DTALL)
+        DEALLOCATE(HTALL)
+END IF
+        CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
+        HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
+        EXTOT=EXTOT-EX*HFSCALE
+PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
+PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM........... =',IAT,EAT
+PRINT*,'EXCHANGE-XORRECTION FOR ATOM............. =',IAT,EAT-EX
+!
+!!$IF(TACTIVE) THEN 
+!!$PRINT*,'IAT=',IAT,NDIMD
+!!$WRITE(*,FMT='(82("="),T10,"  H FROM SIMPLEDC ")')
+!!$DO IDIMD=1,NDIMD
+!!$  DO LMN=1,LMNX
+!!$    WRITE(*,FMT='("IDIMD=",I1,":",100F10.5)')IDIMD,H(LMN,:,IDIMD)
+!!$  ENDDO
+!!$ENDDO
+!!$END IF
+!
+        CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
         DEALLOCATE(HT)
         DEALLOCATE(DT)
         DEALLOCATE(U)
@@ -4985,8 +4972,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNX,LNX,LOX,CHI,LRX &
-     &                        ,AECORE &
-     &                        ,DENMAT,DENMATB,HFSCALE,ETOT,HAM,HAMB)
+     &                                ,AECORE,DENMAT,HFSCALE,ETOT,HAM)
 !     **************************************************************************
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
 !     **                                                                      **
@@ -5022,33 +5008,26 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)     ,INTENT(IN) :: AECORE(NR)
       REAL(8)     ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
-      REAL(8)     ,INTENT(IN) :: DENMATB(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
       REAL(8)     ,INTENT(IN) :: HFSCALE
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
-      REAL(8)     ,INTENT(OUT):: HAMB(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
-      INTEGER(4)  ,PARAMETER  :: METHOD=3
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
       REAL(8)                 :: CUT(NR)
-      REAL(8)     ,ALLOCATABLE:: RHO(:,:,:)
-      REAL(8)     ,ALLOCATABLE:: RHO2(:,:,:)
-      REAL(8)     ,ALLOCATABLE:: POT2(:,:,:)
-      REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
-      REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
-      REAL(8)                 :: EDENSITY(NR)
+      REAL(8)     ,ALLOCATABLE:: RHO_LOC(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: POT_LOC(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: RHO_ALL(:,:,:)
+      REAL(8)     ,ALLOCATABLE:: POT_ALL(:,:,:)
       REAL(8)                 :: AUX(NR),SVAR
       REAL(8)                 :: FXC(NR)
       REAL(8)                 :: PI,FOURPI,Y0
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN,IR
-      REAL(8)                 :: ETOTC,ETOTV
 !     **************************************************************************
       ETOT=0.D0
       HAM=0.D0
-      HAMB=0.D0
 !
       LMRX=(LRX+1)**2
       PI=4.D0*ATAN(1.D0)
@@ -5057,40 +5036,40 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
-!     ==  TRANSFORM DENSITY MATRIX FROM UP/DOWN TO TOTAL/SPIN                 ==
+!     ==  DENSITY OF LOCAL ORBITALS (INCLUDING CORE)                          ==
 !     ==========================================================================
-      DENMAT1=CMPLX(DENMATB,KIND=8)
-!
-!     ==========================================================================
-!     ==  CALCULATE DENSITY OF CORRELATED ORBITALS (WHICH INCLUDES THE CORE)  ==
-!     ==========================================================================
-      ALLOCATE(RHO(NR,LMRX,NDIMD))
+      DENMAT1=CMPLX(DENMAT,KIND=8)
+      ALLOCATE(RHO_LOC(NR,LMRX,NDIMD))
       DO IDIM=1,NDIMD
         CALL AUGMENTATION_RHO(NR,LNX,LOX,CHI &
-     &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO(:,:,IDIM))
+     &                       ,LMNX,DENMAT1(:,:,IDIM),LMRX,RHO_LOC(:,:,IDIM))
       ENDDO
-      RHO(:,1,1)=RHO(:,1,1)+AECORE(:)
+      RHO_LOC(:,1,1)=RHO_LOC(:,1,1)+AECORE(:)
 !
 !     ==========================================================================
-!     ==  CALCULATE CUTOFF FUNCTION                                           ==
+!     == ONE-CENTER EXPANSION OF THE TOTAL DENSITY                            ==
 !     ==========================================================================
-      ALLOCATE(RHOWC(NR,LMRX,NDIMD))
-      CALL LMTOAUGMENTATION$GETRHO(GID,NR,LMRX,NDIMD,RHOWC)
-      RHOWC(:,1,1)=RHOWC(:,1,1)+AECORE(:)
+      ALLOCATE(RHO_ALL(NR,LMRX,NDIMD))
+      CALL LMTOAUGMENTATION$GETRHO(GID,NR,LMRX,NDIMD,RHO_ALL)
+      RHO_ALL(:,1,1)=RHO_ALL(:,1,1)+AECORE(:)
 !
-      CUT(:)=(RHO(:,1,1)/(RHOWC(:,1,1)+1.D-6))**2 
+!     ==========================================================================
+!     ==  CUTOFF FUNCTION FOR EXCHANGE-CORRELATION INTEGRAL                   ==
+!     ==  CUT IS CLOSE TO UNITY IN THE CENTER AND IS ZERO BEYOND THE ATOM     ==
+!     ==========================================================================
+      CUT(:)=(RHO_LOC(:,1,1)/(RHO_ALL(:,1,1)+1.D-6))**2 
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
 !     ==========================================================================
-      ALLOCATE(POT(NR,LMRX,NDIMD))  ! POTENTIAL FOR PARTIAL-WAVE DENSITY N_T
-      ALLOCATE(POT2(NR,LMRX,NDIMD))
+      ALLOCATE(POT_ALL(NR,LMRX,NDIMD))  ! POTENTIAL FOR PARTIAL-WAVE DENSITY 
+      ALLOCATE(POT_LOC(NR,LMRX,NDIMD))  ! POTENTIAL FOR LOCAL ORBITALS
 !
 !     == EXCHANGE CORRELATION OF THE TOTAL DENSITY INCLUDING CORE ==============
-      CALL LMTO_RADXC(GID,NR,LMRX,NDIMD,RHOWC,FXC,POT)
+      CALL LMTO_RADXC(GID,NR,LMRX,NDIMD,RHO_ALL,FXC,POT_ALL)
 !
 !     == SUBTRACT FROZEN-CORE ==================================================
-      CALL LMTO_RADXC(GID,NR,1,1,AECORE,AUX,POT2) !POT2 WILL BE OVERWRITTEN
+      CALL LMTO_RADXC(GID,NR,1,1,AECORE,AUX,POT_LOC)!POT_LOC WILL BE OVERWRITTEN
       FXC(:)=FXC(:)-AUX(:)
 !
 !     == CALCULATE ENERGY ======================================================
@@ -5101,33 +5080,44 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     == POTENTIAL FOR PARTIAL-WAVE DENSITY N_T ================================
       DO IDIM=1,NDIMD
         DO LM=1,LMRX
-          POT(:,LM,IDIM)=CUT(:)*POT(:,LM,IDIM)
+          POT_ALL(:,LM,IDIM)=CUT(:)*POT_ALL(:,LM,IDIM)
         ENDDO
       ENDDO
-      POT(:,1,1)=POT(:,1,1)-2.D0*FXC(:)*CUT(:)/(RHOWC(:,1,1)+1.D-6)/Y0**2
+      POT_ALL(:,1,1)=POT_ALL(:,1,1) &
+     &              -2.D0*FXC(:)*CUT(:)/(RHO_ALL(:,1,1)+1.D-6)/Y0**2
 !
-!     == POTENTIAL FOR THE CORRELATED DENSITY =================================
-      POT2(:,:,:)=0.D0
-      POT2(:,1,1)=2.D0*FXC(:)*CUT(:)/(RHO(:,1,1)+1.D-6)/Y0**2
+!     == POTENTIAL FOR THE CORRELATED DENSITY ==================================
+      POT_LOC(:,:,:)=0.D0
+      POT_LOC(:,1,1)=2.D0*FXC(:)*CUT(:)/(RHO_LOC(:,1,1)+1.D-6)/Y0**2
 !
 !     ==========================================================================
 !     ==  EXTRACT HAMILTON CONTRIBUTIONS                                      ==
 !     ==========================================================================
       HAM1=(0.D0,0.D0)
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
-      HAMB=REAL(HAM1)
-      POT=-POT*HFSCALE
-      CALL LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD,POT)
-!PRINT*,'HFSCALE',HFSCALE,FIXCUT
-!!$CALL LMTO_WRITEPHI('POTR.DAT',GID,NR,LMRX,POT2)
-!!$CALL LMTO_WRITEPHI('POTT.DAT',GID,NR,LMRX,POT)
-!!$CALL LMTO_WRITEPHI('RHO.DAT',GID,NR,LMRX,RHO)
-!!$CALL LMTO_WRITEPHI('RHOWC.DAT',GID,NR,LMRX,RHOWC)
-!!$CALL LMTO_WRITEPHI('CUT.DAT',GID,NR,1,CUT)
-!STOP 'FORCED'
+      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT_LOC,CHI,HAM1)
+      HAM=REAL(HAM1)
 !
-      DEALLOCATE(POT)
-      DEALLOCATE(POT2)
+!     == POTENTIAL ENTERS WITH NEGATIVE SIGN, BECAUSE THE LOCAL EXCHANGE =======
+!     == CONTRIBUTION IS TO BE SUBTRACTED FROM THE ONE-CENTER HAMILTONIAN. =====
+!     == SIMILARLY THE SCALE FACTOR HFWEIGHT IS APPLIED AT THIS POINT. =========
+      CALL LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD,-POT_ALL*HFSCALE)
+!!$PRINT*,'HFSCALE',HFSCALE
+!!$CALL LMTO_WRITEPHI('FXC.DAT',GID,NR,1,FXC)
+!!$CALL LMTO_WRITEPHI('POT_LOC.DAT',GID,NR,LMRX,POT_LOC)
+!!$CALL LMTO_WRITEPHI('POT_ALL.DAT',GID,NR,LMRX,POT_ALL)
+!!$CALL LMTO_WRITEPHI('RHO_LOC.DAT',GID,NR,LMRX,RHO_LOC)
+!!$CALL LMTO_WRITEPHI('RHO_ALL.DAT',GID,NR,LMRX,RHO_ALL)
+!!$CALL LMTO_WRITEPHI('CUT.DAT',GID,NR,1,CUT)
+!!$CALL RADIAL$INTEGRAL(GID,NR,FOURPI*R**2*(RHO_ALL(:,1,1)-AECORE(:))*Y0,SVAR)
+!!$PRINT*,'RADXC VALENCE CHARGE (PARTIAL WAVE EXPANSION)=',SVAR
+!!$CALL RADIAL$INTEGRAL(GID,NR,FOURPI*R**2*(RHO_LOC(:,1,1)-AECORE(:))*Y0,SVAR)
+!!$PRINT*,'RADXC VALENCE CHARGE (LOCAL ORBITALS)=        ',SVAR
+!!$CALL RADIAL$INTEGRAL(GID,NR,FOURPI*R**2*AECORE*Y0,SVAR)
+!!$PRINT*,'RADXC CORE CHARGE                    =        ',SVAR
+!!$STOP 'FORCED'
+!
+      DEALLOCATE(POT_ALL)
+      DEALLOCATE(POT_LOC)
 !
       RETURN
       END
@@ -5777,11 +5767,15 @@ PRINT*,'----EXC  ',ETOT
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_RADXC(GID,NR,LMRX,NDIMD,RHOIN,FXC,VXC)
 !     **************************************************************************
-!     ** (SLIGHTLUY CHANGED AUGMENTATION_XC)                                  **
-!     **                                                                      **
 !     **  CALCULATES THE EXCHANGE AND CORRELATION ENERGY                      **
 !     **  FOR A DENSITY GIVEN ON A RADIAL LOGARITHMIC GRID                    **
 !     **  TIMES REAL SPHERICAL HARMONICS                                      **
+!     **                                                                      **
+!     **  THIS ROUTINE IS ALMOST IDENTICAL TO THE ROUTINE AUGMENTATION_XC     **
+!     **  OF THE AUGMENTATION OBJECT PAW_AUGMENTATION.F90. IT DIFFERS IN THAT **
+!     **  THE ENERGY DENSITY IS PROVIDED ON A RADIAL GRID, SO THAT            **
+!     **       EXC=4\PI\INT_0^\INFTY DR R^2 FXC(R)                            **
+!     **  IS THE EXCHANGE-CORRELATION ENERGY.                                 **
 !     **                                                                      **
 !     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                          **
 !     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC               **
@@ -5826,8 +5820,6 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)   ,ALLOCATABLE:: GRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: VRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: B(:,:)    
-      REAL(8)   ,ALLOCATABLE:: C(:,:)    
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
