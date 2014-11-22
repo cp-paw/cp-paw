@@ -1,0 +1,192 @@
+#!/bin/bash 
+###############################################################################
+#
+#          NAME: paw_do
+#
+#         USAGE: paw_do options 
+#
+#       OPTIONS: optional: hv0fsdw 
+#
+#   DESCRIPTION: frontend for paw calculations or tools
+#
+#       OPTIONS:
+#          -h    print this help message
+#          -f    execute paw_fast.x
+#          -d    execute paw_dos.x and paw_dosplot.x
+#          -s    execute paw_strc.x
+#          -w    execute paw_show -ce
+#          -0:   dry-run
+#          -b:   directory containing the paw executables
+#          -v:   verbose
+#
+#  Example:
+#       paw_do -f si2
+#
+#   REQUIREMENTS: 
+#                  paw_dos.x,paw_dosplot.x,paw_show,paw_fast,paw_strc.x
+#
+#         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
+#
+#        CREATED: Nov. 17, 2014
+#
+###############################################################################
+#-------------------------------------------------------------------------------
+# help message
+#-------------------------------------------------------------------------------
+export USAGE="Usage of $0 \n"
+USAGE="$USAGE \n"
+USAGE="$USAGE \tpaw_do options\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Purpose:\n"
+USAGE="$USAGE \t frontend for paw code and tools"
+USAGE="$USAGE \n"
+USAGE="$USAGE Options:\n"
+USAGE="$USAGE \t -h \t print this help message \n"
+USAGE="$USAGE \t -f: paw_fast.x 1>out 2>&1 & \n"
+USAGE="$USAGE \t -d: paw_dos.x ; paw_dosplot.x; xmgrace \n"
+USAGE="$USAGE \t -s: paw_strc.x -c \n"
+USAGE="$USAGE \t -w: paw_show -ce \n"
+USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
+USAGE="$USAGE \t -v: verbose\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Example:\n"
+USAGE="$USAGE \t paw_do -f \n"
+USAGE="$USAGE \n"
+#-------------------------------------------------------------------------------
+#  individual data
+#-------------------------------------------------------------------------------
+# name of the bin directory holding the executable ppaw_fast.x or paw_fast.x
+# name do not allow any trailing blanks in PAWXDIR!
+THISDIR=$(pwd)
+export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
+export DRYRUN=no
+export VERBOSE=no
+#-------------------------------------------------------------------------------
+#  implement dry-run
+#-------------------------------------------------------------------------------
+function execute(){
+    # || is "or" in [[...]], && is "and" in [[..]] 
+    if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
+      echo "${@}"
+    fi
+    if [[ "${DRYRUN}" = "no" ]] ; then
+      eval "$@"
+    fi
+}
+#-------------------------------------------------------------------------------
+#  findroot
+#-------------------------------------------------------------------------------
+# searches the current directory for a file with a specified extension
+# and returns the file name if it is unique. Otherwise it returns an empty 
+# string. 
+# use as FILE=$(findroot cntl)
+function findroot(){
+    local EXT=$1
+    local LIST=$(find . -iname "*.$EXT")
+    local RESULT=
+    local X
+    for X in $LIST; do
+      if [[ -z $RESULT ]] ; then
+        RESULT=$X
+      else
+        RESULT=
+        LIST=
+      fi
+    done
+    echo $RESULT
+}
+
+#-------------------------------------------------------------------------------
+#  resolve argument list
+#-------------------------------------------------------------------------------
+OPTSTRING="hv0sdfw"
+OPTIND=0
+while getopts "${OPTSTRING}" OPT  ; do
+  case $OPT in
+    0)   #nothing:
+      DRYRUN=yes
+#      set -n
+      ;;
+    v)   #verbose
+      VERBOSE=yes
+#      set -v
+#      set -x
+      ;;
+    h)   # help
+      echo -e $USAGE
+      exit 0
+      ;;
+    \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
+      echo "error in $0" >&2
+      echo "invalid option -$OPTARG" >&2
+      echo "retrieve argument list with:" >&2
+      echo "$0 -h" >&2
+      exit 1
+      ;;
+    :)    # no argument passed to option requiring one
+      echo "error in $0" >&2
+      echo "option -$OPTARG requires an additional argument" >&2
+      exit 1
+      ;;  
+  esac
+done
+if [[ "${VERBOSE}" == "yes" ]] ; then
+  echo verbose=$VERBOSE
+  echo dryrun=$DRYRUN
+  echo OPTSTRING=$OPTSTRING
+  echo args="$1"
+fi
+OPTIND=0  # reset argument position
+while getopts "${OPTSTRING}" OPT  ; do
+ case $OPT in
+    f) # paw_fast.x $ROOT.cntl
+      Y=$(findroot cntl)
+      if [[ -n $Y ]] ; then      
+        execute "paw_fast.x  $Y 1>out 2>&1 &"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "*.cntl file not unique or not present" >&2
+        exit 1
+      fi
+      ;;
+    s) # paw_strc.x -c 
+      Y=$(findroot strc_out)
+      Y=${Y%.strc_out}
+      if [[ -n $Y ]] ; then      
+        execute "paw_strc.x -c $Y"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "ROOT not unique or no file *.strc_out present" >&2
+        exit 1
+      fi
+      ;;
+    d) # paw_dos.x $ROOT.dcntl
+      Y=$(findroot dcntl)
+      if [[ -n $Y ]] ; then      
+        execute "paw_dos.x  $Y"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "*.dcntl file not unique or not present" >&2
+        exit 1
+      fi
+      Y=$(findroot dpcntl)
+      if [[ -n $Y ]] ; then      
+        execute "paw_dosplot.x $Y"
+        Y=${Y%.dpcntl}
+        execute "xmgrace -batch $Y.bat"
+      fi
+      ;;
+    w) # paw_show -ce $ROOT
+      Y=$(findroot prot)
+      Y=${Y%.prot}
+      if [[ -n $Y ]] ; then      
+        execute "paw_show -ce $Y"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "*.prot file not unique or not present" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+exit 0
