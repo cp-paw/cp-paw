@@ -232,15 +232,17 @@ scripts:
 	cp ${THISDIR}/src/Tools/Scripts/* ${BINDIR}
 #
 clean_scripts:
-	rm -f ${BINDIR}/paw_show
-	rm -f ${BINDIR}/paw_get
 	rm -f ${BINDIR}/paw_collect
+	rm -f ${BINDIR}/paw_copy    
+	rm -f ${BINDIR}/paw_do
+	rm -f ${BINDIR}/paw_ext_copy    
+	rm -f ${BINDIR}/paw_get
+	rm -f ${BINDIR}/paw_mpeg_encode
 	rm -f ${BINDIR}/paw_resolve
 	rm -f ${BINDIR}/paw_scan
 	rm -f ${BINDIR}/paw_scanlat
-	rm -f ${BINDIR}/paw_copy    
-	rm -f ${BINDIR}/paw_ext_copy    
-	rm -f ${BINDIR}/paw_mpeg_encode
+	rm -f ${BINDIR}/paw_show
+	rm -f ${BINDIR}/paw_waittillempty
 #
 #---------------------------------------------------------------------------
 #--          Documentation                                                --

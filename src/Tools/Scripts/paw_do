@@ -99,7 +99,7 @@ function findroot(){
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
-OPTSTRING="hv0sdfw"
+OPTSTRING=":hv0sdfw"
 OPTIND=0
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
