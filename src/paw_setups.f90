@@ -1253,10 +1253,10 @@ END MODULE SETUP_MODULE
         THIS%PARMS%TVAL0_POT=TVAL0_POT
         THIS%PARMS%VAL0_POT =VAL0_POT
 !       __PSEUDO POTENTIAL______________________________________________________
-        THIS%PARMS%POW_CORE  =POW_POT
-        THIS%PARMS%RC_CORE   =RC_POT
-        THIS%PARMS%TVAL0_CORE=TVAL0_POT
-        THIS%PARMS%VAL0_CORE =VAL0_POT
+        THIS%PARMS%POW_CORE  =POW_CORE
+        THIS%PARMS%RC_CORE   =RC_CORE
+        THIS%PARMS%TVAL0_CORE=TVAL0_CORE
+        THIS%PARMS%VAL0_CORE =VAL0_CORE
 !       __ RADIAL GRID__________________________________________________________
         CALL RADIAL$GRIDPARAMETERS(DMIN,DMAX,RMAX,R1,DEX,NR)
         CALL RADIAL$NEW('SHLOG',GID)
@@ -3413,7 +3413,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
      &                          ,THIS1%PARMS%POW_POT,'')
         IF(THIS1%PARMS%TVAL0_CORE) THEN
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' &
-     &                          //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'H')
+     &                          //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'A_0^(-3)')
         ELSE
           CALL REPORT$CHVAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' & 
      &                          //' VAL(0)','NOT DETERMINED')
@@ -7815,6 +7815,14 @@ END IF
 !     ==========================================================================
 !     == CONSTRUCT QNDOT FUNCTION                                             ==
 !     ==========================================================================
+      IF(NJ.EQ.0) THEN
+        CALL ERROR$MSG('ZERO NUMBER OF PARTIAL WAVES FOR THIS ANGULAR MOMENTUM')
+        CALL ERROR$MSG('THE CODE IS NOT YET ABLE TO DEAL WITH THIS')
+        CALL ERROR$MSG('BECAUSE OF THE STATEMENT: G=-QN(:,NJ)')
+        CALL ERROR$I4VAL('L',L)
+        CALL ERROR$I4VAL('SO',SO)
+        CALL ERROR$STOP('SETUP_NEWPRO')
+      END IF
       G=-QN(:,NJ)
       IF(TSMALL) THEN
         GSM=-QNSM(:,NJ)
