@@ -77,7 +77,19 @@ USAGE="$USAGE \n"
 THISDIR=$(pwd)   # current directory
 # PAWXDIR is the directory holding the paw executables
 export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
-#
+#-------------------------------------------------------------------------------
+#  implement dry-run
+#-------------------------------------------------------------------------------
+function execute(){
+    # || is "or" in [[...]], && is "and" in [[..]] 
+    if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
+      echo "${@}"
+    fi
+    if [[ "${DRYRUN}" = "no" ]] ; then
+      eval "$@"
+    fi
+}
+   #
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
@@ -174,28 +186,18 @@ if [[ $UPDATE = no ]] ; then
     # construct structure control file from template by replacing alat
     #===========================================================================
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
-    if [[ $VERBOSE = yes ]] ; then
-      echo "sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc"
-    fi
-    if [[ "$DRYRUN" = "no" ]] ; then
-      sed "/LUNIT/s/${ALAT0}/${ALAT} /g" ${NAME}.strc >${NAME}_${X}.strc
-    fi
+    execute "sed \"/LUNIT/s/${ALAT0}/${ALAT} /g\" ${NAME}.strc >${NAME}_${X}.strc"
     #==========================================================================
     # run paw_fast.x and place data "gap.dat" and "etot.dat"
     #==========================================================================
-    if [[ $VERBOSE = yes ]] ; then
-      echo "cp ${NAME}.cntl ${NAME}_${X}.cntl"
-      echo "paw_waittillempty -n $NJOBS"
-      echo "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1"
+    execute "cp ${NAME}.cntl ${NAME}_${X}.cntl"
+    if [[ ! -e ${NAME}_${X}.rstrt ]] ; then
+      if [[ -e ${NAME}.rstrt ]] ; then
+        execute "cp ${NAME}.rstrt ${NAME}_${X}.rstrt"
+      fi
     fi
-    if [[ "$DRYRUN" = "no" ]] ; then
-      #if [ -e ${NAME}_${X}.prot ] ; then rm ${NAME}_${X}.prot; fi
-      cp ${NAME}.cntl ${NAME}_${X}.cntl
-      # paw_waitillempty waits if equal or more than NJOBS paw_jobs are active
-      paw_waittillempty -n $NJOBS 
-      # submit paw calculation in the background
-      ${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &
-    fi
+    execute "paw_waittillempty -n $NJOBS"
+    execute "${PAWXDIR}/$EXECTBLE ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &"
   done
 fi
 #
