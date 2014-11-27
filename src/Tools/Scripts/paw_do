@@ -181,6 +181,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       if [[ -n $Y ]] ; then      
         execute "paw_fast.x  $Y 1>out 2>&1 &"
+        execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
        else
         echo "error in $0 for option $OPT" >&2
@@ -192,7 +193,8 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       Y=${Y%.cntl}
       if [[ -n $Y ]] ; then      
-        execute "doppaw $Y 4 &"
+        execute "nohup doppaw $Y 4 &"
+        execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
        else
         echo "error in $0 for option $OPT" >&2

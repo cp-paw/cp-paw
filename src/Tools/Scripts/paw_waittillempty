@@ -54,8 +54,13 @@ if [ -z $NJOBX ] ; then   # number of argmuments equals 1?
   if [ $OS = Darwin ] ; then   # Darwin identifies Apple OSX
     export NCORE=$(sysctl hw.ncpu | awk '{print $2}')
   elif [ $OS = Linux ] ; then 
-    export NCORE=$(lscpu | grep 'CPU(s):' | grep -v ' CPU(s):*' \
-                         | awk -F: '{print $2}')
+#    export NCORE=$(lscpu | grep 'CPU(s):' | grep -v ' CPU(s):*' \
+#                         | awk -F: '{print $2}')
+     if [[ -n "$(which lscpu)" ]] ; then
+       export NCORE=$(lscpu | grep 'CPU(s):' | head -1 | cut -d ":" -f2)
+     else
+        export NCORE=$(grep -c processor /proc/cpuinfo)
+     fi
   else
     echo "operating system $OS not recognized" >&2
     exit 1
@@ -69,13 +74,13 @@ echo no more than $NJOBX jobs shall be run at a time
 #
 # pause until one more job fits
 #
-NJOBS=$(ps -c | grep paw | wc -l)
+NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
 echo $NJOBS jobs are currently running. date: $(date) 
 echo entering waiting loop .....
 sleep  2s  # allow jobs to start
 while [ $NJOBS -ge $(echo $NJOBX | bc) ] ; do
   sleep  10s
-  NJOBS=$(ps -c | grep paw | wc -l)
+  NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
   echo No.Jobs=$NJOBS Date=`date` waiting....
 done
 echo $NJOBS jobs are currently running. date: `date` 
