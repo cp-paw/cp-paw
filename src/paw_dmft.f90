@@ -1250,7 +1250,85 @@ ENDDO
 !     **************************************************************************
 !     **  CALCULATES THE U-TENSOR OF THE NATURAL TIGHT-BINDING ORBITALS       **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : ISPECIES,POTPAR1,SBAR_NEW
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                       ,POTPAR1 &
+     &                       ,TCTE &
+     &                       ,CTE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: IAT
+      INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
+      REAL(8)   ,INTENT(OUT) :: U(LMNX,LMNX,LMNX,LMNX)
+      REAL(8)   ,ALLOCATABLE :: U1(:,:,:,:)
+      REAL(8)   ,ALLOCATABLE :: U2(:,:,:,:)
+      INTEGER(4)             :: ISP     ! ATOM TYPE
+      INTEGER(4)             :: LMNXT   ! #(VALENCE+SCATTERING WAVES)
+      INTEGER(4)             :: IH,IT
+!     **************************************************************************
+      IF(.NOT.TCTE) THEN
+        CALL DMFT_ULOCAL_NONCTE(IAT,LMNX,U)
+        RETURN
+      END IF
+      ISP=ISPECIES(IAT)
+      LMNXT=CTE(IAT)%LMNXT ! SIZE OF U-TENSOR ON POTPAR
+      IF(LMNX.NE.CTE(IAT)%LMNXH) THEN
+        CALL ERROR$MSG('INCONSISTENT ARRAY DIMENSIONS')
+        CALL ERROR$MSG('LMNX MUST BE EQUAL TO THE NUMBER OF HEAD FUNCTIONS')
+        CALL ERROR$I4VAL('LMNX',LMNX)
+        CALL ERROR$I4VAL('LMNXH',CTE(IAT)%LMNXH)
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$STOP('DMFT_ULOCAL')
+      END IF
+!
+!     ==========================================================================
+!     == COLLECT U-TENSOR IN EXPANDED BASIS                                   ==
+!     ==========================================================================
+      ALLOCATE(U1(LMNXT,LMNXT,LMNXT,LMNXT))
+      U1=POTPAR1(ISP)%TAILED%U
+!
+!     ==========================================================================
+!     == COLLECT U-TENSOR IN EXPANDED BASIS                                   ==
+!     ==========================================================================
+      ALLOCATE(U2(LMNXT,LMNXT,LMNXT,LMNX))
+      U2(:,:,:,:)=0.D0
+      DO IH=1,LMNX
+        DO IT=1,LMNXT
+          U2(:,:,:,IH)=U2(:,:,:,IH)+U1(:,:,:,IT)*CTE(IAT)%MAT(IT,IH)
+        ENDDO
+      ENDDO
+      U1(:,:,:,:)=0.D0
+      DO IH=1,LMNX
+        DO IT=1,LMNXT
+          U1(:,:,IH,:LMNX)=U1(:,:,IH,:LMNX) &
+     &                    +U2(:,:,IT,:LMNX)*CTE(IAT)%MAT(IT,IH)
+        ENDDO
+      ENDDO
+      U2(:,:,:,:)=0.D0
+      DO IH=1,LMNX
+        DO IT=1,LMNXT
+          U2(:,IH,:LMNX,:LMNX)=U2(:,IH,:LMNX,:LMNX) &
+     &                        +U1(:,IT,:LMNX,:LMNX)*CTE(IAT)%MAT(IT,IH)
+        ENDDO
+      ENDDO
+      U(:,:,:,:)=0.D0
+      DO IH=1,LMNX
+        DO IT=1,LMNXT
+          U(IH,:,:,:)=U(IH,:,:,:) &
+     &               +U2(IT,:LMNX,:LMNX,:LMNX)*CTE(IAT)%MAT(IT,IH)
+        ENDDO
+      ENDDO
+      DEALLOCATE(U1)
+      DEALLOCATE(U2)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_ULOCAL_NONCTE(IAT,LMNX,U)
+!     **************************************************************************
+!     **  CALCULATES THE U-TENSOR OF THE NATURAL TIGHT-BINDING ORBITALS       **
+!     **************************************************************************
+      USE LMTO_MODULE, ONLY : ISPECIES &
+     &                       ,POTPAR1 &
+     &                       ,SBAR_NEW
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT
       INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
