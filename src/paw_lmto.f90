@@ -10042,6 +10042,9 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     **  MAPS THE SCREENED ORBITAL LMNORB AT ATOM IATORB                     **
 !     **  ONTO THE GRID P                                                     **
 !     **                                                                      **
+!     **  THE ONSITE TERMS ARE AUGMENTED WITH THE ALL-ELECTRON PARTIAL WAVES. **
+!     **  THE OFF-SITE TERMS ARE OAUGMENTED WITH NODELESS PARTIAL WAVES       **
+!     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2012 ************
       USE LMTO_MODULE, ONLY : ISPECIES,NSP,K2,LNX &
      &                       ,SBAR=>SBAR_NEW &
@@ -10080,6 +10083,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       REAL(8)  ,ALLOCATABLE :: K0ARR(:)     ! BARE AUGMENTED HANKEL FUNCTION
       REAL(8)  ,ALLOCATABLE :: DK0ARR(:)    ! 
       REAL(8)  ,ALLOCATABLE :: JBARARR(:,:) ! SCREENED AUGMENTED BESSEL FUNCTION
+      REAL(8)  ,ALLOCATABLE :: DJBARARR(:,:)!
       INTEGER(4)            :: NHEAD,NTAIL ! #(HEAD/TAIL FUNCTIONS)
       INTEGER(4)            :: LMNX  ! X#(TAIL FUNCTIONS) OF ALL ATOM TYPES
       INTEGER(4)            :: LMX   ! X#(ANGULAR MOMENTA) OF ALL ATOM TYPES
@@ -10223,11 +10227,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         ALLOCATE(K0ARR(NR))
         ALLOCATE(DK0ARR(NR))
         ALLOCATE(JBARARR(NR,NTAIL))
+        ALLOCATE(DJBARARR(NR,NTAIL))
         TONSITE=(ISP2.EQ.ISPECIES(IATORB))
         DO IT=1,NTAIL
           L=POTPAR(ISP2)%LOFT(IT)
           LNDOT=POTPAR(ISP2)%LNOFT(IT)
           JBARARR(:,IT)=NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%JBARTOPHIDOT(IT)
+          DJBARARR(:,IT)=(AEPHIDOT(:,LNDOT)-NLPHIDOT(:,LNDOT)) &
+      &                 *POTPAR(ISP2)%JBARTOPHIDOT(IT)
           IF(TONSITE) THEN
             IF(POTPAR(ISP2)%LOFH(IHORB).EQ.L) THEN
               LN=POTPAR(ISP2)%LNOFH(IHORB)
@@ -10264,10 +10271,23 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
             CALL SPHERICAL$YLM(LM2X,DR,YLM)
 !
 !           == INCLUDE DIFFERENCE BETWEEN AEPHI AND NLPHI ======================
-!           == (THEY MAY DIFFER OUTSIDE THE SPHERE DUE TO CORE TAILS ===========
+!           == (THEY MAY DIFFER OUTSIDE THE SPHERE DUE TO CORE TAILS) ==========
+!           == AUGMENTATION WITH ALL-ELECTRON PARTIAL WAVES ONLY ONSITE ========
             IF(TONSITE) THEN
               CALL RADIAL$VALUE(GID,NR,DK0ARR,DIS,VAL)
               ORB(IP)=ORB(IP)+VAL*YLM(LMORB)
+!
+              LMN2=0
+              DO IT=1,NTAIL
+                CALL RADIAL$VALUE(GID,NR,DJBARARR(:,IT),DIS,VALDOT)
+                L=POTPAR(ISP2)%LOFT(IT)
+                LM2=L**2
+                DO IM=1,2*L+1
+                  LM2=LM2+1
+                  LMN2=LMN2+1
+                  ORB(IP)=ORB(IP)-VALDOT*YLM(LM2)*SBARVEC(LMN2) 
+                ENDDO
+              ENDDO
             END IF
 !
             TSPHERE=(DIS.LT.POTPAR(ISP2)%RAD)
@@ -10294,6 +10314,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         DEALLOCATE(K0ARR)
         DEALLOCATE(DK0ARR)
         DEALLOCATE(JBARARR)
+        DEALLOCATE(DJBARARR)
       ENDDO   ! END LOOP NSP
       DEALLOCATE(YLM)
       RETURN
