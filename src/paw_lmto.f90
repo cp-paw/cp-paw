@@ -1759,7 +1759,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
             POTPAR1(ISP)%TAILED%NLF(IR,LNT)=B1*SVAR1+B2*SVAR2
           ENDDO
         ENDDO  
-!CALL LMTO_WRITEPHI('0_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
 !
 !       ========================================================================
 !       == AUGMENTATION ========================================================
@@ -1841,6 +1840,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !!$CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
 !!$CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
 !!$CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
+!!$STOP 'FORCED'
         CALL SETUP$UNSELECT()
       ENDDO ! END OF LOOP OVER ATOM TYPES
       RETURN
@@ -4841,6 +4841,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)             :: MH,MT,MA
       INTEGER(4)             :: ISVAR
       INTEGER(4)             :: LN,L,M,LMN
+      REAL(8)                :: SVAR
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -4947,9 +4948,9 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
           LMNXH=CTE(IAT)%LMNXH
           WRITE(*,FMT='(82("-"),T5," EXPANSION OF NTBO IN TAILED COMPONENTS "' &
      &        //'" FOR ATOM ",I3," ")')IAT
-          DO LMNH=1,LMNXH
-            WRITE(*,FMT='("LMN=",I3," CTE=",100F10.5)')LMNH,CTE(IAT)%MAT(:,LMNH)
-          ENDDO
+!!$          DO LMNH=1,LMNXH
+!!$            WRITE(*,FMT='("LMN=",I3," CTE=",100F10.5)')LMNH,CTE(IAT)%MAT(:,LMNH)
+!!$          ENDDO
           LMN=0
           WRITE(*,FMT='(4A4,10A20)')'LN','L','M','LMN','CTE'
           ISP=ISPECIES(IAT)
@@ -4957,12 +4958,18 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
             L=POTPAR(ISP)%TAILED%LOX(LN)
             DO M=1,2*L+1
               LMN=LMN+1
-              WRITE(*,FMT='(4I4,10F25.10)')LN,L,M,LMN,CTE(IAT)%MAT(LMN,:)
+              SVAR=MAXVAL(ABS(CTE(IAT)%MAT(LMN,:)))
+              IF(SVAR.LT.1.D-10) CYCLE
+              IF(SVAR.LT.1.D+4) THEN
+                WRITE(*,FMT='(4I4,100F12.6)')LN,L,M,LMN,CTE(IAT)%MAT(LMN,:)
+              ELSE
+                WRITE(*,FMT='(4I4,100E12.3)')LN,L,M,LMN,CTE(IAT)%MAT(LMN,:)
+              END IF
             ENDDO
           ENDDO
         ENDDO
-        CALL ERROR$MSG('PLANNED STOP AFTER PRINTING')
-        CALL ERROR$STOP('LMTO_TAILEDEXPANSION')
+!!$        CALL ERROR$MSG('PLANNED STOP AFTER PRINTING')
+!!$        CALL ERROR$STOP('LMTO_TAILEDEXPANSION')
       END IF
       RETURN
       END
@@ -9869,7 +9876,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       ORB=0.D0
       LMN=0    
       DO LN=1,POTPAR(ISP)%TAILED%LNX
-!      DO LN=1,POTPAR(ISP)%NHEAD+POTPAR(ISP)%NTAIL
         L=POTPAR(ISP)%TAILED%LOX(LN)
         DO M=1,2*L+1
           LMN=LMN+1
@@ -10068,6 +10074,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       REAL(8)  ,ALLOCATABLE :: YLM(:)    ! SPHERICAL HARMONICS
       REAL(8)  ,ALLOCATABLE :: R(:)      ! RADIAL GRID
       REAL(8)  ,ALLOCATABLE :: AEPHI(:,:)   ! ALL-ELECTRON PARTIAL WAVE
+      REAL(8)  ,ALLOCATABLE :: AEPHIDOT(:,:)! ALL-ELECTRON SCATTERING WAVE
       REAL(8)  ,ALLOCATABLE :: NLPHI(:,:)   ! NODELESS PARTIAL WAVE
       REAL(8)  ,ALLOCATABLE :: NLPHIDOT(:,:)! NODELESS SCATTERING PARTIAL WAVE
       REAL(8)  ,ALLOCATABLE :: K0ARR(:)     ! BARE AUGMENTED HANKEL FUNCTION
@@ -10161,7 +10168,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !       == SELECT STRUCTURE CONSTANT ARRAY =====================================
         LMN2X=SBAR(NN)%N2
         LM2X=(MAXVAL(POTPAR(ISP2)%LOFT)+1)**2
-        SBARVEC(:LMN2X)=SBAR(NN)%MAT(LMNORB,:)  
+        SBARVEC(:LMN2X)=SBAR(NN)%MAT(LMNORB,:)
 !
 !       == LOOP OVER REAL SPACE GRID ===========================================
         DO IP=1,NP
@@ -10202,9 +10209,11 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         CALL RADIAL$R(GID,NR,R)
 !       == COLLECT PARTIAL WAVES ===============================================
         ALLOCATE(AEPHI(NR,LNX(ISP2)))
+        ALLOCATE(AEPHIDOT(NR,LNX(ISP2)))
         ALLOCATE(NLPHI(NR,LNX(ISP2)))
         ALLOCATE(NLPHIDOT(NR,LNX(ISP2)))
         CALL SETUP$GETR8A('AEPHI',NR*LNX(ISP2),AEPHI)
+        CALL SETUP$GETR8A('AEPHIDOT',NR*LNX(ISP2),AEPHIDOT)
         CALL SETUP$GETR8A('NLPHI',NR*LNX(ISP2),NLPHI)
         CALL SETUP$GETR8A('NLPHIDOT',NR*LNX(ISP2),NLPHIDOT)
         CALL SETUP$ISELECT(0)
@@ -10224,11 +10233,13 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
               LN=POTPAR(ISP2)%LNOFH(IHORB)
               K0ARR(:)=NLPHI(:,LN)   *POTPAR(ISP2)%KTOPHI(IHORB) &
                       +NLPHIDOT(:,LNDOT)*POTPAR(ISP2)%KTOPHIDOT(IHORB) 
-              DK0ARR(:)=(AEPHI(:,LN)-NLPHI(:,LN))*POTPAR(ISP2)%KTOPHI(IHORB) 
+              DK0ARR(:)=(AEPHI(:,LN)-NLPHI(:,LN))*POTPAR(ISP2)%KTOPHI(IHORB) &
+     &            +(AEPHIDOT(:,LN)-NLPHIDOT(:,LN))*POTPAR(ISP2)%KTOPHIDOT(IHORB)
             END IF
           END IF
         ENDDO
         DEALLOCATE(AEPHI)
+        DEALLOCATE(AEPHIDOT)
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
 !
