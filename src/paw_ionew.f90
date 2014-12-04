@@ -158,7 +158,7 @@
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      logical(4)          :: ttest=.false.
+      LOGICAL(4)          :: TTEST=.FALSE.
       INTEGER(4)          :: NFIL
       INTEGER(4)          :: NFILO
       REAL(8)             :: DELTAT=1.D0
@@ -167,7 +167,7 @@
       INTEGER(4),PARAMETER:: NFILSTDOUT=6
       CHARACTER(128)      :: FILENAME
 !     ******************************************************************
-                          call trace$push('writerestart')
+                          CALL TRACE$PUSH('WRITERESTART')
 !     CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
 !     ==================================================================
@@ -176,10 +176,10 @@
       CALL FILEHANDLER$FILENAME('RESTART_OUT',FILENAME)
       TCHK=(FILENAME.EQ.-'/DEV/NULL')
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
-      IF(TCHK) then
-        call trace$pop()
+      IF(TCHK) THEN
+        CALL TRACE$POP()
         RETURN
-      end if
+      END IF
 !
 !     ==================================================================
 !     == GET FILE UNIT                                                ==
@@ -241,9 +241,9 @@
       CALL QMMM$WRITE(NFIL,NFILO,TCHK)
 !
 !     ==================================================================
-!     == WRITE COsmo ENVIRONMENT                                      ==
+!     == WRITE COSMO ENVIRONMENT                                      ==
 !     ==================================================================
-      CALL COsmo$WRITE(NFIL,NFILO,TCHK)
+      CALL COSMO$WRITE(NFIL,NFILO,TCHK)
 !
 !     ==================================================================
 !     == END OF FILE                                                  ==
@@ -259,10 +259,10 @@
       IF(TTEST.AND.THISTASK.EQ.1) THEN
         PRINT*,'CHECK CONSISTENCY OF RESTART FILE IN WRITERESTART'
         CALL RESTART$CHECK(NFIL)
-        CALL FILEHANDLER$CLOSE('RESTART_OUT')
       END IF
+      CALL FILEHANDLER$CLOSE('RESTART_OUT')
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
-                                                     call trace$pop()
+                                                     CALL TRACE$POP()
       RETURN
       END
 !
