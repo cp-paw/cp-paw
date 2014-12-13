@@ -1357,7 +1357,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
         DO I=1,MD%NNBX
           NULLIFY(MD%IBLIST(I)%IT)
         ENDDO      
-        CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB
+        CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB &
      &                    ,MD%IBLIST,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,MD%I2FIRST)
       END IF
                                CALL TRACE$POP
@@ -4784,6 +4784,170 @@ END MODULE UFFTABLE_MODULE
       RIJ=RIJ*ANGSTROM
       DIJ=DIJ*KCALBYMOL
       TCHK=(DIJ.GT.1.D-8)
+      RETURN
+      END
+!
+!........1.........2.........3.........4.........5.........6.........7.........8
+MODULE TIP4P_MODULE
+!*******************************************************************************
+!**  TIP4P MODEL OF WATER FROM JOERGENSEN ET AL. J.CHEM.PHYS. 79, 926 (1983)  **
+!**                                                                           **
+!**  THE MOLECULAR STRUCTURE IS FROZEN.                                       **
+!**  A LENNARD-JONES POTENTIAL IS ATTACHED TO THE OXYGEN ION                  **
+!**  ELECTROSTATIC CHARGES ARE ATTACHED TO THE HYDROGEN ATOM AND A DUMMY ATOM **
+!**  THE DUMMY ATOM IS EXPRESSED BY THE POSITIONS OF THE REAL ATOMS           **
+!**                                                                           **
+!*******************************************************************************
+LOGICAL(4)        :: TINI=.FALSE.
+REAL(8),PARAMETER :: QO=0.D0
+REAL(8),PARAMETER :: QH=0.52D0
+REAL(8),PARAMETER :: QM=-2.D0*QH
+REAL(8)           :: DOH  ! O-H DISTANCE
+REAL(8)           :: DHH  ! H1-H2 DISTANCE
+REAL(8)           :: C12  ! LENNARD-JONES PARAMETER
+REAL(8)           :: C6   ! LENNARD-JONES PARAMETER
+REAL(8)           :: WO   ! RMIDDLE=WO*RO+WH*RH1+WH*RH2
+REAL(8)           :: WH
+END MODULE TIP4P_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P_INI()
+!     **************************************************************************
+!     ** DETERMINE PARAMETERS FOR THE TIP4P MODEL OF WATER                    **
+!     ** SOURCE: JOERGENSEN ET AL. J. CHEM. PHYS. 79, 926 (1983)              **
+!     **************************************************************************
+      USE TIP4P_MODULE, ONLY : TINI,DOH,DHH,C6,C12,WO,WH
+      IMPLICIT NONE 
+      REAL(8)        :: ANGSTROM
+      REAL(8)        :: KCALBYMOL
+      REAL(8)        :: PHIHOH
+      REAL(8)        :: DOM
+      REAL(8)        :: PI
+      REAL(8)        :: SVAR
+!     **************************************************************************
+      IF(TINI) RETURN
+      TINI=.TRUE.
+      PI=4.D0*ATAN(1.D0)
+      CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+      CALL CONSTANTS$GET('KCALBYMOL',KCALBYMOL)
+!
+!     ==========================================================================
+!     == DISTANCES BETWEEN THE THREE REAL ATOMS                               ==
+!     ==========================================================================
+      DOH=0.9572D0*ANGSTROM
+      DOM=0.15D0*ANGSTROM
+      PHIHOH=104.52D0/180.D0*PI
+      DHH=2.D0*DOH*SIN(PHIHOH/2.D0)
+!
+!     ==========================================================================
+!     == WEIGHTS THAT EXPRESS THE DUMMY ATOM M IN TERMS OF REAL ATOMS         ==
+!     ==========================================================================
+      SVAR=DOH*COS(PHIHOH/2.D0) 
+      WO=DOM/SVAR
+      WH=0.5D0*(1.D0-WO)
+!
+!     ==========================================================================
+!     == LENNARD-JONES PARAMETERS                                             ==
+!     ==========================================================================
+      C12=6.D+5*KCALBYMOL*ANGSTROM**12
+      C6=610.D0*KCALBYMOL*ANGSTROM**6
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P_CONSTRAINT(MO,MH,MM,RO,RH1,RH2,RM,ROP,RH1P,RH2P,RMP)
+!     **************************************************************************
+!     ** GIVEN THE COORDINATES OF THE ACTUAL POSITIONS AND THOSE PROPAGATED   **
+!     ** WITHOUT CONSTRAINTS, THE NEXT POSITIONS PROPAGATED WITH CONSTRAINTS  **
+!     ** ARE RETURNED                                                         **
+!     **************************************************************************
+      USE TIP4P_MODULE, ONLY : DOH,DHH,WO,WH
+      IMPLICIT NONE 
+      INTEGER(4),PARAMETER  :: NITER=1000
+      REAL(8)   ,PARAMETER  :: TOL=1.D-8
+      REAL(8),INTENT(IN)    :: MO      ! OXYGEN MASS
+      REAL(8),INTENT(IN)    :: MH      ! HYDROGEN MASS
+      REAL(8),INTENT(IN)    :: MM      ! MIDDLE-ATOM MASS
+      REAL(8),INTENT(IN)    :: RO(3)   ! OXYGEN POSITION
+      REAL(8),INTENT(IN)    :: RH1(3)  ! 1ST HYDROGEN POSITION
+      REAL(8),INTENT(IN)    :: RH2(3)  ! 2ND HYDROGEN POSITION
+      REAL(8),INTENT(IN)    :: RM(3)   ! MIDDLE-ATOM POSITION
+      REAL(8),INTENT(INOUT) :: ROP(3)  ! PROPAGATED OXYGEN POSITION
+      REAL(8),INTENT(INOUT) :: RH1P(3) ! PROPAGATED 1ST HYDROGEN POSITION
+      REAL(8),INTENT(INOUT) :: RH2P(3) ! PROPAGATED 2ND HYDROGEN POSITION
+      REAL(8),INTENT(INOUT) :: RMP(3)  ! PROPAGATED MIDDLE-ATOM POSITION
+      REAL(8)               :: G(6)    ! CONSTRAINTS
+      REAL(8)               :: LAMBDA(6)  ! LAGRANGE MULTIPLIERS
+      REAL(8)               :: DGDR(12,6) ! CONSTRAINT DERIVATIVES
+      REAL(8)               :: RP(12)     ! CONTAINER FOR NEXT POSITIONS
+      REAL(8)               :: A(6,6)
+      REAL(8)               :: AINV(6,6)
+      INTEGER(4)            :: I,ITER
+      LOGICAL(4)            :: CONVG
+!     **************************************************************************
+      CALL TIP4P_INI()
+!     ==========================================================================
+!     == CALCULATE THE DERIVATIVE OF THE CONSTRAINT AT THE ORIGINAL POSITIONS ==
+!     == G(1)=(RO-RH1)^2-DOH^2
+!     == G(2)=(RO-RH2)^2-DOH^2
+!     == G(3)=(RH1-RH2)^2-DHH^2
+!     == G(4:6)=WO*RO+WH*(RH1+RH2)-RM
+!     == LAMBDA=(DOH1,DOH2,DHH,XM,YM,ZM)
+!     == R=(RO,RH1,RH2,RM)
+!     == DGDR(I,J)=DG_J/DR_I
+!     ==========================================================================
+      DGDR(1:3,1)=2.D0*(RO-RH1)
+      DGDR(4:6,1)=2.D0*(RH1-RO)
+      DGDR(1:3,2)=2.D0*(RO-RH2)
+      DGDR(7:9,2)=2.D0*(RH2-RO)
+      DGDR(4:6,3)=2.D0*(RH1-RH2)
+      DGDR(7:9,3)=2.D0*(RH2-RH1)
+      DO I=1,3
+        DGDR(  I,3+I)=WO
+        DGDR(3+I,3+I)=WH
+        DGDR(6+I,3+I)=WH
+        DGDR(9+I,3+I)=-1.D0
+      ENDDO
+!
+!     ==========================================================================
+!     == LINEAR MATRIX A_IJ=SUM_K: DG_I/DR_K 1/M_K DGJ/DR_K
+!     ==========================================================================
+      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO)
+      DGDR(4:9,:)  =DGDR(4:9,:)/SQRT(MH)
+      DGDR(10:12,:)=DGDR(10:12,:)/SQRT(MM)
+      A=MATMUL(TRANSPOSE(DGDR),DGDR)
+      CALL LIB$INVERTR8(6,A,AINV)
+!
+!     == DGDR=1/M*DGDR =========================================================
+      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO)
+      DGDR(4:9,:)  =DGDR(4:9,:)/SQRT(MH)
+      DGDR(10:12,:)=DGDR(10:12,:)/SQRT(MM)
+!
+!     ==========================================================================
+!     == ITERATE TO FULFILL CONSTRAINTS                                       ==
+!     ==========================================================================
+      RP(1:3)=RO
+      RP(4:6)=RH1
+      RP(7:9)=RH2
+      RP(10:12)=RM
+      DO ITER=1,NITER
+        G(1)=SUM((ROP-RH1P)**2)-DOH**2
+        G(2)=SUM((ROP-RH2P)**2)-DOH**2
+        G(3)=SUM((RH1P-RH2P)**2)-DHH**2
+        G(4:6)=WO*ROP+WH*RH1P+WH*RH2P-RMP
+        CONVG=MAXVAL(ABS(G)).LT.TOL
+        IF(CONVG) EXIT
+        LAMBDA=MATMUL(AINV,G)
+        RP=RP-MATMUL(DGDR(:,:),LAMBDA)
+        ROP =RP(1:3)
+        RH1P=RP(4:6)
+        RH2P=RP(7:9)
+        RMP =RP(10:12)
+      ENDDO
+      IF(.NOT.CONVG) THEN
+        CALL ERROR$MSG('LOOP NOT CONVERGED')
+        CALL ERROR$STOP('TIP4P_CONSTRAINT')
+      END IF
       RETURN
       END
 !
