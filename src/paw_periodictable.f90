@@ -85,7 +85,7 @@ TYPE ELEMENT_TYPE
   INTEGER(4)        :: NISOTOPES
   TYPE(ISOTOPE_TYPE),POINTER :: ISOTOPE(:)
 END TYPE
-INTEGER,PARAMETER     :: NEL=108
+INTEGER,PARAMETER     :: NEL=109
 INTEGER,PARAMETER     :: IFIRSTDUMMY=106
 TYPE(ELEMENT_TYPE)    :: ELEMENT(0:NEL)
 LOGICAL(4)            :: TINI=.FALSE.
@@ -253,6 +253,7 @@ CONTAINS
       SET(106)=SET_TYPE('CP',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(107)=SET_TYPE('PI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(108)=SET_TYPE('CI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
+      SET(109)=SET_TYPE('M ',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')  !tip4p
 !
 !     ==========================================================================
 !     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                        ==
@@ -263,7 +264,8 @@ CONTAINS
         ELEMENT(I)%SYMBOL=SET(I)%SYMBOL
         ELEMENT(I)%MASS=SET(I)%MASS*U
         ELEMENT(I)%RCOV=SET(I)%RCOV*ANGSTROM
-        ELEMENT(I)%RVDW=SET(I)%RVDW*ANGSTROM*0.5d0 !listed are distances, not radii
+!       __listed are distances, not radii: convert to radii_____________________
+        ELEMENT(I)%RVDW=SET(I)%RVDW*ANGSTROM*0.5d0 
         ELEMENT(I)%CONFIGURATION=SET(I)%CONFIGURATION
         ELEMENT(I)%RASA=FACASA*ELEMENT(I)%RCOV
         ELEMENT(I)%EN=SET(I)%EN
@@ -274,7 +276,9 @@ CONTAINS
         CALL PERIODICTABLE_ATOMICNUMBER(SET(I)%CORE,IC)
         ELEMENT(I)%CORE=IC
         DO J=1,4
-          IF(ELEMENT(IC)%CONFIGURATION(J).GT.0)ELEMENT(I)%NODES(J)=ELEMENT(IC)%NODES(J)+1
+          IF(ELEMENT(IC)%CONFIGURATION(J).GT.0) then
+            ELEMENT(I)%NODES(J)=ELEMENT(IC)%NODES(J)+1
+          end if
         ENDDO
         ELEMENT(I)%NISOTOPES=0
         NULLIFY(ELEMENT(I)%ISOTOPE)

@@ -104,7 +104,7 @@ TYPE MD_TYPE
   INTEGER(4)            :: NAT            !         #(ATOMS)
   REAL(8)      ,POINTER :: R0(:,:)        !(3,NAT)  ACTUAL ATOMIC POSITIONS
   REAL(8)      ,POINTER :: RMASS(:)       !(NAT)    ATOMIC MASSES
-  CHARACTER(5) ,POINTER :: TYPE(:)        !(NAT)    ATOM TYPE
+  CHARACTER(8) ,POINTER :: TYPE(:)        !(NAT)    ATOM TYPE
   CHARACTER(30),POINTER :: ATNAME(:)      !(NAT)    ATOM NAME
   CHARACTER(2), POINTER :: ELEMENT(:)     !(NAT)    ELEMENT SYMBOL
   REAL(8)      ,POINTER :: QEL(:)         !(NAT)    POINT CHARGE
@@ -129,7 +129,7 @@ TYPE MD_TYPE
   INTEGER(4)            :: NANGLE              
   TYPE(ANGLE_TYPE),POINTER :: ANGLE(:)    !(NANGLE)
   INTEGER(4)            :: NTORSION            
-  TYPE(TORSION_TYPE),POINTER :: TORSION(:)        !(NTORSION)
+  TYPE(TORSION_TYPE),POINTER :: TORSION(:)        !NTORSION)
   INTEGER(4)            :: NINVERSION          
   TYPE(INVERSION_TYPE),POINTER :: INVERSION(:)      !(NINVERSION)
   INTEGER(4)            :: NTYPE               
@@ -252,10 +252,12 @@ CONTAINS
       RETURN
       END SUBROUTINE CLASSICAL_ZERO_INVERSION
 END MODULE CLASSICAL_MODULE
+!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL$SELECT(ID_)
 !     **************************************************************************
-!     **                                                                      **
+!     **  SELECT A INSTANCE OF THE CLASSICAL OBJECT                           **
+!     **  OR CREATE A NEW ONE IF NOT PRESENT                                  **
 !     **************************************************************************
       USE CLASSICAL_MODULE
       IMPLICIT NONE
@@ -273,7 +275,7 @@ END MODULE CLASSICAL_MODULE
       ELSE
         MD=>MDFIRST
         DO 
-          IF(MD%MDNAME.EQ.ID_) RETURN
+          IF(MD%MDNAME.EQ.ID_) RETURN   ! INSTANCE FOUND. DONE...
           IF(ASSOCIATED(MD%NEXT)) THEN
             MD=>MD%NEXT
           ELSE
@@ -283,8 +285,11 @@ END MODULE CLASSICAL_MODULE
           END IF
         ENDDO
       END IF
-      MD%MDNAME=ID_
 !
+!     ==========================================================================
+!     ==  SET NEW INSTANCE TO ZERO                                            ==
+!     ==========================================================================
+      MD%MDNAME=ID_
       MD%NAT=0
       NULLIFY(MD%R0)
       NULLIFY(MD%RMASS)
@@ -1170,6 +1175,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
       TYPE(TORSION_TYPE)  ,ALLOCATABLE :: TORSION(:)
       TYPE(INVERSION_TYPE),ALLOCATABLE :: INVERSION(:)
       INTEGER(4)             :: ISVAR,I
+      REAL(8)   ,ALLOCATABLE :: RPOS(:,:)
 !     **************************************************************************
       IF(.NOT.SELECTED) THEN
         CALL ERROR$MSG('NO CLASSICAL OBJECT SELECTED')
@@ -1284,6 +1290,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
 !     ==========================================================================
 !     ==  CALCULATE EXCLUSIONS                                                ==
 !     ==========================================================================
+      CALL TIP4P$SELECT(MD%MDNAME)
       ALLOCATE(MD%I2FIRST(MD%NAT))
 !     == FIRST COUNT THE NUMBER OF EXCLUSIONS ....
       MD%NEXCL=1
@@ -1298,6 +1305,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
       CALL CLASSICAL_EXCLUSIONS(MD%NAT,MD%NBOND,MD%BOND,MD%NANGLE,MD%ANGLE &
      &               ,MD%NTORSION,MD%TORSION,MD%MAXDIV,MD%NEXCL,ISVAR &
      &               ,MD%EXCLUSION,MD%I2FIRST)
+      CALL TIP4P$SELECT('NONE')
 !
 !     ==========================================================================
 !     == CALCULATE NEIGHBORLIST                                               ==
@@ -1321,7 +1329,17 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
       ENDDO      
       CALL CLASSICAL_NEIGHBORS(MD%NAT,MD%R0,MD%RBAS0,MD%NNBX,MD%NNB,MD%IBLIST &
      &                      ,MD%MAXDIV,MD%NEXCL,MD%EXCLUSION,MD%I2FIRST)
-
+!
+!     ==========================================================================
+!     == ENFORCE TIP4P CONSTRAINTS                                            ==
+!     ==========================================================================
+      ALLOCATE(RPOS(3,MD%NAT))
+      CALL TIP4P$SELECT(MD%MDNAME)
+      RPOS=MD%R0
+      CALL TIP4P$CONSTRAINTS(MD%NAT,MD%RMASS,RPOS,MD%R0)
+      RPOS=MD%RM
+      CALL TIP4P$CONSTRAINTS(MD%NAT,MD%RMASS,RPOS,MD%RM)
+      CALL TIP4P$SELECT('NONE')
                                CALL TRACE$POP
       RETURN
       END
@@ -1386,6 +1404,8 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
 !     ==  TAKE CARE OF FORCES ACTING ON DUMMY ATOMS                           ==
 !     ==========================================================================
       CALL CLASSICAL_DUMMY_POSITION(MD%NAT,MD%TYPE,MD%R0,MD%NBOND,MD%BOND)
+      CALL TIP4P$SELECT(MD%MDNAME)  ! IS USED IN CLASSICAL_DUMMY_POSITION
+      CALL TIP4P$DUMMY_POSITIONS(MD%NAT,MD%R0)
 !
 !     ==========================================================================
 !     ==  NOW CALCULATE TOTAL ENERGY AND FORCES                               ==
@@ -1403,6 +1423,8 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
 !     ==  TAKE CARE OF FORCES ACTING ON DUMMY ATOMS                           ==
 !     ==========================================================================
       CALL CLASSICAL_DUMMY_FORCE(MD%NAT,MD%TYPE,MD%FORCE,MD%NBOND,MD%BOND)
+      CALL TIP4P$DUMMY_FORCES(MD%NAT,MD%FORCE)
+      CALL TIP4P$SELECT('NONE')
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -1424,7 +1446,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_DUMMY_POSITION(NAT,TYPE,R,NBOND,BOND)
 !     **************************************************************************
-!     ** CALCULATE DUMMY ATOM POSITIONS                                       **
+!     ** CALCULATE POSITIONS OF DUMMY ATOM                                    **
 !     **                                                                      **
 !     **  DUMMY ATOMS ARE INTRODUCED TO DEFINE PI BONDED SYSTEMS              **
 !     **  SUCH AS CYCLOPENTADIENYL (CPR, CPR_B), ALLYL (CIR) AND              **
@@ -1439,7 +1461,7 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
       USE CLASSICAL_MODULE, ONLY : BOND_TYPE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)   :: NAT
-      CHARACTER(5),INTENT(IN)   :: TYPE(NAT)
+      CHARACTER(*),INTENT(IN)   :: TYPE(NAT)
       REAL(8)     ,INTENT(INOUT):: R(3,NAT)
       INTEGER(4)  ,INTENT(IN)   :: NBOND
       TYPE(BOND_TYPE),INTENT(IN):: BOND(NBOND)
@@ -1447,27 +1469,35 @@ CALL ERROR$STOP('CLASSICAL$GETI4A')
       INTEGER(4)                :: NN,IAT1,IAT2
       REAL(8)                   :: R0(3)
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == SCAN ATOMS FOR DUMMY ATOMS AND RECALCULATE THEIR POSITIONS           ==
+!     ==========================================================================
       DO IAT=1,NAT
-        IF(TYPE(IAT).NE.'CPR'.AND.TYPE(IAT).NE.'CPR_B'.AND. &
-     &     TYPE(IAT).NE.'PIR'.AND.TYPE(IAT).NE.'CIR') CYCLE
-        R0=0.D0
-        NN=0
-        DO IBOND=1,NBOND
-          IAT1=BOND(IBOND)%IAT1
-          IAT2=BOND(IBOND)%IAT2
-          IF(IAT1.EQ.IAT) THEN
-            IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
-            NN=NN+1
-            R0(:)=R0(:)+R(:,IAT2)
-          ELSE IF(IAT2.EQ.IAT) THEN
-            IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
-            NN=NN+1
-            R0(:)=R0(:)+R(:,IAT1)
-          END IF
-        ENDDO
-        R(:,IAT)=R0(:)/DBLE(NN)
-PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
-      ENDDO
+!
+!       ========================================================================
+!       == MIDDLE ATOM OF AROMATIC SYSTEMS, ALLYL AND OLEFIN                  ==
+!       ========================================================================
+        IF(TYPE(IAT).EQ.'CPR'.OR.TYPE(IAT).EQ.'CPR_B'.OR. &
+     &     TYPE(IAT).EQ.'PIR'.OR.TYPE(IAT).EQ.'CIR') THEN
+          R0=0.D0
+          NN=0
+          DO IBOND=1,NBOND
+            IAT1=BOND(IBOND)%IAT1
+            IAT2=BOND(IBOND)%IAT2
+            IF(IAT1.EQ.IAT) THEN
+              IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
+              NN=NN+1
+              R0(:)=R0(:)+R(:,IAT2)
+            ELSE IF(IAT2.EQ.IAT) THEN
+              IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
+              NN=NN+1
+              R0(:)=R0(:)+R(:,IAT1)
+            END IF
+          ENDDO
+          R(:,IAT)=R0(:)/DBLE(NN)
+        END IF
+      ENDDO  !END OF LOOP OVER ATOMS SCANNING FOR DUMMY ATOMS
       RETURN
     END SUBROUTINE CLASSICAL_DUMMY_POSITION
 !
@@ -1479,7 +1509,7 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
       USE CLASSICAL_MODULE, ONLY : BOND_TYPE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)   :: NAT
-      CHARACTER(5),INTENT(IN)   :: TYPE(NAT)
+      CHARACTER(*),INTENT(IN)   :: TYPE(NAT)
       REAL(8)     ,INTENT(INOUT):: F(3,NAT)
       INTEGER(4)  ,INTENT(IN)   :: NBOND
       TYPE(BOND_TYPE),INTENT(IN):: BOND(NBOND)
@@ -1487,36 +1517,44 @@ PRINT*,'DUMMY ATOM POSITION',TYPE(IAT),NN,R(:,IAT)
       INTEGER(4)                :: NN,IAT1,IAT2
       REAL(8)                   :: F0(3)
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == SCAN ATOMS FOR DUMMY ATOMS AND MAP THEIR FORCES ONTO REAL ATOMS      ==
+!     ==========================================================================
       DO IAT=1,NAT
-        IF(TYPE(IAT).NE.'CPR'.AND.TYPE(IAT).NE.'CPR_B'.AND. &
-     &     TYPE(IAT).NE.'PIR'.AND.TYPE(IAT).NE.'CIR') CYCLE
-        NN=0
-        DO IBOND=1,NBOND
-          IAT1=BOND(IBOND)%IAT1
-          IAT2=BOND(IBOND)%IAT2
-          IF(IAT1.EQ.IAT) THEN
-            IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
-            NN=NN+1
-          ELSE IF(IAT2.EQ.IAT) THEN
-            IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
-            NN=NN+1
-          END IF
-        ENDDO
-        F0(:)=F(:,IAT)/DBLE(NN)
-        F(:,IAT)=0.D0
-        DO IBOND=1,NBOND
-          IAT1=BOND(IBOND)%IAT1
-          IAT2=BOND(IBOND)%IAT2
-          IF(IAT1.EQ.IAT) THEN
-            IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
-            F(:,IAT2)=F(:,IAT2)+F0(:)
-          ELSE IF(IAT2.EQ.IAT) THEN
-            IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
-            F(:,IAT1)=F(:,IAT1)+F0(:)
-          END IF
-        ENDDO
-PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
-      ENDDO
+!
+!       ========================================================================
+!       == MIDDLE ATOM OF AROMATIC SYSTEMS, ALLYL AND OLEFIN                  ==
+!       ========================================================================
+        IF(TYPE(IAT).EQ.'CPR'.OR.TYPE(IAT).EQ.'CPR_B'.OR. &
+     &     TYPE(IAT).EQ.'PIR'.OR.TYPE(IAT).EQ.'CIR') THEN
+          NN=0
+          DO IBOND=1,NBOND
+            IAT1=BOND(IBOND)%IAT1
+            IAT2=BOND(IBOND)%IAT2
+            IF(IAT1.EQ.IAT) THEN
+              IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
+              NN=NN+1
+            ELSE IF(IAT2.EQ.IAT) THEN
+              IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
+              NN=NN+1
+            END IF
+          ENDDO
+          F0(:)=F(:,IAT)/DBLE(NN)
+          DO IBOND=1,NBOND
+            IAT1=BOND(IBOND)%IAT1
+            IAT2=BOND(IBOND)%IAT2
+            IF(IAT1.EQ.IAT) THEN
+              IF(TYPE(IAT2).NE.'C_2'.AND.TYPE(IAT2).NE.'C_R') CYCLE
+              F(:,IAT2)=F(:,IAT2)+F0(:)
+            ELSE IF(IAT2.EQ.IAT) THEN
+              IF(TYPE(IAT1).NE.'C_2'.AND.TYPE(IAT1).NE.'C_R') CYCLE
+              F(:,IAT1)=F(:,IAT1)+F0(:)
+            END IF
+          ENDDO
+          F(:,IAT)=0.D0   !SET FORCE OF DUMMY ATOM TO ZERO
+        END IF
+      ENDDO !END OF LOOP OVER ATOMS SCANNING FOR DUMMY ATOMS
       RETURN
     END SUBROUTINE CLASSICAL_DUMMY_FORCE
 !
@@ -1548,7 +1586,7 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CLASSICAL_MODULE
+      USE CLASSICAL_MODULE, ONLY : SELECTED,MD
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)   :: DELT
       REAL(8)   ,INTENT(IN)   :: ANNE
@@ -1590,7 +1628,15 @@ PRINT*,'DUMMY ATOM FORCE ',TYPE(IAT),NN,F0(:)
           ENDDO
         END IF
       ENDDO
-
+!
+      CALL TIP4P$SELECT(MD%MDNAME)
+      CALL TIP4P$CONSTRAINTS(MD%NAT,MD%RMASS,MD%R0,MD%RP)
+      CALL TIP4P$SELECT('NONE')
+!!$PRINT*,'  '
+!!$DO IAT=1,MD%NAT
+!!$PRINT*,'MD%DR(3) ',MD%RP(:,IAT)-MD%R0(:,IAT)
+!!$ENDDO
+!
 !     =========================================================================
 !     == TIP3P NEW                                                           ==
 !     =========================================================================
@@ -2060,7 +2106,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
           ENDDO
         ENDDO
       ENDDO
- PRINT*,'BOND ',ETOT
+! PRINT*,'BOND ',ETOT
 ! 
 !     =========================================================================
 !     ==  BOND ANGLE FORCES                                                  ==
@@ -2099,7 +2145,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
           ENDDO
         ENDDO
       ENDDO 
- PRINT*,'ANGLE ',ETOT
+! PRINT*,'ANGLE ',ETOT
 ! 
 !     =========================================================================
 !     ==  TORSION ANGLE FORCES                                               ==
@@ -2146,7 +2192,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
           ENDDO
         ENDDO
       ENDDO 
- PRINT*,'TORSION ',ETOT
+! PRINT*,'TORSION ',ETOT
 ! 
 !     =========================================================================
 !     ==  INVERSION FORCES                                                   ==
@@ -2193,7 +2239,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
           ENDDO
         ENDDO
       ENDDO 
-  PRINT*,'INVERSION ',ETOT
+!  PRINT*,'INVERSION ',ETOT
 !
 !     ==========================================================================
 !     ==  ADD RESULTS FROM ALL TASKS                                          ==
@@ -2694,7 +2740,7 @@ LOGICAL(4) :: TONEFOUR
       TYPE(BOND_TYPE),INTENT(INOUT) :: BOND(NBOND)
       REAL(8)      ,INTENT(IN)   :: BO(NBOND)
       INTEGER(4)   ,INTENT(IN)   :: NAT
-      CHARACTER(5) ,INTENT(IN)   :: TYPE(NAT)
+      CHARACTER(*) ,INTENT(IN)   :: TYPE(NAT)
       INTEGER(4)   ,INTENT(OUT)  :: ITYPE(NAT)
       INTEGER(4)   ,INTENT(IN)   :: NANGLEX
       INTEGER(4)   ,INTENT(OUT)  :: NANGLE
@@ -2713,7 +2759,7 @@ LOGICAL(4) :: TONEFOUR
       TYPE(POT_TYPE),INTENT(INOUT) :: POT(NPOTX)
       LOGICAL(4)                 :: TCHK
       CHARACTER(64)              :: ID
-      CHARACTER(5)               :: TYPE1,TYPE2,TYPE3,TYPE4
+      CHARACTER(8)               :: TYPE1,TYPE2,TYPE3,TYPE4
 !     INTEGER(4)   ,ALLOCATABLE  :: IWORK(:)
       INTEGER(4)                 :: NNEIGH(NAT)
       INTEGER(4)                 :: INEIGH(NNEIGHX,NAT)
@@ -2895,7 +2941,6 @@ LOGICAL(4) :: TONEFOUR
                CALL ERROR$CHVAL('MD%FF',MD%FF)
                CALL ERROR$STOP('FORCEFIELDSETUP')
             END IF
-
             IF(.NOT.TCHK) CYCLE
 !
 !           == ADD NEW ANGLE ===================================================
@@ -3170,26 +3215,26 @@ LOGICAL(4) :: TONEFOUR
             TYPE1=TYPE(IAT1)
             TYPE2=TYPE(IAT2)
             IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
-               CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
+              CALL UFFTABLE$NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
             ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
-               CALL FORCEFIELD$AMBER_NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
+              CALL FORCEFIELD$AMBER_NONBONDPARMS(TYPE1,TYPE2,ID,X,D,TCHK)
             END IF
             IF(TCHK) THEN
-               NPOT=NPOT+1
-               IF(NPOT.GT.NPOTX) THEN
-                  CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
-                  CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
-               END IF
-               IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
-                  CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
-               ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
-                  CALL FORCEFIELD$AMBER_NONBONDPOTA(ID,X,D,POT(NPOT))
-               END IF
-               NONBOND(I1,I2)=NPOT
-               NONBOND(I2,I1)=NPOT
+              NPOT=NPOT+1
+              IF(NPOT.GT.NPOTX) THEN
+                 CALL ERROR$MSG('NUMBER OF POTENTIALS TOO LARGE AT NONBOND')
+                 CALL ERROR$STOP('CLASSICAL_UFFINITIALIZE')
+              END IF
+              IF(TRIM(ADJUSTL(MD%FF)).EQ.'UFF') THEN
+                 CALL CLASSICAL_NONBONDPOTA(ID,X,D,POT(NPOT))
+              ELSE IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
+                 CALL FORCEFIELD$AMBER_NONBONDPOTA(ID,X,D,POT(NPOT))
+              END IF
+              NONBOND(I1,I2)=NPOT
+              NONBOND(I2,I1)=NPOT
             ELSE
-               NONBOND(I1,I2)=-1
-               NONBOND(I2,I1)=-1
+              NONBOND(I1,I2)=-1
+              NONBOND(I2,I1)=-1
             END IF
           END IF
         ENDDO
@@ -3552,11 +3597,11 @@ LOGICAL(4) :: TONEFOUR
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_NONBONDPOTA(ID,RIJ,DIJ,POT)
-!     ******************************************************************
-!     **                                                              **
-!     **  VAN DER WAALS POTENTIAL AS FUNCTION OF 1/R                  **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  VAN DER WAALS POTENTIAL AS FUNCTION OF 1/R                          **
+!     **                                                                      **
+!     **************************************************************************
       USE CLASSICAL_MODULE, ONLY: POT_TYPE
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN)  :: ID
@@ -3807,13 +3852,18 @@ CONTAINS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE UFFTABLE_INI
-!     ******************************************************************     
-!     **                                                              **   
-!     ******************************************************************     
+!     **************************************************************************
+!     **  TABLE I FROM RAPPE, ET AL. JACS 114, 10024 (1992)                   **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
-!     ******************************************************************     
+      REAL(8)     :: SVAR
+      REAL(8)     :: ANGSTROM
+      REAL(8)     :: KCALBYMOL
+!     **************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.
+!     ==  (NAME,RCOV,BOND ANGLE,VDW RADIUS, VDW ENERGY, VDW-SCALE, CHARGE) =====
 PAR(  1)=UFFPAR_TYPE('H_   ',0.354,180.000,2.886,0.044,12.000,0.712)
 PAR(  2)=UFFPAR_TYPE('H___B',0.460, 83.500,2.886,0.044,12.000,0.712)
 PAR(  3)=UFFPAR_TYPE('HE4+4',0.849, 90.000,2.362,0.056,12.000,0.098)
@@ -3949,23 +3999,44 @@ PAR(139)=UFFPAR_TYPE('CPR_B',0.340, 90.000,3.851,0.000,12.000,1.912)
 PAR(140)=UFFPAR_TYPE('CIR  ',0.616, 90.000,3.851,0.000,12.000,1.912)
 ! ALLYL CENTER
 PAR(141)=UFFPAR_TYPE('PIR  ',0.616, 90.000,3.851,0.000,12.000,1.912)
-      NTYPE=141
+!
+!     ==========================================================================
+!     ==  TIP4P WATER MODEL INHERITS O_3,H_,H_                                ==
+!     ==========================================================================
+!     == 1) THE EFFECTIVE CHARGES DETERMINE THE FORCE CONSTANTS FOR BOND-     ==
+!     ==    AND ANGLE FORCES. THEY ARE SET TO ZERO BECAUSE ALL INTERNAL       ==
+!     ==    MOLECULAR FORCES ARE ACCOUNTED FOR BY CONSTRAINTS.                ==
+!        2) THE LENNARD JONES POTENTIAL IS ATTACHED ONLY TO THE O-ATOM        ==
+!     == 3) M_TIP4P IS A DUMMY ATOM, CARRIES A CHARGE                         ==
+      PAR(142)=UFFPAR_TYPE('O_TIP4P',0.658,104.510,3.500,0.060,14.085,0.0)
+      PAR(143)=UFFPAR_TYPE('H_TIP4P',0.354,180.000,2.886,0.000,12.000,0.0)
+      PAR(144)=UFFPAR_TYPE('M_TIP4P',0.354,180.000,2.886,0.000,12.000,0.0)
+      CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+      CALL CONSTANTS$GET('KCAL/MOL',KCALBYMOL)
+      CALL TIP4P$GETR8('RLJ',SVAR) ; SVAR=SVAR/ANGSTROM
+      PAR(142)%X=SVAR
+      CALL TIP4P$GETR8('DLJ',SVAR) ; SVAR=SVAR/KCALBYMOL
+      PAR(142)%D=SVAR
+      CALL TIP4P$GETR8('ROH',SVAR) ; SVAR=SVAR/ANGSTROM
+      PAR(143)%R=SVAR-PAR(142)%R   !R_COV,H = DISTANCE - R_COV,O
+!
+      NTYPE=144
       TINI=.TRUE.
       RETURN
       END SUBROUTINE UFFTABLE_INI
 END MODULE UFFTABLE_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE UFFTABLE$EXIST(TYPE_,EXIST,SUGGESTION)
-!     ******************************************************************
-!     **  CHECK IF FORCE FIELD TYPE EXIST.                           **
-!     **  USED IN PAW_PREOPT TOOL                                    **
-!     **                                                             **
-!     **  REMARK                                                     **
-!     **  IF THE STRING TYPE IS CONTAINED IN AN EXISTING ATOM TYPE   **
-!     **  BUT NOT IDENTICAL TO AN EXISTING ATOM TYPE                 **
-!     **  ONE OF THE EXISTING ATOM TYPES IS RETURNED AS SUGGESTION   **
-!     **                                                             **
-!     ************************WRITTEN BY JOHANNES KAESTNER 2002********
+!     **************************************************************************
+!     **  CHECK IF FORCE FIELD TYPE EXIST.                                    **
+!     **  USED IN PAW_PREOPT TOOL                                             **
+!     **                                                                      **
+!     **  REMARK                                                              **
+!     **  IF THE STRING TYPE IS CONTAINED IN AN EXISTING ATOM TYPE            **
+!     **  BUT NOT IDENTICAL TO AN EXISTING ATOM TYPE                          **
+!     **  ONE OF THE EXISTING ATOM TYPES IS RETURNED AS SUGGESTION            **
+!     **                                                                      **
+!     ************************WRITTEN BY JOHANNES KAESTNER 2002*****************
       USE UFFTABLE_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -3973,12 +4044,12 @@ END MODULE UFFTABLE_MODULE
       LOGICAL(4)  ,INTENT(OUT):: EXIST
       CHARACTER(*),INTENT(OUT):: SUGGESTION
       INTEGER(4)              :: ITYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL UFFTABLE_INI
 !
-!     ==================================================================
-!     ==  FIND ATOM TYPE                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  FIND ATOM TYPE                                                      ==
+!     ==========================================================================
       ITYPE=1
       SUGGESTION=' '
       EXIST=.FALSE.
@@ -3994,6 +4065,8 @@ END MODULE UFFTABLE_MODULE
     END SUBROUTINE UFFTABLE$EXIST
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE UFFTABLE$GET(TYPE_,ID,VAL_)
+!     **************************************************************************
+!     **************************************************************************
       USE UFFTABLE_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -4050,8 +4123,8 @@ END MODULE UFFTABLE_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      CHARACTER(5),INTENT(IN) :: TYPE1      ! UFF ATOM TYPE FIRST ATOM
-      CHARACTER(5),INTENT(IN) :: TYPE2      ! UFF ATOM TYPE SECOND ATOM
+      CHARACTER(*),INTENT(IN) :: TYPE1      ! UFF ATOM TYPE FIRST ATOM
+      CHARACTER(*),INTENT(IN) :: TYPE2      ! UFF ATOM TYPE SECOND ATOM
       REAL(8)     ,INTENT(IN) :: BO         ! BOND ORDER
       REAL(8)     ,INTENT(OUT):: R          ! EQUILIBRIUM BOND LENGTH
       REAL(8)                 :: RI,RJ      ! COVALENT RADII
@@ -4102,8 +4175,8 @@ END MODULE UFFTABLE_MODULE
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE1 ! FF-ATOM-TYPE
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE2 ! FF-ATOM-TYPE
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE1 ! FF-ATOM-TYPE
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE2 ! FF-ATOM-TYPE
       REAL(8)       ,INTENT(IN)  :: BO    ! BOND ORDER
       CHARACTER(64) ,INTENT(OUT) :: ID    ! IDENTIFIER
       REAL(8)       ,INTENT(OUT) :: R     ! BOND DISTANCE
@@ -4132,10 +4205,10 @@ END MODULE UFFTABLE_MODULE
 !     == WRITE POTENTIAL ID                                          ==
 !     ==================================================================
       IF(LGT(TYPE1,TYPE2)) THEN
-        WRITE(ID,FMT='(A1,2A5," BO=",F5.1," R=",F5.2," K=",F5.0," D=",F5.0)') &
+        WRITE(ID,FMT='(A1,2A8," BO=",F5.1," R=",F5.2," K=",F5.0," D=",F5.0)') &
      &        'B ',TYPE1,TYPE2,BO,R,K,D
       ELSE
-        WRITE(ID,FMT='(A1,2A5," BO=",F5.1," R=",F5.2," K=",F5.0," D=",F5.0)') &
+        WRITE(ID,FMT='(A1,2A8," BO=",F5.1," R=",F5.2," K=",F5.0," D=",F5.0)') &
      &        'B ',TYPE2,TYPE1,BO,R,K,D
       END IF
 !
@@ -4163,14 +4236,14 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       IMPLICIT NONE
       TYPE BONDRULE_TYPE 
-        CHARACTER(5) :: ATOM1
-        CHARACTER(5) :: ATOM2
+        CHARACTER(8) :: ATOM1
+        CHARACTER(8) :: ATOM2
         REAL(8)      :: R       ! BOND LENGTH
         REAL(8)      :: K       ! FORCE CONSTANT
         REAL(8)      :: D       ! BINDING ENERGY, USED WITH MORSE
       END TYPE BONDRULE_TYPE 
-      CHARACTER(5),INTENT(IN) :: ATOM1   ! FIRST ATOM TYPE
-      CHARACTER(5),INTENT(IN) :: ATOM2   ! SECOND ATOM TYPE
+      CHARACTER(*),INTENT(IN) :: ATOM1   ! FIRST ATOM TYPE
+      CHARACTER(*),INTENT(IN) :: ATOM2   ! SECOND ATOM TYPE
       REAL(8)     ,INTENT(IN) :: BO      ! BOND ORDER
       REAL(8)     ,INTENT(OUT):: R       ! BOND DISTANCE
       REAL(8)     ,INTENT(OUT):: D       ! DISSOCIATION ENERGY (MORSE)
@@ -4200,8 +4273,8 @@ END MODULE UFFTABLE_MODULE
 !       ................................................................
         SUBROUTINE COMPARE(ATOM1,ATOM2,RULE,TCHK)
 !       ****************************************************************
-        CHARACTER(5),INTENT(IN)        :: ATOM1
-        CHARACTER(5),INTENT(IN)        :: ATOM2
+        CHARACTER(*),INTENT(IN)        :: ATOM1
+        CHARACTER(*),INTENT(IN)        :: ATOM2
         TYPE(BONDRULE_TYPE),INTENT(IN) :: RULE
         LOGICAL(4)         ,INTENT(OUT):: TCHK
 !       ****************************************************************
@@ -4231,9 +4304,9 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       USE CLASSICAL_MODULE, ONLY: POT_TYPE
       IMPLICIT NONE
-      CHARACTER(5)  ,INTENT(IN)  :: ATOM1 ! FF-ATOM-TYPE TERMINAL ATOM   
-      CHARACTER(5)  ,INTENT(IN)  :: ATOM2 ! FF-ATOM-TYPE CENTRAL ATOM   
-      CHARACTER(5)  ,INTENT(IN)  :: ATOM3 ! FF-ATOM-TYPE TERMINAL ATOM
+      CHARACTER(*)  ,INTENT(IN)  :: ATOM1 ! FF-ATOM-TYPE TERMINAL ATOM   
+      CHARACTER(*)  ,INTENT(IN)  :: ATOM2 ! FF-ATOM-TYPE CENTRAL ATOM   
+      CHARACTER(*)  ,INTENT(IN)  :: ATOM3 ! FF-ATOM-TYPE TERMINAL ATOM
       REAL(8)       ,INTENT(IN)  :: BO1   ! BOND ORDER (ATOM1-ATOM2)
       REAL(8)       ,INTENT(IN)  :: BO2   ! BOND ORDER (ATOM2-ATOM3)
       CHARACTER(64) ,INTENT(OUT) :: ID    ! IDENTIFIER
@@ -4271,11 +4344,11 @@ END MODULE UFFTABLE_MODULE
 !     ==  WRITE STRING IDENTIFYING POTENTIAL                          ==
 !     ==================================================================
       IF(LGT(ATOM1,ATOM3)) THEN
-        WRITE(ID,FMT='(A1,3A5," BO=",F5.1," BO=",F5.1' &
+        WRITE(ID,FMT='(A1,3A8," BO=",F5.1," BO=",F5.1' &
      &              //'," THETA=",F5.0," K=",F5.0)') &
      &                'A ',ATOM1,ATOM2,ATOM3,BO1,BO2,THETA/PI*180,K
       ELSE
-        WRITE(ID,FMT='(A1,3A5," BO=",F5.1," BO=",F5.1' &
+        WRITE(ID,FMT='(A1,3A8," BO=",F5.1," BO=",F5.1' &
      &              //'," THETA=",F5.0," K=",F5.0)') &
      &                'A ',ATOM3,ATOM2,ATOM1,BO2,BO1,THETA/PI*180,K
       END IF
@@ -4289,7 +4362,8 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     ==  TEST FOR ZERO POTENTIALS                                    ==
 !     ==================================================================
-      TCHK=(K.GT.1.D-6)
+      TCHK=(K.GT.1.D-6) !DO NOT EXCLUDE ANGLES HERE, BECAUSE THEY DEFINE 
+                         ! BOND EXCLUSIONS
       RETURN
       END
 !
@@ -4304,15 +4378,15 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       IMPLICIT NONE
       TYPE ANGLERULE_TYPE 
-        CHARACTER(5) :: ATOM1
-        CHARACTER(5) :: ATOM2
-        CHARACTER(5) :: ATOM3
+        CHARACTER(8) :: ATOM1
+        CHARACTER(8) :: ATOM2
+        CHARACTER(8) :: ATOM3
         REAL(8)      :: THETA   ! EQUILIBRIUM ANGLE
         REAL(8)      :: K       ! FORCE CONSTANT
       END TYPE ANGLERULE_TYPE 
-      CHARACTER(5),INTENT(IN) :: ATOM1   ! FIRST ATOM TYPE
-      CHARACTER(5),INTENT(IN) :: ATOM2   ! SECOND (CENTRAL) ATOM TYPE
-      CHARACTER(5),INTENT(IN) :: ATOM3   ! THIRD ATOM TYPE
+      CHARACTER(*),INTENT(IN) :: ATOM1   ! FIRST ATOM TYPE
+      CHARACTER(*),INTENT(IN) :: ATOM2   ! SECOND (CENTRAL) ATOM TYPE
+      CHARACTER(*),INTENT(IN) :: ATOM3   ! THIRD ATOM TYPE
       REAL(8)     ,INTENT(IN) :: BO1     ! BOND ORDER (ATOM1,ATOM2)
       REAL(8)     ,INTENT(IN) :: BO2     ! BOND ORDER (ATOM2-ATOM3)
       REAL(8)     ,INTENT(OUT):: THETA   ! EQUILIBRIUM ANGLE
@@ -4341,9 +4415,8 @@ END MODULE UFFTABLE_MODULE
       RULE(15)=ANGLERULE_TYPE('C_2  ','CIR  ','C_2  ',180.D0,  0.D0)
       RULE(16)=ANGLERULE_TYPE('C_2  ','PIR  ','X    ', 90.D0,100.D0)
       RULE(17)=ANGLERULE_TYPE('C_2  ','PIR  ','C_R  ', 72.D0,  0.D0)
-      TCHK=.TRUE.
       DO I=1,NRULE
-        CALL COMPARE(ATOM1,ATOM2,ATOM3,RULE(I),TCHK)
+        CALL UFFTABLE_ANGLESPECIAL_COMPARE(ATOM1,ATOM2,ATOM3,RULE(I),TCHK)
         IF(TCHK) THEN
           THETA=RULE(I)%THETA/180.D0*PI
           K=RULE(I)%K
@@ -4353,12 +4426,13 @@ END MODULE UFFTABLE_MODULE
       TCHK=.FALSE.
       RETURN
       CONTAINS
+!
 !       .1.........2.........3.........4.........5.........6.........7.........8
-        SUBROUTINE COMPARE(ATOM1,ATOM2,ATOM3,RULE,TCHK)
+        SUBROUTINE UFFTABLE_ANGLESPECIAL_COMPARE(ATOM1,ATOM2,ATOM3,RULE,TCHK)
 !       ****************************************************************
-        CHARACTER(5)        ,INTENT(IN) :: ATOM1
-        CHARACTER(5)        ,INTENT(IN) :: ATOM2
-        CHARACTER(5)        ,INTENT(IN) :: ATOM3
+        CHARACTER(*)        ,INTENT(IN) :: ATOM1
+        CHARACTER(*)        ,INTENT(IN) :: ATOM2
+        CHARACTER(*)        ,INTENT(IN) :: ATOM3
         TYPE(ANGLERULE_TYPE),INTENT(IN) :: RULE
         LOGICAL(4)          ,INTENT(OUT):: TCHK
 !       ****************************************************************
@@ -4378,8 +4452,8 @@ END MODULE UFFTABLE_MODULE
         END IF
         TCHK=.FALSE.
         RETURN
-        END SUBROUTINE COMPARE
-      END
+        END SUBROUTINE UFFTABLE_ANGLESPECIAL_COMPARE
+      END SUBROUTINE UFFTABLE_ANGLESPECIAL
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE UFFTABLE$TORSIONPARMS(TYPE1,TYPE2,TYPE3,TYPE4 &
@@ -4392,10 +4466,10 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       USE CLASSICAL_MODULE,ONLY: POT_TYPE
       IMPLICIT NONE
-      CHARACTER(5)  ,INTENT(IN) :: TYPE1
-      CHARACTER(5)  ,INTENT(IN) :: TYPE2
-      CHARACTER(5)  ,INTENT(IN) :: TYPE3
-      CHARACTER(5)  ,INTENT(IN) :: TYPE4
+      CHARACTER(*)  ,INTENT(IN) :: TYPE1
+      CHARACTER(*)  ,INTENT(IN) :: TYPE2
+      CHARACTER(*)  ,INTENT(IN) :: TYPE3
+      CHARACTER(*)  ,INTENT(IN) :: TYPE4
       REAL(8)       ,INTENT(IN) :: BO12
       REAL(8)       ,INTENT(IN) :: BO23
       REAL(8)       ,INTENT(IN) :: BO34
@@ -4619,10 +4693,10 @@ END MODULE UFFTABLE_MODULE
 !     ==  READ STRING IDENTIFYING POTENTIAL                           ==
 !     ==================================================================
       IF(LGT(TYPE2,TYPE3)) THEN
-        WRITE(ID,FMT='(A1,2A5," BO=",F5.1," PHI=",F4.0," N=",I2," V=",F3.0)') &
+        WRITE(ID,FMT='(A1,2A8," BO=",F5.1," PHI=",F4.0," N=",I2," V=",F3.0)') &
      &                'T ',TYPE2,TYPE3,BO23,PHI0/PI*180.D0,NJK,VBARRIER
       ELSE
-        WRITE(ID,FMT='(A1,2A5," BO=",F5.1," PHI",F4.0," N=",I2," V=",F3.0)') &
+        WRITE(ID,FMT='(A1,2A8," BO=",F5.1," PHI",F4.0," N=",I2," V=",F3.0)') &
      &                'T ',TYPE3,TYPE2,BO23,PHI0/PI*180.D0,NJK,VBARRIER
       END IF
 !
@@ -4658,10 +4732,10 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       USE CLASSICAL_MODULE,ONLY : POT_TYPE
       IMPLICIT NONE
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE1
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE2
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE3
-      CHARACTER(5)  ,INTENT(IN)  :: TYPE4
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE1
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE2
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE3
+      CHARACTER(*)  ,INTENT(IN)  :: TYPE4
       CHARACTER(64) ,INTENT(OUT) :: ID
       REAL(8)       ,INTENT(OUT) :: GAMMA0
       REAL(8)       ,INTENT(OUT) :: K
@@ -4731,7 +4805,7 @@ END MODULE UFFTABLE_MODULE
 !     ==================================================================
 !     ==  READ STRING IDENTIFYING POTENTIAL                           ==
 !     ==================================================================
-      WRITE(ID,FMT='(A1,2A5," GAMMA0=",F5.0," K=",F5.0)') &
+      WRITE(ID,FMT='(A1,2A8," GAMMA0=",F5.0," K=",F5.0)') &
      &              'I ',TYPE1,TYPE2,GAMMA0/PI*180,K
 !
 !     ==================================================================
@@ -4757,8 +4831,8 @@ END MODULE UFFTABLE_MODULE
 !     ******************************************************************
       USE CLASSICAL_MODULE,ONLY : POT_TYPE
       IMPLICIT NONE
-      CHARACTER(5)  ,INTENT(IN)  :: ATOM1
-      CHARACTER(5)  ,INTENT(IN)  :: ATOM2
+      CHARACTER(*)  ,INTENT(IN)  :: ATOM1
+      CHARACTER(*)  ,INTENT(IN)  :: ATOM2
       CHARACTER(64) ,INTENT(OUT) :: ID
       REAL(8)       ,INTENT(OUT) :: RIJ
       REAL(8)       ,INTENT(OUT) :: DIJ
@@ -4773,7 +4847,7 @@ END MODULE UFFTABLE_MODULE
 !
       RIJ=SQRT(XI*XJ)
       DIJ=SQRT(DI*DJ)
-      WRITE(ID,FMT='(A1,2A5, " X=",F5.2," D=",F6.4)') &
+      WRITE(ID,FMT='(A1,2A8, " X=",F5.2," D=",F6.4)') &
      &              'N ',ATOM1,ATOM2,RIJ,DIJ
 !
 !     ==================================================================
@@ -4797,18 +4871,116 @@ MODULE TIP4P_MODULE
 !**  ELECTROSTATIC CHARGES ARE ATTACHED TO THE HYDROGEN ATOM AND A DUMMY ATOM **
 !**  THE DUMMY ATOM IS EXPRESSED BY THE POSITIONS OF THE REAL ATOMS           **
 !**                                                                           **
+!**  THE TIP4P OBJECT HAS MULTIPLE INSTANCES WHICH NEED TO BE SELECTED AND    **
+!**  UNSELECTED WITH THE FUNCTION TIP4P$SELECT(ID) OR TIP4P$SELECT('NONE')    **
+!**                                                                           **
 !*******************************************************************************
 LOGICAL(4)        :: TINI=.FALSE.
 REAL(8),PARAMETER :: QO=0.D0
 REAL(8),PARAMETER :: QH=0.52D0
 REAL(8),PARAMETER :: QM=-2.D0*QH
-REAL(8)           :: DOH  ! O-H DISTANCE
-REAL(8)           :: DHH  ! H1-H2 DISTANCE
-REAL(8)           :: C12  ! LENNARD-JONES PARAMETER
-REAL(8)           :: C6   ! LENNARD-JONES PARAMETER
+REAL(8)           :: ROH  ! O-H DISTANCE
+REAL(8)           :: RHH  ! H1-H2 DISTANCE
+REAL(8)           :: RLJ  ! EQUILIBRIUM DISTANCE LENNARD-JONES DISTANCE
+REAL(8)           :: DLJ  ! BINDING ENERGY LENNARD-JONES POTENTIAL
 REAL(8)           :: WO   ! RMIDDLE=WO*RO+WH*RH1+WH*RH2
 REAL(8)           :: WH
+TYPE TIP4P_TYPE
+  CHARACTER(32)      :: ID
+  INTEGER(4)         :: NWATER
+  INTEGER(4),POINTER :: IATS(:,:) => NULL()
+  TYPE(TIP4P_TYPE),POINTER :: NEXT
+END TYPE TIP4P_TYPE
+TYPE(TIP4P_TYPE),TARGET,SAVE :: FIRST
+TYPE(TIP4P_TYPE),POINTER     :: THIS =>NULL()
+LOGICAL(4)                   :: SELECTED=.FALSE.
+REAL(8)                      :: NWATER
+INTEGER(4),ALLOCATABLE       :: IATS(:,:)
 END MODULE TIP4P_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$GETR8(ID,VAL)
+!     **************************************************************************
+!     **  GET REAL(8)-DATA FROM TIP4P OBJECT                                  **
+!     **************************************************************************
+      USE TIP4P_MODULE, ONLY : TINI,RLJ,DLJ,ROH
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      REAL(8)     ,INTENT(OUT):: VAL
+!     **************************************************************************
+      IF(.NOT.TINI)CALL TIP4P_INI()  
+      IF(ID.EQ.'RLJ') THEN
+         VAL=RLJ            !VAN DER WAALS RADIUS
+      ELSE IF(ID.EQ.'DLJ') THEN
+         VAL=DLJ            !VAN DER WAALS BINDING ENERGY
+      ELSE IF(ID.EQ.'ROH') THEN
+         VAL=ROH            ! O-H DISTANCE
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('TIP4P$GETR8')
+      END IF
+      RETURN
+      END      
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$SELECT(ID_)
+!     **************************************************************************
+!     **  SELECT A INSTANCE OF THE CLASSICAL OBJECT                           **
+!     **  OR CREATE A NEW ONE IF NOT PRESENT                                  **
+!     **************************************************************************
+      USE TIP4P_MODULE, ONLY : TINI,SELECTED,FIRST,THIS
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID_
+!     **************************************************************************
+      IF(ID_.EQ.'NONE') THEN
+        IF(SELECTED) THEN
+          SELECTED=.FALSE.
+        ELSE
+          CALL ERROR$MSG('ATTEMPT TO UNSELECT, WHILE NONE IS SELECTED')
+          CALL ERROR$STOP('TIP4P$SELECT')
+        END IF
+      ELSE
+        IF(SELECTED) THEN
+          CALL ERROR$MSG('ATTEMPT TO SELECT, WHILE ONE IS ALREADY SELECTED')
+          CALL ERROR$CHVAL('ID REQUESTED',ID_)
+          CALL ERROR$CHVAL('ID SELECTED ',THIS%ID)
+          CALL ERROR$STOP('TIP4P$SELECT')
+        ELSE
+          SELECTED=.TRUE.
+        END IF
+      END IF
+!
+!     ==========================================================================
+!     ==  SELECT OR ALLOCATE                                                  ==
+!     ==========================================================================
+      IF(.NOT.TINI) THEN
+        TINI=.TRUE.
+        CALL TIP4P_INI()  !CALCULATES COMMON PARAMETER 
+        THIS=>FIRST
+      ELSE
+        THIS=>FIRST
+        DO 
+          IF(THIS%ID.EQ.ID_) RETURN   ! INSTANCE FOUND. DONE...
+          IF(ASSOCIATED(THIS%NEXT)) THEN
+            THIS=>THIS%NEXT
+          ELSE
+            ALLOCATE(THIS%NEXT)
+            THIS=>THIS%NEXT
+            EXIT 
+          END IF
+        ENDDO
+      END IF
+!
+!     ==========================================================================
+!     ==  SET NEW INSTANCE TO ZERO                                            ==
+!     ==========================================================================
+      THIS%ID=ID_
+      THIS%NWATER=-1
+      NULLIFY(THIS%IATS)
+      NULLIFY(THIS%NEXT)
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TIP4P_INI()
@@ -4816,125 +4988,370 @@ END MODULE TIP4P_MODULE
 !     ** DETERMINE PARAMETERS FOR THE TIP4P MODEL OF WATER                    **
 !     ** SOURCE: JOERGENSEN ET AL. J. CHEM. PHYS. 79, 926 (1983)              **
 !     **************************************************************************
-      USE TIP4P_MODULE, ONLY : TINI,DOH,DHH,C6,C12,WO,WH
+      USE TIP4P_MODULE, ONLY : ROH,RHH,RLJ,DLJ,WO,WH
       IMPLICIT NONE 
       REAL(8)        :: ANGSTROM
       REAL(8)        :: KCALBYMOL
       REAL(8)        :: PHIHOH
-      REAL(8)        :: DOM
+      REAL(8)        :: ROM
       REAL(8)        :: PI
       REAL(8)        :: SVAR
+      REAL(8)        :: C12,C6
 !     **************************************************************************
-      IF(TINI) RETURN
-      TINI=.TRUE.
       PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
-      CALL CONSTANTS$GET('KCALBYMOL',KCALBYMOL)
+      CALL CONSTANTS$GET('KCAL/MOL',KCALBYMOL)
 !
 !     ==========================================================================
 !     == DISTANCES BETWEEN THE THREE REAL ATOMS                               ==
 !     ==========================================================================
-      DOH=0.9572D0*ANGSTROM
-      DOM=0.15D0*ANGSTROM
+      ROH=0.9572D0*ANGSTROM
+      ROM=0.15D0*ANGSTROM
       PHIHOH=104.52D0/180.D0*PI
-      DHH=2.D0*DOH*SIN(PHIHOH/2.D0)
+      RHH=2.D0*ROH*SIN(PHIHOH/2.D0)
 !
 !     ==========================================================================
 !     == WEIGHTS THAT EXPRESS THE DUMMY ATOM M IN TERMS OF REAL ATOMS         ==
 !     ==========================================================================
-      SVAR=DOH*COS(PHIHOH/2.D0) 
-      WO=DOM/SVAR
-      WH=0.5D0*(1.D0-WO)
+      WH=0.5D0*ROM/(ROH*COS(PHIHOH/2.D0))
+      WO=1.D0-2.D0*WH
 !
 !     ==========================================================================
 !     == LENNARD-JONES PARAMETERS                                             ==
 !     ==========================================================================
       C12=6.D+5*KCALBYMOL*ANGSTROM**12
       C6=610.D0*KCALBYMOL*ANGSTROM**6
+      RLJ=(2.D0*C12/C6)**(1.D0/6.D0) !EQUILIBRIUM DISTANCE
+      SVAR=1.D0/RLJ**6
+      DLJ=-C6**2/(4.D0*C12)        !EQUILIBRIUM ENERGY D>0
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE TIP4P_CONSTRAINT(MO,MH,MM,RO,RH1,RH2,RM,ROP,RH1P,RH2P,RMP)
+      SUBROUTINE TIP4P$EXCLUSIONS(NAT,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION)
+!     **************************************************************************
+!     ** ADD INTRAMOLECULAR PAIRS TO EXCLUSION FILE                           **
+!     **                                                                      **
+!     ** IF THE ARRAY-SIZE  IS TOO SMALL THE EXLCUSIONS ARE ONLY COUNTED      **
+!     ** TO PROVIDE GUIDANCE FOR ARRAY ALLOCATION                             **
+!     **************************************************************************
+      USE TIP4P_MODULE    , ONLY : SELECTED,THIS
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NAT
+      INTEGER(4),INTENT(IN)    :: MAXDIV
+      INTEGER(4),INTENT(IN)    :: NEXCLUSIONX
+      INTEGER(4),INTENT(INOUT) :: NEXCLUSION
+      INTEGER(4),INTENT(INOUT) :: IEXCLUSION(2,NEXCLUSIONX)
+      INTEGER(4)               :: IT(3) ! LATTICE TRANSLATION
+      INTEGER(4)               :: IA(4) ! ATOM INDICES OF THE MOLECULE
+      INTEGER(4)               :: IEXCL
+      INTEGER(4)               :: IW,I,J
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO INSTANCE SELECTED')
+        CALL ERROR$STOP('TIP4P$DUMMYPOSITIONS')
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      IF(THIS%NWATER.LE.0) THEN
+        CALL TIP4P$COLLECT()
+      END IF
+!
+!     ==========================================================================
+!     == COUNT AND ADD EXCLUSIONS                                             ==
+!     ==========================================================================
+      IT=0.D0
+      DO IW=1,THIS%NWATER
+        IA(1)=THIS%IATS(1,IW)
+        IA(2)=THIS%IATS(2,IW)
+        IA(3)=THIS%IATS(3,IW)
+        IA(4)=THIS%IATS(4,IW)
+        DO I=1,3
+          DO J=I+1,4
+            CALL CLASSICAL_ENCODEEXCLUSION(NAT,MAXDIV,IA(I),IA(J),IT,IEXCL)
+            NEXCLUSION=NEXCLUSION+1
+            IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
+              IEXCLUSION(1,NEXCLUSION)=IEXCL
+              IEXCLUSION(2,NEXCLUSION)=0
+            END IF
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$DUMMY_POSITIONS(NAT,R)
+!     **************************************************************************
+      USE TIP4P_MODULE    , ONLY : SELECTED,THIS,WO,WH
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NAT
+      REAL(8)   ,INTENT(INOUT) :: R(3,NAT)
+      INTEGER(4)               :: IO,IM,IH1,IH2
+      INTEGER(4)               :: IW
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO INSTANCE SELECTED')
+        CALL ERROR$STOP('TIP4P$DUMMYPOSITIONS')
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      IF(THIS%NWATER.LE.0) THEN
+        CALL TIP4P$COLLECT()
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      DO IW=1,THIS%NWATER
+        IO =THIS%IATS(1,IW)
+        IM =THIS%IATS(2,IW)
+        IH1=THIS%IATS(3,IW)
+        IH2=THIS%IATS(4,IW)
+        R(:,IM)=WO*R(:,IO)+WH*(R(:,IH1)+R(:,IH2))
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$DUMMY_FORCES(NAT,F)
+!     **************************************************************************
+      USE TIP4P_MODULE    , ONLY : SELECTED,THIS,WO,WH
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NAT
+      REAL(8)   ,INTENT(INOUT) :: F(3,NAT)
+      INTEGER(4)               :: IO,IM,IH1,IH2
+      INTEGER(4)               :: IW
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO INSTANCE SELECTED')
+        CALL ERROR$STOP('TIP4P$DUMMY_FORCES')
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      IF(THIS%NWATER.LE.0) THEN
+        CALL TIP4P$COLLECT()
+      END IF
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      DO IW=1,THIS%NWATER
+        IO =THIS%IATS(1,IW)
+        IM =THIS%IATS(2,IW)
+        IH1=THIS%IATS(3,IW)
+        IH2=THIS%IATS(4,IW)
+        F(:,IO) =F(:,IO) +WO*F(:,IM)
+        F(:,IH1)=F(:,IH1)+WH*F(:,IM)
+        F(:,IH2)=F(:,IH2)+WH*F(:,IM)
+        F(:,IM)=0.D0
+      ENDDO
+      RETURN
+      END
+!
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$COLLECT()
+!     **************************************************************************
+      USE CLASSICAL_MODULE, ONLY : MD
+      USE TIP4P_MODULE    , ONLY : QM,QH,QO,SELECTED,THIS
+      IMPLICIT NONE
+      INTEGER(4)              :: IAT,IW,IBOND,IAT1,IAT2
+      INTEGER(4)              :: NWATER
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO INSTANCE SELECTED')
+        CALL ERROR$STOP('TIP4P$COLLECT')
+      END IF
+!
+!     ==========================================================================
+!     == COUNT NUMBER OF TIP4P WATER MOLECULES                                ==
+!     ==========================================================================
+      NWATER=0
+      DO IAT=1,MD%NAT
+        IF(MD%TYPE(IAT).EQ.'O_TIP4P') NWATER=NWATER+1
+      ENDDO
+      THIS%NWATER=NWATER
+!
+!     ==========================================================================
+!     == FILL ATOM POINTERS IATS TO TIP4P WATER MOLECULES                     ==
+!     == IATS(:,IW)=(IAT_O,IAT_M,IAT_H2,IAT_H2)                               ==
+!     ==========================================================================
+      ALLOCATE(THIS%IATS(4,NWATER))
+      THIS%IATS(:,:)=0
+      IW=0
+      DO IAT=1,MD%NAT
+        IF(MD%TYPE(IAT).NE.'O_TIP4P') CYCLE
+        IW=IW+1
+        THIS%IATS(1,IW)=IAT
+        DO IBOND=1,MD%NBOND
+          IAT1=MD%BOND(IBOND)%IAT1
+          IAT2=MD%BOND(IBOND)%IAT2
+          IF(IAT1.NE.IAT.AND.IAT2.NE.IAT) CYCLE
+          IF(MD%TYPE(IAT1)(3:).NE.'TIP4P') CYCLE
+          IF(MD%TYPE(IAT2)(3:).NE.'TIP4P') CYCLE
+          IF(IAT2.EQ.IAT)IAT2=IAT1
+          IF(MD%TYPE(IAT2).EQ.'M_TIP4P') THEN
+            THIS%IATS(2,IW)=IAT2
+          ELSE IF(MD%TYPE(IAT2).EQ.'H_TIP4P') THEN
+            IF(THIS%IATS(3,IW).EQ.0) THEN
+              THIS%IATS(3,IW)=IAT2
+            ELSE
+              THIS%IATS(4,IW)=IAT2
+              EXIT
+            END IF
+          END IF
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == FILL ATOM POINTERS IATS TO TIP4P WATER MOLECULES                     ==
+!     ==========================================================================
+      DO IW=1,NWATER
+        MD%QEL(THIS%IATS(1,IW))=-QO
+        MD%QEL(THIS%IATS(2,IW))=-QM
+        MD%QEL(THIS%IATS(3,IW))=-QH
+        MD%QEL(THIS%IATS(4,IW))=-QH
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P$CONSTRAINTS(NAT,MASS,R0,RP)
+!     **************************************************************************
+!     **************************************************************************
+      USE TIP4P_MODULE, ONLY : SELECTED,THIS,WO,WH
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NAT
+      REAL(8)   ,INTENT(IN)    :: MASS(NAT)
+      REAL(8)   ,INTENT(IN)    :: R0(3,NAT)
+      REAL(8)   ,INTENT(INOUT) :: RP(3,NAT)
+      REAL(8)   ,PARAMETER     :: TOL=1.D-8
+      REAL(8)                  :: MO,MH1,MH2   !MASSES
+      REAL(8)                  :: RO(3),RH1(3),RH2(3) 
+      REAL(8)                  :: ROP(3),RH1P(3),RH2P(3) 
+      INTEGER(4)               :: IW
+      INTEGER(4)               :: IO,IM,IH1,IH2
+!     **************************************************************************
+      IF(.NOT.SELECTED) THEN
+        CALL ERROR$MSG('NO INSTANCE SELECTED')
+        CALL ERROR$STOP('TIP4P$CONSTRAINTS')
+      END IF
+      IF(THIS%NWATER.EQ.0) RETURN
+!
+!     ==========================================================================
+!     == CONSTRUCT MAPPING ARRAY TO SPEED UP OPERATIONS                       ==
+!     ==========================================================================
+      IF(THIS%NWATER.LE.0) THEN
+        CALL TIP4P_INI
+        CALL TIP4P$COLLECT()
+      END IF
+!
+!     ==========================================================================
+!     == ENFORCE STRUCTURE CONSTRAINTS FOR ALL WATER MOLECULES                ==
+!     ==========================================================================
+      DO IW=1,THIS%NWATER
+        IO =THIS%IATS(1,IW)
+        IM =THIS%IATS(2,IW)
+        IH1=THIS%IATS(3,IW)
+        IH2=THIS%IATS(4,IW)
+        MO  =MASS(IO)
+        RO  =R0(:,IO)
+        ROP =RP(:,IO)
+        MH1 =MASS(IH1)
+        RH1 =R0(:,IH1)
+        RH1P=RP(:,IH1)
+        MH2 =MASS(IH2)
+        RH2 =R0(:,IH2)
+        RH2P=RP(:,IH2)
+        CALL TIP4P_CONSTRAINT(MO,MH1,MH2,RO,RH1,RH2,ROP,RH1P,RH2P)
+        RP(:,IO)=ROP
+        RP(:,IM)=WO*ROP+WH*(RH1P+RH2P)
+        RP(:,IH1)=RH1P
+        RP(:,IH2)=RH2P
+      ENDDO
+
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TIP4P_CONSTRAINT(MO,MH1,MH2,RO,RH1,RH2,ROP,RH1P,RH2P)
 !     **************************************************************************
 !     ** GIVEN THE COORDINATES OF THE ACTUAL POSITIONS AND THOSE PROPAGATED   **
 !     ** WITHOUT CONSTRAINTS, THE NEXT POSITIONS PROPAGATED WITH CONSTRAINTS  **
 !     ** ARE RETURNED                                                         **
 !     **************************************************************************
-      USE TIP4P_MODULE, ONLY : DOH,DHH,WO,WH
+      USE TIP4P_MODULE, ONLY : ROH,RHH
       IMPLICIT NONE 
-      INTEGER(4),PARAMETER  :: NITER=1000
+      INTEGER(4),PARAMETER  :: NITER=200
       REAL(8)   ,PARAMETER  :: TOL=1.D-8
       REAL(8),INTENT(IN)    :: MO      ! OXYGEN MASS
-      REAL(8),INTENT(IN)    :: MH      ! HYDROGEN MASS
-      REAL(8),INTENT(IN)    :: MM      ! MIDDLE-ATOM MASS
+      REAL(8),INTENT(IN)    :: MH1     ! HYDROGEN MASS
+      REAL(8),INTENT(IN)    :: MH2     ! HYDROGEN MASS
       REAL(8),INTENT(IN)    :: RO(3)   ! OXYGEN POSITION
       REAL(8),INTENT(IN)    :: RH1(3)  ! 1ST HYDROGEN POSITION
       REAL(8),INTENT(IN)    :: RH2(3)  ! 2ND HYDROGEN POSITION
-      REAL(8),INTENT(IN)    :: RM(3)   ! MIDDLE-ATOM POSITION
       REAL(8),INTENT(INOUT) :: ROP(3)  ! PROPAGATED OXYGEN POSITION
       REAL(8),INTENT(INOUT) :: RH1P(3) ! PROPAGATED 1ST HYDROGEN POSITION
       REAL(8),INTENT(INOUT) :: RH2P(3) ! PROPAGATED 2ND HYDROGEN POSITION
-      REAL(8),INTENT(INOUT) :: RMP(3)  ! PROPAGATED MIDDLE-ATOM POSITION
-      REAL(8)               :: G(6)    ! CONSTRAINTS
-      REAL(8)               :: LAMBDA(6)  ! LAGRANGE MULTIPLIERS
-      REAL(8)               :: DGDR(12,6) ! CONSTRAINT DERIVATIVES
-      REAL(8)               :: RP(12)     ! CONTAINER FOR NEXT POSITIONS
-      REAL(8)               :: A(6,6)
-      REAL(8)               :: AINV(6,6)
-      INTEGER(4)            :: I,ITER
+      REAL(8)               :: MT      ! MOLECULAR MASS
+      REAL(8)               :: G(3)    ! CONSTRAINTS
+      REAL(8)               :: LAMBDA(3)  ! LAGRANGE MULTIPLIERS
+      REAL(8)               :: DGDR(9,3) ! CONSTRAINT DERIVATIVES
+      REAL(8)               :: RP(9)     ! CONTAINER FOR NEXT POSITIONS
+      REAL(8)               :: A(3,3)
+      REAL(8)               :: AINV(3,3)
+      INTEGER(4)            :: ITER,I,J
       LOGICAL(4)            :: CONVG
 !     **************************************************************************
-      CALL TIP4P_INI()
 !     ==========================================================================
 !     == CALCULATE THE DERIVATIVE OF THE CONSTRAINT AT THE ORIGINAL POSITIONS ==
-!     == G(1)=(RO-RH1)^2-DOH^2
-!     == G(2)=(RO-RH2)^2-DOH^2
-!     == G(3)=(RH1-RH2)^2-DHH^2
-!     == G(4:6)=WO*RO+WH*(RH1+RH2)-RM
-!     == LAMBDA=(DOH1,DOH2,DHH,XM,YM,ZM)
-!     == R=(RO,RH1,RH2,RM)
+!     == G(1)=(RO-RH1)^2-ROH^2
+!     == G(2)=(RO-RH2)^2-ROH^2
+!     == G(3)=(RH1-RH2)^2-RHH^2
+!     == LAMBDA=(ROH1,ROH2,RHH)
+!     == R=(RO,RH1,RH2)
 !     == DGDR(I,J)=DG_J/DR_I
 !     ==========================================================================
+      DGDR=0.D0
       DGDR(1:3,1)=2.D0*(RO-RH1)
       DGDR(4:6,1)=2.D0*(RH1-RO)
       DGDR(1:3,2)=2.D0*(RO-RH2)
       DGDR(7:9,2)=2.D0*(RH2-RO)
       DGDR(4:6,3)=2.D0*(RH1-RH2)
       DGDR(7:9,3)=2.D0*(RH2-RH1)
-      DO I=1,3
-        DGDR(  I,3+I)=WO
-        DGDR(3+I,3+I)=WH
-        DGDR(6+I,3+I)=WH
-        DGDR(9+I,3+I)=-1.D0
-      ENDDO
 !
 !     ==========================================================================
 !     == LINEAR MATRIX A_IJ=SUM_K: DG_I/DR_K 1/M_K DGJ/DR_K
 !     ==========================================================================
-      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO)
-      DGDR(4:9,:)  =DGDR(4:9,:)/SQRT(MH)
-      DGDR(10:12,:)=DGDR(10:12,:)/SQRT(MM)
+      MT=MO+MH1+MH2  ! TOTAL MASS USED TO VOID LARGE NUMBERS
+      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO/MT)
+      DGDR(4:6,:)  =DGDR(4:6,:)/SQRT(MH1/MT)
+      DGDR(7:9,:)  =DGDR(7:9,:)/SQRT(MH2/MT)
       A=MATMUL(TRANSPOSE(DGDR),DGDR)
-      CALL LIB$INVERTR8(6,A,AINV)
+      CALL LIB$INVERTR8(3,A,AINV)
 !
 !     == DGDR=1/M*DGDR =========================================================
-      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO)
-      DGDR(4:9,:)  =DGDR(4:9,:)/SQRT(MH)
-      DGDR(10:12,:)=DGDR(10:12,:)/SQRT(MM)
+      DGDR(1:3,:)  =DGDR(1:3,:)/SQRT(MO/MT)
+      DGDR(4:6,:)  =DGDR(4:6,:)/SQRT(MH1/MT)
+      DGDR(7:9,:)  =DGDR(7:9,:)/SQRT(MH2/MT)
 !
 !     ==========================================================================
 !     == ITERATE TO FULFILL CONSTRAINTS                                       ==
 !     ==========================================================================
-      RP(1:3)=RO
-      RP(4:6)=RH1
-      RP(7:9)=RH2
-      RP(10:12)=RM
+      RP(1:3)=ROP
+      RP(4:6)=RH1P
+      RP(7:9)=RH2P
       DO ITER=1,NITER
-        G(1)=SUM((ROP-RH1P)**2)-DOH**2
-        G(2)=SUM((ROP-RH2P)**2)-DOH**2
-        G(3)=SUM((RH1P-RH2P)**2)-DHH**2
-        G(4:6)=WO*ROP+WH*RH1P+WH*RH2P-RMP
+        G(1)=SUM((ROP-RH1P)**2)-ROH**2
+        G(2)=SUM((ROP-RH2P)**2)-ROH**2
+        G(3)=SUM((RH1P-RH2P)**2)-RHH**2
         CONVG=MAXVAL(ABS(G)).LT.TOL
         IF(CONVG) EXIT
         LAMBDA=MATMUL(AINV,G)
@@ -4942,7 +5359,6 @@ END MODULE TIP4P_MODULE
         ROP =RP(1:3)
         RH1P=RP(4:6)
         RH2P=RP(7:9)
-        RMP =RP(10:12)
       ENDDO
       IF(.NOT.CONVG) THEN
         CALL ERROR$MSG('LOOP NOT CONVERGED')
@@ -5181,6 +5597,84 @@ END MODULE TIP4P_MODULE
       END SUBROUTINE CLASSICAL_NEIGHBORS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CLASSICAL_ENCODEEXCLUSION(NAT,MAXDIV,IAT1,IAT2,IT,IEXCL)
+!     **************************************************************************
+!     **  EXCLUSIONS DEFINE A PAIR OF ATOMS THAT FOR WHICH NO NON-BOND FORCES **
+!     **  SHALL BE CALCULATED. AN EXCLUSION IS SPECIFIED BY TWO ATOM INDICES  **
+!     **  AND A LATTICE TRANSLATION OF THE SECOND ATOM. THESE FIVE INTEGERS   **
+!     **  ARE MAPPEN ONTO A SINGLE NUMBER.                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: MAXDIV
+      INTEGER(4),INTENT(IN) :: IAT1
+      INTEGER(4),INTENT(IN) :: IAT2
+      INTEGER(4),INTENT(IN) :: IT(3)
+      INTEGER(4),INTENT(OUT):: IEXCL
+!     **************************************************************************
+      IEXCL=1+(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) &
+     &                      +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+     &                      +(1+2*MAXDIV)*(IAT2-1+NAT*(IAT1-1))))
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CLASSICAL_DECODEEXCLUSION(NAT,MAXDIV,IAT1,IAT2,IT,IEXCL)
+!     **************************************************************************
+!     **  EXCLUSIONS DEFINE A PAIR OF ATOMS THAT FOR WHICH NO NON-BOND FORCES **
+!     **  SHALL BE CALCULATED. AN EXCLUSION IS SPECIFIED BY TWO ATOM INDICES  **
+!     **  AND A LATTICE TRANSLATION OF THE SECOND ATOM. THESE FIVE INTEGERS   **
+!     **  ARE MAPPEN ONTO A SINGLE NUMBER.                                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NAT
+      INTEGER(4),INTENT(IN)  :: MAXDIV
+      INTEGER(4),INTENT(OUT) :: IAT1
+      INTEGER(4),INTENT(OUT) :: IAT2
+      INTEGER(4),INTENT(OUT) :: IT(3)
+      INTEGER(4),INTENT(IN)  :: IEXCL
+      INTEGER(4)             :: ID
+!     **************************************************************************
+!     == IEXCL=1+(IT(1)+MAXDIV)+(1+2*MAXDIV)*((IT(2)+MAXDIV) ===================
+!     ==                       +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
+!     ==                      +(1+2*MAXDIV)*(IAT2-1+NAT*(IAT1-1))))
+      ID=IEXCL-1
+      IT(1)=MOD(ID,(1+2*MAXDIV))-MAXDIV
+      ID=INT(ID/(1+2*MAXDIV))
+      IT(2)=MOD(ID,(1+2*MAXDIV))-MAXDIV
+      ID=INT(ID/(1+2*MAXDIV))
+      IT(3)=MOD(ID,(1+2*MAXDIV))-MAXDIV
+      ID=INT(ID/(1+2*MAXDIV))
+      IAT2=MOD(ID,NAT)+1
+      ID=INT(ID/NAT)
+      IAT1=ID+1
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CLASSICAL_PRINTEXCLUSION(NAT,MAXDIV,NEXCLX,NEXCL,IEXCL)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NAT
+      INTEGER(4),INTENT(IN)  :: MAXDIV
+      INTEGER(4),INTENT(IN)  :: NEXCLX
+      INTEGER(4),INTENT(IN)  :: NEXCL
+      INTEGER(4),INTENT(IN)  :: IEXCL(2,NEXCLX)
+      INTEGER(4)             :: I
+      INTEGER(4)             :: IAT1,IAT2,IT(3),IEXCL1
+!     **************************************************************************
+      DO I=1,NEXCL
+        IF(IEXCL(1,I).EQ.-1) EXIT
+        CALL CLASSICAL_DECODEEXCLUSION(NAT,MAXDIV,IAT1,IAT2,IT,IEXCL(1,I))
+        CALL CLASSICAL_ENCODEEXCLUSION(NAT,MAXDIV,IAT1,IAT2,IT,IEXCL1)
+        WRITE(*,FMT='("IAT1=",I5," IAT2=",I5," IT=",3I4," TEST=",2I10)') &
+     &                     IAT1,IAT2,IT,IEXCL(1,I),IEXCL1
+      ENDDO        
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_EXCLUSIONS(NAT,NBOND,BOND,NANGLE,ANGLE,NTORSION &
      &               ,TORSION,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION,I2FIRST)
 !     **************************************************************************
@@ -5225,8 +5719,13 @@ END MODULE TIP4P_MODULE
       END IF
       NEXCLUSION=0
       IEXCLUSION(1,:)=-1
-      IEXCLUSION(2,:)=1   ! 1 STANDS FOR "THIS IS A 1-4 EXCLUSION"
-                          ! 0 STANDS FOR "THIS IS A 1-2 OR 1-3 EXCLUSION"
+      IEXCLUSION(2,:)=1   ! 1 STANDS FOR 1-4 EXCLUSION
+                          ! 0 STANDS FOR A 1-2 OR 1-3 EXCLUSION
+!
+!     ==========================================================================
+!     ==  TIP4P-INTRAMOLECULAR EXCLUSIONS                                     ==
+!     ==========================================================================
+      CALL TIP4P$EXCLUSIONS(NAT,MAXDIV,NEXCLUSIONX,NEXCLUSION,IEXCLUSION)
 !
 !     ==========================================================================
 !     ==  FIND BOND EXCLUSIONS                                               ==
@@ -5275,8 +5774,7 @@ END MODULE TIP4P_MODULE
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
           IEXCLUSION(1,NEXCLUSION)=1+ISVAR
-          IEXCLUSION(2,NEXCLUSION)=0   ! 0 STANDS FOR "THIS IS A 1-2  &
-                                       !                      OR 1-3 EXCLUSION"
+          IEXCLUSION(2,NEXCLUSION)=0   ! 0 STANDS FOR A 1-2 OR 1-3 EXCLUSION
         END IF
       ENDDO
 !
@@ -5329,8 +5827,7 @@ END MODULE TIP4P_MODULE
      &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
      &                        +(1+2*MAXDIV)*ISVAR))
           IEXCLUSION(1,NEXCLUSION)=1+ISVAR
-          IEXCLUSION(2,NEXCLUSION)=0   ! 0 STANDS FOR "THIS IS A 1-2 
-                                       ! OR 1-3 EXCLUSION"
+          IEXCLUSION(2,NEXCLUSION)=0   ! 0 STANDS FOR A 1-2 OR 1-3 EXCLUSION
         END IF
       ENDDO
 !
@@ -5590,13 +6087,13 @@ PRINT*,"FLAG: NTORSION=",NTORSION
       REAL(8)     ,ALLOCATABLE :: R0S(:,:)       !(3,NATS)
       REAL(8)     ,ALLOCATABLE :: QELS(:)        !(NATS)
       REAL(8)     ,ALLOCATABLE :: RMASSS(:)      !(NATS)
-      CHARACTER(5),ALLOCATABLE :: TYPES(:)       !(NATS)
+      CHARACTER(8),ALLOCATABLE :: TYPES(:)       !(NATS)
       INTEGER(4)  ,ALLOCATABLE :: IBONDSNEW(:,:)    !(6,NBONDS)
       REAL(8)     ,ALLOCATABLE :: BOS(:)         !(NBONDS)
       REAL(8)     ,ALLOCATABLE :: R0(:,:)        !(3,NAT)
       REAL(8)     ,ALLOCATABLE :: QEL(:)         !(NAT)
       REAL(8)     ,ALLOCATABLE :: RMASS(:)       !(NAT)
-      CHARACTER(5),ALLOCATABLE :: TYPE(:)        !(NAT)
+      CHARACTER(8),ALLOCATABLE :: TYPE(:)        !(NAT)
       INTEGER(4)  ,ALLOCATABLE :: IBONDNEW(:,:)!(6,NBOND)(IAT1,IAT2,IT2(3),IPOT)
       REAL(8)     ,ALLOCATABLE :: BO(:)          !(NBOND)
       REAL(8)     ,ALLOCATABLE :: REXCL(:,:)     !(3,NATEXCL)
