@@ -4367,8 +4367,8 @@ INTEGER(4) :: I,J
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$FFTADJUSTGRD(NR)
 !     **************************************************************************
-!     **  THIS ROUTINE RETURNS THE ALLOWED FOURIER TRANSFORM LENGTH           ** 
-!     **  THAT IS EQUAL OR LARGER THAN THE LENGTH SUPPLIED, BUT               ** 
+!     **  THIS ROUTINE RETURNS THE ALLOWED FOURIER TRANSFORM LENGTH           **
+!     **  THAT IS EQUAL OR LARGER THAN THE LENGTH SUPPLIED, BUT               **
 !     **  BUT OTHERWISE AS SMALL AS POSSIBLE.                                 **
 !     **************************************************************************
       IMPLICIT NONE
@@ -4383,8 +4383,7 @@ INTEGER(4) :: I,J
 !     **************************************************************************
       IF (TINIT) THEN
         TINIT=.FALSE.
-#IF DEFINED(CPPVAR_FFT_ESSL)
-!       == ALLOWED LENGTH FOR THE ESSL FFT =====================================
+!       == ALLOWED LENGTHS =====================================================
         COUNT=0
         OUTER: DO H=1,25
           DO I=0,2
@@ -4401,39 +4400,7 @@ INTEGER(4) :: I,J
             ENDDO
           ENDDO
         ENDDO OUTER
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-        COUNT=0
-        OUTER: DO H=1,25
-          DO I=0,2
-            DO J=0,1
-              DO K=0,1
-                DO M=0,1
-                  IF(COUNT.GE.MAXI) EXIT OUTER
-                  SVAR = 2.D0**H * 3.D0**I * 5.D0**J * 7.D0**K *11.D0**M
-                  IF(SVAR.GT.37748736.D0) CYCLE
-                  COUNT=COUNT+1
-                  IFR(COUNT)=NINT(SVAR)
-                ENDDO
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO OUTER
-#ELSE
-!       == THE GENERAL LENGTH HAS BEEN REMOVED BECAUSE PASSF AND PASSB =========
-!       == DO NOT WORK =========================================================
-        COUNT=0
-        OUTER: DO H=1,25
-          DO I=0,4
-            DO J=0,2
-              IF(COUNT.GE.MAXI) EXIT OUTER
-              SVAR = 2.D0**H * 3.D0**I * 5.D0**J 
-              IF(SVAR.GT.37748736.D0) CYCLE
-              COUNT=COUNT+1
-              IFR(COUNT)=NINT(SVAR)
-            ENDDO
-          ENDDO
-        ENDDO OUTER
-#ENDIF
+!
         DO I=1,COUNT
           DO J=I+1,COUNT
             IF(IFR(I).GT.IFR(J)) THEN
