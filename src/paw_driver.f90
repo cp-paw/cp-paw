@@ -1153,7 +1153,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL CONSTRAINTS$REPORT(NFILO,'FULL')
       END IF
                               CALL TRACE$PASS('BEFORE FLUSH')
-      CALL LIB$FLUSHFILE(NFILO)
 !   
 !     ==========================================================================
 !     ==   WRITE CONSTRAINT INFORMATION                                       ==
@@ -1178,6 +1177,12 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
            CALL FORCEFIELD$WRITE_UFFSTRC
         END IF
       END IF
+!   
+!     ==========================================================================
+!     ==   WRITE FILE STRC_OUT                                                ==
+!     ==========================================================================
+      CALL FILEHANDLER$CLOSE('PROT')
+!      CALL LIB$FLUSHFILE(NFILO)
                               CALL TRACE$POP
       RETURN
       END
