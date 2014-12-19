@@ -2074,7 +2074,7 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
         CALL CLASSICAL_ECOULOMB(NAT,R,Q,ETOT,F,V,RBAS,SIGMA &
      &            ,ITYPE,NTYPE,NONBOND,NNB,NBLIST,NPOT,POT)
       END IF
-! PRINT*,'COULOMB ',ETOT
+ PRINT*,'COULOMB ',ETOT
 ! 
 !     =========================================================================
 !     ==  TWO BODY INTERACTION                                               ==
@@ -3246,7 +3246,6 @@ LOGICAL(4) :: TONEFOUR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLASSICAL_COULOMBPOTA(POT)
 !     ******************************************************************
-!     **                                                              **
 !     **  RETURNS RC*F(RC/R) AS FUNCTION OF X=RC/R                    **
 !     **  WHERE RC*F(RC/R) APPROACHES 1/R FOR R->INFTY                **
 !     **                                                              **
@@ -5034,6 +5033,10 @@ END MODULE TIP4P_MODULE
 !     **                                                                      **
 !     ** IF THE ARRAY-SIZE  IS TOO SMALL THE EXLCUSIONS ARE ONLY COUNTED      **
 !     ** TO PROVIDE GUIDANCE FOR ARRAY ALLOCATION                             **
+!     **                                                                      **
+!     ** IEXCLUSION(:,2) ARE THE EXCLUSION TYPES. FOR TIP4P THE EXCLUSION     **
+!     ** TYPE IS SET TO  2, INDICATING COMPLETE EXCLUSION OF LONG-RANGED      **
+!     ** FORCES                                                               **
 !     **************************************************************************
       USE TIP4P_MODULE    , ONLY : SELECTED,THIS
       IMPLICIT NONE
@@ -5074,7 +5077,7 @@ END MODULE TIP4P_MODULE
             NEXCLUSION=NEXCLUSION+1
             IF(NEXCLUSION.LE.NEXCLUSIONX) THEN
               IEXCLUSION(1,NEXCLUSION)=IEXCL
-              IEXCLUSION(2,NEXCLUSION)=0
+              IEXCLUSION(2,NEXCLUSION)=2
             END IF
           ENDDO
         ENDDO
@@ -5551,14 +5554,32 @@ END MODULE TIP4P_MODULE
                &             +(1+2*MAXDIV)*((ITVEC(3)+MAXDIV) &
                &             +(1+2*MAXDIV)*(IAT2-1+NAT*(IAT1-1))))
                   IAT2A=I2FIRST(IAT1)
+                  NBLIST(NNB)%EXCLUDE=.FALSE.
+                  NBLIST(NNB)%TONEFOUR=.FALSE.
                   DO IEX=IAT2A,NEXCL
                      IF(IEXCLUSION(1,IEX).LT.EXCLUSION) CYCLE
-                     IF(IEXCLUSION(1,IEX).EQ.EXCLUSION) THEN
-                        NBLIST(NNB)%EXCLUDE=.TRUE. 
-                        NBLIST(NNB)%TONEFOUR=(IEXCLUSION(2,IEX).EQ.1)
+                     IF(IEXCLUSION(1,IEX).GT.EXCLUSION) EXIT
+!                    == IEXCLUSION(1,IEX).EQ.EXCLUSION: EXCLUSION ENCOUNTERED ==
+                     IF(IEXCLUSION(2,IEX).EQ.0) THEN
+!                      __ 1,2 OR 1,3 EXCLUSION__________________________________
+                       NBLIST(NNB)%EXCLUDE=.TRUE. 
+                       NBLIST(NNB)%TONEFOUR=.FALSE.
+                     ELSE IF(IEXCLUSION(2,IEX).EQ.1) THEN
+!                      __1,4 EXCLUSION__________________________________________
+                       NBLIST(NNB)%EXCLUDE=.TRUE. 
+                       NBLIST(NNB)%TONEFOUR=.TRUE.
+                     ELSE IF(IEXCLUSION(2,IEX).EQ.2) THEN
+!                      __TOTAL EXCLUSION. REMOVE FROM NEIGHBORLIST______________
+                       NNB=NNB-1
                      ELSE
-                        NBLIST(NNB)%EXCLUDE=.FALSE.
-                        NBLIST(NNB)%TONEFOUR=.FALSE.
+                       CALL ERROR$MSG('EXCLUSION TYPE NOT RECOGNIZED')
+                       CALL ERROR$I4VAL('EXCLUSION TYPE',IEXCLUSION(2,IEX))
+                       CALL ERROR$I4VAL('IAT1',IAT1)
+                       CALL ERROR$I4VAL('IAT2',IAT2)
+                       CALL ERROR$I4VAL('IT(1)',ITVEC(1))
+                       CALL ERROR$I4VAL('IT(2)',ITVEC(2))
+                       CALL ERROR$I4VAL('IT(3)',ITVEC(3))
+                       CALL ERROR$STOP('CLASSICAL_NEIGHBORS')
                      END IF
                      EXIT
                   END DO
@@ -5719,8 +5740,10 @@ END MODULE TIP4P_MODULE
       END IF
       NEXCLUSION=0
       IEXCLUSION(1,:)=-1
-      IEXCLUSION(2,:)=1   ! 1 STANDS FOR 1-4 EXCLUSION
+      IEXCLUSION(2,:)=-1  
                           ! 0 STANDS FOR A 1-2 OR 1-3 EXCLUSION
+                          ! 1 STANDS FOR 1-4 EXCLUSION
+                          ! 2 STANDS FOR DEFINITELY NO INTERACTION
 !
 !     ==========================================================================
 !     ==  TIP4P-INTRAMOLECULAR EXCLUSIONS                                     ==
@@ -5884,8 +5907,9 @@ PRINT*,"FLAG: NTORSION=",NTORSION
                     &                        +(1+2*MAXDIV)*((IT(3)+MAXDIV) &
                     &                        +(1+2*MAXDIV)*ISVAR))
                IEXCLUSION(1,NEXCLUSION)=1+ISVAR
-! DO NOT SET IEXCLSUION (2,NEXCL...) TO AVOID OVERWRITING 1-2 AND 1-3 EXCLUSIONS
-! IT IS SET TO 1 BEFORE THE 1-2 AND 1-3 EXCLUSIONS ARE EVALUATES
+               IEXCLUSION(2,NEXCLUSION)=1
+! DO NOT SET IEXCLUSION (2,NEXCL...) TO AVOID OVERWRITING 1-2 AND 1-3 EXCLUSIONS
+! IT IS SET TO 1 BEFORE THE 1-2 AND 1-3 EXCLUSIONS ARE EVALUATED
 
 ! PRINT*,"FLAG: ANGLE EXCLUSION FOUND: ",IAT1, IAT2
 ! C=IEXCLUSION(NEXCLUSION)
@@ -5939,10 +5963,28 @@ PRINT*,"FLAG: NTORSION=",NTORSION
           IF(IEXCLUSION(1,I1).NE.IEXCLUSION(1,I)) THEN
             I1=I1+1
             IEXCLUSION(1,I1)=IEXCLUSION(1,I)        
+            IEXCLUSION(2,I1)=IEXCLUSION(2,I)        
           ELSE
+!           __REPORT DISCARDED EXCLUSIONS_______________________________________
             IAT2=(IEXCLUSION(1,I)-1)/NAT+1
             IAT1=IEXCLUSION(1,I)-NAT*(IAT2-1)
             PRINT*,'DOUBLE EXCLUSION BETWEEN ATOMS:',IAT1,IAT2
+!           == UNRAVEL PREVALENCE OF EXCLUSION TYPES ===========================
+            IF(IEXCLUSION(2,I).EQ.2) THEN
+!             __TOTAL EXCLUSION HAS PREVALENCE OVER ALL OTHERS__________________
+              IEXCLUSION(2,I1)=IEXCLUSION(2,I)
+            ELSE IF(IEXCLUSION(2,I).EQ.0) THEN
+!             __1,2 AND 1,3 EXCLUSIONS HAVE PREVALENCE OVER 1,4 EXCLUSIONS______
+              IF(IEXCLUSION(2,I1).EQ.1) THEN
+                IEXCLUSION(2,I1)=IEXCLUSION(2,I)
+              END IF
+            ELSE IF(IEXCLUSION(2,I).EQ.0) THEN
+            ELSE
+              CALL ERROR$MSG('EXCLUSION TYPE NOT RECOGNIZED')
+              CALL ERROR$I4VAL('IAT1',IAT1)
+              CALL ERROR$I4VAL('IAT2',IAT2)
+              CALL ERROR$STOP('CLASSICAL_EXCLUSIONS')
+            END IF
           END IF
         ENDDO
         IF(NEXCLUSION.NE.I1) THEN
