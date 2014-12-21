@@ -1895,6 +1895,7 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
       ENDDO
       DEALLOCATE(HAMILTON)
 !     == OCCUPATIONS ===================================================
+      CALL WAVES_DEDFFROMNTBO(NB,NKPTL,NSPIN,EIG)
       CALL WAVES_DYNOCCSETR8A('EPSILON',NB*NKPTL*NSPIN,EIG)
       DEALLOCATE(EIG)
 !
@@ -2963,6 +2964,29 @@ END IF
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$FROMNTBO
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_DEDFFROMNTBO(NB,NKPTL,NSPIN,EIG)
+!     **************************************************************************
+!     ** ADDS TERMS TO DEDF, WHICH ARE NOT TAKEN CARE OF WITH <PSI|HPSI>      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NB
+      INTEGER(4),INTENT(IN)    :: NKPTL
+      INTEGER(4),INTENT(IN)    :: NSPIN
+      REAL(8)   ,INTENT(INOUT) :: EIG(NB,NKPTL,NSPIN)
+      REAL(8)                  :: DEIG(NB,NKPTL,NSPIN)
+      LOGICAL(4)               :: TON
+!     **************************************************************************
+      CALL LMTO$GETL4('ON',TON)
+      IF(.NOT.TON) RETURN
+      CALL LMTO$GETL4('THTBC',TON) !HTBC HAS NOT BEEN CALCULATED
+      IF(.NOT.TON) RETURN
+!
+      CALL LMTO$DEDF(NB,NKPTL,NSPIN,DEIG)
+      EIG=EIG+DEIG
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &

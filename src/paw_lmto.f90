@@ -2911,6 +2911,25 @@ INTEGER(4) :: J,K,L
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$DEDF(NB,NKPTL,NSPIN,DEIG)
+!     **************************************************************************
+!     ** RETURNS THE CORRECTION FOR DEDF, WHICH IS NOT TAKEN CARE OF BY       **
+!     ** <PI|HPSI>.                                                           **
+!     **                                                                      **
+!     ** REMARK: ACTS ONLY ON THE LOCAL SET OF K-POINTS                       **
+!     ** REMARK: SET TO ZERO IF THERE IS NO CORRECTION!                       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NKPTL
+      INTEGER(4),INTENT(IN) :: NSPIN
+      REAL(8)   ,INTENT(OUT):: DEIG(NB,NKPTL,NSPIN)
+!     **************************************************************************
+      DEIG=0.D0
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_NTBODENMAT_NEW()
 !     **************************************************************************
 !     **  CONSTRUCT DENSITY MATRIX IN A NTBO BASIS                            **
