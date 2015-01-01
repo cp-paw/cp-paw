@@ -743,7 +743,8 @@ END IF
 !       == PLACE ONSITE ELEMENT FOR EACH ATOM FIRST IN THE NEIGHBORLIST
         NNB=NNB+1
         IF(NNB.GT.NNX) THEN
-          CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
+          CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED (1ST MSG)')
+          CALL ERROR$I4VAL('IAT',IAT1)
           CALL ERROR$I4VAL('NNB',NNB)
           CALL ERROR$I4VAL('NNX',NNX)
           CALL ERROR$STOP('LMTO$NEIGHBORLIST')
@@ -774,8 +775,16 @@ END IF
                 NNB=NNB+1
                 IF(NNB.GT.NNX) THEN
                   CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
+                  CALL ERROR$MSG(' (2ND MSG)')
                   CALL ERROR$I4VAL('NNB',NNB)
                   CALL ERROR$I4VAL('NNX',NNX)
+                  CALL ERROR$I4VAL('IAT1',IAT1)
+                  CALL ERROR$I4VAL('IAT2',IAT2)
+                  CALL ERROR$I4VAL('IT1',IT1)
+                  CALL ERROR$I4VAL('IT2',IT2)
+                  CALL ERROR$I4VAL('IT3',IT3)
+                  CALL ERROR$R8VAL('RMAX',SQRT(RMAX2))
+                  CALL ERROR$R8VAL('|D|',SQRT(D2))
                   CALL ERROR$STOP('LMTO$NEIGHBORLIST')
                 END IF
                 NNLIST(1,NNB)=IAT1

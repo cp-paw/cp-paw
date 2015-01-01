@@ -592,7 +592,7 @@ END MODULE LMTO_MODULE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       CALL REPORT$TITLE(NFIL,'LMTO OBJECT:  GENERIC VARIABLES')
-      CALL REPORT$R8VAL(NFIL,'EXCHANGE ADMIXTURE ',HFWEIGHT,'')
+      CALL REPORT$R8VAL(NFIL,'EXCHANGE ADMIXTURE ',HFWEIGHT,' ')
       CALL REPORT$R8VAL(NFIL,'RANGESCALE ',RCSCALE,'*(RCOV(A)+RCOV(B))')
       CALL REPORT$R8VAL(NFIL,'K2 ',K2,'A.U.')
 !
@@ -608,7 +608,7 @@ END MODULE LMTO_MODULE
         CALL REPORT$TITLE(NFIL,'LMTO OBJECT: '//TRIM(ID))
         IF(HYBRIDSETTING(ISP)%LHFWEIGHT.GE.0.D0) THEN
           CALL REPORT$R8VAL(NFIL,'LOCAL EXCHANGE ADMIXTURE ' &
-     &                        ,HYBRIDSETTING(ISP)%LHFWEIGHT,'')
+     &                        ,HYBRIDSETTING(ISP)%LHFWEIGHT,' ')
         END IF
         CALL REPORT$L4VAL(NFIL,'SETUP WITH FOCK TERM ' &
      &                        ,HYBRIDSETTING(ISP)%TFOCKSETUP)
@@ -4138,7 +4138,7 @@ STOP
       USE LMTO_MODULE, ONLY : TOFFSITE
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL(4),PARAMETER  :: TTEST=.true.
       INTEGER(4)            :: SWITCH
 INTEGER(4) ::IX,NN,IND1,IND2,IND3
 REAL(8)    :: XDELTA,XSVAR,XENERGY
@@ -4159,7 +4159,7 @@ IF(TTEST) THEN
   PRINT*,'MARKE BEFORE LMTO_LOCNATORB'
   CALL LMTO_LOCNATORB()
   PRINT*,'MARKE AFTER LMTO_LOCNATORB'
-  STOP
+!  STOP
 END IF
 
 
@@ -4288,11 +4288,13 @@ END IF
       INTEGER(4)              :: LMNXT
       INTEGER(4)              :: IAT1,IAT2,IT(3)
       LOGICAL(4)              :: TONSITE
-      INTEGER(4)              :: IAT,ISP,NN,I
+      INTEGER(4)              :: IAT,ISP,NN,I,j
       REAL(8)   ,ALLOCATABLE  :: OVERLAP(:,:)
-      COMPLEX(8),ALLOCATABLE  :: OINV(:,:)
+      real(8)   ,ALLOCATABLE  :: OINV(:,:)
       REAL(8)   ,ALLOCATABLE  :: F(:)
+      REAL(8)   ,ALLOCATABLE  :: F1(:)
       REAL(8)   ,ALLOCATABLE  :: ORB(:,:)
+      REAL(8)   ,ALLOCATABLE  :: UNS(:,:,:,:)
 !     **************************************************************************
                                    CALL TRACE$PUSH('LMTO_LOCNATORB')
       NAT=SIZE(ISPECIES)
@@ -4364,23 +4366,95 @@ END IF
         ALLOCATE(ORB(LMNH,LMNH))
         CALL LIB$INVERTR8(LMNH,OVERLAP,OINV)
         CALL LIB$GENERALEIGENVALUER8(LMNH,DENMAT_NEW(NND)%MAT(:,:,1),OINV,F,ORB)
+        orb=matmul(oinv,orb)
+!
+!       == REORDER SO THAT OCCUPATIONS DECREASE ================================
+        ALLOCATE(F1(LMNH))
+        OINV=ORB
+        f1=f
+        DO I=1,LMNH
+          F(LMNH+1-I)=f1(i)
+          ORB(:,LMNH+1-I)=OINV(:,I)
+        ENDDO          
+        DEALLOCATE(OINV)
+        DEALLOCATE(f1)
+!
         WRITE(*,FMT='(80("="),T10,"  OCCUPATIONS FOR ATOM ",I3,"  ")')IAT
         WRITE(*,FMT='(10F10.5)')F
         WRITE(*,FMT='(80("="),T10,"  NATURAL ORBITALS FOR ATOM ",I3,"  ")')IAT
         DO I=1,LMNH
           WRITE(*,FMT='(10F10.5)')ORB(:,I)
         ENDDO
-        DEALLOCATE(OINV)
         DEALLOCATE(F)
-        DEALLOCATE(ORB)
 !
         DEALLOCATE(OVERLAP)
+!
+!       ========================================================================
+!       == DETERMINE ONSITE U-tensor of local NATURAL ORBITALS                ==
+!       ========================================================================
+        ALLOCATE(UNS(LMNH,LMNH,LMNH,LMNH))
+        CALL DMFT_ULOCAL(IAT,LMNH,UNS)
+        CALL LMTO_MAPUTONATORB(LMNH,ORB,Uns)
+!
+        WRITE(*,FMT='(80("="),T10,"  U-PARAMETER in eV FOR ATOM ",I3,"  ")')IAT
+        DO I=1,LMNH
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)*27.211d0,J=1,LMNH)
+        ENDDO
+        WRITE(*,FMT='(80("="),T10,"  J-PARAMETER in eV FOR ATOM ",I3,"  ")')IAT
+        DO I=1,LMNH
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)*27.211d0,J=1,LMNH)
+        ENDDO
+!
+        DEALLOCATE(uns)
+        DEALLOCATE(ORB)
       ENDDO
 !!$CALL ERROR$MSG('FORCED STOP')
 !!$CALL ERROR$STOP('LMTO_LOCNATORB')
                                    CALL TRACE$POP()
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_maputonatorb(lmnx,orb,u)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      implicit none
+      integer(4),intent(in)    :: lmnx
+      real(8)   ,intent(in)    :: orb(lmnx,lmnx)
+      real(8)   ,intent(inout) :: u(lmnx,lmnx,lmnx,lmnx)
+      real(8)                  :: u1(lmnx,lmnx,lmnx,lmnx)
+      integer(4)               :: i,j
+!     **************************************************************************
+      u1(:,:,:,:)=0.d0
+      do i=1,lmnx
+        do j=1,lmnx
+          u1(:,:,:,i)=u1(:,:,:,i)+u(:,:,:,j)*orb(j,i)
+        enddo
+      enddo
+!
+      u(:,:,:,:)=0.d0
+      do i=1,lmnx
+        do j=1,lmnx
+          u(:,:,i,:)=u(:,:,i,:)+u1(:,:,j,:)*orb(j,i)
+        enddo
+      enddo
+!
+      u1(:,:,:,:)=0.d0
+      do i=1,lmnx
+        do j=1,lmnx
+          u1(:,i,:,:)=u1(:,i,:,:)+u(:,j,:,:)*orb(j,i)
+        enddo
+      enddo
+!
+      u(:,:,:,:)=0.d0
+      do i=1,lmnx
+        do j=1,lmnx
+          u(i,:,:,:)=u(i,:,:,:)+u1(j,:,:,:)*orb(j,i)
+        enddo
+      enddo
+      return
+      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2_NEW()
@@ -6711,7 +6785,7 @@ PRINT*,'============ OFFSITEXEVAL ============================='
 !       ========================================================================
 !       == NDDO TERM:                                                         ==
 !       == U22(1,2,3,4)=INT DX1 INT DX2: A1(X1)*A2(X1)][B3(X2)*B4(X2)]/|R1-R2|==
-!       == LMN1A,LMN2A TIED TO COORDINATE X, LMN1B,LMN2B TO X'                ==
+!       == LMN1A,LMN2A TIED TO COORDINATE X1, LMN1B,LMN2B TO X2               ==
 !       ========================================================================
         IF(TNDDO) THEN
           ALLOCATE(U22   (LMNXTA,LMNXTA,LMNXTB,LMNXTB))
@@ -6738,7 +6812,7 @@ PRINT*,'============ OFFSITEXEVAL ============================='
 !       == 3-1 TERMS:                                                         ==
 !       == U3A1B(1,2,3,4)=INT DX1 INT DX2:                                    ==
 !       ==                          * [A1(X1)*A2(X1)][A3(X2)*B4(X2)]/|X1-X2|  ==
-!       == LMN1A,LMN2A TIED TO COORDINATE X, LMN3A,LMN1B TO X'                ==
+!       == LMN1A,LMN2A TIED TO COORDINATE X1, LMN3A,LMN1B TO X2               ==
 !       ========================================================================
         IF(T31) THEN
           ALLOCATE(U3A1B (LMNXTA,LMNXTA,LMNXTA,LMNXTB))

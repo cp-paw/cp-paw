@@ -5065,7 +5065,7 @@ END MODULE TIP4P_MODULE
 !     ==========================================================================
 !     == COUNT AND ADD EXCLUSIONS                                             ==
 !     ==========================================================================
-      IT=0.D0
+      IT=0
       DO IW=1,THIS%NWATER
         IA(1)=THIS%IATS(1,IW)
         IA(2)=THIS%IATS(2,IW)
@@ -5310,7 +5310,7 @@ END MODULE TIP4P_MODULE
       REAL(8)               :: RP(9)     ! CONTAINER FOR NEXT POSITIONS
       REAL(8)               :: A(3,3)
       REAL(8)               :: AINV(3,3)
-      INTEGER(4)            :: ITER,I,J
+      INTEGER(4)            :: ITER
       LOGICAL(4)            :: CONVG
 !     **************************************************************************
 !     ==========================================================================

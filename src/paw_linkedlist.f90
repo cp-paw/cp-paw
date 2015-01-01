@@ -2493,9 +2493,11 @@ CONTAINS
 !       ================================================================
 !       ==  READ A LINE AND COMMUNICATE                               ==
 !       ================================================================
-        LINE=' '
+        LINE='#'
         IF(THISTASK.EQ.1) THEN
-          READ(NFIL,FMT='(A)',ERR=9999,IOSTAT=IOS,END=200)LINE
+          DO WHILE(LINE(1:1).EQ.'#') 
+            READ(NFIL,FMT='(A)',ERR=9999,IOSTAT=IOS,END=200)LINE
+          ENDDO
         END IF
  200    CONTINUE
         CALL MPE$BROADCAST(CID,1,LINE)

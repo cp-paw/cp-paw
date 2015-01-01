@@ -14,6 +14,7 @@
 #          -0:   dry-run
 #          -v:   verbose
 #          -F    execute paw_fast.x
+#          -K    soft kill of simulation
 #          -P    execute doppaw (ppaw_fast.x)
 #          -D    execute paw_dos.x and paw_dosplot.x
 #          -S    execute paw_strc.x
@@ -54,6 +55,7 @@ USAGE="$USAGE \t -A: paw_show -ce ROOT\n"
 USAGE="$USAGE \t -F: paw_fast.x ROOT.cntl 1>out 2>&1 & \n"
 USAGE="$USAGE \t -D: paw_dos.x ROOT.dcntl \n"
 USAGE="$USAGE \t\t   paw_dosplot.x ROOT.dpcntl; xmgrace -batch ROOT.bat\n"
+USAGE="$USAGE \t -K: touch ROOT.exit (regular stop of simulation) \n"
 USAGE="$USAGE \t -P: doppaw ROOT 4 (parallel ppaw_fast.x with 4 tasks) \n"
 USAGE="$USAGE \t -S: paw_strc.x -c ROOT\n"
 USAGE="$USAGE \t -T: paw_tra.x ROOT.tcntl\n"
@@ -111,7 +113,7 @@ function findroot(){
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
-OPTSTRING=":hv0AFPSDWTZ"
+OPTSTRING=":hv0AFKPSDWTZ"
 OPTIND=0
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
@@ -184,6 +186,16 @@ while getopts "${OPTSTRING}" OPT  ; do
         execute "paw_fast.x  $Y 1>out 2>&1 &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
+       else
+        echo "error in $0 for option $OPT" >&2
+        echo "*.cntl file not unique or not present" >&2
+        exit 1
+      fi
+      ;;
+    K) # touch $ROOT.exit
+      Y=$(findroot cntl)
+      if [[ -n $Y ]] ; then      
+        execute "touch ${Y%.cntl}.exit"
        else
         echo "error in $0 for option $OPT" >&2
         echo "*.cntl file not unique or not present" >&2

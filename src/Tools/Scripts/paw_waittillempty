@@ -30,6 +30,7 @@ while getopts :n:h? OPT; do
       ;;
     h)
       echo -e $USAGE
+      exit 1
       ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
       echo "error in $0" >&2
