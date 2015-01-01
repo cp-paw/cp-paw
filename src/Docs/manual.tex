@@ -293,14 +293,15 @@ motto {\bf ``Fewer Parts!''}. For the user this implies that he will
 find few instances where two options provide the same functionality. I
 hope that the limitations will be offset by clarity.
 
-The program uses {\bf Hartree atomic units}, that is
-$\hbar=e=m_e=4\pi\epsilon_0=1$, and Cartesian coordiantes.  Angles are
-handled in radian ($2\pi{\rm\ rad}= 360~\deg$).  The conversion to
-other units is often done during printing. The conversion factors are
-provided by a particular agent (see section~\ref{constants}), which is
-based on the values of fundamental physical constants recommended in
-1986 by CODATA (Committee on Data for Science and Technology of the
-International Council of Scientific Unions) \cite{mohr00_rmp72_351}.
+The program uses \textbf{Hartree atomic units}\index{Hartree atomic
+  units}, that is $\hbar=e=m_e=4\pi\epsilon_0=1$, and Cartesian
+coordiantes.  Angles are handled in radian ($2\pi{\rm\ rad}=
+360~\deg$).  The conversion to other units is often done during
+printing. The conversion factors are provided by a particular agent
+(see section~\ref{constants}), which is based on the values of
+fundamental physical constants recommended in 1986 by CODATA
+(Committee on Data for Science and Technology of the International
+Council of Scientific Unions) \cite{mohr00_rmp72_351}.
 
 The program divides work into {\bf three steps: simulation --
   analysis -- visualization}.  The program consists of the simulation
@@ -379,6 +380,7 @@ The following simple expample shall illustrate the structure
   DATA=5
   !SECONDBLOCK OTHERDATA=T !END
   !SECONDBLOCK OTHERDATA=F !END
+        # this is a comment. The entire line is ignored.
   !THIRDBLOCK_OFF TEXTDATA='THIS IS A TEXT' !END
 !END
 !EOB
@@ -387,6 +389,11 @@ The indentation and the arrangement of the data is arbitrary. The only
 requirements are that data and keywords be separated by blanks or
 line breaks, and that their sequence observes the logical tree structure
 described below.
+
+Lines which begin with hash ($\#$) are ignored while parsing the input
+file. This is one mechanism to include
+\textbf{comments}\index{comments !input files}. Another one is to add
+text beyond the \verb|!EOB|.
 
 Every block starts with a block identifier and ends with the string
 ``!END''.  The identifier starts with an exclamation mark such as
@@ -456,7 +463,6 @@ blocks, followed by a colon and the data keyword.
 \subsection{Extended notation for atoms}
 \label{sec:extendedatomnotation}
 %==========================================================================
-
 The PAW code refers to atoms by name. No two atoms must be given the
 same name. Arbitrary names, given a length limit, are allowed.
 However, the recommended notation choses the first two characters as
@@ -471,7 +477,8 @@ of the same atom. An example is a bondlength constraint between two
 atoms, of which one is a periodic image of a original atom. In that
 case we use in some cases an extended naming convention.
 
-In the extended notation the atom name has the form
+In the \textbf{extended notation the atom name}\index{extended
+  notation atom name}\index{atom name !extended notation} has the form
 ``\textit{name}:\textit{ijk}'', where {\it name} is the name of the
 atom in the original atom cell. and {\it i,j,k} are the three
 translations along the lattice vectors. The latter can be single digit
@@ -571,11 +578,13 @@ In order to run the simulation code, two input files have to be
 prepared:
 
 \begin{enumerate}
-\item The {\bf structure input file} (or often simply called STRC),
+\item The \textbf{structure input file}\index{structure input
+  file}\index{input file !structure} (or often simply called STRC),
   describes the system to be studied. Here you provide information
-  about which atoms you wish to simulate, what their specifics
-  are, whether you wish to simulate a molecule or a crystal and so on.
-\item The {\bf control input file} (sometimes abbreviated as CNTL)
+  about which atoms you wish to simulate, what their specifics are,
+  whether you wish to simulate a molecule or a crystal and so on.
+\item The \textbf{control input file}\index{control input
+  file}\index{input file !control} (sometimes abbreviated as CNTL)
   describes what the program shall do, such as optimizing the wave
   functions, relaxing the atoms or simlating at finite temperature.
 \end{enumerate}
