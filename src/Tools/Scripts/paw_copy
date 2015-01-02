@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ######################################################################
 #
 #  name:    paw_copy
@@ -13,5 +13,13 @@
 # $2 and with teh same ending
 #
 #######################################################################
-for FILE in $1* ;do cp -p "$FILE" "$2${FILE#$1}"; done
-exit
+for FILE in $1* ;do 
+  cp -p "$FILE" "$2${FILE#$1}"
+  RC=$?
+  if [[ $RC -ne 0 ]] ; then 
+     echo "error in $0" >&2
+     echo "copying $FILE to $2${FILE#$1} failed" >&2
+     exit 1
+  fi
+done
+exit 0

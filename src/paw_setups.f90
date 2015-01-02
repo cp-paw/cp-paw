@@ -4103,11 +4103,11 @@ PRINT*,'=================== L=',L,' ================================='
 !         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
           G(:)=0.D0
-PRINT*,'BEFORE PAWBOUNDSTATE'
-PRINT*,'L=',L,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
+!PRINT*,'BEFORE PAWBOUNDSTATE'
+!PRINT*,'L=',L,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
-PRINT*,' E=',E
+!PRINT*,' E=',E
           SVAR2=E
           EOFICOMP(2,IB-NC)=E
 !
@@ -7503,6 +7503,7 @@ END IF
       INTEGER(4),PARAMETER  :: SWITCH=2 ! BIORTHOGONALIZATION METHOD
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL(4)            :: TOLD
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
       LOGICAL(4)            :: TZORA    ! ZEROTH-ORDER RELATIVISTIC EFFECTS
       LOGICAL(4)            :: TSMALL   ! SMALL COMPONENTS CALCULATED
@@ -7972,11 +7973,23 @@ END IF
 !     == AUX = -1/2*[1/R PARTIAL_R^2 R- L(L+1)/R^2]|Q> 
 !     ==     = -1/2*R^L [ 2(L+1)/R+PARTIAL_R ] PARTIAL_R ( QN/R^L )
       DO JP=2,NJ
+TOLD=.FALSE.
+IF(TOLD) THEN
+!!$! CHANGED ON JAN. 1, 2015 TO BE CONSISTENT WITH SCHR\"ODINGER EQUATION ======
         AUX(:)=PSPHI(:,JP)/R(:)**L
         CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
         CALL RADIAL$DERIVE(GID,NR,AUX1,AUX)
         AUX(:)=AUX(:)+2.D0*REAL(L+1,KIND=8)*AUX1(:)/R(:)
         TPSPHI(:,JP)=-0.5D0*R(:)**L*AUX(:)
+ELSE
+!
+!       == THIS SHOULD BE CONSISTENT WITH THE SOLVER FOR THE SCHR. EQ.
+        CALL RADIAL$VERLETD1(GID,NR,PSPHI(:,JP),AUX)
+        CALL RADIAL$VERLETD2(GID,NR,PSPHI(:,JP),AUX1)
+        TPSPHI(:,JP)=-0.5D0*(AUX1+2.D0*AUX/R &
+     &                           -REAL(L*(L+1),KIND=8)*PSPHI(:,JP)/R**2)
+        TPSPHI(1:2,JP)=TPSPHI(3,JP)
+END IF
       ENDDO
 !     == FOR LARGE DISTANCES (R>RC), I USE THE RELATIVISTIC KINETIC ENERGY =====
 !     == TO ENSURE CANCELLATION OF TAIL CONTRIBUTIONS. =========================
@@ -8784,7 +8797,9 @@ IPHISCALE=1
 !     ==========================================================================
       CALL SETUP_WRITEPHI(-'PSPHI.DAT',GID,NR,NPRO,PSPHI)
       DO I=1,NPRO
+!       == CONSTRUCT PSEUDO PARTIAL WAVE AUX FROM TAYLOR EXPANSION =============
         CALL SETUP_PHIOFE(GID,NR,NPRO,EOFPHI,PSPHI,EOFPHI(I),AUX)
+!       == CONSTRUCT RESIDUAL OF THE PAW EQUATION AS PHI =======================
         CALL SETUP_TESTPAWEQ(GID,NR,L,PSPOT,NPRO,PRO,DATH,DOVER,EOFPHI(I) &
      &                      ,AUX,PHI(:,I))
 PRINT*,'DEV FROM PAW. EQ. FOR IPRO=',I,' MAXDEV=',MAXVAL(ABS(PHI(:NR-5,I)))
@@ -8883,6 +8898,9 @@ PRINT*,'EOFPHI ',EOFPHI
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_TESTPAWEQ(GID,NR,L,PSPOT,NPRO,PRO,DH,DO,E,PSPHI,DEV)
 !     **************************************************************************
+!     ** CALCULATES THE RESIDUAL DEV OF THE PAW EQUATION.                     **
+!     **    DEV=HTILDE-E*OTILDE|PSPHI>                                        **
+!     **                                                                      **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2013******************
       USE STRINGS_MODULE
@@ -8908,24 +8926,40 @@ PRINT*,'EOFPHI ',EOFPHI
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  CALCULATE PROJECTION <PRO|PSPHI>                                    ==
+!     ==========================================================================
       DO I=1,NPRO !LOOP OVER PARTIAL WAVES
         AUX=R**2*PRO(:,I)*PSPHI(:)
         CALL RADIAL$INTEGRAL(GID,NR,AUX,PROJ(I))
       END DO
-!PRINT*,'PROJ ',PROJ
-!PRINT*,'L ',L
 !
-!     == 1/R PARTIAL^2_R R- L(L+1)/R^2  
-!     ==  =  R^L [2(L+1)/R +PARTIAL_R] PARTIAL_R R^(-L)
-      DEV=PSPHI(:)/R(:)**L
-      CALL RADIAL$DERIVE(GID,NR,DEV,AUX)
-      CALL RADIAL$DERIVE(GID,NR,AUX,DEV)
-      DEV=R**L*(DEV+REAL(2*(L+1),KIND=8)/R(:)*AUX)
-      DEV(1:4)=DEV(5)
-!     == MAKE KINETIC ENERGY OUT OF LAPLACIAN
-      DEV=-0.5D0*DEV
-!     == ADD THE REST
+!     ==========================================================================
+!     ==  CALCULATE KINETIC ENERGY DENSITY                                    ==
+!     ==  USE DERIVATIVES CONSISTENT WITH VERLET ALGORITHM, WHICH HAS BEEN    ==
+!     ==  USED FOR SOLVING THE DIFFERENTIAL EQUATION FOR PSPHI                ==
+!     ==========================================================================
+      CALL RADIAL$VERLETD1(GID,NR,PSPHI,AUX)
+      CALL RADIAL$VERLETD2(GID,NR,PSPHI,DEV)
+      DEV=DEV+2.D0*REAL(L,KIND=8)*AUX/R-REAL(L*(L+1),KIND=8)*PSPHI/R**2
+      DEV(1:2)=DEV(3)
+      DEV=-0.5D0*DEV   ! TURN LAPLACIAN INTO KINETIC ENERGY
+
+!!$! THIS WAS APPARENTLY WRONG
+!!$!     == 1/R PARTIAL^2_R R- L(L+1)/R^2  
+!!$!     ==  =  R^L [2(L+1)/R +PARTIAL_R] PARTIAL_R R^(-L)
+!!$      DEV=PSPHI(:)/R(:)**L
+!!$      CALL RADIAL$DERIVE(GID,NR,DEV,AUX)
+!!$      CALL RADIAL$DERIVE(GID,NR,AUX,DEV)
+!!$      DEV=R**L*(DEV+REAL(2*(L+1),KIND=8)/R(:)*AUX)
+!!$      DEV(1:4)=DEV(5)
+!!$!     == MAKE KINETIC ENERGY OUT OF LAPLACIAN
+!!$      DEV=-0.5D0*DEV
+
+!     == ADD POTENTIAL ENERGY ==================================================
       DEV=DEV+(PSPOT(:)*Y0-E)*PSPHI(:)
+!     == ADD PROJECTOR CONTRIBUTION ============================================
       DO I=1,NPRO
         SVAR=0.D0
         DO J=1,NPRO
@@ -8933,8 +8967,6 @@ PRINT*,'EOFPHI ',EOFPHI
         ENDDO
         DEV=DEV+PRO(:,I)*SVAR
       ENDDO
-!CALL SETUP_WRITEPHI(-'T6.DAT',GID,NR,1,DEV)
-!STOP 'FORCED D'
       RETURN
       END
 !

@@ -1147,19 +1147,21 @@ END IF
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$DERIVATIVE(GID,NR,F,R0,F0)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     ** CALCULATE DERIVATIVE OF F AT A SPECIFIC POINT R0                     **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: F(NR)
-      REAL(8)   ,INTENT(IN) :: R0
-      REAL(8)   ,INTENT(OUT):: F0
+      INTEGER(4),INTENT(IN) :: GID    ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR     ! #(GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: F(NR)  ! INPUT FUNCTION 
+      REAL(8)   ,INTENT(IN) :: R0     ! RADIUS AT WHICH DERIVATIVE IS TAKEN
+      REAL(8)   ,INTENT(OUT):: F0     ! DERIVATIVE OF F AT R0
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$DERIVATIVE(GIDS,NR,F,R0,F0)
@@ -1262,18 +1264,21 @@ END IF
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$VERLETD1(GID,NR,F,DFDR)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     ** CALCULATE THE FIRST DERIVATIVE FOR F CONSISTENT WITH THE VERLET      **
+!     ** ALGORITHM                                                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      REAL(8)   ,INTENT(IN) :: F(NR)
-      REAL(8)   ,INTENT(OUT):: DFDR(NR)
+      INTEGER(4),INTENT(IN) :: GID       ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR        ! #(GRID POINTS)
+      REAL(8)   ,INTENT(IN) :: F(NR)     ! FORM DERIVATIVE OF F
+      REAL(8)   ,INTENT(OUT):: DFDR(NR)  ! RADIAL DERIVATIVE OF F
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$VERLETD1(GIDS,NR,F,DFDR)
@@ -1286,10 +1291,13 @@ END IF
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$VERLETD2(GID,NR,F,D2FDR2)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     ** CALCULATE THE SECOND DERIVATIVE FOR F CONSISTENT WITH THE VERLET     **
+!     ** ALGORITHM                                                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
@@ -1297,7 +1305,7 @@ END IF
       REAL(8)   ,INTENT(OUT):: D2FDR2(NR)
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$VERLETD2(GIDS,NR,F,D2FDR2)
@@ -1310,20 +1318,19 @@ END IF
       RETURN
       END      
 !
-!     .....................................................POISON.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$POISSON(GID,NR,L,RHO,V)
-!     ******************************************************************
-!     **                                                              **
-!     ** SOLVES THE RADIAL POISSON EQUALTION FOR A GIVEN              **
-!     ** ANGULAR MOMENTUM COMPONENT OF THE CHARGE DENSITY             **
-!     **                                                              **
-!     ** INPUT :                                                      **
-!     **   L            MAIN ANGULAR MOMENTUM QUANTUM NUMBER          **
-!     **   RHO          INPUT CHARGE DENSITY                          **
-!     ** OUTPUT :                                                      *
-!     **   V            ELECTROSTATIC POTENTIAL                       **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     ** SOLVES THE RADIAL POISSON EQUALTION FOR A GIVEN                      **
+!     ** ANGULAR MOMENTUM COMPONENT OF THE CHARGE DENSITY                     **
+!     **                                                                      **
+!     ** INPUT :                                                              **
+!     **   L            MAIN ANGULAR MOMENTUM QUANTUM NUMBER                  **
+!     **   RHO          INPUT CHARGE DENSITY                                  **
+!     ** OUTPUT :                                                             **
+!     **   V            ELECTROSTATIC POTENTIAL                               **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID     ! GRID ID
       INTEGER(4),INTENT(IN) :: NR      ! NUMBER OF RADIAL GRID POINTS
@@ -1335,7 +1342,7 @@ END IF
       REAL(8)               :: R(NR)
       REAL(8)               :: PI
       REAL(8)               :: FAC
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       AUX1(:)=RHO(:)*R(:)**(L+2) 
@@ -1948,18 +1955,19 @@ END MODULE SHLOGRADIAL_MODULE
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL$DGLGENC(GID,NR_,NF,I1,I2,A,B,C,D,F)
-!     **                                                               **
-!     **  TRANSFORMS THE EQUATION                                      **
-!     **    [A(R)\PARTIAL_R^2+B(R)\PARTIAL_R+C(R)]F(R)=D(R)            **
-!     **  INTO                                                         **
-!     **    [A(R)\PARTIAL^2_X+B1(R)\PARTIAL_X+C1(X)]F(X)=D1(X)         **
-!     **  WITH R(X)=R1\EXP(\ALPHA(X-1))                                **
-!     **                                                               **
-!     **  AND CALLS RADIAL_DGLEQUISPACEDGENC TO SOLVE THE RESULTING    **
-!     **  DGL ON THE EQUI-SPACED GRID                                  **
-!     **                                                               **
+!     **************************************************************************
+!     **  TRANSFORMS THE EQUATION                                             **
+!     **    [A(R)\PARTIAL_R^2+B(R)\PARTIAL_R+C(R)]F(R)=D(R)                   **
+!     **  INTO                                                                **
+!     **    [A(R)\PARTIAL^2_X+B1(R)\PARTIAL_X+C1(X)]F(X)=D1(X)                **
+!     **  WITH R(X)=R1\EXP(\ALPHA(X-1))                                       **
+!     **                                                                      **
+!     **  AND CALLS RADIAL_DGLEQUISPACEDGENC TO SOLVE THE RESULTING           **
+!     **  DGL ON THE EQUI-SPACED GRID                                         **
+!     **                                                                      **
+!     **************************************************************************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1979,7 +1987,7 @@ END MODULE SHLOGRADIAL_MODULE
       COMPLEX(8)            :: D1(NR_,NF)
       INTEGER(4)            :: I,J
       INTEGER(4)            :: IMIN,IMAX
-!     ******************************************************************
+!     **************************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
@@ -2004,8 +2012,13 @@ END MODULE SHLOGRADIAL_MODULE
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL$VERLETD1(GID,NR_,F,DFDR)
+!     **************************************************************************
+!     ** CALCULATE THE FIRST DERIVATIVE FOR F CONSISTENT WITH THE VERLET      **
+!     ** ALGORITHM                                                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -2013,7 +2026,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)   ,INTENT(IN) :: F(NR_)
       REAL(8)   ,INTENT(OUT):: DFDR(NR_)
       REAL(8)               :: R(NR_)
-!     ******************************************************************
+!     **************************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
@@ -2036,8 +2049,13 @@ END MODULE SHLOGRADIAL_MODULE
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SHLOGRADIAL$VERLETD2(GID,NR_,F,D2FDR2)
+!     **************************************************************************
+!     ** CALCULATE THE SECOND DERIVATIVE FOR F CONSISTENT WITH THE VERLET     **
+!     ** ALGORITHM                                                            **
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -2047,7 +2065,7 @@ END MODULE SHLOGRADIAL_MODULE
       REAL(8)               :: R(NR_)
       REAL(8)               :: DRDX(NR_)
       REAL(8)               :: DFDR(NR_)
-!     ******************************************************************
+!     **************************************************************************
       CALL SHLOGRADIAL_RESOLVE(GID)
       IF(NR_.NE.NR) THEN
          CALL ERROR$MSG('INCONSISTENT NUMBER OF GRID POINTS')
