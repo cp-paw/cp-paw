@@ -165,12 +165,12 @@ fi
 # pick out the equilibrium lattice constant from the structure file
 #==============================================================================
 if [[ -n $(grep 'LUNIT\[AA\]=' $NAME.strc) ]]; then
-  X=$(grep 'LUNIT\[AA\]=' $NAME.strc)  #pick the line containing LUNIT
-  X=${X#*LUNIT\[AA\]=}
+  X=$(grep -i 'LUNIT\[AA\]=' $NAME.strc)  #pick the line containing LUNIT
+  X=${X#*[Ll][Uu][Nn][Ii][Tt]\[[Aa][Aa]\]=}
   AA=$(echo "1. / 0.529177" | bc -l )   # conversion factor into atomic units
 else
   X=$(grep 'LUNIT=' $NAME.strc)  #pick the line containing LUNIT
-  X=${X#*LUNIT=}
+  X=${X#*[Ll][Uu][Nn][Ii][Tt]=}
   AA=$(echo "1." | bc -l )
 fi
 X=${X%%!END*}
@@ -186,7 +186,7 @@ if [[ $UPDATE = no ]] ; then
     # construct structure control file from template by replacing alat
     #===========================================================================
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
-    execute "sed \"/LUNIT/s/${ALAT0}/${ALAT} /g\" ${NAME}.strc >${NAME}_${X}.strc"
+    execute "sed \"/[Ll][Uu][Nn][Ii][Tt]/s/${ALAT0}/${ALAT} /g\" ${NAME}.strc >${NAME}_${X}.strc"
     #==========================================================================
     # run paw_fast.x and place data "gap.dat" and "etot.dat"
     #==========================================================================

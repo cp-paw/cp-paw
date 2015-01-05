@@ -131,6 +131,7 @@ REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
 REAL(8)   ,POINTER     :: AEPHIDOTSM(:,:)!(NR,LNX)  
 REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
+REAL(8)   ,POINTER     :: DATH(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
 REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
 REAL(8)   ,POINTER     :: COREVALENCEX(:,:)  !(LNX,LNX) CORE VALENCE EXCHANGE
 REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
@@ -2914,6 +2915,7 @@ RCL=RCOV
       ALLOCATE(THIS%QPHISM(NR,LNX))
       ALLOCATE(THIS%DTKIN(LNX,LNX))
       ALLOCATE(THIS%DOVER(LNX,LNX))
+      ALLOCATE(THIS%DATH(LNX,LNX))
       ALLOCATE(THIS%PSPHIDOT(NR,LNX))
       ALLOCATE(THIS%PSPHIDOTSM(NR,LNX))
       ALLOCATE(THIS%AEPHIDOT(NR,LNX))
@@ -2940,7 +2942,8 @@ RCL=RCOV
      &          ,THIS%AEPHI,THIS%AEPHISM,THIS%PSPHI,THIS%PSPHISM &
      &          ,THIS%UPHI,THIS%UPHISM,THIS%QPHI,THIS%QPHISM &
      &          ,THIS%AEPHIDOT,THIS%AEPHIDOTSM,THIS%PSPHIDOT,THIS%PSPHIDOTSM &
-     &          ,THIS%PRO,THIS%DTKIN,THIS%DOVER,THIS%AECORE,THIS%PSCORE &
+     &          ,THIS%PRO,THIS%DTKIN,THIS%DOVER,THIS%DATH &
+     &          ,THIS%AECORE,THIS%PSCORE &
      &          ,THIS%PSPOT,THIS%PARMS%POW_POT,THIS%PARMS%TVAL0_POT &
      &          ,THIS%PARMS%VAL0_POT,THIS%PARMS%RC_POT &
      &          ,THIS%RCSM,THIS%VADD,THIS%PSG2,THIS%PSG4)
@@ -2992,6 +2995,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !
       CALL TIMING$CLOCKON('TEST GHOSTS')
       CALL SETUP_TESTGHOST1()
+      CALL SETUP_TESTGHOST()
       CALL TIMING$CLOCKOFF('TEST GHOSTS')
 !     
 !     ==========================================================================
@@ -3494,7 +3498,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
      &                  ,RBOX,ROUT,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
      &                  ,AEPHI,AEPHISM,PSPHI,PSPHISM,NLPHI,NLPHISM,QN,QNSM &
      &                  ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM &
-     &                  ,PRO,DT,DOVER,AECORE,PSCORE,PSPOT &
+     &                  ,PRO,DT,DOVER,DH,AECORE,PSCORE,PSPOT &
      &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD,PSG2,PSG4)
 !     **************************************************************************
 !     **  CONSTRUCTS  THE SETUP                                               **
@@ -3545,6 +3549,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)   ,INTENT(OUT):: PRO(NR,LNX)
       REAL(8)   ,INTENT(OUT):: DT(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: DOVER(LNX,LNX)
+      REAL(8)   ,INTENT(OUT):: DH(LNX,LNX)
       REAL(8)   ,INTENT(OUT):: PSPHIDOT(NR,LNX),PSPHIDOTSM(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: AEPHIDOT(NR,LNX),AEPHIDOTSM(NR,LNX)  
       REAL(8)   ,INTENT(OUT):: PSG2
@@ -3553,7 +3558,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
       INTEGER(4),ALLOCATABLE:: NCL(:)
-      REAL(8)               :: DH(LNX,LNX)
       REAL(8)               :: UOFI(NR,NB)   ! NODELESS WAVE FUNCTION
       REAL(8)               :: UOFISM(NR,NB) ! SMALL COMPONENT
       REAL(8)               :: PHISCALE(LNX)
@@ -3758,6 +3762,9 @@ END IF
           SVAR=0.5D0*(DOVER(LN1,LN2)+DOVER(LN2,LN1))
           DOVER(LN1,LN2)=SVAR
           DOVER(LN2,LN1)=SVAR
+          SVAR=0.5D0*(DH(LN1,LN2)+DH(LN2,LN1))
+          DH(LN1,LN2)=SVAR
+          DH(LN2,LN1)=SVAR
         ENDDO
       ENDDO
 !
@@ -4412,6 +4419,316 @@ PRINT*,'=================== L=',L,' ================================='
           WRITE(*,FMT='(80("="))')
         END IF
       END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TESTGHOST
+!     **************************************************************************
+!     **  TEST FOR GHOST STATES.                                              **
+!     **  METHOD IS INSPIRED BY X. GONZE ET AL, PRB 44, 8503 (1991)           **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4)             :: LNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      REAL(8)   ,ALLOCATABLE :: PROPRO(:,:)    !<P|P>
+      REAL(8)   ,ALLOCATABLE :: PROHPRO(:,:)   !<P|HLOC|P>
+      REAL(8)   ,ALLOCATABLE :: HMAT(:,:)      !
+      REAL(8)   ,ALLOCATABLE :: OMAT(:,:)      !
+      REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)   ,ALLOCATABLE :: E(:)
+      REAL(8)   ,ALLOCATABLE :: U(:,:)
+      INTEGER(4)             :: NR
+      INTEGER(4)             :: GID
+      INTEGER(4)             :: L
+      INTEGER(4)             :: LN,LN1,LN2
+      LOGICAL(4),PARAMETER   :: TFORCESTOP=.FALSE.
+      REAL(8)                :: SVAR
+      REAL(8)                :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      ALLOCATE(AUX(NR))
+      ALLOCATE(AUX1(NR))
+      CALL RADIAL$R(GID,NR,R)
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOX
+!
+      CALL SETUP_TESTGHOST_OUTER
+      CALL SETUP_TESTGHOST_INNER
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TESTGHOST_OUTER
+!     **************************************************************************
+!     **  TEST FOR GHOST STATES.                                              **
+!     **  METHOD IS INSPIRED BY X. GONZE ET AL, PRB 44, 8503 (1991)           **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER   :: NBX=10
+      INTEGER(4)             :: LNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)   ,ALLOCATABLE :: DREL(:)
+      REAL(8)   ,ALLOCATABLE :: G(:)
+      REAL(8)   ,ALLOCATABLE :: PHI0(:,:)
+      REAL(8)   ,ALLOCATABLE :: PHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: SMAT(:,:),SMATIN(:,:)
+      REAL(8)                :: E0(NBX)
+      REAL(8)                :: E(NBX)
+      REAL(8)   ,ALLOCATABLE :: PRO(:,:)
+      REAL(8)   ,ALLOCATABLE :: PROPHI(:,:)
+      REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
+      REAL(8)                :: QMAT(NBX,NBX)
+      REAL(8)                :: HMAT(NBX,NBX)
+      REAL(8)                :: OMAT(NBX,NBX)
+      REAL(8)                :: U(NBX,NBX)
+      REAL(8)                :: EPSILONX
+      INTEGER(4)             :: NR
+      INTEGER(4)             :: GID
+      INTEGER(4)             :: L,NN,SO,LN,NPRO,IPRO,I,J
+      LOGICAL(4),PARAMETER   :: TFORCESTOP=.FALSE.
+      REAL(8)                :: RNS
+      REAL(8)                :: SVAR
+      REAL(8)                :: RBOX
+      REAL(8)                :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      CALL RADIAL$R(GID,NR,R)
+      RBOX=R(NR-3)  ! BOUNDARY CONDITIONS
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOX
+!
+!     ==========================================================================
+!     ==  LOOP OVER ANGULAR MOMENTA                                           ==
+!     ==========================================================================
+      ALLOCATE(DREL(NR))
+      ALLOCATE(G(NR))
+      ALLOCATE(PHI(NR,NBX))
+      ALLOCATE(PHI0(NR,NBX))
+      ALLOCATE(AUX(NR))
+      ALLOCATE(AUX1(NR))
+      DO L=0,MAXVAL(LOX)
+!
+!       ========================================================================
+!       ==  COLLECT PROJECTOR FUNCTIONS FOR THIS ANGULAR MOMENTUM             ==
+!       ========================================================================
+        NPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).EQ.L)NPRO=NPRO+1
+        ENDDO
+        ALLOCATE(PRO(NR,NPRO))
+        ALLOCATE(PROPHI(NPRO,NBX))
+        IPRO=0
+        DO LN=1,LNX
+          IF(LOX(LN).NE.L)CYCLE
+          IPRO=IPRO+1
+          PRO(:,IPRO)=THIS%PRO(:,LN)
+        ENDDO
+!
+!       ========================================================================
+!       ==  DETERMINE EIGENSTATES OF THE UNCONSTRAINED PROBLEM                ==
+!       ========================================================================
+        DO I=1,NBX
+          SO=0
+          DREL=0.D0
+          G=0.D0
+          RNS=1.D-3
+          E0(I)=0.D0
+          IF(I.GT.1)E0(I)=E0(I-1)
+          CALL ATOMLIB$BOUNDSTATE(GID,NR,L,SO,RNS,RBOX &
+     &                          ,.FALSE.,DREL,G,I-1,THIS%PSPOT,E0(I),PHI0(:,I))
+!          WRITE(*,FMT='("L=",I2," IB=",I2," E(LOCAL)=",F10.5)')L,I,E0(I)
+!         == NORMALIZE =========================================================
+          AUX(:)=R(:)**2*PHI0(:,I)**2
+          CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+          CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SVAR)
+          PHI0(:,I)=PHI0(:,I)/SQRT(SVAR)
+        ENDDO
+!          
+!       ========================================================================
+!       ==  DETERMINE CONSTRAINT VIOLATION PROPHI = <PRO|PHI0>                ==
+!       ========================================================================
+        DO I=1,NBX
+          DO IPRO=1,NPRO
+            AUX(:)=R(:)**2*PRO(:,IPRO)*PHI0(:,I)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,PROPHI(IPRO,I))
+          ENDDO
+        ENDDO
+!
+!       ========================================================================
+!       ==  QMAT = <PHI0|PRO>(<PRO|PRO)^{-1}<PRO|PHI0>                        ==
+!       ========================================================================
+        ALLOCATE(SMATIN(NPRO,NPRO))
+        DO I=1,NPRO
+          DO J=I,NPRO
+            AUX(:)=R(:)**2*PRO(:,I)*PRO(:,J)
+            CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,SMATIN(I,J))
+            SMATIN(J,I)=SMATIN(I,J)
+          ENDDO
+        ENDDO
+        ALLOCATE(SMAT(NPRO,NPRO))
+        CALL LIB$INVERTR8(NPRO,SMATIN,SMAT)
+        DEALLOCATE(SMATIN)
+        QMAT=MATMUL(TRANSPOSE(PROPHI),MATMUL(SMAT,PROPHI))
+        DEALLOCATE(SMAT)
+        DEALLOCATE(PROPHI)
+!
+!       ========================================================================
+!       ==  CALCULATE HAMILTONIAN AND OVERLAP OF THE PROJECTED FUNCTIONS      ==
+!       ========================================================================
+        EPSILONX=MAXVAL(E0)
+        HMAT=QMAT*EPSILONX
+        OMAT=-QMAT
+        DO I=1,NBX
+          OMAT(I,I)=OMAT(I,I)+1.D0
+          HMAT(I,I)=HMAT(I,I)+E0(I)
+          HMAT(:,I)=HMAT(:,I)-QMAT(:,I)*E0(I)
+          HMAT(I,:)=HMAT(I,:)-E0(I)*QMAT(I,:)
+          DO J=1,NBX
+            HMAT(:,J)=HMAT(:,J)+QMAT(:,I)*(E0(I)-EPSILONX)*QMAT(I,J)
+          ENDDO
+        ENDDO
+!       == [ HMAT - OMAT*E(I) ] U(:,I)=0 =======================================
+        CALL LIB$GENERALEIGENVALUER8(NBX,HMAT,OMAT,E,U)
+        PHI(:,:)=MATMUL(PHI0,U)
+!
+!       ========================================================================
+!       ==  WRITE RESULT                                                      ==
+!       ========================================================================
+        DO I=1,MIN(NBX,4)
+!          CALL ATOMLIB$ORTHOBOUNDSTATE(GID,NR,L,NN,RBOX,THIS%PSPOT,NPRO,PRO,G &
+!     &                                ,E2,PHI)
+          WRITE(*,FMT='("L=",I2," IB=",I2," E(LOCAL)=",F10.5' &
+      &                               //'," E(OUTER)=",2F10.5)')L,I,E0(I),E(I)
+        ENDDO
+!        WRITE(*,FMT='("SUMTEST:",10F10.5)')(SUM(E(:I)-E0(:I)),I=1,NBX)
+!!$CALL SETUP_WRITEPHI('TEST_PHI',GID,NR,NBX,PHI)
+!!$CALL SETUP_WRITEPHI('TEST_PHI0',GID,NR,NBX,PHI0)
+!!$STOP
+        DEALLOCATE(PRO)
+      ENDDO ! END OF LOOP OVER ANGULAR MOMENTA
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SETUP_TESTGHOST_INNER
+!     **************************************************************************
+!     **  TEST FOR GHOST STATES.                                              **
+!     **  METHOD IS INSPIRED BY X. GONZE ET AL, PRB 44, 8503 (1991)           **
+!     **                                                                      **
+!     **************************************************************************
+      USE SETUP_MODULE
+      IMPLICIT NONE
+      INTEGER(4)             :: LNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      REAL(8)   ,ALLOCATABLE :: PROPRO(:,:)    !<P|P>
+      REAL(8)   ,ALLOCATABLE :: PROHPRO(:,:)   !<P|HLOC|P>
+      REAL(8)   ,ALLOCATABLE :: HMAT(:,:)      !
+      REAL(8)   ,ALLOCATABLE :: OMAT(:,:)      !
+      REAL(8)   ,ALLOCATABLE :: AUX(:),AUX1(:)
+      REAL(8)   ,ALLOCATABLE :: R(:)
+      REAL(8)   ,ALLOCATABLE :: E(:)
+      REAL(8)   ,ALLOCATABLE :: U(:,:)
+      INTEGER(4)             :: NR
+      INTEGER(4)             :: GID
+      INTEGER(4)             :: L
+      INTEGER(4)             :: LN,LN1,LN2
+      LOGICAL(4),PARAMETER   :: TFORCESTOP=.FALSE.
+      REAL(8)                :: SVAR
+      REAL(8)                :: PI,Y0
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      Y0=1.D0/SQRT(4.D0*PI)
+      GID=THIS%GID
+      CALL RADIAL$GETI4(GID,'NR',NR)
+      ALLOCATE(R(NR))
+      ALLOCATE(AUX(NR))
+      ALLOCATE(AUX1(NR))
+      CALL RADIAL$R(GID,NR,R)
+      LNX=THIS%LNX
+      ALLOCATE(LOX(LNX))
+      LOX=THIS%LOX
+!
+!     ==========================================================================
+!     == CALCULATE <P|P>  AND <P|HLOC|P>                                      ==
+!     ==========================================================================
+      ALLOCATE(PROPRO(LNX,LNX))
+      ALLOCATE(PROHPRO(LNX,LNX))
+      PROPRO(:,:)=0.D0
+      PROHPRO(:,:)=0.D0
+      DO LN2=1,LNX
+        L=LOX(LN2)
+!
+!       == AUX1 = KINETIC ENERGY OF PRO(LN2) TIMES R**2 ========================
+        CALL RADIAL$VERLETD1(GID,NR,THIS%PRO(:,LN2),AUX)
+        CALL RADIAL$VERLETD2(GID,NR,THIS%PRO(:,LN2),AUX1)
+!       __ INCLUDE ALREADY THE R**2 WEIGHTING FROM THE RADIAL INTEGRATION______ 
+        AUX1=AUX1*R**2+2.D0*AUX*R-REAL(L*(L+1),KIND=8)*THIS%PRO(:,LN2)
+        AUX1=-0.5D0*AUX1
+!
+!       == LOOP OVER LN1 =======================================================
+        DO LN1=LN2,LNX
+          IF(LOX(LN1).NE.L) CYCLE
+          AUX(:)=R(:)**2*THIS%PRO(:,LN1)*THIS%PRO(:,LN2)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,PROPRO(LN1,LN2))
+          PROPRO(LN2,LN1)=PROPRO(LN1,LN2)
+!
+!         ==  EXPECTATION VALUE OF LOCAL HAMILTONIAN ===========================
+          AUX=AUX*THIS%PSPOT(:)*Y0+THIS%PRO(:,LN1)*AUX1
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,PROHPRO(LN1,LN2))
+          PROHPRO(LN2,LN1)=PROHPRO(LN1,LN2)
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == CALCULATE EIGENVALUES OF LOCAL HAMILTONIAN                           ==
+!     ==========================================================================
+      ALLOCATE(U(LNX,LNX))
+      ALLOCATE(E(LNX))
+!
+      ALLOCATE(HMAT(LNX,LNX))
+      ALLOCATE(OMAT(LNX,LNX))
+      HMAT=PROHPRO+MATMUL(PROPRO,MATMUL(THIS%DATH,PROPRO))
+      OMAT=PROPRO+MATMUL(PROPRO,MATMUL(THIS%DOVER,PROPRO))
+!     == CHECK IF OMAT IS POSITIVE DEFINITE ====================================
+      CALL LIB$DIAGR8(LNX,OMAT,E,U)
+      IF(MINVAL(E).LE.0.D0) THEN
+        CALL ERROR$MSG('OMAT NOT POSITIVE DEFINITE')
+        CALL ERROR$R8VAL('SMALLEST EIGENVALUE',MINVAL(E))
+        CALL ERROR$STOP('SETUP_TESTGHOST')
+      END IF
+
+!     == HMAT*U=OMAT*U*E  WITH   UDAGGER*OMAT*U=1 ==============================
+!     == OMAT MUST BE POSITIVE DEFINITE!   =====================================
+      CALL LIB$GENERALEIGENVALUER8(LNX,HMAT,OMAT,E,U)
+!
+!     ==========================================================================
+!     == WRITE INFORMATION ON LOCAL HAMILTONIAN                               ==
+!     ==========================================================================
+      WRITE(*,FMT='(80("="),T10," GHOSTBUSTER FOR=",A5," Z=",F6.1," ")') &
+     &                               TRIM(THIS%ID),THIS%AEZ
+      DO LN=1,LNX
+        L=LOX(LN)
+        WRITE(*,FMT='("LN",I2," L=",I2," E(INNER)=",F10.5," H")')LN,L,E(LN)
+      ENDDO
       RETURN
       END
 !

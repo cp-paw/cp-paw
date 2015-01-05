@@ -1620,7 +1620,7 @@ END IF
      &                                ,E,PHI)
 !     **************************************************************************
 !     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
-!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN WITH R<RMINNODE.     **
 !     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
 !     **                                                                      **
 !     **  THE BOUNDARY CONDITION IS PHI(RBOX)=0                               **
@@ -1632,6 +1632,9 @@ END IF
 !     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND           **
 !     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT           **
 !     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                         **
+!     **                                                                      **
+!     ** WARNING! ONLY NODES AT R>RMINNODE ARE COUNTED                        **
+!     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
@@ -1651,6 +1654,7 @@ END IF
       INTEGER(4) ,PARAMETER      :: NITER=100
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
+      REAL(8)    ,PARAMETER      :: RMINNODE=1.D0 ! MIN. RADIUS FOR NODE COUNT
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)                    :: R(NR)
@@ -1719,9 +1723,9 @@ END IF
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-!       == NODES WITH R<1 A_BOHR ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODES WITH R<rminnode ARE NOT COUNTED, BECAUSE THERE IS NO  =========
 !       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,rminnode,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1783,6 +1787,268 @@ END IF
         CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
         CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
+      END IF
+!
+!     ==========================================================================
+!     ==  AVERAGE BOTH BOUNDS OF BISECTION                                    ==
+!     ==========================================================================
+      X1=R(IRBOX-1)
+      X2=R(IRBOX)
+      Y1=PHI1(IRBOX-1)
+      Y2=PHI1(IRBOX)
+      DER=(Y2-Y1)/(X2-X1)
+      VAL1=Y1+DER*(RBOX-X1)
+      Y1=PHI2(IRBOX-1)
+      Y2=PHI2(IRBOX)
+      DER=(Y2-Y1)/(X2-X1)
+      VAL2=Y1+DER*(RBOX-X1)
+      SVAR=VAL2-VAL1
+      VAL1=VAL1/SVAR
+      VAL2=VAL2/SVAR
+      PHI=PHI1*VAL2-PHI2*VAL1
+RETURN
+!
+!     ==========================================================================
+!     ==  DETERMINE MATCHING POINT                                            ==
+!     ==========================================================================
+      DO IR=1,NR
+        IRMATCH=IR
+        IF(R(IR).LT.RMATCHN)CYCLE
+        IF(SUM(ABS(PRO(IR,:))).LT.1.D-8) THEN
+          EXIT
+!          IF(ABS(PHI2(IR)-PHI1(IR)).GT.1.D-3*ABS(PHI1(IR))) EXIT
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     ==  INTEGRATE INWARD                                                    ==
+!     ==========================================================================
+      DREL(:)=0.D0
+      SO=0
+      IF(IRMATCH.LT.IRBOX) THEN
+        THOM=MAXVAL(ABS(G(:))).EQ.0.D0
+        IDIR=-1
+!       ==  HOMOGENEOUS SOLUTION THAT FULFILLS THE OUTER BOUNDARY CONDITION   ==
+!       ==  INTEGRATE INWARD AT THE GIVEN ENERGY WITH SLIGHTLY DIFFERENT      ==
+!       ==  BOUNDARY CONDITIONS AND SUPERIMPOSE THEM SO THAT OUTER BOUNDARY   ==
+!       ==  CONDITION IS EXACTLY FULFILLED                                    ==
+        GHOM(:)=0.D0
+        GHOM(IRBOX+1)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,GHOM,L,E,IDIR,PHIHOM)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+        GHOM(:)=0.D0
+        GHOM(IRBOX+2)=1.D-8
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,GHOM,L,E,IDIR,PHI1)
+        PHI1(:)=PHI1(:)/PHI1(IRMATCH)
+!       == FULFILL OUTER BOUNDARY CONDITION ====================================
+        CALL RADIAL$VALUE(GID,NR,PHIHOM,RBOX,VAL1)
+        CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL2)
+        SVAR=VAL1+VAL2
+        VAL1=VAL1/SVAR
+        VAL2=VAL2/SVAR
+        PHIHOM(:)=VAL2*PHIHOM(:)-VAL1*PHI1(:)
+        PHIHOM(:)=PHIHOM(:)/PHIHOM(IRMATCH)
+!       
+!       == INHOMOGENEOUS SOLUTION WITH CORRECT BOUNDARY CONDITIONS =============
+        IF(.NOT.THOM) THEN     
+          CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,G,L,E,IDIR,PHIINHOM)
+          CALL RADIAL$VALUE(GID,NR,PHIINHOM,RBOX,VAL1)
+          CALL RADIAL$VALUE(GID,NR,PHI1,RBOX,VAL2)
+          PHIINHOM(:)=PHIINHOM(:)-VAL1/VAL2*PHI1(:)
+        ELSE
+          PHIINHOM(:)=0.D0
+        END IF
+!
+!       =======================================================================
+!       ==  MATCH SOLUTION INSIDE AND OUTSIDE WITH VALUE                     ==
+!       =======================================================================
+        SVAR=(PHI(IRMATCH)-PHIINHOM(IRMATCH))/PHIHOM(IRMATCH)
+        PHIINHOM(:)=PHIINHOM(:)+SVAR*PHIHOM(:)
+        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+!
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHI,R(IRMATCH),DER)
+!!$        CALL RADIAL$DERIVATIVE(GID,NR,PHIINHOM,R(IRMATCH),DERO)
+!!$        SVAR=(DERO-DER)/PHI(IRMATCH)
+!!$        PHI(IRMATCH:)=PHIINHOM(IRMATCH:)
+      END IF
+                                 CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB$ORTHOBOUNDSTATE(GID,NR,L,NN,RBOX,PSPOT,NPRO,PRO,G &
+     &                                ,E,PHI)
+!     **************************************************************************
+!     ** CAUTION! THIS ROUTINE SEEMS TO FAIL!!                                **
+!     **                                                                      **
+!     **  FINDS A BOUND STATE OF THE RADIAL SCHROEDINGER EQUATION AND         **
+!     **  ITS ENERGY FOR A  SPECIFIED NUMBER OF NODES NN.                     **
+!     **  AND THE CONDITION THAT THE SOLUTION MUST BE ORTHOGONAL TO THE       **
+!     **  PROJECTOR FUNCTIONS PRO.
+!     **  SCHROEDINGER EQUATION MAY INVOLVE AN INHOMOGENEITY G                **
+!     **                                                                      **
+!     **  THE BOUNDARY CONDITION IS PHI(RBOX)=0                               **
+!     **                                                                      **
+!     **  FIRST, THE ENERGY IS DETERMINED BY BISECTION ON THE                 **
+!     **  GENERALIZED PHASE SHIFT AT THE OUTERMOST RADIAL GRID POINT.         **
+!     **  THIS WAVE FUNCTION MAY HOWEVER STILL DIVERGE EXPONENTIALLY.         **
+!     **                                                                      **
+!     **  SECONDLY, THE SCHROEDINGER EQUATION IS SOLVED INWARD, AND           **
+!     **  MATCHED WITH VALUE, EITHER AT THE CLASSICAL TURNING POINT           **
+!     **  OR A SPECIFIED RADIUS, WHATEVER IS SMALLER.                         **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4) ,INTENT(IN)     :: GID     ! GRID ID
+      INTEGER(4) ,INTENT(IN)     :: NR      ! #(RADIAL GRID POINTS)
+      INTEGER(4) ,INTENT(IN)     :: L       ! ANGULAR MOMENTUM
+      INTEGER(4) ,INTENT(IN)     :: NN      ! #(NODES)
+      REAL(8)    ,INTENT(IN)     :: RBOX    ! BOX RADIUS
+      INTEGER(4) ,INTENT(IN)     :: NPRO      !#(NODES)
+      REAL(8)    ,INTENT(IN)     :: PSPOT(NR) !POTENTIAL
+      REAL(8)    ,INTENT(IN)     :: PRO(NR,NPRO)
+      REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
+      REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
+      REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      LOGICAL(4) ,PARAMETER      :: TWRITE=.FALSE.
+      INTEGER(4) ,PARAMETER      :: NITER=100
+      REAL(8)    ,PARAMETER      :: TOL=1.D-12
+      REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
+      REAL(8)    ,PARAMETER      :: RMinnode=1.D0 ! MIN radius for node count
+      INTEGER(4)                 :: ISTART,IBI
+      REAL(8)                    :: X0,DX,XM,ZM,Z0
+      REAL(8)                    :: R(NR)
+      REAL(8)                    :: PHI1(NR),PHI2(NR)
+      REAL(8)                    :: DREL(NR),GHOM(NR),PHIHOM(NR)
+      REAL(8)                    :: PHIINHOM(NR)
+      REAL(8)                    :: VAL1,VAL2,SVAR
+      INTEGER(4)                 :: IR,IRMATCH,SO,IDIR,I
+      INTEGER(4)                 :: ITER
+      LOGICAL                    :: THOM
+      REAL(8)                    :: Y2,Y1,X2,X1,DER
+      INTEGER(4)                 :: IRBOX
+!     **************************************************************************
+                                 CALL TRACE$PUSH('ATOMLIB$ORTHOBOUNDSTATE')
+      IF(TWRITE) THEN
+        WRITE(*,FMT='(80("+"),T20," ATOMLIB$ORTHOBOUNDSTATE ")')
+        WRITE(*,FMT='("L=",I3," NN=",I3," RBOX=",F9.3," NPRO=",I3)') &
+     &              L,NN,RBOX,NPRO
+        WRITE(*,FMT='("E=",F10.5)')E
+      END IF
+!
+      PHI=0.D0
+      CALL RADIAL$R(GID,NR,R)
+!     ==  R(IRBOX) IS THE FIRST GRIDPOINT JUST OUTSIDE THE BOX =================
+      IF(RBOX.GT.R(NR-3)) THEN
+        CALL ERROR$MSG('GRID TOO SMALL FOR CHOSEN BOX RADIUS')
+        CALL ERROR$R8VAL('RBOX',RBOX)
+        CALL ERROR$R8VAL('R(NR)',R(NR))
+        CALL ERROR$R8VAL('R(NR-2)',R(NR-2))
+        CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+      END IF
+      IRBOX=1
+      DO IR=1,NR-3
+        IRBOX=IR
+        IF(R(IR).GE.RBOX) EXIT
+      ENDDO
+!          
+!     ==========================================================================
+!     ==========================================================================
+!     ==  PRESELECT A WINDOW FOR BISECTION                                    ==
+!     ==  DO SMALL STEPS TO AVOID COMING CLOSE TO A GHOST STATE               ==
+!     ==========================================================================
+!     ==========================================================================
+      X0=E
+      Z0=333.333D0 ! FIRST VALUE IS MEANINGLESS
+      DX=1.D-2
+      DO ITER=1,NITER
+        E=X0
+!       ========================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       ========================================================================
+        CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,NPRO,PRO,G,PHI)
+!       == CHECK FOR OVERFLOW ==================================================
+        IF(.NOT.(PHI(IRBOX+2).GT.0.OR.PHI(IRBOX+2).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+        END IF
+!
+!       ========================================================================
+!       == ESTIMATE PHASE SHIFT                                               ==
+!       ========================================================================
+!       == NODES WITH R<RMINNODE ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
+!print*,'e,logder',e,z0,npro
+!!$CALL ATOMLIB_WRITEPHI('test_phi',GID,NR,1,PHI)
+!!$CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,0,PRO,G,PHI)
+!!$print*,'e,logder',e,z0,npro
+!!$CALL ATOMLIB_WRITEPHI('test_phi0',GID,NR,1,PHI)
+!!$CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,1,PRO(:,1),G,PHI)
+!!$print*,'e,logder',e,z0,npro
+!!$CALL ATOMLIB_WRITEPHI('test_phi1',GID,NR,1,PHI)
+!!$stop 'forced'
+        Z0=Z0-REAL(NN+1,KIND=8)
+        IF(Z0.GT.0.D0) THEN
+          PHI1(:)=PHI(:)
+        ELSE
+          PHI2(:)=PHI(:)
+        END IF
+        IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
+        IF(ITER.EQ.1) DX=SIGN(DX,-Z0)
+        XM=X0
+        ZM=Z0
+        X0=X0+DX
+      ENDDO
+!          
+!     ==========================================================================
+!     ==========================================================================
+!     ==  ITERATE TO BISECT ENERGY WITH A NODE AT RBOX                        ==
+!     ==========================================================================
+!     ==========================================================================
+      ISTART=1
+      X0=E
+      Z0=333.333D0   ! FIRST VALUE IS MEANINGLESS
+!     == DX IS DEFINED BY THE PREVIOUS LOOP
+      CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      DO ITER=1,NITER
+        E=X0
+!
+!       ========================================================================
+!       == INTEGRATE RADIAL SCHROEDINGER EQUATION OUTWARD                     ==
+!       ========================================================================
+        CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,NPRO,PRO,G,PHI)
+!       == CHECK FOR OVERFLOW ==================================================
+        IF(.NOT.(PHI(IRBOX+2).GT.0.OR.PHI(IRBOX+2).LE.0)) THEN
+          CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+        END IF
+!
+!       ========================================================================
+!       == ESTIMATE PHASE SHIFT                                               ==
+!       ========================================================================
+!       == NODES WITH R<1 A_BOHR ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
+        Z0=Z0-REAL(NN+1,KIND=8)
+        IF(TWRITE)WRITE(*,FMT='("X0=",F10.5," Z0=",E12.3)')X0,Z0
+
+        IF(ABS(2.D0*DX).LE.TOL) EXIT
+        IF(Z0.GT.0.D0) THEN
+          PHI1(:)=PHI(:)
+        ELSE
+          PHI2(:)=PHI(:)
+        END IF
+!       ========================================================================
+!       ==  BISECTION                                                         ==
+!       ========================================================================
+        CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
+      ENDDO
+      IF(ABS(DX).GT.TOL) THEN
+        CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
+        CALL ERROR$MSG('BOUND STATE NOT FOUND')
+        CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
       END IF
 !
 !     ==========================================================================
@@ -2248,6 +2514,136 @@ RETURN
       ENDDO
       RETURN
       STOP
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,NPRO,PRO,G,PHI)
+!     **************************************************************************
+!     **  SOLVES THE SCHROEDINGER EQUATION IN A SUBSPACE ORTHOGONAL TO THE    **
+!     **  PROJECTOR FUNCTIONS.                                                **
+!     **                                                                      **
+!     **  1) THE SOLUTION PHI IS ORTHOGONAL TO ALL PROJECTOR FUNCTIONS.       **
+!     **  2) THE RESIDUAL OF THE DIFFERENTIAL EQUATION LIES ENTIRELY IN THE   **
+!     **     OF PROJECTOR FUNCTIONS                                           **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID     !GRID ID
+      INTEGER(4)  ,INTENT(IN) :: NR      ! #(RADIAL GRID POINTS
+      INTEGER(4)  ,INTENT(IN) :: L       ! ANGULAR MOMENTUM
+      REAL(8)     ,INTENT(IN) :: E       ! ENERGY
+      REAL(8)     ,INTENT(IN) :: PSPOT(NR)  !VTILDE=PSPOT*Y0
+      INTEGER(4)  ,INTENT(IN) :: NPRO       ! #(PROJECTOR FUNCTIONS)
+      REAL(8)     ,INTENT(IN) :: PRO(NR,NPRO) ! PROJECTOR FUNCTIONS
+      REAL(8)     ,INTENT(IN) :: G(NR)        !INHOMOGENEITY
+      REAL(8)     ,INTENT(OUT):: PHI(NR)      !PAW RADIAL FUNCTION
+      logical(4)  ,parameter  :: ttest=.true.
+      REAL(8)                 :: U(NR)
+      REAL(8)                 :: V(NR,NPRO)
+      REAL(8)                 :: AMAT(NPRO,NPRO)
+      REAL(8)                 :: CVEC(NPRO)
+      REAL(8)                 :: DVEC(NPRO)
+      INTEGER(4)              :: I,J
+      REAL(8)                 :: AUX(NR)
+      REAL(8)                 :: svar
+      REAL(8)                 :: R(NR)
+      REAL(8)                 :: DREL(NR)
+      INTEGER(4)              :: SO
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  -1/2NABLA^2+POT-E|U>=|G>                                            ==
+!     ==========================================================================
+      SO=0
+      DREL(:)=0.D0
+      CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,G,L,E,1,U)
+!!$      svar=1.d0/u(nr-3)
+!!$      u=u*svar
+!
+!     ==========================================================================
+!     ==  -1/2NABLA^2+POT-E|V>=|PRO>                                          ==
+!     ==========================================================================
+      DO I=1,NPRO
+        CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,PRO(:,I),L,E,1,V(:,I))
+!       __AVOID EXPONENTIALLY INCREASING SOLUTION TO SOME EXTENT________________
+        SVAR=V(NR-3,I)/U(NR-3)
+        V(:,I)=V(:,I)-U(:)*svar
+      ENDDO
+!
+!     ==========================================================================
+!     ==  AMAT=<PRO|V>  CVEC=<PRO|U>                                          ==
+!     ==========================================================================
+      DO I=1,NPRO
+        DO J=1,NPRO
+          AUX(:)=PRO(:,I)*V(:,J)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,AMAT(I,J))
+        ENDDO
+      ENDDO
+      DO I=1,NPRO
+        AUX(:)=PRO(:,I)*U(:)*R(:)**2
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,CVEC(I))
+      ENDDO  
+!
+!     ==========================================================================
+!     == DETERMINE COEFFICIENTS THAT IMPOSE ORTHOGONALITY TO PROJECTOR FUNCS  ==
+!     ==========================================================================
+!     == THIS EQUATION FAILS, IF A SINGULAR VALUE OF AMAT VANISHES. IN THIS   ==
+!     == THE SOLUTION IS GIVEN ENTIRELY BY THE V=FUNCTIONS WITH COEFFICIENTS  ==
+!     == FROM THE SINGULAR VECTOR AND THE CONTRIBUTION OF U VANISHES. ==========
+!     == THIS POSSIBILITY IS NOT CONSIDERED YET. ===============================
+!     ==========================================================================
+      IF(NPRO.EQ.0) THEN 
+      else IF(NPRO.EQ.1) THEN 
+        DVEC(1)=-cvec(1)/amat(1,1)
+      ELSE 
+!       == amat*dvec+c=0 =======================================================
+        CALL LIB$MATRIXSOLVER8(NPRO,NPRO,1,AMAT,DVEC,-CVEC)
+      END IF
+!
+!     ==========================================================================
+!     ==  |PHI> = |U>+|V>DVEC                                                 ==
+!     ==========================================================================
+!     PHI(:)=U(:)+MATMUL(V(:,:),DVEC(:))
+      PHI(:)=U(:)
+      DO I=1,NPRO
+        PHI(:)=PHI(:)+V(:,I)*DVEC(I)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  test                                                                ==
+!     ==========================================================================
+      IF(TTEST.and.npro.gt.0) THEN
+!       == park residual in dvec ===============================================
+        dvec=matmul(amat,dvec)+cvec
+        DO I=1,NPRO
+          AUX=PRO(:,I)*PHI(:)*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,CVEC(I))
+          AUX=PRO(:,I)**2*R(:)**2
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar)
+          cvec(i)=cvec(i)/sqrt(svar)
+        ENDDO
+        AUX=R**2*PHI**2
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+        CVEC=CVEC/SQRT(SVAR)
+
+        IF(MAXVAL(ABS(CVEC)).GT.1.D-4) THEN
+          PRINT*,'test matrix eq ',dVEC
+          PRINT*,'test final     ',CVEC
+CALL ATOMLIB_WRITEPHI('crash_phi',GID,NR,1,Phi)
+CALL ATOMLIB_WRITEPHI('crash_pro',GID,NR,npro,Pro)
+CALL ATOMLIB_WRITEPHI('crash_u',GID,NR,1,u)
+CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
+          CALL ERROR$MSG('ORTHOGONALITY TEST FAILED')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$R8VAL('E',E)
+          CALL ERROR$I4VAL('NPRO',NPRO)
+          CALL ERROR$R8VAL('MAX COS',MAXVAL(ABS(CVEC)))
+          CALL ERROR$STOP('ATOMLIB$ORTHODER')
+        END IF
+      END IF
+      RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -2795,7 +3191,7 @@ PRINT*,'EKIN,EH,EX ',EKIN,EH,EX
         PHI1(:)=PHI(IR,:)
         DO I=1,NPHI  ! AVOID CONFLICT WITH XMGRACE
           IF(ABS(PHI1(I)).LT.1.D-60) PHI1(I)=0.D0
-          PHI1(I)=MAX(-1.D+6,MIN(1.D+6,PHI1(I)))
+          PHI1(I)=MAX(-1.D+60,MIN(1.D+60,PHI1(I)))
         ENDDO
         WRITE(100,FMT='(F15.10,2X,20(E25.10,2X))')R(IR),PHI1
       ENDDO
