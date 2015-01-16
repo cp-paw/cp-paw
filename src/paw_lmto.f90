@@ -426,8 +426,8 @@ END MODULE LMTO_MODULE
           HYBRIDSETTING(:)%TBONDX    =.TRUE.
           HYBRIDSETTING(:)%TAILEDLAMBDA1=4.D0
           HYBRIDSETTING(:)%TAILEDLAMBDA2=2.D0
-          HYBRIDSETTING(:)%RAUG         =-1.D0
-          HYBRIDSETTING(:)%RTAIL        =-1.D0
+          HYBRIDSETTING(:)%RAUG      =-1.D0
+          HYBRIDSETTING(:)%RTAIL     =-1.D0
           DO I=1,NSP
             NULLIFY(HYBRIDSETTING(I)%NORBOFL)
           ENDDO
@@ -963,6 +963,7 @@ CALL SETUP$ISELECT(0)
 !     == DETERMINE POTENTIAL PARAMETERS                                       ==
 !     == RAD,LNSCATT,PHIDOTPROJ,QBAR,KTOPHI,KTOPHIDOT,JBARTOPHIDOT            ==
 !     ==========================================================================
+      CALL LMTO_CONSOLIDATETAILEDPARMS()
       CALL LMTO_MAKEPOTPAR1()
 !
 !     ==========================================================================
@@ -1552,6 +1553,59 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_CONSOLIDATETAILEDPARMS()
+!     **************************************************************************
+!     ** CONSOLIDATE THE PARAMETERS OF HYBRIDSETTING                          **
+!     ** I.E. INITIALIZE UNSET VALUES TO ACCOUNT FOR ELEMENT SPECIFIC DEFAULTS**
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2015******************
+      USE LMTO_MODULE, ONLY : NSP &
+     &                       ,HYBRIDSETTING 
+      USE PERIODICTABLE_MODULE
+      IMPLICIT NONE
+      INTEGER(4)   :: ISP
+      REAL(8)      :: AEZ
+      REAL(8)      :: RCOV
+!     **************************************************************************
+                              CALL TRACE$PUSH('LMTO_CONSOLIDATETAILEDPARMS')
+      DO ISP=1,NSP
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+        CALL SETUP$ISELECT(0)
+!
+!       ========================================================================
+!       ==  SET DEFAULTS FOR PARAMETERS FOR THE TAILED REPRESENTATION         ==
+!       ========================================================================
+
+!       == MATCHING RADIUS =====================================================
+        IF(HYBRIDSETTING(ISP)%RAUG.LE.0.D0) THEN
+!         __THE RADIUS MUST CIRCUMSCRIBE SEMI-CORE STATES, BECAUSE THE DECAY____
+!         __OF THE HANKEL FUNCTIONS IS USUALLY ADAPTED TO THE VALENCE STATES____
+!         __AND THEIR DECAY IS USUALLY MUCH TO SLOW FOR SEMI-CORE STATES________
+          HYBRIDSETTING(ISP)%RAUG=1.1D0*RCOV
+        END IF
+!
+!       == RADIUS FOR MATCHING EXPONENTIAL TAILS TO HANKEL FKT.=================
+        IF(HYBRIDSETTING(ISP)%RTAIL.LE.0.D0) THEN
+          HYBRIDSETTING(ISP)%RTAIL=1.2*RCOV
+        END IF
+!
+!       == RAPIDLY DECAYING EXPONENTIAL ========================================
+        IF(HYBRIDSETTING(ISP)%TAILEDLAMBDA1.LE.0.D0) THEN
+          HYBRIDSETTING(ISP)%TAILEDLAMBDA1=4.D0
+        END IF
+!
+!       == SLOWLY DECAYING EXPONENTIAL =========================================
+        IF(HYBRIDSETTING(ISP)%TAILEDLAMBDA2.LE.0.D0) THEN
+          HYBRIDSETTING(ISP)%TAILEDLAMBDA2=2.D0
+        END IF
+      ENDDO
+                              CALL TRACE$POP()
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
 !     **************************************************************************
 !     ** CONSTRUCTS AUGMENTED HANKEL END BESSEL FUNCTIONS WITH                **
@@ -1752,6 +1806,11 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !         -- DETERMINE VALUE AND LOGARITHMIC DERIVATIVE OF PHI AND PHIBARDOT----
           IF(JVAL.EQ.0.D0) THEN
             CALL ERROR$MSG('DIVIDE BY ZERO AHEAD. FIX CODE!')
+            CALL ERROR$I4VAL('IH',IH)
+            CALL ERROR$I4VAL('NHIGHER',NHIGHER)
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$R8VAL('RTAIL',RTAIL)
+            CALL ERROR$R8VAL('K2',K2)
             CALL ERROR$R8VAL('JVAL',JVAL)
             CALL ERROR$STOP('LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1')
           END IF
@@ -2949,7 +3008,7 @@ INTEGER(4) :: J,K,L
      &                       ,ISPECIES
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.false.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
@@ -4143,7 +4202,7 @@ STOP
       USE LMTO_MODULE, ONLY : TOFFSITE
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TTEST=.true.
+      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
       INTEGER(4)            :: SWITCH
 INTEGER(4) ::IX,NN,IND1,IND2,IND3
 REAL(8)    :: XDELTA,XSVAR,XENERGY
@@ -4293,9 +4352,9 @@ END IF
       INTEGER(4)              :: LMNXT
       INTEGER(4)              :: IAT1,IAT2,IT(3)
       LOGICAL(4)              :: TONSITE
-      INTEGER(4)              :: IAT,ISP,NN,I,j
+      INTEGER(4)              :: IAT,ISP,NN,I,J
       REAL(8)   ,ALLOCATABLE  :: OVERLAP(:,:)
-      real(8)   ,ALLOCATABLE  :: OINV(:,:)
+      REAL(8)   ,ALLOCATABLE  :: OINV(:,:)
       REAL(8)   ,ALLOCATABLE  :: F(:)
       REAL(8)   ,ALLOCATABLE  :: F1(:)
       REAL(8)   ,ALLOCATABLE  :: ORB(:,:)
@@ -4305,9 +4364,9 @@ END IF
       NAT=SIZE(ISPECIES)
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
-        LMNH=SUM(2*POTPAR1(ISP)%LOFH+1) ! #(local orbitals for this atom)
+        LMNH=SUM(2*POTPAR1(ISP)%LOFH+1) ! #(LOCAL ORBITALS FOR THIS ATOM)
         IF(.NOT.HYBRIDSETTING(ISP)%ACTIVE) CYCLE
-        if(lmnh.eq.0) cycle
+        IF(LMNH.EQ.0) CYCLE
 !
 !       == IDENTIFY ONSITE DENSITY MATRIX INDEX ================================
         NNX=SIZE(DENMAT_NEW)
@@ -4372,18 +4431,18 @@ END IF
         ALLOCATE(ORB(LMNH,LMNH))
         CALL LIB$INVERTR8(LMNH,OVERLAP,OINV)
         CALL LIB$GENERALEIGENVALUER8(LMNH,DENMAT_NEW(NND)%MAT(:,:,1),OINV,F,ORB)
-        orb=matmul(oinv,orb)
+        ORB=MATMUL(OINV,ORB)
 !
 !       == REORDER SO THAT OCCUPATIONS DECREASE ================================
         ALLOCATE(F1(LMNH))
         OINV=ORB
-        f1=f
+        F1=F
         DO I=1,LMNH
-          F(LMNH+1-I)=f1(i)
+          F(LMNH+1-I)=F1(I)
           ORB(:,LMNH+1-I)=OINV(:,I)
         ENDDO          
         DEALLOCATE(OINV)
-        DEALLOCATE(f1)
+        DEALLOCATE(F1)
 !
         WRITE(*,FMT='(80("="),T10,"  OCCUPATIONS FOR ATOM ",I3,"  ")')IAT
         WRITE(*,FMT='(10F10.5)')F
@@ -4396,22 +4455,22 @@ END IF
         DEALLOCATE(OVERLAP)
 !
 !       ========================================================================
-!       == DETERMINE ONSITE U-tensor of local NATURAL ORBITALS                ==
+!       == DETERMINE ONSITE U-TENSOR OF LOCAL NATURAL ORBITALS                ==
 !       ========================================================================
         ALLOCATE(UNS(LMNH,LMNH,LMNH,LMNH))
         CALL DMFT_ULOCAL(IAT,LMNH,UNS)
-        CALL LMTO_MAPUTONATORB(LMNH,ORB,Uns)
+        CALL LMTO_MAPUTONATORB(LMNH,ORB,UNS)
 !
-        WRITE(*,FMT='(80("="),T10,"  U-PARAMETER in eV FOR ATOM ",I3,"  ")')IAT
+        WRITE(*,FMT='(80("="),T10,"  U-PARAMETER IN EV FOR ATOM ",I3,"  ")')IAT
         DO I=1,LMNH
-          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)*27.211d0,J=1,LMNH)
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)*27.211D0,J=1,LMNH)
         ENDDO
-        WRITE(*,FMT='(80("="),T10,"  J-PARAMETER in eV FOR ATOM ",I3,"  ")')IAT
+        WRITE(*,FMT='(80("="),T10,"  J-PARAMETER IN EV FOR ATOM ",I3,"  ")')IAT
         DO I=1,LMNH
-          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)*27.211d0,J=1,LMNH)
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)*27.211D0,J=1,LMNH)
         ENDDO
 !
-        DEALLOCATE(uns)
+        DEALLOCATE(UNS)
         DEALLOCATE(ORB)
       ENDDO
 !!$CALL ERROR$MSG('FORCED STOP')
@@ -4421,46 +4480,46 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_maputonatorb(lmnx,orb,u)
+      SUBROUTINE LMTO_MAPUTONATORB(LMNX,ORB,U)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in)    :: lmnx
-      real(8)   ,intent(in)    :: orb(lmnx,lmnx)
-      real(8)   ,intent(inout) :: u(lmnx,lmnx,lmnx,lmnx)
-      real(8)                  :: u1(lmnx,lmnx,lmnx,lmnx)
-      integer(4)               :: i,j
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: LMNX
+      REAL(8)   ,INTENT(IN)    :: ORB(LMNX,LMNX)
+      REAL(8)   ,INTENT(INOUT) :: U(LMNX,LMNX,LMNX,LMNX)
+      REAL(8)                  :: U1(LMNX,LMNX,LMNX,LMNX)
+      INTEGER(4)               :: I,J
 !     **************************************************************************
-      u1(:,:,:,:)=0.d0
-      do i=1,lmnx
-        do j=1,lmnx
-          u1(:,:,:,i)=u1(:,:,:,i)+u(:,:,:,j)*orb(j,i)
-        enddo
-      enddo
+      U1(:,:,:,:)=0.D0
+      DO I=1,LMNX
+        DO J=1,LMNX
+          U1(:,:,:,I)=U1(:,:,:,I)+U(:,:,:,J)*ORB(J,I)
+        ENDDO
+      ENDDO
 !
-      u(:,:,:,:)=0.d0
-      do i=1,lmnx
-        do j=1,lmnx
-          u(:,:,i,:)=u(:,:,i,:)+u1(:,:,j,:)*orb(j,i)
-        enddo
-      enddo
+      U(:,:,:,:)=0.D0
+      DO I=1,LMNX
+        DO J=1,LMNX
+          U(:,:,I,:)=U(:,:,I,:)+U1(:,:,J,:)*ORB(J,I)
+        ENDDO
+      ENDDO
 !
-      u1(:,:,:,:)=0.d0
-      do i=1,lmnx
-        do j=1,lmnx
-          u1(:,i,:,:)=u1(:,i,:,:)+u(:,j,:,:)*orb(j,i)
-        enddo
-      enddo
+      U1(:,:,:,:)=0.D0
+      DO I=1,LMNX
+        DO J=1,LMNX
+          U1(:,I,:,:)=U1(:,I,:,:)+U(:,J,:,:)*ORB(J,I)
+        ENDDO
+      ENDDO
 !
-      u(:,:,:,:)=0.d0
-      do i=1,lmnx
-        do j=1,lmnx
-          u(i,:,:,:)=u(i,:,:,:)+u1(j,:,:,:)*orb(j,i)
-        enddo
-      enddo
-      return
-      end
+      U(:,:,:,:)=0.D0
+      DO I=1,LMNX
+        DO J=1,LMNX
+          U(I,:,:,:)=U(I,:,:,:)+U1(J,:,:,:)*ORB(J,I)
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_SIMPLEENERGYTEST2_NEW()
