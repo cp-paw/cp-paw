@@ -638,12 +638,6 @@ PRINT*,'==== CHECKING IF ATOM ',IAT,' IS ACTIVE ',TCHK
         CALL LDAPLUSU$SELECT(0)  ! UNSELECTING IS REQUIRED
         RETURN
       END IF
-      CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL ERROR$MSG('THE LDAPLUSU-OBJECT ONLY WORKS WITH INTERNAL SETUPS')
-        CALL ERROR$MSG('THIS AFFECTS LDA+U, HYBRID FUNCTIONALS AND LDA+CI')
-        CALL ERROR$STOP('LDAPLUSU.ETOT')
-      END IF
                             CALL TRACE$PUSH('LDAPLUSU$ETOT')
 !      
 !     ==========================================================================

@@ -163,7 +163,6 @@ REAL(8)               :: HFWEIGHT=0.25D0
 !== VARIABLE SECTION                                                          ==
 !===============================================================================
 LOGICAL(4)              :: TINI=.FALSE.
-LOGICAL(4)              :: TINISTRUC=.FALSE.
 LOGICAL(4)              :: THTBC=.FALSE. ! HTBC CALCULATED
 LOGICAL(4)              :: TOTBC=.FALSE. ! OTBC CALCULATED
 CHARACTER(32)           :: MODUS='NONE'
@@ -642,7 +641,7 @@ END MODULE LMTO_MODULE
 !     **  IS NEEDED ALSO BY LDAPLUSU VIA LMTO$DOLOCORB                        **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : K2,RCSCALE,TINISTRUC &
+      USE LMTO_MODULE, ONLY : K2,RCSCALE &
      &                       ,POTPAR1 &
      &                       ,ISPECIES,NSP &
      &                       ,SBAR_NEW
@@ -675,15 +674,8 @@ END MODULE LMTO_MODULE
       INTEGER(4)             :: NTASKS,THISTASK,FROMTASK
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-CALL SETUP$ISELECT(1)
-CALL SETUP$ISELECT(0)
-!
-!     == LMTO INTERFACE WORKS ONLY WITH INTERNAL SETUPS ========================
-      CALL SETUP$GETL4('INTERNALSETUPS',TCHK)
-      IF(.NOT.TCHK) RETURN
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
                               CALL TIMING$CLOCKON('LMTO STRUCTURECONSTANTS')
-      TINISTRUC=.TRUE.
 !
 !     ==========================================================================
 !     ==  INITIALIZE LMTO OBJECT                                              ==

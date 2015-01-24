@@ -170,7 +170,6 @@ TYPE FASTACCESS_TYPE
   TYPE(THIS_TYPE),POINTER :: THIS
 END TYPE FASTACCESS_TYPE
 TYPE(FASTACCESS_TYPE),ALLOCATABLE :: FASTACCESS(:)
-LOGICAL(4)             :: TINTERNALSETUPS=.TRUE.
 END MODULE SETUP_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -432,28 +431,6 @@ END MODULE SETUP_MODULE
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SETUP$GETCH')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP$GETL4(ID,VAL)
-!     **************************************************************************
-!     **  COLLECTS INTERNAL DATA                                              **
-!     **                                                                      **
-!     **  REMARK: REQUIRES PROPER SETUP TO BE SELECTED                        **
-!     **                                                                      **
-!     **************************************************************************
-      USE SETUP_MODULE
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: ID
-      LOGICAL(4)  ,INTENT(OUT) :: VAL
-!     **************************************************************************
-      IF(ID.EQ.'INTERNALSETUPS') THEN
-        VAL=TINTERNALSETUPS
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$STOP('SETUP$GETL4')
       END IF
       RETURN
       END
