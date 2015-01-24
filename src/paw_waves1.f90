@@ -1541,7 +1541,6 @@ END MODULE WAVES_MODULE
       IF(TFIRST) THEN
         CALL WAVES$PROJECTIONS('PSI0')
       END IF
-      IF(TFIRST) TFIRST=.FALSE.
 !
 !     ==========================================================================
 !     == CALCULATE LMTO STRUCTURE CONSTANTS                                   ==
@@ -1555,6 +1554,7 @@ END MODULE WAVES_MODULE
                                CALL TIMING$CLOCKON('WAVES$TONTBO')
       CALL WAVES$TONTBO()
                                CALL TIMING$CLOCKOFF('WAVES$TONTBO')
+      IF(TFIRST) TFIRST=.FALSE.
 !
 !     ==========================================================================
 !     == KINETIC ENERGY                                                       ==

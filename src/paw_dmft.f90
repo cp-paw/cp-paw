@@ -334,6 +334,7 @@ PRINT*,'NCHI ',NCHI
       CALL DMFT_DOSHIST() 
       CALL DMFT_GNI() 
 !
+!     == CAUTION: STOREKSET SETS A LOT OF DATA TO ZERO ON OUTPUT
 1000  IF(TREPEAT) CALL DMFT_STOREKSET() ! STORE AND RESET COMPLETE INPUT 
 !
 !     ==========================================================================
@@ -1014,6 +1015,7 @@ WRITE(*,FMT='(80("+"))')
           KSET(IKPT)%SMAT=COPY(IKPT)%SMAT
         ENDDO        
       END IF
+PRINT*,'CAUTION!!!!: DMFT_STOREKSET SETS GAMMA, HRHO ETC. TO ZERO'
 DO IKPT=1,NKPTL
    KSET(IKPT)%GAMMA=(0.D0,0.D0)
    KSET(IKPT)%HRHO=(0.D0,0.D0)
