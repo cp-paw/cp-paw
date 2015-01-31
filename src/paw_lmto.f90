@@ -150,7 +150,6 @@ LOGICAL(4)            :: TON=.FALSE.
 LOGICAL(4)            :: TOFFSITE=.FALSE.  !INCLUDE OFFSITE EXCHANGE
 LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
-
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
 !REAL(8)               :: K2=0.D0    ! 0.5*K2 IS THE KINETIC ENERGY
 REAL(8)               :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
@@ -420,9 +419,9 @@ END MODULE LMTO_MODULE
           HYBRIDSETTING(:)%TCV       =.TRUE.
           HYBRIDSETTING(:)%TFOCKSETUP=.FALSE.
           HYBRIDSETTING(:)%LHFWEIGHT =-1.D0
-          HYBRIDSETTING(:)%TNDDO     =.TRUE.
-          HYBRIDSETTING(:)%T31       =.TRUE.
-          HYBRIDSETTING(:)%TBONDX    =.TRUE.
+          HYBRIDSETTING(:)%TNDDO     =.FALSE.
+          HYBRIDSETTING(:)%T31       =.FALSE.
+          HYBRIDSETTING(:)%TBONDX    =.FALSE.
           HYBRIDSETTING(:)%TAILEDLAMBDA1=4.D0
           HYBRIDSETTING(:)%TAILEDLAMBDA2=2.D0
           HYBRIDSETTING(:)%RAUG      =-1.D0
@@ -933,7 +932,9 @@ END MODULE LMTO_MODULE
 !     **  IT IS CALLED BY LMTO$MAKESTRUCTURECONSTANTS                         **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : TINI,TON,TOFFSITE
+      USE LMTO_MODULE, ONLY : TINI &
+     &                       ,TON &
+     &                       ,TOFFSITE 
       IMPLICIT NONE
       INTEGER(4) :: NAT,ISP
 !     **************************************************************************
@@ -968,15 +969,15 @@ END MODULE LMTO_MODULE
 !     ==========================================================================
 !     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
 !     ==========================================================================
-      IF(TOFFSITE) THEN
                             CALL TIMING$CLOCKON('OFFSITE U-TENSOR')
 !       == GAUSSIAN FIT OF TAILED ORBITAL FOR ABAB-TYPE U-TENSOR ===============
         CALL LMTO_TAILEDGAUSSFIT()
 !
-!       == OFF-SITE MATRIX ELEMENTS OF THE U-TENSOR ============================
+!       == OFF-SITE MATRIX ELEMENTS OF OVERLAP MATRIX AND U-TENSOR =============
+!       == OVERLAP MATRIX ELEMENTS ARE ALWAYS COMPUTED, U-TENSOR ELEMENTS ======
+!       == ONLY WHEN REQUESTED =================================================
         CALL LMTO_OFFXINT()
                             CALL TIMING$CLOCKOFF('OFFSITE U-TENSOR')
-      END IF
                           CALL TRACE$POP()
       RETURN
       END
@@ -7151,7 +7152,8 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
 !     ** GRID                                                                 **
 !     ** ROUTINE IS PARALLELIZED OVER 'MONOMER'                               **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1,OFFSITEX
+      USE LMTO_MODULE, ONLY : POTPAR=>POTPAR1 &
+     &                       ,OFFSITEX
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
@@ -7160,6 +7162,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       REAL(8)   ,PARAMETER  :: TOLMIN=1.D-8
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -7178,6 +7181,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       REAL(8) ,ALLOCATABLE  :: TOLFAC2(:)
       REAL(8)               :: TOL
       INTEGER(4)            :: NTASKS,THISTASK,COUNT
+REAL(8)::SVAR
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
@@ -7251,17 +7255,36 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
               COUNT=COUNT+1
               IF(MOD(COUNT-1,NTASKS).NE.THISTASK-1) CYCLE
               DIS=OFFSITEX(ISP1,ISP2)%DIS(IDIS)
-!PRINT*,'IND ',IND,LN1,LN2,MABS,DIS,TOL
               CALL LMTO_TWOCENTER(L1,MABS,GID1,NR1,PHI1 &
        &                         ,L2,MABS,GID2,NR2,PHI2 &
        &                         ,DIS,TOL,INTEGRAL)
-!PRINT*,'   ',DIS,INTEGRAL
               OFFSITEX(ISP1,ISP2)%OVERLAP(IDIS,IND)=INTEGRAL
             ENDDO
           ENDDO
         ENDDO
       ENDDO
       CALL MPE$COMBINE('MONOMER','+',OFFSITEX(ISP1,ISP2)%OVERLAP)
+!
+!     ==========================================================================
+!     == PRINT FOR TESTING                                                    ==
+!     ==========================================================================
+      IF(TPR) THEN
+        IND=0
+        DO LN1=1,LNX1
+          L1=POTPAR(ISP1)%TAILED%LOX(LN1)
+          DO LN2=1,LNX2
+            L2=POTPAR(ISP2)%TAILED%LOX(LN2)
+            DO MABS=0,MIN(L1,L2)
+              IND=IND+1
+              DO IDIS=1,NDIS
+                DIS=OFFSITEX(ISP1,ISP2)%DIS(IDIS)
+                WRITE(*,*)ISP1,ISP2,LN1,LN2,MABS,IDIS, &
+     &                      OFFSITEX(ISP1,ISP2)%OVERLAP(IDIS,IND)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      END IF
       RETURN
       END
 !
@@ -7832,7 +7855,7 @@ INTEGER(4) :: J
       ENDDO                
 !
 !     ==========================================================================
-!     == OBTAIN U-TENSOR                                                      ==
+!     == OBTAIN OVERLAP MATRIX ELEMENTS                                       ==
 !     ==========================================================================
       O(:,:)=0.D0
       DO(:,:)=0.D0
@@ -8510,7 +8533,7 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        PLM1=PLM1*SQRT(REAL(2*L1+1,KIND=8)/FPI)
        PLM2=PLM2*SQRT(REAL(2*L2+1,KIND=8)/FPI)
        IF(M1.NE.0)PLM1=PLM1*SQ2
-       IF(M1.NE.0)PLM2=PLM1*SQ2
+       IF(M2.NE.0)PLM2=PLM2*SQ2  ! FIXED ERROR FROM PLM2=PLM1*SQ2 150128
 !
        VALUE=2.D0*PI/DIS*DRDP * R1*VAL1*R2*VAL2*PLM1*PLM2
 !IF(TPR)WRITE(*,FMT='("==",10F10.5)')DIS,VALUE,R1,VAL1,R2,VAL2,PLM1*PLM2,DRDP
@@ -9197,15 +9220,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     **  OVERLAP USES THE SAME DATA STRUCTURE AS DENMAT AND INHERITS         **
 !     **  THE SAME NEIGHBORLIST.                                              **
 !     **                                                                      **
+!     **  CAUTION! ROUTINE IS USED ALSO BY PAW_DMFT OBJECT!                   **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : ISPECIES &
      &                       ,POTPAR=>POTPAR1 &
-     &                       ,DENMAT=>DENMAT_NEW &
      &                       ,SBAR=>SBAR_NEW &
      &                       ,NSP &
      &                       ,OFFSITEX &
      &                       ,OVERLAP &
-     &                       ,TOFFSITE &
      &                       ,TCTE
       IMPLICIT NONE
       REAL(8)                :: RBAS(3,3)
@@ -9214,11 +9236,10 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)             :: LNX
       INTEGER(4)             :: LMNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
-      INTEGER(4)             :: NND,NNS
+      INTEGER(4)             :: NNS
       INTEGER(4)             :: NN
       INTEGER(4)             :: ISPA,ISPB
       INTEGER(4)             :: LMNXA,LMNXB
-      INTEGER(4)             :: N1,N2
       INTEGER(4)             :: LNXA,LNXB
       INTEGER(4)             :: IAT,IATA,IATB
       REAL(8)                :: RA(3),RB(3)
@@ -9237,11 +9258,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4),ALLOCATABLE :: INS(:)
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_OVERLAPEVAL')
-      IF(.NOT.TOFFSITE) THEN
-        CALL ERROR$MSG('PARAMETER TOFFSITE MUST BE TRUE')
-        CALL ERROR$L4VAL('TOFFSITE',TOFFSITE)
-        CALL ERROR$STOP('LMTO_OVERLAPEVAL')
-      END IF
 !
 !     ==========================================================================
 !     == COLLECT ATOMIC STRUCTURE                                             ==
@@ -9257,34 +9273,31 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !
 !     == DEALLOCATE FIRST ======================================================
       IF(ALLOCATED(OVERLAP)) THEN
-        NND=SIZE(OVERLAP)
-        DO NN=1,NND
+        NNS=SIZE(OVERLAP)
+        DO NN=1,NNS
           DEALLOCATE(OVERLAP(NN)%MAT)
         ENDDO
         DEALLOCATE(OVERLAP)
       END IF
 
-      NND=SIZE(DENMAT)
-      IF(.NOT.ALLOCATED(OVERLAP)) THEN
-        ALLOCATE(OVERLAP(NND))
-        DO NN=1,NND
-          OVERLAP(NN)%IAT1=DENMAT(NN)%IAT1
-          OVERLAP(NN)%IAT2=DENMAT(NN)%IAT2
-          OVERLAP(NN)%IT  =DENMAT(NN)%IT
-          OVERLAP(NN)%N1  =DENMAT(NN)%N1
-          OVERLAP(NN)%N2  =DENMAT(NN)%N2
-          N1  =DENMAT(NN)%N1
-          N2  =DENMAT(NN)%N2
-          ALLOCATE(OVERLAP(NN)%MAT(N1,N2))
-          OVERLAP(NN)%MAT=0.D0
-        ENDDO
-      END IF
-      IF(SIZE(OVERLAP).NE.NND) THEN
-        CALL ERROR$MSG('SIZE OF DENSITY MATRIX AND OVERLAP MATRIX INONSISTENT')
-        CALL ERROR$I4VAL('NND',NND)
-        CALL ERROR$I4VAL('SIZE(OVERLAP)',SIZE(OVERLAP))
-        CALL ERROR$STOP('LMTO_OVERLAPEVAL')
-      END IF
+!     == ALLOCATE OVERLAP MATRIX NOW ===========================================
+      NNS=SIZE(SBAR)
+      ALLOCATE(OVERLAP(NNS))
+      DO NN=1,NNS
+        IATA=SBAR(NN)%IAT1
+        IATB=SBAR(NN)%IAT2
+        ISPA=ISPECIES(IATA)
+        ISPB=ISPECIES(IATB)
+        NA=SUM(2*POTPAR(ISPA)%LOFH+1)
+        NB=SUM(2*POTPAR(ISPB)%LOFH+1)
+        OVERLAP(NN)%IAT1=IATA
+        OVERLAP(NN)%IAT2=IATB
+        OVERLAP(NN)%IT=SBAR(NN)%IT(:)
+        OVERLAP(NN)%N1=NA
+        OVERLAP(NN)%N2=NB
+        ALLOCATE(OVERLAP(NN)%MAT(NA,NB))
+        OVERLAP(NN)%MAT(:,:)=0.D0
+      ENDDO
 !
 !     ==========================================================================
 !     == COLLECT POINTERS INS(IAT) TO ONSITE STRUCTURE CONSTANTS              ==
@@ -9303,14 +9316,14 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
           CALL ERROR$MSG('INDEX ARRAY FOR ONSITE STRUCTURE CONSTANTS')
           CALL ERROR$MSG('NO ONSITE TERMS FOUND FOR ATOM')
           CALL ERROR$I4VAL('IAT',IAT)
-          CALL ERROR$STOP('LMTO_OFFSITEX')
+          CALL ERROR$STOP('LMTO_OVERLAPEVAL')
         END IF
       ENDDO
 !
 !     ==========================================================================
 !     == LOOP OVER PAIRS                                                      ==
 !     ==========================================================================
-      DO NN=1,NND
+      DO NN=1,NNS
         IATA=OVERLAP(NN)%IAT1
         IATB=OVERLAP(NN)%IAT2
         ISPA=ISPECIES(IATA)
@@ -9346,6 +9359,10 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         ALLOCATE(DOV(LMNXA,LMNXB))
         DIS=SQRT(SUM((RB-RA)**2))
         CALL LMTO_OFFSITEOVERLAP(ISPA,ISPB,DIS,LMNXA,LMNXB,OV,DOV)
+!!$WRITE(*,FMT='(82("="),T20,"  OVERLAP IN Z DIRECTION ",2I2)')ISPA,ISPB
+!!$DO I=1,LMNXA
+!!$  WRITE(*,FMT='(200F10.5)')OV(I,:)
+!!$ENDDO
 !
 !       ========================================================================
 !       == ROTATE DENSITY MATRIX SO THAT DISTANCE VECTOR POINTS IN Z-DIRECTION=
@@ -9355,7 +9372,7 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         DR(:)=RB(:)-RA(:)
         DIS=SQRT(SUM(DR**2))
         ROT(:,3)=DR(:)/DIS
-!       == FIRST VECTOR IS VECTOR PRODUCT OF THE THE MOST ORTHOGNAL UNIT VECTOR
+!       == FIRST VECTOR IS VECTOR PRODUCT OF THE MOST ORTHOGONAL UNIT VECTOR ===
         I=MINLOC(ABS(DR),1)
         ROT(:,2)=0.D0
         ROT(I,2)=1.D0
@@ -9363,10 +9380,11 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
         ROT(2,1)=ROT(3,2)*ROT(1,3)-ROT(1,2)*ROT(3,3)
         ROT(3,1)=ROT(1,2)*ROT(2,3)-ROT(2,2)*ROT(1,3)
         ROT(:,1)=ROT(:,1)/SQRT(SUM(ROT(:,1)**2))
+!       == SECOND VECTOR AS VECTOR PRODUCT BETWEEN FIRST AND THIRD VECTOR ======
         ROT(1,2)=ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)
         ROT(2,2)=ROT(3,3)*ROT(1,1)-ROT(1,3)*ROT(3,1)
         ROT(3,2)=ROT(1,3)*ROT(2,1)-ROT(2,3)*ROT(1,1)
-!       == REMOVE INVERSION, IF PRESENT
+!       == REMOVE INVERSION, IF PRESENT ========================================
         SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(3,2)*ROT(2,3)) &
        &    +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)) &
        &    +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(3,1)*ROT(2,2))
@@ -9416,8 +9434,8 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
      &                          ,OVERLAP(NN)%MAT,OV)
         ELSE
           CALL LMTO_EXPANDNONLOCAL('BACK',1,NA,NB,LMNXA,LMNXB &
-     &                          ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
-     &                          ,OVERLAP(NN)%MAT,OV)
+     &                            ,SBAR(INS(IATA))%MAT,SBAR(INS(IATB))%MAT &
+     &                            ,OVERLAP(NN)%MAT,OV)
         END IF
         DEALLOCATE(OV)
         DEALLOCATE(DOV)
@@ -9426,7 +9444,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
 !     ==========================================================================
 !     == CLEAN UP TO AVOID MEMORY LEAK                                        ==
 !     ==========================================================================
-!!$CALL LMTO$REPORTDENMAT(6)
 !!$CALL LMTO$REPORTOVERLAP(6)
 !!$STOP 'FORCED'
                             CALL TRACE$POP()
