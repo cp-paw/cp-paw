@@ -2996,7 +2996,7 @@ PRINT*,'HAM',HAM
       REAL(8)   ,PARAMETER     :: TOL=1.D-3
       INTEGER(4),PARAMETER     :: NITER=100000
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      COMPLEX(8)               :: dgamma(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: SLAUR(NCHI,NCHI,NDIMD,NLAU)
       COMPLEX(8)               :: DRHO(NCHI,NCHI,NDIMD)
@@ -3006,11 +3006,11 @@ PRINT*,'HAM',HAM
       INTEGER(4)               :: IKPT,ITER,IDIMD,NU,IAT
       INTEGER(4)               :: I1,I2,ILAU
       REAL(8)                  :: FN(2)
-      real(8)                  :: svar
-      integer(4),parameter     :: nscale=10.d0
-      real(8)                  :: scale(nscale)
-      real(8)                  :: fofscale(nscale)
-      integer(4)               :: iscale,i
+      REAL(8)                  :: SVAR
+      INTEGER(4),PARAMETER     :: NSCALE=10.D0
+      REAL(8)                  :: SCALE(NSCALE)
+      REAL(8)                  :: FOFSCALE(NSCALE)
+      INTEGER(4)               :: ISCALE,I
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
@@ -3026,9 +3026,9 @@ PRINT*,'HAM',HAM
         CALL ERROR$STOP('DMFT_CONSTRAINTS')
       END IF
 !
-      do iscale=1,nscale
-        scale(iscale)=1.d-1*real(iscale,kind=8)**2
-      enddo
+      DO ISCALE=1,NSCALE
+        SCALE(ISCALE)=1.D-1*REAL(ISCALE,KIND=8)**2
+      ENDDO
 !
 !     ==========================================================================
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                                ==
@@ -3042,11 +3042,11 @@ PRINT*,'HAM',HAM
           CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
      &                  ,KSET(IKPT)%GAMMA,DRHO)
-!!$do i=1,nchi
-!!$  write(*,fmt='("drho",100f10.5)')drho(i,:,1)
-!!$enddo  
+!!$DO I=1,NCHI
+!!$  WRITE(*,FMT='("DRHO",100F10.5)')DRHO(I,:,1)
+!!$ENDDO  
 !PRINT*,'ITER DEV=',MAXVAL(ABS(DRHO))
-!!$stop 'forced in constraints'
+!!$STOP 'FORCED IN CONSTRAINTS'
 !
 !         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
@@ -3062,7 +3062,7 @@ PRINT*,'HAM',HAM
           CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
           DGAMMA=-4.D0*KBT*DH0
           IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER &
-      &              ,MAXVAL(ABS(Dgamma)),MAXVAL(ABS(DRHO)) &
+      &              ,MAXVAL(ABS(DGAMMA)),MAXVAL(ABS(DRHO)) &
       &                        ,MAXLOC(ABS(DRHO))
           DO ISCALE=1,NSCALE
             CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
@@ -3088,49 +3088,49 @@ PRINT*,'HAM',HAM
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_drho(nchi,ndimd,nomega,nlau,kbt,mu,omega,fn,smat,sinv &
-     &                    ,hrho,gamma,drho)
+      SUBROUTINE DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN,SMAT,SINV &
+     &                    ,HRHO,GAMMA,DRHO)
 !     **************************************************************************
-!     ** calculate the deviation of the actual densitty matrix from the       **
-!     ** target density matrix for a specific k-point                         **
+!     ** CALCULATE THE DEVIATION OF THE ACTUAL DENSITTY MATRIX FROM THE       **
+!     ** TARGET DENSITY MATRIX FOR A SPECIFIC K-POINT                         **
 !     **************************************************************************
-      use dmft_module, only : nat &
-     &                       ,atomset
+      USE DMFT_MODULE, ONLY : NAT &
+     &                       ,ATOMSET
       IMPLICIT NONE
-      integer(4),intent(in) :: nchi
-      integer(4),intent(in) :: ndimd
-      integer(4),intent(in) :: nomega
-      integer(4),intent(in) :: nlau
-      real(8)   ,intent(in) :: kbt
-      real(8)   ,intent(in) :: mu
-      real(8)   ,intent(in) :: omega(nomega)
-      real(8)   ,intent(in) :: fn(nlau+1)
-      COMPLEX(8),intent(in) :: smat(NCHI,NCHI,NDIMD)
-      COMPLEX(8),intent(in) :: sinv(NCHI,NCHI,NDIMD)
-      COMPLEX(8),intent(in) :: hrho(NCHI,NCHI,NDIMD)
-      COMPLEX(8),intent(in) :: gamma(NCHI,NCHI,NDIMD)
-      COMPLEX(8),intent(out):: drho(NCHI,NCHI,NDIMD)
-      complex(4),parameter  :: ci=(0.d0,1.d0)
+      INTEGER(4),INTENT(IN) :: NCHI
+      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: NOMEGA
+      INTEGER(4),INTENT(IN) :: NLAU
+      REAL(8)   ,INTENT(IN) :: KBT
+      REAL(8)   ,INTENT(IN) :: MU
+      REAL(8)   ,INTENT(IN) :: OMEGA(NOMEGA)
+      REAL(8)   ,INTENT(IN) :: FN(NLAU+1)
+      COMPLEX(8),INTENT(IN) :: SMAT(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: SINV(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: HRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: GAMMA(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(OUT):: DRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(4),PARAMETER  :: CI=(0.D0,1.D0)
       COMPLEX(8)            :: GLAUR(NCHI,NCHI,NDIMD,NLAU+1)
       COMPLEX(8)            :: MATX(NCHI,NCHI,NDIMD)
-      COMPLEX(8)            :: dMATX(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: DMATX(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: G(NCHI,NCHI,NDIMD)
-      integer(4)            :: nu,iat,i1,i2,idimd,ilau
+      INTEGER(4)            :: NU,IAT,I1,I2,IDIMD,ILAU
 !     **************************************************************************
 !
 !     == LAURENT EXPANSION FOR THE GREENS FUNCTION DIFFERENCE ==============
       GLAUR=(0.D0,0.D0)
 !     == MATX=-MU*S+HRHO ; DMATX=SLAUR(0)-GAMMA ============================
       MATX=-MU*SMAT+HRHO
-!     == self energy minus gamma
-      dmatx=(0.D0,0.D0)
+!     == SELF ENERGY MINUS GAMMA
+      DMATX=(0.D0,0.D0)
       DO IAT=1,NAT
         I1=ATOMSET(IAT)%ICHI1
         I2=ATOMSET(IAT)%ICHI2
-        dmatx(I1:I2,I1:I2,:)=dmatx(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOCLAUR(:,:,:,1)
+        DMATX(I1:I2,I1:I2,:)=DMATX(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOCLAUR(:,:,:,1)
       ENDDO
-      DMATX=dmatx-GAMMA
+      DMATX=DMATX-GAMMA
 !     == GLAUR2=SINV*MATX*SINV =============================================
       CALL SPINOR$MATMUL(NDIMD,NCHI,DMATX,SINV,MAT)
       CALL SPINOR$MATMUL(NDIMD,NCHI,SINV,MAT,GLAUR(:,:,:,2))
@@ -3163,8 +3163,8 @@ PRINT*,'HAM',HAM
       DO ILAU=1,NLAU+1
         DRHO=DRHO+FN(ILAU)*GLAUR(:,:,:,ILAU)
       ENDDO
-      return
-      end
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_MIX(XDEV)
@@ -4530,7 +4530,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
         END DO
 !
 !       __ WRITE GREENS FUNCTION TO FILE________________________________________
-!       CALL MSIGMA_WRITEGF('G',NORB,NOMEGA,OMEGA,GF,"GF_IN.DAT")
+        CALL MSIGMA_WRITEGF('G',NORB,NOMEGA,OMEGA,GF,"GF_IN.DAT")
       END IF
 !
 !     ==========================================================================
@@ -4550,14 +4550,14 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       CALL MSIGMA_FILLGFFULL(NORB,NOMEGA,NLAU,KBT,GF,GLAU &
      &                      ,NMAXINDEX,NMININDEX,GFFULL)
 !
-      if(tpr) then
+      IF(TPR) THEN
 !!$        PRINT*,'SUM(GFFULL) ',SUM(GFFULL)
-!!$        open(888,file='gfffull.dat')
-!!$        do i=1,NMAXINDEX-NMININDEX+1
-!!$          write(888,fmt='(i5,200(f10.5,2x))')i,(gffull(j,j,i),j=1,norb)
-!!$       enddo
-!!$       close(888)
-      end if
+!!$        OPEN(888,FILE='GFFFULL.DAT')
+!!$        DO I=1,NMAXINDEX-NMININDEX+1
+!!$          WRITE(888,FMT='(I5,200(F10.5,2X))')I,(GFFULL(J,J,I),J=1,NORB)
+!!$       ENDDO
+!!$       CLOSE(888)
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE SELF ENERGY                                                ==
@@ -4570,6 +4570,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
           CALL MSIGMA_GETSIGMA(NORB,SUM_MAX,NMININDEX,NMAXINDEX &
     &                          ,M,N,BETA,UTENSOR,GFFULL,SIGMA(M,M,N))
         END DO
+!WRITE(*,FMT='(I5,200F10.5)')N,(SIGMA(M,M,N),M=1,NORB)
       END DO
 !
 !     ==========================================================================
@@ -4591,9 +4592,9 @@ STOP 'FORCED IN SPECTRALFUNCTION'
 !     ==========================================================================
 !     == WRITE SELF ENERGIES TO FILE                                          ==
 !     ==========================================================================
-      if(tpr) then
-!       CALL MSIGMA_WRITEGF('S',NORB,NOMEGA,OMEGA,SIGMA,'SIGMA.DAT') 
-      end if
+      IF(TPR) THEN
+        CALL MSIGMA_WRITEGF('S',NORB,NOMEGA,OMEGA,SIGMA,'SIGMA.DAT') 
+      END IF
       RETURN
       END SUBROUTINE MSIGMA$2NDORDER
 !   
@@ -4653,8 +4654,8 @@ STOP 'FORCED IN SPECTRALFUNCTION'
 !     **  DETERMINE THE COEFFICIENTS OF 
 !     **   REG(OMEGA)=A+B/(CI*OMEGA)**2 
 !     **   IMG(OMEGA)=C/(CI*OMEGA) +D/(CI*OMEGA)**3 
-!     **  from a pair of omega-values. These coefficients are than averaged   **
-!     **  a set of pairs
+!     **  FROM A PAIR OF OMEGA-VALUES. THESE COEFFICIENTS ARE THAN AVERAGED   **
+!     **  A SET OF PAIRS
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NORB
@@ -4663,16 +4664,16 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       REAL(8)   ,INTENT(IN)   :: OMEGA(NOMEGA)
       COMPLEX(8),INTENT(IN)   :: GF_IN(NORB,NORB,NOMEGA)
       REAL(8)   ,INTENT(OUT)  :: LAUARRAY(NORB,NORB,NO_LAUR)
-      INTEGER(4),parameter    :: N_AVG=25
-      INTEGER(4),parameter    :: SHIFT=25
-      REAL(8)                 :: C2_TMP(norb,norb)
-      REAL(8)                 :: COEFFS(norb,norb,4)
-      REAL(8)                 :: FN(norb,norb)
-      REAL(8)                 :: Fm(norb,norb)
-      REAL(8)                 :: Fni(norb,norb)
-      REAL(8)                 :: Fmi(norb,norb)
-      real(8)                 :: wn,wm
-      INTEGER(4)              :: Nun,num
+      INTEGER(4),PARAMETER    :: N_AVG=25
+      INTEGER(4),PARAMETER    :: SHIFT=25
+      REAL(8)                 :: C2_TMP(NORB,NORB)
+      REAL(8)                 :: COEFFS(NORB,NORB,4)
+      REAL(8)                 :: FN(NORB,NORB)
+      REAL(8)                 :: FM(NORB,NORB)
+      REAL(8)                 :: FNI(NORB,NORB)
+      REAL(8)                 :: FMI(NORB,NORB)
+      REAL(8)                 :: WN,WM
+      INTEGER(4)              :: NUN,NUM
       INTEGER(4)              :: M, N, NL
 !     **************************************************************************
       IF(NO_LAUR.GT.4) THEN
@@ -4682,8 +4683,8 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       END IF
       COEFFS = 0.D0
       DO N=1,N_AVG
-        NUN = NOmega-N+1
-        NUM = NOmega-N-SHIFT+1
+        NUN = NOMEGA-N+1
+        NUM = NOMEGA-N-SHIFT+1
         WN  = OMEGA(NUN)
         WM  = OMEGA(NUM)
         FN  = REAL( GF_IN(:,:,NUN),KIND=8)
@@ -4699,7 +4700,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       COEFFS = COEFFS/N_AVG
 !
 !     ==========================================================================
-!     == map into result array                                                ==
+!     == MAP INTO RESULT ARRAY                                                ==
 !     ==========================================================================
       WRITE(6,'(A15,I3,A15)') 'CALCULATE ONLY ',NO_LAUR,' LAURENT COEFF.'
       LAUARRAY = 0.D0
@@ -4708,9 +4709,9 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       END DO
 !
 !     ==========================================================================
-!     ==  now print
+!     ==  NOW PRINT
 !     ==========================================================================
-      do m=1,norb
+      DO M=1,NORB
         WRITE(*,'(A15,I2,A13,4F8.4)')'LAURENT : ORB=',M &
      &                               ,', C(0,1,2,3)=',REAL(LAUARRAY(M,M,:))
       END DO   
@@ -4782,7 +4783,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       END SUBROUTINE MSIGMA_SETFILLING
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE MSIGMA_FILLGFFULL(NORB,NOMEGA,NLAU,kbt,GF,GLAU &
+      SUBROUTINE MSIGMA_FILLGFFULL(NORB,NOMEGA,NLAU,KBT,GF,GLAU &
      &                            ,NMAXINDEX,NMININDEX,GFFULL)
 !     **************************************************************************
 !     ** EXPAND GREENS FUNCTION TO A LARGER MATSUBARA GRID                    **
@@ -4791,18 +4792,18 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       INTEGER(4),INTENT(IN) :: NORB
       INTEGER(4),INTENT(IN) :: NOMEGA
       INTEGER(4),INTENT(IN) :: NLAU
-      REAL(8)   ,INTENT(IN) :: kbt
+      REAL(8)   ,INTENT(IN) :: KBT
       COMPLEX(8),INTENT(IN) :: GF(NORB,NORB,NOMEGA)
       REAL(8)   ,INTENT(IN) :: GLAU(NORB,NORB,NLAU+1)
       INTEGER(4),INTENT(IN) :: NMININDEX
       INTEGER(4),INTENT(IN) :: NMAXINDEX
       COMPLEX(8),INTENT(OUT):: GFFULL(NORB,NORB,NMAXINDEX-NMININDEX+1)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER(4)            :: N,ORBITAL,ilau,nu
-      real(8)               :: omeganu
-      COMPLEX(8)            :: csvar
-      COMPLEX(8)            :: GF1(norb,norb)
-      real(8)               :: pi
+      INTEGER(4)            :: N,ORBITAL,ILAU,NU
+      REAL(8)               :: OMEGANU
+      COMPLEX(8)            :: CSVAR
+      COMPLEX(8)            :: GF1(NORB,NORB)
+      REAL(8)               :: PI
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       GFFULL=(0.D0, 0.D0)
@@ -4833,7 +4834,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MSIGMA_GETSIGMA(NORB,SUM_MAX,NMININDEX,NMAXINDEX &
-     &                          ,ORB,N,BETA,U,GFFULL,S)
+     &                          ,ORB,N_IN,BETA,U,GFFULL,S)
 !     **************************************************************************
 !     ** CALCULATE SIGMA IN 2ND ORDER
 !     **************************************************************************
@@ -4843,20 +4844,20 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       INTEGER(4),INTENT(IN) :: NMAXINDEX
       INTEGER(4),INTENT(IN) :: NMININDEX
       INTEGER(4),INTENT(IN) :: ORB  ! ORBITAL INDEX
-      INTEGER(4),INTENT(IN) :: N    ! MATSUBARA FREQUENCY INDEX
+      INTEGER(4),INTENT(IN) :: N_IN ! MATSUBARA FREQUENCY INDEX (STARTS WITH 1)
       REAL(8)   ,INTENT(IN) :: BETA
       COMPLEX(8),INTENT(IN) :: U(NORB,NORB,NORB,NORB+1)
       COMPLEX(8),INTENT(IN) :: GFFULL(NORB,NORB,NMAXINDEX-NMININDEX+1)
       COMPLEX(8),INTENT(OUT):: S    ! SELF ENERGY
-      INTEGER(4)            :: M, N1, LOWER_POLE, UPPER_POLE
-      INTEGER(4)            :: ind1a,ind1b,ind2a,ind2b
+      INTEGER(4)            :: M, N1, LOWER_POLE, UPPER_POLE,N
+      INTEGER(4)            :: IND1A,IND1B,IND2A,IND2B
       COMPLEX(8)            :: S_PRE_N1
 !     **************************************************************************
       S = (0.D0,0.D0)
-      
+      N=N_IN-1
       !2ND ORDER DIAGRAM (D+E) EQ. 63
       DO M=1,NORB
-        IF(M /= ORB) THEN 
+        IF(M.NE.ORB) THEN 
           S_PRE_N1 = (0.D0,0.D0)
           DO N1=-SUM_MAX,SUM_MAX-1
             !DIAGRAM (D+E)
@@ -4866,13 +4867,13 @@ STOP 'FORCED IN SPECTRALFUNCTION'
             !SUM FROM LEFT POLE-SUM_MAX UP TO RIGHT POLE+SUM_MAX
             LOWER_POLE = MIN(0, N1-N);
             UPPER_POLE = MAX(0, N1-N);
-            ind1a=LOWER_POLE-SUM_MAX-NMININDEX+1
-            ind1b=UPPER_POLE+SUM_MAX-NMININDEX+0
-            ind2a=ind1a+N-N1
-            ind2b=ind1b+N-N1
+            IND1A=LOWER_POLE-SUM_MAX-NMININDEX+1
+            IND1B=UPPER_POLE+SUM_MAX-NMININDEX+0
+            IND2A=IND1A+N-N1
+            IND2B=IND1B+N-N1
             S_PRE_N1=S_PRE_N1 + GFFULL(ORB,ORB,N1-NMININDEX+1) &
-     &              * DOT_PRODUCT(CONJG(GFFULL(M,M,ind1a:ind1b))  &
-     &                                 ,GFFULL(M,M,ind2a:ind2b) )
+     &              * DOT_PRODUCT(CONJG(GFFULL(M,M,IND1A:IND1B))  &
+     &                                 ,GFFULL(M,M,IND2A:IND2B) )
           END DO
           S = S - REAL(U(ORB,M,ORB,M),KIND=8)**2 * S_PRE_N1/(2.0*BETA*BETA)
         END IF
