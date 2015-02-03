@@ -584,6 +584,7 @@ END MODULE LMTO_MODULE
       INTEGER(4)            :: LNX1
       INTEGER(4),ALLOCATABLE :: LOX1(:)
       REAL(8)                :: AEZ,RCOV
+      REAL(8)                :: LHFWEIGHT
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL LMTO_INITIALIZE()
@@ -604,10 +605,9 @@ END MODULE LMTO_MODULE
         CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
         WRITE(NFIL,*)
         CALL REPORT$TITLE(NFIL,'LMTO OBJECT: '//TRIM(ID))
-        IF(HYBRIDSETTING(ISP)%LHFWEIGHT.GE.0.D0) THEN
-          CALL REPORT$R8VAL(NFIL,'LOCAL EXCHANGE ADMIXTURE ' &
-     &                        ,HYBRIDSETTING(ISP)%LHFWEIGHT,' ')
-        END IF
+        LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
+        IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
+        CALL REPORT$R8VAL(NFIL,'LOCAL EXCHANGE ADMIXTURE ',LHFWEIGHT,' ')
         CALL REPORT$L4VAL(NFIL,'SETUP WITH FOCK TERM ' &
      &                        ,HYBRIDSETTING(ISP)%TFOCKSETUP)
         CALL REPORT$L4VAL(NFIL,'CORE VALENCE EXCHANGE ' &
@@ -4334,6 +4334,7 @@ END IF
      &                      ,SBAR_NEW &
      &                      ,POTPAR1 &
      &                      ,HYBRIDSETTING &
+     &                      ,HFWEIGHT &
      &                      ,TCTE
       IMPLICIT NONE
       INTEGER(4)              :: NAT
@@ -4346,6 +4347,8 @@ END IF
       INTEGER(4)              :: IAT1,IAT2,IT(3)
       LOGICAL(4)              :: TONSITE
       INTEGER(4)              :: IAT,ISP,NN,I,J
+      REAL(8)                 :: LHFWEIGHT
+      REAL(8)                 :: EV
       REAL(8)   ,ALLOCATABLE  :: OVERLAP(:,:)
       REAL(8)   ,ALLOCATABLE  :: OINV(:,:)
       REAL(8)   ,ALLOCATABLE  :: F(:)
@@ -4354,11 +4357,11 @@ END IF
       REAL(8)   ,ALLOCATABLE  :: UNS(:,:,:,:)
 !     **************************************************************************
                                    CALL TRACE$PUSH('LMTO_LOCNATORB')
+      CALL CONSTANTS$GET('EV',EV)
       NAT=SIZE(ISPECIES)
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
         LMNH=SUM(2*POTPAR1(ISP)%LOFH+1) ! #(LOCAL ORBITALS FOR THIS ATOM)
-        IF(.NOT.HYBRIDSETTING(ISP)%ACTIVE) CYCLE
         IF(LMNH.EQ.0) CYCLE
 !
 !       == IDENTIFY ONSITE DENSITY MATRIX INDEX ================================
@@ -4450,17 +4453,33 @@ END IF
 !       ========================================================================
 !       == DETERMINE ONSITE U-TENSOR OF LOCAL NATURAL ORBITALS                ==
 !       ========================================================================
+        LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
+!       __LHFWEIGHT=-1 IF NOT SET. IN THAT CASE TAKE THE GLOBAL DEFAULT_________
+        IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
+!        
         ALLOCATE(UNS(LMNH,LMNH,LMNH,LMNH))
         CALL DMFT_ULOCAL(IAT,LMNH,UNS)
         CALL LMTO_MAPUTONATORB(LMNH,ORB,UNS)
 !
-        WRITE(*,FMT='(80("="),T10,"  U-PARAMETER IN EV FOR ATOM ",I3,"  ")')IAT
+        WRITE(*,FMT='(80("="),T10," BARE U-PARAMETER IN EV FOR ATOM "' &
+       &          //',I3,"  ")')IAT
         DO I=1,LMNH
-          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)*27.211D0,J=1,LMNH)
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)/EV,J=1,LMNH)
         ENDDO
-        WRITE(*,FMT='(80("="),T10,"  J-PARAMETER IN EV FOR ATOM ",I3,"  ")')IAT
+        WRITE(*,FMT='(80("="),T10,"  SCREENED U-PARAMETER IN EV FOR ATOM "' &
+       &          //',I3,"  ")')IAT
         DO I=1,LMNH
-          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)*27.211D0,J=1,LMNH)
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,J,I)*LHFWEIGHT/EV,J=1,LMNH)
+        ENDDO
+        WRITE(*,FMT='(80("="),T10,"  BARE J-PARAMETER IN EV FOR ATOM "' &
+       &          //',I3,"  ")')IAT
+        DO I=1,LMNH
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)/EV,J=1,LMNH)
+        ENDDO
+        WRITE(*,FMT='(80("="),T10,"  SCREENED J-PARAMETER IN EV FOR ATOM "' &
+       &          //',I3,"  ")')IAT
+        DO I=1,LMNH
+          WRITE(*,FMT='(10F12.1)')(UNS(J,I,I,J)*LHFWEIGHT/EV,J=1,LMNH)
         ENDDO
 !
         DEALLOCATE(UNS)
@@ -4558,6 +4577,7 @@ END IF
       INTEGER(4)            :: LMN,LN,IM
       REAL(8)               :: QSPIN(4)
       REAL(8)               :: SVAR
+      REAL(8)               :: LHFWEIGHT
       INTEGER(4)            :: IDFTTYPE
 INTEGER(4)            :: IDIMD
 CHARACTER(128) :: STRING
@@ -4609,17 +4629,11 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
         LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
 !
 !       == ADJUSTMENT IF LOCAL HFWEIGHT IS DIFFERENT FROM GLOBAL HFWEIGHT ======
-        IF(HFWEIGHT.GT.0.D0) THEN
-          HFSCALE=HYBRIDSETTING(ISP)%LHFWEIGHT/HFWEIGHT
-        ELSE
-          HFSCALE=1.D0
-        END IF
-!       == IF NOT SET, LHFWEIGT IS SET TO -1.D0 ================================
-        IF(ABS(HYBRIDSETTING(ISP)%LHFWEIGHT+1.D0).LT.1.D-6) THEN
-          HFSCALE=1.D0
-        END IF
-PRINT*,'IAT=',IAT,' LOCAL HFSCALE * GLOBAL HFWEIGHT= ',HFSCALE*HFWEIGHT
-PRINT*,'LHFW=',HYBRIDSETTING(ISP)%LHFWEIGHT,' GHFW=',HFWEIGHT
+        LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
+        IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
+        HFSCALE=1.D0
+        IF(HFWEIGHT.GT.0.D0)HFSCALE=LHFWEIGHT/HFWEIGHT
+PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
 !
 !       == FIND ELEMENTS FOR DENSITY MATRIX, HAMILTONIAN AND STRUCTURE CONSTANTS
         NND=SIZE(DENMAT)

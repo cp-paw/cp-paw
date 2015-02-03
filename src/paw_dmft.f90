@@ -3010,7 +3010,7 @@ PRINT*,'HAM',HAM
       INTEGER(4),PARAMETER     :: NSCALE=10.D0
       REAL(8)                  :: SCALE(NSCALE)
       REAL(8)                  :: FOFSCALE(NSCALE)
-      INTEGER(4)               :: ISCALE,I
+      INTEGER(4)               :: ISCALE,I,J
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
@@ -3061,6 +3061,20 @@ PRINT*,'HAM',HAM
           CALL SPINOR$MATMUL(NDIMD,NCHI,DRHO,KSET(IKPT)%SMAT,MAT)
           CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
           DGAMMA=-4.D0*KBT*DH0
+PRINT*,'============= ITER=',ITER,' IKPT=',IKPT,' ======================'
+SVAR=0.1D0*MAXVAL(ABS(DGAMMA))
+DO I=1,NCHI
+  DO J=1,NCHI
+    DO IDIMD=1,NDIMD
+      IF(ABS(DRHO(I,J,IDIMD)).GT.1.D-3.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR) THEN
+       WRITE(*,FMT='(3I5,6F10.5)')I,J,IDIMD &
+   &                 ,KSET(IKPT)%RHOADAPTED(I,J,NDIMD) &
+   &                 ,DRHO(I,J,IDIMD) &
+   &                 ,DGAMMA(I,J,IDIMD)*27.211D0
+      END IF
+    ENDDO
+  ENDDO
+ENDDO
           IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER &
       &              ,MAXVAL(ABS(DGAMMA)),MAXVAL(ABS(DRHO)) &
       &                        ,MAXLOC(ABS(DRHO))
@@ -3071,6 +3085,7 @@ PRINT*,'HAM',HAM
             FOFSCALE(ISCALE)=MAXVAL(ABS(DRHO))   !SUM(ABS(DRHO**2))
           ENDDO
           SVAR=SCALE(MINLOC(ABS(FOFSCALE),DIM=1))
+PRINT*,'SCALE',SVAR,MAXDEV
 !WRITE(*,FMT='(I10,I2,12F10.5)')ITER,MINLOC(ABS(FOFSCALE),DIM=1),FOFSCALE
           KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SVAR
         ENDDO ! END OF LOOP OVER ITERATIONS
@@ -3233,12 +3248,11 @@ PRINT*,'HAM',HAM
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT) :: ETOT
       LOGICAL(4),PARAMETER   :: STATICOFF=.FALSE.
-      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPRINT=.TRUE.
       REAL(8)                :: PHILW
       REAL(8)                :: LHFWEIGHT
       REAL(8)                :: EDC
       INTEGER(4)             :: NLOC  !#(LOCAL ORBITALS ON THIS SITE)
-      INTEGER(4)             :: LMNX  !#(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4)             :: IAT
       INTEGER(4)             :: IDIMD,I,NU
       COMPLEX(8),ALLOCATABLE :: HAM(:,:,:)
@@ -3274,6 +3288,14 @@ PRINT*,'HAM',HAM
 !       == PRINT IF DESIRED ====================================================
         IF(TPRINT) THEN
           WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
+       &                        'LOCAL DENSITY MATRIX',IAT
+          DO IDIMD=1,NDIMD
+            DO I=1,NLOC
+              WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I &
+      &                                   ,ATOMSET(IAT)%DENMAT%RHO(I,:,IDIMD)
+            ENDDO
+          ENDDO
+          WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
        &                        'FOCK HAMILTONIAN',IAT
           DO IDIMD=1,NDIMD
             DO I=1,NLOC
@@ -3289,9 +3311,10 @@ PRINT*,'HAM',HAM
 !       == COLLECT LOCAL HF WEIGHT =============================================
         LHFWEIGHT=ATOMSET(IAT)%LHFWEIGHT
         ALLOCATE(HAM(NLOC,NLOC,NDIMD))
-        CALL DMFT_DC(IAT,NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO,EDC,HAM)
-        ETOT=ETOT+LHFWEIGHT*EDC
-        ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+LHFWEIGHT*HAM
+        CALL DMFT_DC(IAT,NLOC,NDIMD,ATOMSET(IAT)%DENMAT%RHO,LHFWEIGHT,EDC,HAM)
+!       __SCALING WITH LHFWEIGHT IS DONE INSIDE DMFT_DC_________________________
+        ETOT=ETOT+EDC
+        ATOMSET(IAT)%DENMAT%H=ATOMSET(IAT)%DENMAT%H+HAM
         WRITE(*,FMT='(60("."),T1'&
      &        //',"--DMFT--DOUBLE COUNTING FOR ATOM  "' &
      &        //',I3,T60,":",F20.10)')IAT,LHFWEIGHT*EDC
@@ -3301,7 +3324,7 @@ PRINT*,'HAM',HAM
           WRITE(*,FMT='(82("="),T10," ",A," IAT=",I4,"  ")') &
        &                        'DBLE-CNTNG HAMILTONIAN',IAT
           DO IDIMD=1,NDIMD
-            DO I=1,LMNX
+            DO I=1,NLOC
               WRITE(*,FMT='(4I5,100F10.5)')IAT,NU,IDIMD,I,HAM(I,:,IDIMD) 
             ENDDO
           ENDDO
@@ -3367,28 +3390,32 @@ PRINT*,'HAM',HAM
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE DMFT_DC(IAT,LMNX,NDIMD,RHO,EDC,HAM)
+      SUBROUTINE DMFT_DC(IAT,LMNX,NDIMD,RHO,LHFWEIGHT,EDC,HAM)
 !     **************************************************************************
 !     ** CALCULATES THE DFT EXCHANGE ENERGY FOR THE CORRELATED ORBITALS.      **
 !     ** EDC IS TO BE ADDED! TO THE TOTAL ENERGY (MINUS SIGN IS INCLUDED)     **
 !     **                                                                      **
 !     ** REMARK: SOME ROUTINES ONLY WORK IN THE NON-COLLINEAR MODE            **
+!     **                                                                      **
+!     ** REMARK: THE ENERGY SCALING WITH LHFWEIGHT IS TAKEN CARE OF INSIDE    **
+!     **         THIS ROUTINE. IT IS ALSO PASSED ON TO LMTOAUGMENTATION.      **
+!     **                                                                      **
+!     ** REMARK: IN CONTRAST TO THE HYBRID FUNCTIONALS, ALSO THE CORRELATION  **
+!     **         CONTRIBUTION IS ACCOUNTED FOR.                               **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : ISPECIES,POTPAR=>POTPAR1,SBAR=>SBAR_NEW
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT
       INTEGER(4),INTENT(IN)  :: LMNX          !  #(LOCAL ORBITALS ON THIS SITE)
       INTEGER(4),INTENT(IN)  :: NDIMD
+      REAL(8)   ,INTENT(IN)  :: LHFWEIGHT  !SCREENING FACTOR FOR U-TENSOR
       COMPLEX(8),INTENT(IN)  :: RHO(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
       REAL(8)   ,INTENT(OUT) :: EDC           ! -E_(DFT-EXCHANGE)
       COMPLEX(8),INTENT(OUT) :: HAM(LMNX,LMNX,NDIMD) ! HAMILTONIAN CONTRIB.
       REAL(8)   ,ALLOCATABLE :: D(:,:,:)     !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: DT(:,:,:)    !(LMNXT,LMNXT,NDIMD)
-      REAL(8)   ,ALLOCATABLE :: DTALL(:,:,:) !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: HT(:,:,:)    !(LMNXT,LMNXT,NDIMD)
-      REAL(8)   ,ALLOCATABLE :: HTALL(:,:,:) !(LMNXT,LMNXT,NDIMD)
       REAL(8)   ,ALLOCATABLE :: H(:,:,:)  !(LMNX,LMNX,NDIMD)
-      REAL(8)   ,ALLOCATABLE :: HALL(:,:,:)  !(LMNX,LMNX,NDIMD)
       REAL(8)                :: EX
       INTEGER(4)             :: IDFTTYPE
       INTEGER(4)             :: LMNXT   ! #(VALENCE+SCATTERING WAVES)
@@ -3438,39 +3465,26 @@ PRINT*,'HAM',HAM
 !     ==========================================================================
 !     ==  MAP ONTO REAL ARRAY. (T,X,Y,Z) REPRESENTATION                       ==
 !     ==========================================================================
-!  CAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTION
-!
-!  THE DOUBLE COUNTING TERM IS NOT CALCULATED CORRECTLY. DTALL SHALL DESCRIBE 
-!  THE FULL DENSITY INCLUDING PARTIAL WAVES THAT HAVE NO CORRESPONDING LOCAL 
-!  ORBITALS. CHECK WITH PBLOECHL C611D05
-!
-!  CAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTIONCAUTION
-
       ALLOCATE(D(LMNX,LMNX,NDIMD))
       ALLOCATE(H(LMNX,LMNX,NDIMD))
-      ALLOCATE(HALL(LMNX,LMNX,NDIMD))
       ALLOCATE(DT(LMNXT,LMNXT,NDIMD))
-      ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
       ALLOCATE(HT(LMNXT,LMNXT,NDIMD))
-      ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
       D=REAL(RHO)
-      CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
-      DTALL=DT
-      CALL LMTO_SIMPLEDC_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
-     &                  ,POTPAR(ISP)%TAILED%AEF &
-     &                  ,LRX,AECORE,DT,DTALL,EX,HT,HTALL)
-      CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,HALL,HTALL)
-      CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
-      EDC=-EX  !SUBTRACT EXCHANGE CORRELATION ENERGY FROM TOTAL ENERGY
-      HAM=-CMPLX(H+HALL,KIND=8)
+      CALL LMTO_EXPANDLOCALWITHCTE('FWRD',IAT,NDIMD,LMNX,LMNXT,D,DT)
+      CALL LMTOAUGMENTATION$SETI4('IAT',IAT)
+      CALL LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
+     &                    ,POTPAR(ISP)%TAILED%AEF &
+     &                    ,LRX,AECORE,DT,LHFWEIGHT,EX,HT)
+      CALL LMTOAUGMENTATION$SETI4('IAT',0) !UNSET ATOM INDEX
+      CALL LMTO_EXPANDLOCALWITHCTE('BACK',IAT,NDIMD,LMNX,LMNXT,H,HT)
+      EDC=-EX*LHFWEIGHT
+      HAM=-CMPLX(H,KIND=8)*LHFWEIGHT
       DEALLOCATE(D)
       DEALLOCATE(DT)
-      DEALLOCATE(DTALL)
-      DEALLOCATE(HTALL)
       DEALLOCATE(HT)
       DEALLOCATE(H)
-      DEALLOCATE(HALL)
 !PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
+!
       RETURN
       END
 !
