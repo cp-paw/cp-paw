@@ -3823,17 +3823,17 @@ INTEGER(4) :: I,J
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB_LAPACK_ZHEGV(N,H,S,E,VEC)
-!     *********************************************************************
-!     **                                                                 **
-!     ** SOLVES THE GENERALIZED, REAL NON-SYMMETRIC EIGENVALUE PROBLEM   **
-!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                            **
-!     **                                                                 **
-!     ** REMARK: H AND S MUST BE HERMITEANC                              **
-!     **         S MUST BE POSITIVE DEFINITE                             **
-!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE               **
-!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
-!     **                                                                 **
-!     *********************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     ** SOLVES THE GENERALIZED, COMPLEX EIGENVALUE PROBLEM                   **
+!     **      [H(:,:)-E(I)*S(:,:)]*VEC(:,I)=0                                 **
+!     **                                                                      **
+!     ** REMARK: H AND S MUST BE HERMITEANC                                   **
+!     **         S MUST BE POSITIVE DEFINITE                                  **
+!     **         EIGENVECTORS ARE ORTHONORMAL IN THE SENSE                    **
+!     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY            **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
@@ -3848,11 +3848,11 @@ INTEGER(4) :: I,J
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       INTEGER               :: I
-!     *********************************************************************
+!     **************************************************************************
 !
-!     ========================================================================
-!     == TEST IF INPUT MATRICES ARE SYMMETRIC                               ==
-!     ========================================================================
+!     ==========================================================================
+!     == TEST IF INPUT MATRICES ARE HERMITEAN                                 ==
+!     ==========================================================================
       IF(TTEST) THEN
         DEV=SUM(ABS(H-TRANSPOSE(CONJG(H))))
         IF(DEV.GT.1.D-8) THEN
@@ -3868,9 +3868,9 @@ INTEGER(4) :: I,J
         END IF
       END IF
 !
-!     ========================================================================
-!     == CALL LAPACK ROUTINE                                                ==
-!     ========================================================================
+!     ==========================================================================
+!     == CALL LAPACK ROUTINE                                                 ==
+!     ==========================================================================
       ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
       VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  
       S1=S
@@ -3882,12 +3882,29 @@ INTEGER(4) :: I,J
       DEALLOCATE(WORK)
       ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
-      IF(INFO.LT.0) THEN
-        CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
-        CALL ERROR$I4VAL('I',-INFO)
-        CALL ERROR$STOP('LIB_LAPACK_ZHEGV')
-      ELSE IF(INFO.GT.0) THEN
-        CALL ERROR$MSG('FAILED')
+!
+!     ==========================================================================
+!     == ERROR MESSAGES                                                       ==
+!     ==========================================================================
+      IF(INFO.NE.0) THEN
+        CALL ERROR$MSG('FAILURE SOLVING THE COMPLEX GENERALIZED')
+        CALL ERROR$MSG('EIGENVALUE PROBLEM A*X=(LAMBDA)*B*X USING ZHEGV:')
+        IF(INFO.LT.0) THEN
+          CALL ERROR$MSG('ITH ARGUMENT OF ZHGEV HAS ILLEGAL VALUE')
+          CALL ERROR$I4VAL('I',-INFO)
+        ELSE IF(INFO.GT.N) THEN
+          CALL ERROR$MSG('THE LEADING MINOR OF ORDER I OF B IS NOT POSITIVE')
+          CALL ERROR$MSG('DEFINITE. THE FACTORIZATION OF B COULD NOT BE')
+          CALL ERROR$MSG('COMPLETED AND NO EIGENVALUES OR EIGENVECTORS ')
+          CALL ERROR$MSG('WERE COMPUTED.')
+          CALL ERROR$I4VAL('I',INFO-N)
+        ELSE   !(0.LT.INFO.LE.N)
+          CALL ERROR$MSG('ZHEEV FAILED  TO  CONVERGE')
+          CALL ERROR$MSG('I OFF-DIAGONAL ELEMENTS OF AN INTERMEDIATE') 
+          CALL ERROR$MSG('TRIDIAGONAL FORM DID NOT CONVERGE TO ZERO')
+          CALL ERROR$I4VAL('I',INFO)
+        END IF
+        CALL ERROR$I4VAL('N',N)
         CALL ERROR$I4VAL('INFO',INFO)
         CALL ERROR$STOP('LIB_LAPACK_ZHEGV')
       END IF

@@ -845,6 +845,15 @@ END MODULE LMTO_MODULE
 !!$STOP 'FORCED'
 !
 !     ==========================================================================
+!     == REPORT NEIGHBORLIST FOR STRUCTURE CONSTANTS                          ==
+!     ==========================================================================
+      WRITE(*,FMT='(82("="),T5,"  NEIGHBORLIST FOR SBAR  ")') 
+      DO NN=1,NNS
+        WRITE(*,FMT='("IAT1=",I5," IAT2=",I5," IT=",3I3)') &
+     &          SBAR_NEW(NN)%IAT1,SBAR_NEW(NN)%IAT2,SBAR_NEW(NN)%IT
+      ENDDO
+!
+!     ==========================================================================
 !     == CALCULATE <PRO|CHI> FROM STRUCTURE CONSTANTS                         ==
 !     ==========================================================================
       CALL LMTO_PCHI()
