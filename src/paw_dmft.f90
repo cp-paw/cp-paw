@@ -3043,24 +3043,23 @@ PRINT*,'HAM',HAM
       USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NDIMD,NAT,NOMEGA,NLAU &
      &                      ,OMEGA,KBT,MU,KSET,ATOMSET
       IMPLICIT NONE
-      REAL(8)   ,PARAMETER     :: TOL=1.D-3
-      INTEGER(4),PARAMETER     :: NITER=100000
+      INTEGER(4),PARAMETER     :: NITER1=100  ! X#(CONJUGATE GRADIENT STEPS)
+      INTEGER(4),PARAMETER     :: NITER2=100  ! X#(STEPS) FOR LINE SARCH
+      REAL(8)   ,PARAMETER     :: TOL1=1.D-5  ! TOLERANCE FOR CG ITERATION
+      REAL(8)   ,PARAMETER     :: TOL2=1.D-5  ! TOLERANCE FOR LINE SEARCH
+      REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5  ! INITIAL MIXING
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: SLAUR(NCHI,NCHI,NDIMD,NLAU)
+      COMPLEX(8)               :: FORCE(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: DRHO(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: DH0(NCHI,NCHI,NDIMD)
       LOGICAL(4)               :: CONVG
-      REAL(8)                  :: MAXDEV
-      INTEGER(4)               :: IKPT,ITER,IDIMD,NU,IAT
-      INTEGER(4)               :: I1,I2,ILAU
+      REAL(8)                  :: MAXDEV,MAXDEVOLD
+      REAL(8)                  :: SCALE
+      REAL(8)                  :: FF,PF,PFOLD
+      INTEGER(4)               :: IKPT,IDIMD
+      INTEGER(4)               :: ITER1,ITER2,ITER,I,J
       REAL(8)                  :: FN(2)
-      REAL(8)                  :: SVAR
-      INTEGER(4),PARAMETER     :: NSCALE=20,ISCALE0=7
-      REAL(8)                  :: SCALE(NSCALE)
-      REAL(8)                  :: FOFSCALE(NSCALE)
-      INTEGER(4)               :: ISCALE,I,J
+      REAL(8)                  :: SVAR,SVAR1,SVAR2
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
@@ -3077,22 +3076,6 @@ PRINT*,'HAM',HAM
       END IF
 !
 !     ==========================================================================
-!     ==  ARRANGE FOR SCALING ARRAY
-!     ==========================================================================
-      SCALE(ISCALE0)=0.D0 ! INCLUDE ZERO TO ENSURE THAT IT DOES NOT GET WORSE
-      SVAR=1.D0
-      DO I=ISCALE0+1,NSCALE
-        SVAR=SVAR*2.D0
-        SCALE(I)=+(SVAR-1.D0)
-      ENDDO
-      SVAR=1.D0
-      DO I=ISCALE0-1,1,-1
-        SVAR=SVAR*2.D0
-        SCALE(I)=-(SVAR-1.D0)
-      ENDDO
-      SCALE=SCALE*1.D-6
-!
-!     ==========================================================================
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                                ==
 !     ==========================================================================
       DO IKPT=1,NKPTL
@@ -3100,88 +3083,152 @@ PRINT*,'HAM',HAM
 !       ========================================================================
 !       ==  ADJUST H0 TO OBEY DENSITY MATRIX CONSTRAINT                       ==
 !       ========================================================================
-        DO ITER=1,NITER
-          CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+        DO ITER1=1,NITER1
+          IF(ITER1.EQ.1) THEN
+            CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
      &                  ,KSET(IKPT)%GAMMA,DRHO)
 !
-!         == DGAMMA=DMAXDEV/DGAMMA =============================================
-          CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+!           == DGAMMA=DMAXDEV/DGAMMA ===========================================
+            CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                  ,KSET(IKPT)%GAMMA,DRHO,MAXDEV,DGAMMA)
-          DGAMMA=-DGAMMA  ! DOWNHILL DIRECTION
-          DO IDIMD=1,NDIMD
-            DGAMMA(:,:,IDIMD)=TRANSPOSE(CONJG(DGAMMA(:,:,IDIMD)))
-          ENDDO
+     &                  ,KSET(IKPT)%GAMMA,DRHO,MAXDEV,FORCE)
+            FORCE=-FORCE  ! DOWNHILL DIRECTION
+            DGAMMA=(0.D0,0.D0)
+          END IF
+!
+!         ======================================================================
+!         == TEST DERIVATIVE                                                  ==
+!         ======================================================================
+!!$          CALL DMFT_TESTDER(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+!!$     &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
+!!$     &                  ,KSET(IKPT)%GAMMA)
 !
 !         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
-          CONVG=MAXDEV.LT.TOL
+          CONVG=SQRT(MAXDEV).LT.TOL1
           IF(CONVG) EXIT
 !
 !         ======================================================================
-!         == ADJUST HAMILTONIAN (LAGRANGE MULTIPLIER)                         ==
+!         == PREPARE NEXT SEARCH DIRECTION DGAMMA                             **
 !         ======================================================================
-!!$          CALL SPINOR$MATMUL(NDIMD,NCHI,DRHO,KSET(IKPT)%SMAT,MAT)
-!!$          CALL SPINOR$MATMUL(NDIMD,NCHI,KSET(IKPT)%SMAT,MAT,DH0)
-!!$          DO IDIMD=1,NDIMD
-!!$            DH0(:,:,IDIMD)=TRANSPOSE(DH0(:,:,IDIMD)) 
-!!$          ENDDO
-!!$          DGAMMA=-4.D0*KBT*DH0
-PRINT*,'============= ITER=',ITER,' IKPT=',IKPT,' ======================'
-SVAR=0.1D0*MAXVAL(ABS(DGAMMA))
-DO I=1,NCHI
-  DO J=1,NCHI
-    DO IDIMD=1,NDIMD
-      IF(ABS(DRHO(I,J,IDIMD)).GT.1.D-3.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR) THEN
-       WRITE(*,FMT='(3I5,6F10.5)')I,J,IDIMD &
-   &                 ,KSET(IKPT)%RHOADAPTED(I,J,NDIMD) &
-   &                 ,DRHO(I,J,IDIMD) &
-   &                 ,DGAMMA(I,J,IDIMD)*27.211D0
-      END IF
-    ENDDO
-  ENDDO
-ENDDO
-          IF(MOD(ITER,100).EQ.0)PRINT*,'MAXVAL OF DH /DRHO ',ITER &
-      &              ,MAXVAL(ABS(DGAMMA)),MAXVAL(ABS(DRHO)) &
-      &                        ,MAXLOC(ABS(DRHO))
-          DO ISCALE=1,NSCALE
+          FF=SUM(ABS(FORCE)**2)
+          DGAMMA=DGAMMA+FORCE/FF   ! NEW SEARCH DIRECTION
+!!$DO IDIMD=1,NDIMD
+!!$  DO I=1,NCHI
+!!$    DO J=1,NCHI
+!!$      SVAR1=MAXVAL(ABS(DRHO))/10.D0
+!!$      SVAR2=MAXVAL(ABS(DGAMMA))/10.D0
+!!$      IF(ABS(DRHO(I,J,IDIMD)).GT.SVAR1.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR2) THEN
+!!$        WRITE(*,FMT='(3I4,10F10.5)')I,J,IDIMD,DRHO(I,J,IDIMD),DGAMMA(I,J,IDIMD)
+!!$      END IF
+!!$    ENDDO
+!!$  ENDDO
+!!$ENDDO
+!
+!         ======================================================================
+!         == LINE SEARCH                                                      ==
+!         ======================================================================
+          PFOLD=REAL(SUM(CONJG(FORCE)*DGAMMA),KIND=8)
+          MAXDEVOLD=MAXDEV
+          SCALE=SCALEINI*FF
+          DO ITER2=1,NITER2
+            KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SCALE
+!
             CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                    ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                    ,KSET(IKPT)%GAMMA+DGAMMA*SCALE(ISCALE),DRHO)
-!           FOFSCALE(ISCALE)=MAXVAL(ABS(DRHO))   !SUM(ABS(DRHO**2))
-            FOFSCALE(ISCALE)=SQRT(SUM(ABS(DRHO)**2))
-          ENDDO
-!
-WRITE(*,FMT='("FOFSCALE")')
-DO ISCALE=1,NSCALE
- WRITE(*,*) SCALE(ISCALE),FOFSCALE(ISCALE)
-ENDDO
-
-          ISCALE=MINLOC(ABS(FOFSCALE),DIM=1)
-          SVAR=SCALE(ISCALE)
-PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
-          IF(ABS(SVAR).LT.1.D-10) THEN
-            DO ISCALE=1,NSCALE
-              PRINT*,SCALE(ISCALE),FOFSCALE(ISCALE)
-            ENDDO
-            CALL ERROR$MSG('CONSTRAINT LOOP STOPPED')
-            CALL ERROR$STOP('DMFT_CONSTRAINT')
+     &                    ,KSET(IKPT)%GAMMA,DRHO)
+            CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
+     &                  ,KSET(IKPT)%GAMMA,DRHO,MAXDEV,FORCE)
+            FORCE=-FORCE  ! DOWNHILL DIRECTION
+            PF=REAL(SUM(CONJG(FORCE)*DGAMMA),KIND=8)
+            CONVG=ABS(PF).LT.TOL2
+            IF(CONVG) EXIT
+            SVAR=PF/(PFOLD-PF)
+!           __LIMIT UNUSUALLY LARGE STEPS_______________________________________
+            IF(0.5D0*ABS(SVAR).GT.1.D0)SVAR=SVAR/(0.5D0*ABS(SVAR))
+            SCALE=SVAR*SCALE
+            PFOLD=PF
+            MAXDEVOLD=MAXDEV
+          ENDDO ! END OF LINE SEARCH
+          IF(.NOT.CONVG) THEN
+            CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
+            CALL ERROR$R8VAL('CONV CITERIUM',PF)
+            CALL ERROR$R8VAL('TOLERANCE',TOL2)
+            CALL ERROR$STOP('DMFT_CONSTRAINTS')
           END IF
-!WRITE(*,FMT='(I10,I2,12F10.5)')ITER,MINLOC(ABS(FOFSCALE),DIM=1),FOFSCALE
-          KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SVAR
-        ENDDO ! END OF LOOP OVER ITERATIONS
+PRINT*,'ITER ',ITER1,SQRT(MAXDEV)
+          CONVG=.FALSE.
+        ENDDO ! END OF CONJUGATE GRADIENT LOOP
         IF(.NOT.CONVG) THEN
           CALL ERROR$MSG('LOOP NOT CONVERGED')
           CALL ERROR$I4VAL('IKPT',IKPT)
-          CALL ERROR$I4VAL('ITER',ITER)
+          CALL ERROR$I4VAL('ITER1',ITER1)
           CALL ERROR$R8VAL('MAX. DEVIATION',MAXDEV)
-          CALL ERROR$R8VAL('TOLERANCE',TOL)
+          CALL ERROR$R8VAL('TOLERANCE',TOL1)
           CALL ERROR$STOP('DMFT_CONSTRAINTS')
         END IF
       ENDDO   !END OF LOOP OVER K-POINTS
                               CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_TESTDER(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &                  ,SMAT,SINV,HRHO,GAMMA0)
+!     **************************************************************************
+!     ** TEST DERIVATIVES OF THE SQUARE DEVIATION OF THE DENSITY MATRIX       **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NCHI
+      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: NOMEGA
+      INTEGER(4),INTENT(IN) :: NLAU
+      REAL(8)   ,INTENT(IN) :: KBT
+      REAL(8)   ,INTENT(IN) :: MU
+      REAL(8)   ,INTENT(IN) :: OMEGA(NOMEGA)
+      REAL(8)   ,INTENT(IN) :: FN(NLAU+1)
+      COMPLEX(8),INTENT(IN) :: SMAT(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: SINV(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: HRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN) :: GAMMA0(NCHI,NCHI,NDIMD)
+      COMPLEX(4),PARAMETER  :: CI=(0.D0,1.D0)
+      COMPLEX(8)            :: DRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: GAMMA(NCHI,NCHI,NDIMD)
+      REAL(8)               :: MAXDEV0,MAXDEVP,MAXDEVM
+      COMPLEX(8)            :: FORCE0(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: FORCEP(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: FORCEM(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: DIR(NCHI,NCHI,NDIMD)
+      REAL(8)               :: SVARP,SVARM
+      INTEGER(4)            :: IDIS
+!     **************************************************************************
+      CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA0,DRHO)
+      CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA0,DRHO,MAXDEV0,FORCE0)
+      FORCE0=-FORCE0
+      DIR=FORCE0
+      DIR=DIR/SQRT(SUM(ABS(DIR)**2))
+      PRINT*,'--',0.D0,-REAL(SUM(DIR*FORCE0),KIND=8)
+      DO IDIS=1,5
+        SVARP=+1.D-5*REAL(IDIS,8)
+        SVARM=-SVARP
+        GAMMA=GAMMA0+SVARP*DIR
+        CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,DRHO)
+        CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,DRHO,MAXDEVP,FORCEP)
+        GAMMA=GAMMA0+SVARM*DIR
+        CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,DRHO)
+        CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,DRHO,MAXDEVM,FORCEM)
+        PRINT*,'--',SVARP,(MAXDEVP-MAXDEVM)/(SVARP-SVARM)
+      ENDDO
+      STOP
       RETURN
       END
 !
@@ -3258,9 +3305,12 @@ PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
       ENDDO
 !
 !     == ADD TAILS (GLAUR3 DOES NOT CONTRIBUTE) ============================
-      DO ILAU=1,NLAU+1
-        DRHO=DRHO+FN(ILAU)*GLAUR(:,:,:,ILAU)
-      ENDDO
+!SWITCHED OFF BECAUSE THEY ARE NOT ACCOUNTED FOR IN THE DERIVATIVES
+!!$      DO ILAU=1,NLAU+1
+!!$        DRHO=DRHO+FN(ILAU)*GLAUR(:,:,:,ILAU)
+!!$      ENDDO
+
+
 !!$DO IDIMD=1,NDIMD
 !!$  WRITE(*,FMT='(82("="),T10," REAL(DRHO) IDIMD=",I5," ")')IDIMD
 !!$  DO I=1,NCHI
@@ -3272,6 +3322,12 @@ PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
 !!$  ENDDO
 !!$ENDDO
 !!$STOP 'FORCED'
+
+!!$SVAR=0.D0
+!!$DO IDIMD=1,NDIMD
+!!$  SVAR=MAX(SVAR,MAXVAL(ABS(DRHO(:,:,IDIMD)-CONJG(TRANSPOSE(DRHO(:,:,IDIMD))))))
+!!$ENDDO
+!!$PRINT*,'DEV FROM HERMITEAN DRHO',SVAR
       RETURN
       END
 !
@@ -3279,6 +3335,8 @@ PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
       SUBROUTINE DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                        ,SMAT,SINV,HRHO,GAMMA,DRHO,F,DFDGAMMA)
 !     **************************************************************************
+!     ** F=SUM(ABS(DRHO)**2)=TR[DRHO*DRHO^\DAGGER]
+!     ** DF=DFDGAMMA*DGAMMA
 !     **************************************************************************
       USE DMFT_MODULE, ONLY : NAT &
      &                       ,ATOMSET
@@ -3305,8 +3363,9 @@ PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
       COMPLEX(8)            :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: G(NCHI,NCHI,NDIMD)
       INTEGER(4)            :: NU,IAT,I1,I2,IDIMD,ILAU,I
+      REAL(8)               :: SVAR
 !     **************************************************************************
-      F=SQRT(SUM(ABS(DRHO)**2))
+      F=SUM(ABS(DRHO)**2)
 !
 !     == LOOP OVER OMEGA =======================================================
       DFDGAMMA=(0.D0,0.D0)
@@ -3330,6 +3389,12 @@ PRINT*,'SCALE:',ITER,IKPT,ISCALE,SVAR,MAXDEV
         DFDGAMMA(:,:,IDIMD)=DFDGAMMA(:,:,IDIMD) &
      &                     +CONJG(TRANSPOSE(DFDGAMMA(:,:,IDIMD)))
       ENDDO
+      DFDGAMMA=2.D0*DFDGAMMA  
+!
+!     == THIS IS A FUDGE FACTOR, WHICH IS NOT YET UNDERSTOOD. I BELIEVE THAT
+!     == IT HAS TO DO WITH THE SPINOR REPRESENTSTION. IT WAS NUMERICALLY 
+!     == REQUIRED WITH NON-SPIN POLARIZED CALCULATKION
+      DFDGAMMA=0.25D0*DFDGAMMA  
       RETURN
       END
 !
