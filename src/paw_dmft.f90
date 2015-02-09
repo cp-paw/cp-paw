@@ -1706,10 +1706,10 @@ INTEGER(4) :: NFIL=1500,NN2,LM1
           SINV=SINV+SVAR*KSET(IKPT)%SINV(I1:I2,I1:I2,:)
         ENDDO
 !
-CALL SPINOR_PRINTMATRIX(6,'RHO(T,S)  IN NATORB',1,NLOC,NDIMD,NLOC &
-   &    ,RHO)
-CALL SPINOR_PRINTMATRIX(6,'SINV(T,S) IN NATORB',1,NLOC,NDIMD,NLOC &
-   &    ,SINV)
+!!$CALL SPINOR_PRINTMATRIX(6,'RHO(T,S)  IN NATORB',1,NLOC,NDIMD,NLOC &
+!!$   &    ,RHO)
+!!$CALL SPINOR_PRINTMATRIX(6,'SINV(T,S) IN NATORB',1,NLOC,NDIMD,NLOC &
+!!$   &    ,SINV)
 !
 !       ========================================================================
 !       == CONVERT TO UP-DOWN REPRESENTATION                                  ==
@@ -1875,8 +1875,8 @@ INTEGER(4) :: IDIMD,ICHI1,ICHI2,ICHI
           CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,KSET(IKPT)%SINV) 
           DO ISPIN=1,NDIMD
 !           == A*U=B*U*F  WITH U^DAGGER*S*U=1 ==================================
-CALL SPINOR$PRINTMATRIX(6,'RHO IN HRHO','TXYZ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%RHO)
-CALL SPINOR$PRINTMATRIX(6,'SINV IN HRHO','TXYZ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%SINV)
+!!$CALL SPINOR$PRINTMATRIX(6,'RHO IN HRHO','TXYZ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%RHO)
+!!$CALL SPINOR$PRINTMATRIX(6,'SINV IN HRHO','TXYZ',1,NCHI,NDIMD,NCHI,KSET(IKPT)%SINV)
             CALL LIB$GENERALEIGENVALUEC8(NCHI,KSET(IKPT)%RHO(:,:,ISPIN) &
      &                                       ,KSET(IKPT)%SINV(:,:,ISPIN),F,U)
 !!$WRITE(*,FMT='(78("="),T10," IKPT=",I5," ISPIN=",I2,"  ")')IKPT,ISPIN
@@ -2514,7 +2514,7 @@ PRINT*,'MU ',MU
 !       == HFWEIGHT IS ABSORBED IN THE LOCAL U-TENSOR                         ==
 !       ========================================================================
 !IF(IAT.EQ.2)CALL DMFT_SOLVERTEST(IAT)
-CALL TESTRHOOFG(NLOC,NDIMD,NOMEGA,NLAU,KBT,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR)
+!CALL TESTRHOOFG(NLOC,NDIMD,NOMEGA,NLAU,KBT,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR)
 !       __SELF ENERGY IS RETURNED AS ATOMSET%DPHIDG_____________________________
         CALL DMFT_DYNAMICSOLVER(NLOC,NDIMD,NOMEGA,NLAU,KBT &
      &                         ,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLAUR &
@@ -2523,9 +2523,10 @@ CALL TESTRHOOFG(NLOC,NDIMD,NOMEGA,NLAU,KBT,ATOMSET(IAT)%GLOC,ATOMSET(IAT)%GLOCLA
      &                         ,ATOMSET(IAT)%DEDU &
      &                         ,ATOMSET(IAT)%NATORB%PIPHI &
      &                         ,ATOMSET(IAT)%NATORB%CHIPHI)
-       CALL SPINOR_PRINTMATRIX(6,'DPHIDG(NU=1) IN SOLVER ' &
+       IF(SUM(ABS(ATOMSET(IAT)%DPHIDG(:,:,:,1))).GT.1.D-6) THEN
+         CALL SPINOR_PRINTMATRIX(6,'DPHIDG(NU=1) IN SOLVER ' &
     &                      ,1,NLOC,NDIMD,NLOC,ATOMSET(IAT)%DPHIDG(:,:,:,1))
-!PRINT*,'DPHIDG ',ATOMSET(IAT)%DPHIDG(1,1,1,:)
+       END IF
         ETOT=ETOT+PHILW !SCREENING ALREADY CONTAINED IN U-TENSOR
         WRITE(*,FMT='(60("."),T1'&
      &        //',"--DMFT--LW FUNCTIONAL FOR DYNAMIC CORRELATION OF ATOM "' &
@@ -2700,8 +2701,7 @@ STOP 'FORCED'
         CALL SPINOR$SHRINKDOWN(NDIMD,NLOC,SLAUR(:,:,I),SLOCLAUR(:,:,:,I))
       ENDDO
       SLAUR=0.5D0*SLAUR
-CALL SPINOR_PRINTMATRIX(6,'SLOC',1,NLOC,NDIMD,NLOC,SLOC(:,:,:,1))
-
+!  CALL SPINOR_PRINTMATRIX(6,'SLOC',1,NLOC,NDIMD,NLOC,SLOC(:,:,:,1))
 !!$IF(SUM(ABS(SLOC))+SUM(ABS(SLOCLAUR)).GT.1.D-8) THEN
 !!$  WRITE(*,FMT='(82("="),T10," AFTER SHRINKDOWN  ")')
 !!$  DO IDIMD=1,NDIMD
@@ -3043,10 +3043,10 @@ PRINT*,'HAM',HAM
       USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NDIMD,NAT,NOMEGA,NLAU &
      &                      ,OMEGA,KBT,MU,KSET,ATOMSET
       IMPLICIT NONE
-      INTEGER(4),PARAMETER     :: NITER1=100  ! X#(CONJUGATE GRADIENT STEPS)
-      INTEGER(4),PARAMETER     :: NITER2=100  ! X#(STEPS) FOR LINE SARCH
-      REAL(8)   ,PARAMETER     :: TOL1=1.D-5  ! TOLERANCE FOR CG ITERATION
-      REAL(8)   ,PARAMETER     :: TOL2=1.D-5  ! TOLERANCE FOR LINE SEARCH
+      INTEGER(4),PARAMETER     :: NITER1=10000 ! X#(CONJUGATE GRADIENT STEPS)
+      INTEGER(4),PARAMETER     :: NITER2=100   ! X#(STEPS) FOR LINE SARCH
+      REAL(8)   ,PARAMETER     :: TOL1=1.D-5   ! TOLERANCE FOR CG ITERATION
+      REAL(8)   ,PARAMETER     :: TOL2=1.D-5   ! TOLERANCE FOR LINE SEARCH
       REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5  ! INITIAL MIXING
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
@@ -3159,7 +3159,10 @@ PRINT*,'HAM',HAM
             CALL ERROR$R8VAL('TOLERANCE',TOL2)
             CALL ERROR$STOP('DMFT_CONSTRAINTS')
           END IF
-PRINT*,'ITER ',ITER1,SQRT(MAXDEV)
+          IF(MOD(ITER1,10).EQ.0) THEN
+            WRITE(*,FMT='("DMFT_CONSTRAINTS ITER=",I5," SQRT(|DRHO|^2)=",E10.3)') &
+    &                   ITER1,SQRT(MAXDEV)
+          END IF
           CONVG=.FALSE.
         ENDDO ! END OF CONJUGATE GRADIENT LOOP
         IF(.NOT.CONVG) THEN
@@ -3414,7 +3417,7 @@ PRINT*,'ITER ',ITER1,SQRT(MAXDEV)
       REAL(8)   ,INTENT(OUT):: XDEV   ! MAX DEVIATION OF THE SELF ENERGY
 !!$      REAL(8)  ,PARAMETER :: MIX1=0.1D0
 !!$      REAL(8)  ,PARAMETER :: MIX2=0.1D0
-      REAL(8)   ,PARAMETER :: MIX1=0.1D0
+      REAL(8)   ,PARAMETER :: MIX1=1.D0
       REAL(8)   ,PARAMETER :: MIX2=0.0D0
       INTEGER(4),PARAMETER :: NUH=50
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
@@ -4041,6 +4044,7 @@ PRINT*,'RESET? ',TRESET
 !         ======================================================================
           MAT=KSET(IKPT)%GAMMA(:,:,:)
           CALL SPINOR$CONVERT('BACK',NCHI,NDIMD,MAT)
+!         __WHAT IS THE FUNNY FACTOR 2???_______________________________________
           MAT=2.D0*MAT   
 !!$DO IAT=1,NAT
 !!$  IF(ATOMSET(IAT)%NLOC.LE.0) CYCLE ! NO DOUBLE COUNTING          
@@ -4771,6 +4775,8 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       REAL(8)                :: EV
       REAL(8)                :: PI
 !     **************************************************************************
+                               CALL TRACE$PUSH('MSIGMA$2NDORDER')
+      WRITE(*,FMT='(82("="),T10," IN MSIGMA$2NDORDER ")')
       CALL CONSTANTS$GET('EV',EV)
       PI=4.D0*ATAN(1.D0)
 !
@@ -4788,6 +4794,7 @@ STOP 'FORCED IN SPECTRALFUNCTION'
 !     ==========================================================================
       NO_LAUR=3   ! NO_LAUR TERMS IN THE LAURENT EXPANSION
       SUM_MAX=NOMEGA+300
+SUM_MAX=NOMEGA+10
       CALL MSIGMA_DETERMINEBOUNDS(NOMEGA,SUM_MAX,NMININDEX,NMAXINDEX)
 !
 !     ==========================================================================
@@ -4803,9 +4810,9 @@ STOP 'FORCED IN SPECTRALFUNCTION'
         WRITE(*,*)'NMAXINDEX........=',NMAXINDEX
         WRITE(*,*)'NMININDEX........=',NMININDEX
         WRITE(*,FMT='(T20,"  U-TENSOR  ")')
-        DO I=1,NORB
-          WRITE(6,FMT='(200F11.5)') (REAL(UTENSOR(I,J,I,J)),J=1,NORB)
-        END DO
+!!$        DO I=1,NORB
+!!$          WRITE(6,FMT='(200F11.5)') (REAL(UTENSOR(I,J,I,J)),J=1,NORB)
+!!$        END DO
 !
 !       __ WRITE GREENS FUNCTION TO FILE________________________________________
         CALL MSIGMA_WRITEGF('G',NORB,NOMEGA,OMEGA,GF,"GF_IN.DAT")
@@ -4828,27 +4835,17 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       CALL MSIGMA_FILLGFFULL(NORB,NOMEGA,NLAU,KBT,GF,GLAU &
      &                      ,NMAXINDEX,NMININDEX,GFFULL)
 !
-      IF(TPR) THEN
-!!$        PRINT*,'SUM(GFFULL) ',SUM(GFFULL)
-!!$        OPEN(888,FILE='GFFFULL.DAT')
-!!$        DO I=1,NMAXINDEX-NMININDEX+1
-!!$          WRITE(888,FMT='(I5,200(F10.5,2X))')I,(GFFULL(J,J,I),J=1,NORB)
-!!$       ENDDO
-!!$       CLOSE(888)
-      END IF
-!
 !     ==========================================================================
 !     == CALCULATE SELF ENERGY                                                ==
 !     ==========================================================================
       SIGMA = (0.D0,0.D0)
       DO N=1,NOMEGA
-        WRITE(*,'(F6.2,A6)') (N-1)*100.D0/NOMEGA,'% DONE'
+!        WRITE(*,'(F6.2,A6)') (N-1)*100.D0/NOMEGA,'% DONE'
         DO M=1,NORB
 !         __SIGMA(M,M,N+1) = GETSIGMA(M,N,UTENSOR)______________________________
           CALL MSIGMA_GETSIGMA(NORB,SUM_MAX,NMININDEX,NMAXINDEX &
     &                          ,M,N,BETA,UTENSOR,GFFULL,SIGMA(M,M,N))
         END DO
-!WRITE(*,FMT='(I5,200F10.5)')N,(SIGMA(M,M,N),M=1,NORB)
       END DO
 !
 !     ==========================================================================
@@ -4873,6 +4870,8 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       IF(TPR) THEN
         CALL MSIGMA_WRITEGF('S',NORB,NOMEGA,OMEGA,SIGMA,'SIGMA.DAT') 
       END IF
+      WRITE(*,FMT='(82("="),T10," MSIGMA$2NDORDER DONE ")')
+                               CALL TRACE$POP()
       RETURN
       END SUBROUTINE MSIGMA$2NDORDER
 !   
