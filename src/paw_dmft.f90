@@ -2786,7 +2786,8 @@ STOP 'FORCED'
       CHARACTER(32),PARAMETER :: IDIN='DMFT_IN_SIGMA'
       INTEGER(4)            :: NORB_,NOMEGA_
       INTEGER(4)            :: NFIL
-      INTEGER(4)            :: NU,I
+      INTEGER(4)            :: NU,I,j
+      COMPLEX(8)            :: Ucopy(NORB,NORB,NORB,NORB) !U-TENSOR
 !      CHARACTER(32),PARAMETER :: TYPE='LINEAR' ! 'NONE','LINEAR','STATIC'
 !      CHARACTER(32),PARAMETER :: TYPE='NONE' ! 'NONE','LINEAR',
 !      CHARACTER(32),PARAMETER :: TYPE='STATIC' ! 'NONE','LINEAR',
@@ -2837,7 +2838,23 @@ IF(NORB.NE.12) THEN
  SLAUR=(0.D0,0.D0)
  RETURN
 END IF
+!!$ucopy=u
+!!$do i=1,6
+!!$  if(i.eq.1) j=1   ! s
+!!$  if(i.eq.2) j=2   ! eg
+!!$  if(i.eq.3) j=4   ! eg
+!!$  if(i.eq.4) j=7   ! s  
+!!$  if(i.eq.5) j=8
+!!$  if(i.eq.6) j=10
+!!$  Ucopy(j,:,:,:)=0.d0
+!!$  Ucopy(:,j,:,:)=0.d0
+!!$  Ucopy(:,:,j,:)=0.d0
+!!$  Ucopy(:,:,:,j)=0.d0
+!!$enddo
+!!$        CALL MSIGMA$2NDORDER(NORB,NOMEGA,NLAU,KBT,G,GLAUR,Ucopy,ETOT,S,SLAUR)
         CALL MSIGMA$2NDORDER(NORB,NOMEGA,NLAU,KBT,G,GLAUR,U,ETOT,S,SLAUR)
+
+!
 !!$WRITE(*,FMT='(82("="),T10,"  RIGHT AFTER MSIGMA$2NDORDER  ")')
 !!$WRITE(*,FMT='(82("="),T10," REAL(SIGMA)  ")')
 !!$DO I=1,NORB
@@ -3046,20 +3063,23 @@ PRINT*,'HAM',HAM
       INTEGER(4),PARAMETER     :: NITER1=10000 ! X#(CONJUGATE GRADIENT STEPS)
       INTEGER(4),PARAMETER     :: NITER2=100   ! X#(STEPS) FOR LINE SARCH
       REAL(8)   ,PARAMETER     :: TOL1=1.D-5   ! TOLERANCE FOR CG ITERATION
-      REAL(8)   ,PARAMETER     :: TOL2=1.D-5   ! TOLERANCE FOR LINE SEARCH
+      REAL(8)   ,PARAMETER     :: TOL2=1.D-7   ! TOLERANCE FOR LINE SEARCH
       REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5  ! INITIAL MIXING
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
       COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: FORCE(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: FORCEm(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: DRHO(NCHI,NCHI,NDIMD)
       LOGICAL(4)               :: CONVG
       REAL(8)                  :: MAXDEV,MAXDEVOLD
       REAL(8)                  :: SCALE
-      REAL(8)                  :: FF,PF,PFOLD
+      REAL(8)                  :: PF,PFOLD
       INTEGER(4)               :: IKPT,IDIMD
       INTEGER(4)               :: ITER1,ITER2,ITER,I,J
       REAL(8)                  :: FN(2)
       REAL(8)                  :: SVAR,SVAR1,SVAR2
+      REAL(8)                  :: cosalpha,cosbeta,cosgamma
+      character(128)           :: string
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
@@ -3108,34 +3128,56 @@ PRINT*,'HAM',HAM
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
           CONVG=SQRT(MAXDEV).LT.TOL1
+          CONVG=CONVG.OR.SQRT(SUM(ABS(FORCE)**2)).LT.TOL1
           IF(CONVG) EXIT
 !
 !         ======================================================================
 !         == PREPARE NEXT SEARCH DIRECTION DGAMMA                             **
 !         ======================================================================
-          FF=SUM(ABS(FORCE)**2)
-          DGAMMA=DGAMMA+FORCE/FF   ! NEW SEARCH DIRECTION
-!!$DO IDIMD=1,NDIMD
-!!$  DO I=1,NCHI
-!!$    DO J=1,NCHI
-!!$      SVAR1=MAXVAL(ABS(DRHO))/10.D0
-!!$      SVAR2=MAXVAL(ABS(DGAMMA))/10.D0
-!!$      IF(ABS(DRHO(I,J,IDIMD)).GT.SVAR1.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR2) THEN
-!!$        WRITE(*,FMT='(3I4,10F10.5)')I,J,IDIMD,DRHO(I,J,IDIMD),DGAMMA(I,J,IDIMD)
-!!$      END IF
-!!$    ENDDO
-!!$  ENDDO
-!!$ENDDO
+!         __polak-ribiere. better for nonlinearities___________________________
+          SVAR=SVAR/SUM(ABS(FORCEM)**2)
+!          SVAR=SVAR*SUM(REAL(CONJG(FORCE-FORCEM)*FORCE,KIND=8))
+          SVAR=SVAR*SUM(REAL(CONJG(FORCE)*FORCE,KIND=8)) !fletcher reeves
+IF(ITER1.GT.1) THEN
+! __ ANGLE BETWEEN THE THE NEW AND OLD SEARCH DIRECTIONS________________________
+  COSALPHA=SUM(REAL(CONJG(DGAMMA)*(FORCE+DGAMMA*SVAR),KIND=8)) &
+ &        /SQRT(SUM(ABS(FORCE+DGAMMA*SVAR)**2)*SUM(ABS(DGAMMA)**2))
+! __ANGLE BETWEEN SEARCH DIRECTION AND FORCE (COS(ALPHA) SHOULD BE ZERO)________
+  COSBETA=SUM(REAL(CONJG(DGAMMA)*FORCE,KIND=8)) &
+ &        /SQRT(SUM(ABS(FORCE)**2)*SUM(ABS(DGAMMA)**2))
+! __ ANGLE BETWEEN CURRENT AND PREVIOUS FORCE__(COS(ALPHA) SHOULD BE ZERO)______
+  COSGAMMA=SUM(REAL(CONJG(FORCEM)*FORCE,KIND=8)) &
+ &        /SQRT(SUM(ABS(FORCE)**2)*SUM(ABS(FORCEM)**2))
+END IF         
+          FORCEM=FORCE
+          DGAMMA=FORCE+DGAMMA*SVAR   ! NEW SEARCH DIRECTION
+!         __ENSURE THAT DGAMMA REMAINS HERMITEAN________________________________
+          DO IDIMD=1,NDIMD
+            DGAMMA(:,:,IDIMD)=0.5D0*(DGAMMA(:,:,IDIMD) &
+         &                          +TRANSPOSE(CONJG(DGAMMA(:,:,IDIMD))))
+          ENDDO
+
+DO IDIMD=1,NDIMD
+  DO I=1,NCHI
+    DO J=1,NCHI
+      SVAR1=MAXVAL(ABS(DRHO))/10.D0
+      SVAR2=MAXVAL(ABS(DGAMMA))/10.D0
+      IF(ABS(DRHO(I,J,IDIMD)).GT.SVAR1.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR2) THEN
+        WRITE(*,FMT='(4I4,10F15.5)')I,J,IDIMD,ikpt &
+ &                                ,DRHO(I,J,IDIMD),DGAMMA(I,J,IDIMD)
+      END IF
+    ENDDO
+  ENDDO
+ENDDO
 !
 !         ======================================================================
 !         == LINE SEARCH                                                      ==
 !         ======================================================================
           PFOLD=REAL(SUM(CONJG(FORCE)*DGAMMA),KIND=8)
           MAXDEVOLD=MAXDEV
-          SCALE=SCALEINI*FF
+          SCALE=SCALEINI
           DO ITER2=1,NITER2
             KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SCALE
-!
             CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                    ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
      &                    ,KSET(IKPT)%GAMMA,DRHO)
@@ -3159,9 +3201,12 @@ PRINT*,'HAM',HAM
             CALL ERROR$R8VAL('TOLERANCE',TOL2)
             CALL ERROR$STOP('DMFT_CONSTRAINTS')
           END IF
-          IF(MOD(ITER1,10).EQ.0) THEN
-            WRITE(*,FMT='("DMFT_CONSTRAINTS ITER=",I5," SQRT(|DRHO|^2)=",E10.3)') &
-    &                   ITER1,SQRT(MAXDEV)
+          IF(MOD(ITER1,1).EQ.0) THEN
+            STRING='("DMFT_CONSTRAINTS ITER=",I5," |DRHO|=",E10.3," |F|=",E10.3'
+            STRING=TRIM(STRING)//'," COS(PHI)=",3F20.5," LINENITER=",I5)'
+            WRITE(*,FMT=TRIM(STRING)) &
+    &            ITER1,SQRT(MAXDEV),SQRT(SUM(ABS(FORCE)**2)) &
+    &                    ,COSALPHA,cosbeta,cosgamma,ITER2
           END IF
           CONVG=.FALSE.
         ENDDO ! END OF CONJUGATE GRADIENT LOOP
@@ -3417,7 +3462,7 @@ PRINT*,'HAM',HAM
       REAL(8)   ,INTENT(OUT):: XDEV   ! MAX DEVIATION OF THE SELF ENERGY
 !!$      REAL(8)  ,PARAMETER :: MIX1=0.1D0
 !!$      REAL(8)  ,PARAMETER :: MIX2=0.1D0
-      REAL(8)   ,PARAMETER :: MIX1=1.D0
+      REAL(8)   ,PARAMETER :: MIX1=1.0D0
       REAL(8)   ,PARAMETER :: MIX2=0.0D0
       INTEGER(4),PARAMETER :: NUH=50
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
@@ -3445,14 +3490,14 @@ PRINT*,'HAM',HAM
         DO NU=1,NOMEGA
 !          SVAR=1.D0/(1.D0-MIX1/(MIX1-1.D0)+MIX2*OMEGA(NU)**2)
           SVAR=1.D0/(1.D0+(1.D0-MIX1)/(MIX1+(OMEGA(NU)/OMEGA(NUH))**2))
-!SVAR=MIX1
+SVAR=MIX1
           ATOMSET(IAT)%SLOC(:,:,:,NU)=ATOMSET(IAT)%SLOC(:,:,:,NU) &
      &                          +SVAR*ATOMSET(IAT)%DPHIDG(:,:,:,NU)
         ENDDO
 !
 !       == MIX IN WITH FREQUENCY INDEPENDENT MASS ==============================
         SVAR=1.D0
-! SVAR=MIX1
+ SVAR=MIX1
         ATOMSET(IAT)%SLOCLAUR=ATOMSET(IAT)%SLOCLAUR+SVAR*ATOMSET(IAT)%DPHIDGLAUR
 !
         ATOMSET(IAT)%DPHIDG=(0.D0,0.D0)
