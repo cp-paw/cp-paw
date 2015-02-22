@@ -2009,6 +2009,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       INTEGER(4)      ,INTENT(IN) :: NBH
       INTEGER(4)      ,INTENT(IN) :: NB
       COMPLEX(8)      ,INTENT(INOUT):: PSI(NGL,NDIM,NBH)
+      LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
+      COMPLEX(8)      ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)                  :: NPRO
       INTEGER(4)                  :: I,J
       INTEGER(4)                  :: IBH1,IBH2,IB1A,IB1B,IB2A,IB2B
@@ -2020,11 +2022,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       COMPLEX(8)      ,ALLOCATABLE:: X2(:,:)
       COMPLEX(8)      ,ALLOCATABLE:: PSIINV(:,:,:)
       COMPLEX(8)                  :: CSVAR1,CSVAR2
-      COMPLEX(8)      ,PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4)                  :: TINV
       REAL(8)                     :: NORM(NB)
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
-      LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
 !     ******************************************************************
 !
@@ -2060,7 +2060,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       DO I=1,NB
         SMAP(I)=I
       ENDDO 
-     ALLOCATE(X(NB,NB))
+      ALLOCATE(X(NB,NB))
 !== SPEICHERZUGRIFFSFEHLER IFC10
       CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X,SMAP)
       DEALLOCATE(OVERLAP)
@@ -2323,10 +2323,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_INITIALIZERANDOM(NG,NDIM,NB,G,PSI)
 !     **************************************************************************
-!     **                                                                      **
 !     **  CREATE RANDOM WAVE FUNCTIONS                                        **
 !     **                                                                      **
 !     **  THE MAXIMUM WEIGHT OF THE WAVE FUNCTIONS AT EPW[RY]=GC2             **
+!     **                                                                      **
+!     **  ATTENTION: THE CHOICE TDETERMINISTIC MAY LEAD TO LINEARLY DEPENDENT **
+!     **     WAVE FUNCTIONS THAT WILL FAIL DURING THE ORTHOGONALIZATION       **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1991)***********
       IMPLICIT NONE
@@ -2337,7 +2339,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       COMPLEX(8),INTENT(OUT)   :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       LOGICAL(4),SAVE          :: TINI=.FALSE.
       LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.TRUE.
-      INTEGER(4),PARAMETER     :: NRAN=1000
+      INTEGER(4),PARAMETER     :: NRAN=10000
       REAL(8)   ,SAVE          :: XRAN(NRAN)
       REAL(8)   ,PARAMETER     :: GC2=3.D0
       REAL(8)                  :: G2

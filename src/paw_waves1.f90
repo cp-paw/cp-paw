@@ -1862,7 +1862,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 CALL TIMING$CLOCKON('W:EXPECT')
       ALLOCATE(EIG(NBX,NKPTL,NSPIN))
       ALLOCATE(HAMILTON(2,2))
-PRINT*,'==================BAND MISMATCHES========================='
+!PRINT*,'==================BAND MISMATCHES========================='
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2312,7 +2312,8 @@ END IF
 !     **    CONSISTENT SET OF ATOMIC POSITIONS.                        **
 !     **                                                              **
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*********************
-      USE WAVES_MODULE
+      USE WAVES_MODULE, ONLY : NKPTL,NSPIN,NDIM,MAP,GSET,THIS &
+     &                        ,WAVES_SELECTWV
       IMPLICIT NONE
       INTEGER(4)             :: IKPT,ISPIN
       INTEGER(4)             :: NGL
