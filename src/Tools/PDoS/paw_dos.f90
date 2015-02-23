@@ -341,12 +341,12 @@ END MODULE READCNTL_MODULE
         WRITE(NFILO,FMT='(82("="))')
         WRITE(NFILO,FMT='(82("="),T30," SPIN ANALYSIS  ")')
         WRITE(NFILO,FMT='(82("="))')
-        WRITE(NFILO,FMT='(A,T38,"X",T48,"Y",T58,"Z",T66,"TOTAL")') &
+        WRITE(NFILO,FMT='(A,T40,"X",T50,"Y",T60,"Z",T69,"TOTAL")') &
      &                   'TOTAL SPIN PROJECTED ON'
 !
 !       ==  SPIN DIRECTIONS ====================================================
         DO IAT=1,NAT
-          WRITE(NFILO,FMT='("SPIN[HBAR/2] ON ATOM",T20,A10,":",4F10.3)')  &
+          WRITE(NFILO,FMT='("SPIN[HBAR/2] ON ATOM",T23,A10,":",4F10.3)')  &
      &          ATOMID(IAT),SPIN(1,IAT),SPIN(2,IAT),SPIN(3,IAT) &
      &                     ,SQRT(SPIN(1,IAT)**2+SPIN(2,IAT)**2+SPIN(3,IAT)**2)
           DO IDIR=1,3
@@ -371,7 +371,7 @@ END MODULE READCNTL_MODULE
         IF(NAT.GE.2) THEN
           WRITE(NFILO,FMT='(82("="),T20,A)') &
     &              " ANGLES [DEG] BETWEEN THE SPINS > 0.1 ON THE ATOMS "
-          WRITE(NFILO,FMT='(T8,10(4X,A6))') &
+          WRITE(NFILO,FMT='(T9,10(1X,A7))') &
      &                       (ATOMID(IATSPINANGLE(IAT2)),IAT2=NATSPINANGLE,2,-1)
           DO IAT1=1,NATSPINANGLE !SENKRECHT
             DO IAT2=NATSPINANGLE,IAT1+1,-1   !WAAGRECHT
@@ -380,7 +380,7 @@ END MODULE READCNTL_MODULE
             END DO
             ITEN=NATSPINANGLE
             DO WHILE (IAT1+1.LE.ITEN)
-              WRITE(NFILO,FMT='(A6,10F8.2)')ATOMID(IATSPINANGLE(IAT1)) &
+              WRITE(NFILO,FMT='(A6,10F8.1)')ATOMID(IATSPINANGLE(IAT1)) &
      &                         ,(ANGLE(IAT2),IAT2=ITEN,MAX(ITEN-9,IAT1+1),-1)
               ITEN=ITEN-10
             ENDDO
