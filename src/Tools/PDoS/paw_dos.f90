@@ -50,17 +50,17 @@ END MODULE READCNTL_MODULE
       INTEGER(4)   ,ALLOCATABLE :: LMX(:)
       REAL(8)      ,ALLOCATABLE :: RPOS(:,:)
       REAL(8)                   :: RBAS(3,3) ! LATTICE VECTORS
-      REAL(8)      ,ALLOCATABLE :: EIG(:,:,:)
+      REAL(8)      ,ALLOCATABLE :: EIG(:,:)
+      REAL(8)      ,ALLOCATABLE :: OCC(:,:)
       REAL(8)      ,ALLOCATABLE :: SET(:,:,:,:)
       CHARACTER(32),ALLOCATABLE :: LEGEND(:)
       REAL(8)                   :: EMIN
       REAL(8)                   :: EMAX
       INTEGER(4)                :: NE
       REAL(8)                   :: EBROAD
-      LOGICAL(4)                :: TDOS  ! DENSITY OF STATES FILE PRINTED ?
-      LOGICAL(4)                :: TNOS  ! NUMBER  OF STATES FILE PRINTED ?
       INTEGER(4)                :: NFILIN
       INTEGER(4)                :: NPRO
+      INTEGER(4)                :: NBB             ! #(SPIN STATES PER K-POINTS)
       INTEGER(4)                :: IKPT,ISPIN,IB
       INTEGER(4)   ,ALLOCATABLE :: NBARR(:,:)
       CHARACTER(6)              :: FLAG
@@ -119,26 +119,6 @@ END MODULE READCNTL_MODULE
       CALL PDOS$GETR8A('RBAS',3*3,RBAS)
       ALLOCATE(RPOS(3,NAT))
       CALL PDOS$GETR8A('R',3*NAT,RPOS)
-      ALLOCATE(EIG(NB,NKPT,NSPIN))
-      ALLOCATE(SPINDIR(3,NAT))
-      DO IKPT=1,NKPT
-        DO ISPIN=1,NSPIN
-          STATE=>STATEARR(IKPT,ISPIN)
-          DO IB=1,NB
-            EIG(IB,IKPT,ISPIN)=STATE%EIG(IB)
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
-!     ==========================================================================
-      CALL READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
-!     == DEFAULT VALUES FOR RANGE OF ENERGY GRID ===============================
-      EMIN=MINVAL(EIG)-1.D-1
-      EMAX=MINVAL(EIG(NB,:,:)) 
-      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
-      CALL READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
 !
 !     ==========================================================================
 !     == CHECK IF PDOS FILE CONTAINS DATA FOR THE TETRAHEDRON METHOD ===========
@@ -151,7 +131,15 @@ END MODULE READCNTL_MODULE
         CALL ERROR$STOP('PDOS MAIN')
       ENDIF
                             CALL TRACE$PASS('AFTER READPDOS')
-      CALL REPORT(NFILO,EIG)
+!
+!     ==========================================================================
+!     ==  READ PREDEFINED ORBITALS                                            ==
+!     ==========================================================================
+!
+!     __DETERMINE ANGULAR MOMENTUM WEIGHTS AND SPIN CONTRIBUTIONS AND WRITE_____
+!     __TO PROTOCOLL FILE.
+      ALLOCATE(SPINDIR(3,NAT))
+      CALL REPORT(NFILO)
                             CALL TRACE$PASS('AFTER REPORT')
 !
 !     ==========================================================================
@@ -163,23 +151,38 @@ END MODULE READCNTL_MODULE
 !     ==========================================================================
 !     ==  SELECT MATRIXELEMENTS                                               ==
 !     ==========================================================================
+      NBB=NB    ! #(STATES PER K-POINT) NOS SPIN DEGERACY
+      IF(NDIM.EQ.1)NBB=2*NB
       CALL READCNTL$SETNUMBER(NSET)
-      ALLOCATE(SET(NB,NKPT,NSPIN,NSET))
       ALLOCATE(LEGEND(NSET))
-      CALL READCNTL$SETS(NB,NKPT,NSPIN,NSET,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
+      ALLOCATE(SET(NBB,NKPT,2,NSET))  ! SET WORKS ALWAYS WITH TWO SPINS
+      ALLOCATE(EIG(NBB,NKPT))
+      ALLOCATE(OCC(NBB,NKPT))
+!     __ FILL IN EIGENVALUES AND OCCUPATIONS____________________________________
+      CALL SET$ENOCC(NBB,NKPT,EIG,OCC)
+!     __ FILL IN WEIGHT FOR EACH STATE__________________________________________
+      CALL READCNTL$SETS(NBB,NKPT,NSET,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
       DEALLOCATE(LMX)
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
+!
+!     ==========================================================================
+!     ==  READ GENERAL INFORMATION FROM CONTROL FILE
+!     ==========================================================================
+      CALL READCNTL$GENERIC(MODE,PREFIX)
+!     == DEFAULT VALUES FOR RANGE OF ENERGY GRID ===============================
+      CALL READCNTL$GRID(EMIN,EMAX,NE,EBROAD)
+      CALL READCNTL$REPORT1(MODE,PREFIX,EMIN,EMAX,NE,EBROAD)
 !
 !     ==========================================================================
 !     ==  MAKE PLOTS                                                          ==
 !     ==========================================================================
 !     ==  CALCULAT WEIGHTS FOR DOS USING THE TETRAHEDRON METHOD               ==
       IF(MODE.EQ.'TETRA')THEN
-        CALL GENERATE_TETRA_WGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+        CALL GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG)
       ENDIF
 !     == WRITE FILES ===========================================================
-      CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX,TDOS,TNOS &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,MODE)
+      CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
+     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,LEGEND,MODE)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
 !     ==========================================================================
@@ -202,16 +205,24 @@ END MODULE READCNTL_MODULE
       END PROGRAM PDOS
 !      
 !      ..1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE REPORT(NFILO,EIG) 
+      SUBROUTINE REPORT(NFILO) 
 !     **************************************************************************
 !     **  WRITES PROJECTED CHARGES AND SPINS FOR EACH ATOM TO                 **
 !     **  DPROT FILE AND CALCULATES THE SPIN DIRECTIONS                       **
 !     **************************************************************************
-      USE PDOS_MODULE
-      USE SPINDIR_MODULE
+      USE PDOS_MODULE   , ONLY : NSPIN &
+     &                          ,NKPT &
+     &                          ,NDIM &
+     &                          ,STATEARR,STATE &
+     &                          ,NAT &
+     &                          ,ISPECIES &
+     &                          ,LNX,LOX &
+     &                          ,ATOMID &
+     &                          ,R &
+     &                          ,OV
+      USE SPINDIR_MODULE, ONLY : SPINDIR
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFILO
-      REAL(8)     ,INTENT(IN) :: EIG(STATE%NB,NKPT,NSPIN)
       INTEGER(4)              :: NFIL
       INTEGER(4)              :: ISPIN,IKPT,IB,IDIM
       INTEGER(4)              :: IPRO0,IPRO1,IPRO2
@@ -624,7 +635,7 @@ END MODULE ORBITALS_MODULE
 !     ** A VECTOR DEFINING THAT ORBITAL                                       **
 !     **                                                                      **
 !     **************************************************************************
-      USE ORBITALS_MODULE
+      USE ORBITALS_MODULE, ONLY : ORBITALS$GETORB
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -1082,7 +1093,7 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$GENERIC(MODE,TDOS,TNOS,PREFIX)
+      SUBROUTINE READCNTL$GENERIC(MODE,PREFIX)
 !     **************************************************************************
 !     ** READ !DCNTL!GENERIC BLOCK FROM THE CONTROL FILE                      **
 !     **************************************************************************
@@ -1091,16 +1102,12 @@ END MODULE ORBITALS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(OUT) :: MODE    ! "SAMPLE" OR "TETRA"
       CHARACTER(*),INTENT(OUT) :: PREFIX  ! PREFIX FOR DOS AND NOS FILES
-      LOGICAL(4)  ,INTENT(OUT) :: TDOS    ! DENSITY OF STATES WILL BE PRINTED
-      LOGICAL(4)  ,INTENT(OUT) :: TNOS    ! NUMBER OF STATES WILL BE PRINTED
       LOGICAL(4)               :: TCHK
 !     **************************************************************************
 !     ==========================================================================
 !     == SET DEFAULT VALUES                                                   ==
 !     ==========================================================================
       MODE='TETRA'
-      TDOS=.TRUE.
-      TNOS=.FALSE.
       PREFIX=''
 !
 !     ==========================================================================
@@ -1122,14 +1129,27 @@ END MODULE ORBITALS_MODULE
         ENDIF
       ENDIF
 !
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'DOS',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'DOS',1,TDOS)
-!
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NOS',1,TCHK)
-      IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'NOS',1,TNOS)
-!
       CALL LINKEDLIST$EXISTD(LL_CNTL,'PREFIX',1,TCHK)
       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PREFIX',1,PREFIX)
+!
+!     ==========================================================================
+!     == OBSOLETE INPUT DATA                                                  ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'DOS',1,TCHK)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('!DCNTL!GENERIC:DOS IS OBSOLETE')
+        CALL ERROR$MSG('THE DENSITY OF STATES ID CALCULATED AS DEFAULT')
+        CALL ERROR$STOP('READCNTL$GENERIC')
+      END IF
+!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NOS',1,TCHK)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('!DCNTL!GENERIC:NOS IS OBSOLETE')
+        CALL ERROR$MSG('THE DENSITY OF STATES ID CALCULATED AS DEFAULT')
+        CALL ERROR$MSG('THE NUMBER OF STATES IS OBTAINED BY INTEGRATION')
+        CALL ERROR$MSG('THE ENERGY GRID COVERS ALL CORE STATES')
+        CALL ERROR$STOP('READCNTL$GENERIC')
+      END IF
       RETURN
       END SUBROUTINE READCNTL$GENERIC
 !
@@ -1138,18 +1158,34 @@ END MODULE ORBITALS_MODULE
 !     **************************************************************************
 !     ** READ !DCNTL!GRID FROM CONTROL FILE                                   **
 !     **************************************************************************
+      USE PDOS_MODULE   , ONLY : NSPIN &
+     &                          ,NKPT &
+     &                          ,STATEARR,STATE 
       USE LINKEDLIST_MODULE
       USE READCNTL_MODULE, ONLY: LL_CNTL
       IMPLICIT NONE
-      REAL(8)   ,INTENT(INOUT) :: EMIN   ! MINIMUM OF ENERGY GRID
-      REAL(8)   ,INTENT(INOUT) :: EMAX   ! MAXIMMUM OF ENERGY GRID
+      REAL(8)   ,INTENT(OUT)   :: EMIN   ! MINIMUM OF ENERGY GRID
+      REAL(8)   ,INTENT(OUT)   :: EMAX   ! MAXIMMUM OF ENERGY GRID
       INTEGER(4),INTENT(OUT)   :: NE     ! NUMBER OF ENERGY GRID POINTS
       REAL(8)   ,INTENT(OUT)   :: EBROAD ! THERMAL ENERGY BROADENING
       REAL(8)                  :: EV     ! ELECTRON VOLT
       REAL(8)                  :: KB     ! BOLTZMANN CONSTANT
       REAL(8)                  :: DE
       LOGICAL(4)               :: TCHK,TCHK1
+      INTEGER(4)               :: ISPIN,IKPT
+      INTEGER(4)               :: NB
 !     **************************************************************************
+      EMIN=HUGE(EMIN)
+      EMAX=HUGE(EMAX)
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          STATE=>STATEARR(IKPT,ISPIN)
+          NB=STATE%NB
+          EMIN=MIN(EMIN,MINVAL(STATE%EIG))
+          EMAX=MIN(EMAX,STATE%EIG(NB))
+        ENDDO
+      ENDDO
+!
 !     ==========================================================================
 !     == SET DEFAULT VALUES                                                   ==
 !     == (DEFAULT FOR EMIN/EMAX IS INPUT)                                     ==
@@ -1166,18 +1202,6 @@ END MODULE ORBITALS_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'GRID')
-!     ==  READ ACTUAL VALUES  ==================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'EMIN[EV]',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'EMIN[EV]',1,EMIN)
-        EMIN=EMIN*EV
-      END IF
-!
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX[EV]',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',1,EMAX)
-        EMAX=EMAX*EV
-      END IF
 !
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DE[EV]',1,TCHK)
       IF(TCHK) THEN
@@ -1190,8 +1214,8 @@ END MODULE ORBITALS_MODULE
       CALL LINKEDLIST$EXISTD(LL_CNTL,'BROADENING[K]',1,TCHK1)
       IF(TCHK.AND.TCHK1) THEN
         CALL ERROR$MSG('SELECT ONLY ONE OF THE ALTERNATIVE OPTIONS, ')
-        CALL ERROR$MSG('EITHER !DCNTL!GENERIC:BROADENING[EV]')
-        CALL ERROR$MSG('    OR !DCNTL!GENERIC:BROADENING[K]')
+        CALL ERROR$MSG('EITHER !DCNTL!GRID:BROADENING[EV]')
+        CALL ERROR$MSG('    OR !DCNTL!GRID:BROADENING[K]')
         CALL ERROR$STOP('READCNTL$GRID')
       END IF
       IF(TCHK) THEN
@@ -1202,10 +1226,36 @@ END MODULE ORBITALS_MODULE
         CALL LINKEDLIST$GET(LL_CNTL,'BROADENING[K]',1,EBROAD)
         EBROAD=EBROAD*KB
       END IF
+!
+!     ==========================================================================
+!     == OBSOLETE INPUT DATA                                                  ==
+!     ==========================================================================
+!     ==  READ ACTUAL VALUES  ==================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EMIN[EV]',1,TCHK)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('!DCNTL!GRID:EMIN[EV] IS OBSOLETE')
+        CALL ERROR$MSG('THE ENTIRE ENERGY REGION IS USED ')
+        CALL ERROR$STOP('READCNTL$GRID')
+      END IF
+!!$      IF(TCHK) THEN
+!!$        CALL LINKEDLIST$GET(LL_CNTL,'EMIN[EV]',1,EMIN)
+!!$        EMIN=EMIN*EV
+!!$      END IF
+!!$!
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'EMAX[EV]',1,TCHK)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('!DCNTL!GRID:EMAX[EV] IS OBSOLETE')
+        CALL ERROR$MSG('THE ENTIRE ENERGY REGION IS USED ')
+        CALL ERROR$STOP('READCNTL$GRID')
+      END IF
+!!$      IF(TCHK) THEN
+!!$        CALL LINKEDLIST$GET(LL_CNTL,'EMAX[EV]',1,EMAX)
+!!$        EMAX=EMAX*EV
+!!$      END IF
 
       CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALEY',1,TCHK)
       IF(TCHK) THEN
-        CALL ERROR$MSG('!DCNTL!GENERIC:SCALEY IS OBSOLETE')
+        CALL ERROR$MSG('!DCNTL!GRID:SCALEY IS OBSOLETE')
         CALL ERROR$MSG('DOS AND NOS FILES ARE PRODUCED AS SEPARATE FILES')
         CALL ERROR$MSG('DEPENDING ON THE SETTING OF "DOS" AND "NOS"')
         CALL ERROR$STOP('READCNTL$GRID')
@@ -1215,14 +1265,12 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL$GRID
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$REPORT1(MODE,TDOS,TNOS,PREFIX,EMIN,EMAX,NE,EBROAD)
+      SUBROUTINE READCNTL$REPORT1(MODE,PREFIX,EMIN,EMAX,NE,EBROAD)
 !     **************************************************************************
 !     **************************************************************************
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: MODE    ! "SAMPLE" OR "TETRA"
       CHARACTER(*),INTENT(IN) :: PREFIX  ! PREFIX FOR DOS AND NOS FILES
-      LOGICAL(4)  ,INTENT(IN) :: TDOS    ! DENSITY OF STATES WILL BE PRINTED
-      LOGICAL(4)  ,INTENT(IN) :: TNOS    ! NUMBER OF STATES WILL BE PRINTED
       REAL(8)     ,INTENT(IN) :: EMIN   ! MINIMUM OF ENERGY GRID
       REAL(8)     ,INTENT(IN) :: EMAX   ! MAXIMMUM OF ENERGY GRID
       INTEGER(4)  ,INTENT(IN) :: NE     ! NUMBER OF ENERGY GRID POINTS
@@ -1234,11 +1282,10 @@ END MODULE ORBITALS_MODULE
       CALL CONSTANTS('EV',EV)
       CALL REPORT$CHVAL(NFILO,'INTEGRATION METHOD',MODE)
       CALL REPORT$CHVAL(NFILO,'PREFIX FOR DOS AND NOS FILES',PREFIX)
-      CALL REPORT$L4VAL(NFILO,'DENSITY OF STATES ARE WRITTEN?',TDOS)
-      CALL REPORT$L4VAL(NFILO,'NUMBER OF STATES ARE WRITTEN?',TNOS)
       CALL REPORT$R8VAL(NFILO,'ENERGY GRID STARTS AT',EMIN/EV,'EV')
       CALL REPORT$R8VAL(NFILO,'ENERGY GRID ENDS AT',EMAX/EV,'EV')
-      CALL REPORT$R8VAL(NFILO,'SPACING OF THE ENERGY GRID',(EMAX-EMIN)/REAL(NE-1)/EV,'EV')
+      CALL REPORT$R8VAL(NFILO,'SPACING OF THE ENERGY GRID' &
+     &                       ,(EMAX-EMIN)/REAL(NE-1)/EV,'EV')
       WRITE(NFILO,*)
       RETURN
       END
@@ -1308,10 +1355,80 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL$SETNUMBER
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$SETS(NB,NKPT,NSPIN,NSET &
+      SUBROUTINE SET$ENOCC(NBB,NKPT_,EIG,OCC)
+!     **************************************************************************
+!     **  ENERGIES AND OCCUPATIONS ARE TREATED IN THE FOLLOWING DATA MODEL:   **
+!     **                                                                      **
+!     **  THERE ARE INDEPENDENT ARRAYS FOR THE TWO SPIN DIRECTIONS, EACH      **
+!     **  WITH ITS OWN ENERGIES AN OCCUPATIONS.                               **
+!     **  1) FOR NDIM=1,NSPIN=1: EACH STATE IS DUPLICATED SO THAT BOTH SPIN   **
+!     **     CHANNELS ARE FILLED                                              **
+!     **  2) FOR NDIM=1,NSPIN=2: EIGENVALUES AND OCCUPATIONS DIFFER FOR BOTH  **
+!     **     SPIN DIRECTIONS.                                                 **
+!     **  3) FOR NDIM=2,NSPIN=1: ENERGIES AND OCCUPATIONS ARE DUPLICATED.     **
+!     **     BUT THE ENTRIES IN SET ARE SPIN DEPENDENT                        **
+!     **                                                                      **
+!     **************************************************************************
+      USE PDOS_MODULE   , ONLY : NDIM &
+     &                          ,NSPIN &
+     &                          ,NKPT &
+     &                          ,STATEARR,STATE 
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NBB  ! X#(SPIN STATES PER KPOINT)
+      INTEGER(4),INTENT(IN) :: NKPT_
+      REAL(8)   ,INTENT(OUT):: EIG(NBB,NKPT_)
+      REAL(8)   ,INTENT(OUT):: OCC(NBB,NKPT_)
+      INTEGER(4)            :: ISPIN,IKPT
+      REAL(8)               :: EMAX
+      INTEGER(4)            :: NB
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == EXTRACT UPPER BOUND OF THE SPECTRUM AND THE NUMBER OF BANDS FOR TEST ==
+!     ==========================================================================
+      EMAX=-HUGE(EMAX)
+      NB=0
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          STATE=>STATEARR(IKPT,ISPIN)
+          NB=MAX(NB,STATE%NB)
+          EMAX=MAX(EMAX,MAXVAL(STATE%EIG))
+        ENDDO
+      ENDDO
+      IF(NB*2/NDIM.NE.NBB.OR.NKPT_.NE.NKPT) THEN
+        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
+        CALL ERROR$I4VAL('NBB',NBB)
+        CALL ERROR$I4VAL('NB',NB)
+        CALL ERROR$I4VAL('NKPT_',NKPT_)
+        CALL ERROR$I4VAL('NKPT',NKPT)
+        CALL ERROR$STOP('SET$ENOCC')
+      END IF
+!      
+!     ==========================================================================
+!     == FILL IN EIGENVALUES AND OCCUPATIONS                                  ==
+!     ==========================================================================
+      EIG=EMAX+0.1D0
+      OCC=0.D0
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          STATE=>STATEARR(IKPT,ISPIN)
+          NB=STATE%NB
+          EIG(1+NB*(ISPIN-1):NB*ISPIN,IKPT)=STATE%EIG(:)
+          OCC(1+NB*(ISPIN-1):NB*ISPIN,IKPT)=STATE%OCC(:)
+          IF(NDIM*NSPIN.EQ.1) THEN ! FOR NON-SPIN-POLARIZED CASE
+            EIG(NB+1:2*NB,IKPT)=EIG(1:NB,IKPT)
+            OCC(1:NB,IKPT)=0.5D0*OCC(1:NB,IKPT)
+            OCC(NB+1:2*NB,IKPT)=OCC(1:NB,IKPT)
+          END IF
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READCNTL$SETS(NBB,NKPT,NSET &
      &                        ,NAT,LMX,RBAS,RPOS,LENG,SET,LEGEND)
 !     **************************************************************************
-!     **                                                                      **
 !     ** REMARK: THE STRING VARIABLE SPIN DESCRIBES THE SPIN PROJECTION FOR   **
 !     ** NON-COLLINEAR CALCULATIONS. IN THIS CASE, NSPIN=1.                   **
 !     **    SPIN='TOTAL' CALCULATES TOTAL ELECTRON DENSITY                    **
@@ -1324,18 +1441,19 @@ END MODULE ORBITALS_MODULE
       USE READCNTL_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN)  :: NB
+      INTEGER(4)   ,INTENT(IN)  :: NBB
       INTEGER(4)   ,INTENT(IN)  :: NKPT
-      INTEGER(4)   ,INTENT(IN)  :: NSPIN
       INTEGER(4)   ,INTENT(IN)  :: NSET
       INTEGER(4)   ,INTENT(IN)  :: NAT
       INTEGER(4)   ,INTENT(IN)  :: LMX(NAT)
       INTEGER(4)   ,INTENT(IN)  :: LENG
       REAL(8)      ,INTENT(IN)  :: RBAS(3,3)
       REAL(8)      ,INTENT(IN)  :: RPOS(3,NAT)
-      REAL(8)      ,INTENT(OUT) :: SET(NB,NKPT,NSPIN,NSET)
+      REAL(8)      ,INTENT(OUT) :: SET(NBB,NKPT,2,NSET) ! ALWAYS WITH 2 SPINS 
       CHARACTER(32),INTENT(OUT) :: LEGEND(NSET)
+      REAL(8)      ,ALLOCATABLE :: SET1(:,:,:) !(NBB,NKPT,2)
       INTEGER(4)                :: ISET   ! SET COUNTER
+      INTEGER(4)                :: ISPIN   ! SET COUNTER
       CHARACTER(8)              :: TYPE
       CHARACTER(32)             :: NAME,SPIN
       LOGICAL(4)                :: TCHK,TCHK1
@@ -1380,7 +1498,18 @@ END MODULE ORBITALS_MODULE
           ORBITAL2(:)=ORBITAL2(:)+ORBITALI(:)
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
-        CALL SET$PROJECT(LENG,NB,NKPT,NSPIN,ORBITAL1,ORBITAL2,SET(:,:,:,ISET))
+!
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
+          SPIN=+SPIN
+        ELSE
+!         ==  SPIN=TOTAL MEANS "SUM OVER ALL SPINOR COMPONENTS". =============
+!         ==  FOR COLLINEAR CALCULATIONS, SPIN='TOTAL' PRODUCES THE TWO ======
+!         ==  SPIN DENSITIES. ================================================
+          SPIN='TOTAL' 
+        END IF
+        CALL SET$PROJECT(LENG,NBB,NKPT,ORBITAL1,ORBITAL2,SPIN,SET(:,:,:,ISET))
         WRITE(LEGEND(ISET),FMT='("COOP:SET",I5)')ISET
         CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',1,TCHK)
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ID',0,LEGEND(ISET))
@@ -1401,6 +1530,17 @@ END MODULE ORBITALS_MODULE
         TYPE=''
         SET(:,:,:,ISET)=0.D0
 !
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
+          SPIN=+SPIN
+        ELSE
+!         ==  SPIN=TOTAL MEANS "SUM OVER ALL SPINOR COMPONENTS". =============
+!         ==  FOR COLLINEAR CALCULATIONS, SPIN='Z' PRODUCES THE TWO ==========
+!         ==  SPIN DENSITIES. ================================================
+          SPIN='Z' 
+        END IF
+!
 !       == TYPE MAY BE 'TOTAL', 'ALL' OR 'EMPTY' ===============================
         CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
         IF(TCHK) THEN
@@ -1418,45 +1558,30 @@ END MODULE ORBITALS_MODULE
             CALL ERROR$STOP('READCNTL$SETS')
           END IF
 !
-          CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
-          IF(TCHK1) THEN
-            CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
-            SPIN=+SPIN
-            IF(NSPIN.EQ.2) THEN
-              CALL ERROR$MSG('!DCNTL!WEIGHT:TYPE IS ONLY COMPATIBLE WITH')
-              CALL ERROR$MSG('NON-COLLINEAR CALCULATIONS.')
-              CALL ERROR$MSG('FOR COLLINEAR CALCULATIONS, (NSPIN=2)')
-              CALL ERROR$MSG('BOTH SPIN COMPONENTS ARE PRODUCED SIMULTANEOUSLY')
-              CALL ERROR$CHVAL('TYPE',TYPE)
-              CALL ERROR$CHVAL('SPIN',SPIN)
-              CALL ERROR$I4VAL('NSPIN',NSPIN)
-              CALL ERROR$STOP('READCNTL$SETS')
-            END IF
-          ELSE
-!           ==  SPIN=TOTAL MEANS "SUM OVER ALL SPINOR COMPONENTS". =============
-!           ==  FOR COLLINEAR CALCULATIONS, SPIN='TOTAL' PRODUCES THE TWO ======
-!           ==  SPIN DENSITIES. ================================================
-            SPIN='TOTAL' 
-          END IF
-!
 !         ======================================================================
 !         ==  'TOTAL' = TOTAL DENSITY OF STATES                               ==
 !         ======================================================================
           IF(TRIM(TYPE).EQ.'TOTAL') THEN
-            SET(:,:,:,ISET)=1.D0
+            CALL SET$WEIGHT('TOTAL','',NBB,NKPT,SPIN,SET(1,1,1,ISET))
 !
 !         ======================================================================
 !         ==  'ALL' = ALL PROJECTED DENSITY OF STATES                         ==
 !         ======================================================================
           ELSE IF(TRIM(TYPE).EQ.'ALL') THEN
-            CALL SET$WEIGHT('ALL','',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+            CALL SET$WEIGHT('ALL','',NBB,NKPT,SPIN,SET(1,1,1,ISET))
 !
 !         ======================================================================
 !         ==  'EMPTY' = VACCUM DENSITY OF STATES                              ==
 !         ======================================================================
           ELSE IF(TRIM(TYPE).EQ.'EMPTY') THEN
-            CALL SET$WEIGHT('ALL','',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
-            SET(:,:,:,ISET)=1.D0-SET(:,:,:,ISET)
+            ALLOCATE(SET1(NBB,NKPT,2))
+            SET1=0.D0
+            CALL SET$WEIGHT('TOTAL','',NBB,NKPT,SPIN,SET1)
+            SET(:,:,:,ISET)=SET(:,:,:,ISET)+SET1
+            SET1=0.D0
+            CALL SET$WEIGHT('ALL','',NBB,NKPT,SPIN,SET1)
+            SET(:,:,:,ISET)=SET(:,:,:,ISET)-SET1
+            DEALLOCATE(SET1)
 
 !         ======================================================================
 !         ==  NOT RECOGNIZED                                                  ==
@@ -1477,29 +1602,24 @@ END MODULE ORBITALS_MODULE
           CALL LINKEDLIST$SELECT(LL_CNTL,'ATOM',JTH)
           CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,NAME)
           CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK)
-          IF(TCHK) THEN
-            CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
-          ELSE
-            SPIN='TOTAL'
-          END IF
 !
 !         == SELECT TYPE =======================================================
           CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
           TYPE=+TYPE
           IF(TYPE.EQ.'ALL') THEN
-            CALL SET$WEIGHT(NAME,'ALL',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+            CALL SET$WEIGHT(NAME,'ALL',NBB,NKPT,SPIN,SET(1,1,1,ISET))
           ELSE
             IF(SCAN(TYPE,'S').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'S',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+              CALL SET$WEIGHT(NAME,'S',NBB,NKPT,SPIN,SET(1,1,1,ISET))
             END IF
             IF(SCAN(TYPE,'P').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'P',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+              CALL SET$WEIGHT(NAME,'P',NBB,NKPT,SPIN,SET(1,1,1,ISET))
             END IF
             IF(SCAN(TYPE,'D').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'D',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+              CALL SET$WEIGHT(NAME,'D',NBB,NKPT,SPIN,SET(1,1,1,ISET))
             END IF
             IF(SCAN(TYPE,'F').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'F',NB,NKPT,NSPIN,SPIN,SET(1,1,1,ISET))
+              CALL SET$WEIGHT(NAME,'F',NBB,NKPT,SPIN,SET(1,1,1,ISET))
             END IF
 
             IF(SCAN(TYPE,'ABCEGHIJKLMNOQRTUVWXYZ0123456789').NE.0) THEN
@@ -1522,7 +1642,7 @@ END MODULE ORBITALS_MODULE
         DO IORB=1,NORB
           CALL LINKEDLIST$SELECT(LL_CNTL,'ORB',IORB)
           CALL READONEORB(LL_CNTL,NAT,LMX,RBAS,RPOS,LENG,ORBITALI)
-          CALL SET$PROJECT(LENG,NB,NKPT,NSPIN,ORBITALI,ORBITALI,SET(1,1,1,ISET))
+          CALL SET$PROJECT(LENG,NBB,NKPT,ORBITALI,ORBITALI,SPIN,SET(1,1,1,ISET))
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
         WRITE(LEGEND(ISET),FMT='("WEIGHT",I5)')ISET
@@ -1536,37 +1656,104 @@ END MODULE ORBITALS_MODULE
       END SUBROUTINE READCNTL$SETS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SET$WEIGHT(ATOMID_,ORBITALID,NB_,NKPT_,NSPIN_,SPIN,SET)
+      SUBROUTINE SET$WEIGHT(ATOMID_,ORBITALID,NBB,NKPT_,SPIN,SET)
 !     **************************************************************************
 !     ** ADDS A CONTRIBUTION TO THE SET, WHICH CONTAINS THE CONTRIBUTION      **
 !     ** TO THE WEIGHT FROM ALL THE STATES                                    **
 !     **   SPIN: MAY BE 'TOTAL', 'MAIN', 'X', 'Y', 'Z'                        **
 !     **         TOTAL IS THE TOTAL DENSITY OF STATES                         **
 !     **         MAIN IS THE PROJECTION ON SPINDIR(I,IAT)                     **
-!     **   ORBITALID MAY BE:  'ALL','S','P','D','F'                           **
+!     **   ORBITALID MAY BE:  'TOTAL','ALL','S','P','D','F'                   **
 !     **                                                                      **
 !     **************************************************************************
-      USE PDOS_MODULE
-      USE SPINDIR_MODULE
+      USE PDOS_MODULE   , ONLY : NDIM &
+     &                          ,NSPIN &
+     &                          ,NKPT &
+     &                          ,STATEARR,STATE &
+     &                          ,NAT &
+     &                          ,ATOMID &
+     &                          ,ISPECIES &
+     &                          ,LNX &
+     &                          ,LOX &
+     &                          ,OV
+      USE SPINDIR_MODULE, ONLY : SPINDIR
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: ATOMID_
       CHARACTER(*),INTENT(IN)   :: ORBITALID !MAY BE 'ALL','S','P','D','F'
-      INTEGER(4)  ,INTENT(IN)   :: NB_
+      INTEGER(4)  ,INTENT(IN)   :: NBB
       INTEGER(4)  ,INTENT(IN)   :: NKPT_
-      INTEGER(4)  ,INTENT(IN)   :: NSPIN_
-      CHARACTER(*),INTENT(INOUT):: SPIN   
-      REAL(8)     ,INTENT(INOUT):: SET(NB_,NKPT_,NSPIN_)
+      CHARACTER(*),INTENT(IN)   :: SPIN   
+      REAL(8)     ,INTENT(INOUT):: SET(NBB,NKPT_,2) !ALWAYS TWO SPIN COMPONENTS
       INTEGER(4)                :: ISPIN,IKPT,IB,IDIM
-      INTEGER(4)                :: IPRO0,IPRO1,IPRO2
+      INTEGER(4)                :: IPRO0,IPRO1,IPRO2,IP1,IP2
       INTEGER(4)                :: IAT,IAT0,ISP
       INTEGER(4)                :: L,L1,L2,M,LN,LN1,LN2
+      INTEGER(4)                :: IBB
+      INTEGER(4)                :: NB
       REAL(8)                   :: SUM,SUM_(3)
+      COMPLEX(8),PARAMETER      :: CI=(0.D0,1.D0)
+      COMPLEX(8),PARAMETER      :: CONE=(1.D0,0.D0)
+      COMPLEX(8)                :: CSVAR1P,CSVAR1M,CSVAR2P,CSVAR2M 
+      REAL(8)                   :: SVARP,SVARM      
+      COMPLEX(8)                :: CP(2),CM(2) ! SPIN EIGENSTATES
+      REAL(8)                   :: SVAR
 !     **************************************************************************
                                  CALL TRACE$PUSH('SET$WEIGHT')
-      IF(NDIM.EQ.1) SPIN='TOTAL'   ! OVERWRITE IF ONLY ONE CHOICE POSSIBLE
 !
 !     ==========================================================================
-!     ==  SELECT ATOM                                                         ==
+!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
+!     ==========================================================================
+      IF(TRIM(SPIN).EQ.'X') THEN
+        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
+        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
+        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
+        CALL SPINBRA(SPINDIR(1,IAT0),SPINDIR(2,IAT0),SPINDIR(3,IAT0),CP,CM)
+      ELSE
+        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
+        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
+        CALL ERROR$CHVAL('SPIN',SPIN)
+        CALL ERROR$STOP('SET$WEIGHT')
+      END IF
+
+PRINT*,'SPIN',SPIN,NSPIN,NDIM
+PRINT*,'CP',CP
+PRINT*,'CM',CM
+
+
+      IF(ATOMID_.EQ.'TOTAL') THEN
+        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
+        IF(TRIM(SPIN).EQ.'TOTAL') THEN
+!         == WEIGHT OF BOTH SPIN COMPONENTS IS ADDED TO THE FIRST SPIN CHANNEL
+          SET(:,:,1)=SET(:,:,1)+SVAR
+          RETURN
+        ELSE IF(TRIM(SPIN).EQ.'Z'.AND.NSPIN.EQ.2) THEN
+          DO IKPT=1,NKPT
+            DO ISPIN=1,NSPIN
+              STATE=>STATEARR(IKPT,ISPIN)
+              NB=STATE%NB
+              SET(:NB  ,IKPT,1)=SET(:NB  ,IKPT,1)+0.5D0*SVAR
+              SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+0.5D0*SVAR
+            ENDDO
+          ENDDO
+        ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
+          CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
+          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL')
+          CALL ERROR$CHVAL('SPIN',SPIN)
+          CALL ERROR$CHVAL('ATOMID',ATOMID)
+          CALL ERROR$STOP('SET$WEIGHT')
+        ELSE
+!         == FOR NON-COLLINEAR CALCULATION THERE IS NO PREFERRED SPIN AXIS =====
+!         == THEREFORE THE WEIGHT IS EQUALLY DISTRIBUTED TO BOTH SPIN DIRECTIONS
+          SET(:,:,:)=SET(:,:,:)+0.5D0*SVAR
+        END IF
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     ==  ATOM SPECIFIER IAT0: IAT0<0 IMPLIES ALL ATOMS                       ==
 !     ==========================================================================
       IF(ATOMID_.EQ.'ALL'.OR.ATOMID_.EQ.'') THEN
         IAT0=-1
@@ -1584,6 +1771,7 @@ END MODULE ORBITALS_MODULE
           CALL ERROR$STOP('SET$WEIGHT')
         END IF
       END IF
+!
       IF(TRIM(SPIN).EQ.'MAIN'.AND.IAT0.EQ.-1.AND.NAT.GT.1) THEN
         CALL ERROR$MSG('MAIN SPIN FOR ALL ATOMS NOT POSSIBLE')
         CALL ERROR$CHVAL('SPIN',SPIN)
@@ -1592,7 +1780,7 @@ END MODULE ORBITALS_MODULE
       END IF
 !
 !     ==========================================================================
-!     ==  SELECT ORBITAL                                                      ==
+!     ==  ANGULAR MOMENTUM SPECIFIER L: L<0 MEANS ALL ANGULAR MOMENTA         ==
 !     ==========================================================================
       IF(ORBITALID.EQ.'S') THEN
         L=0
@@ -1619,61 +1807,62 @@ END MODULE ORBITALS_MODULE
           IPRO0=0
           DO IAT=1,NAT
             ISP=ISPECIES(IAT)
-            IF(IAT.EQ.IAT0.OR.IAT0.EQ.-1) THEN
-!
+            IF(IAT.EQ.IAT0.OR.IAT0.LE.0) THEN ! ALL ATOMS FOR IAT0<1
               IPRO1=IPRO0
               DO LN1=1,LNX(ISP)
                 L1=LOX(LN1,ISP)
                 IPRO2=IPRO0
                 DO LN2=1,LNX(ISP)
                   L2=LOX(LN2,ISP)
-                  IF(L1.NE.L2.OR.(L.GE.0.AND.L1.NE.L)) THEN
+!                 == SELECT ANGULAR MOMENTA (ALL FOR L<0)
+                  IF(L1.NE.L2.OR.(L.GE.0.AND.L1.NE.L)) THEN  
                     IPRO2=IPRO2+2*L2+1
                     CYCLE
                   END IF
-                  DO IB=1,STATE%NB
-                    SUM=0.D0
-                    SUM_(:)=0.D0
+                  NB=STATE%NB
+                  DO IB=1,NB
+                    IBB=IB+NB*(ISPIN-1)
                     DO M=1,2*L1+1
-                      DO IDIM=1,NDIM
-                        SUM=SUM+REAL(CONJG(STATE%VEC(IDIM,IPRO1+M,IB)) &
-     &                                    *STATE%VEC(IDIM,IPRO2+M,IB))
-                      ENDDO
-                      IF(NDIM.EQ.2.AND.TRIM(SPIN).NE.'TOTAL') THEN
-                        SUM_(1)=SUM_(1) +2.D0*REAL( &
-     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                                *STATE%VEC(2,IPRO2+M,IB)) 
-                        SUM_(2)=SUM_(2)+2.D0*AIMAG( &
-     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                               *STATE%VEC(2,IPRO2+M,IB))
-                        SUM_(3)=SUM_(3)+REAL( &
-     &                                          CONJG(STATE%VEC(1,IPRO1+M,IB)) &
-     &                                               *STATE%VEC(1,IPRO2+M,IB)  &
-     &                                         -CONJG(STATE%VEC(2,IPRO1+M,IB)) &
-     &                                               *STATE%VEC(2,IPRO2+M,IB))
+                      IP1=IPRO1+M
+                      IP2=IPRO2+M
+                      IF(NDIM.EQ.1) THEN
+                        CSVAR1P=CP(ISPIN)*STATE%VEC(1,IP1,IB)
+                        CSVAR2P=CP(ISPIN)*STATE%VEC(1,IP2,IB)
+                        CSVAR1M=CM(ISPIN)*STATE%VEC(1,IP1,IB)
+                        CSVAR2M=CM(ISPIN)*STATE%VEC(1,IP2,IB)
+                        SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
+                        SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                        SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
+                        SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
+                        IF(ISPIN.EQ.1.AND.NSPIN.EQ.1) THEN
+                          CSVAR1P=CP(2)*STATE%VEC(1,IP1,IB)
+                          CSVAR2P=CP(2)*STATE%VEC(1,IP2,IB)
+                          CSVAR1M=CM(2)*STATE%VEC(1,IP1,IB)
+                          CSVAR2M=CM(2)*STATE%VEC(1,IP2,IB)
+                          SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
+                          SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                          SET(IB+NB,IKPT,1)=SET(IB+NB,IKPT,1) &
+      &                                                  +SVARP*OV(LN1,LN2,ISP)
+                          SET(IB+NB,IKPT,2)=SET(IB+NB,IKPT,2) &
+      &                                                  +SVARM*OV(LN1,LN2,ISP)
+                        END IF
+                      ELSE IF(NDIM.EQ.2) THEN
+                        CSVAR1P=(0.D0,0.D0)
+                        CSVAR1M=(0.D0,0.D0)
+                        CSVAR2P=(0.D0,0.D0)
+                        CSVAR2M=(0.D0,0.D0)
+                        DO IDIM=1,NDIM
+                          CSVAR1P=CSVAR1P+CP(IDIM)*STATE%VEC(IDIM,IP1,IB)
+                          CSVAR1M=CSVAR1M+CM(IDIM)*STATE%VEC(IDIM,IP1,IB)
+                          CSVAR2P=CSVAR2P+CP(IDIM)*STATE%VEC(IDIM,IP2,IB)
+                          CSVAR2M=CSVAR2M+CM(IDIM)*STATE%VEC(IDIM,IP2,IB)
+                        ENDDO
+                        SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
+                        SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                        SET(IB,IKPT,1)=SET(IB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
+                        SET(IB,IKPT,2)=SET(IB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
                       END IF
                     ENDDO
-                    SUM    =SUM    *OV(LN1,LN2,ISP)
-                    SUM_(:)=SUM_(:)*OV(LN1,LN2,ISP)
-                    IF(TRIM(SPIN).EQ.'TOTAL') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM
-                    ELSE IF(TRIM(SPIN).EQ.'X') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(1)
-                    ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(2)
-                    ELSE IF(TRIM(SPIN).EQ.'Z') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+SUM_(3)
-                    ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-                      SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN) &
-     &                                                 +SUM_(1)*SPINDIR(1,IAT) &
-     &                                                 +SUM_(2)*SPINDIR(2,IAT) &
-     &                                                 +SUM_(3)*SPINDIR(3,IAT)
-                    ELSE
-                      CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-                      CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
-                      CALL ERROR$CHVAL('SPIN',SPIN)
-                      CALL ERROR$STOP('SET$WEIGHT')
-                    END IF
                   ENDDO  ! END OF LOOP OVER BANDS (IB)
                   IPRO2=IPRO2+2*L2+1
                 ENDDO    !END OF LOOP OVER LN2
@@ -1686,52 +1875,175 @@ END MODULE ORBITALS_MODULE
           ENDDO  ! END LOOP OVER ATOMS (IAT)
         ENDDO  ! END LOOP OVER SPINS (ISPIN)
       ENDDO  ! END LOOP OVER K-POINTS (IKPT)
+!
+!     ==========================================================================
+!     == ADD UP CONTRIBUTIONS FOR SPIN=TOTAL                                  ==
+!     ==========================================================================
+      IF(SPIN.EQ.'TOTAL') THEN
+        SET(:,:,1)=SET(:,:,1)+SET(:,:,2)
+        SET(:,:,2)=0.D0
+      END IF
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE SET$WEIGHT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SET$PROJECT(NPRO_,NB_,NKPT_,NSPIN_,ORBITAL1,ORBITAL2,SET)
+      SUBROUTINE SPINBRA(X,Y,Z,CP,CM)
 !     **************************************************************************
-!     **                                                                      **
+!     ** BRAS OF SPIN EIGENSTATES FOR A SPIN-AXIS (X,Y,Z)                     **
 !     **************************************************************************
-      USE PDOS_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NPRO_
-      INTEGER(4),INTENT(IN) :: NB_
-      INTEGER(4),INTENT(IN) :: NKPT_
-      INTEGER(4),INTENT(IN) :: NSPIN_
-      COMPLEX(8),INTENT(IN) :: ORBITAL1(NPRO)
-      COMPLEX(8),INTENT(IN) :: ORBITAL2(NPRO)
-      REAL(8)   ,INTENT(INOUT):: SET(NB_,NKPT_,NSPIN_)
-      INTEGER(4)            :: ISPIN,IKPT,IB,IPRO,IDIM
-      COMPLEX(8)            :: CSVAR1,CSVAR2
+      REAL(8)   ,INTENT(IN)  :: X,Y,Z
+      COMPLEX(8),INTENT(OUT) :: CP(2)
+      COMPLEX(8),INTENT(OUT) :: CM(2)
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)                :: EX,EY,EZ
+      REAL(8)                :: SVAR
+!     **************************************************************************
+      SVAR=SQRT(X**2+Y**2+Z**2)
+      EX=X/SVAR
+      EY=Y/SVAR
+      EZ=Z/SVAR
+!     == EIGENVECTORS OF EZ*SIGMAX+EY*SIGMAY+EZ*SIGMAZ
+      CP(1)=1.D0+EZ
+      CP(2)=EX+CI*EY
+      CM(1)=EX-CI*EY
+      CM(2)=-(1.D0+EZ)
+      CP=CP/SQRT(2.D0*(1.D0+EZ))
+      CM=CM/SQRT(2.D0*(1.D0+EZ))
+!
+!     == TURN KETS INTO BRAS =================================================
+      CP=CONJG(CP)
+      CM=CONJG(CM)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SET$PROJECT(NPRO_,NBB,NKPT_,ORBITAL1,ORBITAL2,SPIN,SET)
+!     **************************************************************************
+!     **  ADDS PROJECTION ONTO MATRIX ELEMENTS OF PREDEFINED ORBITALS         **
+!     **  SPECIFIED BY ORBITAL1 AND ORBITAL2 TO SET                           **
+!     **                                                                      **
+!     **  ASSUMES THAT ORBITAL1 AND 2 ARE NONZERO ONLY FOR THE FIRST PARTIAL  **
+!     **    WAVE PER SITE AND ANGULAR MOMENTUM
+!     **                                                                      **
+!     **  CAUTION: SET IS AN INOUT VARIABLE!                                  **
+!     **************************************************************************
+      USE PDOS_MODULE, ONLY : NSPIN &
+     &                       ,NKPT &
+     &                       ,NDIM &
+     &                       ,STATEARR,STATE &
+     &                       ,NPRO &
+     &                       ,NAT &
+     &                       ,ISPECIES &
+     &                       ,LNX &
+     &                       ,LOX &
+     &                       ,OV
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)   :: NPRO_
+      INTEGER(4)  ,INTENT(IN)   :: NBB
+      INTEGER(4)  ,INTENT(IN)   :: NKPT_
+      COMPLEX(8)  ,INTENT(IN)   :: ORBITAL1(NPRO)
+      COMPLEX(8)  ,INTENT(IN)   :: ORBITAL2(NPRO)
+      CHARACTER(*),INTENT(IN)   :: SPIN   
+      REAL(8)     ,INTENT(INOUT):: SET(NBB,NKPT_,2) 
+      COMPLEX(8)                :: ORBITAL1P(2,NPRO)
+      COMPLEX(8)                :: ORBITAL2P(2,NPRO)
+      COMPLEX(8)                :: ORBITAL1M(2,NPRO)
+      COMPLEX(8)                :: ORBITAL2M(2,NPRO)
+      INTEGER(4)                :: ISPIN,IKPT,IB,IPRO,IDIM,IBB
+      INTEGER(4)                :: IAT,ISP,LN,L,M
+      INTEGER(4)                :: NB
+      COMPLEX(8)                :: CSVAR,CSVAR1,CSVAR2
+      COMPLEX(8)                :: CVEC(2),CP(2),CM(2)
+      REAL(8)                   :: SVAR
 !     **************************************************************************
                                  CALL TRACE$PUSH('SET$PROJECT')
-      DO ISPIN=1,NSPIN
-        DO IKPT=1,NKPT
-          STATE=>STATEARR(IKPT,ISPIN)
-          DO IB=1,NB_
-            CSVAR1=0.D0
-            CSVAR2=0.D0
-            DO IPRO=1,NPRO
-              DO IDIM=1,NDIM
-                CSVAR1=CSVAR1+CONJG(ORBITAL1(IPRO))*STATE%VEC(IDIM,IPRO,IB)
-                CSVAR2=CSVAR2+CONJG(ORBITAL2(IPRO))*STATE%VEC(IDIM,IPRO,IB)
-              ENDDO                      
-            ENDDO
-!JOHANNES:  SET(IB,IKPT,ISPIN)=REAL(CONJG(CSVAR1)*CSVAR2)
-            SET(IB,IKPT,ISPIN)=SET(IB,IKPT,ISPIN)+REAL(CONJG(CSVAR1)*CSVAR2)
+!
+!     ==========================================================================
+!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
+!     ==========================================================================
+      IF(TRIM(SPIN).EQ.'X') THEN
+        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
+        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
+        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
+      ELSE
+        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
+        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
+        CALL ERROR$CHVAL('SPIN',SPIN)
+        CALL ERROR$STOP('SET$PROJECT')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
+!     ==========================================================================
+      ORBITAL1P(1,:)=CP(1)*CONJG(ORBITAL1(:))
+      ORBITAL1P(2,:)=CP(2)*CONJG(ORBITAL1(:))
+      ORBITAL1M(1,:)=CM(1)*CONJG(ORBITAL1(:))
+      ORBITAL1M(2,:)=CM(2)*CONJG(ORBITAL1(:))
+      ORBITAL2P(1,:)=CP(1)*CONJG(ORBITAL2(:))
+      ORBITAL2P(2,:)=CP(2)*CONJG(ORBITAL2(:))
+      ORBITAL2M(1,:)=CM(1)*CONJG(ORBITAL2(:))
+      ORBITAL2M(2,:)=CM(2)*CONJG(ORBITAL2(:))
+      IPRO=0
+      DO IAT=1,NAT
+        ISP=ISPECIES(IAT)
+        DO LN=1,LNX(ISP)
+          L=LOX(LN,ISP)
+          DO M=1,2*L+1
+            IPRO=IPRO+1
+            ORBITAL1P(:,IPRO)=ORBITAL1P(:,IPRO)*OV(LN,LN,ISP)
+            ORBITAL1M(:,IPRO)=ORBITAL1M(:,IPRO)*OV(LN,LN,ISP)
           ENDDO
         ENDDO
       ENDDO
+
+      DO ISPIN=1,NSPIN
+        DO IKPT=1,NKPT
+          STATE=>STATEARR(IKPT,ISPIN)
+          NB=STATE%NB
+          DO IB=1,NB
+            IBB=IB+NB*(ISPIN-1)
+            IF(NDIM.EQ.2) THEN
+              CSVAR1=SUM(ORBITAL1P(:,:)*STATE%VEC(:,:,IB))
+              CSVAR2=SUM(ORBITAL2P(:,:)*STATE%VEC(:,:,IB))
+              SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+REAL(CONJG(CSVAR1)*CSVAR2)
+              CSVAR1=SUM(ORBITAL1M(:,:)*STATE%VEC(:,:,IB))
+              CSVAR2=SUM(ORBITAL2M(:,:)*STATE%VEC(:,:,IB))
+              SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
+            ELSE
+              CSVAR1=SUM(ORBITAL1P(ISPIN,:)*STATE%VEC(1,:,IB))
+              CSVAR2=SUM(ORBITAL2P(ISPIN,:)*STATE%VEC(1,:,IB))
+              SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+REAL(CONJG(CSVAR1)*CSVAR2)
+              CSVAR1=SUM(ORBITAL1M(ISPIN,:)*STATE%VEC(1,:,IB))
+              CSVAR2=SUM(ORBITAL2M(ISPIN,:)*STATE%VEC(1,:,IB))
+              SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
+              IF(NSPIN.EQ.1) THEN
+                CSVAR1=SUM(ORBITAL1M(2,:)*STATE%VEC(1,:,IB))
+                CSVAR2=SUM(ORBITAL2M(2,:)*STATE%VEC(1,:,IB))
+                SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
+              END IF
+            END IF
+          ENDDO   ! END OF LOOP OVER BANDS IB
+        ENDDO  ! END OF LOOP OVER K-POINTS IKPT
+      ENDDO  ! END OF LOOP OVER SPINS ISPIN
+!
+!     ==========================================================================
+!     == ADD UP CONTRIBUTIONS FOR SPIN=TOTAL                                  ==
+!     ==========================================================================
+      IF(SPIN.EQ.'TOTAL') THEN
+        SET(:,:,1)=SET(:,:,1)+SET(:,:,2)
+        SET(:,:,2)=0.D0
+      END IF
                                  CALL TRACE$POP
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX,TDOS,TNOS &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,NSET,SET,LEGEND,MODE)
+      SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
+     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,LEGEND,MODE)
 !     **************************************************************************
 !     **************************************************************************
       USE STRINGS_MODULE
@@ -1744,34 +2056,28 @@ END MODULE ORBITALS_MODULE
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
       CHARACTER(*) ,INTENT(IN) :: PREFIX ! FOR DOS AND NOS FILES
-      LOGICAL(4)   ,INTENT(IN) :: TDOS  ! DENSITY OF STATES PRINTED ?
-      LOGICAL(4)   ,INTENT(IN) :: TNOS  ! NUMBER OF STATES PRINTED ?
-      INTEGER(4)   ,INTENT(IN) :: NB
+      INTEGER(4)   ,INTENT(IN) :: NBB
       INTEGER(4)   ,INTENT(IN) :: NKPT
-      INTEGER(4)   ,INTENT(IN) :: NSPIN
-      INTEGER(4)   ,INTENT(IN) :: NDIM  !#(SPINOR COMPONENTS)
-      REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
+      REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)
+      REAL(8)      ,INTENT(IN) :: OCC(NBB,NKPT)
       INTEGER(4)   ,INTENT(IN) :: NSET
-      REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN,NSET)
+      REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2,NSET)
       CHARACTER(32),INTENT(IN) :: LEGEND(NSET)
       CHARACTER(32),INTENT(IN) :: MODE
+      LOGICAL(4)   ,PARAMETER  :: TDOS=.TRUE.  ! DENSITY OF STATES PRINTED ?
+      LOGICAL(4)   ,PARAMETER  :: TNOS=.FALSE.  ! NUMBER OF STATES PRINTED ?
       CHARACTER(32)        :: LEGEND1
       CHARACTER(256)       :: FILE
-      LOGICAL(4)           :: TIB,TE,TIK,TIS,TCHK
-      INTEGER(4)           :: IB,IKPT,ISPIN,I,IOUT
-      INTEGER(4)           :: ISET
+      LOGICAL(4)           :: TCHK
       INTEGER(4)           :: NOUT
       INTEGER(4)           :: NFIL
       INTEGER(4)           :: NFILDOS  ! UNIT FOR DENSITY OF STATES FILE
-      INTEGER(4)           :: NFILNOS  ! UNIT FOR NUMBER OF STATES FILE
       INTEGER(4)           :: NFILO
-      INTEGER(4)           :: IB0,IK0,IS0
       REAL(8)              :: EV
-      REAL(8)              :: ENERGY
       REAL(8)              :: E1,E2
       INTEGER(4)           :: IE1,IE2
-      REAL(8)              :: SUM,SUMS,SVAR 
-      LOGICAL(4),ALLOCATABLE :: DEADZONE(:,:) !(NE,ISPIN)
+      LOGICAL(4),ALLOCATABLE :: DEADZONE(:) !(NE,ISPIN)
+      INTEGER(4)           :: IB,IKPT,I,ISET
 !     **************************************************************************
                          CALL TRACE$PUSH('READCNTL$OUTPUT')
       CALL CONSTANTS('EV',EV)
@@ -1782,16 +2088,14 @@ END MODULE ORBITALS_MODULE
 !     == AND NEED NOT BE PRINTED. DEADZONES MUST BE THE SAME FOR ALL SETS     ==
 !     == TO ALLOW DATASET OPERATIONS, FOR EXAMPLE WITH XMGRACE.               ==
 !     ==========================================================================
-      ALLOCATE(DEADZONE(NE,NSPIN))
-      DEADZONE(:,:)=.TRUE.
-      DO ISPIN=1,NSPIN
-        DO IB=1,NB
-          E1=MINVAL(EIG(IB,:,ISPIN))-1.D0*EV-5.D0*EBROAD
-          E2=MAXVAL(EIG(IB,:,ISPIN))+1.D0*EV+5.D0*EBROAD
-          IE1=MAX(1, 1+NINT((E1-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
-          IE2=MIN(NE,1+NINT((E2-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
-          DEADZONE(IE1:IE2,ISPIN)=.FALSE.
-        ENDDO
+      ALLOCATE(DEADZONE(NE))
+      DEADZONE(:)=.TRUE.
+      DO IB=1,NBB
+        E1=MINVAL(EIG(IB,:))-1.D0*EV-5.D0*EBROAD
+        E2=MAXVAL(EIG(IB,:))+1.D0*EV+5.D0*EBROAD
+        IE1=MAX(1, 1+NINT((E1-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
+        IE2=MIN(NE,1+NINT((E2-EMIN)/(EMAX-EMIN)*REAL(NE-1)))
+        DEADZONE(IE1:IE2)=.FALSE.
       ENDDO
 !
 !     ==========================================================================
@@ -1807,19 +2111,14 @@ END MODULE ORBITALS_MODULE
 !       ========================================================================
         FILE=TRIM(PREFIX)//TRIM(LEGEND1)//-'.DOS'
         CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
-        FILE=TRIM(PREFIX)//TRIM(LEGEND1)//-'.NOS'
-        CALL FILEHANDLER$SETFILE('PNOSOUT',.FALSE.,FILE)
-        NFILDOS=-1
-        NFILNOS=-1
-        IF(TDOS) CALL FILEHANDLER$UNIT('PDOSOUT',NFILDOS)
-        IF(TNOS)CALL FILEHANDLER$UNIT('PNOSOUT',NFILNOS)
+        CALL FILEHANDLER$UNIT('PDOSOUT',NFILDOS)
 !
 !       ========================================================================
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                              ==
 !       ========================================================================
         IF(MODE.EQ.'SAMPLE')THEN
-          CALL PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-      &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          CALL PUTONGRID_SAMPLE(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
+      &                 ,NBB,NKPT,EIG,OCC,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE IF(MODE.EQ.'TETRA')THEN
 !!$          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
 !!$      &       MINVAL(SET(:,:,:,ISET)).NE.1.0D0).AND.SPACEGROUP.NE.1)THEN
@@ -1830,8 +2129,8 @@ END MODULE ORBITALS_MODULE
 !!$            CALL ERROR$STOP('READCNTL$OUTPUT')
 !!$          ENDIF
 !
-          CALL PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-      &                 ,NB,NKPT,NSPIN,NDIM,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+          CALL PUTONGRID_TETRA(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
+      &                 ,NBB,NKPT,EIG,SET(:,:,:,ISET),LEGEND(ISET))
         ELSE
           CALL ERROR$MSG('VALUE FOR "MODE" NOT RECOGNIZED')
           CALL ERROR$MSG('MUST BE "SAMPLE" OR "TETRA"')
@@ -1841,151 +2140,14 @@ END MODULE ORBITALS_MODULE
 !
 !       == CLOSE DOWN ==========================================================
         IF(NFILDOS.GE.0)CALL FILEHANDLER$CLOSE('PDOSOUT')
-        IF(NFILNOS.GE.0)CALL FILEHANDLER$CLOSE('PNOSOUT')
       ENDDO  ! END OF LOOP OVER SETS
-!
-!     ==========================================================================
-!     ==========================================================================
-!     == SCAN SPECIFIC OUTPUT BLOCKS                                          ==
-!     ==========================================================================
-!     ==========================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
-      CALL LINKEDLIST$NLISTS(LL_CNTL,'OUTPUT',NOUT)
-      DO IOUT=1,NOUT
-        CALL LINKEDLIST$SELECT(LL_CNTL,'OUTPUT',IOUT)
-                          CALL TRACE$PASS('NEXT IOUT')
-!
-!       ==  SPECIFY SET ========================================================
-        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,LEGEND1)
-        ISET=0
-        DO I=1,NSET
-          IF(TRIM(LEGEND1).EQ.TRIM(LEGEND(I))) THEN
-            ISET=I ; EXIT
-          END IF
-        ENDDO
-        IF(ISET.EQ.0) THEN
-          CALL ERROR$MSG('ID NOT RECOGNIZED')
-          DO I=1,NSET
-            PRINT*,'LEGEND ',I,TRIM(LEGEND(I)),'::'
-          ENDDO
-          CALL ERROR$CHVAL('LEGEND1',LEGEND1)
-          CALL ERROR$STOP('READCNTL$OUTPUT')
-        END IF
- !
-!       ==  OUTPUT TYPE ========================================================
-!       ==  (B,K,S) SPECIFIES A SPECIFIC STATE REPORTED IN THE PROTOCOLL
-!       ==  E[EV]    SPECIFIES AN ENERGY
-!       ==  OTHERWISE THE INFORMATION ON THE GRID IS WRITTEN TO FILE
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'B',1,TIB)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'E[EV]',1,TE)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'K',1,TIK)
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'S',1,TIS)
-        IF((.NOT.(TIB.OR.TE)).AND.(TIK.OR.TIS)) THEN
-          CALL ERROR$MSG('K-POINT AND SPIN MUST NOT BE SELECTED') 
-          CALL ERROR$MSG('                FOR DENSITY OF STATES')
-          CALL ERROR$STOP('READCNTL$OUTPUT') 
-        END IF
-        IK0=0
-        IS0=0
-        IF(TIK)CALL LINKEDLIST$GET(LL_CNTL,'K',1,IK0)
-        IF(TIS)CALL LINKEDLIST$GET(LL_CNTL,'S',1,IS0)
-        IF(TIB.AND.TE) THEN
-          CALL ERROR$MSG('NB AND E ARE INCOMPATIBLE')
-          CALL ERROR$STOP('READCNTL$OUTPUT')
-        END IF
-!
-!       ========================================================================
-!       ==  WRITE PROJECTION OF A GIVEN STATE ON FILE                         ==
-!       ========================================================================
-        IF(TIB) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'B',1,IB0)
-          DO ISPIN=1,NSPIN
-            IF(TIS.AND.(ISPIN.NE.IS0)) CYCLE
-            DO IKPT=1,NKPT
-              IF(TIK.AND.(IKPT.NE.IK0)) CYCLE
-              WRITE(NFILO,FMT='(A32,"; B=",I3,"; K=",I2,"; S=",I1 &
-     &         ,"; E[EV]=",F10.5,";TOTAL PRO=",F10.5)') &
-     &                LEGEND(ISET),IB0,IKPT,ISPIN &
-     &               ,EIG(IB0,IKPT,ISPIN)/EV,SET(IB0,IKPT,ISPIN,ISET)
-            ENDDO
-          ENDDO
-        END IF
-!
-!       ========================================================================
-!       ==  WRITE INTEGRATED DENSITY OF STATES AT A GIVEN ENERGY              ==
-!       ========================================================================
-        IF(TIB) THEN
-          ENERGY=-1.D+10
-          SUM=0.D0
-          SUMS=0.D0
-          DO ISPIN=1,NSPIN
-            IF(TIS.AND.(ISPIN.NE.IS0)) CYCLE
-            IF(ISPIN.EQ.1) SVAR=1.D0
-            IF(ISPIN.EQ.2) SVAR=-1.D0
-            DO IKPT=1,NKPT
-              IF(TIK.AND.(IKPT.NE.IK0)) CYCLE
-              DO IB=1,IB0
-                SUM=SUM+SET(IB,IKPT,ISPIN,ISET)
-                SUMS=SUMS+SET(IB,IKPT,ISPIN,ISET)*SVAR
-                ENERGY=MAX(ENERGY,EIG(IB,IKPT,ISPIN))
-              ENDDO
-            ENDDO        
-          ENDDO
-          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-POINT WEIGHT ? NO NDIM ?
-          WRITE(NFILO,FMT='(A32,"; B=",I3,"; K=",I2,"; S=",I1 &
-     &                  ,"; E[EV]=",F10.5,"; TOTAL NOS=",F10.5)') &
-     &                  LEGEND(ISET),IB0,IK0,IS0,ENERGY/EV,SUM
-!         IF(NSPIN.EQ.2.AND.(.NOT.TIS)) THEN
-!           WRITE(NFIL,FMT='(A32,"; B=",I3,"; K=",I2,"; S=",I1 &
-!    &                  ,";       ",10X,  "; SOS=",F10.5)') &
-!    &                  LEGEND(ISET),IB0,IK0,IS0,SUMS
-!         END IF
-        END IF
-!
-!       ========================================================================
-!       ==  WRITE INTEGRATED DENSITY OF STATES AT A GIVEN ENERGY              ==
-!       ========================================================================
-        IF(TE) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'E[EV]',1,ENERGY)
-          ENERGY=ENERGY*EV
-          SUM=0.D0
-          SUMS=0.D0
-          DO ISPIN=1,NSPIN
-            IF(TIS.AND.(ISPIN.NE.IS0)) CYCLE
-            IF(ISPIN.EQ.1) SVAR=1.D0
-            IF(ISPIN.EQ.2) SVAR=-1.D0
-            DO IKPT=1,NKPT
-              IF(TIK.AND.(IKPT.NE.IK0)) CYCLE
-              DO IB=1,NB
-                IF(EIG(IB,IKPT,ISPIN).LT.ENERGY) THEN
-                  SUM=SUM+SET(IB,IKPT,ISPIN,ISET)
-                  SUMS=SUMS+SET(IB,IKPT,ISPIN,ISET)*SVAR
-                END IF
-              ENDDO
-            ENDDO        
-          ENDDO
-          IF(.NOT.TIS) SUM=SUM*2.D0/DBLE(NSPIN)  ! NO K-POINT WEIGHT ? NO NDIM ?
-          WRITE(NFILO,FMT='(A32,8X," K=",I2,"; S=",I1 &
-     &                  ,"; E[EV]=",F10.5,"; TOTAL NOS=",F10.5)') &
-     &                  LEGEND(ISET),IK0,IS0,ENERGY/EV,SUM
-          IF(NSPIN.EQ.2.AND.(.NOT.TIS)) THEN
-            WRITE(NFILO,FMT='(A32,8X,"; K=",I2,"; S=",I1 &
-     &                  ,"; E[EV]=",F10.5,"; TOTAL SOS=",F10.5)') &
-     &                  LEGEND(ISET),IK0,IS0,ENERGY/EV,SUMS
-          END IF
-        END IF
-!
-!       == CLOSE DOWN ==========================================================
-        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      ENDDO  ! END OF LOOP OVER OUTPUT BLOCKS
                           CALL TRACE$POP
       RETURN
       END SUBROUTINE READCNTL$OUTPUT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PUTONGRID_SAMPLE(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,SET,LEGEND)
+      SUBROUTINE PUTONGRID_SAMPLE(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
+     &                    ,NBB,NKPT,EIG,OCC,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
 !     **  CONSTRUCTS DOS AND NOS AND WRITES THE RESULT ON FILE                **
@@ -2007,59 +2169,39 @@ END MODULE ORBITALS_MODULE
       REAL(8)      ,INTENT(IN) :: EMIN
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
-      INTEGER(4)   ,INTENT(IN) :: NB
+      INTEGER(4)   ,INTENT(IN) :: NBB
       INTEGER(4)   ,INTENT(IN) :: NKPT
-      INTEGER(4)   ,INTENT(IN) :: NSPIN
-      INTEGER(4)   ,INTENT(IN) :: NDIM
-      REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
-      REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN)
-      INTEGER(4)   ,INTENT(IN) :: NFILDOS  ! UNIT FOR DOS FILE OR "-1"
-      INTEGER(4)   ,INTENT(IN) :: NFILNOS  ! UNIT FOR NOS FILE OR "-1"
+      REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)
+      REAL(8)      ,INTENT(IN) :: OCC(NBB,NKPT)
+      REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2)
+      INTEGER(4)   ,INTENT(IN) :: NFILDOS  
       CHARACTER(32),INTENT(IN) :: LEGEND
-      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE,NSPIN)
+      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE)
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
-      REAL(8)              :: DE
-      INTEGER(4)           :: IE1,IE2,IDE
-      INTEGER(4)           :: ND,IOCC
-      REAL(8)              :: NOS(NE,NSPIN,2)
-      REAL(8)              :: DOS(NE,NSPIN,2)
-      REAL(8),ALLOCATABLE  :: SMEAR(:)
-      REAL(8)              :: EV
-      REAL(8)              :: W1,W2,X,FAC
-      REAL(8)              :: NOSSMALL(NSPIN,2)
-      REAL(8)              :: WGHTX
-!      REAL(8)              :: WKPT(NKPT)
-      INTEGER(4)           :: IKPT,ISPIN,IE,IB
-      REAL(8)              :: SVAR
-      REAL(8)              :: SIG
-      REAL(8)              :: E
-      REAL(8)              :: SPINDEG
+      REAL(8)                  :: DE
+      INTEGER(4)               :: IE1,IE2,IDE
+      INTEGER(4)               :: ND,IOCC
+      REAL(8)                  :: NOS(NE,2,2)   
+      REAL(8)                  :: DOS(NE,2,2)
+      REAL(8)      ,ALLOCATABLE:: SMEAR(:)
+      REAL(8)                  :: EV
+      REAL(8)                  :: W1,W2,X,FAC
+      REAL(8)                  :: WGHTX
+      INTEGER(4)               :: IKPT,ISPIN,IE,IB
+      REAL(8)                  :: SVAR
+      REAL(8)                  :: SIG
+      REAL(8)                  :: E
+      REAL(8)                  :: SPINDEG
+      REAL(8)                  :: OCC1
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID_SAMPLE')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)   !STEP OF THE ENERGY GRID
-      SPINDEG=1.D0
-      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
 !
-!     == THIS IS A DIRTY FIX THAT WAS NECESSARY BEFORE THE K-POINT WEIGHT WAS
-!     == AVAILABLE ON THE PDOS FILE 
       IF(SUM(WKPT).EQ.0.D0) THEN
         CALL ERROR$MSG('NO K-POINT WEIGHTS AVAILABLE: OLD VERSION OF PDOS FILE')
         CALL ERROR$MSG('RERUN ONE PAW ITERATION WITH NEW CODE')
         CALL ERROR$STOP('PUTONGRID_SAMPLE')
-        DO IKPT=1,NKPT
-          WKPT(IKPT)=0.D0
-          DO ISPIN=1,NSPIN
-            STATE=>STATEARR(IKPT,ISPIN)
-!           == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
-!           == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
-            WKPT(IKPT)=MAX(WKPT(IKPT),MAXVAL(STATE%OCC(:)))
-          ENDDO
-          IF(WKPT(IKPT).EQ.0.D0) THEN
-            CALL ERROR$MSG('NO ELECTRONS FOR THIS K-POINT. GOT CONFUSED')
-            CALL ERROR$STOP('PUTONGRID_SAMPLE')
-          END IF
-        ENDDO       
       END IF
 !
 !     ==========================================================================
@@ -2069,34 +2211,26 @@ END MODULE ORBITALS_MODULE
 !     == STATES LYING BELOW EMIN ARE MAPPED INTO NOSSMALL                     ==
 !     ==========================================================================
       NOS(:,:,:)=0.D0
-      NOSSMALL(:,:)=0.D0
-      DO ISPIN=1,NSPIN
+      DO ISPIN=1,2
         DO IKPT=1,NKPT
           STATE=>STATEARR(IKPT,ISPIN)
 !         == CAUTION: HERE I ESTIMATE THE WEIGHT AND SPIN-DEGENERACY FACTOR 
 !         == FROM THE MAX OCCUPATION, WHICH MAY BE INCORRECT
-          WGHTX=WKPT(IKPT)*SPINDEG
-          DO IB=1,NB
-            X=(EIG(IB,IKPT,ISPIN)-EMIN)/DE+1.D0
+          WGHTX=WKPT(IKPT)
+          DO IB=1,NBB
+            X=(EIG(IB,IKPT)-EMIN)/DE+1.D0
             IE1=INT(X)
             IE2=IE1+1
             W2=(X-REAL(IE1,KIND=8))
             W1=1.D0-W2
-            IF (IE1.LT.1) THEN
-              NOSSMALL(ISPIN,1)=NOSSMALL(ISPIN,1)+SET(IB,IKPT,ISPIN)*WGHTX
-              NOSSMALL(ISPIN,2)=NOSSMALL(ISPIN,2) &
-     &                                         +SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
-            ELSE
-              IF(IE1.LE.NE.AND.IE1.GE.1) THEN 
-                NOS(IE1,ISPIN,1)=NOS(IE1,ISPIN,1)+W1*SET(IB,IKPT,ISPIN)*WGHTX
-                NOS(IE1,ISPIN,2)=NOS(IE1,ISPIN,2) &
-     &                                      +W1*SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
-              END IF
-              IF(IE2.LE.NE.AND.IE2.GE.1) THEN
-                NOS(IE2,ISPIN,1)=NOS(IE2,ISPIN,1)+W2*SET(IB,IKPT,ISPIN)*WGHTX
-                NOS(IE2,ISPIN,2)=NOS(IE2,ISPIN,2) &
-     &                                      +W2*SET(IB,IKPT,ISPIN)*STATE%OCC(IB)
-              END IF
+            OCC1=OCC(IB,IKPT)
+            IF(IE1.LE.NE.AND.IE1.GE.1) THEN 
+              NOS(IE1,ISPIN,1)=NOS(IE1,ISPIN,1)+W1*SET(IB,IKPT,ISPIN)*WGHTX
+              NOS(IE1,ISPIN,2)=NOS(IE1,ISPIN,2)+W1*SET(IB,IKPT,ISPIN)*OCC1
+            END IF
+            IF(IE2.LE.NE.AND.IE2.GE.1) THEN
+              NOS(IE2,ISPIN,1)=NOS(IE2,ISPIN,1)+W2*SET(IB,IKPT,ISPIN)*WGHTX
+              NOS(IE2,ISPIN,2)=NOS(IE2,ISPIN,2)+W2*SET(IB,IKPT,ISPIN)*OCC1
             END IF
           ENDDO
         ENDDO
@@ -2112,34 +2246,18 @@ END MODULE ORBITALS_MODULE
         SMEAR(IDE)=EBROAD/( 0.5D0*COSH(0.5D0*REAL(IDE,KIND=8)*DE/EBROAD) )**2
       ENDDO
       SMEAR=SMEAR/SUM(SMEAR)  ! RENORMALIZE TO MAINTAIN SUM RULES
+!
 !     ==  SMEAR DENSITY OF STATES ==============================================
       DOS(:,:,:)=0.D0
-      DO ISPIN=1,NSPIN
+      DO ISPIN=1,2
         DO IOCC=1,2
           DO IDE=-ND,ND
             IE1=MAX(1,1-IDE)
             IE2=MIN(NE,NE-IDE)
             W1=SMEAR(IDE)
-            DO IE=-IDE+1,IE1-1
-              NOSSMALL(ISPIN,IOCC)=NOSSMALL(ISPIN,IOCC) &
-    &                             +NOS(IE+IDE,ISPIN,IOCC)*W1
-            ENDDO
             DO IE=IE1,IE2
               DOS(IE,ISPIN,IOCC)=DOS(IE,ISPIN,IOCC)+NOS(IE+IDE,ISPIN,IOCC)*W1
             ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
-!     ==  DETERMINE NOS BY SUMMATION                                          ==
-!     ==========================================================================
-      NOS=DOS
-      DO ISPIN=1,NSPIN
-        DO IOCC=1,2
-          NOS(1,ISPIN,IOCC)=NOS(1,ISPIN,IOCC)+NOSSMALL(ISPIN,IOCC)
-          DO IE=2,NE
-            NOS(IE,ISPIN,IOCC)=NOS(IE,ISPIN,IOCC)+NOS(IE-1,ISPIN,IOCC)
           ENDDO
         ENDDO
       ENDDO
@@ -2152,10 +2270,9 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
 !     ==========================================================================
-      DO ISPIN=1,NSPIN
+      DO ISPIN=1,2
         DO IOCC=1,2
           DO IE=1,NE
-            IF(ABS(NOS(IE,ISPIN,IOCC)).LE.1.D-99)NOS(IE,ISPIN,IOCC)=0.D0
             IF(ABS(DOS(IE,ISPIN,IOCC)).LE.1.D-99)DOS(IE,ISPIN,IOCC)=0.D0
           ENDDO
         ENDDO
@@ -2165,43 +2282,25 @@ END MODULE ORBITALS_MODULE
 !     ==  WRITE RESULT ON PSODOUT                                             ==
 !     ==========================================================================
 !     == WRITE DENSITY OF STATES ===============================================
-      IF(NFILDOS.GE.0) THEN
-        DO ISPIN=1,NSPIN
-          SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
-          WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          DO IE=1,NE
-            IF(DEADZONE(IE,ISPIN)) CYCLE
-            E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
-                                                   ,SIG*DOS(IE,ISPIN,2)*EV
-          ENDDO
-          WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
+      DO ISPIN=1,2
+        SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
+        WRITE(NFILDOS,FMT='(F14.8,2F20.8)')EMIN/EV,0.D0,0.D0
+        DO IE=1,NE
+          IF(DEADZONE(IE)) CYCLE
+          E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
+          WRITE(NFILDOS,FMT='(F14.8,2F20.8)')E/EV,SIG*DOS(IE,ISPIN,1)*EV &
+                                                 ,SIG*DOS(IE,ISPIN,2)*EV
         ENDDO
-        WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
-      END IF
-!
-!     == WRITE NUMBER OF STATES ================================================
-      IF(NFILNOS.GE.0) THEN
-        DO ISPIN=1,NSPIN
-          SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
-          WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          DO IE=1,NE
-            IF(DEADZONE(IE,ISPIN)) CYCLE
-            E=EMIN+(EMAX-EMIN)*REAL(IE-1)/REAL(NE-1)
-            WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN,1) &
-                                                   ,SIG*NOS(IE,ISPIN,2)
-          ENDDO
-          WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
-        ENDDO
-        WRITE(NFILNOS,FMT='("# THIS WAS: ",A)')LEGEND
-      END IF
+        WRITE(NFILDOS,FMT='(F14.8,2F20.8)')EMAX/EV,0.D0,0.D0
+      ENDDO
+      WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
                                  CALL TRACE$POP
       RETURN
-    END SUBROUTINE PUTONGRID_SAMPLE
+      END SUBROUTINE PUTONGRID_SAMPLE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PUTONGRID_TETRA(NFILDOS,NFILNOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-     &                    ,NB,NKPT,NSPIN,NDIM,EIG,SET,LEGEND)
+      SUBROUTINE PUTONGRID_TETRA(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
+     &                    ,NBB,NKPT,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
 !     **  CONSTRUCTS DOS AND NOS WITH THE TETRAHEDRON METHOD AND WRITES THE   **
@@ -2221,60 +2320,46 @@ END MODULE ORBITALS_MODULE
       REAL(8)      ,INTENT(IN) :: EMIN
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
-      INTEGER(4)   ,INTENT(IN) :: NB
+      INTEGER(4)   ,INTENT(IN) :: NBB
       INTEGER(4)   ,INTENT(IN) :: NKPT
-      INTEGER(4)   ,INTENT(IN) :: NSPIN
-      INTEGER(4)   ,INTENT(IN) :: NDIM
-      REAL(8)      ,INTENT(IN) :: EIG(NB,NKPT,NSPIN)
-      REAL(8)      ,INTENT(IN) :: SET(NB,NKPT,NSPIN)
+      REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)
+      REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2)
       INTEGER(4)   ,INTENT(IN) :: NFILDOS ! UNIT FOR DOS FILE OR "-1"
-      INTEGER(4)   ,INTENT(IN) :: NFILNOS ! UNIT FOR NOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
-      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE,NSPIN)
+      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE)
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
-      REAL(8)    ,ALLOCATABLE  :: NOS(:,:)
-      REAL(8)    ,ALLOCATABLE  :: NOSMIN(:)
-      REAL(8)    ,ALLOCATABLE  :: DOS(:,:)
+      REAL(8)                  :: NOS(NE,2)
+      REAL(8)                  :: NOSMIN(2)
+      REAL(8)                  :: DOS(NE,2)
       REAL(8)    ,ALLOCATABLE  :: SMEAR(:)
       REAL(8)                  :: DE
       INTEGER(4)               :: IE1,IE2,IDE,I1,I2,IBIS
       INTEGER(4)               :: ND,IOCC
       REAL(8)                  :: EV
-      REAL(8)                  :: W1,W2,X,FAC
-      REAL(8)                  :: NOSSMALL(NSPIN,2)
-      REAL(8)                  :: WGHTX
+      REAL(8)                  :: W1,W2,X
       INTEGER(4)               :: IKPT,ISPIN,IE,IB
       REAL(8)                  :: SVAR
       REAL(8)                  :: SIG
       REAL(8)                  :: E
-      LOGICAL(4)               :: TSKIP
-      REAL(8)                  :: SPINDEG
 !     **************************************************************************
                                  CALL TRACE$PUSH('PUTONGRID_TETRA')
       CALL CONSTANTS('EV',EV)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)  !STEP OF THE ENERGY GRID
-      SPINDEG=1.D0
-      IF(NSPIN.EQ.1.AND.NDIM.EQ.1) SPINDEG=2.D0
 !
 !     ==========================================================================
 !     ==  CALCULATE NUMBER OF STATES FOR EACH ENERGY INTERVAL                 ==
 !     ==========================================================================
-      ALLOCATE(DOS(NE,NSPIN))
-      ALLOCATE(NOSMIN(NSPIN))
-      ALLOCATE(NOS(NE,NSPIN))
       DOS(:,:)=0.D0
       NOSMIN(:)=0.D0
-      DO IKPT=1,NKPT
-        DO ISPIN=1,NSPIN
-          DO IB=1,NB
-            STATE=>STATEARR(IKPT,ISPIN)
-            IBIS=IB+NB*(ISPIN-1)
-            SVAR=SPINDEG*SET(IB,IKPT,ISPIN)*DE
-            NOSMIN(ISPIN)=NOSMIN(ISPIN)+WGHT(IBIS,IKPT)*SVAR
-            I1=EWGHT(IB+NB*(ISPIN-1),IKPT)%I1
-            I2=EWGHT(IB+NB*(ISPIN-1),IKPT)%I2
+      DO ISPIN=1,2   ! THE DATA MODEL HAS BEEN EXPANDED TO 2 COMPONENTS
+        DO IKPT=1,NKPT
+          DO IB=1,NBB
+            SVAR=SET(IB,IKPT,ISPIN)*DE
+            NOSMIN(ISPIN)=NOSMIN(ISPIN)+WGHT(IB,IKPT)*SVAR
+            I1=EWGHT(IB,IKPT)%I1
+            I2=EWGHT(IB,IKPT)%I2
             DO IE=I1,I2
-              DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IBIS,IKPT)%WGHT(IE)*SVAR
+              DOS(IE,ISPIN)=DOS(IE,ISPIN)+EWGHT(IB,IKPT)%WGHT(IE)*SVAR
             ENDDO
           ENDDO
         ENDDO
@@ -2295,7 +2380,7 @@ END MODULE ORBITALS_MODULE
 !     ==  SMEAR OUT THE DENSITY OF STATES. (NOS IS ONLY A SUPPORT ARRAY.) ======
       NOS=DOS
       DOS(:,:)=0.D0
-      DO ISPIN=1,NSPIN
+      DO ISPIN=1,2
         DO IDE=-ND,ND
           IE1=MAX(1,1-IDE)
           IE2=MIN(NE,NE-IDE)
@@ -2315,21 +2400,10 @@ END MODULE ORBITALS_MODULE
       DOS=DOS/DE
 !
 !     ==========================================================================
-!     ==  DETERMINE NOS BY INTEGRATION                                        ==
-!     ==========================================================================
-      DO ISPIN=1,NSPIN
-        NOS(1,ISPIN)=NOSMIN(ISPIN)
-        DO IE=2,NE
-          NOS(IE,ISPIN)=NOS(IE-1,ISPIN)+DOS(IE,ISPIN)*DE
-        ENDDO
-      ENDDO
-!
-!     ==========================================================================
 !     ==  ROUND INSIGNIFICANT VALUES TO ZERO                                  ==
 !     ==========================================================================
-      DO ISPIN=1,NSPIN
+      DO ISPIN=1,2
         DO IE=1,NE
-          IF(ABS(NOS(IE,ISPIN)).LE.1.D-99) NOS(IE,ISPIN)=0.D0
           IF(ABS(DOS(IE,ISPIN)).LE.1.D-99) DOS(IE,ISPIN)=0.D0
         ENDDO
       ENDDO
@@ -2338,66 +2412,44 @@ END MODULE ORBITALS_MODULE
 !     ==  WRITE RESULT ON PSODOUT                                             ==
 !     ==========================================================================
 !     == WRITE DENSITY OF STATES ===============================================
-      IF(NFILDOS.GE.0) THEN
-        DO ISPIN=1,NSPIN
-          SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
-          WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          DO IE=1,NE
-            IF(DEADZONE(IE,ISPIN)) CYCLE
-            E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
-            SVAR=1.D0
-            IF(E.GT.EF) SVAR=0.D0
-            WRITE(NFILDOS,FMT='(F14.8,2F14.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
-                                              ,SIG*DOS(IE,ISPIN)*SVAR*EV
-          ENDDO
-          WRITE(NFILDOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
+      DO ISPIN=1,2
+        SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
+        WRITE(NFILDOS,FMT='(F14.8,2F20.8)')EMIN/EV,0.D0,0.D0
+        DO IE=1,NE
+          IF(DEADZONE(IE)) CYCLE
+          E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
+          SVAR=1.D0
+          IF(E.GT.EF) SVAR=0.D0
+          WRITE(NFILDOS,FMT='(F14.8,2F20.8)')E/EV,SIG*DOS(IE,ISPIN)*EV &
+                                                 ,SIG*DOS(IE,ISPIN)*SVAR*EV
         ENDDO
-        WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
-      END IF
-!
-!     == WRITE NUMBER OF STATES ================================================
-      IF(NFILNOS.GE.0) THEN
-        DO ISPIN=1,NSPIN
-          SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
-          WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMIN/EV,0.D0,0.D0
-          IE1=1
-          DO IE=1,NE
-            IF(DEADZONE(IE,ISPIN)) CYCLE
-            E=EMIN+(EMAX-EMIN)*REAL(IE-1,KIND=8)/REAL(NE-1)
-            IF(E.LT.EF)IE1=IE
-            WRITE(NFILNOS,FMT='(F14.8,2F14.8)')E/EV,SIG*NOS(IE,ISPIN) &
-      &                                            ,SIG*NOS(IE1,ISPIN)
-          ENDDO
-          WRITE(NFILNOS,FMT='(F14.8,2F14.8)')EMAX/EV,0.D0,0.D0
-        ENDDO
-        WRITE(NFILNOS,FMT='("# THIS WAS: ",A)')LEGEND
-      END IF
+        WRITE(NFILDOS,FMT='(F14.8,2F20.8)')EMAX/EV,0.D0,0.D0
+      ENDDO
+      WRITE(NFILDOS,FMT='("# THIS WAS: ",A)')LEGEND
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE PUTONGRID_TETRA
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NB,NSPIN,NKPT,EMAX,EMIN,NE,RBAS,EIG)
-      USE DOS_WGHT_MODULE, ONLY: EF,SPACEGROUP,WGHT,EWGHT
-      USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
+      SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
+      USE DOS_WGHT_MODULE , ONLY: EF,SPACEGROUP,WGHT,EWGHT
+      USE BRILLOUIN_MODULE, ONLY: EWGHT_TYPE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: NFILO
-      INTEGER(4),INTENT(IN)        :: NB
-      INTEGER(4),INTENT(IN)        :: NSPIN
+      INTEGER(4),INTENT(IN)        :: NBB
       INTEGER(4),INTENT(IN)        :: NKPT
       REAL(8),INTENT(IN)           :: EMIN
       REAL(8),INTENT(IN)           :: EMAX
       INTEGER(4),INTENT(IN)        :: NE
       REAL(8),INTENT(IN)           :: RBAS(3,3)
-      REAL(8),INTENT(IN)           :: EIG(NB,NKPT,NSPIN)
+      REAL(8),INTENT(IN)           :: EIG(NBB,NKPT)
       INTEGER(4)                   :: ISHIFT(3)
       INTEGER(4)                   :: NKDIV(3)
       INTEGER(4)                   :: NKPT2
       LOGICAL(4)                   :: TINV
-      REAL(8),ALLOCATABLE          :: EB(:,:)
       REAL(8)                      :: RNTOT,NEL
       REAL(8)                      :: SUMA(2),SVAR
       REAL(8),ALLOCATABLE          :: A(:,:)
@@ -2486,14 +2538,8 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     == CONSTRUCT K-INTEGRATION WEIGHTS                                      ==
 !     ==========================================================================
-      ALLOCATE(EB(NB*NSPIN,NKPT))
-      DO IKPT=1,NKPT
-        DO ISPIN=1,NSPIN
-          EB(1+NB*(ISPIN-1):NB+NB*(ISPIN-1),IKPT)=EIG(1:NB,IKPT,ISPIN) 
-        ENDDO
-      ENDDO
-      ALLOCATE(WGHT(NB*NSPIN,NKPT))
-      CALL BRILLOUIN$DOS(NSPIN*NB,NKPT,EB,WGHT,RNTOT,EF)
+      ALLOCATE(WGHT(NBB,NKPT))
+      CALL BRILLOUIN$DOS(NBB,NKPT,EIG,WGHT,RNTOT,EF)
 !!$!
 !!$!     ==========================================================================
 !!$!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
@@ -2530,9 +2576,9 @@ END MODULE ORBITALS_MODULE
 !     ==========================================================================
 !     == CALCULATE ENERGY DEPENDENT INTEGRATION WEIGHTS                       ==
 !     ==========================================================================
-      ALLOCATE(EWGHT(NB*NSPIN,NKPT))
-      CALL BRILLOUIN$WGHT(NKPT,NB*NSPIN,EMIN,EB,WGHT)
-      CALL BRILLOUIN$EWGHT(NKPT,NB*NSPIN,EB,EMIN,EMAX,NE,EWGHT)
+      ALLOCATE(EWGHT(NBB,NKPT))
+      CALL BRILLOUIN$WGHT(NKPT,NBB,EMIN,EIG,WGHT)
+      CALL BRILLOUIN$EWGHT(NKPT,NBB,EIG,EMIN,EMAX,NE,EWGHT)
 !     
 !     ==========================================================================
 !     == REPORT INFORMATION                                                   ==

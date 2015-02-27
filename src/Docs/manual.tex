@@ -6315,7 +6315,7 @@ The density of states file contains the following columns
 \begin{enumerate}
 \item energy in eV.
 \item Density of states. 
-\item Density of states weightd with occupations 
+\item Density of states weighted with occupations 
 \end{enumerate}
 For non-collinear spin-polarized calculations, the 
 contribution of the spin-$\uparrow$ electrons is drawn first, followed
@@ -6333,7 +6333,7 @@ The format for the number of states files is analogous.
     !FILE ID='PROT' EXT=F NAME='stdout'  !END
   !END
   !generic mode='tetra' DOS=T NOS=F prefix='Dos/' !END
-  !GRID    EMIN[EV]=-18. EMAX[EV]=0. DE[EV]=0.1 BROADENING[EV]=0.1 !END
+  !GRID    DE[EV]=0.1 BROADENING[EV]=0.1 !END
   !ORBITAL NAME='SP3(C1-H2)'
     !ORB ATOM='C_1' TYPE='SP3' NNZ='H_2' FAC=1.0 !END
   !END
@@ -6380,17 +6380,17 @@ largely independent of the system}
 \vrules{optional}
 \vdefault{'TETRA'}}
 
-\mbax{\key{DOS} 
-\vdescr{Density of states will be written to file per default}
-\vformat{logical} 
-\vrules{optional}
-\vdefault{true}}
+%% \mbax{\key{DOS} 
+%% \vdescr{Density of states will be written to file per default}
+%% \vformat{logical} 
+%% \vrules{optional}
+%% \vdefault{true}}
 
-\mbax{\key{NOS} 
-\vdescr{Number of states will be written to file per default}
-\vformat{logical} 
-\vrules{optional}
-\vdefault{true}}
+%% \mbax{\key{NOS} 
+%% \vdescr{Number of states will be written to file per default}
+%% \vformat{logical} 
+%% \vrules{optional}
+%% \vdefault{true}}
 
 \mbax{\key{PREFIX} 
 \vdescr{String will be prepended to the file names of density of
@@ -6403,24 +6403,26 @@ largely independent of the system}
 \block{!DCNTL!GRID}
 %----------------------------------------------------------------------
 \brules{optional} 
-  \bdescr{defines the energy grid and termal energy
-  broadening.  Read section~\ref{sec:thermoalbroadening} for the
-  background of the thermal broadening.  }
+  \bdescr{defines the energy grid and thermal energy
+  broadening. The grid extends from the minimum energy value to the
+  minimum energy of the highest band.  Read
+  section~\ref{sec:thermoalbroadening} for the background of the
+  thermal broadening.  Large energy gaps are excluded from the grid.}
 
-\mbax{\key{EMIN[EV]}
-\vdescr{lower bound in eV of the energy interval for density 
-of number of states}
-\vformat{real} 
-\vrules{optional}
-\vdefault{minimum of all energy bands specified on the PDOS file minus
-  0.1/eV.}}
+%% \mbax{\key{EMIN[EV]}
+%% \vdescr{lower bound in eV of the energy interval for density 
+%% of number of states}
+%% \vformat{real} 
+%% \vrules{optional}
+%% \vdefault{minimum of all energy bands specified on the PDOS file minus
+%%   0.1/eV.}}
 
-\mbax{\key{EMAX[EV]}
-\vdescr{upper bound of the energy grid in eV}
-\vformat{real} 
-\vrules{optional}
-\vdefault{minimum of the highest energy band specified on the PDOS
-  file.}}
+%% \mbax{\key{EMAX[EV]}
+%% \vdescr{upper bound of the energy grid in eV}
+%% \vformat{real} 
+%% \vrules{optional}
+%% \vdefault{minimum of the highest energy band specified on the PDOS
+%%   file.}}
 
 \mbax{\key{DE[EV]}
 \vdescr{spacing of the grid points on the energy grid in eV. The value
@@ -6442,11 +6444,11 @@ of number of states}
 \vrules{optional, mutually exclusive with BROADENING[EV]}
 \vdefault{300.}}
 
-\mbax{\key{SCALEY} 
-\vdescr{Obsolete!}
-\vformat{character} 
-\vrules{not used}
-\vdefault{'none'}}
+%% \mbax{\key{SCALEY} 
+%% \vdescr{Obsolete!}
+%% \vformat{character} 
+%% \vrules{not used}
+%% \vdefault{'none'}}
 
 %----------------------------------------------------------------------
 \block{!DCNTL!FILES}
@@ -6656,19 +6658,6 @@ or a combination of S,P,D,F, such as ``SD''.
 \vrules{optional}
 \vdefault{none}}
 
-\mbax{\key{SPIN}
-\vdescr{selects the spin directions in noncollinear calculations. Can be
-\begin{description}
-\item[``TOTAL''] total density
-\item[``X'']   spin density in $x$-direction
-\item[``Y'']   spin density in $y$-direction
-\item[``Z'']   spin density in $z$-direction
-\item[``MAIN'']   spin density in the main spin direction of this atom
-\end{description}}
-\vformat{character} 
-\vrules{optional}
-\vdefault{TOTAL}
-}
 
 %----------------------------------------------------------------------
 \block{!DCNTL!WEIGHT!ORB}
@@ -6713,44 +6702,19 @@ or a combination of S,P,D,F, such as ``SD''.
   !DCNTL!COOP!ORB1 are to be calculated; usage is same as
   !DCNTL!ORBITAL!ORB}
 
-%----------------------------------------------------------------------
-\block{!DCNTL!OUTPUT}
-%----------------------------------------------------------------------
-\brules{optional,multiple}
-\bdescr{selects output of the data; if neither E[EV] nor B are given,
-the density of states and the number of states are mapped onto the
-energy grid.}
-
-\mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements; refers to
-ID in block !DCNTL!WEIGHT or !DCNTL!COOP}
+\mbax{\key{SPIN}
+\vdescr{selects the spin directions in noncollinear calculations. Can be
+\begin{description}
+\item[``TOTAL''] total density
+\item[``X'']   spin density in $x$-direction
+\item[``Y'']   spin density in $y$-direction
+\item[``Z'']   spin density in $z$-direction
+\item[``MAIN'']   spin density in the main spin direction of this atom
+\end{description}}
 \vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
-
-\mbax{\key{B}
-\vdescr{band index}
-\vformat{integer} 
-\vrules{optional; incompatible with E[EV]}
-\vdefault{none}}
-
-\mbax{\key{E[EV]}
-\vdescr{energy}
-\vformat{real} 
-\vrules{optional; incompatible with B}
-\vdefault{none}}
-
-\mbax{\key{S}
-\vdescr{spin index}
-\vformat{integer} 
 \vrules{optional}
-\vdefault{all spins}}
-
-\mbax{\key{K}
-\vdescr{k-point index}
-\vformat{integer} 
-\vrules{optional}
-\vdefault{all k-points}}
+\vdefault{TOTAL}
+}
 
 %==========================================================================
 \newpage
