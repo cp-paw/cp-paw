@@ -58,6 +58,7 @@ END MODULE READCNTL_MODULE
       REAL(8)                   :: EMAX
       INTEGER(4)                :: NE
       REAL(8)                   :: EBROAD
+      REAL(8)                   :: ELSCALE
       INTEGER(4)                :: NFILIN
       INTEGER(4)                :: NPRO
       INTEGER(4)                :: NBB             ! #(SPIN STATES PER K-POINTS)
@@ -178,7 +179,9 @@ END MODULE READCNTL_MODULE
 !     ==========================================================================
 !     ==  CALCULAT WEIGHTS FOR DOS USING THE TETRAHEDRON METHOD               ==
       IF(MODE.EQ.'TETRA')THEN
-        CALL GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+        ELSCALE=1.D0
+        IF(NSPIN.EQ.1.AND.NDIM.EQ.1) ELSCALE=2.D0
+        CALL GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG,ELSCALE)
       ENDIF
 !     == WRITE FILES ===========================================================
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
@@ -242,7 +245,6 @@ END MODULE READCNTL_MODULE
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
-!PRINT*,'STATE%VEC',IKPT,ISPIN,STATE%VEC(1,:,:)
           SIGMA=REAL(3-2*ISPIN,KIND=8)
           IPRO0=0
           DO IAT=1,NAT
@@ -1718,13 +1720,9 @@ END MODULE ORBITALS_MODULE
         CALL ERROR$STOP('SET$WEIGHT')
       END IF
 
-PRINT*,'SPIN',SPIN,NSPIN,NDIM
-PRINT*,'CP',CP
-PRINT*,'CM',CM
-
-
       IF(ATOMID_.EQ.'TOTAL') THEN
-        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
+!        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
+        svar=1.d0
         IF(TRIM(SPIN).EQ.'TOTAL') THEN
 !         == WEIGHT OF BOTH SPIN COMPONENTS IS ADDED TO THE FIRST SPIN CHANNEL
           SET(:,:,1)=SET(:,:,1)+SVAR
@@ -1832,6 +1830,10 @@ PRINT*,'CM',CM
                         CSVAR2M=CM(ISPIN)*STATE%VEC(1,IP2,IB)
                         SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
                         SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                        IF(SPIN.EQ.'TOTAL') THEN
+                          SVARP=SVARP+SVARM
+                          SVARM=0.D0
+                        END IF
                         SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
                         SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
                         IF(ISPIN.EQ.1.AND.NSPIN.EQ.1) THEN
@@ -1841,6 +1843,10 @@ PRINT*,'CM',CM
                           CSVAR2M=CM(2)*STATE%VEC(1,IP2,IB)
                           SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
                           SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                          IF(SPIN.EQ.'TOTAL') THEN
+                            SVARP=SVARP+SVARM
+                            SVARM=0.D0
+                          END IF
                           SET(IB+NB,IKPT,1)=SET(IB+NB,IKPT,1) &
       &                                                  +SVARP*OV(LN1,LN2,ISP)
                           SET(IB+NB,IKPT,2)=SET(IB+NB,IKPT,2) &
@@ -1859,6 +1865,10 @@ PRINT*,'CM',CM
                         ENDDO
                         SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
                         SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
+                        IF(SPIN.EQ.'TOTAL') THEN
+                          SVARP=SVARP+SVARM
+                          SVARM=0.D0
+                        END IF
                         SET(IB,IKPT,1)=SET(IB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
                         SET(IB,IKPT,2)=SET(IB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
                       END IF
@@ -1875,14 +1885,6 @@ PRINT*,'CM',CM
           ENDDO  ! END LOOP OVER ATOMS (IAT)
         ENDDO  ! END LOOP OVER SPINS (ISPIN)
       ENDDO  ! END LOOP OVER K-POINTS (IKPT)
-!
-!     ==========================================================================
-!     == ADD UP CONTRIBUTIONS FOR SPIN=TOTAL                                  ==
-!     ==========================================================================
-      IF(SPIN.EQ.'TOTAL') THEN
-        SET(:,:,1)=SET(:,:,1)+SET(:,:,2)
-        SET(:,:,2)=0.D0
-      END IF
                                  CALL TRACE$POP
       RETURN
       END SUBROUTINE SET$WEIGHT
@@ -2431,7 +2433,7 @@ PRINT*,'CM',CM
       END SUBROUTINE PUTONGRID_TETRA
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG)
+      SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG,ELSCALE)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -2441,11 +2443,12 @@ PRINT*,'CM',CM
       INTEGER(4),INTENT(IN)        :: NFILO
       INTEGER(4),INTENT(IN)        :: NBB
       INTEGER(4),INTENT(IN)        :: NKPT
-      REAL(8),INTENT(IN)           :: EMIN
-      REAL(8),INTENT(IN)           :: EMAX
+      REAL(8)   ,INTENT(IN)        :: EMIN
+      REAL(8)   ,INTENT(IN)        :: EMAX
       INTEGER(4),INTENT(IN)        :: NE
-      REAL(8),INTENT(IN)           :: RBAS(3,3)
-      REAL(8),INTENT(IN)           :: EIG(NBB,NKPT)
+      REAL(8)   ,INTENT(IN)        :: RBAS(3,3)
+      REAL(8)   ,INTENT(IN)        :: EIG(NBB,NKPT)
+      REAL(8)   ,INTENT(IN)        :: ELSCALE
       INTEGER(4)                   :: ISHIFT(3)
       INTEGER(4)                   :: NKDIV(3)
       INTEGER(4)                   :: NKPT2
@@ -2473,7 +2476,11 @@ PRINT*,'CM',CM
 !     ==========================================================================
       CALL PDOS$GETI4A('NKDIV',3,NKDIV)
       CALL PDOS$GETI4A('ISHIFT',3,ISHIFT)
+!     == FOR NON-SPIN POLARIZED CALCULATIONS, RNTOT IS ONLY ONE-HALF OF THE ====
+!     == NUMBER OF ELECTRONS (SET IN PAW_WAVES2.F90). HERE IT IS BLOWN UP ======
+!     == TO THE FULL NUMBER OF ELECTRONS =======================================
       CALL PDOS$GETR8('RNTOT',RNTOT)
+      RNTOT=RNTOT*ELSCALE
       CALL PDOS$GETR8('NEL',NEL)
       CALL PDOS$GETL4('TINV',TINV)
       CALL PDOS$GETI4('SPACEGROUP',SPACEGROUP)
@@ -2540,6 +2547,7 @@ PRINT*,'CM',CM
 !     ==========================================================================
       ALLOCATE(WGHT(NBB,NKPT))
       CALL BRILLOUIN$DOS(NBB,NKPT,EIG,WGHT,RNTOT,EF)
+PRINT*,'EFERMI[EV] ',EF*27.211D0
 !!$!
 !!$!     ==========================================================================
 !!$!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
