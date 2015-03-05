@@ -26,9 +26,9 @@
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == consistency checks of the calling sequency and version info          ==
+!     == CONSISTENCY CHECKS OF THE CALLING SEQUENCY AND VERSION INFO          ==
 !     ==========================================================================
-      call paw_version()
+      CALL PAW_VERSION()
 !
 !     ==========================================================================
 !     == INITIALIZE MPE ROUTINE FOR PARALLEL PROCESSING                       ==
@@ -54,16 +54,18 @@
 !     ==========================================================================
 !     ==PRINTING IS ALLOWED ONLY ON THE FIRST TASK =============================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
       IF(THISTASK.EQ.1) THEN      
-        CALL FILEHANDLER$UNIT('PROT',NFILO)
         CALL FILEHANDLER$REPORT(NFILO,'USED')
       END IF
-!     == TIMING MUST BE CALLED BY ALL NODES ====================================
+!     == TIMING MUST BE CALLED BY ALL NODES ==================================
       CALL TRACE$PASS('BEFORE TIMING')
       CALL TIMING$PRINT('MONOMER',NFILO)
-      WRITE(NFILO,*)'REMARK: THE TIMING REPORT DOES NOT CONSIDER THE FIRST ' &
+      IF(THISTASK.EQ.1) THEN      
+        WRITE(NFILO,*)'REMARK: THE TIMING REPORT DOES NOT CONSIDER THE FIRST ' &
      &              ,'ITERATION'
-      WRITE(NFILO,*)'        TO EXCLUDE THE TIME FOR SELF-INITIALIZATION'
+        WRITE(NFILO,*)'        TO EXCLUDE THE TIME FOR SELF-INITIALIZATION'
+      END IF
       CALL TRACE$PASS('AFTER TIMING')
       CALL MPE$CLOCKREPORT(NFILO)
 !
