@@ -1835,6 +1835,7 @@ ENDDO
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       REAL(8)   ,PARAMETER   :: TOL=1.D-5  ! TOLERANCE FOR THE DENSITY MATRIX
+      REAL(8)   ,PARAMETER   :: EMAXBYKT=10.D0
       COMPLEX(8),ALLOCATABLE :: MAT(:,:,:)
       COMPLEX(8),ALLOCATABLE :: A(:,:)
       COMPLEX(8),ALLOCATABLE :: B(:,:)
@@ -1891,7 +1892,7 @@ INTEGER(4) :: IDIMD,ICHI1,ICHI2,ICHI
             B=TRANSPOSE(CONJG(U))
             DO I=1,NCHI
               CALL DMFT_EOFF(KBT,F(I),SVAR)
-              SVAR=MAX(-100.D0*KBT,MIN(100.D0*KBT,SVAR))
+              SVAR=MAX(-EMAXBYKT*KBT,MIN(EMAXBYKT*KBT,SVAR))
               SVAR=MU+SVAR
               E(I)=SVAR
               B(I,:)=SVAR*B(I,:)
@@ -2083,13 +2084,13 @@ INTEGER(4) :: IDIMD,ICHI1,ICHI2,ICHI
       IF(F.GT.FMIN.AND.F.LT.1.D0-FMIN) THEN
         E=LOG((1.D0-F)/F)
       ELSE 
-        F0=FMIN
+        IF(F.LT.0.5D0) THEN
+          F0=FMIN
+        ELSE
+          F0=1.D0-FMIN
+        END IF
         VAL=LOG( (1.D0-F0)/F0 )
         SLOPE=-1.D0/( F0*(1.D0-F0) )
-        IF(F.GT.0.5D0) THEN
-          VAL=-VAL
-          F0=1.D0-F0
-        END IF
         E=VAL+SLOPE*(F-F0)
       END IF
       E=E*KBT
@@ -2786,8 +2787,8 @@ STOP 'FORCED'
       CHARACTER(32),PARAMETER :: IDIN='DMFT_IN_SIGMA'
       INTEGER(4)            :: NORB_,NOMEGA_
       INTEGER(4)            :: NFIL
-      INTEGER(4)            :: NU,I,j
-      COMPLEX(8)            :: Ucopy(NORB,NORB,NORB,NORB) !U-TENSOR
+      INTEGER(4)            :: NU,I,J
+      COMPLEX(8)            :: UCOPY(NORB,NORB,NORB,NORB) !U-TENSOR
 !      CHARACTER(32),PARAMETER :: TYPE='LINEAR' ! 'NONE','LINEAR','STATIC'
 !      CHARACTER(32),PARAMETER :: TYPE='NONE' ! 'NONE','LINEAR',
 !      CHARACTER(32),PARAMETER :: TYPE='STATIC' ! 'NONE','LINEAR',
@@ -2838,20 +2839,20 @@ IF(NORB.NE.12) THEN
  SLAUR=(0.D0,0.D0)
  RETURN
 END IF
-!!$ucopy=u
-!!$do i=1,6
-!!$  if(i.eq.1) j=1   ! s
-!!$  if(i.eq.2) j=2   ! eg
-!!$  if(i.eq.3) j=4   ! eg
-!!$  if(i.eq.4) j=7   ! s  
-!!$  if(i.eq.5) j=8
-!!$  if(i.eq.6) j=10
-!!$  Ucopy(j,:,:,:)=0.d0
-!!$  Ucopy(:,j,:,:)=0.d0
-!!$  Ucopy(:,:,j,:)=0.d0
-!!$  Ucopy(:,:,:,j)=0.d0
-!!$enddo
-!!$        CALL MSIGMA$2NDORDER(NORB,NOMEGA,NLAU,KBT,G,GLAUR,Ucopy,ETOT,S,SLAUR)
+!!$UCOPY=U
+!!$DO I=1,6
+!!$  IF(I.EQ.1) J=1   ! S
+!!$  IF(I.EQ.2) J=2   ! EG
+!!$  IF(I.EQ.3) J=4   ! EG
+!!$  IF(I.EQ.4) J=7   ! S  
+!!$  IF(I.EQ.5) J=8
+!!$  IF(I.EQ.6) J=10
+!!$  UCOPY(J,:,:,:)=0.D0
+!!$  UCOPY(:,J,:,:)=0.D0
+!!$  UCOPY(:,:,J,:)=0.D0
+!!$  UCOPY(:,:,:,J)=0.D0
+!!$ENDDO
+!!$        CALL MSIGMA$2NDORDER(NORB,NOMEGA,NLAU,KBT,G,GLAUR,UCOPY,ETOT,S,SLAUR)
         CALL MSIGMA$2NDORDER(NORB,NOMEGA,NLAU,KBT,G,GLAUR,U,ETOT,S,SLAUR)
 
 !
@@ -3062,14 +3063,16 @@ PRINT*,'HAM',HAM
       IMPLICIT NONE
       INTEGER(4),PARAMETER     :: NITER1=10000 ! X#(CONJUGATE GRADIENT STEPS)
       INTEGER(4),PARAMETER     :: NITER2=100   ! X#(STEPS) FOR LINE SARCH
-      REAL(8)   ,PARAMETER     :: TOL1=1.D-5   ! TOLERANCE FOR CG ITERATION
+      REAL(8)   ,PARAMETER     :: TOL1=1.D-2   ! TOLERANCE FOR CG ITERATION
       REAL(8)   ,PARAMETER     :: TOL2=1.D-7   ! TOLERANCE FOR LINE SEARCH
       REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5  ! INITIAL MIXING
       COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      CHARACTER(2),PARAMETER   :: CGID='PR'   ! CAN BE 'FR', 'PR' 
       COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: FORCE(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: FORCEm(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: DRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: FORCEM(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: MAT1(NCHI,NCHI,NDIMD)
+      COMPLEX(8)               :: CSVAR
       LOGICAL(4)               :: CONVG
       REAL(8)                  :: MAXDEV,MAXDEVOLD
       REAL(8)                  :: SCALE
@@ -3078,10 +3081,14 @@ PRINT*,'HAM',HAM
       INTEGER(4)               :: ITER1,ITER2,ITER,I,J
       REAL(8)                  :: FN(2)
       REAL(8)                  :: SVAR,SVAR1,SVAR2
-      REAL(8)                  :: cosalpha,cosbeta,cosgamma
-      character(128)           :: string
+      REAL(8)                  :: COSALPHA,COSBETA,COSGAMMA
+      CHARACTER(128)           :: STRING
+      REAL(8)                  :: SUMSCALE
+      REAL(8)                  :: DLEN,FLEN
+      REAL(8)                  :: PI
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_CONSTRAINTS')
+      PI=4.D0*ATAN(1.D0)
       CALL DMFT_REGMATSUBARA(KBT,NOMEGA,OMEGA,2,FN)
 !
       IF(NLAU.GT.2) THEN
@@ -3099,22 +3106,82 @@ PRINT*,'HAM',HAM
 !     ==  DEVIATION FROM TARGET DENSITY MATRIX                                ==
 !     ==========================================================================
       DO IKPT=1,NKPTL
+!
+!       == THIS SYMMETRIZATION IS NOT REQUIRED. IT IS INTRODUCED TO AVOID
+!       == POTENTIAL PROBLEMS DURING DEBUGGING
+        CALL SPINOR$CONJUGATE(NDIMD,NCHI,KSET(IKPT)%GAMMA,MAT1)
+        KSET(IKPT)%GAMMA=0.5D0*(KSET(IKPT)%GAMMA+MAT1)
 !       
 !       ========================================================================
 !       ==  ADJUST H0 TO OBEY DENSITY MATRIX CONSTRAINT                       ==
+!       ==  USE CONJUGATE GRADIENT METHOD TO MINIMIZE THE ABSOLUTE SQUARE     ==
+!       ==  OF THE DEVIATION OF THE DENSITY MATRIX FROM THE TARGET            ==
 !       ========================================================================
+!       == INITIATE CONJUGATE GRADIENT ITERATION ===============================
+!       == DGAMMA=DMAXDEV/DGAMMA ===========================================
+        CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
+     &              ,KSET(IKPT)%GAMMA,MAXDEV,FORCE)
+        FORCE=0.5D0*FORCE  ! CONVERT TO WIRTINGER DERIVATIVE
+        FORCE=-FORCE       ! DOWNHILL DIRECTION
+        DGAMMA=FORCE       ! FIRST SEARCH DIRECTION IS DOWNHILL
+        FORCEM=FORCE       ! STORE AS PREVIOUS FORCE
         DO ITER1=1,NITER1
-          IF(ITER1.EQ.1) THEN
-            CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                  ,KSET(IKPT)%GAMMA,DRHO)
+!         __ENSURE THAT DGAMMA REMAINS HERMITEAN________________________________
+          CALL SPINOR$CONJUGATE(NDIMD,NCHI,DGAMMA,MAT1)
+          DGAMMA=0.5D0*(DGAMMA+MAT1)
 !
-!           == DGAMMA=DMAXDEV/DGAMMA ===========================================
+!         ======================================================================
+!         == LINE SEARCH                                                      ==
+!         ======================================================================
+          CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCEM,DGAMMA,CSVAR)
+          PFOLD=REAL(CSVAR,KIND=8)
+          CALL SPINOR$TRACEAB(NDIMD,NCHI,DGAMMA,DGAMMA,CSVAR)
+          DLEN=SQRT(REAL(CSVAR,KIND=8))
+          MAXDEVOLD=MAXDEV
+          SCALE=SCALEINI
+          SUMSCALE=0.D0
+          DO ITER2=1,NITER2 ! LINE SEARCH
+            KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SCALE
+            SUMSCALE=SUMSCALE+SCALE ! SUMSCALE IS USED FOR REPORTING
             CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
      &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                  ,KSET(IKPT)%GAMMA,DRHO,MAXDEV,FORCE)
+     &                  ,KSET(IKPT)%GAMMA,MAXDEV,FORCE)
+            FORCE=0.5D0*FORCE  ! CONVERT TO WIRTINGER DERIVATIVE
             FORCE=-FORCE  ! DOWNHILL DIRECTION
-            DGAMMA=(0.D0,0.D0)
+    
+            CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,DGAMMA,CSVAR)
+            PF=REAL(CSVAR,KIND=8)
+            CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,FORCE,CSVAR)
+            FLEN=SQRT(REAL(CSVAR,KIND=8))
+!
+!           ====================================================================
+!           == TEST DERIVATIVE                                                ==
+!           ====================================================================
+!!$            CALL DMFT_TESTDER(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+!!$     &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
+!!$     &                  ,KSET(IKPT)%GAMMA)
+!
+!           == CHECK CONVERGENCE ===============================================
+!PRINT*,'ANGLE',PF/(DLEN*FLEN)/PI*90.D0,DLEN,FLEN,SCALE,MAXDEV
+            CONVG=ABS(PF).LT.TOL2*FLEN*DLEN
+            IF(CONVG) EXIT
+!
+!           == DETERMINE SIZE OF NEXT STEP =====================================
+            SVAR=PF/(PFOLD-PF)
+!           __LIMIT UNUSUALLY LARGE STEPS_______________________________________
+            IF(0.5D0*ABS(SVAR).GT.1.D0)SVAR=SVAR/(0.5D0*ABS(SVAR))
+            SCALE=SVAR*SCALE
+!
+!           == UPDATE ==========================================================
+            PFOLD=PF
+            MAXDEVOLD=MAXDEV
+          ENDDO ! END OF LINE SEARCH
+          IF(.NOT.CONVG) THEN
+            CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
+            CALL ERROR$R8VAL('CONV CITERIUM',PF)
+            CALL ERROR$R8VAL('TOLERANCE',TOL2)
+            CALL ERROR$STOP('DMFT_CONSTRAINTS')
           END IF
 !
 !         ======================================================================
@@ -3125,6 +3192,18 @@ PRINT*,'HAM',HAM
 !!$     &                  ,KSET(IKPT)%GAMMA)
 !
 !         ======================================================================
+!         == REPORT PROGRESS                                                  ==
+!         ======================================================================
+          IF(MOD(ITER1,1).EQ.0) THEN
+            PRINT*,'CURVATURE ',(PF-PFOLD)/(DLEN**2*SCALE)
+            STRING='("DMFT_CONSTRAINTS ITER=",I5," |DRHO|=",E10.3," |F|=",E10.3'
+            STRING=TRIM(STRING)//'," COS(PHI)=",3F20.5," LINENITER=",I5)'
+            WRITE(*,FMT=TRIM(STRING)) &
+    &            ITER1,SQRT(MAXDEV),SQRT(SUM(ABS(FORCE)**2)) &
+    &                    ,COSALPHA,COSBETA,COSGAMMA,ITER2
+          END IF
+!
+!         ======================================================================
 !         == CHECK CONVERGENCE                                                ==
 !         ======================================================================
           CONVG=SQRT(MAXDEV).LT.TOL1
@@ -3132,82 +3211,65 @@ PRINT*,'HAM',HAM
           IF(CONVG) EXIT
 !
 !         ======================================================================
-!         == PREPARE NEXT SEARCH DIRECTION DGAMMA                             **
+!         == PREPARE NEXT SEARCH DIRECTION DGAMMA                             ==
 !         ======================================================================
-!         __polak-ribiere. better for nonlinearities___________________________
-          SVAR=SVAR/SUM(ABS(FORCEM)**2)
-!          SVAR=SVAR*SUM(REAL(CONJG(FORCE-FORCEM)*FORCE,KIND=8))
-          SVAR=SVAR*SUM(REAL(CONJG(FORCE)*FORCE,KIND=8)) !fletcher reeves
-IF(ITER1.GT.1) THEN
-! __ ANGLE BETWEEN THE THE NEW AND OLD SEARCH DIRECTIONS________________________
-  COSALPHA=SUM(REAL(CONJG(DGAMMA)*(FORCE+DGAMMA*SVAR),KIND=8)) &
- &        /SQRT(SUM(ABS(FORCE+DGAMMA*SVAR)**2)*SUM(ABS(DGAMMA)**2))
-! __ANGLE BETWEEN SEARCH DIRECTION AND FORCE (COS(ALPHA) SHOULD BE ZERO)________
-  COSBETA=SUM(REAL(CONJG(DGAMMA)*FORCE,KIND=8)) &
- &        /SQRT(SUM(ABS(FORCE)**2)*SUM(ABS(DGAMMA)**2))
-! __ ANGLE BETWEEN CURRENT AND PREVIOUS FORCE__(COS(ALPHA) SHOULD BE ZERO)______
-  COSGAMMA=SUM(REAL(CONJG(FORCEM)*FORCE,KIND=8)) &
- &        /SQRT(SUM(ABS(FORCE)**2)*SUM(ABS(FORCEM)**2))
-END IF         
-          FORCEM=FORCE
-          DGAMMA=FORCE+DGAMMA*SVAR   ! NEW SEARCH DIRECTION
-!         __ENSURE THAT DGAMMA REMAINS HERMITEAN________________________________
-          DO IDIMD=1,NDIMD
-            DGAMMA(:,:,IDIMD)=0.5D0*(DGAMMA(:,:,IDIMD) &
-         &                          +TRANSPOSE(CONJG(DGAMMA(:,:,IDIMD))))
-          ENDDO
-
-DO IDIMD=1,NDIMD
-  DO I=1,NCHI
-    DO J=1,NCHI
-      SVAR1=MAXVAL(ABS(DRHO))/10.D0
-      SVAR2=MAXVAL(ABS(DGAMMA))/10.D0
-      IF(ABS(DRHO(I,J,IDIMD)).GT.SVAR1.OR.ABS(DGAMMA(I,J,IDIMD)).GT.SVAR2) THEN
-        WRITE(*,FMT='(4I4,10F15.5)')I,J,IDIMD,ikpt &
- &                                ,DRHO(I,J,IDIMD),DGAMMA(I,J,IDIMD)
-      END IF
-    ENDDO
-  ENDDO
-ENDDO
-!
-!         ======================================================================
-!         == LINE SEARCH                                                      ==
-!         ======================================================================
-          PFOLD=REAL(SUM(CONJG(FORCE)*DGAMMA),KIND=8)
-          MAXDEVOLD=MAXDEV
-          SCALE=SCALEINI
-          DO ITER2=1,NITER2
-            KSET(IKPT)%GAMMA=KSET(IKPT)%GAMMA+DGAMMA*SCALE
-            CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &                    ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                    ,KSET(IKPT)%GAMMA,DRHO)
-            CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &                  ,KSET(IKPT)%SMAT,KSET(IKPT)%SINV,KSET(IKPT)%HRHO &
-     &                  ,KSET(IKPT)%GAMMA,DRHO,MAXDEV,FORCE)
-            FORCE=-FORCE  ! DOWNHILL DIRECTION
-            PF=REAL(SUM(CONJG(FORCE)*DGAMMA),KIND=8)
-            CONVG=ABS(PF).LT.TOL2
-            IF(CONVG) EXIT
-            SVAR=PF/(PFOLD-PF)
-!           __LIMIT UNUSUALLY LARGE STEPS_______________________________________
-            IF(0.5D0*ABS(SVAR).GT.1.D0)SVAR=SVAR/(0.5D0*ABS(SVAR))
-            SCALE=SVAR*SCALE
-            PFOLD=PF
-            MAXDEVOLD=MAXDEV
-          ENDDO ! END OF LINE SEARCH
-          IF(.NOT.CONVG) THEN
-            CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
-            CALL ERROR$R8VAL('CONV CITERIUM',PF)
-            CALL ERROR$R8VAL('TOLERANCE',TOL2)
+          IF(CGID.EQ.'PR') THEN ! POLAK-RIBIERE. BETTER FOR NONLINEARITIES_____
+            CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCEM,FORCEM,CSVAR)
+            SVAR=REAL(CSVAR,KIND=8)
+            IF(SVAR.GT.1.D-8) THEN
+              CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE-FORCEM,FORCE,CSVAR)
+              SVAR=REAL(CSVAR,KIND=8)/SVAR
+!             ==HTTP://EN.WIKIPEDIA.ORG/WIKI/NONLINEAR_CONJUGATE_GRADIENT_METHOD
+              IF(SVAR.LT.0.D0) SVAR=0.D0
+            ELSE
+              SVAR=0.D0
+            END IF
+          ELSE IF(CGID.EQ.'FR') THEN ! FLETCHER_REEVES__________________________
+            CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCEM,FORCEM,CSVAR)
+            SVAR=REAL(CSVAR,KIND=8)
+            IF(SVAR.GT.1.D-8) THEN
+              CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,FORCE,CSVAR)
+              SVAR=REAL(CSVAR,KIND=8)/SVAR
+            ELSE
+              SVAR=0.D0
+            END IF
+          ELSE
+            CALL ERROR$MSG('ID FOR CONJUGATE GRADIENT METHOD NOT RECOGNIZED')
+            CALL ERROR$CHVAL('CGID',CGID)
             CALL ERROR$STOP('DMFT_CONSTRAINTS')
           END IF
-          IF(MOD(ITER1,1).EQ.0) THEN
-            STRING='("DMFT_CONSTRAINTS ITER=",I5," |DRHO|=",E10.3," |F|=",E10.3'
-            STRING=TRIM(STRING)//'," COS(PHI)=",3F20.5," LINENITER=",I5)'
-            WRITE(*,FMT=TRIM(STRING)) &
-    &            ITER1,SQRT(MAXDEV),SQRT(SUM(ABS(FORCE)**2)) &
-    &                    ,COSALPHA,cosbeta,cosgamma,ITER2
-          END IF
+!         __ REGULAR RESTART
+!          IF(MOD(ITER1,10).EQ.0) SVAR=0.D0
+!
+!PRINT*,'BETA',SVAR
+IF(ITER1.GT.1) THEN
+! __ ANGLE BETWEEN THE THE NEW AND OLD SEARCH DIRECTIONS________________________
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE+DGAMMA*SVAR,DGAMMA,CSVAR)
+  COSALPHA=REAL(CSVAR,KIND=8)
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE+DGAMMA*SVAR,FORCE+DGAMMA*SVAR,CSVAR)
+  COSALPHA=COSALPHA/REAL(CSVAR,KIND=8)
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,DGAMMA,DGAMMA,CSVAR)
+  COSALPHA=COSALPHA/REAL(CSVAR,KIND=8)
+
+! __ANGLE BETWEEN SEARCH DIRECTION AND FORCE (COS(ALPHA) SHOULD BE ZERO)________
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,DGAMMA,CSVAR)
+  COSBETA=REAL(CSVAR,KIND=8)
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,FORCE,CSVAR)
+  COSBETA=COSBETA/SQRT(REAL(CSVAR,KIND=8))
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,DGAMMA,DGAMMA,CSVAR)
+  COSBETA=COSBETA/SQRT(REAL(CSVAR,KIND=8))
+!
+! __ ANGLE BETWEEN CURRENT AND PREVIOUS FORCE__(COS(ALPHA) SHOULD BE ZERO)______
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCEM,FORCE,CSVAR)
+  COSGAMMA=REAL(CSVAR,KIND=8)
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCE,FORCE,CSVAR)
+  COSGAMMA=COSGAMMA/SQRT(REAL(CSVAR,KIND=8))
+  CALL SPINOR$TRACEAB(NDIMD,NCHI,FORCEM,FORCEM,CSVAR)
+  COSGAMMA=COSGAMMA/SQRT(REAL(CSVAR,KIND=8))
+END IF         
+
+          FORCEM=FORCE
+          DGAMMA=FORCE+DGAMMA*SVAR   ! NEW SEARCH DIRECTION
           CONVG=.FALSE.
         ENDDO ! END OF CONJUGATE GRADIENT LOOP
         IF(.NOT.CONVG) THEN
@@ -3243,40 +3305,105 @@ ENDDO
       COMPLEX(8),INTENT(IN) :: HRHO(NCHI,NCHI,NDIMD)
       COMPLEX(8),INTENT(IN) :: GAMMA0(NCHI,NCHI,NDIMD)
       COMPLEX(4),PARAMETER  :: CI=(0.D0,1.D0)
-      COMPLEX(8)            :: DRHO(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: GAMMA(NCHI,NCHI,NDIMD)
       REAL(8)               :: MAXDEV0,MAXDEVP,MAXDEVM
-      COMPLEX(8)            :: FORCE0(NCHI,NCHI,NDIMD)
-      COMPLEX(8)            :: FORCEP(NCHI,NCHI,NDIMD)
-      COMPLEX(8)            :: FORCEM(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: FORCE(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: DIR(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: DIRDAGGER(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: MAT(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: CSVAR
+      REAL(8)               :: DER,DERP,DERM
       REAL(8)               :: SVARP,SVARM
-      INTEGER(4)            :: IDIS
+      INTEGER(4)            :: IDIS,IDIMD
+      REAL(8)               :: DF
+      COMPLEX(8)            :: FORCE0(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: FORCEM(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: FORCEP(NCHI,NCHI,NDIMD)
 !     **************************************************************************
-      CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA0,DRHO)
+!
+!     ==========================================================================
+!     == TEST DERIVATIVES WITHOUT WIRTINGER CALCULUS                          ==
+!     ==========================================================================
       CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA0,DRHO,MAXDEV0,FORCE0)
-      FORCE0=-FORCE0
-      DIR=FORCE0
+     &                  ,SMAT,SINV,HRHO,GAMMA0,MAXDEV0,FORCE)
+!
+!     == DISPLACEMENT ==========================================================
+      DIR=FORCE
       DIR=DIR/SQRT(SUM(ABS(DIR)**2))
-      PRINT*,'--',0.D0,-REAL(SUM(DIR*FORCE0),KIND=8)
+!
+      WRITE(*,FMT='(82("="),T20," TEST DERIVATIVES ")')
+      WRITE(*,FMT='(5A20)')' DISPLACEMENT ',' FORCE ',' FORCE ' &
+     &                                     ,' VALUE ',' VALUE '
+      CALL SPINOR$TRACEAB(NDIMD,NCHI,DIR,FORCE,CSVAR)
+      DER=REAL(CSVAR,KIND=8)
+      WRITE(*,FMT='(5F20.10)')0.D0,DER,DER,MAXDEV0,MAXDEV0
       DO IDIS=1,5
         SVARP=+1.D-5*REAL(IDIS,8)
         SVARM=-SVARP
-        GAMMA=GAMMA0+SVARP*DIR
-        CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA,DRHO)
+        GAMMA=GAMMA0+SVARP*DIR 
         CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA,DRHO,MAXDEVP,FORCEP)
-        GAMMA=GAMMA0+SVARM*DIR
-        CALL DMFT_DRHO(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA,DRHO)
+     &              ,SMAT,SINV,HRHO,GAMMA,MAXDEVP,FORCE)
+        CALL SPINOR$TRACEAB(NDIMD,NCHI,DIR,FORCE,CSVAR)
+        DER=REAL(CSVAR,KIND=8)
+        GAMMA=GAMMA0+SVARM*DIR 
         CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &              ,SMAT,SINV,HRHO,GAMMA,DRHO,MAXDEVM,FORCEM)
-        PRINT*,'--',SVARP,(MAXDEVP-MAXDEVM)/(SVARP-SVARM)
+     &              ,SMAT,SINV,HRHO,GAMMA,MAXDEVM,FORCE)
+        CALL SPINOR$TRACEAB(NDIMD,NCHI,DIR,FORCE,CSVAR)
+        DER=0.5D0*(DER+REAL(CSVAR,KIND=8))
+        WRITE(*,FMT='(5F20.10)')SVARP,(MAXDEVP-MAXDEVM)/(SVARP-SVARM),DER &
+     &                          ,MAXDEVP,MAXDEVM
       ENDDO
-      STOP
+!
+!     ==========================================================================
+!     ==  TEST WIRTINGER DERIVATIVES                                          ==
+!     ==========================================================================
+      CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA0,MAXDEV0,FORCE)
+      FORCE=0.5D0*FORCE  ! CONVERT TO WIRTINGER DERIVATIVES
+      FORCE=-FORCE       ! CONVERT GRADIENT INTO FORCE
+!
+!     == DISPLACEMENT ==========================================================
+      DIR=FORCE
+      DIR=DIR/SQRT(SUM(ABS(DIR)**2))
+      CALL SPINOR$CONJUGATE(NDIMD,NCHI,DIR,DIRDAGGER)
+!
+!     ==
+      WRITE(*,FMT='(82("="),T20," TEST WIRTINGER DERIVATIVES ")')
+      WRITE(*,FMT='(5A20)')' DISPLACEMENT ',' FORCE ',' FORCE ' &
+     &                                     ,' VALUE ',' VALUE '
+!
+!     == THE FACTOR 2 COMES FROM THE WIRTINGER DERIVATIVES =====================
+!     == DE=SUM(CONJG(F)*DIR+CONJG(DIR)*F)*SCALE
+      CALL SPINOR$MATMUL(NDIMD,NCHI,DIR,FORCE,MAT)
+      CALL SPINOR$TRACE(NDIMD,NCHI,MAT,CSVAR)
+      DER=REAL(CSVAR+CONJG(CSVAR),KIND=8)
+      WRITE(*,FMT='(5F20.10)')0.D0,DER,DER,MAXDEV0,MAXDEV0
+
+      DO IDIS=1,5
+        SVARP=+1.D-5*REAL(IDIS,8)
+        SVARM=-SVARP
+!
+        GAMMA=GAMMA0+SVARP*DIR
+        CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,MAXDEVP,FORCE)
+        FORCE=0.5D0*FORCE ! CONVERT TO WIRTINGER DERIVATIVES
+        FORCE=-FORCE      ! CONVERT GRADIENT INTO FORCE
+        CALL SPINOR$MATMUL(NDIMD,NCHI,DIR,FORCE,MAT)
+        CALL SPINOR$TRACE(NDIMD,NCHI,MAT,CSVAR)
+        DERP=REAL(CSVAR+CONJG(CSVAR),KIND=8)
+!
+        GAMMA=GAMMA0+SVARM*DIR
+        CALL DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
+     &              ,SMAT,SINV,HRHO,GAMMA,MAXDEVM,FORCE)
+        FORCE=0.5D0*FORCE ! CONVERT TO WIRTINGER DERIVATIVES
+        FORCE=-FORCE      ! CONVERT GRADIENT INTO FORCE
+        CALL SPINOR$MATMUL(NDIMD,NCHI,DIR,FORCE,MAT)
+        CALL SPINOR$TRACE(NDIMD,NCHI,MAT,CSVAR)
+        DERM=REAL(CSVAR+CONJG(CSVAR),KIND=8)
+        WRITE(*,FMT='(5F20.10)')SVARP,-(MAXDEVP-MAXDEVM)/(SVARP-SVARM) &
+     &                      ,0.5D0*(DERP+DERM),MAXDEVP,MAXDEVM
+      ENDDO
+!STOP 'FORCED STOP IN DMFT_TESTDER'
       RETURN
       END
 !
@@ -3311,24 +3438,24 @@ ENDDO
       COMPLEX(8)            :: G(NCHI,NCHI,NDIMD)
       INTEGER(4)            :: NU,IAT,I1,I2,IDIMD,ILAU,I
 !     **************************************************************************
-!
-!     == LAURENT EXPANSION FOR THE GREENS FUNCTION DIFFERENCE ==============
-      GLAUR=(0.D0,0.D0)
-!     == MATX=-MU*S+HRHO ; DMATX=SLAUR(0)-GAMMA ============================
-!      MATX=-MU*SMAT+HRHO
-!     == SELF ENERGY MINUS GAMMA
-      DMATX=(0.D0,0.D0)
-      DO IAT=1,NAT
-        I1=ATOMSET(IAT)%ICHI1
-        I2=ATOMSET(IAT)%ICHI2
-        DMATX(I1:I2,I1:I2,:)=DMATX(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOCLAUR(:,:,:,1)
-      ENDDO
-      DMATX=DMATX-GAMMA
-!     == GLAUR2=SINV*MATX*SINV =============================================
-      CALL SPINOR$MATMUL(NDIMD,NCHI,DMATX,SINV,MAT)
-      CALL SPINOR$MATMUL(NDIMD,NCHI,SINV,MAT,GLAUR(:,:,:,2))
-!     == THE NEXT TERM GLAUR3 DOES NOT CONTRIBUTE TO THE DENSITY MATRIX. ===
-!     == GLAUR4 IS NOT IMPLEMENTED BECAUSE NLAU<3 ==========================
+!!$!
+!!$!     == LAURENT EXPANSION FOR THE GREENS FUNCTION DIFFERENCE ==============
+!!$      GLAUR=(0.D0,0.D0)
+!!$!     == MATX=-MU*S+HRHO ; DMATX=SLAUR(0)-GAMMA ============================
+!!$!      MATX=-MU*SMAT+HRHO
+!!$!     == SELF ENERGY MINUS GAMMA
+!!$      DMATX=(0.D0,0.D0)
+!!$      DO IAT=1,NAT
+!!$        I1=ATOMSET(IAT)%ICHI1
+!!$        I2=ATOMSET(IAT)%ICHI2
+!!$        DMATX(I1:I2,I1:I2,:)=DMATX(I1:I2,I1:I2,:)+ATOMSET(IAT)%SLOCLAUR(:,:,:,1)
+!!$      ENDDO
+!!$      DMATX=DMATX-GAMMA
+!!$!     == GLAUR2=SINV*MATX*SINV =============================================
+!!$      CALL SPINOR$MATMUL(NDIMD,NCHI,DMATX,SINV,MAT)
+!!$      CALL SPINOR$MATMUL(NDIMD,NCHI,SINV,MAT,GLAUR(:,:,:,2))
+!!$!     == THE NEXT TERM GLAUR3 DOES NOT CONTRIBUTE TO THE DENSITY MATRIX. ===
+!!$!     == GLAUR4 IS NOT IMPLEMENTED BECAUSE NLAU<3 ==========================
 !
 !     == LOOP OVER OMEGA ===================================================
       DRHO=(0.D0,0.D0)
@@ -3381,10 +3508,10 @@ ENDDO
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_SUMDRHO2(NCHI,NDIMD,NOMEGA,NLAU,KBT,MU,OMEGA,FN &
-     &                        ,SMAT,SINV,HRHO,GAMMA,DRHO,F,DFDGAMMA)
+     &                        ,SMAT,SINV,HRHO,GAMMA,F,DFDGAMMA)
 !     **************************************************************************
 !     ** F=SUM(ABS(DRHO)**2)=TR[DRHO*DRHO^\DAGGER]
-!     ** DF=DFDGAMMA*DGAMMA
+!     ** DF=TR[DFDGAMMA*DGAMMA]
 !     **************************************************************************
       USE DMFT_MODULE, ONLY : NAT &
      &                       ,ATOMSET
@@ -3401,48 +3528,68 @@ ENDDO
       COMPLEX(8),INTENT(IN) :: SINV(NCHI,NCHI,NDIMD)
       COMPLEX(8),INTENT(IN) :: HRHO(NCHI,NCHI,NDIMD)
       COMPLEX(8),INTENT(IN) :: GAMMA(NCHI,NCHI,NDIMD)
-      COMPLEX(8),INTENT(IN) :: DRHO(NCHI,NCHI,NDIMD)
       REAL(8)   ,INTENT(OUT):: F
       COMPLEX(8),INTENT(OUT):: DFDGAMMA(NCHI,NCHI,NDIMD)
       COMPLEX(4),PARAMETER  :: CI=(0.D0,1.D0)
+      COMPLEX(8)            :: DRHO(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: MAT1(NCHI,NCHI,NDIMD)
+      COMPLEX(8)            :: MAT2(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: GLAUR(NCHI,NCHI,NDIMD,NLAU+1)
-      COMPLEX(8)            :: MATX(NCHI,NCHI,NDIMD)
-      COMPLEX(8)            :: DMATX(NCHI,NCHI,NDIMD)
-      COMPLEX(8)            :: MAT(NCHI,NCHI,NDIMD)
       COMPLEX(8)            :: G(NCHI,NCHI,NDIMD)
       INTEGER(4)            :: NU,IAT,I1,I2,IDIMD,ILAU,I
       REAL(8)               :: SVAR
 !     **************************************************************************
-      F=SUM(ABS(DRHO)**2)
 !
-!     == LOOP OVER OMEGA =======================================================
-      DFDGAMMA=(0.D0,0.D0)
+!     ==========================================================================
+!     == CALCULATE DRHO=RHO-RHOBAR                                            ==
+!     ==========================================================================
+      DRHO=(0.D0,0.D0)
       DO NU=1,NOMEGA
 !       == CONSTRUCT LATTICE GREENS FUNCTION ===================================
-        MAT=(CI*OMEGA(NU)+MU)*SMAT-HRHO+GAMMA
+        MAT1=(CI*OMEGA(NU)+MU)*SMAT-HRHO 
+        CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,G)
+        DRHO=DRHO-KBT*G  ! SUBTRACT NONINTERACTING G
+        MAT1=MAT1+GAMMA
         DO IAT=1,NAT
           I1=ATOMSET(IAT)%ICHI1
           I2=ATOMSET(IAT)%ICHI2
-          MAT(I1:I2,I1:I2,:)=MAT(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
+          MAT1(I1:I2,I1:I2,:)=MAT1(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
         ENDDO
-        CALL SPINOR$INVERT(NDIMD,NCHI,MAT,G)
-        DO IDIMD=1,NDIMD
-          DFDGAMMA(:,:,IDIMD)=DFDGAMMA(:,:,IDIMD) &
-     &            -KBT*MATMUL(G(:,:,IDIMD),MATMUL(DRHO(:,:,IDIMD),G(:,:,IDIMD)))
-        ENDDO
+        CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,G)
+        DRHO=DRHO+KBT*G
       ENDDO ! END LOOP OVER MATSUBARA FREQUENCIES
 !
 !     == INCLUDE NEGATIVE FREQUENCIES ==========================================
       DO IDIMD=1,NDIMD
-        DFDGAMMA(:,:,IDIMD)=DFDGAMMA(:,:,IDIMD) &
-     &                     +CONJG(TRANSPOSE(DFDGAMMA(:,:,IDIMD)))
+        DRHO(:,:,IDIMD)=DRHO(:,:,IDIMD)+CONJG(TRANSPOSE(DRHO(:,:,IDIMD)))
       ENDDO
-      DFDGAMMA=2.D0*DFDGAMMA  
 !
-!     == THIS IS A FUDGE FACTOR, WHICH IS NOT YET UNDERSTOOD. I BELIEVE THAT
-!     == IT HAS TO DO WITH THE SPINOR REPRESENTSTION. IT WAS NUMERICALLY 
-!     == REQUIRED WITH NON-SPIN POLARIZED CALCULATKION
-      DFDGAMMA=0.25D0*DFDGAMMA  
+!     ==========================================================================
+!     == CALCULATE F=TR[DRHO*DRHO] AND DERIVATIVE DFDGAMMA                    ==
+!     == F(DRHO+DIR)-F(DRHO)=TR[DFDGAMMA*DIR]=SUM[CONJG(DFDGAMMA)*DIR]        ==
+!     ==========================================================================
+      F=SUM(ABS(DRHO)**2)
+      DFDGAMMA=(0.D0,0.D0)
+      DO NU=1,NOMEGA
+!       == CONSTRUCT LATTICE GREENS FUNCTION ===================================
+        MAT1=(CI*OMEGA(NU)+MU)*SMAT-HRHO+GAMMA
+        DO IAT=1,NAT
+          I1=ATOMSET(IAT)%ICHI1
+          I2=ATOMSET(IAT)%ICHI2
+          MAT1(I1:I2,I1:I2,:)=MAT1(I1:I2,I1:I2,:)-ATOMSET(IAT)%SLOC(:,:,:,NU)
+        ENDDO
+        CALL SPINOR$INVERT(NDIMD,NCHI,MAT1,G)
+!       == ADD UP DERIVATIVE ===================================================
+        CALL SPINOR$MATMUL(NDIMD,NCHI,DRHO,G,MAT1)
+        CALL SPINOR$MATMUL(NDIMD,NCHI,G,MAT1,MAT2)
+        DFDGAMMA=DFDGAMMA-2.D0*KBT*MAT2
+      ENDDO ! END LOOP OVER MATSUBARA FREQUENCIES
+!     == ADD NEGATIVE FREQUENCIES ==============================================
+      MAT1=DFDGAMMA
+      DO IDIMD=1,NDIMD
+        MAT1(:,:,IDIMD)=TRANSPOSE(CONJG(MAT1(:,:,IDIMD)))
+      ENDDO
+      DFDGAMMA=DFDGAMMA+MAT1
       RETURN
       END
 !
@@ -4371,7 +4518,71 @@ PRINT*,' BEFORE SPINOR$PRINTL'
       CALL SPINOR$CONVERT('FWRD',NCHI,NDIMD,A)
       RETURN
       END
-        
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPINOR$CONJUGATE(NDIMD,NCHI,A,ADAGGER)
+!     **************************************************************************
+!     **  ADAGGER IS THE HERMITEAN CONJUGATE OF A                             **
+!     **                                                                      **
+!     **************************************PETER BLOECHL GOSLAR 2015***********
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NDIMD
+      INTEGER(4),INTENT(IN)  :: NCHI
+      COMPLEX(8),INTENT(IN)  :: A(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(OUT) :: ADAGGER(NCHI,NCHI,NDIMD)
+      INTEGER(4)             :: IDIMD
+!     **************************************************************************
+      DO IDIMD=1,NDIMD
+        ADAGGER(:,:,IDIMD)=TRANSPOSE(CONJG(A(:,:,IDIMD)))
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPINOR$TRACE(NDIMD,NCHI,A,VAL)
+!     **************************************************************************
+!     **  VAL=TRACE[A]
+!     **                                                                      **
+!     **************************************PETER BLOECHL GOSLAR 2015***********
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NCHI
+      INTEGER(4),INTENT(IN)  :: NDIMD
+      COMPLEX(8),INTENT(IN)  :: A(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(OUT) :: VAL
+      INTEGER(4)             :: I
+!     **************************************************************************
+      VAL=0.D0
+      DO I=1,NCHI
+        VAL=VAL+A(I,I,1)
+      ENDDO
+      VAL=2.D0*VAL
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPINOR$TRACEAB(NDIMD,NCHI,A,B,VAL)
+!     **************************************************************************
+!     **  VAL=TRACE[A*B]
+!     **                                                                      **
+!     **************************************PETER BLOECHL GOSLAR 2015***********
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NCHI
+      INTEGER(4),INTENT(IN)  :: NDIMD
+      COMPLEX(8),INTENT(IN)  :: A(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(IN)  :: B(NCHI,NCHI,NDIMD)
+      COMPLEX(8),INTENT(OUT) :: VAL
+      INTEGER(4)             :: IDIMD,I,J
+!     **************************************************************************
+      VAL=0.D0
+      DO IDIMD=1,NDIMD
+        DO I=1,NCHI
+          DO J=1,NCHI
+            VAL=VAL+A(I,J,IDIMD)*B(J,I,IDIMD)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPINOR$MATMUL(NDIMD,NCHI,A,B,C)
