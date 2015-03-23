@@ -3061,13 +3061,13 @@ PRINT*,'HAM',HAM
       USE DMFT_MODULE, ONLY: TON,NCHI,NKPTL,NDIMD,NAT,NOMEGA,NLAU &
      &                      ,OMEGA,KBT,MU,KSET,ATOMSET
       IMPLICIT NONE
-      INTEGER(4),PARAMETER     :: NITER1=10000 ! X#(CONJUGATE GRADIENT STEPS)
-      INTEGER(4),PARAMETER     :: NITER2=100   ! X#(STEPS) FOR LINE SARCH
-      REAL(8)   ,PARAMETER     :: TOL1=1.D-2   ! TOLERANCE FOR CG ITERATION
-      REAL(8)   ,PARAMETER     :: TOL2=1.D-7   ! TOLERANCE FOR LINE SEARCH
-      REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5  ! INITIAL MIXING
-      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      CHARACTER(2),PARAMETER   :: CGID='PR'   ! CAN BE 'FR', 'PR' 
+      INTEGER(4),PARAMETER     :: NITER1=100000  ! X#(CONJUGATE GRADIENT STEPS)
+      INTEGER(4),PARAMETER     :: NITER2=100     ! X#(STEPS) FOR LINE SARCH
+      REAL(8)   ,PARAMETER     :: TOL1=1.D-3     ! TOLERANCE FOR CG ITERATION
+      REAL(8)   ,PARAMETER     :: TOL2=1.D-8     ! TOLERANCE FOR LINE SEARCH
+      REAL(8)   ,PARAMETER     :: SCALEINI=1.D-5 ! INITIAL MIXING
+      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0) ! SQRT(-1)
+      CHARACTER(2),PARAMETER   :: CGID='PR'      ! CAN BE 'FR', 'PR' 
       COMPLEX(8)               :: DGAMMA(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: FORCE(NCHI,NCHI,NDIMD)
       COMPLEX(8)               :: FORCEM(NCHI,NCHI,NDIMD)
@@ -3126,6 +3126,9 @@ PRINT*,'HAM',HAM
         FORCE=-FORCE       ! DOWNHILL DIRECTION
         DGAMMA=FORCE       ! FIRST SEARCH DIRECTION IS DOWNHILL
         FORCEM=FORCE       ! STORE AS PREVIOUS FORCE
+COSALPHA=0.D0
+COSBETA=0.D0
+COSGAMMA=0.D0
         DO ITER1=1,NITER1
 !         __ENSURE THAT DGAMMA REMAINS HERMITEAN________________________________
           CALL SPINOR$CONJUGATE(NDIMD,NCHI,DGAMMA,MAT1)
@@ -3199,8 +3202,7 @@ PRINT*,'HAM',HAM
             STRING='("DMFT_CONSTRAINTS ITER=",I5," |DRHO|=",E10.3," |F|=",E10.3'
             STRING=TRIM(STRING)//'," COS(PHI)=",3F20.5," LINENITER=",I5)'
             WRITE(*,FMT=TRIM(STRING)) &
-    &            ITER1,SQRT(MAXDEV),SQRT(SUM(ABS(FORCE)**2)) &
-    &                    ,COSALPHA,COSBETA,COSGAMMA,ITER2
+    &                    ITER1,SQRT(MAXDEV),FLEN,COSALPHA,COSBETA,COSGAMMA,ITER2
           END IF
 !
 !         ======================================================================
@@ -5028,12 +5030,10 @@ STOP 'FORCED IN SPECTRALFUNCTION'
       INTEGER(4)             :: NO_LAUR
       INTEGER(4)             :: N,M,NU,I,J
       REAL(8)                :: BETA
-      REAL(8)                :: EV
       REAL(8)                :: PI
 !     **************************************************************************
                                CALL TRACE$PUSH('MSIGMA$2NDORDER')
       WRITE(*,FMT='(82("="),T10," IN MSIGMA$2NDORDER ")')
-      CALL CONSTANTS$GET('EV',EV)
       PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
@@ -5136,6 +5136,7 @@ SUM_MAX=NOMEGA+10
 !     **************************************************************************
 !     ** WRITE GREENS FUNCTION OR SELF ENERGY TO FILE
 !     **************************************************************************
+      USE STRINGS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: NORB
@@ -5143,39 +5144,88 @@ SUM_MAX=NOMEGA+10
       REAL(8)     ,INTENT(IN) :: OMEGA(NOMEGA)
       COMPLEX(8)  ,INTENT(IN) :: GF(NORB,NORB,NOMEGA)
       CHARACTER(*),INTENT(IN) :: FILENAME
-      INTEGER(4)  ,PARAMETER  :: IOPARAM = 1999
-      INTEGER(4)  ,PARAMETER  :: IOPARAMEV = 2000
+      LOGICAL(4)  ,SAVE       :: TINI=.FALSE.
+      CHARACTER(32)           :: FILEID
+      INTEGER(4)              :: NFIL
+      INTEGER(4)              :: NFILEV
       INTEGER(4)              :: M,N
       REAL(8)                 :: EV
       REAL(8)                 :: FACTOR
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == DEFINE FILES FOR FILEHANDLER                                         ==
+!     ==========================================================================
+      IF(.NOT.TINI) THEN
+        TINI=.TRUE.
+        FILEID=+'DMFT_GREENF'
+        CALL FILEHANDLER$SETFILE(FILEID,.TRUE.,-'.DMFTGFIN')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'FORM','FORMATTED')
+        FILEID=+'DMFT_GREENF_EV'
+        CALL FILEHANDLER$SETFILE(FILEID,.TRUE.,-'.DMFTGFIN_EV')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'FORM','FORMATTED')
+        FILEID=+'DMFT_SIGMA'
+        CALL FILEHANDLER$SETFILE(FILEID,.TRUE.,-'.DMFTSIGMA')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'FORM','FORMATTED')
+        FILEID=+'DMFT_SIGMA_EV'
+        CALL FILEHANDLER$SETFILE(FILEID,.TRUE.,-'.DMFTSIGMA_EV')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'STATUS','REPLACE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'POSITION','REWIND')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'ACTION','WRITE')
+        CALL FILEHANDLER$SETSPECIFICATION(FILEID,'FORM','FORMATTED')
+      END IF
+!
+!     ==========================================================================
+!     == OPEN FILE AND DETERMINE CONVERSION FACTOR                            ==
+!     ==========================================================================
       CALL CONSTANTS$GET('EV',EV)
       IF(ID.EQ.'G') THEN
-        FACTOR=1.D0/EV
-      ELSE IF(ID.EQ.'S') THEN
         FACTOR=EV
+        CALL FILEHANDLER$UNIT('DMFT_GREENF',NFIL)
+        CALL FILEHANDLER$UNIT('DMFT_GREENF_EV',NFILEV)
+      ELSE IF(ID.EQ.'S') THEN
+        FACTOR=1.D0/EV
+        CALL FILEHANDLER$UNIT('DMFT_SIGMA',NFIL)
+        CALL FILEHANDLER$UNIT('DMFT_SIGMA_EV',NFILEV)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED (MUST BE "G" OR "S")')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('MSIGMA_WRITEGF')
       END IF
-      OPEN(UNIT=IOPARAM,FILE=FILENAME)
-      OPEN(UNIT=IOPARAMEV,FILE=FILENAME//"_EV")
+!
+!     ==========================================================================
+!     == WRITE FILE                                                           ==
+!     ==========================================================================
       DO N=1,NOMEGA
-        WRITE(IOPARAM,'(ES24.16E3,5X)',ADVANCE='NO') OMEGA(N)
-        WRITE(IOPARAMEV,'(ES24.16E3,5X)',ADVANCE='NO')OMEGA(N)*EV
+        WRITE(NFIL,'(ES24.16E3,5X)',ADVANCE='NO') OMEGA(N)
+        WRITE(NFILEV,'(ES24.16E3,5X)',ADVANCE='NO')OMEGA(N)/EV
         DO M=1,NORB
-          WRITE(IOPARAM,'(ES24.16E3,3X,ES24.16E3,5X)',ADVANCE='NO') &
+          WRITE(NFIL,'(ES24.16E3,3X,ES24.16E3,5X)',ADVANCE='NO') &
      &                      REAL( GF(M,M,N),KIND=8), AIMAG( GF(M,M,N))
-          WRITE(IOPARAMEV,'(ES24.16E3,3X,ES24.16E3,5X)',ADVANCE='NO') &
+          WRITE(NFILEV,'(ES24.16E3,3X,ES24.16E3,5X)',ADVANCE='NO') &
      &                      REAL( GF(M,M,N),KIND=8)*FACTOR &
      &                     ,AIMAG( GF(M,M,N))*FACTOR
         ENDDO !END LOOP OVER ORBITALS
-        WRITE(IOPARAM,*)
-        WRITE(IOPARAMEV,*)
+        WRITE(NFIL,*)
+        WRITE(NFILEV,*)
       ENDDO ! END LOOP OVER MATSUBARA FREQUENCIES
-      CLOSE(UNIT=IOPARAM)
-      CLOSE(UNIT=IOPARAMEV)
+!
+!     ==========================================================================
+!     == CLOSE FILES                                                          ==
+!     ==========================================================================
+      CALL FILEHANDLER$CLOSE('DMFT_GREENF')
+      CALL FILEHANDLER$CLOSE('DMFT_GREENF_EV')
+      CALL FILEHANDLER$CLOSE('DMFT_SIGMA')
+      CALL FILEHANDLER$CLOSE('DMFT_SIGMA_EV')
       RETURN
       END SUBROUTINE MSIGMA_WRITEGF
 !
