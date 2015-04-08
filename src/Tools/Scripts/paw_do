@@ -17,6 +17,7 @@
 #          -K    soft kill of simulation
 #          -P    execute doppaw (ppaw_fast.x)
 #          -D    execute paw_dos.x and paw_dosplot.x
+#          -B    execute paw_bands.x and xmgrace -nxy bands.dat
 #          -S    execute paw_strc.x
 #          -W    execute paw_wave.x
 #          -T    execute paw_tra.x
@@ -30,7 +31,7 @@
 #
 #   REQUIREMENTS: 
 #                  paw_dos.x,paw_dosplot.x,paw_show,paw_fast,paw_strc.x
-#                  paw_wave.x,paw_tra.x
+#                  paw_wave.x,paw_tra.x,paw_bands.x
 #          the scripts rely on the fact that exactly one file with the
 #          required extension lies in the local directory.
 #
@@ -52,6 +53,8 @@ USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -h \t print this help message \n"
 USAGE="$USAGE \t -A: paw_show -ce ROOT\n"
+USAGE="$USAGE \t -B: paw_bands.x ROOT.bcntl\n"
+USAGE="$USAGE \t\t   xmgrace -nxy bands.dat\n"
 USAGE="$USAGE \t -F: paw_fast.x ROOT.cntl 1>out 2>&1 & \n"
 USAGE="$USAGE \t -D: paw_dos.x ROOT.dcntl \n"
 USAGE="$USAGE \t\t   paw_dosplot.x ROOT.dpcntl; xmgrace -batch ROOT.bat\n"
@@ -113,7 +116,7 @@ function findroot(){
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
-OPTSTRING=":hv0AFKPSDWTZ"
+OPTSTRING=":hv0ABFKPSDWTZ"
 OPTIND=0
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
@@ -161,6 +164,24 @@ while getopts "${OPTSTRING}" OPT  ; do
       else
         echo "error in $0 for option $OPT" >&2
         echo "*.prot file not unique or not present" >&2
+        exit 1
+      fi
+      ;;
+    B) # paw_bands.x $ROOT.bcntl
+      Y=$(findroot bcntl)
+      if [[ -n $Y ]] ; then      
+        execute "paw_bands.x  $Y"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "*.bcntl file not unique or not present" >&2
+        exit 1
+      fi
+      if [[ -e bands.dat ]] ; then      
+        execute "xmgrace -free -noask -nxy bands.dat"
+      else
+        echo "error in $0 for option $OPT" >&2
+        echo "file bands.dat not present" >&2
+        echo "in the bcntl file, direct output into bands.dat" >&2
         exit 1
       fi
       ;;

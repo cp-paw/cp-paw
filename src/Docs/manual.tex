@@ -7885,6 +7885,7 @@ with the CP-PAW code.
 The following table provides an overview:\\
 \begin{center}
 \begin{tabular}{ll}
+\verb|paw_do|      & frontend for paw calculations and tools. \\
 \verb|paw_show|    & show energies vs iterations. \\
 \verb|paw_collect| & collect total energies. \\
 \verb|paw_get|     & extract the last value of certain data from simulation.\\
@@ -7907,6 +7908,47 @@ apostrophes. The string ``word1 word2 word3'' is treated as one-word
 argument.  The option id's can be arranged in arbitrary order and they
 can be grouped together. The optional argument may directly follow its
 option id or it may be separated from it by spaces.
+
+%==========================================================================
+\subsection{The Frontend Tool: ``paw\_do''}
+\label{sec:pawshow}
+%==========================================================================
+The tool paw\_do simplifies a number of standard operations.  It It
+assumes that there is exactly one PAW project in the current
+directory.  It exploits the notion of standard extensions and can
+already process a number of commands. By changing a one-letter
+optional argument, various tasks can be done with the same argument.
+
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_do\ } {\it option}}\bigskip
+
+\begin{description}
+\item[-h] print this help message
+\item[-A] paw\_show -ce ROOT
+\item[-B] paw\_bands.x ROOT.bcntl; xmgrace -nxy bands.dat
+\item[-F] paw\_fast.x ROOT.cntl 
+\item[-D] paw\_dos.x ROOT.dcntl; paw\_dosplot.x ROOT.dpcntl; 
+  xmgrace -batch ROOT.bat
+\item[-K] touch ROOT.exit (regular stop of simulation)
+\item[-P] doppaw ROOT 4 (parallel ppaw\_fast.x with 4 tasks)
+\item[-S] paw\_strc.x -c ROOT
+\item[-T] paw\_tra.x ROOT.tcntl
+\item[-W] paw\_wave.x ROOT.wcntl
+\item[-Z] tail -f ROOT.prot
+\item[-0] dry-run (creates files but does not run jobs)
+\item[-v] verbose
+\end{description}
+
+ROOT is the root name of the current project. It is extracted from a
+earch of all files with the required extension in the current
+directory.  The tool assumes that the ROOT is unambiguous in the
+current directory.
 
 %==========================================================================
 \subsection{The Energy Analysis Tool: ``paw\_show''}
@@ -7940,6 +7982,7 @@ without the ``.prot'' ending and {\it option} is one of the following:
 \end{description}
 The optional parameter {\it file} the file to which the data are
 written. If {\it file} is absent, the data are viewed.
+
 
 %==========================================================================
 \subsection{Copy a project: ``paw\_copy''}

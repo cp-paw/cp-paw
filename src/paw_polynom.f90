@@ -20,7 +20,7 @@
       SUBROUTINE POLYNOM$COEFF(NX,X0,COEFF,X,Y)
 !     **                                                                **
 !     **  OBTAINES THE COEFFICIENTS OF A POLYNOMIAL                     **
-!     **  FROM DESCRETE POINTS                                          **
+!     **  FROM DISCRETE POINTS                                          **
 !     **     Y(R)=SUM_I=1^NX: COEFF(I)*(X-X0)**(I-1)                    **
 !     **  SO THAT                                                       **
 !     **     Y(X(I))=Y(I)                                               **
@@ -239,7 +239,74 @@
       ENDDO
       RETURN
       END
-
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE POLYNOM$ZEROS(NX,COEFF,Z)
+!     **************************************************************************
+!     ** DETERMINE THE ZEROS OF A POLYNOMIAL OF ORDER N WITH N=1,2,3          ==
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NX
+      REAL(8)   ,INTENT(IN) :: COEFF(NX)
+      COMPLEX(8),INTENT(OUT):: Z(NX-1)
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      INTEGER(4)            :: N ! ORDER OF THE POLYNOM
+      REAL(8)               :: A,B,C,D,DD,P,Q
+      COMPLEX(8)            :: U,V
+!     **************************************************************************
+      N=NX-1
+      Z(:)=(0.D0,0.D0)
+!
+!     ==========================================================================
+!     == LINEAR EQUATION                                                      ==
+!     ==========================================================================
+      IF(N.EQ.1) THEN
+!       == Y(X)=A*X+B ==========================================================
+        A=COEFF(2)
+        B=COEFF(1)
+        Z(1)=-B/A
+!
+!     ==========================================================================
+!     == QUADRATIC EQUATION                                                   ==
+!     =========================================================================
+      ELSE IF(N.EQ.2) THEN
+!       == AX^2+BX+C ===========================================================
+        A=COEFF(3)
+        B=COEFF(2)
+        C=COEFF(1)
+        DD=B**2-4.D0*A*C
+        Z(1)=SQRT(CMPLX(DD))
+        Z(2)=-Z(1)
+        Z(:)=(Z(:)-B)/(2.D0*A)
+!
+!     ==========================================================================
+!     == CARDANO'S EQUATION FOR CUBIC POLYNOMIAL
+!     ==========================================================================
+      ELSE IF(N.EQ.3) THEN
+!       == AX^3+BX^2+CX+D ======================================================
+        A=COEFF(4)
+        B=COEFF(3)
+        C=COEFF(2)
+        D=COEFF(1)
+        P=C/A-(B/A)**2
+        Q=2.D0/9.D0*(B/A)**2-B*C/(3.D0*A**2)+D/A
+        DD=(P/3.D0)**3+(0.5D0*Q)**2        
+        U=(-0.5D0*Q+SQRT(CMPLX(DD)))**(1.D0/3.D0)
+        V=-P/(3.D0*U)
+        Z(1)=(U+V)-B/(3.D0*A)
+        Z(2)=-0.5D0*(U+V)-B/(3.D0*A)+CI*0.5D0*SQRT(3.D0)*(U-V)
+        Z(3)=-0.5D0*(U+V)-B/(3.D0*A)-CI*0.5D0*SQRT(3.D0)*(U-V)
+!
+!     ==========================================================================
+!     == NO SOLUTION FOR POLYNOMIALS WITH ORDER HIGHER THAN CUBIC             ==
+!     ==========================================================================
+      ELSE
+        CALL ERROR$MSG('ORDER OF THE POLYNOM OUT OF RANGE')
+        CALL ERROR$MSG('ZEROS CAN ONLY BE CALCULATED UP TO CUBIC POLYNOMS')
+        CALL ERROR$STOP('POLYNOM$ZEROS')
+      END IF     
+      RETURN
+      END
 !
 !     ..................................................................
       SUBROUTINE POLYNOM$BINOM(N,B)
