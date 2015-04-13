@@ -1013,6 +1013,76 @@ END MODULE BROYDEN_MODULE
        RETURN
        END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LBFGS(N,NMEMX,NMEM,AMIX,YK,SK,X0,XM,F0,FM,XP)
+!     **************************************************************************
+!     ** LIMITED-MEMORY BROYDEN-FLETSCHER-GOLDFARB-SHANNO  (L-BFGS) ALGORITHM **
+!     ** FOR OPTIMIZING NEARLY QUADRATIC FUNCTIONS
+!     ** 
+!     ** SEE P 779 OF UPDATING QUASI-NEWTON MATRICES IWTH LIMITED STORAGE,    **
+!     ** JORGE NOCEDAL, MATHEMATICS OF COMPUTATION, 35. P773 (1980)           **
+!     **                                                                      **
+!     ** INITIALIZE NMEM=0 BEFORE THE FIRST CALL OR TO RESTART HISTORY.       **
+!     ** DURING OPTIMIZATION LEAVE NMEM,YK,SK UNTOUCHED. THEY ARE UPDATED     **
+!     ** INSIDE THIS ROUTINE.                                                 **
+!     ** FOLLOWING THE ROUTINE,                                               **
+!     **  (1) SHIFT POSITIONS AND FORCES, I.E. XM=X0,FM=X0,X0=XP              **
+!     **  (2) PERFORM A LINE SEARCH ALONG X(S)=X0+(X0-XM)*S                   **
+!     **      UNTIL F(S)*(X0-XM)=0                                            **
+!     **                                                                      **
+!     **************************************PETER BLOECHL GOSLAR 2015***********
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: N     ! DIMENSION OD THE SEARCH SPACE
+      INTEGER(4),INTENT(IN)    :: NMEMX ! MAX #(STEPS STORED IN HISTORY)
+      INTEGER(4),INTENT(INOUT) :: NMEM  ! ACTUAL #(STEPS STORED IN HISTORY)
+      REAL(8)   ,INTENT(INOUT) :: YK(N,NMEMX)
+      REAL(8)   ,INTENT(INOUT) :: SK(N,NMEMX)
+      REAL(8)   ,INTENT(IN)    :: AMIX  ! MIXING FACTOR
+      REAL(8)   ,INTENT(IN)    :: X0(N) ! ACTUAL COORDINATES
+      REAL(8)   ,INTENT(IN)    :: XM(N) ! PREVIOUS COORDINATES
+      REAL(8)   ,INTENT(IN)    :: F0(N) ! ACTUAL FORCE
+      REAL(8)   ,INTENT(IN)    :: FM(N) ! PREVIOUS FORCE
+      REAL(8)   ,INTENT(OUT)   :: XP(N) ! NEXT COORDINATES
+      REAL(8)                  :: ALPHA(NMEMX)
+      REAL(8)                  :: BETA(NMEMX)
+      REAL(8)                  :: RHO(NMEMX)
+      REAL(8)                  :: Q(N)
+      INTEGER(4)               :: I
+!     **************************************************************************
+!
+!     ==========================================================================
+!     ==  UPDATE MEMORY                                                       ==
+!     ==========================================================================
+      Q(:)=X0(:)-XM(:)
+      IF(DOT_PRODUCT(Q,Q).GT.1.D-10) THEN
+        NMEM=MIN(NMEMX,NMEM+1)
+        NMEM=MIN(N,NMEM)
+        DO I=NMEM-1,1,-1
+          SK(:,I+1)=SK(:,I)
+          YK(:,I+1)=YK(:,I)
+        ENDDO
+        SK(:,1)=X0(:)-XM(:)
+        YK(:,1)=F0(:)-FM(:)
+      END IF
+!
+!     ==========================================================================
+!     ==  PREDICT NEXT POSITION                                               ==
+!     ==========================================================================
+      Q(:)=F0(:)
+      DO I=1,NMEM
+        RHO(I)=1.D0/DOT_PRODUCT(YK(:,I),SK(:,I))
+        ALPHA(I)=RHO(I)*DOT_PRODUCT(SK(:,I),Q)
+        Q(:)=Q(:)-YK(:,I)*ALPHA(I)
+      ENDDO
+      Q=-AMIX*Q
+      DO I=NMEM,1,-1
+        BETA(I)=RHO(I)*DOT_PRODUCT(YK(:,I),Q)
+        Q(:)=Q(:)+SK(:,I)*(ALPHA(I)-BETA(I))
+      ENDDO
+      XP(:)=X0(:)-Q(:)
+      RETURN
+      END
+!
 !     .....................................................GAUSSN.......
       SUBROUTINE GAUSSN(L,ALPHA,C)
 !     ******************************************************************
