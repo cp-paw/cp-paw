@@ -4814,7 +4814,7 @@ END IF
           CALL LMTO_EXPANDLOCAL('BACK',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,H,HT)
         END IF
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
-        EXTOT=EXTOT-EX*HFSCALE
+        EXTOT=EXTOT-EX*HFSCALE  !hfweigt is multiplied on later
 PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
 PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM........... =',IAT,EAT
 PRINT*,'EXCHANGE-XORRECTION FOR ATOM............. =',IAT,EAT-EX
@@ -5569,6 +5569,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)     ,PARAMETER  :: DELTA=1.D-6
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
@@ -5614,7 +5615,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==  CUTOFF FUNCTION FOR EXCHANGE-CORRELATION INTEGRAL                   ==
 !     ==  CUT IS CLOSE TO UNITY IN THE CENTER AND IS ZERO BEYOND THE ATOM     ==
 !     ==========================================================================
-      CUT(:)=(RHO_LOC(:,1,1)/(RHO_ALL(:,1,1)+1.D-6))**2 
+      CUT(:)=(RHO_LOC(:,1,1)/(RHO_ALL(:,1,1)+delta))**2 
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
@@ -5633,6 +5634,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       AUX(:)=FOURPI*R(:)**2*FXC(:)*CUT(:)
       CALL RADIAL$INTEGRAL(GID,NR,AUX,ETOT)
       PRINT*,'----EXC  ',ETOT
+! Funny factor made energy conservation much better for a hubbard model
+!etot=1.18d0*etot 
 !      
 !     == POTENTIAL FOR PARTIAL-WAVE DENSITY N_T ================================
       DO IDIM=1,NDIMD
@@ -5641,7 +5644,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
         ENDDO
       ENDDO
       POT_ALL(:,1,1)=POT_ALL(:,1,1) &
-     &              -2.D0*FXC(:)*CUT(:)/(RHO_ALL(:,1,1)+1.D-6)/Y0**2
+     &              -2.D0*FXC(:)*CUT(:)/(RHO_ALL(:,1,1)+DELTA)/Y0**2
 !
 !     == POTENTIAL FOR THE CORRELATED DENSITY ==================================
       POT_LOC(:,:,:)=0.D0
