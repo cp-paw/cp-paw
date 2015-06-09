@@ -2307,6 +2307,78 @@ PRINT*,'NARGS ',NARGS,IARGC()
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$NONHERMITEANDIAGC8(N,H,E,VR)
+!     **************************************************************************
+!     **  DIAGONALIZES THE NONHERMITEAN, SQUARE MATRIX H                      **
+!     **  AND RETURNS EIGENVALUE AND RIGHT EIGENVECTORS                       **
+!     **                                                                      **
+!     **      U(K,I)^(-1)*H(K,L)*U(L,J)=E(I)                                  **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: H(N,N)
+      COMPLEX(8),INTENT(OUT):: E(N)
+      COMPLEX(8),INTENT(OUT):: VR(N,N)
+      COMPLEX(8)            :: VL(1,1)
+      COMPLEX(8)            :: H1(N,N)
+      COMPLEX(8),ALLOCATABLE:: WORK(:)
+      COMPLEX(8)            :: WORK1(1)
+      REAL(8)               :: RWORK(2*N)
+      INTEGER(4)            :: lwork
+      INTEGER(4)            :: INFO
+!     **************************************************************************
+      IF(N.EQ.1) THEN
+        E(1)=H(1,1)
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == DIAGONALIZE                                                          ==
+!     ==========================================================================
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('ESSL INTERFACE NOT IMPLENTED')
+      CALL ERROR$STOP('LIB$DIAGNONHERMITEANC8')
+#ELSE
+!     ==========================================================================
+!     == MAKE COPY OF MATRIX, BECAUSE IT WILL BE OVERWRITTEN                  ==
+!     ==========================================================================
+      H1=H
+!
+!     ==========================================================================
+!     == ALLOCATE WORK ARRAY                                                  ==
+!     ==========================================================================
+      LWORK=-1
+      CALL ZGEEV('N','V',N,H1,N,E,VL,N,VR,N,WORK1,LWORK,RWORK,INFO)
+      LWORK=INT(WORK1(1))
+      ALLOCATE(WORK(LWORK))
+!
+!     ==========================================================================
+!     == SOLVE EIGENVALUE PROBLEM                                             ==
+!     ==========================================================================
+      CALL ZGEEV('N','V',N,H1,N,E,VL,N,VR,N,WORK,LWORK,RWORK,INFO)
+!
+!     ==========================================================================
+!     == CHECK ERROR MESSAGE                                                  ==
+!     ==========================================================================
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('THE I-TH ARGUMENT HAD AN ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('THE QR ALGORITHM FAILED TO COMPUTE ALL THE EIGENVALUES')
+        CALL ERROR$MSG('AND NO EIGENVECTORS HAVE BEEN COMPUTED;')
+        CALL ERROR$MSG('ELEMENTS AND I+1:N OF W CONTAIN EIGENVALUES,')
+        CALL ERROR$MSG('WHICH HAVE CONVERGED.')
+        CALL ERROR$I4VAL('I',INFO)
+        CALL ERROR$I4VAL('N',N)
+        CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
+      END IF
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GENERALEIGENVALUER8(N,H,S,E,U)
 !     **************************************************************************
 !     **                                                                      **
@@ -3878,7 +3950,7 @@ INTEGER(4) :: I,J
       ALLOCATE(WORK(1))
       LDWORK=-1
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
-      LDWORK=WORK(1)
+      LDWORK=int(WORK(1))
       DEALLOCATE(WORK)
       ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)

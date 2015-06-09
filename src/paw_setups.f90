@@ -1333,6 +1333,7 @@ END MODULE SETUP_MODULE
         CALL LINKEDLIST$NEW(LL_SCNTL)
         CALL FILEHANDLER$UNIT('AUGPARMS',NFIL)
         CALL LINKEDLIST$READ(LL_SCNTL,NFIL,'~')
+PRINT*,'SETUP PARAMETER FILE READ'
       END IF
 
 !     ==========================================================================
@@ -1403,10 +1404,6 @@ END MODULE SETUP_MODULE
      &              ,DMIN,DMAX,RMAX)
         ELSE
           TFOUND=.FALSE.
-          CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
-          CALL ERROR$CHVAL('STPTYPE',STPTYPE)
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('SETUP_BUILDPARMS')
         END IF
 !    
 !       ========================================================================
@@ -1420,7 +1417,7 @@ END MODULE SETUP_MODULE
             CALL LINKEDLIST$SELECT(LL_SCNTL,'AUGMENT',I)
             CALL LINKEDLIST$EXISTD(LL_SCNTL,'ID',1,TCHK)
             IF(.NOT.TCHK) THEN
-              CALL ERROR$MSG('!SCNTL!AUGMENT:ID NOT SPECIFIED')
+              CALL ERROR$MSG('!ACNTL!AUGMENT:ID NOT SPECIFIED')
               CALL ERROR$STOP('SETUP$RESOLVESETUPID')
             END IF
             CALL LINKEDLIST$GET(LL_SCNTL,'ID',1,ID1)
@@ -1428,7 +1425,7 @@ END MODULE SETUP_MODULE
 !             == CHECK IF THE SAME NAME HAS ALREADY BEEN FOUND =================
               IF(TFOUND) THEN
                 CALL ERROR$MSG('AUGMENTATION ID IS AMBIGOUS')
-                CALL ERROR$MSG('IT HAS BEEN ENCOUNTERED TWICE')
+                CALL ERROR$MSG('ID HAS BEEN ENCOUNTERED TWICE')
                 CALL ERROR$CHVAL('ID',ID)
                 CALL ERROR$STOP('SETUP$RESOLVESETUPID')
               END IF
@@ -1438,10 +1435,23 @@ END MODULE SETUP_MODULE
        &                              ,RCSM,POTPOW,POTRC,TPOTVAL,POTVAL &
        &                              ,CORPOW,CORRC,TCORVAL,CORVAL &
        &                              ,DMIN,DMAX,RMAX)
-              EXIT
             END IF
             CALL LINKEDLIST$SELECT(LL_SCNTL,'..',0)
           ENDDO
+        END IF
+!
+        IF(.NOT.TFOUND) THEN
+          CALL ERROR$MSG('SETUP TYPE NOT RECOGNIZED')
+          CALL ERROR$CHVAL('STPTYPE',STPTYPE)
+          CALL ERROR$CHVAL('ID',ID)
+          IF(TSTPFILE) THEN
+            CALL ERROR$MSG('SETUP FILE HAS BEEN READ')
+            CALL ERROR$MSG('CAUTION: CHANGED NOTATION IN SETUP FILE:')
+            CALL ERROR$MSG('USE !ACNTL!AUGMENT INSTEAD OF !SCNTL!SETUP')
+          ELSE
+            CALL ERROR$MSG('NO SETUP FILE HAS BEEN READ')
+          END IF
+          CALL ERROR$STOP('SETUP_BUILDPARMS')
         END IF
 !    
 !       ========================================================================

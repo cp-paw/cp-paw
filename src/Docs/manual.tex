@@ -856,9 +856,10 @@ extension {\tt \_r.tra}\\
 &extension {\tt \_r.tra}\\
 &(not yet used)\\
 \hline
+'AUGPARMS'& parameter sets for the augmentation;\\
+&extension: no default extension\\
+\hline
 \end{tabular}
-If the environment variable \$PAWDIR is not set or if it is an 
-empty string, the default is changed to stp.cntl in the current directory.
 }
 \vformat{character} 
 \vrules{mandatory}
@@ -2852,16 +2853,14 @@ types, electronic occupations, atomic masses. etc...}
 \vrules{optional, LUNIT and LUNIT[AA] are mutually exclusive}
 \vdefault{none}}
 
-\mbax{\key{STPVERSION} 
-\vdescr{overwrites the required version of the setup parameters file
-(parameters/stp.cntl). Background: Since version 2.0.0 of the paw code
-there is an internal check in the release versions of the program that 
-makes sure that the version of the paw code (see -{}-version command line argument) 
-is the same as the version of the setup parameters file that is 
-loaded at runtime (see PAWDIR environment variable or PARMS\_STP-option).}
-\vformat{Character} 
-\vrules{optional}
-\vdefault{none}}
+\mbax{\key{STPVERSION} \vdescr{overwrites the required version of the
+    setup parameters file (parameters/stp.cntl). Background: Since
+    version 2.0.0 of the paw code there is an internal check in the
+    release versions of the program that makes sure that the version
+    of the paw code (see -{}-version command line argument) is the
+    same as the version of the setup parameters file that is loaded at
+    runtime (see PAWDIR environment variable or PARMS\_STP-option).}
+  \vformat{Character} \vrules{optional} \vdefault{none}}
 
 %----------------------------------------------------------------------
 \block{!STRUCTURE!LATTICE}
@@ -2953,11 +2952,12 @@ shifting the grid.}
 \vdefault{none}}
 
 \mbax{\key{ID} 
-\vdescr{Identifier for the setup type. Allows to select parameterset
-  defining the augmentation (e.g. partial waves and projector
+\vdescr{Identifier for the setup type. Allows to select the parameter
+  set defining the augmentation (e.g. partial waves and projector
   functions). The ID must be one of the internally recognized strings,
   or it must identify a parameter set on a parameter file specified by
-  !CNTL!FILES!FILE with name=PARMS\_STP.}
+  !CNTL!FILES!FILE with NAME=AUGPARMS. The code stops if the ID is
+  ambiguous.}
 \vformat{character}
 \vrules{optional. not used when !STRUCTURE!SPECIES!AUGMENT is present.}
 \vdefault{none}}
@@ -3025,13 +3025,15 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \mbax{\key{EL} 
  \vdescr{Element symbol.}
 \vformat{character}
-\vrules{optional, mandatory if keyword Z is not specified.}
+\vrules{optional, mandatory if keyword Z is not specified,
+  incompatible with keyword Z.}
 \vdefault{none}}
 
 \mbax{\key{Z} 
  \vdescr{Atomic number}
 \vformat{real}
-\vrules{optional, mandatory if keyword EL is not specified.}
+\vrules{optional, mandatory if keyword EL is not specified,
+  incompatible with keyword EL.}
 \vdefault{none}}
 
 \mbax{\key{ZV} 
