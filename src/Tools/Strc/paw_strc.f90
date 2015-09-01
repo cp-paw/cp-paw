@@ -26,16 +26,16 @@
       LOGICAL(4)                  :: TQMMM
       INTEGER(4)                  :: IAT,IAT1
       CHARACTER(32)               :: STRING
-      INTEGER(4)                  :: I,isvar
+      INTEGER(4)                  :: I,ISVAR
       INTEGER(4)                  :: NARGS
-      INTEGER(4)                  :: nfilo
-      INTEGER(4)                  :: ndup(3)
-      logical                     :: tinput
-      logical                     :: thelp
-      logical                     :: tcm
+      INTEGER(4)                  :: NFILO
+      INTEGER(4)                  :: NDUP(3)
+      LOGICAL                     :: TINPUT
+      LOGICAL                     :: THELP
+      LOGICAL                     :: TCM
 !     **************************************************************************
-      ndup(:)=1
-      tinput=.false.
+      NDUP(:)=1
+      TINPUT=.FALSE.
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==========================================================================
@@ -134,10 +134,10 @@
               CALL ERROR$STOP('MAIN')
             END IF
           END IF
-        else if(string(1:1).eq.'I') then
-          tinput=.true.
-        else if(string(1:1).eq.'M') then
-          tcrystal=.false.
+        ELSE IF(STRING(1:1).EQ.'I') THEN
+          TINPUT=.TRUE.
+        ELSE IF(STRING(1:1).EQ.'M') THEN
+          TCRYSTAL=.FALSE.
         ELSE
           CALL ERROR$MSG('ARGUMENT NOT RECOGNIZED')
           CALL ERROR$MSG('OBTAIN ARGUMENT LIST USING -H ARGUMENT')
@@ -210,7 +210,7 @@
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
 !
 !     ==========================================================================
-!     == GET Length unit                                                      ==
+!     == GET LENGTH UNIT                                                      ==
 !     ==========================================================================
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -290,7 +290,7 @@
       END IF
 !
 !     ==========================================================================
-!     == WRITE header to protocoll file .sprot                                ==
+!     == WRITE HEADER TO PROTOCOLL FILE .SPROT                                ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='()')
@@ -307,7 +307,7 @@
       WRITE(NFILO,FMT='(T10 &
      &    ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
-      IF(TINPUT) then
+      IF(TINPUT) THEN
         WRITE(NFILO,FMT='("INPUT STRUCTURE FILE READ")')
       END IF
       IF(TINPUT) THEN
@@ -332,15 +332,15 @@
       CALL WRITESTRCFILE(RBAS,NAT,NAME,R,TCRYSTAL,RUNIT)
 !
 !     ==========================================================================
-!     ==  write cml file as input for avogadro viewer                         ==
+!     ==  WRITE CML FILE AS INPUT FOR AVOGADRO VIEWER                         ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('CML',NFIL)
       CALL WRITEAVOGADRO(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
 !
 !     ==========================================================================
-!     ==  write xyz file                                                      ==
+!     ==  WRITE XYZ FILE                                                      ==
 !     ==========================================================================
-      call WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,nDUP,rootname)
+      CALL WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,NDUP,ROOTNAME)
 !
 !     ==========================================================================
 !     == CONVERT DATA TO ANGSTROM AND ELECTRON CHARGES                        ==
@@ -454,9 +454,9 @@
      &           +RBAS(:,2)*REAL(IT2-1) &
      &           +RBAS(:,3)*REAL(IT3-1)
              DO IAT=1,NAT
-               el=name(iat)(1:2)
-               if(el(2:2).eq.'_')el(2:2)=' '
-               WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')el, &
+               EL=NAME(IAT)(1:2)
+               IF(EL(2:2).EQ.'_')EL(2:2)=' '
+               WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')EL, &
      &              (R(:,IAT)+T(:))/ANGSTROM
              ENDDO
            ENDDO
@@ -498,13 +498,13 @@
       REAL(8)               :: PI
       INTEGER(4)            :: NBOND,I,J,K
       INTEGER(4)            :: NFILO
-      INTEGER(4)            :: it(3)
+      INTEGER(4)            :: IT(3)
       REAL(8)               :: ANGSTROM
       REAL(8)               :: RBASIN(3,3)
-      character(64)         :: extendedname1,extendedname2
+      CHARACTER(64)         :: EXTENDEDNAME1,EXTENDEDNAME2
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
-      ANGLEN=PI/180.d0*70.d0    ! MIN ANGLE=60 DEG
+      ANGLEN=PI/180.D0*70.D0    ! MIN ANGLE=60 DEG
       DISX=6.D0                 ! MAX DISTANCE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
@@ -554,12 +554,12 @@
 !       == WRITE ATOMIC POSITIONS IN RELATIVE COORDINATES ======================
         CALL LIB$INVERTR8(3,RBAS,RBASIN)
         WRITE(NFILO,FMT='("ATOMIC POSITIONS IN RELATIVE COORDINATES:")')
-        WRITE(NFILO,FMT='("(IMAGE from THE FIRST UNIT CELL)")')
+        WRITE(NFILO,FMT='("(IMAGE FROM THE FIRST UNIT CELL)")')
         DO IAT=1,NAT
           DR(:)=MATMUL(RBASIN,R(:,IAT))
           T1(:)=DR(:)
           DO I=1,3
-            DR(I)=MODULO(DR(I)+1.d-5,1.D0)-1.d-5
+            DR(I)=MODULO(DR(I)+1.D-5,1.D0)-1.D-5
           ENDDO
           T1(:)=DR(:)-T1(:)
           IT(:)=NINT(T1)
@@ -658,7 +658,7 @@
           ANGLE(I,I)=0.D0
           DO J=I+1,NBOND
             SVAR=DOT_PRODUCT(BOND(I)%DR,BOND(J)%DR)/DISARR(I)/DISARR(J)
-            svar=min(1.d0,max(-1.d0,svar))  ! avoid nans
+            SVAR=MIN(1.D0,MAX(-1.D0,SVAR))  ! AVOID NANS
             SVAR=ACOS(SVAR)
             ANGLE(I,J)=SVAR
             ANGLE(J,I)=SVAR
@@ -730,25 +730,25 @@
       INTEGER(4)  ,INTENT(IN) :: IT(3)
       CHARACTER(*),INTENT(OUT):: EXTENDEDNAME
       INTEGER(4)              :: I
-      character(8)            :: string
+      CHARACTER(8)            :: STRING
 !     **************************************************************************
       IF(SUM(IT**2).EQ.0) THEN
         EXTENDEDNAME=NAME
         RETURN
       END IF
 !
-      extendedname=''
+      EXTENDEDNAME=''
       DO I=3,1,-1
-        WRITE(string,fmt='(i8)',err=100)IT(I)
-        EXTENDEDNAME=trim(adjustl(string))//ADJUSTL(EXTENDEDNAME)
+        WRITE(STRING,FMT='(I8)',ERR=100)IT(I)
+        EXTENDEDNAME=TRIM(ADJUSTL(STRING))//ADJUSTL(EXTENDEDNAME)
       ENDDO
       EXTENDEDNAME=TRIM(ADJUSTL(NAME))//':'//TRIM(EXTENDEDNAME)
       RETURN
 100   CONTINUE
       CALL ERROR$MSG('ERROR CONSTRUCTING EXTENDED ATOM NAME')
       CALL ERROR$CHVAL('NAME',NAME)
-      CALL ERROR$I4VAL('len(NAME)',len(NAME))
-      CALL ERROR$I4VAL('len(EXTENDEDNAME)',len(EXTENDEDNAME))
+      CALL ERROR$I4VAL('LEN(NAME)',LEN(NAME))
+      CALL ERROR$I4VAL('LEN(EXTENDEDNAME)',LEN(EXTENDEDNAME))
       CALL ERROR$STOP('EXTENDEDNAME')
       END
 !
@@ -997,12 +997,13 @@
       WRITE(NFIL,FMT='("<",A)')-'ATOM'//+'A'//-'RRAY'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'ID'//'="'
 !      WRITE(NFIL,*)(TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' ',IMAP=1,NMAP)
-      do imap=1,nmap
+      DO IMAP=1,NMAP
         WRITE(NFIL,*)TRIM(NAME(MAP(1,IMAP)))//DISTID(MAP(2,IMAP),MAP(3,IMAP),MAP(4,IMAP))//' '
-      enddo
+      ENDDO
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ELEMENT'//+'T'//-'YPE="'
-      WRITE(NFIL,*)EL(MAP(1,:))//' '
+      WRITE(NFIL,FMT='(10(A2," "))')EL(MAP(1,:))
+!      WRITE(NFIL,*)(EL(MAP(1,I))//' ',I=1,SIZE(MAP(1,:))) !THIS DID NOT WORK
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'X'//+'F'//-'RACT="'
       WRITE(NFIL,FMT='(10F10.5)')X(1,MAP(1,:))+REAL(MAP(2,:))
@@ -1045,18 +1046,18 @@
       WRITE(NFIL,FMT='(A)')-'<BOND'//+'A'//-'RRAY'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF1="'
 !      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' ',I=1,NBOND)
-      do i=1,nbond
+      DO I=1,NBOND
         WRITE(NFIL,*)TRIM(NAME(MAP(1,BOND(1,I))))//DISTID(MAP(2,BOND(1,I)),MAP(3,BOND(1,I)),MAP(4,BOND(1,I)))//' '
-      enddo
+      ENDDO
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ATOM'//+'R'//-'EF2="'
 !      WRITE(NFIL,*)(TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' ',I=1,NBOND)
-      do i=1,nbond
+      DO I=1,NBOND
         WRITE(NFIL,*)TRIM(NAME(MAP(1,BOND(2,I))))//DISTID(MAP(2,BOND(2,I)),MAP(3,BOND(2,I)),MAP(4,BOND(2,I)))//' '
-      enddo
+      ENDDO
       WRITE(NFIL,FMT='(A)')'"'
       WRITE(NFIL,FMT='(A)')-'ORDER="'
-      WRITE(NFIL,fmt='(10i7)')(1,I=1,NBOND)
+      WRITE(NFIL,FMT='(10I7)')(1,I=1,NBOND)
       WRITE(NFIL,FMT='(A)')'"/>'
       WRITE(NFIL,FMT='(A)')-'</MOLECULE>'
       RETURN

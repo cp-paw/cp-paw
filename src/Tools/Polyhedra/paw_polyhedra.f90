@@ -1,34 +1,37 @@
-      Program main
+      PROGRAM MAIN
 !     **************************************************************************
-!     ** paw tool: paw_polyhedra                                              **
+!     ** PAW TOOL: PAW_POLYHEDRA                                              **
 !     **                                                                      **
-!     ** This tool shall divide the structure into polyhedra                  **
-!     ** and report their main parameters                                     **
+!     ** THIS TOOL SHALL DIVIDE THE STRUCTURE INTO POLYHEDRA                  **
+!     ** AND REPORT THEIR MAIN PARAMETERS                                     **
 !     **                                                                      **
-!     ** Caution: Currently dedicated to analyze octahedra in manganites      **
+!     ** CAUTION: CURRENTLY DEDICATED TO ANALYZE OCTAHEDRA IN MANGANITES      **
+!     **                                                                      **
+!     ** 1) exctracts cluster of atoms surrounding atoms named 'Mn...'        **
+!     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      implicit none
-      type(ll_type)             :: ll_strc
-      integer(4)                :: nfil 
-      integer(4)                :: nfilo    !protocoll-file unit 
-      integer(4)                :: nargs 
-      logical(4)                :: tchk
-      character(64)             :: rootname
-      real(8)                   :: rbas(3,3)  !lattice constants
-      integer(4)                :: nat  
-      real(8)                   :: lunit  !length unit of input structure file
-      real(8)                   :: angstrom
-      character(32),allocatable :: name(:) ! atom names
-      real(8)      ,allocatable :: r(:,:)  ! atomic positions
-      integer(4)                :: iat
-      real(8)                   :: transform(3,3)
+      IMPLICIT NONE
+      TYPE(LL_TYPE)             :: LL_STRC
+      INTEGER(4)                :: NFIL 
+      INTEGER(4)                :: NFILO    !PROTOCOLL-FILE UNIT 
+      INTEGER(4)                :: NARGS 
+      LOGICAL(4)                :: TCHK
+      CHARACTER(64)             :: ROOTNAME
+      REAL(8)                   :: RBAS(3,3)  !LATTICE CONSTANTS
+      INTEGER(4)                :: NAT  
+      REAL(8)                   :: LUNIT  !LENGTH UNIT OF INPUT STRUCTURE FILE
+      REAL(8)                   :: ANGSTROM
+      CHARACTER(32),ALLOCATABLE :: NAME(:) ! ATOM NAMES
+      REAL(8)      ,ALLOCATABLE :: R(:,:)  ! ATOMIC POSITIONS
+      INTEGER(4)                :: IAT
+      REAL(8)                   :: TRANSFORM(3,3)
 !     **************************************************************************
 !
 !     ==========================================================================
-!     ==  read atomic structure                                               ==
+!     ==  READ ATOMIC STRUCTURE                                               ==
 !     ==========================================================================
       CALL LINKEDLIST$NEW(LL_STRC)
 !
@@ -37,10 +40,10 @@
 !     == FILE NAMES                                                           ==
 !     ==========================================================================
       CALL LIB$NARGS(NARGS)
-      if(nargs.ne.1) then
-        call error$msg('incorrect number of arguments given')
-        call error$stop('main')
-      end if
+      IF(NARGS.NE.1) THEN
+        CALL ERROR$MSG('INCORRECT NUMBER OF ARGUMENTS GIVEN')
+        CALL ERROR$STOP('MAIN')
+      END IF
       CALL LIB$GETARG(NARGS,ROOTNAME) !LAST ARGUMENT IS THE ROOT NAME
       WRITE(*,FMT='("ROOTNAME: ",A)')TRIM(ROOTNAME)
       IF(LEN(TRIM(ROOTNAME)).EQ.0) THEN
@@ -61,13 +64,32 @@
       CALL FILEHANDLER$SETSPECIFICATION('STRC','FORM','FORMATTED')
 !
 !     ==========================================================================
+!     == WARNING: DO NOT USE THIS TOOL WITHOUT READING THE CODE!
+!     == IT CONTAINS A NUMBER OF IMPLICIT ASSUMPTIONS, SUCH AS ALIGNMENT OF 
+!     == OCTAHEDRA ALONG CARTESIAN COORDINATES!
+!     ==========================================================================
+      WRITE(*,FMT='(80("="))')
+      WRITE(*,*)'WARNING FROM PAW_POLYHEDRA:'
+      WRITE(*,*)'DO NOT USE THIS TOOL WITHOUT HAVING READ THE CODE!'
+      WRITE(*,*)'IT CONTAINS A NUMBER OF IMPLICIT ASSUMPTIONS'
+      WRITE(*,*)'SUCH AS ALIGNMENT OF OCTAHEDRA ALONG CARTESIAN COORDINATES!'
+      WRITE(*,FMT='(80("="))')
+      CALL FILEHANDLER$UNIT('PROT',NFIL)
+      WRITE(NFIL,FMT='(80("="))')
+      WRITE(NFIL,*)'WARNING FROM PAW_POLYHEDRA:'
+      WRITE(NFIL,*)'DO NOT USE THIS TOOL WITHOUT HAVING READ THE CODE!'
+      WRITE(NFIL,*)'IT CONTAINS A NUMBER OF IMPLICIT ASSUMPTIONS'
+      WRITE(NFIL,*)'SUCH AS ALIGNMENT OF OCTAHEDRA ALONG CARTESIAN COORDINATES!'
+      WRITE(NFIL,FMT='(80("="))')
+!
+!     ==========================================================================
 !     == READ STRUCTURE FILE                                                  ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
 !
 !     ==========================================================================
-!     == GET Length unit                                                      ==
+!     == GET LENGTH UNIT                                                      ==
 !     ==========================================================================
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -107,13 +129,13 @@
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
 
-!!$! this is to rotate the axes
-!!$transform(:,:)=0.d0
-!!$transform(1:2,1:2)=1.d0/sqrt(2.d0)
-!!$transform(1,2)=-transform(1,2)
-!!$transform(3,3)=1.d0
-!!$rbas=matmul(transform,rbas)
-!!$r=matmul(transform,r)
+!!$! THIS IS TO ROTATE THE AXES
+!!$TRANSFORM(:,:)=0.D0
+!!$TRANSFORM(1:2,1:2)=1.D0/SQRT(2.D0)
+!!$TRANSFORM(1,2)=-TRANSFORM(1,2)
+!!$TRANSFORM(3,3)=1.D0
+!!$RBAS=MATMUL(TRANSFORM,RBAS)
+!!$R=MATMUL(TRANSFORM,R)
 !
 !     =========================================================================
 !     ==  WRITE ATOMIC STRUCTURE                                             ==
@@ -127,48 +149,48 @@
       ENDDO
 !
 !     =========================================================================
-!     ==  write atomic structure                                             ==
+!     ==  extract clusters of nearest neigbbors for all atoms named 'MN...'  ==
 !     =========================================================================
-      do iat=1,nat
-        if(name(iat)(1:2).eq.'MN') Then
-          call extractclusters(iat,rbas,nat,r)
-        end if
-      enddo
-      stop
-      end
+      DO IAT=1,NAT
+        IF(NAME(IAT)(1:2).EQ.'MN') THEN
+          CALL EXTRACTCLUSTERS(IAT,RBAS,NAT,R)
+        END IF
+      ENDDO
+      STOP
+      END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      subroutine extractclusters(iatc,rbas,nat,r)
-      implicit none
-      integer(4),intent(in) :: iatc
-      integer(4),intent(in) :: nat
-      real(8)   ,intent(in) :: rbas(3,3)
-      real(8)   ,intent(in) :: r(3,nat)
-      real(8)   ,parameter  :: angstrom=1.d0/.529177d0
-      real(8)               :: rc(3,nat)
-      integer(4)            :: iat
-      integer(4)            :: it1,it2,it3
-      integer(4)            :: ic
-      integer(4),parameter  :: nclusterx=7
-      real(8)               :: rcluster(3,nclusterx)
-      real(8)               :: dcluster(nclusterx)
-      integer(4)            :: ncluster
+      SUBROUTINE EXTRACTCLUSTERS(IATC,RBAS,NAT,R)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: IATC
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      REAL(8)   ,PARAMETER  :: ANGSTROM=1.D0/.529177D0
+      REAL(8)               :: RC(3,NAT)
+      INTEGER(4)            :: IAT
+      INTEGER(4)            :: IT1,IT2,IT3
+      INTEGER(4)            :: IC
+      INTEGER(4),PARAMETER  :: NCLUSTERX=7
+      REAL(8)               :: RCLUSTER(3,NCLUSTERX)
+      REAL(8)               :: DCLUSTER(NCLUSTERX)
+      INTEGER(4)            :: NCLUSTER
       REAL(8)               :: RT(3)  ! LATTICE TRANSLATION
-      REAL(8)               :: r2(3)  ! relative position of neighbor
-      REAL(8)               :: d2     ! distance of neighbor
-      real(8)               :: pi
+      REAL(8)               :: R2(3)  ! RELATIVE POSITION OF NEIGHBOR
+      REAL(8)               :: D2     ! DISTANCE OF NEIGHBOR
+      REAL(8)               :: PI
 !     *************************************************************************
-      pi=4.d0*atan(1.d0)
+      PI=4.D0*ATAN(1.D0)
 !
 !     =========================================================================
-!     ==  determine cluster of nearest neighbors                             ==
+!     ==  DETERMINE CLUSTER OF NEAREST NEIGHBORS                             ==
 !     =========================================================================
       DO IAT=1,NAT
         RC(:,IAT)=R(:,IAT)-R(:,IATC)
       ENDDO
-      ncluster=1
-      rcluster(:,1)=(/0.d0,0.d0,0.d0/)
-      dcluster(1)=0.d0
+      NCLUSTER=1
+      RCLUSTER(:,1)=(/0.D0,0.D0,0.D0/)
+      DCLUSTER(1)=0.D0
       DO IT1=-1,1
         DO IT2=-1,1
           DO IT3=-1,1
@@ -176,21 +198,21 @@
             DO IAT=1,NAT
               R2(:)=RC(:,IAT)+RT(:)
               D2=SQRT(SUM(R2**2))
-              if(d2.eq.0.d0) cycle
+              IF(D2.EQ.0.D0) CYCLE
               DO IC=NCLUSTER,1,-1
                 IF(D2.LT.DCLUSTER(IC)) THEN
-                  IF(IC+1.Le.NCLUSTERX) THEN
+                  IF(IC+1.LE.NCLUSTERX) THEN
                     NCLUSTER=MAX(NCLUSTER,IC+1)
                     RCLUSTER(:,IC+1)=RCLUSTER(:,IC)
                     DCLUSTER(IC+1)=DCLUSTER(IC)
                   END IF
                 ELSE ! D2>DCLUSTER(IC)
-                  IF(IC+1.Le.NCLUSTERX) THEN
+                  IF(IC+1.LE.NCLUSTERX) THEN
                     RCLUSTER(:,IC+1)=R2(:)
                     DCLUSTER(IC+1)=D2
-                    ncluster=max(ncluster,ic+1)
+                    NCLUSTER=MAX(NCLUSTER,IC+1)
                   END IF
-                  exit
+                  EXIT
                 END IF  
               ENDDO
             ENDDO
@@ -199,104 +221,177 @@
       ENDDO
 !
 !     =========================================================================
-!     ==  write atomic structure  of the cluster                             ==
+!     ==  WRITE ATOMIC STRUCTURE  OF THE CLUSTER                             ==
 !     =========================================================================
-      write(*,fmt='(82("="),t10,"  cluster for atom ",i4,"  ")')iatc
-      do iat=1,ncluster
-        write(*,fmt='(" r=",3f10.5," AA d=",f10.5," AA")') &
-     &                        rcluster(:,iat)/angstrom,dcluster(iat)/angstrom
-      enddo
+      WRITE(*,FMT='(82("="),T10,"  CLUSTER FOR ATOM ",I4,"  ")')IATC
+      DO IAT=1,NCLUSTER
+        WRITE(*,FMT='(" R=",3F10.5," AA D=",F10.5," AA")') &
+     &                        RCLUSTER(:,IAT)/ANGSTROM,DCLUSTER(IAT)/ANGSTROM
+      ENDDO
 !
 !     =========================================================================
-!     ==  extract norm octahedron                                            ==
+!     ==  EXTRACT NORM OCTAHEDRON                                            ==
 !     =========================================================================
-      call octaparameters(rcluster(:,2:7))
+      CALL OCTAPARAMETERS(RCLUSTER(:,2:7))
       RETURN
       END
+!!$!
+!!$!     ..1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE OCTAcanonicalorder(Rin,rout)
+!!$!     *************************************************************************
+!!$!     **  draft only! not finished!
+!!$      implicit none
+!!$      integer(4),parameter   :: nat=6
+!!$      real(8)   ,intent(in)  :: rin(3,nat)
+!!$      real(8)   ,intent(out) :: rout(3,nat)
+!!$      real(8)                :: cosang(nat*(nat-1)/2)
+!!$      integer(4)             :: ij(2)
+!!$
+!!$!     == normalized distance vectors ===========================================
+!!$      do iat=1,nat
+!!$        rout(:,iat)=rin(:,iat)/sqrt(dot_product(rin(:,iat),rin(:,iat)))
+!!$      enddo
+!!$!     == angles
+!!$      cosang=0.d0
+!!$      ind=0
+!!$      do i=1,6
+!!$        do j=i+1,6
+!!$          ind=ind+1
+!!$          cosang(ind)=dot_product(rout(:,iat1),rout(:,iat2))
+!!$        enddo
+!!$      enddo
+!!$      iax1=minloc(cosang,dim=1)
+!!$      cosang(iax1)=1.d+10
+!!$      iax2=minloc(cosang,dim=1)
+!!$      cosang(iax2)=1.d+10
+!!$      iax3=minloc(cosang,dim=1)
+!!$      cosang(iax3)=1.d+10
+!!$      ind=0
+!!$      do i=1,6
+!!$        do j=i+1,6
+!!$          ind=ind+1
+!!$          if(ind.eq.iax1) then
+!!$            dir(:,1)=rin(:,i)-rin(:,j)
+!!$            if(sum(dir(:,1).ge.0.d0) then
+!!$              rout(:,1)=rin(:,i)            
+!!$              rout(:,2)=rin(:,j)            
+!!$            else
+!!$              rout(:,2)=rin(:,i)            
+!!$              rout(:,1)=rin(:,j)            
+!!$              dir(:,1)=-dir(:,1)
+!!$            end if
+!!$          end if
+!!$          if(ind.eq.iax2) then
+!!$            dir(:,2)=rin(:,i)-rout(:,j)
+!!$            if(sum(dir(:,2).ge.0.d0) then
+!!$              rout(:,3)=rin(:,i)            
+!!$              rout(:,4)=rin(:,j)            
+!!$            else
+!!$              rout(:,4)=rin(:,i)            
+!!$              rout(:,3)=rin(:,j)            
+!!$              dir(:,2)=-dir(:,2)
+!!$            end if
+!!$          end if
+!!$          if(ind.eq.iax3) then
+!!$            dir(:,3)=rin(:,i)-rout(:,j)
+!!$            if(sum(dir(:,3).ge.0.d0) then
+!!$              rout(:,5)=rin(:,i)            
+!!$              rout(:,6)=rin(:,j)            
+!!$            else
+!!$              rout(:,6)=rin(:,i)            
+!!$              rout(:,5)=rin(:,j)            
+!!$              dir(:,3)=-dir(:,3)
+!!$            end if
+!!$          end if
+!!$        enddo
+!!$      enddo
+!!$      return
+!!$      end
+
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      subroutine octaparameters(r0)
+      SUBROUTINE OCTAPARAMETERS(R0)
 !     *************************************************************************
-!     **  extract the parameters for octahedral distortions for a given set  **
-!     **  of six ligands                                                     **
-!     **  result is printed to the screen                                    **
-!     **  pay attention to the order of the operations!!                     **
+!     **  EXTRACT THE PARAMETERS FOR OCTAHEDRAL DISTORTIONS FOR A GIVEN SET  **
+!     **  OF SIX LIGANDS                                                     **
+!     **  RESULT IS PRINTED TO THE SCREEN                                    **
+!     **  PAY ATTENTION TO THE ORDER OF THE OPERATIONS!!                     **
 !     *************************************************************************
-      implicit none
-      real(8)   ,intent(in) :: r0(3,6)
-      real(8)   ,parameter  :: angstrom=1.d0/.529177d0
-      real(8)               :: r(3,6)
-      real(8)               :: fedis(3) ! ferro-electric displacement
-      real(8)               :: dav      ! average bond length
-      real(8)               :: phi(3)   ! rotation angle
-      real(8)               :: dnon(3,3)   ! 
-      real(8)               :: di(6)
-      real(8)               :: vec(3)
-      real(8)               :: svar,ab
-      integer(4)            :: i,j
-      real(8)               :: rideal(3,6)
-      real(8)               :: dis(3,6)
-      real(8)               :: angle
-      real(8)               :: Q2,Q3  ! Jahn Teller modes
-      real(8)               :: pi
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R0(3,6)
+      REAL(8)   ,PARAMETER  :: ANGSTROM=1.D0/.529177D0
+      REAL(8)               :: R(3,6)
+      REAL(8)               :: FEDIS(3) ! FERRO-ELECTRIC DISPLACEMENT
+      REAL(8)               :: DAV      ! AVERAGE BOND LENGTH
+      REAL(8)               :: PHI(3)   ! ROTATION ANGLE
+      REAL(8)               :: DNON(3,3)   ! 
+      REAL(8)               :: DI(6)
+      REAL(8)               :: VEC(3)
+      REAL(8)               :: SVAR,AB
+      INTEGER(4)            :: I,J
+      REAL(8)               :: RIDEAL(3,6)
+      REAL(8)               :: DIS(3,6)
+      REAL(8)               :: ANGLE
+      REAL(8)               :: Q2,Q3  ! JAHN TELLER MODES
+      REAL(8)               :: PI
 !     *************************************************************************
-      pi=4.d0*atan(1.d0)
-!     __ideal octahedral oxygen positions (left,right,back,front,bottom,top)___
-      rideal=0.d0   
-      do i=1,3
-        rideal(i,2*i-1)=-1.d0
-        rideal(i,2*i)  =1.d0
-      enddo
+      PI=4.D0*ATAN(1.D0)
+!     __IDEAL OCTAHEDRAL OXYGEN POSITIONS (LEFT,RIGHT,BACK,FRONT,BOTTOM,TOP)___
+      RIDEAL=0.D0   
+      DO I=1,3
+        RIDEAL(I,2*I-1)=-1.D0
+        RIDEAL(I,2*I)  =1.D0
+      ENDDO
 !
 !     =========================================================================
-!     ==  bring atoms into canonical order                                   ==
+!     ==  BRING ATOMS INTO CANONICAL ORDER                                   ==
 !     =========================================================================
-!     __left___________________________________________________________________
-      i=minloc(r0(1,:),dim=1)  
-      r(:,1)=r0(:,i)    
-!     __right__________________________________________________________________
-      i=maxloc(r0(1,:),dim=1)    
-      r(:,2)=r0(:,i)    
-!     __back___________________________________________________________________
-      i=minloc(r0(2,:),dim=1)  
-      r(:,3)=r0(:,i)    
-!     __front__________________________________________________________________
-      i=maxloc(r0(2,:),dim=1)    
-      r(:,4)=r0(:,i)   
-!     __bottom_________________________________________________________________
-      i=minloc(r0(3,:),dim=1)  
-      r(:,5)=r0(:,i)   
-!     __top____________________________________________________________________
-      i=maxloc(r0(3,:),dim=1)    
-      r(:,6)=r0(:,i)   
+!     __LEFT___________________________________________________________________
+      I=MINLOC(R0(1,:),DIM=1)  
+      R(:,1)=R0(:,I)    
+!     __RIGHT__________________________________________________________________
+      I=MAXLOC(R0(1,:),DIM=1)    
+      R(:,2)=R0(:,I)    
+!     __BACK___________________________________________________________________
+      I=MINLOC(R0(2,:),DIM=1)  
+      R(:,3)=R0(:,I)    
+!     __FRONT__________________________________________________________________
+      I=MAXLOC(R0(2,:),DIM=1)    
+      R(:,4)=R0(:,I)   
+!     __BOTTOM_________________________________________________________________
+      I=MINLOC(R0(3,:),DIM=1)  
+      R(:,5)=R0(:,I)   
+!     __TOP____________________________________________________________________
+      I=MAXLOC(R0(3,:),DIM=1)    
+      R(:,6)=R0(:,I)   
 !
 !     =========================================================================
 !     == FERROELECTRIC DISPLACEMENT OF CENTRAL ATOM                          ==
 !     =========================================================================
-      vec=0.D0
+      VEC=0.D0
       DO I=1,6
-        vec=vec+R(:,I)
+        VEC=VEC+R(:,I)
       ENDDO
-      fedis(:)=vec(:)/6.D0
-!     __ remove ferroelectric displacement ____________________________________
+      FEDIS(:)=VEC(:)/6.D0
+!     __ REMOVE FERROELECTRIC DISPLACEMENT ____________________________________
       DO I=1,6
-        R(:,I)=R(:,I)-fedis(:)
+        R(:,I)=R(:,I)-FEDIS(:)
       ENDDO
 !
 !     =========================================================================
-!     == remove axis ASYMMETRY.                                              ==
-!     == after this step the position are obtained from the ideal octahedron ==
-!     == by linear transformation (rotation,stretch,shear)                   ==
+!     == REMOVE AXIS ASYMMETRY.                                              ==
+!     == AFTER THIS STEP THE POSITION ARE OBTAINED FROM THE IDEAL OCTAHEDRON ==
+!     == BY LINEAR TRANSFORMATION (ROTATION,STRETCH,SHEAR)                   ==
 !     =========================================================================
       DO I=1,3
-        vec=(R(:,2*I-1)+R(:,2*I))/2.D0
-        R(:,2*I-1)=R(:,2*I-1)-vec
-        R(:,2*I)  =R(:,2*I)  -vec
-        dnon(:,i)=vec
+        VEC=(R(:,2*I-1)+R(:,2*I))/2.D0
+        R(:,2*I-1)=R(:,2*I-1)-VEC
+        R(:,2*I)  =R(:,2*I)  -VEC
+        DNON(:,I)=VEC
       ENDDO
 !
 !     =========================================================================
-!     == extract average bond length                                         ==
+!     == EXTRACT AVERAGE BOND LENGTH                                         ==
 !     =========================================================================
       DAV=0.D0
       DO I=1,6
@@ -311,15 +406,15 @@
       DO I=1,3
         DI(I)=SQRT(SUM((R(:,2*I)-R(:,2*I-1))**2))/2.D0
       ENDDO
-!     __ use convention of dagotto, "nanoscale phase separation...",2003
-      Q2=(DI(1)-DI(2))/sqrt(2.d0)
-      Q3=(-DI(1)-DI(2)+2.D0*DI(3))/sqrt(6.d0)
+!     __ USE CONVENTION OF DAGOTTO, "NANOSCALE PHASE SEPARATION...",2003
+      Q2=(DI(1)-DI(2))/SQRT(2.D0)
+      Q3=(-DI(1)-DI(2)+2.D0*DI(3))/SQRT(6.D0)
 !
 !     =========================================================================
 !     == NORMALIZE BOND LENGTHS (THEY ARE ENCODED IN DAV,Q2,Q3)              ==
 !     =========================================================================
       DO I=1,6
-        R(:,i)=R(:,I)/sqrt(sum(r(:,i)**2))
+        R(:,I)=R(:,I)/SQRT(SUM(R(:,I)**2))
       ENDDO
 !
 !     =========================================================================
@@ -345,11 +440,11 @@
 !     == APRIME=A+SVAR*B; BPRIME=B+SVAR*A
 !     == USE A^2=B^2=1: AB+2*SVAR+AB*SVAR**2=0  (BINOMIAL FORMULA IS UNSTABLE)
 !     == ITERATE SVAR=-AB/2 * (1+SVAR**2)
-      ab=DOT_PRODUCT(R(:,4),R(:,2))
-      svar=0.d0
-      do i=1,5
-        svar=-0.5d0*ab*(1+svar**2)
-      enddo
+      AB=DOT_PRODUCT(R(:,4),R(:,2))
+      SVAR=0.D0
+      DO I=1,5
+        SVAR=-0.5D0*AB*(1+SVAR**2)
+      ENDDO
       VEC=R(:,2)
       R(:,1)=R(:,1)-R(:,4)*SVAR
       R(:,2)=R(:,2)+R(:,4)*SVAR
@@ -372,12 +467,12 @@
           PHI(:)=PHI(:)+VEC(:)
         ENDDO
       ENDDO
-      angle=SQRT(SUM(PHI**2))
-      if(angle.ne.0.d0) then
-        PHI(:)=PHI(:)/angle
-      else
-        phi(3)=1.d0
-      end if
+      ANGLE=SQRT(SUM(PHI**2))
+      IF(ANGLE.NE.0.D0) THEN
+        PHI(:)=PHI(:)/ANGLE
+      ELSE
+        PHI(3)=1.D0
+      END IF
       ANGLE=0.D0
       DO I=1,6
         CALL GETANGLE(PHI,RIDEAL(:,I),R(:,I),SVAR)
@@ -402,9 +497,9 @@
         WRITE(*,FMT='("DNON=",T30,3F10.5," AA")')DNON(:,I)/ANGSTROM
       ENDDO
       WRITE(*,FMT='("AVERAGE BOND LENGTH",T30,F10.5," AA")')DAV/ANGSTROM
-!     __ use convention of dagotto, "nanoscale phase separation...",2003
+!     __ USE CONVENTION OF DAGOTTO, "NANOSCALE PHASE SEPARATION...",2003
       WRITE(*,FMT='("Q2=[D(+X)-D(+Y)]/SQRT(2)")')
-      WRITE(*,FMT='("Q3=[-D(+X)-D(+Y)+2D(+Z)]/sqrt(6)")')
+      WRITE(*,FMT='("Q3=[-D(+X)-D(+Y)+2D(+Z)]/SQRT(6)")')
       WRITE(*,FMT='("JAHN-TELLER DISTORTION (Q2,Q3)",T30,2F10.5," AA")') &
      &                                                  Q2/ANGSTROM,Q3/ANGSTROM
       WRITE(*,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T30,F10.5," AA")') &
@@ -415,44 +510,44 @@
       I=INT(SVAR+12)-12
       J=NINT(100*(SVAR-REAL(I,KIND=8)))
       IF(I.EQ.-6) THEN
-         WRITE(*,FMT='(i3,"% (-1,1,0)  and ",i3,"% (-1,2,-1) JT-type ")')100-j,j
-      else if(i.eq.-5) then
-         WRITE(*,FMT='(i3,"% (-1,2,-1) and ",i3,"% (0,1,-1)  JT-type ")')100-j,j
-      else if(i.eq.-4) then
-         WRITE(*,FMT='(i3,"% (0,1,-1)  and ",i3,"% (1,1,-2)  JT-type ")')100-j,j
-      else if(i.eq.-3) then
-         WRITE(*,FMT='(i3,"% (1,1,-2)  and ",i3,"% (1,0,-1)  JT-type ")')100-j,j
-      else if(i.eq.-2) then
-         WRITE(*,FMT='(i3,"% (1,0,-1)  and ",i3,"% (2,-1,-1) JT-type ")')100-j,j
-      else if(i.eq.-1) then
-         WRITE(*,FMT='(i3,"% (2,-1,-1) and ",i3,"% (1,-1,0)  JT-type ")')100-j,j
-      else if(i.eq.0) then
-         WRITE(*,FMT='(i3,"% (1,-1,0)  and ",i3,"% (1,-2,1)  JT-type ")')100-j,j
-      else if(i.eq.1) then
-         WRITE(*,FMT='(i3,"% (1,-2,1)  and ",i3,"% (0,-1,1)  JT-type ")')100-j,j
-      else if(i.eq.2) then
-         WRITE(*,FMT='(i3,"% (1,-1,1)  and ",i3,"% (-1,-1,2) JT-type ")')100-j,j
-      else if(i.eq.3) then
-         WRITE(*,FMT='(i3,"% (-1,-1,2) and ",i3,"% (-1,0,1)  JT-type ")')100-j,j
-      else if(i.eq.4) then
-         WRITE(*,FMT='(i3,"% (-1,0,1)  and ",i3,"% (-2,1,1)  JT-type ")')100-j,j
-      else if(i.eq.5) then
-         WRITE(*,FMT='(i3,"% (-2,1,1)  and ",i3,"% (-1,1,0)  JT-type ")')100-j,j
-      else
-        stop 'selection error'
-      end if
+         WRITE(*,FMT='(I3,"% (-1,1,0)  AND ",I3,"% (-1,2,-1) JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.-5) THEN
+         WRITE(*,FMT='(I3,"% (-1,2,-1) AND ",I3,"% (0,1,-1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.-4) THEN
+         WRITE(*,FMT='(I3,"% (0,1,-1)  AND ",I3,"% (1,1,-2)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.-3) THEN
+         WRITE(*,FMT='(I3,"% (1,1,-2)  AND ",I3,"% (1,0,-1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.-2) THEN
+         WRITE(*,FMT='(I3,"% (1,0,-1)  AND ",I3,"% (2,-1,-1) JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.-1) THEN
+         WRITE(*,FMT='(I3,"% (2,-1,-1) AND ",I3,"% (1,-1,0)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.0) THEN
+         WRITE(*,FMT='(I3,"% (1,-1,0)  AND ",I3,"% (1,-2,1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.1) THEN
+         WRITE(*,FMT='(I3,"% (1,-2,1)  AND ",I3,"% (0,-1,1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.2) THEN
+         WRITE(*,FMT='(I3,"% (1,-1,1)  AND ",I3,"% (-1,-1,2) JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.3) THEN
+         WRITE(*,FMT='(I3,"% (-1,-1,2) AND ",I3,"% (-1,0,1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.4) THEN
+         WRITE(*,FMT='(I3,"% (-1,0,1)  AND ",I3,"% (-2,1,1)  JT-TYPE ")')100-J,J
+      ELSE IF(I.EQ.5) THEN
+         WRITE(*,FMT='(I3,"% (-2,1,1)  AND ",I3,"% (-1,1,0)  JT-TYPE ")')100-J,J
+      ELSE
+        STOP 'SELECTION ERROR'
+      END IF
 
-      WRITE(*,FMT='("TILT ANGLE=",T30,F10.5," DEGREE")')sqrt(sum(phi**2))/PI*180.D0
-      if(SQRT(SUM(PHI**2)).gt.0.d0)  then
+      WRITE(*,FMT='("TILT ANGLE=",T30,F10.5," DEGREE")')SQRT(SUM(PHI**2))/PI*180.D0
+      IF(SQRT(SUM(PHI**2)).GT.0.D0)  THEN
         WRITE(*,FMT='("TILT AXIS=",T30,3F10.5)')PHI/SQRT(SUM(PHI**2))
-      end if
+      END IF
       RETURN
       END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE VECTORPRODUCT(A,B,C)
 !     *************************************************************************
-!     ** construct the vector product C = a vectorproduct B                  **
+!     ** CONSTRUCT THE VECTOR PRODUCT C = A VECTORPRODUCT B                  **
 !     *************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN)  :: A(3)
@@ -466,29 +561,29 @@
       END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      subroutine rotate(phi,r,rnew)
+      SUBROUTINE ROTATE(PHI,R,RNEW)
 !     *************************************************************************
-!     ** rotate r with the angle vector phi (right-hand rule) into rnew      **
+!     ** ROTATE R WITH THE ANGLE VECTOR PHI (RIGHT-HAND RULE) INTO RNEW      **
 !     *************************************************************************
-      implicit none
-      real(8),intent(in) :: phi(3)
-      real(8),intent(in) :: r(3)
-      real(8),intent(out):: rnew(3)
-      real(8)            :: angle
-      real(8)            :: ephi(3)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: PHI(3)
+      REAL(8),INTENT(IN) :: R(3)
+      REAL(8),INTENT(OUT):: RNEW(3)
+      REAL(8)            :: ANGLE
+      REAL(8)            :: EPHI(3)
 !     **************************************************************************
-      angle=sqrt(sum(phi**2))
-      ephi=phi/angle
-      call vectorproduct(ephi,r,rnew)
-      rnew=r+rnew*sin(angle)+(r-ephi*dot_product(ephi,r))*(cos(angle)-1.d0)
-      return
-      end
+      ANGLE=SQRT(SUM(PHI**2))
+      EPHI=PHI/ANGLE
+      CALL VECTORPRODUCT(EPHI,R,RNEW)
+      RNEW=R+RNEW*SIN(ANGLE)+(R-EPHI*DOT_PRODUCT(EPHI,R))*(COS(ANGLE)-1.D0)
+      RETURN
+      END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GETANGLE(AXIS,R,RNEW,ANGLE)
 !     *************************************************************************
-!     ** specify the rotation angle for a given rotation axis, that brings   **
-!     ** point r into the transformed vector rnew
+!     ** SPECIFY THE ROTATION ANGLE FOR A GIVEN ROTATION AXIS, THAT BRINGS   **
+!     ** POINT R INTO THE TRANSFORMED VECTOR RNEW
 !     *************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: AXIS(3)
@@ -496,22 +591,22 @@
       REAL(8),INTENT(IN) :: RNEW(3) 
       REAL(8),INTENT(OUT):: ANGLE
       REAL(8)            :: EPHI(3) 
-      REAL(8)            :: s(3)
-      REAL(8)            :: snew(3)
-      real(8)            :: u(3),v(3),w(3)
-      real(8)            :: uu,uv,uw,vv,vw
-      real(8)            :: det
-      real(8)            :: cosphi,sinphi
+      REAL(8)            :: S(3)
+      REAL(8)            :: SNEW(3)
+      REAL(8)            :: U(3),V(3),W(3)
+      REAL(8)            :: UU,UV,UW,VV,VW
+      REAL(8)            :: DET
+      REAL(8)            :: COSPHI,SINPHI
 !     *************************************************************************
       EPHI=AXIS/SQRT(SUM(AXIS**2))
-      s=r-ephi*dot_product(ephi,r)
-      snew=rnew-ephi*dot_product(ephi,rnew)
-      s=s/sqrt(sum(s**2))
-      snew=snew/sqrt(sum(snew**2))
+      S=R-EPHI*DOT_PRODUCT(EPHI,R)
+      SNEW=RNEW-EPHI*DOT_PRODUCT(EPHI,RNEW)
+      S=S/SQRT(SUM(S**2))
+      SNEW=SNEW/SQRT(SUM(SNEW**2))
 
-      U=EPHI*DOT_PRODUCT(EPHI,s)-s
-      call VECTORPRODUCT(EPHI,s,v)
-      call VECTORPRODUCT(EPHI,sNEW,w)
+      U=EPHI*DOT_PRODUCT(EPHI,S)-S
+      CALL VECTORPRODUCT(EPHI,S,V)
+      CALL VECTORPRODUCT(EPHI,SNEW,W)
       UU=DOT_PRODUCT(U,U)
       UV=DOT_PRODUCT(U,V)
       UW=DOT_PRODUCT(U,W)
@@ -540,13 +635,13 @@
       REAL(8),INTENT(IN) :: R(3) 
       REAL(8),INTENT(IN) :: RNEW(3) 
       REAL(8),INTENT(OUT):: PHI(3)
-      REAL(8)            :: x(3),xnew(3)
+      REAL(8)            :: X(3),XNEW(3)
       REAL(8)            :: EPHI(3)
       REAL(8)            :: U(3),V(3),W(3)
       REAL(8)            :: UU,UV,UW,VV,VW
       REAL(8)            :: DET
       REAL(8)            :: COSPHI,SINPHI
-      REAL(8)            :: angle
+      REAL(8)            :: ANGLE
 !     *************************************************************************
       X=R/DSQRT(SUM(R**2))
       XNEW=RNEW/DSQRT(SUM(RNEW**2))
@@ -562,13 +657,13 @@
       VW=DOT_PRODUCT(V,W)
       DET=(UU*VV-UV*UV)
       IF(DET.EQ.0.D0) THEN
-        phi=0.d0
+        PHI=0.D0
         RETURN
       END IF
       COSPHI=(UU*VW-UV*UW)/DET
       SINPHI=(VV*UW-UV*VW)/DET
       ANGLE=ACOS(COSPHI)
       IF(SINPHI.LT.0.D0) ANGLE=-ANGLE
-      phi=ephi*angle
+      PHI=EPHI*ANGLE
       RETURN
       END
