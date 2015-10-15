@@ -504,7 +504,7 @@
       CHARACTER(64)         :: EXTENDEDNAME1,EXTENDEDNAME2
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
-      ANGLEN=PI/180.D0*70.D0    ! MIN ANGLE=60 DEG
+      ANGLEN=PI/180.D0*59.D0    ! MIN ANGLE=60 DEG
       DISX=6.D0                 ! MAX DISTANCE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)

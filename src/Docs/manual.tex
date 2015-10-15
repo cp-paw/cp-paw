@@ -6000,7 +6000,7 @@ Start the Dataexplorer using
 \newpage
 \section{The Density of States Analysis Tool: paw\_dos}
 %==========================================================================
-The paw\_dos tool allows one to analyze binding locally and energy
+The paw\_dos tool allows one to analyze binding, both locally and energy
 resolved. It can tell you which states contribute mostly to a
 particular $\sigma, \pi, \delta$ bond. For example, you can learn whether
 either bonding and antibonding states are close to the Fermi level
@@ -6037,15 +6037,15 @@ The density of states matrix is defined as follows
 \langle\Psi_n|\chi^\prime\rangle
 \end{equation}
 from the Kohn-Sham orbitals $\Psi_n$ and their one-particle energies
-$\epsilon_n$. The orbitals $\chi$ and $\chi^\prime$ pick out certain
-matrix elements of the density-of-states operator. The possible
-choices for the orbitals $\chi,\chi^\prime$ are described in more
-detail below.
+$\epsilon_n$. The orbitals $|\chi\rangle$ and $|\chi^\prime\rangle$
+pick out certain matrix elements of the density-of-states
+operator. The possible choices for the orbitals $\chi,\chi^\prime$ are
+described in more detail below.
 
 The density of states is most useful to obtain a qualitative
-understanding of chemical binding, both local and energy-resolved.
-Consider, for example, a complete, orthonormal set of orbitals
-$\chi_{RL}$ similar to atomic orbitals.
+understanding of chemical binding, both locally and energy-resolved.
+%% Consider, for example, a complete, orthonormal set of orbitals
+%% $\{|\chi_{RL}\rangle\}$ similar to atomic orbitals.
 
 The band structure energy $\sum f(\epsilon_n)\epsilon_n$, where
 $f(\epsilon)$ is the Fermi distribution function and $\epsilon_n$ are
@@ -6055,6 +6055,7 @@ contributions.
 \sum_n f(\epsilon_n)\epsilon_n 
 = \sum_{i,j,k,l} \int d\epsilon f(\epsilon)
 D_{i,j}(\epsilon) O^{-1}_{j,k} H_{k,l}O^{-1}_{k,i}
+\label{eq:dosebandeq1}
 \end{equation}
 where 
 \begin{equation}
@@ -6068,36 +6069,42 @@ is the overlap matrix for a complete set of functions $\chi_i$.
 
 Two sum rules connect the overlap matrix element
 with the zeroth energy moment of the projected density of states
-\begin{eqnarray*}
+\begin{eqnarray}
 \langle\chi_i|\chi_j\rangle&=&\sum_{n,m}
 \langle\chi_i|\Psi_n\rangle\langle\Psi_n|\Psi_m\rangle\langle\Psi_m|\chi_j\rangle
-\\
+\nonumber\\
 &=&\sum_{n}\langle\chi_i|\Psi_n\rangle   \langle\Psi_n|\chi_j\rangle
-\\
+\nonumber\\
 &=&\sum_{n}\int_{-\infty}^{\infty} d\epsilon\ 
 \langle\chi_i|\Psi_n\rangle\delta(\epsilon-\epsilon_n)
 \langle\Psi_n|\chi_j\rangle
-\\
+\nonumber\\
 &=&\int_{-\infty}^{\infty} d\epsilon\  D_{i,j}(\epsilon)
-\end{eqnarray*}
+\label{eq:dossumruleo}
+\end{eqnarray}
 and the Hamilton matrix element with the first moment:
-\begin{eqnarray*}
+\begin{eqnarray}
 \langle\chi_i|H|\chi_j\rangle&=&\sum_{n,m}
 \langle\chi_i|\Psi_n\rangle\langle\Psi_n|H|\Psi_m\rangle\langle\Psi_m|\chi_j\rangle
-\\
+\nonumber\\
 &=&\sum_{n}\langle\chi_i|\Psi_n\rangle  \epsilon_n \langle\Psi_n|\chi_j\rangle
-\\
-&=&\sum_{n}\int_{-\infty}^{\infty} d\epsilon\ \epsilon
+\nonumber\\
+&=&\sum_{n}\int_{-\infty}^{\infty} d\epsilon\;\epsilon\,
 \langle\chi_i|\Psi_n\rangle\delta(\epsilon-\epsilon_n)
 \langle\Psi_n|\chi_j\rangle
-\\
-&=&\int_{-\infty}^{\infty} d\epsilon\ \epsilon D_{i,j}(\epsilon)
-\end{eqnarray*}
+\nonumber\\
+&=&\int_{-\infty}^{\infty} d\epsilon\;\epsilon\, D_{i,j}(\epsilon)
+\label{eq:dossumruleh}
+\end{eqnarray}
 
 Let us now make a simplifying assumption: assume that the local
-functions $\chi_i$ have only diagonal overlap matrix elements, in
-which case the bond contributions have the form
-\begin{displaymath}
+functions $|\chi_i\rangle$ have only diagonal overlap matrix elements,
+so that we can approximate the overlap matrix elements by
+$O_{i,j}=O_{i,i}\delta_{i,j}$.  With this approximation, the bond
+contributions of Eq.~\ref{eq:dosebandeq1} can be expressed by the
+integrals of the density of states Eq.~\ref{eq:dossumruleo} and
+Eq.~\ref{eq:dossumruleh}.
+\begin{eqnarray}
 \sum_n f(\epsilon_n)\epsilon_n =
 \sum_{i,j}\frac{
 \Bigl[\int d\epsilon f(\epsilon) D_{i,j}(\epsilon)\Bigr]
@@ -6107,12 +6114,20 @@ which case the bond contributions have the form
 \Bigl[\int d\epsilon D_{i,i}(\epsilon)\Bigr]
 \Bigl[\int d\epsilon  D_{j,j}(\epsilon)\Bigr]
 }
-\end{displaymath}
+\label{eq:dosebandfromenergyintegrals}
+\end{eqnarray}
+This expression divides the band-structure energy, the sum of occupied
+energy levels, into orbital contributions and contributions of orbital
+pairs. Roughly speaking, the orbital contribution describe the ionic
+character of the bond, while the orbital pairs reflect the covalent
+bonds.
 
-This equation allows us to estimate the covalent bond strength from the
-peak positions and peak strengths of the projected density of states.
-Note that this analysis is only qualitative. As a qualitative tool,
-however, this analysis has been invaluable.
+
+Equation Eq.~\ref{eq:dosebandfromenergyintegrals} allows one to
+estimate the covalent bond strength from the peak positions and peak
+strengths of the projected density of states.  Note, that this
+analysis is only qualitative. As a qualitative tool, however, this
+analysis has been invaluable.
 
 %An example is shown in Fig.\ref{fig:h2copdos}
 
@@ -6434,13 +6449,13 @@ largely independent of the system}
 \vdefault{10$^{-2}$}}
 
 \mbax{\key{BROADENING[EV]}
-\vdescr{Thermal broading $k_BT$ of the density of states expressed in eV. }
+\vdescr{Thermal broadening $k_BT$ of the density of states expressed in eV. }
 \vformat{real} 
 \vrules{optional, mutually exclusive with BROADENING[K]}
 \vdefault{300 Kelvin/eV}}
 
 \mbax{\key{BROADENING[K]}
-\vdescr{Thermal broading $k_BT$ of the density of states with $T$
+\vdescr{Thermal broadening $k_BT$ of the density of states with $T$
   expressed in Kelvin.}
 \vformat{real} 
 \vrules{optional, mutually exclusive with BROADENING[EV]}
