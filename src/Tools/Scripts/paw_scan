@@ -44,7 +44,7 @@
 #  Example:
 #       paw_scan -w run -r "EPW 20 30 40" ./si2
 #
-#   REQUIREMENTS: doppaw, paw_resolve, paw_waittillempty, paw_get
+#   REQUIREMENTS: doppaw, paw_resolve, paw_waittillempty 
 #                  paw_dos.x
 #
 #         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de

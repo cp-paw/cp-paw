@@ -8074,12 +8074,16 @@ The calling sequence is
 \item[-h:] print help message
 \item[-w whatid:] Specify the quantity to be extracted. whatid may be one of
 \begin{description}
-\item[etot:] total energy in Hartree (default)
-\item[gap:]  fundamental band gap in eV
-\item[homo:] energy of the highest occupied state in eV
-\item[lumo:] energy of the lowest unoccupied state in eV
-\item[efermi:] energy of the fermi level in eV
+\item[etot:] total energy 
+\item[gap:]  fundamental band gap 
+\item[homo:] energy of the highest occupied state
+\item[lumo:] energy of the lowest unoccupied state
+\item[efermi:] energy of the fermi level 
+\item[volume:] unit cell volume
 \end{description}
+\item[-u:] unit (ev, kj/mol, kcal/mol , H, angstrom\^3, aa\^3,
+  cubangstrom, a0\^3, abohr\^3, cubabohr) case insensitive. Unit must
+  be consistsnet with quantity to be retrieved
 \item[-n:] prints the result as number 
 \item[-t:] prints the result as text
 \item[-v:] verbose
@@ -8090,8 +8094,9 @@ The calling sequence is
 The command scans the file \textit{rootname}\verb|.prot| and
 prints the last occurance of the corresponding variable 
 
-Remark: -gap -homo and -lumo do not work with variable occupations
-and will provide an error message.
+Remark: -gap does not work with variable occupations and will provide
+an error message. -lumo and -homo will report the chemical potential
+with variable occupations.
 %
 %==========================================================================
 \subsection{Collect energies ``paw\_resolve''}

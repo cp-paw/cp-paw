@@ -46,7 +46,7 @@ for FILE in         *.prot \
             */*/*/*/*.prot ; do
   if [[ -f $FILE ]] ; then
     ROOT=${FILE%.prot}
-    ENERGY=$(paw_get -nw etot -- $ROOT)
+    ENERGY=$(paw_get -nw etot -u H -- $ROOT)
     echo -e "$ROOT $ENERGY"
   fi
 done

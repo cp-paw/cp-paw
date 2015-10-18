@@ -210,12 +210,12 @@ if [[ $UPDATE = yes ]] ; then
   if [[ -e murn.in ]]  ; then rm murn.in; fi
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo "collecting ${NAME}_$X" ; fi
-    echo ${X} $(paw_get -w gap  -n ${NAME}_${X})  >>gap.dat
-    echo ${X} $(paw_get -w etot -n ${NAME}_${X}) >>etot.dat
+    echo ${X} $(paw_get -w gap -u ev -n ${NAME}_${X})  >>gap.dat
+    echo ${X} $(paw_get -w etot -u H -n ${NAME}_${X}) >>etot.dat
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
     Y=$(echo "$ALAT * $AA" | bc -l)
     Y=$(echo "$Y * $Y * $Y " | bc -l)
-    echo ${Y} $(paw_get -w etot -n ${NAME}_${X}) >>murn.in
+    echo ${Y} $(paw_get -w etot -u H -n ${NAME}_${X}) >>murn.in
     #
     #  clean up
     # 
