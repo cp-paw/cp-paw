@@ -14,6 +14,7 @@
 ##     -t       atomic temperature                               ##
 ##     -c       constant energy (constant of motion)             ##
 ##     -f       fictitios kinetic energy of the wave functions   ##
+##     -s       time steps rather than time in ps                ##
 ##     -a type: friction                                         ##
 ##         type=r   friction acting on nuclei                    ##
 ##         type=p   friction acting on wave functions            ##
@@ -24,13 +25,14 @@
 ###################################################################
 USAGE="
 usage: paw_show option rootname [outfile]\n
-1)rootname  is paw protocol file name without the .prot ending
-2)option (exactly one must be given) can be one of the following
-\t -h: give info about use and exit
-\t -e: plot static total energy in Hartree
+1)rootname  is paw protocol file name without the .prot ending 
+2)option (exactly one must be given) can be one of the following 
+\t -h: give info about use and exit 
+\t -e: plot static total energy in Hartree 
 \t -t: plot temperature in Kelvin
 \t -c: plot conserved energy in Hartree
 \t -f: plot fictitious kinetic wave function energy in Hartree
+\t -s: use time steps rather than time in picoseconds
 \t -a: type: plot friction 
 \t\t     type=p: phi
 \t\t     type=r: atoms
@@ -46,13 +48,45 @@ usage: paw_show option rootname [outfile]\n
 #===================================================================
 #  resolve argument list                                          ==
 #===================================================================
+XLABEL='t[ps]'
+#
+#--- extract energy unit
+UNIT='H'
+EUNIT=1.
+while getopts :hetfca:su: OPT ; do
+  case $OPT in
+    u) UNIT=$OPTARG 
+       UNIT=$(echo $UNIT | tr '[:upper:]' '[:lower:]') #convert to lower case
+       case $UNIT in
+         h)        EUNIT=1.; UNIT="H" ;;
+         ry)       EUNIT=0.5; UNIT="Ry" ;;
+         ev)       EUNIT=$(echo "scale=8; 1. / 27.211 " | bc -l) 
+                   UNIT="eV"
+                   ;;
+         kj/mol)   EUNIT=$(echo "scale=8; 1. / 2625.500223430069 " | bc -l) 
+                   UNIT="kJ/mol"
+                   ;;
+         kcal/mol)EUNIT=$(echo "scale=8; 1. / 627.5096463920391 " | bc -l) 
+                   UNIT="kcal/mol"
+                   ;;
+
+         *) echo "error in $0: argument $OPTARG for -u not recognized" >&2
+             exit 1 ;;
+       esac
+      ;;
+  esac
+done
+#
+#
+#
+OPTIND=1
 AWKSTRING=""
-while getopts :hetfca: OPT ; do
+while getopts :hetfca:su: OPT ; do
   case $OPT in 
     t) AWKSTRING="$AWKSTRING \" \" \$4 " ;; # temperature (Kelvin)
-    f) AWKSTRING="$AWKSTRING \" \" \$5 " ;; # fict. kinetic energy
-    e) AWKSTRING="$AWKSTRING \" \" \$6 " ;; # static total energy
-    c) AWKSTRING="$AWKSTRING \" \" \$7 " ;; # conserved energy
+    f) AWKSTRING="$AWKSTRING \" \" \$5/$EUNIT " ;; # fict. kinetic energy
+    e) AWKSTRING="$AWKSTRING \" \" \$6/$EUNIT " ;; # static total energy
+    c) AWKSTRING="$AWKSTRING \" \" \$7/$EUNIT " ;; # conserved energy
     a) #friction
        case $OPTARG in
          p) AWKSTRING="$AWKSTRING \" \" \$8" ;; # wave functions
@@ -62,6 +96,8 @@ while getopts :hetfca: OPT ; do
             ;;
        esac
        ;;
+    s) XLABEL="time steps" ;; # time coordinate 
+    u) ;;  # unit already done
     h) 
        echo -e "$USAGE"
        exit 0
@@ -104,15 +140,49 @@ if [[ $RC -ne 0 ]]; then
   echo "error in $0: Can't create temp file, exiting..."
   exit 1
 fi
+PARMFILE=$(mktemp ${TMPDIR}/pawshowfile.XXXXXX)
+RC=$?
+if [[ $RC -ne 0 ]]; then
+  echo "error in $0: Can't create temp file, exiting..."
+  exit 1
+fi
+#
+#===================================================================
+#  select time in ps or time steps
+#===================================================================
+if [[ "$XLABEL" = "t[ps]" ]] ; then
+  AWKSTRING="{print  \$3 $AWKSTRING}"
+else
+  AWKSTRING="{print  \$2 $AWKSTRING}"
+fi
 #
 #===================================================================
 #  extract data from protocoll file                               ==
 #===================================================================
-AWKSTRING="{print  \$3 $AWKSTRING}"
 grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
                        | sed 's/-/ -/g' \
-                       | gawk "$AWKSTRING" \
+                       | gawk -v CONVFMT=%.17g "$AWKSTRING" \
                        > ${TMPFILE}
+#
+#===================================================================
+#  construct parameter file
+#===================================================================
+>$PARMFILE
+echo 'map font 0 to "Helvetica", "Helvetica" '       >> $PARMFILE
+echo 'default linewidth 3.0'                         >> $PARMFILE
+echo 'page background fill off'                      >> $PARMFILE
+echo 'frame background pattern 1'                    >> $PARMFILE
+echo 'frame background color 0'                      >> $PARMFILE
+echo 'default sformat "%.17g"'                        >> $PARMFILE
+echo "with g0"                                       >> $PARMFILE
+echo "  legend on"                                   >> $PARMFILE
+if [[ "$XLABEL" = "t[ps]" ]] ; then
+  echo '  xaxis LABEL "t[PS]"'                       >> $PARMFILE
+else
+  echo '  xaxis LABEL "time steps" '                 >> $PARMFILE
+fi
+echo "  yaxis ticklabel prec 17"                          >> $PARMFILE
+echo "  yaxis LABEL \"E[$UNIT]\""                          >> $PARMFILE
 #
 #===================================================================
 #  print or present via xmgrace
@@ -120,7 +190,7 @@ grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
 if [[ -n $OUT ]] ; then
   cp ${TMPFILE} $OUT
 else
-  xmgrace -free -noask -nxy ${TMPFILE}
+  xmgrace -free -noask -param $PARMFILE -nxy ${TMPFILE}
 fi
 rm ${TMPFILE}
 exit 0
