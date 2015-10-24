@@ -23,10 +23,13 @@ USAGE="$USAGE \t\t whatid=homo  \t prints energy of the highest occupied \
                                           state in eV\n"
 USAGE="$USAGE \t\t whatid=lumo  \t prints energy of the lowest unoccupied \
                                           state in eV\n"
-USAGE="$USAGE \t\t whatid=volume   \t prints volume of the unit cell \n"
+USAGE="$USAGE \t\t whatid=volume \t prints volume of the unit cell \n"
+USAGE="$USAGE \t\t whatid=epw    \t prints wavefunction plane wave cutoff \n"
+USAGE="$USAGE \t\t whatid=epwrho \t prints density plane wave cutoff \n"
+USAGE="$USAGE \t\t whatid=nkpt   \t prints the number of k-points\n"
 USAGE="$USAGE \t -n prints the result as number or according to -u\n"
 USAGE="$USAGE \t -t prints the result as text (default)\n"
-USAGE="$USAGE \t -u unit: ev|kj/mol|kcal/mol|h|angstrom^3|aa^3|cubangstrom|a0^3|abohr^3|cubabohr \n"
+USAGE="$USAGE \t -u unit: 1|ev|kj/mol|kcal/mol|h|ry|angstrom^3|aa^3|cubangstrom|a0^3|abohr^3|cubabohr \n"
 USAGE="$USAGE \t -v verbose\n"
 USAGE="$USAGE \t -h prints this help message\n"
 #-------------------------------------------------------------------------------
@@ -53,6 +56,7 @@ function convertunit(){
   local ARGUNIT=$(echo "$ARGSTRING" | awk '{print $2}')
   #
   local HARTREE=1.
+  local RYDBERG=0.5
   local EV=$(echo "scale=8; 1. / 27.211 " | bc -l)
   local KJBYMOL=$(echo "scale=8; 1. / 2625.500223430069 " | bc -l)
   local KCALBYMOL=$(echo "scale=8; 1. / 627.5096463920391 " | bc -l)
@@ -64,6 +68,8 @@ function convertunit(){
   local NEWVALUE
   case "$ARGUNIT" in
     H) NEWVALUE=$(echo "scale=8; $ARGVALUE * $HARTREE " | bc -l) 
+       ;;
+    RY) NEWVALUE=$(echo "scale=8; $ARGVALUE * $RYDBERG " | bc -l) 
        ;;
     EV) NEWVALUE=$(echo "scale=8; $ARGVALUE * $EV " | bc -l) 
        ;;
@@ -87,6 +93,8 @@ function convertunit(){
   esac
   case "$NEWUNIT" in
     H) NEWVALUE=$(echo "scale=8; $NEWVALUE / $HARTREE " | bc -l) 
+       ;;
+    RY) NEWVALUE=$(echo "scale=8; $NEWVALUE / $RYDBERG " | bc -l) 
        ;;
     EV) NEWVALUE=$(echo "scale=8; $NEWVALUE / $EV " | bc -l) 
        ;;
@@ -123,7 +131,7 @@ while getopts :hw:tnp:vu: OPT ; do
   case $OPT in 
     w) WHATID="$OPTARG" 
        case $WHATID in
-         etot|gap|homo|lumo|efermi|volume) 
+         etot|gap|homo|lumo|efermi|volume|nkpt|epw|epwrho) 
          ;; 
          *)
            echo "error in $0: illegal argument $WHATID of option -w" >&2
@@ -137,6 +145,7 @@ while getopts :hw:tnp:vu: OPT ; do
        UNIT=$(echo $UNIT | tr '[:upper:]' '[:lower:]') #convert to lower case
        case $UNIT in 
          h)        UNIT="H" ;;
+         ry)       UNIT="RY" ;;
          ev)       UNIT="EV" ;;
          kj/mol)   UNIT="KJ/MOL" ;;
          kcal/mol) UNIT="KCAL/MOL" ;;
@@ -189,8 +198,10 @@ fi
 #  is the output unit been specified? ------------------------------------------
 #
 if [[ -z $UNIT ]] ; then
-  echo error: missing argument -u. specify UNIT
-  exit 1
+  case $WHATID in 
+    nkpt) ;;
+    *) echo error: missing argument -u. specify UNIT; exit 1 ;;
+  esac
 fi
 #
 # Does protocoll file exist?
@@ -204,9 +215,9 @@ fi
 # Is the unit consistent with quantity?
 #
 case $WHATID in
-  etot|gap|homo|lumo|efermi)
+  etot|gap|homo|lumo|efermi|epw|epwrho)
     case $UNIT in
-      H|EV|KJ/MOL|KCAL/MOL) ;;
+      H|EV|KJ/MOL|KCAL/MOL|RY) ;;
       *)
         echo "error in $0: unit inconsistency" >&2
         echo "energy variable $WHATID inconsistent with unit $UNIT" >&2
@@ -223,6 +234,13 @@ case $WHATID in
         exit 1
         ;;
     esac
+    ;;
+  nkpt)
+    if [[ -n $UNIT ]] ; then
+      echo "error in $0: unit inconsistency" >&2
+      echo "volume variable $WHATID inconsistent with unit $UNIT" >&2
+      exit 1
+    fi
     ;;
 esac
 #
@@ -303,6 +321,25 @@ elif [[ "$WHATID" = "volume" ]] ; then
             + $T13 * ( $T21 * $T32 - $T22 * $T31 ) "
   export RESULT=$(echo " scale=5;  ${DETSTRING} " | bc -l )
   RESULT="$RESULT CUBANGSTROM"
+#
+#--------------  nkpt  ---------------------------------------------------------
+#
+elif [[ "$WHATID" = "nkpt" ]] ; then
+  export WHAT="NUMBER OF K-POINTS" 
+  export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+#
+#--------------  EPW(psi)-------------------------------------------------------
+#
+elif [[ "$WHATID" = "epw" ]] ; then
+  export WHAT="WAVEFUNCTION PLANE WAVE CUTOFF" 
+  export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+#
+#--------------  EPW(rho)-------------------------------------------------------
+#
+elif [[ "$WHATID" = "epwrho" ]] ; then
+  export WHAT="DENSITY PLANE WAVE CUTOFF" 
+  export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+#
 else
   echo "error in $0: $WHAT is not a permitted value for WHAT"
   exit 1
@@ -316,7 +353,11 @@ fi
 ################################################################################
 #  convert units
 ################################################################################
-RESULT=$(convertunit $UNIT "$RESULT") #internal function convertunit
+case $WHATID in
+ nkpt) ;;                                 # no unit 
+ *) RESULT=$(convertunit $UNIT "$RESULT") # internal function convertunit 
+   ;;
+esac
 #
 ################################################################################
 #  switch between number and text output and edit result

@@ -7,12 +7,13 @@
 #
 #       OPTIONS: optional: hv0fsdw 
 #
-#   DESCRIPTION: frontend for paw calculations or tools
+#   DESCRIPTION: frontend for paw calculations or tools.
 #
 #       OPTIONS:
 #          -h    print this help message
 #          -0:   dry-run
 #          -v:   verbose
+#          -R root  specify root file. (Default is to find it.)
 #          -F    execute paw_fast.x
 #          -K    soft kill of simulation
 #          -P    execute doppaw (ppaw_fast.x)
@@ -102,24 +103,36 @@ function findroot(){
     local LIST=$(echo *.$1)
     local RESULT=
     local X
-    for X in $LIST; do
-      if [[ -z $RESULT ]] ; then
-        RESULT=$X
+    if [[ -n ${ROOT} ]] ; then
+      if [[ -f ${ROOT}.$1 ]] ; then
+        RESULT=${ROOT}.$1  # use variable root if defined, and if file exists
       else
         RESULT=
-        LIST=
       fi
-    done
+    else
+      for X in $LIST; do
+        if [[ -z $RESULT ]] ; then
+          RESULT=$X
+        else  # return nothing, if more than one match!
+          RESULT=
+          LIST=
+        fi
+      done
+    fi
     echo $RESULT
 }
 
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
-OPTSTRING=":hv0ABFKPSDWTZ"
+export ROOT=
+#
+OPTSTRING=":hv0ABFKPR:SDWTZ"
 OPTIND=0
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
+    R) ROOT="$OPTARG" #set explicit root name
+      ;;
     0)   #nothing:
       DRYRUN=yes
 #      set -n
@@ -153,6 +166,10 @@ if [[ "${VERBOSE}" == "yes" ]] ; then
   echo OPTSTRING=$OPTSTRING
   echo args="$1"
 fi
+#
+#
+#
+#
 OPTIND=0  # reset argument position
 while getopts "${OPTSTRING}" OPT  ; do
  case $OPT in
