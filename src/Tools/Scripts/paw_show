@@ -183,8 +183,8 @@ if [[ "$XLABEL" = "t[ps]" ]] ; then
 else
   echo '  xaxis LABEL "time steps" '                 >> $PARMFILE
 fi
-echo "  yaxis ticklabel prec 17"                          >> $PARMFILE
-echo "  yaxis LABEL \"E[$UNIT]\""                          >> $PARMFILE
+echo "  yaxis ticklabel prec 14"                     >> $PARMFILE
+echo "  yaxis LABEL \"E[$UNIT]\""                    >> $PARMFILE
 #
 #===================================================================
 #  print or present via xmgrace
