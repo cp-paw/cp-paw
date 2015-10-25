@@ -15,6 +15,7 @@
 ##     -c       constant energy (constant of motion)             ##
 ##     -f       fictitios kinetic energy of the wave functions   ##
 ##     -s       time steps rather than time in ps                ##
+##     -u unit  select unit (h, ry, ev, kj/mol, kcal/mol)        ##
 ##     -a type: friction                                         ##
 ##         type=r   friction acting on nuclei                    ##
 ##         type=p   friction acting on wave functions            ##
@@ -33,6 +34,7 @@ usage: paw_show option rootname [outfile]\n
 \t -c: plot conserved energy in Hartree
 \t -f: plot fictitious kinetic wave function energy in Hartree
 \t -s: use time steps rather than time in picoseconds
+\t -u unit  select unit (h, ry, ev, kj/mol, kcal/mol)      
 \t -a: type: plot friction 
 \t\t     type=p: phi
 \t\t     type=r: atoms

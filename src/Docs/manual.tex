@@ -7994,6 +7994,8 @@ without the ``.prot'' ending and {\it option} is one of the following:
 \item[-t] temperature of the atoms in Kelvin
 \item[-ar] friction parameter for the atoms
 \item[-ap] friction parameter for the wave functions
+\item[-s] use time steps instead of time in ps
+\item[-u unit] select unit (h, ry, ev, kj/mol, kcal/mol)     
 \item[-h] prints information about usage of the tool 
 \item[?] prints information about usage of the tool 
 \end{description}
@@ -8080,8 +8082,11 @@ The calling sequence is
 \item[lumo:] energy of the lowest unoccupied state
 \item[efermi:] energy of the fermi level 
 \item[volume:] unit cell volume
+\item[epw:] wave function plane wave cutoff
+\item[epwrho:] density plane wave cutoff
+\item[nkpt:] number of k-points
 \end{description}
-\item[-u:] unit (ev, kj/mol, kcal/mol , H, angstrom\^3, aa\^3,
+\item[-u:] unit (1, ev, kj/mol, kcal/mol , H, angstrom\^3, aa\^3,
   cubangstrom, a0\^3, abohr\^3, cubabohr) case insensitive. Unit must
   be consistsnet with quantity to be retrieved
 \item[-n:] prints the result as number 
@@ -9820,7 +9825,7 @@ and \ref{table:spacegroupnumber_b}.
 \end{table}
 
 
-\begin{table}[H]
+\begin{table}[!h]
 \begin{center}
 \begin{tabular}{||r|l||r|l||r|l||r|l||r|l||}
 \hline
