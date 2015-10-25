@@ -177,6 +177,7 @@ echo 'frame background pattern 1'                    >> $PARMFILE
 echo 'frame background color 0'                      >> $PARMFILE
 echo 'default sformat "%.17g"'                        >> $PARMFILE
 echo "with g0"                                       >> $PARMFILE
+echo "  view 0.2,0.15,1.2,0.95"                      >> $PARMFILE
 echo "  legend on"                                   >> $PARMFILE
 if [[ "$XLABEL" = "t[ps]" ]] ; then
   echo '  xaxis LABEL "t[PS]"'                       >> $PARMFILE
