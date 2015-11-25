@@ -66,6 +66,13 @@ function convertunit(){
   local CUBABOHR=1.
   #
   local NEWVALUE
+  # check if $ARGVALUE is a number
+  if [[ $(echo "${ARGVALUE}" \
+         | grep -x -e "[-]\?[0-9]*[.]\?[0-9]*" \
+         | wc -l) -eq 0 ]] ; then
+    echo "error in $0: ARGVALUE=$ARGVALUE is not a number" >&2
+    exit 1
+  fi
   case "$ARGUNIT" in
     H) NEWVALUE=$(echo "scale=8; $ARGVALUE * $HARTREE " | bc -l) 
        ;;
@@ -191,7 +198,7 @@ fi
 # is rootname defined ? --------------------------------------------------------
 #
 if [[ -z $ROOT ]] ; then
-  echo error: missing argument. specify root name of the paw_project
+  echo error: missing argument. specify root name of the paw_project >&2
   exit 1
 fi
 #
@@ -200,7 +207,7 @@ fi
 if [[ -z $UNIT ]] ; then
   case $WHATID in 
     nkpt) ;;
-    *) echo error: missing argument -u. specify UNIT; exit 1 ;;
+    *) echo error: missing argument -u. specify UNIT  >&2 ; exit 1 ;;
   esac
 fi
 #
@@ -278,7 +285,7 @@ elif [[ "$WHATID" = "gap" ]] ; then
   WHAT="ABSOLUTE GAP"
   export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
   if [[ -z $RESULT ]] ; then  
-    echo "error in $0: calculation with variable occupations: gap is unknown."
+    echo "error in $0: variable occupations: gap is unknown."  >&2
     exit 1
   fi
 #
@@ -319,7 +326,7 @@ elif [[ "$WHATID" = "volume" ]] ; then
   DETSTRING=" $T11 * ( $T22 * $T33 - $T23 * $T32 ) \
             + $T12 * ( $T23 * $T31 - $T21 * $T33 ) \
             + $T13 * ( $T21 * $T32 - $T22 * $T31 ) "
-  export RESULT=$(echo " scale=5;  ${DETSTRING} " | bc -l )
+  export RESULT=$(echo " scale=8;  ${DETSTRING} " | bc -l )
   RESULT="$RESULT CUBANGSTROM"
 #
 #--------------  nkpt  ---------------------------------------------------------
@@ -341,12 +348,12 @@ elif [[ "$WHATID" = "epwrho" ]] ; then
   export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
 #
 else
-  echo "error in $0: $WHAT is not a permitted value for WHAT"
+  echo "error in $0: $WHAT is not a permitted value for WHAT"  >&2
   exit 1
 fi
 #  test if result is empty
 if [[ -z  "$RESULT" ]] ; then
-  echo "error in $0: no result found in $ROOT.prot"
+  echo "error in $0: no result found in $ROOT.prot" >&2
   exit 1
 fi
 #

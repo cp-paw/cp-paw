@@ -107,8 +107,10 @@ export MPE = ${OBJDIR}/paw_mpelib$(MODE).o
 #
 ifneq ($(strip ${FFT_HEADER}),)
   # copy includefile into object directory.
+  # fftw_f77.i for fftw2 and fftw3.f03 for fftw3
   # new name is uppercase to allow global uppercasing of fortran code
-  FFTWINCLUDE=cp ${FFT_HEADER} ${OBJDIR}/fftw_f77.i
+  #  FFTWINCLUDE=cp ${FFT_HEADER} ${OBJDIR}/fftw_f77.i
+  FFTWINCLUDE=cp ${FFT_HEADER} ${OBJDIR}/
 else
   # not there, just create an empty file
   FFTWINCLUDE= touch ${OBJDIR}/fftw_f77.i

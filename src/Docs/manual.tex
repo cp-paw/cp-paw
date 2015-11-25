@@ -25,6 +25,7 @@
 %
 %  define commands
 %
+\newcommand{\mat}[1]{\mathbf{#1}}
 \newcommand{\block}[1]{\subsubsection[#1]{\shabox{\bf #1}}}
 %
 \newcommand{\brules}[1]{
@@ -7165,6 +7166,89 @@ conflict with the existing pdos from the paw calculation.
 
 
 %==========================================================================
+\subsubsection{Input for a fcc-lattice}
+%==========================================================================
+Band structure file for the real-space fcc lattice. The real-space
+lattice constants are
+\begin{eqnarray}
+\mat{T}=\left(\begin{array}{ccc}
+0,\frac{1}{2},\frac{1}{2}\\
+\frac{1}{2},0,\frac{1}{2}\\
+\frac{1}{2},\frac{1}{2},0\end{array}
+\right)a
+\end{eqnarray}
+The corresponding reciprocal unit vectors are
+\begin{eqnarray}
+\mat{g}=\left(\begin{array}{ccc}
+-1,1,1\\
+1,-1,1\\
+1,1,-1
+\end{array}\right)\frac{2\pi}{a}
+\end{eqnarray}
+The high symmetry points are 
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+point & absolute coordinates $\left[\frac{2\pi}{a}\right]$
+      & relative coordinates\\
+\hline
+$\Gamma$ & (0,0,0) & (0,0,0)\\
+X        & $(1,0,0)$ &$(0,\frac{1}{2},\frac{1}{2})$\\
+W        & $(1,\frac{1}{4},0)$ &$(\frac{1}{8},\frac{1}{2},\frac{5}{8})$\\
+L        & $(\frac{1}{2},\frac{1}{2},\frac{1}{2})$ 
+              & $(\frac{1}{2},\frac{1}{2},\frac{1}{2})$\\
+K        & $(\frac{1}{2},\frac{1}{2},0)$ 
+              & $(\frac{1}{4},\frac{1}{4},\frac{1}{2})$\\
+U        & $(1,\frac{1}{2},\frac{1}{2})$ 
+              & $(\frac{1}{2},\frac{3}{4},\frac{3}{4})$\\
+\hline
+\end{tabular}
+\end{center}
+(see \url{https://en.wikipedia.org/wiki/Brillouin_zone})
+
+The high-symmetry path drawn is
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+$\Gamma$ & $X$ & $W$           & $L$     & $\Gamma$ & $K$=$U$ &  $X$    \\
+\hline
+0        & 1   & $\frac{3}{2}$ & 2.20711 & 3.07313  & 4.13379 & 4.48735 \\
+\hline
+\end{tabular}
+\end{center}
+
+The path Gamma-K, U-X is identical ot the straight line from Gamma to
+an X-point of the neighboring cell.
+
+
+\begin{verbatim}
+!bcntl
+  !BANDSTRUCTURE MODE='DIAGONALISATION'
+    !line comment='gamma-X'
+          file='Dos_A/bands.dat' nk=30 NB=8           
+          xk1=0. 0. 0. xk2=0.0 0.5 0.5  !end
+    !line comment='X-W'
+          file='Dos_A/bands.dat' nk=30 NB=8 tappend=T 
+          xk1=.0 0.5 0.5 xk2= 0.125 0.5 0.625  !end
+    !line comment='W-L'
+          file='Dos_A/bands.dat' nk=30 NB=8 tappend=T 
+          xk1=0.125 0.5 0.625 xk2= .5 .5 .5   !end
+    !line comment='L-Gamma'
+          file='Dos_A/bands.dat' nk=30 NB=8 tappend=T 
+          xk1= .5 .5 0.5 xk2=0. 0. 0.  !end
+    !line comment='Gamma-K'
+          file='Dos_A/bands.dat' nk=30 NB=8 tappend=T 
+          xk1=0. 0. 0. xk2=.25 .25  .5 !end
+    !line comment='U-X'
+          file='Dos_A/bands.dat' nk=30 NB=8 tappend=T 
+          xk1=0.5 0.75 0.75 xk2= 0.0 0.5 0.5 !end
+  !end
+!end
+!eob
+\end{verbatim}
+
+
+%==========================================================================
 \subsection{Argument description for the control input file}
 %==========================================================================
 
@@ -7432,28 +7516,38 @@ Crystallography, Vol. A. See description below.}
 %==========================================================================
 
 \subsection{Diagonalisation}
-The banddata-file contains all necessary information to build up the paw
-hamiltonian $\hat {\tilde H}$ in the plane wave basis. To calculate the
-eigenvalues $\epsilon_n $ and eigenstates $|\tilde \psi_n\rangle$, which are
-necessary for the projections $|\langle\tilde p_{IPRO} |\tilde
-\psi_i\rangle|^2$, we have to solve the Kohn-Sham equation for the pseudo wave
-functions:
+The banddata-file contains all necessary information to build up the
+paw hamiltonian $\hat {\tilde H}$ in the plane wave basis. To
+calculate the eigenvalues $\epsilon_n $ and eigenstates $|\tilde
+\psi_n\rangle$, which are necessary for the projections
+$|\langle\tilde p_{IPRO} |\tilde \psi_i\rangle|^2$, we have to solve
+the Kohn-Sham equation for the pseudo wave functions:
 \begin{equation}
-  \hat{\tilde H}|\tilde \psi_n\rangle=\epsilon_n \hat{\tilde S} |\tilde \psi_n\rangle,
+  \hat{\tilde H}|\tilde \psi_n\rangle
+=\epsilon_n \hat{\tilde S} |\tilde \psi_n\rangle,
 \end{equation}
 Here the hamilton operator is given as
 \begin{equation}
-\hat{\tilde H} =\frac{\hat{\vec p}^2}{2}+\tilde v+\sum_{i,j}|\tilde p_i\rangle\left(\langle \phi_i|\frac{\hat{\vec p}^2}{2}+v^1|\phi_j\rangle-\langle \tilde\phi_i|\frac{\hat{\vec p}^2}{2}+\tilde v^1|\tilde\phi_j\rangle\right)\langle \tilde p_j|
+\hat{\tilde H} 
+=\frac{\hat{\vec p}^2}{2}+\tilde v
++\sum_{i,j}|\tilde p_i\rangle
+\left(\langle \phi_i|\frac{\hat{\vec p}^2}{2}+v^1|\phi_j\rangle
+-\langle \tilde\phi_i|\frac{\hat{\vec p}^2}{2}
++\tilde v^1|\tilde\phi_j\rangle\right)\langle \tilde p_j|
 \end{equation}
 and the overlap operator can be written as
 \begin{equation}
-  \hat{\tilde S}=1+\sum_{i,j}|\tilde p_i\rangle[\langle \phi_i|\phi_j\rangle-\langle \tilde\phi_i|\tilde\phi_j\rangle]\langle \tilde p_j|.
+  \hat{\tilde S}
+=1+\sum_{i,j}|\tilde p_i\rangle[\langle \phi_i|\phi_j\rangle
+-\langle \tilde\phi_i|\tilde\phi_j\rangle]\langle \tilde p_j|.
 \end{equation}
 (For details please refer to Peter Bloechls main publication about the paw
-formalism.)\\For the calculation of the eigenvalues and eigenstates we build up
-the operators $\hat{\tilde H}$ and $\hat{\tilde S}$ is a finite plane wave basis
-and then solve the resulting generalized eigenvalue problem, where $\tilde H$ is
-hermitian and $\tilde S$ is positive definite.\\
+formalism.)
+
+For the calculation of the eigenvalues and eigenstates we build up the
+operators $\hat{\tilde H}$ and $\hat{\tilde S}$ is a finite plane wave
+basis and then solve the resulting generalized eigenvalue problem,
+where $\tilde H$ is hermitian and $\tilde S$ is positive definite.
 
 %====================================================================
 \paragraph{Matrix dimensions}

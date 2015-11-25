@@ -4,7 +4,7 @@ CHARACTER(32)        :: FILENAME="DEBUGOUT"
 INTEGER(8)           :: DUNIT=4243         
 LOGICAL(4)           :: ALLTASKS=.TRUE.
 END MODULE DEBUG_MODULE
-!      ........................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DEBUG$NAN_R8(LEN,OUTPUT,COMMENT)
        USE MPE_MODULE
        USE DEBUG_MODULE
@@ -14,23 +14,27 @@ END MODULE DEBUG_MODULE
        CHARACTER(*), INTENT(IN)           ::  COMMENT
        INTEGER(4)                         ::  NTASKS,THISTASK
        INTEGER(4)                         :: I
- !     **************************************************************************
+!      *************************************************************************
        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
        IF(.NOT.ALLTASKS) THEN
-         OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
-         &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-         WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+         OPEN(DUNIT,FILE=TRIM(ADJUSTL(FILENAME)),STATUS="UNKNOWN" &
+      &         ,ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE" &
+      &         ,POSITION="APPEND")
+         WRITE(DUNIT,FMT="(3A)",ADVANCE="YES" ) &
+      &              "==============",COMMENT,"==============" 
          IF(THISTASK.EQ.1) THEN
            DO I=1,LEN
              IF(OUTPUT(I).NE.OUTPUT(I)) THEN
-               WRITE (DUNIT,FMT="(A,I10,F25.14)")"THE FOLLOWING ELEMENT IS DUBIOUS: ",I,OUTPUT(I) 
+                WRITE(DUNIT,FMT="(A,I10,F25.14)") &
+      &              "THE FOLLOWING ELEMENT IS DUBIOUS: ",I,OUTPUT(I) 
              END IF
            END DO
            CLOSE(DUNIT)
          END IF
        ELSE
-         OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
-      &     ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
+         OPEN (DUNIT,FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN" &
+     &                 ,ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE" &
+     &                 ,POSITION="APPEND")
        DO I=1,LEN
          IF(OUTPUT(I).NE.OUTPUT(I)) THEN
            WRITE(DUNIT,FMT="(2A,I10,A,I4,F25.14)") &
@@ -41,22 +45,24 @@ END MODULE DEBUG_MODULE
        END IF
        END SUBROUTINE DEBUG$NAN_R8
 !
-!.....................................................................................
-SUBROUTINE DEBUG$NAN_C8(LEN,OUTPUT,COMMENT)
-  USE MPE_MODULE
-  USE DEBUG_MODULE
-  IMPLICIT NONE
-  INTEGER(4),   INTENT(IN)           ::  LEN
-  COMPLEX(8),   INTENT(IN)           ::  OUTPUT(LEN)
-  CHARACTER(*), INTENT(IN)           ::  COMMENT
-  INTEGER(4)                         ::  NTASKS,THISTASK
-  INTEGER(4)                         :: I
- !...................................................
-  CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-IF(.NOT.ALLTASKS) THEN
-  OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
-       &ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE", POSITION="APPEND")
-  WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE DEBUG$NAN_C8(LEN,OUTPUT,COMMENT)
+       USE MPE_MODULE
+       USE DEBUG_MODULE
+       IMPLICIT NONE
+       INTEGER(4),   INTENT(IN)           ::  LEN
+       COMPLEX(8),   INTENT(IN)           ::  OUTPUT(LEN)
+       CHARACTER(*), INTENT(IN)           ::  COMMENT
+       INTEGER(4)                         ::  NTASKS,THISTASK
+       INTEGER(4)                         :: I
+!      *************************************************************************
+       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+       IF(.NOT.ALLTASKS) THEN
+         OPEN(DUNIT,FILE=TRIM(ADJUSTL(FILENAME)),STATUS="UNKNOWN" &
+      &      ,ACCESS="SEQUENTIAL", FORM="FORMATTED",ACTION="WRITE" &
+      &      , POSITION="APPEND")
+       WRITE (DUNIT, FMT="(3A)", ADVANCE="YES" ) &
+      &      "==============",COMMENT,"==============" 
 
   IF(THISTASK.EQ.1) THEN
      DO I=1,LEN
