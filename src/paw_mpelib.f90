@@ -46,8 +46,8 @@ END MODULE MPI_MINE
 !
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL
-  USE MPI_MINE
-!  USE MPI
+     USE MPI_MINE
+!!$  USE MPI
 #ENDIF
   TYPE THISTYPE
     CHARACTER(128)     :: ID
@@ -121,7 +121,7 @@ CONTAINS
       RETURN
       END SUBROUTINE MPE_CHARTOASCII
 !
-!     .............................................................................
+!     ..........................................................................
       SUBROUTINE MPE_CHARFROMASCII(LENCH,STRING,LENI,IASCII)
       IMPLICIT  NONE
       INTEGER     ,INTENT(IN) :: LENCH
@@ -129,7 +129,7 @@ CONTAINS
       INTEGER     ,INTENT(IN) :: LENI
       INTEGER(4)  ,INTENT(IN) :: IASCII(LENI)
       INTEGER(4)              :: LENG,I,J,K
-!     *******************************************************************************
+!     **************************************************************************
       LENG=LEN(STRING)
       IF(LENG*LENCH.NE.LENI) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY SIZES')

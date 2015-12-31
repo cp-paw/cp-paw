@@ -10045,6 +10045,106 @@ and \ref{table:spacegroupnumber_b}.
   Kristallographie (2006), 221, 1, 15-27.  }
 \end{table}
 
+
+%====================================================================
+\newpage
+\section{Bands}
+%====================================================================
+Here I will list the high-symmetry points of the Brillouin zone, for
+use with the \verb|paw_bands.x| tool. If the real space lattice vectors are
+chosen consistent with the convention below, one can directly use the
+relative coordinates as \verb|xk1| and \verb|xk2| in the \verb|bcntl|
+file.
+
+See \url{http://lampx.tugraz.at/~hadley/ss1/bzones/}
+
+%====================================================================
+\subsection{Face-centered cubic lattice}
+%====================================================================
+\begin{center}
+\renewcommand\arraystretch{1.5}
+\begin{tabular}{||c|c||c|c||}
+\hline
+\multicolumn{2}{|c|}{real space vectors} &
+\multicolumn{2}{|c|}{reciprocal space vectors} \\
+\hline
+$\vec{T}_1$ & $(0,\frac{1}{2},\frac{1}{2}) a$ &
+$\vec{g}_1$ & $(-1,1,1)\frac{2\pi}{a}$ \\
+$\vec{T}_2$ & $(\frac{1}{2},0,\frac{1}{2}) a$ &
+$\vec{g}_2$ & $(1,-1,1)\frac{2\pi}{a}$ \\
+$\vec{T}_3$ & $(\frac{1}{2},\frac{1}{2},0) a$ &
+$\vec{g}_3$ & $(1,1,-1)\frac{2\pi}{a}$ \\
+\hline
+\end{tabular}
+\renewcommand\arraystretch{1.}
+\end{center}
+
+\begin{center}
+\renewcommand\arraystretch{1.5}
+\begin{tabular}{|c|c|c|}
+\hline
+\multicolumn{3}{|c|}{$\Gamma-X-W-L-\Gamma-K-X'$}\\
+\multicolumn{3}{|c|}{$(0)-(1)-(\frac{3}{2})-(2.20711)-(3.07313)-(4.13379)-(4.48735)$}\\
+\hline
+Symbol & absolute coord. & relative coord. \texttt{xk1,xk2}\\
+\hline
+$\Gamma$   & $(0,0,0) \frac{2\pi}{a}$ & $(0,0,0)$ \\ 
+$X$        & $(1,0,0) \frac{2\pi}{a}$ & $(0,\frac{1}{2},\frac{1}{2})$ \\ 
+$W$        & $(1,\frac{1}{2},0) \frac{2\pi}{a}$ & $(\frac{1}{4},\frac{1}{2},\frac{3}{4})$ \\ 
+$L$        & $(\frac{1}{2},\frac{1}{2},\frac{1}{2}) \frac{2\pi}{a}$ & $(\frac{1}{2},\frac{1}{2},\frac{1}{2})$ \\ 
+$\Gamma$   & $(0,0,0) \frac{2\pi}{a}$ & $(0,0,0)$ \\ 
+$K$        & $(\frac{3}{4},\frac{3}{4},0) \frac{2\pi}{a}$ & $(\frac{3}{8},\frac{3}{8},\frac{3}{4})$ \\ 
+$X'$       & $(1,1,0) \frac{2\pi}{a}$ & $(\frac{1}{2},\frac{1}{2},1)$ \\ 
+\hline
+\end{tabular}
+\renewcommand\arraystretch{1.}
+\end{center}
+The point $K$ lies on the connection from $\Gamma$ to $X'$, where $X'$
+is the $X$-point of a nearest neighbor reciprocal lattice vector of the
+$\Gamma$ point.
+
+%====================================================================
+\subsection{Body-centered cubic lattice}
+%====================================================================
+\begin{center}
+\renewcommand\arraystretch{1.5}
+\begin{tabular}{||c|c||c|c||}
+\hline
+\multicolumn{2}{|c|}{real space vectors} &
+\multicolumn{2}{|c|}{reciprocal space vectors} \\
+\hline
+$\vec{T}_1$ & $(-\frac{1}{2},\frac{1}{2},\frac{1}{2}) a$ &
+$\vec{g}_1$ & $(0,1,1)\frac{2\pi}{a}$ \\
+$\vec{T}_2$ & $(\frac{1}{2},-\frac{1}{2},\frac{1}{2}) a$ &
+$\vec{g}_2$ & $(1,0,1)\frac{2\pi}{a}$ \\
+$\vec{T}_3$ & $(\frac{1}{2},\frac{1}{2},-\frac{1}{2}) a$ &
+$\vec{g}_3$ & $(1,1,0)\frac{2\pi}{a}$ \\
+\hline
+\end{tabular}
+\renewcommand\arraystretch{1.}
+\end{center}
+
+\begin{center}
+\renewcommand\arraystretch{1.5}
+\begin{tabular}{|c|c|c|}
+\hline
+\multicolumn{3}{|c|}{$N-\Gamma-H-N-P-\Gamma$}\\
+\multicolumn{3}{|c|}{$(0)-(0.7071)-(1.7071)-(2.5731)-(3.0731)-(3.9392)$}\\
+\hline
+Symbol & absolute coord. & relative coord. \texttt{xk1,xk2}\\
+\hline
+$\Gamma$   & $(0,0,0) \frac{2\pi}{a}$ & $(0,0,0)$ \\ 
+$H$        & $(1,0,0) \frac{2\pi}{a}$ & $(-\frac{1}{2},\frac{1}{2},\frac{1}{2})$ \\ 
+$P$        & $(\frac{1}{2},\frac{1}{2},\frac{1}{2}) \frac{2\pi}{a}$ & $(\frac{1}{4},\frac{1}{4},\frac{1}{4})$ \\ 
+$N$        & $(\frac{1}{2},\frac{1}{2},0) \frac{2\pi}{a}$ & $(0,0,\frac{1}{2})$ \\ 
+\hline
+\end{tabular}
+\renewcommand\arraystretch{1.}
+\end{center}
+
+
+
+
 \clearpage
 
 

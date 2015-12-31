@@ -649,6 +649,34 @@
       END
 !
 !     ..................................................................
+      SUBROUTINE PDOS$GETCHA(ID,LEN,VAL)
+      USE PDOS_MODULE
+      IMPLICIT NONE
+      CHARACTER(*) ,INTENT(IN) :: ID
+      INTEGER(4)   ,INTENT(IN) :: LEN
+      CHARACTER(16),INTENT(OUT):: VAL(LEN)
+!     ******************************************************************
+      IF(ID.EQ.'ATOMID') THEN
+        IF(LEN.NE.NAT) THEN
+          CALL ERROR$MSG('INCONSISTENT SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETCHA')
+        END IF
+        IF(.NOT.ALLOCATED(ATOMID)) THEN
+          CALL ERROR$MSG('ATOMID NOT ALLOCATED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('PDOS$GETCHA')
+        END IF
+        VAL(:)=ATOMID(:)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PDOS$GETCHA')
+      END IF
+      RETURN
+      END
+!
+!     ..................................................................
       SUBROUTINE PDOS$SETCH(ID,VAL)
       USE PDOS_MODULE
       IMPLICIT NONE
