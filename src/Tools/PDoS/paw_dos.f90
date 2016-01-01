@@ -38,7 +38,7 @@ END MODULE READCNTL_MODULE
       USE SPINDIR_MODULE
       USE DOS_WGHT_MODULE
       IMPLICIT NONE
-      logical(4),parameter      :: told=.false.
+      LOGICAL(4),PARAMETER      :: TOLD=.FALSE.
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NAT
       INTEGER(4)                :: NB
@@ -135,20 +135,21 @@ END MODULE READCNTL_MODULE
 !
 !     ==========================================================================
 !     ==  TRANSFORM STATES IN PDOS OBJECT ONTO AN ORTHORMAL BASISSET          ==
+!     ==  AFTER THAT THE VARIABLE OV EQUALS THE UNIT MATRIX                   ==
 !     ==========================================================================
       CALL ORTHONORMALIZESTATES()
 !
 !     ==========================================================================
-!     ==  WRITE REPORT                                                        ==
+!     ==  CALCULATE ANGULAR MOMENTUM WEIGHTS AND SPINS                        ==
+!     ==  AND WRITE RESULT TO THE PROTOCOLL FILE.                             ==
+!     ==  THE VARIABLE SPIN DIR GIVES THE LOCAL SPIN AXIS AND IS KEPT FOR LATER=
 !     ==========================================================================
-!     __DETERMINE ANGULAR MOMENTUM WEIGHTS AND SPIN CONTRIBUTIONS AND WRITE_____
-!     __TO PROTOCOLL FILE.
       ALLOCATE(SPINDIR(3,NAT))
       CALL REPORT(NFILO)
                             CALL TRACE$PASS('AFTER REPORT')
 !
 !     ==========================================================================
-!     ==  READ PREDEFINED ORBITALS                                            ==
+!     ==  READ PREDEFINED ORBITALS  (DATA -> NEWORBITAL_MODULE)               ==
 !     ==========================================================================
       CALL READCNTL$ORBITAL(LENG,NAT,RBAS,RPOS,ATOMID)
                             CALL TRACE$PASS('AFTER READCNTL$ORBITAL')
@@ -551,6 +552,9 @@ PRINT*,'AFTER NEWSET$PROCESS'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ORTHONORMALIZESTATES()
 !     **************************************************************************
+!     ** transforms the locval basis set so that it is orthonormal.           **
+!     ** a cholesky decomposition of the local orbitals transforms the        **
+!     ** variable into a unit matrix                                          **
 !     **************************************************************************
       USE PDOS_MODULE, ONLY : NSP &
      &                       ,LNX &      !(NSP)
@@ -578,15 +582,16 @@ PRINT*,'AFTER NEWSET$PROCESS'
       ENDDO
       ISVAR=MAXVAL(LMNX)
       ALLOCATE(TRANSFORM(ISVAR,ISVAR,NSP))
+      transform(:,:,:)=(0.d0,0.d0)
 !
 !     ==========================================================================
 !     == DETERMINE TRANSFORMATION MATRIX USING CHOLESKY DECOMPOSITION         ==
 !     ==========================================================================
       DO ISP=1,NSP
-        WRITE(*,FMT='(80("="),T10," OV FOR ISP=",I2,"  ")')ISP
-        DO LN=1,LNX(ISP)
-          WRITE(*,FMT='(10F10.5)')OV(LN,:LNX(ISP),ISP)
-        ENDDO 
+!!$        WRITE(*,FMT='(80("="),T10," OV FOR ISP=",I2,"  ")')ISP
+!!$        DO LN=1,LNX(ISP)
+!!$          WRITE(*,FMT='("OV=",10F10.5)')OV(LN,:LNX(ISP),ISP)
+!!$        ENDDO 
         ALLOCATE(AMAT(LNX(ISP),LNX(ISP)))
         ALLOCATE(BMAT(LNX(ISP),LNX(ISP)))
         AMAT=OV(:LNX(ISP),:LNX(ISP),ISP)
@@ -594,10 +599,10 @@ PRINT*,'AFTER NEWSET$PROCESS'
         BMAT=TRANSPOSE(BMAT)
         DEALLOCATE(AMAT)
 !
-        WRITE(*,FMT='(80("="),T10," G FOR ISP=",I2,"  ")')ISP
-        DO LN1=1,LNX(ISP)
-          WRITE(*,FMT='(10F10.5)')BMAT(:,LN1)
-        ENDDO 
+!!$        WRITE(*,FMT='(80("="),T10," G FOR ISP=",I2,"  ")')ISP
+!!$        DO LN1=1,LNX(ISP)
+!!$          WRITE(*,FMT='(10F10.5)')BMAT(:,LN1)
+!!$        ENDDO 
 !
 !       == UPFOLD BMAT AND PLACE INTO TRANSFORM ================================
         LMN1=0
@@ -606,13 +611,14 @@ PRINT*,'AFTER NEWSET$PROCESS'
           LMN2=0
           DO LN2=1,LNX(ISP)
             L2=LOX(LN2,ISP)
-            IF(L2.NE.L1) CYCLE
-            DO IM=1,2*L1+1
-              TRANSFORM(LMN1+IM,LMN2+IM,ISP)=CMPLX(BMAT(LN1,LN2),KIND=8)
-            ENDDO
+            IF(L2.eq.L1) then
+              DO IM=1,2*L1+1
+                TRANSFORM(LMN1+IM,LMN2+IM,ISP)=CMPLX(BMAT(LN1,LN2),KIND=8)
+              ENDDO
+            endif
             LMN2=LMN2+2*L2+1
           ENDDO
-          LMN1=LMN1+1
+          LMN1=LMN1+2*l1+1
         ENDDO
         DEALLOCATE(BMAT)
       ENDDO !ISP
@@ -646,12 +652,13 @@ PRINT*,'AFTER NEWSET$PROCESS'
           OV(LN,LN,ISP)=1.D0
         ENDDO
       ENDDO
-      DO ISP=1,NSP
-        WRITE(*,FMT='(80("="),T10," OV(SET TO 1) FOR ISP=",I2,"  ")')ISP
-        DO LN=1,LNX(ISP)
-          WRITE(*,FMT='(10F10.5)')OV(LN,:LNX(ISP),ISP)
-        ENDDO 
-      ENDDO
+!
+!!$      DO ISP=1,NSP
+!!$        WRITE(*,FMT='(80("="),T10," OV(SET TO 1) FOR ISP=",I2,"  ")')ISP
+!!$        DO LN=1,LNX(ISP)
+!!$          WRITE(*,FMT='(10F10.5)')OV(LN,:LNX(ISP),ISP)
+!!$        ENDDO 
+!!$      ENDDO
       RETURN
       END
 !
@@ -1019,7 +1026,7 @@ END MODULE NEWORBITAL_MODULE
         CALL ERROR$MSG('ORBITAL NOT SELECTED')
         CALL ERROR$STOP('NEWORBITAL$GETENTRY')
       END IF
-      IF(IENTRY.GT.NEWORBITAL(IORB)%nENTRY) THEN
+      IF(IENTRY.GT.NEWORBITAL(IORB)%NENTRY) THEN
         CALL ERROR$MSG('ENTRY INDEX OUT OF RANGE')
         CALL ERROR$STOP('NEWORBITAL$GETENTRY')
       END IF
@@ -1164,15 +1171,15 @@ END MODULE NEWORBITAL_MODULE
                 IF(IPRO.EQ.0) CYCLE
                 CFAC=CONJG(NEWORBITAL(IORB)%ENTRY(IENTRY)%ORB(LMN)*EIKT)
                 IF(NDIM.EQ.2) THEN
-                  ORBPRO(:,:,iKPT,IORB)=ORBPRO(:,:,iKPT,IORB) &
+                  ORBPRO(:,:,IKPT,IORB)=ORBPRO(:,:,IKPT,IORB) &
      &                                 +CFAC*STATE%VEC(:,IPRO,:)
                 ELSE IF(NDIM.EQ.1) THEN
                   IF(ISPIN.EQ.1) THEN ! FIRST SPIN DIRECTION
-                    ORBPRO(1,:NB,iKPT,IORB)=ORBPRO(1,:NB,iKPT,IORB) &
+                    ORBPRO(1,:NB,IKPT,IORB)=ORBPRO(1,:NB,IKPT,IORB) &
      &                                   +CFAC*STATE%VEC(1,IPRO,:)
                   END IF
                   IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN ! SECOND SPIN DIRECTION
-                    ORBPRO(2,NB+1:2*NB,iKPT,IORB)=ORBPRO(2,NB+1:2*NB,iKPT,IORB)&
+                    ORBPRO(2,NB+1:2*NB,IKPT,IORB)=ORBPRO(2,NB+1:2*NB,IKPT,IORB)&
      &                                       +CFAC*STATE%VEC(1,IPRO,:)
                   END IF
                 END IF ! NDIM=1 OR 2
@@ -1300,6 +1307,14 @@ END MODULE NEWSET_MODULE
           CALL ERROR$STOP('NEWSET$SETCH')
         END IF
         NEWSET(ISET)%SPINID=VAL
+!
+      ELSE IF(ID.EQ.'LEGEND') THEN
+        IF(ISET.EQ.0) THEN
+          CALL ERROR$MSG('NO SET SELECTED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('NEWSET$SETCH')
+        END IF
+        NEWSET(ISET)%LEGEND=VAL
 !
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -1710,7 +1725,7 @@ END MODULE NEWSET_MODULE
      &                          ,STATEARR !(IKPT,ISPIN)
       USE NEWSET_MODULE, ONLY : NEWSET
       IMPLICIT NONE
-      logical(4),parameter   :: told=.false.
+      LOGICAL(4),PARAMETER   :: TOLD=.FALSE.
       INTEGER(4),INTENT(IN)  :: NBB
       INTEGER(4),INTENT(IN)  :: NKPT
       INTEGER(4),INTENT(IN)  :: NSET
@@ -1769,8 +1784,8 @@ END MODULE NEWSET_MODULE
 !     ==  OVERWRITE OLD SETS                                                  ==
 !     ==========================================================================
 !!$      DO ISET=1,NSET
-!!$        WRITE(*,*)trim(NEWSET(ISET)%ID),'||',trim(NEWSET(ISET)%LEGEND) &
-!!$     &                                 ,'||',trim(NEWSET(ISET)%spinid)
+!!$        WRITE(*,*)TRIM(NEWSET(ISET)%ID),'||',TRIM(NEWSET(ISET)%LEGEND) &
+!!$     &                                 ,'||',TRIM(NEWSET(ISET)%SPINID)
 !!$        DO IKPT=1,NKPT
 !!$          DO I=1,NBB
 !!$            WRITE(*,FMT='(3I5,10F10.5)')ISET,IKPT,I,MATEL(:2,I,IKPT,ISET) &
@@ -1782,12 +1797,12 @@ END MODULE NEWSET_MODULE
 !     ==========================================================================
 !     ==  OVERWRITE OLD SETS                                                  ==
 !     ==========================================================================
-      if(told) then
-        print*,'old version'
-        return
-      else
-        print*,'new version'
-      end if
+      IF(TOLD) THEN
+        PRINT*,'OLD VERSION'
+        RETURN
+      ELSE
+        PRINT*,'NEW VERSION'
+      END IF
 !
       DO I=1,2
         SET(:,:,I,:)=MATEL(I,:,:,:)
@@ -1828,7 +1843,7 @@ END MODULE NEWSET_MODULE
 !     **************************************************************************
       IF(NSET1.NE.NSET) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY SIZES')
-        CALL ERROR$STOP('NEWSET_projectspin')
+        CALL ERROR$STOP('NEWSET_PROJECTSPIN')
       END IF
       DO ISET=1,NSET
         SPINID=NEWSET(ISET)%SPINID
@@ -2052,9 +2067,9 @@ END MODULE NEWSET_MODULE
 !     ==========================================================================
       DO ISET=1,NSET
         IF(NEWSET(ISET)%SPECIAL.EQ.'TOTAL') THEN
-!         == matel is the prefactor of the prefactor of the unit matrix
-!         == which has trace two. therefor the factor 0.5
-          MATEL(1,:,:,ISET)=0.5d0
+!         == MATEL IS THE PREFACTOR OF THE PREFACTOR OF THE UNIT MATRIX
+!         == WHICH HAS TRACE TWO. THEREFOR THE FACTOR 0.5
+          MATEL(1,:,:,ISET)=0.5D0
         ELSE IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
      &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
           DO IKPT=1,NKPT
@@ -2379,10 +2394,10 @@ END MODULE ORBITALS_MODULE
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,ORBITALNAME1)
         CALL ORBITALS$GETORB(ORBITALNAME1,NPRO,ORBITAL)
-        if(sum(it**2).gt.0) then
-          call error$msg('cannot translate orbital')
-          call error$stop('readoneorb')
-        end if
+        IF(SUM(IT**2).GT.0) THEN
+          CALL ERROR$MSG('CANNOT TRANSLATE ORBITAL')
+          CALL ERROR$STOP('READONEORB')
+        END IF
       END IF
 !
 !     ==========================================================================
@@ -3742,6 +3757,16 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         CALL NEWSET$SELECT(SETID)
 !
 !       ========================================================================
+!       == READ LEGEND                                                        ==
+!       ========================================================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'LEGEND',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,LEGEND)
+        ELSE
+          CALL NEWSET$SETCH('LEGEND',LEGEND)
+        END IF
+!
+!       ========================================================================
 !       == DEFINE SPIN AXIS                                                   ==
 !       == CAN BE '+Z', '-Z'
 !       ========================================================================
@@ -4605,7 +4630,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PUTONGRID_TETRA(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-     &                    ,NBB,NKPT,EIG,SET,LEGEND)
+     &                          ,NBB,NKPT,EIG,SET,LEGEND)
 !     **************************************************************************
 !     **  MAPS THE CONTRIBUTION FROM EACH STATE ONTO AN ENERGY GRID,          **
 !     **  CONSTRUCTS DOS AND NOS WITH THE TETRAHEDRON METHOD AND WRITES THE   **
