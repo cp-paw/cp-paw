@@ -1258,6 +1258,23 @@ to estimate the frequency from
   \vdefault{T}
 }
 
+\mbax{\key{STRAIGHTEN} 
+  \vdescr{Transform the wave functions onto energy eigenstates. The
+    transform is performed during the first big writeup of the
+    protocoll file. A unitary transform among the wave function is
+    performed. That is, the Hilbert space remains unchanged.  Note,
+    that the occupations may be inconsistent with the new states. It
+    may be adviseable to simultaneously restart the occupations.
+ 
+    This option can be used to accelerate convergence with
+    !CONTROL!PSIDYN:SAFEORTHO=F, because it shortcuts the lengthy
+    dynamics towared energy eigenstates. It may also be useful in the
+    early stages of the wave function optimization.}
+  \vformat{logical} 
+  \vrules{optional} 
+  \vdefault{F}
+}
+
 \mbax{\key{SWAPSTATES}
 \vdescr{\textbf{Experimental option! You are on your own!}
 Only used with SAFEORTHO=F. For SWAPSTATES=F, the approximate
@@ -4761,7 +4778,7 @@ The calling sequence is
 
 \noindent 
 where {\it controlfile} is the file name of the control input file for
-the paw\_dos tool described below. I recommend the extension
+the paw\_wave tool described below. I recommend the extension
 ``.wcntl'' for the control file of the density of states analysis tool.
 
 %==========================================================================
@@ -6234,7 +6251,9 @@ normalized with the overlap between partial waves to obtain the
 complete result.
 
 
+%===============================================================================
 \subsubsection{Matrix elements}
+%===============================================================================
 
 Once the orbitals have been defined, we need to choose the matrix
 elements of the PDOS operator. Each matrix element is given a name,
@@ -6254,9 +6273,9 @@ can be selected in two different ways:
 
 \end{itemize}
 
-%=======================================
+%===============================================================================
 \subsubsection{Operations}
-%=======================================
+%===============================================================================
 Projected charges, spin and eventually spin directions are printed to
 the protocol file.  In order to access the data we have to define how
 they are to be represented.
@@ -6527,8 +6546,21 @@ largely independent of the system}
 %----------------------------------------------------------------------
 \block{!DCNTL!ORBITAL!ORB}
 %----------------------------------------------------------------------
-\brules{optional, multiple}
-\bdescr{select a predefined orbital from which the orbital is built}
+\brules{optional, multiple} 
+\bdescr{select an orbital (fragment) to be added to the current orbital
+\begin{itemize}
+\item An elementary unit of a general orbital is a contribution from a
+  single site in a specific unit cell. This contribution can be
+  specified by an angular momentum character or as hybrid orbital. The
+  orbital can be chosen as one of basic types TYPE in a local
+  coordinate system.
+% 
+\item An existing orbital can be selected using NAME. The orbital
+  needs to be defined by a preceeding !DCNTL!ORBITAL block. In this
+  manner orbitals with arbitrary complexity can be composed.
+\end{itemize}
+Once defined, the orbital can be shifted by a lattice translation IT
+and multiplied with a complex factor FAC.  }
 
 \mbax{\key{NAME}
 \vdescr{specifies an orbital previously specified by another block
@@ -6537,11 +6569,27 @@ largely independent of the system}
 \vrules{optional; incompatible with atom and type}
 \vdefault{none}}
 
-\mbax{\key{ATOM}
-\vdescr{atom name on which the orbital resides.}
-\vformat{character} 
-\vrules{optional; incompatible with name}
+\mbax{\key{FAC}
+\vdescr{Orbital coefficient, with which it contributes to the orbital
+  to be built.}
+\vformat{complex (real and integer allowed)} 
+\vrules{optional}
+\vdefault{1.0}}
+
+\mbax{\key{IT}
+\vdescr{translations along the three real space lattice vectors. The
+  entire orbital is shifted by $\sum_{j=1}^3\vec{T}_j IT_j$.}
+\vformat{$3\times$ integer} 
+\vrules{optional}
 \vdefault{none}}
+
+\mbax{\key{ATOM} 
+\vdescr{atom name on which the orbital resides.  (Extended notation,
+  see section~\ref{sec:extendedatomnotation} on
+  p.~\pageref{sec:extendedatomnotation})}
+  \vformat{character}
+  \vrules{optional; incompatible with name} 
+  \vdefault{none}}
 
 \mbax{\key{TYPE} 
 \vdescr{orbital type. Can be one of the following.
@@ -6552,13 +6600,6 @@ largely independent of the system}
 \vrules{optional; incompatible with name; mandatory if atom is
   specified.}
 \vdefault{none}}
-
-\mbax{\key{FAC}
-\vdescr{Orbital coefficient, with which it contributes to the orbital
-  to be built.}
-\vformat{complex (real and integer allowed)} 
-\vrules{optional}
-\vdefault{1.0}}
 
 \mbax{\key{Z}
 \vdescr{vector defining the new z-direction to which TYPE refers}
@@ -6609,12 +6650,18 @@ The selection type is not compatible with the other two possibilities.
 }
 
 \mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements. Note that
-  the file name for the DoS and NoS files will be composed from this ID
-  as PREFIX//ID//'.dos' and PREFIX//ID//'.nos'. The file format is
-  described in section~\ref{sec:formatdosfile}}
+\vdescr{defines the name for this set of matrix elements. 
+  This ID defines the name of the output file as PREFIX//ID//'.dos', 
+  where PREFIX is defined in !DCNTL!GENERIC:PREFIX.
+  The file format is described in section~\ref{sec:formatdosfile}}
 \vformat{character} 
 \vrules{mandatory} 
+\vdefault{none}}
+
+\mbax{\key{LEGEND}
+\vdescr{defines the legend used in the plot to annotate the dataset.}
+\vformat{character} 
+\vrules{optional} 
 \vdefault{none}}
 
 \mbax{\key{TYPE}
@@ -6629,31 +6676,37 @@ The selection type is not compatible with the other two possibilities.
 be present}
 \vdefault{none}}
 
-\mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements}
-\vformat{character} 
-\vrules{mandatory}
-\vdefault{none}}
 
-\mbax{\key{SPIN}
-\vdescr{specifies the spin projection for non-collinear calculations
+\mbax{\key{SPIN} 
+\vdescr{specifies the axis $\vec{e}_S$ for the spin projection.  The
+  density of states is divided into contributions from eigenstates
+  into spin eigenstates parallel and anti-parallel to this spin
+  axis. (Even non-spin polarized calculations are interpreted in the 
+  data model for non-collinear calculations.) The parallel contribution 
+  is shown with positive values and
+  the antiparallel contribution is shown with negative values.
 \begin{description}
-\item[``TOTAL''] total density
-\item[``X'']   spin density in $x$-direction
-\item[``Y'']   spin density in $y$-direction
-\item[``Z'']   spin density in $z$-direction
-\item[``MAIN'']   spin density in the main spin direction of this atom
+\item['TOTAL'] Both spin components are added up. 
+(The second component is set to zero.)
+\item['X' or '+X']   spin axis is $\vec{e}_S=(1,0,0)$
+\item['-X']   spin axis is $\vec{e}_S=(-1,0,0)$
+\item['Y' or '+Y']   spin axis is $\vec{e}_S=(0,1,0)$
+\item['-Y']   spin axis is $\vec{e}_S=(0,-1,0)$
+\item['Z' or '+Z']   spin axis is $\vec{e}_S=(0,0,1)$
+\item['-Z']   spin axis is $\vec{e}_S=(0,0,-1)$
+\item['MAIN']  spin axis is the direction of the majority spin axis.
+\item[string holding three real numbers] The three numbers are the
+  three cartesian components of the spin axis $\vec{e}_S$
 \end{description}}
 \vformat{character} 
-\vrules{optional; only used when ``type'' is present. 
-       Not allowed for collinear calculations.}
-\vdefault{none}}
+\vrules{optional}
+\vdefault{'+Z'}}
 
 %----------------------------------------------------------------------
 \block{!DCNTL!WEIGHT!ATOM}
 %----------------------------------------------------------------------
 \brules{optional}
-\bdescr{select a predefined orbital from which the orbital is built}
+\bdescr{select the angular momentum weights from a given atom.}
 
 \mbax{\key{NAME}
 \vdescr{atom name from which the contribution to this weight is selected}
@@ -6686,53 +6739,74 @@ or a combination of S,P,D,F, such as ``SD''.
 %----------------------------------------------------------------------
 \block{!DCNTL!COOP}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{selects a sum of off-diagonal elements of
-  the density-of-states operator.  The off-diagonal elements are
-  defined by all pairs of orbitals specified in !DCNTL!COOP!ORB1 on
-  the one hand and in !DCNTL!COOP!ORB2 on the other hand.}
+\brules{optional} \bdescr{selects off-diagonal matrix elements of the
+  density-of-states operator.  The off-diagonal elements are defined
+  by all pairs of orbitals specified in !DCNTL!COOP!ORB1 on the one
+  hand and in !DCNTL!COOP!ORB2 on the other hand.
+
+  While it is possible, it is not recommended to use more than one
+  pair of orbitals. The result of multiple orbitals is the sum of all
+  coops that can be built from orbitals all pairs of orbitals, of
+  which one is from ORB1 and the other from ORB2. The result is
+  identical to the matrix element of an orbital obtained by summing
+  all orbitals ORB1 and another one obtained by summing all orbitals
+  ORB2.}
 
 \mbax{\key{ID}
-\vdescr{defines the name for this set of matrix elements. Note that
-  the file name for the DoS and NoS files will be composed from this ID
-  as PREFIX//ID//'.dos' and PREFIX//ID//'.nos'. The file format is
-  described in section~\ref{sec:formatdosfile}}
+\vdescr{defines the name for this set of matrix elements. 
+  This ID defines the name of the output file as PREFIX//ID//'.dos', 
+  where PREFIX is defined in !DCNTL!GENERIC:PREFIX.
+  The file format is described in section~\ref{sec:formatdosfile}}
 \vformat{character} 
-\vrules{mandatory}
+\vrules{mandatory} 
 \vdefault{none}}
+
+\mbax{\key{LEGEND}
+\vdescr{defines the legend used in the plot to annotate the dataset.}
+\vformat{character} 
+\vrules{optional} 
+\vdefault{none}}
+
+\mbax{\key{SPIN} 
+\vdescr{specifies the axis $\vec{e}_S$ for the spin projection.  The
+  density of states is projected onto contributions from spin eigenstates
+  parallel (not antiparallel) to this spin axis. 
+(Even non-spin polarized calculations are interpreted in the 
+  data model for non-collinear calculations.) 
+\begin{description}
+\item['TOTAL'] Both spin components are added up. 
+(The second component is set to zero.)
+\item['X' or '+X']   spin axis is $\vec{e}_S=(1,0,0)$
+\item['-X']   spin axis is $\vec{e}_S=(-1,0,0)$
+\item['Y' or '+Y']   spin axis is $\vec{e}_S=(0,1,0)$
+\item['-Y']   spin axis is $\vec{e}_S=(0,-1,0)$
+\item['Z' or '+Z']   spin axis is $\vec{e}_S=(0,0,1)$
+\item['-Z']   spin axis is $\vec{e}_S=(0,0,-1)$
+\item['MAIN']  spin axis is the direction of the majority spin axis.
+\item[string holding three real numbers] The three numbers are the
+  three cartesian components of the spin axis $\vec{e}_S$
+\end{description}}
+\vformat{character} 
+\vrules{optional}
+\vdefault{'+Z'}}
+
 
 %----------------------------------------------------------------------
 \block{!DCNTL!COOP!ORB1}
 %----------------------------------------------------------------------
 \brules{optional, multiple} 
 
-\bdescr{selects an orbital for which the off-diagonal elements of the
-  density of states operator with the orbitals selected by
-  !DCNTL!COOP!ORB2 are to be calculated; usage is same as
-  !DCNTL!ORBITAL!ORB}
+\bdescr{selects the 'left' orbital of the density of states matrix
+  element Usage is same as !DCNTL!ORBITAL!ORB}
 
 %----------------------------------------------------------------------
 \block{!DCNTL!COOP!ORB2}
 %----------------------------------------------------------------------
 \brules{optional, multiple} 
 
-\bdescr{selects an orbital for which the off-diagonal elements of the
-  density of states operator with the orbitals selected by
-  !DCNTL!COOP!ORB1 are to be calculated; usage is same as
-  !DCNTL!ORBITAL!ORB}
+\bdescr{selects the 'right' orbital of the density of states matrix
+  element Usage is same as !DCNTL!ORBITAL!ORB}
 
-\mbax{\key{SPIN}
-\vdescr{selects the spin directions in noncollinear calculations. Can be
-\begin{description}
-\item[``TOTAL''] total density
-\item[``X'']   spin density in $x$-direction
-\item[``Y'']   spin density in $y$-direction
-\item[``Z'']   spin density in $z$-direction
-\item[``MAIN'']   spin density in the main spin direction of this atom
-\end{description}}
-\vformat{character} 
-\vrules{optional}
-\vdefault{TOTAL}
-}
 
 %==========================================================================
 \newpage

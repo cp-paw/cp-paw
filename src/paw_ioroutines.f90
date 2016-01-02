@@ -1223,6 +1223,9 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_PSIDYN(LL_CNTL_)
+!     **************************************************************************
+!     ** READ INFORMATION FOR WAVE FUNCTION DYNAMICS FROM CONTROL FILE        **
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
@@ -1237,28 +1240,29 @@ CALL TRACE$PASS('DONE')
       REAL(8)               :: EMASSCG2
       REAL(8)               :: DT
       REAL(8)               :: PI
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('READIN_PSIDYN')  
       LL_CNTL=LL_CNTL_
       PI=4.D0*ATAN(1.D0)
 !
-!     ==================================================================
-!     ==  READ BLOCK GENERIC                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK GENERIC                                                  ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
       CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
       CALL WAVES$SETR8('TIMESTEP',DT)
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!PSIDYN                                  ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!PSIDYN                                          ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'PSIDYN')
 !
-!     == CAPTURE OUTDATED VERSIONS  ====================================
+!     ==========================================================================
+!     == CAPTURE OUTDATED VERSIONS  ============================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DIAG',1,TCHK)
       IF(TCHK) THEN
         CALL ERROR$MSG('SYNTAX HAS CHANGED')
@@ -1266,13 +1270,15 @@ CALL TRACE$PASS('DONE')
         CALL ERROR$STOP('READIN$PSIDYN')
       END IF
 !
-!     ==  BEGIN WITH ZERO VELOCITIES ===================================
+!     ==========================================================================
+!     ==  BEGIN WITH ZERO VELOCITIES ===========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TSTOPE)
       CALL WAVES$SETL4('STOP',TSTOPE)
 !
-!     ==  BEGIN WITH RANDOM VELOCITIES =================================
+!     ==========================================================================
+!     ==  BEGIN WITH RANDOM VELOCITIES =========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'RANDOM',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RANDOM',0,0.D0)
       CALL LINKEDLIST$CONVERT(LL_CNTL,'RANDOM',1,'R(8)')
@@ -1281,14 +1287,16 @@ CALL TRACE$PASS('DONE')
       CALL WAVES$SETL4('RANDOMIZE',TRANE)
       CALL WAVES$SETR8('AMPRE',AMPRE)
 !
-!     ==  FRICTION  (MAY BE CHANGED BY !AUTO) ==========================
+!     ==========================================================================
+!     ==  FRICTION  (MAY BE CHANGED BY !AUTO)                                 ==
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
       CALL LINKEDLIST$CONVERT(LL_CNTL,'FRIC',1,'R(8)')
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRICTION)
       CALL WAVES$SETR8('FRICTION',FRICTION)
 !
-!     ==  ENHANCEMENT FACTOR FOR FICTITIOUS ELECTRON MASS ==============
+!     ==========================================================================
+!     ==  FICTITIOUS WAVE FUNCTION MASS                                       ==
       CALL LINKEDLIST$EXISTD(LL_CNTL,'MPSI',1,TCHK)
       IF(.NOT.TCHK) THEN
         EMASS=10.D0*DT**2
@@ -1299,7 +1307,8 @@ CALL TRACE$PASS('DONE')
       END IF
       CALL WAVES$SETR8('EMASS',EMASS)
 !
-!     ==  ENHANCEMENT FACTOR FOR FICTITIOUS ELECTRON MASS ==============
+!     ==========================================================================
+!     ==  ENHANCEMENT FACTOR FOR FICTITIOUS WAVE FUNCTION MASS                ==
       CALL LINKEDLIST$EXISTD(LL_CNTL,'MPSICG2',1,TCHK)
       IF(.NOT.TCHK) THEN
          EMASSCG2=0.5D0*(10.D0/(2.D0*PI))**2*DT**2/EMASS
@@ -1310,30 +1319,39 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$GET(LL_CNTL,'MPSICG2',1,EMASSCG2)
       CALL WAVES$SETR8('EMASSCG2',EMASSCG2)
 !
-!     ==  STORE REAL SPACE WAVE FUNCTIONS TO AVOID ADDITIONAL FFT =======
+!     ==========================================================================
+!     ==  STORE REAL SPACE WAVE FUNCTIONS TO AVOID ADDITIONAL FFT ==============
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOREPSIR',1,TCHK)
       IF(TCHK) THEN
         CALL ERROR$MSG('THE PARAMETER STOREPSIR HAS BEEN ELIMINATED')
         CALL ERROR$STOP('READIN_WAVES')         
       END IF
 !
-!     ==  SAFEORTHO STRICTLY CONSERVES ENERGY, ==========================
-!     ==  BUT DOES NOT PRODUCE EIGENSTATES ===============================
+!     ==========================================================================
+!     ==  SAFEORTHO=T STRICTLY CONSERVES ENERGY,                              ==
+!     ==  BUT DOES NOT PRODUCE EIGENSTATES =====================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'SAFEORTHO',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SAFEORTHO',0,.TRUE.)
       CALL LINKEDLIST$GET(LL_CNTL,'SAFEORTHO',1,TCHK)
       CALL WAVES$SETL4('SAFEORTHO',TCHK)
 !
+!     ==========================================================================
+!     ==  STRAIGHTEN MAKES ONCE A TRANSFORMATION TO EIGENSTATES               ==
+!     ==                                                                      ==
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STRAIGHTEN',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STRAIGHTEN',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'STRAIGHTEN',1,TCHK)
+      CALL WAVES$SETL4('STRAIGHTEN',TCHK)
+!
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'SWAPSTATES',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SWAPSTATES',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'SWAPSTATES',1,TCHK)
       CALL WAVES$SETL4('SWAPSTATES',TCHK)
-
-
 !
-!     ==================================================================
-!     ==  READ       FIXRHO                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ       FIXRHO                                                   ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FIXRHO',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FIXRHO',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'FIXRHO',1,TCHK)
@@ -1345,7 +1363,8 @@ CALL TRACE$PASS('DONE')
         CALL LINKEDLIST$EXISTL(LL_TEST,'RDYN',1,TCHK1)
         IF(TCHK1) THEN
           CALL ERROR$MSG('FROZEN POTENTIAL AND ATOM DYNAMICS ARE INCOMPATIBLE')
-          CALL ERROR$MSG('!CONTROL!RDYN AND !CONTROL!PSIDYN:FIXRHO ARE INCOMPATIBLE')
+          CALL ERROR$MSG('!CONTROL!RDYN AND !CONTROL!PSIDYN:FIXRHO')
+          CALL ERROR$MSG('ARE INCOMPATIBLE')
           CALL ERROR$STOP('READIN_PSIDYN')
         END IF
       END IF
@@ -1356,14 +1375,14 @@ CALL TRACE$PASS('DONE')
         CALL WAVES$SETL4('WRITERHO',TCHK)
       END IF
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!PSIDYN!AUTO                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!PSIDYN!AUTO                                     ==
+!     ==========================================================================
       CALL READIN_AUTO(LL_CNTL,'WAVES',0.3D0,0.97D0,0.3D0,1.D0)
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!PSIDYN!THERMOSTAT                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!PSIDYN!THERMOSTAT                               ==
+!     ==========================================================================
       CALL READIN_THERMOSTAT(LL_CNTL,'WAVES',DT,1.D0,100.D0)
 !
 !     ==========================================================================
@@ -1381,8 +1400,8 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_RDYN(LL_CNTL_)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
@@ -1395,38 +1414,38 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)               :: TRANP
       REAL(8)                  :: CELVIN
       REAL(8)                  :: DT
-!     ******************************************************************
+!     **************************************************************************
                             CALL TRACE$PUSH('READIN_RDYN')
       LL_CNTL=LL_CNTL_
 !
-!     ==================================================================
-!     ==  READ BLOCK GENERIC                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK GENERIC                                                  ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
       CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DT)
       CALL WAVES$SETR8('TIMESTEP',DT)
 !
-!     ==================================================================
-!     ==  GET INTO BLOCK !CONTROL!RDYN                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  GET INTO BLOCK !CONTROL!RDYN                                        ==
+!     ==========================================================================
       CALL CONSTANTS('KB',CELVIN)
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'RDYN',1,TFOR)
       CALL LINKEDLIST$SELECT(LL_CNTL,'RDYN')
 !
-!     == SET ATOMS OBJECT ==============================================
+!     == SET ATOMS OBJECT ======================================================
       CALL ATOMS$SETL4('MOVE',TFOR)
 !
-!     == STOP
+!     == STOP ==================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'STOP',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'STOP',0,.FALSE.)
       CALL LINKEDLIST$GET(LL_CNTL,'STOP',1,TSTOPR)
       CALL ATOMS$SETL4('STOP',TSTOPR)
 !
-!     == RANDOMIZE
+!     == RANDOMIZE =============================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'RANDOM[K]',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'RANDOM[K]',0,0.D0)
       CALL LINKEDLIST$GET(LL_CNTL,'RANDOM[K]',1,AMPRP) 
@@ -1435,25 +1454,25 @@ CALL TRACE$PASS('DONE')
       CALL ATOMS$SETL4('RANDOMIZE',TRANP)
       CALL ATOMS$SETR8('AMPRE',AMPRP)
 !
-!     == FRICTION =====================================================
+!     == FRICTION ==============================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
       IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'FRIC',0,0.D0)
       CALL LINKEDLIST$GET(LL_CNTL,'FRIC',1,FRICTION)
-!     __ FRICTION MAY HAVE AN INFLUENCE ON THE ELECTRON FRICTION_______ 
-!     __ EVEN IF ATOMS DO NOT MOVE_____________________________________
+!     __ FRICTION MAY HAVE AN INFLUENCE ON THE ELECTRON FRICTION________________
+!     __ EVEN IF ATOMS DO NOT MOVE______________________________________________
       IF(.NOT.TFOR) FRICTION=0.D0
       CALL ATOMS$SETR8('FRICTION',FRICTION)
 !
-!     == START WITH POSITIONS FROM STRUCTURE INPUT FILE 'STRC' ========
+!     == START WITH POSITIONS FROM STRUCTURE INPUT FILE 'STRC' =================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'START',1,TCHK)
       END IF
       CALL ATOMS$SETL4('START',TCHK)
 !
-!     ==================================================================
-!     ==  ATTENTION                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ATTENTION                                                           ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'USEOPTFRIC',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'USEOPTFRIC',1,TCHK)
@@ -1466,28 +1485,29 @@ CALL TRACE$PASS('DONE')
       END IF
       CALL ATOMS$SETL4('NONEGATIVEFRICTION',TCHK)
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!RDYN!AUTO                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!RDYN!AUTO                                       ==
+!     ==========================================================================
       CALL READIN_AUTO(LL_CNTL,'ATOMS',0.D0,1.D0,1.D-2,1.D0)
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!RDYN!THERMOSTAT                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!RDYN!THERMOSTAT                                 ==
+!     ==========================================================================
       CALL READIN_THERMOSTAT(LL_CNTL,'ATOMS',DT,293.D0*CELVIN,10.D0)
 !
-!     ==================================================================
-!     ==  READ BLOCK !CONTROL!RDYN!WARMUP                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK !CONTROL!RDYN!WARMUP                                     ==
+!     ==========================================================================
       CALL READIN_RDYN_WARMUP(LL_CNTL)
 !
-!     ==================================================================
-!     ==  CHECK FOR SIMULTANEOUS USE OF AUTO AND THERMOSTAT           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CHECK FOR SIMULTANEOUS USE OF AUTO AND THERMOSTAT                   ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'THERMOSTAT',1,TCHK1)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'AUTO',1,TCHK2)
       IF(TCHK1.AND.TCHK2) THEN
-        CALL ERROR$MSG('AUTO AND THERMOSTAT MUST NOT BE SPECIFIED SIMULTANEOUSLY')
+        CALL ERROR$MSG('AUTO AND THERMOSTAT MUST NOT')
+        CALL ERROR$MSG('BE SPECIFIED SIMULTANEOUSLY')
         CALL ERROR$STOP('READIN_RDYN')
       END IF
                             CALL TRACE$POP

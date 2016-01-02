@@ -549,7 +549,6 @@ END IF
        COMPLEX(8),INTENT(INOUT):: PSIBAR(NGL*NDIM,NBH)
        COMPLEX(8),INTENT(INOUT):: OPSI(NGL*NDIM,NBH)
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
-       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
        INTEGER(4)              :: IBH1,IBH2,I,IDIM
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
@@ -620,7 +619,6 @@ END IF
        COMPLEX(8),INTENT(INOUT):: PSIBAR(NGL*NDIM,NBH)
        COMPLEX(8),INTENT(IN)   :: OPSI(NGL*NDIM,NBH)
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
-       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
        INTEGER(4)              :: IBH1,IBH2,I,IDIM
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B
@@ -631,7 +629,7 @@ END IF
        COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
 !      *************************************************************************
-                               CALL TIMING$CLOCKON('WAVES_ADDOPSI')
+                               CALL TIMING$CLOCKON('WAVES_ADDPSI')
        TINV=NBH.NE.NB
        NGLNDIM=NGL*NDIM
        IF(.NOT.TINV) THEN
@@ -670,7 +668,7 @@ END IF
          DEALLOCATE(TPSI)
          DEALLOCATE(LAMBDA2)
        END IF
-                               CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
+                               CALL TIMING$CLOCKOFF('WAVES_ADDPSI')
        RETURN
        END
 !
@@ -691,7 +689,6 @@ END IF
        COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
        COMPLEX(8),INTENT(IN)   :: OPROJ(NDIM,NBH,NPRO)
        COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
-       LOGICAL(4),PARAMETER    :: TESSL=.TRUE.
        LOGICAL(4)              :: TINV
        INTEGER(4)              :: IBH1,IBH2,IDIM
        INTEGER(4)              :: IB1A,IB1B,IB2A,IB2B

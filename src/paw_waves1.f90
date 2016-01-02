@@ -132,6 +132,7 @@ LOGICAL(4)  :: TRANDOM=.FALSE.    ! INITIAL VELOCITIES RANDOMIZED
 REAL(8)     :: AMPRANDOM=0.D0
 LOGICAL(4)  :: TSAFEORTHO=.TRUE.  ! CHOICE OR ORTHOGONALIZATION
 LOGICAL(4)  :: TSWAPSTATES=.FALSE. ! CHOICE OR SWITCHING STATES IN A BAND CROSSING
+LOGICAL(4)  :: TSTRAIGHTEN=.TRUE. ! TRANSFORM TO EIGENSTATES
 REAL(8)     :: DELT=0.D0          ! TIME STEP IN A.U.
 LOGICAL(4)  :: THAMILTON=.FALSE.  ! HAMILTON MATRIX AVAILABLE
 LOGICAL(4)  :: TRAWSTATES=.FALSE. ! PROVIDES NON-DIAGONALIZED WAVE FUNCTIONS THROUGH $GETR
@@ -779,9 +780,9 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETI4(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
@@ -789,18 +790,18 @@ END MODULE WAVES_MODULE
       INTEGER(4)  ,INTENT(IN) :: VAL
       INTEGER(4)              :: IKPT,IKPTL,I
       INTEGER(4)              :: THISTASK,NTASKS
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'SPINORDIM') THEN
         NDIM=VAL
 !
       ELSE IF(ID.EQ.'IKPT') THEN   ! GLOBAL IKPT
         IKPT=VAL
-!       == CHECK IF K-POINT IS PRESENT ===============================
+!       == CHECK IF K-POINT IS PRESENT =========================================
         CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
         IF(KMAP(IKPT).NE.THISTASK) THEN
           IKPTL=0
         ELSE
-!         == CONVERT GLOBAL IKPT INTO LOCAL IKPT =====================
+!         == CONVERT GLOBAL IKPT INTO LOCAL IKPT ===============================
           IKPTL=0
           DO I=1,IKPT
             IF(KMAP(I).EQ.THISTASK) IKPTL=IKPTL+1
@@ -825,14 +826,14 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETI4(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(OUT):: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'SPINORDIM') THEN
         VAL=NDIM
       ELSE IF(ID.EQ.'NSPIN') THEN
@@ -878,14 +879,14 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETL4(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'STOP') THEN
         TSTOP=VAL
       ELSE IF(ID.EQ.'SAFEORTHO') THEN
@@ -894,6 +895,10 @@ END MODULE WAVES_MODULE
         TSWAPSTATES=VAL
       ELSE IF(ID.EQ.'RANDOMIZE') THEN
         TRANDOM=VAL
+!
+!     == UNITARY TRANSFORMATION ONTO EIGENSTATES (PERFORMED ONCE) ==============
+      ELSE IF(ID.EQ.'STRAIGHTEN') THEN
+        TSTRAIGHTEN=VAL
       ELSE IF(ID.EQ.'HAMILTON') THEN
         THAMILTON=VAL
       ELSE IF(ID.EQ.'FORCE') THEN
@@ -918,14 +923,14 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$GETL4(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       LOGICAL(4)  ,INTENT(OUT) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RAWSTATES') THEN
         VAL=TRAWSTATES
       ELSE IF(ID.EQ.'TIM') THEN
@@ -948,14 +953,14 @@ END MODULE WAVES_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$SETCH(ID,VAL)
-!     ******************************************************************
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
-!     ******************************************************************
+!     **************************************************************************
       IF(ID.EQ.'RSTRTTYPE') THEN
         IF(VAL.NE.'DYNAMIC'.AND.VAL.NE.'STATIC') THEN
           CALL ERROR$MSG('VALUE NOT RECOGNIZED')
@@ -1942,6 +1947,29 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
             IF(.NOT.ASSOCIATED(THIS%EIGVEC))ALLOCATE(THIS%EIGVEC(NB,NB))
             CALL LIB$DIAGC8(NB,HAMILTON,THIS%EIGVAL,THIS%EIGVEC)
             DEALLOCATE(HAMILTON)
+!
+!           ====================================================================
+!           == TRANSFORMS STATES ONTO HAMILTON EIGENSTATES. THIS ACCELERATES  ==
+!           == CONERGENCE FOR SAFEORTHO=F. IT DOES NOT AFFECT THE OCCUPATIONS.==
+!           == THEREFORE IT IS RECOMMENDED TO RESTART IT AS WELL.             ==
+!           ==                                                                ==
+!           == A SECOND CALL GIVES VELOCITY TO THE WAVE FUNCTIONS, WHICH IS   ==
+!           == NOT UNDERSTOOD. THEREFORE IT IS EXECUTED ONLY ONCE AND         ==
+!           == SWITCHED OFF BELOW.                                            ==
+!           ====================================================================
+            IF(TSTRAIGHTEN) THEN
+PRINT*,'STRAIGHTENING STATES...'
+              CALL WAVES_STRAIGHTEN(NDIM,NBH,NB,NGL,MAP%NPRO,THIS%EIGVEC &
+    &                              ,THIS%PSI0,THIS%PSIM,THIS%HPSI,THIS%PROJ &
+    &                              ,THIS%RLAM0)
+!THE FOLLOWING HAS LITTLE USE USE
+!!$              IF(ASSOCIATED(THIS%RLAMM))DEALLOCATE(THIS%RLAMM)
+!!$              IF(ASSOCIATED(THIS%RLAM2M))DEALLOCATE(THIS%RLAM2M)
+!!$              IF(ASSOCIATED(THIS%RLAM3M))DEALLOCATE(THIS%RLAM3M)
+!!$              THIS%PSIM=THIS%PSI0
+              CALL WAVES$SETL4('STOP',.TRUE.)
+PRINT*,'......STATES STRAIGHTENED'
+            END IF !TSTRAIGHTEN
           ENDDO
         ENDDO
       ELSE
@@ -1950,6 +1978,10 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
           IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
         END IF                         !KAESTNERCG
       END IF
+!
+!     == DIAGONALIZATION IS DONE ONLY ONCE...
+      IF(TSTRAIGHTEN.AND.THAMILTON) TSTRAIGHTEN=.FALSE.
+!
 CALL TIMING$CLOCKOFF('W:EXPECT')
 !
 !     ==================================================================
@@ -1975,6 +2007,67 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       DEALLOCATE(R)
                               CALL TIMING$CLOCKOFF('WAVES$ETOT')
                               CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_STRAIGHTEN(NDIM,NBH,NB,NGL,NPRO,UMAT &
+    &                             ,PSI0,PSIM,HPSI,PROJ,RLAM0)
+!     **************************************************************************
+!     ** PERFORMS A UNITARY TRANSFORM OF THE ACTIAL STATE OF WAVE FUNCTIONS
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NDIM         ! #(SPINOR COMPONENTS)
+      INTEGER(4),INTENT(IN)    :: NBH          ! #(SUPER WAVE FUNCTIONS)
+      INTEGER(4),INTENT(IN)    :: NB           ! #(BANDS)
+      INTEGER(4),INTENT(IN)    :: NGL          ! #(LOCAL G-VECTORS)
+      INTEGER(4),INTENT(IN)    :: NPRO         ! #(PROJECTIONS)
+      COMPLEX(8),INTENT(INOUT) :: UMAT(NB,NB)  ! TRANSFORMATION
+      COMPLEX(8),INTENT(INOUT) :: PSI0(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(INOUT) :: PSIM(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(INOUT) :: PROJ(NDIM,NBH,NPRO)
+      COMPLEX(8),INTENT(INOUT) :: RLAM0(NB,NB)
+      COMPLEX(8),ALLOCATABLE   :: AUX(:,:,:)
+      INTEGER(4)               :: I
+!     **************************************************************************
+!
+!     ==========================================================================
+!     ==  TRANSFORM WAVE FUNCTIONS                                            ==
+!     ==========================================================================
+      ALLOCATE(AUX(NGL,NDIM,NBH))
+      AUX=PSI0
+      PSI0=(0.D0,0.D0)
+      CALL WAVES_ADDPSI(NGL,NDIM,NBH,NB,PSI0,AUX,UMAT)
+      AUX=PSIM
+      PSIM=(0.D0,0.D0)
+      CALL WAVES_ADDPSI(NGL,NDIM,NBH,NB,PSIM,AUX,UMAT)
+      AUX=HPSI
+      HPSI=(0.D0,0.D0)
+      CALL WAVES_ADDPSI(NGL,NDIM,NBH,NB,HPSI,AUX,UMAT)
+      DEALLOCATE(AUX)
+!
+!     ==========================================================================
+!     ==  TRANSFORM PROJECTIONS                                               ==
+!     ==========================================================================
+      ALLOCATE(AUX(NDIM,NBH,NPRO))
+      AUX=PROJ
+      PROJ=(0.D0,0.D0)
+      CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,PROJ,AUX,UMAT)
+      DEALLOCATE(AUX)
+!
+!     ==========================================================================
+!     ==  TRANSFORM LAGRANGE MULTIPLIERS                                      ==
+!     ==========================================================================
+      RLAM0=MATMUL(TRANSPOSE(CONJG(UMAT)),MATMUL(RLAM0,UMAT))
+!
+!     ==========================================================================
+!     == FINALLY, TRANSFORM EIGENSTATES TO A UNIT MATRIX.                     ==
+!     ==========================================================================
+      UMAT(:,:)=(0.D0,0.D0)
+      DO I=1,NB
+        UMAT(I,I)=(1.D0,0.D0)
+      ENDDO
       RETURN
       END
 !
@@ -2932,6 +3025,13 @@ END IF
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           NBH=THIS%NBH
           ALLOCATE(HPROJ(NDIM,NBH,NPRO))
+          IF(.NOT.ASSOCIATED(THIS%HTBC_NEW)) THEN
+!         == THIS%HTBC IS EVALUATED IN LMTO_NTBODENMATDER_NEW
+            CALL ERROR$MSG('INTERNAL ERROR:')
+            CALL ERROR$MSG('LMTO$PROJTONTBO USES NON-ASSOCIATED POINTER')
+            CALL ERROR$MSG('CHECK CALL IN PAW_WAVES1.F90')
+            CALL ERROR$STOP('WAVES$FROMNTBO')
+          END IF
           CALL LMTO$PROJTONTBO_NEW('BACK',XK(:,IKPT),NDIM,NBH,NPRO,HPROJ &
      &                                                      ,NORB,THIS%HTBC_NEW)
           DEALLOCATE(THIS%HTBC_NEW)
@@ -4173,13 +4273,13 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END
 !
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,PROJ,OPSI)
-!     *****************************************************************
-!     **                                                             **
-!     **  |PSI>+|P>DO<P|PSI>                                         **
-!     **                                                             **
-!     *********************************JOHANNES KAESTNER 2004**********
+!     **************************************************************************
+!     **                                                                      **
+!     **  |PSI>+|P>DO<P|PSI>                                                  **
+!     **                                                                      **
+!     *********************************JOHANNES KAESTNER 2004*******************
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)   :: NB

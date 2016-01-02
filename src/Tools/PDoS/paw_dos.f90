@@ -174,7 +174,7 @@ PRINT*,'BEFORE NEWORBITAL$REPORT'
 CALL NEWORBITAL$REPORT(6)
 CALL NEWSET$REPORT(6)
 PRINT*,'BEFORE NEWSET$PROCESS'
-      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET)
+      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET,legend)
 PRINT*,'AFTER NEWSET$PROCESS'
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
 !
@@ -1712,7 +1712,7 @@ END MODULE NEWSET_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET)
+      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET,legend)
 !     **************************************************************************
 !     **   STATE(IKPT,ISPIN)%NB
 !     **                    %VEC(IDIM,IPRO,IB)
@@ -1730,6 +1730,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4),INTENT(IN)  :: NKPT
       INTEGER(4),INTENT(IN)  :: NSET
       REAL(8)   ,INTENT(OUT) :: SET(NBB,NKPT,2,NSET)
+      character(32),intent(out) :: legend(nset)
       INTEGER(4)             :: NBB1
       INTEGER(4)             :: NORB
       INTEGER(4)             :: NSET1
@@ -1781,7 +1782,7 @@ END MODULE NEWSET_MODULE
       CALL NEWSET_PROJECTSPIN(NBB,NKPT,NSET,MATEL)
 !
 !     ==========================================================================
-!     ==  OVERWRITE OLD SETS                                                  ==
+!     ==  compare with old version                                            ==
 !     ==========================================================================
 !!$      DO ISET=1,NSET
 !!$        WRITE(*,*)TRIM(NEWSET(ISET)%ID),'||',TRIM(NEWSET(ISET)%LEGEND) &
@@ -1793,6 +1794,11 @@ END MODULE NEWSET_MODULE
 !!$          ENDDO
 !!$        ENDDO
 !!$      ENDDO
+!
+!     ==========================================================================
+!     ==  COLLECT LEGENDS                                                     ==
+!     ==========================================================================
+      LEGEND(:nset)=NEWSET(:nset)%LEGEND
 !
 !     ==========================================================================
 !     ==  OVERWRITE OLD SETS                                                  ==
@@ -3294,7 +3300,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       CHARACTER(16),INTENT(IN) :: ATOMID(NAT)  ! ATOM NAMES
       REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)  ! ATOMIC POSITIONS
       INTEGER(4)   ,PARAMETER  :: LMXX=16
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,tchk1
       CHARACTER(32)            :: ORBITALNAME1
       INTEGER(4)               :: IORB2
       INTEGER(4)               :: IAT
@@ -3303,8 +3309,21 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       COMPLEX(8)               :: ORB(LMXX)
 !     **************************************************************************
       CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK1)
+      IF(TCHK1.EQ.TCHK) THEN
+        CALL ERROR$MSG('!ORB:NAME AND !ORB:ATOM ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$MSG('ONE OF THE TWO NEEDS TO BE SPECIFIED')
+        CALL ERROR$L4VAL('NAME PRESENT',TCHK)
+        CALL ERROR$L4VAL('ATOM PRESENT',TCHK1)
+        CALL ERROR$STOP('READONENEWORB')
+      END IF
+!
+!     ==========================================================================
+!     == resolve orbital (!orb contains name= )                               ==
+!     ==========================================================================
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,ORBITALNAME1)
+
 !
 !       ========================================================================
 !       ==  GET PREFACTOR                                                     ==
@@ -3749,7 +3768,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       DO ITH=1,NUM
         CALL LINKEDLIST$SELECT(LL_CNTL,'COOP',ITH)
         ISET=ISET+1
-        WRITE(LEGEND,FMT='("COOP:SET",I5)')ISET
+        WRITE(SETID,FMT='("COOP:SET",I5)')ISET
         CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',1,TCHK)
         IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ID',0,SETID)
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,SETID)
@@ -3759,12 +3778,10 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !       ========================================================================
 !       == READ LEGEND                                                        ==
 !       ========================================================================
+        WRITE(LEGEND,FMT='("COOP:SET",I5)')ISET
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LEGEND',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,LEGEND)
-        ELSE
-          CALL NEWSET$SETCH('LEGEND',LEGEND)
-        END IF
+        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,LEGEND)
+        CALL NEWSET$SETCH('LEGEND',LEGEND)
 !
 !       ========================================================================
 !       == DEFINE SPIN AXIS                                                   ==
@@ -3831,6 +3848,14 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,SETID)
         CALL NEWSET$NEWSET(SETID)
         CALL NEWSET$SELECT(SETID)
+!
+!       ========================================================================
+!       == READ LEGEND                                                        ==
+!       ========================================================================
+        WRITE(legend,FMT='("WEIGHT",I5)')ISET
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'LEGEND',1,TCHK)
+        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,LEGEND)
+        CALL NEWSET$SETCH('LEGEND',LEGEND)
 !
 !       ========================================================================
 !       ==  SELECT SPIN AXIS                                                  ==
@@ -4384,6 +4409,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       USE READCNTL_MODULE
       USE ORBITALS_MODULE
       USE DOS_WGHT_MODULE
+      USE newset_module, only : newset
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
@@ -4435,12 +4461,11 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ==========================================================================
 !     ==========================================================================
       DO ISET=1,NSET
-        LEGEND1=LEGEND(ISET)
 !
 !       ========================================================================
 !       ==  SPECIFY OUTPUT FILE ================================================
 !       ========================================================================
-        FILE=TRIM(PREFIX)//TRIM(LEGEND1)//-'.DOS'
+        FILE=TRIM(PREFIX)//TRIM(NEWSET(ISET)%ID)//-'.DOS'
         CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
         CALL FILEHANDLER$UNIT('PDOSOUT',NFILDOS)
 !
