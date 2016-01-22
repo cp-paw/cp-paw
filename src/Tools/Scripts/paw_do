@@ -31,8 +31,11 @@
 #       paw_do -F 
 #
 #   REQUIREMENTS: 
+#                  doppaw
+#
 #                  paw_dos.x,paw_dosplot.x,paw_show,paw_fast,paw_strc.x
 #                  paw_wave.x,paw_tra.x,paw_bands.x
+#
 #          the scripts rely on the fact that exactly one file with the
 #          required extension lies in the local directory.
 #
@@ -245,7 +248,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       Y=${Y%.cntl}
       if [[ -n $Y ]] ; then      
-        execute "nohup doppaw $Y 4 &"
+        execute "nohup doppaw $Y &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
        else
