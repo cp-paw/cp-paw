@@ -3787,17 +3787,13 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !       == DEFINE SPIN AXIS                                                   ==
 !       == CAN BE '+Z', '-Z'
 !       ========================================================================
+        SPIN='+Z'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
         IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
           SPIN=+SPIN
-          CALL NEWSET$SETCH('SPINID',SPIN)
-        ELSE
-          CALL ERROR$MSG('!DCNTL!COOP:SPIN IS MANDATORY')
-          CALL ERROR$MSG('SELECT "+Z", "-Z", ETC. SEE MNUAL')
-          CALL ERROR$CHVAL('SETID',SETID)
-          CALL ERROR$STOP('READCNTL$SETS_NEW')
         END IF
+        CALL NEWSET$SETCH('SPINID',SPIN)
 !
 !       ========================================================================
 !       == THE SUM OF COOPS BETWEEN ALL ORB1 AND ALL ORB2 IS EQUAL TO THE     ==

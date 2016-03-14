@@ -46,26 +46,39 @@
 #
 USAGE="Usage of $0:\n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \t paw_resolve options infile > outfile \n"
+USAGE="$USAGE \t paw_resolve options\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
+USAGE="$USAGE \t -i input file (mandatory)\n"
+USAGE="$USAGE \t -o output file (default: stdout)\n"
 USAGE="$USAGE \t -p prefix: prefix to be added to the filename in @file@\n"
 USAGE="$USAGE \t -r id=value: rule to convert @id@ into value\n"
 USAGE="$USAGE \t -f id=file: rule to replace lines containing  @id@ "
 USAGE="$USAGE       by the contents of file \n"
 USAGE="$USAGE \t -h this help message\n"
 USAGE="$USAGE \t -v verbose\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE \t Caution: specify output file with -o to when using -v or -h,"
+USAGE="$USAGE \t\t to avoid piping undesired information into the outfile"
 #-------------------------------------------------------------------------------
 # resolve argument list
 #-------------------------------------------------------------------------------
-IN=""      # input file
-PRE=""     # prefix for file insertions (such as a path)
+INFILE=""      # input file
+OUTFILE=""     # output file
+PRE=""         # prefix for file insertions (such as a path)
 declare -a RULES # string replacement rules  A=B: @A@ -> B
 NRULE=0
 FRULES="" # file insertion rules
+INFILE=""
 VERBOSE=no
-while getopts :hp:r:f:v OPT ; do
+while getopts :hi:o:p:r:f:v OPT ; do
   case $OPT  in
+    i)
+      INFILE="$OPTARG"
+      ;;
+    o)
+      OUTFILE="$OPTARG"
+      ;;
     p)
       PRE="$OPTARG"
       ;;
@@ -96,22 +109,31 @@ while getopts :hp:r:f:v OPT ; do
   esac
 done
 shift $(($OPTIND - 1))
-if [[ -z $1 ]] ; then
-  echo "error in $0: no infile supplied" >&2
+#
+# check if mandatory arguments are provided
+#
+if [[ -z "${INFILE}" ]] ; then
+  echo "error in $0: mandatory argument -i infile missing" >&2
   exit 1
 fi
-IN=$1
 #
 #   report setting of parameters
 #
 if [[ $VERBOSE = yes ]] ; then
- echo input file : $IN
+ echo input file : $INFILE
  if [[ -n "$PRE" ]]    ; then echo "prefix: $PRE"        ; fi
  for I in ${!RULES[*]} ; do
     echo RULE $I:${RULES[$I]}
  done
  if [[ -n "$FRULES" ]] ; then echo "file rules: $FRULES" ; fi
 fi
+
+
+if [ ! -e ${INFILE} ] ; then 
+  echo "error in $0: file of file rule $X does not exist" >&2
+     exit 1
+   fi
+
 #
 #-------------------------------------------------------------------------------
 # explicit string replacement rules
@@ -132,25 +154,25 @@ done
 for X in $FRULES ; do
    A=${X%=*}
    B=${X##*=}
-   if [ ! -e $B ] ; then 
+   if [ ! -e ${PRE}$B ] ; then 
      echo "error in $0: file of file rule $X does not exist" >&2
      exit 1
    fi
-   CHS0="$CHS0 -e/@$A@/r${B} "
+   CHS0="$CHS0 -e/@$A@/r${PRE}${B} "
    CHS2="$CHS2 -e/@$A@/d " 
 done
 #
 #-------------------------------------------------------------------------------
-# collect all lines containing @*@ in infile ($IN) and obtain the file
+# collect all lines containing @*@ in infile ($INFILE) and obtain the file
 # names in @file@ as $LIST
 #-------------------------------------------------------------------------------
-VAR=$(sed -n -e '/@*@/p' < $IN)
+VAR=$(sed -n -e '/@*@/p' < $INFILE)
 # collect the filennames enclosed in @file@ in LIST
 LIST=""
 for X in $VAR; do
   Y=$X
-  X=${X%@*}
-  X=${X#*@}
+  X=${X%@*}    # strip trailing '@' and following stuff
+  X=${X#*@}    # strip preceeding '@' and everything before
   if [ $X = $Y ] ; then X="" ; fi  # discard expressions without @
   #
   #   check if $X corresponds to a direct replacement (-r). otherwise clear it
@@ -179,9 +201,9 @@ for X in $VAR; do
       exit 1
     fi
     # check if the lines containing file replacements are alone on one line
-    LINES=$(sed -n -e ":@$X@:=" $IN)
+    LINES=$(sed -n -e ":@$X@:=" $INFILE)
     for Y in $LINES ; do
-      LINE=$(sed -n -e ${Y}p < $IN)
+      LINE=$(sed -n -e ${Y}p < $INFILE)
       for Z in $LINE ; do
         if [[ "@$X@" != "$Z" ]] ; then
           echo "error in $0: file replacement @$X@ is not alone in the line" >&2
@@ -200,7 +222,7 @@ done
 # to standard out.
 #-------------------------------------------------------------------------------
 for X in $LIST; do
-  CHS1="${CHS1}-e:@$X@:r${PRE}${X}"
+  CHS1="${CHS1}-e:@$X@:r${X}"
 done
 #
 for X in $LIST; do
@@ -212,10 +234,13 @@ done
  # echo CHS0=$CHS0 ${CHS0[0]}
  # echo CHS1=$CHS1
  # echo CHS2=$CHS2
-CMD="cat ${IN}"
-if [[ -n "${CHS0}" ]] ; then CMD="$CMD | sed ${CHS0}" ; fi
+CMD="cat ${INFILE}"
+if [[ -n "${CHS0}" ]] ; then CMD="$CMD | sed ${CHS0}" ; fi # file replacement
 if [[ -n "${CHS1}" ]] ; then CMD="$CMD | sed ${CHS1}" ; fi
 if [[ -n "${CHS2}" ]] ; then CMD="$CMD | sed ${CHS2}" ; fi
+if [[ ! -z "${OUTFILE}" ]] ; then
+  CMD="$CMD > ${OUTFILE}"
+fi
 if [[ $VERBOSE = yes ]] ; then echo $CMD; fi
 eval ${CMD}
 #-------------------------------------------------------------------------------

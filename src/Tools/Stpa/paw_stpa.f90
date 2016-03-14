@@ -27,7 +27,8 @@
 !     ==  DEFINE LIST OF SELECTIONS                                           ==
 !     ==========================================================================
       I=1
-      CHOICE(1,I)='SCATTERING'; CHOICE(2,I)=-'PHASE SHIFTS'; I=I+1
+      CHOICE(1,I)='SCATTERING' ; 
+                  CHOICE(2,I)=-'PHASE SHIFTS (1ST SET: AE,2ND SET:PAW)'; I=I+1
       CHOICE(1,I)='NB'; CHOICE(2,I)=-'NR. OF WAVE FUNCTIONS'; I=I+1
       CHOICE(1,I)='NC'; CHOICE(2,I)=-'NR. OF CORE WAVE FUNCTIONS'; I=I+1
       CHOICE(1,I)='ATOM.L'; CHOICE(2,I)=-'MAIN ANGULAR MOMENTA OF WAVE FUNCTIONS'; I=I+1

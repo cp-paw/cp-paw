@@ -320,7 +320,9 @@ for PAR1VAL in $PAR1VALS; do
      if [[ ! -e ${TARGET} ]] ; then
        echo copying file into $TARGET
        paw_resolve -r "${PAR1NAME}=$PAR1VAL" \
-                   -r "SRCROOT=$SRCROOT" ${SOURCE} > ${TARGET}
+                   -r "SRCROOT=$SRCROOT" \
+                   -i "${SOURCE}" \
+                   -o "${TARGET}"
        RC=$?
        if [[ $RC -ne 0 ]] ; then
          echo "error in $0: paw_resolve failed to expand ${SOURCE}" >&2
