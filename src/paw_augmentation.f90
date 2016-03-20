@@ -514,7 +514,7 @@ END MODULE AUGMENTATION_MODULE
 !     ==================================================================
 !     ==  EVALUATE KINETIC HAMILTONIAN AND OVERLAP                    ==
 !     ==================================================================
-      DATH(:,:,:)=CMPLX(DTKIN(:,:,:),0.D0)
+      DATH(:,:,:)=CMPLX(DTKIN(:,:,:),0.D0,KIND=8)
 !
       IF(TTEST) THEN
         IF(ITEST.EQ.2) THEN
@@ -533,7 +533,7 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(DATP(LMNX,LMNX,NDIMD))
       CALL AUGMENTATION_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
      &                        ,AETOTPOT,PSTOTPOT,AEPHI,PSPHI,DATP)
-      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0)
+      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0,KIND=8)
       DEALLOCATE(DATP)
 !     WRITE(TESTSTRING,FMT='("R8DATH",I2,12(" "))')IAT
 !     CALL STOREIT(TESTSTRING,8*LMNX*LMNX*NSPIN,DATH)
@@ -550,7 +550,7 @@ END MODULE AUGMENTATION_MODULE
       CALL ATOMLIST$GETCH('NAME',IAT,ATOM)
       ALLOCATE(DATP(LMNX,LMNX,NDIMD))
       CALL EXTERNAL1CPOT$APPLY(ATOM,LMNX,NDIMD,DENMAT,DATP,DETOT)
-      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0)
+      DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0,KIND=8)
       DEALLOCATE(DATP)
       CALL AUGMENTATION_ADD('EXTERNAL 1CENTER POTENTIAL',DETOT)
 !     

@@ -250,9 +250,10 @@
       REAL(8)   ,INTENT(IN) :: COEFF(NX)
       COMPLEX(8),INTENT(OUT):: Z(NX-1)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER  :: BY3=1.D0/3.D0
       INTEGER(4)            :: N ! ORDER OF THE POLYNOM
-      REAL(8)               :: A,B,C,D,DD,P,Q
-      COMPLEX(8)            :: U,V
+      REAL(8)               :: A,B,C,D,DD,P,Q,SVAR,PI,U,V
+      COMPLEX(8)            :: CU,CV,CSVAR
 !     **************************************************************************
       N=NX-1
       Z(:)=(0.D0,0.D0)
@@ -275,7 +276,7 @@
         B=COEFF(2)
         C=COEFF(1)
         DD=B**2-4.D0*A*C
-        Z(1)=SQRT(CMPLX(DD))
+        Z(1)=SQRT(CMPLX(DD,KIND=8))
         Z(2)=-Z(1)
         Z(:)=(Z(:)-B)/(2.D0*A)
 !
@@ -283,19 +284,30 @@
 !     == CARDANO'S EQUATION FOR CUBIC POLYNOMIAL
 !     ==========================================================================
       ELSE IF(N.EQ.3) THEN
+        PI=4.D0*ATAN(1.D0)
 !       == AX^3+BX^2+CX+D ======================================================
         A=COEFF(4)
         B=COEFF(3)
         C=COEFF(2)
         D=COEFF(1)
-        P=C/A-(B/A)**2
-        Q=2.D0/9.D0*(B/A)**2-B*C/(3.D0*A**2)+D/A
-        DD=(P/3.D0)**3+(0.5D0*Q)**2        
-        U=(-0.5D0*Q+SQRT(CMPLX(DD)))**(1.D0/3.D0)
-        V=-P/(3.D0*U)
-        Z(1)=(U+V)-B/(3.D0*A)
-        Z(2)=-0.5D0*(U+V)-B/(3.D0*A)+CI*0.5D0*SQRT(3.D0)*(U-V)
-        Z(3)=-0.5D0*(U+V)-B/(3.D0*A)-CI*0.5D0*SQRT(3.D0)*(U-V)
+        P=C/A-BY3*(B/A)**2
+        Q=2.D0*(B*BY3/A)**3-BY3*B*C/A**2+D/A
+        DD=(P*BY3)**3+(0.5D0*Q)**2        
+        IF(DD.LE.0.D0) THEN
+          SVAR=BY3 * ACOS(-0.5D0*Q*(-BY3*P)**(-1.5D0))
+          Z(1)=COS(SVAR)
+          Z(2)=COS(SVAR+BY3*2.D0*PI)
+          Z(3)=COS(SVAR-BY3*2.D0*PI)
+          Z=Z*SQRT(-BY3*4.D0*P)
+        ELSE IF(DD.GT.0.D0) THEN
+          U=( -0.5D0*Q+SQRT(DD) )**BY3
+          V=-P*BY3/U
+          CSVAR=EXP(2.D0*PI*CI*BY3)
+         Z(1)=CMPLX(U+V,KIND=8)
+         Z(2)=U*CSVAR+V/CSVAR
+         Z(3)=U/CSVAR+V*CSVAR
+       END IF
+       Z(:)=Z(:)-B*BY3/A
 !
 !     ==========================================================================
 !     == NO SOLUTION FOR POLYNOMIALS WITH ORDER HIGHER THAN CUBIC             ==

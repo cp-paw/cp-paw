@@ -1839,7 +1839,7 @@ PRINT*,'JPARAMETER[EV](1) ',JPAR*27.211D0 ,'JPARAMETER(1) ',JPAR
         ETOT=ETOT+E
         DO IS=1,2
           DO I=NCHI1,NCHI2
-            HAM(I,I,IS,IS)=HAM(I,I,IS,IS)+CMPLX(V(IS),0.D0)
+            HAM(I,I,IS,IS)=HAM(I,I,IS,IS)+CMPLX(V(IS),0.D0,KIND=8)
           ENDDO
         ENDDO
         NCHI1=NCHI2+1
@@ -2413,7 +2413,7 @@ PRINT*,'EDFT: EXC ',ETOT
               DO ISPIN=1,NDIMD
                 DWORK1(:)=AEDMU(:,ISPIN)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
                 CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
-                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+CMPLX(SVAR,0.D0)
+                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN)+CMPLX(SVAR,0.D0,8)
               ENDDO
             ENDDO
           ENDDO

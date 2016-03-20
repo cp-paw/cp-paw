@@ -9730,6 +9730,55 @@ projectors appears fairly uncritical. For first-row elements, however,
 insdtabilities may already be present if only one projector function
 is used for s, p, and d-type angular momenta.
 
+
+%==========================================================================
+\newpage
+\section{Code documentation}
+%==========================================================================
+%==========================================================================
+\subsection{Strategy}
+%==========================================================================
+The main documentation for the user is the manual file. It shall
+contain a complete description of all input parameters and their
+functionality.
+
+For the algorithms we prepare reports with a detailed description and
+their theoretical background. These reports are currently only for
+internal use. 
+
+The code is written as self-explanatory as possible. I understand that
+this looks like an excuse for not documenting the code. The idea
+behind is to use meaningful variable names, use explicit typing such
+as declaring each variable explicitely, declaring its intent
+(in,out,inout), and to use similar structures and conventions
+throughout the code. This technique avoids the common problem that
+documentation and code become asynchronous.
+
+%==========================================================================
+\subsection{Doxygen}
+%==========================================================================
+Doxygen is a tool for code analysis and automatic code
+documentation. It is a free multi-platform tool available at
+\url{http://www.stack.nl/~dimitri/doxygen/}.
+
+The CP-PAW code supports analysis with Doxygen. Currently this is in a
+testing phase and not in its final implementation. 
+\begin{itemize}
+\item Only the debug version of the code is analyzed. Therefore this
+  must be compiled before analysing it with \verb|make dbg|. Then you
+  construct the doxygen files with \verb|make doxygen|. The Doxygen
+  data are within a directory \verb|Doxydocs| in the directory
+  alongside with the paw executables.
+%
+\item one can view the data (on OSXusing
+\begin{verbatim}
+A=$(which paw_dbg.x); A=${A%paw_dbg.x}Doxydocs/html/index.html; open -a safari $A
+\end{verbatim}
+The last command opens the Web-browser on the file \verb|$A|, and
+should be replaced by the corresponding command on your system.
+%
+\end{itemize}
+
 \appendix
 %==========================================================================
 \section{Installation}

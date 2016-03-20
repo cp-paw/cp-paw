@@ -127,7 +127,7 @@ END MODULE SPHERICAL_MODULE
       IF(DISXY.NE.0.D0) THEN
         SINPHI=R(2)/DISXY
         COSPHI=R(1)/DISXY
-        EIPHI=CMPLX(COSPHI,SINPHI,8)
+        EIPHI=CMPLX(COSPHI,SINPHI,KIND=8)
       ELSE
         EIPHI=(1.D0,0.D0)
       END IF
@@ -657,9 +657,9 @@ END MODULE SPHERICAL_MODULE
       LPMAT=(0.D0,0.D0)
       LMMAT=(0.D0,0.D0)
       DO LM=1,LMX
-        LZ(LM,LM)=CMPLX(LZFAC(LM),0.D0)
-        IF(MOX(LM).NE.+LOX(LM))LPMAT(LM+1,LM)=CMPLX(LPFAC(LM),0.D0)
-        IF(MOX(LM).NE.-LOX(LM))LMMAT(LM-1,LM)=CMPLX(LMFAC(LM),0.D0)
+        LZ(LM,LM)=CMPLX(LZFAC(LM),0.D0,KIND=8)
+        IF(MOX(LM).NE.+LOX(LM))LPMAT(LM+1,LM)=CMPLX(LPFAC(LM),0.D0,KIND=8)
+        IF(MOX(LM).NE.-LOX(LM))LMMAT(LM-1,LM)=CMPLX(LMFAC(LM),0.D0,KIND=8)
       ENDDO
 !
 !     =======================================================================

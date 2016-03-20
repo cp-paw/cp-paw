@@ -359,7 +359,7 @@ END IF
               RLAMBDA=REAL(LAMBDA,KIND=8)
               CALL WAVES_ORTHO_X(NB,OCC(1,IKPT,ISPIN) &
        &                        ,ROOMAT,RMAT,ROMAT,RLAMBDA)
-              LAMBDA=CMPLX(RLAMBDA,0.D0,8)
+              LAMBDA=CMPLX(RLAMBDA,0.D0,KIND=8)
               DEALLOCATE(RLAMBDA)
               DEALLOCATE(RMAT)
               DEALLOCATE(ROMAT)
@@ -808,7 +808,7 @@ END IF
            MAT2(2,2)=+RE
            DO I=IB1A,IB1B
              DO J=IB2A,IB2B
-               MAT(I,J)=CMPLX(MAT2(I-IB1A+1,J-IB2A+1),0.D0,8)
+               MAT(I,J)=CMPLX(MAT2(I-IB1A+1,J-IB2A+1),0.D0,KIND=8)
              ENDDO
            ENDDO
          ENDDO
@@ -830,7 +830,7 @@ END IF
            MAT2(2,2)=-RE
            DO I=IB1A,IB1B
              DO J=IB2A,IB2B
-               MAT(I,J)=MAT(I,J)+CMPLX(MAT2(I-IB1A+1,J-IB2A+1),0.D0,8)
+               MAT(I,J)=MAT(I,J)+CMPLX(MAT2(I-IB1A+1,J-IB2A+1),0.D0,KIND=8)
              ENDDO
            ENDDO
          ENDDO
@@ -4938,7 +4938,7 @@ END MODULE TOTALSPIN_MODULE
 !     ==================================================================
 !     == EXPECTATION VALUE OF S**2 OF THE SLATER DETERMINANT          ==
 !     ==================================================================
-      EXPECTS2=0.75D0*CMPLX(SUM(IOCC),0.D0)
+      EXPECTS2=0.75D0*CMPLX(SUM(IOCC),0.D0,KIND=8)
 !
 !     ==================================================================
 !     == NOW ADD THE EXCHANGE-LIKE CONTRIBUTION TO THE SPIN           ==
@@ -4948,7 +4948,7 @@ END MODULE TOTALSPIN_MODULE
         DO J=1,NBD
           PART=(QMAT(1,I,1,J)-QMAT(2,I,2,J))*(QMAT(1,J,1,I)-QMAT(2,J,2,I)) &
      &        +4.D0*QMAT(1,I,2,J)*QMAT(2,J,1,I)
-          CSUM=CSUM-PART*CMPLX(SQRT(ABS(IOCC(I)*IOCC(J))),0.D0)
+          CSUM=CSUM-PART*CMPLX(SQRT(ABS(IOCC(I)*IOCC(J))),0.D0,KIND=8)
         END DO
       END DO
       PRINT*,'TOTALSPIN: EXCHANGE LIKE CONTRIBUTION : ',CSUM

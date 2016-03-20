@@ -3488,8 +3488,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
      &                  ,PRO,DT,DOVER,DH,AECORE,PSCORE,PSPOT &
      &                  ,POW_POT,TVAL0_POT,VAL0_POT,RC_POT,RCSM,VADD,PSG2,PSG4)
 !     **************************************************************************
-!     **  CONSTRUCTS  THE SETUP                                               **
-!     **                                                                      **
+!     **  SETUP CONSTRUCTION: PARTIAL WAVES, POTENTIALS, ETC                  **
 !     **                                                                      **
 !     **                                                                      **
 !     ******************************PETER BLOECHL, GOSLAR 2010******************
