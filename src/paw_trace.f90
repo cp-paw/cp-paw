@@ -411,8 +411,8 @@ END MODULE TRACE_MODULE
 !     **************************************************************************
       USE TRACE_MODULE
       IMPLICIT NONE
-      INTEGER               ::NFILERR
-      INTEGER               ::I
+      INTEGER(4)              :: NFILERR
+      INTEGER(4)              :: I
 !     **************************************************************************
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST

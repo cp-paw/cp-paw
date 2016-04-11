@@ -1,38 +1,38 @@
 MODULE COSMO_MODULE
-LOGICAL,SAVE             :: TON=.FALSE.    ! ACTIVATES COSMO
-LOGICAL,SAVE             :: TINI=.FALSE. 
-LOGICAL,SAVE             :: START=.FALSE. 
-LOGICAL,SAVE             :: TISO=.TRUE.   ! TREATS AS ISOLATED CLUSTER/ PERIODIC SYSTEM
-LOGICAL,SAVE             :: TSTOP=.FALSE.  ! SETS INITIAL VELOCITIES TO ZERO
-LOGICAL,SAVE             :: TADIABATIC=.FALSE.  ! MINIMIZATION IN EACH STEP
-LOGICAL,SAVE             :: TMULTIPLE=.FALSE.   !MULTIPLE TIME STEP DYNAMOCS
-REAL(8),SAVE             :: ETOL=-1.D0  ! ENERGY TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
-REAL(8),SAVE             :: QTOL=-1.D0  ! CHARGE TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+LOGICAL(4),SAVE             :: TON=.FALSE.    ! ACTIVATES COSMO
+LOGICAL(4),SAVE             :: TINI=.FALSE. 
+LOGICAL(4),SAVE             :: START=.FALSE. 
+LOGICAL(4),SAVE             :: TISO=.TRUE.   ! ISOLATED CLUSTER/ PERIODIC SYSTEM
+LOGICAL(4),SAVE             :: TSTOP=.FALSE. ! SET INITIAL VELOCITIES TO ZERO
+LOGICAL(4),SAVE             :: TADIABATIC=.FALSE.  ! MINIMIZE IN EACH STEP
+LOGICAL(4),SAVE             :: TMULTIPLE=.FALSE.   ! MULTIPLE TIME STEP DYNAMICS
+REAL(8)   ,SAVE             :: ETOL=-1.D0  ! ENERGY TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
+REAL(8)   ,SAVE             :: QTOL=-1.D0  ! CHARGE TOLERANCE FOR CHARGE-POTENTIAL CONVERGENCE
 
 !==  PARAMETERS THAT DEFINE THE ENERGY FUNCTIONAL
-REAL(8),SAVE             :: DT=10.D0        ! TIME STEP
-REAL(8),SAVE             :: ANNE=0.D0      ! FRICTION
-INTEGER,SAVE             :: NMULTIPLE=30   ! #(MULTIPLE STEPS PER ITERATION)
-REAL(8),SAVE             :: QMASS=1.D+5    ! MASS FOR SURFACE CHARGES
-REAL(8),SAVE             :: KSELF=10.D0
-REAL(8),SAVE             :: GAMMA=6.3739D-6 !SEE SECTION IV.B IN SENN ET AL.
-REAL(8),SAVE             :: BETA=2.1567D-3 !SEE SECTION IV.B IN SENN ET AL.
-REAL(8),SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
-INTEGER,SAVE             :: NAT=0
-REAL(8),SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
-REAL(8),SAVE             :: DISMIN
-REAL(8),SAVE             :: VPAULI=0.D0
+REAL(8)   ,SAVE             :: DT=10.D0        ! TIME STEP
+REAL(8)   ,SAVE             :: ANNE=0.D0      ! FRICTION
+INTEGER(4),SAVE             :: NMULTIPLE=30   ! #(MULTIPLE STEPS PER ITERATION)
+REAL(8)   ,SAVE             :: QMASS=1.D+5    ! MASS FOR SURFACE CHARGES
+REAL(8)   ,SAVE             :: KSELF=10.D0
+REAL(8)   ,SAVE             :: GAMMA=6.3739D-6 !SEE SECTION IV.B IN SENN ET AL.
+REAL(8)   ,SAVE             :: BETA=2.1567D-3 !SEE SECTION IV.B IN SENN ET AL.
+REAL(8)   ,SAVE             :: FDIEL=1.D0    ! (E_R-1)/(E_R+0.5)
+INTEGER(4),SAVE             :: NAT=0
+REAL(8)   ,SAVE,ALLOCATABLE :: RSOLV(:) !(NAT) SOLVATION RADIUS
+REAL(8)   ,SAVE             :: DISMIN
+REAL(8)   ,SAVE             :: VPAULI=0.D0
 !== 
-INTEGER                  :: NQ=0     !#(CHARGES)=SUM(NQAT)
-INTEGER,SAVE,ALLOCATABLE :: NQAT(:)
-INTEGER,SAVE,ALLOCATABLE :: IQFIRST(:)
-REAL(8),SAVE,ALLOCATABLE :: QRELPOS(:,:)
-REAL(8),SAVE,ALLOCATABLE :: Q0(:)
-REAL(8),SAVE,ALLOCATABLE :: QM(:)
-REAL(8),SAVE,ALLOCATABLE :: QP(:)
-REAL(8),SAVE,ALLOCATABLE :: CUTOFFTHETA(:)
-INTEGER,SAVE             :: NPTESS=0
-REAL(8),SAVE,ALLOCATABLE :: RTESS(:,:)
+INTEGER(4)                  :: NQ=0     !#(CHARGES)=SUM(NQAT)
+INTEGER(4),SAVE,ALLOCATABLE :: NQAT(:)
+INTEGER(4),SAVE,ALLOCATABLE :: IQFIRST(:)
+REAL(8)   ,SAVE,ALLOCATABLE :: QRELPOS(:,:)
+REAL(8)   ,SAVE,ALLOCATABLE :: Q0(:)
+REAL(8)   ,SAVE,ALLOCATABLE :: QM(:)
+REAL(8)   ,SAVE,ALLOCATABLE :: QP(:)
+REAL(8)   ,SAVE,ALLOCATABLE :: CUTOFFTHETA(:)
+INTEGER(4),SAVE             :: NPTESS=0
+REAL(8)   ,SAVE,ALLOCATABLE :: RTESS(:,:)
 !== SASCHA - PRINTOUT CHARGES
 LOGICAL(4) ::  TCHARGES
 !======
@@ -412,7 +412,7 @@ END MODULE COSMO_MODULE
       USE COSMO_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: FILEID
-      LOGICAL                 :: TCHK
+      LOGICAL(4)              :: TCHK
       REAL(8)                 :: R(3)
 !     ***********************************************************************
       CALL COSMO_READTESSELATION(FILEID,1,NPTESS,R,TCHK)
@@ -432,14 +432,14 @@ END MODULE COSMO_MODULE
 !     **                                                                   **
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: FILEID
-      INTEGER     ,INTENT(IN) :: NX
-      LOGICAL     ,INTENT(OUT):: TCHK  ! IF FALSE, NX WAS TOO SMALL. TRY AGAIN WITH NX=N
-      INTEGER     ,INTENT(OUT):: N
+      INTEGER(4)  ,INTENT(IN) :: NX
+      LOGICAL(4)  ,INTENT(OUT):: TCHK  ! IF FALSE, NX WAS TOO SMALL. TRY AGAIN WITH NX=N
+      INTEGER(4)  ,INTENT(OUT):: N
       REAL(8)     ,INTENT(OUT):: R(3,NX)
       INTEGER(4)              :: NFIL
-      INTEGER                 :: NC ! #(CORNERS)
+      INTEGER(4)              :: NC ! #(CORNERS)
       REAL(8)     ,ALLOCATABLE:: C(:,:) !CORNERS
-      INTEGER                 :: I,ISVAR,I1,I2,I3       
+      INTEGER(4)              :: I,ISVAR,I1,I2,I3       
 !     ***********************************************************************
       CALL FILEHANDLER$UNIT(FILEID,NFIL)
       REWIND(NFIL)
@@ -488,10 +488,10 @@ END MODULE COSMO_MODULE
       SUBROUTINE COSMO_TESSELATIONFILE(N,R)
 !     **                                                                   **
 !     **                                                                   **
-      INTEGER,INTENT(IN)  :: N
-      REAL(8),INTENT(OUT) :: R(3,N)
-      INTEGER             :: I
-      REAL(8)             :: SVAR
+      INTEGER(4),INTENT(IN)  :: N
+      REAL(8)   ,INTENT(OUT) :: R(3,N)
+      INTEGER(4)             :: I
+      REAL(8)                :: SVAR
 !     ***********************************************************************
       IF(N.EQ.60) THEN
         R(:,  1)=(/   0.10960,   0.33732,   0.93499/)
@@ -571,22 +571,22 @@ END MODULE COSMO_MODULE
       RETURN
       END
 !
-!     .......................................................................
+!     ..........................................................................
       SUBROUTINE COSMO_NEIGHBORLIST(TISO,NAT,RAT,RBAS,RMAX,NNX,NNN,NNLIST)
-!     **                                                                   **
-!     **  SETS UP A NEIGBORLIST OF ALL ATOMS WITHIN A DISTANCE OF RC       **
-!     **                                                                   **
-!     **                                                                   **
+!     **                                                                      **
+!     **  SETS UP A NEIGBORLIST OF ALL ATOMS WITHIN A DISTANCE OF RC          **
+!     **                                                                      **
+!     **                                                                      **
       IMPLICIT NONE
-      LOGICAL,INTENT(IN)  :: TISO       ! ISOLATED CLUSTER/PERIODIC SYSTEM
-      INTEGER,INTENT(IN)  :: NAT        ! #(ATOMS)
-      REAL(8),INTENT(IN)  :: RAT(3,NAT) ! ATOMIC POSITIONS
-      REAL(8),INTENT(IN)  :: RBAS(3,3)  ! LATTICE VECTORS
-      REAL(8),INTENT(IN)  :: RMAX       ! CUTOFF RADIUS FOR NEIGBORLIST
-      INTEGER,INTENT(IN)  :: NNX        ! X( #(NEIGBORS)/ATOM )
-      INTEGER,INTENT(OUT) :: NNN(NAT)   ! #(NEIGBORS) FOR A GIVEN ATOM
-      INTEGER,INTENT(OUT) :: NNLIST(4,NNX,NAT)
-      INTEGER             :: IFOLD(3,NAT)
+      LOGICAL(4),INTENT(IN)  :: TISO       ! ISOLATED CLUSTER/PERIODIC SYSTEM
+      INTEGER(4),INTENT(IN)  :: NAT        ! #(ATOMS)
+      REAL(8)   ,INTENT(IN)  :: RAT(3,NAT) ! ATOMIC POSITIONS
+      REAL(8)   ,INTENT(IN)  :: RBAS(3,3)  ! LATTICE VECTORS
+      REAL(8)   ,INTENT(IN)  :: RMAX       ! CUTOFF RADIUS FOR NEIGBORLIST
+      INTEGER(4),INTENT(IN)  :: NNX        ! X( #(NEIGBORS)/ATOM )
+      INTEGER(4),INTENT(OUT) :: NNN(NAT)   ! #(NEIGBORS) FOR A GIVEN ATOM
+      INTEGER(4),INTENT(OUT) :: NNLIST(4,NNX,NAT)
+      INTEGER(4)          :: IFOLD(3,NAT)
       REAL(8)             :: RATF(3,NAT)
       REAL(8)             :: XAT(3)     ! POSITION IN RELATIVE COORDINATES
       REAL(8)             :: RBASIN(3,3)! RBAS**(-1)
@@ -596,10 +596,10 @@ END MODULE COSMO_MODULE
       INTEGER(4)          :: MIN1,MAX1,MIN2,MAX2,MIN3,MAX3
       REAL(8)             :: DIS
       REAL(8)             :: DISARR(NNX,NAT)
-      INTEGER             :: IWORK(4)
+      INTEGER(4)          :: IWORK(4)
       INTEGER(4)          :: FROM,TO
       INTEGER(4)          :: ISVAR
-      INTEGER             :: IN,IAT1,IAT2,IT1,IT2,IT3
+      INTEGER(4)          :: IN,IAT1,IAT2,IT1,IT2,IT3
       REAL(8)             :: R8LARGE=1.D+20
 !     ***********************************************************************
 !
@@ -697,10 +697,10 @@ END MODULE COSMO_MODULE
         ENDDO
       END IF
 !
-!     ============================================================================
-!     == SORT NEIGBORLIST SO THAT NEAREST NEIGHBORS ARE FIRST                   ==
-!     == THIS BLANKS OUT AS MANY CHARGES EARLY ON AND SPEEDS UP                ==
-!     ============================================================================
+!     ==========================================================================
+!     == SORT NEIGBORLIST SO THAT NEAREST NEIGHBORS ARE FIRST                 ==
+!     == THIS BLANKS OUT AS MANY CHARGES EARLY ON AND SPEEDS UP               ==
+!     ==========================================================================
       DO IAT1=1,NAT
         ISVAR=NNN(IAT1)  ! CONVERSION TO DEFAULT INTEGER
         CALL SORT$SET(ISVAR,DISARR(:NNN(IAT1),IAT1))
@@ -724,36 +724,36 @@ END MODULE COSMO_MODULE
       RETURN
       END
 !
-!     .......................................................................
-      SUBROUTINE COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST,IQFIRST,NQAT,RQ &
-     &                       ,ZEROTHETA,THETA)
-!     **                                                                   **
-!     **  CALCULATE THETA, THE CUTOFF FUNCTION                             **
-!     **  CHARGES THAT ARE COMPLETELY BLANKED OUT ARE IDENTIFIED BY ZEROTHETA
-!     **                                                                   **
+!     ..........................................................................
+      SUBROUTINE COSMO_CUTOFF(NAT,NQ,RAT,RBAS,RSOLV,NNX,NNN,NNLIST &
+     &                       ,IQFIRST,NQAT,RQ,ZEROTHETA,THETA)
+!     **                                                                      **
+!     **  CALCULATE THETA, THE CUTOFF FUNCTION                                **
+!     **  CHARGES THAT ARE COMPLETELY BLANKED OUT ARE IDENTIFIED BY ZEROTHETA **
+!     **                                                                      **
       USE COSMO_MODULE, ONLY : ETA
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NNX
-      INTEGER,INTENT(IN) :: NNN(NAT)
-      INTEGER,INTENT(IN) :: NNLIST(4,NNX,NAT)
-      REAL(8),INTENT(IN) :: RAT(3,NAT)
-      REAL(8),INTENT(IN) :: RBAS(3,3)
-      REAL(8),INTENT(IN) :: RSOLV(NAT)
-      INTEGER,INTENT(IN) :: IQFIRST(NAT)
-      INTEGER,INTENT(IN) :: NQAT(NAT)
-      REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
-      LOGICAL,INTENT(OUT):: ZEROTHETA(NQ)
-      REAL(8),INTENT(OUT):: THETA(NQ)
-      REAL(8),PARAMETER  :: DRSOLVPLUS=0.2D0   !1.D0     
-      REAL(8),PARAMETER  :: DRSOLVMINUS=0.05D0 !0.9D0    
-      INTEGER            :: IAT1,IAT,IAT2,IQ
-      REAL(8)            :: DR(3),DIS
-      REAL(8)            :: R2(3)
-      LOGICAL            :: TFAR(NNX)
-      REAL(8),ALLOCATABLE:: DISARR(:,:)
-      LOGICAL            :: TALLZERO ! IDENTIFIES AN ATOM WITH ALL CHARGES 
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NNX
+      INTEGER(4),INTENT(IN) :: NNN(NAT)
+      INTEGER(4),INTENT(IN) :: NNLIST(4,NNX,NAT)
+      REAL(8)   ,INTENT(IN) :: RAT(3,NAT)
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      REAL(8)   ,INTENT(IN) :: RSOLV(NAT)
+      INTEGER(4),INTENT(IN) :: IQFIRST(NAT)
+      INTEGER(4),INTENT(IN) :: NQAT(NAT)
+      REAL(8)   ,INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
+      LOGICAL(4),INTENT(OUT):: ZEROTHETA(NQ)
+      REAL(8)   ,INTENT(OUT):: THETA(NQ)
+      REAL(8)   ,PARAMETER  :: DRSOLVPLUS=0.2D0   !1.D0     
+      REAL(8)   ,PARAMETER  :: DRSOLVMINUS=0.05D0 !0.9D0    
+      INTEGER(4)            :: IAT1,IAT,IAT2,IQ
+      REAL(8)               :: DR(3),DIS
+      REAL(8)               :: R2(3)
+      LOGICAL(4)            :: TFAR(NNX)
+      REAL(8)   ,ALLOCATABLE:: DISARR(:,:)
+      LOGICAL(4)            :: TALLZERO ! IDENTIFIES AN ATOM WITH ALL CHARGES 
                                      ! BLANKED OUT
       INTEGER(4)         :: ISVAR,IQ1,IQ2,IN,IT1,IT2,IT3
 !     ***********************************************************************
@@ -835,16 +835,16 @@ END MODULE COSMO_MODULE
 !     **                                                                   **
       USE COSMO_MODULE, ONLY : DLNETA
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NNX
-      INTEGER,INTENT(IN) :: NNN(NAT)
-      INTEGER,INTENT(IN) :: NNLIST(4,NNX,NAT)
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NNX
+      INTEGER(4),INTENT(IN) :: NNN(NAT)
+      INTEGER(4),INTENT(IN) :: NNLIST(4,NNX,NAT)
       REAL(8),INTENT(IN) :: RAT(3,NAT)
       REAL(8),INTENT(IN) :: RBAS(3,3)
       REAL(8),INTENT(IN) :: RSOLV(NAT)
-      INTEGER,INTENT(IN) :: IQFIRST(NAT)
-      INTEGER,INTENT(IN) :: NQAT(NAT)
+      INTEGER(4),INTENT(IN) :: IQFIRST(NAT)
+      INTEGER(4),INTENT(IN) :: NQAT(NAT)
       REAL(8),INTENT(IN) :: RQ(3,NQ)     ! ABSOLUTE POSITIONS OF CHARGE
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: THETA(NQ)
@@ -852,7 +852,7 @@ END MODULE COSMO_MODULE
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8),PARAMETER  :: DRSOLVPLUS=0.2D0   !1.D0     
       REAL(8),PARAMETER  :: DRSOLVMINUS=0.05D0 !0.9D0    
-      INTEGER            :: IAT1,IAT2,IQ
+      INTEGER(4)         :: IAT1,IAT2,IQ
       REAL(8)            :: DR(3),DIS
       REAL(8)            :: R2(3)
       REAL(8)            :: SVAR
@@ -892,14 +892,14 @@ END MODULE COSMO_MODULE
 !     **  THIS POTENTIAL SHALL MIMICK THE PAULI REPULSION BY THE SOLVENT.  **
 !     **                                                                   ** 
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NG
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NG
       REAL(8),INTENT(IN) :: RC(NG,NAT)
       REAL(8),INTENT(IN) :: VPAULI
       REAL(8),INTENT(IN) :: QMAD(NG,NAT)
       REAL(8),INTENT(OUT):: EPAULI
       REAL(8),INTENT(OUT):: VMAD(NG,NAT)
-      INTEGER            :: IAT,IG
+      INTEGER(4)         :: IAT,IG
       REAL(8),PARAMETER  :: RVDW=6.D0
       REAL(8)            :: X 
       REAL(8)            :: POT
@@ -954,8 +954,8 @@ END MODULE COSMO_MODULE
       IMPLICIT NONE
       LOGICAL,INTENT(IN) :: TISO
       REAL(8),INTENT(IN) :: RBAS(3,3)
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NAT
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: DISMIN
       REAL(8),INTENT(IN) :: QBAR(NQ)
@@ -967,8 +967,8 @@ END MODULE COSMO_MODULE
       REAL(8),INTENT(OUT):: FQ(3,NQ)
       REAL(8),INTENT(OUT):: VATBAR(NAT)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
-      INTEGER            :: NQEFF
-      INTEGER            :: IQ
+      INTEGER(4)         :: NQEFF
+      INTEGER(4)         :: IQ
       REAL(8),ALLOCATABLE:: QEFF(:)
       REAL(8),ALLOCATABLE:: VEFF(:)
       REAL(8),ALLOCATABLE:: REFF(:,:)
@@ -1028,7 +1028,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8),   PARAMETER  :: TOL=1.D-8
       REAL(8),   INTENT(IN) :: RBAS(3,3)     ! LATTICE VECTORS
-      INTEGER,   INTENT(IN) :: NBAS          ! NUMBER OF CHARGES
+      INTEGER(4),   INTENT(IN) :: NBAS          ! NUMBER OF CHARGES
       REAL(8),   INTENT(IN) :: BAS(3,NBAS)   ! POSITIONS OF CHARGES
       REAL(8),   INTENT(IN) :: Q(NBAS)       ! CHARGES
       REAL(8),   INTENT(OUT):: EMAD          ! MADELUNG ENERGY   
@@ -1040,20 +1040,20 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8)               :: PI,FOURPI,ROOT2
       REAL(8)               :: VOL
       REAL(8)               :: RC,SVAR,FAC
-      INTEGER               :: I,IR,IR1,IR2
+      INTEGER(4)            :: I,IR,IR1,IR2
       REAL(8)               :: GMAX,RMAX
-      INTEGER               :: IG1MIN,IG1MAX
-      INTEGER               :: IG2MIN,IG2MAX
-      INTEGER               :: IG3MIN,IG3MAX
-      INTEGER               :: IG1,IG2,IG3
+      INTEGER(4)            :: IG1MIN,IG1MAX
+      INTEGER(4)            :: IG2MIN,IG2MAX
+      INTEGER(4)            :: IG3MIN,IG3MAX
+      INTEGER(4)            :: IG1,IG2,IG3
       REAL(8)               :: T1,T2,T3
       REAL(8)               :: GSQUARE,GVEC(3)
       REAL(8)               :: RCG1SQUARE,RCG2SQUARE,RCG3SQUARE
       REAL(8)               :: SINFAC,COSFAC
       REAL(8)               :: Q12
       REAL(8)               :: DR(3),DR12(3)
-      INTEGER               :: IT1MIN,IT1MAX
-      INTEGER               :: IT2MIN,IT2MAX
+      INTEGER(4)            :: IT1MIN,IT1MAX
+      INTEGER(4)            :: IT2MIN,IT2MAX
       INTEGER(4)            :: IT3MIN,IT3MAX
       INTEGER(4)            :: IT1,IT2,IT3
       REAL(8)               :: DX,DLEN
@@ -1287,9 +1287,9 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !     **  INTO ONE ARRAY                                               **
 !     **                                                               **
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NQEFF
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NQEFF
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: QSURF(NQ)
       REAL(8),INTENT(IN) :: RSURF(3,NQ)
@@ -1297,7 +1297,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8),INTENT(IN) :: RAT(3,NAT)
       REAL(8),INTENT(OUT):: QEFF(NQEFF)
       REAL(8),INTENT(OUT):: REFF(3,NQEFF)
-      INTEGER            :: IQ,IQEFF,IAT
+      INTEGER(4)         :: IQ,IQEFF,IAT
 !     *******************************************************************
       IQEFF=0
       DO IQ=1,NQ
@@ -1326,9 +1326,9 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !     **  INTO ONE ARRAY                                               **
 !     **                                                               **
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NQEFF
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NQEFF
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(OUT):: VSURF(NQ)
       REAL(8),INTENT(OUT):: FSURF(3,NQ)
@@ -1336,7 +1336,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8),INTENT(IN) :: VEFF(NQEFF)
       REAL(8),INTENT(IN) :: FEFF(3,NQEFF)
-      INTEGER            :: IQ,IQEFF,IAT
+      INTEGER(4)         :: IQ,IQEFF,IAT
 !     *******************************************************************
       IQEFF=0
       DO IQ=1,NQ
@@ -1366,7 +1366,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !     **  INTO ONE ARRAY                                               **
 !     **                                                               **
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: N
+      INTEGER(4),INTENT(IN) :: N
       REAL(8),INTENT(IN) :: R(3,N)  ! POSITIONS
       REAL(8),INTENT(IN) :: Q(N)    ! CHARGES
       REAL(8),INTENT(OUT):: ETOT    ! TOTAL ENERGY
@@ -1376,7 +1376,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8)            :: DR(3)
       REAL(8)            :: DIS
       REAL(8)            :: SVAR
-      INTEGER            :: I,J
+      INTEGER(4)         :: I,J
       REAL(8)            :: B,C
       REAL(8)            :: VINT,DVINTDRBYR
 !     *******************************************************************
@@ -1412,15 +1412,15 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       SUBROUTINE COSMO_SELFENERGY(NAT,NQ,ZEROTHETA,THETA,FDIEL,KSELF,BETA,GAMMA &
      &                     ,NQAT,RSOLV,QSURF,ETOT,VSURF,VTHETA)
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NQ
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(IN) :: THETA(NQ)
       REAL(8),INTENT(IN) :: FDIEL
       REAL(8),INTENT(IN) :: KSELF
       REAL(8),INTENT(IN) :: BETA
       REAL(8),INTENT(IN) :: GAMMA
-      INTEGER,INTENT(IN) :: NQAT(NAT)
+      INTEGER(4),INTENT(IN) :: NQAT(NAT)
       REAL(8),INTENT(IN) :: RSOLV(NAT)
       REAL(8),INTENT(IN) :: QSURF(NQ)
       REAL(8),INTENT(OUT):: ETOT
@@ -1508,15 +1508,15 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !     ** 5) CONSIDER PERIODIC IMAGES                                       **
 !     **                                                                   **
       IMPLICIT NONE
-      INTEGER,INTENT(IN) :: NQ
-      INTEGER,INTENT(IN) :: NAT
-      INTEGER,INTENT(IN) :: NG
-      INTEGER,INTENT(IN) :: NNX
-      INTEGER,INTENT(IN) :: NNN(NAT)
-      INTEGER,INTENT(IN) :: NNLIST(4,NNX,NAT)
+      INTEGER(4),INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NG
+      INTEGER(4),INTENT(IN) :: NNX
+      INTEGER(4),INTENT(IN) :: NNN(NAT)
+      INTEGER(4),INTENT(IN) :: NNLIST(4,NNX,NAT)
       REAL(8),INTENT(IN) :: RBAS(3,3)
-      INTEGER,INTENT(IN) :: IQFIRST(NAT)
-      INTEGER,INTENT(IN) :: NQAT(NAT)
+      INTEGER(4),INTENT(IN) :: IQFIRST(NAT)
+      INTEGER(4),INTENT(IN) :: NQAT(NAT)
       LOGICAL,INTENT(IN) :: ZEROTHETA(NQ)
       REAL(8),INTENT(OUT):: EPOT
       REAL(8),INTENT(IN) :: Q(NQ)   ! Q*THETA
@@ -1529,7 +1529,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8)            :: PI
       REAL(8)            :: TWOBYSQPI
-      INTEGER            :: IAT1,IAT2,IG,IQ,IQ1,IQ2,IN,IT1,IT2,IT3
+      INTEGER(4)         :: IAT1,IAT2,IG,IQ,IQ1,IQ2,IN,IT1,IT2,IT3
       REAL(8)            :: DIS,DIS2,DR(3)
       REAL(8)            :: QSUM,VSUM
       REAL(8)            :: RC1
@@ -1615,7 +1615,7 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       IMPLICIT NONE
       REAL(8),INTENT(IN) :: DT ! TIMESTEP
       REAL(8),INTENT(IN) :: ANNE ! FRICTION FACTOR
-      INTEGER,INTENT(IN) :: NQ
+      INTEGER(4),INTENT(IN) :: NQ
       REAL(8),INTENT(IN) :: MQ
       REAL(8),INTENT(IN) :: Q0(NQ)
       REAL(8),INTENT(IN) :: QM(NQ)
@@ -1630,20 +1630,20 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       RETURN
       END
 !
-!     .......................................................................
+!     ..........................................................................
       SUBROUTINE COSMO_EKIN(DT,MQ,NQ,QP,Q0,QM,EKIN)
-!     **                                                                   **
-!     **  CALCULATES THE KINETIC ENERGY OF THE CHARGES                     **
-!     **                                                                   **
+!     **                                                                      **
+!     **  CALCULATES THE KINETIC ENERGY OF THE CHARGES                        **
+!     **                                                                      **
       IMPLICIT NONE
-      REAL(8),INTENT(IN) :: DT ! TIMESTEP
-      INTEGER,INTENT(IN) :: NQ
-      REAL(8),INTENT(IN) :: MQ
-      REAL(8),INTENT(IN) :: QM(NQ)
-      REAL(8),INTENT(IN) :: Q0(NQ)
-      REAL(8),INTENT(IN) :: QP(NQ)
-      REAL(8),INTENT(OUT):: EKIN
-!     ***********************************************************************
+      REAL(8)   ,INTENT(IN) :: DT ! TIMESTEP
+      INTEGER(4),INTENT(IN) :: NQ
+      REAL(8)   ,INTENT(IN) :: MQ
+      REAL(8)   ,INTENT(IN) :: QM(NQ)
+      REAL(8)   ,INTENT(IN) :: Q0(NQ)
+      REAL(8)   ,INTENT(IN) :: QP(NQ)
+      REAL(8)   ,INTENT(OUT):: EKIN
+!     **************************************************************************
 !      EKIN=0.5D0*MQ*SUM((QP-QM)**2)/(2.D0*DT)**2
 !     == THE FOLLOWING FORM GIVES A BETTER ENERGY CONSERVATION THAN THE
 !     == VERLET FORM ABOVE
@@ -1651,13 +1651,13 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       RETURN
       END
 !
-!     .......................................................................
+!     ..........................................................................
       SUBROUTINE COSMO_SWITCH(NQ,QP,Q0,QM)
-!     **                                                                   **
-!     ** SWITCH CHARGES                                                    **
-!     **                                                                   **
+!     **                                                                      **
+!     ** SWITCH CHARGES                                                       **
+!     **                                                                      **
       IMPLICIT NONE
-      INTEGER,INTENT(IN)    :: NQ
+      INTEGER(4),INTENT(IN)    :: NQ
       REAL(8),INTENT(INOUT) :: QM(NQ)
       REAL(8),INTENT(INOUT) :: Q0(NQ)
       REAL(8),INTENT(INOUT) :: QP(NQ)
@@ -1668,21 +1668,21 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       RETURN
       END
 
-!     .......................................................................
+!     ..........................................................................
       SUBROUTINE COSMO$INTERFACE(NAT_,R0,NG,RC,QMAD,EPOT,EKIN,VMAD,FORCE)
-!     **                                                                   **
-!     ** PROPAGATE                                                         **
-!     **                                                                   **
-!     ** THIS IS THE HEART OF THE CODE: IT GETS CALLED FROM PAW_ISOLATE    **
-!     ** AND DOES ALL THE RUNTIME CALCULATIONS!  (IT IS PUBLIC)            **
-!     **                                                                   **
-!     ** WE TAKE IT FROM THE ORIGINAL CODE BUT MODIFY IT SIGNIFICANTLY     **
-!     ** ESPECIALLY WE BREAK UP THE CHARGE PROPAGATION AND THE CALCULATION **
-!     ** OF THE FORCES ON THE NUCLEI AND THE GAUSSIAN CHARGES              **
-!     ** ONLY MULTIPLE TIMESTEP IS POSSIBLE                                **
-!     ** -> THIS IS ENSURED BY THE FACT THAT MULTIPLE MUST BE AN EVEN      **
-!     ** NUMBER (AT LEAST 2 :-)                                            **
-!     **                                                                   **
+!     **************************************************************************
+!     ** PROPAGATE                                                            **
+!     **                                                                      **
+!     ** THIS IS THE HEART OF THE CODE: IT GETS CALLED FROM PAW_ISOLATE       **
+!     ** AND DOES ALL THE RUNTIME CALCULATIONS!  (IT IS PUBLIC)               **
+!     **                                                                      **
+!     ** WE TAKE IT FROM THE ORIGINAL CODE BUT MODIFY IT SIGNIFICANTLY        **
+!     ** ESPECIALLY WE BREAK UP THE CHARGE PROPAGATION AND THE CALCULATION    **
+!     ** OF THE FORCES ON THE NUCLEI AND THE GAUSSIAN CHARGES                 **
+!     ** ONLY MULTIPLE TIMESTEP IS POSSIBLE                                   **
+!     ** -> THIS IS ENSURED BY THE FACT THAT MULTIPLE MUST BE AN EVEN         **
+!     ** NUMBER (AT LEAST 2 :-)                                               **
+!     **************************************************************************
       USE COSMO_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NAT_
@@ -1694,11 +1694,11 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
       REAL(8)   ,INTENT(IN)    :: R0(3,NAT_)
       REAL(8)   ,INTENT(INOUT) :: QMAD(NG,NAT_)
       REAL(8)   ,INTENT(IN)    :: RC(NG,NAT_)
-      INTEGER   ,PARAMETER     :: NNX=20  ! MAX. #(NEIGBORS)/ATOM
+      INTEGER(4),PARAMETER     :: NNX=20  ! MAX. #(NEIGBORS)/ATOM
       REAL(8)                  :: RMAX    ! MAX. DISTANCE FOR NEIGHBORLIST
-      INTEGER                  :: NNN(NAT_)
-      INTEGER                  :: NNLIST(4,NNX,NAT_)
-      LOGICAL   ,ALLOCATABLE   :: ZEROTHETA(:)
+      INTEGER(4)               :: NNN(NAT_)
+      INTEGER(4)               :: NNLIST(4,NNX,NAT_)
+      LOGICAL(4),ALLOCATABLE   :: ZEROTHETA(:)
 !     == ATOMS
       REAL(8)                  :: QATBAR(NAT_)
       REAL(8)                  :: RAT(3,NAT_)
@@ -1721,11 +1721,11 @@ CALL MADELUNG(NAT,RBAS,RAT,QATBAR,ETOT1,V1,F1)
 !
       REAL(8)                  :: EPOT1,EPOTSUM
       REAL(8)                  :: EKIN1,EKINSUM
-      INTEGER                  :: I,IAT,ITER,IQ1,IQ2
+      INTEGER(4)               :: I,IAT,ITER,IQ1,IQ2
       REAL(8)                  :: RBAS(3,3)
-      LOGICAL                  :: TCONVG
+      LOGICAL(4)               :: TCONVG
       REAL(8)                  :: SVAR
-      INTEGER                  :: NITER
+      INTEGER(4)               :: NITER
       REAL(8)                  :: ANNEM  ! PREVIOUS FRICTION FACTOR
       REAL(8)                  :: DQ,DE
       REAL(8)    ,ALLOCATABLE  :: WORK(:)

@@ -3165,7 +3165,7 @@ PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       REAL(8)   ,INTENT(IN) :: T
       COMPLEX(8),INTENT(OUT):: RES
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER   ,PARAMETER  :: NX=10
+      INTEGER(4),PARAMETER  :: NX=10
       REAL(8)               :: PI
       INTEGER(4)            :: P 
       REAL(8)               :: COSPPIHALF,SINPPIHALF

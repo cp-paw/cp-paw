@@ -390,11 +390,11 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8) ,INTENT(OUT) :: SECONDS
-      INTEGER              :: COUNT
-      INTEGER,SAVE         :: COUNTPREV=0
-      INTEGER              :: COUNTRATE
-      INTEGER              :: COUNTMAX
-      INTEGER,SAVE         :: COUNTTURN=0
+      INTEGER(8)           :: COUNT
+      INTEGER(8),SAVE      :: COUNTPREV=0
+      INTEGER(8)           :: COUNTRATE
+      INTEGER(8)           :: COUNTMAX
+      INTEGER(8),SAVE      :: COUNTTURN=0
       REAL(8)              :: RCOUNT
 !     **************************************************************************
       CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
@@ -405,8 +405,8 @@ END MODULE TIMING_MODULE
       COUNTPREV=COUNT
 ! 
 !     == OPERATIONS ARE DONE IN REAL MODE TO AVOID OVERFLOWS ===================
-      RCOUNT=REAL(COUNT)+REAL(COUNTMAX)*REAL(COUNTTURN)
-      SECONDS=RCOUNT/REAL(COUNTRATE)
+      RCOUNT=REAL(COUNT)+REAL(COUNTMAX,KIND=8)*REAL(COUNTTURN,KIND=8)
+      SECONDS=RCOUNT/REAL(COUNTRATE,KIND=8)
       RETURN
       END SUBROUTINE TIMING_CLOCK
 !    
