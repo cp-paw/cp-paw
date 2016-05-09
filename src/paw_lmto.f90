@@ -4786,8 +4786,16 @@ IF(.TRUE.) THEN
         CALL LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
      &                    ,POTPAR1(ISP)%TAILED%AEF &
      &                    ,LRX,AECORE,DT,HFSCALE*HFWEIGHT,EX,HT)
+
+!!$call testsimpledc_new_new(GID,NR,NDIMD,LMNXT,LNXT,LOXT &
+!!$     &                    ,POTPAR1(ISP)%TAILED%AEF &
+!!$     &                    ,LRX,AECORE,DT,HFSCALE*HFWEIGHT,EX,HT)
+
         CALL LMTOAUGMENTATION$SETI4('IAT',0) !UNSET ATOM INDEX
         CALL DFT$SETL4('XCONLY',.FALSE.)
+
+
+
 ELSE
         ALLOCATE(DTALL(LMNXT,LMNXT,NDIMD))
         ALLOCATE(HTALL(LMNXT,LMNXT,NDIMD))
@@ -5157,7 +5165,10 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     **  BLOW UP DENSITY MATRIX UP INTO A REPRESENTATION OF                  **
 !     **  PURE ANGULAR MOMENTUM COMPONENTS IN THE ONE-CENTER TAILED EXPANSION **
 !     **  AND SHRINK HAMILTOINIAN DOWN TO THE NTBO REPRESENTATION             **
-!     ** 
+!     **                                                                      **
+!     ** id='fwrd' x=intent(in),xt=intent(out)                                **
+!     ** id='back' x=intent(out),xt=intent(in)                                **
+!     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : CTE
       IMPLICIT NONE
@@ -5517,14 +5528,503 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       AUX(:)=FOURPI*R(:)**2*FXC*AUX(:)
       CALL RADIAL$INTEGRAL(GID,NR,AUX,ETOT)
 !      PRINT*,'----EXC  ',ETOT
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
+      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
       HAM=REAL(HAM1)
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
       HAMB=REAL(HAM1)
       DEALLOCATE(POT)
       DEALLOCATE(POT2)
 !
       RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE test_radxc_withcut(GID,NR,LMRX,NDIMD,RHO)
+!     **************************************************************************
+!     ** test routine for lmto_radxc                                          **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: LmRX
+      INTEGER(4)  ,INTENT(IN) :: NDIMD
+      real(8)     ,intent(in) :: rho(nr,lmrx,ndimd)
+      integer(4)  ,parameter  :: ndis=4
+      real(8)                 :: r(nr)
+      real(8)                 :: aux(nr)
+      real(8)                 :: rho1(nr,lmrx,ndimd)
+      real(8)                 :: pot1(nr,lmrx,ndimd)
+      real(8)                 :: drho(nr,lmrx,ndimd)
+      real(8)                 :: pi,fourpi
+      real(8)                 :: svar
+      real(8)                 :: etot(-ndis:ndis)
+      real(8)                 :: detot(-ndis:ndis)
+      real(8)                 :: cut1(nr)
+      real(8)                 :: cut(nr)
+      real(8)                 :: dcut(nr)
+      real(8)                 :: vcut(nr)
+      integer(4)              :: i,lm,idimd,l
+!     **************************************************************************
+      WRITE(*,FMT='(80("=")/80("="),T10,"  LMTO_RADXC TEST  "/80("="))')
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
+      CALL RADIAL$R(GID,NR,R)
+      CUT(:)=EXP(-R**2)
+!
+!     ==========================================================================
+!     ==  DEWFINE DISPLACEMENTS                                               ==
+!     ==========================================================================
+      LM=2
+      L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+      DRHO(:,:,:)=0.D0
+      DRHO(:,LM,1)=1.D-2*R**L*EXP(-R**2)
+      DCUT(:)=0.D-6*EXP(-2.D0*R**2)
+!
+!     ==========================================================================
+!     ==  DATA COLLECTION                                                     ==
+!     ==========================================================================
+      DO I=-NDIS,NDIS
+        RHO1=RHO+DRHO*REAL(I,KIND=8)
+        CUT1=CUT+DCUT*REAL(I,KIND=8)
+        CALL LMTO_RADXC_WITHCUT(GID,NR,LMRX,NDIMD,RHO1,CUT1,ETOT(I),POT1,VCUT)
+        DETOT(I)=0.D0
+        DO IDIMD=1,NDIMD
+          DO LM=1,LMRX
+            AUX=R**2*DRHO(:,LM,IDIMD)*POT1(:,LM,IDIMD)
+            CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+            DETOT(I)=DETOT(I)+SVAR
+          ENDDO
+        ENDDO
+        AUX=R**2*VCUT*DCUT
+        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+        DETOT(I)=DETOT(I)+SVAR
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ANALYZE                                                             ==
+!     ==========================================================================
+      ETOT=ETOT-ETOT(0)
+
+      WRITE(*,FMT='("NDIMD   ",I5)')NDIMD
+      WRITE(*,FMT='("LMrx    ",I5)')LMrx
+!
+      WRITE(*,FMT='(I5,E15.5,E15.5)')0,0.D0,DETOT(0)
+      DO I=1,NDIS
+        WRITE(*,FMT='(I5,E15.5,E15.5)')I &
+     &             ,(ETOT(I)-ETOT(-I))/(2.D0*REAL(I,KIND=8)) &
+     &             ,(DETOT(I)+DETOT(-I))/2.D0
+      ENDDO
+      STOP
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_RADXC_withcut(GID,NR,LMRX,NDIMD,RHOIN,cut,EXC,VXC,vcut)
+!     **************************************************************************
+!     **  CALCULATES THE EXCHANGE AND CORRELATION ENERGY                      **
+!     **  FOR A DENSITY GIVEN ON A RADIAL LOGARITHMIC GRID                    **
+!     **  TIMES REAL SPHERICAL HARMONICS                                      **
+!     **                                                                      **
+!     **  THIS ROUTINE IS ALMOST IDENTICAL TO THE ROUTINE AUGMENTATION_XC     **
+!     **  OF THE AUGMENTATION OBJECT PAW_AUGMENTATION.F90. IT DIFFERS IN THAT **
+!     **  THE ENERGY DENSITY IS PROVIDED ON A RADIAL GRID, SO THAT            **
+!     **       EXC=4\PI\INT_0^\INFTY DR R^2 FXC(R)                            **
+!     **  IS THE EXCHANGE-CORRELATION ENERGY.                                 **
+!     **                                                                      **
+!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                          **
+!     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC               **
+!     **  ORDER IN THE NON-SPHERICAL CONTRIBUTIONS                            **
+!     **                                                                      **
+!     **  EXC = EXC(XVAL(L=0)*Y0)                                             **
+!     **      + 0.5 * D2[EXC]/D[XVAL(L=0)*Y0]**2 * XVAL(L>0)**2               **
+!     **                                                                      **
+!     **  WHERE XVAL=(/RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS/)              **
+!     **  IS AN SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.             **
+!     **                                                                      **
+!     **  DEPENDECIES:                                                        **
+!     **    DFT                                                               **
+!     **    TIMING                                                            **
+!     **    TRACE                                                             **
+!     **                                                                      **
+!     **  REMARKS: THE GRADIENTS ARE CORRECT ONLY IF DFT SUPPORTS             **
+!     **    THIRD DERIVATIVES OF THE XC-ENERGY                                **
+!     **   - WHEN USING SELFTEST ON THIS ROUTINE, THEN                        **
+!     **     D(EXC)/DRHO(I)=POT(I)*DEX*R(I)**3                                **
+!     **     AND THE VALUES AT LARGE RADII MUST BE SURPRESSED                 **
+!     **                                                                      **
+!     **  REMARK: FOR A COLLINEAR DENSITY THE ROUTINE GIVES DIFFERENT RESULTS **
+!     **          WITH NDIMD=2 AND NDIMD=4 DUE TO THE TAYLOR EXPANSION IN     **
+!     **          ANGULAR MOMENTUM EXPANSIONS                                 **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1996 ************
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER  :: TNS=.TRUE. ! NON-SPHERICAL CONTRIBUTIONS ON
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: LMRX
+      INTEGER(4),INTENT(IN) :: NDIMD      ! CAN BE 1,2,4
+      REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
+      REAL(8)   ,INTENT(IN) :: cut(nr)
+      REAL(8)   ,INTENT(OUT):: EXC
+      REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
+      REAL(8)   ,INTENT(OUT):: vcut(NR)
+      LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
+      INTEGER(4)            :: NSPIN
+      REAL(8)               :: EXC1
+      REAL(8)               :: R(NR)
+      REAL(8)               :: fxc(NR)
+      REAL(8)   ,ALLOCATABLE:: RHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: GRHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: VRHO(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: VGRHO(:,:,:)
+      REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
+      REAL(8)               :: XVAL(NR,5,LMRX)
+      REAL(8)               :: XDER(NR,5,LMRX)
+      REAL(8)               :: PI,FOURPI
+      REAL(8)               :: Y0
+      INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
+      INTEGER(4)            :: LM
+      INTEGER(4)            :: IMAX
+      REAL(8)               :: FAC
+      REAL(8)               :: CG0LL
+      REAL(8)               :: WORK(NR)
+      REAL(8)               :: WORK1(NR)
+      REAL(8)               :: WORK2(NR)
+      real(8)               :: svec(5)
+      real(8),parameter     :: XX=1.d0  !bugfix 160509 xx=0.5->1.0
+!     **************************************************************************
+                                                  CALL TRACE$PUSH('LMTO_RADXC')
+      exc=0.d0
+      VXC(:,:,:)=0.D0
+      vcut(:)=0.d0
+!
+!     ==========================================================================
+!     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
+!     ==========================================================================
+      CALL DFT$GETL4('GC',TGRA)
+      PI=4.D0*ATAN(1.D0)
+      FOURPI=4.D0*PI
+      Y0=1.D0/SQRT(FOURPI)
+      CG0LL=Y0
+      CALL RADIAL$R(GID,NR,R)
+!
+!     ==========================================================================
+!     ==  OBTAIN SPIN DENSITY                                                 ==
+!     ==========================================================================
+      NSPIN=1
+      IF(NDIMD.GT.1) NSPIN=2
+      ALLOCATE(RHO(NR,LMRX,NSPIN))
+      ALLOCATE(GRHO(NR,LMRX,NSPIN))
+      ALLOCATE(VRHO(NR,LMRX,NSPIN))
+      RHO(:,:,1)=RHOIN(:,:,1)
+      IF(NDIMD.EQ.2) THEN
+        RHO(:,:,2)=RHOIN(:,:,2)
+      ELSE IF(NDIMD.EQ.4) THEN
+!       == HERE WE NEED TO CALCULATE THE ABSOLUTE VALUE OF THE SPIN DENSITY ====
+!       == IN AN ANGULAR MOMENTUM EXPANSION. THIS IS ONLY POSSIBLE APPROXIMATELY
+!       == USING A TAYLOR EXPANSION ABOUT THE SPHERICAL PART OF THE SQUARE =====
+!       == OF THE SPIN DENSITY. ================================================
+        VRHO(:,:,:)=0.D0
+        CALL AUGMENTATION_NCOLLTRANS(GID,'RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+      END IF
+!
+!     == IMAX ALLOWS TO RESTRICT SOME LOOPS (1:5) TO (1:IMAX)
+      IF(TGRA) THEN
+        IF(NSPIN.EQ.2) THEN; IMAX=5; ELSE; IMAX=3; END IF
+      ELSE 
+        IF(NSPIN.EQ.2) THEN; IMAX=2; ELSE; IMAX=1; END IF
+      END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE RADIAL GRADIENT OF THE DENSITY                            ==
+!     ==========================================================================
+      CALL TRACE$PASS('BEFORE GRADIENTS')
+      IF(TGRA) THEN
+        GRHO(:,:,:)=0.D0
+        DO ISPIN=1,NSPIN
+          DO LM=1,LMRX
+            CALL RADIAL$DERIVE(GID,NR,RHO(:,LM,ISPIN),GRHO(:,LM,ISPIN))
+          ENDDO
+        ENDDO
+      ELSE
+        GRHO(:,:,:)=0.D0
+      END IF
+!
+!     ==========================================================================
+!     ==  DEFINE VECTOR (RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS)             ==
+!     ==========================================================================
+      XVAL(:,:,:)=0.D0
+      DO ISPIN=1,NSPIN
+        DO LM=1,LMRX
+          IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+          XVAL(:,ISPIN,LM)=RHO(:,LM,ISPIN)
+        ENDDO
+      ENDDO
+      IF(TGRA) THEN
+        II=2
+        DO ISPIN1=1,NSPIN          ! THIS LOOP PUTS T,T->3; S,S->4 ;T,S->5
+          DO ISPIN2=ISPIN1,1,-1    ! AND ASSURES CONSISTENCY WITH NSPIN
+            II=II+1
+            DO LM=1,LMRX
+              IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+              L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+              FAC=REAL(L*(L+1),KIND=8)
+              XVAL(:,II,1)=XVAL(:,II,1) &
+        &                 +CG0LL*(GRHO(:,LM,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                        +FAC*RHO(:,LM,ISPIN1)*RHO(:,LM,ISPIN2)/R(:)**2)
+            ENDDO
+            DO LM=2,LMRX 
+              IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
+              XVAL(:,II,LM)=XVAL(:,II,LM) &
+        &                  +XX*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                            +GRHO(:,LM,ISPIN1)*GRHO(:,1,ISPIN2))
+            ENDDO
+          ENDDO
+        ENDDO
+!        XVAL(1,:,1)=XVAL(2,:,1) !AVOID DIVIDEBYZERO
+      END IF
+!
+!     ==========================================================================
+!     ==  CALCULATE EXCHANGE ENERGY FOR THE SPHERICAL DENSITY                 ==
+!     ==========================================================================
+      CALL TRACE$PASS('BEFORE DFT')
+      fxc(:)=0.D0
+      XDER(:,:,:)=0.D0
+      vcut(:)=0.d0
+      DO IR=1,NR
+!       ==  CYCLE IF THE TOTAL DENSITY VANISHES ================================
+        IF(XVAL(IR,1,1).LE.0.D0) CYCLE
+!       == NOW CALL DFT ROUTINE ================================================
+        VAL5(:)=XVAL(IR,:,1)*Y0
+        CALL DFT3(VAL5,EXC1,VXC5,V2XC5,V3XC5)
+
+!       == NOW CALCULATE ENERGY DENSITY AND DERIvATIVES ========================
+        fxc(IR)   =fourpi*EXC1*cut(ir)
+        vxc5 =vxc5 *cut(ir)
+        v2xc5=v2xc5*cut(ir)
+        v3xc5=v3xc5*cut(ir)
+        vcut(ir)  =fourpi*EXC1
+!
+        XDER(IR,:,1)=FOURPI*VXC5(:)*Y0
+        DO LM=2,LMRX
+          DO I=1,IMAX        ! IMAX=<5 
+            DO J=1,IMAX
+              fxc(IR)=fxc(IR)+0.5D0*XVAL(IR,I,LM)*V2XC5(I,J)*XVAL(IR,J,LM)
+              XDER(IR,:,1)=XDER(IR,:,1) &
+       &                  +0.5D0*Y0*XVAL(IR,I,LM)*V3XC5(:,I,J)*XVAL(IR,J,LM)
+              XDER(IR,I,LM)=XDER(IR,I,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,J,LM)
+              XDER(IR,J,LM)=XDER(IR,J,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,I,LM)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      CALL RADIAL$INTEGRAL(GID,NR,fxc(:)*R(:)**2,EXC)
+      CALL TRACE$PASS('AFTER DFT')
+!
+!
+!     ==========================================================================
+!     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
+!     ==========================================================================
+      ALLOCATE(VGRHO(NR,LMRX,NSPIN))
+      VRHO(:,:,:)=0.D0
+      VGRHO(:,:,:)=0.D0
+      DO ISPIN=1,NSPIN
+        DO LM=1,LMRX
+          VRHO(:,LM,ISPIN)=XDER(:,ISPIN,LM)
+        ENDDO
+      ENDDO
+      IF(TGRA) THEN
+        II=2
+        DO ISPIN1=1,NSPIN
+          DO ISPIN2=ISPIN1,1,-1
+            II=II+1
+!           ==  resolve spherical part =========================================
+            vgrho(:,1,ispin1)=vgrho(:,1,ispin1) &
+     &                         +y0*xder(:,II,1)*grho(:,1,ispin2)
+            vgrho(:,1,ispin2)=vgrho(:,1,ispin2) &
+     &                         +y0*xder(:,II,1)*grho(:,1,ispin1)
+!           == nonspherical contributions ======================================
+            DO LM=2,LMRX
+              L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+              FAC=REAL(L*(L+1),KIND=8)
+              vgrho(:,1,ispin1)=vgrho(:,1,ispin1) &
+     &                         +XX*y0*xder(:,II,lm)*grho(:,lm,ispin2)
+              vgrho(:,1,ispin2)=vgrho(:,1,ispin2) &
+     &                         +XX*y0*xder(:,II,lm)*grho(:,lm,ispin1)
+              VRHO(:,LM,ISPIN1)=VRHO(:,LM,ISPIN1) &
+     &                         +FAC*Y0*XDER(:,II,1)*RHO(:,LM,ISPIN2)/r**2
+              VRHO(:,LM,ISPIN2)=VRHO(:,LM,ISPIN2) &
+     &                         +FAC*Y0*XDER(:,II,1)*RHO(:,LM,ISPIN1)/r**2
+              VGRHO(:,lm,ISPIN1)=VGRHO(:,lm,ISPIN1) &
+     &                         +Y0*XDER(:,II,1)*GRHO(:,LM,ISPIN2) &
+     &                         +XX*Y0*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
+              VGRHO(:,lm,ISPIN2)=VGRHO(:,lm,ISPIN2) &
+     &                         +Y0*XDER(:,II,1)*GRHO(:,LM,ISPIN1) &
+     &                         +XX*Y0*XDER(:,II,LM)*GRHO(:,1,ISPIN1)
+            ENDDO
+          ENDDO
+        ENDDO               
+      END IF
+!
+!     ==========================================================================
+!     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS                     ==
+!     ==  V = V -1/R**2 D/DR [ R**2 VGRHO ]                                   ==
+!     ==  V = V -[2/R VGRHO+ D/DR VGRHO ]                                     ==
+!     ==========================================================================
+      IF(TGRA) THEN
+        DO ISPIN=1,NSPIN
+          DO LM=1,LMRX
+            IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
+            WORK2(:)=VGRHO(:,LM,ISPIN)*R(:)**2
+            CALL RADIAL$DERIVE(GID,NR,WORK2,WORK1)
+            WORK1(2:)=WORK1(2:)/R(2:)**2
+            WORK(1)=WORK(2)  ! AVOID DIVIDE BY ZERO
+!           == ALTERNATIVES FINISHED
+            VRHO(:,LM,ISPIN)=VRHO(:,LM,ISPIN)-WORK1(:)
+          ENDDO
+        ENDDO
+      ENDIF
+      DEALLOCATE(VGRHO)
+!
+!     ==========================================================================
+!     ==   CORRECT FOR DIVERGENCE AT THE ORIGIN:                              ==
+!     ==   IF A SHIFTED LOGARITHMIC GRID IS USED THE FIRST GRID POINT         ==
+!     ==   IS MESSED UP BECAUSE OF FACTORS 1/R                                ==
+!     ==========================================================================
+      IF(R(1).LT.1.D-5) THEN
+        VRHO(1,:,:)=VRHO(2,:,:)
+      END IF
+!
+!     ==========================================================================
+!     ==  TRANSFORM GRADIENT POTENTIAL BACK TO POTENTIALS                     ==
+!     ==========================================================================
+      VXC(:,:,1)=VRHO(:,:,1)
+      IF(NDIMD.EQ.2) THEN
+        VXC(:,:,2)=VRHO(:,:,2)
+      ELSE IF(NDIMD.EQ.4) THEN
+        CALL AUGMENTATION_NCOLLTRANS(GID,'POT',NR,LMRX,RHOIN,RHO,VRHO,VXC)
+      END IF     
+      DEALLOCATE(RHO)
+      DEALLOCATE(GRHO)
+      DEALLOCATE(VRHO)
+                      CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE testsIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNX,LNX,LOX,CHI,LRX &
+     &                                ,AECORE,DENMAT,HFSCALE,ETOT,HAM)
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      INTEGER(4)  ,INTENT(IN) :: NR
+      INTEGER(4)  ,INTENT(IN) :: LRX
+      INTEGER(4)  ,INTENT(IN) :: NDIMD
+      INTEGER(4)  ,INTENT(IN) :: LMNX       ! #(LOCAL ORBITALS)
+      INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
+      INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   !MAIN ANGULAR MOMENTUM OF LOCAL ORB.
+      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)  ! local orbitals
+      REAL(8)     ,INTENT(IN) :: AECORE(NR)
+      REAL(8)     ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
+      REAL(8)     ,INTENT(IN) :: HFSCALE
+      REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
+      REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
+      integer(4)  ,parameter  :: ndis=4
+      integer(4)              :: nat
+      integer(4)              :: Iat
+      integer(4)              :: I
+      integer(4)              :: isp
+      integer(4)              :: LNX_S
+      integer(4)              :: LmNX_S
+      integer(4)  ,allocatable:: LOX_S(:)
+      integer(4)              :: lmnxx
+      complex(8)  ,allocatable:: denmat_big(:,:,:,:)      
+      complex(8)  ,allocatable:: dh_big(:,:,:,:)      
+      complex(8)  ,allocatable:: denmat_tot_save(:,:,:) !lmnx_s,lmnx_s,ndimd
+      complex(8)  ,allocatable:: dis_tot(:,:,:)         !lmnx_s,lmnx_s,ndimd
+      complex(8)  ,allocatable:: denmat_tot(:,:,:)      !lmnx_s,lmnx_s,ndimd
+      complex(8)  ,allocatable:: dh_tot(:,:,:)          !lmnx_s,lmnx_s,ndimd
+      real(8)                 :: denmat_loc_save(lmnx,lmnx,ndimd)     
+      real(8)                 :: dis_loc(lmnx,lmnx,ndimd)      
+      real(8)                 :: denmat_loc(lmnx,lmnx,ndimd)     
+      real(8)                 :: dh_loc(lmnx,lmnx,ndimd)      
+      real(8)                 :: etotarr(-ndis:ndis)       
+      real(8)                 :: detotarr(-ndis:ndis)       
+      real(8)                 :: ran,ran1,ran2
+      real(8)                 :: hfscale1=1.d0
+      real(8)                 :: r(nr)
+!     **************************************************************************
+      CALL LMTOAUGMENTATION$GETI4('IAT',IAT)
+if(iat.ne.1) return
+      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETI4('LNX',LNX_S)
+      ALLOCATE(LOX_S(LNX_S))
+      CALL SETUP$GETI4A('LOX',LNX_S,LOX_S)
+      CALL RADIAL$R(GID,NR,R)
+      CALL SETUP$UNSELECT()
+      LMNX_S=SUM(2*LOX_S+1)
+      ALLOCATE(DENMAT_TOT_SAVE(LMNX_S,LMNX_S,NDIMD))
+      ALLOCATE(DIS_tot(LMNX_S,LMNX_S,NDIMD))
+      ALLOCATE(DENMAT_tot(LMNX_S,LMNX_S,NDIMD))
+      ALLOCATE(DH_tot(LMNX_S,LMNX_S,NDIMD))
+
+      CALL LMTOAUGMENTATION$GETI4('NAT',NAT)
+      CALL LMTOAUGMENTATION$GETI4('LMNXX',LMNXX)
+      ALLOCATE(DENMAT_BIG(LMNXX,LMNXX,NDIMD,NAT))
+      ALLOCATE(DH_BIG(LMNXX,LMNXX,NDIMD,NAT))
+      CALL LMTOAUGMENTATION$GETC8A('DENMAT',LMNXX*LMNXX*NDIMD*NAT,DENMAT_BIG)
+      DENMAT_TOT_SAVE=DENMAT_BIG(:LMNX_S,:LMNX_s,:,IAT)
+      DENMAT_LOC_SAVE=DENMAT
+!
+!     ==========================================================================
+!     ==  SET UP DISPLACEMENTS
+!     ==========================================================================
+      DIS_LOC=0.D0
+      DIS_TOT=(0.D0,0.d0)
+      DIS_LOC(:,1,1)=1.D-3*exp(-r**2)
+      DIS_tot(:,1,1)=0.d0*(1.D0,0.d0)*exp(-r**2)
+!
+!     ==========================================================================
+!     ==  TEST CALCULATIONS
+!     ==========================================================================
+      DO I=-NDIS,NDIS
+        DENMAT_LOC=DENMAT_LOC_SAVE+DIS_LOC*REAL(I,KIND=8)
+        DENMAT_TOT=DENMAT_TOT_SAVE+DIS_TOT*REAL(I,KIND=8)
+        DENMAT_BIG(:,:,:,IAT)=(0.D0,0.D0)
+        DENMAT_BIG(:LMNX_S,:LMNX_S,:,IAT)=DENMAT_TOT
+        CALL LMTOAUGMENTATION$SETC8A('DENMAT',LMNXX*LMNXX*NDIMD*NAT,DENMAT_BIG)
+        CALL LMTO_SIMPLEDC_NEW_NEW(GID,NR,NDIMD,LMNX,LNX,LOX,CHI,LRX &
+     &                          ,AECORE,DENMAT_LOC,HFSCALE1,ETOT,DH_LOC)
+        CALL LMTOAUGMENTATION$GETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH_BIG)
+        DH_TOT=DH_BIG(:LMNX_S,:LMNX_S,:,IAT)
+        ETOTARR(I)=ETOT
+!       ==MINUS SIGN BECAUSE DC IS SUBTRACTED
+        DETOTARR(I)=SUM(DIS_LOC*DH_LOC)-SUM(DIS_TOT*DH_TOT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ANALYZE
+!     ==========================================================================
+      ETOTARR=ETOTARR-ETOTARR(0)
+
+      WRITE(*,FMT='("ATOM ID ",I5)')IAT
+      WRITE(*,FMT='("LMNX    ",I5)')LMNX
+      WRITE(*,FMT='("LNX     ",I5)')LNX
+      WRITE(*,FMT='("LOX     ",10I5)')LOX(:)
+      WRITE(*,FMT='("NDIMD   ",I5)')NDIMD
+      WRITE(*,FMT='("LMNXX   ",I5)')LMNXX
+      WRITE(*,FMT='("LMNX_S  ",I5)')LMNX_S
+      WRITE(*,FMT='("LNX_S   ",I5)')LNX_S
+      WRITE(*,FMT='("LOX_S   ",10I5)')LOX_S(:)
+      WRITE(*,FMT='("hfscale1",f10.5)')hfscale1
+!
+      WRITE(*,FMT='(I5,E15.5,E15.5)')0,0.D0,DETOTARR(0)
+      DO I=1,NDIS
+        WRITE(*,FMT='(I5,E15.5,E15.5)')I &
+     &             ,(ETOTARR(I)-ETOTARR(-I))/(2.D0*REAL(I,KIND=8)) &
+     &             ,(DETOTARR(I)+DETOTARR(-I))/2.D0
+      ENDDO
+      STOP
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -5534,9 +6034,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
 !     **                                                                      **
 !     **  EXPRESSES THE TOTAL DENSITY IN TERMS OF A PARTIAL-WAVE EXPANSION.   **
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
 !     **  DETERMINES THE HARTREE AND EXCHANGE-ONLY ENERGY FROM THE            **
@@ -5562,24 +6059,24 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)  ,INTENT(IN) :: LMNX       ! #(LOCAL ORBITALS)
       INTEGER(4)  ,INTENT(IN) :: LNX        ! #(RADIAL FUNCTIONS)
       INTEGER(4)  ,INTENT(IN) :: LOX(LNX)   !MAIN ANGULAR MOMENTUM OF LOCAL ORB.
-      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)
+      REAL(8)     ,INTENT(IN) :: CHI(NR,LNX)  ! local orbitals
       REAL(8)     ,INTENT(IN) :: AECORE(NR)
       REAL(8)     ,INTENT(IN) :: DENMAT(LMNX,LMNX,NDIMD) ! DENSITY MATRIX
       REAL(8)     ,INTENT(IN) :: HFSCALE
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
-      REAL(8)     ,PARAMETER  :: DELTA=1.D-6
+      REAL(8)     ,PARAMETER  :: DELTA=1.D-8
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
       REAL(8)                 :: CUT(NR)
+      REAL(8)                 :: vCUT(NR)
       REAL(8)     ,ALLOCATABLE:: RHO_LOC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT_LOC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: RHO_ALL(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT_ALL(:,:,:)
-      REAL(8)                 :: AUX(NR),SVAR
-      REAL(8)                 :: FXC(NR)
+      REAL(8)                 :: AUX(NR),aux2(nr),SVAR
       REAL(8)                 :: PI,FOURPI,Y0
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN,IR
@@ -5596,6 +6093,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==========================================================================
 !     ==  DENSITY OF LOCAL ORBITALS (INCLUDING CORE)                          ==
 !     ==========================================================================
+!     == TAKING THE REAL PART IS NOT APPROXIMATION: ONLY THE REAL PART OF THE 
+!     == DENSITY MATRIX IN (TXYZ) REPRESENTATION CONTRIBUTES TO THE DENSITY. 
       DENMAT1=CMPLX(DENMAT,KIND=8)
       ALLOCATE(RHO_LOC(NR,LMRX,NDIMD))
       DO IDIM=1,NDIMD
@@ -5624,37 +6123,28 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       ALLOCATE(POT_LOC(NR,LMRX,NDIMD))  ! POTENTIAL FOR LOCAL ORBITALS
 !
 !     == EXCHANGE CORRELATION OF THE TOTAL DENSITY INCLUDING CORE ==============
-      CALL LMTO_RADXC(GID,NR,LMRX,NDIMD,RHO_ALL,FXC,POT_ALL)
+!     ==  call test_radxc_withcut(GID,NR,LMRX,NDIMD,RHO_all)
+      CALL LMTO_RADXC_withcut(GID,NR,LMRX,NDIMD,RHO_ALL,cut,Etot,POT_ALL,vcut)
 !
 !     == SUBTRACT FROZEN-CORE ==================================================
-      CALL LMTO_RADXC(GID,NR,1,1,AECORE,AUX,POT_LOC)!POT_LOC WILL BE OVERWRITTEN
-      FXC(:)=FXC(:)-AUX(:)
-!
-!     == CALCULATE ENERGY ======================================================
-      AUX(:)=FOURPI*R(:)**2*FXC(:)*CUT(:)
-      CALL RADIAL$INTEGRAL(GID,NR,AUX,ETOT)
-      PRINT*,'----EXC  ',ETOT
-! Funny factor made energy conservation much better for a hubbard model
-!etot=1.18d0*etot 
+      CALL LMTO_RADXC_WITHCUT(GID,NR,1,1,AECORE,CUT,SVAR,POT_LOC,AUX)
+      Etot=Etot-SVAR
+      POT_LOC=0.D0
+      VCUT(:)=VCUT(:)-AUX(:)
+!vcut=0.d0
 !      
 !     == POTENTIAL FOR PARTIAL-WAVE DENSITY N_T ================================
-      DO IDIM=1,NDIMD
-        DO LM=1,LMRX
-          POT_ALL(:,LM,IDIM)=CUT(:)*POT_ALL(:,LM,IDIM)
-        ENDDO
-      ENDDO
-      POT_ALL(:,1,1)=POT_ALL(:,1,1) &
-     &              -2.D0*FXC(:)*CUT(:)/(RHO_ALL(:,1,1)+DELTA)/Y0**2
+      POT_ALL(:,1,1)=POT_ALL(:,1,1)-VCUT(:)*2.D0*CUT(:)/(RHO_ALL(:,1,1)+DELTA) 
 !
 !     == POTENTIAL FOR THE CORRELATED DENSITY ==================================
-      POT_LOC(:,:,:)=0.D0
-      POT_LOC(:,1,1)=2.D0*FXC(:)*CUT(:)/(RHO_LOC(:,1,1)+1.D-6)/Y0**2
+      POT_LOC(:,1,1)=VCUT(:)*2.D0*CUT(:)/(RHO_LOC(:,1,1)+1.D-6) 
+      POT_LOC(:,2:,2:)=0.D0
 !
 !     ==========================================================================
 !     ==  EXTRACT HAMILTON CONTRIBUTIONS                                      ==
 !     ==========================================================================
       HAM1=(0.D0,0.D0)
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT_LOC,CHI,HAM1)
+      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT_LOC,CHI,HAM1)
       HAM=REAL(HAM1)
 !
 !     == POTENTIAL ENTERS WITH NEGATIVE SIGN, BECAUSE THE LOCAL EXCHANGE =======
@@ -5662,7 +6152,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     == SIMILARLY THE SCALE FACTOR HFWEIGHT IS APPLIED AT THIS POINT. =========
       CALL LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD,-POT_ALL*HFSCALE)
 !!$PRINT*,'HFSCALE',HFSCALE
-!!$CALL LMTO_WRITEPHI('FXC.DAT',GID,NR,1,FXC)
+!!$PRINT*,'LMRX',LMRX
 !!$CALL LMTO_WRITEPHI('POT_LOC.DAT',GID,NR,LMRX,POT_LOC)
 !!$CALL LMTO_WRITEPHI('POT_ALL.DAT',GID,NR,LMRX,POT_ALL)
 !!$CALL LMTO_WRITEPHI('RHO_LOC.DAT',GID,NR,LMRX,RHO_LOC)
@@ -5709,6 +6199,31 @@ END MODULE LMTOAUGMENTATION_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$GETI4(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,IAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(OUT):: VAL
+!     **************************************************************************
+      IF(ID.EQ.'NAT') THEN
+        val=NAT   !use only to inspect this object
+      ELSE IF(ID.EQ.'IAT') THEN
+        VAL=iat   !use only to inspect this object
+      ELSE IF(ID.EQ.'LMNXX') THEN
+        val=lmnxx   !use only to inspect this object
+      ELSE IF(ID.EQ.'NDIMD') THEN
+        val=NDIMD !use only to inspect this object
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTOAUGMENTATION$SETI4(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
@@ -5718,12 +6233,24 @@ END MODULE LMTOAUGMENTATION_MODULE
       INTEGER(4)  ,INTENT(IN) :: VAL
 !     **************************************************************************
       IF(ID.EQ.'NAT') THEN
+        IF(TINI.AND.NAT.NE.VAL) THEN
+          CALL ERROR$MSG('NAT MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
         NAT=VAL
       ELSE IF(ID.EQ.'IAT') THEN
         IAT=VAL
       ELSE IF(ID.EQ.'LMNXX') THEN
+        IF(TINI.AND.LMNXX.NE.VAL) THEN
+          CALL ERROR$MSG('LMNXX MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
         LMNXX=VAL
       ELSE IF(ID.EQ.'NDIMD') THEN
+        IF(TINI.AND.NDIMD.NE.VAL) THEN
+          CALL ERROR$MSG('NDIMD MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
         NDIMD=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -5761,6 +6288,7 @@ END MODULE LMTOAUGMENTATION_MODULE
           DATH=(0.D0,0.D0)
         END IF
         DENMAT=RESHAPE(VAL,(/LMNXX,LMNXX,NDIMD,NAT/))
+!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -5773,7 +6301,7 @@ END MODULE LMTOAUGMENTATION_MODULE
       SUBROUTINE LMTOAUGMENTATION$GETC8A(ID,LEN,VAL)
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,DATH
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,DATH,denmat
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -5792,6 +6320,19 @@ END MODULE LMTOAUGMENTATION_MODULE
           CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
         END IF
         VAL=RESHAPE(DATH,(/LMNXX*LMNXX*NDIMD*NAT/))
+!
+      ELSE IF(ID.EQ.'DENMAT') THEN
+        IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$I4VAL('LMNXX',LMNXX)
+          CALL ERROR$I4VAL('LMNXX',NDIMD)
+          CALL ERROR$I4VAL('NAT',NAT)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+        END IF
+         VAL=RESHAPE(DENMAT,(/LMNXX*LMNXX*NDIMD*NAT/))
+!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -5875,7 +6416,7 @@ END MODULE LMTOAUGMENTATION_MODULE
       SUBROUTINE LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD_,POT)
 !     **************************************************************************
 !     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,DATH,IAT
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NDIMD,DATH,IAT
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: GID
       INTEGER(4),INTENT(IN)  :: NR
@@ -5931,7 +6472,7 @@ END MODULE LMTOAUGMENTATION_MODULE
       CALL SETUP$UNSELECT()
       LMNX=SUM(2*LOX(:LNX)+1)
       ALLOCATE(DATH1(LMNX,LMNX,NDIMD))
-      CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,AEPHI,DATH1)
+      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,AEPHI,DATH1)
       DATH(:,:,:,IAT)=(0.D0,0.D0)
       DATH(:LMNX,:LMNX,:,IAT)=DATH1(:,:,:)
       DEALLOCATE(AEPHI)
@@ -5941,7 +6482,7 @@ END MODULE LMTOAUGMENTATION_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
+      SUBROUTINE LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
      &                          ,AEPOT,AEPHI,DATH)
 !     **************************************************************************
 !     **                                                                      **
@@ -6113,7 +6654,7 @@ INTEGER(4) :: IMETHOD
         CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHOWC,ETOT,POT)
         CALL DFT$SETL4('XCONLY',.FALSE.)
         ETOT=ETOT-ETOTC
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
         DEALLOCATE(POT)
         HAM=REAL(HAM1)
 
@@ -6146,10 +6687,10 @@ CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,ETOTV,POT2)
         CALL DFT$SETL4('XCONLY',.FALSE.)
 PRINT*,'EX(TOT)=',ETOT,' EX(TOT-COR)=',ETOTC,' DEX=',ETOT-ETOTC,' EX(COR)=',ETOTV
         ETOT=ETOT-ETOTC
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
         HAM=REAL(HAM1)
         POT=POT2-POT
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
         HAMB=REAL(HAM1)
         DEALLOCATE(POT)
         DEALLOCATE(POT2)
@@ -6181,9 +6722,9 @@ PRINT*,'EX(TOT)=',ETOT,' EX(TOT-COR)=',ETOTC,' DEX=',ETOT-ETOTC,' EX(COR)=',ETOT
         AUX(:)=FOURPI*R(:)**2*FXC*AUX(:)
         CALL RADIAL$INTEGRAL(GID,NR,AUX,ETOT)
 PRINT*,'----EXC  ',ETOT
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT2,CHI,HAM1)
         HAM=REAL(HAM1)
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
         HAMB=REAL(HAM1)
         DEALLOCATE(POT)
         DEALLOCATE(POT2)
@@ -6313,7 +6854,7 @@ PRINT*,'----EXC  ',ETOT
 !       ========================================================================
 !       ==  CALCULATE HAMILTONIAN IN TOTAL/SPIN REPRESENTATION                ==
 !       ========================================================================
-        CALL LDAPLUSU_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
+        CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,CHI,HAM1)
         DEALLOCATE(POT)
 !
 !     ==========================================================================
@@ -6434,6 +6975,8 @@ PRINT*,'----EXC  ',ETOT
       ELSE 
         IF(NSPIN.EQ.2) THEN; IMAX=2; ELSE; IMAX=1; END IF
       END IF
+print*,'tgra=',tgra,' ndimd=',ndimd,' nspin=',nspin,' imax=',imax
+
 !
 !     ==========================================================================
 !     ==  CALCULATE RADIAL GRADIENT OF THE DENSITY                            ==
@@ -6468,19 +7011,21 @@ PRINT*,'----EXC  ',ETOT
             DO LM=1,LMRX
               IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
               L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
-              FAC=DBLE(L*(L+1))
+              FAC=REAL(L*(L+1),KIND=8)
               XVAL(:,II,1)=XVAL(:,II,1) &
-        &         +CG0LL*(GRHO(:,LM,ISPIN1)*GRHO(:,LM,ISPIN2) &
-        &                +FAC*RHO(:,LM,ISPIN1)*RHO(:,LM,ISPIN2)/R(:)**2)
+        &                 +CG0LL*(GRHO(:,LM,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                        +FAC*RHO(:,LM,ISPIN1)*RHO(:,LM,ISPIN2)/R(:)**2)
             ENDDO
             DO LM=2,LMRX 
               IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
               XVAL(:,II,LM)=XVAL(:,II,LM) &
-        &         +0.5D0*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
-        &                      +GRHO(:,LM,ISPIN1)*GRHO(:,1,ISPIN2))
+!        &         +0.5D0*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &         +CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &                +GRHO(:,LM,ISPIN1)*GRHO(:,1,ISPIN2))
             ENDDO
           ENDDO
         ENDDO
+        XVAL(1,:,1)=XVAL(2,:,1) !AVOID DIVIDEBYZERO
       END IF
 !
 !     ==========================================================================
@@ -6495,16 +7040,17 @@ PRINT*,'----EXC  ',ETOT
 !       == NOW CALL DFT ROUTINE ================================================
         VAL5(:)=XVAL(IR,:,1)*Y0
         CALL DFT3(VAL5,EXC1,VXC5,V2XC5,V3XC5)
-!       == NOW CALCULATE ENERGY DENSITY AND DERIAVTIVES ========================
+!       == NOW CALCULATE ENERGY DENSITY AND DERIvATIVES ========================
         FXC(IR)=EXC1
+        work1(IR)=fourpi*EXC1
         XDER(IR,:,1)  =FOURPI*VXC5(:)*Y0
         DO LM=2,LMRX
           DO I=1,IMAX        ! IMAX=<5 
             DO J=1,IMAX
-              WORK1(IR)=WORK1(IR) &
-       &              +0.5D0*XVAL(IR,I,LM)*V2XC5(I,J)*XVAL(IR,J,LM)
+              work1(IR)=work1(IR) &
+       &               +0.5D0*XVAL(IR,I,LM)*V2XC5(I,J)*XVAL(IR,J,LM)
               XDER(IR,:,1)=XDER(IR,:,1) &
-       &              +0.5D0*Y0*XVAL(IR,I,LM)*V3XC5(:,I,J)*XVAL(IR,J,LM)
+       &                  +0.5D0*Y0*XVAL(IR,I,LM)*V3XC5(:,I,J)*XVAL(IR,J,LM)
               XDER(IR,I,LM)=XDER(IR,I,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,J,LM)
               XDER(IR,J,LM)=XDER(IR,J,LM)+0.5D0*V2XC5(I,J)*XVAL(IR,I,LM)
             ENDDO
@@ -6512,6 +7058,9 @@ PRINT*,'----EXC  ',ETOT
         ENDDO
       ENDDO
       CALL TRACE$PASS('AFTER DFT')
+!
+!     CALL RADIAL$INTEGRAL(GID,NR,WORK1(:)*R(:)**2,EXC)
+      fxc=work1/fourpi
 !
 !     ==========================================================================
 !     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
@@ -6529,11 +7078,35 @@ PRINT*,'----EXC  ',ETOT
         DO ISPIN1=1,NSPIN
           DO ISPIN2=ISPIN1,1,-1
             II=II+1
+if(1.eq.1) then
+!           ==  resolve spherical part =========================================
+            do lm=1,lmrx
+              vgrho(:,1,ispin1)=vgrho(:,1,ispin1) &
+     &                         +y0*xder(:,II,lm)*grho(:,lm,ispin2)
+              vgrho(:,1,ispin2)=vgrho(:,1,ispin2) &
+     &                         +y0*xder(:,II,lm)*grho(:,lm,ispin1)
+            enddo
+!           == nonspherical contributions ======================================
+            DO LM=2,LMRX
+              L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+              FAC=REAL(L*(L+1),KIND=8)
+              VRHO(:,LM,ISPIN1)=VRHO(:,LM,ISPIN1) &
+     &                         +FAC*Y0*XDER(:,II,1)*RHO(:,LM,ISPIN2)
+              VRHO(:,LM,ISPIN2)=VRHO(:,LM,ISPIN2) &
+     &                         +FAC*Y0*XDER(:,II,1)*RHO(:,LM,ISPIN1)
+              VGRHO(:,1,ISPIN1)=VGRHO(:,1,ISPIN1) &
+     &                         +Y0*XDER(:,II,1)*GRHO(:,LM,ISPIN2) &
+     &                         +Y0*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
+              VGRHO(:,1,ISPIN2)=VGRHO(:,1,ISPIN2) &
+     &                         +Y0*XDER(:,II,1)*GRHO(:,LM,ISPIN1) &
+     &                         +Y0*XDER(:,II,LM)*GRHO(:,1,ISPIN1)
+            ENDDO
+else           
 !           == FIRST RESOLVE XVAL(:,II,1) ======================================
             DO LM=1,LMRX
               IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
               L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
-              FAC=DBLE(L*(L+1))
+              FAC=real(L*(L+1),kind=8)
 !             == THE FOLLOWING LINES DIVIDE BY ZERO IF R=0. ====================
 !             == THE VALUES ARE OVERWRITTEN AT THE END OF THE ROUTINE... =======
               VRHO(:,LM,ISPIN1)  =VRHO(:,LM,ISPIN1) &
@@ -6557,6 +7130,7 @@ PRINT*,'----EXC  ',ETOT
               VGRHO(:,LM,ISPIN1)=VGRHO(:,LM,ISPIN1) &
       &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
             ENDDO
+end if
           ENDDO
         ENDDO               
       END IF
@@ -6571,8 +7145,9 @@ PRINT*,'----EXC  ',ETOT
           DO LM=1,LMRX
             IF(LM.NE.1.AND.(.NOT.TNS)) EXIT ! USED TO RESTORE PREVIOUS STATE
 !           == FIRST ALTERNATIVE
-!           CALL RADIAL$DERIVE(GID,NR,VGRHO(:,LM,ISPIN),WORK2)   !NOT SO 
-!           WORK1(:)=2.D0/R(:)*VGRHO(:,LM,ISPIN)+WORK2(:)  !GOOD
+!!$           CALL RADIAL$DERIVE(GID,NR,VGRHO(:,LM,ISPIN),WORK2)   !NOT SO 
+!!$           WORK1(2:)=2.D0/R(2:)*VGRHO(2:,LM,ISPIN)+WORK2(2:)         !GOOD
+!!$           work1(1)=work1(2)
 !           ==  SECOND ALTERNATIVE APPEARS TO BE MORE ACCURATE
             WORK2(:)=VGRHO(:,LM,ISPIN)*R(:)**2
             CALL RADIAL$DERIVE(GID,NR,WORK2,WORK1)

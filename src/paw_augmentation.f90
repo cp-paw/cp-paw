@@ -757,6 +757,7 @@ STOP
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
+      real(8)   ,parameter  :: xx=1.d0  !bugfix 160509 xx=0.5->1.0
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -840,7 +841,7 @@ STOP
             DO LM=2,LMRX 
               IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
               XVAL(:,II,LM)=XVAL(:,II,LM) &
-        &         +0.5D0*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
+        &         +XX*CG0LL*(GRHO(:,1,ISPIN1)*GRHO(:,LM,ISPIN2) &
         &                      +GRHO(:,LM,ISPIN1)*GRHO(:,1,ISPIN2))
             ENDDO
           ENDDO
@@ -913,13 +914,13 @@ STOP
             DO LM=2,LMRX
               IF(.NOT.TNS) EXIT ! USED TO RESTORE PREVIOUS STATE
               VGRHO(:,1,ISPIN1) =VGRHO(:,1,ISPIN1) &
-      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN2)
+      &                 +XX*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN2)
               VGRHO(:,1,ISPIN2) =VGRHO(:,1,ISPIN2) &
-      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN1)
+      &                 +XX*CG0LL*XDER(:,II,LM)*GRHO(:,LM,ISPIN1)
               VGRHO(:,LM,ISPIN2)=VGRHO(:,LM,ISPIN2) &
-      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN1)
+      &                 +XX*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN1)
               VGRHO(:,LM,ISPIN1)=VGRHO(:,LM,ISPIN1) &
-      &                 +0.5D0*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
+      &                 +XX*CG0LL*XDER(:,II,LM)*GRHO(:,1,ISPIN2)
             ENDDO
           ENDDO
         ENDDO               
