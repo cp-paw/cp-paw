@@ -7819,6 +7819,10 @@ END IF
       REAL(8)               :: TAECORE(NR,NC)
       REAL(8)               :: TPSCORE(NR,NC)
       REAL(8)               :: TQN(NR,NJ)
+      REAL(8)               :: TQNDOT(NR)
+      REAL(8)               :: PSPHIDOT(NR)
+      REAL(8)               :: TPSPHIDOT(NR)
+      REAL(8)               :: PRODOT(NR)
       REAL(8)               :: TAEPHI(NR,NJ)
       REAL(8)               :: TPSPHI(NR,NJ)
       REAL(8)   ,ALLOCATABLE:: PHITEST(:,:),TPHITEST(:,:),DEV(:,:)
@@ -8143,6 +8147,7 @@ END IF
         G=G-AUX1-(1.D0-KAPPA)/R*AUX
       END IF
       CALL SCHROEDINGER$SPHERICAL(GID,NR,AEPOT,DREL,SO,G,L,ENU,IDIR,QNDOT)
+      TQNDOT=G(:)+(ENU-AEPOT(:)*Y0)*QNDOT
       IF(TSMALL) THEN
         CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO,DREL,GSM,QNDOT,QNDOTSM)
         QNDOTSM(IRCL:)=0.D0
@@ -8294,11 +8299,19 @@ ELSE
         TPSPHI(1:2,JP)=TPSPHI(3,JP)
 END IF
       ENDDO
+      PSPHIDOT=QNDOT
+      TPSPHIDOT=TQNDOT
+      CALL RADIAL$VERLETD1(GID,NR,PSPHIDOT,AUX)
+      CALL RADIAL$VERLETD2(GID,NR,PSPHIDOT,AUX1)
+      TPSPHIDOT=-0.5D0*(AUX1+2.D0*AUX/R-REAL(L*(L+1),KIND=8)*PSPHIDOT/R**2)
+      TPSPHIDOT(1:2)=TPSPHIDOT(3)
+!
 !     == FOR LARGE DISTANCES (R>RC), I USE THE RELATIVISTIC KINETIC ENERGY =====
 !     == TO ENSURE CANCELLATION OF TAIL CONTRIBUTIONS. =========================
       DO IR=1,NR
         IF(R(IR).GT.RC) THEN
           TPSPHI(IR:,2:)=TQN(IR:,2:)
+          TPSPHIDOT(IR:)=TQNDOT(IR:)
           EXIT
         END IF
       ENDDO
@@ -8337,8 +8350,11 @@ IPHISCALE=1
         PSCORESM=PSCORESM*SCALE
 !       == SCATTERING WAVE FUNCTIONS ===========================================
         QNDOT=QNDOT*SCALE
+        TQNDOT=TQNDOT*SCALE
         QNDOTSM=QNDOTSM*SCALE
         AEPHIDOT=AEPHIDOT*SCALE
+        PSPHIDOT=PSPHIDOT*SCALE
+        TPSPHIDOT=TPSPHIDOT*SCALE
         AEPHIDOTSM=AEPHIDOTSM*SCALE
       END IF
 !
@@ -8351,6 +8367,32 @@ IPHISCALE=1
 !        PRO(:,JP)=TPSPHI(:,JP)+(PSPOT*Y0-EOFPHI(JP))*PSPHI(:,JP)
       ENDDO
       IF(NJ.GE.2) PRO(:,2)=PRO(:,2)+(PSPHI(:,1)-QN(:,1))  ! |K>
+!
+      PRODOT(:)=TPSPHIDOT(:)-TQNDOT(:)+(PSPOT-AEPOT)*Y0*QNDOT
+      IF(NJ.EQ.1) PRODOT(:)=PRODOT(:)+(PSPHI(:,1)-QN(:,1))  ! |K>
+!
+!     ==========================================================================
+!     == ORTHOGONALIZE BARE PROJECTOR FUNCTION TO HIGHER PARTIAL WAVE         ==
+!     ==========================================================================
+!!$      AUX=R**2*PSPHIDOT*PRODOT
+!!$      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$      CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,SCALE)
+!!$      SCALE=1.D0/SCALE
+!!$CALL SETUP_WRITEPHI(-'TEST_PRO_OLD.DAT',GID,NR,NJ,PRO)
+!!$CALL SETUP_WRITEPHI(-'TEST_PSPHI.DAT',GID,NR,NJ,PSPHI)
+!!$CALL SETUP_WRITEPHI(-'TEST_PRODOT.DAT',GID,NR,1,PRODOT)
+!!$CALL SETUP_WRITEPHI(-'TEST_PSHIDOT.DAT',GID,NR,1,PSPHIDOT)
+!!$CALL SETUP_WRITEPHI(-'TEST_QNDOT.DAT',GID,NR,1,QNDOT)
+!!$      DO JP=1,NJ
+!!$        AUX=R**2*PSPHIDOT*PRO(:,JP)
+!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+!!$        CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,SVAR)
+!!$        SVAR=SVAR*SCALE
+!!$        PRO(:,JP)=PRO(:,JP)-PRODOT*SVAR
+!!$      ENDDO
+!!$
+!!$CALL SETUP_WRITEPHI(-'TEST_PRO_NEW.DAT',GID,NR,NJ,PRO)
+!!$STOP
 !
 !     ==========================================================================
 !     == TEST                                                                 ==

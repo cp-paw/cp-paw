@@ -1552,7 +1552,9 @@ END MODULE WAVES_MODULE
 !     ==========================================================================
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
+!if(tfirst) then
         CALL LMTO$MAKESTRUCTURECONSTANTS()
+!end if
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')

@@ -599,6 +599,51 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_TESTLMTO$SCREEN(NORB,N,QBAR,S)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N            ! #(ORBITALS ON THE CLUSTER)
+      INTEGER(4),INTENT(IN) :: NORB         ! #(ORBITALS ON CENTRAL SITE
+      REAL(8)   ,INTENT(IN) :: QBAR(N)      !
+      REAL(8)   ,INTENT(IN) :: S(N,N)       ! UNSCREENED-STRUCTURE CONSTANTS
+      INTEGER(4),PARAMETER  :: NDIS=4
+      REAL(8)               :: SBAR(NORB,N,-NDIS:NDIS)
+      REAL(8)               :: DS(N,N)
+      LOGICAL(4)            :: TSTART=.TRUE.
+      INTEGER(4)            :: I,I1,I2
+      REAL(8)               :: RAN
+!     **************************************************************************
+      DS=0.D0
+      DO I=1,10
+        CALL RANDOM_NUMBER(RAN)
+        I1=NINT(RAN*REAL(N,KIND=8))
+        CALL RANDOM_NUMBER(RAN)
+        I2=NINT(RAN*REAL(N,KIND=8))
+        CALL RANDOM_NUMBER(RAN)
+        DS(I1,I2)=RAN-0.5D0
+      ENDDO
+      DO I=-NDIS,NDIS
+        CALL LMTO$SCREEN(TSTART,NORB,N,QBAR,S+DS*REAL(I,KIND=8),SBAR(:,:,I))
+      ENDDO
+      WRITE(*,FMT='(20("."),T1,"NORB",T20,":",I5)')NORB
+      WRITE(*,FMT='(20("."),T1,"N",T20,":",I5)')N
+      WRITE(*,FMT='("QBAR",10F10.5)')QBAR
+      OPEN(UNIT=101,FILE='SBAR.DAT')
+      DO I=-NDIS,NDIS
+        WRITE(101,*)I,SBAR(:,:,I)-SBAR(:,:,0)
+!!$        IF(I.LT.0) THEN
+!!$          WRITE(101,*)I,0.5D0*(SBAR(:,:,I)+SBAR(:,:,-I))
+!!$        ELSE
+!!$          WRITE(101,*)I,0.5D0*(SBAR(:,:,I)+SBAR(:,:,-I))-SBAR(:,:,0)
+!!$        END IF
+      ENDDO
+      CLOSE(101)
+      STOP
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$CLUSTERSTRUCTURECONSTANTS(K2,NAT,RPOS,LX,QBAR,NORB,N,SBAR)
 !     **************************************************************************
 !     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
@@ -684,6 +729,7 @@ END IF
 !     == THE FIRST PARAMETER SWITCHES BETWEEN AN ITERATIVE AND A DIRECT SOLUTION
 !     == OF THE EQUATION. THE ITERATIVE APPROACH MAY BE MORE EFFICIENT IN AN
 !     == CAR-PARRINELLO LIKE APPROACH.
+!CALL LMTO_TESTLMTO$SCREEN(NORB,N,QBAR,S0)
       CALL LMTO$SCREEN(.TRUE.,NORB,N,QBAR,S0,SBAR)
                                CALL TRACE$POP()
       RETURN
