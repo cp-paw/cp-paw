@@ -7806,6 +7806,7 @@ END IF
       INTEGER(4),PARAMETER  :: SWITCH=2 ! BIORTHOGONALIZATION METHOD
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPRODOT=.FALSE. ! EXPERIMENTAL OPTION
       LOGICAL(4)            :: TOLD
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
       LOGICAL(4)            :: TZORA    ! ZEROTH-ORDER RELATIVISTIC EFFECTS
@@ -8299,19 +8300,21 @@ ELSE
         TPSPHI(1:2,JP)=TPSPHI(3,JP)
 END IF
       ENDDO
-      PSPHIDOT=QNDOT
-      TPSPHIDOT=TQNDOT
-      CALL RADIAL$VERLETD1(GID,NR,PSPHIDOT,AUX)
-      CALL RADIAL$VERLETD2(GID,NR,PSPHIDOT,AUX1)
-      TPSPHIDOT=-0.5D0*(AUX1+2.D0*AUX/R-REAL(L*(L+1),KIND=8)*PSPHIDOT/R**2)
-      TPSPHIDOT(1:2)=TPSPHIDOT(3)
+      IF(TPRODOT) THEN
+        PSPHIDOT=QNDOT
+        TPSPHIDOT=TQNDOT
+        CALL RADIAL$VERLETD1(GID,NR,PSPHIDOT,AUX)
+        CALL RADIAL$VERLETD2(GID,NR,PSPHIDOT,AUX1)
+        TPSPHIDOT=-0.5D0*(AUX1+2.D0*AUX/R-REAL(L*(L+1),KIND=8)*PSPHIDOT/R**2)
+        TPSPHIDOT(1:2)=TPSPHIDOT(3)
+      END IF
 !
 !     == FOR LARGE DISTANCES (R>RC), I USE THE RELATIVISTIC KINETIC ENERGY =====
 !     == TO ENSURE CANCELLATION OF TAIL CONTRIBUTIONS. =========================
       DO IR=1,NR
         IF(R(IR).GT.RC) THEN
           TPSPHI(IR:,2:)=TQN(IR:,2:)
-          TPSPHIDOT(IR:)=TQNDOT(IR:)
+          IF(TPRODOT) TPSPHIDOT(IR:)=TQNDOT(IR:)
           EXIT
         END IF
       ENDDO
@@ -8353,9 +8356,11 @@ IPHISCALE=1
         TQNDOT=TQNDOT*SCALE
         QNDOTSM=QNDOTSM*SCALE
         AEPHIDOT=AEPHIDOT*SCALE
-        PSPHIDOT=PSPHIDOT*SCALE
-        TPSPHIDOT=TPSPHIDOT*SCALE
         AEPHIDOTSM=AEPHIDOTSM*SCALE
+        IF(TPRODOT) THEN
+          PSPHIDOT=PSPHIDOT*SCALE
+          TPSPHIDOT=TPSPHIDOT*SCALE
+        END IF
       END IF
 !
 !     ==========================================================================
@@ -8368,31 +8373,10 @@ IPHISCALE=1
       ENDDO
       IF(NJ.GE.2) PRO(:,2)=PRO(:,2)+(PSPHI(:,1)-QN(:,1))  ! |K>
 !
-      PRODOT(:)=TPSPHIDOT(:)-TQNDOT(:)+(PSPOT-AEPOT)*Y0*QNDOT
-      IF(NJ.EQ.1) PRODOT(:)=PRODOT(:)+(PSPHI(:,1)-QN(:,1))  ! |K>
-!
-!     ==========================================================================
-!     == ORTHOGONALIZE BARE PROJECTOR FUNCTION TO HIGHER PARTIAL WAVE         ==
-!     ==========================================================================
-!!$      AUX=R**2*PSPHIDOT*PRODOT
-!!$      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$      CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,SCALE)
-!!$      SCALE=1.D0/SCALE
-!!$CALL SETUP_WRITEPHI(-'TEST_PRO_OLD.DAT',GID,NR,NJ,PRO)
-!!$CALL SETUP_WRITEPHI(-'TEST_PSPHI.DAT',GID,NR,NJ,PSPHI)
-!!$CALL SETUP_WRITEPHI(-'TEST_PRODOT.DAT',GID,NR,1,PRODOT)
-!!$CALL SETUP_WRITEPHI(-'TEST_PSHIDOT.DAT',GID,NR,1,PSPHIDOT)
-!!$CALL SETUP_WRITEPHI(-'TEST_QNDOT.DAT',GID,NR,1,QNDOT)
-!!$      DO JP=1,NJ
-!!$        AUX=R**2*PSPHIDOT*PRO(:,JP)
-!!$        CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-!!$        CALL RADIAL$VALUE(GID,NR,AUX1,3.D0,SVAR)
-!!$        SVAR=SVAR*SCALE
-!!$        PRO(:,JP)=PRO(:,JP)-PRODOT*SVAR
-!!$      ENDDO
-!!$
-!!$CALL SETUP_WRITEPHI(-'TEST_PRO_NEW.DAT',GID,NR,NJ,PRO)
-!!$STOP
+      IF(TPRODOT) THEN
+        PRODOT(:)=TPSPHIDOT(:)-TQNDOT(:)+(PSPOT-AEPOT)*Y0*QNDOT
+        IF(NJ.EQ.1) PRODOT(:)=PRODOT(:)+(PSPHI(:,1)-QN(:,1))  ! |K>
+      END IF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -8539,6 +8523,23 @@ IPHISCALE=1
       END IF
 !
 !     ==========================================================================
+!     == ORTHOGONALIZE BARE PROJECTOR FUNCTION TO HIGHER PARTIAL WAVE         ==
+!     ==========================================================================
+      IF(TPRODOT) THEN
+!!$CALL SETUP_WRITEPHI(-'TEST_PRO_OLD.DAT',GID,NR,NJ,PRO)
+!!$CALL SETUP_WRITEPHI(-'TEST_PSPHI.DAT',GID,NR,NJ,PSPHI)
+!!$CALL SETUP_WRITEPHI(-'TEST_PRODOT_OLD.DAT',GID,NR,1,PRODOT)
+!!$CALL SETUP_WRITEPHI(-'TEST_PSPHIDOT.DAT',GID,NR,1,PSPHIDOT)
+!!$CALL SETUP_WRITEPHI(-'TEST_QNDOT.DAT',GID,NR,1,QNDOT)
+        CALL RADIAL$INTEGRAL(GID,NR,R**2*PSPHIDOT*PRODOT,SCALE)
+        SCALE=1.D0/SCALE
+        DO JP=1,NJ
+          CALL RADIAL$INTEGRAL(GID,NR,R**2*PSPHIDOT*PRO(:,JP),SVAR)
+          PRO(:,JP)=PRO(:,JP)-PRODOT*SVAR*SCALE
+        ENDDO
+      END IF
+!
+!     ==========================================================================
 !     == UNBARE PROJECTOR FUNCTIONS                                           ==
 !     ==========================================================================
       DO JP=1,NJ
@@ -8549,6 +8550,40 @@ IPHISCALE=1
       ENDDO        
       CALL LIB$INVERTR8(NJ,MAT,MATINV)
       PRO(:,:)=MATMUL(PRO,MATINV)
+!
+!     ==========================================================================
+!     == ADJUST PRODOT (PRODOT IS ONLY FOR INTERNAL CONSISTENCY CHECKS)
+!     ==========================================================================
+      IF(TPRODOT) THEN
+        DO JP=1,NJ
+          CALL RADIAL$INTEGRAL(GID,NR,R**2*PSPHI(:,JP)*PRODOT,SVAR)
+          PRODOT(:)=PRODOT(:)-PRO(:,JP)*SVAR
+        ENDDO
+        CALL RADIAL$INTEGRAL(GID,NR,R**2*PSPHIDOT*PRODOT,SVAR)
+        PRODOT=PRODOT/SVAR
+!TEST
+!!$      DO J=1,NJ
+!!$        DO JP=1,NJ
+!!$          AUX(:)=R(:)**2*PRO(:,J)*PSPHI(:,JP)
+!!$          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!!$          PRINT*,'J,JP, BIORTHO ',J,JP,SVAR
+!!$        ENDDO
+!!$        AUX(:)=R(:)**2*PRO(:,JP)*PSPHIDOT
+!!$        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!!$        PRINT*,'J,JP, BIORTHO ',J,'DOT',SVAR
+!!$      ENDDO
+!!$      DO JP=1,NJ
+!!$        AUX(:)=R(:)**2*PRODOT*PSPHI(:,JP)
+!!$        CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!!$        PRINT*,'J,JP, BIORTHO ','DOT',JP,SVAR
+!!$      ENDDO
+!!$      AUX(:)=R(:)**2*PRODOT*PSPHIDOT
+!!$      CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+!!$      PRINT*,'J,JP, BIORTHO ','DOT','DOT',SVAR
+!!$CALL SETUP_WRITEPHI(-'TEST_PRO_NEW.DAT',GID,NR,NJ,PRO)
+!!$CALL SETUP_WRITEPHI(-'TEST_PRODOT_NEW.DAT',GID,NR,1,PRODOT)
+!!$STOP
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE DOVER AND DTKIN                                            ==
