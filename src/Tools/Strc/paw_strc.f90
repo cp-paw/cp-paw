@@ -682,6 +682,7 @@
           IF(J.EQ.I) CYCLE
           ANGLE(:,J)=ANGLE(:,I) 
           ANGLE(J,:)=ANGLE(I,:) 
+          BOND(J)   =BOND(I)
           DISARR(J)=DISARR(I)
         ENDDO
         NBOND=J
