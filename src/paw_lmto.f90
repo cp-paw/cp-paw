@@ -671,6 +671,7 @@ END MODULE LMTO_MODULE
       REAL(8)   ,ALLOCATABLE :: RC(:)
       INTEGER(4)             :: LMX
       INTEGER(4)             :: NTASKS,THISTASK,FROMTASK
+logical(4),save:: tfirst=.true.
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
                               CALL TRACE$PUSH('LMTO$MAKESTRUCTURECONSTANTS')
@@ -861,7 +862,10 @@ END MODULE LMTO_MODULE
 !     ==========================================================================
 !     == CALCULATE CTE, THE EXPANSION COEFFICIENTS IN TAILED COMPONENTS       ==
 !     ==========================================================================
+if(tfirst) then
       CALL LMTO_TAILEDEXPANSION()
+!  tfirst=.false.
+end if
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS FOR TESTING (USUALLY INACTIVE)                   ==
@@ -4745,14 +4749,23 @@ PRINT*,'EXACT VALENCE EXCHANGE ENERGY FOR ATOM=....',IAT,EX
 !       == ADD CORE VALENCE EXCHANGE                                          ==
 !       ========================================================================
         IF(HYBRIDSETTING(ISP)%TCV) THEN
+!         call test_lmto_cvx_new(iat,isp,ndimd,lmnx,lmnxt,d)
           IF(TCTE) THEN
             CALL LMTO_EXPANDLOCALWITHCTE('FWRD',IAT,NDIMD,LMNX,LMNXT,D,DT)
           ELSE
+            CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2_NEW')
             CALL LMTO_EXPANDLOCAL('FWRD',1,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
           END IF
 !  
           CALL LMTO_CVX_NEW(ISP,LMNXT,EX,DT(:,:,1),HT(:,:,1))
+          ht(:,:,2:)=0.d0
+!!$ex=0.d0
+!!$ht=0.d0
+print*,'tcte ',tcte,sum(dt*ht)-ex,ex,iat,isp,lmnx,lmnxt,ndimd &
+&       ,sum(abs(ht(:,:,1)-transpose(ht(:,:,1)))) &
+&       ,sum(abs(dt(:,:,1)-transpose(dt(:,:,1))))
 !
+h=0.d0
           IF(TCTE) THEN
             CALL LMTO_EXPANDLOCALWITHCTE('BACK',IAT,NDIMD,LMNX,LMNXT,H,HT)
           ELSE
@@ -5318,6 +5331,61 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine test_lmto_cvx_new(iat,isp,ndimd,lmnx,lmnxt,d_in)
+!     **************************************************************************
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      integer(4),intent(in) :: iat
+      integer(4),intent(in) :: isp
+      integer(4),intent(in) :: ndimd
+      integer(4),intent(in) :: lmnx
+      integer(4),intent(in) :: lmnxt
+      real(8)   ,intent(in) :: d_in(lmnx,lmnx,ndimd)
+      real(8)               :: d(lmnx,lmnx,ndimd)
+      real(8)               :: dt(lmnxt,lmnxt,ndimd)
+      real(8)               :: ht(lmnxt,lmnxt,ndimd)
+      real(8)               :: h(lmnx,lmnx,ndimd)
+      real(8)               :: delta(lmnx,lmnx,ndimd)
+      integer(4),parameter  :: ndis=4
+      real(8)               :: earr(-ndis:ndis)
+      real(8)               :: darr(-ndis:ndis)
+      real(8)               :: ex
+      real(8)               :: ran
+      real(8)               :: y1,y2
+      integer(4)            :: lmn1,lmn2,idis
+!     **************************************************************************
+      delta=0.d0
+      do lmn1=1,lmnx
+        do lmn2=lmn1,lmnx
+          call random_number(ran)
+          delta(lmn1,lmn2,1)=-0.5d0+ran
+        enddo
+      enddo
+      delta(:,:,1)=0.5d0*(delta(:,:,1)+transpose(delta(:,:,1)))
+      delta=delta*1.d-3
+!
+      do idis=-ndis,ndis
+        d=d_in+delta*real(idis,kind=8)
+        CALL LMTO_EXPANDLOCALWITHCTE('FWRD',IAT,NDIMD,LMNX,LMNXT,D,DT)
+        CALL LMTO_CVX_NEW(ISP,LMNXT,EX,DT(:,:,1),HT(:,:,1))
+        ht(:,:,2:)=0.d0
+        CALL LMTO_EXPANDLOCALWITHCTE('BACK',IAT,NDIMD,LMNX,LMNXT,H,HT)
+        earr(idis)=ex
+        darr(idis)=sum(h*delta)
+      enddo
+
+      do idis=1,ndis
+        y1=0.5d0*(earr(idis)-earr(-idis))/real(idis,kind=8)
+        y2=0.5d0*(darr(idis)+darr(-idis))
+        print*,'idis,y1,y2 ',idis,y1,y2
+      enddo
+      stop
+      return
+      end
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_CVX_NEW(ISP,LMNXT,EX,DT,HT)
 !     **************************************************************************
 !     **  CORE VALENCE EXCHANGE ENERGY                                        **
@@ -5366,19 +5434,24 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
             DO IH2=1,NHEAD
               CVX(IH1,IH2)=CVX(IH1,IH2) &
      &                    +POTPAR1(ISP)%PROK(LN1,IH1)*CVXMAT(LN1,LN2) &
-     &                                               *POTPAR1(ISP)%PROK(LN2,IH2)         
+     &                                               *POTPAR1(ISP)%PROK(LN2,IH2)
             ENDDO
             DO IT2=1,NTAIL
               CVX(IH1,NHEAD+IT2)=CVX(IH1,NHEAD+IT2) &
      &                          +POTPAR1(ISP)%PROK(LN1,IH1)*CVXMAT(LN1,LN2) &
-     &                                            *POTPAR1(ISP)%PROJBAR(LN2,IT2)         
+     &                                            *POTPAR1(ISP)%PROJBAR(LN2,IT2)
             ENDDO
           ENDDO
           DO IT1=1,NTAIL
+            DO IH2=1,NHEAD
+              CVX(NHEAD+IT1,IH2)=CVX(NHEAD+IT1,IH2) &
+     &                          +POTPAR1(ISP)%PROjbar(LN1,IT1)*CVXMAT(LN1,LN2) &
+     &                                               *POTPAR1(ISP)%PROK(LN2,IH2)
+            ENDDO
             DO IT2=1,NTAIL
               CVX(NHEAD+IT1,NHEAD+IT2)=CVX(NHEAD+IT1,NHEAD+IT2) &
-     &                         +POTPAR1(ISP)%PROJBAR(LN1,IT1)*CVXMAT(LN1,LN2) &
-     &                                            *POTPAR1(ISP)%PROJBAR(LN2,IT2)         
+     &                          +POTPAR1(ISP)%PROJBAR(LN1,IT1)*CVXMAT(LN1,LN2) &
+     &                                            *POTPAR1(ISP)%PROJBAR(LN2,IT2)
             ENDDO
           ENDDO
         ENDDO
@@ -5412,6 +5485,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
         ENDDO
         LMN1=LMN1+2*L1+1
       ENDDO      
+!     == ht=0.5d0*(ht+transpose(ht))
 !
 !     ==========================================================================
 !     == CLOSE DOWN                                                           ==

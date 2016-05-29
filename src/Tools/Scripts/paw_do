@@ -63,8 +63,8 @@ USAGE="$USAGE \t -F: paw_fast.x ROOT.cntl 1>out 2>&1 & \n"
 USAGE="$USAGE \t -D: paw_dos.x ROOT.dcntl \n"
 USAGE="$USAGE \t\t   paw_dosplot.x ROOT.dpcntl; xmgrace -batch ROOT.bat\n"
 USAGE="$USAGE \t -K: touch ROOT.exit (regular stop of simulation) \n"
-USAGE="$USAGE \t -P: doppaw ROOT 4 (parallel ppaw_fast.x with 4 tasks)\n"
-USAGE="$USAGE \t -R root:  specify root file. (Default is to find it.)\n"
+USAGE="$USAGE \t -P: doppaw -n 6 ROOT (parallel ppaw_fast.x with 6 tasks)\n"
+USAGE="$USAGE \t -R  root:  specify root file. (Default is to find it.)\n"
 USAGE="$USAGE \t -S: paw_strc.x -c ROOT\n"
 USAGE="$USAGE \t -T: paw_tra.x ROOT.tcntl\n"
 USAGE="$USAGE \t -W: paw_wave.x ROOT.wcntl\n"
@@ -248,7 +248,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       Y=${Y%.cntl}
       if [[ -n $Y ]] ; then      
-        execute "nohup doppaw $Y &"
+        execute "nohup doppaw -n 6 $Y &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
        else
