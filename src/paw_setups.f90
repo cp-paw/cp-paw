@@ -6269,7 +6269,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
       INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
       REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
-      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
       INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
       INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
       INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
@@ -6283,6 +6283,7 @@ PRINT*,'KI ',KI
       INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2
       REAL(8)               :: PI
+      REAL(8)               :: CNORM
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       LX=MAXVAL(LOX)
@@ -6335,6 +6336,7 @@ PRINT*,'KI ',KI
               IF(L2.NE.L1) CYCLE
               AUX(:)=R(:)**2*POT(:)*PSIC(:,IC)*AEPHI(:,LN2)
               CALL RADIAL$INTEGRAL(GID,NR,AUX,VAL)
+!
 !!$PRINT*,LN1,IC,LC,LRHO,LN2,'VAL ',VAL
 !!$CALL ATOMLIB_WRITEPHI('X0.DAT',GID,NR,1,AUX)
               VAL=VAL*REAL(2*LRHO+1,KIND=8)/(4.D0*PI)  !SLATER INTEGRAL
@@ -6361,10 +6363,70 @@ PRINT*,'KI ',KI
           ENDDO
         ENDDO
 !        STOP
+!        CALL TESTPOTTEST(GID,NR,LNX,LOX,LOFC,NC,LRHOX,AEPHI,PSIC)
       END IF
+
       RETURN
       END      
-!
+! 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE TESTPOTTEST(GID,NR,LNX,LOX,LOFC,NC,LRHOX,AEPHI,PSIC)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID           ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR            ! #(RADIAL GRID POINTS)
+      INTEGER(4),INTENT(IN) :: LNX           ! #(PARTIAL WAVES W/O M,SIGMA)
+      INTEGER(4),INTENT(IN) :: LOX(LNX)      ! ANGULAR MOMENTA OF PARTIAL WAVES
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX) ! AE PARTIAL WAVES
+      INTEGER(4),INTENT(IN) :: NC            ! #(CORE STATES)
+      INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
+      REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
+      INTEGER(4),INTENT(IN) :: LRHOX         ! X(ANGULAR MOMENMTUM OF THE DENISTY)
+      REAL(8)   ,ALLOCATABLE:: RHO(:)
+      REAL(8)   ,ALLOCATABLE:: POT(:,:)
+      INTEGER(4),SAVE       :: COUNTER=0
+      CHARACTER(128)        :: NAME
+      INTEGER(4)            :: LN1,L1,IC,LC,LRHO,IND
+      REAL(8)               :: R(NR)
+      REAL(8)               :: RHO1(NR)
+      CHARACTER(128)        :: STRING
+      REAL(8)               :: PI
+      REAL(8)               :: VAL
+!     **************************************************************************
+      PI=4.D0*ATAN(1.D0)
+      COUNTER=COUNTER+1
+      CALL RADIAL$R(GID,NR,R)
+      ALLOCATE(POT(NR,LRHOX+1))
+      ALLOCATE(RHO(NR))
+      DO LN1=1,LNX
+        L1=LOX(LN1)
+        DO IC=1,NC
+          LC=LOFC(IC)
+          RHO(:)=AEPHI(:,LN1)*PSIC(:,IC)
+IF(LC.EQ.L1) THEN
+  CALL RADIAL$INTEGRAL(GID,NR,R**2*RHO,VAL)
+ PRINT*,'OVERLAP  IAT=',COUNTER,' LN=',LN1,' O=',VAL
+END IF
+          DO LRHO=0,LRHOX
+            CALL RADIAL$POISSON(GID,NR,LRHO,RHO,POT(:,LRHO+1))
+          ENDDO
+          NAME='POT_'
+          WRITE(STRING,*)COUNTER
+          NAME=TRIM(ADJUSTL(NAME))//"_"//TRIM(ADJUSTL(STRING))
+          WRITE(STRING,*)LN1
+          NAME=TRIM(ADJUSTL(NAME))//"_"//TRIM(ADJUSTL(STRING))
+          WRITE(STRING,*)IC
+          NAME=TRIM(ADJUSTL(NAME))//"_"//TRIM(ADJUSTL(STRING))
+          CALL SETUP_WRITEPHI(TRIM(NAME),GID,NR,LRHOX+1,POT)
+        ENDDO
+      ENDDO
+STOP
+      RETURN
+      END
+    
+
+! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP_OUTEROLDPROWRAPPER(GID,NR,ROUT,RBOX,RCOV &
      &            ,NC,NB,LOFI,SOFI,EOFI,LNX,LOX,TYPE,RC,LAMBDA,ISCATT &
