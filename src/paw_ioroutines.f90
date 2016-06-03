@@ -4145,6 +4145,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL LMTO$SETR8('TAILLAMBDA2',WORK(2))
           DEALLOCATE(WORK)
         END IF
+!
+!       == TAIL-TRUNCATION RADIUS ==============================================
+        SVAR=3.D0 ! DEFAULT IN UNITS OF RCOV
+        CALL LINKEDLIST$EXISTD(LL_STRC,'RTAILCUT/RCOV',1,TCHK)
+        IF(TCHK) CALL LINKEDLIST$GET(LL_STRC,'RTAILCUT/RCOV',1,SVAR)
+        SVAR=SVAR*RCOV
+        CALL LMTO$SETR8('RTAILCUT',SVAR)
 !   
 !       ========================================================================
 !       == DEFINE INTERACTIONS                                                ==

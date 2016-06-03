@@ -24,6 +24,7 @@ TYPE HYBRIDSETTING_TYPE
   REAL(8)     :: TAILEDLAMBDA2  ! SMALLER DECAY CONSTANT FOR THE NTBO TAILS
   REAL(8)     :: RAUG       ! AUGMENTATION RADIUS
   REAL(8)     :: RTAIL      ! RADIUS FOR MATCHING TAILS
+  REAL(8)     :: RTAILCUT   ! RADIUS FOR CUTTING TAILS OFF
   INTEGER(4),POINTER :: NORBOFL(:) ! #(LOCAL ORBITALS PER ANGULAR MOMENTUM)
 END TYPE HYBRIDSETTING_TYPE
 !
@@ -499,6 +500,16 @@ END MODULE LMTO_MODULE
         END IF
         HYBRIDSETTING(ISPSELECTOR)%RTAIL=VAL
 !
+      ELSE IF(ID.EQ.'RTAILCUT') THEN
+        IF(ISPSELECTOR.LE.0) THEN
+          CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTO$SETR8')
+        END IF
+        HYBRIDSETTING(ISPSELECTOR)%RTAILCUT=VAL
+!
       ELSE IF(ID.EQ.'SCALERCUT') THEN
         RCSCALE=VAL
 !
@@ -622,6 +633,8 @@ END MODULE LMTO_MODULE
      &                        ,HYBRIDSETTING(ISP)%RAUG/RCOV,'*R(COV) ')
         CALL REPORT$R8VAL(NFIL,'TAIL MATCHING RADIUS ' &
      &                        ,HYBRIDSETTING(ISP)%RTAIL/RCOV,'*R(COV)')
+        CALL REPORT$R8VAL(NFIL,'TRUNCATION RADIUS FOR EXPONENTIAL TAILS' &
+     &                        ,HYBRIDSETTING(ISP)%RTAILCUT/RCOV,'*R(COV)')
         CALL REPORT$R8VAL(NFIL,'LAMDA1 FOR NTBO TAILS ' &
      &                        ,HYBRIDSETTING(ISP)%TAILEDLAMBDA1,'1/ABOHR ')
         CALL REPORT$R8VAL(NFIL,'LAMDA2 FOR NTBO TAILS ' &
@@ -862,10 +875,10 @@ LOGICAL(4),SAVE:: TFIRST=.TRUE.
 !     ==========================================================================
 !     == CALCULATE CTE, THE EXPANSION COEFFICIENTS IN TAILED COMPONENTS       ==
 !     ==========================================================================
-IF(TFIRST) THEN
+!IF(TFIRST) THEN
       CALL LMTO_TAILEDEXPANSION()
 !  TFIRST=.FALSE.
-END IF
+!END IF
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS FOR TESTING (USUALLY INACTIVE)                   ==
@@ -1632,7 +1645,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
      &                       ,TCTE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TCUT=.FALSE.
       LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
       INTEGER(4),PARAMETER   :: LXHIGHER=4
       REAL(8)                :: LAMBDA1
@@ -1662,7 +1674,8 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)   ,ALLOCATABLE :: PSPHIDOT(:,:)
       REAL(8)   ,ALLOCATABLE :: NLPHI(:,:)
       REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)
-      REAL(8)                :: RTAIL
+      REAL(8)                :: RTAIL     ! TAIL-MATCHING RADIUS
+      REAL(8)                :: RTAILCUT  ! TAIL-TRUNCATION RADIUS 
       LOGICAL(4)             :: TCHKHIGHER(LXHIGHER+1)
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
@@ -1670,6 +1683,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         LAMBDA1=HYBRIDSETTING(ISP)%TAILEDLAMBDA1
         LAMBDA2=HYBRIDSETTING(ISP)%TAILEDLAMBDA2
         RTAIL=HYBRIDSETTING(ISP)%RTAIL
+        RTAILCUT=HYBRIDSETTING(ISP)%RTAILCUT
 !
         CALL SETUP$ISELECT(ISP)
 !       == RADIAL GRID =========================================================
@@ -1894,18 +1908,16 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !       ========================================================================
 !       ==  CUT OFF TAILS FOR STABILITY                                       ==
 !       ========================================================================
-        IF(TCUT) THEN
-          CALL SETUP$GETR8('AEZ',AEZ)
-          CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
-          DO IR=1,NR
-            IF(R(IR).GT.2.D0*RCOV) THEN  ! 2*RCOV IS A BIT ARBITRARY
-              POTPAR1(ISP)%TAILED%NLF(IR:,:)=0.D0
-              POTPAR1(ISP)%TAILED%AEF(IR:,:)=0.D0
-              POTPAR1(ISP)%TAILED%PSF(IR:,:)=0.D0
-              EXIT
-            END IF
-          ENDDO
-        END IF
+        CALL SETUP$GETR8('AEZ',AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
+        DO IR=1,NR
+          IF(R(IR).GT.RTAILCUT) THEN  
+            POTPAR1(ISP)%TAILED%NLF(IR:,:)=0.D0
+            POTPAR1(ISP)%TAILED%AEF(IR:,:)=0.D0
+            POTPAR1(ISP)%TAILED%PSF(IR:,:)=0.D0
+            EXIT
+          END IF
+        ENDDO
 
 !!$CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
 !!$CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
