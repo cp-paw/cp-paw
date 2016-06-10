@@ -196,6 +196,7 @@ else
   xmgrace -free -noask -param $PARMFILE -nxy ${TMPFILE}
 fi
 rm ${TMPFILE}
+rm ${PARMFILE}
 exit 0
 
 
