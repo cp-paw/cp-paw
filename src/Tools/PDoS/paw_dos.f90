@@ -4033,25 +4033,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       REAL(8)                   :: SVAR
 !     **************************************************************************
                                  CALL TRACE$PUSH('SET$WEIGHT')
-!
-!     ==========================================================================
-!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
-!     ==========================================================================
-      IF(TRIM(SPIN).EQ.'X') THEN
-        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
-        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-        CALL SPINBRA(SPINDIR(1,IAT0),SPINDIR(2,IAT0),SPINDIR(3,IAT0),CP,CM)
-      ELSE
-        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
-        CALL ERROR$CHVAL('SPIN',SPIN)
-        CALL ERROR$STOP('SET$WEIGHT')
-      END IF
-
       IF(ATOMID_.EQ.'TOTAL') THEN
 !        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
         SVAR=1.D0
@@ -4106,6 +4087,24 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         CALL ERROR$MSG('MAIN SPIN FOR ALL ATOMS NOT POSSIBLE')
         CALL ERROR$CHVAL('SPIN',SPIN)
         CALL ERROR$CHVAL('ATOMID_',ATOMID_)
+        CALL ERROR$STOP('SET$WEIGHT')
+      END IF
+!
+!     ==========================================================================
+!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
+!     ==========================================================================
+      IF(TRIM(SPIN).EQ.'X') THEN
+        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
+        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
+        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
+      ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
+        CALL SPINBRA(SPINDIR(1,IAT0),SPINDIR(2,IAT0),SPINDIR(3,IAT0),CP,CM)
+      ELSE
+        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
+        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
+        CALL ERROR$CHVAL('SPIN',SPIN)
         CALL ERROR$STOP('SET$WEIGHT')
       END IF
 !
