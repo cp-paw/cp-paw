@@ -995,6 +995,7 @@ LOGICAL(4),SAVE:: TFIRST=.TRUE.
 !     ==========================================================================
 !     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
 !     ==========================================================================
+      IF(TOFFSITE) THEN 
                             CALL TIMING$CLOCKON('OFFSITE U-TENSOR')
 !       == GAUSSIAN FIT OF TAILED ORBITAL FOR ABAB-TYPE U-TENSOR ===============
         CALL LMTO_TAILEDGAUSSFIT()
@@ -1004,6 +1005,7 @@ LOGICAL(4),SAVE:: TFIRST=.TRUE.
 !       == ONLY WHEN REQUESTED =================================================
         CALL LMTO_OFFXINT()
                             CALL TIMING$CLOCKOFF('OFFSITE U-TENSOR')
+      END IF
                           CALL TRACE$POP()
       RETURN
       END
