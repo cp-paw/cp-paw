@@ -1124,13 +1124,19 @@ END MODULE DYNOCC_MODULE
 !       ================================================================
 !       == AUGMENT MISSING DATA                                       ==
 !       ================================================================
-        DO IKPT=NKPT1+1,NKPT
-          X0(:,IKPT,:)=X0(:,1,:)
-          XM(:,IKPT,:)=XM(:,1,:)
-          EPSILON(:,IKPT,:)=EPSILON(:,1,:)
-          EPS0(:,IKPT,:)=EPS0(:,1,:)
-          EPSM(:,IKPT,:)=EPSM(:,1,:)
-        ENDDO
+!       - THE FOLLING IF-CONDITION IS A WORKAROUND FOR A BUG IN THE LOOP 
+!       - VECTORIZER OF THE INTEL FORTAN COMPILER 16, THAT WOULD GENERATE 
+!       - AN INFINITE LOOP HERE.
+        IF(NKPT1+1.LE.NKPT)THEN
+          DO IKPT=NKPT1+1,NKPT
+            X0(:,IKPT,:)=X0(:,1,:)
+            XM(:,IKPT,:)=XM(:,1,:)
+            EPSILON(:,IKPT,:)=EPSILON(:,1,:)
+            EPS0(:,IKPT,:)=EPS0(:,1,:)
+            EPSM(:,IKPT,:)=EPSM(:,1,:)
+          ENDDO
+        ENDIF
+
         IF(NSPIN1.EQ.1.AND.NSPIN.EQ.2) THEN
           X0(:,:,2)=X0(:,:,1)
           XM(:,:,2)=XM(:,:,1)

@@ -757,7 +757,7 @@ STOP
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
-      real(8)   ,parameter  :: xx=1.d0  !bugfix 160509 xx=0.5->1.0
+      REAL(8)   ,PARAMETER  :: XX=1.D0  !BUGFIX 160509 XX=0.5->1.0
 !     **************************************************************************
       CALL TRACE$PUSH('AUGMENTATION_XC')
       EXC=0.D0
@@ -2362,7 +2362,7 @@ TYPE EXTPOT
   CHARACTER(LEN=32):: ATOM
   REAL(8)          :: RC  
   REAL(8)          :: PWR
-  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D',F','ALL'
+  CHARACTER(LEN=32):: TYPE   ! CAN BE 'S','P','D','F','ALL'
   INTEGER(4)       :: IDIMD  ! IDIMD=0 REFERES TO ALL SPIN DIRECTIONS
 END TYPE EXTPOT
 INTEGER(4)             :: NPOT=0

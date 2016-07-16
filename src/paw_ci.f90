@@ -1738,7 +1738,8 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$HAMILTONCOPY(HAM1,HAM2)
 !     **************************************************************************
-!     **  EXPRESSES THE HAMILTONIAN IN A NEW BASIS |CHI'_I>=SUM_J |CHI_J>*U(J,I)
+!     **  EXPRESSES THE HAMILTONIAN IN A NEW BASIS                            **
+!     **            |CHI-PRIME_I>=SUM_J |CHI_J>*U(J,I)                        **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -1779,7 +1780,8 @@ CALL TIMING$CLOCKOFF('CI$CLEANH')
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI$HAMILTONTRANSFORM(NCHI,U,HAM)
 !     **************************************************************************
-!     **  EXPRESSES THE HAMILTONIAN IN A NEW BASIS |CHI'_I>=SUM_J |CHI_J>*U(J,I)
+!     **  EXPRESSES THE HAMILTONIAN IN A NEW BASIS                            **
+!     **               |CHI-PRIME_I>=SUM_J |CHI_J>*U(J,I)
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE

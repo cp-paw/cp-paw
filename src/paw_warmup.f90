@@ -365,7 +365,7 @@ END MODULE WARMUP_MODULE
 !     *****************************************************************
 !     ** RETURNS A VELOCITY VECTOR DELTAV                            **
 !     ** DELTAV IS CHOSEN RANDOMLY IN THE FIRST PULSE, ALL SUBSEQUENT**
-!     ** DELTAV'S ARE GENERATED IN DIRECTIONS NORMAL TO THE CURRENT  **
+!     ** DELTAV-S ARE GENERATED IN DIRECTIONS NORMAL TO THE CURRENT  **
 !     ** VELOCITIES                                                  **
 !     *****************************************************************
       IMPLICIT NONE

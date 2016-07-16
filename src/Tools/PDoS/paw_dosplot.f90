@@ -684,11 +684,11 @@ END MODULE DOSSETS_MODULE
        PRINT*,'EXECUTE WITH THE FOLLOWING COMMANDS:'
        PRINT*,-'XMGRACE -NOSAFE -BATCH ',TRIM(GRBFILE)
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'EPS'//-' -BATCH ',TRIM(GRBFILE) &
-      &      ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.EPS'
+      &      ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'_DOS.EPS'
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'PDF'//-' -BATCH ',TRIM(GRBFILE) &
-      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.PDF'
+      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'_DOS.PDF'
        PRINT*,-'GRACEBAT -NOSAFE -HDEVICE '//+'SVG'//-' -BATCH ',TRIM(GRBFILE) &
-      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'.SVG'
+      &         ,-' -HARDCOPY -PRINTFILE ',TRIM(ROOT)//-'_DOS.SVG'
 !
 !      =========================================================================
 !      == CALL SYSTEM TO PRODUCE A PLOT FILE                                  ==

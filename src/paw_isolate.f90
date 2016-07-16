@@ -10,9 +10,9 @@
 !     **     INTERACTION OF PERIODIC IMAGES                           **
 !     **                                                              **
 !     **  REFERENCE:                                                  **
-!     **    "ELECTROSTATIC DECOUPLING OF PERIODIC IMAGES OF           **
+!     **     ELECTROSTATIC DECOUPLING OF PERIODIC IMAGES OF           **
 !     **     OF PLANE WAVE EXPANDED DENSITIES                         **
-!     **     AND DERIVED POINT CHARGES";                          .   **
+!     **     AND DERIVED POINT CHARGES;                          .    **
 !     **     P.E. BLOECHL, J. CHEM.PHYS.103, P7422 (1995)             **
 !     **                                                              **
 !     ******************************************************************

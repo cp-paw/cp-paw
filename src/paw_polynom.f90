@@ -281,7 +281,7 @@
         Z(:)=(Z(:)-B)/(2.D0*A)
 !
 !     ==========================================================================
-!     == CARDANO'S EQUATION FOR CUBIC POLYNOMIAL
+!     == CARDANOS EQUATION FOR CUBIC POLYNOMIAL
 !     ==========================================================================
       ELSE IF(N.EQ.3) THEN
         PI=4.D0*ATAN(1.D0)
@@ -324,7 +324,7 @@
       SUBROUTINE POLYNOM$BINOM(N,B)
 !     ******************************************************************
 !     ** EVALUATES THE BINOMIAL COEFFICIENTS B(I)=(N-1;I)             **
-!     ** USING PASCAL'S TRIANGLE CONSTRUCTION                         **
+!     ** USING PASCALS TRIANGLE CONSTRUCTION                          **
 !     **                                                              **
 !     ** DOES NOT WORK FOR N=68 OR HIGHER BECAUSE OF THE LIMITED      **
 !     ** PRECISION OF INTEGER(8) (ASSUMED TO BE 8-BYTE INTEGER)       **

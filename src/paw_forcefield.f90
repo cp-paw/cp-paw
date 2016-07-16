@@ -1,4 +1,4 @@
-!     ...1.........2.........3.........4.........5.........6.........7.........8
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE FORCEFIELD_MODULE
 !*******************************************************************************
 !*  FORCEFIELD_MODULE                                                          *
@@ -1027,7 +1027,7 @@ print*,"SIZE OF RES: (including patches)",   SIZE(TOP_RES)
            IF(MMATOM(I)%ELEMENT.EQ.' ') THEN
               MMATOM(I)%ELEMENT = ADJUSTR(MMATOM(I)%NAME(1:2))
            END IF
-!     ----- If there is only one chain in the protein, some PDB file don't specify this. Then we set the chain name to 'A'
+!     ----- If there is only one chain in the protein, some PDB file do not specify this. Then we set the chain name to 'A'
            IF(MMATOM(I)%KEYWORD.EQ.'ATOM  '.AND.MMATOM(I)%CHAINID.EQ.' ') THEN
               MMATOM(I)%CHAINID='A'
            END IF

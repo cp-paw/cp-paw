@@ -2023,7 +2023,7 @@ WRITE(DPROTFIL,*)"DEBUG42ROT","SVAR",SVAR,"SVAR1",SVAR1,"PERPANNER",ROTANNER,"EN
          DO I=1,3
             WRITE(DPROTFIL,*)"SEP: ",ABS(Y2((IAT*3)-3+I))
             IF(ABS(Y2((IAT*3)-3+I)).LT.CONSTRSTEP) THEN
-               !IT'S OK TO SET IT 0
+               !IT IS OK TO SET IT 0
                Y2((IAT*3)-3+I)=0.0D0
             ELSE
                !USE THE USERDEFINED MAX STEP

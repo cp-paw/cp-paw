@@ -6160,7 +6160,7 @@ PRINT*,"SELEMENT= ",SATOM(IATS)%ELEMENT, IATS
           ELSE
             MATOM(IATM)%M=QATOM(IATQ)%M
             SATOM(IATS)%M=QATOM(IATQ)%M
-            SATOM(IATS)%Q=MATOM(IATM)%Q !!! MANUEL: HERE IS THE POODLE'S CORE
+            SATOM(IATS)%Q=MATOM(IATM)%Q 
           END IF
 !         ----- IS ATOM FIXED ? -----------------------
           IF(+MMATOM(IATM)%FLAG.EQ.'F') TFREEZE(IATM)=.TRUE. 

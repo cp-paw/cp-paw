@@ -251,7 +251,7 @@ while getopts "${OPTSTRING}" OPT  ; do
         execute "nohup doppaw -n 6 $Y &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
-       else
+      else
         echo "error in $0 for option $OPT" >&2
         echo "*.cntl file not unique or not present" >&2
         exit 1

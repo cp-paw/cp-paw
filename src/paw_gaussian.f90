@@ -1697,7 +1697,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     **************************************************************************
 !
 !     ==========================================================================
-!     ==  DETERMINE BOYS' FUNCTIONS                                           ==
+!     ==  DETERMINE BOYS FUNCTIONS                                            ==
 !     ==========================================================================
       X=E*(R(1)**2+R(2)**2+R(3)**2)
       CALL GAUSSIAN_BOYS(3*N,X,F)
@@ -1784,7 +1784,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     **************************************************************************
 !
 !     ==========================================================================
-!     ==  DETERMINE BOYS' FUNCTIONS                                           ==
+!     ==  DETERMINE BOYS FUNCTIONS                                            ==
 !     ==========================================================================
       X=E*(R(1)**2+R(2)**2+R(3)**2)
       CALL GAUSSIAN_BOYS(3*N,X,F)
@@ -1828,8 +1828,8 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ** RESULT IS ACCURATE ONLY FOR ABOUT X<D (EMPIRICAL OBSERVATION)        **
 !     **                                                                      **
 !     ** METHOD USED IS A VARIATION OF:                                       **
-!     **   B.A. MAMEDOV, "ON THE EVALUATION OF BOYS FUNCTIONS USING DOWNWARD  **
-!     **   RECURSION RELATION", J. MATH. CHEM. 36, P301                       **
+!     **   B.A. MAMEDOV, ON THE EVALUATION OF BOYS FUNCTIONS USING DOWNWARD   **
+!     **   RECURSION RELATION, J. MATH. CHEM. 36, P301                        **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N

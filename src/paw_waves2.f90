@@ -1130,7 +1130,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
          END IF
 !
 !        ===============================================================
-!        == ORTHOGONALIZE HIGHER PHI'S TO THIS PHI                    ==
+!        == ORTHOGONALIZE HIGHER PHIS TO THIS PHI                     ==
 !        == PHI(J)=PHI(J)+CHI(N)*Z(J)       J>N                       ==
 !        ===============================================================
          DO IU=1,NU
@@ -1195,7 +1195,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
          END IF
 !
 !        ===============================================================
-!        == ORTHOGONALIZE HIGHER CHI'S TO THIS PHI                    ==
+!        == ORTHOGONALIZE HIGHER CHIS TO THIS PHI                     ==
 !        == CHI(M)=CHI(M)+CHI(N)*DELTA(M)   M>N                       ==
 !        ===============================================================
 !               CALL TRACE$PASS('ORTHOGONALIZE HIGHER CHIS TO THIS PHI')
@@ -1424,7 +1424,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
          END IF
 !
 !        ===============================================================
-!        == ORTHOGONALIZE HIGHER PHI'S TO THIS PHI                    ==
+!        == ORTHOGONALIZE HIGHER PHIS TO THIS PHI                     ==
 !        == PHI(M)=PHI(M)+CHI(N)*DELTA(M)   M>N                       ==
 !        ===============================================================
                 CALL TRACE$PASS('ORTHOGONALIZE HIGHER PHIS TO THIS PHI')
@@ -1457,7 +1457,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
          END IF
 !
 !        ===============================================================
-!        == ORTHOGONALIZE HIGHER CHI'S TO THIS PHI                    ==
+!        == ORTHOGONALIZE HIGHER CHIS TO THIS PHI                     ==
 !        == CHI(M)=CHI(M)+CHI(N)*DELTA(M)   M>N                       ==
 !        ===============================================================
                 CALL TRACE$PASS('ORTHOGONALIZE HIGHER CHIS TO THIS PHI')
@@ -1589,8 +1589,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                 **
 !     **                                                              **
 !     **  THE METHOD IS DESCRIBED IN :                                **
-!     **    R.CAR AND M.PARRINELLO, IN "SIMPLE MOLECULAR SYSTEMS      **
-!     **    AT VERY HIGH DENSITY", PAGE 455                           **
+!     **    R.CAR AND M.PARRINELLO,                                   **
+!     **    IN "SIMPLE MOLECULAR SYSTEMSAT VERY HIGH DENSITY", P.455  **
 !     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                     **
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                      **
 !     **                                                              **
@@ -1828,12 +1828,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **                                                              **
 !     **  IMPOSES THE ORTHOGONALITY CONSTRAINT ONTO THE ELECTRONS     **
 !     **                                                              **
-!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                    **
+!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                 **
 !     **                                                              **
 !     **                                                              **
 !     **  THE METHOD IS DESCRIBED IN :                                **
-!     **    R.CAR AND M.PARRINELLO, IN "SIMPLE MOLECULAR SYSTEMS      **
-!     **    AT VERY HIGH DENSITY", PAGE 455                           **
+!     **    R.CAR AND M.PARRINELLO, IN                                **
+!     **    "SIMPLE MOLECULAR SYSTEMS AT VERY HIGH DENSITY", P. 455   **
 !     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                     **
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                      **
 !     **                                                              **
@@ -4884,12 +4884,12 @@ END MODULE WAVESFIXRHO_MODULE
 !.....................................................................
 MODULE TOTALSPIN_MODULE
 !** TOTALSPIN CONTAINS <S^2>,<S_X>,<S_Y>,<S_X>                      **
-REAL(8)               :: TOTSPIN(4) ! DIFFERS FROM JOHANNES' VERSION
+REAL(8)               :: TOTSPIN(4) ! DIFFERS FROM JOHANNES VERSION
 END MODULE TOTALSPIN_MODULE
 !
 !     ..................................................................
       SUBROUTINE WAVES_TOTALSPINRESET()
-      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
+      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES VERSION
       TOTSPIN=0.D0
       END SUBROUTINE WAVES_TOTALSPINRESET
 !
@@ -4900,7 +4900,7 @@ END MODULE TOTALSPIN_MODULE
 !     **                                    1                          **
 !     **                                                              **
 !     ******************************************************************
-      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
+      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES VERSION
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NBX,NB,NKPT,IKPT,NSPIN
       REAL(8)   ,INTENT(IN) :: OCC(NBX,NKPT,NSPIN) 
@@ -4979,7 +4979,7 @@ END MODULE TOTALSPIN_MODULE
 !     **  WAVES$GET                                                   **
 !     **  GET                                                         **
 !     ******************************************************************
-      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES' VERSION
+      USE TOTALSPIN_MODULE, ONLY: TOTSPIN ! DIFFERS FROM JOHANNES VERSION
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL

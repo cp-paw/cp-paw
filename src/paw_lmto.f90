@@ -2859,6 +2859,7 @@ INTEGER(4) :: J,K,L
 !     ==========================================================================
 !     == DETERMINE START AND END OF THE INDICES FOR A GIVEN ATOM
 !     ==========================================================================
+CALL TIMING$CLOCKON('LMTO:TO-1')
       ALLOCATE(NPRO1(NAT))
       ALLOCATE(NPRO2(NAT))
       ALLOCATE(NORB1(NAT))
@@ -2874,10 +2875,12 @@ INTEGER(4) :: J,K,L
         NPRO2(IAT)=IPRO
         NORB2(IAT)=IORB
       ENDDO
+CALL TIMING$CLOCKOFF('LMTO:TO-1')
 !
 !     ==========================================================================
 !     ==  BUILD <PRO|CHI> IN K-SPACE
 !     ==========================================================================
+CALL TIMING$CLOCKON('LMTO:TO-2')
       ALLOCATE(PCHIOFK(NPRO,NORB))
       PCHIOFK(:,:)=(0.D0,0.D0)
       NNS=SIZE(PCHI)
@@ -2892,10 +2895,12 @@ INTEGER(4) :: J,K,L
         J2=NORB2(IAT2)
         PCHIOFK(I1:I2,J1:J2)=PCHIOFK(I1:I2,J1:J2)+PCHI(NN)%MAT*EIKR
       ENDDO
+CALL TIMING$CLOCKOFF('LMTO:TO-2')
 !
 !     ==========================================================================
 !     == CALCULAT OPCHIOFK
 !     ==========================================================================
+CALL TIMING$CLOCKON('LMTO:TO-3')
       ALLOCATE(OPCHIOFK(NPRO,NORB))
       OPCHIOFK=(0.D0,0.D0)
       DO IAT=1,NAT
@@ -2915,10 +2920,12 @@ INTEGER(4) :: J,K,L
           ENDDO
         ENDDO
       ENDDO
+CALL TIMING$CLOCKOFF('LMTO:TO-3')
 !
 !     ==========================================================================
 !     == TRANSFORMATION FROM PARTIAL WAVE PROJECTIONS TO ORBITAL PROJECTIONS  ==
 !     ==========================================================================
+CALL TIMING$CLOCKON('LMTO:TO-4')
       ALLOCATE(MAT(NORB,NORB))
       MAT=MATMUL(CONJG(TRANSPOSE(PCHIOFK)),OPCHIOFK)
       ALLOCATE(MATIN(NORB,NORB))
@@ -2929,10 +2936,12 @@ INTEGER(4) :: J,K,L
       DEALLOCATE(MATIN)
       DEALLOCATE(PCHIOFK)
       DEALLOCATE(OPCHIOFK)
+CALL TIMING$CLOCKOFF('LMTO:TO-4')
 !
 !     ==========================================================================
 !     == TRANSFORM PARTIAL WAVE PROJECTIONS TO ORBITAL PROJECTIONS            ==
 !     ==========================================================================
+CALL TIMING$CLOCKON('LMTO:TO-5')
       IF(ID.EQ.'FWRD') THEN
         PIPSI(:,:,:)=(0.D0,0.D0)
         DO J=1,NPRO
@@ -2959,6 +2968,7 @@ INTEGER(4) :: J,K,L
       DEALLOCATE(NPRO2)
       DEALLOCATE(NORB1)
       DEALLOCATE(NORB2)
+CALL TIMING$CLOCKOFF('LMTO:TO-5')
 !
 !     ==========================================================================
 !     == PRINT FOR TESTING                                                    ==
