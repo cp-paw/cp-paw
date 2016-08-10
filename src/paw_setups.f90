@@ -6000,27 +6000,27 @@ PRINT*,'KI ',KI
 
       IF(.NOT.TSC) THEN
         IF(IZ.LE.2) THEN
-          STRING='" NPRO=1  LRHOX=2 ")'
+          STRING='" NPRO=1  LRHOX=4 ")'
         ELSE IF(IZ.LE.4) THEN
-          STRING='" NPRO=1 1 0  LRHOX=2 ")'
+          STRING='" NPRO=1 1 0  LRHOX=4 ")'
         ELSE IF(IZ.LE.10) THEN
-          STRING='" NPRO=1 1 1  LRHOX=2 ")'
+          STRING='" NPRO=1 1 1  LRHOX=4 ")'
         ELSE IF(IZ.LE.18) THEN
-          STRING='" NPRO=2 2 1  LRHOX=2 ")'
+          STRING='" NPRO=2 2 1  LRHOX=4 ")'
         ELSE IF(IZ.LT.56) THEN
-          STRING='" NPRO=1 1 1  LRHOX=2 ")'
+          STRING='" NPRO=1 1 1  LRHOX=4 ")'
         ELSE      
-          STRING='" NPRO=1 1 1 1 LRHOX=2 ")'
+          STRING='" NPRO=1 1 1 1 LRHOX=4 ")'
         END IF
       ELSE
         IF(IZ.LE.2) THEN
-          STRING='" NPRO=1  LRHOX=2 ")'
+          STRING='" NPRO=1  LRHOX=4 ")'
         ELSE IF(IZ.LE.18) THEN
-          STRING='" NPRO=2 2 0  LRHOX=2 ")'
+          STRING='" NPRO=2 2 0  LRHOX=4 ")'
         ELSE IF(IZ.LT.56) THEN
-          STRING='" NPRO=2 2 1  LRHOX=2 ")'
+          STRING='" NPRO=2 2 1  LRHOX=4 ")'
         ELSE      
-          STRING='" NPRO=2 2 1 1 LRHOX=2 ")'
+          STRING='" NPRO=2 2 1 1 LRHOX=4 ")'
         END IF
       END IF
       STRING='(T3,"!SPECIES NAME=",A,'//TRIM(STRING)
@@ -6171,23 +6171,23 @@ PRINT*,'KI ',KI
      &                               "'"//EL//"'","'"//TRIM(ID)//"'"
       IF(.NOT.TSC) THEN
         IF(IZ.LE.2) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=4")')
         ELSE IF(IZ.LE.18) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=1 1 0  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 0  LRHOX=4")')
         ELSE IF(IZ.LT.56) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1  LRHOX=4")')
         ELSE      
-          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1 1 LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=1 1 1 1 LRHOX=4")')
         END IF
       ELSE
         IF(IZ.LE.2) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=1  LRHOX=4")')
         ELSE IF(IZ.LE.18) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=2 2 0  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 0  LRHOX=4")')
         ELSE IF(IZ.LT.56) THEN
-          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1  LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1  LRHOX=4")')
         ELSE      
-          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1 1 LRHOX=2")')
+          WRITE(NFIL,FMT='(T4,"NPRO=2 2 1 1 LRHOX=4")')
         END IF
       END IF
 !
