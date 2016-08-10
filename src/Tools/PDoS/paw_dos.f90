@@ -1244,16 +1244,16 @@ MODULE NEWSET_MODULE
 TYPE SET_TYPE
   CHARACTER(32)             :: ID
   INTEGER(4)                :: NCOOP=0
-  CHARACTER(32),ALLOCATABLE :: COOP(:,:)  !(2,NCOOP)
-  INTEGER(4)   ,ALLOCATABLE :: ICOOP(:,:) !(2,NCOOP)
+  CHARACTER(32),ALLOCATABLE :: COOP(:,:)    !(2,NCOOP)
+  INTEGER(4)   ,ALLOCATABLE :: ICOOP(:,:)   !(2,NCOOP)
   INTEGER(4)                :: NORB=0
-  CHARACTER(32),ALLOCATABLE :: ORB(:) !(NORB)
-  INTEGER(4)   ,ALLOCATABLE :: IORB(:) !(NORB)
+  CHARACTER(32),ALLOCATABLE :: ORB(:)       !(NORB)
+  INTEGER(4)   ,ALLOCATABLE :: IORB(:)      !(NORB)
   INTEGER(4)                :: NWGHT=0
-  INTEGER(4)   ,ALLOCATABLE :: IAT(:) !(NWGHT)
-  INTEGER(4)   ,ALLOCATABLE :: L(:)   !(NWGHT)
-  CHARACTER(32)             :: SPECIAL=' '! SPECIAL TYPE LIKE TOTAL AND EMPTY
-  CHARACTER(32)             :: LEGEND=' ' ! TEXT FOR ANNOTATION IN THE FIGURE
+  INTEGER(4)   ,ALLOCATABLE :: IAT(:)       !(NWGHT)
+  INTEGER(4)   ,ALLOCATABLE :: L(:)         !(NWGHT)
+  CHARACTER(32)             :: SPECIAL=' '  ! SPECIAL TYPE LIKE TOTAL AND EMPTY
+  CHARACTER(32)             :: LEGEND=' '   ! TEXT FOR ANNOTATION IN THE FIGURE
   CHARACTER(32)             :: SPINID='+Z'  ! ID FOR SPIN PROJECTION
 END TYPE SET_TYPE
 INTEGER(4)     ,PARAMETER   :: NSETX=100
@@ -2109,7 +2109,8 @@ END MODULE NEWSET_MODULE
               L=LOX(LN,ISP)
               IF(IAT.EQ.IATP.OR.IATP.EQ.-1) THEN
                 IF(L.EQ.LP.OR.LP.EQ.-1) THEN
-                  IF(N.EQ.NP.OR.NP.EQ.-1) THEN
+! n/np this is for later when also different orbitals per l shall be addressed
+!                  IF(N.EQ.NP.OR.NP.EQ.-1) THEN 
                     DO IKPT=1,NKPT
                       DO ISPIN=1,NSPIN
                         STATE=>STATEARR(IKPT,ISPIN)
@@ -2119,7 +2120,7 @@ END MODULE NEWSET_MODULE
         &                                   ,NBB,MATEL(:,:,IKPT,ISET))
                       ENDDO ! ISPIN
                     ENDDO !IKPT
-                  END IF !N
+!                 END IF !N
                 END IF ! L
               END IF ! IAT
               IPRO=IPRO+2*L+1
