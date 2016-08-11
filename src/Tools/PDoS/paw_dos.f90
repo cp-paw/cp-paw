@@ -167,14 +167,19 @@ END MODULE READCNTL_MODULE
 !     __ FILL IN EIGENVALUES AND OCCUPATIONS____________________________________
       CALL SET$ENOCC(NBB,NKPT,EIG,OCC)
 !     __ FILL IN WEIGHT FOR EACH STATE__________________________________________
+!     == CAUTION! SETS CONSTRUCTED HERE WILL BE OVERWRITTEN IN THE NEW VERSION
       CALL READCNTL$SETS(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS,LENG,SET,LEGEND)
 PRINT*,'BEFORE READCNTL$SETS_NEW'
+!
+! CAUTION!!! MUCH OF WHAT IS DONE ABOVE IS REDUNDANT AND IS REPLACED BY
+! THE FOLLOWING
+!
       CALL READCNTL$SETS_NEW(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
 PRINT*,'BEFORE NEWORBITAL$REPORT'
 CALL NEWORBITAL$REPORT(6)
 CALL NEWSET$REPORT(6)
 PRINT*,'BEFORE NEWSET$PROCESS'
-      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET,legend)
+      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET,LEGEND)
 PRINT*,'AFTER NEWSET$PROCESS'
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
 !
@@ -552,9 +557,9 @@ PRINT*,'AFTER NEWSET$PROCESS'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ORTHONORMALIZESTATES()
 !     **************************************************************************
-!     ** transforms the locval basis set so that it is orthonormal.           **
-!     ** a cholesky decomposition of the local orbitals transforms the        **
-!     ** variable into a unit matrix                                          **
+!     ** TRANSFORMS THE LOCVAL BASIS SET SO THAT IT IS ORTHONORMAL.           **
+!     ** A CHOLESKY DECOMPOSITION OF THE LOCAL ORBITALS TRANSFORMS THE        **
+!     ** VARIABLE INTO A UNIT MATRIX                                          **
 !     **************************************************************************
       USE PDOS_MODULE, ONLY : NSP &
      &                       ,LNX &      !(NSP)
@@ -582,7 +587,7 @@ PRINT*,'AFTER NEWSET$PROCESS'
       ENDDO
       ISVAR=MAXVAL(LMNX)
       ALLOCATE(TRANSFORM(ISVAR,ISVAR,NSP))
-      transform(:,:,:)=(0.d0,0.d0)
+      TRANSFORM(:,:,:)=(0.D0,0.D0)
 !
 !     ==========================================================================
 !     == DETERMINE TRANSFORMATION MATRIX USING CHOLESKY DECOMPOSITION         ==
@@ -611,14 +616,14 @@ PRINT*,'AFTER NEWSET$PROCESS'
           LMN2=0
           DO LN2=1,LNX(ISP)
             L2=LOX(LN2,ISP)
-            IF(L2.eq.L1) then
+            IF(L2.EQ.L1) THEN
               DO IM=1,2*L1+1
                 TRANSFORM(LMN1+IM,LMN2+IM,ISP)=CMPLX(BMAT(LN1,LN2),KIND=8)
               ENDDO
-            endif
+            ENDIF
             LMN2=LMN2+2*L2+1
           ENDDO
-          LMN1=LMN1+2*l1+1
+          LMN1=LMN1+2*L1+1
         ENDDO
         DEALLOCATE(BMAT)
       ENDDO !ISP
@@ -1345,7 +1350,6 @@ END MODULE NEWSET_MODULE
         WRITE(NFIL,FMT='(80("="),T1,"SET ",A," ")')TRIM(NEWSET(I)%ID)
         IF(LEN_TRIM(NEWSET(I)%SPECIAL).NE.0) THEN
           WRITE(NFIL,FMT='("SPECIAL TYPE : ",A)')NEWSET(I)%SPECIAL
-          WRITE(NFIL,FMT='("SPECIAL TYPE : ",A)')NEWSET(I)%SPECIAL
         END IF
         NCOOP=NEWSET(I)%NCOOP
         DO J=1,NCOOP
@@ -1712,8 +1716,16 @@ END MODULE NEWSET_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET,legend)
+      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET,LEGEND)
 !     **************************************************************************
+!     ** CONSTRUCTS THE NEW SETS, THAT IS THE CONTRIBUTION FROM EACH STATE    **
+!     ** TO THE PROJECTED DENSITY OF STATES. THERE IS ONE SET FOR EACH        **
+!     ** PROJECTED DENSITY OF STATES                                          **
+!     **                                                                      **
+!     ** THIS ROUTINE FIRST CONSTRUCTS ALL SPIN COMPONENTS FROM A SET OF      **
+!     ** ORBITALS AND THEN PROJECTS ONTO SPIN CONTRIBUTIONS                   **
+!     **                                                                      **
+!     ** THE INFORMATION ON THE WAVE FNCTIONS IS ENCODED IN                   **
 !     **   STATE(IKPT,ISPIN)%NB
 !     **                    %VEC(IDIM,IPRO,IB)
 !     **                    %OCC(IB)
@@ -1730,7 +1742,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4),INTENT(IN)  :: NKPT
       INTEGER(4),INTENT(IN)  :: NSET
       REAL(8)   ,INTENT(OUT) :: SET(NBB,NKPT,2,NSET)
-      character(32),intent(out) :: legend(nset)
+      CHARACTER(32),INTENT(OUT) :: LEGEND(NSET)
       INTEGER(4)             :: NBB1
       INTEGER(4)             :: NORB
       INTEGER(4)             :: NSET1
@@ -1782,7 +1794,7 @@ END MODULE NEWSET_MODULE
       CALL NEWSET_PROJECTSPIN(NBB,NKPT,NSET,MATEL)
 !
 !     ==========================================================================
-!     ==  compare with old version                                            ==
+!     ==  COMPARE WITH OLD VERSION                                            ==
 !     ==========================================================================
 !!$      DO ISET=1,NSET
 !!$        WRITE(*,*)TRIM(NEWSET(ISET)%ID),'||',TRIM(NEWSET(ISET)%LEGEND) &
@@ -1798,7 +1810,7 @@ END MODULE NEWSET_MODULE
 !     ==========================================================================
 !     ==  COLLECT LEGENDS                                                     ==
 !     ==========================================================================
-      LEGEND(:nset)=NEWSET(:nset)%LEGEND
+      LEGEND(:NSET)=NEWSET(:NSET)%LEGEND
 !
 !     ==========================================================================
 !     ==  OVERWRITE OLD SETS                                                  ==
@@ -2076,6 +2088,20 @@ END MODULE NEWSET_MODULE
 !         == MATEL IS THE PREFACTOR OF THE PREFACTOR OF THE UNIT MATRIX
 !         == WHICH HAS TRACE TWO. THEREFOR THE FACTOR 0.5
           MATEL(1,:,:,ISET)=0.5D0
+!         == NO SPIN INFORMATION IS AVAILABLE FOR TOTAL AND NON-COLLINEAR CALC.
+          IF(NDIM.EQ.1) THEN
+            DO IKPT=1,NKPT
+              DO ISPIN=1,NSPIN
+                STATE=>STATEARR(IKPT,ISPIN)
+                NB=STATE%NB
+                IF(ISPIN.EQ.1) THEN
+                  MATEL(4,1:NB     ,IKPT,ISET)=+0.5D0
+                ELSE IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN
+                  MATEL(4,NB+1:2*NB,IKPT,ISET)=-0.5D0
+                END IF
+              ENDDO
+            ENDDO
+          END IF
         ELSE IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
      &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
           DO IKPT=1,NKPT
@@ -2109,7 +2135,7 @@ END MODULE NEWSET_MODULE
               L=LOX(LN,ISP)
               IF(IAT.EQ.IATP.OR.IATP.EQ.-1) THEN
                 IF(L.EQ.LP.OR.LP.EQ.-1) THEN
-! n/np this is for later when also different orbitals per l shall be addressed
+! N/NP THIS IS FOR LATER WHEN ALSO DIFFERENT ORBITALS PER L SHALL BE ADDRESSED
 !                  IF(N.EQ.NP.OR.NP.EQ.-1) THEN 
                     DO IKPT=1,NKPT
                       DO ISPIN=1,NSPIN
@@ -2133,6 +2159,12 @@ END MODULE NEWSET_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE XXX(NDIM,NPRO,NB,ISPIN,NSPIN,C,NBB,MATEL)
+!     **************************************************************************
+!     ** CALCULATES GENERALIZED ANGULAR MOMENTUM WEIGHTS.                     **
+!     ** MATEL ADDS THE SUM OVER THE WEIGHTS FROM THE SET OF ORBITALS SUPPLIED**
+!     ** THE RESULT IS RESOLVED INTO THE (TOTAL,SX,SY,SZ) SPIN COMPONENTS     **
+!     ** THE CALLING ROUTINE SPECIFIES THE ORBITAL RANGE.                     **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NDIM
       INTEGER(4),INTENT(IN) :: NPRO
@@ -2468,7 +2500,7 @@ END MODULE ORBITALS_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READORBENTRY(LL_CNTL,RBAS,NAT,ATOMID,RPOS,IAT,IT,LMXX,ORB)
 !     **************************************************************************
-!     ** READ ONE !ORB BLOCK IN THE !DCNTL FILE WITH ATOM=" SPECIFIED         **
+!     ** READ ONE !ORB BLOCK IN THE !DCNTL FILE WITH ATOM=' ' SPECIFIED       **
 !     ** AND RETURN A THE DATA FOR AN ORBITAL ENTRY                           **
 !     **                                                                      **
 !     ** 1) ALL ATOMS CAN BE SPECIFIED IN EXTENDED ATOM NOTATION              **
@@ -3301,7 +3333,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       CHARACTER(16),INTENT(IN) :: ATOMID(NAT)  ! ATOM NAMES
       REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)  ! ATOMIC POSITIONS
       INTEGER(4)   ,PARAMETER  :: LMXX=16
-      LOGICAL(4)               :: TCHK,tchk1
+      LOGICAL(4)               :: TCHK,TCHK1
       CHARACTER(32)            :: ORBITALNAME1
       INTEGER(4)               :: IORB2
       INTEGER(4)               :: IAT
@@ -3320,7 +3352,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       END IF
 !
 !     ==========================================================================
-!     == resolve orbital (!orb contains name= )                               ==
+!     == RESOLVE ORBITAL (!ORB CONTAINS NAME= )                               ==
 !     ==========================================================================
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,ORBITALNAME1)
@@ -3849,7 +3881,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !       ========================================================================
 !       == READ LEGEND                                                        ==
 !       ========================================================================
-        WRITE(legend,FMT='("WEIGHT",I5)')ISET
+        WRITE(LEGEND,FMT='("WEIGHT",I5)')ISET
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LEGEND',1,TCHK)
         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,LEGEND)
         CALL NEWSET$SETCH('LEGEND',LEGEND)
@@ -4034,40 +4066,41 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       REAL(8)                   :: SVAR
 !     **************************************************************************
                                  CALL TRACE$PUSH('SET$WEIGHT')
-      IF(ATOMID_.EQ.'TOTAL') THEN
-!        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
-        SVAR=1.D0
-        IF(TRIM(SPIN).EQ.'TOTAL') THEN
-!         == WEIGHT OF BOTH SPIN COMPONENTS IS ADDED TO THE FIRST SPIN CHANNEL
-          SET(:,:,1)=SET(:,:,1)+SVAR
-          RETURN
-        ELSE IF(TRIM(SPIN).EQ.'Z'.AND.NSPIN.EQ.2) THEN
-          DO IKPT=1,NKPT
-            DO ISPIN=1,NSPIN
-              STATE=>STATEARR(IKPT,ISPIN)
-              NB=STATE%NB
-              SET(:NB  ,IKPT,1)=SET(:NB  ,IKPT,1)+0.5D0*SVAR
-              SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+0.5D0*SVAR
-            ENDDO
-          ENDDO
-        ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-          CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL')
-          CALL ERROR$CHVAL('SPIN',SPIN)
-          CALL ERROR$CHVAL('ATOMID',ATOMID)
-          CALL ERROR$STOP('SET$WEIGHT')
-        ELSE
-!         == FOR NON-COLLINEAR CALCULATION THERE IS NO PREFERRED SPIN AXIS =====
-!         == THEREFORE THE WEIGHT IS EQUALLY DISTRIBUTED TO BOTH SPIN DIRECTIONS
-          SET(:,:,:)=SET(:,:,:)+0.5D0*SVAR
-        END IF
-        RETURN
-      END IF
+!!$      IF(ATOMID_.EQ.'TOTAL') THEN
+!!$!        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
+!!$        SVAR=1.D0
+!!$        IF(TRIM(SPIN).EQ.'TOTAL') THEN
+!!$!         == WEIGHT OF BOTH SPIN COMPONENTS IS ADDED TO THE FIRST SPIN CHANNEL
+!!$          SET(:,:,1)=SET(:,:,1)+SVAR
+!!$          RETURN
+!!$        ELSE IF(TRIM(SPIN).EQ.'Z'.AND.NSPIN.EQ.2) THEN
+!!$          DO IKPT=1,NKPT
+!!$            DO ISPIN=1,NSPIN
+!!$              STATE=>STATEARR(IKPT,ISPIN)
+!!$              NB=STATE%NB
+!!$              SET(:NB  ,IKPT,1)=SET(:NB  ,IKPT,1)+0.5D0*SVAR
+!!$              SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+0.5D0*SVAR
+!!$            ENDDO
+!!$          ENDDO
+!!$        ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
+!!$          CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
+!!$          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL')
+!!$          CALL ERROR$CHVAL('SPIN',SPIN)
+!!$          CALL ERROR$CHVAL('ATOMID',ATOMID)
+!!$          CALL ERROR$STOP('SET$WEIGHT')
+!!$        ELSE
+!!$!         == FOR NON-COLLINEAR CALCULATION THERE IS NO PREFERRED SPIN AXIS =====
+!!$!         == THEREFORE THE WEIGHT IS EQUALLY DISTRIBUTED TO BOTH SPIN DIRECTIONS
+!!$          SET(:,:,:)=SET(:,:,:)+0.5D0*SVAR
+!!$        END IF
+!!$        RETURN
+!!$      END IF
 !
 !     ==========================================================================
 !     ==  ATOM SPECIFIER IAT0: IAT0<0 IMPLIES ALL ATOMS                       ==
 !     ==========================================================================
-      IF(ATOMID_.EQ.'ALL'.OR.ATOMID_.EQ.' ') THEN
+!     == ATOMID_='TOTAL' WILL BE TREATED HERE LIKE 'ALL', DESPITE SPECIAL RULE==
+      IF(ATOMID_.EQ.'ALL'.OR.ATOMID_.EQ.'TOTAL'.OR.ATOMID_.EQ.' ') THEN
         IAT0=-1
       ELSE
         IAT0=-1
@@ -4101,6 +4134,13 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
         CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
       ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
+        IF(IAT0.EQ.-1) THEN
+          CALL ERROR$MSG('NOT ATOM SELECTED TO SPECIFY LOCAL SPIN AXIS')
+          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL OR ALL')
+          CALL ERROR$CHVAL('SPIN',SPIN)
+          CALL ERROR$CHVAL('ATOMID',ATOMID)
+          CALL ERROR$STOP('SET$WEIGHT')
+        END IF
         CALL SPINBRA(SPINDIR(1,IAT0),SPINDIR(2,IAT0),SPINDIR(3,IAT0),CP,CM)
       ELSE
         CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
@@ -4127,6 +4167,52 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         CALL ERROR$CHVAL('ORBITALID',ORBITALID)
         CALL ERROR$STOP('SET$WEIGHT')
       END IF
+!
+!     ==========================================================================
+!     ==  SPECIAL RULE FOR ATOMID_='TOTAL'
+!     ==  IS IS APPLIED HERE FOR CONSISTENCY WITH GENERAL RULE
+!     ==========================================================================
+      IF(ATOMID_.EQ.'TOTAL') THEN
+        DO IKPT=1,NKPT
+          DO ISPIN=1,NSPIN
+            STATE=>STATEARR(IKPT,ISPIN)
+            NB=STATE%NB
+            IF(NDIM.EQ.1) THEN
+              SVARP=ABS(CP(ISPIN))**2
+              SVARM=ABS(CM(ISPIN))**2
+              IF(SPIN.EQ.'TOTAL') THEN
+                SVARP=SVARP+SVARM
+                SVARM=0.D0
+              END IF
+              IB=NB*(ISPIN-1)
+              SET(IB+1:IB+NB,IKPT,1)=SET(IB+1:IB+NB,IKPT,1)+SVARP
+              SET(IB+1:IB+NB,IKPT,2)=SET(IB+1:IB+NB,IKPT,2)+SVARM
+              IF(ISPIN.EQ.1.AND.NSPIN.EQ.1) THEN
+                SVARP=ABS(CP(2))**2
+                SVARM=ABS(CM(2))**2
+                IF(SPIN.EQ.'TOTAL') THEN
+                  SVARP=SVARP+SVARM
+                  SVARM=0.D0
+                END IF
+                SET(NB+1:,IKPT,1)=SET(NB+1:,IKPT,1)+SVARP
+                SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+SVARM
+              END IF
+            ELSE IF(NDIM.EQ.2) THEN
+              IF(SPIN.EQ.'TOTAL') THEN
+                SET(1:NB,IKPT,1)=1.D0
+              ELSE
+                CALL ERROR$MSG('INTERNAL ERROR')
+                CALL ERROR$MSG('THE TOTAL DOS CAN NOT BE SPIN RESOLVED')
+                CALL ERROR$MSG('USE TYPE=ALL INSTEAD OF TYPE=TOTAL')
+                CALL ERROR$MSG('OR SPIN=TOTAL')
+                CALL ERROR$STOP('SET$WEIGHT')
+              END IF
+            END IF
+          ENDDO  !END LOOP ISPIN
+        ENDDO  ! END LOOP IKPT
+                                 CALL TRACE$POP
+        RETURN
+      END IF ! END SELECTION ATOMID_='TOTAL'
 !
 !     ==========================================================================
 !     ==  NOW EVALUATE WEIGHTS                                                ==
@@ -4405,7 +4491,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       USE READCNTL_MODULE
       USE ORBITALS_MODULE
       USE DOS_WGHT_MODULE
-      USE newset_module, only : newset
+      USE NEWSET_MODULE, ONLY : NEWSET
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN
