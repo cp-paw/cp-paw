@@ -10,8 +10,8 @@
       INTEGER(4)                  :: NFIL
       LOGICAL                     :: TCRYSTAL=.FALSE.
       REAL(8)                     :: ANGSTROM
-      CHARACTER(128)              :: ROOTNAME  ! COMMON ROOT OF THE FILENAMES
-      CHARACTER(128)              :: OBJECTNAME
+      CHARACTER(256)              :: ROOTNAME  ! COMMON ROOT OF THE FILENAMES
+      CHARACTER(256)              :: OBJECTNAME
       LOGICAL                     :: TCHK
       REAL(8)                     :: RUNIT     ! LENGTH UNIT ON STRUCTURE FILE
       REAL(8)                     :: RBAS(3,3) ! LATTICE VECTORS
@@ -25,7 +25,7 @@
       REAL(8),      ALLOCATABLE   :: MMQ(:)    ! ATOMIC CHARGES MM PART OF QM-MM
       LOGICAL(4)                  :: TQMMM
       INTEGER(4)                  :: IAT,IAT1
-      CHARACTER(32)               :: STRING
+      CHARACTER(256)              :: STRING
       INTEGER(4)                  :: I,ISVAR
       INTEGER(4)                  :: NARGS
       INTEGER(4)                  :: NFILO

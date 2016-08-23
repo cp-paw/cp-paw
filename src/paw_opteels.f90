@@ -869,7 +869,7 @@ END MODULE OPTEELS_MODULE
                           CALL TRACE$PUSH('OPTEELS_EELS')
        CALL MPE$QUERY('K',NTASKS_K,THISTASK_K) 
        CALL MPE$QUERY('MONOMER',NTASKS,THISTASK) 
-      CALL CONSTANTS('EV',EV)
+       CALL CONSTANTS('EV',EV)
        CALL CONSTANTS('METER',METER)
        NANOMETER=1.D-9*METER
 !
@@ -947,7 +947,7 @@ PRINT*,'GAMMACORE[EV] ',GAMMACORE/EV
            CALL RADIAL$VALUE(GID,NR,WORK,RBOX,RADINT)
            DO M=1,2*L+1
              LMN=LMN+1
-            LM=L**2+M
+             LM=L**2+M
              DO MC=1,2*LC+1
                LMC=LC**2+MC
                CALL SPHERICAL$GAUNT(LM,2,LMC,CG(1)) !X/R
