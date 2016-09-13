@@ -1122,10 +1122,16 @@ END MODULE NEWORBITAL_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE NEWORBITAL$ORBPRO(NBB,NKPT,NORB,ORBPRO)
+      SUBROUTINE NEWORBITAL$ORBPRO(TINV,NBB,NKPT,NORB,ORBPRO)
 !     **************************************************************************
 !     ** CALCULATE THE PROJECTION OF THE KOHN-SHAM WAVE FUNCTIONS ON THE      **
-!     ** DEFINED ORBITALS.
+!     ** DEFINED ORBITALS.                                                    **
+!     **                                                                      **
+!     ** WITH TINV=T, THE WAVE FUNCTIONS ARE TRANSFORMED THROUGH              **
+!     ** TIME-INVERSION SYMMETRY.                                             **
+!     **   FOR NDIM=1, PSI(S,-K)=CONJG(PSI(S,K)).                             **
+!     **   FOR NDIM=2, PSI(UP,-K)=-CONJG(PSI(DN,K)) AND                       **
+!     **               PSI(DN,-K)=+CONJG(PSI(UP,K))                           **
 !     **************************************************************************
       USE PDOS_MODULE   , ONLY : NDIM &
      &                          ,NSPIN &
@@ -1136,6 +1142,7 @@ END MODULE NEWORBITAL_MODULE
       USE NEWORBITAL_MODULE, ONLY : NORB1=>NORB &
      &                             ,NEWORBITAL
       IMPLICIT NONE
+      LOGICAL(4),INTENT(IN) :: TINV
       INTEGER(4),INTENT(IN) :: NBB
       INTEGER(4),INTENT(IN) :: NKPT
       INTEGER(4),INTENT(IN) :: NORB
@@ -1158,9 +1165,9 @@ END MODULE NEWORBITAL_MODULE
       DO IKPT=1,NKPT
 !       == E^(IKT)=EXP(I* XK * GBAS^T * RBAS * IT )
 !       ==        = EIK1^IT(1) * EIK2^IT(2) * EIK3^IT(3)
-        EIK1=EXP(CI*2.D0*PI*XK(1,IKPT))
-        EIK2=EXP(CI*2.D0*PI*XK(2,IKPT))
-        EIK3=EXP(CI*2.D0*PI*XK(3,IKPT))
+        EIK1=EXP(-CI*2.D0*PI*XK(1,IKPT))
+        EIK2=EXP(-CI*2.D0*PI*XK(2,IKPT))
+        EIK3=EXP(-CI*2.D0*PI*XK(3,IKPT))
         DO ISPIN=1,NSPIN
           STATE=>STATEARR(IKPT,ISPIN)
           NB=STATE%NB
@@ -1174,20 +1181,41 @@ END MODULE NEWORBITAL_MODULE
               DO LMN=1,LMNX
                 IPRO=NEWORBITAL(IORB)%ENTRY(IENTRY)%IPRO(LMN)
                 IF(IPRO.EQ.0) CYCLE
-                CFAC=CONJG(NEWORBITAL(IORB)%ENTRY(IENTRY)%ORB(LMN)*EIKT)
-                IF(NDIM.EQ.2) THEN
-                  ORBPRO(:,:,IKPT,IORB)=ORBPRO(:,:,IKPT,IORB) &
+                IF(.NOT.TINV) THEN
+                  CFAC=CONJG(NEWORBITAL(IORB)%ENTRY(IENTRY)%ORB(LMN)*EIKT)
+                  IF(NDIM.EQ.2) THEN
+                    ORBPRO(:,:,IKPT,IORB)=ORBPRO(:,:,IKPT,IORB) &
      &                                 +CFAC*STATE%VEC(:,IPRO,:)
-                ELSE IF(NDIM.EQ.1) THEN
-                  IF(ISPIN.EQ.1) THEN ! FIRST SPIN DIRECTION
-                    ORBPRO(1,:NB,IKPT,IORB)=ORBPRO(1,:NB,IKPT,IORB) &
-     &                                   +CFAC*STATE%VEC(1,IPRO,:)
-                  END IF
-                  IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN ! SECOND SPIN DIRECTION
+                  ELSE IF(NDIM.EQ.1) THEN
+                    IF(ISPIN.EQ.1) THEN ! FIRST SPIN DIRECTION
+                      ORBPRO(1,:NB,IKPT,IORB)=ORBPRO(1,:NB,IKPT,IORB) &
+     &                                     +CFAC*STATE%VEC(1,IPRO,:)
+                    END IF
+                    IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN ! SECOND SPIN DIRECTION
                     ORBPRO(2,NB+1:2*NB,IKPT,IORB)=ORBPRO(2,NB+1:2*NB,IKPT,IORB)&
      &                                       +CFAC*STATE%VEC(1,IPRO,:)
-                  END IF
-                END IF ! NDIM=1 OR 2
+                    END IF
+                  END IF ! NDIM=1 OR 2
+                ELSE  !TIME INVERTED WAVE FUNCTION (-K)
+                  CFAC=CONJG( NEWORBITAL(IORB)%ENTRY(IENTRY)%ORB(LMN) &
+     &                       *CONJG(EIKT))
+                  IF(NDIM.EQ.2) THEN
+                     ORBPRO(1,:,IKPT,IORB)=ORBPRO(1,:,IKPT,IORB) &
+     &                                 -CFAC*CONJG(STATE%VEC(2,IPRO,:))
+                     ORBPRO(2,:,IKPT,IORB)=ORBPRO(2,:,IKPT,IORB) &
+     &                                 +CFAC*CONJG(STATE%VEC(1,IPRO,:))
+                   ELSE IF(NDIM.EQ.1) THEN
+                     IF(ISPIN.EQ.1) THEN ! FIRST SPIN DIRECTION
+                       ORBPRO(1,:NB,IKPT,IORB)=ORBPRO(1,:NB,IKPT,IORB) &
+     &                                        +CFAC*CONJG(STATE%VEC(1,IPRO,:))
+                    END IF
+                    IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN ! SECOND SPIN DIRECTION
+                      ORBPRO(2,NB+1:2*NB,IKPT,IORB) &
+     &                                       =ORBPRO(2,NB+1:2*NB,IKPT,IORB) &
+     &                                       +CFAC*CONJG(STATE%VEC(1,IPRO,:))
+                    END IF
+                  END IF ! NDIM=1 OR 2
+                END IF  ! TINV=T OR F
               ENDDO  ! LMN
             ENDDO ! IENTRY
           ENDDO ! IORB
@@ -1227,6 +1255,7 @@ END MODULE NEWORBITAL_MODULE
         DO IENTRY=1,NEWORBITAL(IORB)%NENTRY
           IAT=NEWORBITAL(IORB)%ENTRY(IENTRY)%IAT
           LMNX=NEWORBITAL(IORB)%ENTRY(IENTRY)%LMNX
+          IF(ALLOCATED(NEWORBITAL(IORB)%ENTRY(IENTRY)%IPRO)) CYCLE
           ALLOCATE(NEWORBITAL(IORB)%ENTRY(IENTRY)%IPRO(LMNX))
           NEWORBITAL(IORB)%ENTRY(IENTRY)%IPRO(:)=0
           LMN=0
@@ -1749,6 +1778,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4)             :: IKPT,ISPIN,I,ISET
       REAL(8)   ,ALLOCATABLE :: MATEL(:,:,:,:)
       COMPLEX(8),ALLOCATABLE :: ORBPRO(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE :: ORBPROCC(:,:,:,:)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1779,14 +1809,16 @@ END MODULE NEWSET_MODULE
 !     ==========================================================================
       CALL NEWORBITAL$GETI4('NORB',NORB)
       ALLOCATE(ORBPRO(2,NBB,NKPT,NORB))
-      CALL NEWORBITAL$ORBPRO(NBB,NKPT,NORB,ORBPRO)
+      ALLOCATE(ORBPROCC(2,NBB,NKPT,NORB))
+      CALL NEWORBITAL$ORBPRO(.FALSE.,NBB,NKPT,NORB,ORBPRO)
+      CALL NEWORBITAL$ORBPRO(.TRUE.,NBB,NKPT,NORB,ORBPROCC)
 !
 !     ==========================================================================
 !     ==  RESOLVE SETS                                                        ==
 !     ==========================================================================
       CALL NEWSET$CLEANUP()
       ALLOCATE(MATEL(4,NBB,NKPT,NSET))
-      CALL NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORBPRO,MATEL)
+      CALL NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORBPRO,ORBPROCC,MATEL)
 !
 !     ==========================================================================
 !     ==  PROJECT ONTO UP AND DOWN SPIN                                       ==
@@ -1941,7 +1973,7 @@ END MODULE NEWSET_MODULE
      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORB,MATEL)
+      SUBROUTINE NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORB,ORBCC,MATEL)
 !     **************************************************************************
 !     **************************************************************************
       USE NEWSET_MODULE, ONLY : NSET1=>NSET &
@@ -1952,6 +1984,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4),INTENT(IN) :: NORB
       INTEGER(4),INTENT(IN) :: NSET
       COMPLEX(8),INTENT(IN) :: ORB(2,NBB,NKPT,NORB)
+      COMPLEX(8),INTENT(IN) :: ORBCC(2,NBB,NKPT,NORB) ! -K
       REAL(8)   ,INTENT(OUT):: MATEL(4,NBB,NKPT,NSET)
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NCOOP
@@ -2003,19 +2036,28 @@ END MODULE NEWSET_MODULE
 !         == 0.5*TRACE(D*SIGMA)=0.5*SUM_I,J D_JI * SIGMA_IJ ====================
 !         == D_IJ=<I|PSI1>... <PSI2|J> =========================================
 !         == REAL PART TO ACCOUNT FOR -K (WAVE VECTOR)
+!         == ORBCC ACCOUNTS FOR -K (AVERAGE FO +K AND -K IS CALCULATED)
 !         == REAL(C) INHERITS THE KIND PARAMETER IF THE ARGUMENT C IS COMPLEX
           MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)) &
-     &                               +ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)) &
+     &                           +ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)))&
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB2)) &
+     &                           +ORBCC(2,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB2)))
           MATEL(2,:,:,ISET)=MATEL(2,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)) &
-     &                               +ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)) &
+     &                          +ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2))) &
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB2)) &
+     &                           +ORBCC(2,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB2)))
           MATEL(3,:,:,ISET)=MATEL(3,:,:,ISET) &
-     &                   +0.5D0*AIMAG(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)) &
-     &                               -ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)))
+     &               +0.25D0*AIMAG(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)) &
+     &                            -ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2))) &
+     &               +0.25D0*AIMAG(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB2))&
+     &                            -ORBCC(2,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB2)))
           MATEL(4,:,:,ISET)=MATEL(4,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)) &
-     &                               -ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB2)) &
+     &                           -ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB2))) &
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB2)) &
+     &                           -ORBCC(2,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB2)))
         ENDDO !ICOOP
       ENDDO
 !
@@ -2027,17 +2069,25 @@ END MODULE NEWSET_MODULE
         DO I=1,NSETORB
           IORB1=NEWSET(ISET)%IORB(I)
           MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)) &
-     &                               +ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)) &
+     &                           +ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1))) &
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB1)) &
+     &                           +ORBCC(2,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB1)))
           MATEL(2,:,:,ISET)=MATEL(2,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)) &
-     &                               +ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)) &
+     &                          +ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1))) &
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB1)) &
+     &                           +ORBCC(2,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB1)))
           MATEL(3,:,:,ISET)=MATEL(3,:,:,ISET) &
-     &                   +0.5D0*AIMAG(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)) &
-     &                               -ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)))
+     &              +0.25D0*AIMAG(ORB(1,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)) &
+     &                           -ORB(2,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1))) &
+     &              +0.25D0*AIMAG(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB1)) &
+     &                           -ORBCC(2,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB1)))
           MATEL(4,:,:,ISET)=MATEL(4,:,:,ISET) &
-     &                    +0.5D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)) &
-     &                               -ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1)))
+     &               +0.25D0*REAL(ORB(1,:,:,IORB1)*CONJG(ORB(1,:,:,IORB1)) &
+     &                           -ORB(2,:,:,IORB1)*CONJG(ORB(2,:,:,IORB1))) &
+     &               +0.25D0*REAL(ORBCC(1,:,:,IORB1)*CONJG(ORBCC(1,:,:,IORB1)) &
+     &                           -ORBCC(2,:,:,IORB1)*CONJG(ORBCC(2,:,:,IORB1)))
         ENDDO
       ENDDO
       RETURN
@@ -2102,6 +2152,7 @@ END MODULE NEWSET_MODULE
               ENDDO
             ENDDO
           END IF
+!
         ELSE IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
      &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
           DO IKPT=1,NKPT
