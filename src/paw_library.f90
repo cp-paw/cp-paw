@@ -2372,7 +2372,7 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
       COMPLEX(8),INTENT(OUT):: U(N,N)
-      INTEGER(4),PARAMETER  :: LWMAX=2000
+      INTEGER(4),PARAMETER  :: LWMAX=4000
       COMPLEX(8)            :: CWORK(LWMAX)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER(4)            :: I
