@@ -11,14 +11,21 @@ MODULE DMFT_MODULE
 !**                                                                           **
 !*******************************************************************************
 TYPE DENMAT_TYPE   ! CONSIDERS ALL ORBITALS ON THIS SITE
-COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
-COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
+  COMPLEX(8),POINTER  :: RHO(:,:,:) => NULL() ! DENSITY MATRIX
+  COMPLEX(8),POINTER  :: H(:,:,:)   => NULL() ! HAMILTONIAN FROM DOUBLE COUNTING
 END TYPE DENMAT_TYPE
+!
 TYPE NATORB_TYPE                             ! NATURAL ORBITALS
-COMPLEX(8),POINTER  :: CHIPHI(:,:) => NULL() !(2*NLOC,2*NLOC) <CHI|NATORB>
-COMPLEX(8),POINTER  :: PIPHI(:,:)  => NULL() !(2*NLOC,2*NLOC) <PI|NATORB>
+  COMPLEX(8),POINTER  :: CHIPHI(:,:) => NULL() !(2*NLOC,2*NLOC) <CHI|NATORB>
+  COMPLEX(8),POINTER  :: PIPHI(:,:)  => NULL() !(2*NLOC,2*NLOC) <PI|NATORB>
 END TYPE NATORB_TYPE
+!
 TYPE ATOMSET_TYPE
+  !**  nloc       =#(local orbotals on this atom)
+  !**  u          = U-tensor
+  !**  gni        = non-interacting local Greens function
+  !**  dphidg     = self energy from luttinger-ward functional
+  !**  rho        = local density matrix 
   INTEGER(4)           :: NLOC
   INTEGER(4)           :: ICHI1
   INTEGER(4)           :: ICHI2
@@ -27,8 +34,8 @@ TYPE ATOMSET_TYPE
   REAL(8)   ,POINTER   :: DEDU(:,:,:,:)     => NULL() !(NLOC,NLOC,NLOC,NLOC) 
   COMPLEX(8),POINTER   :: GLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: GLOCLAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,NLAU+1)
-  COMPLEX(8),POINTER   :: GNI(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
-  COMPLEX(8),POINTER   :: GNILAUR(:,:,:,:) => NULL() !(NLOC,NLOC,NDIMD,NLAU+1)
+  COMPLEX(8),POINTER   :: GNI(:,:,:,:)      => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
+  COMPLEX(8),POINTER   :: GNILAUR(:,:,:,:)  => NULL() !(NLOC,NLOC,NDIMD,NLAU+1)
   COMPLEX(8),POINTER   :: DPHIDG(:,:,:,:)   => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
   COMPLEX(8),POINTER   :: DPHIDGLAUR(:,:,:,:)=> NULL() !(NLOC,NLOC,NDIMD,NLAU)
   COMPLEX(8),POINTER   :: SLOC(:,:,:,:)     => NULL() !(NLOC,NLOC,NDIMD,NOMEGA)
@@ -39,13 +46,17 @@ TYPE ATOMSET_TYPE
   TYPE(NATORB_TYPE)    :: NATORB
 END TYPE ATOMSET_TYPE
 TYPE KSET_TYPE
+  !** pipsi   = <pi|psi> projection of band state onto local orbital
+  !** rho     = density matrix
+  !** rho     = density matrix made n-representable
+  !** gamma   = lagrange multipliers for density matrix constraint
   REAL(8)            :: WKPT
-  LOGICAL(4)         :: TADDMINUSK    !ADD  THE TERM FOR -K
-  REAL(8)   ,POINTER :: F(:,:)        ! (NB,NSPIN)         
-  REAL(8)   ,POINTER :: E(:,:)        ! (NB,NSPIN)         
-  COMPLEX(8),POINTER :: PIPSI(:,:,:,:)!(NDIM,NCHI,NB,NSPIN)
+  LOGICAL(4)         :: TADDMINUSK    !ADD THE TERM FOR -K
+  REAL(8)   ,POINTER :: F(:,:)        !(NB,NSPIN)  occupation       
+  REAL(8)   ,POINTER :: E(:,:)        !(NB,NSPIN)  energy       
+  COMPLEX(8),POINTER :: PIPSI(:,:,:,:)!(NDIM,NCHI,NB,NSPIN) 
   COMPLEX(8),POINTER :: RHO(:,:,:)    !(NCHI,NCHI,NDIMD)
-  COMPLEX(8),POINTER :: RHOADAPTED(:,:,:)    !(NCHI,NCHI,NDIMD)
+  COMPLEX(8),POINTER :: RHOADAPTED(:,:,:) !(NCHI,NCHI,NDIMD)
   COMPLEX(8),POINTER :: GAMMA(:,:,:)  !(NCHI,NCHI,NDIMD)
   COMPLEX(8),POINTER :: HRHO(:,:,:)   !(NCHI,NCHI,NDIMD)
   COMPLEX(8),POINTER :: SINV(:,:,:)   !(NCHI,NCHI,NDIMD)
@@ -56,6 +67,7 @@ END TYPE KSET_TYPE
 LOGICAL(4),PARAMETER   :: TON=.TRUE.
 LOGICAL(4),PARAMETER   :: TONATORB=.FALSE.
 LOGICAL(4),SAVE        :: TINI=.FALSE.
+logical(4),PARAMETER   :: tsimpledmft=.true. ! no density matrix constraint
 INTEGER(4)             :: NOMEGA
 INTEGER(4)             :: NLAU          ! #(LAURENT EXPANSION TERMS SELF ENERGY
 INTEGER(4)             :: NCHI          ! #(CORRELATED ORBITALS)
@@ -334,7 +346,8 @@ PRINT*,'NCHI ',NCHI
 !     ** PIPSI <PI_A|PSI_N> IS THE PRE-FACTOR OF LOCAL ORBITAL |CHI_A> IN     **
 !     **       THE LOCAL ORBITAL EXPANSION OF |PSI_N>                         **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: TON
+      USE DMFT_MODULE, ONLY: TON &
+     &                      ,tsimpledmft
       USE MPE_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
@@ -346,7 +359,7 @@ PRINT*,'NCHI ',NCHI
       REAL(8)                :: ELAST
       REAL(8)                :: SVAR
       INTEGER(4)             :: ITER
-      LOGICAL(4) :: TREPEAT=.TRUE. ! USED FOR GRADIENT TEST
+      LOGICAL(4) :: TREPEAT=.false. ! USED FOR GRADIENT TEST
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                               CALL TRACE$PUSH('DMFT$GREEN')
@@ -371,7 +384,8 @@ PRINT*,'NCHI ',NCHI
 !     ==========================================================================
 !     ==  OVERLAP MATRIX IN K-SPACE
 !     ==========================================================================
-      CALL DMFT_OVERLAPOFK()
+!This apparently overwrites sinv constructed in dmft_rhoofk
+!      CALL DMFT_OVERLAPOFK()
 !
       IF(TREPEAT)CALL DMFT_CHECKGRADIENT1()
 !
@@ -397,7 +411,7 @@ PRINT*,'NCHI ',NCHI
       CALL DMFT_NATORB()
 !      CALL DMFT_NININTSPECTALDENSITY() ! USED FOR TESTING
 !      CALL DMFT_GLOCNI()
-      CALL DMFT_LOCALSPECTRALFUNCTION()
+!      CALL DMFT_LOCALSPECTRALFUNCTION()
 !
 !     ==========================================================================
 !     == ITERATION TO ENFORCE CONSTRAINTS                                     ==
@@ -407,11 +421,16 @@ PRINT*,'NCHI ',NCHI
         WRITE(*,FMT='(82("="),T20," ITERATION ",I5)')ITER
         CALL DMFT_GLOC() 
 !
+print*,'before printing spectral function iter =',iter
+call DMFT_fullLOCALSPECTRALFUNCTION()
+print*,'after printing spectral function'
+
+!CALL DMFT_LOCALSPECTRALFUNCTION()
+!
 !       ========================================================================
 !       ==  CALL THE SOLVER                                                   ==
 !       ========================================================================
         CALL DMFT_SOLVER(ETOT) 
-!
         WRITE(*,FMT='(60("."),T1'&
      &        //',"--DMFT--ENERGY AFTER DMFT_SOLVER"' &
      &        //',T60,":",F20.10)')ETOT
@@ -424,7 +443,10 @@ PRINT*,'NCHI ',NCHI
 !       ========================================================================
 !       ==  CONSTRAINTS                                                       ==
 !       ========================================================================
-        CALL DMFT_CONSTRAINTS()
+        if(.not.tsimpledmft) then
+          CALL DMFT_CONSTRAINTS()
+        end if
+print*,'constraints done ',tsimpledmft
         PRINT*,'ITERATION COMPLETED ',ITER,XDEV,ETOT,ETOT-ELAST
         IF(ABS(ETOT-ELAST).LT.ETOL.AND.XDEV.LT.SIGMATOL) EXIT
         ELAST=ETOT
@@ -465,6 +487,8 @@ IF(TREPEAT) STOP 'FORCED BECAUSE TREPEAT'
 !      CALL DMFT_TONATORB('BACK')
       CALL DMFT_ADDTOHPSI()
 WRITE(*,FMT='(82("="),T20," LEAVING DMFT$GREEN ")')
+
+call error$stop('forced in dmft$green')
                                        CALL TRACE$POP()
       RETURN
       END
@@ -643,8 +667,18 @@ PRINT*,'MU FROM MERMIN[EV]',MU1*27.211D0
 !     **                                                                      **
 !     ** THIS IS THE MATRIX GRHO WHICH WILL HAVE A DEGENERATE SPECTRAL FNCTN  **
 !     **************************************************************************
-      USE DMFT_MODULE, ONLY: NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,NAT,NOMEGA,OMEGA &
-     &                      ,KSET,ATOMSET,MU
+      USE DMFT_MODULE, ONLY: NCHI &
+     &                      ,NB &
+     &                      ,NKPTL &
+     &                      ,NSPIN &
+     &                      ,NDIM &
+     &                      ,NDIMD &
+     &                      ,NAT &
+     &                      ,NOMEGA &
+     &                      ,OMEGA &
+     &                      ,KSET &
+     &                      ,ATOMSET &
+     &                      ,MU 
       IMPLICIT NONE
       COMPLEX(8),PARAMETER      :: CI=(0.D0,1.D0)
       COMPLEX(8)                :: CSVAR
@@ -718,8 +752,8 @@ PRINT*,'MU FROM MERMIN[EV]',MU1*27.211D0
 !     ** DOS-HISTOGRAM                                                        **
 !     ** DOS IS CALCULATED DIRECTLY FROM THE ENERGY VALUES OBTAINED FROM      **
 !     ** DYNOCC SHIFTED RELATIVE TO THE FERMI LEVEL.                          **
-!     **                                                                      **
-!     ** ENERGY AXIS IN EV AND RELATIVE TO THE FERMI LEVEL                    **
+!     ** -) BOTH SPINS ARE ADDED                                              **
+!     ** -) ENERGY AXIS IN EV AND RELATIVE TO THE FERMI LEVEL                 **
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD,NAT,NOMEGA,OMEGA &
@@ -727,6 +761,9 @@ PRINT*,'MU FROM MERMIN[EV]',MU1*27.211D0
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TON=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      INTEGER(4),PARAMETER   :: NE=500
+      REAL(8)   ,PARAMETER   :: EMIN=-2.D0/27.211D0
+      REAL(8)   ,PARAMETER   :: EMAX=+2.D0/27.211D0
       COMPLEX(8)             :: CSVAR
       INTEGER(4)             :: ICHI1,ICHI2
       INTEGER(4)             :: NLOC
@@ -740,9 +777,6 @@ PRINT*,'MU FROM MERMIN[EV]',MU1*27.211D0
       INTEGER(4)             :: NFIL=10015
       CHARACTER(64)          :: FILE='FORDOS.DAT'
       REAL(8)   ,ALLOCATABLE :: DOS(:,:)
-      INTEGER(4),PARAMETER   :: NE=500
-      REAL(8)   ,PARAMETER   :: EMIN=-2.D0/27.211D0
-      REAL(8)   ,PARAMETER   :: EMAX=+2.D0/27.211D0
       REAL(8)                :: EV
       INTEGER(4)             :: NEG
       REAL(8)   ,ALLOCATABLE :: SMEAR(:)
@@ -757,7 +791,8 @@ PRINT*,'MU FROM MERMIN[EV]',MU1*27.211D0
         ICHI1=ATOMSET(IAT)%ICHI1
         ICHI2=ATOMSET(IAT)%ICHI2
         NLOC=ATOMSET(IAT)%NLOC
-PRINT*,'IAT,ICHI1,ICHI2,NLOC,NDIM,NDIMD ',IAT,ICHI1,ICHI2,NLOC,NDIM,NDIMD
+PRINT*,'IAT,ICHI1,ICHI2,NLOC,NDIM,NDIMD,NSPIN ' &
+&      ,IAT,ICHI1,ICHI2,NLOC,NDIM,NDIMD,NSPIN
 IF(NLOC.LE.0) PRINT*,'SKIPPING ATOM=',IAT
 IF(NLOC.LE.0) CYCLE
         ALLOCATE(VEC(NDIM,NLOC))
@@ -1125,7 +1160,7 @@ ENDDO
       SUBROUTINE DMFT_RHOOFK()
 !     **************************************************************************
 !     **  CALCULATES THE K-DEPENDENT DENSITY MATRIX AND THE OVERLAP MATRIX    **
-!     **  FROM THE TB-PROJECTIONS OF THE NATURAL ORBITALS AND THEIR OCCUPATIONS* 
+!     **  FROM TB-PROJECTIONS OF THE NATURAL ORBITALS AND THEIR OCCUPATIONS   **
 !     **                                                                      **
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: TON,NCHI,NB,NKPTL,NSPIN,NDIM,NDIMD &
@@ -1356,8 +1391,12 @@ INTEGER(4) :: NFIL=1500,NN2,LM1
 !     == CALCULATES OVERLAP MATRIX ON THE NEIGHBORLIST. 
 !     == CHECKS IF OFFSITEX IS TRUE. STOPS, IF NOT
 !     ==========================================================================
+!THE ROUTINE LMTO_OVERLAPEVAL DOES NOT WORK BECAUSE THE ARRAY OFFSITEX 
+!IS NOT SET UP DURING THE INITIALIZATION, WHEN GOING THROUGH THE DMFT OPTION.
+CALL ERROR$MSG('FORCED STOP AFTER CALLING LMTO_OVERLAPEVAL IN THE DMFT OBJECT')
+CALL ERROR$STOP('DMFT_OVERLAPOFK')
       CALL LMTO_OVERLAPEVAL()
-!CALL DMFT_REPORTOVERLAP(6)
+CALL DMFT_REPORTOVERLAP(6)
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -1482,6 +1521,8 @@ INTEGER(4) :: NFIL=1500,NN2,LM1
 !       == SCREEN U-TENSOR BY LOCAL HF-WEIGHT                                 ==
 !       ========================================================================
         ATOMSET(IAT)%U=ATOMSET(IAT)%LHFWEIGHT*ATOMSET(IAT)%U
+print*,'---alpha--- ',atomset(iat)%lhfweight
+print*,'---u------- ',atomset(iat)%u
 !
       ENDDO  ! END LOOP OVER ATOMS
                                           CALL TRACE$POP()
@@ -1879,8 +1920,10 @@ ENDDO
       INTEGER(4)             :: N
       REAL(8)                :: SVAR
       INTEGER(4)             :: IKPT,ISPIN,I
+REAL(8)    :: ev
 INTEGER(4) :: IDIMD,ICHI
 !     **************************************************************************
+      CALL CONSTANTS('EV',EV)
       IF(NDIMD.LE.2) THEN  ! NON-SPIN AND COLLINEAR
         N=NCHI
       ELSE IF(NDIMD.EQ.4) THEN ! NON-COLLINEAR
@@ -1923,8 +1966,8 @@ INTEGER(4) :: IDIMD,ICHI
               SVAR=MU+SVAR
               E(I)=SVAR
               B(I,:)=SVAR*B(I,:)
-WRITE(*,FMT='("IN HRHO: E[EV]=",F15.5," OCC=",2F10.5)')E(I)*27.211D0,F(I) &
-& ,1.D0/(1.D0+EXP((E(I)-MU)/KBT))
+WRITE(*,FMT='("IN HRHO: K=",I5," S=",I1," E[EV]=",F15.5," OCC=",2F10.5)') &
+&   IKPT,ISPIN,E(I)/EV,F(I),1.D0/(1.D0+EXP((E(I)-MU)/KBT))
             ENDDO ! ICHI
             KSET(IKPT)%HRHO(:,:,ISPIN)=MATMUL(U,B)
 !
@@ -2443,23 +2486,124 @@ WRITE(*,FMT='("IN HRHO: E[EV]=",F15.5," OCC=",2F10.5)')E(I)*27.211D0,F(I) &
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_fullLOCALSPECTRALFUNCTION()
+!     **************************************************************************
+!     **************************************************************************
+      USE DMFT_MODULE, ONLY: NCHI,NKPTL,NDIMD,NAT,MU,KSET,ATOMSET,nomega,omega
+      use strings_module
+      IMPLICIT NONE
+      TYPE SPECTR_TYPE
+        complex(8),ALLOCATABLE :: MAT(:,:,:,:) ! NORB,NORB,NE 
+      END TYPE SPECTR_TYPE
+      LOGICAL(4),PARAMETER :: TON=.true.
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      REAL(8)   ,PARAMETER :: EMIN=-15.D0/27.211D0
+      REAL(8)   ,PARAMETER :: EMAX=+15.D0/27.211D0
+      INTEGER(4),PARAMETER :: NE=1000
+      INTEGER(4)           :: NORB
+      REAL(8)   ,allocatable  :: E(:) !(NE)
+      TYPE(SPECTR_TYPE)     :: SPECTR(NAT)
+      complex(8),ALLOCATABLE:: spectral(:,:,:) !(NORB,NORB,NOMEGA)
+      complex(8),ALLOCATABLE:: GREEN(:,:,:) !(NORB,NORB,NOMEGA)
+      integer(4),save       :: icallcount
+      integer(4)            :: nfil
+      character(128)        :: file
+      character(128)        :: string
+      INTEGER(4)            :: IE,IAT,IDIMD,I,nu
+!     **************************************************************************
+                              CALL TRACE$PUSH('DMFT_FULLLOCALSPECTRALFUNCTION')
+      IF(.NOT.TON) RETURN
+      DO IAT=1,NAT
+        NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
+        ALLOCATE(SPECTR(IAT)%MAT(NORB,NORB,NDIMD,NE))
+        SPECTR(IAT)%MAT=(0.D0,0.d0)
+      ENDDO
+!     == ENERGY GRID ===========================================================
+      allocate(e(ne))
+      DO IE=1,NE
+        E(IE)=EMIN+(EMAX-EMIN)/REAL(NE-1,KIND=8)*REAL(IE-1,KIND=8)
+      ENDDO
+!
+!     ==========================================================================
+!     == PERFORM BRILLOUIN-ZONE SAMPLING                                      ==
+!     ==========================================================================
+      DO IAT=1,NAT
+        NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
+        ALLOCATE(GREEN(NORB,NORB,NOMEGA))
+        ALLOCATE(SPECTRAL(NORB,NORB,NE))
+        DO IDIMD=1,NDIMD
+          DO NU=1,NOMEGA
+            GREEN(:,:,NU)=ATOMSET(IAT)%GLOC(:,:,IDIMD,NU)
+          ENDDO
+          CALL DMFT_ANALYTICCONTINUATION(NORB,NOMEGA,OMEGA,GREEN &
+     &                                  ,NE,EMIN,EMAX,SPECTRAL)
+          DO IE=1,NE
+            SPECTR(IAT)%MAT(:,:,IDIMD,IE)=SPECTRAL(:,:,IE)
+          ENDDO
+        ENDDO
+        DEALLOCATE(GREEN)
+        DEALLOCATE(SPECTRAL)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  WRITE SPECTRAL FUNCTION                                             ==
+!     ==========================================================================
+      ICALLCOUNT=ICALLCOUNT+1
+      DO IAT=1,NAT
+        WRITE(STRING,*)IAT
+        FILE='_fullSPECTRALFUNCTION_AT'//TRIM(ADJUSTL(STRING))
+        WRITE(STRING,*)ICALLCOUNT
+        FILE=TRIM(ADJUSTL(FILE))//'_I'//TRIM(ADJUSTL(STRING))
+        FILE=TRIM(ADJUSTL(FILE))//'.DAT'
+        CALL FILEHANDLER$SETFILE('SPECTRALFILE',.TRUE.,-FILE)
+        IF(ICALLCOUNT.EQ.1) THEN
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','STATUS','UNKNOWN')
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','ACTION','WRITE')
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','FORM','FORMATTED')
+        END IF
+        CALL FILEHANDLER$UNIT('SPECTRALFILE',NFIL)
+
+        DO IE=1,NE
+          NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
+          WRITE(NFIL,FMT='(200F15.5)')E(IE)*27.211D0 &
+!     &       ,(REAL(SPECTR(IAT)%MAT(I,I,1,IE)),I=1,NORB) &
+     &       ,(AIMAG(SPECTR(IAT)%MAT(I,I,1,IE)),I=1,NORB)
+        ENDDO
+        CALL FILEHANDLER$CLOSE('SPECTRALFILE')
+      ENDDO
+STOP 'FORCED AFTER WRITING SPECTRAL FUNCTION'
+!
+!     ==========================================================================
+!     ==  CLEAN                                                               ==
+!     ==========================================================================
+      DO IAT=1,NAT
+        DEALLOCATE(SPECTR(IAT)%MAT)
+      ENDDO
+                              CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DMFT_LOCALSPECTRALFUNCTION()
 !     **************************************************************************
 !     **************************************************************************
       USE DMFT_MODULE, ONLY: NCHI,NKPTL,NDIMD,NAT,MU,KSET,ATOMSET
+      use strings_module
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER     :: TON=.FALSE.
-      COMPLEX(8),PARAMETER     :: CI=(0.D0,1.D0)  ! SQRT(-1)
-      LOGICAL(4),PARAMETER     :: TPRINT=.FALSE.
-      LOGICAL(4),PARAMETER     :: TTEST=.FALSE.
-      COMPLEX(8)               :: MATX(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: MAT(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: MAT2(NCHI,NCHI,NDIMD)
-      COMPLEX(8)               :: G(NCHI,NCHI,NDIMD)
-      REAL(8)                  :: WKPTL
-      INTEGER(4)               :: IKPT,IE,IAT,I1,I2,IDIMD,I
-      INTEGER(4)               :: NORB
-      REAL(8)   ,PARAMETER :: EMIN=-15.D0/27.211D0,EMAX=15.D0/27.211D0
+      LOGICAL(4),PARAMETER :: TON=.true.
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)  ! SQRT(-1)
+      LOGICAL(4),PARAMETER :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER :: TTEST=.FALSE.
+      COMPLEX(8)           :: MATX(NCHI,NCHI,NDIMD)
+      COMPLEX(8)           :: MAT(NCHI,NCHI,NDIMD)
+      COMPLEX(8)           :: MAT2(NCHI,NCHI,NDIMD)
+      COMPLEX(8)           :: G(NCHI,NCHI,NDIMD)
+      REAL(8)              :: WKPTL
+      INTEGER(4)           :: IKPT,IE,IAT,I1,I2,IDIMD,I
+      INTEGER(4)           :: NORB
+      real(8)   ,parameter :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER :: EMIN=-15.D0/27.211D0
+      REAL(8)   ,PARAMETER :: EMAX=+15.D0/27.211D0
       INTEGER(4),PARAMETER :: NE=1000
       REAL(8)              :: E(NE)
       REAL(8)   ,PARAMETER :: DELTA=0.1D0/27.211D0
@@ -2467,11 +2611,13 @@ WRITE(*,FMT='("IN HRHO: E[EV]=",F15.5," OCC=",2F10.5)')E(I)*27.211D0,F(I) &
         REAL(8),ALLOCATABLE :: MAT(:,:,:,:) ! NORB,NORB,NE 
       END TYPE SPECTR_TYPE
       TYPE(SPECTR_TYPE)     :: SPECTR(NAT)
-      REAL(8)               :: PI
+      integer(4),save       :: icallcount
+      integer(4)            :: nfil
+      character(128)        :: file
+      character(128)        :: string
 !     **************************************************************************
                               CALL TRACE$PUSH('DMFT_LOCALSPECTRALFUNCTION')
       IF(.NOT.TON) RETURN
-      PI=4.D0*ATAN(1.D0)
       DO IAT=1,NAT
         NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
 PRINT*,'NORB',NORB,IAT
@@ -2508,13 +2654,28 @@ PRINT*,'MU ',MU
 !     ==========================================================================
 !     ==  WRITE SPECTRAL FUNCTION                                             ==
 !     ==========================================================================
-      DO IE=1,NE
-        IAT=2
-        NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
-        WRITE(*,FMT='(200F15.5)')E(IE)*27.211D0 &
-     &                                ,(SPECTR(IAT)%MAT(I,I,1,IE),I=1,NORB)
+      ICALLCOUNT=ICALLCOUNT+1
+      DO IAT=1,NAT
+        WRITE(STRING,*)IAT
+        FILE='_SPECTRALFUNCTION_AT'//TRIM(ADJUSTL(STRING))
+        WRITE(STRING,*)ICALLCOUNT
+        FILE=TRIM(ADJUSTL(FILE))//'_I'//TRIM(ADJUSTL(STRING))
+        FILE=TRIM(ADJUSTL(FILE))//'.DAT'
+        CALL FILEHANDLER$SETFILE('SPECTRALFILE',.TRUE.,-FILE)
+        IF(ICALLCOUNT.EQ.1) THEN
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','STATUS','UNKNOWN')
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','ACTION','WRITE')
+          CALL FILEHANDLER$SETSPECIFICATION('SPECTRALFILE','FORM','FORMATTED')
+        END IF
+        CALL FILEHANDLER$UNIT('SPECTRALFILE',NFIL)
+        DO IE=1,NE
+          NORB=ATOMSET(IAT)%ICHI2-ATOMSET(IAT)%ICHI1+1
+          WRITE(NFIL,FMT='(200F15.5)')E(IE)*27.211D0 &
+     &       ,(SPECTR(IAT)%MAT(I,I,1,IE),I=1,NORB)
+        ENDDO
+        CALL FILEHANDLER$CLOSE('SPECTRALFILE')
       ENDDO
-!STOP 'FORCED AFTER WRITING SPECTRAL FUNCTION'
+STOP 'FORCED AFTER WRITING SPECTRAL FUNCTION'
 !
 !     ==========================================================================
 !     ==  CLEAN                                                               ==
@@ -2740,7 +2901,7 @@ PRINT*,'MU ',MU
       DGLOC(1,1,1,1)=(1.D0,2.D0)
 !
 !     ==========================================================================
-!     == ANALYTIC DERIVATIVE FOR A GIVEN DISPLACEMENT DGLOC*SCALE             ==         
+!     == ANALYTIC DERIVATIVE FOR A GIVEN DISPLACEMENT DGLOC*SCALE             ==
 !     ==========================================================================
       Y0=0.D0
       DO NU=1,NOMEGA
@@ -2934,12 +3095,12 @@ STOP 'FORCED STOP IN DMFT_SOLVERTEST'
       INTEGER(4)            :: NFIL
       INTEGER(4)            :: NU,I,J,K,L
       COMPLEX(8)            :: UCOPY(NORB,NORB,NORB,NORB) !U-TENSOR
-      CHARACTER(32),PARAMETER :: TYPE='LINEAR' ! 'NONE','LINEAR','STATIC'
+!      CHARACTER(32),PARAMETER :: TYPE='LINEAR' ! 'NONE','LINEAR','STATIC'
 !      CHARACTER(32),PARAMETER :: TYPE='NONE' ! 'NONE','LINEAR',
 !      CHARACTER(32),PARAMETER :: TYPE='STATIC' ! 'NONE','LINEAR',
-!      CHARACTER(32),PARAMETER :: TYPE='2NDORDER' ! 'NONE','LINEAR',
+      CHARACTER(32),PARAMETER :: TYPE='2NDORDER' ! 'NONE','LINEAR',
       REAL(8)                 :: PI
-      LOGICAL(4),PARAMETER    :: TMYSECONDORDER=.FALSE.
+      LOGICAL(4),PARAMETER    :: TMYSECONDORDER=.true.
 !     **************************************************************************
                                      CALL TRACE$PUSH('DMFT_SOLVERIO')
       PI=4.D0*ATAN(1.D0)
@@ -3008,6 +3169,7 @@ STOP 'FORCED STOP IN DMFT_SOLVERTEST'
         PRINT*,'CALCULATION OF LW FUNCTIONAL DONE'
 
         IF(TMYSECONDORDER) THEN
+          CALL DMFT_SOLVERIO_WRITEGF('S',NORB,NOMEGA,KBT,S)
           PRINT*,'FROM STEFFEN: ETOT',ETOT
           PRINT*,'FROM STEFFEN: SIGMA',S(:,:,1)
 !         == MY RESULTS HAVE A STRANGE BEHAVIOR IN THE SELF ENERGY FOR LARGE 
@@ -3499,7 +3661,7 @@ PRINT*,'HAM',HAM
            &                        +CSVAR*GLAU(O2,I3,ILAU)*POLE(NU1-NOMEGA,ILAU)
                   ENDDO
                 ENDDO
-               
+!               
 !               == NUB NEGATIVE ================================================
                 IF(NUB.NE.0) THEN  ! DO NOT COUNT NUB=0 TWICE!
 !                 == NUB NEGATIVE, NU1=NU2+NUB NEGATIVE ========================
@@ -7171,6 +7333,342 @@ SUM_MAX=NOMEGA+0
       WRITE(6,'(A11,ES14.6E3)') 'LW-ENERGY: ',LW
       RETURN
       END SUBROUTINE MSIGMA_GETLW
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_ANALYTICCONTINUATION(NORB,NOMEGA,OMEGA,GREEN &
+     &                                    ,NE,EMIN,EMAX,SPECTRAL)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NOMEGA
+      INTEGER(4),INTENT(IN) :: NORB
+      REAL(8)   ,INTENT(IN) :: OMEGA(NOMEGA)
+      COMPLEX(8),INTENT(IN) :: GREEN(NORB,NORB,NOMEGA)
+      INTEGER(4),INTENT(IN) :: NE
+      REAL(8)   ,INTENT(IN) :: EMIN
+      REAL(8)   ,INTENT(IN) :: EMAX
+      COMPLEX(8),INTENT(OUT):: SPECTRAL(NORB,NORB,NE)
+      INTEGER(4),PARAMETER  :: NPOLE=10
+      INTEGER(4),PARAMETER  :: NP=2*NPOLE
+      INTEGER(4),PARAMETER  :: NIMAGX=1
+      real(8)   ,parameter  :: imagx=5.d-3
+      COMPLEX(8),PARAMETER  :: CONE=(1.D0,0.D0)
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)               :: e,gamma
+      INTEGER(4)            :: NO
+      INTEGER(4)            :: NUP(NP)   ! INDEX FOR MATSUBARA FREQS
+      COMPLEX(8)            :: ZP(NP)
+      COMPLEX(8)            :: FP(NP)
+      COMPLEX(8),ALLOCATABLE:: ZO(:)
+      COMPLEX(8),ALLOCATABLE:: FO(:)
+      COMPLEX(8)            :: csvar
+      INTEGER(4)            :: I,J,IE,IO1,IO2,IND
+integer(4):: nfil1,nfil2
+!     **************************************************************************
+!     ==========================================================================
+!     == SELECT POINTS TO BE FITTED                                       
+!     ==========================================================================
+      DO I=1,NP
+        NUP(I)=I
+      ENDDO
+      NUP(NP)=NOMEGA
+      DO I=1,3
+        NUP(NP-I)=NINT(REAL(NUP(NP-I+1),KIND=8)/2.D0)
+      ENDDO      
+
+      DO I=1,NP
+        IF(NUP(I).GT.0) THEN
+          ZP(I)=CI*OMEGA(NUP(I))
+        ELSE
+          ZP(I)=-CI*OMEGA(-NUP(I))
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == ENERGY GRID
+!     ==========================================================================
+      NO=NIMAGX*NE
+      ALLOCATE(ZO(NO))
+      ALLOCATE(FO(NO))
+      IND=0
+      DO I=1,NE
+        e=EMIN+(EMAX-EMIN)*REAL(I-1,KIND=8)/REAL(NE-1,KIND=8)
+        DO J=1,NIMAGX
+          gamma=IMAGX*REAL(J,KIND=8)/REAL(NIMAGX,KIND=8)
+          IND=IND+1
+          ZO(IND)=cmplx(e,gamma)
+        ENDDO
+      ENDDO
+!!$ind=0
+!!$do i=1,ne
+!!$  DO J=1,NIMAGX
+!!$    e=omega(nomega)/real(ne)*real(i)
+!!$    ind=ind+1
+!!$    ZO(IND)=cmplx(0.d0,e)
+!!$  enddo
+!!$enddo
+!
+!     ==========================================================================
+!     == ENERGY GRID
+!     ==========================================================================
+      DO IO1=1,NORB
+        DO IO2=IO1,NORB
+!
+          DO I=1,NP
+            IF(NUP(I).GT.0) THEN
+              FP(I)=GREEN(IO1,IO2,NUP(I))
+            ELSE
+              FP(I)=CONJG(GREEN(IO2,IO1,-NUP(I)))
+            END IF
+          ENDDO
+!
+!!$print*,'before dmft_padels'
+          CALL DMFT_PADELS(NPOLE,NP,ZP,FP,NO,ZO,FO)
+!!$print*,'after dmft_padels'
+!!$open(newunit=nfil1,file='out1.dat')
+!!$do i=1,np
+!!$  write(nfil1,*)aimag(zp(i)),real(fp(i)),aimag(fp(i))
+!!$enddo
+!!$close(nfil1)
+!!$open(newunit=nfil1,file='out2.dat')
+!!$do i=1,no
+!!$  write(nfil1,*)aimag(zo(i)),real(fo(i)),aimag(fo(i))
+!!$enddo
+!!$close(nfil1)
+!!$stop 'forced'
+!
+          IND=0
+          DO I=1,NE
+            DO J=1,NIMAGX
+              IND=IND+1
+              csvar=FO(IND)
+            ENDDO
+            SPECTRAL(IO1,IO2,I)=csvar
+            SPECTRAL(IO2,IO1,I)=CONJG(csvar)
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_PADELS(NPOLE,NP,ZP,FP,NO,ZO,FO)
+!     **************************************************************************
+!     **  LEAST-SQUARE PADE APPROXIMATION                                     **
+!     **  METHOD TAKEN FROM SCHOETT ARXIV1511.03496 EQS. 8,9,10,11            **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NPOLE
+      INTEGER(4),INTENT(IN) :: NP       ! NUMBER OF DATA POINTS TO BE FITTED
+      COMPLEX(8),INTENT(IN) :: ZP(NP)   ! COMPLEX ARGUMENTS OF DATA POINTS
+      COMPLEX(8),INTENT(IN) :: FP(NP)   ! FUNCTION VALUES OF DATA POINTS
+      INTEGER(4),INTENT(IN) :: NO       ! NUMBER OF INTERPOLATED VALUES 
+      COMPLEX(8),INTENT(IN) :: ZO(NO)   ! COMPLEX ARGUMENTS OF THE INTERPOLATION
+      COMPLEX(8),INTENT(OUT):: FO(NO)   ! INTERPOLATED FUNCTION VALUES
+      COMPLEX(8),PARAMETER  :: CONE=(1.D0,0.D0)
+      COMPLEX(8),PARAMETER  :: Ci=(0.D0,1.D0)
+      COMPLEX(8),PARAMETER  :: Cnull=(0.D0,0.D0)
+      COMPLEX(8)            :: Amat(NP,2*NPOLE)
+      COMPLEX(8)            :: B(NP)
+      COMPLEX(8)            :: X(2*NPOLE)
+      COMPLEX(8)            :: cdenom(nPOLE+1)
+      COMPLEX(8)            :: apole(NPOLE)
+      COMPLEX(8)            :: zpole(NPOLE)
+      COMPLEX(8),allocatable:: P(:),Q(:)
+      real(8)               :: re,im
+      INTEGER(4)            :: J,k
+      logical(4),parameter  :: tprint=.true.
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == set up system of equations for least-square fit
+!     ==========================================================================
+!     == MATRIX K (EQ 11)
+      Amat(:,1)=CONE
+      DO J=2,NPOLE
+        Amat(:,J)=Amat(:,J-1)*ZP(:)
+      ENDDO
+      Amat(:,NPOLE+1)=-FP
+      DO J=NPOLE+2,2*NPOLE
+        Amat(:,J)=Amat(:,J-1)*ZP(:)
+      ENDDO
+!     ==  VECTOR V (EQ 11)
+      B=-Amat(:,2*NPOLE)*ZP(:)
+!
+!     ==========================================================================
+!     == solve an over-determined equation system A*x=b via Sing Val. decomp. ==
+!     ==========================================================================
+      CALL DMFT_MYSVDEQS(NP,2*NPOLE,Amat,B,X)
+!
+!     ==========================================================================
+!     == determine poles                                                      ==
+!     ==========================================================================
+      cdenom(:npole)=x(npole+1:)
+      cdenom(npole+1)=cone
+      call polynom$zerosc8(npole+1,cdenom,zpole)
+
+!!$apole=(0.D0,0.D0)
+!!$do j=1,npole+1
+!!$  apole(:)=apole(:)+cdenom(j)*zpole(:)**(j-1)
+!!$enddo
+!!$print*,'cdenom ',cdenom
+!!$print*,'zpole ',zpole
+!!$print*,'nonzero ',maxval(abs(apole))
+!!$stop
+
+      apole=(0.D0,0.D0)
+      DO J=1,NPOLE
+        apole(:)=apole(:)+X(J)*Zpole(:)**(J-1)
+      ENDDO
+      do j=1,npole
+        do k=1,npole
+          if(k.eq.j) cycle
+          apole(j)=apole(j)/(zpole(j)-zpole(k))
+        enddo
+      enddo
+!
+!     ==========================================================================
+!     == shift poles                                                          ==
+!     ==========================================================================
+      do j=1,npole
+        re=real(zpole(j),kind=8)
+        im=aimag(zpole(j))
+        im=min(1.d-8,im)
+        zpole(j)=cmplx(re,im)
+      enddo
+      IF(TPRINT) THEN
+        DO J=1,NPOLE
+          WRITE(*,FMT='("POLE=",2e15.5," AMPLITUDE=",2e15.5)')ZPOLE(J),APOLE(J)
+        ENDDO
+      END if
+!apole=real(apole)
+!
+!     ==========================================================================
+!     == evaluate rational polynomial                                         ==
+!     ==========================================================================
+      fo(:)=cnull
+      do j=1,npole
+        fo(:)=fo(:)+apole(j)/(zo(:)-zpole(j))
+      enddo
+
+!!$      allocate(p(no))
+!!$      allocate(q(no))
+!!$      P=(0.D0,0.D0)
+!!$      Q=(0.D0,0.D0)
+!!$      DO J=1,NPOLE
+!!$        P(:)=P(:)+X(J)      *ZO(:)**(J-1)
+!!$        Q(:)=Q(:)+X(NPOLE+J)*ZO(:)**(J-1)
+!!$      ENDDO
+!!$      q(:)=q(:)+zo(:)**npole
+!!$      FO(:)=P(:)/Q(:)
+      RETURN
+      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE DMFT_PADELSpoles(NPOLE,NP,ZP,FP,NO,ZO,FO)
+!!$!     **************************************************************************
+!!$!     **  LEAST-SQUARE PADE APPROXIMATION                                     **
+!!$!     **  METHOD TAKEN FROM SCHOETT ARXIV1511.03496 EQS. 8,9,10,11            **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: NPOLE
+!!$      INTEGER(4),INTENT(IN) :: NP       ! NUMBER OF DATA POINTS TO BE FITTED
+!!$      COMPLEX(8),INTENT(IN) :: ZP(NP)   ! COMPLEX ARGUMENTS OF DATA POINTS
+!!$      COMPLEX(8),INTENT(IN) :: FP(NP)   ! FUNCTION VALUES OF DATA POINTS
+!!$      COMPLEX(8),INTENT(IN) :: Zpole(Npole) ! poles of the Greens function
+!!$      COMPLEX(8),INTENT(OUT):: FO(NO)   ! INTERPOLATED FUNCTION VALUES
+!!$      COMPLEX(8),PARAMETER  :: CONE=(1.D0,0.D0)
+!!$      COMPLEX(8)            :: A(NP,2*NPOLE)
+!!$      COMPLEX(8)            :: B(NP)
+!!$      COMPLEX(8)            :: X(2*NPOLE)
+!!$      COMPLEX(8),allocatable:: P(:),Q(:)
+!!$      INTEGER(4)            :: J
+!!$!     **************************************************************************
+!!$      allocate(p(no))
+!!$      allocate(q(no))
+!!$!
+!!$!     ==========================================================================
+!!$!     == set up system of equations for least-square fit
+!!$!     ==========================================================================
+!!$!     == MATRIX K (EQ 11)
+!!$      A(:,1)=CONE
+!!$      DO J=2,NPOLE
+!!$        A(:,J)=A(:,J-1)*ZP(:)
+!!$      ENDDO
+!!$      A(:,NPOLE+1)=-FP
+!!$      DO J=NPOLE+2,2*NPOLE
+!!$        A(:,J)=A(:,J-1)*ZP(:)
+!!$      ENDDO
+!!$!     ==  VECTOR V (EQ 11)
+!!$      B=-A(:,2*NPOLE)*ZP(:)
+!!$!
+!!$!     ==========================================================================
+!!$!     == solve an over-determined equation system A*x=b via Sing Val. decomp. ==
+!!$!     ==========================================================================
+!!$      CALL DMFT_MYSVDEQS(NP,2*NPOLE,A,B,X)
+!!$!
+!!$!     ==========================================================================
+!!$!     == evaluate rational polynomial                                         ==
+!!$!     ==========================================================================
+!!$      call polynomial$zerosc8(npole+1,x(:npole+1),znumerator
+!!$      P=(0.D0,0.D0)
+!!$      Q=(0.D0,0.D0)
+!!$      DO J=1,NPOLE
+!!$        P(:)=P(:)+X(J)      *ZO(:)**(J-1)
+!!$        Q(:)=Q(:)+X(NPOLE+J)*ZO(:)**(J-1)
+!!$      ENDDO
+!!$      q(:)=q(:)+zo(:)**npole
+!!$      RETURN
+!!$      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DMFT_MYSVDEQS(M,N,A,B,X)
+!     **************************************************************************
+!     ** SOLVES A LINEAR EQUATION SYSTEM A*X=B FOR X  IN THE LEAST-SQUARE     **
+!     ** SENSE. THAT IS THE NUMBER M OF EQUATION CAN BE MUCH LARGER THEN      **
+!     ** THE NUMBER OF UNKNOWNS X.
+!     ** M IS LARGER OR EQUAL TO N
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: M
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: A(M,N)
+      COMPLEX(8),INTENT(IN) :: B(M)
+      COMPLEX(8),INTENT(OUT):: X(N)
+      REAL(8)   ,allocatable:: S(:)    !(m)    !singular values of A
+      COMPLEX(8),allocatable:: U(:,:)  !(M,m)  !(LDU,N) left vectors
+      COMPLEX(8),allocatable:: VT(:,:) !(N,N) !(LDVT,N) right vectors
+!     **************************************************************************
+      IF(M.LT.N) THEN
+        CALL ERROR$MSG('ERROR: M MUST NOT BE SMALLER THAN N')
+        CALL ERROR$STOP('DMFT_MYSVDEQS')
+      END IF
+      IF(N.LE.1) THEN
+        CALL ERROR$MSG('N MUST BE LARGER THAN 1')
+        CALL ERROR$STOP('DMFT_MYSVDEQS')
+      END IF
+      allocate(s(m))
+      allocate(u(m,m))
+      allocate(vt(n,n))
+
+!     ==========================================================================
+!     == SINGULAR VALUE DECOMPOSITION A=U*S*V^DAGGER
+!     ==========================================================================
+!     CAUTION: ROUTINE PRODUCES THE FULL M*M MATRIX U INCLUDING NULL-VECTORS
+      CALL LIB$SVDC8(M,N,A,U,S,VT)
+!
+!     ==========================================================================
+!     == A*X=B => U*S*VT*X=B => X=V*1/S*UT*B
+!     ==========================================================================
+      X=MATMUL(CONJG(TRANSPOSE(U(:,:N))),B)
+      X=X/S(:n)
+      X=MATMUL(CONJG(TRANSPOSE(VT)),X)
+!
+      deallocate(s)
+      deallocate(u)
+      deallocate(vt)
+      RETURN
+      END
    
    
 !!

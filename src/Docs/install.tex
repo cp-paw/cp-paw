@@ -830,6 +830,13 @@ section~\ref{sec:parms.example} and discussed later.
 \section{Example for a Parameter File}
 \label{sec:parms.example}
 %============================================================================
+
+\textbf{Caution: linebreaks with ``\" are apparently not supported. A
+  variable must be defined in a single line! The line break is
+  introduced only for the sake of visibility in this booklet.}
+
+
+
 \begin{verbatim}
 ################################################################################
 ##_______________________architecture (arbitrary name)________________________##
@@ -869,10 +876,10 @@ LDFLAGS_PARALLEL="-Wl,-dy -I${OBJDIR} -L${OBJDIR} -L${LAPACKDIR} \
                   -L${FFTDIR}/fftw/.libs/ -L${MPIDIR}/mpe/lib"
 #________________________external libraries (sequential)______________________##
 LIBS_SCALAR="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c"
-#___________________external libraries (parallel)_____________________________## 
+#___________________external libraries (parallel)_____________________________##
 LIBS_PARALLEL="-Wl,-dn -lfftw -Wl,-dn -lacml -Wl,-dy -lg2c -Wl,-dy -lmpe \
                -Wl,-dy -llmpe"
-#________________________preprocessor variables_______________________________## 
+#________________________preprocessor variables_______________________________##
 CPPFLAGS="-DCPPVAR_COMPILER_G95 -DCPPVAR_FFT_FFTW \
           -DCPPVAR_LAPACK_LAPACK -DCPPVAR_BLAS_BLAS"
 #________________________file extension_______________________________________## 

@@ -2340,20 +2340,20 @@ END MODULE PLANEWAVE_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PLANEWAVE$SCALARPRODUCT(ID,NGL,NDIM,N1,F1,N2,F2,MAT)
-!     ******************************************************************
-!     **  SCALAR PRODUCT OF SETS OF FUNCTIONS IN RECIPROCAL SPACE     **
-!     **                                                              **
-!     **  THE SUBROUTINE IS NOT PARALLELIZED ADD THE RESULT EXTERNALLY**
-!     **  USING MPE$COMBINE('NONE','+',MAT)                                  **
-!     **                                                              **
-!     **  THREE OPTIONS SPECIFIED BY ID                               **
-!     **    ID='=' INDICATES THAT F1=F2                               **
-!     **    ID='-' <F1(-)|F2(+)>                                       **
-!     **    ID=''  <F1|F2>                                            **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  SCALAR PRODUCT OF SETS OF FUNCTIONS IN RECIPROCAL SPACE             **
+!     **                                                                      **
+!     **  THE SUBROUTINE IS NOT PARALLELIZED ADD THE RESULT EXTERNALLY        **
+!     **  USING MPE$COMBINE('NONE','+',MAT)                                   **
+!     **                                                                      **
+!     **  THREE OPTIONS SPECIFIED BY ID                                       **
+!     **    ID='=' INDICATES THAT F1=F2                                       **
+!     **    ID='-' <F1(-)|F2(+)>                                              **
+!     **    ID=' '  <F1|F2>                                                   **
+!     **                                                                      **
+!     **************************************************************************
       USE PLANEWAVE_MODULE
       IMPLICIT NONE 
       CHARACTER(*),INTENT(IN)   :: ID    ! ' ','=','-'
@@ -2368,9 +2368,9 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                :: I1,I2,IDIM
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:)
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
-!     ******************************************************************
+!     **************************************************************************
                           CALL TIMING$CLOCKON('PLANEWAVE$SCALARPRODUCT')
-      IF(ID.EQ.''.OR.ID.EQ.'=') THEN
+      IF(ID.EQ.' '.OR.ID.EQ.'=') THEN
         CALL LIB$SCALARPRODUCTC8((ID.EQ.'='),NGL*NDIM,N1,F1,N2,F2,MAT)
       ELSE IF(ID.EQ.'-') THEN
         IF(.NOT.THIS%TINV.OR.THIS%TSUPER) THEN
@@ -2429,7 +2429,7 @@ END MODULE PLANEWAVE_MODULE
 !     **  THREE OPTIONS SPECIFIED BY ID                               **
 !     **    ID='=' INDICATES THAT F1=F2                               **
 !     **    ID='-' <F1(-)|F2(+)>                                      **
-!     **    ID=''  <F1|F2>                                            **
+!     **    ID=' '  <F1|F2>                                            **
 !     **                                                              **
 !     ******************************************************************
       USE PLANEWAVE_MODULE
@@ -2447,7 +2447,7 @@ END MODULE PLANEWAVE_MODULE
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
 !     ******************************************************************
                              CALL TIMING$CLOCKON('PLANEWAVE$ADDPRODUCT')
-      IF(ID.EQ.'') THEN
+      IF(ID.EQ.' ') THEN
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL*NDIM,N2,N1,F2,MAT,F1)
 !
 !     ==================================================================

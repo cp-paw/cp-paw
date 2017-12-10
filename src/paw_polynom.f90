@@ -243,7 +243,11 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POLYNOM$ZEROS(NX,COEFF,Z)
 !     **************************************************************************
-!     ** DETERMINE THE ZEROS OF A POLYNOMIAL OF ORDER N WITH N=1,2,3          ==
+!     ** DETERMINE THE ZEROS OF A POLYNOMIAL OF ORDER N WITH N=1,2,3          **
+!     ** WITH REAL COEFFICIENTS                                               **
+!     **                                                                      **
+!     ** SEE ROUTINE POLYNOM$ZEROSC8 FOR POLYNOMIALS OF HIGHER ORDER WITH     **
+!     ** COMPLEX COEFFICIENTS                                                 **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NX
@@ -319,6 +323,63 @@
       END IF     
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE POLYNOM$ZEROSC8(NX,COEFF,Z)
+!     **************************************************************************
+!     ** FIND THE ROOTS OF A COMPLEX POLYNOMIAL OF ORDER NX-1                 **
+!     ** THE POLYNOMIAL IS SUM_{J=1}^NX A_J * X**(J-1)                        **
+!     ** USES METHOD OF VIETA (CODE BY ROBERT SCHADE, MODIFIED PETER BLOECHL) **
+!     **                                                                      **
+!     ** ROBERT SUGGESTS TO LOOK INTO THE METHOD OF JENKINS-TRAUB FOR A       **
+!     ** NUMERICALLY MORE STABLE METHOD, SHOULD THIS BE AN ISSUE              **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)               :: NX        ! #(COEFFICIENTS)
+      COMPLEX(8),INTENT(IN)               :: COEFF(Nx) ! COEFFICIENT ARRAY
+      COMPLEX(8),INTENT(OUT)              :: Z(Nx-1)   ! ZEROS
+      LOGICAL(4),PARAMETER                :: TTEST=.false.
+      INTEGER(4)                          :: I,J
+      COMPLEX(8),ALLOCATABLE              :: M(:,:)
+      COMPLEX(16)                         :: CSVAR
+!     **************************************************************************
+!     ==========================================================================
+!     ==  VIETA FORMULAS
+!     ==========================================================================
+      ALLOCATE(M(NX-1,NX-1))
+      M(:,:)=(0.d0,0.d0)
+      DO I=1,NX-1
+        M(1,I)=-COEFF(I+1)/COEFF(1)
+        IF(I+1.LE.NX-1)M(I+1,I)=(1.D0,0.D0)
+      ENDDO
+!
+!     ==========================================================================
+!     == DETERMINE ZEROS FROM EIGENVALUE PROBLEM                              ==
+!     ==========================================================================
+      CALL LIB__EIGVALNONHERMITEANC8(NX-1,M,Z)
+      Z=(1.D0,0.D0)/Z
+!
+!     ==========================================================================
+!     == TEST RESULT                                                          ==
+!     ==========================================================================
+      IF(TTEST) THEN
+         WRITE(*,FMT='(" P(Z)=(",2F15.5,") * Z^",I2)')coeff(1),0
+        DO I=2,Nx
+          WRITE(*,FMT='("     +(",2F15.5,") * Z^",I2)')coeff(I),I-1
+        ENDDO
+        DO I=1,Nx-1  ! LOOP OVER ZEROS
+          CSVAR=CMPLX(0.D0,0.D0,KIND=16)
+          DO J=1,Nx
+            CSVAR=CSVAR+CMPLX(coeff(J),KIND=16)*Z(I)**(J-1)  
+          ENDDO
+          WRITE(*,FMT='(I3," ZERO Z=  ",2F10.5," ABS(P(Z)= ",E10.5)') &
+     &            I,Z(I),ABS(CSVAR)
+        ENDDO
+        CALL ERROR$MSG('REGULAR STOP AFTER TEST')
+        CALL ERROR$STOP('POLYNOM$ZEROSC8')
+      END IF
+      RETURN
+      END SUBROUTINE POLYNOM$ZEROSC8
 !
 !     ..................................................................
       SUBROUTINE POLYNOM$BINOM(N,B)

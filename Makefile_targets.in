@@ -236,6 +236,7 @@ clean_scripts:
 	rm -f ${BINDIR}/paw_collect
 	rm -f ${BINDIR}/paw_copy    
 	rm -f ${BINDIR}/paw_do
+	rm -f ${BINDIR}/paw_doppaw
 	rm -f ${BINDIR}/paw_ext_copy    
 	rm -f ${BINDIR}/paw_get
 	rm -f ${BINDIR}/paw_mpeg_encode

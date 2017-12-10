@@ -1,3 +1,8 @@
+! Todo: 
+!      - Fortran 2008 has a number of new intrinsic bit functions such as 
+!        popcnt and poppar, which implement some of the functionality directly
+!
+!      - use integer(8) for id to allow larger 1-particle basissets
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 !*******************************************************************************
@@ -191,7 +196,7 @@ END MODULE CI_MODULE
       SUBROUTINE CI$ZEROPSI(PHI)
 !     **************************************************************************
 !     **  CI$ZEROPSI                                                          **
-!     **  ZET WAVE FUNCTION TO ZERO                                           **
+!     **  SET WAVE FUNCTION TO ZERO                                           **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -943,11 +948,11 @@ END MODULE CI_MODULE
       IMPLICIT NONE
       TYPE(CIHAMIL_TYPE),INTENT(INOUT) :: HAM           
 !     **************************************************************************
-CALL TIMING$CLOCKON('CI$CLEANH')
+!CALL TIMING$CLOCKON('CI$CLEANH')
       CALL CI_CLEANU(HAM%U)
       CALL CI_CLEANH(HAM%H)
       CALL CI_CLEANA(HAM%A)
-CALL TIMING$CLOCKOFF('CI$CLEANH')
+!CALL TIMING$CLOCKOFF('CI$CLEANH')
       RETURN 
       END SUBROUTINE CI$CLEANHAMILTONIAN
 ! 

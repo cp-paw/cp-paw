@@ -268,7 +268,7 @@ CONTAINS
       END SUBROUTINE MPE$COMBINE<TYPEID><RANKID>
 #IFDEF CPPVARIABLE_PARALLEL
 !
-!     .......................................................................................
+!     ...................................................................
       SUBROUTINE MPE_TESTCOMBINE<TYPEID><RANKID>(CID,LEN,VAL1)
       USE MPE_MPIF_MODULE
       IMPLICIT NONE

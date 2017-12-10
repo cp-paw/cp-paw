@@ -15,9 +15,9 @@
 !****                                                                      *****
 !****  THE INTERFACES SHALL BE TESTED USING LIB$TEST                       *****
 !****                                                                      *****
-!****  NOTE: There is a lapack interface to lapack                         *****
-!****         http://www.netlib.org/lapack/lawnspdf/lawn82.pdf             *****
-!****         http://www.netlib.org/lapack/essl/                           *****
+!****  NOTE: THERE IS A LAPACK INTERFACE TO LAPACK                         *****
+!****         HTTP://WWW.NETLIB.ORG/LAPACK/LAWNSPDF/LAWN82.PDF             *****
+!****         HTTP://WWW.NETLIB.ORG/LAPACK/ESSL/                           *****
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
@@ -333,8 +333,8 @@
         OPTIND=0
 !       FORMERLY: NARG=IARGC()
         NARG=COMMAND_ARGUMENT_COUNT()
-        CARG=''
-        CONE=''
+        CARG=' '
+        CONE=' '
         LARG=0
         LCUR=1
       ENDIF
@@ -635,6 +635,28 @@
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB$SVDC8(M,N,A,U,S,VT)
+!     **************************************************************************
+!     **  SINGULAR VALUE DECOMPOSITION OF THE MXN MATRIX A                    **
+!     **  A = U * S * VT
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: M         ! DIMENSION OF THE MATRIX
+      INTEGER(4),INTENT(IN) :: N         ! DIMENSION OF THE MATRIX
+      COMPLEX(8),INTENT(IN) :: A(M,N)    ! MATRIX TO BE INVERTED
+      COMPLEX(8),INTENT(OUT):: U(M,M)    ! LEFT HAND ORTHOGONAL VECTORS
+      REAL(8)   ,INTENT(OUT):: S(M)      ! SINGULAR VECTORS
+      COMPLEX(8),INTENT(OUT):: VT(N,N)   ! ADJUNCT RIGHT-HAND  VECTORS
+!     **************************************************************************
+#IF DEFINED(CPPVAR_LAPACK_ESSL)
+      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
+#ELSE 
+      CALL LIB_LAPACK_ZGESVD(M,N,A,U,S,VT)
+#ENDIF
+      RETURN
+      END
+!
 !     ..................................................................
       SUBROUTINE LIB$MATRIXSOLVER8(N,M,NEQ,A,X,B)
 !     ******************************************************************
@@ -918,7 +940,7 @@
 !     ==========================================================================
 #IF DEFINED(CPPVAR_LAPACK_ESSL)
       CALL ERROR$MSG('ESSL INTERFACE NOT IMPLENTED')
-      CALL ERROR$STOP('LIB$DIAGNONHERMITEANC8')
+      CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
 #ELSE
       H1=H
       CALL ZGEEV('N','N',N,H1,N,E,VL,1,VR,1,WORK,2*N,RWORK,INFO)
@@ -958,11 +980,12 @@
       COMPLEX(8),ALLOCATABLE:: WORK(:)
       COMPLEX(8)            :: WORK1(1)
       REAL(8)               :: RWORK(2*N)
-      INTEGER(4)            :: lwork
+      INTEGER(4)            :: LWORK
       INTEGER(4)            :: INFO
 !     **************************************************************************
       IF(N.EQ.1) THEN
         E(1)=H(1,1)
+        VR(1,1)=(1.D0,0.D0)
         RETURN
       END IF
 !
@@ -1893,6 +1916,50 @@
       RETURN
       END SUBROUTINE LIB_LAPACK_DGESVD
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LIB_LAPACK_ZGESVD(M,N,A,U,S,VT)
+!     **************************************************************************
+!     ** SINGULAR VALUE DECOMPOSITION OF THE NON-SQUARE MATRIX A              **
+!     ** A=U*SIGMA*VT  
+!     **  SIGMA IS AN M-TIMES-N DIAGONAL MATRIX WITH DIAGONAL ELEMENTS S(I)   **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: M
+      INTEGER(4),INTENT(IN)  :: N
+      COMPLEX(8),INTENT(IN)  :: A(M,N)
+      COMPLEX(8),INTENT(OUT) :: U(M,M)
+      COMPLEX(8),INTENT(OUT) :: VT(N,N)
+      REAL(8)   ,INTENT(OUT) :: S(M)     ! SINGULAR VALUES IN DESCENDING ORDER
+      COMPLEX(8),ALLOCATABLE :: WORK(:)
+      real(8)   ,ALLOCATABLE :: rWORK(:)
+      COMPLEX(8)             :: ACOPY(M,N)
+      INTEGER(4)             :: LWORK
+      INTEGER(4)             :: INFO
+      INTEGER(4)             :: I
+!     **************************************************************************
+      LWORK=MAX(1,2*MIN(M,N)+MAX(M,N))
+      ALLOCATE(WORK(LWORK))
+      ALLOCATE(rWORK(5*min(m,n)))
+      ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
+      CALL ZGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,rwork,INFO)
+      IF(INFO.LT.0) THEN
+        CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
+        CALL ERROR$I4VAL('I',-INFO)
+        CALL ERROR$I4VAL('1ST INDEX OF MATRIX',M)
+        CALL ERROR$I4VAL('2ND INDEX OF MATRIX',N)
+        CALL ERROR$STOP('LIB_LAPACK_DGESVD')
+      ELSE IF(INFO.GT.0) THEN
+        CALL ERROR$MSG('ZBDSQR DID NOT CONVERGE')
+        CALL ERROR$I4VAL('NUMBER OF UNCONVERGED SUPERDIAGONALS',INFO)
+        CALL ERROR$I4VAL('1ST INDEX OF MATRIX',M)
+        CALL ERROR$I4VAL('2ND INDEX OF MATRIX',N)
+        CALL ERROR$STOP('LIB_LAPACK_DGESVD')
+      END IF
+      DEALLOCATE(WORK)
+      S(N+1:M)=0.D0
+      RETURN
+      END SUBROUTINE LIB_LAPACK_ZGESVD
+!
 !     ..................................................................
       SUBROUTINE LIB_LAPACK_DGESV(N,M,NEQ,A,X,B)
 !     ******************************************************************
@@ -2374,6 +2441,7 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(OUT):: U(N,N)
       INTEGER(4),PARAMETER  :: LWMAX=4000
       COMPLEX(8)            :: CWORK(LWMAX)
+      COMPLEX(8),ALLOCATABLE:: CWORK1(:)
       REAL(8)               :: RWORK(3*N-2)
       INTEGER(4)            :: I
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
@@ -2386,17 +2454,24 @@ INTEGER(4) :: I,J
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
-      IF(LWMAX.LT.2*N) THEN
-        CALL ERROR$MSG('HARDWIRED LIMIT LWMAX SMALLER THAN 2*N')
-        CALL ERROR$I4VAL('LWMAX',LWMAX)
-        CALL ERROR$I4VAL('2*N',2*N)
-        CALL ERROR$STOP('LIB_LAPACK_ZHEEV')
-      END IF
+!!$      IF(LWMAX.LT.2*N) THEN
+!!$        CALL ERROR$MSG('HARDWIRED LIMIT LWMAX SMALLER THAN 2*N')
+!!$        CALL ERROR$I4VAL('LWMAX',LWMAX)
+!!$        CALL ERROR$I4VAL('2*N',2*N)
+!!$        CALL ERROR$STOP('LIB_LAPACK_ZHEEV')
+!!$      END IF
       U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       LWORK=-1
       CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
-      LWORK=MIN(LWMAX,INT(CWORK(1)))
-      CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
+      LWORK=INT(CWORK(1))
+      IF(LWORK.LT.LWMAX) THEN
+!       LWORK=MIN(LWMAX,INT(CWORK(1)))
+        CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
+      ELSE
+        ALLOCATE(CWORK1(LWORK))
+        CALL ZHEEV('V','L',N,U,N,E,CWORK1,LWORK,RWORK,INFO) !LAPACK
+        DEALLOCATE(CWORK1)
+      END IF
 !
       IF(INFO.NE.0) THEN
         IF(INFO.LT.0) THEN
@@ -2583,7 +2658,7 @@ INTEGER(4) :: I,J
       ALLOCATE(WORK(1))
       LDWORK=-1
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
-      LDWORK=int(WORK(1))
+      LDWORK=INT(WORK(1))
       DEALLOCATE(WORK)
       ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
@@ -3412,7 +3487,7 @@ INTEGER(4) :: I,J
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
+      CHARACTER(4),SAVE       :: DIRSAVE=' '
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       INTEGER     ,SAVE       :: ISIGN
       REAL(8)     ,SAVE       :: SCALE
@@ -3422,7 +3497,7 @@ INTEGER(4) :: I,J
       INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
       INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
       LOGICAL                 :: DEF
-      INCLUDE 'FFTW_F77.I' ! filename made lowercase by f90pp 
+      INCLUDE 'FFTW_F77.I' ! FILENAME MADE LOWERCASE BY F90PP 
 !     ***********  FFTW_F77.I *******************************************
 !     THIS FILE CONTAINS PARAMETER STATEMENTS FOR VARIOUS CONSTANTS
 !     THAT CAN BE PASSED TO FFTW ROUTINES.  YOU SHOULD INCLUDE
@@ -3519,7 +3594,7 @@ INTEGER(4) :: I,J
       INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
       REAL(8)     ,SAVE       :: SCALE
       INTEGER     ,SAVE       :: DIMSAVE(3)=0
-      CHARACTER(4),SAVE       :: DIRSAVE=''
+      CHARACTER(4),SAVE       :: DIRSAVE=' '
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
       INTEGER     ,SAVE       :: ISIGN
@@ -3601,7 +3676,7 @@ INTEGER(4) :: I,J
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
+      CHARACTER(4),SAVE       :: DIRSAVE=' '
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       REAL(8)     ,SAVE       :: SCALE
       INTEGER     ,SAVE       :: ISIGN
@@ -3698,7 +3773,7 @@ INTEGER(4) :: I,J
       COMPLEX(8)              :: Y(N1,N2,N3)
       TYPE(C_PTR) :: PLAN
       REAL(8)     ,SAVE       :: SCALE
-      INCLUDE 'FFTW3.F03' ! filename made lowercase by f90pp 
+      INCLUDE 'FFTW3.F03' ! FILENAME MADE LOWERCASE BY F90PP 
 !     **************************************************************************
       PRINT*,"3DFFTW3",N1,N2,N3
       IF(DIR.EQ.'RTOG') THEN
@@ -3758,7 +3833,7 @@ INTEGER(4) :: I,J
       INTEGER(4)  ,PARAMETER  :: NAUX2=20000
       REAL(8)     ,SAVE       :: AUX2(NAUX2)
       REAL(8)     ,SAVE       :: AUX1(NAUX1)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
+      CHARACTER(4),SAVE       :: DIRSAVE=' '
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       INTEGER(4)  ,SAVE       :: ISIGN
@@ -3897,7 +3972,7 @@ INTEGER(4) :: I,J
       REAL(8)     ,SAVE       :: AUX2(NAUX2)
       INTEGER(4)  ,SAVE       :: IAUX(30)
       REAL(8)                 :: SEQUENCE(2*LEN)
-      CHARACTER(4),SAVE       :: DIRSAVE=''
+      CHARACTER(4),SAVE       :: DIRSAVE=' '
       INTEGER(4)  ,SAVE       :: LENSAVE=0
       INTEGER(4)  ,SAVE       :: NFFTSAVE=0
       INTEGER(4)  ,SAVE       :: ISIGN

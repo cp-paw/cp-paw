@@ -1,4 +1,21 @@
 ## #/bin/sh  ! comment this out for openmpi
+################################################################################
+################################################################################
+####    parameters to be set by the user:
+####
+####   specify name of the nodes file. The nodes file contains the name of one
+####   node per line. For a single multiprocessor engine, specify "localhost"
+####   on as many lines as processes you want to use in parallel.
+export NFILE=/Users/ptpb/bin/NODES    # nodes file
+##     default for the number of nodes to be used. overwritten with option -n
+export NNODES=4
+##     paw executable for parallel computatiuon. Can be left as is if found
+export PARCODE=$(which ppaw_fast.x)
+##     path of the mpirun command. Can be left as is if found
+export MPIRUN=$(which mpirun)          #package mpi execution
+####  
+################################################################################
+################################################################################
 export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE \tdoppaw options JOB\n"
@@ -10,10 +27,13 @@ USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -n nnodes: submit parallel job with the specified number \
                              of processes\n"
-USAGE="$USAGE \t -x name: name of executable paw_fast.x with full path\n"
+USAGE="$USAGE \t -x name: name of executable ppaw_XXX.x with full path\n"
 USAGE="$USAGE \t -h \t print this help message \n"
 USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
 USAGE="$USAGE \t -v: verbose\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE attention: contains hardcoded user-specified parameters \n"
+USAGE="$USAGE attention: creates and removes a temporary directory in \tmp \n"
 USAGE="$USAGE \n"
 #-------------------------------------------------------------------------------
 #  implement dry-run
@@ -28,21 +48,37 @@ function execute(){
     fi
 }
 #-------------------------------------------------------------------------------
+#  initial checks
+#-------------------------------------------------------------------------------
+# is mpirun command $MPIRUN set?
+if [[ ! -x $MPIRUN ]] ; then 
+  echo "error in $0: mpirun command unknown or not executable"
+  echo "value of MPIRUN: $MPIRUN"
+  exit 1
+fi
+# is parallel paw executable $PARCODE set?
+if [[ ! -x $PARCODE ]] ; then 
+  echo "error in $0: parallel PAW executable unknown or not executable"
+  echo "value of PARCODE: $PARCODE"
+  exit 1
+fi
+# is nodefile $NFILE set?
+if [[ ! -f $NFILE ]] ; then 
+  echo "error in $0: nodesfile unkown or not existent"
+  echo "value of NFILE: $NFILE"
+  exit 1
+fi
+#-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
 export DRYRUN=no
 export VERBOSE=no
-export PARCODE=$(which ppaw_fast.x)
-#export MPIRUN=/opt/openmpi-1.10.1/bin/mpirun    #package mpi execution
-export MPIRUN=/usr/local/bin/mpirun    #package mpi execution
-export NFILE=/Users/ptpb/bin/NODES    # nodes file
-export NNODES=4
 while getopts :hv0n:x: OPT  ; do
   case $OPT in
     n)   #nodes:
       NNODES=$OPTARG
       ;;
-    x)   name of the executable ppaw_fast.x with full path
+    x)   #name of the executable ppaw_fast.x with full path
       PARCODE=$OPTARG
       ;;
     0)   #nothing:
@@ -89,10 +125,19 @@ fi
 export OMP_NUM_THREADS_OLD=$OMP_NUM_THREADS # store previous value for reset
 export OMP_NUM_THREADS=1
 execute "export OMP_NUM_THREADS=$OMP_NUM_THREADS"
+#
+# a new TMPDIR is constructed to avoid an error within mpirun due a too long 
+#       file name. The directory is deleted and the variable is set  to the
+#       original value after execution
+export OLDTMPDIR=${TMPDIR}
+export TMPDIR=$(mktemp -d /tmp/doppaw.XXXXXXX)
+#
 execute "${MPIRUN}  -np $NNODES \
                       $PARCODE \
                       $JOB.cntl 1>out 2>&1 "
 #                     -hostfile $NFILE \
 export OMP_NUM_THREADS=$OMP_NUM_THREADS_OLD
+rmdir ${TMPDIR}
+TMPDIR=${OLDTMPDIR}
 exit 0
 

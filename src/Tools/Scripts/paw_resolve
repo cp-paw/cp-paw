@@ -33,6 +33,9 @@
 #  Remark: colons are used instead of slashes as separators in sed to allow
 #  replacements with path names.
 #
+#  Remark: string replacement rules (-r) precede file replacement rules (-f).
+#  i.e. they do not act on inserted files
+#
 #  Example:
 #
 #    paw_resolve -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
@@ -66,7 +69,13 @@ USAGE="$USAGE \t\t to avoid piping undesired information into the outfile"
 INFILE=""      # input file
 OUTFILE=""     # output file
 PRE=""         # prefix for file insertions (such as a path)
-declare -a RULES # string replacement rules  A=B: @A@ -> B
+declare -a RULES=( ) # string replacement rules  A=B: @A@ -> B as array
+    # declare -a RULES=(a b c d) create array RULES with four elements a b c d
+    # ${RULES[3]}   Third array element 
+    # ${RULES[3]}   Third array element 
+    # ${RULES[*]}   all array elements
+    # ${#RULES[*]}  number of array elements  
+    # ${!RULES[*]}  array of all array indices
 NRULE=0
 FRULES="" # file insertion rules
 INFILE=""
@@ -83,7 +92,8 @@ while getopts :hi:o:p:r:f:v OPT ; do
       PRE="$OPTARG"
       ;;
     r)
-      RULES=("${RULES[*]}" "$OPTARG")   # $OPTARG is appended the array RULES
+      let I=${#RULES[*]}+1 # number of array elements +1
+      RULES[$I]=$OPTARG    # add $OPTARG as next element to array RULES
       ;;
     f)
       FRULES="$FRULES $OPTARG"
@@ -141,13 +151,16 @@ if [ ! -e ${INFILE} ] ; then
 CHS0=""
 CHS1=""
 CHS2=""
-for I in ${!RULES[*]} ; do
+for I in ${!RULES[*]} ; do    # step through array indices
    A=${RULES[$I]%=*}
    A=$(echo $A | sed 's/^ *//') #remove preceeding spaces
    A=$(echo $A | sed 's/ *$//') #remove trailing spaces
    B=${RULES[$I]##*=}
    CHS0="$CHS0-e s:@$A@:\"$B\":g "
 done
+if [[ $VERBOSE = yes ]] ; then
+  echo -e "explicit string replacement rules: CHS0=$CHS0"
+fi
 #-------------------------------------------------------------------------------
 # explicit file replacement rules
 #-------------------------------------------------------------------------------

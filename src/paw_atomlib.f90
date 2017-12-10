@@ -1806,6 +1806,7 @@ END IF
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR
       PHI=PHI1*VAL2-PHI2*VAL1
+call trace$pop()
 RETURN
 !
 !     ==========================================================================
