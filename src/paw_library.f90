@@ -57,6 +57,11 @@
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
+! LIB$SYSTEM      -> EXECUTE_COMMAND_LINE
+! LIB$GETARG      -> GET_COMMAND_ARGUMENT
+! LIB$GETENV      -> GET_ENVIRONMENT_VARIABLE
+! LIB$GETHOSTNAME -> GET_ENVIRONMENT_VARIABLE
+! LIB$SYSTEM      -> EXECUTE_COMMAND_LINE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETARG(IPOS,ARG)

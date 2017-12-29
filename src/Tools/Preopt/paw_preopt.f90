@@ -646,9 +646,9 @@ END MODULE READ_MODULE
       CHARACTER(256) :: ROOTNAME
       CHARACTER(256) :: INNAME
       INTEGER(4)     :: ISVAR,NFILO
-      integer        :: narg
+      INTEGER        :: NARG
 !     ******************************************************************
-      NARGS=COMMAND_ARGUMENT_COUNT()
+      NARG=COMMAND_ARGUMENT_COUNT()
       IF(NARG.LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE OF THE PREOPTIMIZATION TOOL IS MANDATORY')

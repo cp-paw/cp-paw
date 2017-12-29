@@ -1,3 +1,12 @@
+!
+!CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION
+!
+! CAUTION! THIS FILES CONTAINS DOLLARS THAT MUST NOT BE CONVERTED TO "__" 
+! AS DONE BY THE PREPROCESSOR. FURTHERMORE IT CONTAINS STRING WITH
+! UPPERCASE AND LOWER CASE LETTERS THAT MUST NOT BE CONVERTED.
+!
+!CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION! -- CAUTION
+!
 module stpreport_module
 character(256),save :: precommand
 character(256),save :: tmpdir
@@ -13,6 +22,7 @@ end module stpreport_module
        character(512) :: command
        character(256)  :: texfile
        integer        :: nargs,i
+       integer        :: rc
        real(8)        :: svar
 !      *************************************************************************
 !
@@ -37,9 +47,23 @@ end module stpreport_module
        write(tmpdir,fmt='(i12)')abs(nint(svar*1.d+6))
        tmpdir='tmpdir'//trim(adjustl(tmpdir))//'/'
        command='mkdir '//trim(adjustl(tmpdir))
-       call lib__system(command) !       rc=system(command)
+!       call lib__system(command) !       rc=system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('main')
+       end if
        command='cp '//trim(filename)//' '//trim(tmpdir)
-       call lib__system(command) ! rc=system(command)
+!       call lib__system(command) ! rc=system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('main')
+       end if
        precommand='cd '//trim(tmpdir)//'; '
 !
 !      =========================================================================
@@ -69,10 +93,24 @@ end module stpreport_module
 !      =========================================================================
        command='pdflatex '//adjustl(texfile)
        command=trim(precommand)//command
-!      ==== call lib$system(command)
-       call lib__system(trim(command)) ! rc=system(trim(command))
+!      ==== call lib__system(command)
+!       call lib__system(trim(command)) ! rc=system(trim(command))
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('main')
+       end if
        command='cp '//trim(tmpdir)//'tmp.pdf '//trim(rootname)//'.pdf'
-       call lib__system(trim(command)) ! rc=system(trim(command))
+!       call lib__system(trim(command)) ! rc=system(trim(command))
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('main')
+       end if
        stop
        end
 !
@@ -104,6 +142,7 @@ end module stpreport_module
        character(50)           :: stpa_args(stpa_nargs)
        character(2048)         :: command
        integer                 :: i
+       integer                 :: rc
 !      *************************************************************************
        stpa_args( 1)='-s nb               -o nb.dat'
        stpa_args( 2)='-s id               -o id.dat'
@@ -140,7 +179,14 @@ end module stpreport_module
        enddo
        command=trim(adjustl(command))//' '//trim(adjustl(filename))
        command=trim(precommand)//command
-       call lib__system(command) ! call system(command)
+!       call lib__system(command) ! call system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('executestpa')
+       end if
        return
        end
 !
@@ -157,6 +203,7 @@ end module stpreport_module
        integer                 :: nfilgp=1001
        character(1024)         :: command
        integer                 :: i
+       integer                 :: rc
 !      *************************************************************************
 !
 !      =========================================================================
@@ -192,8 +239,15 @@ end module stpreport_module
 !      =========================================================================
        command='gnuplot '//trim(adjustl(filename))
        command=trim(precommand)//command
-!      ==== call lib$system(command)
-       call lib__system(command) ! rc=system(command)
+!      ==== call lib__system(command)
+!       call lib__system(command) ! rc=system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('gnuplotpotentials')
+       end if
        return 
        end
 !
@@ -215,6 +269,7 @@ end module stpreport_module
        integer(4)              :: lx
        integer(4)              :: il,i
        integer(4)              :: iline
+       integer(4)              :: rc
 !      *************************************************************************
 !
 !      =========================================================================
@@ -263,8 +318,15 @@ end module stpreport_module
 !      =========================================================================
        command='gnuplot '//adjustl(filename)
        command=trim(precommand)//command
-!      ==== call lib$system(command)
-       call lib__system(command) ! rc=system(command)
+!      ==== call lib__system(command)
+!       call lib__system(command) ! rc=system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('gnuplotscattering')
+       end if
        return 
        end
 !
@@ -286,6 +348,7 @@ end module stpreport_module
        integer(4)              :: lx
        integer(4)              :: l,ipro
        integer(4)              :: iline,i
+       integer(4)              :: rc
        logical                 :: tfirst
 !      *************************************************************************
        call readlinei4('lpro.dat',nvalx,nval,ival)
@@ -343,8 +406,15 @@ end module stpreport_module
 !        =======================================================================
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
-!        ==== call lib$system(command)
-         call lib__system(command) ! rc=system(command)
+!        ==== call lib__system(command)
+!         call lib__system(command) ! rc=system(command)
+         call execute_command_line(trim(command),exitstat=rc)
+         if(rc.ne.0) then
+           call error__msg('command line argument failed')
+           call error__chval('command',trim(command))
+           call error__i4val('return code',rc)
+           call error__stop('gnuplotorbitals')
+         end if
        enddo
 
        return 
@@ -363,6 +433,7 @@ end module stpreport_module
        integer                 :: nfilgp=1001
        character(1024)         :: command
        integer                 :: i
+       integer                 :: rc
        integer(4),parameter    :: nvalx=10
        integer(4)              :: nval
        integer(4)              :: ival(nvalx)
@@ -417,8 +488,15 @@ end module stpreport_module
 !        =======================================================================
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
-!        ==== call lib$system(command)
-         call lib__system(command) ! rc=system(command)
+!        ==== call lib__system(command)
+!         call lib__system(command) ! rc=system(command)
+         call execute_command_line(trim(command),exitstat=rc)
+         if(rc.ne.0) then
+           call error__msg('command line argument failed')
+           call error__chval('command',trim(command))
+           call error__i4val('return code',rc)
+           call error__stop('gnuplotprojectors')
+         end if
        enddo
 
        return 
@@ -443,6 +521,7 @@ end module stpreport_module
        integer(4)              :: nval
        integer(4)              :: ival(nvalx)
        integer(4)              :: i,ib
+       integer(4)              :: rc
        integer(4)              :: nb
        integer(4)              :: nr
        real(8)   ,allocatable  :: r(:)
@@ -461,7 +540,14 @@ end module stpreport_module
 !      =========================================================================
        command='wc -l UPSI.dat > nr.dat'
        command=trim(precommand)//command
-       call lib__system(command) ! rc=system(command)
+!       call lib__system(command) ! rc=system(command)
+       call execute_command_line(trim(command),exitstat=rc)
+       if(rc.ne.0) then
+         call error__msg('command line argument failed')
+         call error__chval('command',trim(command))
+         call error__i4val('return code',rc)
+         call error__stop('gnuplotwf')
+       end if
        call readline('nr.dat',line(1))
        read(line(1),*)nr
        allocate(r(nr))
@@ -526,8 +612,15 @@ end module stpreport_module
 !        =======================================================================
          command='gnuplot '//adjustl(filename)
          command=trim(precommand)//command
-!        ==== call lib$system(command)
-         call lib__system(command) ! rc=system(command)
+!        ==== call lib__system(command)
+!         call lib__system(command) ! rc=system(command)
+         call execute_command_line(trim(command),exitstat=rc)
+         if(rc.ne.0) then
+           call error__msg('command line argument failed')
+           call error__chval('command',trim(command))
+           call error__i4val('return code',rc)
+           call error__stop('gnuplotwf')
+         end if
        enddo
 
        return 
