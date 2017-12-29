@@ -130,13 +130,8 @@ END MODULE DYNOCC_MODULE
        REAL(8),INTENT(IN) :: X
        REAL(8),INTENT(OUT):: F
        REAL(8),INTENT(OUT):: DF   !DF/DX
-       LOGICAL(4),SAVE    :: TNEW=.TRUE.
-       REAL(8)   ,SAVE    :: PI
+       REAL(8),PARAMETER  :: PI=4.D0*ATAN(1.D0)
 !      *************************************************************************
-       IF(TNEW) THEN
-         PI=4.D0*ATAN(1.D0)
-         TNEW=.FALSE.
-       END IF
        F =0.5D0*(1.D0-COS(X*PI))
        DF=0.5D0*PI*SIN(X*PI)
        RETURN
@@ -155,14 +150,9 @@ END MODULE DYNOCC_MODULE
        REAL(8)   ,INTENT(IN) :: F
        REAL(8)   ,INTENT(INOUT):: X
        REAL(8)   ,INTENT(OUT):: DX    
-       LOGICAL(4),SAVE       :: TNEW=.TRUE.
-       REAL(8)   ,SAVE       :: PI
+       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
        REAL(8)               :: DFDX
 !      *****************************************************************
-       IF(TNEW) THEN
-         PI=4.D0*ATAN(1.D0)
-         TNEW=.FALSE.
-       END IF
 !      *****************************************************************
        X=ACOS(1.D0-2.D0*F)/PI
 !      == 0<X<1  =========================================================

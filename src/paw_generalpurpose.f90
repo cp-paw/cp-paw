@@ -1,22 +1,22 @@
 !
-!     .....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ABCALPHABETAGAMMA(SWITCH,A,B,C,ALPHA,BETA,GAMMA,T)
-!     **                                                                 **
-!     **  CONVERTS THE LATTICE REPRESENTATION OF LENTHS OF AND ANGLES    **
-!     **  BETWEEN LATTICE VECTORS                                        **
-!     **                                                                 **
-!     **  ATTENTION!! ANGLES ARE IN DEGREE I.E. IN UNITS OF  2*PI/360    **
-!     **                                                                 **
-!     *********************************************************************
+!     **************************************************************************
+!     **  CONVERTS THE LATTICE REPRESENTATION OF LENTHS OF AND ANGLES         **
+!     **  BETWEEN LATTICE VECTORS                                             **
+!     **                                                                      **
+!     **  ATTENTION!! ANGLES ARE IN DEGREE I.E. IN UNITS OF  2*PI/360         **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
-      LOGICAL, INTENT(IN)    :: SWITCH  ! ABC...-> T / T->ABC...
-      REAL(8),  INTENT(INOUT) :: A,B,C   ! LENGTH OF LATTICE VECTORS
-      REAL(8),  INTENT(INOUT) :: ALPHA,BETA,GAMMA  ! ANGLES BETWEEN LATTICE VECTORS
-      REAL(8),  INTENT(INOUT) :: T(3,3)  !LATTICE VECTORS  
-      REAL(8)                 :: PI
-      REAL(8)                 :: DEGREE
-      REAL(8)                 :: COSA,COSB,COSG,SING
-      PI=4.D0*ATAN(1.D0)
+      LOGICAL(4),INTENT(IN)    :: SWITCH  ! ABC...-> T / T->ABC...
+      REAL(8)   ,INTENT(INOUT) :: A,B,C   ! LENGTH OF LATTICE VECTORS
+      REAL(8)   ,INTENT(INOUT) :: ALPHA,BETA,GAMMA !ANGLES BETWEEN LAT. VECTORS
+      REAL(8)   ,INTENT(INOUT) :: T(3,3)  !LATTICE VECTORS  
+      REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)                  :: DEGREE
+      REAL(8)                  :: COSA,COSB,COSG,SING
+!     **************************************************************************
       DEGREE=2.D0*PI/360.D0
       IF(SWITCH) THEN
         COSA=COS(ALPHA*DEGREE)
@@ -79,14 +79,13 @@
 !     **                                                              **
 !     ****************************************** P.E. BLOECHL, 1991 ****
       IMPLICIT NONE
-      REAL(8), INTENT(IN)  :: RBAS(3,3) ! REAL SPACE LATTIC VECTORS
-      REAL(8), INTENT(OUT) :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
-      REAL(8), INTENT(OUT) :: DET       ! REAL SPACE UNIT CELL VOLUME
-      REAL(8)              :: PI
-      REAL(8)              :: FAC
-      INTEGER(4)           :: I,J
+      REAL(8),INTENT(IN)  :: RBAS(3,3) ! REAL SPACE LATTIC VECTORS
+      REAL(8),INTENT(OUT) :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
+      REAL(8),INTENT(OUT) :: DET       ! REAL SPACE UNIT CELL VOLUME
+      REAL(8),PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)             :: FAC
+      INTEGER(4)          :: I,J
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       GBAS(1,1) = RBAS(2,2)*RBAS(3,3) - RBAS(3,2)*RBAS(2,3)
       GBAS(2,1) = RBAS(3,2)*RBAS(1,3) - RBAS(1,2)*RBAS(3,3)
       GBAS(3,1) = RBAS(1,2)*RBAS(2,3) - RBAS(2,2)*RBAS(1,3)
@@ -1101,11 +1100,10 @@ END MODULE BROYDEN_MODULE
       INTEGER(4),INTENT(IN) :: L
       REAL(8)   ,INTENT(IN) :: ALPHA
       REAL(8)   ,INTENT(OUT):: C
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: RINT
       INTEGER(4)            :: K,IFAC,I
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
 !     ==================================================================
 !     ==  CALCULATE INT(DR): R**(2*L+2) *EXP(-ALPHA * R**2)           ==
 !     ==  SEE BRONSTEIN P66.                                          ==
@@ -1700,18 +1698,17 @@ END IF
       RETURN
       END
 !      
-!     ......................................................MADELUNG....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-!     ******************************************************************
-!     **                                                              **
-!     ** EVALUATES MADELUNG ENERGY, POTENTIAL AND FORCES              **
-!     **                                                              **
-!     ** USES: MPE$QUERY                                              **
-!     **       MPE$COMBINE                                            **
-!     **       GBASS                                                  **
-!     **       BOXSPH                                                 **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     ** EVALUATES MADELUNG ENERGY, POTENTIAL AND FORCES                      **
+!     **                                                                      **
+!     ** USES: MPE$QUERY                                                      **
+!     **       MPE$COMBINE                                                    **
+!     **       GBASS                                                          **
+!     **       BOXSPH                                                         **
+!     **                                                                      **
+!     **************************************************************************
 !     USE MPE_MODULE
       IMPLICIT NONE
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
@@ -1723,11 +1720,12 @@ END IF
       REAL(8),   INTENT(OUT):: EMAD          ! MADELUNG ENERGY   
       REAL(8),   INTENT(OUT):: VMAD(NBAS)    ! POTENTIAL AT CHARGE POSITIONS
       REAL(8),   INTENT(OUT):: FMAD(3,NBAS)  ! FORCES ON CHARGES
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: GBAS(3,3)     ! RECIPROCAL LATTICE VECTORS
       COMPLEX(8)            :: EIGR(NBAS)    ! FORM FACTOR
       COMPLEX(8)            :: EIGR12
       COMPLEX(8)            :: EIGR1
-      REAL(8)               :: PI,FOURPI,ROOT2
+      REAL(8)               :: FOURPI,ROOT2
       REAL(8)               :: VOL
       REAL(8)               :: RC,X,Y,C1,C2,SVAR,FAC,GFAC
       INTEGER(4)            :: K,I,IR,IR1,IR2
@@ -1750,8 +1748,7 @@ END IF
       REAL(8)               :: GR,G2MAX
       REAL(8)               :: ERFCX
 !     INTEGER(4)            :: NTASKNUM,ITASK,ICOUNT
-!     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
+!     **************************************************************************
       FOURPI=4.D0*PI
       ROOT2=SQRT(2.D0)
 !
@@ -1987,23 +1984,23 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SLATERKOSTER(R,OV,H)
-!     ******************************************************************
-!     ** SLATER-KOSTER ENERGY INTEGRALS                               **
-!     **  J.C. SLATER AND G.F. KOSTER, PHYS. REV. 94, 1498 (1954)     **
-!     **                                                              **
-!     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                **
-!     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                          **
-!     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                      **
-!     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                      **
-!     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                      **
-!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2      **
-!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2      **
-!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2      **
-!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2      **
-!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2      **
-!     ******************************************************************
+!     **************************************************************************
+!     ** SLATER-KOSTER ENERGY INTEGRALS                                       **
+!     **  J.C. SLATER AND G.F. KOSTER, PHYS. REV. 94, 1498 (1954)             **
+!     **                                                                      **
+!     **  THE FIRST NINE REAL SPHERICAL HARMONICS ARE:                        **
+!     **      YLM(1)=SQRT( 1/( 4*PI))    * 1                                  **
+!     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                              **
+!     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                              **
+!     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                              **
+!     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2              **
+!     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2              **
+!     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2              **
+!     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2              **
+!     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2              **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN)  :: R(3)
       REAL(8),INTENT(IN)  :: OV(10)
@@ -2012,7 +2009,7 @@ END IF
       REAL(8)             :: L,M,N,L2,M2,N2
       REAL(8)             :: SVAR,SQ3,P1,P
       INTEGER(4)          :: I,J
-!     ******************************************************************
+!     **************************************************************************
       SQ3=SQRT(3.D0)
       SVAR=SQRT(DOT_PRODUCT(R,R))
       IF(SVAR.LT.1.D-20) THEN
@@ -2119,24 +2116,25 @@ END IF
       ENDDO
       RETURN
       END
-!*********************************************************************************
-!*********************************************************************************
-!*********************************************************************************
-!****                                                                         ****
-!****   TEST ROUTINES                                                         ****
-!****                                                                         ****
-!****                                                                         ****
-!*********************************************************************************
-!*********************************************************************************
-!*********************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!****                                                                       ****
+!****   TEST ROUTINES                                                       ****
+!****                                                                       ****
+!****                                                                       ****
+!*******************************************************************************
+!*******************************************************************************
+!*******************************************************************************
 !
-!     ...............................................................................
+!     ..........................................................................
       SUBROUTINE TEST_MADELUNG()
-!     **                                                                        **
-!     **  CALCULATE VARIOUS MADELUNG CONSTANTS AND COMPARE WITH                 **
-!     **  "CONDENSED MATTER PHYSICS" BY M.P.MARDER                              **
-!     **                                                                        **
+!     **                                                                      **
+!     **  CALCULATE VARIOUS MADELUNG CONSTANTS AND COMPARE WITH               **
+!     **  "CONDENSED MATTER PHYSICS" BY M.P.MARDER                            **
+!     **                                                                      **
       INTEGER(4),PARAMETER :: NBAS=2
+      REAL(8)   ,PARAMETER :: PI=4.D0*ATAN(1.D0)
       REAL(8)              :: RBAS(3,3)
       REAL(8)              :: BAS(3,NBAS)
       REAL(8)              :: Q(NBAS)
@@ -2144,13 +2142,11 @@ END IF
       REAL(8)              :: VMAD(NBAS)
       REAL(8)              :: FMAD(3,NBAS)
       REAL(8)              :: D,RS,DET
-      REAL(8)              :: PI
-!     ******************************************************************************
-      PI=4.D0*ATAN(1.D0)
+!     **************************************************************************
       Q(1)=1.D0
       Q(2)=-1.D0
 !
-!     == SODIUM CHLORIDE: 1.74757 =============================================
+!     == SODIUM CHLORIDE: 1.74757 ==============================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
@@ -2158,9 +2154,10 @@ END IF
       BAS(:,2) =(/0.5D0,0.0D0,0.0D0/)
       D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
       CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("NACL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.74757
+      WRITE(*,FMT='("NACL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &             -EMAD*D,-EMAD*D-1.74757
 !
-!     == CSCL STRUCTURE: 1.76268 ==============================================
+!     == CSCL STRUCTURE: 1.76268 ===============================================
       RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
       RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
       RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
@@ -2168,9 +2165,10 @@ END IF
       BAS(:,2) =(/0.5D0,0.5D0,0.5D0/)
       D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
       CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("CSCL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.76268
+      WRITE(*,FMT='("CSCL STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &            -EMAD*D,-EMAD*D-1.76268
 !
-!     == ZNS STRUCTURE: 1.63806 ===============================================
+!     == ZNS STRUCTURE: 1.63806 ================================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
@@ -2178,14 +2176,15 @@ END IF
       BAS(:,2) =(/0.25D0,0.25D0,0.25D0/)
       D=SQRT(SUM((BAS(:,2)-BAS(:,1))**2))
       CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("ZNS STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*D,-EMAD*D-1.63806
+      WRITE(*,FMT='("ZNS STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &            -EMAD*D,-EMAD*D-1.63806
 !
-!     ========================================================================
-!     == MADELUNG CONSTANTS FOR METALS                                      ==
-!     == ATTENTION THE DEFINITION IS DIFFERENT!!!!                          ==
-!     ========================================================================
+!     ==========================================================================
+!     == MADELUNG CONSTANTS FOR METALS                                        ==
+!     == ATTENTION THE DEFINITION IS DIFFERENT!!!!                            ==
+!     ==========================================================================
 !
-!     == FCC: 1.79186 ========================================================
+!     == FCC: 1.79186 ==========================================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
@@ -2195,9 +2194,10 @@ END IF
      &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
       CALL MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("FCC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-2.D0*EMAD*RS,-2.D0*EMAD*RS-1.79186
+      WRITE(*,FMT='("FCC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &             -2.D0*EMAD*RS,-2.D0*EMAD*RS-1.79186
 !
-!     == SIC: 1.76012 ========================================================
+!     == SIC: 1.76012 ==========================================================
       RBAS(1,:)=(/1.0D0,0.0D0,0.0D0/)
       RBAS(2,:)=(/0.0D0,1.0D0,0.0D0/)
       RBAS(3,:)=(/0.0D0,0.0D0,1.0D0/)
@@ -2207,9 +2207,10 @@ END IF
      &   +RBAS(3,1)*(RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)) 
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
       CALL MADELUNG(1,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("SIC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-2.D0*EMAD*RS,-2.D0*EMAD*RS-1.76012
+      WRITE(*,FMT='("SIC STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &             -2.D0*EMAD*RS,-2.D0*EMAD*RS-1.76012
 !
-!     == DIAMOND: 1.67085 ===================================================
+!     == DIAMOND: 1.67085 ======================================================
       RBAS(1,:)=(/0.0D0,0.5D0,0.5D0/)
       RBAS(2,:)=(/0.5D0,0.0D0,0.5D0/)
       RBAS(3,:)=(/0.5D0,0.5D0,0.0D0/)
@@ -2222,7 +2223,8 @@ END IF
       Q(:)=1.D0
       RS=(3.D0*DET/(4.D0*PI))**(1.D0/3.D0)
       CALL MADELUNG(NBAS,RBAS,BAS,Q,EMAD,VMAD,FMAD)
-      WRITE(*,FMT='("DIAMOND STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)')-EMAD*RS,-EMAD*RS-1.67085
+      WRITE(*,FMT='("DIAMOND STRUCTURE",T30,"E=",F10.5,"  DEV=",F10.5)') &
+     &             -EMAD*RS,-EMAD*RS-1.67085
       RETURN
       END
 !

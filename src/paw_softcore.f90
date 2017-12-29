@@ -117,7 +117,7 @@ END MODULE CORE_MODULE
       INTEGER(4),INTENT(IN) :: NR
       INTEGER(4),INTENT(IN) :: LMRXX
       REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRXX)
-
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: ATPOT(NR)
       REAL(8)               :: AEPOT1(NR,LMRXX)
       INTEGER(4)            :: NB
@@ -131,7 +131,6 @@ END MODULE CORE_MODULE
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: LMRX
 
-      REAL(8)               :: PI
       INTEGER(4)            :: I
       REAL(8)               :: AUX2
 
@@ -214,7 +213,6 @@ END MODULE CORE_MODULE
 !     ==================================================================
 !     ==  CONSTANTS                                                   ==
 !     ==================================================================
-      PI=4.D0*ATAN(1.D0)
 
       LMNX=0
       LMRX=0

@@ -3609,6 +3609,7 @@ END MODULE SPACEGROUP_MODULE
       INTEGER(4)  ,INTENT(OUT):: NOP
       INTEGER(4)  ,INTENT(OUT):: OPERATION(3,3,NOPX)
       REAL(8)     ,INTENT(OUT):: C(3,NOPX)  ! CENTER OF OPERATION
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)              :: E(3,3)      ! IDENTITY
       INTEGER(4)              :: INV(3,3)    ! INVERSION
       INTEGER(4)              :: C4XP(3,3),  C4XM(3,3)
@@ -3631,7 +3632,7 @@ END MODULE SPACEGROUP_MODULE
       INTEGER(4)              :: C31P(3,3),C32P(3,3),C33P(3,3),C34P(3,3) 
       INTEGER(4)              :: C31M(3,3),C32M(3,3),C33M(3,3),C34M(3,3)
       REAL(8)                 :: MAT(3,3)
-      REAL(8)                 :: PI, PIH ! PIH=PI/2
+      REAL(8)                 :: PIH ! PIH=PI/2
       REAL(8)                 :: RBAS(3,3),TTAUT(3,3),TTAUTINV(3,3)
       INTEGER(4)              :: I
       CHARACTER(3)            :: BRAVAIS
@@ -4810,7 +4811,6 @@ END MODULE SPACEGROUP_MODULE
       IF(ID.EQ.'REAL') THEN
         CALL ERROR$MSG('REAL SPACE GENERATORES NOT YET IMPLEMENTED')
         CALL ERROR$STOP('BRILLOUIN$GENERATORS')
-        PI=4.D0*ATAN(1.D0)
         PIH=PI/2.D0
         CALL SPACEGROUP$RBAS(BRAVAIS,1.D0,1.D0,1.D0,PIH,PIH,PIH,RBAS)
         TTAUT=MATMUL(TRANSPOSE(RBAS),RBAS)

@@ -811,6 +811,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(IN) :: RB(3)
       REAL(8)   ,INTENT(IN) :: CB(NIJKB,NCB)
       REAL(8)   ,INTENT(OUT) :: SAB(NCA,NCB)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
@@ -818,10 +819,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA
       INTEGER(4)            :: INDB,MB,IB,JB,KB
       INTEGER(4)            :: NIJKA1,NIJKB1
-      REAL(8)               :: PI
       REAL(8)               :: SVAR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
@@ -921,7 +920,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(IN) :: EB(NEB)
       REAL(8)   ,INTENT(IN) :: RB(3)
       REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NCB)
-      REAL(8)   ,INTENT(OUT) :: SAB(NCA,NCB)
+      REAL(8)   ,INTENT(OUT):: SAB(NCA,NCB)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
@@ -929,9 +929,7 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
       INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
       INTEGER(4)            :: NIJKA1,NIJKB1
-      REAL(8)               :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
@@ -1013,14 +1011,13 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(IN) :: EB(NEB)
       REAL(8)   ,INTENT(IN) :: RB(3)
       REAL(8)   ,INTENT(OUT):: SAB(NIJKA,NEA,NIJKB,NEB)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
       INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
-      REAL(8)               :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
@@ -1101,16 +1098,15 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4),INTENT(IN) :: NCB
       REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NCB)   ! |PSI_N>=SUM_J:|GB_J>CB(J,N)
       REAL(8)   ,INTENT(OUT):: GCB(NIJKA,NEA,NCB)  ! <GA_I|PSI_N>
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NA,NB
       INTEGER(4)            :: NABX
       INTEGER(4)            :: J,K
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
       INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
-      REAL(8)               :: PI
       REAL(8)               :: SVAR,FAC
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       GCB(:,:,:)=0.D0
 !
 !     ==========================================================================
@@ -1271,7 +1267,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,INTENT(IN) :: CB(NIJKB,NEB,NORBB)
       REAL(8)   ,INTENT(IN) :: CC(NIJKC,NEC,NORBC)
       REAL(8)   ,INTENT(IN) :: CD(NIJKD,NED,NORBD)
-      REAL(8)   ,INTENT(OUT) :: UABCD(NORBA,NORBB,NORBC,NORBD)
+      REAL(8)   ,INTENT(OUT):: UABCD(NORBA,NORBB,NORBC,NORBD)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NIJKP,NIJKQ
       REAL(8)                :: EP,EQ
       REAL(8)                :: RP(3),RQ(3)
@@ -1284,9 +1281,8 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)             :: INDP,INDQ,MP,MQ,IP,IQ,JP,JQ,KP,KQ
       INTEGER(4)             :: IORBA,IORBB,IORBC,IORBD
       INTEGER(4)             :: IEA,IEB,IEC,IED
-      REAL(8)                :: PI,SGN
+      REAL(8)                :: SGN
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
@@ -1393,6 +1389,7 @@ PRINT*,'MARKE 1',IORBA,IORBB,IEA,IEB
       REAL(8)   ,INTENT(IN)  :: CB(NIJKB,NEB,NFB)
       REAL(8)   ,INTENT(IN)  :: DIS
       REAL(8)   ,INTENT(OUT) :: UABCD(NFA,NFB,NFA,NFB)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NIJKP
       INTEGER(4)             :: NEP
       REAL(8)                :: RA(3)
@@ -1413,10 +1410,9 @@ PRINT*,'MARKE 1',IORBA,IORBB,IEA,IEB
       INTEGER(4)             :: IEA,IEB,IEC,IED,IEP,IEQ
       INTEGER(4)             :: IFA,IFB,IFC,IFD
       INTEGER(4)             :: IA,IB,IC,ID
-      REAL(8)                :: PI,SGN
+      REAL(8)                :: SGN
 !     **************************************************************************
                      CALL TRACE$PUSH('GAUSSIAN$ZDIRECTION_FOURCENTER')
-      PI=4.D0*ATAN(1.D0)
       CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
@@ -1836,7 +1832,8 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       REAL(8)   ,INTENT(IN) :: X
       REAL(8)   ,INTENT(OUT):: F(0:N)
       REAL(8)   ,PARAMETER  :: D=15.D0   ! #(ACCURATE DIGITS) 
-      REAL(8)               :: Y,EXPMX,PI,SVAR,F0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: Y,EXPMX,SVAR,F0
       INTEGER(4)            :: MT,M,MBREAK
 !     **************************************************************************
 !
@@ -1856,7 +1853,6 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
 !     ==========================================================================
 !     == SET UP DATA FOR THE MAIN PART                                        ==
 !     ==========================================================================
-      PI=4.D0*ATAN(1.D0)
       IF(X.LT.35.D0) THEN
         CALL LIB$ERFR8(SQRT(X),SVAR)
         F0=SQRT(PI/(4.D0*X))*SVAR  ! BOYS FUNCTION F0

@@ -917,20 +917,19 @@
       REAL(8)   ,INTENT(IN)   :: PSCORG(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: DPSCORG(NGL,NSP)
       COMPLEX(8),INTENT(IN)   :: VTEMP(NGL)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                 :: GBAS(3,3)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)    !(NGL)
       INTEGER(4),PARAMETER    :: NBLOCK=100
       REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
       REAL(8)                 :: FAC,SVAR,SVAR1
       REAL(8)                 :: CELLVOL
-      REAL(8)                 :: PI,Y0
       INTEGER(4)              :: IG,ISP,IAT,I,J
       REAL(8)                 :: FORCE1(3)
       REAL(8)                 :: STRESS1(3,3)
       COMPLEX(8)              :: CSVAR
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL GBASS(RBAS,GBAS,CELLVOL)
       FORCE(:,:)=0.D0
       STRESS(:,:)=0.D0
@@ -1049,12 +1048,11 @@
       REAL(8)   ,INTENT(IN)   :: RAT(3,NAT)     ! ATOMIC POSITIONS
       REAL(8)   ,INTENT(IN)   :: PSCORG(NGL,NSP)! PS-CORE
       COMPLEX(8),INTENT(INOUT):: RHO(NGL)       ! IN PS-DENSITY; OUT: +PS-CORE
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)        !(NGL) STRUCTURE FACTOR
-      REAL(8)                 :: PI,Y0
       INTEGER(4)              :: IAT,ISP,IG
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       ALLOCATE(EIGR(NGL))
       DO IAT=1,NAT
         ISP=ISPECIES(IAT)
@@ -1116,6 +1114,8 @@
       REAL(8)   ,INTENT(IN)   :: DG0(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: DV0(NGL,NSP)
       REAL(8)   ,INTENT(OUT)  :: STRESS(3,3)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)         !(NGL)
       COMPLEX(8),ALLOCATABLE  :: RHO2(:)         !(NGL) PSRHO+COMPENSATION
       COMPLEX(8),ALLOCATABLE  :: VG(:)           !(NGL)
@@ -1125,15 +1125,13 @@
       REAL(8)                 :: VB               !VHAT(GAMMA)
       INTEGER(4)              :: M,L,LM,ISP,IAT,IG,I,J,LM1,LM2
       REAL(8)                 :: SVAR,SVAR1
-      REAL(8)                 :: PI,Y0,FPI
+      REAL(8)                 :: FPI
       REAL(8)                 :: CC(3,3)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
       REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
 !      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       FPI=4.D0*PI
-      Y0=1.D0/SQRT(FPI)
       CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
 !
       ALLOCATE(EIGR(NGL))

@@ -728,18 +728,17 @@ END MODULE STRCIO_MODULE
       USE STRCIO_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: NFIL
-      REAL(8)                 :: PI
-      REAL(8)                 :: RBASINV(3,3) ! RBAS**(-1)
-      REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
-      REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
-      REAL(8)                 :: DET
-      INTEGER(4)              :: IAT
-      REAL(8)                 :: VEC(3),RBASNEU(3,3)
-      REAL(8)                 :: ANGSTROM
-      INTEGER(4)              :: NEIGH1(8)
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: RBASINV(3,3) ! RBAS**(-1)
+      REAL(8)               :: A,B,C            ! LENGTH OF LATTICE VECTORS
+      REAL(8)               :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
+      REAL(8)               :: DET
+      INTEGER(4)            :: IAT
+      REAL(8)               :: VEC(3),RBASNEU(3,3)
+      REAL(8)               :: ANGSTROM
+      INTEGER(4)            :: NEIGH1(8)
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !
 !     ==================================================================
@@ -812,20 +811,19 @@ END MODULE STRCIO_MODULE
       USE STRCIO_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: NFIL
-      REAL(8)                 :: PI
-      REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
-      REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
-      INTEGER(4)              :: IAT
-      REAL(8)                 :: ANGSTROM
-      INTEGER(4)              :: SPCGRPNR
-      CHARACTER(11)           :: SPCGRPNM
-      INTEGER(4)              :: IORTH,IATNR,ISVAR
-      CHARACTER(60)           :: TITLE
-      CHARACTER(53)           :: STRING
-      CHARACTER(1)            :: CH1
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: A,B,C            ! LENGTH OF LATTICE VECTORS
+      REAL(8)               :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
+      INTEGER(4)            :: IAT
+      REAL(8)               :: ANGSTROM
+      INTEGER(4)            :: SPCGRPNR
+      CHARACTER(11)         :: SPCGRPNM
+      INTEGER(4)            :: IORTH,IATNR,ISVAR
+      CHARACTER(60)         :: TITLE
+      CHARACTER(53)         :: STRING
+      CHARACTER(1)          :: CH1
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !

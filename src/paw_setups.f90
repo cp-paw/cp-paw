@@ -981,7 +981,7 @@ END MODULE SETUP_MODULE
       REAL(8)     ,INTENT(IN)  :: G2(NG_) ! G**2
       REAL(8)     ,INTENT(OUT) :: F(NG_)  
       REAL(8)     ,ALLOCATABLE :: FOFG(:)  !(NG)
-      REAL(8)                  :: PI
+      REAL(8)     ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)               :: IG
       INTEGER(4)               :: NG
       INTEGER(4)               :: NGAMMA
@@ -1055,7 +1055,6 @@ END MODULE SETUP_MODULE
 !     == CORRECT EXTRAPOLATION TO THE GAMMA POINT                     ==
 !     ==================================================================
       IF(NGAMMA.NE.0) THEN
-        PI=4.D0*ATAN(1.D0)
         IF(TDER) THEN
           NGAMMA=0
         ELSE
@@ -1099,6 +1098,8 @@ END MODULE SETUP_MODULE
       USE SETUP_MODULE, ONLY: NSP,THIS
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN):: LL_STRC_
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       TYPE(LL_TYPE)           :: LL_STRC
       INTEGER(4)   ,PARAMETER :: LX=3
       REAL(8)                 :: AEZ     ! ATOMIC NUMBER
@@ -1127,7 +1128,6 @@ END MODULE SETUP_MODULE
       LOGICAL(4)              :: TCHK,TCHK1
       CHARACTER(128)          :: ID
       REAL(8)                 :: RCOV
-      REAL(8)                 :: PI,Y0
       REAL(8)                 :: PROTONMASS
       REAL(8)                 :: EV
       REAL(8)                 :: SVAR
@@ -1138,8 +1138,6 @@ END MODULE SETUP_MODULE
 !     **************************************************************************
                                          CALL TRACE$PUSH('SETUP$READSTRCIN')
       LL_STRC=LL_STRC_  !AVOID REPOSITIONING OF THE POINTER
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS('U',PROTONMASS)
       CALL CONSTANTS('EV',EV)
 !
@@ -1998,14 +1996,13 @@ RCL=RCOV
       REAL(8)     ,INTENT(OUT):: DMIN
       REAL(8)     ,INTENT(OUT):: DMAX
       REAL(8)     ,INTENT(OUT):: RMAX
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       TYPE(LL_TYPE)           :: LL_STP
       LOGICAL(4)              :: TCHK
       CHARACTER(128)          :: ID
       REAL(8)                 :: RCOV
-      REAL(8)                 :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
 
       CALL LINKEDLIST$EXISTD(LL_STP,'ID',1,TCHK)
@@ -2102,10 +2099,9 @@ RCL=RCOV
       LOGICAL(4)               :: TCHK
       CHARACTER(64)            :: STRING
       REAL(8)                  :: RCOV
-      REAL(8)                  :: PI,Y0
+      REAL(8)      ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)      ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
 
       CALL LINKEDLIST$EXISTL(LL_STP,'AUGMENT',0,TCHK)
@@ -2457,12 +2453,11 @@ RCL=RCOV
       REAL(8)      ,INTENT(OUT) :: RC
       LOGICAL(4)   ,INTENT(OUT) :: TVAL0
       REAL(8)      ,INTENT(OUT) :: VAL0
+      REAL(8)      ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)      ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       TYPE(LL_TYPE)             :: LL_STP
       LOGICAL(4)                :: TCHK
-      REAL(8)                   :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
 !
       CALL LINKEDLIST$EXISTL(LL_STP,'POT',1,TCHK)
@@ -2519,12 +2514,11 @@ RCL=RCOV
       REAL(8)      ,INTENT(OUT) :: RC
       LOGICAL(4)   ,INTENT(OUT) :: TVAL0
       REAL(8)      ,INTENT(OUT) :: VAL0
+      REAL(8)      ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)      ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       TYPE(LL_TYPE)             :: LL_STP
       LOGICAL(4)                :: TCHK
-      REAL(8)                   :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       LL_STP=LL_STP_  !AVOID REPOSITIONING OF THE POINTER
 !
       CALL LINKEDLIST$EXISTL(LL_STP,'CORE',1,TCHK)
@@ -2632,6 +2626,10 @@ RCL=RCOV
       IMPLICIT NONE
       TYPE(LL_TYPE)          :: LL_STP
       INTEGER(4),PARAMETER  :: NBX=40
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
+      REAL(8)   ,PARAMETER  :: C0LL=1.D0/SQRT(FOURPI)
       INTEGER(4)            :: LOFI(NBX)
       INTEGER(4)            :: SOFI(NBX)
       REAL(8)               :: FOFI(NBX)
@@ -2659,7 +2657,6 @@ RCL=RCOV
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
       REAL(8)   ,ALLOCATABLE:: PSISM(:,:)  !SMALL COMPONENT
       LOGICAL(4)            :: TCHK,TCHK1
-      REAL(8)               :: PI,FOURPI,Y0,C0LL
       INTEGER(4)            :: IR,IB,LN,L,IB1,LENG
       INTEGER(4)            :: LRHOX
       CHARACTER(64)         :: STRING
@@ -2670,10 +2667,6 @@ RCL=RCOV
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_READ_NEW')
       CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
-      C0LL=1.D0/SQRT(FOURPI)
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO SETUP SELECTED')
         CALL ERROR$STOP('SETUP_READ')
@@ -3328,16 +3321,16 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4)     ,INTENT(IN) :: NFIL
+      REAL(8)        ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)        ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)                 :: L,NPRO,LN,NPROSUM
       TYPE(THIS_TYPE),POINTER    :: THIS1
       CHARACTER(64)              :: STRING
-      REAL(8)                    :: U,PI,Y0
+      REAL(8)                    :: U
       INTEGER(4)                 :: THISTASK,NTASKS
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('U',U)
       THIS1=>FIRST
       DO 
@@ -3465,13 +3458,12 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)   ,INTENT(OUT):: G0(NG)
       REAL(8)   ,INTENT(OUT):: V0(NG)
       REAL(8)   ,PARAMETER  :: EPSILONGAMMA=1.D-7
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4
       REAL(8)               :: BGGAUSS,SMGAUSS
       INTEGER(4)            :: IG
       REAL(8)               :: GARR(NG)
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       SVAR1=-0.25D0*RCBG**2
       SVAR2=-0.25D0*RCSM**2
       SVAR3=4.D0*PI
@@ -3550,6 +3542,9 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: C0LL=Y0
       INTEGER(4),ALLOCATABLE:: NCL(:)
       REAL(8)               :: UOFI(NR,NB)   ! NODELESS WAVE FUNCTION
       REAL(8)               :: UOFISM(NR,NB) ! SMALL COMPONENT
@@ -3558,7 +3553,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)               :: PSRHO(NR),PAWRHO(NR)
       INTEGER(4)            :: LX
       INTEGER(4)            :: L,IB,LN,IR,LN1,LN2
-      REAL(8)               :: PI,Y0,C0LL
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)   ,ALLOCATABLE:: AUXARR(:,:)
@@ -3576,9 +3570,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      C0LL=Y0
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
       CALL PERIODICTABLE$GET(NINT(AEZ),'R(COV)',RCOV)
@@ -3983,6 +3974,9 @@ END IF
       REAL(8)   ,ALLOCATABLE:: PRO1(:,:)
       REAL(8)   ,ALLOCATABLE:: DH1(:,:)
       REAL(8)   ,ALLOCATABLE:: DO1(:,:)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: C0LL=Y0
       REAL(8)               :: E
       REAL(8)               :: EOFI1(NB)
       REAL(8)               :: EOFICOMP(2,NB-NC)
@@ -3999,12 +3993,8 @@ END IF
       INTEGER(4)            :: IVB
       INTEGER(4)            :: L,LN,LN1,LN2,IPRO,IPRO1,IPRO2,IB,IR
       INTEGER(4)            :: NN,NN0,NPRO
-      REAL(8)               :: PI,Y0,C0LL
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_PAWDENSITY')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      C0LL=Y0
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
       CALL RADIAL$R(GID,NR,R)
       EOFI1=EOFI
@@ -4250,6 +4240,7 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)   ,PARAMETER  :: GMAX=15.D0   ! EPW[RY]<GMAX**2 FOR PSI AND RHO
       REAL(8)   ,PARAMETER  :: G1=1.D-3     
       INTEGER(4),PARAMETER  :: NG=250
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: CHARGE  ! PSEUDO VALENCE CHARGE
       REAL(8)               :: EKIN    ! PSEUDO KINETIC ENERGY
       REAL(8)               :: EKING2  ! SUM F<PSPSI|G**4|PSPSI>
@@ -4262,13 +4253,11 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)               :: VAL
       REAL(8)               :: R(NR)
       INTEGER(4)            :: IRBOX ! FIRST GRID POINT BEYOND BOX RADIUS
-      REAL(8)               :: PI
       LOGICAL               :: TTEST=.FALSE.
       REAL(8)               :: CHARGE1,EKIN1
       INTEGER(4)            :: L,IB,IR
 !     **************************************************************************
                       CALL TRACE$PUSH('SETUP_PARMSMASSRENORMALIZATION')
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
         IF(R(IR).LT.RBOX) CYCLE
@@ -4434,16 +4423,15 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)   ,ALLOCATABLE :: R(:)
       REAL(8)   ,ALLOCATABLE :: E(:)
       REAL(8)   ,ALLOCATABLE :: U(:,:)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)             :: NR
       INTEGER(4)             :: GID
       INTEGER(4)             :: L
       INTEGER(4)             :: LN,LN1,LN2
       LOGICAL(4),PARAMETER   :: TFORCESTOP=.FALSE.
       REAL(8)                :: SVAR
-      REAL(8)                :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
@@ -4469,6 +4457,8 @@ PRINT*,'=================== L=',L,' ================================='
       USE SETUP_MODULE
       IMPLICIT NONE
       INTEGER(4),PARAMETER   :: NBX=10
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: R(:)
@@ -4494,10 +4484,7 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)                :: RNS
       REAL(8)                :: SVAR
       REAL(8)                :: RBOX
-      REAL(8)                :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
@@ -4630,6 +4617,8 @@ PRINT*,'=================== L=',L,' ================================='
 !     **************************************************************************
       USE SETUP_MODULE
       IMPLICIT NONE
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: PROPRO(:,:)    !<P|P>
@@ -4646,10 +4635,7 @@ PRINT*,'=================== L=',L,' ================================='
       INTEGER(4)             :: LN,LN1,LN2
       LOGICAL(4),PARAMETER   :: TFORCESTOP=.FALSE.
       REAL(8)                :: SVAR
-      REAL(8)                :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       GID=THIS%GID
       CALL RADIAL$GETI4(GID,'NR',NR)
       ALLOCATE(R(NR))
@@ -4736,6 +4722,8 @@ PRINT*,'=================== L=',L,' ================================='
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)             :: NFIL
       INTEGER(4)             :: NC
       INTEGER(4)             :: NB
@@ -4760,7 +4748,6 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)   ,ALLOCATABLE :: DH(:,:)  !(LNX,LNX) HAMILTON-DIFFERENCE
       REAL(8)   ,ALLOCATABLE :: DO(:,:)  !(LNX,LNX) OVERLAP DIFFERENCE
       REAL(8)                :: VAL
-      REAL(8)                :: PI,Y0
       REAL(8)                :: RCOV
       REAL(8)                :: DPHASE
       INTEGER(4)             :: NPRO
@@ -4768,8 +4755,6 @@ PRINT*,'=================== L=',L,' ================================='
       CHARACTER(64)          :: STRING
       LOGICAL(4),PARAMETER   :: TWRITE=.FALSE.
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       NC=THIS%ATOM%NC
       NB=THIS%ATOM%NB
       EMIN=MIN(MINVAL(THIS%ATOM%EOFI(NC+1:NB))-0.2D0,-1.D0)
@@ -5038,18 +5023,17 @@ PRINT*,'=================== L=',L,' ================================='
       REAL(8)     ,INTENT(IN) :: PSPOT(NR)
       REAL(8)     ,INTENT(IN) :: RCSM
       REAL(8)     ,INTENT(OUT):: VADD(NR)
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                 :: R(NR)
       REAL(8)                 :: AUX(NR),AUX1(NR),SVAR
       REAL(8)                 :: POT(NR),POTXC(NR),POTH(NR)
-      REAL(8)                 :: PI,Y0
       REAL(8)                 :: QLM
       REAL(8)                 :: ALPHA,CL
       REAL(8)                 :: GRHO(NR)
       INTEGER(4)              :: IR
       REAL(8)                 :: RH,GRHO2,VXC,VGXC,EXC,DUMMY1,DUMMY2,DUMMY3
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -5250,8 +5234,9 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)   ,PARAMETER      :: TOL=1.D-11
       REAL(8)   ,PARAMETER      :: CMIN=1.D-8
       REAL(8)   ,PARAMETER      :: RBNDX=6.D0
+      REAL(8)   ,PARAMETER      :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER      :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                   :: E
-      REAL(8)                   :: PI,Y0
       REAL(8)                   :: DREL(NR),G(NR),POT(NR),PHI(NR)
       REAL(8)                   :: C(NR)
       REAL(8)                   :: R(NR)
@@ -5267,8 +5252,6 @@ PRINT*,'PSEUDO+AUGMENTATION CHARGE ',SVAR*Y0*4.D0*PI,' (SHOULD BE ZERO)'
       REAL(8)                   :: RBND2
 !     **************************************************************************
                                 CALL TRACE$PUSH('ATOMIC_MAKEPSPHI_HBS')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       DO LN=1,LNX
         L=LOX(LN)
@@ -5468,10 +5451,10 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
       INTEGER(4),PARAMETER      :: NX=1000
       LOGICAL(4),PARAMETER      :: TDIFFERENTIABLELAPLACIAN=.FALSE.
       REAL(8)   ,PARAMETER      :: XMAX=30.D0
+      REAL(8)   ,PARAMETER      :: PI=4.D0*ATAN(1.D0)
       REAL(8)                   :: R(NR)
       INTEGER(4)                :: IR,I,J,ITER
       REAL(8)                   :: TOL=1.D-12
-      REAL(8)                   :: PI
       REAL(8)                   :: VAL
       REAL(8)                   :: X(NX)
       REAL(8)                   :: JL(NX),DJLDR(NX),PHASE(NX)
@@ -5492,7 +5475,6 @@ PRINT*,'L ',L,' E=',E,'PHIPHASE AFTER ADJUSTMENT= ',PHIPHASE
       INTEGER(4)                :: IRMATCH
 !     **************************************************************************
 !CALL SETUP_WRITEPHI('TESTCONSTRUCTPSPHI1',GID,NR,NB,PSPHI)
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$NEW('SHLOG',GIDX)
       XDEX=1.D-5
       X1=XMAX/XDEX/REAL(NX)
@@ -6277,6 +6259,7 @@ PRINT*,'KI ',KI
       INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
       REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
       LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
       INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES
       INTEGER(4)            :: LCX ! HIGHEST ANGULAR MOMENTUM OF CORE STATES
@@ -6289,10 +6272,8 @@ PRINT*,'KI ',KI
       INTEGER(4)            :: LMCA
       INTEGER(4)            :: LM1,LC,LRHO,IMC,LMC,LMRHOA,IMRHO,LMRHO
       INTEGER(4)            :: LN1,L1,IC,LN2,L2
-      REAL(8)               :: PI
       REAL(8)               :: CNORM
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       LX=MAXVAL(LOX)
       LMX=(LX+1)**2
       LCX=MAXVAL(LOFC)
@@ -6390,6 +6371,7 @@ PRINT*,'KI ',KI
       INTEGER(4),INTENT(IN) :: LOFC(NC)      ! ANGULAR MOMENTA OF CORE STATES
       REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
       INTEGER(4),INTENT(IN) :: LRHOX         ! X(ANGULAR MOMENMTUM OF THE DENISTY)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,ALLOCATABLE:: RHO(:)
       REAL(8)   ,ALLOCATABLE:: POT(:,:)
       INTEGER(4),SAVE       :: COUNTER=0
@@ -6398,10 +6380,8 @@ PRINT*,'KI ',KI
       REAL(8)               :: R(NR)
       REAL(8)               :: RHO1(NR)
       CHARACTER(128)        :: STRING
-      REAL(8)               :: PI
       REAL(8)               :: VAL
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       COUNTER=COUNTER+1
       CALL RADIAL$R(GID,NR,R)
       ALLOCATE(POT(NR,LRHOX+1))
@@ -6479,6 +6459,8 @@ STOP
       LOGICAL(4),PARAMETER  :: TCUTTAIL=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.TRUE.
       LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TSEQUENTIALAUGMENT=.FALSE.
       REAL(8)               :: R(NR)
       REAL(8)               :: DREL(NR)
@@ -6522,11 +6504,8 @@ STOP
       INTEGER(4)            :: LX ! X(ANGULAR MOMENTUM)
       INTEGER(4),ALLOCATABLE :: NCL(:)
       INTEGER(4),ALLOCATABLE :: NPROL(:)
-      REAL(8)               :: PI,Y0
 !     **************************************************************************
                                      CALL TRACE$PUSH('SETUP_OUTEROLDPROWRAPPER')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
       CALL RADIAL$R(GID,NR,R)
@@ -7588,6 +7567,8 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       REAL(8)   ,ALLOCATABLE :: EOFPHI(:)
       LOGICAL(4),PARAMETER   :: TTEST=.TRUE.
       LOGICAL(4),PARAMETER   :: TWRITE=.TRUE.
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER   :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)             :: NBL
       INTEGER(4)             :: NCL  
       INTEGER(4)             :: NPHI !#(PARTIAL WAVES FOR THIS L)
@@ -7596,11 +7577,8 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       CHARACTER(16)          :: RELTYPE
       REAL(8)                :: RCL  !PSEUDIZATION RADIUS FOR THIS L
       REAL(8)                :: ENU  !EXPANSION ENERGY FOR TAYLOR EXPANSION
-      REAL(8)                :: PI,Y0
 !     **************************************************************************
                                      CALL TRACE$PUSH('SETUP_OUTERNEWPROWRAPPER')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       G_QNPHI=0.D0
       G_AEPHI=0.D0
       G_PSPHI=0.D0
@@ -7876,6 +7854,8 @@ END IF
       INTEGER(4),PARAMETER  :: IDIR=1
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
       LOGICAL(4),PARAMETER  :: TPRODOT=.FALSE. ! EXPERIMENTAL OPTION
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TOLD
       LOGICAL(4)            :: TREL     ! RELATIVISTIC EFFECTS INCLUDED
       LOGICAL(4)            :: TZORA    ! ZEROTH-ORDER RELATIVISTIC EFFECTS
@@ -7901,7 +7881,6 @@ END IF
       REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)               :: G(NR),GSM(NR)
       REAL(8)               :: MAT(NJ,NJ),MATINV(NJ,NJ)
-      REAL(8)               :: PI,Y0
       REAL(8)               :: A(NC,NJ),B(NC,NJ)
       REAL(8)               :: SVAR,SVAR1,SVAR2
       REAL(8)               :: RNS
@@ -7914,8 +7893,6 @@ END IF
       REAL(8)               :: FACTOR
 !     **************************************************************************
                                        CALL TRACE$PUSH('SETUP_NEWPRO')
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       ECORE=ECOREIN
 !     == KAPPA=-L-1 FOR L*S.GE.0; KAPPA=L FOR L*S<0; KAPPA=-1 FOR SO=0 =========
       KAPPA=REAL( -1+SO*(-L+(SO-1)/2) ,KIND=8)
@@ -8712,6 +8689,8 @@ IPHISCALE=1
       LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
 !     == A LARGER POTPOW MAKES THE POTENTIAL FLATTER WITH A MORE ABRUPT UPTURN
       REAL(8)   ,PARAMETER  :: POTPOW=3.D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)            :: IRC
       REAL(8)               :: R(NR)
       REAL(8)               :: PHIIN(NR),TPHIIN(NR)
@@ -8732,12 +8711,9 @@ IPHISCALE=1
       REAL(8)               :: DERTPHI,DERTF,DERTFDOT,DERTFDDOT,DERTFDDDOT
       REAL(8)               :: C1,C2,C3,C4,DET
       INTEGER(4)            :: IR
-      REAL(8)               :: PI,Y0
       REAL(8)               :: SVAR
       CHARACTER(16) :: LSTRING
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
         IF(R(IR).GT.RC) EXIT
@@ -9048,10 +9024,11 @@ IPHISCALE=1
       REAL(8)   ,INTENT(IN) :: DOVER(NJ,NJ)
       REAL(8)   ,INTENT(IN) :: DTKIN(NJ,NJ)
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: R(NR)
       REAL(8)               :: G(NR)
       REAL(8)               :: PHI(NR)
-      REAL(8)               :: PI,Y0
       REAL(8)               :: AUX(NR),AUX1(NR),SVAR,SVAR1,SVAR2,SVAR3
       REAL(8)               :: MAT(NJ,NJ)
       REAL(8)               :: E
@@ -9059,8 +9036,6 @@ IPHISCALE=1
       CHARACTER(16)         :: LSTRING
       INTEGER(4)            :: JP,I,J
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       NFIL=11
       WRITE(LSTRING,*)L
@@ -9196,6 +9171,8 @@ IPHISCALE=1
       REAL(8)   ,INTENT(IN) :: PRO(NR,NPRO)
       REAL(8)   ,INTENT(IN) :: DTKIN(NPRO,NPRO)
       REAL(8)   ,INTENT(IN) :: DOVER(NPRO,NPRO)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: DATH(NPRO,NPRO)
       REAL(8)               :: R(NR)
       REAL(8)               :: AUX(NR),AUX1(NR)
@@ -9205,15 +9182,12 @@ IPHISCALE=1
       REAL(8)               :: SVAR
       REAL(8)               :: ROUT
       REAL(8)               :: E,EIN
-      REAL(8)               :: PI,Y0
       CHARACTER(16)         :: LSTRING
       REAL(8)  ,PARAMETER   :: RBNDOUT=5.D0
       INTEGER(4)            :: I,J,IND
       INTEGER(4)            :: NN
       LOGICAL(4)            :: TFAIL
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       WRITE(LSTRING,*)L
       LSTRING=ADJUSTL(LSTRING)
@@ -9365,15 +9339,14 @@ PRINT*,'EOFPHI ',EOFPHI
       REAL(8)   ,INTENT(IN) :: DO(NPRO,NPRO)
       REAL(8)   ,INTENT(IN) :: PSPHI(NR)
       REAL(8)   ,INTENT(OUT):: DEV(NR)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: PROJ(NPRO)
       REAL(8)               :: AUX(NR)
       REAL(8)               :: R(NR)
       INTEGER(4)            :: I,J
-      REAL(8)               :: PI,Y0
       REAL(8)               :: SVAR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -9434,6 +9407,8 @@ PRINT*,'EOFPHI ',EOFPHI
       REAL(8)   ,INTENT(IN) :: AEPOT(NR)
       REAL(8)   ,INTENT(IN) :: PSPOT(NR)
       REAL(8)   ,INTENT(IN) :: UCORE(NR)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: R(NR)
       REAL(8)               :: G(NR)
       REAL(8)               :: DREL(NR)
@@ -9447,14 +9422,11 @@ PRINT*,'EOFPHI ',EOFPHI
       INTEGER(4),PARAMETER  :: SO=0
       INTEGER(4),PARAMETER  :: IDIR=1
       INTEGER(4),PARAMETER  :: NFIL=11
-      REAL(8)               :: PI,Y0
       REAL(8)               :: SVAR
       REAL(8)               :: TOL
       CHARACTER(16)         :: LSTRING
       CHARACTER(128)        :: FILENAME
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
       CALL RADIAL$R(GID,NR,R)
       WRITE(LSTRING,*)L

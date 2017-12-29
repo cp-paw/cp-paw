@@ -135,9 +135,9 @@
         REAL(8),INTENT(OUT) :: F
         REAL(8),INTENT(OUT) :: DFDR
         REAL(8),INTENT(OUT) :: INTF
-        REAL(8)             :: PI,SVAR
+        REAL(8),PARAMETER   :: PI=4.D0*ATAN(1.D0)
+        REAL(8)             :: SVAR
 !       ****************************************************************
-        PI=4.D0*ATAN(1.D0)
         F=EXP(-R**2)
         DFDR=-2.D0*R*F
         CALL SPECIALFUNCTION$ERF(R,SVAR)
@@ -1337,13 +1337,12 @@ END IF
       INTEGER(4),INTENT(IN) :: L       ! MAIN ANGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: RHO(NR) ! CHARGE DENSITY
       REAL(8)   ,INTENT(OUT):: V(NR)   ! ELECTROSTATIC POTENTIAL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: AUX1(NR)
       REAL(8)               :: AUX2(NR)
       REAL(8)               :: R(NR)
-      REAL(8)               :: PI
       REAL(8)               :: FAC
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       AUX1(:)=RHO(:)*R(:)**(L+2) 
       CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
@@ -1381,13 +1380,12 @@ END IF
       INTEGER(4),INTENT(IN) :: NR       ! #(RADIAL GRID POINTS)
       REAL(8)   ,INTENT(IN) :: Z        ! ATOMIC NUMBER
       REAL(8)   ,INTENT(OUT):: POT(NR)  ! POTENTIAL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: RNUC     ! NUCLEAR RADIUS
       REAL(8)               :: R(NR)    ! RADIAL GRID
-      REAL(8)               :: PI,Y0
       INTEGER(4)            :: IR
 !     ***********************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL PERIODICTABLE$GET(Z,'RNUC',RNUC)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
@@ -2686,6 +2684,7 @@ END MODULE LOGRADIAL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TEST_BESSEL()
       IMPLICIT NONE
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)           :: L=0
       INTEGER(4)           :: GID
       INTEGER(4),PARAMETER :: NR=250
@@ -2702,13 +2701,11 @@ END MODULE LOGRADIAL_MODULE
       REAL(8)              :: FOFG_OLD(NG)
       REAL(8)              :: G(NG)
       REAL(8)              :: SVAR
-      REAL(8)              :: PI
       INTEGER(4)           :: I
       INTEGER(4)           :: NFIL=20
 !      CHARACTER(16),PARAMETER :: TYPE='EXPONENTIAL'
       CHARACTER(16),PARAMETER :: TYPE='GAUSSIAN'
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !      CALL RADIAL_BESSELTRANSF_PLOTM()
 !
 !     ==========================================================================
@@ -3031,12 +3028,13 @@ STOP
       INTEGER(4),PARAMETER  :: NEXPAND=2
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: PHI(NP)
       COMPLEX(8)            :: POFR(NP*NEXPAND)
       COMPLEX(8)            :: POFG(NP*NEXPAND)
       REAL(8)               :: XEXP,RI
       REAL(8)               :: T
-      REAL(8)               :: PI,TWOPI
+      REAL(8)               :: TWOPI
       INTEGER(4)            :: I
       INTEGER(4)            :: NPH
       INTEGER(4)            :: NP2
@@ -3046,7 +3044,6 @@ STOP
       REAL(8)               :: LOGR1 ! LOG(R1)
       COMPLEX(8)            :: CVAL,CSVAR1,CSVAR2
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
       NP2=NEXPAND*NP
       DT=TWOPI/(DEX*REAL(NP2,KIND=8))
@@ -3166,7 +3163,7 @@ PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       COMPLEX(8),INTENT(OUT):: RES
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4),PARAMETER  :: NX=10
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: P 
       REAL(8)               :: COSPPIHALF,SINPPIHALF
       COMPLEX(8)            :: Z
@@ -3184,7 +3181,6 @@ PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       REAL(8)   ,PARAMETER  :: DX=(XMAX-XMIN)/(NPREAL-1.D0) 
       REAL(8)               :: X
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       P=L-M
       IF(P.LT.0) THEN
         CALL ERROR$MSG('ILLEGAL VALUE')
@@ -3384,14 +3380,13 @@ PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: F(N)
       COMPLEX(8),INTENT(OUT):: G(N)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       COMPLEX(8)            :: EI(N)
       COMPLEX(8)            :: FEI(N)
-      REAL(8)               :: PI
       REAL(8)               :: DG
       COMPLEX(8)            :: CSVAR1,CSVAR2
       INTEGER(4)            :: I
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       DG=2.D0*PI/REAL(N,KIND=8)
       CSVAR1=1.D0
       CSVAR2=CMPLX(COS(DG),SIN(DG),KIND=8)
@@ -3464,8 +3459,8 @@ CONTAINS
       REAL(8)   ,INTENT(OUT):: G(NP)
       COMPLEX(8),INTENT(IN) :: WW(NP)
       COMPLEX(8),INTENT(IN) :: TA(NP)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       COMPLEX(8)            :: XA(NP)
-      REAL(8)               :: PI
       INTEGER(4)            :: NH,NHP
       REAL(8)               :: DT,T,AA,BB,CM
       REAL(8)               :: RIX,XEXPX
@@ -3473,7 +3468,6 @@ CONTAINS
 !     ******************************************************************
       NH=NP/2
       NHP=NH+1
-      PI=4.D0*ATAN(1.D0)
       RIX=R1**(L+1.5)
       XEXPX=EXP((L+1.5)*DEX) 
       DO I=1,NP 
@@ -3600,16 +3594,15 @@ CONTAINS
       COMPLEX(8),INTENT(IN) :: WW(NP)
       COMPLEX(8),INTENT(IN) :: TA(NP)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       COMPLEX(8)            :: XA(NP)
       COMPLEX(8)            :: Y1
-      REAL(8)                :: PI
       REAL(8)                :: RIX,XEXPX
       INTEGER(4)             :: NH,NHP
       INTEGER(4)             :: IJ,IJK
       INTEGER(4)             :: I,JJ
       REAL(8)                :: AA,BB,T,DT,CM
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       NH=NP/2
       NHP=NH+1
 
@@ -3709,7 +3702,7 @@ CONTAINS
       REAL(8)   ,INTENT(IN)  :: H
       INTEGER(4),INTENT(IN)  :: NP
       COMPLEX(8),INTENT(OUT) :: TA(NP)
-      REAL(8)                :: PI
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NH    ! NP/2
       REAL(8)                :: DT,AA,T,S,XX,CC,PHI,RR
       INTEGER(4)             :: I,NA  ! DO LOOP INDICES
@@ -3719,7 +3712,6 @@ CONTAINS
 !     ******************************************************************
       RHOMIN=LOG(R1)
       KAPMIN=LOG(G1)
-      PI=4.D0*ATAN(1.D0) 
       NH=NP/2
       DT=2.D0*PI/(H*DBLE(NP))
       Y1=1.D0 
@@ -3763,14 +3755,13 @@ CONTAINS
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NP
       COMPLEX(8),INTENT(OUT) :: WW(NP)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NH
-      REAL(8)                :: PI
       REAL(8)                :: AN
       REAL(8)                :: XX
       INTEGER(4)             :: I
 !     ******************************************************************
       NH=NP/2
-      PI=4.D0*ATAN(1.D0)
       AN=DBLE(NP)
       DO I=1,NH 
         XX=(I-1)*PI/AN 

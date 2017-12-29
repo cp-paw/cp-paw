@@ -1870,9 +1870,9 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
       USE CLASSICAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFIL
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       REAL(8)                :: PRTONM
       REAL(8)                :: ANGSTROM
-      REAL(8)                :: PI
       INTEGER(4)             :: IAT,I,IB,IA,IPOT
       INTEGER(4)             :: IAT1,IAT2,IAT3
       REAL(8)                :: D,A
@@ -1938,7 +1938,6 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
 !     ==========================================================================
       WRITE(NFIL,FMT='(''===  ANGLES IN DEGREE  ===; NANGLE='',I10)')MD%NANGLE
       IF(LOD.GE.3) THEN
-         PI=4.D0*ATAN(1.D0)
          DO IA=1,MD%NANGLE
             IAT1=MD%ANGLE(IA)%IAT1
             IAT2=MD%ANGLE(IA)%IAT2
@@ -2305,13 +2304,14 @@ IF(TRIM(ADJUSTL(MD%FF)).EQ.'AMBER') THEN
       TYPE(NONBOND_TYPE),INTENT(IN)   :: NBLIST(NNB)
       INTEGER(4)        ,INTENT(IN)   :: NPOT
       TYPE(POT_TYPE)    ,INTENT(IN)   :: POT(NPOT)
+      REAL(8)           ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       LOGICAL(4)                      :: TEXCL
       INTEGER(4)                      :: IAT1,IAT2,IPOT,IIB
       INTEGER(4)                      :: ITYPE1,ITYPE2
       REAL(8)                         :: Q1,Q2
       REAL(8)                         :: D1,D2,D3
       REAL(8)                         :: X,FAC,SVAR
-      REAL(8)                         :: RC,G,DGDX,PI
+      REAL(8)                         :: RC,G,DGDX
       REAL(8)                         :: DE2,DEDX
       INTEGER(4)                      :: THISTASK,NTASKS,ICOUNT
       REAL(8)                         :: T1,T2,T3
@@ -2319,7 +2319,6 @@ LOGICAL(4) :: TONEFOUR
 !     **************************************************************************
                                CALL TRACE$PUSH('CLASSICAL_ECOULOMB')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      PI=4.D0*ATAN(1.D0)
       ICOUNT=0   ! USED TO DISTRIBUTE TASKS
       DO IIB=1,NNB
 !       == DISTRIBUTE OVER TASKS
@@ -3256,12 +3255,11 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)    ,PARAMETER   :: NX=1000
       REAL(8)       ,PARAMETER   :: X1=0.D0
       REAL(8)       ,PARAMETER   :: X2=5.D0
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)                 :: I
       REAL(8)                    :: X
-      REAL(8)                    :: PI
       REAL(8)                    :: ERFX
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
       POT%ID='COULOMB WITH 1/R'
       POT%NX=NX
       POT%X1=X1
@@ -3308,12 +3306,11 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)    ,PARAMETER   :: NX=1000
       REAL(8)       ,PARAMETER   :: X1=0.D0
       REAL(8)       ,PARAMETER   :: X2=5.D0
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)                 :: I
       REAL(8)                    :: X
-      REAL(8)                    :: PI
       REAL(8)                    :: ERFX
 !     ******************************************************************
-      PI=4.D0*DATAN(1.D0)
       POT%ID='COULOMB WITH GAUSS CUTOFF'
       POT%NX=NX
       POT%X1=X1
@@ -3391,13 +3388,12 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)    ,PARAMETER   :: NX=101
       REAL(8)       ,PARAMETER   :: X1=-1.D0
       REAL(8)       ,PARAMETER   :: X2=+1.D0
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)                 :: I,N
       REAL(8)                    :: C(0:4)
       REAL(8)                    :: SVAR1,SVAR2,THETA,THETAN,A,B
-      REAL(8)                    :: PI
       REAL(8)                    :: X
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     ==  DETERMINE FOURIER COMPONENTS                                        ==
@@ -3557,11 +3553,11 @@ LOGICAL(4) :: TONEFOUR
       INTEGER(4)    ,PARAMETER   :: NX=20
       REAL(8)       ,PARAMETER   :: X1=-1.D0
       REAL(8)       ,PARAMETER   :: X2=1.D0
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)                 :: I
       REAL(8)                    :: X0,X,FAC
-      REAL(8)                    :: C0,C1,C2,PI
+      REAL(8)                    :: C0,C1,C2
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       POT%ID=ID
       POT%NX=NX
       POT%X1=X1
@@ -4312,12 +4308,12 @@ END MODULE UFFTABLE_MODULE
       REAL(8)       ,INTENT(OUT) :: THETA ! EQUILIBRIUM ANGLE
       REAL(8)       ,INTENT(OUT) :: K     ! FORCE CONSTANT
       LOGICAL(4)    ,INTENT(OUT) :: TCHK
-      REAL(8)                    :: PI,KCALBYMOL
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      REAL(8)                    :: KCALBYMOL
       REAL(8)                    :: ZI,ZK
       REAL(8)                    :: RIJ,RJK,RIK,BETA
       LOGICAL(4)                 :: TCHK1
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  SCAN SPECIAL RULES                                          ==
@@ -4391,12 +4387,11 @@ END MODULE UFFTABLE_MODULE
       REAL(8)     ,INTENT(OUT):: THETA   ! EQUILIBRIUM ANGLE
       REAL(8)     ,INTENT(OUT):: K       ! FORCE CONSTANT
       LOGICAL(4)  ,INTENT(OUT):: TCHK    ! SPECIAL RULE APPLIED 
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)  ,PARAMETER  :: NRULE=17 ! # OF SPECIAL RULES
       TYPE(ANGLERULE_TYPE)    :: RULE(NRULE)
       INTEGER(4)              :: I
-      REAL(8)                 :: PI
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       RULE(1)=ANGLERULE_TYPE('C_R  ','CPR  ','X    ', 90.D0,100.D0)
       RULE(2)=ANGLERULE_TYPE('CPR  ','C_R  ','X    ',180.D0,100.D0)
       RULE(3)=ANGLERULE_TYPE('C_R  ','CPR  ','C_R  ', 72.D0,  0.D0)
@@ -4477,13 +4472,13 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)    ,INTENT(OUT):: NJK
       REAL(8)       ,INTENT(OUT):: VBARRIER
       LOGICAL(4)    ,INTENT(OUT):: TCHK
+      REAL(8)       ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       LOGICAL(4)                :: TPR
       INTEGER(4)    ,PARAMETER  :: NDATA=20 ! # OF DATA ENTRIES
       CHARACTER(3)              :: CHEL(NDATA)
       REAL(8)                   :: USP3(NDATA),USP2(5)
       INTEGER(4)                :: IPER(NDATA),IGRP(NDATA)
       INTEGER(4)                :: NTORSION
-      REAL(8)                   :: PI
       REAL(8)                   :: SVAR1,SVAR2
       INTEGER(4)                :: IGRP2,IGRP3,IPER2,IPER3
       INTEGER(4)                :: I
@@ -4491,7 +4486,6 @@ END MODULE UFFTABLE_MODULE
       INTEGER(4)                :: IHYB2,IHYB3
       REAL(8)                   :: KCALBYMOL,SVAR11,SVAR12
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
       TPR=.FALSE.
 !
@@ -4739,10 +4733,9 @@ END MODULE UFFTABLE_MODULE
       REAL(8)       ,INTENT(OUT) :: GAMMA0
       REAL(8)       ,INTENT(OUT) :: K
       LOGICAL(4)    ,INTENT(OUT) :: TCHK
+      REAL(8)       ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       REAL(8)                    :: KCALBYMOL
-      REAL(8)                    :: PI
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       TCHK=.TRUE.
 !
 !     ==================================================================
@@ -4989,15 +4982,14 @@ END MODULE TIP4P_MODULE
 !     **************************************************************************
       USE TIP4P_MODULE, ONLY : ROH,RHH,RLJ,DLJ,WO,WH
       IMPLICIT NONE 
+      REAL(8),PARAMETER :: PI=4.D0*ATAN(1.D0)
       REAL(8)        :: ANGSTROM
       REAL(8)        :: KCALBYMOL
       REAL(8)        :: PHIHOH
       REAL(8)        :: ROM
-      REAL(8)        :: PI
       REAL(8)        :: SVAR
       REAL(8)        :: C12,C6
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
       CALL CONSTANTS$GET('KCAL/MOL',KCALBYMOL)
 !
@@ -6122,6 +6114,7 @@ PRINT*,"FLAG: NTORSION=",NTORSION
       CHARACTER(*),INTENT(IN)  :: IDENTMOL
       REAL(8)     ,INTENT(IN)  :: RSPHERE
       REAL(8)     ,INTENT(IN)  :: DENSITY
+      REAL(8)     ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       LOGICAL(4)               :: TCHK
       REAL(8)                  :: RBAS(3,3)
       REAL(8)                  :: RBASINV(3,3)
@@ -6146,14 +6139,13 @@ PRINT*,"FLAG: NTORSION=",NTORSION
       REAL(8)                  :: T1,T2,T3
       REAL(8)                  :: X,Y,Z,X1,Y1,Z1
       REAL(8)                  :: SVAR
-      REAL(8)                  :: PI,TWOPI
+      REAL(8)                  :: TWOPI
       INTEGER(4)               :: NMOL
       INTEGER(4)               :: NATS,NBONDS
       INTEGER(4)               :: IBS,IMOL,IAT,IATS,IB,I
       INTEGER(4)               :: NATEXCL,NBONDEXCL
       REAL(8)                  :: ALAT,DET
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
 !
 !     ==================================================================
@@ -6685,10 +6677,10 @@ PRINT*,"FLAG: NTORSION=",NTORSION
       REAL(8)       ,INTENT(IN) :: STRENGTH
       REAL(8)       ,INTENT(IN) :: PHI0
       TYPE(POT_TYPE),INTENT(OUT):: POT
-      REAL(8)                   :: XI,PI,PHI,DPHIDX
+      REAL(8)       ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)                   :: XI,PHI,DPHIDX
       INTEGER(4)                :: IX
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       POT%NX=1000
       ALLOCATE(POT%VAL(POT%NX))
       ALLOCATE(POT%DER(POT%NX))

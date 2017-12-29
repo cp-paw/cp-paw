@@ -8,6 +8,8 @@
 !     **  REMAINING DIFFERENCE MAY BE DUE TIO THE FINITE NUCLEUS              **
 !     **************************************************************************
       IMPLICIT NONE
+      REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)    ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                :: AEZ     ! ATOMIC NUMBER
       INTEGER(4)             :: NB      ! #(STATES)
       INTEGER(4),ALLOCATABLE :: LOFI(:) ! ANGULAR MOMENTUM
@@ -33,14 +35,10 @@
       REAL(8)                :: JPHALF ! J+1/2
       REAL(8)                :: C      ! SPEED OF LIGHT
       REAL(8)                :: ALPHA  ! FINE STRUCTURE CONSTANT
-      REAL(8)                :: PI     ! PI
-      REAL(8)                :: Y0     ! Y0 SPHERICAL HARMONICS FOR L=0
       LOGICAL(4)             :: TFINITENUCLEUS
 !     **************************************************************************
       CALL CONSTANTS('C',C)
       ALPHA=1.D0/C
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==========================================================================
 !     == THE FOLLOWING PARAMETERS MUST BE SET BY HAND                         ==
@@ -368,6 +366,8 @@ END MODULE RADIALPAW_MODULE
       REAL(8)         ,INTENT(IN) :: F(NR)
       REAL(8)         ,INTENT(OUT):: VF(NR)
       REAL(8)         ,INTENT(OUT):: OF(NR)
+      REAL(8)         ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)         ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)         ,ALLOCATABLE:: PROJ(:)
       REAL(8)         ,ALLOCATABLE:: CPRO(:)
       REAL(8)         ,ALLOCATABLE:: DPRO(:)
@@ -377,11 +377,8 @@ END MODULE RADIALPAW_MODULE
       INTEGER(4)                  :: IPRO,IPRO1,IPRO2
       REAL(8)                     :: AUX(NR)
       REAL(8)                     :: R(NR)
-      REAL(8)                     :: PI,Y0
 !     **************************************************************************
       LNX=VPAW%LNX
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -598,13 +595,13 @@ END MODULE RADIALFOCK_MODULE
       USE RADIALFOCK_MODULE
       IMPLICIT NONE
       INTEGER(4)      ,INTENT(IN) :: LXNEW
+      REAL(8)         ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)                  :: LF,LB,LRHO
       INTEGER(4)                  :: LMF,LMB,LMRHO
       INTEGER(4)                  :: IMB,IMRHO
       INTEGER(4)                  :: LX
       REAL(8)                     :: SVAR
       REAL(8)                     :: CG
-      REAL(8)                     :: PI
 !     **************************************************************************
       IF(LXNEW.LE.LXCOEFF) RETURN
 !
@@ -612,7 +609,6 @@ END MODULE RADIALFOCK_MODULE
       LXCOEFF=LXNEW
       LX=LXNEW
       ALLOCATE(COEFF(LX+1,2*LX+1,LX+1))
-      PI=4.D0*ATAN(1.D0)
       COEFF(:,:,:)=0.D0
       DO LF=0,LX
         DO LB=0,LX
@@ -653,7 +649,8 @@ END MODULE RADIALFOCK_MODULE
       INTEGER(4)      ,INTENT(IN) :: L
       REAL(8)         ,INTENT(IN) :: F(NR)
       REAL(8)         ,INTENT(OUT):: G(NR)
-      REAL(8)                     :: PI,Y0
+      REAL(8)         ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)         ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                     :: R(NR)
       REAL(8)                     :: SVAR
       INTEGER(4)                  :: LXB
@@ -665,8 +662,6 @@ END MODULE RADIALFOCK_MODULE
       G=0.D0
       IF(.NOT.VFOCK%TON.OR.VFOCK%SCALE.EQ.0.D0) RETURN
 !
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       LXB=MAXVAL(VFOCK%L)
       LX=MAX(LXB,L,INT((VFOCK%LRHOX+1)/2))
       CALL RADIALFOCK_UPDATECOEFF(LX)
@@ -725,9 +720,9 @@ USE PERIODICTABLE_MODULE
       REAL(8)    ,INTENT(OUT)    :: ETOT      ! TOTAL ENERGY
       REAL(8)    ,INTENT(INOUT)  :: POT(NR)   ! POTENTIAL
       TYPE(VFOCK_TYPE),INTENT(INOUT)  :: VFOCK  ! FOCK TERM
-      REAL(8)    ,INTENT(OUT)    :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
-      REAL(8)    ,INTENT(OUT)    :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
-      REAL(8)    ,INTENT(OUT)    :: SPHI(NR,NX) ! SMALL COMPONENT
+      REAL(8)   ,INTENT(OUT)     :: EOFI(NX)  ! ONE-PARTICLE ENERGIES
+      REAL(8)   ,INTENT(OUT)     :: PHI(NR,NX)! ONE-PARTICLE WAVE FUNCTIONS
+      REAL(8)   ,INTENT(OUT)     :: SPHI(NR,NX) ! SMALL COMPONENT
       REAL(8)   ,PARAMETER       :: TOL=1.D-3
       REAL(8)   ,PARAMETER       :: PRETOL=1.D-4
       REAL(8)   ,PARAMETER       :: XMAXTOL=1.D-8
@@ -735,6 +730,9 @@ USE PERIODICTABLE_MODULE
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
       LOGICAL(4),PARAMETER       :: TPR=.FALSE.
+      REAL(8)   ,PARAMETER       :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER       :: Y0=1.D0/SQRT(4.D0*PI) !SPH. HARM. L=0
+      REAL(8)   ,PARAMETER       :: C0LL=Y0               !GAUNT COEFF
       REAL(8)                    :: R(NR)
       REAL(8)                    :: RHO(NR)
       REAL(8)                    :: AUX(NR),AUX1(NR)   !AUXILIARY ARRAY
@@ -757,7 +755,6 @@ USE PERIODICTABLE_MODULE
 !      INTEGER(4)          :: LMAP(19)=(/0,0,1,0,1,0,2,1,0,2,1,0,3,2,1,0,3,2,1/)
       INTEGER(4),PARAMETER       :: ZCORES(6)=(/2,10,18,36,54,86/)
       REAL(8)                    :: FTOT
-      REAL(8)                    :: PI,Y0,C0LL
       INTEGER(4)                 :: NBROYDENMEM
       REAL(8)                    :: BROYDENSTEP
       INTEGER(4)                 :: LRHOX=4
@@ -844,9 +841,6 @@ USE PERIODICTABLE_MODULE
 !     ==========================================================================
       NBROYDENMEM=2
       BROYDENSTEP=5.D-1
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
-      C0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
       EOFI=0.D0
@@ -1723,9 +1717,9 @@ END IF
 !       ========================================================================
 !       == ESTIMATE PHASE SHIFT                                               ==
 !       ========================================================================
-!       == NODES WITH R<rminnode ARE NOT COUNTED, BECAUSE THERE IS NO  =========
+!       == NODES WITH R<RMINNODE ARE NOT COUNTED, BECAUSE THERE IS NO  =========
 !       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,rminnode,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -1806,7 +1800,7 @@ END IF
       VAL1=VAL1/SVAR
       VAL2=VAL2/SVAR
       PHI=PHI1*VAL2-PHI2*VAL1
-call trace$pop()
+CALL TRACE$POP()
 RETURN
 !
 !     ==========================================================================
@@ -1914,7 +1908,7 @@ RETURN
       INTEGER(4) ,PARAMETER      :: NITER=100
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
-      REAL(8)    ,PARAMETER      :: RMinnode=1.D0 ! MIN radius for node count
+      REAL(8)    ,PARAMETER      :: RMINNODE=1.D0 ! MIN RADIUS FOR NODE COUNT
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)                    :: R(NR)
@@ -1944,7 +1938,7 @@ RETURN
         CALL ERROR$R8VAL('RBOX',RBOX)
         CALL ERROR$R8VAL('R(NR)',R(NR))
         CALL ERROR$R8VAL('R(NR-2)',R(NR-2))
-        CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+        CALL ERROR$STOP('ATOMLIB$ORTHOBOUNDSTATE')
       END IF
       IRBOX=1
       DO IR=1,NR-3
@@ -1971,7 +1965,7 @@ RETURN
         IF(.NOT.(PHI(IRBOX+2).GT.0.OR.PHI(IRBOX+2).LE.0)) THEN
           CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
           CALL ERROR$I4VAL('L',L)
-          CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+          CALL ERROR$STOP('ATOMLIB$ORTHOBOUNDSTATE')
         END IF
 !
 !       ========================================================================
@@ -1980,15 +1974,15 @@ RETURN
 !       == NODES WITH R<RMINNODE ARE NOT COUNTED, BECAUSE THERE IS NO  =========
 !       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
-!print*,'e,logder',e,z0,npro
-!!$CALL ATOMLIB_WRITEPHI('test_phi',GID,NR,1,PHI)
+!PRINT*,'E,LOGDER',E,Z0,NPRO
+!!$CALL ATOMLIB_WRITEPHI('TEST_PHI',GID,NR,1,PHI)
 !!$CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,0,PRO,G,PHI)
-!!$print*,'e,logder',e,z0,npro
-!!$CALL ATOMLIB_WRITEPHI('test_phi0',GID,NR,1,PHI)
+!!$PRINT*,'E,LOGDER',E,Z0,NPRO
+!!$CALL ATOMLIB_WRITEPHI('TEST_PHI0',GID,NR,1,PHI)
 !!$CALL ATOMLIB_ORTHODER(GID,NR,L,E,PSPOT,1,PRO(:,1),G,PHI)
-!!$print*,'e,logder',e,z0,npro
-!!$CALL ATOMLIB_WRITEPHI('test_phi1',GID,NR,1,PHI)
-!!$stop 'forced'
+!!$PRINT*,'E,LOGDER',E,Z0,NPRO
+!!$CALL ATOMLIB_WRITEPHI('TEST_PHI1',GID,NR,1,PHI)
+!!$STOP 'FORCED'
         Z0=Z0-REAL(NN+1,KIND=8)
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
@@ -2023,7 +2017,7 @@ RETURN
         IF(.NOT.(PHI(IRBOX+2).GT.0.OR.PHI(IRBOX+2).LE.0)) THEN
           CALL ERROR$MSG('OVERFLOW AFTER OUTWARD INTEGRATION')
           CALL ERROR$I4VAL('L',L)
-          CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+          CALL ERROR$STOP('ATOMLIB$ORTHOBOUNDSTATE')
         END IF
 !
 !       ========================================================================
@@ -2049,7 +2043,7 @@ RETURN
       IF(ABS(DX).GT.TOL) THEN
         CALL ERROR$MSG('BISECTION LOOP NOT CONVERGED')
         CALL ERROR$MSG('BOUND STATE NOT FOUND')
-        CALL ERROR$STOP('ATOMLIB$orthoBOUNDSTATE')
+        CALL ERROR$STOP('ATOMLIB$ORTHOBOUNDSTATE')
       END IF
 !
 !     ==========================================================================
@@ -2148,18 +2142,18 @@ RETURN
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
       INTEGER(4),INTENT(IN) :: NR
-      REAL(8),   INTENT(IN) :: AEZ
-      REAL(8),   INTENT(IN) :: RAD
-      REAL(8),   INTENT(IN) :: RHO(NR)
-      REAL(8),   INTENT(OUT):: POT(NR)
-      REAL(8),   INTENT(OUT):: EH
-      REAL(8),   INTENT(OUT):: EXC
-      REAL(8),   PARAMETER  :: RHOMIN=1.D-2
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(IN) :: RHO(NR)
+      REAL(8)   ,INTENT(OUT):: POT(NR)
+      REAL(8)   ,INTENT(OUT):: EH
+      REAL(8)   ,INTENT(OUT):: EXC
+      REAL(8)   ,PARAMETER  :: RHOMIN=1.D-2
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: POTH(NR)
       REAL(8)               :: POTXC(NR)
-      REAL(8)               :: PI
       REAL(8)               :: FOURPI
-      REAL(8)               :: Y0
       REAL(8)               :: RHO1(NR)
       REAL(8)               :: AUX(NR)
       REAL(8)               :: AUX1(NR)
@@ -2172,9 +2166,7 @@ RETURN
       INTEGER(4)            :: IR,IRBOX
       REAL(8)               :: Q
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
         IRBOX=IR    ! SMALLEST GRID-POINT INDEX WITH R(IRBOX).GE.RAD
@@ -2269,9 +2261,9 @@ RETURN
       REAL(8),   INTENT(IN) :: RHO(NR)
       REAL(8),   INTENT(OUT):: MUX(NR)
       REAL(8),   PARAMETER  :: RHOMIN=1.D-2
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: FOURPI
-      REAL(8)               :: Y0
       REAL(8)               :: AUX(NR),AUX1(NR)
       REAL(8)               :: GRHO(NR)
       REAL(8)               :: R(NR)
@@ -2279,9 +2271,7 @@ RETURN
       REAL(8)               :: DUMMY1,DUMMY2,DUMMY3
       INTEGER(4)            :: IR,IRBOX
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
       CALL RADIAL$R(GID,NR,R)
       DO IR=1,NR
         IRBOX=IR
@@ -2336,6 +2326,8 @@ RETURN
       REAL(8)   ,INTENT(INOUT):: EOFI(NB)
       REAL(8)   ,INTENT(OUT)  :: UOFI(NR,NB)
       REAL(8)   ,INTENT(OUT)  :: TUOFI(NR,NB)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
       INTEGER(4)              :: L
       REAL(8)                 :: E
       REAL(8)                 :: G(NR)
@@ -2343,11 +2335,8 @@ RETURN
       INTEGER(4)              :: NN
       INTEGER(4)              :: SO
       INTEGER(4)              :: IB,I
-      REAL(8)                 :: PI,Y0
       LOGICAL(4)              :: TVARDREL
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       UOFI(:,:)=0.D0
       TUOFI(:,:)=0.D0
       DO IB=1,NB
@@ -2539,7 +2528,7 @@ RETURN
       REAL(8)     ,INTENT(IN) :: PRO(NR,NPRO) ! PROJECTOR FUNCTIONS
       REAL(8)     ,INTENT(IN) :: G(NR)        !INHOMOGENEITY
       REAL(8)     ,INTENT(OUT):: PHI(NR)      !PAW RADIAL FUNCTION
-      logical(4)  ,parameter  :: ttest=.true.
+      LOGICAL(4)  ,PARAMETER  :: TTEST=.TRUE.
       REAL(8)                 :: U(NR)
       REAL(8)                 :: V(NR,NPRO)
       REAL(8)                 :: AMAT(NPRO,NPRO)
@@ -2547,7 +2536,7 @@ RETURN
       REAL(8)                 :: DVEC(NPRO)
       INTEGER(4)              :: I,J
       REAL(8)                 :: AUX(NR)
-      REAL(8)                 :: svar
+      REAL(8)                 :: SVAR
       REAL(8)                 :: R(NR)
       REAL(8)                 :: DREL(NR)
       INTEGER(4)              :: SO
@@ -2560,8 +2549,8 @@ RETURN
       SO=0
       DREL(:)=0.D0
       CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,G,L,E,1,U)
-!!$      svar=1.d0/u(nr-3)
-!!$      u=u*svar
+!!$      SVAR=1.D0/U(NR-3)
+!!$      U=U*SVAR
 !
 !     ==========================================================================
 !     ==  -1/2NABLA^2+POT-E|V>=|PRO>                                          ==
@@ -2570,7 +2559,7 @@ RETURN
         CALL SCHROEDINGER$SPHERICAL(GID,NR,PSPOT,DREL,SO,PRO(:,I),L,E,1,V(:,I))
 !       __AVOID EXPONENTIALLY INCREASING SOLUTION TO SOME EXTENT________________
         SVAR=V(NR-3,I)/U(NR-3)
-        V(:,I)=V(:,I)-U(:)*svar
+        V(:,I)=V(:,I)-U(:)*SVAR
       ENDDO
 !
 !     ==========================================================================
@@ -2596,10 +2585,10 @@ RETURN
 !     == THIS POSSIBILITY IS NOT CONSIDERED YET. ===============================
 !     ==========================================================================
       IF(NPRO.EQ.0) THEN 
-      else IF(NPRO.EQ.1) THEN 
-        DVEC(1)=-cvec(1)/amat(1,1)
+      ELSE IF(NPRO.EQ.1) THEN 
+        DVEC(1)=-CVEC(1)/AMAT(1,1)
       ELSE 
-!       == amat*dvec+c=0 =======================================================
+!       == AMAT*DVEC+C=0 =======================================================
         CALL LIB$MATRIXSOLVER8(NPRO,NPRO,1,AMAT,DVEC,-CVEC)
       END IF
 !
@@ -2613,29 +2602,29 @@ RETURN
       ENDDO
 !
 !     ==========================================================================
-!     ==  test                                                                ==
+!     ==  TEST                                                                ==
 !     ==========================================================================
-      IF(TTEST.and.npro.gt.0) THEN
-!       == park residual in dvec ===============================================
-        dvec=matmul(amat,dvec)+cvec
+      IF(TTEST.AND.NPRO.GT.0) THEN
+!       == PARK RESIDUAL IN DVEC ===============================================
+        DVEC=MATMUL(AMAT,DVEC)+CVEC
         DO I=1,NPRO
           AUX=PRO(:,I)*PHI(:)*R(:)**2
           CALL RADIAL$INTEGRAL(GID,NR,AUX,CVEC(I))
           AUX=PRO(:,I)**2*R(:)**2
-          CALL RADIAL$INTEGRAL(GID,NR,AUX,svar)
-          cvec(i)=cvec(i)/sqrt(svar)
+          CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
+          CVEC(I)=CVEC(I)/SQRT(SVAR)
         ENDDO
         AUX=R**2*PHI**2
         CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
         CVEC=CVEC/SQRT(SVAR)
 
         IF(MAXVAL(ABS(CVEC)).GT.1.D-4) THEN
-          PRINT*,'test matrix eq ',dVEC
-          PRINT*,'test final     ',CVEC
-CALL ATOMLIB_WRITEPHI('crash_phi',GID,NR,1,Phi)
-CALL ATOMLIB_WRITEPHI('crash_pro',GID,NR,npro,Pro)
-CALL ATOMLIB_WRITEPHI('crash_u',GID,NR,1,u)
-CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
+          PRINT*,'TEST MATRIX EQ ',DVEC
+          PRINT*,'TEST FINAL     ',CVEC
+CALL ATOMLIB_WRITEPHI('CRASH_PHI',GID,NR,1,PHI)
+CALL ATOMLIB_WRITEPHI('CRASH_PRO',GID,NR,NPRO,PRO)
+CALL ATOMLIB_WRITEPHI('CRASH_U',GID,NR,1,U)
+CALL ATOMLIB_WRITEPHI('CRASH_V',GID,NR,NPRO,V)
           CALL ERROR$MSG('ORTHOGONALITY TEST FAILED')
           CALL ERROR$I4VAL('L',L)
           CALL ERROR$R8VAL('E',E)
@@ -2684,6 +2673,8 @@ CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
       INTEGER(4)      ,PARAMETER  :: NITER=200
       REAL(8)         ,PARAMETER  :: XMAX=1.D+15 !MAX. FACTOR FOR WAVEFUNCTION
       LOGICAL(4)      ,PARAMETER  :: TPR=.FALSE.
+      REAL(8)         ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)         ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                  :: PHASE
       REAL(8)                  :: DPSI(NR)
       REAL(8)                  :: DEVARR(NR)
@@ -2693,7 +2684,6 @@ CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
       REAL(8)                  :: VALDOT,DERDOT,VAL0,DER0
       REAL(8)                  :: W0,WDOT
       REAL(8)                  :: Y1,Y2,X1,X2
-      REAL(8)                  :: PI,Y0
       REAL(8)                  :: SOFACTOR
       REAL(8)                  :: R(NR)
       REAL(8)                  :: AUX(NR),AUX1(NR),AUX2(NR)
@@ -2716,8 +2706,6 @@ CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
 !CHARACTER(64)            :: STRING
 !REAL(8)                  :: TESTARR(NR,NITER,6)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,DREL,RDPRIME) 
       TFIXE=RBND.LE.0.D0
@@ -2947,6 +2935,8 @@ CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
       REAL(8)   ,INTENT(IN) :: POT(NR)
       TYPE(VFOCK_TYPE),INTENT(IN) :: VFOCK
       REAL(8)   ,INTENT(OUT):: ETOT
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: DRRPSI(NR,NB)
       REAL(8)               :: AUX(NR),AUX1(NR),AUX2(NR)
       REAL(8)               :: EKDEN(NR),EHDEN(NR),EXDEN(NR),EKIN,EH,EX
@@ -2954,14 +2944,11 @@ CALL ATOMLIB_WRITEPHI('crash_v',GID,NR,npro,v)
       REAL(8)               :: EOFI(NB)
       REAL(8)               :: DREL(NR),RDPRIME(NR)
       REAL(8)               :: VAL,DER
-      REAL(8)               :: PI,Y0
       INTEGER(4)            :: IRBOX
       REAL(8)               :: SOFACTOR
       INTEGER(4)            :: IR,IB
       INTEGER(4)            :: L
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     == INDEX OF THE FIRST GRIDPOINT OUTSIDE RBOX =============================

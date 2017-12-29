@@ -18,16 +18,16 @@
 !**            ->LMTO_MAKETAILEDPARTIALWAVES_WITHPOTPAR1()
 !**            ->LMTO_MAKETAILEDMATRIXELEMENTS_WITHPOTPAR1()
 !**            ->LMTO_TAILEDGAUSSFIT()
-!**            -> LMTO_OFFXINT()  (TIME CONSUMING, INTERNALLY parallel)
+!**            -> LMTO_OFFXINT()  (TIME CONSUMING, INTERNALLY PARALLEL)
 !**       -> LMTO$CLUSTERSTRUCTURECONSTANTS (PARALLEL)
 !**       -> LMTO_PCHI
 !**       -> LMTO_TAILEDEXPANSION
-!**  LMTO$PROJTONTBO_NEW (transform projections to and from local orbitals)
+!**  LMTO$PROJTONTBO_NEW (TRANSFORM PROJECTIONS TO AND FROM LOCAL ORBITALS)
 !**  LMTO$DEDF(NB,NKPTL,NSPIN,DEIG)
 !**  LMTO$ETOT(NB,NKPTL,NSPIN,DEIG) 
 !** 
 !**
-!** parallelization model:
+!** PARALLELIZATION MODEL:
 !** 
 !*******************************************************************************
 !*******************************************************************************
@@ -2080,6 +2080,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       REAL(8)   ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LN1,LN2,LN3,LN4
       INTEGER(4)            :: L
       INTEGER(4)            :: LMIN,LMAX,ISVAR1,ISVAR2
@@ -2088,7 +2089,6 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)               :: AUX(NR)
       REAL(8)               :: SVAR
       REAL(8)               :: R(NR)
-      REAL(8)               :: PI,FOURPI
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_ULITTLE')
       CALL RADIAL$R(GID,NR,R)
@@ -2127,10 +2127,8 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !     ==========================================================================
 !     == ADD FACTOR CONSISTENT WITH DEFINITION OF SLATER INTEGRALS            ==
 !     ==========================================================================
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
       DO L=0,LRX
-        ULITTLE(L+1,:,:,:,:)=ULITTLE(L+1,:,:,:,:)*REAL(2*L+1,KIND=8)/FOURPI
+        ULITTLE(L+1,:,:,:,:)=ULITTLE(L+1,:,:,:,:)*REAL(2*L+1,KIND=8)/(4.D0*PI)
       ENDDO
 
                             CALL TRACE$POP()
@@ -2150,6 +2148,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)   ,INTENT(IN) :: ULITTLE(LRX+1,LNX,LNX,LNX,LNX)
       INTEGER(4),INTENT(IN) :: NORB
       REAL(8)   ,INTENT(OUT):: U(NORB,NORB,NORB,NORB)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LN1,LN2,LN3,LN4
       INTEGER(4)            :: IORB1,IORB2,IORB3,IORB4
       INTEGER(4)            :: L1,L2,L3,L4
@@ -2158,11 +2157,10 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       INTEGER(4)            :: L,M,LM,LX
       REAL(8)               :: CG1,CG2
       REAL(8)               :: SVAR
-      REAL(8)               :: PI,FOURPI
+      REAL(8)               :: FOURPI
       REAL(8)               :: FOURPIBY2LPLUS1
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_UTENSOR')
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
 !
       U(:,:,:,:)=0.D0
@@ -2304,14 +2302,14 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       INTEGER(4),INTENT(IN) :: LOX(LNX)
       REAL(8)   ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: QLN(2,LNX,LNX)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LN1,LN2
       INTEGER(4)            :: L1,L2,IM
       REAL(8)               :: AUX(NR),SVAR
       REAL(8)               :: R(NR)
-      REAL(8)               :: PI,SQ4PI,SQ4PITHIRD
+      REAL(8)               :: SQ4PI,SQ4PITHIRD
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_ONECENTERMULTIPOLE')
-      PI=4.D0*ATAN(1.D0)
       SQ4PI=SQRT(4.D0*PI)
       SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       CALL RADIAL$R(GID,NR,R)
@@ -2874,6 +2872,7 @@ INTEGER(4) :: J,K,L
       INTEGER(4)  ,INTENT(IN) :: NORB  ! #(LOCAL ORBITALS)
       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
       COMPLEX(8),INTENT(INOUT):: PIPSI(NDIM,NBH,NORB)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       COMPLEX(8),ALLOCATABLE  :: PCHIOFK(:,:)
       COMPLEX(8),ALLOCATABLE  :: OPCHIOFK(:,:)
@@ -2885,13 +2884,11 @@ INTEGER(4) :: J,K,L
       INTEGER(4)              :: NNS
       REAL(8)                 :: KR
       COMPLEX(8)              :: EIKR
-      REAL(8)                 :: PI
       REAL(8)                 :: SVAR  !SUPPORT VARIABLE
       INTEGER(4)              :: IPRO,IORB
       INTEGER(4)              :: IAT1,IAT2,I1,I2,J1,J2,I,J
       INTEGER(4)              :: ISP,NN,IAT,LN1,LN2,LMN1,LMN2,M,IBH,IDIM,L
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       NAT=SIZE(ISPECIES)
 !
 !     ==========================================================================
@@ -3078,6 +3075,7 @@ CALL TIMING$CLOCKOFF('LMTO:TO-5')
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
       INTEGER(4)             :: NNS
@@ -3095,12 +3093,10 @@ CALL TIMING$CLOCKOFF('LMTO:TO-5')
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
-      REAL(8)                :: PI
 COMPLEX(8)  :: PHASE
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
 !     **************************************************************************
                                           CALL TRACE$PUSH('LMTO_NTBODENMAT_NEW')
-      PI=4.D0*ATAN(1.D0)
       IF(.NOT.ASSOCIATED(THIS%TBC_NEW)) THEN
         CALL ERROR$MSG('THIS%TBC_NEW NOT ASSOCIATED (1)')
         CALL ERROR$STOP('LMTO_NTBODENMAT_NEW')
@@ -3302,6 +3298,7 @@ COMPLEX(8)  :: PHASE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
       INTEGER(4)             :: NNS
@@ -3319,12 +3316,10 @@ COMPLEX(8)  :: PHASE
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
-      REAL(8)                :: PI
 COMPLEX(8)  :: PHASE
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
 !     **************************************************************************
                                           CALL TRACE$PUSH('LMTO_NTBOINVOVERLAP')
-      PI=4.D0*ATAN(1.D0)
       IF(.NOT.ASSOCIATED(THIS%TBC_NEW)) THEN
         CALL ERROR$MSG('THIS%TBC_NEW NOT ASSOCIATED (1)')
         CALL ERROR$STOP('LMTO_NTBOINVOVERLAP')
@@ -3514,6 +3509,7 @@ COMPLEX(8)  :: PHASE
      &                       ,THTBC !LOGICAL VARIABLE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
       INTEGER(4)             :: NND
@@ -3529,10 +3525,8 @@ COMPLEX(8)  :: PHASE
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1,C2,CSVAR22(NDIM,NDIM)
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
-      REAL(8)                :: PI
 !     **************************************************************************
                                  CALL TRACE$PUSH('LMTO_NTBODENMATDER_NEW')
-      PI=4.D0*ATAN(1.D0)
       IF(NDIM.EQ.1) THEN
         NDIMD=NSPIN
       ELSE IF(NDIM.EQ.2) THEN
@@ -4623,7 +4617,7 @@ END IF
      &                       ,POTPAR1 &
      &                       ,TOFFSITE,HYBRIDSETTING,HFWEIGHT &
      &                       ,TCTE
-      use mpe_module
+      USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
@@ -4661,7 +4655,7 @@ CHARACTER(128) :: STRING
 REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       REAL(8)               :: HFSCALE
       LOGICAL(4)            :: TACTIVE ! DOES THIS ATOM CONTRIBUTE?
-      LOGICAL(4),PARAMETER  :: TPARALLEL=.false.
+      LOGICAL(4),PARAMETER  :: TPARALLEL=.FALSE.
       INTEGER(4)            :: THISTASK,NTASKS
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
@@ -4688,17 +4682,17 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
       ENDDO
 !
 !     ==========================================================================
-!     == parallelization model                                                ==
-!     == the outcome of this routine is                                       ==
-!     == -- Hamil (lmto_module; hamil_new)                                    ==
-!     == -- extot (passed to energlist)                                       ==
-!     == -- dath (via module lmtoaugmentatiuon)                               ==
+!     == PARALLELIZATION MODEL                                                ==
+!     == THE OUTCOME OF THIS ROUTINE IS                                       ==
+!     == -- HAMIL (LMTO_MODULE; HAMIL_NEW)                                    ==
+!     == -- EXTOT (PASSED TO ENERGLIST)                                       ==
+!     == -- DATH (VIA MODULE LMTOAUGMENTATIUON)                               ==
 !     ==                                                                      ==
-!     == only one of the tasks in the monomer group adds to hamil. at the end ==
-!     == of this routine the resilt is summed over all tasks.                 ==
+!     == ONLY ONE OF THE TASKS IN THE MONOMER GROUP ADDS TO HAMIL. AT THE END ==
+!     == OF THIS ROUTINE THE RESILT IS SUMMED OVER ALL TASKS.                 ==
 !     ==                                                                      ==
-!     == the parameter tparallel decides whether the parallelization is done  ==
-!     == or wether everything is calculated on each task                      ==
+!     == THE PARAMETER TPARALLEL DECIDES WHETHER THE PARALLELIZATION IS DONE  ==
+!     == OR WETHER EVERYTHING IS CALCULATED ON EACH TASK                      ==
 !     ==                                                                      ==
 !     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -4971,7 +4965,7 @@ END IF
       END IF
 !
 !     ==========================================================================
-!     == wrap up parallelization                                              ==
+!     == WRAP UP PARALLELIZATION                                              ==
 !     ==========================================================================
       IF(TPARALLEL) THEN
         CALL MPE$COMBINE('MONOMER','+',EXTOT)
@@ -5007,7 +5001,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==========================================================================
 !     == PRINT FOR TEST                                                       ==
 !     ==========================================================================
-      IF(TPR.and.thistask.eq.1) THEN
+      IF(TPR.AND.THISTASK.EQ.1) THEN
         WRITE(*,FMT='(82("="),T10," DENSITY MATRIX IN A NTBO BASIS ")')
         WRITE(*,FMT='(82("="),T10," ONLY ONSITE TERMS WRITTEN ")')
         DO NN=1,NND
@@ -5728,6 +5722,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)     ,INTENT(OUT):: HAMB(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
       INTEGER(4)  ,PARAMETER  :: METHOD=3
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
@@ -5739,15 +5735,13 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
       REAL(8)                 :: FXC(NR)
-      REAL(8)                 :: PI,FOURPI,Y0
+      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
 !     **************************************************************************
       LMRX=(LRX+1)**2
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(4.D0*PI)
       ETOT=0.D0
 !
 !     ==========================================================================
@@ -5816,12 +5810,13 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)  ,INTENT(IN) :: NDIMD
       REAL(8)     ,INTENT(IN) :: RHO(NR,LMRX,NDIMD)
       INTEGER(4)  ,PARAMETER  :: NDIS=4
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)                 :: R(NR)
       REAL(8)                 :: AUX(NR)
       REAL(8)                 :: RHO1(NR,LMRX,NDIMD)
       REAL(8)                 :: POT1(NR,LMRX,NDIMD)
       REAL(8)                 :: DRHO(NR,LMRX,NDIMD)
-      REAL(8)                 :: PI,FOURPI
+      REAL(8)                 :: FOURPI
       REAL(8)                 :: SVAR
       REAL(8)                 :: ETOT(-NDIS:NDIS)
       REAL(8)                 :: DETOT(-NDIS:NDIS)
@@ -5832,7 +5827,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)              :: I,LM,IDIMD,L
 !     **************************************************************************
       WRITE(*,FMT='(80("=")/80("="),T10,"  LMTO_RADXC TEST  "/80("="))')
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
       CALL RADIAL$R(GID,NR,R)
       CUT(:)=EXP(-R**2)
@@ -5933,6 +5927,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)   ,INTENT(OUT):: EXC
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: VCUT(NR)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -5945,8 +5941,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: Y0
+      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
@@ -5967,10 +5962,8 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*ATAN(1.D0)
-      FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
-      CG0LL=Y0
+       FOURPI=4.D0*PI
+       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -6336,6 +6329,8 @@ IF(IAT.NE.1) RETURN
       REAL(8)     ,INTENT(OUT):: HAM(LMNX,LMNX,NDIMD)  ! DETOT/D(RHO^*)        
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)     ,PARAMETER  :: DELTA=1.D-8
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
@@ -6346,7 +6341,7 @@ IF(IAT.NE.1) RETURN
       REAL(8)     ,ALLOCATABLE:: RHO_ALL(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT_ALL(:,:,:)
       REAL(8)                 :: AUX(NR),AUX2(NR),SVAR
-      REAL(8)                 :: PI,FOURPI,Y0
+      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN,IR
 !     **************************************************************************
@@ -6358,9 +6353,7 @@ IF(IAT.NE.1) RETURN
 !!$RETURN
 !
       LMRX=(LRX+1)**2
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -7031,10 +7024,12 @@ END MODULE LMTOAUGMENTATION_MODULE
       REAL(8)     ,ALLOCATABLE:: POT2(:,:,:)
       REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
       REAL(8)                 :: FXC(NR)
-      REAL(8)                 :: PI,FOURPI,Y0
+      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
@@ -7047,9 +7042,7 @@ INTEGER(4) :: IMETHOD
  REAL(8)                 :: ETOT2
 !     **************************************************************************
       LMRX=(LRX+1)**2
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(4.D0*PI)
       ETOT=0.D0
 !
 !     ==========================================================================
@@ -7340,6 +7333,8 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: FXC(NR)
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -7351,8 +7346,7 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: Y0
+      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
@@ -7370,9 +7364,7 @@ PRINT*,'----EXC  ',ETOT
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
@@ -7613,15 +7605,15 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_OFFSITEXEVAL_NEW(tparallel,EX)
+      SUBROUTINE LMTO_OFFSITEXEVAL_NEW(TPARALLEL,EX)
 !     **************************************************************************
-!     **  offsite exchange energy with TAILED PARTIAL WAVES                   **
+!     **  OFFSITE EXCHANGE ENERGY WITH TAILED PARTIAL WAVES                   **
 !     **                                                                      **
-!     **  output is                                                           **
-!     **   -- ex                                                              **
-!     **   -- hamil                                                           **
+!     **  OUTPUT IS                                                           **
+!     **   -- EX                                                              **
+!     **   -- HAMIL                                                           **
 !     **                                                                      **
-!     **  parallelizization model:                                            **
+!     **  PARALLELIZIZATION MODEL:                                            **
 !     **                                                                      **
 !     **                                                                      **
 !     **                                                                      **
@@ -7636,7 +7628,7 @@ END IF
      &                       ,HYBRIDSETTING &
      &                       ,TCTE
       IMPLICIT NONE
-      logical(4),intent(in)  :: tparallel
+      LOGICAL(4),INTENT(IN)  :: TPARALLEL
       REAL(8)   ,INTENT(OUT) :: EX
       REAL(8)                :: RBAS(3,3)
       INTEGER(4)             :: NAT
@@ -7681,9 +7673,9 @@ END IF
       REAL(8)   ,ALLOCATABLE :: H(:,:,:)
       REAL(8)   ,ALLOCATABLE :: HA(:,:,:)
       REAL(8)   ,ALLOCATABLE :: HB(:,:,:)
-      integer(4)             :: lmrx
-      integer(4)             :: lrx
-      integer(4)             :: lx
+      INTEGER(4)             :: LMRX
+      INTEGER(4)             :: LRX
+      INTEGER(4)             :: LX
       LOGICAL(4)             :: TNDDO,T31,TBONDX
       INTEGER(4)            :: THISTASK,NTASKS
 INTEGER(4) :: J,K,I1,J1,K1
@@ -8200,9 +8192,9 @@ CALL TRACE$PASS('XABAB DONE')
 !     == CONVERT INTEGRALS INTO COEFFICIENTS OF INTERPOLATING FUNCTION        ==
 !     ==========================================================================
 PRINT*,'CONVERTING....'
-CALL TRACE$PASS('converting')
+CALL TRACE$PASS('CONVERTING')
       CALL LMTO_OFFSITEXCONVERT()
-CALL TRACE$PASS('conversion done')
+CALL TRACE$PASS('CONVERSION DONE')
 PRINT*,'INITIALIZATION OF OFFSITE DONE...'
                                   CALL TRACE$POP()
       RETURN
@@ -8365,6 +8357,7 @@ REAL(8)::SVAR
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       REAL(8)   ,PARAMETER  :: RX=0.1D0
       REAL(8)   ,PARAMETER  :: TOLMIN=1.D-8
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -8385,10 +8378,9 @@ REAL(8)::SVAR
       REAL(8)               :: TOL
       INTEGER(4)            :: IR
       REAL(8)               :: AUX(NR2),SVAR,SVAR1,SVAR2,A,B
-      REAL(8)               :: PI,SQ4PI,SQ4PITHIRD
+      REAL(8)               :: SQ4PI,SQ4PITHIRD
       INTEGER(4)            :: THISTASK,NTASKS,COUNT
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       SQ4PI=SQRT(4.D0*PI)
       SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -8964,6 +8956,7 @@ INTEGER(4) :: J
       INTEGER(4),INTENT(IN) :: LMNX2
       REAL(8)   ,INTENT(OUT):: U(LMNX1,LMNX1,LMNX2,LMNX2)
       REAL(8)   ,INTENT(OUT):: DU(LMNX1,LMNX1,LMNX2,LMNX2)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
       INTEGER(4)            :: IND
@@ -8979,10 +8972,9 @@ INTEGER(4) :: J
       REAL(8)               :: INTEGRAL,DINTEGRAL
       REAL(8)               :: CG1,CG2 ! GAUNT COEFFICIENTS
       INTEGER(4)            :: LMRX
-      REAL(8)               :: PI,SQ4PI,SQ4PITHIRD
+      REAL(8)               :: SQ4PI,SQ4PITHIRD
       REAL(8)               :: SVAR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       SQ4PI=SQRT(4.D0*PI)
       SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
 !
@@ -9140,10 +9132,10 @@ INTEGER(4) :: J
       REAL(8)               :: SVAR
       INTEGER(4)            :: LMRX
       REAL(8)               :: CG1,CG2 ! GAUNT COEFFICIENTS
-      real(8)               :: fac,dfac
-      integer(4),parameter  :: version=2
-!         version=0  original version
-!         version=2  own subroutine version
+      REAL(8)               :: FAC,DFAC
+      INTEGER(4),PARAMETER  :: VERSION=2
+!         VERSION=0  ORIGINAL VERSION
+!         VERSION=2  OWN SUBROUTINE VERSION
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -9175,14 +9167,14 @@ INTEGER(4) :: J
 !     ==========================================================================
 !     == OBTAIN U-TENSOR                                                      ==
 !     ==========================================================================
-!!$write(*,fmt='(80("="),t20,"  offx31  ")')
-!!$write(*,fmt='("isp1/2   ",t20,2i5)')isp1,isp2
-!!$write(*,fmt='("lnx1/2   ",t20,2i5)')lnx1,lnx2
-!!$write(*,fmt='("lox(isp1)",t20,20i5)')POTPAR(ISP1)%TAILED%LOX(:)
-!!$write(*,fmt='("lox(isp2)",t20,20i5)')POTPAR(ISP2)%TAILED%LOX(:)
-!!$write(*,fmt='("lmn0a    ",t20,20i5)')lmn0a
-!!$write(*,fmt='("lmn0b    ",t20,20i5)')lmn0b
-if(version.eq.0) then
+!!$WRITE(*,FMT='(80("="),T20,"  OFFX31  ")')
+!!$WRITE(*,FMT='("ISP1/2   ",T20,2I5)')ISP1,ISP2
+!!$WRITE(*,FMT='("LNX1/2   ",T20,2I5)')LNX1,LNX2
+!!$WRITE(*,FMT='("LOX(ISP1)",T20,20I5)')POTPAR(ISP1)%TAILED%LOX(:)
+!!$WRITE(*,FMT='("LOX(ISP2)",T20,20I5)')POTPAR(ISP2)%TAILED%LOX(:)
+!!$WRITE(*,FMT='("LMN0A    ",T20,20I5)')LMN0A
+!!$WRITE(*,FMT='("LMN0B    ",T20,20I5)')LMN0B
+IF(VERSION.EQ.0) THEN
       U(:,:,:,:)=0.D0
       DU(:,:,:,:)=0.D0
       IND=0
@@ -9257,7 +9249,7 @@ if(version.eq.0) then
           ENDDO
         ENDDO
       ENDDO
-else if(version.eq.1) then
+ELSE IF(VERSION.EQ.1) THEN
       U(:,:,:,:)=0.D0
       DU(:,:,:,:)=0.D0
       IND=0
@@ -9301,8 +9293,8 @@ else if(version.eq.1) then
                           LMR1=LMR1+1
                          CALL SPHERICAL$GAUNT(LMR1,LM3,LMR2,CG2)
                           IF(CG2.EQ.0.D0) CYCLE
-                          fac=cg2*integral
-                          dfac=cg2*dintegral
+                          FAC=CG2*INTEGRAL
+                          DFAC=CG2*DINTEGRAL
 !
                           LM2=L2**2
                           LMN2=LMN0A(LN2)
@@ -9319,9 +9311,9 @@ else if(version.eq.1) then
                               IF(CG1.EQ.0.D0) CYCLE
 !
                               U(LMN1,LMN2,LMN3,LMN4) =U(LMN1,LMN2,LMN3,LMN4) &
-       &                                             +CG1*fac
+       &                                             +CG1*FAC
                               DU(LMN1,LMN2,LMN3,LMN4)=DU(LMN1,LMN2,LMN3,LMN4) &
-       &                                             +CG1*dfac
+       &                                             +CG1*DFAC
                             ENDDO
                           ENDDO
                         ENDDO
@@ -9334,16 +9326,16 @@ else if(version.eq.1) then
           ENDDO
         ENDDO
       ENDDO
-else if(version.eq.2) then
-      call LMTO_OFFSITEX31U_test1(isp1,lnx1,POTPAR(ISP1)%TAILED%LOX,lmnx1 &
-     &                           ,isp2,lnx2,POTPAR(ISP2)%TAILED%LOX,lmnx2 &
-     &                           ,lrx1,dis,u,du)
-else
-  call error$msg('value of version not recognized')
-  call error$stop('value of version not recognized')
-end if
-!!$  end if
-!!$end if
+ELSE IF(VERSION.EQ.2) THEN
+      CALL LMTO_OFFSITEX31U_TEST1(ISP1,LNX1,POTPAR(ISP1)%TAILED%LOX,LMNX1 &
+     &                           ,ISP2,LNX2,POTPAR(ISP2)%TAILED%LOX,LMNX2 &
+     &                           ,LRX1,DIS,U,DU)
+ELSE
+  CALL ERROR$MSG('VALUE OF VERSION NOT RECOGNIZED')
+  CALL ERROR$STOP('VALUE OF VERSION NOT RECOGNIZED')
+END IF
+!!$  END IF
+!!$END IF
 
 !
 !     ==========================================================================
@@ -9358,207 +9350,207 @@ end if
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_OFFSITEX31U_test1(ispa,lnxa,loxa,lmnxa &
-     &                                 ,ispb,lnxb,loxb,lmnxb &
-     &                                 ,lrx,dis,u,du)
+      SUBROUTINE LMTO_OFFSITEX31U_TEST1(ISPA,LNXA,LOXA,LMNXA &
+     &                                 ,ISPB,LNXB,LOXB,LMNXB &
+     &                                 ,LRX,DIS,U,DU)
 !     **************************************************************************
 !     **************************************************************************
-      implicit none
-      integer(4),intent(in) :: ispa
-      integer(4),intent(in) :: ispb
-      integer(4),intent(in) :: lnxa
-      integer(4),intent(in) :: lnxb
-      integer(4),intent(in) :: loxa(lnxa)
-      integer(4),intent(in) :: loxb(lnxb)
-      integer(4),intent(in) :: lmnxa
-      integer(4),intent(in) :: lmnxb
-      integer(4),intent(in) :: lrx !x(angular momentum for density)
-      real(8)   ,intent(in) :: dis
-      real(8)   ,intent(out):: u(lmnxa,lmnxa,lmnxa,lmnxb)
-      real(8)   ,intent(out):: du(lmnxa,lmnxa,lmnxa,lmnxb)
-      type x31list_type
-        integer(4) :: m1
-        integer(4) :: m2
-        integer(4) :: m3
-        integer(4) :: m4
-        real(8)    :: val
-      end type x31list_type
-      type(x31list_type),allocatable :: list(:) !(iix)
-      real(8)   ,allocatable :: integral(:)  !(indx)
-      real(8)   ,allocatable :: dintegral(:) !(indx)
-      real(8)   ,allocatable :: cgmat(:,:,:) !gaund coefficients
-      integer(4),allocatable :: iia1(:,:,:,:,:,:,:) !(lxa+1,lxa+1,lxa+1,...
-      integer(4),allocatable :: iia2(:,:,:,:,:,:,:) !(lxa+1,lxa+1,lxa+1,...
-      integer(4),allocatable :: iibnds(:,:) !(2,iix)
-      integer(4)             :: lxa,lxb
-      integer(4)             :: lmxa,lmxb
-      integer(4)             :: lmn0a(lnxa),lmn0b(lnxb)
-      integer(4)             :: mabsx
-      integer(4)             :: indx
-      integer(4)             :: lr1x,lr2x
-      integer(4)             :: ind
-      integer(4)             :: ln1,ln2,ln3,ln4
-      integer(4)             :: l1,l2,l3,l4
-      integer(4)             :: m1,m2,m3,m4
-      integer(4)             :: lm1,lm2,lm3,lm4
-      integer(4)             :: lmn1,lmn2,lmn3,lmn4
-      integer(4)             :: lr1,lr2,mabs
-      integer(4)             :: lmr1,lmr2
-      integer(4)             :: m,pm,mr1
-      integer(4)             :: lmr1i,lmr1f
-      integer(4)             :: iix
-      integer(4)             :: ii1,ii2,ii
-      real(8)                :: svar
-      real(8)                :: cg1,cg2
-      logical(4)             :: tchk
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISPA
+      INTEGER(4),INTENT(IN) :: ISPB
+      INTEGER(4),INTENT(IN) :: LNXA
+      INTEGER(4),INTENT(IN) :: LNXB
+      INTEGER(4),INTENT(IN) :: LOXA(LNXA)
+      INTEGER(4),INTENT(IN) :: LOXB(LNXB)
+      INTEGER(4),INTENT(IN) :: LMNXA
+      INTEGER(4),INTENT(IN) :: LMNXB
+      INTEGER(4),INTENT(IN) :: LRX !X(ANGULAR MOMENTUM FOR DENSITY)
+      REAL(8)   ,INTENT(IN) :: DIS
+      REAL(8)   ,INTENT(OUT):: U(LMNXA,LMNXA,LMNXA,LMNXB)
+      REAL(8)   ,INTENT(OUT):: DU(LMNXA,LMNXA,LMNXA,LMNXB)
+      TYPE X31LIST_TYPE
+        INTEGER(4) :: M1
+        INTEGER(4) :: M2
+        INTEGER(4) :: M3
+        INTEGER(4) :: M4
+        REAL(8)    :: VAL
+      END TYPE X31LIST_TYPE
+      TYPE(X31LIST_TYPE),ALLOCATABLE :: LIST(:) !(IIX)
+      REAL(8)   ,ALLOCATABLE :: INTEGRAL(:)  !(INDX)
+      REAL(8)   ,ALLOCATABLE :: DINTEGRAL(:) !(INDX)
+      REAL(8)   ,ALLOCATABLE :: CGMAT(:,:,:) !GAUND COEFFICIENTS
+      INTEGER(4),ALLOCATABLE :: IIA1(:,:,:,:,:,:,:) !(LXA+1,LXA+1,LXA+1,...
+      INTEGER(4),ALLOCATABLE :: IIA2(:,:,:,:,:,:,:) !(LXA+1,LXA+1,LXA+1,...
+      INTEGER(4),ALLOCATABLE :: IIBNDS(:,:) !(2,IIX)
+      INTEGER(4)             :: LXA,LXB
+      INTEGER(4)             :: LMXA,LMXB
+      INTEGER(4)             :: LMN0A(LNXA),LMN0B(LNXB)
+      INTEGER(4)             :: MABSX
+      INTEGER(4)             :: INDX
+      INTEGER(4)             :: LR1X,LR2X
+      INTEGER(4)             :: IND
+      INTEGER(4)             :: LN1,LN2,LN3,LN4
+      INTEGER(4)             :: L1,L2,L3,L4
+      INTEGER(4)             :: M1,M2,M3,M4
+      INTEGER(4)             :: LM1,LM2,LM3,LM4
+      INTEGER(4)             :: LMN1,LMN2,LMN3,LMN4
+      INTEGER(4)             :: LR1,LR2,MABS
+      INTEGER(4)             :: LMR1,LMR2
+      INTEGER(4)             :: M,PM,MR1
+      INTEGER(4)             :: LMR1I,LMR1F
+      INTEGER(4)             :: IIX
+      INTEGER(4)             :: II1,II2,II
+      REAL(8)                :: SVAR
+      REAL(8)                :: CG1,CG2
+      LOGICAL(4)             :: TCHK
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == calculate array sizes                                                ==
+!     == CALCULATE ARRAY SIZES                                                ==
 !     ==========================================================================
-      lxa=maxval(loxa)
-      lxb=maxval(loxb)
-      lmxa=lxa**2
-      lmxb=lxb**2
-      indx=0
-      lr1x=-1
-      lr2x=-1
-      mabsx=-1
-      DO LN1=1,LNXa
-        L1=LOXa(LN1)
-        DO LN2=LN1,LNXa
-          L2=LOXa(LN2)
-          DO LN3=1,LNXa
-            L3=LOXa(LN3)
-            DO LN4=1,LNXb
-              L4=lOXb(LN4)
-              DO LR1=ABS(L1-L2),MIN(L1+L2,LRx),2
-                lr1x=max(lr1x,lr1)
+      LXA=MAXVAL(LOXA)
+      LXB=MAXVAL(LOXB)
+      LMXA=LXA**2
+      LMXB=LXB**2
+      INDX=0
+      LR1X=-1
+      LR2X=-1
+      MABSX=-1
+      DO LN1=1,LNXA
+        L1=LOXA(LN1)
+        DO LN2=LN1,LNXA
+          L2=LOXA(LN2)
+          DO LN3=1,LNXA
+            L3=LOXA(LN3)
+            DO LN4=1,LNXB
+              L4=LOXB(LN4)
+              DO LR1=ABS(L1-L2),MIN(L1+L2,LRX),2
+                LR1X=MAX(LR1X,LR1)
                 DO LR2=ABS(L3-LR1),L3+LR1,2
-                  lr2x=max(lr2x,lr2)
+                  LR2X=MAX(LR2X,LR2)
                   DO MABS=0,MIN(LR2,L4)
-                    mabsx=max(mabsx,MIN(LR2,L4))
-                    indx=indx+1
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-!     this estimate is nearly a factor 10 too large!!! why?
-      iix=0
-      DO L1=0,LXa
-        DO L2=0,LXa
-          DO L3=0,LXa
-            DO L4=0,LXb
+                    MABSX=MAX(MABSX,MIN(LR2,L4))
+                    INDX=INDX+1
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!     THIS ESTIMATE IS NEARLY A FACTOR 10 TOO LARGE!!! WHY?
+      IIX=0
+      DO L1=0,LXA
+        DO L2=0,LXA
+          DO L3=0,LXA
+            DO L4=0,LXB
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX),2
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
-                    iix=iix+(2*l1+1)*(2*l2+1)*(2*l3+1)*2
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
+                    IIX=IIX+(2*L1+1)*(2*L2+1)*(2*L3+1)*2
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
 !
-!     == set up index array ====================================================
-      lmn1=0
-      do ln1=1,lnxa
-        L1=LOXa(LN1)
-        lmn0a(ln1)=lmn1
-        lmn1=lmn1+2*l1+1
-      enddo
-      lmn1=0
-      do ln1=1,lnxb
-        L1=LOXb(LN1)
-        lmn0b(ln1)=lmn1
-        lmn1=lmn1+2*l1+1
-      enddo
-!!$write(*,fmt='("ispa,ispb",t20,10i5)')ispa,ispb
-!!$write(*,fmt='("lxa,lxb",t20,10i5)')lxa,lxb
-!!$write(*,fmt='("lmxa,lmxb",t20,10i5)')lmxa,lmxb
-!!$write(*,fmt='("lnxa,lnxb",t20,10i5)')lnxa,lnxb
-!!$write(*,fmt='("loxa",t20,20i5)')loxa
-!!$write(*,fmt='("loxb",t20,20i5)')loxb
-!!$write(*,fmt='("lmn0a",t20,20i5)')lmn0a
-!!$write(*,fmt='("lmn0b",t20,20i5)')lmn0b
-!!$write(*,fmt='("indx,iix,",t20,10i10)')indx,iix
-!!$write(*,fmt='("lr1x,lr2x,mabsx",t20,10i5)')lr1x,lr2x,mabsx
+!     == SET UP INDEX ARRAY ====================================================
+      LMN1=0
+      DO LN1=1,LNXA
+        L1=LOXA(LN1)
+        LMN0A(LN1)=LMN1
+        LMN1=LMN1+2*L1+1
+      ENDDO
+      LMN1=0
+      DO LN1=1,LNXB
+        L1=LOXB(LN1)
+        LMN0B(LN1)=LMN1
+        LMN1=LMN1+2*L1+1
+      ENDDO
+!!$WRITE(*,FMT='("ISPA,ISPB",T20,10I5)')ISPA,ISPB
+!!$WRITE(*,FMT='("LXA,LXB",T20,10I5)')LXA,LXB
+!!$WRITE(*,FMT='("LMXA,LMXB",T20,10I5)')LMXA,LMXB
+!!$WRITE(*,FMT='("LNXA,LNXB",T20,10I5)')LNXA,LNXB
+!!$WRITE(*,FMT='("LOXA",T20,20I5)')LOXA
+!!$WRITE(*,FMT='("LOXB",T20,20I5)')LOXB
+!!$WRITE(*,FMT='("LMN0A",T20,20I5)')LMN0A
+!!$WRITE(*,FMT='("LMN0B",T20,20I5)')LMN0B
+!!$WRITE(*,FMT='("INDX,IIX,",T20,10I10)')INDX,IIX
+!!$WRITE(*,FMT='("LR1X,LR2X,MABSX",T20,10I5)')LR1X,LR2X,MABSX
 
 !
 !     ==========================================================================
-!     == extract four slater integrals                                        ==
+!     == EXTRACT FOUR SLATER INTEGRALS                                        ==
 !     ==========================================================================
-      allocate(integral(indx))
-      allocate(dintegral(indx))
+      ALLOCATE(INTEGRAL(INDX))
+      ALLOCATE(DINTEGRAL(INDX))
       IND=0
-      DO LN1=1,LNXa
-        L1=LOXa(LN1)
-        DO LN2=LN1,LNXa
-          L2=LOXa(LN2)
-          DO LN3=1,LNXa
-            L3=LOXa(LN3)
-            DO LN4=1,LNXb
-              L4=lOXb(LN4)
-              DO LR1=ABS(L1-L2),MIN(L1+L2,LRx),2
+      DO LN1=1,LNXA
+        L1=LOXA(LN1)
+        DO LN2=LN1,LNXA
+          L2=LOXA(LN2)
+          DO LN3=1,LNXA
+            L3=LOXA(LN3)
+            DO LN4=1,LNXB
+              L4=LOXB(LN4)
+              DO LR1=ABS(L1-L2),MIN(L1+L2,LRX),2
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
                     IND=IND+1
 !                   == EVALUATE MATRIX ELEMENT FOR THE DISTANCE HERE...
-                    CALL LMTO_OFFSITEXVALUE('31',ISPa,ISPb,IND,ABS(DIS) &
-     &                                          ,INTEGRAL(ind),DINTEGRAL(ind))
+                    CALL LMTO_OFFSITEXVALUE('31',ISPA,ISPB,IND,ABS(DIS) &
+     &                                          ,INTEGRAL(IND),DINTEGRAL(IND))
                     IF(DIS.LT.0.D0) THEN
-                      SVAR=real((-1)**(L1+L2+L3+L4))
-                      INTEGRAL(ind)=SVAR*INTEGRAL(ind)
-                      DINTEGRAL(ind)=-SVAR*DINTEGRAL(ind)
+                      SVAR=REAL((-1)**(L1+L2+L3+L4))
+                      INTEGRAL(IND)=SVAR*INTEGRAL(IND)
+                      DINTEGRAL(IND)=-SVAR*DINTEGRAL(IND)
                     END IF
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
-!     == extract products of gaunt coefficients                               ==
+!     == EXTRACT PRODUCTS OF GAUNT COEFFICIENTS                               ==
 !     ==========================================================================
-      lm1=max(max(lmxa,(lr1x+1)**2),(lr2x+1)**2)
-      allocate(cgmat(lm1,lm1,lm1))
-      cgmat(:,:,:)=0.d0
-      do lm3=1,lmxa
-        do lm2=1,max((lr2x+1)**2,lmxa)
-          do lm1=1,(lr1x+1)**2
+      LM1=MAX(MAX(LMXA,(LR1X+1)**2),(LR2X+1)**2)
+      ALLOCATE(CGMAT(LM1,LM1,LM1))
+      CGMAT(:,:,:)=0.D0
+      DO LM3=1,LMXA
+        DO LM2=1,MAX((LR2X+1)**2,LMXA)
+          DO LM1=1,(LR1X+1)**2
             CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG1)
-            cgmat(lm1,lm2,lm3)=cg1
-            cgmat(lm2,lm1,lm3)=cg1
-            cgmat(lm1,lm3,lm2)=cg1
-            cgmat(lm3,lm1,lm2)=cg1
-            cgmat(lm2,lm3,lm1)=cg1
-            cgmat(lm3,lm2,lm1)=cg1
-          enddo
-        enddo
-      enddo
+            CGMAT(LM1,LM2,LM3)=CG1
+            CGMAT(LM2,LM1,LM3)=CG1
+            CGMAT(LM1,LM3,LM2)=CG1
+            CGMAT(LM3,LM1,LM2)=CG1
+            CGMAT(LM2,LM3,LM1)=CG1
+            CGMAT(LM3,LM2,LM1)=CG1
+          ENDDO
+        ENDDO
+      ENDDO
 
-      allocate(list(iix))
-      allocate(iia1(lxa+1,lxa+1,lxa+1,lxb+1,lr1x+1,lr2x+1,mabsx+1))
-      allocate(iia2(lxa+1,lxa+1,lxa+1,lxb+1,lr1x+1,lr2x+1,mabsx+1))
-CALL TIMING$CLOCKON('X31-a')
-      ii=0
-      DO L1=0,LXa
-        DO L2=0,LXa
-          DO L3=0,LXa
-            DO L4=0,LXb
+      ALLOCATE(LIST(IIX))
+      ALLOCATE(IIA1(LXA+1,LXA+1,LXA+1,LXB+1,LR1X+1,LR2X+1,MABSX+1))
+      ALLOCATE(IIA2(LXA+1,LXA+1,LXA+1,LXB+1,LR1X+1,LR2X+1,MABSX+1))
+CALL TIMING$CLOCKON('X31-A')
+      II=0
+      DO L1=0,LXA
+        DO L2=0,LXA
+          DO L3=0,LXA
+            DO L4=0,LXB
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX),2
-                lmr1i=(lr1**2)+1
-                lmr1f=(lr1+1)**2
+                LMR1I=(LR1**2)+1
+                LMR1F=(LR1+1)**2
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
 !
-                    iia1(l1+1,l2+1,l3+1,l4+1,lr1+1,lr2+1,mabs+1)=ii+1
+                    IIA1(L1+1,L2+1,L3+1,L4+1,LR1+1,LR2+1,MABS+1)=II+1
 
                     DO PM=-1,1,2
                       IF(MABS.EQ.0.AND.PM.EQ.1) CYCLE
@@ -9575,24 +9567,24 @@ CALL TIMING$CLOCKON('X31-a')
                           LM1=L1**2
                           DO M1=1,2*L1+1
                             LM1=LM1+1
-                            svar=sum(cgmat(lmr1i:lmr1f,lm1,lm2) &
-                   &                *cgmat(lmr1i:lmr1f,lm3,lmr2))
-                            if(svar.eq.0.d0) cycle
-                            ii=ii+1
-                            if(ii.gt.iix) then
+                            SVAR=SUM(CGMAT(LMR1I:LMR1F,LM1,LM2) &
+                   &                *CGMAT(LMR1I:LMR1F,LM3,LMR2))
+                            IF(SVAR.EQ.0.D0) CYCLE
+                            II=II+1
+                            IF(II.GT.IIX) THEN
                               CALL ERROR$STOP('INDEX II EXCEEDS ARRAY SIZE')
                               CALL ERROR$STOP('LMTO_OFFSITEX31U_TEST1')
-                            end if
-                            list(ii)%m1=m1
-                            list(ii)%m2=m2
-                            list(ii)%m3=m3
-                            list(ii)%m4=m4
-                            list(ii)%val=svar
+                            END IF
+                            LIST(II)%M1=M1
+                            LIST(II)%M2=M2
+                            LIST(II)%M3=M3
+                            LIST(II)%M4=M4
+                            LIST(II)%VAL=SVAR
                           ENDDO
                         ENDDO
                       ENDDO
                     ENDDO
-                    iia2(l1+1,l2+1,l3+1,l4+1,lr1+1,lr2+1,mabs+1)=ii
+                    IIA2(L1+1,L2+1,L3+1,L4+1,LR1+1,LR2+1,MABS+1)=II
                   ENDDO
                 ENDDO
               ENDDO
@@ -9600,66 +9592,66 @@ CALL TIMING$CLOCKON('X31-a')
           ENDDO
         ENDDO
       ENDDO
-CALL TIMING$CLOCKOff('X31-a')
-deallocate(cgmat)
-print*,'ii ',ii,iix
+CALL TIMING$CLOCKOFF('X31-A')
+DEALLOCATE(CGMAT)
+PRINT*,'II ',II,IIX
 !
-      allocate(iibnds(2,indx))
+      ALLOCATE(IIBNDS(2,INDX))
       IND=0
-      DO LN1=1,LNXa
-        L1=LOXa(LN1)
-        DO LN2=LN1,LNXa
-          L2=LOXa(LN2)
-          DO LN3=1,LNXa
-            L3=LOXa(LN3)
-            DO LN4=1,LNXb
-              L4=lOXb(LN4)
+      DO LN1=1,LNXA
+        L1=LOXA(LN1)
+        DO LN2=LN1,LNXA
+          L2=LOXA(LN2)
+          DO LN3=1,LNXA
+            L3=LOXA(LN3)
+            DO LN4=1,LNXB
+              L4=LOXB(LN4)
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX),2
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
                     IND=IND+1
-                    iibnds(1,ind)=iia1(l1+1,l2+1,l3+1,l4+1,lr1+1,lr2+1,mabs+1)
-                    iibnds(2,ind)=iia2(l1+1,l2+1,l3+1,l4+1,lr1+1,lr2+1,mabs+1)
-                  enddo
-                enddo
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-      deallocate(iia1)
-      deallocate(iia2)
+                    IIBNDS(1,IND)=IIA1(L1+1,L2+1,L3+1,L4+1,LR1+1,LR2+1,MABS+1)
+                    IIBNDS(2,IND)=IIA2(L1+1,L2+1,L3+1,L4+1,LR1+1,LR2+1,MABS+1)
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(IIA1)
+      DEALLOCATE(IIA2)
 !
 !     ==========================================================================
-!     == calculate four center integrals
+!     == CALCULATE FOUR CENTER INTEGRALS
 !     ==========================================================================
-CALL TIMING$CLOCKON('X31-b')
+CALL TIMING$CLOCKON('X31-B')
       U(:,:,:,:)=0.D0
       DU(:,:,:,:)=0.D0
       IND=0
-      DO LN1=1,LNXa
-        L1=LOXa(LN1)
-        DO LN2=LN1,LNXa
-          L2=LOXa(LN2)
-          DO LN3=1,LNXa
-            L3=LOXa(LN3)
-            DO LN4=1,LNXb
-              L4=lOXb(LN4)
+      DO LN1=1,LNXA
+        L1=LOXA(LN1)
+        DO LN2=LN1,LNXA
+          L2=LOXA(LN2)
+          DO LN3=1,LNXA
+            L3=LOXA(LN3)
+            DO LN4=1,LNXB
+              L4=LOXB(LN4)
               DO LR1=ABS(L1-L2),MIN(L1+L2,LR1X),2
                 DO LR2=ABS(L3-LR1),L3+LR1,2
                   DO MABS=0,MIN(LR2,L4)
                     IND=IND+1
-                    ii1=iibnds(1,ind)
-                    ii2=iibnds(2,ind)
-                    do ii=ii1,ii2
-                      LMN1=LMN0a(LN1)+list(ii)%m1
-                      LMN2=LMN0a(LN2)+list(ii)%m2
-                      LMN3=LMN0a(LN3)+list(ii)%m3
-                      LMN4=LMN0B(LN4)+list(ii)%m4
-                      u(lmn1,lmn2,lmn3,lmn4)=u(lmn1,lmn2,lmn3,lmn4) &
-     &                                      +list(ii)%val*integral(ind)
-                      du(lmn1,lmn2,lmn3,lmn4)=du(lmn1,lmn2,lmn3,lmn4) &
-     &                                      +list(ii)%val*dintegral(ind)
+                    II1=IIBNDS(1,IND)
+                    II2=IIBNDS(2,IND)
+                    DO II=II1,II2
+                      LMN1=LMN0A(LN1)+LIST(II)%M1
+                      LMN2=LMN0A(LN2)+LIST(II)%M2
+                      LMN3=LMN0A(LN3)+LIST(II)%M3
+                      LMN4=LMN0B(LN4)+LIST(II)%M4
+                      U(LMN1,LMN2,LMN3,LMN4)=U(LMN1,LMN2,LMN3,LMN4) &
+     &                                      +LIST(II)%VAL*INTEGRAL(IND)
+                      DU(LMN1,LMN2,LMN3,LMN4)=DU(LMN1,LMN2,LMN3,LMN4) &
+     &                                      +LIST(II)%VAL*DINTEGRAL(IND)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -9668,9 +9660,9 @@ CALL TIMING$CLOCKON('X31-b')
           ENDDO
         ENDDO
       ENDDO
-CALL TIMING$CLOCKOff('X31-b')
-      return
-      end
+CALL TIMING$CLOCKOFF('X31-B')
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO_OFFSITEXBONDU(ISP1,ISP2,DIS,LMNX1,LMNX2,U,DU)
@@ -9986,7 +9978,8 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: P(2)  ! POINT [-1,1]X[-1,1]
        REAL(8),INTENT(OUT):: VALUE ! RESULTING OVERLAP
-       REAL(8)            :: PI,FPI,SQ2
+       REAL(8),PARAMETER  :: PI=4.D0*ATAN(1.D0)
+       REAL(8)            :: FPI,SQ2
        REAL(8)            :: COSTHETA1,COSTHETA2
        REAL(8)            :: PLM1,PLM2
        REAL(8)            :: R0(2),T1(2),T2(2),R(2)
@@ -9994,7 +9987,6 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        REAL(8)            :: DRDP
        REAL(8)            :: VAL1,VAL2
 !      *************************************************************************
-       PI=4.D0*ATAN(1.D0)
        FPI=4.D0*PI
        SQ2=SQRT(2.D0)
 !
@@ -10156,7 +10148,7 @@ END MODULE ADAPT_MODULE
        IMPLICIT NONE
        REAL(8)  ,INTENT(IN)  :: P(2)
        REAL(8)  ,INTENT(OUT) :: RES
-       REAL(8)               :: PI
+       REAL(8)  ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
        REAL(8)               :: R0(2)
        REAL(8)               :: T1(2)
        REAL(8)               :: T2(2)
@@ -10182,7 +10174,6 @@ END MODULE ADAPT_MODULE
        ELSE IF (TYPE.EQ.2) THEN
 !        == TEST 6 FROM VAN DOOREN AND DE RIDDER ===============================
 !        == TARGET RESULT IS -4 ================================================
-         PI=4.D0*ATAN(1.D0)
          R0   =(/0.D0,0.D0/)
          T1(:)=(/3.D0*PI,0.D0/)
          T2(:)=(/0.D0,3.D0*PI/)
@@ -12248,6 +12239,9 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)   ,INTENT(IN)  :: IKPT0
       INTEGER(4)   ,INTENT(IN)  :: ISPIN0
       INTEGER(4)   ,INTENT(IN)  :: NR1,NR2,NR3
+      REAL(8)      ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      COMPLEX(8)   ,PARAMETER   :: CI=(0.D0,1.D0)
+      COMPLEX(8)   ,PARAMETER   :: CI2PI=CI*2.D0*PI
       REAL(8)                   :: RBAS(3,3)
       INTEGER(4)                :: NAT
       REAL(8)       ,ALLOCATABLE:: R0(:,:)
@@ -12262,8 +12256,6 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       CHARACTER(64)             :: TITLE='LMTO_WAVEFILE'
       COMPLEX(8)  ,ALLOCATABLE  :: WAVE(:)
       COMPLEX(8)  ,ALLOCATABLE  :: WAVE1(:,:,:)
-      REAL(8)                   :: PI
-      COMPLEX(8)                :: CI2PI
       COMPLEX(8)                :: EIKT
       COMPLEX(8)                :: CSVAR
       REAL(8)                   :: T(3)
@@ -12278,13 +12270,10 @@ STOP 'FORCED STOP IN LMTO_TESTDENMAT_1CENTER'
       INTEGER(4)                :: NIJK,NE,NORB
       INTEGER(4)                :: NPRO,NB,NBH
       COMPLEX(8)                :: CSVAR1,CSVAR2
-      COMPLEX(8)  ,PARAMETER    :: CI=(0.D0,1.D0)
       LOGICAL(4)                :: TINV
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO$PLOTWAVE')
       IF(.NOT.TON) RETURN
-      PI=4.D0*ATAN(1.D0)
-      CI2PI=(0.D0,1.D0)*2.D0*PI
 !
 !     ==========================================================================
 !     ==  COLLECT DATA                                                        ==

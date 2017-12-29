@@ -151,6 +151,7 @@ END MODULE WARMUP_MODULE
       REAL(8)   ,INTENT(IN)      :: R0(3,NAT)
       REAL(8)   ,INTENT(INOUT)   :: FORCE(3,NAT)
       REAL(8)   ,INTENT(INOUT)   :: RP(3,NAT)
+      REAL(8)   ,PARAMETER       :: PI=4.D0*ATAN(1.D0)
       REAL(8)                    :: MASS(3,NAT)
       INTEGER(4),SAVE            :: NSTEP
       REAL(8)   ,ALLOCATABLE,SAVE:: DELTAV(:,:)
@@ -161,10 +162,9 @@ END MODULE WARMUP_MODULE
       REAL(8)          :: XMIN, A, B, TEMPER, TEMPER1,RKAPPA, SVAR, RKB, SXVAR
       INTEGER(4)       :: ISTEP, I, J, NFILO, IPULSE, I1, I2, J1, J2, JC, IC
       INTEGER(4), SAVE :: ITOTAL = 0
-      REAL(8)          :: PI, TWOPI
+      REAL(8)          :: TWOPI
       INTEGER(4)       :: NG
 !     -----------------------------------------------------------------------
-      PI=4.D0*ATAN(1.D0)
       TWOPI=2.D0*PI
       NG=3*NAT
 !     ----------------------------------------------------

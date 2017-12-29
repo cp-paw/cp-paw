@@ -170,14 +170,13 @@ END MODULE CELL_MODULE
       REAL(8),INTENT(IN) :: PERIOD ! PERIOD OF CELL OSCILLATION
       REAL(8),INTENT(OUT):: MASS  ! MASS OF THE UNIT CELL
       REAL(8),INTENT(OUT):: FRICTION ! FRICTION PARAMETER FOR CRITICAL DAMPING
-      REAL(8)            :: PI
+      REAL(8),PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)            :: OMEGA
       REAL(8)            :: VOL
       REAL(8)            :: AMAT(3,3)
 !     *****************************************************************
 !      CALL ERROR$MSG('NOT FULLY IMPLEMENTED: DO NOT USE')
 !      CALL ERROR$STOP('CELL$CONVERT')
-      PI=4.D0*ATAN(1.D0)
       CALL GBASS(TREF,AMAT,VOL)
       OMEGA=2.D0*PI/PERIOD
       MASS=3.D0*B*VOL**(1.D0/3.D0)/OMEGA**2

@@ -118,7 +118,7 @@ CONTAINS
         CHARACTER(2)      :: CORE
       END TYPE
       TYPE(SET_TYPE)      :: SET(0:NEL)
-      REAL(8)             :: PI
+      REAL(8)  ,PARAMETER :: PI=4.D0*ATAN(1.D0)
       REAL(8)             :: FACASA
       INTEGER(4)          :: I,J,IC
 !     **************************************************************************
@@ -258,7 +258,6 @@ CONTAINS
 !     ==========================================================================
 !     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                        ==
 !     ==========================================================================
-      PI=4.D0*ATAN(1.D0)
       FACASA=4.D0/SQRT(2.D0)*(3.D0/(16.D0*PI))**(1.D0/3.D0)
       DO I=0,NEL
         ELEMENT(I)%SYMBOL=SET(I)%SYMBOL

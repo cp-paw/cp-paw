@@ -255,8 +255,9 @@
       COMPLEX(8),INTENT(OUT):: Z(NX-1)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)   ,PARAMETER  :: BY3=1.D0/3.D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: N ! ORDER OF THE POLYNOM
-      REAL(8)               :: A,B,C,D,DD,P,Q,SVAR,PI,U,V
+      REAL(8)               :: A,B,C,D,DD,P,Q,SVAR,U,V
       COMPLEX(8)            :: CU,CV,CSVAR
 !     **************************************************************************
       N=NX-1
@@ -288,7 +289,6 @@
 !     == CARDANOS EQUATION FOR CUBIC POLYNOMIAL
 !     ==========================================================================
       ELSE IF(N.EQ.3) THEN
-        PI=4.D0*ATAN(1.D0)
 !       == AX^3+BX^2+CX+D ======================================================
         A=COEFF(4)
         B=COEFF(3)

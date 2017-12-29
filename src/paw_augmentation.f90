@@ -241,6 +241,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,INTENT(OUT)  :: POTB ! NEG. AV. EL. AUGM. POT.
       COMPLEX(8),INTENT(OUT)  :: DATH(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: DO(LMNX,LMNX,NDIMD)
+      REAL(8)    ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)              :: GID   ! GRID ID
       REAL(8)   ,ALLOCATABLE  :: R(:)  ! RADIAL GRID
       REAL(8)                 :: AEZ
@@ -276,7 +277,6 @@ END MODULE AUGMENTATION_MODULE
       CHARACTER(32)           :: ATOM
       REAL(8)                 :: VQLM1(LMRX)
       REAL(8)                 :: QLM(LMRX)
-      REAL(8)                 :: PI
       REAL(8)   ,ALLOCATABLE  :: AEHPOT(:,:)
       REAL(8)   ,ALLOCATABLE  :: AEXCPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSHPOT(:,:)
@@ -287,7 +287,6 @@ END MODULE AUGMENTATION_MODULE
       CHARACTER(32)           :: SOFTCORETYPE
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==================================================================
 !     ==  COLLECT ATOM-TYPE SPECIFIC INFORMATION FROM SETUP OBJECT    ==
@@ -671,14 +670,13 @@ STOP
       REAL(8)   ,INTENT(IN) :: AERHO(NR,LMRX)
       REAL(8)   ,INTENT(IN) :: PSRHO(NR,LMRX)
       REAL(8)   ,INTENT(OUT):: QLM(LMRX)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)               :: DWORK(NR)
-      REAL(8)               :: PI,Y0
       REAL(8)               :: RES
       INTEGER(4)            :: LM,L
       REAL(8)               :: R(NR)
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       QLM(:)=0.D0
       DO LM=1,LMRX
@@ -736,6 +734,8 @@ STOP
       REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: EXC
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -747,8 +747,7 @@ STOP
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: Y0
+      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
@@ -767,9 +766,7 @@ STOP
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
@@ -1018,6 +1015,8 @@ STOP
       REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: EXC
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -1034,8 +1033,7 @@ STOP
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: PI,FOURPI
-      REAL(8)               :: Y0
+      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM,LM1,LM2,LM3
       INTEGER(4)            :: IMAX
@@ -1056,9 +1054,7 @@ STOP
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      PI=4.D0*ATAN(1.D0)
       FOURPI=4.D0*PI
-      Y0=1.D0/SQRT(FOURPI)
       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
@@ -1385,6 +1381,8 @@ STOP
       REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
       REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
       REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      REAL(8)     ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER     :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
       REAL(8)                    :: A(NR,LMRX,3)
@@ -1394,7 +1392,6 @@ STOP
       REAL(8)                    :: S(NR,LMRX)
       REAL(8)                    :: VS(NR,LMRX)
       REAL(8)                    :: AUX(NR)
-      REAL(8)                    :: PI,Y0
       REAL(8)                    :: CG   ! GAUNT COEFFICIENT
       REAL(8)     ,PARAMETER     :: SMALL=(1.D-2)**2
       INTEGER(4)                 :: ISIG,LM,LM1,LM2,LM3
@@ -1408,8 +1405,6 @@ STOP
 !!$CALL AUGMENTATION_WRITEPHI('POT4_Z_OTHER.DAT',GID,NR,LMRX,POT4(:,:,4))
         RETURN
       END IF
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       RHO2(:,:,:)=0.D0
       POT4(:,:,:)=0.D0
 !
@@ -1558,16 +1553,15 @@ STOP
       REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
       REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
       REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      REAL(8)     ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER     :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                    :: A(NR,LMRX,3)
       REAL(8)                    :: VA(NR,LMRX,3)
       REAL(8)                    :: Q(NR)
       REAL(8)                    :: VQ(NR)
-      REAL(8)                    :: PI,Y0
       REAL(8)     ,PARAMETER     :: SMALL=1.D-4 ! DO NOT CHOOSE TOO SMALL!
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       RHO2(:,:,:)=0.D0
       POT4(:,:,:)=0.D0
 !
@@ -1658,12 +1652,11 @@ STOP
       REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
       REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
       REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
-      REAL(8)                    :: PI,Y0
+      REAL(8)     ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER     :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)     ,PARAMETER     :: SMALL=1.D-4 ! DO NOT CHOOSE TOO SMALL!
       INTEGER(4)                 :: ISIG,LM
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       RHO2(:,:,:)=0.D0
       POT4(:,:,:)=0.D0
 !
@@ -1726,16 +1719,16 @@ STOP
       REAL(8)     ,INTENT(OUT)   :: RHO2(NR,LMRX,2)
       REAL(8)     ,INTENT(IN)    :: POT2(NR,LMRX,2)
       REAL(8)     ,INTENT(OUT)   :: POT4(NR,LMRX,4)
+      REAL(8)     ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER     :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                    :: ARRAY(NR)
       REAL(8)                    :: A(NR,LMRX,3)
       REAL(8)                    :: B(NR,LMRX,3)
       REAL(8)                    :: AUX(NR)
-      REAL(8)                    :: PI,Y0,C0LL,CG
+      REAL(8)                    :: C0LL,CG
       REAL(8)     ,PARAMETER     :: SMALL=1.D-6 ! DO NOT CHOOSE TOO SMALL!
       INTEGER(4)                 :: ISIG,LM,LM1,LM2,LM3
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       C0LL=Y0
       RHO2(:,:,:)=0.D0
       POT4(:,:,:)=0.D0
@@ -1855,19 +1848,18 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB
       REAL(8)    ,INTENT(OUT):: PSPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: PSEH
+      REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)                :: R(NR)
       REAL(8)                :: RHO1(NR)
       REAL(8)                :: POT(NR)
       REAL(8)                :: PSE(NR)
       REAL(8)                :: G(NR)
       REAL(8)                :: RHOHAT(NR,LMRX)
-      REAL(8)                :: PI
       REAL(8)                :: ALPHA   !1/RCSM
       REAL(8)                :: CL
       REAL(8)                :: SVAR
       INTEGER(4)             :: LM,L,M,LX
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==================================================================
@@ -1968,18 +1960,17 @@ STOP
       REAL(8)    ,INTENT(IN) :: RHOB       ! COMPENSATING BACKGROUND
       REAL(8)    ,INTENT(OUT):: AEPOT(NR,LMRX)
       REAL(8)    ,INTENT(OUT):: AEEH       ! ENERGY
+      REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)    ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                :: R(NR)
       REAL(8)                :: AUX(NR)
       REAL(8)                :: POT(NR)
       REAL(8)                :: AEE(NR)  ! ENERGY DENSITY
       REAL(8)                :: SVAR
       REAL(8)                :: EEXT
-      REAL(8)                :: PI,Y0
       INTEGER(4)             :: LM
       INTEGER(4)             :: L
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==================================================================
@@ -2729,14 +2720,13 @@ END IF
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      REAL(8),   INTENT(IN) :: RC
-      REAL(8),   INTENT(IN) :: R
+      REAL(8)   ,INTENT(IN) :: RC
+      REAL(8)   ,INTENT(IN) :: R
       INTEGER(4),INTENT(IN) :: L
-      REAL(8),   INTENT(OUT):: V
-      REAL(8)               :: PI
+      REAL(8)   ,INTENT(OUT):: V
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: FAC,X,SVAR1
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       FAC=4.D0*PI/DBLE(2*L+1)*RC**DBLE(L+2)
       X=R/RC
       CALL DG2NDX(L+1,X,SVAR1)
@@ -2758,12 +2748,11 @@ END IF
       INTEGER(4),INTENT(IN) :: N
       REAL(8),   INTENT(IN) :: X
       REAL(8),   INTENT(OUT):: V
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: X2,GAUSS,FAC1,FAC2
       REAL(8)               :: ERFX
       INTEGER(4)            :: I
 !     ******************************************************************
-      PI=4.D0*ATAN(1.D0)
       X2=X*X
       CALL LIB$ERFR8(X,ERFX)
       V=0.5D0*SQRT(PI)*ERFX
@@ -2922,7 +2911,7 @@ END IF
       REAL(8)   ,INTENT(IN)   :: RHO(NR)
       REAL(8)   ,INTENT(OUT)  :: EB
       REAL(8)   ,INTENT(INOUT):: POT(NR)
-      REAL(8)                 :: PI
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       REAL(8)                 :: SVAR
       REAL(8)                 :: WORK(NR)
       REAL(8)                 :: R(NR)
@@ -2931,7 +2920,6 @@ END IF
         EB=0.D0
         RETURN
       END IF
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
       SVAR=-2.D0*PI*RHOB/3.D0*SQRT(4.D0*PI)
       WORK(:)=SVAR*RHO(:)*R(:)**4

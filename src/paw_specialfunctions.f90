@@ -278,17 +278,16 @@
       INTEGER(4),INTENT(IN) :: L ! MAIN AGULAR MOMENTUM
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! BESSL FUNCTION AT X
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: TRIG(4)
       REAL(8)               :: FACUL(0:100)
       REAL(8)   ,PARAMETER  :: TOL=1.D-10
-      REAL(8)               :: PI
       REAL(8)               :: ARG
       REAL(8)               :: XSQ
       REAL(8)               :: FAC
       INTEGER(4)            :: I,K,IL,II,ISVAR
 !     ******************************************************************
       IF(X.GT.REAL(L,KIND=8)) THEN
-        PI=4.D0*ATAN(1.D0)
         ARG=X-0.5D0*REAL(L,KIND=8)*PI
         TRIG(1)=SIN(ARG)/X
         TRIG(2)=COS(ARG)/X
@@ -386,10 +385,10 @@
       REAL(8)   ,INTENT(OUT):: Y ! BESSL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
       REAL(8)   ,PARAMETER  :: TOL=1.D-10
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: TRIG(4)
       REAL(8)               :: DTRIG(4)
       REAL(8)               :: FACUL(0:2*L)
-      REAL(8)               :: PI
       REAL(8)               :: ARG
       REAL(8)               :: XSQ
       REAL(8)               :: FAC,DFAC
@@ -441,7 +440,6 @@
 !       ========================================================================
 !       ==  EXPANSION FOR LARGE ARGUMENTS  X>L                                ==
 !       ========================================================================
-        PI=4.D0*ATAN(1.D0)
         ARG=X-0.5D0*REAL(L,KIND=8)*PI
         TRIG(1)=SIN(ARG)/X
         TRIG(2)=COS(ARG)/X
@@ -491,8 +489,8 @@
       REAL(8)   ,INTENT(OUT):: Y ! BESSL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
       REAL(8)               :: JLPHALB,JLMHALB,JLPDREIHALB
-      REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
-      REAL(8),PARAMETER     :: XMIN=1.D-30
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: XMIN=1.D-30
 !     **************************************************************************
       IF(X.LT.0.D0) THEN
         CALL ERROR$MSG('BESSEL FUNCTION FOR NEGATIVE ARG UNDEFINED')
@@ -543,11 +541,11 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE OF NEUMANN FUNCTION AT X
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: TRIG(4)
       REAL(8)               :: DTRIG(4)
       REAL(8)               :: FACUL(0:2*L)
       REAL(8)   ,PARAMETER  :: TOL=1.D-10
-      REAL(8)               :: PI
       REAL(8)               :: ARG
       REAL(8)               :: XSQ,DXSQ
       REAL(8)               :: FAC,DFAC
@@ -595,7 +593,6 @@
 !       ========================================================================
 !       ==  EXPANSION FOR LARGE ARGUMENTS   X>L                               ==
 !       ========================================================================
-        PI=4.D0*ATAN(1.D0)
         ARG=X+0.5D0*REAL(L,KIND=8)*PI
         M1POWERL=(-1)**L
         TRIG(1)=-M1POWERL*COS(ARG)/X
@@ -648,7 +645,7 @@
       REAL(8)   ,INTENT(OUT):: Y ! NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE OF NEUMANN FUNCTION AT X
       REAL(8)               :: YLPHALB,YLMHALB,YLPDREIHALB
-      REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8),PARAMETER     :: XMIN=1.D-30
 !     **************************************************************************
       IF(X.LT.0.D0) THEN
@@ -768,7 +765,7 @@
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED BESSEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
       REAL(8)               :: ILPHALB,ILMHALB,ILPDREIHALB
-      REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8),PARAMETER     :: XMIN=1.D-30
 !     **************************************************************************
       IF(X.LT.XMIN)THEN
@@ -895,7 +892,7 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED NEUMANN FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! DERIVATIVE
-      REAL(8),PARAMETER     :: PI=3.141592653589793238462643383279502884197169D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8),PARAMETER     :: XMIN=1.D-30
       REAL(8)               :: MODHANKEL_Y,MODHANKEL_DYDX
       REAL(8)               :: MODBESSEL_Y,MODBESSEL_DYDX
@@ -960,7 +957,7 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED HANKEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! MODIFIED HANKEL FUNCTION AT X
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: TRIG,DTRIG
       REAL(8)   ,PARAMETER  :: TOL=1.D-10
       REAL(8)               :: XSQ
@@ -970,7 +967,6 @@
       REAL(8)               :: SVAR,DSVAR
       INTEGER(4)            :: K
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       IF(X.LE.0.D0) THEN
         CALL ERROR$MSG('UNDEFINED FOR NEGATIVE OR ZERO ARGUMENTS')
         CALL ERROR$STOP('SPFUNCTION$MODHANKEL')
@@ -1012,7 +1008,7 @@
       REAL(8)   ,INTENT(IN) :: X ! ARGUMENT
       REAL(8)   ,INTENT(OUT):: Y ! MODIFIED HANKEL FUNCTION AT X
       REAL(8)   ,INTENT(OUT):: DYDX ! MODIFIED HANKEL FUNCTION AT X
-      REAL(8)   ,PARAMETER  :: PI=3.141592653589793238462643383279502884197169D0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: XMIN=1.D-30
       REAL(8)               :: KLPHALB,KLMHALB,KLPDREIHALB
 !     **************************************************************************

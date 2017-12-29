@@ -88,8 +88,9 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4),INTENT(IN)   :: LMX
       REAL(8),   INTENT(IN)   :: R(3)
       REAL(8),   INTENT(OUT)  :: YLM(LMX)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       COMPLEX(8)              :: EIPHI,EIMPHI
-      REAL(8)                 :: PI,FPI,SQ2
+      REAL(8)                 :: FPI,SQ2
       INTEGER(4)              :: LX
       REAL(8)                 :: DIS,DISXY
       REAL(8)                 :: COSTHE,SINPHI,COSPHI
@@ -97,7 +98,6 @@ END MODULE SPHERICAL_MODULE
       REAL(8)                 :: FAC,SVAR
       INTEGER(4)              :: LMM,LMP
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       FPI=4.D0*PI
       SQ2=SQRT(2.D0)
       IF(LMX.LE.1) THEN
@@ -161,10 +161,10 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4),INTENT(IN) :: INDX   ! 
       INTEGER(4),INTENT(IN) :: LMX
       REAL(8)   ,INTENT(OUT):: YLMPOL(INDX,LMX) 
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: FACTORIAL(0:2*LX)
       INTEGER(4)            :: L,MPOS,IX,JY,KZ,P,I,J,K,J1,K1,N,IND,LM,M
       REAL(8)               :: SVAR1,SVAR2,SVAR3,SVAR4,SVAR5,RES
-      REAL(8)               :: PI
       INTEGER(4)            :: ISVAR
       LOGICAL(4),PARAMETER  :: TWRITE=.FALSE.
 !     **************************************************************************
@@ -195,7 +195,6 @@ END MODULE SPHERICAL_MODULE
 !     ==========================================================================
 !     == PREPARATION: PI AND FACTORIAL                                        ==
 !     ==========================================================================
-      PI=4.D0*ATAN(1.D0)
       ISVAR=0
       FACTORIAL(0)=1.D0
       DO I=1,2*LX
@@ -595,10 +594,10 @@ END MODULE SPHERICAL_MODULE
       REAL(8)   ,INTENT(OUT):: X(LMX,LMX)
       REAL(8)   ,INTENT(OUT):: Y(LMX,LMX)
       REAL(8)   ,INTENT(OUT):: Z(LMX,LMX)
-      REAL(8)               :: PI,SQ4PIBY3
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: SQ4PIBY3
       INTEGER(4)            :: LM1,LM2
 !     ***********************************************************************
-      PI=4.D0*ATAN(1.D0)
       SQ4PIBY3=SQRT(4.D0*PI/3.D0)
       DO LM1=1,LMX
         DO LM2=1,LMX
@@ -797,9 +796,10 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4),INTENT(IN) :: LMXX
       INTEGER(4),INTENT(IN) :: LMAX
       REAL(8)   ,INTENT(OUT):: CG(LMXX,LMXX,LMXX)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: FACT(0:170) !UPPER LIMIT IS MAX IN REAL(8)
       REAL(8)               :: SQFACT(0:170)
-      REAL(8)               :: PI,SQPI,SQ2
+      REAL(8)               :: SQPI,SQ2
       INTEGER(4)            :: I,IMAX
       INTEGER(4)            :: LM1,L1,M1,N1,IS1
       INTEGER(4)            :: LM2,L2,M2,N2,IS2
@@ -820,7 +820,6 @@ END MODULE SPHERICAL_MODULE
         END
       END INTERFACE
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       SQ2=SQRT(2.D0)
       SQPI=SQRT(PI)
       IMAX=4*LMAX+1
@@ -1021,14 +1020,13 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4),PARAMETER :: LX1=10
       INTEGER(4),PARAMETER :: LX2=10
       INTEGER(4),PARAMETER :: LX3=10
+      REAL(8)   ,PARAMETER :: PI=4.D0*ATAN(1.D0)
       REAL(8)              :: COEFF(LX1+1,LX2+1,(LX3+1)**2)
       INTEGER(4)           :: L1,L2,L3,L3A,L3B
       INTEGER(4)           :: IM1,IM2,IM3,IM3A,IM3B
       INTEGER(4)           :: LM1,LM2,LM3,LM3A,LM3B
       REAL(8)              :: CG1,CG2,SVAR
-      REAL(8)              :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     == TAKE CARE OF ANGULAR PART                                            ==

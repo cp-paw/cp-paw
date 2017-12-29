@@ -93,14 +93,13 @@
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       INTEGER(4),INTENT(IN) :: LMX
       REAL(8)   ,INTENT(OUT):: J(LMX)
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
       REAL(8)               :: X,Y,DYDX
       INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
-      REAL(8)               :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,J)
       LX=INT(SQRT(REAL(LMX+1.D-5)))-1
       K=SQRT(ABS(K2))     
@@ -140,16 +139,15 @@
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       INTEGER(4),INTENT(IN) :: LMX
       REAL(8)   ,INTENT(OUT):: H(LMX)  ! SOLID HANKEL FUNCTION
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
       REAL(8)               :: X,XR,Y,DYDX
       INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
-      REAL(8)               :: PI
       LOGICAL(4)            :: TCAP
       REAL(8)               :: A,B
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL SPHERICAL$YLM(LMX,R,H)
       LX=INT(SQRT(REAL(LMX+1.D-5)))-1
       K=SQRT(ABS(K2))     
@@ -296,11 +294,10 @@
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       REAL(8)   ,INTENT(OUT):: J
       REAL(8)   ,INTENT(OUT):: JDER
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: K 
       REAL(8)               :: X,Y,DYDX
-      REAL(8)               :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
       X=R
       IF(K2.GT.0.D0) THEN
@@ -334,12 +331,11 @@
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       REAL(8)   ,INTENT(OUT):: H    ! RADIAL PART OF THE HANKEL FUNCTION
       REAL(8)   ,INTENT(OUT):: HDER ! RADIAL DERIVATIVE OF THE HANKEL FUNCTION
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: K 
       REAL(8)               :: X,Y,DYDX
-      REAL(8)               :: PI
       REAL(8)               :: SVAR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       K=SQRT(ABS(K2))     
       X=R
       IF(K2.GT.0.D0) THEN
@@ -380,7 +376,7 @@
       REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
       REAL(8)   ,INTENT(OUT):: S((L1X+1)**2,(L2X+1)**2)
       REAL(8)   ,PARAMETER  :: RAD=1.D-6
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: SVAR
       INTEGER(4)            :: L3X,LM1X,LM2X,LM3X
       INTEGER(4)            :: LM1,LM2,LM3,L,L1,L2,L3,IM,LM3A,LM3B
@@ -391,7 +387,6 @@
 !     **************************************************************************
       IF(L1X.EQ.-1.OR.L2X.EQ.-1) RETURN  ! NO RETURN VALUES
 !
-      PI=4.D0*ATAN(1.D0)
       L3X=L1X+L2X
       LM1X=(L1X+1)**2
       LM2X=(L2X+1)**2

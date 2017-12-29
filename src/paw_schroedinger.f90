@@ -262,20 +262,18 @@
       INTEGER(4) ,INTENT(IN)     :: IDIR    ! IDIR=1 INTEGRATE OUTWARD
                                             ! IDIR=-1 INTEGRATE INWARD
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
+      REAL(8)    ,PARAMETER      :: PI=4.D0*ATAN(1.D0)
+      REAL(8)    ,PARAMETER      :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                    :: A(NR) 
       REAL(8)                    :: B(NR) 
       REAL(8)                    :: C(NR) 
       REAL(8)                    :: D(NR) 
       REAL(8)                    :: R(NR) 
-      REAL(8)                    :: PI
-      REAL(8)                    :: Y0
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
       LOGICAL(4)                 :: THOM
 INTEGER(4) :: IR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     ==========================================================================
 !     == SPIN ORBIT COUPLING                                                  ==
@@ -369,17 +367,16 @@ ENDDO
       REAL(8)    ,INTENT(IN)     :: POT(NR) !POTENTIAL (RADIAL PART ONLY)
       REAL(8)    ,INTENT(IN)     :: PHI(NR) !WAVE-FUNCTION
       REAL(8)    ,INTENT(OUT)    :: TPHI(NR) !KINETIC ENERGY * WAVE-FUNCTION
+      REAL(8)    ,PARAMETER      :: PI=4.D0*ATAN(1.D0)
       REAL(8)                    :: A(NR) 
       REAL(8)                    :: B(NR) 
       REAL(8)                    :: C(NR) 
       REAL(8)                    :: DPHI(NR) 
       REAL(8)                    :: D2PHI(NR) 
       REAL(8)                    :: R(NR) 
-      REAL(8)                    :: PI
       REAL(8)                    :: SOFACTOR
       REAL(8)                    :: RDPRIME(NR)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
 !
 !     ==========================================================================
 !     == SPIN ORBIT COUPLING                                                  ==
@@ -2249,16 +2246,14 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN)   :: XMAX     ! MAXIMUM TOLERABLE RATIO OF PHI 
       REAL(8)   ,INTENT(INOUT):: POT(NR)  ! RADIAL SPHERICAL POTENTIAL
       REAL(8)   ,INTENT(IN)   :: E        ! ENERGY
-      REAL(8)                 :: PI
-      REAL(8)                 :: Y0
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                 :: SVAR
       REAL(8)                 :: R(NR)
       REAL(8)                 :: F(NR)
       REAL(8)                 :: G(NR)
       INTEGER(4)              :: IR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)
       F(:)=SQRT(MAX(POT(:)*Y0-E,0.D0))
       CALL RADIAL$INTEGRATE(GID,NR,F,G)
@@ -2297,8 +2292,8 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: E        ! ENERGY
       INTEGER(4),INTENT(OUT):: IRCL     ! CLASSICAL TURNING POINT
       INTEGER(4),INTENT(OUT):: IROUT    ! OUTERMOST GRID POINT
-      REAL(8)               :: PI       ! PI
-      REAL(8)               :: Y0       ! SPHERICAL HARMONIC FOR LM=0
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR LM=0
       REAL(8)               :: R(NR)    ! RADIAL GRID
       REAL(8)               :: TKIN(NR)    ! RADIAL KINETIC ENERGY
       REAL(8)               :: FAC,SVAR,SUMVAL,XMAXLOG
@@ -2306,8 +2301,6 @@ CHARACTER(32):: FILE
       LOGICAL               :: TCHK
       LOGICAL(4),PARAMETER  :: TINNER=.FALSE.
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       XMAXLOG=LOG(XMAX)
       CALL RADIAL$R(GID,NR,R)
 !
@@ -2811,12 +2804,11 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: POT(NR)     ! POTENTIAL (MULTIPLY WITH Y0!)
       REAL(8)   ,INTENT(IN) :: E           ! ONE-PARTICLE ENERGY
       REAL(8)   ,INTENT(OUT):: DREL(NR)    ! RELATIVISTIC CORRECTION 
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR LM=0
       REAL(8)               :: C           ! SPEED OF LIGHT
-      REAL(8)               :: PI,Y0      
       REAL(8)               :: EKIN(NR)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL CONSTANTS$GET('C',C)
       EKIN(:)=E-POT(:)*Y0
       EKIN(:)=MAX(EKIN,-C**2)   ! FIX TO AVOID A DIVIDE BY ZERO.
@@ -2845,12 +2837,11 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN) :: RMIN  ! NODES INSIDE RMIN ARE NOT COUNTED
       REAL(8)   ,INTENT(IN) :: RC    ! PHASESHIFT CALCULATED AT RC
       REAL(8)   ,INTENT(OUT):: PHASE
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: R(NR)
       REAL(8)               :: VAL,DER
       INTEGER(4)            :: IR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL RADIAL$R(GID,NR,R)
 !
 !     == THIS IS A MORE ROBUST EXPRESSION WITH LINEAR INTERPOLATION BETWEEN
@@ -2901,10 +2892,9 @@ CHARACTER(32):: FILE
       REAL(8)   ,INTENT(IN)  :: PHASE
       REAL(8)   ,INTENT(OUT) :: VAL
       REAL(8)   ,INTENT(OUT) :: DER
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)                :: SVAR
-      REAL(8)                :: PI
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       SVAR=MODULO(PHASE,1.D0)
       NN=NINT(PHASE-SVAR)
       IF(ABS(SVAR-0.5D0).LT.0.25D0) THEN
@@ -2931,6 +2921,8 @@ CHARACTER(32):: FILE
       INTEGER(4),PARAMETER :: NB=3
       INTEGER(4),PARAMETER :: NBG=5
       REAL(8)   ,PARAMETER :: AEZ=7.D0
+      REAL(8)   ,PARAMETER :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR LM=0
       INTEGER(4)           :: LOFI(NB)
       INTEGER(4)           :: NN(NB)
       REAL(8)              :: F(NB)  ! OCCUPATION PER SHELL
@@ -2940,10 +2932,7 @@ CHARACTER(32):: FILE
       REAL(8)              :: TPHI(NR,LMX,NBG)
       REAL(8)              :: R(NR)
       REAL(8)              :: POT(NR,LMRX)
-      REAL(8)              :: PI,Y0
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
 !
 !     == DEFINE RADIAL GRID
       CALL RADIAL__NEW('LOG',GID)
@@ -2998,6 +2987,8 @@ STOP
       INTEGER(4),PARAMETER  :: LMX=(L+1)**2
       INTEGER(4),PARAMETER  :: NPHI=2*L+1
       INTEGER(4),PARAMETER  :: LXSL=2
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR L=0
       REAL(8)               :: R(NR)    ! RADIAL GRID
       REAL(8)               :: DREL(NR) ! ARRAY FOR RELATIVISTIC CORRECTION
       REAL(8)               :: POT(NR,LMRX)
@@ -3009,14 +3000,11 @@ STOP
       REAL(8)               :: PHI(NR,LMX,NPHI)
       REAL(8)               :: TPHI(NR,LMX,NPHI)
       LOGICAL(4)            :: TOK
-      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
 !     **************************************************************************
       IF(L+1.GT.N) THEN
         CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
         CALL ERROR$STOP('SCHROEDINGER_TESTLBND_SCALREL')
       END IF
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL__R(GID,NR,R)      
 !
 !     ==========================================================================
@@ -3053,6 +3041,8 @@ CALL ERROR$MSG('SCHROEDINGER_TESTLBND_SLOC')
       INTEGER(4),PARAMETER  :: N=2 !MAIN QUANTUM NUMBER USED IN THE TEST
       INTEGER(4),PARAMETER  :: LMX=(L+1)**2
       INTEGER(4),PARAMETER  :: NPHI=2*L+1
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR L=0
       REAL(8)               :: R(NR)    ! RADIAL GRID
       REAL(8)               :: DREL(NR) ! ARRAY FOR RELATIVISTIC CORRECTION
       REAL(8)               :: POT(NR,LMRX)
@@ -3064,14 +3054,11 @@ CALL ERROR$MSG('SCHROEDINGER_TESTLBND_SLOC')
       LOGICAL(4)            :: TOK
       LOGICAL(4)            :: TMAINSH(L+1)
       INTEGER(4)            :: LX=L
-      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
 !     **************************************************************************
       IF(L+1.GT.N) THEN
         CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
         CALL ERROR$STOP('SCHROEDINGER_TESTLBND_SCALREL')
       END IF
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL$R(GID,NR,R)      
 !
 !     ==========================================================================
@@ -3108,6 +3095,8 @@ CALL ERROR$MSG('SCHROEDINGER_TESTLBND_SLOC')
       INTEGER(4),INTENT(IN) :: NR
       REAL(8)   ,INTENT(IN) :: AEZ
       INTEGER(4),PARAMETER  :: L=2   !ANGULAR MOMENTUM USED IN THE TEST
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI) ! SPH. HARMON. FOR L=0
       INTEGER(4)            :: N=4   !MAIN QUANTUM NUMBER USED IN THE TEST
       INTEGER(4)            :: NFIL=70
       INTEGER(4)            :: SO
@@ -3125,15 +3114,12 @@ CALL ERROR$MSG('SCHROEDINGER_TESTLBND_SLOC')
       INTEGER(4)            :: IRCL     ! CLASSICAL RETURN RADIUS, MAX RADIUS 
       INTEGER(4)            :: IROUT    ! MAX RADIUS WITHOUT CREATING AN OVERFLOW
       INTEGER(4)            :: IR       ! 
-      REAL(8)               :: PI,Y0    ! PI, SPHERICAL HARMONIC FOR L=0
       REAL(8)               :: SVAR     ! AUXILIARY VARIABLE
 !     **************************************************************************
       IF(L+1.GT.N) THEN
         CALL ERROR$MSG('L+1 MUST BE SMALLER THAN N')
         CALL ERROR$STOP('SCHROEDINGER_TESTSPHERICAL')
       END IF
-      PI=4.D0*ATAN(1.D0)
-      Y0=1.D0/SQRT(4.D0*PI)
       CALL RADIAL__R(GID,NR,R)      
 !
 !     ==========================================================================

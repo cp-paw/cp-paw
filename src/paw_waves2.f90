@@ -2286,13 +2286,14 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
       INTEGER(4)               :: IB,IG,IDIM,I
-      REAL(8)                  :: PI,FAC
+      REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
+      REAL(8)                  :: FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
       INTEGER(4)               :: ISVAR
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
+      
 !
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
@@ -2341,9 +2342,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       INTEGER(4),PARAMETER     :: NRAN=10000
       REAL(8)   ,SAVE          :: XRAN(NRAN)
       REAL(8)   ,PARAMETER     :: GC2=3.D0
+      REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
       REAL(8)                  :: G2
       INTEGER(4)               :: IB,IG,IDIM,I
-      REAL(8)                  :: PI,FAC
+      REAL(8)                  :: FAC
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: RANDARR(NG)
       REAL(8)                  :: REC,RIM
@@ -2351,7 +2353,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)                  :: SVAR,RAN,GX,GY,GZ
       REAL(8)                  :: RSMALL
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       RSMALL=100.D0*TINY(RSMALL)
 !     ==========================================================================
 !     == CREATE A SERIES OF NRAN PSEUDO-RANDOM NUMBERS                        ==

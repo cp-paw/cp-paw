@@ -207,11 +207,11 @@ END MODULE THERMOSTAT_MODULE
 !     **************************************************************************
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
-      INTEGER(4)            ,INTENT(IN) :: NFIL
-      REAL(8)                           :: KELVIN
-      REAL(8)                           :: SVAR
-      REAL(8)                           :: OMEGA0
-      REAL(8)                           :: PI
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: KELVIN
+      REAL(8)               :: SVAR
+      REAL(8)               :: OMEGA0
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO THERMOSTAT SELECTED')
@@ -220,7 +220,6 @@ END MODULE THERMOSTAT_MODULE
       IF(.NOT.THIS%ON) RETURN
 !
       CALL CONSTANTS('KB',KELVIN)
-      PI=4.D0*ATAN(1.D0)
       CALL REPORT$TITLE(NFIL,'THERMOSTAT: '//TRIM(THIS%ID))
       IF(THIS%TWAVE) THEN
         CALL REPORT$STRING(NFIL,'SPECIAL WAVE FUNCTION THERMOSTAT:COOLING ONLY')
@@ -259,11 +258,10 @@ END MODULE THERMOSTAT_MODULE
       REAL(8)   ,INTENT(OUT):: Q        ! THERMOSTAT MASS
       REAL(8)   ,INTENT(OUT):: FRICTION ! THERMOSTAT FRICTION FOR
                                         ! CRITICAL DAMPING
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: OMEGA0
       REAL(8)               :: ALPHA
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       OMEGA0=2.D0*PI/PERIOD
       Q=4.D0*TARGET/OMEGA0**2   ! OMEGA0=SQRT(4*<T>/Q)
       ALPHA=1.D0/OMEGA0         ! CRITICAL DAMPING
@@ -319,7 +317,7 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
       USE THERMOSTAT_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: DT
       REAL(8)               :: X0,XM,XP
       REAL(8)               :: ANNEX  ! FRICTION FOR THE NOSE THERMOSTAT
@@ -367,7 +365,6 @@ IF(THIS%ID.EQ.'ATOMS')PRINT*,'THERMOSTAT$SCALEGFREE',THIS%Q
 !     ==========================================================================
 !     ==  ADJUST DIRECT THERMOSTAT PARAMETERS                                 ==
 !     ==========================================================================
-      PI=4.D0*ATAN(1.D0)
       PERIOD=PI*SQRT(THIS%Q/THIS%EKIN_TARGET)
       IF(PERIOD.LT.3.D0*THIS%DT) THEN
         PRINT*,'WARNING! THERMOSTAT HAS TOO LARGE TIME STEP'

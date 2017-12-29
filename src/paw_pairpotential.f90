@@ -293,7 +293,7 @@
       REAL(8)   ,INTENT(IN)   :: A(LRXX+1,2*LRXX+2,LRXX)
       REAL(8)   ,INTENT(OUT)  :: VQLM(LMRX)
       REAL(8)   ,INTENT(OUT)  :: ESELF
-      REAL(8)                 :: PI
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       REAL(8)                 :: ROOT2
       REAL(8)                 :: RC12S,RC12B
       REAL(8)                 :: ES,EB
@@ -303,7 +303,6 @@
 !     **************************************************************************
       ESELF=0.D0
       VQLM(:)=0.D0
-      PI=4.D0*ATAN(1.D0)
       ROOT2=SQRT(2.D0)
       RC12S=ROOT2*RCSM
       RC12B=ROOT2*RCBG
@@ -349,7 +348,7 @@
       REAL(8)   ,INTENT(OUT):: HS(0:2*LRXX+1,0:LRXX)
       REAL(8)   ,INTENT(OUT):: HB(0:2*LRXX+1,0:LRXX)
       REAL(8)   ,INTENT(IN) :: A(LRXX+1,2*LRXX+2,LRXX)
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LUP,NUP,JUP
       INTEGER(4)            :: L,N,J
       REAL(8)               :: RC12S,RC12B
@@ -363,7 +362,6 @@
       REAL(8)               :: SUMS,SUMB
       REAL(8)               :: SVARS,SVARB
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       LUP=(2*LRXX+1)
       NUP=LRXX
       JUP=LRXX
@@ -436,8 +434,9 @@
       INTEGER(4),INTENT(IN)   :: LRXX
       REAL(8)   ,INTENT(IN)   :: HS(0:2*LRXX+1,0:LRXX)
       REAL(8)   ,INTENT(IN)   :: HB(0:2*LRXX+1,0:LRXX)
+      REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
       REAL(8)                 :: YLM((2*LRXX+2)**2)
-      REAL(8)                 :: PI,SQ4PB3
+      REAL(8)                 :: SQ4PB3
       INTEGER(4)              :: LPPXX
       INTEGER(4)              :: LMPPXX
       INTEGER(4)              :: I,LM,LM1,LM2,LM3,LM4,L1,L2,L3,L4
@@ -450,7 +449,6 @@
       REAL(8)                 :: FOFR
       REAL(8)                 :: CG,CG123   ! CLEBSCH GORDAN COEFFICIENT
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       SQ4PB3=SQRT(4.D0*PI/3.D0)
       LPPXX=2*LRXX+1
       LMPPXX=(LPPXX+1)**2
