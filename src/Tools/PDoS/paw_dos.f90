@@ -457,7 +457,7 @@ PRINT*,'AFTER NEWSET$PROCESS'
       INTEGER(4)     :: ISVAR
       INTEGER(4)     :: NARGS
 !     **************************************************************************
-      CALL LIB$NARGS(NARGS)
+      NARGS=COMMAND_ARGUMENT_COUNT()
       IF(NARGS.LT.1) THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$MSG('THE CONTROL FILE OF THE PDOS TOOL IS MANDATORY')

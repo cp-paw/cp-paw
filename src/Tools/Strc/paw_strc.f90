@@ -42,7 +42,7 @@
 !     == GET FILE NAME ROOT FROM THE ARGUMENT LIST AND CONSTRUCT              ==
 !     == FILE NAMES                                                           ==
 !     ==========================================================================
-      CALL LIB$NARGS(NARGS)
+      NARGS=COMMAND_ARGUMENT_COUNT()
       
 !     ==  DETECT HELP REQUESTS =================================================
       THELP=.FALSE.

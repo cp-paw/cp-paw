@@ -19,6 +19,7 @@
       CHARACTER(32)   :: CH32SVAR
       CHARACTER(256)  :: VERSIONTEXT
       CHARACTER(256)  :: VERSIONINFO
+      INTEGER         :: ST,LENG
       COMMON/VERSION/VERSIONTEXT
 !     **************************************************************************
 !     ==========================================================================
@@ -31,7 +32,7 @@
 !     ==========================================================================
 !     == CHECK THAT AT LEAST ONE ARGUMENT IS GIVEN                            ==
 !     ==========================================================================
-      CALL LIB$NARGS(ISVAR)
+      ISVAR=COMMAND_ARGUMENT_COUNT()
       IF(ISVAR.LT.1) THEN
         CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
         CALL ERROR$MSG('MUST BE GIVEN AS ARGUMENT')
@@ -41,7 +42,13 @@
 !     ==========================================================================
 !     == CHECK THAT AT LEAST ONE ARGUMENT IS GIVEN                            ==
 !     ==========================================================================
-      CALL LIB$GETARG(1,CNTLNAME)
+      CALL GET_COMMAND_ARGUMENT(1,CNTLNAME,LENG,ST)
+      IF(ST.NE.0) THEN
+        CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+        CALL ERROR$I4VAL('ARGUMENT LENGTH',LENG)
+        CALL ERROR$I4VAL('STATUS',ST)
+        CALL ERROR$STOP('PAW_VERSION')
+      END IF
       IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.EQ.'?') THEN
         WRITE(*,FMT='("USAGE:"/"=====")')
         WRITE(*,FMT='(T5,"1ST ARGUMENT",T25,"ACTION"/T5,32("-"))')
@@ -55,7 +62,7 @@
         WRITE(*,FMT='(T5,A9,T25,"PRINT VERSION INFORMATION")')TRIM(CH32SVAR)
         CH32SVAR=-'--PARMFILE'
         WRITE(*,FMT='(T5,A10,T25,"PRINT PARMFILE")')TRIM(CH32SVAR)
-        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE irrelevant")')
+        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE IRRELEVANT")')
         CALL ERROR$NORMALSTOP
 !
       ELSE IF(+CNTLNAME.EQ.'--VERSION') THEN
@@ -71,12 +78,12 @@
         WRITE(*,FMT='(A)')TRIM(VERAUT)
         WRITE(*,FMT='(A)')TRIM(VERDAT)
         WRITE(*,FMT='(72("*"))')
-        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE irRELEVANT")')
+        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE IRRELEVANT")')
         CALL ERROR$NORMALSTOP
       ELSE IF(+CNTLNAME.EQ.'--PARMFILE') THEN
         CALL VERSION$WRITEPARMFILE()
-        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE irRELEVANT")')
+        WRITE(*,FMT='(T5,A10,T25,"ERRORS AFTER THIS LINE ARE IRRELEVANT")')
         CALL ERROR$NORMALSTOP
       END IF
-      return
-      end
+      RETURN
+      END

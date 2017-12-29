@@ -39,7 +39,7 @@
 !     == GET FILE NAME ROOT FROM THE ARGUMENT LIST AND CONSTRUCT              ==
 !     == FILE NAMES                                                           ==
 !     ==========================================================================
-      CALL LIB$NARGS(NARGS)
+      NARGS=COMMAND_ARGUMENT_COUNT()
       IF(NARGS.NE.1) THEN
         CALL ERROR$MSG('INCORRECT NUMBER OF ARGUMENTS GIVEN')
         CALL ERROR$STOP('MAIN')

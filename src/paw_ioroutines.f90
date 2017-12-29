@@ -26,6 +26,7 @@ CONTAINS
         CHARACTER(*) ,INTENT(IN) :: VERSIONTEXT
         CHARACTER(32)            :: DATIME
         CHARACTER(32)            :: HOSTNAME
+        INTEGER(4)               :: STATUS
 !       ****************************************************************
         WRITE(NFILO,FMT='()')
         WRITE(NFILO,FMT='(80("*"))')
@@ -51,7 +52,8 @@ CONTAINS
         ENDIF
 
         CALL CLOCK$NOW(DATIME)
-        CALL LIB$GETHOSTNAME(HOSTNAME)
+        CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
+        IF(STATUS.NE.0) HOSTNAME='UNKNOWN HOSTNAME'
         WRITE(NFILO,FMT='("PROGRAM STARTED: ",A32," ON ",A)') &
      &           DATIME,HOSTNAME
         CALL LOCK$REPORT(NFILO)
@@ -288,6 +290,7 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)                   :: LEN
       INTEGER(4)                   :: RUNTIME(3)
       INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
+      INTEGER                      :: ST
       COMMON/VERSION/VERSIONTEXT
 !     **************************************************************************
                           CALL TRACE$PUSH('READIN')
@@ -297,13 +300,18 @@ CALL TRACE$PASS('DONE')
 !     ==========================================================================
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
-        CALL LIB$NARGS(ISVAR)
+        ISVAR=COMMAND_ARGUMENT_COUNT()
         IF (ISVAR.LT.1) THEN
           CALL ERROR$MSG('THE NAME OF THE CONTROLFILE')
           CALL ERROR$MSG('MUST BE GIVEN AS ARGUMENT')
           CALL ERROR$STOP('READIN')
         END IF
-        CALL LIB$GETARG(1,CNTLNAME)
+        CALL GET_COMMAND_ARGUMENT(1,CNTLNAME,STATUS=ST)
+        IF(ST.NE.0) THEN
+          CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+          CALL ERROR$I4VAL('STATUS',ST)
+          CALL ERROR$STOP('READIN')
+        END IF
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
       IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.EQ.'?') THEN
@@ -821,9 +829,17 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
       CHARACTER(512)       :: PAWDIR=''
+      INTEGER(4)           :: ST
 !     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
-      CALL LIB$GETENV('PAWDIR',PAWDIR)
+      CALL GET_ENVIRONMENT_VARIABLE('PAWDIR',PAWDIR,STATUS=ST)
+      IF(ST.NE.0.OR.ST.NE.1) THEN
+        IF(ST.EQ.-1) THEN
+          CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE "PAWDIR"')
+          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+        END IF
+        CALL ERROR$STOP('STANDARDFILES')
+      END IF
 !  
 !     ==========================================================================
 !     == SET STANDARD FILENAMES                                               ==

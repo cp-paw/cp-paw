@@ -19,7 +19,7 @@ end module stpreport_module
 !      =========================================================================
 !      == obtain filename and rootname                                        ==
 !      =========================================================================
-       call lib__nargs(nargs) !nargs=command_argument_count()
+       NARGS=COMMAND_ARGUMENT_COUNT()
        if(nargs.ne.1) then
          print*,'filename is not given'
          stop 'command line error'

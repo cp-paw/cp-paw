@@ -61,7 +61,9 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETARG(IPOS,ARG)
 !     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
+!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
+!     **  THIS ROUTINE SHALL BE REPLACED BY A DIRECT CALL TO THE FORTRAN      **
+!     ** INTRINSIC. IT IS STILL HEAVILY USED IN THE TOOLS.                    **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)  :: IPOS
@@ -81,61 +83,48 @@
       END IF
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$NARGS(NARGS)
-!     **************************************************************************
-!     **  RETURNS THE NUMBER OF COMMAND-LINE ARGUMENTS OF THE MAIN ROUTINE    **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: NARGS
-!     **************************************************************************
-!     == USE FORTRAN 2003 INTRINSIC FUNCTION ===================================
-      NARGS=COMMAND_ARGUMENT_COUNT()
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$GETENV(NAME,VAL)
-!     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
-!     **************************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)  :: NAME
-      CHARACTER(*),INTENT(OUT) :: VAL
-      INTEGER                  :: LENG
-      INTEGER                  :: ST
-!     **************************************************************************
-      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
-      IF(ST.NE.0) THEN
-        IF(ST.EQ.1) THEN
-          VAL=''
-!         CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-          RETURN
-        ELSE IF(ST.EQ.-1) THEN
-          CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE')
-          CALL ERROR$CHVAL('NAME',NAME)
-          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
-        END IF
-        CALL ERROR$STOP('LIB$GETENV')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
-!     **************************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!     **  IF HOSTNAME NOT AVAILABLE, RETURN 'UNKNOWN HOSTNAME'                **
-!     **************************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
-      INTEGER(4)                :: RC
-      INTEGER(4)                :: STATUS
-!     **************************************************************************
-      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
-      IF(STATUS.NE.0) THEN
-        HOSTNAME='UNKNOWN HOSTNAME'
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB$GETENV(NAME,VAL)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(IN)  :: NAME
+!!$      CHARACTER(*),INTENT(OUT) :: VAL
+!!$      INTEGER                  :: LENG
+!!$      INTEGER                  :: ST
+!!$!     **************************************************************************
+!!$      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
+!!$      IF(ST.NE.0) THEN
+!!$        IF(ST.EQ.1) THEN
+!!$          VAL=''
+!!$!         CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
+!!$          RETURN
+!!$        ELSE IF(ST.EQ.-1) THEN
+!!$          CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE')
+!!$          CALL ERROR$CHVAL('NAME',NAME)
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+!!$        END IF
+!!$        CALL ERROR$STOP('LIB$GETENV')
+!!$      END IF
+!!$      RETURN
+!!$      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
+!!$!     **************************************************************************
+!!$!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
+!!$!     **  IF HOSTNAME NOT AVAILABLE, RETURN 'UNKNOWN HOSTNAME'                **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
+!!$      INTEGER(4)                :: RC
+!!$      INTEGER(4)                :: STATUS
+!!$!     **************************************************************************
+!!$      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
+!!$      IF(STATUS.NE.0) THEN
+!!$        HOSTNAME='UNKNOWN HOSTNAME'
 !!$        IF(STATUS.EQ.-1) THEN
 !!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
 !!$        ELSE IF(STATUS.EQ.1) THEN
@@ -146,35 +135,9 @@
 !!$        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
 !!$        CALL ERROR$I4VAL('STATUS',STATUS)
 !!$        CALL ERROR$STOP('LIB$GETHOSTNAME')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$SYSTEM(COMMAND)
-!     **************************************************************************
-!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!     **************************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)   :: COMMAND
-      INTEGER(4)                :: RC   ! RETURN CODE
-      INTEGER                   :: ST
-      CHARACTER(82)             :: MSG
-!     **************************************************************************
-      CALL ERROR$MSG('LIB$SYSTEM IS DISABLED')
-      CALL ERROR$MSG('IT SHOULD NOT BE USED UNTIL FORTRAN2008 IS AVAILABLE')
-      CALL ERROR$STOP('LIB$SYSTEM')
-#
-!!$!     == FORTRAN 2008 STATEMENT ================================================
-!!$      CALL EXECUTE_COMMAND_LINE(COMMAND,WAIT=.FALSE.,EXITSTAT=ST,CMDMSG=MSG)
-!!$      IF(ST.NE.0) THEN
-!!$        CALL ERROR$MSG('SYSTEM CALL FAILED')
-!!$        CALL ERROR$CHVAL('COMMAND',COMMAND)
-!!$        CALL ERROR$CHVAL('ERROR MSG',MSG)
-!!$        CALL ERROR$STOP('LIB$SYSTEM')
 !!$      END IF
-      RETURN
-      END
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$FLUSHFILE(N)
@@ -1931,7 +1894,7 @@
       COMPLEX(8),INTENT(OUT) :: VT(N,N)
       REAL(8)   ,INTENT(OUT) :: S(M)     ! SINGULAR VALUES IN DESCENDING ORDER
       COMPLEX(8),ALLOCATABLE :: WORK(:)
-      real(8)   ,ALLOCATABLE :: rWORK(:)
+      REAL(8)   ,ALLOCATABLE :: RWORK(:)
       COMPLEX(8)             :: ACOPY(M,N)
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: INFO
@@ -1939,9 +1902,9 @@
 !     **************************************************************************
       LWORK=MAX(1,2*MIN(M,N)+MAX(M,N))
       ALLOCATE(WORK(LWORK))
-      ALLOCATE(rWORK(5*min(m,n)))
+      ALLOCATE(RWORK(5*MIN(M,N)))
       ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
-      CALL ZGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,rwork,INFO)
+      CALL ZGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,RWORK,INFO)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)

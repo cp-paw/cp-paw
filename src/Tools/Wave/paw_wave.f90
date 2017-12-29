@@ -20,7 +20,7 @@
        INTEGER(4)                :: I
        INTEGER(4)                :: NLISTS
 !      ******************************************************************
-       CALL LIB$NARGS(I)
+       I=COMMAND_ARGUMENT_COUNT()
        IF(I.NE.1) THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE.X [FILE]'
          WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
