@@ -2615,7 +2615,7 @@ RCL=RCOV
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_READ_NEW
+      SUBROUTINE SETUP_READ
 !     **************************************************************************
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
@@ -2665,7 +2665,7 @@ RCL=RCOV
       REAL(8)               :: SVAR
       INTEGER(4),ALLOCATABLE:: IWORK(:)
 !     **************************************************************************
-                            CALL TRACE$PUSH('SETUP_READ_NEW')
+                            CALL TRACE$PUSH('SETUP_READ')
       CALL TIMING$CLOCKON('SETUP CONSTRUCTION')
       IF(.NOT.ASSOCIATED(THIS)) THEN
         CALL ERROR$MSG('NO SETUP SELECTED')
@@ -3435,7 +3435,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
                             CALL TRACE$PUSH('SETUP$READ')
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
-        CALL SETUP_READ_NEW
+        CALL SETUP_READ
         CALL SETUP$UNSELECT()
       ENDDO
                             CALL TRACE$POP

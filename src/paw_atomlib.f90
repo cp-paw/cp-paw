@@ -709,7 +709,7 @@ USE PERIODICTABLE_MODULE
       INTEGER(4) ,INTENT(IN)     :: GID       ! GRID ID
       INTEGER(4) ,INTENT(IN)     :: NR        ! #(GRID POINTS)
       CHARACTER(*),INTENT(IN)    :: KEY     
-      REAL(8)    ,INTENT(INOUT)  :: RBOX      ! BOX RADIUS     
+      REAL(8)    ,INTENT(IN)     :: RBOX      ! BOX RADIUS     
       REAL(8)    ,INTENT(IN)     :: AEZ       ! ATOMIC NUMBER
       INTEGER(4) ,INTENT(IN)     :: NX        ! X#(STATES)
       INTEGER(4) ,INTENT(OUT)    :: NB        ! #(STATES)
@@ -1473,6 +1473,9 @@ END IF
 !       ========================================================================
 !       ==  CUT OFF THE POTENTIAL                                             ==
 !       ========================================================================
+!       == SPECIALRADS DETERMINES IRCL AND IROUT. 
+!       == R(IRCL)=CLASS. TURNING POINT
+!       == R(IROUT)= MAX RADIUS WITHOUT OVERFLOW
         CALL SCHROEDINGER_SPECIALRADS(GID,NR,L,XMAX,POT,E,IRCL,IROUT)
 !       == BOUNDARY CONDITION PHI(ROUT)=0 ======================================
         IF(R(IROUT).LT.RBOX) THEN
