@@ -2786,8 +2786,8 @@ STOP
 !     **  OF THE PERIODICALLY REPEATED FUNCTION                               **
 !     **    F(G) = 1/V * INT_V D^3R EXP(-I*G*R) \SUM_T F(R-T)                 **
 !     **                                                                      **
-!     **  CURRENTLY SIEGMAN'S METHOD IS USED:                                 **
-!     **  IT TURNS OUT THAT SIEGMAN'S METHOD IS SUPERIOR.  TALMAN'S METHOD    **
+!     **  CURRENTLY SIEGMANS METHOD IS USED:                                  **
+!     **  IT TURNS OUT THAT SIEGMANS METHOD IS SUPERIOR.  TALMANS METHOD      **
 !     **  GIVES IDENTICAL RESULTS, WHEN THE GRID IS DOUBLED AS WELL, BUT      **
 !     **  ITS RESULTS ARE NOISY NEAR G=0.                                     **
 !     **                                                                      **
@@ -2872,9 +2872,9 @@ STOP
 !!$CALL RADIAL_WRITEPHI('FOFGS.DAT',G1,DEX,NG,FOFGS)
 !!$CALL RADIAL_WRITEPHI('FOFG.DAT',G1,DEX,NG,FOFG)
 !
-!     =================================================================
-!     == APPLY FACTOR THAT DIFFERS TO TALMAN'S NOTATION              ==
-!     =================================================================
+!     ==========================================================================
+!     == APPLY FACTOR THAT DIFFERS TO TALMANS NOTATION                        ==
+!     ==========================================================================
 !      FOFG(:)=4.D0*PI/(2.D0*PI)**3*FOFG(:)
 !!$IF(MAXVAL(ABS(FOFG-FOFG_OLD)).GT.1.D-6*MAXVAL(ABS(FOFG_OLD))) THEN
 !!$PRINT*,'L ',L,R1,G1,DEX,NG
@@ -2921,7 +2921,7 @@ STOP
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_BESSELTRANSF_SIEGMANN(L,R1,G1,DEX,NP,FOFR,FOFG)
 !     **************************************************************************
-!     **  CONVOLUTION USING SIEGMAN'S METHOD USING TWO SUCCESSIVE FAST        **
+!     **  CONVOLUTION USING SIEGMANS METHOD USING TWO SUCCESSIVE FAST         **
 !     **  FOURIER TRANSFORMS                                                  **
 !     **                                                                      **
 !     **   F(G)= INT DR J_L(GR) * R^2 * F(R)                                  **
@@ -3012,7 +3012,7 @@ STOP
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL_BESSELTRANSF_CONVOLUTION(L,M,R1,G1,DEX,NP,FOFR,FOFG)
 !     **************************************************************************
-!     **  TALMAN'S METHOD FOR THE LARGE-G APPROXIMATION (M=0) AND             **
+!     **  TALMANS METHOD FOR THE LARGE-G APPROXIMATION (M=0) AND              **
 !     **  THE SMALL-G APPROXIMATION (M=L) FOR L>1                             **
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2009 ************
@@ -4051,7 +4051,7 @@ END MODULE BESSELTRANSFORM_MODULE
 !     **   THE DISCREPANCY AT THE MATCHING POINT IS RETURNED AS               **
 !     **   VARIABLE DISC SERVING AS ERROR ESTIMATE.                           **
 !     **                                                                      **
-!     **   FOR L=0,1 THE SMALL-G TRANSFORM USES SIEGMAN'S METHOD              **
+!     **   FOR L=0,1 THE SMALL-G TRANSFORM USES SIEGMANS METHOD               **
 !     **                                                                      **
 !     **   THE FOURIERTRANSFORM ACCORDING TO THE CONVENTION USED              **
 !     **   IN PAW IS OBTAINED BY MULTIPLICATION WITH 4*PI*I**L/VOL            **

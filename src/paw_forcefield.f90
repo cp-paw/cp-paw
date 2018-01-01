@@ -1356,7 +1356,7 @@ integer   :: nfilinfo
         ITORS = 0
 !     ---- Here I try to find the right parameters. The problem is that there are
 !          more than one possibilities. E.g. one can have X-CT-CT-X or OS-CT-CT-OH.
-!          I also don't know if it is possible that one gets X-CA-C-X instead of X-C-CA-X
+!          I also dont know if it is possible that one gets X-CA-C-X instead of X-C-CA-X
 !          so I also check the entries again. Maybe this can be optimized later.
 !print*,"FLAG: TYPES= ",Type1, TYPE2, TYPE3, TYPE4
         DO I=1, SIZE(TORSION_PARMS)

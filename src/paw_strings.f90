@@ -65,7 +65,7 @@ CONTAINS
         INTEGER(4)                   :: IWRITE
         LOGICAL(4)                   :: TZERO
 !       ************************************************************************
-        STRING=''
+        STRING=' '
         IACT=ABS(REAL(I,KIND=8))
         IF(IACT.GT.10**(IBASEMAX-1)) THEN
            CALL ERROR$MSG('ERROR STOP IN INTEGER TO STRING')
@@ -107,7 +107,7 @@ CONTAINS
         CALL ERROR$MSG('ROUTINE IS MARKED FOR DELETION')
         CALL ERROR$MSG('I_2_S_ALEX IS REPLACED BY I_2_S')
         CALL ERROR$STOP('I_2_S_ALEX')
-        STRING=''
+        STRING=' '
         IWRITE=1
         IACT=ABS(REAL(I,KIND=8))
         TZERO=.TRUE.

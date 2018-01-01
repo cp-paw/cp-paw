@@ -828,19 +828,19 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)        :: ID
       INTEGER(4)           :: NTASKS
       INTEGER(4)           :: THISTASK
-      CHARACTER(512)       :: PAWDIR=' '
+!!$      CHARACTER(512)       :: PAWDIR=' '
       INTEGER(4)           :: ST
 !     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
-      CALL GET_ENVIRONMENT_VARIABLE('PAWDIR',PAWDIR,STATUS=ST)
-      IF(ST.NE.0) THEN
-        CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE "PAWDIR"')
-        CALL ERROR$I4VAL('STATUS',ST)
-        IF(ST.EQ.-1) THEN
-          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
-        END IF
-        CALL ERROR$STOP('STANDARDFILES')
-      END IF
+!!$      CALL GET_ENVIRONMENT_VARIABLE('PAWDIR',PAWDIR,STATUS=ST)
+!!$      IF(ST.NE.0.AND.ST.NE.1) THEN
+!!$        CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE "PAWDIR"')
+!!$        CALL ERROR$I4VAL('STATUS',ST)
+!!$        IF(ST.EQ.-1) THEN
+!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
+!!$        END IF
+!!$        CALL ERROR$STOP('STANDARDFILES')
+!!$      END IF
 !  
 !     ==========================================================================
 !     == SET STANDARD FILENAMES                                               ==
@@ -2873,7 +2873,7 @@ CALL TRACE$PASS('DONE')
         CALL OPTEELS$SETCH('GROUP',CH256)
 !
 !       == ATOM NAME FOR EELS ==================================================
-        CH32='' !DEFAULT NOT SELECTED
+        CH32=' ' !DEFAULT NOT SELECTED
         CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,CH32)
         CALL OPTEELS$SETCH('ATOM',CH32)

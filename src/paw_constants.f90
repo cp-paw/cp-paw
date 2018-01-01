@@ -337,8 +337,8 @@ END MODULE CONSTANTS_MODULE
       REAL(8)                 :: SVAR
 !     ******************************************************************
       IF(TFIRST)CALL CONSTANTS_INITIALIZE
-      WRITE(NFIL,FMT='(/''CONVERSION FACTORS AN CONSTANTS:''' &
-     &                //'/''================================'')') 
+      WRITE(NFIL,FMT='(/"CONVERSION FACTORS AN CONSTANTS:"' &
+     &              //'/"================================")') 
 !
 !     ==================================================================
 !     ==   ATOMIC UNITS                                               ==

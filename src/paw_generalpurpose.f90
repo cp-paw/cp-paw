@@ -1801,12 +1801,12 @@ END IF
         RC=SQRT(C1/(2.D0*PI*C2))*VOL**(1.D0/3.D0)
         GMAX=C1/RC
         RMAX=C2*RC
-!       WRITE(*,FMT='(''RC='',F10.5,'' RMAX='',F10.5,'' GMAX='',F10.5)')
+!       WRITE(*,FMT='("RC=",F10.5," RMAX=",F10.5," GMAX=",F10.5)')
 !    &       RC,RMAX,GMAX
       ENDDO
       GMAX=C1/RC*2.D0
       RMAX=C2*RC*2.D0
-!     WRITE(*,FMT='(''RC='',F10.5,'' RMAX='',F10.5,'' GMAX='',F10.5)')
+!     WRITE(*,FMT='("RC=",F10.5," RMAX=",F10.5," GMAX=",F10.5)')
 !    &       RC,RMAX,GMAX
 !
 !     ==================================================================
@@ -2339,7 +2339,7 @@ END IF
 !!$LOGICAL(4)           :: TINI=.FALSE.
 !!$REAL(8)   ,PARAMETER :: SLEEP=5.D0 ! TIME IN SECONDS BEFORE INQUIRING ABOUT THE 
 !!$                                   ! LOCKED OR UNLOCKED STATE
-!!$CHARACTER(128)       :: DIR='' !/HOME/TOOLS/PAWLOCK/' !WILL BE MADE LOWERCASE
+!!$CHARACTER(128)       :: DIR=' ' !/HOME/TOOLS/PAWLOCK/ WILL BE MADE LOWERCASE
 !!$CHARACTER(128)       :: LOCKFILE
 !!$CHARACTER(128)       :: CMD_UNLOCK
 !!$CHARACTER(128)       :: CMD_LOCK

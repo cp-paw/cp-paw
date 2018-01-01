@@ -103,7 +103,7 @@
 !!$      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
 !!$      IF(ST.NE.0) THEN
 !!$        IF(ST.EQ.1) THEN
-!!$          VAL=''
+!!$          VAL=' '
 !!$!         CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
 !!$          RETURN
 !!$        ELSE IF(ST.EQ.-1) THEN
@@ -314,7 +314,7 @@
         OPTIND=OPTIND+1
         IF(OPTIND.GT.NARG) THEN
           NAME='?'
-          OPTARG=''
+          OPTARG=' '
           EXITCODE=1
           RETURN
         END IF
@@ -333,13 +333,13 @@
         LCUR=2
         IF(LARG.EQ.1.OR.(CONE.NE.'-'.AND.CONE.NE.'+')) THEN
           NAME='?'
-          OPTARG=''
+          OPTARG=' '
           EXITCODE=1
           RETURN
         ELSE IF(LARG.EQ.2.AND.CARG(2:2).EQ.CONE) THEN
           OPTIND=OPTIND+1
           NAME='?'
-          OPTARG=''
+          OPTARG=' '
           EXITCODE=1
           RETURN
         ENDIF
@@ -369,7 +369,7 @@
         LNAME=2
       END IF
       NAME(LNAME:LNAME)=COPT
-      OPTARG=''
+      OPTARG=' '
       IF(LOPT.LT.LEN(OPTIONSTRING).AND.OPTIONSTRING(LOPT+1:LOPT+1).EQ.':') THEN
       IF(LCUR.GT.LARG) THEN
         OPTIND=OPTIND+1

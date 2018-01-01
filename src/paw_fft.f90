@@ -70,7 +70,7 @@
 !**    BUT ONLY THE PART CORRESPONDING TO ITS PLANES.                **
 !**    THE PARTIAL STRIPES ARE DISTRIBUTED ONTO PLANES USING THE     **
 !**    ARRAY "ISTRIPEOFYZ". WE CONSIDER                              **
-!**    THAT SOME LINE-FFT'S NEED NOT BE DONE, BECAUSE THERE ARE      **
+!**    THAT SOME LINE-FFTS NEED NOT BE DONE, BECAUSE THERE ARE       **
 !**    NO NON-ZERO VECTORS. FINALLY THE THIRD DIRECTION IS PROCESSED.**
 !**                                                                  **
 !**                                                                  **

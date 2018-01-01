@@ -751,7 +751,7 @@ END MODULE DYNOCC_MODULE
       INTEGER(4)  ,INTENT(IN) :: LEN_
       INTEGER(4)  ,INTENT(OUT):: VAL(LEN_)
 !     *****************************************************************
-      IF(ID_.EQ.'') THEN
+      IF(ID_.EQ.' ') THEN
          VAL(:)=0
       ELSE IF(ID_.EQ.'NKDIV') THEN
         IF(LEN_.NE.3) THEN
