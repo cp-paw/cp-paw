@@ -395,7 +395,7 @@ END MODULE SETUP_MODULE
       THIS%SETTING%SO=.FALSE.
       THIS%SETTING%ZORA=.FALSE.
       THIS%SETTING%FOCK=0.D0
-      THIS%PARMS%ID=''
+      THIS%PARMS%ID=' '
       THIS%PARMS%POW_POT=0.D0
       THIS%PARMS%TVAL0_POT=.FALSE.
       THIS%PARMS%VAL0_POT=0.D0
@@ -1265,13 +1265,13 @@ END MODULE SETUP_MODULE
         ELSE IF(TCHK1) THEN
           CALL LINKEDLIST$GET(LL_STRC,'RAD',0,THIS%RAD)
         ENDIF
-        IF(THIS%RAD.GT.THIS%RBOX) THEN
-          CALL ERROR$MSG('VARIABLE "!STRUCTURE!SPECIES:RAD" MUST BE SMALLER')
-          CALL ERROR$MSG('THAN VARIABLE "!STRUCTURE!SPECIES!AUGMENT:RBOX".')
-          CALL ERROR$R8VAL('RAD[ABOHR]',THIS%RAD)
-          CALL ERROR$R8VAL('RBOX[ABOHR]',THIS%RBOX)
-          CALL ERROR$STOP('SETUP$READSTRCIN')
-        END IF
+!!$        IF(THIS%RAD.GT.THIS%RBOX) THEN
+!!$          CALL ERROR$MSG('VARIABLE "!STRUCTURE!SPECIES:RAD" MUST BE SMALLER')
+!!$          CALL ERROR$MSG('THAN VARIABLE "!STRUCTURE!SPECIES!AUGMENT:RBOX".')
+!!$          CALL ERROR$R8VAL('RAD[ABOHR]',THIS%RAD)
+!!$          CALL ERROR$R8VAL('RBOX[ABOHR]',THIS%RBOX)
+!!$          CALL ERROR$STOP('SETUP$READSTRCIN')
+!!$        END IF
 !
         CALL SETUP$UNSELECT()
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
@@ -2416,7 +2416,7 @@ RCL=RCOV
       IF(.NOT.TCHK) THEN
         CALL ERROR$MSG('!AUGMENT:RCL NOT SPECIFIED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP_LOOKUP_ndlss')
+        CALL ERROR$STOP('SETUP_LOOKUP_NDLSS')
       END IF
 !
       CALL LINKEDLIST$SIZE(LL_STP,'RCL/RCOV',1,LENG)
@@ -2425,7 +2425,7 @@ RCL=RCOV
         CALL ERROR$I4VAL('MAX L ON FILE ',LENG-1)
         CALL ERROR$I4VAL('MAX L REQUESTED',LX) 
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP_LOOKUP_ndlss')
+        CALL ERROR$STOP('SETUP_LOOKUP_NDLSS')
       END IF
 !
       ALLOCATE(WORK(LENG))
@@ -3403,7 +3403,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
         CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: RC' &
      &                          ,THIS1%PARMS%RC_POT,'ABOHR')
         CALL REPORT$R8VAL(NFIL,'POTENTIAL PSEUDIZATION PARAMETER: POWER' &
-     &                          ,THIS1%PARMS%POW_POT,'')
+     &                          ,THIS1%PARMS%POW_POT,' ')
         IF(THIS1%PARMS%TVAL0_CORE) THEN
           CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER:' &
      &                          //' VAL(0)',THIS1%PARMS%VAL0_CORE*Y0,'A_0^(-3)')
@@ -3414,7 +3414,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
         CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: RC' &
      &                         ,THIS1%PARMS%RC_CORE,'ABOHR')
         CALL REPORT$R8VAL(NFIL,'CORE DENSITY PSEUDIZATION PARAMETER: POWER' &
-     &                         ,THIS1%PARMS%POW_CORE,'')
+     &                         ,THIS1%PARMS%POW_CORE,' ')
         IF(.NOT.ASSOCIATED(THIS1%NEXT)) EXIT
         THIS1=>THIS1%NEXT
       ENDDO
@@ -3567,6 +3567,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)               :: RCOV    !COVALENT RADIUS
       REAL(8)               :: RNORM   !NORMALIZATIONS ARE DONE WITHIN RNORM
       REAL(8)               :: RBNDOUT
+      CHARACTER(32)         :: RELTYPE
 !     **************************************************************************
                                 CALL TRACE$PUSH('SETUP_MAKEPARTIALWAVES')
 !VFOCK%SCALE=0.D0
@@ -3621,7 +3622,20 @@ END IF
 !     == ALTERNATE PROJECTOR CONSTRUCTION                                     ==
 !     ==========================================================================
       IF(TYPE.EQ.'NDLSS') THEN
-        CALL SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT &
+        IF(TREL.AND.(.NOT.TZORA).AND.TSO) THEN
+          RELTYPE='SPINORBIT'
+        ELSE IF(TREL.AND.TZORA.AND.(.NOT.TSO)) THEN
+          RELTYPE='ZORA'
+        ELSE IF((.NOT.TREL).AND.(.NOT.TZORA).AND.(.NOT.TSO)) THEN
+          RELTYPE='NONREL'
+        ELSE
+          CALL ERROR$MSG('CAN NOT SELECT RELTYPE: UNKNOWN SELECTION')
+          CALL ERROR$L4VAL('TREL',TREL)
+          CALL ERROR$L4VAL('TZORA',TZORA)
+          CALL ERROR$L4VAL('TSO',TSO)
+          CALL ERROR$STOP('MAKEPARTIALWAVES')
+        END IF
+        CALL SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT,RELTYPE &
       &                   ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
       &                   ,QN,QNSM,AEPHI,AEPHISM,PSPHI,PSPHISM,PRO,DT,DOVER &
       &                   ,AEPHIDOT,AEPHIDOTSM,PSPHIDOT,PSPHIDOTSM)
@@ -3777,7 +3791,7 @@ END IF
             IF(LOX(LN2).NE.LOX(LN1)) CYCLE
             AUX(:)=R(:)**2*AEPHI(:,LN1)*AEPHI(:,LN2)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RNORM,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
             A(LN1,LN2)=VAL
           ENDDO
           WRITE(6,FMT='(20F12.3)')A(LN1,:)
@@ -3792,7 +3806,7 @@ END IF
             IF(LOX(LN2).NE.LOX(LN1)) CYCLE
             AUX(:)=R(:)**2*PRO(:,LN1)*PSPHI(:,LN2)
             CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
-            CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,VAL)
+            CALL RADIAL$VALUE(GID,NR,AUX1,ROUT,VAL)
             A(LN1,LN2)=VAL
           ENDDO
           WRITE(6,FMT='(20F12.3)')A(LN1,:)
@@ -6757,8 +6771,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
         WRITE(6,FMT='(80("="),T20," NEW: NODELESS EQUATION                 ")')
         WRITE(6,FMT='(80("="),T20," DIFFERENCE DUE TO RELATIVISTIC EFFECTS ")')
         DO IB=1,NB
-          WRITE(6,FMT='("IB=",I3," L=",I2," E[NEW]=",F15.5 &
-     &                                   ," E[OLD]=",F15.5)') &
+          WRITE(6,FMT='("IB=",I3," L=",I2," E[NEW]=",F15.5," E[OLD]=",F15.5)') &
      &                  IB,LOFI(IB),EOFI1(IB),EOFI(IB)
         ENDDO
         IF(TWRITE)CALL SETUP_WRITEPHI('UOFI.DAT',GID,NR,NB,UOFI)
@@ -7499,7 +7512,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT &
+      SUBROUTINE SETUP_OUTERNEWPROWRAPPER(GID,NR,ROUT,RELTYPE &
      &                  ,NB,NC,LOFI,SOFI,EOFI,LNX,LOX,RC,AEPOT,PSPOT,VFOCK &
      &                  ,G_QNPHI,G_QNPHISM,G_AEPHI,G_AEPHISM,G_PSPHI,G_PSPHISM &
      &                  ,G_PRO,G_DTKIN,G_DOVER &
@@ -7518,6 +7531,7 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       INTEGER(4),INTENT(IN)  :: GID    ! GRID ID
       INTEGER(4),INTENT(IN)  :: NR
       REAL(8)   ,INTENT(IN)  :: ROUT   ! RADIUS OF ENCLOSING SPHERE
+      CHARACTER(*),INTENT(IN):: RELTYPE
       INTEGER(4),INTENT(IN)  :: NB
       INTEGER(4),INTENT(IN)  :: NC
       INTEGER(4),INTENT(IN)  :: LOFI(NB)
@@ -7574,7 +7588,6 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       INTEGER(4)             :: NPHI !#(PARTIAL WAVES FOR THIS L)
       INTEGER(4)             :: LX
       INTEGER(4)             :: L,SO,IB,IBL,IPHI,JPHI,LN,LN1,LN2
-      CHARACTER(16)          :: RELTYPE
       REAL(8)                :: RCL  !PSEUDIZATION RADIUS FOR THIS L
       REAL(8)                :: ENU  !EXPANSION ENERGY FOR TAYLOR EXPANSION
 !     **************************************************************************
@@ -7593,13 +7606,18 @@ PRINT*,'CUT PARTIAL WAVE TAIL FOR LN=',LN,' AT R=',R(IR),' AND BEYOND'
       G_DTKIN=0.D0
       G_DOVER=0.D0
 
-!     RELTYPE='NONREL'
-      RELTYPE='ZORA'
-!     RELTYPE='SPINORBIT'
+      IF(RELTYPE.NE.'NONREL'.AND.RELTYPE.NE.'ZORA' &
+                            .AND.RELTYPE.NE.'SPINORBIT') THEN
+        CALL ERROR$MSG('ILLEGAL VALUE OF IDENTIFIER RELTYPE')
+        CALL ERROR$CHVAL('RELTYPE',RELTYPE)
+        CALL ERROR$STOP('SETUP_NEWPRO')
+      END IF
 !
       LX=MAX(MAXVAL(LOFI),MAXVAL(LOX))
       DO L=0,LX
         DO SO=MINVAL(SOFI),1,2  
+          IF(L.EQ.0.AND.SO.EQ.-1) CYCLE
+!
 WRITE(*,FMT='(80("-"),T20," L=",I2," SO=",I2)')L,SO
 !
 !         ======================================================================
@@ -7904,6 +7922,7 @@ END IF
 !
 !     ==========================================================================
 !     == RESOLVE RELTYPE                                                      ==
+!     == TSMALL=TVARDREL=(TREL.AND.(NOT.TZORA))                               ==
 !     ==========================================================================
       IF(RELTYPE.EQ.'NONREL') THEN
         TREL=.FALSE.
@@ -7915,11 +7934,6 @@ END IF
         TZORA=.TRUE.
         TSMALL=.FALSE.
         TVARDREL=.FALSE.
-!!$      ELSE IF(RELTYPE.EQ.'SCALAR') THEN
-!!$        TREL=.TRUE.
-!!$        TZORA=.FALSE.
-!!$        TSMALL=.TRUE.
-!!$        TVARDREL=.FALSE.
       ELSE IF(RELTYPE.EQ.'SPINORBIT') THEN
         TREL=.TRUE.
         TZORA=.FALSE.
@@ -7960,6 +7974,7 @@ END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT RELATIVISTIC FACTOR                                        ==
+!     == KEPT CONSTANT EXCEPT FOR FULLY RELATIVISTIC CALCULATION              ==
 !     ==========================================================================
       DREL=0.D0   !NON-RELATIVISTIC CASE
       IF(TREL) THEN
@@ -7981,11 +7996,11 @@ END IF
 !
 !       == PREPARE INHOMOGENEITY ===============================================
         IF(TSMALL) THEN
-          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   
+          AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   !GSM=-UCORE(IB-1)
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
-          AUX=AUX1+(1.D0-KAPPA)/R*AUX  
+          AUX=AUX1+(1.D0-KAPPA)/R*AUX    !CAUTION: PROBABLY SIGN ERROR
           AUX(1)=AUX(2)
-          G=G-AUX !GSM=-FSM(IB-1)
+          G=G-AUX !GSM=-FSM(IB-1)   !CAUTION: PROBABLY SIGN ERROR
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================
@@ -7998,7 +8013,8 @@ END IF
 !
 !       == CONSTRUCT SMALL COMPONENT ===========================================
         IF(TSMALL) THEN
-          DREL(IRCL:)=0.D0  ! MAY HAVE BEEN RESET IN ATOMLIB$BOUNDSTATE
+          CALL SCHROEDINGER$DREL(GID,NR,AEPOT,E,DREL)
+          DREL(IRCL:)=0.D0
           CALL SCHROEDINGER$SPHSMALLCOMPONENT(GID,NR,L,SO &
      &                                      ,DREL,GSM,UCORE(:,IB),UCORESM(:,IB))
           UCORESM(IRCL:,IB)=0.D0
@@ -8007,12 +8023,11 @@ END IF
         END IF
 !
 !       ========================================================================
-        SCALE=1.D0/MAXVAL(ABS(UCORE(:,IB)))
-!       PRINT*,'CORE STATE ENERGY ',L,IB,ECORE(IB) &
-!                               ,' OLD ',ECOREIN(IB),ECORE(IB)-ECOREIN(IB)
+        PRINT*,'CORE STATE ENERGY ',L,IB,ECORE(IB) &
+                               ,' OLD ',ECOREIN(IB),ECORE(IB)-ECOREIN(IB)
 !
 !       == PROVIDE WAVE FUNCTIONS FOR THE NEXT NODELESS LEVEL ==================
-        G=-UCORE(:,IB)
+        G  =-UCORE(:,IB)
         GSM=-UCORESM(:,IB)
       ENDDO
 !
@@ -8167,6 +8182,7 @@ END IF
 !     ==========================================================================
 !     == RESCALE CONSISTENTLY                                                 ==
 !     ==========================================================================
+      SCALE=1.D0/MAXVAL(ABS(QN(:,1)))
       QN=QN*SCALE
       TQN=TQN*SCALE
       QNSM=QNSM*SCALE
@@ -8330,7 +8346,7 @@ END IF
       DO JP=2,NJ
 TOLD=.FALSE.
 IF(TOLD) THEN
-!!$! CHANGED ON JAN. 1, 2015 TO BE CONSISTENT WITH SCHR\"ODINGER EQUATION ======
+!!$! CHANGED ON JAN. 1, 2015 TO BE CONSISTENT WITH SCHROEDINGER EQUATION ======
         AUX(:)=PSPHI(:,JP)/R(:)**L
         CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
         CALL RADIAL$DERIVE(GID,NR,AUX1,AUX)
