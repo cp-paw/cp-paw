@@ -4918,7 +4918,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **                                                                      **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1998)***********
-      USE OMP_LIB
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -4943,7 +4942,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)     ,SAVE       :: BLOCKSIZE=256
       INTEGER(4)                 :: BS,IGB
       COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
-      REAL(8)                    :: T1,T2
       COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
       COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
 !     **************************************************************************
@@ -5003,15 +5001,10 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDDO
       ELSE
 !       == BLOCKED CODE SEGMENT ================================================
-        T1=OMP_GET_WTIME()
         ALLOCATE(EIGRALL(NGL,MAP%NAT))
         DO IAT=1,MAP%NAT
           CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
         ENDDO
-        T2=OMP_GET_WTIME()
-        PRINT*,"EIGR",T2-T1
-
-        T1=OMP_GET_WTIME()
         ALLOCATE(PROPSI1(LMNXX*NB))
         ALLOCATE(PSITMP(BLOCKSIZE,NB))
         ALLOCATE(PROTMP(BLOCKSIZE,LMNXX))
@@ -5052,9 +5045,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             ENDDO
           ENDDO
         ENDDO
-
-        T2=OMP_GET_WTIME()
-        PRINT*,"PROJ",BLOCKSIZE,T2-T1
         DEALLOCATE(EIGRALL)
         DEALLOCATE(PSITMP)
         DEALLOCATE(PROTMP)
@@ -5084,7 +5074,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **                                                                      **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1998)***********
-      USE OMP_LIB
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -5110,7 +5099,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)     ,SAVE       :: BLOCKSIZE=200
       INTEGER(4)                 :: BS,IGB
       COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
-      REAL(8)                    :: T1,T2
       COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
       COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
 !     **************************************************************************
@@ -5176,15 +5164,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !
       ELSE
 !       == BLOCKED CODE SEGMENT ================================================
-        T1=OMP_GET_WTIME()
         ALLOCATE(EIGRALL(NGL,MAP%NAT))
         DO IAT=1,MAP%NAT
           CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
         ENDDO
-        T2=OMP_GET_WTIME()
-        PRINT*,"ADD EIGR",T2-T1
        
-        T1=OMP_GET_WTIME()
         ALLOCATE(PSITMP(BLOCKSIZE,NB))
         ALLOCATE(PROTMP(BLOCKSIZE,LMNXX))
         DO IDIM=1,NDIM
@@ -5231,9 +5215,6 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDDO
         DEALLOCATE(PROTMP)
         DEALLOCATE(PSITMP)
-
-        T2=OMP_GET_WTIME()
-        PRINT*,"ADD ADD",BLOCKSIZE,T2-T1
         DEALLOCATE(EIGRALL)
 !       == END OF BLOCKED CODE SEGMENT =========================================
       END IF  
