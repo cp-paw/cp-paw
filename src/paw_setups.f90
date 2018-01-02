@@ -7917,7 +7917,8 @@ END IF
       CALL RADIAL$R(GID,NR,R)
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       ALPHA=1.D0/SPEEDOFLIGHT ! FINE STRUCTURE CONSTANT IN A.U.
-      ENU=MAXVAL(EOFPHI)
+      ENU=MAXVAL(EOFPHI)  ! USED TO CUT RELATIVISTIC EFFECTS OFF
+                          ! AND AS REFERENCE ENERGY FOR QNDOT FUNCTIONS
       IPHISCALE=0
 !
 !     ==========================================================================
@@ -7978,7 +7979,8 @@ END IF
 !     ==========================================================================
       DREL=0.D0   !NON-RELATIVISTIC CASE
       IF(TREL) THEN
-        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+!       == THE ENERGY (0.D0) MUST BE CONSISTENT WITH ATOMLIB$AESCF =============
+        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
         DREL(IRCL:)=0.D0
       END IF
 !
@@ -8036,7 +8038,8 @@ END IF
 !     ==========================================================================
 !     == GO BACK TO THE DIRAC EQUATION TO SEE HOW THE INHOMGENEITY TRANSLATES
       IF(TREL) THEN
-        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+!       == THE ENERGY (0.D0) MUST BE CONSISTENT WITH ATOMLIB$AESCF =============
+        CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
         DREL(IRCL:)=0.D0
       END IF
       G=0.D0
@@ -8137,7 +8140,8 @@ END IF
 !     ==========================================================================
       IF(VFOCK%TON) THEN
         IF(TREL) THEN
-          CALL SCHROEDINGER$DREL(GID,NR,AEPOT,ENU,DREL)
+!         == THE ENERGY (0.D0) MUST BE CONSISTENT WITH ATOMLIB$AESCF ===========
+          CALL SCHROEDINGER$DREL(GID,NR,AEPOT,0.D0,DREL)
           DREL(IRCL:)=0.D0
         END IF
         G(:)=0.D0

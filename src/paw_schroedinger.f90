@@ -2648,7 +2648,7 @@ CHARACTER(32):: FILE
 !     **  G IS THE INHOMOGENEITY IN THE SMALL COMPONENTS OF THE               **
 !     **    FOUR-COMPONENT DIRAC EQUATION. FOR THE NODELESS EQUATIONS IT IS   **
 !     **    EQUAL TO THE SMALL COMPONENT OF THE NODELESS WAVE FUNCTION OF THE **
-!     **    NEXT LOWER BAND.                                                  **  
+!     **    NEXT LOWER BAND.                                                  **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -2690,9 +2690,11 @@ CHARACTER(32):: FILE
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,PHI,SPHI)
-      SPHI(2:)=SPHI(2:)-LAMBDA*PHI(2:)/R(2:)
+      SPHI(2:)=SPHI(2:)-LAMBDA*PHI(2:)/R(2:)  !lambda=-(1+kappa)
       SPHI(1)=SPHI(2)
-      SPHI=SGNLAMBDA*SPHI-G/SPEEDOFLIGHT
+!      SPHI=SGNLAMBDA*SPHI-G/SPEEDOFLIGHT
+!      the sgnlambda does not occur in my nodes nor in those of robert schade
+      SPHI=SPHI-G/SPEEDOFLIGHT
       SPHI=0.5D0*(1.D0+DREL)/SPEEDOFLIGHT*SPHI
       RETURN
       END
