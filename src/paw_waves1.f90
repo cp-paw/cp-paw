@@ -1552,9 +1552,9 @@ END MODULE WAVES_MODULE
 !     ==========================================================================
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
-!if(tfirst) then
+!IF(TFIRST) THEN
         CALL LMTO$MAKESTRUCTURECONSTANTS()
-!end if
+!END IF
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
@@ -4910,14 +4910,15 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NB,NPRO,PSI,PROPSI)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE PROJECTIONS                                       **
-!     **                                                              **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1998)***
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE PROJECTIONS                                               **
+!     **                                                                      **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1998)***********
+      USE OMP_LIB
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -4938,12 +4939,19 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)                 :: IPRO,IBPRO,IAT,LMN,IB,IDIM,II
       INTEGER(4)                 :: LMNXX,LNXX
       INTEGER(4)                 :: LNX,LMNX,ISP
-!     ******************************************************************
+
+      INTEGER(4)     ,SAVE       :: BLOCKSIZE=256
+      INTEGER(4)                 :: BS,IGB
+      COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
+      REAL(8)                    :: T1,T2
+      COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
+      COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
+!     **************************************************************************
                                 CALL TIMING$CLOCKON('WAVES_PROJECTIONS')
 !
-!     ==================================================================
-!     ==  CONSISTENCY CHECKS                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CONSISTENCY CHECKS                                                  ==
+!     ==========================================================================
       IF(NPRO.NE.MAP%NPRO) THEN
         CALL ERROR$MSG('INCONSISTENT NPRO')
         CALL ERROR$STOP('WAVES_PROJECTIONS')
@@ -4953,44 +4961,105 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         CALL ERROR$STOP('WAVES_PROJECTIONS')
       END IF
 !
-!     ==================================================================
-!     ==  COLLECT G-VECTORS                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COLLECT G-VECTORS                                                   ==
+!     ==========================================================================
       ALLOCATE(GVEC(3,NGL))
       CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
 !
-!     ==================================================================
-!     ==  <PRO|PSI>                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  <PRO|PSI>                                                           ==
+!     ==========================================================================
       LMNXX=MAXVAL(MAP%LMNX)
       LNXX=MAXVAL(MAP%LNX)
       ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(EIGR(NGL))
       ALLOCATE(LOX(LNXX))
       ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
-      IPRO=1
-      DO IAT=1,MAP%NAT
-        ISP=MAP%ISP(IAT)
-        LNX=MAP%LNX(ISP)
-        LMNX=MAP%LMNX(ISP)
-        LOX=MAP%LOX(:,ISP)
-        IBPRO=1+SUM(MAP%LNX(1:ISP-1))
-        CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
-        CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                      ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
-        CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,LMNX,PRO,NDIM*NB,PSI &
-     &                              ,PROPSI1)
-        II=0
-        DO IB=1,NB
-          DO IDIM=1,NDIM
-            DO LMN=1,LMNX
-              II=II+1    ! II=(LMN,IDIM,IB)
-              PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI1(II)
+      IF(.FALSE.) THEN
+!       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
+        IPRO=1
+        DO IAT=1,MAP%NAT
+          ISP=MAP%ISP(IAT)
+          LNX=MAP%LNX(ISP)
+          LMNX=MAP%LMNX(ISP)
+          LOX=MAP%LOX(:,ISP)
+          IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+          CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
+          CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
+     &                        ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX &
+     &                        ,GSET%YLM,EIGR,PRO)
+          CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,LMNX,PRO,NDIM*NB,PSI,PROPSI1)
+          II=0
+          DO IB=1,NB
+            DO IDIM=1,NDIM
+              DO LMN=1,LMNX
+                II=II+1    ! II=(LMN,IDIM,IB)
+                PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI1(II)
+              ENDDO
+            ENDDO
+          ENDDO
+          IPRO=IPRO+LMNX
+        ENDDO
+      ELSE
+!       == BLOCKED CODE SEGMENT ================================================
+        T1=OMP_GET_WTIME()
+        ALLOCATE(EIGRALL(NGL,MAP%NAT))
+        DO IAT=1,MAP%NAT
+          CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
+        ENDDO
+        T2=OMP_GET_WTIME()
+        PRINT*,"EIGR",T2-T1
+
+        T1=OMP_GET_WTIME()
+        ALLOCATE(PROPSI1(LMNXX*NB))
+        ALLOCATE(PSITMP(BLOCKSIZE,NB))
+        ALLOCATE(PROTMP(BLOCKSIZE,LMNXX))
+        PROPSI(:,:,:)=0
+        DO IDIM=1,NDIM
+          DO IGB=1,NGL,BLOCKSIZE
+            BS=MIN(NGL-IGB+1,BLOCKSIZE)
+            IF(BS.NE.BLOCKSIZE)THEN
+              DEALLOCATE(PSITMP)
+              ALLOCATE(PSITMP(BS,NB))
+              DEALLOCATE(PROTMP)
+              ALLOCATE(PROTMP(BS,LMNXX))
+            END IF
+            PSITMP(1:BS,1:NB)=PSI(IGB:IGB+BS-1,IDIM,1:NB)
+
+            IPRO=1
+            DO IAT=1,MAP%NAT
+              ISP=MAP%ISP(IAT)
+              LNX=MAP%LNX(ISP)
+              LMNX=MAP%LMNX(ISP)
+              LOX=MAP%LOX(:,ISP)
+              IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+              CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,BS,GVEC(1:3,IGB:IGB+BS-1) &
+     &                      ,GSET%PRO(IGB:IGB+BS-1,IBPRO:IBPRO+LNX-1) &
+     &                      ,MAP%LMX,GSET%YLM(IGB:IGB+BS-1,:) &
+     &                      ,EIGRALL(IGB:IGB+BS-1,IAT),PROTMP)
+              CALL PLANEWAVE$SCALARPRODUCT(' ',BS,1,LMNX,PROTMP,NB,PSITMP &
+     &                                                            ,PROPSI1)
+              II=0
+              DO IB=1,NB
+                DO LMN=1,LMNX
+                  II=II+1    ! II=(LMN,IDIM,IB)
+                  PROPSI(IDIM,IB,IPRO-1+LMN)=PROPSI(IDIM,IB,IPRO-1+LMN) &
+     &                                      +PROPSI1(II)
+                ENDDO
+              ENDDO
+              IPRO=IPRO+LMNX
             ENDDO
           ENDDO
         ENDDO
-        IPRO=IPRO+LMNX
-      ENDDO
+
+        T2=OMP_GET_WTIME()
+        PRINT*,"PROJ",BLOCKSIZE,T2-T1
+        DEALLOCATE(EIGRALL)
+        DEALLOCATE(PSITMP)
+        DEALLOCATE(PROTMP)
+!       == END OF BLOCKED CODE SEGMENT =========================================
+      END IF
       DEALLOCATE(LOX)
       DEALLOCATE(PRO)
       DEALLOCATE(PROPSI1)
@@ -5007,14 +5076,15 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END
 !
-!     .....................................................NLSMX........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NB,NPRO,PSI,PROPSI)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE PROJECTIONS                                       **
-!     **                                                              **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1998)***
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE PROJECTIONS                                               **
+!     **                                                                      **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1998)***********
+      USE OMP_LIB
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -5036,12 +5106,20 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)                 :: IPRO,IBPRO,IAT,LMN,IB,IDIM,II
       INTEGER(4)                 :: LMNXX,LNXX
       INTEGER(4)                 :: LNX,LMNX,ISP
-!     ******************************************************************
+!
+      INTEGER(4)     ,SAVE       :: BLOCKSIZE=200
+      INTEGER(4)                 :: BS,IGB
+      COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
+      REAL(8)                    :: T1,T2
+      COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
+      COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
+!     **************************************************************************
+                                 CALL TRACE$PUSH('WAVES_ADDPRO')
                                  CALL TIMING$CLOCKON('WAVES_ADDPRO')
 !
-!     ==================================================================
-!     ==  CONSISTENCY CHECKS                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CONSISTENCY CHECKS                                                  ==
+!     ==========================================================================
       IF(NPRO.NE.MAP%NPRO) THEN
         CALL ERROR$MSG('INCONSISTENT NPRO')
         CALL ERROR$STOP('WAVES_ADDPRO')
@@ -5051,54 +5129,121 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         CALL ERROR$STOP('WAVES_ADDPRO')
       END IF
 !
-!     ==================================================================
-!     ==  COLLECT G-VECTORS                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COLLECT G-VECTORS                                                   ==
+!     ==========================================================================
       ALLOCATE(GVEC(3,NGL))
       CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
 !
-!     ==================================================================
-!     ==  COLLECT G-VECTORS                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COLLECT G-VECTORS                                                   ==
+!     ==========================================================================
       LMNXX=MAXVAL(MAP%LMNX)
       LNXX=MAXVAL(MAP%LNX)
       ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
       ALLOCATE(EIGR(NGL))
       ALLOCATE(LOX(LNXX))
-      IPRO=1
-      DO IAT=1,MAP%NAT
-        ISP=MAP%ISP(IAT)
-        LNX=MAP%LNX(ISP)
-        LMNX=MAP%LMNX(ISP)
-        LOX=MAP%LOX(:,ISP)
-        IBPRO=1+SUM(MAP%LNX(1:ISP-1))
-        CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
-        CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &              ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
-!
-!       ===============================================================
-!       ==  |PSI>=|PSI>+|PRO>PROPSI                                  ==
-!       ===============================================================
-        II=0
-        DO IB=1,NB
-          DO IDIM=1,NDIM
-            DO LMN=1,LMNX
-              II=II+1    ! II=(LMN,IDIM,IB)
-              PROPSI1(II)=PROPSI(IDIM,IB,IPRO-1+LMN)
+      IF(.FALSE.) THEN
+!       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
+        IPRO=1
+        DO IAT=1,MAP%NAT
+          ISP=MAP%ISP(IAT)
+          LNX=MAP%LNX(ISP)
+          LMNX=MAP%LMNX(ISP)
+          LOX=MAP%LOX(:,ISP)
+          IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+          CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
+          CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
+       &              ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM,EIGR,PRO)
+!    
+!         ======================================================================
+!         ==  |PSI>=|PSI>+|PRO>PROPSI                                         ==
+!         ======================================================================
+          II=0
+          DO IB=1,NB
+            DO IDIM=1,NDIM
+              DO LMN=1,LMNX
+                II=II+1    ! II=(LMN,IDIM,IB)
+                PROPSI1(II)=PROPSI(IDIM,IB,IPRO-1+LMN)
+              ENDDO
             ENDDO
           ENDDO
+!         == PSI=PSI+PRO*PROPSI1
+          CALL LIB$ADDPRODUCTC8(.FALSE.,NGL,LMNX,NDIM*NB,PRO,PROPSI1,PSI)
+          IPRO=IPRO+LMNX
         ENDDO
-!       == PSI=PSI+PRO*PROPSI1
-        CALL LIB$ADDPRODUCTC8(.FALSE.,NGL,LMNX,NDIM*NB,PRO,PROPSI1,PSI)
-        IPRO=IPRO+LMNX
-      ENDDO
+!
+      ELSE
+!       == BLOCKED CODE SEGMENT ================================================
+        T1=OMP_GET_WTIME()
+        ALLOCATE(EIGRALL(NGL,MAP%NAT))
+        DO IAT=1,MAP%NAT
+          CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
+        ENDDO
+        T2=OMP_GET_WTIME()
+        PRINT*,"ADD EIGR",T2-T1
+       
+        T1=OMP_GET_WTIME()
+        ALLOCATE(PSITMP(BLOCKSIZE,NB))
+        ALLOCATE(PROTMP(BLOCKSIZE,LMNXX))
+        DO IDIM=1,NDIM
+          DO IGB=1,NGL,BLOCKSIZE
+            BS=MIN(NGL-IGB+1,BLOCKSIZE)
+            IF(BS.NE.BLOCKSIZE)THEN
+              DEALLOCATE(PSITMP)
+              ALLOCATE(PSITMP(BS,NB))
+              DEALLOCATE(PROTMP)
+              ALLOCATE(PROTMP(BS,LMNXX))
+            ENDIF
+            PSITMP(1:BS,1:NB)=PSI(IGB:IGB+BS-1,IDIM,1:NB)
+            
+            IPRO=1
+            DO IAT=1,MAP%NAT
+              ISP=MAP%ISP(IAT)
+              LNX=MAP%LNX(ISP)
+              LMNX=MAP%LMNX(ISP)
+              LOX=MAP%LOX(:,ISP)
+              IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+              CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,BS,GVEC(1:3,IGB:IGB+BS-1) &
+           &                      ,GSET%PRO(IGB:IGB+BS-1,IBPRO:IBPRO+LNX-1) &
+           &                      ,MAP%LMX,GSET%YLM(IGB:IGB+BS-1,:) &
+           &                      ,EIGRALL(IGB:IGB+BS-1,IAT),PROTMP)
+!
+!             ==================================================================
+!             ==  |PSI>=|PSI>+|PRO>PROPSI                                     ==
+!             ==================================================================
+              II=0
+              DO IB=1,NB
+                !DO IDIM=1,NDIM
+                  DO LMN=1,LMNX
+                    II=II+1    ! II=(LMN,IDIM,IB)
+                    PROPSI1(II)=PROPSI(IDIM,IB,IPRO-1+LMN)
+                  ENDDO
+                !ENDDO
+              ENDDO
+!             == PSI=PSI+PRO*PROPSI1 ===========================================
+              CALL LIB$ADDPRODUCTC8(.FALSE.,BS,LMNX,NB,PROTMP,PROPSI1,PSITMP)
+              IPRO=IPRO+LMNX
+            ENDDO
+            PSI(IGB:IGB+BS-1,IDIM,1:NB)=PSITMP(1:BS,1:NB)
+          ENDDO
+        ENDDO
+        DEALLOCATE(PROTMP)
+        DEALLOCATE(PSITMP)
+
+        T2=OMP_GET_WTIME()
+        PRINT*,"ADD ADD",BLOCKSIZE,T2-T1
+        DEALLOCATE(EIGRALL)
+!       == END OF BLOCKED CODE SEGMENT =========================================
+      END IF  
       DEALLOCATE(LOX)
       DEALLOCATE(PRO)
       DEALLOCATE(GVEC)
       DEALLOCATE(EIGR)
       DEALLOCATE(PROPSI1)
                                  CALL TIMING$CLOCKOFF('WAVES_ADDPRO')
+                                 CALL TRACE$POP()
       RETURN
       END
 !
