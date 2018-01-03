@@ -4939,7 +4939,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)                 :: LMNXX,LNXX
       INTEGER(4)                 :: LNX,LMNX,ISP
 
-      INTEGER(4)     ,SAVE       :: BLOCKSIZE=256
+      INTEGER(4)     ,SAVE       :: BLOCKSIZE=128
       INTEGER(4)                 :: BS,IGB
       COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
       COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
@@ -4973,9 +4973,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(EIGR(NGL))
       ALLOCATE(LOX(LNXX))
-      ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
       IF(.FALSE.) THEN
 !       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
+        ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
         IPRO=1
         DO IAT=1,MAP%NAT
           ISP=MAP%ISP(IAT)
@@ -5096,7 +5096,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)                 :: LMNXX,LNXX
       INTEGER(4)                 :: LNX,LMNX,ISP
 !
-      INTEGER(4)     ,SAVE       :: BLOCKSIZE=200
+      INTEGER(4)     ,SAVE       :: BLOCKSIZE=128
       INTEGER(4)                 :: BS,IGB
       COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
       COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
