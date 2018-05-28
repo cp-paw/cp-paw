@@ -1685,7 +1685,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
      &                       ,TCTE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPRINT=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
       INTEGER(4),PARAMETER   :: LXHIGHER=4
       REAL(8)                :: LAMBDA1
       REAL(8)                :: LAMBDA2
@@ -1717,6 +1717,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)                :: RTAIL     ! TAIL-MATCHING RADIUS
       REAL(8)                :: RTAILCUT  ! TAIL-TRUNCATION RADIUS 
       LOGICAL(4)             :: TCHKHIGHER(LXHIGHER+1)
+      character(64)           :: string
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
       DO ISP=1,NSP
@@ -1958,12 +1959,24 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         DEALLOCATE(NLPHI)
         DEALLOCATE(NLPHIDOT)
         DEALLOCATE(R)
-
-!!$CALL LMTO_WRITEPHI('1_AEF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%AEF)
-!!$CALL LMTO_WRITEPHI('1_PSF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%PSF)
-!!$CALL LMTO_WRITEPHI('1_NLF.DAT',GID,NR,LNXT,POTPAR1(ISP)%TAILED%NLF)
-!!$STOP 'FORCED'
+!
         CALL SETUP$UNSELECT()
+!
+!       ========================================================================
+!       === write tailed functions to file                                    ==
+!       ========================================================================
+        IF(TPR) THEN
+print*,'before ',isp
+          WRITE(STRING,*)ISP
+print*,'after ',isp
+          STRING=ADJUSTL(STRING) 
+          CALL LMTO_WRITEPHI(TRIM(STRING)//'_AEF.DAT',GID,NR &
+       &                    ,LNXT,POTPAR1(ISP)%TAILED%AEF)
+          CALL LMTO_WRITEPHI(TRIM(STRING)//'_PSF.DAT',GID,NR &
+       &                    ,LNXT,POTPAR1(ISP)%TAILED%PSF)
+          CALL LMTO_WRITEPHI(TRIM(STRING)//'_NLF.DAT',GID,NR &
+       &                    ,LNXT,POTPAR1(ISP)%TAILED%NLF)
+        END IF
       ENDDO ! END OF LOOP OVER ATOM TYPES
       RETURN
       END
@@ -9594,7 +9607,6 @@ CALL TIMING$CLOCKON('X31-A')
       ENDDO
 CALL TIMING$CLOCKOFF('X31-A')
 DEALLOCATE(CGMAT)
-PRINT*,'II ',II,IIX
 !
       ALLOCATE(IIBNDS(2,INDX))
       IND=0

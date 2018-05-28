@@ -249,8 +249,26 @@ clean_scripts:
 #---------------------------------------------------------------------------
 #--          Documentation                                                --
 #---------------------------------------------------------------------------
-doxygen:
-	cd ${BINDIR}; doxygen ${THISDIR}/src/Buildtools/Doxygen/Doxyfile 
+doxygen: dbg
+	doxygen -g  # construct Doxyfile
+	sed \
+            -e /OPTIMIZE_FOR_FORTRAN/s/NO/YES/g \
+            -e /EXTRACT_ALL/s/NO/YES/g \
+            -e /EXTRACT_PRIVATE/s/NO/YES/g \
+            -e /EXTRACT_STATIC/s/NO/YES/g \
+            -e /HAVE_DOT/s/NO/YES/g \
+            -e /CALL_GRAPH/s/NO/YES/g \
+            -e /CALLER_GRAPH/s/NO/YES/g \
+            -e /CALLER_GRAPH/s/NO/YES/g \
+            -e /SOURCE_BROWSER/s/NO/YES/g \
+            -e /INLINE_SOURCES/s/NO/YES/g \
+            -e /REFERENCED_BY_RELATION/s/NO/YES/g \
+            -e /REFERENCES_RELATION/s/NO/YES/g \
+            -e /PROJECT_NAME/s/My\ Project/CP-PAW/g \
+            -e /INPUT\ /sX=X=./Objects/dbgXg \
+            -e /OUTPUT_DIRECTORY/sX=X=./DoxydocsXg \
+            Doxyfile > ${BINDIR}/Doxyfile
+	cd ${BINDIR}; doxygen ${BINDIR}/Doxyfile
 #
 #---------------------------------------------------------------------------
 #--          Documentation                                                --

@@ -7986,6 +7986,11 @@ END IF
 !
 !     ==========================================================================
 !     == CONSTRUCT NODELESS CORE STATES                                       ==
+!     == CAUTION!                                                             ==
+!     == FOR THE FULLY RELATIVISTIC CALCULATION WITH THE SMALL COMPONENT,     ==
+!     == THE ENERGIES FROM THE NODELESS CONSTRUCTION DEVIATE FROM THOSE       ==
+!     == OBTAINED WITH THE NODAL EQUATION . THE DEVIATION FOR AU-S STATES     ==
+!     == IS IN THE RANGE 10^-4 H, WHILE 10^-9 H IS ACHIEVED FOR ZORA.         ==
 !     ==========================================================================
       G(:)=0.D0
       GSM(:)=0.D0
@@ -7996,13 +8001,22 @@ END IF
           DREL(IRCL:)=0.D0
         END IF
 !
+!       ========================================================================
 !       == PREPARE INHOMOGENEITY ===============================================
+!       ========================================================================
         IF(TSMALL) THEN
           AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM   !GSM=-UCORE(IB-1)
           CALL RADIAL$DERIVE(GID,NR,AUX,AUX1)
           AUX=AUX1+(1.D0-KAPPA)/R*AUX    !CAUTION: PROBABLY SIGN ERROR
           AUX(1)=AUX(2)
           G=G-AUX !GSM=-FSM(IB-1)   !CAUTION: PROBABLY SIGN ERROR
+!
+          IF(IB.GT.1) THEN ! THIS IS A SMALL NUMERICAL CORRECTION ==============
+            CALL RADIAL__DERIVE(GID,NR,UCORE(:,IB-1),AUX1)
+            CALL RADIAL__DERIVE(GID,NR,AUX1,AUX)
+            CALL RADIAL__VERLETD2(GID,NR,UCORE(:,IB-1),AUX1)
+            G=G-(0.5D0*ALPHA*(1.D0+DREL))**2*(AUX1-AUX)
+          END IF  
         END IF
 !
 !       == OBTAIN LARGE COMPONENT ==============================================

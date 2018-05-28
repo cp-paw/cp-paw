@@ -2690,7 +2690,7 @@ CHARACTER(32):: FILE
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       CALL RADIAL$R(GID,NR,R)
       CALL RADIAL$DERIVE(GID,NR,PHI,SPHI)
-      SPHI(2:)=SPHI(2:)-LAMBDA*PHI(2:)/R(2:)  !lambda=-(1+kappa)
+      SPHI(2:)=SPHI(2:)+(1.D0+KAPPA)*PHI(2:)/R(2:)  !LAMBDA=-(1+KAPPA)
       SPHI(1)=SPHI(2)
 !      SPHI=SGNLAMBDA*SPHI-G/SPEEDOFLIGHT
 !      the sgnlambda does not occur in my nodes nor in those of robert schade

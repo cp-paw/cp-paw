@@ -1828,15 +1828,18 @@
 !     **************************************************************************
 !     **  WRITE A GAUSSIAN CUBE FILE (EXTENSION .CUB) WITH VOLUMINETRIC DATA  **
 !     **                                                                      **
+!     ** A VERY CLEAR DESCRIPTION OF THE GAUSSIAN CUBE FORMAT HAS BEEN GIVEN  **
+!     **  ON HTTP://LOCAL.WASP.UWA.EDU.AU/~PBOURKE/DATAFORMATS/CUBE/          **
+!     **                                                                      **
 !     ** REMARK:                                                              **
-!     ** UNITS WRITTEN ARE ABOHR, CONSISTENT WITH AVOGADRO'S IMPLEMENTATION.  **
+!     ** UNITS WRITTEN ARE ABOHR, CONSISTENT WITH AVOGADROS IMPLEMENTATION.   **
 !     ** THE SPECS REQUIRE N1,N2,N3 TO BE MULTIPLIED BY -1 IF ABOHR ARE USED  **
 !     ** AND ANGSTROM IS THE UNIT IF THEY ARE POSITIVE.                       **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT       ! NUMBER OF ATOMS
-      REAL(8)   ,INTENT(IN) :: Z(NAT)    !ATOMIC NUMBER
+      REAL(8)   ,INTENT(IN) :: Z(NAT)    ! ATOMIC NUMBER
       REAL(8)   ,INTENT(IN) :: R(3,NAT)
       REAL(8)   ,INTENT(IN) :: ORIGIN(3)
       REAL(8)   ,INTENT(IN) :: BOX(3,3)
@@ -1844,20 +1847,32 @@
       REAL(8)   ,INTENT(IN) :: DATA(N1,N2,N3)
       REAL(8)               :: ANGSTROM
       REAL(8)               :: SCALE
+      integer(4)            :: sunit=1   ! =1 for Bohr radii/ =-1 for Angstrom
       INTEGER(4)            :: IAT,I,J,K
 !     **************************************************************************
-      CALL CONSTANTS('ANGSTROM',ANGSTROM)
-      SCALE=1.D0
-!      SCALE=1.D0/ANGSTROM
+      IF(SUNIT.EQ.1) THEN       ! lengths in bohr radii
+        SCALE=1.D0
+      ELSE IF(SUNIT.EQ.-1) THEN ! lengths in angstrom
+        CALL CONSTANTS('ANGSTROM',ANGSTROM)
+        SCALE=1.D0/ANGSTROM
+      ELSE
+        CALL ERROR$MSG('ILLEGAL VALUE OF SUNIT. MUST BE EITHER +1 OR -1')
+        CALL ERROR$I4VAL('SUNIT',SUNIT)
+        CALL ERROR$STOP('WRITECUBEFILE')
+      END IF
       WRITE(NFIL,FMT='("CP-PAW CUBE FILE")')
       WRITE(NFIL,FMT='("NOCHN KOMMENTAR")')
       WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*SCALE
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N1,BOX(:,1)/REAL(N1-1,KIND=8)*SCALE
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N2,BOX(:,2)/REAL(N2-1,KIND=8)*SCALE
-      WRITE(NFIL,FMT='(I5,3F12.6)')-N3,BOX(:,3)/REAL(N3-1,KIND=8)*SCALE
+!     == SHEARED GRIDS ARE PERMITTED BUT OFTEN NOT SUPPORTED ===================
+!     == MINUS SIGN INDICATS ANGSTROM-UNIT. OTHERWISE BOHR RADII ===============
+      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N1,BOX(:,1)/REAL(N1-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N2,BOX(:,2)/REAL(N2-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N3,BOX(:,3)/REAL(N3-1,KIND=8)*SCALE
+!
       DO IAT=1,NAT
         WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*SCALE
       ENDDO  
+!     == data are written with z as innermost and x as outermost loop
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
 !!$DO K=1,N3
 !!$  SCALE=0.D0

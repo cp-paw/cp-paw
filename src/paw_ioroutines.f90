@@ -4701,6 +4701,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     **                                                              **
 !     ******************************************************************
       USE LINKEDLIST_MODULE
+      USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
       TYPE(LL_TYPE)            :: LL_STRC
@@ -4711,10 +4712,13 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CHARACTER(32)            :: TYPE
       INTEGER(4)               :: ISPIN
       INTEGER(4)               :: NAT
+      INTEGER(4)               :: I
       INTEGER(4)               :: IAT
       REAL(8)                  :: VALUE
       REAL(8)                  :: RC
       REAL(8)                  :: PWR
+      REAL(8)                  :: AEZ
+      REAL(8)                  :: RCOV
 !     ******************************************************************
                            CALL TRACE$PUSH('STRCIN_ORBPOT')
       LL_STRC=LL_STRC_
@@ -4745,7 +4749,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       == CHECK IF ATOM EXISTS ========================================
         CALL ATOMLIST$NATOM(NAT)
         TCHK=.FALSE.
-        DO IAT=1,NAT
+        DO I=1,NAT
+          IAT=I
           CALL ATOMLIST$GETCH('NAME',IAT,NAME)
           TCHK=TCHK.OR.(NAME.EQ.ATOM)
           IF(TCHK) EXIT
@@ -4757,6 +4762,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$MSG('SUGGESTION: CHECK UPPER-LOWER CASE')
           CALL ERROR$STOP('STRCIN_ORBPOT')
         END IF
+        CALL ATOMLIST$GETR8('Z',IAT,AEZ)
+        CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
 !
 !       == SPECIFY TYPE ================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'TYPE',1,TCHK)
@@ -4804,12 +4811,14 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           END IF
         END IF
 !       == SPECIFY CUTOFF RADIUS =======================================
+        RC=RCOV
         CALL LINKEDLIST$EXISTD(LL_STRC,'RC',1,TCHK)
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:RC NOT SPECIFIED')
-          CALL ERROR$STOP('STRCIN_ORBPOT')
-        END IF
-        CALL LINKEDLIST$GET(LL_STRC,'RC',1,RC)
+!!$        IF(.NOT.TCHK) THEN
+!!$          CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:RC NOT SPECIFIED')
+!!$          CALL ERROR$STOP('STRCIN_ORBPOT')
+!!$        END IF
+!!$        CALL LINKEDLIST$GET(LL_STRC,'RC',1,RC)
+        IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RC',1,RC)
 !       == SPECIFY POWER ===============================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'PWR',1,TCHK)
         IF(.NOT.TCHK) THEN

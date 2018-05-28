@@ -3,16 +3,15 @@
 ################################################################################
 ####    parameters to be set by the user:
 ####
-####   specify name of the nodes file. The nodes file contains the name of one
-####   node per line. For a single multiprocessor engine, specify "localhost"
-####   on as many lines as processes you want to use in parallel.
-export NFILE=/Users/ptpb/bin/NODES    # nodes file
 ##     default for the number of nodes to be used. overwritten with option -n
 export NNODES=4
+##
 ##     paw executable for parallel computatiuon. Can be left as is if found
 export PARCODE=$(which ppaw_fast.x)
+##
 ##     path of the mpirun command. Can be left as is if found
 export MPIRUN=$(which mpirun)          #package mpi execution
+##
 ####  
 ################################################################################
 ################################################################################
@@ -60,12 +59,6 @@ fi
 if [[ ! -x $PARCODE ]] ; then 
   echo "error in $0: parallel PAW executable unknown or not executable"
   echo "value of PARCODE: $PARCODE"
-  exit 1
-fi
-# is nodefile $NFILE set?
-if [[ ! -f $NFILE ]] ; then 
-  echo "error in $0: nodesfile unkown or not existent"
-  echo "value of NFILE: $NFILE"
   exit 1
 fi
 #-------------------------------------------------------------------------------
@@ -118,7 +111,6 @@ fi
 #   use variables
 #     - $JOB    rootname of the project
 #     - $NNODES
-#     - $NFILE  node file
 #     - $PARODE name of the ppaw executable, e.g. ppaw_fast.x
 #     - $MPIRUN submit command
 ###########################################################################
@@ -132,10 +124,9 @@ execute "export OMP_NUM_THREADS=$OMP_NUM_THREADS"
 export OLDTMPDIR=${TMPDIR}
 export TMPDIR=$(mktemp -d /tmp/doppaw.XXXXXXX)
 #
-execute "${MPIRUN}  -np $NNODES \
+execute "${MPIRUN}  -np $NNODES --oversubscribe \
                       $PARCODE \
                       $JOB.cntl 1>out 2>&1 "
-#                     -hostfile $NFILE \
 export OMP_NUM_THREADS=$OMP_NUM_THREADS_OLD
 rmdir ${TMPDIR}
 TMPDIR=${OLDTMPDIR}

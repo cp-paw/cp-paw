@@ -25,6 +25,7 @@
 %
 %  define commands
 %
+\newcommand{\eq}[1]{Eq.~\ref{#1}}
 \newcommand{\mat}[1]{\mathbf{#1}}
 \newcommand{\block}[1]{\subsubsection[#1]{\shabox{\bf #1}}}
 %
@@ -4509,22 +4510,54 @@ on p.~\pageref{sec:extendedatomnotation})}
 %----------------------------------------------------------------------
 \block{!STRUCTURE!ORBPOT}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{applies external potentials acting on
-  orbitals. The relation $|\Psi\rangle\approx
-  \sum_i|\phi_i\rangle\langle\tilde{p}_i|\tilde\Psi\rangle$ between
-  the true wave function and its one-center expansion is used to
-  represent the energy of a potential $u$ that is localized well
-  withing the augmentation region as
-  $$\sum_n\langle\Psi_n|u|\Psi_n\rangle\approx\sum_{i,j}
-  D_{i,j}U_{j,i}\ ,$$ where $D_{i,j}=\sum_n
-  \langle\tilde{p}_i|\tilde\Psi_n\rangle
-  \langle\tilde\Psi_n|\tilde{p}_j\rangle$ is the one-center density
-  matrix and  $U_{i,j}=\langle\phi_i|u|\phi_j\rangle$.\\
-  The special angular dependent form $$u(r,r^\prime)=U_0 \sum_m {\rm
-    e}^{-(r/r_c)^q}\delta(|r|-|r^\prime|)Y_L(r)Y_L(r^\prime)$$
-  is used, where $L=(\ell,m)$ and $U_0, r_c, q, \ell$ and the atomic
-  site $R$, which is used as origin in the above equation, are input
-  parameters.}
+\brules{optional} 
+  \bdescr{applies external potentials acting on
+  electrons at a specific atom at $\vec{R}$ with a specific angular
+  momentum $(\ell,m)$ and spin $\vec{S}$. The added
+  Hamiltonian has the form
+  \begin{eqnarray}
+    \Delta\hat{H}
+     &=&\sum_{\alpha,\beta}|\tilde{p}_\alpha\rangle
+    \langle\phi_\alpha|\hat{P}_{\vec{R},\ell,m,\vec{S}} 
+           U\mathrm{e}^{-\left(\frac{|\vec{r}-\vec{R}|}{r_c}\right)^q}
+   |\phi_\beta\rangle\langle\tilde{p}_\beta|
+  \label{eq:orbpot}
+\\
+     &\approx&\hat{P}_{\vec{R},\ell,m,\vec{S}} 
+           U\mathrm{e}^{-\left(\frac{|\vec{r}-\vec{R}|}{r_c}\right)^q}
+\nonumber
+  \end{eqnarray}  
+  where $\hat{P}_{\vec{R},\ell,m,\sigma}$ is a projection operator
+  that singles out electrons with given angular momentum $(\ell,m)$
+  about the center $\vec{R}$ and a spin identified by $\vec{S}$.  The
+  radial part of the potential is determined from the parameters
+  $U,r_c,q$, of which $U$ specifies the value at the center of the
+  atom, $r_c$ determines the radial extent of the orbital, and $q$
+  which specifies how sharp the potential goes to zero beyond
+  $r_c$. (larger $q$ is sharper.) With $|\phi_\alpha\rangle$ we denote
+  the all-electron partial waves and with $\langle\tilde{p}_\alpha|$
+  the projector functions.
+
+  To be specific, only partial waves centered at the specified atom
+  are taken into account. The contribution of the pseudo wave
+  functions is ignored for the sake of simplicity.
+
+%% The relation $|\Psi\rangle\approx
+%%   \sum_i|\phi_i\rangle\langle\tilde{p}_i|\tilde\Psi\rangle$ between
+%%   the true wave function and its one-center expansion is used to
+%%   represent the energy of a potential $u$ that is localized well
+%%   withing the augmentation region as
+%%   $$\sum_n\langle\Psi_n|u|\Psi_n\rangle\approx\sum_{i,j}
+%%   D_{i,j}U_{j,i}\ ,$$ where $D_{i,j}=\sum_n
+%%   \langle\tilde{p}_i|\tilde\Psi_n\rangle
+%%   \langle\tilde\Psi_n|\tilde{p}_j\rangle$ is the one-center density
+%%   matrix and  $U_{i,j}=\langle\phi_i|u|\phi_j\rangle$.\\
+%%   The special angular dependent form $$u(r,r^\prime)=U_0 \sum_m {\rm
+%%     e}^{-(r/r_c)^q}\delta(|r|-|r^\prime|)Y_L(r)Y_L(r^\prime)$$
+%%   is used, where $L=(\ell,m)$ and $U_0, r_c, q, \ell$ and the atomic
+%%   site $R$, which is used as origin in the above equation, are input
+%%   parameters.
+}
 %
 %----------------------------------------------------------------------
 \block{!STRUCTURE!ORBPOT!POT}
@@ -4541,12 +4574,6 @@ on p.~\pageref{sec:extendedatomnotation})}
 \vrules{mandatory}
 \vdefault{none}}
 %
-\mbax{\key{VALUE}
-\vdescr{value of the external potential in Hartree}
-\vformat{real}
-\vrules{mandatory}
-\vdefault{none}}
-%
 \mbax{\key{TYPE}
 \vdescr{orbital type, can be 'S', 'P', 'D', 'ALL'.
 One can also specify specific angular momenta such as 
@@ -4557,20 +4584,29 @@ For the f-orbitals we use the notation 'F1', \ldots, 'F7'.
 \vrules{mandatory}
 \vdefault{none}}
 %
-\mbax{\key{rc}
-\vdescr{cutoff radius $r_c$ as defined above}
+\mbax{\key{VALUE}
+\vdescr{value $U$ of the external potential at the atomic site 
+in Hartree as defined above in \eq{eq:orbpot}}
 \vformat{real}
 \vrules{mandatory}
 \vdefault{none}}
 %
-\mbax{\key{pwr}
-\vdescr{exponent $q$ for the cutoff radius as defined above}
+\mbax{\key{RC}
+\vdescr{cutoff radius $r_c$ in units of bohr radii as defined above 
+in \eq{eq:orbpot}}
+\vformat{real}
+\vrules{optional}
+\vdefault{covalent radius}}
+%
+\mbax{\key{PWR}
+\vdescr{exponent $q$ for the radial cutoff function as defined above 
+in \eq{eq:orbpot}.}
 \vformat{real}
 \vrules{optional}
 \vdefault{2.0}}
 %
 \mbax{\key{S} 
-\vdescr{restricts the spin on which the potential act. If this
+\vdescr{restricts the spin, on which the potential acts. If this
   parameter is omitted the potential acts on all electrons
   irrespective of their spin direction.  For a collinear
   spin-polarized potential only $S=1$ is allowed and defines a
@@ -6604,7 +6640,7 @@ and multiplied with a complex factor FAC.  }
 \mbax{\key{TYPE} 
 \vdescr{orbital type. Can be one of the following.
     'S', 'PX', 'PY', 'PZ', 'DXY', 'D3Z2-R2', 'DXZ', 'DYZ', 'DX2-Y2',
-    'SP', 'SP2', 'SP3'. The meaning of these orbitals is described in
+    'SP1', 'SP2', 'SP3'. The meaning of these orbitals is described in
     the preceding introduction to the paw\_dos tool.}
 \vformat{character} 
 \vrules{optional; incompatible with name; mandatory if atom is
@@ -8264,9 +8300,9 @@ The calling sequence is
 \item[epwrho:] density plane wave cutoff
 \item[nkpt:] number of k-points
 \end{description}
-\item[-u:] unit (1, ev, kj/mol, kcal/mol , H, angstrom\^3, aa\^3,
-  cubangstrom, a0\^3, abohr\^3, cubabohr) case insensitive. Unit must
-  be consistsnet with quantity to be retrieved
+\item[-u:] unit (1, ev, kj/mol, kcal/mol , H, angstrom\^{}3, aa\^{}3,
+  cubangstrom, a0\^{}3, abohr\^{}3, cubabohr) case insensitive. Unit must
+  be consistent with quantity to be retrieved
 \item[-n:] prints the result as number 
 \item[-t:] prints the result as text
 \item[-v:] verbose
@@ -8275,7 +8311,7 @@ The calling sequence is
 \bigskip
 
 The command scans the file \textit{rootname}\verb|.prot| and
-prints the last occurance of the corresponding variable 
+prints the last occurance of the corresponding variable.
 
 Remark: -gap does not work with variable occupations and will provide
 an error message. -lumo and -homo will report the chemical potential
@@ -9769,25 +9805,52 @@ documentation and code become asynchronous.
 %==========================================================================
 Doxygen is a tool for code analysis and automatic code
 documentation. It is a free multi-platform tool available at
-\url{http://www.stack.nl/~dimitri/doxygen/}.
+\url{http://www.stack.nl/~dimitri/doxygen/}. Most useful are the call
+graphs and caller graphs, which provide a quick overview of the code
+structure.
 
 The CP-PAW code supports analysis with Doxygen. Currently this is in a
 testing phase and not in its final implementation. 
-\begin{itemize}
-\item Only the debug version of the code is analyzed. Therefore this
-  must be compiled before analysing it with \verb|make dbg|. Then you
-  construct the doxygen files with \verb|make doxygen|. The Doxygen
-  data are within a directory \verb|Doxydocs| in the directory
-  alongside with the paw executables.
-%
-\item one can view the data (on OSXusing
-\begin{verbatim}
-A=$(which paw_dbg.x); A=${A%paw_dbg.x}Doxydocs/html/index.html; open -a safari $A
+
+On OSX, I installed doxygen with the option \verb|with-graphviz| in
+order to be able to prepare call graphs and caller graphs. 
+\begin{verbatim} 
+brew install doxygen --with-graphviz
 \end{verbatim}
-The last command opens the Web-browser on the file \verb|$A|, and
-should be replaced by the corresponding command on your system.
+The graph-drawing kit graphviz can be obtained from
+\url{http://www.graphviz.org/}.
+
+\begin{itemize}
+\item Only the debug version of the code is analyzed. Therefore, the
+  debug version must be compiled with \verb|make dbg| before analysing
+  it with doxygen. 
+%
+\item \verb|make doxygen| constructs a configuration file ``Doxyfile''
+  and it generates from it the doxygen information.  The information
+  generated is held in directory \verb|Doxydocs| in the directory
+  which holds the paw executables.
+%
+\item The data are represented as a net of interlinked web-pages.
+on MacOS one can view the data with
+\begin{verbatim}
+A=$(which paw_dbg.x)
+open ${A%paw_dbg.x}Doxydocs/html/index.html
+\end{verbatim}
+On other operating systems, the file can be accessed with any
+web-browser instead of \verb|open|.
+
+First, the variable $A$ is defined as the filename of
+\verb|paw\_dbg.x| with the full path. With \verb|${A%paw_dbg.x}|, we
+obtain the path without the trailing file name, which allows us to
+build up the full filename of the main web site holding the doxygen
+data. This \verb|index.html| file is then opened with a web browser.
 %
 \end{itemize}
+
+
+Remark: A box in the call graph with red borders indicates that the
+node has more arrows than shown.
+
 
 \appendix
 %==========================================================================
