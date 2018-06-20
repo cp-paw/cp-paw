@@ -1047,7 +1047,11 @@ at short distances.}
 \mbax{\key{OFFSITE} 
 %
 \vdescr{Calculates off-site U-tensor. OFFSITE=T is only compatible
-  with MODUS='HYBRID'.}
+  with MODUS='HYBRID'. To be come active, 
+  the specific options NDDO, 31 and/or BONDX need to
+  be selected for each species in the structure file. 
+  See !STRUCTURE!SPECIES!NTBO.}
+
 %
 \vformat{logical} 
 \vrules{optional} 
@@ -3283,26 +3287,29 @@ tails of the orbitals.}
 
 \mbax{\key{NDDO} 
 \vdescr{Exchange term where the density of two orbitals of one atom interacts 
-with the density of two orbitals of a bond partner}
+with the density of two orbitals of a bond partner. 
+(untested experimental option)}
 \vformat{logical}
 \vrules{optional} 
-\vdefault{true}}
+\vdefault{false}}
 
 \mbax{\key{31} 
 \vdescr{Exchange term with three orbitals on one site and one on the
   opposite side of a bond. That is, the density of two orbitals of one
   atom interacts with the overlap density of two orbitals, one from
-  each of the bond partners.}
+  each of the bond partners.
+ (untested experimental option)}
  \vformat{logical} \vrules{optional}
- \vdefault{true}}
+ \vdefault{false}}
 
 \mbax{\key{BONDX} 
 \vdescr{Exchange term of between two overlap densities from the same
   bond.  Each overlap density is made from two orbitals centered at
-  differnt bond partners.}
+  differnt bond partners.
+(untested experimental option)}
 \vformat{logical}
 \vrules{optional} 
-\vdefault{true}}
+\vdefault{false}}
 
 
 %----------------------------------------------------------------------
