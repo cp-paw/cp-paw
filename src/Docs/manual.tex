@@ -188,10 +188,11 @@ traditional electronic structure method -- using a friction to
 ``cool'' the temperature to zero -- and it has been combined
 with statistical approaches to study processes with large barriers.
 
-The {\bf projector augmented wave method (PAW)} \cite{bloechl94_prb50_17953} has been
-developed by the author in response to the invention of the ab-initio
-molecular dynamics approach. Whereas the latter was based on the plane
-wave pseudopotential approach, a new method was needed to enhance the
+The {\bf projector augmented wave method (PAW)}
+\cite{bloechl94_prb50_17953} has been developed by the author in
+response to the invention of the ab-initio molecular dynamics
+approach. Whereas the latter was based on the plane wave
+pseudopotential approach, a new method was needed to enhance the
 accuracy and computational efficiency of the approach and to provide
 the correct wave functions, rather than the fictitious wave functions
 provided by the pseudopotential approach.  The PAW method describes
@@ -203,9 +204,8 @@ region of the wave functions, but used alone it would require
 prohibitive large basis sets to describe correctly all the
 oscillations of the wave function near the nuclei. On the other hand,
 the expansions into atomic orbitals are well suited to describe
-correctly the
-nodal structure of the wave function near the nucleus, but
-lack the variational degrees of freedom for the bonding and tail
+correctly the nodal structure of the wave function near the nucleus,
+but lack the variational degrees of freedom for the bonding and tail
 regions.  The PAW method combines the virtues of both numerical
 representations in one well-defined basis set.
 
@@ -2590,7 +2590,8 @@ relative to the real-space grid used in the calculation.}
 \vdefault{'TOTAL'}}
 
 \mbax{\key{OCC} 
-\vdescr{use acutal occupations} 
+\vdescr{use actual occupations. With \verb|OCC=F|, all selected states
+  contribute independent of their occupations.}
 \vformat{logical} 
 \vrules{optional}
 \vdefault{T}}

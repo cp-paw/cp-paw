@@ -2898,6 +2898,7 @@ CALL TRACE$PASS('DONE')
 !     ==  TITLE= IMAGE TITLE                                          ==
 
 !     ******************************************************************
+      USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
@@ -2953,6 +2954,15 @@ CALL TRACE$PASS('DONE')
         TYPE='TOTAL'
         CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
+        TYPE=+TYPE
+        IF(TYPE.NE.'TOTAL'.AND.TYPE.NE.'SPIN' &
+       &                  .AND.TYPE.NE.'UP'.AND.TYPE.NE.'DOWN') THEN
+          CALL ERROR$MSG('INVALID VALUE OF VARIABLE TYPE')
+          CALL ERROR$MSG('TYPE MUST BE EITHER "TOTAL" OR "SPIN" OR')
+          CALL ERROR$MSG('                            OR "UP" OR "DOWN"')
+          CALL ERROR$CHVAL('TYPE',TYPE)
+          CALL ERROR$STOP('READIN_ANALYSE_DENSITY')
+        end if
         CALL GRAPHICS$SETCH('TYPE',TYPE)
 !
 !       == TOCC

@@ -4107,11 +4107,11 @@ PRINT*,'=================== L=',L,' ================================='
 !         == NODES DOES NOT INCREASE WITH ENERGY. HENCE THE NODE TRACING FAILS
           NN=NNOFI(IB)-NN0
           G(:)=0.D0
-!PRINT*,'BEFORE PAWBOUNDSTATE'
-!PRINT*,'L=',L,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
+PRINT*,'BEFORE PAWBOUNDSTATE'
+PRINT*,'L=',L,' nn=',nn,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
-!PRINT*,' E=',E
+PRINT*,' E=',E
           SVAR2=E
           EOFICOMP(2,IB-NC)=E
 !

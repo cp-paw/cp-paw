@@ -1647,11 +1647,15 @@ END IF
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-      LOGICAL(4) ,PARAMETER      :: TWRITE=.FALSE.
-      INTEGER(4) ,PARAMETER      :: NITER=100
+      LOGICAL(4) ,PARAMETER      :: TWRITE=.true.
+      INTEGER(4) ,PARAMETER      :: NITER=1000
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS
-      REAL(8)    ,PARAMETER      :: RMINNODE=1.D0 ! MIN. RADIUS FOR NODE COUNT
+      REAL(8)    ,PARAMETER      :: RMINNODE=1.D-2 ! MIN. RADIUS FOR NODE COUNT
+!     == RMINNODE MUST BE SUFFICIENTLY SMALL TO ALLOW FOR REAL NODES SUCH AS 
+!     == FOR H AND LI. ON THE OTHER HAND IT SHOULD PROJECT OUT ANY SPURIOUS 
+!     == NODES DUE TO THE VIOLATION OF THE NODAL THEOREM BY NON-LOCAL POTENTIALS
+!     == VALUE HAS BEEN CHANGED FROM 1 TO 0.5 ON JULY 7, 2018. PEB.
       INTEGER(4)                 :: ISTART,IBI
       REAL(8)                    :: X0,DX,XM,ZM,Z0
       REAL(8)                    :: R(NR)
@@ -1701,9 +1705,23 @@ END IF
 !     ==  DO SMALL STEPS TO AVOID COMING CLOSE TO A GHOST STATE               ==
 !     ==========================================================================
 !     ==========================================================================
-      X0=E
       Z0=333.333D0 ! FIRST VALUE IS MEANINGLESS
       DX=1.D-2
+      X0=E-dx
+!!$IF(l.eq.0.and.nn.eq.1) THEN
+!!$X0=X0+1.d-2
+!!$end if
+!!$IF(l.eq.0.and.nn.eq.1) THEN
+!!$open(unit=1005,file='xout')
+!!$do iter=1,20000
+!!$  e=-2.d0+2.5d-4*real(iter,kind=8)
+!!$  CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO,DH,DO,G,PHI)
+!!$  CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
+!!$  write(1005,*)e,z0
+!!$enddo
+!!$close(1005)
+!!$call error$stop('---')
+!!$end if
       DO ITER=1,NITER
         E=X0
 !       ========================================================================
@@ -1724,12 +1742,33 @@ END IF
 !       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
         CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
+        IF(TWRITE)WRITE(*,FMT='("LOOP1 X0=",F10.5," Z0=",E12.3)')X0,Z0
         IF(Z0.GT.0.D0) THEN
           PHI1(:)=PHI(:)
         ELSE
           PHI2(:)=PHI(:)
         END IF
         IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
+!!$IF(l.eq.0.and.nn.eq.1) THEN
+!!$ CALL ATOMLIB_WRITEPHI('ERROR_PAWPSI.DAT',GID,NR,1,PHI)
+!!$ CALL ERROR$I4VAL('L',L)
+!!$ CALL ERROR$I4VAL('NN',NN)
+!!$ CALL ERROR$R8VAL('RMINNODE',RMINNODE)
+!!$ CALL ERROR$R8VAL('Rbox',Rbox)
+!!$ CALL ERROR$R8VAL('X0',X0)
+!!$ CALL ERROR$R8VAL('Z0',Z0)
+!!$ CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
+!!$endif
+        IF(ITER.EQ.NITER) THEN
+          CALL ERROR$MSG('SEARCH FOR BISECTION WINDOW FAILED')
+          CALL ERROR$I4VAL('L',L)
+          CALL ERROR$I4VAL('NN',NN)
+          CALL ERROR$r8VAL('XM',XM)
+          CALL ERROR$r8VAL('X0',X0)
+          CALL ERROR$r8VAL('ZM',ZM)
+          CALL ERROR$r8VAL('Z0',Z0)
+          CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
+        END IF
         IF(ITER.EQ.1) DX=SIGN(DX,-Z0)
         XM=X0
         ZM=Z0
@@ -1743,7 +1782,6 @@ END IF
 !     ==========================================================================
       ISTART=1
       X0=E
-      Z0=333.333D0   ! FIRST VALUE IS MEANINGLESS
 !     == DX IS DEFINED BY THE PREVIOUS LOOP
       CALL BISEC(ISTART,IBI,X0,Z0,DX,XM,ZM)
       DO ITER=1,NITER
@@ -1765,9 +1803,9 @@ END IF
 !       ========================================================================
 !       == NODES WITH R<1 A_BOHR ARE NOT COUNTED, BECAUSE THERE IS NO  =========
 !       == NODAL THEOREM FOR NON-LOCAL POTENTIALS. =============================
-        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,1.D0,RBOX,Z0)
+        CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
         Z0=Z0-REAL(NN+1,KIND=8)
-        IF(TWRITE)WRITE(*,FMT='("X0=",F10.5," Z0=",E12.3)')X0,Z0
+        IF(TWRITE)WRITE(*,FMT='("LOOP2 X0=",F10.5," Z0=",E12.3)')X0,Z0
 
         IF(ABS(2.D0*DX).LE.TOL) EXIT
         IF(Z0.GT.0.D0) THEN

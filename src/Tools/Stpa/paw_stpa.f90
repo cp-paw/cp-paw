@@ -67,6 +67,7 @@
       CHOICE(1,I)='POT'; CHOICE(2,I)=-'POTENTIALS [AE,PS,V(PSRHO)]'; I=I+1
       CHOICE(1,I)='PROG'; CHOICE(2,I)=-'PROJECTOR FUNCTIONS IN G-SPACE'; I=I+1
       CHOICE(1,I)='VADDG'; CHOICE(2,I)=-'VADD IN G-SPACE'; I=I+1
+      CHOICE(1,I)='CORE'; CHOICE(2,I)=-'AE AND PS CORE'; I=I+1
       NCHOICE=I-1
       CHOICE(1,I)='AECORE'; CHOICE(2,I)=-'ATOMIC CORE DENSITY'; I=I+1
       CHOICE(1,I)='PSCORE'; CHOICE(2,I)=-'PSEUDIZED CORE DENSITY'; I=I+1
@@ -221,6 +222,12 @@
         IF(TCHK)cycle
 !
 !       ========================================================================
+!       == SCAN FOR core densities                                            ==
+!       ========================================================================
+        CALL CORE(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
+        IF(TCHK)cycle
+!
+!       ========================================================================
 !       == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                   ==
 !       ========================================================================
         CALL FOURIER(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
@@ -322,18 +329,34 @@
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NCHOICE
       CHARACTER(*),INTENT(IN) :: CHOICE(2,NCHOICE)
+      CHARACTER(128)          :: string
       INTEGER(4)              :: I
 !     **************************************************************************
       WRITE(*,FMT='(A)')'CALLING SEQUENCE:'
-      WRITE(*,FMT='(T10,A)')-"PAW_STPA.X -S SELECTION -O OUTFILE INFILE"
+      WRITE(*,FMT='(T10,A)')-"PAW_STPA.X OPTIONS INFILE"
+      WRITE(*,FMT='(A)')"OPTIONS CAN BE"
+      WRITE(*,FMT='(T10,A)')-"-H"
+      WRITE(*,FMT='(T10,A)')-"? "
+      WRITE(*,FMT='(T10,A)')-"-S"//" SELECTION"
+      WRITE(*,FMT='(T10,A)')-"-O"//" OUTFILE" 
+      STRING='("THE OPTIONS '//-'-S'//' AND '//-'-O'
+      STRING=TRIM(ADJUSTL(STRING))//' CAN BE SPECIFIED SEVERAL TIMES.")'
+      WRITE(*,FMT=TRIM(STRING))
       WRITE(*,FMT=*)
-      WRITE(*,FMT='("INFILE IS THE NAME OF THE INPUT FILE")') 
-      WRITE(*,FMT='("THE NAME OF INFILE HAS THE FORM:")') 
+       
+      STRING='("INFILE IS THE NAME OF THE INPUT FILE, WHICH HAS THE FORM:")'
+      WRITE(*,FMT=string)
       WRITE(*,FMT='(T10,A)')+"ROOT"//-"_STPFORZ"//+"NN"//-".MYXML"
-      WRITE(*,FMT='("     WHERE NN IS THE ATOMIC NUMBER")') 
-      WRITE(*,FMT='("     AND ROOT IS THE ROOT NAME OF THE PAW PROJECT")') 
+      STRING='("WHERE NN IS THE ATOMIC NUMBER AND ROOT IS THE'
+      STRING=TRIM(ADJUSTL(STRING))//' ROOT NAME OF THE PAW PROJECT")'
+      WRITE(*,FMT=string)
       WRITE(*,FMT=*)
-      WRITE(*,FMT='("OUTFILE IS THE NAME OF THE OUTPUT FILE")') 
+
+      STRING='("OUTFILE IS THE NAME OF THE OUTPUT FILE FOR THE PRECEEDING' 
+      STRING=TRIM(ADJUSTL(STRING))//' SELECTION SPECIFIED BY '
+      STRING=TRIM(ADJUSTL(STRING))//-' -S.")'
+      WRITE(*,FMT=STRING)
+      WRITE(*,FMT='("THE DEFAULT OUTFILE IS STOUT (STANDARD OUT, TERMINAL.)")') 
       WRITE(*,FMT=*)
       WRITE(*,FMT='("SELECTION CAN BE ONE OF:")')
 !
@@ -735,6 +758,46 @@
 !     ==========================================================================
       DO IR=1,NR
         WRITE(NFIL,*)R(IR),POTS(IR,:)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CORE(LL_STP,NFIL,ID,TCHK)
+!     **************************************************************************
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(INOUT) :: LL_STP
+      INTEGER(4)   ,INTENT(IN)    :: NFIL
+      CHARACTER(*),INTENT(IN)     :: ID
+      LOGICAL(4)   ,INTENT(OUT)   :: TCHK
+      INTEGER(4)                  :: NR
+      REAL(8)      ,ALLOCATABLE   :: R(:)
+      REAL(8)      ,ALLOCATABLE   :: CORES(:,:)
+      INTEGER(4)                  :: IR
+!     **************************************************************************
+      TCHK=ID.EQ.'CORE'
+      IF(.NOT.TCHK) RETURN
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'RGRID',1)
+      CALL LINKEDLIST$GET(LL_STP,'NR',1,NR)
+      ALLOCATE(R(NR))
+      CALL LINKEDLIST$GET(LL_STP,'R',1,R)
+!
+      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+      CALL LINKEDLIST$SELECT(LL_STP,'AUGMENTATION',1)
+      ALLOCATE(CORES(NR,2))
+      CALL LINKEDLIST$GET(LL_STP,'AECORE',1,CORES(:,1))
+      CALL LINKEDLIST$GET(LL_STP,'PSCORE',1,CORES(:,2))
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      DO IR=1,NR
+        WRITE(NFIL,*)R(IR),CORES(IR,:)
       ENDDO
       RETURN
       END
