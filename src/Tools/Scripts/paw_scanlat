@@ -198,10 +198,9 @@ if [[ $UPDATE = no ]] ; then
     export PDIR=${ROOT%/*}   # project directory
     export PNAME=${ROOT##*/} # project name w/o Dir.
     BACK=$(pwd)
-    cd ${PDIR}    
+    execute "cd ${PDIR}"
     execute "${PAWCMD} ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &" 
-    cd ${BACK}
-exit 1
+    execute "cd ${BACK}"
   done
 fi
 

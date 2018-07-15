@@ -1647,7 +1647,7 @@ END IF
       REAL(8)    ,INTENT(IN)     :: G(NR)   !INHOMOGENITY
       REAL(8)    ,INTENT(INOUT)  :: E       !ENERGY
       REAL(8)    ,INTENT(OUT)    :: PHI(NR) !WAVE-FUNCTION
-      LOGICAL(4) ,PARAMETER      :: TWRITE=.true.
+      LOGICAL(4) ,PARAMETER      :: TWRITE=.FALSE.
       INTEGER(4) ,PARAMETER      :: NITER=1000
       REAL(8)    ,PARAMETER      :: TOL=1.D-12
       REAL(8)    ,PARAMETER      :: RMATCHN=4.D0 ! MIN MATCHING RADIUS

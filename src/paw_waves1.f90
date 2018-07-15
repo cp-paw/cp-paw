@@ -1217,8 +1217,8 @@ END MODULE WAVES_MODULE
 !     ==================================================================
 !     ==  REPORT DATA ABOUT FFTS                                      ==
 !     ==================================================================
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
-      CALL PLANEWAVE$REPORT(NFILO)
+!!$      CALL FILEHANDLER$UNIT('PROT',NFILO)
+!!$      CALL PLANEWAVE$REPORT(NFILO)
 !
 !      DO IKPT=1,NKPTL
 !        CALL WAVES_SELECTWV(IKPT,1)
