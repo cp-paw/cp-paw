@@ -19,6 +19,8 @@ export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE \tdoppaw options JOB\n"
 USAGE="$USAGE \n"
+USAGE="$USAGE An ending ".cntl" of JOB is stripped away.\n"
+USAGE="$USAGE \n"
 USAGE="$USAGE Purpose:\n"
 USAGE="$USAGE \t perform a parallel paw_calculation\n"
 USAGE="$USAGE \t\t with control file JOB.cntl\n"
@@ -105,6 +107,11 @@ if [ -z "$JOB" ] ; then
   echo -e "$USAGE"
   exit
 fi
+#
+###########################################################################
+# strip extension .cntl
+###########################################################################
+JOB=${JOB%.cntl}
 #
 ###########################################################################
 # submit job: This may be specific to the local computer

@@ -974,7 +974,18 @@ END MODULE DYNOCC_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE DYNOCC_MODULE
+      USE DYNOCC_MODULE, ONLY : STARTTYPE &
+     &                         ,BZITYPE &
+     &                         ,TRESTARTFILEPRESENT &
+     &                         ,FMAX &
+     &                         ,TEMP & !TEMPERATURE
+     &                         ,TFIXSPIN,SPINCHA,SPINPOT &
+     &                         ,TFIXTOT,TOTCHA,TOTPOT &
+     &                         ,NB,NKPT,NSPIN &
+     &                         ,WKPT &
+     &                         ,XM,X0,XP &
+     &                         ,EPSILON &
+     &                         ,EPSM,EPS0,EPSP
       USE RESTART_INTERFACE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -1054,9 +1065,9 @@ END MODULE DYNOCC_MODULE
         CALL FILEHANDLER$CLOSE('PROT')
       END IF
 !
-!     ==================================================================
-!     == READ DATA                                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     == READ DATA                                                            ==
+!     ==========================================================================
       IF(.NOT.ALLOCATED(EPS0)) THEN
         ALLOCATE(EPSM(NB,NKPT,NSPIN))
         ALLOCATE(EPS0(NB,NKPT,NSPIN))
@@ -1064,6 +1075,10 @@ END MODULE DYNOCC_MODULE
       END IF
       X0(:,:,:)=0.D0
       XM(:,:,:)=0.D0
+      EPS0=0.D0
+      EPSM=0.D0
+      EPSP=0.D0
+      EPSILON=0.D0
       IF(THISTASK.EQ.1) THEN
         READ(NFIL)NB1,NKPT1,NSPIN1
         ALLOCATE(TMP0(NB1,NKPT1,NSPIN1))
@@ -1082,6 +1097,11 @@ END MODULE DYNOCC_MODULE
           READ(NFIL)TMPE(:,:,:)
           X0(1:NB1,1:NKPT1,1:NSPIN1)=TMP0(1:NB1,1:NKPT1,1:NSPIN1)
           XM(1:NB1,1:NKPT1,1:NSPIN1)=TMPM(1:NB1,1:NKPT1,1:NSPIN1)
+!         == ensure that added bands are treated as unoccupied==================
+          EPS0(NB1+1:,:NKPT1,:NSPIN1)=MAXVAL(TMPE0)
+          EPSM(NB1+1:,:NKPT1,:NSPIN1)=MAXVAL(TMPEM)
+          EPSILON(NB1+1:,:NKPT1,:NSPIN1)=MAXVAL(TMPE)
+!
           EPS0(1:NB1,1:NKPT1,1:NSPIN1)=TMPE0(1:NB1,1:NKPT1,1:NSPIN1)
           EPSM(1:NB1,1:NKPT1,1:NSPIN1)=TMPEM(1:NB1,1:NKPT1,1:NSPIN1)
           EPSP(:,:,:)=EPS0(:,:,:)
@@ -1104,6 +1124,10 @@ END MODULE DYNOCC_MODULE
           EPSM(:,:,:)=EPSILON(:,:,:)
           EPS0(:,:,:)=EPSILON(:,:,:)
           EPSP(:,:,:)=EPSILON(:,:,:)
+        ELSE 
+          CALL ERROR$MSG('FORMATTYPE SPECIFIED IN RESTART FILE NOT RECOGNIZED')
+          CALL ERROR$CHVAL('FORMATTYPE',FORMATTYPE)
+          CALL ERROR$STOP('DYNOCC$READ')
         END IF
         DEALLOCATE(TMP0)
         DEALLOCATE(TMPM)
@@ -1111,9 +1135,9 @@ END MODULE DYNOCC_MODULE
         DEALLOCATE(TMPE0)
         DEALLOCATE(TMPE)
 !
-!       ================================================================
-!       == AUGMENT MISSING DATA                                       ==
-!       ================================================================
+!       ========================================================================
+!       == AUGMENT MISSING DATA                                               ==
+!       ========================================================================
 !       - THE FOLLING IF-CONDITION IS A WORKAROUND FOR A BUG IN THE LOOP 
 !       - VECTORIZER OF THE INTEL FORTAN COMPILER 16, THAT WOULD GENERATE 
 !       - AN INFINITE LOOP HERE.
@@ -1136,18 +1160,18 @@ END MODULE DYNOCC_MODULE
         END IF
       END IF
 !
-!     ==================================================================
-!     ==  BROADCAST                                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  BROADCAST                                                           ==
+!     ==========================================================================
       CALL MPE$BROADCAST('MONOMER',1,X0)
       CALL MPE$BROADCAST('MONOMER',1,XM)
       CALL MPE$BROADCAST('MONOMER',1,EPSILON)
       CALL MPE$BROADCAST('MONOMER',1,EPS0)
       CALL MPE$BROADCAST('MONOMER',1,EPSM)
 !
-!     ==================================================================
-!     == CONVERT ENERGIES INTO OCCUPATIONS                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == CONVERT ENERGIES INTO OCCUPATIONS                                    ==
+!     ==========================================================================
       IF(STARTTYPE.EQ.'E'.AND.BZITYPE.EQ.'SAMP' &
      &             .AND.(FORMATTYPE.NE.'AUG1996')) THEN
 !       == NOT SUITABLE FOR TETRAHEDRON METHOD BECAUSE IT FAILS FOR T=0
@@ -1157,9 +1181,9 @@ END MODULE DYNOCC_MODULE
         XM(:,:,:)=X0(:,:,:)
       END IF
 !
-!     ==================================================================
-!     ==  RESET THERMODYNAMIC VARIABLES                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  RESET THERMODYNAMIC VARIABLES                                       ==
+!     ==========================================================================
       IF(STARTTYPE.EQ.'X') THEN
         IF(NSPIN.EQ.1) THEN
           SPINCHA=0.D0
@@ -1188,118 +1212,118 @@ END MODULE DYNOCC_MODULE
       RETURN
       END
 !
-!      .................................................................
-       SUBROUTINE DYNOCC$REPORT(NFIL)
-!      *****************************************************************
-!      **                                                             **
-!      **  THE DATA OF THE DYNOCC OBJECT ARE DIVIDED IN STATIC        **
-!      **  DYNAMIC DATA.                                              **
-!      **  THE PARAMETER RESET IS CHANGED TO TRUE WHENEVER STATIC     **
-!      **  DATA ARE CHANGED AND TO FALSE AFTER EACH REPORT.           **
-!      **  STATIC DATA ARE THEREFORE REPORTED, WHENEVER ONE OF THEM   **
-!      **  HAS BEEN MODIFIED.                                         **
-!      **                                                             **
-!      **  DYNAMIC DATA ARE ALWAYS REPORTED                           **
-!      **                                                             **
-!      *****************************************************************
-       USE DYNOCC_MODULE
-       IMPLICIT NONE
-       INTEGER(4),INTENT(IN) :: NFIL
-       REAL(8)               :: SVAR
-       REAL(8)               :: OCC(NB,NKPT,NSPIN)
-       INTEGER(4)            :: ISPIN,IKPT
-       REAL(8)               :: EV
-       REAL(8)               :: KELVIN
-!      *****************************************************************
-                          CALL TRACE$PUSH('DYNOCC$REPORT')
-       CALL CONSTANTS('EV',EV)
-       CALL CONSTANTS('KB',KELVIN)
-!      == 1EL<->0.5HBAR => HBAR=2 EL
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DYNOCC$REPORT(NFIL)
+!     **************************************************************************
+!     **                                                                      **
+!     **  THE DATA OF THE DYNOCC OBJECT ARE DIVIDED IN STATIC                 **
+!     **  DYNAMIC DATA.                                                       **
+!     **  THE PARAMETER RESET IS CHANGED TO TRUE WHENEVER STATIC              **
+!     **  DATA ARE CHANGED AND TO FALSE AFTER EACH REPORT.                    **
+!     **  STATIC DATA ARE THEREFORE REPORTED, WHENEVER ONE OF THEM            **
+!     **  HAS BEEN MODIFIED.                                                  **
+!     **                                                                      **
+!     **  DYNAMIC DATA ARE ALWAYS REPORTED                                    **
+!     **                                                                      **
+!     **************************************************************************
+      USE DYNOCC_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)               :: SVAR
+      REAL(8)               :: OCC(NB,NKPT,NSPIN)
+      INTEGER(4)            :: ISPIN,IKPT
+      REAL(8)               :: EV
+      REAL(8)               :: KELVIN
+!     **************************************************************************
+                         CALL TRACE$PUSH('DYNOCC$REPORT')
+      CALL CONSTANTS('EV',EV)
+      CALL CONSTANTS('KB',KELVIN)
+!     == 1EL<->0.5HBAR => HBAR=2 EL
 !
-!      =================================================================
-!      == TITLE OF THE REPORT                                         ==
-!      =================================================================
-       CALL REPORT$TITLE(NFIL,'OCCUPATIONS')
+!     ==========================================================================
+!     == TITLE OF THE REPORT                                                  ==
+!     ==========================================================================
+      CALL REPORT$TITLE(NFIL,'OCCUPATIONS')
 !
-!      =================================================================
-!      == REPORT BASIC SETTINGS, IF THEY HAVE CHANGED SINCE THE LAST CALL
-!      =================================================================
-       IF(RESET) THEN
-         CALL DYNOCC_REPORTSETTING(NFIL)
-         RESET=.FALSE.
-       END IF
-       IF(.NOT.TDYN) RETURN
+!     ==========================================================================
+!     == REPORT BASIC SETTINGS, IF THEY HAVE CHANGED SINCE THE LAST CALL
+!     ==========================================================================
+      IF(RESET) THEN
+        CALL DYNOCC_REPORTSETTING(NFIL)
+        RESET=.FALSE.
+      END IF
+      IF(.NOT.TDYN) RETURN
 !
-!      =================================================================
-!      ==  PRINT ENSEMBLE INFORMATION                                 ==
-!      =================================================================
-       IF(TFIXTOT) THEN
-         CALL REPORT$R8VAL(NFIL,'CHEMICAL POTENTIAL',TOTPOT/EV,'EV')
-       ELSE
-         CALL REPORT$R8VAL(NFIL,'CHARGE',-(TOTCHA-SUMOFZ),'E')
-         CALL REPORT$R8VAL(NFIL,'CHARGE TERM (-MU*N)?' &
-     &                    ,-TOTPOT*(TOTCHA-SUMOFZ)/EV,'EV')
-       END IF
+!     ==========================================================================
+!     ==  PRINT ENSEMBLE INFORMATION                                          ==
+!     ==========================================================================
+      IF(TFIXTOT) THEN
+        CALL REPORT$R8VAL(NFIL,'CHEMICAL POTENTIAL',TOTPOT/EV,'EV')
+      ELSE
+        CALL REPORT$R8VAL(NFIL,'CHARGE',-(TOTCHA-SUMOFZ),'E')
+        CALL REPORT$R8VAL(NFIL,'CHARGE TERM (-MU*N)?' &
+    &                    ,-TOTPOT*(TOTCHA-SUMOFZ)/EV,'EV')
+      END IF
 !
-       IF(NSPIN.EQ.2) THEN
-         IF(TFIXSPIN) THEN
-           CALL REPORT$R8VAL(NFIL,'MAGNETIC FIELD',SPINPOT/(EV),'EV/(HBAR/2)')
-         ELSE
-           CALL REPORT$R8VAL(NFIL,'SPIN',SPINCHA/2.D0,'HBAR')
-           CALL REPORT$R8VAL(NFIL,'MAGNETIZATION TERM (-S*B)?' &
-     &                           ,-SPINPOT*SPINCHA/EV,'EV')
-         END IF
-       END IF
+      IF(NSPIN.EQ.2) THEN
+        IF(TFIXSPIN) THEN
+          CALL REPORT$R8VAL(NFIL,'MAGNETIC FIELD',SPINPOT/(EV),'EV/(HBAR/2)')
+        ELSE
+          CALL REPORT$R8VAL(NFIL,'SPIN',SPINCHA/2.D0,'HBAR')
+          CALL REPORT$R8VAL(NFIL,'MAGNETIZATION TERM (-S*B)?' &
+    &                           ,-SPINPOT*SPINCHA/EV,'EV')
+        END IF
+      END IF
 
-       IF(BZITYPE.EQ.'SAMP') THEN 
-         CALL DYNOCC$GETR8('EPOT',SVAR)
-         IF(TFIXTOT) THEN
-           IF(TFIXSPIN) THEN
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS',SVAR/EV,'EV')
-           ELSE
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S',SVAR/EV,'EV')
-           END IF
-         ELSE
-           IF(TFIXSPIN) THEN
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-MU*N',SVAR/EV,'EV')
-           ELSE
-             CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S-MU*N',SVAR/EV,'EV')
-           END IF
-         END IF
-       END IF
+      IF(BZITYPE.EQ.'SAMP') THEN 
+        CALL DYNOCC$GETR8('EPOT',SVAR)
+        IF(TFIXTOT) THEN
+          IF(TFIXSPIN) THEN
+            CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS',SVAR/EV,'EV')
+          ELSE
+            CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S',SVAR/EV,'EV')
+          END IF
+        ELSE
+          IF(TFIXSPIN) THEN
+            CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-MU*N',SVAR/EV,'EV')
+          ELSE
+            CALL REPORT$R8VAL(NFIL,'ENTROPY TERM -TS-B*S-MU*N',SVAR/EV,'EV')
+          END IF
+        END IF
+      END IF
 !
-!      =========================================================================
-!      ==  PRINT INFORMATION ABOUT CONVERGENCE                                ==
-!      =========================================================================
-       IF(TPROPAGATED) THEN
-         CALL REPORT$R8VAL(NFIL,'MAX DEVIATION STATE OCC.',MAXDEVOCC,'E')
-         CALL REPORT$R8VAL(NFIL,'ESTIMATED ENERGY DEVIATION',DEVENERGY,'H')
-       END IF
+!     ==========================================================================
+!     ==  PRINT INFORMATION ABOUT CONVERGENCE                                 ==
+!     ==========================================================================
+      IF(TPROPAGATED) THEN
+        CALL REPORT$R8VAL(NFIL,'MAX DEVIATION STATE OCC.',MAXDEVOCC,'E')
+        CALL REPORT$R8VAL(NFIL,'ESTIMATED ENERGY DEVIATION',DEVENERGY,'H')
+      END IF
 !
-!      =========================================================================
-!      == PRINT ENERGIES AND OCCUPATIONS                                      ==
-!      =========================================================================
-       IF(TEPSILON) THEN
-         CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
-         WRITE(NFIL,*)'OCCUPATIONS AND ENERGY EXPECTATION VALUES [EV]'
-         DO ISPIN=1,NSPIN
-           DO IKPT=1,NKPT
-             WRITE(NFIL,FMT='("FOR K-POINT: ",I5," AND SPIN ",I1)')IKPT,ISPIN
-             CALL DYNOCC_PREIG('EIG',NFIL,NB,EPSILON(:,IKPT,ISPIN),EV)
-             CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
-           ENDDO
-         ENDDO
+!     ==========================================================================
+!     == PRINT ENERGIES AND OCCUPATIONS                                       ==
+!     ==========================================================================
+      IF(TEPSILON) THEN
+        CALL DYNOCC$GETR8A('OCC',NB*NKPT*NSPIN,OCC)
+        WRITE(NFIL,*)'OCCUPATIONS AND ENERGY EXPECTATION VALUES [EV]'
+        DO ISPIN=1,NSPIN
+          DO IKPT=1,NKPT
+            WRITE(NFIL,FMT='("FOR K-POINT: ",I5," AND SPIN ",I1)')IKPT,ISPIN
+            CALL DYNOCC_PREIG('EIG',NFIL,NB,EPSILON(:,IKPT,ISPIN),EV)
+            CALL DYNOCC_PREIG('OCC',NFIL,NB,OCC(:,IKPT,ISPIN),WKPT(IKPT))
+          ENDDO
+        ENDDO
 !
-!        == CHECK IF THE NUMBER OF BAND IS SUFFICIENT ==========================
-         IF(SUM(OCC(NB,:,:)).GT.1.D-6) THEN
-           CALL REPORT$STRING(NFIL,'WARNING: HIGHEST BAND IS NOT EMPTY')
-           CALL REPORT$STRING(NFIL,'         RESULTS ARE POBABLY INCORRECT')
-           CALL REPORT$STRING(NFIL,'         INCREASE NUMBER OF BANDS')
-         END IF
-       END IF
-                          CALL TRACE$POP()
-       RETURN
-       END
+!       == CHECK IF THE NUMBER OF BAND IS SUFFICIENT ===========================
+        IF(SUM(OCC(NB,:,:)).GT.1.D-6) THEN
+          CALL REPORT$STRING(NFIL,'WARNING: HIGHEST BAND IS NOT EMPTY')
+          CALL REPORT$STRING(NFIL,'         RESULTS ARE POBABLY INCORRECT')
+          CALL REPORT$STRING(NFIL,'         INCREASE NUMBER OF BANDS')
+        END IF
+      END IF
+                         CALL TRACE$POP()
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_REPORTSETTING(NFIL)
@@ -1321,6 +1345,7 @@ END MODULE DYNOCC_MODULE
        REAL(8)               :: KELVIN
        REAL(8)               :: OCC(NB,NKPT,NSPIN)
        INTEGER(4)            :: ISPIN,IKPT
+       character(80)         :: string
 !      *************************************************************************
        CALL CONSTANTS('EV',EV)
        CALL CONSTANTS('KB',KELVIN)
@@ -1356,7 +1381,8 @@ END MODULE DYNOCC_MODULE
          IF(TFIXSPIN) THEN
            CALL REPORT$R8VAL(NFIL,'FIXED SPIN',SPINCHA*0.5D0,'HBAR')
          ELSE
-           CALL REPORT$R8VAL(NFIL,'FIXED MAGNETIC FIELD',SPINPOT/EV,'EV/(HBAR/2)')
+           CALL REPORT$R8VAL(NFIL,'FIXED MAGNETIC FIELD',SPINPOT/EV &
+      &                                                 ,'EV/(HBAR/2)')
          END IF
        END IF
 !
@@ -1364,10 +1390,13 @@ END MODULE DYNOCC_MODULE
          CALL REPORT$STRING(NFIL,'BRILLOUIN-ZONE INTEGRATION BY SAMPLING') 
          CALL REPORT$R8VAL(NFIL,'TEMPERATURE',TEMP/KELVIN,'K')
         IF(TADIABATIC) THEN
-           CALL REPORT$STRING(NFIL,'QUASI-ADIABATIC OCCUPATIONS USING MERMIN FUNCTIONAL')
+
+           string='QUASI-ADIABATIC OCCUPATIONS USING MERMIN FUNCTIONAL'
+           CALL REPORT$STRING(NFIL,trim(string))
            CALL REPORT$R8VAL(NFIL,'RETARDATION',RETARD,'DELTAT')
          ELSE 
-           CALL REPORT$STRING(NFIL,'DYNAMICAL OCCUPATIONS USING MERMIN FUNCTIONAL')
+           STRING='DYNAMICAL OCCUPATIONS USING MERMIN FUNCTIONAL'
+           CALL REPORT$STRING(NFIL,trim(string))
            CALL REPORT$R8VAL(NFIL,'MASS OF X',MX,'A.U.')
            IF(ANNEX.NE.0.D0) THEN
              CALL REPORT$R8VAL(NFIL,'FRICTION',ANNEX,' ')
@@ -1377,22 +1406,30 @@ END MODULE DYNOCC_MODULE
            END IF
            IF(TRESTARTFILEPRESENT) THEN
              IF(STARTTYPE.EQ.'N') THEN
-               CALL REPORT$STRING(NFIL,'INITIAL STATES ARE FILLED BOTTOM UP ASSUMING FLAT BANDS')
+               STRING='INITIAL STATES ARE FILLED BOTTOM UP ASSUMING FLAT BANDS'
+               CALL REPORT$STRING(NFIL,trim(string))
              ELSE IF(STARTTYPE.EQ.'X') THEN
-               CALL REPORT$STRING(NFIL,'INITIAL OCCUPATIONS ARE READ FROM RESTART FILE')
+               STRING='INITIAL OCCUPATIONS ARE READ FROM RESTART FILE'
+               CALL REPORT$STRING(NFIL,trim(string))
              ELSE IF(STARTTYPE.EQ.'E') THEN
-              CALL REPORT$STRING(NFIL,'INITIAL OCCUPATIONS CONSTRUCTED FROM ENERGIES READ FROM RESTART FILE')
+              STRING='INITIAL OCCUPATIONS CONSTRUCTED FROM ENERGIES'
+              string=trim(string)//' READ FROM RESTART FILE'
+              CALL REPORT$STRING(NFIL,trim(string))
              END IF
            ELSE
-             CALL REPORT$STRING(NFIL,'NO MERMIN INFORMATION READ FROM RESTART FILE')
-             CALL REPORT$STRING(NFIL,'INITIAL STATES ARE FILLED BOTTOM UP ASSUMING FLAT BANDS')
+             STRING='NO MERMIN INFORMATION READ FROM RESTART FILE'
+             CALL REPORT$STRING(NFIL,trim(string))
+             STRING='INITIAL STATES ARE FILLED BOTTOM UP ASSUMING FLAT BANDS'
+             CALL REPORT$STRING(NFIL,trim(string))
            END IF
          END IF
 !
-!      == NOE TETRAHEDRON METHOD =================================================
+!      == NOE TETRAHEDRON METHOD ===============================================
        ELSE IF(BZITYPE.EQ.'TETRA+') THEN
-         CALL REPORT$STRING(NFIL,'BRILLOUIN-ZONE INTEGRATION BY TETRAHEDRON METHOD')
-         CALL REPORT$STRING(NFIL,'QUASI-ADIABATIC OCCUPATIONS USING MERMIN FUNCTIONAL')
+         string='BRILLOUIN-ZONE INTEGRATION BY TETRAHEDRON METHOD'
+         CALL REPORT$STRING(NFIL,trim(string))
+         STRING='QUASI-ADIABATIC OCCUPATIONS USING MERMIN FUNCTIONAL'
+         CALL REPORT$STRING(NFIL,trim(string))
          CALL REPORT$R8VAL(NFIL,'RETARDATION',RETARD,'DELTAT')
          CALL REPORT$R8VAL(NFIL,'TEMPERATURE',TEMP/KELVIN,'K')
          IF(TEMP.GT.1.D-4) THEN
@@ -1404,7 +1441,7 @@ END MODULE DYNOCC_MODULE
        RETURN
        END 
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_PREIG(ID,NFIL,NB,EIG,UNIT)
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: ID
@@ -1612,7 +1649,7 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_EKIN(EKIN_)
 !      *****************************************************************
 !      **                                                             **
@@ -1639,7 +1676,7 @@ END MODULE DYNOCC_MODULE
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_EPOT(EPOT_)
 !      *****************************************************************
 !      **                                                             **
@@ -2103,7 +2140,8 @@ END IF
                              CALL TRACE$POP
        RETURN
        END
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DYNOCC$SWITCH()
 !     ******************************************************************
 !     ******************************************************************
@@ -2208,7 +2246,7 @@ END IF
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC$INIOCC
 !      *****************************************************************
 !      ** CHOOSE INITIAL CONDITIONS FOR THE OCCUPATIONS               **
@@ -2223,7 +2261,7 @@ END IF
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC$MODOCC(IB_,IKPT_,ISPIN_,OCC_)
 !      *****************************************************************
 !      **  MODIFY INDIVIDUAL OCCUPATIONS                              **
@@ -2269,7 +2307,7 @@ END IF
        END
 !PB031019START
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_INIOCCBYNUMBER(NB,NKPT,NSPIN,FMAX &
       &                                ,TOTCHA,SPINCHA,WKPT,X)
 !      *****************************************************************
@@ -2326,7 +2364,7 @@ END IF
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE DYNOCC_INIOCCBYENERGY(NB,NKPT,NSPIN,FMAX &
       &          ,TEMP,TFIXTOT,TOTCHA,TOTPOT,TFIXSPIN,SPINCHA,SPINPOT &
       &          ,WKPT,EPSILON,X0)
@@ -2426,7 +2464,7 @@ END IF
        END
 !PB031019END
 !
-!     .....................................................MERMIN.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DYNOCC_MERMIN(NBANDS,NKPT,NSPIN &
      &                 ,TOTCHA,ISPINDEG,TEMP,WKPT,EIG,F,CHMPOT,EMERMN)
 !     ******************************************************************
@@ -2564,7 +2602,7 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 MODULE OCCUPATION_MODULE
 USE LINKEDLIST_MODULE 
 LOGICAL(4)    :: TINI=.FALSE.
@@ -2578,7 +2616,7 @@ CONTAINS
    END SUBROUTINE OCCUPATION_NEWLIST
 END MODULE OCCUPATION_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE OCCUPATION$SET(STRING_,NBYTE_,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -2596,7 +2634,7 @@ END MODULE OCCUPATION_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE OCCUPATION$GET(STRING_,NBYTE_,VAL)
 !     ******************************************************************
 !     **                                                              **
@@ -2621,7 +2659,7 @@ END MODULE OCCUPATION_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE OCCUPATION$REPORT(NFIL,STRING_)
 !     ******************************************************************
 !     **                                                              **
