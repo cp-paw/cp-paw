@@ -120,6 +120,16 @@ export VERBOSE=no
 #  implement dry-run
 #-------------------------------------------------------------------------------
 function execute(){
+    if [[ "$DRYRUN" != yes && "$DRYRUN" != 'no' ]] ; then
+      echo "error in $0: illegal value '$DRYRUN' of DRYRUN"
+      echo "DRYRUN must be either 'yes' or 'no'"
+      exit 1
+    fi
+    if [[ "$VERBOSE" != yes && "$VERBOSE" != 'no' ]] ; then
+      echo "error in $0: illegal value '$VERBOSE' of VERBOSE"
+      echo "VERBOSE must be either 'yes' or 'no'"
+      exit 1
+    fi
     # || is "or" in [[...]], && is "and" in [[..]] 
     if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
       echo "${@}"

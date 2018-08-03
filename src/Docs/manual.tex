@@ -961,6 +961,14 @@ zero.}
 \vrules{optional}
 \vdefault{NONE}}
 
+\mbax{\key{NEWSTRC} 
+\vdescr{Unit cell and atomic positions from
+    structure input file overwrite any structure information from
+    restart file.}
+\vformat{logical}
+\vrules{optional}
+\vdefault{F}}
+
 %----------------------------------------------------------------------
 \block{!CONTROL!DFT}
 %----------------------------------------------------------------------
@@ -1722,29 +1730,59 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vrules{optional}
 \vdefault{300}}
 
-%
-\mbax{\key{ADIABATIC} 
-\vdescr{chooses quasi-adiabatic mode for
-  occupations. New energy levels are introduced that approach the energy
-  levels $\epsilon=\frac{\partial E}{\partial f_n}$.in a retarded fashion. The
-  occupations are determined for these retarded energies. Note that in the
-  previous formula the energy also includes the fictitious kinetic
-  energy. This mode of operation does not produce an energy conserving
-  dynamics. It is recommended for static calculations. The current
-  implementation of the tetrahedron method for Brillouin zone integration only
-  works with adiabatic=T.}
-\vformat{logical}
+
+\mbax{\key{ADIABATIC} \vdescr{if true, a quasi-adiabatic mode for
+    occupations is chosen. New ``floating'' energy levels
+    $\tilde{\epsilon}_n(t)$ are introduced that approach the ``true''
+    energy levels in a retarded fashion $\epsilon_n(t)$.  The
+    occupations are determined for these floating energy levels
+    $\tilde{\epsilon}_n$.
+
+    The ``true'' energy levels are 
+    \begin{eqnarray}
+    \epsilon_n=\frac{\partial E}{\partial f_n}
+    +\langle\dot{\tilde{\psi}}_m|m_\Psi|\dot{\tilde{\psi}}_m\rangle
+    \end{eqnarray}
+    The formula the energy $\epsilon_n$ also
+    includes the fictitious kinetic energy.  
+
+    The floating energy levels are propagated like
+    \begin{eqnarray}
+      \tilde{\epsilon}_n(t+\Delta)=\tilde{\epsilon}_n(t)
+       +\Bigl(\epsilon_n(t)-\tilde{\epsilon}_n(t)\Bigr)
+        \frac{1}{\text{RETARD}}
+    \end{eqnarray}
+  where RETARD is the value specified by
+  \texttt{!CONTROL!MERMIN:RETARD}. This mode of
+  operation does not produce an energy-conserving dynamics. It is
+  recommended for static calculations. The current implementation of
+  the tetrahedron method for Brillouin-zone integration only works
+  with ADIABATIC=T.}  
+\vformat{logical} 
 \vrules{optional}
 \vdefault{.false.}}
 
 %
-\mbax{\key{RETARD}
-\vdescr{The energy levels used for the Brillouin-zone integration in the
-  adiabatic mode approach the actual enegy levels as
-$\sim\exp(-\frac{1}{r}\frac{t}{\Delta})$.}
-\vformat{real}
-\vrules{optional, used only if !ADIABATIC=T}
-\vdefault{0.}}
+\mbax{\key{RETARD} \vdescr{Time scale in units of the time step
+    $\Delta$ for the retardation of the occupation dynamics selected
+    by \texttt{!CONTROL!MERMIN:ADIABATIC}. If the true energy levels
+    $\epsilon_n$ are constant, the floating energy levels
+     $\tilde{\epsilon}_n(t)$ approach the true
+    energy levels exponentially, namely like
+\begin{eqnarray}
+\tilde{\epsilon}_n(t)\sim \epsilon_n+
+\Bigl(\tilde{\epsilon}_n(t=0)-\epsilon_n\Bigr)
+\exp\left(-\frac{1}{\text{RETARD}}\frac{t}{\Delta}\right)
+\end{eqnarray}.
+A value of 10. is a reasonable choice for many systems. Unit cells
+with large spatial dimensions (e.g. surface or interface calculations)
+require a much larger value such as 100. to avoid the charge-sloshing
+phenomenon. The problem is related to the fact that a small
+reoccupation of states can transport charge over large distances,
+which in turn produces a large response in the electrostatic
+potential. By retarding the process, it can be kept within stability
+limits.}  \vformat{real} \vrules{optional, used only if !ADIABATIC=T}
+  \vdefault{0.}}
 %
 \mbax{\key{TETRA+} 
 \vdescr{if true, the Brillouin zone integration is performed with the
@@ -2560,7 +2598,8 @@ relative to the real-space grid used in the calculation.}
   input file for OPENDX\cite{opendx}.  }
 
 \mbax{\key{TITLE}
-\vdescr{title of the image. Currently it is not used other than in the printout.}
+\vdescr{title of the image. Currently it is not used other 
+  than in the printout.}
 \vformat{character}
 \vrules{optional}
 \vdefault{none}}
@@ -2581,16 +2620,18 @@ relative to the real-space grid used in the calculation.}
 \vdefault{0.4}}
 
 \mbax{\key{TYPE}
-\vdescr{can be 'TOTAL', 'SPIN', 'UP' or 'DOWN'. Determines the weights of the
-  states in the density plots. 'TOTAL' takes the actual occupations
-  and k-point or uniform weights (depending on 'OCC'). 'SPIN' is like `TOTAL', but counts states for
-  spin=2 negative. 'UP' and 'DOWN' give the spin up and down densities respectively.}
+\vdescr{can be 'TOTAL', 'SPIN', 'UP' or 'DOWN'. Determines the weights
+  of the states in the density plots. 'TOTAL' takes the actual
+  occupations and k-point- or uniform weights (depending on
+  'OCC'). 'SPIN' is like `TOTAL', but counts states for spin=2
+  negative. 'UP' and 'DOWN' give the spin up and down densities
+  respectively.}
 \vformat{character}
 \vrules{optional}
 \vdefault{'TOTAL'}}
 
 \mbax{\key{OCC} 
-\vdescr{use actual occupations. With \verb|OCC=F|, all selected states
+\vdescr{use actual occupations. With OCC=F, all selected states
   contribute independent of their occupations.}
 \vformat{logical} 
 \vrules{optional}
@@ -2657,6 +2698,34 @@ relative to the real-space grid used in the calculation.}
     to get an integer factor relative to the real-space grid used in
     the calculation.}  \vformat{real} \vrules{optional}
   \vdefault{0.4}}
+%
+%----------------------------------------------------------------------
+\block{!CONTROL!ANALYSE!1DPOT}
+%----------------------------------------------------------------------
+\brules{optional} \bdescr{Writes the Hartree potential averaged over
+  planes perpendicular to a specified axis. Finite values are obtained
+  only if the axis is an integer multiple of the real space lattice
+  vectors. \textbf{Caution! At this point only the plane wave part is
+    implemented}. See also the \texttt{paw\_1davpot} tool described in
+  section~\ref{sec:1davpottool}.}
+
+\mbax{\key{TITLE}
+\vdescr{title of the image. Currently it is not used other than in the printout.}
+\vformat{character}
+\vrules{optional}
+\vdefault{none}}
+
+\mbax{\key{FILE} 
+\vdescr{full file name of the file to be produced.} 
+\vformat{character} 
+\vrules{mandatory}
+\vdefault{none}}
+
+\mbax{\key{IT} \vdescr{Relative coordinates of the axis defining the
+    planar averages.}  
+\vformat{integer} 
+\vrules{optional}
+\vdefault{0.4}}
 
 %----------------------------------------------------------------------
 \block{!CONTROL!ANALYSE!EELS}
@@ -5302,7 +5371,7 @@ obtained by averaging the potential over lattice planes. By comparing
 with the respective bulk calculations one can determine the band
 offsets or work functions.
 
-The tool uses the electrostatic potential produces by the CP-PAW code
+The tool uses the electrostatic potential produced by the CP-PAW code
 using the option !control!analyse!potential. If the file of the
 resulting potential file is ``case\_pot.wv'',  the calling sequence is
 \begin{center}
@@ -8440,14 +8509,23 @@ The calling sequence is
 \noindent Options:\\[2mm]
 \hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
 \begin{description}
-\item[-h:] print help message
+\item[-l \textit{list}:] list of percent changes of the lattice
+  constant (enter in apostrophes "...")\\
+  default: {\tt ``96 97 98 99 100 101 102 103 104"}
+%
 \item[-p \textit{rootname}:] rootname of the project to be considered
   (mandatory)
-\item[-l \textit{list}:] list of percent changes of the lattice
-  constant (enter in apostrophes "...")
-\item[-b \textit{directory}:] directory containing the paw executables
-  (binaries)
-\item[-e \textit{executable}:] name of the executable
+%
+\item[-u:] update only. No paw simulation.
+%
+\item[-e \textit{executable}:] name of the executable\\
+    default: {\tt |"paw\_waittillempty -n \$NJOBS ; paw\_fast"|}
+%
+\item[-j \textit{n}:] $n$ paw jobs are allowed to run
+   simultaneously. Only used when option {\tt -e} is absent.
+%
+\item[-h:] print help message
+\item[-v:] verbose
 \item[-0:] dry run
 \end{description}
 \end{minipage}}\\
@@ -8462,6 +8540,37 @@ The calling sequence is
 \end{minipage}}
 \bigskip
 
+\noindent Example:\\[2mm]
+\begin{verbatim}
+paw_scanlat -u -l "96 98 100 102 104" -p nio \
+            -e "waittillempty -n 4; paw_fast.x"
+\end{verbatim}
+
+\noindent Explanation:\\[2mm]
+\verb|paw_scanlat| makes copies of the control, structure and restart
+files of the project with
+\begin{itemize}
+\item the values specified by option \verb|-l| appended to the project
+  name and
+\item the length unit scaled by the percentage values specified by option
+  \verb|-l| appended to the project.
+\end{itemize}
+and performs paw calculations.  The restart file is copied only if it
+does not yet exist.
+
+Finally \verb|paw_scanlat| extracts the total energies. It produces
+two files:
+\begin{itemize}
+\item \verb|etot.dat| containing a two-column list of (1) percentage
+  scaling specified by the option \verb|-l| and (2) the energy in
+  Hartree.  
+\item \verb|murn.in| containing a two-column list of (1) the cube of
+  the length unit in the in abohr and (2) the energy in Hartree. This
+  file is used as input file for the \verb|paw_murnaghan.x.| tool
+\end{itemize}
+
+
+
 
 %==========================================================================
 \subsection{Murnaghan fit ``paw\_murnagan.x''}
@@ -8474,13 +8583,72 @@ the bulk modulus depends linearly on pressure.
 
 The calling sequence is
 
-\bigskip\fbox{{\tt paw\_murnaghan.x\ <in.dat}}\bigskip
+\bigskip\fbox{{\tt paw\_murnaghan.x\ < murn.in}}\bigskip
 
 where {\tt in.dat} is an input file holding the energy-versus-volume
 data.  The first column of {\tt in.dat} holds the volumes and the
 second the corresponding energies, both given in Hartree atomic
-units. In addition a file ``{\tt murn.dat}'' is produced holding the
+units. 
+
+
+
+In addition a file ``{\tt murn.dat}'' is produced holding the
 interpolated data covering the range of the input volumes +10\%.
+
+
+%==========================================================================
+\subsubsection{Command}
+%==========================================================================
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_murnaghan.x} \textit{options} < murn.in}
+\vspace{0.5cm}
+
+\noindent Options:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{description}
+\item[-l:] first column of input is a length $L$.
+%   
+\item[-v:] (default) first column of input is a volume. $L^3$
+%
+\item[-eu \textit{value}:] energy unit of second column in
+  Hartree. default: 1.
+%
+\item[-lu \textit{value}:] length unit of the data in the first column
+  in abohr. Default: 1.
+%
+\item[-vbl \value{value}:] Volume $\det[T]/L^3$ of the unit cell
+  expressed in length units $L$. $T/L$ is the matrix of the three
+  lattice vectors as specified in {\tt !STRUCTURE!LATTICE:T=}. Default: 1.
+%
+\item[-scale \textit{value}:] energies and volumes are scaled by this
+  value.  If the unit cell contains, for example, two formula units,
+  the results for one formula unit are obtained using a scale factor of
+  0.5. Input data are scaled upon reading.
+%
+\item[-h:] print help message
+\item[-v:] verbose
+\item[-0:] dry run
+\end{description}
+\end{minipage}}\\
+\bigskip
+
+\noindent Preconditions:\\[2mm]
+\hspace*{1cm}\fbox{\begin{minipage}{0.9\linewidth}
+\begin{itemize}
+\item 	 murn.in (File to be passed to standard in).
+\end{itemize}
+\end{minipage}}
+\bigskip
+
+\noindent Example:\\[2mm]
+\begin{verbatim}
+paw_murnaghan -v -vbl <murn.in
+\end{verbatim}
+
+
+
+
 %
 %==========================================================================
 \subsection{``paw\_waittilempty''}

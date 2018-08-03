@@ -34,6 +34,11 @@
 #  this occurrance will be replaced by the varied values for the 
 #  individual runs.
 #
+#  specify k-points in the structure file with !STRUCTURE!KPOINTS:DIV=
+#  rather than using R=. Otherwise the k-point grid changes between 
+#  different values of lattice constant and the restart file becomes 
+#  unusable.
+#
 #  result       etot.dat 
 #               gap.dat
 #               murn.in
@@ -79,12 +84,25 @@ export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
 #  implement dry-run
 #-------------------------------------------------------------------------------
 function execute(){
+    if [[ "$DRYRUN" != yes && "$DRYRUN" != 'no' ]] ; then
+      echo "error in $0" >&2
+      echo "illegal value '$DRYRUN' of DRYRUN" >&2
+      echo "DRYRUN must be either 'yes' or 'no'" >&2
+      exit 1
+    fi
+    if [[ "$VERBOSE" != yes && "$VERBOSE" != 'no' ]] ; then
+      echo "error in $0" >&2
+      echo "illegal value '$VERBOSE' of VERBOSE" >&2
+      echo "VERBOSE must be either 'yes' or 'no'" >&2
+      exit 1
+    fi
     # || is "or" in [[...]], && is "and" in [[..]] 
     if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
       echo "${@}"
     fi
     if [[ "${DRYRUN}" = "no" ]] ; then
       eval "$@"
+      export PID=$!
     fi
 }
    #
@@ -145,7 +163,7 @@ fi
 #
 # when PAWCMD has not been defined via arguments, set default
 if [[ -z $PAWCMD ]] ; then
-  PAWCMD="paw_waittllempty -n $NJOBS ; paw_fast"
+  PAWCMD="paw_waittillempty -n $NJOBS ; paw_fast"
 fi
 #
 #   report setting of variables
@@ -178,6 +196,7 @@ ALAT0=$X
 # loop crystal calculation through different lattic constants                ==
 #==============================================================================
 if [[ $UPDATE = no ]] ; then
+  export PIDS=
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi 
     #===========================================================================
@@ -192,6 +211,9 @@ if [[ $UPDATE = no ]] ; then
     if [[ ! -e ${NAME}_${X}.rstrt ]] ; then
       if [[ -e ${NAME}.rstrt ]] ; then
         execute "cp ${NAME}.rstrt ${NAME}_${X}.rstrt"
+      else
+        echo "error in $0: source restart file ${NAME}.rstrt does not exist"
+        exit 1
       fi
     fi
     export ROOT=${NAME}_${X}
@@ -200,10 +222,23 @@ if [[ $UPDATE = no ]] ; then
     BACK=$(pwd)
     execute "cd ${PDIR}"
     execute "${PAWCMD} ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &" 
+    PIDS="$PIDS $PID"   # store the project id returned by 'execute'
     execute "cd ${BACK}"
   done
 fi
-
+#
+#============================================================================
+#==  wait until all submitted jobs ($PIDS) are finished
+#============================================================================
+export NACTIVE=1
+while [ ${NACTIVE} -gt 0 ] ; do
+  echo No.Jobs=$NACTIVE Date=`date` waiting....
+  sleep  1s
+  NACTIVE=0
+  for X in ${PIDS} ; do
+    if [[ -n  $(ps -p $X -o pid= ) ]] ; then  NACTIVE=$(( $NACTIVE + 1 )); fi
+  done
+done
 #
 #==============================================================================
 # update data files
@@ -214,7 +249,7 @@ if [[ $UPDATE = yes ]] ; then
   if [[ -e murn.in ]]  ; then rm murn.in; fi
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo "collecting ${NAME}_$X" ; fi
-    echo ${X} $(paw_get -w gap -u ev -n ${NAME}_${X})  >>gap.dat
+#    echo ${X} $(paw_get -w gap -u ev -n ${NAME}_${X})  >>gap.dat
     echo ${X} $(paw_get -w etot -u H -n ${NAME}_${X}) >>etot.dat
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
     Y=$(echo "$ALAT * $AA" | bc -l)

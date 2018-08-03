@@ -51,15 +51,22 @@ TYPE POTPLOT_TYPE
  CHARACTER(128)          :: TITLE ! IMAGE TITLE 
  REAL(8)                 :: DR    ! STEP SIZE OF THE GRID
 END TYPE POTPLOT_TYPE
+TYPE ONEDPOTPLOT_TYPE
+ CHARACTER(512)          :: FILE  ! FILE NAME
+ CHARACTER(128)          :: TITLE ! IMAGE TITLE 
+ INTEGER(4)              :: IT(3) ! RBAS*IT IS THE REAL-SPACE AXIS
+END TYPE ONEDPOTPLOT_TYPE
 TYPE(DENSITYPLOT_TYPE),ALLOCATABLE :: DENSITYPLOT(:)
 TYPE(WAVEPLOT_TYPE)   ,ALLOCATABLE :: WAVEPLOT(:)
 TYPE(POTPLOT_TYPE)                 :: POTPLOT
+TYPE(ONEDPOTPLOT_TYPE)  ,ALLOCATABLE :: ONEDPOTPLOT(:)
 LOGICAL(4)                :: TINI=.FALSE.
 LOGICAL(4)                :: TWAKE=.FALSE.
 INTEGER(4)                :: IWAVEPTR=0
 INTEGER(4)                :: IDENSITYPTR=0
 INTEGER(4)                :: IPOTPTR=0
-COMPLEX(8),ALLOCATABLE    :: PWPOT(:)
+INTEGER(4)                :: I1DPOTPTR=0
+COMPLEX(8),ALLOCATABLE    :: PWPOT(:)   ! HARTREE POTENTIAL IN G-SPACE
 COMPLEX(8),ALLOCATABLE    :: PWTOTPOT(:)
 REAL(8)                   :: POTSHIFT=0.D0  ! ADDITIVE CONSTANT TO BE ADDED TO PWPOT,AE1CPOT, PS1CPOT
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
@@ -71,6 +78,7 @@ INTEGER(4)                :: NRX=0
 INTEGER(4)                :: NGL=0
 INTEGER(4)                :: NWAVE=0
 INTEGER(4)                :: NDENSITY=0
+INTEGER(4)                :: N1DPOT=0
 LOGICAL(4)                :: TPOT=.FALSE.
 END MODULE GRAPHICS_MODULE
 !
@@ -101,18 +109,57 @@ END MODULE GRAPHICS_MODULE
         END IF
         NDENSITY=VAL
         ALLOCATE(DENSITYPLOT(NDENSITY))
+!!
+      ELSE IF(ID.EQ.'N1DPOT') THEN 
+        IF(ALLOCATED(ONEDPOTPLOT)) THEN
+          CALL ERROR$MSG('ONEDPOTPLOT ALREADY ALLOCATED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('GRAPHICS$SETI4')
+        END IF
+        N1DPOT=VAL
+        ALLOCATE(ONEDPOTPLOT(N1DPOT))
 !
       ELSE IF(ID.EQ.'IWAVE') THEN 
         IDENSITYPTR=0
         IPOTPTR=0
         IWAVEPTR=VAL
+        I1DPOTPTR=0
         TINI=.TRUE.
+        IF(IWAVEPTR.GT.NWAVE) THEN
+          CALL ERROR$MSG('POINTER TO WAVE PLOT EXCEEDS MAXIMUM')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('IWAVEPTR',IWAVEPTR)
+          CALL ERROR$I4VAL('NWAVE',NWAVE)
+          CALL ERROR$STOP('GRAPHICS$SETI4')
+        END IF
 !
       ELSE IF(ID.EQ.'IDENSITY') THEN 
         IWAVEPTR=0
         IPOTPTR=0
         IDENSITYPTR=VAL
+        I1DPOTPTR=0
         TINI=.TRUE.
+        IF(IDENSITYPTR.GT.NDENSITY) THEN
+          CALL ERROR$MSG('POINTER TO DENSITY PLOT EXCEEDS MAXIMUM')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('IDENSITYPTR',IDENSITYPTR)
+          CALL ERROR$I4VAL('NDENSITY',NDENSITY)
+          CALL ERROR$STOP('GRAPHICS$SETI4')
+        END IF
+!
+      ELSE IF(ID.EQ.'I1DPOT') THEN 
+        IWAVEPTR=0
+        IPOTPTR=0
+        IDENSITYPTR=0
+        I1DPOTPTR=VAL
+        TINI=.TRUE.
+        IF(I1DPOTPTR.GT.N1DPOT) THEN
+          CALL ERROR$MSG('POINTER TO 1D-POTENTIAL PLOT EXCEEDS MAXIMUM')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('I1DPOTPTR',I1DPOTPTR)
+          CALL ERROR$I4VAL('N1DPOT',N1DPOT)
+          CALL ERROR$STOP('GRAPHICS$SETI4')
+        END IF
 !
       ELSE IF(ID.EQ.'IB') THEN 
         IF(IWAVEPTR.EQ.0) THEN
@@ -157,6 +204,34 @@ END MODULE GRAPHICS_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('GRAPHICS$SETI4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GRAPHICS$SETI4A(ID,LEN,VAL)
+!     **************************************************************************
+!     **  PLOT                                                        **
+!     **************************************************************************
+      USE GRAPHICS_MODULE, ONLY : ONEDPOTPLOT &
+     &                           ,I1DPOTPTR
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      INTEGER(4)  ,INTENT(IN) :: VAL(LEN)
+!     **************************************************************************
+      IF(ID.EQ.'IT') THEN 
+        IF(I1DPOTPTR.NE.0) THEN
+          ONEDPOTPLOT(I1DPOTPTR)%IT=VAL
+        ELSE
+          CALL ERROR$MSG('ONEDPOTPLOT NOT SELECTED')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('GRAPHICS$SETRI4A')
+        END IF
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('GRAPHICS$SETI4A')
       END IF
       RETURN
       END
@@ -239,6 +314,8 @@ END MODULE GRAPHICS_MODULE
           DENSITYPLOT(IDENSITYPTR)%FILE=VAL
         ELSE IF(IPOTPTR.NE.0) THEN
           POTPLOT%FILE=VAL
+        ELSE IF(I1DPOTPTR.NE.0) THEN
+          ONEDPOTPLOT%FILE=VAL
         ELSE
           CALL ERROR$MSG('NEITHER WAVE OR DENSITY OR POT PLOT SELECTED')
           CALL ERROR$CHVAL('ID',ID)
@@ -252,6 +329,8 @@ END MODULE GRAPHICS_MODULE
           DENSITYPLOT(IDENSITYPTR)%TITLE=VAL
         ELSE IF(IPOTPTR.NE.0) THEN
           POTPLOT%TITLE=VAL
+        ELSE IF(I1DPOTPTR.NE.0) THEN
+          ONEDPOTPLOT%TITLE=VAL
         ELSE
           CALL ERROR$MSG('NEITHER WAVE OR DENSITY OR POT PLOT SELECTED')
           CALL ERROR$CHVAL('ID',ID)
@@ -322,12 +401,11 @@ END MODULE GRAPHICS_MODULE
         DENSITYPLOT(IDENSITYPTR)%EMAX=VAL
 !
       ELSE IF(ID.EQ.'POTSHIFT') THEN 
-        IF(IPOTPTR.EQ.0) RETURN
         POTSHIFT=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('GRAPHICS$SETL4')
+        CALL ERROR$STOP('GRAPHICS$SETR8')
       END IF
       RETURN
       END
@@ -374,6 +452,19 @@ USE MPE_MODULE
         CALL GRAPHICS_CREATEPOT(FILE,TITLE,DR)
         CALL TRACE$PASS('GRAPHICS$PLOT: CREATEPOT DONE')
       END IF
+!
+!     ==========================================================================
+!     == PLOT 1D-POTENTIAL                                                    ==
+!     ==========================================================================
+      IF(ALLOCATED(PWPOT)) then
+        DO I=1,N1DPOT
+          FILE=ONEDPOTPLOT(I)%FILE
+          TITLE=ONEDPOTPLOT(I)%TITLE
+          CALL TRACE$PASS('GRAPHICS$PLOT: BEFORE CREATE1DPOT')
+          CALL GRAPHICS_CREATE1DPOT(FILE,TITLE,ONEDPOTPLOT(I)%IT)
+          CALL TRACE$PASS('GRAPHICS$PLOT: CREATE1DPOT DONE')
+        ENDDO
+      end if
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS                                                  ==
@@ -1696,6 +1787,10 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_REFINEGRID(NR1,NR2,NR3,NR1B,NR2B,NR3B,WAVE,WAVEBIG)
 !     **************************************************************************
+!     ** FOURIER INTERPOLATION OF 'WAVE' SPECIFIED ON THE REAL-SPACE GRID     **
+!     ** (NR1,NR2,NR3) ONTO A FINER REAL-SPACE GRID (NR1B,NR2B,NR3B).         **
+!     ** RESULT IS RETURNED IN 'WAVEBIG'.                                     **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)     :: NR1
       INTEGER(4),INTENT(IN)     :: NR2
@@ -1703,8 +1798,8 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4),INTENT(IN)     :: NR1B
       INTEGER(4),INTENT(IN)     :: NR2B
       INTEGER(4),INTENT(IN)     :: NR3B
-      REAL(8),INTENT(IN)        :: WAVE(NR1,NR2,NR3)
-      REAL(8),INTENT(OUT)       :: WAVEBIG(NR1B,NR2B,NR3B)
+      REAL(8)   ,INTENT(IN)     :: WAVE(NR1,NR2,NR3)
+      REAL(8)   ,INTENT(OUT)    :: WAVEBIG(NR1B,NR2B,NR3B)
       COMPLEX(8),ALLOCATABLE    :: WORKC1(:,:,:)
       COMPLEX(8),ALLOCATABLE    :: WORKC2(:,:,:)
       INTEGER(4)                :: I
@@ -1712,17 +1807,29 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4)                :: K
 !     **************************************************************************
                            CALL TRACE$PUSH('GRAPHICS_REFINEGRID')
+!
+!     == MAP ONTO A COMPLEX-VALUED ARRAY WORKC1 ================================
       ALLOCATE(WORKC1(NR1,NR2,NR3))
       WORKC1(:,:,:)=CMPLX(WAVE(:,:,:),KIND=8)
+!
+!     == FOURIER TRANSFORM TO RECIPROCAL SPACE =================================
       ALLOCATE(WORKC2(NR1,NR2,NR3)) 
       CALL LIB$3DFFTC8('RTOG',NR1,NR2,NR3,WORKC1,WORKC2)
       DEALLOCATE(WORKC1)
+!
+!     == MAP INTO LARGER FOURIER GRID WITH DIMENSIONS (NR1B,NR2B,NR3B) =========
       ALLOCATE(WORKC1(NR1B,NR2B,NR3B))      
       WORKC1=(0.D0,0.D0)
       I=NR1/2  !MIND: REQUIRES THAT ONLY EVEN NUMBERS ARE USED (-> ASSURED BY LIB$FFTADJUSTGRD)
       J=NR2/2
       K=NR3/2
-!
+      IF(2*I.NE.NR1.OR.2*J.NE.NR2.OR.2*K.NE.NR3) THEN
+        CALL ERROR$MSG('GRID LENGTHS MUST BE EVEN')
+        CALL ERROR$I4VAL('NR1',NR1)
+        CALL ERROR$I4VAL('NR2',NR2)
+        CALL ERROR$I4VAL('NR3',NR3)
+        CALL ERROR$STOP('GRAPHICS_REFINEGRID')
+      END IF
       WORKC1(1:I          ,1:J          ,1:K)          =WORKC2(1:I    ,1:J    ,1:K)
       WORKC1(NR1B-I+1:NR1B,1:J          ,1:K)          =WORKC2(I+1:2*I,1:J    ,1:K)
       WORKC1(1:I          ,NR2B-J+1:NR2B,1:K)          =WORKC2(1:I    ,J+1:2*J,1:K)        
@@ -1731,8 +1838,9 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       WORKC1(1:I          ,NR2B-J+1:NR2B,NR3B-K+1:NR3B)=WORKC2(1:I    ,J+1:2*J,K+1:2*K)        
       WORKC1(NR1B-I+1:NR1B,1:J          ,NR3B-K+1:NR3B)=WORKC2(I+1:2*I,1:J    ,K+1:2*K)
       WORKC1(NR1B-I+1:NR1B,NR2B-J+1:NR2B,NR3B-K+1:NR3B)=WORKC2(I+1:2*I,J+1:2*J,K+1:2*K)
-!
       DEALLOCATE(WORKC2)
+!
+!     == FOURIER-BACK-TRANSFORM TO THE REFINED REAL-SPACE GRID =================
       ALLOCATE(WORKC2(NR1B,NR2B,NR3B))
       CALL LIB$3DFFTC8('GTOR',NR1B,NR2B,NR3B,WORKC1,WORKC2)
       WAVEBIG(:,:,:)=REAL(WORKC2(:,:,:),KIND=8)
@@ -1788,12 +1896,12 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS$SETPWPOT(ID,NGL_,VHARTREE)
 !     **************************************************************************
-!     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN         **
+!     **  STORE THE POTENTIAL IN THE INTERNAL ARRAY PWPOT OR PWTOTPOT         **
 !     **************************************************************************
-      USE GRAPHICS_MODULE, ONLY: TINI,TWAKE,TPOT,NGL,PWPOT,PWTOTPOT
+      USE GRAPHICS_MODULE, ONLY: TINI,TWAKE,TPOT,N1DPOT,NGL,PWPOT,PWTOTPOT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: NGL_
@@ -1801,7 +1909,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     **************************************************************************
       IF(.NOT.TINI) RETURN
       IF(.NOT.TWAKE) RETURN
-      IF(.NOT.TPOT) RETURN
+      IF(.NOT.(TPOT.OR.N1DPOT.GT.0)) RETURN
       IF(NGL.NE.0.AND.NGL.NE.NGL_) THEN
         CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
         CALL ERROR$I4VAL('NGL',NGL)
@@ -1894,9 +2002,9 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_CREATEPOT(FILE,TITLE,DR)
-!     ******************************************************************
+!     **************************************************************************
       USE GRAPHICS_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -1925,7 +2033,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       INTEGER(4)                 :: NSP   !#(ATOM TYPES)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
-!     ******************************************************************
+!     **************************************************************************
                                  CALL TRACE$PUSH('GRAPHICS_CREATEPOT')
 !COLLECTING OF INFORMATION
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -1957,12 +2065,11 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       CALL LIB$FFTADJUSTGRD(NR3B) 
       ALLOCATE(POTENTIAL(NR1B,NR2B,NR3B))
       ALLOCATE(VHARTREE(NRL))
-PRINT*,'MARKE 1'
       CALL PLANEWAVE$SUPFFT('GTOR',1,NGL,PWPOT,NRL,VHARTREE)
-PRINT*,'MARKE 2'
       VHARTREE=VHARTREE+POTSHIFT ! ADD ADDITIVE CONSTANT TO POTENTIAL
       IF(FACT.EQ.1) THEN
-        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE,NR1*NR2*NR3,POTENTIAL)
+        CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE &
+     &                                ,NR1*NR2*NR3,POTENTIAL)
       ELSE
         ALLOCATE(WORK(NR1*NR2*NR3))
         CALL PLANEWAVE$RSPACECOLLECTR8(NR1L*NR2*NR3,VHARTREE,NR1*NR2*NR3,WORK)
@@ -2008,7 +2115,7 @@ PRINT*,'MARKE 2'
         CALL RADIAL$GETI4(GID,'NR',NR)
         IF(NRX.NE.NR) THEN
           CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-          CALL ERROR$MSG('ERROR ENTERED WHILE ALLOWING ATOM SPECIFIC RADIAL GRIDS')
+          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
           CALL ERROR$STOP('GRAPHICS_CREATEPOT')
         END IF
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
@@ -2036,6 +2143,157 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
       DEALLOCATE(POTENTIAL)
+                                 CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE GRAPHICS_CREATE1DPOT(FILE,TITLE,IT)
+!     **************************************************************************
+!     ** CONSTRUCT ONE-DIMENSIONAL POTENTIAL AVERAGED OVER PLANES             **
+!     ** PERPENDICULAR TO THE SPECIFIED AXIS. THE AXIS MUST BE A INTEGER      **
+!     ** MULTIPLE OF THE REAL-SPACE LATTICE VECTORS. OTHERWISE THE RESULT IS  **
+!     ** ZERO. ONLY WAVE FUNCTION COMPONENTS WITH G-VECTORS PARALLEL TO THE   **
+!     ** AXIS CONTRIBUTE.                                                     **
+!     **                                                                      **
+!     ** THE AXIS IS RBAS*IT                                                  **
+!     **                                                                      **
+!     ** PWPOT IS THE HARTREE POTENTIAL IN RECIPROCAL SPACE.                  **
+!     **                                                                      **
+!     **************************************************************************
+      USE GRAPHICS_MODULE, ONLY : PWPOT,POTSHIFT
+      USE MPE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: TITLE
+      CHARACTER(*),INTENT(IN)    :: FILE   ! OUTPUT FILE FOR 1-D POTENTIAL
+      INTEGER(4)  ,INTENT(IN)    :: IT(3)  ! INTEGERS DEFINING THE AXIS
+      REAL(8)     ,PARAMETER     :: TOL=1.D-8
+      INTEGER(4)  ,PARAMETER     :: NZ=1000
+      COMPLEX(8)  ,PARAMETER     :: CI=(0.D0,1.D0)
+      REAL(8)                    :: AXIS(3)
+      REAL(8)                    :: AXISL
+      INTEGER(4)                 :: NGL
+      REAL(8)     ,ALLOCATABLE   :: GVEC(:,:) ! RECIPROCAL LATTICE VECTORS
+      REAL(8)                    :: GZ        ! GVEC PROJECTED ONTO AXIS
+      REAL(8)                    :: G2        ! GVEC**2
+      COMPLEX(8)                 :: CFAC,EIGZ
+      REAL(8)                    :: POTZ(NZ)
+      REAL(8)                    :: DZ
+      INTEGER(4)                 :: IG,IZ
+      REAL(8)                    :: RBAS(3,3)
+      INTEGER(4)                 :: NFIL
+      INTEGER(4)                 :: NTASKS,THISTASK
+!
+      REAL(8)   ,ALLOCATABLE     :: POTENTIAL(:,:,:)
+      INTEGER(4)                 :: NR1,NR2,NR3
+      INTEGER(4)                 :: NAT
+      INTEGER(4)                 :: IAT
+      CHARACTER(32),ALLOCATABLE  :: ATOMNAME(:)
+      REAL(8)   ,ALLOCATABLE     :: Q(:)
+      REAL(8)   ,ALLOCATABLE     :: Z(:)
+      REAL(8)   ,ALLOCATABLE     :: POS(:,:)
+      INTEGER(4)                 :: NR
+      REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
+      INTEGER(4)                 :: NSP   !#(ATOM TYPES)
+      INTEGER(4)                 :: ISP
+      INTEGER(4)                 :: GID
+!     **************************************************************************
+                                 CALL TRACE$PUSH('GRAPHICS_CREATE1DPOT')
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!
+      CALL PLANEWAVE$SELECT('DENSITY')
+      CALL PLANEWAVE$GETI4('NGL',NGL)
+      ALLOCATE(GVEC(3,NGL))
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL CELL$GETR8A('T(0)',9,RBAS)
+!
+!     ==========================================================================
+!     == EXTRACT FOURIER TRANSFORM OF 1D POTENTIAL                            ==
+!     == ONLY G-VECTORS THAT ARE STRICTLY PARALLEL TO THE AXIS CONTRIBUTE     ==
+!     ==========================================================================
+      AXIS=MATMUL(RBAS,REAL(IT,KIND=8))
+      AXISL=SQRT(SUM(AXIS**2))
+      AXIS=AXIS/AXISL
+      DZ=AXISL/REAL(NZ-1,KIND=8)
+      POTZ(:)=0.D0
+      DO IG=1,NGL
+        GZ=SUM(GVEC(:,IG)*AXIS(:))
+        G2   =SUM(GVEC(:,IG)**2)
+        IF(G2-GZ**2.GT.TOL) CYCLE  ! G NOT PARALLEL TO AXIS
+        EIGZ=EXP(CI*GZ*DZ)
+        CFAC=PWPOT(IG)
+        DO IZ=1,NZ
+          POTZ(IZ)=POTZ(IZ)+REAL(CFAC,KIND=8)
+          CFAC=CFAC*EIGZ
+        ENDDO
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',POTZ)
+      POTZ=POTZ+POTSHIFT
+!
+!     ==========================================================================
+!     ==  ONE-CENTER CONTRIBUTIONS                                            ==
+!     ==========================================================================
+!!$      CALL ATOMLIST$NATOM(NAT)
+!!$      ALLOCATE(ATOMNAME(NAT))
+!!$      ALLOCATE(Z(NAT))
+!!$      ALLOCATE(Q(NAT))
+!!$      ALLOCATE(POS(3,NAT))
+!!$      CALL SETUP$GETI4('NSP',NSP)
+!!$      NRX=0
+!!$      DO ISP=1,NSP
+!!$        CALL SETUP$ISELECT(ISP)
+!!$        CALL SETUP$GETI4('NR',NR)
+!!$        CALL SETUP$UNSELECT()
+!!$        NRX=MAX(NRX,NR)
+!!$      ENDDO        
+!!$      IF(.NOT.ALLOCATED(AE1CPOT)) THEN
+!!$        CALL SETUP$GETI4('LMRXX',LMRXX)
+!!$        CALL ATOMLIST$NATOM(NAT)
+!!$        ALLOCATE(AE1CPOT(NRX,LMRXX,NAT))
+!!$        ALLOCATE(PS1CPOT(NRX,LMRXX,NAT))
+!!$        AE1CPOT=0.D0
+!!$        PS1CPOT=0.D0
+!!$      END IF
+!!$      ALLOCATE(ONECPOT(NRX,LMRXX,NAT))
+!!$      ONECPOT=AE1CPOT-PS1CPOT
+!!$      CALL MPE$COMBINE('MONOMER','+',ONECPOT)
+!!$      DO IAT=1,NAT
+!!$        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+!!$        CALL SETUP$ISELECT(ISP)
+!!$        CALL SETUP$GETI4('GID',GID)                
+!!$        CALL SETUP$UNSELECT()
+!!$        CALL RADIAL$GETI4(GID,'NR',NR)
+!!$        IF(NRX.NE.NR) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+!!$          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
+!!$          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+!!$        END IF
+!!$        CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
+!!$        CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
+!!$        CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
+!!$        CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
+!!$PRINT*,'INCLUDE AE-CONTRIBUTIONS'
+!!$CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
+!!$        CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
+!!$     &           ,POTENTIAL,POS(:,IAT),GID,NRX,LMRXX,ONECPOT(:,:,IAT))
+!!$CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
+!!$PRINT*,'INCLUDED AE-CONTRIBUTIONS'
+!!$      ENDDO
+!!$      DEALLOCATE(ONECPOT)
+!
+!     ==========================================================================
+!     ==  WRITE TO FILE                                                       ==
+!     ==========================================================================
+      IF(THISTASK.EQ.1) THEN
+        CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
+        CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','FORMATTED')
+        CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
+        WRITE(NFIL,*)'# ',NZ,DZ,IT
+        do iz=1,nz
+          WRITE(NFIL,*)dz*real(iz-1,kind=8),POTZ(iz)
+        enddo
+        CALL FILEHANDLER$CLOSE('WAVEPLOT')
+      END IF
                                  CALL TRACE$POP()
       RETURN
       END

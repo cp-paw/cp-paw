@@ -27,6 +27,7 @@ USAGE="$USAGE \t\t whatid=volume \t prints volume of the unit cell \n"
 USAGE="$USAGE \t\t whatid=epw    \t prints wavefunction plane wave cutoff \n"
 USAGE="$USAGE \t\t whatid=epwrho \t prints density plane wave cutoff \n"
 USAGE="$USAGE \t\t whatid=nkpt   \t prints the number of k-points\n"
+USAGE="$USAGE \t\t whatid=kdiv   \t prints the divisions for the k-grid\n"
 USAGE="$USAGE \t -n prints the result as number or according to -u\n"
 USAGE="$USAGE \t -t prints the result as text (default)\n"
 USAGE="$USAGE \t -u unit: 1|ev|kj/mol|kcal/mol|h|ry|angstrom^3|aa^3|cubangstrom|a0^3|abohr^3|cubabohr \n"
@@ -36,6 +37,16 @@ USAGE="$USAGE \t -h prints this help message\n"
 #  implement dry-run
 #-------------------------------------------------------------------------------
 function execute(){
+    if [[ "$DRYRUN" != yes && "$DRYRUN" != 'no' ]] ; then
+      echo "error in $0: illegal value '$DRYRUN' of DRYRUN"
+      echo "DRYRUN must be either 'yes' or 'no'"
+      exit 1
+    fi
+    if [[ "$VERBOSE" != yes && "$VERBOSE" != 'no' ]] ; then
+      echo "error in $0: illegal value '$VERBOSE' of VERBOSE"
+      echo "VERBOSE must be either 'yes' or 'no'"
+      exit 1
+    fi
     # || is "or" in [[...]], && is "and" in [[..]]
     if [[ "${DRYRUN}" = "yes" || "${VERBOSE}" = "yes" ]] ; then
       echo "${@}"
@@ -138,7 +149,7 @@ while getopts :hw:tnp:vu: OPT ; do
   case $OPT in 
     w) WHATID="$OPTARG" 
        case $WHATID in
-         etot|gap|homo|lumo|efermi|volume|nkpt|epw|epwrho) 
+         etot|gap|homo|lumo|efermi|volume|nkpt|kdiv|epw|epwrho) 
          ;; 
          *)
            echo "error in $0: illegal argument $WHATID of option -w" >&2
@@ -207,6 +218,7 @@ fi
 if [[ -z $UNIT ]] ; then
   case $WHATID in 
     nkpt) ;;
+    kdiv) ;;
     *) echo error: missing argument -u. specify UNIT  >&2 ; exit 1 ;;
   esac
 fi
@@ -242,7 +254,7 @@ case $WHATID in
         ;;
     esac
     ;;
-  nkpt)
+  nkpt|kdiv)
     if [[ -n $UNIT ]] ; then
       echo "error in $0: unit inconsistency" >&2
       echo "volume variable $WHATID inconsistent with unit $UNIT" >&2
@@ -335,6 +347,15 @@ elif [[ "$WHATID" = "nkpt" ]] ; then
   export WHAT="NUMBER OF K-POINTS" 
   export RESULT=$(grep "$WHAT" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
 #
+#--------------  nkpt  ---------------------------------------------------------
+#
+elif [[ "$WHATID" = "kdiv" ]] ; then
+  export WHAT="DIVISIONS FOR K-GRID" 
+  export NK1=$(grep "$kdiv(1)" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+  export NK2=$(grep "$kdiv(2)" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+  export NK3=$(grep "$kdiv(3)" $ROOT.prot | tail -n1 | awk -F: '{print $2}')
+  export RESULT="${NK1} ${NK2} ${NK3}"
+#
 #--------------  EPW(psi)-------------------------------------------------------
 #
 elif [[ "$WHATID" = "epw" ]] ; then
@@ -361,7 +382,7 @@ fi
 #  convert units
 ################################################################################
 case $WHATID in
- nkpt) ;;                                 # no unit 
+ nkpt|kdiv) ;;                            # no unit 
  *) RESULT=$(convertunit $UNIT "$RESULT") # internal function convertunit 
    ;;
 esac
@@ -370,7 +391,10 @@ esac
 #  switch between number and text output and edit result
 ################################################################################
 if [[ $TN = N ]] ; then 
-  RESULT=$(echo "$RESULT" | awk '{print $1}')
+  case $WHATID in
+    kdiv) ;;
+    *) RESULT=$(echo "$RESULT" | awk '{print $1}') ;;
+  esac
 else
   RESULT=$(echo "$WHATID = $RESULT for $ROOT")
 fi

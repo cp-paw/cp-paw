@@ -19,6 +19,7 @@
      REAL(8)    :: LUNIT              ! LENGTH UNIT IN ATOMIC UNITS
      REAL(8)    :: VBYL3              ! VOLUME IS VBYL3*L**3
      REAL(8)    :: SVAR               ! AUXILIARY VARIABLE
+     REAL(8)    :: Scale              ! scales the result
      CHARACTER(64) :: ARG     
      CHARACTER(250) :: string     
      LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
@@ -43,6 +44,7 @@
 !    ==========================================================================
      EUNIT=1.D0
      LUNIT=1.D0
+     SCALE=1.D0
      TL=.FALSE.
      VBYL3=1.D0
      I=0
@@ -54,8 +56,10 @@
        IF(ARG.EQ.-'-H') THEN
          WRITE(*,FMT=-'("PAW_MURNAGHAN.X OPTIONS < INPUT")')
          WRITE(*,FMT='("OPTIONS:")')
-         WRITE(*,FMT=-'(T5,"-L",T30,"FIRST COLUMN IS A LATTICE CONSTANT")')
-         WRITE(*,FMT=-'(T5,"-V",T30,"FIRST COLUMN IS A VOLUME (DEFAULT)")')
+         WRITE(*,FMT=-'(T5,"-L",T30 &
+    &                  ,"FIRST COLUMN OF INPUT IS A LATTICE CONSTANT")')
+         WRITE(*,FMT=-'(T5,"-V",T30 &
+    &                 ,"FIRST COLUMN OF INPUT IS A VOLUME (DEFAULT)")')
          WRITE(*,FMT=-'(T5,"-EU VALUE",T30 &
     &                    ,"ENERGY UNIT OF SECOND COLUMN IN HARTREE")')
          WRITE(*,FMT=-'(T5,"-LU VALUE",T30 &
@@ -82,6 +86,10 @@
          I=I+1
          CALL GET_COMMAND_ARGUMENT(I,ARG)
          READ(ARG,*)VBYL3
+       ELSE IF(ARG.EQ.-'-SCALE') THEN
+         I=I+1
+         CALL GET_COMMAND_ARGUMENT(I,ARG)
+         READ(ARG,*)SCALE
        ELSE
          WRITE(*,*) I,'TH ARGUMENT NOT RECOGNIZED'
          WRITE(*,*) 'ARGUMENT VALUE: ',TRIM(ARG)
@@ -108,27 +116,35 @@
          EXIT
        END IF
        READ(*,*,END=100,ERR=100)V(NP),E(NP)
+       IF(TL) V(np)=V(np)**3
      ENDDO
 100  CONTINUE
      NP=NP-1
      IF (NP.LT.4) THEN
-       WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 REQUIRED!"
+       WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 ARE REQUIRED!"
        STOP
      END IF
+print*,'v1 ',v(:np)
 !
 !    ==========================================================================
 !    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
 !    ==========================================================================
-     IF(TL) THEN
-       V(:)=V(:)**3
-     END IF
      E(:)=E(:)*EUNIT
      V(:)=V(:)*VBYL3*LUNIT**3
 !
+!    ==========================================================================
+!    == scale results
+!    ==========================================================================
+     e(:)=e(:)*scale
+     v(:)=v(:)*scale
+     vbyl3=vbyl3*scale
+!
+!    ==========================================================================
 !    == REPORT INPUT DATA =====================================================
+!    ==========================================================================
      DO I=1,NP
        SVAR=(V(I)/VBYL3)**(1.D0/3.D0)
-       WRITE(*,FMT='(I5," L=",F10.5," V=",F10.5," E=",F10.5)')I,SVAR,V(I),E(I)
+       WRITE(*,FMT='(I5," L=",F15.5," V=",F15.5," E=",F10.5)')I,SVAR,V(I),E(I)
      ENDDO
 !
 !    ==========================================================================
@@ -187,9 +203,11 @@
 !     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
 !    &                         //-' TO FILE MURN.DAT")')
      OPEN(UNIT=8,FILE=-'MURN.DAT')
+     OPEN(UNIT=9,FILE=-'EOFV.DAT')
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
+       WRITE(9,FMT='(2F10.5)')VI/lunit**3,EFIT/eunit
 !      __ convert consistent with the input data________________________________
        EFIT=EFIT/EUNIT
        VI=VI/VBYL3/LUNIT**3

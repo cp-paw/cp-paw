@@ -283,7 +283,6 @@ CALL TRACE$PASS('DONE')
       CHARACTER(512)               :: CNTLNAME
       CHARACTER(512)               :: ROOTNAME
       CHARACTER(32)                :: CH32SVAR
-      LOGICAL(4)                   :: TEQ
       LOGICAL(4)                   :: TPR=.FALSE.
       INTEGER(4)                   :: ISVAR
       INTEGER                      :: NTASKS,THISTASK
@@ -428,112 +427,7 @@ CALL TRACE$PASS('DONE')
 !     ==========================================================================
 !     ==  READ BLOCK !GENERIC                                                 ==
 !     ==========================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
-!
-!     ==========================================================================
-!     == TAKE CARE OF TRACE FIRST ==============================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TRACE',0,TCHK)
-      IF(TCHK) THEN
-         CALL LINKEDLIST$GET(LL_CNTL,'TRACE',1,TCHK)
-         CALL TRACE$SETL4('ON',TCHK)
-      ELSE
-         CALL TRACE$SETL4('ON',.FALSE.)
-      END IF
-!
-!     == PRECONDITION FILEHANDLER FOR LITTLE AND BIG ENDIAN =============
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'ENDIAN',0,TCHK)
-      IF(TCHK) THEN
-         CALL LINKEDLIST$GET(LL_CNTL,'ENDIAN',1,CH32SVAR)
-         IF(CH32SVAR.EQ.'INTEL') THEN
-           CH32SVAR='LITTLE'
-         ELSE IF(CH32SVAR.EQ.'IBM') THEN
-           CH32SVAR='BIG'
-         END IF
-         IF(CH32SVAR.NE.'LITTLE'.AND.CH32SVAR.NE.'BIG') THEN
-           CALL ERROR$MSG('ENDIAN MUST HAVE VALUES LITTLE,BIG,INTEL OR IBM')
-           CALL ERROR$CHVAL('ENDIAN',CH32SVAR)
-           CALL ERROR$STOP('READIN IN !CNTL!GENERIC:ENDIAN')
-         END IF
-         CALL FILEHANDLER$SETCH('ENDIAN',CH32SVAR)
-      END IF
-!
-!     == DEFAULT VALUES
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'DT',0,TCHK)
-      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'DT',0,5.D0) 
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NSTEP',0,TCHK)
-      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'NSTEP',0,100) 
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NWRITE',0,TCHK)
-      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'NWRITE',0,100) 
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'START',0,TCHK)
-      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'START',0,.FALSE.) 
-!
-!     == CAPTURE USE OF OUTDATED SYNTAX ============================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'STOREPSIR',1,TCHK)
-      IF(TCHK) THEN
-        CALL ERROR$MSG('SYNTAX HAS CHANGED')
-        CALL ERROR$MSG('THIS OPTION HAS BEEN ELIMINATED')
-        CALL ERROR$STOP('READIN')
-      END IF
-!
-!     ==  READ ACTUAL VALUES  ==========================================
-      CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DELT)
-      CALL LINKEDLIST$GET(LL_CNTL,'NSTEP',1,NOMORE)
-      CALL LINKEDLIST$GET(LL_CNTL,'NWRITE',1,IPRINT)
-      CALL LINKEDLIST$GET(LL_CNTL,'START',1,TEQ)
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'RSTRTTYPE',0,TCHK)
-      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'RSTRTTYPE',0,'DYNAMIC') 
-      CALL LINKEDLIST$GET(LL_CNTL,'RSTRTTYPE',1,CH32SVAR)
-      IF(CH32SVAR.NE.'STATIC'.AND.CH32SVAR.NE.'DYNAMIC') THEN
-        CALL ERROR$MSG('ILLEGAL VALUE FOR RSTRTTYPE')
-        CALL ERROR$CHVAL('RSTRTTYPE',CH32SVAR)
-        CALL ERROR$MSG('ALLOWED VALUES ARE "DYNAMIC" AND "STATIC"')
-        CALL ERROR$STOP('READIN')
-      END IF
-      CALL WAVES$SETCH('RSTRTTYPE',CH32SVAR)
-!
-!     ================================================================
-      IF(TEQ) THEN
-        NBEG=-1
-      ELSE
-        NBEG=0
-      END IF
-!
-!     ==  READ RUNTIME =================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'RUNTIME',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$SIZE(LL_CNTL,'RUNTIME',1,LEN)
-        IF(LEN.LT.1.OR.LEN.GT.3) THEN
-          CALL ERROR$MSG('ILLEGAL LENGTH FOR RUNTIME! ALLOWED LENGTH: ')
-          CALL ERROR$MSG('1 - SECONDS')
-          CALL ERROR$MSG('2 - MINUTES SECOUNDS')
-          CALL ERROR$MSG('3 - HOURS MINUTES SECOUNDS')
-          CALL ERROR$I4VAL('LENGTH:',LEN)
-          CALL ERROR$STOP('READIN')
-        END IF
-        CALL LINKEDLIST$GET(LL_CNTL,'RUNTIME',1,RUNTIME(1:LEN))
-        IF(LEN.EQ.3)RUNTIME(1)=RUNTIME(3)+60*(RUNTIME(2)+60*RUNTIME(1))
-        IF(LEN.EQ.2)RUNTIME(1)=RUNTIME(2)+60*RUNTIME(1)
-        IF(LEN.EQ.1)RUNTIME(1)=RUNTIME(1)
-        CALL STOPIT$SETI4('RUNTIME',RUNTIME(1))
-      END IF
-!
-!     ==  READ AUTOCONV =================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'AUTOCONV',0,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'AUTOCONV',1,ISVAR)
-        IF(ISVAR.LT.1) THEN
-          CALL ERROR$MSG('!CONTROL!GENERIC:AUTONV<1 NOT ALLOWED')
-          CALL ERROR$I4VAL('AUTOCONV:',ISVAR)
-          CALL ERROR$STOP('READIN')
-        END IF
-        CALL AUTO$SETI4('NTOL',ISVAR)
-      END IF
-
-                          CALL TRACE$PASS('BLOCK !CONTROL!GENERIC FINISHED')
-!CALL DYNOCC$TEST
-!STOP 'FORCED IN READIN'
+      CALL READIN_GENERIC(LL_CNTL,NBEG,NOMORE,IPRINT,DELT)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !DFT                                             ==
@@ -640,14 +534,19 @@ CALL TRACE$PASS('DONE')
       CALL READIN_ANALYSE_WAVE(LL_CNTL)
 !
 !     ==================================================================
-!     ==  READ BLOCK !ANALYSE!WAVE                                    ==
+!     ==  READ BLOCK !ANALYSE!density                                 ==
 !     ==================================================================
       CALL READIN_ANALYSE_DENSITY(LL_CNTL)
 !
 !     ==================================================================
-!     ==  READ BLOCK !ANALYSE!WAVE                                    ==
+!     ==  READ BLOCK !ANALYSE!potential                               ==
 !     ==================================================================
       CALL READIN_ANALYSE_POTENTIAL(LL_CNTL)
+!
+!     ==================================================================
+!     ==  READ BLOCK !ANALYSE!1dpot                                   ==
+!     ==================================================================
+      CALL READIN_ANALYSE_1DPOT(LL_CNTL)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !ANALYSE!POINTCHARGEPOT                          ==
@@ -1021,6 +920,150 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
                                    CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READIN_GENERIC(LL_CNTL_,NBEG,NOMORE,IPRINT,DELT)
+!     **************************************************************************
+!     ** 
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
+      REAL(8)      ,INTENT(OUT):: DELT
+      INTEGER(4)   ,INTENT(OUT):: NOMORE
+      INTEGER(4)   ,INTENT(OUT):: IPRINT
+      INTEGER(4)   ,INTENT(OUT):: NBEG
+      TYPE(LL_TYPE)            :: LL_CNTL
+      LOGICAL(4)               :: TEQ
+      LOGICAL(4)               :: TCHK
+      CHARACTER(32)            :: CH32SVAR
+      INTEGER(4)               :: LEN
+      INTEGER(4)               :: ISVAR
+      INTEGER(4)               :: RUNTIME(3)
+!     **************************************************************************
+                           CALL TRACE$PUSH('READIN_GENERIC')
+      LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
+!
+!     ==========================================================================
+!     == TAKE CARE OF TRACE FIRST ==============================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TRACE',0,TCHK)
+      IF(TCHK) THEN
+         CALL LINKEDLIST$GET(LL_CNTL,'TRACE',1,TCHK)
+         CALL TRACE$SETL4('ON',TCHK)
+      ELSE
+         CALL TRACE$SETL4('ON',.FALSE.)
+      END IF
+!
+!     == PRECONDITION FILEHANDLER FOR LITTLE AND BIG ENDIAN =============
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ENDIAN',0,TCHK)
+      IF(TCHK) THEN
+         CALL LINKEDLIST$GET(LL_CNTL,'ENDIAN',1,CH32SVAR)
+         IF(CH32SVAR.EQ.'INTEL') THEN
+           CH32SVAR='LITTLE'
+         ELSE IF(CH32SVAR.EQ.'IBM') THEN
+           CH32SVAR='BIG'
+         END IF
+         IF(CH32SVAR.NE.'LITTLE'.AND.CH32SVAR.NE.'BIG') THEN
+           CALL ERROR$MSG('ENDIAN MUST HAVE VALUES LITTLE,BIG,INTEL OR IBM')
+           CALL ERROR$CHVAL('ENDIAN',CH32SVAR)
+           CALL ERROR$STOP('READIN IN !CNTL!GENERIC:ENDIAN')
+         END IF
+         CALL FILEHANDLER$SETCH('ENDIAN',CH32SVAR)
+      END IF
+!
+!     == DEFAULT VALUES
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'DT',0,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'DT',0,5.D0) 
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NSTEP',0,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'NSTEP',0,100) 
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NWRITE',0,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'NWRITE',0,100) 
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'START',0,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'START',0,.FALSE.) 
+!
+!     == CAPTURE USE OF OUTDATED SYNTAX ============================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'STOREPSIR',1,TCHK)
+      IF(TCHK) THEN
+        CALL ERROR$MSG('SYNTAX HAS CHANGED')
+        CALL ERROR$MSG('THIS OPTION HAS BEEN ELIMINATED')
+        CALL ERROR$STOP('READIN')
+      END IF
+!
+!     ==  READ ACTUAL VALUES  ==========================================
+      CALL LINKEDLIST$GET(LL_CNTL,'DT',1,DELT)
+      CALL LINKEDLIST$GET(LL_CNTL,'NSTEP',1,NOMORE)
+      CALL LINKEDLIST$GET(LL_CNTL,'NWRITE',1,IPRINT)
+      CALL LINKEDLIST$GET(LL_CNTL,'START',1,TEQ)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RSTRTTYPE',0,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'RSTRTTYPE',0,'DYNAMIC') 
+      CALL LINKEDLIST$GET(LL_CNTL,'RSTRTTYPE',1,CH32SVAR)
+      IF(CH32SVAR.NE.'STATIC'.AND.CH32SVAR.NE.'DYNAMIC') THEN
+        CALL ERROR$MSG('ILLEGAL VALUE FOR RSTRTTYPE')
+        CALL ERROR$CHVAL('RSTRTTYPE',CH32SVAR)
+        CALL ERROR$MSG('ALLOWED VALUES ARE "DYNAMIC" AND "STATIC"')
+        CALL ERROR$STOP('READIN')
+      END IF
+      CALL WAVES$SETCH('RSTRTTYPE',CH32SVAR)
+!
+!     ================================================================
+      IF(TEQ) THEN
+        NBEG=-1
+      ELSE
+        NBEG=0
+      END IF
+!
+!     ==========================================================================
+!     ==  READ RUNTIME                                                        ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'RUNTIME',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$SIZE(LL_CNTL,'RUNTIME',1,LEN)
+        IF(LEN.LT.1.OR.LEN.GT.3) THEN
+          CALL ERROR$MSG('ILLEGAL LENGTH FOR RUNTIME! ALLOWED LENGTH: ')
+          CALL ERROR$MSG('1 - SECONDS')
+          CALL ERROR$MSG('2 - MINUTES SECOUNDS')
+          CALL ERROR$MSG('3 - HOURS MINUTES SECOUNDS')
+          CALL ERROR$I4VAL('LENGTH:',LEN)
+          CALL ERROR$STOP('READIN')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'RUNTIME',1,RUNTIME(1:LEN))
+        IF(LEN.EQ.3)RUNTIME(1)=RUNTIME(3)+60*(RUNTIME(2)+60*RUNTIME(1))
+        IF(LEN.EQ.2)RUNTIME(1)=RUNTIME(2)+60*RUNTIME(1)
+        IF(LEN.EQ.1)RUNTIME(1)=RUNTIME(1)
+        CALL STOPIT$SETI4('RUNTIME',RUNTIME(1))
+      END IF
+!
+!     ==========================================================================
+!     ==  READ AUTOCONV                                                       ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'AUTOCONV',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'AUTOCONV',1,ISVAR)
+        IF(ISVAR.LT.1) THEN
+          CALL ERROR$MSG('!CONTROL!GENERIC:AUTONV<1 NOT ALLOWED')
+          CALL ERROR$I4VAL('AUTOCONV:',ISVAR)
+          CALL ERROR$STOP('READIN')
+        END IF
+        CALL AUTO$SETI4('NTOL',ISVAR)
+      END IF
+!
+!     ==========================================================================
+!     ==  RESET ATOMIC STRUCTURE FROM STRUCTURE INPUT FILE                    ==
+!     ==  I.E. IGNORE UNIT CELL AND ATOMIC OPOSITIONS FROM RESTART FILE       ==
+!     == CAUTION! REDUNDANCY WITH !CNTL!RDYN:START                            ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'NEWSTRC',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'NEWSTRC',1,TCHK)
+        CALL CELL$SETL4('START',TCHK)
+        CALL ATOMS$SETL4('START',TCHK)
+      END IF
+                           CALL TRACE$POP()
       RETURN
       END
 !
@@ -1483,9 +1526,12 @@ CALL TRACE$PASS('DONE')
 !     == START WITH POSITIONS FROM STRUCTURE INPUT FILE 'STRC' =================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'START',1,TCHK)
       IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'START',1,TCHK)
+        CALL ERROR$MSG('OPTION !CONTROL!RDYN:START IS OBSOLETE')
+        CALL ERROR$MSG('USE !CONTROL!GENERIC:NEWSTRC INSTEAD')
+        CALL ERROR$STOP('READIN_RDYN')
+!        CALL LINKEDLIST$GET(LL_CNTL,'START',1,TCHK)
       END IF
-      CALL ATOMS$SETL4('START',TCHK)
+!      CALL ATOMS$SETL4('START',TCHK)
 !
 !     ==========================================================================
 !     ==  ATTENTION                                                           ==
@@ -2914,7 +2960,7 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)            :: IBMIN,IBMAX
       REAL(8)               :: EV
 !     ******************************************************************
-                           CALL TRACE$PUSH('READIN_ANALYSE_WAVE')  
+                           CALL TRACE$PUSH('READIN_ANALYSE_DENSITY')  
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
@@ -2962,7 +3008,7 @@ CALL TRACE$PASS('DONE')
           CALL ERROR$MSG('                            OR "UP" OR "DOWN"')
           CALL ERROR$CHVAL('TYPE',TYPE)
           CALL ERROR$STOP('READIN_ANALYSE_DENSITY')
-        end if
+        END IF
         CALL GRAPHICS$SETCH('TYPE',TYPE)
 !
 !       == TOCC
@@ -2992,7 +3038,7 @@ CALL TRACE$PASS('DONE')
         TCHK2=TCHK.OR.TCHK2
         IF(TCHK1.AND.TCHK2) THEN
           CALL ERROR$MSG('SELECT EITHER BANDS OR ENERGY RANGE')
-          CALL ERROR$STOP('READING_ANALYSE_WAVE')
+          CALL ERROR$STOP('READING_ANALYSE_DENSITY')
         END IF
         IF(TCHK1) THEN
           CALL GRAPHICS$SETCH('SELECT','EMINMAX')
@@ -3038,7 +3084,7 @@ CALL TRACE$PASS('DONE')
       REAL(8)               :: DR
       CHARACTER(256)        :: CH256SVAR1
 !     ******************************************************************
-                           CALL TRACE$PUSH('READIN_ANALYSE_WAVE')  
+                           CALL TRACE$PUSH('READIN_ANALYSE_POTENTIAL')  
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
@@ -3069,6 +3115,74 @@ CALL TRACE$PASS('DONE')
       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'DR',1,DR)
       CALL GRAPHICS$SETR8('DR',DR)
       CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+                           CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE READIN_ANALYSE_1DPOT(LL_CNTL_)
+!     **************************************************************************
+!     **  ONE-DIMENSIONAL HARTREE POTENTIAL ALONG A SPECIFIED LATTICE DIRECTION*
+!     **                                                                      **
+!     **  FILE=FILENAME                                                       **
+!     **  TITLE= IMAGE TITLE                                                  **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
+      TYPE(LL_TYPE)         :: LL_CNTL
+      LOGICAL(4)            :: TCHK
+      INTEGER(4)            :: IT(3)
+      INTEGER(4)            :: I1DPOT
+      INTEGER(4)            :: N1DPOT
+      CHARACTER(256)        :: TITLE
+      CHARACTER(256)        :: FILE
+!     **************************************************************************
+                           CALL TRACE$PUSH('READIN_ANALYSE_1DPOT')  
+      LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'ANALYSE')
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'1DPOT',N1DPOT)
+      CALL GRAPHICS$SETI4('N1DPOT',N1DPOT)
+      DO I1DPOT=1,N1DPOT
+        CALL LINKEDLIST$SELECT(LL_CNTL,'1DPOT',I1DPOT)
+        CALL GRAPHICS$SETI4('I1DPOT',I1DPOT)
+!
+!       == SET TITLE OF THE IMAGE ==============================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'TITLE',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          WRITE(TITLE,*)I1DPOT
+          TITLE=-'ONEDPOT_'//TRIM(ADJUSTL(TITLE))
+          CALL LINKEDLIST$SET(LL_CNTL,'TITLE',0,TRIM(TITLE))
+        ELSE
+          CALL LINKEDLIST$GET(LL_CNTL,'TITLE',1,TITLE)
+        END IF
+        CALL GRAPHICS$SETCH('TITLE',TRIM(TITLE))
+!
+!       == SET FILENAME FOR THE IMAGE===========================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'FILE',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,FILE)
+        ELSE
+          WRITE(FILE,*)I1DPOT
+          FILE=-'ONEDPOT_'//TRIM(ADJUSTL(TITLE))//-'.DAT'
+          CALL LINKEDLIST$SET(LL_CNTL,'TITLE',0,TRIM(FILE))
+        END IF
+        CALL GRAPHICS$SETCH('FILE',TRIM(FILE))
+!
+!       == AXIS FOR 1D POTENTIAL AXIS=RBAS*IT ==================================
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'IT',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('MISSING MANDATORY ARGUMENT!CONTROL!ANALYSE!1DPLOT:IT')
+          CALL ERROR$I4VAL('I1DPOT',I1DPOT)
+          CALL ERROR$STOP('READIN_ANALYSE_1DPOT')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'IT',0,IT)
+        CALL GRAPHICS$SETI4A('IT',3,IT)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      ENDDO
                            CALL TRACE$POP
       RETURN
       END

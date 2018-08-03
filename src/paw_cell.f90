@@ -27,11 +27,12 @@
 MODULE CELL_MODULE
 IMPLICIT NONE
 LOGICAL(4) :: TPARRINELLORAHMAN=.TRUE.
-! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE'
+! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE',NOSHEARFIXV
 CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
 LOGICAL(4) :: TON  =.FALSE.      ! USED TO REQUEST INTERNAL STRESS
 LOGICAL(4) :: TMOVE=.FALSE.      ! PROPAGATE UNIT CELL
+LOGICAL(4) :: TSTART=.FALSE.   ! IGNORE RESTART FILE. USE TREF.
 REAL(8)    :: TREF(3,3)          ! REFERENCE CELL CONSTANTS
 REAL(8)    :: STRESS(3,3)=0.D0   ! EXTERNAL STRESS TENSOR
 REAL(8)    :: PRESSURE=0.D0      ! EXTERNAL PRESSURE
@@ -67,9 +68,9 @@ CONTAINS
       IF(TINIT) RETURN
       TINIT=.TRUE.
 !
-!     ==================================================================
-!     ==  CALCULATE TREFINV                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE TREFINV                                                   ==
+!     ==========================================================================
       IF(SUM(TREF**2).EQ.0.D0) THEN
         CALL ERROR$MSG('REFERENCE CELL NOT SET')
         CALL ERROR$STOP('CELL_INITIALIZE')
@@ -79,9 +80,9 @@ CONTAINS
      &    +TREF(3,1) * (TREF(1,2)*TREF(2,3)-TREF(2,2)*TREF(1,3))
       CALL LIB$INVERTR8(3,TREF,TREFINV)
 !
-!     ==================================================================
-!     ==  SET DEFAULT CELL IF NOT DEFINED OTHERWISE                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  SET DEFAULT CELL IF NOT DEFINED OTHERWISE                           ==
+!     ==========================================================================
       IF(SUM(T0**2).EQ.0.D0) THEN   ! T0 IS NOT SET
         T0=TREF
         TM=T0
@@ -103,9 +104,9 @@ CONTAINS
         TP=T0
       END IF
 !
-!     ===================================================================
-!     ==  CALCULATE SIGMA MATRIX EQ 2.24                               ==
-!     ===================================================================
+!     ==========================================================================
+!     ==  CALCULATE SIGMA MATRIX EQ 2.24                                      ==
+!     ==========================================================================
       SIGMA=STRESS
       SVAR=0.D0
       DO I=1,3
@@ -143,10 +144,16 @@ END MODULE CELL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
 !     **************************************************************************
-      IF(.NOT.TON) RETURN
       CALL CELL_INITIALIZE()
       CALL REPORT$TITLE(NFIL,'UNIT CELL')
+      IF(TSTART) THEN
+        CALL REPORT$STRING(NFIL,'INITIAL UNIT CELL FROM STRUCTURE FILE') 
+      ELSE
+        CALL REPORT$STRING(NFIL,'INITIAL UNIT CELL FROM RESTART FILE') 
+      END IF
       CALL REPORT$L4VAL(NFIL,'DYNAMICAL UNIT CELL',TMOVE) 
+      IF(.NOT.TON) RETURN
+!
       CALL REPORT$R8VAL(NFIL,'MASS',TMASS,'A.U.') 
       CALL REPORT$R8VAL(NFIL,'FRICTION',FRIC,'DT/2') 
       CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE,'A.U.') 
@@ -174,7 +181,7 @@ END MODULE CELL_MODULE
       REAL(8)            :: OMEGA
       REAL(8)            :: VOL
       REAL(8)            :: AMAT(3,3)
-!     *****************************************************************
+!     **************************************************************************
 !      CALL ERROR$MSG('NOT FULLY IMPLEMENTED: DO NOT USE')
 !      CALL ERROR$STOP('CELL$CONVERT')
       CALL GBASS(TREF,AMAT,VOL)
@@ -189,21 +196,33 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : CONSTRAINTTYPE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       CHARACTER(*),INTENT(IN) :: VAL
+      LOGICAL(4)              :: TCHK
 !     **************************************************************************
 !
-!     =================================================================
-!     ==  CALCULATE PRESSURE                                         ==
-!     =================================================================
+!     ==========================================================================
+!     ==  DETERMINE CONSTRAINT SET FOR CELL DYNAMICS                          ==
+!     ==========================================================================
       IF(ID.EQ.'CONSTRAINTTYPE') THEN
         CONSTRAINTTYPE=VAL
+        TCHK=.FALSE.
+        TCHK=TCHK.OR.(CONSTRAINTTYPE.EQ.'ISOTROPIC')
+        TCHK=TCHK.OR.(CONSTRAINTTYPE.EQ.'NOSHEAR')
+        TCHK=TCHK.OR.(CONSTRAINTTYPE.EQ.'NOSHEARFIXV')
+        TCHK=TCHK.OR.(CONSTRAINTTYPE.EQ.'FREE')
+        TCHK=TCHK.OR.(CONSTRAINTTYPE.EQ.'NONE')
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('VALUE OF CONSTRAINTTYPE NOT RECOGNIZED')
+          CALL ERROR$CHVAL('CONSTRAINTTYPE',CONSTRAINTTYPE)
+          CALL ERROR$STOP('CELL$SETCH')
+        END IF
 !
-!     =================================================================
-!     ==  DONE                                                       ==
-!     =================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -217,36 +236,43 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TON,TMOVE,TSTOP,TSTART
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(IN) :: VAL
 !     **************************************************************************
 !
-!     =================================================================
-!     ==  CALCULATE PRESSURE                                         ==
-!     =================================================================
+!     ==========================================================================
+!     ==  CALCULATE PRESSURE                                                  ==
+!     ==========================================================================
       IF(ID.EQ.'ON') THEN
         TON=VAL
 !
-!     =================================================================
-!     ==  PROPAGATE                                                  ==
-!     =================================================================
+!     ==========================================================================
+!     ==  PROPAGATE                                                           ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'MOVE') THEN
         TMOVE=VAL
         IF(TMOVE) THEN
           TON=.TRUE.
         END IF
 !
-!     =================================================================
-!     ==  SET VELOCITY TO ZERO IN THE NEXT TIME STEP                 ==
-!     =================================================================
+!     ==========================================================================
+!     ==  SET VELOCITY TO ZERO IN THE NEXT TIME STEP                          ==
+!     ==========================================================================
+!     ==  SET VELOCITY TO ZERO IN THE NEXT TIME STEP        +++++++++==
       ELSE IF(ID.EQ.'STOP') THEN
         TSTOP=VAL
 !
-!     =================================================================
-!     ==  DONE                                                       ==
-!     =================================================================
+!     ==========================================================================
+!     ==  IGNORE RESTART FILE AND USE STRUCTURE INPUT FILE FOR LATTICE VECTORS==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'START') THEN
+        TSTART=VAL
+!
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -260,27 +286,27 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TON,TMOVE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       LOGICAL(4)  ,INTENT(OUT):: VAL
 !     **************************************************************************
 !
-!     =================================================================
-!     ==  CALCULATE PRESSURE AND STRESS                              ==
-!     =================================================================
+!     ==========================================================================
+!     ==  CALCULATE PRESSURE AND STRESS                                       ==
+!     ==========================================================================
       IF(ID.EQ.'ON') THEN
         VAL=TON
 !
-!     =================================================================
-!     ==  PROPAGATE                                                  ==
-!     =================================================================
+!     ==========================================================================
+!     ==  PROPAGATE                                                           ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'MOVE') THEN
         VAL=TMOVE
 !
-!     =================================================================
-!     ==  DONE                                                       ==
-!     =================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -294,7 +320,7 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : PRESSURE,DELTAT,FRIC,TMASS
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
@@ -318,15 +344,15 @@ END MODULE CELL_MODULE
       ELSE IF(ID.EQ.'FRICTION') THEN
         FRIC=VAL
 !
-!     ==================================================================
-!     ==  MASS                                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  MASS                                                                ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'MASS') THEN
         TMASS=VAL
 !
-!     ==================================================================
-!     ==  DONE                                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -340,7 +366,7 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : EPOT,EKIN,TMASS,TMOVE,TPROPAGATED
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
@@ -390,7 +416,7 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TREF,STRESS,STRESS_I,KINSTRESS,T0,TM
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -408,11 +434,10 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$SETR8A')
         END IF
         TREF=RESHAPE(VAL,(/3,3/))
-
 !
-!     ==================================================================
-!     ==  EXTERNAL STRESS TENSOR                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  EXTERNAL STRESS TENSOR                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'STRESS') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -422,9 +447,9 @@ END MODULE CELL_MODULE
         END IF
         STRESS=RESHAPE(VAL,(/3,3/))
 !
-!     ==================================================================
-!     ==  INTERNAL STRESS TENSOR                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  INTERNAL STRESS TENSOR                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'STRESS_I') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -434,9 +459,9 @@ END MODULE CELL_MODULE
         END IF
         STRESS_I=RESHAPE(VAL,(/3,3/))
 !
-!     ==================================================================
-!     ==  INTERNAL STRESS TENSOR                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  INTERNAL STRESS TENSOR                                              ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'KINSTRESS') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -446,9 +471,9 @@ END MODULE CELL_MODULE
         END IF
         KINSTRESS=RESHAPE(VAL,(/3,3/))
 !
-!     ==================================================================
-!     ==  CELL VECTORS                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CELL VECTORS                                                        ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'T0'.OR.ID.EQ.'T(0)') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -458,9 +483,9 @@ END MODULE CELL_MODULE
         END IF
         T0=RESHAPE(VAL,(/3,3/))
 !
-!     ==================================================================
-!     ==  CELL VECTORS OF PREVIOUS TIME STEP                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CELL VECTORS OF PREVIOUS TIME STEP                                  ==
+!     ==========================================================================
       ELSE IF(ID.EQ.'TM'.OR.ID.EQ.'T(-)') THEN
         IF(LEN.NE.9) THEN
           CALL ERROR$MSG('SIZE MISMATCH')
@@ -470,9 +495,9 @@ END MODULE CELL_MODULE
         END IF
         TM=RESHAPE(VAL,(/3,3/))
 !
-!     ==================================================================
-!     ==  DONE                                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DONE                                                                ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -683,14 +708,19 @@ END IF
         NCONSTRAINT=5
         ALLOCATE(CONSTRAINTPROJECT(3,3,NCONSTRAINT))
         CONSTRAINTPROJECT(:,:,:)=0.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 2 ==================
         CONSTRAINTPROJECT(1,2,1)=1.D0
         CONSTRAINTPROJECT(2,1,1)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 3 ==================
         CONSTRAINTPROJECT(1,3,2)=1.D0
         CONSTRAINTPROJECT(3,1,2)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 2 AND 3 ==================
         CONSTRAINTPROJECT(2,3,3)=1.D0
         CONSTRAINTPROJECT(3,2,3)=1.D0
+!       == OMIT UNEQUAL EXPANSION OF LATTICE VECTORS 1 AND 2 ===================
         CONSTRAINTPROJECT(1,1,4)=1.D0
         CONSTRAINTPROJECT(2,2,4)=-1.D0
+!       == OMIT UNEQUAL EXPANSION OF LATTICE VECTORS 2 AND 3 ===================
         CONSTRAINTPROJECT(2,2,5)=1.D0
         CONSTRAINTPROJECT(3,3,5)=-1.D0
 !
@@ -702,14 +732,18 @@ END IF
 !!$          STRESS_I(I,I)=SVAR1
 !!$          KINSTRESS(I,I)=SVAR2
 !!$        ENDDO
+!
       ELSE IF(CONSTRAINTTYPE.EQ.'NOSHEAR') THEN
         NCONSTRAINT=3
         ALLOCATE(CONSTRAINTPROJECT(3,3,NCONSTRAINT))
         CONSTRAINTPROJECT(:,:,:)=0.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 2 ==================
         CONSTRAINTPROJECT(1,2,1)=1.D0
         CONSTRAINTPROJECT(2,1,1)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 3 ==================
         CONSTRAINTPROJECT(1,3,2)=1.D0
         CONSTRAINTPROJECT(3,1,2)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 2 AND 3 ==================
         CONSTRAINTPROJECT(2,3,3)=1.D0
         CONSTRAINTPROJECT(3,2,3)=1.D0
 !!$        DO I=1,3
@@ -719,12 +753,33 @@ END IF
 !!$            KINSTRESS(I,J)=0.D0
 !!$          ENDDO
 !!$        ENDDO
+!
+      ELSE IF(CONSTRAINTTYPE.EQ.'NOSHEARFIXV') THEN
+        NCONSTRAINT=4
+        ALLOCATE(CONSTRAINTPROJECT(3,3,NCONSTRAINT))
+        CONSTRAINTPROJECT(:,:,:)=0.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 2 ==================
+        CONSTRAINTPROJECT(1,2,1)=1.D0
+        CONSTRAINTPROJECT(2,1,1)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 1 AND 3 ==================
+        CONSTRAINTPROJECT(1,3,2)=1.D0
+        CONSTRAINTPROJECT(3,1,2)=1.D0
+!       == OMIT SHEAR IN THE PLANE OF LATTICE VECTORS 2 AND 3 ==================
+        CONSTRAINTPROJECT(2,3,3)=1.D0
+        CONSTRAINTPROJECT(3,2,3)=1.D0
+!       == FIX VOLUME ==========================================================
+        CONSTRAINTPROJECT(1,1,4)=1.D0
+        CONSTRAINTPROJECT(2,2,4)=1.D0
+        CONSTRAINTPROJECT(3,3,4)=1.D0
+!
       ELSE IF(CONSTRAINTTYPE.EQ.'NOSTRESS') THEN
         NCONSTRAINT=0
         STRESS_I(:,:)=0.D0
         KINSTRESS(:,:)=0.D0
+!
       ELSE IF(CONSTRAINTTYPE.EQ.'FREE') THEN
         NCONSTRAINT=0
+! 
       ELSE
         CALL ERROR$MSG('CONSTRAINTTYPE NOT RECOGNIZED')
         CALL ERROR$CHVAL('CONSTRAINTTYPE',CONSTRAINTTYPE)
@@ -882,7 +937,9 @@ END IF
 !     **                                                                      **
 !     **************************************************************************
       USE RESTART_INTERFACE
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : T0,TM,TMM &
+     &                       ,TREF &
+     &                       ,TSTART   ! IGNORE RESTART FILE WHEN TRUE
       USE MPE_MODULE
       IMPLICIT NONE
       INTEGER(4)           ,INTENT(IN) :: NFIL
@@ -894,7 +951,7 @@ END IF
       INTEGER(4)                       :: NTASKS,THISTASK
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      TCHK=.TRUE.
+      TCHK=.NOT.TSTART
       SEPARATOR=MYSEPARATOR
       IF(THISTASK.EQ.1)CALL RESTART$READSEPARATOR(SEPARATOR,NFIL,NFILO,TCHK)
       CALL MPE$BROADCAST('MONOMER',1,TCHK)
