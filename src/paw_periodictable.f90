@@ -107,6 +107,9 @@ CONTAINS
 !     **    FROM QUANTITIES,UNITS AND SYMBOLS IN PHYSICAL CHEMISTRY           **
 !     **    BLACKWELL SCIENTIFIC PUBLICATIONS, OXFORD 1993                    **
 !     **                                                                      **
+!     ** THERE IS ONE ELEMENT WITH ATOMIC NUMBER ZERO. IT HAS A SMALL FINITE  **
+!     ** MASS TO AVOID A DIVIDE-BY-ZERO WHILE PROPAGATING ITS POSITION        **
+!     **                                                                      **
 !     **************************************************************************
       TYPE SET_TYPE
         CHARACTER(2)      :: SYMBOL    ! ELEMENT SYMBOL
@@ -126,7 +129,7 @@ CONTAINS
       TINI=.TRUE.
 !    
 !     ==  1S   =================================================================
-      SET(  0)=SET_TYPE('0 ',0.0000  ,0.53,0.530,0.00,(/0,0,0,0/),'0 ')
+      SET(  0)=SET_TYPE('0 ',0.1000  ,0.53,0.530,0.00,(/0,0,0,0/),'0 ')
       SET(  1)=SET_TYPE('H ',1.00794 ,0.32,2.886,2.20,(/1,0,0,0/),'0 ')
       SET(  2)=SET_TYPE('HE',4.002602,0.93,2.362,0.00,(/2,0,0,0/),'0 ')
 !     ==  2SP  =================================================================

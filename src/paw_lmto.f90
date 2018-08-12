@@ -1717,7 +1717,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
       REAL(8)                :: RTAIL     ! TAIL-MATCHING RADIUS
       REAL(8)                :: RTAILCUT  ! TAIL-TRUNCATION RADIUS 
       LOGICAL(4)             :: TCHKHIGHER(LXHIGHER+1)
-      character(64)           :: string
+      CHARACTER(64)           :: STRING
 !     **************************************************************************
                               CALL TRACE$PUSH('LMTO_MAKETAILEDPARTIALWAVES')
       DO ISP=1,NSP
@@ -1963,12 +1963,12 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
         CALL SETUP$UNSELECT()
 !
 !       ========================================================================
-!       === write tailed functions to file                                    ==
+!       === WRITE TAILED FUNCTIONS TO FILE                                    ==
 !       ========================================================================
         IF(TPR) THEN
-print*,'before ',isp
+PRINT*,'BEFORE ',ISP
           WRITE(STRING,*)ISP
-print*,'after ',isp
+PRINT*,'AFTER ',ISP
           STRING=ADJUSTL(STRING) 
           CALL LMTO_WRITEPHI(TRIM(STRING)//'_AEF.DAT',GID,NR &
        &                    ,LNXT,POTPAR1(ISP)%TAILED%AEF)
@@ -2162,6 +2162,7 @@ print*,'after ',isp
       INTEGER(4),INTENT(IN) :: NORB
       REAL(8)   ,INTENT(OUT):: U(NORB,NORB,NORB,NORB)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       INTEGER(4)            :: LN1,LN2,LN3,LN4
       INTEGER(4)            :: IORB1,IORB2,IORB3,IORB4
       INTEGER(4)            :: L1,L2,L3,L4
@@ -2170,11 +2171,9 @@ print*,'after ',isp
       INTEGER(4)            :: L,M,LM,LX
       REAL(8)               :: CG1,CG2
       REAL(8)               :: SVAR
-      REAL(8)               :: FOURPI
       REAL(8)               :: FOURPIBY2LPLUS1
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_UTENSOR')
-      FOURPI=4.D0*PI
 !
       U(:,:,:,:)=0.D0
       IORB1=0
@@ -2305,7 +2304,7 @@ print*,'after ',isp
 !     **                                                                      **
 !     **  FOR A DENSITY CHI_LN(R)Y_L(R)RHO_LN'(|R|)*Y_L'(R)                   **
 !     **  THE CHARGE IS QLN(1,LN,LN')C_{L,L',S} AND                           **
-!     **  THE DIPOLE IS QLN(2,LN,LN')C_{L,L',P}                               ** 
+!     **  THE DIPOLE IS QLN(2,LN,LN')C_{L,L',P}                               **
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
@@ -2316,15 +2315,14 @@ print*,'after ',isp
       REAL(8)   ,INTENT(IN) :: CHI(NR,LNX)
       REAL(8)   ,INTENT(OUT):: QLN(2,LNX,LNX)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       INTEGER(4)            :: LN1,LN2
       INTEGER(4)            :: L1,L2,IM
       REAL(8)               :: AUX(NR),SVAR
       REAL(8)               :: R(NR)
-      REAL(8)               :: SQ4PI,SQ4PITHIRD
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_ONECENTERMULTIPOLE')
-      SQ4PI=SQRT(4.D0*PI)
-      SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       CALL RADIAL$R(GID,NR,R)
       QLN(:,:,:)=0.D0
       DO LN1=1,LNX
@@ -5737,6 +5735,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
       REAL(8)                 :: R(NR)
@@ -5748,13 +5747,11 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
       REAL(8)                 :: FXC(NR)
-      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
 !     **************************************************************************
       LMRX=(LRX+1)**2
-      FOURPI=4.D0*PI
       ETOT=0.D0
 !
 !     ==========================================================================
@@ -5824,12 +5821,12 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)     ,INTENT(IN) :: RHO(NR,LMRX,NDIMD)
       INTEGER(4)  ,PARAMETER  :: NDIS=4
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)                 :: R(NR)
       REAL(8)                 :: AUX(NR)
       REAL(8)                 :: RHO1(NR,LMRX,NDIMD)
       REAL(8)                 :: POT1(NR,LMRX,NDIMD)
       REAL(8)                 :: DRHO(NR,LMRX,NDIMD)
-      REAL(8)                 :: FOURPI
       REAL(8)                 :: SVAR
       REAL(8)                 :: ETOT(-NDIS:NDIS)
       REAL(8)                 :: DETOT(-NDIS:NDIS)
@@ -5840,7 +5837,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)              :: I,LM,IDIMD,L
 !     **************************************************************************
       WRITE(*,FMT='(80("=")/80("="),T10,"  LMTO_RADXC TEST  "/80("="))')
-      FOURPI=4.D0*PI
       CALL RADIAL$R(GID,NR,R)
       CUT(:)=EXP(-R**2)
 !
@@ -5941,7 +5937,9 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
       REAL(8)   ,INTENT(OUT):: VCUT(NR)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: CG0LL=Y0
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -5954,7 +5952,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
@@ -5975,8 +5972,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-       FOURPI=4.D0*PI
-       CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -6343,6 +6338,7 @@ IF(IAT.NE.1) RETURN
       COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)     ,PARAMETER  :: DELTA=1.D-8
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       COMPLEX(8)              :: DENMAT1(LMNX,LMNX,NDIMD)
       COMPLEX(8)              :: HAM1(LMNX,LMNX,NDIMD)
@@ -6354,7 +6350,6 @@ IF(IAT.NE.1) RETURN
       REAL(8)     ,ALLOCATABLE:: RHO_ALL(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT_ALL(:,:,:)
       REAL(8)                 :: AUX(NR),AUX2(NR),SVAR
-      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN,IR
 !     **************************************************************************
@@ -6366,7 +6361,6 @@ IF(IAT.NE.1) RETURN
 !!$RETURN
 !
       LMRX=(LRX+1)**2
-      FOURPI=4.D0*PI
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -7038,11 +7032,11 @@ END MODULE LMTOAUGMENTATION_MODULE
       REAL(8)     ,ALLOCATABLE:: RHOWC(:,:,:)
       REAL(8)     ,ALLOCATABLE:: POT(:,:,:)
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)                 :: EDENSITY(NR)
       REAL(8)                 :: AUX(NR),SVAR
       REAL(8)                 :: FXC(NR)
-      REAL(8)                 :: FOURPI
       INTEGER(4)              :: LMRX,L
       INTEGER(4)              :: IDIM,LM,LMN
       REAL(8)                 :: ETOTC,ETOTV
@@ -7055,7 +7049,6 @@ INTEGER(4) :: IMETHOD
  REAL(8)                 :: ETOT2
 !     **************************************************************************
       LMRX=(LRX+1)**2
-      FOURPI=4.D0*PI
       ETOT=0.D0
 !
 !     ==========================================================================
@@ -7347,7 +7340,9 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)   ,INTENT(OUT):: FXC(NR)
       REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: CG0LL=Y0
       LOGICAL(4)            :: TGRA   ! SWITCH FOR GRADIENT CORRECTION
       INTEGER(4)            :: NSPIN
       REAL(8)               :: EXC1
@@ -7359,12 +7354,10 @@ PRINT*,'----EXC  ',ETOT
       REAL(8)               :: VAL5(5),VXC5(5),V2XC5(5,5),V3XC5(5,5,5)
       REAL(8)               :: XVAL(NR,5,LMRX)
       REAL(8)               :: XDER(NR,5,LMRX)
-      REAL(8)               :: FOURPI
       INTEGER(4)            :: IR,L,II,ISPIN,ISPIN1,ISPIN2,I,J
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
       REAL(8)               :: FAC
-      REAL(8)               :: CG0LL
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
@@ -7377,8 +7370,6 @@ PRINT*,'----EXC  ',ETOT
 !     ==   CALCULATE SOME CONSTANTS NEEDED LATER                              ==
 !     ==========================================================================
       CALL DFT$GETL4('GC',TGRA)
-      FOURPI=4.D0*PI
-      CG0LL=Y0
       CALL RADIAL$R(GID,NR,R)
 !
 !     ==========================================================================
@@ -8371,6 +8362,8 @@ REAL(8)::SVAR
       REAL(8)   ,PARAMETER  :: RX=0.1D0
       REAL(8)   ,PARAMETER  :: TOLMIN=1.D-8
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -8391,11 +8384,8 @@ REAL(8)::SVAR
       REAL(8)               :: TOL
       INTEGER(4)            :: IR
       REAL(8)               :: AUX(NR2),SVAR,SVAR1,SVAR2,A,B
-      REAL(8)               :: SQ4PI,SQ4PITHIRD
       INTEGER(4)            :: THISTASK,NTASKS,COUNT
 !     **************************************************************************
-      SQ4PI=SQRT(4.D0*PI)
-      SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 !
 !     ==========================================================================
@@ -8970,6 +8960,8 @@ INTEGER(4) :: J
       REAL(8)   ,INTENT(OUT):: U(LMNX1,LMNX1,LMNX2,LMNX2)
       REAL(8)   ,INTENT(OUT):: DU(LMNX1,LMNX1,LMNX2,LMNX2)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
+      REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
       INTEGER(4)            :: IND
@@ -8985,11 +8977,8 @@ INTEGER(4) :: J
       REAL(8)               :: INTEGRAL,DINTEGRAL
       REAL(8)               :: CG1,CG2 ! GAUNT COEFFICIENTS
       INTEGER(4)            :: LMRX
-      REAL(8)               :: SQ4PI,SQ4PITHIRD
       REAL(8)               :: SVAR
 !     **************************************************************************
-      SQ4PI=SQRT(4.D0*PI)
-      SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
 !
 !     ==========================================================================
 !     == PREPARATION                                                          ==
@@ -9991,7 +9980,8 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        REAL(8),INTENT(IN) :: P(2)  ! POINT [-1,1]X[-1,1]
        REAL(8),INTENT(OUT):: VALUE ! RESULTING OVERLAP
        REAL(8),PARAMETER  :: PI=4.D0*ATAN(1.D0)
-       REAL(8)            :: FPI,SQ2
+       REAL(8),PARAMETER  :: FPI=4.D0*PI
+       REAL(8),PARAMETER  :: SQ2=SQRT(2.D0)
        REAL(8)            :: COSTHETA1,COSTHETA2
        REAL(8)            :: PLM1,PLM2
        REAL(8)            :: R0(2),T1(2),T2(2),R(2)
@@ -9999,9 +9989,6 @@ ENDMODULE LMTO_TWOCENTER_MODULE
        REAL(8)            :: DRDP
        REAL(8)            :: VAL1,VAL2
 !      *************************************************************************
-       FPI=4.D0*PI
-       SQ2=SQRT(2.D0)
-!
        R0(:)=(/DIS,0.D0/)
        T1(:)=(/-DIS,DIS/)
        T2(:)=(/SLEN,SLEN/)
