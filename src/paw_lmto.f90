@@ -5956,7 +5956,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4)            :: LM
       INTEGER(4)            :: IMAX
       REAL(8)               :: FAC
-      REAL(8)               :: CG0LL
       REAL(8)               :: WORK(NR)
       REAL(8)               :: WORK1(NR)
       REAL(8)               :: WORK2(NR)
