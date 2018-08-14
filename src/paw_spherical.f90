@@ -1,21 +1,21 @@
-!***********************************************************************
-!**                                                                   **
-!**  NAME: SPHERICAL                                                  **
-!**                                                                   **
-!**  PURPOSE: REAL SPHERICAL HARMONICS AND CLEBSCH GORDON COEFFICIENTS**
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    GETYLM                                                         **
-!**    ROTATEYLM                                                      **
-!**    CLEBSCH                                                        **
-!**                                                                   **
-!**  REMARKS:                                                         **
-!**    1) FUNCTIONS NEED TO BE PUT INTO THE FORM SPHERICAL$FUNCTION   **
-!**    2) INTERNAL ROUTINES SHALL BE INCLUDED INTO A MODULE           **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: SPHERICAL                                                          **
+!**                                                                           **
+!**  PURPOSE: REAL SPHERICAL HARMONICS AND CLEBSCH GORDON COEFFICIENTS        **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    GETYLM                                                                 **
+!**    ROTATEYLM                                                              **
+!**    CLEBSCH                                                                **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    1) FUNCTIONS NEED TO BE PUT INTO THE FORM SPHERICAL$FUNCTION           **
+!**    2) INTERNAL ROUTINES SHALL BE INCLUDED INTO A MODULE                   **
+!**                                                                           **
+!*******************************************************************************
 !
-!..........................................................CLBSCH........
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE SPHERICAL_MODULE
 INTEGER(4)          :: LMXX=0
 REAL(8),ALLOCATABLE :: GAUNTMAT(:,:,:)
@@ -49,15 +49,15 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     ....................................................CLBSCH........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CLEBSCH(LM1,LM2,LM3,CG)
-!     ******************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1
       INTEGER(4),INTENT(IN) :: LM2
       INTEGER(4),INTENT(IN) :: LM3
       REAL(8)   ,INTENT(OUT):: CG
-!     ******************************************************************
+!     **************************************************************************
       CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
       RETURN
       END
@@ -397,26 +397,26 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$ROTATEYLM(LMX,ROT,YLMROT)
-!     **                                                              **
-!     **  PRODUCES A LMX*LMX MATRIX YLMROT                            **
-!     **  THAT TRANSFORMS A COEFFICIENT VECTOR C_LM                   **
-!     **  OF A FUNCTION EXPRESSED AS F(R)=SUM_LM Y_LM(R)*C_LM         **
-!     **  INTO A COORDINATE SYSTEM RPRIME=ROT*R                       **
-!     **  WITH YPRIME_LM(R')=Y_LM(R)                                  **
-!     **  SUCH THAT    F(R)=SUM_LM YPRIME_LM(R)*CPRIME_LM             **
-!     **  WITH CPRIME_LM1=SUM_LM2 YLMROT_LM1,LM2 C_LM2                **
-!     **  REMAINS INVARIANT UNDER ROTATION                            **
-!     **                                                              **
-!     **  WORKS ONLY FOR REAL HARMONICS  WITH Y_2=C*X;Y_3=C*Z;Y_4=C*Y **
-!     **  USES THE CLEBSCH GORDAN ROUTINE CLEBSCH                     **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  PRODUCES A LMX*LMX MATRIX YLMROT                                    **
+!     **  THAT TRANSFORMS A COEFFICIENT VECTOR C_LM                           **
+!     **  OF A FUNCTION EXPRESSED AS F(R)=SUM_LM Y_LM(R)*C_LM                 **
+!     **  INTO A COORDINATE SYSTEM RPRIME=ROT*R                               **
+!     **  WITH YPRIME_LM(RPRIME)=Y_LM(R)                                      **
+!     **  SUCH THAT    F(R)=SUM_LM YPRIME_LM(R)*CPRIME_LM                     **
+!     **  WITH CPRIME_LM1=SUM_LM2 YLMROT_LM1,LM2 C_LM2                        **
+!     **  REMAINS INVARIANT UNDER ROTATION                                    **
+!     **                                                                      **
+!     **  WORKS ONLY FOR REAL HARMONICS  WITH Y_2=C*X;Y_3=C*Z;Y_4=C*Y         **
+!     **  USES THE CLEBSCH GORDAN ROUTINE CLEBSCH                             **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMX             ! #(L,M-ANGULAR MOMENTA)
       REAL(8)   ,INTENT(IN) :: ROT(3,3)        ! ROTATION MATRIX FOR POSITIONS
-      REAL(8)   ,INTENT(OUT):: YLMROT(LMX,LMX) ! ROTATION MATRIX FOR COEFFICIENTS
+      REAL(8)   ,INTENT(OUT):: YLMROT(LMX,LMX) !ROTATION MATRIX FOR COEFFICIENTS
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.     ! PRINTS RESULT
       LOGICAL(4),PARAMETER  :: TTEST=.TRUE.    ! CHECKS WHETHER RO IS UNITARY
       INTEGER(4)            :: LX
@@ -425,11 +425,11 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4)            :: LM1A,LM1B,LM2A,LM2B
       INTEGER(4)            :: LM1,LM2,LM3,LM4,LM5,LM6,L
       REAL(8)               :: SVAR,SVAR1,SVAR2,CG
-!     ******************************************************************
+!     **************************************************************************
 !
-!      =================================================================
-!      == TEST WHETHER ROTATION MATRIX IS UNITARY                     ==
-!      =================================================================
+!      =========================================================================
+!      == TEST WHETHER ROTATION MATRIX IS UNITARY                             ==
+!      =========================================================================
        IF(TTEST) THEN
          SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(2,3)*ROT(3,2)) &
       &      +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(2,1)*ROT(3,3)) &
@@ -440,9 +440,9 @@ END MODULE SPHERICAL_MODULE
          END IF
        END IF
 !
-!      =================================================================
-!      == INITIALIZE YLMROT FOR L=0 AND L=1                           ==
-!      =================================================================
+!      =========================================================================
+!      == INITIALIZE YLMROT FOR L=0 AND L=1                                   ==
+!      =========================================================================
        LX=INT(SQRT(REAL(LMX))-1.D0)
        IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
          CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
@@ -466,9 +466,9 @@ END MODULE SPHERICAL_MODULE
          ENDDO
        END IF
 !
-!      =================================================================
-!      == APPLY RECURSION FOR YLMROT FOR L>1                          ==
-!      =================================================================
+!      =========================================================================
+!      == APPLY RECURSION FOR YLMROT FOR L>1                                  ==
+!      =========================================================================
        DO L=2,LX
          LM1A=L**2+1
          LM1B=(L+1)**2
@@ -518,15 +518,16 @@ END MODULE SPHERICAL_MODULE
        RETURN
        END
 !
-!     ..........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$YLMTRANS(LMX,C)
 !     **                                                                      **
 !     **  TRANSFORMATION MATRIX FROM REAL SPHERICAL HARMONICS YBAR            **
 !     **  TO ANGULAR MOMENTUM EIGENSTATES Y                                   **
 !     **                                                                      **
-!     **   1=\SUM_{LM,LMPRIME} |Y_{LM}><Y_{LM}|YBAR_{LM'}><YBAR_{LMPRIME}|    **
+!     **   1=\SUM_{LM,LMPRIME} |Y_{LM}><Y_{LM}|YBAR_{LMPRIME}><YBAR_{LMPRIME}|**
 !     **    =\SUM_{LM,LMPRIME} |Y_{LM}>C_{LM,LMPRIME}<YBAR_{LMPRIME}|         **
 !     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMX
       COMPLEX(8),INTENT(OUT):: C(LMX,LMX)
@@ -577,18 +578,19 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     .......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$ER(LMX,X,Y,Z)
-!     **                                                                   **
-!     **  MATRIX ELEMENTS OF THE UNIT VECTORS X/R, Y/R, Z/Y                **
-!     **                                                                   **
-!     **       XI/R=\SUM_{LM,LM'} |Y_LM><Y_LM|XI/R|Y_LM'><YBAR_LM'|        **
-!     **           =\SUM_{LM,LM'} |Y_LM> XI_{LM,LM'} <YBAR_LM'|            **
-!     **                                                                   **
-!     **       X_{LM,LM'}=<LM|X/R|LM'>                                     **
-!     **       Y_{LM,LM'}=<LM|Y/R|LM'>                                     **
-!     **       Z_{LM,LM'}=<LM|Z/R|LM'>                                     **
-!     **                                                                   **
+!     **************************************************************************
+!     **  MATRIX ELEMENTS OF THE UNIT VECTORS X/R, Y/R, Z/Y                   **
+!     **                                                                      **
+!     **   XI/R=\SUM_{LM,LMPRIME} |Y_LM><Y_LM|XI/R|Y_LMPRIME><YBAR_LMPRIME|   **
+!     **       =\SUM_{LM,LMPRIME} |Y_LM> XI_{LM,LMPRIME} <YBAR_LMPRIME|       **
+!     **                                                                      **
+!     **       X_{LM,LMPRIME}=<LM|X/R|LMPRIME>                                **
+!     **       Y_{LM,LMPRIME}=<LM|Y/R|LMPRIME>                                **
+!     **       Z_{LM,LMPRIME}=<LM|Z/R|LMPRIME>                                **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMX
       REAL(8)   ,INTENT(OUT):: X(LMX,LMX)
@@ -597,7 +599,7 @@ END MODULE SPHERICAL_MODULE
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: SQ4PIBY3
       INTEGER(4)            :: LM1,LM2
-!     ***********************************************************************
+!     **************************************************************************
       SQ4PIBY3=SQRT(4.D0*PI/3.D0)
       DO LM1=1,LMX
         DO LM2=1,LMX
@@ -612,14 +614,15 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     .......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$L(LMX,LX,LY,LZ)
-!     **                                                                   **
-!     **  ANGULAR MOMENTUM MATRIX ELEMENTS IN A REPRESENTATION             **
-!     **  OF REAL SPHERICAL HARMONICS                                      **
-!     **                                                                   **
-!     **    LX_{LM,LM'}=<LM|LX|LM'>                                        **
-!     **                                                                   **
+!     **************************************************************************
+!     **  ANGULAR MOMENTUM MATRIX ELEMENTS IN A REPRESENTATION                **
+!     **  OF REAL SPHERICAL HARMONICS                                         **
+!     **                                                                      **
+!     **    LX_{LM,LMPRIME}=<LM|LX|LMPRIME>                                   **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMX
       COMPLEX(8),INTENT(OUT):: LX(LMX,LMX)
@@ -632,7 +635,7 @@ END MODULE SPHERICAL_MODULE
       REAL(8)               :: LPFAC(LMX),LMFAC(LMX),LZFAC(LMX)
       COMPLEX(8)            :: LPMAT(LMX,LMX),LMMAT(LMX,LMX)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-!     ***********************************************************************
+!     **************************************************************************
       LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
       IF((LMAX+1)**2.NE.LMX) THEN
         CALL ERROR$STOP('SPHERICAL_L')
@@ -649,9 +652,9 @@ END MODULE SPHERICAL_MODULE
         ENDDO
       ENDDO
 !
-!     =======================================================================
-!     == ANGULAR MOMENTA IN ANGULAR MOMENTUM EIGENSTATES                   ==
-!     =======================================================================
+!     ==========================================================================
+!     == ANGULAR MOMENTA IN ANGULAR MOMENTUM EIGENSTATES                      ==
+!     ==========================================================================
       LZ=(0.D0,0.D0)
       LPMAT=(0.D0,0.D0)
       LMMAT=(0.D0,0.D0)
@@ -661,10 +664,10 @@ END MODULE SPHERICAL_MODULE
         IF(MOX(LM).NE.-LOX(LM))LMMAT(LM-1,LM)=CMPLX(LMFAC(LM),0.D0,KIND=8)
       ENDDO
 !
-!     =======================================================================
-!     == TRANSFORM FROM A BASIS OF ANGULAR MOMENTUM EIGENSTATES TO A BASIS ==
-!     == OF REAL SPHERICAL HARMONICS                                       ==
-!     =======================================================================
+!     ==========================================================================
+!     == TRANSFORM FROM A BASIS OF ANGULAR MOMENTUM EIGENSTATES TO A BASIS    ==
+!     == OF REAL SPHERICAL HARMONICS                                          ==
+!     ==========================================================================
       CALL SPHERICAL$YLMTRANS(LMX,C)
       LZ=MATMUL(LZ,C)
       LPMAT=MATMUL(LPMAT,C)
@@ -674,17 +677,17 @@ END MODULE SPHERICAL_MODULE
       LPMAT=MATMUL(C,LPMAT)
       LMMAT=MATMUL(C,LMMAT)
 !
-!     =======================================================================
-!     == CARTESIAN ANGULAR MOMENTA                                         ==
-!     =======================================================================
+!     ==========================================================================
+!     == CARTESIAN ANGULAR MOMENTA                                            ==
+!     ==========================================================================
       LX= 0.5D0   *(LPMAT+LMMAT)
       LY=-0.5D0*CI*(LPMAT-LMMAT)
       RETURN
       END
 !
-!     .......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL_TEST()
-!     **                                                                   **
+!     **                                                                      **
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: LMX=9
       COMPLEX(8)           :: LX(LMX,LMX),LY(LMX,LMX),LZ(LMX,LMX)
@@ -696,7 +699,7 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4)           :: LMAX
       REAL(8)              :: SVAR
       COMPLEX(8)           :: CI=(0.D0,1.D0)
-!     ***********************************************************************
+!     **************************************************************************
       LMAX=INT(SQRT(REAL(LMX)+1.D-8))-1
       IF((LMAX+1)**2.NE.LMX) THEN
         CALL ERROR$STOP('SPHERICAL_L')
@@ -824,8 +827,8 @@ END MODULE SPHERICAL_MODULE
       SQPI=SQRT(PI)
       IMAX=4*LMAX+1
       IF(IMAX.GT.150) THEN
-!       == PREVISIOUSLY IT WAS TESTED FOR IMAX.GE.50 ====================
-!       == POSSIBLY THE RESULTS ARE INACCURATE BEYOND THIS VALUE ========
+!       == PREVISIOUSLY IT WAS TESTED FOR IMAX.GE.50 ===========================
+!       == POSSIBLY THE RESULTS ARE INACCURATE BEYOND THIS VALUE ===============
         CALL ERROR$MSG('DIMENSIONS IN CLBSCH TO SMALL')
         CALL ERROR$MSG('FACTORIAL PRODUCES OVERFLOW FOR I>170')
         CALL ERROR$I4VAL('FACTORIAL REQUESTED UP TO',IMAX)
@@ -839,9 +842,9 @@ END MODULE SPHERICAL_MODULE
         SQFACT(I)=SQRT(FACT(I))
       ENDDO
 !
-!     ==================================================================
-!     ==  INITIALIZE ARRAY                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  INITIALIZE ARRAY                                                    ==
+!     ==========================================================================
       DO LM3=1,LMXX
         DO LM2=1,LMXX
           DO LM1=1,LMXX
@@ -850,9 +853,9 @@ END MODULE SPHERICAL_MODULE
         ENDDO
       ENDDO
 !
-!     ==================================================================
-!     ==  CALCULATE CLEBSCH GORDAN COEFFICIENTS                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE CLEBSCH GORDAN COEFFICIENTS                               ==
+!     ==========================================================================
       DO L1=0,LMAX
         DO M1=-L1,L1
           N1=IABS(M1)
@@ -907,9 +910,9 @@ END MODULE SPHERICAL_MODULE
       ENDDO
 !
       IF(.NOT.TPR) RETURN
-!     ==================================================================
-!     == PRINTOUT FOR CHECK                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     == PRINTOUT FOR CHECK                                                   ==
+!     ==========================================================================
       LMUP=(LMAX+1)**2
       DO LM1=1,LMUP
         DO LM2=1,LMUP
@@ -925,16 +928,16 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     ..................................................THREEJ..........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       DOUBLE PRECISION FUNCTION THREEJ(L1,M1,L2,M2,L3,M3,FACT,SQFACT)
-!     ******************************************************************
-!     **                                                              **
-!     **  CALCULATE WIEGNER 3J SYMBOLS                                **
-!     **                                                              **
-!     **  THREEJ = (-1)**L1-L2-M3 * ( L1  L2  L3 )                    **
-!     **                            ( M1  M2  M3 )                    **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATE WIEGNER 3J SYMBOLS                                        **
+!     **                                                                      **
+!     **  THREEJ = (-1)**L1-L2-M3 * ( L1  L2  L3 )                            **
+!     **                            ( M1  M2  M3 )                            **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L1
       INTEGER(4),INTENT(IN) :: M1
@@ -947,15 +950,15 @@ END MODULE SPHERICAL_MODULE
       REAL(8)               :: R1,R2
       INTEGER(4)            :: KMAX,KMIN,K
       REAL(8)               :: SUM,SVAR
-!     ******************************************************************
+!     **************************************************************************
       IF(M3.NE.M1+M2) THEN
         THREEJ=0.D0
         RETURN
       END IF
 !
-!     ==================================================================
-!     ==  CALCULATE THE 3J SYMBOLS  TIMES ....                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE THE 3J SYMBOLS  TIMES ....                                ==
+!     ==========================================================================
       R1=SQFACT(L1+L2-L3)*SQFACT(L3+L1-L2)*SQFACT(L3+L2-L1) &
      &  /SQFACT(L1+L2+L3+1)
       R2=SQFACT(L1+M1)*SQFACT(L1-M1)*SQFACT(L2+M2)*SQFACT(L2-M2) &
@@ -972,11 +975,11 @@ END MODULE SPHERICAL_MODULE
       RETURN
       END
 !
-!     ..................................................PRECG...........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       DOUBLE PRECISION FUNCTION PRECG(L1,L2,L3,FACT,SQFACT)
-!     ******************************************************************
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: L1
       INTEGER(4),INTENT(IN) :: L2
@@ -984,7 +987,7 @@ END MODULE SPHERICAL_MODULE
       REAL(8)   ,INTENT(IN) :: FACT(0:170)
       REAL(8)   ,INTENT(IN) :: SQFACT(0:170)
       INTEGER(4)            :: LT,LTH
-!     ******************************************************************
+!     **************************************************************************
 !
 !     ==================================================================
 !     ==                                                              ==
@@ -1118,26 +1121,26 @@ PRINT*,'========================================================='
       STOP 'TESTGAUNTREL1 COMPLETED SUCESSFULLY'
       END
 !
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE SPHERICALCCMAT_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  USED TO EVALUATE THE MATRIXES A0 AND A1 TO EVALUATE STRESSES     **
-!**  IN A SPHERICAL HARMONICS REPRESENTATION                          **
-!**                                                                   **
-!**  GI(D/DGJ)SUM_L V_L Y_L                                           **
-!**           = G_IG_J SUM_L [1/G^2 DV_L/DG -L V_L] Y_L               **
-!**           + SUM_L SUM_L' V_L [P0_IJ(L,L')+PM_IJ(L,L')] Y_L'       **
-!**                                                                   **
-!**  WHERE P_0 IS NON-ZERO ONLY IF THE MAIN ANGULAR MOMENTA ARE       **
-!**  IDENTICAL AND FOR P_M THE SECOND ANGULAR MOMENTUM IS LOWER       **
-!**  BY 2 THAN THE FIRST                                              **
-!**                                                                   **
-!**  USE THE INTERFACES                                               **
-!**    SPHERICAL$CCMAT0(LM1,I,LM2,CC)                                 **
-!**    SPHERICAL$CCMATM(LM1,I,LM2,CC)                                 **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  USED TO EVALUATE THE MATRIXES A0 AND A1 TO EVALUATE STRESSES             **
+!**  IN A SPHERICAL HARMONICS REPRESENTATION                                  **
+!**                                                                           **
+!**  GI(D/DGJ)SUM_L V_L Y_L                                                   **
+!**        = G_IG_J SUM_L [1/G^2 DV_L/DG -L V_L] Y_L                          **
+!**        + SUM_L SUM_LPRIME V_L [P0_IJ(L,LPRIME)+PM_IJ(L,LPRIME)] Y_LPRIME  **
+!**                                                                           **
+!**  WHERE P_0 IS NON-ZERO ONLY IF THE MAIN ANGULAR MOMENTA ARE               **
+!**  IDENTICAL AND FOR P_M THE SECOND ANGULAR MOMENTUM IS LOWER               **
+!**  BY 2 THAN THE FIRST                                                      **
+!**                                                                           **
+!**  USE THE INTERFACES                                                       **
+!**    SPHERICAL$CCMAT0(LM1,I,LM2,CC)                                         **
+!**    SPHERICAL$CCMATM(LM1,I,LM2,CC)                                         **
+!**                                                                           **
+!*******************************************************************************
 TYPE A_TYPE 
 LOGICAL(4):: EXIST0(10)
 LOGICAL(4):: EXISTM(10)
@@ -1151,18 +1154,18 @@ INTEGER(4)               :: LMRXX=0
 TYPE(A_TYPE),ALLOCATABLE :: THIS(:)
 END MODULE SPHERICALCCMAT_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$CLEARCCMAT
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
-!     *******************************************************************
+!     **************************************************************************
       IF(ALLOCATED(THIS))DEALLOCATE(THIS)
       LRXX=0
       LMRXX=0
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICALCCMAT_INITIALIZE(LM_)
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
@@ -1174,7 +1177,7 @@ END MODULE SPHERICALCCMAT_MODULE
       INTEGER(4),PARAMETER :: MAPLM(3)=(/2,4,3/)
       INTEGER(4)           :: I,J,LMI,LMJ,LM1,LM2,LM3,LM3X,L1,L2,LM
       LOGICAL(4)           :: TCHK,T0,TM
-!     ******************************************************************
+!     **************************************************************************
       IF(ALLOCATED(THIS))DEALLOCATE(THIS)
       LRXX=MAX(INT(SQRT(REAL(LM_-1,KIND=8)+DSMALL)),2)
       LMRXX=(LRXX+1)**2
@@ -1189,7 +1192,7 @@ END MODULE SPHERICALCCMAT_MODULE
       ENDDO
       FOURPIBY3=16.D0*ATAN(1.D0)/3.D0  !4PI/3
 !
-!     ==================================================================
+!     ==========================================================================
       DO LM1=1,LMRXX
         L1=INT(SQRT(REAL(LM1-1,KIND=8)+DSMALL))
         LM3X=L1**2
@@ -1199,9 +1202,9 @@ END MODULE SPHERICALCCMAT_MODULE
           TM=L2.EQ.L1-2
           IF(.NOT.(T0.OR.TM)) CYCLE
 !
-!         ==============================================================
-!         ==  EVALUATE MATRIX                                         ==
-!         ==============================================================
+!         ======================================================================
+!         ==  EVALUATE MATRIX                                                 ==
+!         ======================================================================
           A1(:,:)=0.D0
           DO LM3=1,LM3X
             DO I=1,3
@@ -1216,9 +1219,9 @@ END MODULE SPHERICALCCMAT_MODULE
           ENDDO 
           A1(:,:)=FOURPIBY3*REAL(2*L1+1,KIND=8)*A1(:,:)
 !
-!         ==============================================================
-!         ==  CYCLE IF THERE ARE ONLY ZERO ELEMENTS                    ==
-!         ==============================================================
+!         ======================================================================
+!         ==  CYCLE IF THERE ARE ONLY ZERO ELEMENTS                           ==
+!         ======================================================================
           TCHK=.FALSE.
           DO I=1,3
             DO J=1,3
@@ -1227,9 +1230,9 @@ END MODULE SPHERICALCCMAT_MODULE
           ENDDO
           IF(.NOT.TCHK) CYCLE                    
 !
-!         ==============================================================
-!         ==  STORE L2=L1 ELEMENTS                                    ==
-!         ==============================================================
+!         ======================================================================
+!         ==  STORE L2=L1 ELEMENTS                                            ==
+!         ======================================================================
           IF(T0) THEN
             I=1
             DO WHILE(THIS(LM1)%EXIST0(I)) 
@@ -1244,9 +1247,9 @@ END MODULE SPHERICALCCMAT_MODULE
             THIS(LM1)%EXIST0(I)=.TRUE.
           END IF
 !
-!         ==============================================================
-!         ==  STORE L2=L1-2 ELEMENTS                                  ==
-!         ==============================================================
+!         ======================================================================
+!         ==  STORE L2=L1-2 ELEMENTS                                          ==
+!         ======================================================================
           IF(TM) THEN
             I=1
             DO WHILE(THIS(LM1)%EXISTM(I)) 
@@ -1265,14 +1268,14 @@ END MODULE SPHERICALCCMAT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$CCMAT0(LM1,I,LM2,CC)
-!     ******************************************************************
-!     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION   **
-!     **  OF SPHERICAL HARMONICS                                      **
-!     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                       **
-!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE               **
-!     ******************************************************************
+!     **************************************************************************
+!     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION           **
+!     **  OF SPHERICAL HARMONICS                                              **
+!     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                               **
+!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE                       **
+!     **************************************************************************
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1     ! FIRST ANGULAR MOMENTUM INDEX  
@@ -1280,7 +1283,7 @@ END MODULE SPHERICALCCMAT_MODULE
       INTEGER(4),INTENT(OUT):: LM2     ! SECOND ANGULAR MOMENTUM INDEX 
       REAL(8)   ,INTENT(OUT):: CC(3,3) ! P0_IJ(LM1,LM2)                
       LOGICAL(4)            :: TCHK
-!     ******************************************************************
+!     **************************************************************************
       IF(LM1.GT.LMRXX) CALL SPHERICALCCMAT_INITIALIZE(LM1)
       TCHK=I.LE.10
       IF(TCHK) TCHK=THIS(LM1)%EXIST0(I) 
@@ -1294,14 +1297,14 @@ END MODULE SPHERICALCCMAT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$CCMATM(LM1,I,LM2,CC)
-!     ******************************************************************
-!     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION   **
-!     **  OF SPHERICAL HARMONICS                                      **
-!     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                       **
-!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE               **
-!     ******************************************************************
+!     **************************************************************************
+!     **  MATRIX P0 USED TO EVALUATE THE STRESS IN A REPRESENTATION           **
+!     **  OF SPHERICAL HARMONICS                                              **
+!     **  SEE SPHERICALCCMAT_MODULE FOR DETAILS                               **
+!     **  LM2=0 AND CC=0.D0 ON RETURN IF I IS TOO LARGE                       **
+!     **************************************************************************
       USE SPHERICALCCMAT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LM1      ! FIRST ANGULAR MOMENTUM INDEX  
@@ -1309,7 +1312,7 @@ END MODULE SPHERICALCCMAT_MODULE
       INTEGER(4),INTENT(OUT):: LM2      ! SECOND ANGULAR MOMENTUM INDEX 
       REAL(8)   ,INTENT(OUT):: CC(3,3)  ! PM_IJ(LM1,LM2)                
       LOGICAL(4)            :: TCHK
-!     ******************************************************************
+!     **************************************************************************
       IF(LM1.GT.LMRXX) CALL SPHERICALCCMAT_INITIALIZE(LM1)
       TCHK=I.LE.10
       IF(TCHK) TCHK=THIS(LM1)%EXISTM(I)

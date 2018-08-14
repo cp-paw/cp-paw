@@ -1,11 +1,11 @@
-!***********************************************************************
-!**                                                                   **
-!**   TEST ROUTINE FOR RADIAL OBJECT                                  **
-!**                                                                   **
-!**   NOTE THAT THE INTEGRATE ROUTINE OF THE OLD OBJECT WAS INACCURATE**
-!**   BECAUSE OF ONLY QUADRATIC INERPOLATION TO THE ORIGIN            **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**   TEST ROUTINE FOR RADIAL OBJECT                                          **
+!**                                                                           **
+!**   NOTE THAT THE INTEGRATE ROUTINE OF THE OLD OBJECT WAS INACCURATE        **
+!**   BECAUSE OF ONLY QUADRATIC INERPOLATION TO THE ORIGIN                    **
+!**                                                                           **
+!*******************************************************************************
 !    
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$TEST()

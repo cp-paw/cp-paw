@@ -1017,17 +1017,20 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       REAL(8)   ,ALLOCATABLE:: HX(:,:,:),HY(:,:,:),HZ(:,:,:)
       INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
       INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
+      INTEGER(4)            :: NIJKA1,NIJKB1
 !     **************************************************************************
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,JA,KA)
+      NIJKA1=NIJKA !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,JA,KA)
       IF(JA.NE.0.OR.KA.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_GAUSSOVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,JB,KB)
+      NIJKB1=NIJKB !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,JB,KB)
       IF(JB.NE.0.OR.KB.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_GAUSSOVERLAP')
@@ -1106,18 +1109,21 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)            :: INDA,MA,IA,JA,KA,IEA
       INTEGER(4)            :: INDB,MB,IB,JB,KB,IEB
       REAL(8)               :: SVAR,FAC
+      INTEGER(4)            :: NIJKA1,NIJKB1
 !     **************************************************************************
       GCB(:,:,:)=0.D0
 !
 !     ==========================================================================
 !     ==  TESTS                                                               ==
 !     ==========================================================================
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA,NA,J,K)
+      NIJKA1=NIJKA !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKA1,NA,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')
       END IF
-      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB,NB,J,K)
+      NIJKB1=NIJKB !AVOID MAPPING INTENT(IN) ONTO INTENT(INOUT)
+      CALL GAUSSIAN_GAUSSINDEX('IJKFROMIND',NIJKB1,NB,J,K)
       IF(J.NE.0.OR.K.NE.0) THEN
         CALL ERROR$MSG('COEFFICIENT ARRAY DOES NOT COVER COMPLETE SHELLS')
         CALL ERROR$STOP('GAUSSIAN_OVERLAP')

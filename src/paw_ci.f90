@@ -1,8 +1,8 @@
-! Todo: 
-!      - Fortran 2008 has a number of new intrinsic bit functions such as 
-!        popcnt and poppar, which implement some of the functionality directly
+! TODO: 
+!      - FORTRAN 2008 HAS A NUMBER OF NEW INTRINSIC BIT FUNCTIONS SUCH AS 
+!        POPCNT AND POPPAR, WHICH IMPLEMENT SOME OF THE FUNCTIONALITY DIRECTLY
 !
-!      - use integer(8) for id to allow larger 1-particle basissets
+!      - USE INTEGER(8) FOR ID TO ALLOW LARGER 1-PARTICLE BASISSETS
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 !*******************************************************************************
@@ -1993,14 +1993,16 @@ END MODULE CI_MODULE
 !     **************************************************************************
 !     **  MATRIX ELEMENT OF THE REDUCED ONE-PARTICLE DENSITY MATRIX           **
 !     **       CVAL=RHO(I,J)=<PSI|CDAGGER_J C_I |PSI>                         **
+!     **                                                                      **
+!     **  PSI IS INTENT(INOUT) BECAUSE IT MAY BE CLEANED UP                   **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      TYPE(CISTATE_TYPE),INTENT(IN) :: PSI
-      INTEGER(4)        ,INTENT(IN) :: IORB1
-      INTEGER(4)        ,INTENT(IN) :: IORB2
-      COMPLEX(8)        ,INTENT(OUT):: CVAL
-      TYPE(CISTATE_TYPE)            :: PSI1
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSI  ! MODIFIED BY CLEANING
+      INTEGER(4)        ,INTENT(IN)   :: IORB1
+      INTEGER(4)        ,INTENT(IN)   :: IORB2
+      COMPLEX(8)        ,INTENT(OUT)  :: CVAL
+      TYPE(CISTATE_TYPE)              :: PSI1
 !     **************************************************************************
       CALL CI$NEWPSI(PSI1,PSI%N)
       CALL CI$COPYPSI(PSI,PSI1)
@@ -2264,17 +2266,18 @@ ENDDO
 !     **                                                                      **
 !     **  EKIN=(<PSI(+)|-<PSI(-)|) (|\PSI(+)>-PSI(-)> *MPSI/(2*DT)**2         **
 !     **                                                                      **
+!     **  PSIP AND PSIM ARE INTENT(INOUT) BECAUSE THEY MAY BE CLEANED UP      **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      REAL(8)           ,INTENT(IN) :: DT    ! TIME STEP
-      REAL(8)           ,INTENT(IN) :: MPSI  ! WAVE FUNCTION MASS
-      TYPE(CISTATE_TYPE),INTENT(IN) :: PSIP  ! |PSI(+)>
-      TYPE(CISTATE_TYPE),INTENT(IN) :: PSIM  ! |PSI(-)>
-      REAL(8)           ,INTENT(OUT):: EKIN
-      TYPE(CISTATE_TYPE)            :: PSICOPY
-      COMPLEX(8)        ,PARAMETER  :: CMINUS=(-1.D0,0.D0)
-      COMPLEX(8)                    :: CSVAR
+      REAL(8)           ,INTENT(IN)   :: DT    ! TIME STEP
+      REAL(8)           ,INTENT(IN)   :: MPSI  ! WAVE FUNCTION MASS
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSIP  ! |PSI(+)>
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSIM  ! |PSI(-)>
+      REAL(8)           ,INTENT(OUT)  :: EKIN
+      TYPE(CISTATE_TYPE)              :: PSICOPY
+      COMPLEX(8)        ,PARAMETER    :: CMINUS=(-1.D0,0.D0)
+      COMPLEX(8)                      :: CSVAR
 !     **************************************************************************
       CALL CI$NEWPSI(PSICOPY,PSIM%N)
       CALL CI$COPYPSI(PSIM,PSICOPY)
@@ -2510,6 +2513,8 @@ PRINT*,'AFTER ITERATION'
       SUBROUTINE CI_LAGRANGEMAT(NCHI,NPSI,QX,X0,QPSI,PSI0,NC,MAT)
 !     **************************************************************************
 !     **  DETERMINE LINEAR TERM OF EQUATION FOR LAGRANGE MULTIPLIERS          **
+!     **                                                                      **
+!     **  PSI0 IS INTENT(INOUT) BECAUSE IT MAY BECOME CLEANED UP              **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -2518,7 +2523,7 @@ PRINT*,'AFTER ITERATION'
       REAL(8)           ,INTENT(IN)  :: QX
       REAL(8)           ,INTENT(IN)  :: X0(NPSI) 
       REAL(8)           ,INTENT(IN)  :: QPSI(NPSI)
-      TYPE(CISTATE_TYPE),INTENT(IN)  :: PSI0(NPSI)
+      TYPE(CISTATE_TYPE),INTENT(INOUT) :: PSI0(NPSI)
       INTEGER(4)        ,INTENT(IN)  :: NC
       REAL(8)           ,INTENT(OUT) :: MAT(NC,NC)
       REAL(8)                        :: P0(NPSI)
@@ -2870,24 +2875,26 @@ PRINT*,'MARKE 2'
       SUBROUTINE CI_CONSTRAINT(NCHI,NPSI,X,PSI,RHO,NC,VEC)
 !     **************************************************************************
 !     ** EVALUATES THE DEVIATION FROM THE CONSTRAINT CONDITIONS               **
+!     **                                                                      **
+!     ** PSI IS INTENT(INOUT) BECAUSE IT MAY BE CLEANED UP                    **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      INTEGER(4)        ,INTENT(IN)  :: NCHI
-      INTEGER(4)        ,INTENT(IN)  :: NPSI
-      REAL(8)           ,INTENT(IN)  :: X(NPSI)
-      TYPE(CISTATE_TYPE),INTENT(IN)  :: PSI(NPSI)
-      COMPLEX(8)        ,INTENT(IN)  :: RHO(NCHI,NCHI) ! TARGET DENSITY MATRIX
-      INTEGER(4)        ,INTENT(IN)  :: NC
-      REAL(8)           ,INTENT(OUT) :: VEC(NC)
-      TYPE(CISTATE_TYPE)             :: PSI1,PSI2
-      COMPLEX(8)                     :: CMAT2(NCHI,NCHI)
-      COMPLEX(8)                     :: CMAT0(NPSI,NPSI)
-      INTEGER(4)                     :: I,J,N,IND
-      REAL(8)                        :: S
-      REAL(8)                        :: P(NPSI)
-      COMPLEX(8)                     :: CSVAR
-      COMPLEX(8)       ,PARAMETER    :: CI=(0.D0,1.D0)
+      INTEGER(4)        ,INTENT(IN)   :: NCHI
+      INTEGER(4)        ,INTENT(IN)   :: NPSI
+      REAL(8)           ,INTENT(IN)   :: X(NPSI)
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSI(NPSI)
+      COMPLEX(8)        ,INTENT(IN)   :: RHO(NCHI,NCHI) ! TARGET DENSITY MATRIX
+      INTEGER(4)        ,INTENT(IN)   :: NC
+      REAL(8)           ,INTENT(OUT)  :: VEC(NC)
+      TYPE(CISTATE_TYPE)              :: PSI1,PSI2
+      COMPLEX(8)                      :: CMAT2(NCHI,NCHI)
+      COMPLEX(8)                      :: CMAT0(NPSI,NPSI)
+      INTEGER(4)                      :: I,J,N,IND
+      REAL(8)                         :: S
+      REAL(8)                         :: P(NPSI)
+      COMPLEX(8)                      :: CSVAR
+      COMPLEX(8)       ,PARAMETER     :: CI=(0.D0,1.D0)
 !     **************************************************************************
       IF(NC.NE.NCHI**2+NPSI**2+1) THEN
         CALL ERROR$STOP('CI_CONSTRAINT')
@@ -2969,6 +2976,8 @@ PRINT*,'MARKE 2'
 !     ** ADD CONSTRAINTS FORCES TO PSIP                                       **
 !     ** CONSTRAINT FORCES ARE EVALUATED FOR THE CURRENT WAVE FUNCTIONS AND   **
 !     ** THE CURRENT PROBABILITIES P0=P(0)                                    **
+!     **                                                                      **
+!     ** PSI0 IS INTENT(OINOUT) BECAUSE IT MAY BECOME CLEANED UP              **
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
@@ -2979,7 +2988,7 @@ PRINT*,'MARKE 2'
       REAL(8)           ,INTENT(IN)   :: X0(NPSI)
       REAL(8)           ,INTENT(INOUT):: XP(NPSI)
       TYPE(CISTATE_TYPE),INTENT(INOUT):: PSIP(NPSI)
-      TYPE(CISTATE_TYPE),INTENT(IN)   :: PSI0(NPSI)
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSI0(NPSI)
       INTEGER(4)        ,INTENT(IN)   :: NC
       REAL(8)           ,INTENT(IN)   :: VEC(NC)
       TYPE(CISTATE_TYPE)              :: PSI1
@@ -3220,7 +3229,7 @@ PRINT*,'..........................TRANSFORMATION DONE'
       ENDDO
       X0(:)=SQRT(P0(:))
       XM(:)=X0(:)
-! HIER UNTERSCHEIDET SICH CHRISTIAN'S VERSION STARK VON MEINER. PB
+! HIER UNTERSCHEIDET SICH CHRISTIANS VERSION STARK VON MEINER. PB
 !
 !     ==========================================================================
 !     == ITERATE TO FIND GROUND STATE                                         ==
@@ -3626,23 +3635,24 @@ STOP 'FORCED'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CI_LAGRANGEMATOLD(NCHI,PSI0,NC,MAT)
 !     **************************************************************************
+!     ** PSI0 IS INTENT(INOUT) BECAUSE IT MAY BE CLEANED UP
 !     **************************************************************************
       USE CI_MODULE
       IMPLICIT NONE
-      INTEGER(4)        ,INTENT(IN)  :: NCHI
-      TYPE(CISTATE_TYPE),INTENT(IN)  :: PSI0
-      INTEGER(4)        ,INTENT(IN)  :: NC
-      REAL(8)           ,INTENT(OUT) :: MAT(NC,NC)
-      TYPE(CISTATE_TYPE)             :: PSI1,PSI2,PSI3,PSI4
-      COMPLEX(8)                     :: CMAT4(NCHI,NCHI,NCHI,NCHI)
-      COMPLEX(8)                     :: CMAT2(NCHI,NCHI)
-      COMPLEX(8)                     :: CMAT0
-      REAL(8)                        :: RMAT2(NCHI,NCHI)
-      REAL(8)                        :: RMAT0
-      INTEGER(4)                     :: IINDEX(2,NC)
-      INTEGER(4)                     :: I,J,K,L,IC1,IC2
-      COMPLEX(8)                     :: CSVAR1,CSVAR2
-      COMPLEX(8)        ,PARAMETER   :: CI=(0.D0,1.D0)
+      INTEGER(4)        ,INTENT(IN)   :: NCHI
+      TYPE(CISTATE_TYPE),INTENT(INOUT):: PSI0
+      INTEGER(4)        ,INTENT(IN)   :: NC
+      REAL(8)           ,INTENT(OUT)  :: MAT(NC,NC)
+      TYPE(CISTATE_TYPE)              :: PSI1,PSI2,PSI3,PSI4
+      COMPLEX(8)                      :: CMAT4(NCHI,NCHI,NCHI,NCHI)
+      COMPLEX(8)                      :: CMAT2(NCHI,NCHI)
+      COMPLEX(8)                      :: CMAT0
+      REAL(8)                         :: RMAT2(NCHI,NCHI)
+      REAL(8)                         :: RMAT0
+      INTEGER(4)                      :: IINDEX(2,NC)
+      INTEGER(4)                      :: I,J,K,L,IC1,IC2
+      COMPLEX(8)                      :: CSVAR1,CSVAR2
+      COMPLEX(8)        ,PARAMETER    :: CI=(0.D0,1.D0)
 !     **************************************************************************
       IF(NC.NE.NCHI**2+1) THEN
         CALL ERROR$STOP('CI_LAGRANGEMAT')
