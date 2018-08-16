@@ -3195,6 +3195,8 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       CALL CONSTANTS('KB',KB)
       EBROAD=KB*300.D0
       DE=1.D-2*EV
+      EMIN=EMIN-20.D0*EBROAD
+      EMAX=EMAX+20.D0*EBROAD
       NE=INT((EMAX-EMIN)/DE)+1
 !
 !     ==========================================================================
