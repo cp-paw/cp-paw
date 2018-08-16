@@ -1461,8 +1461,8 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NFILO
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
-!     **************************************************************************
       INTEGER(4) ::NTASKS_W,THISTASK_W
+!     **************************************************************************
       CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
 !

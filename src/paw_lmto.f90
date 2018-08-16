@@ -895,11 +895,11 @@ LOGICAL(4),SAVE:: TFIRST=.TRUE.
 !     ==========================================================================
 !     == REPORT NEIGHBORLIST FOR STRUCTURE CONSTANTS                          ==
 !     ==========================================================================
-      WRITE(*,FMT='(82("="),T5,"  NEIGHBORLIST FOR SBAR  ")') 
-      DO NN=1,NNS
-        WRITE(*,FMT='("IAT1=",I5," IAT2=",I5," IT=",3I3)') &
-     &          SBAR_NEW(NN)%IAT1,SBAR_NEW(NN)%IAT2,SBAR_NEW(NN)%IT
-      ENDDO
+!!$      WRITE(*,FMT='(82("="),T5,"  NEIGHBORLIST FOR SBAR  ")') 
+!!$      DO NN=1,NNS
+!!$        WRITE(*,FMT='("IAT1=",I5," IAT2=",I5," IT=",3I3)') &
+!!$     &          SBAR_NEW(NN)%IAT1,SBAR_NEW(NN)%IAT2,SBAR_NEW(NN)%IT
+!!$      ENDDO
 !
 !     ==========================================================================
 !     == CALCULATE <PRO|CHI> FROM STRUCTURE CONSTANTS                         ==
@@ -3734,7 +3734,6 @@ COMPLEX(8)  :: PHASE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$ETOT(LMNXX_,NDIMD_,NAT_,DENMAT_,DH_)
-      USE LMTO_MODULE, ONLY : TON
 !     **************************************************************************
 !     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
 !     **  IS USED IN THE AUGMENTATION                                         **
@@ -3743,7 +3742,8 @@ COMPLEX(8)  :: PHASE
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE LMTO_MODULE, ONLY : MODUS
+      USE LMTO_MODULE, ONLY : TON &
+     &                       ,MODUS
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LMNXX_
       INTEGER(4),INTENT(IN) :: NDIMD_
@@ -3763,6 +3763,7 @@ COMPLEX(8)  :: PHASE
       CALL LMTOAUGMENTATION$SETI4('NAT',NAT_)
       CALL LMTOAUGMENTATION$SETI4('NDIMD',NDIMD_)
       CALL LMTOAUGMENTATION$SETI4('LMNXX',LMNXX_)
+!     == SETC8A('DENMAT'...) ALLOCATES INTERNAL ARRAYS AN AND SETS TACTIVE=TRUE
       CALL LMTOAUGMENTATION$SETC8A('DENMAT',LMNXX_*LMNXX_*NDIMD_*NAT_,DENMAT_)
 !
 !     ==========================================================================
@@ -3786,6 +3787,8 @@ COMPLEX(8)  :: PHASE
 !     ==  COLLECT ONE-CENTER HAMILTONIAN FROM LMTOAUGMENTATION OBJECT         ==
 !     ==========================================================================
       CALL LMTOAUGMENTATION$GETC8A('DH',LMNXX_*LMNXX_*NDIMD_*NAT_,DH_)
+!
+!     == DEALLOCATE INTERNAL ARRAYS AND SET OBJECT INACTIVE=====================
       CALL LMTOAUGMENTATION$CLEAN()
 !
       WRITE(*,FMT='(82("="),T30," LMTO$ENERGY DONE ")')
@@ -4268,18 +4271,15 @@ STOP
       SUBROUTINE LMTO_HYBRID()
 !     **************************************************************************
 !     **                                                                      **
-!     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
-!     **  IS USED IN THE AUGMENTATION                                         **
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
       USE LMTO_MODULE, ONLY : TOFFSITE
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.
+      LOGICAL(4),PARAMETER  :: TTEST1=.FALSE.
+      LOGICAL(4),PARAMETER  :: TTEST2=.false.
       INTEGER(4)            :: SWITCH
-INTEGER(4) ::IX,NN,IND1,IND2,IND3
-REAL(8)    :: XDELTA,XSVAR,XENERGY
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -4293,7 +4293,7 @@ REAL(8)    :: XDELTA,XSVAR,XENERGY
       CALL TIMING$CLOCKON('NTBODENMAT')
       CALL LMTO_NTBODENMAT_NEW()
       CALL TIMING$CLOCKOFF('NTBODENMAT')
-IF(TTEST) THEN
+IF(TTEST1) THEN
   PRINT*,'MARKE BEFORE LMTO_LOCNATORB'
   CALL LMTO_LOCNATORB()
   PRINT*,'MARKE AFTER LMTO_LOCNATORB'
@@ -4308,13 +4308,6 @@ END IF
 !STOP 'FORCED'
 
 !!$      CALL LMTO$REPORTSBAR(6)
-
-!!$PRINT*,'FUDGE WARNING!!!!! DENSITY MATRIX OVERWRITTEN FOR H2 TEST'
-!!$DO NN=1,SIZE(DENMAT)
-!!$  DENMAT(NN)%MAT=0.D0
-!!$  DENMAT(NN)%MAT(1,1,1)=0.60266D0
-!!$ENDDO
-
 !!$      CALL LMTO$REPORTOVERLAP(6)
 !STOP 'FORCED'
 !
@@ -4324,29 +4317,14 @@ END IF
 !!$      CALL LMTO$REPORTDENMAT(6)
 !!$STOP 'FORCED'
 !
-!!$NN=2
-!!$IND1=1
-!!$IND2=2
-!!$IND3=1
-!!$XSVAR=DENMAT(NN)%MAT(IND1,IND2,IND3)
-!!$XDELTA=1.D-2
-!!$IX=-3
-!!$1000 CONTINUE
-!!$IX=IX+1
-!!$DENMAT(NN)%MAT(IND1,IND2,IND3)=XSVAR+XDELTA*REAL(IX,KIND=8)
-!!$XENERGY=0.D0
-!
 !     ==========================================================================
 !     ==  CALCULATE ENERGY                                                    ==
 !     ==========================================================================
+      IF(TTEST2) CALL LMTO_TESTHYBRIDENERGY() !STOPS AFTER TEST
+!
       CALL TIMING$CLOCKON('NTBOETOT')
-      CALL LMTO_SIMPLEENERGYTEST2_NEW()
+      CALL LMTO_HYBRIDENERGY()
       CALL TIMING$CLOCKOFF('NTBOETOT')
-!!$WRITE(*,*)XDELTA*REAL(IX,8),HAMIL(NN)%MAT(IND1,IND2,IND3)*4.D0 !FACTOR FOUR TO COMPENSATE HFWEIGHT
-!!$IF(IX.EQ.3) STOP 'FORCED'
-!!$DEALLOCATE(HAMIL)
-!!$GOTO 1000
-!!$STOP
 !
 !     ==========================================================================
 !     ==  CONVERT HAMIL INTO HTBC
@@ -4365,6 +4343,146 @@ END IF
 !     ==========================================================================
       CALL LMTO_CLEANDENMAT_NEW()
       RETURN
+      END
+
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE  LMTO_TESTHYBRIDENERGY()
+!     **************************************************************************
+!     ** TEST ROUTINE FOR LMTO_HYBRIDENERGY                                   **
+!     ** LMTO HYBRIDENERGY CALCULATES THE HARTREE-FOCK CORRECTION OF THE      **
+!     ** HYBRID FUNCTIONALS IN THE LOCAL BASIS.                               **
+!     ** LMTO_HYBRIDENERGY SUMS OVER ALL ATOMS.                               **
+!     **                                                                      **
+!     ** THE MATRIX ELEMENTS TO BE TESTED NEED TO BE SELECTED BY HAND         **
+!     **************************************************************************
+      USE LMTO_MODULE             ,ONLY: DENMAT=>DENMAT_NEW &
+     &                                  ,HAMIL=>HAMIL_NEW
+      USE WAVES_MODULE            ,ONLY: NSPIN,NDIM
+!     __ DENMAT,DATH ARE COMPLEX(8),DIMENSION (LMNXX,LMNXX,NDIMD,NAT)
+      USE LMTOAUGMENTATION_MODULE, ONLY: DENMAT_PARTWAVE=>DENMAT &
+     &                                  ,DATH_PARTWAVE=>DATH
+      IMPLICIT NONE
+      INTEGER(4),PARAMETER  :: NIX=3
+      REAL(8)   ,PARAMETER  :: XDELTA=1.D-2
+      REAL(8)   ,PARAMETER  :: YDELTA=1.D-2
+      INTEGER(4)            :: LMNXX,NDIMD,NAT
+      INTEGER(4)            :: LMN1,LMN2,IDIMD,IAT
+      INTEGER(4)            :: NN,IND1,IND2,IND3
+      REAL(8)               :: XSVAR,YSVAR
+      COMPLEX(8)            :: YCSVAR,YCDELTA
+      REAL(8)               :: XVAL(-NIX:NIX)
+      REAL(8)               :: XDER(-NIX:NIX)
+      REAL(8)               :: YDER(-NIX:NIX)
+      INTEGER(4)            :: IX
+!     **************************************************************************
+      CALL LMTOAUGMENTATION$GETI4('NAT',NAT)
+      CALL LMTOAUGMENTATION$GETI4('LMNXX',LMNXX)
+      CALL LMTOAUGMENTATION$GETI4('NDIMD',NDIMD)
+!
+!     ==========================================================================
+!     == SELECT MATRIX ELEMENTS TO BE SCANNED                                 ==
+!     ==========================================================================
+!     == LOCAL-ORBITAL DENSITY MATRIX
+      NN=1
+      IND1=2
+      IND2=2
+      IND3=1
+!     == PARTIAL WAVE DENSITY MATRIX
+      LMN1=1
+      LMN2=2
+      IDIMD=IND3
+      IAT=1
+!
+!     ==========================================================================
+!     == REPORT                                                               ==
+!     ==========================================================================
+      WRITE(*,FMT='(82("="))')
+      WRITE(*,FMT='(82("="),T20," TEST LMTO_HYBRIDENERGY  ")')
+      WRITE(*,FMT='(82("="))')
+      WRITE(*,FMT='("LOCAL-ORBITAL DENSITY MATRIX")')
+      WRITE(*,FMT='(49("."),":",ES10.2,T1,"DISPLACEMENT")')XDELTA
+      WRITE(*,FMT='(49("."),":",I3,T1,"ATOM INDEX")')IAT
+      WRITE(*,FMT='(49("."),":",2I3,T1,"LMN1,LMN2")')IND1,IND2
+      WRITE(*,FMT='(49("."),":",I3,T1,"IDIMD")')IND3
+      WRITE(*,FMT='("PARTIAL-WAVE DENSITY MATRIX")')
+      WRITE(*,FMT='(49("."),":",ES10.2,T1,"DISPLACEMENT")')YDELTA
+      WRITE(*,FMT='(49("."),":",I3,T1,"ATOM INDEX")')IAT
+      WRITE(*,FMT='(49("."),":",2I3,T1,"LMN1,LMN2")')LMN1,LMN2
+      WRITE(*,FMT='(49("."),":",I3,T1,"IDIMD")')IDIMD
+!
+!     ==========================================================================
+!     == CHECK ARRAY SIZE                                                     ==
+!     ==========================================================================
+      IF(    LMN1 .GT.LMNXX &
+     &   .OR.LMN2 .GT.LMNXX &
+     &   .OR.IDIMD.GT.NDIMD &
+     &   .OR.IAT  .GT.NAT) THEN
+        CALL ERROR$MSG('ERROR STOP DURING TESTING')
+        CALL ERROR$MSG('LMN1,LMN2,IDIMD, OR IAT OUT OF RANGE')
+        CALL ERROR$I4VAL('LMN1',LMN1)
+        CALL ERROR$I4VAL('MAX(LMN1)',LMNXX)
+        CALL ERROR$I4VAL('LMN2',LMN2)
+        CALL ERROR$I4VAL('MAX(LMN2)',LMNXX)
+        CALL ERROR$I4VAL('IDIMD',IDIMD)
+        CALL ERROR$I4VAL('MAX(IDIMD)',NDIMD)
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$I4VAL('MAX(IAT)',NAT)
+        CALL ERROR$STOP('LMTO_TESTHYBRIDENERGY')
+      END IF
+      IF(NN.GT.SIZE(DENMAT)) THEN
+        CALL ERROR$MSG('ERROR STOP DURING TESTING')
+        CALL ERROR$MSG('NN OUT OF RANGE')
+        CALL ERROR$STOP('LMTO_TESTHYBRIDENERGY')
+      END IF
+      IF(    IND1.GT.SIZE(DENMAT(NN)%MAT(:,1,1)) &
+     &   .OR.IND2.GT.SIZE(DENMAT(NN)%MAT(1,:,1)) &
+     &   .OR.IND3.GT.SIZE(DENMAT(NN)%MAT(1,1,:))) THEN
+        CALL ERROR$MSG('ERROR STOP DURING TESTING (TTEST2)')
+        CALL ERROR$MSG('IND1,IND2 OR IND3 OUT OF RANGE')
+        CALL ERROR$I4VAL('IND1',IND1)
+        CALL ERROR$I4VAL('MAX(IND1)',SIZE(DENMAT(NN)%MAT(:,1,1)))
+        CALL ERROR$I4VAL('IND2',IND2)
+        CALL ERROR$I4VAL('MAX(IND2)',SIZE(DENMAT(NN)%MAT(1,:,1)))
+        CALL ERROR$I4VAL('IND3',IND3)
+        CALL ERROR$I4VAL('MAX(IND3)',SIZE(DENMAT(NN)%MAT(1,1,:)))
+        CALL ERROR$STOP('LMTO_TESTHYBRIDENERGY')
+      END IF
+!
+!     ==========================================================================
+!     == CALCULATE ENERGIES AND DERIBATIVES                                   ==
+!     ==========================================================================
+      XSVAR=DENMAT(NN)%MAT(IND1,IND2,IND3)
+      YCSVAR=DENMAT_PARTWAVE(LMN1,LMN2,IDIMD,IAT)
+      YSVAR=REAL(YCSVAR,KIND=8)
+      YCDELTA=CMPLX(YDELTA,0.D0,KIND=8)
+      DO IX=-NIX,NIX,1
+        DENMAT(NN)%MAT(IND1,IND2,IND3)      = XSVAR+ XDELTA*REAL(IX,KIND=8)
+        DENMAT_PARTWAVE(LMN1,LMN2,IDIMD,IAT)=YCSVAR+YCDELTA*REAL(IX,KIND=8)
+        DATH_PARTWAVE(:,:,:,:)=(0.D0,0.D0)
+!
+        CALL LMTO_HYBRIDENERGY()
+!
+        CALL ENERGYLIST$RETURN('LMTO INTERFACE',XVAL(IX))
+        XDER(IX)=HAMIL(NN)%MAT(IND1,IND2,IND3)
+        YDER(IX)=REAL(DATH_PARTWAVE(LMN1,LMN2,IDIMD,IAT),KIND=8)
+        DEALLOCATE(HAMIL) ! IS ALLOCATED IN LMTO_HYBRIDENERGY
+      ENDDO
+!
+!     ==========================================================================
+!     == REPORT RESULT                                                        ==
+!     ==========================================================================
+      DO IX=1,NIX
+        XSVAR=(XVAL(IX)-XVAL(-IX))/(2.D0*REAL(IX,KIND=8))
+        WRITE(*,FMT='("-->VDER ",3F30.20)')REAL(IX,8),XSVAR &
+ &          ,0.5D0*(XDER(IX)+XDER(-IX))*XDELTA+0.5D0*(YDER(IX)+YDER(-IX))*YDELTA
+      ENDDO
+!
+!     ==========================================================================
+!     == STOPPING IS REQUIRED BECAUSE INTERNAL DATA HAVE BEEN CHANGED         ==
+!     ==========================================================================
+      CALL ERROR$MSG('FORCED STOP DURING TESTING (TTEST2)')
+      CALL ERROR$STOP('LMTO_TESTHYBRIDENERGY')
+      STOP
       END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.......
@@ -4615,7 +4733,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_SIMPLEENERGYTEST2_NEW()
+      SUBROUTINE LMTO_HYBRIDENERGY()
 !     **************************************************************************
 !     **  WORK OUT THE ENERGY USING THE LOCAL APPROXIMATION                   **
 !     **  TAILED PARTIAL WAVES                                                **
@@ -4631,6 +4749,7 @@ END IF
       USE MPE_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR2=.FALSE.
       LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNS
@@ -4669,12 +4788,12 @@ REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       LOGICAL(4),PARAMETER  :: TPARALLEL=.FALSE.
       INTEGER(4)            :: THISTASK,NTASKS
 !     **************************************************************************
-                            CALL TRACE$PUSH('LMTO_SIMPLEENERGYTEST2')
-PRINT*,'============ ENERGYTEST2_NEW ============================='
+                            CALL TRACE$PUSH('LMTO_HYBRIDENERGY')
+if(tpr2)PRINT*,'============ lmto_hybridenergy ============================='
       NAT=SIZE(ISPECIES)
       IF(ALLOCATED(HAMIL)) THEN
         CALL ERROR$MSG('HAMIL IS ALLOCATED')
-        CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2_NEW')
+        CALL ERROR$STOP('LMTO_HYBRIDENERGY')
       END IF
       NND=SIZE(DENMAT)
       ALLOCATE(HAMIL(NND))
@@ -4735,7 +4854,7 @@ PRINT*,'============ ENERGYTEST2_NEW ============================='
         IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
         HFSCALE=1.D0
         IF(HFWEIGHT.GT.0.D0)HFSCALE=LHFWEIGHT/HFWEIGHT
-PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
+if(tpr2)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
 !
 !       == FIND ELEMENTS FOR DENSITY MATRIX, HAMILTONIAN AND STRUCTURE CONSTANTS
         NND=SIZE(DENMAT)
@@ -4828,13 +4947,15 @@ PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
         END IF
         HAMIL(INH)%MAT=HAMIL(INH)%MAT+H*HFSCALE
         EXTOT=EXTOT+EX*HFSCALE
-PRINT*,'TOTAL VALENCE CHARGE ON ATOM=..............',IAT,QSPIN(1)
-PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=................',IAT,QSPIN(2:NDIMD)
-PRINT*,'EXACT VALENCE EXCHANGE ENERGY FOR ATOM=....',IAT,EX
+IF(TPR2) THEN
+  PRINT*,'TOTAL VALENCE CHARGE ON ATOM=..............',IAT,QSPIN(1)
+  PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=................',IAT,QSPIN(2:NDIMD)
+  PRINT*,'EXACT VALENCE EXCHANGE ENERGY FOR ATOM=....',IAT,EX
+END IF
         EAT=EAT+EX
         EX=0.D0
 !       ========================================================================
-!       == ADD CORE VALENCE EXCHANGE                                          ==
+!       == ADD CORE-VALENCE EXCHANGE                                          ==
 !       ========================================================================
         IF(HYBRIDSETTING(ISP)%TCV) THEN
 IF(.TRUE.) THEN
@@ -4859,7 +4980,7 @@ ELSE
           IF(TCTE) THEN
             CALL LMTO_EXPANDLOCALWITHCTE('FWRD',IAT,NDIMD,LMNX,LMNXT,D,DT)
           ELSE
-            CALL ERROR$STOP('LMTO_SIMPLEENERGYTEST2_NEW')
+            CALL ERROR$STOP('LMTO_HYBRIDENERGY')
             CALL LMTO_EXPANDLOCAL('FWRD',1,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
           END IF
 !  
@@ -4881,7 +5002,7 @@ PRINT*,'TCTE ',TCTE,SUM(DT*HT)-EX,EX,IAT,ISP,LMNX,LMNXT,NDIMD &
           EXTOT=EXTOT+EX*HFSCALE
           EAT=EAT+EX
 END IF
-PRINT*,'CORE VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
+if(tpr2)PRINT*,'CORE-VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
           EX=0.D0
         END IF
 !
@@ -4940,10 +5061,12 @@ END IF
         END IF
         HAMIL(INH)%MAT=HAMIL(INH)%MAT-H*HFSCALE
         EXTOT=EXTOT-EX*HFSCALE  !HFWEIGT IS MULTIPLIED ON LATER
-IF(.NOT.TPARALLEL) THEN
-  PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
-  PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM........... =',IAT,EAT
-  PRINT*,'EXCHANGE-XORRECTION FOR ATOM............. =',IAT,EAT-EX
+IF(TPR2) THEN
+  IF(.NOT.TPARALLEL) THEN
+    PRINT*,'DOUBLE COUNTING CORRECTION ENERGY FOR ATOM=',IAT,-EX
+    PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM........... =',IAT,EAT
+    PRINT*,'EXCHANGE-XORRECTION FOR ATOM............. =',IAT,EAT-EX
+  END IF
 END IF
 !
 !!$IF(TACTIVE) THEN 
@@ -4988,7 +5111,7 @@ END IF
       END IF
 !
 !     ==========================================================================
-!     == MAKE HAMILTONIAN HERMITESCH                                          ==
+!     == MAKE HAMILTONIAN HERMITian                                           ==
 !     ==========================================================================
 !      CALL LMTO$SYMMETRIZEHAMIL()
 !
@@ -5004,7 +5127,7 @@ END IF
 !     ==========================================================================
 !     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
 !     ==========================================================================
-PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
+if(tpr2)PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
@@ -5841,7 +5964,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CUT(:)=EXP(-R**2)
 !
 !     ==========================================================================
-!     ==  DEWFINE DISPLACEMENTS                                               ==
+!     ==  DEFINE DISPLACEMENTS                                                ==
 !     ==========================================================================
       LM=2
       L=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
@@ -5895,19 +6018,19 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     **                                                                      **
 !     **  THIS ROUTINE IS ALMOST IDENTICAL TO THE ROUTINE AUGMENTATION_XC     **
 !     **  OF THE AUGMENTATION OBJECT PAW_AUGMENTATION.F90. IT DIFFERS IN THAT **
-!     **  THE ENERGY DENSITY IS PROVIDED ON A RADIAL GRID, SO THAT            **
-!     **       EXC=4\PI\INT_0^\INFTY DR R^2 FXC(R)                            **
+!     **  THE ENERGY DENSITY IS MULTIPLIED WITH A CUTOFF FUNCTION CUT(R)      **
+!     **  SO THAT                                                             **
+!     **       EXC=4\PI\INT_0^\INFTY DR R^2 CUT(R)*FXC(R)                     **
 !     **  IS THE EXCHANGE-CORRELATION ENERGY.                                 **
 !     **                                                                      **
-!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE                          **
-!     **  SPHERICAL CONTRIBUTION OF THE DENSITY UP TO QUADRATIC               **
-!     **  ORDER IN THE NON-SPHERICAL CONTRIBUTIONS                            **
+!     **  THE TOTAL ENERGY IS AN EXPANSION ABOUT THE SPHERICAL CONTRIBUTION   **
+!     **  OF THE DENSITY UP TO QUADRATIC ORDER IN THE NON-SPHERICAL CONTRIBS. **
 !     **                                                                      **
-!     **  EXC = EXC(XVAL(L=0)*Y0)                                             **
-!     **      + 0.5 * D2[EXC]/D[XVAL(L=0)*Y0]**2 * XVAL(L>0)**2               **
+!     **       FXC = FXC(XVAL(L=0)*Y0)                                        **
+!     **           + 0.5 * D2[FXC]/DXVAL(L=0)*Y0]**2 * XVAL(L>0)**2           **
 !     **                                                                      **
 !     **  WHERE XVAL=(/RHOT,RHOS,GRHOT**2,GRHOS**2,GRHOT*GRHOS/)              **
-!     **  IS AN SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.             **
+!     **  IS A SPHERICAL HARMONICS EXPANSION ON THE RADIAL GRID.              **
 !     **                                                                      **
 !     **  DEPENDECIES:                                                        **
 !     **    DFT                                                               **
@@ -5922,7 +6045,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
 !     **                                                                      **
 !     **  REMARK: FOR A COLLINEAR DENSITY THE ROUTINE GIVES DIFFERENT RESULTS **
 !     **          WITH NDIMD=2 AND NDIMD=4 DUE TO THE TAYLOR EXPANSION IN     **
-!     **          ANGULAR MOMENTUM EXPANSIONS                                 **
+!     **          ANGULAR-MOMENTUM EXPANSIONS                                 **
 !     **                                                                      **
 !     ****************************************** P.E. BLOECHL, 1996 ************
       IMPLICIT NONE
@@ -5932,10 +6055,10 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       INTEGER(4),INTENT(IN) :: LMRX
       INTEGER(4),INTENT(IN) :: NDIMD      ! CAN BE 1,2,4
       REAL(8)   ,INTENT(IN) :: RHOIN(NR,LMRX,NDIMD)
-      REAL(8)   ,INTENT(IN) :: CUT(NR)
-      REAL(8)   ,INTENT(OUT):: EXC
-      REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)
-      REAL(8)   ,INTENT(OUT):: VCUT(NR)
+      REAL(8)   ,INTENT(IN) :: CUT(NR)             ! CUTOFF FOR DENSITY
+      REAL(8)   ,INTENT(OUT):: EXC                 ! INT:CUT*FXC[RHOIN]
+      REAL(8)   ,INTENT(OUT):: VXC(NR,LMRX,NDIMD)  ! DEXC/DRHOIN
+      REAL(8)   ,INTENT(OUT):: VCUT(NR)            ! DEXC/DCUT(:)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
@@ -5993,7 +6116,7 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
         CALL AUGMENTATION_NCOLLTRANS(GID,'RHO',NR,LMRX,RHOIN,RHO,VRHO,VXC)
       END IF
 !
-!     == IMAX ALLOWS TO RESTRICT SOME LOOPS (1:5) TO (1:IMAX)
+!     == IMAX ALLOWS TO RESTRICT SOME LOOPS (1:5) TO (1:IMAX) ==================
       IF(TGRA) THEN
         IF(NSPIN.EQ.2) THEN; IMAX=5; ELSE; IMAX=3; END IF
       ELSE 
@@ -6083,7 +6206,6 @@ PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       ENDDO
       CALL RADIAL$INTEGRAL(GID,NR,FXC(:)*R(:)**2,EXC)
       CALL TRACE$PASS('AFTER DFT')
-!
 !
 !     ==========================================================================
 !     ==  TRANSFORM POTENTIALS FOR SPHERICAL PART                             ==
@@ -6354,10 +6476,6 @@ IF(IAT.NE.1) RETURN
 !     **************************************************************************
       ETOT=0.D0
       HAM=0.D0
-!!$ALLOCATE(POT_ALL(NR,LMRX,NDIMD))  ! POTENTIAL FOR PARTIAL-WAVE DENSITY 
-!!$POT_ALL=0.D0
-!!$CALL LMTOAUGMENTATION$SETPOT(GID,NR,LMRX,NDIMD,-POT_ALL*HFSCALE)
-!!$RETURN
 !
       LMRX=(LRX+1)**2
       CALL RADIAL$R(GID,NR,R)
@@ -6837,6 +6955,8 @@ END MODULE LMTOAUGMENTATION_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTOAUGMENTATION$ADDPOT(GID,NR,LMRX,NDIMD_,POT)
 !     **************************************************************************
+!     ** CALCULATES MATRIX ELEMENT OF THE POTENTIAL WITH PARTIAL WAVES        **
+!     ** AND ADDS THEM TO THE MODULE-ARRAY DATH                               **
 !     **************************************************************************
       USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,NDIMD,DATH,IAT
       IMPLICIT NONE
