@@ -3732,6 +3732,549 @@ COMPLEX(8)  :: PHASE
       RETURN
       END
 !
+!........1.........2.........3.........4.........5.........6.........7.........8
+MODULE LMTOAUGMENTATION_MODULE
+!*******************************************************************************
+!** THE LMTOAUGMENTATION IS A SUBOBJECT OF LMTO, WHICH IS USED TO CONSTRUCT   **
+!** PART OF THE DOUBLE COUNTING. IN THE DOUBLE COUNTING THE TOTAL ONE-CENTER  **
+!** EXPANSION OF THE DENSITY ENTERS, WHICH MAY DIFFER FROM THE DENSITY OF THE **
+!** LOCAL ORBITALS.                                                           **
+!**                                                                           **
+!** TACTIVE: TACTIVE IS SET TO TRUE WHEN THE DENSITY OF STATES IS SUPPLIED    **
+!**          AND IT IS SET TO FALSE BY LMTOAUGMENTATION$CLEAN. DURING ONE     **
+!**          SUCH LMTOAGMENTATION$ADD... IS ADDING                            **
+!**                                                                           **
+!*******************************************************************************
+IMPLICIT NONE
+LOGICAL(4),SAVE        :: TINI=.FALSE.
+LOGICAL(4),SAVE        :: TACTIVE=.FALSE.
+INTEGER(4)             :: NAT=0
+INTEGER(4)             :: IAT=0           ! ATOM FOCUS
+INTEGER(4)             :: NDIMD=0
+INTEGER(4)             :: LMNXX=0
+COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) !(LMNXX,LMNXX,NDIMD,NAT)
+COMPLEX(8),ALLOCATABLE :: DATH(:,:,:,:)   !(LMNXX,LMNXX,NDIMD,NAT)
+END MODULE LMTOAUGMENTATION_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION_INITIALIZE()
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,NDIMD,LMNXX
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(TINI) RETURN
+      CALL ATOMLIST$NATOM(NAT)
+      IF(NDIMD.EQ.0) THEN
+        CALL ERROR$MSG('NDIMD HAS NOT BEEN SET')
+        CALL ERROR$STOP('LMTOAUGMENTATION_INITIALIZE')
+      END IF
+      IF(LMNXX.EQ.0) THEN
+        CALL ERROR$MSG('LMNXX HAS NOT BEEN SET')
+        CALL ERROR$STOP('LMTOAUGMENTATION_INITIALIZE')
+      END IF
+      TINI=.TRUE.
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$CLEAN()
+!     **************************************************************************
+!     ** FREE MEMORY. NEEDS TO BE ACTIVATED BY SETTING A DENSITY MATRIX
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TACTIVE,IAT,DENMAT,DATH
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(ALLOCATED(DENMAT))DEALLOCATE(DENMAT)
+      IF(ALLOCATED(DATH))  DEALLOCATE(DATH)
+      IAT=0                      ! REMOVE ATOM FOCUS
+      TACTIVE=.FALSE.
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$GETI4(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,IAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(OUT):: VAL
+!     **************************************************************************
+      IF(ID.EQ.'NAT') THEN
+        VAL=NAT   !USE ONLY TO INSPECT THIS OBJECT
+      ELSE IF(ID.EQ.'IAT') THEN
+        VAL=IAT   !USE ONLY TO INSPECT THIS OBJECT
+      ELSE IF(ID.EQ.'LMNXX') THEN
+        VAL=LMNXX   !USE ONLY TO INSPECT THIS OBJECT
+      ELSE IF(ID.EQ.'NDIMD') THEN
+        VAL=NDIMD !USE ONLY TO INSPECT THIS OBJECT
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$SETI4(ID,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,IAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: VAL
+!     **************************************************************************
+      IF(ID.EQ.'NAT') THEN
+        IF(TINI.AND.NAT.NE.VAL) THEN
+          CALL ERROR$MSG('NAT MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
+        NAT=VAL
+      ELSE IF(ID.EQ.'IAT') THEN
+        IAT=VAL
+      ELSE IF(ID.EQ.'LMNXX') THEN
+        IF(TINI.AND.LMNXX.NE.VAL) THEN
+          CALL ERROR$MSG('LMNXX MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
+        LMNXX=VAL
+      ELSE IF(ID.EQ.'NDIMD') THEN
+        IF(TINI.AND.NDIMD.NE.VAL) THEN
+          CALL ERROR$MSG('NDIMD MUST NOT BE CHANGED AFTER INITIALIZATION')
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+        END IF
+        NDIMD=VAL
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$SETC8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE &
+     &                                   ,NAT,LMNXX,NDIMD,DENMAT,DATH
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      COMPLEX(8)  ,INTENT(IN) :: VAL(LEN)
+      INTEGER(4)              :: I
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(ID.EQ.'DENMAT') THEN
+        IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$I4VAL('LMNXX',LMNXX)
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$I4VAL('NAT',NAT)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
+        END IF
+        IF(TACTIVE) THEN
+          CALL ERROR$MSG('DENSITY MATRIX MUST NOT BE CHANGED IN ACTIVE STATE')
+          CALL ERROR$MSG('CALL LMTOAUGMENTATION$CLEAN TO RESET OBJECT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
+        END IF 
+        ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
+        ALLOCATE(DATH(LMNXX,LMNXX,NDIMD,NAT))
+        DATH=(0.D0,0.D0)
+        DENMAT=RESHAPE(VAL,(/LMNXX,LMNXX,NDIMD,NAT/))
+        TACTIVE=.TRUE.
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$ADDC8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
+     &                                   ,NAT,LMNXX,NDIMD,DENMAT,DATH
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      COMPLEX(8)  ,INTENT(IN) :: VAL(LEN)
+      INTEGER(4)              :: ISP,LNX,LMNX
+      INTEGER(4)  ,ALLOCATABLE:: LOX(:)
+      INTEGER(4)              :: I
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(ID.EQ.'DH') THEN
+        IF(.NOT.TACTIVE) THEN
+          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
+        END IF 
+        IF(IAT.EQ.0) THEN
+          CALL ERROR$MSG('NO ATOM FOCUS')
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
+        END IF
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('LNX',LNX)
+        ALLOCATE(LOX(LNX))
+        CALL SETUP$GETI4A('LOX',LNX,LOX)
+        CALL SETUP$UNSELECT()
+        LMNX=SUM(2*LOX+1)
+        IF(LMNX*LMNX*NDIMD.NE.LEN) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$I4VAL('LMNX',LMNX)
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$I4VAL('IAT',IAT)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
+        END IF
+        DATH(:LMNX,:LMNX,:,IAT)=DATH(:LMNX,:LMNX,:,IAT) &
+     &                                         +RESHAPE(VAL,(/LMNX,LMNX,NDIMD/))
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$GETC8A(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
+     &                                    ,NAT,LMNXX,NDIMD,DATH,DENMAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      COMPLEX(8)  ,INTENT(OUT):: VAL(LEN)
+      INTEGER(4)              :: ISP,LNX,LMNX
+      INTEGER(4)  ,ALLOCATABLE:: LOX(:)
+      INTEGER(4)              :: I
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(ID.EQ.'DH') THEN
+        IF(.NOT.TACTIVE) THEN
+          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+        END IF 
+        IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+          CALL ERROR$I4VAL('LMNXX',LMNXX)
+          CALL ERROR$I4VAL('NDIMD',NDIMD)
+          CALL ERROR$I4VAL('NAT',NAT)
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+        END IF
+        VAL=RESHAPE(DATH,(/LMNXX*LMNXX*NDIMD*NAT/))
+!
+      ELSE IF(ID.EQ.'DENMAT') THEN
+        IF(.NOT.TACTIVE) THEN
+          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+        END IF 
+        IF(IAT.EQ.0) THEN  ! NO ATOM FOCUS: DENSITY MATRIX FOR ALL ATOMS IS PROVIDED
+          IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$I4VAL('LMNXX',LMNXX)
+            CALL ERROR$I4VAL('NDIMD',NDIMD)
+            CALL ERROR$I4VAL('NAT',NAT)
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+          END IF
+          VAL=RESHAPE(DENMAT,(/LMNXX*LMNXX*NDIMD*NAT/))
+        ELSE 
+          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+          CALL SETUP$ISELECT(ISP)
+          CALL SETUP$GETI4('LNX',LNX)
+          ALLOCATE(LOX(LNX))
+          CALL SETUP$GETI4A('LOX',LNX,LOX)
+          CALL SETUP$UNSELECT()
+          LMNX=SUM(2*LOX+1)
+          IF(LMNX*LMNX*NDIMD.NE.LEN) THEN
+            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+            CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
+            CALL ERROR$I4VAL('LMNX',LMNX)
+            CALL ERROR$I4VAL('NDIMD',NDIMD)
+            CALL ERROR$I4VAL('IAT',IAT)
+            CALL ERROR$CHVAL('ID',ID)
+            CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+          END IF
+          VAL=RESHAPE(DENMAT(:LMNX,:LMNX,:,IAT),(/LMNX*LMNX*NDIMD/))
+        END IF
+!
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$GETRHO(GID,NR,LMRX,NDIMD_,RHO)
+!     **************************************************************************
+!     ** VALENCE DENSITY FROM PARTIAL WAVES
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
+     &                                   ,NAT,LMNXX,NDIMD,DENMAT
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: GID
+      INTEGER(4),INTENT(IN)  :: NR
+      INTEGER(4),INTENT(IN)  :: LMRX
+      INTEGER(4),INTENT(IN)  :: NDIMD_
+      REAL(8)   ,INTENT(OUT) :: RHO(NR,LMRX,NDIMD)
+      INTEGER(4)             :: ISP
+      INTEGER(4)             :: GID1
+      INTEGER(4)             :: NR1
+      INTEGER(4)             :: LNX
+      INTEGER(4)             :: LMNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)    !(NR,LNX)
+      COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:)  !(LMNX,LMNX)
+      INTEGER(4)             :: IDIMD
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(IAT.EQ.0) THEN
+        CALL ERROR$MSG('ATOM INDEX NOT SET')
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
+      END IF
+      IF(.NOT.TACTIVE) THEN
+        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
+      END IF 
+      IF(NDIMD_.NE.NDIMD) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUES OF NDIMD')
+        CALL ERROR$I4VAL('NDIMD ON INPUT',NDIMD_)
+        CALL ERROR$I4VAL('NDIMD FROM MODULE',NDIMD)
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
+      END IF
+
+      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETI4('GID',GID1)
+      IF(GID.NE.GID1) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUE OF GID')
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$I4VAL('GID-ON-INPUT',GID)
+        CALL ERROR$I4VAL('SET-GID',GID1)
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
+      END IF
+      CALL RADIAL$GETI4(GID,'NR',NR1)
+      IF(NR.NE.NR1) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUE OF NR')
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$I4VAL('NR-ON-INPUT',NR)
+        CALL ERROR$I4VAL('SET-NR',NR1)
+        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
+      END IF
+      CALL SETUP$GETI4('LNX',LNX)
+      ALLOCATE(LOX(LNX))
+      CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(AEPHI(NR,LNX))
+      CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+      CALL SETUP$UNSELECT()
+      LMNX=SUM(2*LOX(:LNX)+1)
+      ALLOCATE(DENMAT1(LMNX,LMNX))
+      DO IDIMD=1,NDIMD
+        DENMAT1(:,:)=DENMAT(:LMNX,:LMNX,IDIMD,IAT)
+        CALL AUGMENTATION_RHO(NR,LNX,LOX,AEPHI,LMNX,DENMAT1,LMRX,RHO(:,:,IDIMD))
+      ENDDO
+      DEALLOCATE(AEPHI)
+      DEALLOCATE(LOX)
+      DEALLOCATE(DENMAT1)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$MPECOMBINEPOT()
+!     **************************************************************************
+!     ** PARALLELIZATION:
+!     ** SUMS DATH OVER ALL PROCESSORS IN THE MONOMER GROUP                   **
+!     ** ASSUMES THAT DATH OF A GIVEN ATOM IS ONLY CALCULATED ON ONE TASK     **
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,DATH
+      USE MPE_MODULE
+      IMPLICIT NONE
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(.NOT.TACTIVE) THEN
+        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+        CALL ERROR$STOP('LMTOAUGMENTATION$MPECOMBINEPOT')
+      END IF 
+      CALL MPE$COMBINE('MONOMER','+',DATH)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTOAUGMENTATION$ADDPOT(GID,NR,LMRX,NDIMD_,POT)
+!     **************************************************************************
+!     ** CALCULATES MATRIX ELEMENT OF THE POTENTIAL WITH PARTIAL WAVES        **
+!     ** AND ADDS THEM TO THE MODULE-ARRAY DATH                               **
+!     **************************************************************************
+      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,NDIMD,DATH,IAT
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: GID
+      INTEGER(4),INTENT(IN)  :: NR
+      INTEGER(4),INTENT(IN)  :: LMRX
+      INTEGER(4),INTENT(IN)  :: NDIMD_
+      REAL(8)   ,INTENT(IN)  :: POT(NR,LMRX,NDIMD)
+      INTEGER(4)             :: ISP
+      INTEGER(4)             :: GID1
+      INTEGER(4)             :: NR1
+      INTEGER(4)             :: LNX
+      INTEGER(4)             :: LMNX
+      INTEGER(4),ALLOCATABLE :: LOX(:)
+      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)    !(NR,LNX)
+      REAL(8)                :: AECORE(NR)
+      COMPLEX(8),ALLOCATABLE :: DATH1(:,:,:)  !(LMNX,LMNX)
+!     **************************************************************************
+      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
+      IF(IAT.EQ.0) THEN
+        CALL ERROR$MSG('ATOM INDEX NOT SET')
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
+      END IF
+      IF(.NOT.TACTIVE) THEN
+        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
+      END IF 
+      IF(NDIMD_.NE.NDIMD) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUES OF NDIMD')
+        CALL ERROR$I4VAL('NDIMD ON INPUT',NDIMD_)
+        CALL ERROR$I4VAL('NDIMD FROM MODULE',NDIMD)
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
+      END IF
+      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+      CALL SETUP$ISELECT(ISP)
+      CALL SETUP$GETI4('GID',GID1)
+      IF(GID.NE.GID1) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUE OF GID')
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$I4VAL('GID-ON-INPUT',GID)
+        CALL ERROR$I4VAL('SET-GID',GID1)
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
+      END IF
+      CALL RADIAL$GETI4(GID,'NR',NR1)
+      IF(NR.NE.NR1) THEN
+        CALL ERROR$MSG('INCONSISTENT VALUE OF NR')
+        CALL ERROR$I4VAL('IAT',IAT)
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$I4VAL('NR-ON-INPUT',NR)
+        CALL ERROR$I4VAL('SET-NR',NR1)
+        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
+      END IF
+      CALL SETUP$GETI4('LNX',LNX)
+      ALLOCATE(LOX(LNX))
+      CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(AEPHI(NR,LNX))
+      CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
+      CALL SETUP$GETR8A('AECORE',NR,AECORE)
+      CALL SETUP$UNSELECT()
+      LMNX=SUM(2*LOX(:LNX)+1)
+      ALLOCATE(DATH1(LMNX,LMNX,NDIMD))
+      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,AEPHI,DATH1)
+      DATH(:LMNX,:LMNX,:,IAT)=DATH(:LMNX,:LMNX,:,IAT)+DATH1(:,:,:)
+      DEALLOCATE(AEPHI)
+      DEALLOCATE(LOX)
+      DEALLOCATE(DATH1)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
+     &                          ,AEPOT,AEPHI,DATH)
+!     **************************************************************************
+!     **                                                                      **
+!     **  CALCULATES THE EXPECTATION VALUE OF                                 **
+!     **  THE ONE-CENTER POTENTIALS WITH THE LOCAL ORBITALS                   **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: LMRX
+      INTEGER(4),INTENT(IN) :: LNX
+      INTEGER(4),INTENT(IN) :: LOX(LNX)
+      INTEGER(4),INTENT(IN) :: LMNX
+      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
+      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
+      COMPLEX(8),INTENT(OUT):: DATH(LMNX,LMNX,NDIMD)
+      INTEGER(4)            :: LMN1,LMN2
+      INTEGER(4)            :: LN1,LN2
+      INTEGER(4)            :: LM1,LM2,LM3
+      INTEGER(4)            :: L1,L2
+      INTEGER(4)            :: IM1,IM2
+      INTEGER(4)            :: ISPIN
+      REAL(8)               :: AEDMU(NR,NDIMD)
+      REAL(8)               :: DWORK1(NR)
+      REAL(8)               :: CG
+      REAL(8)               :: SVAR
+      REAL(8)               :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      DATH(:,:,:)=0.D0
+      LMN1=0
+      DO LN1=1,LNX
+        L1=LOX(LN1)
+        DO IM1=1,2*L1+1
+          LMN1=LMN1+1
+          LMN2=0
+          LM1=L1**2+IM1
+          DO LN2=1,LNX
+            L2=LOX(LN2)
+            DO IM2=1,2*L2+1
+              LMN2=LMN2+1
+              LM2=L2**2+IM2
+!     
+!             ==================================================================
+!             ==  SUM ALL POTENTIALS THAT ACT ON THE GIVEN PAIR               ==
+!             ==  OF PARTIAL WAVES                                            ==
+!             ==================================================================
+              AEDMU(:,:)=0.D0
+              DO LM3=1,LMRX
+                CALL CLEBSCH(LM1,LM2,LM3,CG)
+                IF(CG.NE.0.D0) THEN
+                  DO ISPIN=1,NDIMD
+                    AEDMU(:,ISPIN)=AEDMU(:,ISPIN)+CG*AEPOT(:,LM3,ISPIN)
+                  ENDDO
+                END IF
+              ENDDO
+!     
+!             ==================================================================
+!             ==  PERFORM NOW THE INTEGRATION                                 ==
+!             ==================================================================
+              DO ISPIN=1,NDIMD
+                DWORK1(:)=AEDMU(:,ISPIN)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
+                CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
+                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN) &
+    &                                +CMPLX(SVAR,0.D0,KIND=8)
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LMTO$ETOT(LMNXX_,NDIMD_,NAT_,DENMAT_,DH_)
 !     **************************************************************************
@@ -6558,549 +7101,6 @@ IF(IAT.NE.1) RETURN
       DEALLOCATE(POT_ALL)
       DEALLOCATE(POT_LOC)
 !
-      RETURN
-      END
-!
-!........1.........2.........3.........4.........5.........6.........7.........8
-MODULE LMTOAUGMENTATION_MODULE
-!*******************************************************************************
-!** THE LMTOAUGMENTATION IS A SUBOBJECT OF LMTO, WHICH IS USED TO CONSTRUCT   **
-!** PART OF THE DOUBLE COUNTING. IN THE DOUBLE COUNTING THE TOTAL ONE-CENTER  **
-!** EXPANSION OF THE DENSITY ENTERS, WHICH MAY DIFFER FROM THE DENSITY OF THE **
-!** LOCAL ORBITALS.                                                           **
-!**                                                                           **
-!** TACTIVE: TACTIVE IS SET TO TRUE WHEN THE DENSITY OF STATES IS SUPPLIED    **
-!**          AND IT IS SET TO FALSE BY LMTOAUGMENTATION$CLEAN. DURING ONE     **
-!**          SUCH LMTOAGMENTATION$ADD... IS ADDING                            **
-!**                                                                           **
-!*******************************************************************************
-IMPLICIT NONE
-LOGICAL(4),SAVE        :: TINI=.FALSE.
-LOGICAL(4),SAVE        :: TACTIVE=.FALSE.
-INTEGER(4)             :: NAT=0
-INTEGER(4)             :: IAT=0           ! ATOM FOCUS
-INTEGER(4)             :: NDIMD=0
-INTEGER(4)             :: LMNXX=0
-COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) !(LMNXX,LMNXX,NDIMD,NAT)
-COMPLEX(8),ALLOCATABLE :: DATH(:,:,:,:)   !(LMNXX,LMNXX,NDIMD,NAT)
-END MODULE LMTOAUGMENTATION_MODULE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION_INITIALIZE()
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,NDIMD,LMNXX
-      IMPLICIT NONE
-!     **************************************************************************
-      IF(TINI) RETURN
-      CALL ATOMLIST$NATOM(NAT)
-      IF(NDIMD.EQ.0) THEN
-        CALL ERROR$MSG('NDIMD HAS NOT BEEN SET')
-        CALL ERROR$STOP('LMTOAUGMENTATION_INITIALIZE')
-      END IF
-      IF(LMNXX.EQ.0) THEN
-        CALL ERROR$MSG('LMNXX HAS NOT BEEN SET')
-        CALL ERROR$STOP('LMTOAUGMENTATION_INITIALIZE')
-      END IF
-      TINI=.TRUE.
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$CLEAN()
-!     **************************************************************************
-!     ** FREE MEMORY. NEEDS TO BE ACTIVATED BY SETTING A DENSITY MATRIX
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TACTIVE,IAT,DENMAT,DATH
-      IMPLICIT NONE
-!     **************************************************************************
-      IF(ALLOCATED(DENMAT))DEALLOCATE(DENMAT)
-      IF(ALLOCATED(DATH))  DEALLOCATE(DATH)
-      IAT=0                      ! REMOVE ATOM FOCUS
-      TACTIVE=.FALSE.
-
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$GETI4(ID,VAL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,IAT
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(OUT):: VAL
-!     **************************************************************************
-      IF(ID.EQ.'NAT') THEN
-        VAL=NAT   !USE ONLY TO INSPECT THIS OBJECT
-      ELSE IF(ID.EQ.'IAT') THEN
-        VAL=IAT   !USE ONLY TO INSPECT THIS OBJECT
-      ELSE IF(ID.EQ.'LMNXX') THEN
-        VAL=LMNXX   !USE ONLY TO INSPECT THIS OBJECT
-      ELSE IF(ID.EQ.'NDIMD') THEN
-        VAL=NDIMD !USE ONLY TO INSPECT THIS OBJECT
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$SETI4(ID,VAL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,NAT,LMNXX,NDIMD,IAT
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: VAL
-!     **************************************************************************
-      IF(ID.EQ.'NAT') THEN
-        IF(TINI.AND.NAT.NE.VAL) THEN
-          CALL ERROR$MSG('NAT MUST NOT BE CHANGED AFTER INITIALIZATION')
-          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
-        END IF
-        NAT=VAL
-      ELSE IF(ID.EQ.'IAT') THEN
-        IAT=VAL
-      ELSE IF(ID.EQ.'LMNXX') THEN
-        IF(TINI.AND.LMNXX.NE.VAL) THEN
-          CALL ERROR$MSG('LMNXX MUST NOT BE CHANGED AFTER INITIALIZATION')
-          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
-        END IF
-        LMNXX=VAL
-      ELSE IF(ID.EQ.'NDIMD') THEN
-        IF(TINI.AND.NDIMD.NE.VAL) THEN
-          CALL ERROR$MSG('NDIMD MUST NOT BE CHANGED AFTER INITIALIZATION')
-          CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
-        END IF
-        NDIMD=VAL
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTOAUGMENTATION$SETI4')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$SETC8A(ID,LEN,VAL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE &
-     &                                   ,NAT,LMNXX,NDIMD,DENMAT,DATH
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      COMPLEX(8)  ,INTENT(IN) :: VAL(LEN)
-      INTEGER(4)              :: I
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(ID.EQ.'DENMAT') THEN
-        IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$I4VAL('LMNXX',LMNXX)
-          CALL ERROR$I4VAL('NDIMD',NDIMD)
-          CALL ERROR$I4VAL('NAT',NAT)
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
-        END IF
-        IF(TACTIVE) THEN
-          CALL ERROR$MSG('DENSITY MATRIX MUST NOT BE CHANGED IN ACTIVE STATE')
-          CALL ERROR$MSG('CALL LMTOAUGMENTATION$CLEAN TO RESET OBJECT')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
-        END IF 
-        ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
-        ALLOCATE(DATH(LMNXX,LMNXX,NDIMD,NAT))
-        DATH=(0.D0,0.D0)
-        DENMAT=RESHAPE(VAL,(/LMNXX,LMNXX,NDIMD,NAT/))
-        TACTIVE=.TRUE.
-!
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTOAUGMENTATION$SETC8A')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$ADDC8A(ID,LEN,VAL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
-     &                                   ,NAT,LMNXX,NDIMD,DENMAT,DATH
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      COMPLEX(8)  ,INTENT(IN) :: VAL(LEN)
-      INTEGER(4)              :: ISP,LNX,LMNX
-      INTEGER(4)  ,ALLOCATABLE:: LOX(:)
-      INTEGER(4)              :: I
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(ID.EQ.'DH') THEN
-        IF(.NOT.TACTIVE) THEN
-          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
-        END IF 
-        IF(IAT.EQ.0) THEN
-          CALL ERROR$MSG('NO ATOM FOCUS')
-          CALL ERROR$I4VAL('IAT',IAT)
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
-        END IF
-        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('LNX',LNX)
-        ALLOCATE(LOX(LNX))
-        CALL SETUP$GETI4A('LOX',LNX,LOX)
-        CALL SETUP$UNSELECT()
-        LMNX=SUM(2*LOX+1)
-        IF(LMNX*LMNX*NDIMD.NE.LEN) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$I4VAL('LMNX',LMNX)
-          CALL ERROR$I4VAL('NDIMD',NDIMD)
-          CALL ERROR$I4VAL('IAT',IAT)
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
-        END IF
-        DATH(:LMNX,:LMNX,:,IAT)=DATH(:LMNX,:LMNX,:,IAT) &
-     &                                         +RESHAPE(VAL,(/LMNX,LMNX,NDIMD/))
-!
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDC8A')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$GETC8A(ID,LEN,VAL)
-!     **************************************************************************
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
-     &                                    ,NAT,LMNXX,NDIMD,DATH,DENMAT
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      COMPLEX(8)  ,INTENT(OUT):: VAL(LEN)
-      INTEGER(4)              :: ISP,LNX,LMNX
-      INTEGER(4)  ,ALLOCATABLE:: LOX(:)
-      INTEGER(4)              :: I
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(ID.EQ.'DH') THEN
-        IF(.NOT.TACTIVE) THEN
-          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-        END IF 
-        IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
-          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-          CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$I4VAL('LMNXX',LMNXX)
-          CALL ERROR$I4VAL('NDIMD',NDIMD)
-          CALL ERROR$I4VAL('NAT',NAT)
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-        END IF
-        VAL=RESHAPE(DATH,(/LMNXX*LMNXX*NDIMD*NAT/))
-!
-      ELSE IF(ID.EQ.'DENMAT') THEN
-        IF(.NOT.TACTIVE) THEN
-          CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-        END IF 
-        IF(IAT.EQ.0) THEN  ! NO ATOM FOCUS: DENSITY MATRIX FOR ALL ATOMS IS PROVIDED
-          IF(LMNXX*LMNXX*NDIMD*NAT.NE.LEN) THEN
-            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-            CALL ERROR$I4VAL('LMNXX',LMNXX)
-            CALL ERROR$I4VAL('NDIMD',NDIMD)
-            CALL ERROR$I4VAL('NAT',NAT)
-            CALL ERROR$CHVAL('ID',ID)
-            CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-          END IF
-          VAL=RESHAPE(DENMAT,(/LMNXX*LMNXX*NDIMD*NAT/))
-        ELSE 
-          CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-          CALL SETUP$ISELECT(ISP)
-          CALL SETUP$GETI4('LNX',LNX)
-          ALLOCATE(LOX(LNX))
-          CALL SETUP$GETI4A('LOX',LNX,LOX)
-          CALL SETUP$UNSELECT()
-          LMNX=SUM(2*LOX+1)
-          IF(LMNX*LMNX*NDIMD.NE.LEN) THEN
-            CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
-            CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-            CALL ERROR$I4VAL('LMNX',LMNX)
-            CALL ERROR$I4VAL('NDIMD',NDIMD)
-            CALL ERROR$I4VAL('IAT',IAT)
-            CALL ERROR$CHVAL('ID',ID)
-            CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-          END IF
-          VAL=RESHAPE(DENMAT(:LMNX,:LMNX,:,IAT),(/LMNX*LMNX*NDIMD/))
-        END IF
-!
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETC8A')
-      END IF
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$GETRHO(GID,NR,LMRX,NDIMD_,RHO)
-!     **************************************************************************
-!     ** VALENCE DENSITY FROM PARTIAL WAVES
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,IAT &
-     &                                   ,NAT,LMNXX,NDIMD,DENMAT
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: GID
-      INTEGER(4),INTENT(IN)  :: NR
-      INTEGER(4),INTENT(IN)  :: LMRX
-      INTEGER(4),INTENT(IN)  :: NDIMD_
-      REAL(8)   ,INTENT(OUT) :: RHO(NR,LMRX,NDIMD)
-      INTEGER(4)             :: ISP
-      INTEGER(4)             :: GID1
-      INTEGER(4)             :: NR1
-      INTEGER(4)             :: LNX
-      INTEGER(4)             :: LMNX
-      INTEGER(4),ALLOCATABLE :: LOX(:)
-      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)    !(NR,LNX)
-      COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:)  !(LMNX,LMNX)
-      INTEGER(4)             :: IDIMD
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(IAT.EQ.0) THEN
-        CALL ERROR$MSG('ATOM INDEX NOT SET')
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
-      END IF
-      IF(.NOT.TACTIVE) THEN
-        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
-      END IF 
-      IF(NDIMD_.NE.NDIMD) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUES OF NDIMD')
-        CALL ERROR$I4VAL('NDIMD ON INPUT',NDIMD_)
-        CALL ERROR$I4VAL('NDIMD FROM MODULE',NDIMD)
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
-      END IF
-
-      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$GETI4('GID',GID1)
-      IF(GID.NE.GID1) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUE OF GID')
-        CALL ERROR$I4VAL('IAT',IAT)
-        CALL ERROR$I4VAL('ISP',ISP)
-        CALL ERROR$I4VAL('GID-ON-INPUT',GID)
-        CALL ERROR$I4VAL('SET-GID',GID1)
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
-      END IF
-      CALL RADIAL$GETI4(GID,'NR',NR1)
-      IF(NR.NE.NR1) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUE OF NR')
-        CALL ERROR$I4VAL('IAT',IAT)
-        CALL ERROR$I4VAL('ISP',ISP)
-        CALL ERROR$I4VAL('NR-ON-INPUT',NR)
-        CALL ERROR$I4VAL('SET-NR',NR1)
-        CALL ERROR$STOP('LMTOAUGMENTATION$GETRHO')
-      END IF
-      CALL SETUP$GETI4('LNX',LNX)
-      ALLOCATE(LOX(LNX))
-      CALL SETUP$GETI4A('LOX',LNX,LOX)
-      ALLOCATE(AEPHI(NR,LNX))
-      CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
-      CALL SETUP$UNSELECT()
-      LMNX=SUM(2*LOX(:LNX)+1)
-      ALLOCATE(DENMAT1(LMNX,LMNX))
-      DO IDIMD=1,NDIMD
-        DENMAT1(:,:)=DENMAT(:LMNX,:LMNX,IDIMD,IAT)
-        CALL AUGMENTATION_RHO(NR,LNX,LOX,AEPHI,LMNX,DENMAT1,LMRX,RHO(:,:,IDIMD))
-      ENDDO
-      DEALLOCATE(AEPHI)
-      DEALLOCATE(LOX)
-      DEALLOCATE(DENMAT1)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$MPECOMBINEPOT()
-!     **************************************************************************
-!     ** PARALLELIZATION:
-!     ** SUMS DATH OVER ALL PROCESSORS IN THE MONOMER GROUP                   **
-!     ** ASSUMES THAT DATH OF A GIVEN ATOM IS ONLY CALCULATED ON ONE TASK     **
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,DATH
-      USE MPE_MODULE
-      IMPLICIT NONE
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(.NOT.TACTIVE) THEN
-        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-        CALL ERROR$STOP('LMTOAUGMENTATION$MPECOMBINEPOT')
-      END IF 
-      CALL MPE$COMBINE('MONOMER','+',DATH)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTOAUGMENTATION$ADDPOT(GID,NR,LMRX,NDIMD_,POT)
-!     **************************************************************************
-!     ** CALCULATES MATRIX ELEMENT OF THE POTENTIAL WITH PARTIAL WAVES        **
-!     ** AND ADDS THEM TO THE MODULE-ARRAY DATH                               **
-!     **************************************************************************
-      USE LMTOAUGMENTATION_MODULE, ONLY : TINI,TACTIVE,NDIMD,DATH,IAT
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: GID
-      INTEGER(4),INTENT(IN)  :: NR
-      INTEGER(4),INTENT(IN)  :: LMRX
-      INTEGER(4),INTENT(IN)  :: NDIMD_
-      REAL(8)   ,INTENT(IN)  :: POT(NR,LMRX,NDIMD)
-      INTEGER(4)             :: ISP
-      INTEGER(4)             :: GID1
-      INTEGER(4)             :: NR1
-      INTEGER(4)             :: LNX
-      INTEGER(4)             :: LMNX
-      INTEGER(4),ALLOCATABLE :: LOX(:)
-      REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)    !(NR,LNX)
-      REAL(8)                :: AECORE(NR)
-      COMPLEX(8),ALLOCATABLE :: DATH1(:,:,:)  !(LMNX,LMNX)
-!     **************************************************************************
-      IF(.NOT.TINI) CALL LMTOAUGMENTATION_INITIALIZE()
-      IF(IAT.EQ.0) THEN
-        CALL ERROR$MSG('ATOM INDEX NOT SET')
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
-      END IF
-      IF(.NOT.TACTIVE) THEN
-        CALL ERROR$MSG('LMTOAUGMENTATION OBJECT IS NOT ACTIVE')
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
-      END IF 
-      IF(NDIMD_.NE.NDIMD) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUES OF NDIMD')
-        CALL ERROR$I4VAL('NDIMD ON INPUT',NDIMD_)
-        CALL ERROR$I4VAL('NDIMD FROM MODULE',NDIMD)
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
-      END IF
-      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-      CALL SETUP$ISELECT(ISP)
-      CALL SETUP$GETI4('GID',GID1)
-      IF(GID.NE.GID1) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUE OF GID')
-        CALL ERROR$I4VAL('IAT',IAT)
-        CALL ERROR$I4VAL('ISP',ISP)
-        CALL ERROR$I4VAL('GID-ON-INPUT',GID)
-        CALL ERROR$I4VAL('SET-GID',GID1)
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
-      END IF
-      CALL RADIAL$GETI4(GID,'NR',NR1)
-      IF(NR.NE.NR1) THEN
-        CALL ERROR$MSG('INCONSISTENT VALUE OF NR')
-        CALL ERROR$I4VAL('IAT',IAT)
-        CALL ERROR$I4VAL('ISP',ISP)
-        CALL ERROR$I4VAL('NR-ON-INPUT',NR)
-        CALL ERROR$I4VAL('SET-NR',NR1)
-        CALL ERROR$STOP('LMTOAUGMENTATION$ADDPOT')
-      END IF
-      CALL SETUP$GETI4('LNX',LNX)
-      ALLOCATE(LOX(LNX))
-      CALL SETUP$GETI4A('LOX',LNX,LOX)
-      ALLOCATE(AEPHI(NR,LNX))
-      CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
-      CALL SETUP$GETR8A('AECORE',NR,AECORE)
-      CALL SETUP$UNSELECT()
-      LMNX=SUM(2*LOX(:LNX)+1)
-      ALLOCATE(DATH1(LMNX,LMNX,NDIMD))
-      CALL LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX,POT,AEPHI,DATH1)
-      DATH(:LMNX,:LMNX,:,IAT)=DATH(:LMNX,:LMNX,:,IAT)+DATH1(:,:,:)
-      DEALLOCATE(AEPHI)
-      DEALLOCATE(LOX)
-      DEALLOCATE(DATH1)
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LMTO_EXPECT(GID,NR,NDIMD,LNX,LOX,LMNX,LMRX &
-     &                          ,AEPOT,AEPHI,DATH)
-!     **************************************************************************
-!     **                                                                      **
-!     **  CALCULATES THE EXPECTATION VALUE OF                                 **
-!     **  THE ONE-CENTER POTENTIALS WITH THE LOCAL ORBITALS                   **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: GID
-      INTEGER(4),INTENT(IN) :: NR
-      INTEGER(4),INTENT(IN) :: NDIMD
-      INTEGER(4),INTENT(IN) :: LMRX
-      INTEGER(4),INTENT(IN) :: LNX
-      INTEGER(4),INTENT(IN) :: LOX(LNX)
-      INTEGER(4),INTENT(IN) :: LMNX
-      REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRX,NDIMD)
-      REAL(8)   ,INTENT(IN) :: AEPHI(NR,LNX)
-      COMPLEX(8),INTENT(OUT):: DATH(LMNX,LMNX,NDIMD)
-      INTEGER(4)            :: LMN1,LMN2
-      INTEGER(4)            :: LN1,LN2
-      INTEGER(4)            :: LM1,LM2,LM3
-      INTEGER(4)            :: L1,L2
-      INTEGER(4)            :: IM1,IM2
-      INTEGER(4)            :: ISPIN
-      REAL(8)               :: AEDMU(NR,NDIMD)
-      REAL(8)               :: DWORK1(NR)
-      REAL(8)               :: CG
-      REAL(8)               :: SVAR
-      REAL(8)               :: R(NR)
-!     **************************************************************************
-      CALL RADIAL$R(GID,NR,R)
-      DATH(:,:,:)=0.D0
-      LMN1=0
-      DO LN1=1,LNX
-        L1=LOX(LN1)
-        DO IM1=1,2*L1+1
-          LMN1=LMN1+1
-          LMN2=0
-          LM1=L1**2+IM1
-          DO LN2=1,LNX
-            L2=LOX(LN2)
-            DO IM2=1,2*L2+1
-              LMN2=LMN2+1
-              LM2=L2**2+IM2
-!     
-!             ==================================================================
-!             ==  SUM ALL POTENTIALS THAT ACT ON THE GIVEN PAIR               ==
-!             ==  OF PARTIAL WAVES                                            ==
-!             ==================================================================
-              AEDMU(:,:)=0.D0
-              DO LM3=1,LMRX
-                CALL CLEBSCH(LM1,LM2,LM3,CG)
-                IF(CG.NE.0.D0) THEN
-                  DO ISPIN=1,NDIMD
-                    AEDMU(:,ISPIN)=AEDMU(:,ISPIN)+CG*AEPOT(:,LM3,ISPIN)
-                  ENDDO
-                END IF
-              ENDDO
-!     
-!             ==================================================================
-!             ==  PERFORM NOW THE INTEGRATION                                 ==
-!             ==================================================================
-              DO ISPIN=1,NDIMD
-                DWORK1(:)=AEDMU(:,ISPIN)*AEPHI(:,LN1)*AEPHI(:,LN2)*R(:)**2
-                CALL RADIAL$INTEGRAL(GID,NR,DWORK1,SVAR)
-                DATH(LMN1,LMN2,ISPIN)=DATH(LMN1,LMN2,ISPIN) &
-    &                                +CMPLX(SVAR,0.D0,KIND=8)
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
       RETURN
       END
 !
