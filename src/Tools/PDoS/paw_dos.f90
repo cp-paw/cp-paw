@@ -5,6 +5,18 @@
 !**                                                                           **
 !**  PURPOSE: ANALYSIS TOOL FOR DENSITY OF STATES                             **
 !**                                                                           **
+!**  NEWORBITAL_MODULE: DESCRIBES A GENERAL ORBITAL.                          **
+!**    EACH ENTRY OF AN ORBITAL IS (ATOM-INDEX IAT, LATTICE TRANSLATION IT,   **
+!**    ARRAY ORB OF ORBITAL COEFFICIENTS, ARRAY IPRO OF ORBITAL INDICES       **
+!**    THAT POINT TO A SPECIFIC POSITION ON THE STATE VECTOR                  **
+!**                                                                           **
+!**  NEWSET_MODULE: ENCODES A PROJECTION OR COOP                              **
+!**    A SET SPECIFIES EXACTLY ONE OF THE FOLLOWING                           **
+!**    1) COOP 2)WGHT 3) ORBITALS, 4) SPECIALS: (TOTAL,EMPTY,ALL)             **
+!**    THE NEWSET REFERS TO THE NE NEWORBITALS                                **
+!**                                                                           **
+!**                                                                           **
+!**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
 !
@@ -34,9 +46,14 @@ END MODULE READCNTL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM PDOS
 !     **************************************************************************
+!     **                                                                      **
+!     **                                                                      **
+!     **  - PDOS$READ                                                         **
+!     **  - READCNTL$ORBITAL                                                  **
+!     **                                                                      **
+!     **                                                                      **
 !     **************************************************************************
-      USE SPINDIR_MODULE
-      USE DOS_WGHT_MODULE
+      USE SPINDIR_MODULE  ,only : spindir !(is only allocated)
       IMPLICIT NONE
       LOGICAL(4),PARAMETER      :: TOLD=.FALSE.
       INTEGER(4)                :: NFILO
@@ -67,7 +84,6 @@ END MODULE READCNTL_MODULE
       CHARACTER(6)              :: FLAG
       CHARACTER(32)             :: MODE
       CHARACTER(256)            :: PREFIX !OPTIONAL PREFIX FOR DOS AND NOS FILES
-!      REAL(8)      ,ALLOCATABLE :: SPINDIR(:,:)
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
 !
@@ -152,34 +168,39 @@ END MODULE READCNTL_MODULE
 !     ==  READ PREDEFINED ORBITALS  (DATA -> NEWORBITAL_MODULE)               ==
 !     ==========================================================================
       CALL READCNTL$ORBITAL(LENG,NAT,RBAS,RPOS,ATOMID)
+      CALL NEWORBITAL$REPORT(NFILO)
                             CALL TRACE$PASS('AFTER READCNTL$ORBITAL')
 !
 !     ==========================================================================
 !     ==  SELECT MATRIXELEMENTS                                               ==
 !     ==========================================================================
-      NBB=NB    ! #(STATES PER K-POINT) NOS SPIN DEGERACY
-      IF(NDIM.EQ.1)NBB=2*NB
       CALL READCNTL$SETNUMBER(NSET)
-      ALLOCATE(LEGEND(NSET))
+      CALL READCNTL$SETS_NEW(NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
+      CALL NEWSET$REPORT(NFILO)
+!
+!     ==========================================================================
+!     ==  SELECT MATRIXELEMENTS                                               ==
+!     ==========================================================================
+      NBB=NB    ! #(STATES PER K-POINT) NOS SPIN DEGERACY
+      IF(NSPIN.EQ.1.AND.NDIM.EQ.1)NBB=2*NB
       ALLOCATE(SET(NBB,NKPT,2,NSET))  ! SET WORKS ALWAYS WITH TWO SPINS
+!
       ALLOCATE(EIG(NBB,NKPT))
       ALLOCATE(OCC(NBB,NKPT))
 !     __ FILL IN EIGENVALUES AND OCCUPATIONS____________________________________
       CALL SET$ENOCC(NBB,NKPT,EIG,OCC)
 !     __ FILL IN WEIGHT FOR EACH STATE__________________________________________
 !     == CAUTION! SETS CONSTRUCTED HERE WILL BE OVERWRITTEN IN THE NEW VERSION
-      CALL READCNTL$SETS(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS,LENG,SET,LEGEND)
+!      ALLOCATE(LEGEND(NSET))
+!      CALL READCNTL$SETS(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS,LENG,SET,LEGEND)
 PRINT*,'BEFORE READCNTL$SETS_NEW'
 !
 ! CAUTION!!! MUCH OF WHAT IS DONE ABOVE IS REDUNDANT AND IS REPLACED BY
 ! THE FOLLOWING
 !
-      CALL READCNTL$SETS_NEW(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
-PRINT*,'BEFORE NEWORBITAL$REPORT'
-CALL NEWORBITAL$REPORT(6)
-CALL NEWSET$REPORT(6)
+
 PRINT*,'BEFORE NEWSET$PROCESS'
-      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET,LEGEND)
+      CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET)
 PRINT*,'AFTER NEWSET$PROCESS'
                             CALL TRACE$PASS('AFTER READCNTL$SETS')
 !
@@ -202,7 +223,7 @@ PRINT*,'AFTER NEWSET$PROCESS'
       ENDIF
 !     == WRITE FILES ===========================================================
       CALL READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
-     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,LEGEND,MODE)
+     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,MODE)
                             CALL TRACE$PASS('AFTER READCNTL$OUTPUT')
 !
 !     ==========================================================================
@@ -1369,33 +1390,72 @@ END MODULE NEWSET_MODULE
       INTEGER(4)            :: NCOOP
       INTEGER(4)            :: NWGHT
       INTEGER(4)            :: NORB
-      INTEGER(4)            :: I,J
+      INTEGER(4)            :: I,J,K,j1,j2
+      CHARACTER(16)         :: TYPEID
+      CHARACTER(218)        :: FMT
 !     **************************************************************************
       WRITE(NFIL,FMT='(80("="))')
       WRITE(NFIL,FMT='(80("="),T20,"  NEWSET REPORT  ")')
       WRITE(NFIL,FMT='(80("="))')
       WRITE(NFIL,FMT='(40("."),":",T1,A,T42,I3)')'NUMBER OF SETS',NSET
       DO I=1,NSET
-        WRITE(NFIL,FMT='(80("="),T1,"SET ",A," ")')TRIM(NEWSET(I)%ID)
-        IF(LEN_TRIM(NEWSET(I)%SPECIAL).NE.0) THEN
-          WRITE(NFIL,FMT='("SPECIAL TYPE : ",A)')NEWSET(I)%SPECIAL
-        END IF
+!
+!       ========================================================================
+!       == HEADER LINE and generic information                                ==
+!       ========================================================================
+        FMT='(80("="))'
+        WRITE(NFIL,FMT=FMT) 
+        FMT='(20("."),":",T1,A,T25,A)'
+        WRITE(NFIL,FMT=FMT)'ID',TRIM(NEWSET(I)%ID)
+        WRITE(NFIL,FMT=FMT)'LEGEND',TRIM(NEWSET(I)%LEGEND)
+        WRITE(NFIL,FMT=FMT)'SPINID',NEWSET(I)%SPINID
+!
+!       ========================================================================
+!       == REPORT FOR SPECIFIC TYPES                                          ==
+!       ========================================================================
         NCOOP=NEWSET(I)%NCOOP
-        DO J=1,NCOOP
-          WRITE(NFIL,FMT='("ORBITAL1=",A32," ORBITAL2=",A21)') &
-    &                      NEWSET(I)%COOP(:,J)
-        ENDDO
         NORB=NEWSET(I)%NORB
-        IF(NORB.GT.0) THEN
-          WRITE(NFIL,FMT='("ORB=",A,T40," ORB=",A)') &
-    &                      (TRIM(NEWSET(I)%ORB(J)),J=1,NORB)
-        ENDIF
         NWGHT=NEWSET(I)%NWGHT
-        IF(NWGHT.GT.0) THEN
-          WRITE(NFIL,FMT='(5("[ IAT=",I5," L=",I2," ] "))') &
-    &                     (NEWSET(I)%IAT(J),NEWSET(I)%L(J),J=1,NWGHT)
+        IF(LEN_TRIM(NEWSET(I)%SPECIAL).NE.0) THEN
+          WRITE(NFIL,FMT=FMT)'TYPE','SPECIAL:'//NEWSET(I)%SPECIAL
+!
+        ELSE IF(NCOOP.GT.0) THEN 
+          WRITE(NFIL,FMT=FMT)'TYPE','COOP'
+          DO J=1,NCOOP
+            WRITE(NFIL,FMT='("ORBITAL1=",A32," ORBITAL2=",A21)') &
+    &                      NEWSET(I)%COOP(:,J)
+          ENDDO
+!
+        ELSE IF(NWGHT.GT.0) THEN
+          WRITE(NFIL,FMT=FMT)'TYPE','ANGULAR-MOMENTUM WEIGHTS'
+!         == 5 ENTRIES PER LINE=================================================
+          FMT='(5(" [IAT=",I5," L=",I1,"] "))'
+          DO J=1,INT(REAL(NWGHT)/5.)
+            J1=1+5*(J-1)
+            J2=5*(J-1)
+            WRITE(NFIL,FMT=FMT)(NEWSET(I)%IAT(K),NEWSET(I)%L(K),K=J1,J2)
+          ENDDO
+          J1=1+5*INT(REAL(NWGHT)/5.)
+          FMT='(T1'
+          DO J=J1,NWGHT
+            FMT=TRIM(ADJUSTL(FMT))//'," [IAT=",I5," L=",I1,"] "'
+          ENDDO
+          FMT=TRIM(ADJUSTL(FMT))//')'
+          WRITE(NFIL,FMT=FMT)(NEWSET(I)%IAT(J),NEWSET(I)%L(J),J=J1,NWGHT)
+!
+        ELSE IF(NORB.GT.0) THEN
+          WRITE(NFIL,FMT=FMT)'TYPE','ORBITAL-WEIGHTS'
+          WRITE(NFIL,FMT='("ORB=",A,T40," ORB=",A)') &
+    &                                          (TRIM(NEWSET(I)%ORB(J)),J=1,NORB)
+!
+        ELSE
+          CALL ERROR$MSG('TYPE ID NOT RECOGNIZED')
+          CALL ERROR$CHVAL('TYPEID',TYPEID)
+          CALL ERROR$STOP('NEWSET$REPORT')
         ENDIF
       ENDDO
+!
+      write(nfil,*)
       RETURN
       END
 !
@@ -1745,7 +1805,7 @@ END MODULE NEWSET_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET,LEGEND)
+      SUBROUTINE NEWSET$PROCESS(NBB,NKPT,NSET,SET)
 !     **************************************************************************
 !     ** CONSTRUCTS THE NEW SETS, THAT IS THE CONTRIBUTION FROM EACH STATE    **
 !     ** TO THE PROJECTED DENSITY OF STATES. THERE IS ONE SET FOR EACH        **
@@ -1771,7 +1831,6 @@ END MODULE NEWSET_MODULE
       INTEGER(4),INTENT(IN)  :: NKPT
       INTEGER(4),INTENT(IN)  :: NSET
       REAL(8)   ,INTENT(OUT) :: SET(NBB,NKPT,2,NSET)
-      CHARACTER(32),INTENT(OUT) :: LEGEND(NSET)
       INTEGER(4)             :: NBB1
       INTEGER(4)             :: NORB
       INTEGER(4)             :: NSET1
@@ -1840,11 +1899,6 @@ END MODULE NEWSET_MODULE
 !!$      ENDDO
 !
 !     ==========================================================================
-!     ==  COLLECT LEGENDS                                                     ==
-!     ==========================================================================
-      LEGEND(:NSET)=NEWSET(:NSET)%LEGEND
-!
-!     ==========================================================================
 !     ==  OVERWRITE OLD SETS                                                  ==
 !     ==========================================================================
       IF(TOLD) THEN
@@ -1865,12 +1919,15 @@ END MODULE NEWSET_MODULE
 !     **************************************************************************
 !     ** RESOLVE SPIN PROJECTIONS                                             **
 !     **                                                                      **
+!     ** ON INPUT, MATEL HOLDS THE (RHOT,SPIN_X,SPIN_Y,SPIN_Z) COMPONENTS     **
+!     **                                                                      **
+!     ** on output:                                                           **
 !     ** - THE FIRST TWO ELEMENTS OF MATEL ARE THE SPIN-UP AND SPIN-DOWN      **
 !     **   COMPONENTS FOR THE SELECTED SPIN AXIS                              **
 !     ** - FOR COOPS, ONLY ONE THE SELECTED SPIN-UP DIRECTION IS MAINTAINED.  **
-!     ** - FOR 'TOTAL' THE TWO SPIN DIRECTIONS ARE SUMMED IN THE FIRST        **
+!     ** - FOR spinid='TOTAL' THE TWO SPIN DIRECTIONS ARE SUMMED IN THE FIRST **
 !     **   AND THE SECOND IS SET TO ZERO.                                     **
-!     ** - THE SPIN DIRECTION 'MAIN' IS ONLY ALLOWED IF ANGTLAR MOMENTUM      **
+!     ** - THE SPIN DIRECTION 'MAIN' IS ONLY ALLOWED IF ANGULAR MOMENTUM      **
 !     **   WEIGHTS ON A SINGLE ATOM ARE SELECTED                              **
 !     **                                                                      **
 !     ** SPINID MAY HAVE THE VALUES:                                          **
@@ -1975,6 +2032,7 @@ END MODULE NEWSET_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORB,ORBCC,MATEL)
 !     **************************************************************************
+!     ** THE FIRST INDEX OF MATEL SPECIFIES (RHOT,MAG_X,MAG_Y,MAG_Z)          **
 !     **************************************************************************
       USE NEWSET_MODULE, ONLY : NSET1=>NSET &
      &                         ,NEWSET
@@ -2020,7 +2078,7 @@ END MODULE NEWSET_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     == ANGULAR MOMENTUM WEIGHTS                                             ==
+!     == ANGULAR MOMENTUM WEIGHTS and special (total,all,empty)               ==
 !     ==========================================================================
       MATEL=0.D0
       CALL NEWSET_ANGMOMWEIGHTS(NBB,NKPT,NSET,MATEL)
@@ -2134,10 +2192,29 @@ END MODULE NEWSET_MODULE
 !     == PROCESS SPECIAL                                                      ==
 !     ==========================================================================
       DO ISET=1,NSET
-        IF(NEWSET(ISET)%SPECIAL.EQ.'TOTAL') THEN
-!         == MATEL IS THE PREFACTOR OF THE PREFACTOR OF THE UNIT MATRIX
-!         == WHICH HAS TRACE TWO. THEREFOR THE FACTOR 0.5
-          MATEL(1,:,:,ISET)=0.5D0
+!
+        IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
+     &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+          DO IKPT=1,NKPT
+            DO ISPIN=1,NSPIN
+              STATE=>STATEARR(IKPT,ISPIN)
+              NB=STATE%NB
+              CALL XXX(NDIM,NPRO,NB,ISPIN,NSPIN,STATE%VEC &
+     &                ,NBB,MATEL(:,:,IKPT,ISET))
+            ENDDO
+          ENDDO
+        END IF
+
+        IF(NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+          MATEL(:,:,:,ISET)=-MATEL(:,:,:,ISET)
+!          MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET)+1.D0
+        END IF
+
+        IF(    NEWSET(ISET)%SPECIAL.EQ.'TOTAL' &
+     &     .or.NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+!         == MATEL IS THE PREFACTOR OF THE UNIT MATRIX
+!         == WHICH HAS TRACE TWO. THEREFORE THE FACTOR 0.5
+          MATEL(1,:,:,ISET)=matel(1,:,:,iset)+0.5d0
 !         == NO SPIN INFORMATION IS AVAILABLE FOR TOTAL AND NON-COLLINEAR CALC.
           IF(NDIM.EQ.1) THEN
             DO IKPT=1,NKPT
@@ -2145,29 +2222,16 @@ END MODULE NEWSET_MODULE
                 STATE=>STATEARR(IKPT,ISPIN)
                 NB=STATE%NB
                 IF(ISPIN.EQ.1) THEN
-                  MATEL(4,1:NB     ,IKPT,ISET)=+0.5D0
+!!$                  MATEL(1,1:nb ,ikpt,ISET)=MATEL(1,1:nb     ,ikpt,ISET)+0.5d0
+!!$                  MATEL(4,1:NB ,IKPT,ISET)=MATEL(4,1:NB     ,IKPT,ISET)+0.5d0
                 ELSE IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN
-                  MATEL(4,NB+1:2*NB,IKPT,ISET)=-0.5D0
+!!$                  MATEL(1,nb+1:,ikpt,ISET)=MATEL(1,nb+1:2*nb,ikpt,ISET)+0.5d0
+!!$                  MATEL(4,NB+1:,IKPT,ISET)=MATEL(4,NB+1:2*NB,IKPT,ISET)-0.5d0
                 END IF
               ENDDO
             ENDDO
           END IF
-!
-        ELSE IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
-     &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
-          DO IKPT=1,NKPT
-            DO ISPIN=1,NSPIN
-              STATE=>STATEARR(IKPT,ISPIN)
-              NB=STATE%NB
-              CALL XXX(NDIM,NPRO,NB,ISPIN,NSPIN,STATE%VEC &
-        &             ,NBB,MATEL(:,:,IKPT,ISET))
-            ENDDO
-          ENDDO
-        END IF
-        IF(NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
-          MATEL(:,:,:,ISET)=-MATEL(:,:,:,ISET)
-          MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET)+1.D0
-        END IF
+        end if
       ENDDO         
 !
 !     ==========================================================================
@@ -3804,7 +3868,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       END SUBROUTINE READCNTL$SETS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$SETS_NEW(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
+      SUBROUTINE READCNTL$SETS_NEW(NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
 !     **************************************************************************
 !     ** REMARK: THE STRING VARIABLE SPIN DESCRIBES THE SPIN PROJECTION FOR   **
 !     ** NON-COLLINEAR CALCULATIONS. IN THIS CASE, NSPIN=1.                   **
@@ -3818,7 +3882,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       USE READCNTL_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN)  :: NBB
       INTEGER(4)   ,INTENT(IN)  :: NKPT
       INTEGER(4)   ,INTENT(IN)  :: NSET
       INTEGER(4)   ,INTENT(IN)  :: NAT          ! #(ATOMS)
@@ -4543,31 +4606,30 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
-     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,LEGEND,MODE)
+     &                    ,NBB,NKPT,EIG,OCC,NSET,SET,MODE)
 !     **************************************************************************
 !     **************************************************************************
       USE STRINGS_MODULE
       USE READCNTL_MODULE
       USE ORBITALS_MODULE
       USE DOS_WGHT_MODULE
-      USE NEWSET_MODULE, ONLY : NEWSET
+      USE NEWSET_MODULE  ,ONLY : NEWSET
       IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN) :: NE
-      REAL(8)      ,INTENT(IN) :: EMIN
+      INTEGER(4)   ,INTENT(IN) :: NE   ! #(ENERGY-GRID POINTS)
+      REAL(8)      ,INTENT(IN) :: EMIN ! MIN ENERGY ON GRID
       REAL(8)      ,INTENT(IN) :: EMAX
       REAL(8)      ,INTENT(IN) :: EBROAD
       CHARACTER(*) ,INTENT(IN) :: PREFIX ! FOR DOS AND NOS FILES
       INTEGER(4)   ,INTENT(IN) :: NBB
       INTEGER(4)   ,INTENT(IN) :: NKPT
+      INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)
       REAL(8)      ,INTENT(IN) :: OCC(NBB,NKPT)
-      INTEGER(4)   ,INTENT(IN) :: NSET
       REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2,NSET)
-      CHARACTER(32),INTENT(IN) :: LEGEND(NSET)
       CHARACTER(32),INTENT(IN) :: MODE
       LOGICAL(4)   ,PARAMETER  :: TDOS=.TRUE.  ! DENSITY OF STATES PRINTED ?
       LOGICAL(4)   ,PARAMETER  :: TNOS=.FALSE.  ! NUMBER OF STATES PRINTED ?
-      CHARACTER(32)        :: LEGEND1
+      CHARACTER(32)        :: LEGEND
       CHARACTER(256)       :: FILE
       INTEGER(4)           :: NFILDOS  ! UNIT FOR DENSITY OF STATES FILE
       INTEGER(4)           :: NFILO
@@ -4604,18 +4666,23 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       DO ISET=1,NSET
 !
 !       ========================================================================
-!       ==  SPECIFY OUTPUT FILE ================================================
+!       ==  SPECIFY OUTPUT FILE                                               ==
 !       ========================================================================
         FILE=TRIM(PREFIX)//TRIM(NEWSET(ISET)%ID)//-'.DOS'
         CALL FILEHANDLER$SETFILE('PDOSOUT',.FALSE.,FILE)
         CALL FILEHANDLER$UNIT('PDOSOUT',NFILDOS)
 !
 !       ========================================================================
+!       ==  EXTRACT LEGEND                                                    ==
+!       ========================================================================
+        LEGEND=NEWSET(ISET)%LEGEND
+!
+!       ========================================================================
 !       ==  WRITE DOS AND INTEGRATED DOS ON FILE                              ==
 !       ========================================================================
         IF(MODE.EQ.'SAMPLE')THEN
           CALL PUTONGRID_SAMPLE(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-      &                 ,NBB,NKPT,EIG,OCC,SET(:,:,:,ISET),LEGEND(ISET))
+      &                 ,NBB,NKPT,EIG,OCC,SET(:,:,:,ISET),LEGEND)
         ELSE IF(MODE.EQ.'TETRA')THEN
 !!$          IF((MAXVAL(SET(:,:,:,ISET)).NE.1.0D0.OR.&
 !!$      &       MINVAL(SET(:,:,:,ISET)).NE.1.0D0).AND.SPACEGROUP.NE.1)THEN
@@ -4627,7 +4694,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !!$          ENDIF
 !
           CALL PUTONGRID_TETRA(NFILDOS,EMIN,EMAX,NE,EBROAD,DEADZONE &
-      &                 ,NBB,NKPT,EIG,SET(:,:,:,ISET),LEGEND(ISET))
+      &                 ,NBB,NKPT,EIG,SET(:,:,:,ISET),LEGEND)
         ELSE
           CALL ERROR$MSG('VALUE FOR "MODE" NOT RECOGNIZED')
           CALL ERROR$MSG('MUST BE "SAMPLE" OR "TETRA"')
@@ -4653,9 +4720,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **       AND OCCUPATIONS MULTIPLIED TO THEM)                            **
 !     **  STATE(IK,IS)%OCC(IB) IS THE OCCUPATION MULTIPLIED WITH THE          **
 !     **     WITH THE K-POINT WEIGHT                                          **
-!     **  SCALEY MAY BE 'DOS' OR 'NOS' OR 'NONE'                              **
-!     **     SCALEY='DOS' RESCALES THE DENSITY OF STATES TO FIT WINDOW        **
-!     **     SCALEY='NOS' RESCALES THE NUMBER OF STATES TO FIT WINDOW         **
 !     **  NOS(IE,ISPIN,1) IS MULTIPLIED WITH MAX OCCUPATION OF ALL BANDS      **
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
@@ -4802,30 +4866,33 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **  CONSTRUCTS DOS AND NOS WITH THE TETRAHEDRON METHOD AND WRITES THE   **
 !     **  RESULT ON FILE                                                      **
 !     **                                                                      **
-!     **  SCALEY MAY BE 'DOS' OR 'NOS' OR 'NONE'                              **
-!     **     SCALEY='DOS' RESCALES THE DENSITY OF STATES TO FIT WINDOW        **
-!     **     SCALEY='NOS' RESCALES THE NUMBER OF STATES TO FIT WINDOW         **
 !     **  NOS(IE,ISPIN,1) IS MULTIPLIED WITH MAX OCCUPATION OF ALL BANDS      **
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
+!     **  EWGHT ARE ENERGY-RESOLVED DENSITY OF STATES FROM A SPECIFIC K-POINT **
+!     **  AND BAND INDEX. (ENERGY DERIVATIVE OF INTEGRATION WEIGHTS)          **
+!     **  THE STRUCTURE EWGHT_TYPE CONTAINS THE DATA WGHT ON A SUBSECTION     **
+!     **  (I1,...,I2) OF THE ENERGY GRID                                      **
 !     **************************************************************************
-      USE DOS_WGHT_MODULE, ONLY: EF,EWGHT,WGHT
-      USE PDOS_MODULE, ONLY: STATEARR
+      USE DOS_WGHT_MODULE, ONLY: EF &
+     &                          ,EWGHT &
+     &                          ,WGHT
+      USE PDOS_MODULE    , ONLY: STATEARR
       IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN) :: NE
-      REAL(8)      ,INTENT(IN) :: EMIN
-      REAL(8)      ,INTENT(IN) :: EMAX
-      REAL(8)      ,INTENT(IN) :: EBROAD
-      INTEGER(4)   ,INTENT(IN) :: NBB
-      INTEGER(4)   ,INTENT(IN) :: NKPT
-      REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)
-      REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2)
+      INTEGER(4)   ,INTENT(IN) :: NE     ! #(ENERGY GRID POINTS)
+      REAL(8)      ,INTENT(IN) :: EMIN   ! MIN ENERGY ON GRID
+      REAL(8)      ,INTENT(IN) :: EMAX   ! MAX ENERGY ON GRID
+      REAL(8)      ,INTENT(IN) :: EBROAD ! KBT OF THERMAL BROADENIUNG
+      INTEGER(4)   ,INTENT(IN) :: NBB    ! #(BANDS PER K-POINT)
+                                         ! NBB=2*NB FOR NSPIN=1,2
+      INTEGER(4)   ,INTENT(IN) :: NKPT   ! #(K-POINTS)
+      REAL(8)      ,INTENT(IN) :: EIG(NBB,NKPT)   ! ONE-PARTICLE ENERGIES
+      REAL(8)      ,INTENT(IN) :: SET(NBB,NKPT,2) ! MATRIX ELEMENTS
       INTEGER(4)   ,INTENT(IN) :: NFILDOS ! UNIT FOR DOS FILE OR "-1"
       CHARACTER(32),INTENT(IN) :: LEGEND
-      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE)
+      LOGICAL(4)   ,INTENT(IN) :: DEADZONE(NE) !INDICATES POINTS TO BE SKIPPED
       REAL(8)      ,PARAMETER  :: TOL=1.D-2
       REAL(8)                  :: NOS(NE,2)
-      REAL(8)                  :: NOSMIN(2)
       REAL(8)                  :: DOS(NE,2)
       REAL(8)    ,ALLOCATABLE  :: SMEAR(:)
       REAL(8)                  :: DE
@@ -4843,15 +4910,13 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       DE=(EMAX-EMIN)/REAL(NE-1,KIND=8)  !STEP OF THE ENERGY GRID
 !
 !     ==========================================================================
-!     ==  CALCULATE NUMBER OF STATES FOR EACH ENERGY INTERVAL                 ==
+!     ==  CALCULATE DENSITY OF STATES                                         ==
 !     ==========================================================================
       DOS(:,:)=0.D0
-      NOSMIN(:)=0.D0
-      DO ISPIN=1,2   ! THE DATA MODEL HAS BEEN EXPANDED TO 2 COMPONENTS
+      DO ISPIN=1,2   ! THE DATA MODEL HAS BEEN EXPANDED TO 2 SPIN COMPONENTS
         DO IKPT=1,NKPT
           DO IB=1,NBB
             SVAR=SET(IB,IKPT,ISPIN)*DE
-            NOSMIN(ISPIN)=NOSMIN(ISPIN)+WGHT(IB,IKPT)*SVAR
             I1=EWGHT(IB,IKPT)%I1
             I2=EWGHT(IB,IKPT)%I2
             DO IE=I1,I2
@@ -4881,9 +4946,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
           IE1=MAX(1,1-IDE)
           IE2=MIN(NE,NE-IDE)
           W1=SMEAR(IDE)
-          DO IE=1-IDE,IE1-1
-            NOSMIN(ISPIN)=NOSMIN(ISPIN)+NOS(IE+IDE,ISPIN)*W1
-          ENDDO
           DO IE=IE1,IE2
             DOS(IE,ISPIN)=DOS(IE,ISPIN)+NOS(IE+IDE,ISPIN)*W1
           ENDDO
@@ -4905,9 +4967,11 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       ENDDO
 !
 !     ==========================================================================
-!     ==  WRITE RESULT ON PSODOUT                                             ==
+!     ==  WRITE RESULT ON FILE WITH ID PDOSOUT                                ==
+!     ==  1) THE DOS OF THE FIRST SPIN DIRECTION IS WRITTEN WITH POSTIVE SIGN.==
+!     ==  2) THE VALUES JUMP TO (EMAX,0) AND (EMIN,0).                        ==
+!     ==  3) THE DOS FOR THE SECOND SPIN DIRECTION IS DRAWN WITH NEGATIVE SIGN==
 !     ==========================================================================
-!     == WRITE DENSITY OF STATES ===============================================
       DO ISPIN=1,2
         SIG=REAL(3-2*ISPIN) ! +1 FOR ISPIN=1 / -1 FOR ISPIN=2
         WRITE(NFILDOS,FMT='(F14.8,2F20.8)')EMIN/EV,0.D0,0.D0
@@ -4930,6 +4994,10 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       SUBROUTINE GENERATE_TETRA_WGHT(NFILO,NBB,NKPT,EMAX,EMIN,NE,RBAS,EIG &
      &                              ,ELSCALE)
 !     **************************************************************************
+!     **  EWGHT ARE ENERGY-RESOLVED DENSITY OF STATES FROM A SPECIFIC K-POINT **
+!     **  AND BAND INDEX. (ENERGY DERIVATIVE OF INTEGRATION WEIGHTS)          **
+!     **  THE STRUCTURE EWGHT_TYPE CONTAINS THE DATA WGHT ON A SUBSECTION     **
+!     **  (I1,...,I2) OF THE ENERGY GRID                                      **
 !     **                                                                      **
 !     **************************************************************************
       USE DOS_WGHT_MODULE , ONLY: EF,SPACEGROUP,WGHT,EWGHT
