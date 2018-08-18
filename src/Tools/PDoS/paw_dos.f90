@@ -2619,7 +2619,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       INTEGER(4)  ,INTENT(IN)   :: LMX
       CHARACTER(*),INTENT(IN)   :: TYPE
       COMPLEX(8)  ,INTENT(OUT)  :: ORBITAL(LMX)
-      REAL(8)                   :: ORB(9)
+      REAL(8)                   :: ORB(16)
       INTEGER(4)                :: LM
 !     ************************************************************************
       ORB(:)=0.D0
@@ -2648,18 +2648,34 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         ORB(5)=1.D0
       ELSE IF(TRIM(TYPE).EQ.'DXZ') THEN
         ORB(6)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'D3Z2-R2') THEN
+      ELSE IF(TRIM(TYPE).EQ.'D3Z2-R2'.OR.TRIM(TYPE).EQ.'DZ2') THEN
         ORB(7)=1.D0
       ELSE IF(TRIM(TYPE).EQ.'DYZ') THEN
         ORB(8)=1.D0
       ELSE IF(TRIM(TYPE).EQ.'DXY') THEN
         ORB(9)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FX(X2-3Y2') THEN
+        ORB(10)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FZ(X2-Y2') THEN
+        ORB(11)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FX(5Z2-R2)'.OR.TRIM(TYPE).EQ.'FXZ^2') THEN
+        ORB(12)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FZ(5Z2-3R2)'.OR.TRIM(TYPE).EQ.'FZ3') THEN
+        ORB(13)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FY(5Z2-R2)'.OR.TRIM(TYPE).EQ.'FYZ^2') THEN
+        ORB(14)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FXYZ') THEN
+        ORB(15)=1.D0
+      ELSE IF(TRIM(TYPE).EQ.'FY(3X2-Y2') THEN
+        ORB(16)=1.D0
       ELSE
         CALL ERROR$MSG('TYPE NOT IDENTIFIED')
         CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
         CALL ERROR$STOP('RESOLVETYPE')
       END IF
-      DO LM=LMX+1,9
+!
+!     == CHECK WHETHER THE ORBITAL VECTOR FITS INTO THE ARRAY SUPPLIED =========
+      DO LM=LMX+1,16
         IF(ORB(LM).NE.0) THEN
           CALL ERROR$MSG('LMX TOO SMALL')
           CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
@@ -2667,8 +2683,14 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
           CALL ERROR$STOP('RESOLVETYPE')
         END IF
       ENDDO
-      ORBITAL(1:9)=CMPLX(ORB,KIND=8)
-      ORBITAL(10:)=(0.D0,0.D0)
+!
+!     == MAP ORB VECTOR ONTO OUTPUT ============================================
+      IF(LMX.LE.16) THEN
+        ORBITAL(:)=CMPLX(ORB(:LMX),KIND=8)
+      ELSE
+        ORBITAL(1:16)=CMPLX(ORB,KIND=8)
+        ORBITAL(17:)=(0.D0,0.D0)
+      END IF
       RETURN
       END SUBROUTINE RESOLVETYPE
 !

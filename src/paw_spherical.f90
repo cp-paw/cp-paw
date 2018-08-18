@@ -75,14 +75,22 @@ END MODULE SPHERICAL_MODULE
 !     **      YLM(2)=SQRT( 3/( 4*PI))    * X / R                              **
 !     **      YLM(3)=SQRT( 3/( 4*PI))    * Z / R                              **
 !     **      YLM(4)=SQRT( 3/( 4*PI))    * Y / R                              **
+!     **      == D-TYPE SPHERICAL HARMONICS 
 !     **      YLM(5)=SQRT(15/(16*PI))    * (  X**2-Y**2  ) /R**2              **
 !     **      YLM(6)=SQRT(60/(16*PI))    * (     X*Z     ) /R**2              **
 !     **      YLM(7)=SQRT( 5/(16*PI))    * ( 3*Z**2-R**2 ) /R**2              **
 !     **      YLM(8)=SQRT(60/(16*PI))    * (      Y*Z    ) /R**2              **
 !     **      YLM(9)=SQRT(60/(16*PI))    * (      X*Y    ) /R**2              **
+!     **      == F-TYPE REAL HARMONICS (PLEASE CHECK!)                        **
+!     **      YLM(10)=SQRT( 35/(32*PI))  * ( (X^3-3*X*Y^2 ) /R**3             **
+!     **      YLM(11)=SQRT(210/(32*PI))  * ( Z*(X^2-Y^2)    /R**3             **
+!     **      YLM(12)=SQRT( 21/(32*PI))  * ( X*(5Z^2-R^2)   /R**3             **
+!     **      YLM(13)=SQRT( 14/(32*PI))  * ( Z*(5Z^2-3*R^2) /R**3             **
+!     **      YLM(14)=SQRT( 21/(32*PI))  * ( Y*(5Z^2-R^2)   /R**3             **
+!     **      YLM(15)=SQRT(210/(32*PI))  * ( X*Y*Z          /R**3             **
+!     **      YLM(16)=SQRT( 35/(32*PI))  * ( Y*(3X^2-Y^2)   /R**3             **
 !     **                                                                      **
-!     **                                         P.E. BLOECHL, (1991)         **
-!     **                                                                      **
+!     **                                         P.E. BLOECHL, (1991,2018)    **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: LMX
