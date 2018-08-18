@@ -456,7 +456,7 @@ USE MPE_MODULE
 !     ==========================================================================
 !     == PLOT 1D-POTENTIAL                                                    ==
 !     ==========================================================================
-      IF(ALLOCATED(PWPOT)) then
+      IF(ALLOCATED(PWPOT)) THEN
         DO I=1,N1DPOT
           FILE=ONEDPOTPLOT(I)%FILE
           TITLE=ONEDPOTPLOT(I)%TITLE
@@ -464,7 +464,7 @@ USE MPE_MODULE
           CALL GRAPHICS_CREATE1DPOT(FILE,TITLE,ONEDPOTPLOT(I)%IT)
           CALL TRACE$PASS('GRAPHICS$PLOT: CREATE1DPOT DONE')
         ENDDO
-      end if
+      END IF
 !
 !     ==========================================================================
 !     == PLOT WAVE FUNCTIONS                                                  ==
@@ -2113,11 +2113,11 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         CALL SETUP$GETI4('GID',GID)                
         CALL SETUP$UNSELECT()
         CALL RADIAL$GETI4(GID,'NR',NR)
-        IF(NRX.NE.NR) THEN
-          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
-          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
-        END IF
+!!$        IF(NRX.NE.NR) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
+!!$          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
+!!$          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+!!$        END IF
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
@@ -2125,7 +2125,7 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-     &           ,POTENTIAL,POS(:,IAT),GID,NRX,LMRXX,ONECPOT(:,:,IAT))
+     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRXX,ONECPOT(:NR,:,IAT))
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
@@ -2289,9 +2289,9 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','FORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
         WRITE(NFIL,*)'# ',NZ,DZ,IT
-        do iz=1,nz
-          WRITE(NFIL,*)dz*real(iz-1,kind=8),POTZ(iz)
-        enddo
+        DO IZ=1,NZ
+          WRITE(NFIL,*)DZ*REAL(IZ-1,KIND=8),POTZ(IZ)
+        ENDDO
         CALL FILEHANDLER$CLOSE('WAVEPLOT')
       END IF
                                  CALL TRACE$POP()
