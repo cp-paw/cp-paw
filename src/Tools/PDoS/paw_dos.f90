@@ -86,7 +86,7 @@ END MODULE DOS_WGHT_MODULE
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE READCNTL_MODULE
-USE LINKEDLIST_MODULE
+USE LINKEDLIST_MODULE,ONLY : LL_TYPE
 TYPE(LL_TYPE)   :: LL_CNTL
 SAVE
 END MODULE READCNTL_MODULE
@@ -1117,12 +1117,11 @@ END MODULE NEWORBITAL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWORBITAL$SCALEORBITAL(FACTOR)
 !     **************************************************************************
-!     **  ADD AN ORBITAL TO THE SELECTED ONE. THE ORBITAL CAN BE DISPLACED    **
-!     **  WITH LATICE TRANSLATIONS GIVEN BY IT AND MULTIPLIED WITH A FACTOR   **
+!     **  SCALE SELECTED ORBITAL (IORB) BY A FACTOR                           **
 !     **************************************************************************
       USE NEWORBITAL_MODULE, ONLY : IORB,NEWORBITAL
       IMPLICIT NONE
-      COMPLEX(8),INTENT(OUT):: FACTOR
+      COMPLEX(8),INTENT(IN) :: FACTOR
       INTEGER(4)            :: NENTRY
       INTEGER(4)            :: I
 !     **************************************************************************
@@ -2939,7 +2938,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE
+      USE READCNTL_MODULE, ONLY : LL_CNTL
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
       LOGICAL(4)           :: TCHK
@@ -3203,7 +3202,8 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ** REMARK: IN THE NEW VERSION THE ORBITAL IS NO MORE NORMALIZED.        **
 !     ** 
 !     **************************************************************************
-      USE READCNTL_MODULE
+      USE LINKEDLIST_MODULE 
+      USE READCNTL_MODULE   ,ONLY : LL_CNTL
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NPRO
       INTEGER(4)   ,INTENT(IN) :: NAT
@@ -3337,7 +3337,8 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       SUBROUTINE READCNTL$SETNUMBER(NSET)
 !     **************************************************************************
 !     **************************************************************************
-      USE READCNTL_MODULE
+      USE LINKEDLIST_MODULE
+      USE READCNTL_MODULE, ONLY : LL_CNTL
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: NSET
       INTEGER(4)             :: I
@@ -3437,6 +3438,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **                 SPIN DENSITY                                         **
 !     **                                                                      **
 !     **************************************************************************
+      USE LINKEDLIST_MODULE
       USE READCNTL_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE

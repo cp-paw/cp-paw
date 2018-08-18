@@ -4821,7 +4821,7 @@ STOP
       USE WAVES_MODULE, ONLY: NKPTL,NSPIN,NDIM,THIS,MAP,WAVES_SELECTWV,GSET
       IMPLICIT NONE
       LOGICAL(4),PARAMETER  :: TTEST1=.FALSE.
-      LOGICAL(4),PARAMETER  :: TTEST2=.false.
+      LOGICAL(4),PARAMETER  :: TTEST2=.FALSE.
       INTEGER(4)            :: SWITCH
 !     **************************************************************************
 !
@@ -5332,7 +5332,7 @@ REAL(8)   ,ALLOCATABLE:: T(:,:),UNT(:,:),MYMAT(:,:)
       INTEGER(4)            :: THISTASK,NTASKS
 !     **************************************************************************
                             CALL TRACE$PUSH('LMTO_HYBRIDENERGY')
-if(tpr2)PRINT*,'============ lmto_hybridenergy ============================='
+IF(TPR2)PRINT*,'============ LMTO_HYBRIDENERGY ============================='
       NAT=SIZE(ISPECIES)
       IF(ALLOCATED(HAMIL)) THEN
         CALL ERROR$MSG('HAMIL IS ALLOCATED')
@@ -5397,7 +5397,7 @@ if(tpr2)PRINT*,'============ lmto_hybridenergy ============================='
         IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
         HFSCALE=1.D0
         IF(HFWEIGHT.GT.0.D0)HFSCALE=LHFWEIGHT/HFWEIGHT
-if(tpr2)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
+IF(TPR2)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
 !
 !       == FIND ELEMENTS FOR DENSITY MATRIX, HAMILTONIAN AND STRUCTURE CONSTANTS
         NND=SIZE(DENMAT)
@@ -5545,7 +5545,7 @@ PRINT*,'TCTE ',TCTE,SUM(DT*HT)-EX,EX,IAT,ISP,LMNX,LMNXT,NDIMD &
           EXTOT=EXTOT+EX*HFSCALE
           EAT=EAT+EX
 END IF
-if(tpr2)PRINT*,'CORE-VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
+IF(TPR2)PRINT*,'CORE-VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
           EX=0.D0
         END IF
 !
@@ -5654,7 +5654,7 @@ END IF
       END IF
 !
 !     ==========================================================================
-!     == MAKE HAMILTONIAN HERMITian                                           ==
+!     == MAKE HAMILTONIAN HERMITIAN                                           ==
 !     ==========================================================================
 !      CALL LMTO$SYMMETRIZEHAMIL()
 !
@@ -5670,7 +5670,7 @@ END IF
 !     ==========================================================================
 !     == COMMUNICATE ENERGY TO ENERGYLIST                                     ==
 !     ==========================================================================
-if(tpr2)PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
+IF(TPR2)PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       CALL ENERGYLIST$SET('LMTO INTERFACE',EXTOT)
       CALL ENERGYLIST$ADD('LOCAL CORRELATION',EXTOT)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
@@ -6882,6 +6882,8 @@ if(tpr2)PRINT*,'ENERGY FROM LMTO INTERFACE ',EXTOT
       REAL(8)                 :: HFSCALE1=1.D0
       REAL(8)                 :: R(NR)
 !     **************************************************************************
+      ETOT=0.D0
+      HAM=0.D0
       CALL LMTOAUGMENTATION$GETI4('IAT',IAT)
 IF(IAT.NE.1) RETURN
       CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)

@@ -372,7 +372,7 @@
           DO J=1,Nx
             CSVAR=CSVAR+CMPLX(coeff(J),KIND=16)*Z(I)**(J-1)  
           ENDDO
-          WRITE(*,FMT='(I3," ZERO Z=  ",2F10.5," ABS(P(Z)= ",E10.5)') &
+          WRITE(*,FMT='(I3," ZERO Z=  ",2F15.5," ABS(P(Z)= ",E15.5)') &
      &            I,Z(I),ABS(CSVAR)
         ENDDO
         CALL ERROR$MSG('REGULAR STOP AFTER TEST')
