@@ -5,6 +5,10 @@
 !**                                                                           **
 !**  PURPOSE: ANALYSIS TOOL FOR DENSITY OF STATES                             **
 !**                                                                           **
+!**  PDOS_MODULE (SEE OBJECT PAW_PDOS.F90 OF THE SIMULATION CODE)             **
+!**                                                                           **
+!**                                                                           **
+!**                                                                           **
 !**  NEWORBITAL_MODULE: DESCRIBES A GENERAL ORBITAL.                          **
 !**    EACH ENTRY OF AN ORBITAL IS (ATOM-INDEX IAT, LATTICE TRANSLATION IT,   **
 !**    ARRAY ORB OF ORBITAL COEFFICIENTS, ARRAY IPRO OF ORBITAL INDICES       **
@@ -17,6 +21,50 @@
 !**                                                                           **
 !**                                                                           **
 !**                                                                           **
+!*******************************************************************************
+!*******************************************************************************
+!**
+!*******************************************************************************
+!**  COPY OF THE PDOS_MODULE FROM THE PAW_PDOS.F90 OBJECT OF THE MAIN CODE    **
+!*******************************************************************************
+!**  MODULE PDOS_MODULE
+!**    TYPE STATE_TYPE
+!**      INTEGER(4)                        :: NB
+!**      REAL(8)   ,POINTER                :: EIG(:)
+!**      REAL(8)   ,POINTER                :: OCC(:)
+!**      COMPLEX(8),POINTER                :: VEC(:,:,:)
+!**    END TYPE STATE_TYPE 
+!**    CHARACTER(6)                        :: FLAG
+!**    INTEGER(4)                          :: NAT
+!**    INTEGER(4)                          :: NSP
+!**    INTEGER(4)                          :: NKPT
+!**    INTEGER(4)                          :: NSPIN
+!**    INTEGER(4)                          :: NDIM
+!**    INTEGER(4)                          :: NPRO
+!**    INTEGER(4)                          :: NKDIV(3)
+!**    INTEGER(4)                          :: ISHIFT(3)
+!**    REAL(8)                             :: RNTOT
+!**    REAL(8)                             :: NEL
+!**    LOGICAL(4)                          :: TINV
+!**    INTEGER(4)                          :: LNXX
+!**    REAL(8)                             :: RBAS(3,3)
+!**    REAL(8)   ,ALLOCATABLE              :: R(:,:)
+!**    INTEGER(4),ALLOCATABLE              :: LNX(:)
+!**    INTEGER(4),ALLOCATABLE              :: LOX(:,:)
+!**    INTEGER(4),ALLOCATABLE              :: ISPECIES(:)
+!**    CHARACTER(16),ALLOCATABLE           :: ATOMID(:)
+!**    INTEGER(4),ALLOCATABLE              :: IZ(:)
+!**    REAL(8)   ,ALLOCATABLE              :: RAD(:)
+!**    REAL(8)   ,ALLOCATABLE              :: PHIOFR(:,:)
+!**    REAL(8)   ,ALLOCATABLE              :: DPHIDR(:,:)
+!**    REAL(8)   ,ALLOCATABLE              :: OV(:,:,:)
+!**    REAL(8)   ,ALLOCATABLE              :: XK(:,:)
+!**    REAL(8)   ,ALLOCATABLE              :: WKPT(:)
+!**    TYPE(STATE_TYPE),ALLOCATABLE,TARGET :: STATEARR(:,:)
+!**    TYPE(STATE_TYPE),POINTER            :: STATE
+!**    INTEGER(4)                          :: SPACEGROUP
+!**    LOGICAL(4)                          :: TSHIFT
+!**  END MODULE PDOS_MODULE
 !*******************************************************************************
 !*******************************************************************************
 !
@@ -53,7 +101,7 @@ END MODULE READCNTL_MODULE
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE SPINDIR_MODULE  ,only : spindir !(is only allocated)
+      USE SPINDIR_MODULE  ,ONLY : SPINDIR !(IS ONLY ALLOCATED)
       IMPLICIT NONE
       LOGICAL(4),PARAMETER      :: TOLD=.FALSE.
       INTEGER(4)                :: NFILO
@@ -69,7 +117,6 @@ END MODULE READCNTL_MODULE
       REAL(8)      ,ALLOCATABLE :: EIG(:,:)
       REAL(8)      ,ALLOCATABLE :: OCC(:,:)
       REAL(8)      ,ALLOCATABLE :: SET(:,:,:,:)
-      CHARACTER(32),ALLOCATABLE :: LEGEND(:)
       CHARACTER(16),ALLOCATABLE :: ATOMID(:)
       REAL(8)                   :: EMIN
       REAL(8)                   :: EMAX
@@ -151,7 +198,8 @@ END MODULE READCNTL_MODULE
 !
 !     ==========================================================================
 !     ==  TRANSFORM STATES IN PDOS OBJECT ONTO AN ORTHORMAL BASISSET          ==
-!     ==  AFTER THAT THE VARIABLE OV EQUALS THE UNIT MATRIX                   ==
+!     ==  AFTER THAT THE VARIABLE OV EQUALS THE UNIT MATRIX.                  ==
+!     ==  CHANGES STATE%VEC AND OV IN PDOS_MODULE.
 !     ==========================================================================
       CALL ORTHONORMALIZESTATES()
 !
@@ -172,37 +220,27 @@ END MODULE READCNTL_MODULE
                             CALL TRACE$PASS('AFTER READCNTL$ORBITAL')
 !
 !     ==========================================================================
-!     ==  SELECT MATRIXELEMENTS                                               ==
+!     ==  SELECT MATRIXELEMENTS   (->NEWSET_MODULE)                           ==
 !     ==========================================================================
       CALL READCNTL$SETNUMBER(NSET)
       CALL READCNTL$SETS_NEW(NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
       CALL NEWSET$REPORT(NFILO)
+                            CALL TRACE$PASS('AFTER READCNTL$SETS_NEW')
 !
 !     ==========================================================================
-!     ==  SELECT MATRIXELEMENTS                                               ==
+!     ==  DETERMINE SELECTED MATRIX ELEMENTS FOR EACH STATE                   ==
+!     ==  DATA WILL BE ENCODED BY (EIG,OCC,SET)
 !     ==========================================================================
-      NBB=NB    ! #(STATES PER K-POINT) NOS SPIN DEGERACY
-      IF(NSPIN.EQ.1.AND.NDIM.EQ.1)NBB=2*NB
-      ALLOCATE(SET(NBB,NKPT,2,NSET))  ! SET WORKS ALWAYS WITH TWO SPINS
-!
+!     == NBB=#(SPIN-STATES PER K-POINT) 
+      NBB=NB                         
+      IF(NDIM.EQ.1)NBB=2*NB          ! COLLINEAR AND NON-SPIN-POLARIZED
+      ALLOCATE(SET(NBB,NKPT,2,NSET)) ! SET WORKS ALWAYS WITH TWO SPINS
       ALLOCATE(EIG(NBB,NKPT))
       ALLOCATE(OCC(NBB,NKPT))
 !     __ FILL IN EIGENVALUES AND OCCUPATIONS____________________________________
       CALL SET$ENOCC(NBB,NKPT,EIG,OCC)
-!     __ FILL IN WEIGHT FOR EACH STATE__________________________________________
-!     == CAUTION! SETS CONSTRUCTED HERE WILL BE OVERWRITTEN IN THE NEW VERSION
-!      ALLOCATE(LEGEND(NSET))
-!      CALL READCNTL$SETS(NBB,NKPT,NSET,NAT,RBAS,ATOMID,RPOS,LENG,SET,LEGEND)
-PRINT*,'BEFORE READCNTL$SETS_NEW'
-!
-! CAUTION!!! MUCH OF WHAT IS DONE ABOVE IS REDUNDANT AND IS REPLACED BY
-! THE FOLLOWING
-!
-
-PRINT*,'BEFORE NEWSET$PROCESS'
       CALL NEWSET$PROCESS(NBB,NKPT,NSET,SET)
-PRINT*,'AFTER NEWSET$PROCESS'
-                            CALL TRACE$PASS('AFTER READCNTL$SETS')
+                            CALL TRACE$PASS('AFTER NEWSET$PROCESS')
 !
 !     ==========================================================================
 !     ==  READ GENERAL INFORMATION FROM CONTROL FILE
@@ -578,9 +616,15 @@ PRINT*,'AFTER NEWSET$PROCESS'
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ORTHONORMALIZESTATES()
 !     **************************************************************************
-!     ** TRANSFORMS THE LOCVAL BASIS SET SO THAT IT IS ORTHONORMAL.           **
+!     ** TRANSFORMS THE LOCAL BASIS SET SO THAT IT IS ORTHONORMAL.            **
 !     ** A CHOLESKY DECOMPOSITION OF THE LOCAL ORBITALS TRANSFORMS THE        **
-!     ** VARIABLE INTO A UNIT MATRIX                                          **
+!     ** OVERLAP INTO A UNIT MATRIX                                           **
+!     **                                                                      **
+!     ** CHANGES STATE%VEC AND OV ON PDOS_MODULE                              **
+!     **                                                                      **
+!     ** THE FIRST ORBITAL FOR EACH ANGULAR MOMENTUM IS ONLY NORMALIZED       **
+!     ** THE SECOND ORBITAL FOR EACH ANGULAR MOMENTUM IS ORTHONORMALIZED      **
+!     **     TO THE FIRST ORBITAL AND THEN NORMALIZED                         **
 !     **************************************************************************
       USE PDOS_MODULE, ONLY : NSP &
      &                       ,LNX &      !(NSP)
@@ -621,6 +665,7 @@ PRINT*,'AFTER NEWSET$PROCESS'
         ALLOCATE(AMAT(LNX(ISP),LNX(ISP)))
         ALLOCATE(BMAT(LNX(ISP),LNX(ISP)))
         AMAT=OV(:LNX(ISP),:LNX(ISP),ISP)
+!       ==  AMAT=MATMUL(BMAT,TRANSPOSE(BMAT)) WITH BMAT(I,J)=0 FOR J>I =========
         CALL CHOLESKY(LNX(ISP),AMAT,BMAT)
         BMAT=TRANSPOSE(BMAT)
         DEALLOCATE(AMAT)
@@ -1145,7 +1190,7 @@ END MODULE NEWORBITAL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWORBITAL$ORBPRO(TINV,NBB,NKPT,NORB,ORBPRO)
 !     **************************************************************************
-!     ** CALCULATE THE PROJECTION OF THE KOHN-SHAM WAVE FUNCTIONS ON THE      **
+!     ** CALCULATE THE PROJECTION OF THE KOHN-SHAM WAVE FUNCTIONS ONTO THE    **
 !     ** DEFINED ORBITALS.                                                    **
 !     **                                                                      **
 !     ** WITH TINV=T, THE WAVE FUNCTIONS ARE TRANSFORMED THROUGH              **
@@ -1164,12 +1209,12 @@ END MODULE NEWORBITAL_MODULE
      &                             ,NEWORBITAL
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TINV
-      INTEGER(4),INTENT(IN) :: NBB
+      INTEGER(4),INTENT(IN) :: NBB    !=2*NB FOR COLLINEAR AND NON-SPIN CALC.
       INTEGER(4),INTENT(IN) :: NKPT
       INTEGER(4),INTENT(IN) :: NORB
       COMPLEX(8),INTENT(OUT):: ORBPRO(2,NBB,NKPT,NORB)
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      REAL(8)               :: PI
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NENTRY
       INTEGER(4)            :: LMNX
       INTEGER(4)            :: NB
@@ -1179,7 +1224,6 @@ END MODULE NEWORBITAL_MODULE
       COMPLEX(8)            :: EIK1,EIK2,EIK3,EIKT
       COMPLEX(8)            :: CFAC
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL NEWORBITAL_COMPLETEIPRO()
 !
       ORBPRO=(0.D0,0.D0)
@@ -1390,7 +1434,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4)            :: NCOOP
       INTEGER(4)            :: NWGHT
       INTEGER(4)            :: NORB
-      INTEGER(4)            :: I,J,K,j1,j2
+      INTEGER(4)            :: I,J,K,J1,J2
       CHARACTER(16)         :: TYPEID
       CHARACTER(218)        :: FMT
 !     **************************************************************************
@@ -1401,7 +1445,7 @@ END MODULE NEWSET_MODULE
       DO I=1,NSET
 !
 !       ========================================================================
-!       == HEADER LINE and generic information                                ==
+!       == HEADER LINE AND GENERIC INFORMATION                                ==
 !       ========================================================================
         FMT='(80("="))'
         WRITE(NFIL,FMT=FMT) 
@@ -1455,7 +1499,7 @@ END MODULE NEWSET_MODULE
         ENDIF
       ENDDO
 !
-      write(nfil,*)
+      WRITE(NFIL,*)
       RETURN
       END
 !
@@ -1819,6 +1863,20 @@ END MODULE NEWSET_MODULE
 !     **                    %VEC(IDIM,IPRO,IB)
 !     **                    %OCC(IB)
 !     **                    %EIG(IB)
+!     **                                                                      **
+!     **                                                                      **
+!     **  TREATMENT OF SPINS:                                                 **
+!     **    NON SPIN-POLARIZED:            NDIM=1,NSPIN=1                     **
+!     **    COLLINEAR, SPIN POLARIZED:     NDIM=1,NSPIN=2                     **
+!     **    NON-COLLINEAR, SPIN POLARIZED: NDIM=1,NSPIN=2                     **
+!     **                                                                      **
+!     **    THE VARIABLE ORBPRO AND ORBPROCC ARE FORMULATED IN THE            **
+!     **    NON-COLLINEARMODEL: 
+!     **    - THE BAND INDEX (NBB) PER K-POINT COUNTS ALWAYS SPIN-UP AND      **
+!     **      SPIN-DOWN STATES                                                **
+!     **    - EACH STATE HAS SPIN-UP AND SPIN-DOWN COMPONENTS                 **
+!     **                                                                      **
+!     **                                                                      **
 !     **************************************************************************
       USE PDOS_MODULE   , ONLY : NDIM &
      &                          ,NSPIN &
@@ -1836,15 +1894,13 @@ END MODULE NEWSET_MODULE
       INTEGER(4)             :: NSET1
       INTEGER(4)             :: IKPT,ISPIN,I,ISET
       REAL(8)   ,ALLOCATABLE :: MATEL(:,:,:,:)
-      COMPLEX(8),ALLOCATABLE :: ORBPRO(:,:,:,:)
-      COMPLEX(8),ALLOCATABLE :: ORBPROCC(:,:,:,:)
+      COMPLEX(8),ALLOCATABLE :: ORBPRO(:,:,:,:)   !(2,NBB,NKPT,NORB))
+      COMPLEX(8),ALLOCATABLE :: ORBPROCC(:,:,:,:) !(2,NBB,NKPT,NORB))
 !     **************************************************************************
 !
 !     ==========================================================================
 !     ==  ALLOCATE MATRIX ELEMENTS MATEL(NDIM,NBB,NKPT,NSET)                  ==
 !     ==========================================================================
-!
-!     == NBB HOLDS ALL STATES OF ONE K-POINT AND INCLUDE BOTH SPIN QUANTUM NRS.
       NBB1=0
       DO IKPT=1,NKPT
         DO ISPIN=1,NSPIN
@@ -1885,29 +1941,8 @@ END MODULE NEWSET_MODULE
       CALL NEWSET_PROJECTSPIN(NBB,NKPT,NSET,MATEL)
 !
 !     ==========================================================================
-!     ==  COMPARE WITH OLD VERSION                                            ==
+!     ==                                                                      ==
 !     ==========================================================================
-!!$      DO ISET=1,NSET
-!!$        WRITE(*,*)TRIM(NEWSET(ISET)%ID),'||',TRIM(NEWSET(ISET)%LEGEND) &
-!!$     &                                 ,'||',TRIM(NEWSET(ISET)%SPINID)
-!!$        DO IKPT=1,NKPT
-!!$          DO I=1,NBB
-!!$            WRITE(*,FMT='(3I5,10F10.5)')ISET,IKPT,I,MATEL(:2,I,IKPT,ISET) &
-!!$     &                                             ,SET(I,IKPT,:2,ISET)
-!!$          ENDDO
-!!$        ENDDO
-!!$      ENDDO
-!
-!     ==========================================================================
-!     ==  OVERWRITE OLD SETS                                                  ==
-!     ==========================================================================
-      IF(TOLD) THEN
-        PRINT*,'OLD VERSION'
-        RETURN
-      ELSE
-        PRINT*,'NEW VERSION'
-      END IF
-!
       DO I=1,2
         SET(:,:,I,:)=MATEL(I,:,:,:)
       ENDDO
@@ -1921,11 +1956,11 @@ END MODULE NEWSET_MODULE
 !     **                                                                      **
 !     ** ON INPUT, MATEL HOLDS THE (RHOT,SPIN_X,SPIN_Y,SPIN_Z) COMPONENTS     **
 !     **                                                                      **
-!     ** on output:                                                           **
+!     ** ON OUTPUT:                                                           **
 !     ** - THE FIRST TWO ELEMENTS OF MATEL ARE THE SPIN-UP AND SPIN-DOWN      **
 !     **   COMPONENTS FOR THE SELECTED SPIN AXIS                              **
 !     ** - FOR COOPS, ONLY ONE THE SELECTED SPIN-UP DIRECTION IS MAINTAINED.  **
-!     ** - FOR spinid='TOTAL' THE TWO SPIN DIRECTIONS ARE SUMMED IN THE FIRST **
+!     ** - FOR SPINID='TOTAL' THE TWO SPIN DIRECTIONS ARE SUMMED IN THE FIRST **
 !     **   AND THE SECOND IS SET TO ZERO.                                     **
 !     ** - THE SPIN DIRECTION 'MAIN' IS ONLY ALLOWED IF ANGULAR MOMENTUM      **
 !     **   WEIGHTS ON A SINGLE ATOM ARE SELECTED                              **
@@ -2033,6 +2068,7 @@ END MODULE NEWSET_MODULE
       SUBROUTINE NEWSET_COLLECTMATEL(NBB,NKPT,NSET,NORB,ORB,ORBCC,MATEL)
 !     **************************************************************************
 !     ** THE FIRST INDEX OF MATEL SPECIFIES (RHOT,MAG_X,MAG_Y,MAG_Z)          **
+!     ** ORB AND ORBC ARE FORMULATED IN THE NON-COLLINEAR SPIN MODEL          **
 !     **************************************************************************
       USE NEWSET_MODULE, ONLY : NSET1=>NSET &
      &                         ,NEWSET
@@ -2078,7 +2114,7 @@ END MODULE NEWSET_MODULE
       ENDDO
 !
 !     ==========================================================================
-!     == ANGULAR MOMENTUM WEIGHTS and special (total,all,empty)               ==
+!     == ANGULAR MOMENTUM WEIGHTS AND SPECIAL (TOTAL,ALL,EMPTY)               ==
 !     ==========================================================================
       MATEL=0.D0
       CALL NEWSET_ANGMOMWEIGHTS(NBB,NKPT,NSET,MATEL)
@@ -2193,8 +2229,10 @@ END MODULE NEWSET_MODULE
 !     ==========================================================================
       DO ISET=1,NSET
 !
-        IF(NEWSET(ISET)%SPECIAL.EQ.'ALL'.OR. &
-     &          NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+        IF(    NEWSET(ISET)%SPECIAL.EQ.'ALL'    &
+     &     .OR.NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+!         == CONSTRUCT SUMM OF ALL ANGULAR MOMENTUM WEIGHTS ====================
+!         == THE RESULT FOR EMPTY WILL BE ADJUSTED BELOW =======================
           DO IKPT=1,NKPT
             DO ISPIN=1,NSPIN
               STATE=>STATEARR(IKPT,ISPIN)
@@ -2211,10 +2249,10 @@ END MODULE NEWSET_MODULE
         END IF
 
         IF(    NEWSET(ISET)%SPECIAL.EQ.'TOTAL' &
-     &     .or.NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
+     &     .OR.NEWSET(ISET)%SPECIAL.EQ.'EMPTY') THEN
 !         == MATEL IS THE PREFACTOR OF THE UNIT MATRIX
 !         == WHICH HAS TRACE TWO. THEREFORE THE FACTOR 0.5
-          MATEL(1,:,:,ISET)=matel(1,:,:,iset)+0.5d0
+          MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET)+0.5D0
 !         == NO SPIN INFORMATION IS AVAILABLE FOR TOTAL AND NON-COLLINEAR CALC.
           IF(NDIM.EQ.1) THEN
             DO IKPT=1,NKPT
@@ -2222,16 +2260,16 @@ END MODULE NEWSET_MODULE
                 STATE=>STATEARR(IKPT,ISPIN)
                 NB=STATE%NB
                 IF(ISPIN.EQ.1) THEN
-!!$                  MATEL(1,1:nb ,ikpt,ISET)=MATEL(1,1:nb     ,ikpt,ISET)+0.5d0
-!!$                  MATEL(4,1:NB ,IKPT,ISET)=MATEL(4,1:NB     ,IKPT,ISET)+0.5d0
+!!$                  MATEL(1,1:NB ,IKPT,ISET)=MATEL(1,1:NB     ,IKPT,ISET)+0.5D0
+!!$                  MATEL(4,1:NB ,IKPT,ISET)=MATEL(4,1:NB     ,IKPT,ISET)+0.5D0
                 ELSE IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN
-!!$                  MATEL(1,nb+1:,ikpt,ISET)=MATEL(1,nb+1:2*nb,ikpt,ISET)+0.5d0
-!!$                  MATEL(4,NB+1:,IKPT,ISET)=MATEL(4,NB+1:2*NB,IKPT,ISET)-0.5d0
+!!$                  MATEL(1,NB+1:,IKPT,ISET)=MATEL(1,NB+1:2*NB,IKPT,ISET)+0.5D0
+!!$                  MATEL(4,NB+1:,IKPT,ISET)=MATEL(4,NB+1:2*NB,IKPT,ISET)-0.5D0
                 END IF
               ENDDO
             ENDDO
           END IF
-        end if
+        END IF
       ENDDO         
 !
 !     ==========================================================================
@@ -2381,236 +2419,6 @@ END MODULE NEWSET_MODULE
       ENDDO
       RETURN
       END
-!
-!........1.........2.........3.........4.........5.........6.........7.........8
-MODULE ORBITALS_MODULE
-PRIVATE
-PUBLIC ORBITALS$SETORB
-PUBLIC ORBITALS$GETORB
-LOGICAL(4)                :: TINI=.FALSE.
-INTEGER(4)                :: NORB=0      ! #(ORBITALS)
-INTEGER(4)                :: NORBX=0     ! MAX#(ORBITALS)
-INTEGER(4)    ,PARAMETER  :: NORBSTEP=10 ! STEP IN #(ORBITALS)
-INTEGER(4)                :: LENG=0      ! LENGTH OF ORBITALVECTOR
-COMPLEX(8)   ,ALLOCATABLE :: ORBITAL(:,:)
-CHARACTER(21),ALLOCATABLE :: ORBITALNAME(:)
-CONTAINS
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ORBITALS$SETORB(NAME_,LENG_,ORBITAL_)
-      CHARACTER(*),INTENT(IN) :: NAME_
-      INTEGER(4)  ,INTENT(IN) :: LENG_
-      COMPLEX(8)  ,INTENT(IN) :: ORBITAL_(LENG_)
-!     **************************************************************************
-      IF(.NOT.TINI) THEN
-        LENG=LENG_
-        TINI=.TRUE.
-      END IF
-      IF(LENG.NE.LENG_) THEN
-        CALL ERROR$MSG('LENGTH OF ORBITAL VECTOR INCONSISTENT')
-        CALL ERROR$I4VAL('LENG_',LENG_)
-        CALL ERROR$I4VAL('LENG',LENG)
-        CALL ERROR$STOP('ORBITALS$SETORB')
-      END IF
-!
-!     ==========================================================================
-!     == EXPAND ORBITAL ARRAY IF REQUIRED                                     ==
-!     ==========================================================================
-      CALL RESIZE
-!
-!     ==========================================================================
-!     == CREATE NEW ORBITAL                                                   ==
-!     ==========================================================================
-      NORB=NORB+1
-      ORBITAL(:,NORB)=ORBITAL_(:)
-      ORBITALNAME(NORB)=NAME_
-      RETURN
-      END SUBROUTINE ORBITALS$SETORB
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ORBITALS$GETORB(NAME_,LENG_,ORBITAL_)
-      IMPLICIT NONE
-      CHARACTER(*) ,INTENT(IN) :: NAME_
-      INTEGER(4)   ,INTENT(IN) :: LENG_
-      COMPLEX(8)   ,INTENT(OUT):: ORBITAL_(LENG_)
-      INTEGER(4)               :: IORB
-!     **************************************************************************
-      IF(.NOT.TINI) THEN
-        CALL ERROR$MSG('ORBITALS MODULE NOT YET INITIALIZED')
-        CALL ERROR$STOP('ORBITALS$GETORB')
-      END IF
-      IF(LENG.NE.LENG_) THEN
-        CALL ERROR$MSG('LENGTH OF ORBITAL VECTOR INCONSISTENT')
-        CALL ERROR$I4VAL('LENG_',LENG_)
-        CALL ERROR$I4VAL('LENG',LENG)
-        CALL ERROR$STOP('ORBITALS$GETORB')
-      END IF
-      DO IORB=1,NORB
-        IF(TRIM(ORBITALNAME(IORB)).EQ.TRIM(NAME_)) THEN
-          ORBITAL_(:)=ORBITAL(:,IORB)
-          RETURN
-        END IF
-      ENDDO
-      CALL ERROR$MSG('ORBITAL NAME NOT RECOGNIZED')
-      CALL ERROR$CHVAL('NAME_',NAME_)
-      CALL ERROR$STOP('ORBITALS$GETORB')
-      RETURN
-      END SUBROUTINE ORBITALS$GETORB
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RESIZE
-      COMPLEX(8)  ,ALLOCATABLE :: TMPORBITAL(:,:)
-      CHARACTER(32),ALLOCATABLE :: TMPNAME(:)
-!     **************************************************************************
-      IF(NORB+1.LT.NORBX) RETURN
-      IF(NORB.GT.0) THEN
-        ALLOCATE(TMPORBITAL(LENG,NORB))
-        ALLOCATE(TMPNAME(NORB))
-        TMPORBITAL(:,:)=ORBITAL(:,1:NORB)
-        TMPNAME(:)     =ORBITALNAME(1:NORB)
-        DEALLOCATE(ORBITAL)
-        DEALLOCATE(ORBITALNAME)
-      END IF
-      NORBX=NORB+NORBSTEP
-      ALLOCATE(ORBITAL(LENG,NORBX))
-      ALLOCATE(ORBITALNAME(NORBX))
-      IF(NORB.GT.0) THEN
-        ORBITAL(:,1:NORB)=TMPORBITAL(:,:)
-        ORBITALNAME(1:NORB)=TMPNAME(:)
-        DEALLOCATE(TMPORBITAL)
-        DEALLOCATE(TMPNAME)
-      END IF
-      ORBITAL(:,NORB+1:NORBX)=0.D0
-      ORBITALNAME(NORB+1:NORBX)=' '
-      END SUBROUTINE RESIZE
-END MODULE ORBITALS_MODULE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READONEORB(LL_CNTL,NAT,RBAS,RPOS,NPRO,ORBITAL)
-!     **************************************************************************
-!     ** READ ONE !ORB BLOCK IN THE !DCNTL FILE AND ADDS TO THE CURRENT ORBITAL*
-!     **                                                                      **
-!     ** READ  AN ORBITAL BLOCK FROM LIST LL_CNTL AND RETURN                  **
-!     ** A VECTOR DEFINING THAT ORBITAL                                       **
-!     **                                                                      **
-!     **************************************************************************
-      USE ORBITALS_MODULE, ONLY : ORBITALS$GETORB
-      USE LINKEDLIST_MODULE
-      USE STRINGS_MODULE
-      IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN) :: NAT
-      REAL(8)      ,INTENT(IN) :: RBAS(3,3)
-      REAL(8)      ,INTENT(IN) :: RPOS(3,NAT)
-      INTEGER(4)   ,INTENT(IN) :: NPRO
-      TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL
-      COMPLEX(8)   ,INTENT(OUT):: ORBITAL(NPRO)
-      INTEGER(4)   ,PARAMETER  :: LMXX=16
-      COMPLEX(8)               :: ORB(LMXX)
-      INTEGER(4)               :: IAT,IAT2
-      CHARACTER(32)            :: ATOM1,ATOMZ,ATOMX
-      CHARACTER(32)            :: ORBITALNAME1 
-      CHARACTER(8)             :: TYPE
-      INTEGER(4)               :: IT3(3),IT3Z(3),IT3X(3)
-      INTEGER(4)               :: IT(3) ! OVERALL TRANSLATION 
-      COMPLEX(8)               :: CFAC
-      LOGICAL(4)               :: TCHK
-      REAL(8)                  :: DRZ(3)
-      REAL(8)                  :: DRX(3)
-      REAL(8)                  :: ROT(3,3)
-      REAL(8)      ,ALLOCATABLE:: YLMROT(:,:)
-!     **************************************************************************
-      ORBITAL(:)=0.D0
-!
-!     ==========================================================================
-!     ==  GET PREFACTOR                                                       ==
-!     ==========================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'FAC',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$CONVERT(LL_CNTL,'FAC',1,'C(8)')
-        CALL LINKEDLIST$GET(LL_CNTL,'FAC',1,CFAC)
-      ELSE
-        CFAC=(1.D0,0.D0)
-      END IF
-!
-!     ==========================================================================
-!     ==  GET LATTICE TRANSLATION                                             ==
-!     ==========================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'IT',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'IT',1,IT)
-      ELSE
-        IT=(/0,0,0/)
-      END IF
-!
-!     ==========================================================================
-!     ==  SEARCH PREDEFINED ORBITALS                                          ==
-!     ==========================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,ORBITALNAME1)
-        CALL ORBITALS$GETORB(ORBITALNAME1,NPRO,ORBITAL)
-        IF(SUM(IT**2).GT.0) THEN
-          CALL ERROR$MSG('CANNOT TRANSLATE ORBITAL')
-          CALL ERROR$STOP('READONEORB')
-        END IF
-      END IF
-!
-!     ==========================================================================
-!     ==  BUILD NEW ORBITAL COMPONENT FROM BASIC BUILDING BLOCKS              ==
-!     ==========================================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOM',1,TCHK)
-      IF(TCHK) THEN   
-        CALL LINKEDLIST$GET(LL_CNTL,'ATOM',1,ATOM1)
-        CALL RESOLVEATOM(ATOM1,IAT,IT3)
-        CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
-        TYPE=+TYPE
-        CALL RESOLVETYPE(LMXX,TYPE,ORB)
-!       
-!       ========================================================================
-!       ==  FIND NEAREST NEIGHBOUR DIRECTIONS                                 ==
-!       ========================================================================
-        DRZ(:)=0.D0
-        DRZ(3)=1.D0
-        DRX(:)=0.D0
-        DRX(1)=1.D0
-        CALL PDOS$GETR8A('RBAS',9,RBAS) !ADDED
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'Z',1,TCHK)
-        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'Z',1,DRZ(:))
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'X',1,TCHK)
-        IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'X',1,DRX(:))
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'NNZ',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNZ',1,ATOMZ)
-          CALL RESOLVEATOM(ATOMZ,IAT2,IT3Z)
-          DRZ(:)=RPOS(:,IAT2)-RPOS(:,IAT) &
-       &        +RBAS(:,1)*REAL(IT3Z(1)-IT3(1),KIND=8) &
-       &        +RBAS(:,2)*REAL(IT3Z(2)-IT3(2),KIND=8) &
-       &        +RBAS(:,3)*REAL(IT3Z(3)-IT3(3),KIND=8)
-!          CALL LINKEDLIST$SET(LL_CNTL,'Z',0,DRZ(:))
-        END IF
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'NNX',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'NNX',1,ATOMX)
-          CALL RESOLVEATOM(ATOMX,IAT2,IT3X)
-          DRX(:)=RPOS(:,IAT2)-RPOS(:,IAT) &
-       &        +RBAS(:,1)*REAL(IT3X(1)-IT3(1),KIND=8) &
-       &        +RBAS(:,2)*REAL(IT3X(2)-IT3(2),KIND=8) &
-       &        +RBAS(:,3)*REAL(IT3X(3)-IT3(3),KIND=8)
-!          CALL LINKEDLIST$SET(LL_CNTL,'X',0,DRX(:))
-        END IF
-!       
-!       ========================================================================
-!       ==  MAKE ORBITAL                                                      ==
-!       ========================================================================
-        CALL RESOLVEROTATION(DRZ,DRX,ROT)
-        ALLOCATE(YLMROT(LMXX,LMXX))
-        CALL ROTATEYLM(LMXX,ROT,YLMROT)
-        ORB=MATMUL(CMPLX(YLMROT,KIND=8),ORB)
-        DEALLOCATE(YLMROT)
-        CALL MAKEORBITAL(ATOM1,LMXX,ORB,NPRO,ORBITAL)
-      END IF
-      ORBITAL=ORBITAL*CFAC
-      RETURN
-      END SUBROUTINE READONEORB
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READORBENTRY(LL_CNTL,RBAS,NAT,ATOMID,RPOS,IAT,IT,LMXX,ORB)
@@ -3190,7 +2998,13 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         IF(MODE.NE.'SAMPLE'.AND.MODE.NE.'TETRA')THEN
           CALL ERROR$MSG('MODE UNKNOWN (SHOULD BE "SAMPLE" OR "TETRA")')
           CALL ERROR$CHVAL('MODE ',MODE)
-          CALL ERROR$STOP('PDOS MAIN')
+          CALL ERROR$STOP('READCNTL$GENERIC')
+        ENDIF
+        IF(MODE.EQ.'SAMPLE')THEN
+          CALL ERROR$MSG('MODE SAMPLE NOT PROPERLY IMPLEMENTED')
+          CALL ERROR$MSG('STOPPING...')
+          CALL ERROR$CHVAL('MODE ',MODE)
+          CALL ERROR$STOP('READCNTL$GENERIC')
         ENDIF
       ENDIF
 !
@@ -3368,7 +3182,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ** 
 !     **************************************************************************
       USE READCNTL_MODULE
-      USE ORBITALS_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NPRO
       INTEGER(4)   ,INTENT(IN) :: NAT
@@ -3396,7 +3209,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       DO IORB=1,NORB
         CALL LINKEDLIST$SELECT(LL_CNTL,'ORBITAL',IORB)
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,ORBITALNAME)
-!BEGIN NEW
         CALL NEWORBITAL$NEWORBITAL(ORBITALNAME)
         CALL NEWORBITAL$SELECT(ORBITALNAME)
         CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NUM)
@@ -3406,19 +3218,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
         CALL NEWORBITAL$SELECT('NONE')
-!END NEW
-!BEGIN OLD
-        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NUM)
-        ORBITAL(:)=0.D0
-        DO ITH=1,NUM
-          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB',ITH)
-          CALL READONEORB(LL_CNTL,NAT,RBAS,RPOS,NPRO,ORBITAL1)
-          ORBITAL(:)=ORBITAL(:)+ORBITAL1(:)
-          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-        ENDDO
-!        CALL NORMALIZEORBITAL(NPRO,ORBITAL)
-        CALL ORBITALS$SETORB(ORBITALNAME,NPRO,ORBITAL)
-!END OLD
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ENDDO
                           CALL TRACE$POP
@@ -3605,269 +3404,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE READCNTL$SETS(NBB,NKPT,NSET &
-     &                        ,NAT,RBAS,ATOMID,RPOS,LENG,SET,LEGEND)
-!     **************************************************************************
-!     ** REMARK: THE STRING VARIABLE SPIN DESCRIBES THE SPIN PROJECTION FOR   **
-!     ** NON-COLLINEAR CALCULATIONS. IN THIS CASE, NSPIN=1.                   **
-!     **    SPIN='TOTAL' CALCULATES TOTAL ELECTRON DENSITY                    **
-!     **    SPIN='MAIN'  CALCULATES THE SPIN DENSITY PROJECTED ONTO THE       **
-!     **                 MAIN SPIN AXIS                                       **
-!     **    SPIN='X','Y','Z' PRODUCES ONE OF THE CARTESIAN COMPONENTS OF THE  **
-!     **                 SPIN DENSITY                                         **
-!     **                                                                      **
-!     **************************************************************************
-      USE READCNTL_MODULE
-      USE STRINGS_MODULE
-      IMPLICIT NONE
-      INTEGER(4)   ,INTENT(IN)  :: NBB
-      INTEGER(4)   ,INTENT(IN)  :: NKPT
-      INTEGER(4)   ,INTENT(IN)  :: NSET
-      INTEGER(4)   ,INTENT(IN)  :: NAT          ! #(ATOMS)
-      INTEGER(4)   ,INTENT(IN)  :: LENG
-      REAL(8)      ,INTENT(IN)  :: RBAS(3,3)    ! LATTICE VECTORS
-      CHARACTER(16),INTENT(IN)  :: ATOMID(NAT)  ! ATOM NAMES
-      REAL(8)      ,INTENT(IN)  :: RPOS(3,NAT)  ! ATOMIC POSITIONS
-      REAL(8)      ,INTENT(OUT) :: SET(NBB,NKPT,2,NSET) ! ALWAYS WITH 2 SPINS 
-      CHARACTER(32),INTENT(OUT) :: LEGEND(NSET)
-      REAL(8)      ,ALLOCATABLE :: SET1(:,:,:) !(NBB,NKPT,2)
-      INTEGER(4)                :: ISET   ! SET COUNTER
-      CHARACTER(8)              :: TYPE
-      CHARACTER(32)             :: NAME,SPIN
-      LOGICAL(4)                :: TCHK,TCHK1
-      INTEGER(4)                :: ITH, NUM
-      INTEGER(4)                :: JTH, NUMJTH
-      INTEGER(4)                :: IORB1,IORB2,IORB
-      INTEGER(4)                :: NORB1,NORB2,NORB
-      COMPLEX(8)                :: ORBITAL1(LENG)
-      COMPLEX(8)                :: ORBITAL2(LENG)
-      COMPLEX(8)                :: ORBITALI(LENG)
-      CHARACTER(32)             :: ORBITAL1NAME
-      CHARACTER(32)             :: ORBITAL2NAME
-!     **************************************************************************
-                          CALL TRACE$PUSH('READCNTL$SETS')
-      SET(:,:,:,:)=0.D0
-      ISET=0
-!
-!     ==========================================================================
-!     ==========================================================================
-!     ==  SCAN COOPS                                                          ==
-!     ==========================================================================
-!     ==========================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
-      CALL LINKEDLIST$NLISTS(LL_CNTL,'COOP',NUM)
-      DO ITH=1,NUM
-        CALL LINKEDLIST$SELECT(LL_CNTL,'COOP',ITH)
-        ISET=ISET+1
-!
-!       ========================================================================
-!       == THE SUM OF COOPS BETWEEN ALL ORB1 AND ALL ORB2 IS EQUAL TO THE     ==
-!       == COOP OF THE SUM OF ORBITALS ORB1 WITH THE SUM OF ALL ORBITALS ORB2 ==
-!       ========================================================================
-!!$!BEGIN NEW
-!!$        WRITE(ORBITAL1NAME,*)ISET
-!!$        ORBITAL2NAME='COOP'//TRIM(ADJUSTL(ORBITAL1NAME))//'ORB2'
-!!$        ORBITAL1NAME='COOP'//TRIM(ADJUSTL(ORBITAL1NAME))//'ORB1'
-!!$        CALL NEWORBITAL$NEWORBITAL(ORBITAL1NAME)
-!!$        CALL NEWORBITAL$NEWORBITAL(ORBITAL2NAME)
-!!$!
-!!$        CALL NEWORBITAL$SELECT(ORBITAL1NAME)
-!!$        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB1',NORB1)
-!!$        DO IORB1=1,NORB1
-!!$          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB1',IORB1) 
-!!$          CALL READONENEWORB(LL_CNTL,RBAS,NAT,ATOMID,RPOS)
-!!$          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-!!$        ENDDO
-!!$        CALL NEWORBITAL$SELECT('NONE')
-!!$!
-!!$        CALL NEWORBITAL$SELECT(ORBITAL2NAME)
-!!$        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB2',NORB2)
-!!$        DO IORB2=1,NORB2
-!!$          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB2',IORB2) 
-!!$          CALL READONENEWORB(LL_CNTL,RBAS,NAT,ATOMID,RPOS)
-!!$          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-!!$        ENDDO
-!!$        CALL NEWORBITAL$SELECT('NONE')
-!!$!END NEW     
-!BEGIN OLD
-!
-!       == LOOK UP ORBITALS ====================================================
-        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB1',NORB1)
-        ORBITAL1=0.D0 
-        DO IORB1=1,NORB1
-          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB1',IORB1) 
-          CALL READONEORB(LL_CNTL,NAT,RBAS,RPOS,LENG,ORBITALI)
-          ORBITAL1(:)=ORBITAL1(:)+ORBITALI(:)
-          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-        ENDDO
-        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB2',NORB2)
-        ORBITAL2=0.D0 
-        DO IORB2=1,NORB2
-          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB2',IORB2)
-          CALL READONEORB(LL_CNTL,NAT,RBAS,RPOS,LENG,ORBITALI)
-          ORBITAL2(:)=ORBITAL2(:)+ORBITALI(:)
-          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-        ENDDO
-!END OLD
-!
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
-        IF(TCHK1) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
-          SPIN=+SPIN
-        ELSE
-!         ==  SPIN=TOTAL MEANS "SUM OVER ALL SPINOR COMPONENTS". =============
-!         ==  FOR COLLINEAR CALCULATIONS, SPIN='TOTAL' PRODUCES THE TWO ======
-!         ==  SPIN DENSITIES. ================================================
-          SPIN='TOTAL' 
-        END IF
-        CALL SET$PROJECT(LENG,NBB,NKPT,ORBITAL1,ORBITAL2,SPIN,SET(:,:,:,ISET))
-        WRITE(LEGEND(ISET),FMT='("COOP:SET",I5)')ISET
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ID',0,LEGEND(ISET))
-        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,LEGEND(ISET))
-        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      ENDDO
-                          CALL TRACE$PASS('COOPS FINISHED')
-!
-!     ==========================================================================
-!     ==========================================================================
-!     ==  SCAN WEIGHTS                                                        ==
-!     ==========================================================================
-!     ==========================================================================
-      CALL LINKEDLIST$NLISTS(LL_CNTL,'WEIGHT',NUM)
-      DO ITH=1,NUM
-        CALL LINKEDLIST$SELECT(LL_CNTL,'WEIGHT',ITH)
-        ISET=ISET+1
-        TYPE=' '
-        SET(:,:,:,ISET)=0.D0
-!
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK1)
-        IF(TCHK1) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'SPIN',1,SPIN)
-          SPIN=+SPIN
-        ELSE
-!         ==  SPIN=TOTAL MEANS "SUM OVER ALL SPINOR COMPONENTS". =============
-!         ==  FOR COLLINEAR CALCULATIONS, SPIN='Z' PRODUCES THE TWO ==========
-!         ==  SPIN DENSITIES. ================================================
-          SPIN='Z' 
-        END IF
-!
-!       == TYPE MAY BE 'TOTAL', 'ALL' OR 'EMPTY' ===============================
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
-        IF(TCHK) THEN
-          CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
-          TYPE=+TYPE
-!         == CHECK SYNTAX ======================================================
-          CALL LINKEDLIST$NLISTS(LL_CNTL,'ATOM',NUMJTH)
-          CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NORB)
-          IF(NUMJTH.GT.0.OR.NORB.GT.0) THEN
-            CALL ERROR$MSG('!DCNTL!WEIGHT:TYPE IS INCOMPATIBLE WITH')
-            CALL ERROR$MSG('!DCNTL!WEIGHT!ATOM AND !DCNTL!WEIGHT!ORB')
-            CALL ERROR$CHVAL('TYPE',TYPE)
-            CALL ERROR$I4VAL('NUMJTH',NUMJTH)
-            CALL ERROR$I4VAL('NORB',NORB)
-            CALL ERROR$STOP('READCNTL$SETS')
-          END IF
-!
-!         ======================================================================
-!         ==  'TOTAL' = TOTAL DENSITY OF STATES                               ==
-!         ======================================================================
-          IF(TRIM(TYPE).EQ.'TOTAL') THEN
-            CALL SET$WEIGHT('TOTAL',' ',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-!
-!         ======================================================================
-!         ==  'ALL' = ALL PROJECTED DENSITY OF STATES                         ==
-!         ======================================================================
-          ELSE IF(TRIM(TYPE).EQ.'ALL') THEN
-            CALL SET$WEIGHT('ALL',' ',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-!
-!         ======================================================================
-!         ==  'EMPTY' = VACCUM DENSITY OF STATES                              ==
-!         ======================================================================
-          ELSE IF(TRIM(TYPE).EQ.'EMPTY') THEN
-            ALLOCATE(SET1(NBB,NKPT,2))
-            SET1=0.D0
-            CALL SET$WEIGHT('TOTAL',' ',NBB,NKPT,SPIN,SET1)
-            SET(:,:,:,ISET)=SET(:,:,:,ISET)+SET1
-            SET1=0.D0
-            CALL SET$WEIGHT('ALL',' ',NBB,NKPT,SPIN,SET1)
-            SET(:,:,:,ISET)=SET(:,:,:,ISET)-SET1
-            DEALLOCATE(SET1)
-
-!         ======================================================================
-!         ==  NOT RECOGNIZED                                                  ==
-!         ======================================================================
-          ELSE 
-            CALL ERROR$MSG('TYPE NOT RECOGNIZED')
-            CALL ERROR$MSG('MUST BE EITHER TOTAL,ALL OR EMPTY')
-            CALL ERROR$CHVAL('TYPE ',TYPE)
-            CALL ERROR$STOP('READCNTL$SETS')
-          END IF
-        END IF
-!
-!       ========================================================================
-!       == COLLECT CONTRIBUTIONS FROM INDIVIDUAL ATOMS                        ==
-!       ========================================================================
-        CALL LINKEDLIST$NLISTS(LL_CNTL,'ATOM',NUMJTH)
-        DO JTH=1,NUMJTH
-          CALL LINKEDLIST$SELECT(LL_CNTL,'ATOM',JTH)
-          CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,NAME)
-          CALL LINKEDLIST$EXISTD(LL_CNTL,'SPIN',1,TCHK)
-!
-!         == SELECT TYPE =======================================================
-          CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,TYPE)
-          TYPE=+TYPE
-          IF(TYPE.EQ.'ALL') THEN
-            CALL SET$WEIGHT(NAME,'ALL',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-          ELSE
-            IF(SCAN(TYPE,'S').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'S',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-            END IF
-            IF(SCAN(TYPE,'P').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'P',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-            END IF
-            IF(SCAN(TYPE,'D').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'D',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-            END IF
-            IF(SCAN(TYPE,'F').NE.0) THEN
-              CALL SET$WEIGHT(NAME,'F',NBB,NKPT,SPIN,SET(1,1,1,ISET))
-            END IF
-
-            IF(SCAN(TYPE,'ABCEGHIJKLMNOQRTUVWXYZ0123456789').NE.0) THEN
-              CALL ERROR$MSG('ALLOWED VALUES FOR VARIABLE TYPE ARE')
-              CALL ERROR$MSG('ONLY "ALL" OR A COMBINATION OF "S", "P", "D","F"')
-              CALL ERROR$CHVAL('ATOM',NAME)
-              CALL ERROR$CHVAL('TYPE',TYPE)
-              CALL ERROR$STOP('READCNTL$SETS')
-            END IF
-          END IF
-          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-        ENDDO
-!
-!       ========================================================================
-!       == ADD CONTRIBUTION FROM PREDEFINED ORBITALS ===========================
-!       ========================================================================
-!
-!       == LOOK UP ORBITALS ====================================================
-        CALL LINKEDLIST$NLISTS(LL_CNTL,'ORB',NORB)
-        DO IORB=1,NORB
-          CALL LINKEDLIST$SELECT(LL_CNTL,'ORB',IORB)
-          CALL READONEORB(LL_CNTL,NAT,RBAS,RPOS,LENG,ORBITALI)
-          CALL SET$PROJECT(LENG,NBB,NKPT,ORBITALI,ORBITALI,SPIN,SET(1,1,1,ISET))
-          CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-        ENDDO
-        WRITE(LEGEND(ISET),FMT='("WEIGHT",I5)')ISET
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'ID',0,LEGEND(ISET))
-        CALL LINKEDLIST$GET(LL_CNTL,'ID',1,LEGEND(ISET))
-        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      ENDDO
-                          CALL TRACE$POP
-      RETURN
-      END SUBROUTINE READCNTL$SETS
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$SETS_NEW(NKPT,NSET,NAT,RBAS,ATOMID,RPOS)
 !     **************************************************************************
 !     ** REMARK: THE STRING VARIABLE SPIN DESCRIBES THE SPIN PROJECTION FOR   **
@@ -4035,7 +3571,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
             CALL ERROR$CHVAL('TYPE',TYPE)
             CALL ERROR$I4VAL('NUMJTH',NUMJTH)
             CALL ERROR$I4VAL('NORB',NORB)
-            CALL ERROR$STOP('READCNTL$SETS')
+            CALL ERROR$STOP('READCNTL$SETS_NEW')
           END IF
 !
 !         ======================================================================
@@ -4063,7 +3599,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
             CALL ERROR$MSG('TYPE NOT RECOGNIZED')
             CALL ERROR$MSG('MUST BE EITHER TOTAL,ALL OR EMPTY')
             CALL ERROR$CHVAL('TYPE ',TYPE)
-            CALL ERROR$STOP('READCNTL$SETS')
+            CALL ERROR$STOP('READCNTL$SETS_NEW')
           END IF
         END IF
 !
@@ -4087,7 +3623,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
             IF(NAME.NE.'ALL') THEN
               CALL ERROR$MSG('ATOMID NOT RECOGNIZED')
               CALL ERROR$CHVAL('ATOMID_',NAME)
-              CALL ERROR$STOP('SET$WEIGHT')
+              CALL ERROR$STOP('READCNTL$SETS_NEW')
             END IF
           END IF
 !
@@ -4107,7 +3643,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
               CALL ERROR$MSG('ONLY "ALL" OR A COMBINATION OF "S", "P", "D","F"')
               CALL ERROR$CHVAL('ATOM',NAME)
               CALL ERROR$CHVAL('TYPE',TYPE)
-              CALL ERROR$STOP('READCNTL$SETS')
+              CALL ERROR$STOP('READCNTL$SETS_NEW')
             END IF
           END IF
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
@@ -4137,291 +3673,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
                           CALL TRACE$POP
       RETURN
     END SUBROUTINE READCNTL$SETS_NEW
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SET$WEIGHT(ATOMID_,ORBITALID,NBB,NKPT_,SPIN,SET)
-!     **************************************************************************
-!     ** ADDS A CONTRIBUTION TO THE SET, WHICH CONTAINS THE CONTRIBUTION      **
-!     ** TO THE WEIGHT FROM ALL THE STATES                                    **
-!     **   SPIN: MAY BE 'TOTAL', 'MAIN', 'X', 'Y', 'Z'                        **
-!     **         TOTAL IS THE TOTAL DENSITY OF STATES                         **
-!     **         MAIN IS THE PROJECTION ON SPINDIR(I,IAT)                     **
-!     **   ORBITALID MAY BE:  'TOTAL','ALL','S','P','D','F'                   **
-!     **                                                                      **
-!     **************************************************************************
-      USE PDOS_MODULE   , ONLY : NDIM &
-     &                          ,NSPIN &
-     &                          ,NKPT &
-     &                          ,STATEARR,STATE &
-     &                          ,NAT &
-     &                          ,ATOMID &
-     &                          ,ISPECIES &
-     &                          ,LNX &
-     &                          ,LOX &
-     &                          ,OV
-      USE SPINDIR_MODULE, ONLY : SPINDIR
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN)   :: ATOMID_
-      CHARACTER(*),INTENT(IN)   :: ORBITALID !MAY BE 'ALL','S','P','D','F'
-      INTEGER(4)  ,INTENT(IN)   :: NBB
-      INTEGER(4)  ,INTENT(IN)   :: NKPT_
-      CHARACTER(*),INTENT(IN)   :: SPIN   
-      REAL(8)     ,INTENT(INOUT):: SET(NBB,NKPT_,2) !ALWAYS TWO SPIN COMPONENTS
-      INTEGER(4)                :: ISPIN,IKPT,IB,IDIM
-      INTEGER(4)                :: IPRO0,IPRO1,IPRO2,IP1,IP2
-      INTEGER(4)                :: IAT,IAT0,ISP
-      INTEGER(4)                :: L,L1,L2,M,LN,LN1,LN2
-      INTEGER(4)                :: IBB
-      INTEGER(4)                :: NB
-      REAL(8)                   :: SUM,SUM_(3)
-      COMPLEX(8),PARAMETER      :: CI=(0.D0,1.D0)
-      COMPLEX(8),PARAMETER      :: CONE=(1.D0,0.D0)
-      COMPLEX(8)                :: CSVAR1P,CSVAR1M,CSVAR2P,CSVAR2M 
-      REAL(8)                   :: SVARP,SVARM      
-      COMPLEX(8)                :: CP(2),CM(2) ! SPIN EIGENSTATES
-      REAL(8)                   :: SVAR
-!     **************************************************************************
-                                 CALL TRACE$PUSH('SET$WEIGHT')
-!!$      IF(ATOMID_.EQ.'TOTAL') THEN
-!!$!        SVAR=2.D0/REAL(NDIM*NSPIN,KIND=8)
-!!$        SVAR=1.D0
-!!$        IF(TRIM(SPIN).EQ.'TOTAL') THEN
-!!$!         == WEIGHT OF BOTH SPIN COMPONENTS IS ADDED TO THE FIRST SPIN CHANNEL
-!!$          SET(:,:,1)=SET(:,:,1)+SVAR
-!!$          RETURN
-!!$        ELSE IF(TRIM(SPIN).EQ.'Z'.AND.NSPIN.EQ.2) THEN
-!!$          DO IKPT=1,NKPT
-!!$            DO ISPIN=1,NSPIN
-!!$              STATE=>STATEARR(IKPT,ISPIN)
-!!$              NB=STATE%NB
-!!$              SET(:NB  ,IKPT,1)=SET(:NB  ,IKPT,1)+0.5D0*SVAR
-!!$              SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+0.5D0*SVAR
-!!$            ENDDO
-!!$          ENDDO
-!!$        ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-!!$          CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-!!$          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL')
-!!$          CALL ERROR$CHVAL('SPIN',SPIN)
-!!$          CALL ERROR$CHVAL('ATOMID',ATOMID)
-!!$          CALL ERROR$STOP('SET$WEIGHT')
-!!$        ELSE
-!!$!         == FOR NON-COLLINEAR CALCULATION THERE IS NO PREFERRED SPIN AXIS =====
-!!$!         == THEREFORE THE WEIGHT IS EQUALLY DISTRIBUTED TO BOTH SPIN DIRECTIONS
-!!$          SET(:,:,:)=SET(:,:,:)+0.5D0*SVAR
-!!$        END IF
-!!$        RETURN
-!!$      END IF
-!
-!     ==========================================================================
-!     ==  ATOM SPECIFIER IAT0: IAT0<0 IMPLIES ALL ATOMS                       ==
-!     ==========================================================================
-!     == ATOMID_='TOTAL' WILL BE TREATED HERE LIKE 'ALL', DESPITE SPECIAL RULE==
-      IF(ATOMID_.EQ.'ALL'.OR.ATOMID_.EQ.'TOTAL'.OR.ATOMID_.EQ.' ') THEN
-        IAT0=-1
-      ELSE
-        IAT0=-1
-        DO IAT=1,NAT
-          IF(ATOMID_.EQ.ATOMID(IAT)) THEN
-            IAT0=IAT
-            EXIT
-          END IF
-        ENDDO
-        IF(IAT0.EQ.-1) THEN
-          CALL ERROR$MSG('ATOMID NOT RECOGNIZED')
-          CALL ERROR$CHVAL('ATOMID_',ATOMID_)
-          CALL ERROR$STOP('SET$WEIGHT')
-        END IF
-      END IF
-!
-      IF(TRIM(SPIN).EQ.'MAIN'.AND.IAT0.EQ.-1.AND.NAT.GT.1) THEN
-        CALL ERROR$MSG('MAIN SPIN FOR ALL ATOMS NOT POSSIBLE')
-        CALL ERROR$CHVAL('SPIN',SPIN)
-        CALL ERROR$CHVAL('ATOMID_',ATOMID_)
-        CALL ERROR$STOP('SET$WEIGHT')
-      END IF
-!
-!     ==========================================================================
-!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
-!     ==========================================================================
-      IF(TRIM(SPIN).EQ.'X') THEN
-        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
-        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'MAIN') THEN
-        IF(IAT0.EQ.-1) THEN
-          CALL ERROR$MSG('NOT ATOM SELECTED TO SPECIFY LOCAL SPIN AXIS')
-          CALL ERROR$MSG('SPIN=MAIN INCOMPATIBLE WITH ATOMID=TOTAL OR ALL')
-          CALL ERROR$CHVAL('SPIN',SPIN)
-          CALL ERROR$CHVAL('ATOMID',ATOMID)
-          CALL ERROR$STOP('SET$WEIGHT')
-        END IF
-        CALL SPINBRA(SPINDIR(1,IAT0),SPINDIR(2,IAT0),SPINDIR(3,IAT0),CP,CM)
-      ELSE
-        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
-        CALL ERROR$CHVAL('SPIN',SPIN)
-        CALL ERROR$STOP('SET$WEIGHT')
-      END IF
-!
-!     ==========================================================================
-!     ==  ANGULAR MOMENTUM SPECIFIER L: L<0 MEANS ALL ANGULAR MOMENTA         ==
-!     ==========================================================================
-      IF(ORBITALID.EQ.'S') THEN
-        L=0
-      ELSE IF(ORBITALID.EQ.'P') THEN
-        L=1
-      ELSE IF(ORBITALID.EQ.'D') THEN
-        L=2
-      ELSE IF(ORBITALID.EQ.'F') THEN
-        L=3
-      ELSE IF(ORBITALID.EQ.'ALL'.OR.ORBITALID.EQ.' ') THEN
-        L=-1
-      ELSE
-        CALL ERROR$MSG('ORBITALID NOT RECOGNIZED')
-        CALL ERROR$CHVAL('ORBITALID',ORBITALID)
-        CALL ERROR$STOP('SET$WEIGHT')
-      END IF
-!
-!     ==========================================================================
-!     ==  SPECIAL RULE FOR ATOMID_='TOTAL'
-!     ==  IS IS APPLIED HERE FOR CONSISTENCY WITH GENERAL RULE
-!     ==========================================================================
-      IF(ATOMID_.EQ.'TOTAL') THEN
-        DO IKPT=1,NKPT
-          DO ISPIN=1,NSPIN
-            STATE=>STATEARR(IKPT,ISPIN)
-            NB=STATE%NB
-            IF(NDIM.EQ.1) THEN
-              SVARP=ABS(CP(ISPIN))**2
-              SVARM=ABS(CM(ISPIN))**2
-              IF(SPIN.EQ.'TOTAL') THEN
-                SVARP=SVARP+SVARM
-                SVARM=0.D0
-              END IF
-              IB=NB*(ISPIN-1)
-              SET(IB+1:IB+NB,IKPT,1)=SET(IB+1:IB+NB,IKPT,1)+SVARP
-              SET(IB+1:IB+NB,IKPT,2)=SET(IB+1:IB+NB,IKPT,2)+SVARM
-              IF(ISPIN.EQ.1.AND.NSPIN.EQ.1) THEN
-                SVARP=ABS(CP(2))**2
-                SVARM=ABS(CM(2))**2
-                IF(SPIN.EQ.'TOTAL') THEN
-                  SVARP=SVARP+SVARM
-                  SVARM=0.D0
-                END IF
-                SET(NB+1:,IKPT,1)=SET(NB+1:,IKPT,1)+SVARP
-                SET(NB+1:,IKPT,2)=SET(NB+1:,IKPT,2)+SVARM
-              END IF
-            ELSE IF(NDIM.EQ.2) THEN
-              IF(SPIN.EQ.'TOTAL') THEN
-                SET(1:NB,IKPT,1)=1.D0
-              ELSE
-                CALL ERROR$MSG('INTERNAL ERROR')
-                CALL ERROR$MSG('THE TOTAL DOS CAN NOT BE SPIN RESOLVED')
-                CALL ERROR$MSG('USE TYPE=ALL INSTEAD OF TYPE=TOTAL')
-                CALL ERROR$MSG('OR SPIN=TOTAL')
-                CALL ERROR$STOP('SET$WEIGHT')
-              END IF
-            END IF
-          ENDDO  !END LOOP ISPIN
-        ENDDO  ! END LOOP IKPT
-                                 CALL TRACE$POP
-        RETURN
-      END IF ! END SELECTION ATOMID_='TOTAL'
-!
-!     ==========================================================================
-!     ==  NOW EVALUATE WEIGHTS                                                ==
-!     ==========================================================================
-      DO IKPT=1,NKPT
-        DO ISPIN=1,NSPIN
-          STATE=>STATEARR(IKPT,ISPIN)
-          IPRO0=0
-          DO IAT=1,NAT
-            ISP=ISPECIES(IAT)
-            IF(IAT.EQ.IAT0.OR.IAT0.LE.0) THEN ! ALL ATOMS FOR IAT0<1
-              IPRO1=IPRO0
-              DO LN1=1,LNX(ISP)
-                L1=LOX(LN1,ISP)
-                IPRO2=IPRO0
-                DO LN2=1,LNX(ISP)
-                  L2=LOX(LN2,ISP)
-!                 == SELECT ANGULAR MOMENTA (ALL FOR L<0)
-                  IF(L1.NE.L2.OR.(L.GE.0.AND.L1.NE.L)) THEN  
-                    IPRO2=IPRO2+2*L2+1
-                    CYCLE
-                  END IF
-                  NB=STATE%NB
-                  DO IB=1,NB
-                    IBB=IB+NB*(ISPIN-1)
-                    DO M=1,2*L1+1
-                      IP1=IPRO1+M
-                      IP2=IPRO2+M
-                      IF(NDIM.EQ.1) THEN
-                        CSVAR1P=CP(ISPIN)*STATE%VEC(1,IP1,IB)
-                        CSVAR2P=CP(ISPIN)*STATE%VEC(1,IP2,IB)
-                        CSVAR1M=CM(ISPIN)*STATE%VEC(1,IP1,IB)
-                        CSVAR2M=CM(ISPIN)*STATE%VEC(1,IP2,IB)
-                        SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
-                        SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
-                        IF(SPIN.EQ.'TOTAL') THEN
-                          SVARP=SVARP+SVARM
-                          SVARM=0.D0
-                        END IF
-                        SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
-                        SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
-                        IF(ISPIN.EQ.1.AND.NSPIN.EQ.1) THEN
-                          CSVAR1P=CP(2)*STATE%VEC(1,IP1,IB)
-                          CSVAR2P=CP(2)*STATE%VEC(1,IP2,IB)
-                          CSVAR1M=CM(2)*STATE%VEC(1,IP1,IB)
-                          CSVAR2M=CM(2)*STATE%VEC(1,IP2,IB)
-                          SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
-                          SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
-                          IF(SPIN.EQ.'TOTAL') THEN
-                            SVARP=SVARP+SVARM
-                            SVARM=0.D0
-                          END IF
-                          SET(IB+NB,IKPT,1)=SET(IB+NB,IKPT,1) &
-      &                                                  +SVARP*OV(LN1,LN2,ISP)
-                          SET(IB+NB,IKPT,2)=SET(IB+NB,IKPT,2) &
-      &                                                  +SVARM*OV(LN1,LN2,ISP)
-                        END IF
-                      ELSE IF(NDIM.EQ.2) THEN
-                        CSVAR1P=(0.D0,0.D0)
-                        CSVAR1M=(0.D0,0.D0)
-                        CSVAR2P=(0.D0,0.D0)
-                        CSVAR2M=(0.D0,0.D0)
-                        DO IDIM=1,NDIM
-                          CSVAR1P=CSVAR1P+CP(IDIM)*STATE%VEC(IDIM,IP1,IB)
-                          CSVAR1M=CSVAR1M+CM(IDIM)*STATE%VEC(IDIM,IP1,IB)
-                          CSVAR2P=CSVAR2P+CP(IDIM)*STATE%VEC(IDIM,IP2,IB)
-                          CSVAR2M=CSVAR2M+CM(IDIM)*STATE%VEC(IDIM,IP2,IB)
-                        ENDDO
-                        SVARP=REAL(CONJG(CSVAR1P)*CSVAR2P,KIND=8)
-                        SVARM=REAL(CONJG(CSVAR1M)*CSVAR2M,KIND=8)
-                        IF(SPIN.EQ.'TOTAL') THEN
-                          SVARP=SVARP+SVARM
-                          SVARM=0.D0
-                        END IF
-                        SET(IB,IKPT,1)=SET(IB,IKPT,1)+SVARP*OV(LN1,LN2,ISP)
-                        SET(IB,IKPT,2)=SET(IB,IKPT,2)+SVARM*OV(LN1,LN2,ISP)
-                      END IF
-                    ENDDO
-                  ENDDO  ! END OF LOOP OVER BANDS (IB)
-                  IPRO2=IPRO2+2*L2+1
-                ENDDO    !END OF LOOP OVER LN2
-                IPRO1=IPRO1+2*L1+1
-              ENDDO      !END OF LOOP OVER LN1
-            END IF
-            DO LN=1,LNX(ISP)
-              IPRO0=IPRO0+2*LOX(LN,ISP)+1
-            ENDDO
-          ENDDO  ! END LOOP OVER ATOMS (IAT)
-        ENDDO  ! END LOOP OVER SPINS (ISPIN)
-      ENDDO  ! END LOOP OVER K-POINTS (IKPT)
-                                 CALL TRACE$POP
-      RETURN
-      END SUBROUTINE SET$WEIGHT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPINBRA(X,Y,Z,CP,CM)
@@ -4476,142 +3727,12 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SET$PROJECT(NPRO_,NBB,NKPT_,ORBITAL1,ORBITAL2,SPIN,SET)
-!     **************************************************************************
-!     **  ADDS PROJECTION ONTO MATRIX ELEMENTS OF PREDEFINED ORBITALS         **
-!     **  SPECIFIED BY ORBITAL1 AND ORBITAL2 TO SET                           **
-!     **                                                                      **
-!     **  ASSUMES THAT ORBITAL1 AND 2 ARE NONZERO ONLY FOR THE FIRST PARTIAL  **
-!     **    WAVE PER SITE AND ANGULAR MOMENTUM
-!     **                                                                      **
-!     **  CAUTION: SET IS AN INOUT VARIABLE!                                  **
-!     **************************************************************************
-      USE PDOS_MODULE, ONLY : NSPIN &
-     &                       ,NKPT &
-     &                       ,NDIM &
-     &                       ,STATEARR,STATE &
-     &                       ,NPRO &
-     &                       ,NAT &
-     &                       ,ISPECIES &
-     &                       ,LNX &
-     &                       ,LOX &
-     &                       ,OV
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)   :: NPRO_
-      INTEGER(4)  ,INTENT(IN)   :: NBB
-      INTEGER(4)  ,INTENT(IN)   :: NKPT_
-      COMPLEX(8)  ,INTENT(IN)   :: ORBITAL1(NPRO)
-      COMPLEX(8)  ,INTENT(IN)   :: ORBITAL2(NPRO)
-      CHARACTER(*),INTENT(IN)   :: SPIN   
-      REAL(8)     ,INTENT(INOUT):: SET(NBB,NKPT_,2) 
-      COMPLEX(8)                :: ORBITAL1P(2,NPRO)
-      COMPLEX(8)                :: ORBITAL2P(2,NPRO)
-      COMPLEX(8)                :: ORBITAL1M(2,NPRO)
-      COMPLEX(8)                :: ORBITAL2M(2,NPRO)
-      INTEGER(4)                :: ISPIN,IKPT,IB,IPRO,IDIM,IBB
-      INTEGER(4)                :: IAT,ISP,LN,L,M
-      INTEGER(4)                :: NB
-      COMPLEX(8)                :: CSVAR,CSVAR1,CSVAR2
-      COMPLEX(8)                :: CVEC(2),CP(2),CM(2)
-      REAL(8)                   :: SVAR
-!     **************************************************************************
-                                 CALL TRACE$PUSH('SET$PROJECT')
-!
-!     ==========================================================================
-!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
-!     ==========================================================================
-      IF(TRIM(SPIN).EQ.'X') THEN
-        CALL SPINBRA(1.D0,0.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'-X') THEN
-        CALL SPINBRA(-1.D0,0.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Y') THEN
-        CALL SPINBRA(0.D0,1.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'-Y') THEN
-        CALL SPINBRA(0.D0,-1.D0,0.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'Z'.OR.TRIM(SPIN).EQ.'TOTAL') THEN
-        CALL SPINBRA(0.D0,0.D0,1.D0,CP,CM)
-      ELSE IF(TRIM(SPIN).EQ.'-Z') THEN
-        CALL SPINBRA(0.D0,0.D0,-1.D0,CP,CM)
-      ELSE
-        CALL ERROR$MSG('SPIN COMPONENT NOT RECOGNIZED')
-        CALL ERROR$MSG('SPIN SHOULD BE TOTAL,X,Y,Z OR MAIN')
-        CALL ERROR$CHVAL('SPIN',SPIN)
-        CALL ERROR$STOP('SET$PROJECT')
-      END IF
-!
-!     ==========================================================================
-!     ==  DETERMINE SPINOR EIGENSTATES                                        ==
-!     ==========================================================================
-      ORBITAL1P(1,:)=CP(1)*CONJG(ORBITAL1(:))
-      ORBITAL1P(2,:)=CP(2)*CONJG(ORBITAL1(:))
-      ORBITAL1M(1,:)=CM(1)*CONJG(ORBITAL1(:))
-      ORBITAL1M(2,:)=CM(2)*CONJG(ORBITAL1(:))
-      ORBITAL2P(1,:)=CP(1)*CONJG(ORBITAL2(:))
-      ORBITAL2P(2,:)=CP(2)*CONJG(ORBITAL2(:))
-      ORBITAL2M(1,:)=CM(1)*CONJG(ORBITAL2(:))
-      ORBITAL2M(2,:)=CM(2)*CONJG(ORBITAL2(:))
-      IPRO=0
-      DO IAT=1,NAT
-        ISP=ISPECIES(IAT)
-        DO LN=1,LNX(ISP)
-          L=LOX(LN,ISP)
-          DO M=1,2*L+1
-            IPRO=IPRO+1
-            ORBITAL1P(:,IPRO)=ORBITAL1P(:,IPRO)*OV(LN,LN,ISP)
-            ORBITAL1M(:,IPRO)=ORBITAL1M(:,IPRO)*OV(LN,LN,ISP)
-          ENDDO
-        ENDDO
-      ENDDO
-
-      DO ISPIN=1,NSPIN
-        DO IKPT=1,NKPT
-          STATE=>STATEARR(IKPT,ISPIN)
-          NB=STATE%NB
-          DO IB=1,NB
-            IBB=IB+NB*(ISPIN-1)
-            IF(NDIM.EQ.2) THEN
-              CSVAR1=SUM(ORBITAL1P(:,:)*STATE%VEC(:,:,IB))
-              CSVAR2=SUM(ORBITAL2P(:,:)*STATE%VEC(:,:,IB))
-              SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+REAL(CONJG(CSVAR1)*CSVAR2)
-              CSVAR1=SUM(ORBITAL1M(:,:)*STATE%VEC(:,:,IB))
-              CSVAR2=SUM(ORBITAL2M(:,:)*STATE%VEC(:,:,IB))
-              SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
-            ELSE
-              CSVAR1=SUM(ORBITAL1P(ISPIN,:)*STATE%VEC(1,:,IB))
-              CSVAR2=SUM(ORBITAL2P(ISPIN,:)*STATE%VEC(1,:,IB))
-              SET(IBB,IKPT,1)=SET(IBB,IKPT,1)+REAL(CONJG(CSVAR1)*CSVAR2)
-              CSVAR1=SUM(ORBITAL1M(ISPIN,:)*STATE%VEC(1,:,IB))
-              CSVAR2=SUM(ORBITAL2M(ISPIN,:)*STATE%VEC(1,:,IB))
-              SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
-              IF(NSPIN.EQ.1) THEN
-                CSVAR1=SUM(ORBITAL1M(2,:)*STATE%VEC(1,:,IB))
-                CSVAR2=SUM(ORBITAL2M(2,:)*STATE%VEC(1,:,IB))
-                SET(IBB,IKPT,2)=SET(IBB,IKPT,2)+REAL(CONJG(CSVAR1)*CSVAR2)
-              END IF
-            END IF
-          ENDDO   ! END OF LOOP OVER BANDS IB
-        ENDDO  ! END OF LOOP OVER K-POINTS IKPT
-      ENDDO  ! END OF LOOP OVER SPINS ISPIN
-!
-!     ==========================================================================
-!     == ADD UP CONTRIBUTIONS FOR SPIN=TOTAL                                  ==
-!     ==========================================================================
-      IF(SPIN.EQ.'TOTAL') THEN
-        SET(:,:,1)=SET(:,:,1)+SET(:,:,2)
-        SET(:,:,2)=0.D0
-      END IF
-                                 CALL TRACE$POP
-      RETURN
-      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READCNTL$OUTPUT(EMIN,EMAX,NE,EBROAD,PREFIX &
      &                    ,NBB,NKPT,EIG,OCC,NSET,SET,MODE)
 !     **************************************************************************
 !     **************************************************************************
       USE STRINGS_MODULE
       USE READCNTL_MODULE
-      USE ORBITALS_MODULE
       USE DOS_WGHT_MODULE
       USE NEWSET_MODULE  ,ONLY : NEWSET
       IMPLICIT NONE
@@ -4724,7 +3845,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **  NOS(IE,ISPIN,2) IS MULTIPLIED WITH ACTUAL OCCUPATION OF EACH STATE  **
 !     **                                                                      **
 !     **************************************************************************
-      USE PDOS_MODULE, ONLY: STATE,STATEARR,WKPT
+      USE PDOS_MODULE, ONLY: STATE,STATEARR,WKPT,NSPIN
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NE
       REAL(8)      ,INTENT(IN) :: EMIN

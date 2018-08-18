@@ -6373,6 +6373,68 @@ that may be anticipated. In this case we would need a set of vectors
 normalized with the overlap between partial waves to obtain the
 complete result.
 
+%===============================================================================
+\subsubsection{Orbital primitives}
+%===============================================================================
+The primitive orbitals are usually partial waves, that are truncated
+beyond a certain radius specified in the simulation code.  
+\begin{eqnarray}
+|\chi_\alpha\rangle=\theta_{\Omega_{R_\alpha}}|\phi_\alpha\rangle
+\end{eqnarray}
+(I plan to replace these by local tight-binding orbitals in
+the future.)  These orbitals are not orthonormal to other orbitals on
+the same site, which produces (correct, but ) counterintuitive
+results.
+
+
+For this purpose, we transform these primitives inside the paw\_dos
+tool into a new set that is orthonormal on each site. For this purpose,
+I perform a Cholesky decomposition of the overlap matrix.
+\begin{eqnarray}
+o_{\alpha,\beta}=\langle\chi_\alpha|\chi_\beta\rangle
+=\sum_\gamma L_{\alpha,\gamma}L^\dagger_{\gamma,\beta}
+=\sum_{\gamma,\delta}\mat{L}_{\alpha,\gamma}
+\langle\chi'_\gamma|\chi'_\delta\rangle
+\mat{L}^\dagger_{\delta,\beta}
+\end{eqnarray}
+with a lower triangular, real\footnote{The matrix $\mat{L}$ is purely
+  real, if the overlap matrix is positive definite, which is always
+  satisfied, because the overlap matrix is itself constructed from
+  wellpdefined orbitals.} $\mat{L}$, i.e.
+\begin{eqnarray}
+L_{\alpha,\beta}=0\qquad\text{for $\beta>\alpha$}
+\end{eqnarray}
+
+The new set $|\chi'_\alpha\rangle$ obeys local orthonormality
+\begin{eqnarray}
+\langle\chi'_\gamma|\chi'_\delta\rangle=
+\delta_{\gamma,\delta} \qquad\text{for $\vec{R}_\gamma=\vec{R}_\delta$}
+\end{eqnarray}
+
+A wave function then has the form
+\begin{eqnarray}
+|\psi\rangle
+&=&\sum_{\alpha}
+|\chi_\alpha\rangle_{\Omega_R}
+\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
+=\sum_{\gamma}
+|\chi'_\gamma\rangle_{\Omega_R}
+\underbrace{\Bigl(
+\sum_{\alpha}
+L^\dagger_{\gamma,\alpha}
+\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
+\Bigr)}_{\langle\tilde{\pi}'_\alpha|\tilde\psi\rangle}
+\end{eqnarray}
+
+The new primitive orbitals are
+\begin{eqnarray}
+|\chi'_\alpha\rangle=\sum_{\gamma=1}^{\alpha}
+|\chi_\gamma\rangle L^{\dagger,-1}_{\gamma,\alpha}
+\end{eqnarray}
+The restriction of the sum over $\gamma$ originates from the fact that
+$\mat{L}$ is lower triagonal, $\mat{L}^\dagger$ and
+$\mat{L}^{\dagger,-a}$ are upper triagonal, so that
+$L^{\dagger,-1}_{\gamma,\alpha}=0$ for $\gamma>\alpha$.
 
 %===============================================================================
 \subsubsection{Matrix elements}
