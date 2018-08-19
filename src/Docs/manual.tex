@@ -4653,9 +4653,9 @@ on p.~\pageref{sec:extendedatomnotation})}
 %
 \mbax{\key{TYPE}
 \vdescr{orbital type, can be 'S', 'P', 'D', 'ALL'.
-One can also specify specific angular momenta such as 
-'PX', 'PY', 'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2', 'DYZ', 'DXY'.
-For the f-orbitals we use the notation 'F1', \ldots, 'F7'.
+One can also specify specific angular momenta such as 'PX', 'PY',
+'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2', 'DYZ', 'DXY'.  For the f-orbitals we
+use the notation 'F1', \ldots, 'F7'.  
 }
 \vformat{character}
 \vrules{mandatory}
@@ -6304,7 +6304,7 @@ $Y_{d_{xy}}=\sqrt{60\over{16\pi}} {{xy}\over{|r|^2}}$
 $Y_{d_{xz}}=\sqrt{60\over{16\pi}} {{xz}\over{|r|^2}}$
 \item[dyz]A d-orbital with angular dependence 
 $Y_{d_{yz}}=\sqrt{60\over{16\pi}} {{yz}\over{|r|^2}}$
-\item[d3z2-r2]A d-orbital with angular dependence 
+\item[dz2] (or \textbf{d4z2-r2}) A d-orbital with angular dependence 
 $Y_{d_{3z^2-r^2}}=\sqrt{5\over{16\pi}} {{3z^2-r^2}\over{|r|^2}}$
 \item[dx2-y2]A d-orbital with angular dependence 
 $Y_{d_{x^2-y^2}}=\sqrt{15\over{16\pi}} {{x^2-y^2}\over{|r|^2}}$
@@ -6314,7 +6314,30 @@ $\sqrt{1\over{2}}Y_s \phi_s(|r|) + \sqrt{1\over{2}}Y_{p_z}\phi_p(|r|)$
 $\sqrt{1\over{3}}Y_s\phi_s(|r|) + \sqrt{2\over{3}}Y_{p_z})\phi_p(|r|)$
 \item[sp3] An sp$^3$ orbital pointing in z-direction: 
 $\sqrt{1\over{4}}Y_s\phi_s(|r|) + \sqrt{3\over{4}}Y_{p_z})\phi_p(|r|)$
-\item
+%
+%
+%
+\item[fx(x2-3y2)] An f orbital with angular dependence 
+$Y_{f_{x(x^2-3y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{x(x^2-3y^2)}{|r|^3}$
+%
+\item[fz(x2-y2)] An f orbital with angular dependence 
+$Y_{f_{z(x^2-y^2)}}=\sqrt{\frac{210}{32\pi}} \frac{z(x^2-y^2)}{|r|^3}$
+%
+\item[fxz2] (or\textbf{fx(5z2-r2)}) An f orbital with angular dependence 
+$Y_{f_{xz2}}=\sqrt{\frac{21}{32\pi}} \frac{x(5z^2-r^2)}{|r|^3}$
+%
+\item[fz3] (or \textbf{fz(5z2-3r2)}) An f orbital with angular dependence 
+$Y_{f_{z3}}=\sqrt{\frac{14}{32\pi}} \frac{z(5z^2-3r^2)}{|r|^3}$
+%
+\item[fyz2] (or \textbf{fy(5z2-r2)})An f orbital with angular dependence 
+$Y_{f_{yz2}}=\sqrt{\frac{21}{32\pi}} \frac{y(5z^2-r^2)}{|r|^3}$
+%
+\item[fxyz] An f orbital with angular dependence 
+$Y_{f_{xyz}}=\sqrt{\frac{210}{32\pi}} \frac{xyz}{|r|^3}$
+%
+\item[fy(3x2-y2)] An f orbital with angular dependence 
+$Y_{f_{y(3x^2-y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{y(3x^2-y^2)}{|r|^3}$
+%
 \end{description}
 where the spherical harmonics are expressed relative to the Cartesian
 coordinate system used in the calculation. Instead of projecting on
@@ -6777,9 +6800,12 @@ and multiplied with a complex factor FAC.  }
   \vdefault{none}}
 
 \mbax{\key{TYPE} 
-\vdescr{orbital type. Can be one of the following.
-    'S', 'PX', 'PY', 'PZ', 'DXY', 'D3Z2-R2', 'DXZ', 'DYZ', 'DX2-Y2',
-    'SP1', 'SP2', 'SP3'. The meaning of these orbitals is described in
+\vdescr{orbital type. Can be one of the following:\\
+    'S', 'PX', 'PY', 'PZ', 'SP1', 'SP2', 'SP3',\\
+    'DXY', 'DZ2' or 'D3Z2-R2', 'DXZ', 'DYZ', 'DX2-Y2',\\
+    'FX(X2-3Y2)', 'FZ(X2-Y2)', 'FXZ2' or 'FZ(5Z2-R2)', 'FZ3' or 'FZ(5Z2-3R2)'
+    'FXZ2' or 'FY(5Z2-R2)', 'FXYZ', 'FY(3X2-Y2)'\\
+    The meaning of these orbitals is described in
     the preceding introduction to the paw\_dos tool.}
 \vformat{character} 
 \vrules{optional; incompatible with name; mandatory if atom is
