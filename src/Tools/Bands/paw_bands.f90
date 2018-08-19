@@ -419,11 +419,11 @@ END MODULE REFCELL_MODULE
       REAL(8)                   :: SVAR,SVAR1
       LOGICAL(4)                :: TCHK,TCHK1,TCHK2
       LOGICAL(4)                :: TAPPEND
-      REAL(8)                   :: PI
+      INTEGER(4)                :: NBMAX   ! LIMITS THE NUMBER OF BANDS PLOTTED
+      REAL(8)      ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       REAL(8)                   :: ANGSTROM
       LOGICAL(4),PARAMETER      :: TREFINE=.FALSE.
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !
 !     ==========================================================================
@@ -686,6 +686,12 @@ PRINT*,'N1B ',N1B,N2B,N3B
          NP=100
          CALL LINKEDLIST$EXISTD(LL_CNTL,'NK',0,TCHK)
          IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'NK',1,NP)
+!
+!        == NBMAX LIMITS THE NUMBER OF BANDS PRINTED ===========================
+         NBMAX=20
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'NB',0,TCHK)
+         IF(TCHK) CALL LINKEDLIST$GET(LL_CNTL,'NB',1,NBMAX)
+
 !        == PROJECTION FOR 2D- BANDSTRUCTURE ===================================
          CALL LINKEDLIST$EXISTD(LL_CNTL,'XKPROJECT',0,TCHK)
          IF(TCHK) THEN
@@ -720,8 +726,9 @@ PRINT*,'N1B ',N1B,N2B,N3B
 !      &                        ,NKPTBIG,NB,EBBIG(:,:,ISPIN) &
 !      &                        ,NP,X1,XK1,X2,XK2,NQ,XQ)
          ELSE
-           CALL BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NKPT,NB,EB(:,:,ISPIN) &
-      &                        ,PROPSI(:,:,ISPIN) &
+           CALL BANDS_PLOTBANDS(GBAS,N1,N2,N3,MAP,NKPT &
+      &                        ,NBMAX,EB(:NBMAX,:,ISPIN) &
+      &                        ,PROPSI(:NBMAX,:,ISPIN) &
       &                        ,NP,X1,XK1,X2,XK2,NQ,XQ)
          END IF
 !
@@ -1598,17 +1605,16 @@ END MODULE
       INTEGER(4)                :: NFILFATBAND
       INTEGER(4)                :: NFATBAND,IFATBAND,ILINESPERBAND
       INTEGER(4),ALLOCATABLE    :: FATBANDIPRO(:),FATBANDIAT(:),LINESPERBAND(:)
-      REAL(8),ALLOCATABLE       :: FATBANDMAXWIDTH(:)
+      REAL(8)   ,ALLOCATABLE    :: FATBANDMAXWIDTH(:)
       CHARACTER(512),ALLOCATABLE:: FATBANDFILE(:)
       REAL(8)                   :: FATBANDMAX,SVAR,SVAR1,SVAR2
       LOGICAL(4)                :: TAPPEND
       REAL(8)                   :: COORD,COORD0
       INTEGER(4)                :: THISTASK,NTASKS,INDEX
-      REAL(8)                   :: PI
+      REAL(8)   ,PARAMETER      :: PI=4.D0*ATAN(1.D0)
       REAL(8)                   :: ANGSTROM
 !     **************************************************************************
                             CALL TRACE$PUSH('BANDS_BANDSTRUCTURE_DIAG')
-      PI=4.D0*ATAN(1.D0)
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 
       CALL MPE$QUERY('~',NTASKS,THISTASK)

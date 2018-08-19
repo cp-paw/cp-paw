@@ -7730,28 +7730,36 @@ Details are described below.}
 \brules{optional,multiple}
 \bdescr{defines one line segment in k-space, i.e. a part of a bandstructure}
 
-\mbax{\key{XK1}
-\vdescr{First point of the line segment in relative coordinates 
-of the reciprocal lattice vectors. kvec1=GBAS*xk1}
+\mbax{\key{XK1} \vdescr{First point of the line segment in relative
+    coordinates of the reciprocal lattice vectors. The k-point in
+    cartesian coordinates is $\vec{k}$. It is obtained from the
+    relative coordinates $\vec{x}$ by multiplication with the
+    reciprocal lattice vectors $\vec{g}_1$, $\vec{g}_2$, and
+    $\vec{g}_3$as
+\begin{eqnarray}
+\vec{k}=\vec{g}_1 x_1+\vec{g}_2 x_2+\vec{g}_3 x_3\;.
+\end{eqnarray}
+}
 \vformat{real(3)} 
 \vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
 
 \mbax{\key{KVEC1}
-\vdescr{First point of the line segment in absolute coordinates.}
+\vdescr{First point of the line segment in cartesian coordinates.}
 \vformat{real(3)} 
 \vrules{mandatory (xk1 or kvec1)}
 \vdefault{none}}
 
 \mbax{\key{XK2}
-\vdescr{Last point of the line segment in relative coordinates 
-of the reciprocal lattice vectors. kvec2=GBAS*xk2}
+\vdescr{Last point of the line segment in relative coordinates of the
+  reciprocal lattice vectors. See the description of variable $xk1$
+  for the relation of absolute and relative coordinates.}
 \vformat{real(3)} 
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
 
 \mbax{\key{KVEC2}
-\vdescr{Last point of the line segment in absolute coordinates.}
+\vdescr{Last point of the line segment in cartesian coordinates.}
 \vformat{real(3)} 
 \vrules{mandatory (xk2 or kvec2)}
 \vdefault{none}}
