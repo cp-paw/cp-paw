@@ -254,7 +254,7 @@ code from little ``boxes'', which are easy to maintain and enhance.
 
 As part of the OO design, the program uses its own low level object
 library, which customizes a number of common operations, such as
-interproceessor communication, error handling, file handling,
+interprocessor communication, error handling, file handling,
 tree-linked-list structures for intuitive IO, periodic table,
 constants, DFT functionals, tracing, timing, string handling, and a
 few more. These low-level objects are rather unspecific to the PAW
@@ -269,7 +269,7 @@ crunching, such as good compilers and, for my taste, a natural and
 easily comprehensible way to write mathematics. Compared to FORTRAN77
 it is a significant advance towards the OO features of C++ or Java
 because it incorporates features such as dynamic memory allocation,
-derived data types (structures), operator overloding, modules, etc.
+derived data types (structures), operator overloading, modules, etc.
 The option of using templates has been implemented using a self-made
 preprocessor.  FORTRAN90 is largely compatible with FORTRAN77, so you
 need to pick up only a few new things if you want to work with the
@@ -297,7 +297,7 @@ hope that the limitations will be offset by clarity.
 
 The program uses \textbf{Hartree atomic units}\index{Hartree atomic
   units}, that is $\hbar=e=m_e=4\pi\epsilon_0=1$, and Cartesian
-coordiantes.  Angles are handled in radian ($2\pi{\rm\ rad}=
+coordinates.  Angles are handled in radian ($2\pi{\rm\ rad}=
 360~\deg$).  The conversion to other units is often done during
 printing. The conversion factors are provided by a particular agent
 (see section~\ref{constants}), which is based on the values of
@@ -323,7 +323,7 @@ probably want to make your own analysis tools, because you have found a way
 to understand your data that nobody has thought of before. Or you
 want examine a property, which nobody has tried to calculate. Or
 you have a unique visualizer and need an interface for it.  And
-because you want to discuss this particular result with your collegues
+because you want to discuss this particular result with your colleagues
 at the upcoming coffee break, you choose the quick-and-sloppy
 approach.  You do not want to do this inside the simulation code,
 because you dare not jeopardize its operation.
@@ -331,15 +331,14 @@ because you dare not jeopardize its operation.
 In contrast to analysis, simulation is computationally expensive.
 Therefore, it is desirable to archive as much data from the simulation
 as possible, and be able to go back later and look at it again. Hence
-the simulation writes most data rather unspecifically in
-machine-readable form (which saves a considerable amount of disk
-space).  The data are written in a simple format so that it is easy to
-read them into the analysis tools.
+the simulation writes most data in machine-readable form (which saves
+a considerable amount of disk space).  The data are written in a
+simple format so that it is easy to read them into the analysis tools.
 
 Visualization is also separated from analysis, because many tools
 exist and the choice is a matter of taste and wealth. The analysis
 tools that come with the CP-PAW code will write data formats for the
-visulatization tools that we currently use. (Those are currently the
+visualization tools that we currently use. (Those are currently the
 IBM Dataexplorer \cite{opendx} for 3D representations of the
 wave functions or trajectories, xmgrace \cite{xmgrace} for x-y plots, and
 CryMolCAD\cite{crymolcad} for the analysis of the atomic structure.)
@@ -365,7 +364,7 @@ the user may not be interested in, which then can be handled by
 default values, and it avoids the unnecessary restrictions of formatted
 input. The PAW library has objects that can handle such structures
 easily, so that it is widely used for data input for both the
-simlation code and the analysis tools. The following section shall
+simulation code and the analysis tools. The following section shall
 make you familiar with the general layout of input data.
 %
 %==========================================================================
@@ -376,7 +375,7 @@ Input data are structured as nested data blocks, each identified
 by a key word. Each data block may contain other data blocks and
 data. Data are again specified by keywords.
 
-The following simple expample shall illustrate the structure 
+The following simple example shall illustrate the structure 
 \begin{verbatim}
 !FIRSTBLOCK
   DATA=5
@@ -450,7 +449,7 @@ allowed to provide both integer and real. Therefore, if you provided a
 number of the wrong type and, against your expectation, the program
 does not complain, a conversion has been done by rounding the number
 to the nearest integer or a simple type conversion from integer to
-real has occured.)
+real has occurred.)
 
 The description uses the following notation. Data blocks are
 indicated by a frame. The enclosed name contains the entire
@@ -467,14 +466,14 @@ blocks, followed by a colon and the data keyword.
 %==========================================================================
 The PAW code refers to atoms by name. No two atoms must be given the
 same name. Arbitrary names, given a length limit, are allowed.
-However, the recommended notation choses the first two characters as
+However, the recommended notation chooses the first two characters as
 the element symbol, with blanks replaced by underscores, and the
 remainder is a number. Starting the name with the element symbol
 allows to exploit some default settings. The names are defined in the
 structure input file and can be referred to in other specifications
 and by the PAW tools.
 
-In solids, it will be neccesary to distinguish between periodic images
+In solids, it will be necessary to distinguish between periodic images
 of the same atom. An example is a bondlength constraint between two
 atoms, of which one is a periodic image of a original atom. In that
 case we use in some cases an extended naming convention.
@@ -484,7 +483,7 @@ In the \textbf{extended notation the atom name}\index{extended
 ``\textit{name}:\textit{ijk}'', where {\it name} is the name of the
 atom in the original atom cell. and {\it i,j,k} are the three
 translations along the lattice vectors. The latter can be single digit
-integer numbers with or without preceeding sign. To give a few
+integer numbers with or without preceding sign. To give a few
 examples ``H\_2:100'', ``H\_2:+1+0+0'', ``H\_2:10-1''.
 
 Note, that the translations do {\em not} specify a unit cell that
@@ -588,7 +587,7 @@ prepared:
 \item The \textbf{control input file}\index{control input
   file}\index{input file !control} (sometimes abbreviated as CNTL)
   describes what the program shall do, such as optimizing the wave
-  functions, relaxing the atoms or simlating at finite temperature.
+  functions, relaxing the atoms or simulating at finite temperature.
 \end{enumerate}
 
 After the simlation has finished, the program writes a restart file, which
@@ -607,7 +606,7 @@ The simulation code is executed using the command
 \noindent where {\it controlfile} is the name of the control input
 file described in the next section.  With {\tt 1$>$err} one redirects
 the print statements to the file out. If the file existed before it is
-overwritten. This information is normally irrelevent and is used for
+overwritten. This information is normally irrelevant and is used for
 development purposes. However, it is crucial for tracing errors.  With
 {\tt 2$>$\&1} one redirects also error messages into the same file,
 namely {\tt err}. Thus also error messages be it from PAW or from the
@@ -679,7 +678,7 @@ In order to track the simulation one can issue the command
 
 \bigskip\fbox{{\tt tail -f \$ROOT.prot }}\bigskip
 
-which continually prints the lines written to the protocoll file also
+which continually prints the lines written to the protocol file also
 to the screen. Another way to trace the simulation is the command {\tt
 paw\_show} described in section~\ref{sec:pawshow}.
 
@@ -924,11 +923,11 @@ subroutines under trace control. Used for debugging purposes.}
 \vdefault{.false.}}
 
 \mbax{\key{ENDIAN} \vdescr{defines whether unformatted files are
-written in little endian as typical on intel computers or in big
-endian as on ibm computers. The value can be
+written in little endian as typical on Intel computers or in big
+endian as on IBM computers. The value can be
 'little','intel','big','ibm'. The first two values have identical
 meaning and the last two have identical meaning.
-It is only functional using certain compilers (absoft).}  
+It is only functional using certain compilers (Absoft).}  
 \vformat{character}
 \vrules{optional} \vdefault{little}}
 
@@ -953,7 +952,7 @@ autoconv time steps.}
 
 \mbax{\key{RSTRTTYPE} \vdescr{allows to cut down the information on
 the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
-wave functions. This reduces the amount of diskspace by nearly a
+wave functions. This reduces the amount of disk space by nearly a
 factor of two. This option should not be used in a dynamical
 simulation, because, the velocity of the wave functions will be set to
 zero.}
@@ -974,7 +973,7 @@ zero.}
 %----------------------------------------------------------------------
 \brules{optional}
 \bdescr{selects density functional parameterization; default is Perdew-Zunger
-parameterization of the Ceperley Alder quantum Monte Carlo calculation}
+parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
 
 \mbax{\key{TYPE} \vdescr{density functional parameterization.
     possible values are:\hfill\break 
@@ -1045,7 +1044,7 @@ at short distances.}
 
 \mbax{\key{MODUS} 
 %
-\vdescr{switch betwee different energy contributions. May be 'HYBRID'
+\vdescr{switch between different energy contributions. May be 'HYBRID'
   or 'DMFT'.}
 %
 \vformat{character} 
@@ -1101,7 +1100,7 @@ at short distances.}
   A cutoff of 30~Ry=15~H for the wave function and CDUAL=2 is
   sufficient for most applications. In order to account for all plane
   wave components in the density, the plane wave cutoff for the
-  density should in prinicple be four times the cutoff for the wave
+  density should in principle be four times the cutoff for the wave
   function.  (For low cutoffs, even CDUAL$>$4 may be required since
   the exchange and correlation functional is nonlinear, and therefore
   the energy may not necessarily decrease monotonically as the
@@ -1132,21 +1131,21 @@ at short distances.}
 \vdescr{EPWRHO=CDUAL*EPWPSI; The default cdual=4 produces the correct
 result; cdual=2 is often a good choice.}
 \vformat{real}
-\vrules{optional; this value is overwritten by any occurance of ``EPWRHO''}
+\vrules{optional; this value is overwritten by any occurence of ``EPWRHO''}
 \vdefault{4}}
 
 \mbax{\key{EPWBUCKET} 
 \vdescr{Used mostly for cell dynamics. 
 See section~\ref{sec:sawtooth} for an explanation of the sawtooth 
-behavior. Parameter $E_B$ in Ry specified as
-follows: If specified an additial potential energy term
+behavior. The parameter $E_B$ in Ry is specified as
+follows: If specified, an additional potential-energy term
 $\sum_{G,n}f_n\langle\tilde\Psi_n|G\rangle B(G)\langle
-G|\tilde\Psi_n\rangle$, is added top the total energy where
+G|\tilde\Psi_n\rangle$, is added to the total energy, where
 $B(G)=c_B\theta(\frac{1}{2}G^2-E_B)(G-\sqrt{2E_B})^2$.  When this term
-is set to a fixed value, the plane wave convergence is artificially
+is set to a fixed value, the plane-wave convergence is artificially
 accelerated, which is important to evaluate stresses.  The energy
-converged this way corresponds however not to equal to the energy
-converged without this term, but corresponds to the total energy
+converged this way differs from that converged without this term.
+Rather, it corresponds roughly to the total energy
 obtained with a plane wave cutoff slightly higher than EPWBUCKET.
 Example: $E_{PW}=50$~Ry, $E_B=30$~Ry, $c_B=1$}
 \vformat{real} 
@@ -1277,11 +1276,11 @@ to estimate the frequency from
     protocoll file. A unitary transform among the wave function is
     performed. That is, the Hilbert space remains unchanged.  Note,
     that the occupations may be inconsistent with the new states. It
-    may be adviseable to simultaneously restart the occupations.
+    may be advisable to simultaneously restart the occupations.
  
     This option can be used to accelerate convergence with
     !CONTROL!PSIDYN:SAFEORTHO=F, because it shortcuts the lengthy
-    dynamics towared energy eigenstates. It may also be useful in the
+    dynamics towards energy eigenstates. It may also be useful in the
     early stages of the wave function optimization.}
   \vformat{logical} 
   \vrules{optional} 
@@ -1312,7 +1311,7 @@ occupations remain approximately constant. The crossing is treated
 like an avoided crossing.
 \item SWAPSTATES=T: the wave function maintains its character, but the
 occupations dynamically change from occupied to unoccupied and vice
-versa. If the croosing is an avoided crossing, the wave functions are
+versa. If the crossing is an avoided crossing, the wave functions are
 reordered only if the if the conversion of the character of the wave
 functions is sufficiently retarded, that a band crossing of the
 one-particle energies takes place.
@@ -1493,8 +1492,8 @@ functions.
 corresponds to a temperature in Kelvin. Can be used to bring the
 system quickly to a finite temperature. Note, however, that the
 electron wave functions cannot immediately follow this
-sudden kick. They will start to lag behind, and deviate from the Born
-Oppenheimer surface. A small friction acting on the wave functions
+sudden kick. They will start to lag behind, and deviate from the 
+Born-Oppenheimer surface. A small friction acting on the wave functions
 will allow the wave functions to recover.}
 \vformat{real}
 \vrules{optional}
@@ -1512,11 +1511,11 @@ Avoids negative friction on the atoms. It is recommended for
 structure optimizations. It must not be used in connection with
 thermostats.  The friction can become negative via the compensation
 for the drag by the wave function cloud. A friction on the wave
-functions implicitely causes an effective friction on the atoms.  This
+functions implicitly causes an effective friction on the atoms.  This
 effective friction is compensated by adding a negative friction on the
 atoms. In this case the total friction on some atoms can become
 negative so that the atoms cannot come to rest.
-[Future developents shall automatically exclude simultaneous use
+[Future developments shall automatically exclude simultaneous use
 together with thermostats.]} 
 \vformat{logical} 
 \vrules{optional}
@@ -1663,7 +1662,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   friction of about 0.01 until the system is about stationary at the
   new temperature. Once the stationary state has been reached, the
   friction must be removed, so that the system can approach the
-  canonical ensemple}
+  canonical ensemble}
 \vformat{real}
 \vrules{optional}
 \vdefault{0}}
@@ -1675,7 +1674,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
 \vdefault{F}}
 
 
-\ifthenelse{\boolean{private}}{
+%\ifthenelse{\boolean{private}}{
 %----------------------------------------------------------------------
 \block{!CONTROL!MERMIN}
 %----------------------------------------------------------------------
@@ -1702,7 +1701,7 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   of metallic systems.
 
   Use this option (variable occupations) only with
-  eigenstates of the Hamitlonian, i.e. with
+  eigenstates of the Hamiltonian, i.e. with
   !CONTROL!PSIDYN:SAFEORTHO=.false. Otherwise the results are
   unpredictable. 
 
@@ -1712,8 +1711,8 @@ wavefunctions from the BO surface. This is an approximate procedure.}
   charge and total spin is obtained from the restart file and not from the
   structure input file
 
-  Remark the dynocc object has been largely rewrittem 23-28.12.06. 
-  Please report any suspicious observations.
+  Remark: the paw\_dynocc object has been largely rewritten
+  23-28.12.06.  Please report any suspicious observations.  
 }
 %
 \mbax{\key{T[K]}
@@ -1853,7 +1852,7 @@ ordered according to increasing energy.
 \vdefault{.false.}}
 
 \mbax{\key{EFERMI[EV]}
-\vdescr{chemical potential of the elctrons in eV; only used if fixq=.false.}
+\vdescr{chemical potential of the electrons in eV; only used if fixq=.false.}
 \vformat{real}
 \vrules{optional}
 \vdefault{0.0}}
@@ -1883,7 +1882,7 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \vdefault{none}}
 
 \mbax{\key{RATE}
-\vdescr{Specifies the rate of change of the variabble. The unit of the
+\vdescr{Specifies the rate of change of the variable. The unit of the
   variable is that  indicated by the name. The time scale unit is a.u.}
 \vformat{real}
 \vrules{mandatory}
@@ -1895,7 +1894,7 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \vformat{real}
 \vrules{mandatory}
 \vdefault{none}}
-}{}%end of \ifthenelse
+%}{}%end of \ifthenelse
 %
 %----------------------------------------------------------------------
 \block{!CONTROL!CELL}
@@ -2473,15 +2472,17 @@ original deviation.}
 \vdefault{none}}
 
 \mbax{\key{EFG}
-\vdescr{select electric field gradient calculation. Result will be
-  documented in the protocol. The electric field gradient is related
+\vdescr{calculate \textbf{electric-field gradient}
+\index{electric-field gradient}. The result will be
+  documented in the protocol. The electric-field gradient is related
   to the second derivatives of the potential at the nuclear site}
 \vformat{logical}
 \vrules{optional}
 \vdefault{.false.}}
 
 \mbax{\key{ISOMERSHIFT}
-\vdescr{select isomer shift calculation. Result will be
+\vdescr{calculate the \textbf{isomer-shift}\index{isomer shift}. 
+  The result will be
   documented in the protocol. The isomer shift is related to the
   charge density at the nuclear site.}
 \vformat{logical}
@@ -2489,16 +2490,19 @@ original deviation.}
 \vdefault{.false.}}
 
 \mbax{\key{FERMICONTACT}
-\vdescr{calculates the Fermi contact field. It is the magnetic field
-  acting on the nucleusResult will be
-  documented in the protocol. The Fermi contact term is related to
+\vdescr{calculate the \textbf{Fermi-contact field}
+  \index{Fermi-contact field}. It is the magnetic field
+  acting on the nucleus. The result will be
+  documented in the protocol. The Fermi-contact term is related to
   the spin density at the nuclear site.}
 \vformat{logical}
 \vrules{optional}
 \vdefault{.false.}}
 
 \mbax{\key{ANISOTROPIC}
-\vdescr{selects anisotropic hyperfine parameter calculation. Result will be
+\vdescr{calculate \textbf{anisotropic hyperfine parameters}
+\index{hyperfine parameter !anisotropic}. The 
+    result will be
   documented in the protocol. The anisotropic hyperfine parameter is
   related to the $\ell=2$ component of the spin density near the nucleus}
 \vformat{logical}
@@ -2513,7 +2517,7 @@ original deviation.}
 \bdescr{calculates the positions of the core levels
   (absolute and relative to the isolated atom (atomic calculation)). Note that
   core relaxation effects, which contribute typically to 15~\%, are not
-  included. The absolute position of the core levels is only meaningfull for
+  included. The absolute position of the core levels is only meaningful for
   isolated molecules. For extended systems, the zero of the electrostatic
   potential is not the vacuum level, so that only relative shifts within a
   single calculation are meaningful. For Tests see Pasquarello et al., Phys.
@@ -2761,11 +2765,11 @@ Q_{n,c}(\vec{k})&=&\frac{2m_e}{\hbar^2}\sum_c(\epsilon_n-\epsilon_c)
   \end{eqnarray}
 Eq.~\ref{eq:eels_diel}, specifying the dielectric constant
 $\epsilon(\hbar\omega)$, corresponds to Wooten's Eq.~3.68.
-Eq.~\ref{eq:eels_q}, specifying the oscillator stength
-$Q_{n,0}(\vec{k})$, corresponds to Wooten's Eq.~3.67 and
-Eq.~\ref{eq:eels_loss}, giving the loss function, corresponds to
-Wooten's Eq.~5.62. With $\Im$, I denote the imaginary part. $N/V$ is
-the number density of the specified atom
+Eq.~\ref{eq:eels_q}, specifying the \textbf{oscillator
+  strength}\index{oscillator strength} $Q_{n,0}(\vec{k})$, corresponds
+to Wooten's Eq.~3.67 and Eq.~\ref{eq:eels_loss}, giving the loss
+function, corresponds to Wooten's Eq.~5.62. With $\Im$, I denote the
+imaginary part. $N/V$ is the number density of the specified atom
 (i.e. 1/unit-cell-volume). $\epsilon_r(\omega)$ is the relative
 dielectric constant. Here only the core-excitations are considered.
 $|\psi_c\rangle$ are the core levels and $\epsilon_c$ are their
@@ -2780,7 +2784,7 @@ states is obtained from Eq.~15 of Egerton
 \cite{egerton07_ultramicroscopy107_565} with the inelastic mean free
 path of Seah\cite{seah79_surfinterfaceanal1_2}, Eq.~5 and table 1
 (entry for inorganic compounds). The loss function is furthermore
-smeared by a Gaussian with the specified experimental broadenig.  The
+smeared by a Gaussian with the specified experimental broadening.  The
 spectrum is calculated from 5~eV below the estimated Fermi level to he
 minimum of the top-most band. (i.e. the minimum for both spin
 directions.)
@@ -2819,7 +2823,7 @@ IC & shell & X-ray notation \\
   \vdefault{1}}
 
 \mbax{\key{BROADENING[EV]} 
-\vdescr{Instrumental broeadening FWHM (Full width at half maximum) in eV.}
+\vdescr{Instrumental broadening FWHM (Full width at half maximum) in eV.}
 \vformat{real} 
 \vrules{optional. Must not be set to zero.}
 \vdefault{1.0}}
@@ -3181,7 +3185,7 @@ a +br^{\alpha}+cr^{\alpha+2} &\text{for $r<r_c$}\\
 v(r) & \text{for $r> r_c$}\\
 \end{cases}
 \end{eqnarray}
-where $v(r)$ is tha radial component of the true atomic potential.
+where $v(r)$ is the radial component of the true atomic potential.
 }
 
 \mbax{\key{POW} 
@@ -3274,7 +3278,7 @@ with $x=1,2,3,\ldots,N$.}
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES!NTBO}
 %----------------------------------------------------------------------
-\brules{optional, atom cointribution is scaled to zero if not specified.}
+\brules{optional, atom contribution is scaled to zero if not specified.}
   \bdescr{Defines a set of local orbitals, called
   natural tight-binding orbitals (NTBOs). The NTBOs exhibit only
   scattering character in the context of nodeless wave
@@ -3375,7 +3379,7 @@ with the density of two orbitals of a bond partner.
 \mbax{\key{BONDX} 
 \vdescr{Exchange term of between two overlap densities from the same
   bond.  Each overlap density is made from two orbitals centered at
-  differnt bond partners.
+  different bond partners.
 (untested experimental option)}
 \vformat{logical}
 \vrules{optional} 
@@ -3560,7 +3564,7 @@ contributing to the fit}
   molecule which mimics the Pauli repulsion of a solvent. The
   potential starts to raise at a radius $r_{in,R}$, chosen equal to
   the van der Waals radius of the respective atom and reaches the
-  maximum value $V_0$ at a rsadius $r_{out,R}$ equal to twice the Van der
+  maximum value $V_0$ at a radius $r_{out,R}$ equal to twice the Van der
   Waals radius. The confining potential has the form
  \begin{eqnarray*}
  v(\vec{r})=V_0\prod_R f\left(\frac{|\vec{r}-\vec{R}|-r_{in,R}}{r_{out,R}-r_{in,R}}\right)
@@ -3596,7 +3600,7 @@ f(x)=\left\lbrace \begin{array}{ll}
   QM molecule are repeated both in the MM shadow and in the
   MM environment, and their positions are constrained to be identical
   in all three parts. The total energy is $E_1+E_3-E_2$. The total
-  energy $E_3-E_2$ decribes the external forces and potentials acting
+  energy $E_3-E_2$ describes the external forces and potentials acting
   from the environment on the QM molecule.\\
   Bonds are linked in the following way: Suppose there is a bond from
   atom X to atom Y, where X is part of the QM molecule, but Y is only
@@ -3763,10 +3767,7 @@ for this atom. }
 \block{!STRUCTURE!COSMO!ATOM}
 %----------------------------------------------------------------------
 \brules{mandatory, multiple} 
-\bdescr{ThereHere, data is provided that pertains to the
-representation of the solute surface. For each atom a radius that
-specifies the distance of closest approach between solute and solvent
-for this atom. }
+\bdescr{Set the solvent sphere for a specific atom.} 
 
 \mbax{\key{NAME}
 \vdescr{Atom name. Must be correspond to !STRUCTURE!ATOM.}
@@ -3852,9 +3853,9 @@ for this atom. }
 \block{!STRUCTURE!VEXT!UNBIND}
 %----------------------------------------------------------------------
 \brules{Optional, multiple} 
-\bdescr{Applies a pair potential between
-  the selected atoms, which vanishes beyonmd the sum of the van der
-  Waals radii, and increases in a parabolic way inwardly. This option
+\bdescr{Applies a pair potential between the selected atoms, 
+   which vanishes beyond the sum of the van-der-Waals radii, 
+   and increases in a parabolic way inwardly. This option
   can be used in order to avoid the formation of covalent bond between
   certain atoms.}
 
@@ -3946,7 +3947,7 @@ given direction.}
 %----------------------------------------------------------------------
 \brules{optional,multiple} 
 
-\bdescr{Supresses the angular momentum $\vec{L}$ of a group of atoms
+\bdescr{Suppresses the angular momentum $\vec{L}$ of a group of atoms
   in a given direction $\vec{e}$ in the reference frame of the center
   of gravity $\vec{R}_C(t)$ of the specified group.Thus the constraint
   enforces
@@ -4140,7 +4141,8 @@ on p.~\pageref{sec:extendedatomnotation})}
 
 \mbax{\key{M}
 \vdescr{Mass of the constraint in a.u. A negative value results in an
-  energy maximizing evolution for sassle point determination.}
+  energy-maximizing dynamics, which can be used for 
+  saddle-point determinations.}
 \vformat{real}
 \vrules{optional}
 \vdefault{1.0=$m_e$}}
@@ -4770,7 +4772,7 @@ the paw\_grab tool. I recommend the extension ``.gcntl''.
 \block{!GCNTL!SUBSTANCE}
 %----------------------------------------------------------------------
 \brules{optional}
-\bdescr{defines a reactand or reaction product through a protocol
+\bdescr{defines a reactant or reaction product through a protocol
   file of the simulation code}
 
 \mbax{\key{ID}
@@ -4795,8 +4797,8 @@ the paw\_grab tool. I recommend the extension ``.gcntl''.
 \vdescr{Identifier of the reaction.}
 \vformat{character} 
 \vrules{optional}
-\vdefault{A stochiometric formula of the reaction created from
-  reactands and products and their stochiometries}}
+\vdefault{A stoichiometric formula of the reaction created from
+  reactants and products and their stoichiometries}}
 
 %----------------------------------------------------------------------
 \block{!GCNTL!REACTION!FROM}
@@ -4811,7 +4813,7 @@ the paw\_grab tool. I recommend the extension ``.gcntl''.
 \vdefault{none}}
 
 \mbax{\key{FAC}
-\vdescr{defines the stochiometry with which the the reactand takes
+\vdescr{defines the stoichiometry with which the the reactand takes
   part in the reaction}
 \vformat{real} 
 \vrules{mandatory}
@@ -4864,8 +4866,8 @@ ending and option is one of the following:
 \item[-c\textit{ijk}] like -c but multiplies the lattice in the xyz
   file by factors i,j,k in the three lattice directions. \textit{ijk}
   is a three digit integer composed out of three single digit numbers
-  i,j,k by sinple concatenation. (No spaces!)
-\item[-i] real from input structue file .strc instead from the output
+  i,j,k by simple concatenation. (No spaces!)
+\item[-i] real from input structure file .strc instead from the output
   structure file .strc\_out.
 \end{description}
 
@@ -4967,7 +4969,7 @@ largely independent of the system}
 \mbax{\key{EXT}
 \vdescr{rootname flag: if true, the filename is interpreted as an
   extension of the rootname. The rootname is the filename of the
-  wavecontrol file with out the last dot and the following characters.}
+  wave-control file with out the last dot and the following characters.}
 \vformat{logical} 
 \vrules{optional}
 \vdefault{.false.}}
@@ -5097,8 +5099,8 @@ similar and VRML files can be converted into X3D files.
 \newpage
 \subsection{Contour plots using Gnuplot}
 %==========================================================================
-If a plane has been sepcified in !WCNTL a input file for gnuplot to
-produce countour plots is generated. It has the File id. 'GNUCONTOUR'
+If a plane has been specified in !WCNTL a input file for gnuplot to
+produce contour plots is generated. It has the File id. 'GNUCONTOUR'
 and the default file name \textit{rootname}\_c.gnu.
 
 A plot is generated by the command
@@ -5338,7 +5340,7 @@ file. The top part looks something like the following:
 \begin{enumerate}
 \item adjust orientation by changing the parameters \verb|rot_x| and
   \verb|rot_z|
-\item adjust the viewing arey by changing the parameters \verb|xmin|,
+\item adjust the viewing area by changing the parameters \verb|xmin|,
   \verb|xmax|, \verb|ymin|, \verb|ymax|
 \item if you like contours on the surface, comment the line 'unset surface'
 \item select the terminal type to create a certain file type.
@@ -5351,7 +5353,7 @@ file. The top part looks something like the following:
 \section{Wave function converter for CryMolCAD: ``paw\_cmcwave''}
 %==========================================================================
 The tool converts the wave function file .wv produced by the
-simultation code into an input file for the CrymolCAD viewer. The wave
+simulaation code into an input file for the CrymolCAD viewer. The wave
 function can be a general field such as wave function, density or
 potential.
 \begin{center}
@@ -5655,7 +5657,7 @@ the paw\_tra tool. I recommend the extension
   yet implemented!)}
 \vformat{character(1); allowed values are 'D' for distance and 'A' for
   angle} 
-\vrules{otional}
+\vrules{optional}
 \vdefault{'D'}}
 
 \mbax{\key{DEP}
@@ -5708,7 +5710,7 @@ the paw\_tra tool. I recommend the extension
 \block{!TCNTL!CORRELATION!PARTNER}
 %----------------------------------------------------------------------
 \brules{optional} \bdescr{specify the atoms to be used as partner
-  atoms. Unless specified, all atoms are selectes.}
+  atoms. Unless specified, all atoms are selected.}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!CORRELATION!PARTNER!SELECT}
@@ -5792,7 +5794,7 @@ the paw\_tra tool. I recommend the extension
 \brules{mandatory} 
 \bdescr{specify the file where the spaghetti plot is written. The file
   is formatted and to be used with an x-y plotting tool. Each line
-  containes the time in ps and the distance in Angstrom}
+  contains the time in ps and the distance in Angstrom}
 
 \mbax{\key{EXT}
 \vdescr{switch to the rootname appended by the extension provided,
@@ -5943,7 +5945,7 @@ the paw\_tra tool. I recommend the extension
 
 \mbax{\key{ID}
 \vdescr{Identifier of this mode to be used in further operations can
-  be any string, but different from all other mode-identifierss.}
+  be any string, but different from all other mode-identifiers.}
 \vformat{character} 
 \vrules{mandatory}
 \vdefault{none}}
@@ -6285,10 +6287,104 @@ analysis has been invaluable.
 \label{fig:h2copdos}
 \end{figure}
 
-\subsubsection{Orbitals}
 
-The paw\_dos tool works with elementary orbitals, identified by the atom
-name, and an abbreviation of an angular momentum such as
+%==========================================================================
+\subsection{Orbital primitives}
+\label{sec:dostoolorbitalprimitives}
+%==========================================================================
+The primitive orbitals are usually partial waves, that are truncated
+beyond a certain radius specified in the simulation code.  
+\begin{eqnarray}
+|\chi_\alpha\rangle=\theta_{\Omega_{R_\alpha}}|\phi_\alpha\rangle
+\end{eqnarray}
+where $\theta_{\Omega_{R_\alpha}}$ is a real space function which is
+unit inside some chosen augmentation region and zero elsewhere.  
+
+Per default, the augmentation sphere is confined by the atomic-sphere
+radius, is approximately 10\% larger than the covalent radius. (The
+factor corresponds to the ratio between the radius of a
+volume-filling-sphere radius in an fcc crystal and the corresponding
+touching-sphere radius.) However, it is possible to specify a
+different radius in the structure control file of the PAW simulation
+code.
+
+In the future, I plan to replace these by local tight-binding orbitals.
+
+%===============================================================================
+\subsubsection{Orthonormalization}
+%===============================================================================
+These orbitals constructed either from truncated orbitals or from
+tight-binding orbitals are not orthonormal to other orbitals on the
+same site, which produces counterintuitive results.
+
+Therefore, we transform these primitives inside the paw\_dos tool into
+a new set that is orthonormal on each site. For this purpose, I
+perform a Cholesky decomposition of the overlap matrix of orbitals on
+the same site, i.e. $\vec{R}_{\alpha}=\vec{R}_\beta=\vec{R}_\gamma$.
+\begin{eqnarray}
+\langle\chi_\alpha|\chi_\beta\rangle
+=\sum_{\gamma (R_\gamma=R_\alpha)}  L_{\alpha,\gamma}L^\dagger_{\gamma,\beta}
+=\sum_{\gamma,\delta}\mat{L}_{\alpha,\gamma}
+\langle\chi'_\gamma|\chi'_\delta\rangle
+\mat{L}^\dagger_{\delta,\beta}
+\qquad\text{for $\vec{R}_\alpha=\vec{R}_\beta$}
+\end{eqnarray}
+with a lower triangular, real\footnote{The matrix $\mat{L}$ is purely
+  real, if the overlap matrix is positive definite, which is always
+  satisfied, because the overlap matrix is itself constructed from
+  well-defined orbitals.} $\mat{L}$, i.e.
+\begin{eqnarray}
+L_{\alpha,\beta}=0\qquad\text{for $\beta>\alpha$}
+\end{eqnarray}
+With $\beta>\alpha$ we refer to the order of partial waves with the
+same angular momentum. 
+
+The new set $|\chi'_\alpha\rangle$ obeys local orthonormality
+\begin{eqnarray}
+\langle\chi'_\gamma|\chi'_\delta\rangle=
+\delta_{\gamma,\delta} \qquad\text{for $\vec{R}_\gamma=\vec{R}_\delta$}
+\end{eqnarray}
+
+A wave function then has the form
+\begin{eqnarray}
+|\psi\rangle
+&=&\sum_{\alpha}
+|\chi_\alpha\rangle_{\Omega_R}
+\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
+=\sum_{\gamma}
+|\chi'_\gamma\rangle_{\Omega_R}
+\underbrace{\Bigl(
+\sum_{\alpha}
+L^\dagger_{\gamma,\alpha}
+\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
+\Bigr)}_{\langle\tilde{\pi}'_\alpha|\tilde\psi\rangle}
+\end{eqnarray}
+
+The new primitive orbitals are
+\begin{eqnarray}
+|\chi'_\alpha\rangle=\sum_{\gamma=1}^{\alpha}
+|\chi_\gamma\rangle L^{\dagger,-1}_{\gamma,\alpha}
+\end{eqnarray}
+The restriction of the sum over $\gamma$ originates from the fact that
+$\mat{L}$ is lower triangular, $\mat{L}^\dagger$ and
+$\mat{L}^{\dagger,-a}$ are upper triagonal, so that
+$L^{\dagger,-1}_{\gamma,\alpha}=0$ for $\gamma>\alpha$.
+
+%==========================================================================
+\subsubsection{Angular-momentum character of orbital primitives}
+\label{sec:dostoolorbitalprimitivesangularmomentum}
+%==========================================================================
+The primitive orbitals are addressed by their angular-momentum
+character, where we use real spherical harmonics. Real spherical
+harmonics are not angular-momentum eigenstates, but mix states with
+$\pm m$. 
+
+Per default, the spherical harmonics are expressed relative to the
+cartesian coordinate system used in the calculation.  The angular
+momentum character can, however, also be specified with respect to a
+arbitrary local coordinate system.
+
+The keywords and their angular momentum character are given below:
 \begin{description}
 \item[s]An s-orbital with angular dependence 
 $Y_s=\sqrt{1\over{4\pi}}$
@@ -6339,15 +6435,112 @@ $Y_{f_{xyz}}=\sqrt{\frac{210}{32\pi}} \frac{xyz}{|r|^3}$
 $Y_{f_{y(3x^2-y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{y(3x^2-y^2)}{|r|^3}$
 %
 \end{description}
-where the spherical harmonics are expressed relative to the Cartesian
-coordinate system used in the calculation. Instead of projecting on
-atomic orbitals as in a Mulliken population analysis, we project here
-onto partial waves, that are truncated at the atomic sphere radius.
-The atomic sphere radius is approximately 10\% larger than the
-covalent radius. (The factor corresponds to the ratio between the
-radius of a volume-filling-sphere radius in an fcc crystal and the
-corresponding touching-sphere radius.)
 
+%==========================================================================
+\subsubsection{Spin character of orbital primitives}
+%==========================================================================
+
+\textbf{Remark: Currently the spin is a property of the projection and
+  not the orbital primitives as it should be.}
+
+For non-collinear electrons the definition of spin-up and spin-down
+electrons is ambiguous. The wave function is a \textbf{two-component
+  spinor}\index{spinor !two-component} wave function,
+\begin{eqnarray}
+\left(\begin{array}{c}|\psi(\uparrow,\vec{r})\\\psi(\downarrow,\vec{r})
+\end{array}\right)
+=\left(\begin{array}{c}\langle\uparrow,\vec{r}|\psi\rangle\\
+\langle\downarrow,\vec{r}|\psi\rangle
+\end{array}\right)
+\end{eqnarray}
+I absorbed the spin index $\uparrow/\downarrow$ into the argument
+list, in order to differentiate it from a quantum number.\footnote{A
+  quantum number $\uparrow$ would characterize an eigenstate of $S_z$
+  with eigenvalue $+\hbar/2$. Such a state would have only one
+  non-vanishing spinor component,
+  i.e. $\psi_\uparrow(\downarrow,\vec{r})=0$.}  A spinor wave function
+has a three-dimensional spin-density in each point of
+space.\footnote{The term \textbf{``spin density''}\index{spin density}
+  is actually a misnomer: It is not the density of spins, but rather a
+  \textbf{spin-resolved density}\index{spin-resolved density}.}
+\begin{eqnarray}
+n_t(\vec{r})
+&=&
+\psi^*(\uparrow,\vec{r})\psi(\uparrow,\vec{r})  
++\psi^*(\downarrow,\vec{r})\psi(\downarrow,\vec{r})  
+\nonumber\\
+n_{S_x}(\vec{r})
+&=&
+\psi^*(\uparrow,\vec{r})\psi(\downarrow,\vec{r})  
++\psi^*(\downarrow,\vec{r})\psi(\uparrow,\vec{r})  
+\nonumber\\
+n_{S_y}(\vec{r})
+&=&
+-i\Bigl(
+\psi^*(\uparrow,\vec{r})\psi(\downarrow,\vec{r})  
+-\psi^*(\downarrow,\vec{r})\psi(\uparrow,\vec{r})  
+\Bigr)
+\nonumber\\
+n_{S_z}(\vec{r})
+&=&
+\psi^*(\uparrow,\vec{r})\psi(\uparrow,\vec{r})  
+-\psi^*(\downarrow,\vec{r})\psi(\downarrow,\vec{r})  
+\nonumber\\
+\end{eqnarray}
+
+The the representation of a four-component density of states is not
+intuitive. Therefore we choose a particular coordinate system and
+project onto spin eigenstates along the z-coordinate in this
+coordinate system.
+
+For a specific axis $\vec{e}$, the z-axis of the local coordinate
+system, the spin eigenstates\footnote{The spin operator along an axis
+  $\vec{e}$ with $|\vec{e}|=1$, is
+\begin{eqnarray}
+S_{\vec{e}}
+=\vec{e}\vec{S}
+\hat{=}\frac{\hbar}{2}\left(\begin{array}{cc}
+e_z & (e_x-ie_y)\\(e_x+ie_y)& -e_z\end{array}\right)
+\end{eqnarray}}
+ are
+\begin{eqnarray}
+\left(\begin{array}{c}
+\psi_{+e}(\uparrow,\vec{r})\\\psi_{+e}(\downarrow,\vec{r})
+\end{array}\right)
+&=&
+\left(\begin{array}{c}
+1+e_z\\x_x+ie_y
+\end{array}\right)\frac{f_{+\vec{e}}(\vec{r})}{\sqrt{2(1+e_z)}}
+%
+\nonumber\\
+%
+\left(\begin{array}{c}
+\psi_{-e}(\uparrow,\vec{r})\\\psi_{+e}(\downarrow,\vec{r})
+\end{array}\right)
+&=&
+\left(\begin{array}{c}
+e_x-ie_y\\-(1+e_z)
+\end{array}\right)\frac{f_{-\vec{e}}(\vec{r})}{\sqrt{2(1+e_z)}}
+\end{eqnarray}
+with arbitrary, normalized functions $f_{\pm\vec{e}}(\vec{r})$.
+The spin eigenstates obey
+\begin{eqnarray}
+\vec{e}\hat{\vec{S}}|\psi_{+\vec{e}}\rangle=|\psi_{+\vec{e}}\rangle
+\Bigl(+\frac{\hbar}{2}\Bigr)
+\nonumber\\
+\vec{e}\hat{\vec{S}}|\psi_{-\vec{e}}\rangle=|\psi_{+\vec{e}}\rangle
+\Bigl(-\frac{\hbar}{2}\Bigr)
+\end{eqnarray}
+
+
+
+
+
+
+
+%==========================================================================
+\subsection{Complex orbitals}
+%==========================================================================
 More complex orbitals such as bond orbitals can be constructed from
 these elementary orbitals by using the block ``!DCNTL!ORBITAL''. The
 orbitals are named and can be referred to later by their name.
@@ -6396,68 +6589,6 @@ that may be anticipated. In this case we would need a set of vectors
 normalized with the overlap between partial waves to obtain the
 complete result.
 
-%===============================================================================
-\subsubsection{Orbital primitives}
-%===============================================================================
-The primitive orbitals are usually partial waves, that are truncated
-beyond a certain radius specified in the simulation code.  
-\begin{eqnarray}
-|\chi_\alpha\rangle=\theta_{\Omega_{R_\alpha}}|\phi_\alpha\rangle
-\end{eqnarray}
-(I plan to replace these by local tight-binding orbitals in
-the future.)  These orbitals are not orthonormal to other orbitals on
-the same site, which produces (correct, but ) counterintuitive
-results.
-
-
-For this purpose, we transform these primitives inside the paw\_dos
-tool into a new set that is orthonormal on each site. For this purpose,
-I perform a Cholesky decomposition of the overlap matrix.
-\begin{eqnarray}
-o_{\alpha,\beta}=\langle\chi_\alpha|\chi_\beta\rangle
-=\sum_\gamma L_{\alpha,\gamma}L^\dagger_{\gamma,\beta}
-=\sum_{\gamma,\delta}\mat{L}_{\alpha,\gamma}
-\langle\chi'_\gamma|\chi'_\delta\rangle
-\mat{L}^\dagger_{\delta,\beta}
-\end{eqnarray}
-with a lower triangular, real\footnote{The matrix $\mat{L}$ is purely
-  real, if the overlap matrix is positive definite, which is always
-  satisfied, because the overlap matrix is itself constructed from
-  wellpdefined orbitals.} $\mat{L}$, i.e.
-\begin{eqnarray}
-L_{\alpha,\beta}=0\qquad\text{for $\beta>\alpha$}
-\end{eqnarray}
-
-The new set $|\chi'_\alpha\rangle$ obeys local orthonormality
-\begin{eqnarray}
-\langle\chi'_\gamma|\chi'_\delta\rangle=
-\delta_{\gamma,\delta} \qquad\text{for $\vec{R}_\gamma=\vec{R}_\delta$}
-\end{eqnarray}
-
-A wave function then has the form
-\begin{eqnarray}
-|\psi\rangle
-&=&\sum_{\alpha}
-|\chi_\alpha\rangle_{\Omega_R}
-\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
-=\sum_{\gamma}
-|\chi'_\gamma\rangle_{\Omega_R}
-\underbrace{\Bigl(
-\sum_{\alpha}
-L^\dagger_{\gamma,\alpha}
-\langle\tilde{\pi}_\alpha|\tilde\psi\rangle
-\Bigr)}_{\langle\tilde{\pi}'_\alpha|\tilde\psi\rangle}
-\end{eqnarray}
-
-The new primitive orbitals are
-\begin{eqnarray}
-|\chi'_\alpha\rangle=\sum_{\gamma=1}^{\alpha}
-|\chi_\gamma\rangle L^{\dagger,-1}_{\gamma,\alpha}
-\end{eqnarray}
-The restriction of the sum over $\gamma$ originates from the fact that
-$\mat{L}$ is lower triagonal, $\mat{L}^\dagger$ and
-$\mat{L}^{\dagger,-a}$ are upper triagonal, so that
-$L^{\dagger,-1}_{\gamma,\alpha}=0$ for $\gamma>\alpha$.
 
 %===============================================================================
 \subsubsection{Matrix elements}
@@ -6496,9 +6627,9 @@ date to a file, so that they can be plotted.
 
 %===============================================================================
 \subsubsection{Thermal broadening of the Density-of-States}
-\label{sec:thermoalbroadening}
+\label{sec:thermalbroadening}
 %===============================================================================
-The rationale for the thermal broadeing of the density of states is
+The rationale for the thermal broadening of the density of states is
 the following: An expectation value of an observable $A$ can be
 written in the form
 \begin{eqnarray}
@@ -6531,25 +6662,27 @@ _{D_A^{\beta}(\epsilon)}
 \nonumber\\
 &=&\int_{-\infty}^\mu d\epsilon\;D^\beta_A(\epsilon)
 \end{eqnarray}
-
-The derivative of the Fermi distribution is
+where the thermally smoothened density of states is
 \begin{eqnarray}
-\partial_\mu f_\beta(\epsilon-\mu)
-=\beta\Bigl[\frac{1}{2}
-\cosh\Bigl(\frac{1}{2}\beta(\epsilon-\mu)\Bigr)\Bigr]^{-2}
+D_A^{\beta}(\epsilon)
+&:=&
+\int_{-\infty}^\infty d\epsilon'\; 
+\frac{\frac{1}{4}\beta D_A(\epsilon')}
+{\cosh^2\Bigl(\frac{1}{2}\beta(\epsilon-\epsilon')\Bigr)}
 \end{eqnarray}
 
-The thermal broadeing as a second practical reason, naemly to smoothen
-delta-function like spikes in the density of states resulting from
-accidental degeneracies of energies within a tetrahedron, when the
-tetrahedron method is used.
+
+The thermal broadening has a second practical reason, namely to
+smoothen delta-function like spikes in the density of states resulting
+from accidental degeneracies of energies within a tetrahedron, when
+the tetrahedron method is used.
 
 If the energies are sampled (MODE='SAMPLE') the result without
-broadeing is a series of spikes with equal height. Here the broadening
+broadening is a series of spikes with equal height. Here the broadening
 is important to produce a sensible density at the cost of loss of
 energy resolution. If sampling is used in a solid, the thermal
-broadeing shall mimick an interpolation. Then the broadeing should be
-comparible to the typical energy distance of neighboring k-points for
+broadeing shall mimic an interpolation. Then the broadeing should be
+comparable to the typical energy distance of neighboring k-points for
 in a typical band.
 
 %===============================================================================
@@ -6651,7 +6784,7 @@ largely independent of the system}
   \bdescr{defines the energy grid and thermal energy
   broadening. The grid extends from the minimum energy value to the
   minimum energy of the highest band.  Read
-  section~\ref{sec:thermoalbroadening} for the background of the
+  section~\ref{sec:thermalbroadening} for the background of the
   thermal broadening.  Large energy gaps are excluded from the grid.}
 
 %% \mbax{\key{EMIN[EV]}
@@ -6768,7 +6901,9 @@ largely independent of the system}
   manner orbitals with arbitrary complexity can be composed.
 \end{itemize}
 Once defined, the orbital can be shifted by a lattice translation IT
-and multiplied with a complex factor FAC.  }
+and multiplied with a complex factor FAC.  The orbital primitives are
+described further in section~\ref{sec:dostoolorbitalprimitives}.
+}
 
 \mbax{\key{NAME}
 \vdescr{specifies an orbital previously specified by another block
@@ -6800,13 +6935,15 @@ and multiplied with a complex factor FAC.  }
   \vdefault{none}}
 
 \mbax{\key{TYPE} 
-\vdescr{orbital type. Can be one of the following:\\
-    'S', 'PX', 'PY', 'PZ', 'SP1', 'SP2', 'SP3',\\
-    'DXY', 'DZ2' or 'D3Z2-R2', 'DXZ', 'DYZ', 'DX2-Y2',\\
-    'FX(X2-3Y2)', 'FZ(X2-Y2)', 'FXZ2' or 'FZ(5Z2-R2)', 'FZ3' or 'FZ(5Z2-3R2)'
-    'FXZ2' or 'FY(5Z2-R2)', 'FXYZ', 'FY(3X2-Y2)'\\
-    The meaning of these orbitals is described in
-    the preceding introduction to the paw\_dos tool.}
+\vdescr{orbital type. Can be one of the following:\\ 'S', 'PX', 'PY',
+  'PZ', 'SP1', 'SP2', 'SP3',\\ 'DXY', 'DZ2' or 'D3Z2-R2', 'DXZ',
+  'DYZ', 'DX2-Y2',\\ 'FX(X2-3Y2)', 'FZ(X2-Y2)', 'FXZ2' or
+  'FZ(5Z2-R2)', 'FZ3' or 'FZ(5Z2-3R2)' 'FXZ2' or 'FY(5Z2-R2)', 'FXYZ',
+  'FY(3X2-Y2)'\\ The meaning of these keywords is described in
+  section~\ref{sec:dostoolorbitalprimitivesangularmomentum} Only the
+  first orbital per angular momentum is used. This omission can be
+  undesired, in particular, when core states are treated like valence
+  states.}
 \vformat{character} 
 \vrules{optional; incompatible with name; mandatory if atom is
   specified.}
@@ -6929,10 +7066,10 @@ be present}
 \vdescr{selects the weights from this atom. Can be
 \begin{description}
 \item[``ALL''] sum over all projected density of states on this atom
-\item[``S'']   angular momentum weight for $\ell=0$
-\item[``P'']   angular momentum weight for $\ell=1$
-\item[``D'']   angular momentum weight for $\ell=2$
-\item[``F'']   angular momentum weight for $\ell=3$
+\item[``S'']   angular-momentum weight for $\ell=0$
+\item[``P'']   angular-momentum weight for $\ell=1$
+\item[``D'']   angular-momentum weight for $\ell=2$
+\item[``F'']   angular-momentum weight for $\ell=3$
 \end{description}
 or a combination of S,P,D,F, such as ``SD''.
 }
@@ -7026,7 +7163,7 @@ or a combination of S,P,D,F, such as ``SD''.
 The paw\_dosplot tool prepares a batch file for the plotting software
 ``Grace''.\cite{xmgrace}. It refers to the output files of paw\_dos
 and arranges the data in one or more graphs stacked below each
-other. Within a graph several density of states data can be drawne
+other. Within a graph several density of states data can be drawn
 color coded and stacked ontop of each other
 
 
@@ -7108,7 +7245,7 @@ the paw\_dosplot tool. I recommend the extension ``.dpcntl''.
 \block{!DPCNTL}
 %----------------------------------------------------------------------
 \brules{mandatory}
-\bdescr{containes direwctions on what the tool shall do}
+\bdescr{containes directions on what the tool shall do}
 
 \mbax{\key{EZERO[EV]}
 \vdescr{shifts the energy axis of all graphs so the specified value
@@ -7373,10 +7510,10 @@ The two main tasks that can be accomplished with the paw\_bands-tools are:
 \begin{itemize} 
   \item calculation of bandstructures including fat bands and
       projected bandstructures from paw-calculations with either a simple linear
-      interpolation scheme on the k-point grid or by a direct diagonalisation of
+      interpolation scheme on the k-point grid or by a direct diagonalization of
       the paw hamiltonian
   \item calculation of a new pdos-file with different k-points than 
-    the ones used in the paw calculation inclusing symmetries
+    the ones used in the paw calculation including symmetries
 \end{itemize}
 
 For that purpose the control input file is split up into two main sections:
@@ -7502,8 +7639,8 @@ $\Gamma$ & $X$ & $W$           & $L$     & $\Gamma$ & $K$=$U$ &  $X$    \\
 \end{tabular}
 \end{center}
 
-The path Gamma-K, U-X is identical ot the straight line from Gamma to
-an X-point of the neighboring cell.
+The path Gamma-K, U-X is identical to the straight line from
+Gamma-point to an X-point of the neighboring cell.
 
 
 \begin{verbatim}
@@ -7591,7 +7728,7 @@ Details are described below.}
 \block{!BCNTL!BANDSTRUCTURE!LINE}
 %----------------------------------------------------------------------
 \brules{optional,multiple}
-\bdescr{defines one line seqment in k-space, i.e. a part of a bandstructure}
+\bdescr{defines one line segment in k-space, i.e. a part of a bandstructure}
 
 \mbax{\key{XK1}
 \vdescr{First point of the line segment in relative coordinates 
@@ -7826,7 +7963,7 @@ and the overlap operator can be written as
 =1+\sum_{i,j}|\tilde p_i\rangle[\langle \phi_i|\phi_j\rangle
 -\langle \tilde\phi_i|\tilde\phi_j\rangle]\langle \tilde p_j|.
 \end{equation}
-(For details please refer to Peter Bloechls main publication about the paw
+(For details please refer to Peter Bl\"ochl's main publication about the paw
 formalism.)
 
 For the calculation of the eigenvalues and eigenstates we build up the
@@ -7867,9 +8004,9 @@ we get for the memory needed:
 To reduce the computational effort for the k-point calculations we use the
 symmetry of the system, so that only irreducible k-points have to be calculated.
 The symmetry group is determined by the parameter SPACEGROUP given in the
-PDOS-block, which denotes the three-dimesnional spacegroup according to
+PDOS-block, which denotes the three-dimensional spacegroup according to
 International Tables for Crystallography, Vol. A. \\
-A table of space group-definitions and the corresponding bravais lattice vectors
+A table of space-group definitions and the corresponding Bravais lattice vectors
 can be found in appendix \ref{section:symmetry_tables}.
 
 
@@ -8342,7 +8479,7 @@ The calling sequence is
 \end{description}
 
 ROOT is the root name of the current project. It is extracted from a
-earch of all files with the required extension in the current
+search of all files with the required extension in the current
 directory.  The tool assumes that the ROOT is unambiguous in the
 current directory.
 
@@ -8769,7 +8906,7 @@ The calling sequence is
 \subsection{PAW-snapshot ``paw\_snapshot''}
 %==========================================================================
 {\tt paw\_snapshot} is a shell script that collects all raw files of
-the PAW disttribution, i.e. source code, configuration files,
+the PAW distribution, i.e. source code, configuration files,
 parameter files etc. in a compresses tar file paw\_snapshot.tgz
 
 The calling sequence is
@@ -8952,7 +9089,7 @@ The program works in Cartesian coordinates using Hartree atomic units
 Angles are given in radian ($2\pi~{\rm radian}=360~\deg$).
 
 The following list is produced by the CONSTANTS object.  The data are
-based on a values recommended by The Commitee on Data for Science and
+based on a values recommended by The Committee on Data for Science and
 Technology (CODATA) \cite{mohr00_rmp72_351}.
 \begin{verbatim}
 UNITS AND CONSTANTS IN ATOMIC HARTREE UNITS:
@@ -9072,13 +9209,14 @@ PETA...........=    1.000000E+15 :PETA=1.D+15
 \subsection{Vibrations}
 %===================================================================
 
-Vibrational freqencies and optical absorption energies are frequenty measured
-via the frequency or wave-length of the absorbed light. The frequency or
-energy is measured in wave-numbers $\bar{\nu}=1/L$ defined as the inverse
-of the wavelength $L$. (The wave number is the number of times an
-oscillation of a light wave fitswithin a given length interval.) It is
-measured in units of cm$^{-1}$. Here we provide the conversion of wave numbers
-into energies, frequencies, etc.
+Vibrational frequencies and optical absorption energies are frequently
+measured via the frequency or wave-length of the absorbed light. The
+frequency or energy is measured in wave-numbers $\bar{\nu}=1/L$
+defined as the inverse of the wavelength $L$. (The wave number is the
+number of times an oscillation of a light wave fits within a given
+length interval.) It is measured in units of cm$^{-1}$. Here we
+provide the conversion of wave numbers into energies, frequencies,
+etc.
 
 
 First we convert the wave number into a frequency $\omega=2\pi/T$ where $T$ is
@@ -9106,7 +9244,7 @@ T&=&\frac{2\pi}{\omega}=\frac{1}{c\bar{\nu}}
 \label{eq:periodofbarnu}
 \end{eqnarray}
 The connection to the energy is given by $E=\hbar\omega$, where $E$ is the
-energy of the absorbed or emmited photon with frequency $\omega$. It is the
+energy of the absorbed or emitted photon with frequency $\omega$. It is the
 energy difference between the energy levels of the corresponding transition.
 \begin{eqnarray}
 E&=&\hbar\omega=2\pi\hbar c\bar{\nu}
@@ -9525,7 +9663,7 @@ PD4+2  1.338   90.000
 The time evolution of most quantities is done as friction dynamics.
 This friction itself may be time dependent for example in optimization
 procedures or via a thermostat. Here we shall describe the main
-features, and provide guidelines for the selction of the free
+features, and provide guidelines for the selection of the free
 parameters.
 
 The general equation of motion is 
@@ -9599,7 +9737,7 @@ friction parameters.
     period than $\frac{2\pi\Delta}{a}$ the the variables converge
     exponentially with a rate $2\Delta/a$, which makes a large
     friction $a$ appear favorable.  However at the same time,
-    oscilations with a period $T>2\pi\Delta/a$ do not converge due to
+    oscillations with a period $T>2\pi\Delta/a$ do not converge due to
     overdamping. (In order to converge bond stretch frequencies, which
     typically lie above 500~cm$^{-1}$, the friction parameter should
     not be higher than $a=0.025$. This also indicates the inefficiency
@@ -9620,8 +9758,8 @@ The optimum friction factor is estimated according to
 a_{opt}=\Delta\sqrt{\frac{\dot{R}\dot{F}}{\dot{R}\mathbf{m}\dot{R}}}
 \end{eqnarray*}
 
-Numerator and Denominator can oszillate rapidly. Therefore we use a
-running average, which is calculated accoring to
+Numerator and Denominator can oscillate rapidly. Therefore we use a
+running average, which is calculated according to
 \begin{eqnarray*}
 \langle a_{opt}\rangle=\beta a_{opt}+(1-\beta)\langle a_{opt}
 \end{eqnarray*}
@@ -9741,7 +9879,7 @@ of volume as shown in Fig.~\ref{fig:sawtooth}.
 volume with a fixed plane wave cutoff (black) with a fixed number of
 plane waves (green dashed) and the correct result with a fully
 converged calculation (red). By adding a G-dependent potential the
-plane wave convergence can be artyificially accelerated.}
+plane wave convergence can be artificially accelerated.}
 \end{figure}
 
 The steps in the total energy vanish if the calculation is fully converged in
@@ -9767,7 +9905,7 @@ investigation so far.
 
 The problem is the following: One cannot map a number of N projector
 functions onto less than N real space grid points. On the grid they
-are no more distingishable. Thus there are combinations of partial
+are no more distinguishable. Thus there are combinations of partial
 waves with coefficients that are completely decoupled from the plane
 wave part. 
 
@@ -9889,7 +10027,7 @@ program expects a data with type ``real(8)'', but finds one of type
 ``integer(4)''. It appears that the program has mistaken your data for
 DT as an integer, because the user forgot to type the decimal point.
 \item The program does not do what you want it to. You may have mistyped
-  keywords, or mixed bup the tree structure. This renders a lot of data
+  keywords, or mixed up the tree structure. This renders a lot of data
   invisible, and the program uses the default values. Try to consult
   the protocol of the program. It should report all options selected.
   If options are not listed, the option is not selected, or the
@@ -9928,10 +10066,10 @@ keep this list as short as possible.
     In this case reduce the plane wave cutoff to a small value such as
     5, 10 or 20 Ry. If this alone does not help, also reduce the time
     step, but leave the wave function masses MPSI and MPSICG2
-    constant. It is suffient to do this for the first few (about five
+    constant. It is sufficient to do this for the first few (about five
     or ten) time steps. If you started a new job with gradient
     corrected DFT functionals, you should try
-    ``!CONTROL!FOURIER:CDUAL=4'' or reach convergence furst for a
+    ``!CONTROL!FOURIER:CDUAL=4'' or reach convergence first for a
     truly local functional before switching gradient corrections
     on. If the kinetic energy for the wave functions decreases to a
     reasonable value of a few Hartree, one can restart with the
@@ -9975,13 +10113,13 @@ keep this list as short as possible.
 %==========================================================================
 Using too many partial waves leads to so-called
 \textbf{overcompleteness}\index{overcompleteness} of projector
-functions.  This is counterintitive because one would think that more
+functions.  This is counterintuitive because one would think that more
 terms would make the description more accurate. 
 
 The origin of the problem is that, with a finite plane wave cutoff,
 the wave function has only a limited number of degrees of freedom
-inside the atomic region. If the numbert of projector functions
-exceeds this number of degrees of freedom, there is atleast one
+inside the atomic region. If the number of projector functions
+exceeds this number of degrees of freedom, there is at least one
 partial wave with a prefactor that is not fixed by the wave function.
 If this partial wave increases the energy, it will be projected
 out. If it, however, lowers the energy the calculation becomes
@@ -10037,7 +10175,7 @@ present.
 This table indicates that for hydrogen, only the s-type projector
 should be used. For second-row elements the choice of the number of
 projectors appears fairly uncritical. For first-row elements, however,
-insdtabilities may already be present if only one projector function
+instabilities may already be present if only one projector function
 is used for s, p, and d-type angular momenta.
 
 
@@ -10059,7 +10197,7 @@ internal use.
 The code is written as self-explanatory as possible. I understand that
 this looks like an excuse for not documenting the code. The idea
 behind is to use meaningful variable names, use explicit typing such
-as declaring each variable explicitely, declaring its intent
+as declaring each variable explicitly, declaring its intent
 (in,out,inout), and to use similar structures and conventions
 throughout the code. This technique avoids the common problem that
 documentation and code become asynchronous.
@@ -10086,7 +10224,7 @@ The graph-drawing kit graphviz can be obtained from
 
 \begin{itemize}
 \item Only the debug version of the code is analyzed. Therefore, the
-  debug version must be compiled with \verb|make dbg| before analysing
+  debug version must be compiled with \verb|make dbg| before analyzing
   it with doxygen. 
 %
 \item \verb|make doxygen| constructs a configuration file ``Doxyfile''
