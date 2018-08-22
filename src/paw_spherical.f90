@@ -87,8 +87,12 @@ END MODULE SPHERICAL_MODULE
 !     **      YLM(12)=SQRT( 21/(32*PI))  * ( X*(5Z^2-R^2)   /R**3             **
 !     **      YLM(13)=SQRT( 14/(32*PI))  * ( Z*(5Z^2-3*R^2) /R**3             **
 !     **      YLM(14)=SQRT( 21/(32*PI))  * ( Y*(5Z^2-R^2)   /R**3             **
-!     **      YLM(15)=SQRT(210/(32*PI))  * ( X*Y*Z          /R**3             **
+!     **      YLM(15)=SQRT(840/(32*PI))  * ( X*Y*Z          /R**3             **
 !     **      YLM(16)=SQRT( 35/(32*PI))  * ( Y*(3X^2-Y^2)   /R**3             **
+!     ** 
+!     **    REMARK: THE F-TYPE ORBITALS IN THIS COMMENT HAVE BEEN TAKEN FROM  **
+!     **    HTTPS://EN.WIKIPEDIA.ORG/WIKI/TABLE_OF_SPHERICAL_HARMONICS.       **
+!     **    THE CODE WORKS INDEPENDENTLY.                                     **
 !     **                                                                      **
 !     **                                         P.E. BLOECHL, (1991,2018)    **
 !     **************************************************************************
@@ -277,38 +281,81 @@ END MODULE SPHERICAL_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$LMBYNAME(NAME,LM)
+!     **************************************************************************
+!     ** RETURNS THE COMBINED ANGULAR MOMENTUM INDEX FOR A NAME               **
+!     ** OF REAL SPHERICAL HARMONICS                                          **
+!     ** 
+!     **************************************************************************
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(OUT):: LM
+!     **************************************************************************
+      IF(NAME.EQ.'S') THEN 
+        LM=1
+      ELSE IF(NAME.EQ.'PX') THEN
+        LM=2
+      ELSE IF(NAME.EQ.'PZ') THEN
+        LM=3
+      ELSE IF(NAME.EQ.'PY') THEN
+        LM=4
+      ELSE IF(NAME.EQ.'DX2-Y2') THEN
+        LM=5
+      ELSE IF(NAME.EQ.'DXZ') THEN
+        LM=6
+      ELSE IF(NAME.EQ.'D3Z2-R2'.OR.NAME.EQ.'DZ2') THEN
+        LM=7
+      ELSE IF(NAME.EQ.'DYZ') THEN
+        LM=8
+      ELSE IF(NAME.EQ.'DXY') THEN
+        LM=9
+      ELSE IF(NAME.EQ.'FX(X2-3Y2)') THEN
+        LM=10
+      ELSE IF(NAME.EQ.'FZ(X2-Y2)') THEN
+        LM=11
+      ELSE IF(NAME.EQ.'FX(5Z2-R2)'.OR.NAME.EQ.'FXZ2') THEN
+        LM=12
+      ELSE IF(NAME.EQ.'FZ(5Z2-3R2)'.OR.NAME.EQ.'FZ3') THEN
+        LM=13
+      ELSE IF(NAME.EQ.'FY(5Z2-R2)'.OR.NAME.EQ.'FYZ2') THEN
+        LM=14
+      ELSE IF(NAME.EQ.'FXYZ') THEN
+        LM=15
+      ELSE IF(NAME.EQ.'FY(3X2-Y2)') THEN
+        LM=16
+      ELSE
+        CALL ERROR$MSG('ORBITAL NAME NOT RECOGNIZED')
+        CALL ERROR$CHVAL('NAME',NAME)
+        CALL ERROR$STOP('SPHERICAL$LMBYNAME')
+      END IF
+      RETURN
+      END 
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$YLMNAME(LM,NAME)
 !     **************************************************************************
+!     ** RETURNS THE NAME FOR A REAL HARMONICS FOR A GIVEN INDEX              **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)    :: LM
+      INTEGER(4)  ,INTENT(IN)  :: LM
       CHARACTER(*),INTENT(OUT) :: NAME
       CHARACTER(8)             :: STRING
+      INTEGER(4)   ,PARAMETER  :: LMX=16
+      CHARACTER(11),PARAMETER  :: NAMES(LMX)= &
+!     ** '12345678901','12345678901','12345678901','12345678901','12345678901'
+     & (/'S          ' &
+     &  ,'PX         ','PZ         ','PY         ' &
+     &  ,'DX2-Y2     ','DXZ        ','D3Z2-R2    ','DYZ        ','DXY        ' &
+     &  ,'FX(X2-3Y2) ','FZ(X2-Y2)  ','FX(5Z2-R2) ','FZ(5Z2-3R2)' &
+     &                ,'FY(5Z2-R2) ','FXYZ       ','FY(3X2-Y2) '/)
 !     **************************************************************************
-      IF(LM.EQ.1) THEN
-        NAME='S'
-      ELSE IF(LM.EQ.2) THEN
-        NAME='PX'
-      ELSE IF(LM.EQ.3) THEN
-        NAME='PZ'
-      ELSE IF(LM.EQ.4) THEN
-        NAME='PY'
-      ELSE IF(LM.EQ.5) THEN
-        NAME='DX2-Y2'
-      ELSE IF(LM.EQ.6) THEN
-        NAME='DXZ'
-      ELSE IF(LM.EQ.7) THEN
-        NAME='D3Z2-R2'
-      ELSE IF(LM.EQ.8) THEN
-        NAME='DYZ'
-      ELSE IF(LM.EQ.9) THEN
-        NAME='DXY'
-      ELSE IF(LM.LE.0) THEN
+      IF(LM.LE.0) THEN
         CALL ERROR$MSG('INDEX FOR CUBIC HARMONIC MUST BE POSITIVE')
         CALL ERROR$STOP('SPHERICAL$YLMNAME')
-      ELSE
+      ELSE IF(LM.GT.LMX) THEN
         WRITE(STRING,*)LM
         NAME='LM='//TRIM(STRING)
+      ELSE
+        NAME=TRIM(NAMES(LM))
       END IF       
       RETURN
       END
