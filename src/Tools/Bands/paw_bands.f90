@@ -771,9 +771,13 @@ PRINT*,'N1B ',N1B,N2B,N3B
        REAL(8)               :: PROPSII(NB)
        INTEGER(4)            :: IP,IQ
        INTEGER(4)            :: NFIL=11
+       CHARACTER(64)         :: FMTSTRING
 !      *************************************************************************
+                                            CALL TRACE$PUSH('BANDS_PLOTBANDS')
        PRINT*,'NB ',NB
        PRINT*,'X1X2 ',X1,X2
+       WRITE(FMTSTRING,*)NB
+       FMTSTRING='('//TRIM(ADJUSTL(FMTSTRING))//'F9.5)'
        CALL FILEHANDLER$UNIT('BANDS',NFIL)
        DO IQ=1,NQ
          IF(NQ.EQ.1) THEN
@@ -788,18 +792,12 @@ PRINT*,'N1B ',N1B,N2B,N3B
 !          == KI IS THE K-POINT IN CARTESIAN COORDINATES =======================
            KI=MATMUL(GBAS,XK1*D1+XK2*D2+XQ*D3)
            CALL BANDS_GETBAND(GBAS,N1,N2,N3,MAP,NK,NB,EB,PROPSI,KI,EBI,PROPSII)
-!!$           IF(NB.GT.100) THEN
-!!$             CALL ERROR$MSG('NUMBER OF BANDS EXCEEDS LIMIT OF 100')
-!!$             CALL ERROR$I4VAL('NB ',NB)
-!!$             CALL ERROR$STOP('BANDS_PLOTBANDS')
-!!$           END IF
-!          WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI,PROPSII
-!          == PBBLOECHL: REMOVED PROPSII
-           WRITE(NFIL,FMT='(100F9.5)')X1+(X2-X1)*D2,EBI 
+           WRITE(NFIL,FMT=FMTSTRING)X1+(X2-X1)*D2,EBI 
          ENDDO
        ENDDO
        CALL LIB$FLUSHFILE(NFIL)
        CALL FILEHANDLER$CLOSE('BANDS')
+                                            CALL TRACE$POP()
        RETURN 
        END
 !
