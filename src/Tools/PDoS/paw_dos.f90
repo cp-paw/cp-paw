@@ -2252,18 +2252,17 @@ END MODULE NEWSET_MODULE
 !         == MATEL IS THE PREFACTOR OF THE UNIT MATRIX
 !         == WHICH HAS TRACE TWO. THEREFORE THE FACTOR 0.5
           MATEL(1,:,:,ISET)=MATEL(1,:,:,ISET)+0.5D0
-!         == NO SPIN INFORMATION IS AVAILABLE FOR TOTAL AND NON-COLLINEAR CALC.
-          IF(NDIM.EQ.1) THEN
+!         == ADD SPIN INFORMATION FOR COLLINEAR SPIN-POLARIZED CALC
+!         == NO SPIN INFORMATION IS AVAILABLE FOR TOTAL IN A NON-COLLINEAR CALC.
+          IF(NSPIN.EQ.2.AND.NDIM.EQ.1) THEN
             DO IKPT=1,NKPT
               DO ISPIN=1,NSPIN
                 STATE=>STATEARR(IKPT,ISPIN)
                 NB=STATE%NB
                 IF(ISPIN.EQ.1) THEN
-!!$                  MATEL(1,1:NB ,IKPT,ISET)=MATEL(1,1:NB     ,IKPT,ISET)+0.5D0
-!!$                  MATEL(4,1:NB ,IKPT,ISET)=MATEL(4,1:NB     ,IKPT,ISET)+0.5D0
+                  MATEL(4,1:NB ,IKPT,ISET)=MATEL(4,1:NB     ,IKPT,ISET)+0.5D0
                 ELSE IF(ISPIN.EQ.2.OR.NSPIN.EQ.1) THEN
-!!$                  MATEL(1,NB+1:,IKPT,ISET)=MATEL(1,NB+1:2*NB,IKPT,ISET)+0.5D0
-!!$                  MATEL(4,NB+1:,IKPT,ISET)=MATEL(4,NB+1:2*NB,IKPT,ISET)-0.5D0
+                  MATEL(4,NB+1:,IKPT,ISET)=MATEL(4,NB+1:2*NB,IKPT,ISET)-0.5D0
                 END IF
               ENDDO
             ENDDO
@@ -2643,7 +2642,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
       ELSE
 !       == RESOLVE PURE REAL SPHERICAL HARMONICS ===============================
-        CALL SPHERICAL$LMBYNAME('TYPE',LM)
+        CALL SPHERICAL$LMBYNAME(TYPE,LM)
         ORB(LM)=1.D0
       END IF
 !
@@ -4233,7 +4232,6 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ==========================================================================
       ALLOCATE(WGHT(NBB,NKPT))
       CALL BRILLOUIN$DOS(NBB,NKPT,EIG,WGHT,RNTOT,EF)
-PRINT*,'EFERMI[EV] ',EF*27.211D0
 !!$!
 !!$!     ==========================================================================
 !!$!     ==  PERFORM BRILLOUIN ZONE INTEGRATION OF A(K) FOR TESTING              ==
