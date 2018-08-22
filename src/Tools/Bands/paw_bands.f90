@@ -776,7 +776,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
                                             CALL TRACE$PUSH('BANDS_PLOTBANDS')
        PRINT*,'NB ',NB
        PRINT*,'X1X2 ',X1,X2
-       WRITE(FMTSTRING,*)NB
+       WRITE(FMTSTRING,*)NB+1
        FMTSTRING='('//TRIM(ADJUSTL(FMTSTRING))//'F9.5)'
        CALL FILEHANDLER$UNIT('BANDS',NFIL)
        DO IQ=1,NQ
