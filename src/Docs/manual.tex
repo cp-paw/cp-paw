@@ -4653,14 +4653,17 @@ on p.~\pageref{sec:extendedatomnotation})}
 \vrules{mandatory}
 \vdefault{none}}
 %
-\mbax{\key{TYPE}
-\vdescr{orbital type, can be 'S', 'P', 'D', 'ALL'.
-One can also specify specific angular momenta such as 'PX', 'PY',
-'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2', 'DYZ', 'DXY'.  For the f-orbitals we
-use the notation 'F1', \ldots, 'F7'.  
-}
-\vformat{character}
-\vrules{mandatory}
+\mbax{\key{TYPE} 
+\vdescr{orbital type, can be 'S', 'P', 'D', 'ALL' or the ID of any
+  real spherical harmonics with $\ell\le3$. The allowed values for
+  real spherical harmonics are provided in
+  table~\ref{tab:realsphericalharmonics}
+  on p.~\pageref{tab:realsphericalharmonics}.
+.  Some of them are
+  'S','PX', 'PY', 'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2' or 'DZ2', 'DYZ',
+  'DXY'.}  
+\vformat{character} 
+\vrules{mandatory} 
 \vdefault{none}}
 %
 \mbax{\key{VALUE}
@@ -6384,57 +6387,67 @@ cartesian coordinate system used in the calculation.  The angular
 momentum character can, however, also be specified with respect to a
 arbitrary local coordinate system.
 
-The keywords and their angular momentum character are given below:
+
+
+The keywords and their angular momentum character are given in
+table~\ref{tab:realsphericalharmonics}. In addition the following
+special set of hybrid orbitals can be adressed.
 \begin{description}
-\item[s]An s-orbital with angular dependence 
-$Y_s=\sqrt{1\over{4\pi}}$
-\item[px]A p-orbital with angular dependence 
-$Y_{p_x}=\sqrt{3\over{4\pi}} {x\over{|r|}}$
-\item[py]A p-orbital with angular dependence 
-$Y_{p_y}=\sqrt{3\over{4\pi}} {y\over{|r|}}$
-\item[pz]A p-orbital with angular dependence 
-$Y_{p_z}=\sqrt{3\over{4\pi}} {z\over{|r|}}$
-\item[dxy]A d-orbital with angular dependence 
-$Y_{d_{xy}}=\sqrt{60\over{16\pi}} {{xy}\over{|r|^2}}$
-\item[dxz]A d-orbital with angular dependence 
-$Y_{d_{xz}}=\sqrt{60\over{16\pi}} {{xz}\over{|r|^2}}$
-\item[dyz]A d-orbital with angular dependence 
-$Y_{d_{yz}}=\sqrt{60\over{16\pi}} {{yz}\over{|r|^2}}$
-\item[dz2] (or \textbf{d4z2-r2}) A d-orbital with angular dependence 
-$Y_{d_{3z^2-r^2}}=\sqrt{5\over{16\pi}} {{3z^2-r^2}\over{|r|^2}}$
-\item[dx2-y2]A d-orbital with angular dependence 
-$Y_{d_{x^2-y^2}}=\sqrt{15\over{16\pi}} {{x^2-y^2}\over{|r|^2}}$
 \item[sp] An sp$^1$ orbital pointing in z-direction: 
 $\sqrt{1\over{2}}Y_s \phi_s(|r|) + \sqrt{1\over{2}}Y_{p_z}\phi_p(|r|)$
 \item[sp2] An sp$^2$ orbital pointing in z-direction: 
 $\sqrt{1\over{3}}Y_s\phi_s(|r|) + \sqrt{2\over{3}}Y_{p_z})\phi_p(|r|)$
 \item[sp3] An sp$^3$ orbital pointing in z-direction: 
 $\sqrt{1\over{4}}Y_s\phi_s(|r|) + \sqrt{3\over{4}}Y_{p_z})\phi_p(|r|)$
-%
-%
-%
-\item[fx(x2-3y2)] An f orbital with angular dependence 
-$Y_{f_{x(x^2-3y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{x(x^2-3y^2)}{|r|^3}$
-%
-\item[fz(x2-y2)] An f orbital with angular dependence 
-$Y_{f_{z(x^2-y^2)}}=\sqrt{\frac{210}{32\pi}} \frac{z(x^2-y^2)}{|r|^3}$
-%
-\item[fxz2] (or\textbf{fx(5z2-r2)}) An f orbital with angular dependence 
-$Y_{f_{xz2}}=\sqrt{\frac{21}{32\pi}} \frac{x(5z^2-r^2)}{|r|^3}$
-%
-\item[fz3] (or \textbf{fz(5z2-3r2)}) An f orbital with angular dependence 
-$Y_{f_{z3}}=\sqrt{\frac{14}{32\pi}} \frac{z(5z^2-3r^2)}{|r|^3}$
-%
-\item[fyz2] (or \textbf{fy(5z2-r2)})An f orbital with angular dependence 
-$Y_{f_{yz2}}=\sqrt{\frac{21}{32\pi}} \frac{y(5z^2-r^2)}{|r|^3}$
-%
-\item[fxyz] An f orbital with angular dependence 
-$Y_{f_{xyz}}=\sqrt{\frac{210}{32\pi}} \frac{xyz}{|r|^3}$
-%
-\item[fy(3x2-y2)] An f orbital with angular dependence 
-$Y_{f_{y(3x^2-y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{y(3x^2-y^2)}{|r|^3}$
-%
 \end{description}
+
+\begin{table}[!hbt]
+\caption{\label{tab:realsphericalharmonics}List of real spherical
+  harmonics as they are used in the CP-PAW code. LM is the combined
+  angular momentum index used to address the real spherical harmonics
+  in the code. $\ell$ is the main angular momentum. $m$ is NOT the
+  magnetic quantum number, but a running index within one shell with a
+  given main angular monentum. IDs are the names with which the
+  orbitals can be addressed. The last column gives the expression of
+  the real spherical harmonics in cartesian coordinates.}
+\begin{center}
+\begin{tabular}{|r|c|c|l|l|}
+\hline
+LM & $\ell$ & $m$ & IDs & expression \\
+\hline
+1 & 0 & 1 & S   & $Y_s=\sqrt{1\over{4\pi}}$ \\
+\hline
+2 & 1 & 1 & PX  & $Y_{p_x}=\sqrt{3\over{4\pi}} {x\over{|r|}}$\\
+3 & 1 & 2 & PZ  & $Y_{p_z}=\sqrt{3\over{4\pi}} {z\over{|r|}}$\\
+4 & 1 & 3 & PY  & $Y_{p_y}=\sqrt{3\over{4\pi}} {y\over{|r|}}$\\
+\hline
+5 & 2 & 1  & DX2-Y2
+                & $Y_{d_{x^2-y^2}}=\sqrt{15\over{16\pi}} {{x^2-y^2}\over{|r|^2}}$\\
+6 & 2 & 2 & DXZ & $Y_{d_{xz}}=\sqrt{60\over{16\pi}} {{xz}\over{|r|^2}}$\\
+7 & 2 & 3 & dz2,d3z2-r2 
+                & $Y_{d_{3z^2-r^2}}=\sqrt{5\over{16\pi}} {{3z^2-r^2}\over{|r|^2}}$\\
+8 & 2 & 4 & dyz & $Y_{d_{yz}}=\sqrt{60\over{16\pi}} {{yz}\over{|r|^2}}$\\
+9 & 2 & 5 & DXY & $Y_{d_{xy}}=\sqrt{60\over{16\pi}} {{xy}\over{|r|^2}}$\\
+\hline
+10 & 3 & 1 & FX(X2-3Y2),F1 
+   & $Y_{f_{x(x^2-3y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{x(x^2-3y^2)}{|r|^3}$\\
+11 & 3 & 2 & FZ(X2-Y2),F2
+   & $Y_{f_{z(x^2-y^2)}}=\sqrt{\frac{210}{32\pi}} \frac{z(x^2-y^2)}{|r|^3}$\\
+12 & 3 & 3 & FXZ2,FX(5Z2-R2),F3 
+   & $Y_{f_{xz2}}=\sqrt{\frac{21}{32\pi}} \frac{x(5z^2-r^2)}{|r|^3}$\\
+13 & 3 & 4 & fZ3,FZ(5Z2-3R2),F4
+   & $Y_{f_{z3}}=\sqrt{\frac{14}{32\pi}} \frac{z(5z^2-3r^2)}{|r|^3}$\\
+14 & 3 & 5 & FYZ2, FY(5Z2-R2),F4
+   & $Y_{f_{yz2}}=\sqrt{\frac{21}{32\pi}} \frac{y(5z^2-r^2)}{|r|^3}$\\
+15 & 3 & 6 & FXYZ,F6
+   & $Y_{f_{xyz}}=\sqrt{\frac{210}{32\pi}} \frac{xyz}{|r|^3}$\\
+16 & 3 & 7 & FY(3X2-Y2),F7
+   & $Y_{f_{y(3x^2-y^2)}}=\sqrt{\frac{35}{32\pi}} \frac{y(3x^2-y^2)}{|r|^3}$\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
 
 %==========================================================================
 \subsubsection{Spin character of orbital primitives}

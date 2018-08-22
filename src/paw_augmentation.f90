@@ -2468,6 +2468,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
 !     **************************************************************************
 !     **  TOTAL ENERGY AND ONE-CENTER HAMILTONIAN CONTRIBUTIONS FROM          **
 !     **  EXTERNAL POTENTIAL                                                  **
+!     **                                                                      **
+!     **                                                                      **
 !     **************************************************************************
       USE EXPERTNAL1CPOT_MODULE
       IMPLICIT NONE
@@ -2491,7 +2493,7 @@ END MODULE EXPERTNAL1CPOT_MODULE
       REAL(8)      ,ALLOCATABLE :: AUX(:)    !(NR)
       CHARACTER(32)             :: SPECIES
       LOGICAL(4)                :: TCHK
-      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I
+      INTEGER(4)                :: LN1,LN2,LMN1,LMN2,IPOT,IDIMD,L1,L2,I,LM
       INTEGER(4)                :: GID     ! GRID ID
       REAL(8)      ,ALLOCATABLE :: R(:)    ! RADIAL GRID
       LOGICAL(4)                :: TACTIVE
@@ -2515,76 +2517,34 @@ END MODULE EXPERTNAL1CPOT_MODULE
         TACTIVE=.TRUE.
 !
 !       ========================================================================
-!       ==  UNSCRAMBLE TYPE                                                   ==  
+!       ==  UNSCRAMBLE TYPE                                                   ==
 !       ========================================================================
 !       == LANG=MAIN ANGULAR MOMENTUM  LANG=-1 ALL ANGULAR MOMENTA
-!       == MANG="MAGNETIC" QUANTUM NUMBER  MANG=-1 ALL "MAGNETIC" QUANTUM NUMBERS
+!       == MANG="MAGNETIC" QUANTUM NUMBER  MANG=-1 ALL "MAGNETIC" QUANTUM NUMBRS
 !       == CAUTION: MANG REFERS TO REAL SPHERICAL HARMONICS
-        MANG=-1
-        IF(TRIM(POT1%TYPE).EQ.'S') THEN
-          LANG=0
 !
-        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'P') THEN
-          LANG=1
-          IF(TRIM(POT1%TYPE(2:)).EQ.'X') THEN
-            MANG=1  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'Z') THEN
-            MANG=2  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'Y') THEN
-            MANG=3
-          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
-            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
-            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
-            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
-          END IF
-!
-        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'D') THEN
-          LANG=2
-          IF(TRIM(POT1%TYPE(2:)).EQ.'X2-Y2') THEN
-            MANG=1  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'XZ') THEN
-            MANG=2  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'3Z2-R2') THEN
-            MANG=3
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'YZ') THEN
-            MANG=4
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'XY') THEN
-            MANG=5
-          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
-            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
-            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
-            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
-          END IF
-!
-        ELSE IF(TRIM(POT1%TYPE(1:1)).EQ.'F') THEN
-          LANG=3
-          IF(TRIM(POT1%TYPE(2:)).EQ.'1') THEN
-            MANG=1  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'2') THEN
-            MANG=2  
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'3') THEN
-            MANG=3
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'4') THEN
-            MANG=4
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'5') THEN
-            MANG=5
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'6') THEN
-            MANG=6
-          ELSE IF(TRIM(POT1%TYPE(2:)).EQ.'7') THEN
-            MANG=7
-          ELSE IF(LEN_TRIM(POT1%TYPE(2:)).GT.0) THEN
-            CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
-            CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
-            CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
-          END IF
-!
-        ELSE IF(TRIM(POT1%TYPE).EQ.'ALL') THEN
+        IF(TRIM(POT1%TYPE).EQ.'ALL') THEN
           LANG=-1
 !
-        ELSE
-          CALL ERROR$MSG('VALUE OF TYPE NOT RECOGNIZED')
-          CALL ERROR$CHVAL('POT1%TYPE',POT1%TYPE)
-          CALL ERROR$STOP('EXTERNAL1CPOT$APPLY')
+!       == SELECT COMPLETE ANGULAR MOMENTUM SHELLS =============================
+        ELSE IF(TRIM(POT1%TYPE).EQ.'S') THEN
+          LANG=0
+          MANG=-1
+        ELSE IF(TRIM(POT1%TYPE).EQ.'P') THEN
+          LANG=1
+          MANG=-1
+        ELSE IF(TRIM(POT1%TYPE).EQ.'D') THEN
+          LANG=2
+          MANG=-1
+        ELSE IF(TRIM(POT1%TYPE).EQ.'F') THEN
+          LANG=3
+          MANG=-1
+        ELSE   
+!         == SELECT INDIVIDUAL REAL SPHERICAL HARMONICS ========================
+!         == SPHERICAL$LMBYNAME THROWS AN ERROR IF TYPE IS NOT RECOGNIZED ======
+          CALL SPHERICAL$LMBYNAME(TRIM(POT1%TYPE),LM)
+          LANG=INT(SQRT(REAL(LM-1,KIND=8))+1.D-5)
+          MANG=LM-LANG**2        
         END IF
 !
 !       ========================================================================

@@ -2610,70 +2610,46 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RESOLVETYPE(LMX,TYPE,ORBITAL)
-!     ************************************************************************
-!     ** CONSTRUCTS THE PREFACTORS OF AN ORBITAL IN AN EXPANSION OF         **
-!     ** REAL SPHERICAL HARMONICS                                           **
-!     ************************************************************************
+!     **************************************************************************
+!     ** CONSTRUCTS THE PREFACTORS OF AN ORBITAL IN AN EXPANSION OF           **
+!     ** REAL SPHERICAL HARMONICS                                             **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN)   :: LMX
       CHARACTER(*),INTENT(IN)   :: TYPE
       COMPLEX(8)  ,INTENT(OUT)  :: ORBITAL(LMX)
       REAL(8)                   :: ORB(16)
       INTEGER(4)                :: LM
-!     ************************************************************************
+!     **************************************************************************
       ORB(:)=0.D0
 !
-!     ========================================================================
-!     ==  SET ORBITAL COEFFICIENTS                                          ==
-!     ========================================================================
-      IF(TRIM(TYPE).EQ.'S') THEN
-        ORB(1)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'PX') THEN
-        ORB(2)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'PZ') THEN
-        ORB(3)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'PY') THEN
-        ORB(4)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'SP1') THEN
-        ORB(1)=SQRT(1.D0/2.D0)
-        ORB(3)=SQRT(1.D0/2.D0)
+!     ==========================================================================
+!     ==  SET ORBITAL COEFFICIENTS                                            ==
+!     ==========================================================================
+      IF(TRIM(TYPE).EQ.'SP1') THEN
+!       == SP1 HYBRID ORBITAL IN Z DIRECTION ===================================
+        ORB(1)=SQRT(1.D0/2.D0)  ! S
+        ORB(3)=SQRT(1.D0/2.D0)  ! PZ
+!
       ELSE IF(TRIM(TYPE).EQ.'SP2') THEN
+!       == SP2 HYBRID ORBITAL IN Z DIRECTION ===================================
         ORB(1)=SQRT(1.D0/3.D0)
         ORB(3)=SQRT(2.D0/3.D0)
+!
       ELSE IF(TRIM(TYPE).EQ.'SP3') THEN
+!       == SP3 HYBRID ORBITAL IN Z DIRECTION ===================================
         ORB(1)=SQRT(1.D0/4.D0)
         ORB(3)=SQRT(3.D0/4.D0)
-      ELSE IF(TRIM(TYPE).EQ.'DX2-Y2') THEN
-        ORB(5)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'DXZ') THEN
-        ORB(6)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'D3Z2-R2'.OR.TRIM(TYPE).EQ.'DZ2') THEN
-        ORB(7)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'DYZ') THEN
-        ORB(8)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'DXY') THEN
-        ORB(9)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FX(X2-3Y2') THEN
-        ORB(10)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FZ(X2-Y2') THEN
-        ORB(11)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FX(5Z2-R2)'.OR.TRIM(TYPE).EQ.'FXZ^2') THEN
-        ORB(12)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FZ(5Z2-3R2)'.OR.TRIM(TYPE).EQ.'FZ3') THEN
-        ORB(13)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FY(5Z2-R2)'.OR.TRIM(TYPE).EQ.'FYZ^2') THEN
-        ORB(14)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FXYZ') THEN
-        ORB(15)=1.D0
-      ELSE IF(TRIM(TYPE).EQ.'FY(3X2-Y2') THEN
-        ORB(16)=1.D0
+!
       ELSE
-        CALL ERROR$MSG('TYPE NOT IDENTIFIED')
-        CALL ERROR$CHVAL('TYPE',TRIM(TYPE))
-        CALL ERROR$STOP('RESOLVETYPE')
+!       == RESOLVE PURE REAL SPHERICAL HARMONICS ===============================
+        CALL SPHERICAL$LMBYNAME('TYPE',LM)
+        ORB(LM)=1.D0
       END IF
 !
-!     == CHECK WHETHER THE ORBITAL VECTOR FITS INTO THE ARRAY SUPPLIED =========
+!     ==========================================================================
+!     == CHECK WHETHER THE ORBITAL VECTOR FITS INTO THE ARRAY SUPPLIED        ==
+!     ==========================================================================
       DO LM=LMX+1,16
         IF(ORB(LM).NE.0) THEN
           CALL ERROR$MSG('LMX TOO SMALL')
@@ -2683,7 +2659,9 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
         END IF
       ENDDO
 !
-!     == MAP ORB VECTOR ONTO OUTPUT ============================================
+!     ==========================================================================
+!     == MAP ORB VECTOR ONTO OUTPUT                                           ==
+!     ==========================================================================
       IF(LMX.LE.16) THEN
         ORBITAL(:)=CMPLX(ORB(:LMX),KIND=8)
       ELSE

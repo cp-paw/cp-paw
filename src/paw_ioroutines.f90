@@ -534,17 +534,17 @@ CALL TRACE$PASS('DONE')
       CALL READIN_ANALYSE_WAVE(LL_CNTL)
 !
 !     ==================================================================
-!     ==  READ BLOCK !ANALYSE!density                                 ==
+!     ==  READ BLOCK !ANALYSE!DENSITY                                 ==
 !     ==================================================================
       CALL READIN_ANALYSE_DENSITY(LL_CNTL)
 !
 !     ==================================================================
-!     ==  READ BLOCK !ANALYSE!potential                               ==
+!     ==  READ BLOCK !ANALYSE!POTENTIAL                               ==
 !     ==================================================================
       CALL READIN_ANALYSE_POTENTIAL(LL_CNTL)
 !
 !     ==================================================================
-!     ==  READ BLOCK !ANALYSE!1dpot                                   ==
+!     ==  READ BLOCK !ANALYSE!1DPOT                                   ==
 !     ==================================================================
       CALL READIN_ANALYSE_1DPOT(LL_CNTL)
 !    
@@ -4819,11 +4819,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_ORBPOT(LL_STRC_)
-!     ******************************************************************
-!     **  DEFINE GROUPS IN GROUPLIST                                  **
-!     **                                                              **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  DEFINE GROUPS IN GROUPLIST                                          **
+!     **                                                                      **
+!     **                                                                      **
+!     **************************************************************************
+      USE STRINGS_MODULE    ! +/-  MAKES STRING UPPERCASE/LOWERCASE
       USE LINKEDLIST_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
@@ -4843,7 +4844,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       REAL(8)                  :: PWR
       REAL(8)                  :: AEZ
       REAL(8)                  :: RCOV
-!     ******************************************************************
+      INTEGER(4)               :: LM
+!     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_ORBPOT')
       LL_STRC=LL_STRC_
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
@@ -4854,23 +4856,23 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         RETURN
       END IF
 !
-!     ==================================================================
-!     ==  COLLECT NSPIN FROM !STRUCTURE!OCCUPATIONS                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COLLECT NSPIN FROM !STRUCTURE!OCCUPATIONS                           ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'ORBPOT')
       CALL LINKEDLIST$NLISTS(LL_STRC,'POT',NTH)
       DO ITH=1,NTH
         CALL LINKEDLIST$SELECT(LL_STRC,'POT',ITH)
-!       == SPECIFY ATOM ================================================
+!       == SPECIFY ATOM ========================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'ATOM',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:ATOM NOT SPECIFIED')
           CALL ERROR$STOP('STRCIN_ORBPOT')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'ATOM',1,ATOM)
-!       == CHECK IF ATOM EXISTS ========================================
+!       == CHECK IF ATOM EXISTS ================================================
         CALL ATOMLIST$NATOM(NAT)
         TCHK=.FALSE.
         DO I=1,NAT
@@ -4889,40 +4891,26 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL ATOMLIST$GETR8('Z',IAT,AEZ)
         CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
 !
-!       == SPECIFY TYPE ================================================
+!       == SPECIFY TYPE ========================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'TYPE',1,TCHK)
         IF(.NOT.TCHK) THEN
           TYPE='ALL'
         ELSE
           CALL LINKEDLIST$GET(LL_STRC,'TYPE',1,TYPE)
+          TYPE=+TYPE   ! MAKE INPUT CASE INSENSITIVE BY UPPERCASING TYPE
         END IF
         TCHK=.FALSE.
-        IF(TYPE.EQ.'S') TCHK=.TRUE.
-        IF(TYPE.EQ.'P') TCHK=.TRUE.
-        IF(TYPE.EQ.'PX') TCHK=.TRUE.
-        IF(TYPE.EQ.'PY') TCHK=.TRUE.
-        IF(TYPE.EQ.'PZ') TCHK=.TRUE.
-        IF(TYPE.EQ.'D') TCHK=.TRUE.
-        IF(TYPE.EQ.'DX2-Y2') TCHK=.TRUE.
-        IF(TYPE.EQ.'DXZ') TCHK=.TRUE.
-        IF(TYPE.EQ.'D3Z2-R2') TCHK=.TRUE.
-        IF(TYPE.EQ.'DYZ') TCHK=.TRUE.
-        IF(TYPE.EQ.'DXY') TCHK=.TRUE.
-        IF(TYPE.EQ.'F') TCHK=.TRUE.
-        IF(TYPE.EQ.'F1') TCHK=.TRUE.
-        IF(TYPE.EQ.'F2') TCHK=.TRUE.
-        IF(TYPE.EQ.'F3') TCHK=.TRUE.
-        IF(TYPE.EQ.'F4') TCHK=.TRUE.
-        IF(TYPE.EQ.'F5') TCHK=.TRUE.
-        IF(TYPE.EQ.'F6') TCHK=.TRUE.
-        IF(TYPE.EQ.'F7') TCHK=.TRUE.
+        IF(TYPE.EQ.'P')   TCHK=.TRUE.
+        IF(TYPE.EQ.'D')   TCHK=.TRUE.
+        IF(TYPE.EQ.'F')   TCHK=.TRUE.
         IF(TYPE.EQ.'ALL') TCHK=.TRUE.
+!       == PURE ANGULAR MOMENTA ================================================
+!       == SEE SPHERICAL$LMBYNAME ==============================================
         IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('VALUE  OF !STRUCTURE!ORBPOT!POT:TYPE NOT ALLOWED')
-          CALL ERROR$CHVAL('TYPE',TYPE)
-          CALL ERROR$STOP('STRCIN_ORBPOT')
+!         == SPHERICAL$LMBYNAME THROWS AN ERROR IF TYPE IS NOT RECOGNIZED ======
+          CALL SPHERICAL$LMBYNAME(TYPE,LM)
         END IF
-!       == SPECIFY SPIN DIRECTION ======================================
+!       == SPECIFY SPIN DIRECTION ==============================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'S',1,TCHK)
         IF(.NOT.TCHK) THEN
           ISPIN=0          ! ISPIN=0 IS DEFAULT FOR ALL SPIN DIRECTIONS
@@ -4934,7 +4922,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
             CALL ERROR$STOP('STRCIN_ORBPOT')
           END IF
         END IF
-!       == SPECIFY CUTOFF RADIUS =======================================
+!       == SPECIFY CUTOFF RADIUS ===============================================
         RC=RCOV
         CALL LINKEDLIST$EXISTD(LL_STRC,'RC',1,TCHK)
 !!$        IF(.NOT.TCHK) THEN
@@ -4943,21 +4931,21 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !!$        END IF
 !!$        CALL LINKEDLIST$GET(LL_STRC,'RC',1,RC)
         IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RC',1,RC)
-!       == SPECIFY POWER ===============================================
+!       == SPECIFY POWER =======================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'PWR',1,TCHK)
         IF(.NOT.TCHK) THEN
           PWR=2.D0
         ELSE
           CALL LINKEDLIST$GET(LL_STRC,'PWR',1,PWR)
         END IF
-!       == SPECIFY VALUE ===============================================
+!       == SPECIFY VALUE =======================================================
         CALL LINKEDLIST$EXISTD(LL_STRC,'VALUE',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:VALUE NOT SPECIFIED')
           CALL ERROR$STOP('STRCIN_ORBPOT')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'VALUE',1,VALUE)
-!       ================================================================
+!       ========================================================================
         CALL EXTERNAL1CPOT$SETPOT(ATOM,TYPE,ISPIN,VALUE,RC,PWR)
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
