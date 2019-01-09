@@ -7396,10 +7396,11 @@ If STACK is non-existent or has the value .false. the stack is reset to the actu
     color. The colors to the left of the following table may be
     used. The corresponding colors on the right will be used for the
     empty density of states.
-\definecolor{black     }{RGB}{0  ,0,0}      
-\definecolor{red       }{RGB}{255,0,0}    
-\definecolor{green     }{RGB}{0  ,230,0}    
-\definecolor{blue      }{RGB}{0,0,255}    
+\definecolor{black     }{RGB}{0  ,  0,  0}      
+\definecolor{grey      }{RGB}{200,200,200} 
+\definecolor{red       }{RGB}{255,  0,  0}    
+\definecolor{green     }{RGB}{  0,230,  0}    
+\definecolor{blue      }{RGB}{  0,  0,255}    
 \definecolor{yellow    }{RGB}{230,230,  0} 
 \definecolor{cyan      }{RGB}{  0,230,230} 
 \definecolor{magenta   }{RGB}{255,  0,255} 
@@ -7407,26 +7408,30 @@ If STACK is non-existent or has the value .false. the stack is reset to the actu
 \definecolor{brown     }{RGB}{200,150,150} 
 \definecolor{gold      }{RGB}{170,130,  0} 
 \definecolor{darkgreen }{RGB}{  0,155,  0} 
-\definecolor{lblack    }{RGB}{ 150,150,150} 
-\definecolor{lred      }{RGB}{ 255,150,150} 
-\definecolor{lgreen    }{RGB}{ 170,255,170} 
-\definecolor{lblue}{RGB}{150,150,255} 
-\definecolor{lyellow   }{RGB}{ 255,255,150} 
-\definecolor{lcyan     }{RGB}{ 150,255,255} 
-\definecolor{lmagenta  }{RGB}{ 255,150,255} 
-\definecolor{lorange   }{RGB}{ 255,210,120}
-\definecolor{lbrown    }{RGB}{ 255,180,180} 
-\definecolor{lgold     }{RGB}{ 210,180,100} 
-\definecolor{ldarkgreen}{RGB}{ 120,220,120} 
+\definecolor{lblack    }{RGB}{150,150,150} 
+\definecolor{lgrey     }{RGB}{240,240,240} 
+\definecolor{lred      }{RGB}{255,150,150} 
+\definecolor{lgreen    }{RGB}{170,255,170} 
+\definecolor{lblue     }{RGB}{150,150,255} 
+\definecolor{lyellow   }{RGB}{255,255,150} 
+\definecolor{lcyan     }{RGB}{150,255,255} 
+\definecolor{lmagenta  }{RGB}{255,150,255} 
+\definecolor{lorange   }{RGB}{255,210,120}
+\definecolor{lbrown    }{RGB}{255,180,180} 
+\definecolor{lgold     }{RGB}{210,180,100} 
+\definecolor{ldarkgreen}{RGB}{120,220,120} 
 \begin{center}
 \begin{tabular}{|l|c|l|c|}
 \hline
 name   &RGB &name   &RGB \\
 \hline
-black     & \colorbox{black     }{\textcolor{white}{(000,000,000)}}  & lblack &  \colorbox{lblack  }{(150,150,150)} \\
-red       & \colorbox{red       }{(255,000,000)}     & lred        & \colorbox{lred      }{(255,150,150)} \\
-green     & \colorbox{green     }{(000,230,000)}   & lgreen      & \colorbox{lgreen    }{(150,255,150)} \\
-blue      & \colorbox{blue      }{\textcolor{white}{(000,000,255)}}     & lblue       & \colorbox{lblue}{(150,150,255)} \\
+black     & \colorbox{black     }{\textcolor{white}{(000,000,000)}} 
+                                                 & lblack      & \colorbox{lblack    }{(150,150,150)}\\
+grey      & \colorbox{grey      }{(200,200,200)} & lgrey       & \colorbox{lgrey     }{(240,240,240)} \\
+red       & \colorbox{red       }{(255,000,000)} & lred        & \colorbox{lred      }{(255,150,150)} \\
+green     & \colorbox{green     }{(000,230,000)} & lgreen      & \colorbox{lgreen    }{(150,255,150)} \\
+blue      & \colorbox{blue      }{\textcolor{white}{(000,000,255)}} 
+                                                 & lblue       & \colorbox{lblue     }{(150,150,255)}\\
 yellow    & \colorbox{yellow    }{(230,230,000)} & lyellow     & \colorbox{lyellow   }{(255,255,150)} \\
 cyan      & \colorbox{cyan      }{(000,230,230)} & lcyan       & \colorbox{lcyan     }{(150,255,255)} \\
 magenta   & \colorbox{magenta   }{(255,000,255)} & lmagenta    & \colorbox{lmagenta  }{(255,150,255)} \\

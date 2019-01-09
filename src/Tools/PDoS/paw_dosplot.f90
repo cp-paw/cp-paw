@@ -653,8 +653,9 @@ END MODULE DOSSETS_MODULE
          CALL GRACE_MAPCOLOR(NFIL,I,  0,155,  0,'DARKGREEN')   ; I=I+1
          CALL GRACE_MAPCOLOR(NFIL,I,120,220,120,'LDARKGREEN')   ; I=I+1
          CALL GRACE_MAPCOLOR(NFIL,I,150,150,150,'LBLACK')   ; I=I+1
+         CALL GRACE_MAPCOLOR(NFIL,I,240,240,240,'LGREY')   ; I=I+1
        END IF
-       CALL GRACE_MAPCOLOR(NFIL,I,220,220,220,'GREY')
+       CALL GRACE_MAPCOLOR(NFIL,I,200,200,200,'GREY')
 !
 !      =========================================================================
 !      == SWITCH BACKGROUND FILLING OFF                                       ==

@@ -504,7 +504,11 @@
      &                                                  Q2/ANGSTROM,Q3/ANGSTROM
       WRITE(*,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T30,F10.5," AA")') &
      &                                               SQRT(Q2**2+Q3**2)/ANGSTROM
-      SVAR=ACOS(Q2/SQRT(Q2**2+Q3**2))
+      IF(Q2**2+Q3**2.GT.1.D-8) THEN
+        SVAR=ACOS(Q2/SQRT(Q2**2+Q3**2))
+      ELSE
+        SVAR=0.D0
+      ENDIF
       IF(Q3.LT.0.D0)SVAR=-SVAR
       SVAR=SVAR/(PI/6.D0)
       I=INT(SVAR+12)-12
@@ -537,9 +541,12 @@
         STOP 'SELECTION ERROR'
       END IF
 
-      WRITE(*,FMT='("TILT ANGLE=",T30,F10.5," DEGREE")')SQRT(SUM(PHI**2))/PI*180.D0
       IF(SQRT(SUM(PHI**2)).GT.0.D0)  THEN
+        WRITE(*,FMT='("TILT ANGLE=",T30,F10.5," DEGREE")') &
+     &                     SQRT(SUM(PHI**2))/PI*180.D0
         WRITE(*,FMT='("TILT AXIS=",T30,3F10.5)')PHI/SQRT(SUM(PHI**2))
+      ELSE
+        WRITE(*,FMT='("TILT ANGLE=",T30,F10.5," DEGREE")')0.D0
       END IF
       RETURN
       END
