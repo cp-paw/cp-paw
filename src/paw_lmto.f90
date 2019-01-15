@@ -1685,7 +1685,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
      &                       ,TCTE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4),PARAMETER   :: LXHIGHER=4
       REAL(8)                :: LAMBDA1
       REAL(8)                :: LAMBDA2
@@ -1966,9 +1966,7 @@ PRINT*,'W[JBARPHI]/W[PHIPHIDOT] ',WJBARPHI/WPHIPHIDOT
 !       === WRITE TAILED FUNCTIONS TO FILE                                    ==
 !       ========================================================================
         IF(TPR) THEN
-PRINT*,'BEFORE ',ISP
           WRITE(STRING,*)ISP
-PRINT*,'AFTER ',ISP
           STRING=ADJUSTL(STRING) 
           CALL LMTO_WRITEPHI(TRIM(STRING)//'_AEF.DAT',GID,NR &
        &                    ,LNXT,POTPAR1(ISP)%TAILED%AEF)
@@ -5291,9 +5289,8 @@ END IF
      &                       ,TCTE
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.true.
-      LOGICAL(4),PARAMETER  :: TPR2=.true.
-      LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR2=.FALSE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNS
       INTEGER(4)            :: NAT
@@ -5435,7 +5432,7 @@ IF(TPR2)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
           CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
         END IF
 
-if(tpr2) then
+IF(TPR2) THEN
   IF(TACTIVE) THEN
     DO I=1,NDIMD
       WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
@@ -5450,7 +5447,7 @@ if(tpr2) then
       ENDDO
     ENDDO
   END IF
-end if
+END IF
 !
 !       ========================================================================
 !       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
