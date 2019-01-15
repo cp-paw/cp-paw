@@ -5291,8 +5291,8 @@ END IF
      &                       ,TCTE
       USE MPE_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER  :: TPR=.FALSE.
-      LOGICAL(4),PARAMETER  :: TPR2=.FALSE.
+      LOGICAL(4),PARAMETER  :: TPR=.true.
+      LOGICAL(4),PARAMETER  :: TPR2=.true.
       LOGICAL(4),PARAMETER  :: TPLOT=.TRUE.
       INTEGER(4)            :: NND
       INTEGER(4)            :: NNS
@@ -5435,20 +5435,22 @@ IF(TPR2)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
           CALL LMTO_EXPANDLOCAL('FWRD',NDIMD,LMNX,LMNXT,SBAR(INS)%MAT,D,DT)
         END IF
 
-!!$IF(TACTIVE) THEN
-!!$DO I=1,NDIMD
-!!$  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
-!!$  DO LMN=1,LMNX
-!!$    WRITE(*,FMT='(200F10.5)')D(LMN,:,I)
-!!$  ENDDO
-!!$ENDDO
-!!$DO I=1,NDIMD
-!!$  WRITE(*,FMT='(82("="),T30," DENSITY MATRIX DT FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
-!!$  DO LMN=1,LMNXT
-!!$    WRITE(*,FMT='(200F10.5)')DT(LMN,:,I)
-!!$  ENDDO
-!!$ENDDO
-!!$END IF
+if(tpr2) then
+  IF(TACTIVE) THEN
+    DO I=1,NDIMD
+      WRITE(*,FMT='(82("="),T30," DENSITY MATRIX D FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
+      DO LMN=1,LMNX
+        WRITE(*,FMT='(200F10.5)')D(LMN,:,I) 
+      ENDDO
+    ENDDO
+    DO I=1,NDIMD
+      WRITE(*,FMT='(82("="),T30," DENSITY MATRIX DT FOR IAT=",I5,"  IDIM=",I5," ")')IAT,I
+      DO LMN=1,LMNXT
+        WRITE(*,FMT='(200F10.5)')DT(LMN,:,I)
+      ENDDO
+    ENDDO
+  END IF
+end if
 !
 !       ========================================================================
 !       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
