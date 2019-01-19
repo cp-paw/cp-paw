@@ -151,9 +151,7 @@
       CALL SPHERICAL$YLM(LMX,R,H)
       LX=INT(SQRT(REAL(LMX+1.D-5)))-1
       K=SQRT(ABS(K2))     
-      XR=SQRT(SUM(R**2))
-      TCAP=XR.LT.RAD
-      X=MAX(XR,RAD)
+      X=SQRT(SUM(R**2))
       LM=0
       DO L=0,LX
         IF(K2.GT.0.D0) THEN

@@ -1362,6 +1362,81 @@ END IF
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$YUKAWA(GID,NR,L,KAPPA,RHO,V)
+!     **************************************************************************
+!     ** CALCULATES THE YUKAWA POTENTIAL FOR A CHARGE DENSITY IN A SPHERICAL  **
+!     ** HARMONICS EXPANSION. THE YUKAWA POTENTIAL SOVES THE HELMHOLTZ        **
+!     ** EQUATION                                                             **
+!     **                                                                      **
+!     ** THE CHARGE DENSITY IS RHO(RVEC)=SUM_L RHO(L,R)*Y_L(RVEC)             **
+!     ** THE POTENTIAL IS        V(RVEC)=SUM_L V(L,R)  *Y_L(RVEC)             **
+!     **      V(R)=INT D3R' (RHO(R')/|R-R'|) * EXP(-KAPPA|R-R'|)              **
+!     **                                                                      **
+!     ** INPUT :                                                              **
+!     **   L            MAIN ANGULAR MOMENTUM QUANTUM NUMBER                  **
+!     **   KAPPA        INVERSE SCREENING LENGTH                              **
+!     **   RHO          INPUT CHARGE DENSITY                                  **
+!     ** OUTPUT :                                                             **
+!     **   V            ELECTROSTATIC POTENTIAL                               **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID     ! GRID ID
+      INTEGER(4),INTENT(IN) :: NR      ! NUMBER OF RADIAL GRID POINTS
+      INTEGER(4),INTENT(IN) :: L       ! MAIN ANGULAR MOMENTUM
+      REAL(8)   ,INTENT(IN) :: KAPPA   ! INVERSE SCREENING LENGTH
+      REAL(8)   ,INTENT(IN) :: RHO(NR) ! CHARGE DENSITY
+      REAL(8)   ,INTENT(OUT):: V(NR)   ! SCREENED ELECTROSTATIC POTENTIAL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
+      REAL(8)               :: HANKEL(NR),DHANKELDR(NR)
+      REAL(8)               :: BESSEL(NR),DBESSELDR(NR)
+      REAL(8)               :: AUX1(NR)
+      REAL(8)               :: AUX2(NR)
+      REAL(8)               :: R(NR)
+      REAL(8)               :: X,Y,DYDX
+      INTEGER(4)            :: IR
+!     **************************************************************************
+      IF(KAPPA.LT.0.D0) THEN
+        CALL ERROR$MSG('KAPPA MUST NOT BE NEGATIVE')
+        CALL ERROR$R8VAL('KAPPA',KAPPA)
+        CALL ERROR$STOP('RADIAL$YUKAWA')
+      ELSE IF(KAPPA.EQ.0) THEN
+        CALL RADIAL$POISSON(GID,NR,L,RHO,V)
+      END IF
+      CALL RADIAL$R(GID,NR,R)
+      DO IR=1,NR
+        X=KAPPA*R(IR)
+!       __ABRAMOWITZ 10.1.25____________________________________________________
+        CALL SPFUNCTION$MODBESSEL(L,X,Y,DYDX)
+        BESSEL(IR)=Y/KAPPA**L
+        DBESSELDR(IR)=DYDX/KAPPA**(L-1)
+!       __ABRAMOWITZ 10.1.26____________________________________________________
+        CALL SPFUNCTION$MODHANKEL(L,X,Y,DYDX)
+        HANKEL(IR)=Y*2.D0/PI*KAPPA**(L+1)
+        DHANKELDR(IR)=DYDX*2.D0/PI*KAPPA**(L+2)
+!       __THE FOLLOWING SHOULD BE CONSTANT AND EQUAL TO 1
+!       PRINT*,'R(IR)',R(IR),-R(IR)**2 &
+!     &       *(BESSEL(IR)*DHANKELDR(IR)-HANKEL(IR)*DBESSELDR(IR))*R(IR)**2
+      ENDDO
+      AUX1(:)=R(:)**2*BESSEL(:)*RHO(:)
+      CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+!     ==  R(1)=0 THERE IS A PRODUCT OF ZERO AND INFINITY =======================
+      IF(R(1).EQ.0.D0) THEN
+        V(1)   =0.D0
+        AUX1(1)=0.D0  ! ASSUMING RHO \SIM R^L
+        V(:)   =HANKEL(:)*AUX2(:)
+        AUX1(:)=R(:)**2*HANKEL(:)*RHO(:)
+       ELSE
+        V(:)   =HANKEL(:)*AUX2(:)
+        AUX1(:)=R(:)**2*HANKEL(:)*RHO(:)
+      END IF
+      CALL RADIAL$INTEGRATE(GID,NR,AUX1,AUX2)
+      V(:)=FOURPI*( V(:)+BESSEL(:)*(AUX2(NR)-AUX2(:)) )
+      RETURN
+      END
+!
 !     ......................................................................
       SUBROUTINE RADIAL$NUCPOT(GID,NR,Z,POT)
 !     **                                                                  **
