@@ -208,6 +208,7 @@ OBJECTS1 = \
            ${OBJDIR}/paw_lists.o \
            ${OBJDIR}/paw_constraints.o \
            ${OBJDIR}/paw_lmto.o \
+           ${OBJDIR}/paw_simplelmto.o \
            ${OBJDIR}/paw_dmft.o \
            ${OBJDIR}/paw_fft.o 
 #
@@ -1099,6 +1100,10 @@ endif
 ##  ${OBJDIR}/paw_lmto.o : ATOMS_MODULE.mod
 ${OBJDIR}/paw_lmto.o : PERIODICTABLE_MODULE.mod
 LMTO_MODULE.mod : ${OBJDIR}/paw_lmto.o
+ ## file:src/Tools/Wave/paw_lmto.f90
+##  ${OBJDIR}/paw_simplelmto.o : ATOMS_MODULE.mod
+${OBJDIR}/paw_simplelmto.o : PERIODICTABLE_MODULE.mod
+SIMPLELMTO_MODULE.mod : ${OBJDIR}/paw_simplelmto.o
  ## file:src/Tools/Wave/paw_dmft.f90
 DMFT_MODULE.mod : ${OBJDIR}/paw_dmft.o
 ${OBJDIR}/paw_dmft.o : LMTO_MODULE.mod

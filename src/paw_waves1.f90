@@ -41,6 +41,91 @@
 !**                                                                           **
 !*******************************************************************************
 !*******************************************************************************
+MODULE RSPACEOP_MODULE
+TYPE RSPACEMAT_TYPE
+  INTEGER(4)      :: IAT1        ! 1ST ATOM (LINKED TO THE LEFT INDEX OF MAT)
+  INTEGER(4)      :: IAT2        ! 2ND ATOM (LINKED TO THE RIGHT INDEX OF MAT)
+  INTEGER(4)      :: IT(3)       ! LATTICE TRANSLATIONS TO BE ADDED TO ATOM 2
+  INTEGER(4)      :: N1          ! LEFT DIMENSION OF MAT
+  INTEGER(4)      :: N2          ! RIGHT DIMENSION OF MAT
+  INTEGER(4)      :: N3          ! THIRD INDEX OF MAT
+  REAL(8),ALLOCATABLE :: MAT(:,:,:)  ! (N1,N2,N3)
+END TYPE RSPACEMAT_TYPE
+CONTAINS
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE RSPACEOP$COPY(IN,OUT)
+!      *************************************************************************
+!      ** COPIES ONE ITEM OF RSPACEOP
+!      *************************************************************************
+       IMPLICIT NONE
+       TYPE(RSPACEMAT_TYPE),INTENT(IN)    :: IN
+       TYPE(RSPACEMAT_TYPE),INTENT(INOUT) :: OUT
+!      *************************************************************************
+       OUT%IAT1=IN%IAT1
+       OUT%IAT2=IN%IAT2
+       OUT%IT  =IN%IT
+       IF(OUT%N1.NE.IN%N1.OR.OUT%N2.NE.IN%N2.OR.OUT%N3.NE.IN%N3) THEN
+         IF(ALLOCATED(OUT%MAT))DEALLOCATE(OUT%MAT)
+       END IF
+       IF(.NOT.ALLOCATED(OUT%MAT)) THEN
+         OUT%N1  =IN%N1
+         OUT%N2  =IN%N2
+         OUT%N3  =IN%N3
+         ALLOCATE(OUT%MAT(IN%N1,IN%N2,IN%N3))
+       END IF
+       OUT%MAT=IN%MAT
+       RETURN
+       END SUBROUTINE RSPACEOP$COPY
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE RSPACEOP$DELETE(IN)
+!      *************************************************************************
+!      ** COPIES ONE ITEM OF RSPACEOP
+!      *************************************************************************
+       IMPLICIT NONE
+       TYPE(RSPACEMAT_TYPE),INTENT(INOUT) :: IN
+!      *************************************************************************
+       IF(ALLOCATED(IN%MAT))DEALLOCATE(IN%MAT)
+       IN%N1=-1
+       IN%N2=-1
+       IN%N3=-1
+       IN%IAT1=-1
+       IN%IAT2=-1
+       IN%IT  =(/0,0,0/)
+       RETURN
+       END SUBROUTINE RSPACEOP$DELETE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RSPACEOP$WRITEMAT(NFIL,TITLE,NN,MAT)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)          ,INTENT(IN) :: NFIL
+      CHARACTER(*)        ,INTENT(IN) :: TITLE
+      INTEGER(4)          ,INTENT(IN) :: NN
+      TYPE(RSPACEMAT_TYPE),INTENT(IN) :: MAT(NN)
+      INTEGER(4)                      :: IN,I1,I3
+!     **************************************************************************
+      WRITE(NFIL,FMT='(82("="))')
+      WRITE(NFIL,FMT='(82("="),T10,"  ",A,"   ")')TRIM(TITLE)
+      WRITE(NFIL,FMT='(82("="))')
+      DO IN=1,NN
+        IF(MAT(IN)%N1*MAT(NN)%N2.EQ.0) CYCLE
+        WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
+     &                 MAT(IN)%IAT1,MAT(IN)%IAT2,MAT(IN)%IT
+        DO I3=1,MAT(NN)%N3
+          WRITE(NFIL,FMT='(82("-"),T10," COMPONENT ",I1,"  ")')I3
+          DO I1=1,MAT(NN)%N1
+            WRITE(NFIL,FMT='(20F10.5)')MAT(IN)%MAT(I1,:,I3)
+          ENDDO
+        ENDDO
+        WRITE(NFIL,FMT='(82("="))')
+      ENDDO
+      RETURN
+      END SUBROUTINE RSPACEOP$WRITEMAT
+END MODULE RSPACEOP_MODULE
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE WAVES_MODULE                                                
@@ -49,6 +134,7 @@ MODULE WAVES_MODULE
 !**                                                                           **
 !************************************************P.E. BLOECHL, (1995)***********
 USE LINKEDLIST_MODULE
+USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE  ! (IN PAW_WAVES1.F90)
 ! ------------------------------------------------------------------------------
 ! THE TYPE MAP_TYPE DESCRIBES THE ARRANGEMENT OF PROJECTOR FUNCTIONS 
 ! AND THEIR LINKS TO ATOMS AN ANGULAR MOMENTA
@@ -89,6 +175,7 @@ TYPE WVSET_TYPE  !==============================================================
   COMPLEX(8),POINTER :: PSI0(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(0)
   COMPLEX(8),POINTER :: PSIM(:,:,:)=>NULL()     !(NGL,NDIM,NBH)  PSPSI(-,+)(G)
   COMPLEX(8),POINTER :: PROJ(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) <PSPSI|P>
+  COMPLEX(8),POINTER :: HPROJ(:,:,:)=>NULL()    !(NDIM,NBH,NPRO) 
   COMPLEX(8),POINTER :: TBC_NEW(:,:,:)=>NULL()  !(NDIM,NBH,NORB) |PSI>=|CHI>*TBC
   COMPLEX(8),POINTER :: HTBC_NEW(:,:,:)=>NULL()     !(NDIM,NBH,NPRO) DE/DTBC
   COMPLEX(8),POINTER :: HPSI(:,:,:)=>NULL()     !(NGWLX,NB,IDIM)
@@ -149,6 +236,8 @@ TYPE(WVSET_TYPE),POINTER  :: THISARRAY(:,:)   ! (NKPTL,NSPIN)
 TYPE(WVSET_TYPE),POINTER  :: THIS            ! CURRENT SET OF WAVES
 TYPE(GSET_TYPE) ,POINTER  :: GSET            ! CURRENT SET OF GSET
 TYPE(MAP_TYPE)            :: MAP
+TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSDENMAT(:)      
+TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSHAMIL(:)      
 LOGICAL(4)                :: TPR=.FALSE.
 LOGICAL(4)                :: TFIRST=.TRUE.
 TYPE(EXTERNALPOINTER_TYPE):: EXTPNTR
@@ -842,33 +931,48 @@ END MODULE WAVES_MODULE
         VAL=NDIM
       ELSE IF(ID.EQ.'NDIMD') THEN
         VAL=NDIMD
+!
       ELSE IF(ID.EQ.'NB') THEN
         IF(EXTPNTR%ISPIN.EQ.0) EXTPNTR%ISPIN=1
         IF(EXTPNTR%IKPT.EQ.0)  EXTPNTR%IKPT=1
         CALL WAVES_SELECTWV(EXTPNTR%IKPT,EXTPNTR%ISPIN)
         VAL=THIS%NB
+!
       ELSE IF(ID.EQ.'NKPT') THEN
         VAL=NKPT   !GLOBAL NKPT
+!
       ELSE IF(ID.EQ.'NR1') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR1',VAL)
+!
       ELSE IF(ID.EQ.'NR1L') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR1L',VAL)
+!
       ELSE IF(ID.EQ.'NR2') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR2',VAL)
+!
       ELSE IF(ID.EQ.'NR3') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR3',VAL)
+!
       ELSE IF(ID.EQ.'NR1START') THEN
         CALL WAVES_SELECTWV(1,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         CALL PLANEWAVE$GETI4('NR1START',VAL)
+!
+      ELSE IF(ID.EQ.'NND') THEN
+        IF(ALLOCATED(OSDENMAT)) THEN
+          VAL=SIZE(OSDENMAT)
+        ELSE
+          VAL=-1
+        END IF
+!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -983,6 +1087,88 @@ END MODULE WAVES_MODULE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('WAVES$SETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$GETRSPACEMATA(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
+     &                           ,RSPACEOP$COPY 
+      USE WAVES_MODULE, ONLY: OSDENMAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)          :: ID
+      INTEGER(4)  ,INTENT(IN)          :: LEN
+      TYPE(RSPACEMAT_TYPE),INTENT(OUT) :: VAL(LEN)
+      INTEGER(4)                       :: I
+!     **************************************************************************
+      IF(ID.EQ.'DENMAT') THEN
+        IF(.NOT.ALLOCATED(OSDENMAT)) THEN
+          CALL ERROR$MSG('OSDENMAT IS NOT AVAILABLE')
+          CALL ERROR$MSG('CODE ERROR')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$GETRSPACEMATA')
+        END IF
+        IF(LEN.NE.SIZE(OSDENMAT)) THEN
+          CALL ERROR$MSG('LEN INCONSISTENT WITH SIZE OF OSDENMAT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$I4VAL('SIZE(OSDENMAT)',SIZE(OSDENMAT))
+          CALL ERROR$STOP('WAVES$GETRSPACEMATA')
+        END IF
+        DO I=1,LEN
+          CALL RSPACEOP$COPY(OSDENMAT(I),VAL(I))
+        ENDDO
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('WAVES$GETRSPACEMATA')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$SETRSPACEMATA(ID,LEN,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE &
+     &                          ,RSPACEOP$COPY 
+      USE WAVES_MODULE   , ONLY: OSHAMIL &
+     &                          ,OSDENMAT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)          :: ID
+      INTEGER(4)  ,INTENT(IN)          :: LEN
+      TYPE(RSPACEMAT_TYPE),INTENT(IN)  :: VAL(LEN)
+      INTEGER(4)                       :: I
+!     **************************************************************************
+      IF(ID.EQ.'HAMIL') THEN
+        IF(.NOT.ALLOCATED(OSDENMAT)) THEN
+          CALL ERROR$MSG('OSDENMAT IS NOT AVAILABLE')
+          CALL ERROR$MSG('MUST BE PRESENT TO CHECK SIZE CONSISTENCY')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('WAVES$SETRSPACEMATA')
+        END IF
+        IF(LEN.NE.SIZE(OSDENMAT)) THEN
+          CALL ERROR$MSG('LEN INCONSISTENT WITH SIZE OF OSDENMAT')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$I4VAL('SIZE(OSDENMAT)',SIZE(OSDENMAT))
+          CALL ERROR$STOP('WAVES$SETRSPACEMATA')
+        END IF
+        IF(.NOT.ALLOCATED(OSHAMIL)) THEN
+          ALLOCATE(OSHAMIL(LEN))
+        END IF
+        DO I=1,LEN
+          CALL RSPACEOP$COPY(VAL(I),OSHAMIL(I))
+        ENDDO
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('WAVES$SETRSPACEMATA')
       END IF
       RETURN
       END
@@ -1586,6 +1772,7 @@ END MODULE WAVES_MODULE
       ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(EDENMAT(LMNXX,LMNXX,NDIMD,NAT))
       CALL WAVES$DENMAT(LMNXX,NDIMD,NAT,DENMAT,EDENMAT) !<<<<<<<<<<<<<<<
+      CALL WAVES$OFFSITEDENMAT()
 !
 !     ==================================================================
 !     == PSEUDO DENSITY STILL WITHOUT PSEUDOCORE                      ==
@@ -1683,6 +1870,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
       ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
       CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
+      CALL SIMPLELMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
       DH=DH+DH1
       DEALLOCATE(DH1)
 !
@@ -1828,6 +2016,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ================================================================== 
                                CALL TIMING$CLOCKON('WAVES$FROMNTBO')
       CALL WAVES$FROMNTBO()
+      CALL WAVES$OFFSITEHAMIL() ! CALCULATE THIS$HPROJ
                                CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
 !
 !     ==================================================================
@@ -1902,7 +2091,7 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
       ENDDO
       DEALLOCATE(HAMILTON)
 !     == OCCUPATIONS ===================================================
-      CALL WAVES_DEDFFROMNTBO(NB,NKPTL,NSPIN,EIG)
+      CALL WAVES_DEDFFROMNTBO(NB,NKPTL,NSPIN,EIG) ! NO FUNCTION 
       CALL WAVES_DYNOCCSETR8A('EPSILON',NB*NKPTL*NSPIN,EIG)
       DEALLOCATE(EIG)
 !
@@ -3336,6 +3525,454 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$OFFSITEDENMAT()
+!     **************************************************************************
+!     ** EVALUATES THE DENSITY MATRIX FOR A NEIGHBORLIST
+!     ** 
+!     ** REMARK: DEFINING THE CUTOFF VIA THE SCALED COVALENT RADII IS A POOR 
+!     **         CHOICE, BECAUSE THE DENSITY MATRIX WILL NOT BE HERMITEAN.
+!     **************************************************************************
+      USE PERIODICTABLE_MODULE
+      USE WAVES_MODULE, ONLY: MAP &
+     &                       ,NDIMD &
+     &                       ,OSDENMAT 
+      IMPLICIT NONE
+      REAL(8)   ,PARAMETER   :: RCSCALE=2.2D0
+      INTEGER(4),PARAMETER   :: NNXPERATOM=100
+      INTEGER(4)             :: NNX
+      INTEGER(4)             :: NND
+      INTEGER(4),ALLOCATABLE :: NNLIST(:,:) !(5,NNX)
+      INTEGER(4)             :: NAT
+      REAL(8)                :: RBAS(3,3) !LATTICE VECTORS
+      REAL(8)   ,ALLOCATABLE :: R0(:,:)   !(3,NAT) ATOMIC POSITIONS
+      REAL(8)   ,ALLOCATABLE :: RC(:)     !(NAT) RADIUS OF NEIGHBORLIST
+      REAL(8)                :: SVAR
+      INTEGER(4)             :: IAT1,IAT2,N1,N2
+      INTEGER(4)             :: IAT,ISP,NN
+!     **************************************************************************
+                                          CALL TRACE$PUSH('WAVES_OFFSITEDENMAT')
+      NAT=MAP%NAT
+!
+!     ==========================================================================
+!     == CLEAN DENSITY MATRIX STRUCTURE                                       ==
+!     ==========================================================================
+      IF(ALLOCATED(OSDENMAT)) THEN
+        NND=SIZE(OSDENMAT)
+        DO NN=1,NND
+          IF(ALLOCATED(OSDENMAT(NN)%MAT)) DEALLOCATE(OSDENMAT(NN)%MAT)
+        ENDDO
+        DEALLOCATE(OSDENMAT)
+      END IF
+!
+!     ==========================================================================
+!     == OBTAIN ATOMIC STRUCTURE                                              ==
+!     ==========================================================================
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(R0(3,NAT))
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+!
+!     ==========================================================================
+!     == SET UP NEIGHBOLIST (ENCODED IN NNLIST)                               ==
+!     ==========================================================================
+      ALLOCATE(RC(NAT))
+      DO IAT=1,NAT
+        ISP=MAP%ISP(IAT)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETR8('AEZ',SVAR)
+        CALL SETUP$UNSELECT()
+        CALL PERIODICTABLE$GET(SVAR,'R(COV)',RC(IAT))
+        RC(IAT)=RC(IAT)*RCSCALE
+      ENDDO
+      NNX=NNXPERATOM*NAT
+      ALLOCATE(NNLIST(5,NNX))
+      CALL LMTO$NEIGHBORLIST(RBAS,NAT,R0,RC,NNX,NND,NNLIST)
+      DEALLOCATE(RC)
+      DEALLOCATE(R0)
+!
+!     ==========================================================================
+!     == ALLOCATE DENSITY MATRIX
+!     ==========================================================================
+      ALLOCATE(OSDENMAT(NND))
+      DO NN=1,NND
+        IAT1=NNLIST(1,NN)
+        IAT2=NNLIST(2,NN)
+        N1=MAP%LMNX(MAP%ISP(IAT1))
+        N2=MAP%LMNX(MAP%ISP(IAT2))
+        OSDENMAT(NN)%IAT1=IAT1
+        OSDENMAT(NN)%IAT2=IAT2
+        OSDENMAT(NN)%IT=NNLIST(3:5,NN)
+        OSDENMAT(NN)%N1=N1
+        OSDENMAT(NN)%N2=N2
+        OSDENMAT(NN)%N3=NDIMD  !(TOTAL,X,Y,Z)
+        ALLOCATE(OSDENMAT(NN)%MAT(N1,N2,NDIMD))
+        OSDENMAT(NN)%MAT(:,:,:)=0.D0
+      ENDDO
+!
+!     ==========================================================================
+!     == EVALUATE DENSITY MATRIX
+!     ==========================================================================
+      CALL WAVES_SUMMUPOFFSITEDENMAT()
+                                                                CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_SUMMUPOFFSITEDENMAT()
+!     **************************************************************************
+!     **  CONSTRUCT DENSITY MATRIX IN A NTBO BASIS                            **
+!     **                                                                      **
+!     ******************************PETER BLOECHL, GOSLAR 2011******************
+      USE MPE_MODULE
+      USE WAVES_MODULE, ONLY: NKPTL &
+     &                       ,NSPIN &
+     &                       ,NDIM  &
+     &                       ,NDIMD &
+     &                       ,THIS  &
+     &                       ,MAP   &
+     &                       ,WAVES_SELECTWV &
+     &                       ,GSET  &
+     &                       ,OSDENMAT  ! OFF-SITE DENSITY MATRIX
+!     &                       ,RSPACEOP ! (FROM RSPACEOP_MODULE)
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: N1,N2
+      INTEGER(4)             :: NND
+      INTEGER(4)             :: NPRO
+      INTEGER(4)             :: NB,NBH,NBX
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      INTEGER(4),ALLOCATABLE :: IPRO1(:)
+      INTEGER(4),ALLOCATABLE :: NPROAT(:)
+      REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
+      INTEGER(4)             :: IAT,NN,II,ISP,IPRO,IKPT,ISPIN,I,J,IBH,IB
+      REAL(8)                :: SVAR
+      REAL(8)                :: F1,F2
+      LOGICAL(4)             :: TINV
+      INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
+      COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
+COMPLEX(8)  :: PHASE
+      INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
+!     **************************************************************************
+                                    CALL TRACE$PUSH('WAVES_SUMMUPOFFSITEDENMAT')
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+      CALL DYNOCC$GETI4('NB',NBX)
+      ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+      CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+!
+!     ==========================================================================
+!     ==  CONSTRUCT INDEX ARRAYS                                              ==
+!     ==========================================================================
+      NAT=MAP%NAT
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=MAP%ISP(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=MAP%LMNX(ISP)
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ADD UP DENSITY MATRIX                                               ==
+!     ==========================================================================
+      NND=SIZE(OSDENMAT)
+      NPRO=MAP%NPRO
+      CALL MPE$QUERY('K',NTASKS,THISTASK)
+      ICOUNT=0
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETL4('TINV',TINV)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          DO NN=1,NND
+            ICOUNT=ICOUNT+1
+            IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
+            IAT1=OSDENMAT(NN)%IAT1
+            IAT2=OSDENMAT(NN)%IAT2
+            IT  =OSDENMAT(NN)%IT
+!            SVAR=-2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
+            SVAR=2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
+            EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
+            I0=IPRO1(IAT1)-1
+            J0=IPRO1(IAT2)-1
+
+            DO I=1,NPROAT(IAT1)
+              DO J=1,NPROAT(IAT2)
+!
+                IF(TINV) THEN
+                  CSVAR22(:,:)=(0.D0,0.D0)
+                  DO IBH=1,NBH
+                    F1=OCC(2*IBH-1,IKPT,ISPIN)
+                    F2=OCC(2*IBH,IKPT,ISPIN)
+                    C1(:)=THIS%PROJ(:,IBH,I0+I)
+                    C2(:)=THIS%PROJ(:,IBH,J0+J)*EIKR   ! EXP(-I*K*T)
+                    DO JDIM=1,NDIM
+                      CSVAR22(:,JDIM)=CSVAR22(:,JDIM) &
+     &                               +0.5D0*((F1+F2)*C1(:)*CONJG(C2(JDIM)) &
+     &                                      +(F1-F2)*C1(:)*C2(JDIM))
+                    ENDDO
+                  ENDDO
+                  CSVAR22=REAL(CSVAR22) ! IMAG(CSVAR) CONTAINS CRAP 
+                                        !  DUE TO SUPER WAVE FUNCTIONS
+                ELSE
+                  CSVAR22(:,:)=(0.D0,0.D0)
+                  DO IB=1,NB
+                    F1=OCC(IB,IKPT,ISPIN)
+                    C1(:)=THIS%PROJ(:,IB,I0+I)
+                    C2(:)=THIS%PROJ(:,IB,J0+J)*EIKR ! EXP(-I*K*T)
+                    DO JDIM=1,NDIM
+                      CSVAR22(:,JDIM)=CSVAR22(:,JDIM)+F1*C1(:)*CONJG(C2(JDIM))
+                    ENDDO
+                  ENDDO
+                END IF
+!
+!           == DISTRIBUTE ONTO DENSITY MATRIX ENTRIES ==========================
+!           == D(IDIMD)=SUM_{IDIM,JDIM} D(IDIM,JDIM)*PAULI_{IDIMD}(JDIM,IDIM) ==
+!           == IDIMD IN {TOTAL,X,Y,Z}; IDIM IN {UP,DOWN} =======================
+!           == TRANSFORMATION MUST BE CONSISTENT WITH WAVES_DENMAT =============
+                IF(NSPIN.EQ.1) THEN
+                  IF(NDIM.EQ.1) THEN !NON-SPIN-POLARIZED
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                                       +REAL(CSVAR22(1,1))
+                  ELSE ! NONCOLLINEAR
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                                  +REAL(CSVAR22(1,1)+CSVAR22(2,2))
+                    OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                                  +REAL(CSVAR22(1,2)+CSVAR22(2,1))
+                    OSDENMAT(NN)%MAT(I,J,3)=OSDENMAT(NN)%MAT(I,J,3) &
+     &                                  -AIMAG(CSVAR22(1,2)-CSVAR22(2,1))
+                    OSDENMAT(NN)%MAT(I,J,4)=OSDENMAT(NN)%MAT(I,J,4) &
+     &                                  +REAL(CSVAR22(1,1)-CSVAR22(2,2))
+                  END IF
+                ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
+                  IF(ISPIN.EQ.1) THEN
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                                       +REAL(CSVAR22(1,1))
+                    OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                                       +REAL(CSVAR22(1,1))
+                  ELSE
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                                       +REAL(CSVAR22(1,1))
+                    OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                                       -REAL(CSVAR22(1,1))
+                  END IF
+                END IF
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
+!     ==========================================================================
+      DO NN=1,NND
+        CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
+      IF(TPR) THEN
+        WRITE(*,FMT='(82("="),T10," NON-LOCAL DENSITY MATRIX  ")')
+        WRITE(*,FMT='(82("="),T10," FROM WAVES_SUMMUPOFFSITEDENMAT ")')
+        DO NN=1,NND
+          IAT1=OSDENMAT(NN)%IAT1
+          IAT2=OSDENMAT(NN)%IAT2
+          IT=OSDENMAT(NN)%IT
+          WRITE(*,FMT='(82("="),T10," IAT1 ",I4," IAT2=",I4," IT=",3I3)') &
+     &                                                         IAT1,IAT2,IT
+          N1=OSDENMAT(NN)%N1
+          N2=OSDENMAT(NN)%N2
+          DO I=1,1 !OSDENMAT(NN)%N3
+            DO J=1,N1 
+              WRITE(*,FMT='(I3,300F10.3)')I,OSDENMAT(NN)%MAT(J,:,I)
+            ENDDO
+            WRITE(*,FMT='(82("-"))')
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER PRINTING DENSITY MATRIX')
+        CALL ERROR$STOP('WAVES_SUMMUPOFFSITEDENMAT')
+      END IF
+                                                                CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$OFFSITEHAMIL()
+!     **************************************************************************
+!     **  CONSTRUCT HPROJ FROM THE DERIVATIVE OF THE ENERGY WITH RESPECT TO   **
+!     **  THE DENSITY MATRIX                                                  **
+!     **                                                                      **
+!     **  HAMIL=DE/DRHODAGGER                                                 **
+!     **************************************************************************
+      USE WAVES_MODULE, ONLY: WVSET_TYPE &
+     &                       ,NKPTL &
+     &                       ,NSPIN &
+     &                       ,NDIM &
+     &                       ,NDIMD &
+     &                       ,THIS &
+     &                       ,MAP &
+     &                       ,WAVES_SELECTWV &
+     &                       ,GSET &
+     &                       ,OSHAMIL
+      IMPLICIT NONE
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      INTEGER(4)             :: NAT
+      INTEGER(4)             :: N1,N2
+      INTEGER(4)             :: NND
+      INTEGER(4)             :: NPRO
+      INTEGER(4)             :: NB,NBH
+      REAL(8)   ,ALLOCATABLE :: XK(:,:)
+      INTEGER(4),ALLOCATABLE :: IPRO1(:)
+      INTEGER(4),ALLOCATABLE :: NPROAT(:)
+      INTEGER(4)             :: IAT,NN,ISP,IPRO,IKPT,ISPIN,I,J,IBH,IB
+      REAL(8)                :: SVAR
+      LOGICAL(4)             :: TINV
+      INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
+      COMPLEX(8)             :: EIKR,C1,C2,CSVAR22(NDIM,NDIM)
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+!     **************************************************************************
+                                 CALL TRACE$PUSH('WAVES$OFFSITEHAMIL')
+      IF(.NOT.ALLOCATED(OSHAMIL)) RETURN
+!
+!     ==========================================================================
+!     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
+!     ==========================================================================
+      ALLOCATE(XK(3,NKPTL))
+      CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
+!
+!     ==========================================================================
+!     ==  CONSTRUCT INDEX ARRAYS                                              ==
+!     ==========================================================================
+      NAT=MAP%NAT
+      ALLOCATE(IPRO1(NAT))
+      ALLOCATE(NPROAT(NAT))
+      IPRO=1
+      DO IAT=1,NAT
+        ISP=MAP%ISP(IAT)
+        IPRO1(IAT)=IPRO
+        NPROAT(IAT)=MAP%LMNX(ISP)
+        IPRO=IPRO+NPROAT(IAT)
+      ENDDO
+      NPRO=SUM(NPROAT(:))
+!
+!     ==========================================================================
+!     ==  ADD UP DENSITY MATRIX                                               ==
+!     ==========================================================================
+      NND=SIZE(OSHAMIL)
+      NPRO=MAP%NPRO
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETL4('TINV',TINV)
+          NBH=THIS%NBH
+          NB=THIS%NB
+          IF(.NOT.ASSOCIATED(THIS%HPROJ)) ALLOCATE(THIS%HPROJ(NDIM,NBH,NPRO))
+          THIS%HPROJ(:,:,:)=(0.D0,0.D0)
+          DO NN=1,NND
+            IAT1=OSHAMIL(NN)%IAT1
+            IAT2=OSHAMIL(NN)%IAT2
+            IT=OSHAMIL(NN)%IT
+            SVAR=2.D0*PI*SUM(XK(:,IKPT)*REAL(IT))
+            EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
+            I0=IPRO1(IAT1)-1
+            J0=IPRO1(IAT2)-1
+            DO I=1,NPROAT(IAT1)
+              DO J=1,NPROAT(IAT2)
+!
+!               == CONVERT FROM TOTAL/SPIN INTO UP-DOWN REPRESENTATION =====
+                IF(NSPIN.EQ.1) THEN
+                  IF(NDIM.EQ.1) THEN !NON-SPIN-POLARIZED
+                    CSVAR22(1,1)=CMPLX(OSHAMIL(NN)%MAT(I,J,1),0.D0,KIND=8)
+                  ELSE ! NONCOLLINEAR
+                    CSVAR22(1,1)=CMPLX(OSHAMIL(NN)%MAT(I,J,1) &
+     &                                +OSHAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+                    CSVAR22(1,2)=CMPLX(OSHAMIL(NN)%MAT(I,J,2) &
+     &                               ,-OSHAMIL(NN)%MAT(I,J,3),KIND=8)
+                    CSVAR22(2,1)=CMPLX(OSHAMIL(NN)%MAT(I,J,2) &
+     &                               ,+OSHAMIL(NN)%MAT(I,J,3),KIND=8)
+                    CSVAR22(2,2)=CMPLX(OSHAMIL(NN)%MAT(I,J,1) &
+     &                                -OSHAMIL(NN)%MAT(I,J,4),0.D0,KIND=8)
+                  END IF
+                ELSE IF(NSPIN.EQ.2) THEN !SPIN POLARIZED
+                  IF(ISPIN.EQ.1) THEN
+                    CSVAR22(1,1)=CMPLX(OSHAMIL(NN)%MAT(I,J,1) &
+     &                                +OSHAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
+                  ELSE
+                    CSVAR22(1,1)=CMPLX(OSHAMIL(NN)%MAT(I,J,1) &
+     &                                -OSHAMIL(NN)%MAT(I,J,2),0.D0,KIND=8)
+                  END IF
+                END IF
+                CSVAR22(:,:)=CSVAR22(:,:)*EIKR
+!
+                DO IB=1,NBH
+                  DO IDIM=1,NDIM
+                    DO JDIM=1,NDIM
+! THIS IS THE OLD VERSION (THIS IS CORRECT: SEE METHODS SECTION 'SECOND QUANT..'
+!!$                      THIS%HTBC(JDIM,IB,J0+J)=THIS%HTBC(JDIM,IB,J0+J) &
+!!$      &                              +CSVAR22(JDIM,IDIM)*THIS%TBC(IDIM,IB,I0+I)
+! THIS SHOULD BE CORRECT.(NO!)
+                      THIS%HPROJ(IDIM,IB,I0+I)=THIS%HPROJ(IDIM,IB,I0+I) &
+      &                           +CSVAR22(IDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)
+                    ENDDO
+                  ENDDO
+                ENDDO
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == PRINT FOR TESTING                                                    ==
+!     ==========================================================================
+      IF(TPR) THEN
+        DO IKPT=1,NKPTL
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            NBH=THIS%NBH
+            WRITE(*,FMT='(80("="),T10," HTBC(OLD) FOR XK=",3F10.5,"  ")') &
+     &                                                                XK(:,IKPT)
+            DO IBH=1,NBH
+              DO IDIM=1,NDIM
+                WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+                WRITE(*,FMT='("RE:",10F20.5)')REAL(THIS%HPROJ(IDIM,IBH,:))
+                WRITE(*,FMT='("IM:",10F20.5)')AIMAG(THIS%HPROJ(IDIM,IBH,:))
+              ENDDO
+            ENDDO
+            WRITE(*,FMT='(80("="),T10," HTBC(NEW) FOR XK=",3F10.5,"  ")') &
+     &                                                                XK(:,IKPT)
+            DO IBH=1,NBH
+              DO IDIM=1,NDIM
+                WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
+                WRITE(*,FMT='("RE:",10F20.5)')REAL(THIS%HPROJ(IDIM,IBH,:))
+                WRITE(*,FMT='("IM:",10F20.5)')AIMAG(THIS%HPROJ(IDIM,IBH,:))
+              ENDDO
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL ERROR$MSG('FORCED STOP AFTER WRITING DIAGNOSTIC RESULTS')
+        CALL ERROR$STOP('WAVES$OFFSITEHAMIL')
+      END IF
+                                 CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO)
 !     **************************************************************************
 !     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE                **
@@ -3845,6 +4482,7 @@ RETURN
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)    ! (LNX,LNX)    
       COMPLEX(8),ALLOCATABLE :: DH1(:,:,:)  ! (LMNX,LMNX,NDIM**2)    
       COMPLEX(8),ALLOCATABLE :: DEDPROJ(:,:,:) ! (NDIM,NBH,LMNX)
+      COMPLEX(8),ALLOCATABLE :: DEDPROJ1(:,:,:) ! (NDIM,NBH,LMNX)
       COMPLEX(8),ALLOCATABLE :: DEDPRO(:,:) ! (NGL,LMNX)
       COMPLEX(8),ALLOCATABLE :: EIGR(:)     ! (NGL)
       REAL(8)                :: FORCE1(3)
@@ -3940,9 +4578,14 @@ RETURN
             DEALLOCATE(DO1)
 !
 !           == ADD CONTRIBUTION FROM NTBOS  ====================================
+            IF(ASSOCIATED(THIS%HPROJ)) THEN
+              CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
+     &                                ,THIS%HPROJ(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
+            END IF
+!
             IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
               CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
-     &                                ,THIS%HTBC_NEW(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
+     &                             ,THIS%HTBC_NEW(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
             END IF
 
 !           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================

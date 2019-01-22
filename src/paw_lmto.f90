@@ -8875,7 +8875,7 @@ INTEGER(4) :: J
           IF(TOVERLAP) THEN
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%OVERLAP(1,:))
             DO I=1,NIND
-              OFFSITEX(ISP1,ISP2)%OVERLAP(:,I) &
+              OFFSITEX(ISP1,ISP2)%OVERLAP(:nf,I) &
      &                         =MATMUL(AMATIN,OFFSITEX(ISP1,ISP2)%OVERLAP(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%OVERLAP(NF+1:,:)=0.D0
@@ -8887,7 +8887,7 @@ INTEGER(4) :: J
           IF(TNDDO) THEN
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%X22(1,:))
             DO I=1,NIND
-              OFFSITEX(ISP1,ISP2)%X22(:,I)=MATMUL(AMATIN &
+              OFFSITEX(ISP1,ISP2)%X22(:nf,I)=MATMUL(AMATIN &
       &                                          ,OFFSITEX(ISP1,ISP2)%X22(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%X22(NF+1:,:)=0.D0
@@ -8899,7 +8899,7 @@ INTEGER(4) :: J
           IF(T31) THEN
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%X31(1,:))
             DO I=1,NIND
-              OFFSITEX(ISP1,ISP2)%X31(:,I)=MATMUL(AMATIN &
+              OFFSITEX(ISP1,ISP2)%X31(:nf,I)=MATMUL(AMATIN &
        &                                         ,OFFSITEX(ISP1,ISP2)%X31(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%X31(NF+1:,:)=0.D0
@@ -8911,7 +8911,7 @@ INTEGER(4) :: J
           IF(TBONDU) THEN
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%BONDU(1,:))
             DO I=1,NIND
-              OFFSITEX(ISP1,ISP2)%BONDU(:,I)=MATMUL(AMATIN &
+              OFFSITEX(ISP1,ISP2)%BONDU(:nf,I)=MATMUL(AMATIN &
      &                           ,OFFSITEX(ISP1,ISP2)%BONDU(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%BONDU(NF+1:,:)=0.D0

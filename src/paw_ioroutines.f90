@@ -163,6 +163,7 @@ CALL TRACE$PASS('SPECIES')
 !     == LMTO OBJECT                                                  ==
 !     ==================================================================
       CALL LMTO$REPORT(NFILO)
+      CALL SIMPLELMTO$REPORT(NFILO)
 !
 !     ==================================================================
 !     == ATOMS                                                        ==
@@ -1119,6 +1120,8 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'NTBO',1,TCHK)
       IF(TCHK) THEN
         CALL LMTO$SETL4('ON',.TRUE.)
+CALL LMTO$SETL4('ON',.FALSE.)
+        CALL SIMPLELMTO$SETL4('ON',.TRUE.)
         CALL LINKEDLIST$SELECT(LL_CNTL,'NTBO')
 !
 !       == MODUS  (CAN BE 'HYBRID', 'DMFT', OR 'ROBERT') ======================
@@ -1132,6 +1135,7 @@ CALL TRACE$PASS('DONE')
           CALL ERROR$STOP('READIN_DFT')
         END IF
         CALL LMTO$SETCH('MODUS',MODUS) 
+        CALL SIMPLELMTO$SETCH('MODUS',MODUS) 
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'OFFSITE',1,TCHK1)
         IF(TCHK1) THEN
@@ -1144,6 +1148,7 @@ CALL TRACE$PASS('DONE')
             CALL ERROR$STOP('READIN_DFT')
           END IF
           CALL LMTO$SETL4('OFFSITE',TCHK2)
+          CALL SIMPLELMTO$SETL4('OFFSITE',TCHK2)
         END IF
 !
         CALL LINKEDLIST$EXISTD(LL_CNTL,'DROP',1,TCHK1)
@@ -1188,18 +1193,21 @@ CALL TRACE$PASS('DONE')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'HFWEIGHT',1,SVAR)
           CALL LMTO$SETR8('HFWEIGHT',SVAR)
+          CALL SIMPLELMTO$SETR8('HFWEIGHT',SVAR)
         END IF
 !!$
         CALL LINKEDLIST$EXISTD(LL_CNTL,'K2',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'K2',1,SVAR)
           CALL LMTO$SETR8('K2',SVAR)
+          CALL SIMPLELMTO$SETR8('K2',SVAR)
         END IF
 !!$
         CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALERCUT',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'SCALERCUT',1,SVAR)
           CALL LMTO$SETR8('SCALERCUT',SVAR)
+          CALL SIMPLELMTO$SETR8('SCALERCUT',SVAR)
         END IF
 
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
@@ -4216,6 +4224,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       DO ISP=1,NSP
         CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',ISP)
         CALL LMTO$SETI4('ISP ',ISP)
+        CALL SIMPLELMTO$SETI4('ISP ',ISP)
 !
 !       ========================================================================
 !       ==  SKIP IF NTBO BLOCK IS NOT PRESENT                                 ==
@@ -4223,6 +4232,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         CALL LINKEDLIST$EXISTL(LL_STRC,'NTBO',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL LMTO$SETR8('LHFWEIGHT',0.D0)    ! SWITCH CONTRIBUTION OFF
+          CALL SIMPLELMTO$SETR8('LHFWEIGHT',0.D0)    ! SWITCH CONTRIBUTION OFF
           CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
           CYCLE
         END IF
@@ -4256,6 +4266,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           IWORK(1)=0           ! A SUM EQUAL ZERO SWITCHES TO TORB (SEE BELOW)
         END IF        
         CALL LMTO$SETI4A('NORBOFL',LENG,IWORK)
+        CALL SIMPLELMTO$SETI4A('NORBOFL',LENG,IWORK)
         DEALLOCATE(IWORK)
 !   
 !       == RADIUS FOR MATCHING PARTIAL WAVES TO ENVELOPE FUNCTIONS =============
@@ -4264,6 +4275,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK)CALL LINKEDLIST$GET(LL_STRC,'RAUG/RCOV',1,SVAR)
         SVAR=SVAR*RCOV
         CALL LMTO$SETR8('RAUG',SVAR)
+        CALL SIMPLELMTO$SETR8('RAUG',SVAR)
 !   
 !       == RADIUS FOR MATCHING EXPONENTIAL TAILS ===============================
         SVAR=1.D0
@@ -4302,6 +4314,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'LHFWEIGHT',1,SVAR)
           CALL LMTO$SETR8('LHFWEIGHT',SVAR)
+          CALL SIMPLELMTO$SETR8('LHFWEIGHT',SVAR)
         END IF
 !
 !       == CORE VALENCE EXCHANGE ===============================================
@@ -4309,6 +4322,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'CV',1,TCHK1)
           CALL LMTO$SETL4('COREVALENCE',TCHK1)
+          CALL SIMPLELMTO$SETL4('COREVALENCE',TCHK1)
         END IF
 !   
 !       == FOCK SETUP ==========================================================
@@ -4316,6 +4330,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'FOCKSETUP',1,TCHK1)
           CALL LMTO$SETL4('FOCKSETUP',TCHK1)
+          CALL SIMPLELMTO$SETL4('FOCKSETUP',TCHK1)
         END IF
 !   
 !       == NEGLECT OF DIATOMIC DIFFERENTIAL OVERLAP ===========================
@@ -4323,6 +4338,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'NDDO',1,TCHK1)
           CALL LMTO$SETL4('NDDO',TCHK1)
+          CALL SIMPLELMTO$SETL4('NDDO',TCHK1)
         END IF
 !   
 !       ==  
@@ -4330,6 +4346,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'31',1,TCHK1)
           CALL LMTO$SETL4('31',TCHK1)
+          CALL SIMPLELMTO$SETL4('31',TCHK1)
         END IF
 !
 !       == 
@@ -4337,6 +4354,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_STRC,'BONDX',1,TCHK1)
           CALL LMTO$SETL4('BONDX',TCHK1)
+          CALL SIMPLELMTO$SETL4('BONDX',TCHK1)
         END IF
 !   
 !       ========================================================================
@@ -4358,6 +4376,7 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ==  CLOSE LOOP                                                        ==
 !       ========================================================================
         CALL LMTO$SETI4('ISP',0)             ! UNSELECT LMTO INSTANCE
+        CALL SIMPLELMTO$SETI4('ISP',0)             ! UNSELECT LMTO INSTANCE
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE NTBO BLOCK
         CALL LINKEDLIST$SELECT(LL_STRC,'..') ! LEAVE SPECIES BLOCK
       ENDDO
