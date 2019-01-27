@@ -1078,8 +1078,11 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: MODUS
+      REAL(8)                  :: ANGSTROM  ! ANGSTROM
 !     **************************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
+      CALL CONSTANTS('ANGSTROM',ANGSTROM)
+!
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
@@ -1201,6 +1204,13 @@ CALL LMTO$SETL4('ON',.FALSE.)
           CALL LINKEDLIST$GET(LL_CNTL,'K2',1,SVAR)
           CALL LMTO$SETR8('K2',SVAR)
           CALL SIMPLELMTO$SETR8('K2',SVAR)
+        END IF
+!
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'SCREENL[AA]',1,TCHK)
+        IF(TCHK) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'SCREENL[AA]',1,SVAR)
+          SVAR=SVAR*ANGSTROM
+          CALL SIMPLELMTO$SETR8('SCREENL',SVAR)
         END IF
 !!$
         CALL LINKEDLIST$EXISTD(LL_CNTL,'SCALERCUT',1,TCHK)

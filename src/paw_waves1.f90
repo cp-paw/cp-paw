@@ -1136,9 +1136,10 @@ END MODULE WAVES_MODULE
 !     **                                                                      **
 !     **************************************************************************
       USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE &
-     &                          ,RSPACEOP$COPY 
+     &                          ,RSPACEOP$COPY &
+     &                          ,RSPACEOP$WRITEMAT
       USE WAVES_MODULE   , ONLY: OSHAMIL &
-     &                          ,OSDENMAT
+     &                          ,OSDENMAT 
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)          :: ID
       INTEGER(4)  ,INTENT(IN)          :: LEN
@@ -1673,14 +1674,14 @@ END MODULE WAVES_MODULE
       IF(TSTRESS)CALL POTENTIAL$SETL4('STRESS',TSTRESS)
       IF(TFORCE)CALL POTENTIAL$SETL4('FORCE',TFORCE)
 !
-!     ==================================================================
-!     == COLLECT VARIABLES                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == COLLECT VARIABLES                                                    ==
+!     ==========================================================================
       NAT=MAP%NAT
-!     == UNIT CELL =====================================================
+!     == UNIT CELL =============================================================
       CALL CELL$GETR8A('T0',9,RBAS)
       STRESS=0.D0
-!     == ATOMIC POSITIONS ==============================================
+!     == ATOMIC POSITIONS ======================================================
       ALLOCATE(R(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
       ALLOCATE(FORCE(3,NAT))
@@ -1772,7 +1773,7 @@ END MODULE WAVES_MODULE
       ALLOCATE(DENMAT(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(EDENMAT(LMNXX,LMNXX,NDIMD,NAT))
       CALL WAVES$DENMAT(LMNXX,NDIMD,NAT,DENMAT,EDENMAT) !<<<<<<<<<<<<<<<
-      CALL WAVES$OFFSITEDENMAT()
+      CALL WAVES$OFFSITEDENMAT()  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 !
 !     ==================================================================
 !     == PSEUDO DENSITY STILL WITHOUT PSEUDOCORE                      ==
@@ -3535,7 +3536,8 @@ END IF
       USE PERIODICTABLE_MODULE
       USE WAVES_MODULE, ONLY: MAP &
      &                       ,NDIMD &
-     &                       ,OSDENMAT 
+     &                       ,OSDENMAT &
+     &                       ,OSHAMIL 
       IMPLICIT NONE
       REAL(8)   ,PARAMETER   :: RCSCALE=2.2D0
       INTEGER(4),PARAMETER   :: NNXPERATOM=100
@@ -3562,6 +3564,13 @@ END IF
           IF(ALLOCATED(OSDENMAT(NN)%MAT)) DEALLOCATE(OSDENMAT(NN)%MAT)
         ENDDO
         DEALLOCATE(OSDENMAT)
+      END IF
+      IF(ALLOCATED(OSHAMIL)) THEN
+        NND=SIZE(OSHAMIL)
+        DO NN=1,NND
+          IF(ALLOCATED(OSHAMIL(NN)%MAT)) DEALLOCATE(OSHAMIL(NN)%MAT)
+        ENDDO
+        DEALLOCATE(OSHAMIL)
       END IF
 !
 !     ==========================================================================
@@ -3812,10 +3821,10 @@ COMPLEX(8)  :: PHASE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$OFFSITEHAMIL()
 !     **************************************************************************
-!     **  CONSTRUCT HPROJ FROM THE DERIVATIVE OF THE ENERGY WITH RESPECT TO   **
-!     **  THE DENSITY MATRIX                                                  **
+!     **  CONSTRUCT HPROJ = H<p|psi> = dE/d<psi|p> from the off-site          **
+!     **  Hamiltonian and the projections                                     **
 !     **                                                                      **
-!     **  HAMIL=DE/DRHODAGGER                                                 **
+!     **  osHAMIL=DE/DRHODAGGER                                                 **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: WVSET_TYPE &
      &                       ,NKPTL &
@@ -3827,8 +3836,11 @@ COMPLEX(8)  :: PHASE
      &                       ,WAVES_SELECTWV &
      &                       ,GSET &
      &                       ,OSHAMIL
+      USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE &
+     &                          ,RSPACEOP$COPY &
+     &                          ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER   :: TPR=.false.
       REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
@@ -3945,16 +3957,7 @@ COMPLEX(8)  :: PHASE
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             NBH=THIS%NBH
-            WRITE(*,FMT='(80("="),T10," HTBC(OLD) FOR XK=",3F10.5,"  ")') &
-     &                                                                XK(:,IKPT)
-            DO IBH=1,NBH
-              DO IDIM=1,NDIM
-                WRITE(*,FMT='(80("-"),T10," IBH=",I5," IDIM=",I2,"  ")')IBH,IDIM
-                WRITE(*,FMT='("RE:",10F20.5)')REAL(THIS%HPROJ(IDIM,IBH,:))
-                WRITE(*,FMT='("IM:",10F20.5)')AIMAG(THIS%HPROJ(IDIM,IBH,:))
-              ENDDO
-            ENDDO
-            WRITE(*,FMT='(80("="),T10," HTBC(NEW) FOR XK=",3F10.5,"  ")') &
+            WRITE(*,FMT='(80("="),T10," Hproj FOR XK=",3F10.5,"  ")') &
      &                                                                XK(:,IKPT)
             DO IBH=1,NBH
               DO IDIM=1,NDIM
@@ -4771,6 +4774,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
             DEALLOCATE(THIS%HTBC_NEW)
             NULLIFY(THIS%HTBC_NEW)
           END IF
+          IF(ASSOCIATED(THIS%HPROJ)) THEN
+            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HPROJ(:,:,:)
+            DEALLOCATE(THIS%HPROJ)
+            NULLIFY(THIS%HPROJ)
+          END IF
 !
 !         ==============================================================
 !         ==  ADD  |P>DH<P|PSI>                                       ==
@@ -4799,6 +4807,8 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
 !     **************************************************************************
+!     **  hproj = dh*proc= dH*<p|psi>                                         **
+!     **  dh is the on-site augmentation hamiltonian                          **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY : MAP_TYPE

@@ -9988,7 +9988,7 @@ PRINT*,'NORM OF G=',VAL
         PRINT*,'DIS=',DIS,'OVERLAP ',OVERLAP,SVAR,OVERLAP-SVAR
       ENDDO
 !
-STOP 'FORCED'
+STOP 'FORCED in lmto_twocenter_test'
       RETURN
       END
 !
