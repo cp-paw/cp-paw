@@ -236,7 +236,7 @@ TYPE(WVSET_TYPE),POINTER  :: THISARRAY(:,:)   ! (NKPTL,NSPIN)
 TYPE(WVSET_TYPE),POINTER  :: THIS            ! CURRENT SET OF WAVES
 TYPE(GSET_TYPE) ,POINTER  :: GSET            ! CURRENT SET OF GSET
 TYPE(MAP_TYPE)            :: MAP
-TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSDENMAT(:)      
+TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSDENMAT(:)  !offsite density matrix      
 TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSHAMIL(:)      
 LOGICAL(4)                :: TPR=.FALSE.
 LOGICAL(4)                :: TFIRST=.TRUE.
@@ -3935,8 +3935,8 @@ COMPLEX(8)  :: PHASE
                   DO IDIM=1,NDIM
                     DO JDIM=1,NDIM
 ! THIS IS THE OLD VERSION (THIS IS CORRECT: SEE METHODS SECTION 'SECOND QUANT..'
-!!$                      THIS%HTBC(JDIM,IB,J0+J)=THIS%HTBC(JDIM,IB,J0+J) &
-!!$      &                              +CSVAR22(JDIM,IDIM)*THIS%TBC(IDIM,IB,I0+I)
+!!$                      THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
+!!$      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(iDIM,IB,I0+I)
 ! THIS SHOULD BE CORRECT.(NO!)
                       THIS%HPROJ(IDIM,IB,I0+I)=THIS%HPROJ(IDIM,IB,I0+I) &
       &                           +CSVAR22(IDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)

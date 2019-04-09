@@ -1122,7 +1122,7 @@ CALL TRACE$PASS('DONE')
 !     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'NTBO',1,TCHK)
       IF(TCHK) THEN
-        CALL LMTO$SETL4('ON',.TRUE.)
+!        CALL LMTO$SETL4('ON',.TRUE.)
 CALL LMTO$SETL4('ON',.FALSE.)
         CALL SIMPLELMTO$SETL4('ON',.TRUE.)
         CALL LINKEDLIST$SELECT(LL_CNTL,'NTBO')
