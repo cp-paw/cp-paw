@@ -1870,10 +1870,12 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     == INTERFACE TO NTBO BASIS                                              ==
 !     ==========================================================================
       ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
+      dh1=(0.d0,0.d0)
       CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
-      CALL SIMPLELMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
       DH=DH+DH1
       DEALLOCATE(DH1)
+!
+      CALL SIMPLELMTO$ETOT()
 !
 !     ===================================================================
 !     ==  SUBTRACT AVERAGE ELECTROSTATIC POTENTIAL =====================

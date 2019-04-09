@@ -1706,7 +1706,7 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO$ETOT(LMNXX_,NDIMD_,NAT_,DENMAT_,DH_)
+      SUBROUTINE SIMPLELMTO$ETOT()
 !     **************************************************************************
 !     **  DENMAT_ ON INPUT IS CALCULATED DIRECTLY FROM THE PROJECTIONS AND    **
 !     **  IS USED IN THE AUGMENTATION                                         **
@@ -1715,11 +1715,6 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
       USE SIMPLELMTO_MODULE, ONLY : TON &
      &                             ,MODUS
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: LMNXX_
-      INTEGER(4),INTENT(IN) :: NDIMD_
-      INTEGER(4),INTENT(IN) :: NAT_
-      COMPLEX(8),INTENT(IN) :: DENMAT_(LMNXX_,LMNXX_,NDIMD_,NAT_)
-      COMPLEX(8),INTENT(OUT):: DH_(LMNXX_,LMNXX_,NDIMD_,NAT_)
       INTEGER(4)            :: IAT
 !     **************************************************************************
       CALL SIMPLELMTO$INITIALIZE()
