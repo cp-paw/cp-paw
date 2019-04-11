@@ -107,14 +107,15 @@ CONTAINS
       INTEGER(4)          ,INTENT(IN) :: NN
       TYPE(RSPACEMAT_TYPE),INTENT(IN) :: MAT(NN)
       INTEGER(4)                      :: IN,I1,I3
+      character(128)                  :: fomt
 !     **************************************************************************
       WRITE(NFIL,FMT='(82("="))')
       WRITE(NFIL,FMT='(82("="),T10,"  ",A,"   ")')TRIM(TITLE)
       WRITE(NFIL,FMT='(82("="))')
       DO IN=1,NN
         IF(MAT(IN)%N1*MAT(NN)%N2.EQ.0) CYCLE
-        WRITE(NFIL,FMT='(82("="),T10," IAT1=",I5," IAT2=",I5," IT=",3I3," ")') &
-     &                 MAT(IN)%IAT1,MAT(IN)%IAT2,MAT(IN)%IT
+        FOMT='(82("="),T10,"IN=",I8," IAT1=",I5," IAT2=",I5," IT=",3I3," ")'
+        WRITE(NFIL,FMT=FOMT)IN,MAT(IN)%IAT1,MAT(IN)%IAT2,MAT(IN)%IT
         DO I3=1,MAT(NN)%N3
           WRITE(NFIL,FMT='(82("-"),T10," COMPONENT ",I1,"  ")')I3
           DO I1=1,MAT(NN)%N1
@@ -1740,14 +1741,14 @@ END MODULE WAVES_MODULE
       IF(TFIRST.OR.TFORCE.OR.TSTRESS) THEN
                                CALL TIMING$CLOCKON('STRUCTURECONSTANTS')
 !IF(TFIRST) THEN
-        CALL LMTO$MAKESTRUCTURECONSTANTS()
+!!$        CALL LMTO$MAKESTRUCTURECONSTANTS()
 !END IF
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
-                               CALL TIMING$CLOCKON('WAVES$TONTBO')
-      CALL WAVES$TONTBO()
-                               CALL TIMING$CLOCKOFF('WAVES$TONTBO')
+!!$                               CALL TIMING$CLOCKON('WAVES$TONTBO')
+!!$      CALL WAVES$TONTBO()
+!!$                               CALL TIMING$CLOCKOFF('WAVES$TONTBO')
       IF(TFIRST) TFIRST=.FALSE.
 !
 !     ==========================================================================
@@ -1868,12 +1869,14 @@ CALL ERROR$STOP('WAVES$ETOT')
 !
 !     ==========================================================================
 !     == INTERFACE TO NTBO BASIS                                              ==
+!     == INPUT:   OSDENMAT (OFFSITE-DENSITY MATRIX)                           ==
+!     == RETURNS: OSHAMIL (OFFSITE-HAMILTONIAN)                               ==
 !     ==========================================================================
-      ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
-      dh1=(0.d0,0.d0)
-      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
-      DH=DH+DH1
-      DEALLOCATE(DH1)
+!!$      ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
+!!$      dh1=(0.d0,0.d0)
+!!$      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
+!!$      DH=DH+DH1
+!!$      DEALLOCATE(DH1)
 !
       CALL SIMPLELMTO$ETOT()
 !
@@ -2018,7 +2021,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                      ==
 !     ================================================================== 
                                CALL TIMING$CLOCKON('WAVES$FROMNTBO')
-      CALL WAVES$FROMNTBO()
+!      CALL WAVES$FROMNTBO()
       CALL WAVES$OFFSITEHAMIL() ! CALCULATE THIS$HPROJ
                                CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
 !
@@ -3826,7 +3829,12 @@ COMPLEX(8)  :: PHASE
 !     **  CONSTRUCT HPROJ = H<p|psi> = dE/d<psi|p> from the off-site          **
 !     **  Hamiltonian and the projections                                     **
 !     **                                                                      **
-!     **  osHAMIL=DE/DRHODAGGER                                                 **
+!     **  THE OFF-SITE HAMILTONIAN IS IN THE SPIN REPRESENTATION              **
+!     **    NSPIN=1,NDIM=1: TOTAL                        (NDIMD=1)            **
+!     **    NSPIN=2,NDIM=1: TOTAL,SPIN_Z                 (NDIMD=2)            **
+!     **    NSPIN=1,NDIM=2: TOTAL,SPIN_X,SPIN_Y,SPIN_Z   (NDIMD=3)            **
+!     **                                                                      **
+!     **  osHAMIL=DE/DRHODAGGER                                               **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: WVSET_TYPE &
      &                       ,NKPTL &
@@ -3936,12 +3944,20 @@ COMPLEX(8)  :: PHASE
                 DO IB=1,NBH
                   DO IDIM=1,NDIM
                     DO JDIM=1,NDIM
+!===============================================================================
+!       E=E_0 + sum_{a,b} H_{a,b}D_{a,b} +... = E_0 + Tr[ H * D-dagger ] +... ==
+!                                                                             ==
+!         => de=<dpsi_n| [sum_{a,b} |p_b>H_{a,b}<p_a|psi_n> f_n + ...         ==
+!===============================================================================
+                      THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
+      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(IDIM,IB,I0+I)
+!
 ! THIS IS THE OLD VERSION (THIS IS CORRECT: SEE METHODS SECTION 'SECOND QUANT..'
-!!$                      THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
-!!$      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(iDIM,IB,I0+I)
+!                      THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
+!      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(iDIM,IB,I0+I)
 ! THIS SHOULD BE CORRECT.(NO!)
-                      THIS%HPROJ(IDIM,IB,I0+I)=THIS%HPROJ(IDIM,IB,I0+I) &
-      &                           +CSVAR22(IDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)
+!!$                      THIS%HPROJ(IDIM,IB,I0+I)=THIS%HPROJ(IDIM,IB,I0+I) &
+!!$      &                           +CSVAR22(iDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -4771,11 +4787,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !         ==============================================================
 !         == HTBC CONTAINS ALREADY HPROJ IN TERMS OF PARTIAL WAVE 
 !         == PROJECTOR FUNCTIONS.
-          IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
-            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC_NEW(:,:,:)
-            DEALLOCATE(THIS%HTBC_NEW)
-            NULLIFY(THIS%HTBC_NEW)
-          END IF
+!!$          IF(ASSOCIATED(THIS%HTBC_NEW)) THEN
+!!$            HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HTBC_NEW(:,:,:)
+!!$            DEALLOCATE(THIS%HTBC_NEW)
+!!$            NULLIFY(THIS%HTBC_NEW)
+!!$          END IF
           IF(ASSOCIATED(THIS%HPROJ)) THEN
             HPROJ(:,:,:)=HPROJ(:,:,:)+THIS%HPROJ(:,:,:)
             DEALLOCATE(THIS%HPROJ)

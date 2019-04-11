@@ -1718,7 +1718,6 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
       INTEGER(4)            :: IAT
 !     **************************************************************************
       CALL SIMPLELMTO$INITIALIZE()
-      DH_=(0.D0,0.D0)
       IF(.NOT.TON) RETURN
                                     CALL TRACE$PUSH('SIMPLELMTO$ETOT')
  
@@ -1761,8 +1760,8 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
       LOGICAL(4)          ,PARAMETER   :: TPR=.FALSE.
-      LOGICAL(4)          ,PARAMETER   :: TTEST=.false.
-      LOGICAL(4)          ,PARAMETER   :: TTESTA=.false.
+      LOGICAL(4)          ,PARAMETER   :: TTEST=.FALSE.
+      LOGICAL(4)          ,PARAMETER   :: TTESTA=.FALSE.
       INTEGER(4)                       :: NAT
       INTEGER(4)                       :: NND
       REAL(8)                          :: RBAS(3,3)
@@ -1778,7 +1777,7 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
       REAL(8)                          :: ETOT
       INTEGER(4)                       :: I,IAT
       INTEGER(4)                       :: NFILO
-      LOGICAL(4)                       :: Tfirst=.TRUE.
+      LOGICAL(4)                       :: TFIRST=.TRUE.
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1794,6 +1793,7 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
 !     ==  COLLECT DENSITY MATRIX                                              ==
 !     ==========================================================================
       CALL WAVES$GETI4('NND',NND)
+PRINT*,'NND ',NND
       ALLOCATE(DENMAT(NND))
       CALL WAVES$GETRSPACEMATA('DENMAT',NND,DENMAT)
       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'DENSITY MATRIX IN PHIS',NND,DENMAT)
@@ -1817,7 +1817,7 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
 !     ==========================================================================
 !     ==  CALCULATE ENERGY                                                    ==
 !     ==========================================================================
-      etot=0.d0
+      ETOT=0.D0
       ALLOCATE(HAMIL(NND))
       DO I=1,NND
         CALL RSPACEOP$COPY(DENMAT(I),HAMIL(I))
@@ -1829,18 +1829,18 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
         HONSITE(IAT)%MAT=0.D0
       ENDDO
 !
-if(.not.ttest.or.tfirst) then
-tfirst=.false.
+IF(.NOT.TTEST.OR.TFIRST) THEN
+TFIRST=.FALSE.
       CALL TIMING$CLOCKON('SIMPLELMTO_HYBRIDENERGY')
       CALL SIMPLELMTO_HYBRIDENERGY(NAT,NND,RBAS,R0,DENMAT,DONSITE &
      &                                  ,ETOT,STRESS,FORCE,HAMIL,HONSITE)
       CALL TIMING$CLOCKOFF('SIMPLELMTO_HYBRIDENERGY')
-end if
+END IF
 !
 !     ==========================================================================
 !     == 
 !     ==========================================================================
-IF(TTEST.and.ttesta) THEN
+IF(TTEST.AND.TTESTA) THEN
   CALL FILEHANDLER$UNIT('PROT',NFILO)
   WRITE(NFILO,*)'WARNING FROM SIMPLELMTO_HYBRID! TEST ENVIRONMENT IS ON'
   DO I=1,NND !NEIGBORLIST IS DIRECTIONAL
@@ -1851,9 +1851,9 @@ IF(TTEST.and.ttesta) THEN
   CALL SIMPLELMTO_FAKEETOT(NND,DENMAT,ETOT,HAMIL)
   FORCE=0.D0
   STRESS=0.D0
-  do iat=1,nat
-    honsite(iat)%mat=0.d0
-  enddo
+  DO IAT=1,NAT
+    HONSITE(IAT)%MAT=0.D0
+  ENDDO
 END IF
 !
 !     ==========================================================================
@@ -1869,7 +1869,7 @@ END IF
 !!$DO  IAT=1,NAT
 !!$  WRITE(*,FMT='("HONSITE 2: ",20F10.5)')HONSITE(IAT)%MAT
 !!$ENDDO
-IF(TTEST.and.(.not.ttesta)) THEN
+IF(TTEST.AND.(.NOT.TTESTA)) THEN
   CALL FILEHANDLER$UNIT('PROT',NFILO)
   WRITE(NFILO,*)'WARNING FROM SIMPLELMTO_HYBRID! TEST ENVIRONMENT IS ON'
   DO I=1,NND !NEIGBORLIST IS DIRECTIONAL
@@ -1879,9 +1879,9 @@ IF(TTEST.and.(.not.ttesta)) THEN
   CALL SIMPLELMTO_FAKEETOT(NND,DENMAT,ETOT,HAMIL)
   FORCE=0.D0
   STRESS=0.D0
-  do iat=1,nat
-    honsite(iat)%mat=0.d0
-  enddo
+  DO IAT=1,NAT
+    HONSITE(IAT)%MAT=0.D0
+  ENDDO
 END IF
 !
 !     ==========================================================================
@@ -1939,27 +1939,37 @@ END IF
       IMPLICIT NONE
       INTEGER(4)          ,INTENT(IN)   :: NND
       TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: DENMAT(NND)
-      REAL(8)             ,INTENT(inOUT):: ETOT
+      REAL(8)             ,INTENT(INOUT):: ETOT
       TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HAMIL(NND)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE,SAVE:: HAMILSAVE(:)
-      real(8)             ,save         :: etotsave
+      REAL(8)             ,SAVE         :: ETOTSAVE
       INTEGER(4)                        :: IND,J
+      INTEGER(4)                        :: IND1,IND2
+      REAL(8)                           :: SVAR
+      LOGICAL(4)                        :: TCHK
       LOGICAL(4)          ,SAVE         :: TINI=.FALSE.
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == STORE ENERGY AND HAMILTONIAN IN THE FIRST CALL
+!     ==========================================================================
       IF(.NOT.TINI) THEN
         TINI=.TRUE.
         ALLOCATE(HAMILSAVE(NND))
         DO IND=1,NND
           CALL RSPACEOP$COPY(HAMIL(IND),HAMILSAVE(IND))
         ENDDO
-        etotsave=etot
+        ETOTSAVE=ETOT
         DO IND=1,NND
           DO J=1,HAMILSAVE(IND)%N3
-            ETOTsave=ETOTsave-SUM(DENMAT(IND)%MAT(:,:,J)*HAMIL(IND)%MAT(:,:,J))
+            ETOTSAVE=ETOTSAVE-SUM(DENMAT(IND)%MAT(:,:,J)*HAMIL(IND)%MAT(:,:,J))
           ENDDO
         ENDDO
       END IF
 !
+!     ==========================================================================
+!     == OVERWRITE ENERGY AND HAMILTONIAN
+!     ==========================================================================
       ETOT=ETOTSAVE
       DO IND=1,NND
 !PRINT*,'==',HAMIL(IND)%IAT1,HAMIL(IND)%IAT2,HAMIL(IND)%IT
@@ -1969,9 +1979,131 @@ END IF
         ENDDO
 !HAMIL(IND)%MAT=0.D0
       ENDDO
-!      etot=2.d0*etot
-!etot=0.d0
+!      ETOT=2.D0*ETOT
+!ETOT=0.D0
 
+!
+!     ==========================================================================
+!     == CHECK WHETHER DENSITY MATRIX IS HERMITEAN
+!     ==========================================================================
+      DO IND1=1,NND
+        TCHK=.FALSE.
+        DO IND2=1,NND
+          IF(DENMAT(IND2)%IAT2.NE.DENMAT(IND1)%IAT1) CYCLE
+          IF(DENMAT(IND2)%IAT1.NE.DENMAT(IND1)%IAT2) CYCLE
+          IF(SUM((DENMAT(IND2)%IT+DENMAT(IND1)%IT)**2).NE.0) CYCLE
+          IF(TCHK) THEN
+            CALL ERROR$MSG('ERROR 4')
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+          TCHK=.TRUE.
+          SVAR=0.D0
+          DO J=1,DENMAT(IND1)%N3
+            SVAR=SVAR+SUM((DENMAT(IND2)%MAT(:,:,J) &
+     &          -TRANSPOSE(DENMAT(IND1)%MAT(:,:,J)))**2)
+          ENDDO
+          IF(SVAR.GT.1.D-10) THEN
+            CALL RSPACEOP$WRITEMAT(6,'DENMAT',NND,DENMAT)
+            CALL ERROR$MSG('ERROR 5')
+            CALL ERROR$I4VAL('IND1',IND1)
+            CALL ERROR$I4VAL('IND2',IND2)
+            CALL ERROR$I4VAL('IND1-IAT1',DENMAT(IND1)%IAT1)
+            CALL ERROR$I4VAL('IND1-IAT2',DENMAT(IND1)%IAT2)
+            CALL ERROR$I4VAL('IND1-IT',DENMAT(IND1)%IT)
+            CALL ERROR$I4VAL('IND2-IAT1',DENMAT(IND2)%IAT1)
+            CALL ERROR$I4VAL('IND2-IAT2',DENMAT(IND2)%IAT2)
+            CALL ERROR$I4VAL('IND2-IT',DENMAT(IND2)%IT)
+            CALL ERROR$R8VAL('DEV',SVAR)
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+        ENDDO
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('ERROR 6')
+          CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == MAKE HAMILTONIAN  HERMITEAN
+!     ==========================================================================
+      DO IND1=1,NND
+        TCHK=.FALSE.
+        DO IND2=1,NND
+          IF(HAMIL(IND2)%IAT2.NE.HAMIL(IND1)%IAT1) CYCLE
+          IF(HAMIL(IND2)%IAT1.NE.HAMIL(IND1)%IAT2) CYCLE
+          IF(SUM((HAMIL(IND2)%IT+HAMIL(IND1)%IT)**2).NE.0) CYCLE
+          IF(TCHK) THEN
+            CALL ERROR$MSG('ERROR 1')
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+          TCHK=.TRUE.
+          SVAR=0.D0
+          DO J=1,HAMIL(IND1)%N3
+            HAMIL(IND2)%MAT(:,:,J)=0.5D0*(HAMIL(IND2)%MAT(:,:,J) &
+     &                         +TRANSPOSE(HAMIL(IND1)%MAT(:,:,J)))
+            HAMIL(IND1)%MAT(:,:,J)=TRANSPOSE(HAMIL(IND2)%MAT(:,:,J))
+          ENDDO
+          IF(SVAR.GT.1.D-10) THEN
+            CALL RSPACEOP$WRITEMAT(6,'HAMIL',NND,HAMIL)
+            CALL ERROR$MSG('ERROR 2')
+            CALL ERROR$I4VAL('IND1',IND1)
+            CALL ERROR$I4VAL('IND2',IND2)
+            CALL ERROR$I4VAL('IND1-IAT1',HAMIL(IND1)%IAT1)
+            CALL ERROR$I4VAL('IND1-IAT2',HAMIL(IND1)%IAT2)
+            CALL ERROR$I4VAL('IND1-IT',HAMIL(IND1)%IT)
+            CALL ERROR$I4VAL('IND2-IAT1',HAMIL(IND2)%IAT1)
+            CALL ERROR$I4VAL('IND2-IAT2',HAMIL(IND2)%IAT2)
+            CALL ERROR$I4VAL('IND2-IT',HAMIL(IND2)%IT)
+            CALL ERROR$R8VAL('DEV',SVAR)
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+        ENDDO
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('ERROR 3')
+          CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == CHECK WHETHER HAMILTONIAN IS HERMITEAN
+!     ==========================================================================
+      DO IND1=1,NND
+        TCHK=.FALSE.
+        DO IND2=1,NND
+          IF(HAMIL(IND2)%IAT2.NE.HAMIL(IND1)%IAT1) CYCLE
+          IF(HAMIL(IND2)%IAT1.NE.HAMIL(IND1)%IAT2) CYCLE
+          IF(SUM((HAMIL(IND2)%IT+HAMIL(IND1)%IT)**2).NE.0) CYCLE
+          IF(TCHK) THEN
+            CALL ERROR$MSG('ERROR 1')
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+          TCHK=.TRUE.
+          SVAR=0.D0
+          DO J=1,HAMIL(IND1)%N3
+            SVAR=SVAR+SUM((HAMIL(IND2)%MAT(:,:,J) &
+     &          -TRANSPOSE(HAMIL(IND1)%MAT(:,:,J)))**2)
+          ENDDO
+          IF(SVAR.GT.1.D-10) THEN
+            CALL RSPACEOP$WRITEMAT(6,'HAMIL',NND,HAMIL)
+            CALL ERROR$MSG('ERROR 2')
+            CALL ERROR$I4VAL('IND1',IND1)
+            CALL ERROR$I4VAL('IND2',IND2)
+            CALL ERROR$I4VAL('IND1-IAT1',HAMIL(IND1)%IAT1)
+            CALL ERROR$I4VAL('IND1-IAT2',HAMIL(IND1)%IAT2)
+            CALL ERROR$I4VAL('IND1-IT',HAMIL(IND1)%IT)
+            CALL ERROR$I4VAL('IND2-IAT1',HAMIL(IND2)%IAT1)
+            CALL ERROR$I4VAL('IND2-IAT2',HAMIL(IND2)%IAT2)
+            CALL ERROR$I4VAL('IND2-IT',HAMIL(IND2)%IT)
+            CALL ERROR$R8VAL('DEV',SVAR)
+            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+          END IF
+        ENDDO
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('ERROR 3')
+          CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+        END IF
+      ENDDO
+!
       RETURN
       END
 !
@@ -2148,14 +2280,14 @@ END IF
       REAL(8)             ,INTENT(OUT)  :: ETOT
       REAL(8)             ,INTENT(OUT)  :: STRESS(3,3)
       REAL(8)             ,INTENT(OUT)  :: FORCE(3,NAT)
-      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HAMIL(NND)   !intent(out)
-      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HONSITE(NAT) !intent(out)
+      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HAMIL(NND)   !INTENT(OUT)
+      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HONSITE(NAT) !INTENT(OUT)
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: IND
       INTEGER(4)            :: LNX
       INTEGER(4),ALLOCATABLE:: LOX(:)
       INTEGER(4)            :: LMNX
-      INTEGER(4)            :: LMNXphi
+      INTEGER(4)            :: LMNXPHI
       INTEGER(4)            :: NDIMD
       INTEGER(4)            :: N1,N2,N3
       INTEGER(4)            :: LMRX,LRX
@@ -2164,9 +2296,9 @@ END IF
       REAL(8)   ,ALLOCATABLE:: AECORE(:)
       REAL(8)   ,ALLOCATABLE:: U(:,:,:,:)
       REAL(8)   ,ALLOCATABLE:: D(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: Don(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: DON(:,:,:)
       REAL(8)   ,ALLOCATABLE:: H(:,:,:)
-      REAL(8)   ,ALLOCATABLE:: Hon(:,:,:)
+      REAL(8)   ,ALLOCATABLE:: HON(:,:,:)
       REAL(8)               :: EH,EX,Q,EAT
       INTEGER(4)            :: NN,IAT,I,J,K,L,IS,IAT1,IAT2,ISP
       INTEGER(4)            :: LMN,LN,IM
@@ -2273,7 +2405,7 @@ END IF
         EAT=0.D0
         QSPIN=0.D0
         H(:,:,:)=0.D0
-        Hon(:,:,:)=0.D0
+        HON(:,:,:)=0.D0
         DO I=1,LMNX
           DO J=1,LMNX
             QSPIN(:NDIMD)=QSPIN(:NDIMD) &
@@ -2313,13 +2445,13 @@ END IF
 !       == ADD CORE-VALENCE EXCHANGE                                          ==
 !       ========================================================================
         IF(HYBRIDSETTING(ISP)%TCV) THEN
-          CALL SIMPLELMTO_CVX_ACTONPHI_NEW(IAT,LMNXPHI,NDIMD,DON,EX,HON)
+          CALL SIMPLELMTO_CVX_ACTONPHI(IAT,LMNXPHI,NDIMD,DON,EX,HON)
           HONSITE(IAT)%MAT=HONSITE(IAT)%MAT+HON*HFSCALE
           ETOT=ETOT+EX*HFSCALE
           EAT=EAT+EX
           IF(TPR)PRINT*,'CORE-VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
           EX=0.D0
-          hon=0.D0
+          HON=0.D0
         END IF
 !
 !       ========================================================================
@@ -2440,24 +2572,24 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_CVX_ACTONPHI_new(IAT,lmnx,ndimd,denmat,ETOT,dh)
+      SUBROUTINE SIMPLELMTO_CVX_ACTONPHI(IAT,LMNX,NDIMD,DENMAT,ETOT,DH)
 !     **************************************************************************
 !     **  CORE VALENCE EXCHANGE ENERGY ACTING ON PARTIAL WAVES                **
 !     *****************************PETER BLOECHL, GOSLAR 2011-2019**************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: IAT          ! ATOM INDEX
-      INTEGER(4),intent(in)  :: LMNX
-      INTEGER(4),intent(in)  :: ndimd
+      INTEGER(4),INTENT(IN)  :: LMNX
+      INTEGER(4),INTENT(IN)  :: NDIMD
       REAL(8)   ,INTENT(OUT) :: ETOT              ! CORE-VALENCE ENERGY
-      real(8)   ,intent(in)  :: DENMAT(LMNX,LMNX,NDIMD)
-      real(8)   ,intent(out) :: Dh(LMNX,LMNX,NDIMD)
+      REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX,NDIMD)
+      REAL(8)   ,INTENT(OUT) :: DH(LMNX,LMNX,NDIMD)
       INTEGER(4)             :: ISP
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: CVXMAT(:,:)
       INTEGER(4)             :: LN1,LN2,L1,L2,LMN1,LMN2,IM
 !     **************************************************************************
-                              CALL TRACE$PUSH('LMTO_CVX_ACTONPHI_new')
+                              CALL TRACE$PUSH('LMTO_CVX_ACTONPHI')
 !
 !     ==========================================================================
 !     == COLLECT DATA                                                         ==
@@ -2472,7 +2604,7 @@ END IF
       CALL SETUP$UNSELECT()
       IF(LMNX.NE.SUM(2*LOX+1)) THEN
         CALL ERROR$MSG('INCONSISTENT INPUT VALUE LMNX')
-        CALL ERROR$STOP('SIMPLELMTO_CVX_ACTONPHI_NEW')
+        CALL ERROR$STOP('SIMPLELMTO_CVX_ACTONPHI')
       END IF
 !
 !     ==========================================================================
@@ -3236,7 +3368,7 @@ VCUT=0.D0
       IMPLICIT NONE
       REAL(8)   ,PARAMETER :: TOLERANCE=1.D-3
       INTEGER(4),PARAMETER :: NDIS=5  !#(DISTANCE GRID POINTS)
-      REAL(8)   ,PARAMETER :: DSMN=0.5D0,DSMX=3.D0 !PARMS FOR DISTANCE GRID
+      REAL(8)   ,PARAMETER :: DSMN=0.5D0,DSMX=5.D0 !PARMS FOR DISTANCE GRID
       INTEGER(4),PARAMETER :: NF=3    !#(FIT FUNCTIONS)
 !OLD  REAL(8)   ,PARAMETER :: DCAYMN=0.8D0,DCAYMX=2.D0 !PARMS FOR FIT FUNCTIONS
       REAL(8)   ,PARAMETER :: DCAYMN=0.8D0,DCAYMX=2.D0 !PARMS FOR FIT FUNCTIONS
@@ -3675,8 +3807,7 @@ REAL(8)::SVAR
                                          ,LR2,MABS,GID2,NR2,RHO34 &
        &                                 ,DIS,TOL,INTEGRAL)
 !                     == SUBTRACT OUT LONG RANGE PART TO ALLOW INTERPOLATION ===
-!                     == WILL BE ADDED AGAIN SUBTRACT OUT LONG RANGE PART ======
-!                     == TO ALLOW INTERPOLATION =======
+!                     == WILL BE ADDED AGAIN ===================================
                       IF(LR1.LE.1.AND.LR2.LE.1) THEN
                         SVAR=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
      &                      *POTPAR(ISP2)%QLN(LR2+1,LN3,LN4)
@@ -5124,14 +5255,15 @@ PRINT*,'X31 EVAL D: ',G(:NF)
       REAL(8)             ,INTENT(OUT)  :: FORCE(3,NAT)
       TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: HAMIL(NND)
       LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
-      LOGICAL(4)          ,PARAMETER    :: TOV=.TRUE.
+      LOGICAL(4)          ,PARAMETER    :: TOV=.FALSE.
+      INTEGER(4)             :: INDM(NND)
       REAL(8)                :: RBASINV(3,3) ! 1/RBAS
       REAL(8)                :: DEDRBAS(3,3)
       INTEGER(4)             :: ISP
       INTEGER(4)             :: LNX
       INTEGER(4)             :: LMNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
-      INTEGER(4)             :: NN,NNA,NNB
+      INTEGER(4)             :: NN,NNA,NNB,NN2
       INTEGER(4)             :: ISPA,ISPB
       INTEGER(4)             :: LMN1A,LMN2A,LMN1B,LMN2B,LMN3A,LMN3B
       INTEGER(4)             :: LMNXA,LMNXB
@@ -5157,12 +5289,14 @@ PRINT*,'X31 EVAL D: ',G(:NF)
       REAL(8)   ,ALLOCATABLE :: DU3B1A(:,:,:,:)
       REAL(8)   ,ALLOCATABLE :: BONDU(:,:,:,:)
       REAL(8)   ,ALLOCATABLE :: DBONDU(:,:,:,:)
-      REAL(8)   ,ALLOCATABLE :: D(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: DA(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: DB(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: H(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: HA(:,:,:)
-      REAL(8)   ,ALLOCATABLE :: HB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DAB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DBA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DAA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: DBB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HAB(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HBA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HAA(:,:,:)
+      REAL(8)   ,ALLOCATABLE :: HBB(:,:,:)
       REAL(8)   ,ALLOCATABLE :: OV(:,:)
       REAL(8)   ,ALLOCATABLE :: DOV(:,:)
       REAL(8)                :: DEDD
@@ -5197,6 +5331,28 @@ PRINT*,'============ OFFSITEXEVAL ============================='
           CALL ERROR$MSG('NO ONSITE TERMS FOUND FOR ATOM')
           CALL ERROR$I4VAL('IAT',IAT)
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEX')
+        END IF
+      ENDDO
+!
+!     ==========================================================================
+!     == FIND THE NEIGHBORLIST PAIRS WITH REVERSED INDICES                    ==
+!     ==========================================================================
+      INDM(:)=0
+      DO NN=1,NND
+        IATA=DENMAT(NN)%IAT1
+        IATB=DENMAT(NN)%IAT2
+        IF(INDM(NN).NE.0) CYCLE
+        DO NN2=NN,NND
+          IF(DENMAT(NN2)%IAT2.NE.IATA) CYCLE
+          IF(DENMAT(NN2)%IAT1.NE.IATB) CYCLE
+          IF(SUM((DENMAT(NN)%IT+DENMAT(NN2)%IT)**2).NE.0) CYCLE
+          INDM(NN)=NN2          
+          INDM(NN2)=NN          
+          EXIT
+        ENDDO
+        IF(INDM(NN).EQ.0) THEN
+          CALL ERROR$MSG('ERROR LOCATING INVERSE PAIR')
+          CALL ERROR$STOP('SIMPLELMTO_OFFSITEXEVAL')
         END IF
       ENDDO
 !
@@ -5253,12 +5409,14 @@ CALL TIMING$CLOCKON('OFFX:BLOWUP')
           CALL ERROR$MSG('LMNX NOT EQUAL LMNXT') 
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXEVAL')
         END IF
-        ALLOCATE(D(LMNXA,LMNXB,NDIMD))
-        ALLOCATE(DA(LMNXA,LMNXA,NDIMD))
-        ALLOCATE(DB(LMNXB,LMNXB,NDIMD))
-        D(:,:,:) =DENMAT(NN )%MAT(:,:,:)
-        DA(:,:,:)=DENMAT(NNA)%MAT(:,:,:)
-        DB(:,:,:)=DENMAT(NNB)%MAT(:,:,:)
+        ALLOCATE(DAB(LMNXA,LMNXB,NDIMD))
+        ALLOCATE(DBA(LMNXB,LMNXA,NDIMD))
+        ALLOCATE(DAA(LMNXA,LMNXA,NDIMD))
+        ALLOCATE(DBB(LMNXB,LMNXB,NDIMD))
+        DAB(:,:,:) =DENMAT(NN )%MAT(:,:,:)
+        DBA(:,:,:) =DENMAT(INDM(NN))%MAT(:,:,:)
+        DAA(:,:,:)=DENMAT(NNA)%MAT(:,:,:)
+        DBB(:,:,:)=DENMAT(NNB)%MAT(:,:,:)
 CALL TIMING$CLOCKOFF('OFFX:BLOWUP')
  !
 !       ========================================================================
@@ -5317,21 +5475,24 @@ CALL TIMING$CLOCKON('OFFX:ROTATE1')
 !       == ROTATE DENSITY MATRIX ===============================================
         !SUGGESTION: SPEED UP BY EXPLOITING THAT UROT IS SPARSE
         DO I=1,NDIMD
-          DA(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DA(:,:,I),UROTA))
-          D(:,:,I) =MATMUL(TRANSPOSE(UROTA),MATMUL(D(:,:,I) ,UROTB))
-          DB(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DB(:,:,I),UROTB))
+          DAA(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DAA(:,:,I),UROTA))
+          DAB(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DAB(:,:,I),UROTB))
+          DBA(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DBA(:,:,I),UROTA))
+          DBB(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DBB(:,:,I),UROTB))
         ENDDO
 CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
 !
 !       ========================================================================
 !       == ADD UP EXCHANGE ENERGY                                             ==
 !       ========================================================================
-        ALLOCATE(H (LMNXA,LMNXB,NDIMD))
-        ALLOCATE(HA(LMNXA,LMNXA,NDIMD))
-        ALLOCATE(HB(LMNXB,LMNXB,NDIMD))
-        H=0.D0
-        HA=0.D0
-        HB=0.D0
+        ALLOCATE(HAA(LMNXA,LMNXA,NDIMD))
+        ALLOCATE(HAB(LMNXA,LMNXB,NDIMD))
+        ALLOCATE(HBA(LMNXB,LMNXA,NDIMD))
+        ALLOCATE(HBB(LMNXB,LMNXB,NDIMD))
+        HAA=0.D0
+        HAB=0.D0
+        HBA=0.D0
+        HBB=0.D0
         DEDD=0.D0  ! ENERGY DERIVATIVE WITH RESPECT TO DISTANCE
 !
 !       ========================================================================
@@ -5363,14 +5524,21 @@ CALL TIMING$CLOCKON('OFFX:NDDO')
             DO LMN2B=1,LMNXB
               DO LMN2A=1,LMNXA
                 DO LMN1A=1,LMNXA
+!                 ==  W(LMN1A,LMN1B,LMN2A,LMN2B)
                   SVAR =-0.25D0* U22(LMN1A,LMN2A,LMN2B,LMN1B)
                   DSVAR=-0.25D0*DU22(LMN1A,LMN2A,LMN2B,LMN1B)
-                  SVAR2=SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
-                  EX  =EX  + SVAR*SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
+                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN1B,:)*DBA(LMN2B,LMN2A,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN1B,:)*DBA(LMN2B,LMN2A,:))
+                  HAB(LMN1A,LMN1B,:)=HAB(LMN1A,LMN1B,:)+SVAR*DBA(LMN2B,LMN2A,:)
+                  HBA(LMN2B,LMN2A,:)=HBA(LMN2B,LMN2A,:)+SVAR*DAB(LMN1A,LMN1B,:)
+
+!!$                  SVAR2=SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
 !!$PRINT*,'--NN--',DIS,SVAR,DSVAR,SVAR2,EX,DEDD,NN,IATA,IATB
-                  H(LMN1A,LMN1B,:)=H(LMN1A,LMN1B,:)+SVAR*D(LMN2A,LMN2B,:)
-                  H(LMN2A,LMN2B,:)=H(LMN2A,LMN2B,:)+SVAR*D(LMN1A,LMN1B,:)
+!!$                  SVAR2=SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
+!!$                  EX  =EX  + SVAR*SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
+!!$                  DEDD=DEDD+DSVAR*SUM(D(LMN1A,LMN1B,:)*D(LMN2A,LMN2B,:))
+!!$                  H(LMN1A,LMN1B,:)=H(LMN1A,LMN1B,:)+SVAR*D(LMN2A,LMN2B,:)
+!!$                  H(LMN2A,LMN2B,:)=H(LMN2A,LMN2B,:)+SVAR*D(LMN1A,LMN1B,:)
                 ENDDO
               ENDDO
             ENDDO
@@ -5393,25 +5561,25 @@ CALL TIMING$CLOCKON('OFFX:31')
           CALL SIMPLELMTO_OFFSITEX31U(ISPA,ISPB, DIS,LMNXA,LMNXB,U3A1B,DU3A1B)
 PRINT*,'X31REPORT A:',IATA,IATB,DIS,LMNXA,LMNXB
 PRINT*,'X31REPORT A U=',U3A1B,DU3A1B
-PRINT*,'X31REPORT A D =',D
-PRINT*,'X31REPORT A DA=',DA
-PRINT*,'X31REPORT A DB=',DB
+PRINT*,'X31REPORT A DAB =',DAB
+PRINT*,'X31REPORT A DAA=',DAA
+PRINT*,'X31REPORT A DBB=',DBB
          DO LMN1B=1,LMNXB
             DO LMN3A=1,LMNXA 
               DO LMN2A=1,LMNXA
                 DO LMN1A=1,LMNXA
                   SVAR =-0.25D0* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
                   DSVAR=-0.25D0*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
-                  EX  =EX   +SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN1A,LMN3A,:))
-PRINT*,'(1)',SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN1A,LMN3A,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN1A,LMN3A,:))
-                  HA(LMN1A,LMN3A,:)=HA(LMN1A,LMN3A,:)+SVAR*D(LMN2A,LMN1B,:)
-                  H(LMN2A,LMN1B,:) =H(LMN2A,LMN1B,:) +SVAR*DA(LMN1A,LMN3A,:)
-                  EX  =EX   +SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN3A,LMN1A,:))
-PRINT*,'(2)',SVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN3A,LMN1A,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN2A,LMN1B,:)*DA(LMN3A,LMN1A,:))
-                  HA(LMN3A,LMN1A,:)=HA(LMN3A,LMN1A,:)+SVAR*D(LMN2A,LMN1B,:)
-                  H(LMN2A,LMN1B,:) =H(LMN2A,LMN1B,:) +SVAR*DA(LMN3A,LMN1A,:)
+                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+PRINT*,'(1)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+                  HAA(LMN1A,LMN3A,:)=HAA(LMN1A,LMN3A,:)+SVAR*DAB(LMN2A,LMN1B,:)
+                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN1A,LMN3A,:)
+                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+PRINT*,'(2)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+                  HAA(LMN3A,LMN1A,:)=HAA(LMN3A,LMN1A,:)+SVAR*DAB(LMN2A,LMN1B,:)
+                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN3A,LMN1A,:)
                 ENDDO
               ENDDO
             ENDDO
@@ -5428,16 +5596,16 @@ PRINT*,'X31REPORT B:',-DIS,LMNXB,LMNXA,U3B1A,DU3B1A
                 DO LMN1B=1,LMNXB
                   SVAR =-0.25D0* U3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
                   DSVAR=-0.25D0*DU3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
-                  EX=EX+SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN1B,LMN3B,:))
-PRINT*,'(3)',SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN1B,LMN3B,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN1B,LMN3B,:))
-                  HB(LMN1B,LMN3B,:)=HB(LMN1B,LMN3B,:)+SVAR*D(LMN1A,LMN2B,:)
-                  H(LMN1A,LMN2B,:) =H(LMN1A,LMN2B,:) +SVAR*DB(LMN1B,LMN3B,:)
-                  EX  =EX  + SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN3B,LMN1B,:))
-PRINT*,'(4)',SVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN3B,LMN1B,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN1A,LMN2B,:)*DB(LMN3B,LMN1B,:))
-                  HB(LMN3B,LMN1B,:)=HB(LMN3B,LMN1B,:)+SVAR*D(LMN1A,LMN2B,:)
-                  H(LMN1A,LMN2B,:) =H(LMN1A,LMN2B,:) +SVAR*DB(LMN3B,LMN1B,:)
+                  EX=EX+SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+PRINT*,'(3)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+                  HBB(LMN1B,LMN3B,:)=HBB(LMN1B,LMN3B,:)+SVAR*DAB(LMN1A,LMN2B,:)
+                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN1B,LMN3B,:)
+                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+PRINT*,'(4)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+                  HBB(LMN3B,LMN1B,:)=HBB(LMN3B,LMN1B,:)+SVAR*DAB(LMN1A,LMN2B,:)
+                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN3B,LMN1B,:)
                 ENDDO
               ENDDO
             ENDDO
@@ -5465,16 +5633,16 @@ CALL TIMING$CLOCKON('OFFX:BONDX')
                 DO LMN1A=1,LMNXA
                   SVAR =-0.25D0* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                   DSVAR=-0.25D0*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
-                  EX  =EX  + SVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:))
-                  DEDD=DEDD+DSVAR*SUM(DA(LMN1A,LMN2A,:)*DB(LMN1B,LMN2B,:)) 
-                  HA(LMN1A,LMN2A,:)=HA(LMN1A,LMN2A,:)+SVAR*DB(LMN1B,LMN2B,:)
-                  HB(LMN1B,LMN2B,:)=HB(LMN1B,LMN2B,:)+SVAR*DA(LMN1A,LMN2A,:)
+                  EX  =EX  + SVAR*SUM(DAA(LMN1A,LMN2A,:)*DBB(LMN1B,LMN2B,:))
+                  DEDD=DEDD+DSVAR*SUM(DAA(LMN1A,LMN2A,:)*DBB(LMN1B,LMN2B,:)) 
+                  HAA(LMN1A,LMN2A,:)=HAA(LMN1A,LMN2A,:)+SVAR*DBB(LMN1B,LMN2B,:)
+                  HBB(LMN1B,LMN2B,:)=HBB(LMN1B,LMN2B,:)+SVAR*DAA(LMN1A,LMN2A,:)
                   SVAR =-0.25D0* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                   DSVAR=-0.25D0*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
-                  EX  =EX  + SVAR*SUM(D(LMN1A,LMN2B,:)*D(LMN2A,LMN1B,:))
-                  DEDD=DEDD+DSVAR*SUM(D(LMN1A,LMN2B,:)*D(LMN2A,LMN1B,:))
-                  H(LMN1A,LMN2B,:)=H(LMN1A,LMN2B,:)+SVAR*D(LMN2A,LMN1B,:)
-                  H(LMN2A,LMN1B,:)=H(LMN2A,LMN1B,:)+SVAR*D(LMN1A,LMN2B,:)
+                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DAB(LMN2A,LMN1B,:))
+                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DAB(LMN2A,LMN1B,:))
+                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DAB(LMN2A,LMN1B,:)
+                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAB(LMN1A,LMN2B,:)
                 ENDDO
               ENDDO
             ENDDO
@@ -5497,9 +5665,10 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
 !       == ROTATE HAMILTONIAN BACK                                            ==
 !       ========================================================================
         DO I=1,NDIMD
-          HA(:,:,I)=MATMUL(UROTA,MATMUL(HA(:,:,I),TRANSPOSE(UROTA)))
-          H(:,:,I) =MATMUL(UROTA,MATMUL(H(:,:,I) ,TRANSPOSE(UROTB)))
-          HB(:,:,I)=MATMUL(UROTB,MATMUL(HB(:,:,I),TRANSPOSE(UROTB)))
+          HAA(:,:,I)=MATMUL(UROTA,MATMUL(HAA(:,:,I),TRANSPOSE(UROTA)))
+          HAB(:,:,I)=MATMUL(UROTA,MATMUL(HAB(:,:,I),TRANSPOSE(UROTB)))
+          HBA(:,:,I)=MATMUL(UROTB,MATMUL(HBA(:,:,I),TRANSPOSE(UROTA)))
+          HBB(:,:,I)=MATMUL(UROTB,MATMUL(HBB(:,:,I),TRANSPOSE(UROTB)))
         ENDDO
         DEALLOCATE(UROTA)
         DEALLOCATE(UROTB)
@@ -5507,15 +5676,18 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
 !       ========================================================================
 !       == MAP HAMILTONIAN BACK                                               ==
 !       ========================================================================
-        HAMIL(NN )%MAT(:,:,:)=HAMIL(NN )%MAT(:,:,:)+H(:,:,:)
-        HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+HA(:,:,:)
-        HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+HB(:,:,:)
-        DEALLOCATE(D)
-        DEALLOCATE(H)
-        DEALLOCATE(DA)
-        DEALLOCATE(HA)
-        DEALLOCATE(DB)
-        DEALLOCATE(HB)
+        HAMIL(NN )%MAT(:,:,:)=HAMIL(NN )%MAT(:,:,:)+HAB(:,:,:)
+        HAMIL(INDM(NN))%MAT(:,:,:)=HAMIL(INDM(NN))%MAT(:,:,:)+HBA(:,:,:)
+        HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+HAA(:,:,:)
+        HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+HBB(:,:,:)
+        DEALLOCATE(DAB)
+        DEALLOCATE(DBA)
+        DEALLOCATE(HAB)
+        DEALLOCATE(HBA)
+        DEALLOCATE(DAA)
+        DEALLOCATE(HAA)
+        DEALLOCATE(DBB)
+        DEALLOCATE(HBB)
 !!$WRITE(*,*)XDELTA*REAL(IX,8),EX,HAMIL(NN)%MAT(IND1,IND2,IND3)
 !!$IF(IX.EQ.3) STOP 'FORCED'
 !!$GOTO 1000
