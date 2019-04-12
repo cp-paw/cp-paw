@@ -103,10 +103,6 @@ LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
 !REAL(8)               :: K2=0.D0    ! 0.5*K2 IS THE KINETIC ENERGY
-REAL(8)               :: RCSCALE=2.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
-! RCSCALE=5. IS GOOD FOR THE HUBBARD MODEL WITH LATTICE CONSTANT=3\AA
-!REAL(8)               :: RCSCALE=5.D0  !RADIUS SCALE FACTOR FOR NEIGHBORLIST
-!         RCSCALE TIMES THE SUM OF COVALENT RADII DEFINES CUTOFF FOR NEIGBORLIST
 REAL(8)               :: HFWEIGHT=0.25D0
 REAL(8)               :: SCREENL=-1.D0  !SCREENING LENGTH
 !
@@ -381,8 +377,7 @@ END MODULE SIMPLELMTO_MODULE
      &                             ,HYBRIDSETTING &
      &                             ,HFWEIGHT &
      &                             ,K2 &
-     &                             ,SCREENL &
-     &                             ,RCSCALE
+     &                             ,SCREENL 
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
@@ -408,9 +403,6 @@ END MODULE SIMPLELMTO_MODULE
           CALL ERROR$STOP('SIMPLELMTO$SETR8')
         END IF
         HYBRIDSETTING(ISPSELECTOR)%RAUG=VAL
-!
-      ELSE IF(ID.EQ.'SCALERCUT') THEN
-        RCSCALE=VAL
 !
       ELSE IF(ID.EQ.'HFWEIGHT') THEN
         HFWEIGHT=VAL
@@ -648,19 +640,24 @@ END MODULE SIMPLELMTO_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : TON,NSP,HYBRIDSETTING,RCSCALE,HFWEIGHT,K2 &
-     &                       ,TOFFSITE
+      USE SIMPLELMTO_MODULE, ONLY : TON &
+     &                             ,NSP &
+     &                             ,HYBRIDSETTING &
+     &                             ,HFWEIGHT &
+     &                             ,K2 &
+     &                             ,TOFFSITE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NFIL
-      INTEGER(4)            :: THISTASK,NTASKS
-      CHARACTER(32)         :: ID
-      INTEGER(4)            :: ISP,I
-      LOGICAL(4)            :: TCHK
-      INTEGER(4)            :: LNX1
+      INTEGER(4),INTENT(IN)  :: NFIL
+      INTEGER(4)             :: THISTASK,NTASKS
+      CHARACTER(32)          :: ID
+      INTEGER(4)             :: ISP,I
+      LOGICAL(4)             :: TCHK
+      INTEGER(4)             :: LNX1
       INTEGER(4),ALLOCATABLE :: LOX1(:)
       REAL(8)                :: AEZ,RCOV
       REAL(8)                :: LHFWEIGHT
+      REAL(8)                :: SCALERCUT
 !     **************************************************************************
       IF(.NOT.TON) RETURN
       CALL SIMPLELMTO$INITIALIZE()
@@ -668,7 +665,8 @@ END MODULE SIMPLELMTO_MODULE
       IF(THISTASK.NE.1) RETURN
       CALL REPORT$TITLE(NFIL,'SIMPLELMTO OBJECT:  GENERIC VARIABLES')
       CALL REPORT$R8VAL(NFIL,'OFFSITE EXCHANGE ADMIXTURE ',HFWEIGHT,' ')
-      CALL REPORT$R8VAL(NFIL,'RANGESCALE ',RCSCALE,'*(RCOV(A)+RCOV(B))')
+      CALL WAVES$GETR8('SCALERCUT',SCALERCUT)
+      CALL REPORT$R8VAL(NFIL,'RANGESCALE ',SCALERCUT,'*(RCOV(A)+RCOV(B))')
       CALL REPORT$R8VAL(NFIL,'K2 ',K2,'A.U.')
       IF(TOFFSITE) THEN
         CALL REPORT$CHVAL(NFIL,'OFFSITE MATRIX ELEMENTS ARE','INCLUDED')
@@ -1760,7 +1758,7 @@ WRITE(*,*)ISP,'AMATINV',AMATINV
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
       LOGICAL(4)          ,PARAMETER   :: TPR=.FALSE.
-      LOGICAL(4)          ,PARAMETER   :: TTEST=.FALSE.
+      LOGICAL(4)          ,PARAMETER   :: TTEST=.false.
       LOGICAL(4)          ,PARAMETER   :: TTESTA=.FALSE.
       INTEGER(4)                       :: NAT
       INTEGER(4)                       :: NND
@@ -1879,9 +1877,6 @@ IF(TTEST.AND.(.NOT.TTESTA)) THEN
   CALL SIMPLELMTO_FAKEETOT(NND,DENMAT,ETOT,HAMIL)
   FORCE=0.D0
   STRESS=0.D0
-  DO IAT=1,NAT
-    HONSITE(IAT)%MAT=0.D0
-  ENDDO
 END IF
 !
 !     ==========================================================================
@@ -2026,43 +2021,43 @@ END IF
 !     ==========================================================================
 !     == MAKE HAMILTONIAN  HERMITEAN
 !     ==========================================================================
-      DO IND1=1,NND
-        TCHK=.FALSE.
-        DO IND2=1,NND
-          IF(HAMIL(IND2)%IAT2.NE.HAMIL(IND1)%IAT1) CYCLE
-          IF(HAMIL(IND2)%IAT1.NE.HAMIL(IND1)%IAT2) CYCLE
-          IF(SUM((HAMIL(IND2)%IT+HAMIL(IND1)%IT)**2).NE.0) CYCLE
-          IF(TCHK) THEN
-            CALL ERROR$MSG('ERROR 1')
-            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
-          END IF
-          TCHK=.TRUE.
-          SVAR=0.D0
-          DO J=1,HAMIL(IND1)%N3
-            HAMIL(IND2)%MAT(:,:,J)=0.5D0*(HAMIL(IND2)%MAT(:,:,J) &
-     &                         +TRANSPOSE(HAMIL(IND1)%MAT(:,:,J)))
-            HAMIL(IND1)%MAT(:,:,J)=TRANSPOSE(HAMIL(IND2)%MAT(:,:,J))
-          ENDDO
-          IF(SVAR.GT.1.D-10) THEN
-            CALL RSPACEOP$WRITEMAT(6,'HAMIL',NND,HAMIL)
-            CALL ERROR$MSG('ERROR 2')
-            CALL ERROR$I4VAL('IND1',IND1)
-            CALL ERROR$I4VAL('IND2',IND2)
-            CALL ERROR$I4VAL('IND1-IAT1',HAMIL(IND1)%IAT1)
-            CALL ERROR$I4VAL('IND1-IAT2',HAMIL(IND1)%IAT2)
-            CALL ERROR$I4VAL('IND1-IT',HAMIL(IND1)%IT)
-            CALL ERROR$I4VAL('IND2-IAT1',HAMIL(IND2)%IAT1)
-            CALL ERROR$I4VAL('IND2-IAT2',HAMIL(IND2)%IAT2)
-            CALL ERROR$I4VAL('IND2-IT',HAMIL(IND2)%IT)
-            CALL ERROR$R8VAL('DEV',SVAR)
-            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
-          END IF
-        ENDDO
-        IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('ERROR 3')
-          CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
-        END IF
-      ENDDO
+!!$      DO IND1=1,NND
+!!$        TCHK=.FALSE.
+!!$        DO IND2=1,NND
+!!$          IF(HAMIL(IND2)%IAT2.NE.HAMIL(IND1)%IAT1) CYCLE
+!!$          IF(HAMIL(IND2)%IAT1.NE.HAMIL(IND1)%IAT2) CYCLE
+!!$          IF(SUM((HAMIL(IND2)%IT+HAMIL(IND1)%IT)**2).NE.0) CYCLE
+!!$          IF(TCHK) THEN
+!!$            CALL ERROR$MSG('ERROR 1')
+!!$            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+!!$          END IF
+!!$          TCHK=.TRUE.
+!!$          SVAR=0.D0
+!!$          DO J=1,HAMIL(IND1)%N3
+!!$            HAMIL(IND2)%MAT(:,:,J)=0.5D0*(HAMIL(IND2)%MAT(:,:,J) &
+!!$     &                         +TRANSPOSE(HAMIL(IND1)%MAT(:,:,J)))
+!!$            HAMIL(IND1)%MAT(:,:,J)=TRANSPOSE(HAMIL(IND2)%MAT(:,:,J))
+!!$          ENDDO
+!!$          IF(SVAR.GT.1.D-10) THEN
+!!$            CALL RSPACEOP$WRITEMAT(6,'HAMIL',NND,HAMIL)
+!!$            CALL ERROR$MSG('ERROR 2')
+!!$            CALL ERROR$I4VAL('IND1',IND1)
+!!$            CALL ERROR$I4VAL('IND2',IND2)
+!!$            CALL ERROR$I4VAL('IND1-IAT1',HAMIL(IND1)%IAT1)
+!!$            CALL ERROR$I4VAL('IND1-IAT2',HAMIL(IND1)%IAT2)
+!!$            CALL ERROR$I4VAL('IND1-IT',HAMIL(IND1)%IT)
+!!$            CALL ERROR$I4VAL('IND2-IAT1',HAMIL(IND2)%IAT1)
+!!$            CALL ERROR$I4VAL('IND2-IAT2',HAMIL(IND2)%IAT2)
+!!$            CALL ERROR$I4VAL('IND2-IT',HAMIL(IND2)%IT)
+!!$            CALL ERROR$R8VAL('DEV',SVAR)
+!!$            CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+!!$          END IF
+!!$        ENDDO
+!!$        IF(.NOT.TCHK) THEN
+!!$          CALL ERROR$MSG('ERROR 3')
+!!$          CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
+!!$        END IF
+!!$      ENDDO
 !
 !     ==========================================================================
 !     == CHECK WHETHER HAMILTONIAN IS HERMITEAN
@@ -3648,6 +3643,13 @@ REAL(8)::SVAR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SIMPLELMTO_OFFSITEX22SETUP(ISP1,ISP2,NR1,NR2,TOLERANCE)
 !     **************************************************************************
+!     ** NDDO(NEGELECT OF DIFFERENTIAL OVERLAP) CONTRIBUTION TO THE EXCHANGE  **
+!     ** THE COULOMB MATRIX ELEMENTS CONSIDERS ONE PAIR OF ORBITALS           **
+!     ** ON ONE SITE R, WHICH FORM A DENSITY THAT INTERACTS WITH THE DENSITY  **
+!     ** OF A SECOND PAIR OF ORBITALS ON A SECOND CENTER RPRIME               **
+!     **                                                                      **
+!     ** REMARK: THE LONG RANGE TERM FROM MONOPOLE AND DIPOLE DENSITIES IS    **
+!     **  SUBTRACTED OUT AND WILL BE ADDED IN AFTER INTERPOLATION             **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : POTPAR &
      &                             ,OFFSITEX &
@@ -3806,15 +3808,23 @@ REAL(8)::SVAR
                       CALL SIMPLELMTO_TWOCENTER(LR1,MABS,GID1,NR1,POT12 &
                                          ,LR2,MABS,GID2,NR2,RHO34 &
        &                                 ,DIS,TOL,INTEGRAL)
+!                     ==========================================================
 !                     == SUBTRACT OUT LONG RANGE PART TO ALLOW INTERPOLATION ===
 !                     == WILL BE ADDED AGAIN ===================================
                       IF(LR1.LE.1.AND.LR2.LE.1) THEN
                         SVAR=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
      &                      *POTPAR(ISP2)%QLN(LR2+1,LN3,LN4)
-                        SVAR=SVAR/DIS**(LR1+LR2+1)
-                        INTEGRAL =INTEGRAL -SVAR
-                        SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
-                        DINTEGRAL=DINTEGRAL-SVAR
+                        IF(SCREENL.LT.0.D0) THEN
+                          SVAR=SVAR/DIS**(LR1+LR2+1)
+                          INTEGRAL =INTEGRAL -SVAR
+                          SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
+                          DINTEGRAL=DINTEGRAL-SVAR
+                        ELSE
+                          SVAR=SVAR/DIS**(LR1+LR2+1)*EXP(-DIS/SCREENL)
+                          INTEGRAL =INTEGRAL -SVAR
+                          SVAR=(-REAL(LR1+LR2+1)/DIS-1.D0/SCREENL)*SVAR
+                          DINTEGRAL=DINTEGRAL-SVAR
+                        END IF
                       END IF
                       OFFSITEX(ISP1,ISP2)%X22(IDIS,IND)=INTEGRAL
                     ENDDO
@@ -4354,7 +4364,8 @@ PRINT*,'X(LAMBDA)  ',X
 !     ** U-TENSOR FOR TWO ATOMS                                               **
 !     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : POTPAR
+      USE SIMPLELMTO_MODULE, ONLY : POTPAR &
+     &                             ,SCREENL
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
@@ -4432,13 +4443,23 @@ PRINT*,'X(LAMBDA)  ',X
 !                   == EVALUATE MATRIX ELEMENT FOR THE DISTANCE HERE...
                     CALL SIMPLELMTO_OFFSITEXVALUE('22',ISP1,ISP2,IND,DIS &
      &                                          ,INTEGRAL,DINTEGRAL)
+!                   ============================================================
+!                   == ADD IN LONG RANGE PART FROM MONO- AND DIPOLES          ==
+!                   ============================================================
                     IF(LR1.LE.1.AND.LR2.LE.1) THEN
                       SVAR=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
      &                    *POTPAR(ISP2)%QLN(LR2+1,LN3,LN4)
-                      SVAR=SVAR/DIS**(LR1+LR2+1)
-                      INTEGRAL =INTEGRAL +SVAR
-                      SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
-                      DINTEGRAL=DINTEGRAL+SVAR
+                      IF(SCREENL.LT.0.D0) THEN
+                        SVAR=SVAR/DIS**(LR1+LR2+1)
+                        INTEGRAL =INTEGRAL +SVAR
+                        SVAR=-REAL(LR1+LR2+1)*SVAR/DIS
+                        DINTEGRAL=DINTEGRAL+SVAR
+                      ELSE 
+                        SVAR=SVAR/DIS**(LR1+LR2+1)*EXP(-DIS/SCREENL)
+                        INTEGRAL =INTEGRAL +SVAR
+                        SVAR=(-REAL(LR1+LR2+1)/DIS-1.D0/SCREENL)*SVAR
+                        DINTEGRAL=DINTEGRAL+SVAR
+                      END IF
                     END IF
 !PRINT*,'INTEGRAL ',INTEGRAL/(4.D0*PI)
 !
@@ -4511,7 +4532,10 @@ PRINT*,'X(LAMBDA)  ',X
       SUBROUTINE SIMPLELMTO_OFFSITEX31U(ISP1,ISP2,DIS,LMNX1,LMNX2,U,DU)
 !     **************************************************************************
 !     ** U-TENSOR FOR TWO ATOMS 
-!     ** TWO ORBITALS ARE ON THE FIRST AND TWO ORBITALS ON THE SECOND ATOM    **
+!     ** Three ORBITALS ARE ON THE FIRST AND one ORBITALS ON THE SECOND ATOM  **
+!     **                                                                      **
+!     ** U(I,J,K,L)= INT CHI_I(R1)*CHI_J(R1)*CHI_K(R2)*CHIL(R2)/|R1-R2|       **
+!     **    WITH I,J,K ON ATOM A  AND L ON B                                  **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : POTPAR
       IMPLICIT NONE
@@ -5189,10 +5213,10 @@ CALL TIMING$CLOCKOFF('X31-B')
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
         DINTEGRAL=-SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:) &
      &                *OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
-PRINT*,'X31 EVAL A: ',INTEGRAL,DINTEGRAL
-PRINT*,'X31 EVAL B: ',OFFSITEX(ISP1,ISP2)%X31
-PRINT*,'X31 EVAL C: ',OFFSITEX(ISP1,ISP2)%LAMBDA
-PRINT*,'X31 EVAL D: ',G(:NF)
+!!$PRINT*,'X31 EVAL A: ',INTEGRAL,DINTEGRAL
+!!$PRINT*,'X31 EVAL B: ',OFFSITEX(ISP1,ISP2)%X31
+!!$PRINT*,'X31 EVAL C: ',OFFSITEX(ISP1,ISP2)%LAMBDA
+!!$PRINT*,'X31 EVAL D: ',G(:NF)
 !
       ELSE IF (ID.EQ.'BONDU') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%BONDU)) THEN
@@ -5570,48 +5594,81 @@ PRINT*,'X31REPORT A DBB=',DBB
                 DO LMN1A=1,LMNXA
                   SVAR =-0.25D0* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
                   DSVAR=-0.25D0*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+!
                   EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
-PRINT*,'(1)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
                   DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
                   HAA(LMN1A,LMN3A,:)=HAA(LMN1A,LMN3A,:)+SVAR*DAB(LMN2A,LMN1B,:)
                   HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN1A,LMN3A,:)
+!
+                  EX  =EX   +SVAR*SUM(Dba(LMN1B,LMN2A,:)*DAA(LMN1A,LMN3A,:))
+                  DEDD=DEDD+DSVAR*SUM(DBa(LMN1B,LMN2A,:)*DAA(LMN1A,LMN3A,:))
+                  HAA(LMN1A,LMN3A,:)=HAA(LMN1A,LMN3A,:)+SVAR*Dba(LMN1B,LMN2A,:)
+                  Hba(LMN1B,LMN2A,:)=Hba(LMN1B,lMN2A,:)+SVAR*DAA(LMN1A,LMN3A,:)
+!
                   EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
-PRINT*,'(2)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
                   DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
                   HAA(LMN3A,LMN1A,:)=HAA(LMN3A,LMN1A,:)+SVAR*DAB(LMN2A,LMN1B,:)
                   HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN3A,LMN1A,:)
+!
+                  EX  =EX   +SVAR*SUM(Dba(LMN1B,LMN2A,:)*DAA(LMN3A,LMN1A,:))
+                  DEDD=DEDD+DSVAR*SUM(Dba(LMN1B,LMN2A,:)*DAA(LMN3A,LMN1A,:))
+                  HAA(LMN3A,LMN1A,:)=HAA(LMN3A,LMN1A,:)+SVAR*Dba(LMN1B,LMN2A,:)
+                  Hba(LMN1B,LMN2A,:)=Hba(LMN1B,LMN2A,:)+SVAR*DAA(LMN3A,LMN1A,:)
                 ENDDO
               ENDDO
             ENDDO
           ENDDO               
           DEALLOCATE(U3A1B)
           DEALLOCATE(DU3A1B)
-          ALLOCATE(U3B1A (LMNXB,LMNXB,LMNXB,LMNXA))
-          ALLOCATE(DU3B1A(LMNXB,LMNXB,LMNXB,LMNXA))
-          CALL SIMPLELMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
-PRINT*,'X31REPORT B:',-DIS,LMNXB,LMNXA,U3B1A,DU3B1A
-          DO LMN1A=1,LMNXA
-            DO LMN3B=1,LMNXB 
-              DO LMN2B=1,LMNXB
-                DO LMN1B=1,LMNXB
-                  SVAR =-0.25D0* U3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
-                  DSVAR=-0.25D0*DU3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
-                  EX=EX+SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-PRINT*,'(3)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-                  HBB(LMN1B,LMN3B,:)=HBB(LMN1B,LMN3B,:)+SVAR*DAB(LMN1A,LMN2B,:)
-                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN1B,LMN3B,:)
-                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-PRINT*,'(4)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-                  HBB(LMN3B,LMN1B,:)=HBB(LMN3B,LMN1B,:)+SVAR*DAB(LMN1A,LMN2B,:)
-                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN3B,LMN1B,:)
-                ENDDO
-              ENDDO
-            ENDDO
-          ENDDO
-          DEALLOCATE(U3B1A)
-          DEALLOCATE(DU3B1A)
+!== original version
+!!$         DO LMN1B=1,LMNXB
+!!$            DO LMN3A=1,LMNXA 
+!!$              DO LMN2A=1,LMNXA
+!!$                DO LMN1A=1,LMNXA
+!!$                  SVAR =-0.25D0* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+!!$                  DSVAR=-0.25D0*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+!!$                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+!!$                  HAA(LMN1A,LMN3A,:)=HAA(LMN1A,LMN3A,:)+SVAR*DAB(LMN2A,LMN1B,:)
+!!$                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN1A,LMN3A,:)
+!!$PRINT*,'(1)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
+!!$                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+!!$                  HAA(LMN3A,LMN1A,:)=HAA(LMN3A,LMN1A,:)+SVAR*DAB(LMN2A,LMN1B,:)
+!!$                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN3A,LMN1A,:)
+!!$PRINT*,'(2)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO               
+!!$          DEALLOCATE(U3A1B)
+!!$          DEALLOCATE(DU3A1B)
+!!$          ALLOCATE(U3B1A (LMNXB,LMNXB,LMNXB,LMNXA))
+!!$          ALLOCATE(DU3B1A(LMNXB,LMNXB,LMNXB,LMNXA))
+!!$          CALL SIMPLELMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
+!!$PRINT*,'X31REPORT B:',-DIS,LMNXB,LMNXA,U3B1A,DU3B1A
+!!$          DO LMN1A=1,LMNXA
+!!$            DO LMN3B=1,LMNXB 
+!!$              DO LMN2B=1,LMNXB
+!!$                DO LMN1B=1,LMNXB
+!!$                  SVAR =-0.25D0* U3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
+!!$                  DSVAR=-0.25D0*DU3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
+!!$                  EX=EX+SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+!!$                  HBB(LMN1B,LMN3B,:)=HBB(LMN1B,LMN3B,:)+SVAR*DAB(LMN1A,LMN2B,:)
+!!$                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN1B,LMN3B,:)
+!!$PRINT*,'(3)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
+!!$                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+!!$                  HBB(LMN3B,LMN1B,:)=HBB(LMN3B,LMN1B,:)+SVAR*DAB(LMN1A,LMN2B,:)
+!!$                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN3B,LMN1B,:)
+!!$PRINT*,'(4)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
+!!$                ENDDO
+!!$              ENDDO
+!!$            ENDDO
+!!$          ENDDO
+!!$          DEALLOCATE(U3B1A)
+!!$          DEALLOCATE(DU3B1A)
 CALL TIMING$CLOCKOFF('OFFX:31')
         END IF
 !

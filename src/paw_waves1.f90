@@ -226,6 +226,8 @@ LOGICAL(4)  :: THAMILTON=.FALSE.  ! HAMILTON MATRIX AVAILABLE
 LOGICAL(4)  :: TRAWSTATES=.FALSE. ! PROVIDES NON-DIAGONALIZED WAVE FUNCTIONS THROUGH $GETR
 LOGICAL(4)  :: TFORCEX=.TRUE.
 LOGICAL(4)  :: TSTRESSX=.FALSE.
+REAL(8)     :: SCALERCUT=2.D0  ! NEIGHBORLIST FOR OFFSITE DENSITY MATRIX CONTAINS
+                             ! PAIRS WITH DIS <(RCOV1+RCOV2)*SCALERCUT
 !===============================================================================
 !== PERMANENT DATA, WHICH ARE ORGANIZED BY THE ROUTINES ITSELF                ==
 !===============================================================================
@@ -346,6 +348,8 @@ END MODULE WAVES_MODULE
         DELT=VAL
       ELSE IF(ID.EQ.'AMPRE') THEN
         AMPRANDOM=VAL
+      ELSE IF(ID.EQ.'SCALERCUT') THEN
+        SCALERCUT=VAL
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -380,6 +384,8 @@ END MODULE WAVES_MODULE
         ELSE 
           VAL=0.5D0*(WAVEEKIN1+WAVEEKIN2)
         END IF
+      ELSE IF(ID.EQ.'SCALERCUT') THEN
+        VAL=SCALERCUT
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -3533,18 +3539,20 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$OFFSITEDENMAT()
 !     **************************************************************************
-!     ** EVALUATES THE DENSITY MATRIX FOR A NEIGHBORLIST
-!     ** 
-!     ** REMARK: DEFINING THE CUTOFF VIA THE SCALED COVALENT RADII IS A POOR 
-!     **         CHOICE, BECAUSE THE DENSITY MATRIX WILL NOT BE HERMITEAN.
+!     ** EVALUATES THE DENSITY MATRIX FOR A NEIGHBORLIST                      **
+!     **                                                                      **
+!     ** NEIGHBORLIST INCLUDES ALL ATOM PAIRS WITH DISTANCE SMALLER THAN      **
+!     ** THE SUM OF COVALENT RADII TIME SCALERCUT                             **
+!     ** SCALERCUT=5. IS GOOD FOR THE HUBBARD MODEL WITH LATTICE CONSTANT=3\AA**
 !     **************************************************************************
       USE PERIODICTABLE_MODULE
       USE WAVES_MODULE, ONLY: MAP &
      &                       ,NDIMD &
      &                       ,OSDENMAT &
-     &                       ,OSHAMIL 
+     &                       ,OSHAMIL &
+     &                       ,SCALERCUT !RADIUS SCALE FACTOR FOR NEIGHBORLIST
       IMPLICIT NONE
-      REAL(8)   ,PARAMETER   :: RCSCALE=2.2D0
+      logical(4),parameter   :: tprnn=.true.  !print neighborlist entries
       INTEGER(4),PARAMETER   :: NNXPERATOM=100
       INTEGER(4)             :: NNX
       INTEGER(4)             :: NND
@@ -3596,13 +3604,25 @@ END IF
         CALL SETUP$GETR8('AEZ',SVAR)
         CALL SETUP$UNSELECT()
         CALL PERIODICTABLE$GET(SVAR,'R(COV)',RC(IAT))
-        RC(IAT)=RC(IAT)*RCSCALE
+        RC(IAT)=RC(IAT)*SCALERCUT
       ENDDO
       NNX=NNXPERATOM*NAT
       ALLOCATE(NNLIST(5,NNX))
       CALL LMTO$NEIGHBORLIST(RBAS,NAT,R0,RC,NNX,NND,NNLIST)
       DEALLOCATE(RC)
       DEALLOCATE(R0)
+!
+!     ==========================================================================
+!     ==  report neighborlist                                                 ==
+!     ==========================================================================
+      IF(TPRNN) THEN
+        WRITE(*,FMT= &
+     &       '(82("="),T5," NEIGHBORLIST ENTRIES IN WAVES$OFFSITEDENMAT ")')
+        DO NN=1,NND
+          WRITE(*,FMT='(I10," ATOM1=",I4," ATOM2=",I4," IT=",3I3)') &
+     &                NN,NNLIST(:,NN)
+        ENDDO
+      END IF
 !
 !     ==========================================================================
 !     == ALLOCATE DENSITY MATRIX
@@ -3910,7 +3930,7 @@ COMPLEX(8)  :: PHASE
             IAT2=OSHAMIL(NN)%IAT2
             IT=OSHAMIL(NN)%IT
             SVAR=2.D0*PI*SUM(XK(:,IKPT)*REAL(IT))
-            EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
+            EIKR=EXP(-CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
             I0=IPRO1(IAT1)-1
             J0=IPRO1(IAT2)-1
             DO I=1,NPROAT(IAT1)
