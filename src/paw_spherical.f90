@@ -135,7 +135,9 @@ END MODULE SPHERICAL_MODULE
         RETURN
       ENDIF
       COSTHE=R(3)/DIS
-      CALL PLGNDR(LMX,LX,COSTHE,YLM)
+!     == SPHERICAL_PLGNDR RETURNS THE ASSOCIATED LEGENDRE POLYNOMIALS ==========
+!     == MULTIPLIED WITH  SQRT( (L-M)! / (L+M)! ) FOR LM(L,M)=L(L+1)+1-M =======
+      CALL SPHERICAL_PLGNDR(LMX,LX,COSTHE,YLM)
       IF(DISXY.NE.0.D0) THEN
         SINPHI=R(2)/DISXY
         COSPHI=R(1)/DISXY
@@ -361,7 +363,7 @@ END MODULE SPHERICAL_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PLGNDR(LMX,LX,X,PLM)
+      SUBROUTINE SPHERICAL_PLGNDR(LMX,LX,X,PLM)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATE THE ASSOCIATED LEGENDRE POLYNOMIALS MULTIPLIED WITH       **
