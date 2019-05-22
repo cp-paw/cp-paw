@@ -25,7 +25,7 @@
       REAL(8)              :: DIS
       CHARACTER(64)        :: FILE
       REAL(8)              :: MAXDEV
-      LOGICAL    ,PARAMETER:: TPR=.FALSE.
+      LOGICAL    ,PARAMETER:: TPR=.true.
 !     **************************************************************************
 !     == THE BARE HANKEL FUNCTION IS CENTERED AT THE ORIGIN AND CALCULATED 
 !     == ALONG A LINE FROM CENTER-DR TO CENTER+DR.

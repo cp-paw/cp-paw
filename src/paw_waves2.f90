@@ -2472,9 +2472,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL REPORT$R8VAL(NFIL,'WAVEFUNCTION PLANE WAVE CUTOFF',EPWPSI/RY,'RY')
       CALL REPORT$R8VAL(NFIL,'WAVEFUNCTION MASS',EMASS,'A.U.')
       CALL REPORT$R8VAL(NFIL,'G**2 ENHANCEMENT OF FUNCTION MASS',EMASSCG2,' ')
-      CALL REPORT$R8VAL(NFIL,'BUCKET POTENTIAL STARTS AT 0.5G^2=',EPWPSI0/RY,'RY')
+      CALL REPORT$R8VAL(NFIL,'BUCKET POTENTIAL STARTS AT 0.5G^2=' &
+     &                       ,EPWPSI0/RY,'RY')
       CALL REPORT$R8VAL(NFIL,'BUCKET POTENTIAL PREFACTOR',D2EPWPSI,'H')
-      CALL REPORT$R8VAL(NFIL,'CUTOFF SCALE-FACTOR FOR NEIGHBORLIST',SCALERCUT,'')
+      CALL REPORT$R8VAL(NFIL,'CUTOFF SCALE-FACTOR FOR NEIGHBORLIST' & 
+     &                      ,SCALERCUT,' ')
       CALL REPORT$CHVAL(NFIL,'|R1-R2|<(RCOV1+RCOV2)*SCALERCUT',' ')
       IF(ANNEE.NE.0) THEN
         CALL REPORT$R8VAL(NFIL,'FRICTION',ANNEE,' ')
@@ -2799,13 +2801,13 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
             END IF
           END IF
 !
-!         ================================================================
-!         == NOW THE DATA IS AVAILABLE ON TASK 1 OF MONOMER; NEXT WRITE ==  
-!         == ON FILE. ATTENTION DATA ARE ONLY AVAILABLE ON TASK 1.      ==
-!         == THIS BLOCK CANNOT BE INTEGRATED INTO THE COMMUNICATION     ==
-!         == NBLOCK ABOVE, BECAUSE THERE IS NO COMMUNICATION IF THE DATA==
-!         == ARE ALREADY IN TASK 1.                                     ==
-!         ================================================================
+!         ======================================================================
+!         == NOW THE DATA IS AVAILABLE ON TASK 1 OF MONOMER; NEXT WRITE       ==
+!         == to FILE. ATTENTION: DATA ARE ONLY AVAILABLE ON TASK 1.           ==
+!         == THIS BLOCK CANNOT BE INTEGRATED INTO THE COMMUNICATION           ==
+!         == NBLOCK ABOVE, BECAUSE THERE IS NO COMMUNICATION IF THE DATA      ==
+!         == ARE ALREADY IN TASK 1.                                           ==
+!         ======================================================================
           IF(THISTASK.EQ.1) THEN
             CALL PDOS$WRITEK(NFIL,XK(:,IKPTG),NB,NDIM,NPRO,&
       &              WKPT(IKPTG),EIG,OCC(:,IKPTG,ISPIN),VECTOR1(:,:,:))
