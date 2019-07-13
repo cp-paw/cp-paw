@@ -113,7 +113,7 @@ endif
 #       toxyz 1davpot cmcwave lattice test
 #Oldtools: lattice cmcwave (should be included later)
 TOOLS=bands grab murnaghan dos dosplot polyhedra preopt stpa stpreport \
-      strc tostrc toxyz tra converttra cleantra wave 1davpot 
+      strc tostrc toxyz tra converttra cleantra wave 1davpot fromposcar
 SCRIPTS=scripts
 TESTS=$(addsuffix _tests,${OBJTYPES})
 #

@@ -8246,6 +8246,11 @@ the paw\_preopt tool. I recommend the extension ``.pcntl''.
 Please note that a keyword COMMENT is ignored by all PAW
 programs. Thus it can be used to add comments to the input files.
 
+
+
+
+
+
 %==========================================================================
 %\newpage
 \subsection{Argument description for the control input file}
@@ -8441,6 +8446,39 @@ are used which are ignored by the main simulation code. The keyword
   atoms. Not yet implemented.}
 
  
+%==========================================================================
+\newpage
+\section{Structure converter Tool: paw\_fromposcar.x}
+%==========================================================================
+This tool facilitates the input of atomic structures by converting the
+widespread format 'POSCAR' of the VASP code into the format used by
+the structure input file of CP-PAW.
+
+Source of atomic structures are
+\begin{itemize}
+\item ``The Materials Project''
+\url{https://materialsproject.org}, which is a collection of
+electronic structure calculations already done.
+%
+\item The AFLOW standard library of crystallographic prototypes
+  \url{http://aflowlib.org/CrystalDatabase/}
+\end{itemize}
+
+%==========================================================================
+\subsection{Command}
+%==========================================================================
+
+The calling sequence is
+
+\bigskip\fbox{{\tt paw\_fromposcar.x} {\it poscar-file-name}}\bigskip
+
+\noindent
+where {\it poscar-file-name} is the file name of the poscar input file 
+from which the structure shall be adopted.
+
+The result of the conversion is written to stdout (standard out) and
+can thus be piped into a structure file, which is in preparation.
+
 %==========================================================================
 \newpage
 \section{Scripts}
