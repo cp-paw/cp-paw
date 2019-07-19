@@ -52,10 +52,16 @@ MODULE SETUP_MODULE
 !**    GETR8A('AMATCHI',LNXPHI*LNXCHI,AMAT)                                   **
 !**    GETR8A('BMATCHI',LNXCHI*LNXPHI,BMAT)                                   **
 !**                                                                           **
-!**                                                                           **
 !**  AN UNSELECT FUNCTION HAS BEEN INCLUDED BUT NOT FULLY IMPLEMENTED.        **
 !**  BY FORCING UNSELECT BEFORE SELECT, ONE CAN SAFEGUARD THAT A SUBROUTINE   **
 !**  CHANGES THE SETTING OF A PARENT ROUTINE.                                 **
+!**                                                                           **
+!**  RBOX HAS THE FOLLOWING FUNCTIONS:                                        **
+!**    PSG2 AND PSG4 IS EVALUATED WITHIN A SPHERE WITH RADIUS RBOX            **
+!**                                                                           **
+!**  THE RADIAL GRID DEFINES THE BOUNDARY CONDITIONS FOR THE ATOMIC           **
+!**    CALCULATIONS: R(NR-3) IS THE POSITION OF THE OUTERMOST ZERO.           **
+!**                                                                           **
 !**                                                                           **
 !**                                              P.E. BLOECHL, (1991-2010)    **
 !*******************************************************************************
@@ -3541,7 +3547,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       REAL(8)   ,INTENT(OUT):: PSG4
       REAL(8)   ,PARAMETER  :: TOL=1.D-7
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-      LOGICAL   ,PARAMETER  :: TWRITE=.FALSE.
+      LOGICAL   ,PARAMETER  :: TWRITE=.TRUE.
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: C0LL=Y0
@@ -4108,7 +4114,7 @@ PRINT*,'=================== L=',L,' ================================='
           NN=NNOFI(IB)-NN0
           G(:)=0.D0
 PRINT*,'BEFORE PAWBOUNDSTATE'
-PRINT*,'L=',L,' nn=',nn,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
+PRINT*,'L=',L,' NN=',NN,' E=',E,' NPRO=',NPRO,' ROUT=',ROUT,' IB=',IB
           CALL ATOMLIB$PAWBOUNDSTATE(GID,NR,L,NN,ROUT,PSPOT,NPRO,PRO1,DH1,DO1 &
      &                              ,G,E,PSPSIF(:,IB-NC))
 PRINT*,' E=',E
@@ -4255,6 +4261,7 @@ PRINT*,' E=',E
       REAL(8)   ,PARAMETER  :: G1=1.D-3     
       INTEGER(4),PARAMETER  :: NG=250
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: CHARGE  ! PSEUDO VALENCE CHARGE
       REAL(8)               :: EKIN    ! PSEUDO KINETIC ENERGY
       REAL(8)               :: EKING2  ! SUM F<PSPSI|G**4|PSPSI>
@@ -4267,7 +4274,6 @@ PRINT*,' E=',E
       REAL(8)               :: VAL
       REAL(8)               :: R(NR)
       INTEGER(4)            :: IRBOX ! FIRST GRID POINT BEYOND BOX RADIUS
-      LOGICAL               :: TTEST=.FALSE.
       REAL(8)               :: CHARGE1,EKIN1
       INTEGER(4)            :: L,IB,IR
 !     **************************************************************************
@@ -4337,6 +4343,9 @@ PRINT*,' E=',E
      &             CHARGE,CHARGE1
         WRITE(*,FMT='("PS EKIN   IN G-SPACE ",F10.6,:" IN R-SPACE ",F10.5)') &
      &             EKIN,EKIN1
+        CALL ERROR$MSG('PLANNED STOP AFTER PRINTOUT OF DIAGNOSTIC INFORMATION')
+        CALL ERROR$R8VAL('RBOX',RBOX)
+        CALL ERROR$STOP('SETUP_PARMSMASSRENORMALIZATION')
       END IF
                       CALL TRACE$POP()
       RETURN
@@ -5024,6 +5033,8 @@ PRINT*,' E=',E
       SUBROUTINE ATOMIC_UNSCREEN(GID,NR,RBOX,AEZ,AERHO,PSRHO,PSPOT,RCSM,VADD)
 !     **************************************************************************
 !     **                                                                      **
+!     **                                                                      **
+!     ** CAUTION: I BELIEVE THAT ROUT=R(NR-3) SHOULD BE CHOSEN IN PLACE OF RBOX*
 !     **                                                                      **
 !     **************************************************************************
 !     ******************************PETER BLOECHL, GOSLAR 2010******************
@@ -6272,7 +6283,7 @@ PRINT*,'KI ',KI
       REAL(8)   ,INTENT(IN) :: PSIC(NR,NC)   ! CORE STATES
       INTEGER(4),INTENT(IN) :: LRHOX         ! MAX ANGULAR MOMENTUM OF DENSITY
       REAL(8)   ,INTENT(OUT):: MAT(LNX,LNX)  ! CORE VALENCE X MATRIX ELEMENTS
-      LOGICAL(4),PARAMETER  :: TPRINT=.TRUE.
+      LOGICAL(4),PARAMETER  :: TPRINT=.FALSE.
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: LX  ! MAX ANGULAR MOMENTUM PARTIAL WAVES
       INTEGER(4)            :: LMX ! MAX #(ANGULAR MOMENTA) OF PARTIAL WAVES

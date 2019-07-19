@@ -913,17 +913,18 @@ END MODULE RADIAL_MODULE
       RETURN
       END SUBROUTINE RADIAL$SETI4
 !
-!     .................................................................
-      SUBROUTINE RADIAL$GETI4(GID,ID,VAL)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$GETi4(GID,ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE RADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
       CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4)  ,INTENT(OUT):: VAL
+      integer(4)  ,INTENT(OUT):: VAL
       INTEGER(4)              :: GIDS,TYPE
-!     ***************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN 
         CALL LOGRADIAL$GETI4(GIDS,ID,VAL)
@@ -933,12 +934,34 @@ END MODULE RADIAL_MODULE
       RETURN
       END SUBROUTINE RADIAL$GETI4
 !
-!     .......................................................SPHLSD.....
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RADIAL$GETCH(GID,ID,VAL)
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006-2019 *******
+      USE RADIAL_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: GID
+      CHARACTER(*),INTENT(IN) :: ID
+      character(*),INTENT(OUT):: VAL
+      INTEGER(4)              :: GIDS,TYPE
+!     **************************************************************************
+      CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
+      IF(ID.EQ.'TYPE') THEN
+        VAL=GRIDTYPE(TYPE)
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('RADIAL$GETch')
+      END IF
+      RETURN
+      END SUBROUTINE RADIAL$GETCH
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$CHANGEGRID(GID1,NR1,F,GID2,NR2,G)
-!     **                                                              **
-!     **                                                              **
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **                                                                      **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN) :: GID1
       INTEGER(4) ,INTENT(IN) :: GID2
@@ -949,7 +972,7 @@ END MODULE RADIAL_MODULE
       INTEGER(4)             :: IR
       REAL(8)                :: R2(NR2)
       REAL(8)                :: R1(NR1)
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL$R(GID1,NR1,R1)
       CALL RADIAL$R(GID2,NR2,R2)
       DO IR=1,NR2
@@ -968,7 +991,6 @@ END MODULE RADIAL_MODULE
       SUBROUTINE RADIAL$R(GID,NR,R)
 !     **************************************************************************
 !     **  RETURNS RADIAL GRID                                                 **
-!     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1005,7 +1027,6 @@ END IF
       SUBROUTINE RADIAL$DRDX(GID,NR,DRDX)
 !     **************************************************************************
 !     **  RETURNS DERIVATIVE OF MAPPING FROM EQUISPACED TO RADIAL GRID        **
-!     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1026,10 +1047,11 @@ END IF
       RETURN
       END      
 !
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$VALUE(GID,NR,F,R0,F0)
-!     **                                                                  **
-!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ********
+!     **************************************************************************
+!     **  returns the interpolated function value f0 at r0                    **
+!     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE RADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: GID
@@ -1039,7 +1061,7 @@ END IF
       REAL(8)   ,INTENT(OUT):: F0
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$VALUE(GIDS,NR,F,R0,F0)
@@ -1056,6 +1078,7 @@ END IF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$XOFR(GID,R0,X0)
+!     **************************************************************************
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2007 ************
       USE RADIAL_MODULE
@@ -1065,7 +1088,7 @@ END IF
       REAL(8)   ,INTENT(OUT):: X0
       INTEGER(4)            :: GIDS
       INTEGER(4)            :: TYPE
-!     ******************************************************************
+!     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
       IF(TYPE.EQ.1) THEN
         CALL LOGRADIAL$XOFR(GIDS,R0,X0)
@@ -1551,11 +1574,11 @@ END MODULE SHLOGRADIAL_MODULE
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE SHLOGRADIAL_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(OUT) :: GID
-      INTEGER(4),PARAMETER ::NGIDBLOCKSIZE=10
-      TYPE(SHLOGGRID_TYPE), ALLOCATABLE :: NEWARRAY(:)
-      INTEGER(4)           :: NEWNGIDX
-      INTEGER(4)           :: IGID
+      INTEGER(4),INTENT(OUT)           :: GID
+      INTEGER(4),PARAMETER             :: NGIDBLOCKSIZE=10
+      TYPE(SHLOGGRID_TYPE),ALLOCATABLE :: NEWARRAY(:)
+      INTEGER(4)                       :: NEWNGIDX
+      INTEGER(4)                       :: IGID
 !     **************************************************************************
 !       
 !     ==========================================================================

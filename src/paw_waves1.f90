@@ -107,7 +107,7 @@ CONTAINS
       INTEGER(4)          ,INTENT(IN) :: NN
       TYPE(RSPACEMAT_TYPE),INTENT(IN) :: MAT(NN)
       INTEGER(4)                      :: IN,I1,I3
-      character(128)                  :: fomt
+      CHARACTER(128)                  :: FOMT
 !     **************************************************************************
       WRITE(NFIL,FMT='(82("="))')
       WRITE(NFIL,FMT='(82("="),T10,"  ",A,"   ")')TRIM(TITLE)
@@ -239,7 +239,7 @@ TYPE(WVSET_TYPE),POINTER  :: THISARRAY(:,:)   ! (NKPTL,NSPIN)
 TYPE(WVSET_TYPE),POINTER  :: THIS            ! CURRENT SET OF WAVES
 TYPE(GSET_TYPE) ,POINTER  :: GSET            ! CURRENT SET OF GSET
 TYPE(MAP_TYPE)            :: MAP
-TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSDENMAT(:)  !offsite density matrix      
+TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSDENMAT(:)  !OFFSITE DENSITY MATRIX      
 TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: OSHAMIL(:)      
 LOGICAL(4)                :: TPR=.FALSE.
 LOGICAL(4)                :: TFIRST=.TRUE.
@@ -587,6 +587,7 @@ END MODULE WAVES_MODULE
 !     ==  THE PROJECTION IS OBTAINED FOR EIGENSTATES                          ==
 !     ==========================================================================
       ELSE IF(ID.EQ.'<PSPSI|PRO>') THEN
+!       == THE RESULT IS <PRO|PSPSI>. THE CURRENT ID IS MISLEADING! ============
         IKPT=EXTPNTR%IKPT   ! IKPT REFERS TO LOCAL KPOINTS
         IF(IKPT.EQ.0) THEN
           CALL ERROR$MSG('STATE NOT AVAILABLE ON THIS TASK')
@@ -681,6 +682,8 @@ END MODULE WAVES_MODULE
           ENDDO
         END IF
         DEALLOCATE(CWORK1)
+!!$PRINT*,'EXTPNTR',EXTPNTR%IAT,EXTPNTR%IB,' VAL ',VAL
+!!$PRINT*,'EIGVEC ',THIS%EIGVEC(:,IB)
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -1879,7 +1882,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     == RETURNS: OSHAMIL (OFFSITE-HAMILTONIAN)                               ==
 !     ==========================================================================
 !!$      ALLOCATE(DH1(LMNXX,LMNXX,NDIMD,NAT))
-!!$      dh1=(0.d0,0.d0)
+!!$      DH1=(0.D0,0.D0)
 !!$      CALL LMTO$ETOT(LMNXX,NDIMD,NAT,DENMAT,DH1)
 !!$      DH=DH+DH1
 !!$      DEALLOCATE(DH1)
@@ -2154,7 +2157,7 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
 !           ====================================================================
 !           == TRANSFORMS STATES ONTO HAMILTON EIGENSTATES. THIS ACCELERATES  ==
 !           == CONERGENCE FOR SAFEORTHO=F. IT DOES NOT AFFECT THE OCCUPATIONS.==
-!           == THEREFORE IT IS RECOMMENDED TO RESTART IT AS WELL.             ==
+!           == THEREFORE IT IS RECOMMENDED TO RESTART THOSE AS WELL.          ==
 !           ==                                                                ==
 !           == A SECOND CALL GIVES VELOCITY TO THE WAVE FUNCTIONS, WHICH IS   ==
 !           == NOT UNDERSTOOD. THEREFORE IT IS EXECUTED ONLY ONCE AND         ==
@@ -2165,25 +2168,23 @@ PRINT*,'STRAIGHTENING STATES...'
               CALL WAVES_STRAIGHTEN(NDIM,NBH,NB,NGL,MAP%NPRO,THIS%EIGVEC &
     &                              ,THIS%PSI0,THIS%PSIM,THIS%HPSI,THIS%PROJ &
     &                              ,THIS%RLAM0)
-!THE FOLLOWING HAS LITTLE USE USE
-!!$              IF(ASSOCIATED(THIS%RLAMM))DEALLOCATE(THIS%RLAMM)
-!!$              IF(ASSOCIATED(THIS%RLAM2M))DEALLOCATE(THIS%RLAM2M)
-!!$              IF(ASSOCIATED(THIS%RLAM3M))DEALLOCATE(THIS%RLAM3M)
-!!$              THIS%PSIM=THIS%PSI0
-              CALL WAVES$SETL4('STOP',.TRUE.)
+!             == DISCARD DATA THAT IS INCONSISTENT WITH NEW STATES =============
+              IF(ASSOCIATED(THIS%RLAMM))DEALLOCATE(THIS%RLAMM)
+              IF(ASSOCIATED(THIS%RLAM2M))DEALLOCATE(THIS%RLAM2M)
+              IF(ASSOCIATED(THIS%RLAM3M))DEALLOCATE(THIS%RLAM3M)
 PRINT*,'......STATES STRAIGHTENED'
             END IF !TSTRAIGHTEN
           ENDDO
         ENDDO
+!
+!       == ENSURE THAT STRAIGTHENING IS DONE ONLY ONCE... ======================
+        IF(TSTRAIGHTEN) TSTRAIGHTEN=.FALSE.
       ELSE
         IF(OPTIMIZERTYPE.NE.'CG') THEN    !KAESTNERCG
           IF(ASSOCIATED(THIS%EIGVAL))DEALLOCATE(THIS%EIGVAL)
           IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
         END IF                         !KAESTNERCG
       END IF
-!
-!     == DIAGONALIZATION IS DONE ONLY ONCE...
-      IF(TSTRAIGHTEN.AND.THAMILTON) TSTRAIGHTEN=.FALSE.
 !
 CALL TIMING$CLOCKOFF('W:EXPECT')
 !
@@ -3552,7 +3553,7 @@ END IF
      &                       ,OSHAMIL &
      &                       ,SCALERCUT !RADIUS SCALE FACTOR FOR NEIGHBORLIST
       IMPLICIT NONE
-      logical(4),parameter   :: tprnn=.true.  !print neighborlist entries
+      LOGICAL(4),PARAMETER   :: TPRNN=.TRUE.  !PRINT NEIGHBORLIST ENTRIES
       INTEGER(4),PARAMETER   :: NNXPERATOM=100
       INTEGER(4)             :: NNX
       INTEGER(4)             :: NND
@@ -3613,7 +3614,7 @@ END IF
       DEALLOCATE(R0)
 !
 !     ==========================================================================
-!     ==  report neighborlist                                                 ==
+!     ==  REPORT NEIGHBORLIST                                                 ==
 !     ==========================================================================
       IF(TPRNN) THEN
         WRITE(*,FMT= &
@@ -3740,7 +3741,6 @@ COMPLEX(8)  :: PHASE
             EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
             I0=IPRO1(IAT1)-1
             J0=IPRO1(IAT2)-1
-
             DO I=1,NPROAT(IAT1)
               DO J=1,NPROAT(IAT2)
 !
@@ -3846,15 +3846,15 @@ COMPLEX(8)  :: PHASE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$OFFSITEHAMIL()
 !     **************************************************************************
-!     **  CONSTRUCT HPROJ = H<p|psi> = dE/d<psi|p> from the off-site          **
-!     **  Hamiltonian and the projections                                     **
+!     **  CONSTRUCT HPROJ = H<P|PSI> = DE/D<PSI|P> FROM THE OFF-SITE          **
+!     **  HAMILTONIAN AND THE PROJECTIONS                                     **
 !     **                                                                      **
 !     **  THE OFF-SITE HAMILTONIAN IS IN THE SPIN REPRESENTATION              **
 !     **    NSPIN=1,NDIM=1: TOTAL                        (NDIMD=1)            **
 !     **    NSPIN=2,NDIM=1: TOTAL,SPIN_Z                 (NDIMD=2)            **
 !     **    NSPIN=1,NDIM=2: TOTAL,SPIN_X,SPIN_Y,SPIN_Z   (NDIMD=3)            **
 !     **                                                                      **
-!     **  osHAMIL=DE/DRHODAGGER                                               **
+!     **  OSHAMIL=DE/DRHODAGGER                                               **
 !     **************************************************************************
       USE WAVES_MODULE, ONLY: WVSET_TYPE &
      &                       ,NKPTL &
@@ -3870,7 +3870,7 @@ COMPLEX(8)  :: PHASE
      &                          ,RSPACEOP$COPY &
      &                          ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TPR=.false.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)             :: NAT
       INTEGER(4)             :: N1,N2
@@ -3965,19 +3965,19 @@ COMPLEX(8)  :: PHASE
                   DO IDIM=1,NDIM
                     DO JDIM=1,NDIM
 !===============================================================================
-!       E=E_0 + sum_{a,b} H_{a,b}D_{a,b} +... = E_0 + Tr[ H * D-dagger ] +... ==
+!       E=E_0 + SUM_{A,B} H_{A,B}D_{A,B} +... = E_0 + TR[ H * D-DAGGER ] +... ==
 !                                                                             ==
-!         => de=<dpsi_n| [sum_{a,b} |p_b>H_{a,b}<p_a|psi_n> f_n + ...         ==
+!         => DE=<DPSI_N| [SUM_{A,B} |P_B>H_{A,B}<P_A|PSI_N> F_N + ...         ==
 !===============================================================================
                       THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
       &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(IDIM,IB,I0+I)
 !
 ! THIS IS THE OLD VERSION (THIS IS CORRECT: SEE METHODS SECTION 'SECOND QUANT..'
 !                      THIS%HPROJ(JDIM,IB,J0+J)=THIS%HPROJ(JDIM,IB,J0+J) &
-!      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(iDIM,IB,I0+I)
+!      &                           +CSVAR22(JDIM,IDIM)*THIS%PROJ(IDIM,IB,I0+I)
 ! THIS SHOULD BE CORRECT.(NO!)
 !!$                      THIS%HPROJ(IDIM,IB,I0+I)=THIS%HPROJ(IDIM,IB,I0+I) &
-!!$      &                           +CSVAR22(iDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)
+!!$      &                           +CSVAR22(IDIM,JDIM)*THIS%PROJ(JDIM,IB,J0+J)
                     ENDDO
                   ENDDO
                 ENDDO
@@ -3995,7 +3995,7 @@ COMPLEX(8)  :: PHASE
           DO ISPIN=1,NSPIN
             CALL WAVES_SELECTWV(IKPT,ISPIN)
             NBH=THIS%NBH
-            WRITE(*,FMT='(80("="),T10," Hproj FOR XK=",3F10.5,"  ")') &
+            WRITE(*,FMT='(80("="),T10," HPROJ FOR XK=",3F10.5,"  ")') &
      &                                                                XK(:,IKPT)
             DO IBH=1,NBH
               DO IDIM=1,NDIM
@@ -4845,8 +4845,8 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
 !     **************************************************************************
-!     **  hproj = dh*proc= dH*<p|psi>                                         **
-!     **  dh is the on-site augmentation hamiltonian                          **
+!     **  HPROJ = DH*PROC= DH*<P|PSI>                                         **
+!     **  DH IS THE ON-SITE AUGMENTATION HAMILTONIAN                          **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1991)***********
       USE WAVES_MODULE, ONLY : MAP_TYPE
@@ -5664,7 +5664,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(EIGR(NGL))
       ALLOCATE(LOX(LNXX))
-      IF(.FALSE.) THEN
+      IF(.TRUE.) THEN
 !       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
         ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
         IPRO=1
@@ -5674,11 +5674,16 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           LMNX=MAP%LMNX(ISP)
           LOX=MAP%LOX(:,ISP)
           IBPRO=1+SUM(MAP%LNX(1:ISP-1))
-          CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
+          CALL PLANEWAVE$STRUCTUREFACTOR(R(:,IAT),NGL,EIGR)
           CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
      &                        ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX &
      &                        ,GSET%YLM,EIGR,PRO)
           CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,1,LMNX,PRO,NDIM*NB,PSI,PROPSI1)
+!!$PRINT*,'IAT ',IAT,'R ',R
+!!$PRINT*,'IAT ',IAT,'NGL ',NGL,' LNX=',LNX,' LOX=',LOX &
+!!$       ,' LMNX=',LMNX,' LMX=',MAP%LMX
+!!$PRINT*,'IAT ',IAT,'EIGR-1 ',MAXVAL(ABS(EIGR-(1.D0,0.D0)))
+!!$PRINT*,'IAT ',IAT,'PROPSI1 ',PROPSI1 
           II=0
           DO IB=1,NB
             DO IDIM=1,NDIM
@@ -5746,13 +5751,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       DEALLOCATE(PROPSI1)
       DEALLOCATE(EIGR)
       DEALLOCATE(GVEC)
+
 !!$DO IB=1,NB
 !!$  PRINT*,'PSI '
-!!$  DO LMN=1,LMNX
+!!$  DO LMN=1,NPRO
 !!$     PRINT*,'PROPSI ',IB,LMN,PROPSI(1,IB,LMN)
 !!$  ENDDO
 !!$ENDDO
-!!$STOP
+!!$STOP 'FORCED IN PAW_PROJECTIONS'
                                CALL TIMING$CLOCKOFF('WAVES_PROJECTIONS')
       RETURN
       END
@@ -6294,16 +6300,42 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES$STOP()
+!     **************************************************************************
+!     **  SETS THE VELOCITY OF WAVE FUNCTIONS TO ZERO                         **
+!     **************************************************************************
+      USE WAVES_MODULE, ONLY : NKPTL &
+     &                        ,NSPIN &
+     &                        ,WAVES_SELECTWV &
+     &                        ,THIS &
+     &                        ,WAVEEKIN1 
+      IMPLICIT NONE
+      INTEGER(4)           :: IKPT
+      INTEGER(4)           :: ISPIN
+!     **************************************************************************
+      DO IKPT=1,NKPTL
+        DO ISPIN=1,NSPIN
+          CALL WAVES_SELECTWV(IKPT,ISPIN)
+          THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
+          IF(ASSOCIATED(THIS%RLAMM))DEALLOCATE(THIS%RLAMM)
+          IF(ASSOCIATED(THIS%RLAM2M))DEALLOCATE(THIS%RLAM2M)
+          IF(ASSOCIATED(THIS%RLAM3M))DEALLOCATE(THIS%RLAM3M)
+        ENDDO
+      ENDDO
+      WAVEEKIN1=0.D0
+      RETURN 
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$PROPAGATE()
-!     ******************************************************************
-!     **                                                              **
-!     **  PROPAGATES WAVE FUNCTIONS                                   **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    PARAMETERS DELT,EMASS,EMASSCG2,ANNEE AND TSTOP MUST BE SET**
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  PROPAGATES WAVE FUNCTIONS                                           **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **    PARAMETERS DELT,EMASS,EMASSCG2,ANNEE AND TSTOP MUST BE SET        **
+!     **                                                                      **
+!     **************************************************************************
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4)            :: IKPT,ISPIN,IG,IDIM,IB
@@ -6317,33 +6349,27 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)               :: FRICMAT(3,3)
       REAL(8)  ,ALLOCATABLE :: GVEC(:,:)
       REAL(8)  ,ALLOCATABLE :: ANNEEVEC(:)
-!     ******************************************************************
+!     **************************************************************************
       IF(OPTIMIZERTYPE.EQ.'CG') RETURN                           !KAESTNERCG
                               CALL TRACE$PUSH('WAVES$PROPAGATE')
 !
-!     ==================================================================
-!     ==  STOP WAVE FUNCTIONS                                         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  STOP WAVE FUNCTIONS                                                 ==
+!     ==========================================================================
       IF(TSTOP) THEN
-        DO IKPT=1,NKPTL
-          DO ISPIN=1,NSPIN
-            CALL WAVES_SELECTWV(IKPT,ISPIN)
-            THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
-          ENDDO
-        ENDDO
-        WAVEEKIN1=0.D0
+        CALL WAVES$STOP()
         TSTOP=.FALSE.
       END IF
 !
-!     ==================================================================
-!     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTO PSIM)             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PROPAGATE WAVE FUNCTIONS (PUT PSI(+) INTO PSIM)                     ==
+!     ==========================================================================
       CALL CELL$GETL4('MOVE',TSTRESS)
       DO IKPT=1,NKPTL
         CALL WAVES_SELECTWV(IKPT,1)
         CALL PLANEWAVE$SELECT(GSET%ID)
         NGL=GSET%NGL
-!       == EVALUATE FACTORS ============================================
+!       == EVALUATE FACTORS ====================================================
         ALLOCATE(ARR1(NGL))
         ALLOCATE(ARR2(NGL))
         ALLOCATE(ARR3(NGL))
@@ -6379,7 +6405,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             ARR3(IG)=SVAR3/GSET%MPSI(IG)
           ENDDO
         END IF
-!       ==  NOW PROPAGATE ==============================================
+!       ==  NOW PROPAGATE ======================================================
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)

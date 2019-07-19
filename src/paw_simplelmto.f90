@@ -42,6 +42,7 @@ TYPE POTPAR1_TYPE
   !__FROM SIMPLELMTO_MAKECHI1___________________________________________________
   REAL(8)             :: RAUG            ! MATCHING RADIUS
   INTEGER(4)          :: GID             ! GRID ID
+  INTEGER(4)          :: GIDE            ! GRID ID FOR EXTENDED GRID (->OFFXINT)
   INTEGER(4)          :: LNXH            ! #(HEAD FUNCTIONS)
   INTEGER(4),POINTER  :: LOXH(:)         !(LNXH) MAIN ANGULAR MOMENTUM ="LOX"
   INTEGER(4),POINTER  :: LNOFH(:)        !(LNXH) PARTIAL WAVE ID
@@ -52,7 +53,7 @@ TYPE POTPAR1_TYPE
   REAL(8)   ,POINTER  :: AECHI(:,:)      !(NR,LNXH)
   REAL(8)   ,POINTER  :: PROPHIH(:,:)    !(LNX,LNXH)
   REAL(8)   ,POINTER  :: PROPHIT(:,:)    !(LNX,LNXT)
-  REAL(8),ALLOCATABLE :: CMAT(:,:)      !(LNXH,LNXH) 
+  REAL(8),ALLOCATABLE :: CMAT(:,:)       !(LNXH,LNXH) 
   !__FROM SIMPLELMTO_ONSITEMATRIXELEMENTS1______________________________________
   REAL(8),ALLOCATABLE :: ONSITEU(:,:,:,:) !(LMNXH,LMNXH,LMNXH,LMNXH)
   REAL(8),ALLOCATABLE :: QLN(:,:,:)       !(2,LNX,LNX)
@@ -807,15 +808,19 @@ END MODULE SIMPLELMTO_MODULE
           CALL ERROR$I4VAL('ISP',ISP)
           CALL ERROR$STOP('SIMPLELMTO_MAKEPOTPAR1')
         END IF
+!       == ONE TAIL FUNCTION FOR EACH MAIN ANGULAR MOMENTUM ====================
+!       == ONE HEAD FUNCTION FOR EACH PARTIAL WAVE =============================
         LNXT=SIZE(HYBRIDSETTING(ISP)%NORBOFL)
         LNXH=SUM(HYBRIDSETTING(ISP)%NORBOFL)
+!       == LNOFH POINTS TO THE TWO PARTIALWAVES, WHICH AUGMENT THE HEAD ========
+!       == FOR LNOFH.LE.0, THE SCATTERING WAVE WITH L=-LNOFH IS USED ===========
         ALLOCATE(LNOFH(2,LNXH))
         ALLOCATE(LNOFT(2,LNXT))
         CALL SIMPLELMTO_LNHEADTAIL(HYBRIDSETTING(ISP)%NORBOFL &
     &                             ,LNX(ISP),LOX(:LNX(ISP),ISP) &
     &                             ,LNXH,LNOFH,LNXT,LNOFT)
 !
-!       == COLLECT ANGULAR MOMENTUM OF HEAD AND TAIL FUNCTIONS
+!       == COLLECT ANGULAR MOMENTUM OF HEAD AND TAIL FUNCTIONS =================
         ALLOCATE(LOXH(LNXH))
         ALLOCATE(LOXT(LNXT))
         DO LNH=1,LNXH
@@ -864,7 +869,7 @@ END MODULE SIMPLELMTO_MODULE
         ALLOCATE(PSPHIDOT(NR,LNXPHI))
 !!$        CALL SETUP$GETR8A('NLPHI',NR*LNXPHI,NLPHI)
 !!$        CALL SETUP$GETR8A('NLPHIDOT',NR*LNXPHI,NLPHIDOT)
-!ATTENTION: QPHI AND NLPHI SEEM TO BE THE SAME, namely nlphi. 
+!ATTENTION: QPHI AND NLPHI SEEM TO BE THE SAME, NAMELY NLPHI. 
 !           THE SECOND PARTIAL WAVE SHOULD BE DIFFERENT
 !
         CALL SETUP$GETR8A('QPHI',NR*LNXPHI,NLPHI)
@@ -1221,7 +1226,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
         DEALLOCATE(PSCHI)
         DEALLOCATE(PROPHIH)
         DEALLOCATE(PROPHIT)
-        DEALLOCATE(phiov)
+        DEALLOCATE(PHIOV)
         DEALLOCATE(CMAT)
         DEALLOCATE(KHEAD)
         DEALLOCATE(JTAIL)
@@ -1241,7 +1246,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     **                                                                      **
 !     ** FOR LNOFH<1, IT POINTS TO A SCATTERING PARTIAL WAVE.                 **
 !     ** FOR EACH ANGULAR MOMENTUM THERE IS A SINGLE SCATTERING WAVE PARTIAL  **
-!     ** WAVE. FOR LNOFH.LE.0 LNOFH POINTS TO THAT SCATTERING WAVE WITH       **
+!     ** WAVE. FOR LNOFH.LE.0, LNOFH POINTS TO THAT SCATTERING WAVE WITH      **
 !     ** L=-LNOFH.                                                            **
 !     **************************************************************************
       INTEGER(4),INTENT(IN) :: LNXT
@@ -1312,7 +1317,8 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
           DO LN=1,LNX
             IF(LOX(LN).NE.L) CYCLE
             N=N+1
-            LNOFT(N,L+1)=LN   ! IF THERE IS ONLY ONE PARTIAL WAVE MAKE BOTH IDENTICAL
+            LNOFT(N,L+1)=LN   ! IF THERE IS ONLY ONE PARTIAL WAVE, 
+                              ! MAKE BOTH IDENTICAL
             IF(N.EQ.2) EXIT
           ENDDO
           IF(N.EQ.0) THEN
@@ -1724,7 +1730,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : ton &
+      USE SIMPLELMTO_MODULE, ONLY : TON &
      &                             ,TOFFSITE
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$DELETE &
@@ -2398,6 +2404,8 @@ END IF
         ENDDO
       ENDDO
 !
+!     == POINTS FROM EACH ATOM TO THE CORRESPONDIG ONSITE TERM =================
+!     == IN THE NEIGHBORLIST ===================================================
       ALLOCATE(INDON(NAT))
       INDON=0
       DO I=1,NND
@@ -2439,6 +2447,7 @@ END IF
      &                        ,MATMUL(MYMAT(ISP2)%CMAT &
      &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
+!PIPHI(I)%MAT=0.D0
         END IF
         PIPHI(I)%MAT(:,:,1)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
                                  ,MATMUL(PIPHI(I)%MAT(:,:,1),MYMAT(ISP2)%PHIOV))
@@ -2789,17 +2798,13 @@ END IF
 !     == -- ETOT (PASSED TO ENERGLIST)                                        ==
 !     ==                                                                      ==
 !     == ONLY ONE OF THE TASKS IN THE MONOMER GROUP ADDS TO HAMIL. AT THE END ==
-!     == OF THIS ROUTINE THE RESILT IS SUMMED OVER ALL TASKS.                 ==
+!     == OF THIS ROUTINE, THE RESuLT IS SUMMED OVER ALL TASKS.                ==
 !     ==                                                                      ==
 !     == THE PARAMETER TPARALLEL DECIDES WHETHER THE PARALLELIZATION IS DONE  ==
 !     == OR WETHER EVERYTHING IS CALCULATED ON EACH TASK                      ==
 !     ==                                                                      ==
 !     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!
-!     ==========================================================================
-!     == LOOP OVER ALL ATOMS                                                  ==
-!     ==========================================================================
       ETOT=0.D0
       DO I=1,NND
         HAMIL(I)%MAT=0.D0
@@ -2809,24 +2814,16 @@ END IF
       ENDDO
       FORCE=0.D0
       STRESS=0.D0
+!
+!     ==========================================================================
+!     == onsite exchange correction                                           ==
+!     ==========================================================================
       DO IAT=1,NAT
         IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
 !
         ISP=ISPECIES(IAT)
         TACTIVE=(POTPAR(ISP)%LNXH.GT.0)
         IF(.NOT.TACTIVE) CYCLE
-!
-!       ========================================================================
-!       == COLLECT INFORMATION FROM SETUPS OBJECT ==============================
-!       ========================================================================
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('GID',GID)
-        CALL RADIAL$GETI4(GID,'NR',NR)
-        ALLOCATE(AECORE(NR))
-        CALL SETUP$GETR8A('AECORE',NR,AECORE)
-        CALL SETUP$GETI4('LMRX',LMRX)
-        CALL SETUP$UNSELECT()
-        LRX=INT(SQRT(REAL(LMRX)+1.D-8))-1
 !
 !       ========================================================================
 !       == ADJUSTMENT IF LOCAL HFWEIGHT IS DIFFERENT FROM GLOBAL HFWEIGHT ======
@@ -2843,119 +2840,34 @@ END IF
         CALL SIMPLELMTO_INDEXLOCAL2(IAT,NND,DENMAT,IND)
         LMNX=DENMAT(IND)%N1
         NDIMD=DENMAT(IND)%N3
-        LNX=SIZE(POTPAR(ISP)%LOXH)
-        ALLOCATE(LOX(LNX))
-        LOX=POTPAR(ISP)%LOXH
-!
-!       ========================================================================
-!       == CALCULATE U-TENSOR                                                 ==
-!       ========================================================================
-        U=POTPAR(ISP)%ONSITEU
-!PRINT*,'U ',U
-!PRINT*,'O ',POTPAR(ISP)%OVERLAP
-!
-!       ========================================================================
-!       == 
-!       ========================================================================
-        ALLOCATE(D(LMNX,LMNX,NDIMD))
-        ALLOCATE(H(LMNX,LMNX,NDIMD))
         LMNXPHI=DONSITE(IAT)%N1
-        ALLOCATE(DON(LMNXPHI,LMNXPHI,NDIMD))
-        ALLOCATE(HON(LMNXPHI,LMNXPHI,NDIMD))
-        DON=DONSITE(IAT)%MAT
-        D=DENMAT(IND)%MAT
 !
 !       ========================================================================
 !       == WORK OUT TOTAL ENERGY AND HAMILTONIAN                              ==
 !       ========================================================================
-        EX=0.D0
-        EAT=0.D0
+        CALL REPORT$TITLE(6,'ONSITE PBE0R CORRECTIONS')
+        CALL REPORT$I4VAL(6,'ATOM',IAT,' ')
+        ALLOCATE(HON(LMNXPHI,LMNXPHI,NDIMD))
+        ALLOCATE(H(LMNX,LMNX,NDIMD))
+        CALL SIMPLELMTO_ONSITEX(ISP,HYBRIDSETTING(ISP)%TCV,NDIMD,LMNX,LMNXPHI &
+      &                 ,POTPAR(ISP)%ONSITEU,DENMAT(IND)%MAT,DONSITE(IAT)%MAT &
+      &                 ,EX,H,HON)
+        HONSITE(IAT)%MAT=HONSITE(IAT)%MAT+HON*HFSCALE
+        HAMIL(IND)%MAT  =HAMIL(IND)%MAT  +H  *HFSCALE
+        ETOT            =ETOT            +EX *HFSCALE  
+                                         !HFWEIGHT IS MULTIPLIED ON LATER
+        DEALLOCATE(HON)
+        DEALLOCATE(H)
+!
+!       == CALCULATE CHARGE AND SPIN FOR DIAGONISTIC PURPOSES ==================
         QSPIN=0.D0
-        H(:,:,:)=0.D0
-        HON(:,:,:)=0.D0
         DO I=1,LMNX
           DO J=1,LMNX
             QSPIN(:NDIMD)=QSPIN(:NDIMD) &
-       &                 +POTPAR(ISP)%OVERLAP(I,J)*D(J,I,:)
-            DO K=1,LMNX
-              DO L=1,LMNX
-!               ================================================================
-!               == HARTREE TERM (NOT CONSIDERED)                              ==
-!               == EH=EH+0.5D0*U(I,J,K,L)*D(K,I,1)*D(L,J,1)                   ==
-!               == H(K,I,1)=H(K,I,1)+0.5D0*U(I,J,K,L)*D(L,J,1) !DE/DRHO(K,I,1)==
-!               == H(L,J,1)=H(L,J,1)+0.5D0*U(I,J,K,L)*D(K,I,1) !DE/DRHO(L,J,1)==
-!               ================================================================
-!               ================================================================
-!               == EXCHANGE ENERGY =============================================
-!               ================================================================
-!               == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION ==========
-!               == INTO TOTAL AND SPIN
-                SVAR=-0.25D0*U(I,J,K,L)
-                EX=EX+SVAR*SUM(D(K,J,:)*D(L,I,:))
-                H(K,J,:)=H(K,J,:)+SVAR*D(L,I,:) 
-                H(L,I,:)=H(L,I,:)+SVAR*D(K,J,:) 
-              ENDDO
-            ENDDO
+       &                 +POTPAR(ISP)%OVERLAP(I,J)*DENMAT(IND)%MAT(J,I,:)
           ENDDO
         ENDDO
-        HAMIL(IND)%MAT=HAMIL(IND)%MAT+H*HFSCALE
-        ETOT=ETOT+EX*HFSCALE
-        IF(TPR) THEN
-          PRINT*,'TOTAL VALENCE CHARGE ON ATOM=..............',IAT,QSPIN(1)
-          PRINT*,'TOTAL SPIN[HBAR/2] ON ATOM=................',IAT,QSPIN(2:NDIMD)
-          PRINT*,'EXACT VALENCE EXCHANGE ENERGY FOR ATOM=....',IAT,EX
-        END IF
-        EAT=EAT+EX
-        EX=0.D0
-!
-!       ========================================================================
-!       == ADD CORE-VALENCE EXCHANGE                                          ==
-!       ========================================================================
-        IF(HYBRIDSETTING(ISP)%TCV) THEN
-          CALL SIMPLELMTO_CVX_ACTONPHI(IAT,LMNXPHI,NDIMD,DON,EX,HON)
-          HONSITE(IAT)%MAT=HONSITE(IAT)%MAT+HON*HFSCALE
-          ETOT=ETOT+EX*HFSCALE
-          EAT=EAT+EX
-          IF(TPR)PRINT*,'CORE-VALENCE EXCHANGE ENERGY FOR ATOM=.....',IAT,EX
-          EX=0.D0
-          HON=0.D0
-        END IF
-!
-!       ========================================================================
-!       == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
-!       == THIS IS THE TIME CONSUMING PART                                    ==
-!       ========================================================================
-        CALL TIMING$CLOCKON('ENERGYTEST:DC')      
-!
-EX=0.D0
-H=0.D0
-HON=0.D0
-IF(.TRUE.) THEN
-        CALL DFT$SETL4('XCONLY',.TRUE.)
-        CALL SIMPLELMTO_DC_NEW(ISP,NDIMD,LMNX,D,LMNXPHI,DON,EX,H,HON)
-        CALL DFT$SETL4('XCONLY',.FALSE.)
-!HONSITE(IAT)%MAT=0.D0
-        HONSITE(IAT)%MAT=HONSITE(IAT)%MAT-HON*HFSCALE
-        HAMIL(IND)%MAT  =HAMIL(IND)%MAT  -H*HFSCALE
-        ETOT            =ETOT-EX*HFSCALE  !HFWEIGHT IS MULTIPLIED ON LATER
-END IF
-!
-        IF(TPR) THEN
-          IF(.NOT.TPARALLEL) THEN
-            PRINT*,'DOUBLE COUNTING CORRECFTION ENERGY FOR ATOM=',IAT,-EX
-            PRINT*,'EXACT EXCHANGE ENERGY FOR ATOM........... =',IAT,EAT
-            PRINT*,'EXCHANGE-XORRECTION FOR ATOM............. =',IAT,EAT-EX
-          END IF
-        END IF
-!
-        CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
-        DEALLOCATE(U)
-        DEALLOCATE(H)
-        DEALLOCATE(HON)
-        DEALLOCATE(DON)
-        DEALLOCATE(D)
-        DEALLOCATE(AECORE)
-        DEALLOCATE(LOX)
+        CALL REPORT$R8VAL(6,'CHARGE',QSPIN(1),'(Q_E)')
       ENDDO !END OF LOOP OVER ATOMS
 !
 !     ==========================================================================
@@ -3006,6 +2918,88 @@ END IF
                             CALL TRACE$POP()
       RETURN
       END
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SIMPLELMTO_ONSITEX(ISP,TCV,NDIMD,LMNXCHI,LMNXPHI &
+      &                            ,UCHI,DCHI,DPHI,EX,HCHI,HPHI)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: ISP
+      LOGICAL(4),INTENT(IN) :: TCV
+      INTEGER(4),INTENT(IN) :: NDIMD    ! #(SPIN COMPONENTS (1,2, OR 4)
+      INTEGER(4),INTENT(IN) :: LMNXCHI  ! #(LOCAL ORBITALS)
+      INTEGER(4),INTENT(IN) :: LMNXPHI  ! #(PARTIAL WAVES)
+      REAL(8)   ,INTENT(IN) :: UCHI(LMNXCHI,LMNXCHI,LMNXCHI,LMNXCHI)
+      REAL(8)   ,INTENT(IN) :: DCHI(LMNXCHI,LMNXCHI,NDIMD)
+      REAL(8)   ,INTENT(IN) :: DPHI(LMNXPHI,LMNXPHI,NDIMD)
+      REAL(8)   ,INTENT(OUT):: EX
+      REAL(8)   ,INTENT(OUT):: HCHI(LMNXCHI,LMNXCHI,NDIMD)
+      REAL(8)   ,INTENT(OUT):: HPHI(LMNXPHI,LMNXPHI,NDIMD)
+      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
+      REAL(8)   ,ALLOCATABLE:: HPHI1(:,:,:) !(LMNXPHI,LMNXPHI,NDIMD) 
+      REAL(8)   ,ALLOCATABLE:: HCHI1(:,:,:) !(LMNXCHI,LMNXCHI,NDIMD) 
+      INTEGER(4)            :: I,J,K,L
+      REAL(8)               :: EX1
+      REAL(8)               :: SVAR
+!     **************************************************************************
+      EX=0.D0
+      HCHI(:,:,:)=0.D0
+      HPHI(:,:,:)=0.D0
+      ALLOCATE(HCHI1(LMNXCHI,LMNXCHI,NDIMD))
+      ALLOCATE(HPHI1(LMNXPHI,LMNXPHI,NDIMD))
+!
+!     ==========================================================================
+!     == EXACT EXCHANGE ENERGY                                                ==
+!     ==========================================================================
+      DO I=1,LMNXCHI
+        DO J=1,LMNXCHI
+          DO K=1,LMNXCHI
+            DO L=1,LMNXCHI
+!             ==================================================================
+!             == HARTREE TERM (NOT CONSIDERED)                                ==
+!             == EH=EH+0.5D0*U(I,J,K,L)*D(K,I,1)*D(L,J,1)                     ==
+!             == H(K,I,1)=H(K,I,1)+0.5D0*U(I,J,K,L)*D(L,J,1) !DE/DRHO(K,I,1)  ==
+!             == H(L,J,1)=H(L,J,1)+0.5D0*U(I,J,K,L)*D(K,I,1) !DE/DRHO(L,J,1)  ==
+!             ==================================================================
+!             == AN ADDITIONAL FACTOR COMES FROM THE REPRESENTATION ============
+!             == INTO TOTAL AND SPIN ===========================================
+              SVAR=-0.25D0*UCHI(I,J,K,L)
+              EX=EX+SVAR*SUM(DCHI(K,J,:)*DCHI(L,I,:))
+              HCHI(K,J,:)=HCHI(K,J,:)+SVAR*DCHI(L,I,:) 
+              HCHI(L,I,:)=HCHI(L,I,:)+SVAR*DCHI(K,J,:) 
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      IF(TPR)CALL REPORT$R8VAL(6,'EXACT LOCAL EXCHANGE',EX,'H')
+!
+!     ========================================================================
+!     == ADD CORE-VALENCE EXCHANGE                                          ==
+!     ========================================================================
+      IF(TCV) THEN
+        CALL SIMPLELMTO_CVX_ACTONPHI(ISP,LMNXPHI,NDIMD,DPHI,EX1,HPHI1)
+        EX=EX+EX1
+        HPHI=HPHI+HPHI1
+        IF(TPR)CALL REPORT$R8VAL(6,'CORE-VALENCE EXCHANGE',EX1,'H')
+      END IF
+!
+!     ========================================================================
+!     == DOUBLE COUNTING CORRECTION (EXCHANGE ONLY)                         ==
+!     == THIS IS THE TIME CONSUMING PART                                    ==
+!     ========================================================================
+      CALL TIMING$CLOCKON('ENERGYTEST:DC')      
+      CALL DFT$SETL4('XCONLY',.TRUE.)
+      CALL SIMPLELMTO_DC(ISP,NDIMD,LMNXCHI,DCHI,LMNXPHI,DPHI &
+     &                      ,EX1,HCHI1,HPHI1)
+      CALL DFT$SETL4('XCONLY',.FALSE.)
+      HPHI=HPHI-HPHI1
+      HCHI=HCHI-HCHI1
+      EX  =EX  -EX1
+        IF(TPR)CALL REPORT$R8VAL(6,'DOUBLE COUNTING CORRECTION',-EX1,'H')
+      CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SIMPLELMTO_INDEXLOCAL2(IAT,NND,DENMAT,IND)
@@ -3039,18 +3033,17 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_CVX_ACTONPHI(IAT,LMNX,NDIMD,DENMAT,ETOT,DH)
+      SUBROUTINE SIMPLELMTO_CVX_ACTONPHI(ISP,LMNX,NDIMD,DENMAT,ETOT,DH)
 !     **************************************************************************
 !     **  CORE VALENCE EXCHANGE ENERGY ACTING ON PARTIAL WAVES                **
 !     *****************************PETER BLOECHL, GOSLAR 2011-2019**************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: IAT          ! ATOM INDEX
+      INTEGER(4),INTENT(IN)  :: ISP          ! ATOM TYPE INDEX
       INTEGER(4),INTENT(IN)  :: LMNX
       INTEGER(4),INTENT(IN)  :: NDIMD
       REAL(8)   ,INTENT(OUT) :: ETOT              ! CORE-VALENCE ENERGY
       REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT) :: DH(LMNX,LMNX,NDIMD)
-      INTEGER(4)             :: ISP
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: CVXMAT(:,:)
@@ -3061,7 +3054,6 @@ END IF
 !     ==========================================================================
 !     == COLLECT DATA                                                         ==
 !     ==========================================================================
-      CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
       CALL SETUP$ISELECT(ISP)
       CALL SETUP$GETI4('LNX',LNX)
       ALLOCATE(LOX(LNX))
@@ -3071,6 +3063,10 @@ END IF
       CALL SETUP$UNSELECT()
       IF(LMNX.NE.SUM(2*LOX+1)) THEN
         CALL ERROR$MSG('INCONSISTENT INPUT VALUE LMNX')
+        CALL ERROR$I4VAL('ISP',ISP)
+        CALL ERROR$I4VAL('LNX',LNX)
+        CALL ERROR$I4VAL('LMNX',LMNX)
+        CALL ERROR$I4VAL('SUM(2*LOX+1)',SUM(2*LOX+1))
         CALL ERROR$STOP('SIMPLELMTO_CVX_ACTONPHI')
       END IF
 !
@@ -3106,7 +3102,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_DC_NEW(ISP,NDIMD,LMNX_CHI,D_CHI,LMNX_PHI,D_PHI &
+      SUBROUTINE SIMPLELMTO_DC(ISP,NDIMD,LMNX_CHI,D_CHI,LMNX_PHI,D_PHI &
      &                            ,ETOT,H_CHI,H_PHI)
 !     **************************************************************************
 !     **  DOUBLE COUNTING CORRECTION FOR THE HYBRID FUNCTIONAL                **
@@ -3141,7 +3137,7 @@ END IF
       REAL(8)     ,INTENT(OUT):: ETOT       ! DOUBLE COUNTINNG ENERGY
       REAL(8)     ,INTENT(OUT):: H_CHI(LMNX_CHI,LMNX_CHI,NDIMD) !HAMILTONIAN
       REAL(8)     ,INTENT(OUT):: H_PHI(LMNX_PHI,LMNX_PHI,NDIMD) !HAMILTONIAN
-      LOGICAL(4)  ,PARAMETER  :: TPR=.TRUE.
+      LOGICAL(4)  ,PARAMETER  :: TPR=.FALSE.
       REAL(8)     ,PARAMETER  :: DELTA=1.D-8
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
@@ -3319,21 +3315,23 @@ VCUT=0.D0
 !     ==  PRINT DIAGNOSTIC INFORMATION                                        ==
 !     ==========================================================================
       IF(TPR) THEN
-        PRINT*,'LMRX',LMRX
         CALL LMTO_WRITEPHI('POT_CHI.DAT',GID,NR,LMRX,POT_CHI)
         CALL LMTO_WRITEPHI('POT_PHI.DAT',GID,NR,LMRX,POT_PHI)
         CALL LMTO_WRITEPHI('RHO_CHI.DAT',GID,NR,LMRX,RHO_CHI)
         CALL LMTO_WRITEPHI('RHO_PHI.DAT',GID,NR,LMRX,RHO_PHI)
         CALL LMTO_WRITEPHI('CUT.DAT',GID,NR,1,CUT)
         CALL LMTO_WRITEPHI('VCUT.DAT',GID,NR,1,VCUT)
+!
+        CALL REPORT$TITLE(6,'DIAGNOSTIC INFO FROM SIMPLELMTO_DC')
+        CALL REPORT$I4VAL(6,'LMRX',LMRX,' ')
         CALL RADIAL$INTEGRAL(GID,NR &
     &                      ,FOURPI*R**2*(RHO_PHI(:,1,1)-AECORE(:))*Y0,SVAR)
-        PRINT*,'RADXC VALENCE CHARGE (PARTIAL WAVE EXPANSION)=',SVAR
+        CALL REPORT$R8VAL(6,'VALENCE CHARGE (PARTIAL WAVE EXPANSION)',SVAR,' ')
         CALL RADIAL$INTEGRAL(GID,NR &
     &                       ,FOURPI*R**2*(RHO_CHI(:,1,1)-AECORE(:))*Y0,SVAR)
-        PRINT*,'RADXC VALENCE CHARGE (LOCAL ORBITALS)=        ',SVAR
+        CALL REPORT$R8VAL(6,'VALENCE CHARGE (LOCAL ORBITALS)',SVAR,' ')
         CALL RADIAL$INTEGRAL(GID,NR,FOURPI*R**2*AECORE*Y0,SVAR)
-        PRINT*,'RADXC CORE CHARGE                    =        ',SVAR
+        CALL REPORT$R8VAL(6,'CORE CHARGE',SVAR,' ')
 !!$        CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
 !!$        CALL ERROR$STOP('SIMPLELMTO_DC')
       END IF
@@ -3824,8 +3822,12 @@ VCUT=0.D0
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SIMPLELMTO_OFFXINT()
 !     **************************************************************************
-!     ** COMPUTES OFFSITE MATRIX ELEMENTS OFFSITEX
-!     ** WATCH PARALLELIZATION!!!
+!     ** COMPUTES OFFSITE MATRIX ELEMENTS OFFSITEX                            **
+!     ** WATCH PARALLELIZATION!!!                                             **
+!     **                                                                      **
+!     ** CAUTION: THE CHOICE OF FIT FUNCTIONS FOR THE INTERPOLATION IS NOT    **
+!     **    OPTIMIZED. LOGARITHMIC SPACING FOR DECAY AND RADIAL GRID MAY BE   **
+!     **                                                                      **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE,ONLY : POTPAR=>POTPAR1 &
      &                      ,OFFSITEX &
@@ -3833,20 +3835,22 @@ VCUT=0.D0
      &                      ,NSP
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      REAL(8)   ,PARAMETER :: TOLERANCE=1.D-3
-      INTEGER(4),PARAMETER :: NDIS=100  !#(DISTANCE GRID POINTS)
-      REAL(8)   ,PARAMETER :: DSMN=0.5D0,DSMX=5.D0 !PARMS FOR DISTANCE GRID
-      INTEGER(4),PARAMETER :: NF=3    !#(FIT FUNCTIONS)
-!OLD  REAL(8)   ,PARAMETER :: DCAYMN=0.8D0,DCAYMX=2.D0 !PARMS FOR FIT FUNCTIONS
-      REAL(8)   ,PARAMETER :: DCAYMN=0.8D0,DCAYMX=2.D0 !PARMS FOR FIT FUNCTIONS
-!      REAL(8)   ,PARAMETER :: DCAYMN=0.5D0,DCAYMX=3.D0 !PARMS FOR FIT FUNCTIONS
-      INTEGER(4)           :: GID1,GID2
-      INTEGER(4)           :: NR1,NR2
+      REAL(8)   ,PARAMETER :: TOLERANCE=1.D-5
+      INTEGER(4),PARAMETER :: NDIS=10  !#(DISTANCE GRID POINTS)
+      REAL(8)   ,PARAMETER :: DSMN=0.5D0,DSMX=4.D0 !PARMS FOR DISTANCE GRID
+!                             !DISTANCE GRID WILL BE SCALED BY RCOV1+RCOV2 
+      INTEGER(4),PARAMETER :: NF=4    !#(FIT FUNCTIONS 1<NF<NDIS!)
+      REAL(8)   ,PARAMETER :: DCAYMN=0.1D0,DCAYMX=0.5D0 !PARMS FOR FIT FUNCTIONS
+      REAL(8)    ,PARAMETER:: RMAXEX=20.D0 !TARGET EXTENT OF EXTENDED RAD. GRIDS
+      CHARACTER(8)         :: GRIDTYPE
+      INTEGER(4)           :: GID1,GID2  ! GRID ID
+      INTEGER(4)           :: NR1,NR2    ! #(RADIAL GRID POINTS)
       INTEGER(4)           :: LMNX1,LMNX2
       INTEGER(4)           :: LMN1,LMN2,LMN3,LMN4
       INTEGER(4)           :: ISP,ISP1,ISP2,I
       REAL(8)              :: SVAR,SVAR1,AEZ
-      REAL(8)              :: RCOV(NSP)
+      REAL(8)              :: RCOV(NSP)  ! COVALENT RADII
+      REAL(8)              :: R1,DEX     ! GRID PARAMETERS
       REAL(8)              :: DIS 
 !     **************************************************************************
                                   CALL TRACE$PUSH('SIMPLELMTO_OFFXINT')
@@ -3867,6 +3871,35 @@ PRINT*,'STARTING INITIALIZATION OF SIMPLELMTO_OFFSITE'
           NULLIFY(OFFSITEX(ISP1,ISP2)%X31)
           NULLIFY(OFFSITEX(ISP1,ISP2)%BONDU)
         ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == DEFINE EXTENDED RADIAL GRIDS                                         ==
+!     ==========================================================================
+!     == THE RADIAL GRIDS SUPPLIED FOR THE SETUPS MAY BE TOO SHORT FOR THE    ==
+!     == EVALUATION OF U-TENSOR MATRIX ELEMENTS. AN EXTENDED RADIAL GRID      ==
+!     == IS THUS DEFINED FOR THE U-TENSOR. THE FIRST POINTS ON THE EXTENDED   ==
+!     == GRID ARE IDENTICAL TO THOSE OF THE ORIGINAL GRID.                    ==
+      DO ISP=1,NSP
+        GID1=POTPAR(ISP)%GID
+        CALL RADIAL$GETCH(GID1,'TYPE',GRIDTYPE)
+        CALL RADIAL$NEW(GRIDTYPE,GID2)
+        POTPAR(ISP)%GIDE=GID2
+        CALL RADIAL$GETR8(GID1,'R1',R1)
+        CALL RADIAL$SETR8(GID2,'R1',R1)
+        CALL RADIAL$GETR8(GID1,'DEX',DEX)
+        CALL RADIAL$SETR8(GID2,'DEX',DEX)
+        CALL RADIAL$GETI4(GID1,'NR',NR1)
+        IF(GRIDTYPE.EQ.'SHLOG') THEN
+          NR2=MAX(NR1,NINT( LOG(1.D0+RMAXEX/R1)/DEX ))
+        ELSE IF(GRIDTYPE.EQ.'LOG') THEN
+          NR2=MAX(NR1,NINT( LOG(RMAXEX/R1)/DEX ))
+        ELSE
+          CALL ERROR$MSG('GRIDTYPE NOT RECOGNIZED: MUST BE "LOG" OR "SHLOG"')
+          CALL ERROR$CHVAL('GRIDTYPE',GRIDTYPE)
+          CALL ERROR$STOP('OFFXINT')
+        END IF
+        CALL RADIAL$SETI4(GID2,'NR',NR2)
       ENDDO
 !
 !     ==========================================================================
@@ -3921,14 +3954,10 @@ PRINT*,'DOING OVERLAP....',ISP1,ISP2
 !     ==========================================================================
       DO ISP1=1,NSP
         IF(.NOT.HYBRIDSETTING(ISP1)%TNDDO) CYCLE
-        GID1=POTPAR(ISP1)%GID
-        CALL RADIAL$GETI4(GID1,'NR',NR1)
         DO ISP2=1,NSP
           IF(.NOT.HYBRIDSETTING(ISP2)%TNDDO) CYCLE
-          GID2=POTPAR(ISP2)%GID
-          CALL RADIAL$GETI4(GID2,'NR',NR2)
 PRINT*,'DOING X22 ....',ISP1,ISP2
-          CALL SIMPLELMTO_OFFSITEX22SETUP(ISP1,ISP2,NR1,NR2,TOLERANCE)
+          CALL SIMPLELMTO_OFFSITEX22SETUP(ISP1,ISP2,TOLERANCE)
         ENDDO
       ENDDO
 !
@@ -4113,15 +4142,18 @@ REAL(8)::SVAR
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_OFFSITEX22SETUP(ISP1,ISP2,NR1,NR2,TOLERANCE)
+      SUBROUTINE SIMPLELMTO_OFFSITEX22SETUP(ISP1,ISP2,TOLERANCE)
 !     **************************************************************************
-!     ** NDDO(NEGELECT OF DIFFERENTIAL OVERLAP) CONTRIBUTION TO THE EXCHANGE  **
+!     ** NDDO(NEGLECT OF DIFFERENTIAL OVERLAP) CONTRIBUTION TO THE EXCHANGE   **
 !     ** THE COULOMB MATRIX ELEMENTS CONSIDERS ONE PAIR OF ORBITALS           **
 !     ** ON ONE SITE R, WHICH FORM A DENSITY THAT INTERACTS WITH THE DENSITY  **
 !     ** OF A SECOND PAIR OF ORBITALS ON A SECOND CENTER RPRIME               **
 !     **                                                                      **
-!     ** REMARK: THE LONG RANGE TERM FROM MONOPOLE AND DIPOLE DENSITIES IS    **
+!     ** REMARK: THE LONG-RANGE TERM FROM MONOPOLE AND DIPOLE DENSITIES IS    **
 !     **  SUBTRACTED OUT AND WILL BE ADDED IN AFTER INTERPOLATION             **
+!     **                                                                      **
+!     ** REMARK: USES AN EXTENDED RADIAL GRIDS.                               **
+!     **                                                                      **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : POTPAR=>POTPAR1 &
      &                             ,OFFSITEX &
@@ -4130,8 +4162,6 @@ REAL(8)::SVAR
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: ISP1
       INTEGER(4),INTENT(IN) :: ISP2
-      INTEGER(4),INTENT(IN) :: NR1
-      INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       LOGICAL(4),PARAMETER  :: TTEST=.FALSE. 
@@ -4145,7 +4175,12 @@ REAL(8)::SVAR
       REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQ4PI
-      INTEGER(4)            :: GID1,GID2
+      INTEGER(4)            :: GID1,GID2   !GRID ID OF NORMAL GRIDS
+      INTEGER(4)            :: GID1E,GID2E !GRID ID OF EXTENDED GRIDS
+      INTEGER(4)            :: NR1,NR2     ! 
+      INTEGER(4)            :: NR1E,NR2E
+      REAL(8)   ,ALLOCATABLE:: RGRID1(:)  !(NR1E)
+      REAL(8)   ,ALLOCATABLE:: RGRID2(:)  !(NR2E)
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
       INTEGER(4)            :: IND
@@ -4156,8 +4191,10 @@ REAL(8)::SVAR
       INTEGER(4)            :: MABS
       REAL(8)               :: INTEGRAL,DINTEGRAL
       INTEGER(4)            :: LMRX
-      REAL(8)               :: RHO12(NR1),RHO34(NR2),POT12(NR1),POT34(NR2)
-      REAL(8)               :: RGRID1(NR1),RGRID2(NR2)
+      REAL(8)   ,ALLOCATABLE:: RHO12(:)   !(NR1E)
+      REAL(8)   ,ALLOCATABLE:: RHO34(:)   !(NR2E)
+      REAL(8)   ,ALLOCATABLE:: POT12(:)   !(NR1E)
+      REAL(8)   ,ALLOCATABLE:: POT34(:)   !(NR2E)
       INTEGER(4)            :: IDIS
       INTEGER(4)            :: NDIS
       REAL(8)               :: DIS
@@ -4166,7 +4203,7 @@ REAL(8)::SVAR
       REAL(8) ,ALLOCATABLE  :: YLMDIS(:)
       REAL(8)               :: TOL
       INTEGER(4)            :: IR,I1,I2
-      REAL(8)               :: AUX(NR2),SVAR,SVAR1,SVAR2,A,B,YLM2
+      REAL(8)               :: SVAR,SVAR1,SVAR2,A,B,YLM2
       INTEGER(4)            :: THISTASK,NTASKS,COUNT
 LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
       REAL(8) :: Q1,Q2,D1(3),D2(3),E,VQ1,VQ2,VD1(3),VD2(3),LAMBDA
@@ -4175,10 +4212,24 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
       IF(TPR) OPEN(UNIT=10,FILE='X22.DAT')
 !
 !     ==========================================================================
-!     == PREPARATION                                                          ==
+!     == PREPARATION: RADIAL GRIDS                                            ==
 !     ==========================================================================
       GID1=POTPAR(ISP1)%GID
       GID2=POTPAR(ISP2)%GID
+      CALL RADIAL$GETI4(GID1,'NR',NR1)
+      CALL RADIAL$GETI4(GID2,'NR',NR2)
+      GID1E=POTPAR(ISP1)%GIDE
+      GID2E=POTPAR(ISP2)%GIDE
+      CALL RADIAL$GETI4(GID1E,'NR',NR1E)
+      CALL RADIAL$GETI4(GID2E,'NR',NR2E)
+      ALLOCATE(RGRID1(NR1E))
+      ALLOCATE(RGRID2(NR2E))
+      CALL RADIAL$R(GID1E,NR1E,RGRID1)
+      CALL RADIAL$R(GID2E,NR2E,RGRID2)
+!
+!     ==========================================================================
+!     == PREPARATION: ANGULAR MOMENTA                                         ==
+!     ==========================================================================
       LNX1=POTPAR(ISP1)%LNXH
       LNX2=POTPAR(ISP2)%LNXH
       CALL SETUP$ISELECT(ISP1)
@@ -4189,7 +4240,6 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
       CALL SETUP$GETI4('LMRX',LMRX)
       CALL SETUP$UNSELECT()
       LRX2=INT(SQRT(REAL(LMRX-1,KIND=8)+1.D-9))
-      NDIS=OFFSITEX(ISP1,ISP2)%NDIS
 
       ALLOCATE(YLMDIS((LRX2+2)**2))
       CALL SPHERICAL$YLM((LRX2+2)**2,(/0.D0,0.D0,1.D0/),YLMDIS)
@@ -4199,15 +4249,13 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
 !     ==========================================================================
       ALLOCATE(TOLFAC1(LNX1))
       ALLOCATE(TOLFAC2(LNX2))
-      CALL RADIAL$R(GID1,NR1,RGRID1)
       DO LN1=1,LNX1
         CALL RADIAL$INTEGRAL(GID1,NR1 &
-     &                   ,(RGRID1(:)*POTPAR(ISP1)%AECHI(:,LN1))**2,TOLFAC1(LN1))
+     &                ,(RGRID1(:NR1)*POTPAR(ISP1)%AECHI(:,LN1))**2,TOLFAC1(LN1))
       ENDDO
-      CALL RADIAL$R(GID2,NR2,RGRID2)
       DO LN2=1,LNX2
         CALL RADIAL$INTEGRAL(GID2,NR2 &
-    &                    ,(RGRID2(:)*POTPAR(ISP2)%AECHI(:,LN2))**2,TOLFAC2(LN2))
+    &                 ,(RGRID2(:NR2)*POTPAR(ISP2)%AECHI(:,LN2))**2,TOLFAC2(LN2))
       ENDDO
       TOLFAC1=SQRT(TOLFAC1)
       TOLFAC2=SQRT(TOLFAC2)
@@ -4236,11 +4284,16 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
           ENDDO
         ENDDO
       ENDDO
+      NDIS=OFFSITEX(ISP1,ISP2)%NDIS
       ALLOCATE(OFFSITEX(ISP1,ISP2)%X22(NDIS,IND))
 !
 !     ==========================================================================
 !     == DETERMINE INTEGRALS                                                 ==
 !     ==========================================================================
+      ALLOCATE(RHO12(NR1E))
+      ALLOCATE(POT12(NR1E))
+      ALLOCATE(RHO34(NR2E))
+      ALLOCATE(POT34(NR2E))
       OFFSITEX(ISP1,ISP2)%X22=0.D0
       COUNT=0
       IND=0
@@ -4248,14 +4301,16 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
         L1=POTPAR(ISP1)%LOXH(LN1)
         DO LN2=LN1,LNX1
           L2=POTPAR(ISP1)%LOXH(LN2)
-          RHO12(:)=POTPAR(ISP1)%AECHI(:,LN1) &
-       &          *POTPAR(ISP1)%AECHI(:,LN2)
+          RHO12(:NR1)=POTPAR(ISP1)%AECHI(:,LN1) &
+       &             *POTPAR(ISP1)%AECHI(:,LN2)
+          RHO12(NR1+1:)=0.D0
           DO LN3=1,LNX2
             L3=POTPAR(ISP2)%LOXH(LN3)
             DO LN4=LN3,LNX2
               L4=POTPAR(ISP2)%LOXH(LN4)
-              RHO34(:)=POTPAR(ISP2)%AECHI(:,LN3) &
-       &              *POTPAR(ISP2)%AECHI(:,LN4)
+              RHO34(:NR2)=POTPAR(ISP2)%AECHI(:,LN3) &
+       &                 *POTPAR(ISP2)%AECHI(:,LN4)
+              RHO34(NR2+1:)=0.D0
               TOL=TOLERANCE*TOLFAC1(LN1)*TOLFAC1(LN2) &
        &                   *TOLFAC2(LN3)*TOLFAC2(LN4)
               TOL=MAX(TOLMIN,TOL)
@@ -4265,9 +4320,9 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
 !               == DETERMINE POTENTIAL OF FIRST SITE
 !               ==============================================================
                 IF(SCREENL.LE.0.D0) THEN
-                  CALL RADIAL$POISSON(GID1,NR1,LR1,RHO12,POT12)
+                  CALL RADIAL$POISSON(GID1E,NR1E,LR1,RHO12,POT12)
                 ELSE
-                  CALL RADIAL$YUKAWA(GID1,NR1,LR1,1.D0/SCREENL,RHO12,POT12)
+                  CALL RADIAL$YUKAWA(GID1E,NR1E,LR1,1.D0/SCREENL,RHO12,POT12)
                 END IF
 
 IF(TTEST) THEN
@@ -4279,17 +4334,21 @@ END IF
                 IF(LR1.EQ.0) THEN
                   SVAR=POTPAR(ISP1)%QLN(1,LN1,LN2)*SQ4PI
                   IF(SCREENL.LE.0.D0) THEN
-                    POT12(:)=POT12(:)-SVAR/RGRID1(:)
+                    POT12(2:)=POT12(2:)-SVAR/RGRID1(2:)
+                    POT12(1)=POT12(2)
                   ELSE
-                    POT12(:)=POT12(:)-SVAR/RGRID1(:)*EXP(-RGRID1(:)/SCREENL)
+                    POT12(2:)=POT12(2:)-SVAR/RGRID1(2:)*EXP(-RGRID1(2:)/SCREENL)
+                    POT12(1)=POT12(2)
                   END IF
                 ELSE IF(LR1.EQ.1) THEN
                   SVAR=POTPAR(ISP1)%QLN(2,LN1,LN2)*SQ4PITHIRD
                   IF(SCREENL.LE.0.D0) THEN ! WITHOUT SCREENING
-                    POT12(:)=POT12(:)-SVAR/RGRID1(:)**2
+                    POT12(2:)=POT12(2:)-SVAR/RGRID1(2:)**2
+                    POT12(1)=POT12(2)
                  ELSE                      ! WITH SCREENING
-                    POT12(:)=POT12(:)-SVAR/RGRID1(:)**2 &
-      &                       *(1.D0+RGRID1(:)/SCREENL)*EXP(-RGRID1(:)/SCREENL)
+                    POT12(2:)=POT12(2:)-SVAR/RGRID1(2:)**2 &
+      &                      *(1.D0+RGRID1(2:)/SCREENL)*EXP(-RGRID1(2:)/SCREENL)
+                    POT12(1)=POT12(2)
                   END IF
                 END IF
 !
@@ -4301,9 +4360,9 @@ IF(TTEST)POT12=-POT12
 !                 == DETERMINE POTENTIAL OF SECOND SITE
 !                 ==============================================================
                   IF(SCREENL.LE.0.D0) THEN
-                    CALL RADIAL$POISSON(GID2,NR2,LR2,RHO34,POT34)
+                    CALL RADIAL$POISSON(GID2E,NR2E,LR2,RHO34,POT34)
                   ELSE
-                    CALL RADIAL$YUKAWA(GID2,NR2,LR2,1.D0/SCREENL,RHO34,POT34)
+                    CALL RADIAL$YUKAWA(GID2E,NR2E,LR2,1.D0/SCREENL,RHO34,POT34)
                   END IF
 !                 ==SUBTRACT LONG RANGE PART INCLUDING MONO- AND DIPOLE TERMS
 IF(TTEST) THEN
@@ -4313,17 +4372,22 @@ END IF
                   IF(LR2.EQ.0) THEN
                     SVAR=POTPAR(ISP2)%QLN(1,LN3,LN4)*SQ4PI
                     IF(SCREENL.LE.0.D0) THEN
-                      POT34(:)=POT34(:)-SVAR/RGRID2(:)
+                      POT34(2:)=POT34(2:)-SVAR/RGRID2(2:)
+                      POT34(1)=POT34(2)
                     ELSE
-                      POT34(:)=POT34(:)-SVAR/RGRID2(:)*EXP(-RGRID2(:)/SCREENL)
+                      POT34(2:)=POT34(2:) &
+       &                       -SVAR/RGRID2(2:)*EXP(-RGRID2(2:)/SCREENL)
+                      POT34(1)=POT34(2)
                     END IF
                   ELSE IF(LR2.EQ.1) THEN
                     SVAR=POTPAR(ISP2)%QLN(2,LN3,LN4)*SQ4PITHIRD
                     IF(SCREENL.LE.0.D0) THEN ! WITHOUT SCREENING
-                      POT34(:)=POT34(:)-SVAR/RGRID2(:)**2
+                      POT34(2:)=POT34(2:)-SVAR/RGRID2(2:)**2
+                      POT34(1)=POT34(2)
                     ELSE                      ! WITH SCREENING
-                      POT34(:)=POT34(:)-SVAR/RGRID1(:)**2 &
-      &                       *(1.D0+RGRID2(:)/SCREENL)*EXP(-RGRID2(:)/SCREENL)
+                      POT34(2:)=POT34(2:)-SVAR/RGRID2(2:)**2 &
+      &                      *(1.D0+RGRID2(2:)/SCREENL)*EXP(-RGRID2(2:)/SCREENL)
+                      POT34(1)=POT34(2)
                     END IF
                   END IF
 !
@@ -4342,8 +4406,8 @@ IF(TTEST) POT34=-POT34
 !                     == OFFSITEX WILL BE ADDED TOGETHER IN THE CALLING ROUTINE
                       IF(MOD(COUNT-1,NTASKS).NE.THISTASK-1) CYCLE
                       DIS=OFFSITEX(ISP1,ISP2)%DIS(IDIS)
-                      CALL SIMPLELMTO_TWOCENTER(LR1,MABS,GID1,NR1,POT12 &
-       &                                       ,LR2,MABS,GID2,NR2,RHO34 &
+                      CALL SIMPLELMTO_TWOCENTER(LR1,MABS,GID1E,NR1E,POT12 &
+       &                                       ,LR2,MABS,GID2E,NR2E,RHO34 &
        &                                       ,DIS,TOL,INTEGRAL)
 !
 IF(TTEST.AND.TEST_TYPE.EQ.'TC') GOTO 1000
@@ -4351,19 +4415,19 @@ IF(TTEST.AND.TEST_TYPE.EQ.'CO')    INTEGRAL=0.D0
 
                       IF(MABS.EQ.0) THEN
                          IF(LR1.EQ.0) THEN
-                           CALL RADIAL$VALUE(GID2,NR2,POT34,DIS,SVAR)
+                           CALL RADIAL$VALUE(GID2E,NR2E,POT34,DIS,SVAR)
                            SVAR=SVAR*POTPAR(ISP1)%QLN(LR1+1,LN1,LN2)
                            YLM2=(-1.D0)**LR2 * YLMDIS(LR2**2+LR2+1)
                            INTEGRAL=INTEGRAL+SVAR*YLM2
                          ELSE IF(LR1.EQ.1) THEN
-                           CALL RADIAL$DERIVATIVE(GID2,NR2,POT34,DIS,SVAR)
+                           CALL RADIAL$DERIVATIVE(GID2E,NR2E,POT34,DIS,SVAR)
                            SVAR=SVAR*POTPAR(ISP1)%QLN(LR1+1,LN1,LN2)
                            YLM2=(-1.D0)**(LR2+1) * YLMDIS(LR2**2+LR2+1)
                            INTEGRAL=INTEGRAL+SVAR*YLM2
                          END IF
                       END IF
                       IF(LR1.EQ.1) THEN
-                        CALL RADIAL$VALUE(GID2,NR2,POT34,DIS,SVAR)
+                        CALL RADIAL$VALUE(GID2E,NR2E,POT34,DIS,SVAR)
 !!$IF(MABS.EQ.0.AND.LR1.EQ.1) SVAR=-SVAR
 !!$! FEHLER FUER MABS=1,LR1=1,LR2=1
 !!$IF(MABS.EQ.1.AND.LR1.EQ.1.AND.LR2.EQ.1) SVAR=2.D0*SVAR
@@ -4503,6 +4567,19 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
         CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
         CALL ERROR$STOP('SIMPLELMTO_OFFSITEX22SETUP')
       END IF
+!
+!     ==========================================================================
+!     == CLEANUP                                                              ==
+!     ==========================================================================
+      DEALLOCATE(YLMDIS)
+      DEALLOCATE(TOLFAC1)
+      DEALLOCATE(TOLFAC2)
+      DEALLOCATE(RGRID1)
+      DEALLOCATE(RGRID2)
+      DEALLOCATE(RHO12)
+      DEALLOCATE(RHO34)
+      DEALLOCATE(POT12)
+      DEALLOCATE(POT34)
       RETURN
       END
 
@@ -4734,6 +4811,8 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
       INTEGER(4)            :: NF     !#(INTERPOLATING FUNCTIONS)
       INTEGER(4)            :: I
       INTEGER(4)            :: NIND   !#(INTEGRALS)
+      LOGICAL(4),PARAMETER  :: TESTNDDOFIT=.FALSE.
+      LOGICAL(4),PARAMETER  :: TESTX31FIT=.FALSE.
       REAL(8)   ,ALLOCATABLE:: AMAT(:,:)
       REAL(8)   ,ALLOCATABLE:: AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: AMATIN(:,:)
@@ -4804,12 +4883,26 @@ INTEGER(4) :: J
 !         == COULOMB TERMS X22
 !         ======================================================================
           IF(TNDDO) THEN
+            IF(TESTNDDOFIT) THEN !----------------------------------------------
+              PRINT*,'NDDO-A:',OFFSITEX(ISP1,ISP2)%X22(:NDIS,:)
+              CALL SIMPLELMTO_TESTOFFSITEXCONVERT_A(NDIS &
+        &                                     ,OFFSITEX(ISP1,ISP2)%DIS &
+        &                                     ,OFFSITEX(ISP1,ISP2)%X22(:,1))
+            END IF !------------------------------------------------------------
+
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%X22(1,:))
             DO I=1,NIND
               OFFSITEX(ISP1,ISP2)%X22(:NF,I)=MATMUL(AMATIN &
       &                                          ,OFFSITEX(ISP1,ISP2)%X22(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%X22(NF+1:,:)=0.D0
+!
+            IF(TESTNDDOFIT) THEN !----------------------------------------------
+              PRINT*,'NDDO-B:',OFFSITEX(ISP1,ISP2)%X22(:NF,:)
+              CALL SIMPLELMTO_TESTOFFSITEXCONVERT_B(NF &
+       &                   ,OFFSITEX(ISP1,ISP2)%LAMBDA(:NF) &
+       &                   ,OFFSITEX(ISP1,ISP2)%X22(:NF,1))
+            END IF !------------------------------------------------------------
           END IF
 !
 !         ======================================================================
@@ -4898,8 +4991,8 @@ PRINT*,'X(D)  ',X
       REAL(8)   ,INTENT(IN) :: LAMBDA(NF)
       REAL(8)   ,INTENT(IN) :: X(NF)
       REAL(8)   ,PARAMETER  :: DMIN=0.D0
-      REAL(8)   ,PARAMETER  :: DMAX=5.D0
-      INTEGER(4),PARAMETER  :: ND=100
+      REAL(8)   ,PARAMETER  :: DMAX=150.D0
+      INTEGER(4),PARAMETER  :: ND=1000
       INTEGER(4)            :: I
       INTEGER(4)            :: NFIL
       REAL(8)               :: D
@@ -4916,8 +5009,11 @@ PRINT*,'X(LAMBDA)  ',X
         FINT=SUM(X(:)*EXP(-LAMBDA(:)*D))
         WRITE(NFIL,FMT='(F10.5,10F15.5)')D,FINT
       ENDDO
+PRINT*,'LAMBDA ',LAMBDA
+PRINT*,'X      ',X
       CALL FILEHANDLER$CLOSE('TEST')
-      STOP
+      WRITE(NFIL,FMT='(80("+"),T10," STOPPING AFTER TEST ")')
+      STOP 'SIMPLELMTO_TESTOFFSITEXCONVERT_B'
       RETURN
       END
 !
@@ -6332,11 +6428,11 @@ CALL TIMING$CLOCKON('OFFX:31')
           ALLOCATE(U3A1B (LMNXA,LMNXA,LMNXA,LMNXB))
           ALLOCATE(DU3A1B(LMNXA,LMNXA,LMNXA,LMNXB))
           CALL SIMPLELMTO_OFFSITEX31U(ISPA,ISPB, DIS,LMNXA,LMNXB,U3A1B,DU3A1B)
-PRINT*,'X31REPORT A:',IATA,IATB,DIS,LMNXA,LMNXB
-PRINT*,'X31REPORT A U=',U3A1B,DU3A1B
-PRINT*,'X31REPORT A DAB =',DAB
-PRINT*,'X31REPORT A DAA=',DAA
-PRINT*,'X31REPORT A DBB=',DBB
+!!$PRINT*,'X31REPORT A:',IATA,IATB,DIS,LMNXA,LMNXB
+!!$PRINT*,'X31REPORT A U=',U3A1B,DU3A1B
+!!$PRINT*,'X31REPORT A DAB =',DAB
+!!$PRINT*,'X31REPORT A DAA=',DAA
+!!$PRINT*,'X31REPORT A DBB=',DBB
          DO LMN1B=1,LMNXB
             DO LMN3A=1,LMNXA 
               DO LMN2A=1,LMNXA
@@ -7055,7 +7151,7 @@ USE LMTO_TWOCENTER_MODULE, ONLY : TPR
        IMPLICIT NONE
        REAL(8)   ,INTENT(IN)  :: TOLERANCE ! REQUIRED ACCURACY
        REAL(8)   ,INTENT(OUT) :: VALUE     ! INTEGRAL VALUE
-       INTEGER(4),PARAMETER   :: LSTACKX=10000
+       INTEGER(4),PARAMETER   :: LSTACKX=50000
        TYPE(SEGMENT_TYPE)     :: STACK(LSTACKX)
        TYPE(SEGMENT_TYPE)     :: SEGMENT1
        TYPE(SEGMENT_TYPE)     :: SEGMENT2

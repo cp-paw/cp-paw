@@ -3321,30 +3321,31 @@ with $x=1,2,3,\ldots,N$.}
 \vrules{optional} 
 \vdefault{1.}}
 
-\mbax{\key{RTAIL/RCOV} 
-\vdescr{Tail-matching radius in units of the covalent radius of the
-  atom. At the tail-matching radius the exponential tails are matched
-  differentiably to the envelope function. The tail-matching radius
-  may be larger or smaller than the augmentation radius.}
-\vformat{real}
-\vrules{optional} 
-\vdefault{1.}}
+%% \mbax{\key{RTAIL/RCOV} 
+%% \vdescr{Tail-matching radius in units of the covalent radius of the
+%%   atom. At the tail-matching radius the exponential tails are matched
+%%   differentiably to the envelope function. The tail-matching radius
+%%   may be larger or smaller than the augmentation radius.}
+%% \vformat{real}
+%% \vrules{optional} 
+%% \vdefault{1.}}
 
-\mbax{\key{RTAILCUT/RCOV} 
-\vdescr{Tail-truncation radius in units of the covalent radius of the
-  atom. Beyond the tail-truncation radius, the 
-  one-center expansion of the orbitals
- is set to zero. Reasonable values range from 1.3 to 3.}
-\vformat{real}
-\vrules{optional} 
-\vdefault{99.}}
 
-\mbax{\key{TAILLAMBDA} 
-\vdescr{Decay constants of the two exponentials, that replace the 
-tails of the orbitals.}
-\vformat{2$\times$real}
-\vrules{optional} 
-\vdefault{(/4.,2./)}}
+%% \mbax{\key{RTAILCUT/RCOV} 
+%% \vdescr{Tail-truncation radius in units of the covalent radius of the
+%%   atom. Beyond the tail-truncation radius, the 
+%%   one-center expansion of the orbitals
+%%  is set to zero. Reasonable values range from 1.3 to 3.}
+%% \vformat{real}
+%% \vrules{optional} 
+%% \vdefault{99.}}
+
+%% \mbax{\key{TAILLAMBDA} 
+%% \vdescr{Decay constants of the two exponentials, that replace the 
+%% tails of the orbitals.}
+%% \vformat{2$\times$real}
+%% \vrules{optional} 
+%% \vdefault{(/4.,2./)}}
 
 \mbax{\key{LHFWEIGHT} 
  \vdescr{Overwrites the generic mixing factor for 
@@ -3352,6 +3353,21 @@ tails of the orbitals.}
 \vformat{real} 
 \vrules{Optional} 
 \vdefault{none}}
+
+\mbax{\key{SCREENL[AA]} 
+   \vdescr{Screening length $\lambda$ in {\AA}: The Coulomb
+     interaction in the explicit Hartree-Fock term is replaced by
+     a Yukawa potential
+     \begin{eqnarray}
+     v(\vec{r})=\frac{1}{4\pi\epsilon_0|\vec{r}|}
+     \exp\left(-\frac{|\vec{r}|}{\lambda}\right)
+     \end{eqnarray}
+     in the
+     spirit of the random-phase approximation (RPA), respectively the
+     screened Coulomb interaction in GW.}
+    \vformat{real}
+    \vrules{Optional} 
+    \vdefault{$\infty$}}
 
 \mbax{\key{FOCKSETUP} 
  \vdescr{Partial waves and projector functions are obtained from an 
