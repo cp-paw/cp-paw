@@ -48,7 +48,7 @@
       THELP=.FALSE.
       TCM=.FALSE.     ! CRYSTAL OR MOLECULE SPECIFIED
       DO I=1,NARGS
-        CALL LIB$GETARG(I,STRING)
+        CALL GET_COMMAND_ARGUMENT(I,STRING)
         STRING=+STRING
         IF(STRING(1:2).EQ.'-H'.OR.STRING.EQ.'?') THEN
           THELP=.TRUE.
@@ -100,7 +100,7 @@
 !     == RESOLVE ARGUMENTS =====================================================
       TCRYSTAL=.FALSE.
       DO I=1,NARGS-1
-        CALL LIB$GETARG(I,STRING)
+        CALL GET_COMMAND_ARGUMENT(I,STRING)
         WRITE(*,FMT='("ARGUMENT(",I2,"):",A)')I,TRIM(STRING)
         IF(STRING(1:1).NE.'-') THEN
           CALL ERROR$MSG('ARGUMENT DOES NOT HAVE PRECEDING "-"')
@@ -148,7 +148,7 @@
       ENDDO
 !
 !     == ROOTNAME ==============================================================
-      CALL LIB$GETARG(NARGS,ROOTNAME) !LAST ARGUMENT IS THE ROOT NAME
+      CALL GET_COMMAND_ARGUMENT(NARGS,ROOTNAME) !LAST ARGUMENT IS THE ROOT NAME
       WRITE(*,FMT='("ROOTNAME: ",A)')TRIM(ROOTNAME)
       IF(LEN(TRIM(ROOTNAME)).EQ.0) THEN
         STOP 'NO ROOTNAME SUPPLIED'

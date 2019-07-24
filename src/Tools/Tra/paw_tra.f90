@@ -123,7 +123,7 @@ END MODULE TRAJECTORY_MODULE
       character(40)  :: str
 !     **************************************************************************
                           CALL TRACE$PUSH('MAIN')
-      CALL LIB$GETARG(1,FILE)
+      CALL GET_COMMAND_ARGUMENT(1,FILE)
       I=INDEX(FILE,'.',BACK=.TRUE.)
       ROOT=FILE(1:I-1)
 !

@@ -34,7 +34,7 @@ end module stpreport_module
          print*,'filename is not given'
          stop 'command line error'
        end if
-       call lib__getarg(1,filename) ! call get_command_argument(1,filename)
+       call get_command_argument(1,filename)
        i=index(filename,'.')
        rootname=filename(1:i-1)
 !

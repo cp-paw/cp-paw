@@ -16,9 +16,9 @@
       CHARACTER(256)      :: FILEOUT
       CHARACTER(256)      :: TEXT
 !     ******************************************************************      
-      CALL LIB$GETARG(1,FILEIN)
-      CALL LIB$GETARG(2,FILEOUT)
-      CALL LIB$GETARG(3,TEXT)
+      CALL GET_COMMAND_ARGUMENT(1,FILEIN)
+      CALL GET_COMMAND_ARGUMENT(2,FILEOUT)
+      CALL GET_COMMAND_ARGUMENT(3,TEXT)
       READ(TEXT,*)DELTAT
 print*,'filein ',trim(filein)
 print*,'fileout ',trim(fileout)

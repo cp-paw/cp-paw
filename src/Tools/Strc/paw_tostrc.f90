@@ -20,10 +20,10 @@
 !     == GET FILE NAME ROOT FROM THE ARGUMENT LIST AND CONSTRUCT      ==
 !     == FILE NAMES                                                   ==
 !     ==================================================================
-      CALL LIB$GETARG(1,ROOTNAME)
+      CALL GET_COMMAND_ARGUMENT(1,ROOTNAME)
       IF(ROOTNAME(1:1).EQ.'-') THEN
         TCRYSTAL=(+ROOTNAME(2:2).EQ.+'C')
-        CALL LIB$GETARG(2,ROOTNAME)
+        CALL GET_COMMAND_ARGUMENT(2,ROOTNAME)
       END IF
       IF(LEN(TRIM(ROOTNAME)).EQ.0) THEN
         STOP 'NO ROOTNAME SUPPLIED'

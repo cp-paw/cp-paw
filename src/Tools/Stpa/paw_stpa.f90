@@ -19,7 +19,7 @@
       INTEGER(4)   ,PARAMETER     :: NCHOICEX=100
       CHARACTER(60)               :: CHOICE(2,NCHOICEX)
       INTEGER(4)                  :: I,NCHOICE
-      INTEGER(4)                  :: Iselection
+      INTEGER(4)                  :: ISELECTION
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
 !
@@ -81,7 +81,7 @@
 !     ==  SEARCH FOR HELP ARGUMENT                                            ==
 !     ==========================================================================
       DO IARG=1,NARGS
-        CALL LIB$GETARG(IARG,STRING)
+        CALL GET_COMMAND_ARGUMENT(IARG,STRING)
         IF(STRING.EQ.'?'.OR.STRING.EQ.-'-H') THEN
           CALL ERRORMESSAGE(NCHOICE,CHOICE)
           STOP
@@ -94,7 +94,7 @@
 !     ==========================================================================
 !     ==========================================================================
 !     == LAST ARGUMENT IS THE INPUT  FILE FOR THE SETUP REPORT =================
-      CALL LIB$GETARG(NARGS,SETUPREPORT)
+      CALL GET_COMMAND_ARGUMENT(NARGS,SETUPREPORT)
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -103,7 +103,7 @@
 !     ==========================================================================
       NSELECTION=0
       DO IARG=1,NARGS-1
-        CALL LIB$GETARG(IARG,STRING)
+        CALL GET_COMMAND_ARGUMENT(IARG,STRING)
         IF(+STRING(1:2).EQ.'-S') NSELECTION=NSELECTION+1
       ENDDO
       IF(NSELECTION.EQ.0) THEN
@@ -114,12 +114,12 @@
       END IF
       ALLOCATE(SELECTION(NSELECTION))
       ALLOCATE(OUTFILE(NSELECTION))
-      SELECTION(:)=''
-      OUTFILE(:)=''
+      SELECTION(:)=' '
+      OUTFILE(:)=' '
       ISELECTION=0
       IARG=1
       DO WHILE(IARG.LT.NARGS)
-        CALL LIB$GETARG(IARG,STRING)
+        CALL GET_COMMAND_ARGUMENT(IARG,STRING)
 !       == OPTION MUST START WITH A DASH =======================================
         IF(STRING(1:1).NE.'-') THEN
           WRITE(*,*)'INPUT ERROR: ARGUMENT MUST BEGIN WITH A DASH'
@@ -134,8 +134,8 @@
             CALL ERROR$MSG('SELECTION MUST BE SPECIFIED BEFORE THE OUTPUT FILE')
             CALL ERROR$STOP('MAIN')
           END IF
-          CALL LIB$GETARG(IARG,OUTFILE(ISELECTION))
-          IF(OUTFILE(iselection)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+          CALL GET_COMMAND_ARGUMENT(IARG,OUTFILE(ISELECTION))
+          IF(OUTFILE(ISELECTION)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -O MUST BE FOLLOWED BY OUTPUT FILE'
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)
@@ -147,8 +147,8 @@
         ELSE IF(+STRING.EQ.+'-S') THEN
           IARG=IARG+1
           ISELECTION=ISELECTION+1
-          CALL LIB$GETARG(IARG,SELECTION(ISELECTION))
-          IF(SELECTION(iselection)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
+          CALL GET_COMMAND_ARGUMENT(IARG,SELECTION(ISELECTION))
+          IF(SELECTION(ISELECTION)(1:1).EQ.'-'.OR.IARG.EQ.NARGS) THEN
             WRITE(*,*)'INPUT ERROR: OPTION -S MUST BE FOLLOWED BY SELECTION'
             WRITE(*,*)
             CALL ERRORMESSAGE(NCHOICE,CHOICE)
@@ -197,7 +197,7 @@
 !     == DEFINE OUTPUT FILE AND PREPARE OUTPUT                                ==
 !     ==========================================================================
       DO ISELECTION=1,NSELECTION
-        IF(OUTFILE(ISELECTION).NE.'') THEN
+        IF(OUTFILE(ISELECTION).NE.' ') THEN
           CALL FILEHANDLER$SETFILE('DAT',.FALSE.,OUTFILE(ISELECTION))
           CALL FILEHANDLER$SETSPECIFICATION('DAT','STATUS','UNKNOWN')
           CALL FILEHANDLER$SETSPECIFICATION('DAT','POSITION','REWIND')
@@ -213,25 +213,25 @@
 !       == SCAN FOR PARAMETERS                                              ==
 !       ======================================================================
         CALL PARMSCONSTANTS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK) cycle
+        IF(TCHK) CYCLE
 !
 !       ========================================================================
 !       == SCAN FOR POTENTIALS                                                ==
 !       ========================================================================
         CALL POTENTIALS(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK)cycle
+        IF(TCHK)CYCLE
 !
 !       ========================================================================
-!       == SCAN FOR core densities                                            ==
+!       == SCAN FOR CORE DENSITIES                                            ==
 !       ========================================================================
         CALL CORE(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK)cycle
+        IF(TCHK)CYCLE
 !
 !       ========================================================================
 !       == SCAN FOR PROJECTOR FUNCTIONS AND VADD IN G-SPACE                   ==
 !       ========================================================================
         CALL FOURIER(LL_STP,NFIL,SELECTION(ISELECTION),TCHK)
-        IF(TCHK)cycle
+        IF(TCHK)CYCLE
 !
 !       ========================================================================
 !       == TAKE CARE OF SCATTERING PROPERTIES                                 ==
@@ -315,7 +315,7 @@
           CALL ERROR$CHVAL('SELECTION',SELECTION(ISELECTION))
           CALL ERROR$STOP('MAIN')
         END IF
-        if(nfil.ne.6) CALL FILEHANDLER$CLOSE('DAT')
+        IF(NFIL.NE.6) CALL FILEHANDLER$CLOSE('DAT')
       ENDDO
       STOP
       END
@@ -329,7 +329,7 @@
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NCHOICE
       CHARACTER(*),INTENT(IN) :: CHOICE(2,NCHOICE)
-      CHARACTER(128)          :: string
+      CHARACTER(128)          :: STRING
       INTEGER(4)              :: I
 !     **************************************************************************
       WRITE(*,FMT='(A)')'CALLING SEQUENCE:'
@@ -345,11 +345,11 @@
       WRITE(*,FMT=*)
        
       STRING='("INFILE IS THE NAME OF THE INPUT FILE, WHICH HAS THE FORM:")'
-      WRITE(*,FMT=string)
+      WRITE(*,FMT=STRING)
       WRITE(*,FMT='(T10,A)')+"ROOT"//-"_STPFORZ"//+"NN"//-".MYXML"
       STRING='("WHERE NN IS THE ATOMIC NUMBER AND ROOT IS THE'
       STRING=TRIM(ADJUSTL(STRING))//' ROOT NAME OF THE PAW PROJECT")'
-      WRITE(*,FMT=string)
+      WRITE(*,FMT=STRING)
       WRITE(*,FMT=*)
 
       STRING='("OUTFILE IS THE NAME OF THE OUTPUT FILE FOR THE PRECEEDING' 

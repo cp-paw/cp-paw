@@ -2803,7 +2803,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !
 !         ======================================================================
 !         == NOW THE DATA IS AVAILABLE ON TASK 1 OF MONOMER; NEXT WRITE       ==
-!         == to FILE. ATTENTION: DATA ARE ONLY AVAILABLE ON TASK 1.           ==
+!         == TO FILE. ATTENTION: DATA ARE ONLY AVAILABLE ON TASK 1.           ==
 !         == THIS BLOCK CANNOT BE INTEGRATED INTO THE COMMUNICATION           ==
 !         == NBLOCK ABOVE, BECAUSE THERE IS NO COMMUNICATION IF THE DATA      ==
 !         == ARE ALREADY IN TASK 1.                                           ==
@@ -2821,7 +2821,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       DEALLOCATE(R)
       DEALLOCATE(OCC)
       IF(THISTASK.EQ.1) THEN
-        CALL LIB$FLUSHFILE(NFIL)
+        FLUSH(NFIL)
         CALL FILEHANDLER$CLOSE('PDOS')
       END IF
                              CALL TRACE$POP

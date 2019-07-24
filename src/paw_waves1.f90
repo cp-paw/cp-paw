@@ -113,12 +113,12 @@ CONTAINS
       WRITE(NFIL,FMT='(82("="),T10,"  ",A,"   ")')TRIM(TITLE)
       WRITE(NFIL,FMT='(82("="))')
       DO IN=1,NN
-        IF(MAT(IN)%N1*MAT(NN)%N2.EQ.0) CYCLE
+        IF(MAT(IN)%N1*MAT(IN)%N2.EQ.0) CYCLE
         FOMT='(82("="),T10,"IN=",I8," IAT1=",I5," IAT2=",I5," IT=",3I3," ")'
         WRITE(NFIL,FMT=FOMT)IN,MAT(IN)%IAT1,MAT(IN)%IAT2,MAT(IN)%IT
-        DO I3=1,MAT(NN)%N3
+        DO I3=1,MAT(IN)%N3
           WRITE(NFIL,FMT='(82("-"),T10," COMPONENT ",I1,"  ")')I3
-          DO I1=1,MAT(NN)%N1
+          DO I1=1,MAT(IN)%N1
             WRITE(NFIL,FMT='(20F10.5)')MAT(IN)%MAT(I1,:,I3)
           ENDDO
         ENDDO

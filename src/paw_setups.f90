@@ -4013,6 +4013,7 @@ END IF
       INTEGER(4)            :: IVB
       INTEGER(4)            :: L,LN,LN1,LN2,IPRO,IPRO1,IPRO2,IB,IR
       INTEGER(4)            :: NN,NN0,NPRO
+      CHARACTER(128)        :: STRING
 !     **************************************************************************
                             CALL TRACE$PUSH('SETUP_PAWDENSITY')
       LX=MAX(MAXVAL(LOX),MAXVAL(LOFI))
@@ -4232,10 +4233,10 @@ PRINT*,' E=',E
 !
 !     == REPORT ===============================================================
       WRITE(6,FMT='(80("="),T20,"  STRAIGHT AE- AND PAW-ENERGY LEVELS ")')
+      STRING='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;"'
+      STRING=TRIM(ADJUSTL(STRING))//'," PS-ENERGY:",F10.5," EV")' 
       DO IB=NC+1,NB
-        WRITE(6,FMT='("IB=",I2," L=",I2," AE-ENERGY:",F10.5," EV;" &
-     &                                 ," PS-ENERGY:",F10.5," EV")') &
-     &          IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
+        WRITE(6,FMT=STRING)IB,LOFI(IB),EOFICOMP(:,IB-NC)*27.211D0
       ENDDO
                             CALL TRACE$POP()
       RETURN
@@ -6529,6 +6530,7 @@ STOP
       INTEGER(4)            :: LX ! X(ANGULAR MOMENTUM)
       INTEGER(4),ALLOCATABLE :: NCL(:)
       INTEGER(4),ALLOCATABLE :: NPROL(:)
+      CHARACTER(128)         :: STRING
 !     **************************************************************************
                                      CALL TRACE$PUSH('SETUP_OUTEROLDPROWRAPPER')
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
@@ -7116,10 +7118,11 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
         ENDDO
 !
         WRITE(6,FMT='(80("="),T20,"  TEST RAW PAW EQUATION  ")')
+        STRING='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5'
+        STRING=TRIM(ADJUSTL(STRING))//'" SCHR. EQ.",F10.5)'
         DO LN=1,LNX
-          WRITE(6,FMT='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5 &
-     &                                 ," SCHR. EQ.",F10.5)') &
-     &         LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))),MAXVAL(ABS(PHITEST(:,LN)))
+          WRITE(6,FMT=STRING)LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))) &
+    &                                  ,MAXVAL(ABS(PHITEST(:,LN)))
         ENDDO
         DEALLOCATE(PHITEST)
         DEALLOCATE(TPHITEST)
@@ -7412,11 +7415,11 @@ GOTO 100
 !     == TEST IF BACK TRANSFORM WAS SUCCESSFUL ================================
       IF(TTEST) THEN
         WRITE(6,FMT='(80("="),T20,"  TEST BACK TRANSFORM  ")')
+        STRING='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5'
+        STRING=TRIM(ADJUSTL(STRING))//'" DIFF. KIN.OP NDLSS. PHI ",F10.5)'
         DO LN=1,LNX
-          WRITE(6,FMT='("LN=",I2," L=",I2," DIFF. NDLSS PHI",F10.5 &
-     &                                 ," DIFF. KIN.OP NDLSS. PHI ",F10.5)') &
-     &          LN,LOX(LN),MAXVAL(ABS(QN(:,LN)-NLPHI(:,LN))) &
-     &                    ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
+          WRITE(6,FMT=STRING)LN,LOX(LN),MAXVAL(ABS(QN(:,LN)-NLPHI(:,LN))) &
+     &                                 ,MAXVAL(ABS(TQN(:,LN)-TNLPHI(:,LN)))
         ENDDO
       END IF
 100 CONTINUE

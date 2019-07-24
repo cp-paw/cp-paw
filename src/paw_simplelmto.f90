@@ -2191,7 +2191,7 @@ END IF
       INTEGER(4)          ,INTENT(IN)   :: NND
       TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: DENMAT(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: SBARE(NND)
-      LOGICAL(4)          ,PARAMETER    :: TPR=.TRUE.
+      LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE  :: PIPHI(:)
       TYPE(MYMAT_TYPE)    ,ALLOCATABLE  :: MYMAT(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE  :: RHONEU(:)   !(NND)
@@ -2579,21 +2579,21 @@ END IF
           ELSE
             DO J=1,DENMAT(I)%N3
               DENMAT(I)%MAT(:,:,J)= &
-      &                       MATMUL(TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)) &
-      &                      ,MATMUL(RHONEU(INDON(IAT2))%MAT(:,:,J) &
-      &                             ,PIPHI(I)%MAT(:,:,1))) &
-      &                     + MATMUL(TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)) &
-      &                      ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                             ,PIPHI(INDON(IAT1))%MAT(:,:,1))) &
-      &                     + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
+      &                       MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
       &                      ,MATMUL(RHONEU(INDON(IAT1))%MAT(:,:,J) &
-      &                             ,PIPHI(INDON(IAT1))%MAT(:,:,1))) 
+      &                             ,PIPHI(I)%MAT(:,:,1))) &
+      &                     + MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
+      &                      ,MATMUL(RHONEU(I)%MAT(:,:,J) &
+      &                             ,PIPHI(INDON(IAT2))%MAT(:,:,1))) &
+      &                     + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
+      &                      ,MATMUL(RHONEU(INDON(IAT2))%MAT(:,:,J) &
+      &                             ,PIPHI(INDON(IAT2))%MAT(:,:,1))) 
               DENMAT(INDON(IAT1))%MAT(:,:,J)=DENMAT(INDON(IAT1))%MAT(:,:,J) &
       &                      + MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
-      &                       ,MATMUL(RHONEU(INDBACK(I))%MAT(:,:,J) &
+      &                       ,MATMUL(RHONEU(I)%MAT(:,:,J) &
       &                              ,PIPHI(INDBACK(I))%MAT(:,:,1))) &
-      &                       + MATMUL(TRANSPOSE(PIPHI(I)%MAT(:,:,1)) &
-      &                        ,MATMUL(RHONEU(I)%MAT(:,:,J) &
+      &                       + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
+      &                        ,MATMUL(RHONEU(INDBACK(I))%MAT(:,:,J) &
       &                               ,PIPHI(INDON(IAT1))%MAT(:,:,1)))
             ENDDO
           END IF
@@ -2687,6 +2687,8 @@ END IF
         ALLOCATE(SBARE(I)%MAT(N1,N2,1))
         SBARE(I)%MAT=0.D0
         IF(SBARE(I)%IAT1.EQ.SBARE(I)%IAT2.AND.SUM(SBARE(I)%IT**2).EQ.0) CYCLE
+!!$print*,'iat1 ',iat1,isp1,n1,POTPAR(ISP1)%LOXH
+!!$print*,'iat2 ',iat2,isp2,n2,POTPAR(ISP1)%LOXT
 !
 !       ========================================================================
 !       == CALCULATE BARE STRUCTURE CONSTANTS                                 ==
@@ -2715,9 +2717,7 @@ END IF
             LMN2B=LMN2A+2*L2
             LM2A=L2**2+1
             LM2B=(L2+1)**2
-            IF(L1.EQ.L2) THEN
-              SBARE(I)%MAT(LMN1A:LMN1B,LMN2A:LMN2B,1)=SMAT(LM1A:LM1B,LM2A:LM2B)
-            END IF
+            SBARE(I)%MAT(LMN1A:LMN1B,LMN2A:LMN2B,1)=SMAT(LM1A:LM1B,LM2A:LM2B)
             LMN2A=LMN2B+1
           ENDDO
           LMN1A=LMN1B+1
@@ -2996,7 +2996,8 @@ END IF
       HPHI=HPHI-HPHI1
       HCHI=HCHI-HCHI1
       EX  =EX  -EX1
-        IF(TPR)CALL REPORT$R8VAL(6,'DOUBLE COUNTING CORRECTION',-EX1,'H')
+      IF(TPR)CALL REPORT$R8VAL(6,'DOUBLE COUNTING CORRECTION',-EX1,'H')
+      IF(TPR)CALL REPORT$R8VAL(6,'ONSITE EXCHANGE',EX,'H')
       CALL TIMING$CLOCKOFF('ENERGYTEST:DC')      
       RETURN
       END
@@ -3044,6 +3045,7 @@ END IF
       REAL(8)   ,INTENT(OUT) :: ETOT              ! CORE-VALENCE ENERGY
       REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT) :: DH(LMNX,LMNX,NDIMD)
+      LOGICAL(4),PARAMETER   :: TPR=.false.
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: CVXMAT(:,:)
@@ -3093,6 +3095,24 @@ END IF
       ENDDO        
 !
 !     ==========================================================================
+!     == DIAGNOSTIC PRINTOUT                                                  ==
+!     ==========================================================================
+      IF(TPR) THEN
+        PRINT*,' LOX=',LOX
+        PRINT*,' e_cvx=',etot
+        WRITE(*,FMT='(82("="),T10,"  DENMAT  ")')
+        DO LMN1=1,LMNX
+          WRITE(*,FMT='(I3,20F10.5)')LMN1,DENMAT(LMN1,:,1)
+        ENDDO
+        WRITE(*,FMT='(82("="),T10,"  HAMILTONIAN (W/O SCALING)  ")')
+        DO LMN1=1,LMNX
+          WRITE(*,FMT='(I3,20F10.5)')LMN1,DH(LMN1,:,1)
+        ENDDO
+        CALL ERROR$MSG('REGULAR STOP AFTER DIAGNOSTIC OUTPUT')
+        CALL ERROR$STOP('SIMPLELMTO_CVX_ACTONPHI')
+      END IF
+!
+!     ==========================================================================
 !     == CLOSE DOWN                                                           ==
 !     ==========================================================================
       DEALLOCATE(CVXMAT)
@@ -3138,7 +3158,7 @@ END IF
       REAL(8)     ,INTENT(OUT):: H_CHI(LMNX_CHI,LMNX_CHI,NDIMD) !HAMILTONIAN
       REAL(8)     ,INTENT(OUT):: H_PHI(LMNX_PHI,LMNX_PHI,NDIMD) !HAMILTONIAN
       LOGICAL(4)  ,PARAMETER  :: TPR=.FALSE.
-      REAL(8)     ,PARAMETER  :: DELTA=1.D-8
+      REAL(8)     ,PARAMETER  :: DELTA=1.D-2
       REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)     ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
@@ -3167,7 +3187,7 @@ END IF
       INTEGER(4)              :: LMRX
 !      INTEGER(4)              :: LMRX,L
 !      INTEGER(4)              :: IDIM,LM,LMN,IR
-      INTEGER(4)              :: IDIM,IR
+      INTEGER(4)              :: IDIM,IR,lmn
       REAL(8),ALLOCATABLE,SAVE :: CUTSAVE(:)
 !     **************************************************************************
       ETOT=0.D0
@@ -3204,7 +3224,6 @@ END IF
 !     ==========================================================================
       ALLOCATE(RHO_CHI(NR,LMRX,NDIMD))
       ALLOCATE(RHO_PHI(NR,LMRX,NDIMD))
-      ALLOCATE(CUT(NR))
 !
 !     == TAKING THE REAL PART IS NOT APPROXIMATION: ONLY THE REAL PART OF THE 
 !     == DENSITY MATRIX IN (TXYZ) REPRESENTATION CONTRIBUTES TO THE DENSITY. 
@@ -3233,7 +3252,15 @@ END IF
 !     ==  CUTOFF FUNCTION FOR EXCHANGE-CORRELATION INTEGRAL                   ==
 !     ==  CUT IS CLOSE TO UNITY IN THE CENTER AND IS ZERO BEYOND THE ATOM     ==
 !     ==========================================================================
-!!$      CUT(:)=(RHO_CHI(:,1,1)/(RHO_PHI(:,1,1)+DELTA))**2 
+      ALLOCATE(CUT(NR))
+      CUT(:)=(RHO_CHI(:,1,1)/(RHO_PHI(:,1,1)+DELTA))**2 
+!     == PROBLEM 1: A ZERO IN RHO_PHI AT LARGE DISTANCES PRODUCES A DIVERGENCE
+!     ==   NEAR THE OUTER BOUNDARY OF THE GRID. THIS CAN BE REMEDIED BY 
+!     ==   THE CHOICE OF DELTA, WHICH IS MUCH LARGER THAN RHO_CHI.
+!     == PROBLEM 2: PARTIAL WAVES WITH NATURAL BOUNDARY CONDITIONS DO NOT 
+!     ==   PRODUCE AN EFFECTIVE CUTOFF, SO THAT THE TAIL REGION DOMINATES.
+!     == SOLUTION: CHOOSE DELTA IN THE RANGE OF THE DENSITY IN BETWEEN ATOMS.
+!     ==                                                                      ==
 !!$!     == FUDGE FACTOR: CUT OFF THE CUTOFF FUNCTION TO AVOID AN INCREASE 
 !!$!     == AT LARGE DISTANCES. 6 ABOHR IS ABOUT A BOND DISTANCE
 !!$      DO IR=1,NR
@@ -3249,13 +3276,14 @@ END IF
 !!$  CUTSAVE=CUT
 !!$END IF
 !CUT(:)=EXP(-R**2)
-      CUT=1.D0
-      DO IR=1,NR
-        IF(R(IR).GT.RCOV) THEN
-          CUT(IR:)=0.D0
-          EXIT
-        END IF
-      ENDDO
+!
+!!$      CUT=1.D0
+!!$      DO IR=1,NR
+!!$        IF(R(IR).GT.RCOV) THEN
+!!$          CUT(IR:)=0.D0
+!!$          EXIT
+!!$        END IF
+!!$      ENDDO
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY AND POTENTIAL                                      ==
@@ -3275,13 +3303,13 @@ END IF
       ETOT=ETOT-SVAR
       VCUT(:)=VCUT(:)-AUX(:)
       POT_CHI=0.D0
-      DO IR=1,NR
-        IF(R(IR).GT.6.D0) THEN
-          VCUT(IR:)=0.D0
-          EXIT
-        END IF
-      ENDDO
-VCUT=0.D0
+!!$      DO IR=1,NR
+!!$        IF(R(IR).GT.6.D0) THEN
+!!$          VCUT(IR:)=0.D0
+!!$          EXIT
+!!$        END IF
+!!$      ENDDO
+!!$VCUT=0.D0
 !VCUT=VCUT*Y0
 !      
 !     == POTENTIAL FOR PARTIAL-WAVE DENSITY N_T ================================
@@ -3289,7 +3317,7 @@ VCUT=0.D0
 !
 !     == POTENTIAL FOR THE CORRELATED DENSITY ==================================
       POT_CHI(:,:,:)=0.D0
-      POT_CHI(:,1,1)=VCUT(:)*2.D0*CUT(:)/(RHO_CHI(:,1,1)+DELTA)
+      POT_CHI(:,1,1)=VCUT(:)*2.D0*RHO_CHI(:,1,1)/(RHO_PHI(:,1,1)+DELTA)**2
 !
 !     ==========================================================================
 !     ==  EXTRACT HAMILTON CONTRIBUTIONS                                      ==
@@ -3332,8 +3360,25 @@ VCUT=0.D0
         CALL REPORT$R8VAL(6,'VALENCE CHARGE (LOCAL ORBITALS)',SVAR,' ')
         CALL RADIAL$INTEGRAL(GID,NR,FOURPI*R**2*AECORE*Y0,SVAR)
         CALL REPORT$R8VAL(6,'CORE CHARGE',SVAR,' ')
-!!$        CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
-!!$        CALL ERROR$STOP('SIMPLELMTO_DC')
+!
+        WRITE(*,FMT='(82("="),T10,"  DENMAT-CHI  ")')
+        DO LMN=1,LMNX_CHI
+          WRITE(*,FMT='(I3,20F10.5)')LMN,D_CHI(LMN,:,1)
+        ENDDO
+        WRITE(*,FMT='(82("="),T10,"  DENMAT-PHI  ")')
+        DO LMN=1,LMNX_PHI
+          WRITE(*,FMT='(I3,20F10.5)')LMN,D_PHI(LMN,:,1)
+        ENDDO
+        WRITE(*,FMT='(82("="),T10,"  HAMILTONIAN-CHI (W/O SCALING)  ")')
+        DO LMN=1,LMNX_CHI
+          WRITE(*,FMT='(I3,20F10.5)')LMN,H_CHI(LMN,:,1)
+        ENDDO
+        WRITE(*,FMT='(82("="),T10,"  HAMILTONIAN-PHI (W/O SCALING)  ")')
+        DO LMN=1,LMNX_PHI
+          WRITE(*,FMT='(I3,20F10.5)')LMN,H_PHI(LMN,:,1)
+        ENDDO
+        CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
+        CALL ERROR$STOP('SIMPLELMTO_DC')
       END IF
 !
       DEALLOCATE(RHO_PHI)
@@ -3615,7 +3660,8 @@ VCUT=0.D0
             ENDDO
           ENDDO
         ENDDO
-        VCUT(IR)    =FXC(IR)/FOURPI
+        VCUT(IR)    =FXC(IR)  !/FOURPI factor removed because not present in
+                                     ! prior version
         FXC(IR)     =FXC(IR)*CUT(IR)
         XDER(IR,:,:)=XDER(IR,:,:)*CUT(IR)
       ENDDO

@@ -76,6 +76,7 @@ END MODULE CORE_MODULE
       INTEGER(4)              :: I
       REAL(8)                 :: SVAR
       INTEGER(4)              :: THISTASK,NTASKS
+      CHARACTER(128)          :: STRING
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
@@ -87,12 +88,15 @@ END MODULE CORE_MODULE
         CALL REPORT$TITLE(NFIL,'EIGENVALUES OF CORE STATES FROM ATOM '& 
      &                       //TRIM(NAME))
         WRITE(NFIL,*)'     CURRENT SYSTEM          ISOLATED ATOM' 
-        WRITE(NFIL,*)'  ENERGY[H]  ENERGY[EV]   ENERGY[H]  ENERGY[EV]&
-     &    SHIFT[H]   SHIFT[EV]'
+        STRING='(T3,"ENERGY[H]",T14,"ENERGY[EV]"'
+        STRING=TRIM(ADJUSTL(STRING))//',T28,"ENERGY[H]",T39,"ENERGY[EV]"'
+        STRING=TRIM(ADJUSTL(STRING))//',T53,"SHIFT[H]",T64,"SHIFT[EV]"'
+        WRITE(NFIL,STRING)
         DO I=1,THIS%N
           SVAR = THIS%E(I) - THIS%EATOM(I)
-          WRITE(NFIL,FMT='(A5,6F12.5)')TRIM(THIS%TYPE(I)),THIS%E(I),THIS%E(I)/EV &
-    &          ,THIS%EATOM(I),THIS%EATOM(I)/EV,SVAR,SVAR/EV
+          WRITE(NFIL,FMT='(A5,6F12.5)')TRIM(THIS%TYPE(I)) &
+    &                                 ,THIS%E(I),THIS%E(I)/EV &
+    &                              ,THIS%EATOM(I),THIS%EATOM(I)/EV,SVAR,SVAR/EV
         ENDDO
         IF(.NOT.ASSOCIATED(THIS%NEXT)) EXIT
         THIS=>THIS%NEXT
@@ -305,42 +309,11 @@ END MODULE CORE_MODULE
           ELSE IF(L1.EQ.3) THEN
             THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'F'
           ELSE
-            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'??'
+            THIS%TYPE(LMN1)=TRIM(THIS%TYPE(LMN1))//'?'
           END IF
         ENDDO
       ENDDO
       
-!
-!!$!     ==================================================================
-!!$!     ==  PRINTOUT                                                    ==
-!!$!     ==================================================================
-!!$      CALL CONSTANTS('EV',EV)
-!!$!     ==  PRINTOUT
-!!$      CALL FILEHANDLER$UNIT('PROT',NFILO)
-!!$      CALL REPORT$TITLE(NFILO,'EIGENVALUES OF CORE STATES FROM ATOM '& 
-!!$        &//TRIM(NAME))
-!!$      WRITE(NFILO,*)'     CURRENT SYSTEM          ISOLATED ATOM' 
-!!$      WRITE(NFILO,*)'  ENERGY[H]  ENERGY[EV]   ENERGY[H]  ENERGY[EV]&
-!!$        &    SHIFT[H]   SHIFT[EV]'
-!!$
-!!$      LMN1=0
-!!$      DO LN1=1,NC
-!!$        L1=LB(LN1)
-!!$        DO IM1=1,2*L1+1
-!!$          LMN1=LMN1+1
-!!$          AUX2 = EIGENVAL(LMN1) - EB(LN1)
-!!$          WRITE(NFILO,FMT='(6F12.5)')EIGENVAL(LMN1),EIGENVAL(LMN1)/EV&
-!!$            &,EB(LN1),EB(LN1)/EV,AUX2,AUX2/EV
-!!$        ENDDO
-!!$      ENDDO
-!!$
-!      CALL FILEHANDLER$UNIT('PROT',NFILO)
-!      CALL CORE$REPORT(NFILO)
-!     DO I=1,LMNX
-!       AUX2 = EIGENVAL(I) - EB(I)
-!       WRITE(NFILO,FMT='(6F12.5)')EIGENVAL(I),EIGENVAL(I)/EV,EB(I)&
-!         &,EB(I)/EV,AUX2,AUX2/EV
-!     ENDDO
 
 !     ==================================================================
 !     ==  CLOSE DOWN                                                  ==

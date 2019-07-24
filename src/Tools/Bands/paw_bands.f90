@@ -306,7 +306,7 @@ END MODULE REFCELL_MODULE
         CALL ERROR$MSG('THE CONTROL FILE OF THE PDOS TOOL IS MANDATORY')
         CALL ERROR$STOP('INITIALIZEFILEANDLER')
       END IF
-      CALL LIB$GETARG(1,PDOSINNAME)
+      CALL GET_COMMAND_ARGUMENT(1,PDOSINNAME)
       ISVAR=INDEX(PDOSINNAME,-'.BCNTL',BACK=.TRUE.)
       IF(ISVAR.NE.0) THEN
         ROOTNAME=PDOSINNAME(1:ISVAR-1)
@@ -795,7 +795,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
            WRITE(NFIL,FMT=FMTSTRING)X1+(X2-X1)*D2,EBI 
          ENDDO
        ENDDO
-       CALL LIB$FLUSHFILE(NFIL)
+       CALL FLUSH(NFIL)
        CALL FILEHANDLER$CLOSE('BANDS')
                                             CALL TRACE$POP()
        RETURN 
@@ -2038,7 +2038,7 @@ PRINT*,'+++++++++++++++++ SPIN=',ISPIN,'++++++++++++++++++'
             COORD=COORD0+SQRT(SUM((KVECVAL(:,IKDIAG)-KVECVAL(:,1))**2))/GUNIT
             WRITE(NFILBAND,FMT='(103F10.5)')COORD,EIGVAL(:,IKDIAG)
           ENDDO
-          CALL LIB$FLUSHFILE(NFILBAND)
+          CALL FLUSH(NFILBAND)
           CALL FILEHANDLER$CLOSE('BANDS')
           COORD0=COORD
           !WRITE FATBANDS
@@ -2554,7 +2554,7 @@ PRINT*,'+++++++++++++++++ SPIN=',ISPIN,'++++++++++++++++++'
 !     ==  CLOSE PDOS FILE                                                     ==
 !     ==========================================================================
                             CALL TRACE$PUSH('PDOS CLOSE')
-      CALL LIB$FLUSHFILE(NFILOUT)
+      CALL FLUSH(NFILOUT)
       CALL FILEHANDLER$CLOSE('PDOSOUT')
                             CALL TRACE$POP()     
 !$!

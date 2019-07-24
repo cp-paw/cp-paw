@@ -769,7 +769,7 @@ END MODULE STOPIT_MODULE
       IF(TSTOP.AND.TNOTIFY.AND.THISTASK.EQ.1) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         WRITE(NFILO,*)'STOP SIGNAL RECEIVED'
-        CALL LIB$FLUSHFILE(NFILO)
+        FLUSH(NFILO)
         TNOTIFY=.FALSE.
       END IF
       RETURN
@@ -1155,7 +1155,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       IF(THISTASK.EQ.1) THEN
         WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
         CALL CONSTRAINTS$REPORT(NFIL,'SHORT')
-        CALL LIB$FLUSHFILE(NFIL)
+        CALL FLUSH(NFIL)
       END IF
 !   
 !     ==========================================================================
@@ -1176,7 +1176,6 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ==   WRITE FILE STRC_OUT                                                ==
 !     ==========================================================================
       CALL FILEHANDLER$CLOSE('PROT')
-!      CALL LIB$FLUSHFILE(NFILO)
                               CALL TRACE$POP
       RETURN
       END

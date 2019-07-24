@@ -49,7 +49,7 @@
       CELLDISTANCE=6.D0*1.889726878D0   ! DEFAULT CELL DISTANCE IN A.U.
       NARG=COMMAND_ARGUMENT_COUNT()
       DO WHILE (IARG.LE.NARG)
-         CALL LIB$GETARG(IARG,LINE)
+         CALL GET_COMMAND_ARGUMENT(IARG,LINE)
          IARG=IARG+1
          IF(LINE(1:1).EQ.'-') THEN
             IF(+LINE(2:2).EQ.'O') THEN
@@ -67,7 +67,7 @@
                PRINT*,'|/            WRITTEN IN DEZ. 2001 BY JOHANNES SCHIMPL   |/ '
                PRINT*,'+--------------------------------------------------------+  '
             ELSE IF(+LINE(2:2).EQ.'D') THEN
-               CALL LIB$GETARG(IARG,STRING)
+               CALL GET_COMMAND_ARGUMENT(IARG,STRING)
                IARG=IARG+1
                CALL CHAR_TO_REAL(STRING,DIST,TCHK)
                IF(TCHK) THEN
@@ -75,15 +75,15 @@
                   WRITE(*,"('USING ',F10.5,' ANG AS TARGET DISTANCE')") DIST
                END IF
             ELSE IF (+LINE(2:2).EQ.'M') THEN
-               CALL LIB$GETARG(IARG,STRING)
+               CALL GET_COMMAND_ARGUMENT(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MX
                IF (MX.LT.1) MX=1
-               CALL LIB$GETARG(IARG,STRING)
+               CALL GET_COMMAND_ARGUMENT(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MY
                IF (MY.LT.1) MY=1
-               CALL LIB$GETARG(IARG,STRING)
+               CALL GET_COMMAND_ARGUMENT(IARG,STRING)
                IARG=IARG+1
                READ(STRING,'(I4)') MZ
                IF (MZ.LT.1) MZ=1

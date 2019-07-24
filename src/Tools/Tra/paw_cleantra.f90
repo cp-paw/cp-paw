@@ -19,7 +19,7 @@
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
         CALL ERROR$STOP('INITIALIZEFILEANDLER')
       ENDIF
-      CALL LIB$GETARG(1,FILE)
+      CALL GET_COMMAND_ARGUMENT(1,FILE)
 !
 !     ==================================================================
 !     ==  DEFINE FILES                                                ==

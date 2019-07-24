@@ -138,6 +138,9 @@
        REAL(8),INTENT(IN) :: A
        REAL(8),INTENT(OUT):: VAL
 !      *************************************************************************
+       CALL ERROR$MSG('FUNCTION NOT USED. IT IS MARKED FOR DELETION')
+       CALL ERROR$STOP('SPECIALFUNCTION$GAMMP')
+!
        IF(X.LT.0.D0.OR.A.LE.0.D0) THEN
          STOP 'ERROR STOP IN SPECIALFUNCTION$GAMMP'
        END IF
@@ -166,6 +169,9 @@
        REAL(8)            :: X1,TMP,SER
        INTEGER(4)         :: J
 !      *************************************************************
+       CALL ERROR$MSG('FUNCTION NOT USED. IT IS MARKED FOR DELETION')
+       CALL ERROR$STOP('SPECIALFUNCTION$GAMMP')
+!
        X1=X-1.D0
        TMP=X1+5.5D0
        TMP=(X1+0.5D0)*LOG(TMP)-TMP
@@ -193,6 +199,9 @@
        REAL(8)               :: AP,SUM,DEL,GLN
        INTEGER(4)            :: N
 !      *************************************************************
+       CALL ERROR$MSG('FUNCTION NOT USED. IT IS MARKED FOR DELETION')
+       CALL ERROR$STOP('SPECIALFUNCTION$GAMMP')
+!
        IF(X.LT.0.D0) THEN
          STOP 'INVALID ARGUMENT FOR GSER'
        END IF
@@ -234,6 +243,9 @@
        REAL(8)               :: FAC,AN,ANA,ANF,G
        INTEGER(4)            :: N
 !      *************************************************************
+       CALL ERROR$MSG('FUNCTION NOT USED. IT IS MARKED FOR DELETION')
+       CALL ERROR$STOP('SPECIALFUNCTION$GAMMP')
+!
        CALL SPECIALFUNCTION_GAMMLN(A,GLN)
        GOLD=0.D0
        A0=1.D0

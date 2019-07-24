@@ -253,7 +253,6 @@ CALL TRACE$PASS('FILEHANDLER')
 !     ==================================================================
 CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$CLOSEALL
-!      IF(THISTASK.EQ.1)CALL LIB$FLUSHFILE(NFILO)
                             CALL TRACE$POP
       RETURN
       END
@@ -1217,7 +1216,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'SCALERCUT',1,SVAR)
           CALL LMTO$SETR8('SCALERCUT',SVAR)
-          CALL waves$SETR8('SCALERCUT',SVAR)
+          CALL WAVES$SETR8('SCALERCUT',SVAR)
         END IF
 
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')

@@ -414,6 +414,7 @@ END MODULE COSMO_MODULE
       CHARACTER(*),INTENT(IN) :: FILEID
       LOGICAL(4)              :: TCHK
       REAL(8)                 :: R(3)
+      INTEGER(4)              :: N
 !     ***********************************************************************
       CALL COSMO_READTESSELATION(FILEID,1,NPTESS,R,TCHK)
       IF(ALLOCATED(RTESS)) THEN
@@ -421,7 +422,8 @@ END MODULE COSMO_MODULE
         CALL ERROR$STOP('COSMO$READTESSELATION')
       END IF
       ALLOCATE(RTESS(3,NPTESS))
-      CALL COSMO_READTESSELATION(FILEID,NPTESS,NPTESS,RTESS,TCHK)
+      N=NPTESS
+      CALL COSMO_READTESSELATION(FILEID,NPTESS,N,RTESS,TCHK)
       RETURN
       END
 !
@@ -2341,7 +2343,7 @@ END IF
         END FUNCTION UC
       END
 !
-!     .............................................................................
+!     ..........................................................................
       SUBROUTINE COSMO_WRITEENERGIES(NFIL,ETOT,DE,EDIEL)
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
@@ -2349,7 +2351,8 @@ END IF
       REAL(8)     ,INTENT(IN) :: EDIEL         ! DIELECTRIC ENERGY
       REAL(8)     ,INTENT(IN) :: DE            ! ENERGY CORRECTION
       CHARACTER(1)            :: DOLLAR    ! DOLLAR SIGN
-!     *****************************************************************************
+      CHARACTER(128)          :: STRING
+!     **************************************************************************
       DOLLAR=ACHAR(36)
       WRITE(NFIL,FMT='("# CORRELATED (C) COSMO CALCULATION:")')
       WRITE(NFIL,FMT='("# TOTAL ENERGY: E(SCF)-EDIEL(SCF)+E(C)+EDIEL(C)")')
@@ -2360,14 +2363,16 @@ END IF
       WRITE(NFIL,FMT='(A)')DOLLAR//'COSMO_ENERGY'
       WRITE(NFIL,FMT='("  TOTAL ENERGY [A.U.]            =   ", F17.10)')ETOT
       WRITE(NFIL,FMT='("  TOTAL ENERGY + OC CORR. [A.U.] =   ", F17.10)')ETOT+DE
-      WRITE(NFIL,FMT='("  TOTAL ENERGY CORRECTED [A.U.]  =   ", F17.10 &
-     &                ," NOTE: INCORRECT VALUE CONTAINED FOR DOWNWARD COMPATIBILITY")')ETOT+0.5D0*DE
+      STRING='("  TOTAL ENERGY CORRECTED [A.U.]  =   ", F17.10'
+      STRING=TRIM(ADJUSTL(STRING)) &
+     &      //'" NOTE: INCORRECT VALUE CONTAINED FOR DOWNWARD COMPATIBILITY")'
+      WRITE(NFIL,FMT=STRING)ETOT+0.5D0*DE
       WRITE(NFIL,FMT='("  DIELECTRIC ENERGY [A.U.]       =   ", F17.10)')EDIEL
       WRITE(NFIL,FMT='("  DIEL. ENERGY + OC CORR. [A.U.] =   ", F17.10)')EDIEL+DE
       RETURN
       END
 !
-!     .............................................................................
+!     ..........................................................................
       SUBROUTINE COSMO_WRITESEGMENT(NFIL,NPS,IATSP,COSURF,QCOSC,AR,PHIC)
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL          ! FILE UNIT OF THE COSMO FILE
@@ -2380,18 +2385,22 @@ END IF
       REAL(8)      ,PARAMETER :: ANGSTROM = 1.D0/0.529177249D0 
       INTEGER(4)              :: I,J
       CHARACTER(1)            :: DOLLAR    ! DOLLAR SIGN
-!     *****************************************************************************
+      CHARACTER(128)          :: STRING
+!     **************************************************************************
       DOLLAR=ACHAR(36)
       WRITE(NFIL,FMT='(A)')DOLLAR//'SEGMENT_INFORMATION'
-      WRITE(NFIL,FMT='("# N             - SEGMENT NUMBER")')
-      WRITE(NFIL,FMT='("# ATOM          - ATOM ASSOCIATED WITH SEGMENT N")')
-      WRITE(NFIL,FMT='("# POSITION      - SEGMENT COORDINATES [A.U.]")')
-      WRITE(NFIL,FMT='("# CHARGE        - SEGMENT CHARGE (CORRECTED)")')
-      WRITE(NFIL,FMT='("# AREA          - SEGMENT AREA [A**2]")')
-      WRITE(NFIL,FMT='("# POTENTIAL     - SOLUTE POTENTIAL ON SEGMENT (A LENGTH SCALE)")')
+      WRITE(NFIL,FMT='("# N"       ,T17,"- SEGMENT NUMBER")')
+      WRITE(NFIL,FMT='("# ATOM"    ,T17,"- ATOM ASSOCIATED WITH SEGMENT N")')
+      WRITE(NFIL,FMT='("# POSITION",T17,"- SEGMENT COORDINATES [A.U.]")')
+      WRITE(NFIL,FMT='("# CHARGE"  ,T17,"- SEGMENT CHARGE (CORRECTED)")')
+      WRITE(NFIL,FMT='("# AREA"    ,T17,"- SEGMENT AREA [A**2]")')
+      STRING='("# POTENTIAL",T17,"- SOLUTE POTENTIAL ON SEGMENT"'
+      STRING=TRIM(ADJUSTL(STRING))//'" (A LENGTH SCALE)")'
+      WRITE(NFIL,FMT=STRING)
       WRITE(NFIL,FMT='("#")')
-      WRITE(NFIL,FMT='("#  N   ATOM",14X,"POSITION (X, Y, Z)",19X &
-     &                ,"CHARGE         AREA        CHARGE/AREA     POTENTIAL")')
+      STRING='("#  N   ATOM",T26,"POSITION (X, Y, Z)",T63,"CHARGE",T78,"AREA"'
+      STRING=TRIM(ADJUSTL(STRING))//',T90,"CHARGE/AREA",T106,"POTENTIAL")'
+      WRITE(NFIL,FMT=STRING)
       WRITE(NFIL,FMT='("#")')
       WRITE(NFIL,FMT='("#")')
       DO I=1,NPS

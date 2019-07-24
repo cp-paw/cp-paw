@@ -1081,8 +1081,8 @@ END MODULE BRILLOUIN_MODULE
       NMSHP=(N(1)+1)*(N(2)+1)*(N(3)+1)                                  
       WRITE(*,FMT='("NO. OF MESH POINTS IN THE BRILLOUIN ZONE =",I6)') &
      &            N(1)*N(2)*N(3)      
-      WRITE(*,FMT='("DIVISION OF RECIPROCAL LATTICE VECTORS (INTERVALS)=" &
-     &        ,3I5)')N(:)
+      WRITE(*,FMT= &
+     &        '("DIVISION OF RECIPROCAL LATTICE VECTORS (INTERVALS)=",3I5)')N(:)
       RETURN                                                            
       END                                                               
 !

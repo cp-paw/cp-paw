@@ -62,32 +62,32 @@
 ! LIB$GETENV      -> GET_ENVIRONMENT_VARIABLE
 ! LIB$GETHOSTNAME -> GET_ENVIRONMENT_VARIABLE
 ! LIB$SYSTEM      -> EXECUTE_COMMAND_LINE
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$GETARG(IPOS,ARG)
-!     **************************************************************************
-!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
-!     **  THIS ROUTINE SHALL BE REPLACED BY A DIRECT CALL TO THE FORTRAN      **
-!     ** INTRINSIC. IT IS STILL HEAVILY USED IN THE TOOLS.                    **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN)  :: IPOS
-      CHARACTER(*),INTENT(OUT) :: ARG
-      INTEGER                  :: IPOSSTD
-      INTEGER                  :: LENG
-      INTEGER                  :: ST
-!     **************************************************************************
-!     == USE FORTRAN 2003 INTRINSIC SUBROUTINE
-      CALL GET_COMMAND_ARGUMENT(IPOS,ARG,LENG,ST)
-      IF(ST.NE.0) THEN
-        CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
-        CALL ERROR$I4VAL('STATUS',ST)
-        CALL ERROR$I4VAL('POSITION',IPOS)
-        CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
-        CALL ERROR$STOP('LIB$GETARG')
-      END IF
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB$GETARG(IPOS,ARG)
+!!$!     **************************************************************************
+!!$!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
+!!$!     **  THIS ROUTINE SHALL BE REPLACED BY A DIRECT CALL TO THE FORTRAN      **
+!!$!     ** INTRINSIC. IT IS STILL HEAVILY USED IN THE TOOLS.                    **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4)  ,INTENT(IN)  :: IPOS
+!!$      CHARACTER(*),INTENT(OUT) :: ARG
+!!$      INTEGER                  :: IPOSSTD
+!!$      INTEGER                  :: LENG
+!!$      INTEGER                  :: ST
+!!$!     **************************************************************************
+!!$!     == USE FORTRAN 2003 INTRINSIC SUBROUTINE
+!!$      CALL GET_COMMAND_ARGUMENT(IPOS,ARG,LENG,ST)
+!!$      IF(ST.NE.0) THEN
+!!$        CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
+!!$        CALL ERROR$I4VAL('STATUS',ST)
+!!$        CALL ERROR$I4VAL('POSITION',IPOS)
+!!$        CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
+!!$        CALL ERROR$STOP('LIB$GETARG')
+!!$      END IF
+!!$      RETURN
+!!$      END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
 !!$      SUBROUTINE LIB$GETENV(NAME,VAL)
@@ -143,18 +143,18 @@
 !!$      END IF
 !!$      RETURN
 !!$      END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB$FLUSHFILE(N)
-!     **************************************************************************
-!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
-!     **************************************************************************
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: N
-!     **************************************************************************
-      FLUSH(N) ! FORTRAN 2003
-      RETURN
-      END 
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE LIB$FLUSHFILE(N)
+!!$!     **************************************************************************
+!!$!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
+!!$!     **************************************************************************
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: N
+!!$!     **************************************************************************
+!!$      FLUSH(N) ! FORTRAN 2003
+!!$      RETURN
+!!$      END 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)
@@ -3642,7 +3642,7 @@ INTEGER(4) :: I,J
       CHARACTER(*),INTENT(IN) :: DIR
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(INOUT) :: X(LEN,NFFT)
+      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
       CHARACTER(4),SAVE       :: DIRSAVE=' '
       INTEGER(4)  ,SAVE       :: LENSAVE=0
@@ -4170,7 +4170,6 @@ INTEGER(4) :: I,J
       INTEGER(4)         :: K,I
       REAL(8)            :: A(0:64)
       REAL(8)            :: B(0:64)
-!     **************************************************************************
       DATA (A(I), I = 0, 12) / &
      &    0.00000000005958930743D0, -0.00000000113739022964D0, &
      &    0.00000001466005199839D0, -0.00000016350354461960D0, &
@@ -4251,6 +4250,10 @@ INTEGER(4) :: I,J
      &   -0.00017604388937031815D0, -0.00239729611435071610D0, & 
      &    0.02064129023876022970D0, -0.06905562880005864105D0, & 
      &    0.09084526782065478489D0 / 
+!     **************************************************************************
+      Y=ERF(X)    !FORTRAN 2008 INTRINSIC
+      RETURN
+!
       W = ABS(X)
       IF (W .LT. 2.2D0) THEN
           T = W * W
@@ -4319,6 +4322,9 @@ INTEGER(4) :: I,J
       REAL(8)     ,PARAMETER :: P22 = 1.27109764952614092D-03
       REAL(8)                :: T,U
 !     **************************************************************************
+      Y=ERFC(X)    !FORTRAN 2008 INTRINSIC
+      RETURN
+!
       T = PA / (PA + ABS(X))
       U = T - 0.5D0
       Y = (((((((((P22 * U + P21) * U + P20) * U + &
@@ -4900,18 +4906,19 @@ END MODULE RANDOM_MODULE
 !     **************************************************************************
 !     **  BESSEL FUNCTION OF FIRST KIND                                       **
 !     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **                                                                      **
+!     **  CAUTION: THE FORTRAN INTRINSICS ALLOW ONLY INTEGER ORDER L,         **
+!     **           WHILE WE MOSTLY NEED HALF-INTEGER ORDER                    **
 !     **************************************************************************
       IMPLICIT NONE
-      REAL(8),INTENT(IN)           :: L
-      REAL(8),INTENT(IN)           :: X
-      REAL(8),INTENT(OUT)          :: Y
-      INTEGER(4)                   :: NZ
-!     ================================================================
+      REAL(8),INTENT(IN)           :: L   ! order 
+      REAL(8),INTENT(IN)           :: X   ! argument
+      REAL(8),INTENT(OUT)          :: Y   ! bessel functiohn of first kind
+      INTEGER(4)                   :: NZ  ! nz.neq.0 in output: underflow
+!     **************************************************************************
       CALL DBESJ(X,L,1,Y,NZ)
       IF(NZ.NE.0)THEN
-        Y=0.0D0
-!        CALL ERROR$MSG('UNDERFLOW OR OVERFLOW')
-!        CALL ERROR$STOP('LIB$DBESJ')
+        Y=0.D0
       END IF
       RETURN
       END SUBROUTINE
@@ -4921,12 +4928,15 @@ END MODULE RANDOM_MODULE
 !     **************************************************************************
 !     **  BESSEL FUNCTION OF SECOND KIND                                      **
 !     **  SEE SLATEC.F FOR FURTHER DETAILS                                    **
+!     **                                                                      **
+!     **  CAUTION: THE FORTRAN INTRINSICS ALLOW ONLY INTEGER ORDER L,         **
+!     **           WHILE WE MOSTLY NEED HALF-INTEGER ORDER                    **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN)           :: L
       REAL(8),INTENT(IN)           :: X
       REAL(8),INTENT(OUT)          :: Y
-!     ================================================================
+!     **************************************************************************
       CALL DBESY(X,L,1,Y)
       RETURN
       END SUBROUTINE
