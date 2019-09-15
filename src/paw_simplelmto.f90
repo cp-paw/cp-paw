@@ -2237,180 +2237,9 @@ END IF
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_DENMATPHITOCHI')
       NAT=SIZE(ISPECIES)
-      ALLOCATE(MYMAT(NSP))
       ALLOCATE(RHONEU(NND))
-!
-!     ==========================================================================
-!     == EXPAND <P|PHI-H>                                                     ==
-!     ==========================================================================
-      DO ISP=1,NSP
-        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
-        LMNX2=SUM(2*POTPAR(ISP)%LOXH+1)
-        ALLOCATE(MYMAT(ISP)%PROPHIH(LMNX1,LMNX2))
-        MYMAT(ISP)%PROPHIH=0.D0
-
-        LMN1I=0
-        DO LN1=1,LNX(ISP)
-          L1=LOX(LN1,ISP)
-!
-          LMN2I=0 
-          DO LN2=1,POTPAR(ISP)%LNXH
-            L2=POTPAR(ISP)%LOXH(LN2)
-            IF(L2.EQ.L1) THEN
-              DO IM=1,2*L2+1
-                MYMAT(ISP)%PROPHIH(LMN1I+IM,LMN2I+IM) &
-    &                                              =POTPAR(ISP)%PROPHIH(LN1,LN2)
-              ENDDO
-            END IF
-            LMN2I=LMN2I+2*L2+1
-          ENDDO
-          LMN1I=LMN1I+2*L1+1     
-        ENDDO
-!
-        IF(TPR) THEN
-          WRITE(*,FMT='(80("="),T20," <PRO|PHI-HEAD> FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PROPHIH(I,:)
-          ENDDO
-        END IF
-!
-      ENDDO
-!
-!     ==========================================================================
-!     == EXPAND <P|PHI-T>                                                     ==
-!     ==========================================================================
-      DO ISP=1,NSP
-        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
-        LMNX2=SUM(2*POTPAR(ISP)%LOXT+1)
-        ALLOCATE(MYMAT(ISP)%PROPHIT(LMNX1,LMNX2))
-        MYMAT(ISP)%PROPHIT=0.D0
-
-        LMN1I=0
-        DO LN1=1,LNX(ISP)
-          L1=LOX(LN1,ISP)
-!
-          LMN2I=0 
-          DO LN2=1,POTPAR(ISP)%LNXT
-            L2=POTPAR(ISP)%LOXT(LN2)
-            IF(L2.EQ.L1) THEN
-              DO IM=1,2*L2+1
-                MYMAT(ISP)%PROPHIT(LMN1I+IM,LMN2I+IM) &
-    &                                              =POTPAR(ISP)%PROPHIT(LN1,LN2)
-              ENDDO
-            END IF
-            LMN2I=LMN2I+2*L2+1
-          ENDDO
-          LMN1I=LMN1I+2*L1+1     
-        ENDDO
-!
-        IF(TPR) THEN
-          WRITE(*,FMT='(80("="),T20," <PRO|PHI-TAIL> FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PROPHIT(I,:)
-          ENDDO
-        END IF
-!
-      ENDDO
-!
-!     ==========================================================================
-!     == EXPAND PARTIAL WAVE OVERLAP                                          ==
-!     ==========================================================================
-      DO ISP=1,NSP
-        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
-        LMNX2=LMNX1
-        ALLOCATE(MYMAT(ISP)%PHIOV(LMNX1,LMNX2))
-        MYMAT(ISP)%PHIOV=0.D0
-
-        LMN1I=0
-        DO LN1=1,LNX(ISP)
-          L1=LOX(LN1,ISP)
-!
-          LMN2I=0 
-          DO LN2=1,LNX(ISP)
-            L2=LOX(LN2,ISP)
-            IF(L2.EQ.L1) THEN
-              DO IM=1,2*L2+1
-                MYMAT(ISP)%PHIOV(LMN1I+IM,LMN2I+IM)=POTPAR(ISP)%PHIOV(LN1,LN2)
-              ENDDO
-            END IF
-            LMN2I=LMN2I+2*L2+1
-          ENDDO
-          LMN1I=LMN1I+2*L1+1     
-        ENDDO
-!
-        IF(TPR) THEN
-          WRITE(*,FMT='(80("="),T20," <PHI|THETA|PHI> FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIOV(I,:)
-          ENDDO
-        END IF
-!
-      ENDDO
-!
-!     ==========================================================================
-!     == CMAT (RESPONSIBLE FOR NORMALIZATION OF CHI)                          ==
-!     ==========================================================================
-      DO ISP=1,NSP
-        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
-        LMNX2=LMNX1
-        ALLOCATE(MYMAT(ISP)%CMAT(LMNX1,LMNX2))
-        MYMAT(ISP)%CMAT=0.D0
-        LMN1I=0
-        DO LN1=1,POTPAR(ISP)%LNXH
-          L1=POTPAR(ISP)%LOXH(LN1)
-!
-          LMN2I=0 
-          DO LN2=1,POTPAR(ISP)%LNXH
-            L2=POTPAR(ISP)%LOXH(LN2)
-            IF(L2.EQ.L1) THEN
-              DO IM=1,2*L2+1
-                 MYMAT(ISP)%CMAT(LMN1I+IM,LMN2I+IM)=POTPAR(ISP)%CMAT(LN1,LN2)
-              ENDDO
-            END IF
-            LMN2I=LMN2I+2*L2+1
-          ENDDO
-          LMN1I=LMN1I+2*L1+1     
-        ENDDO
-!
-        IF(TPR) THEN
-          WRITE(*,FMT='(80("="),T20," CMAT FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%CMAT(I,:)
-          ENDDO
-        END IF
-!
-      ENDDO
-!
-!     ==========================================================================
-!     == <PHI-H|THETA|PHI-H> AND <PHI-H|THETA|PHI_J> 
-!     ==========================================================================
-      DO ISP=1,NSP
-        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
-        ALLOCATE(MYMAT(ISP)%PHIHHOV(LMNX1,LMNX1))
-        MYMAT(ISP)%PHIHHOV=MATMUL(TRANSPOSE(MYMAT(ISP)%PROPHIH) &
-     &                           ,MATMUL(MYMAT(ISP)%PHIOV,MYMAT(ISP)%PROPHIH))
-!
-        ALLOCATE(MYMAT(ISP)%PHIHHOVINV(LMNX1,LMNX1))
-        CALL LIB$INVERTR8(LMNX1,MYMAT(ISP)%PHIHHOV,MYMAT(ISP)%PHIHHOVINV)
-!
-        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
-        LMNX2=SUM(2*POTPAR(ISP)%LOXT+1)
-        ALLOCATE(MYMAT(ISP)%PHIHTOV(LMNX1,LMNX2))
-        MYMAT(ISP)%PHIHTOV=MATMUL(TRANSPOSE(MYMAT(ISP)%PROPHIH) &
-     &                           ,MATMUL(MYMAT(ISP)%PHIOV,MYMAT(ISP)%PROPHIT))
-!
-        IF(TPR) THEN
-          WRITE(*,FMT='(80("="),T20," <PHI-H|THETA|PHI-H> FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIHHOV(I,:)
-          ENDDO
-          WRITE(*,FMT='(80("="),T20," <PHI-H|THETA|PHI-T> FOR ISP=",I3," ")')ISP
-          DO I=1,LMNX1
-            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIHTOV(I,:)
-          ENDDO
-        END IF
-!
-      ENDDO
+      ALLOCATE(MYMAT(NSP))
+      CALL SIMPLELMTO_EXPANDTOMYMAT(NSP,MYMAT)
 !
 !     ==========================================================================
 !     == POINTER TO BACK HOP
@@ -2479,7 +2308,7 @@ END IF
 !PIPHI(I)%MAT=0.D0
         END IF
         DO II=1,4
-          PIPHI(I)%MAT(:,:,I)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
+          PIPHI(I)%MAT(:,:,II)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
                              ,MATMUL(PIPHI(I)%MAT(:,:,II),MYMAT(ISP2)%PHIOV))
         ENDDO
       ENDDO
@@ -2655,6 +2484,213 @@ END IF
         DEALLOCATE(MYMAT(ISP)%PHIHTOV)
       ENDDO
       DEALLOCATE(MYMAT)
+                                    CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SIMPLELMTO_expandtomymat(nsp,mymat)
+!     **************************************************************************
+!     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
+!     **                                                                      **
+!     ********************************************P. BLOECHL, GOSLAR 2019*******
+      USE SIMPLELMTO_MODULE, ONLY : POTPAR=>POTPAR1 &
+     &                             ,LOX &
+     &                             ,LNX 
+      IMPLICIT NONE
+      TYPE MYMAT_TYPE
+        REAL(8),ALLOCATABLE :: PROPHIH(:,:)
+        REAL(8),ALLOCATABLE :: PROPHIT(:,:)
+        REAL(8),ALLOCATABLE :: CMAT(:,:)
+        REAL(8),ALLOCATABLE :: PHIOV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHHOV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHHOVINV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHTOV(:,:)
+      END TYPE MYMAT_TYPE
+      INTEGER(4)      ,INTENT(IN) :: NSP
+      type(mymat_type),INTENT(OUT):: MYMAT(NSP)
+      logical(4)      ,parameter  :: tpr=.false.
+      integer(4)                  :: isp
+      INTEGER(4)                  :: LMNX1,LMNX2
+      INTEGER(4)                  :: LMN1I,LMN2I
+      INTEGER(4)                  :: ln1,ln2
+      INTEGER(4)                  :: l1,l2
+      INTEGER(4)                  :: im
+      INTEGER(4)                  :: i
+!     **************************************************************************
+                                    CALL TRACE$PUSH('SIMPLELMTO_EXPANDTOMYMAT')
+!
+!     ==========================================================================
+!     == EXPAND <P|PHI-H>                                                     ==
+!     ==========================================================================
+      DO ISP=1,NSP
+        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        LMNX2=SUM(2*POTPAR(ISP)%LOXH+1)
+        ALLOCATE(MYMAT(ISP)%PROPHIH(LMNX1,LMNX2))
+        MYMAT(ISP)%PROPHIH=0.D0
+
+        LMN1I=0
+        DO LN1=1,LNX(ISP)
+          L1=LOX(LN1,ISP)
+!
+          LMN2I=0 
+          DO LN2=1,POTPAR(ISP)%LNXH
+            L2=POTPAR(ISP)%LOXH(LN2)
+            IF(L2.EQ.L1) THEN
+              DO IM=1,2*L2+1
+                MYMAT(ISP)%PROPHIH(LMN1I+IM,LMN2I+IM) &
+    &                                              =POTPAR(ISP)%PROPHIH(LN1,LN2)
+              ENDDO
+            END IF
+            LMN2I=LMN2I+2*L2+1
+          ENDDO
+          LMN1I=LMN1I+2*L1+1     
+        ENDDO
+!
+        IF(TPR) THEN
+          WRITE(*,FMT='(80("="),T20," <PRO|PHI-HEAD> FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PROPHIH(I,:)
+          ENDDO
+        END IF
+!
+      ENDDO
+!
+!     ==========================================================================
+!     == EXPAND <P|PHI-T>                                                     ==
+!     ==========================================================================
+      DO ISP=1,NSP
+        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        LMNX2=SUM(2*POTPAR(ISP)%LOXT+1)
+        ALLOCATE(MYMAT(ISP)%PROPHIT(LMNX1,LMNX2))
+        MYMAT(ISP)%PROPHIT=0.D0
+
+        LMN1I=0
+        DO LN1=1,LNX(ISP)
+          L1=LOX(LN1,ISP)
+!
+          LMN2I=0 
+          DO LN2=1,POTPAR(ISP)%LNXT
+            L2=POTPAR(ISP)%LOXT(LN2)
+            IF(L2.EQ.L1) THEN
+              DO IM=1,2*L2+1
+                MYMAT(ISP)%PROPHIT(LMN1I+IM,LMN2I+IM) &
+    &                                              =POTPAR(ISP)%PROPHIT(LN1,LN2)
+              ENDDO
+            END IF
+            LMN2I=LMN2I+2*L2+1
+          ENDDO
+          LMN1I=LMN1I+2*L1+1     
+        ENDDO
+!
+        IF(TPR) THEN
+          WRITE(*,FMT='(80("="),T20," <PRO|PHI-TAIL> FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PROPHIT(I,:)
+          ENDDO
+        END IF
+!
+      ENDDO
+!
+!     ==========================================================================
+!     == EXPAND PARTIAL WAVE OVERLAP                                          ==
+!     ==========================================================================
+      DO ISP=1,NSP
+        LMNX1=SUM(2*LOX(:LNX(ISP),ISP)+1)
+        LMNX2=LMNX1
+        ALLOCATE(MYMAT(ISP)%PHIOV(LMNX1,LMNX2))
+        MYMAT(ISP)%PHIOV=0.D0
+
+        LMN1I=0
+        DO LN1=1,LNX(ISP)
+          L1=LOX(LN1,ISP)
+!
+          LMN2I=0 
+          DO LN2=1,LNX(ISP)
+            L2=LOX(LN2,ISP)
+            IF(L2.EQ.L1) THEN
+              DO IM=1,2*L2+1
+                MYMAT(ISP)%PHIOV(LMN1I+IM,LMN2I+IM)=POTPAR(ISP)%PHIOV(LN1,LN2)
+              ENDDO
+            END IF
+            LMN2I=LMN2I+2*L2+1
+          ENDDO
+          LMN1I=LMN1I+2*L1+1     
+        ENDDO
+!
+        IF(TPR) THEN
+          WRITE(*,FMT='(80("="),T20," <PHI|THETA|PHI> FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIOV(I,:)
+          ENDDO
+        END IF
+!
+      ENDDO
+!
+!     ==========================================================================
+!     == CMAT (RESPONSIBLE FOR NORMALIZATION OF CHI)                          ==
+!     ==========================================================================
+      DO ISP=1,NSP
+        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
+        LMNX2=LMNX1
+        ALLOCATE(MYMAT(ISP)%CMAT(LMNX1,LMNX2))
+        MYMAT(ISP)%CMAT=0.D0
+        LMN1I=0
+        DO LN1=1,POTPAR(ISP)%LNXH
+          L1=POTPAR(ISP)%LOXH(LN1)
+!
+          LMN2I=0 
+          DO LN2=1,POTPAR(ISP)%LNXH
+            L2=POTPAR(ISP)%LOXH(LN2)
+            IF(L2.EQ.L1) THEN
+              DO IM=1,2*L2+1
+                 MYMAT(ISP)%CMAT(LMN1I+IM,LMN2I+IM)=POTPAR(ISP)%CMAT(LN1,LN2)
+              ENDDO
+            END IF
+            LMN2I=LMN2I+2*L2+1
+          ENDDO
+          LMN1I=LMN1I+2*L1+1     
+        ENDDO
+!
+        IF(TPR) THEN
+          WRITE(*,FMT='(80("="),T20," CMAT FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%CMAT(I,:)
+          ENDDO
+        END IF
+!
+      ENDDO
+!
+!     ==========================================================================
+!     == <PHI-H|THETA|PHI-H> AND <PHI-H|THETA|PHI_J> 
+!     ==========================================================================
+      DO ISP=1,NSP
+        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
+        ALLOCATE(MYMAT(ISP)%PHIHHOV(LMNX1,LMNX1))
+        MYMAT(ISP)%PHIHHOV=MATMUL(TRANSPOSE(MYMAT(ISP)%PROPHIH) &
+     &                           ,MATMUL(MYMAT(ISP)%PHIOV,MYMAT(ISP)%PROPHIH))
+!
+        ALLOCATE(MYMAT(ISP)%PHIHHOVINV(LMNX1,LMNX1))
+        CALL LIB$INVERTR8(LMNX1,MYMAT(ISP)%PHIHHOV,MYMAT(ISP)%PHIHHOVINV)
+!
+        LMNX1=SUM(2*POTPAR(ISP)%LOXH+1)
+        LMNX2=SUM(2*POTPAR(ISP)%LOXT+1)
+        ALLOCATE(MYMAT(ISP)%PHIHTOV(LMNX1,LMNX2))
+        MYMAT(ISP)%PHIHTOV=MATMUL(TRANSPOSE(MYMAT(ISP)%PROPHIH) &
+     &                           ,MATMUL(MYMAT(ISP)%PHIOV,MYMAT(ISP)%PROPHIT))
+!
+        IF(TPR) THEN
+          WRITE(*,FMT='(80("="),T20," <PHI-H|THETA|PHI-H> FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIHHOV(I,:)
+          ENDDO
+          WRITE(*,FMT='(80("="),T20," <PHI-H|THETA|PHI-T> FOR ISP=",I3," ")')ISP
+          DO I=1,LMNX1
+            WRITE(*,FMT='(10F10.3)')MYMAT(ISP)%PHIHTOV(I,:)
+          ENDDO
+        END IF
+!
+      ENDDO
                                     CALL TRACE$POP()
       RETURN
       END
