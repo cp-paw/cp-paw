@@ -891,7 +891,7 @@ END MODULE SIMPLELMTO_MODULE
               IF(R(IR).GT.1.D-1) THEN
                 CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KHEAD(IR,LNH),KDER)
               ELSE
-                KHEAD(IR,LNH)=0.D0 ! avoid singularity at the origin
+                KHEAD(IR,LNH)=0.D0 ! AVOID SINGULARITY AT THE ORIGIN
               END IF
             ENDDO
           ENDDO
@@ -1268,15 +1268,15 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     **      PER ANGULAR MOMENTUM (LNXT=SIZE(NORBOFL)                        **
 !     ** LNXH IS THE NUMBER OF HEAD FUNCTIONS WHICH IS EQUAL TO THE NUMBER    **
 !     **      OF PARTIAL WAVES (LNXH=SUM(NORBOFL))                            **
-!     ** FOR EACH ANGULAR MOMENTUM, THERE IS A SINGLE SCATTERING PARTIAL wave **
+!     ** FOR EACH ANGULAR MOMENTUM, THERE IS A SINGLE SCATTERING PARTIAL WAVE **
 !     ** FOR LNOFH.LE.0, LNOFH POINTS TO THAT SCATTERING WAVE WITH L=-LNOFH.  **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: LNXT     ! #(tail functions)
-      INTEGER(4),INTENT(IN) :: NORBOFL(LNXT) !#(partial waves per angular mom.
-      INTEGER(4),INTENT(IN) :: LNX      ! #(partial waves)
-      INTEGER(4),INTENT(IN) :: LOX(LNX) ! main ang.mom. for each partial wave
-      INTEGER(4),INTENT(IN) :: LNXH     ! #(head functions)
+      INTEGER(4),INTENT(IN) :: LNXT     ! #(TAIL FUNCTIONS)
+      INTEGER(4),INTENT(IN) :: NORBOFL(LNXT) !#(PARTIAL WAVES PER ANGULAR MOM.
+      INTEGER(4),INTENT(IN) :: LNX      ! #(PARTIAL WAVES)
+      INTEGER(4),INTENT(IN) :: LOX(LNX) ! MAIN ANG.MOM. FOR EACH PARTIAL WAVE
+      INTEGER(4),INTENT(IN) :: LNXH     ! #(HEAD FUNCTIONS)
       INTEGER(4),INTENT(OUT):: LNOFH(2,LNXH)
       INTEGER(4),INTENT(OUT):: LNOFT(2,LNXT)
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
@@ -1318,7 +1318,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     ==========================================================================
       DO LNH=1,LNXH
         L=LOX(LNOFH(1,LNH))
-        LNOFH(2,LNH)=-L   ! scattering wave, unless 2. partial wave exists
+        LNOFH(2,LNH)=-L   ! SCATTERING WAVE, UNLESS 2. PARTIAL WAVE EXISTS
         DO LN=LNOFH(1,LNH)+1,LNX      
           IF(LOX(LN).NE.L) CYCLE
           LNOFH(2,LNH)=LN
@@ -2230,8 +2230,8 @@ END IF
       INTEGER(4)                        :: NPHI1,NPHI2
       INTEGER(4)                        :: N1,N2,N3
       INTEGER(4)                        :: NAT
-      INTEGER(4)                        :: I,J,IS,IM,LN1,LN2,L1,L2,ii
-      real(8)                           :: s
+      INTEGER(4)                        :: I,J,IS,IM,LN1,LN2,L1,L2,II
+      REAL(8)                           :: S
       INTEGER(4)                        :: LMNX1,LMNX2
       INTEGER(4)                        :: LMN1I,LMN2I
 !     **************************************************************************
@@ -2449,7 +2449,7 @@ END IF
         ISP2=ISPECIES(IAT2)
         N1=SUM(2*POTPAR(ISP1)%LOXH+1)
         N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
-        N3=4    !value and gradient
+        N3=4    !VALUE AND GRADIENT
         PIPHI(I)%IAT1=IAT1
         PIPHI(I)%IAT2=IAT2
         PIPHI(I)%IT  =SBARE(I)%IT
@@ -2462,26 +2462,26 @@ END IF
         IF(INDBACK(I).EQ.I) THEN
           PIPHI(I)%MAT(:,:,1)=TRANSPOSE(MYMAT(ISP1)%PROPHIH)
         ELSE
-          DO Ii=1,4
-            s=sign(1,3-2*ii) ! =-1 for gradients taking care of indback
-            PIPHI(I)%MAT(:,:,Ii)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
-     &                        ,MATMUL(SBARE(I)%MAT(:,:,Ii) &
+          DO II=1,4
+            S=SIGN(1,3-2*II) ! =-1 FOR GRADIENTS TAKING CARE OF INDBACK
+            PIPHI(I)%MAT(:,:,II)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
+     &                        ,MATMUL(SBARE(I)%MAT(:,:,II) &
      &                        ,TRANSPOSE(MYMAT(ISP2)%PROPHIT &
      &                                  -MATMUL(MYMAT(ISP2)%PROPHIH &
      &                                         ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                                              ,MYMAT(ISP2)%PHIHTOV))))) &
-     &                       +s*MATMUL(MYMAT(ISP1)%PHIHTOV &
-     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,Ii)) &
+     &                       +S*MATMUL(MYMAT(ISP1)%PHIHTOV &
+     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,II)) &
      &                        ,MATMUL(MYMAT(ISP2)%CMAT &
      &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
           ENDDO
 !PIPHI(I)%MAT=0.D0
         END IF
-        do ii=1,4
-          PIPHI(I)%MAT(:,:,i)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
-                             ,MATMUL(PIPHI(I)%MAT(:,:,ii),MYMAT(ISP2)%PHIOV))
-        enddo
+        DO II=1,4
+          PIPHI(I)%MAT(:,:,I)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
+                             ,MATMUL(PIPHI(I)%MAT(:,:,II),MYMAT(ISP2)%PHIOV))
+        ENDDO
       ENDDO
        IF(TPR)CALL RSPACEOP$WRITEMAT(6,'<PI|PHI>',NND,PIPHI)
 !
@@ -2717,7 +2717,7 @@ END IF
         SBARE(I)%N1=N1
         SBARE(I)%N2=N2
         SBARE(I)%N3=1
-        ALLOCATE(SBARE(I)%MAT(N1,N2,4)) ! value and gradient
+        ALLOCATE(SBARE(I)%MAT(N1,N2,4)) ! VALUE AND GRADIENT
         SBARE(I)%MAT=0.D0
         IF(SBARE(I)%IAT1.EQ.SBARE(I)%IAT2.AND.SUM(SBARE(I)%IT**2).EQ.0) CYCLE
 !!$PRINT*,'IAT1 ',IAT1,ISP1,N1,POTPAR(ISP1)%LOXH
@@ -2729,9 +2729,9 @@ END IF
         R21=R0(:,IAT2)+MATMUL(RBAS,REAL(SBARE(I)%IT))-R0(:,IAT1)
         L1X=MAXVAL(POTPAR(ISP1)%LOXH)
         L2X=MAXVAL(POTPAR(ISP2)%LOXT)
-        ALLOCATE(SMAT((L1X+1)**2,(L2X+1)**2,4)) ! value and gradient
-        CALL LMTO$STRUCTURECONSTANTSwgrad(R21,K2,L1X,L2X,SMAT(:,:,1) &
-       &                                                ,smat(:,:,2:))
+        ALLOCATE(SMAT((L1X+1)**2,(L2X+1)**2,4)) ! VALUE AND GRADIENT
+        CALL LMTO$STRUCTURECONSTANTSWGRAD(R21,K2,L1X,L2X,SMAT(:,:,1) &
+       &                                                ,SMAT(:,:,2:))
 !
 !       ========================================================================
 !       == MAP STRUCTURE CONSTANTS ON SBARE                                   ==
