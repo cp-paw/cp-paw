@@ -11,7 +11,7 @@
 !**                                       DEALLOCATE(OSHAMIL)                 **
 !**     SIMPLELMTO$MAKE$ETOT              ETOT,OSHAMIL <- OSDENMAT            **
 !**         WAVES$GETI4('NND')                <- SIZE(OSDENMAT)               **
-!**         WAVES$GETRSPACEMATA('DEMAT')     <- OSDENMAT                     **
+!**         WAVES$GETRSPACEMATA('DEMAT')     <- OSDENMAT                      **
 !**         WAVES$SETRSPACEMATA('HAMIL')      -> OSHAMIL (ALLOCATE(OSHAMIL)   **
 !**     WAVES$OFFSITEHAMIL                THIS%HPROJ <- OSHAMIL               **
 !**     WAVES$FORCE|WAVES_FORCE_ADDHTBC   FORCE      <- THIS%HPROJ            **
@@ -795,7 +795,7 @@ END MODULE SIMPLELMTO_MODULE
         CALL SETUP$ISELECT(ISP)
         LNXPHI=LNX(ISP)
 !
-!       == VARIABLE "STRING"  IS USED AS PREFIX FOR WAVE FUNCTION FILES ========
+!       == VARIABLE "STRING"  IS USED AS PREFIX FOR WAVE-FUNCTION FILES ========
         WRITE(STRING,*)ISP
         STRING='NEW_'//ADJUSTL(STRING) 
 !
@@ -878,6 +878,30 @@ END MODULE SIMPLELMTO_MODULE
         CALL SETUP$GETR8A('AEPHIDOT',NR*LNXPHI,AEPHIDOT)
         CALL SETUP$GETR8A('PSPHI',NR*LNXPHI,PSPHI)
         CALL SETUP$GETR8A('PSPHIDOT',NR*LNXPHI,PSPHIDOT)
+!
+!       ========================================================================
+!       ==  CONSTRUCT SOLID HANKEL AND BESSEL FUNCTIONS                       ==
+!       ========================================================================
+        IF(TPR) THEN
+          ALLOCATE(KHEAD(NR,LNXT))
+          ALLOCATE(JTAIL(NR,LNXT))
+          DO LNH=1,LNXH
+            L=LOXH(LNH)
+            DO IR=1,NR
+              IF(R(IR).GT.1.D-1) THEN
+                CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KHEAD(IR,LNH),KDER)
+              ELSE
+                KHEAD(IR,LNH)=0.D0 ! avoid singularity at the origin
+              END IF
+            ENDDO
+          ENDDO
+          DO LNT=1,LNXT
+            L=LOXT(LNT)
+            DO IR=1,NR
+              CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JTAIL(IR,LNT),JDER)
+            ENDDO
+          ENDDO
+        END IF
 !
 !       ========================================================================
 !       ==  CONSTRUCT HEAD AND TAIL FUNCTIONS                                 ==
@@ -991,30 +1015,8 @@ IF(TPR) THEN
 END IF
 !
 !       ========================================================================
-!       ==  CONSTRUCT SOLID HANKEL AND BESSEL FUNCTIONS FOR TEST PURPOSES     ==
+!       ==  CONSTRUCT HEAD-AUGMENTED SOLID HANKEL AND BESSEL FUNCTIONS        ==
 !       ========================================================================
-        ALLOCATE(KHEAD(NR,LNXT))
-        ALLOCATE(JTAIL(NR,LNXT))
-        IF(TPR) THEN
-           DO LNT=1,LNXT
-            L=LOXT(LNT)
-            DO IR=1,NR
-              IF(R(IR).GT.1.D0) THEN
-                CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KHEAD(IR,LNT),KDER)
-              ELSE
-                KHEAD(IR,LNT)=0.D0
-              END IF
-              CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JTAIL(IR,LNT),JDER)
-            ENDDO
-          ENDDO
-        END IF
-!
-!       ========================================================================
-!       ==  CONSTRUCT HEAD-AUGMENTED SOLID HANKEL FUNCTIONS                   ==
-!       ========================================================================
-        ALLOCATE(AECHI(NR,LNXH))
-        ALLOCATE(PSCHI(NR,LNXH))
-        ALLOCATE(NLCHI(NR,LNXH))
         IRAD=1
         DO IR=1,NR
           IF(R(IR).LE.RAUG) CYCLE
@@ -1023,14 +1025,32 @@ END IF
         ENDDO
         DO LNH=1,LNXH
           L=LOXH(LNH)
-          NLCHI(:IRAD-1,LNH)=NLPHIH(:IRAD-1,LNH)
           DO IR=IRAD,NR   ! WILL BE AUGMENTED FROM 1 TO IRAD-1
             CALL LMTO$SOLIDHANKELRAD(L,R(IR),K2,KVAL,KDER)
-            NLCHI(IR,LNH)=KVAL
+            AEPHIH(IR,LNH)=AEPHIH(IR,LNH)-NLPHIH(IR,LNH)+KVAL
+            PSPHIH(IR,LNH)=PSPHIH(IR,LNH)-NLPHIH(IR,LNH)+KVAL
+            NLPHIH(IR,LNH)=KVAL ! DO THIS LAST!!!
           ENDDO
         ENDDO
-        AECHI=NLCHI+AEPHIH-NLPHIH
-        PSCHI=NLCHI+PSPHIH-NLPHIH
+!
+        DO LNT=1,LNXT
+          L=LOXT(LNT)
+          DO IR=IRAD,NR   ! WILL BE AUGMENTED FROM 1 TO IRAD-1
+            CALL LMTO$SOLIDBESSELRAD(L,R(IR),K2,JVAL,JDER)
+            AEPHIT(IR,LNT)=AEPHIT(IR,LNT)-NLPHIT(IR,LNT)+JVAL
+            PSPHIT(IR,LNT)=PSPHIT(IR,LNT)-NLPHIT(IR,LNT)+JVAL
+            NLPHIT(IR,LNT)=JVAL ! DO THIS LAST!!!
+          ENDDO
+        ENDDO
+!
+!       == MAINTAINING BOTH, AECHI AND AEPHIH, IS UPERFLUOUS AND SHALL BE 
+!       == CLEANED UP
+        ALLOCATE(AECHI(NR,LNXH))
+        ALLOCATE(PSCHI(NR,LNXH))
+        ALLOCATE(NLCHI(NR,LNXH))
+        AECHI=AEPHIH
+        PSCHI=PSPHIH
+        NLCHI=NLPHIH
 !
 !       ========================================================================
 !       == PERFORM ON-SITE ORTHONORMALIZATION USING GRAM-SCHMIDT
@@ -1244,16 +1264,19 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     **    |PHIHEAD_J>=|PHI(LNOFH(1,J))> * A + |PHI(LNOFH(2,J)> * B          **
 !     **    |PHITAIL_J>=|PHI(LNOFT(1,J))> * C + |PHI(LNOFT(2,J)> * D          **
 !     **                                                                      **
-!     ** FOR LNOFH<1, IT POINTS TO A SCATTERING PARTIAL WAVE.                 **
-!     ** FOR EACH ANGULAR MOMENTUM THERE IS A SINGLE SCATTERING WAVE PARTIAL  **
-!     ** WAVE. FOR LNOFH.LE.0, LNOFH POINTS TO THAT SCATTERING WAVE WITH      **
-!     ** L=-LNOFH.                                                            **
+!     ** LNXT IS THE NUMBER OF ANGULAR MOMENTA AND THERE IS ONE TAIL FUNCTION **
+!     **      PER ANGULAR MOMENTUM (LNXT=SIZE(NORBOFL)                        **
+!     ** LNXH IS THE NUMBER OF HEAD FUNCTIONS WHICH IS EQUAL TO THE NUMBER    **
+!     **      OF PARTIAL WAVES (LNXH=SUM(NORBOFL))                            **
+!     ** FOR EACH ANGULAR MOMENTUM, THERE IS A SINGLE SCATTERING PARTIAL wave **
+!     ** FOR LNOFH.LE.0, LNOFH POINTS TO THAT SCATTERING WAVE WITH L=-LNOFH.  **
 !     **************************************************************************
-      INTEGER(4),INTENT(IN) :: LNXT
-      INTEGER(4),INTENT(IN) :: NORBOFL(LNXT)
-      INTEGER(4),INTENT(IN) :: LNX
-      INTEGER(4),INTENT(IN) :: LOX(LNX)
-      INTEGER(4),INTENT(IN) :: LNXH
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LNXT     ! #(tail functions)
+      INTEGER(4),INTENT(IN) :: NORBOFL(LNXT) !#(partial waves per angular mom.
+      INTEGER(4),INTENT(IN) :: LNX      ! #(partial waves)
+      INTEGER(4),INTENT(IN) :: LOX(LNX) ! main ang.mom. for each partial wave
+      INTEGER(4),INTENT(IN) :: LNXH     ! #(head functions)
       INTEGER(4),INTENT(OUT):: LNOFH(2,LNXH)
       INTEGER(4),INTENT(OUT):: LNOFT(2,LNXT)
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
@@ -1295,7 +1318,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
 !     ==========================================================================
       DO LNH=1,LNXH
         L=LOX(LNOFH(1,LNH))
-        LNOFH(2,LNH)=-L
+        LNOFH(2,LNH)=-L   ! scattering wave, unless 2. partial wave exists
         DO LN=LNOFH(1,LNH)+1,LNX      
           IF(LOX(LN).NE.L) CYCLE
           LNOFH(2,LNH)=LN
@@ -1336,6 +1359,8 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       IF(TPR) THEN
         WRITE(*,FMT='("LOX     =",10I5)')LOX
         WRITE(*,FMT='("NORBOFL =",10I5)')NORBOFL
+        WRITE(*,FMT='("LNXH    =",10I5)')LNXH
+        WRITE(*,FMT='("LNXT    =",10I5)')LNXT
         WRITE(*,FMT='("LNOFH(1)=",10I5)')LNOFH(1,:)
         WRITE(*,FMT='("LNOFH(2)=",10I5)')LNOFH(2,:)
         WRITE(*,FMT='("LNOFT(1)=",10I5)')LNOFT(1,:)
@@ -2205,7 +2230,8 @@ END IF
       INTEGER(4)                        :: NPHI1,NPHI2
       INTEGER(4)                        :: N1,N2,N3
       INTEGER(4)                        :: NAT
-      INTEGER(4)                        :: I,J,IS,IM,LN1,LN2,L1,L2
+      INTEGER(4)                        :: I,J,IS,IM,LN1,LN2,L1,L2,ii
+      real(8)                           :: s
       INTEGER(4)                        :: LMNX1,LMNX2
       INTEGER(4)                        :: LMN1I,LMN2I
 !     **************************************************************************
@@ -2423,7 +2449,7 @@ END IF
         ISP2=ISPECIES(IAT2)
         N1=SUM(2*POTPAR(ISP1)%LOXH+1)
         N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
-        N3=1
+        N3=4    !value and gradient
         PIPHI(I)%IAT1=IAT1
         PIPHI(I)%IAT2=IAT2
         PIPHI(I)%IT  =SBARE(I)%IT
@@ -2436,21 +2462,26 @@ END IF
         IF(INDBACK(I).EQ.I) THEN
           PIPHI(I)%MAT(:,:,1)=TRANSPOSE(MYMAT(ISP1)%PROPHIH)
         ELSE
-          PIPHI(I)%MAT(:,:,1)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
-     &                        ,MATMUL(SBARE(I)%MAT(:,:,1) &
+          DO Ii=1,4
+            s=sign(1,3-2*ii) ! =-1 for gradients taking care of indback
+            PIPHI(I)%MAT(:,:,Ii)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
+     &                        ,MATMUL(SBARE(I)%MAT(:,:,Ii) &
      &                        ,TRANSPOSE(MYMAT(ISP2)%PROPHIT &
      &                                  -MATMUL(MYMAT(ISP2)%PROPHIH &
      &                                         ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                                              ,MYMAT(ISP2)%PHIHTOV))))) &
-     &                        +MATMUL(MYMAT(ISP1)%PHIHTOV &
-     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,1)) &
+     &                       +s*MATMUL(MYMAT(ISP1)%PHIHTOV &
+     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,Ii)) &
      &                        ,MATMUL(MYMAT(ISP2)%CMAT &
      &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
+          ENDDO
 !PIPHI(I)%MAT=0.D0
         END IF
-        PIPHI(I)%MAT(:,:,1)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
-                                 ,MATMUL(PIPHI(I)%MAT(:,:,1),MYMAT(ISP2)%PHIOV))
+        do ii=1,4
+          PIPHI(I)%MAT(:,:,i)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
+                             ,MATMUL(PIPHI(I)%MAT(:,:,ii),MYMAT(ISP2)%PHIOV))
+        enddo
       ENDDO
        IF(TPR)CALL RSPACEOP$WRITEMAT(6,'<PI|PHI>',NND,PIPHI)
 !
@@ -2596,6 +2627,8 @@ END IF
       &                        ,MATMUL(RHONEU(INDBACK(I))%MAT(:,:,J) &
       &                               ,PIPHI(INDON(IAT1))%MAT(:,:,1)))
             ENDDO
+!
+            
           END IF
         ENDDO
       ELSE
@@ -2652,7 +2685,7 @@ END IF
       INTEGER(4)                        :: N1,N2
       REAL(8)                           :: R21(3) 
       INTEGER(4)                        :: L1X,L2X
-      REAL(8)             ,ALLOCATABLE  :: SMAT(:,:)
+      REAL(8)             ,ALLOCATABLE  :: SMAT(:,:,:) !VALUE AND GRADIENT
       INTEGER(4)                        :: I,J
       REAL(8)                           :: RBAS(3,3)  ! LATTICE VECTORS
       INTEGER(4)                        :: NAT        ! #(ATOMS)
@@ -2684,11 +2717,11 @@ END IF
         SBARE(I)%N1=N1
         SBARE(I)%N2=N2
         SBARE(I)%N3=1
-        ALLOCATE(SBARE(I)%MAT(N1,N2,1))
+        ALLOCATE(SBARE(I)%MAT(N1,N2,4)) ! value and gradient
         SBARE(I)%MAT=0.D0
         IF(SBARE(I)%IAT1.EQ.SBARE(I)%IAT2.AND.SUM(SBARE(I)%IT**2).EQ.0) CYCLE
-!!$print*,'iat1 ',iat1,isp1,n1,POTPAR(ISP1)%LOXH
-!!$print*,'iat2 ',iat2,isp2,n2,POTPAR(ISP1)%LOXT
+!!$PRINT*,'IAT1 ',IAT1,ISP1,N1,POTPAR(ISP1)%LOXH
+!!$PRINT*,'IAT2 ',IAT2,ISP2,N2,POTPAR(ISP1)%LOXT
 !
 !       ========================================================================
 !       == CALCULATE BARE STRUCTURE CONSTANTS                                 ==
@@ -2696,8 +2729,9 @@ END IF
         R21=R0(:,IAT2)+MATMUL(RBAS,REAL(SBARE(I)%IT))-R0(:,IAT1)
         L1X=MAXVAL(POTPAR(ISP1)%LOXH)
         L2X=MAXVAL(POTPAR(ISP2)%LOXT)
-        ALLOCATE(SMAT((L1X+1)**2,(L2X+1)**2))
-        CALL LMTO$STRUCTURECONSTANTS(R21,K2,L1X,L2X,SMAT)
+        ALLOCATE(SMAT((L1X+1)**2,(L2X+1)**2,4)) ! value and gradient
+        CALL LMTO$STRUCTURECONSTANTSwgrad(R21,K2,L1X,L2X,SMAT(:,:,1) &
+       &                                                ,smat(:,:,2:))
 !
 !       ========================================================================
 !       == MAP STRUCTURE CONSTANTS ON SBARE                                   ==
@@ -2717,7 +2751,7 @@ END IF
             LMN2B=LMN2A+2*L2
             LM2A=L2**2+1
             LM2B=(L2+1)**2
-            SBARE(I)%MAT(LMN1A:LMN1B,LMN2A:LMN2B,1)=SMAT(LM1A:LM1B,LM2A:LM2B)
+            SBARE(I)%MAT(LMN1A:LMN1B,LMN2A:LMN2B,:)=SMAT(LM1A:LM1B,LM2A:LM2B,:)
             LMN2A=LMN2B+1
           ENDDO
           LMN1A=LMN1B+1
@@ -2798,7 +2832,7 @@ END IF
 !     == -- ETOT (PASSED TO ENERGLIST)                                        ==
 !     ==                                                                      ==
 !     == ONLY ONE OF THE TASKS IN THE MONOMER GROUP ADDS TO HAMIL. AT THE END ==
-!     == OF THIS ROUTINE, THE RESuLT IS SUMMED OVER ALL TASKS.                ==
+!     == OF THIS ROUTINE, THE RESULT IS SUMMED OVER ALL TASKS.                ==
 !     ==                                                                      ==
 !     == THE PARAMETER TPARALLEL DECIDES WHETHER THE PARALLELIZATION IS DONE  ==
 !     == OR WETHER EVERYTHING IS CALCULATED ON EACH TASK                      ==
@@ -2816,7 +2850,7 @@ END IF
       STRESS=0.D0
 !
 !     ==========================================================================
-!     == onsite exchange correction                                           ==
+!     == ONSITE EXCHANGE CORRECTION                                           ==
 !     ==========================================================================
       DO IAT=1,NAT
         IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
@@ -3045,7 +3079,7 @@ END IF
       REAL(8)   ,INTENT(OUT) :: ETOT              ! CORE-VALENCE ENERGY
       REAL(8)   ,INTENT(IN)  :: DENMAT(LMNX,LMNX,NDIMD)
       REAL(8)   ,INTENT(OUT) :: DH(LMNX,LMNX,NDIMD)
-      LOGICAL(4),PARAMETER   :: TPR=.false.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       INTEGER(4)             :: LNX
       INTEGER(4),ALLOCATABLE :: LOX(:)
       REAL(8)   ,ALLOCATABLE :: CVXMAT(:,:)
@@ -3099,7 +3133,7 @@ END IF
 !     ==========================================================================
       IF(TPR) THEN
         PRINT*,' LOX=',LOX
-        PRINT*,' e_cvx=',etot
+        PRINT*,' E_CVX=',ETOT
         WRITE(*,FMT='(82("="),T10,"  DENMAT  ")')
         DO LMN1=1,LMNX
           WRITE(*,FMT='(I3,20F10.5)')LMN1,DENMAT(LMN1,:,1)
@@ -3187,7 +3221,7 @@ END IF
       INTEGER(4)              :: LMRX
 !      INTEGER(4)              :: LMRX,L
 !      INTEGER(4)              :: IDIM,LM,LMN,IR
-      INTEGER(4)              :: IDIM,IR,lmn
+      INTEGER(4)              :: IDIM,IR,LMN
       REAL(8),ALLOCATABLE,SAVE :: CUTSAVE(:)
 !     **************************************************************************
       ETOT=0.D0
@@ -3660,8 +3694,8 @@ END IF
             ENDDO
           ENDDO
         ENDDO
-        VCUT(IR)    =FXC(IR)  !/FOURPI factor removed because not present in
-                                     ! prior version
+        VCUT(IR)    =FXC(IR)  !/FOURPI FACTOR REMOVED BECAUSE NOT PRESENT IN
+                                     ! PRIOR VERSION
         FXC(IR)     =FXC(IR)*CUT(IR)
         XDER(IR,:,:)=XDER(IR,:,:)*CUT(IR)
       ENDDO

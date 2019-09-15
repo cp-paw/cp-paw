@@ -1155,7 +1155,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       IF(THISTASK.EQ.1) THEN
         WRITE(NFIL,FMT='(20("="),2X,"TIMESTEP: ",I10,2X,20("="))')NFI
         CALL CONSTRAINTS$REPORT(NFIL,'SHORT')
-        CALL FLUSH(NFIL)
+        FLUSH(NFIL)
       END IF
 !   
 !     ==========================================================================

@@ -138,10 +138,13 @@
       REAL(8)   ,INTENT(IN) :: RAD  ! INSIDE RAD THE FUNCTION IS REGULARIZED
       REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
       INTEGER(4),INTENT(IN) :: LMX
-      REAL(8)   ,INTENT(OUT):: H(LMX)  ! SOLID HANKEL FUNCTION
+      REAL(8)   ,INTENT(OUT):: H(LMX)    ! SOLID HANKEL FUNCTION
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: SQ4PIBY3=SQRT(4.D0*PI/3.D0)
+      INTEGER(4),PARAMETER  :: LMOFP(3)=(/2,4,3/)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
+      REAL(8)               :: YLM(LMX)
       REAL(8)               :: X,XR,Y,DYDX
       INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
@@ -149,7 +152,7 @@
       REAL(8)               :: A,B
 !     **************************************************************************
       CALL SPHERICAL$YLM(LMX,R,H)
-      LX=INT(SQRT(REAL(LMX+1.D-5)))-1
+      LX=NINT(SQRT(real(LMX)))-1
       K=SQRT(ABS(K2))     
       X=SQRT(SUM(R**2))
       LM=0
@@ -181,9 +184,108 @@
             DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
           END IF
         END IF  
+
         DO M=1,2*L+1
           LM=LM+1
           H(LM)=H(LM)*Y
+        ENDDO
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$SOLIDHANKELWGRAD(R,RAD,K2,LMX,H,DH)
+!     **************************************************************************
+!     ** CONSTRUCTS THE IRREGULAR SOLUTIONS OF THE HELMHOLTZ EQUATION         **
+!     **                   (NABLA^2 + K2)*PSI(R)=0                            **
+!     ** AND ITS GRADIENT                                                     **
+!     **                                                                      **
+!     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
+!     **    H_{L,M}(R)= (2*L-1)!! * |R|^{-L-1}  Y_{L,M}(R)                    **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R(3) ! POSITION RELATIVE TO THE ORIGIN
+      REAL(8)   ,INTENT(IN) :: RAD  ! INSIDE RAD THE FUNCTION IS REGULARIZED
+      REAL(8)   ,INTENT(IN) :: K2   ! SQUARE OF THE WAVE VECTOR
+      INTEGER(4),INTENT(IN) :: LMX
+      REAL(8)   ,INTENT(OUT):: H(LMX)    ! SOLID HANKEL FUNCTION
+      REAL(8)   ,INTENT(OUT):: DH(3,LMX) ! GRADIENT OF SOLID HANKEL FUNCTION
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: SQ4PIBY3=SQRT(4.D0*PI/3.D0)
+      INTEGER(4),PARAMETER  :: LMOFP(3)=(/2,4,3/)
+      REAL(8)               :: YLM((1+INT(SQRT(REAL(LMX)+1.d-5)))**2)
+      INTEGER(4)            :: LX
+      REAL(8)               :: K 
+      REAL(8)               :: X,XR,Y,DYDX
+      INTEGER(4)            :: LM,M
+      INTEGER(4)            :: L,I
+      INTEGER(4)            :: LPRIME,MPRIME,LMPRIME
+      LOGICAL(4)            :: TCAP
+      REAL(8)               :: A,B
+      REAL(8)               :: CG   !GAUNT COEFFICIENT
+      REAL(8)               :: SVAR !SUPPORT VARIABLE
+!     **************************************************************************
+      LX=INT(SQRT(REAL(LMX)+1.D-5))-1
+      IF(LMX.NE.(LX+1)**2) THEN
+        CALL ERROR$MSG('ILLEGAL VALUE OF LMX')
+        CALL ERROR$STOP('LMTO$SOLIDHANKELWGRAD')
+      END IF
+      CALL SPHERICAL$YLM((LX+2)**2,R,YLM)
+      K=SQRT(ABS(K2))     
+      X=SQRT(SUM(R**2))
+      LM=0
+      DO L=0,LX
+        IF(K2.GT.0.D0) THEN
+          CALL SPFUNCTION$NEUMANN(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.26
+          Y=-Y*K**(L+1)
+          DYDX=-DYDX*K**(L+2)
+        ELSE IF(K2.LT.0.D0) THEN
+          CALL SPFUNCTION$MODHANKEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
+          Y=Y*2.D0/PI*K**(L+1)
+          DYDX=DYDX*2.D0/PI*K**(L+2)
+        ELSE
+!         ==  Y(X)= 1/(2L-1)!! * X**(-L-1) 
+          CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.6
+          Y=-Y     !
+          DYDX=-DYDX 
+        END IF 
+!
+!       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
+        IF(TCAP) THEN
+          B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
+          A=Y/X**L-B*X**2
+          IF(L.EQ.0) THEN
+            Y=A+B*XR**2
+            DYDX=2.D0*B*XR
+          ELSE
+            Y=A*XR**L+B*XR**(L+2)
+            DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
+          END IF
+        END IF  
+
+        DO M=1,2*L+1
+          LM=LM+1
+          H(LM)=Y*YLM(LM)
+!         == CALCULATE GRADIENT ================================================
+          DH(:,LM)=0.D0
+          DO LPRIME=MAX(L-1,0),L+1
+            IF(LPRIME.EQ.L-1) THEN
+              SVAR=SQ4PIBY3*(REAL(-L,KIND=8)*Y/X+DYDX)
+            ELSE IF(LPRIME.EQ.L+1) THEN
+              SVAR=SQ4PIBY3*(REAL(L+1,KIND=8)*Y/X+DYDX)
+            ELSE
+              CYCLE
+            END IF
+            LMPRIME=LPRIME**2
+            DO MPRIME=1,2*LPRIME+1
+              LMPRIME=LMPRIME+1
+              DO I=1,3
+                CALL SPHERICAL$GAUNT(LM,LMPRIME,LMOFP(I),CG)
+                DH(I,LM)=DH(I,LM)+SVAR*CG*YLM(LMPRIME)
+              ENDDO
+            ENDDO
+          ENDDO
         ENDDO
       ENDDO
       RETURN
@@ -435,6 +537,93 @@
       S=-4.D0*PI*S
       DO LM2=1,LM2X
         S(:,LM2)=S(:,LM2)*(-1.D0)**LOFLM(LM2)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LMTO$STRUCTURECONSTANTSWGRAD(R21,K2,L1X,L2X,S,DS)
+!     **************************************************************************
+!     **  CONSTRUCTS THE STRUCTURE CONSTANTS THAT MEDIATE AN EXPANSION        **
+!     **  OF A SOLID HANKEL FUNCTION H_{L,M}(R-R1) CENTERED AT R1             **
+!     **  INTO SOLID BESSEL FUNCTIONS  J_{L,M}(R-R2) CENTERED AT R2           **
+!     **                                                                      **
+!     **    H_{L,M}(R-R1) = - SUM_{L',M'} S_{L,M,L',M'} * J_{L',M'}(R-R2)     **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: R21(3) ! EXPANSION CENTER
+      INTEGER(4),INTENT(IN) :: L1X
+      INTEGER(4),INTENT(IN) :: L2X
+      REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
+      REAL(8)   ,INTENT(OUT):: S((L1X+1)**2,(L2X+1)**2)
+      REAL(8)   ,INTENT(OUT):: DS(3,(L1X+1)**2,(L2X+1)**2)
+      REAL(8)   ,PARAMETER  :: RAD=1.D-6
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)               :: SVAR
+      INTEGER(4)            :: L3X,LM1X,LM2X,LM3X
+      INTEGER(4)            :: LM1,LM2,LM3,L,L1,L2,L3,IM,LM3A,LM3B
+      INTEGER(4)            :: LOFLM((L1X+L2X+1)**2)
+      REAL(8)               :: H((L1X+L2X+1)**2)
+      REAL(8)               :: DH(3,(L1X+L2X+1)**2)
+      REAL(8)               :: CG     ! GAUNT COEFFICIENT
+      COMPLEX(8)            :: KAPPA
+!     **************************************************************************
+      IF(L1X.EQ.-1.OR.L2X.EQ.-1) RETURN  ! NO RETURN VALUES
+!
+      L3X=L1X+L2X
+      LM1X=(L1X+1)**2
+      LM2X=(L2X+1)**2
+      LM3X=(L3X+1)**2
+      LM3=0
+      DO L=0,L3X
+        DO IM=1,2*L+1
+          LM3=LM3+1
+          LOFLM(LM3)=L
+        ENDDO
+      ENDDO
+      IF(K2.GT.0.D0) THEN
+        KAPPA=CMPLX(0.D0,-SQRT(K2),KIND=8)
+      ELSE IF(K2.LT.0.D0) THEN
+        KAPPA=CMPLX(SQRT(-K2),0.D0,KIND=8)
+      ELSE
+        KAPPA=(0.D0,0.D0)
+      END IF
+
+!     == CALCULATE HANKEL FUNCTION OF THE DISTANCE =============================
+      CALL LMTO$SOLIDHANKELWGRAD(R21,RAD,K2,LM3X,H,DH)
+!
+!     ==========================================================================
+      S(:,:)=0.D0
+      DO LM1=1,LM1X
+        L1=LOFLM(LM1)
+        DO LM2=1,LM2X
+          L2=LOFLM(LM2)
+!          LM3A=(ABS(L2-L1))**2+1
+!          LM3B=(L1+L2+1)**2
+!          DO LM3=LM3A,LM3B
+          DO LM3=1,LM3X
+            L3=LOFLM(LM3)
+            CALL SPHERICAL$GAUNT(LM1,LM2,LM3,CG)
+            IF(CG.EQ.0.D0) CYCLE
+            IF(K2.EQ.0.D0) THEN
+              IF(L3.NE.L1+L2) CYCLE  ! AVOID 0**0
+              SVAR=1.D0
+            ELSE
+              SVAR=REAL(KAPPA**(L1+L2-L3))
+            END IF
+            S(LM1,LM2)=S(LM1,LM2)+CG*H(LM3)*SVAR
+            DS(:,LM1,LM2)=DS(:,LM1,LM2)+CG*DH(:,LM3)*SVAR
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     == MULTIPLY WITH -4*PI (-1)**L2 ==========================================
+      S =-4.D0*PI*S
+      DS=-4.D0*PI*DS
+      DO LM2=1,LM2X
+        S(:,LM2)   =S(:,LM2)   *(-1.D0)**LOFLM(LM2)
+        DS(:,:,LM2)=DS(:,:,LM2)*(-1.D0)**LOFLM(LM2)
       ENDDO
       RETURN
       END
