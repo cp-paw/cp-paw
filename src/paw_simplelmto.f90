@@ -2218,28 +2218,23 @@ END IF
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: SBARE(NND)
       LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE  :: PIPHI(:)
-      TYPE(MYMAT_TYPE)    ,ALLOCATABLE  :: MYMAT(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE  :: RHONEU(:)   !(NND)
-      REAL(8)             ,ALLOCATABLE  :: CMATIN(:,:)
-      REAL(8)             ,ALLOCATABLE  :: AMAT(:,:)
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
       INTEGER(4)                        :: IAT1,IAT2
       INTEGER(4)                        :: ISP,ISP1,ISP2
-      INTEGER(4)                        :: NCHI1,NCHI2
-      INTEGER(4)                        :: NPHI1,NPHI2
       INTEGER(4)                        :: N1,N2,N3
       INTEGER(4)                        :: NAT
-      INTEGER(4)                        :: I,J,IS,IM,LN1,LN2,L1,L2,II
-      REAL(8)                           :: S
-      INTEGER(4)                        :: LMNX1,LMNX2
-      INTEGER(4)                        :: LMN1I,LMN2I
+      INTEGER(4)                        :: I,J
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_DENMATPHITOCHI')
-      NAT=SIZE(ISPECIES)
-      ALLOCATE(RHONEU(NND))
-      ALLOCATE(MYMAT(NSP))
-      CALL SIMPLELMTO_EXPANDTOMYMAT(NSP,MYMAT)
+!
+!     ==========================================================================
+!     == CONSTRUCT <PI|PHI> WHICH CONVERTS PARTIAL-WAVE PROJECTIONS INTO      ==
+!     == LOCAL-ORBITAL PROJECTIONS
+!     ==========================================================================
+      ALLOCATE(PIPHI(NND))
+      CALL SIMPLELMTO_MAKEPIPHI(NND,SBARE,PIPHI)
 !
 !     ==========================================================================
 !     == POINTER TO BACK HOP
@@ -2261,6 +2256,7 @@ END IF
 !
 !     == POINTS FROM EACH ATOM TO THE CORRESPONDIG ONSITE TERM =================
 !     == IN THE NEIGHBORLIST ===================================================
+      NAT=SIZE(ISPECIES)
       ALLOCATE(INDON(NAT))
       INDON=0
       DO I=1,NND
@@ -2268,55 +2264,9 @@ END IF
       ENDDO
 !
 !     ==========================================================================
-!     ==  <PI|PHI>            |PSI>=|CHI><PI|PHI><P|PSI>                      ==
-!     ==========================================================================
-      ALLOCATE(PIPHI(NND))
-      DO I=1,NND
-        IAT1=SBARE(I)%IAT1
-        IAT2=SBARE(I)%IAT2
-        ISP1=ISPECIES(IAT1)
-        ISP2=ISPECIES(IAT2)
-        N1=SUM(2*POTPAR(ISP1)%LOXH+1)
-        N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
-        N3=4    !VALUE AND GRADIENT
-        PIPHI(I)%IAT1=IAT1
-        PIPHI(I)%IAT2=IAT2
-        PIPHI(I)%IT  =SBARE(I)%IT
-        PIPHI(I)%N1=N1
-        PIPHI(I)%N2=N2
-        PIPHI(I)%N3=N3
-        ALLOCATE(PIPHI(I)%MAT(N1,N2,N3))
-        PIPHI(I)%MAT=0.D0
-!
-        IF(INDBACK(I).EQ.I) THEN
-          PIPHI(I)%MAT(:,:,1)=TRANSPOSE(MYMAT(ISP1)%PROPHIH)
-        ELSE
-          DO II=1,4
-            S=SIGN(1,3-2*II) ! =-1 FOR GRADIENTS TAKING CARE OF INDBACK
-            PIPHI(I)%MAT(:,:,II)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
-     &                        ,MATMUL(SBARE(I)%MAT(:,:,II) &
-     &                        ,TRANSPOSE(MYMAT(ISP2)%PROPHIT &
-     &                                  -MATMUL(MYMAT(ISP2)%PROPHIH &
-     &                                         ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
-     &                                              ,MYMAT(ISP2)%PHIHTOV))))) &
-     &                       +S*MATMUL(MYMAT(ISP1)%PHIHTOV &
-     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,II)) &
-     &                        ,MATMUL(MYMAT(ISP2)%CMAT &
-     &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
-     &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
-          ENDDO
-!PIPHI(I)%MAT=0.D0
-        END IF
-        DO II=1,4
-          PIPHI(I)%MAT(:,:,II)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
-                             ,MATMUL(PIPHI(I)%MAT(:,:,II),MYMAT(ISP2)%PHIOV))
-        ENDDO
-      ENDDO
-       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'<PI|PHI>',NND,PIPHI)
-!
-!     ==========================================================================
 !     ==  FORWARD TRANSFORMATION FROM RHOPHI TO RHOCHI                        ==
 !     ==========================================================================
+      ALLOCATE(RHONEU(NND))
       IF(ID.EQ.'FWRD') THEN
 !       ========================================================================
 !       ==  COPY DENMAT INTO RHONEU, RESIZE DENMAT
@@ -2475,6 +2425,135 @@ END IF
       ENDDO
       DEALLOCATE(RHONEU)
       DEALLOCATE(PIPHI)
+                                    CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SIMPLELMTO_MAKEPIPHI(NND,SBARE,PIPHI)
+!     **************************************************************************
+!     **  CALCULATE THE MATRIX <PI|PHI>WHICH CONVERTS PARTIAL-WAVE PROJECTIONS**
+!     **  <PTILDE|PSITILDE> INTO LOCAL-ORBITAL PROJECTIONS <PI|PSI>.          **
+!     **                                                                      **
+!     **            |PSI> APPROX |CHI><PI|PHI><PTILDE|PSITILDE>               **
+!     **                                                                      **
+!     **  1: OFF-SITE STRUCTURE CONSTANTS ENTER ONLY TO FIRST ORDER.          **
+!     **     AS A RESULT PHICHI AND SBARE ARE ON THE SAME NEIGHBORLIST        **
+!     **                                                                      **
+!     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
+!     **                                                                      **
+!     ********************************************P. BLOECHL, GOSLAR 2019*******
+      USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
+     &                             ,POTPAR=>POTPAR1 &
+     &                             ,LOX &
+     &                             ,LNX &
+     &                             ,NSP
+      USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE &
+     &                             ,RSPACEOP$WRITEMAT
+      IMPLICIT NONE
+      TYPE MYMAT_TYPE
+        REAL(8),ALLOCATABLE :: PROPHIH(:,:)
+        REAL(8),ALLOCATABLE :: PROPHIT(:,:)
+        REAL(8),ALLOCATABLE :: CMAT(:,:)
+        REAL(8),ALLOCATABLE :: PHIOV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHHOV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHHOVINV(:,:)
+        REAL(8),ALLOCATABLE :: PHIHTOV(:,:)
+      END TYPE MYMAT_TYPE
+      INTEGER(4)          ,INTENT(IN)   :: NND
+      TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: SBARE(NND)
+      TYPE(RSPACEMAT_TYPE),INTENT(OUT)  :: PIPHI(NND)
+      LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
+      TYPE(MYMAT_TYPE)    ,ALLOCATABLE  :: MYMAT(:)
+      INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
+      INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
+      INTEGER(4)                        :: IAT1,IAT2
+      INTEGER(4)                        :: ISP,ISP1,ISP2
+      INTEGER(4)                        :: N1,N2,N3
+      INTEGER(4)                        :: NAT
+      INTEGER(4)                        :: I,J,II
+      REAL(8)                           :: S
+!     **************************************************************************
+                                    CALL TRACE$PUSH('SIMPLELMTO_MAKEPIPHI')
+      NAT=SIZE(ISPECIES)
+      ALLOCATE(MYMAT(NSP))
+      CALL SIMPLELMTO_EXPANDTOMYMAT(NSP,MYMAT)
+!
+!     ==========================================================================
+!     == POINTER TO BACK HOP
+!     ==========================================================================
+      ALLOCATE(INDBACK(NND))
+      INDBACK=0
+      DO I=1,NND
+        IF(INDBACK(I).NE.0) CYCLE
+        IAT1=SBARE(I)%IAT1
+        IAT2=SBARE(I)%IAT2
+        DO J=I,NND
+          IF(SBARE(J)%IAT2.NE.IAT1) CYCLE
+          IF(SBARE(J)%IAT1.NE.IAT2) CYCLE
+          IF(SUM((SBARE(I)%IT+SBARE(J)%IT)**2).NE.0) CYCLE
+          INDBACK(I)=J
+          INDBACK(J)=I
+        ENDDO
+      ENDDO
+!
+!     == POINTS FROM EACH ATOM TO THE CORRESPONDIG ONSITE TERM =================
+!     == IN THE NEIGHBORLIST ===================================================
+      ALLOCATE(INDON(NAT))
+      INDON=0
+      DO I=1,NND
+        IF(INDBACK(I).EQ.I) INDON(SBARE(I)%IAT1)=I
+      ENDDO
+!
+!     ==========================================================================
+!     ==  <PI|PHI>            |PSI>=|CHI><PI|PHI><P|PSI>                      ==
+!     ==========================================================================
+      DO I=1,NND
+        IAT1=SBARE(I)%IAT1
+        IAT2=SBARE(I)%IAT2
+        ISP1=ISPECIES(IAT1)
+        ISP2=ISPECIES(IAT2)
+        N1=SUM(2*POTPAR(ISP1)%LOXH+1)
+        N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
+        N3=4    !VALUE AND GRADIENT
+        PIPHI(I)%IAT1=IAT1
+        PIPHI(I)%IAT2=IAT2
+        PIPHI(I)%IT  =SBARE(I)%IT
+        PIPHI(I)%N1=N1
+        PIPHI(I)%N2=N2
+        PIPHI(I)%N3=N3
+        ALLOCATE(PIPHI(I)%MAT(N1,N2,N3))
+        PIPHI(I)%MAT=0.D0
+!
+        IF(INDBACK(I).EQ.I) THEN
+          PIPHI(I)%MAT(:,:,1)=TRANSPOSE(MYMAT(ISP1)%PROPHIH)
+        ELSE
+          DO II=1,4
+            S=SIGN(1,3-2*II) ! =-1 FOR GRADIENTS TAKING CARE OF INDBACK
+            PIPHI(I)%MAT(:,:,II)=-MATMUL(TRANSPOSE(MYMAT(ISP1)%CMAT) &
+     &                        ,MATMUL(SBARE(I)%MAT(:,:,II) &
+     &                        ,TRANSPOSE(MYMAT(ISP2)%PROPHIT &
+     &                                  -MATMUL(MYMAT(ISP2)%PROPHIH &
+     &                                         ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
+     &                                              ,MYMAT(ISP2)%PHIHTOV))))) &
+     &                       +S*MATMUL(MYMAT(ISP1)%PHIHTOV &
+     &                        ,MATMUL(TRANSPOSE(SBARE(INDBACK(I))%MAT(:,:,II)) &
+     &                        ,MATMUL(MYMAT(ISP2)%CMAT &
+     &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
+     &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
+          ENDDO
+!PIPHI(I)%MAT=0.D0
+        END IF
+        DO II=1,4
+          PIPHI(I)%MAT(:,:,II)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
+                             ,MATMUL(PIPHI(I)%MAT(:,:,II),MYMAT(ISP2)%PHIOV))
+        ENDDO
+      ENDDO
+       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'<PI|PHI>',NND,PIPHI)
+!
+!     ==========================================================================
+!     ==  CLEAN UP                                                            ==
+!     ==========================================================================
       DO ISP=1,NSP
         DEALLOCATE(MYMAT(ISP)%PROPHIH)
         DEALLOCATE(MYMAT(ISP)%PROPHIT)
@@ -2489,7 +2568,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_expandtomymat(nsp,mymat)
+      SUBROUTINE SIMPLELMTO_EXPANDTOMYMAT(NSP,MYMAT)
 !     **************************************************************************
 !     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
 !     **                                                                      **
@@ -2508,15 +2587,15 @@ END IF
         REAL(8),ALLOCATABLE :: PHIHTOV(:,:)
       END TYPE MYMAT_TYPE
       INTEGER(4)      ,INTENT(IN) :: NSP
-      type(mymat_type),INTENT(OUT):: MYMAT(NSP)
-      logical(4)      ,parameter  :: tpr=.false.
-      integer(4)                  :: isp
+      TYPE(MYMAT_TYPE),INTENT(OUT):: MYMAT(NSP)
+      LOGICAL(4)      ,PARAMETER  :: TPR=.FALSE.
+      INTEGER(4)                  :: ISP
       INTEGER(4)                  :: LMNX1,LMNX2
       INTEGER(4)                  :: LMN1I,LMN2I
-      INTEGER(4)                  :: ln1,ln2
-      INTEGER(4)                  :: l1,l2
-      INTEGER(4)                  :: im
-      INTEGER(4)                  :: i
+      INTEGER(4)                  :: LN1,LN2
+      INTEGER(4)                  :: L1,L2
+      INTEGER(4)                  :: IM
+      INTEGER(4)                  :: I
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_EXPANDTOMYMAT')
 !
