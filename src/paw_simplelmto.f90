@@ -505,19 +505,19 @@ END MODULE SIMPLELMTO_MODULE
 !     ==========================================================================
       CALL SIMPLELMTO_OFFXINT()
 !!$!
-!!$!     ==========================================================================
-!!$!     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                      ==
-!!$!     ==========================================================================
+!!$!     =======================================================================
+!!$!     ==  CONSTRUCT OFFSITE INTEGRALS OF TAILED ORBITALS                     
+!!$!     =======================================================================
 !!$      IF(TOFFSITE) THEN 
 !!$                            CALL TIMING$CLOCKON('OFFSITE U-TENSOR')
-!!$!       == GAUSSIAN FIT OF TAILED ORBITAL FOR ABAB-TYPE U-TENSOR ===============
+!!$!       == GAUSSIAN FIT OF TAILED ORBITAL FOR ABAB-TYPE U-TENSOR ============
 !!$                            CALL TIMING$CLOCKON('OFFS.U. GAUSSFIT')
 !!$        CALL SIMPLELMTO_TAILEDGAUSSFIT()
 !!$                            CALL TIMING$CLOCKOFF('OFFS.U. GAUSSFIT')
 !!$!
-!!$!       == OFF-SITE MATRIX ELEMENTS OF OVERLAP MATRIX AND U-TENSOR =============
-!!$!       == OVERLAP MATRIX ELEMENTS ARE ALWAYS COMPUTED, U-TENSOR ELEMENTS ======
-!!$!       == ONLY WHEN REQUESTED =================================================
+!!$!       == OFF-SITE MATRIX ELEMENTS OF OVERLAP MATRIX AND U-TENSOR ==========
+!!$!       == OVERLAP MATRIX ELEMENTS ARE ALWAYS COMPUTED, U-TENSOR ELEMENTS ===
+!!$!       == ONLY WHEN REQUESTED ==============================================
 !!$                            CALL TIMING$CLOCKON('OFFS.U. INTEGRALS')
 !!$        CALL SIMPLELMTO_OFFXINT()
 !!$                            CALL TIMING$CLOCKOFF('OFFS.U. INTEGRALS')
@@ -732,7 +732,7 @@ END MODULE SIMPLELMTO_MODULE
       INTEGER(4)             :: ISVAR
       LOGICAL(4)             :: TCHK
 !     **************************************************************************
-      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       REAL(8)                :: RAUG       ! MATCHING RADIUS
       INTEGER(4)             :: LNXPHI     ! #(PARTIALWAVES)
       INTEGER(4)             :: LNXH       ! #(HEAD FUNCTIONS)
@@ -1773,10 +1773,10 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       REAL(8)                          :: STRESS(3,3)
       REAL(8)             ,ALLOCATABLE :: R0(:,:) !(3,NAT)
       REAL(8)             ,ALLOCATABLE :: FORCE(:,:) !(3,NAT)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATphi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATchi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILchi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILphi(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATPHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATCHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILCHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILPHI(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DONSITE(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HONSITE(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: SBARE(:)
@@ -1787,14 +1787,9 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       INTEGER(4)                       :: I,IAT
       INTEGER(4)                       :: NFILO
       LOGICAL(4)                       :: TFIRST=.TRUE.
-LOGICAL(4),PARAMETER :: TFIXORB=.false. ! test rgid orbitals
-LOGICAL(4),SAVE :: TINI=.TRUE.
-REAL(8)   ,SAVE :: RSAVE(3,100)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                      CALL TRACE$PUSH('SIMPLELMTO_HYBRID')
-!!$print*,'before testder'
-!!$call SIMPLELMTO_testder()
 !
 !     ==========================================================================
 !     == COLLECT ATOMIC STRUCTURE                                             ==
@@ -1804,20 +1799,12 @@ REAL(8)   ,SAVE :: RSAVE(3,100)
       ALLOCATE(R0(3,NAT))
       ALLOCATE(FORCE(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-if(tfixorb) then
-  if(tini) then 
-     rsave(:,:nat)=r0
-    tini=.false.
-  else
-   r0=rsave(:,:nat)
-  end if
-end if
 !
 !     ==========================================================================
 !     ==  COLLECT DENSITY MATRIX                                              ==
 !     ==========================================================================
       CALL WAVES$GETI4('NND',NND)
-      ALLOCATE(DENMATphi(NND))
+      ALLOCATE(DENMATPHI(NND))
       CALL WAVES$GETRSPACEMATA('DENMAT',NND,DENMATPHI)
       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'DENSITY MATRIX IN PHIS',NND,DENMATPHI)
 !
@@ -1827,10 +1814,6 @@ end if
       ALLOCATE(DONSITE(NAT))
       CALL SIMPLELMTO_ONSITEDENMATEXTRACTADD('EXTRACT',NND,DENMATPHI &
      &                                                ,NAT,DONSITE)
-!!$DO  IAT=1,NAT
-!!$  WRITE(*,FMT='("DONSITE 2: ",20F10.5)')DONSITE(IAT)%MAT
-!!$ENDDO
-!!$STOP 'FORCED'
 !
 !     ==========================================================================
 !     ==  CALCULATE BARE STRUCTURECONSTANTS                                   ==
@@ -1862,89 +1845,43 @@ end if
 !     ==  DENMATPHI IS KEPTFORT FORCE CALCULATION
 !     ==========================================================================
       ALLOCATE(DENMATCHI(NND))
-!      CALL SIMPLELMTO_DENMATPHITOCHI2('FWRD',NND,DENMATCHI,PIPHI)
-      call SIMPLELMTO_DENMATPHITOCHI(NND,PIPHI,DENMATPHI,DENMATCHI)
+      CALL SIMPLELMTO_DENMATPHITOCHI(NND,PIPHI,DENMATPHI,DENMATCHI)
 !
 !     ==========================================================================
 !     ==  CALCULATE ENERGY                                                    ==
 !     ==========================================================================
       ETOT=0.D0
-      ALLOCATE(HAMILchi(NND))
+      ALLOCATE(HAMILCHI(NND))
       DO I=1,NND
-        CALL RSPACEOP$COPY(DENMATCHI(I),HAMILchi(I))
-        HAMILchi(I)%MAT=0.D0
+        CALL RSPACEOP$COPY(DENMATCHI(I),HAMILCHI(I))
+        HAMILCHI(I)%MAT=0.D0
       ENDDO
       ALLOCATE(HONSITE(NAT))
       DO IAT=1,NAT
         CALL RSPACEOP$COPY(DONSITE(IAT),HONSITE(IAT))
         HONSITE(IAT)%MAT=0.D0
       ENDDO
-!
-IF(.NOT.TTEST.OR.TFIRST) THEN
-TFIRST=.FALSE.
-      CALL TIMING$CLOCKON('SIMPLELMTO_HYBRIDENERGY')
-      CALL SIMPLELMTO_HYBRIDENERGY(NAT,NND,RBAS,R0,DENMATCHI,DONSITE &
-     &                                  ,ETOT,STRESS,FORCE,HAMILchi,HONSITE)
-      CALL TIMING$CLOCKOFF('SIMPLELMTO_HYBRIDENERGY')
-END IF
                                  CALL TRACE$PASS('AFTER IMPLELMTO_HYBRIDENERGY')
-!
-!     ==========================================================================
-!     == 
-!     ==========================================================================
-IF(TTEST.AND.TTESTA) THEN
-  CALL FILEHANDLER$UNIT('PROT',NFILO)
-  WRITE(NFILO,*)'WARNING FROM SIMPLELMTO_HYBRID! TEST ENVIRONMENT IS ON'
-  DO I=1,NND !NEIGBORLIST IS DIRECTIONAL
-    CALL RSPACEOP$DELETE(DENMATchi(I))
-  ENDDO
-  CALL WAVES$GETRSPACEMATA('DENMATchi',NND,DENMATchi)
-  CALL SIMPLELMTO_FAKEETOT(NND,DENMATchi,ETOT,HAMILchi)
-  FORCE=0.D0
-  STRESS=0.D0
-  DO IAT=1,NAT
-    HONSITE(IAT)%MAT=0.D0
-  ENDDO
-END IF
 !
 !     ==========================================================================
 !     ==  FORCE CONTRIBUTION FROM CONVERSION BETWEEN CHI AND PHI              ==
 !     ==========================================================================
       ALLOCATE(FORCET(3,NAT))
-      CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILchi,FORCET)
-!!$print*,'lattice   from SIMPLELMTO_FORCEPHITOCHI:',rbas
-!!$print*,'positions from SIMPLELMTO_FORCEPHITOCHI:',r0
-print*,'forces    from SIMPLELMTO_FORCEPHITOCHI:',forcet
-if(tfixorb) forcet=0.d0
+      CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI,FORCET)
       FORCE=FORCE+FORCET
       DEALLOCATE(FORCET)
 !
 !     ==========================================================================
 !     ==  CONVERT HAMIL INTO THE PARTIAL-WAVE EXPANSION                       ==
 !     ==========================================================================
-      IF(TPR)CALL RSPACEOP$WRITEMAT(6,'HAMILTON IN CHI-S',NND,HAMILchi)
-!      CALL SIMPLELMTO_DENMATPHITOCHI2('BACK',NND,HAMIL,PIPHI)
+      IF(TPR)CALL RSPACEOP$WRITEMAT(6,'HAMILTON IN CHI-S',NND,HAMILCHI)
       ALLOCATE(HAMILPHI(NND))
       CALL SIMPLELMTO_HAMILCHITOPHI(NND,PIPHI,HAMILCHI,HAMILPHI)
 !
 !     ==========================================================================
 !     ==  ADD ONSITE HAMILTONIAN TO OFF-SITE HAMILTONIAN                      ==
 !     ==========================================================================
-      CALL SIMPLELMTO_ONSITEDENMATEXTRACTADD('ADDBACK',NND,HAMILphi,NAT,HONSITE)
-!!$DO  IAT=1,NAT
-!!$  WRITE(*,FMT='("HONSITE 2: ",20F10.5)')HONSITE(IAT)%MAT
-!!$ENDDO
-IF(TTEST.AND.(.NOT.TTESTA)) THEN
-  CALL FILEHANDLER$UNIT('PROT',NFILO)
-  WRITE(NFILO,*)'WARNING FROM SIMPLELMTO_HYBRID! TEST ENVIRONMENT IS ON'
-  DO I=1,NND !NEIGBORLIST IS DIRECTIONAL
-    CALL RSPACEOP$DELETE(DENMATCHI(I))
-  ENDDO
-  CALL WAVES$GETRSPACEMATA('DENMAT',NND,DENMATCHI)
-  CALL SIMPLELMTO_FAKEETOT(NND,DENMATCHI,ETOT,HAMILchi)
-  FORCE=0.D0
-  STRESS=0.D0
-END IF
+      CALL SIMPLELMTO_ONSITEDENMATEXTRACTADD('ADDBACK',NND,HAMILPHI,NAT,HONSITE)
 !
 !     ==========================================================================
 !     == COMMUNICATE ENERGY AND DERIVATIVES                                   ==
@@ -1968,23 +1905,23 @@ END IF
       CALL CELL$SETR8A('STRESS_I',9,STRESST)
 !
 !     ==  HAMILTONIAN -> WAVES OBJECT ==========================================
-      IF(TPR)CALL RSPACEOP$WRITEMAT(6,'HAMILTON IN PHIS',NND,HAMILphi)
-      CALL WAVES$SETRSPACEMATA('HAMIL',NND,HAMILphi)
+      IF(TPR)CALL RSPACEOP$WRITEMAT(6,'HAMILTON IN PHIS',NND,HAMILPHI)
+      CALL WAVES$SETRSPACEMATA('HAMIL',NND,HAMILPHI)
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
 !     ==========================================================================
       DO I=1,NND
         CALL RSPACEOP$DELETE(PIPHI(I))
-        CALL RSPACEOP$DELETE(DENMATphi(I))
-        CALL RSPACEOP$DELETE(DENMATchi(I))
-        CALL RSPACEOP$DELETE(HAMILchi(I))
-        CALL RSPACEOP$DELETE(HAMILphi(I))
+        CALL RSPACEOP$DELETE(DENMATPHI(I))
+        CALL RSPACEOP$DELETE(DENMATCHI(I))
+        CALL RSPACEOP$DELETE(HAMILCHI(I))
+        CALL RSPACEOP$DELETE(HAMILPHI(I))
       ENDDO
-      DEALLOCATE(DENMATphi)
-      DEALLOCATE(DENMATchi)
-      DEALLOCATE(HAMILchi)
-      DEALLOCATE(HAMILphi)
+      DEALLOCATE(DENMATPHI)
+      DEALLOCATE(DENMATCHI)
+      DEALLOCATE(HAMILCHI)
+      DEALLOCATE(HAMILPHI)
       DEALLOCATE(PIPHI)
       DO IAT=1,NAT
         CALL RSPACEOP$DELETE(DONSITE(IAT))
@@ -1997,7 +1934,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_testder()
+      SUBROUTINE SIMPLELMTO_TESTDER()
 !     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
@@ -2010,7 +1947,7 @@ END IF
      &                           ,RSPACEOP$COPY &
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
-      LOGICAL(4)          ,PARAMETER   :: TPR=.false.
+      LOGICAL(4)          ,PARAMETER   :: TPR=.FALSE.
       CHARACTER(5)        ,PARAMETER   :: TYPE='FINAL'
 !      CHARACTER(5)        ,PARAMETER   :: TYPE='PRIOR'
       LOGICAL(4)          ,PARAMETER   :: TTEST=.FALSE.
@@ -2020,26 +1957,26 @@ END IF
       REAL(8)                          :: RBAS(3,3)
       REAL(8)                          :: STRESS(3,3)
       REAL(8)             ,ALLOCATABLE :: R0(:,:) !(3,NAT)
-      REAL(8)             ,ALLOCATABLE :: dis(:,:) !(3,NAT)
-      REAL(8)             ,ALLOCATABLE :: rsave(:,:) !(3,NAT)
+      REAL(8)             ,ALLOCATABLE :: DIS(:,:) !(3,NAT)
+      REAL(8)             ,ALLOCATABLE :: RSAVE(:,:) !(3,NAT)
       REAL(8)             ,ALLOCATABLE :: FORCE(:,:) !(3,NAT)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATphi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATchi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILchi(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILphi(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATPHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DENMATCHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILCHI(:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HAMILPHI(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: DONSITE(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: HONSITE(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: SBARE(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: SBAREsave(:,:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: SBARESAVE(:,:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: PIPHI(:)
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: PIPHIsave(:,:)
+      TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: PIPHISAVE(:,:)
       REAL(8)             ,ALLOCATABLE :: FORCET(:,:) !(3,NAT)
       REAL(8)                          :: STRESST(3,3)
       REAL(8)                          :: ETOT
-      REAL(8)                          :: ran
-      INTEGER(4)                       :: I,IAT,k,l,ii,idis
-      INTEGER(4)                       :: Iat1,iat2
-      INTEGER(4)                       :: n1,n2
+      REAL(8)                          :: RAN
+      INTEGER(4)                       :: I,IAT,K,L,II,IDIS
+      INTEGER(4)                       :: IAT1,IAT2
+      INTEGER(4)                       :: N1,N2
       INTEGER(4)                       :: NFILO
       LOGICAL(4)                       :: TFIRST=.TRUE.
 !     **************************************************************************
@@ -2052,23 +1989,23 @@ END IF
       CALL CELL$GETR8A('T0',9,RBAS)
       CALL ATOMLIST$NATOM(NAT)
       ALLOCATE(R0(3,NAT))
-      ALLOCATE(Rsave(3,NAT))
-      ALLOCATE(dis(3,NAT))
+      ALLOCATE(RSAVE(3,NAT))
+      ALLOCATE(DIS(3,NAT))
       ALLOCATE(FORCE(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-      rsave=r0
-      do iat=1,nat
-        do i=1,3
-          call random_number(ran)
-          dis(i,iat)=(2.d0*ran-1.d0)*1.d-3
-        enddo
-      enddo
+      RSAVE=R0
+      DO IAT=1,NAT
+        DO I=1,3
+          CALL RANDOM_NUMBER(RAN)
+          DIS(I,IAT)=(2.D0*RAN-1.D0)*1.D-3
+        ENDDO
+      ENDDO
 !
 !     ==========================================================================
 !     ==  COLLECT DENSITY MATRIX                                              ==
 !     ==========================================================================
       CALL WAVES$GETI4('NND',NND)
-      ALLOCATE(DENMATphi(NND))
+      ALLOCATE(DENMATPHI(NND))
       CALL WAVES$GETRSPACEMATA('DENMAT',NND,DENMATPHI)
 !      IF(TPR)CALL RSPACEOP$WRITEMAT(6,'DENSITY MATRIX IN PHIS',NND,DENMATPHI)
 !
@@ -2082,12 +2019,12 @@ END IF
 !     =========================================================================
 !     =========================================================================
 !     =========================================================================
-      allocate(sbaresave(nnd,-5:5))
-      allocate(piphisave(nnd,-5:5))
+      ALLOCATE(SBARESAVE(NND,-5:5))
+      ALLOCATE(PIPHISAVE(NND,-5:5))
       ALLOCATE(SBARE(NND))
       ALLOCATE(PIPHI(NND))
-      do idis=-5,5
-        r0=rsave+dis*real(idis,kind=8)
+      DO IDIS=-5,5
+        R0=RSAVE+DIS*REAL(IDIS,KIND=8)
 !
 !       ========================================================================
 !       ==  CALCULATE BARE STRUCTURECONSTANTS                                 ==
@@ -2099,29 +2036,29 @@ END IF
         ENDDO
         CALL SIMPLELMTO_STRUCTURECONSTANTS(NAT,R0,RBAS,NND,SBARE)
 !
-        do i=1,nnd
-          iat1=sbare(i)%iat1
-          iat2=sbare(i)%iat2
-          n1=sbare(i)%n1
-          n2=sbare(i)%n2
-          sbaresave(i,idis)%iat1=iat1
-          sbaresave(i,idis)%iat2=iat2
-          sbaresave(i,idis)%n1=n1
-          sbaresave(i,idis)%n2=n2
-          sbaresave(i,idis)%n3=1
-          allocate(sbaresave(i,idis)%mat(n1,n2,1))
-          if(idis.ne.0) then
-            sbaresave(i,idis)%mat(:,:,1)=sbare(i)%mat(:,:,1)
-          else
-            sbaresave(i,idis)%mat=0.d0
-            do ii=1,3
-              sbaresave(i,idis)%mat(:,:,1) &
-    &                =sbaresave(i,idis)%mat(:,:,1)&
-    &                +sbare(i)%mat(:,:,1+ii)*(dis(ii,iat2)-dis(ii,iat1))
-            enddo
-!            write(*,*)i,sbaresave(i,idis)%mat(:,:,1)
-          end if
-        enddo
+        DO I=1,NND
+          IAT1=SBARE(I)%IAT1
+          IAT2=SBARE(I)%IAT2
+          N1=SBARE(I)%N1
+          N2=SBARE(I)%N2
+          SBARESAVE(I,IDIS)%IAT1=IAT1
+          SBARESAVE(I,IDIS)%IAT2=IAT2
+          SBARESAVE(I,IDIS)%N1=N1
+          SBARESAVE(I,IDIS)%N2=N2
+          SBARESAVE(I,IDIS)%N3=1
+          ALLOCATE(SBARESAVE(I,IDIS)%MAT(N1,N2,1))
+          IF(IDIS.NE.0) THEN
+            SBARESAVE(I,IDIS)%MAT(:,:,1)=SBARE(I)%MAT(:,:,1)
+          ELSE
+            SBARESAVE(I,IDIS)%MAT=0.D0
+            DO II=1,3
+              SBARESAVE(I,IDIS)%MAT(:,:,1) &
+    &                =SBARESAVE(I,IDIS)%MAT(:,:,1)&
+    &                +SBARE(I)%MAT(:,:,1+II)*(DIS(II,IAT2)-DIS(II,IAT1))
+            ENDDO
+!            WRITE(*,*)I,SBARESAVE(I,IDIS)%MAT(:,:,1)
+          END IF
+        ENDDO
 !
 !       ========================================================================
 !       == CONSTRUCT <PI|PHI> WHICH CONVERTS PARTIAL-WAVE PROJECTIONS INTO    ==
@@ -2129,74 +2066,74 @@ END IF
 !       ========================================================================
         CALL SIMPLELMTO_MAKEPIPHI(NND,SBARE,PIPHI)
 !
-        do i=1,nnd
-          iat1=piphi(i)%iat1
-          iat2=piphi(i)%iat2
-          n1=piphi(i)%n1
-          n2=piphi(i)%n2
-          piphisave(i,idis)%iat1=iat1
-          piphisave(i,idis)%iat2=iat2
-          piphisave(i,idis)%n1=n1
-          piphisave(i,idis)%n2=n2
-          piphisave(i,idis)%n3=1
-          allocate(piphisave(i,idis)%mat(n1,n2,1))
-          if(idis.ne.0) then
-            piphisave(i,idis)%mat(:,:,1)=piphi(i)%mat(:,:,1)
-          else
-            piphisave(i,idis)%mat=0.d0
-            do ii=1,3
-              piphisave(i,idis)%mat(:,:,1) &
-    &                =piphisave(i,idis)%mat(:,:,1)&
-    &                +piphi(i)%mat(:,:,1+ii)*(dis(ii,iat2)-dis(ii,iat1))
-            enddo
-!            write(*,*)i,piphisave(i,idis)%mat(:,:,1)
-          end if
-        enddo
+        DO I=1,NND
+          IAT1=PIPHI(I)%IAT1
+          IAT2=PIPHI(I)%IAT2
+          N1=PIPHI(I)%N1
+          N2=PIPHI(I)%N2
+          PIPHISAVE(I,IDIS)%IAT1=IAT1
+          PIPHISAVE(I,IDIS)%IAT2=IAT2
+          PIPHISAVE(I,IDIS)%N1=N1
+          PIPHISAVE(I,IDIS)%N2=N2
+          PIPHISAVE(I,IDIS)%N3=1
+          ALLOCATE(PIPHISAVE(I,IDIS)%MAT(N1,N2,1))
+          IF(IDIS.NE.0) THEN
+            PIPHISAVE(I,IDIS)%MAT(:,:,1)=PIPHI(I)%MAT(:,:,1)
+          ELSE
+            PIPHISAVE(I,IDIS)%MAT=0.D0
+            DO II=1,3
+              PIPHISAVE(I,IDIS)%MAT(:,:,1) &
+    &                =PIPHISAVE(I,IDIS)%MAT(:,:,1)&
+    &                +PIPHI(I)%MAT(:,:,1+II)*(DIS(II,IAT2)-DIS(II,IAT1))
+            ENDDO
+!            WRITE(*,*)I,PIPHISAVE(I,IDIS)%MAT(:,:,1)
+          END IF
+        ENDDO
 !
 !       =======================================================================
 !       ==
 !       =======================================================================
-        do i=1,nnd
-          deallocate(sbare(i)%mat)
-          deallocate(piphi(i)%mat)
-        enddo
-      enddo
-      deallocate(sbare)
+        DO I=1,NND
+          DEALLOCATE(SBARE(I)%MAT)
+          DEALLOCATE(PIPHI(I)%MAT)
+        ENDDO
+      ENDDO
+      DEALLOCATE(SBARE)
 !
 !     ==========================================================================
-!     ==  analyze
+!     ==  ANALYZE
 !     ==========================================================================
-print*,'analyze sbare gradient'
-      do i=1,nnd
-         do idis=1,5
-           sbaresave(i,idis)%mat(:,:,1) &
-     &          =(sbaresave(i,idis)%mat(:,:,1)-sbaresave(i,-idis)%mat(:,:,1)) &
-     &           /real(2*idis,kind=8) &
-     &           /sbaresave(i,0)%mat(:,:,1)
-         enddo
-         do k=1,sbaresave(i,0)%n1
-           do l=1,sbaresave(i,0)%n2
-             if(sbaresave(i,0)%mat(k,l,1).eq.0.d0) cycle
-             write(*,fmt='(5f10.5)')(sbaresave(i,idis)%mat(k,l,1),idis=1,5)
-           enddo
-         enddo
-      enddo      
-print*,'analyze piphi gradient'
-      do i=1,nnd
-         do idis=1,5
-           piphisave(i,idis)%mat(:,:,1) &
-     &          =(piphisave(i,idis)%mat(:,:,1)-piphisave(i,-idis)%mat(:,:,1)) &
-     &           /real(2*idis,kind=8) &
-     &           /piphisave(i,0)%mat(:,:,1)
-         enddo
-         do k=1,piphisave(i,0)%n1
-           do l=1,piphisave(i,0)%n2
-             if(piphisave(i,0)%mat(k,l,1).eq.0.d0) cycle
-             write(*,fmt='(5f10.5)')(piphisave(i,idis)%mat(k,l,1),idis=1,5)
-           enddo
-         enddo
-      enddo      
-stop 'forced --'
+PRINT*,'ANALYZE SBARE GRADIENT'
+      DO I=1,NND
+         DO IDIS=1,5
+           SBARESAVE(I,IDIS)%MAT(:,:,1) &
+     &          =(SBARESAVE(I,IDIS)%MAT(:,:,1)-SBARESAVE(I,-IDIS)%MAT(:,:,1)) &
+     &           /REAL(2*IDIS,KIND=8) &
+     &           /SBARESAVE(I,0)%MAT(:,:,1)
+         ENDDO
+         DO K=1,SBARESAVE(I,0)%N1
+           DO L=1,SBARESAVE(I,0)%N2
+             IF(SBARESAVE(I,0)%MAT(K,L,1).EQ.0.D0) CYCLE
+             WRITE(*,FMT='(5F10.5)')(SBARESAVE(I,IDIS)%MAT(K,L,1),IDIS=1,5)
+           ENDDO
+         ENDDO
+      ENDDO      
+PRINT*,'ANALYZE PIPHI GRADIENT'
+      DO I=1,NND
+         DO IDIS=1,5
+           PIPHISAVE(I,IDIS)%MAT(:,:,1) &
+     &          =(PIPHISAVE(I,IDIS)%MAT(:,:,1)-PIPHISAVE(I,-IDIS)%MAT(:,:,1)) &
+     &           /REAL(2*IDIS,KIND=8) &
+     &           /PIPHISAVE(I,0)%MAT(:,:,1)
+         ENDDO
+         DO K=1,PIPHISAVE(I,0)%N1
+           DO L=1,PIPHISAVE(I,0)%N2
+             IF(PIPHISAVE(I,0)%MAT(K,L,1).EQ.0.D0) CYCLE
+             WRITE(*,FMT='(5F10.5)')(PIPHISAVE(I,IDIS)%MAT(K,L,1),IDIS=1,5)
+           ENDDO
+         ENDDO
+      ENDDO      
+STOP 'FORCED --'
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
@@ -2204,15 +2141,15 @@ stop 'forced --'
         DEALLOCATE(SBARE)
       DO I=1,NND
         CALL RSPACEOP$DELETE(PIPHI(I))
-        CALL RSPACEOP$DELETE(DENMATphi(I))
-        CALL RSPACEOP$DELETE(DENMATchi(I))
-        CALL RSPACEOP$DELETE(HAMILchi(I))
-        CALL RSPACEOP$DELETE(HAMILphi(I))
+        CALL RSPACEOP$DELETE(DENMATPHI(I))
+        CALL RSPACEOP$DELETE(DENMATCHI(I))
+        CALL RSPACEOP$DELETE(HAMILCHI(I))
+        CALL RSPACEOP$DELETE(HAMILPHI(I))
       ENDDO
-      DEALLOCATE(DENMATphi)
-      DEALLOCATE(DENMATchi)
-      DEALLOCATE(HAMILchi)
-      DEALLOCATE(HAMILphi)
+      DEALLOCATE(DENMATPHI)
+      DEALLOCATE(DENMATCHI)
+      DEALLOCATE(HAMILCHI)
+      DEALLOCATE(HAMILPHI)
       DEALLOCATE(PIPHI)
       DO IAT=1,NAT
         CALL RSPACEOP$DELETE(DONSITE(IAT))
@@ -2462,25 +2399,25 @@ stop 'forced --'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_indbackon(NND,DENMAT,nat,indon,indback)
+      SUBROUTINE SIMPLELMTO_INDBACKON(NND,DENMAT,NAT,INDON,INDBACK)
 !     **************************************************************************
 !     **                                                                      **
 !     ********************************************P. BLOECHL, GOSLAR 2019*******
       USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE 
       IMPLICIT NONE
-      INTEGER(4)          ,INTENT(IN)   :: nat         ! #(atoms)
-      INTEGER(4)          ,INTENT(IN)   :: NND         ! #(neighborlist entries)
+      INTEGER(4)          ,INTENT(IN)   :: NAT         ! #(ATOMS)
+      INTEGER(4)          ,INTENT(IN)   :: NND         ! #(NEIGHBORLIST ENTRIES)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: DENMAT(NND)
-      INTEGER(4)          ,INTENT(out)  :: indon(nat)  ! pointer to onsite term
-      INTEGER(4)          ,INTENT(out)  :: indback(nnd)! pointer to back hop
+      INTEGER(4)          ,INTENT(OUT)  :: INDON(NAT)  ! POINTER TO ONSITE TERM
+      INTEGER(4)          ,INTENT(OUT)  :: INDBACK(NND)! POINTER TO BACK HOP
       INTEGER(4)                        :: IAT1,IAT2
       INTEGER(4)                        :: I,J
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_INDBACKON')
 !
 !     ==========================================================================
-!     == indback: POINTER TO BACK HOP
-!     == indon POINTS FROM EACH ATOM TO THE CORRESPONDIG ONSITE TERM ===========
+!     == INDBACK: POINTER TO BACK HOP
+!     == INDON POINTS FROM EACH ATOM TO THE CORRESPONDIG ONSITE TERM ===========
 !     ==========================================================================
       INDBACK=0
       DO I=1,NND
@@ -2493,219 +2430,10 @@ stop 'forced --'
           IF(SUM((DENMAT(I)%IT+DENMAT(J)%IT)**2).NE.0) CYCLE
           INDBACK(I)=J
           INDBACK(J)=I
-          if(i.eq.j) INDON(IAT1)=I
-          exit
+          IF(I.EQ.J) INDON(IAT1)=I
+          EXIT
         ENDDO
       ENDDO
-      return
-      end
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_DENMATPHITOCHI2(ID,NND,DENMAT,PIPHI)
-!     **************************************************************************
-!     ** TRANSFORMS THE DENSITY MATRIX FROM A PARTIAL-WAVE REPRESENTATION     **
-!     ** TO A LOCAL ORBITAL REPRESENTATION (SHRINK) AND IT                    **
-!     ** TRANSFORMES THE HAMILTONIAN FROM A LOCAL-ORBITAL REPRESENTATION      **
-!     ** TO A PARTIAL-WAVE REPRESENTATION (EXPAND).                           **
-!     **                                                                      **
-!     **            |PSI> APPROX |CHI><PI|PHI><PTILDE|PSITILDE>               **
-!     **                                                                      **
-!     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
-!     **                                                                      **
-!     ********************************************P. BLOECHL, GOSLAR 2019*******
-      USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
-     &                             ,POTPAR=>POTPAR1 &
-     &                             ,LOX &
-     &                             ,LNX &
-     &                             ,NSP
-      USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE &
-     &                             ,RSPACEOP$WRITEMAT
-      IMPLICIT NONE
-      CHARACTER(*)        ,INTENT(IN)   :: ID   !'FWRD' OR 'BACK'
-      INTEGER(4)          ,INTENT(IN)   :: NND
-      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: DENMAT(NND)
-      TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
-      LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
-      TYPE(RSPACEMAT_TYPE),ALLOCATABLE  :: RHONEU(:)   !(NND)
-      INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
-      INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
-      INTEGER(4)                        :: IAT1,IAT2
-      INTEGER(4)                        :: ISP,ISP1,ISP2
-      INTEGER(4)                        :: N1,N2,N3
-      INTEGER(4)                        :: NAT
-      INTEGER(4)                        :: I,J
-!     **************************************************************************
-                                    CALL TRACE$PUSH('SIMPLELMTO_DENMATPHITOCHI')
-!
-!     ==========================================================================
-!     == POINTER TO BACK HOP
-!     ==========================================================================
-      NAT=SIZE(ISPECIES)
-      ALLOCATE(INDON(NAT))
-      ALLOCATE(INDBACK(NND))
-      CALL SIMPLELMTO_INDBACKON(NND,DENMAT,NAT,INDON,INDBACK)
-!
-!     ==========================================================================
-!     ==  FORWARD TRANSFORMATION FROM RHOPHI TO RHOCHI                        ==
-!     ==========================================================================
-      ALLOCATE(RHONEU(NND))
-      IF(ID.EQ.'FWRD') THEN
-!       ========================================================================
-!       ==  COPY DENMAT INTO RHONEU, RESIZE DENMAT
-!       ========================================================================
-        DO I=1,NND
-          IAT1=DENMAT(I)%IAT1
-          IAT2=DENMAT(I)%IAT2
-          ISP1=ISPECIES(IAT1)
-          ISP2=ISPECIES(IAT2)
-          N1  =DENMAT(I)%N1
-          N2  =DENMAT(I)%N2
-          N3  =DENMAT(I)%N3
-          RHONEU(I)%IAT1=IAT1
-          RHONEU(I)%IAT2=IAT2
-          RHONEU(I)%IT  =DENMAT(I)%IT
-          RHONEU(I)%N1  =N1
-          RHONEU(I)%N2  =N2
-          RHONEU(I)%N3  =N3
-          ALLOCATE(RHONEU(I)%MAT(N1,N2,N3))
-          RHONEU(I)%MAT=DENMAT(I)%MAT
-          DEALLOCATE(DENMAT(I)%MAT)
-          N1=SUM(2*POTPAR(ISP1)%LOXH+1)
-          N2=SUM(2*POTPAR(ISP2)%LOXH+1)
-          N3=DENMAT(I)%N3
-          DENMAT(I)%N1=N1
-          DENMAT(I)%N2=N2
-          ALLOCATE(DENMAT(I)%MAT(N1,N2,N3))
-          DENMAT(I)%MAT=0.D0
-        ENDDO
-!
-!       ========================================================================
-!       ==  COMPUTE DENMAT IN PARTIAL WAVE REPRESENTATION                     ==
-!       ==  CAUTION: XTRANSPOSE(I)%MAT(I,J)=TRANSPOSE(INDBACK(I)%MAT(J,I)     ==
-!       ==  ONLY FIRST ORDER IN THE STRUCTURE CONSTANTS                       ==
-!       ==  AND OFFSITE TERMS ONLY ON THE SAME BOND IN A PRODUCT.             ==
-!       ========================================================================
-        DO I=1,NND
-          IAT1=RHONEU(I)%IAT1
-          IAT2=RHONEU(I)%IAT2
-          IF(INDBACK(I).EQ.I) THEN  !ONSITE
-            DO J=1,DENMAT(I)%N3
-              DENMAT(I)%MAT(:,:,J)=DENMAT(I)%MAT(:,:,J) &
-      &                           +MATMUL(PIPHI(I)%MAT(:,:,1) &
-      &                           ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                                  ,TRANSPOSE(PIPHI(I)%MAT(:,:,1)))) 
-            ENDDO
-          ELSE
-            DO J=1,DENMAT(I)%N3
-              DENMAT(I)%MAT(:,:,J)=MATMUL(PIPHI(I)%MAT(:,:,1) &
-      &                        ,MATMUL(RHONEU(INDON(IAT2))%MAT(:,:,J) &
-      &                            ,TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)))) &
-      &                       + MATMUL(PIPHI(INDON(IAT1))%MAT(:,:,1) &
-      &                        ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                            ,TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)))) &
-      &                       + MATMUL(PIPHI(INDON(IAT1))%MAT(:,:,1) &
-      &                        ,MATMUL(RHONEU(INDON(IAT1))%MAT(:,:,J) &
-      &                             ,TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)))) 
-              DENMAT(INDON(IAT1))%MAT(:,:,J)=DENMAT(INDON(IAT1))%MAT(:,:,J) &
-      &                       + MATMUL(PIPHI(INDON(IAT1))%MAT(:,:,1) &
-      &                        ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                               ,TRANSPOSE(PIPHI(I)%MAT(:,:,1)))) &
-      &                       + MATMUL(PIPHI(I)%MAT(:,:,1) &
-      &                        ,MATMUL(RHONEU(INDBACK(I))%MAT(:,:,J) &
-      &                            ,TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)))) 
-            ENDDO
-          END IF
-        ENDDO
-!
-       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'DENMAT IN CHI-S',NND,DENMAT)
-!
-!     ==========================================================================
-!     ==  BACKWARD TRANSFORMATION FROM HCHI TO HPHI                           ==
-!     ==========================================================================
-      ELSE IF(ID.EQ.'BACK') THEN
-!       ========================================================================
-!       ==  COPY HAMILTONIAN INTO RHONEU, RESIZE DENMAT
-!       ========================================================================
-        DO I=1,NND
-          IAT1=DENMAT(I)%IAT1
-          IAT2=DENMAT(I)%IAT2
-          ISP1=ISPECIES(IAT1)
-          ISP2=ISPECIES(IAT2)
-          N1  =DENMAT(I)%N1
-          N2  =DENMAT(I)%N2
-          N3  =DENMAT(I)%N3
-          RHONEU(I)%IAT1=IAT1
-          RHONEU(I)%IAT2=IAT2
-          RHONEU(I)%IT  =DENMAT(I)%IT
-          RHONEU(I)%N1  =N1
-          RHONEU(I)%N2  =N2
-          RHONEU(I)%N3  =N3
-          ALLOCATE(RHONEU(I)%MAT(N1,N2,N3))
-          RHONEU(I)%MAT=DENMAT(I)%MAT
-          DEALLOCATE(DENMAT(I)%MAT)
-          N1=SUM(2*LOX(:LNX(ISP1),ISP1)+1)
-          N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
-          N3=DENMAT(I)%N3
-          DENMAT(I)%N1=N1
-          DENMAT(I)%N2=N2
-          ALLOCATE(DENMAT(I)%MAT(N1,N2,N3))
-          DENMAT(I)%MAT=0.D0
-        ENDDO
-!
-!       ========================================================================
-!       ==  COMPUTE HAMILTONIAN (DENMAT) IN PARTIAL WAVE  REPRESENTATION      ==
-!       ==  CAUTION: XTRANSPOSE(I)%MAT(I,J)=TRANSPOSE(INDBACK(I)%MAT(J,I)     ==
-!       ==  ONLY FIRST ORDER IN THE STRUCTURE CONSTANTS                       ==
-!       ==  AND OFFSITE TERMS ONLY ON THE SAME BOND IN A PRODUCT.             ==
-!       ========================================================================
-        DO I=1,NND
-          IAT1=RHONEU(I)%IAT1
-          IAT2=RHONEU(I)%IAT2
-          IF(INDBACK(I).EQ.I) THEN  !ONSITE
-            DO J=1,DENMAT(I)%N3
-              DENMAT(I)%MAT(:,:,J)=DENMAT(I)%MAT(:,:,J) &
-      &                           +MATMUL(TRANSPOSE(PIPHI(I)%MAT(:,:,1)) &
-      &                           ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                                  ,PIPHI(I)%MAT(:,:,1)))
-            ENDDO
-          ELSE
-            DO J=1,DENMAT(I)%N3
-              DENMAT(I)%MAT(:,:,J)= &
-      &                       MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
-      &                      ,MATMUL(RHONEU(INDON(IAT1))%MAT(:,:,J) &
-      &                             ,PIPHI(I)%MAT(:,:,1))) &
-      &                     + MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
-      &                      ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                             ,PIPHI(INDON(IAT2))%MAT(:,:,1))) &
-      &                     + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
-      &                      ,MATMUL(RHONEU(INDON(IAT2))%MAT(:,:,J) &
-      &                             ,PIPHI(INDON(IAT2))%MAT(:,:,1))) 
-              DENMAT(INDON(IAT1))%MAT(:,:,J)=DENMAT(INDON(IAT1))%MAT(:,:,J) &
-      &                      + MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
-      &                       ,MATMUL(RHONEU(I)%MAT(:,:,J) &
-      &                              ,PIPHI(INDBACK(I))%MAT(:,:,1))) &
-      &                       + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
-      &                        ,MATMUL(RHONEU(INDBACK(I))%MAT(:,:,J) &
-      &                               ,PIPHI(INDON(IAT1))%MAT(:,:,1)))
-            ENDDO
-!
-            
-          END IF
-        ENDDO
-      ELSE
-        CALL ERROR$MSG('ID NOT RECOGNIZED. MUST BE "FWRD" OR "BACK"')
-        CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SIMPLELMTO_DENMATPHITOCHI')
-      END IF
-!
-!     ==========================================================================
-!     ==  CLEAN UP                                                            ==
-!     ==========================================================================
-      DO I=1,NND
-        DEALLOCATE(RHONEU(I)%MAT)
-      ENDDO
-      DEALLOCATE(RHONEU)
-                                    CALL TRACE$POP()
       RETURN
       END
 !
@@ -2731,8 +2459,8 @@ stop 'forced --'
      &                             ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
       INTEGER(4)          ,INTENT(IN)   :: NND
-      TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: DENMATphi(NND)
-      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: DENMATchi(NND)
+      TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: DENMATPHI(NND)
+      TYPE(RSPACEMAT_TYPE),INTENT(INOUT):: DENMATCHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
       LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
@@ -2810,13 +2538,13 @@ stop 'forced --'
       &                        ,MATMUL(DENMATPHI(INDON(IAT1))%MAT(:,:,J) &
       &                             ,TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1))))
 !
-              DENMATchi(INDON(IAT1))%MAT(:,:,J) &
-      &                                     =DENMATchi(INDON(IAT1))%MAT(:,:,J) &
+              DENMATCHI(INDON(IAT1))%MAT(:,:,J) &
+      &                                     =DENMATCHI(INDON(IAT1))%MAT(:,:,J) &
       &                       + MATMUL(PIPHI(INDON(IAT1))%MAT(:,:,1) &
       &                        ,MATMUL(DENMATPHI(I)%MAT(:,:,J) &
       &                               ,TRANSPOSE(PIPHI(I)%MAT(:,:,1)))) &
       &                       + MATMUL(PIPHI(I)%MAT(:,:,1) &
-      &                        ,MATMUL(DENMATpHI(INDBACK(I))%MAT(:,:,J) &
+      &                        ,MATMUL(DENMATPHI(INDBACK(I))%MAT(:,:,J) &
       &                            ,TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)))) 
             ENDDO
           END IF
@@ -2828,7 +2556,7 @@ stop 'forced --'
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SIMPLELMTO_HAMILCHITOPHI(NND,PIPHI,hamilchi,hamilphi)
+      SUBROUTINE SIMPLELMTO_HAMILCHITOPHI(NND,PIPHI,HAMILCHI,HAMILPHI)
 !     **************************************************************************
 !     ** TRANSFORMS THE DENSITY MATRIX FROM A PARTIAL-WAVE REPRESENTATION     **
 !     ** TO A LOCAL ORBITAL REPRESENTATION (SHRINK) AND IT                    **
@@ -2851,7 +2579,7 @@ stop 'forced --'
       INTEGER(4)          ,INTENT(IN)   :: NND
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: HAMILCHI(NND)
-      TYPE(RSPACEMAT_TYPE),INTENT(out)  :: HAMILPHI(NND)
+      TYPE(RSPACEMAT_TYPE),INTENT(OUT)  :: HAMILPHI(NND)
       LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
@@ -2869,28 +2597,28 @@ stop 'forced --'
       NAT=SIZE(ISPECIES)
       ALLOCATE(INDON(NAT))
       ALLOCATE(INDBACK(NND))
-      CALL SIMPLELMTO_INDBACKON(NND,hamilchi,NAT,INDON,INDBACK)
+      CALL SIMPLELMTO_INDBACKON(NND,HAMILCHI,NAT,INDON,INDBACK)
 !
 !     ==========================================================================
 !     ==  FORWARD TRANSFORMATION FROM RHOPHI TO RHOCHI                        ==
 !     ==========================================================================
       DO I=1,NND
-        IAT1=hamilchi(I)%IAT1
-        IAT2=hamilchi(I)%IAT2
+        IAT1=HAMILCHI(I)%IAT1
+        IAT2=HAMILCHI(I)%IAT2
         ISP1=ISPECIES(IAT1)
         ISP2=ISPECIES(IAT2)
 !
-        hamilphi(I)%IAT1=IAT1
-        hamilphi(I)%IAT2=IAT2
-        hamilphi(I)%IT  =hamilchi(I)%IT
+        HAMILPHI(I)%IAT1=IAT1
+        HAMILPHI(I)%IAT2=IAT2
+        HAMILPHI(I)%IT  =HAMILCHI(I)%IT
         N1=SUM(2*LOX(:LNX(ISP1),ISP1)+1)
         N2=SUM(2*LOX(:LNX(ISP2),ISP2)+1)
-        N3=hamilchi(I)%N3
-        hamilphi(I)%N1=N1
-        hamilphi(I)%N2=N2
-        hamilphi(I)%N3=N3
-        ALLOCATE(hamilphi(I)%MAT(N1,N2,N3))
-        hamilphi(I)%MAT=0.D0
+        N3=HAMILCHI(I)%N3
+        HAMILPHI(I)%N1=N1
+        HAMILPHI(I)%N2=N2
+        HAMILPHI(I)%N3=N3
+        ALLOCATE(HAMILPHI(I)%MAT(N1,N2,N3))
+        HAMILPHI(I)%MAT=0.D0
       ENDDO
 !
 !     ========================================================================
@@ -2900,9 +2628,9 @@ stop 'forced --'
 !     ==  AND OFFSITE TERMS ONLY ON THE SAME BOND IN A PRODUCT.             ==
 !     ========================================================================
       DO I=1,NND
-        IAT1=hamilphi(I)%IAT1
-        IAT2=hamilphi(I)%IAT2
-        n3  =hamilphi(i)%n3
+        IAT1=HAMILPHI(I)%IAT1
+        IAT2=HAMILPHI(I)%IAT2
+        N3  =HAMILPHI(I)%N3
         IF(INDBACK(I).EQ.I) THEN  !ONSITE
           DO J=1,N3
             HAMILPHI(I)%MAT(:,:,J)=HAMILPHI(I)%MAT(:,:,J) &
@@ -2918,7 +2646,7 @@ stop 'forced --'
           DO J=1,N3
             HAMILPHI(I)%MAT(:,:,J)= HAMILPHI(I)%MAT(:,:,J) &
 !                           __<PHI(1)|PI(2)>H(2,2)<PI(2)|PHI(2)>________________
-     &                    + MATMUL(TRANSPOSE(PIPHI(indback(i))%MAT(:,:,1)) &
+     &                    + MATMUL(TRANSPOSE(PIPHI(INDBACK(I))%MAT(:,:,1)) &
      &                     ,MATMUL(HAMILCHI(INDON(IAT2))%MAT(:,:,J) &
      &                            ,PIPHI(INDON(IAT2))%MAT(:,:,1))) &
 !                           __<PHI(1)|PI(1)>H(1,1)<PI(1)|PHI(2)>________________
@@ -2929,21 +2657,6 @@ stop 'forced --'
      &                    + MATMUL(TRANSPOSE(PIPHI(INDON(IAT1))%MAT(:,:,1)) &
      &                     ,MATMUL(HAMILCHI(I)%MAT(:,:,J) &
      &                            ,PIPHI(INDON(IAT2))%MAT(:,:,1))) 
-
-!!$            HAMILPHI(I)%MAT(:,:,J)= HAMILPHI(I)%MAT(:,:,J) &
-!!$!                           __<PHI(2)|PI(1)>H(1,1)<PI(1)|PHI(1)>_____________
-!!$     &                    + MATMUL(TRANSPOSE(PIPHI(I)%MAT(:,:,1)) &
-!!$     &                     ,MATMUL(HAMILCHI(INDON(IAT1))%MAT(:,:,J) &
-!!$     &                            ,PIPHI(INDON(IAT1))%MAT(:,:,1))) &
-!!$!                           __<PHI(2)|PI(2)>H(2,2)<PI(2)|PHI(1)>_____________
-!!$     &                    + MATMUL(TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)) &
-!!$     &                     ,MATMUL(HAMILCHI(INDON(IAT2))%MAT(:,:,J) &
-!!$     &                            ,PIPHI(INDBACK(I))%MAT(:,:,1))) &
-!!$!                           __<PHI(2)|PI(2)>H(2,1)<PI(1)|PHI(1)>_____________
-!!$     &                    + MATMUL(TRANSPOSE(PIPHI(INDON(IAT2))%MAT(:,:,1)) &
-!!$     &                     ,MATMUL(HAMILCHI(INDBACK(I))%MAT(:,:,J) &
-!!$     &                            ,PIPHI(INDON(IAT1))%MAT(:,:,1))) 
-
 !
             HAMILPHI(INDON(IAT1))%MAT(:,:,J) &
      &                      =HAMILPHI(INDON(IAT1))%MAT(:,:,J) &
@@ -2997,7 +2710,6 @@ stop 'forced --'
       REAL(8)                           :: DEDR(3)
       INTEGER(4)                        :: IAT1,IAT2
       INTEGER(4)                        :: I,J,II
-REAL(8)                           :: svar
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_FORCEPHITOCHI')
 !
@@ -3012,25 +2724,16 @@ REAL(8)                           :: svar
 !     ==  CAUTION: XTRANSPOSE(I)%MAT(I,J)=TRANSPOSE(INDBACK(I)%MAT(J,I)       ==
 !     ==  ONLY FIRST ORDER IN THE STRUCTURE CONSTANTS                         ==
 !     ==  AND OFFSITE TERMS ONLY ON THE SAME BOND IN A PRODUCT.               ==
-!     == assumes that the derivative of onsite <pi|phi> with respect to       ==
-!     == atomic position vanishes.                                            ==
+!     == ASSUMES THAT THE DERIVATIVE OF ONSITE <PI|PHI> WITH RESPECT TO       ==
+!     == ATOMIC POSITION VANISHES.                                            ==
 !     ==========================================================================
-      force=0.d0
+      FORCE=0.D0
       DO I=1,NND
         IAT1=PIPHI(I)%IAT1
         IAT2=PIPHI(I)%IAT2
         IF(INDBACK(I).NE.I) THEN  !EXCLUDE ONSITE
           ALLOCATE(MAT(PIPHI(I)%N1,PIPHI(I)%N2))
           MAT(:,:)=0.D0
-!!$          DO J=1,DENMATPHI(I)%N3
-!!$!           == TERM WITH OFFSITE PHIPHI ========================================
-!!$            MAT=MAT+MATMUL(HAMILCHI(INDON(IAT2))%MAT(:,:,J) &
-!!$     &                    ,MATMUL(PIPHI(INDON(IAT2))%MAT(:,:,1) &
-!!$     &                           ,DENMATPHI(INDBACK(I))%MAT(:,:,J))) &
-!!$     &             +MATMUL(HAMILCHI(INDBACK(I))%MAT(:,:,J) &
-!!$     &                    ,MATMUL(PIPHI(INDON(IAT1))%MAT(:,:,1) &
-!!$     &                           ,DENMATPHI(INDON(IAT1))%MAT(:,:,J))) 
-!!$          ENDDO
           DO J=1,DENMATPHI(I)%N3
 !           == TERM WITH OFFSITE PHIPHI ========================================
             MAT=MAT+MATMUL(HAMILCHI(INDON(IAT1))%MAT(:,:,J) &
@@ -3042,15 +2745,14 @@ REAL(8)                           :: svar
           ENDDO
           DO II=1,3
              DEDR(II)=2.D0*SUM(MAT(:,:)*PIPHI(I)%MAT(:,:,1+II))
-!             DEDR(II)=2.D0*SUM(MAT(:,:)*PIPHI(Indback(i))%MAT(:,:,1+II))
           ENDDO   
           FORCE(:,IAT2)=FORCE(:,IAT2)-DEDR(:)
           FORCE(:,IAT1)=FORCE(:,IAT1)+DEDR(:)
-!!$!         == this is just a sketch as reminder to not forget the stresses ===
-!!$          do ii=1,3
-!!$            stress(:,ii)=stress(:,ii) &
-!!$                    +(matmul(rbas,real(piphi(i)%it,kind=8))*dedr(ii)
-!!$          enddo
+!!$!         == THIS IS JUST A SKETCH AS REMINDER TO NOT FORGET THE STRESSES ===
+!!$          DO II=1,3
+!!$            STRESS(:,II)=STRESS(:,II) &
+!!$                    +(MATMUL(RBAS,REAL(PIPHI(I)%IT,KIND=8))*DEDR(II)
+!!$          ENDDO
           DEALLOCATE(MAT)
         END IF
       ENDDO
@@ -3058,7 +2760,7 @@ REAL(8)                           :: svar
                                     CALL TRACE$POP()
       RETURN
       END
-module simplelmto_mymat_module
+MODULE SIMPLELMTO_MYMAT_MODULE
       TYPE MYMAT_TYPE
         REAL(8),ALLOCATABLE :: PROPHIH(:,:)
         REAL(8),ALLOCATABLE :: PROPHIT(:,:)
@@ -3068,7 +2770,7 @@ module simplelmto_mymat_module
         REAL(8),ALLOCATABLE :: PHIHHOVINV(:,:)
         REAL(8),ALLOCATABLE :: PHIHTOV(:,:)
       END TYPE MYMAT_TYPE
-end module simplelmto_mymat_module
+END MODULE SIMPLELMTO_MYMAT_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SIMPLELMTO_MAKEPIPHI(NND,SBARE,PIPHI)
@@ -3096,7 +2798,7 @@ end module simplelmto_mymat_module
       INTEGER(4)          ,INTENT(IN)   :: NND
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: SBARE(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(OUT)  :: PIPHI(NND)
-      LOGICAL(4)          ,PARAMETER    :: TPR=.true.
+      LOGICAL(4)          ,PARAMETER    :: TPR=.TRUE.
       TYPE(MYMAT_TYPE)    ,ALLOCATABLE  :: MYMAT(:)
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
@@ -3117,7 +2819,7 @@ end module simplelmto_mymat_module
 !     ==========================================================================
       ALLOCATE(INDON(NAT))
       ALLOCATE(INDBACK(NND))
-      CALL SIMPLELMTO_INDBACKON(NND,sbare,NAT,INDON,INDBACK)
+      CALL SIMPLELMTO_INDBACKON(NND,SBARE,NAT,INDON,INDBACK)
 !
 !     ==========================================================================
 !     ==  <PI|PHI>            |PSI>=|CHI><PI|PHI><P|PSI>                      ==
@@ -3157,26 +2859,13 @@ end module simplelmto_mymat_module
      &                        ,MATMUL(MYMAT(ISP2)%PHIHHOVINV &
      &                               ,TRANSPOSE(MYMAT(ISP2)%PROPHIH)))))
           ENDDO
-!PIPHI(I)%MAT=0.D0
         END IF
         DO II=1,4
           PIPHI(I)%MAT(:,:,II)=MATMUL(MYMAT(ISP1)%PHIHHOVINV &
                              ,MATMUL(PIPHI(I)%MAT(:,:,II),MYMAT(ISP2)%PHIOV))
         ENDDO
-PRINT*,'MAKEIPHI ',I,'SBARE%MAT ',I,(SUM(SBARE(I)%MAT(:,:,II)),II=1,4)
-PRINT*,'MAKEIPHI ',I,'SBARE%MAT ',INDBACK(I),(SUM(SBARE(INDBACK(I))%MAT(:,:,II)),II=1,4)
-PRINT*,'MAKEIPHI ',I,'MYMAT%PROPHIH   ',SUM(MYMAT(ISP2)%PROPHIH),ISP2 &
-&                   ,'MYMAT%PROPHIT   ',SUM(MYMAT(ISP2)%PROPHIT),ISP2 &
-&                   ,'MYMAT%CMAT(1)   ',SUM(MYMAT(ISP1)%CMAT),ISP1 &
-&                   ,'MYMAT%CMAT(2)   ',SUM(MYMAT(ISP2)%CMAT),ISP2 &
-&                   ,'mymat%phiov     ',sum(MYMAT(ISP2)%PHIOV),isp2 &
-&                   ,'mymat%phihhov   ',sum(MYMAT(ISP2)%PHIHHov),isp2 &
-&                   ,'mymat%phihhovinv',sum(MYMAT(ISP2)%PHIHHOVINV),isp2 &
-&                   ,'mymat%phihtov1  ',sum(MYMAT(ISP1)%phihtov),isp1 &
-&                   ,'mymat%phihtov2  ',sum(MYMAT(ISP2)%phihtov),isp2 
       ENDDO
       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'<PI|PHI>',NND,PIPHI)
-!stop 'forced'
 !
 !     ==========================================================================
 !     ==  CLEAN UP                                                            ==
@@ -3425,7 +3114,7 @@ PRINT*,'MAKEIPHI ',I,'MYMAT%PROPHIH   ',SUM(MYMAT(ISP2)%PROPHIH),ISP2 &
       REAL(8)                           :: R21(3) 
       INTEGER(4)                        :: L1X,L2X
       REAL(8)             ,ALLOCATABLE  :: SMAT(:,:,:) !VALUE AND GRADIENT
-      INTEGER(4)                        :: I,J,k
+      INTEGER(4)                        :: I,J,K
       INTEGER(4)                        :: LMN1A,LMN1B,LMN2A,LMN2B
       INTEGER(4)                        :: LM1A,LM1B,LM2A,LM2B
       INTEGER(4)                        :: L1,L2
@@ -3448,15 +3137,13 @@ PRINT*,'MAKEIPHI ',I,'MYMAT%PROPHIH   ',SUM(MYMAT(ISP2)%PROPHIH),ISP2 &
         SBARE(I)%N3=N3
         ALLOCATE(SBARE(I)%MAT(N1,N2,N3)) ! VALUE AND GRADIENT
         SBARE(I)%MAT=0.D0
-!       == skip onsite terms. they are zero ====================================
+!       == SKIP ONSITE TERMS. THEY ARE ZERO ====================================
         IF(SBARE(I)%IAT1.EQ.SBARE(I)%IAT2.AND.SUM(SBARE(I)%IT**2).EQ.0) CYCLE
-!!$PRINT*,'IAT1 ',IAT1,ISP1,N1,POTPAR(ISP1)%LOXH
-!!$PRINT*,'IAT2 ',IAT2,ISP2,N2,POTPAR(ISP1)%LOXT
 !
 !       ========================================================================
 !       == CALCULATE BARE STRUCTURE CONSTANTS                                 ==
 !       ========================================================================
-        R21=R0(:,IAT2)+MATMUL(RBAS,REAL(SBARE(I)%IT,kind=8))-R0(:,IAT1)
+        R21=R0(:,IAT2)+MATMUL(RBAS,REAL(SBARE(I)%IT,KIND=8))-R0(:,IAT1)
         L1X=MAXVAL(POTPAR(ISP1)%LOXH)
         L2X=MAXVAL(POTPAR(ISP2)%LOXT)
         ALLOCATE(SMAT((L1X+1)**2,(L2X+1)**2,4)) ! VALUE AND GRADIENT
@@ -3546,7 +3233,6 @@ PRINT*,'MAKEIPHI ',I,'MYMAT%PROPHIH   ',SUM(MYMAT(ISP2)%PROPHIH),ISP2 &
       REAL(8)               :: SVAR
       REAL(8)               :: LHFWEIGHT
       INTEGER(4)            :: IDFTTYPE
-!REAL(8)   ,ALLOCATABLE:: T(:,:)
       REAL(8)               :: HFSCALE
       LOGICAL(4)            :: TACTIVE ! DOES THIS ATOM CONTRIBUTE?
       LOGICAL(4),PARAMETER  :: TPARALLEL=.FALSE.
