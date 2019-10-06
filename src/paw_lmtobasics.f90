@@ -25,7 +25,7 @@
       REAL(8)              :: DIS
       CHARACTER(64)        :: FILE
       REAL(8)              :: MAXDEV
-      LOGICAL    ,PARAMETER:: TPR=.true.
+      LOGICAL    ,PARAMETER:: TPR=.TRUE.
 !     **************************************************************************
 !     == THE BARE HANKEL FUNCTION IS CENTERED AT THE ORIGIN AND CALCULATED 
 !     == ALONG A LINE FROM CENTER-DR TO CENTER+DR.
@@ -152,7 +152,7 @@
       REAL(8)               :: A,B
 !     **************************************************************************
       CALL SPHERICAL$YLM(LMX,R,H)
-      LX=NINT(SQRT(real(LMX)))-1
+      LX=NINT(SQRT(REAL(LMX)))-1
       K=SQRT(ABS(K2))     
       X=SQRT(SUM(R**2))
       LM=0
@@ -214,7 +214,7 @@
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: SQ4PIBY3=SQRT(4.D0*PI/3.D0)
       INTEGER(4),PARAMETER  :: LMOFP(3)=(/2,4,3/)
-      REAL(8)               :: YLM((1+INT(SQRT(REAL(LMX)+1.d-5)))**2)
+      REAL(8)               :: YLM((1+INT(SQRT(REAL(LMX)+1.D-5)))**2)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
       REAL(8)               :: X,XR,Y,DYDX
@@ -236,14 +236,17 @@
       X=SQRT(SUM(R**2))
       LM=0
       DO L=0,LX
+!       ========================================================================
+!       == calculate radial function                                          ==
+!       ========================================================================
         IF(K2.GT.0.D0) THEN
           CALL SPFUNCTION$NEUMANN(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.26
           Y=-Y*K**(L+1)
           DYDX=-DYDX*K**(L+2)
         ELSE IF(K2.LT.0.D0) THEN
           CALL SPFUNCTION$MODHANKEL(L,K*X,Y,DYDX) !ABRAMOWITZ 10.2.4
-          Y=Y*2.D0/PI*K**(L+1)
-          DYDX=DYDX*2.D0/PI*K**(L+2)
+          Y   =Y   *(2.D0/PI)*K**(L+1)
+          DYDX=DYDX*(2.D0/PI)*K**(L+2)
         ELSE
 !         ==  Y(X)= 1/(2L-1)!! * X**(-L-1) 
           CALL SPFUNCTION$NEUMANN0(L,X,Y,DYDX)  ! ABRAMOWITZ 10.2.6
@@ -251,7 +254,9 @@
           DYDX=-DYDX 
         END IF 
 !
+!       ========================================================================
 !       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
+!       ========================================================================
         IF(TCAP) THEN
           B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
           A=Y/X**L-B*X**2
@@ -263,16 +268,19 @@
             DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
           END IF
         END IF  
-
+!
+!       ========================================================================
+!       == multiply with spherical harmonics                                  ==
+!       ========================================================================
         DO M=1,2*L+1
           LM=LM+1
           H(LM)=Y*YLM(LM)
 !         == CALCULATE GRADIENT ================================================
           DH(:,LM)=0.D0
           DO LPRIME=MAX(L-1,0),L+1
-            IF(LPRIME.EQ.L-1) THEN
+            IF(LPRIME.EQ.L+1) THEN
               SVAR=SQ4PIBY3*(REAL(-L,KIND=8)*Y/X+DYDX)
-            ELSE IF(LPRIME.EQ.L+1) THEN
+            ELSE IF(LPRIME.EQ.L-1) THEN
               SVAR=SQ4PIBY3*(REAL(L+1,KIND=8)*Y/X+DYDX)
             ELSE
               CYCLE
@@ -557,7 +565,7 @@
       INTEGER(4),INTENT(IN) :: L2X
       REAL(8)   ,INTENT(IN) :: K2 ! 2ME/HBAR**2
       REAL(8)   ,INTENT(OUT):: S((L1X+1)**2,(L2X+1)**2)
-      REAL(8)   ,INTENT(OUT):: DS(3,(L1X+1)**2,(L2X+1)**2)
+      REAL(8)   ,INTENT(OUT):: DS((L1X+1)**2,(L2X+1)**2,3)
       REAL(8)   ,PARAMETER  :: RAD=1.D-6
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: SVAR
@@ -595,6 +603,7 @@
 !
 !     ==========================================================================
       S(:,:)=0.D0
+      dS(:,:,:)=0.D0
       DO LM1=1,LM1X
         L1=LOFLM(LM1)
         DO LM2=1,LM2X
@@ -612,8 +621,8 @@
             ELSE
               SVAR=REAL(KAPPA**(L1+L2-L3))
             END IF
-            S(LM1,LM2)=S(LM1,LM2)+CG*H(LM3)*SVAR
-            DS(:,LM1,LM2)=DS(:,LM1,LM2)+CG*DH(:,LM3)*SVAR
+            S(LM1,LM2)   =S(LM1,LM2)   +CG*H(LM3)*SVAR
+            DS(LM1,LM2,:)=DS(LM1,LM2,:)+CG*DH(:,LM3)*SVAR
           ENDDO
         ENDDO
       ENDDO
@@ -623,7 +632,7 @@
       DS=-4.D0*PI*DS
       DO LM2=1,LM2X
         S(:,LM2)   =S(:,LM2)   *(-1.D0)**LOFLM(LM2)
-        DS(:,:,LM2)=DS(:,:,LM2)*(-1.D0)**LOFLM(LM2)
+        DS(:,LM2,:)=DS(:,LM2,:)*(-1.D0)**LOFLM(LM2)
       ENDDO
       RETURN
       END
