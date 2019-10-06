@@ -1188,10 +1188,12 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
        &                    ,LNXT,PSPHIT)
           CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_NLPHIT.DAT',GID,NR &
        &                    ,LNXT,NLPHIT)
-          CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_KHEAD.DAT',GID,NR &
+          IF(TPR) THEN  !KHEAD AND JTAIL ALLOCATED ONLY FOR TPR=TRUE
+            CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_KHEAD.DAT',GID,NR &
        &                    ,LNXT,KHEAD)
-          CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_JTAIL.DAT',GID,NR &
+            CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_JTAIL.DAT',GID,NR &
        &                    ,LNXT,JTAIL)
+          END IF
 !
           WRITE(*,FMT='("ISP=",I3," LOXPHI=",20I5)')ISP,LOX(:LNXPHI,ISP)
           WRITE(*,FMT='("ISP=",I3," LOXH  =",20I5)')ISP,LOXH
@@ -1248,8 +1250,10 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
         DEALLOCATE(PROPHIT)
         DEALLOCATE(PHIOV)
         DEALLOCATE(CMAT)
-        DEALLOCATE(KHEAD)
-        DEALLOCATE(JTAIL)
+        IF(TPR) THEN
+          DEALLOCATE(KHEAD)
+          DEALLOCATE(JTAIL)
+        END IF
       ENDDO
                              CALL TRACE$POP()
       RETURN
@@ -1799,6 +1803,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       ALLOCATE(R0(3,NAT))
       ALLOCATE(FORCE(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
+print*,'positions',r0
 !
 !     ==========================================================================
 !     ==  COLLECT DENSITY MATRIX                                              ==
@@ -1861,6 +1866,11 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
         CALL RSPACEOP$COPY(DONSITE(IAT),HONSITE(IAT))
         HONSITE(IAT)%MAT=0.D0
       ENDDO
+      CALL TIMING$CLOCKON('SIMPLELMTO_HYBRIDENERGY')
+      CALL SIMPLELMTO_HYBRIDENERGY(NAT,NND,RBAS,R0,DENMATCHI,DONSITE &
+     &                                  ,ETOT,STRESS,FORCE,HAMILchi,HONSITE)
+      CALL TIMING$CLOCKOFF('SIMPLELMTO_HYBRIDENERGY')
+!
                                  CALL TRACE$PASS('AFTER IMPLELMTO_HYBRIDENERGY')
 !
 !     ==========================================================================
@@ -1869,6 +1879,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       ALLOCATE(FORCET(3,NAT))
       CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI,FORCET)
       FORCE=FORCE+FORCET
+print*,'forcet',forcet
       DEALLOCATE(FORCET)
 !
 !     ==========================================================================
