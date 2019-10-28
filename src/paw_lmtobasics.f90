@@ -237,7 +237,7 @@
       LM=0
       DO L=0,LX
 !       ========================================================================
-!       == calculate radial function                                          ==
+!       == CALCULATE RADIAL FUNCTION                                          ==
 !       ========================================================================
         IF(K2.GT.0.D0) THEN
           CALL SPFUNCTION$NEUMANN(L,K*X,Y,DYDX)  ! ABRAMOWITZ 10.1.26
@@ -270,7 +270,7 @@
         END IF  
 !
 !       ========================================================================
-!       == multiply with spherical harmonics                                  ==
+!       == MULTIPLY WITH SPHERICAL HARMONICS                                  ==
 !       ========================================================================
         DO M=1,2*L+1
           LM=LM+1
@@ -603,7 +603,7 @@
 !
 !     ==========================================================================
       S(:,:)=0.D0
-      dS(:,:,:)=0.D0
+      DS(:,:,:)=0.D0
       DO LM1=1,LM1X
         L1=LOFLM(LM1)
         DO LM2=1,LM2X
@@ -1011,8 +1011,8 @@ END IF
                 IF(D2.GT.RMAX2) CYCLE
                 NNB=NNB+1
                 IF(NNB.GT.NNX) THEN
-                  CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
-                  CALL ERROR$MSG(' (2ND MSG)')
+                  CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED ')
+                  CALL ERROR$MSG('(2ND MSG)')
                   CALL ERROR$I4VAL('NNB',NNB)
                   CALL ERROR$I4VAL('NNX',NNX)
                   CALL ERROR$I4VAL('IAT1',IAT1)

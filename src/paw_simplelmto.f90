@@ -1188,12 +1188,10 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
        &                    ,LNXT,PSPHIT)
           CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_NLPHIT.DAT',GID,NR &
        &                    ,LNXT,NLPHIT)
-          IF(TPR) THEN  !KHEAD AND JTAIL ALLOCATED ONLY FOR TPR=TRUE
-            CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_KHEAD.DAT',GID,NR &
+          CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_KHEAD.DAT',GID,NR &
        &                    ,LNXT,KHEAD)
-            CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_JTAIL.DAT',GID,NR &
+          CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_JTAIL.DAT',GID,NR &
        &                    ,LNXT,JTAIL)
-          END IF
 !
           WRITE(*,FMT='("ISP=",I3," LOXPHI=",20I5)')ISP,LOX(:LNXPHI,ISP)
           WRITE(*,FMT='("ISP=",I3," LOXH  =",20I5)')ISP,LOXH
@@ -1803,7 +1801,7 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
       ALLOCATE(R0(3,NAT))
       ALLOCATE(FORCE(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-print*,'positions',r0
+PRINT*,'POSITIONS',R0
 !
 !     ==========================================================================
 !     ==  COLLECT DENSITY MATRIX                                              ==
@@ -1868,7 +1866,7 @@ print*,'positions',r0
       ENDDO
       CALL TIMING$CLOCKON('SIMPLELMTO_HYBRIDENERGY')
       CALL SIMPLELMTO_HYBRIDENERGY(NAT,NND,RBAS,R0,DENMATCHI,DONSITE &
-     &                                  ,ETOT,STRESS,FORCE,HAMILchi,HONSITE)
+     &                                  ,ETOT,STRESS,FORCE,HAMILCHI,HONSITE)
       CALL TIMING$CLOCKOFF('SIMPLELMTO_HYBRIDENERGY')
 !
                                  CALL TRACE$PASS('AFTER IMPLELMTO_HYBRIDENERGY')
@@ -1879,7 +1877,7 @@ print*,'positions',r0
       ALLOCATE(FORCET(3,NAT))
       CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI,FORCET)
       FORCE=FORCE+FORCET
-print*,'forcet',forcet
+PRINT*,'FORCET',FORCET
       DEALLOCATE(FORCET)
 !
 !     ==========================================================================
