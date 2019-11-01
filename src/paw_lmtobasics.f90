@@ -1011,8 +1011,8 @@ END IF
                 IF(D2.GT.RMAX2) CYCLE
                 NNB=NNB+1
                 IF(NNB.GT.NNX) THEN
-                  CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED ')
-                  CALL ERROR$MSG('(2ND MSG)')
+                  CALL ERROR$MSG('MAXIMUM NUMBER OF NEIGHBORS EXCEEDED')
+                  CALL ERROR$MSG(' (2ND MSG)')
                   CALL ERROR$I4VAL('NNB',NNB)
                   CALL ERROR$I4VAL('NNX',NNX)
                   CALL ERROR$I4VAL('IAT1',IAT1)
