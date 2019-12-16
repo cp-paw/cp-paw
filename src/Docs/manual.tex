@@ -1064,13 +1064,13 @@ at short distances.}
 \vrules{optional} 
 \vdefault{false}}
 
-\mbax{\key{HFWEIGHT} 
-%
-\vdescr{Mixing Factor for replacement of the Fock term.}
-%
-\vformat{real} 
-\vrules{optional} 
-\vdefault{0.25}}
+%% \mbax{\key{HFWEIGHT} 
+%% %
+%% \vdescr{Mixing Factor for replacement of the Fock term.}
+%% %
+%% \vformat{real} 
+%% \vrules{optional} 
+%% \vdefault{0.25}}
 
 \mbax{\key{K2} 
 %
@@ -1082,9 +1082,20 @@ at short distances.}
 \vdefault{-0.25}}
 
 \mbax{\key{SCREENL[AA]} 
-\vdescr{The Coulomb interaction in the Exchange term is replaced 
-  by a Yukawa potential with the specified screening length.}
-\vformat{real} 
+\vdescr{The Coulomb interaction in the Exchange term is replaced by a
+  Yukawa potential with the specified screening length.  Screening
+  length $\lambda$ in {\AA}: The Coulomb interaction in the explicit
+  Hartree-Fock term is replaced by a Yukawa potential
+     \begin{eqnarray}
+     v(\vec{r})=\frac{1}{4\pi\epsilon_0|\vec{r}|}
+     \exp\left(-\frac{|\vec{r}|}{\lambda}\right)
+     \end{eqnarray}
+     in the spirit of the random-phase approximation (RPA),
+     respectively the screened Coulomb interaction in GW.  The
+     (unscreened) Poisson equation is used, if this parameter is not
+     specified. Warning: values below 0.02 are reset to internally to
+     0.02 to avoid numerical problems in library routine.}
+\vformat{real, $\ge0$} 
 \vrules{optional} 
 \vdefault{$\infty$}}
 
@@ -3350,26 +3361,15 @@ with $x=1,2,3,\ldots,N$.}
 %% \vdefault{(/4.,2./)}}
 
 \mbax{\key{LHFWEIGHT} 
- \vdescr{Overwrites the generic mixing factor for 
-     exchange of the onsite terms of this atom type.}
+\vdescr{``local Hartree-Fock weight'': Factor
+    for admixture of the screened exchange for this atom type. The
+    four-center integrals are scaled by
+    $\prod_{j=1}^4\sqrt{\alpha_j}$, where $\alpha_j$ is the local
+    Hartree-Fock weight of the four orbital indices.}
 \vformat{real} 
 \vrules{Optional} 
 \vdefault{none}}
 
-\mbax{\key{SCREENL[AA]} 
-   \vdescr{Screening length $\lambda$ in {\AA}: The Coulomb
-     interaction in the explicit Hartree-Fock term is replaced by
-     a Yukawa potential
-     \begin{eqnarray}
-     v(\vec{r})=\frac{1}{4\pi\epsilon_0|\vec{r}|}
-     \exp\left(-\frac{|\vec{r}|}{\lambda}\right)
-     \end{eqnarray}
-     in the
-     spirit of the random-phase approximation (RPA), respectively the
-     screened Coulomb interaction in GW.}
-    \vformat{real}
-    \vrules{Optional} 
-    \vdefault{$\infty$}}
 
 \mbax{\key{FOCKSETUP} 
  \vdescr{Partial waves and projector functions are obtained from an 
@@ -8469,8 +8469,9 @@ are used which are ignored by the main simulation code. The keyword
 \section{Structure converter Tool: paw\_fromposcar.x}
 %==========================================================================
 This tool facilitates the input of atomic structures by converting the
-widespread format 'POSCAR' of the VASP code into the format used by
-the structure input file of CP-PAW.
+widespread format 'POSCAR' of the VASP code\footnote{The POSCAR format
+  changed with version 5 of VASP. The new version is implemented.}
+into the format used by the structure input file of CP-PAW.
 
 Source of atomic structures are
 \begin{itemize}
@@ -8486,16 +8487,29 @@ electronic structure calculations already done.
 \subsection{Command}
 %==========================================================================
 
-The calling sequence is
+The calling sequence is\bigskip
 
-\bigskip\fbox{{\tt paw\_fromposcar.x} {\it poscar-file-name}}\bigskip
+\fbox{{\tt paw\_fromposcar.x} \textit{poscar-file-name} 
+[\textit{lunit}]}\bigskip
+
+\noindent or\bigskip
+
+\fbox{{\tt paw\_fromposcar.x} -h}
+\bigskip
 
 \noindent
-where {\it poscar-file-name} is the file name of the poscar input file 
-from which the structure shall be adopted.
-
-The result of the conversion is written to stdout (standard out) and
-can thus be piped into a structure file, which is in preparation.
+where 
+\begin{itemize}
+\item \textit{poscar-file-name} is the name of the poscar input file, 
+\item the optional argument \textit{lunit} is the length unit used in
+  the out file.
+\item The result, the structure in CP-PAW style, is written to stdout
+  (standard out) and can thus be piped '$>>$' into a structure file,
+  which is in preparation. Note that editing of the striucture file is
+  required.
+\item If the first argument is '-h', the usage information is written
+  to stdout.
+\end{itemize}
 
 %==========================================================================
 \newpage

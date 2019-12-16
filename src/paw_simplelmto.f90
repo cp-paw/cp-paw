@@ -31,8 +31,7 @@ TYPE HYBRIDSETTING_TYPE
   LOGICAL(4)  :: T31        ! INCLUDE 31 OFFSITE EXCHANGE TERMS 
   LOGICAL(4)  :: TBONDX     ! INCLUDE BOND EXCHANGE TERMS 
   LOGICAL(4)  :: TFOCKSETUP ! CALCULATE ATOM WITH FOCK TERM
-  REAL(8)     :: LHFWEIGHT  ! LOCAL EXCHANGE TERMS ARE TREATED WITH
-                            ! LHFWEIGHT, EXCEPT WHEN IT IS NEGATIVE
+  REAL(8)     :: LHFWEIGHT  ! LOCAL EXCHANGE TERMS ARE TREATED WITH LHFWEIGHT
   REAL(8)     :: RAUG       ! AUGMENTATION RADIUS
   INTEGER(4),POINTER :: NORBOFL(:) ! #(LOCAL ORBITALS PER ANGULAR MOMENTUM)
 END TYPE HYBRIDSETTING_TYPE
@@ -95,7 +94,6 @@ LOGICAL(4)            :: TDROP=.FALSE. ! WRITE THE WAVE FUNCTIONS TO FILE
 LOGICAL(4)            :: TPICK=.FALSE. ! REAL HAMILTON CORRECTION FROM FILE
 REAL(8)               :: K2=-0.25D0    ! 0.5*K2 IS THE KINETIC ENERGY
 !REAL(8)               :: K2=0.D0    ! 0.5*K2 IS THE KINETIC ENERGY
-REAL(8)               :: HFWEIGHT=0.25D0
 REAL(8)               :: SCREENL=-1.D0  !SCREENING LENGTH
 !
 !===============================================================================
@@ -344,7 +342,7 @@ END MODULE SIMPLELMTO_MODULE
           HYBRIDSETTING(:)%ACTIVE    =.FALSE.
           HYBRIDSETTING(:)%TCV       =.TRUE.
           HYBRIDSETTING(:)%TFOCKSETUP=.FALSE.
-          HYBRIDSETTING(:)%LHFWEIGHT =-1.D0
+          HYBRIDSETTING(:)%LHFWEIGHT =0.D0
           HYBRIDSETTING(:)%TNDDO     =.FALSE.
           HYBRIDSETTING(:)%T31       =.FALSE.
           HYBRIDSETTING(:)%TBONDX    =.FALSE.
@@ -367,7 +365,6 @@ END MODULE SIMPLELMTO_MODULE
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : ISPSELECTOR &
      &                             ,HYBRIDSETTING &
-     &                             ,HFWEIGHT &
      &                             ,K2 &
      &                             ,SCREENL 
       IMPLICIT NONE
@@ -396,9 +393,6 @@ END MODULE SIMPLELMTO_MODULE
         END IF
         HYBRIDSETTING(ISPSELECTOR)%RAUG=VAL
 !
-      ELSE IF(ID.EQ.'HFWEIGHT') THEN
-        HFWEIGHT=VAL
-!
       ELSE IF(ID.EQ.'SCREENL') THEN
         SCREENL=VAL
 !
@@ -417,18 +411,14 @@ END MODULE SIMPLELMTO_MODULE
       SUBROUTINE SIMPLELMTO$GETR8(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : HFWEIGHT &
-     &                             ,NSP &
+      USE SIMPLELMTO_MODULE, ONLY : NSP &
      &                             ,HYBRIDSETTING &
      &                             ,ISPSELECTOR
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      REAL(8)    ,INTENT(OUT) :: VAL
+      REAL(8)     ,INTENT(OUT) :: VAL
 !     **************************************************************************
-      IF(ID.EQ.'HFWEIGHT') THEN
-        VAL=HFWEIGHT
-!
-      ELSE IF(ID.EQ.'LHFWEIGHT') THEN
+      IF(ID.EQ.'LHFWEIGHT') THEN
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
@@ -437,7 +427,6 @@ END MODULE SIMPLELMTO_MODULE
           CALL ERROR$STOP('SIMPLELMTO$GETR8')
         END IF
         VAL=HYBRIDSETTING(ISPSELECTOR)%LHFWEIGHT
-        IF(VAL.LT.0.D0) VAL=HFWEIGHT
 
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -636,7 +625,6 @@ END MODULE SIMPLELMTO_MODULE
       USE SIMPLELMTO_MODULE, ONLY : TON &
      &                             ,NSP &
      &                             ,HYBRIDSETTING &
-     &                             ,HFWEIGHT &
      &                             ,K2 &
      &                             ,TOFFSITE &
      &                             ,SCREENL
@@ -658,7 +646,6 @@ END MODULE SIMPLELMTO_MODULE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       CALL REPORT$TITLE(NFIL,'SIMPLELMTO OBJECT:  GENERIC VARIABLES')
-      CALL REPORT$R8VAL(NFIL,'OFFSITE EXCHANGE ADMIXTURE ',HFWEIGHT,' ')
       CALL WAVES$GETR8('SCALERCUT',SCALERCUT)
       CALL REPORT$R8VAL(NFIL,'RANGESCALE ',SCALERCUT,'*(RCOV(A)+RCOV(B))')
       CALL REPORT$R8VAL(NFIL,'K2 ',K2,'A.U.')
@@ -680,7 +667,6 @@ END MODULE SIMPLELMTO_MODULE
         WRITE(NFIL,*)
         CALL REPORT$TITLE(NFIL,'SIMPLELMTO OBJECT: '//TRIM(ID))
         LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
-        IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
         CALL REPORT$R8VAL(NFIL,'LOCAL EXCHANGE ADMIXTURE ',LHFWEIGHT,' ')
         CALL REPORT$L4VAL(NFIL,'SETUP WITH FOCK TERM ' &
      &                        ,HYBRIDSETTING(ISP)%TFOCKSETUP)
@@ -1474,10 +1460,18 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
           LMAX=MAX(ISVAR1,ISVAR2)
           LMAX=MIN(LMAX,LRX)
           DO L=LMIN,LMAX
-            IF(SCREENL.LT.0.D0) THEN
+            IF(SCREENL.LT.0.D0) THEN ! SCREENL<0 IMPLIES SCREENL=INFINITE
               CALL RADIAL$POISSON(GID,NR,L,RHO,POT)
             ELSE
-              CALL RADIAL$YUKAWA(GID,NR,L,1.D0/SCREENL,RHO,POT) 
+!             __AVOID UNDERFLOW IN YUKAWA FOR TOO SMALL SCREENL_________________
+              IF(SCREENL.LT.3.779D-2) THEN
+                CALL ERROR$MSG('SET SCREENING LENGTH LARGER THAN 0.02 AA')
+                CALL ERROR$MSG('IN !CONTROL!DFT!NTBO:SCREENL[AA]')
+                CALL ERROR$MSG('(NUMERICAL PROBLEM IN LIBRARY ROUTINE)')
+                CALL ERROR$STOP('SIMPLELMTO_ULITTLE')
+              END IF
+              SVAR=1.D0/MAX(1.D-8,SCREENL) !AVOID DIVIDE BY ZERO
+              CALL RADIAL$YUKAWA(GID,NR,L,SVAR,RHO,POT) 
            END IF
             POT(:)=POT(:)*R(:)**2
             DO LN3=1,LNX
@@ -3201,8 +3195,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
      &                            ,LOXPHI=>LOX &
      &                            ,POTPAR=>POTPAR1 &
      &                            ,TOFFSITE &
-     &                            ,HYBRIDSETTING &
-     &                            ,HFWEIGHT
+     &                            ,HYBRIDSETTING
       USE MPE_MODULE
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$WRITEMAT
@@ -3242,7 +3235,6 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       REAL(8)               :: SVAR
       REAL(8)               :: LHFWEIGHT
       INTEGER(4)            :: IDFTTYPE
-      REAL(8)               :: HFSCALE
       LOGICAL(4)            :: TACTIVE ! DOES THIS ATOM CONTRIBUTE?
       LOGICAL(4),PARAMETER  :: TPARALLEL=.FALSE.
       INTEGER(4)            :: THISTASK,NTASKS
@@ -3285,13 +3277,9 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
         IF(.NOT.TACTIVE) CYCLE
 !
 !       ========================================================================
-!       == ADJUSTMENT IF LOCAL HFWEIGHT IS DIFFERENT FROM GLOBAL HFWEIGHT ======
+!       ==                                                                    ==
 !       ========================================================================
         LHFWEIGHT=HYBRIDSETTING(ISP)%LHFWEIGHT
-        IF(LHFWEIGHT.LT.0.D0) LHFWEIGHT=HFWEIGHT
-        HFSCALE=1.D0
-        IF(HFWEIGHT.GT.0.D0)HFSCALE=LHFWEIGHT/HFWEIGHT
-        IF(TPR)PRINT*,'LHFW=',LHFWEIGHT,' GHFW=',HFWEIGHT
 !
 !       ========================================================================
 !       == FIND INDEX TO THE ONSITE ELEMENTS OF THE DENSITY MATRIX
@@ -3311,9 +3299,9 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
         CALL SIMPLELMTO_ONSITEX(ISP,HYBRIDSETTING(ISP)%TCV,NDIMD,LMNX,LMNXPHI &
       &                 ,POTPAR(ISP)%ONSITEU,DENMAT(IND)%MAT,DONSITE(IAT)%MAT &
       &                 ,EX,H,HON)
-        HONSITE(IAT)%MAT=HONSITE(IAT)%MAT+HON*HFSCALE
-        HAMIL(IND)%MAT  =HAMIL(IND)%MAT  +H  *HFSCALE
-        ETOT            =ETOT            +EX *HFSCALE  
+        HONSITE(IAT)%MAT=HONSITE(IAT)%MAT+HON*LHFWEIGHT
+        HAMIL(IND)%MAT  =HAMIL(IND)%MAT  +H  *LHFWEIGHT
+        ETOT            =ETOT            +EX *LHFWEIGHT  
                                          !HFWEIGHT IS MULTIPLIED ON LATER
         DEALLOCATE(HON)
         DEALLOCATE(H)
@@ -3360,19 +3348,6 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !     == MAKE HAMILTONIAN HERMITIAN                                           ==
 !     ==========================================================================
 !      CALL SIMPLELMTO$SYMMETRIZEHAMIL()
-!
-!     ==========================================================================
-!     == RESCALE WITH HFWEIGHT                                                ==
-!     ==========================================================================
-      ETOT  =ETOT  *HFWEIGHT
-      STRESS=STRESS*HFWEIGHT
-      FORCE =FORCE *HFWEIGHT
-      DO NN=1,NND
-        HAMIL(NN)%MAT=HAMIL(NN)%MAT*HFWEIGHT
-      ENDDO
-      DO IAT=1,NAT
-        HONSITE(IAT)%MAT=HONSITE(IAT)%MAT*HFWEIGHT
-      ENDDO
 !
                             CALL TRACE$POP()
       RETURN
@@ -4823,11 +4798,19 @@ LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX1),2
 !               ================================================================
 !               == DETERMINE POTENTIAL OF FIRST SITE
-!               ==============================================================
-                IF(SCREENL.LE.0.D0) THEN
+!               ================================================================
+                IF(SCREENL.LT.0.D0) THEN ! SCREENL<0 IMPLIES SCREENL=INFINITE
                   CALL RADIAL$POISSON(GID1E,NR1E,LR1,RHO12,POT12)
                 ELSE
-                  CALL RADIAL$YUKAWA(GID1E,NR1E,LR1,1.D0/SCREENL,RHO12,POT12)
+!                 __AVOID UNDERFLOW IN YUKAWA FOR TOO SMALL SCREENL_____________
+                  IF(SCREENL.LT.3.779D-2) THEN
+                    CALL ERROR$MSG('SET SCREENING LENGTH LARGER THAN 0.02 AA')
+                    CALL ERROR$MSG('IN !CONTROL!DFT!NTBO:SCREENL[AA]')
+                    CALL ERROR$MSG('(NUMERICAL PROBLEM IN LIBRARY ROUTINE)')
+                    CALL ERROR$STOP('SIMPLELMTO_OFFSITEX22SETUP')
+                  END IF
+                  SVAR=1.D0/MAX(1.D-8,SCREENL) !AVOID DIVIDE BY ZERO
+                  CALL RADIAL$YUKAWA(GID1E,NR1E,LR1,SVAR,RHO12,POT12)
                 END IF
 
 IF(TTEST) THEN
@@ -4864,10 +4847,18 @@ IF(TTEST)POT12=-POT12
 !                 ==============================================================
 !                 == DETERMINE POTENTIAL OF SECOND SITE
 !                 ==============================================================
-                  IF(SCREENL.LE.0.D0) THEN
+                  IF(SCREENL.LT.0.D0) THEN ! SCREENL<0 IMPLIES SCREENL=INFINITE
                     CALL RADIAL$POISSON(GID2E,NR2E,LR2,RHO34,POT34)
                   ELSE
-                    CALL RADIAL$YUKAWA(GID2E,NR2E,LR2,1.D0/SCREENL,RHO34,POT34)
+!                   __AVOID UNDERFLOW IN YUKAWA FOR TOO SMALL SCREENL___________
+                    IF(SCREENL.LT.3.779D-2) THEN
+                      CALL ERROR$MSG('SET SCREENING LENGTH LARGER THAN 0.02 AA')
+                      CALL ERROR$MSG('IN !CONTROL!DFT!NTBO:SCREENL[AA]')
+                      CALL ERROR$MSG('(NUMERICAL PROBLEM IN LIBRARY ROUTINE)')
+                      CALL ERROR$STOP('SIMPLELMTO_OFFSITEX22SETUP')
+                    END IF
+                    SVAR=1.D0/MAX(1.D-8,SCREENL) !AVOID DIVIDE BY ZERO
+                    CALL RADIAL$YUKAWA(GID2E,NR2E,LR2,SVAR,RHO34,POT34)
                   END IF
 !                 ==SUBTRACT LONG RANGE PART INCLUDING MONO- AND DIPOLE TERMS
 IF(TTEST) THEN
@@ -5170,6 +5161,7 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
       REAL(8)               :: RGRID1(NR1),RGRID2(NR2)
       INTEGER(4)            :: IDIS
       INTEGER(4)            :: NDIS
+      REAL(8)               :: SVAR
       REAL(8)               :: DIS
       REAL(8) ,ALLOCATABLE  :: TOLFAC1(:)
       REAL(8) ,ALLOCATABLE  :: TOLFAC2(:)
@@ -5259,10 +5251,18 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
        &                   *TOLFAC1(LN3)*TOLFAC2(LN4) 
               TOL=MAX(TOLMIN,TOL)
               DO LR1=ABS(L1-L2),MIN(L1+L2,LRX1),2
-                IF(SCREENL.LT.0.D0) THEN
+                IF(SCREENL.LT.0.D0) THEN ! SCREENL<0 IMPLIES SCREENL=INFINITE
                   CALL RADIAL$POISSON(GID1,NR1,LR1,RHO12,POT12)
                 ELSE
-                  CALL RADIAL$YUKAWA(GID1,NR1,LR1,1.D0/SCREENL,RHO12,POT12)
+!                 __AVOID UNDERFLOW IN YUKAWA FOR TOO SMALL SCREENL_____________
+                  IF(SCREENL.LT.3.779D-2) THEN
+                    CALL ERROR$MSG('SET SCREENING LENGTH LARGER THAN 0.02 AA')
+                    CALL ERROR$MSG('IN !CONTROL!DFT!NTBO:SCREENL[AA]')
+                    CALL ERROR$MSG('(NUMERICAL PROBLEM IN LIBRARY ROUTINE)')
+                    CALL ERROR$STOP('SIMPLELMTO_OFFSITEX31SETUP')
+                  END IF
+                  SVAR=1.D0/MAX(1.D-8,SCREENL) !AVOID DIVIDE BY ZERO
+                  CALL RADIAL$YUKAWA(GID1,NR1,LR1,SVAR,RHO12,POT12)
                 END IF
                 A123(:)=POT12(:)*POTPAR(ISP1)%AECHI(:,LN3)
                 DO LR2=ABS(L3-LR1),L3+LR1,2
@@ -6668,6 +6668,8 @@ CALL TIMING$CLOCKOFF('X31-B')
       REAL(8)   ,ALLOCATABLE :: HBB(:,:,:)
       REAL(8)   ,ALLOCATABLE :: OV(:,:)
       REAL(8)   ,ALLOCATABLE :: DOV(:,:)
+      REAL(8)                :: SQLHFWA,SQLHFWB
+      REAL(8)                :: SCALE
       REAL(8)                :: DEDD
       REAL(8)                :: QOFFSITE
       INTEGER(4)             :: LMRX
@@ -6765,8 +6767,12 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         TNDDO=HYBRIDSETTING(ISPA)%TNDDO.AND.HYBRIDSETTING(ISPB)%TNDDO
         T31=HYBRIDSETTING(ISPA)%T31.AND.HYBRIDSETTING(ISPB)%T31
         TBONDX=HYBRIDSETTING(ISPA)%TBONDX.AND.HYBRIDSETTING(ISPB)%TBONDX
+        SQLHFWA=HYBRIDSETTING(ISPA)%LHFWEIGHT**0.25D0
+        SQLHFWB=HYBRIDSETTING(ISPB)%LHFWEIGHT**0.25D0
 !       == DO NOTHING UNLESS NEEDED
         IF(.NOT.(TNDDO.OR.T31.OR.TBONDX)) CYCLE
+        IF(SQLHFWA*SQLHFWB.EQ.0.D0) CYCLE
+
 CALL TIMING$CLOCKON('LOOP:OFFX')
 !
 !       ========================================================================
@@ -6894,13 +6900,14 @@ CALL TIMING$CLOCKON('OFFX:NDDO')
           ALLOCATE(U22   (LMNXA,LMNXA,LMNXB,LMNXB))
           ALLOCATE(DU22  (LMNXA,LMNXA,LMNXB,LMNXB))
           CALL SIMPLELMTO_OFFSITEX22U(ISPA,ISPB, DIS,LMNXA,LMNXB,U22,DU22)
+          SCALE=(SQLHFWA*SQLHFWB)**2
           DO LMN1B=1,LMNXB
             DO LMN2B=1,LMNXB
               DO LMN2A=1,LMNXA
                 DO LMN1A=1,LMNXA
 !                 ==  W(LMN1A,LMN1B,LMN2A,LMN2B)
-                  SVAR =-0.25D0* U22(LMN1A,LMN2A,LMN2B,LMN1B)
-                  DSVAR=-0.25D0*DU22(LMN1A,LMN2A,LMN2B,LMN1B)
+                  SVAR =-0.25D0*SCALE* U22(LMN1A,LMN2A,LMN2B,LMN1B)
+                  DSVAR=-0.25D0*SCALE*DU22(LMN1A,LMN2A,LMN2B,LMN1B)
                   EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN1B,:)*DBA(LMN2B,LMN2A,:))
                   DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN1B,:)*DBA(LMN2B,LMN2A,:))
                   HAB(LMN1A,LMN1B,:)=HAB(LMN1A,LMN1B,:)+SVAR*DBA(LMN2B,LMN2A,:)
@@ -6938,12 +6945,13 @@ CALL TIMING$CLOCKON('OFFX:31')
 !!$PRINT*,'X31REPORT A DAB =',DAB
 !!$PRINT*,'X31REPORT A DAA=',DAA
 !!$PRINT*,'X31REPORT A DBB=',DBB
+         SCALE=SQLHFWA**3*SQLHFWB
          DO LMN1B=1,LMNXB
             DO LMN3A=1,LMNXA 
               DO LMN2A=1,LMNXA
                 DO LMN1A=1,LMNXA
-                  SVAR =-0.25D0* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
-                  DSVAR=-0.25D0*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+                  SVAR =-0.25D0*SCALE* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
+                  DSVAR=-0.25D0*SCALE*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
 !
                   EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
                   DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
@@ -7034,18 +7042,19 @@ CALL TIMING$CLOCKON('OFFX:BONDX')
           ALLOCATE(DBONDU(LMNXA,LMNXB,LMNXA,LMNXB))
 !         == BONDU(1,2,3,4)=INT DX INT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|==
           CALL SIMPLELMTO_OFFSITEXBONDU(ISPA,ISPB,DIS,LMNXA,LMNXB,BONDU,DBONDU)
+          SCALE=(SQLHFWA*SQLHFWB)**2
           DO LMN2B=1,LMNXB
             DO LMN2A=1,LMNXA 
               DO LMN1B=1,LMNXB
                 DO LMN1A=1,LMNXA
-                  SVAR =-0.25D0* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
-                  DSVAR=-0.25D0*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                  SVAR =-0.25D0*SCALE* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                  DSVAR=-0.25D0*SCALE*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                   EX  =EX  + SVAR*SUM(DAA(LMN1A,LMN2A,:)*DBB(LMN1B,LMN2B,:))
                   DEDD=DEDD+DSVAR*SUM(DAA(LMN1A,LMN2A,:)*DBB(LMN1B,LMN2B,:)) 
                   HAA(LMN1A,LMN2A,:)=HAA(LMN1A,LMN2A,:)+SVAR*DBB(LMN1B,LMN2B,:)
                   HBB(LMN1B,LMN2B,:)=HBB(LMN1B,LMN2B,:)+SVAR*DAA(LMN1A,LMN2A,:)
-                  SVAR =-0.25D0* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
-                  DSVAR=-0.25D0*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                  SVAR =-0.25D0*SCALE* BONDU(LMN1A,LMN1B,LMN2A,LMN2B)
+                  DSVAR=-0.25D0*SCALE*DBONDU(LMN1A,LMN1B,LMN2A,LMN2B)
                   EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DAB(LMN2A,LMN1B,:))
                   DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DAB(LMN2A,LMN1B,:))
                   HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DAB(LMN2A,LMN1B,:)
@@ -7083,10 +7092,10 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
 !       ========================================================================
 !       == MAP HAMILTONIAN BACK                                               ==
 !       ========================================================================
-        HAMIL(NN )%MAT(:,:,:)=HAMIL(NN )%MAT(:,:,:)+HAB(:,:,:)
+        HAMIL(NN )%MAT(:,:,:)     =HAMIL(NN )%MAT(:,:,:)+HAB(:,:,:)
         HAMIL(INDM(NN))%MAT(:,:,:)=HAMIL(INDM(NN))%MAT(:,:,:)+HBA(:,:,:)
-        HAMIL(NNA)%MAT(:,:,:)=HAMIL(NNA)%MAT(:,:,:)+HAA(:,:,:)
-        HAMIL(NNB)%MAT(:,:,:)=HAMIL(NNB)%MAT(:,:,:)+HBB(:,:,:)
+        HAMIL(NNA)%MAT(:,:,:)     =HAMIL(NNA)%MAT(:,:,:)+HAA(:,:,:)
+        HAMIL(NNB)%MAT(:,:,:)     =HAMIL(NNB)%MAT(:,:,:)+HBB(:,:,:)
         DEALLOCATE(DAB)
         DEALLOCATE(DBA)
         DEALLOCATE(HAB)

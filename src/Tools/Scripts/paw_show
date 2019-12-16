@@ -29,15 +29,15 @@ usage: paw_show option rootname [outfile]\n
 1)rootname  is paw protocol file name without the .prot ending 
 2)option (exactly one must be given) can be one of the following 
 \t -h: give info about use and exit 
-\t -e: plot static total energy in Hartree 
-\t -t: plot temperature in Kelvin
-\t -c: plot conserved energy in Hartree
-\t -f: plot fictitious kinetic wave function energy in Hartree
 \t -s: use time steps rather than time in picoseconds
-\t -u unit  select unit (h, ry, ev, kj/mol, kcal/mol)      
+\t -u unit  select energy unit (h, ry, ev, kj/mol, kcal/mol)      
+\t -e: plot static total energy E_tot in Hartree 
+\t -c: plot conserved energy E_c in Hartree
+\t -f: plot fictitious kinetic wave function energy E_psi
+\t -t: plot temperature T in Kelvin
 \t -a: type: plot friction 
-\t\t     type=p: phi
-\t\t     type=r: atoms
+\t\t     type=p: for wave functions a_p
+\t\t     type=r: for atoms atoms a_R 
 3) optional argument outfile: redirects output into file outfile
 \t if this argument is absent, output is shown with xmgrace
 \n"
@@ -50,13 +50,55 @@ usage: paw_show option rootname [outfile]\n
 #===================================================================
 #  resolve argument list                                          ==
 #===================================================================
-XLABEL='t[ps]'
+export XLABEL='t[ps]' # default
+export UNIT='H'       # default
+export EUNIT=1.       # default
+export YLABEL=""     
+declare -i ICOLOR=1
+OPTIND=1
+AWKSTRING=""
 #
-#--- extract energy unit
-UNIT='H'
-EUNIT=1.
+# xmgrace typesetting:
+#   \R{n} switch to color n
+#   \s subscript
+#   \N normal font
+#   \f{SYMBOL} switch to greek font
+#   \f{} switch to normal font
+#
 while getopts :hetfca:su: OPT ; do
-  case $OPT in
+  case $OPT in 
+    t) AWKSTRING="$AWKSTRING \" \" \$4 " # temperature (Kelvin)
+       YLABEL="${YLABEL}\R{$ICOLOR}T[K]; "
+       ICOLOR=$ICOLOR+1
+       ;;
+    f) AWKSTRING="$AWKSTRING \" \" \$5/$EUNIT "  # fict. kinetic energy
+       YLABEL="${YLABEL}\R{$ICOLOR}E\s\f{Symbol}y\f{}\N[$UNIT]; "
+       ICOLOR=$ICOLOR+1
+       ;;
+    e) AWKSTRING="$AWKSTRING \" \" \$6/$EUNIT " # static total energy
+       YLABEL="${YLABEL}\R{$ICOLOR}E\stot\N[$UNIT]; "
+       ICOLOR=$ICOLOR+1
+       ;;
+    c) AWKSTRING="$AWKSTRING \" \" \$7/$EUNIT " # conserved energy
+       YLABEL="${YLABEL}\R{$ICOLOR}E\sc\N[$UNIT]; "
+       ICOLOR=$ICOLOR+1
+       ;;
+    a) #friction
+       case $OPTARG in
+         p) AWKSTRING="$AWKSTRING \" \" \$8"  # wave functions
+            YLABEL="${YLABEL}\R{$ICOLOR}a\s\f{Symbol}y\f{}\N; "
+            ICOLOR=$ICOLOR+1
+            ;;
+         r) AWKSTRING="$AWKSTRING \" \" \$9"  # atomic positions
+            YLABEL="${YLABEL}\R{$ICOLOR}a\sR\N; "
+            ICOLOR=$ICOLOR+1
+           ;;
+         *) echo "error in $0: argument $OPTARG not recognized" >&2
+            exit 1
+            ;;
+       esac
+       ;;
+    s) XLABEL="time steps" ;; # time coordinate 
     u) UNIT=$OPTARG 
        UNIT=$(echo $UNIT | tr '[:upper:]' '[:lower:]') #convert to lower case
        case $UNIT in
@@ -71,35 +113,10 @@ while getopts :hetfca:su: OPT ; do
          kcal/mol)EUNIT=$(echo "scale=8; 1. / 627.5096463920391 " | bc -l) 
                    UNIT="kcal/mol"
                    ;;
-
          *) echo "error in $0: argument $OPTARG for -u not recognized" >&2
              exit 1 ;;
        esac
       ;;
-  esac
-done
-#
-#
-#
-OPTIND=1
-AWKSTRING=""
-while getopts :hetfca:su: OPT ; do
-  case $OPT in 
-    t) AWKSTRING="$AWKSTRING \" \" \$4 " ;; # temperature (Kelvin)
-    f) AWKSTRING="$AWKSTRING \" \" \$5/$EUNIT " ;; # fict. kinetic energy
-    e) AWKSTRING="$AWKSTRING \" \" \$6/$EUNIT " ;; # static total energy
-    c) AWKSTRING="$AWKSTRING \" \" \$7/$EUNIT " ;; # conserved energy
-    a) #friction
-       case $OPTARG in
-         p) AWKSTRING="$AWKSTRING \" \" \$8" ;; # wave functions
-         r) AWKSTRING="$AWKSTRING \" \" \$9" ;; # atomic positions
-         *) echo "error in $0: argument $OPTARG not recognized" >&2
-            exit 1
-            ;;
-       esac
-       ;;
-    s) XLABEL="time steps" ;; # time coordinate 
-    u) ;;  # unit already done
     h) 
        echo -e "$USAGE"
        exit 0
@@ -185,7 +202,8 @@ else
   echo '  xaxis LABEL "time steps" '                 >> $PARMFILE
 fi
 echo "  yaxis ticklabel prec 14"                     >> $PARMFILE
-echo "  yaxis LABEL \"E[$UNIT]\""                    >> $PARMFILE
+YLABEL=${YLABEL%;*}   # remove trailin "; "
+echo "  yaxis LABEL \"${YLABEL}\""                   >> $PARMFILE
 #
 #===================================================================
 #  print or present via xmgrace
