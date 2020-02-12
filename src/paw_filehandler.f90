@@ -1,5 +1,5 @@
 !
-!........................................................FILEHANDLER....
+!      ..1.........2.........3.........4.........5.........6.........7.........8
 MODULE  FILEHANDLER_MODULE
 !***********************************************************************
 !**                                                                   **
@@ -140,7 +140,7 @@ CONTAINS
         END SUBROUTINE FILEHANDLER_LOOKUP
 END MODULE FILEHANDLER_MODULE
 !
-!     .................................................................
+!      ..1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE FILEHANDLER$SETCH(ID,VAL)
 !     ==================================================================
 !     ==  SET TABLE MAXIMUM TABLE SIZE                                ==
@@ -475,16 +475,16 @@ END MODULE FILEHANDLER_MODULE
       RETURN
       END
 !
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE FILEHANDLER$PRINTFILEOFUNIT(UNIT_)
-!     ==================================================================
-!     ==  SAVE                                                        ==
-!     ==================================================================
+!     **************************************************************************
+!     **  SAVE                                                                **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: UNIT_
       LOGICAL(4)            :: TCHK
       CHARACTER(512)        :: STRING
-!     ******************************************************************
+!     **************************************************************************
       INQUIRE(UNIT=UNIT_,OPENED=TCHK,NAME=STRING)
       IF(TCHK) THEN
         WRITE(*,FMT='("UNIT ",I5," IS CONNECTED TO FILE ",A)') &
@@ -496,17 +496,17 @@ END MODULE FILEHANDLER_MODULE
       RETURN
       END
 !
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE FILEHANDLER$REPORT(NFIL_,STRING_)
-!     ==================================================================
-!     ==   STRING CAN BE AN IDENTIFIER OR ,'ALL', OR 'USED'           ==
-!     ==================================================================
+!     **************************************************************************
+!     **   STRING CAN BE AN IDENTIFIER OR ,'ALL', OR 'USED'                   **
+!     **************************************************************************
       USE FILEHANDLER_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: NFIL_
       CHARACTER(*),INTENT(IN) :: STRING_
       INTEGER(4)              :: IFIL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
       WRITE(NFIL_,FMT='()')
       WRITE(NFIL_,FMT='("FILE REPORT"/"===========")')
@@ -532,19 +532,17 @@ END MODULE FILEHANDLER_MODULE
         END SUBROUTINE MYPRINT
       END
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
-!     .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE FILEHANDLER$FILENAME(ID_,NAME_)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     ** RETURNS THE NAME OF THE FILE CONNECTED TO A GIVEN file ID            **
+!     **************************************************************************
       USE FILEHANDLER_MODULE
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: ID_
       CHARACTER(*) ,INTENT(OUT):: NAME_
       INTEGER(4)               :: IFIL
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.ALLOCATED(FILE))CALL FILEHANDLER_CREATE
       CALL FILEHANDLER_LOOKUP(ID_,IFIL)
       IF(IFIL.EQ.0) THEN
@@ -576,8 +574,10 @@ END MODULE FILEHANDLER_MODULE
       CHARACTER(5)                   :: STDIN
       CHARACTER(9)                   :: DEVNULL
       INTEGER(4)                     :: I
-      LOGICAL(4)                     :: TOPENIBM  ! IBM CHOICE BETWEEN LITTLE AND BIG ENDIAN
-      CHARACTER(1)                   :: CONVERT        !USED TO TEST FOR LITTLE AND BIG ENDIAN
+      LOGICAL(4)                     :: TOPENIBM ! IBM CHOICE BETWEEN 
+                                                 ! LITTLE AND BIG ENDIAN
+      CHARACTER(1)                   :: CONVERT  ! USED TO TEST FOR  
+                                                 ! LITTLE AND BIG ENDIAN
       CHARACTER(128)                 :: IOMSG
 !     **************************************************************************
       STDOUT =-'STDOUT'

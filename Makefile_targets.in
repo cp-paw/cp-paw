@@ -245,6 +245,7 @@ clean_scripts:
 	rm -f ${BINDIR}/paw_scanlat
 	rm -f ${BINDIR}/paw_show
 	rm -f ${BINDIR}/paw_waittillempty
+	rm -f ${BINDIR}/paw_checkpoint
 #
 #---------------------------------------------------------------------------
 #--          Documentation                                                --

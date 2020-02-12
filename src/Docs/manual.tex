@@ -5678,28 +5678,47 @@ the paw\_tra tool. I recommend the extension
 \block{!TCNTL!CORRELATION}
 %----------------------------------------------------------------------
 \brules{optional} 
-\bdescr{evaluates pair correlation functions for distances and angles}
+\bdescr{evaluates pair correlation functions
+\begin{eqnarray}
+g_{C,P}(d)=\frac{1}{T_2-T_1}\int_{T_1}^{T_2}dt\;
+\frac{1}{N_C}\sum_{i\in C}\sum_{j\in P}
+\delta\left(\left|R_j(t)-\vec{R}_i(t)\right|-d\right)
+\nonumber
+\end{eqnarray}
+where $[T_1,T_2]$ is the selected time interval. $C$ is the set of
+center atoms selectrd in \texttt{!TCNTL!CORRELATION!CENTER} and $P$ is
+the set of partner atoms selected in
+\texttt{!TCNTL!CORRELATION!PARTNER}.
 
-\mbax{\key{Type}
-\vdescr{select distance or angle correlation. (Angle correlations not
-  yet implemented!)}
-\vformat{character(1); allowed values are 'D' for distance and 'A' for
-  angle} 
-\vrules{optional}
-\vdefault{'D'}}
+The histogram is currently plotted up to a maximum distance of
+$d_x=5$~\AA. The histogram is a density on the distance grid, which is
+normalized by the number of center atoms.
 
-\mbax{\key{DEP}
-\vdescr{selects correlation over time as spaghetti plot or the time
-  averaged histogram as function of angle or distance.}
-\vformat{character; allowed values are 'SPAGHETTI' and 'HISTOGRAM'} 
-\vrules{optional}
-\vdefault{'SPAGHETTI'}}
+Warning! Currently the code selects a set of atom pairs from the
+initial time slice in the specified time interval and monitors the
+distances of only these pairs. Atom pairs with initial distances above
+$2\times d_x$~\AA (i.e. 10~\AA) are ignored.}
+
+%% \mbax{\key{TYPE}
+%% \vdescr{select distance or angle correlation. (Angle correlations not
+%%   yet implemented!)}
+%% \vformat{character(1); allowed values are 'D' for distance and 'A' for
+%%   angle} 
+%% \vrules{optional}
+%% \vdefault{'D'}}
+
+%% \mbax{\key{DEP}
+%% \vdescr{selects correlation over time as spaghetti plot or the time
+%%   averaged histogram as function of angle or distance.}
+%% \vformat{character; allowed values are 'SPAGHETTI' and 'HISTOGRAM'} 
+%% \vrules{optional}
+%% \vdefault{'HISTOGRAM'}}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!CORRELATION!FILE}
 %----------------------------------------------------------------------
 \brules{optional} 
-\bdescr{specify the file where cssr file is written to.}
+\bdescr{specify the file where output (histogram or spaghetti) is written to.}
 
 \mbax{\key{EXT}
 \vdescr{switch to the rootname appended by the extension provided,
@@ -5712,7 +5731,7 @@ the paw\_tra tool. I recommend the extension
 \vdescr{file name}
 \vformat{character} 
 \vrules{optional}
-\vdefault{the rootname appended by ``.tra.cssr''}}
+\vdefault{the rootname appended by ``.tra.correlation''}}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!CORRELATION!CENTER}

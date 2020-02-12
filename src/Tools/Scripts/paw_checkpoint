@@ -1,0 +1,53 @@
+#!/bin/bash
+if [ "$#" -ne 2 ]; then
+  echo "Illegal number of parameters"
+  echo "usage: paw_checkpoint.sh [create|recover] CHECKPOINTNAME"
+  echo "With the option \"create\" all files from the current directory are copied into a new directory called CHECKPOINTNANE."
+  echo "With the option \"recover\" ALL files from the current directory are DELETED and the content of the directory called CHECKPOINTNANE is copied into the current directory instead."
+fi
+
+op="$1"
+dirname=$2
+
+case "$op" in
+  create )
+    #check if directory $dirname already exists
+    if [ -d "$2" ];
+    then
+      echo "WARNING: the directory $dirname already exists, doing NOTHING!" 
+      exit
+    else
+      #create directory
+      mkdir "$dirname"
+      #copy all files
+      /bin/cp * "$dirname"
+    fi
+  ;;
+  recover )
+    #check if directory $dirname exists
+    if [ -d "$2" ];
+    then
+      #ask user if he really wants to
+      echo "Do you really want to delete all files (not directories) in the current directory and copy the files from $dirname into it? (y/n)"
+      read answer
+      if [ "$answer" = "y" ];
+      then
+        #remove all files in the current directory
+        /bin/rm *
+        #copy all files from $dirname
+        /bin/cp $dirname/* .
+        echo "You now have the all the files from the directory $dirname in the current directory."
+      else
+        echo "DOING NOTHING."
+        exit
+      fi
+    else
+      echo "WARNING: the directory $dirname does NOT exists, doing NOTHING!" 
+      exit
+    fi
+  ;;
+  *) echo "The second argument of this sript has to be either \"create\" or \"recover\", you gave $op instead."
+     ;;
+esac
+
+

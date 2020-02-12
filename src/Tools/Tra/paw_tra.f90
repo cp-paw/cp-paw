@@ -1,4 +1,4 @@
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE TRAJECTORY_MODULE
 TYPE TRA_TYPE
   INTEGER(4)             :: NSTEP
@@ -146,7 +146,7 @@ END MODULE TRAJECTORY_MODULE
 !
 !     ==========================================================================
 !     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED                     ==
-!     ========================================================================== 
+!     ==========================================================================
       CALL TRACE$PASS('RESET FILENAME FOR STRC FILE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'FILES')
@@ -206,14 +206,14 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'FILES')
 !
-!     ==================================================================
-!     ==  RENAME FILES IF DESIRED                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  RENAME FILES IF DESIRED                                             ==
+!     ==========================================================================
       CALL LINKEDLIST$NLISTS(LL_CNTL,'FILE',NLISTS)
       DO I=1,NLISTS
         CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',I)
 !
-!       == GET FILE ID ================================================
+!       == GET FILE ID =========================================================
         CALL LINKEDLIST$EXISTD(LL_CNTL,'ID',1,TCHK)
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('KEYWORD ID IS MANDATORY')
@@ -221,10 +221,10 @@ END MODULE TRAJECTORY_MODULE
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,ID)
 !
-!       == GET FILE NAME ==============================================
+!       == GET FILE NAME =======================================================
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
 !
-!       == GET EXTENSION FLAG ========================================
+!       == GET EXTENSION FLAG ==================================================
         CALL LINKEDLIST$EXISTD(LL_CNTL,'EXT',1,TCHK)
         IF(TCHK) THEN
           CALL LINKEDLIST$GET(LL_CNTL,'EXT',1,TCHK)
@@ -235,9 +235,9 @@ END MODULE TRAJECTORY_MODULE
       CALL TRACE$PASS('FILENAME FOR STRC FILE SET')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
 !
-!     ==================================================================
-!     == HEADER                                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     == HEADER                                                               ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='()')
       WRITE(NFILO,FMT='(72("*"))')
@@ -253,29 +253,30 @@ END MODULE TRAJECTORY_MODULE
      &    ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
       WRITE(NFILO,*)
 !
-!     ==================================================================
-!     ==  READ STRC FILE TO LINKEDLIST                                ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ STRC FILE TO LINKEDLIST                                        ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$NEW(LL_STRC)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
 !
-!     ==================================================================
-!     == GET ATOMIC NUMBER                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == GET ATOMIC NUMBER                                                    ==
+!     ==========================================================================
       CALL READ_STRC(LL_STRC)
 !
-!     ==================================================================
-!     ==  READ TRAJECTORY                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ time interval for analysis                                     ==
+!     ==========================================================================
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL CONSTANTS$GET('FEMTO',FEMTO)
       CALL CONSTANTS$GET('PICO',PICO)
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'SEQUENCE')
 !
-!     == GET BEGINNING OF TIME SEQUENCE =================================
+!     == GET BEGINNING OF TIME SEQUENCE ========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T1[PS]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'T1[PS]',0,-1.D+9)
@@ -283,7 +284,7 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$GET(LL_CNTL,'T1[PS]',1,T1)
       T1=T1*PICO*SECOND
 !
-!     == GET BEGINNING OF TIME SEQUENCE =================================
+!     == GET BEGINNING OF TIME SEQUENCE ========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T2[PS]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'T2[PS]',0,+1.D+9)
@@ -291,7 +292,7 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$GET(LL_CNTL,'T2[PS]',1,T2)
       T2=T2*PICO*SECOND
 !
-!     == GET BEGINNING OF TIME SEQUENCE =================================
+!     == GET BEGINNING OF TIME SEQUENCE ========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DT[FS]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'DT[FS]',0,0.D0)
@@ -300,8 +301,9 @@ END MODULE TRAJECTORY_MODULE
       DT=DT*FEMTO*SECOND
       CALL LINKEDLIST$SELECT(LL_CNTL,'..')
 !
-
-CALL FILEHANDLER$FILENAME('TRA',str)
+!     ==========================================================================
+!     ==  READ TRAJECTORY FILE                                                ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('TRA',NFIL)      
       CALL READTRA(NFIL,T1,T2,DT)
 !
@@ -390,7 +392,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
 !     ==========================================================================
 !     ==   DISTANCE AND ANGLE CORRELATIONS                                    ==
 !     ==========================================================================
-!      CALL CORRELATION(LL_CNTL)
+      CALL CORRELATION(LL_CNTL)
 !
 !     ==========================================================================
 !     ==   PRINT MASS WEIGHTED PATH LENGTH                                    ==
@@ -400,18 +402,26 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CORRELATION(LL_CNTL_)
-!     ******************************************************************
-!     **                                                              **
-!     **  DISTANCES AND ANGLES AS FUNCTION OF TIME                    **
-!     **  OR DENSITY AS FUNCTION OF DISTANCE OR ANGLE                 **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  DISTANCES AND ANGLES AS FUNCTION OF TIME                            **
+!     **  OR DENSITY AS FUNCTION OF DISTANCE OR ANGLE                         **
+!     **                                                                      **
+!     **************************************************************************
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
-      USE TRAJECTORY_MODULE
       USE SORT_MODULE
+      USE TRAJECTORY_MODULE, ONLY : TQMMM &
+     &                             ,BOND_TYPE &
+     &                             ,TRA_TYPE &
+     &                             ,RBAS &
+     &                             ,TRA &
+     &                             ,ATOM &
+     &                             ,NSTEP &
+     &                             ,NAT &
+     &                             ,QNAT   !#(ATOMS IN QM-MM) 
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -451,23 +461,21 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       REAL(8)      ,ALLOCATABLE:: P(:)
       INTEGER(4)               :: TO,FROM
       INTEGER(4)               :: NATOM
-!     ******************************************************************
+!     **************************************************************************
                                CALL TRACE$PUSH('CORRELATION')
+      CALL CONSTANTS$GET('PICO',PICO)
+      CALL CONSTANTS$GET('SECOND',SECOND)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+
       IF(TQMMM) THEN
-!         ALLOCATE(TSELECT(QNAT))
          ALLOCATE(TSELECTP(QNAT))
          ALLOCATE(TSELECTC(QNAT))
          NATOM=QNAT
       ELSE
-!         ALLOCATE(TSELECT(NAT))
          ALLOCATE(TSELECTP(NAT))
          ALLOCATE(TSELECTC(NAT))
          NATOM=NAT
       END IF
-
-      CALL CONSTANTS$GET('PICO',PICO)
-      CALL CONSTANTS$GET('SECOND',SECOND)
-      CALL FILEHANDLER$UNIT('PROT',NFILO)
 
       LL_CNTL=LL_CNTL_
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -478,10 +486,11 @@ CALL FILEHANDLER$FILENAME('TRA',str)
         RETURN
       END IF
       CALL LINKEDLIST$SELECT(LL_CNTL,'CORRELATION')
+      CALL REPORT$TITLE(NFILO,'CORRELATION')
 !     
-!     ================================================================
-!     ==  SPECIFY FILE                                              ==
-!     ================================================================
+!     ==========================================================================
+!     ==  SPECIFY FILE                                                        ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',0)
@@ -493,7 +502,10 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       ELSE
         CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',1)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
-        IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'NAME',0,-'.TRA.CORRELATION')
+        IF(.NOT.TCHK) then
+          CALL LINKEDLIST$SET(LL_CNTL,'NAME',0,-'.TRA.CORRELATION')
+          CALL LINKEDLIST$SET(LL_CNTL,'EXT',0,.TRUE.)
+        END IF
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
 !     
         CALL LINKEDLIST$EXISTD(LL_CNTL,'EXT',1,TCHK)
@@ -504,47 +516,31 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       CALL FILEHANDLER$SETFILE('CORRELATION',TCHK,TRIM(FILE))
       CALL FILEHANDLER$SETSPECIFICATION('CORRELATION','FORM','FORMATTED')
 !     
-!     ================================================================
-!     ==  SELECT CENTRAL AND NEIGHBOR ATOMS                         ==
-!     ================================================================
+!     ==========================================================================
+!     ==  SELECT CENTRAL AND NEIGHBOR ATOMS                                   ==
+!     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'CENTER',1,TCHK)
       IF(TCHK) THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'CENTER',0)
         CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECTC)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ELSE
         TSELECTC(:)=.TRUE.
       END IF
-!     CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'PARTNER',1,TCHK)
       IF(TCHK) THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'PARTNER',0)
         CALL SELECTION(LL_CNTL,NATOM,ATOM,TSELECTP)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       ELSE
         TSELECTP(:)=.TRUE.
       END IF
-!     CALL LINKEDLIST$SELECT(LL_CNTL,'..')
 !     
-!     ================================================================
-!     ==  SELECT CENTRAL ATOMS                                      ==
-!     ================================================================
-!
-!     == TYPE CAN BE 'D' FOR DISTANCE OR 'A' FOR ANGLE =============== 
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
-      IF(TCHK) THEN
-        CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,DA)
-        DA=+DA
-        IF(DA.NE.'D'.AND.DA.NE.'A') THEN
-          CALL ERROR$MSG('TYPE MUST CAN ONLY "D" OR "A"')
-          CALL ERROR$CHVAL('TYPE',DA)
-          CALL ERROR$STOP('CORRELATION')
-        END IF
-      ELSE
-        DA='D'
-      END IF
-      IF(DA.EQ.'A') THEN
-        CALL ERROR$MSG('ANGLE CORRELATION NOT YET IMPLEMENTED')
-        CALL ERROR$STOP('CORRELATION')
-      END IF
-!
-!     == DEP CAN BE 'SPAGHETTI' FOR DISTANCE OR 'HISTOGRAM' FOR ANGLE ==
+!     ==========================================================================
+!     == SELECT HISTOGRAM OR SPAGHETTI                                        ==
+!     ========================================== ===============================
+!     == option spaghetti is not documented in the manual.
+!     == its implementation is not functional
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DEP',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'DEP',1,DEP)
@@ -555,12 +551,12 @@ CALL FILEHANDLER$FILENAME('TRA',str)
           CALL ERROR$STOP('CORRELATION')
         END IF
       ELSE
-        DEP='SPAGHETTI'
+        DEP='HISTOGRAM'
       END IF
 !     
-!     ================================================================
-!     == DEFINE POSITIONS TO BE CONSIDERED                          ==
-!     ================================================================
+!     ==========================================================================
+!     == DEFINE POSITIONS TO BE CONSIDERED                                    ==
+!     ==========================================================================
       NATM=0
       DO IAT=1,NATOM
         IF(.NOT.(TSELECTC(IAT).OR.TSELECTP(IAT))) CYCLE
@@ -578,16 +574,30 @@ CALL FILEHANDLER$FILENAME('TRA',str)
         TSELECTPM(IATM)=TSELECTP(IAT)
       ENDDO
 !     
-!     ================================================================
-!     == DEFINE DISTANCE CRITERION                                  ==
-!     ================================================================
+!     ==========================================================================
+!     == branch out to pair correlation function                              ==
+!     ==========================================================================
+      IF(DEP.EQ.'HISTOGRAM') THEN
+        CALL FILEHANDLER$UNIT('CORRELATION',NFIL)
+! fast
+        CALL PAIRCORRELATION1(NFIL,RBAS,NATOM,TSELECTC,TSELECTP,NSTEP,TRA%R)
+! secure
+!        CALL PAIRCORRELATION2(NFIL,RBAS,NATOM,TSELECTC,TSELECTP,NSTEP,TRA%R)
+        CALL FILEHANDLER$CLOSE('CORRELATION')
+        CALL REPORT$TITLE(NFILO,'CORRELATION')
+        RETURN
+      END IF
+!     
+!     ==========================================================================
+!     == DEFINE DISTANCE CRITERION                                            ==
+!     ==========================================================================
       RMAX=5.0
       RADM(:)=0.5D0*RMAX
       SCALEX=1.0D0
 !     
-!     ================================================================
-!     == COLLECT TRAJECTORIES                                       ==
-!     ================================================================
+!     ==========================================================================
+!     == COLLECT TRAJECTORIES                                                 ==
+!     ==========================================================================
       INNMAX=0
       DO ISTEP=1,NSTEP
         IATM=0
@@ -619,13 +629,13 @@ CALL FILEHANDLER$FILENAME('TRA',str)
         INNMAX=MAX(INNMAX,INN)
       ENDDO   
 !     
-!     ==================================================================
-!     ==  ORDER DISTANCES                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  ORDER DISTANCES                                                     ==
+!     ==========================================================================
       CALL FILEHANDLER$UNIT('CORRELATION',NFIL)
       IF(DEP.EQ.'SPAGHETTI') THEN
         DO ISTEP=1,NSTEP
-!         __ ORDER ARRAY________________________________________________
+!         __ ORDER ARRAY________________________________________________________
           CALL SORT$SET(INNMAX,FIOFT(1,ISTEP))
           CALL SORT$RESTART
           CALL SORT$FLIP(FROM,TO)
@@ -641,7 +651,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
           ENDDO
           CALL SORT$UNSET
         ENDDO
-!       == WRITE =====================================================
+!       == WRITE ===============================================================
         DO INN=1,INNMAX
           WRITE(NFIL,FMT='(2F10.5)')TRA%T(1)/(PICO*SECOND),RMAX
           DO ISTEP=1,NSTEP
@@ -676,14 +686,13 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       END IF
       CALL FILEHANDLER$CLOSE('CORRELATION')
 !     
-!     ================================================================
-!     ==  WRITE ATOMS TO PROTOCOLL FILE                             ==
-!     ================================================================
-      CALL REPORT$TITLE(NFILO,'CORRELATION')
+!     ==========================================================================
+!     ==  WRITE ATOMS TO PROTOCOLL FILE                                       ==
+!     ==========================================================================
 !     
-!     ================================================================
-!     == CLOSE DOWN                                                ==
-!     ================================================================
+!     ==========================================================================
+!     == CLOSE DOWN                                                           ==
+!     ==========================================================================
       DEALLOCATE(POSM)
       DEALLOCATE(RADM)
       DEALLOCATE(TSELECTCM)
@@ -692,15 +701,218 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
-      SUBROUTINE SNAPSHOT(LL_CNTL_)
-!     ******************************************************************
-!     **                                                              **
-!     **  PICKS OUT ONE PARTICULAR TIME STEP FROM A TRAJECTORY FILE   **
-!     **  AND PRODUCES PSEUDO STRUCTURE INPUT                         **
-!     **  AND A CSSR FILE                                             **
-!     **                                                              **
-!     ******************************************************************
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAIRCORRELATION1(NFIL,RBAS,NAT,TSELECTC,TSELECTP,NSTEP,R)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      USE TRAJECTORY_MODULE, ONLY: BOND_TYPE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4),INTENT(IN) :: NAT
+      LOGICAL(4),INTENT(IN) :: TSELECTC(NAT)
+      LOGICAL(4),INTENT(IN) :: TSELECTP(NAT)
+      INTEGER(4),INTENT(IN) :: NSTEP
+      REAL(8)   ,INTENT(IN) :: R(3,NAT,NSTEP)
+      REAL(8)   ,PARAMETER  :: angstrom=1.889726D0 ! angstrom
+      REAL(8)   ,PARAMETER  :: RMAX=5.D0*angstrom ! OUTERMOST POINT OF HISTOGRAM
+      REAL(8)   ,PARAMETER  :: RMAX2=rmax**2
+      REAL(8)   ,PARAMETER  :: SCALEX=2.D0  ! SELECT WITH RMAX*SCALEX
+      INTEGER(4),PARAMETER  :: NBX=100000     ! #(BONDS CONSIDERED)
+      INTEGER(4),PARAMETER  :: NP=1000  ! #(GRID POINTS ON HISTOGRAM)
+      REAL(8)               :: HISTOGRAM(NP)
+      INTEGER(4)            :: NB ! #(BONDS)
+      REAL(8)   ,ALLOCATABLE:: RAD(:) !(NAT)
+      type(bond_type),allocatable :: bond(:)
+      type(bond_type)       :: bond1
+      REAL(8)               :: DR(3)
+      REAL(8)               :: DIS2
+      REAL(8)               :: SVAR ! SUPPORT VARIABLE
+      INTEGER(4)            :: IATC,IATP,ISTEP,IP,i,ib
+      INTEGER(4)            :: it(3)
+      INTEGER(4)            :: natc  !#(center atoms)
+!     **************************************************************************
+      ALLOCATE(RAD(NAT))
+      RAD(:)=0.5D0*RMAX
+      natc=0
+      do iatc=1,nat
+        if(tselectc(iatc))natc=natc+1
+      enddo
+      ALLOCATE(BOND(NBX))
+      ISTEP=1
+      nb=0
+      CALL BONDS_EVAL(RBAS,NAT,R(:,:,ISTEP),RAD,SCALEX,NBX,NB,BOND)
+!
+!     __REMOVE UNDESIRED BONDS__________________________________________________
+      IB=0
+      DO I=1,NB
+        IATC=BOND(I)%IAT1
+        IF(.NOT.TSELECTC(IATC)) CYCLE
+        IATP=BOND(I)%IAT2
+        IF(.NOT.TSELECTP(IATP)) CYCLE
+        IB=IB+1
+        IF(IB.LT.I) BOND(IB)=BOND(I)
+      ENDDO
+      NB=IB
+!
+!     __ARRANGE BONDS SUITABLE FOR CASHING______________________________________
+      DO IB=1,NB-1
+        DO I=IB+1,NB
+          IATC=BOND(IB)%IAT1
+          IATP=BOND(IB)%IAT2
+          IF(BOND(I)%IAT1.LT.IATC) THEN
+            BOND1=BOND(IB)
+            BOND(IB)=BOND(I)
+            BOND(I)=BOND1
+            IATC=BOND(IB)%IAT1  
+            IATP=BOND(IB)%IAT2  
+          ELSE IF(BOND(I)%IAT1.EQ.IATC) THEN
+            IF(BOND(I)%IAT1.LT.IATP) THEN
+              BOND1=BOND(IB)
+              BOND(IB)=BOND(I)
+              BOND(I)=BOND1
+              IATP=BOND(IB)%IAT2
+            END IF
+          END IF
+        ENDdo
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ACCUMULATE HISTOGRAM                                                ==
+!     ==========================================================================
+      SVAR=1.D0/RMAX*REAL(NP,KIND=8)
+      HISTOGRAM(:)=0.D0
+      DO ISTEP=1,NSTEP
+        DO IB=1,NB
+          IATC=BOND(ib)%IAT1
+          IATP=BOND(ib)%IAT2
+          DR(:)=R(:,IATP,ISTEP)-R(:,IATC,ISTEP)   
+          IT=BOND(ib)%IT
+          if(sum(it**2).ne.0) DR(:)=dr(:)+MATMUL(RBAS,REAL(IT,KIND=8))
+          DIS2=SUM((DR(:))**2)
+          IF(DIS2.GE.RMAX2) CYCLE
+          IP=1+INT(SQRT(DIS2)*SVAR)
+          HISTOGRAM(IP)=HISTOGRAM(IP)+1.D0
+        ENDDO
+      ENDDO
+      HISTOGRAM(:)=HISTOGRAM(:)/REAL(NSTEP,KIND=8)
+!
+!     __DIVIDE BY THE NUMBER OF CENTRAL ATOMS___________________________________
+      HISTOGRAM(:)=HISTOGRAM(:)/REAL(NATC,KIND=8)
+!
+!     __CONVERT SUM INTO DENSITY________________________________________________
+      HISTOGRAM(:)=HISTOGRAM(:)/(RMAX/REAL(NP,KIND=8))
+!
+!     ==========================================================================
+!     ==  WRITE HISTOGRAM TO FILE                                             ==
+!     ==========================================================================
+      DO IP=1,NP
+        SVAR=REAL(IP,KIND=8)/REAL(NP,KIND=8)*RMAX
+        WRITE(NFIL,*)SVAR,HISTOGRAM(IP)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      subroutine PAIRCORRELATION2(NFIL,RBAS,NAT,TSELECTC,TSELECTP,NSTEP,R)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4),INTENT(IN) :: NAT
+      LOGICAL(4),INTENT(IN) :: TSELECTC(NAT)
+      LOGICAL(4),INTENT(IN) :: TSELECTP(NAT)
+      INTEGER(4),INTENT(IN) :: NSTEP
+      REAL(8)   ,INTENT(IN) :: R(3,NAT,nSTEP)
+      REAL(8)   ,PARAMETER  :: RMAX=5.D0
+      REAL(8)   ,PARAMETER  :: RMAX2=RMAX**2
+      INTEGER(4),PARAMETER  :: ITX=3
+      INTEGER(4),PARAMETER  :: NP=1000  ! #(GRID POINTS ON HISTOGRAM)
+      REAL(8)               :: HISTOGRAM(NP)
+      INTEGER(4)            :: NT ! #(TRANSLATION VECTORS KEPT)
+      REAL(8)   ,ALLOCATABLE:: TVEC(:,:) ! (3,NT)
+      REAL(8)               :: r1(3)
+      REAL(8)               :: DR(3)
+      REAL(8)               :: dis2
+      REAL(8)               :: SVAR ! SUPPORT VARIABLE
+      INTEGER(4)            :: IT1,IT2,IT3
+      INTEGER(4)            :: iatc,iatp,IT,istep,ip
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == DETERMINE SET OF TRANSLATION VECTORS                                 ==
+!     ==========================================================================
+!     == SVAR ADDS MAIN DIAGONAL OF UNIT CELL TO MAXIMUM DISTANCE
+      SVAR=SQRT(SUM((RBAS(:,1)+RBAS(:,2)+RBAS(:,3))**2))
+      DO IT1=-ITX,ITX
+        DO IT2=-ITX,ITX
+          DO IT3=-ITX,ITX
+            DR(:)=RBAS(:,1)*REAL(IT1,KIND=8) &
+                 +RBAS(:,2)*REAL(IT2,KIND=8) &
+                 +RBAS(:,3)*REAL(IT3,KIND=8) 
+            IF(SQRT(SUM(DR**2)).LT.RMAX+SVAR)NT=NT+1
+          ENDDO
+        ENDDO
+      ENDDO
+      ALLOCATE(TVEC(3,NT))
+      DO IT1=-ITX,ITX
+        DO IT2=-ITX,ITX
+          DO IT3=-ITX,ITX
+            DR(:)=RBAS(:,1)*REAL(IT1,KIND=8) &
+                 +RBAS(:,2)*REAL(IT2,KIND=8) &
+                 +RBAS(:,3)*REAL(IT3,KIND=8) 
+            IF(SQRT(SUM(DR**2)).LT.RMAX+SVAR) THEN
+              IT=IT+1
+              TVEC(:,IT)=DR(:)
+            END IF
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ACCUMULATE HISTOGRAM                                                ==
+!     ==========================================================================
+      SVAR=1.D0/RMAX*REAL(NP,KIND=8)
+      HISTOGRAM(:)=0.D0
+      DO ISTEP=1,NSTEP
+        DO IATC=1,NAT
+          IF(.NOT.TSELECTC(IATC)) CYCLE
+          R1(:)=R(:,IATC,ISTEP)
+          DO IATP=1,NAT
+            IF(.NOT.TSELECTP(IATP)) CYCLE
+            dr(:)=R(:,IATP,ISTEP)-R1(:)
+            DO IT=1,NT
+              DIS2=SUM((dr(:)+TVEC(:,IT))**2)
+              IF(DIS2.GE.RMAX2) CYCLE
+              IP=1+INT(SQRT(DIS2)*SVAR)
+              HISTOGRAM(IP)=HISTOGRAM(IP)+1.D0
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+      HISTOGRAM=HISTOGRAM/REAL(NSTEP,KIND=8)
+      HISTOGRAM=HISTOGRAM/REAL(NP,KIND=8)
+!
+!     ==========================================================================
+!     ==  WRITE HISTOGRAM TO FILE                                             ==
+!     ==========================================================================
+      DO IP=1,NP
+        SVAR=REAL(IP,KIND=8)/REAL(NP,KIND=8)*RMAX
+        WRITE(NFIL,*)SVAR,HISTOGRAM(IP)
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SNAPSHOT(LL_CNTL_)!
+!     **************************************************************************
+!     **  PICKS OUT ONE PARTICULAR TIME STEP FROM A TRAJECTORY FILE           **
+!     **  AND PRODUCES PSEUDO STRUCTURE INPUT                                 **
+!     **  AND A CSSR FILE                                                     **
+!     **************************************************************************
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
       USE TRAJECTORY_MODULE
@@ -721,7 +933,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       CHARACTER(32),ALLOCATABLE:: ATOMM(:)
       REAL(8)      ,ALLOCATABLE:: POSM(:,:)
       REAL(8)      ,ALLOCATABLE:: QM(:)
-!     ******************************************************************
+!     **************************************************************************
                                CALL TRACE$PUSH('SNAPSHOT')
       IF(TQMMM) THEN
          ALLOCATE(TSELECT(QNAT))
@@ -741,9 +953,9 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       DO ISNAPSHOT=1,NSNAPSHOTS
         CALL LINKEDLIST$SELECT(LL_CNTL,'SNAPSHOT',ISNAPSHOT)
 !     
-!       ==============================================================
-!       ==  SPECIFY FILE                                            ==
-!       ==============================================================
+!       ========================================================================
+!       ==  SPECIFY FILE                                                      ==
+!       ========================================================================
         CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TCHK)
         IF(.NOT.TCHK) THEN
           IF(ISNAPSHOT.GT.1) THEN
@@ -863,7 +1075,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SOFT(LL_CNTL_)
 !     ******************************************************************
 !     **                                                              **
@@ -971,7 +1183,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPAGHETTI(LL_CNTL_)
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
@@ -1072,7 +1284,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TEMPERATURE(LL_CNTL_)
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
@@ -1269,7 +1481,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEMODES(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE TRAJECTORY_MODULE
@@ -1350,7 +1562,7 @@ CALL FILEHANDLER$FILENAME('TRA',str)
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MODES(LL_CNTL_)
       USE LINKEDLIST_MODULE
       USE TRAJECTORY_MODULE
@@ -1450,12 +1662,18 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READTRA(NFIL,T1,T2,DT)
-!     ******************************************************************
-!     **  READ TRAJECTORY FILE *****************************************
-!     ******************************************************************
-      USE TRAJECTORY_MODULE
+!     **************************************************************************
+!     **  READ TRAJECTORY FILE                                                **
+!     **************************************************************************
+      USE TRAJECTORY_MODULE, ONLY : TQMMM &
+     &                             ,RBAS &
+     &                             ,NAT &
+     &                             ,QNAT &
+     &                             ,ATOM &
+     &                             ,NSTEP &
+     &                             ,TRA 
       USE LINKEDLIST_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: T1
@@ -1471,46 +1689,45 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REAL(8)                :: PICO
       REAL(8)                :: SECOND
       REAL(8)                :: FIRSTONFILE,LASTONFILE
-      logical(4)             :: tchk,tspinread
-!     ******************************************************************
-
+      LOGICAL(4)             :: TCHK,TSPINREAD
+!     **************************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL CONSTANTS$GET('PICO',PICO)
 !
-!     ==================================================================
-!     ==  CALCULATE #(ATOMS)                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE #(ATOMS)                                                  ==
+!     ==========================================================================
       REWIND(NFIL)
       READ(NFIL)I,TIME,LENG 
       FIRSTONFILE=TIME
 !
       IF(.NOT.TQMMM) THEN
         IF(LENG.EQ.9+3*NAT+NAT+4*NAT) THEN
-!         == TRAJECTORY USES SPINS
-          TSPINREAD=.TRUE.
+          TSPINREAD=.TRUE.              ! TRAJECTORY USES SPINS
         ELSE IF(LENG.EQ.9+3*NAT+NAT) THEN
-!         == TRAJECTORY USES SPINS
-          TSPINREAD=.FALSE.
-        else
-          CALL ERROR$MSG('#(ATOMS) ON TRAJECTORY FILE INCONSISTENT WITH STRC FILE')
+          TSPINREAD=.FALSE.             ! NO SPIN INFORMATION IN TRAJECTORY 
+        ELSE
+          CALL ERROR$MSG('#(ATOMS) ON TRAJECTORY FILE INCONSISTENT')
+          CALL ERROR$MSG('                          WITH STRC FILE')
           CALL ERROR$I4VAL('ARRAY SIZE',LENG)
           CALL ERROR$I4VAL('#(ATOMS) ON STRC FILE',NAT)
           CALL ERROR$STOP('READTRA')
         END IF           
       ELSE
         TSPINREAD=.FALSE.
-        IF(QNAT.NE.(LENG-9)/4) THEN
-          CALL ERROR$MSG('#(ATOMS) ON TRAJECTORY FILE INCONSISTENT WITH STRC FILE')
+        IF(LENG.NE.9+4*QNAT) THEN
+          CALL ERROR$MSG('#(ATOMS) ON TRAJECTORY FILE INCONSISTENT')
+          CALL ERROR$MSG('                          WITH STRC FILE')
           CALL ERROR$I4VAL('#(ATOMS) ON TRA FILE',LENG/4)
           CALL ERROR$I4VAL('#(ATOMS) ON STRC FILE',QNAT)
           CALL ERROR$STOP('READTRA')
         END IF
       END IF
 !
-!     ==================================================================
-!     ==  CALCULATE NUMBER OF RECORDS                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE NUMBER OF RECORDS                                         ==
+!     ==========================================================================
       REWIND(NFIL)
       NSTEP=0
       TLAST=-1.D+6
@@ -1543,10 +1760,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
         CALL ERROR$STOP('READTRA')
       END IF
 !
-!     ==================================================================
-!     ==  ALLOCATE TRAJECTORY AND READ                                ==
-!     ==================================================================
-!clemens
+!     ==========================================================================
+!     ==  ALLOCATE TRAJECTORY AND READ                                        ==
+!     ==========================================================================
+!CLEMENS
       ALLOCATE(TRA%CELL(9,NSTEP))
       IF(.NOT.TQMMM) THEN
          ALLOCATE(TRA%R(3,NAT,NSTEP))
@@ -1555,27 +1772,33 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
          ALLOCATE(TRA%R(3,QNAT,NSTEP))
          ALLOCATE(TRA%Q(QNAT,NSTEP))
       END IF
-      if(tspinread) then
-         allocate(tra%spin(3,nat,nstep))
-         allocate(tra%charge(nat,nstep)) 
-      end if
+      IF(TSPINREAD) THEN
+         ALLOCATE(TRA%SPIN(3,NAT,NSTEP))
+         ALLOCATE(TRA%CHARGE(NAT,NSTEP)) 
+      END IF
       ALLOCATE(TRA%T(NSTEP))
       ALLOCATE(TRA%ISTEP(NSTEP))
+!
+!     == POSITION FILE AT BEGINNING OF SELECTED TIME-INTERVAL ==================
       REWIND(NFIL)
       DO IREC=1,ISTART
         READ(NFIL)
       ENDDO
+!
+!     == READ TRAJECTORY =======================================================
       TLAST=-1.D+9
       IREC=0
       I=1
       DO 
-!clemens
-        if(tspinread) then
+!CLEMENS
+        IF(TSPINREAD) THEN
           READ(NFIL,END=200)TRA%ISTEP(I),TRA%T(I),LENG,TRA%CELL(:,I) &
-    &                      ,TRA%R(:,:,I),TRA%Q(:,I),tra%charge(:,i),tra%spin(:,:,i)
-        else
-          READ(NFIL,END=200)TRA%ISTEP(I),TRA%T(I),LENG,TRA%CELL(:,I),TRA%R(:,:,I),TRA%Q(:,I)
-        end if
+    &                      ,TRA%R(:,:,I),TRA%Q(:,I) &
+    &                      ,TRA%CHARGE(:,I),TRA%SPIN(:,:,I)
+        ELSE
+          READ(NFIL,END=200)TRA%ISTEP(I),TRA%T(I),LENG,TRA%CELL(:,I) &
+    &                      ,TRA%R(:,:,I),TRA%Q(:,I)
+        END IF
         IF(TRA%T(I)-TLAST.LT.DT) CYCLE
         TLAST=TRA%T(I)
         I=I+1
@@ -1583,9 +1806,9 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       ENDDO
  200  CONTINUE
 !
-!     ==================================================================
-!     ==  REPORT                                                      ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  REPORT                                                              ==
+!     ==========================================================================
       CALL REPORT$TITLE(NFILO,'TRAJECTORY INFORMATION')
       CALL REPORT$R8VAL(NFILO,'TRAJECTORY STARTS AT' &
      &                 ,FIRSTONFILE/(PICO*SECOND),'PSEC')
@@ -1609,11 +1832,11 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITETRA(LL_STRC_,LL_CNTL_)
-!     ******************************************************************
-!     **  WRITE MOVIE FILE                                            **
-!     ******************************************************************
+!     **************************************************************************
+!     **  WRITE MOVIE FILE                                                    **
+!     **************************************************************************
       USE TRAJECTORY_MODULE
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE 
@@ -1658,7 +1881,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REAL(8)      ,ALLOCATABLE :: QM(:) 
       LOGICAL(4)                :: TBOX,TQMMM_out
       real(8)      ,allocatable :: scaledrad(:)
-!     ******************************************************************
+!     **************************************************************************
                            CALL TRACE$PUSH('WRITETRA')
       LL_STRC=LL_STRC_
       LL_CNTL=LL_CNTL_
@@ -1964,7 +2187,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEXYZ(NFIL,FRAME,NAT,ID,R)
 !     ******************************************************************
 !     **                                                              **
@@ -1987,7 +2210,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MODEL$NATM(BOXR0,BOXVEC,NAT,POS,RBAS,NATM)
 !     ******************************************************************
 !     **                                                              **
@@ -2057,7 +2280,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !     
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MODEL$ATOMS(BOXR0,BOXVEC,NAT,POS,RBAS,NATM,POSM,MAP)
 !     ******************************************************************
 !     **                                                              **
@@ -2133,7 +2356,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !     
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MODEL$NBONDM(NAT,POS,RAD,NBOND)
 !     ******************************************************************
 !     **                                                              **
@@ -2158,7 +2381,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !     
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MODEL$BONDS(NAT,POS,RAD,NBOND,BOND)
 !     ******************************************************************
 !     **                                                              **
@@ -2188,11 +2411,11 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       RETURN
       END
 !
-!      ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE READ_STRC(LL_STRC_)
-!      ******************************************************************
-!      **  READS STRC FILE                                             **
-!      ******************************************************************
+!      *************************************************************************
+!      **  READS STRC FILE                                                    **
+!      *************************************************************************
        USE LINKEDLIST_MODULE
        USE STRINGS_MODULE
        USE PERIODICTABLE_MODULE
@@ -2214,15 +2437,15 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
        INTEGER(4)                :: NFILO
 integer(4),allocatable    :: ind(:)
 integer(4)                :: j,natm
-!      ******************************************************************
+!      *************************************************************************
                                CALL TRACE$PUSH('READ_STRC')
        LL_STRC=LL_STRC_
 
        CALL CONSTANTS$GET('U',MASSUNIT)
 !
-!      ==================================================================
-!      ==   GET NUMBER OF ATOMS AND ALLOCATE ARRAYS                    ==
-!      ==================================================================
+!      =========================================================================
+!      ==   GET NUMBER OF ATOMS AND ALLOCATE ARRAYS                           ==
+!      =========================================================================
        IF(.NOT.TQMMM) THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'~')
           CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -2258,9 +2481,9 @@ integer(4)                :: j,natm
        ATOM(:)=' '
        SP(:)=' '
 !
-!      ==================================================================
-!      ==   PICK UP ATOM SPECIES OF THE ATOMS                          ==
-!      ==================================================================
+!      =========================================================================
+!      ==   PICK UP ATOM SPECIES OF THE ATOMS                                 ==
+!      =========================================================================
        CALL LINKEDLIST$SELECT(LL_STRC,'~')
        CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
        IF(.NOT.TQMMM) THEN
@@ -2312,26 +2535,26 @@ integer(4)                :: j,natm
 
 
 
-!      ==CHECK FOR IDENTICAL ATOM NAMES AND INDICES OUT OF RANGE ========
+!      ==CHECK FOR IDENTICAL ATOM NAMES AND INDICES OUT OF RANGE ===============
        IF(.NOT.TQMMM) THEN
-          DO I=1,NAT
-             DO J=I+1,NAT
-                IF(IND(I).EQ.IND(J)) THEN
-                   CALL ERROR$MSG('TWO ATOMS WITH THE SAME NAME ARE NOT ALLOWED')
-                   CALL ERROR$CHVAL('ATOM NAME',ATOM(IND(I)))
-                   CALL ERROR$I4VAL('POSITION OF FIRST ATOM IN STRC_OUT FILE ',I)
-                   CALL ERROR$I4VAL('POSITION OF SECOND ATOM IN STRC_OUT FILE ',J)
-                   CALL ERROR$STOP('READ_STRC')
-                END IF
-             ENDDO
-          ENDDO
+         DO I=1,NAT
+            DO J=I+1,NAT
+              IF(IND(I).EQ.IND(J)) THEN
+                CALL ERROR$MSG('TWO ATOMS WITH THE SAME NAME ARE NOT ALLOWED')
+                CALL ERROR$CHVAL('ATOM NAME',ATOM(IND(I)))
+                CALL ERROR$I4VAL('POSITION OF FIRST ATOM IN STRC_OUT FILE ',I)
+                CALL ERROR$I4VAL('POSITION OF SECOND ATOM IN STRC_OUT FILE ',J)
+                CALL ERROR$STOP('READ_STRC')
+              END IF
+            ENDDO
+         ENDDO
        END IF
 
        IF(ALLOCATED(IND)) deallocate(ind)
 !
-!      ==================================================================
-!      ==   LOOK UP ATOMIC NUMBER OF SPECIES                           ==
-!      ==================================================================
+!      =========================================================================
+!      ==   LOOK UP ATOMIC NUMBER OF SPECIES                                  ==
+!      =========================================================================
        IF(.NOT.TQMMM.OR.FFORMAT.EQ.'STRC') THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'~')
           CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -2377,9 +2600,9 @@ integer(4)                :: j,natm
           END DO
        END IF
 !
-!      ==================================================================
-!      ==  OVERWRITE DEFAULTS                                          ==
-!      ==================================================================
+!      =========================================================================
+!      ==  OVERWRITE DEFAULTS                                                 ==
+!      =========================================================================
        IF(.NOT.TQMMM.OR.FFORMAT.EQ.'STRC') THEN
           CALL LINKEDLIST$SELECT(LL_STRC,'~')
           CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
@@ -2399,7 +2622,7 @@ integer(4)                :: j,natm
              DO I=1,QNAT
                 CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
                 CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
-                !             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX in QMMM Part
+!             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX in QMMM Part
                 IAT = I
                 CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
                 IF(TCHK)THEN
@@ -2412,9 +2635,9 @@ integer(4)                :: j,natm
           END IF
        END IF
 !
-!      ==================================================================
-!      ==   CHECK                                                      ==
-!      ==================================================================
+!      =========================================================================
+!      ==   CHECK                                                             ==
+!      =========================================================================
 
        IF(.NOT.TQMMM) THEN
           DO I=1,NAT
@@ -2437,9 +2660,9 @@ integer(4)                :: j,natm
        END IF
 
 !
-!     ==================================================================
-!     ==  GET UNIT CELL                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  GET UNIT CELL                                                       ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
@@ -2451,9 +2674,9 @@ integer(4)                :: j,natm
       CALL LINKEDLIST$GET(LL_STRC,'T',1,RBAS)
       RBAS=RBAS*LUNIT
 !
-!     ==================================================================
-!     ==  REPORT DATA                                                 ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  REPORT DATA                                                         ==
+!     ==========================================================================
      CALL FILEHANDLER$UNIT('PROT',NFILO)
      CALL REPORT$TITLE(NFILO,'DATA FROM STRUCTURE FILE')
      WRITE(NFILO,FMT='(10A8)')ATOM
@@ -2461,8 +2684,9 @@ integer(4)                :: j,natm
       RETURN
       END 
 !
-!     ..................................................................
-      SUBROUTINE DXBALLSTICK(NFIL,IOBJECT0,NAT,COLOR,RAD,POS,NBOND,IBOND,BOXR0,BOXVEC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DXBALLSTICK(NFIL,IOBJECT0,NAT,COLOR,RAD,POS &
+     &                      ,NBOND,IBOND,BOXR0,BOXVEC)
       USE STRINGS_MODULE
       implicit none
       INTEGER(4),INTENT(IN) :: NFIL
@@ -2479,11 +2703,11 @@ integer(4)                :: j,natm
       integer(4)            :: i1,i2,i3
       real(8)               :: t1,t2,t3
       real(8)               :: x,y,z
-!     ****************************************************************
+!     **************************************************************************
 !     
-!     ================================================================
-!     ==   DATA ARRAY: SIZE OF THE SPHERES                          ==
-!     ================================================================
+!     ==========================================================================
+!     ==   DATA ARRAY: SIZE OF THE SPHERES                                    ==
+!     ==========================================================================
 !     WRITE(NFIL,FMT='("#"/"#",T10,-"SPHERE SIZE"/"#")')
       WRITE(NFIL,FMT='(A,1X,I10)')-'OBJECT',IOBJECT0+1
       WRITE(NFIL,FMT='(A,1X,I10)')-"CLASS ARRAY TYPE FLOAT RANK 0 ITEMS ",NAT
@@ -2492,35 +2716,38 @@ integer(4)                :: j,natm
       WRITE(NFIL,FMT='(A)')      -"ATTRIBUTE ""DEP"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='("#")')
 !     
-!     ================================================================
-!     ==   COLORS                                                   ==
-!     ================================================================
+!     ==========================================================================
+!     ==   COLORS                                                             ==
+!     ==========================================================================
 !     WRITE(NFIL,FMT='("#"/"#",T10,"COLORS"/"#")')
       WRITE(NFIL,FMT='(A,1X,I10)')-'OBJECT',IOBJECT0+2
-      WRITE(NFIL,FMT='(A,1X,I10)')-"CLASS ARRAY TYPE FLOAT RANK 1 SHAPE 3 ITEMS",NAT
+      WRITE(NFIL,FMT='(A,1X,I10)') &
+     &                        -"CLASS ARRAY TYPE FLOAT RANK 1 SHAPE 3 ITEMS",NAT
       WRITE(NFIL,FMT='(A)')-"DATA FOLLOWS"
       WRITE(NFIL,FMT='(10F10.5)')COLOR(:,:)
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""DEP"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='("#")')
 !     
-!     ================================================================
-!     ==   POSITIONS ARRAY: ATOMIC POSITIONS                        ==
-!     ================================================================
+!     ==========================================================================
+!     ==   POSITIONS ARRAY: ATOMIC POSITIONS                                  ==
+!     ==========================================================================
 !     WRITE(NFIL,FMT='("#"/"#",T10,-"ATOMIC POSITIONS"/"#")')
       WRITE(NFIL,FMT='(A,1X,I10)')-"OBJECT ",IOBJECT0+3
-      WRITE(NFIL,FMT='(A,1X,I10)')-"CLASS ARRAY TYPE FLOAT RANK 1 SHAPE 3 ITEMS ",NAT
+      WRITE(NFIL,FMT='(A,1X,I10)') &
+     &                       -"CLASS ARRAY TYPE FLOAT RANK 1 SHAPE 3 ITEMS ",NAT
       WRITE(NFIL,FMT='(A)')      -"DATA FOLLOWS"
       WRITE(NFIL,FMT='(10F12.5)')POS(:,:)
       WRITE(NFIL,FMT='(A)')      -"ATTRIBUTE ""DEP"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='("#")')
 !     
-!     ================================================================
-!     ==   CONNECTIONS ARRAY: BONDS                                 ==
-!     ================================================================
+!     ==========================================================================
+!     ==   CONNECTIONS ARRAY: BONDS                                           ==
+!     ==========================================================================
       if(nbond.gt.0) then
 !     WRITE(NFIL,FMT='("#"/"#",T10,"BONDS"/"#")')
       WRITE(NFIL,FMT='(A,1X,I10)')-"OBJECT ",IOBJECT0+4
-      WRITE(NFIL,FMT='(A,1X,I10)')-"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND
+      WRITE(NFIL,FMT='(A,1X,I10)') &
+     &                       -"CLASS ARRAY TYPE INT RANK 1 SHAPE 2 ITEMS ",NBOND
       WRITE(NFIL,FMT='(A)')      -"DATA FOLLOWS"
       WRITE(NFIL,FMT='(10I5)')   IBOND(:,:)-1
       WRITE(NFIL,FMT='(A)')      -"ATTRIBUTE ""REF"" STRING ""POSITIONS"""
@@ -2528,9 +2755,9 @@ integer(4)                :: j,natm
       WRITE(NFIL,FMT='("#")')
       end if
 !     
-!     ================================================================
-!     ==   BOX: LATTICE VECTORS                                     ==
-!     ================================================================
+!     ==========================================================================
+!     ==   BOX: LATTICE VECTORS                                               ==
+!     ==========================================================================
 !     WRITE(NFIL,FMT='("#"/"#",T10,-"LATTICE VECTORS"/"#")')
       WRITE(NFIL,FMT='(A,I10)')-"OBJECT ",IOBJECT0+5
       WRITE(NFIL,FMT='(A)')-"CLASS ARRAY TYPE FLOAT RANK 1 SHAPE 3 ITEMS 8"
@@ -2550,9 +2777,9 @@ integer(4)                :: j,natm
       ENDDO
       WRITE(NFIL,FMT='("#")')
 !     
-!     ================================================================
-!     ==   OBJECT MOLECULE:                                         ==
-!     ================================================================
+!     ==========================================================================
+!     ==   OBJECT MOLECULE:                                                   ==
+!     ==========================================================================
       WRITE(NFIL,FMT='(A,1X,I10)')-"OBJECT",IOBJECT0+6
       WRITE(NFIL,FMT='(A)')      -"CLASS FIELD"
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""DATA"" VALUE ",IOBJECT0+1
@@ -2567,7 +2794,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !        
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMCOLOR(IZ,ICOLOR)
 !     ******************************************************************
 !     **                                                              **
@@ -2693,7 +2920,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BOND(IAT1,IAT2,ARRAY)
 !     ******************************************************************
 !     **   CALCULATE   BOND DISTANCE                                 ***
@@ -2743,7 +2970,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ANGLE(IAT1,IAT2,IAT3,ARRAY)
 !     ******************************************************************
 !     **   CALCULATE   BOND ANGLE                                     **
@@ -2789,7 +3016,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TORSION(IAT1,IAT2,IAT3,IAT4,ARRAY)
 !     ******************************************************************
 !     **   CALCULATE BOND TORSION                                     **
@@ -2864,7 +3091,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE VELOCITY(N,T,X,V)
 !     ******************************************************************
 !     **   CALCULATE TIME DERIVATIVE OF A COORDINATE TRAJECTORY       **
@@ -2892,7 +3119,7 @@ integer(4)                :: j,natm
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEIGHBORS(LL_CNTL_)
 !     ******************************************************************
 !     **                                                              **
@@ -2936,14 +3163,14 @@ integer(4)                :: j,natm
       TYPE(JUMP_TYPE),POINTER  :: JUMP
       TYPE(JUMP_TYPE),POINTER  :: JUMP1,NEXT
       CHARACTER(256)           :: FILENAME
-!     ******************************************************************
+!     **************************************************************************
       LL_CNTL=LL_CNTL_
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
 !
-!     ==================================================================
-!     ==  READ CONTROL FILE                                           ==      
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ CONTROL FILE                                                   ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'NEIGHBORS',1,TCHK)
@@ -2956,16 +3183,16 @@ integer(4)                :: j,natm
       CALL FILEHANDLER$SETSPECIFICATION('NEIGHBORS','FORM','FORMATTED')
       CALL FILEHANDLER$UNIT('NEIGHBORS',NFIL)
 !
-!     ==================================================================
-!     == CALCULATE RADII                                              ==      
-!     ==================================================================
+!     ==========================================================================
+!     == CALCULATE RADII                                                      ==
+!     ==========================================================================
       DO IAT=1,NAT
         CALL PERIODICTABLE$GET(IZ(IAT),'R(COV)',RCOV(IAT))
       ENDDO
 !
-!     ==================================================================
-!     == COLLECT POTENTIAL NEIGHBORS                                  ==      
-!     ==================================================================
+!     ==========================================================================
+!     == COLLECT POTENTIAL NEIGHBORS                                          ==
+!     ==========================================================================
 PRINT*,'BONDS'
       NBX=NAT*NPX
       ALLOCATE(BOND(NBX,NSTEP))
@@ -2974,26 +3201,26 @@ PRINT*,'BONDS'
         CALL BONDS_EVAL(RBAS,NAT,R,RCOV,DISTX,NBX,NB(ISTEP),BOND(:,ISTEP))
       ENDDO
 !
-!     ==================================================================
-!     == WRITE NEIGHBORHOOD                                           ==      
-!     ==================================================================
+!     ==========================================================================
+!     == WRITE NEIGHBORHOOD                                                   ==
+!     ==========================================================================
       WRITE(NFIL,FMT='("NEIGHBOR TABLE"/14("="))')
       ISTEP=1
       DO IAT=1,NAT
         CALL BONDS_NEIGHBORS(NFIL,IAT,NB(ISTEP),BOND(:,ISTEP))
       ENDDO
 !
-!     ==================================================================
-!     == COLLECT JUMPS                                                ==      
-!     ==================================================================
+!     ==========================================================================
+!     == COLLECT JUMPS                                                        ==
+!     ==========================================================================
 PRINT*,'COLLECT JUMPS'
       NULLIFY(FIRSTJUMP)
       NULLIFY(JUMP)
       DO ISTEP=1,NSTEP
 !
-!       ================================================================
-!       == LOOK FOR BOND FORMATION                                    ==
-!       ================================================================
+!       ========================================================================
+!       == LOOK FOR BOND FORMATION                                            ==
+!       ========================================================================
         IF(ISTEP.GT.1) THEN
           DO IB=1,NB(ISTEP)
             CALL BONDS_FIND(BOND(IB,ISTEP),NB(ISTEP-1),BOND(1,ISTEP-1),I)
@@ -3015,9 +3242,9 @@ PRINT*,'COLLECT JUMPS'
           ENDDO
         END IF
 !
-!       ================================================================
-!       == LOOK FOR BOND BREAKING                                     ==
-!       ================================================================
+!       ========================================================================
+!       == LOOK FOR BOND BREAKING                                             ==
+!       ========================================================================
         IF(ISTEP.LT.NSTEP) THEN
           DO IB=1,NB(ISTEP)
             CALL BONDS_FIND(BOND(IB,ISTEP),NB(ISTEP+1),BOND(1,ISTEP+1),I)
@@ -3040,9 +3267,9 @@ PRINT*,'COLLECT JUMPS'
         END IF
       ENDDO
 !
-!     ==================================================================
-!     == CLEAN JUMPS                                                  ==      
-!     ==================================================================
+!     ==========================================================================
+!     == CLEAN JUMPS                                                          ==
+!     ==========================================================================
 !PRINT*,'COLLAPSING'
       IF(.NOT.ASSOCIATED(FIRSTJUMP)) GOTO 9999
       DTMAX=0.1D0*PICO*SECOND
@@ -3122,9 +3349,9 @@ PRINT*,'COLLECT JUMPS'
       END IF
  1000 CONTINUE
 !
-!     ==================================================================
-!     == REPORT JUMPS                                                 ==      
-!     ==================================================================
+!     ==========================================================================
+!     == REPORT JUMPS                                                         ==
+!     ==========================================================================
 !PRINT*,'JUMPS AFTER CLEAN'
       JUMP=>FIRSTJUMP
       DO 
@@ -3151,9 +3378,9 @@ PRINT*,'COLLECT JUMPS'
 !PRINT*,'MARKE 4'
  9999 CONTINUE
 !
-!     ==================================================================
-!     == WRITE NEIGHBORHOOD                                           ==      
-!     ==================================================================
+!     ==========================================================================
+!     == WRITE NEIGHBORHOOD                                                   ==
+!     ==========================================================================
       WRITE(NFIL,FMT='("NEIGHBOR TABLE"/14("="))')
       ISTEP=NSTEP
       DO IAT=1,NAT
@@ -3163,7 +3390,7 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BONDS_NEIGHBORS(NFIL,IAT0,NB,BOND)
 !     ******************************************************************
 !     **   WRITES OUT A NEIGHBOR LIST FOR A SPECIFIED ATOM            **
@@ -3183,9 +3410,9 @@ PRINT*,'COLLECT JUMPS'
 !     ******************************************************************
       IPOINT(:)=0
 !
-!     ==================================================================
-!     ==  COUNT NUMBER OF NEIGHBORS                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COUNT NUMBER OF NEIGHBORS                                           ==
+!     ==========================================================================
       NPOINT=0
       DO IB=1,NB
         IF(BOND(IB)%IAT1.EQ.IAT0.OR.BOND(IB)%IAT2.EQ.IAT0) THEN
@@ -3194,9 +3421,9 @@ PRINT*,'COLLECT JUMPS'
         END IF
       ENDDO
 !
-!     ==================================================================
-!     ==  COUNT NUMBER OF NEIGHBORS                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  COUNT NUMBER OF NEIGHBORS                                           ==
+!     ==========================================================================
       ALLOCATE(NEIGHBOR(NPOINT))
       DO I=1,NPOINT
         IB=IPOINT(I)
@@ -3227,7 +3454,7 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BONDS_FIND(BOND0,NB,BOND,IB0)
 !     ******************************************************************
 !     **   CALCULATE TIME DERIVATIVE OF A COORDINATE TRAJECTORY       **
@@ -3264,7 +3491,7 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BONDS_ADDBOND(BOND0,RBAS,NAT,R,RCOV,NBX,NB,BOND)
 !     ******************************************************************
 !     **   CALCULATE TIME DERIVATIVE OF A COORDINATE TRAJECTORY       **
@@ -3301,7 +3528,7 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BONDS_DELETEBOND(BOND0,NB,BOND)
 !     ******************************************************************
 !     **   CALCULATE TIME DERIVATIVE OF A COORDINATE TRAJECTORY       **
@@ -3326,11 +3553,11 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BONDS_EVAL(RBAS,NAT,R,RCOV,SCALEX,NBX,NB,BOND)
-!     ******************************************************************
-!     **  LIST OF NEAREST NEIGHBOR BONDS                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  LIST OF NEAREST NEIGHBOR BONDS                                      **
+!     **************************************************************************
       USE TRAJECTORY_MODULE, ONLY: BOND_TYPE
       IMPLICIT NONE 
       INTEGER(4)     ,INTENT(IN) :: NAT              ! #(ATOMS)
@@ -3348,14 +3575,14 @@ PRINT*,'COLLECT JUMPS'
       REAL(8)                    :: DR1(3)
       REAL(8)                    :: DR2(3)
       INTEGER(4)                 :: IAT1,IAT2,IT1,IT2,IT3,IB1,IB2
-!     ******************************************************************
+!     **************************************************************************
       DO IB1=1,NBX
         BOND(IB1)=BOND_TYPE(0,0,(/0,0,0/),0.D0)
       ENDDO
 !
-!     ==================================================================
-!     == COLLECT POTENTIAL NEIGHBORS                                  ==      
-!     ==================================================================
+!     ==========================================================================
+!     == COLLECT POTENTIAL NEIGHBORS                                          ==
+!     ==========================================================================
       NB=0
       DO IAT1=1,NAT
         DO IAT2=IAT1,NAT
@@ -3384,6 +3611,8 @@ PRINT*,'COLLECT JUMPS'
                 NB=NB+1
                 IF(NB.GT.NBX) THEN
                   CALL ERROR$MSG('TO MANY NEIGHBORS')
+                  CALL ERROR$i4val('nb',nb)
+                  CALL ERROR$i4val('nbx',nbx)
                   CALL ERROR$STOP('BONDS_EVAL')
                 END IF
                 DIS=SQRT(DIS2)
@@ -3394,9 +3623,9 @@ PRINT*,'COLLECT JUMPS'
         ENDDO
       ENDDO 
 !
-!     ==================================================================
-!     == ORDER ACCORDING TO RELATIVE DISTANCE                         ==      
-!     ==================================================================
+!     ==========================================================================
+!     == ORDER ACCORDING TO RELATIVE DISTANCE                                 ==
+!     ==========================================================================
       DO IB1=1,NB
         DO IB2=IB1+1,NB
           IF(BOND(IB1)%DIS.LT.BOND(IB2)%DIS) THEN
@@ -3409,14 +3638,14 @@ PRINT*,'COLLECT JUMPS'
       RETURN
       END
 !
-!     ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SELECTION(LL_CNTL_,NATOM,ATOM,TSELECT)
-!     ****************************************************************
-!     **                                                            **
-!     **  READS THE STANDARDIZED BLOCK !SELECT FROM THE             **
-!     **  INPUT LINKEDLIST STRUCTURE                                **
-!     **                                                            **
-!     ****************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  READS THE STANDARDIZED BLOCK !SELECT FROM THE                       **
+!     **  INPUT LINKEDLIST STRUCTURE                                          **
+!     **                                                                      **
+!     **************************************************************************
       USE LINKEDLIST_MODULE
       implicit none
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
@@ -3429,15 +3658,15 @@ PRINT*,'COLLECT JUMPS'
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
       LOGICAL(4)   ,PARAMETER  :: TPR=.FALSE.
       integer(4)               :: iat
-!     ****************************************************************
+!     **************************************************************************
       LL_CNTL=LL_CNTL_
       TSELECT(:)=.TRUE.
       CALL LINKEDLIST$EXISTL(LL_CNTL,'SELECT',1,TCHK)
       IF(.NOT.TCHK) RETURN
 !
-!     ==================================================================
-!     ==  READ OUT NAMES OF SELECTED ATOMS                            ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ OUT NAMES OF SELECTED ATOMS                                    ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'SELECT')
       CALL LINKEDLIST$EXISTD(LL_CNTL,'ATOMS',1,TCHK)
       IF(.NOT.TCHK) THEN
@@ -3449,9 +3678,9 @@ PRINT*,'COLLECT JUMPS'
       CALL LINKEDLIST$GET(LL_CNTL,'ATOMS',1,ATOMNAMES(:))
       CALL LINKEDLIST$SELECT(LL_CNTL,'..')
 !
-!     ==================================================================
-!     ==  EVALUATE TSELECT VECTOR ENCODING SELECTED ATOMS             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  EVALUATE TSELECT VECTOR ENCODING SELECTED ATOMS                     ==
+!     ==========================================================================
       TSELECT(:)=.FALSE.
       DO I=1,N
         TCHK=.FALSE.
@@ -3471,9 +3700,9 @@ PRINT*,'COLLECT JUMPS'
         END IF
       ENDDO
 !
-!     ==================================================================
-!     ==  PRINT FOR TEST                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PRINT FOR TEST                                                      ==
+!     ==========================================================================
       IF(TPR) THEN
         DO IAT=1,NATOM
           IF(TSELECT(IAT)) THEN
@@ -3488,8 +3717,11 @@ PRINT*,'COLLECT JUMPS'
 !
       RETURN
       END
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITECSSR(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)
+!     **************************************************************************
+!     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTERFACE OPERATOR (.DYAD.)
@@ -3513,19 +3745,19 @@ PRINT*,'COLLECT JUMPS'
       INTEGER(4)              :: NEIGH(8,NAT)
       REAL(8)                 :: RBASINV(3,3) ! RBAS**(-1)
       REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
-      REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECTORS
+      REAL(8)                 :: ALPHA,BETA,GAMMA ! ANGLES BETWEEN LATTICE VECT
       REAL(8)                 :: DET
       INTEGER(4)              :: IAT,I,J
       REAL(8)                 :: VEC(3),SVAR,RBASNEU(3,3)
       REAL(8)                 :: ANGSTROM
-!     ******************************************************************
+!     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
 !
-!     ==================================================================
-!     == CONVERT DATA TO UNITS OF LATTICE VECTORS                     ==
-!     ==================================================================
+!     ==========================================================================
+!     == CONVERT DATA TO UNITS OF LATTICE VECTORS                             ==
+!     ==========================================================================
       IF(TCRYSTAL) THEN
         RBASINV(1,:)=RBAS(:,2).DYAD.RBAS(:,3)
         RBASINV(2,:)=RBAS(:,3).DYAD.RBAS(:,1)
@@ -3546,19 +3778,21 @@ PRINT*,'COLLECT JUMPS'
         RBASNEU(3,2)=B*COS(ALPHA*PI/180.D0)
         RBASNEU(2,2)=SQRT(B**2-RBASNEU(3,2)**2)
         RBASNEU(3,1)=A*COS(BETA*PI/180.D0)
-        RBASNEU(2,1)=(A*B*COS(GAMMA*PI/180.D0)-RBASNEU(3,1)*RBASNEU(3,2))/RBASNEU(2,2)
+        RBASNEU(2,1)=(A*B*COS(GAMMA*PI/180.D0)-RBASNEU(3,1)*RBASNEU(3,2)) &
+       &             /RBASNEU(2,2)
         RBASNEU(1,1)=SQRT(A**2-RBASNEU(2,1)**2-RBASNEU(3,1)**2)
       END IF
 !
-!     ==================================================================
-!     == WRITE CSSR FILE                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     == WRITE CSSR FILE                                                      ==
+!     ==========================================================================
       IF(TCRYSTAL) THEN
         WRITE(NFIL,FMT='(T39,3F8.3 &
      &   /T22,3F8.3,T50,"SPGR = 1 P 1",T72,"OPT = 1" &
-      &   /I4,''   1 CREATED BY PAW    '' &
+     &   /I4,''   1 CREATED BY PAW    '' &
      &   /"     0 ",A4,": ",A4)') &
-     &   A/ANGSTROM,B/ANGSTROM,C/ANGSTROM,ALPHA,BETA,GAMMA,NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
+     &   A/ANGSTROM,B/ANGSTROM,C/ANGSTROM,ALPHA,BETA,GAMMA &
+     &                ,NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
       ELSE
         WRITE(NFIL,FMT='(//I4,''   1 CREATED BY PAW    '' &
      &   /"     0 ",A4,": ",A4)')NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
@@ -3580,7 +3814,7 @@ PRINT*,'COLLECT JUMPS'
 
       RETURN
       END
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       FUNCTION DYADISCHES_PRODUCT(R1,R2) RESULT(R3)
         REAL(8), INTENT(IN) :: R1(3)
         REAL(8), INTENT(IN) :: R2(3)
