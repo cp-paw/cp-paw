@@ -6989,10 +6989,6 @@ CALL TIMING$CLOCKON('OFFX:ROTATE1')
 !
 !       == rotation matrix =====================================================
         CALL SPHERICAL$AXISUROT(DR,ROT,DROT)
-        ROT=TRANSPOSE(ROT)
-        DROT(:,:,1)=TRANSPOSE(DROT(:,:,1))
-        DROT(:,:,2)=TRANSPOSE(DROT(:,:,2))
-        DROT(:,:,3)=TRANSPOSE(DROT(:,:,3))
 !
 !       == CONSTRUCT TRANSFORMATION MATRIX FOR REAL SPHERICAL HARMONICS ========
         LMX=MAX(MAXVAL(POTPAR(ISPA)%LOXH),MAXVAL(POTPAR(ISPB)%LOXH))
@@ -7034,10 +7030,10 @@ CALL TIMING$CLOCKON('OFFX:ROTATE1')
 !       == ROTATE DENSITY MATRIX ===============================================
         !SUGGESTION: SPEED UP BY EXPLOITING THAT UROT IS SPARSE
         DO I=1,NDIMD
-          DAA(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DAA(:,:,I),UROTA))
-          DAB(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(DAB(:,:,I),UROTB))
-          DBA(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DBA(:,:,I),UROTA))
-          DBB(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(DBB(:,:,I),UROTB))
+          DAA(:,:,I)=MATMUL(UROTA,MATMUL(DAA(:,:,I),TRANSPOSE(UROTA)))
+          DAB(:,:,I)=MATMUL(UROTA,MATMUL(DAB(:,:,I),TRANSPOSE(UROTB)))
+          DBA(:,:,I)=MATMUL(UROTB,MATMUL(DBA(:,:,I),TRANSPOSE(UROTA)))
+          DBB(:,:,I)=MATMUL(UROTB,MATMUL(DBB(:,:,I),TRANSPOSE(UROTB)))
         ENDDO
 CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
 !
@@ -7281,12 +7277,12 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
        &            +MATMUL(DBA(:,:,I),TRANSPOSE(HBA(:,:,I)))
         ENDDO
         DO J=1,3
-          DUROTA(:,:,J)=MATMUL(TRANSPOSE(UROTA),DUROTA(:,:,J))
-          DUROTB(:,:,J)=MATMUL(TRANSPOSE(UROTB),DUROTB(:,:,J))
+          DUROTA(:,:,J)=MATMUL(DUROTA(:,:,J),TRANSPOSE(UROTA))
+          DUROTB(:,:,J)=MATMUL(DUROTB(:,:,J),TRANSPOSE(UROTB))
           DEDR(J)=0.D0
           DO I=1,NDIMD
-            DEDR(J)=DEDR(J)+SUM(DAA(:,:,I)*DUROTA(:,:,j)) &
-       &                   +SUM(DBB(:,:,I)*DUROTB(:,:,j)) 
+            DEDR(J)=DEDR(J)+SUM(DAA(:,:,I)*transpose(DUROTA(:,:,j))) &
+       &                   +SUM(DBB(:,:,I)*transpose(DUROTB(:,:,j))) 
           ENDDO
         ENDDO
         FORCE(:,IATB)=FORCE(:,IATB)-DEDR(:)
@@ -7299,12 +7295,13 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
 !       == ROTATE HAMILTONIAN BACK                                            ==
 !       ========================================================================
         DO I=1,NDIMD
-          HAA(:,:,I)=MATMUL(UROTA,MATMUL(HAA(:,:,I),TRANSPOSE(UROTA)))
-          HAB(:,:,I)=MATMUL(UROTA,MATMUL(HAB(:,:,I),TRANSPOSE(UROTB)))
-          HBA(:,:,I)=MATMUL(UROTB,MATMUL(HBA(:,:,I),TRANSPOSE(UROTA)))
-          HBB(:,:,I)=MATMUL(UROTB,MATMUL(HBB(:,:,I),TRANSPOSE(UROTB)))
+          HAA(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(HAA(:,:,I),UROTA))
+          HAB(:,:,I)=MATMUL(TRANSPOSE(UROTA),MATMUL(HAB(:,:,I),UROTB))
+          HBA(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(HBA(:,:,I),UROTA))
+          HBB(:,:,I)=MATMUL(TRANSPOSE(UROTB),MATMUL(HBB(:,:,I),UROTB))
         ENDDO
-        IF(TOV) OV(:,:)=MATMUL(UROTA,MATMUL(OV(:,:),TRANSPOSE(UROTB)))
+!        IF(TOV) OV(:,:)=MATMUL(UROTA,MATMUL(OV(:,:),TRANSPOSE(UROTB)))
+        IF(TOV) OV(:,:)=MATMUL(TRANSPOSE(UROTA),MATMUL(OV(:,:),UROTB))
         DEALLOCATE(UROTA)
         DEALLOCATE(UROTB)
         DEALLOCATE(dUROTA)
