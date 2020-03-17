@@ -892,7 +892,7 @@ END MODULE STOPIT_MODULE
      &            'ANNEE','ANNER','COSMO-EPOT','COSMO-EKIN'
         ELSE
           WRITE(NFILO,FMT='()')
-          WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A10,2A13,2A8)') &
+          WRITE(NFILO,FMT='(2X,A5,A9,1X,A4,1X,A11,2A14,2A8)') &
      &            'NFI','T[PSEC]','T[K]','EKIN(PSI)','E(RHO)','ECONS', &
      &            'ANNEE','ANNER'
         END IF
@@ -987,6 +987,10 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         CALL WAVES$GETR8('FRICTION',ANNEE)
         CALL ATOMS$GETR8('FRICTION',ANNER)
 !
+!       __REMARK: ALL DATA ENTRIES SHOULD BE SEPARATED BY A BLANK (1X),_________
+!       __SO THAT THE PARSER PAW_SHOW.X DOES NOT GET CONFUSED IF VALUES_________
+!       __ARE TOO LARGE. THIS HAS BEEN DONE SOFAR ONLY FOR THE GENERIC PRINTOUT_
+!       __AND IT NEEDS TO BE DONE FOR TCOSMO, TQMMM, CALGARY_QMMM_______________
         IF (TCOSMO) THEN
           WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5' &
      &                     //',2F11.5)') &
@@ -1007,7 +1011,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
      &                     NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &                    ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
         ELSE
-          WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5)') &
+          WRITE(NFILO,FMT='("!>",I6,1X,F9.5,1X,I5,1X,F10.6,1X,F13.6,1X,F13.6 &
+     &                          ,1X,F7.4,1X,F7.4)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER
         ENDIF
 !

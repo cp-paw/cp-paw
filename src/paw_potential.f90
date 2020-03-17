@@ -1086,7 +1086,6 @@
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
       INTEGER(4),INTENT(IN)   :: LMRXX
       INTEGER(4),INTENT(IN)   :: LRXX 
       INTEGER(4),INTENT(IN)   :: NGL
@@ -1115,7 +1114,9 @@
       REAL(8)   ,INTENT(IN)   :: DV0(NGL,NSP)
       REAL(8)   ,INTENT(OUT)  :: STRESS(3,3)
       REAL(8)   ,PARAMETER    :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER    :: FPI=4.D0*PI
       REAL(8)   ,PARAMETER    :: Y0=1.D0/SQRT(4.D0*PI)
+      COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
       COMPLEX(8),ALLOCATABLE  :: EIGR(:)         !(NGL)
       COMPLEX(8),ALLOCATABLE  :: RHO2(:)         !(NGL) PSRHO+COMPENSATION
       COMPLEX(8),ALLOCATABLE  :: VG(:)           !(NGL)
@@ -1125,13 +1126,11 @@
       REAL(8)                 :: VB               !VHAT(GAMMA)
       INTEGER(4)              :: M,L,LM,ISP,IAT,IG,I,J,LM1,LM2
       REAL(8)                 :: SVAR,SVAR1
-      REAL(8)                 :: FPI
       REAL(8)                 :: CC(3,3)
       COMPLEX(8)              :: P0(3,3,LMRXX),PM(3,3,LMRXX),PT(3,3)
       REAL(8)   ,PARAMETER    :: R8SMALL=1.D-20
 !      REAL(8)                 :: STRESSA(3,3),STRESSB(3,3),STRESSC(3,3)
 !     ******************************************************************
-      FPI=4.D0*PI
       CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
 !
       ALLOCATE(EIGR(NGL))

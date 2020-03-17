@@ -1505,17 +1505,22 @@ functions.
 \vrules{optional}
 \vdefault{F}}
 %
-\mbax{\key{RANDOM[K]}
-\vdescr{adds random velocities at the start; the velocity distribution 
-corresponds to a temperature in Kelvin. Can be used to bring the
-system quickly to a finite temperature. Note, however, that the
-electron wave functions cannot immediately follow this
-sudden kick. They will start to lag behind, and deviate from the 
-Born-Oppenheimer surface. A small friction acting on the wave functions
-will allow the wave functions to recover.}
-\vformat{real}
-\vrules{optional}
-\vdefault{0}}
+\mbax{\key{RANDOM[K]} 
+\vdescr{adds random velocities once at the beginning of the
+  simulation; the velocity distribution corresponds to a temperature
+  in Kelvin. Can be used to bring the system quickly to a finite
+  temperature. Note, however, that the electron wave functions cannot
+  immediately follow this sudden kick. They will start to lag behind,
+  and deviate from the Born-Oppenheimer surface. A small friction
+  acting on the wave functions will allow the wave functions to
+  recover. Remark: The initial temperature typically drops quickly,
+  because much of the kinetic energy from the initial kick is
+  converted into potential energy. For a harmonic oscillator, as model
+  for the atomic vibrations, kinetic energy and vibrational potential
+  energy become equal in thermal equilibrium.}  
+  \vformat{real} 
+  \vrules{optional} 
+  \vdefault{0}}
 
 \mbax{\key{FRIC}
 \vdescr{constant friction $c_\alpha$}

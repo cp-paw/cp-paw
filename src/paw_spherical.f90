@@ -455,6 +455,97 @@ END MODULE SPHERICAL_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$AXISUROT(DR,U,DU)
+!     **************************************************************************
+!     ** DETERMINES A 3X3 ROTATION MATRIX U, WHICH TRANSFORMS THE VECTOR DR   **
+!     ** INTO THE Z-DIRECTION, AND ITS DERIVATIVE DU                          **
+!     **     E_Z|DR|=U*DR, WHERE E_Z IS THE UNIT VECTOR IN Z-DIRECTION        **
+!     **     DU(I,J,K)=DU_IJ/DR_K                                             **
+!     **                                                                      **
+!     ** REMARK: THE MATRIX U CHANGES DISCONTINUOUSLY, WHEN THE TWO ABSOLUTE  **
+!     **   SMALLEST COMPONENTS OF DR INTERCHANGE. THIS CAN CONFUSE TESTS      **
+!     **   BASED ON NUMERICAL DIFFERENCES                                     **
+!     **************************************PETER BLOECHL, GOSLAR 2020**********
+      IMPLICIT NONE
+      REAL(8),INTENT(IN)  :: DR(3)      ! VECTOR WILL BE ROTATED IN Z-DIRECTION
+      REAL(8),INTENT(OUT) :: U(3,3)     ! UNITARY ROTATION MATRIX U(I,J)
+      REAL(8),INTENT(OUT) :: DU(3,3,3)  ! DERIVATIVE DU(I,J)/DR(K)
+      REAL(8)             :: AVEC(3)
+      REAL(8)             :: Y(3,3)
+      REAL(8)             :: Y1L,Y2L,Y3L
+      REAL(8)             :: DYDR(3,3,3)
+      REAL(8)             :: ADR
+      REAL(8)             :: DR2
+      REAL(8)             :: SVAR
+      INTEGER(4)          :: I,J,N
+!     **************************************************************************
+!     ==========================================================================
+!     == CHOOSE VECTOR AVEC, WHICH IS NOT LINEAR DEPENDENT WITH DR            ==
+!     ==========================================================================
+      AVEC(:)=0.D0
+      AVEC(MINLOC(ABS(DR),1))=1.D0
+      ADR=SUM(AVEC*DR)
+      DR2=SUM(DR*DR)
+!
+!     ==========================================================================
+!     == DETERMINE ORTHOGONAL SET OF VECTORS WITH Y3 LINEAR DEPENDENT WITH DR ==
+!     ==========================================================================
+      Y(:,3)=DR(:)
+      Y(1,2)=AVEC(2)*DR(3)-AVEC(3)*DR(2)
+      Y(2,2)=AVEC(3)*DR(1)-AVEC(1)*DR(3)
+      Y(3,2)=AVEC(1)*DR(2)-AVEC(2)*DR(1)
+      Y(:,1)=DR(:)*ADR-AVEC(:)*DR2   ! Y2 TIMES Y3 (SEE BAC-CAB RULE)
+!
+!     ==========================================================================
+!     == DETERMINE GRADIENT OF THE VECTORS Y                                  ==
+!     ==========================================================================
+      DYDR(:,:,:)=0.D0
+      DO I=1,3
+        DYDR(I,3,I)=1.D0
+      ENDDO
+      DYDR(1,2,3)= AVEC(2)
+      DYDR(1,2,2)=-AVEC(3)
+      DYDR(2,2,1)= AVEC(3)
+      DYDR(2,2,3)=-AVEC(1)
+      DYDR(3,2,2)= AVEC(1)
+      DYDR(3,2,1)=-AVEC(2)
+      DO I=1,3
+        DYDR(:,1,I)=DR(:)*AVEC(I)-AVEC(:)*2.D0*DR(I)
+        DYDR(I,1,I)=DYDR(I,1,I)+ADR
+      ENDDO
+!
+!     ==========================================================================
+!     == NORMALIZE Y-VECTORS                                                  ==
+!     ==========================================================================
+      Y1L=SQRT(SUM(Y(:,1)**2))
+      Y2L=SQRT(SUM(Y(:,2)**2))
+      Y3L=SQRT(SUM(Y(:,3)**2))
+      Y(:,1)=Y(:,1)/Y1L
+      Y(:,2)=Y(:,2)/Y2L
+      Y(:,3)=Y(:,3)/Y3L
+      DYDR(:,1,:)=DYDR(:,1,:)/Y1L
+      DYDR(:,2,:)=DYDR(:,2,:)/Y2L
+      DYDR(:,3,:)=DYDR(:,3,:)/Y3L
+      DO N=1,3
+        DO J=1,3
+          SVAR=SUM(Y(:,J)*DYDR(:,J,N))
+          DYDR(:,J,N)=DYDR(:,J,N)-Y(:,J)*SVAR
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     == ROTATION MATRIX AND GRADIENT                                         ==
+!     == ROTATION MATRIX U IS THE TRANSPOSE OF THE VECTOR-MATRIX Y            ==
+!     ==========================================================================
+      U=TRANSPOSE(Y)
+      DO N=1,3
+        DU(:,:,N)=TRANSPOSE(DYDR(:,:,N))
+      ENDDO
+
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPHERICAL$ROTATEYLM(LMX,ROT,YLMROT)
 !     **************************************************************************
 !     **  PRODUCES A LMX*LMX MATRIX YLMROT                                    **
@@ -556,6 +647,144 @@ END MODULE SPHERICAL_MODULE
                ENDDO
              ENDDO
              YLMROT(LM1,LM2)=SVAR/SVAR2
+           ENDDO
+         ENDDO 
+       ENDDO
+!
+!      =================================================================
+!      == PRINT RESULT FOR TEST PURPOSES                              ==
+!      =================================================================
+       IF(TPR) THEN
+         DO L=0,LX
+           LM1A=L**2+1
+           LM1B=(L+1)**2
+           DO LM1=LM1A,LM1B
+             WRITE(*,FMT='(9F10.3)')YLMROT(LM1A:LM1B,LM1)
+           ENDDO
+         ENDDO
+       END IF
+       RETURN
+       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SPHERICAL$ROTATEYLMWDER(LMX,N,ROT,DROT,YLMROT,DYLMROT)
+!     **************************************************************************
+!     **  SIMILAR TO SPHERICAL$ROTATEYLM, BUT WITH GRADIENTS                  **
+!     **                                                                      **
+!     **  PRODUCES A LMX*LMX MATRIX YLMROT AND GRADIENTS                      **
+!     **  THAT TRANSFORMS A COEFFICIENT VECTOR C_LM                           **
+!     **  OF A FUNCTION EXPRESSED AS F(R)=SUM_LM Y_LM(R)*C_LM                 **
+!     **  INTO A COORDINATE SYSTEM RPRIME=ROT*R                               **
+!     **  WITH YPRIME_LM(RPRIME)=Y_LM(R)                                      **
+!     **  SUCH THAT    F(R)=SUM_LM YPRIME_LM(R)*CPRIME_LM                     **
+!     **  WITH CPRIME_LM1=SUM_LM2 YLMROT_LM1,LM2 C_LM2                        **
+!     **  REMAINS INVARIANT UNDER ROTATION                                    **
+!     **                                                                      **
+!     **  WORKS ONLY FOR REAL HARMONICS  WITH Y_2=C*X;Y_3=C*Z;Y_4=C*Y         **
+!     **  USES THE CLEBSCH GORDAN ROUTINE CLEBSCH                             **
+!     **                                                                      **
+!     **  DROT(LMX,LMX,N) DESCRIBES N DERIVATIVES OF the rotation matrix      **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: LMX             ! #(L,M-ANGULAR MOMENTA)
+      INTEGER(4),INTENT(IN) :: N               ! #(DERIVATIVES)
+      REAL(8)   ,INTENT(IN) :: ROT(3,3)        ! ROTATION MATRIX FOR POSITIONS
+      REAL(8)   ,INTENT(IN) :: DROT(3,3,N)     ! PERTURBATION
+      REAL(8)   ,INTENT(OUT):: YLMROT(LMX,LMX) !ROTATION MATRIX FOR COEFFICIENTS
+      REAL(8)   ,INTENT(OUT):: DYLMROT(LMX,LMX,N) !PERTURBATION
+      LOGICAL(4),PARAMETER  :: TPR=.FALSE.     ! PRINTS RESULT
+      LOGICAL(4),PARAMETER  :: TTEST=.TRUE.    ! CHECKS WHETHER ROt IS UNITARY
+      INTEGER(4)            :: LX
+      INTEGER(4)            :: I1,I2,J1,J2
+      INTEGER(4)            :: INDEX(3)
+      INTEGER(4)            :: LM1A,LM1B,LM2A,LM2B
+      INTEGER(4)            :: LM1,LM2,LM3,LM4,LM5,LM6,L
+      REAL(8)               :: SVAR,SVAR1,SVAR2,CG
+      REAL(8)               :: DSVAR(N),DSVAR1(N)
+!     **************************************************************************
+!
+!      =========================================================================
+!      == TEST WHETHER ROTATION MATRIX IS UNITARY                             ==
+!      =========================================================================
+       IF(TTEST) THEN
+         SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(2,3)*ROT(3,2)) &
+      &      +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(2,1)*ROT(3,3)) &
+      &      +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(2,2)*ROT(3,1))
+         IF(ABS(SVAR-1.D0).GT.1.D-12) THEN
+           CALL ERROR$MSG('ROTATION MATRIX NOT UNITARY')
+           CALL ERROR$STOP('SPHERICAL$ROTATYLMWDER')
+         END IF
+       END IF
+!
+!      =========================================================================
+!      == INITIALIZE YLMROT FOR L=0 AND L=1                                   ==
+!      =========================================================================
+       LX=INT(SQRT(REAL(LMX))-1.D0)
+       IF((LX+1)**2.NE.LMX) THEN   !LMX=(LX+1)**2
+         CALL ERROR$MSG('LMX DOES NOT CORRESPOND TO A FULL SHELL')
+         CALL ERROR$MSG('OR ROUNDING ERRORS PRODUCED INCORRECT RESULTS')
+         CALL ERROR$I4VAL('LMX',LMX)
+         CALL ERROR$I4VAL('LX',LX)
+         CALL ERROR$STOP('SPHERICAL$ROTATYLMWDER')
+       END IF
+       YLMROT(:,:)=(0.D0,0.D0)
+       IF(LX.GE.0) THEN
+         YLMROT(1,1)=1.D0
+         DYLMROT(1,1,:)=0.D0
+       END IF
+       IF(LX.GE.1) THEN
+         INDEX(1)=2
+         INDEX(2)=4
+         INDEX(3)=3
+         DO I1=1,3
+           I2=INDEX(I1)
+           DO J1=1,3
+             J2=INDEX(J1)
+             YLMROT(I2,J2)   =ROT(I1,J1)
+             DYLMROT(I2,J2,:)=DROT(I1,J1,:)
+           ENDDO
+         ENDDO
+       END IF
+!
+!      =========================================================================
+!      == APPLY RECURSION FOR YLMROT FOR L>1                                  ==
+!      =========================================================================
+       DO L=2,LX
+         LM1A=L**2+1
+         LM1B=(L+1)**2
+         LM2A=(L-1)**2+1
+         LM2B=L**2
+         SVAR2=0.D0
+         DO LM3=2,4
+           DO LM5=LM2A,LM2B
+             CALL CLEBSCH(LM1A,LM3,LM5,CG)
+             SVAR2=SVAR2+CG**2
+           ENDDO
+         ENDDO
+         
+         DO LM1=LM1A,LM1B
+           DO LM2=LM1A,LM1B
+             SVAR=0.D0
+             DO LM3=2,4
+               DO LM5=LM2A,LM2B
+                 SVAR1=0.D0
+                 DSVAR1=0.D0
+                 DO LM4=2,4
+                   DO LM6=LM2A,LM2B
+                     CALL CLEBSCH(LM2,LM4,LM6,CG)
+                     SVAR1=SVAR1+YLMROT(LM3,LM4)*YLMROT(LM5,LM6)*CG
+                     DSVAR1=DSVAR1+(DYLMROT(LM3,LM4,:)*YLMROT(LM5,LM6) &
+       &                           +YLMROT(LM3,LM4)*DYLMROT(LM5,LM6,:))*CG
+                   ENDDO
+                 ENDDO
+                 CALL CLEBSCH(LM1,LM3,LM5,CG)
+                 SVAR=SVAR+SVAR1*CG
+                 DSVAR(:)=DSVAR(:)+DSVAR1(:)*CG
+               ENDDO
+             ENDDO
+             YLMROT(LM1,LM2)=SVAR/SVAR2
+             DYLMROT(LM1,LM2,:)=DSVAR(:)/SVAR2
            ENDDO
          ENDDO 
        ENDDO
