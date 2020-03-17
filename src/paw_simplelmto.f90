@@ -6922,28 +6922,25 @@ PRINT*,'============ OFFSITEXEVAL ============================='
         IATB=DENMAT(NN)%IAT2
 !       == CONSIDER ONLY OFFSITE TERMS =========================================
         IF(IATA.EQ.IATB.AND.SUM(DENMAT(NN)%IT**2).EQ.0) CYCLE
-!!$CALL SIMPLELMTO$REPORTDENMAT(6)
-!!$STOP
-
-nntest=-1
-if(nn.eq.nntest) then
-  IND1=2
-  IND2=1
-  IND3=1
-  open(1753,file='testset')
-  read(1753,*)ind1,ind2,ind3
-  write(*,*)'testset',ind1,ind2,ind3,' nntest=',nn,'NDIMD=',DENMAT(NN)%N3
-  close(1753)
-  XSVAR=DENMAT(NN)%MAT(IND1,IND2,IND3)
-  XDELTA=1.D-2
-  IX=-nx-1
-  1000 CONTINUE
-  IX=IX+1
-  testx(ix)=XDELTA*REAL(IX,KIND=8)
-  DENMAT(NN)%MAT(IND1,IND2,IND3)=XSVAR+testx(ix)
-  HAMIL(NN)%MAT(IND1,IND2,IND3)=0.D0
-  EX=0.D0
-end if
+!!$nntest=-1
+!!$if(nn.eq.nntest) then
+!!$  IND1=2
+!!$  IND2=1
+!!$  IND3=1
+!!$  open(1753,file='testset')
+!!$  read(1753,*)ind1,ind2,ind3
+!!$  write(*,*)'testset',ind1,ind2,ind3,' nntest=',nn,'NDIMD=',DENMAT(NN)%N3
+!!$  close(1753)
+!!$  XSVAR=DENMAT(NN)%MAT(IND1,IND2,IND3)
+!!$  XDELTA=1.D-2
+!!$  IX=-nx-1
+!!$  1000 CONTINUE
+!!$  IX=IX+1
+!!$  testx(ix)=XDELTA*REAL(IX,KIND=8)
+!!$  DENMAT(NN)%MAT(IND1,IND2,IND3)=XSVAR+testx(ix)
+!!$  HAMIL(NN)%MAT(IND1,IND2,IND3)=0.D0
+!!$  EX=0.D0
+!!$end if
         ISPA=ISPECIES(IATA)
         ISPB=ISPECIES(IATB)
         NNA=NNAT(IATA)
@@ -6988,29 +6985,7 @@ CALL TIMING$CLOCKOFF('OFFX:BLOWUP')
 !       ========================================================================
 !       == ROTATE DENSITY MATRIX SO THAT DISTANCE VECTOR POINTS IN Z-DIRECTION=
 !       ========================================================================
-!
 CALL TIMING$CLOCKON('OFFX:ROTATE1')
-!!$!       == CONSTRUCT ROTATION MATRIX ===========================================
-!!$!       == DISTANCE VECTOR WILL BE NEW Z-DIRECTION =============================
-!!$        ROT(:,3)=DR(:)/DIS  ! ONSITE TERMS ARE ALREADY EXCLUDED
-!!$!       == FIRST VECTOR IS VECTOR PRODUCT OF THE THE MOST ORTHOGNAL UNIT VECTOR
-!!$        I=MINLOC(ABS(DR),1)
-!!$        ROT(:,2)=0.D0
-!!$        ROT(I,2)=1.D0
-!!$!
-!!$        ROT(1,1)=ROT(2,2)*ROT(3,3)-ROT(3,2)*ROT(2,3)
-!!$        ROT(2,1)=ROT(3,2)*ROT(1,3)-ROT(1,2)*ROT(3,3)
-!!$        ROT(3,1)=ROT(1,2)*ROT(2,3)-ROT(2,2)*ROT(1,3)
-!!$        ROT(:,1)=ROT(:,1)/SQRT(SUM(ROT(:,1)**2))
-!!$!
-!!$        ROT(1,2)=ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)
-!!$        ROT(2,2)=ROT(3,3)*ROT(1,1)-ROT(1,3)*ROT(3,1)
-!!$        ROT(3,2)=ROT(1,3)*ROT(2,1)-ROT(2,3)*ROT(1,1)
-!!$!       == REMOVE INVERSION, IF PRESENT
-!!$        SVAR=ROT(1,1)*(ROT(2,2)*ROT(3,3)-ROT(3,2)*ROT(2,3)) &
-!!$       &    +ROT(1,2)*(ROT(2,3)*ROT(3,1)-ROT(3,3)*ROT(2,1)) &
-!!$       &    +ROT(1,3)*(ROT(2,1)*ROT(3,2)-ROT(3,1)*ROT(2,2))
-!!$        IF(SVAR.LE.0.D0) ROT(:,1)=-ROT(:,1)
 !
 !       == rotation matrix =====================================================
         CALL SPHERICAL$AXISUROT(DR,ROT,DROT)
@@ -7121,7 +7096,7 @@ CALL TIMING$CLOCKON('OFFX:NDDO')
             DO LMN2B=1,LMNXB
               DO LMN2A=1,LMNXA
                 DO LMN1A=1,LMNXA
-!                 ==  W(LMN1A,LMN1B,LMN2A,LMN2B)
+!                 ==  W(LMN1A,LMN1B,LMN2A,LMN2B) ==============================
                   SVAR =-0.25D0*SCALE* U22(LMN1A,LMN2A,LMN2B,LMN1B)
                   DSVAR=-0.25D0*SCALE*DU22(LMN1A,LMN2A,LMN2B,LMN1B)
                   EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN1B,:)*DBA(LMN2B,LMN2A,:))
@@ -7290,8 +7265,7 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
         FORCE(:,IATB)=FORCE(:,IATB)-DEDD*DR(:)/DIS
         FORCE(:,IATA)=FORCE(:,IATA)+DEDD*DR(:)/DIS
         DO J=1,3
-! ERROR DEDD IS NOT PART OF DEDRBAS!!!!!
-          DEDRBAS(:,J)=DEDRBAS(:,J)+REAL(DENMAT(NN)%IT(:))*DR(J)/DIS
+          DEDRBAS(:,J)=DEDRBAS(:,J)+REAL(DENMAT(NN)%IT(:))*dedd*DR(J)/DIS
         ENDDO
 !
 !       == DAA AND DBB WILL NO MORE BE USED AS DENSITY MATRIX
@@ -7315,11 +7289,9 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
        &                   +SUM(DBB(:,:,I)*DUROTB(:,:,j)) 
           ENDDO
         ENDDO
-!print*,'dr=',dr,' dedr=',dedr
         FORCE(:,IATB)=FORCE(:,IATB)-DEDR(:)
         FORCE(:,IATA)=FORCE(:,IATA)+DEDR(:)
         DO J=1,3
-! ERROR  the following line is pure guesswork!!!
           DEDRBAS(:,J)=DEDRBAS(:,J)+REAL(DENMAT(NN)%IT(:))*DEDR(J)
         ENDDO
 !
@@ -7345,13 +7317,6 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
         HAMIL(INDM(NN))%MAT(:,:,:)=HAMIL(INDM(NN))%MAT(:,:,:)+HBA(:,:,:)
         HAMIL(NNA)%MAT(:,:,:)     =HAMIL(NNA)%MAT(:,:,:)+HAA(:,:,:)
         HAMIL(NNB)%MAT(:,:,:)     =HAMIL(NNB)%MAT(:,:,:)+HBB(:,:,:)
-!!$        do i=1,ndimd
-!!$          HAMIL(INDM(NN))%MAT(:,:,I)=HAMIL(INDM(NN))%MAT(:,:,I)+transpose(HAB(:,:,I))
-!!$          HAMIL(NN)%MAT(:,:,I)      =HAMIL(NN)%MAT(:,:,I)+transpose(HBA(:,:,I))
-!!$          HAMIL(NNA)%MAT(:,:,I)     =HAMIL(NNA)%MAT(:,:,I)+transpose(HAA(:,:,I))
-!!$          HAMIL(NNB)%MAT(:,:,I)     =HAMIL(NNB)%MAT(:,:,I)+transpose(HBB(:,:,I))
-!!$        enddo
-
         DEALLOCATE(DAB)
         DEALLOCATE(DBA)
         DEALLOCATE(HAB)
@@ -7365,20 +7330,20 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
           DEALLOCATE(OV)
         END IF
 CALL TIMING$CLOCKOFF('LOOP:OFFX')
-if(nn.eq.nntest) then
-   testy(ix)=ex
-   testdydx(ix)=HAMIL(NN)%MAT(IND1,IND2,IND3)
-   WRITE(*,*)XDELTA*REAL(IX,8),EX,HAMIL(NN)%MAT(IND1,IND2,IND3)
-   IF(IX.EQ.nx) then
-     WRITE(*,*)0,testdydx(0),testdydx(0)
-     do i=1,nx
-       WRITE(*,*)i,(testy(i)-testy(-i))/(testx(i)-testx(-i)) &
-&                ,0.5d0*(testdydx(i)+testdydx(-i))
-     enddo
-     STOP 'FORCED'
-   end if
-   GOTO 1000
-end if
+!!$if(nn.eq.nntest) then
+!!$   testy(ix)=ex
+!!$   testdydx(ix)=HAMIL(NN)%MAT(IND1,IND2,IND3)
+!!$   WRITE(*,*)XDELTA*REAL(IX,8),EX,HAMIL(NN)%MAT(IND1,IND2,IND3)
+!!$   IF(IX.EQ.nx) then
+!!$     WRITE(*,*)0,testdydx(0),testdydx(0)
+!!$     do i=1,nx
+!!$       WRITE(*,*)i,(testy(i)-testy(-i))/(testx(i)-testx(-i)) &
+!!$&                ,0.5d0*(testdydx(i)+testdydx(-i))
+!!$     enddo
+!!$     STOP 'FORCED'
+!!$   end if
+!!$   GOTO 1000
+!!$end if
       ENDDO
 !
 !     ==========================================================================
