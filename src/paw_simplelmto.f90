@@ -6791,7 +6791,7 @@ CALL TIMING$CLOCKOFF('X31-B')
       INTEGER(4)          ,INTENT(IN)   :: NND
       REAL(8)             ,INTENT(IN)   :: RBAS(3,3)
       REAL(8)             ,INTENT(IN)   :: R0(3,NAT)
-      TYPE(RSPACEMAT_TYPE),INTENT(INOUT)   :: DENMAT(NND) !INOUT FOR TESTING
+      TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: DENMAT(NND) !INOUT FOR TESTING
       REAL(8)             ,INTENT(OUT)  :: EX
       REAL(8)             ,INTENT(OUT)  :: STRESS(3,3)
       REAL(8)             ,INTENT(OUT)  :: FORCE(3,NAT)
@@ -7272,9 +7272,9 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
        &            +MATMUL(DBA(:,:,I),TRANSPOSE(HBA(:,:,I)))
         ENDDO
 !       == SUM UP TOTAL AND SPIN CONTRIBUTIONS =================================
-        DO J=2,NDIMD
-          DAA(:,:,1)=DAA(:,:,1)+DAA(:,:,J)
-          DBB(:,:,1)=DBB(:,:,1)+DBB(:,:,J)
+        DO i=2,NDIMD
+          DAA(:,:,1)=DAA(:,:,1)+DAA(:,:,i)
+          DBB(:,:,1)=DBB(:,:,1)+DBB(:,:,i)
         ENDDO
 !       == DEDR IS THE ENERGY DERIVATIVE WITH RESPECT TO THE AXIAL FORCE
         DEDR(:)=DEDD*DR(:)/DIS

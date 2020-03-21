@@ -729,6 +729,7 @@ END MODULE SPHERICAL_MODULE
          CALL ERROR$STOP('SPHERICAL$ROTATYLMWDER')
        END IF
        YLMROT(:,:)=(0.D0,0.D0)
+       dYLMROT(:,:,:)=(0.D0,0.D0)
        IF(LX.GE.0) THEN
          YLMROT(1,1)=1.D0
          DYLMROT(1,1,:)=0.D0
@@ -766,6 +767,7 @@ END MODULE SPHERICAL_MODULE
          DO LM1=LM1A,LM1B
            DO LM2=LM1A,LM1B
              SVAR=0.D0
+             dSVAR=0.D0
              DO LM3=2,4
                DO LM5=LM2A,LM2B
                  SVAR1=0.D0
