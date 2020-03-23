@@ -719,6 +719,7 @@ END MODULE SIMPLELMTO_MODULE
       LOGICAL(4)             :: TCHK
 !     **************************************************************************
       LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TH1S=.FALSE. ! OVERWRITE AECHI WITH H ORBITAL
       REAL(8)                :: RAUG       ! MATCHING RADIUS
       INTEGER(4)             :: LNXPHI     ! #(PARTIALWAVES)
       INTEGER(4)             :: LNXH       ! #(HEAD FUNCTIONS)
@@ -1123,6 +1124,15 @@ PRINT*,'ASA RADIUS FOR SPECIES ',ISP,' IS ', RASA
             PHIOV(LN2,LN1)=SVAR
           ENDDO
         ENDDO
+!
+!===============================================================================
+!== OVERWRITE LOCAL ORBITAL FOR TESTING PURPOSES
+!== USE A HYDROGEN SETUP WITH NPRO=1 .
+!===============================================================================
+IF(TH1S) THEN
+  PRINT*,'WARNING: FUDGE FOR TESTINGIN SIMPLELMTO_MAKECHI1!!!! '
+  AECHI(:,1)=EXP(-R)*2.D0   ! 2=1/SQRT(PI)*1/Y0
+END IF
 !
 !       ========================================================================
 !       == MAP TO POTPAR                                                     ==
@@ -1771,7 +1781,7 @@ INTEGER(4)          :: I
      &                           ,RSPACEOP$COPY &
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
-      LOGICAL(4)          ,PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4)          ,PARAMETER   :: TPR=.FALSE.
       CHARACTER(5)        ,PARAMETER   :: TYPE='FINAL'
 !      CHARACTER(5)        ,PARAMETER   :: TYPE='PRIOR'
       LOGICAL(4)          ,PARAMETER   :: TTEST=.FALSE.
@@ -3302,11 +3312,11 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !     == ONSITE EXCHANGE CORRECTION                                           ==
 !     ==========================================================================
       DO IAT=1,NAT
-        IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
-!
         ISP=ISPECIES(IAT)
         TACTIVE=(POTPAR(ISP)%LNXH.GT.0)
         IF(.NOT.TACTIVE) CYCLE
+!
+        IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
 !
 !       ========================================================================
 !       ==                                                                    ==
@@ -4397,11 +4407,13 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
       REAL(8)   ,PARAMETER :: TOLERANCE=1.D-5
-      INTEGER(4),PARAMETER :: NDIS=10  !#(DISTANCE GRID POINTS)
-      REAL(8)   ,PARAMETER :: DSMN=0.5D0,DSMX=4.D0 !PARMS FOR DISTANCE GRID
+      INTEGER(4),PARAMETER :: NDIS=25  !#(DISTANCE GRID POINTS)
+      REAL(8)   ,PARAMETER :: DSMN=0.01D0,DSMX=8.D0 !PARMS FOR DISTANCE GRID
 !                             !DISTANCE GRID WILL BE SCALED BY RCOV1+RCOV2 
-      INTEGER(4),PARAMETER :: NF=4    !#(FIT FUNCTIONS 1<NF<NDIS!)
-      REAL(8)   ,PARAMETER :: DCAYMN=0.1D0,DCAYMX=0.5D0 !PARMS FOR FIT FUNCTIONS
+!!$      INTEGER(4),PARAMETER :: NDIS=10  !#(DISTANCE GRID POINTS)
+!!$      REAL(8)   ,PARAMETER :: DSMN=0.01D0,DSMX=10.D0 !PARMS FOR DISTANCE GRID
+      INTEGER(4),PARAMETER :: NF=10  !#(FIT FUNCTIONS 1<NF<NDIS!)
+      REAL(8)   ,PARAMETER :: DCAYMN=0.01D0,DCAYMX=0.3D0 !PARMS FOR FIT FUNCTIONS
       REAL(8)    ,PARAMETER:: RMAXEX=20.D0 !TARGET EXTENT OF EXTENDED RAD. GRIDS
       CHARACTER(8)         :: GRIDTYPE
       INTEGER(4)           :: GID1,GID2  ! GRID ID
@@ -4576,6 +4588,7 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       INTEGER(4),INTENT(IN) :: NR2
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       REAL(8)   ,PARAMETER  :: TOLMIN=1.D-8
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
@@ -4594,10 +4607,12 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
       REAL(8) ,ALLOCATABLE  :: TOLFAC1(:)
       REAL(8) ,ALLOCATABLE  :: TOLFAC2(:)
       REAL(8)               :: TOL
+      INTEGER(4)            :: I1,I2,IR
       INTEGER(4)            :: NTASKS,THISTASK,COUNT
-REAL(8)::SVAR
+      REAL(8)               ::SVAR
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(TPR) OPEN(UNIT=10,FILE='XOV.DAT')
 !
 !     ==========================================================================
 !     == PREPARATION                                                          ==
@@ -4680,25 +4695,84 @@ REAL(8)::SVAR
       CALL MPE$COMBINE('MONOMER','+',OFFSITEX(ISP1,ISP2)%OVERLAP)
 !
 !     ==========================================================================
-!     == PRINT FOR TESTING                                                    ==
+!     == DIAGNOSTIC PRINTOUT                                                  ==
 !     ==========================================================================
       IF(TPR) THEN
-        IND=0
-        DO LN1=1,LNX1
-          L1=POTPAR(ISP1)%LOXH(LN1)
-          DO LN2=1,LNX2
-            L2=POTPAR(ISP2)%LOXH(LN2)
-            DO MABS=0,MIN(L1,L2)
-              IND=IND+1
-              DO IDIS=1,NDIS
-                DIS=OFFSITEX(ISP1,ISP2)%DIS(IDIS)
-                WRITE(*,*)ISP1,ISP2,LN1,LN2,MABS,IDIS, &
-     &                      OFFSITEX(ISP1,ISP2)%OVERLAP(IDIS,IND)
-              ENDDO
-            ENDDO
+        IF(THISTASK.NE.1) THEN
+          CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
+          CALL ERROR$STOP('SIMPLELMTO_OFFSITEOVERLAPSETUP')
+        END IF 
+        WRITE(10,*)'#XOV  FOR ',ISP1,ISP2
+        WRITE(10,*)'#IND',IND,SHAPE(OFFSITEX(ISP1,ISP2)%X22)
+        SVAR=0.D0
+        DO I1=1,IND,10
+          I2=MIN(IND,I1+9)
+          WRITE(10,*)'#====',I1,I2,'====='
+          WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(1) &
+     &                           ,(/(0.D0,IR=1,10)/)
+          DO IDIS=1,NDIS
+            WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(IDIS) &
+     &                              ,OFFSITEX(ISP1,ISP2)%OVERLAP(IDIS,I1:I2) &
+     &                              ,(/(0.D0,IR=I2+1,I1+9)/)
           ENDDO
+          WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(NDIS) &
+     &                           ,(/(0.D0,IR=1,10)/)
+          SVAR=SVAR+25.D0
         ENDDO
+        CLOSE(10)
+        CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
+        CALL ERROR$STOP('SIMPLELMTO_OFFSITEOVERLAPSETUP')
       END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SIMPLELMTO_EXPLDISF(SCREENL,DIS,INV,DINV)
+!     **************************************************************************
+!     ** CALCULATES THE INTERPOLATING FUNCTIONS REPLACING THE LONG-RANGE-PART **
+!     ** USED BY SIMPLELMTO_OFFSITEX22U AND SIMPLELMTO_OFFSITEX22SETUP        **
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN) :: SCREENL ! SCREENING LENGTH
+      REAL(8)   ,INTENT(IN) :: DIS     ! DISTANCE OF THE MULTIPOLE CENTERS
+      REAL(8)   ,INTENT(OUT):: INV(3)  ! REPLACEMENT FOR 1/D, 1/D**2, 1/D**3
+      REAL(8)   ,INTENT(OUT):: DINV(3) ! DERIVATIVE OF INV(:)
+      LOGICAL(4),PARAMETER  :: TOFF=.FALSE.
+      REAL(8)   ,PARAMETER  :: LAMBDA=2.D0 
+      REAL(8)               :: EXPLDIS
+      REAL(8)               :: F1,DF1
+!     **************************************************************************
+      IF(TOFF) THEN
+        INV=0.D0
+        DINV=0.D0
+        RETURN
+      END IF     
+      EXPLDIS=EXP(-LAMBDA*DIS)
+      INV(1)=(1.D0-(1.D0-0.5D0*(LAMBDA*DIS)**2)*EXPLDIS)/DIS
+      INV(2)=(1.D0-(1.D0+(LAMBDA*DIS)-(LAMBDA*DIS)**3/3.D0)*EXPLDIS)/DIS**2
+      INV(3)=(1.D0-(1.D0+(LAMBDA*DIS)+(LAMBDA*DIS)**2/2.D0 &
+     &                               -(LAMBDA*DIS)**4/8.D0)*EXPLDIS)/DIS**3
+      DINV(1)=-INV(1)/DIS &
+     &        -LAMBDA*(-LAMBDA*DIS)*EXPLDIS/DIS &
+     &        +LAMBDA*(1.D0-0.5D0*(LAMBDA*DIS)**2)*EXPLDIS/DIS
+      DINV(2)=-2.D0*INV(2)/DIS &
+     &        -LAMBDA*(1.D0-(LAMBDA*DIS)**2)*EXPLDIS/DIS**2 &
+     &        +LAMBDA*(1.D0+(LAMBDA*DIS)-(LAMBDA*DIS)**3/3.D0)*EXPLDIS/DIS**2
+      DINV(3)=-3.D0*INV(3)/DIS &
+     &        -LAMBDA*(1.D0+(LAMBDA*DIS)-(LAMBDA*DIS)**3/2.D0)*EXPLDIS/DIS**3 &
+     &        -LAMBDA*(1.D0+(LAMBDA*DIS)+(LAMBDA*DIS)**2/2.D0 &
+     &                                  -(LAMBDA*DIS)**4/8.D0)*EXPLDIS/DIS**3
+      IF(SCREENL.GE.0.D0) THEN
+        EXPLDIS=EXP(-DIS/SCREENL)
+        F1=(1.D0+DIS/SCREENL)*EXPLDIS
+        DF1=(EXPLDIS-F1)/SCREENL
+        INV(1)=INV(1)*F1
+        INV(2)=INV(2)*F1
+        INV(3)=INV(3)*F1
+        DINV(1)=DINV(1)*F1+INV(1)*DF1
+        DINV(2)=DINV(2)*F1+INV(2)*DF1
+        DINV(3)=DINV(3)*F1+INV(3)*DF1
+      ENDIF
       RETURN
       END
 !
@@ -4764,7 +4838,8 @@ REAL(8)::SVAR
       REAL(8) ,ALLOCATABLE  :: YLMDIS(:)
       REAL(8)               :: TOL
       INTEGER(4)            :: IR,I1,I2
-      REAL(8)               :: SVAR,SVAR1,SVAR2,A,B,YLM2
+      REAL(8)               :: SVAR,SVAR1,SVAR2,A,B,YLM2,FAC
+      REAL(8)               :: INV(3),DINV(3)
       INTEGER(4)            :: THISTASK,NTASKS,COUNT
 LOGICAL(4),PARAMETER  :: TPTCHM=.TRUE. ! POINT-CHARGE MODEL
       REAL(8) :: Q1,Q2,D1(3),D2(3),E,VQ1,VQ2,VD1(3),VD2(3),LAMBDA
@@ -5028,24 +5103,29 @@ IF(TTEST.AND.TEST_TYPE.EQ.'CO')    INTEGRAL=0.D0
                       END IF
 !
 !                     ==========================================================
-!                     == SUBTRACT OUT LONG RANGE PART TO ALLOW INTERPOLATION ===
-!                     == WILL BE ADDED AGAIN IN SIMPLELMTO_OFFSITEX22U =========
+!                     == ADD IN U_LONGRANGE PART TO COMPLETE MATRIX ELEMENT   ==
+!                     == THEN, SUBTRACT OUT LONG RANGE CORRECTION TO ALLOW    ==
+!                     == INTERPOLATION. THE CORRECTION                        ==
+!                     == WILL BE ADDED AGAIN IN SIMPLELMTO_OFFSITEX22U        ==
 !                     ==========================================================
 IF(TTEST.AND.TEST_TYPE.EQ.'CO')    GOTO 1000
-IF(TTEST.AND.TEST_TYPE.EQ.'LR') THEN
-INTEGRAL=0.D0
+!IF(TTEST.AND.TEST_TYPE.EQ.'LR') THEN
+!INTEGRAL=0.D0
 !
                       IF(LR1.LE.1.AND.LR2.LE.1) THEN
-                        SVAR=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
+                        FAC=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
      &                      *POTPAR(ISP2)%QLN(LR2+1,LN3,LN4)
-                        SVAR=-SVAR  ! CHANGE SIGN TO REMOVE LONG-RANGE PART
+                        SVAR=FAC
+                        CALL SIMPLELMTO_EXPLDISF(SCREENL,DIS,INV,DINV)
                         IF(LR1+LR2.EQ.0) THEN ! MONOPOLE-MONOPOLE
                           IF(SCREENL.LE.0.D0) THEN
                             INTEGRAL =INTEGRAL +SVAR/DIS
                           ELSE
                             INTEGRAL =INTEGRAL +SVAR/DIS*EXP(-DIS/SCREENL)
                           END IF
+                          INTEGRAL =INTEGRAL -FAC*INV(1)
                         ELSE IF(LR1+LR2.EQ.1) THEN  !MONOPOLE-DIPOLE
+                          SVAR=FAC
                           IF(LR1.EQ.1) SVAR=-SVAR
                           IF(SCREENL.LE.0.D0) THEN
                             SVAR=-SVAR/DIS**2
@@ -5055,27 +5135,33 @@ INTEGRAL=0.D0
         &                             *EXP(-DIS/SCREENL)*(1.D0+DIS/SCREENL)
                             INTEGRAL =INTEGRAL +SVAR
                           END IF
+                          SVAR=FAC
+                          IF(LR1.EQ.1) SVAR=-SVAR
+                            INTEGRAL =INTEGRAL -SVAR*INV(2)
                         ELSE IF(LR1+LR2.EQ.2) THEN  !DIPOLE-DIPOLE 
-                          SVAR=SVAR/DIS**3
+                          SVAR=FAC/DIS**3
                           IF(SCREENL.LE.0.D0) THEN
                             INTEGRAL =INTEGRAL +SVAR
                           ELSE
                             INTEGRAL =INTEGRAL +SVAR*(1.D0+DIS/SCREENL) &
         &                                            *EXP(-DIS/SCREENL)
                           END IF
+
+                          INTEGRAL =INTEGRAL -FAC*INV(3)
                           IF(MABS.EQ.0) THEN
-                            IF(SCREENL.LE.0.D0) THEN
-                              INTEGRAL =INTEGRAL -SVAR*3.D0
-                            ELSE
-                              INTEGRAL=INTEGRAL -SVAR &
-        &                           *(3.D0+3.D0*DIS/SCREENL+(DIS/SCREENL)**2) &
-        &                           *EXP(-DIS/SCREENL)
-                            END IF
+                             IF(SCREENL.LE.0.D0) THEN
+                               INTEGRAL =INTEGRAL -SVAR*3.D0
+                             ELSE
+                               INTEGRAL=INTEGRAL -SVAR &
+         &                           *(3.D0+3.D0*DIS/SCREENL+(DIS/SCREENL)**2) &
+         &                           *EXP(-DIS/SCREENL)
+                             END IF
+                            INTEGRAL =INTEGRAL -3.D0*FAC*INV(3)
                           END IF
                         END IF
                       END IF
-                      GOTO 1000
-                    END IF
+!!$   GOTO 1000
+!!$ END IF
 !
 IF(TTEST.AND.TEST_TYPE.EQ.'MD') THEN
   Q1=0.D0
@@ -5229,6 +5315,7 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
       REAL(8)   ,INTENT(IN) :: TOLERANCE
       REAL(8)   ,PARAMETER  :: TOLMIN=1.D-8
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: GID1,GID2
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
@@ -5249,8 +5336,10 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
       REAL(8) ,ALLOCATABLE  :: TOLFAC2(:)
       REAL(8)               :: TOL
       INTEGER(4)            :: NTASKS,THISTASK,COUNT
+      INTEGER(4)            :: I1,I2,IR
 !     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(TPR) OPEN(UNIT=10,FILE='X31.DAT')
 !
 !     ==========================================================================
 !     == PREPARATION                                                          ==
@@ -5367,17 +5456,43 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
         ENDDO
       ENDDO
       CALL MPE$COMBINE('MONOMER','+',OFFSITEX(ISP1,ISP2)%X31)
+!!$!
+!!$!     ==========================================================================
+!!$!     == DIAGNOSTIC PRINTOUT                                                  ==
+!!$!     ==========================================================================
+!!$      IF(TPR) THEN
+!!$        PRINT*,'X31  FOR ',ISP1,ISP2
+!!$        DO IDIS=1,NDIS
+!!$          PRINT*,OFFSITEX(ISP1,ISP2)%DIS(IDIS) &
+!!$     &          ,OFFSITEX(ISP1,ISP2)%X31(IDIS,:) !/(4.D0*PI)
+!!$        ENDDO
+!!$        STOP 'FORCED'
+!!$      END IF
 !
 !     ==========================================================================
 !     == DIAGNOSTIC PRINTOUT                                                  ==
 !     ==========================================================================
       IF(TPR) THEN
-        PRINT*,'X31  FOR ',ISP1,ISP2
-        DO IDIS=1,NDIS
-          PRINT*,OFFSITEX(ISP1,ISP2)%DIS(IDIS) &
-     &          ,OFFSITEX(ISP1,ISP2)%X31(IDIS,:) !/(4.D0*PI)
+        WRITE(10,*)'#X31  FOR ',ISP1,ISP2
+        WRITE(10,*)'#IND',IND,SHAPE(OFFSITEX(ISP1,ISP2)%X31)
+        SVAR=0.D0
+        DO I1=1,IND,10
+          I2=MIN(IND,I1+9)
+          WRITE(10,*)'#====',I1,I2,'====='
+          WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(1) &
+     &                           ,(/(0.D0,IR=1,10)/)
+          DO IDIS=1,NDIS
+            WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(IDIS) &
+     &                          ,OFFSITEX(ISP1,ISP2)%X31(IDIS,I1:I2)/(4.D0*PI) &
+     &                             ,(/(0.D0,IR=I2+1,I1+9)/)
+          ENDDO
+          WRITE(10,FMT='(11F10.5)')SVAR+OFFSITEX(ISP1,ISP2)%DIS(NDIS) &
+     &                           ,(/(0.D0,IR=1,10)/)
+          SVAR=SVAR+25.D0
         ENDDO
-        STOP 'FORCED'
+        CLOSE(10)
+        CALL ERROR$MSG('REGULAR STOP AFTER PRINTING DIAGNOSTIC INFORMATION')
+        CALL ERROR$STOP('SIMPLELMTO_OFFSITEX31SETUP')
       END IF
       RETURN
       END
@@ -5387,7 +5502,7 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
 !     **************************************************************************
 !     ** CONVERT THE DISTANCE-DEPENDENT MATRIX ELEMENTS OF THE U-TENSOR       **
 !     ** INTO EXPANSION COEFFICIENTS FOR THE INTERPOLATING FUNCTION           **
-!     ** F_J(X)=SUM_I=1^NDIS X22(I,J)*EXP(-LAMBDA(I)*X)                       **
+!     ** F_J(X)=SUM_I=1^NDIS X22(I,J)*EXP(-LAMBDA(I)*X)*(1+LAMBDA(I)*X)       **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : OFFSITEX &
      &                             ,POTPAR=>POTPAR1 &
@@ -5404,6 +5519,8 @@ IF(TTEST.AND.ABS(INTEGRAL).LT.1.D-5) INTEGRAL=0.D0
       REAL(8)   ,ALLOCATABLE:: AINV(:,:)
       REAL(8)   ,ALLOCATABLE:: AMATIN(:,:)
       REAL(8)   ,ALLOCATABLE:: G(:,:)  !INTERPOLATING FUNCTIONS
+      REAL(8)               :: LAMBDA1,LAMBDA2,SVAR1,SVAR2
+      REAL(8)               :: DISX
 REAL(8) :: Y(10),R
 INTEGER(4) :: J
       LOGICAL(4)           :: TFIT
@@ -5424,14 +5541,23 @@ INTEGER(4) :: J
           ALLOCATE(G(NDIS,NF))  ! INTERPOLATING FUNCTIONS
           DO I=1,NF
             G(:,I)=EXP(-OFFSITEX(ISP1,ISP2)%LAMBDA(I) &
-     &                 *OFFSITEX(ISP1,ISP2)%DIS(:))
+     &                 *OFFSITEX(ISP1,ISP2)%DIS(:)) &
+     &            *(1.D0+OFFSITEX(ISP1,ISP2)%LAMBDA(I) &
+     &                  *OFFSITEX(ISP1,ISP2)%DIS(:))
           ENDDO
           TFIT=OFFSITEX(ISP1,ISP2)%NF.NE.OFFSITEX(ISP1,ISP2)%NDIS
           ALLOCATE(AMAT(NF,NF))
+          DISX=MAXVAL(OFFSITEX(ISP1,ISP2)%DIS)
           IF(TFIT) THEN
             DO I=1,NF
+              LAMBDA1=OFFSITEX(ISP1,ISP2)%LAMBDA(I) 
               DO J=I,NF
-                AMAT(I,J)=SUM(G(:,I)*G(:,J))
+                LAMBDA2=OFFSITEX(ISP1,ISP2)%LAMBDA(J) 
+                SVAR1=LAMBDA1*LAMBDA2/(LAMBDA1+LAMBDA2)**2
+                SVAR2=(LAMBDA1+LAMBDA2)*DISX
+                AMAT(I,J)=SUM(G(:,I)*G(:,J)) &
+     &              +(2.D0+SVAR2+SVAR1*(SVAR2**2+2.D0*SVAR2+2.D0)) &
+     &               *EXP(-SVAR2)/SVAR2*REAL(NDIS,KIND=8)
                 AMAT(J,I)=AMAT(I,J)
               ENDDO
             ENDDO
@@ -5496,20 +5622,26 @@ INTEGER(4) :: J
 !         == 31 TERMS  X31
 !         ======================================================================
           IF(T31) THEN
+            IF(TESTX31FIT) THEN !----------------------------------------------
+              PRINT*,'X31-A:',OFFSITEX(ISP1,ISP2)%X22(:NDIS,:)
+              CALL SIMPLELMTO_TESTOFFSITEXCONVERT_A(NDIS &
+        &                                     ,OFFSITEX(ISP1,ISP2)%DIS &
+        &                                     ,OFFSITEX(ISP1,ISP2)%X31(:,1))
+            END IF !------------------------------------------------------------
+!
             NIND=SIZE(OFFSITEX(ISP1,ISP2)%X31(1,:))
-!!$PRINT*,'X31-A:',OFFSITEX(ISP1,ISP2)%X31(:NDIS,:)
-!!$            CALL SIMPLELMTO_TESTOFFSITEXCONVERT_A(NDIS &
-!!$        &                                     ,OFFSITEX(ISP1,ISP2)%DIS &
-!!$        &                                     ,OFFSITEX(ISP1,ISP2)%X31(:,1))
             DO I=1,NIND
               OFFSITEX(ISP1,ISP2)%X31(:NF,I)=MATMUL(AMATIN &
        &                                         ,OFFSITEX(ISP1,ISP2)%X31(:,I))
             ENDDO
             OFFSITEX(ISP1,ISP2)%X31(NF+1:,:)=0.D0
-!!$PRINT*,'X31-B:',OFFSITEX(ISP1,ISP2)%X31(:NF,:)
-!!$            CALL SIMPLELMTO_TESTOFFSITEXCONVERT_B(NF &
-!!$       &                   ,OFFSITEX(ISP1,ISP2)%LAMBDA(:NF) &
-!!$       &                   ,OFFSITEX(ISP1,ISP2)%X31(:NF,1))
+!
+            IF(TESTX31FIT) THEN !----------------------------------------------
+              PRINT*,'X31-B:',OFFSITEX(ISP1,ISP2)%X22(:NF,:)
+              CALL SIMPLELMTO_TESTOFFSITEXCONVERT_B(NF &
+       &                   ,OFFSITEX(ISP1,ISP2)%LAMBDA(:NF) &
+       &                   ,OFFSITEX(ISP1,ISP2)%X31(:NF,1))
+            END IF !------------------------------------------------------------
           END IF
 !
 !         ======================================================================
@@ -5540,7 +5672,7 @@ INTEGER(4) :: J
 !     ** THIS AND THE PARTNER ROUTINE ..._B IS USED TO INSPECT THE FIT OF THE **
 !     ** DISTANCE-DEPENDENT U-TENSOR MATRIX ELEMENTS BY A SET OF EXPONENTIALS.**
 !     ** THE FIRST ROUTINE ..._A WRITES THE DISTANCE-DEPENDENT DATA TO A FILE **
-!     ** TEST_A.DAT, WHILE THE SECOND WRITES THE INTERPOLATING FUNCTION TO    **
+!     ** TEST_A.DAT, WHILE THE SECOND WRIMORE TEST_TES THE INTERPOLATING FUNCTION TO    **
 !     ** FILE TEST_B.DAT. THE SECOND ROUTINE STOPS EXECUTION.
 !     **************************************************************************
       USE STRINGS_MODULE
@@ -5578,7 +5710,7 @@ PRINT*,'X(D)  ',X
       REAL(8)   ,INTENT(IN) :: LAMBDA(NF)
       REAL(8)   ,INTENT(IN) :: X(NF)
       REAL(8)   ,PARAMETER  :: DMIN=0.D0
-      REAL(8)   ,PARAMETER  :: DMAX=150.D0
+      REAL(8)   ,PARAMETER  :: DMAX=50.D0
       INTEGER(4),PARAMETER  :: ND=1000
       INTEGER(4)            :: I
       INTEGER(4)            :: NFIL
@@ -5593,11 +5725,9 @@ PRINT*,'LAMBDA     ',LAMBDA
 PRINT*,'X(LAMBDA)  ',X
       DO I=1,ND
         D=DMIN+(DMAX-DMIN)*REAL(I-1,KIND=8)/REAL(ND-1,KIND=8)
-        FINT=SUM(X(:)*EXP(-LAMBDA(:)*D))
+        FINT=SUM(X(:)*EXP(-LAMBDA(:)*D)*(1.D0+LAMBDA(:)*D))
         WRITE(NFIL,FMT='(F10.5,10F15.5)')D,FINT
       ENDDO
-PRINT*,'LAMBDA ',LAMBDA
-PRINT*,'X      ',X
       CALL FILEHANDLER$CLOSE('TEST')
       WRITE(NFIL,FMT='(80("+"),T10," STOPPING AFTER TEST ")')
       STOP 'SIMPLELMTO_TESTOFFSITEXCONVERT_B'
@@ -5761,6 +5891,9 @@ PRINT*,'X      ',X
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
+!     -- LAMBDA MUST BE CONSISTENT WITH SIMPLELMTO_OFFSITEX22SETUP
+      REAL(8)   ,PARAMETER  :: LAMBDA=-0.5D0 
+      REAL(8)               :: EXPLMDADIS
       INTEGER(4)            :: LRX1,LRX2
       INTEGER(4)            :: LNX1,LNX2
       INTEGER(4)            :: IND
@@ -5778,7 +5911,13 @@ PRINT*,'X      ',X
       INTEGER(4)            :: LMRX
       REAL(8)               :: SVAR
       REAL(8)               :: FAC
+      REAL(8)               :: INV(3),DINV(3)
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == FUNCTIONS CAPTURING THE LONG-RANGE BEHAVIOR OF THE COULOMB INTERACTION=
+!     ==========================================================================
+      CALL SIMPLELMTO_EXPLDISF(SCREENL,DIS,INV,DINV)
 !
 !     ==========================================================================
 !     == PREPARATION                                                          ==
@@ -5837,65 +5976,22 @@ PRINT*,'X      ',X
                       FAC=POTPAR(ISP1)%QLN(LR1+1,LN1,LN2) &
      &                   *POTPAR(ISP2)%QLN(LR2+1,LN3,LN4)
                       IF(LR1+LR2.EQ.0) THEN ! MONOPOLE-MONOPOLE
-                        IF(SCREENL.LT.0.D0) THEN
-                          SVAR=FAC/DIS
-                          INTEGRAL =INTEGRAL +SVAR
-                          SVAR=-SVAR/DIS
-                          DINTEGRAL=DINTEGRAL+SVAR
-                        ELSE
-                          SVAR=FAC/DIS*EXP(-DIS/SCREENL)
-                          INTEGRAL =INTEGRAL +SVAR
-                          SVAR=-SVAR/DIS*(1.D0+DIS/SCREENL)
-                          DINTEGRAL=DINTEGRAL+SVAR
-                        END IF
+                        INTEGRAL =INTEGRAL +FAC*INV(1)
+                        DINTEGRAL=DINTEGRAL+FAC*DINV(1)
 !PRINT*,'22 MONOPOLE ',DIS,INTEGRAL,DINTEGRAL
                       ELSE IF(LR1+LR2.EQ.1) THEN !MONOPOLE-DIPOLE
-                        IF(SCREENL.LT.0.D0) THEN
-                          SVAR=-FAC/DIS**2
-                          IF(LR1.EQ.1) SVAR=-SVAR
-                          INTEGRAL =INTEGRAL +SVAR
-                          SVAR=-2.D0*SVAR/DIS
-                          DINTEGRAL=DINTEGRAL+SVAR
-                        ELSE
-                          SVAR=-FAC/DIS**2 &
-        &                           *EXP(-DIS/SCREENL)*(1.D0+DIS/SCREENL)
-                          IF(LR1.EQ.1) SVAR=-SVAR
-                          INTEGRAL =INTEGRAL +SVAR
-                          SVAR=-2.D0*SVAR/DIS &
-        &                    *(1.D0+0.5D0*(DIS/SCREENL)**2/(1+DIS/SCREENL))
-                          DINTEGRAL=DINTEGRAL+SVAR
-                        END IF
+                        SVAR=FAC
+                        IF(LR1.EQ.0) SVAR=-SVAR
+                        INTEGRAL =INTEGRAL +SVAR*INV(2)
+                        DINTEGRAL=DINTEGRAL+SVAR*DINV(2)
                       ELSE IF(LR1+LR2.EQ.2) THEN !DIPOLE-DIPOLE
-                        IF(SCREENL.LE.0.D0) THEN
-                          SVAR=FAC/DIS**3
-                          INTEGRAL =INTEGRAL +SVAR
-                          DINTEGRAL=DINTEGRAL-3.D0*SVAR/DIS
-                        ELSE
-                          SVAR=FAC/DIS**3*(1.D0+DIS/SCREENL)*EXP(-DIS/SCREENL)
-                          INTEGRAL =INTEGRAL +SVAR
-!NEW
-                          SVAR=SVAR/DIS &
-        &                     *(-3.D0+(DIS/SCREENL)**2/(1.D0+DIS/SCREENL))
-                          DINTEGRAL=DINTEGRAL+SVAR
-                        END IF
+                        INTEGRAL =INTEGRAL +FAC*INV(3)
+                        DINTEGRAL=DINTEGRAL+FAC*DINV(3)
                         IF(MABS.EQ.0) THEN
-                          IF(SCREENL.LE.0.D0) THEN
-                            SVAR=FAC/DIS**3
-                            INTEGRAL =INTEGRAL  -SVAR*3.D0
-                            DINTEGRAL =DINTEGRAL+SVAR*9.D0/DIS
-                          ELSE
-                            SVAR=-FAC/DIS**3 &
-        &                       *(3.D0+3.D0*DIS/SCREENL+(DIS/SCREENL)**2) &
-        &                       *EXP(-DIS/SCREENL)
-                            INTEGRAL=INTEGRAL +SVAR 
-!NEW
-                            SVAR=-SVAR/DIS &
-        &                       *(3.D0+(DIS/SCREENL)**2*(1.D0+DIS/SCREENL) &
-        &                             /(3.D0+3.D0*DIS/SCREENL+(DIS/SCREENL)**2))
-                            DINTEGRAL=DINTEGRAL+SVAR
-                          END IF
+                          INTEGRAL =INTEGRAL -3.D0*FAC*DINV(3)
+                          DINTEGRAL=DINTEGRAL-3.D0*FAC*DINV(3)
+                        ELSE
                         END IF
-
                       END IF
                     END IF
 
@@ -6697,7 +6793,8 @@ CALL TIMING$CLOCKOFF('X31-B')
         ISP1SAVE=ISP1
         ISP2SAVE=ISP2
         IF(.NOT.ALLOCATED(OFFSITEX)) THEN
-          CALL ERROR$MSG('ARRAY OFFSITEX IN SIMPLELMTO_MODULE HAS NOT BEEN ALLOCATED')
+          CALL ERROR$MSG('ARRAY OFFSITEX IN SIMPLELMTO_MODULE')
+          CALL ERROR$MSG('HAS NOT BEEN ALLOCATED')
           CALL ERROR$MSG('INTERNAL CODING ERROR')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
@@ -6707,7 +6804,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         DISSAVE=DIS      
-        G(:NF)=EXP(-OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS)
+        G(:NF)=EXP(-OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS) &
+      &       *(1.D0+OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS) 
       END IF
 !
       IF(ID.EQ.'22') THEN
@@ -6718,8 +6816,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
-        DINTEGRAL=-SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:) &
-     &                *OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
+        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
+     &                    *OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
 !
       ELSE IF (ID.EQ.'31') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%X31)) THEN
@@ -6729,12 +6827,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
-        DINTEGRAL=-SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:) &
+        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
      &                *OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
-!!$PRINT*,'X31 EVAL A: ',INTEGRAL,DINTEGRAL
-!!$PRINT*,'X31 EVAL B: ',OFFSITEX(ISP1,ISP2)%X31
-!!$PRINT*,'X31 EVAL C: ',OFFSITEX(ISP1,ISP2)%LAMBDA
-!!$PRINT*,'X31 EVAL D: ',G(:NF)
 !
       ELSE IF (ID.EQ.'BONDU') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%BONDU)) THEN
@@ -6755,8 +6849,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*G(:NF))
-        DINTEGRAL=-SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:) &
-     &                *OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*G(:NF))
+        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
+     &                    *OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*G(:NF))
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
@@ -7058,7 +7152,6 @@ CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
           ALLOCATE(OV (LMNXA,LMNXB))
           ALLOCATE(DOV(LMNXA,LMNXB))
           CALL SIMPLELMTO_OFFSITEOVERLAP(ISPA,ISPB,DIS,LMNXA,LMNXB,OV,DOV)
-!PRINT*,'OV-REPORT OFFSITE ',IATA,IATB,OV,DOV
           DO LMN1A=1,LMNXA
             DO LMN1B=1,LMNXB
               QOFFSITE=QOFFSITE+DBA(LMN1B,LMN1A,1)*OV(LMN1A,LMN1B)
@@ -7076,7 +7169,7 @@ CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
 !       == CAUTION: H(I,J)=DE/DRHO(I,J), WHICH IS HAMILTONIAN^DAGGE           ==
 !       ========================================================================
         IF(TNDDO) THEN
-CALL TIMING$CLOCKON('OFFX:NDDO')
+          CALL TIMING$CLOCKON('OFFX:NDDO')
           ALLOCATE(U22   (LMNXA,LMNXA,LMNXB,LMNXB))
           ALLOCATE(DU22  (LMNXA,LMNXA,LMNXB,LMNXB))
 
@@ -7105,7 +7198,7 @@ CALL TIMING$CLOCKON('OFFX:NDDO')
           ENDDO
           DEALLOCATE(U22)
           DEALLOCATE(DU22)
-CALL TIMING$CLOCKOFF('OFFX:NDDO')
+          CALL TIMING$CLOCKOFF('OFFX:NDDO')
         END IF
 !
 !       ========================================================================
@@ -7117,7 +7210,7 @@ CALL TIMING$CLOCKOFF('OFFX:NDDO')
 !       == CAUTION: H(I,J)=DE/DRHO(I,J), WHICH IS HAMILTONIAN^DAGGE           ==
 !       ========================================================================
         IF(T31) THEN
-CALL TIMING$CLOCKON('OFFX:31')
+          CALL TIMING$CLOCKON('OFFX:31')
           ALLOCATE(U3A1B (LMNXA,LMNXA,LMNXA,LMNXB))
           ALLOCATE(DU3A1B(LMNXA,LMNXA,LMNXA,LMNXB))
 
@@ -7128,13 +7221,6 @@ CALL TIMING$CLOCKON('OFFX:31')
 !!$STOP 'FORCED'
 
           CALL SIMPLELMTO_OFFSITEX31U(ISPA,ISPB, DIS,LMNXA,LMNXB,U3A1B,DU3A1B)
-!!$PRINT*,'X31REPORT A:',IATA,IATB,DIS,LMNXA,LMNXB
-!!$PRINT*,'X31REPORT A U=',U3A1B,DU3A1B
-!!$PRINT*,'X31REPORT A DAB =',DAB
-!!$PRINT*,'X31REPORT A DAA=',DAA
-!!$PRINT*,'X31REPORT A DBB=',DBB
-
-
           SCALE=SQLHFWA**3*SQLHFWB
           DO LMN1B=1,LMNXB
             DO LMN3A=1,LMNXA 
@@ -7165,56 +7251,7 @@ CALL TIMING$CLOCKON('OFFX:31')
           ENDDO               
           DEALLOCATE(U3A1B)
           DEALLOCATE(DU3A1B)
-!== ORIGINAL VERSION
-!!$         DO LMN1B=1,LMNXB
-!!$            DO LMN3A=1,LMNXA 
-!!$              DO LMN2A=1,LMNXA
-!!$                DO LMN1A=1,LMNXA
-!!$                  SVAR =-0.25D0* U3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
-!!$                  DSVAR=-0.25D0*DU3A1B(LMN1A,LMN2A,LMN3A,LMN1B)
-!!$                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
-!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
-!!$                  HAA(LMN1A,LMN3A,:)=HAA(LMN1A,LMN3A,:)+SVAR*DAB(LMN2A,LMN1B,:)
-!!$                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN1A,LMN3A,:)
-!!$PRINT*,'(1)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN1A,LMN3A,:))
-!!$                  EX  =EX   +SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
-!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
-!!$                  HAA(LMN3A,LMN1A,:)=HAA(LMN3A,LMN1A,:)+SVAR*DAB(LMN2A,LMN1B,:)
-!!$                  HAB(LMN2A,LMN1B,:)=HAB(LMN2A,LMN1B,:)+SVAR*DAA(LMN3A,LMN1A,:)
-!!$PRINT*,'(2)',SVAR*SUM(DAB(LMN2A,LMN1B,:)*DAA(LMN3A,LMN1A,:))
-!!$                ENDDO
-!!$              ENDDO
-!!$            ENDDO
-!!$          ENDDO               
-!!$          DEALLOCATE(U3A1B)
-!!$          DEALLOCATE(DU3A1B)
-!!$          ALLOCATE(U3B1A (LMNXB,LMNXB,LMNXB,LMNXA))
-!!$          ALLOCATE(DU3B1A(LMNXB,LMNXB,LMNXB,LMNXA))
-!!$          CALL SIMPLELMTO_OFFSITEX31U(ISPB,ISPA,-DIS,LMNXB,LMNXA,U3B1A,DU3B1A)
-!!$PRINT*,'X31REPORT B:',-DIS,LMNXB,LMNXA,U3B1A,DU3B1A
-!!$          DO LMN1A=1,LMNXA
-!!$            DO LMN3B=1,LMNXB 
-!!$              DO LMN2B=1,LMNXB
-!!$                DO LMN1B=1,LMNXB
-!!$                  SVAR =-0.25D0* U3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
-!!$                  DSVAR=-0.25D0*DU3B1A(LMN1B,LMN2B,LMN3B,LMN1A)
-!!$                  EX=EX+SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-!!$                  HBB(LMN1B,LMN3B,:)=HBB(LMN1B,LMN3B,:)+SVAR*DAB(LMN1A,LMN2B,:)
-!!$                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN1B,LMN3B,:)
-!!$PRINT*,'(3)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN1B,LMN3B,:))
-!!$                  EX  =EX  + SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-!!$                  DEDD=DEDD+DSVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-!!$                  HBB(LMN3B,LMN1B,:)=HBB(LMN3B,LMN1B,:)+SVAR*DAB(LMN1A,LMN2B,:)
-!!$                  HAB(LMN1A,LMN2B,:)=HAB(LMN1A,LMN2B,:)+SVAR*DBB(LMN3B,LMN1B,:)
-!!$PRINT*,'(4)',SVAR*SUM(DAB(LMN1A,LMN2B,:)*DBB(LMN3B,LMN1B,:))
-!!$                ENDDO
-!!$              ENDDO
-!!$            ENDDO
-!!$          ENDDO
-!!$          DEALLOCATE(U3B1A)
-!!$          DEALLOCATE(DU3B1A)
-CALL TIMING$CLOCKOFF('OFFX:31')
+          CALL TIMING$CLOCKOFF('OFFX:31')
         END IF
 !
 !       ========================================================================
@@ -7224,7 +7261,7 @@ CALL TIMING$CLOCKOFF('OFFX:31')
 !       == LMN1A,LMN1B TIED TO COORDINATE X1, LMN2A,LMN2B TO X2               ==
 !       ========================================================================
         IF(TBONDX) THEN
-CALL TIMING$CLOCKON('OFFX:BONDX')
+          CALL TIMING$CLOCKON('OFFX:BONDX')
           ALLOCATE(BONDU (LMNXA,LMNXB,LMNXA,LMNXB))
           ALLOCATE(DBONDU(LMNXA,LMNXB,LMNXA,LMNXB))
 !         == BONDU(1,2,3,4)=INT DX INT DX': A1(X)*B2(X)][A3(X')*B4(X')]/|R-R'|==
@@ -7252,7 +7289,7 @@ CALL TIMING$CLOCKON('OFFX:BONDX')
           ENDDO
           DEALLOCATE(BONDU)
           DEALLOCATE(DBONDU)
-CALL TIMING$CLOCKOFF('OFFX:BONDX')
+          CALL TIMING$CLOCKOFF('OFFX:BONDX')
         END IF
 !
 !       ========================================================================
@@ -7272,9 +7309,9 @@ CALL TIMING$CLOCKOFF('OFFX:BONDX')
        &            +MATMUL(DBA(:,:,I),TRANSPOSE(HBA(:,:,I)))
         ENDDO
 !       == SUM UP TOTAL AND SPIN CONTRIBUTIONS =================================
-        DO i=2,NDIMD
-          DAA(:,:,1)=DAA(:,:,1)+DAA(:,:,i)
-          DBB(:,:,1)=DBB(:,:,1)+DBB(:,:,i)
+        DO I=2,NDIMD
+          DAA(:,:,1)=DAA(:,:,1)+DAA(:,:,I)
+          DBB(:,:,1)=DBB(:,:,1)+DBB(:,:,I)
         ENDDO
 !       == DEDR IS THE ENERGY DERIVATIVE WITH RESPECT TO THE AXIAL FORCE
         DEDR(:)=DEDD*DR(:)/DIS
