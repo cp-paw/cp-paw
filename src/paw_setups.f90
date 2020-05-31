@@ -1078,6 +1078,20 @@ END MODULE SETUP_MODULE
       F=F/CELLVOL
       RETURN
       END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      subroutine setup_qnjofe(nr,l,n,j,qnjofe)
+!!$!     **************************************************************************
+!!$      implicit none
+!!$      integer(4),intent(in) :: nr
+!!$      integer(4),intent(in) :: l
+!!$      integer(4),intent(in) :: n
+!!$      integer(4),intent(in) :: j
+!!$      real(8)   ,intent(out):: qnjofe
+!!$!     **************************************************************************
+!!$
+!!$      return
+!!$      end
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$READSTRCIN(LL_STRC_)
