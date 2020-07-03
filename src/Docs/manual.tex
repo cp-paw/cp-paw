@@ -6349,14 +6349,18 @@ beyond a certain radius specified in the simulation code.
 \begin{eqnarray}
 |\chi_\alpha\rangle=\theta_{\Omega_{R_\alpha}}|\phi_\alpha\rangle
 \end{eqnarray}
-where $\theta_{\Omega_{R_\alpha}}$ is a real space function which is
-unit inside some chosen augmentation region and zero elsewhere.  
+where $\theta_{\Omega_{R_\alpha}}$ is a real-space step function which is
+unity inside some chosen augmentation region and zero elsewhere.  
 
 Per default, the augmentation sphere is confined by the atomic-sphere
-radius, is approximately 10\% larger than the covalent radius. (The
-factor corresponds to the ratio between the radius of a
-volume-filling-sphere radius in an fcc crystal and the corresponding
-touching-sphere radius.) However, it is possible to specify a
+radius, is approximately\footnote{The factor corresponds to the ratio
+  between the radius of a volume-filling-sphere radius in an fcc
+  crystal and the corresponding touching-sphere radius.  The radius of
+  a volume filling sphere in an fcc-crystal with lattice constant $1$
+  is given by $\frac{4\pi}{4}r^3=\frac{1}{4}$ A touching sphere has
+  the radius $r'=1/(2\sqrt{2})$. The ratio is
+  $r/r'=\sqrt[3]{\frac{3}{16\pi}}/(\sqrt{2}/4)=1.105$.} 10\% larger
+than the covalent radius.  However, it is possible to specify a
 different radius in the structure control file of the PAW simulation
 code.
 
@@ -6365,7 +6369,7 @@ In the future, I plan to replace these by local tight-binding orbitals.
 %===============================================================================
 \subsubsection{Orthonormalization}
 %===============================================================================
-These orbitals constructed either from truncated orbitals or from
+The orbitals constructed either from truncated orbitals or from
 tight-binding orbitals are not orthonormal to other orbitals on the
 same site, which produces counterintuitive results.
 
@@ -6436,8 +6440,6 @@ cartesian coordinate system used in the calculation.  The angular
 momentum character can, however, also be specified with respect to a
 arbitrary local coordinate system.
 
-
-
 The keywords and their angular momentum character are given in
 table~\ref{tab:realsphericalharmonics}. In addition the following
 special set of hybrid orbitals can be adressed.
@@ -6449,6 +6451,14 @@ $\sqrt{1\over{3}}Y_s\phi_s(|r|) + \sqrt{2\over{3}}Y_{p_z})\phi_p(|r|)$
 \item[sp3] An sp$^3$ orbital pointing in z-direction: 
 $\sqrt{1\over{4}}Y_s\phi_s(|r|) + \sqrt{3\over{4}}Y_{p_z})\phi_p(|r|)$
 \end{description}
+
+\textcolor{red}{\textbf{CAUTION!} In the present construction, the
+  hybrid orbitals are constructed solely from the first partial wave
+  of each angular momentum and site. In the presence of semi-core
+  states treated as valence, the hybrid orbitals are thus constructed
+  from the core states and have no weight from the valence
+  states. This is to be changed in the future.}
+
 
 \begin{table}[!hbt]
 \caption{\label{tab:realsphericalharmonics}List of real spherical

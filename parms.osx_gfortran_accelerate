@@ -114,7 +114,7 @@ SPECIAL="none"
 BLASDIR=""
 LAPACKDIR=""
 FFTDIR="/usr/local/lib/"
-MPIDIR="/usr/local/Cellar/open-mpi/4.0.1_1/"
+MPIDIR="/usr/local/Cellar/open-mpi/4.0.3/"
 FFT_HEADER="/usr/local/Cellar/fftw/3.3.8_1/include/fftw3.f03"
 MPI_HEADER="${MPIDIR}/include/mpif.h"
 #

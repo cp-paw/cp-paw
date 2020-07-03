@@ -505,7 +505,7 @@
 !     **************************************************************************
       PI=4.D0*ATAN(1.D0)
       ANGLEN=PI/180.D0*59.D0    ! MIN ANGLE=60 DEG
-      DISX=6.D0                 ! MAX DISTANCE
+      DISX=6.5D0                 ! MAX DISTANCE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
 !

@@ -2701,6 +2701,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
           L=LOX(LN,ISP)
           IF(TCHK.AND.LCHK(L+1)) THEN
             LCHK(L+1)=.FALSE.
+!PB:WARNING: PICKS ONLY THE WEIGHT FROM THE FIRST PARTIAL WAVE
             LM=L**2
             DO M=1,2*L+1
               IPRO=IPRO+1
@@ -3234,7 +3235,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **                                                                      **
 !     **  PRECONDITIONS:                                                      **
 !     **   - THE LINKED LIST LL_CNTL MUST BE POSITIONED INSIDE THE !ORB BLOCK **
-!     **   - ONE ORBITAL IS SELECTRD IN THE NEWORBITAL OBJECT                 **
+!     **   - ONE ORBITAL IS SELECTED IN THE NEWORBITAL OBJECT                 **
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE, ONLY : LL_TYPE &
