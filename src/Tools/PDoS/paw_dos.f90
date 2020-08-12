@@ -103,7 +103,6 @@ END MODULE READCNTL_MODULE
 !     **************************************************************************
       USE SPINDIR_MODULE  ,ONLY : SPINDIR !(IS ONLY ALLOCATED)
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER      :: TOLD=.FALSE.
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NAT
       INTEGER(4)                :: NB
@@ -131,6 +130,7 @@ END MODULE READCNTL_MODULE
       CHARACTER(6)              :: FLAG
       CHARACTER(32)             :: MODE
       CHARACTER(256)            :: PREFIX !OPTIONAL PREFIX FOR DOS AND NOS FILES
+      character(128)            :: format
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
 !
@@ -149,16 +149,15 @@ END MODULE READCNTL_MODULE
 !     ==  WRITE HEADER                                                        ==
 !     ==========================================================================
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(80("*"),T15 &
-     &             ,"           PDOS ANALYSIS TOOL                ")')
-      WRITE(NFILO,FMT='(80("*"),T15 &
-     &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
+      WRITE(NFILO,FMT='(80("*"),T15,a50)') &
+     &            '              PDOS ANALYSIS TOOL                '
+      WRITE(NFILO,FMT='(80("*"),T15,a50)') &
+     &             '    FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ' 
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(T20 &
-     &               ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
-      WRITE(NFILO,FMT='(T20 &
-     &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &      /T20,"ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+      WRITE(NFILO,FMT='(T20," P.E. BLOECHL ")')
+      WRITE(NFILO,FMT='(T20,A/T20,A)') &
+     &      '(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY' &
+     &      ,'ANY USE REQUIRES WRITTEN LICENSE FROM CUT'
       WRITE(NFILO,*)
 !
 !     ==========================================================================
@@ -801,7 +800,7 @@ TYPE ORBITAL_TYPE
   TYPE(ORBITALENTRY_TYPE) :: ENTRY(100)
 END TYPE ORBITAL_TYPE
 !
-INTEGER(4)        ,PARAMETER   :: NORBX=1000
+INTEGER(4)        ,PARAMETER   :: NORBX=100
 INTEGER(4)                     :: NORB=0
 INTEGER(4)                     :: IORB=0
 TYPE(ORBITAL_TYPE)             :: NEWORBITAL(NORBX) !(NORBX)
@@ -918,7 +917,7 @@ END MODULE NEWORBITAL_MODULE
       IF(NORB+1.GT.NORBX) THEN
         CALL ERROR$MSG('MAX. NR. OF ORBITALS EXCEEDED')
         CALL ERROR$MSG('INCREASE PARAMETER "NORBX" IN NEWORBITAL_MODULE')
-        CALL ERROR$CHVAL('NORBX',NORBX)
+        CALL ERROR$I4VAL('NORBX',NORBX)
         CALL ERROR$CHVAL('NAME',NAME)
         CALL ERROR$STOP('NEWORBITAL$NEWORBITAL')
       END IF
@@ -1063,7 +1062,7 @@ END MODULE NEWORBITAL_MODULE
         NENTRY=NENTRY+1
         IF(NENTRY.GT.SIZE(NEWORBITAL(IORB)%ENTRY)) THEN
           CALL ERROR$MSG('NUMBER OF ENTRIES FOR ORBITAL EXCEEDED')
-          CALL ERROR$I4VAL('ORBITAL NAME',NEWORBITAL(IORB)%NAME)
+          CALL ERROR$CHVAL('ORBITAL NAME',NEWORBITAL(IORB)%NAME)
           CALL ERROR$I4VAL('NENTRY',NENTRY)
           CALL ERROR$I4VAL('SIZE OF ENTRY',SIZE(NEWORBITAL(IORB)%ENTRY))
           CALL ERROR$STOP('NEWORBITAL$ADDENTRY')
@@ -1531,7 +1530,7 @@ END MODULE NEWSET_MODULE
       IF(NSET+1.GT.NSETX) THEN
         CALL ERROR$MSG('MAX. NR. OF SETS EXCEEDED')
         CALL ERROR$MSG('INCREASE PARAMETER "NSETX" IN NEWSET_MODULE')
-        CALL ERROR$CHVAL('NSETX',NSETX)
+        CALL ERROR$I4VAL('NSETX',NSETX)
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('NEWSET$NEWSET')
       END IF
@@ -1883,7 +1882,6 @@ END MODULE NEWSET_MODULE
      &                          ,STATEARR !(IKPT,ISPIN)
       USE NEWSET_MODULE, ONLY : NEWSET
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER   :: TOLD=.FALSE.
       INTEGER(4),INTENT(IN)  :: NBB
       INTEGER(4),INTENT(IN)  :: NKPT
       INTEGER(4),INTENT(IN)  :: NSET

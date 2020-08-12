@@ -853,7 +853,6 @@ END MODULE COSMO_MODULE
       REAL(8),INTENT(IN) :: VTHETA(NQ)
       REAL(8),INTENT(OUT):: FAT(3,NAT)
       REAL(8),PARAMETER  :: DRSOLVPLUS=0.2D0   !1.D0     
-      REAL(8),PARAMETER  :: DRSOLVMINUS=0.05D0 !0.9D0    
       INTEGER(4)         :: IAT1,IAT2,IQ
       REAL(8)            :: DR(3),DIS
       REAL(8)            :: R2(3)

@@ -1659,6 +1659,7 @@ END MODULE WAVES_MODULE
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
       INTEGER(4) ::NTASKS_W,THISTASK_W
+REAL(8) :: RBASM(3,3)
 !     **************************************************************************
       CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
@@ -1768,6 +1769,20 @@ END MODULE WAVES_MODULE
       CALL ENERGYLIST$SET('PS  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('AE  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',EKIN)
+IF(1.EQ.0) THEN
+      CALL CELL$GETR8A('TM',9,RBASM)
+WRITE(*,FMT='("STRESSTEST:",66("="))')
+WRITE(*,FMT='("STRESSTEST: EKIN=",F20.10)')EKIN
+WRITE(*,FMT='("STRESSTEST: STRESS*RBAS=",F20.10)')SUM(RBAS*STRESSKIN)
+WRITE(*,FMT='("STRESSTEST: RBAS1=",3F20.10)')RBAS(1,:)
+WRITE(*,FMT='("STRESSTEST: RBAS2=",3F20.10)')RBAS(2,:)
+WRITE(*,FMT='("STRESSTEST: RBAS3=",3F20.10)')RBAS(3,:)
+WRITE(*,FMT='("STRESSTEST: STRESS1=",3F20.10)')STRESSKIN(1,:)
+WRITE(*,FMT='("STRESSTEST: STRESS2=",3F20.10)')STRESSKIN(2,:)
+WRITE(*,FMT='("STRESSTEST: STRESS3=",3F20.10)')STRESSKIN(3,:)
+END IF
+
+
 !
 !     ==========================================================================
 !     == ONE-CENTER DENSITY MATRICES                                          ==
@@ -3639,7 +3654,7 @@ END IF
         OSDENMAT(NN)%IT=NNLIST(3:5,NN)
         OSDENMAT(NN)%N1=N1
         OSDENMAT(NN)%N2=N2
-        OSDENMAT(NN)%N3=NDIMD  !(TOTAL,X,Y,Z)
+        OSDENMAT(NN)%N3=NDIMD  !(total),(total,z),(TOTAL,X,Y,Z)
         ALLOCATE(OSDENMAT(NN)%MAT(N1,N2,NDIMD))
         OSDENMAT(NN)%MAT(:,:,:)=0.D0
       ENDDO
@@ -3688,7 +3703,6 @@ END IF
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
-COMPLEX(8)  :: PHASE
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
 !     **************************************************************************
                                     CALL TRACE$PUSH('WAVES_SUMMUPOFFSITEDENMAT')
@@ -3720,6 +3734,10 @@ COMPLEX(8)  :: PHASE
 !     ==  ADD UP DENSITY MATRIX                                               ==
 !     ==========================================================================
       NND=SIZE(OSDENMAT)
+      DO NN=1,NND
+        OSDENMAT(NN)%MAT=0.D0
+      ENDDO
+!
       NPRO=MAP%NPRO
       CALL MPE$QUERY('K',NTASKS,THISTASK)
       ICOUNT=0
@@ -3736,7 +3754,7 @@ COMPLEX(8)  :: PHASE
             IAT1=OSDENMAT(NN)%IAT1
             IAT2=OSDENMAT(NN)%IAT2
             IT  =OSDENMAT(NN)%IT
-!            SVAR=-2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
+!           SVAR=-2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
             SVAR=2.D0*PI*SUM(XK(:,IKPT)*REAL(IT,KIND=8))
             EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
             I0=IPRO1(IAT1)-1
@@ -3812,7 +3830,11 @@ COMPLEX(8)  :: PHASE
 !     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
 !     ==========================================================================
       DO NN=1,NND
+WRITE(*,*)'BEFORE MPE-COMBINE ',THISTASK,NN,nnd
+WRITE(*,*)'       MPE-COMBINE ',thistask,nn,SHAPE(OSDENMAT(NN)%MAT)
+WRITE(*,*)'       MPE-COMBINE ',thistask,nn,OSDENMAT(NN)%MAT(1,1,1)
         CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
+WRITE(*,*)'AFTER  MPE-COMBINE ',THISTASK,NN,OSDENMAT(NN)%MAT(1,1,1)
       ENDDO
 !
 !     ==========================================================================
@@ -5379,7 +5401,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           SVAR2=0.5D0*(F1-F2)
 !         == NOTE THAT OOCUPATIONS CAN BE NEGATIVE FROM K-INTEGRATION
           IF(SVAR1.EQ.0.D0) THEN
-            IF(SVAR2.EQ.0) CYCLE
+            IF(SVAR2.EQ.0.d0) CYCLE
           END IF
           DO IR=1,NRL
             PSI1(IR)=SVAR1*CONJG(PSIOFR(IR,1,IBH))

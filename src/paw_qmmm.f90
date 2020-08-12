@@ -1,5 +1,5 @@
-!attention charges may be reversed because I count electrons and 
-! force fields count electron charges!
+!ATTENTION CHARGES MAY BE REVERSED BECAUSE I COUNT ELECTRONS AND 
+! FORCE FIELDS COUNT ELECTRON CHARGES!
 ! 
 !.......................................................................
 MODULE QMMM_MODULE
@@ -46,17 +46,17 @@ TYPE LINK_TYPE
   INTEGER(4)  :: MATOM
   INTEGER(4)  :: SATOM
   REAL(8)     :: ALPHA
-  REAL(8)     :: QAO    !q-all outer
-  REAL(8)     :: QSO    !q-shadow-outer
-  REAL(8)     :: faO(3) !force-all-outer
-  REAL(8)     :: fai(3) !force-all-inner
-  REAL(8)     :: fsO(3) !force-shadow-outer
-  REAL(8)     :: fsi(3) !force-shadow-inner
-  integer(4)  :: shared      ! points to another link bond with shared atoms
+  REAL(8)     :: QAO    !Q-ALL OUTER
+  REAL(8)     :: QSO    !Q-SHADOW-OUTER
+  REAL(8)     :: FAO(3) !FORCE-ALL-OUTER
+  REAL(8)     :: FAI(3) !FORCE-ALL-INNER
+  REAL(8)     :: FSO(3) !FORCE-SHADOW-OUTER
+  REAL(8)     :: FSI(3) !FORCE-SHADOW-INNER
+  INTEGER(4)  :: SHARED      ! POINTS TO ANOTHER LINK BOND WITH SHARED ATOMS
 END TYPE LINK_TYPE
 TYPE MAP_TYPE
-! MAP PROVIDES THE INDICES FOR THE ATOMS of the central cluster 
-! not participating in the link bonds.
+! MAP PROVIDES THE INDICES FOR THE ATOMS OF THE CENTRAL CLUSTER 
+! NOT PARTICIPATING IN THE LINK BONDS.
 ! THE ATOM HAS THE INDEX QATOM IN THE QM-SYSTEM, THE INDEX SATOM IN THE 
 ! SHADOW AND THE INDEX MATOM IN THE MM SYSTEM. MAP HAS ENTRIES ALSO TO 
 ! BOTH PARTNERS OF A BOND CROSSING THE QM-MM BOUNDARY. (IT INCLUDES ALSO 
@@ -99,10 +99,10 @@ END MODULE QMMM_MODULE
       REAL(8)     ,ALLOCATABLE :: SQ(:)
       CHARACTER(5),ALLOCATABLE :: MTYPE(:)
       CHARACTER(5),ALLOCATABLE :: STYPE(:)
-      CHARACTER(32),ALLOCATABLE:: mname(:)
-      CHARACTER(32),ALLOCATABLE:: Sname(:)
+      CHARACTER(32),ALLOCATABLE:: MNAME(:)
+      CHARACTER(32),ALLOCATABLE:: SNAME(:)
       CHARACTER(2), ALLOCATABLE:: MELEMENT(:), SELEMENT(:)
-      integer(4)               :: i
+      INTEGER(4)               :: I
       LOGICAL(4)               :: TCHK
 !     ******************************************************************
       IF(TINI) RETURN
@@ -146,14 +146,14 @@ END MODULE QMMM_MODULE
       DO I=1,SIZE(MNAME)
          MNAME(I)(1:2)= ADJUSTL(MNAME(I)(1:2))
          IF(MNAME(I)(2:2).EQ.' ') MNAME(I)(2:2)='_'
-!new version:
+!NEW VERSION:
          IF(MELEMENT(I)(2:2).EQ.' ') MELEMENT(I)(2:2)='_'
 !----------
       ENDDO
       DO I=1,SIZE(SNAME)
          SNAME(I)= ADJUSTL(SNAME(I)(1:2))
          IF(SNAME(I)(2:2).EQ.' ') SNAME(I)(2:2)='_'
-!new version:
+!NEW VERSION:
          IF(SELEMENT(I)(2:2).EQ.' ') SELEMENT(I)(2:2)='_'
 !----------
       ENDDO
@@ -165,7 +165,7 @@ END MODULE QMMM_MODULE
         IATQ=LINK(ILINK)%QATOM
         IATS=LINK(ILINK)%SATOM
         IATM=LINK(ILINK)%MATOM
-!new version: changed S/Mname into S/Melement
+!NEW VERSION: CHANGED S/MNAME INTO S/MELEMENT
         CALL PERIODICTABLE$GET(SELEMENT(IATS)(1:2),'R(COV)',RS)
         CALL PERIODICTABLE$GET(MELEMENT(IATM)(1:2),'R(COV)',RM)
         CALL PERIODICTABLE$GET(MELEMENT(IATMJ)(1:2),'R(COV)',RJ)
@@ -173,11 +173,11 @@ END MODULE QMMM_MODULE
         LINK(ILINK)%ALPHA=(RS+RJ)/(RM+RJ)
         LINK(ILINK)%QAO=MQ(IATM)
         LINK(ILINK)%QSO=SQ(IATS)
-        LINK(ILINK)%fao(:)=0.d0
-        LINK(ILINK)%fai(:)=0.d0
-        LINK(ILINK)%fso(:)=0.d0
-        LINK(ILINK)%fsi(:)=0.d0
-        LINK(ILINK)%shared=0
+        LINK(ILINK)%FAO(:)=0.D0
+        LINK(ILINK)%FAI(:)=0.D0
+        LINK(ILINK)%FSO(:)=0.D0
+        LINK(ILINK)%FSI(:)=0.D0
+        LINK(ILINK)%SHARED=0
       ENDDO
       DEALLOCATE(STYPE)
       DEALLOCATE(MTYPE)
@@ -189,16 +189,16 @@ END MODULE QMMM_MODULE
       DEALLOCATE(SQ)
 !
 !     ===================================================================
-!     ==  check if link bonds overlap                                  ==
+!     ==  CHECK IF LINK BONDS OVERLAP                                  ==
 !     ===================================================================
-      do ilink=1,nlink
+      DO ILINK=1,NLINK
         IATQ=LINK(ILINK)%QATOM
         IATQJ=LINK(ILINK)%QJOINT
-        link(ilink)%shared=0
-        do i=ilink+1,nlink
+        LINK(ILINK)%SHARED=0
+        DO I=ILINK+1,NLINK
           IF(LINK(I)%QATOM.EQ.IATQ.OR.LINK(I)%QJOINT.EQ.IATQJ) THEN
-            link(ilink)%shared=i
-            exit
+            LINK(ILINK)%SHARED=I
+            EXIT
           END IF
         ENDDO
       ENDDO
@@ -257,7 +257,7 @@ END MODULE QMMM_MODULE
           I=I+1; LINK(ILINK)%MATOM=VALUE(I)
           I=I+1; LINK(ILINK)%SATOM=VALUE(I)
           LINK(ILINK)%ALPHA=0.D0
-          LINK(ILINK)%qao=0.D0
+          LINK(ILINK)%QAO=0.D0
         ENDDO
       ELSE 
         CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -443,18 +443,18 @@ END MODULE QMMM_MODULE
       SUBROUTINE QMMM$INTERFACE(NAT,POS,CHARGE,FORCE,POT,DEPOT)
 !     *****************************************************************
 !     *****************************************************************
-      USE QMMM_MODULE !, only : map_type,nmap,map,link_type,nlink,link
+      USE QMMM_MODULE !, ONLY : MAP_TYPE,NMAP,MAP,LINK_TYPE,NLINK,LINK
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NAT          ! #(atoms in qm cluster)
-      REAL(8)   ,INTENT(IN)  :: POS(3,NAT)   ! position of qm cluster
-      REAL(8)   ,INTENT(IN)  :: CHARGE(NAT)  ! charges of qm cluster
-      REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT) ! environment forces on qm cluster
-      REAL(8)   ,INTENT(OUT) :: POT(NAT)     ! environment potentials on qm cluster
-      REAL(8)   ,INTENT(OUT) :: DEPOT        ! environment energy
-      REAL(8)   ,ALLOCATABLE :: MPOS(:,:)    ! positions of complete system
+      INTEGER(4),INTENT(IN)  :: NAT          ! #(ATOMS IN QM CLUSTER)
+      REAL(8)   ,INTENT(IN)  :: POS(3,NAT)   ! POSITION OF QM CLUSTER
+      REAL(8)   ,INTENT(IN)  :: CHARGE(NAT)  ! CHARGES OF QM CLUSTER
+      REAL(8)   ,INTENT(OUT) :: FORCE(3,NAT) ! ENVIRONMENT FORCES ON QM CLUSTER
+      REAL(8)   ,INTENT(OUT) :: POT(NAT)     ! ENVIRONMENT POTENTIALS ON QM CLUSTER
+      REAL(8)   ,INTENT(OUT) :: DEPOT        ! ENVIRONMENT ENERGY
+      REAL(8)   ,ALLOCATABLE :: MPOS(:,:)    ! POSITIONS OF COMPLETE SYSTEM
       REAL(8)   ,ALLOCATABLE :: MPOSM(:,:)
       REAL(8)   ,ALLOCATABLE :: SPOS(:,:)
-      REAL(8)   ,ALLOCATABLE :: SPOSm(:,:)
+      REAL(8)   ,ALLOCATABLE :: SPOSM(:,:)
       REAL(8)   ,ALLOCATABLE :: MCHARGE(:)
       REAL(8)   ,ALLOCATABLE :: SCHARGE(:)
       REAL(8)   ,ALLOCATABLE :: MFORCE(:,:)
@@ -477,7 +477,7 @@ END MODULE QMMM_MODULE
       INTEGER(4)             :: IMULTIPLE
       LOGICAL(4)             :: TTHERMOSTAT
       REAL(8)                :: ENOSE
-      integer(4)             :: ind
+      INTEGER(4)             :: IND
 !     *****************************************************************
       DEPOT=0.D0
       POT(:)=0.D0
@@ -492,14 +492,14 @@ END MODULE QMMM_MODULE
       ALLOCATE(MFORCE(3,NATM))
       ALLOCATE(MPOT(NATM))
       ALLOCATE(SPOS(3,NATS))
-      ALLOCATE(SPOSm(3,NATS))
+      ALLOCATE(SPOSM(3,NATS))
       ALLOCATE(SCHARGE(NATS))
 !     ALLOCATE(SFORCE(3,NATS))
 !     ALLOCATE(SPOT(NATS))
-      ALLOCATE(fa(3,NATq))
-      ALLOCATE(fs(3,NATs))
-      ALLOCATE(va(NATq))
-      ALLOCATE(vs(NATs))
+      ALLOCATE(FA(3,NATQ))
+      ALLOCATE(FS(3,NATS))
+      ALLOCATE(VA(NATQ))
+      ALLOCATE(VS(NATS))
 !
 !     ==================================================================
 !     ==  APPLY CONSTRAINTS                                           ==
@@ -512,7 +512,7 @@ END MODULE QMMM_MODULE
       CALL CLASSICAL$GETR8A('QEL',NATM,MCHARGE)
       CALL CLASSICAL$SELECT('SHADOW')
       CALL CLASSICAL$GETR8A('R(0)',3*NATS,SPOS)
-      CALL CLASSICAL$GETR8A('R(-)',3*NATS,SPOSm)
+      CALL CLASSICAL$GETR8A('R(-)',3*NATS,SPOSM)
       CALL CLASSICAL$GETR8A('QEL',NATS,SCHARGE)
 !
 !     =========================================================================
@@ -530,8 +530,8 @@ END MODULE QMMM_MODULE
         MCHARGE(IATM)=CHARGE(IATQ)
         SCHARGE(IATS)=CHARGE(IATQ)
 !SET TO ZERO TO NEGLECT CHARGES
-! mcharge(iatm)=0.d0
-! scharge(iats)=0.d0
+! MCHARGE(IATM)=0.D0
+! SCHARGE(IATS)=0.D0
       ENDDO      
 !
 !     =========================================================================
@@ -547,24 +547,24 @@ END MODULE QMMM_MODULE
         IATS =LINK(ILINK)%SATOM
         ALPHA=LINK(ILINK)%ALPHA
         MPOS(:,IATM)  =POS(:,IATQJ)+(POS(:,IATQ)-POS(:,IATQJ))/ALPHA
-        MPOS(:,IATMj) =POS(:,IATqj)   
+        MPOS(:,IATMJ) =POS(:,IATQJ)   
         MPOSM(:,IATM) =MPOS(:,IATM)   !SET VELOCITIES TO ZERO
-        MPOSM(:,IATMj)=MPOS(:,IATMj)  !SET VELOCITIES TO ZERO
+        MPOSM(:,IATMJ)=MPOS(:,IATMJ)  !SET VELOCITIES TO ZERO
         SPOS(:,IATS)=POS(:,IATQ)
-        SPOS(:,IATSj)=POS(:,IATQj)
+        SPOS(:,IATSJ)=POS(:,IATQJ)
 !       == NOTE THAT THE CHARGE OF THE M ATOM MUST BE RESET!! ========
-        svar=charge(iatq)-link(ilink)%QsO
-        MCHARGE(IATM) =LINK(ILINK)%qAO+ALPHA*svar
-        MCHARGE(IATMJ)=charge(iatqJ)+(1.D0-ALPHA)*svar
-!double counting for shared atoms!
+        SVAR=CHARGE(IATQ)-LINK(ILINK)%QSO
+        MCHARGE(IATM) =LINK(ILINK)%QAO+ALPHA*SVAR
+        MCHARGE(IATMJ)=CHARGE(IATQJ)+(1.D0-ALPHA)*SVAR
+!DOUBLE COUNTING FOR SHARED ATOMS!
         SCHARGE(IATS) =CHARGE(IATQ)
         SCHARGE(IATSJ)=CHARGE(IATQJ)
 
 !SET TO ZERO TO NEGLECT CHARGES
-!mcharge(iatm)=0.d0
-!mcharge(iatmj)=0.d0
-!scharge(iats)=0.d0
-!scharge(iatsj)=0.d0
+!MCHARGE(IATM)=0.D0
+!MCHARGE(IATMJ)=0.D0
+!SCHARGE(IATS)=0.D0
+!SCHARGE(IATSJ)=0.D0
       ENDDO
 PRINT*,'MQ ',MCHARGE
 PRINT*,'SQ ',SCHARGE
@@ -582,8 +582,8 @@ PRINT*,'SQ ',SCHARGE
       CALL CLASSICAL$SELECT('SHADOW')
       CALL CLASSICAL$NEIGHBORS
       CALL CLASSICAL$ETOT(EPOTS)  
-      CALL CLASSICAL$GETR8A('FORCE',3*NATS,fs)
-      CALL CLASSICAL$GETR8A('VEL',NATS,vs)
+      CALL CLASSICAL$GETR8A('FORCE',3*NATS,FS)
+      CALL CLASSICAL$GETR8A('VEL',NATS,VS)
 !
 !     ==================================================================
 !     ==  SET VELOCITIES TO ZERO IF REQUESTED                         ==
@@ -602,7 +602,7 @@ PRINT*,'SQ ',SCHARGE
 !     ==  RANDOMIZE INITIAL VELOCITIES                                ==
 !     ==================================================================
       IF(TRANDOMIZE) THEN
-!       == the velocities of the reaction center remain unchanged
+!       == THE VELOCITIES OF THE REACTION CENTER REMAIN UNCHANGED
         CALL QMMM_RANDOMIZEVELOCITY
         TRANDOMIZE=.FALSE.
       END IF
@@ -630,7 +630,7 @@ PRINT*,'SQ ',SCHARGE
                         CALL TIMING$CLOCKON('QM-MM:NEIGHBORS')
         CALL CLASSICAL$NEIGHBORS
                         CALL TIMING$CLOCKOFF('QM-MM:NEIGHBORS')
-        IF(TADIABATIC.and.tmove) THEN
+        IF(TADIABATIC.AND.TMOVE) THEN
           CALL QMMM_MINIMIZE(TCHK)
         END IF
                         CALL TIMING$CLOCKON('QM-MM:ETOT')
@@ -639,7 +639,7 @@ PRINT*,'SQ ',SCHARGE
                         CALL TIMING$CLOCKOFF('QM-MM:ETOT')
 !
 !       ==================================================================
-!       ==  accumulate FORCES and potentials                             ==
+!       ==  ACCUMULATE FORCES AND POTENTIALS                             ==
 !       ==================================================================
         CALL CLASSICAL$GETR8A('FORCE',3*NATM,MFORCE)
         CALL CLASSICAL$GETR8A('VEL',NATM,MPOT)
@@ -647,10 +647,10 @@ PRINT*,'SQ ',SCHARGE
           IATQ=MAP(IMAP)%QATOM
           IATM=MAP(IMAP)%MATOM
           IATS=MAP(IMAP)%SATOM
-!         the indexing of the qm system is used because the arrays are 
-!         allocated only with nat elements
-          FA(:,iatq)=fa(:,iatq)+mforce(:,iatm)
-          VA(iatq)=va(iatq)+mpot(iatm)
+!         THE INDEXING OF THE QM SYSTEM IS USED BECAUSE THE ARRAYS ARE 
+!         ALLOCATED ONLY WITH NAT ELEMENTS
+          FA(:,IATQ)=FA(:,IATQ)+MFORCE(:,IATM)
+          VA(IATQ)=VA(IATQ)+MPOT(IATM)
         ENDDO        
         DO ILINK=1,NLINK
           IATQJ=LINK(ILINK)%QJOINT
@@ -660,10 +660,10 @@ PRINT*,'SQ ',SCHARGE
           IATM =LINK(ILINK)%MATOM
           IATS =LINK(ILINK)%SATOM
           ALPHA=LINK(ILINK)%ALPHA
-          fa(:,iatq) =fa(:,iatq) +mforce(:,iatm)
-          fa(:,iatqj)=fa(:,iatqj)+mforce(:,iatmj)
-          VA(iatq)   =va(iatq)   +alpha*mpot(iatm)+(1.d0-alpha)*mpot(iatmj)
-          VA(iatqj)  =va(iatqj)  +mpot(iatmj)
+          FA(:,IATQ) =FA(:,IATQ) +MFORCE(:,IATM)
+          FA(:,IATQJ)=FA(:,IATQJ)+MFORCE(:,IATMJ)
+          VA(IATQ)   =VA(IATQ)   +ALPHA*MPOT(IATM)+(1.D0-ALPHA)*MPOT(IATMJ)
+          VA(IATQJ)  =VA(IATQJ)  +MPOT(IATMJ)
         ENDDO
 !
 !       ==================================================================
@@ -721,7 +721,7 @@ PRINT*,'SQ ',SCHARGE
 !       ==================================================================
 !       ==  SWITCH EXCEPT THE LAST                                      ==
 !       ==================================================================
-        IF(IMULTIPLE.Lt.NMULTIPLE) THEN
+        IF(IMULTIPLE.LT.NMULTIPLE) THEN
           CALL CLASSICAL$SWITCH
           CALL THERMOSTAT$SWITCH
         END IF
@@ -733,26 +733,26 @@ PRINT*,'SQ ',SCHARGE
         ETHERM_QMMM=SVAR*ETHERM_QMMM
         FA(:,:)    =SVAR*FA(:,:)
         VA(:)      =SVAR*VA(:)
-      else
-        ekin_qmmm  = 0.d0
-        etherm_qmmm= 0.d0
+      ELSE
+        EKIN_QMMM  = 0.D0
+        ETHERM_QMMM= 0.D0
       END IF
       DEPOT      =EPOT_QMMM
 PRINT*,'EKIN_QMMM',EKIN_QMMM
 !
 !     ==================================================================
-!     ==  map forces and potentials into arguments force and pot      ==
-!     ==  forces on link atoms are done special                       ==
+!     ==  MAP FORCES AND POTENTIALS INTO ARGUMENTS FORCE AND POT      ==
+!     ==  FORCES ON LINK ATOMS ARE DONE SPECIAL                       ==
 !     ==================================================================
-      pot(:)=0.d0
+      POT(:)=0.D0
       DO IMAP=1,NMAP
         IATQ=MAP(IMAP)%QATOM
         IATM=MAP(IMAP)%MATOM
         IATS=MAP(IMAP)%SATOM
-!       the indexing of the qm system is used because the arrays are 
-!       allocated only with nat elements
-        force(:,iatq)=fa(:,iatq)-fs(:,iats)
-        pot(iatq)=pot(iatq)+VA(iatq)-vs(iats)
+!       THE INDEXING OF THE QM SYSTEM IS USED BECAUSE THE ARRAYS ARE 
+!       ALLOCATED ONLY WITH NAT ELEMENTS
+        FORCE(:,IATQ)=FA(:,IATQ)-FS(:,IATS)
+        POT(IATQ)=POT(IATQ)+VA(IATQ)-VS(IATS)
       ENDDO        
       DO ILINK=1,NLINK
         IATQJ=LINK(ILINK)%QJOINT
@@ -766,45 +766,45 @@ PRINT*,'EKIN_QMMM',EKIN_QMMM
         LINK(ILINK)%FAI(:)=FA(:,IATQJ)
         LINK(ILINK)%FSO(:)=FS(:,IATS)
         LINK(ILINK)%FSI(:)=FS(:,IATSJ)
-        if(tadiabatic) then
-          force(:,iatq) =force(:,iatq)+fa(:,iatq)/alpha-fs(:,iats)
-          force(:,iatqj)=force(:,iatqj)+fa(:,iatqj)+fa(:,iatq)*(1.d0-1.d0/alpha)-fs(:,iatsj)
-print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-pos(:,iatqj)) &
-  /sqrt(sum((pos(:,iatq)-pos(:,iatqj))**2)),sqrt(sum((pos(:,iatq)-pos(:,iatqj))**2)),ilink,alpha
-        else    ! forces are taken care of in qmmm$propagate
+        IF(TADIABATIC) THEN
+          FORCE(:,IATQ) =FORCE(:,IATQ)+FA(:,IATQ)/ALPHA-FS(:,IATS)
+          FORCE(:,IATQJ)=FORCE(:,IATQJ)+FA(:,IATQJ)+FA(:,IATQ)*(1.D0-1.D0/ALPHA)-FS(:,IATSJ)
+PRINT*,'FORCE ALONG LINK',DOT_PRODUCT(FORCE(:,IATQ)-FORCE(:,IATQJ),POS(:,IATQ)-POS(:,IATQJ)) &
+  /SQRT(SUM((POS(:,IATQ)-POS(:,IATQJ))**2)),SQRT(SUM((POS(:,IATQ)-POS(:,IATQJ))**2)),ILINK,ALPHA
+        ELSE    ! FORCES ARE TAKEN CARE OF IN QMMM$PROPAGATE
           FORCE(:,IATQ) =0.D0
           FORCE(:,IATQJ)=0.D0
-        end if
-        ind=link(ilink)%shared
-!check potentials for shared bond more carefully. Here we assume
-!that only the joint atom is shared
-        if(ind.eq.0) then
-          POT(IATQJ)=pot(iatqj)+VA(IATQJ)-VS(IATSJ)          
-        end if
-        POT(IATQ)=pot(iatq)+ALPHA*VA(IATQ)+(1.D0-ALPHA)*VA(IATQJ)-VS(IATS)
+        END IF
+        IND=LINK(ILINK)%SHARED
+!CHECK POTENTIALS FOR SHARED BOND MORE CAREFULLY. HERE WE ASSUME
+!THAT ONLY THE JOINT ATOM IS SHARED
+        IF(IND.EQ.0) THEN
+          POT(IATQJ)=POT(IATQJ)+VA(IATQJ)-VS(IATSJ)          
+        END IF
+        POT(IATQ)=POT(IATQ)+ALPHA*VA(IATQ)+(1.D0-ALPHA)*VA(IATQJ)-VS(IATS)
       ENDDO
-!print*,'va',va
-!print*,'vs',vs
-!print*,'pot',pot
-!stop
+!PRINT*,'VA',VA
+!PRINT*,'VS',VS
+!PRINT*,'POT',POT
+!STOP
 !
 !     ==================================================================
-!     ==  deallocate arrays                                           ==
+!     ==  DEALLOCATE ARRAYS                                           ==
 !     ==================================================================
       DEALLOCATE(MPOS)
-      deALLOCATE(MPOSM)
+      DEALLOCATE(MPOSM)
       DEALLOCATE(MCHARGE)
       DEALLOCATE(MFORCE)
       DEALLOCATE(MPOT)
       DEALLOCATE(SPOS)
-      deALLOCATE(SPOSm)
+      DEALLOCATE(SPOSM)
       DEALLOCATE(SCHARGE)
 !      DEALLOCATE(SFORCE)
 !      DEALLOCATE(SPOT)
-      deALLOCATE(fa)
-      deALLOCATE(fs)
-      deALLOCATE(va)
-      deALLOCATE(vs)
+      DEALLOCATE(FA)
+      DEALLOCATE(FS)
+      DEALLOCATE(VA)
+      DEALLOCATE(VS)
 !
 !     ==================================================================
 !     ==  PRINTOUT                                                    ==
@@ -825,38 +825,38 @@ print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-p
       END
 ! 
 !     ..................................................................
-      SUBROUTINE QMMM$propagate(nat_,delt,anner,mass,annervec,rm,r0,rp)
+      SUBROUTINE QMMM$PROPAGATE(NAT_,DELT,ANNER,MASS,ANNERVEC,RM,R0,RP)
 !     ******************************************************************
 !     **                                                              **
 !     **                                                              **
 !     ******************************************************************
       USE QMMM_MODULE
       IMPLICIT NONE
-      integer(4)  ,intent(in) :: nat_
-      real(8)     ,intent(in) :: delt
-      real(8)     ,intent(in) :: anner
-      real(8)     ,intent(in) :: mass(nat_)  ! reduced mass
-      real(8)     ,intent(in) :: annervec(nat_)  
-      real(8)     ,intent(in) :: rm(3,nat_)  
-      real(8)     ,intent(inout) :: rp(3,nat_)
-      real(8)     ,intent(in) :: r0(3,nat_)
-      REAL(8)     ,ALLOCATABLE:: raP(:,:)
-      REAL(8)     ,ALLOCATABLE:: ma(:)
-      REAL(8)     ,ALLOCATABLE:: rsP(:,:)
-      REAL(8)     ,ALLOCATABLE:: ms(:)
-      INTEGER(4)              :: ILINK,i
+      INTEGER(4)  ,INTENT(IN) :: NAT_
+      REAL(8)     ,INTENT(IN) :: DELT
+      REAL(8)     ,INTENT(IN) :: ANNER
+      REAL(8)     ,INTENT(IN) :: MASS(NAT_)  ! REDUCED MASS
+      REAL(8)     ,INTENT(IN) :: ANNERVEC(NAT_)  
+      REAL(8)     ,INTENT(IN) :: RM(3,NAT_)  
+      REAL(8)     ,INTENT(INOUT) :: RP(3,NAT_)
+      REAL(8)     ,INTENT(IN) :: R0(3,NAT_)
+      REAL(8)     ,ALLOCATABLE:: RAP(:,:)
+      REAL(8)     ,ALLOCATABLE:: MA(:)
+      REAL(8)     ,ALLOCATABLE:: RSP(:,:)
+      REAL(8)     ,ALLOCATABLE:: MS(:)
+      INTEGER(4)              :: ILINK,I
       INTEGER(4)              :: IATQO,IATQI,IATAO,IATAI,IATSO,IATSI
-      real(8)                 :: raom(3),rao0(3),raop(3)
-      real(8)                 :: raim(3),rai0(3),raIp(3)
-      real(8)                 :: rsom(3),rso0(3),rsop(3)
-      real(8)                 :: rsim(3),rsi0(3),rsIp(3)
-      real(8)                 :: fao(3),fai(3)
-      real(8)                 :: fso(3),fsi(3)
+      REAL(8)                 :: RAOM(3),RAO0(3),RAOP(3)
+      REAL(8)                 :: RAIM(3),RAI0(3),RAIP(3)
+      REAL(8)                 :: RSOM(3),RSO0(3),RSOP(3)
+      REAL(8)                 :: RSIM(3),RSI0(3),RSIP(3)
+      REAL(8)                 :: FAO(3),FAI(3)
+      REAL(8)                 :: FSO(3),FSI(3)
       REAL(8)                 :: CHIQO,CHIQI,CHIAO,CHIAI,CHISO,CHISI
       REAL(8)                 :: ALPHA
       REAL(8)                 :: MAT(4,4),MATINV(4,4),VEC(4),LAGR(4)
-      real(8)                 :: dr(3)
-      real(8)                 :: svar,svar1,svar2,svar3
+      REAL(8)                 :: DR(3)
+      REAL(8)                 :: SVAR,SVAR1,SVAR2,SVAR3
 !     ******************************************************************
       IF(.NOT.TON) RETURN
       IF(TADIABATIC) RETURN
@@ -866,20 +866,20 @@ print*,'force along link',dot_product(force(:,iatq)-force(:,iatqj),pos(:,iatq)-p
       CALL CLASSICAL$SELECT('SHADOW')
       CALL CLASSICAL$GETI4('NAT',NATS)
       CALL ATOMLIST$NATOM(NATQ)
-if(nat_.ne.natq) then
-  call error$stop('qmmm$propagate')
-end if
+IF(NAT_.NE.NATQ) THEN
+  CALL ERROR$STOP('QMMM$PROPAGATE')
+END IF
 !
-      ALLOCATE(ma(NATM))
-      ALLOCATE(raP(3,NATM))
-      ALLOCATE(ms(NATS))
-      ALLOCATE(rSP(3,NATS))
+      ALLOCATE(MA(NATM))
+      ALLOCATE(RAP(3,NATM))
+      ALLOCATE(MS(NATS))
+      ALLOCATE(RSP(3,NATS))
       CALL CLASSICAL$SELECT('QMMM')
-      CALL CLASSICAL$GETR8A('R(+)',3*NATM,raP)
-      CALL CLASSICAL$GETR8A('MASS',NATM,mA)
+      CALL CLASSICAL$GETR8A('R(+)',3*NATM,RAP)
+      CALL CLASSICAL$GETR8A('MASS',NATM,MA)
       CALL CLASSICAL$SELECT('SHADOW')
-      CALL CLASSICAL$GETR8A('R(+)',3*NATS,rsp)
-      CALL CLASSICAL$GETR8A('MASS',NATS,ms)
+      CALL CLASSICAL$GETR8A('R(+)',3*NATS,RSP)
+      CALL CLASSICAL$GETR8A('MASS',NATS,MS)
       DO ILINK=1,NLINK
         IATQI=LINK(ILINK)%QJOINT
         IATAI=LINK(ILINK)%MJOINT
@@ -888,41 +888,41 @@ end if
         IATAO=LINK(ILINK)%MATOM
         IATSO=LINK(ILINK)%SATOM
         ALPHA=LINK(ILINK)%ALPHA
-!       == propagate mm atoms
-        svar1=2.d0/(1.d0+anner)
-        svar2=1.d0-svar1
-        svar3=delt**2/(1.d0+anner)
-        rao0(:)=r0(:,iatqi)+(r0(:,iatqo)-r0(:,iatqi))/alpha
-        rai0(:)=r0(:,iatqi)
-        raom(:)=rm(:,iatqi)+(rm(:,iatqo)-rm(:,iatqi))/alpha
-        raim(:)=rm(:,iatqi)
-        fao(:)=link(ilink)%fao(:)
-        fai(:)=link(ilink)%fai(:)
-        raop(:)=rao0(:)*svar1+raom(:)*svar2+fao(:)*svar3/ma(iatAO)
-        raip(:)=rai0(:)*svar1+raim(:)*svar2+fai(:)*svar3/ma(iataI)
-!       == propagate shadow atoms
-        rso0(:)=r0(:,iatqo)
-        rsi0(:)=r0(:,iatqi)
-        rsom(:)=rm(:,iatqo)
-        rsim(:)=rm(:,iatqi)
-        fso(:)=link(ilink)%fso(:)
-        fsi(:)=link(ilink)%fsi(:)
-        rsop(:)=rso0(:)*svar1+rsom(:)*svar2+fso(:)*svar3/ms(iatso)
-        rsip(:)=rsi0(:)*svar1+rsim(:)*svar2+fsi(:)*svar3/ms(iatsi)
+!       == PROPAGATE MM ATOMS
+        SVAR1=2.D0/(1.D0+ANNER)
+        SVAR2=1.D0-SVAR1
+        SVAR3=DELT**2/(1.D0+ANNER)
+        RAO0(:)=R0(:,IATQI)+(R0(:,IATQO)-R0(:,IATQI))/ALPHA
+        RAI0(:)=R0(:,IATQI)
+        RAOM(:)=RM(:,IATQI)+(RM(:,IATQO)-RM(:,IATQI))/ALPHA
+        RAIM(:)=RM(:,IATQI)
+        FAO(:)=LINK(ILINK)%FAO(:)
+        FAI(:)=LINK(ILINK)%FAI(:)
+        RAOP(:)=RAO0(:)*SVAR1+RAOM(:)*SVAR2+FAO(:)*SVAR3/MA(IATAO)
+        RAIP(:)=RAI0(:)*SVAR1+RAIM(:)*SVAR2+FAI(:)*SVAR3/MA(IATAI)
+!       == PROPAGATE SHADOW ATOMS
+        RSO0(:)=R0(:,IATQO)
+        RSI0(:)=R0(:,IATQI)
+        RSOM(:)=RM(:,IATQO)
+        RSIM(:)=RM(:,IATQI)
+        FSO(:)=LINK(ILINK)%FSO(:)
+        FSI(:)=LINK(ILINK)%FSI(:)
+        RSOP(:)=RSO0(:)*SVAR1+RSOM(:)*SVAR2+FSO(:)*SVAR3/MS(IATSO)
+        RSIP(:)=RSI0(:)*SVAR1+RSIM(:)*SVAR2+FSI(:)*SVAR3/MS(IATSI)
 !
-!       ==  enforce constraints ===================================
-!       ==  G_?=rqi-rai
-!       ==  G_?=rsi-rai
-!       ==  G_1=rai+alpha*(rao-rai)-rqo
-!       ==  G_?=rso-rqo
-        CHIQO=1.D0/(MASS(IATQO)*(1.D0+annervec(IATQO)))
-        CHIQI=1.D0/(MASS(IATQI)*(1.D0+annervec(IATQI)))
-        CHIAO=1.D0/(ma(IATAO)*(1.D0+ANNEr))
-        CHIAI=1.D0/(ma(IATAI)*(1.D0+ANNEr))
-        CHISO=1.D0/(ms(IATSO)*(1.D0+ANNEr))
-        CHISI=1.D0/(ms(IATSI)*(1.D0+ANNEr))
+!       ==  ENFORCE CONSTRAINTS ===================================
+!       ==  G_?=RQI-RAI
+!       ==  G_?=RSI-RAI
+!       ==  G_1=RAI+ALPHA*(RAO-RAI)-RQO
+!       ==  G_?=RSO-RQO
+        CHIQO=1.D0/(MASS(IATQO)*(1.D0+ANNERVEC(IATQO)))
+        CHIQI=1.D0/(MASS(IATQI)*(1.D0+ANNERVEC(IATQI)))
+        CHIAO=1.D0/(MA(IATAO)*(1.D0+ANNER))
+        CHIAI=1.D0/(MA(IATAI)*(1.D0+ANNER))
+        CHISO=1.D0/(MS(IATSO)*(1.D0+ANNER))
+        CHISI=1.D0/(MS(IATSI)*(1.D0+ANNER))
         MAT(:,:)=0.D0
-        MAT(1,1)=(1.d0-ALPHA)*CHIAI ! dg1/drai
+        MAT(1,1)=(1.D0-ALPHA)*CHIAI ! DG1/DRAI
         MAT(1,2)=CHIQI+CHIAI        ! 
         MAT(1,4)=CHIQI
         MAT(2,2)=CHIQI
@@ -934,46 +934,46 @@ end if
         MAT(4,3)=CHIQO
         CALL LIB$INVERTR8(4,MAT,MATINV)
         DO I=1,3
-          VEC(1)=raip(i)-rp(I,IATQI)
-          VEC(2)=rsip(I)-rP(I,IATQI)    
-          VEC(3)=rsoP(I)-rP(I,IATQO)    
-          VEC(4)=(1.D0-ALPHA)*raiP(I)+ALPHA*rAoP(I)-rP(I,IATQO)    
+          VEC(1)=RAIP(I)-RP(I,IATQI)
+          VEC(2)=RSIP(I)-RP(I,IATQI)    
+          VEC(3)=RSOP(I)-RP(I,IATQO)    
+          VEC(4)=(1.D0-ALPHA)*RAIP(I)+ALPHA*RAOP(I)-RP(I,IATQO)    
           LAGR(:)=MATMUL(MATINV,VEC)
-          rP(I,IATQO)=rP(I,IATQO)+CHIQO*(LAGR(1)+LAGR(3))
-          rP(I,IATQI)=rP(I,IATQI)+CHIQI*(LAGR(2)+LAGR(4))
-          rAoP(I)=raop(I)+CHIAO*(-ALPHA*LAGR(1))
-          raip(I)=raip(I)+CHIAI*(-(1.D0-ALPHA)*LAGR(1)-LAGR(2))
-          rSoP(I)=rsop(I)+CHISO*LAGR(3)
-          rsip(I)=rsip(I)+CHISI*LAGR(4)
-        ENDDo
-        svar=0.d0
-        dr(:)=rp(:,iatqo)-rsop(:)
-        svar=svar+sum(dr**2)
-        dr(:)=rp(:,iatqi)-rsip(:)
-        svar=svar+sum(dr**2)
-        dr(:)=rp(:,iatqo)-( raip(:)+(raop(:)-raip(:))*alpha )
-        svar=svar+sum(dr**2)
-        dr(:)=rp(:,iatqi)-raip(:)
-        svar=svar+sum(dr**2)
-        svar=sqrt(svar/12.d0)
-        if(svar.gt.1.d-7) then
-print*,'qop',iatqo,rp(:,iatqo)
-print*,'sop',iatso,rsop
-print*,'mop',iatao,raop
-print*,'qip',iatqi,rp(:,iatqi)
-print*,'sip',iatsi,rsip
-print*,'mip',iatai,raip
-          call error$msg('constraints not fulfilled for link bonds')
-          call error$i4val('ilink',ilink)
-          call error$r8val('sigma',svar)
-          call error$stop('qmmm$propagate')
-        end if
+          RP(I,IATQO)=RP(I,IATQO)+CHIQO*(LAGR(1)+LAGR(3))
+          RP(I,IATQI)=RP(I,IATQI)+CHIQI*(LAGR(2)+LAGR(4))
+          RAOP(I)=RAOP(I)+CHIAO*(-ALPHA*LAGR(1))
+          RAIP(I)=RAIP(I)+CHIAI*(-(1.D0-ALPHA)*LAGR(1)-LAGR(2))
+          RSOP(I)=RSOP(I)+CHISO*LAGR(3)
+          RSIP(I)=RSIP(I)+CHISI*LAGR(4)
+        ENDDO
+        SVAR=0.D0
+        DR(:)=RP(:,IATQO)-RSOP(:)
+        SVAR=SVAR+SUM(DR**2)
+        DR(:)=RP(:,IATQI)-RSIP(:)
+        SVAR=SVAR+SUM(DR**2)
+        DR(:)=RP(:,IATQO)-( RAIP(:)+(RAOP(:)-RAIP(:))*ALPHA )
+        SVAR=SVAR+SUM(DR**2)
+        DR(:)=RP(:,IATQI)-RAIP(:)
+        SVAR=SVAR+SUM(DR**2)
+        SVAR=SQRT(SVAR/12.D0)
+        IF(SVAR.GT.1.D-7) THEN
+PRINT*,'QOP',IATQO,RP(:,IATQO)
+PRINT*,'SOP',IATSO,RSOP
+PRINT*,'MOP',IATAO,RAOP
+PRINT*,'QIP',IATQI,RP(:,IATQI)
+PRINT*,'SIP',IATSI,RSIP
+PRINT*,'MIP',IATAI,RAIP
+          CALL ERROR$MSG('CONSTRAINTS NOT FULFILLED FOR LINK BONDS')
+          CALL ERROR$I4VAL('ILINK',ILINK)
+          CALL ERROR$R8VAL('SIGMA',SVAR)
+          CALL ERROR$STOP('QMMM$PROPAGATE')
+        END IF
       ENDDO
-      deALLOCATE(raP)
-      deALLOCATE(rSP)
-      DEALLOCATE(ma)
-      DEALLOCATE(ms)
-                              call trace$pop
+      DEALLOCATE(RAP)
+      DEALLOCATE(RSP)
+      DEALLOCATE(MA)
+      DEALLOCATE(MS)
+                              CALL TRACE$POP
       RETURN
       END
 !
@@ -998,9 +998,9 @@ print*,'mip',iatai,raip
       REAL(8)               :: MRP(3)
       REAL(8)               :: MRM(3)
       REAL(8)               :: MMASS(NATM)
-      REAL(8)               :: sMASS(NATs)
+      REAL(8)               :: SMASS(NATS)
       INTEGER(4)            :: ILINK,I
-      INTEGER(4)            :: IATM,IATQ,IATQJ,iats
+      INTEGER(4)            :: IATM,IATQ,IATQJ,IATS
       REAL(8)               :: ALPHA
 !     *****************************************************************
       EKIN=0.D0
@@ -1141,7 +1141,7 @@ print*,'mip',iatai,raip
       USE QMMM_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT):: TCONV
-      LOGICAL(4),PARAMETER  :: TPR=.true.
+      LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4),PARAMETER  :: NITER=10000
       REAL(8)   ,PARAMETER  :: TOL=1.D-3
       REAL(8)               :: FORCE1(3*NATM)
@@ -1152,10 +1152,10 @@ print*,'mip',iatai,raip
       REAL(8)               :: R2(3*NATM)
       INTEGER(4)            :: ITER,INNER
       REAL(8)               :: EPOT1,EPOT2,FMAX
-      REAL(8)               :: ALPHA,ALPHALAST,dalpha
-      real(8)               :: EPOTLAST,FORCELAST(3*NATM)
+      REAL(8)               :: ALPHA,ALPHALAST,DALPHA
+      REAL(8)               :: EPOTLAST,FORCELAST(3*NATM)
       INTEGER(4)            :: NFILO
-      real(8)               :: svar1,svar2
+      REAL(8)               :: SVAR1,SVAR2
 !     ******************************************************************
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
@@ -1194,8 +1194,8 @@ print*,'mip',iatai,raip
 !       ================================================================
 !       ==  PERFORM CG LINE SEARCH  ALONG DIRECTION FORCE1            ==
 !       ================================================================
-        call QMMM_CG_LINESEARCH(NATm,R1,DIR1,ALPHA)
-        r2=r1+alpha*dir1
+        CALL QMMM_CG_LINESEARCH(NATM,R1,DIR1,ALPHA)
+        R2=R1+ALPHA*DIR1
 
 !!$!
 !!$        ALPHA=1.D-3/SQRT(SUM(DIR1**2))
@@ -1209,13 +1209,13 @@ print*,'mip',iatai,raip
 !!$!         == TRY AGAIN WITH SMALLER STEP IF ENERGY WENT UP ==============
 !!$          IF(EPOT2.GT.EPOTLAST) THEN
 !!$            ALPHA=0.5D0*(ALPHALAST+ALPHA)
-!!$print*,'energy goes up; try again: ',epot2,alpha,alpha/SQRT(SUM(DIR1**2))
+!!$PRINT*,'ENERGY GOES UP; TRY AGAIN: ',EPOT2,ALPHA,ALPHA/SQRT(SUM(DIR1**2))
 !!$            CYCLE
 !!$          END IF
 !!$!
 !!$!         == REPORT ACCEPTED MOVE ========================================
 !!$          IF(TPR) THEN
-!!$!if(inner.gt.0) then
+!!$!IF(INNER.GT.0) THEN
 !!$            WRITE(NFILO,FMT='("INNER",I6," EPOT ",E12.5," FMAX ",E12.5," ALPHA ",F10.5)') &
 !!$       &                    INNER,EPOT2,DOT_PRODUCT(DIR1,FORCE2),ALPHA
 !!$          END IF
@@ -1229,13 +1229,13 @@ print*,'mip',iatai,raip
 !!$          DALPHA=ALPHA-ALPHALAST          
 !!$          IF(-DALPHA*SVAR2.GT.0.D0) THEN   ! CURVATURE POSITIVE
 !!$            DALPHA=-SVAR1/SVAR2*DALPHA
-!!$print*,'curvature positive ',dalpha,alpha,alphalast,epot2,iter,inner
+!!$PRINT*,'CURVATURE POSITIVE ',DALPHA,ALPHA,ALPHALAST,EPOT2,ITER,INNER
 !!$          ELSE                             ! STEEPEST DESCENT FOR NEGATIVE CURVATURE
 !!$            DALPHA=SIGN(1.D-2/DOT_PRODUCT(DIR1,DIR1),SVAR2)
-!!$print*,'curvature negative ',dalpha,alpha,alphalast,epot2,iter,inner
+!!$PRINT*,'CURVATURE NEGATIVE ',DALPHA,ALPHA,ALPHALAST,EPOT2,ITER,INNER
 !!$          END IF
 !!$!
-!!$!         == STORE SUCCESSFUL MOVE as reference AND DETERMINE NEW ALPHA ==
+!!$!         == STORE SUCCESSFUL MOVE AS REFERENCE AND DETERMINE NEW ALPHA ==
 !!$          ALPHALAST=ALPHA
 !!$          EPOTLAST=EPOT2
 !!$          FORCELAST=FORCE2
@@ -1245,9 +1245,9 @@ print*,'mip',iatai,raip
 !!$          CALL ERROR$MSG('LINE SEARCH NOT CONVERGED')
 !!$          CALL ERROR$STOP('QMMM_MINIMIZE')
 !!$        END IF
-        cALL ONETOT(NATM,R2,EPOT2,FORCE2)
+        CALL ONETOT(NATM,R2,EPOT2,FORCE2)
 !
-!       == choose new search direction ===================================
+!       == CHOOSE NEW SEARCH DIRECTION ===================================
         CALL CG$NEWDIR(3*NATM,FORCE1,DIR1,FORCE2,DIR2)
         R1=R2
         FORCE1=FORCE2
@@ -1262,7 +1262,7 @@ print*,'mip',iatai,raip
       END IF
       PRINT*,'QMMM$MINIMIZE FINISHED AFTER ',ITER,' ITERATIONS'
       CALL CLASSICAL$SETR8A('R(0)',3*NATM,R2)
-      CALL CLASSICAL$ETOT(Epot2)
+      CALL CLASSICAL$ETOT(EPOT2)
       RETURN
       CONTAINS
 !       .................................................................
@@ -1317,10 +1317,13 @@ CALL CLASSICAL$NEIGHBORS
       REAL(8)   ,PARAMETER  :: FIRSTSTEPSIZE=1.D-1
       REAL(8)               :: CURVATURE,LASTCURVATURE
       LOGICAL(4)            :: THARMONIC
-REAL(8) :: EHISTORY(NITER)
-REAL(8) :: FHISTORY(NITER)
-REAL(8) :: AHISTORY(NITER)
+REAL(8),ALLOCATABLE :: EHISTORY(:) !(NITER)
+REAL(8),ALLOCATABLE :: FHISTORY(:) !(NITER)
+REAL(8),ALLOCATABLE :: AHISTORY(:) !(NITER)
 !     *****************************************************************
+ALLOCATE(EHISTORY(NITER))
+ALLOCATE(FHISTORY(NITER))
+ALLOCATE(AHISTORY(NITER))
 EHISTORY=0.D0
 FHISTORY=0.D0
 AHISTORY=0.D0
@@ -1336,8 +1339,8 @@ AHISTORY=0.D0
         CALL ONETOT1(NAT,R,E0,FORCE)
         F0=SUM(DIR*FORCE)
 EHISTORY(ITER)=E0
-FHISTORY(ITER)=F0/dirlen
-AHISTORY(ITER)=ALPHA0*dirlen
+FHISTORY(ITER)=F0/DIRLEN
+AHISTORY(ITER)=ALPHA0*DIRLEN
 !
 !       == EXCEPTION IF ENERGY GOES UP
         IF(E0.GT.EM) THEN
@@ -1393,6 +1396,9 @@ CLOSE(8)
         CALL ERROR$STOP('QMMM_CG_LINESEARCH')
       END IF
       ALPHA=ALPHA0
+DEALLOCATE(EHISTORY)
+DEALLOCATE(FHISTORY)
+DEALLOCATE(AHISTORY)
       RETURN
       CONTAINS
 !       .................................................................
@@ -1440,7 +1446,7 @@ CLOSE(8)
       REAL(8)               ,ALLOCATABLE:: QEL(:)
       INTEGER(4)                        :: NTASKS,THISTASK
 !     ******************************************************************
-      tchk=.false.
+      TCHK=.FALSE.
       IF(.NOT.TON) RETURN
 !
 !     == WRITE SHADOW ======

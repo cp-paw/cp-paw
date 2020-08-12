@@ -484,8 +484,8 @@ END MODULE BRILLOUIN_MODULE
       REAL(8)               :: GBAS(3,3)
       REAL(8)               :: SVAR
       INTEGER(4)            :: IARB(3)
-      INTEGER(4)            :: I,nmshp
-      logical(4)            :: tchk
+      INTEGER(4)            :: I,NMSHP
+      LOGICAL(4)            :: TCHK
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -4868,9 +4868,17 @@ END MODULE SPACEGROUP_MODULE
       REAL(8)     ,INTENT(IN)   :: BETA
       REAL(8)     ,INTENT(IN)   :: GAMMA
       REAL(8)     ,INTENT(OUT)  :: RBAS(3,3)
+      REAL(8)                   :: A,B,C,ALPHA1,BETA1,GAMMA1
 !     **************************************************************************
       IF(BRAVAIS.EQ.'G1') THEN ! TRICLINIC PRIMITIVE
-       CALL SPACEGROUP$ABCALPHABETAGAMMA(.TRUE.,A0,B0,C0,ALPHA,BETA,GAMMA,RBAS)
+!      __REMAP VARIABLES TO AVOID COMPLAINT REGARDING CONFLICTING INTENT(IN/OUT)
+       A=A0
+       B=B0
+       C=C0
+       ALPHA1=ALPHA
+       BETA1=BETA
+       GAMMA1=GAMMA
+       CALL SPACEGROUP$ABCALPHABETAGAMMA(.TRUE.,A,B,C,ALPHA1,BETA1,GAMMA1,RBAS)
 
 !     ==========================================================================
       ELSE IF(BRAVAIS.EQ.'G1') THEN ! MONOCLIN PRIMITIVE 

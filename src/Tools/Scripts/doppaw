@@ -49,21 +49,6 @@ function execute(){
     fi
 }
 #-------------------------------------------------------------------------------
-#  initial checks
-#-------------------------------------------------------------------------------
-# is mpirun command $MPIRUN set?
-if [[ ! -x $MPIRUN ]] ; then 
-  echo "error in $0: mpirun command unknown or not executable"
-  echo "value of MPIRUN: $MPIRUN"
-  exit 1
-fi
-# is parallel paw executable $PARCODE set?
-if [[ ! -x $PARCODE ]] ; then 
-  echo "error in $0: parallel PAW executable unknown or not executable"
-  echo "value of PARCODE: $PARCODE"
-  exit 1
-fi
-#-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
 export DRYRUN=no
@@ -106,6 +91,21 @@ if [ -z "$JOB" ] ; then
   echo "error in $0: project name missing"
   echo -e "$USAGE"
   exit
+fi
+#-------------------------------------------------------------------------------
+#  initial checks
+#-------------------------------------------------------------------------------
+# is mpirun command $MPIRUN set?
+if [[ ! -x $MPIRUN ]] ; then 
+  echo "error in $0: mpirun command unknown or not executable"
+  echo "value of MPIRUN: $MPIRUN"
+  exit 1
+fi
+# is parallel paw executable $PARCODE set?
+if [[ ! -x $PARCODE ]] ; then 
+  echo "error in $0: parallel PAW executable unknown or not executable"
+  echo "value of PARCODE: $PARCODE"
+  exit 1
 fi
 #
 ###########################################################################

@@ -1312,12 +1312,13 @@ END MODULE SPHERICAL_MODULE
       INTEGER(4),PARAMETER :: LX2=10
       INTEGER(4),PARAMETER :: LX3=10
       REAL(8)   ,PARAMETER :: PI=4.D0*ATAN(1.D0)
-      REAL(8)              :: COEFF(LX1+1,LX2+1,(LX3+1)**2)
+      REAL(8) ,allocatable :: COEFF(:,:,:) !(LX1+1,LX2+1,(LX3+1)**2)
       INTEGER(4)           :: L1,L2,L3,L3A,L3B
       INTEGER(4)           :: IM1,IM2,IM3,IM3A,IM3B
       INTEGER(4)           :: LM1,LM2,LM3,LM3A,LM3B
       REAL(8)              :: CG1,CG2,SVAR
 !     **************************************************************************
+      allocate(coeff(LX1+1,LX2+1,(LX3+1)**2))
 !
 !     ==========================================================================
 !     == TAKE CARE OF ANGULAR PART                                            ==

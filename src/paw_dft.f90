@@ -1338,12 +1338,12 @@ REAL(8)            :: XALPHA=2.D0/3.D0
 !=======================================================================
 !== ARRAYS FOR TABLE LOOKUP OF THE GRADIENT ENHANCEMENT FACTOR        ==
 !=======================================================================
-INTEGER(4),PARAMETER  :: NS2=10000
-REAL(8)               :: FXARRAY(NS2)
-REAL(8)               :: DFXARRAY(NS2)
-REAL(8)               :: D2FXARRAY(NS2)
-REAL(8)               :: D3FXARRAY(NS2)
-TYPE(XTABLE_TYPE)     :: S2TABLE
+INTEGER(4),PARAMETER   :: NS2=10000
+REAL(8)   ,ALLOCATABLE :: FXARRAY(:)   !(NS2)
+REAL(8)   ,ALLOCATABLE :: DFXARRAY(:)  !(NS2)
+REAL(8)   ,ALLOCATABLE :: D2FXARRAY(:) !(NS2)
+REAL(8)   ,ALLOCATABLE :: D3FXARRAY(:) !(NS2)
+TYPE(XTABLE_TYPE)      :: S2TABLE
 CONTAINS
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
@@ -1358,6 +1358,15 @@ CONTAINS
       REAL(8)           :: S2
       INTEGER(4)        :: I
 !     *****************************************************************
+!     ==========================================================================
+!     ==  allocate arrays for exchange                                        ==
+!     ==  allocated here rather than in the module to not overload the stack  ==
+!     ==========================================================================
+      allocate(fxarray(ns2))
+      allocate(dfxarray(ns2))
+      allocate(d2fxarray(ns2))
+      allocate(d3fxarray(ns2))
+
 !     =================================================================
 !     ==  INITIALIZE PARAMETERS TO LOCAL EXCHANGE ETC.               ==
 !     =================================================================
@@ -1891,7 +1900,6 @@ END MODULE EXCHANGE_MODULE
       REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
       REAL(8),PARAMETER  :: ONEBY6=1.D0/6.D0
       REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
-      REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
       REAL(8),PARAMETER  :: EIGHTBY3=8.D0/3.D0
       REAL(8),PARAMETER  :: ELEVENBY3=11.D0/3.D0
       REAL(8)            :: RHO13,RHO23,RHO43
@@ -4269,7 +4277,6 @@ CONTAINS
        REAL(8),INTENT(OUT):: EC
        REAL(8),INTENT(OUT):: DEC
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
-       REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
        REAL(8)            :: RS,DRS
        REAL(8)            :: SQRS,RSSQRS
        REAL(8)            :: SVAR1,DSVAR1
@@ -4458,7 +4465,6 @@ CONTAINS
        REAL(8),INTENT(OUT):: EC
        REAL(8),INTENT(OUT):: EC_T
        REAL(8),INTENT(OUT):: EC_S
-       REAL(8),PARAMETER  :: FOURBY9=4.D0/9.D0
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8)            :: SIGMA
        REAL(8)            :: SIGMAP13,SIGMAP23,SIGMAP43
@@ -5250,7 +5256,6 @@ PRINT*,'SHORTCUT FOR H0'
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
        REAL(8),PARAMETER  :: ONEBY9=1.D0/9.D0
-       REAL(8),PARAMETER  :: SEVENBY6=7.D0/6.D0
        REAL(8)            :: RHOT13
        REAL(8)            :: P13,M13,P23,M23
        REAL(8)            :: SIG,SIG_D,SIG_S
@@ -6377,7 +6382,6 @@ END MODULE PBE_MODULE
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: ONEBY9=1.D0/9.D0
        REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
-       REAL(8),PARAMETER  :: SEVENBY6=7.D0/6.D0
        REAL(8),PARAMETER  :: FOURBY27=4.D0/27.D0
        REAL(8)            :: RHOT13
        REAL(8)            :: P13,M13,P23,M23,P43,M43,P73,M73
@@ -6395,11 +6399,13 @@ END MODULE PBE_MODULE
        REAL(8)            :: T_DDS,T_DSS,T_DSN,T_SSS,T_SSN
        REAL(8)            :: H0,H0_T,H0_E,H0_G
        REAL(8)            :: H0_TT,H0_TE,H0_TG,H0_EE,H0_EG,H0_GG
-       REAL(8)            :: H0_TTT,H0_TTE,H0_TTG,H0_TEE,H0_TEG,H0_TGG,H0_EEE,H0_EEG,H0_EGG,H0_GGG
+       REAL(8)            :: H0_TTT,H0_TTE,H0_TTG,H0_TEE,H0_TEG,H0_TGG
+       REAL(8)            ::    H0_EEE,H0_EEG,H0_EGG,H0_GGG
        REAL(8)            :: H0_D,H0_S,H0_N
        REAL(8)            :: H0_DD,H0_DS,H0_DN,H0_SS,H0_SN,H0_NN
-       REAL(8)            :: H0_DDD,H0_DDS,H0_DDN,H0_DSS,H0_DSN,H0_DNN,H0_SSS,H0_SSN,H0_SNN,H0_NNN
-!      *****************************************************************
+       REAL(8)            :: H0_DDD,H0_DDS,H0_DDN,H0_DSS,H0_DSN,H0_DNN
+       REAL(8)            ::     H0_SSS,H0_SSN,H0_SNN,H0_NNN
+!      *************************************************************************
        IF(.NOT.TINI) CALL PBE_INITIALIZE
        EXC=0.D0
        DEXC(:)=0.D0

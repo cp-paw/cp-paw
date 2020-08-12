@@ -52,7 +52,7 @@
 ##  COMPILER_PARALLEL
 ##               compiler call with all options that are identical for 
 ##               compilation and linking and that are independent of 
-##               optimization, debugging profiling etc.                       ##  
+##               optimization, debugging profiling etc.                       ##
 ##               (e.g. "gfortran -fno-second-underscore ")                    ##
 ##               (e.g. "${MPIDIR}/bin/mpifort -fno-second-underscore ")       ##
 ##                                                                            ##
@@ -68,7 +68,7 @@
 ##______________________________flags for linking_____________________________##
 ##     LDFLAGS_SCALAR link flags for sequential code
 ##     LDFLAGS_PARALLEL link flags for parallel code
-##                                                                                     ##
+##                                                                            ##
 ##----------------------------------------------------------------------------##
 ##  LIBS_SCALAR     external libraries (sequential)                           ##
 ##  LIBS_PARALLEL   external libraries (parallel)                             ##
@@ -78,7 +78,7 @@
 ##                                                                            ##
 ##________________________________preprocessor variables______________________##
 ##                                                                            ##
-##    CPPVAR_ENDIANCHECK: used by paw_filehandler.f90                          ##
+##    CPPVAR_ENDIANCHECK: used by paw_filehandler.f90                         ##
 ##                                                                            ##
 ##  library selectors for linear algebra routines                             ##
 ##    CPPVAR_LAPACK_ESSL:                                                     ##
@@ -101,7 +101,7 @@
 ################################################################################
 ##  the link command for scalar executable will be:                           ##
 ##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -oexecutable objects LLIB##
-##  the link command for parallel executable will be:                                  ##
+##  the link command for parallel executable will be:                         ##
 ##    "COMPILE LDFLAGS -I${OBJDIR} -L${OBJDIR} LLINK -L{MPIDIR} -oexecutable objects LLIBS"  ##
 ##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
 ##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
@@ -114,9 +114,8 @@ SPECIAL="none"
 BLASDIR=""
 LAPACKDIR=""
 FFTDIR="/usr/local/lib/"
-MPIDIR="/usr/local/Cellar/open-mpi/4.0.3/"
-FFT_HEADER="/usr/local/Cellar/fftw/3.3.8_1/include/fftw3.f03"
-MPI_HEADER="${MPIDIR}/include/mpif.h"
+MPIDIR="/usr/local/Cellar/open-mpi/4.0.4_1/"
+FFT_HEADER="/usr/local/Cellar/fftw/3.3.8_2/include/fftw3.f03"
 #
 #COMPILER_SCALAR="gfortran -fno-second-underscore "
 #COMPILER_PARALLEL="${MPIDIR}/bin/mpifort -fno-second-underscore "
@@ -130,7 +129,18 @@ FCFLAGS_PROF="-c -pg -O3 -funroll-loops  -msse2"
 # recommendation by http://fortranwiki.org/fortran/show/Debugging+tools
 # -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
 #
-FCFLAGS_DBG="-c -g -O3 -std=f2008 -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds -fcheck=do -fcheck=mem -fcheck=pointer -fcheck=recursion -Waliasing -Wampersand -Wsurprising -Wintrinsics-std -Wno-tabs -Wintrinsic-shadow -Wline-truncation"
+# gfortran -ffpe-trap=invalid: invAlid floating point operation such as sqrt(-1)
+# gfortran -ffpe-trap=zero: catch division by zero
+#
+# gfortran : -finit-real=snan
+# 
+# -Wall= -Waliasing, -Wampersand, -Wconversion, -Wsurprising, ‘-Wc-binding-type’, ‘-Wintrinsics-std’, ‘-Wno-tabs’, ‘-Wintrinsic-shadow’, ‘-Wline-truncation’, ‘-Wtarget-lifetime’, ‘-Wreal-q-constant’ and ‘-Wunused’.
+#
+#
+#FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -finit-real=snan -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Waliasing -Wampersand  -Winteger-division -Wintrinsics-std -Wsurprising -Wtabs -Wintrinsic-shadow -Wunused-dummy-argument -Wunused-parameter -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
+
+FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
+
 #
 LDFLAGS_SCALAR="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
 LDFLAGS_PARALLEL="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "

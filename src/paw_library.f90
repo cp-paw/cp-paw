@@ -34,127 +34,6 @@
 !****         
 !*******************************************************************************
 !*******************************************************************************
-! 
-!*******************************************************************************
-!*******************************************************************************
-!****                                                                      *****
-!****              INTERFACES TO THE UTILITY LIBRARIES                     *****
-!****                                                                      *****
-!****  GETARG (GETARG)                                                     *****
-!****  NARGS (IARGC)                                                       *****
-!****  SYSTEM (SYSTEM)                                                     *****
-!****  ETIME   (ETIME)                                                     *****
-!****  GETHOSTNM (HOSTNM)                                                  *****
-!****  FLUSH (FLUSH)                                                       *****
-!****                                                                      *****
-!****                                                                      *****
-!****  REMARKS:                                                            *****
-!****    THE XLF SUPPORT ROUTINES CARRY ONE TRAILING UNDERSCORE            *****
-!****                                                                      *****
-!****    THE SUPPORT LIBRARY ROUTINES OF FORTRAN DIFFER SLIGHTLY FROM      *****
-!****    COMPILER TO COMPILER (ARGUMENT TYPES)                             *****
-!****                                                                      *****
-!****                                                                      *****
-!*******************************************************************************
-!*******************************************************************************
-! LIB$SYSTEM      -> EXECUTE_COMMAND_LINE
-! LIB$GETARG      -> GET_COMMAND_ARGUMENT
-! LIB$GETENV      -> GET_ENVIRONMENT_VARIABLE
-! LIB$GETHOSTNAME -> GET_ENVIRONMENT_VARIABLE
-! LIB$SYSTEM      -> EXECUTE_COMMAND_LINE
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LIB$GETARG(IPOS,ARG)
-!!$!     **************************************************************************
-!!$!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 **
-!!$!     **  THIS ROUTINE SHALL BE REPLACED BY A DIRECT CALL TO THE FORTRAN      **
-!!$!     ** INTRINSIC. IT IS STILL HEAVILY USED IN THE TOOLS.                    **
-!!$!     **************************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4)  ,INTENT(IN)  :: IPOS
-!!$      CHARACTER(*),INTENT(OUT) :: ARG
-!!$      INTEGER                  :: IPOSSTD
-!!$      INTEGER                  :: LENG
-!!$      INTEGER                  :: ST
-!!$!     **************************************************************************
-!!$!     == USE FORTRAN 2003 INTRINSIC SUBROUTINE
-!!$      CALL GET_COMMAND_ARGUMENT(IPOS,ARG,LENG,ST)
-!!$      IF(ST.NE.0) THEN
-!!$        CALL ERROR$MSG('FAILURE COLLECTING COMMAND LINE ARGUMENT')
-!!$        CALL ERROR$I4VAL('STATUS',ST)
-!!$        CALL ERROR$I4VAL('POSITION',IPOS)
-!!$        CALL ERROR$I4VAL('ACTUAL LENGTH OF ARGUMENT',LENG)
-!!$        CALL ERROR$STOP('LIB$GETARG')
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LIB$GETENV(NAME,VAL)
-!!$!     **************************************************************************
-!!$!     **  RETURNS THE VALUE OF THE I-TH COMMAND LINE ARGUMENT                 ==
-!!$!     **************************************************************************
-!!$      IMPLICIT NONE
-!!$      CHARACTER(*),INTENT(IN)  :: NAME
-!!$      CHARACTER(*),INTENT(OUT) :: VAL
-!!$      INTEGER                  :: LENG
-!!$      INTEGER                  :: ST
-!!$!     **************************************************************************
-!!$      CALL GET_ENVIRONMENT_VARIABLE(NAME,VAL,LENG,ST)
-!!$      IF(ST.NE.0) THEN
-!!$        IF(ST.EQ.1) THEN
-!!$          VAL=' '
-!!$!         CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-!!$          RETURN
-!!$        ELSE IF(ST.EQ.-1) THEN
-!!$          CALL ERROR$MSG('FAILURE COLLECTING ENVIRONMENT VARIABLE')
-!!$          CALL ERROR$CHVAL('NAME',NAME)
-!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT FIT INTO STRING')
-!!$        END IF
-!!$        CALL ERROR$STOP('LIB$GETENV')
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LIB$GETHOSTNAME(HOSTNAME)
-!!$!     **************************************************************************
-!!$!     **  COLLECTS THE HOST NAME OF THE EXECUTING MACHINE                     **
-!!$!     **  IF HOSTNAME NOT AVAILABLE, RETURN 'UNKNOWN HOSTNAME'                **
-!!$!     **************************************************************************
-!!$      IMPLICIT NONE
-!!$      CHARACTER(*),INTENT(OUT)  :: HOSTNAME
-!!$      INTEGER(4)                :: RC
-!!$      INTEGER(4)                :: STATUS
-!!$!     **************************************************************************
-!!$      CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
-!!$      IF(STATUS.NE.0) THEN
-!!$        HOSTNAME='UNKNOWN HOSTNAME'
-!!$        IF(STATUS.EQ.-1) THEN
-!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE LONGER THAN STRING')
-!!$        ELSE IF(STATUS.EQ.1) THEN
-!!$          CALL ERROR$MSG('ENVIRONMENT VARIABLE DOES NOT EXIST')
-!!$        ELSE IF(STATUS.EQ.2) THEN
-!!$          CALL ERROR$MSG('PROCESSOR DOES NOT SUPPORT ENVIRONMENT VARIABLES')
-!!$        END IF
-!!$        CALL ERROR$CHVAL('NAME OF ENVIRONMENT VARIABLE','HOSTNAME')
-!!$        CALL ERROR$I4VAL('STATUS',STATUS)
-!!$        CALL ERROR$STOP('LIB$GETHOSTNAME')
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE LIB$FLUSHFILE(N)
-!!$!     **************************************************************************
-!!$!     ** FLUSHES THE BUFFER FOR THE FILE CONNECTED TO FORTRAN UNIT N          **
-!!$!     **************************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$!     **************************************************************************
-!!$      FLUSH(N) ! FORTRAN 2003
-!!$      RETURN
-!!$      END 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE LIB$GETOPTS(OPTIONSTRING,NAME,OPTARG,OPTIND,EXITCODE)
@@ -3651,7 +3530,7 @@ INTEGER(4) :: I,J
       COMPLEX(8)              :: XDUMMY(LEN)
       COMPLEX(8)              :: YDUMMY(LEN)
       INTEGER(4),SAVE         :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
+      INTEGER(4),PARAMETER    :: NPX=100 ! #(DIFFERENT FFT PLANS)
       TYPE(C_PTR),SAVE        :: PLANS2(NPX),PLAN
       INTEGER(4),SAVE         :: PLANS1(NPX)
       LOGICAL                 :: DEF
@@ -3686,11 +3565,11 @@ INTEGER(4) :: I,J
           NP=NP+1
           IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
           IF(DIR.EQ.'RTOG') THEN
-            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_FORWARD,&
-              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_FORWARD &
+     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE IF (DIR.EQ.'GTOR') THEN
-            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD,&
-              &IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+            PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD &
+     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
           ELSE
             CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
             CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')

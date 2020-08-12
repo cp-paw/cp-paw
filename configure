@@ -584,7 +584,6 @@ PACKAGE_URL=
 ac_unique_file="src"
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
-MPI_HEADER
 LIBAR
 FFT_HEADER
 MPIDIR
@@ -2249,7 +2248,6 @@ if test "$PARMFILE" != notset; then
   then
     LIBAR="ar"
   fi
-  MPI_HEADER=`grep '^MPI_HEADER' $PARMFILE | cut -d'"' -f2`
   SPECIAL=`grep '^SPECIAL' $PARMFILE | cut -d'"' -f2`
   #
   # compose final variables
@@ -2283,8 +2281,6 @@ CPP="$CPP -traditional -nostdinc"
 ##  check if files are present                                         ##
 ##                                                                     ##
 #########################################################################
-echo '${MPI_HEADER}'
-$as_echo "#define XX \${MPI_HEADER}" >>confdefs.h
 
 echo ${XX}
 echo '============================='

@@ -3037,7 +3037,6 @@ STOP
       INTEGER(4),INTENT(IN) :: NP
       REAL(8)   ,INTENT(IN) :: FOFR(NP)
       REAL(8)   ,INTENT(OUT):: FOFG(NP)
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4)            :: TCORR=.TRUE.
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: B(NP)
@@ -3124,7 +3123,6 @@ STOP
       REAL(8)   ,INTENT(IN) :: FOFR(NP)
       REAL(8)   ,INTENT(OUT):: FOFG(NP)
       INTEGER(4),PARAMETER  :: NEXPAND=2
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       LOGICAL(4),PARAMETER  :: TCORR=.TRUE.
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: PHI(NP)
@@ -3446,7 +3444,6 @@ PRINT*,'NPH*DT ',NPH*DT,NPH,DT
       COMPLEX(8)           :: M(2,LX+1)
       REAL(8)              :: T
       INTEGER(4)           :: I,L
-      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
 !     **************************************************************************
       OPEN(NFIL1,FILE='MLM_0R.DAT')
       OPEN(NFIL2,FILE='MLM_0I.DAT')
@@ -3691,7 +3688,6 @@ CONTAINS
       REAL(8)   ,INTENT(OUT):: G(NP)
       COMPLEX(8),INTENT(IN) :: WW(NP)
       COMPLEX(8),INTENT(IN) :: TA(NP)
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       COMPLEX(8)            :: XA(NP)
       COMPLEX(8)            :: Y1

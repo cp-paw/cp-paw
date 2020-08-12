@@ -1011,8 +1011,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
      &                     NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
      &                    ,MM_POT_ENERGY, IMM_TEMP, MM_FRIC
         ELSE
-          WRITE(NFILO,FMT='("!>",I6,1X,F9.5,1X,I5,1X,F10.6,1X,F13.6,1X,F13.6 &
-     &                          ,1X,F7.4,1X,F7.4)') &
+          WRITE(NFILO,FMT='("!>",I6,1X,F9.5,1X,I5,1X,F10.6,1X,F13.6,1X,F13.6' &
+     &                     //',1X,F7.4,1X,F7.4)') &
      &                NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER
         ENDIF
 !

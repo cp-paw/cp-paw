@@ -1077,7 +1077,7 @@ END IF
 !        == PHI(N)=PHI(N)+CHI(N)*Z(N)                                 ==
 !        ===============================================================
 !CHANGED THIS TO MAKE IT SIMPLER PB 070127
-         SVAR = REAL(B(N,N))**2-A(N,N)*C(N,N)
+         SVAR = REAL( REAL(B(N,N))**2-A(N,N)*C(N,N) )
          SVAR1=-REAL(B(N,N),KIND=8)
          IF(SVAR.GE.0.D0) THEN
            SVAR2=SQRT(SVAR)
@@ -1604,6 +1604,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
       INTEGER(4),PARAMETER     :: ITERX    = 200
+      LOGICAL(4),PARAMETER     :: TPR    = .FALSE.
       INTEGER(4),INTENT(IN)    :: NB
       REAL(8)   ,INTENT(IN)    :: OCC(NB)
       COMPLEX(8),INTENT(INOUT) :: LAMBDA(NB,NB)
@@ -1700,21 +1701,28 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !WRITE(*,FMT='("A",I2,20E10.3)')I,GAMN(I,:)
 !ENDDO
 !
-!       ================================================================
-!       == FIND LARGEST ELEMENT OF THE OVERLAP MATRIX                 ==
-!       ================================================================
-        DIGAM=0.D0
-        TCONVERGED=.TRUE.
-        DO I=1,NB
-          DO J=I,NB
-            IF(ABS(GAMN(I,J)).GT.EPS) THEN
-              TCONVERGED=.FALSE.
-              DIGAM=MAX(DIGAM,ABS(GAMN(I,J)))
-            END IF
-          ENDDO
-        ENDDO
+!       ========================================================================
+!       == CHECK CONVERGENCE MAXVAL(ABS(OVERLAP-1))<EPS ; GAMN=OVERLAP-1      ==
+!       ========================================================================
+!       __IN CASE THE MAXVAL EVALUATION OVER THE ENTIRE ARRAY IS EXPENSIVE______
+!       __CONSIDER AN EXPLICIT LOOP THAT SETS TCONVERGED=FALSE AND EXITS, WHEN__
+!       __THE FIRST ELEMENT WITH ABS(GAMN)>EPS IS ENCOUNTERES___________________
+        DIGAM=MAXVAL(ABS(GAMN))
+        TCONVERGED=DIGAM.LT.EPS
+!       __CHECK CONVERGENCE_____________________________________________________
         IF(TCONVERGED) GOTO 9000
-!PRINT*,'ITER ',ITER,DIGAM
+!
+!       __CHECK WHETHER LOOP DIVERGES___________________________________________
+        IF(TPR.OR.DIGAM.GT.1.D+5)  THEN
+          WRITE(*,*)'WAVES_ORTHO_X_C: ITER ',ITER,' MAX(OVERLAP-1)=',DIGAM
+          IF(DIGAM.GT.1.D+200) THEN
+            CALL ERROR$MSG('ITERATION LOOP FOR ORTHOGONALIZATION')
+            CALL ERROR$MSG('IS ABOUT TO DIVERGE')
+            CALL ERROR$I4VAL('ITER',ITER)
+            CALL ERROR$R8VAL('(MAX(OVERLAP-1)',DIGAM)
+            CALL ERROR$STOP('WAVES_ORTHO_X_C')
+          END IF
+        END IF
 !
 !       ==================================================================
 !       ==  OBTAIN CHANGE OF THE LAMBDA MATRIX                          ==
@@ -1822,26 +1830,27 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       RETURN
       END
 !
-!     .....................................................ORTHO........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_ORTHO_X(NB,OCC,CHICHI,PSIPSI,CHIPSI,LAMBDA)
-!     ******************************************************************
-!     **                                                              **
-!     **  IMPOSES THE ORTHOGONALITY CONSTRAINT ONTO THE ELECTRONS     **
-!     **                                                              **
-!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                 **
-!     **                                                              **
-!     **                                                              **
-!     **  THE METHOD IS DESCRIBED IN :                                **
-!     **    R.CAR AND M.PARRINELLO, IN                                **
-!     **    "SIMPLE MOLECULAR SYSTEMS AT VERY HIGH DENSITY", P. 455   **
-!     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                     **
-!     **    (PLENUM PUBLISHING CORPORATION,1989)                      **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1992)***
+!     **************************************************************************
+!     **                                                                      **
+!     **  IMPOSES THE ORTHOGONALITY CONSTRAINT ONTO THE ELECTRONS             **
+!     **                                                                      **
+!     **  NEW VERSION WITH DIAGONALIZATION FOR CHIPSI                         **
+!     **                                                                      **
+!     **                                                                      **
+!     **  THE METHOD IS DESCRIBED IN :                                        **
+!     **    R.CAR AND M.PARRINELLO, IN                                        **
+!     **    "SIMPLE MOLECULAR SYSTEMS AT VERY HIGH DENSITY", P. 455           **
+!     **    ED. A.POLIAN, PLOUBEYRE AND N.BOCCARA                             **
+!     **    (PLENUM PUBLISHING CORPORATION,1989)                              **
+!     **                                                                      **
+!     *******************************************P.E. BLOECHL, (1992)***********
       IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
       INTEGER(4),PARAMETER     :: MAX    = 200
+      LOGICAL(4),PARAMETER     :: TPR    = .FALSE.
       INTEGER(4),INTENT(IN)    :: NB
       REAL(8)   ,INTENT(IN)    :: OCC(NB)
       REAL(8)   ,INTENT(INOUT) :: LAMBDA(NB,NB)
@@ -1855,18 +1864,18 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)                  :: HAUX(NB,NB)    
       REAL(8)                  :: U(NB,NB)       
       REAL(8)                  :: OCCI,OCCJ
-!     ******************************************************************
+!     **************************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_X')
       ALLOCATE(GAMN(NB,NB))
 !
-!     ==================================================================
-!     ==  CALCULATE  PSIPSI(I,J)= <PSIBAR(I)|PSIBAR(J)>-1             ==
-!     ==        AND  CHIPSI(I,J)   = <PSI0(I)|PSIBAR(J)>              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  CALCULATE  PSIPSI(I,J)= <PSIBAR(I)|PSIBAR(J)>-1                     ==
+!     ==        AND  CHIPSI(I,J)   = <PSI0(I)|PSIBAR(J)>                      ==
+!     ==========================================================================
 !
-!     ==================================================================
-!     ==  DIAGONALIZE 0.5*(CHIPSI(I,J)+CHIPSI(J,I))                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  DIAGONALIZE 0.5*(CHIPSI(I,J)+CHIPSI(J,I))                           ==
+!     ==========================================================================
       CALL LIB$DIAGR8(NB,CHIPSI,EIG,U)
 !CALL DIAG(NB,NB,CHIPSI,EIG,U)
 !WRITE(*,FMT='("EIG",20E10.3)')EIG
@@ -1874,29 +1883,29 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !  WRITE(*,FMT='("U",I2,20E10.3)')I,U(I,:)
 !ENDDO
 !
-!     ==================================================================
-!     ==================================================================
-!     ==  ITERATIVE CALCULATION OF GAMMA                              ==
-!     ==================================================================
-!     ==================================================================
+!     ==========================================================================
+!     ==========================================================================
+!     ==  ITERATIVE CALCULATION OF GAMMA                                      ==
+!     ==========================================================================
+!     ==========================================================================
       DO ITER=1,MAX
 !PRINT*,'==================',ITER,'==========================='
-!       ================================================================
-!       ==  CALCULATE <PHI(+)|PHI(+)>-1 WITH PRESENT LAMBDA           ==
-!       ==  GAMN(I,J)=PSIPSI(I,J)+LAMBDA(K,I)*CHIPSI(K,J)             ==
-!       ==                       +CHIPSI(K,I)*LAMBDA(K,J)             == 
-!       ==           +LAMBDA(K,I)*CHICHI(K,L)*LAMBDA(L,J)-1(I,J)      ==
-!       ================================================================
-!       __GAMN(I,J) = CHICHI(I,K)*LAMBDA(K,J)___________________________
+!       ========================================================================
+!       ==  CALCULATE <PHI(+)|PHI(+)>-1 WITH PRESENT LAMBDA                   ==
+!       ==  GAMN(I,J)=PSIPSI(I,J)+LAMBDA(K,I)*CHIPSI(K,J)                     ==
+!       ==                       +CHIPSI(K,I)*LAMBDA(K,J)                     ==
+!       ==           +LAMBDA(K,I)*CHICHI(K,L)*LAMBDA(L,J)-1(I,J)              ==
+!       ========================================================================
+!       __GAMN(I,J) = CHICHI(I,K)*LAMBDA(K,J)___________________________________
         CALL LIB$MATMULR8(NB,NB,NB,CHICHI,LAMBDA,HAUX)
 !CALL DGEMUL(CHICHI,NB,'N',LAMBDA,NB,'N',HAUX,NB,NB,NB,NB)
-!       __HAUX(I,J) = HAUX(I,J)+2*CHIPSI(I,J)___________________________
+!       __HAUX(I,J) = HAUX(I,J)+2*CHIPSI(I,J)___________________________________
         HAUX=HAUX+2.D0*CHIPSI
 !CALL DAXPY(NB*NB,2.D0,CHIPSI,1,HAUX,1)
-!       __GAMN(I,J) = LAMBDA(K,I)*HAUX(K,J)_____________________________
+!       __GAMN(I,J) = LAMBDA(K,I)*HAUX(K,J)_____________________________________
         CALL LIB$SCALARPRODUCTR8(.FALSE.,NB,NB,LAMBDA,NB,HAUX,GAMN)
 !CALL DGEMUL(LAMBDA,NB,'T',HAUX,NB,'N',GAMN,NB,NB,NB,NB)
-!       __GAMN(I,J) = GAMN(I,J)-1_______________________________________
+!       __GAMN(I,J) = GAMN(I,J)-1_______________________________________________
         DO I=1,NB
           DO J=I,NB
             SVAR=0.5D0*(GAMN(I,J)+GAMN(J,I))+PSIPSI(I,J)
@@ -1909,16 +1918,29 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !WRITE(*,FMT='("A",I2,20E10.3)')I,GAMN(I,:)
 !ENDDO
 !
-!       ================================================================
-!       == FIND LARGEST ELEMENT OF THE OVERLAP MATRIX                 ==
-!       ================================================================
-        DIGAM=MAXVAL(ABS(GAMN))
-        IF(DIGAM.LT.EPS) GOTO 9000
-!PRINT*,'ITER ',ITER,DIGAM
 !
-!       ==================================================================
-!       ==  OBTAIN CHANGE OF THE LAMBDA MATRIX                          ==
-!       ==================================================================
+!       ========================================================================
+!       == CHECK CONVERGENCE MAXVAL(ABS(OVERLAP-1))<EPS ; GAMN=OVERLAP-1      ==
+!       ========================================================================
+        DIGAM=MAXVAL(ABS(GAMN))
+!       __CHECK CONVERGENCE_____________________________________________________
+        IF(DIGAM.LT.EPS) GOTO 9000
+!
+!       __CHECK WHETHER LOOP DIVERGES___________________________________________
+        IF(TPR.OR.DIGAM.GT.1.D+5)  THEN
+          WRITE(*,*)'WAVES_ORTHO_X: ITER ',ITER,' MAX(OVERLAP-1)=',DIGAM
+          IF(DIGAM.GT.1.D+200) THEN
+            CALL ERROR$MSG('ITERATION LOOP FOR ORTHOGONALIZATION')
+            CALL ERROR$MSG('IS ABOUT TO DIVERGE')
+            CALL ERROR$I4VAL('ITER',ITER)
+            CALL ERROR$R8VAL('(MAX(OVERLAP-1)',DIGAM)
+            CALL ERROR$STOP('WAVES_ORTHO_X')
+          END IF
+        END IF
+!
+!       ========================================================================
+!       ==  OBTAIN CHANGE OF THE LAMBDA MATRIX                                ==
+!       ========================================================================
 !       == TRANSFORM OVERLAP MATRIX GAMN
 !       ----  HAUX(I,L)=U(K,I)*H0(K,L)
         CALL LIB$SCALARPRODUCTR8(.FALSE.,NB,NB,U,NB,GAMN,HAUX)
@@ -1946,9 +1968,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !WRITE(*,FMT='("DL",I2,20E10.3)')I,GAMN(I,:)
 !ENDDO
 !
-!       ================================================================
-!       ==  PROPAGATE GAMMA                                           ==
-!       ================================================================
+!       ========================================================================
+!       ==  PROPAGATE GAMMA                                                   ==
+!       ========================================================================
         DO I=1,NB
           OCCI=OCC(I)+DSMALL
           DO J=1,NB
@@ -1961,9 +1983,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !WRITE(*,FMT='("L",I2,20E10.3)')I,GAMN(I,:)
 !ENDDO
 !
-!       ================================================================
-!       == SYMMETRIZE LAMBDA                                          ==
-!       ================================================================
+!       ========================================================================
+!       == SYMMETRIZE LAMBDA                                                  ==
+!       ========================================================================
         DO I=1,NB
           DO J=1,NB
             IF(OCC(I).LT.OCC(J)) THEN
@@ -2340,7 +2362,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       LOGICAL(4),SAVE          :: TINI=.FALSE.
       LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.TRUE.
       INTEGER(4),PARAMETER     :: NRAN=10000
-      REAL(8)   ,SAVE          :: XRAN(NRAN)
+      REAL(8)   ,allocatable,SAVE     :: XRAN(:)   !(NRAN)
       REAL(8)   ,PARAMETER     :: GC2=3.D0
       REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
       REAL(8)                  :: G2
@@ -2359,12 +2381,19 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ==========================================================================
       IF(.NOT.TINI) THEN
         IF(TDETERMINISTIC) THEN
+          allocate(XRAN(NRAN))
           DO I=1,NRAN
 !           == CONSTRUCT A FIXED SERIES OF RANDOM NUMBERS USING
 !           == THE WELL-DEFINED MINIMAL STANDARD LINEAR CONGRUENTIAL
 !           == RANDOM NUMBER GENERATOR (IN PAW_GENERALPURPOSE.F90)
             CALL RANDOM_MSLNG(XRAN(I))
           ENDDO
+        else
+!         __with TDETERMINISTIC=.FALSE., XRAN is used before allocation and 
+!         __before assigning a calue
+          CALL ERROR$MSG('HARDWIRED TDETERMINISTIC=.FALSE. IS NOT ALLOWED')
+          CALL ERROR$L4VAL('TDETERMINISTIC',TDETERMINISTIC)
+          CALL ERROR$STOP('WAVES_INITIALIZERANDOM')
         END IF
         TINI=.TRUE.
       END IF
@@ -4406,6 +4435,7 @@ LOGICAL(4):: TCHK
         NB1=THIS%NB
         NBH1=THIS%NBH
       END IF
+!CAUTION: SHOULD THIS BE TKGROUP2???
       IF(TKGROUP1) THEN
         CALL WAVES_SELECTWV(IKPTL2,1)
         CALL PLANEWAVE$SELECT(GSET%ID)

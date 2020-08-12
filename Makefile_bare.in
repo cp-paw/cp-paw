@@ -51,8 +51,6 @@ export MPIDIR=@MPIDIR@
 export LIBAR=@LIBAR@
 #___________________________header file for fft
 export FFT_HEADER=@FFT_HEADER@
-#___________________________header file for MPI
-export MPI_HEADER=@MPI_HEADER@
 #___________________________special treatment
 export SPECIAL=@SPECIAL@
 #___________________________ set to T, if this is Makefile.parallel
@@ -116,23 +114,6 @@ else
   FFTWINCLUDE= touch ${OBJDIR}/fftw_f77.i
 endif
 #
-# mpif.h is an include file for the MPICH-library
-# for parallel compilation, this file has to be copied into
-# the object directory. Not needed for IBM environment
-# the include file is usually named mpif.f90
-#
-ifeq (${PARALLEL},T)   #select parallel versus scalar paw_mpelib.f90
-  ifneq ($(strip ${MPI_HEADER}),)
-    # copy includefile into object directory
-    MPIINCLUDE=cp ${MPI_HEADER} ${OBJDIR}/mpif.h
-  else
-    # not there, just create an empty file
-    MPIINCLUDE= touch ${OBJDIR}/mpif.h
-  endif
-else
-  # not needed, just create an empty file to fool dependencies
-  MPIINCLUDE= touch ${OBJDIR}/mpif.h
-endif
 #
 # paw_mpelib.f holds the subroutines necessary for parallel execution
 # of the code. Via preprocessor variables, this source is split up into
@@ -361,7 +342,7 @@ ${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${OBJDIR}/mpif.h ${LOBJS} ${LOBJSF77} \
+${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
 	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
@@ -547,9 +528,6 @@ clean_fromposcar:
 ${OBJDIR}/fftw_f77.i:
 	${FFTWINCLUDE}
 #
-${OBJDIR}/mpif.h:
-	${MPIINCLUDE}
-#
 #########################################################################
 ##  execute tests                                                      ##
 #########################################################################
@@ -566,7 +544,7 @@ varOBJTYPE_tests: ${PAWX}
 .PHONY: ${OBJVERSION} ${SRCBLOB}
 #
 #__special rule for parallel interface because of preprocessor___________
-${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${OBJDIR}/mpif.h
+${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 
 	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #

@@ -4,6 +4,7 @@
 !     ******************************************************************
       PROGRAM STRC2XYZ
       USE LINKEDLIST_MODULE
+      USE CONSTANTS_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
       TYPE(LL_TYPE)               :: LL_STRC
@@ -14,7 +15,7 @@
       REAL(8)                     :: ANGSTROM
       CHARACTER(128)              :: ROOTNAME     ! COMMON ROOT OF THE FILENAMES
       CHARACTER(128)              :: OBJECTNAME,LINE
-      LOGICAL                     :: TCHK
+      LOGICAL                     :: TCHK,TCHK1
       REAL(8)                     :: RUNIT        ! LENGTH UNIT ON STRUCTURE FILE
       REAL(8)                     :: RBAS(3,3)    ! LATTICE VECTORS
       CHARACTER(32),ALLOCATABLE   :: NAME(:)      ! ATOM NAMES
@@ -146,6 +147,24 @@
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
       CALL LINKEDLIST$SELECT(LL_STRC,'GENERIC')
+!
+!     ==  READ LUNIT ===========================================================
+      CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT[AA]',1,TCHK1)
+      IF(TCHK1) THEN 
+        CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
+        IF(TCHK.AND.TCHK1) THEN
+          CALL ERROR$MSG('LUNIT AND LUNIT[AA] ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$STOP('STRC2XYZ (MAIN)')
+        END IF
+        CALL LINKEDLIST$GET(LL_STRC,'LUNIT[AA]',0,SVAR)
+        CALL CONSTANTS$GET('ANGSTROM ',ANGSTROM)
+        SVAR=SVAR*ANGSTROM
+        CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,SVAR)
+        CALL LINKEDLIST$RMDATA(LL_STRC,'LUNIT[AA]',1)
+      END IF
+      CALL LINKEDLIST$EXISTD(LL_STRC,'LUNIT',1,TCHK)
+      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_STRC,'LUNIT',0,1.D0)
+!
       CALL LINKEDLIST$GET(LL_STRC,'LUNIT',1,RUNIT)
 !
 !     ==================================================================

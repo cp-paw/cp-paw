@@ -142,7 +142,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -152,7 +152,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -162,7 +162,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -172,7 +172,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -182,7 +182,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -192,7 +192,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETL4')
         END IF
@@ -232,7 +232,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$GETL4')
         END IF
@@ -276,21 +276,18 @@ END MODULE SIMPLELMTO_MODULE
       SUBROUTINE SIMPLELMTO$SETI4A(ID,LEN,VAL)
 !     **************************************************************************
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : ISPECIES & !(NAT)
-     &                       ,POTPAR=>POTPAR1 &  !(NSP)
-     &                       ,ISPSELECTOR &
-     &                       ,HYBRIDSETTING
+      USE SIMPLELMTO_MODULE, ONLY : ISPSELECTOR &
+     &                             ,HYBRIDSETTING
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)  :: ID
       INTEGER(4)  ,INTENT(IN)  :: LEN
       INTEGER(4)  ,INTENT(IN)  :: VAL(LEN)
-      INTEGER(4)               :: IAT,ISP
 !     **************************************************************************
       IF(ID.EQ.'NORBOFL') THEN
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETI4A')
         END IF
@@ -370,14 +367,13 @@ END MODULE SIMPLELMTO_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(IN) :: VAL
-      INTEGER(4)              :: I
 !     **************************************************************************
 !
       IF(ID.EQ.'LHFWEIGHT') THEN
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETR8')
         END IF
@@ -387,7 +383,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$SETR8')
         END IF
@@ -411,8 +407,7 @@ END MODULE SIMPLELMTO_MODULE
       SUBROUTINE SIMPLELMTO$GETR8(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : NSP &
-     &                             ,HYBRIDSETTING &
+      USE SIMPLELMTO_MODULE, ONLY : HYBRIDSETTING &
      &                             ,ISPSELECTOR
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
@@ -422,7 +417,7 @@ END MODULE SIMPLELMTO_MODULE
         IF(ISPSELECTOR.LE.0) THEN
           CALL ERROR$MSG('ATOM TYPE NOT SELECTED')
           CALL ERROR$MSG('SET VARIABLE "ISP" FIRST')
-          CALL ERROR$CHVAL('ISPSELECTOR',ISPSELECTOR)
+          CALL ERROR$I4VAL('ISPSELECTOR',ISPSELECTOR)
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SIMPLELMTO$GETR8')
         END IF
@@ -711,12 +706,8 @@ END MODULE SIMPLELMTO_MODULE
      &                             ,HYBRIDSETTING
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      INTEGER(4),ALLOCATABLE :: ISCATT(:)
       REAL(8)                :: SVAR
-      INTEGER(4)             :: LX    !X(ANGULAR MOMENTUM)
       INTEGER(4)             :: L
-      INTEGER(4)             :: ISVAR
-      LOGICAL(4)             :: TCHK
 !     **************************************************************************
       LOGICAL(4),PARAMETER   :: TPR=.TRUE.
       LOGICAL(4),PARAMETER   :: TH1S=.FALSE. ! OVERWRITE AECHI WITH H ORBITAL
@@ -759,7 +750,6 @@ END MODULE SIMPLELMTO_MODULE
       REAL(8)   ,ALLOCATABLE :: PSPHI2(:)
       REAL(8)   ,ALLOCATABLE :: JTAIL(:,:) !(NR,LNXT)
       REAL(8)   ,ALLOCATABLE :: KHEAD(:,:) !(NR,LNXH)
-      REAL(8)   ,ALLOCATABLE :: AMAT(:,:),AMATIN(:,:)
       REAL(8)   ,ALLOCATABLE :: PHIOV(:,:) !<PHI|THETA_OMEGA|PHI>
       REAL(8)                :: DET
       REAL(8)                :: PHI1VAL,PHI1DER,PHI2VAL,PHI2DER
@@ -878,7 +868,7 @@ END IF
 !       ==  CONSTRUCT SOLID HANKEL AND BESSEL FUNCTIONS                       ==
 !       ========================================================================
         IF(TPR) THEN
-          ALLOCATE(KHEAD(NR,LNXT))
+          ALLOCATE(KHEAD(NR,LNXH))
           ALLOCATE(JTAIL(NR,LNXT))
           DO LNH=1,LNXH
             L=LOXH(LNH)
@@ -1185,7 +1175,7 @@ END IF
           CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_NLPHIT.DAT',GID,NR &
        &                    ,LNXT,NLPHIT)
           CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_KHEAD.DAT',GID,NR &
-       &                    ,LNXT,KHEAD)
+       &                    ,LNXH,KHEAD)
           CALL SIMPLELMTO_WRITEPHI(TRIM(STRING)//'_JTAIL.DAT',GID,NR &
        &                    ,LNXT,JTAIL)
 !
@@ -1279,7 +1269,7 @@ END IF
       INTEGER(4),INTENT(OUT):: LNOFT(2,LNXT)
       LOGICAL(4),PARAMETER  :: TPR=.TRUE.
       INTEGER(4)            :: LX
-      INTEGER(4)            :: LN,LNH,LNT,L,N
+      INTEGER(4)            :: LN,LNH,L,N
 !     **************************************************************************
       IF(LNXH.NE.SUM(NORBOFL)) THEN
         CALL ERROR$MSG('LNXH INCONSISTENT WITH NORBOFL')
@@ -1696,7 +1686,7 @@ INTEGER(4)          :: I
       REAL(8)   ,PARAMETER  :: SQ4PI=SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: SQ4PITHIRD=SQRT(4.D0*PI/3.D0)
       INTEGER(4)            :: LN1,LN2
-      INTEGER(4)            :: L1,L2,IM
+      INTEGER(4)            :: L1,L2
       REAL(8)               :: AUX(NR),SVAR
       REAL(8)               :: R(NR)
 !     **************************************************************************
@@ -1707,13 +1697,13 @@ INTEGER(4)          :: I
         L1=LOX(LN1)
         DO LN2=LN1,LNX
           L2=LOX(LN2)
-          IF(ABS(L1-L2).EQ.0.D0) THEN
+          IF(ABS(L1-L2).EQ.0) THEN
             AUX(:)=R(:)**2*CHI(:,LN1)*CHI(:,LN2)
             CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
             SVAR=SQ4PI*SVAR
             QLN(1,LN1,LN2)=SVAR
             QLN(1,LN2,LN1)=SVAR
-          ELSE IF(ABS(L1-L2).EQ.1.D0) THEN
+          ELSE IF(ABS(L1-L2).EQ.1) THEN
             AUX(:)=R(:)**3*CHI(:,LN1)*CHI(:,LN2)
             CALL RADIAL$INTEGRAL(GID,NR,AUX,SVAR)
             SVAR=SQ4PITHIRD*SVAR
@@ -1739,8 +1729,8 @@ INTEGER(4)          :: I
       INTEGER(4)            :: IAT
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-      CALL SIMPLELMTO$INITIALIZE()
                                     CALL TRACE$PUSH('SIMPLELMTO$ETOT')
+      CALL SIMPLELMTO$INITIALIZE()
  
 !!$DO  IAT=1,NAT_
 !!$  WRITE(*,FMT='("DONSITE 1: ",20F10.5)')DENMAT_(:,:,:,IAT)
@@ -1762,7 +1752,7 @@ INTEGER(4)          :: I
         CALL ERROR$STOP('SIMPLELMTO$ETOT')
       END IF
 !
-      WRITE(*,FMT='(82("="),T30," LMTO$ENERGY DONE ")')
+      CALL TRACE$PASS('SIMPLELMTO$ETOT DONE')
                                     CALL TRACE$POP()
       RETURN
       END
@@ -1774,8 +1764,7 @@ INTEGER(4)          :: I
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : TON &
-     &                             ,TOFFSITE
+      USE SIMPLELMTO_MODULE, ONLY : TON
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$DELETE &
      &                           ,RSPACEOP$COPY &
@@ -1806,8 +1795,6 @@ INTEGER(4)          :: I
       REAL(8)                          :: STRESST(3,3)
       REAL(8)                          :: ETOT
       INTEGER(4)                       :: I,IAT
-      INTEGER(4)                       :: NFILO
-      LOGICAL(4)                       :: TFIRST=.TRUE.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                      CALL TRACE$PUSH('SIMPLELMTO_HYBRID')
@@ -1972,6 +1959,7 @@ PRINT*,'FORCET',FORCET
       ENDDO
       DEALLOCATE(DONSITE)
       DEALLOCATE(HONSITE)
+      CALL TRACE$PASS('SIMPLELMTO_HYBRID  DONE')
                                      CALL TRACE$POP()
       RETURN
       END
@@ -1983,18 +1971,13 @@ PRINT*,'FORCET',FORCET
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE SIMPLELMTO_MODULE, ONLY : TON &
-     &                             ,TOFFSITE
+      USE SIMPLELMTO_MODULE, ONLY : TON
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$DELETE &
      &                           ,RSPACEOP$COPY &
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
       LOGICAL(4)          ,PARAMETER   :: TPR=.FALSE.
-      CHARACTER(5)        ,PARAMETER   :: TYPE='FINAL'
-!      CHARACTER(5)        ,PARAMETER   :: TYPE='PRIOR'
-      LOGICAL(4)          ,PARAMETER   :: TTEST=.FALSE.
-      LOGICAL(4)          ,PARAMETER   :: TTESTA=.FALSE.
       INTEGER(4)                       :: NAT
       INTEGER(4)                       :: NND
       REAL(8)                          :: RBAS(3,3)
@@ -2013,15 +1996,10 @@ PRINT*,'FORCET',FORCET
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: SBARESAVE(:,:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: PIPHI(:)
       TYPE(RSPACEMAT_TYPE),ALLOCATABLE :: PIPHISAVE(:,:)
-      REAL(8)             ,ALLOCATABLE :: FORCET(:,:) !(3,NAT)
-      REAL(8)                          :: STRESST(3,3)
-      REAL(8)                          :: ETOT
       REAL(8)                          :: RAN
       INTEGER(4)                       :: I,IAT,K,L,II,IDIS
       INTEGER(4)                       :: IAT1,IAT2
       INTEGER(4)                       :: N1,N2
-      INTEGER(4)                       :: NFILO
-      LOGICAL(4)                       :: TFIRST=.TRUE.
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                      CALL TRACE$PUSH('SIMPLELMTO_HYBRID')
@@ -2286,10 +2264,14 @@ STOP 'FORCED --'
             CALL ERROR$I4VAL('IND2',IND2)
             CALL ERROR$I4VAL('IND1-IAT1',DENMAT(IND1)%IAT1)
             CALL ERROR$I4VAL('IND1-IAT2',DENMAT(IND1)%IAT2)
-            CALL ERROR$I4VAL('IND1-IT',DENMAT(IND1)%IT)
+            CALL ERROR$I4VAL('IND1-IT(1)',DENMAT(IND1)%IT(1))
+            CALL ERROR$I4VAL('IND1-IT(2)',DENMAT(IND1)%IT(2))
+            CALL ERROR$I4VAL('IND1-IT(3)',DENMAT(IND1)%IT(3))
             CALL ERROR$I4VAL('IND2-IAT1',DENMAT(IND2)%IAT1)
             CALL ERROR$I4VAL('IND2-IAT2',DENMAT(IND2)%IAT2)
-            CALL ERROR$I4VAL('IND2-IT',DENMAT(IND2)%IT)
+            CALL ERROR$I4VAL('IND2-IT(1)',DENMAT(IND2)%IT(1))
+            CALL ERROR$I4VAL('IND2-IT(2)',DENMAT(IND2)%IT(2))
+            CALL ERROR$I4VAL('IND2-IT(3)',DENMAT(IND2)%IT(3))
             CALL ERROR$R8VAL('DEV',SVAR)
             CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
           END IF
@@ -2367,10 +2349,14 @@ STOP 'FORCED --'
             CALL ERROR$I4VAL('IND2',IND2)
             CALL ERROR$I4VAL('IND1-IAT1',HAMIL(IND1)%IAT1)
             CALL ERROR$I4VAL('IND1-IAT2',HAMIL(IND1)%IAT2)
-            CALL ERROR$I4VAL('IND1-IT',HAMIL(IND1)%IT)
+            CALL ERROR$I4VAL('IND1-IT(1)',HAMIL(IND1)%IT(1))
+            CALL ERROR$I4VAL('IND1-IT(2)',HAMIL(IND1)%IT(2))
+            CALL ERROR$I4VAL('IND1-IT(3)',HAMIL(IND1)%IT(3))
             CALL ERROR$I4VAL('IND2-IAT1',HAMIL(IND2)%IAT1)
             CALL ERROR$I4VAL('IND2-IAT2',HAMIL(IND2)%IAT2)
-            CALL ERROR$I4VAL('IND2-IT',HAMIL(IND2)%IT)
+            CALL ERROR$I4VAL('IND2-IT(1)',HAMIL(IND2)%IT(1))
+            CALL ERROR$I4VAL('IND2-IT(2)',HAMIL(IND2)%IT(2))
+            CALL ERROR$I4VAL('IND2-IT(3)',HAMIL(IND2)%IT(3))
             CALL ERROR$R8VAL('DEV',SVAR)
             CALL ERROR$STOP('SIMPLELMTO_FAKEETOT')
           END IF
@@ -2390,10 +2376,6 @@ STOP 'FORCED --'
 !     ** COLLECTS THE ONSITE TERMS OFG THE DENSITY MATRIX                     **
 !     **                                                                      **
 !     ********************************************P. BLOECHL, GOSLAR 2019*******
-      USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
-     &                             ,POTPAR=>POTPAR1 &
-     &                             ,LOX &
-     &                             ,LNX
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$DELETE &
      &                           ,RSPACEOP$COPY &
@@ -2477,6 +2459,7 @@ STOP 'FORCED --'
           EXIT
         ENDDO
       ENDDO
+                                    CALL TRACE$POP()
       RETURN
       END
 !
@@ -2612,10 +2595,8 @@ STOP 'FORCED --'
 !     **                                                                      **
 !     ********************************************P. BLOECHL, GOSLAR 2019*******
       USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
-     &                             ,POTPAR=>POTPAR1 &
      &                             ,LOX &
-     &                             ,LNX &
-     &                             ,NSP
+     &                             ,LNX
       USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE &
      &                             ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
@@ -2623,11 +2604,10 @@ STOP 'FORCED --'
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: HAMILCHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(OUT)  :: HAMILPHI(NND)
-      LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
       INTEGER(4)                        :: IAT1,IAT2
-      INTEGER(4)                        :: ISP,ISP1,ISP2
+      INTEGER(4)                        :: ISP1,ISP2
       INTEGER(4)                        :: N1,N2,N3
       INTEGER(4)                        :: NAT
       INTEGER(4)                        :: I,J
@@ -2732,11 +2712,6 @@ STOP 'FORCED --'
 !     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
 !     **                                                                      **
 !     ********************************************P. BLOECHL, GOSLAR 2019*******
-      USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
-     &                             ,POTPAR=>POTPAR1 &
-     &                             ,LOX &
-     &                             ,LNX &
-     &                             ,NSP
       USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE &
      &                             ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
@@ -2746,7 +2721,6 @@ STOP 'FORCED --'
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: HAMILCHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
       REAL(8)             ,INTENT(OUT)  :: FORCE(3,NAT)
-      LOGICAL(4)          ,PARAMETER    :: TPR=.FALSE.
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
       REAL(8)             ,ALLOCATABLE  :: MAT(:,:)
@@ -2849,7 +2823,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       INTEGER(4)                        :: ISP,ISP1,ISP2
       INTEGER(4)                        :: N1,N2,N3
       INTEGER(4)                        :: NAT
-      INTEGER(4)                        :: I,J,II
+      INTEGER(4)                        :: I,II
       REAL(8)                           :: S
 !     **************************************************************************
                                     CALL TRACE$PUSH('SIMPLELMTO_MAKEPIPHI')
@@ -3138,9 +3112,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
      &                             ,POTPAR=>POTPAR1 &
-     &                             ,K2 &
-     &                             ,LNX &
-     &                             ,LOX
+     &                             ,K2
       USE RSPACEOP_MODULE, ONLY : RSPACEMAT_TYPE &
      &                           ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
@@ -3157,7 +3129,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       REAL(8)                           :: R21(3) 
       INTEGER(4)                        :: L1X,L2X
       REAL(8)             ,ALLOCATABLE  :: SMAT(:,:,:) !VALUE AND GRADIENT
-      INTEGER(4)                        :: I,J,K
+      INTEGER(4)                        :: I
       INTEGER(4)                        :: LMN1A,LMN1B,LMN2A,LMN2B
       INTEGER(4)                        :: LM1A,LM1B,LM2A,LM2B
       INTEGER(4)                        :: L1,L2
@@ -3264,7 +3236,6 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       INTEGER(4)            :: LMRX,LRX
       INTEGER(4)            :: GID
       INTEGER(4)            :: NR
-      REAL(8)   ,ALLOCATABLE:: AECORE(:)
       REAL(8)   ,ALLOCATABLE:: U(:,:,:,:)
       REAL(8)   ,ALLOCATABLE:: D(:,:,:)
       REAL(8)   ,ALLOCATABLE:: DON(:,:,:)
@@ -3926,8 +3897,6 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       INTEGER(4)  ,INTENT(IN) :: NDIMD
       REAL(8)     ,INTENT(IN) :: RHO(NR,LMRX,NDIMD)
       INTEGER(4)  ,PARAMETER  :: NDIS=4
-      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
-      REAL(8)     ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)                 :: R(NR)
       REAL(8)                 :: AUX(NR)
       REAL(8)                 :: RHO1(NR,LMRX,NDIMD)
@@ -7676,8 +7645,8 @@ ENDMODULE SIMPLELMTO_TWOCENTER_MODULE
        R1=R(1)
        R2=R(2)
 !
-       CALL RADIAL$VALUE(GID1,NR1,F1,R1,VAL1)
-       CALL RADIAL$VALUE(GID2,NR2,F2,R2,VAL2)
+       CALL RADIAL$VALUE(GID1,NR1,F1,ABS(R1),VAL1)
+       CALL RADIAL$VALUE(GID2,NR2,F2,ABS(R2),VAL2)
 !
        COSTHETA1=(R1**2-R2**2+DIS**2)/(2.D0*DIS*R1)
        COSTHETA2=-(R2**2-R1**2+DIS**2)/(2.D0*DIS*R2)
@@ -7941,7 +7910,7 @@ USE LMTO_TWOCENTER_MODULE, ONLY : TPR
        REAL(8)   ,INTENT(IN)  :: TOLERANCE ! REQUIRED ACCURACY
        REAL(8)   ,INTENT(OUT) :: VALUE     ! INTEGRAL VALUE
        INTEGER(4),PARAMETER   :: LSTACKX=50000
-       TYPE(SEGMENT_TYPE)     :: STACK(LSTACKX)
+       TYPE(SEGMENT_TYPE),ALLOCATABLE  :: STACK(:) !(LSTACKX)
        TYPE(SEGMENT_TYPE)     :: SEGMENT1
        TYPE(SEGMENT_TYPE)     :: SEGMENT2
        INTEGER(4)             :: NSEGMENTS
@@ -7950,6 +7919,7 @@ USE LMTO_TWOCENTER_MODULE, ONLY : TPR
        INTEGER(4)             :: IAXIS
        INTEGER(4)             :: I
 !      *************************************************************************
+       ALLOCATE(STACK(LSTACKX))
        CALL NEWADAPTINI()
 !
 !      =========================================================================

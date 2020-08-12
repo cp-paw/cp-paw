@@ -1273,7 +1273,6 @@ PRINT*,'SQUARE DEVIATION ',SVAR
       INTEGER(4)             :: NA,NB,NC,ND,NP,NQ,N
       INTEGER(4)             :: J,K
       REAL(8)   ,ALLOCATABLE :: HI(:,:,:)
-      REAL(8)                :: SIGN
       REAL(8)                :: UABCD1
       INTEGER(4)             :: INDP,INDQ,MP,MQ,IP,IQ,JP,JQ,KP,KQ
       INTEGER(4)             :: IORBA,IORBB,IORBC,IORBD
@@ -1409,11 +1408,10 @@ PRINT*,'MARKE 1',IORBA,IORBB,IEA,IEB
       REAL(8)   ,ALLOCATABLE :: CPAB3(:,:,:,:,:)
       REAL(8)   ,ALLOCATABLE :: UPQ(:,:,:,:)
       REAL(8)                :: FACTOR,SVAR
-      INTEGER(4)             :: INDA,INDB,INDC,INDD,INDP,INDQ
+      INTEGER(4)             :: INDA,INDB,INDP,INDQ
       INTEGER(4)             :: MP,MQ,IP,IQ,JP,JQ,KP,KQ
-      INTEGER(4)             :: IEA,IEB,IEC,IED,IEP,IEQ
+      INTEGER(4)             :: IEA,IEB,IEP,IEQ
       INTEGER(4)             :: IFA,IFB,IFC,IFD
-      INTEGER(4)             :: IA,IB,IC,ID
       REAL(8)                :: SGN
 !     **************************************************************************
                      CALL TRACE$PUSH('GAUSSIAN$ZDIRECTION_FOURCENTER')
@@ -1970,7 +1968,7 @@ PRINT*,'IN GAUSSIAN$ZDIRECTION_FOURCENTER: DONE'
       INTEGER(4)            :: IND1X
       REAL(8)               :: R2N(NIJK)
       REAL(8)               :: YLMPOL(NIJK,(NX+1)**2)
-      INTEGER(4)            :: JN,N,I,J,K,I1,J1,K1,IORB,L,IM,LM,IND,IND1,IND2
+      INTEGER(4)            :: N,I,J,K,I1,J1,K1,IORB,L,IM,LM,IND,IND1,IND2
       INTEGER(4)            :: TWOI,TWOJ,TWOK
       REAL(8)               :: SVAR1,SVAR2
 !     ******************************PETER BLOECHL, GOSLAR 2011******************
@@ -2369,7 +2367,6 @@ PRINT*,'H',H(IA,IB,0:IA+IB)
 !     ** COMPARISON WITH DATA FROM B.A. MAMEDOV, J. MATH CHEM 36, P301 (2004) **
 !     **************************************************************************
       IMPLICIT NONE
-      INTEGER(4),PARAMETER :: NFIL=10
       INTEGER(4),PARAMETER :: N1=12,N2=6,N3=6
       REAL(8)              :: F1(N1),F2(N2),F3(N3)
       REAL(8)              :: X1(N1),X2(N2),X3(N3)
@@ -2454,13 +2451,14 @@ STOP 'FORCED'
       REAL(8)              :: E
       REAL(8)              :: DR(3)
       REAL(8)              :: R(3)
-      REAL(8)              :: T(NIJK,NIJK)
+      REAL(8) ,ALLOCATABLE :: T(:,:) !(NIJK,NIJK)
       REAL(8)              :: C0(NIJK)
       REAL(8)              :: C1(NIJK)
       REAL(8)              :: F1,F0
       INTEGER(4)           :: NFIL=6
       INTEGER(4)           :: I
 !     **************************************************************************
+      ALLOCATE(T(NIJK,NIJK))
       E=1.D0
       DR(:)=(/1.D0,0.D0,0.D0/)
       C0(:)=0.D0

@@ -32,8 +32,8 @@ CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
 LOGICAL(4) :: TON  =.FALSE.      ! USED TO REQUEST INTERNAL STRESS
 LOGICAL(4) :: TMOVE=.FALSE.      ! PROPAGATE UNIT CELL
-LOGICAL(4) :: TSTART=.FALSE.   ! IGNORE RESTART FILE. USE TREF.
-REAL(8)    :: TREF(3,3)          ! REFERENCE CELL CONSTANTS
+LOGICAL(4) :: TSTART=.FALSE.     ! IGNORE RESTART FILE. USE TREF.
+REAL(8)    :: TREF(3,3)=0.d0     ! REFERENCE CELL CONSTANTS
 REAL(8)    :: STRESS(3,3)=0.D0   ! EXTERNAL STRESS TENSOR
 REAL(8)    :: PRESSURE=0.D0      ! EXTERNAL PRESSURE
 REAL(8)    :: DELTAT=0.D0
@@ -41,10 +41,10 @@ REAL(8)    :: FRIC=0.D0
 REAL(8)    :: STRESS_I(3,3)=0.D0 ! INTERNAL STRESS TENSOR
 REAL(8)    :: KINSTRESS(3,3)=0.D0 ! INTERNAL STRESS TENSOR
 REAL(8)    :: TP(3,3)=0.D0
-REAL(8)    :: T0(3,3)=0.D0        ! ACTUAL CELL 
+REAL(8)    :: T0(3,3)=0.D0       ! ACTUAL CELL 
 REAL(8)    :: TM(3,3)=0.D0
 REAL(8)    :: TMM(3,3)=0.D0
-REAL(8)    :: TMASS              ! MASS FOR THE UNIT CELL DYNAMICS
+REAL(8)    :: TMASS=0.d0         ! MASS FOR THE UNIT CELL DYNAMICS
 LOGICAL(4) :: TPROPAGATED=.FALSE.
 REAL(8)    :: EPOT=0.D0          ! POTENTIAL ENERGY
 REAL(8)    :: EKIN=0.D0          ! KINETIC ENERGY
@@ -140,7 +140,17 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TSTART &
+     &                       ,TON &
+     &                       ,TMOVE &
+     &                       ,TMASS &
+     &                       ,FRIC &
+     &                       ,PRESSURE &
+     &                       ,CONSTRAINTTYPE &
+     &                       ,VREF &
+     &                       ,STRESS &
+     &                       ,TREF &
+     &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
 !     **************************************************************************
@@ -511,7 +521,14 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : CELL_INITIALIZE &
+     &                       ,T0,TP,TM &
+     &                       ,TREF &
+     &                       ,STRESS_I &
+     &                       ,DELTAT &
+     &                       ,TPROPAGATED &
+     &                       ,TINIT &
+     &                       ,TON
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -639,7 +656,7 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TSTOP
       IMPLICIT NONE
 !     **************************************************************************
       TSTOP=.TRUE.
@@ -651,7 +668,15 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : TON &
+     &                       ,TMOVE &
+     &                       ,TSTOP &
+     &                       ,TPROPAGATED &
+     &                       ,TPARRINELLORAHMAN &
+     &                       ,TP,T0,TM,TMM,V0,VREF,STRESS_I,CONSTRAINTTYPE &
+     &                       ,DELTAT,TMASS &
+     &                       ,EKIN,EPOT,FRIC,KINSTRESS,PRESSURE,SIGMA &
+     &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       REAL(8)    :: AMAT(3,3)
       REAL(8)    :: BMAT(3,3)
@@ -791,9 +816,17 @@ END IF
      &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
       IF(ABS(V0).GT.1.D+10*ABS(VREF)) THEN
         CALL ERROR$MSG('CELL DYNAMICS UNSTABLE')
-        CALL ERROR$R8VAL('CELL',T0)
-        CALL ERROR$R8VAL('VOLUME ',V0)
-        CALL ERROR$R8VAL('REFERENCE VOLUME ',VREF)
+        CALL ERROR$R8VAL('CELL(1,1)',T0(1,1))
+        CALL ERROR$R8VAL('CELL(2,1)',T0(2,1))
+        CALL ERROR$R8VAL('CELL(3,1)',T0(3,1))
+        CALL ERROR$R8VAL('CELL(1,2)',T0(1,2))
+        CALL ERROR$R8VAL('CELL(2,2)',T0(2,2))
+        CALL ERROR$R8VAL('CELL(3,2)',T0(3,2))
+        CALL ERROR$R8VAL('CELL(1,3)',T0(1,3))
+        CALL ERROR$R8VAL('CELL(2,3)',T0(2,3))
+        CALL ERROR$R8VAL('CELL(3,3)',T0(3,3))
+        CALL ERROR$R8VAL('VOLUME',V0)
+        CALL ERROR$R8VAL('REFERENCE VOLUME',VREF)
         CALL ERROR$STOP('CELL_PROPAGATE')
       END IF
 
@@ -910,7 +943,14 @@ END IF
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : EKIN &
+     &                       ,EPOT &
+     &                       ,STRESS_I &
+     &                       ,TMOVE &
+     &                       ,T0,TP,TM,TMM &
+     &                       ,TMOVE &
+     &                       ,V0 &
+     &                       ,TPROPAGATED 
       IMPLICIT NONE
 !     **************************************************************************
       STRESS_I=0.D0
@@ -978,7 +1018,7 @@ END IF
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE
+      USE CELL_MODULE, ONLY : T0,TM,TMM
       USE RESTART_INTERFACE
       IMPLICIT NONE
       INTEGER(4)            ,INTENT(IN) :: NFIL

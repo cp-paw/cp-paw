@@ -169,7 +169,6 @@
       USE ISOLATE_MODULE
       IMPLICIT NONE
       LOGICAL    ,PARAMETER    :: TPR=.FALSE.
-      REAL(8)    ,PARAMETER    :: XK(3)=(/0.D0,0.D0,0.D0/)
       INTEGER(4) ,INTENT(IN)   :: NSP           ! #(ATOM TYPES)
       INTEGER(4) ,INTENT(IN)   :: NAT           ! #(ATOMS)
       INTEGER(4) ,INTENT(IN)   :: ISPECIES(NAT) ! ATOMS->ATOM TYPES

@@ -273,7 +273,6 @@ END MODULE CI_MODULE
       INTEGER            ,POINTER      :: ID(:)
       INTEGER(4)                       :: N
       INTEGER(4)                       :: NPLUS
-      LOGICAL(4),PARAMETER :: TNEW=.TRUE.
 !     **************************************************************************
       IF(PHI%NX.EQ.0) THEN
         PHI%NX=NFURTHER
@@ -3241,6 +3240,7 @@ PRINT*,'..........................TRANSFORMATION DONE'
       IWAIT=0
       EWAIT=EPOT
       TCYCLED=.FALSE.
+      ITERSTOP=0
       DO ITER=1,NOITER
         TSTOP=.FALSE.
         P0(:)=X0(:)**2

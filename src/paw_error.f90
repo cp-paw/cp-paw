@@ -288,6 +288,7 @@ END MODULE ERROR_MODULE
 !     **  WRITE ERROR MESSAGE, FLUSH FILES AND STOP                   **
 !     ******************************************************************
       CALL FILEHANDLER$CLOSEALL
-      CALL MPE$EXIT
+      CALL MPE$STOPALL(0) ! BRING DOWN ALL MPI TASKS RELATED TO MPI_WORLD_COMM
+      CALL MPE$EXIT       ! TERMINATES MPI
       STOP 'NORMAL STOP'
       END

@@ -1254,7 +1254,10 @@ END MODULE DYNOCC_MODULE
         CALL DYNOCC_REPORTSETTING(NFIL)
         RESET=.FALSE.
       END IF
-      IF(.NOT.TDYN) RETURN
+      IF(.NOT.TDYN) then 
+         CALL TRACE$POP()
+         RETURN
+      end if
 !
 !     ==========================================================================
 !     ==  PRINT ENSEMBLE INFORMATION                                          ==

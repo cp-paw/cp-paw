@@ -35,7 +35,7 @@
            if(len.gt.maxlen-overheadlen+1) then
               line=line(maxlen-overheadlen+1:len)
            else
-              line=''
+              line=' '
            end if
            len=len_trim(line)
          enddo

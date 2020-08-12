@@ -1,5 +1,5 @@
 !
-!      ..1.........2.........3.........4.........5.........6.........7.........8
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE  FILEHANDLER_MODULE
 !***********************************************************************
 !**                                                                   **
@@ -448,7 +448,7 @@ END MODULE FILEHANDLER_MODULE
         IF(IOS.NE.0) THEN
           CALL ERROR$MSG('ERROR WHILE SCANNING FOR AVALIABLE FORTRAN FILE UNIT')
           CALL ERROR$MSG('ERROR INQUIRING ABOUT A FILE')
-          CALL ERROR$CHVAL('UNIT',I)
+          CALL ERROR$I4VAL('UNIT',I)
           CALL ERROR$CHVAL('IO MESSAGE',TRIM(IOMSG))
           CALL ERROR$CHVAL('FILE ID',FILE(IFIL)%ID)
           CALL ERROR$CHVAL('FILENAME ',FILE(IFIL)%NAME)

@@ -67,30 +67,30 @@ MODULE SETUP_MODULE
 !*******************************************************************************
 !== PARAMETERS DEFINING THE SETUP CONSTRUCTION =================================
 TYPE SETUPPARMS_TYPE
-  CHARACTER(128)  :: ID 
-  REAL(8)         :: POW_POT=0.D0
-  LOGICAL(4)      :: TVAL0_POT       
-  REAL(8)         :: VAL0_POT
-  REAL(8)         :: RC_POT
-  REAL(8)         :: POW_CORE
-  LOGICAL(4)      :: TVAL0_CORE       
-  REAL(8)         :: VAL0_CORE
-  REAL(8)         :: RC_CORE
-  CHARACTER(32)   :: TYPE
-  REAL(8),POINTER :: RCL(:)    !(LX+1)
-  REAL(8),POINTER :: LAMBDA(:) !(LX+1)
+  CHARACTER(128)      :: ID 
+  REAL(8)             :: POW_POT=0.D0
+  LOGICAL(4)          :: TVAL0_POT       
+  REAL(8)             :: VAL0_POT
+  REAL(8)             :: RC_POT
+  REAL(8)             :: POW_CORE
+  LOGICAL(4)          :: TVAL0_CORE       
+  REAL(8)             :: VAL0_CORE
+  REAL(8)             :: RC_CORE
+  CHARACTER(32)       :: TYPE
+  REAL(8),ALLOCATABLE :: RCL(:)    !(LX+1)
+  REAL(8),ALLOCATABLE :: LAMBDA(:) !(LX+1)
 END TYPE SETUPPARMS_TYPE
 TYPE ATOMWAVES_TYPE
-  INTEGER(4)         :: NB=-1
-  INTEGER(4)         :: NC=-1
-  INTEGER(4),POINTER :: LOFI(:)
-  INTEGER(4),POINTER :: SOFI(:)
-  INTEGER(4),POINTER :: NNOFI(:)
-  REAL(8)   ,POINTER :: EOFI(:)
-  REAL(8)   ,POINTER :: FOFI(:)
-  REAL(8)   ,POINTER :: AEPSI(:,:)
-  REAL(8)   ,POINTER :: AEPSISM(:,:) ! SMALL COMPONENT
-  REAL(8)   ,POINTER :: AEPOT(:)
+  INTEGER(4)             :: NB=-1
+  INTEGER(4)             :: NC=-1
+  INTEGER(4),ALLOCATABLE :: LOFI(:)
+  INTEGER(4),ALLOCATABLE :: SOFI(:)
+  INTEGER(4),ALLOCATABLE :: NNOFI(:)
+  REAL(8)   ,ALLOCATABLE :: EOFI(:)
+  REAL(8)   ,ALLOCATABLE :: FOFI(:)
+  REAL(8)   ,ALLOCATABLE :: AEPSI(:,:)
+  REAL(8)   ,ALLOCATABLE :: AEPSISM(:,:)
+  REAL(8)   ,ALLOCATABLE :: AEPOT(:)
 END TYPE ATOMWAVES_TYPE
 TYPE SETTING_TYPE
   LOGICAL  :: TREL ! RELATIVISTIC OR NON-RELATIVISTIC
@@ -111,47 +111,47 @@ INTEGER(4)             :: LX           ! HIGHEST ANGULAR MOMENTUM
 INTEGER(4)             :: LNX          ! #(ORBITAL SHELLS)
 INTEGER(4)             :: LMNX
 INTEGER(4)             :: LMRX         ! #(ANGULAR MOMENTA FOR 1C-DENSITY)
-INTEGER(4),POINTER     :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA 
-INTEGER(4),POINTER     :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
-                                       !      = 0 FOR VALENCE STATE   (PHI)
-                                       !   = 1 FOR 1ST SCATTERING STATE (PHIDOT)
-REAL(8)   ,POINTER     :: VADD(:)      !(NR)
-REAL(8)   ,POINTER     :: PSPOT(:)     !(NR)
-REAL(8)   ,POINTER     :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
-REAL(8)   ,POINTER     :: PSCORE(:)    !(NR)  PSEUDIZED ELECTRON DENSITY
-REAL(8)   ,POINTER     :: PRO(:,:)     !(NR,LNX)  PROJECTOR FUNCTIONS
+INTEGER(4),ALLOCATABLE :: LOX(:)       !(LNX) MAIN ANGULAR MOMENTA 
+INTEGER(4),ALLOCATABLE :: ISCATT(:)    !(LNX) =-1 FOR SEMI-CORE STATE
+                                   !      = 0 FOR VALENCE STATE   (PHI)
+                                   !   = 1 FOR 1ST SCATTERING STATE (PHIDOT)
+REAL(8)   ,ALLOCATABLE :: VADD(:)      !(NR)
+REAL(8)   ,ALLOCATABLE :: PSPOT(:)     !(NR)
+REAL(8)   ,ALLOCATABLE :: AECORE(:)    !(NR)  CORE ELECTRON DENSITY
+REAL(8)   ,ALLOCATABLE :: PSCORE(:)    !(NR)  PSEUDIZED ELECTRON DENSITY
+REAL(8)   ,ALLOCATABLE :: PRO(:,:)     !(NR,LNX)  PROJECTOR FUNCTIONS
 REAL(8)                :: RBOX         ! PARTIAL WAVES HAVE OUTER NODE AT RBOX
-REAL(8)   ,POINTER     :: AEPHI(:,:)   !(NR,LNX)  AE PARTIAL WAVES
-REAL(8)   ,POINTER     :: AEPHISM(:,:) !(NR,LNX)  
-REAL(8)   ,POINTER     :: PSPHI(:,:)   !(NR,LNX)  PS PARTIAL WAVES
-REAL(8)   ,POINTER     :: PSPHISM(:,:) !(NR,LNX)  
-REAL(8)   ,POINTER     :: UPHI(:,:)    !(NR,LNX)  NODELESS PARTIAL WAVES
-REAL(8)   ,POINTER     :: UPHISM(:,:)  !(NR,LNX)  
-REAL(8)   ,POINTER     :: QPHI(:,:)    !(NR,LNX)  REDUCED-NODE PARTIAL WAVES
-REAL(8)   ,POINTER     :: QPHISM(:,:)  !(NR,LNX)
-REAL(8)   ,POINTER     :: QPHIDOT(:,:) !(NR,LNX)  R-N SCATTERING PARTIAL WAVES
-REAL(8)   ,POINTER     :: NLPHIDOT(:,:)!(NR,LNX)  NL SCATTERING PARTIAL WAVES
-REAL(8)   ,POINTER     :: PSPHIDOT(:,:)!(NR,LNX)  PS SCATTERING PARTIAL WAVES
-REAL(8)   ,POINTER     :: PSPHIDOTSM(:,:)!(NR,LNX)  
-REAL(8)   ,POINTER     :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
-REAL(8)   ,POINTER     :: AEPHIDOTSM(:,:)!(NR,LNX)  
-REAL(8)   ,POINTER     :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
-REAL(8)   ,POINTER     :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
-REAL(8)   ,POINTER     :: DATH(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
-REAL(8)   ,POINTER     :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
-REAL(8)   ,POINTER     :: COREVALENCEX(:,:)  !(LNX,LNX) CORE VALENCE EXCHANGE
-REAL(8)   ,POINTER     :: VADDOFG(:)   !(NGX)
-REAL(8)   ,POINTER     :: PSCOREOFG(:) !(NGX)
-REAL(8)   ,POINTER     :: VHATOFG(:)   !(NGX)
-REAL(8)   ,POINTER     :: NHATPRIMEOFG(:)  !(NGX)
-REAL(8)   ,POINTER     :: PROOFG(:,:)  !(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: AEPHI(:,:)   !(NR,LNX)  AE PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: AEPHISM(:,:) !(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: PSPHI(:,:)   !(NR,LNX)  PS PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: PSPHISM(:,:) !(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: UPHI(:,:)    !(NR,LNX)  NODELESS PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: UPHISM(:,:)  !(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: QPHI(:,:)    !(NR,LNX)  REDUCED-NODE PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: QPHISM(:,:)  !(NR,LNX)
+REAL(8)   ,ALLOCATABLE :: QPHIDOT(:,:) !(NR,LNX)  R-N SCATTERING PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: NLPHIDOT(:,:)!(NR,LNX)  NL SCATTERING PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: PSPHIDOT(:,:)!(NR,LNX)  PS SCATTERING PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: PSPHIDOTSM(:,:)!(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: AEPHIDOT(:,:)!(NR,LNX)  AE SCATTERING PARTIAL WAVES
+REAL(8)   ,ALLOCATABLE :: AEPHIDOTSM(:,:)!(NR,LNX)  
+REAL(8)   ,ALLOCATABLE :: DTKIN(:,:)   !(LNX,LNX) 1C-KIN. EN. MATRIX ELEMENTS
+REAL(8)   ,ALLOCATABLE :: DOVER(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
+REAL(8)   ,ALLOCATABLE :: DATH(:,:)   !(LNX,LNX) 1C-OVERLAP MATRIX ELEMENTS
+REAL(8)   ,ALLOCATABLE :: PROPHIDOT(:,:)  !(LNX,LNX) <PRO|PSPHIDOT>
+REAL(8)   ,ALLOCATABLE :: COREVALENCEX(:,:)  !(LNX,LNX) CORE VALENCE EXCHANGE
+REAL(8)   ,ALLOCATABLE :: VADDOFG(:)   !(NGX)
+REAL(8)   ,ALLOCATABLE :: PSCOREOFG(:) !(NGX)
+REAL(8)   ,ALLOCATABLE :: VHATOFG(:)   !(NGX)
+REAL(8)   ,ALLOCATABLE :: NHATPRIMEOFG(:)  !(NGX)
+REAL(8)   ,ALLOCATABLE :: PROOFG(:,:)  !(NR,LNX)  
 LOGICAL(4)             :: LOCORBINI=.FALSE. !LOCAL ORBS ARE INITIALIZED IF TRUE
 REAL(8)                :: LOCORBRAD(4)=5.D0  ! RADIUS OF LOCAL ORBITALS
 INTEGER(4)             :: LOCORBNOFL(4)=0 ! #(LOCAL ORBITALS PER L)
 INTEGER(4)             :: LOCORBLNX=0     ! #(LOCAL ORBITAL-SHELLS)
-INTEGER(4),POINTER     :: LOCORBLOX(:)    ! L FOR EACH LOCAL ORBITAL-SHELL
-REAL(8)   ,POINTER     :: LOCORBAMAT(:,:) ! |CHI>=|PHI>*AMAT
-REAL(8)   ,POINTER     :: LOCORBBMAT(:,:) ! |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
+INTEGER(4),ALLOCATABLE :: LOCORBLOX(:)    ! L FOR EACH LOCAL ORBITAL-SHELL
+REAL(8)   ,ALLOCATABLE :: LOCORBAMAT(:,:) ! |CHI>=|PHI>*AMAT
+REAL(8)   ,ALLOCATABLE :: LOCORBBMAT(:,:) ! |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
 REAL(8)                :: M
 REAL(8)                :: ZV
 REAL(8)                :: PSG2
@@ -354,44 +354,44 @@ END MODULE SETUP_MODULE
       THIS%LNX   =0
       THIS%LMNX  =0
       THIS%LMRX  =0
-      NULLIFY(THIS%LOX)     !(LNX)
-      NULLIFY(THIS%ISCATT)  !(LNX)
-      NULLIFY(THIS%VADD)    !(NRX)
-      NULLIFY(THIS%PSPOT)  !(NRX)
-      NULLIFY(THIS%AECORE)  !(NRX)
-      NULLIFY(THIS%PSCORE)  !(NRX)
-      NULLIFY(THIS%PRO)     !(NRX,LNX)
+!!$      NULLIFY(THIS%LOX)     !(LNX)
+!!$      NULLIFY(THIS%ISCATT)  !(LNX)
+!!$      NULLIFY(THIS%VADD)    !(NRX)
+!!$      NULLIFY(THIS%PSPOT)   !(NRX)
+!!$      NULLIFY(THIS%AECORE)  !(NRX)
+!!$      NULLIFY(THIS%PSCORE)  !(NRX)
+!!$      NULLIFY(THIS%PRO)     !(NRX,LNX)
       THIS%RBOX  =0.D0
-      NULLIFY(THIS%AEPHI)   !(NRX,LNX)
-      NULLIFY(THIS%AEPHISM) !(NRX,LNX)
-      NULLIFY(THIS%PSPHI)   !(NRX,LNX)
-      NULLIFY(THIS%PSPHISM) !(NRX,LNX)
-      NULLIFY(THIS%UPHI)    !(NRX,LNX)
-      NULLIFY(THIS%UPHISM)  !(NRX,LNX)
-      NULLIFY(THIS%QPHI)    !(NRX,LNX)
-      NULLIFY(THIS%QPHISM)  !(NRX,LNX)
-      NULLIFY(THIS%QPHIDOT) !(NRX,LNX)
-      NULLIFY(THIS%NLPHIDOT)!(NRX,LNX)
-      NULLIFY(THIS%PSPHIDOT)!(NRX,LNX)
-      NULLIFY(THIS%PSPHIDOTSM)!(NRX,LNX)
-      NULLIFY(THIS%AEPHIDOT)!(NRX,LNX)
-      NULLIFY(THIS%AEPHIDOTSM)!(NRX,LNX)
-      NULLIFY(THIS%DTKIN)   !(LNXX,LNX)
-      NULLIFY(THIS%DOVER)   !(LNXX,LNX)
-      NULLIFY(THIS%PROPHIDOT)!(LNX,LNX)
-      NULLIFY(THIS%COREVALENCEX)!(LNX,LNX)
-      NULLIFY(THIS%VADDOFG) !(NGX)
-      NULLIFY(THIS%PSCOREOFG) !(NGX)
-      NULLIFY(THIS%VHATOFG) !(NGX)
-      NULLIFY(THIS%NHATPRIMEOFG) !(NGX)
-      NULLIFY(THIS%PROOFG)  !(NGX,LNX)
+!!$      NULLIFY(THIS%AEPHI)   !(NRX,LNX)
+!!$      NULLIFY(THIS%AEPHISM) !(NRX,LNX)
+!!$      NULLIFY(THIS%PSPHI)   !(NRX,LNX)
+!!$      NULLIFY(THIS%PSPHISM) !(NRX,LNX)
+!!$      NULLIFY(THIS%UPHI)    !(NRX,LNX)
+!!$      NULLIFY(THIS%UPHISM)  !(NRX,LNX)
+!!$      NULLIFY(THIS%QPHI)    !(NRX,LNX)
+!!$      NULLIFY(THIS%QPHISM)  !(NRX,LNX)
+!!$      NULLIFY(THIS%QPHIDOT) !(NRX,LNX)
+!!$      NULLIFY(THIS%NLPHIDOT)!(NRX,LNX)
+!!$      NULLIFY(THIS%PSPHIDOT)!(NRX,LNX)
+!!$      NULLIFY(THIS%PSPHIDOTSM)!(NRX,LNX)
+!!$      NULLIFY(THIS%AEPHIDOT)!(NRX,LNX)
+!!$      NULLIFY(THIS%AEPHIDOTSM)!(NRX,LNX)
+!!$      NULLIFY(THIS%DTKIN)   !(LNXX,LNX)
+!!$      NULLIFY(THIS%DOVER)   !(LNXX,LNX)
+!!$      NULLIFY(THIS%PROPHIDOT)!(LNX,LNX)
+!!$      NULLIFY(THIS%COREVALENCEX)!(LNX,LNX)
+!!$      NULLIFY(THIS%VADDOFG) !(NGX)
+!!$      NULLIFY(THIS%PSCOREOFG) !(NGX)
+!!$      NULLIFY(THIS%VHATOFG) !(NGX)
+!!$      NULLIFY(THIS%NHATPRIMEOFG) !(NGX)
+!!$      NULLIFY(THIS%PROOFG)  !(NGX,LNX)
       THIS%LOCORBINI=.FALSE. ! INITIALIZED?
       THIS%LOCORBRAD(:)=5.D0  ! RADIUS OF LOCAL ORBITALS
       THIS%LOCORBNOFL(:)=0 ! (4) #(LOCAL ORBITALS PER L)
       THIS%LOCORBLNX=0     ! #(LOCAL ORBITAL-SHELLS)
-      NULLIFY(THIS%LOCORBLOX)  !(LOCORBLNX)  L FOR EACH LOCAL ORBITAL-SHELL
-      NULLIFY(THIS%LOCORBAMAT) !(LNX,LOCORBLNX) |CHI>=|PHI>*AMAT
-      NULLIFY(THIS%LOCORBBMAT) !(LOCORBLNX,LNX) |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
+!!$      NULLIFY(THIS%LOCORBLOX)  !(LOCORBLNX)  L FOR EACH LOCAL ORBITAL-SHELL
+!!$      NULLIFY(THIS%LOCORBAMAT) !(LNX,LOCORBLNX) |CHI>=|PHI>*AMAT
+!!$      NULLIFY(THIS%LOCORBBMAT) !(LOCORBLNX,LNX) |PSI>=|CHI>BMAT<PTILDE|PSITILDE>
       THIS%M     =0.D0
       THIS%ZV     =0.D0
       THIS%PSG2  =0.D0
@@ -553,7 +553,8 @@ END MODULE SETUP_MODULE
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETI4A')
         END IF
-        IF(.NOT.ASSOCIATED(THIS%ISCATT)) THEN
+!!$        IF(.NOT.ASSOCIATED(THIS%ISCATT)) THEN
+        IF(.NOT.Allocated(THIS%ISCATT)) THEN
           CALL ERROR$MSG('DATA NOT AVAILABLE')
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$STOP('SETUP$GETI4A')
@@ -1080,18 +1081,18 @@ END MODULE SETUP_MODULE
       END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      subroutine setup_qnjofe(nr,l,n,j,qnjofe)
+!!$      SUBROUTINE SETUP_QNJOFE(NR,L,N,J,QNJOFE)
 !!$!     **************************************************************************
-!!$      implicit none
-!!$      integer(4),intent(in) :: nr
-!!$      integer(4),intent(in) :: l
-!!$      integer(4),intent(in) :: n
-!!$      integer(4),intent(in) :: j
-!!$      real(8)   ,intent(out):: qnjofe
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: NR
+!!$      INTEGER(4),INTENT(IN) :: L
+!!$      INTEGER(4),INTENT(IN) :: N
+!!$      INTEGER(4),INTENT(IN) :: J
+!!$      REAL(8)   ,INTENT(OUT):: QNJOFE
 !!$!     **************************************************************************
 !!$
-!!$      return
-!!$      end
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SETUP$READSTRCIN(LL_STRC_)
@@ -1429,6 +1430,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
      &              ,DMIN,DMAX,RMAX)
         ELSE
           TFOUND=.FALSE.
+          LAMBDA=0.D0   !INITIALIZE SOMEHOW
         END IF
 !    
 !       ========================================================================
@@ -1491,6 +1493,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
         CALL LINKEDLIST$SET(LL_STRC,'RBOX/RCOV',0,RBOX/RCOV)
         CALL LINKEDLIST$SET(LL_STRC,'RCSM/RCOV',0,RCSM/RCOV)
         CALL LINKEDLIST$SET(LL_STRC,'RCL/RCOV',0,RCL/RCOV)
+print*,'paw_setups.f90 a lambda=',lambda
         CALL LINKEDLIST$SET(LL_STRC,'LAMBDA',0,LAMBDA)
 !   
         CALL LINKEDLIST$SELECT(LL_STRC,'GRID',0)
@@ -1578,6 +1581,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
 !     ==========================================================================
       I=INDEX(ID,'_')
       STPTYPE=ID(I+1:)
+      TSC=.FALSE.
       IF(STPTYPE.EQ.'NDLSS_V0') THEN
         TSC=.FALSE.
       ELSE IF(STPTYPE.EQ.'NDLSS_SC_V0') THEN
@@ -1676,7 +1680,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
 !     == DETERMINE RADIAL GRID
 !     ==========================================================================
       DO L=0,LX
-        IF(AEZ.EQ.0) THEN
+        IF(AEZ.LT.1.D0) THEN
           CALL SETUP_RADNDLSSMAX(1.D0,NMAIN(L),RCL(L+1))
         ELSE
           CALL SETUP_RADNDLSSMAX(AEZ,NMAIN(L),RCL(L+1))
@@ -1771,6 +1775,7 @@ RCL=RCOV
 !     ==========================================================================
       I=INDEX(ID,'_')
       STPTYPE=ID(I+1:)
+      TSC=.FALSE.
       IF(STPTYPE.EQ.'HBS') THEN
         TSC=.FALSE.
       ELSE IF(STPTYPE.EQ.'HBS_SC') THEN
@@ -1917,6 +1922,7 @@ RCL=RCOV
 !     ==========================================================================
       I=INDEX(ID,'_')
       STPTYPE=ID(I+1:)
+      TSC=.FALSE.
       IF(STPTYPE.EQ.'.75_6.0') THEN
         TSC=.FALSE.
       ELSE
@@ -2156,10 +2162,12 @@ RCL=RCOV
       TYPE=STRING   ! COPY REQUIRED BECAUSE OF MAPPING FROM CH(64) TO CH(32)
 !
       IF(TYPE.EQ.'KERKER') THEN
+        lambda=0.d0  !not used
         CALL SETUP_LOOKUP_KERKER(LL_STP,ID,RCOV,LX,RCL,RBOX)
       ELSE IF(TYPE.EQ.'HBS') THEN
         CALL SETUP_LOOKUP_HBS(LL_STP,ID,RCOV,LX,RCL,LAMBDA,RBOX)
       ELSE IF(TYPE.EQ.'NDLSS') THEN
+        lambda=0.d0  !not used
         CALL SETUP_LOOKUP_NDLSS(LL_STP,ID,RCOV,LX,RCL,RBOX)
       ELSE
         CALL ERROR$MSG('AUGMENTATION METHOD "TYPE" NOT RECOGNIZED')
@@ -3897,13 +3905,16 @@ END IF
 !     == WRITE SETUP REPORT                                                   ==
 !     ==========================================================================
                       CALL TRACE$PASS('WRITING SETUP FILE')
-      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
-      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
-      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
-      DO IB=1,NB
-        CALL LINKEDLIST$SET(LL_STP,'UPSI',-1,UOFI(:,IB)*PSISCALE(IB))
-        CALL LINKEDLIST$SET(LL_STP,'UPSI_SMALL',-1,UOFISM(:,IB)*PSISCALE(IB))
-      ENDDO
+!!$!ERROR UOFI IS NOT INITIALIZED!!!! REMOVED BLOCK
+!!$ IT IS NOT USED IN THE SIMULATION CODE
+!!$PRINT*,'UOFI= ',UOFI(:,:)
+!!$      CALL LINKEDLIST$SELECT(LL_STP,'~',0)
+!!$      CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
+!!$      CALL LINKEDLIST$SELECT(LL_STP,'ATOM',0)
+!!$      DO IB=1,NB
+!!$        CALL LINKEDLIST$SET(LL_STP,'UPSI',-1,UOFI(:,IB)*PSISCALE(IB))
+!!$        CALL LINKEDLIST$SET(LL_STP,'UPSI_SMALL',-1,UOFISM(:,IB)*PSISCALE(IB))
+!!$      ENDDO
 !
       CALL LINKEDLIST$SELECT(LL_STP,'~',0)
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
@@ -6168,7 +6179,7 @@ PRINT*,'KI ',KI
       END IF
       IF(AEZ.LE.0.D0) THEN
         CALL ERROR$MSG('VALUE FOR ATOMIC NUMBER OUT OF RANGE')
-        CALL ERROR$I4VAL('AEZ',AEZ)
+        CALL ERROR$R8VAL('AEZ',AEZ)
         CALL ERROR$STOP('SETUP_RADNDLSSMAX')
       END IF
 
@@ -6663,6 +6674,7 @@ STOP
             CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,0.D0,RBND,PHIPHASE)
 !           == FIX SIZE OF FIRST PARTIAL WAVE ABOUT EQUAL TO UOFI   ============
             IF(NCL(L).EQ.0) THEN
+              IR=1
               DO IR1=1,NR
                 IF(R(IR1).GT.RBND) EXIT
                 IR=IR1
@@ -8280,6 +8292,7 @@ END IF
 !     == ORTHOGONALIZE ALL-ELECTRON CORE STATES                               ==
 !     ==========================================================================
       AECORE(:,:)  =UCORE(:,:)
+      TAECORE(:,:) =TUCORE(:,:)
       AECORESM(:,:)=UCORESM(:,:)
       IF(1.EQ.1) THEN  !ALTERNATIVE 1
         DO IB=2,NC
@@ -9650,10 +9663,10 @@ PRINT*,'EOFPHI ',EOFPHI
       REAL(8)               :: ROUT
       REAL(8)               :: RAD(NBX)
       REAL(8)               :: AEPOT(NR)
-      REAL(8)               :: PSI(NR,NBX)
-      REAL(8)               :: PSISM(NR,NBX)
-      REAL(8)               :: UCORE(NR,NBX)
-      REAL(8)               :: UCORESM(NR,NBX)
+      REAL(8)  ,allocatable :: PSI(:,:)     !(NR,NBX)
+      REAL(8)  ,allocatable :: PSISM(:,:)   !(NR,NBX)
+      REAL(8)  ,allocatable :: UCORE(:,:)   !(NR,NBX)
+      REAL(8)  ,allocatable :: UCORESM(:,:) !(NR,NBX)
       REAL(8)               :: ETOT,AEZ
       REAL(8)               :: RNS
       REAL(8)               :: E,X,Y
@@ -9661,6 +9674,11 @@ PRINT*,'EOFPHI ',EOFPHI
       REAL(8)               :: SPEEDOFLIGHT,ALPHA
       REAL(8)               :: RCOV
 !     **************************************************************************
+      allocate(PSI(NR,NBX))
+      allocate(PSISM(NR,NBX))
+      allocate(UCORE(NR,NBX))
+      allocate(UCORESM(NR,NBX))
+
       CALL CONSTANTS$GET('C',SPEEDOFLIGHT)
       ALPHA=1.D0/SPEEDOFLIGHT ! FINE STRUCTURE CONSTANT IN A.U.
       DO I=1,NFILX

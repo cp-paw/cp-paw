@@ -140,6 +140,12 @@ fi
 ##                                                                    ##
 ########################################################################
 ${DO1} < $ARG | $DO2 | $DO3 | $DO4 
+RC=$?
+if [[ $RC != 0 ]] ; then 
+  echo "error in $0: last command failed with RC=$RC"
+  echo "try to  execute ulimit -s unlimited"
+  exit 1
+fi              
 exit 0
 
 

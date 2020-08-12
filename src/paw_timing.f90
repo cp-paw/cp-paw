@@ -255,7 +255,6 @@ END MODULE TIMING_MODULE
       CHARACTER(15)                :: TIMESTRING(2)
       REAL(8)                      :: TIME
       REAL(8)                      :: PERCENT
-      REAL(8)         ,PARAMETER   :: R8SMALL=1.D-20
       LOGICAL(4)                   :: ONCLOCK(NENTRYX)
       REAL(8)                      :: WALLCLOCK,WALLCLOCK1
       REAL(8)                      :: CPUTIME,CPUTIME1

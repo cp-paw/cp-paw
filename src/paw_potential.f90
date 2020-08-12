@@ -514,7 +514,7 @@
       INTEGER(4),INTENT(IN)   :: NGL
       INTEGER(4),INTENT(IN)   :: NDIMD
       INTEGER(4),INTENT(IN)   :: ISPECIES(NAT)
-      REAL(8)   ,INTENT(INOUT):: TAU0(3,NAT)     !<-
+      REAL(8)   ,INTENT(IN)   :: TAU0(3,NAT)     !<-
       REAL(8)   ,INTENT(OUT)  :: FION(3,NAT)
       INTEGER(4),INTENT(IN)   :: NR1GLOB
       INTEGER(4),INTENT(IN)   :: NR1
@@ -531,7 +531,7 @@
       REAL(8)   ,INTENT(IN)   :: DG0(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: V0(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: DV0(NGL,NSP)
-      REAL(8)   ,INTENT(INOUT):: QLM(LMRXX,NAT)   !<-
+      REAL(8)   ,INTENT(IN)   :: QLM(LMRXX,NAT)   !<-
       REAL(8)   ,INTENT(OUT)  :: VQLM(LMRXX,NAT)
       INTEGER(4),INTENT(IN)   :: LMRX(NSP)
       LOGICAL(4),INTENT(IN)   :: TSTRESS

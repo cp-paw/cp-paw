@@ -123,7 +123,7 @@ CONTAINS
       TYPE(SET_TYPE)      :: SET(0:NEL)
       REAL(8)  ,PARAMETER :: PI=4.D0*ATAN(1.D0)
       REAL(8)             :: FACASA
-      INTEGER(4)          :: I,J,IC
+      INTEGER(4)          :: I,J,IC=0
 !     **************************************************************************
       IF(TINI) RETURN
       TINI=.TRUE.

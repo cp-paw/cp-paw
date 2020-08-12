@@ -258,7 +258,7 @@
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: N ! ORDER OF THE POLYNOM
       REAL(8)               :: A,B,C,D,DD,P,Q,SVAR,U,V
-      COMPLEX(8)            :: CU,CV,CSVAR
+      COMPLEX(8)            :: CSVAR
 !     **************************************************************************
       N=NX-1
       Z(:)=(0.D0,0.D0)

@@ -162,7 +162,9 @@ CALL TRACE$PASS('SPECIES')
 !     ==================================================================
 !     == LMTO OBJECT                                                  ==
 !     ==================================================================
+CALL TRACE$PASS('LMTO')
       CALL LMTO$REPORT(NFILO)
+CALL TRACE$PASS('SIMPLELMTO')
       CALL SIMPLELMTO$REPORT(NFILO)
 !
 !     ==================================================================

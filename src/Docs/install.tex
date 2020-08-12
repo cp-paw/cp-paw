@@ -1659,6 +1659,26 @@ In the Suse distribution of linux one obtains the versionsnumber using
 \verb+cat /etc/SuSE-release+.  The kernel version is obtained using
 \verb+uname -r+
 
+%===============================================================================
+\subsection{Debugging of MacOs}
+%===============================================================================
+The native debugger of Xcode is LLDB.
+
+compile the code with option \verb|-g|. Then execute with
+\begin{verbatim}
+lldb -- paw_dbg.x xx.cntl
+\end{verbatim}
+
+Commands inside lldb
+\begin{tabular}{ll}
+run & execute \\
+bt  & backtrace \\
+b file:num & set breakpoint in file ``file'' and line number ``num''\\
+source list & print the source code\\
+\end{tabular}
+
+
+
 %==================================================================================
 \section{Background to the configure script}
 \label{sec:configurebackground}
