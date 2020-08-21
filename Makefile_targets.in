@@ -278,7 +278,9 @@ docs: ${THISDIR}/doc/manual.pdf \
       ${THISDIR}/doc/history.pdf \
       ${THISDIR}/doc/install.pdf \
       ${THISDIR}/doc/style.pdf \
-      ${THISDIR}/doc/Examples
+      ${THISDIR}/doc/Examples \
+      ${THISDIR}/doc/doc.bib \
+      ${THISDIR}/doc/all.bib
 #
 ${THISDIR}/doc/manual.pdf : ${THISDIR}/doc/manual.tex  \
                             ${THISDIR}/doc/doc.bib \

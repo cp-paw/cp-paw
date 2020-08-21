@@ -61,6 +61,9 @@
 !===============================================================================
 MODULE MPE_MPIF_MODULE
 #IFDEF CPPVARIABLE_PARALLEL
+!    THE MODULE MPI_F08 IS PART OF MPI (RATHER THAN OF PAW).  IT IS
+!    SUPPLIED BY THE WRAPPER COMPILER FOR THE COMPILATION OF THE
+!    PARALLEL CODE. (SEE COMPILE COMMAND USED.)
      USE MPI_F08
 #ELSE
      TYPE MPI_COMM
@@ -261,21 +264,21 @@ CONTAINS
       INTEGER                         :: IERR
       CHARACTER(MPI_MAX_ERROR_STRING) :: ERRORSTRING
       INTEGER                         :: ERRORSTRINGLEN
-      integer(4)                      :: iattempt
+      INTEGER(4)                      :: IATTEMPT
 !     **************************************************************************
       CALL MPE$SELECT(CID)
 !     
 !     ==========================================================================
 !     == PERFORM OPERATION                                                    ==
 !     ==========================================================================
-!     leng=1     
-!     if(rank(val).ne.0)leng=size(val)   
+!     LENG=1     
+!     IF(RANK(VAL).NE.0)LENG=SIZE(VAL)   
       LENG=<SIZE>
 !
 
-iattempt=0
-1000  continue
-iattempt=iattempt+1
+IATTEMPT=0
+1000  CONTINUE
+IATTEMPT=IATTEMPT+1
       IF(OPERATION.EQ.'+')THEN
         CALL MPI_ALLREDUCE(MPI_IN_PLACE,VAL,LENG,<MPI_TYPE>,MPI_SUM,COMM,IERR)
       ELSE IF(OPERATION.EQ.'*')THEN
@@ -290,7 +293,7 @@ iattempt=iattempt+1
       END IF
 !     __ERROR HANDLING__________________________________________________________
       IF(IERR.NE.0) THEN 
-        write(*,*)'MPE$COMBINE<TYPEID><RANKID> ',thistask,leng,val
+        WRITE(*,*)'MPE$COMBINE<TYPEID><RANKID> ',THISTASK,LENG,VAL
         CALL MPI_ERROR_STRING(IERR,ERRORSTRING,ERRORSTRINGLEN)
         CALL ERROR$MSG('MPI ERROR IN MPI_ALLREDUCE')
         CALL ERROR$MSG(ERRORSTRING(1:ERRORSTRINGLEN))

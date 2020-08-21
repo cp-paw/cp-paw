@@ -3288,6 +3288,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
         IF(.NOT.TACTIVE) CYCLE
 !
         IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
+print*,'++THistask ',tparallel,thistask,ntasks,iat,MOD(IAT-1,NTASKS)
 !
 !       ========================================================================
 !       ==                                                                    ==
@@ -3827,7 +3828,6 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !
       ALLOCATE(HAM1(LMNX_PHI,LMNX_PHI,NDIMD))
       HAM1=(0.D0,0.D0)
-
       CALL SIMPLELMTO_EXPECT(GID,NR,NDIMD,LNX_PHI,LOX_PHI,LMNX_PHI &
      &                     ,LMRX,POT_PHI,PHI,HAM1)
       H_PHI=REAL(HAM1)

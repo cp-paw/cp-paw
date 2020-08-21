@@ -13,7 +13,17 @@
 !     ** ENFORCES THE ORTHONORMALITY CONDITION OF THE WAVE FUNCTIONS          **
 !     **************************************************************************
       USE MPE_MODULE
-      USE WAVES_MODULE
+      USE WAVES_MODULE, ONLY : THIS &
+     &                        ,GSET &
+     &                        ,MAP &
+     &                        ,TSAFEORTHO &
+     &                        ,TSWAPSTATES &
+     &                        ,NKPTL &
+     &                        ,NSPIN &
+     &                        ,NDIM &
+     &                        ,WAVEEKIN2 &
+     &                        ,DELT,ANNEE &
+     &                        ,WAVES_SELECTWV !subroutine
       IMPLICIT NONE
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
       REAL(8)   ,ALLOCATABLE :: MARR(:)
@@ -870,10 +880,9 @@ END IF
       INTEGER(4)                :: IAT,ISP
       INTEGER(4)                :: LN1,L1
       INTEGER(4)                :: LN2,L2
-      INTEGER(4)                :: IPRO,IPROX,IPRO1,IPRO2,M
+      INTEGER(4)                :: IPRO,IPROX,IPRO1,IPRO2
       INTEGER(4)                :: IBH1,IBH2,IB1,IB2,IDIM,LNX
       COMPLEX(8)                :: CSVAR1,CSVAR2
-      REAL(8)                   :: SVAR
       LOGICAL(4)                :: TINV
 !     **************************************************************************
       CALL MPE$QUERY('K',NTASKS,THISTASK)
@@ -2175,7 +2184,15 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **   ORTHOGONALIZE                                              **
 !     **                                                              **
 !     ******************************************************************
-      USE WAVES_MODULE
+      USE WAVES_MODULE, ONLY : THIS &
+     &                        ,GSET &
+     &                        ,NKPTL &
+     &                        ,NSPIN &
+     &                        ,THAMILTON &
+     &                        ,WAVEEKIN1 &
+     &                        ,WAVEEKIN2 &
+     &                        ,WAVES_SELECTWV & !SUBROUTINE
+     &                        ,OPTIMIZERTYPE
       IMPLICIT NONE
       INTEGER(4)             :: IKPT
       INTEGER(4)             :: ISPIN
@@ -2193,16 +2210,20 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL CELL$GETL4('MOVE',TSTRESS)
       WAVEEKIN1=0.D0
       WAVEEKIN2=0.D0
-!      IF(TSTRESS) THEN
-!        CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
-!        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
-!     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
-!     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
-!     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
-!     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
-!     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
-!        CELLSCALE=1.D0/SQRT(CELLSCALE)
-!      ENDIF
+      IF(TSTRESS) THEN
+        CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
+        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
+     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
+     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
+     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
+     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
+     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
+        CELLSCALE=1.D0/SQRT(CELLSCALE)
+WRITE(*,FMT='("MAPTOCELL=",9F8.4)')MAPTOCELL
+PRINT*,'CELLSCALE ',CELLSCALE
+      ELSE 
+        CELLSCALE=1.D0
+      ENDIF
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -2210,10 +2231,16 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
           TPSI=>THIS%PSI0
           THIS%PSI0=>THIS%PSIM
           THIS%PSIM=>TPSI
-!          IF(TSTRESS) THEN
-!            THIS%PSI0=THIS%PSI0*CELLSCALE
-!            THIS%PSIM=THIS%PSIM*CELLSCALE
-!          END IF
+!===============================================================================
+!I DO NOT UNDERSTAND WHY THE FOLLOWING HAD BEEN COMMENTED OUT.  I AM
+!CONCERNED, BECAUSE THE CELL DYNAMICS WITH MOBING ATOMS IS NOT ENERGY
+!CONSERVING, WHILE THAT WITHOUT MOVING ATOMS AND THAT WITHOUT MOVING
+!CELL WORK FINE.
+!===============================================================================
+!!$          IF(TSTRESS) THEN
+!!$            THIS%PSI0=THIS%PSI0*CELLSCALE
+!!$            THIS%PSIM=THIS%PSIM*CELLSCALE
+!!$          END IF
 !
 !         ==============================================================
 !         == EXTRAPOLATE LAGRANGE MULTIPLIERS                         ==
@@ -2307,15 +2334,13 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)   ,INTENT(IN)    :: AMPLITUDE       ! SCALE FACTOR
       REAL(8)   ,INTENT(IN)    :: G2(NG)          ! G**2
       COMPLEX(8),INTENT(INOUT) :: PSI(NG,NDIM,NB) ! PS-WAVE FUNCTION
-      INTEGER(4)               :: IB,IG,IDIM,I
+      INTEGER(4)               :: IB,IG,IDIM
       REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
       REAL(8)                  :: FAC
       REAL(8)   ,PARAMETER     :: GC2=10.D0
       REAL(8)                  :: SCALE(NG)
       REAL(8)                  :: REC,RIM
-      INTEGER(4)               :: ISVAR
 !     **************************************************************************
-      
 !
 !     ==========================================================================
 !     == DETERMINE ENVELOPE FUNCTION OF THE RANDOM NUMBERS TO AVOID LARGE     ==
@@ -2362,7 +2387,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       LOGICAL(4),SAVE          :: TINI=.FALSE.
       LOGICAL(4),PARAMETER     :: TDETERMINISTIC=.TRUE.
       INTEGER(4),PARAMETER     :: NRAN=10000
-      REAL(8)   ,allocatable,SAVE     :: XRAN(:)   !(NRAN)
+      REAL(8)   ,ALLOCATABLE,SAVE     :: XRAN(:)   !(NRAN)
       REAL(8)   ,PARAMETER     :: GC2=3.D0
       REAL(8)   ,PARAMETER     :: PI=4.D0*ATAN(1.D0)
       REAL(8)                  :: G2
@@ -2381,16 +2406,16 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ==========================================================================
       IF(.NOT.TINI) THEN
         IF(TDETERMINISTIC) THEN
-          allocate(XRAN(NRAN))
+          ALLOCATE(XRAN(NRAN))
           DO I=1,NRAN
 !           == CONSTRUCT A FIXED SERIES OF RANDOM NUMBERS USING
 !           == THE WELL-DEFINED MINIMAL STANDARD LINEAR CONGRUENTIAL
 !           == RANDOM NUMBER GENERATOR (IN PAW_GENERALPURPOSE.F90)
             CALL RANDOM_MSLNG(XRAN(I))
           ENDDO
-        else
-!         __with TDETERMINISTIC=.FALSE., XRAN is used before allocation and 
-!         __before assigning a calue
+        ELSE
+!         __WITH TDETERMINISTIC=.FALSE., XRAN IS USED BEFORE ALLOCATION AND 
+!         __BEFORE ASSIGNING A CALUE
           CALL ERROR$MSG('HARDWIRED TDETERMINISTIC=.FALSE. IS NOT ALLOWED')
           CALL ERROR$L4VAL('TDETERMINISTIC',TDETERMINISTIC)
           CALL ERROR$STOP('WAVES_INITIALIZERANDOM')
@@ -2482,7 +2507,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
-      REAL(8)   ,PARAMETER  :: MBYTE=2.D0**20
       INTEGER(4)            :: IKPT
       REAL(8)               :: RY
       INTEGER(4)            :: NG
@@ -2507,7 +2531,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL REPORT$R8VAL(NFIL,'CUTOFF SCALE-FACTOR FOR NEIGHBORLIST' & 
      &                      ,SCALERCUT,' ')
       CALL REPORT$CHVAL(NFIL,'|R1-R2|<(RCOV1+RCOV2)*SCALERCUT',' ')
-      IF(ANNEE.NE.0) THEN
+      IF(ANNEE.NE.0.D0) THEN
         CALL REPORT$R8VAL(NFIL,'FRICTION',ANNEE,' ')
       END IF
       IF(TSTOP) THEN
@@ -3155,7 +3179,6 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       INTEGER(4)  ,INTENT(INOUT):: NREC
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSI1(:,:)
-      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: NTASKS,THISTASK
       INTEGER(4)              :: IOS
       INTEGER(4)              :: IKPT,IKPTG,ISPIN,IB,IDIM,IWAVE
@@ -3891,7 +3914,7 @@ END IF
       INTEGER(4)  ,INTENT(IN)   :: IKPTG
       INTEGER(4)  ,INTENT(INOUT):: NREC
       INTEGER(4)                :: NTASKS,THISTASK
-      INTEGER(4)                :: ISPIN,IKPTL,IKPT,I
+      INTEGER(4)                :: ISPIN,IKPTL,IKPT
       INTEGER(4)                :: NB
       CHARACTER(8)              :: KEY
       COMPLEX(8)  ,ALLOCATABLE  :: LAMBDA(:,:)
@@ -5100,7 +5123,6 @@ END MODULE TOTALSPIN_MODULE
       COMPLEX(8)  ,ALLOCATABLE:: PSIL(:,:,:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSIG(:,:)
       COMPLEX(8)  ,ALLOCATABLE:: PSIIN(:,:)
-      COMPLEX(8)  ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)              :: IOS
       CHARACTER(8)            :: KEY
       INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
@@ -5430,11 +5452,10 @@ END IF
       COMPLEX(8),ALLOCATABLE :: MAT(:,:)
       COMPLEX(8),ALLOCATABLE :: AUXMAT(:,:)
       INTEGER(4)             :: NPRO
-      INTEGER(4)             :: IKPT,ISPIN,IPRO,IAT,ISP
-      INTEGER(4)             :: IB,IDIM,IG,I,J
-      INTEGER(4)             :: NGL,NBH,NB,LMNX,LNX,LMX,LN
+      INTEGER(4)             :: IKPT,ISPIN
+      INTEGER(4)             :: I,J
+      INTEGER(4)             :: NGL,NBH,NB
       INTEGER(4)             :: NAT
-      INTEGER(4)             :: I1,J1,K
       COMPLEX(8),ALLOCATABLE :: THISPROJ(:,:,:)
 !     **************************************************************************
                              CALL TRACE$PUSH('WAVES$TESTORTHO')
