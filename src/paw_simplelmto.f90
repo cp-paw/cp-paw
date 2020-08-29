@@ -1777,7 +1777,7 @@ INTEGER(4)          :: I
       LOGICAL(4)          ,PARAMETER   :: TTESTA=.FALSE.
       INTEGER(4)                       :: NAT
       INTEGER(4)                       :: NND
-      REAL(8)                          :: RBAS(3,3)
+      REAL(8)                          :: RBAS(3,3),RBASINV(3,3)
       REAL(8)                          :: STRESS(3,3)
       REAL(8)             ,ALLOCATABLE :: R0(:,:) !(3,NAT)
       REAL(8)             ,ALLOCATABLE :: FORCE(:,:) !(3,NAT)
@@ -1794,7 +1794,7 @@ INTEGER(4)          :: I
       REAL(8)             ,ALLOCATABLE :: FORCET(:,:) !(3,NAT)
       REAL(8)                          :: STRESST(3,3)
       REAL(8)                          :: ETOT
-      INTEGER(4)                       :: I,IAT
+      INTEGER(4)                       :: I,IAT,J
 !     **************************************************************************
       IF(.NOT.TON) RETURN
                                      CALL TRACE$PUSH('SIMPLELMTO_HYBRID')
@@ -1807,8 +1807,9 @@ INTEGER(4)          :: I
       ALLOCATE(R0(3,NAT))
       ALLOCATE(FORCE(3,NAT))
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
-      FORCE(:,:)=0.D0
 PRINT*,'POSITIONS',R0
+      FORCE(:,:)=0.D0
+      STRESS(:,:)=0.D0
 !
 !     ==========================================================================
 !     ==  COLLECT DENSITY MATRIX                                              ==
@@ -1888,14 +1889,16 @@ PRINT*,'POSITIONS',R0
       CALL TIMING$CLOCKOFF('SIMPLELMTO_HYBRIDENERGY')
       IF(TPR)CALL RSPACEOP$WRITEMAT(6,'OVERLAPCHI ',NND,OVERLAPCHI)
 !
-                                 CALL TRACE$PASS('AFTER IMPLELMTO_HYBRIDENERGY')
+                                CALL TRACE$PASS('AFTER SIMPLELMTO_HYBRIDENERGY')
 !
 !     ==========================================================================
 !     ==  FORCE CONTRIBUTION FROM CONVERSION BETWEEN CHI AND PHI              ==
 !     ==========================================================================
       ALLOCATE(FORCET(3,NAT))
-      CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI,FORCET)
+      CALL SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI &
+     &                             ,FORCET,RBAS,STRESST)
       FORCE=FORCE+FORCET
+      STRESS=STRESS+STRESST
 PRINT*,'FORCET',FORCET
       DEALLOCATE(FORCET)
 !
@@ -1910,6 +1913,17 @@ PRINT*,'FORCET',FORCET
 !     ==  ADD ONSITE HAMILTONIAN TO OFF-SITE HAMILTONIAN                      ==
 !     ==========================================================================
       CALL SIMPLELMTO_ONSITEDENMATEXTRACTADD('ADDBACK',NND,HAMILPHI,NAT,HONSITE)
+!
+!     ==========================================================================
+!     ==  ADD STRESS FROM FORCES                                              ==
+!     ==========================================================================
+!!$      CALL LIB$INVERTR8(3,RBAS,RBASINV)
+!!$      DO I=1,3
+!!$        DO J=1,3
+!!$          STRESST(I,J)=SUM(R0(I,:)*FORCE(J,:))
+!!$        ENDDO
+!!$      ENDDO
+!!$      STRESS=STRESS-MATMUL(RBASINV,STRESST)
 !
 !     ==========================================================================
 !     == COMMUNICATE ENERGY AND DERIVATIVES                                   ==
@@ -2700,7 +2714,7 @@ STOP 'FORCED --'
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SIMPLELMTO_FORCEPHITOCHI(NAT,NND,DENMATPHI,PIPHI,HAMILCHI &
-     &                                   ,FORCE)
+     &                                   ,FORCE,RBAS,STRESS)
 !     **************************************************************************
 !     ** TRANSFORMS THE DENSITY MATRIX FROM A PARTIAL-WAVE REPRESENTATION     **
 !     ** TO A LOCAL ORBITAL REPRESENTATION (SHRINK) AND IT                    **
@@ -2711,7 +2725,10 @@ STOP 'FORCED --'
 !     **                                                                      **
 !     ** LNX,LOX REFER TO THE PARTIAL-WAVE REPRESENTATION                     **
 !     **                                                                      **
-!     ********************************************P. BLOECHL, GOSLAR 2019*******
+!     ** NOTE THAT PIPHI%MAT(:,:,1) IS <PI|PHI> WHILE                         **
+!     **           PIPHI%MAT(:,:,2:4) IS D<PI|PHI>/DR                         **
+!     **                                                                      **
+!     ********************************************P. BLOECHL, GOSLAR 2020*******
       USE RSPACEOP_MODULE  , ONLY : RSPACEMAT_TYPE &
      &                             ,RSPACEOP$WRITEMAT
       IMPLICIT NONE
@@ -2721,6 +2738,8 @@ STOP 'FORCED --'
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: HAMILCHI(NND)
       TYPE(RSPACEMAT_TYPE),INTENT(IN)   :: PIPHI(NND)
       REAL(8)             ,INTENT(OUT)  :: FORCE(3,NAT)
+      REAL(8)             ,INTENT(OUT)  :: STRESS(3,3)
+      REAL(8)             ,INTENT(IN)   :: RBAS(3,3)
       INTEGER(4)          ,ALLOCATABLE  :: INDBACK(:)  !(NND)
       INTEGER(4)          ,ALLOCATABLE  :: INDON(:)    !(NAT)
       REAL(8)             ,ALLOCATABLE  :: MAT(:,:)
@@ -2745,6 +2764,7 @@ STOP 'FORCED --'
 !     == ATOMIC POSITION VANISHES.                                            ==
 !     ==========================================================================
       FORCE=0.D0
+      STRESS=0.D0
       DO I=1,NND
         IAT1=PIPHI(I)%IAT1
         IAT2=PIPHI(I)%IAT2
@@ -2765,11 +2785,11 @@ STOP 'FORCED --'
           ENDDO   
           FORCE(:,IAT2)=FORCE(:,IAT2)-DEDR(:)
           FORCE(:,IAT1)=FORCE(:,IAT1)+DEDR(:)
-!!$!         == THIS IS JUST A SKETCH AS REMINDER TO NOT FORGET THE STRESSES ===
-!!$          DO II=1,3
-!!$            STRESS(:,II)=STRESS(:,II) &
-!!$                    +(MATMUL(RBAS,REAL(PIPHI(I)%IT,KIND=8))*DEDR(II)
-!!$          ENDDO
+!         == THIS IS JUST A SKETCH AS REMINDER TO NOT FORGET THE STRESSES ===
+          DO II=1,3
+            STRESS(:,II)=STRESS(:,II) &
+     &               +MATMUL(RBAS,REAL(PIPHI(I)%IT,KIND=8))*DEDR(II)
+          ENDDO
           DEALLOCATE(MAT)
         END IF
       ENDDO
@@ -3108,6 +3128,8 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !     **                                                                      **
 !     **    H_{L,M}(R-R1) = - SUM_{L',M'} S_{L,M,L',M'} * J_{L',M'}(R-R2)     **
 !     **                                                                      **
+!     **  structure constants and forces are calculated                       **
+!     **                                                                      **
 !     **  SBARE HAS IAT1,IAT2,IT ALREADY SET, SBARE%MAT IS NOT ALLOCATED      **
 !     **************************************************************************
       USE SIMPLELMTO_MODULE, ONLY : ISPECIES &
@@ -3288,7 +3310,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
         IF(.NOT.TACTIVE) CYCLE
 !
         IF(TPARALLEL.AND.MOD(IAT-1,NTASKS).NE.THISTASK-1) CYCLE
-print*,'++THistask ',tparallel,thistask,ntasks,iat,MOD(IAT-1,NTASKS)
+PRINT*,'++THISTASK ',TPARALLEL,THISTASK,NTASKS,IAT,MOD(IAT-1,NTASKS)
 !
 !       ========================================================================
 !       ==                                                                    ==
@@ -3338,7 +3360,9 @@ print*,'++THistask ',tparallel,thistask,ntasks,iat,MOD(IAT-1,NTASKS)
 !     == OFFSITE EXCHANGE CONTRIBUTION                                        ==
 !     ==========================================================================
       IF(TOFFSITE) THEN
-!       ==  USES NUMERICAL MATRIX ELEMENTS =====================================
+!       == USES NUMERICAL MATRIX ELEMENTS ======================================
+!       == UNLIKE THE TOTAL ENERGY, FORCES AND STRESSES ARE NOT ADDED, BUT    ==
+!       == DIRECTLY WRITTEN IN FINAL ARRAYS ====================================
         CALL SIMPLELMTO_OFFSITEXEVAL(TPARALLEL,NAT,NND,RBAS,R0,DENMAT &
      &                              ,EX,STRESS,FORCE,HAMIL,OVERLAPCHI) 
         PRINT*,'+-+-+-+  OFFSITE EX=',EX

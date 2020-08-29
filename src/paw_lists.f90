@@ -130,26 +130,44 @@ END MODULE ENERGYLIST_MODULE
       RETURN
       END
 !     
-!     ..................................................................
-      SUBROUTINE ENERGYLIST$RETURN(STRING_,VALUE_)
-!     ==================================================================
-!     == RETURNS ENERGY VALUE                                         ==
-!     ==================================================================
-      USE ENERGYLIST_MODULE
+!     ..........................................................................
+      SUBROUTINE ENERGYLIST$RETURN(ID,VALUE_)
+!     **************************************************************************
+!     ** THIS FUNCTION IS OBSOLETE AND WILL BE REPLACED BY ENERGYLIST$GET     **
+!     **************************************************************************
       IMPLICIT NONE
-      CHARACTER(*) ,INTENT(IN)  :: STRING_
+      CHARACTER(*) ,INTENT(IN)  :: ID
       REAL(8)      ,INTENT(OUT) :: VALUE_
-      CHARACTER(40)             :: STRING
+!     **************************************************************************
+      CALL ERROR$MSG('SUBROUTINE MARKED FOR DELETION')
+      CALL ERROR$STOP('ENERGYLIST$RETURN')
+!
+      CALL ENERGYLIST$GET(ID,VALUE_)
+      RETURN
+      END
+!     
+!     ..........................................................................
+      SUBROUTINE ENERGYLIST$GET(ID,VAL)
+!     **************************************************************************
+!     ** RETURNS ENERGY VALUE                                                 **
+!     **************************************************************************
+      USE ENERGYLIST_MODULE, ONLY : NE,IDENTIFIER,ENERGY
+      IMPLICIT NONE
+      CHARACTER(*) ,INTENT(IN)  :: ID
+      REAL(8)      ,INTENT(OUT) :: VAL
       INTEGER(4)                :: I
-!     ******************************************************************
-      VALUE_=0.D0
-      STRING=STRING_
+!     **************************************************************************
+      VAL=0.D0
       DO I=1,NE
-        IF(STRING.EQ.IDENTIFIER(I)) THEN
-          VALUE_=ENERGY(I)
-          EXIT
+        IF(ID.EQ.IDENTIFIER(I)) THEN
+          VAL=ENERGY(I)
+          RETURN
         END IF
       ENDDO
+!!$!     __AN ITEM THAT HAS NOT BEEN SET OBTAINS THE VALUE ZERO
+!!$      CALL ERROR$MSG('LIST ITEM NOT FOUND')
+!!$      CALL ERROR$CHVAL('ID',ID)
+!!$      CALL ERROR$STOP('ENERGYLIST$GET')
       RETURN
       END
 !

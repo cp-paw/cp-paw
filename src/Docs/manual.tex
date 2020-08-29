@@ -944,11 +944,21 @@ vector are internally converted into seconds and added up.}
 \vdescr{The autopilot defines a strategy to vary
 the friction for various dynamical variables, to test the convergence
 and to terminate the optimization loop. The decision to terminate is
-taken if the energy remains within an energy window of $10^{-5}$~H for
+taken if the energy remains within an energy window of size ETOL for
 autoconv time steps.}
 \vformat{integer} 
 \vrules{optional} 
 \vdefault{20}}
+
+\mbax{\key{ETOL} 
+\vdescr{The autopilot defines a strategy to vary
+the friction for various dynamical variables, to test the convergence
+and to terminate the optimization loop. The decision to terminate is
+taken if the energy remains within an energy window of size ETOL for
+AUTOCONV time steps.}
+\vformat{integer} 
+\vrules{optional} 
+\vdefault{$10^{-8}$~H}}
 
 \mbax{\key{RSTRTTYPE} \vdescr{allows to cut down the information on
 the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
@@ -1924,9 +1934,11 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 %----------------------------------------------------------------------
 \brules{optional; default is fixed unit cell, and no stress
   calculation} 
-\bdescr{This option is experimental!.  Invokes
-  pressure calculation, and Parrinello-Rahman dynamics of
-  the unit cell, if requested. }
+\bdescr{This option is experimental!.  Invokes pressure calculation,
+  and Parrinello-Rahman dynamics of the unit cell, if requested.//
+  Warning: The implementation of the unit-cell dynamics is still
+  incompatible with atom constraints, because the forces of constraint
+  are not yet considered}
 %
 \mbax{\key{MOVE}
 \vdescr{Dynamical evolution of the unit cell.}

@@ -807,6 +807,7 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)                 :: VEC(3,NAT)
       INTEGER(4)              :: I,IAT
       REAL(8)                 :: EKINS
+      LOGICAL(4)              :: TSTRESS
 !     ******************************************************************
       IF(.NOT.TON) RETURN
                             CALL TIMING$CLOCKON('CONSTRAINTS')
@@ -815,6 +816,23 @@ END MODULE CONSTRAINTS_MODULE
         CALL ERROR$MSG('CONSTRAINTS OBJECT NOT INITIALIZED')
         CALL ERROR$STOP('CONSTRAINTS$APPLY')
       END IF
+
+!     ==========================================================================
+!     == THE STRESSES \SUM_I R_I\OTIMES F_I FROM THE CONSTRAINT FORCES ARE NOT==
+!     == CONSIDERED FOR THE UNIT-CELL PROPAGATION. ATOMS$CONSTRAINTS NEED     ==
+!     == TO BE CALLED BEFORE CELL$PROPAGATE                                   ==
+!     ==========================================================================
+      CALL CELL$GETL4('MOVE',TSTRESS)
+      IF(TSTRESS) THEN
+        CALL ERROR$MSG('ATOM-CONSTRAINTS AND CELL DYNAMICS ARE INCOMPATIBLE')
+        CALL ERROR$MSG('STRESS FROM CONSTRAINT FORCES ARE NOT YET CONSIDERED')
+        CALL ERROR$MSG('THIS IS AN IMPLEMENTATION ISSUE')
+        CALL ERROR$STOP('ATOMS$CONSTRAINTS')
+     END IF
+!     
+!     ==========================================================================
+!     == COLLECT CONSTRAINTS                                                  ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNSTR,'~')
       IF(NC.EQ.0) RETURN
       ALLOCATE(A(NC))
@@ -1782,7 +1800,7 @@ END MODULE CONSTRAINTS_MODULE
       SUBROUTINE CONSTRAINTS_ROT$VALUE &
      &           (NAT,X_,Y_,Z_,TMEMBER,R0,RM,DELTA,RMASS,VALUE_)
 !     **************************************************************************
-!     **  enforce angular momentum to be zero                                 **
+!     **  ENFORCE ANGULAR MOMENTUM TO BE ZERO                                 **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NAT
@@ -1794,10 +1812,10 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(IN) :: RMASS(NAT)
       REAL(8)   ,INTENT(OUT):: VALUE_
 !     **************************************************************************
-!     == CHANGED BY P. BLOECHL July 13, 2007. THIS ROUTINE SHALL ENFORCE THE 
-!     == ANGULAR MOMENTUM TO BE ZERO and not to a constant value. THEREFORE 
+!     == CHANGED BY P. BLOECHL JULY 13, 2007. THIS ROUTINE SHALL ENFORCE THE 
+!     == ANGULAR MOMENTUM TO BE ZERO AND NOT TO A CONSTANT VALUE. THEREFORE 
 !     == THE VALUE SHALL BE EQUAL TO ZERO AND NOT EQUAL TO THE ANGULAR MOMENTUM.
-      value_=0.d0
+      VALUE_=0.D0
       RETURN
       END
 !
@@ -1829,23 +1847,23 @@ END MODULE CONSTRAINTS_MODULE
       REAL(8)   ,INTENT(OUT):: C(3,NAT,3,NAT)
       INTEGER(4)            :: IAT
       REAL(8)               :: XLEN
-      REAL(8)               :: X,Y,Z ! normalized rotation axis
-      REAL(8)               :: TOTM  ! total mass 
-      REAL(8)               :: COG(3)! center of gravity
+      REAL(8)               :: X,Y,Z ! NORMALIZED ROTATION AXIS
+      REAL(8)               :: TOTM  ! TOTAL MASS 
+      REAL(8)               :: COG(3)! CENTER OF GRAVITY
       REAL(8)               :: U(3)
       REAL(8)               :: DX,DY,DZ
 !     **************************************************************************
-      A=0.d0
-      B(:,:)=0.d0
-      C(:,:,:,:)=0.d0
+      A=0.D0
+      B(:,:)=0.D0
+      C(:,:,:,:)=0.D0
 !
-!     == determine normalized rotation axis ====================================
+!     == DETERMINE NORMALIZED ROTATION AXIS ====================================
       XLEN=SQRT(X_**2+Y_**2+Z_**2)
       X=X_/XLEN
       Y=Y_/XLEN
       Z=Z_/XLEN
 !
-!     == CALCULATE CENTER OF GRAVITY COG and total mass totm ===================
+!     == CALCULATE CENTER OF GRAVITY COG AND TOTAL MASS TOTM ===================
       TOTM=0.D0
       COG(:)=0.D0
       DO IAT=1,NAT
@@ -3504,9 +3522,9 @@ END IF
         IF(NC.GT.1) THEN
 !         __ CHECK LINEAR DEPENDENCE OF CONSTRAINTS_____________________
           IF(TLINDEP) THEN
-            CALL LIB$MATRIXSOLVEr8(NC,NC,1,RMAT,VEC,VEC)
+            CALL LIB$MATRIXSOLVER8(NC,NC,1,RMAT,VEC,VEC)
           ELSE
-            CALL LIB$MATRIXSOLVEr8(NC,NC,1,RMAT,VEC,VEC)
+            CALL LIB$MATRIXSOLVER8(NC,NC,1,RMAT,VEC,VEC)
           END IF
         ELSE
           VEC(1)=VEC(1)/RMAT(1,1)
@@ -3642,7 +3660,7 @@ END IF
       TOFF=(ISYMDEF.EQ.NSYM)
       IF(TOFF) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO)
-        WRITE(NFILO,FMT='(''NUMBER OF SYMMETRY OPERATIONS:'',i5)')NSYM
+        WRITE(NFILO,FMT='(''NUMBER OF SYMMETRY OPERATIONS:'',I5)')NSYM
       END IF
       RETURN
       END

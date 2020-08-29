@@ -26,14 +26,16 @@
 !*******************************************************************************
 MODULE CELL_MODULE
 IMPLICIT NONE
-LOGICAL(4) :: TPARRINELLORAHMAN=.TRUE.
+LOGICAL(4),PARAMETER :: TPARRINELLORAHMAN=.TRUE.
+LOGICAL(4),PARAMETER :: TNOBLUE=.TRUE.
+LOGICAL(4),PARAMETER :: TNORED=.TRUE.
 ! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE',NOSHEARFIXV
 CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
 LOGICAL(4) :: TON  =.FALSE.      ! USED TO REQUEST INTERNAL STRESS
 LOGICAL(4) :: TMOVE=.FALSE.      ! PROPAGATE UNIT CELL
 LOGICAL(4) :: TSTART=.FALSE.     ! IGNORE RESTART FILE. USE TREF.
-REAL(8)    :: TREF(3,3)=0.d0     ! REFERENCE CELL CONSTANTS
+REAL(8)    :: TREF(3,3)=0.D0     ! REFERENCE CELL CONSTANTS
 REAL(8)    :: STRESS(3,3)=0.D0   ! EXTERNAL STRESS TENSOR
 REAL(8)    :: PRESSURE=0.D0      ! EXTERNAL PRESSURE
 REAL(8)    :: DELTAT=0.D0
@@ -44,7 +46,7 @@ REAL(8)    :: TP(3,3)=0.D0
 REAL(8)    :: T0(3,3)=0.D0       ! ACTUAL CELL 
 REAL(8)    :: TM(3,3)=0.D0
 REAL(8)    :: TMM(3,3)=0.D0
-REAL(8)    :: TMASS=0.d0         ! MASS FOR THE UNIT CELL DYNAMICS
+REAL(8)    :: TMASS=0.D0         ! MASS FOR THE UNIT CELL DYNAMICS
 LOGICAL(4) :: TPROPAGATED=.FALSE.
 REAL(8)    :: EPOT=0.D0          ! POTENTIAL ENERGY
 REAL(8)    :: EKIN=0.D0          ! KINETIC ENERGY
@@ -376,10 +378,18 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE, ONLY : EPOT,EKIN,TMASS,TMOVE,TPROPAGATED
+      USE CELL_MODULE, ONLY : TON &
+     &                       ,TMOVE &
+     &                       ,EPOT &
+     &                       ,EKIN &
+     &                       ,TMASS &
+     &                       ,TPROPAGATED &
+     &                       ,T0,TP,TM &
+     &                       ,DELTAT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
+      REAL(8)                 :: AMAT(3,3)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -426,7 +436,13 @@ END MODULE CELL_MODULE
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
-      USE CELL_MODULE, ONLY : TREF,STRESS,STRESS_I,KINSTRESS,T0,TM
+      USE CELL_MODULE, ONLY : TREF &
+     &                       ,TNOBLUE &
+     &                       ,STRESS &
+     &                       ,STRESS_I &
+     &                       ,KINSTRESS &
+     &                       ,T0 &
+     &                       ,TM 
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -480,6 +496,8 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$SETR8A')
         END IF
         KINSTRESS=RESHAPE(VAL,(/3,3/))
+
+        IF(TNOBLUE)KINSTRESS=-KINSTRESS
 !
 !     ==========================================================================
 !     ==  CELL VECTORS                                                        ==
@@ -522,6 +540,8 @@ END MODULE CELL_MODULE
 !     **                                                                      **
 !     **************************************************************************
       USE CELL_MODULE, ONLY : CELL_INITIALIZE &
+     &                       ,TNOBLUE &
+     &                       ,TNORED &
      &                       ,T0,TP,TM &
      &                       ,TREF &
      &                       ,STRESS_I &
@@ -611,6 +631,33 @@ END MODULE CELL_MODULE
           AMAT=AMAT+TRANSPOSE(AMAT)
           AMAT=AMAT*0.5D0*DELTAT
           VAL=RESHAPE(AMAT,(/9/))
+!
+          IF(TNOBLUE) VAL=0.D0
+        ELSE
+          VAL=0.D0
+        ENDIF
+!
+!     ==========================================================================
+!     ==  PSIANNE                                                             ==
+!     ==  (ADDITIONAL EFF. FRICTION TERM FOR THE WAVE FUNCTION DYNAMICS)      ==
+!     ==  DET[\DOT{T}*T^{-1}]*DELTAT/2                                        ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'PSIANNEMAT') THEN
+        IF(LEN.NE.9) THEN
+          CALL ERROR$MSG('SIZE MISMATCH')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('CELL$GETR8A')
+        END IF
+        IF(TON) THEN
+          CALL CELL_INITIALIZE()
+          CALL LIB$INVERTR8(3,T0,AMAT)
+          AMAT=MATMUL(TP-TM,AMAT)/(2.D0*DELTAT)
+          AMAT=AMAT+TRANSPOSE(AMAT)
+          AMAT=AMAT*0.5D0*DELTAT
+          VAL=RESHAPE(AMAT,(/9/))
+!
+          IF(TNORED) VAL=0.D0
         ELSE
           VAL=0.D0
         ENDIF
@@ -833,6 +880,8 @@ END IF
       IF(TPARRINELLORAHMAN) THEN
 !       == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV
         EPOT=PRESSURE*V0
+!CAUTION: THIS IMPLEMENTATION ALLOWS ONLY FOR PRESSURE BUT NOT A GENERAL STRESS
+!THE VARIABLE STRESS IS IGNORED
         STRESS_EXT(:,:)=-PRESSURE*V0*ONE
 !       == PROPAGATE LATTICE VECTORS ===========================================
         SVAR1=2.D0/(1.D0+FRIC)

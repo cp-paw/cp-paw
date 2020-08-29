@@ -1,3 +1,5 @@
+! this module does not make sense and shall be removed....
+
 MODULE VEXT_MODULE
 !***********************************************************************
 !**                                                                   **
@@ -91,7 +93,7 @@ END MODULE VEXT_MODULE
        CALL VEXT_UNBIND(RBAS,NAT,R0,ENERGY,FORCE1)
        FORCE(:,:)=FORCE(:,:)+FORCE1(:,:)
        CALL ENERGYLIST$SET('EXTERNAL POTENTIAL',ENERGY)
-       CALL ENERGYLIST$ADD('CONSTANT ENERGY',ENERGY)
+       CALL ENERGYLIST$ADD('TOTAL ENERGY',ENERGY)
        CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
        DEALLOCATE(R0)
        DEALLOCATE(FORCE)

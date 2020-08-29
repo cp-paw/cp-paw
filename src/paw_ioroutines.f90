@@ -943,6 +943,7 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)            :: CH32SVAR
       INTEGER(4)               :: LEN
       INTEGER(4)               :: ISVAR
+      real(8)                  :: svar
       INTEGER(4)               :: RUNTIME(3)
 !     **************************************************************************
                            CALL TRACE$PUSH('READIN_GENERIC')
@@ -1052,6 +1053,15 @@ CALL TRACE$PASS('DONE')
           CALL ERROR$STOP('READIN')
         END IF
         CALL AUTO$SETI4('NTOL',ISVAR)
+      END IF
+!
+!     ==========================================================================
+!     ==  READ ETOL                                                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'ETOL',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'ETOL',1,SVAR)
+        CALL AUTO$SETR8('TOLERANCE',SVAR)
       END IF
 !
 !     ==========================================================================

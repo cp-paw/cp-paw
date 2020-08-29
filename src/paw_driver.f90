@@ -416,7 +416,7 @@
       CALL CELL$PROPAGATE()
       CALL CELL$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
-      CALL ENERGYLIST$ADD('CONSTANT ENERGY',SVAR)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
 ! 
 !     ==================================================================
 !     ==  APPLY CONSTRAINTS TO ATOMIC COORDINATES                     ==
@@ -556,7 +556,9 @@
       CALL WAVES$SWITCH()
 !     __ATOMIC POSITIONS________________________________________________
       CALL ATOMS$SWITCH()
-!     __UNIT CELL_______________________________________________________
+!     __UNIT CELL_______________________________________________________________
+!     __IMPORTANT! _____________________________________________________________
+!     __CELL$SWITCH MUST BE CALLED AFTER WAVES$SWITCH AND ATOMS$SWITCH__________
       CALL CELL$SWITCH()
 !     __OCCUPATIONS_____________________________________________________
       CALL DYNOCC$SWITCH() 
@@ -698,7 +700,7 @@ END MODULE STOPIT_MODULE
       IF(THISTASK.EQ.1) THEN
         IF(.NOT.EXITFILEREMOVED) THEN
           CALL FILEHANDLER$DELETE('EXIT')
-!!$ this code can be removed after testing. replaced by filehandler$delete.
+!!$ THIS CODE CAN BE REMOVED AFTER TESTING. REPLACED BY FILEHANDLER$DELETE.
 !!$          CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
 !!$          INQUIRE(FILE=EXITFILE,EXIST=TCHK)
 !!$          IF(TCHK) THEN
@@ -910,36 +912,121 @@ END MODULE STOPIT_MODULE
         CALL CONSTANTS('SECOND',SECOND)
         CALL CONSTANTS('KB',CELVIN)
         TME1=TIME/(PICO*SECOND)
-!       ========================================================================
-!       == ADD UP CONSERVED ENERGY                                            ==
-!       ========================================================================
-        ECONS=0.D0
 !
-!       == BASIC LDA + ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY =
-        CALL ENERGYLIST$RETURN('TOTAL ENERGY',ETOT)     
-        CALL ENERGYLIST$RETURN('IONIC KINETIC ENERGY',EKINP)
-        CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKINC)     
-        CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
-        ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
+!       ========================================================================
+!       == COMPARE TOTAL ENERGY FROM THE ENERGYLIST WITH THE SUM OF INDIVIDUAL==
+!       == ENERGY CONTRIBUTIONS                                               ==
+!       ========================================================================
+        ETOT=0.D0
+!       __PAW_WAVES1.F90________________________________________________________
+        CALL ENERGYLIST$GET('PS  KINETIC',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_AUGMENTATION.F90__________________________________________________
+        CALL ENERGYLIST$GET('AE1-PS1 KINETIC',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('AE1 EXCHANGE-CORRELATION',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('PS1 EXCHANGE-CORRELATION',SVAR)
+        ETOT=ETOT-SVAR
+        CALL ENERGYLIST$GET('AE1 ELECTROSTATIC',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('PS1 ELECTROSTATIC',SVAR)
+        ETOT=ETOT-SVAR
+        CALL ENERGYLIST$GET('AE1 BACKGROUND',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('PS1 BACKGROUND',SVAR)
+        ETOT=ETOT-SVAR
+        CALL ENERGYLIST$GET('LDA+U EXCHANGE',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('CORE RELAXATION',SVAR)
+        ETOT=ETOT+SVAR
+        CALL ENERGYLIST$GET('EXTERNAL 1CENTER POTENTIAL',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_POTENTIAL.F90_____________________________________________________
+        CALL ENERGYLIST$GET('SOLVENT PAULI REPULSION',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_POTENTIAL.F90_____________________________________________________
+!       __NOTE: 'PAIRPOTENTIAL' IS PART OF 'PS  ELECTROSTATIC'__________________
+        CALL ENERGYLIST$GET('PS  ELECTROSTATIC',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_POTENTIAL.F90_____________________________________________________
+        CALL ENERGYLIST$GET('PS  EXCHANGE-CORRELATION',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_SIMPLELMTO.F90____________________________________________________
+        CALL ENERGYLIST$GET('LOCAL CORRELATION',SVAR)
+        ETOT=ETOT+SVAR
+!       __SRC/PAW_DRIVER.F90____________________________________________________
+        CALL ENERGYLIST$GET('OCCUPATIONAL ENTROPY TERM (-TS)',SVAR)
+        ETOT=ETOT+SVAR
+!       __SRC/PAW_DRIVER.F90____________________________________________________
+        CALL ENERGYLIST$GET('CELLOSTAT POTENTIAL',SVAR)
+        ETOT=ETOT+SVAR
+!       __SRC/PAW_EXTPOT.F90____________________________________________________
+        CALL ENERGYLIST$GET('EXTERNAL POTENTIAL',SVAR)
+        ETOT=ETOT+SVAR
+!       __SRC/PAW_ISOLATE.F90___________________________________________________
+        CALL ENERGYLIST$GET('BACKGROUND ENERGY',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_ISOLATE.F90_______________________________________________________
+        CALL ENERGYLIST$GET('ISOLATE ENERGY',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_ISOLATE.F90_______________________________________________________
+        CALL ENERGYLIST$GET('QMMM POTENTIAL ENERGY',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_ISOLATE.F90_______________________________________________________
+        CALL ENERGYLIST$GET('COSMO POTENTIAL ENERGY',SVAR)
+        ETOT=ETOT+SVAR
+!       __PAW_ISOLATE.F90_______________________________________________________
+        CALL ENERGYLIST$GET('VAN DER WAALS ENERGY',SVAR)
+        ETOT=ETOT+SVAR
+!
+!!$SRC/PAW_DMFT.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+!!$SRC/PAW_DMFT_BACKES.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+!!$SRC/PAW_DMFT_PETER.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+!!$SRC/PAW_LMTO.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',ETOT)
+!!$SRC/PAW_LMTO.F90:      CALL ENERGYLIST$ADD('TOTAL ENERGY',EXTOT)
+!
+        CALL ENERGYLIST$GET('TOTAL ENERGY',SVAR)
+        IF(ABS(ETOT-SVAR).GT.1.D-8) THEN
+          call ENERGYLIST$PRINT(6)
+          CALL ERROR$MSG('INTERNAL CHECK FAILED')
+          CALL ERROR$MSG('TOTAL ENERGY INCONSISTENT WITH INDIVIDUAL TERMS')
+          CALL ERROR$R8VAL('TOTAL ENERGY FROM LIST',SVAR)
+          CALL ERROR$R8VAL('SUM OF INDIVIDUAL TERMS',ETOT)
+          CALL ERROR$STOP('PRINFO')
+        END IF       
+!
+!       ========================================================================
+!       == ADD KINETIC ENERGIES TO OBTAIN CONSERVED ENERGY ECONS              ==
+!       ========================================================================
+        CALL ENERGYLIST$GET('TOTAL ENERGY',ETOT)     
+        ECONS=ETOT
+!
+!       == ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY =====================
+        CALL ENERGYLIST$GET('IONIC KINETIC ENERGY',EKINP)
+        CALL ENERGYLIST$GET('WAVEFUNCTION KINETIC ENERGY',EKINC)     
+        CALL ENERGYLIST$GET('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
+        ECONS=ECONS+EKINC-EFFEKIN+EKINP
+!
+!       == COSMO ===============================================================
+        CALL ENERGYLIST$GET('COSMO KINETIC ENERGY',EKINCOSMO)
+        ECONS=ECONS+EKINCOSMO
+!
+!       == CELLOSTAT ===========================================================
+        CALL ENERGYLIST$GET('CELLOSTAT KINETIC',ECELLKIN)     
+        ECONS=ECONS+ECELLKIN 
 !
 !       == ELECTRON AND ATOM THERMOSTATS =======================================
-        CALL ENERGYLIST$RETURN('CELLOSTAT KINETIC',ECELLKIN)     
-        CALL ENERGYLIST$RETURN('CELLOSTAT POTENTIAL',ECELLPOT)     
-        ECONS=ECONS+ECELLKIN+ECELLPOT
-!PRINT*,'ECELLKIN/POT ',ECELLKIN,ECELLPOT,ECELLKIN+ECELLPOT
-!
-!       == ELECTRON AND ATOM THERMOSTATS =======================================
-        CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
-        CALL ENERGYLIST$RETURN('ELECTRON THERMOSTAT',ENOSEE)     
+        CALL ENERGYLIST$GET('ATOM THERMOSTAT',ENOSEP)     
+        CALL ENERGYLIST$GET('ELECTRON THERMOSTAT',ENOSEE)     
         ECONS=ECONS+ENOSEP+ENOSEE
 !
-        CALL ENERGYLIST$RETURN('CONSTRAINT KINETIC ENERGY',EKINFC)     
+        CALL ENERGYLIST$GET('CONSTRAINT KINETIC ENERGY',EKINFC)     
         ECONS=ECONS+EKINFC
 !
 !       == OCCUPATIONS =========================================================
-        CALL ENERGYLIST$RETURN('EPOT',HEAT) ! -T*S_MERMIN-MU*N-B*S
-        CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
-        ECONS=ECONS+HEAT+OCCKIN
+        CALL ENERGYLIST$GET('OCCUPATION KINETIC ENERGY',OCCKIN)
+        ECONS=ECONS+OCCKIN
 !
 !       == QM-MM ENVIRONMENT ===================================================
         CALL QMMM$GETL4('ON',TQMMM)
@@ -955,34 +1042,19 @@ END MODULE STOPIT_MODULE
 
 !       == QMMM CALGARY IMPLEMENTATION  ========================================
         IF (CALGARY_QMMM) THEN
-          CALL ENERGYLIST$RETURN('MM KINETIC ENERGY',MM_KINETIC_ENERGY)
-          CALL ENERGYLIST$RETURN('MM POT ENERGY',MM_POT_ENERGY)
-          CALL ENERGYLIST$RETURN('MM TEMPERATURE',MM_TEMP)
-          CALL ENERGYLIST$RETURN('MM THERMOSTAT',MM_NOSE_ENERGY)
-          CALL ENERGYLIST$RETURN('MM ATOM FRICTION',MM_FRIC)
+          CALL ENERGYLIST$GET('MM KINETIC ENERGY',MM_KINETIC_ENERGY)
+          CALL ENERGYLIST$GET('MM POT ENERGY',MM_POT_ENERGY)
+          CALL ENERGYLIST$GET('MM TEMPERATURE',MM_TEMP)
+          CALL ENERGYLIST$GET('MM THERMOSTAT',MM_NOSE_ENERGY)
+          CALL ENERGYLIST$GET('MM ATOM FRICTION',MM_FRIC)
           ECONS=ECONS + MM_KINETIC_ENERGY + MM_NOSE_ENERGY
         END IF
 !
-!       == COSMO ===============================================================
-        CALL COSMO$GETL4('ON',TCOSMO)
-        IF(TCOSMO) THEN
-          CALL ENERGYLIST$RETURN('COSMO KINETIC ENERGY',EKINCOSMO)
-          CALL ENERGYLIST$RETURN('COSMO POTENTIAL ENERGY',EPOTCOSMO)
-!IS ALREADY CONTAINED IN ECONS AND ETOT
-!          ECONS=ECONS+EKINCOSMO+EPOTCOSMO
-!          ETOT=ETOT+EPOTCOSMO
-!PRINT*,'PRINFO EPOTCOSMO ADDED TO ETOT ',EPOTCOSMO
-        END IF
-!
-!       == EXTERNAL POTENTIAL===================================================
-        CALL ENERGYLIST$RETURN('EXTERNAL POTENTIAL',EEXT)
-        ECONS=ECONS+EEXT
-!
-        CALL ENERGYLIST$RETURN('CONSTANT ENERGY',SVAR)
+        CALL ENERGYLIST$GET('CONSTANT ENERGY',SVAR)  ! do no use!
 PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
 !       == SOME OTHER STUFF ====================================================
-        CALL ENERGYLIST$RETURN('IONIC TEMPERATURE',TEMPINST)
+        CALL ENERGYLIST$GET('IONIC TEMPERATURE',TEMPINST)
         ITEMP=NINT(TEMPINST/CELVIN)
         CALL WAVES$GETR8('FRICTION',ANNEE)
         CALL ATOMS$GETR8('FRICTION',ANNER)
@@ -991,7 +1063,10 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !       __SO THAT THE PARSER PAW_SHOW.X DOES NOT GET CONFUSED IF VALUES_________
 !       __ARE TOO LARGE. THIS HAS BEEN DONE SOFAR ONLY FOR THE GENERIC PRINTOUT_
 !       __AND IT NEEDS TO BE DONE FOR TCOSMO, TQMMM, CALGARY_QMMM_______________
+        CALL COSMO$GETL4('ON',TCOSMO)
         IF (TCOSMO) THEN
+          CALL ENERGYLIST$GET('COSMO KINETIC ENERGY',EKINCOSMO)
+          CALL ENERGYLIST$GET('COSMO POTENTIAL ENERGY',EPOTCOSMO)
           WRITE(NFILO,FMT='("!>",I6,F10.5,1X,I5,F10.5,2F13.5,2F8.5' &
      &                     //',2F11.5)') &
      &               NFI,TME1,ITEMP,EKINC-EFFEKIN,ETOT,ECONS,ANNEE,ANNER &
@@ -1188,8 +1263,8 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITETRAJECTORY(NFI,DELT)
 !     **************************************************************************
-!     **  transfers trajectory data into the trajectory object                **
-!     **  data will be accumulated an be written in bigu chunks               **
+!     **  TRANSFERS TRAJECTORY DATA INTO THE TRAJECTORY OBJECT                **
+!     **  DATA WILL BE ACCUMULATED AN BE WRITTEN IN BIGU CHUNKS               **
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NFI
@@ -1213,7 +1288,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       REAL(8)                :: EKINFC
       REAL(8)                :: HEAT
       REAL(8)                :: OCCKIN
-      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,tchk
+      LOGICAL(4)             :: TQMMM,TCALGARYQMMM,TCHK
       REAL(8)                :: QMMMKIN,QMMMPOT,QMMMTHERM
       REAL(8)                :: EEXT
 !     **************************************************************************
@@ -1236,23 +1311,23 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       ECONS=0.D0
 !     
 !     == BASIC LDA + ATOMIC AND FICTITIOUS ELECTRONIC KINETIC ENERGY ===========
-      CALL ENERGYLIST$RETURN('TOTAL ENERGY',ETOT)     
-      CALL ENERGYLIST$RETURN('IONIC KINETIC ENERGY',EKINP)
-      CALL ENERGYLIST$RETURN('WAVEFUNCTION KINETIC ENERGY',EKINC)     
-      CALL ENERGYLIST$RETURN('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
+      CALL ENERGYLIST$GET('TOTAL ENERGY',ETOT)     
+      CALL ENERGYLIST$GET('IONIC KINETIC ENERGY',EKINP)
+      CALL ENERGYLIST$GET('WAVEFUNCTION KINETIC ENERGY',EKINC)     
+      CALL ENERGYLIST$GET('BO-WAVEFUNCTION KINETIC ENERGY',EFFEKIN)
       ECONS=ECONS+EKINC-EFFEKIN+EKINP+ETOT
 !     
 !     == ELECTRON AND ATOM THERMOSTATS =========================================
-      CALL ENERGYLIST$RETURN('ATOM THERMOSTAT',ENOSEP)     
-      CALL ENERGYLIST$RETURN('ELECTRON THERMOSTAT',ENOSEE)     
+      CALL ENERGYLIST$GET('ATOM THERMOSTAT',ENOSEP)     
+      CALL ENERGYLIST$GET('ELECTRON THERMOSTAT',ENOSEE)     
       ECONS=ECONS+ENOSEP+ENOSEE
 !     
-      CALL ENERGYLIST$RETURN('CONSTRAINT KINETIC ENERGY',EKINFC)     
+      CALL ENERGYLIST$GET('CONSTRAINT KINETIC ENERGY',EKINFC)     
       ECONS=ECONS+EKINFC
 !     
 !     == OCCUPATIONS ===========================================================
-      CALL ENERGYLIST$RETURN('OCCUPATIONAL ENTROPY TERM (-TS)',HEAT) ! -T*S_MERMIN
-      CALL ENERGYLIST$RETURN('OCCUPATION KINETIC ENERGY',OCCKIN)
+      CALL ENERGYLIST$GET('OCCUPATIONAL ENTROPY TERM (-TS)',HEAT) ! -T*S_MERMIN
+      CALL ENERGYLIST$GET('OCCUPATION KINETIC ENERGY',OCCKIN)
       ECONS=ECONS+HEAT+OCCKIN
 !     
 !     == QM-MM ENVIRONMENT =====================================================
@@ -1270,13 +1345,13 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     == QMMM CALGARY IMPLEMENTATION  ==========================================
       TCALGARYQMMM = .FALSE.
       IF(TCALGARYQMMM) THEN
-        CALL ENERGYLIST$RETURN('MM KINETIC ENERGY',QMMMKIN)
-        CALL ENERGYLIST$RETURN('MM THERMOSTAT',QMMMTHERM)
+        CALL ENERGYLIST$GET('MM KINETIC ENERGY',QMMMKIN)
+        CALL ENERGYLIST$GET('MM THERMOSTAT',QMMMTHERM)
         ECONS=ECONS+QMMMKIN+QMMMTHERM
       END IF
 !     
 !     == EXTERNAL POTENTIAL=====================================================
-      CALL ENERGYLIST$RETURN('EXTERNAL POTENTIAL',EEXT)
+      CALL ENERGYLIST$GET('EXTERNAL POTENTIAL',EEXT)
       ECONS=ECONS+EEXT
 !   
 !     ==========================================================================

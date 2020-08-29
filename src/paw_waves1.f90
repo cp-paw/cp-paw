@@ -2021,8 +2021,8 @@ CALL ERROR$STOP('WAVES$ETOT')
               DH(LMN1,LMN2,2,IAT)=CSVAR1-CSVAR2
               CSVAR1=DO(LMN1,LMN2,1,IAT)
               CSVAR2=DO(LMN1,LMN2,2,IAT)
-              DO(LMN1,LMN2,1,IAT)=CSVAR1+CSVAR2
-              DO(LMN1,LMN2,2,IAT)=CSVAR1-CSVAR2
+              DO(LMN1,LMN2,1,IAT)=REAL(CSVAR1+CSVAR2,KIND=8)
+              DO(LMN1,LMN2,2,IAT)=REAL(CSVAR1-CSVAR2,KIND=8)
             ENDDO
           ENDDO
         ENDDO
@@ -3654,7 +3654,7 @@ END IF
         OSDENMAT(NN)%IT=NNLIST(3:5,NN)
         OSDENMAT(NN)%N1=N1
         OSDENMAT(NN)%N2=N2
-        OSDENMAT(NN)%N3=NDIMD  !(total),(total,z),(TOTAL,X,Y,Z)
+        OSDENMAT(NN)%N3=NDIMD  !(TOTAL),(TOTAL,Z),(TOTAL,X,Y,Z)
         ALLOCATE(OSDENMAT(NN)%MAT(N1,N2,NDIMD))
         OSDENMAT(NN)%MAT(:,:,:)=0.D0
       ENDDO
@@ -3830,9 +3830,9 @@ END IF
 !     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
 !     ==========================================================================
       DO NN=1,NND
-WRITE(*,*)'BEFORE MPE-COMBINE ',THISTASK,NN,nnd
-WRITE(*,*)'       MPE-COMBINE ',thistask,nn,SHAPE(OSDENMAT(NN)%MAT)
-WRITE(*,*)'       MPE-COMBINE ',thistask,nn,OSDENMAT(NN)%MAT(1,1,1)
+WRITE(*,*)'BEFORE MPE-COMBINE ',THISTASK,NN,NND
+WRITE(*,*)'       MPE-COMBINE ',THISTASK,NN,SHAPE(OSDENMAT(NN)%MAT)
+WRITE(*,*)'       MPE-COMBINE ',THISTASK,NN,OSDENMAT(NN)%MAT(1,1,1)
         CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
 WRITE(*,*)'AFTER  MPE-COMBINE ',THISTASK,NN,OSDENMAT(NN)%MAT(1,1,1)
       ENDDO
@@ -4995,7 +4995,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **  |PSI>+|P>DO<P|PSI>                                                  **
 !     **                                                                      **
 !     *********************************JOHANNES KAESTNER 2004*******************
-      USE WAVES_MODULE
+      USE WAVES_MODULE, ONLY : MAP &
+     &                        ,GSET &
+     &                        ,NDIM
       IMPLICIT NONE
       INTEGER(4) ,INTENT(IN)   :: NB
       INTEGER(4) ,INTENT(IN)   :: NBH
@@ -5003,7 +5005,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4) ,INTENT(IN)   :: NAT
       INTEGER(4) ,INTENT(IN)   :: NGL
       REAL(8)    ,INTENT(IN)   :: R0(3,NAT)
-      COMPLEX(8) ,INTENT(IN)   :: PROJ(NDIM,NBH,NPRO)
+      COMPLEX(8) ,INTENT(IN)   :: PROJ(NDIM,NBH,NPRO)  !<P|PSI>
       COMPLEX(8) ,INTENT(INOUT):: OPSI(NGL,NDIM,NBH) !PSI ON ETRY, OPSI ON EXIT
       INTEGER(4)               :: IPRO,IAT,ISP,LNX,LMNX
       COMPLEX(8) ,ALLOCATABLE  :: OPROJ(:,:,:)
@@ -5028,8 +5030,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
      &                  ,PROJ(:,:,IPRO:IPRO+LMNX-1),OPROJ(:,:,IPRO:IPRO+LMNX-1))
          DEALLOCATE(DO)
          IPRO=IPRO+LMNX
+         CALL SETUP$UNSELECT()
       ENDDO
-      CALL SETUP$ISELECT(0)
 !
 !     ==============================================================
 !     ==  ADD  |PSI>+|P>DO<P|PSI>                                 ==
@@ -5401,7 +5403,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           SVAR2=0.5D0*(F1-F2)
 !         == NOTE THAT OOCUPATIONS CAN BE NEGATIVE FROM K-INTEGRATION
           IF(SVAR1.EQ.0.D0) THEN
-            IF(SVAR2.EQ.0.d0) CYCLE
+            IF(SVAR2.EQ.0.D0) CYCLE
           END IF
           DO IR=1,NRL
             PSI1(IR)=SVAR1*CONJG(PSIOFR(IR,1,IBH))
@@ -6396,14 +6398,20 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ALLOCATE(ARR2(NGL))
         ALLOCATE(ARR3(NGL))
         IF(TSTRESS) THEN
-          CALL CELL$GETR8A('FRICMAT',9,FRICMAT) !\ALPHADOT*DELTA/2
+          CALL CELL$GETR8A('PSIANNEMAT',9,FRICMAT) !\ALPHADOT*DELTA/2
+! ==============================================================================
+! THERE IS A FRICTION LIKE TERM WHEN A UNIT CELL CHANGES, WHICH CAN BE
+! REMOVED WITHOUT CHANGING THE ENERGY CONSERVATION, IF AN ANALOGOUS
+! TERM IN THE STRESSES IS REMOVED AS WELL. THIS FRICTION LIKE TERM IS
+! SWITCHED OFF BY THE PARAMETER "TNORED" IN THE CELL OBJECT.
+! ==============================================================================
           ALLOCATE(GVEC(3,NGL))
           CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
           ALLOCATE(ANNEEVEC(NGL))
-          CALL WAVES_DMPSI(.FALSE.,ANNEE,FRICMAT,NGL,GVEC &
+!!$          CALL WAVES_DMPSI(.FALSE.,ANNEE,FRICMAT,NGL,GVEC &
+!!$     &                      ,EMASS,EMASSCG2,GSET%DBUCKET,ANNEEVEC)
+          CALL WAVES_DMPSI(TSTRESS,ANNEE,FRICMAT,NGL,GVEC &
      &                      ,EMASS,EMASSCG2,GSET%DBUCKET,ANNEEVEC)
-!          CALL WAVES_DMPSI(TSTRESS,ANNEE,FRICMAT,NGL,GVEC &
-!     &                      ,EMASS,EMASSCG2,GSET%DBUCKET,ANNEEVEC)
           DEALLOCATE(GVEC)
           ARR1(:)=2.D0/(1.D0+ANNEEVEC(:))
           ARR2(:)=1.D0-ARR1(:)

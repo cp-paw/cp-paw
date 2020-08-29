@@ -122,7 +122,6 @@ MODULE MPE_MPIF_MODULE
 !__THIS IS ONLY THE INITIALIZATION AND MAY BE INCORRECT (BYTES VS. KIND)
 !__VALUES ARE RECALCULATED IN MPE$INIT
 TYPE(MPI_DATATYPE),SAVE    :: MY_MPITYPE_INTEGER_KIND4=MPI_INTEGER4
-TYPE(MPI_DATATYPE),SAVE    :: MY_MPITYPE_LOGICAL_KIND4=MPI_LOGICAL4
 TYPE(MPI_DATATYPE),SAVE    :: MY_MPITYPE_REAL_KIND4   =MPI_REAL4
 TYPE(MPI_DATATYPE),SAVE    :: MY_MPITYPE_REAL_KIND8   =MPI_REAL8
 TYPE(MPI_DATATYPE),SAVE    :: MY_MPITYPE_COMPLEX_KIND8=MPI_DOUBLE_COMPLEX
@@ -264,7 +263,6 @@ CONTAINS
       INTEGER                         :: IERR
       CHARACTER(MPI_MAX_ERROR_STRING) :: ERRORSTRING
       INTEGER                         :: ERRORSTRINGLEN
-      INTEGER(4)                      :: IATTEMPT
 !     **************************************************************************
       CALL MPE$SELECT(CID)
 !     
@@ -275,10 +273,6 @@ CONTAINS
 !     IF(RANK(VAL).NE.0)LENG=SIZE(VAL)   
       LENG=<SIZE>
 !
-
-IATTEMPT=0
-1000  CONTINUE
-IATTEMPT=IATTEMPT+1
       IF(OPERATION.EQ.'+')THEN
         CALL MPI_ALLREDUCE(MPI_IN_PLACE,VAL,LENG,<MPI_TYPE>,MPI_SUM,COMM,IERR)
       ELSE IF(OPERATION.EQ.'*')THEN
@@ -617,7 +611,6 @@ CONTAINS
       INTEGER(4)  ,INTENT(IN)    :: TOTASK
       <TYPE>      ,INTENT(INOUT) :: VAL<RANK>
 #IFDEF  CPPVARIABLE_PARALLEL
-      CHARACTER(32)                   :: MSGID
       INTEGER                         :: TOTASK0
       INTEGER                         :: FROMTASK0
       INTEGER                         :: TAGSTD
@@ -1513,16 +1506,13 @@ END MODULE MPE_MODULE
 !     **************************************************************************
       USE MPE_MPIF_MODULE
       IMPLICIT NONE
+#IFDEF CPPVARIABLE_PARALLEL
       INTEGER                  :: IERR
-!      INTEGER     ,PARAMETER   :: MBYTE=2**20
-!      INTEGER     ,PARAMETER   :: BUFFER_SIZE=6*MBYTE
-!      CHARACTER(1),POINTER    :: BUFFER(:)
-!      INTEGER(4),POINTER       :: BUFFER(:)
+#ENDIF
       REAL(4)                  :: XREAL4
       REAL(8)                  :: XREAL8
       COMPLEX(8)               :: XCOMPLEX8
       INTEGER(4)               :: XINTEGER4
-      LOGICAL(4)               :: XLOGICAL4
       INTEGER                  :: SIZE
 !     **************************************************************************
       IF(TINI) THEN
@@ -1622,7 +1612,6 @@ END MODULE MPE_MODULE
       INTEGER(4)  ,INTENT(IN)  :: ICOLOR_(NTASKS)
 #IFDEF CPPVARIABLE_PARALLEL
       INTEGER(4)                      :: IERR
-      INTEGER(4)                      :: I
       TYPE(MPI_COMM)                  :: NEWCOMM
       INTEGER                         :: ICOLOR(NTASKS_)
       CHARACTER(MPI_MAX_ERROR_STRING) :: ERRORSTRING
@@ -1762,12 +1751,11 @@ END MODULE MPE_MODULE
 !     == RETURN THE TOTAL NUMBER OF TASKS                             ==
 !     == AND THE ID OF THIS TASK [1 ..NTASKS]                         ==
 !     ******************************************************************
-      USE MPE_MPIF_MODULE
+      USE MPE_MPIF_MODULE, only: NTASKS,THISTASK
       IMPLICIT NONE 
       CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
       INTEGER(4)  ,INTENT(OUT) :: NTASKS_   !#(TASKS IN THE GROUP)
       INTEGER(4)  ,INTENT(OUT) :: THISTASK_ ! NUMBER OF THE TASK IN THE GROUP
-      INTEGER                  :: IERR
 !     ******************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$SELECT(CID)
@@ -1915,8 +1903,6 @@ END MODULE MPE_MODULE
       INTEGER           ,INTENT(IN)   :: DATASIZE                    
       CHARACTER(*)      ,INTENT(IN)   :: TYPEID
       REAL(8)                         :: SIZE1
-      REAL(8)                         :: USRTIME
-      REAL(8)                         :: SYSTIME
       REAL(8)                         :: CPUTIME
 !     **************************************************************************
       IF(TYPEID.EQ.'R8') THEN
@@ -1954,14 +1940,17 @@ END MODULE MPE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE$CLOCKREPORT(NFIL)
-      USE MPE_MPIF_MODULE
+      USE MPE_MPIF_MODULE, only : BROADCAST_CLOCK &
+     &                           ,SENDRECEIVE_CLOCK &
+     &                           ,SEND_CLOCK &
+     &                           ,RECEIVE_CLOCK &
+     &                           ,GATHER_CLOCK &
+     &                           ,COMBINE_CLOCK &
+     &                           ,TRANSPOSE_CLOCK &
+     &                           ,SYNC_CLOCK 
       IMPLICIT NONE
-      INTEGER(4)        ,INTENT(IN)   :: NFIL
-      INTEGER(4)               :: COUNT
-      REAL(8)                  :: TTIME
-      REAL(8)                  :: AVSIZE
-      REAL(8)                  :: BANDWIDTH
-      REAL(8)                  :: LATENCY   
+      INTEGER(4),INTENT(IN)   :: NFIL
+      INTEGER(4)              :: NTASKS,THISTASK             
 !     **************************************************************************
 #IFDEF CPPVARIABLE_PARALLEL
       CALL MPE$QUERY('~',NTASKS,THISTASK)
@@ -1984,17 +1973,16 @@ END MODULE MPE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE_CLOCKANALYZE(NFIL,CLOCK)
-      USE MPE_MODULE
-      USE MPE_MPIF_MODULE
+      USE MPE_MODULE     , ONLY : MPE$COMBINE
+      USE MPE_MPIF_MODULE, ONLY : MPECLOCKTYPE
       IMPLICIT NONE
       INTEGER(4)                   :: NFIL
       TYPE(MPECLOCKTYPE),INTENT(IN):: CLOCK
       INTEGER(4)                   :: COUNT
-      REAL(8)                      :: TTIME
-      REAL(8)                      :: AVSIZE
-      REAL(8)                      :: BANDWIDTH
-      REAL(8)                      :: LATENCY
+!!$      REAL(8)                      :: BANDWIDTH
+!!$      REAL(8)                      :: LATENCY
       REAL(8)                      :: ARR(3)
+      INTEGER(4)                   :: NTASKS,THISTASK
 !      INTEGER     ,PARAMETER   :: MBYTE=2**20
 !     **************************************************************************
       CALL MPE$QUERY('~',NTASKS,THISTASK)

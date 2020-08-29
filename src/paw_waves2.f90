@@ -29,7 +29,6 @@
       REAL(8)   ,ALLOCATABLE :: MARR(:)
       REAL(8)   ,ALLOCATABLE :: R0(:,:)      !CURRENT ATOMIC POSITIONS
       REAL(8)   ,ALLOCATABLE :: RP(:,:)      ! NEXT ATOMIC POSITIONS
-      REAL(8)   ,ALLOCATABLE :: RM(:,:)      ! LAST ATOMIC POSITIONS
       COMPLEX(8)             :: CSUM
       COMPLEX(8),ALLOCATABLE :: MAT(:,:)
       COMPLEX(8),ALLOCATABLE :: OMAT(:,:)
@@ -89,7 +88,7 @@
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
-IF(1.EQ.1) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
+IF(1.EQ.0) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 !
 !         ======================================================================
 !         ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID          ==
@@ -130,6 +129,7 @@ ELSE
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
 !++++++++++++++++++++++++ FROM HERE +++++++++++++++++++++++++++++++++++++
+!         __ this$proj=<ptilde|this%psi0>_______________________________________
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
 !++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
 END IF
@@ -168,26 +168,23 @@ END IF
 !     ==  UPDATE STRUCTUREFACTOR, ETC                                 ==
 !     ==================================================================
       ALLOCATE(RP(3,NAT))
-      ALLOCATE(RM(3,NAT))
       CALL ATOMLIST$GETR8A('R(+)',0,3*NAT,RP)
       IF(TSTRESS) THEN
 !       == PREDICT NEW POSITIONS =======================================
         CALL CELL$GETR8A('TP',9,RBAS)
         CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
-        CALL ATOMLIST$GETR8A('R(-)',0,3*NAT,RM)
         DO IAT=1,NAT
-!CHANGE          RP(:,IAT)=RP(:,IAT)-RM(:,IAT)+MATMUL(MAPTOCELL,RM(:,IAT))
            RP(:,IAT)=MATMUL(MAPTOCELL,RP(:,IAT))
         ENDDO
 !       ==  SCALING FACTOR FOR WAVE FUNCTIONS ==========================
         CALL GBASS(RBAS,GBAS,CELLVOL)
-!!$        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
-!!$     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
-!!$     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
-!!$     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
-!!$     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
-!!$     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
-!!$        CELLSCALE=1.D0/SQRT(CELLSCALE)
+        CELLSCALE=MAPTOCELL(1,1)*(MAPTOCELL(2,2)*MAPTOCELL(3,3)  &
+     &                           -MAPTOCELL(3,2)*MAPTOCELL(2,3)) &
+     &           +MAPTOCELL(2,1)*(MAPTOCELL(3,2)*MAPTOCELL(1,3)  &
+     &                           -MAPTOCELL(1,2)*MAPTOCELL(3,3)) &
+     &           +MAPTOCELL(3,1)*(MAPTOCELL(1,2)*MAPTOCELL(2,3)  &
+     &                           -MAPTOCELL(2,2)*MAPTOCELL(1,3))
+        CELLSCALE=1.D0/SQRT(CELLSCALE)
 !       == NOW K-POINT DEPENDENT DATA ==================================
         DO IKPT=1,NKPTL
           CALL WAVES_SELECTWV(IKPT,1)
@@ -226,11 +223,11 @@ END IF
           DEALLOCATE(GVEC)
 !
 !         == RESCALE WAVE FUNCTIONS ============================================
-!          DO ISPIN=1,NSPIN
-!            CALL WAVES_SELECTWV(IKPT,ISPIN)
-!            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)*CELLSCALE
-!            THIS%OPSI(:,:,:)=THIS%OPSI(:,:,:)*CELLSCALE 
-!          ENDDO
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)*CELLSCALE
+            THIS%OPSI(:,:,:)=THIS%OPSI(:,:,:)*CELLSCALE 
+          ENDDO
         ENDDO
       ELSE
         CELLSCALE=1.D0
@@ -304,6 +301,7 @@ END IF
               LAMBDA(J,I)=CONJG(CSVAR)
             ENDDO
           ENDDO
+!
 !===============================================================          
           IF(.NOT.TSAFEORTHO) THEN
             ALLOCATE(SMAP(NB))
@@ -311,7 +309,10 @@ END IF
               SMAP(I)=I
             ENDDO
             IF(TSWAPSTATES) THEN
-              SVAR=0.D0
+!             ==================================================================
+!             == construct smap so that |lambda(smap(i),smap(i))| increases   ==
+!             ==================================================================
+              SVAR=0.D0   ! will become max offdiagonal elements of lambda 
               DO I=1,NB
                 DO J=I+1,NB
                   SVAR=MAX(SVAR,ABS(LAMBDA(I,J)))
@@ -325,6 +326,7 @@ END IF
                   END IF
                 ENDDO
               ENDDO  
+!
 !PRINT*,'SMAP ',SMAP
 !PRINT*,'LAMBDA ',(REAL(LAMBDA(I,I))*27.211D0,I=1,NB)
 !PRINT*,'MAX ',SVAR*27.211D0
@@ -473,15 +475,14 @@ END IF
           CALL WAVES_SELECTWV(IKPT,1)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL PLANEWAVE$SETR8A('RBAS',9,RBAS)
-!          DO ISPIN=1,NSPIN
-!            CALL WAVES_SELECTWV(IKPT,ISPIN)
-!            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)/CELLSCALE
-!          ENDDO   
+          DO ISPIN=1,NSPIN
+            CALL WAVES_SELECTWV(IKPT,ISPIN)
+            THIS%PSIM(:,:,:)=THIS%PSIM(:,:,:)/CELLSCALE
+          ENDDO   
         ENDDO
       END IF
       DEALLOCATE(RP)
       DEALLOCATE(R0)
-      DEALLOCATE(RM)
 !
 !     ==================================================================
 !     ==  CALCULATE SECOND PART OF WAVE FUNCTION KINETIC ENERGY       ==
@@ -2233,14 +2234,14 @@ PRINT*,'CELLSCALE ',CELLSCALE
           THIS%PSIM=>TPSI
 !===============================================================================
 !I DO NOT UNDERSTAND WHY THE FOLLOWING HAD BEEN COMMENTED OUT.  I AM
-!CONCERNED, BECAUSE THE CELL DYNAMICS WITH MOBING ATOMS IS NOT ENERGY
+!CONCERNED, BECAUSE THE CELL DYNAMICS WITH MOvING ATOMS IS NOT ENERGY
 !CONSERVING, WHILE THAT WITHOUT MOVING ATOMS AND THAT WITHOUT MOVING
 !CELL WORK FINE.
 !===============================================================================
-!!$          IF(TSTRESS) THEN
-!!$            THIS%PSI0=THIS%PSI0*CELLSCALE
-!!$            THIS%PSIM=THIS%PSIM*CELLSCALE
-!!$          END IF
+          IF(TSTRESS) THEN
+            THIS%PSI0=THIS%PSI0*CELLSCALE
+            THIS%PSIM=THIS%PSIM*CELLSCALE
+          END IF
 !
 !         ==============================================================
 !         == EXTRAPOLATE LAGRANGE MULTIPLIERS                         ==

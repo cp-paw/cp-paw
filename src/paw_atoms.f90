@@ -238,7 +238,7 @@ END MODULE ATOMS_MODULE
       WRITE(NFIL,FMT='("T1[ANGSTROM]=",3F10.6/"T2[ANGSTROM]=",3F10.6/"T3[ANGSTROM]=",3F10.6)')RBAS/ANGSTROM
       WRITE(STRING,FMT='(T1,A,T15,A,T45,A,T53,A,T65,A,T80,A)') &
      &     'NAME','POSITION[ANGSTROM]','M[U]','MPSI_EFF[U]','Q[E]' &
-     &    ,'FORCE[mH/ABOHR]'
+     &    ,'FORCE[MH/ABOHR]'
       WRITE(NFIL,FMT='(A)')TRIM(STRING)
       ISP=0
       DO IAT=1,NAT
@@ -487,6 +487,9 @@ PRINT*,'ATOMS: OPT.FRICTION ',SVAR,AOPT1AV,AOPT2AV,MIXAOPT
       IF(TSTRESS) CALL CELL$GETR8A('FRICMAT',9,CELLFRIC)
       CALL ATOMS_PROPAGATE(NAT,DELT,REDRMASS,ANNERVEC0 &
    &                      ,FORCE,R0,RM,RP,TSTRESS,CELLFRIC)
+      IF(.NOT.TDYN) THEN
+        RP=R0
+      END IF
 !
 !     ==========================================================================
 !     == TAKE CARE OF LINK BONDS AS CONSTRAINTS                               ==
@@ -1325,6 +1328,13 @@ ENDDO
       REAL(8)               :: SVAR1,SVAR2,SVAR3
       REAL(8)               :: MATP(3,3),MATM(3,3),MATPINV(3,3)
 !     **************************************************************************
+! THIS (PROPAGATING AS WITH TSTRESS=.FALSE.) IS A CHANGE DONE 200822
+! WHILE SEARCHING FOR A BUG, WHICH VIOLATES ENERGY CONSERVATION WHEN
+! BOTH, ATOMS AND UNIT CELL, ARE DYNAMIC. ACCORDING TO MY NOTES, THERE
+! IS NO DIFFERENCE BETWEEN PROPAGATING THE ATOMS WITH AND WITHOUT
+! FRICTION. THE CELL DYNAMICS BECOMES EVIDENT ONLY IN
+! ATOMS$SWITCH. 
+! PRINT*,'CELLFRIC IN ATOMS_PROPAGATE:',TSTRESS,CELLFRIC
 !
 !     ==========================================================================
 !     == PROPAGATE FOR A CONSTANT UNIT CELL                                   ==
@@ -1342,7 +1352,7 @@ ENDDO
 !     ==========================================================================
       ELSE 
         DO IAT=1,NAT
-          MATP(:,:)=CELLFRIC(:,:)
+          MATP(:,:)=+CELLFRIC(:,:)
           MATM(:,:)=-CELLFRIC(:,:)
           DO I=1,3 
             MATP(I,I)=1.D0+ANNERVEC(IAT)+MATP(I,I)
