@@ -3128,7 +3128,7 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
 !     **                                                                      **
 !     **    H_{L,M}(R-R1) = - SUM_{L',M'} S_{L,M,L',M'} * J_{L',M'}(R-R2)     **
 !     **                                                                      **
-!     **  structure constants and forces are calculated                       **
+!     **  STRUCTURE CONSTANTS AND FORCES ARE CALCULATED                       **
 !     **                                                                      **
 !     **  SBARE HAS IAT1,IAT2,IT ALREADY SET, SBARE%MAT IS NOT ALLOCATED      **
 !     **************************************************************************
@@ -3273,6 +3273,9 @@ END MODULE SIMPLELMTO_MYMAT_MODULE
       LOGICAL(4)            :: TACTIVE ! DOES THIS ATOM CONTRIBUTE?
       LOGICAL(4),PARAMETER  :: TPARALLEL=.FALSE.
       INTEGER(4)            :: THISTASK,NTASKS
+LOGICAL(4)            :: TBACK
+REAL(8)               :: RBAS1(3,3),EX1,EX2,DEL,RBASINV(3,3),STRESS1(3,3)
+REAL(8)               :: STRESS0(3,3)
 !     **************************************************************************
                             CALL TRACE$PUSH('SIMPLELMTO_HYBRIDENERGY')
       IF(TPR)WRITE(*,FMT='(82("="),T10,"  ",A,"  ")')'SIMPLELMTO_HYBRIDENERGY'
@@ -3367,6 +3370,37 @@ PRINT*,'++THISTASK ',TPARALLEL,THISTASK,NTASKS,IAT,MOD(IAT-1,NTASKS)
      &                              ,EX,STRESS,FORCE,HAMIL,OVERLAPCHI) 
         PRINT*,'+-+-+-+  OFFSITE EX=',EX
         ETOT=ETOT+EX
+
+!!$!TESTBEGINTESTBEGINTESTBEGINTESTBEGINTESTBEGINTESTBEGINTESTBEGINTESTBEGINTEST
+!!$!****************************************************************************
+!!$!** THIS TESTS THE GRADIENTS OF SIMPLELMTO_OFFSITEXEVAL BY NUMERICAL 
+!!$!** DIFFERENTIATION. CAUTION! IT TESTS DEDRBAS AND NOT STRESS. CHANGE 
+!!$!** SIMPLELMTO_OFFSITEXEVAL SO THAT IT OUTPUTS DEDRBAS INSTEAD OF
+!!$!** STRESS=RBAS*DEDRBAS
+!!$!****************************************************************************
+!!$ CALL SIMPLELMTO_OFFSITEXEVAL(TPARALLEL,NAT,NND,RBAS,R0,DENMAT &
+!!$&                              ,EX2,STRESS,FORCE,HAMIL,OVERLAPCHI) 
+!!$DO I=1,3
+!!$DO J=1,3
+!!$ DEL=1.D-3
+!!$ RBAS1=RBAS
+!!$ RBAS1(I,J)=RBAS(I,J)+DEL
+!!$
+!!$ CALL SIMPLELMTO_OFFSITEXEVAL(TPARALLEL,NAT,NND,RBAS1,R0,DENMAT &
+!!$&                              ,EX2,STRESS0,FORCE,HAMIL,OVERLAPCHI) 
+!!$ RBAS1=RBAS
+!!$ RBAS1(I,J)=RBAS(I,J)-DEL
+!!$ CALL SIMPLELMTO_OFFSITEXEVAL(TPARALLEL,NAT,NND,RBAS1,R0,DENMAT &
+!!$&                              ,EX1,STRESS0,FORCE,HAMIL,OVERLAPCHI) 
+!!$ STRESS1(I,J)=(EX2-EX1)/(2.D0*DEL)
+!!$ WRITE(*,FMT='("STRESSTEST ",2I2,3F10.5)') &
+!!$         I,J,STRESS(I,J),STRESS1(I,J),RBAS(I,J)
+!!$ENDDO
+!!$ENDDO
+!!$WRITE(*,FMT='(A10,3(3F10.5," "))')'STRESS',TRANSPOSE(STRESS)
+!!$WRITE(*,FMT='(A10,3(3F10.5," "))')'STRESS1',STRESS1
+!!$CALL ERROR$STOP('FORCED STOP TEST OF SIMPLELMTO_OFFSITEXEVAL')
+!!$!TESTENDTESTENDTESTENDTESTENDTESTENDTESTENDTESTENDTESTENDTESTENDTESTENDTESTEN
       END IF
 !
 !     ==========================================================================
@@ -4753,18 +4787,19 @@ PRINT*,'INITIALIZATION OF OFFSITE DONE...'
      &        +LAMBDA*(1.D0+(LAMBDA*DIS)-(LAMBDA*DIS)**3/3.D0)*EXPLDIS/DIS**2
       DINV(3)=-3.D0*INV(3)/DIS &
      &        -LAMBDA*(1.D0+(LAMBDA*DIS)-(LAMBDA*DIS)**3/2.D0)*EXPLDIS/DIS**3 &
-     &        -LAMBDA*(1.D0+(LAMBDA*DIS)+(LAMBDA*DIS)**2/2.D0 &
+     &        +LAMBDA*(1.D0+(LAMBDA*DIS)+(LAMBDA*DIS)**2/2.D0 &
      &                                  -(LAMBDA*DIS)**4/8.D0)*EXPLDIS/DIS**3
       IF(SCREENL.GE.0.D0) THEN
         EXPLDIS=EXP(-DIS/SCREENL)
         F1=(1.D0+DIS/SCREENL)*EXPLDIS
         DF1=(EXPLDIS-F1)/SCREENL
-        INV(1)=INV(1)*F1
-        INV(2)=INV(2)*F1
-        INV(3)=INV(3)*F1
+!       __ATTENTION: DINV MUST BE CALCULATED BEFORE INV IS CHANGED!!____________
         DINV(1)=DINV(1)*F1+INV(1)*DF1
         DINV(2)=DINV(2)*F1+INV(2)*DF1
         DINV(3)=DINV(3)*F1+INV(3)*DF1
+        INV(1)=INV(1)*F1
+        INV(2)=INV(2)*F1
+        INV(3)=INV(3)*F1
       ENDIF
       RETURN
       END
@@ -5956,6 +5991,12 @@ PRINT*,'X(LAMBDA)  ',X
                 DO LR2=ABS(L3-L4),MIN(L3+L4,LRX2),2
                   DO MABS=0,MIN(LR1,LR2)
                     IND=IND+1
+!!$CALL SIMPLELMTO_OFFSITEXVALUE('22',ISP1,ISP2,IND,DIS+1.D-3,INTEGRAL,DINTEGRAL)
+!!$PRINT*,'DIS+DELTA ',INTEGRAL,DINTEGRAL
+!!$CALL SIMPLELMTO_OFFSITEXVALUE('22',ISP1,ISP2,IND,DIS-1.D-3,INTEGRAL,DINTEGRAL)
+!!$PRINT*,'DIS-DELTA ',INTEGRAL,DINTEGRAL
+!!$STOP
+
 !
 !                   == EVALUATE MATRIX ELEMENT FOR THE DISTANCE HERE...
                     CALL SIMPLELMTO_OFFSITEXVALUE('22',ISP1,ISP2,IND,DIS &
@@ -5981,9 +6022,8 @@ PRINT*,'X(LAMBDA)  ',X
                         INTEGRAL =INTEGRAL +FAC*INV(3)
                         DINTEGRAL=DINTEGRAL+FAC*DINV(3)
                         IF(MABS.EQ.0) THEN
-                          INTEGRAL =INTEGRAL -3.D0*FAC*DINV(3)
+                          INTEGRAL =INTEGRAL -3.D0*FAC*INV(3)
                           DINTEGRAL=DINTEGRAL-3.D0*FAC*DINV(3)
-                        ELSE
                         END IF
                       END IF
                     END IF
@@ -6171,7 +6211,7 @@ IF(VERSION.EQ.0) THEN
                     CALL SIMPLELMTO_OFFSITEXVALUE('31',ISP1,ISP2,IND,ABS(DIS) &
      &                                          ,INTEGRAL,DINTEGRAL)
 
-!!$CALL SIMPLELMTO_OFFSITEXVALUE_TEST('31',ISP1,ISP2,IND,ABS(DIS))
+!CALL SIMPLELMTO_OFFSITEXVALUE_TEST('31',ISP1,ISP2,IND,ABS(DIS))
                     IF(DIS.LT.0.D0) THEN
                       SVAR=(-1.D0)**(L1+L2+L3+L4)
                       INTEGRAL=SVAR*INTEGRAL
@@ -6780,6 +6820,7 @@ CALL TIMING$CLOCKOFF('X31-B')
       INTEGER(4)  ,SAVE       :: ISP1SAVE=0,ISP2SAVE=0
       REAL(8)     ,SAVE       :: DISSAVE=0.D0
       REAL(8)     ,SAVE       :: G(LF)
+      REAL(8)     ,SAVE       :: DG(LF)
 !     **************************************************************************
       INTEGRAL=0.D0
       IF(ISP1.NE.ISP1SAVE.OR.ISP2.NE.ISP2SAVE.OR.DIS.NE.DISSAVE) THEN
@@ -6797,8 +6838,13 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         DISSAVE=DIS      
+!
+!       __INTERPOLATION FUNCTIONS: (1+LAMBDA*R)*EXP(-LAMBDA*R)__________________
+!       __EXPONENTIAL TAIL AND VANISHING SLOPE AT THE ORIGIN____________________
         G(:NF)=EXP(-OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS) &
-      &       *(1.D0+OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS) 
+     &        *(1.D0+OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS) 
+        DG(:NF)=-OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2*DIS &
+     &          /(1.D0+OFFSITEX(ISP1,ISP2)%LAMBDA(:)*DIS)*G(:NF)
       END IF
 !
       IF(ID.EQ.'22') THEN
@@ -6808,9 +6854,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$I4VAL('ISP2',ISP2)
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
-        INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
-        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
-     &                    *OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
+        INTEGRAL =SUM(OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*G(:NF))
+        DINTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X22(:NF,IND)*DG(:NF))
 !
       ELSE IF (ID.EQ.'31') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%X31)) THEN
@@ -6820,8 +6865,7 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
-        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
-     &                *OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*G(:NF))
+        DINTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%X31(:NF,IND)*DG(:NF))
 !
       ELSE IF (ID.EQ.'BONDU') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%BONDU)) THEN
@@ -6831,8 +6875,7 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%BONDU(:NF,IND)*G(:NF))
-        DINTEGRAL=-SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:) &
-     &                *OFFSITEX(ISP1,ISP2)%BONDU(:NF,IND)*G(:NF))
+        DINTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%BONDU(:NF,IND)*DG(:NF))
 !
       ELSE IF (ID.EQ.'OV') THEN
         IF(.NOT.ASSOCIATED(OFFSITEX(ISP1,ISP2)%OVERLAP)) THEN
@@ -6842,8 +6885,8 @@ CALL TIMING$CLOCKOFF('X31-B')
           CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
         END IF
         INTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*G(:NF))
-        DINTEGRAL=-DIS*SUM(OFFSITEX(ISP1,ISP2)%LAMBDA(:)**2 &
-     &                    *OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*G(:NF))
+        DINTEGRAL=SUM(OFFSITEX(ISP1,ISP2)%OVERLAP(:NF,IND)*DG(:NF))
+!
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$STOP('SIMPLELMTO_OFFSITEXVALUE')
@@ -7306,14 +7349,16 @@ CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
           DAA(:,:,1)=DAA(:,:,1)+DAA(:,:,I)
           DBB(:,:,1)=DBB(:,:,1)+DBB(:,:,I)
         ENDDO
-!       == DEDR IS THE ENERGY DERIVATIVE WITH RESPECT TO THE AXIAL FORCE
+!       == DEDR IS THE ENERGY DERIVATIVE WITH RESPECT TO THE AXIAL FORCE========
         DEDR(:)=DEDD*DR(:)/DIS
 !       == ADD TRANSVERSAL FORCE TO DEDR =======================================
         DO J=1,3
           DUROTA(:,:,J)=MATMUL(DUROTA(:,:,J),TRANSPOSE(UROTA))
           DUROTB(:,:,J)=MATMUL(DUROTB(:,:,J),TRANSPOSE(UROTB))
-          DEDR(J)=DEDR(J)+SUM(DAA(:,:,1)*TRANSPOSE(DUROTA(:,:,J))) &
-       &                 +SUM(DBB(:,:,1)*TRANSPOSE(DUROTB(:,:,J))) 
+!!$          DEDR(J)=DEDR(J)+SUM(DAA(:,:,1)*TRANSPOSE(DUROTA(:,:,J))) &
+!!$       &                 +SUM(DBB(:,:,1)*TRANSPOSE(DUROTB(:,:,J))) 
+          DEDR(J)=DEDR(J)+1.D0*( SUM(DAA(:,:,1)*TRANSPOSE(DUROTA(:,:,J))) &
+       &                        +SUM(DBB(:,:,1)*TRANSPOSE(DUROTB(:,:,J))) )
         ENDDO
 !       == EXTRACT FORCES AND STRESSES FROM DEDR ===============================
         FORCE(:,IATB)=FORCE(:,IATB)-DEDR(:)
@@ -7321,6 +7366,8 @@ CALL TIMING$CLOCKOFF('OFFX:ROTATE1')
         DO J=1,3
           DEDRBAS(:,J)=DEDRBAS(:,J)+REAL(DENMAT(NN)%IT(:))*DEDR(J)
         ENDDO
+!WRITE(*,FMT='("DEDR    ",I5,3F20.10)')NN,DEDR
+! 
 !
 !       ========================================================================
 !       == ROTATE HAMILTONIAN BACK                                            ==
@@ -7376,9 +7423,10 @@ CALL TIMING$CLOCKOFF('LOOP:OFFX')
 !     ==========================================================================
 !     == CONVERT DERIVATIVE INTO STRESSES                                     ==
 !     ==========================================================================
-      CALL LIB$INVERTR8(3,RBAS,RBASINV)
-      DEDRBAS=MATMUL(DEDRBAS,RBASINV)
-      STRESS=0.5D0*(DEDRBAS+TRANSPOSE(DEDRBAS))
+!          M_T DDOT(T)=-DE/DT
+      STRESS=MATMUL(RBAS,DEDRBAS)
+
+!     STRESS=DEDRBAS !THIS IS FOR TESTING THE NUMERICAL DERIVATIVES
 !
 !     ==========================================================================
 !     == CLEAN UP TO AVOID MEMORY LEAK                                        ==

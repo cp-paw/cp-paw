@@ -40,7 +40,8 @@ REAL(8)    :: STRESS(3,3)=0.D0   ! EXTERNAL STRESS TENSOR
 REAL(8)    :: PRESSURE=0.D0      ! EXTERNAL PRESSURE
 REAL(8)    :: DELTAT=0.D0
 REAL(8)    :: FRIC=0.D0
-REAL(8)    :: STRESS_I(3,3)=0.D0 ! INTERNAL STRESS TENSOR
+REAL(8)    :: STRESS_I(3,3)=0.D0   ! INTERNAL STRESS TENSOR
+REAL(8)    :: STRESS_EXT(3,3)=0.D0 ! EXTERNAL STRESS TENSOR
 REAL(8)    :: KINSTRESS(3,3)=0.D0 ! INTERNAL STRESS TENSOR
 REAL(8)    :: TP(3,3)=0.D0
 REAL(8)    :: T0(3,3)=0.D0       ! ACTUAL CELL 
@@ -122,11 +123,11 @@ CONTAINS
 !     ==========================================================================
 !     ==  OTHER CHECKS                                                        ==
 !     ==========================================================================
-      IF(DELTAT.EQ.0.D0) THEN
+      IF(DELTAT.LE.TINY(0.D0)) THEN
         CALL ERROR$MSG('TIME STEP HAS NOT BEEN SET')
         CALL ERROR$STOP('CELL_INITIALIZE')
       END IF
-      IF(TMASS.LE.0.D0) THEN
+      IF(TMASS.LE.TINY(0.D0)) THEN
         CALL CONSTANTS('BAR',MBAR)
         MBAR=MBAR*1.D+6
 !       == BULK MODULUS OF DIAMOND IS 5.45 MBAR ================================
@@ -155,7 +156,12 @@ END MODULE CELL_MODULE
      &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
+      REAL(8)               :: MEGA
+      REAL(8)               :: BAR ! 1 BAR IN A.U.
 !     **************************************************************************
+      CALL CONSTANTS$GET('MEGA',MEGA)
+      CALL CONSTANTS$GET('BAR',BAR)
+!
       CALL CELL_INITIALIZE()
       CALL REPORT$TITLE(NFIL,'UNIT CELL')
       IF(TSTART) THEN
@@ -169,6 +175,7 @@ END MODULE CELL_MODULE
       CALL REPORT$R8VAL(NFIL,'MASS',TMASS,'A.U.') 
       CALL REPORT$R8VAL(NFIL,'FRICTION',FRIC,'DT/2') 
       CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE,'A.U.') 
+      CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE/(MEGA*BAR),'MEGABAR') 
       CALL REPORT$CHVAL(NFIL,'CONSTRAINTYPE',CONSTRAINTTYPE) 
       CALL REPORT$R8VAL(NFIL,'REFERENCE VOLUME',VREF,'A.U.') 
       WRITE(NFIL,FMT='("REFERENCE UNIT CELL",T35," STRESS ")')
@@ -394,13 +401,9 @@ END MODULE CELL_MODULE
 !
 !     ==========================================================================
 !     ==  POTENTIAL ENERGY                                                    ==
+!     ==  CAUTION: AVAILABLE ONLY AFTER CALLING CELL$ETOT                     ==
 !     ==========================================================================
       IF(ID.EQ.'EPOT') THEN
-        IF(TMOVE.AND.(.NOT.TPROPAGATED)) THEN
-          CALL ERROR$MSG('DATA AVALAIBLE ONLY AFTER PROPAGATION')
-          CALL ERROR$CHVAL('ID',ID)
-          CALL ERROR$STOP('CELL$GETR8')
-        END IF
         VAL=EPOT
 !
 !     ==========================================================================
@@ -699,6 +702,69 @@ END MODULE CELL_MODULE
       END SUBROUTINE CELL$GETR8A
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CELL$ETOT()
+!     **************************************************************************
+!     ** ENERGY DUE TO THE EXTERNAL PRESSURE RESERVOIR                        **
+!     ** THE EXTERNAL STRESS IS KEPT INTERNALLY AS STRESS_EXT                 **
+!     **************************************************************************
+      USE CELL_MODULE, ONLY : ton &
+     &                       ,TPARRINELLORAHMAN &
+     &                       ,PRESSURE &
+     &                       ,SIGMA &
+     &                       ,T0 &
+     &                       ,VREF &
+     &                       ,EPOT &
+     &                       ,STRESS_EXT &
+     &                       ,CELL_INITIALIZE
+      IMPLICIT NONE
+      REAL(8)                   :: V0
+      REAL(8)                   :: AMAT(3,3)
+      REAL(8)                   :: ONE(3,3)
+      INTEGER(4)                :: I
+!     **************************************************************************
+      IF(.NOT.TON) RETURN
+      CALL CELL_INITIALIZE()
+!
+!     __UNIT MATRIX_____________________________________________________________
+      ONE=0.D0
+      DO I=1,3
+        ONE(I,I)=1.D0
+      ENDDO
+!
+!     == CURRENT UNIT-CELL VOLUME===============================================
+      V0=T0(1,1)*(T0(2,2)*T0(3,3)-T0(2,3)*T0(3,2)) &
+     &  +T0(2,1)*(T0(3,2)*T0(1,3)-T0(3,3)*T0(1,2)) &
+     &  +T0(3,1)*(T0(1,2)*T0(2,3)-T0(1,3)*T0(2,2)) 
+ 
+!     ==========================================================================
+!     == CALCULATE TOTAL ENERGY AND CORRESPONDING STRESSES                    ==
+!     ==========================================================================
+!     == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV! ===
+!     == TP=...+MATMUL(STRESS_EXT*TRANSPOSE(T0INV))*DT**2/TMASS/(1+FRIC) =======
+      EPOT=PRESSURE*V0
+      STRESS_EXT(:,:)=-PRESSURE*V0*ONE(:,:)
+!
+      IF(SUM(SIGMA**2).GT.TINY(0.D0)) THEN
+        CALL ERROR$MSG('IMPLEMENTATION OF GENERAL STRESSES IS NOT COMPLETED')
+        CALL ERROR$MSG('DO NOT SPECIFY EXTERNAL STRESS SIGMA')
+        CALL ERROR$MSG('ONLY THE EXTERNAL PRESSURE CAN BE SET')
+        CALL ERROR$STOP('CELL$ETOT')
+      END IF
+      IF(.NOT.TPARRINELLORAHMAN) THEN
+        CALL ERROR$MSG('IMPLENTATION NOT COMPLETED')
+        CALL ERROR$STOP('CELL$ETOT')
+        AMAT=VREF*MATMUL(T0,MATMUL(SIGMA,TRANSPOSE(T0)))
+        EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
+        AMAT=-AMAT
+!       == EXTERNAL PRESSURE ===================================================
+        AMAT=AMAT-ONE*PRESSURE*V0  ! -PV - V_0 T0*SIGMA*T0^T
+        EPOT=EPOT+PRESSURE*V0
+!       == TP=+MATMUL(AMAT,T0)*DT**2*(1+FRIC)
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$STOP()
 !     **************************************************************************
 !     **                                                                      **
@@ -713,16 +779,19 @@ END MODULE CELL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$PROPAGATE()
 !     **************************************************************************
-!     **                                                                      **
+!     ** propagate unit cell and calculate kinetic energy                     **
 !     **************************************************************************
       USE CELL_MODULE, ONLY : TON &
      &                       ,TMOVE &
      &                       ,TSTOP &
      &                       ,TPROPAGATED &
      &                       ,TPARRINELLORAHMAN &
-     &                       ,TP,T0,TM,TMM,V0,VREF,STRESS_I,CONSTRAINTTYPE &
+     &                       ,TP,T0,TM,TMM,V0,VREF &
+     &                       ,STRESS_I &
+     &                       ,STRESS_ext &
+     &                       ,CONSTRAINTTYPE &
      &                       ,DELTAT,TMASS &
-     &                       ,EKIN,EPOT,FRIC,KINSTRESS,PRESSURE,SIGMA &
+     &                       ,EKIN,FRIC,KINSTRESS,PRESSURE,SIGMA &
      &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       REAL(8)    :: AMAT(3,3)
@@ -733,7 +802,6 @@ END MODULE CELL_MODULE
       REAL(8)    :: ALPHADOT(3,3)
       REAL(8)    :: XPMAT(3,3),XMMAT(3,3)
       REAL(8)    :: ONE(3,3)
-      REAL(8)    :: STRESS_EXT(3,3)
       REAL(8)    :: SVAR1,SVAR2,SVAR3
       INTEGER(4) :: I,J,ITER,IC1,IC2
       LOGICAL(4),PARAMETER :: DONOTHING=.FALSE.
@@ -743,14 +811,20 @@ END MODULE CELL_MODULE
       REAL(8)                :: SMAT1(3,3),SMAT2(3,3),SMAT3(3,3)
 !     **************************************************************************
       IF(.NOT.TON) RETURN
-      IF(.NOT.TMOVE) RETURN
+      IF(.NOT.TMOVE) THEN
+        TMM=T0
+        TM=T0
+        TP=T0
+        EKIN=0.D0
+        TPROPAGATED=.TRUE.
+        RETURN
+      END IF
       CALL CELL_INITIALIZE()
 IF(DONOTHING) THEN
   TMM=T0
   TM=T0
   TP=T0
   EKIN=0.D0
-  EPOT=0.D0
   TPROPAGATED=.TRUE.
   RETURN
 END IF
@@ -878,18 +952,20 @@ END IF
       END IF
 
       IF(TPARRINELLORAHMAN) THEN
-!       == ENERGY AND STRESS OF THE VOLUME RESERVOIR. THE ENTHALPY IS  H=E+PV
-        EPOT=PRESSURE*V0
-!CAUTION: THIS IMPLEMENTATION ALLOWS ONLY FOR PRESSURE BUT NOT A GENERAL STRESS
-!THE VARIABLE STRESS IS IGNORED
-        STRESS_EXT(:,:)=-PRESSURE*V0*ONE
-!       == PROPAGATE LATTICE VECTORS ===========================================
+!       ========================================================================
+!       == PROPAGATE LATTICE VECTORS                                          ==
+!       == STRESS_I=INTERNAL STRESS FROM TOTAL ENERGY OF THE SYSTEM           ==
+!       == STRESS_EXT=EXTERNAL STRESS FROM VOLUME RESERVOIR                   ==
+!       == PRESSURE IS THE COMPRESSIVE EXTERNAL PRESSURE                      ==
+!       ========================================================================
         SVAR1=2.D0/(1.D0+FRIC)
         SVAR2=1.D0-SVAR1
         SVAR3=DELTAT**2/TMASS/(1.D0+FRIC)
         CALL LIB__INVERTR8(3,T0,T0INV)
-        TP=SVAR1*T0+SVAR2*TM &
-     &             +SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+        TP=SVAR1*T0 &
+     &    +SVAR2*TM &
+     &    +SVAR3*MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
+!!$
 !!$PRINT*,'==CELL$PROPAGATE NCONSTRAINT ',NCONSTRAINT
 !!$PRINT*,'==CELL$PROPAGATE CONSTRAINTTYPE ',CONSTRAINTTYPE
 !!$PRINT*,'==CELL$PROPAGATE STRESS_I ',STRESS_I
@@ -900,7 +976,9 @@ END IF
 !!$PRINT*,'==CELL$PROPAGATE T0 ',T0
 !!$PRINT*,'==CELL$PROPAGATE TP ',TP
 !!$PRINT*,'==CELL$PROPAGATE FT ',MATMUL(STRESS_I+KINSTRESS+STRESS_EXT,TRANSPOSE(T0INV))
-!       == CONSTRAINTS ========================================================
+!       ========================================================================
+!       == CONSTRAINTS                                                        ==
+!       ========================================================================
         IF(NCONSTRAINT.GT.0) THEN        
           ALLOCATE(B(NCONSTRAINT))
           ALLOCATE(X(NCONSTRAINT))
@@ -947,11 +1025,11 @@ END IF
         AMAT=MATMUL(SIGMA,TRANSPOSE(T0))
         AMAT=MATMUL(T0,AMAT)
         AMAT=AMAT*VREF       
-        EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
+!        EPOT=0.5D0*(AMAT(1,1)+AMAT(2,2)+AMAT(3,3))
         AMAT=-AMAT
 !       == EXTERNAL PRESSURE ===================================================
         AMAT=AMAT-ONE*PRESSURE*V0  ! -PV - V_0 T0*SIGMA*T0^T
-        EPOT=EPOT+PRESSURE*V0
+!        EPOT=EPOT+PRESSURE*V0
 !       == STRESS_I ============================================================
         AMAT=AMAT+STRESS_I+KINSTRESS  ! -DE/DALPHA -PV +V T0*SIGMA*T0^T
 !       == STRESS PER VOLUME**2 ================================================
@@ -1002,6 +1080,7 @@ END IF
      &                       ,TPROPAGATED 
       IMPLICIT NONE
 !     **************************************************************************
+      TPROPAGATED=.FALSE.
       STRESS_I=0.D0
       EKIN=0.D0
       EPOT=0.D0
@@ -1016,7 +1095,6 @@ END IF
       V0=T0(1,1) * (T0(2,2)*T0(3,3)-T0(3,2)*T0(2,3)) &
      &  +T0(2,1) * (T0(3,2)*T0(1,3)-T0(1,2)*T0(3,3)) &
      &  +T0(3,1) * (T0(1,2)*T0(2,3)-T0(2,2)*T0(1,3))
-      TPROPAGATED=.FALSE.
       RETURN
       END SUBROUTINE CELL$SWITCH
 !

@@ -331,12 +331,20 @@
 !     ==================================================================
 !     == LDA TOTAL ENERGY ==============================================
       CALL WAVES$ETOT
+!
 !     == EXTERNAL POTENTIAL ACTING ON ATOMS ============================
       CALL VEXT$APPLY
+!
 !     == OCCUPATIONS ===================================================
       CALL DYNOCC$GETR8('EPOT',SVAR)
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
       CALL ENERGYLIST$SET('OCCUPATIONAL ENTROPY TERM (-TS)',SVAR)
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
+!
+!     == UNIT CELL ========= ===================================================
+      CALL CELL$ETOT()
+      CALL CELL$GETR8('EPOT',SVAR)
+      CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
+      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
 !
 !     ==================================================================
 !     ==================================================================
@@ -414,9 +422,6 @@
 !     ==  PROPAGATE UNIT CELL                                         ==
 !     ==================================================================
       CALL CELL$PROPAGATE()
-      CALL CELL$GETR8('EPOT',SVAR)
-      CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
-      CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
 ! 
 !     ==================================================================
 !     ==  APPLY CONSTRAINTS TO ATOMIC COORDINATES                     ==
@@ -1133,9 +1138,11 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !
 !         == CELLOSTAT   =======================================================
           CALL CELL$GETL4('ON',TCHK)
-          CALL CELL$GETL4('MOVE',TCHK1)
-          IF(TCHK.AND.TCHK1) THEN
-            CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT KINETIC')
+          IF(TCHK) THEN
+            CALL CELL$GETL4('MOVE',TCHK1)
+            IF(TCHK1) THEN
+              CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT KINETIC')
+            END IF
             CALL ENERGYLIST$PRINTONE(NFILO,'CELLOSTAT POTENTIAL')
           END IF
 !          

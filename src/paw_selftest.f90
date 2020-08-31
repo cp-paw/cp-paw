@@ -190,7 +190,7 @@ END MODULE SELFTEST_MODULE
           DX=DIFFAMP*DBLE(I)
           SVAR=DFORCE(I)
           SVAR2=(DFORCE(I)-DEDDIFF)/(DFORCE(1)-DEDDIFF)
-          WRITE(NFILO,FMT='("DX ",ES10.2," DEDX(NU) ",ES20.10,"XX",ES20.10)') &
+          WRITE(NFILO,FMT='("DX ",ES10.2," DEDX(NU) ",ES20.10," XX",ES20.10)') &
      &                DX,SVAR,SVAR2
         ENDDO
         WRITE(NFILO,FMT='(72("="))')
