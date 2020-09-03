@@ -162,7 +162,6 @@ if test "$PARMFILE" != notset; then
   then
     LIBAR="ar"
   fi
-  MPI_HEADER=`grep '^MPI_HEADER' $PARMFILE | cut -d'"' -f2`
   SPECIAL=`grep '^SPECIAL' $PARMFILE | cut -d'"' -f2`
   #  
   # compose final variables
@@ -196,9 +195,6 @@ CPP="$CPP -traditional -nostdinc"
 ##  check if files are present                                         ##
 ##                                                                     ##
 #########################################################################
-echo '${MPI_HEADER}'
-AC_DEFINE([XX],${MPI_HEADER})
-echo ${XX}
 echo '============================='
 if test ["$TPARALLEL" = "T"]; then
   #________mpi include file
@@ -209,12 +205,6 @@ if test ["$TPARALLEL" = "T"]; then
       AC_MSG_RESULT(name of the mpi directory: $MPIDIR)
       AC_MSG_ERROR(mpi directory not found)
     fi
-##    AC_MSG_RESULT(check MPI include file)
-##    AC_CHECK_FILES($MPI_HEADER,ERROR=F,ERROR=T)
-##    if test ["$ERROR" = "T"]; then
-##      AC_MSG_RESULT(name of the mpi include file: $MPIDIR)
-##      AC_MSG_ERROR(mpi include file not found)
-##    fi
   else
     # mpidir is empty. error or ok?
     if test "$SPECIAL"="IBM" ; then
@@ -233,12 +223,12 @@ if test -n "$FFTDIR" ; then
     AC_MSG_RESULT(name of the FFT directory: FFTDIR=$FFTDIR)
     AC_MSG_ERROR(FFT directory not found)
   fi
-##  AC_MSG_RESULT(check FFT include file)
-##  AC_CHECK_FILES($FFT_HEADER,ERROR=F,ERROR=T)
-##  if test ["$ERROR" = "T"]; then
-##    AC_MSG_RESULT(name of the fftw include file: $FFT_HEADER)
-##    AC_MSG_ERROR(fftw include file not found)
-##  fi
+  AC_MSG_RESULT(check FFT include file)
+  AC_CHECK_FILES($FFT_HEADER,ERROR=F,ERROR=T)
+  if test ["$ERROR" = "T"]; then
+    AC_MSG_RESULT(name of the fftw include file: $FFT_HEADER)
+    AC_MSG_ERROR(fftw include file not found)
+  fi
 fi
 #
 #########################################################################
@@ -268,7 +258,6 @@ AC_SUBST(FFTDIR)
 AC_SUBST(MPIDIR)     
 AC_SUBST(FFT_HEADER)     
 AC_SUBST(LIBAR)     
-AC_SUBST(MPI_HEADER)     
 #
 #########################################################################
 ##                                                                     ##
@@ -463,9 +452,9 @@ AC_MSG_RESULT(blas library                   : $BLASDIR)
 AC_MSG_RESULT(lapack library                 : $LAPACKDIR)
 AC_MSG_RESULT(libs for Fourier transforms    : $FFTDIR)
 if test "$TPARALLEL" = "T"; then
-#  AC_MSG_RESULT(---------------------------------------------------------------)
-#  AC_MSG_RESULT(--------------specifics for parallel environment---------------)
-#  AC_MSG_RESULT(---------------------------------------------------------------)
+ #AC_MSG_RESULT(---------------------------------------------------------------)
+ #AC_MSG_RESULT(--------------specifics for parallel environment---------------)
+ #AC_MSG_RESULT(---------------------------------------------------------------)
   AC_MSG_RESULT(parallel envirnment considered : yes)
   AC_MSG_RESULT(compile command (parallel)     : $COMPILE_PARALLEL)
   AC_MSG_RESULT(link command w. flags(parallel): $LINK_PARALLEL)

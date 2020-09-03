@@ -3830,11 +3830,9 @@ END IF
 !     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
 !     ==========================================================================
       DO NN=1,NND
-WRITE(*,*)'BEFORE MPE-COMBINE ',THISTASK,NN,NND
-WRITE(*,*)'       MPE-COMBINE ',THISTASK,NN,SHAPE(OSDENMAT(NN)%MAT)
-WRITE(*,*)'       MPE-COMBINE ',THISTASK,NN,OSDENMAT(NN)%MAT(1,1,1)
+!       -- ONCE THE CODE FAILED WITHIN MPI IN THE FOLLOWING CALL. THE FAILURE --
+!       -- WAS NOT DETERMINISTIC -----------------------------------------------
         CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
-WRITE(*,*)'AFTER  MPE-COMBINE ',THISTASK,NN,OSDENMAT(NN)%MAT(1,1,1)
       ENDDO
 !
 !     ==========================================================================

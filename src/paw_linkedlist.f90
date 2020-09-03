@@ -2689,7 +2689,8 @@ CONTAINS
           IF(INDEX(DATUM(1:ISVAR),'"').NE.0) ISVAR=0
         END IF
         IF(ISVAR.NE.0) THEN
-          IF(INDEX(DATUM(1:ISVAR),"'").NE.0) ISVAR=0
+          IF(INDEX(DATUM(1:ISVAR),"'").NE.0) ISVAR=0    
+!          ': balance apostrophs for proper color coding of fortran code
         END IF
         IF(ISVAR.NE.0) THEN
           READ(DATUM(1:ISVAR-1),*)II

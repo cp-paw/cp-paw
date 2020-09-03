@@ -94,6 +94,11 @@
 ##  library selector for getrusage                                            ##
 ##    CPPVAR_USAGE_EXIST                                                      ##
 ##                                                                            ##
+##   libraries for sparse matrix diagonalization for use in paw_bands tool    ##
+##      CPPVAR_FFT_FFTW3 "
+##      CPPVAR_FEAST
+##      CPPVAR_JADAMILU
+##      CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)                   
 ##________________________________file extension______________________________##
 ##  FEXT: file extensions for source files required by the compiler           ##
 ##  may be "f" or "f90"                                                       ##
@@ -148,6 +153,12 @@ LDFLAGS_PARALLEL="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
 LIBS_SCALAR="-L/usr/local/lib -lfftw3"
 LIBS_PARALLEL="-L/usr/local/lib -lfftw3"
 #
-CPPFLAGS="-DCPPVAR_FFT_FFTW3 "
+#  variables for the c-prepocessor:
+#      CPPVAR_FFT_FFTW3 "
+#      CPPVAR_FEAST
+#      CPPVAR_JADAMILU
+#      CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
+#
+CPPFLAGS="-DCPPVAR_FFT_FFTW3"
 FEXT="f90"
 

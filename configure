@@ -2281,8 +2281,6 @@ CPP="$CPP -traditional -nostdinc"
 ##  check if files are present                                         ##
 ##                                                                     ##
 #########################################################################
-
-echo ${XX}
 echo '============================='
 if test "$TPARALLEL" = "T"; then
   #________mpi include file
@@ -2321,12 +2319,6 @@ fi
 $as_echo "name of the mpi directory: $MPIDIR" >&6; }
       as_fn_error $? "mpi directory not found" "$LINENO" 5
     fi
-##    AC_MSG_RESULT(check MPI include file)
-##    AC_CHECK_FILES($MPI_HEADER,ERROR=F,ERROR=T)
-##    if test ["$ERROR" = "T"]; then
-##      AC_MSG_RESULT(name of the mpi include file: $MPIDIR)
-##      AC_MSG_ERROR(mpi include file not found)
-##    fi
   else
     # mpidir is empty. error or ok?
     if test "$SPECIAL"="IBM" ; then
@@ -2370,12 +2362,40 @@ fi
 $as_echo "name of the FFT directory: FFTDIR=$FFTDIR" >&6; }
     as_fn_error $? "FFT directory not found" "$LINENO" 5
   fi
-##  AC_MSG_RESULT(check FFT include file)
-##  AC_CHECK_FILES($FFT_HEADER,ERROR=F,ERROR=T)
-##  if test ["$ERROR" = "T"]; then
-##    AC_MSG_RESULT(name of the fftw include file: $FFT_HEADER)
-##    AC_MSG_ERROR(fftw include file not found)
-##  fi
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: check FFT include file" >&5
+$as_echo "check FFT include file" >&6; }
+  as_ac_File=`$as_echo "ac_cv_file_$FFT_HEADER" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $FFT_HEADER" >&5
+$as_echo_n "checking for $FFT_HEADER... " >&6; }
+if eval \${$as_ac_File+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  test "$cross_compiling" = yes &&
+  as_fn_error $? "cannot check for file existence when cross compiling" "$LINENO" 5
+if test -r "$FFT_HEADER"; then
+  eval "$as_ac_File=yes"
+else
+  eval "$as_ac_File=no"
+fi
+fi
+eval ac_res=\$$as_ac_File
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_File"\" = x"yes"; then :
+
+cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$FFT_HEADER" | $as_tr_cpp` 1
+_ACEOF
+ERROR=F
+else
+  ERROR=T
+fi
+
+  if test "$ERROR" = "T"; then
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: name of the fftw include file: $FFT_HEADER" >&5
+$as_echo "name of the fftw include file: $FFT_HEADER" >&6; }
+    as_fn_error $? "fftw include file not found" "$LINENO" 5
+  fi
 fi
 #
 #########################################################################
@@ -2399,7 +2419,6 @@ fi
 
 
 #
-
 
 
 
@@ -3800,9 +3819,9 @@ $as_echo "lapack library                 : $LAPACKDIR" >&6; }
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: libs for Fourier transforms    : $FFTDIR" >&5
 $as_echo "libs for Fourier transforms    : $FFTDIR" >&6; }
 if test "$TPARALLEL" = "T"; then
-#  AC_MSG_RESULT(---------------------------------------------------------------)
-#  AC_MSG_RESULT(--------------specifics for parallel environment---------------)
-#  AC_MSG_RESULT(---------------------------------------------------------------)
+ #AC_MSG_RESULT(---------------------------------------------------------------)
+ #AC_MSG_RESULT(--------------specifics for parallel environment---------------)
+ #AC_MSG_RESULT(---------------------------------------------------------------)
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: parallel envirnment considered : yes" >&5
 $as_echo "parallel envirnment considered : yes" >&6; }
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: compile command (parallel)     : $COMPILE_PARALLEL" >&5

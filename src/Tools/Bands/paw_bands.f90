@@ -99,7 +99,8 @@ END MODULE REFCELL_MODULE
           CALL ERROR$STOP('PAW_BANDS')
         ENDIF
       ELSE IF(NBANDS.GT.1)THEN
-        CALL ERROR$MSG('TOO MANY BANDSTRCTURE-BLOCKS GIVEN, JUST ONE BLOCK ALLOWED')
+        CALL ERROR$MSG('TOO MANY BANDSTRCTURE-BLOCKS GIVEN')
+        CALL ERROR$MSG('JUST ONE BLOCK ALLOWED')
         CALL ERROR$I4VAL('NBANDS',NBANDS)
         CALL ERROR$STOP('PAW_BANDS')
       ENDIF
@@ -1337,7 +1338,8 @@ PRINT*,'N1B ',N1B,N2B,N3B
 
 !PRINT*,"LOX",IAT,ISP,LNX_,LMNX_,LOX_(1:LNX_),IBPRO,R(:,IAT)
         CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK(1:3,1:NG2) &
-     & ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
+     &                      ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX &
+     &                      ,YLM,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
       ENDDO
       IF(TTIMING)CALL TIMING$CLOCKOFF('PROJECTORS')
 
@@ -1414,7 +1416,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
       ALLOCATE(U(NG2*NDIM,NG2*NDIM))
       IF(TTEST_POSITIVE_DEFINITE)THEN
         CALL LIB$DIAGC8(NG2*NDIM,TI_SK,E,U)
-        PRINT*,"EIGENVALUES OF OVERLAPP MATRIX"
+        PRINT*,"EIGENVALUES OF OVERLAP MATRIX"
         DO I=1,NG2
           PRINT*,I,E(I)
           IF(E(I).LT.0.0D0)THEN
@@ -1427,8 +1429,55 @@ PRINT*,'N1B ',N1B,N2B,N3B
       IF(TTIMING)CALL TIMING$CLOCKON('DIAG')
       IF(METHOD.EQ.1)THEN
         CALL LAPACKOPTIONS$SETCH('GENERALEIGENVALUEC8_MODE','ZHEGVD')
+!
       ELSE IF(METHOD.EQ.2)THEN
         CALL LAPACKOPTIONS$SETCH('GENERALEIGENVALUEC8_MODE','ZHEGV')
+
+!     ==========================================================================
+!     == USE FEAST HTTP://WWW.ECS.UMASS.EDU/~POLIZZI/FEAST/
+!     ==========================================================================
+      ELSE IF(METHOD.EQ.3)THEN
+#IF DEFINED(CPPVAR_FEAST)
+        IF(TTIMING)CALL TRACE$PUSH('FEAST_ZHEGV')
+        CALL FEAST_ZHEGV(NG*NDIM,NB,-15.0D0,5.0D0,.FALSE.,TI_HK,TI_SK,E,U)
+        IF(TTIMING)CALL TRACE$POP
+#ELSE
+        CALL ERROR$MSG('LIBRARY FEAST FOR MATRIX DIAGONALIZATION MISSING')
+        CALL ERROR$MSG('SEE HTTP://WWW.ECS.UMASS.EDU/~POLIZZI/FEAST/')
+        CALL ERROR$I4VAL('METHOD',METHOD)
+        CALL ERROR$STOP('BANDS_KPOINT')
+#ENDIF
+!
+!     ==========================================================================
+!     == USE SLEPC HTTPS://SLEPC.UPV.ES/                                     ==
+!     ==========================================================================
+      ELSE IF(METHOD.EQ.4)THEN
+#IF DEFINED(CPPVAR_SLEPC)
+        IF(TTIMING)CALL TRACE$PUSH('SLEPC_ZHEGV')
+        CALL SLEPC_ZHEGV(NG,NB,TI_HK,TI_SK,E)           
+        IF(TTIMING)CALL TRACE$POP
+#ELSE
+        CALL ERROR$MSG('LIBRARY SLEPC FOR MATRIX DIAGONALIZATION MISSING')
+        CALL ERROR$MSG('SEE HTTPS://SLEPC.UPV.ES/')
+        CALL ERROR$I4VAL('METHOD',METHOD)
+        CALL ERROR$STOP('BANDS_KPOINT')
+#ENDIF
+!
+!     ==========================================================================
+!     == USE JADAMILU (HTTP://HOMEPAGES.ULB.AC.BE/~JADAMILU/)
+!     ==========================================================================
+      ELSE IF(METHOD.EQ.5)THEN
+#IF DEFINED(CPPVAR_JADAMILU)
+        IF(TTIMING)CALL TRACE$PUSH('JADAMILU_ZHEGV')
+        CALL JADAMILU_ZHEGV(NG,NB,TI_HK,TI_SK,E)            
+        IF(TTIMING)CALL TRACE$POP
+#ELSE
+        CALL ERROR$MSG('LIBRARY JADAMILU FOR MATRIX DIAGONALIZATION MISSING')
+        CALL ERROR$MSG('SEE HTTP://HOMEPAGES.ULB.AC.BE/~JADAMILU/')
+        CALL ERROR$I4VAL('METHOD',METHOD)
+        CALL ERROR$STOP('BANDS_KPOINT')
+#ENDIF
+!
       ELSE 
         CALL ERROR$MSG('METHOD_DIAG NOT IMPLEMENTED')
         CALL ERROR$I4VAL('METHOD_DIAG',METHOD)
@@ -2629,3 +2678,438 @@ PRINT*,'+++++++++++++++++ SPIN=',ISPIN,'++++++++++++++++++'
                             CALL TRACE$POP()
       RETURN
       END SUBROUTINE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE LAPACK_ZHEGVD(N,JOBZ,H,S,E)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      CHARACTER(1),INTENT(IN)  :: JOBZ
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8),INTENT(OUT)      :: E(N)
+      INTEGER(4)               :: LWORK,LRWORK,LIWORK,INFO
+      COMPLEX(8),ALLOCATABLE   :: WORK(:)
+      REAL(8)   ,ALLOCATABLE   :: RWORK(:)
+      INTEGER(4),ALLOCATABLE   :: IWORK(:)
+!     **************************************************************************
+
+      LWORK=-1
+      LRWORK=-1
+      LIWORK=-1
+      ALLOCATE(WORK(1))!COMPLEX(8)
+      ALLOCATE(RWORK(1))!REAL(8)
+      ALLOCATE(IWORK(1))!INTEGER(4)
+      
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E &
+     &           ,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      LWORK=WORK(1)
+      LRWORK=RWORK(1)
+      LIWORK=IWORK(1)
+      DEALLOCATE(WORK)
+      DEALLOCATE(RWORK)
+      DEALLOCATE(IWORK)
+      ALLOCATE(WORK(LWORK)) 
+      ALLOCATE(RWORK(LRWORK)) 
+      ALLOCATE(IWORK(LIWORK)) 
+      CALL ZHEGVD(1,JOBZ,'U',N,H,N,S,N,E &
+     &           ,WORK,LWORK,RWORK,LRWORK,IWORK,LIWORK,INFO)
+      DEALLOCATE(WORK)
+      DEALLOCATE(RWORK)
+      DEALLOCATE(IWORK)
+
+      IF(INFO.NE.0)THEN
+        CALL ERROR$MSG('ZHEGVD FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('LAPACK_ZHEGVD')
+      ENDIF
+      RETURN
+      END
+!
+#IF DEFINED(CPPVAR_FEAST)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE FEAST_ZHEGV(N,NB,EMIN,EMAX,TINITIALGUESS,H,S,E,U)
+!     **************************************************************************
+!     ** INTERFACE TO THE SPARSE-MATRIX DIAGONALIZATION                       **
+!     **                                                                      **
+!     **  HTTP://WWW.ECS.UMASS.EDU/~POLIZZI/FEAST/                            **
+!     **                                                                      **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      INTEGER(4)  ,INTENT(IN)  :: NB
+      REAL(8),INTENT(IN)       :: EMIN,EMAX
+      LOGICAL(4),INTENT(IN)    :: TINITIALGUESS
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8),INTENT(OUT)      :: E(N)
+      COMPLEX(8),INTENT(INOUT) :: U(N,N)
+      INTEGER(4)               :: NMAT
+      CHARACTER*1,PARAMETER    :: UPLO='F'
+      INTEGER(4)               :: FPM(64),M
+      REAL(8)                  :: EPSOUT
+      INTEGER(4)               :: INFO,LOOP,M0
+      REAL(8)                  :: RES(N)
+!     **************************************************************************
+      M0=NINT(2.0D0*REAL(NB,KIND=8))
+      NMAT=N
+
+      CALL FEASTINIT(FPM)
+      FPM(1)=1 !PRINT RUNTIME COMMENTS
+      FPM(2)=3 !NUMBER OF CONTOUR POINTS 
+      FPM(3)=0 !STOPPING CRITERIA FOR DOUBLE PRECISION EPS=10^(-FPM(3))
+!     FPM(4)=0 !MAXIMUM NUMBER OF REFINEMENT LOOPS
+      IF(TINITIALGUESS)THEN
+        FPM(5)=1 !PROVIDE INITIAL GUESS SUBSPACE
+      ELSE
+        FPM(5)=0 !PROVIDE INITIAL GUESS SUBSPACE
+        U=CMPLX(0.0D0,0.0D0)
+      ENDIF
+!     __CHOOSE CONVERGENCE CRITERIA:____________________________________________
+!     _________0 RELATIVE ERROR ON TRACE (EPSOUT<EPS)
+!     _________1 RELATIVE RESIDUAL (RES<EPS)
+      FPM(6)=0
+
+      M=0
+      E=0.D0
+      RES=0.D0
+      EPSOUT=0.D0
+      CALL ZFEAST_HEGV(UPLO,NMAT,H,NMAT,S,NMAT,FPM,EPSOUT&
+                   &,LOOP,EMIN/27.211D0, EMAX/27.211D0,M0,E,U,M,RES,INFO) 
+
+      IF(INFO.NE.0)THEN
+        CALL ERROR$MSG('FEAST_ZHEGV FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('FEAST_ZHEGV')
+      ENDIF
+      RETURN
+      END
+#ENDIF
+!
+#IF DEFINED(CPPVAR_JADAMILU)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE JADAMILU_ZHEGV(N,NB,H,S,E)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN)  :: N
+      INTEGER(4)  ,INTENT(IN)  :: NB
+      COMPLEX(8),INTENT(INOUT) :: H(N,N)
+      COMPLEX(8),INTENT(INOUT) :: S(N,N)
+      REAL(8)   ,INTENT(OUT)   :: E(N)
+      INTEGER(4)               :: INFO
+      COMPLEX(8),ALLOCATABLE   :: H_CSR(:)
+      INTEGER(4)               :: IH_CSR(N+1)
+      INTEGER(4),ALLOCATABLE   :: JH_CSR(:)
+      COMPLEX(8),ALLOCATABLE   :: S_CSR(:)
+      INTEGER(4)               :: IS_CSR(N+1)
+      INTEGER(4),ALLOCATABLE   :: JS_CSR(:)
+      INTEGER(4)               :: IERR,IPRINT,NEIG,NINIT,ITER,ICNTL(5)
+      REAL(8)                  :: TOL,RES(NB),SIGMA,SHIFT,MEM,DROPTOL,GAP
+      INTEGER(4)               :: LX,MAXSP,ISEARCH,MADSPACE
+      COMPLEX(8),ALLOCATABLE   :: X(:)
+      REAL(8)                  :: EIGS(NB)
+      INTEGER(4)               :: I,J,NCSR
+!     ******************************************************************
+      !CONVERT DENSE MATRIX TO CSR
+      NCSR=(N*N+N)/2
+      ALLOCATE(H_CSR(NCSR))
+      ALLOCATE(S_CSR(NCSR))
+      ALLOCATE(JH_CSR(NCSR))
+      ALLOCATE(JS_CSR(NCSR))
+
+      CALL DNSCSR (1D-6, N, N, N*N, H, N, H_CSR, JH_CSR, IH_CSR, IERR )
+      CALL DNSCSR (1D-6, N, N, N*N, S, N, S_CSR, JS_CSR, IS_CSR, IERR )
+      PRINT*, IERR
+      !DIAGONAL PREPROCESSING
+      JH_CSR(1)=-1
+      JS_CSR(1)=-1
+
+      IPRINT=6
+      NEIG=NB
+      NINIT=0
+      ITER=10000
+      TOL=1.0D-4
+      ICNTL(1)=0
+      ICNTL(2)=0
+      ICNTL(3)=0
+      ICNTL(4)=0
+      ICNTL(5)=1
+      MAXSP=20
+      ISEARCH=1
+      SIGMA=0.0D0
+      SHIFT=SIGMA
+      MEM=20.0D0
+      DROPTOL=1.D-3
+      MADSPACE=MAXSP
+
+      LX=N*(4*MAXSP+2*NEIG+1)+4*MAXSP*MAXSP
+      ALLOCATE(X(LX))
+
+      CALL ZPJD_GEP(N,H_CSR,JH_CSR,IH_CSR,S_CSR,JS_CSR,IS_CSR,&
+        &   EIGS,RES,X,LX,NEIG,SIGMA,ISEARCH,NINIT,&
+        &   MADSPACE,ITER,TOL,SHIFT,DROPTOL,MEM,ICNTL,IPRINT,INFO,GAP)
+      E(1:NB)=EIGS
+      IF(INFO.NE.0)THEN
+        CALL ERROR$MSG('ZHEGV FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('JADAMILU_ZHEGV')
+      ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DNSCSR(TOL,NROW,NCOL,NZMAX,DNS,NDNS,A,JA,IA,IERR )
+!     **************************************************************************
+!     ** DNSCSR CONVERTS DENSE TO COMPRESSED ROW SPARSE FORMAT.               **
+!     **                                                                      **
+!     ** DISCUSSION:                                                          **
+!     **                                                                      **
+!     ** THIS ROUTINE CONVERTS A DENSELY STORED MATRIX INTO A ROW ORIENTIED   **
+!     ** COMPACTLY SPARSE MATRIX.  IT IS THE REVERSE OF CSRDNS.               **
+!     **                                                                      **
+!     ** THIS ROUTINE DOES NOT CHECK WHETHER AN ELEMENT IS SMALL. IT CONSIDERS**
+!     ** THAT A(I,J) IS ZERO ONLY IF IT IS EXACTLY EQUAL TO ZERO.             **
+!     **                                                                      **
+!     ** MODIFIED: 07 JANUARY 2004                                            **
+!     ** AUTHOR:   YOUCEF SAAD                                                **
+!     ** PART OF JADAMILU                                                    **
+!     **                                                                      **
+!     ** PARAMETERS:                                                          **
+!     **                                                                      **
+!     **  INPUT,INTEGER(KIND=4) NROW: THE ROW DIMENSION OF THE MATRIX.        **
+!     **                                                                      **
+!     **  INPUT,INTEGER(KIND= 4) NCOL: THE COLUMN DIMENSION OF THE MATRIX.    **
+!     **                                                                      **
+!     **  INPUT,INTEGER(KIND=4) NZMAX: THE MAXIMUM NUMBER OF NONZERO ELEMENTS **
+!     **                               ALLOWED. THIS SHOULD BE SET TO BE THE  **
+!     **                               LENGTHS OF THE ARRAYS A AND JA.        **
+!     **                                                                      **
+!     **  INPUT,REAL DNS(NDNS,NCOL): AN NROW BY NCOL DENSE MATRIX.            **
+!     **                                                                      **
+!     **  INPUT,INTEGER(KIND=4) NDNS: THE FIRST DIMENSION OF DNS, WHICH MUST  **
+!     **                              BE AT LEAST NROW.                       **
+!     **                                                                      **
+!     **  OUTPUT,REAL A(*), INTEGER(KIND=4) JA(*), IA(NROW+1): THE MATRIX IN  **
+!     **                                CSR COMPRESSED SPARSE ROW FORMAT.     **
+!     **                                                                      **
+!     **  OUTPUT, INTEGER ( KIND = 4 ) IERR: ERROR INDICATOR.                 **
+!     **            0 MEANS NORMAL RETURN;
+!     **            I, MEANS THAT THE THE CODE STOPPED WHILE PROCESSING ROW I,**
+!     **               BECAUSE THERE WAS NO SPACE LEFT IN A AND JA,           **
+!     **               AS DEFINED BY NZMAX.                                   **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER ( KIND = 4 ),INTENT(IN) :: NCOL
+      INTEGER ( KIND = 4 ),INTENT(IN) :: NDNS
+      INTEGER ( KIND = 4 ),INTENT(IN) :: NROW
+      COMPLEX ( KIND = 8 ),INTENT(IN) :: DNS(NDNS,NCOL)
+      COMPLEX ( KIND = 8 ),INTENT(OUT)::  A(*)
+      INTEGER ( KIND = 4 ),INTENT(OUT):: IA(NROW+1)
+      INTEGER ( KIND = 4 ),INTENT(OUT):: JA(*)
+      INTEGER ( KIND = 4 ) :: IERR
+      INTEGER ( KIND = 4 ) :: I
+      INTEGER ( KIND = 4 ) :: J
+      INTEGER ( KIND = 4 ) :: NEXT
+      INTEGER ( KIND = 4 ) :: NZMAX
+      REAL ( KIND = 8 )    :: TOL
+!     **************************************************************************
+      IERR = 0
+      NEXT = 1
+      IA(1) = 1
+      DO I = 1, NROW
+        DO J = I, NCOL
+          IF ( ABS(DNS(I,J)).GT.TOL ) THEN
+            IF ( NZMAX < NEXT ) THEN
+              IERR = I
+              RETURN
+            END IF
+            JA(NEXT) = J
+            A(NEXT) = DNS(I,J)
+            NEXT = NEXT + 1
+          END IF
+        END DO
+        IA(I+1) = NEXT
+      END DO
+      RETURN
+      END
+#ENDIF
+!
+#IF DEFINED(CPPVAR_SLEPC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE SLEPC_ZHEGV(DIM,NB,HK,SK,E)
+!     **************************************************************************
+!     **                                                                      **
+!     **************************************************************************
+#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>
+      USE SLEPCEPS
+      USE ISO_C_BINDING
+      IMPLICIT NONE
+! FOR USAGE WITHOUT MODULES, UNCOMMENT THE FOLLOWING LINES AND REMOVE 
+! THE PREVIOUS LINES BETWEEN 'PROGRAM MAIN' AND 'IMPLICIT NONE'
+!
+!#INCLUDE <FINCLUDE/PETSC.H>
+!#INCLUDE <FINCLUDE/SLEPC.H>
+      INTEGER(4)  ,INTENT(IN)  :: DIM
+      INTEGER(4)  ,INTENT(IN)  :: NB
+      COMPLEX(8),INTENT(INOUT) :: HK(DIM,DIM)
+      COMPLEX(8),INTENT(INOUT) :: SK(DIM,DIM)
+      REAL(8),INTENT(OUT)      :: E(DIM)
+      INTEGER(4)               :: INFO=0
+#IF DEFINED(PETSC_USE_FORTRAN_DATATYPES)
+      TYPE(MAT)   ::   H2
+      TYPE(MAT)   ::   S2
+      TYPE(EPS)   ::   SOLVER
+#ELSE
+      MAT         ::   H2
+      MAT         ::   S2
+      EPS         ::   SOLVER
+#ENDIF
+      EPSTYPE     ::   TNAME
+      PETSCINT    ::   N, I,J, ISTART, IEND, ONE, TWO, THREE
+      PETSCINT    ::   NEV
+      PETSCINT    ::   ROW(1)
+      PETSCINT    ::   COL(DIM)
+      PETSCMPIINT ::   RANK
+      PETSCERRORCODE :: IERR
+      PETSCBOOL     :: FLG
+      PETSCINT       :: NNZ(DIM)
+      COMPLEX(8)     :: CSVAR1,CSVAR2
+      REAL(8)        :: TOL=1D-3
+!     **************************************************************************
+      ONE = 1
+      TWO = 2
+      THREE = 3
+      CALL SLEPCINITIALIZE(PETSC_NULL_CHARACTER,IERR)
+      CALL MPI_COMM_RANK(PETSC_COMM_WORLD,RANK,IERR)
+      N = DIM
+      !CALL PETSCOPTIONSGETINT(PETSC_NULL_CHARACTER,'-N',N,FLG,IERR)
+      
+      CALL MATCREATE(PETSC_COMM_WORLD,H2,IERR)
+      CALL MATSETSIZES(H2,PETSC_DECIDE,PETSC_DECIDE,N,N,IERR)
+      CALL MATSETFROMOPTIONS(H2,IERR)
+      CALL MATSETUP(H2,IERR)
+      DO I=1,DIM
+        NNZ(I)=0
+        DO J=1,DIM
+          IF(ABS(HK(I,J)).GT.TOL)NNZ(I)=NNZ(I)+1
+        ENDDO
+      ENDDO
+      PRINT*,"SUM",SUM(NNZ(:)),DIM*DIM &
+     &            ,REAL(SUM(NNZ(:)),KIND=8)/REAL(DIM*DIM,KIND=8)
+      CALL MATSEQAIJSETPREALLOCATION(H2,DIM,NNZ,IERR)
+      
+      CALL MATGETOWNERSHIPRANGE(H2,ISTART,IEND,IERR)
+      PRINT*, DIM, ISTART,IEND
+!      DO I=1,DIM
+!        COL(I)=I-1
+!      ENDDO
+      DO I=ISTART,IEND-1
+        !ROW(1)=I
+        !CALL MATSETVALUES(H2,ONE,ROW,DIM,COL,HK(:,I+1),INSERT_VALUES,IERR)
+        DO J=0,DIM-1
+          IF(ABS(HK(I+1,J+1)).GT.TOL)THEN
+            CALL MATSETVALUE(H2,I,J,HK(I+1,J+1),INSERT_VALUES,IERR)
+          ENDIF
+        ENDDO
+      ENDDO
+      CALL MATASSEMBLYBEGIN(H2,MAT_FINAL_ASSEMBLY,IERR)
+      CALL MATASSEMBLYEND(H2,MAT_FINAL_ASSEMBLY,IERR)
+      
+      
+      CALL MATCREATE(PETSC_COMM_WORLD,S2,IERR)
+      CALL MATSETSIZES(S2,PETSC_DECIDE,PETSC_DECIDE,N,N,IERR)
+      CALL MATSETFROMOPTIONS(S2,IERR)
+      CALL MATSETUP(S2,IERR)
+      DO I=1,DIM
+        NNZ(I)=0
+        DO J=1,DIM
+          IF(ABS(SK(I,J)).GT.TOL)NNZ(I)=NNZ(I)+1
+        ENDDO
+      ENDDO
+      PRINT*,"SUM",SUM(NNZ(:)),DIM*DIM &
+    &             ,REAL(SUM(NNZ(:)),KIND=8)/REAL(DIM*DIM,KIND=8)
+      CALL MATSEQAIJSETPREALLOCATION(S2,DIM,NNZ,IERR)
+      
+      CALL MATGETOWNERSHIPRANGE(S2,ISTART,IEND,IERR)
+      PRINT*, DIM, ISTART,IEND
+!      DO I=1,DIM
+!        COL(I)=I-1
+!      ENDDO
+      DO I=ISTART,IEND-1
+        !ROW(1)=I
+        !CALL MATSETVALUES(S2,ONE,ROW,DIM,COL,HK(:,I+1),INSERT_VALUES,IERR)
+        DO J=0,DIM-1
+          IF(ABS(SK(I+1,J+1)).GT.TOL)THEN
+            CALL MATSETVALUE(S2,I,J,SK(I+1,J+1),INSERT_VALUES,IERR)
+          ENDIF
+        ENDDO
+      ENDDO
+      CALL MATASSEMBLYBEGIN(S2,MAT_FINAL_ASSEMBLY,IERR)
+      CALL MATASSEMBLYEND(S2,MAT_FINAL_ASSEMBLY,IERR)
+      
+
+
+!      CALL MATVIEW(H2,      PETSC_VIEWER_STDOUT_SELF)
+!      CALL MATVIEW(S2,      PETSC_VIEWER_STDOUT_SELF)
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+!     CREATE THE EIGENSOLVER AND DISPLAY INFO
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+!     ** CREATE EIGENSOLVER CONTEXT
+      CALL EPSCREATE(PETSC_COMM_WORLD,SOLVER,IERR)
+      CALL EPSSETTYPE(SOLVER,EPSARPACK,IERR)
+!      CALL EPSSETTOLERANCES(SOLVER,1D-3,0,IERR)
+      CALL EPSSETWHICHEIGENPAIRS(SOLVER,EPS_SMALLEST_REAL,IERR)
+      CALL EPSSETDIMENSIONS(SOLVER,NB,PETSC_DECIDE,PETSC_DECIDE,IERR)
+!     ** SET OPERATORS. IN THIS CASE, IT IS A STANDARD EIGENVALUE PROBLEM
+      CALL EPSSETOPERATORS(SOLVER,H2,S2,IERR)
+      CALL EPSSETPROBLEMTYPE(SOLVER,EPS_GHEP,IERR)
+!     ** SET SOLVER PARAMETERS AT RUNTIME
+      !CALL EPSSETFROMOPTIONS(SOLVER,IERR)
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+!     SOLVE THE EIGENSYSTEM
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+      PRINT*,"SOLVING..."
+      CALL EPSSOLVE(SOLVER,IERR) 
+
+!     ** OPTIONAL: GET SOME INFORMATION FROM THE SOLVER AND DISPLAY IT
+      CALL EPSGETTYPE(SOLVER,TNAME,IERR)
+      IF (RANK .EQ. 0) THEN
+        WRITE(*,120) TNAME
+      ENDIF
+ 120  FORMAT (' SOLUTION METHOD: ',A)
+      CALL EPSGETDIMENSIONS(SOLVER,NEV,PETSC_NULL_INTEGER &
+     &                     ,PETSC_NULL_INTEGER,IERR)
+      IF (RANK .EQ. 0) THEN
+        WRITE(*,130) NEV
+      ENDIF
+ 130  FORMAT (' NUMBER OF REQUESTED EIGENVALUES:',I4)
+
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+!     DISPLAY SOLUTION AND CLEAN UP
+! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
+      CALL EPSPRINTSOLUTION(SOLVER,PETSC_NULL_OBJECT,IERR)
+      CALL EPSGETCONVERGED(SOLVER,NEV,IERR)
+      DO I=0,NEV-1
+        CALL EPSGETEIGENVALUE(SOLVER,I,CSVAR1,CSVAR2,IERR)
+        E(I+1)=REAL(CSVAR1,KIND=8)
+      ENDDO
+      CALL EPSDESTROY(SOLVER,IERR)
+      CALL MATDESTROY(H2,IERR)
+      CALL MATDESTROY(S2,IERR)
+
+      CALL SLEPCFINALIZE(IERR)
+
+      IF(INFO.NE.0)THEN
+        CALL ERROR$MSG('ZHEGV FAILED')
+        CALL ERROR$I4VAL('INFO',INFO)
+        CALL ERROR$STOP('SLEPC_ZHEGV')
+      ENDIF
+      END SUBROUTINE SLEPC_ZHEGV
+#ENDIF

@@ -4377,7 +4377,7 @@ LOGICAL(4):: TCHK
       COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
       REAL(8)               :: GBAS(3,3)
       INTEGER(4)            :: NTASKS,THISTASK
-      LOGICAL(4)            :: TKGROUP1,TKGROUP2
+      LOGICAL               :: TKGROUP1,TKGROUP2
       INTEGER(4)            :: IKPTL1,IKPTL2,IKPT
 !     ******************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
