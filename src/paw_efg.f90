@@ -3,47 +3,47 @@
 !GAMMMA PUNKT NICHT MEHR ERSTES ELEMENT AUF DEM G-GITTER
 !TEST EXTRAPOLATE
 !
-!.........................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE HYPERFINE_MODULE
-!*************************************************************************
-!**                                                                     **
-!**  NAME: HYPERFINE_MODULE                                             **
-!**                                                                     **
-!**                                                                     **
-!**  EVALUATES HYPER FINE PARAMETERS SUCH AS                            **
-!**    ELECTRIC FIELD GRADIENTS                                         **
-!**    ISOMER SHIFT                                                     **
-!**    FERMI CONTACT TERM                                               **
-!**    ANISOTROPIC HYPER FINE PARAMETER                                 **
-!**                                                                     **
-!**  STRUCTURE OF THE LINKED LIST                                       **
-!**  ============================                                       **
-!**  ~                                                                  **
-!**   ATOMNAME                                                          **
-!**     TEFG   SWITCH FOR ELECTRIC FIELD GRADIENT CALCULATION           **
-!**     TIS    SWITCH FOR ISOMER SHIFT CALCULATION                      **
-!**     TFC    SWITCH FOR FERMI CONTACT TERM CALCULATION                **
-!**     TANIS  SWITCH FOR ANISOTROPIC HYPERFINE PARAMETER               **
-!**     AE2VLM                                                          **
-!**     PS2VLM                                                          **
-!**     PSV                                                             **
-!**     PSRHOTPW                                                        **
-!**     AERHOTLM                                                        **
-!**     PSRHOTLM                                                        **
-!**     PSRHOSPW                                                        **
-!**     AERHOSLM                                                        **
-!**     PSRHOSLM                                                        **
-!**     PSRHOS2PW                                                       **
-!**     AERHOS2LM                                                       **
-!**     PSRHOS2LM                                                       **
-!**                                                                     **
-!**  REMARKS                                                            **
-!**     ANISOTROPIC HYPERFINE PARAMETER STILL INCORRECT                 **
-!**     ISOMER SHIFT MAY REQUIRE CORE POLARIZATION                      **
-!**     EFG NOT YET CONSISTENT PW AND PS-1                              **
-!**     EFG SECOND DERIVATIVES OR PREFACTOR OF THE QUADRATIC TERM?      **
-!**                                                                     **
-!*************************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: HYPERFINE_MODULE                                                   **
+!**                                                                           **
+!**                                                                           **
+!**  EVALUATES HYPER FINE PARAMETERS SUCH AS                                  **
+!**    ELECTRIC FIELD GRADIENTS                                               **
+!**    ISOMER SHIFT                                                           **
+!**    FERMI CONTACT TERM                                                     **
+!**    ANISOTROPIC HYPER FINE PARAMETER                                       **
+!**                                                                           **
+!**  STRUCTURE OF THE LINKED LIST                                             **
+!**  ============================                                             **
+!**  ~                                                                        **
+!**   ATOMNAME                                                                **
+!**     TEFG   SWITCH FOR ELECTRIC FIELD GRADIENT CALCULATION                 **
+!**     TIS    SWITCH FOR ISOMER SHIFT CALCULATION                            **
+!**     TFC    SWITCH FOR FERMI CONTACT TERM CALCULATION                      **
+!**     TANIS  SWITCH FOR ANISOTROPIC HYPERFINE PARAMETER                     **
+!**     AE2VLM                                                                **
+!**     PS2VLM                                                                **
+!**     PSV                                                                   **
+!**     PSRHOTPW                                                              **
+!**     AERHOTLM                                                              **
+!**     PSRHOTLM                                                              **
+!**     PSRHOSPW                                                              **
+!**     AERHOSLM                                                              **
+!**     PSRHOSLM                                                              **
+!**     PSRHOS2PW                                                             **
+!**     AERHOS2LM                                                             **
+!**     PSRHOS2LM                                                             **
+!**                                                                           **
+!**  REMARKS                                                                  **
+!**     ANISOTROPIC HYPERFINE PARAMETER STILL INCORRECT                       **
+!**     ISOMER SHIFT MAY REQUIRE CORE POLARIZATION                            **
+!**     EFG NOT YET CONSISTENT PW AND PS-1                                    **
+!**     EFG SECOND DERIVATIVES OR PREFACTOR OF THE QUADRATIC TERM?            **
+!**                                                                           **
+!*******************************************************************************
 USE LINKEDLIST_MODULE
 LOGICAL(4)   :: TON=.FALSE.    ! ON/OFF SWITCH
 LOGICAL(4)   :: TWAKE=.TRUE.   ! ON/OFF SWITCH TEMPORARY
@@ -53,7 +53,7 @@ LOGICAL(4)   :: TPW=.TRUE.     ! ON/OFF SWITCH PLANE WAVE PART
 LOGICAL(4)   :: TSPIN=.FALSE.  ! ON/OFF SWITCH SPINPOLARIZED
 LOGICAL(4)   :: TPWRHOS=.FALSE.! ON/OFF SWITCH SPINPOLARIZED
 CONTAINS
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE_NEWLIST
       IMPLICIT NONE
       IF(TINI) RETURN
@@ -61,13 +61,12 @@ CONTAINS
       TINI=.TRUE.
       RETURN
       END SUBROUTINE HYPERFINE_NEWLIST
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXTRAPOLATE(NP,RI,FI_,R0,F0)
-!     **                                                                **
-!     **  POLYNOMIAL EXTRAPOLATION OF ORDER NP FROM NP POINTS (RI,FI_)  **
-!     **  TO THE POINT (R0,F0)                                          **
-!     **                                                                **
-!     ********************************************************************
+!     **************************************************************************
+!     **  POLYNOMIAL EXTRAPOLATION OF ORDER NP FROM NP POINTS (RI,FI_)        **
+!     **  TO THE POINT (R0,F0)                                                **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NP
       REAL(8)   ,INTENT(IN) :: RI(NP)
@@ -77,7 +76,7 @@ CONTAINS
       REAL(8)               :: FI(NP)
       REAL(8)               :: SVAR
       INTEGER(4)            :: I,J,IP
-!     ********************************************************************
+!     **************************************************************************
       FI(:)=FI_(:)
       F0=0.D0
       DO I=1,NP
@@ -99,7 +98,7 @@ CONTAINS
       END SUBROUTINE EXTRAPOLATE
 END MODULE HYPERFINE_MODULE
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$SELECT(ID)
 !     ********************************************************************
 !     **  SELECT AN ATOM IN ORDER TO INPUT INFORMATION                  **
@@ -124,7 +123,7 @@ END MODULE HYPERFINE_MODULE
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$SETL4(ID,VAL)
 !     ********************************************************************
 !     **                                                                **
@@ -153,7 +152,7 @@ END MODULE HYPERFINE_MODULE
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$GETFLAG(IDENT1_,TCHK_)
 !     ********************************************************************
 !     **                                                                **
@@ -195,8 +194,8 @@ END MODULE HYPERFINE_MODULE
       RETURN
       END
 !
-!     ....................................................................
-      SUBROUTINE HYPERFINE$SET1CPOT(IDENT_,IAT_,gid,NR,NRX,LMRX,POT)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE HYPERFINE$SET1CPOT(IDENT_,IAT_,GID,NR,NRX,LMRX,POT)
 !     ********************************************************************
 !     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
 !     ********************************************************************
@@ -204,7 +203,7 @@ END MODULE HYPERFINE_MODULE
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       INTEGER(4)   ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      INTEGER(4)   ,INTENT(IN) :: gid
+      INTEGER(4)   ,INTENT(IN) :: GID
       INTEGER(4)   ,INTENT(IN) :: NR,NRX
       INTEGER(4)   ,INTENT(IN) :: LMRX
       REAL(8)      ,INTENT(IN) :: POT(NRX,LMRX)
@@ -213,8 +212,8 @@ END MODULE HYPERFINE_MODULE
       REAL(8)                  :: V2(5)
       INTEGER(4)   ,PARAMETER  :: NP=5
       REAL(8)                  :: YARRAY(NP)
-      REAL(8)                  :: R(nr)
-      INTEGER(4)               :: LM,IR
+      REAL(8)                  :: R(NR)
+      INTEGER(4)               :: LM
       CHARACTER(32)            :: ATOMNAME
 !     ********************************************************************
 ! 
@@ -240,14 +239,14 @@ END MODULE HYPERFINE_MODULE
 !     == V(R)=R(I)*V(I,J)*R(J)                                         ==
 !     == V2LM=LIM(R->0) V_L(R)/R**2                                    ==
 !     ===================================================================
-      call radial$r(gid,nr,r)
-      IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1X ",5E20.10)')r(1:np)
+      CALL RADIAL$R(GID,NR,R)
+      IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1X ",5E20.10)')R(1:NP)
       IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1V ",1E20.10)')POT(1,1)
       IF(LMRX.GE.9) THEN
         DO LM=5,9
-          YARRAY(1:np)=POT(1:np,LM)/r(1:np)**2
+          YARRAY(1:NP)=POT(1:NP,LM)/R(1:NP)**2
           IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1V2 ",5E20.10)')YARRAY
-!         CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,V2(LM-4))
+!         CALL EXTRAPOLATE(NP,R(1:NP),YARRAY,0.D0,V2(LM-4))
           V2(LM-4)=YARRAY(1)
         ENDDO
       ELSE
@@ -267,8 +266,8 @@ END MODULE HYPERFINE_MODULE
       RETURN
       END
 !
-!     ....................................................................
-      SUBROUTINE HYPERFINE$SET1CRHO(IDENT_,IDENT1_,IAT_,gid,NR,NRX,LMRX,RHO)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE HYPERFINE$SET1CRHO(IDENT_,IDENT1_,IAT_,GID,NR,NRX,LMRX,RHO)
 !     ********************************************************************
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN   **
 !     ********************************************************************
@@ -277,7 +276,7 @@ END MODULE HYPERFINE_MODULE
       CHARACTER(*),INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
       CHARACTER(*),INTENT(IN) :: IDENT1_ ! CAN BE 'TOT' OR 'SPIN' 
       INTEGER(4)  ,INTENT(IN) :: IAT_    ! ATOM INDEX (SEE ATOMLIST)
-      INTEGER(4)  ,INTENT(IN) :: gid
+      INTEGER(4)  ,INTENT(IN) :: GID
       INTEGER(4)  ,INTENT(IN) :: NR,NRX
       INTEGER(4)  ,INTENT(IN) :: LMRX
       REAL(8)     ,INTENT(IN) :: RHO(NRX,LMRX)
@@ -287,16 +286,15 @@ END MODULE HYPERFINE_MODULE
       LOGICAL(4)              :: TEFG    ! SWITCH FOR EFG
       LOGICAL(4)              :: TCHK
       REAL(8)                 :: RHO0
-      REAL(8)                 :: RI
       INTEGER(4)  ,PARAMETER  :: NP=4
-      REAL(8)                 :: XARRAY(NP),YARRAY(NP)
+      REAL(8)                 :: YARRAY(NP)
       REAL(8)                 :: WORK(NR)
       REAL(8)                 :: ANIS(5)
       REAL(8)                 :: V2(5)
-      INTEGER(4)              :: LM,IR
+      INTEGER(4)              :: LM
       CHARACTER(32)           :: ATOMNAME
       REAL(8)                 :: Z
-      real(8)                 :: r(nr)
+      REAL(8)                 :: R(NR)
 !     ********************************************************************
 ! 
 !     ===================================================================
@@ -352,13 +350,13 @@ END MODULE HYPERFINE_MODULE
         RETURN 
       END IF
       IF(LMRX.LT.1) THEN; CALL TRACE$POP; RETURN; END IF
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
 ! 
 !     ===================================================================
 !     == ISOMER SHIFT                                                  ==
 !     ===================================================================
       IF(TIS) THEN
-        CALL EXTRAPOLATE(NP,r(1:np),rho(1:np,1),0.D0,RHO0)
+        CALL EXTRAPOLATE(NP,R(1:NP),RHO(1:NP,1),0.D0,RHO0)
         IF(IDENT_.EQ.'AE') THEN
           CALL LINKEDLIST$SET(LL_HPRFN,'AERHOTLM',0,RHO0)
         ELSE IF(IDENT_.EQ.'PS') THEN
@@ -372,10 +370,10 @@ END MODULE HYPERFINE_MODULE
       IF(TFC) THEN
         IF(IDENT_.EQ.'AE') THEN
           CALL ATOMLIST$GETR8('Z',IAT_,Z)
-          CALL EFG_THOMSON(gid,NR,RHO,Z,RHO0)
+          CALL EFG_THOMSON(GID,NR,RHO,Z,RHO0)
           CALL LINKEDLIST$SET(LL_HPRFN,'AERHOSLM',0,RHO0)
         ELSE IF(IDENT_.EQ.'PS') THEN
-          CALL EXTRAPOLATE(NP,r(1:np),rho(1:np,1),0.D0,RHO0)
+          CALL EXTRAPOLATE(NP,R(1:NP),RHO(1:NP,1),0.D0,RHO0)
           CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOSLM',0,RHO0)
         END IF  
       END IF
@@ -386,10 +384,10 @@ END MODULE HYPERFINE_MODULE
       IF(TANIS) THEN
         IF(LMRX.GE.9) THEN
           DO LM=5,9
-            CALL RADIAL$POISSON(gid,NR,2,RHO(1,LM),WORK)
-            YARRAY(1:np)=WORK(1:np)/r(1:np)**2
+            CALL RADIAL$POISSON(GID,NR,2,RHO(1,LM),WORK)
+            YARRAY(1:NP)=WORK(1:NP)/R(1:NP)**2
             IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
-            CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,ANIS(LM-4))
+            CALL EXTRAPOLATE(NP,R(1:NP),YARRAY,0.D0,ANIS(LM-4))
           ENDDO
         ELSE
           ANIS(:)=0.D0
@@ -408,10 +406,10 @@ END MODULE HYPERFINE_MODULE
       IF(TEFG) THEN
         IF(LMRX.GE.9) THEN
           DO LM=5,9
-            CALL RADIAL$POISSON(gid,NR,2,RHO(1,LM),WORK)
-            YARRAY(1:np)=WORK(1:np)/r(1:np)**2
+            CALL RADIAL$POISSON(GID,NR,2,RHO(1,LM),WORK)
+            YARRAY(1:NP)=WORK(1:NP)/R(1:NP)**2
             IF(IDENT_.EQ.'PS') WRITE(*,FMT='("PS1VS2 ",5E20.10)')YARRAY
-            CALL EXTRAPOLATE(NP,r(1:np),YARRAY,0.D0,V2(LM-4))
+            CALL EXTRAPOLATE(NP,R(1:NP),YARRAY,0.D0,V2(LM-4))
           ENDDO
         ELSE
           V2(:)=0.D0
@@ -429,7 +427,7 @@ END MODULE HYPERFINE_MODULE
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$SETPWPOT(NG,G,VOFG)
 !     ********************************************************************
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN   **
@@ -439,7 +437,7 @@ END MODULE HYPERFINE_MODULE
       COMPLEX(8) ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4) ,INTENT(IN) :: NG            ! #(G-VECTORS FOR POT)
       REAL(8)    ,INTENT(IN) :: G(3,NG)       ! G-VECTORS FOR POT
-      COMPLEX(8) ,INTENT(IN) :: VOFG(NG)      ! POTENTIAL PLANE WAVE COEFFICIENTS
+      COMPLEX(8) ,INTENT(IN) :: VOFG(NG)    ! POTENTIAL PLANE WAVE COEFFICIENTS
       CHARACTER(32)          :: ATOMNAME      
       INTEGER(4)             :: IAT,I,J,IG    ! DO LOOP INDICES
       INTEGER(4)             :: NAT           ! NUMBER OF ATOMS
@@ -473,10 +471,10 @@ LOGICAL(4),PARAMETER :: TTEST=.FALSE.
 !           == EVALUATE ELECTRIC FIELD GRADIENTS                      ==
 !           == V(I,J) = D2V(R)/(DI*DJ)                                ==
 !           ============================================================
-IF(TTEST) then 
+IF(TTEST) THEN 
   ALLOCATE(WORK(6,NG))
   WORK=0.D0
-end if
+END IF
             DO I=1,3
               DO J=1,3
                 V(I,J)=0.D0
@@ -555,7 +553,7 @@ END IF
       RETURN
       END
 !
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$SETPWRHO(IDENT_,NG,G,RHOG)
 !     ********************************************************************
 !     **  GET SECOND DERIVATIVE OF THE RADIAL POTENTIAL AT THE ORIGIN   **
@@ -670,7 +668,7 @@ END IF
             V(2,2)=V(2,2)-TR/3.D0
             V(3,3)=V(3,3)-TR/3.D0
             CALL LINKEDLIST$SET(LL_HPRFN,'PSRHOS2PW',0,V)
-            CALL TRACE$PASS('HYPERFINE$SETPWRHO PW ANISOTROPIC HYPERFINE PARAMETER')
+            CALL TRACE$PASS('HYPERFINE$SETPWRHO PW ANISOTROPIC HYPERFINE PARM')
           END IF
         END IF
       ENDDO
@@ -678,11 +676,11 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE HYPERFINE$PRINT
-!     ******************************************************************
-!     **  CALCULATE ELECTRIC FIELD GRADIENTS AND PRINT RESULTS ON FILE**
-!     ******************************************************************
+!     **************************************************************************
+!     **  CALCULATE ELECTRIC FIELD GRADIENTS AND PRINT RESULTS ON FILE        **
+!     **************************************************************************
       USE HYPERFINE_MODULE
       USE MPE_MODULE
       IMPLICIT NONE
@@ -690,15 +688,14 @@ END IF
       CHARACTER(32)        :: ATOMNAME
       INTEGER(4)           :: NAT
       INTEGER(4)           :: NTASKID,NTASKNUM
-      INTEGER(4)           :: I,J,IAT,ISIGN
+      INTEGER(4)           :: I,J,IAT
       INTEGER(4)           :: NFILO
       LOGICAL(4)           :: TCHK
       LOGICAL(4)           :: TEFG
       LOGICAL(4)           :: TIS
       LOGICAL(4)           :: TFC
       LOGICAL(4)           :: TANIS
-      INTEGER(4),PARAMETER :: NAUX=6
-      REAL(8)              :: AUX(NAUX)
+      LOGICAL(4),PARAMETER :: TPR=.FALSE.
       REAL(8)              :: EFG(3,3),PSEFG(3,3),AEEFG1(3,3),PSEFG1(3,3)
       REAL(8)              :: ANIS(3,3)
       REAL(8)              :: RHOT0
@@ -710,21 +707,21 @@ END IF
       REAL(8)              :: U(3,3)
       REAL(8)              :: Y0
       REAL(8)              :: PI
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TWAKE) RETURN
                                 CALL TRACE$PUSH('HYPERFINE$PRINT')
 !
-!     ================================================================
-!     ==  PREPARE SOME CONSTANTS NEEDED LATER                       ==
-!     ================================================================
+!     ==========================================================================
+!     ==  PREPARE SOME CONSTANTS NEEDED LATER                                 ==
+!     ==========================================================================
       PI=4.D0*ATAN(1.D0)
       Y0=1.D0/SQRT(4.D0*PI)
       CALL MPE$QUERY('MONOMER',NTASKNUM,NTASKID)
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !
-!     ================================================================
-!     ==  LOOP THROUGH ALL ATOMS                                    ==
-!     ================================================================
+!     ==========================================================================
+!     ==  LOOP THROUGH ALL ATOMS                                              ==
+!     ==========================================================================
                          CALL TRACE$PASS('BEFORE LOOP')
       CALL REPORT$TITLE(NFILO,'HYPERFINE PARAMETERS') 
       CALL ATOMLIST$NATOM(NAT)
@@ -745,9 +742,9 @@ END IF
           TANIS=.FALSE.
         END IF
 !
-!       ================================================================
-!       ==  ISOMER SHIFT                                              ==
-!       ================================================================
+!       ========================================================================
+!       ==  ISOMER SHIFT                                                      ==
+!       ========================================================================
                          CALL TRACE$PASS('BEFORE IS:'//TRIM(ATOMNAME))
         IF(TIS) THEN
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'AERHOTLM',1,TCHK)
@@ -775,16 +772,17 @@ END IF
           CALL MPE$COMBINE('MONOMER','+',RHOT0)
                          CALL TRACE$PASS('BEFORE PRINT IS')
           IF(NTASKID.EQ.1) THEN
-            CALL REPORT$R8VAL(NFILO,'ELECTRON DENSITY AT THE NUCLEUS OF ATOM ' &
-      &                            //TRIM(ATOMNAME),RHOT0,'1/ABOHR^3')
+            CALL REPORT$R8VAL(NFILO &
+      &                      ,'ELECTRON DENSITY AT THE NUCLEUS OF ATOM ' &
+      &                       //TRIM(ATOMNAME),RHOT0,'1/ABOHR^3')
             CALL REPORT$R8VAL(NFILO,'ISOMERSHIFT FOR ATOM '//TRIM(ATOMNAME) &
-       &                            ,RHOT0,'E/A_0^3')                             
+       &                            ,RHOT0,'E/A_0^3')
           END IF
         END IF
 !
-!       ================================================================
-!       ==  FERMI CONTACT                                             ==
-!       ================================================================
+!       ========================================================================
+!       ==  FERMI CONTACT                                                     ==
+!       ========================================================================
                          CALL TRACE$PASS('BEFORE FC')
         IF(TFC.AND.TSPIN) THEN
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'AERHOSLM',1,TCHK)
@@ -841,16 +839,17 @@ END IF
           END IF
         END IF
         IF(TFC.AND.(.NOT.TSPIN).AND.NTASKID.EQ.1) THEN
-          CALL REPORT$STRING(NFILO,'NO FERMI CONTACT HYPERFINE FIELD FOR ATOM ' &
-      &                            //TRIM(ATOMNAME)//' BECAUSE NO SPIN POLARIZATION')
+          CALL REPORT$STRING(NFILO &
+      &                     ,'NO FERMI CONTACT HYPERFINE FIELD FOR ATOM ' &
+      &                     //TRIM(ATOMNAME)//' BECAUSE NO SPIN POLARIZATION')
         END IF
 !
-!       ================================================================
-!       ==  ELECTRIC FIELD GRADIENTS                                  ==
-!       ================================================================
+!       ========================================================================
+!       ==  ELECTRIC FIELD GRADIENTS                                          ==
+!       ========================================================================
                          CALL TRACE$PASS('BEFORE EFG')
         IF(TEFG) THEN
-!         == AE PART OF THE EFG ========================================
+!         == AE PART OF THE EFG ================================================
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'AEV2LM',1,TCHK)
           IF(.NOT.TCHK) THEN
             IF(NTASKNUM.EQ.1) THEN
@@ -861,12 +860,12 @@ END IF
           ELSE
             CALL LINKEDLIST$GET(LL_HPRFN,'AEV2LM',1,V2)
           END IF
-!         __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES______
-!         __VLM=V(R)/R**2___VXYZ=D2V/(DI*DJ)____________________________
+!         __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES______________
+!         __VLM=V(R)/R**2___VXYZ=D2V/(DI*DJ)____________________________________
           CALL DTOXYZ(V2,VXYZ)
           AEEFG1(:,:)=VXYZ(:,:)
           EFG(:,:)=VXYZ(:,:)
-!         == PS-PS1 PART  OF THE EFG ===================================
+!         == PS-PS1 PART  OF THE EFG ===========================================
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'PSV',1,TCHK)
           IF(TCHK) THEN
             CALL LINKEDLIST$GET(LL_HPRFN,'PSV',1,VXYZ)
@@ -875,20 +874,20 @@ END IF
             CALL LINKEDLIST$EXISTD(LL_HPRFN,'PSV2LM',1,TCHK)
             IF(TCHK) THEN
               CALL LINKEDLIST$GET(LL_HPRFN,'PSV2LM',1,V2)
-!             __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES__
+!             __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES__________
               CALL DTOXYZ(V2,VXYZ)
               PSEFG1(:,:)=VXYZ(:,:)
               EFG(:,:)=EFG(:,:)-VXYZ(:,:)
             END IF
           END IF
-!         ==  PARALLELIZATION: SUM OVER ALL NODES ======================
+!         ==  PARALLELIZATION: SUM OVER ALL NODES ==============================
                          CALL TRACE$PASS('IN EFG 4')
           CALL MPE$COMBINE('MONOMER','+',EFG)
           CALL MPE$COMBINE('MONOMER','+',PSEFG)
           CALL MPE$COMBINE('MONOMER','+',PSEFG1)
           CALL MPE$COMBINE('MONOMER','+',AEEFG1)
                          CALL TRACE$PASS('IN EFG 5')
-!         ==  CONVERSION AND PRINTOUT FOR ELECTRIC FIELD GRADIENTS =====
+!         ==  CONVERSION AND PRINTOUT FOR ELECTRIC FIELD GRADIENTS =============
           IF(NTASKID.EQ.1) THEN
             SVAR=1.D-21
             CALL CONSTANTS('VOLT',SVAR1) ; SVAR=SVAR/SVAR1 
@@ -896,10 +895,9 @@ END IF
             SVAR=-SVAR   ! THE ELEMENTARY CHARGE IS -1 ELECTRON CHARGE
             PRINT*,SVAR,'SHOULD BE EQUAL TO ',-9.7175D0
 !
-!           == TOTAL ELECTIC FIELD GRADIENT ============================
+!           == TOTAL ELECTIC FIELD GRADIENT ====================================
             CALL REPORT$STRING(NFILO,'ELECTRIC FIELD GRADIENT FOR ATOM ' &
       &                      //TRIM(ATOMNAME)//' IN [10**21*V/M**2]')
-!CALL DIAG(3,3,EFG,EIG,U)              
             CALL LIB$DIAGR8(3,EFG,EIG,U)
             WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
             DO I=1,3
@@ -907,37 +905,41 @@ END IF
      &                                        SVAR*EIG(I),(U(J,I),J=1,3)
             ENDDO
 !
-!           == PRINT PLANE WAVE CONTRIBUTION TO THE EFG ================
-            CALL REPORT$STRING(NFILO,'PSEUDO ELECTRIC FIELD GRADIENT FOR ATOM ' &
-      &                      //TRIM(ATOMNAME)//' IN [10**21*V/M**2]')
-            CALL LIB$DIAGR8(3,PSEFG,EIG,U)
-!CALL DIAG(3,3,PSEFG,EIG,U)              
-            WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
-            DO I=1,3
-              WRITE(NFILO,FMT='(T5,F10.5,T20,3F10.5)') &
-     &                                        SVAR*EIG(I),(U(J,I),J=1,3)
-            ENDDO
+!           == PRINT PLANE WAVE CONTRIBUTION TO THE EFG ========================
+            IF(TPR) THEN
+              CALL REPORT$STRING(NFILO &
+      &                         ,'PSEUDO ELECTRIC FIELD GRADIENT FOR ATOM ' &
+      &                         //TRIM(ATOMNAME)//' IN [10**21*V/M**2]')
+              CALL LIB$DIAGR8(3,PSEFG,EIG,U)
+              WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
+              DO I=1,3
+                WRITE(NFILO,FMT='(T5,F10.5,T20,3F10.5)') &
+     &                                                SVAR*EIG(I),(U(J,I),J=1,3)
+              ENDDO
+            END IF
 !
-!           == PRINT ONE-CENTER CONTRIBUTION TO THE EFG ================
-            CALL REPORT$STRING(NFILO,'ONE-CENTER ELECTIC FIELD GRADIENT FOR ATOM ' &
-      &                      //TRIM(ATOMNAME)//' IN [10**21*V/M**2]')
-            CALL LIB$DIAGR8(3,AEEFG1,EIG,U)
-!CALL DIAG(3,3,AEEFG1,EIG,U)              
-            WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
-            DO I=1,3
-              WRITE(NFILO,FMT='(T5,F10.5,T20,3F10.5)') &
-     &                                        SVAR*EIG(I),(U(J,I),J=1,3)
-            ENDDO
+!           == PRINT ONE-CENTER CONTRIBUTION TO THE EFG ========================
+            IF(TPR) THEN 
+              CALL REPORT$STRING(NFILO &
+      &                         ,'ONE-CENTER ELECTIC FIELD GRADIENT FOR ATOM ' &
+      &                         //TRIM(ATOMNAME)//' IN [10**21*V/M**2]')
+              CALL LIB$DIAGR8(3,AEEFG1,EIG,U)
+              WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
+              DO I=1,3
+                WRITE(NFILO,FMT='(T5,F10.5,T20,3F10.5)') &
+                                SVAR*EIG(I),(U(J,I),J=1,3)
+              ENDDO
+            END IF
                          CALL TRACE$PASS('IN EFG 8')
           END IF
         END IF
 !
-!       ================================================================
-!       ==  ANISOTROPIC HYPERFINE PARAMETER                           ==
-!       ================================================================
+!       ========================================================================
+!       ==  ANISOTROPIC HYPERFINE PARAMETER                                   ==
+!       ========================================================================
                          CALL TRACE$PASS('BEFORE ANIS')
         IF(TANIS.AND.TSPIN) THEN
-!         == AE PART OF THE EFG ========================================
+!         == AE PART OF THE EFG ================================================
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'AERHOS2LM',1,TCHK)
           IF(.NOT.TCHK) THEN
             IF(NTASKNUM.EQ.1) THEN
@@ -951,7 +953,7 @@ END IF
 !         __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES__
           CALL DTOXYZ(V2,VXYZ)
           ANIS(:,:)=VXYZ(:,:)
-!         == PS-PS1 PART  OF THE EFG ===================================
+!         == PS-PS1 PART  OF THE EFG ===========================================
           CALL LINKEDLIST$EXISTD(LL_HPRFN,'PSRHOS2PW',1,TPLANEWAVE)
           IF(TPLANEWAVE) THEN
             CALL LINKEDLIST$GET(LL_HPRFN,'PSRHOS2PW',1,VXYZ)
@@ -959,22 +961,22 @@ END IF
             CALL LINKEDLIST$EXISTD(LL_HPRFN,'PSRHOS2LM',1,TCHK)
             IF(TCHK) THEN
               CALL LINKEDLIST$GET(LL_HPRFN,'PSRHOS2LM',1,V2)
-!             __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES__
+!             __TRANSFORM LM REPRESENTATION INTO CARTESIAN COORDINATES__________
               CALL DTOXYZ(V2,VXYZ)
               ANIS(:,:)=ANIS(:,:)-VXYZ(:,:)
             END IF
           END IF
-!         == PARALLELIZATION : SUM OVER ALL NODES ======================
+!         == PARALLELIZATION : SUM OVER ALL NODES ==============================
           CALL MPE$COMBINE('MONOMER','+',ANIS)
 !         == CONVERSION AND PRINTOUT FOR ANISOTROPIC HYPERFINE PARAMETERS
           IF(NTASKID.EQ.1) THEN
             SVAR=1.D0/(4.D0*PI)
             CALL CONSTANTS('MU0',SVAR1)          ; SVAR=SVAR*SVAR1 
-!           ============================================================
+!           ====================================================================
             CALL CONSTANTS('BOHRMAGNETON',SVAR1) ; SVAR=SVAR*SVAR1
             CALL CONSTANTS('GE',SVAR1)           ; SVAR=SVAR*SVAR1
             CALL CONSTANTS('HBAR',SVAR1)         ; SVAR=SVAR*0.5D0*SVAR1
-!           ============================================================
+!           ====================================================================
             CALL CONSTANTS('TESLA',SVAR1)        ; SVAR=SVAR/SVAR1
             PRINT*,'THIS NUMBER SHOULD BE 12.531 : ',SVAR
             CALL REPORT$STRING(NFILO,'ANISOTROPIC HYPERFINE FIELD FOR ATOM ' &
@@ -982,7 +984,6 @@ END IF
             CALL REPORT$STRING(NFILO,'MULTIPLY MATRIX WITH A UNITY VECTOR ' &
      &                      //'INTO THE DIRECTION OF THE MAGNETIC FIELD')
             CALL LIB$DIAGR8(3,ANIS,EIG,U)              
-!CALL DIAG(3,3,ANIS,EIG,U)              
 !            __ FACTOR 0.5 IS THE ELECTRON SPIN____________
             WRITE(NFILO,FMT='(T5,"VALUE",T20,"DIRECTION")')
             DO I=1,3
@@ -991,14 +992,16 @@ END IF
           END IF
         END IF
         IF(TANIS.AND. (.NOT.TSPIN).AND.NTASKID.EQ.1)  THEN
-          WRITE(NFILO,FMT='("ANISOTROPIC HYPERFINE FIELD FOR ATOM : ",A)')ATOMNAME
-          WRITE(NFILO,FMT='("NOT OBTAINED BECAUSE CALCULATION IS NON SPIN POLARIZED")')
+          WRITE(NFILO,FMT='("ANISOTROPIC HYPERFINE FIELD FOR ATOM : ",A)')&
+     &                    ATOMNAME
+          WRITE(NFILO, &
+     &         FMT='("NOT OBTAINED BECAUSE CALCULATION IS NON SPIN POLARIZED")')
         END IF
       ENDDO
                                 CALL TRACE$POP
       RETURN
       END
-!     ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DTOXYZ(VLM_,V2)
 !     ****************************************************************
 !     **                                                            **
@@ -1022,8 +1025,6 @@ END IF
       REAL(8)             :: SQ5
       REAL(8)             :: SQ60
       REAL(8)             :: SQ16PI
-      REAL(8)             :: TR
-      REAL(8)             :: ONEBY3=1.D0/3.D0
 !     ****************************************************************
       PI=4.D0*ATAN(1.D0)
       SQ15=SQRT(15.D0)
@@ -1047,14 +1048,14 @@ END IF
       RETURN
       END SUBROUTINE DTOXYZ
 !
-!     ..................................................................
-      SUBROUTINE EFG_THOMSON(gid,NR,RHO,Z,RHO0)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE EFG_THOMSON(GID,NR,RHO,Z,RHO0)
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
       USE HYPERFINE_MODULE, ONLY: EXTRAPOLATE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: gid          ! GRID id
+      INTEGER(4),INTENT(IN) :: GID          ! GRID ID
       INTEGER(4),INTENT(IN) :: NR           ! #(GRID POINTS)
       REAL(8)   ,INTENT(IN) :: RHO(NR)      ! DENSITY
       REAL(8)   ,INTENT(IN) :: Z            ! ATOMIC NUMBER
@@ -1064,7 +1065,6 @@ END IF
       REAL(8)               :: RTH          ! THOMSON RADIUS/2
       REAL(8)               :: LAMBDA       ! PSI(R<<1)=C*R**(LAMBDA-1)
       REAL(8)               :: DLAM         ! 2*(LAMBDA-1)
-      REAL(8)               :: RI,XEXP
       REAL(8)               :: R(NR)        !RADIAL GRID
       REAL(8)               :: X1,CI(4)     ! POLYNOMIAL
       REAL(8)               :: RA,RB        ! INTEGRATION BOUNDS
@@ -1079,7 +1079,7 @@ END IF
       DLAM=2.D0*(LAMBDA-1.D0)   ! ASSUMES S-LIKE BEHAVIOR OF WAVE FUNCTIONS
       IF(Z.LT.1) DLAM=0.D0     
 !     == PREPARE RADIAL GRID ===========================================
-      call radial$r(gid,nr,r)
+      CALL RADIAL$R(GID,NR,R)
 !
 !     ================================================================== 
 !     == INTEGRATE TO THE SECOND K-POINT                              == 
@@ -1130,7 +1130,7 @@ END IF
       RETURN
       END
 !
-!     ................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EFG_THOMSON_OLD(R1,DEX,NR,RHO,Z,RHO0)
 !     ****************************************************************
 !     **                                                            **
@@ -1153,7 +1153,7 @@ END IF
       REAL(8)               :: RI,XEXP
       REAL(8)               :: A0,A1,A2,A3  ! POWER EXPANSION COEFFICIENTS 
       REAL(8)               :: S0,S1,S2,S3  ! INTEGRATION OF POWERS
-      REAL(8)               :: X12,X13,X32,X42,X43,Y13,Y42,Y43
+      REAL(8)               :: X12,X13,X32,X42,X43,Y13,Y43
       REAL(8)               :: SVAR,FAC
       REAL(8)               :: RA,RB ! INTEGRATION BOUNDS
       LOGICAL(4), PARAMETER :: TTEST=.FALSE.
