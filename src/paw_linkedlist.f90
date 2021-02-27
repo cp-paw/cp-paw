@@ -2690,7 +2690,7 @@ CONTAINS
         END IF
         IF(ISVAR.NE.0) THEN
           IF(INDEX(DATUM(1:ISVAR),"'").NE.0) ISVAR=0    
-!          ': balance apostrophs for proper color coding of fortran code
+!          ': BALANCE APOSTROPHS FOR PROPER COLOR CODING OF FORTRAN CODE
         END IF
         IF(ISVAR.NE.0) THEN
           READ(DATUM(1:ISVAR-1),*)II

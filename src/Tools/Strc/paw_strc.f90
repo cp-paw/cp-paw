@@ -203,6 +203,12 @@
       CALL FILEHANDLER$SETSPECIFICATION('XYZ','ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION('XYZ','FORM','FORMATTED')
 !
+      CALL FILEHANDLER$SETFILE('POSCAR',.TRUE.,-'.POSCAR.VASP')
+      CALL FILEHANDLER$SETSPECIFICATION('POSCAR','STATUS','UNKNOWN')
+      CALL FILEHANDLER$SETSPECIFICATION('POSCAR','POSITION','REWIND')
+      CALL FILEHANDLER$SETSPECIFICATION('POSCAR','ACTION','WRITE')
+      CALL FILEHANDLER$SETSPECIFICATION('POSCAR','FORM','FORMATTED')
+!
 !     ==========================================================================
 !     == READ STRUCTURE FILE                                                  ==
 !     ==========================================================================
@@ -341,6 +347,12 @@
 !     ==  WRITE XYZ FILE                                                      ==
 !     ==========================================================================
       CALL WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,NDUP,ROOTNAME)
+!
+!     ==========================================================================
+!     ==  WRITE STRUCTURE IN POSCAR FORMAT (OF THE VASP PACKAGE)              ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('POSCAR',NFIL)
+      CALL WRITEPOSCAR(NFIL,OBJECTNAME,RBAS,NAT,NAME,R)
 !
 !     ==========================================================================
 !     == CONVERT DATA TO ANGSTROM AND ELECTRON CHARGES                        ==
@@ -483,6 +495,7 @@
       CHARACTER(*),INTENT(IN):: NAME(NAT)
       REAL(8)   ,INTENT(IN) :: R(3,NAT)
       LOGICAL(4),INTENT(IN) :: TCRYSTAL
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)            :: NT
       REAL(8)               :: DISX
       INTEGER(4)            :: IAT,IAT1,IAT2,IT1,IT2,IT3
@@ -495,7 +508,6 @@
       REAL(8)               :: ANGLE(NBONDX,NBONDX)
       REAL(8)               :: ANGLEN
       REAL(8)               :: SVAR
-      REAL(8)               :: PI
       INTEGER(4)            :: NBOND,I,J,K
       INTEGER(4)            :: NFILO
       INTEGER(4)            :: IT(3)
@@ -503,7 +515,6 @@
       REAL(8)               :: RBASIN(3,3)
       CHARACTER(64)         :: EXTENDEDNAME1,EXTENDEDNAME2
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       ANGLEN=PI/180.D0*59.D0    ! MIN ANGLE=60 DEG
       DISX=6.5D0                 ! MAX DISTANCE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
@@ -774,7 +785,7 @@
       REAL(8)                 :: R(3,NAT)
 !     REAL(8)     ,INTENT(IN) :: R(3,NAT)
       REAL(8)     ,INTENT(IN) :: Q(NAT)
-      REAL(8)                 :: PI
+      REAL(8)     ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       INTEGER(4)              :: NEIGH(8,NAT)
       REAL(8)                 :: RBASINV(3,3) ! RBAS**(-1)
       REAL(8)                 :: A,B,C            ! LENGTH OF LATTICE VECTORS
@@ -783,7 +794,6 @@
       INTEGER(4)              :: IAT
       REAL(8)                 :: VEC(3),RBASNEU(3,3)
 !     **************************************************************************
-      PI=4.D0*ATAN(1.D0)
       NEIGH(:,:)=0
 !
 !     ==================================================================
@@ -844,6 +854,56 @@
       RETURN
       END
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITEPOSCAR(NFIL,OBJECTNAME,RBAS,NAT,NAME,R)
+!     **************************************************************************
+!     ** WRITE STRUCTURE TO THE POSCAR FORMAT FILE USED BY VASP               **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: OBJECTNAME
+      INTEGER(4)  ,INTENT(IN) :: NAT
+      REAL(8)     ,INTENT(IN) :: RBAS(3,3)
+      CHARACTER(*),INTENT(IN) :: NAME(NAT)
+      REAL(8)     ,INTENT(IN) :: R(3,NAT)
+      INTEGER(4)  ,PARAMETER  :: NSPX=100
+      INTEGER(4)              :: NSP=0
+      CHARACTER(2)            :: SPNAME(NSPX)
+      INTEGER(4)              :: SPNUM(NSPX)
+      REAL(8)                 :: ANGSTROM
+      INTEGER(4)              :: IAT
+!     **************************************************************************
+      CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+
+      WRITE(NFIL,*)TRIM(ADJUSTL(OBJECTNAME))
+      WRITE(NFIL,*)1.D0     ! SCALE FACTOR TO ANGSTROM
+      WRITE(NFIL,FMT='(3F20.8)')RBAS/ANGSTROM
+      NSP=1
+      SPNAME(NSP)=NAME(1)(1:2)
+      SPNUM(NSP)=1
+      DO IAT=2,NAT
+        IF(NAME(IAT)(1:2).EQ.SPNAME(NSP)) THEN
+          SPNUM(NSP)=SPNUM(NSP)+1
+        ELSE
+          NSP=NSP+1
+          IF(NSP.GT.NSPX) THEN
+            CALL ERROR$MSG('NUMBER OF ATOM TYPES EXCEEDS HARDCODED LIMIT')
+            CALL ERROR$I4VAL('NSPX',NSPX)
+            CALL ERROR$STOP('WRITEPOSCAR')
+          END IF
+          SPNAME(NSP)=NAME(IAT)(1:2)
+          SPNUM(NSP)=1
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='(100(A," "))')SPNAME(:NSP)
+      WRITE(NFIL,*)SPNUM(:NSP)
+      WRITE(NFIL,FMT='("CARTESIAN")')
+      DO IAT=1,NAT
+        WRITE(NFIL,FMT='(3F10.5)')R(:,IAT)/ANGSTROM
+      ENDDO
+
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEAVOGADRO(NFIL,OBJECTNAME,RBAS,NAT,NAME,R,Q,TCRYSTAL)

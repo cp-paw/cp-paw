@@ -27,8 +27,8 @@
 MODULE CELL_MODULE
 IMPLICIT NONE
 LOGICAL(4),PARAMETER :: TPARRINELLORAHMAN=.TRUE.
-LOGICAL(4),PARAMETER :: TNOBLUE=.TRUE.
-LOGICAL(4),PARAMETER :: TNORED=.TRUE.
+LOGICAL(4),PARAMETER :: TNOBLUE=.FALSE. ! .TRUE.
+LOGICAL(4),PARAMETER :: TNORED=.TRUE.  !.TRUE.
 ! CONSTRAINTTYPE CAN BE 'NONE','ISOTROPIC','NOSHEAR','FREE',NOSHEARFIXV
 CHARACTER(32) :: CONSTRAINTTYPE='FREE'
 LOGICAL(4) :: TINIT=.FALSE.
@@ -619,6 +619,7 @@ END MODULE CELL_MODULE
 !
 !     ==========================================================================
 !     ==  FRICTION MATRIX FOR ATOM DYNAMICS                                   ==
+!     ==  
 !     ==========================================================================
       ELSE IF(ID.EQ.'FRICMAT') THEN
         IF(LEN.NE.9) THEN
@@ -707,7 +708,7 @@ END MODULE CELL_MODULE
 !     ** ENERGY DUE TO THE EXTERNAL PRESSURE RESERVOIR                        **
 !     ** THE EXTERNAL STRESS IS KEPT INTERNALLY AS STRESS_EXT                 **
 !     **************************************************************************
-      USE CELL_MODULE, ONLY : ton &
+      USE CELL_MODULE, ONLY : TON &
      &                       ,TPARRINELLORAHMAN &
      &                       ,PRESSURE &
      &                       ,SIGMA &
@@ -779,7 +780,7 @@ END MODULE CELL_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CELL$PROPAGATE()
 !     **************************************************************************
-!     ** propagate unit cell and calculate kinetic energy                     **
+!     ** PROPAGATE UNIT CELL AND CALCULATE KINETIC ENERGY                     **
 !     **************************************************************************
       USE CELL_MODULE, ONLY : TON &
      &                       ,TMOVE &
@@ -788,7 +789,7 @@ END MODULE CELL_MODULE
      &                       ,TPARRINELLORAHMAN &
      &                       ,TP,T0,TM,TMM,V0,VREF &
      &                       ,STRESS_I &
-     &                       ,STRESS_ext &
+     &                       ,STRESS_EXT &
      &                       ,CONSTRAINTTYPE &
      &                       ,DELTAT,TMASS &
      &                       ,EKIN,FRIC,KINSTRESS,PRESSURE,SIGMA &

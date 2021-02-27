@@ -1359,13 +1359,13 @@ CONTAINS
       INTEGER(4)        :: I
 !     *****************************************************************
 !     ==========================================================================
-!     ==  allocate arrays for exchange                                        ==
-!     ==  allocated here rather than in the module to not overload the stack  ==
+!     ==  ALLOCATE ARRAYS FOR EXCHANGE                                        ==
+!     ==  ALLOCATED HERE RATHER THAN IN THE MODULE TO NOT OVERLOAD THE STACK  ==
 !     ==========================================================================
-      allocate(fxarray(ns2))
-      allocate(dfxarray(ns2))
-      allocate(d2fxarray(ns2))
-      allocate(d3fxarray(ns2))
+      ALLOCATE(FXARRAY(NS2))
+      ALLOCATE(DFXARRAY(NS2))
+      ALLOCATE(D2FXARRAY(NS2))
+      ALLOCATE(D3FXARRAY(NS2))
 
 !     =================================================================
 !     ==  INITIALIZE PARAMETERS TO LOCAL EXCHANGE ETC.               ==

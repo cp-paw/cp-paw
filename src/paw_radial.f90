@@ -914,7 +914,7 @@ END MODULE RADIAL_MODULE
       END SUBROUTINE RADIAL$SETI4
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE RADIAL$GETi4(GID,ID,VAL)
+      SUBROUTINE RADIAL$GETI4(GID,ID,VAL)
 !     **************************************************************************
 !     **                                                                      **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
@@ -922,7 +922,7 @@ END MODULE RADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
       CHARACTER(*),INTENT(IN) :: ID
-      integer(4)  ,INTENT(OUT):: VAL
+      INTEGER(4)  ,INTENT(OUT):: VAL
       INTEGER(4)              :: GIDS,TYPE
 !     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
@@ -943,7 +943,7 @@ END MODULE RADIAL_MODULE
       IMPLICIT NONE
       INTEGER(4)  ,INTENT(IN) :: GID
       CHARACTER(*),INTENT(IN) :: ID
-      character(*),INTENT(OUT):: VAL
+      CHARACTER(*),INTENT(OUT):: VAL
       INTEGER(4)              :: GIDS,TYPE
 !     **************************************************************************
       CALL RADIAL_RESOLVE(GID,GIDS,TYPE)
@@ -952,7 +952,7 @@ END MODULE RADIAL_MODULE
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('RADIAL$GETch')
+        CALL ERROR$STOP('RADIAL$GETCH')
       END IF
       RETURN
       END SUBROUTINE RADIAL$GETCH
@@ -1050,7 +1050,7 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE RADIAL$VALUE(GID,NR,F,R0,F0)
 !     **************************************************************************
-!     **  returns the interpolated function value f0 at r0                    **
+!     **  RETURNS THE INTERPOLATED FUNCTION VALUE F0 AT R0                    **
 !     *********************** COPYRIGHT: PETER BLOECHL, GOSLAR 2006 ************
       USE RADIAL_MODULE
       IMPLICIT NONE
@@ -1425,7 +1425,7 @@ END IF
         CALL ERROR$MSG('KAPPA MUST NOT BE NEGATIVE')
         CALL ERROR$R8VAL('KAPPA',KAPPA)
         CALL ERROR$STOP('RADIAL$YUKAWA')
-      ELSE IF(KAPPA.EQ.0) THEN
+      ELSE IF(KAPPA.EQ.0.D0) THEN
         CALL RADIAL$POISSON(GID,NR,L,RHO,V)
       END IF
       CALL RADIAL$R(GID,NR,R)
@@ -2783,7 +2783,6 @@ END MODULE LOGRADIAL_MODULE
       SUBROUTINE TEST_BESSEL()
       IMPLICIT NONE
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
-      INTEGER(4)           :: L=0
       INTEGER(4)           :: GID
       INTEGER(4),PARAMETER :: NR=250
       REAL(8)              :: R1=1.056D-4
@@ -2905,10 +2904,10 @@ STOP
       REAL(8)               :: FI(NG)
       REAL(8)               :: FOFGS(NG)
       REAL(8)               :: FOFGL(NG)
-      REAL(8)               :: FOFG_OLD(NG)
+!      REAL(8)               :: FOFG_OLD(NG)
       REAL(8)               :: XEXP,RI
       INTEGER(4)            :: ISVAR,I
-!      REAL(8)               :: PI
+!      REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: DIFF
       CHARACTER(16),PARAMETER :: TYPE='SIEGMAN'
 !      CHARACTER(16),PARAMETER :: TYPE='TALMAN'
@@ -2916,8 +2915,6 @@ STOP
 !      CHARACTER(16),PARAMETER :: TYPE='TALMANL'
 !     **************************************************************************
 !      CALL RADIAL$BESSELTRANSFORM_OLD(L,GID,NR,FOFR,GIDG,NG,FOFG_OLD)
-
-!      PI=4.D0*ATAN(1.D0)
 ! 
 !     ==========================================================================
 !     == ANALYZE G-GRID                                                       ==

@@ -107,6 +107,8 @@ CPP="$CPP $CPPOPT"
 ##                  check for fortran compilers                           ##
 ##            currently not used                                          ##
 ############################################################################
+# gfortran compiler (Open source)
+AC_CHECK_PROG(EXIST_COMPILER_GFORTRAN,gfortran,yes,no)
 # g95  compiler (Open source)
 AC_CHECK_PROG(EXIST_COMPILER_G95,g95,yes,no)
 # xlf90 compiler (IBM)

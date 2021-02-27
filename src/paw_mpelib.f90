@@ -5,11 +5,19 @@
 ! ASSUMED RANK : DIMENSION(..)
 ! RANK INTRINSIC
 !
-!
 ! -)   CHANGE "LENG=<SIZE>" TO
 !      "LENG=1;  IF(RANK(VAL).NE.0) LENG=SIZE(VAL)"
 !
+! -) WITH ASSUMED RANK, THE TYPEID SPECIFIER IN THE TEMPLATE
+!     BECOMES REDUNDANT
+!
 ! -) LIGHTEN TEMPLATE FROM RANK USING ASSUMED RANK FOR VAL
+!    
+!     (<RANKID><SIZE><RESHAPE(VAL)><RANK>)
+!                       =([],[],[],[])
+! -) COMPARE WITH PAW_MPELIB_TOOMUCH.F90
+!      (DO NOT USE MPE_STATUS_SIZE IN THE WAY IT IS USED THERE!)
+!
 !*******************************************************************************
 !**                                                                           **
 !**  NAME: MPELIB                                                             **
@@ -1751,7 +1759,7 @@ END MODULE MPE_MODULE
 !     == RETURN THE TOTAL NUMBER OF TASKS                             ==
 !     == AND THE ID OF THIS TASK [1 ..NTASKS]                         ==
 !     ******************************************************************
-      USE MPE_MPIF_MODULE, only: NTASKS,THISTASK
+      USE MPE_MPIF_MODULE, ONLY: NTASKS,THISTASK
       IMPLICIT NONE 
       CHARACTER(*),INTENT(IN)  :: CID   ! COMMUNICATOR ID
       INTEGER(4)  ,INTENT(OUT) :: NTASKS_   !#(TASKS IN THE GROUP)
@@ -1940,7 +1948,7 @@ END MODULE MPE_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE$CLOCKREPORT(NFIL)
-      USE MPE_MPIF_MODULE, only : BROADCAST_CLOCK &
+      USE MPE_MPIF_MODULE, ONLY : BROADCAST_CLOCK &
      &                           ,SENDRECEIVE_CLOCK &
      &                           ,SEND_CLOCK &
      &                           ,RECEIVE_CLOCK &

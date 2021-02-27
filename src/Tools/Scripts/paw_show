@@ -178,7 +178,7 @@ fi
 #===================================================================
 #  extract data from protocoll file                               ==
 #===================================================================
-grep "!>" ${ROOT}.prot | sed 's/!>/!> /1' \
+grep "\!>" ${ROOT}.prot | sed 's/!>/!> /1' \
                        | sed 's/-/ -/g' \
                        | gawk -v CONVFMT=%.17g "$AWKSTRING" \
                        > ${TMPFILE}
