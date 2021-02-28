@@ -7989,6 +7989,7 @@ USE LMTO_TWOCENTER_MODULE, ONLY : TPR
        TYPE(SEGMENT_TYPE),ALLOCATABLE  :: STACK(:) !(LSTACKX)
        TYPE(SEGMENT_TYPE)     :: SEGMENT1
        TYPE(SEGMENT_TYPE)     :: SEGMENT2
+       TYPE(SEGMENT_TYPE)     :: SEGMENT0
        INTEGER(4)             :: NSEGMENTS
        REAL(8)                :: ERROR ! CURRENT ERROR ESTIMATE
        REAL(8)                :: ERRMAX,ERRMIN
@@ -8045,6 +8046,8 @@ END IF
 !        =======================================================================
          CALL NEWADAPT_BASICRULE(SEGMENT1)
          CALL NEWADAPT_BASICRULE(SEGMENT2)
+PRINT*,'1 SEGMENT1%DIVIDEAXIS=',SEGMENT1%DIVIDEAXIS &
+     ,' SEGMENT2%divideaxis=',SEGMENT2%DIVIDEAXIS
 !
 !        =======================================================================
 !        == UPDATE TOTALS                                                     ==
@@ -8058,9 +8061,9 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
 !        == ORDER THE TWO SEGMENTS SO THAT SEGMENT1 HAS THE LARGER ERROR      ==
 !        =======================================================================
          IF(SEGMENT2%ERR.GT.SEGMENT1%ERR) THEN
-           STACK(1)=SEGMENT1
+           SEGMENT0=SEGMENT1
            SEGMENT1=SEGMENT2
-           SEGMENT2=STACK(1)
+           SEGMENT2=SEGMENT0
          END IF
 !
 !        =======================================================================
@@ -8092,6 +8095,11 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
            IF(I.LE.1) EXIT
          ENDDO
          STACK(I)=SEGMENT2
+PRINT*,'2 SEGMENT1%ERR=',SEGMENT1%ERR,' SEGMENT2%ERR=',SEGMENT2%ERR
+PRINT*,'2 STACK%ERR=',STACK(:NSEGMENTS)%ERR
+PRINT*,'2 SEGMENT1%DIVIDEAXIS=',SEGMENT1%DIVIDEAXIS &
+       ,' SEGMENT2%DIVIDEAXIS=',SEGMENT2%DIVIDEAXIS
+PRINT*,'2 STACK%DIVIDEAXIS=',STACK(:NSEGMENTS)%DIVIDEAXIS
        ENDDO
        CALL ERROR$MSG('LOOP NOT CONVERGED')
        CALL ERROR$STOP('NEWADAPT$EVALUATE')
