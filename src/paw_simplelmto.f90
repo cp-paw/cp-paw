@@ -8047,7 +8047,7 @@ END IF
          CALL NEWADAPT_BASICRULE(SEGMENT1)
          CALL NEWADAPT_BASICRULE(SEGMENT2)
 PRINT*,'1 SEGMENT1%DIVIDEAXIS=',SEGMENT1%DIVIDEAXIS &
-     ,' SEGMENT2%divideaxis=',SEGMENT2%DIVIDEAXIS
+       ,' SEGMENT2%divideaxis=',SEGMENT2%DIVIDEAXIS
 !
 !        =======================================================================
 !        == UPDATE TOTALS                                                     ==
