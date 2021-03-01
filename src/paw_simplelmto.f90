@@ -8046,8 +8046,6 @@ END IF
 !        =======================================================================
          CALL NEWADAPT_BASICRULE(SEGMENT1)
          CALL NEWADAPT_BASICRULE(SEGMENT2)
-PRINT*,'1 SEGMENT1%DIVIDEAXIS=',SEGMENT1%DIVIDEAXIS &
-      ,' SEGMENT2%divideaxis=',SEGMENT2%DIVIDEAXIS
 !
 !        =======================================================================
 !        == UPDATE TOTALS                                                     ==
@@ -8067,7 +8065,7 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
          END IF
 !
 !        =======================================================================
-!        == Expand stack and place new segments on default positions          ==
+!        == EXPAND STACK AND PLACE NEW SEGMENTS ON DEFAULT POSITIONS          ==
 !        =======================================================================
          NSEGMENTS=NSEGMENTS+1
          IF(NSEGMENTS.GT.LSTACKX) THEN
@@ -8083,20 +8081,9 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
 !        == INSERT SEGMENT1 SEARCHING FROM TOP OF THE STACK                   ==
 !        =======================================================================
          ERRMAX=SEGMENT1%ERR
-
-!!$ previous buggy version: for nsegments=1, stack(2) IS ADDRESSED,
-!!$ WHICH IS RANDOM
-!!$         I=1
-!!$         DO WHILE(ERRMAX.LT.STACK(I+1)%ERR) 
-!!$           STACK(I)=STACK(I+1)
-!!$           I=I+1
-!!$           IF(I.GE.NSEGMENTS) EXIT
-!!$         ENDDO
-!!$         STACK(I)=SEGMENT1
-
          DO I=2,NSEGMENTS
 !          __ENSURE THAT STACK(I-1).GE.STACK(I)_________________________________
-           IF(STACK(I)%err.GT.ERRMAX) THEN  
+           IF(STACK(I)%ERR.GT.ERRMAX) THEN  
              STACK(I-1)=STACK(I)
            ELSE
              STACK(I-1)=SEGMENT1    
@@ -8108,31 +8095,15 @@ IF(TPR.AND.MODULO(NSEGMENTS,1000).EQ.0)PRINT*,'NEXT ',NSEGMENTS,VALUE,ERROR,STAC
 !        == INSERT SEGMENT2 SEARCHING FROM BOTTOM OF THE STACK                ==
 !        =======================================================================
          ERRMIN=SEGMENT2%ERR
-
-!!$ previous version: 
-!!$         I=NSEGMENTS
-!!$         DO WHILE(ERRMIN.GT.STACK(I-1)%ERR) 
-!!$           STACK(I)=STACK(I-1)
-!!$           I=I-1
-!!$           IF(I.LE.1) EXIT
-!!$         ENDDO
-!!$         STACK(I)=SEGMENT2
-        
          DO I=NSEGMENTS-1,1,-1
 !          __ENSURE THAT STACK(I).GE.STACK(I+1)_________________________________
-           IF(STACK(I)%err.LT.ERRMIN) THEN
+           IF(STACK(I)%ERR.LT.ERRMIN) THEN
              STACK(I+1)=STACK(I)
            ELSE
              STACK(I+1)=SEGMENT1
              EXIT
            END IF
          ENDDO
-
-PRINT*,'2 SEGMENT1%ERR=',SEGMENT1%ERR,' SEGMENT2%ERR=',SEGMENT2%ERR
-PRINT*,'2 STACK%ERR=',STACK(:NSEGMENTS)%ERR
-PRINT*,'2 SEGMENT1%DIVIDEAXIS=',SEGMENT1%DIVIDEAXIS &
-       ,' SEGMENT2%DIVIDEAXIS=',SEGMENT2%DIVIDEAXIS
-PRINT*,'2 STACK%DIVIDEAXIS=',STACK(:NSEGMENTS)%DIVIDEAXIS
        ENDDO
        CALL ERROR$MSG('LOOP NOT CONVERGED')
        CALL ERROR$STOP('NEWADAPT$EVALUATE')
