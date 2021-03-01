@@ -146,7 +146,7 @@
       INTEGER(4)            :: LX
       REAL(8)               :: K 
       REAL(8)               :: YLM(LMX)
-      REAL(8)               :: X,XR,Y,DYDX
+      REAL(8)               :: X,Y,DYDX
       INTEGER(4)            :: LM,M
       INTEGER(4)            :: L
       LOGICAL(4)            :: TCAP
@@ -174,16 +174,16 @@
         END IF 
 !
 !       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
-        TCAP=RAD.GT.0.D0
+        TCAP=RAD.GT.0.d0
         IF(TCAP) THEN
-          B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
-          A=Y/X**L-B*X**2
+          B=0.5D0*(  DYDX*X-REAL(L  ,KIND=8)*Y ) / X**(L+2)
+          A=0.5d0*( -DYDX*X+REAL(L+2,KIND=8)*Y ) / X**L ! A=Y/X**L-B*X**2
           IF(L.EQ.0) THEN
-            Y=A+B*XR**2
-            DYDX=2.D0*B*XR
+            Y=A+B*X**2
+            DYDX=2.D0*B*X
           ELSE
-            Y=A*XR**L+B*XR**(L+2)
-            DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
+            Y=A*X**L+B*X**(L+2)
+            DYDX=REAL(L,KIND=8)*A*X**(L-1)+REAL(L+2)*B*X**(L+1)
           END IF
         END IF  
 
@@ -220,7 +220,7 @@
       REAL(8)               :: YLM((1+INT(SQRT(REAL(LMX)+1.D-5)))**2)
       INTEGER(4)            :: LX
       REAL(8)               :: K 
-      REAL(8)               :: X,XR,Y,DYDX
+      REAL(8)               :: X,Y,DYDX
       INTEGER(4)            :: LM,M
       INTEGER(4)            :: L,I
       INTEGER(4)            :: LPRIME,MPRIME,LMPRIME
@@ -263,13 +263,13 @@
         TCAP=RAD.GT.0.D0
         IF(TCAP) THEN
           B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
-          A=Y/X**L-B*X**2
+          A=0.5d0*( -DYDX*X+REAL(L+2,KIND=8)*Y ) / X**L ! A=Y/X**L-B*X**2
           IF(L.EQ.0) THEN
-            Y=A+B*XR**2
-            DYDX=2.D0*B*XR
+            Y=A+B*X**2
+            DYDX=2.D0*B*X
           ELSE
-            Y=A*XR**L+B*XR**(L+2)
-            DYDX=REAL(L,KIND=8)*A*XR**(L-1)+REAL(L+2)*B*XR**(L+1)
+            Y=A*X**L+B*X**(L+2)
+            DYDX=REAL(L,KIND=8)*A*X**(L-1)+REAL(L+2)*B*X**(L+1)
           END IF
         END IF  
 !
