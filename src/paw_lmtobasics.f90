@@ -132,6 +132,7 @@
 !     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
 !     **    H_{L,M}(R)= (2*L-1)!! * |R|^{-L-1}  Y_{L,M}(R)                    **
 !     **                                                                      **
+!     ** A ZERO OR POSITIVE VALUE OF RAD, SWITCHES THE REGULARIZATUION OFF    **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: R(3) ! POSITION RELATIVE TO THE ORIGIN
@@ -173,6 +174,7 @@
         END IF 
 !
 !       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
+        TCAP=RAD.GT.0.D0
         IF(TCAP) THEN
           B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
           A=Y/X**L-B*X**2
@@ -203,6 +205,7 @@
 !     ** THE SOLUTION BEHAVES AT THE ORIGIN LIKE                              **
 !     **    H_{L,M}(R)= (2*L-1)!! * |R|^{-L-1}  Y_{L,M}(R)                    **
 !     **                                                                      **
+!     ** A ZERO OR POSITIVE VALUE OF RAD, SWITCHES THE REGULARIZATUION OFF    **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: R(3) ! POSITION RELATIVE TO THE ORIGIN
@@ -257,6 +260,7 @@
 !       ========================================================================
 !       == INSIDE RAD, MATCH A PARABOLA TIMES R**L =============================
 !       ========================================================================
+        TCAP=RAD.GT.0.D0
         IF(TCAP) THEN
           B=0.5D0*(DYDX*X-REAL(L,KIND=8)*Y)/X**(L+2)
           A=Y/X**L-B*X**2
