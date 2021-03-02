@@ -16,8 +16,8 @@
 !!$          CHARACTER(LEN(OLD))     :: NEW
 !!$          INTEGER(4)              :: I,ISVAR
 !!$          NEW=OLD 
-!!$          DO I=1,LEN(TRIM(new))
-!!$            ISVAR=IACHAR(new(I:I))
+!!$          DO I=1,LEN(TRIM(NEW))
+!!$            ISVAR=IACHAR(NEW(I:I))
 !!$            IF(ISVAR.GE.65.AND.ISVAR.LE.90) NEW(I:I)=ACHAR(ISVAR+32)
 !!$          ENDDO
 !!$        END FUNCTION LOWER_CASE
@@ -27,8 +27,8 @@
 !!$          CHARACTER(LEN(OLD))     :: NEW
 !!$          INTEGER(4)              :: I,ISVAR
 !!$          NEW=OLD 
-!!$          DO I=1,LEN(TRIM(new))
-!!$            ISVAR=IACHAR(new(I:I))
+!!$          DO I=1,LEN(TRIM(NEW))
+!!$            ISVAR=IACHAR(NEW(I:I))
 !!$            IF(ISVAR.GE.97.AND.ISVAR.LE.122) NEW(I:I)=ACHAR(ISVAR-32)
 !!$          ENDDO
 !!$ STOP
@@ -36,15 +36,15 @@
 !!$      END MODULE STRINGS
 !
 !     ..................................................................
-      SUBROUTINE UPPERCASE1(old,new)
+      SUBROUTINE UPPERCASE1(OLD,NEW)
 !      USE STRINGS
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: old
-      CHARACTER(*),INTENT(OUT):: new
+      CHARACTER(*),INTENT(IN) :: OLD
+      CHARACTER(*),INTENT(OUT):: NEW
       INTEGER(4)              :: I,ISVAR
       NEW=OLD 
-      DO I=1,LEN(TRIM(new))
-        ISVAR=IACHAR(new(I:I))
+      DO I=1,LEN(TRIM(NEW))
+        ISVAR=IACHAR(NEW(I:I))
         IF(ISVAR.GE.97.AND.ISVAR.LE.122) NEW(I:I)=ACHAR(ISVAR-32)
       ENDDO
       RETURN
@@ -324,10 +324,11 @@ END MODULE TEMPLATE_MODULE
       IMPLICIT NONE
       INTEGER(4),PARAMETER :: LINELENG=256
       INTEGER(4),PARAMETER :: NLINEX=100000
-      CHARACTER(LINELENG)  :: BUFFER(NLINEX)
+      CHARACTER(LINELENG),ALLOCATABLE  :: BUFFER(:) !(NLINEX)
       INTEGER(4)           :: NLINE
       INTEGER(4)           :: I
 !     ******************************************************************
+      ALLOCATE(BUFFER(NLINEX))
 !
 !     ==================================================================
 !     == READ INPUT INTO BUFFER     
@@ -345,9 +346,9 @@ END MODULE TEMPLATE_MODULE
       DO 
         I=I+1
         IF(I.GT.NLINE) EXIT
-!       == select beginning of the template, i.e. a line '#...template ...'
+!       == SELECT BEGINNING OF THE TEMPLATE, I.E. A LINE '#...TEMPLATE ...'
         IF(BUFFER(I)(1:1).NE.'#')CYCLE
-        call uppercase1(buffer(i),buffer(i))
+        CALL UPPERCASE1(BUFFER(I),BUFFER(I))
         IF(INDEX(BUFFER(I),'MODULE TEMPLATE').NE.0) CYCLE
         IF(INDEX(BUFFER(I),'END TEMPLATE').NE.0) CYCLE
         IF(INDEX(BUFFER(I),'TEMPLATE').EQ.0) CYCLE
@@ -413,13 +414,14 @@ END MODULE TEMPLATE_MODULE
       INTEGER(4)                 :: NINST
       INTEGER(4)                 :: NMEM(NSETX)  ! #(REPLACEMENTS)
       INTEGER(4)                 :: IBODY,IEND,IINSTANCE
-      TYPE(REP_TYPE)             :: REP(NREPX,NMEMX,NSETX)
+      TYPE(REP_TYPE),allocatable :: REP(:,:,:) !(NREPX,NMEMX,NSETX)
       CHARACTER(LEN(BUFFER))     :: LINE
       LOGICAL(4)                 :: TSET,TREP
       INTEGER(4)                 :: I1,I2,I3,I,ILINE,ILINE2
       INTEGER(4)                 :: IREP,IMEM,ISET,ISHIFT,INST
       INTEGER(4)                 :: IMEMP(NSETX)
 !     ****************************************************************
+      ALLOCATE(REP(NREPX,NMEMX,NSETX))
 !
 !     ===============================================================
 !     == EXTRACT NAME AND DETERMIN END OF TEMPLATE                 ==
@@ -819,7 +821,8 @@ END MODULE TEMPLATE_MODULE
       TYPE(REP_TYPE),INTENT(IN)   :: REP
       CHARACTER(*)  ,INTENT(INOUT):: LINE
       INTEGER(4)                  :: I1,I2
-      character(len(REP%out))     :: test1
+      CHARACTER(LEN(REP%OUT))     :: TEST1
+      CHARACTER(LEN(LINE))        :: LINE1
 !     ****************************************************************
       IF(REP%OUTLEN.EQ.0) THEN
         CALL ERROR$STOP('REPLACE')
@@ -827,15 +830,16 @@ END MODULE TEMPLATE_MODULE
       IF(INDEX(REP%IN(1:REP%INLEN),REP%OUT(1:REP%OUTLEN)).NE.0) THEN
         CALL ERROR$STOP('REPLACE')
       END IF
-      call uppercase1(line,line)  
-      call uppercase1(rep%out(1:rep%outlen),test1)
-      I1=INDEX(LINE,test1(1:REP%OUTLEN))
+      CALL UPPERCASE1(LINE,LINE1)
+      LINE=LINE1
+      CALL UPPERCASE1(REP%OUT(1:REP%OUTLEN),TEST1)
+      I1=INDEX(LINE,TEST1(1:REP%OUTLEN))
 !     I1=INDEX(+LINE,+REP%OUT(1:REP%OUTLEN))
       DO WHILE (I1.NE.0)
         I2=I1+REP%OUTLEN-1
         LINE=LINE(1:I1-1)//REP%IN(1:REP%INLEN)//LINE(I2+1:)
 !       I1=INDEX(LINE,REP%OUT(1:REP%OUTLEN))
-        I1=INDEX(LINE,test1(1:REP%OUTLEN))
+        I1=INDEX(LINE,TEST1(1:REP%OUTLEN))
       ENDDO
       RETURN
       END
