@@ -184,7 +184,7 @@ END MODULE ERROR_MODULE
           IMESSAGE=IMESSAGE-1
           MESSAGE(IMESSAGE)='TOO MANY ERROR MESSAGE IN ERROR'
           RETURN
-        end if
+        END IF
         WRITE(MESSAGE(IMESSAGE),FMT='("VARIABLE ",A' &
      &          //'," HAS THE VALUE ",A)')TRIM(MESSAGE_),TRIM(CHVAL)
       ELSE
@@ -218,7 +218,7 @@ END MODULE ERROR_MODULE
       END
 !
 !     ..................................................................
-      recursive SUBROUTINE ERROR$STOP(MESSAGE_)
+      RECURSIVE SUBROUTINE ERROR$STOP(MESSAGE_)
 !     ******************************************************************
 !     **  WRITE ERROR MESSAGE, FLUSH FILES AND STOP                   **
 !     ******************************************************************
@@ -279,7 +279,7 @@ END MODULE ERROR_MODULE
         CALL FILEHANDLER$CLOSEALL
       END IF
       CALL MPE$STOPALL(NCODE)
-      STOP 'ERROR STOP'
+      STOP 'IN ERROR$STOP'
       END
 !
 !     ..................................................................
@@ -288,7 +288,15 @@ END MODULE ERROR_MODULE
 !     **  WRITE ERROR MESSAGE, FLUSH FILES AND STOP                   **
 !     ******************************************************************
       CALL FILEHANDLER$CLOSEALL
+!
+!     ==========================================================================
+!     == MPI$STOPALL WILL STOP THE EXECUTION ALSO IN THE SCALAR VERSION
+!     ==========================================================================
+      WRITE(*,fmt='(a)')'NORMAL STOP: CALLING MPE$STOPALL TO CLOSE DOWN'
       CALL MPE$STOPALL(0) ! BRING DOWN ALL MPI TASKS RELATED TO MPI_WORLD_COMM
-      CALL MPE$EXIT       ! TERMINATES MPI
+!
+!     ==========================================================================
+!     == THE FOLLOWING STOP IS SUPERFLUOUS
+!     ==========================================================================
       STOP 'NORMAL STOP'
       END

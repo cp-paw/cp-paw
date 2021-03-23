@@ -1736,6 +1736,7 @@ END MODULE MPE_MODULE
       INTEGER                         :: ERRORSTRINGLEN
 !     ******************************************************************
       CALL MPE$SELECT('~')
+      WRITE(*,FMT='(A,I10)')'ERROR CODE:',NCODE_
       CALL MPI_ABORT(COMM,NCODE_,IERR)
 
       IF(IERR.NE.MPI_SUCCESS) THEN 
@@ -1745,10 +1746,10 @@ END MODULE MPE_MODULE
         CALL ERROR$I4VAL('THISTASK',THISTASK)
         CALL ERROR$STOP('MPE$STOPALL')
       END IF      
-      STOP 'ERROR STOP'
+      STOP 'IN MPE$STOPALL'
 #ELSE
-      WRITE(*,*) 'EXIT:',NCODE_
-      STOP 'ERROR STOP'
+      WRITE(*,FMT='(A,I10)')'ERROR CODE:',NCODE_
+      STOP 'IN MPE$STOPALL'
 #ENDIF
       END
 !

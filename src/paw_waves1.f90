@@ -1619,13 +1619,14 @@ END MODULE WAVES_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
       INTEGER(4)             :: LMRXX
-      REAL(8)   ,ALLOCATABLE :: QLM(:,:)  !(LMRXX) MULTIPOLE MOMENTS
-      REAL(8)   ,ALLOCATABLE :: VQLM(:,:) !(LMRXX) MULTIPOLE POTENTIALS
-      REAL(8)   ,ALLOCATABLE :: RHO(:,:)  ! CHARGE DENSITY
+      REAL(8)   ,ALLOCATABLE :: QLM(:,:)        !(LMRXX) MULTIPOLE MOMENTS
+      REAL(8)   ,ALLOCATABLE :: VQLM(:,:)       !(LMRXX) MULTIPOLE POTENTIALS
+      REAL(8)   ,ALLOCATABLE :: RHO(:,:)        ! CHARGE DENSITY
+      REAL(8)   ,ALLOCATABLE :: RHOKIN(:,:)     ! KINETIC ENERGY DENSITY
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
-      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:,:)     ! 1CENTER HAMILTONIAN
+      COMPLEX(8),ALLOCATABLE :: DH1(:,:,:,:)    ! 1CENTER HAMILTONIAN
       REAL(8)   ,ALLOCATABLE :: DO(:,:,:,:)     ! 1CENTER OVERLAP
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       REAL(8)   ,ALLOCATABLE :: R(:,:)
@@ -1658,6 +1659,7 @@ END MODULE WAVES_MODULE
       INTEGER(4)             :: NFILO
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
+      LOGICAL(4)             :: TRHOKIN=.FALSE. !KINETIC ENERGY DENSITY REQUIRED
       INTEGER(4) ::NTASKS_W,THISTASK_W
 REAL(8) :: RBASM(3,3)
 !     **************************************************************************
@@ -1806,7 +1808,12 @@ END IF
 !     ==========================================================================
       NRL=MAP%NRL
       ALLOCATE(RHO(NRL,NDIMD))
-      CALL WAVES$RHO(NRL,NDIMD,RHO)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      IF(TRHOKIN) THEN  ! KINETIC ENERGY DENSITY IS REQUIRED
+        ALLOCATE(RHOKIN(NRL,NDIMD))
+      ELSE
+        ALLOCATE(RHOKIN(1,1))
+      END IF
+      CALL WAVES$RHO(NRL,NDIMD,RHO,TRHOKIN,RHOKIN)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -4031,7 +4038,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO)
+      SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO,TRHOKIN,RHOKIN)
 !     **************************************************************************
 !     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE                **
 !     **  FUNCTIONS                                                           **
@@ -4042,10 +4049,13 @@ END IF
       USE MPE_MODULE
       USE WAVES_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN)  :: NRL
-      INTEGER(4),INTENT(IN)  :: NDIMD_
-      REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIMD_)
+      INTEGER(4),INTENT(IN)  :: NRL             !#(LOCAL REAL SPACE GRID POINTS)
+      INTEGER(4),INTENT(IN)  :: NDIMD_          !#(SPIN COMPONENTS IN DENSITY)
+      REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIMD_) !ELECTRON DENSITY
+      LOGICAL(4),INTENT(IN)  :: TRHOKIN         !KINETIC ENERGY DENSITY REQUIRED
+      REAL(8)   ,INTENT(OUT) :: RHOKIN(NRL,NDIMD_) !KINETIC ENERGY DENSITY
       REAL(8)   ,ALLOCATABLE :: RHO1(:,:)    ! (NRL,NDIM**2)
+      REAL(8)   ,ALLOCATABLE :: RHOKIN1(:,:) ! (NRL,NDIM**2)
       INTEGER(4)             :: IKPT,ISPIN,IR
       INTEGER(4)             :: NBX        
       REAL(8)  ,ALLOCATABLE  :: OCC(:,:,:) 
@@ -4069,21 +4079,26 @@ END IF
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
       ALLOCATE(RHO1(NRL,NDIM**2))
+      IF(TRHOKIN) ALLOCATE(RHOKIN1(NRL,NDIM**2))
       RHO(:,:)=0.D0
+      IF(TRHOKIN) RHOKIN(:,:)=0.D0
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL WAVES_DENSITY(GSET%NGL,MAP%NRL,NDIM,THIS%NB,THIS%NBH &
-     &             ,OCC(1,IKPT,ISPIN),THIS%PSI0,RHO1)
+     &             ,OCC(1,IKPT,ISPIN),THIS%PSI0,RHO1,TRHOKIN,RHOKIN1)
           IF(NDIM.EQ.1) THEN
             RHO(:,ISPIN)=RHO(:,ISPIN)+RHO1(:,1)
+            IF(TRHOKIN) RHOKIN(:,ISPIN)=RHOKIN(:,ISPIN)+RHOKIN1(:,1)
           ELSE
             RHO=RHO+RHO1
+            IF(TRHOKIN) RHOKIN=RHOKIN+RHOKIN1
           END IF
         ENDDO
       ENDDO
       DEALLOCATE(RHO1)
+      IF(TRHOKIN)DEALLOCATE(RHOKIN1)  
 !
 !     ==========================================================================
 !     == CONVERT INTO TOTAL AND SPIN DENSITY                                  ==
@@ -5316,11 +5331,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_DENSITY(NGL,NRL,NDIM,NB,NBH,F,PSIOFG,RHO)
+      SUBROUTINE WAVES_DENSITY(NGL,NRL,NDIM,NB,NBH,F,PSIOFG,RHO,TRHOKIN,RHOKIN)
 !     **************************************************************************
-!     **  THE  ELECTRON DENSITY RHOE IN REAL SPACE                            **
+!     **  CALCULATE ELECTRON DENSITY RHO IN REAL SPACE                        **
+!     **  IF(TRHOKIN) CALCULATE ALSO KINETIC-ENERGY DENSITY RHOKIN IN R. SPACE**
 !     **                                                                      **
-!     *******************************************P.E. BLOECHL, (1991)***********
+!     *******************************************P.E. BLOECHL, (1991-2021)******
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NGL         ! MAX # PLANE WAVES
       INTEGER(4),INTENT(IN)  :: NRL         ! # R-SPACE POINTS
@@ -5330,12 +5346,17 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)   ,INTENT(IN)  :: F(NB)       ! OCCUPATIONS
       COMPLEX(8),INTENT(IN)  :: PSIOFG(NGL,NDIM,NBH)
       REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIM**2) ! DENSITY IN R-SPACE
+      LOGICAL(4),INTENT(IN)  :: TRHOKIN
+      REAL(8)   ,INTENT(OUT) :: RHOKIN(NRL,NDIM**2) ! KINETIC-ENERGY DENSITY
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
-      COMPLEX(8),ALLOCATABLE :: EI2KR(:)  !(NRL) SQUARED BLOCH PHASE FACTOR 
-      COMPLEX(8),ALLOCATABLE :: PSI1(:)   !(NRL)
+      COMPLEX(8),ALLOCATABLE :: PSIKINOFR(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: EI2KR(:)      !(NRL) SQUARED BLOCH PHASE FACTOR
+      COMPLEX(8),ALLOCATABLE :: PSI1(:)          !(NRL)
+      REAL(8)   ,ALLOCATABLE :: G2(:)            !(NGL)
+      COMPLEX(8),ALLOCATABLE :: PSIKINOFG(:,:,:) !(NGL,NDIM,NBH)
       COMPLEX(8)             :: CSVAR
       LOGICAL(4)             :: TINV
-      INTEGER(4)             :: IBH,IR
+      INTEGER(4)             :: IBH,IR,IDIM
       REAL(8)                :: F1,F2
       REAL(8)                :: RE,IM
       REAL(8)                :: SVAR1,SVAR2
@@ -5366,6 +5387,25 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       ALLOCATE(PSIOFR(NRL,NDIM,NBH))
       CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSIOFG,NRL,PSIOFR)
 !
+!     == CONSTRUCT <R| 1/2 * G^2 |PSITILDE> ====================================
+      IF(TRHOKIN) THEN
+        ALLOCATE(G2(NGL))
+        CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+!       == THIS WILL GIVE A SPIKE IN THE MEMORY REQUIREMENT, ===================
+!       == BECAUSE AN ADDITIONAL SET OF WAVE FUNCTIONS IS ALLOCATED ============
+!       == BOTH IN A PLANE WAVE BASIS AND IN REAL SPACE ========================
+        ALLOCATE(PSIKINOFG(NGL,NDIM,NBH))
+        DO IBH=1,NBH
+          DO IDIM=1,NDIM
+            PSIKINOFG(:,IDIM,IBH)=0.5D0*G2(:)*PSIOFG(:,IDIM,IBH)
+          ENDDO
+        ENDDO
+        ALLOCATE(PSIKINOFR(NRL,NDIM,NBH))
+        CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSIKINOFG,NRL,PSIKINOFR)
+        DEALLOCATE(PSIKINOFG)
+        DEALLOCATE(G2)
+      END IF
+!
 !     ==========================================================================
 !     ==  CALCULATE CHARGE DENSITY                                            ==
 !     ==========================================================================
@@ -5386,13 +5426,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDDO
         ALLOCATE(PSI1(NRL))
         RHO(:,:)=0.D0
+        IF(TRHOKIN) RHOKIN(:,:)=0.D0
         DO IBH=1,NBH
           F1=F(2*IBH-1)
           F2=0.D0
           IF(2*IBH.LE.NB) F2=F(2*IBH)
           SVAR1=0.5D0*(F1+F2)
           SVAR2=0.5D0*(F1-F2)
-!         == NOTE THAT OOCUPATIONS CAN BE NEGATIVE FROM K-INTEGRATION
+!         == NOTE THAT OOCUPATIONS CAN BE NEGATIVE FROM K-INTEGRATION ==========
           IF(SVAR1.EQ.0.D0) THEN
             IF(SVAR2.EQ.0.D0) CYCLE
           END IF
@@ -5407,6 +5448,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           DO IR=1,NRL
             RHO(IR,1)=RHO(IR,1)+REAL(PSIOFR(IR,1,IBH)*PSI1(IR),KIND=8)
           ENDDO
+          IF(TRHOKIN) THEN
+            DO IR=1,NRL
+              RHOKIN(IR,1)=RHOKIN(IR,1) &
+       &                  +REAL(PSIKINOFR(IR,1,IBH)*PSI1(IR),KIND=8)
+            ENDDO
+          END IF
         ENDDO
         DEALLOCATE(PSI1)
         DEALLOCATE(EI2KR)
@@ -5427,6 +5474,17 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
               RHO(IR,1)=RHO(IR,1)+F1*(RE**2+IM**2)
             ENDDO
           ENDDO
+          IF(TRHOKIN) THEN
+            RHOKIN(:,:)=0.D0
+            DO IBH=1,NB
+              F1=F(IBH)
+              IF(F1.EQ.0.D0) CYCLE
+              DO IR=1,NRL
+                RHO(IR,1)=RHO(IR,1) &
+                         +F1*REAL(PSIOFR(IR,1,IBH)*CONJG(PSIKINOFR(IR,1,IBH)),8)
+              ENDDO
+            ENDDO
+          END IF
         ELSE
 !       == SPINOR WAVE FUNCTIONS ===============================================
           RHO(:,:)=0.D0
@@ -5453,9 +5511,36 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
             RHO(IR,2)= 2.D0*RHO(IR,2)
             RHO(IR,3)=-2.D0*RHO(IR,3)
           ENDDO
+          IF(TRHOKIN) THEN
+            RHOKIN(:,:)=0.D0
+            DO IBH=1,NBH
+              F1=F(IBH)
+              IF(F1.EQ.0.D0) CYCLE
+!             == REAL(RHO11), REAL(RHO22), RE(RHO12), IM(RHO12) ================
+              DO IR=1,NRL
+                RHOKIN(IR,1)=RHOKIN(IR,1) &
+    &               +F1*REAL(PSIOFR(IR,1,IBH)*CONJG(PSIKINOFR(IR,1,IBH)),KIND=8)
+                RHOKIN(IR,4)=RHOKIN(IR,4) &
+    &               +F1*REAL(PSIOFR(IR,2,IBH)*CONJG(PSIKINOFR(IR,2,IBH)),KIND=8)
+                CSVAR=PSIOFR(IR,1,IBH)*CONJG(PSIKINOFR(IR,2,IBH))
+                RHOKIN(IR,2)=RHOKIN(IR,2)+F1*REAL(CSVAR,KIND=8)
+                RHOKIN(IR,3)=RHOKIN(IR,3)+F1*AIMAG(CSVAR)
+              ENDDO
+            ENDDO
+!           == TRANSFORM TO NT,NX,NY,NZ ========================================
+            DO IR=1,NRL
+              SVAR1=RHOKIN(IR,1)
+              SVAR2=RHOKIN(IR,4)
+              RHOKIN(IR,1)=SVAR1+SVAR2
+              RHOKIN(IR,4)=SVAR1-SVAR2
+              RHOKIN(IR,2)= 2.D0*RHOKIN(IR,2)
+              RHOKIN(IR,3)=-2.D0*RHOKIN(IR,3)
+            ENDDO
+          END IF
         ENDIF
       END IF
       DEALLOCATE(PSIOFR)
+      IF(TRHOKIN) DEALLOCATE(PSIKINOFR)
                                CALL TRACE$POP()
       RETURN
       END
@@ -6331,12 +6416,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
 PRINT*,'WAVES$STOP ',IKPT,ISPIN,ASSOCIATED(THIS%PSIM),ASSOCIATED(THIS%PSI0)
-PRINT*,'WAVES$STOP psi0:',shape(this%psi0)
-PRINT*,'WAVES$STOP psim:',shape(this%psim)
+PRINT*,'WAVES$STOP PSI0:',SHAPE(THIS%PSI0)
+PRINT*,'WAVES$STOP PSIM:',SHAPE(THIS%PSIM)
           THIS%PSIM=THIS%PSI0
-PRINT*,'WAVES$STOP pass1'
+PRINT*,'WAVES$STOP PASS1'
           THIS%PSIM(:,:,:)=THIS%PSI0(:,:,:)
-PRINT*,'WAVES$STOP pass'
+PRINT*,'WAVES$STOP PASS'
 
           IF(ASSOCIATED(THIS%RLAMM))DEALLOCATE(THIS%RLAMM)
           IF(ASSOCIATED(THIS%RLAM2M))DEALLOCATE(THIS%RLAM2M)
