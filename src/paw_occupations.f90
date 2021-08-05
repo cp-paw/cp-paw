@@ -345,7 +345,7 @@ END MODULE DYNOCC_MODULE
        CALL ERROR$STOP('DYNOCC$TEST')
        STOP
        END
-
+!
 !      .................................................................
        SUBROUTINE DYNOCC$CREATE(NB_,NKPT_,NSPIN_)
 !      *****************************************************************
@@ -1240,7 +1240,7 @@ END MODULE DYNOCC_MODULE
                          CALL TRACE$PUSH('DYNOCC$REPORT')
       CALL CONSTANTS('EV',EV)
       CALL CONSTANTS('KB',KELVIN)
-!     == 1EL<->0.5HBAR => HBAR=2 EL
+!     == 1EL<->0.5HBAR => HBAR=2*EL
 !
 !     ==========================================================================
 !     == TITLE OF THE REPORT                                                  ==

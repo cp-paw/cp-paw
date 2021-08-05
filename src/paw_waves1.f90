@@ -1808,11 +1808,7 @@ END IF
 !     ==========================================================================
       NRL=MAP%NRL
       ALLOCATE(RHO(NRL,NDIMD))
-      IF(TRHOKIN) THEN  ! KINETIC ENERGY DENSITY IS REQUIRED
-        ALLOCATE(RHOKIN(NRL,NDIMD))
-      ELSE
-        ALLOCATE(RHOKIN(1,1))
-      END IF
+      ALLOCATE(RHOKIN(NRL,NDIMD))
       CALL WAVES$RHO(NRL,NDIMD,RHO,TRHOKIN,RHOKIN)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
 !
 !     ==========================================================================
@@ -4079,15 +4075,15 @@ END IF
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
       ALLOCATE(RHO1(NRL,NDIM**2))
-      IF(TRHOKIN) ALLOCATE(RHOKIN1(NRL,NDIM**2))
+      ALLOCATE(RHOKIN1(NRL,NDIM**2)) 
       RHO(:,:)=0.D0
-      IF(TRHOKIN) RHOKIN(:,:)=0.D0
+      RHOKIN(:,:)=0.D0
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
           CALL WAVES_DENSITY(GSET%NGL,MAP%NRL,NDIM,THIS%NB,THIS%NBH &
-     &             ,OCC(1,IKPT,ISPIN),THIS%PSI0,RHO1,TRHOKIN,RHOKIN1)
+     &             ,OCC(:THIS%NB,IKPT,ISPIN),THIS%PSI0,RHO1,TRHOKIN,RHOKIN1)
           IF(NDIM.EQ.1) THEN
             RHO(:,ISPIN)=RHO(:,ISPIN)+RHO1(:,1)
             IF(TRHOKIN) RHOKIN(:,ISPIN)=RHOKIN(:,ISPIN)+RHOKIN1(:,1)
@@ -4098,7 +4094,7 @@ END IF
         ENDDO
       ENDDO
       DEALLOCATE(RHO1)
-      IF(TRHOKIN)DEALLOCATE(RHOKIN1)  
+      DEALLOCATE(RHOKIN1)  
 !
 !     ==========================================================================
 !     == CONVERT INTO TOTAL AND SPIN DENSITY                                  ==

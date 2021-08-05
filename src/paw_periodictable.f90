@@ -31,9 +31,9 @@ MODULE PERIODICTABLE_MODULE
 !**         'OCC(P)'    ATOMIC OCCUPATION OF THE VALENCE P-SHELL              **
 !**         'OCC(D)'    ATOMIC OCCUPATION OF THE VALENCE D-SHELL              **
 !**         'OCC(F)'    ATOMIC OCCUPATION OF THE VALENCE F-SHELL              **
-!**         '#NODES(S)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
-!**         '#NODES(p)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
-!**         '#NODES(D)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
+!**         '#NODES(S)' NUMBER OF NODES OF THE VALENCE S-SHELL                **
+!**         '#NODES(P)' NUMBER OF NODES OF THE VALENCE P-SHELL                **
+!**         '#NODES(D)' NUMBER OF NODES OF THE VALENCE D-SHELL                **
 !**         '#NODES(F)' NUMBER OF NODES OF THE VALENCE F-SHELL                **
 !**         'ZCORE'     ATOMIC NUMBER OF THE CORE SHELL                       **
 !**         'MAGNETIC MOMENT' NUCLEAR MAGNETIC MOMENT OF THE MOST ABUNDANT    **
@@ -452,7 +452,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       ELSE IF(ID.EQ.'Z') THEN
         VAL=REAL(IZ)
       ELSE IF(ID.EQ.'ZCORE') THEN
-        VAL=REAL(element(IZ)%CORE)
+        VAL=REAL(ELEMENT(IZ)%CORE)
       ELSE IF(ID.EQ.'EN') THEN
         VAL=ELEMENT(IZ)%EN
       ELSE IF(ID.EQ.'RNUC') THEN

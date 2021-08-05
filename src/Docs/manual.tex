@@ -2891,16 +2891,16 @@ This is an example of a structure input file for formaldehyde in a fcc
 supercell with lattice constant of 10~\AA.
 \begin{verbatim}
 !STRUCTURE
-  !GENERIC LUNIT=1.8897259926 !END   
+  !GENERIC LUNIT[AA]=1. !END   
   !OCCUPATIONS NBAND=8 NSPIN=1 !END
   !LATTICE T= 0.00000  5.00000  5.00000               
               5.00000  0.00000  5.00000               
               5.00000  5.00000  0.00000 !END
-  !SPECIES NAME= 'H_' ZV=1. M=1.9380 
-           FILE='/u/blo.2/PAW/Setups/BP86/001H/h1.out'  !END 
-  !SPECIES NAME= 'C_' ZV=4. M=18.9984 
+  !SPECIES NAME= 'H_'  M=1.9380 
+           FILE='/u/blo2/PAW/Setups/BP86/001H/h1.out'  !END 
+  !SPECIES NAME= 'C_'  M=18.9984 
            FILE='/u/blo.2/PAW/Setups/BP86/006C/c1.out'  !END 
-  !SPECIES NAME= 'O_' ZV=6. M=15.99946 
+  !SPECIES NAME= 'O_' CORE='--' M=15.99946 
            FILE='/u/blo.2/PAW/Setups/BP86/008O/o1.out'  !END 
   !ATOM    NAME= 'H_1'  R= -0.50000  0.00000 -0.86600 !END
   !ATOM    NAME= 'H_2'  R= -0.50000  0.00000  0.86600 !END
@@ -3169,10 +3169,55 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
   incompatible with keyword EL.}
 \vdefault{none}}
 
+\mbax{\key{CORE} \vdescr{Specifies the angular momentum shell in the
+    frozen core. The identifier consists of an optional noble-gas
+    element symbol and a set of modifiers, which add or remove angular
+    momentum shells.  The identifier consists of
+\begin{itemize}
+\item an optional noble gas element symbol. May be one of ``0'', ``He'', ``Ne'',
+  ``Ar'', ``Kr'', ``Xe'', ``Rn''. Of these ``0'' specifies that no
+  core electrons are frozen. If the noble gas element is not
+  specified, it is obtained from the atomic number specified by
+  EL= or Z=.
+%
+\item zero or more modifiers ``-s'', ``-p'', ``-d'', ``-f'', that
+  remove the specified angular momentum shell from the frozen core and
+%
+\item zero or more modifiers ``+s'', ``+p'', ``+d'', ``+f'', that add
+  the specified angular momentum shell to the frozen core.
+\end{itemize}
+While not recommended, several shells with the same angular momentum
+can be removed from the frozen core by repeating the modifier.
+}
+\vformat{character}
+\vrules{optional}
+\vdefault{When CORE is not specified, but ZV is, the code uses the
+  value of ZV (together with Z or EL) to construct CORE. This
+  implementation shall maintain backward compatibility, but is marked
+  for deletion. If ZV is absent the following default values for CORE
+  are used.
+
+The default is satisfies the following rules
+\begin{enumerate}
+\item The starting point isthe the electron configuration of the
+  preceeding noble gas atom
+%
+\item After the lanthanide and actinides, the f-shell is frozen
+%
+\item The d-shell is frozen beginning with the boron group
+  (Ga,In,Tl,Nh).  It is unfrozen for the transition metals, noble
+  metals (Cu,Ag,Au,Rg), zinc group (Zn,Cd,Hg,Cn).
+  The reason for keepingthe d-shell of Ga unfroze
+\end{enumerate}
+Accurate results may require an unfrozen d-shell for the born group,
+i.e. (Ga,In,Tl,Nh). This may be relevant for GaN, GaAs.
+}}
+
 \mbax{\key{ZV} 
  \vdescr{Number of valence electrons.}
 \vformat{real}
-\vrules{mandatory}
+\vrules{Obsolete! Use CORE instead. Used only when CORE is 
+        absent to maintain backward compatibility.}
 \vdefault{none}}
 
 \mbax{\key{RCSM/RCOV} 
@@ -5120,7 +5165,7 @@ Start the Dataexplorer using
   the orientation of the plane by modifying the vector. The plane will
   then rotate about the atom position selected.
 
-  \resizebox{!}{8.0cm}{\includegraphics{Figs/h2co-rho.epsf}}
+  \resizebox{!}{8.0cm}{\includegraphics{Figs/h2co-rho.eps}}
 
   If your viewing direction is straight onto the plane, you will obtain
   a (color) contour plot.
