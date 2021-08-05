@@ -621,11 +621,11 @@ END MODULE SETUP_MODULE
       VAL(:)=.FALSE.
       IF(ID.EQ.'TORB') THEN
         CALL ERROR$MSG('ID="TORB" IS OBSOLETE')
-        CALL ERROR$STOP('SETUP$SETL4A')
+        CALL ERROR$STOP('SETUP$GETL4A')
       ELSE
         CALL ERROR$MSG('ID NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('SETUP$SETL4A')
+        CALL ERROR$STOP('SETUP$GETL4A')
       END IF
       RETURN
       END
@@ -1090,7 +1090,7 @@ END MODULE SETUP_MODULE
 !!$      INTEGER(4),INTENT(IN) :: N
 !!$      INTEGER(4),INTENT(IN) :: J
 !!$      REAL(8)   ,INTENT(OUT):: QNJOFE
-!!$!     **************************************************************************
+!!$!     ***********************************************************************
 !!$
 !!$      RETURN
 !!$      END
@@ -2294,7 +2294,7 @@ RCL=RCOV
       END IF
 !
 !     == COLLECT #VALENCE ELECTRONS ============================================
-      CALL LINKEDLIST$EXISTD(LL_STP,'CORE',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_STP,'CORE',0,TCHK)
       IF(.NOT.TCHK) THEN
         IF(AEZ.GE. 71.AND.AEZ.LE. 86) COREID='+F'   ! FREEZE 4F SHELL FOR LU-RN
         IF(AEZ.GE. 89.AND.AEZ.LE.118) COREID='+F'   ! FREEZE 5F SHELL FOR LR-OG
@@ -2330,7 +2330,9 @@ RCL=RCOV
         IF(AEZ.GE.54)ZCORE=54
         IF(AEZ.GE.86)ZCORE=86
         ZCORE=INT(AEZ-ZV)-ZCORE
-        IF(ZCORE.EQ.-2) THEN
+        IF(ZCORE.EQ.0) THEN
+         COREID=TRIM(ADJUSTL(COREID))
+        else IF(ZCORE.EQ.-2) THEN
          COREID=TRIM(ADJUSTL(COREID))//'-S'
         ELSE IF(ZCORE.EQ.-6) THEN
           COREID=TRIM(ADJUSTL(COREID))//'-P'
@@ -2357,16 +2359,19 @@ RCL=RCOV
           CALL ERROR$MSG('"ZV" IS OBSOLETE')
           CALL ERROR$MSG('SPECIFY "COREID" INSTEAD')
           CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$R8VAL('Z',AEZ)
           CALL ERROR$R8VAL('ZV',ZV)
+          CALL ERROR$i4VAL('ZCORE',ZCORE)
           CALL ERROR$STOP('SETUP_LOOKUPGENERIC')
         END IF
 !
 !       == DISCARD ZV TO AVOID ITS USAGE. IT WILL BE LATER RECALCULATED FROM ===
 !       == COREID ==============================================================
         ZV=999999.D0
+      ELSE      
+        CALL LINKEDLIST$GET(LL_STP,'CORE',1,COREID)
+        COREID=+COREID
       END IF
-      CALL LINKEDLIST$GET(LL_STP,'CORE',1,COREID)
-      COREID=+COREID
 !
 !     == DECAY CONSTANT FOR SHORT-RANGED COMPENSATION CHARGE DENSITY ===========
       CALL LINKEDLIST$EXISTD(LL_STP,'RCSM/RCOV',1,TCHK)
@@ -2766,34 +2771,34 @@ RCL=RCOV
       USE LINKEDLIST_MODULE
       USE RADIALFOCK_MODULE, ONLY: VFOCK_TYPE
       IMPLICIT NONE
-      TYPE(LL_TYPE)          :: LL_STP
+      TYPE(LL_TYPE)         :: LL_STP
       INTEGER(4),PARAMETER  :: NBX=40
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)   ,PARAMETER  :: C0LL=1.D0/SQRT(FOURPI)
-      INTEGER(4)            :: LOFI(NBX)
-      INTEGER(4)            :: SOFI(NBX)
-      REAL(8)               :: FOFI(NBX)
-      INTEGER(4)            :: NNOFI(NBX)
-      REAL(8)               :: EOFI(NBX)
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: GIDG
-      INTEGER(4)            :: NG
-      INTEGER(4)            :: NR
+      INTEGER(4)            :: LOFI(NBX)  ! azimutal angular momentum
+      INTEGER(4)            :: SOFI(NBX)  ! spin orbit orientation 
+      REAL(8)               :: FOFI(NBX)  ! occupation of the shell
+      INTEGER(4)            :: NNOFI(NBX) ! number of nodes of the partial wave
+      REAL(8)               :: EOFI(NBX)  ! energy level of the atomic calc.
+      INTEGER(4)            :: GID        ! grid id
+      INTEGER(4)            :: GIDG       ! grid id for G-grid
+      INTEGER(4)            :: NG         ! #(reciprocal grid points)
+      INTEGER(4)            :: NR         ! #(real-space grid points)
       INTEGER(4)            :: LX,LNX
       INTEGER(4)            :: NB
-      INTEGER(4)            :: NC 
+      INTEGER(4)            :: NC         ! #(core states)
       INTEGER(4),ALLOCATABLE:: NPRO(:)
-      REAL(8)   ,ALLOCATABLE:: R(:)
-      INTEGER(4),ALLOCATABLE:: LOX(:)
+      REAL(8)   ,ALLOCATABLE:: R(:)       ! radial grid
+      INTEGER(4),ALLOCATABLE:: LOX(:)     ! az. angular momentum of partial wave
       REAL(8)   ,ALLOCATABLE:: RC(:)
-      LOGICAL(4),ALLOCATABLE:: TC(:)
+      LOGICAL(4),ALLOCATABLE:: TC(:)      ! frozen-core state selector
       REAL(8)   ,ALLOCATABLE:: LAMBDA(:)  ! SECOND PARAMETER FOR PSEUDIZATION
       REAL(8)               :: RBOX
       REAL(8)               :: ROUT
-      REAL(8)               :: AEZ
-      REAL(8)               :: ZV
+      REAL(8)               :: AEZ        !atomic number
+      REAL(8)               :: ZV         ! #(valence electrons)
       REAL(8)               :: ETOT
       CHARACTER(64)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
@@ -2922,7 +2927,7 @@ RCL=RCOV
 !     ==  SELECT CORE, AND REORDER STATES                                     ==
 !     ==========================================================================
       ALLOCATE(TC(NB))
-      CALL SETUP_CORESELECT(AEZ,ZV,THIS%COREID,NB,LOFI,SOFI,TC)
+      CALL SETUP_CORESELECT(AEZ,THIS%COREID,NB,LOFI,SOFI,TC)
 !     
 !     ==========================================================================
 !     ==  MAP DATA OF THE ATOMIC CALCULATION ONTO DATA STRUCTURE "THIS"       ==
@@ -2933,7 +2938,6 @@ RCL=RCOV
         IF(TC(IB))NC=NC+1
       ENDDO
       THIS%ATOM%NC=NC
-
 !     == MAP ATOMIC DATA ON GRID ===============================================
       THIS%ATOM%NB=NB
       ALLOCATE(THIS%ATOM%LOFI(NB))
@@ -2977,8 +2981,8 @@ RCL=RCOV
       PSISM(:,:NB)=THIS%ATOM%AEPSISM
       DEALLOCATE(TC)
 !
-!     == ZV IS OVERWRITTEN BY INFORMATION FROM COREID
-      ZV=AEZ-SUM(THIS%ATOM%FOFI(:NC))
+!     == ZV IS OVERWRITTEN BY INFORMATION FROM COREID ==========================
+      ZV=AEZ-SUM(THIS%ATOM%FOFI(:NC))  
       THIS%ZV=ZV
 !     
 !     ==========================================================================
@@ -3380,7 +3384,7 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_CORESELECT(AEZ,ZV,COREID,NB,LOFI,SOFI,TC)
+      SUBROUTINE SETUP_CORESELECT(AEZ,COREID,NB,LOFI,SOFI,TC)
 !     **************************************************************************
 !     ** SELECT THE STATES THAT SHOULD BE KEPT FROZEN BY TC(IB)               **
 !     **                                                                      **
@@ -3393,12 +3397,14 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !     **                                                                      **
 !     ** CORE HOLES MUST BE TREATED SEPARATELY                                **
 !     **                                                                      **
-!     ** RENMARK: LATER, THE CORE ID SHALL BE PASSED ON AND REPORTED          **
+!     ** THE VARIALBLE LMAP(L+1) SPECIFIES THE MAIN QUANTUM NUMBER OF THE     **
+!     ** HIGHEST FROZEN CORE STATE FOR EACH ANGULAR MOMENTUM L                **
+!     ** (Caution! the same variable name is used in other routines with a    **
+!     **  different meaning!)                                                 **
 !     **                                                                      **
 !     ***************************PETER BLOECHL, GOSLAR 2021*********************
       IMPLICIT NONE
       REAL(8)     ,INTENT(IN) :: AEZ      ! ATOMIC NUMBER
-      REAL(8)     ,INTENT(IN) :: ZV       ! #(VALENCE ELECTRONS)
       CHARACTER(*),INTENT(IN) :: COREID
       INTEGER(4)  ,INTENT(IN) :: NB       ! #(ATOMIC SHELLS)
       INTEGER(4)  ,INTENT(IN) :: LOFI(NB) ! ANGULAR MOMENTA
@@ -3412,12 +3418,6 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       IF(AEZ.GT.118.D0) THEN
         CALL ERROR$MSG('IMPLEMENTATION IS LIMITED TO ATOMIC NUMBER BELOW 119')
         CALL ERROR$R8VAL('ATOMIC NUMBER AEZ',AEZ)
-        CALL ERROR$STOP('SETUP_CORESELECT')
-      END IF
-      IF(ABS(AEZ-ZV-NINT(AEZ-ZV)).GT.1.D-6) THEN
-        CALL ERROR$MSG('#(CORE STATES MUST BE INTEGER')
-        CALL ERROR$R8VAL('ATOMIC NUMBER AEZ',AEZ)
-        CALL ERROR$R8VAL('#(CORE  STATES)',AEZ-ZV)
         CALL ERROR$STOP('SETUP_CORESELECT')
       END IF
 !
@@ -3503,6 +3503,18 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
           CALL ERROR$STOP('SETUP_CORESELECT')
         END IF
         IPOS=IPOS+2
+      ENDDO
+!
+!     == CONSISTENCY CHECK =====================================================
+      DO IL=1,4
+        IF(IL.LT.0) THEN
+          CALL ERROR$MSG('NUMBER OF FROZEN CORE STATES MUST NOT BE NEGATIVE')
+          CALL ERROR$R8VAL('ATOMIC NUMBER AEZ',AEZ)
+          CALL ERROR$CHVAL('COREID',COREID)
+          CALL ERROR$I4VAL('L',IL-1)
+          CALL ERROR$I4VAL('#(FROZEN CORE STATES)',LMAP(IL))
+          CALL ERROR$STOP('SETUP_CORESELECT')
+        END IF
       ENDDO
 !
 !     ==========================================================================
@@ -8556,8 +8568,23 @@ END IF
         G=-QN(:,NJ)
         IF(TSMALL) GSM=-QNSM(:,NJ)
       ELSE
-        G=-UCORE(:,NC)
-        IF(TSMALL) GSM=-UCORESM(:,NC)
+        IF(NC.GT.0) THEN
+          G=-UCORE(:,NC)
+          IF(TSMALL) GSM=-UCORESM(:,NC)
+        ELSE
+          G=0.D0
+          IF(TSMALL) GSM=0.D0
+          if(nc.eq.0) then
+            CALL ERROR$MSG('ZERO NUMBER OF CORE STATES AND')
+            CALL ERROR$MSG('ZERO NUMBER OF VALENCE STATES FOR THIS L,SO')
+            CALL ERROR$MSG('THE CODE IS NOT YET ABLE TO DEAL WITH THIS')
+            CALL ERROR$I4VAL('L',L)
+            CALL ERROR$I4VAL('SO',SO)
+            CALL ERROR$I4VAL('#(CORE STATES)',NC)
+            CALL ERROR$I4VAL('#(VALENCE STATES)',NJ)
+            CALL ERROR$STOP('SETUP_NEWPRO')
+          END IF
+        END IF
       END IF
       IF(TSMALL) THEN
         AUX=0.5D0*ALPHA*(1.D0+DREL)*GSM
