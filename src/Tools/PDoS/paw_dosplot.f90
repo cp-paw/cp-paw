@@ -19,6 +19,13 @@
       CALL FILEHANDLER$UNIT('DPCNTL',NFIL)
 !      CALL FILEHANDLER$REPORT(6,'ALL')
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$MARK(LL_CNTL,1)
+
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO) 
         CALL LINKEDLIST$REPORT(LL_CNTL,NFILO)
@@ -54,6 +61,10 @@
 !     ==  RESOLVE CONTROL FILE: RESULT IS ENCODED IN DOSSET_MODULE
 !     ==========================================================================
       CALL CUMMULATEDDOS()
+      
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'DPCNTL')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
       CALL TRACE$POP()
       STOP
       END
@@ -69,6 +80,7 @@ TYPE DOSSET_TYPE
   LOGICAL(4)    :: STACK
   REAL(8)       :: SCALE
   REAL(8)       :: XZERO
+  logical(4)    :: LEGEND
   TYPE(DOSSET_TYPE),POINTER :: NEXT
 END TYPE DOSSET_TYPE
 TYPE(DOSSET_TYPE)  ,TARGET  :: FIRSTDOSSET
@@ -104,6 +116,7 @@ END MODULE DOSSETS_MODULE
       REAL(8)         :: YMAXGLOB
       REAL(8)         :: XMINGLOB
       REAL(8)         :: XMAXGLOB
+      LOGICAL(4)      :: TLEGEND
 !     **************************************************************************
                                      CALL TRACE$PUSH('READCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -250,6 +263,7 @@ END MODULE DOSSETS_MODULE
           DOSSET%IS=IS
           DOSSET%FILLCOLOR=''
           DOSSET%STACK=.FALSE.
+          DOSSET%LEGEND=.FALSE.
           NULLIFY(DOSSET%NEXT)
 
 !         == GET PREFIX ========================================================
@@ -269,6 +283,11 @@ END MODULE DOSSETS_MODULE
           DOSSET%STACK=.FALSE.
           CALL LINKEDLIST$EXISTD(LL_CNTL,'STACK',1,TCHK)
           IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'STACK',1,DOSSET%STACK)
+!
+!         == GET LEGEND === ====================================================
+          DOSSET%LEGEND=.FALSE.
+          CALL LINKEDLIST$EXISTD(LL_CNTL,'LEGEND',1,TCHK)
+          IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'LEGEND',1,DOSSET%LEGEND)
 !
 !         == GET SCALE =========================================================
           DOSSET%SCALE=SCALE
@@ -317,7 +336,8 @@ END MODULE DOSSETS_MODULE
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: FC
       CHARACTER(32)            :: LC
-      CHARACTER(256)            :: STRING
+      CHARACTER(256)           :: STRING
+      INTEGER(4),allocatable   :: SETSINGRAPH(:)
 !     *************************************************************************
                                      CALL TRACE$PUSH('CUMULATEDDOS')
 !
@@ -359,11 +379,13 @@ END MODULE DOSSETS_MODULE
 !     == READ SETTINGS                                                       ==
 !     =========================================================================
                                      CALL TRACE$PASS('READ SETTINGS')
+      allocate(SETSINGRAPH(NGRAPH))
       DOSSET=>FIRSTDOSSET
       IG=0
       DO 
         IF(DOSSET%IG.GT.IG) THEN
 !         == NEW GRAPH
+          if(IG.ne.0)SETSINGRAPH(IG)=IS
           IG=DOSSET%IG
           CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG),XMAX(IG),YMIN(IG),YMAX(IG))
           CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
@@ -397,6 +419,40 @@ END MODULE DOSSETS_MODULE
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
         DOSSET=>DOSSET%NEXT
       ENDDO
+      if(IG.ne.0)SETSINGRAPH(IG)=IS
+!     
+!     ==========================================================================
+!     == WRITE LEGENDS                                                        ==
+!     ==========================================================================
+      DOSSET=>FIRSTDOSSET
+      IG=0
+      DO 
+        IF(DOSSET%IG.GT.IG) THEN
+!         == NEW GRAPH
+          IG=DOSSET%IG
+          !CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG),XMAX(IG),YMIN(IG),YMAX(IG))
+          !CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
+          IS=0
+        END IF
+        if(DOSSET%LEGEND)THEN
+          FC=DOSSET%FILLCOLOR
+!         __FILLED ONLY___________________________________________________________
+          CALL GRACE_COPYSET(NFIL,IG-1,IS+SETSINGRAPH(IG),IG-1,IS+1)
+          call GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG),1000.0D0,1000.0D0)
+          CALL GRACE_LINE(NFIL,IG-1,IS+SETSINGRAPH(IG),LW*10.0D0,FC,FC)
+          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG),TRIM(DOSSET%ID)//' occ')
+!         __FILLED AND EMPTY______________________________________________________
+          CALL GRACE_COPYSET(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,IG-1,IS+0)
+          call GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,1000.0D0,1000.0D0)
+          CALL GRACE_LINE(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,LW*10.0D0,'L'//TRIM(FC),'L'//TRIM(FC))
+          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,TRIM(DOSSET%ID)//' unocc')
+        ENDIF
+        IS=IS+2
+        
+        IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
+        DOSSET=>DOSSET%NEXT
+      ENDDO
+
 !
 !     ==========================================================================
 !     == WRITE AXES AND TICKS                                                 ==
@@ -427,6 +483,8 @@ END MODULE DOSSETS_MODULE
         WRITE(NFIL,FMT='("YAXIS TICK OFF")')
 !       == SWITCH TICK LABELS ON THE Y AXIS OFF
         WRITE(NFIL,FMT='("YAXIS TICKLABEL OFF")')
+!       == SET LEGEND POSITION         
+        CALL GRACE_LEGEND_POSITION(NFIL,IG,0.0D0,0.9D0-(IG)/REAL(NGRAPH,KIND=8)*0.8D0)
       ENDDO
       WRITE(NFIL,FMT='("XAXIS TICKLABEL ON")')
       WRITE(NFIL,FMT='("XAXIS LABEL ",A)')+'"E('//-'E'//+'V)"'
@@ -653,7 +711,7 @@ END MODULE DOSSETS_MODULE
          CALL GRACE_MAPCOLOR(NFIL,I,  0,155,  0,'DARKGREEN')   ; I=I+1
          CALL GRACE_MAPCOLOR(NFIL,I,120,220,120,'LDARKGREEN')   ; I=I+1
          CALL GRACE_MAPCOLOR(NFIL,I,150,150,150,'LBLACK')   ; I=I+1
-         CALL GRACE_MAPCOLOR(NFIL,I,240,240,240,'LGREY')   ; I=I+1
+       CALL GRACE_MAPCOLOR(NFIL,I,240,240,240,'LGREY')   ; I=I+1
        END IF
        CALL GRACE_MAPCOLOR(NFIL,I,200,200,200,'GREY')
 !
@@ -879,6 +937,69 @@ END MODULE DOSSETS_MODULE
 !
        COMMAND=TRIM(Y1)//' = '//TRIM(Y1)//' + '//TRIM(Y2)//' * '
        WRITE(NFIL,FMT='(A,F10.5)')TRIM(COMMAND),FACTOR
+       RETURN 
+       END
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE GRACE_COPYSET(NFIL,IGRAPH,ISET,IGRAPH2,ISET2)
+!      *************************************************************************
+!      ** DEFINES A NEW SET ISET WITH THE SAME LENGTH AS ISET2                **
+!      *************************************************************************
+       IMPLICIT NONE
+       INTEGER(4)  ,INTENT(IN) :: NFIL
+       INTEGER(4)  ,INTENT(IN) :: IGRAPH
+       INTEGER(4)  ,INTENT(IN) :: ISET
+       INTEGER(4)  ,INTENT(IN) :: IGRAPH2
+       INTEGER(4)  ,INTENT(IN) :: ISET2
+       CHARACTER(128)          :: Y1,Y2
+       CHARACTER(128)          :: COMMAND
+!      *************************************************************************
+       CALL GRACE_ITOSET(IGRAPH,ISET,Y1)
+       CALL GRACE_ITOSET(IGRAPH2,ISET2,Y2)
+!
+       COMMAND=TRIM(Y1)//' LENGTH '//TRIM(Y2)//'.LENGTH'
+       WRITE(NFIL,FMT='(A)')TRIM(COMMAND)
+       RETURN 
+       END
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE GRACE_LEGEND(NFIL,IGRAPH,ISET,text)
+!      *************************************************************************
+!      ** DEFINES A NEW SET ISET WITH THE SAME LENGTH AS ISET2                **
+!      *************************************************************************
+       IMPLICIT NONE
+       INTEGER(4)  ,INTENT(IN) :: NFIL
+       INTEGER(4)  ,INTENT(IN) :: IGRAPH
+       INTEGER(4)  ,INTENT(IN) :: ISET
+       CHARACTER(*)            :: text
+       CHARACTER(128)          :: Y1
+       CHARACTER(128)          :: COMMAND
+!      *************************************************************************
+       CALL GRACE_ITOSET(IGRAPH,ISET,Y1)
+!
+       COMMAND=TRIM(Y1)//' LEGEND "'//TRIM(text)//'"'
+       WRITE(NFIL,FMT='(A)')TRIM(COMMAND)
+       RETURN 
+       END
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE GRACE_LEGEND_POSITION(NFIL,IGRAPH,X,Y)
+!      *************************************************************************
+!      ** DEFINES A NEW SET ISET WITH THE SAME LENGTH AS ISET2                **
+!      *************************************************************************
+       IMPLICIT NONE
+       INTEGER(4)  ,INTENT(IN) :: NFIL
+       INTEGER(4)  ,INTENT(IN) :: IGRAPH
+       real(8)     ,INTENT(IN) :: X,Y
+       CHARACTER(128)          :: COMMAND
+       CHARACTER(16)           :: STRING
+!      *************************************************************************
+       WRITE(STRING,*)IGRAPH
+       COMMAND='WITH G'//ADJUSTL(STRING)
+       WRITE(NFIL,FMT='(A)')TRIM(COMMAND)
+       COMMAND='LEGEND '
+       WRITE(NFIL,FMT='(A,F12.5,A,F12.5)')TRIM(COMMAND),X,',',Y
+       WRITE(NFIL,FMT='(A)')'legend char size 1.0000'
        RETURN 
        END
 !

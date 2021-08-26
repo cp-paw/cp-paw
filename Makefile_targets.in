@@ -286,13 +286,14 @@ ${THISDIR}/doc/manual.pdf : ${THISDIR}/doc/manual.tex  \
                             ${THISDIR}/doc/doc.bib \
                             ${THISDIR}/doc/all.bib \
                             ${THISDIR}/doc/Figs
-	cd ${THISDIR}/doc;  latex -halt-on-error manual
-	cd ${THISDIR}/doc;  bibtex manual; \
+	cd ${THISDIR}/doc;  pdflatex -output-format pdf -draftmode \
+                                     -halt-on-error manual.tex; \
+                            bibtex manual; \
+                            pdflatex -output-format pdf \
+                                     -halt-on-error manual.tex;  \
                             makeindex manual.idx; \
-                            latex manual;  \
-                            latex manual; \
-                            dvips manual.dvi; \
-                            dvipdf manual.dvi
+                            pdflatex -output-format pdf \
+                                     -halt-on-error manual.tex
 #
 ${THISDIR}/doc/history.pdf : ${THISDIR}/doc/history.tex \
                              ${THISDIR}/doc/doc.bib \
