@@ -2,13 +2,13 @@
 MODULE TRAJECTORY_MODULE
 TYPE TRA_TYPE
   INTEGER(4)             :: NSTEP
-!clemens
+!CLEMENS
   REAL(8)   ,POINTER     :: CELL(:,:)!(9,NSTEP)
   REAL(8)   ,POINTER     :: R(:,:,:) !(3,NAT,NSTEP)  POSITION
   REAL(8)   ,POINTER     :: Q(:,:)   !(NAT,NSTEP)    CHARGE
   REAL(8)   ,POINTER     :: T(:)     !(NSTEP)        TIME
-  REAL(8)   ,POINTER     :: charge(:,:) !(NAT,NSTEP)  #(electrons in sphere)
-  REAL(8)   ,POINTER     :: spin(:,:,:) !(3,NAT,NSTEP)  spin moment in sphere
+  REAL(8)   ,POINTER     :: CHARGE(:,:) !(NAT,NSTEP)  #(ELECTRONS IN SPHERE)
+  REAL(8)   ,POINTER     :: SPIN(:,:,:) !(3,NAT,NSTEP)  SPIN MOMENT IN SPHERE
   INTEGER(4),POINTER     :: ISTEP(:) !(NSTEP)        TIME STEP COUNTER
 END TYPE TRA_TYPE
 TYPE MODE_TYPE
@@ -100,7 +100,7 @@ END MODULE TRAJECTORY_MODULE
       PROGRAM MAIN
 !     **************************************************************************
 !     **                                                                      **
-!     **  main routine of trajectory tool                                     **
+!     **  MAIN ROUTINE OF TRAJECTORY TOOL                                     **
 !     **                                                                      **
 !     **************************************************************************
       USE STRINGS_MODULE
@@ -120,7 +120,7 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)        :: SECOND
       REAL(8)        :: PICO
       REAL(8)        :: FEMTO
-      character(40)  :: str
+      CHARACTER(40)  :: STR
 !     **************************************************************************
                           CALL TRACE$PUSH('MAIN')
       CALL GET_COMMAND_ARGUMENT(1,FILE)
@@ -143,6 +143,12 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$MARK(LL_CNTL,1)
 !
 !     ==========================================================================
 !     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED                     ==
@@ -260,6 +266,12 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$NEW(LL_STRC)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$MARK(LL_STRC,1)
 !
 !     ==========================================================================
 !     == GET ATOMIC NUMBER                                                    ==
@@ -267,7 +279,7 @@ END MODULE TRAJECTORY_MODULE
       CALL READ_STRC(LL_STRC)
 !
 !     ==========================================================================
-!     ==  READ time interval for analysis                                     ==
+!     ==  READ TIME INTERVAL FOR ANALYSIS                                     ==
 !     ==========================================================================
       CALL CONSTANTS$GET('SECOND',SECOND)
       CALL CONSTANTS$GET('FEMTO',FEMTO)
@@ -321,6 +333,13 @@ END MODULE TRAJECTORY_MODULE
 !     ==                                                                      ==
 !     ==========================================================================
       CALL FILEHANDLER$REPORT(NFILO,'USED')
+!      
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_STRC,NFILO)
 !
 !     ==========================================================================
 !     ==  CLOSING                                                             ==
@@ -502,7 +521,7 @@ END MODULE TRAJECTORY_MODULE
       ELSE
         CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',1)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
-        IF(.NOT.TCHK) then
+        IF(.NOT.TCHK) THEN
           CALL LINKEDLIST$SET(LL_CNTL,'NAME',0,-'.TRA.CORRELATION')
           CALL LINKEDLIST$SET(LL_CNTL,'EXT',0,.TRUE.)
         END IF
@@ -539,8 +558,8 @@ END MODULE TRAJECTORY_MODULE
 !     ==========================================================================
 !     == SELECT HISTOGRAM OR SPAGHETTI                                        ==
 !     ========================================== ===============================
-!     == option spaghetti is not documented in the manual.
-!     == its implementation is not functional
+!     == OPTION SPAGHETTI IS NOT DOCUMENTED IN THE MANUAL.
+!     == ITS IMPLEMENTATION IS NOT FUNCTIONAL
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DEP',1,TCHK)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'DEP',1,DEP)
@@ -575,13 +594,13 @@ END MODULE TRAJECTORY_MODULE
       ENDDO
 !     
 !     ==========================================================================
-!     == branch out to pair correlation function                              ==
+!     == BRANCH OUT TO PAIR CORRELATION FUNCTION                              ==
 !     ==========================================================================
       IF(DEP.EQ.'HISTOGRAM') THEN
         CALL FILEHANDLER$UNIT('CORRELATION',NFIL)
-! fast
+! FAST
         CALL PAIRCORRELATION1(NFIL,RBAS,NATOM,TSELECTC,TSELECTP,NSTEP,TRA%R)
-! secure
+! SECURE
 !        CALL PAIRCORRELATION2(NFIL,RBAS,NATOM,TSELECTC,TSELECTP,NSTEP,TRA%R)
         CALL FILEHANDLER$CLOSE('CORRELATION')
         CALL REPORT$TITLE(NFILO,'CORRELATION')
@@ -715,33 +734,33 @@ END MODULE TRAJECTORY_MODULE
       LOGICAL(4),INTENT(IN) :: TSELECTP(NAT)
       INTEGER(4),INTENT(IN) :: NSTEP
       REAL(8)   ,INTENT(IN) :: R(3,NAT,NSTEP)
-      REAL(8)   ,PARAMETER  :: angstrom=1.889726D0 ! angstrom
-      REAL(8)   ,PARAMETER  :: RMAX=5.D0*angstrom ! OUTERMOST POINT OF HISTOGRAM
-      REAL(8)   ,PARAMETER  :: RMAX2=rmax**2
+      REAL(8)   ,PARAMETER  :: ANGSTROM=1.889726D0 ! ANGSTROM
+      REAL(8)   ,PARAMETER  :: RMAX=5.D0*ANGSTROM ! OUTERMOST POINT OF HISTOGRAM
+      REAL(8)   ,PARAMETER  :: RMAX2=RMAX**2
       REAL(8)   ,PARAMETER  :: SCALEX=2.D0  ! SELECT WITH RMAX*SCALEX
       INTEGER(4),PARAMETER  :: NBX=100000     ! #(BONDS CONSIDERED)
       INTEGER(4),PARAMETER  :: NP=1000  ! #(GRID POINTS ON HISTOGRAM)
       REAL(8)               :: HISTOGRAM(NP)
       INTEGER(4)            :: NB ! #(BONDS)
       REAL(8)   ,ALLOCATABLE:: RAD(:) !(NAT)
-      type(bond_type),allocatable :: bond(:)
-      type(bond_type)       :: bond1
+      TYPE(BOND_TYPE),ALLOCATABLE :: BOND(:)
+      TYPE(BOND_TYPE)       :: BOND1
       REAL(8)               :: DR(3)
       REAL(8)               :: DIS2
       REAL(8)               :: SVAR ! SUPPORT VARIABLE
-      INTEGER(4)            :: IATC,IATP,ISTEP,IP,i,ib
-      INTEGER(4)            :: it(3)
-      INTEGER(4)            :: natc  !#(center atoms)
+      INTEGER(4)            :: IATC,IATP,ISTEP,IP,I,IB
+      INTEGER(4)            :: IT(3)
+      INTEGER(4)            :: NATC  !#(CENTER ATOMS)
 !     **************************************************************************
       ALLOCATE(RAD(NAT))
       RAD(:)=0.5D0*RMAX
-      natc=0
-      do iatc=1,nat
-        if(tselectc(iatc))natc=natc+1
-      enddo
+      NATC=0
+      DO IATC=1,NAT
+        IF(TSELECTC(IATC))NATC=NATC+1
+      ENDDO
       ALLOCATE(BOND(NBX))
       ISTEP=1
-      nb=0
+      NB=0
       CALL BONDS_EVAL(RBAS,NAT,R(:,:,ISTEP),RAD,SCALEX,NBX,NB,BOND)
 !
 !     __REMOVE UNDESIRED BONDS__________________________________________________
@@ -775,7 +794,7 @@ END MODULE TRAJECTORY_MODULE
               IATP=BOND(IB)%IAT2
             END IF
           END IF
-        ENDdo
+        ENDDO
       ENDDO
 !
 !     ==========================================================================
@@ -785,11 +804,11 @@ END MODULE TRAJECTORY_MODULE
       HISTOGRAM(:)=0.D0
       DO ISTEP=1,NSTEP
         DO IB=1,NB
-          IATC=BOND(ib)%IAT1
-          IATP=BOND(ib)%IAT2
+          IATC=BOND(IB)%IAT1
+          IATP=BOND(IB)%IAT2
           DR(:)=R(:,IATP,ISTEP)-R(:,IATC,ISTEP)   
-          IT=BOND(ib)%IT
-          if(sum(it**2).ne.0) DR(:)=dr(:)+MATMUL(RBAS,REAL(IT,KIND=8))
+          IT=BOND(IB)%IT
+          IF(SUM(IT**2).NE.0) DR(:)=DR(:)+MATMUL(RBAS,REAL(IT,KIND=8))
           DIS2=SUM((DR(:))**2)
           IF(DIS2.GE.RMAX2) CYCLE
           IP=1+INT(SQRT(DIS2)*SVAR)
@@ -815,7 +834,7 @@ END MODULE TRAJECTORY_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      subroutine PAIRCORRELATION2(NFIL,RBAS,NAT,TSELECTC,TSELECTP,NSTEP,R)
+      SUBROUTINE PAIRCORRELATION2(NFIL,RBAS,NAT,TSELECTC,TSELECTP,NSTEP,R)
 !     **************************************************************************
 !     **                                                                      **
 !     **************************************************************************
@@ -826,7 +845,7 @@ END MODULE TRAJECTORY_MODULE
       LOGICAL(4),INTENT(IN) :: TSELECTC(NAT)
       LOGICAL(4),INTENT(IN) :: TSELECTP(NAT)
       INTEGER(4),INTENT(IN) :: NSTEP
-      REAL(8)   ,INTENT(IN) :: R(3,NAT,nSTEP)
+      REAL(8)   ,INTENT(IN) :: R(3,NAT,NSTEP)
       REAL(8)   ,PARAMETER  :: RMAX=5.D0
       REAL(8)   ,PARAMETER  :: RMAX2=RMAX**2
       INTEGER(4),PARAMETER  :: ITX=3
@@ -834,12 +853,12 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)               :: HISTOGRAM(NP)
       INTEGER(4)            :: NT ! #(TRANSLATION VECTORS KEPT)
       REAL(8)   ,ALLOCATABLE:: TVEC(:,:) ! (3,NT)
-      REAL(8)               :: r1(3)
+      REAL(8)               :: R1(3)
       REAL(8)               :: DR(3)
-      REAL(8)               :: dis2
+      REAL(8)               :: DIS2
       REAL(8)               :: SVAR ! SUPPORT VARIABLE
       INTEGER(4)            :: IT1,IT2,IT3
-      INTEGER(4)            :: iatc,iatp,IT,istep,ip
+      INTEGER(4)            :: IATC,IATP,IT,ISTEP,IP
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -883,9 +902,9 @@ END MODULE TRAJECTORY_MODULE
           R1(:)=R(:,IATC,ISTEP)
           DO IATP=1,NAT
             IF(.NOT.TSELECTP(IATP)) CYCLE
-            dr(:)=R(:,IATP,ISTEP)-R1(:)
+            DR(:)=R(:,IATP,ISTEP)-R1(:)
             DO IT=1,NT
-              DIS2=SUM((dr(:)+TVEC(:,IT))**2)
+              DIS2=SUM((DR(:)+TVEC(:,IT))**2)
               IF(DIS2.GE.RMAX2) CYCLE
               IP=1+INT(SQRT(DIS2)*SVAR)
               HISTOGRAM(IP)=HISTOGRAM(IP)+1.D0
@@ -1302,7 +1321,7 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)                  :: DR(3)
       REAL(8)                  :: DIS
       REAL(8)                  :: TAV,T2AV
-      REAL(8)                  :: Tsum,T2sum
+      REAL(8)                  :: TSUM,T2SUM
       REAL(8)                  :: SVAR
       REAL(8)                  :: DELTAT
       LOGICAL(4)               :: TFILE   ! FILE SHALL BE WRITTEN OR NOT
@@ -1314,7 +1333,7 @@ END MODULE TRAJECTORY_MODULE
       REAL(8)                  :: SUM
       REAL(8)                  :: TRTRD,ALPHARTRD,TAVRTRD
       INTEGER(4)               :: NATOM
-      character(80)            :: string
+      CHARACTER(80)            :: STRING
 !     ******************************************************************
                                CALL TRACE$PUSH('TEMPERATURE')
       IF(TQMMM) THEN
@@ -1336,8 +1355,8 @@ END MODULE TRAJECTORY_MODULE
 !     ==  TEMPERATURE                                                  ==
 !     ================================================================
       CALL REPORT$TITLE(NFILO,'TEMPERATURE OF INDIVIDUAL ATOMS')
-      tsum=0.d0
-      t2sum=0.d0
+      TSUM=0.D0
+      T2SUM=0.D0
       DO IAT=1,NATOM
         TAV=0.D0
         T2AV=0.D0
@@ -1353,14 +1372,14 @@ END MODULE TRAJECTORY_MODULE
         SVAR=0.5D0*MASS(IAT)/1.5D0
         TAV =SVAR*TAV
         T2AV=SVAR**2*T2AV
-        tsum=tsum+tav
-        t2sum=t2sum+t2av
+        TSUM=TSUM+TAV
+        T2SUM=T2SUM+T2AV
         WRITE(NFILO,FMT='("ATOM ",A10," <T>:",F10.1,"K" &
      &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
      &    TRIM(ATOM(IAT)),TAV/KELVIN,SQRT(T2AV-TAV**2)/KELVIN
       ENDDO
-      tsum=tsum/natom
-      t2sum=t2sum/natom
+      TSUM=TSUM/NATOM
+      T2SUM=T2SUM/NATOM
       WRITE(NFILO,FMT='(80("-"))')
       WRITE(NFILO,FMT='("SUM",T17,"<T>:",F10.1,"K" &
      &                    ,"   SQR[<(T-<T>)^2>]",F15.0,"K")') &
@@ -1879,8 +1898,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       INTEGER(4)                :: IZTHIS,IAT1,I
       CHARACTER(32),ALLOCATABLE :: ATOMM(:) ! 
       REAL(8)      ,ALLOCATABLE :: QM(:) 
-      LOGICAL(4)                :: TBOX,TQMMM_out
-      real(8)      ,allocatable :: scaledrad(:)
+      LOGICAL(4)                :: TBOX,TQMMM_OUT
+      REAL(8)      ,ALLOCATABLE :: SCALEDRAD(:)
 !     **************************************************************************
                            CALL TRACE$PUSH('WRITETRA')
       LL_STRC=LL_STRC_
@@ -1952,17 +1971,17 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ==  GET VIEWBOX                                                 ==
 !     ==================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
-      tbox=.false.
+      TBOX=.FALSE.
       BOXR0(:)=0.D0
       BOXVEC(:,:)=RBAS(:,:)
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
-      IF(TCHK) then
-        tbox=.true.
+      IF(TCHK) THEN
+        TBOX=.TRUE.
         CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
-      end if
+      END IF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK)  ! CENTER OF THE BOX
       IF(TCHK) THEN
-        tbox=.true.
+        TBOX=.TRUE.
         CALL LINKEDLIST$GET(LL_CNTL,'C',1,BOXR0)
         BOXR0(:)=BOXR0(:)-0.5D0*(BOXVEC(:,1)+BOXVEC(:,2)+BOXVEC(:,3))
         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
@@ -1972,10 +1991,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
         END IF
       END IF
       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-      IF(TCHK) then
-        tbox=.true.
+      IF(TCHK) THEN
+        TBOX=.TRUE.
         CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
-      end if
+      END IF
 !
 !     ==================================================================
 !     ==  DEFINE FRAMES TO BE SKIPPED                                 ==
@@ -2076,14 +2095,14 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ==  MAP ATOMS INTO VIEWBOX                                    ==
 !       ================================================================
 !TBOX=.FALSE.
-        IF(.not.TBOX) THEN  ! fix due to compiler bug of absoft
+        IF(.NOT.TBOX) THEN  ! FIX DUE TO COMPILER BUG OF ABSOFT
           NATM=NAT0
         ELSE
           CALL MODEL$NATM(BOXR0,BOXVEC,NAT0,R0,RBAS,NATM)
         END IF
         ALLOCATE(POSM(3,NATM))
         ALLOCATE(MAP(NATM))
-        IF(.not.TBOX) THEN  ! fix due to compiler bug of absoft
+        IF(.NOT.TBOX) THEN  ! FIX DUE TO COMPILER BUG OF ABSOFT
           DO I=1,NAT0
             MAP(I)=I
             POSM(:,I)=R0(:,I)
@@ -2092,14 +2111,14 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
           CALL MODEL$ATOMS(BOXR0,BOXVEC,NAT0,R0,RBAS,NATM,POSM,MAP)
         END IF
         ALLOCATE(RAD(NATM))
-        ALLOCATE(scaledrad(NATM))
+        ALLOCATE(SCALEDRAD(NATM))
         ALLOCATE(COLOR(3,NATM))
         ALLOCATE(EL(NATM))
         ALLOCATE(ATOMM(NATM))
         ALLOCATE(QM(NATM))
         DO IAT=1,NATM
           IZTHIS=IZ0(MAP(IAT))
-!print*,"FLAG: ", IZTHIS, EL(IAT), IZ0(MAP(IAT)), MAP(IAT)
+!PRINT*,"FLAG: ", IZTHIS, EL(IAT), IZ0(MAP(IAT)), MAP(IAT)
           CALL PERIODICTABLE$GET(IZTHIS,'R(COV)',RAD(IAT))
           CALL PERIODICTABLE$GET(IZTHIS,'SYMBOL',EL(IAT))
           CALL ATOMCOLOR(IZTHIS,IVEC)
@@ -2110,10 +2129,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ================================================================
 !       ==  CALCULATE BONDS                                           ==
 !       ================================================================
-        scaledrad(:)=1.2d0*rad(:)
-        CALL MODEL$NBONDM(NATM,POSM,scaledrad(:),NBOND)
+        SCALEDRAD(:)=1.2D0*RAD(:)
+        CALL MODEL$NBONDM(NATM,POSM,SCALEDRAD(:),NBOND)
         ALLOCATE(BOND(2,NBOND))
-        CALL MODEL$BONDS(NATM,POSM,scaledrad(:),NBOND,BOND)
+        CALL MODEL$BONDS(NATM,POSM,SCALEDRAD(:),NBOND,BOND)
 !     
 !       ================================================================
 !       ==  WRITE CSSR FILE FOR TEST                                  ==
@@ -2128,8 +2147,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !       ================================================================
         IF(FORMAT.EQ.'DX') THEN
           IOBJ=6*(IFRAME-1)
-          scaledrad(:)=0.5d0*rad(:)
-          CALL DXBALLSTICK(NFIL,IOBJ,NATM,COLOR,scaledrad(:),POSM,NBOND,BOND &
+          SCALEDRAD(:)=0.5D0*RAD(:)
+          CALL DXBALLSTICK(NFIL,IOBJ,NATM,COLOR,SCALEDRAD(:),POSM,NBOND,BOND &
       &         ,BOXR0,BOXVEC)
         ELSE IF(FORMAT.EQ.'XYZ') THEN
 !PRINT*,"FLAG CALL WRITEXYZ(NATM): ",NATM
@@ -2146,7 +2165,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
         DEALLOCATE(POSM)
         DEALLOCATE(MAP)
         DEALLOCATE(RAD)
-        DEALLOCATE(scaledrad)
+        DEALLOCATE(SCALEDRAD)
         DEALLOCATE(COLOR)
         DEALLOCATE(BOND)
         DEALLOCATE(ATOMM)
@@ -2435,8 +2454,8 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
        REAL(8)                   :: MASSUNIT
        REAL(8)                   :: LUNIT
        INTEGER(4)                :: NFILO
-integer(4),allocatable    :: ind(:)
-integer(4)                :: j,natm
+INTEGER(4),ALLOCATABLE    :: IND(:)
+INTEGER(4)                :: J,NATM
 !      *************************************************************************
                                CALL TRACE$PUSH('READ_STRC')
        LL_STRC=LL_STRC_
@@ -2466,9 +2485,9 @@ integer(4)                :: j,natm
              CALL FORCEFIELD$GETI4('NMMATOM',QNAT)
 ! !-- REPORT ATOM DATA FROM PDB FILE
 !          DO IAT=1,QNAT
-!             WRITE(*,pdb_form) MMATOM(IAT)
+!             WRITE(*,PDB_FORM) MMATOM(IAT)
 !          ENDDO
-! print*,"FLAG: FORCED STOP - PRINTOUT OF MMATOMS. ",QNAT
+! PRINT*,"FLAG: FORCED STOP - PRINTOUT OF MMATOMS. ",QNAT
 ! STOP         
          END IF
          ALLOCATE(IZ(QNAT))
@@ -2510,7 +2529,7 @@ integer(4)                :: j,natm
                 CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
                 CALL LINKEDLIST$EXISTD(LL_STRC,'INDEX',1,TCHK)
                 IF(TCHK) THEN
-                   CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT) !there is no INDEX in QMMM part
+                   CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT) !THERE IS NO INDEX IN QMMM PART
                 ELSE 
                    IAT = I
                 END IF
@@ -2527,7 +2546,7 @@ integer(4)                :: j,natm
              DO I=1,QNAT
                 IAT=I
                 IND(I)=IAT
-                ATOM(IAT)=TRIM(ADJUSTL(MMATOM(IAT)%NAME))//'_'//.itos.IAT
+                ATOM(IAT)=TRIM(ADJUSTL(MMATOM(IAT)%NAME))//'_'//.ITOS.IAT
                SP(IAT) = ATOM(IAT)(1:2)
             END DO
           END IF
@@ -2550,7 +2569,7 @@ integer(4)                :: j,natm
          ENDDO
        END IF
 
-       IF(ALLOCATED(IND)) deallocate(ind)
+       IF(ALLOCATED(IND)) DEALLOCATE(IND)
 !
 !      =========================================================================
 !      ==   LOOK UP ATOMIC NUMBER OF SPECIES                                  ==
@@ -2563,7 +2582,7 @@ integer(4)                :: j,natm
              CALL LINKEDLIST$SELECT(LL_STRC,'SPECIES',I)
              CALL LINKEDLIST$GET(LL_STRC,'NAME',1,SPNAME)
              SYMBOL=SPNAME(1:2)
-             print*,"FLAG SPNAME: ",SPNAME
+             PRINT*,"FLAG SPNAME: ",SPNAME
              IF(SYMBOL(2:2).EQ.'_')SYMBOL(2:2)=' '
              CALL PERIODICTABLE$GET(SYMBOL,'Z',IZ1)
              !
@@ -2622,7 +2641,7 @@ integer(4)                :: j,natm
              DO I=1,QNAT
                 CALL LINKEDLIST$SELECT(LL_STRC,'QM-MM')
                 CALL LINKEDLIST$SELECT(LL_STRC,'ATOM',I)
-!             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX in QMMM Part
+!             CALL LINKEDLIST$GET(LL_STRC,'INDEX',1,IAT)  !NO INDEX IN QMMM PART
                 IAT = I
                 CALL LINKEDLIST$EXISTD(LL_STRC,'M',1,TCHK)
                 IF(TCHK)THEN
@@ -2688,7 +2707,7 @@ integer(4)                :: j,natm
       SUBROUTINE DXBALLSTICK(NFIL,IOBJECT0,NAT,COLOR,RAD,POS &
      &                      ,NBOND,IBOND,BOXR0,BOXVEC)
       USE STRINGS_MODULE
-      implicit none
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: COLOR(3,NAT)
@@ -2700,9 +2719,9 @@ integer(4)                :: j,natm
       REAL(8)   ,INTENT(IN) :: BOXVEC(3,3)
       INTEGER(4),INTENT(IN) :: IOBJECT0
       CHARACTER(256)        :: LINE
-      integer(4)            :: i1,i2,i3
-      real(8)               :: t1,t2,t3
-      real(8)               :: x,y,z
+      INTEGER(4)            :: I1,I2,I3
+      REAL(8)               :: T1,T2,T3
+      REAL(8)               :: X,Y,Z
 !     **************************************************************************
 !     
 !     ==========================================================================
@@ -2743,7 +2762,7 @@ integer(4)                :: j,natm
 !     ==========================================================================
 !     ==   CONNECTIONS ARRAY: BONDS                                           ==
 !     ==========================================================================
-      if(nbond.gt.0) then
+      IF(NBOND.GT.0) THEN
 !     WRITE(NFIL,FMT='("#"/"#",T10,"BONDS"/"#")')
       WRITE(NFIL,FMT='(A,1X,I10)')-"OBJECT ",IOBJECT0+4
       WRITE(NFIL,FMT='(A,1X,I10)') &
@@ -2753,7 +2772,7 @@ integer(4)                :: j,natm
       WRITE(NFIL,FMT='(A)')      -"ATTRIBUTE ""REF"" STRING ""POSITIONS"""
       WRITE(NFIL,FMT='(A)')      -"ATTRIBUTE ""ELEMENT TYPE"" STRING ""LINES"""
       WRITE(NFIL,FMT='("#")')
-      end if
+      END IF
 !     
 !     ==========================================================================
 !     ==   BOX: LATTICE VECTORS                                               ==
@@ -2784,9 +2803,9 @@ integer(4)                :: j,natm
       WRITE(NFIL,FMT='(A)')      -"CLASS FIELD"
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""DATA"" VALUE ",IOBJECT0+1
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""POSITIONS"" VALUE ",IOBJECT0+3
-      if(nbond.gt.0) then
+      IF(NBOND.GT.0) THEN
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""CONNECTIONS"" VALUE ",IOBJECT0+4
-      end if
+      END IF
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""BOX"" VALUE ",IOBJECT0+5
       WRITE(NFIL,FMT='(A,1X,I10)')-"COMPONENT ""COLORS"" VALUE ",IOBJECT0+2
       WRITE(NFIL,FMT='(A)')-"ATTRIBUTE ""NAME"" STRING ""ATOMS"""
@@ -2941,7 +2960,7 @@ integer(4)                :: j,natm
 !     ******************************************************************
 !RBASINV=RBAS
 !CALL DGEICD(RBASINV,3,3,0,RCOND,DET,AUX,NAUX) !ESSL MATRIX INVERSION
-      call lib$invertr8(3,rbas,rbasinv)
+      CALL LIB$INVERTR8(3,RBAS,RBASINV)
       DT0(:)=0.D0
       DO ISTEP=1,NSTEP
          DR=TRA%R(:,IAT1,ISTEP)-TRA%R(:,IAT2,ISTEP)+DT0(:)
@@ -2992,7 +3011,7 @@ integer(4)                :: j,natm
 !     ******************************************************************
 !RBASINV=RBAS
 !CALL DGEICD(RBASINV,3,3,0,RCOND,DET,AUX,NAUX) !ESSL MATRIX INVERSION
-      call lib$invertr8(3,rbas,rbasinv)
+      CALL LIB$INVERTR8(3,RBAS,RBASINV)
       DO ISTEP=1,NSTEP
          DR1=TRA%R(:,IAT3,ISTEP)-TRA%R(:,IAT2,ISTEP)
          DR2=TRA%R(:,IAT1,ISTEP)-TRA%R(:,IAT2,ISTEP)
@@ -3048,7 +3067,7 @@ integer(4)                :: j,natm
 !     ******************************************************************
 !RBASINV=RBAS
 !CALL DGEICD(RBASINV,3,3,0,RCOND,DET,AUX,NAUX) !ESSL MATRIX INVERSION
-      call lib$invertr8(3,rbas,rbasinv)
+      CALL LIB$INVERTR8(3,RBAS,RBASINV)
       PI=4.D0*ATAN(1.D0)
       PREV=0.D0
       DO ISTEP=1,NSTEP
@@ -3611,8 +3630,8 @@ PRINT*,'COLLECT JUMPS'
                 NB=NB+1
                 IF(NB.GT.NBX) THEN
                   CALL ERROR$MSG('TO MANY NEIGHBORS')
-                  CALL ERROR$i4val('nb',nb)
-                  CALL ERROR$i4val('nbx',nbx)
+                  CALL ERROR$I4VAL('NB',NB)
+                  CALL ERROR$I4VAL('NBX',NBX)
                   CALL ERROR$STOP('BONDS_EVAL')
                 END IF
                 DIS=SQRT(DIS2)
@@ -3647,7 +3666,7 @@ PRINT*,'COLLECT JUMPS'
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      implicit none
+      IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
       INTEGER(4)   ,INTENT(IN) :: NATOM
@@ -3657,7 +3676,7 @@ PRINT*,'COLLECT JUMPS'
       INTEGER(4)               :: N,I
       CHARACTER(16),ALLOCATABLE:: ATOMNAMES(:)
       LOGICAL(4)   ,PARAMETER  :: TPR=.FALSE.
-      integer(4)               :: iat
+      INTEGER(4)               :: IAT
 !     **************************************************************************
       LL_CNTL=LL_CNTL_
       TSELECT(:)=.TRUE.
@@ -3999,17 +4018,17 @@ PRINT*,'COLLECT JUMPS'
       NAME=XNAME(:ICOLON-1)
       IPOS=ICOLON+1
       IND=0
-      sgn=+1
+      SGN=+1
       DO WHILE(IND.LT.3) 
         ICH=IACHAR(XNAME(IPOS:IPOS))
 !       ==  IACHAR('+')=43; IACHAR('-')=45; IACHAR('0')=48; IACHAR('1')=49;...
-        IF(ICH.GE.48.AND.ICH.LE.57) THEN ! if "0,1,...,9"
+        IF(ICH.GE.48.AND.ICH.LE.57) THEN ! IF "0,1,...,9"
           IND=IND+1
           IT(IND)=SGN*(ICH-48)
           SGN=+1
-        ELSE IF(ICH.EQ.43) THEN   ! if "+"
+        ELSE IF(ICH.EQ.43) THEN   ! IF "+"
           SGN=+1
-        ELSE IF(ICH.EQ.45) THEN   ! if "-"
+        ELSE IF(ICH.EQ.45) THEN   ! IF "-"
           SGN=-1
         ELSE
           CALL ERROR$MSG('ILLEGAL CHARACTER IN EXTENDED ATOM NOTATION')  

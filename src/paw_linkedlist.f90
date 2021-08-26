@@ -61,6 +61,8 @@ TYPE LDATA_TYPE
   CHARACTER(8)              :: TYPE   ! DATA TYPE
   INTEGER(4)                :: SIZE   ! SIZE
   CHARACTER(1)     ,POINTER :: VAL(:) ! DATA
+  INTEGER(4)                :: USED   ! NUMBER OF ACCESSES TO DATA
+  INTEGER(4)                :: MARKED ! CHANGED BY LINKEDLIST$MARK
 END TYPE LDATA_TYPE
 TYPE TYPE_TYPE
  CHARACTER(8)   :: NAME
@@ -301,6 +303,8 @@ CONTAINS
       DATA%ID=ID
       DATA%TYPE=' '
       DATA%SIZE=0
+      DATA%USED=0
+      DATA%MARKED=0
       NULLIFY(DATA%VAL)
       RETURN
       END SUBROUTINE LLIST_APPENDDATA
@@ -519,6 +523,8 @@ CONTAINS
       TYPE(LDATA_TYPE),POINTER   :: IDATA
       CHARACTER(256)             :: EMPTY=' '
       CHARACTER(32)              :: SIZESTRING
+      CHARACTER(32)              :: USEDSTRING
+      CHARACTER(32)              :: MARKEDSTRING
 !     ******************************************************************
       IF(.NOT.ASSOCIATED(DATA)) RETURN
       EMPTY=' '
@@ -531,14 +537,116 @@ CONTAINS
           CALL ERROR$STOP('LLIST_REPORTDATA')
         END IF
         SIZESTRING=TRIM(SIZESTRING(1:23))//'*'//TRIM(IDATA%TYPE)
-        WRITE(NFIL,FMT='(A,A,"[",A,"]")') &
-     &          EMPTY(1:LEVEL),TRIM(IDATA%ID),TRIM(SIZESTRING)
+        WRITE(MARKEDSTRING,FMT='(I32)')IDATA%MARKED
+        MARKEDSTRING=ADJUSTL(MARKEDSTRING)
+        WRITE(USEDSTRING,FMT='(I32)')IDATA%USED
+        USEDSTRING=ADJUSTL(USEDSTRING)
+        WRITE(NFIL,FMT='(A,A,"[",A,",",A,",",A,"]")') &
+     &          EMPTY(1:LEVEL),TRIM(IDATA%ID),TRIM(SIZESTRING), &
+     &          TRIM(MARKEDSTRING),TRIM(USEDSTRING)
         IF(.NOT.ASSOCIATED(IDATA%NEXT)) EXIT
         IDATA=>IDATA%NEXT
       ENDDO
       NULLIFY(IDATA)
       RETURN
       END SUBROUTINE LLIST_REPORTDATA
+!
+!     ..................................................................
+      SUBROUTINE LLIST_REPORTDATA_UNUSED(ILIST,DATA,NFIL,LEVEL)
+!     ******************************************************************
+!     **                                                              **
+!     **  MAKES A REPORT OF ALL DATA EQUAL OR YOUNGER THAN DATA       **
+!     **  AND WRITES THE REPORT TO FILE NFIL                          **
+!     **  APPLY ONLY TO LLIST_TYPE%DATA,  BECAUSE NO CONNECTIONS       **
+!     **  ARE RECOVERD EXCEPT THAT LISTS IS NULLIFIED.                **
+!     **                                                              **
+!     **  ERROR CONDITIONS: NONE                                      **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LLIST_TYPE),INTENT(IN),TARGET:: ILIST
+      TYPE(LDATA_TYPE),POINTER   :: DATA
+      TYPE(LLIST_TYPE),POINTER   :: LIST
+      INTEGER(4)      ,INTENT(IN):: NFIL
+      INTEGER(4)      ,INTENT(IN):: LEVEL
+      TYPE(LDATA_TYPE),POINTER   :: IDATA
+      CHARACTER(256)             :: EMPTY=' '
+      CHARACTER(32)              :: SIZESTRING
+      CHARACTER(32)              :: USEDSTRING
+      CHARACTER(32)              :: MARKEDSTRING
+      CHARACTER(256)             :: PARENTSTRING
+      CHARACTER(256)             :: PARENTSTRING2
+      TYPE(LDATA_TYPE),POINTER   :: PARENT
+      INTEGER(4)                 :: I
+!     ******************************************************************
+      IF(.NOT.ASSOCIATED(DATA)) RETURN
+      EMPTY=' '
+      IDATA=>DATA
+      DO 
+        IF(IDATA%USED.eq.0.and.IDATA%MARKED.eq.1)then
+          WRITE(SIZESTRING,FMT='(I32)')IDATA%SIZE
+          SIZESTRING=ADJUSTL(SIZESTRING)
+          IF(LEN_TRIM(SIZESTRING).GT.23) THEN
+            CALL ERROR$MSG('DIMENSIONING OF SIZESTRING NOT SUFFICIENT')
+            CALL ERROR$STOP('LLIST_REPORTDATA_UNUSED')
+          END IF
+          SIZESTRING=TRIM(SIZESTRING(1:23))//'*'//TRIM(IDATA%TYPE)
+          WRITE(MARKEDSTRING,FMT='(I32)')IDATA%MARKED
+          MARKEDSTRING=ADJUSTL(MARKEDSTRING)
+          WRITE(USEDSTRING,FMT='(I32)')IDATA%USED
+          USEDSTRING=ADJUSTL(USEDSTRING)
+
+          PARENTSTRING=""
+          LIST=>ILIST
+          DO
+            WRITE(PARENTSTRING2,FMT='(A,A1,A)')TRIM(LIST%ID),"!",TRIM(PARENTSTRING)
+            PARENTSTRING=PARENTSTRING2
+            IF(.NOT.ASSOCIATED(LIST%UP)) EXIT
+            LIST=>LIST%UP
+          ENDDO
+
+!          WRITE(NFIL,FMT='(A,A,"[",A,",",A,",",A,"]")') &
+!     &          EMPTY(1:LEVEL),TRIM(IDATA%ID),TRIM(SIZESTRING), &
+!     &          TRIM(MARKEDSTRING),TRIM(USEDSTRING),TRIM(PARENTSTRING)
+          WRITE(NFIL,FMT='(A,A)') &
+     &          TRIM(PARENTSTRING),TRIM(IDATA%ID)
+        endif
+        IF(.NOT.ASSOCIATED(IDATA%NEXT)) EXIT
+        IDATA=>IDATA%NEXT
+      ENDDO
+      NULLIFY(IDATA)
+      RETURN
+      END SUBROUTINE LLIST_REPORTDATA_UNUSED
+!
+!     ..................................................................
+      SUBROUTINE LLIST_MARKDATA(DATA,MARKVALUE,LEVEL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SETS THE INTERNAL VARIABLE MARKED OF AN DATA OBJECT TO      **
+!     **  THE VALUE MARKVALUE.                                        **
+!     **  AND WRITES THE REPORT TO FILE NFIL                          **
+!     **  APPLY ONLY TO LLIST_TYPE%DATA,  BECAUSE NO CONNECTIONS      **
+!     **  ARE RECOVERD EXCEPT THAT LISTS IS NULLIFIED.                **
+!     **                                                              **
+!     **  ERROR CONDITIONS: NONE                                      **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LDATA_TYPE),POINTER   :: DATA
+      INTEGER(4)      ,INTENT(IN):: MARKVALUE
+      INTEGER(4)      ,INTENT(IN):: LEVEL
+      TYPE(LDATA_TYPE),POINTER   :: IDATA
+!     ******************************************************************
+      IF(.NOT.ASSOCIATED(DATA)) RETURN
+      IDATA=>DATA
+      DO 
+        IDATA%MARKED=MARKVALUE
+        IF(.NOT.ASSOCIATED(IDATA%NEXT)) EXIT
+        IDATA=>IDATA%NEXT
+      ENDDO
+      NULLIFY(IDATA)
+      RETURN
+      END SUBROUTINE LLIST_MARKDATA
 !
 !     ..................................................................
       RECURSIVE SUBROUTINE LLIST_REPORTLISTS(LIST,NFIL,LEVEL)
@@ -574,6 +682,75 @@ CONTAINS
       ENDDO
       RETURN
       END SUBROUTINE LLIST_REPORTLISTS
+!
+!     ..................................................................
+      RECURSIVE SUBROUTINE LLIST_REPORTLISTS_UNUSED(LIST,NFIL,LEVEL)
+!     ******************************************************************
+!     **                                                              **
+!     **  MAKES A REPORT OF ALL DATA AND LISTS INCLUDING ALL          **
+!     **  CHILDREN AND THEIR DATA ETC. ATTACHED TO THE CURRENT LIST   **
+!     **                                                              **
+!     **  ERROR CONDITIONS: NONE                                      **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LLIST_TYPE),INTENT(IN)   :: LIST
+      INTEGER(4)      ,INTENT(IN)   :: NFIL
+      INTEGER(4)      ,INTENT(INOUT):: LEVEL
+      TYPE(LLIST_TYPE)              :: ILIST
+      CHARACTER(256)                :: EMPTY=' '
+!     ******************************************************************
+!     IF(.NOT.ASSOCIATED(LIST)) RETURN
+      ILIST=LIST
+      DO 
+        !WRITE(NFIL,FMT='(A,A,"[LIST]")')EMPTY(1:LEVEL),TRIM(ILIST%ID)
+        LEVEL=LEVEL+2
+        IF(ASSOCIATED(ILIST%DATA)) THEN
+          CALL LLIST_REPORTDATA_UNUSED(ILIST,ILIST%DATA,NFIL,LEVEL)
+        END IF
+        IF(ASSOCIATED(ILIST%LISTS)) THEN
+          CALL LLIST_REPORTLISTS_UNUSED(ILIST%LISTS,NFIL,LEVEL)
+        END IF
+        LEVEL=LEVEL-2
+        IF(.NOT.ASSOCIATED(ILIST%NEXT)) EXIT
+        ILIST=ILIST%NEXT
+      ENDDO
+      RETURN
+      END SUBROUTINE LLIST_REPORTLISTS_UNUSED
+!
+!     ..................................................................
+      RECURSIVE SUBROUTINE LLIST_MARKLISTS(LIST,MARKVALUE,LEVEL)
+!     ******************************************************************
+!     **                                                              **
+!     **  SETS THE MARKED VALUE OF ALL DATA AND LISTS INCLUDING ALL   **
+!     **  CHILDREN AND THEIR DATA ETC. ATTACHED TO THE CURRENT LIST   **
+!     **  THE THE VALUE MARKVALUE                                     **
+!     **                                                              **
+!     **  ERROR CONDITIONS: NONE                                      **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LLIST_TYPE),INTENT(IN)   :: LIST
+      INTEGER(4)      ,INTENT(IN)   :: MARKVALUE
+      INTEGER(4)      ,INTENT(INOUT):: LEVEL
+      TYPE(LLIST_TYPE)              :: ILIST
+!     ******************************************************************
+!     IF(.NOT.ASSOCIATED(LIST)) RETURN
+      ILIST=LIST
+      DO 
+        LEVEL=LEVEL+2
+        IF(ASSOCIATED(ILIST%DATA)) THEN
+          CALL LLIST_MARKDATA(ILIST%DATA,MARKVALUE,LEVEL)
+        END IF
+        IF(ASSOCIATED(ILIST%LISTS)) THEN
+          CALL LLIST_MARKLISTS(ILIST%LISTS,MARKVALUE,LEVEL)
+        END IF
+        LEVEL=LEVEL-2
+        IF(.NOT.ASSOCIATED(ILIST%NEXT)) EXIT
+        ILIST=ILIST%NEXT
+      ENDDO
+      RETURN
+      END SUBROUTINE LLIST_MARKLISTS
 !     
 !     ..................................................................
       SUBROUTINE LLIST_GETPTR(LIST,ID,NTH,TYPE,NBYTE,VAL)
@@ -607,6 +784,7 @@ CONTAINS
       NBYTE=DATA%SIZE
       TYPE =DATA%TYPE
       VAL  =>DATA%VAL
+      DATA%USED=DATA%USED+1
       RETURN
       END SUBROUTINE LLIST_GETPTR
 !
@@ -654,6 +832,8 @@ CONTAINS
       END IF
       DATA%SIZE=NBYTE
       DATA%TYPE=TYPE
+      DATA%USED=0
+      DATA%MARKED=0
       IERR=0
       RETURN
       END SUBROUTINE LLIST_SETPTR
@@ -680,6 +860,8 @@ CONTAINS
       DATA%SIZE=NBYTE
       DATA%TYPE=TYPE
       DATA%VAL=>VAL
+      DATA%USED=0
+      DATA%MARKED=0
       RETURN
       END SUBROUTINE LLIST_ADDPTR
 END MODULE LLIST_MODULE
@@ -1639,6 +1821,63 @@ CONTAINS
       END IF
       WRITE(NFIL,FMT='(72("="))')
       END SUBROUTINE LINKEDLIST$REPORT
+!     
+!     ..................................................................
+      SUBROUTINE LINKEDLIST$REPORT_UNUSED(LL,NFIL)
+!     ******************************************************************
+!     **                                                              **
+!     **  WRITES THE CHARACTERISTICS OF THE LIST,SUBLISTS AND         **
+!     **  THEIR DATA TO FILE                                          **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      INTEGER(4)      ,INTENT(IN) :: NFIL
+      INTEGER(4)                  :: LEVEL
+!     ******************************************************************
+      LIST=>LL%PTR
+      WRITE(NFIL,*)
+      WRITE(NFIL,FMT='("UNUSED ELEMENTS FROM INPUT FILE"/32("="))')
+      WRITE(NFIL,FMT='("NAME OF CURRENT LIST: ",A)')TRIM(LIST%ID)
+      WRITE(NFIL,FMT='(A)')"UNUSED ELEMENTS COULD INDICATE MISSPELLED" &
+     &                   //" OR INCORRECTLY PLACED DATA OR LISTS"
+      WRITE(NFIL,FMT='(80("-"),T10,"START LIST OF UNUSED ELEMENTS")') 
+
+      LEVEL=0
+      IF(ASSOCIATED(LIST%DATA)) THEN
+        CALL LLIST_REPORTDATA_UNUSED(LIST,LIST%DATA,NFIL,LEVEL)
+      END IF
+      IF(ASSOCIATED(LIST%LISTS)) THEN
+        CALL LLIST_REPORTLISTS_UNUSED(LIST%LISTS,NFIL,LEVEL)
+      END IF
+!
+      WRITE(NFIL,FMT='(80("-"),T10,"END LIST OF UNUSED ELEMENTS")') 
+      END SUBROUTINE LINKEDLIST$REPORT_UNUSED
+!     
+!     ..................................................................
+      SUBROUTINE LINKEDLIST$MARK(LL,MARKVALUE)
+!     ******************************************************************
+!     **                                                              **
+!     **  SETS THE VALUE OF MARK OF ALL ELEMENTS IN THE LISTS TO THE  **
+!     **  GIVEN VALUE MARKVALUE                                       **
+!     **                                                              **
+!     ******************************************************************
+      IMPLICIT NONE
+      TYPE(LL_TYPE)   ,INTENT(IN) :: LL
+      TYPE(LLIST_TYPE),POINTER    :: LIST
+      INTEGER(4)      ,INTENT(IN) :: MARKVALUE
+      INTEGER(4)                  :: LEVEL
+!     ******************************************************************
+      LIST=>LL%PTR
+      LEVEL=0
+      IF(ASSOCIATED(LIST%DATA)) THEN
+        CALL LLIST_MARKDATA(LIST%DATA,MARKVALUE,LEVEL)
+      END IF
+      IF(ASSOCIATED(LIST%LISTS)) THEN
+        CALL LLIST_MARKLISTS(LIST%LISTS,MARKVALUE,LEVEL)
+      END IF
+      END SUBROUTINE LINKEDLIST$MARK
 !     ....................................................................
 #TEMPLATE LINKEDLIST$SETNUM
 (<TYPEID>,<TYPE>,<TYPEDEF>)=([R8],[REAL(8)],['R(8)',8])
@@ -2689,7 +2928,7 @@ CONTAINS
           IF(INDEX(DATUM(1:ISVAR),'"').NE.0) ISVAR=0
         END IF
         IF(ISVAR.NE.0) THEN
-          IF(INDEX(DATUM(1:ISVAR),"'").NE.0) ISVAR=0    
+          IF(INDEX(DATUM(1:ISVAR),"'").NE.0) ISVAR=0
 !          ': BALANCE APOSTROPHS FOR PROPER COLOR CODING OF FORTRAN CODE
         END IF
         IF(ISVAR.NE.0) THEN

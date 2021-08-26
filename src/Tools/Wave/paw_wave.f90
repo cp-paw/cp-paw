@@ -23,14 +23,16 @@
        I=COMMAND_ARGUMENT_COUNT()
        IF(I.NE.1) THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE.X [FILE]'
-         WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
+         WRITE(*,FMT='(A)') &
+    &                  'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
          WRITE(*,FMT='(A)')'SEE PAW_MANUAL FOR FURTHER DESCRIPTION'
          CALL ERROR$NORMALSTOP
        END IF
        CALL  GET_COMMAND_ARGUMENT(1,FILE)
        IF(FILE.EQ.'?'.OR.FILE.EQ.-'-H') THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE [FILE]'
-         WRITE(*,FMT='(A)')'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
+         WRITE(*,FMT='(A)') &
+    &                  'WHERE [FILE] IS THE FILE CONTROL FILE NAME OF THIS TOOL'
          WRITE(*,FMT='(A)')'SEE PAW_MANUAL FOR FURTHER DESCRIPTION'
          CALL ERROR$NORMALSTOP
        END IF
@@ -91,6 +93,12 @@
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$MARK(LL_CNTL,1)
 !
 !     ==========================================================================
 !     ==  RESET FILE NAME FOR STRUCTURE FILE IF REQUESTED                     ==
@@ -135,11 +143,26 @@
       CALL LINKEDLIST$NEW(LL_STRC)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$MARK(LL_STRC,1)
 !
 !     ==================================================================
 !     ==                                                              ==
 !     ==================================================================
       CALL MWAVE(LL_CNTL,LL_STRC)
+      
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
+
+      !!LL_STRC IS ONLY USED IN GETIZ
+      !CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      !CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      !CALL LINKEDLIST$REPORT_UNUSED(LL_STRC,NFILO)
       STOP
       END
 !
@@ -183,6 +206,7 @@
        LOGICAL(4)                :: TC
        REAL(8)                   :: XK(3)
        REAL(8)                   :: SVAR
+       INTEGER(4)                :: I1,I2,I3
 !      *************************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
@@ -222,14 +246,42 @@
          CALL LINKEDLIST$EXISTD(LL_CNTL,'MIN',1,TCHK1)
          IF(TCHK1) THEN
            CALL LINKEDLIST$GET(LL_CNTL,'MIN',1,SVAR)
-           WAVE=MAX(WAVE,SVAR)
-           IF(TC)CWAVE=CMPLX(MAX(REAL(CWAVE),SVAR),MAX(AIMAG(CWAVE),SVAR))
+           do I1=1,NR1
+             do I2=1,NR2
+               do I3=1,NR3
+                 WAVE(I1,I2,I3)=MAX(WAVE(I1,I2,I3),SVAR)
+               enddo
+             enddo
+           enddo
+           IF(TC)THEN
+             do I1=1,NR1
+               do I2=1,NR2
+                 do I3=1,NR3
+                   CWAVE(I1,I2,I3)=CMPLX(MAX(REAL(CWAVE(I1,I2,I3)),SVAR),MAX(AIMAG(CWAVE(I1,I2,I3)),SVAR))
+                 enddo
+               enddo
+             enddo
+           endif
          END IF     
          CALL LINKEDLIST$EXISTD(LL_CNTL,'MAX',1,TCHK1)
          IF(TCHK1) THEN
            CALL LINKEDLIST$GET(LL_CNTL,'MAX',1,SVAR)
-           WAVE=MIN(WAVE,SVAR)
-           IF(TC)CWAVE=CMPLX(MIN(REAL(CWAVE),SVAR),MIN(AIMAG(CWAVE),SVAR))
+           do I1=1,NR1
+             do I2=1,NR2
+               do I3=1,NR3
+                 WAVE(I1,I2,I3)=MIN(WAVE(I1,I2,I3),SVAR)
+               enddo
+             enddo
+           enddo
+           IF(TC)THEN
+             do I1=1,NR1
+               do I2=1,NR2
+                 do I3=1,NR3
+                   CWAVE(I1,I2,I3)=CMPLX(MIN(REAL(CWAVE(I1,I2,I3)),SVAR),MIN(AIMAG(CWAVE(I1,I2,I3)),SVAR))
+                 enddo
+               enddo
+             enddo
+           endif
          END IF     
        END IF
 !

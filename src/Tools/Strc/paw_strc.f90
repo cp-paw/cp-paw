@@ -214,6 +214,14 @@
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+!     -- MARK ELEMENTS AS READ FROM INPUT IF READING FROM STRC but NOT
+!     -- WHEN READING FROM STRC_OUT
+      IF(TINPUT)CALL LINKEDLIST$MARK(LL_STRC,1)
 !
 !     ==========================================================================
 !     == GET LENGTH UNIT                                                      ==
