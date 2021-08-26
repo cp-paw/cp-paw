@@ -1127,6 +1127,7 @@ END MODULE SETUP_MODULE
       REAL(8)                 :: AEZ     ! ATOMIC NUMBER
       REAL(8)                 :: ZV      ! #(VALENCE ELECTRONS)
       CHARACTER(64)           :: COREID  ! IDENTIFIER FOR THE FROZEN CORE
+      LOGICAL(4)              :: TSO     ! SPIN-ORBIT SWITCH
       REAL(8)                 :: RBOX
       CHARACTER(32)           :: TYPE    ! SETUP TYPE
       CHARACTER(32)           :: SPNAME  ! SPECIES NAME
@@ -1231,17 +1232,18 @@ END MODULE SETUP_MODULE
 !       ========================================================================
 !       == IDENTIFY SETUP ID                                                  ==
 !       ========================================================================
-        CALL SETUP_LOOKUPSETUP(LL_STRC,ID,AEZ,ZV,COREID,RBOX,LX &
+        CALL SETUP_LOOKUPSETUP(LL_STRC,ID,AEZ,ZV,COREID,TSO,RBOX,LX &
      &                             ,TYPE,RCL,LAMBDA &
      &                             ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
      &                             ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
      &                             ,DMIN,DMAX,RMAX)
         THIS%PARMS%ID=ID       
-        THIS%AEZ=AEZ      !ATOMIC NUMBER
-        THIS%RCSM=RCSM    ! DECAY RADIUS FOR COMPENSATION CHARGE
+        THIS%AEZ=AEZ        ! ATOMIC NUMBER
+        THIS%RCSM=RCSM      ! DECAY RADIUS FOR COMPENSATION CHARGE
         THIS%RBOX=RBOX    
-        THIS%ZV=ZV        ! #(VALENCE ELECTRONS)
-        THIS%COREID=COREID        ! IDENTIFIER OF THE FROZEN CORE
+        THIS%ZV=ZV          ! #(VALENCE ELECTRONS)
+        THIS%COREID=COREID  ! IDENTIFIER OF THE FROZEN CORE
+        THIS%SETTING%SO=TSO ! SPIN-ORBIT SWITCH
 !       __ PARTIAL WAVES________________________________________________________
         THIS%PARMS%TYPE     =TYPE         ! PARTIAL WAVE PSEUDIZATION METHOD
         ALLOCATE(THIS%PARMS%RCL(LX+1))    
@@ -1340,6 +1342,7 @@ END MODULE SETUP_MODULE
       REAL(8)                  :: AEZ    ! ATOMIC NUMBER
       REAL(8)                  :: ZV     ! NUMBER OF VALENCE ELECTRONS
       CHARACTER(64)            :: COREID ! SPECIFIES ATOMCORE E.G. 'KR-D+F'
+      LOGICAL(4)               :: TSO    ! SPIN-ORBIT SWITCH
       CHARACTER(64)            :: TYPE
       REAL(8)                  :: RBOX
       REAL(8)                  :: RCOV   !COVALENT RADIUS
@@ -1404,6 +1407,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
 !       ========================================================================
 !       == PARSE INTERNAL SETUPS                                              ==
 !       ========================================================================
+        TSO=.FALSE.   !SET DEFAULT FOR SPIN-ORBIT SWITCH
         IF(STPTYPE.EQ.'NDLSS_V0') THEN
           CALL SETUP_BUILDPARMSONE_NDLSS(ID,LX,AEZ,ZV,COREID,TYPE,RBOX,RCSM &
      &              ,RCL &
@@ -1465,7 +1469,8 @@ PRINT*,'SETUP PARAMETER FILE READ'
                 CALL ERROR$STOP('SETUP$RESOLVESETUPID')
               END IF
               TFOUND=.TRUE.
-              CALL ATOMLIB$SCNTLLOOKUPONE(LL_SCNTL,AEZ,ZV,COREID,RBOX,LX,TYPE &
+              CALL ATOMLIB$SCNTLLOOKUPONE(LL_SCNTL,AEZ,ZV,COREID,TSO &
+       &                              ,RBOX,LX,TYPE &
        &                              ,RCL &
        &                              ,LAMBDA &
        &                              ,RCSM,POTPOW,POTRC,TPOTVAL,POTVAL &
@@ -1499,6 +1504,7 @@ PRINT*,'SETUP PARAMETER FILE READ'
         CALL LINKEDLIST$SET(LL_STRC,'EL',0,EL)
         CALL LINKEDLIST$SET(LL_STRC,'ZV',0,ZV)
         CALL LINKEDLIST$SET(LL_STRC,'COREID',0,COREID)
+        CALL LINKEDLIST$SET(LL_STRC,'SO',0,TSO)
         CALL LINKEDLIST$SET(LL_STRC,'TYPE',0,TYPE)
         CALL LINKEDLIST$SET(LL_STRC,'RBOX/RCOV',0,RBOX/RCOV)
         CALL LINKEDLIST$SET(LL_STRC,'RCSM/RCOV',0,RCSM/RCOV)
@@ -1613,7 +1619,7 @@ PRINT*,'PAW_SETUPS.F90 A LAMBDA=',LAMBDA
       CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
       CALL PERIODICTABLE$GET(IZ,'ZCORE',ZCORE)
       ZV=AEZ-ZCORE
-      CALL PERIODICTABLE$GET(NINT(ZCORE),'SY',COREID)
+      CALL PERIODICTABLE$GET(NINT(ZCORE),'SYMBOL',COREID)
 !
 !     ==========================================================================
 !     == DETERMINE MAIN QUANTUM NUMBERS ACCORDIG TO PERIODIC TABLE            ==
@@ -1821,7 +1827,7 @@ RCL=RCOV
       CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
       CALL PERIODICTABLE$GET(IZ,'ZCORE',ZCORE)
       ZV=AEZ-ZCORE
-      CALL PERIODICTABLE$GET(NINT(ZCORE),'SY',COREID)
+      CALL PERIODICTABLE$GET(NINT(ZCORE),'SYMBOL',COREID)
       IF(IZ.GE.31.AND.IZ.LE.36) ZV=ZV-10.D0
       IF(IZ.GE.49.AND.IZ.LE.54) ZV=ZV-10.D0
       IF(IZ.GE.72.AND.IZ.LE.80) ZV=ZV-14.D0
@@ -1839,7 +1845,7 @@ RCL=RCOV
       IF(TSC) THEN
         IF(AEZ.GE.11) THEN
           ZV=AEZ-ZCORE+8.D0
-          CALL PERIODICTABLE$GET(NINT(ZCORE),'SY',COREID)
+          CALL PERIODICTABLE$GET(NINT(ZCORE),'SYMBOL',COREID)
           COREID=TRIM(ADJUSTL(COREID))//'-S-P'
         END IF
       END IF
@@ -1977,7 +1983,7 @@ RCL=RCOV
       CALL PERIODICTABLE$GET(IZ,'Z',AEZ)
       CALL PERIODICTABLE$GET(IZ,'ZCORE',ZCORE)
       ZV=AEZ-ZCORE
-      CALL PERIODICTABLE$GET(NINT(ZCORE),'SY',COREID)
+      CALL PERIODICTABLE$GET(NINT(ZCORE),'SYMBOL',COREID)
 !
 !     ==========================================================================
 !     == DETERMINE NUMBER OF VALENCE ELECTRONS                                ==
@@ -2034,8 +2040,8 @@ RCL=RCOV
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE ATOMLIB$SCNTLLOOKUPONE(LL_STP_,AEZ,ZV,COREID,RBOX,LX,TYPE,RCL &
-     &                              ,LAMBDA &
+      SUBROUTINE ATOMLIB$SCNTLLOOKUPONE(LL_STP_,AEZ,ZV,COREID,TSO &
+     &                              ,RBOX,LX,TYPE,RCL,LAMBDA &
      &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
      &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
      &                              ,DMIN,DMAX,RMAX)
@@ -2050,6 +2056,7 @@ RCL=RCOV
       REAL(8)     ,INTENT(OUT):: AEZ
       REAL(8)     ,INTENT(OUT):: ZV
       CHARACTER(*),INTENT(OUT):: COREID
+      LOGICAL(4)  ,INTENT(OUT):: TSO
       REAL(8)     ,INTENT(OUT):: RBOX
       CHARACTER(*),INTENT(OUT):: TYPE
       REAL(8)     ,INTENT(OUT):: RCL(LX+1)
@@ -2085,7 +2092,7 @@ RCL=RCOV
 !     ==========================================================================
 !     == IDENTIFY ATOM                                                        ==
 !     ==========================================================================
-      CALL SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM,COREID)
+      CALL SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM,COREID,TSO)
       CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
 !
 !     ==========================================================================
@@ -2133,8 +2140,8 @@ RCL=RCOV
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_LOOKUPSETUP(LL_STP_,ID,AEZ,ZV,COREID,RBOX,LX,TYPE,RCL &
-     &                              ,LAMBDA &
+      SUBROUTINE SETUP_LOOKUPSETUP(LL_STP_,ID,AEZ,ZV,COREID,TSO &
+     &                              ,RBOX,LX,TYPE,RCL,LAMBDA &
      &                              ,RCSM,POW_POT,RC_POT,TVAL0_POT,VAL0_POT &
      &                              ,POW_CORE,RC_CORE,TVAL0_CORE,VAL0_CORE &
      &                              ,DMIN,DMAX,RMAX)
@@ -2150,6 +2157,7 @@ RCL=RCOV
       REAL(8)      ,INTENT(OUT):: AEZ
       REAL(8)      ,INTENT(OUT):: ZV
       CHARACTER(*) ,INTENT(OUT):: COREID
+      LOGICAL(4)   ,INTENT(OUT):: TSO      ! SWITCH FOR SPIN-ORBIT COUPLING
       REAL(8)      ,INTENT(OUT):: RBOX
       CHARACTER(32),INTENT(OUT):: TYPE
       REAL(8)      ,INTENT(OUT):: RCL(LX+1)
@@ -2191,7 +2199,7 @@ RCL=RCOV
 !     ==========================================================================
 !     == IDENTIFY ATOM                                                        ==
 !     ==========================================================================
-      CALL SETUP_LOOKUP_GENERIC(LL_STP,ID,AEZ,ZV,RCSM,COREID)
+      CALL SETUP_LOOKUP_GENERIC(LL_STP,ID,AEZ,ZV,RCSM,COREID,TSO)
       CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
 !
 !     ==========================================================================
@@ -2243,7 +2251,7 @@ RCL=RCOV
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM,COREID)
+      SUBROUTINE SETUP_LOOKUP_GENERIC(LL_STP_,ID,AEZ,ZV,RCSM,COREID,TSO)
 !     **************************************************************************
 !     **  COLLECT INFORMATION ON CORE PSEUDIZATION FROM CORE BLOCK            **
 !     **  LINKED LIST (LL_STP_) MUST BE POSITIONED IN THE PARENT OF THE       **
@@ -2261,6 +2269,7 @@ RCL=RCOV
       REAL(8)      ,INTENT(OUT) :: ZV
       REAL(8)      ,INTENT(OUT) :: RCSM     ! SMALL GAUSSIAN DECAY FOR COMP.CH. 
       CHARACTER(*) ,INTENT(OUT) :: COREID   ! IDENTIFIER FOR THE FROZEN CORE
+      LOGICAL(4)   ,INTENT(OUT) :: TSO      ! SWITCH FOR SPIN-ORBIT COUPLING
       TYPE(LL_TYPE)             :: LL_STP
       LOGICAL(4)                :: TCHK,TCHK1,TCHK2
       CHARACTER(2)              :: EL
@@ -2332,7 +2341,7 @@ RCL=RCOV
         ZCORE=INT(AEZ-ZV)-ZCORE
         IF(ZCORE.EQ.0) THEN
          COREID=TRIM(ADJUSTL(COREID))
-        else IF(ZCORE.EQ.-2) THEN
+        ELSE IF(ZCORE.EQ.-2) THEN
          COREID=TRIM(ADJUSTL(COREID))//'-S'
         ELSE IF(ZCORE.EQ.-6) THEN
           COREID=TRIM(ADJUSTL(COREID))//'-P'
@@ -2361,7 +2370,7 @@ RCL=RCOV
           CALL ERROR$CHVAL('ID',ID)
           CALL ERROR$R8VAL('Z',AEZ)
           CALL ERROR$R8VAL('ZV',ZV)
-          CALL ERROR$i4VAL('ZCORE',ZCORE)
+          CALL ERROR$I4VAL('ZCORE',ZCORE)
           CALL ERROR$STOP('SETUP_LOOKUPGENERIC')
         END IF
 !
@@ -2380,6 +2389,11 @@ RCL=RCOV
       CALL PERIODICTABLE$GET(AEZ,'R(COV)',RCOV)
       RCSM=RCSM*RCOV
 !
+!     == SWITCH FOR SPIN-ORBIT COUPLING ========================================
+      TSO=.FALSE.
+      CALL LINKEDLIST$EXISTD(LL_STP,'SO',1,TCHK)
+      IF(TCHK)CALL LINKEDLIST$GET(LL_STP,'SO',1,TSO)
+
       RETURN
       END
 !
@@ -2777,28 +2791,28 @@ RCL=RCOV
       REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
       REAL(8)   ,PARAMETER  :: FOURPI=4.D0*PI
       REAL(8)   ,PARAMETER  :: C0LL=1.D0/SQRT(FOURPI)
-      INTEGER(4)            :: LOFI(NBX)  ! azimutal angular momentum
-      INTEGER(4)            :: SOFI(NBX)  ! spin orbit orientation 
-      REAL(8)               :: FOFI(NBX)  ! occupation of the shell
-      INTEGER(4)            :: NNOFI(NBX) ! number of nodes of the partial wave
-      REAL(8)               :: EOFI(NBX)  ! energy level of the atomic calc.
-      INTEGER(4)            :: GID        ! grid id
-      INTEGER(4)            :: GIDG       ! grid id for G-grid
-      INTEGER(4)            :: NG         ! #(reciprocal grid points)
-      INTEGER(4)            :: NR         ! #(real-space grid points)
+      INTEGER(4)            :: LOFI(NBX)  ! AZIMUTAL ANGULAR MOMENTUM
+      INTEGER(4)            :: SOFI(NBX)  ! SPIN ORBIT ORIENTATION 
+      REAL(8)               :: FOFI(NBX)  ! OCCUPATION OF THE SHELL
+      INTEGER(4)            :: NNOFI(NBX) ! NUMBER OF NODES OF THE PARTIAL WAVE
+      REAL(8)               :: EOFI(NBX)  ! ENERGY LEVEL OF THE ATOMIC CALC.
+      INTEGER(4)            :: GID        ! GRID ID
+      INTEGER(4)            :: GIDG       ! GRID ID FOR G-GRID
+      INTEGER(4)            :: NG         ! #(RECIPROCAL GRID POINTS)
+      INTEGER(4)            :: NR         ! #(REAL-SPACE GRID POINTS)
       INTEGER(4)            :: LX,LNX
       INTEGER(4)            :: NB
-      INTEGER(4)            :: NC         ! #(core states)
+      INTEGER(4)            :: NC         ! #(CORE STATES)
       INTEGER(4),ALLOCATABLE:: NPRO(:)
-      REAL(8)   ,ALLOCATABLE:: R(:)       ! radial grid
-      INTEGER(4),ALLOCATABLE:: LOX(:)     ! az. angular momentum of partial wave
+      REAL(8)   ,ALLOCATABLE:: R(:)       ! RADIAL GRID
+      INTEGER(4),ALLOCATABLE:: LOX(:)     ! AZ. ANGULAR MOMENTUM OF PARTIAL WAVE
       REAL(8)   ,ALLOCATABLE:: RC(:)
-      LOGICAL(4),ALLOCATABLE:: TC(:)      ! frozen-core state selector
+      LOGICAL(4),ALLOCATABLE:: TC(:)      ! FROZEN-CORE STATE SELECTOR
       REAL(8)   ,ALLOCATABLE:: LAMBDA(:)  ! SECOND PARAMETER FOR PSEUDIZATION
       REAL(8)               :: RBOX
       REAL(8)               :: ROUT
-      REAL(8)               :: AEZ        !atomic number
-      REAL(8)               :: ZV         ! #(valence electrons)
+      REAL(8)               :: AEZ        !ATOMIC NUMBER
+      REAL(8)               :: ZV         ! #(VALENCE ELECTRONS)
       REAL(8)               :: ETOT
       CHARACTER(64)         :: KEY
       REAL(8)   ,ALLOCATABLE:: PSI(:,:)
@@ -2868,9 +2882,12 @@ RCL=RCOV
 !     == SET SWITCHES FOR RELATIVISTIC/NON-RELATIVISTIC HERE ===================
       THIS%SETTING%TREL=.TRUE.
 !THIS%SETTING%TREL=.FALSE.
-      THIS%SETTING%SO=.FALSE.
+!     __SPIN ORBIT SWITCH IS READ FROM !AUGMENT BLOCK. DEFAULT=.FALSE.__________
+!THIS%SETTING%SO=.FALSE.
+PRINT*,'THIS%SETTING%SO=',THIS%SETTING%SO
 !THIS%SETTING%SO=.TRUE.
       THIS%SETTING%ZORA=.TRUE.
+      IF(THIS%SETTING%SO)THIS%SETTING%ZORA=.FALSE.
 !THIS%SETTING%ZORA=.FALSE.
 !     == SELECT HARTREE FOCK ADMIXTURE =========================================
       THIS%SETTING%FOCK=0.D0
@@ -3399,8 +3416,8 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
 !     **                                                                      **
 !     ** THE VARIALBLE LMAP(L+1) SPECIFIES THE MAIN QUANTUM NUMBER OF THE     **
 !     ** HIGHEST FROZEN CORE STATE FOR EACH ANGULAR MOMENTUM L                **
-!     ** (Caution! the same variable name is used in other routines with a    **
-!     **  different meaning!)                                                 **
+!     ** (CAUTION! THE SAME VARIABLE NAME IS USED IN OTHER ROUTINES WITH A    **
+!     **  DIFFERENT MEANING!)                                                 **
 !     **                                                                      **
 !     ***************************PETER BLOECHL, GOSLAR 2021*********************
       IMPLICIT NONE
@@ -8574,7 +8591,7 @@ END IF
         ELSE
           G=0.D0
           IF(TSMALL) GSM=0.D0
-          if(nc.eq.0) then
+          IF(NC.EQ.0) THEN
             CALL ERROR$MSG('ZERO NUMBER OF CORE STATES AND')
             CALL ERROR$MSG('ZERO NUMBER OF VALENCE STATES FOR THIS L,SO')
             CALL ERROR$MSG('THE CODE IS NOT YET ABLE TO DEAL WITH THIS')

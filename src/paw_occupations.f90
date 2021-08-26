@@ -1,3 +1,4 @@
+
 !*******************************************************************************
 !**  TODO:                                                                    **
 !**     - DYNOCC$GETR8: WHEN TOTCHA IS REQUESTED THE DIFFERENCE BETWEEN THE   **
@@ -1798,7 +1799,7 @@ END MODULE DYNOCC_MODULE
        END IF
        TMPSIDOT2=ALLOCATED(MPSIDOT2)
 !
-!      == FILL IN ENERGIES IF IT DID NOT HAPPEN
+!      == FILL IN ENERGIES IF IT DID NOT HAPPEN ================================
        IF(.NOT.ALLOCATED(EPS0)) THEN
          ALLOCATE(EPSM(NB,NKPT,NSPIN))
          ALLOCATE(EPS0(NB,NKPT,NSPIN))
@@ -2514,7 +2515,7 @@ END IF
 !     ******************************************************************
                            CALL TRACE$PUSH('DYNOCC_MERMIN')
 !
-      IF(ISPINDEG.NE.1.AND.ISPINDEG.NE.2.D0) THEN
+      IF(ISPINDEG.NE.1.AND.ISPINDEG.NE.2) THEN
         CALL ERROR$MSG('SPIN-DEGENERACY CAN BE EITHER ONE OR TWO')
         CALL ERROR$STOP('DYNOCC_MERMIN')
       END IF

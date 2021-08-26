@@ -1185,20 +1185,20 @@ ENDDO
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMS_RANDOMIZEVELOCITY(NAT,RMASS,RM,EBATH,DELT)
-!     ******************************************************************
-!     **                                                              **
-!     **  RANDOMIZED VELOCITY ACCORDING TO A TEMPERATURE              **
-!     **                                                              **
-!     **  REMARK: ANY CONSTRAINTS MUST BE ENFORCED SUBSEQUENTLY       **
-!     **                                                              **
-!     **    EBATH    K_B*T WHERE THE T IS THE TEMPERATURE OF THE      **
-!     **             HEATBATH                                         **
-!     **                                                              **
-!     **    THE TARGET KINETIC ENERGY IS 1.5*NAT*EBATH                **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  RANDOMIZED VELOCITY ACCORDING TO A TEMPERATURE                      **
+!     **                                                                      **
+!     **  REMARK: ANY CONSTRAINTS MUST BE ENFORCED SUBSEQUENTLY               **
+!     **                                                                      **
+!     **    EBATH    K_B*T WHERE THE T IS THE TEMPERATURE OF THE              **
+!     **             HEATBATH                                                 **
+!     **                                                                      **
+!     **    THE TARGET KINETIC ENERGY IS 1.5*NAT*EBATH                        **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: NAT        ! #(ATOMS)
       REAL(8)   ,INTENT(IN)   :: DELT       ! TIME STEP
@@ -1208,12 +1208,12 @@ ENDDO
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
       INTEGER(4)              :: IAT,I
       REAL(8)                 :: SVAR,RAN,SUM
-!     ******************************************************************
+!     **************************************************************************
       SUM=0.D0
       DO IAT=1,NAT
         SVAR=SQRT(2.D0*EBATH/RMASS(IAT))*DELT
         DO I=1,3
-          CALL GAUSS_RANDOM_NUMBER(RAN)
+          CALL GAUSS_RANDOM_NUMBER(RAN)  !SEE PAW_GENERALPURPOSE.F90
           RM(I,IAT) = RM(I,IAT) + SVAR*RAN
           SUM=SUM+0.5D0*RMASS(IAT)*(SVAR*RAN/DELT)**2
         ENDDO

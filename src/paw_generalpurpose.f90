@@ -46,18 +46,18 @@
       RETURN
       END
 !
-!     .............................................FUNCTION TFAPOT......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TFAPOT(R,Z,V)
-!     **                                                              **
-!     **  GENERALIZED THOMAS FERMI ATOMIC POTENTIAL                   **
-!     **                                                              **
+!     **************************************************************************
+!     **  GENERALIZED THOMAS FERMI ATOMIC POTENTIAL                           **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8),INTENT(IN)  :: R   !RADIUS
       REAL(8),INTENT(IN)  :: Z   !ATOMIC NUMBER
       REAL(8),INTENT(OUT) :: V   ! POTENTIAL
       REAL(8),PARAMETER   :: BY3=1.D0/3.D0
       REAL(8)             :: B,X,XS,T
-!     ******************************************************************
+!     **************************************************************************
       B=(0.69395656D0/Z)**BY3
       X=R/B
       XS=SQRT(X)
@@ -68,16 +68,16 @@
       RETURN
       END
 !
-!     .....................................................GBASS........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GBASS(RBAS,GBAS,DET)
-!     ******************************************************************
-!     **                                                              **
-!     **  GENERATES RECIPROCAL LATTICE VECTORS G1,G2,G3               **
-!     **  FROM THE REAL SPACE LATTICE VECTORS                         **
-!     **          RI*GI=2*PI ; GI*GJ=0 FOR I.NE.J                     **
-!     **  AND THE REAL SPACE UNIT CELL VOLUME                         **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  GENERATES RECIPROCAL LATTICE VECTORS G1,G2,G3                       **
+!     **  FROM THE REAL SPACE LATTICE VECTORS                                 **
+!     **          RI*GI=2*PI ; GI*GJ=0 FOR I.NE.J                             **
+!     **  AND THE REAL SPACE UNIT CELL VOLUME                                 **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       REAL(8),INTENT(IN)  :: RBAS(3,3) ! REAL SPACE LATTIC VECTORS
       REAL(8),INTENT(OUT) :: GBAS(3,3) ! RECIPROCAL SPACE LATTICE VECTORS
@@ -85,7 +85,7 @@
       REAL(8),PARAMETER   :: PI=4.D0*ATAN(1.D0)
       REAL(8)             :: FAC
       INTEGER(4)          :: I,J
-!     ******************************************************************
+!     **************************************************************************
       GBAS(1,1) = RBAS(2,2)*RBAS(3,3) - RBAS(3,2)*RBAS(2,3)
       GBAS(2,1) = RBAS(3,2)*RBAS(1,3) - RBAS(1,2)*RBAS(3,3)
       GBAS(3,1) = RBAS(1,2)*RBAS(2,3) - RBAS(2,2)*RBAS(1,3)
@@ -111,30 +111,31 @@
       RETURN
       END
 !
-!     .....................................................BOXSPH.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BOXSPH(RBAS,X0,Y0,Z0,RMAX &
      &                 ,MIN1,MAX1,MIN2,MAX2,MIN3,MAX3)
-!     **                                                              **
-!     **  BOXSPH DESCRIBES A BOX AROUND AN SPHERE                     **
-!     **  CENTERED AT (Z0,Y0,Z0) AND WITH RADIUS RMAX                 **
-!     **  AND RETURNS THE MINIMUM AND MAXIMUM NUMBER OF DISPLACEMENTS **
-!     **  IN STEPS OF THAT CREATE POINTS WITHIN THE SPHERE            **
-!     **                                                              **
-!     **  |R-R0| =< RMAX        ONLY IF                               **
-!     **  MIN1 =< I1 =< MAX1; MIN2 =< I2 =< MAX2; MIN3 =< I3 =< MAX3  **
-!     **  WHERE:  R(I) = RBAS(I,1)*I1 + RBAS(I,2)*I2 + RBAS(I,3)*I3   **
-!     **  AND     R0=(X0,Y0,Z0)                                       **
-!     **                                                              **
-!     **  INPUT :                                                     **
-!     **    RBAS        DISPLACEMENT VECTORS                          **
-!     **    RMAX        RADIUS OF THE SPHERE                          **
-!     **    X0,Y0,Z0    CENTER OF THE SPHERE                          **
-!     **  OUTPUT :                                                    **
-!     **    MIN1,MAX1,MIN2,MAX2,MIN3,MAX3     (SEE ABOVE)             **
-!     **                                                              **
-!     **  WARNING: THE DISPLACEMENTS MUST NOT BE SMALLER THAN -1.E+6  **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  BOXSPH DESCRIBES A BOX AROUND AN SPHERE                             **
+!     **  CENTERED AT (Z0,Y0,Z0) AND WITH RADIUS RMAX                         **
+!     **  AND RETURNS THE MINIMUM AND MAXIMUM NUMBER OF DISPLACEMENTS         **
+!     **  IN STEPS OF THAT CREATE POINTS WITHIN THE SPHERE                    **
+!     **                                                                      **
+!     **  |R-R0| =< RMAX        ONLY IF                                       **
+!     **  MIN1 =< I1 =< MAX1; MIN2 =< I2 =< MAX2; MIN3 =< I3 =< MAX3          **
+!     **  WHERE:  R(I) = RBAS(I,1)*I1 + RBAS(I,2)*I2 + RBAS(I,3)*I3           **
+!     **  AND     R0=(X0,Y0,Z0)                                               **
+!     **                                                                      **
+!     **  INPUT :                                                             **
+!     **    RBAS        DISPLACEMENT VECTORS                                  **
+!     **    RMAX        RADIUS OF THE SPHERE                                  **
+!     **    X0,Y0,Z0    CENTER OF THE SPHERE                                  **
+!     **  OUTPUT :                                                            **
+!     **    MIN1,MAX1,MIN2,MAX2,MIN3,MAX3     (SEE ABOVE)                     **
+!     **                                                                      **
+!     **  WARNING: THE DISPLACEMENTS MUST NOT BE SMALLER THAN -1.E+6          **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN)  :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)  :: X0,Y0,Z0
@@ -149,7 +150,7 @@
       REAL(8)                :: XP0,YP0,ZP0
       INTEGER(4)             :: I
       INTEGER(4)             :: IBIG
-!     ******************************************************************
+!     **************************************************************************
       DO I=1,3
         T1(I)=RBAS(I,1)
         T2(I)=RBAS(I,2)
@@ -199,17 +200,17 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BOXBOX(RBAS,R0BOX,TBOX &
      &                   ,XMIN1,XMAX1,XMIN2,XMAX2,XMIN3,XMAX3)
-!     ******************************************************************
-!     **  CIRCUMSCRIBES A BOX                                         **
-!     **  DEFINED BY THE LOWER LEFT FORDER CORNER R0BOX               **
-!     **  AND THREE EDGE VECTORS TBOX                                 **
-!     **  BY ANOTHER BOX DEFINED THROUGH THE GRID TRANSLATION VECTORS **
-!     **  RBAS SUCH THAT ALL POINTS IN THE CIRCUMSCRIBED BOX          **
-!     **  FULFILL R=RBAS*X WITH XMIN<X<XMAX FOR ALL THREE COORDINATES **
-!     ******************************************************************
+!     **************************************************************************
+!     **  CIRCUMSCRIBES A BOX                                                 **
+!     **  DEFINED BY THE LOWER LEFT FORDER CORNER R0BOX                       **
+!     **  AND THREE EDGE VECTORS TBOX                                         **
+!     **  BY ANOTHER BOX DEFINED THROUGH THE GRID TRANSLATION VECTORS         **
+!     **  RBAS SUCH THAT ALL POINTS IN THE CIRCUMSCRIBED BOX                  **
+!     **  FULFILL R=RBAS*X WITH XMIN<X<XMAX FOR ALL THREE COORDINATES         **
+!     **************************************************************************
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: R0BOX(3)
@@ -226,7 +227,7 @@
       REAL(8)               :: R(3)
       INTEGER(4)            :: I,J,I1,I2,I3
       LOGICAL(4)            :: TFIRST
-!     ******************************************************************
+!     **************************************************************************
 !
 !     ==================================================================
 !     ==  CALCULATE RBASIN, THE INVERSE OF RBAS                       ==
@@ -247,11 +248,11 @@
 !     ==================================================================
       TFIRST=.TRUE.
       DO I1=0,1
-        DT(1)=DBLE(I1)
+        DT(1)=REAL(I1,KIND=8)
         DO I2=0,1
-          DT(2)=DBLE(I2)
+          DT(2)=REAL(I2,KIND=8)
           DO I3=0,1
-            DT(3)=DBLE(I3)
+            DT(3)=REAL(I3,KIND=8)
 !           == EVALUATE CORNER OF THE BOX ====================
             DO I=1,3
               R(I)=R0BOX(I)
@@ -288,29 +289,30 @@
       RETURN
       END
 !
-!      .................................................................
-       SUBROUTINE NOMOM(STRING,NAT,R1,R2,RMASS)
-!      **                                                             **
-!      ** ROTATES AND TRANSLATES THE VECTORS R2 SO THAT THE ANGULAR   **
-!      ** AND/OR TRANSLATIONAL MOMENTUM FROM R1 TO R2 VANISHES        **
-!      **                                                             **
-!      **  INPUT:                                                     **
-!      **  STRING    'TR' SUBTRACT TRANSLATION AND ROTATION           **
-!      **            'T'  SUBTRACT TRANSLATION                        **
-!      **            'R'  SUBTRACT ROTATION                           **
-!      **  NAT       NUMBER OF ATOMS                                  **
-!      **  R1        REFERENCE STRUCTURE                              **
-!      **  R2        STRUCTURE TO BE ROTATED                          **
-!      **  RMASS     ATOMIC MASSES                                    **
-!      **                                                             **
-!      **  OUTPUT:                                                    **
-!      **  R2        ROTATED STRUCTURE                                **
-!      **                                                             **
-!      **  REMARKS:                                                   **
-!      **  PROGRAM WILL FAIL FOR ROTATIONS OF PI                      **
-!      **  PROGRAM IS NOT PROTECTED FOR 1-D SYSTEM                    **
-!      **                                                             **
-!      *****************************************************************
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE NOMOM(STRING,NAT,R1,R2,RMASS)
+!     **************************************************************************
+!     **                                                                      **
+!     ** ROTATES AND TRANSLATES THE VECTORS R2 SO THAT THE ANGULAR            **
+!     ** AND/OR TRANSLATIONAL MOMENTUM FROM R1 TO R2 VANISHES                 **
+!     **                                                                      **
+!     **  INPUT:                                                              **
+!     **  STRING    'TR' SUBTRACT TRANSLATION AND ROTATION                    **
+!     **            'T'  SUBTRACT TRANSLATION                                 **
+!     **            'R'  SUBTRACT ROTATION                                    **
+!     **  NAT       NUMBER OF ATOMS                                           **
+!     **  R1        REFERENCE STRUCTURE                                       **
+!     **  R2        STRUCTURE TO BE ROTATED                                   **
+!     **  RMASS     ATOMIC MASSES                                             **
+!     **                                                                      **
+!     **  OUTPUT:                                                             **
+!     **  R2        ROTATED STRUCTURE                                         **
+!     **                                                                      **
+!     **  REMARKS:                                                            **
+!     **  PROGRAM WILL FAIL FOR ROTATIONS OF PI                               **
+!     **  PROGRAM IS NOT PROTECTED FOR 1-D SYSTEM                             **
+!     **                                                                      **
+!     **************************************************************************
        IMPLICIT NONE
        CHARACTER(*),INTENT(IN) :: STRING
        INTEGER(4),INTENT(IN)   :: NAT
@@ -332,7 +334,7 @@
        INTEGER(4)              :: I,J,K,IAT,ITER
        REAL(8)   ,PARAMETER    :: TOL=1.D-6
        INTEGER(4),PARAMETER    :: ITERX=10000
-!      *****************************************************************
+!     **************************************************************************
        IF(STRING.NE.'T'.AND.STRING.NE.'R'.AND.STRING.NE.'TR') THEN
          CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED IN NOMOM')
          CALL ERROR$STOP('NOMOM')
@@ -471,11 +473,11 @@
        RETURN
        END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE EULERANGLE(PHI,THETA,PSI,R)
-!      **                                                             **
-!      ** ROTATION MATRIX FROM EULER ANGLES (SEE GOLDSTEIN)           **
-!      **                                                             **
+!     **************************************************************************
+!     ** ROTATION MATRIX FROM EULER ANGLES (SEE GOLDSTEIN)                    **
+!     **************************************************************************
        IMPLICIT NONE
        REAL(8)   ,INTENT(IN) :: PHI
        REAL(8)   ,INTENT(IN) :: THETA
@@ -487,7 +489,7 @@
        INTEGER(4)            :: I,J,K
        REAL(8)               :: SVAR
        LOGICAL(4),PARAMETER  :: TTEST=.FALSE.
-!      ******************************************************************
+!     **************************************************************************
        C1=COS(PHI)
        S1=SIN(PHI)
        C2=COS(THETA)
@@ -524,14 +526,14 @@
        RETURN
        END
 !
-!      .................................................................
-       SUBROUTINE ROTATIONMATRIX(PHI,R)
-!      **                                                             **
-!      **  CONSTRUCTS ROTATION MATRIX FOR A GIVEN ANGLE VECTOR        **
-!      **  THE ANGLE IS |PHI| THE AXIS IS PHI/|PHI|                   **
-!      **  THE ROTATION IS COUNTER CLOCKWISE                          **
-!      **  THE TRANSFORMED VECTOR IS XPRIME=R*X                       **
-!      **                                                             **
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ROTATIONMATRIX(PHI,R)
+!     **************************************************************************
+!     **  CONSTRUCTS ROTATION MATRIX FOR A GIVEN ANGLE VECTOR                 **
+!     **  THE ANGLE IS |PHI| THE AXIS IS PHI/|PHI|                            **
+!     **  THE ROTATION IS COUNTER CLOCKWISE                                   **
+!     **  THE TRANSFORMED VECTOR IS XPRIME=R*X                                **
+!     **************************************************************************
        IMPLICIT NONE
        REAL(8)   ,INTENT(IN)  :: PHI(3)
        REAL(8)   ,INTENT(OUT) :: R(3,3)
@@ -542,7 +544,7 @@
        REAL(8)                :: COSPHI,SINPHI
        REAL(8)                :: SVAR
        INTEGER(4)             :: I,J,K
-!      *****************************************************************
+!     **************************************************************************
        ABSPHI=SQRT(PHI(1)**2+PHI(2)**2+PHI(3)**2)
 !
 !      =================================================================
@@ -779,37 +781,37 @@
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE BISEC(ISTART,IBI,X0,Y0,DX,XM,YM)
-!     ******************************************************************
-!     **                                                              **
-!     **  FINDS THE ZERO OF A MONOTONIC FUNCTION Y(X)                 **
-!     **  BY DOUBLING STEP SIZE AND SUBSEQUENT BYSECTION.             **
-!     **  THE ROUTINE MUST BE CALLED IN A LOOP                        **
-!     **  THAT STOPS WHEN CONVERGENCE IS OBTAINED                     **
-!     **  AND SUPPLIES NEW FUNCTION VALUES Y0 FOR THE VALUE X0        **
-!     **  THAT IS SUPPLIED BY THIS ROUTINE.                           **
-!     **  REMARK: CALL THIS ROUTINE ONCE BEFORE THE LOOP              **
-!     **                                                              **
-!     **   INITIALIZE BEFORE CALL WITH                                **
-!     **   ISTART=1 FOR MONOTONICALLY INCREASING OR WITH              **
-!     **   ISTART=-1 FOR MONOTONICALLY DECREASING FUNCTIONS:          **
-!     **   AND WITH X0 THE STARTING ARGUMENT AND WITH DX THE          **
-!     **   STARTING STEP SIZE                                         **
-!     **                                                              **
-!     **   DO NOT CHANGE THE VALUES FOR IBI,DX,XM,Y DURING THE        **
-!     **   ITERATION                                                  **
-!     **                                                              **
-!     **   X0=??                                                      **
-!     **   DX=??                                                      **
-!     **   CALL BISEC(1,IBI,X0,Y0,DX,XM,YM)                           **
-!     **   DO I=1,MAX                                                 **
-!     **     CALCULATE Y0 FOR VALUE X0                                **
-!     **     CALL BISEC(0,IBI,X0,Y0,DX,XM,YM)                         **
-!     **     IF(ABS(Y0).LT.TOL) EXIT                                  **
-!     **   ENDDO                                                      **
-!     **                                                              **
-!     ****************************************** P.E. BLOECHL, 1991 ****
+!     **************************************************************************
+!     **                                                                      **
+!     **  FINDS THE ZERO OF A MONOTONIC FUNCTION Y(X)                         **
+!     **  BY DOUBLING STEP SIZE AND SUBSEQUENT BYSECTION.                     **
+!     **  THE ROUTINE MUST BE CALLED IN A LOOP                                **
+!     **  THAT STOPS WHEN CONVERGENCE IS OBTAINED                             **
+!     **  AND SUPPLIES NEW FUNCTION VALUES Y0 FOR THE VALUE X0                **
+!     **  THAT IS SUPPLIED BY THIS ROUTINE.                                   **
+!     **  REMARK: CALL THIS ROUTINE ONCE BEFORE THE LOOP                      **
+!     **                                                                      **
+!     **   INITIALIZE BEFORE CALL WITH                                        **
+!     **   ISTART=1 FOR MONOTONICALLY INCREASING OR WITH                      **
+!     **   ISTART=-1 FOR MONOTONICALLY DECREASING FUNCTIONS:                  **
+!     **   AND WITH X0 THE STARTING ARGUMENT AND WITH DX THE                  **
+!     **   STARTING STEP SIZE                                                 **
+!     **                                                                      **
+!     **   DO NOT CHANGE THE VALUES FOR IBI,DX,XM,Y DURING THE                **
+!     **   ITERATION                                                          **
+!     **                                                                      **
+!     **   X0=??                                                              **
+!     **   DX=??                                                              **
+!     **   CALL BISEC(1,IBI,X0,Y0,DX,XM,YM)                                   **
+!     **   DO I=1,MAX                                                         **
+!     **     CALCULATE Y0 FOR VALUE X0                                        **
+!     **     CALL BISEC(0,IBI,X0,Y0,DX,XM,YM)                                 **
+!     **     IF(ABS(Y0).LT.TOL) EXIT                                          **
+!     **   ENDDO                                                              **
+!     **                                                                      **
+!     ****************************************** P.E. BLOECHL, 1991 ************
       IMPLICIT NONE
       INTEGER(4),INTENT(INOUT) :: ISTART  !=1 BEFORE ITERATION/ =0 OTHERWISE
       INTEGER(4),INTENT(INOUT) :: IBI     ! SWITCH BETWEEN EXPANSION AND CONTRACTION 
@@ -820,7 +822,7 @@
       REAL(8)   ,INTENT(INOUT) :: XM      ! PREVIOUS ARGUMENT
       REAL(8)   ,SAVE          :: SLOPE
       REAL(8)                  :: XP
-!     ******************************************************************
+!     **************************************************************************
 !
 !     ==   STARTUP
       IF(ISTART.NE.0) THEN
@@ -850,7 +852,7 @@
       RETURN
       END
 !
-!...............................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE BROYDEN_MODULE
 LOGICAL(4)         :: TON=.FALSE.
 INTEGER(4)         :: NSTEPX=0
@@ -861,7 +863,7 @@ REAL(8),ALLOCATABLE :: XPREV(:,:)
 REAL(8),ALLOCATABLE :: YPREV(:,:)
 REAL(8),ALLOCATABLE :: WEIGHT(:)
 END MODULE BROYDEN_MODULE
-!      .........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE BROYDEN$NEW(NX_,NSTEPX_,ALPHA_)
        USE BROYDEN_MODULE
        IMPLICIT NONE
@@ -886,7 +888,7 @@ END MODULE BROYDEN_MODULE
        YPREV(:,:)=0.D0
        RETURN
        END
-!      .........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE BROYDEN$CLEAR
        USE BROYDEN_MODULE
        IMPLICIT NONE
@@ -907,7 +909,7 @@ END MODULE BROYDEN_MODULE
        RETURN
        END
 !
-!      .........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE BROYDEN$SETWEIGHT(NX_,WEIGHT_)
        USE BROYDEN_MODULE
        IMPLICIT NONE
@@ -927,7 +929,7 @@ END MODULE BROYDEN_MODULE
        RETURN
        END
 !
-!      .........................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE BROYDEN$STEP(NX_,X,Y)
        USE BROYDEN_MODULE
        IMPLICIT NONE
@@ -1082,7 +1084,7 @@ END MODULE BROYDEN_MODULE
       RETURN
       END
 !
-!     .....................................................GAUSSN.......
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GAUSSN(L,ALPHA,C)
 !     ******************************************************************
 !     **                                                              **
@@ -1113,7 +1115,7 @@ END MODULE BROYDEN_MODULE
       DO I=2,K
         IFAC=IFAC*(2*I-1)
       ENDDO
-      RINT=SQRT(PI/(4.D0*ALPHA))*DBLE(IFAC)/(2.D0*ALPHA)**K
+      RINT=SQRT(PI/(4.D0*ALPHA))*REAL(IFAC,KIND=8)/(2.D0*ALPHA)**K
       C=1.D0/RINT
       RETURN
       END
@@ -1152,7 +1154,7 @@ WRITE(*,FMT='(I5," E ",F20.15," R=",2F10.5," F= ",2E10.3)')ITER,E,R,F2
       ENDDO         
       STOP
       CONTAINS
-!     ....................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
         SUBROUTINE ETOT(N,R,E,F)
         INTEGER(4),INTENT(IN) :: N
         REAL(8)   ,INTENT(IN) :: R(N)  
@@ -1162,7 +1164,7 @@ WRITE(*,FMT='(I5," E ",F20.15," R=",2F10.5," F= ",2E10.3)')ITER,E,R,F2
         REAL(8)   ,PARAMETER  :: C=2.D0
         REAL(8)   ,PARAMETER  :: B(NLOC)=(/0.D0,0.D0/)
         REAL(8)               :: A(NLOC,NLOC)
-!       *********************************************************************
+!       ************************************************************************
         A(:,1)=(/2.D+1,0.D0/)
         A(:,2)=(/0.D0,2.D-3/)
         IF(N.NE.NLOC) STOP 'ERROR IN ETOT'
@@ -1172,7 +1174,7 @@ WRITE(*,FMT='(I5," E ",F20.15," R=",2F10.5," F= ",2E10.3)')ITER,E,R,F2
         END SUBROUTINE ETOT
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CG$LINESEARCH(N,F1,D1,F2,DLAMBDA,TCONV)
 !     **                                                              **
 !     ** CONJUGATE GRADIENT LINE SEARCH                               **
@@ -1212,19 +1214,19 @@ PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CG$LINESEARCH_OLD(N,F1,D1,F2,LAMBDA,TCONV)
-!     **                                                              **
-!     ** CONJUGATE GRADIENT LINE SEARCH                               **
-!     **                                                              **
-!     **  ADJUSTS LAMBDA SUCH THAT THE FORCE AT X+D1*LAMBDA           **
-!     **  PARALLEL TO THE SEARCH DIRECTION D1 CONVERGES TO ZER        **
-!     **                                                              **
-!     **  X(LAMBDA)=X1+D1*LAMBDA                                      **
-!     **  F(LAMBDA)=F1+LAMBDA (F2-F1)/LAMBDA_IN                       **
-!     **  F2=F(LAMBDA_IN)                                             **
-!     **  F1=F(LAMBDA=0)                                              **
-!     **                                                              **
+!     **************************************************************************
+!     ** CONJUGATE GRADIENT LINE SEARCH                                       **
+!     **                                                                      **
+!     **  ADJUSTS LAMBDA SUCH THAT THE FORCE AT X+D1*LAMBDA                   **
+!     **  PARALLEL TO THE SEARCH DIRECTION D1 CONVERGES TO ZER                **
+!     **                                                                      **
+!     **  X(LAMBDA)=X1+D1*LAMBDA                                              **
+!     **  F(LAMBDA)=F1+LAMBDA (F2-F1)/LAMBDA_IN                               **
+!     **  F2=F(LAMBDA_IN)                                                     **
+!     **  F1=F(LAMBDA=0)                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)   :: N
       REAL(8)   ,INTENT(IN)   :: F1(N)  ! FORCE AT X1
@@ -1251,7 +1253,7 @@ PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CG$NEWDIR(N,F1,D1,F2,D2)
 !     **                                                              **
 !     ** CONJUGATE GRADIENT NEW SEARCH DIRECTION                      **
@@ -1278,7 +1280,7 @@ PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
 !!$      RETURN
 !!$      END
 !
-!      .................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE GAUSS_RANDOM_NUMBER(HARVEST)
 !      *****************************************************************
 !      **                                                             **
@@ -1313,12 +1315,12 @@ PRINT*,'WARNING! HESSIAN NOT POSITIVE DEFINITE; SWITCH TO STEPPING'
          HARVEST=0.5D0*HARVEST
          RETURN
        ELSE
-         HARVEST=HARVEST*SQRT(6.D0/DBLE(N))
+         HARVEST=HARVEST*SQRT(6.D0/REAL(N,KIND=8))
          RETURN 
        END IF 
        END
 !
-!.......................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 MODULE SORT_MODULE
 !***********************************************************************
 !**                                                                   **
@@ -1363,7 +1365,7 @@ INTEGER(4)             :: I0=0
 INTEGER(4)             :: IHOLE=0
 INTEGER(4)             :: RANK0
 CONTAINS
-!      ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE HEAPSORT(LEN,X_,IND)
 !      ******************************************************************
 !      **                                                              **
@@ -1445,7 +1447,7 @@ CONTAINS
        GOTO 10                       ! INITIATE NEW CYCLE
        END SUBROUTINE HEAPSORT
 !
-!      ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
        SUBROUTINE SORTRANK(LEN,IND,RANK)
        IMPLICIT NONE
        INTEGER(4),INTENT(IN) :: LEN
@@ -1459,23 +1461,23 @@ CONTAINS
        END SUBROUTINE SORTRANK
 END MODULE SORT_MODULE
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$INDEXARRAY(LEN_,X,IND_)
-!     **                                                              **
-!     ** DIRECT INTERFACE FOR HEAPSORT                                **
-!     **    X(IND(I)) INCREASES WITH INREASING I                      **
-!     **                                                              **
+!     **************************************************************************
+!     ** DIRECT INTERFACE FOR HEAPSORT                                        **
+!     **    X(IND(I)) INCREASES WITH INREASING I                              **
+!     **************************************************************************
       USE SORT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LEN_
       REAL(8)   ,INTENT(IN) :: X(LEN_)
       INTEGER(4),INTENT(OUT):: IND_(LEN_)
-!     *******************************************************************
+!     **************************************************************************
       CALL HEAPSORT(LEN_,X,IND_)
       RETURN 
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$SET(LEN_,CRIT)
 !     ******************************************************************
 !     ******************************************************************
@@ -1515,7 +1517,7 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$RESTART
 !     ******************************************************************
 !     ******************************************************************
@@ -1533,7 +1535,7 @@ IF(LEN.EQ.0) RETURN
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$UNSET
 !     ******************************************************************
 !     ******************************************************************
@@ -1551,33 +1553,30 @@ LEN=0
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$FLIP(FROM,TO)
-!     ******************************************************************
-!     **                                                              **
-!     **  ORDER ARRAY ACCORDING TO AN ORDERING SCHEME DEFINED IN      **
-!     **  SORT$SET.                                                   **
-!     **  USE THE FOLLOWING LOOP:                                     **
-!     **                                                              **
-!     **     CALL SORT$RESTART                                        **
-!     **     CALL SORT$FLIP(FROM,TO)                                  **
-!     **     DO WHILE (FROM.NE.0.OR.TO.NE.0)                          **
-!     **       IF(TO.EQ.0) THEN                                       **
-!     **         SVAR=FIOFT(FROM,ISTEP)                               **
-!     **       ELSE IF(FROM.EQ.0) THEN                                **
-!     **         FIOFT(TO)=SVAR                                       **
-!     **      ELSE                                                    **
-!     **         FIOFT(TO)=FIOFT(FROM)                                **
-!     **       END IF                                                 **
-!     **       CALL SORT$FLIP(FROM,TO)                                **
-!     **     ENDDO                                                    **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **  ORDER ARRAY ACCORDING TO AN ORDERING SCHEME DEFINED IN SORT$SET.    **
+!     **  USE THE FOLLOWING LOOP:                                             **
+!     **                                                                      **
+!     **     CALL SORT$RESTART                                                **
+!     **     CALL SORT$FLIP(FROM,TO)                                          **
+!     **     DO WHILE (FROM.NE.0.OR.TO.NE.0)                                  **
+!     **       IF(TO.EQ.0) THEN                                               **
+!     **         SVAR=FIOFT(FROM,ISTEP)                                       **
+!     **       ELSE IF(FROM.EQ.0) THEN                                        **
+!     **         FIOFT(TO)=SVAR                                               **
+!     **      ELSE                                                            **
+!     **         FIOFT(TO)=FIOFT(FROM)                                        **
+!     **       END IF                                                         **
+!     **       CALL SORT$FLIP(FROM,TO)                                        **
+!     **     ENDDO                                                            **
+!     **************************************************************************
       USE SORT_MODULE
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: FROM
       INTEGER(4),INTENT(OUT) :: TO
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TSET) THEN
         CALL ERROR$MSG('SORT OBJECT NOT INITIALIZED')        
         CALL ERROR$STOP('SORT$FLIP')
@@ -1621,17 +1620,17 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$ORDERC16(LEN,NB,ARRAY)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB
       INTEGER(4),INTENT(IN)    :: LEN
       COMPLEX(8),INTENT(INOUT) :: ARRAY(LEN,NB)
       INTEGER(4)               :: FROM,TO
       COMPLEX(8)               :: TMPARRAY(LEN)
-!     ******************************************************************
+!     **************************************************************************
       CALL SORT$RESTART
       CALL SORT$FLIP(FROM,TO)
       DO WHILE (FROM.NE.0.OR.TO.NE.0)
@@ -1647,17 +1646,17 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$ORDERR8(LEN,NB,ARRAY)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB
       INTEGER(4),INTENT(IN)    :: LEN
       REAL(8)   ,INTENT(INOUT) :: ARRAY(LEN,NB)
       INTEGER(4)               :: FROM,TO
       REAL(8)                  :: TMPARRAY(LEN)
-!     ******************************************************************
+!     **************************************************************************
       CALL SORT$RESTART
       CALL SORT$FLIP(FROM,TO)
       DO WHILE (FROM.NE.0.OR.TO.NE.0)
@@ -1673,16 +1672,17 @@ END IF
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SORT$ORDERI4(LEN,NB,ARRAY)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NB
       INTEGER(4),INTENT(IN)    :: LEN
       INTEGER(4),INTENT(INOUT) :: ARRAY(LEN,NB)
       INTEGER(4)               :: FROM,TO
       INTEGER(4)               :: TMPARRAY(LEN)
-!     ******************************************************************
+!     **************************************************************************
       CALL SORT$RESTART
       CALL SORT$FLIP(FROM,TO)
       DO WHILE (FROM.NE.0.OR.TO.NE.0)
@@ -1769,7 +1769,7 @@ END IF
       DO K=1,10
         SVAR=PI*RC*TOL/2.D0**(1.5D0)
         DO I=1,10000
-          X=0.1D0*DBLE(I)
+          X=0.1D0*REAL(I,KIND=8)
           CALL LIB$ERFCR8(X,ERFCX)   !ERFC=1-ERF
           Y=PI/2.D0*ERFCX
 !         PRINT*,'R: X=',X,' Y=',Y
@@ -1785,7 +1785,7 @@ END IF
         DX=0.1D0
         Y=0.D0
         DO I=1000,1,-1
-          X=DX*DBLE(I)
+          X=DX*REAL(I,KIND=8)
           CALL LIB$ERFCR8(X,ERFCX)   !ERFC=1-ERF
           Y=Y+DX*X*ERFCX
 !         PRINT*,'G: X=',X,' Y=',Y
@@ -1833,14 +1833,14 @@ END IF
       G2MAX=GMAX**2
 !     ICOUNT=0
       DO IG1=IG1MIN,IG1MAX
-        T1=DBLE(IG1)
+        T1=REAL(IG1,KIND=8)
 !       IF(IG1.EQ.0) THEN
 !         IG2MIN=0
 !       ELSE
 !         IG2MIN=-IG2MAX
 !       END IF  
         DO IG2=IG2MIN,IG2MAX
-          T2=DBLE(IG2)
+          T2=REAL(IG2,KIND=8)
 !         IF(IG2.EQ.0) THEN
 !           IG3MIN=0
 !         ELSE
@@ -1851,7 +1851,7 @@ END IF
 !           __ SELECTION FOR PARALLEL PROCESSING________________________
 !           IF(MOD(ICOUNT-1,NTASKNUM).NE.ITASK-1) CYCLE
 !
-            T3=DBLE(IG3)
+            T3=REAL(IG3,KIND=8)
             G1=GBAS(1,1)*T1+GBAS(1,2)*T2+GBAS(1,3)*T3  
             G2=GBAS(2,1)*T1+GBAS(2,2)*T2+GBAS(2,3)*T3  
             G3=GBAS(3,1)*T1+GBAS(3,2)*T2+GBAS(3,3)*T3  
@@ -1910,11 +1910,11 @@ END IF
           CALL BOXSPH(RBAS,-DR1,-DR2,-DR3,RMAX &
      &           ,IT1MIN,IT1MAX,IT2MIN,IT2MAX,IT3MIN,IT3MAX)
           DO IT1=IT1MIN,IT1MAX
-            T1=DBLE(IT1)
+            T1=REAL(IT1,KIND=8)
             DO IT2=IT2MIN,IT2MAX
-              T2=DBLE(IT2)
+              T2=REAL(IT2,KIND=8)
               DO IT3=IT3MIN,IT3MAX
-                T3=DBLE(IT3)
+                T3=REAL(IT3,KIND=8)
                 DX=DR1+RBAS(1,1)*T1+RBAS(1,2)*T2+RBAS(1,3)*T3  
                 DY=DR2+RBAS(2,1)*T1+RBAS(2,2)*T2+RBAS(2,3)*T3  
                 DZ=DR3+RBAS(3,1)*T1+RBAS(3,2)*T2+RBAS(3,3)*T3  

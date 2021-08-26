@@ -91,11 +91,12 @@ END MODULE CORE_MODULE
         STRING='(T3,"ENERGY[H]",T14,"ENERGY[EV]"'
         STRING=TRIM(ADJUSTL(STRING))//',T28,"ENERGY[H]",T39,"ENERGY[EV]"'
         STRING=TRIM(ADJUSTL(STRING))//',T53,"SHIFT[H]",T64,"SHIFT[EV]"'
+        STRING=TRIM(ADJUSTL(STRING))//')'
         WRITE(NFIL,STRING)
         DO I=1,THIS%N
           SVAR = THIS%E(I) - THIS%EATOM(I)
           WRITE(NFIL,FMT='(A5,6F12.5)')TRIM(THIS%TYPE(I)) &
-    &                                 ,THIS%E(I),THIS%E(I)/EV &
+    &                              ,THIS%E(I),THIS%E(I)/EV &
     &                              ,THIS%EATOM(I),THIS%EATOM(I)/EV,SVAR,SVAR/EV
         ENDDO
         IF(.NOT.ASSOCIATED(THIS%NEXT)) EXIT
@@ -123,7 +124,7 @@ END MODULE CORE_MODULE
       REAL(8)   ,INTENT(IN) :: AEPOT(NR,LMRXX)
       REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)               :: ATPOT(NR)
-      REAL(8)               :: AEPOT1(NR,LMRXX)
+      REAL(8)   ,ALLOCATABLE:: AEPOT1(:,:) !(NR,LMRXX)
       INTEGER(4)            :: NB
       INTEGER(4)            :: NC
       INTEGER(4),ALLOCATABLE:: LB(:)
@@ -213,17 +214,18 @@ END MODULE CORE_MODULE
       CALL SETUP$GETR8A('EB',NB,EB)
       ALLOCATE(AEPSI(NR,NB))
       CALL SETUP$GETR8A('AEPSI',NR*NB,AEPSI)
+      CALL SETUP$UNSELECT()
 !
 !     ==================================================================
 !     ==  CONSTANTS                                                   ==
 !     ==================================================================
-
       LMNX=0
       LMRX=0
       DO I=1,NC
         LMNX=LMNX+2*LB(I)+1
         LMRX=MAX(LMRX,(2*LB(I)+1)**2)
       ENDDO
+      LMRX=MIN(LMRX,LMRXX)
       IF(THIS%N.NE.LMNX) THEN
         THIS%N=LMNX
         ALLOCATE(THIS%TYPE(LMNX))
@@ -234,6 +236,7 @@ END MODULE CORE_MODULE
 !     ==================================================================
 !     == SUBTRACTS ATOMIC AE POTENTIAL FROM AE TOTAL POTENTIAL        ==
 !     ==================================================================
+      ALLOCATE(AEPOT1(NR,LMRXX))
       AEPOT1(:,:)=AEPOT(:,:)
       AEPOT1(:,1)=AEPOT(:,1)-ATPOT(:)
 
@@ -276,6 +279,8 @@ END MODULE CORE_MODULE
           ENDDO
         ENDDO
       ENDDO
+      DEALLOCATE(AEPOT1)
+!
 !     ==================================================================
 !     ==  DIAGONALIZATION OF THE HAMILTONIAN                          ==
 !     ==================================================================

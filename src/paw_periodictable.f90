@@ -18,7 +18,7 @@ MODULE PERIODICTABLE_MODULE
 !**      Z IS THE ATOMIC NUMBER (REAL(8))                                     **
 !**      ID IS THE IDENTIFIER OF THE DATE REQUESTED. IT MAY HAVE THE VALUES   **
 !**         'Z'         ATOMIC NUMBER                                         **
-!**         'SY'        ELEMENT SYMBOL                                        **
+!**         'SYMBOL'    ELEMENT SYMBOL                                        **
 !**         'MASS'      MASS IN ATOMIC UNITS (ELECTRON MASSES)                **
 !**         'R(COV)'    COVALENT RADIUS IN A0                                 **
 !**         'R(ASA)'    1.10534 TIMES THE COVALENT RADIUS IN A0               **
@@ -91,9 +91,9 @@ TYPE(ELEMENT_TYPE)    :: ELEMENT(0:NEL)
 LOGICAL(4)            :: TINI=.FALSE.
 REAL(8)     ,PARAMETER:: U=1822.8885046287D0
 REAL(8)     ,PARAMETER:: ANGSTROM=1.8897259926D0
-REAL(8)     ,PARAMETER:: METER=1.889726D+10 ! DOEs NOT HAVE FULL ACCURACY
+REAL(8)     ,PARAMETER:: METER=1.889726D+10 ! DOES NOT HAVE FULL ACCURACY
 ! THE NUCLRAR RADIUS IS RNUC=(MASS/U)**(1/3)*1.2E-15 METER, 
-! WHERE U IS THE M[C12]/12. (e.g. Halliday-Resnick-Walker, Physik, Wiley)
+! WHERE U IS THE M[C12]/12. (E.G. HALLIDAY-RESNICK-WALKER, PHYSIK, WILEY)
 REAL(8)     ,PARAMETER:: RNUCFAC=1.85635065215D-6
 !*******************************************************************************
 CONTAINS
@@ -256,7 +256,7 @@ CONTAINS
       SET(106)=SET_TYPE('CP',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(107)=SET_TYPE('PI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
       SET(108)=SET_TYPE('CI',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')
-      SET(109)=SET_TYPE('M ',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')  !tip4p
+      SET(109)=SET_TYPE('M ',1.0000 ,0.00,0.000,2.55,(/0,0,0,0/),'0 ')  !TIP4P
 !
 !     ==========================================================================
 !     ==  MAP INTO ELEMENT AND CONVERT TO ATOMIC UNITS                        ==
@@ -266,8 +266,8 @@ CONTAINS
         ELEMENT(I)%SYMBOL=SET(I)%SYMBOL
         ELEMENT(I)%MASS=SET(I)%MASS*U
         ELEMENT(I)%RCOV=SET(I)%RCOV*ANGSTROM
-!       __listed are distances, not radii: convert to radii_____________________
-        ELEMENT(I)%RVDW=SET(I)%RVDW*ANGSTROM*0.5d0 
+!       __LISTED ARE DISTANCES, NOT RADII: CONVERT TO RADII_____________________
+        ELEMENT(I)%RVDW=SET(I)%RVDW*ANGSTROM*0.5D0 
         ELEMENT(I)%CONFIGURATION=SET(I)%CONFIGURATION
         ELEMENT(I)%RASA=FACASA*ELEMENT(I)%RCOV
         ELEMENT(I)%EN=SET(I)%EN
@@ -278,9 +278,9 @@ CONTAINS
         CALL PERIODICTABLE_ATOMICNUMBER(SET(I)%CORE,IC)
         ELEMENT(I)%CORE=IC
         DO J=1,4
-          IF(ELEMENT(IC)%CONFIGURATION(J).GT.0) then
+          IF(ELEMENT(IC)%CONFIGURATION(J).GT.0) THEN
             ELEMENT(I)%NODES(J)=ELEMENT(IC)%NODES(J)+1
-          end if
+          END IF
         ENDDO
         ELEMENT(I)%NISOTOPES=0
         NULLIFY(ELEMENT(I)%ISOTOPE)
@@ -411,7 +411,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
         CALL ERROR$MSG('ATOMIC NUMBER OUT OF RANGE')
         CALL ERROR$I4VAL('IZ',IZ)
         CALL ERROR$CHVAL('ID',ID)
-        CALL ERROR$STOP('PERIODICTABLE$GETch')
+        CALL ERROR$STOP('PERIODICTABLE$GETCH')
       END IF
       IF(ID.EQ.'SYMBOL') THEN
         VAL=ELEMENT(IZ)%SYMBOL
@@ -496,12 +496,12 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
 !     **                                                                      **
 !     **************************************************************************
       IMPLICIT NONE
-      real(8)     ,INTENT(IN) :: Z
+      REAL(8)     ,INTENT(IN) :: Z
       CHARACTER(*),INTENT(IN) :: ID
       REAL(8)     ,INTENT(OUT):: VAL
-      INTEGER(4)              :: Iz1,iz2
-      real(8)                 :: c1,c2
-      logical(4)              :: tsubalkali
+      INTEGER(4)              :: IZ1,IZ2
+      REAL(8)                 :: C1,C2
+      LOGICAL(4)              :: TSUBALKALI
 !     **************************************************************************
       CALL PERIODICTABLE_INITIALIZE
       IF(Z.LT.0.OR.Z.GT.REAL(NEL)) THEN
@@ -514,7 +514,7 @@ END SUBROUTINE PERIODICTABLE_ISOTOPES
       IZ2=IZ1+1
       C2=Z-REAL(IZ1)
       C1=1.D0-C2
-      iz2=min(iz2,nel)
+      IZ2=MIN(IZ2,NEL)
       TSUBALKALI=.FALSE.
 !      TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'H '
       TSUBALKALI=TSUBALKALI.OR.ELEMENT(IZ2)%SYMBOL.EQ.'LI'
