@@ -406,6 +406,12 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('CNTL',NFIL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'MONOMER')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$MARK(LL_CNTL,1)
 !
 !     ==========================================================================
 !     ==  READ BLOCK !CONTROL!FILES!FILE                                      ==
@@ -570,6 +576,10 @@ CALL TRACE$PASS('DONE')
 !     ==================================================================
       CALL READIN_ANALYSE_OPTIC(LL_CNTL)
       CALL READIN_ANALYSE_OPTEELS(LL_CNTL)
+      
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
 !
 !     ==================================================================
 !     ==  CHECK TIME TO STOP                                          ==
@@ -3858,6 +3868,12 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       CALL FILEHANDLER$UNIT('STRC',NFIL)
       CALL LINKEDLIST$READ(LL_STRC,NFIL,'MONOMER')
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$MARK(LL_STRC,1)
 !
 !     ==========================================================================
 !     ==  ENTER BLOCK !STRUCTURE                                              ==
@@ -3976,6 +3992,10 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !     ==================================================================
 !     ==                                                              ==
 !     ==================================================================
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_STRC,NFILO)
+
       CALL FILEHANDLER$CLOSE('STRC')
       CALL FILEHANDLER$CLOSE('PROT')
                           CALL TRACE$POP
