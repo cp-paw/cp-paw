@@ -219,7 +219,7 @@
 !     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
 !     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_STRC,'~')
-!     -- MARK ELEMENTS AS READ FROM INPUT IF READING FROM STRC but NOT
+!     -- MARK ELEMENTS AS READ FROM INPUT IF READING FROM STRC BUT NOT
 !     -- WHEN READING FROM STRC_OUT
       IF(TINPUT)CALL LINKEDLIST$MARK(LL_STRC,1)
 !
@@ -334,6 +334,10 @@
       ELSE
         WRITE(NFILO,FMT='("STRUCTURE INPRETED AS MOLECULE")')
       END IF
+   
+      CALL LINKEDLIST$SELECT(LL_STRC,'~')
+      CALL LINKEDLIST$SELECT(LL_STRC,'STRUCTURE')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_STRC,NFILO)
 !
 !     ==========================================================================
 !     == WRITE BOND LENGTH TO PROTOCOLL                                       ==

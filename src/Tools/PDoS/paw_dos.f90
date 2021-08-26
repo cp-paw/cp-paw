@@ -101,7 +101,10 @@ END MODULE READCNTL_MODULE
 !     **                                                                      **
 !     **                                                                      **
 !     **************************************************************************
-      USE SPINDIR_MODULE  ,ONLY : SPINDIR !(IS ONLY ALLOCATED)
+      USE LINKEDLIST_MODULE,ONLY : LINKEDLIST$REPORT_UNUSED &
+     &                            ,LINKEDLIST$SELECT
+      USE READCNTL_MODULE  ,ONLY : LL_CNTL
+      USE SPINDIR_MODULE   ,ONLY : SPINDIR !(IS ONLY ALLOCATED)
       IMPLICIT NONE
       INTEGER(4)                :: NFILO
       INTEGER(4)                :: NAT
@@ -130,7 +133,7 @@ END MODULE READCNTL_MODULE
       CHARACTER(6)              :: FLAG
       CHARACTER(32)             :: MODE
       CHARACTER(256)            :: PREFIX !OPTIONAL PREFIX FOR DOS AND NOS FILES
-      character(128)            :: format
+      CHARACTER(128)            :: FORMAT
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
 !
@@ -149,9 +152,9 @@ END MODULE READCNTL_MODULE
 !     ==  WRITE HEADER                                                        ==
 !     ==========================================================================
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(80("*"),T15,a50)') &
+      WRITE(NFILO,FMT='(80("*"),T15,A50)') &
      &            '              PDOS ANALYSIS TOOL                '
-      WRITE(NFILO,FMT='(80("*"),T15,a50)') &
+      WRITE(NFILO,FMT='(80("*"),T15,A50)') &
      &             '    FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ' 
       WRITE(NFILO,FMT='(80("*"))')
       WRITE(NFILO,FMT='(T20," P.E. BLOECHL ")')
@@ -266,6 +269,10 @@ END MODULE READCNTL_MODULE
 !     ==========================================================================
 !     ==  CLOSING                                                             ==
 !     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'DCNTL')
+      CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
+!
       CALL FILEHANDLER$REPORT(NFILO,'USED')
       WRITE(NFILO,FMT='(80("="))')
       WRITE(NFILO,FMT='(80("="),T20,"  PAW_DOS TOOL FINISHED  ")')
@@ -2933,6 +2940,13 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       CALL LINKEDLIST$NEW(LL_CNTL)
       CALL FILEHANDLER$UNIT('DCNTL',NFIL)
       CALL LINKEDLIST$READ(LL_CNTL,NFIL,'~')
+!    
+!     ==========================================================================
+!     ==  MARK ALL ELEMENTS AS READ FROM INPUT FILE                           ==
+!     ==========================================================================
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$MARK(LL_CNTL,1)
+
       IF(TPR) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO) 
         CALL LINKEDLIST$REPORT(LL_CNTL,NFILO)
