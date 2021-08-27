@@ -1527,7 +1527,10 @@ functions.
   because much of the kinetic energy from the initial kick is
   converted into potential energy. For a harmonic oscillator, as model
   for the atomic vibrations, kinetic energy and vibrational potential
-  energy become equal in thermal equilibrium.}  
+  energy become equal in thermal equilibrium. Remark: The random kick
+  is reproducible, if the internal (hard-wired) parameter
+  \texttt{tsetseed=.true.} in \texttt{paw\_atoms.f90}. This is useful for
+  testing, but it may conflict sampling over different trajectories.}
   \vformat{real} 
   \vrules{optional} 
   \vdefault{0}}

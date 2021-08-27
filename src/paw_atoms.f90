@@ -1206,9 +1206,34 @@ ENDDO
       REAL(8)   ,INTENT(IN)   :: RMASS(NAT) ! ATOMIC MASSES
       REAL(8)   ,INTENT(INOUT):: RM(3,NAT)  ! R(-)
       LOGICAL(4),PARAMETER    :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER    :: TSETSEED=.TRUE.
       INTEGER(4)              :: IAT,I
       REAL(8)                 :: SVAR,RAN,SUM
+      INTEGER                 :: NSEED
+      INTEGER   ,ALLOCATABLE  :: SEED(:),OLDSEED(:)
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == INITIALIZE THE RANDOM-NUMBER GENERATION WITH A DEFINED SEED TO MAKE  ==
+!     == MAKE IT REPRODUCIBLE
+!     ==========================================================================
+      IF(TSETSEED) THEN
+        CALL RANDOM_SEED(SIZE=NSEED)
+        ALLOCATE(OLDSEED(NSEED))
+        CALL RANDOM_SEED(GET=OLDSEED)
+        ALLOCATE(SEED(NSEED))
+!       __SEE CHAPTER 7 IN NUMERICAL RECIPES: THE ART OF SCIENTIFIC COMPUTING___
+        SEED(1)=314159265
+        DO I=2,NSEED
+          SEED(I)=MOD(8121*SEED(I-1)+28411,134456)
+        ENDDO
+        CALL RANDOM_SEED(PUT=SEED)
+        DEALLOCATE(SEED)
+      ENDIF
+!
+!     ==========================================================================
+!     == PROVIDE A RANDOM KICK (CHANGE VELOCITIES, I.E. R(-))                 ==
+!     ==========================================================================
       SUM=0.D0
       DO IAT=1,NAT
         SVAR=SQRT(2.D0*EBATH/RMASS(IAT))*DELT
@@ -1221,6 +1246,14 @@ ENDDO
       IF(TPR) THEN
         SUM=SUM/(1.5D0*DBLE(NAT))
         PRINT*,'KINETIC ENERGY OF THE KICK IN ATOM RANDOMIZATION ',SUM
+      END IF
+!
+!     ==========================================================================
+!     == RESTORE OLD SEED OF RANDOM NUMBER GENERATOR                          ==
+!     ==========================================================================
+      IF(TSETSEED) THEN
+        CALL RANDOM_SEED(PUT=OLDSEED)
+        DEALLOCATE(OLDSEED)
       END IF
       RETURN
       END
