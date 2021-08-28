@@ -16,6 +16,9 @@
       INTEGER(4)             :: ISP,I,IKPT,ISPIN,IAT
       INTEGER(4)             :: NTASKS,THISTASK
 !     ******************************************************************
+CALL ERROR$MSG('ROUTINE IS NOT FINISHED')
+CALL ERROR$MSG('WATCH FOR MPE CALL TO "NONE"')
+CALL ERROR$STOP('WAVES$1CFORCECORR')
                              CALL TRACE$PUSH('WAVES$1CFORCE')
       CALL SETUP$GETI4('NSP',NSP) !FORMER CALL SETUP$NSPECIES(NSP)
       ALLOCATE(LMNX(NSP))      

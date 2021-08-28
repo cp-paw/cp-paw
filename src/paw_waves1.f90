@@ -3561,6 +3561,7 @@ END IF
 !     ** THE SUM OF COVALENT RADII TIME SCALERCUT                             **
 !     ** SCALERCUT=5. IS GOOD FOR THE HUBBARD MODEL WITH LATTICE CONSTANT=3\AA**
 !     **************************************************************************
+      USE MPE_MODULE
       USE PERIODICTABLE_MODULE
       USE WAVES_MODULE, ONLY: MAP &
      &                       ,NDIMD &
@@ -3580,6 +3581,7 @@ END IF
       REAL(8)                :: SVAR
       INTEGER(4)             :: IAT1,IAT2,N1,N2
       INTEGER(4)             :: IAT,ISP,NN
+      INTEGER(4)             :: NTASKS,THISTASK
 !     **************************************************************************
                                           CALL TRACE$PUSH('WAVES_OFFSITEDENMAT')
       NAT=MAP%NAT
@@ -3611,8 +3613,9 @@ END IF
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
 !
 !     ==========================================================================
-!     == SET UP NEIGHBOLIST (ENCODED IN NNLIST)                               ==
+!     == SET UP NEIGHBORLIST (ENCODED IN NNLIST)                              ==
 !     ==========================================================================
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ALLOCATE(RC(NAT))
       DO IAT=1,NAT
         ISP=MAP%ISP(IAT)
@@ -3624,7 +3627,11 @@ END IF
       ENDDO
       NNX=NNXPERATOM*NAT
       ALLOCATE(NNLIST(5,NNX))
-      CALL LMTO$NEIGHBORLIST(RBAS,NAT,R0,RC,NNX,NND,NNLIST)
+!     == SYNCHRONIZE NEIGHBORLIST OVER ALL MPI PROCESSES. NEIGBORLIST MAY ======
+!     == DIFFER ON DIFFERENT TASKS DUE TO AMBIGUOUS DISTANCE CRITERION. ========
+      IF(THISTASK.EQ.1)CALL LMTO$NEIGHBORLIST(RBAS,NAT,R0,RC,NNX,NND,NNLIST)
+      CALL MPE$BROADCAST('MONOMER',1,NND)
+      CALL MPE$BROADCAST('MONOMER',1,NNLIST(:,:NND))
       DEALLOCATE(RC)
       DEALLOCATE(R0)
 !
@@ -3740,7 +3747,6 @@ END IF
 !
       NPRO=MAP%NPRO
       CALL MPE$QUERY('K',NTASKS,THISTASK)
-      ICOUNT=0
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -3748,6 +3754,7 @@ END IF
           CALL PLANEWAVE$GETL4('TINV',TINV)
           NBH=THIS%NBH
           NB=THIS%NB
+          ICOUNT=0
           DO NN=1,NND
             ICOUNT=ICOUNT+1
             IF(MOD(ICOUNT-1,NTASKS).NE.THISTASK-1) CYCLE
@@ -3820,17 +3827,22 @@ END IF
      &                                       -REAL(CSVAR22(1,1))
                   END IF
                 END IF
-              ENDDO
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
+              ENDDO   !J  (PROJECTORS)
+            ENDDO   !I  (PROJECTORS)
+          ENDDO   !NN
+        ENDDO   !ISPIN
+      ENDDO  !IKPT
 !
 !     ==========================================================================
 !     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
 !     ==========================================================================
+!     == THE FOLLOWING STATEMENT CAUSED MPI PROBLEMS (MPI_MESSAGE_TRUNCATE) ====
+!     == BECAUSE THE SHAPE OF OSDENMAT(NN)%MAT DIFFERED ON DIFFERENT TASKS =====
+!     == THIS WAS DUE TO DIFFERING NEIGHBORLISTS ON DIFFERENT TASKS ============
+!     == THE PROBLEM IS FIXED BY BROADCASTING THE NEIGHBORLIST =================
+!     == IN WAVES$OFFSITEDENMAT(). =============================================
       DO NN=1,NND
-!       -- ONCE THE CODE FAILED WITHIN MPI IN THE FOLLOWING CALL. THE FAILURE --
+!       -- ONCE, THE CODE FAILED WITHIN MPI IN THE FOLLOWING CALL. THE FAILURE -
 !       -- WAS NOT DETERMINISTIC -----------------------------------------------
         CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
       ENDDO
@@ -3907,8 +3919,8 @@ END IF
       COMPLEX(8)             :: EIKR,C1,C2,CSVAR22(NDIM,NDIM)
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
 !     **************************************************************************
-                                 CALL TRACE$PUSH('WAVES$OFFSITEHAMIL')
       IF(.NOT.ALLOCATED(OSHAMIL)) RETURN
+                                 CALL TRACE$PUSH('WAVES$OFFSITEHAMIL')
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
@@ -5145,186 +5157,186 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       DEALLOCATE(G2)
       RETURN
       END
-!
-!     ..................................................................
-      SUBROUTINE WAVES_EKIN_OLD(NGL,NDIM,NBH,NB,F,GWEIGHT,PSI,EKIN &
-     &                         ,TSTRESS,STRESS,TBUCKET,BUCKET,DBUCKET)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
-!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
-!     **                                                              **
-!     **  REMARKS:                                                    **
-!     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
-!     **                                                              **
-!     *******************************************P.E. BLOECHL, (1999)***
-      USE MPE_MODULE
-      IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
-      INTEGER(4),INTENT(IN) :: NBH        ! #(WAVE FUNCTIONS)
-      INTEGER(4),INTENT(IN) :: NDIM       ! #(SPINOR COMPONENTS)
-      INTEGER(4),INTENT(IN) :: NGL        ! #(PLANE WAVES)
-      REAL(8)   ,INTENT(IN) :: F(NB)      ! OCCUPATION
-      REAL(8)   ,INTENT(IN) :: GWEIGHT
-      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH) ! PS-WAVE FUNCTION
-      REAL(8)   ,INTENT(OUT):: EKIN       ! KINETIC ENERGY
-      LOGICAL(4),INTENT(IN) :: TSTRESS    ! SWITCH STRESS ON/OFF
-      REAL(8)   ,INTENT(OUT):: STRESS(3,3)! STRESS
-      LOGICAL(4),INTENT(IN) :: TBUCKET    ! BUCKET POTENTIAL PRESENT
-      REAL(8)   ,INTENT(IN) :: BUCKET(NGL) ! BUCKET POTENTIAL
-      REAL(8)   ,INTENT(IN) :: DBUCKET(NGL) ! 1/G *DBUCKET/DG
-      REAL(8)   ,ALLOCATABLE:: G2(:)      ! G**2
-      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)  ! G   
-      COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
-      REAL(8)   ,ALLOCATABLE:: DMAT(:)
-      LOGICAL(4)            :: TINV
-      INTEGER(4)            :: IB,IG,IDIM1,IDIM2
-      REAL(8)               :: FP,FM
-      REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
-      REAL(8)               :: EBUCKET
-      REAL(8)               :: SVAR
-!     ******************************************************************
-      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. CONTAINS ERRORS!')
-      CALL ERROR$STOP('WAVES_EKIN_OLD')
-!
-!     ==================================================================
-!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
-!     ==================================================================
-      CALL PLANEWAVE$GETL4('TINV',TINV)
-      IF(TINV) THEN
-        IF(NBH.NE.(NB+1)/2) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_EKIN')
-        END IF
-      ELSE 
-        IF(NBH.NE.NB) THEN
-          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
-          CALL ERROR$STOP('WAVES_EKIN')
-        END IF
-      END IF
-!
-!     ==================================================================
-!     ==  CALCULATE DMAT(G)=F(IB)*PSI^*(G,IB)*PSI(G,IB)               ==
-!     ==================================================================
-      ALLOCATE(DMAT(NGL))
-      ALLOCATE(PSI1(NGL,NDIM))
-      DMAT(:)=0.D0
-      DO IB=1,NBH
-!       == DETERMINE OCCUPATIONS =======================================
-        IF(TINV) THEN
-          FP=0.5D0*(F(2*IB-1)+F(2*IB))
-          FM=0.5D0*(F(2*IB-1)-F(2*IB))
-        ELSE
-          FP=F(IB)
-          FM=0.D0
-        END IF
-!
-!       ================================================================
-!       == GENERAL WAVE FUNCTION / FIRST PART OF SUPER WAVE FUNCTIONS ==
-!       == <PSI_+|G^2|PSI_+> FOR SUPER WAVE FUNCTIONS                 ==
-!       ================================================================
-        IF(FP.EQ.0.D0.AND.FM.EQ.0.D0) CYCLE
-        DO IDIM1=1,NDIM
-          DO IDIM2=IDIM1,NDIM
-            SVAR=FP
-            IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
-            DO IG=1,NGL
-              DMAT(IG)=DMAT(IG) &
-    &              +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI(IG,IDIM2,IB),KIND=8)
-            ENDDO
-          ENDDO
-        ENDDO
-!
-!       ================================================================
-!       ==  <PSI_+|G^2|PSI_->                                         ==
-!       ================================================================
-        IF(.NOT.TINV.OR.ABS(FM).LT.DSMALL) CYCLE
-        DO IDIM1=1,NDIM
-          CALL PLANEWAVE$INVERTG(NGL,PSI(1,IDIM1,IB),PSI1(1,IDIM1))
-        ENDDO
-        DO IDIM1=1,NDIM
-          DO IDIM2=IDIM1,NDIM
-            SVAR=FM
-            IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
-            DO IG=1,NGL
-              DMAT(IG)=DMAT(IG) &
-     &           +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI1(IG,IDIM2),KIND=8)
-            ENDDO
-          ENDDO
-        ENDDO
-      ENDDO
-      DEALLOCATE(PSI1)
-!
-!     ==================================================================
-!     ==  CALCULATE KINETIC ENERGY AND STRESS                         ==
-!     ==================================================================
-      IF(TSTRESS) THEN
-        ALLOCATE(GVEC(3,NGL))
-        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
-!       == KINETIC ENERGY AND KINETIC STRESS ===========================
-        STRESS(:,:)=0.D0
-        DO IG=1,NGL
-          STRESS(1,1)=STRESS(1,1)+GVEC(1,IG)*GVEC(1,IG)*DMAT(IG)
-          STRESS(1,2)=STRESS(1,2)+GVEC(1,IG)*GVEC(2,IG)*DMAT(IG)
-          STRESS(1,3)=STRESS(1,3)+GVEC(1,IG)*GVEC(3,IG)*DMAT(IG)
-          STRESS(2,2)=STRESS(2,2)+GVEC(2,IG)*GVEC(2,IG)*DMAT(IG)
-          STRESS(2,3)=STRESS(2,3)+GVEC(2,IG)*GVEC(3,IG)*DMAT(IG)
-          STRESS(3,3)=STRESS(3,3)+GVEC(3,IG)*GVEC(3,IG)*DMAT(IG)
-        ENDDO
-        EKIN=0.5D0*(STRESS(1,1)+STRESS(2,2)+STRESS(3,3))
-        STRESS=-STRESS
-!       == ENERGY AND STRESS DUE TO THE BUCKET POTENTIAL ===============
-        IF(TBUCKET) THEN
-          EBUCKET=0.D0
-          DO IG=1,NGL
-            IF(BUCKET(IG).EQ.0.D0) CYCLE
-            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
-            SVAR=DMAT(IG)*DBUCKET(IG)
-            STRESS(1,1)=STRESS(1,1)-GVEC(1,IG)*GVEC(1,IG)*SVAR
-            STRESS(1,2)=STRESS(1,2)-GVEC(1,IG)*GVEC(2,IG)*SVAR
-            STRESS(1,3)=STRESS(1,3)-GVEC(1,IG)*GVEC(3,IG)*SVAR
-            STRESS(2,2)=STRESS(2,2)-GVEC(2,IG)*GVEC(2,IG)*SVAR
-            STRESS(2,3)=STRESS(2,3)-GVEC(2,IG)*GVEC(3,IG)*SVAR
-            STRESS(3,3)=STRESS(3,3)-GVEC(3,IG)*GVEC(3,IG)*SVAR
-          ENDDO
-          EKIN=EKIN+EBUCKET
-        END IF
-!       == PARALLELIZE AND CLOSE DOWN ==================================
-        STRESS(2,1)=STRESS(1,2)
-        STRESS(3,1)=STRESS(1,3)
-        STRESS(3,2)=STRESS(2,3)
-        EKIN=EKIN*GWEIGHT
-        STRESS=STRESS*GWEIGHT
-        CALL MPE$COMBINE('NONE','+',EKIN)
-        CALL MPE$COMBINE('NONE','+',STRESS)
-        DEALLOCATE(GVEC)
-        DEALLOCATE(DMAT)
-      ELSE
-        ALLOCATE(G2(NGL))
-        CALL PLANEWAVE$GETR8A('G2',NGL,G2)
-!       == KINETIC ENERGY ==============================================
-        EKIN=0.D0
-        DO IG=1,NGL
-          EKIN=EKIN+G2(IG)*DMAT(IG)
-        ENDDO
-        EKIN=0.5D0*EKIN
-!       == BUCKET POTENTIAL ============================================
-        IF(TBUCKET) THEN
-          EBUCKET=0.D0
-          DO IG=1,NGL
-            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
-          ENDDO
-          EKIN=EKIN+EBUCKET
-        END IF
-!       ==  PARALLELIZE AND CLOSE DOWN =================================
-        EKIN=EKIN*GWEIGHT
-        CALL MPE$COMBINE('NONE','+',EKIN)
-        DEALLOCATE(DMAT)
-        DEALLOCATE(G2)
-      END IF
-!
-      RETURN
-      END
+!!$!
+!!$!     ..................................................................
+!!$      SUBROUTINE WAVES_EKIN_OLD(NGL,NDIM,NBH,NB,F,GWEIGHT,PSI,EKIN &
+!!$     &                         ,TSTRESS,STRESS,TBUCKET,BUCKET,DBUCKET)
+!!$!     ******************************************************************
+!!$!     **                                                              **
+!!$!     **  EVALUATE PS KINETIC ENERGY IN G-SPACE                       **
+!!$!     **  EVALUATE NUMBER OF ELECTRONS IN G-SPACE                     **
+!!$!     **                                                              **
+!!$!     **  REMARKS:                                                    **
+!!$!     **    REQUIRES PLANEWAVE OBJECT TO BE SET PROPERLY              **
+!!$!     **                                                              **
+!!$!     *******************************************P.E. BLOECHL, (1999)***
+!!$      USE MPE_MODULE
+!!$      IMPLICIT NONE
+!!$      INTEGER(4),INTENT(IN) :: NB         ! #(STATES)
+!!$      INTEGER(4),INTENT(IN) :: NBH        ! #(WAVE FUNCTIONS)
+!!$      INTEGER(4),INTENT(IN) :: NDIM       ! #(SPINOR COMPONENTS)
+!!$      INTEGER(4),INTENT(IN) :: NGL        ! #(PLANE WAVES)
+!!$      REAL(8)   ,INTENT(IN) :: F(NB)      ! OCCUPATION
+!!$      REAL(8)   ,INTENT(IN) :: GWEIGHT
+!!$      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH) ! PS-WAVE FUNCTION
+!!$      REAL(8)   ,INTENT(OUT):: EKIN       ! KINETIC ENERGY
+!!$      LOGICAL(4),INTENT(IN) :: TSTRESS    ! SWITCH STRESS ON/OFF
+!!$      REAL(8)   ,INTENT(OUT):: STRESS(3,3)! STRESS
+!!$      LOGICAL(4),INTENT(IN) :: TBUCKET    ! BUCKET POTENTIAL PRESENT
+!!$      REAL(8)   ,INTENT(IN) :: BUCKET(NGL) ! BUCKET POTENTIAL
+!!$      REAL(8)   ,INTENT(IN) :: DBUCKET(NGL) ! 1/G *DBUCKET/DG
+!!$      REAL(8)   ,ALLOCATABLE:: G2(:)      ! G**2
+!!$      REAL(8)   ,ALLOCATABLE:: GVEC(:,:)  ! G   
+!!$      COMPLEX(8),ALLOCATABLE:: PSI1(:,:)
+!!$      REAL(8)   ,ALLOCATABLE:: DMAT(:)
+!!$      LOGICAL(4)            :: TINV
+!!$      INTEGER(4)            :: IB,IG,IDIM1,IDIM2
+!!$      REAL(8)               :: FP,FM
+!!$      REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
+!!$      REAL(8)               :: EBUCKET
+!!$      REAL(8)               :: SVAR
+!!$!     ******************************************************************
+!!$      CALL ERROR$MSG('ROUTINE MARKED FOR DELETION. CONTAINS ERRORS!')
+!!$      CALL ERROR$STOP('WAVES_EKIN_OLD')
+!!$!
+!!$!     ==================================================================
+!!$!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT==
+!!$!     ==================================================================
+!!$      CALL PLANEWAVE$GETL4('TINV',TINV)
+!!$      IF(TINV) THEN
+!!$        IF(NBH.NE.(NB+1)/2) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
+!!$          CALL ERROR$STOP('WAVES_EKIN')
+!!$        END IF
+!!$      ELSE 
+!!$        IF(NBH.NE.NB) THEN
+!!$          CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
+!!$          CALL ERROR$STOP('WAVES_EKIN')
+!!$        END IF
+!!$      END IF
+!!$!
+!!$!     ==================================================================
+!!$!     ==  CALCULATE DMAT(G)=F(IB)*PSI^*(G,IB)*PSI(G,IB)               ==
+!!$!     ==================================================================
+!!$      ALLOCATE(DMAT(NGL))
+!!$      ALLOCATE(PSI1(NGL,NDIM))
+!!$      DMAT(:)=0.D0
+!!$      DO IB=1,NBH
+!!$!       == DETERMINE OCCUPATIONS =======================================
+!!$        IF(TINV) THEN
+!!$          FP=0.5D0*(F(2*IB-1)+F(2*IB))
+!!$          FM=0.5D0*(F(2*IB-1)-F(2*IB))
+!!$        ELSE
+!!$          FP=F(IB)
+!!$          FM=0.D0
+!!$        END IF
+!!$!
+!!$!       ================================================================
+!!$!       == GENERAL WAVE FUNCTION / FIRST PART OF SUPER WAVE FUNCTIONS ==
+!!$!       == <PSI_+|G^2|PSI_+> FOR SUPER WAVE FUNCTIONS                 ==
+!!$!       ================================================================
+!!$        IF(FP.EQ.0.D0.AND.FM.EQ.0.D0) CYCLE
+!!$        DO IDIM1=1,NDIM
+!!$          DO IDIM2=IDIM1,NDIM
+!!$            SVAR=FP
+!!$            IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
+!!$            DO IG=1,NGL
+!!$              DMAT(IG)=DMAT(IG) &
+!!$    &              +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI(IG,IDIM2,IB),KIND=8)
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$!
+!!$!       ================================================================
+!!$!       ==  <PSI_+|G^2|PSI_->                                         ==
+!!$!       ================================================================
+!!$        IF(.NOT.TINV.OR.ABS(FM).LT.DSMALL) CYCLE
+!!$        DO IDIM1=1,NDIM
+!!$          CALL PLANEWAVE$INVERTG(NGL,PSI(1,IDIM1,IB),PSI1(1,IDIM1))
+!!$        ENDDO
+!!$        DO IDIM1=1,NDIM
+!!$          DO IDIM2=IDIM1,NDIM
+!!$            SVAR=FM
+!!$            IF(IDIM1.NE.IDIM2)SVAR=2.D0*SVAR
+!!$            DO IG=1,NGL
+!!$              DMAT(IG)=DMAT(IG) &
+!!$     &           +SVAR*REAL(CONJG(PSI(IG,IDIM1,IB))*PSI1(IG,IDIM2),KIND=8)
+!!$            ENDDO
+!!$          ENDDO
+!!$        ENDDO
+!!$      ENDDO
+!!$      DEALLOCATE(PSI1)
+!!$!
+!!$!     ==================================================================
+!!$!     ==  CALCULATE KINETIC ENERGY AND STRESS                         ==
+!!$!     ==================================================================
+!!$      IF(TSTRESS) THEN
+!!$        ALLOCATE(GVEC(3,NGL))
+!!$        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+!!$!       == KINETIC ENERGY AND KINETIC STRESS ===========================
+!!$        STRESS(:,:)=0.D0
+!!$        DO IG=1,NGL
+!!$          STRESS(1,1)=STRESS(1,1)+GVEC(1,IG)*GVEC(1,IG)*DMAT(IG)
+!!$          STRESS(1,2)=STRESS(1,2)+GVEC(1,IG)*GVEC(2,IG)*DMAT(IG)
+!!$          STRESS(1,3)=STRESS(1,3)+GVEC(1,IG)*GVEC(3,IG)*DMAT(IG)
+!!$          STRESS(2,2)=STRESS(2,2)+GVEC(2,IG)*GVEC(2,IG)*DMAT(IG)
+!!$          STRESS(2,3)=STRESS(2,3)+GVEC(2,IG)*GVEC(3,IG)*DMAT(IG)
+!!$          STRESS(3,3)=STRESS(3,3)+GVEC(3,IG)*GVEC(3,IG)*DMAT(IG)
+!!$        ENDDO
+!!$        EKIN=0.5D0*(STRESS(1,1)+STRESS(2,2)+STRESS(3,3))
+!!$        STRESS=-STRESS
+!!$!       == ENERGY AND STRESS DUE TO THE BUCKET POTENTIAL ===============
+!!$        IF(TBUCKET) THEN
+!!$          EBUCKET=0.D0
+!!$          DO IG=1,NGL
+!!$            IF(BUCKET(IG).EQ.0.D0) CYCLE
+!!$            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
+!!$            SVAR=DMAT(IG)*DBUCKET(IG)
+!!$            STRESS(1,1)=STRESS(1,1)-GVEC(1,IG)*GVEC(1,IG)*SVAR
+!!$            STRESS(1,2)=STRESS(1,2)-GVEC(1,IG)*GVEC(2,IG)*SVAR
+!!$            STRESS(1,3)=STRESS(1,3)-GVEC(1,IG)*GVEC(3,IG)*SVAR
+!!$            STRESS(2,2)=STRESS(2,2)-GVEC(2,IG)*GVEC(2,IG)*SVAR
+!!$            STRESS(2,3)=STRESS(2,3)-GVEC(2,IG)*GVEC(3,IG)*SVAR
+!!$            STRESS(3,3)=STRESS(3,3)-GVEC(3,IG)*GVEC(3,IG)*SVAR
+!!$          ENDDO
+!!$          EKIN=EKIN+EBUCKET
+!!$        END IF
+!!$!       == PARALLELIZE AND CLOSE DOWN ==================================
+!!$        STRESS(2,1)=STRESS(1,2)
+!!$        STRESS(3,1)=STRESS(1,3)
+!!$        STRESS(3,2)=STRESS(2,3)
+!!$        EKIN=EKIN*GWEIGHT
+!!$        STRESS=STRESS*GWEIGHT
+!!$        CALL MPE$COMBINE('NONE','+',EKIN)
+!!$        CALL MPE$COMBINE('NONE','+',STRESS)
+!!$        DEALLOCATE(GVEC)
+!!$        DEALLOCATE(DMAT)
+!!$      ELSE
+!!$        ALLOCATE(G2(NGL))
+!!$        CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+!!$!       == KINETIC ENERGY ==============================================
+!!$        EKIN=0.D0
+!!$        DO IG=1,NGL
+!!$          EKIN=EKIN+G2(IG)*DMAT(IG)
+!!$        ENDDO
+!!$        EKIN=0.5D0*EKIN
+!!$!       == BUCKET POTENTIAL ============================================
+!!$        IF(TBUCKET) THEN
+!!$          EBUCKET=0.D0
+!!$          DO IG=1,NGL
+!!$            EBUCKET=EBUCKET+BUCKET(IG)*DMAT(IG)
+!!$          ENDDO
+!!$          EKIN=EKIN+EBUCKET
+!!$        END IF
+!!$!       ==  PARALLELIZE AND CLOSE DOWN =================================
+!!$        EKIN=EKIN*GWEIGHT
+!!$        CALL MPE$COMBINE('NONE','+',EKIN)
+!!$        DEALLOCATE(DMAT)
+!!$        DEALLOCATE(G2)
+!!$      END IF
+!!$!
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DENSITY(NGL,NRL,NDIM,NB,NBH,F,PSIOFG,RHO,TRHOKIN,RHOKIN)
