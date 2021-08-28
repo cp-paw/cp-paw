@@ -1098,6 +1098,7 @@ ENDDO
 !     **  SWITCH ATOMIC POSITIONS  R(+)->R(0)->R(M)                   **
 !     ****************************************************************** 
       USE ATOMS_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
       REAL(8)     :: MAPTOCELL(3,3)
       LOGICAL(4)  :: TSTRESS
@@ -1168,11 +1169,20 @@ ENDDO
           RP(:,IAT)=MATMUL(MAPTOCELL,RP(:,IAT))
         ENDDO
       END IF
+!
+!     ==========================================================================
+!     == SYNCHRONIZE POSITIONS AMONG PROCESSES (MPI)                          ==
+!     ==========================================================================
+      CALL MPE$BROADCAST('MONOMER',1,RP)
+      CALL MPE$BROADCAST('MONOMER',1,R0)
+      CALL MPE$BROADCAST('MONOMER',1,RM)
+      CALL MPE$BROADCAST('MONOMER',1,ANNERVEC0)
+!
+!     ==========================================================================
+!     == SWITCH VARIABLES (ALSO FOR OPTIMUM FRICTION)                         ==
+!     ==========================================================================
       IF(.NOT.TDYN) RETURN
 !
-!     ==================================================================
-!     == SWITCH VARIABLES (ALSO FOR OPTIMUM FRICTION)                 ==
-!     ==================================================================
       IF(.NOT.ALLOCATED(R2M))ALLOCATE(R2M(3,NAT))
       IF(.NOT.ALLOCATED(ANNERVECM))ALLOCATE(ANNERVECM(NAT))
       R2M(:,:)=RM(:,:)
