@@ -1176,7 +1176,7 @@ ENDDO
       CALL MPE$BROADCAST('MONOMER',1,RP)
       CALL MPE$BROADCAST('MONOMER',1,R0)
       CALL MPE$BROADCAST('MONOMER',1,RM)
-      CALL MPE$BROADCAST('MONOMER',1,ANNERVEC0)
+      IF(ALLOCATED(ANNERVEC0))CALL MPE$BROADCAST('MONOMER',1,ANNERVEC0)
 !
 !     ==========================================================================
 !     == SWITCH VARIABLES (ALSO FOR OPTIMUM FRICTION)                         ==
