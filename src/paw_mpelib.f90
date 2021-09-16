@@ -1816,14 +1816,17 @@ END MODULE MPE_MODULE
 ! 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE_COUNTTAGS(ID,OTHERTASK,TAG)
-      USE MPE_MPIF_MODULE
+      USE MPE_MPIF_MODULE, ONLY : THISTASK &
+     &                           ,NTASKS &
+     &                           ,SENDTAG &
+     &                           ,RECEIVETAG
       IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: ID
-      INTEGER(4),INTENT(IN) :: OTHERTASK
-      INTEGER   ,INTENT(OUT) :: TAG
-      INTEGER(4)             :: TOTASK
-      INTEGER(4)             :: FROMTASK
-      INTEGER(4),PARAMETER   :: MAXTAG=10000
+      CHARACTER(*),INTENT(IN)  :: ID
+      INTEGER(4)  ,INTENT(IN)  :: OTHERTASK
+      INTEGER     ,INTENT(OUT) :: TAG
+      INTEGER(4)               :: TOTASK
+      INTEGER(4)               :: FROMTASK
+      INTEGER(4)  ,PARAMETER   :: MAXTAG=10000
 !     *********************************************************************
       IF(ID.EQ.'SEND') THEN
         TOTASK=OTHERTASK
@@ -2008,14 +2011,13 @@ END MODULE MPE_MODULE
 !!$      BANDWIDTH=SQRT((CLOCK%SIZESQUARE-CLOCK%SIZE**2) &
 !!$     &              /(CLOCK%TIMESQUARE-CLOCK%TIME**2))
 !!$      LATENCY  =(BANDWIDTH*CLOCK%SIZE-CLOCK%TIME)/REAL(COUNT,KIND=8)
-      WRITE(NFIL,FMT='(A,T17,I9,6ES12.3)') &
-     &            CLOCK%ID,CLOCK%COUNT,ARR(1:3)
+      WRITE(NFIL,FMT='(A,T17,I9,6ES12.3)') CLOCK%ID,CLOCK%COUNT,ARR(1:3)
       RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE MPE_CLOCKRESET(CLOCK)
-      USE MPE_MPIF_MODULE
+      USE MPE_MPIF_MODULE, ONLY : MPECLOCKTYPE
       IMPLICIT NONE
       TYPE(MPECLOCKTYPE),INTENT(OUT):: CLOCK
 !     **************************************************************************

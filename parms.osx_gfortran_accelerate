@@ -144,7 +144,9 @@ FCFLAGS_PROF="-c -pg -O3 -funroll-loops  -msse2"
 #
 #FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -finit-real=snan -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Waliasing -Wampersand  -Winteger-division -Wintrinsics-std -Wsurprising -Wtabs -Wintrinsic-shadow -Wunused-dummy-argument -Wunused-parameter -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
 
-FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
+#FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
+# this is the debugging mode which also includes all optimization statements
+FCFLAGS_DBG="-c -g -O3 -funroll-loops -fomit-frame-pointer -march=native -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
 
 #
 LDFLAGS_SCALAR="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "

@@ -23,7 +23,7 @@
      &                        ,NDIM &
      &                        ,WAVEEKIN2 &
      &                        ,DELT,ANNEE &
-     &                        ,WAVES_SELECTWV !subroutine
+     &                        ,WAVES_SELECTWV !SUBROUTINE
       IMPLICIT NONE
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
       REAL(8)   ,ALLOCATABLE :: MARR(:)
@@ -129,7 +129,7 @@ ELSE
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
 !++++++++++++++++++++++++ FROM HERE +++++++++++++++++++++++++++++++++++++
-!         __ this$proj=<ptilde|this%psi0>_______________________________________
+!         __ THIS$PROJ=<PTILDE|THIS%PSI0>_______________________________________
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
 !++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
 END IF
@@ -310,9 +310,9 @@ END IF
             ENDDO
             IF(TSWAPSTATES) THEN
 !             ==================================================================
-!             == construct smap so that |lambda(smap(i),smap(i))| increases   ==
+!             == CONSTRUCT SMAP SO THAT |LAMBDA(SMAP(I),SMAP(I))| INCREASES   ==
 !             ==================================================================
-              SVAR=0.D0   ! will become max offdiagonal elements of lambda 
+              SVAR=0.D0   ! WILL BECOME MAX OFFDIAGONAL ELEMENTS OF LAMBDA 
               DO I=1,NB
                 DO J=I+1,NB
                   SVAR=MAX(SVAR,ABS(LAMBDA(I,J)))
@@ -2234,7 +2234,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
           THIS%PSIM=>TPSI
 !===============================================================================
 !I DO NOT UNDERSTAND WHY THE FOLLOWING HAD BEEN COMMENTED OUT.  I AM
-!CONCERNED, BECAUSE THE CELL DYNAMICS WITH MOvING ATOMS IS NOT ENERGY
+!CONCERNED, BECAUSE THE CELL DYNAMICS WITH MOVING ATOMS IS NOT ENERGY
 !CONSERVING, WHILE THAT WITHOUT MOVING ATOMS AND THAT WITHOUT MOVING
 !CELL WORK FINE.
 !===============================================================================
@@ -3375,7 +3375,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
       REAL(8)                 :: KREAD(3,NKPT)
       REAL(8)     ,ALLOCATABLE:: XK(:,:)     ! K-POINTS IN RELATIVE COORDINATES
       REAL(8)                 :: DK(3)       ! K-POINT DIFFERENCE IN A.U.
-      REAL(8)                 :: K_(3)       ! K-POINT ON FILE IN RELATIVE COORDINATES
+      REAL(8)                 :: K_(3)  !K-POINT ON FILE IN RELATIVE COORDINATES
       REAL(8)                 :: GBAS_(3,3)  ! REC. LATT. VECT. ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG_(:,:) ! G-VECTORS ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG(:,:)  ! G-VECTORS (GLOBAL)
@@ -4277,33 +4277,59 @@ END IF
       INTEGER(4)            :: IG,I
       INTEGER(4),ALLOCATABLE:: MAP3D(:,:,:)
       REAL(8)               :: GBASIN(3,3)
-      INTEGER(4)            :: IVEC1(3),IVECA(3,NGA)
-      REAL(8)               :: KA(3)
-      REAL(8)               :: G(3)
+      INTEGER(4)            :: IVEC1(3)
+      INTEGER(4),ALLOCATABLE:: IVECA(:,:)  !(3,NGA)
+      REAL(8)               :: XK(3)  !KPOINT IN RELATIVE COORDINATES
+      REAL(8)               :: XG(3)  !G-VECTOR IN RECIPROCAL COORDINATES
       INTEGER(4)            :: MING(3),MAXG(3)
-LOGICAL(4):: TCHK
+      REAL(8)               :: SVAR
 !     ******************************************************************
       CALL LIB$INVERTR8(3,GBASA,GBASIN)
+      IF(NGA.NE.NGB) THEN
+        CALL ERROR$MSG('INCONSISTENT NUMBER OF PLANE WAVES')
+        CALL ERROR$MSG('THIS ERROR STATEMENT IS NOT NECESSARY')
+        CALL ERROR$MSG('BECAUSE WAVES_MAPG CAN DEAL WITH NGA -NE NGB')
+        CALL ERROR$MSG('IT HAS BEEN INTRODUCED FOR TESTING PURPOSES')
+        CALL ERROR$I4VAL('NGA',NGA)
+        CALL ERROR$I4VAL('NGB',NGB)
+        CALL ERROR$STOP('WAVES_MAPG')
+      END IF
 !
 !     ==================================================================
 !     == DETERMINE K-POINT                                            ==
 !     ==================================================================
-      G(:)=MATMUL(GBASIN,GVECA(:,1))
-      IVEC1=NINT(G)
-!!$      DO I=1,3
-!!$        IVEC1(I)=NINT(G(I))
-!!$      ENDDO
-!!$      G=REAL(NINT(G),KIND=8)
-      G(:)=MATMUL(GBASA,REAL(IVEC1,KIND=8))
-      KA(:)=GVECA(:,1)-G(:)
+      XG(:)=MATMUL(GBASIN,GVECA(:,1))
+      XK(:)=XG(:)-REAL(NINT(XG(:)),KIND=8) !KPOINT IN RELATIVE COORDINATES
+PRINT*,'XK ',XK
 !
 !     ==================================================================
 !     == DIMENSION AND ALLOCATE 3-D GRID                              ==
 !     ==================================================================
-      MING=+10000
-      MAXG=-10000
+      ALLOCATE(IVECA(3,NGA))
+      MING=+10000000
+      MAXG=-10000000
       DO IG=1,NGA
-        IVECA(:,IG)=NINT(MATMUL(GBASIN,GVECA(:,IG)-KA(:)))
+        XG(:)=MATMUL(GBASIN,GVECA(:,IG))
+! CAUTION! WHAT IS THE RESULT OF NINT FOR A HALF INTEGER?
+!          NINT=INT(A+0.5) FOR A>0 AND INT(A-0.5) FOR A<0 OR A=0
+!          INT(A) STRIPS THE FRACTIONAL PART OF A
+        IVECA(:,IG)=NINT(XG(:)-XK(:))
+!       == CATCH PROBLEM WHEN MAPPING FAILS ====================================
+        IF(SUM((XG(:)-XK(:)-REAL(IVECA(:,IG),KIND=8))**2).GT.1.D-6) THEN
+           CALL ERROR$MSG('INTERNAL ERROR')
+           CALL ERROR$MSG('G-VECTORS CANNOT BE REPRESENTED AS SUM OF')
+           CALL ERROR$MSG('K-VECTOR AND RECIPROCAL LATTICE VECTORS')
+           CALL ERROR$MSG('FAILED TO MAP G-VECTORS')
+           CALL ERROR$I4VAL('NGA',NGA)
+           CALL ERROR$I4VAL('IG',IG)
+           CALL ERROR$R8VAL('XG(1)',XG(1))
+           CALL ERROR$R8VAL('XG(2)',XG(2))
+           CALL ERROR$R8VAL('XG(3)',XG(3))
+           CALL ERROR$R8VAL('XK(1)',XK(1))
+           CALL ERROR$R8VAL('XK(2)',XK(2))
+           CALL ERROR$R8VAL('XK(3)',XK(3))
+           CALL ERROR$STOP('WAVES_MAPG')
+        END IF
         DO I=1,3
           MING(I)=MIN(MING(I),IVECA(I,IG))
           MAXG(I)=MAX(MAXG(I),IVECA(I,IG))
@@ -4320,18 +4346,28 @@ LOGICAL(4):: TCHK
           MAP3D(IVECA(1,IG),IVECA(2,IG),IVECA(3,IG))=IG
         ELSE
           CALL ERROR$MSG('TWO G-VECTORS ARE MAPPED ONTO THE SAME POINT')
+          CALL ERROR$I4VAL('NGA',NGA)
+          CALL ERROR$I4VAL('IG',IG)
+          CALL ERROR$I4VAL('MAP3D',MAP3D(IVECA(1,IG),IVECA(2,IG),IVECA(3,IG)))
+          CALL ERROR$I4VAL('IVECA(1,IG)',IVECA(1,IG))
+          CALL ERROR$I4VAL('IVECA(2,IG)',IVECA(2,IG))
+          CALL ERROR$I4VAL('IVECA(3,IG)',IVECA(3,IG))
+          CALL ERROR$R8VAL('XK_1',XK(1))
+          CALL ERROR$R8VAL('XK_2',XK(2))
+          CALL ERROR$R8VAL('XK_3',XK(3))
           CALL ERROR$STOP('WAVES_MAPG')
         END IF
       ENDDO
+      DEALLOCATE(IVECA)
 !
 !     ==================================================================
 !     ==  FOR EACH VECTOR (B) PICK OUT THE CLOSEST GRID (A) POINT     ==
 !     ==================================================================
       LOOP1:DO IG=1,NGB
         MAP(IG)=0
-        G(:)=MATMUL(GBASIN,GVECB(:,IG)-KA(:))
+        XG(:)=MATMUL(GBASIN,GVECB(:,IG))-XK(:)
         DO I=1,3
-          IVEC1(I)=NINT(G(I))
+          IVEC1(I)=NINT(XG(I))
           IF(IVEC1(I).LT.MING(I).OR.IVEC1(I).GT.MAXG(I)) CYCLE LOOP1
         ENDDO
         MAP(IG)=MAP3D(IVEC1(1),IVEC1(2),IVEC1(3))
@@ -4341,11 +4377,12 @@ LOGICAL(4):: TCHK
 !     ==================================================================
 !     ==  PRINT IF REMAPPING HAS BEEN DONE                            ==
 !     ==================================================================
-      TCHK=.FALSE.
       DO IG=1,NGB
-        TCHK=TCHK.OR.(MAP(IG).NE.IG)
+        IF(MAP(IG).NE.IG) THEN
+          PRINT*,'ORDER OF G-VECTORS FROM RESTART FILE HAS CHANGED'
+          EXIT
+        END IF
       END DO
-      IF(TCHK)PRINT*,'ORDER OF G-VECTORS FROM RESTART FILE HAS BEEN CHANGED'
       RETURN
       END
 !
@@ -5112,7 +5149,7 @@ END MODULE TOTALSPIN_MODULE
       INTEGER(4)              :: IB,IDIM,IG,ISPIN,I
       INTEGER(4)              :: IKPTG,IKPTL
       INTEGER(4)              :: IWAVE
-      REAL(8)                 :: K_(3)       ! K-POINT ON FILE IN RELATIVE COORDINATES
+      REAL(8)                 :: K_(3) ! K-POINT ON FILE IN RELATIVE COORDINATES
       REAL(8)                 :: GBAS_(3,3)  ! REC. LATT. VECT. ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG_(:,:) ! G-VECTORS ON FILE
       REAL(8)     ,ALLOCATABLE:: GVECG(:,:)  ! G-VECTORS (GLOBAL)
@@ -5127,11 +5164,13 @@ END MODULE TOTALSPIN_MODULE
       INTEGER(4)              :: IOS
       CHARACTER(8)            :: KEY
       INTEGER(4) ,ALLOCATABLE :: IGVECG_(:,:)
-      REAL(8)                 :: XG1,XG2,XG3
+      REAL(8)                 :: XG(3)
       INTEGER(4)              :: NWAVE
       INTEGER(4)              :: NFILO
       LOGICAL(4)              :: TKGROUP
       REAL(8)    ,ALLOCATABLE :: XK(:,:) !K-POINTS IN RELATIVE COORDINATES
+      REAL(8)                 :: GBASIN(3,3)
+ REAL(8)     ,ALLOCATABLE:: TEST(:,:)
 !     **************************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -5235,21 +5274,58 @@ END IF
           CALL GBASS(RBAS,GBAS_,SVAR)
           ALLOCATE(GVECG_(3,NGG_))
           DO IG=1,NGG_
-            XG1=REAL(IGVECG_(1,IG),KIND=8)+K_(1)
-            XG2=REAL(IGVECG_(2,IG),KIND=8)+K_(2)
-            XG3=REAL(IGVECG_(3,IG),KIND=8)+K_(3)
-            DO I=1,3
-              GVECG_(I,IG)=GBAS_(I,1)*XG1+GBAS_(I,2)*XG2+GBAS_(I,3)*XG3
-            ENDDO
+            XG(:)=REAL(IGVECG_(:,IG),KIND=8)+K_(:)
+            GVECG_(:,IG)=MATMUL(GBAS_,XG)
           ENDDO
           DEALLOCATE(IGVECG_)
+!
+! THE FOLLOWING ARE STATEMENTS THAT SEEM TO PREVENT A BUG.
+! THE ERROR IS THAT GVECG_ CAN NO MORE BE REPRESENTED AS GBAS*(INTEGER+K)
+! WHICH INDICATES THAT GVECG_ HAS CHANGED ITS VALUES. THERE IS A TEST IN
+! MAPG, WHICH TESTS FOR THIS. AS SOON AS I TEST FOR IT IN READPSI, 
+! THE ERROR DISAPPEARS.
+!
+ALLOCATE(TEST(3,NGG_))  ! will be used before waves_mapg
+TEST=GVECG_
+IF(.FALSE.) THEN
+  PRINT*,'-----------------TEST START'
+  PRINT*,'K_',K_
+  CALL LIB$INVERTR8(3,GBAS_,GBASIN)
+  ALLOCATE(GVECG(3,NGG_))
+  GVECG=MATMUL(GBASIN,GVECG_)
+  DO I=1,3
+    GVECG(I,:)=GVECG(I,:)-K_(I)
+  ENDDO
+  GVECG=GVECG-REAL(NINT(GVECG,KIND=8),KIND=8)  !!!!!
+  DO I=1,NGG_
+    IF(SUM(GVECG(:,I)**2).GT.1.D-6) THEN
+      CALL ERROR$MSG('FAILURE')
+      CALL ERROR$I4VAL('IG',IG)
+      CALL ERROR$R8VAL('GVECG(1,1)',GVECG(1,1))
+      CALL ERROR$R8VAL('GVECG(2,1)',GVECG(2,1))
+      CALL ERROR$R8VAL('GVECG(3,1)',GVECG(3,1))
+      CALL ERROR$R8VAL('GVECG(1,I)',GVECG(1,I))
+      CALL ERROR$R8VAL('GVECG(2,I)',GVECG(2,I))
+      CALL ERROR$R8VAL('GVECG(3,I)',GVECG(3,I))
+      CALL ERROR$STOP('WAVES_READPSI')
+    END IF
+  ENDDO
+  DEALLOCATE(GVECG)
+  PRINT*,'-----------------TEST END'
+END IF
+
+
         ELSE
           KEY=' '
           NGG_=0
-          TSUPER_=.FALSE.
           NDIM_=0
           NB_=0
+          TSUPER_=.FALSE.
           K_(:)=-999999999.D0
+          GBAS_=0.D0
+          SVAR=0.D0
+          ! GVECG_ NOT ALLOCATED
+          XG(:)=0.D0
         END IF
 !
 !       == NOW COMMUNICATE TO K-GROUP
@@ -5280,6 +5356,11 @@ END IF
 !
 !       == CALCULATE MAPPING ARRAY FOR G-VECTOR MAPPING ==============
         IF(THISTASK.EQ.1) THEN
+IF(SUM((TEST-GVECG)**2).GT.1.D-6) THEN
+  CALL ERROR$MSG('TEST AND GVECG_ DISAGREE:ERROR')
+  CALL ERROR$STOP('WAVES_READPSI')
+END IF
+DEALLOCATE(TEST)
           ALLOCATE(MAPG(NGG))
           CALL WAVES_MAPG(NGG_,GBAS_,GVECG_,NGG,GVECG,MAPG)
           DEALLOCATE(GVECG_)

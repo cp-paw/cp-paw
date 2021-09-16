@@ -70,7 +70,7 @@ END MODULE TIMING_MODULE
 !     **  INITIALIZES A SPECIFIED CLOCK                                      **
 !     **  NOTE THAT ALSO THE NAME IS EMPTY                                    **
 !     **************************************************************************
-      USE TIMING_MODULE
+      USE TIMING_MODULE ,ONLY : CLOCK_TYPE  
       IMPLICIT NONE
       TYPE(CLOCK_TYPE),INTENT(OUT) :: CLOCK_
 !     **************************************************************************
@@ -87,7 +87,9 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
 !     **  RESTARTS THE TIME OBJECT. ALL PRIOR INFORMATION IS LOST.            **
 !     **************************************************************************
-      USE TIMING_MODULE
+      USE TIMING_MODULE ,ONLY : STARTED &
+     &                         ,NENTRY &
+     &                         ,BEGINTIME 
       IMPLICIT NONE
       REAL(8) :: TIME
 !     **************************************************************************
@@ -108,7 +110,6 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
 !     **  ADVANCES THE COUNTER OF TOTAL CLOCK  (USED FOR ITERATIVE PROCEDURES)**
 !     **************************************************************************
-      USE TIMING_MODULE
       IMPLICIT NONE
 !     **************************************************************************
       CALL TIMING$CLOCKOFF('TOTALCLOCK')
@@ -121,7 +122,11 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
 !     ** ACTIVATE A SPECIFIED CLOCK                                           **
 !     **************************************************************************
-      USE TIMING_MODULE
+      USE TIMING_MODULE ,ONLY : STARTED &
+     &                         ,NENTRYX &
+     &                         ,NENTRY &
+     &                         ,CLOCK_TYPE &
+     &                         ,CLOCK
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       CHARACTER(32)           :: ID
@@ -189,7 +194,10 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
 !     **  DEACTIVATE A SPECIFIED CLOCK                                        **
 !     **************************************************************************
-      USE TIMING_MODULE
+      USE TIMING_MODULE ,ONLY : STARTED &
+     &                         ,NENTRY &
+     &                         ,CLOCK_TYPE &
+     &                         ,CLOCK
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID_
       CHARACTER(32)           :: ID
@@ -244,9 +252,13 @@ END MODULE TIMING_MODULE
 !     **************************************************************************
 !     **  REPORT TIMING INFORMATION                                           **
 !     **************************************************************************
-      USE TIMING_MODULE
-      USE CLOCK_MODULE
-      USE MPE_MODULE
+      USE TIMING_MODULE ,ONLY : NENTRYX &
+     &                         ,STARTED &
+     &                         ,CLOCK_TYPE &
+     &                         ,CLOCK &
+     &                         ,NENTRY
+      USE CLOCK_MODULE  ,ONLY : CLOCK$NOW
+      USE MPE_MODULE    ,ONLY : MPE$GATHER
       IMPLICIT NONE
       CHARACTER(*)    ,INTENT(IN)  :: CID  ! COMMUNICATOR ID (SEE MPE)
       INTEGER(4)      ,INTENT(IN)  :: NFIL
@@ -274,6 +286,7 @@ END MODULE TIMING_MODULE
         CALL ERROR$MSG('CALL TIMING$START BEFORE ANY OTHER FUNCTON')
         CALL ERROR$STOP('TIMIMG')
       END IF
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
 ! 
 !     ==========================================================================
 !     == STOP ALL CLOCKS AND REMEMBER THOSE THAT HAVE BEEN ACTIVE             ==
@@ -287,7 +300,6 @@ END MODULE TIMING_MODULE
 !     == COLLECT INFORMATION FROM OTHER PROCESSES                             ==
 !     == DATA ARE FILLED INTO CLOCKARRAY                                      ==
 !     ==========================================================================
-      CALL MPE$QUERY(CID,NTASKS,THISTASK)
       IF(THISTASK.EQ.1)ALLOCATE(CLOCKARRAY(NENTRYX,NTASKS))
       ALLOCATE(NAMEARRAY(NENTRYX,NTASKS))
       ALLOCATE(TIMEARRAY(NENTRYX,NTASKS))
@@ -385,7 +397,7 @@ END MODULE TIMING_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TIMING_CLOCK(SECONDS)
 !     **************************************************************************
-!     ** returns the wall clock time in seconds from system_clock             **
+!     ** RETURNS THE WALL CLOCK TIME IN SECONDS FROM SYSTEM_CLOCK             **
 !     **************************************************************************
       IMPLICIT NONE
       REAL(8) ,INTENT(OUT) :: SECONDS
@@ -418,17 +430,23 @@ END MODULE TIMING_MODULE
       IMPLICIT NONE
       REAL(8)      ,INTENT(IN) :: TIME
       CHARACTER(15),INTENT(OUT):: TIMESTRING 
-      INTEGER(4)               :: HOURS,MINUTES,SECONDS,SECONDFRAC
+      INTEGER(8)               :: HOURS,MINUTES,SECONDS,SECONDFRAC
       REAL(8)                  :: SVAR
 !     **************************************************************************
+      IF(TIME.GE.REAL(HUGE(HOURS)*3600.D0,KIND=8)) THEN
+        CALL ERROR$MSG('TIME TOO LARGE FOR HANDLING WITH INTEGER(8)')
+        CALL ERROR$R8VAL('TIME',TIME)
+        CALL ERROR$R8VAL('HUGE(INTEGER*8)',REAL(HUGE(HOURS),KIND=8))
+        CALL ERROR$STOP('TIMING_CONVERT')
+      END IF
       SVAR   =TIME
-      HOURS  =INT(SVAR/3600.D0)
-      SVAR   =SVAR-DBLE(3600*HOURS)
-      MINUTES=INT(SVAR/60.D0)
-      SVAR   =SVAR-DBLE(60*MINUTES) 
-      SECONDS=INT(SVAR)
-      SVAR   =SVAR-DBLE(SECONDS)
-      SECONDFRAC=INT(SVAR*10.D0)
+      HOURS  =INT(SVAR/3600.D0,KIND=8)
+      SVAR   =SVAR-REAL(3600.D0*HOURS,KIND=8)
+      MINUTES=INT(SVAR/60.D0,KIND=8)
+      SVAR   =SVAR-REAL(60.D0*MINUTES,KIND=8) 
+      SECONDS=INT(SVAR,KIND=8)
+      SVAR   =SVAR-REAL(SECONDS,KIND=8)
+      SECONDFRAC=INT(SVAR*10.D0,KIND=8)
       WRITE(TIMESTRING,FMT='(I6,"H",I2,"M",I2,".",I1,"S")') &
      &               HOURS,MINUTES,SECONDS,SECONDFRAC
       RETURN
