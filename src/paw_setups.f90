@@ -3454,8 +3454,11 @@ CALL TRACE$PASS('AFTER MAKEPARTIALWAVES')
       IF(AEZ.GT. 54.D0) LMAP=(/5,4,2,0/) !XE
       IF(AEZ.GT. 86.D0) LMAP=(/6,5,3,1/) !RN
 
+
       IPOS=1
       IF(COREID(1:1).EQ.'+'.OR.COREID(1:1).EQ.'-') THEN
+!       == DO NOTHING
+      ELSE IF(LEN_TRIM(COREID).EQ.0) THEN 
 !       == DO NOTHING
       ELSE IF(COREID(1:1).EQ.'0') THEN
         LMAP=(/0,0,0,0/)

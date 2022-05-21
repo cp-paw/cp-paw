@@ -336,18 +336,18 @@
 !     **************************************************************************
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)               :: NX        ! #(COEFFICIENTS)
-      COMPLEX(8),INTENT(IN)               :: COEFF(Nx) ! COEFFICIENT ARRAY
-      COMPLEX(8),INTENT(OUT)              :: Z(Nx-1)   ! ZEROS
-      LOGICAL(4),PARAMETER                :: TTEST=.false.
+      COMPLEX(8),INTENT(IN)               :: COEFF(NX) ! COEFFICIENT ARRAY
+      COMPLEX(8),INTENT(OUT)              :: Z(NX-1)   ! ZEROS
+      LOGICAL(4),PARAMETER                :: TTEST=.FALSE.
       INTEGER(4)                          :: I,J
       COMPLEX(8),ALLOCATABLE              :: M(:,:)
-      COMPLEX(16)                         :: CSVAR
+      COMPLEX(8)                         :: CSVAR  !KIND=16 BEFORE
 !     **************************************************************************
 !     ==========================================================================
 !     ==  VIETA FORMULAS
 !     ==========================================================================
       ALLOCATE(M(NX-1,NX-1))
-      M(:,:)=(0.d0,0.d0)
+      M(:,:)=(0.D0,0.D0)
       DO I=1,NX-1
         M(1,I)=-COEFF(I+1)/COEFF(1)
         IF(I+1.LE.NX-1)M(I+1,I)=(1.D0,0.D0)
@@ -363,14 +363,14 @@
 !     == TEST RESULT                                                          ==
 !     ==========================================================================
       IF(TTEST) THEN
-         WRITE(*,FMT='(" P(Z)=(",2F15.5,") * Z^",I2)')coeff(1),0
-        DO I=2,Nx
-          WRITE(*,FMT='("     +(",2F15.5,") * Z^",I2)')coeff(I),I-1
+         WRITE(*,FMT='(" P(Z)=(",2F15.5,") * Z^",I2)')COEFF(1),0
+        DO I=2,NX
+          WRITE(*,FMT='("     +(",2F15.5,") * Z^",I2)')COEFF(I),I-1
         ENDDO
-        DO I=1,Nx-1  ! LOOP OVER ZEROS
-          CSVAR=CMPLX(0.D0,0.D0,KIND=16)
-          DO J=1,Nx
-            CSVAR=CSVAR+CMPLX(coeff(J),KIND=16)*Z(I)**(J-1)  
+        DO I=1,NX-1  ! LOOP OVER ZEROS
+          CSVAR=CMPLX(0.D0,0.D0,KIND=8)   ! KIND=16 BEFORE
+          DO J=1,NX
+            CSVAR=CSVAR+CMPLX(COEFF(J),KIND=8)*Z(I)**(J-1)  !KIND=16 BEFORE  
           ENDDO
           WRITE(*,FMT='(I3," ZERO Z=  ",2F15.5," ABS(P(Z)= ",E15.5)') &
      &            I,Z(I),ABS(CSVAR)

@@ -80,7 +80,7 @@ TYPE DOSSET_TYPE
   LOGICAL(4)    :: STACK
   REAL(8)       :: SCALE
   REAL(8)       :: XZERO
-  logical(4)    :: LEGEND
+  LOGICAL(4)    :: LEGEND
   TYPE(DOSSET_TYPE),POINTER :: NEXT
 END TYPE DOSSET_TYPE
 TYPE(DOSSET_TYPE)  ,TARGET  :: FIRSTDOSSET
@@ -116,7 +116,6 @@ END MODULE DOSSETS_MODULE
       REAL(8)         :: YMAXGLOB
       REAL(8)         :: XMINGLOB
       REAL(8)         :: XMAXGLOB
-      LOGICAL(4)      :: TLEGEND
 !     **************************************************************************
                                      CALL TRACE$PUSH('READCNTL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
@@ -180,7 +179,7 @@ END MODULE DOSSETS_MODULE
         CALL LINKEDLIST$SELECT(LL_CNTL,'GRAPH',IG)
 !
 !       == GET DEFAULT PREFIX FOR THIS GRAPH ===================================
-        PREFIX=''
+        PREFIX=' '
         CALL LINKEDLIST$EXISTD(LL_CNTL,'PREFIX',1,TCHK)
         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'PREFIX',0,PREFIX)
 !
@@ -261,7 +260,7 @@ END MODULE DOSSETS_MODULE
           END IF
           DOSSET%IG=IG
           DOSSET%IS=IS
-          DOSSET%FILLCOLOR=''
+          DOSSET%FILLCOLOR=' '
           DOSSET%STACK=.FALSE.
           DOSSET%LEGEND=.FALSE.
           NULLIFY(DOSSET%NEXT)
@@ -304,7 +303,7 @@ END MODULE DOSSETS_MODULE
           IF(.NOT.TCHK) THEN
             CALL LINKEDLIST$EXISTD(LL_CNTL,'FILLCOLOR',1,TCHK)
             IF(.NOT.TCHK) THEN
-              DOSSET%FILLCOLOR=''
+              DOSSET%FILLCOLOR=' '
             ELSE
               CALL LINKEDLIST$GET(LL_CNTL,'FILLCOLOR',1,DOSSET%FILLCOLOR)
             END IF
@@ -337,7 +336,7 @@ END MODULE DOSSETS_MODULE
       CHARACTER(32)            :: FC
       CHARACTER(32)            :: LC
       CHARACTER(256)           :: STRING
-      INTEGER(4),allocatable   :: SETSINGRAPH(:)
+      INTEGER(4),ALLOCATABLE   :: SETSINGRAPH(:)
 !     *************************************************************************
                                      CALL TRACE$PUSH('CUMULATEDDOS')
 !
@@ -379,13 +378,13 @@ END MODULE DOSSETS_MODULE
 !     == READ SETTINGS                                                       ==
 !     =========================================================================
                                      CALL TRACE$PASS('READ SETTINGS')
-      allocate(SETSINGRAPH(NGRAPH))
+      ALLOCATE(SETSINGRAPH(NGRAPH))
       DOSSET=>FIRSTDOSSET
       IG=0
       DO 
         IF(DOSSET%IG.GT.IG) THEN
 !         == NEW GRAPH
-          if(IG.ne.0)SETSINGRAPH(IG)=IS
+          IF(IG.NE.0)SETSINGRAPH(IG)=IS
           IG=DOSSET%IG
           CALL GRACE_WORLD(NFIL,IG-1,XMIN(IG),XMAX(IG),YMIN(IG),YMAX(IG))
           CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
@@ -419,7 +418,7 @@ END MODULE DOSSETS_MODULE
         IF(.NOT.ASSOCIATED(DOSSET%NEXT)) EXIT
         DOSSET=>DOSSET%NEXT
       ENDDO
-      if(IG.ne.0)SETSINGRAPH(IG)=IS
+      IF(IG.NE.0)SETSINGRAPH(IG)=IS
 !     
 !     ==========================================================================
 !     == WRITE LEGENDS                                                        ==
@@ -434,18 +433,21 @@ END MODULE DOSSETS_MODULE
           !CALL GRACE_SETZEROAXIS(NFIL,IG-1,.FALSE.,.FALSE.)
           IS=0
         END IF
-        if(DOSSET%LEGEND)THEN
+        IF(DOSSET%LEGEND)THEN
           FC=DOSSET%FILLCOLOR
-!         __FILLED ONLY___________________________________________________________
+!         __FILLED ONLY_________________________________________________________
           CALL GRACE_COPYSET(NFIL,IG-1,IS+SETSINGRAPH(IG),IG-1,IS+1)
-          call GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG),1000.0D0,1000.0D0)
+          CALL GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG),1000.0D0,1000.0D0)
           CALL GRACE_LINE(NFIL,IG-1,IS+SETSINGRAPH(IG),LW*10.0D0,FC,FC)
-          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG),TRIM(DOSSET%ID)//' occ')
-!         __FILLED AND EMPTY______________________________________________________
+          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG) &
+     &                               ,TRIM(DOSSET%ID)//' OCC')
+!         __FILLED AND EMPTY____________________________________________________
           CALL GRACE_COPYSET(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,IG-1,IS+0)
-          call GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,1000.0D0,1000.0D0)
-          CALL GRACE_LINE(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,LW*10.0D0,'L'//TRIM(FC),'L'//TRIM(FC))
-          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,TRIM(DOSSET%ID)//' unocc')
+          CALL GRACE_SHIFTSET(NFIL,IG-1,IS+SETSINGRAPH(IG)+1,1000.0D0,1000.0D0)
+          CALL GRACE_LINE(NFIL,IG-1,IS+SETSINGRAPH(IG)+1 &
+     &                             ,LW*10.0D0,'L'//TRIM(FC),'L'//TRIM(FC))
+          CALL GRACE_LEGEND(NFIL,IG-1,IS+SETSINGRAPH(IG)+1 &
+     &                               ,TRIM(DOSSET%ID)//' UNOCC')
         ENDIF
         IS=IS+2
         
@@ -499,7 +501,7 @@ END MODULE DOSSETS_MODULE
       RETURN
       END
 !      
-!     ...................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE INITIALIZEFILEHANDLER
       USE STRINGS_MODULE
       CHARACTER(256) :: ROOTNAME
@@ -534,7 +536,6 @@ END MODULE DOSSETS_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: T=.TRUE.
-      LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: ID
 !     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
@@ -658,7 +659,7 @@ END MODULE DOSSETS_MODULE
        USE STRINGS_MODULE
        IMPLICIT NONE
        INTEGER(4)    ,INTENT(IN) :: NFIL
-       CHARACTER(512)            :: PALETTE=''
+       CHARACTER(512)            :: PALETTE=' '
        INTEGER(4)                :: I
        CHARACTER(64)             :: FMT
 !      *************************************************************************
@@ -963,7 +964,7 @@ END MODULE DOSSETS_MODULE
        END
 !
 !      ..1.........2.........3.........4.........5.........6.........7.........8
-       SUBROUTINE GRACE_LEGEND(NFIL,IGRAPH,ISET,text)
+       SUBROUTINE GRACE_LEGEND(NFIL,IGRAPH,ISET,TEXT)
 !      *************************************************************************
 !      ** DEFINES A NEW SET ISET WITH THE SAME LENGTH AS ISET2                **
 !      *************************************************************************
@@ -971,13 +972,13 @@ END MODULE DOSSETS_MODULE
        INTEGER(4)  ,INTENT(IN) :: NFIL
        INTEGER(4)  ,INTENT(IN) :: IGRAPH
        INTEGER(4)  ,INTENT(IN) :: ISET
-       CHARACTER(*)            :: text
+       CHARACTER(*)            :: TEXT
        CHARACTER(128)          :: Y1
        CHARACTER(128)          :: COMMAND
 !      *************************************************************************
        CALL GRACE_ITOSET(IGRAPH,ISET,Y1)
 !
-       COMMAND=TRIM(Y1)//' LEGEND "'//TRIM(text)//'"'
+       COMMAND=TRIM(Y1)//' LEGEND "'//TRIM(TEXT)//'"'
        WRITE(NFIL,FMT='(A)')TRIM(COMMAND)
        RETURN 
        END
@@ -990,7 +991,7 @@ END MODULE DOSSETS_MODULE
        IMPLICIT NONE
        INTEGER(4)  ,INTENT(IN) :: NFIL
        INTEGER(4)  ,INTENT(IN) :: IGRAPH
-       real(8)     ,INTENT(IN) :: X,Y
+       REAL(8)     ,INTENT(IN) :: X,Y
        CHARACTER(128)          :: COMMAND
        CHARACTER(16)           :: STRING
 !      *************************************************************************
@@ -999,7 +1000,7 @@ END MODULE DOSSETS_MODULE
        WRITE(NFIL,FMT='(A)')TRIM(COMMAND)
        COMMAND='LEGEND '
        WRITE(NFIL,FMT='(A,F12.5,A,F12.5)')TRIM(COMMAND),X,',',Y
-       WRITE(NFIL,FMT='(A)')'legend char size 1.0000'
+       WRITE(NFIL,FMT='(A)')'LEGEND CHAR SIZE 1.0000'
        RETURN 
        END
 !
@@ -1116,7 +1117,7 @@ END MODULE DOSSETS_MODULE
        WRITE(NFIL,FMT='(A," LINE LINEWIDTH ",F10.5)')TRIM(SET),LINEWIDTH
        WRITE(NFIL,FMT='(A," LINE COLOR ",A)')TRIM(SET) &
      &                 ,'"'//-TRIM(ADJUSTL(LINECOLOR))//'"'
-       IF(FILLCOLOR.NE.'') THEN
+       IF(FILLCOLOR.NE.' ') THEN
          WRITE(NFIL,FMT='(A," FILL TYPE 2 ")')TRIM(SET)
          WRITE(NFIL,FMT='(A," FILL RULE 0")')TRIM(SET)
          WRITE(NFIL,FMT='(A," FILL COLOR ",A)')TRIM(SET) &

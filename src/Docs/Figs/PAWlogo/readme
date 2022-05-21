@@ -1,0 +1,22 @@
+PAW Logo constructed as vector graphics using xfig
+
+Author: Peter Bloechl, 2022
+
+Copyright: no restrictions
+
+Font Design "Inter Black" of Rasmus Andersson. Reconstructed using xfig.
+
+Color: hex: #D8B21A rgb 216,178,26
+
+Procedure:
+
+xfig paw_logo.fig; save as pdf
+
+Import to gimp, but with resolution 1000 px/inch
+
+   Colors: color to alpha (change white to "no color")
+   export to logo_big.png
+
+convert logo_big.png -resize 1% logo.png
+
+
