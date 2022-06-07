@@ -953,7 +953,7 @@ CALL TRACE$PASS('DONE')
       CHARACTER(32)            :: CH32SVAR
       INTEGER(4)               :: LEN
       INTEGER(4)               :: ISVAR
-      real(8)                  :: svar
+      REAL(8)                  :: SVAR
       INTEGER(4)               :: RUNTIME(3)
 !     **************************************************************************
                            CALL TRACE$PUSH('READIN_GENERIC')
@@ -2095,6 +2095,8 @@ CALL LMTO$SETL4('ON',.FALSE.)
       REAL(8)                  :: FRIC        ! MASS FOR CELL DFYNAMICS
       CHARACTER(32)            :: CH32VAL
       REAL(8)                  :: DT          ! TIME STEP
+      REAL(8)                  :: CONSTR(3,3)
+      INTEGER(4)               :: I,NCONSTR
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
 !
@@ -2134,13 +2136,31 @@ CALL LMTO$SETL4('ON',.FALSE.)
         CALL ERROR$MSG('PLEASE CHECK THE MANUAL')
         CALL ERROR$STOP('READIN_CELL')
       END IF
+
       CALL LINKEDLIST$EXISTD(LL_CNTL,'CONSTRAINTTYPE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'CONSTRAINTTYPE',0,'FREE')
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'CONSTRAINTTYPE',1,CH32VAL)
+        CALL CELL$SETCH('CONSTRAINTTYPE',CH32VAL)
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'CONSTRAINTTYPE',1,CH32VAL)
-      CALL CELL$SETCH('CONSTRAINTTYPE',CH32VAL)
-!
+
+      CALL LINKEDLIST$NLISTS(LL_CNTL,'CONSTRAINT',NCONSTR)
+      IF(TCHK.AND.(NCONSTR.GT.0)) THEN
+        CALL ERROR$MSG('CONSTRAINTTYPE AND !CONSTRAINT ARE INCOMPATIBLE')
+        CALL ERROR$STOP('READIN_CELL')
+      END IF
+      DO I=1,NCONSTR
+        CALL LINKEDLIST$SELECT(LL_CNTL,'CONSTRAINT',I)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'VEC',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL ERROR$MSG('!CELL!CONSTRAINT:VEC IS MANDATORY')
+          CALL ERROR$STOP('READIN_CELL')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'VEC',1,CONSTR)
+        CALL CELL$SETR8A('CONSTRAINT',9,CONSTR)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      ENDDO
+      CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+
 !     == FRICTION ======================================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'FRIC',1,TCHK)
       IF(.NOT.TCHK) THEN

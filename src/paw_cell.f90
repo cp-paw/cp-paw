@@ -38,22 +38,24 @@ LOGICAL(4) :: TSTART=.FALSE.     ! IGNORE RESTART FILE. USE TREF.
 REAL(8)    :: TREF(3,3)=0.D0     ! REFERENCE CELL CONSTANTS
 REAL(8)    :: STRESS(3,3)=0.D0   ! EXTERNAL STRESS TENSOR
 REAL(8)    :: PRESSURE=0.D0      ! EXTERNAL PRESSURE
+INTEGER(4)          :: NCONSTR=0
+REAL(8),ALLOCATABLE :: CONSTRAINT(:,:,:) !(3,3,NCONSTR)
 REAL(8)    :: DELTAT=0.D0
 REAL(8)    :: FRIC=0.D0
-REAL(8)    :: STRESS_I(3,3)=0.D0   ! INTERNAL STRESS TENSOR
-REAL(8)    :: STRESS_EXT(3,3)=0.D0 ! EXTERNAL STRESS TENSOR
+REAL(8)    :: STRESS_I(3,3)=0.D0  ! INTERNAL STRESS TENSOR
+REAL(8)    :: STRESS_EXT(3,3)=0.D0! EXTERNAL STRESS TENSOR
 REAL(8)    :: KINSTRESS(3,3)=0.D0 ! INTERNAL STRESS TENSOR
 REAL(8)    :: TP(3,3)=0.D0
-REAL(8)    :: T0(3,3)=0.D0       ! ACTUAL CELL 
+REAL(8)    :: T0(3,3)=0.D0        ! ACTUAL CELL 
 REAL(8)    :: TM(3,3)=0.D0
 REAL(8)    :: TMM(3,3)=0.D0
-REAL(8)    :: TMASS=0.D0         ! MASS FOR THE UNIT CELL DYNAMICS
+REAL(8)    :: TMASS=0.D0          ! MASS FOR THE UNIT CELL DYNAMICS
 LOGICAL(4) :: TPROPAGATED=.FALSE.
-REAL(8)    :: EPOT=0.D0          ! POTENTIAL ENERGY
-REAL(8)    :: EKIN=0.D0          ! KINETIC ENERGY
-REAL(8)    :: VREF=0.D0          ! VOLUME OF THE REFERENCE UNIT CELL
-REAL(8)    :: V0=0.D0            ! VOLUME OF THE ACTUAL UNIT CELL
-LOGICAL(4) :: TSTOP=.FALSE.      ! RESET VELOCITIES TO ZERO
+REAL(8)    :: EPOT=0.D0           ! POTENTIAL ENERGY
+REAL(8)    :: EKIN=0.D0           ! KINETIC ENERGY
+REAL(8)    :: VREF=0.D0           ! VOLUME OF THE REFERENCE UNIT CELL
+REAL(8)    :: V0=0.D0             ! VOLUME OF THE ACTUAL UNIT CELL
+LOGICAL(4) :: TSTOP=.FALSE.       ! RESET VELOCITIES TO ZERO
 !=====================================
 REAL(8)    :: SIGMA(3,3)      ! 
 REAL(8)    :: TREFINV(3,3)    ! 
@@ -446,11 +448,14 @@ END MODULE CELL_MODULE
      &                       ,STRESS_I &
      &                       ,KINSTRESS &
      &                       ,T0 &
-     &                       ,TM 
+     &                       ,TM &
+     &                       ,NCONSTR &
+     &                       ,CONSTRAINT
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
       REAL(8)     ,INTENT(IN) :: VAL(LEN)
+      REAL(8)     ,ALLOCATABLE:: WORK(:,:,:)
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -526,6 +531,29 @@ END MODULE CELL_MODULE
           CALL ERROR$STOP('CELL$SETR8A')
         END IF
         TM=RESHAPE(VAL,(/3,3/))
+!
+!     ==========================================================================
+!     ==  CONSTRAINTS ON THE CELL DYNAMICS                                    ==
+!     ==========================================================================
+      ELSE IF(ID.EQ.'CONSTRAINT') THEN
+        IF(LEN.NE.9) THEN
+          CALL ERROR$MSG('SIZE MISMATCH')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$I4VAL('LEN',LEN)
+          CALL ERROR$STOP('CELL$SETR8A')
+        END IF
+        IF(NCONSTR.GT.0) THEN
+          ALLOCATE(WORK(3,3,NCONSTR))
+          WORK=CONSTRAINT
+          DEALLOCATE(CONSTRAINT)
+          ALLOCATE(CONSTRAINT(3,3,NCONSTR+1))
+          CONSTRAINT(:,:,:NCONSTR)=WORK(:,:,:NCONSTR)
+          DEALLOCATE(WORK)
+        ELSE
+          ALLOCATE(CONSTRAINT(3,3,1))
+        END IF
+        NCONSTR=NCONSTR+1
+        CONSTRAINT(:,:,NCONSTR)=RESHAPE(VAL,(/3,3/))
 !
 !     ==========================================================================
 !     ==  DONE                                                                ==
@@ -1273,7 +1301,8 @@ PRINT*,'TMASS ',TMASS,FRICTION
           DO J=1,3
             DO K=1,3
               DO L=1,3
-                ESTRAIN=ESTRAIN+0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(I,J)*STRAIN(K,L)
+                ESTRAIN=ESTRAIN+0.5D0*STRAINTENSOR(I,J,K,L) &
+    &                                *STRAIN(I,J)*STRAIN(K,L)
                 STRESS(I,J)=STRESS(I,J)-0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(K,L)
                 STRESS(K,L)=STRESS(K,L)-0.5D0*STRAINTENSOR(I,J,K,L)*STRAIN(I,J)
               ENDDO
