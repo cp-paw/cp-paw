@@ -27,6 +27,7 @@
 %
 \newcommand{\eq}[1]{Eq.~\ref{#1}}
 \newcommand{\mat}[1]{\mathbf{#1}}
+\newcommand{\Tr}{\mathrm{Tr}}      % trace
 \newcommand{\block}[1]{\subsubsection[#1]{\shabox{\bf #1}}}
 %
 \newcommand{\brules}[1]{
@@ -1982,8 +1983,11 @@ following:
 \item 'ISOTROPIC' only allows isotropic expansions and contractions.
 \item 'NOSHEAR' allows anisotropic expansions and contractions but no
 shearing.
-\item 'FREE' does not restrict the dynamics other than to remove the
-rotation from the stress tensor.
+\item 'UNIAXIAL\_Z' only allows a uni-axial expansion or contraction
+  along the cartesian z-coordinate relative to the reference unit cell
+  specified as unit cell in the structure file.
+%% \item 'FREE' does not restrict the dynamics other than to remove the
+%% rotation from the stress tensor.
 \item 'NOSTRESS' sets the stresses to zero. (Only used for tests).
 \end{itemize}
 }
@@ -1996,6 +2000,60 @@ rotation from the stress tensor.
 % \vformat{real(9)}
 % \vrules{optional}
 % \vdefault{9$\times$0.0}}
+%
+%----------------------------------------------------------------------
+\block{!CONTROL!CELL!CONSTRAINT}
+%----------------------------------------------------------------------
+\brules{optional,multiple, incompatible with
+ !CONTROL!CELL!CONSTRAINTTYPE}
+
+\bdescr{Constrains the dynamics of the unit cell. Let the $3\times3$
+  matrix $\mat{T}$ be the matrix formed by the three lattice vectors
+  $\vec{T}_1,\vec{T}_2,\vec{T}_3$ as columns of $\mat{T}$. A
+  constraint is defined by another $3\times3$ matrix $\mat{C}$
+  $\Tr[\mat{T}\mat{C}^\dagger]=\Tr[\mat{T}^{(ref)}\mat{C}^\dagger]$.
+  The reference unit cell $\mat{T}^{ref}$ is the current unit cell.
+  \begin{itemize}
+  \item Caution: Constraints must not be linearly dependent!
+  \item Caution: restricting rotations both for the atoms and for the
+    unit cell simultaneously is more than excluding a global rotation.
+  \item Caution: the rotation of the unit cell must be suppressed, if
+    the constraint is not isotropic.
+  \item Caution: This option is under construction and requires testing!
+  \end{itemize}
+
+  \begin{eqnarray}
+    \mat{T}(+)&=&\mat{\bar{T}}+\sum_{\lambda}x_\lambda\mat{C}_\lambda
+\mat{T}^{-1,\dagger}(0)
+ \nonumber\\
+    \Delta\mathcal{L}(\mat{T},\dot{\mat{T}})
+&=& \sum_\lambda \gamma_\lambda
+         \Tr\Bigl[\mat{C}^\dagger_\lambda
+                  \bigl(\mat{T}(+)\mat{T}^{-1}(0)-\mat{1}\bigr)
+                  \Bigr]
+\nonumber\\
+&=& \sum_\lambda \gamma_\lambda
+         \Tr\Bigl[\bigl(\mat{\bar{T}}\mat{T}^{-1}(0)
++\sum_{\lambda'}x_{\lambda'} \mat{C}_{\lambda'}\mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)
+-\mat{1}\bigr)\mat{C}^\dagger_\lambda\Bigr]
+ \nonumber\\
+    b_\lambda&=&\Tr\Bigl[\bigl(\mat{\bar{T}}\mat{T}(0)^{-1}-\mat{1}\bigr)
+                      \mat{C}_\lambda^\dagger\Bigr]
+ \nonumber\\
+    A_{\lambda,\lambda'}
+        &=&\mat{C}_\lambda \mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)\mat{C}^\dagger_{\lambda'}
+\nonumber\\
+0&=&\sum_{\lambda'}A_{\lambda,\lambda'}x_{\lambda'}+b_\lambda 
+\qquad\Rightarrow\quad \vec{x}=-\mat{A}^{-1}\vec{b}
+  \end{eqnarray}
+}
+%
+\mbax{\key{C}
+\vdescr{Constraint matrix $\mat{C}$ for the cell dynamics}
+\vformat{real(3,3)}
+\vrules{mandatory}
+\vdefault{none}}
+
 %
 %----------------------------------------------------------------------
 \block{!CONTROL!QM-MM}

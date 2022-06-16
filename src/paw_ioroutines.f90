@@ -2100,9 +2100,9 @@ CALL LMTO$SETL4('ON',.FALSE.)
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
 !
-!     ==================================================================
-!     ==  READ BLOCK GENERIC                                          ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  READ BLOCK GENERIC                                                  ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
@@ -2110,9 +2110,9 @@ CALL LMTO$SETL4('ON',.FALSE.)
       CALL WAVES$SETR8('TIMESTEP',DT)
       CALL CELL$SETR8('DT',DT)
 !
-!     ==================================================================
-!     ==  NOW ENTER CELL BLOCK                                        ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  NOW ENTER CELL BLOCK                                                ==
+!     ==========================================================================
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'CELL',1,TCHK)
@@ -2120,7 +2120,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
       IF(.NOT.TCHK) RETURN
       CALL LINKEDLIST$SELECT(LL_CNTL,'CELL')
 !
-!     == DYNAMICAL OR NOT ==============================================
+!     == DYNAMICAL OR NOT ======================================================
       TMOVE=.TRUE.
       CALL LINKEDLIST$EXISTD(LL_CNTL,'MOVE',1,TCHK)
       IF(TCHK) THEN
@@ -2128,11 +2128,12 @@ CALL LMTO$SETL4('ON',.FALSE.)
       END IF
       CALL CELL$SETL4('MOVE',TMOVE)
 !
-!     == CONSTRAINTS ON THE CELL DYNAMICS =============================
+!     == CONSTRAINTS ON THE CELL DYNAMICS ======================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'CONSTRAINT',1,TCHK)
       IF(TCHK) THEN
-        CALL ERROR$MSG('THERE IS NO KEYWORD "CONSTRAINT" IN !CNTL!CELL')
+        CALL ERROR$MSG('UNKOWN DATA KEYWORD "CONSTRAINT" IN !CNTL!CELL')
         CALL ERROR$MSG('PROBABLY YOU MEAN "CONSTRAINTTYPE"')
+        CALL ERROR$MSG('OR THE BLOCK "CONSTRAINT"')
         CALL ERROR$MSG('PLEASE CHECK THE MANUAL')
         CALL ERROR$STOP('READIN_CELL')
       END IF
