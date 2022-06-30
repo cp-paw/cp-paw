@@ -155,11 +155,14 @@ END MODULE CELL_MODULE
      &                       ,VREF &
      &                       ,STRESS &
      &                       ,TREF &
+     &                       ,NCONSTR &
+     &                       ,CONSTRAINT &
      &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NFIL
       REAL(8)               :: MEGA
       REAL(8)               :: BAR ! 1 BAR IN A.U.
+      INTEGER(4)            :: I
 !     **************************************************************************
       CALL CONSTANTS$GET('MEGA',MEGA)
       CALL CONSTANTS$GET('BAR',BAR)
@@ -178,7 +181,13 @@ END MODULE CELL_MODULE
       CALL REPORT$R8VAL(NFIL,'FRICTION',FRIC,'DT/2') 
       CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE,'A.U.') 
       CALL REPORT$R8VAL(NFIL,'EXTERNAL PRESSURE',PRESSURE/(MEGA*BAR),'MEGABAR') 
-      CALL REPORT$CHVAL(NFIL,'CONSTRAINTYPE',CONSTRAINTTYPE) 
+      IF(NCONSTR.EQ.0) THEN
+        CALL REPORT$CHVAL(NFIL,'CONSTRAINTYPE',CONSTRAINTTYPE) 
+      ELSE 
+        DO I=1,NCONSTR
+          WRITE(NFIL,FMT='("I=",I2,3("   ",3F10.5))')I,CONSTRAINT(:,:,I)
+        ENDDO
+      END IF
       CALL REPORT$R8VAL(NFIL,'REFERENCE VOLUME',VREF,'A.U.') 
       WRITE(NFIL,FMT='("REFERENCE UNIT CELL",T35," STRESS ")')
       WRITE(NFIL,FMT='(3F10.5,T35,3F10.5)')TREF(1,:),STRESS(1,:)
@@ -822,6 +831,7 @@ END MODULE CELL_MODULE
      &                       ,CONSTRAINTTYPE &
      &                       ,DELTAT,TMASS &
      &                       ,EKIN,FRIC,KINSTRESS,PRESSURE,SIGMA &
+     &                       ,CONSTRAINT,NCONSTR &
      &                       ,CELL_INITIALIZE
       IMPLICIT NONE
       REAL(8)    :: AMAT(3,3)
