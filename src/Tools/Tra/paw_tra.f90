@@ -296,7 +296,7 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$GET(LL_CNTL,'T1[PS]',1,T1)
       T1=T1*PICO*SECOND
 !
-!     == GET BEGINNING OF TIME SEQUENCE ========================================
+!     == GET END OF TIME SEQUENCE ========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'T2[PS]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'T2[PS]',0,+1.D+9)
@@ -304,7 +304,7 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$GET(LL_CNTL,'T2[PS]',1,T2)
       T2=T2*PICO*SECOND
 !
-!     == GET BEGINNING OF TIME SEQUENCE ========================================
+!     == GET STEP OF TIME SEQUENCE ========================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'DT[FS]',1,TCHK)
       IF(.NOT.TCHK) THEN
         CALL LINKEDLIST$SET(LL_CNTL,'DT[FS]',0,0.D0)
@@ -417,6 +417,11 @@ END MODULE TRAJECTORY_MODULE
 !     ==   PRINT MASS WEIGHTED PATH LENGTH                                    ==
 !     ==========================================================================
       CALL SOFT(LL_CNTL)
+!
+!     ==========================================================================
+!     ==   UNIT CELL MATRIX AS FUNCTION OF TIME                               ==
+!     ==========================================================================
+      CALL CELL(LL_CNTL)
                                  CALL TRACE$POP
       RETURN
       END
@@ -1336,14 +1341,23 @@ END MODULE TRAJECTORY_MODULE
       CHARACTER(80)            :: STRING
 !     ******************************************************************
                                CALL TRACE$PUSH('TEMPERATURE')
-      IF(TQMMM) THEN
-         NATOM=QNAT
-         ALLOCATE(TSELECT(QNAT))
-      ELSE
-         NATOM = NAT
-         ALLOCATE(TSELECT(NAT))
-      END IF
       LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'TEMPERATURE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL TRACE$POP
+        RETURN
+      END IF
+
+
+      IF(TQMMM) THEN
+        NATOM=QNAT
+        ALLOCATE(TSELECT(QNAT))
+      ELSE
+        NATOM = NAT
+        ALLOCATE(TSELECT(NAT))
+      END IF
 !
       CALL CONSTANTS$GET('PICO',PICO)
       CALL CONSTANTS$GET('SECOND',SECOND)
@@ -1395,8 +1409,6 @@ END MODULE TRAJECTORY_MODULE
 !     ================================================================
 !     ==  INDIVIDUAL PLOTS                                          ==
 !     ================================================================
-      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
-      CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
       CALL LINKEDLIST$NLISTS(LL_CNTL,'TEMPERATURE',NPLOT)
       DO IPLOT=1,NPLOT
         CALL LINKEDLIST$SELECT(LL_CNTL,'TEMPERATURE',IPLOT)
@@ -1412,6 +1424,8 @@ END MODULE TRAJECTORY_MODULE
 !       ================================================================
 !       ==  SPECIFY FILE                                              ==
 !       ================================================================
+! TODO: MANDATORY !FILE BUT NOT KEYS (NAME, EXT)
+!       DEFAULT LEADS TO HIDDEN FILE ".tra.temp"
         CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TFILE)
         IF(.NOT.TFILE) THEN
           CALL ERROR$MSG('!TCNTL!TEMPERATURE!FILE NOT FOUND')
@@ -1499,6 +1513,112 @@ END MODULE TRAJECTORY_MODULE
                                 CALL TRACE$POP
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE CELL(LL_CNTL_)
+!     **************************************************************************
+!     **  EXPORT UNIT CELL MATRIX AS FUNCTION OF TIME TO A FILE               **
+!     **************************************************************************
+      USE STRINGS_MODULE
+      USE LINKEDLIST_MODULE
+      USE TRAJECTORY_MODULE, ONLY: TQMMM &
+     &                            ,NSTEP &
+     &                            ,TRA
+      IMPLICIT NONE
+      TYPE(LL_TYPE), INTENT(IN) :: LL_CNTL_
+      TYPE(LL_TYPE)             :: LL_CNTL
+      LOGICAL(4)                :: TCHK
+      INTEGER(4)                :: NFILO
+      INTEGER(4)                :: NFIL
+      CHARACTER(256)            :: FILE
+      INTEGER(4)                :: I  
+      REAL(8)                   :: ANGSTROM
+      REAL(8)                   :: PICO
+      REAL(8)                   :: SECOND
+!     **************************************************************************
+      CALL TRACE$PUSH('CELL')
+      CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+      CALL CONSTANTS$GET('PICO',PICO)
+      CALL CONSTANTS$GET('SECOND',SECOND)
+      CALL FILEHANDLER$UNIT('PROT',NFILO)
+
+      LL_CNTL=LL_CNTL_
+      CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+      CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'CELL',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL TRACE$POP
+        RETURN
+      END IF
+      CALL LINKEDLIST$SELECT(LL_CNTL,'CELL')
+!     
+!     ==========================================================================
+!     ==  SPECIFY FILE                                                        ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TCHK)
+      IF(.NOT.TCHK) THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',0)
+        FILE=-'.TRA.CELL'
+        CALL LINKEDLIST$SET(LL_CNTL,'NAME',0,TRIM(FILE))
+        TCHK=.TRUE.
+        CALL LINKEDLIST$SET(LL_CNTL,'EXT',0,TCHK)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      ELSE
+        CALL LINKEDLIST$SELECT(LL_CNTL,'FILE',1)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'NAME',1,TCHK)
+        IF(.NOT.TCHK) THEN
+          CALL LINKEDLIST$SET(LL_CNTL,'NAME',0,-'.TRA.CELL')
+          CALL LINKEDLIST$SET(LL_CNTL,'EXT',0,.TRUE.)
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'EXT',1,TCHK)
+        IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'EXT',0,.FALSE.)
+        CALL LINKEDLIST$GET(LL_CNTL,'EXT',1,TCHK)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
+      END IF
+      CALL FILEHANDLER$SETFILE('CELL',TCHK,TRIM(FILE))
+      CALL FILEHANDLER$SETSPECIFICATION('CELL','FORM','FORMATTED')
+!     
+!     ==========================================================================
+!     ==  CHECK FOR TIME FORMAT FLAG                                          ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TIMEFORMAT',1,TCHK)
+      IF(.NOT.TCHK) CALL LINKEDLIST$SET(LL_CNTL,'TIMEFORMAT',0,.FALSE.)
+      CALL LINKEDLIST$GET(LL_CNTL,'TIMEFORMAT',1,TCHK)
+!     
+!     ==========================================================================
+!     ==  REPORT TO PROTOCOL FILE                                             ==
+!     ==========================================================================
+      CALL REPORT$TITLE(NFILO,'CELL')
+      CALL REPORT$CHVAL(NFILO,'CELL FILE',FILE)
+      CALL REPORT$L4VAL(NFILO,'TIMEFORMAT',TCHK)
+!     
+!     ==========================================================================
+!     ==  WRITE DATA TO FILE                                                  ==
+!     ==========================================================================
+      CALL FILEHANDLER$UNIT('CELL',NFIL)
+!       OUTPUT EITHER SIMULATION TIME IN PS OR ITERATION STEPS
+      IF(TCHK) THEN
+        WRITE(NFIL,FMT='(10A10)')'TIME[PS]','T1X','T1Y','T1Z' &
+     &                                     ,'T2X','T2Y','T2Z' &
+     &                                     ,'T3X','T3Y','T3Z'
+        DO I=1,NSTEP
+          WRITE(NFIL,FMT='(F10.5,9F10.5)')TRA%T(I)/(PICO*SECOND) &
+     &                                   ,TRA%CELL(:,I)/ANGSTROM
+        ENDDO
+      ELSE
+        WRITE(NFIL,FMT='(10A10)')'ITER','T1X','T1Y','T1Z' &
+     &                                 ,'T2X','T2Y','T2Z' &
+     &                                 ,'T3X','T3Y','T3Z'
+        DO I=1,NSTEP
+          WRITE(NFIL,FMT='(I10,9F10.5)')TRA%ISTEP(I),TRA%CELL(:,I)/ANGSTROM
+        ENDDO
+      END IF
+!
+      CALL FILEHANDLER$CLOSE('CELL')
+      CALL TRACE$POP
+      RETURN
+      END SUBROUTINE CELL
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WRITEMODES(LL_CNTL_)
