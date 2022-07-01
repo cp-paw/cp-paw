@@ -19,10 +19,11 @@
 ##     -a type: friction                                         ##
 ##         type=r   friction acting on nuclei                    ##
 ##         type=p   friction acting on wave functions            ##
-##     -p file: produce output file rather than opening xmgrace  ##
+##     -o file: produce output file rather than opening xmgrace  ##
 ##              extension (eps,png) specifies graphics format    ##
 ##              other (or no) extensions produce data for grace  ##
-##              execute with xmgrace -nxy name
+##              execute with xmgrace -nxy name                   ##
+##              if option -p is absent, xmgrace is started       ##
 ##     -b batch:add settings from batch file to xmgrace settings ##
 ##                                                               ##
 ##  dpendency:                                                   ##
@@ -30,26 +31,26 @@
 ##                                                               ##
 ###################################################################
 USAGE="
-usage: paw_show option rootname [outfile]\n
+Usage: paw_show options --- rootname\n
 1)rootname  is paw protocol file name without the .prot ending 
-2)option (exactly one must be given) can be one of the following 
+2)option can be one or more of the following 
 \t -h: give info about use and exit 
 \t -s: use time steps rather than time in picoseconds
-\t -u unit  select energy unit (h, ry, ev, kj/mol, kcal/mol)      
-\t -e: plot static total energy E_tot in Hartree 
-\t -c: plot conserved energy E_c in Hartree
-\t -f: plot fictitious kinetic wave function energy E_psi
+\t -u unit: select energy unit (h, ry, ev, kj/mol, kcal/mol)      
+\t -e: plot static total energy E_tot in Hartree (or unit)
+\t -c: plot conserved energy E_c in Hartree (or unit)
+\t -f: plot fictitious kinetic wave function energy in Hartree (or unit)
 \t -t: plot temperature T in Kelvin
 \t -a type: plot friction 
 \t\t     type=p: for wave functions a_p
 \t\t     type=r: for atoms atoms a_R 
-\t -p filename: print to file. 
+\t -o filename: print to file rather than starting xmgrace. 
 \t\t     extensions eps,png produce graphics files
 \t\t     others or no extensions produce xmgrace input file
 \t\t     process with xmgrace -nxy filename
 \t -b batchfile: attach batch file to xmgrace settings
-3) optional argument outfile: redirects output into file outfile
-\t if this argument is absent, output is shown with xmgrace
+\n
+Purpose: plot time-dependent data from protocoll file
 \n"
 # use the following for qm-mm calculations:\n
 # \t -qe: plot static total energy of the environmet\n
@@ -77,7 +78,7 @@ export BATCHFILE=""
 #   \f{SYMBOL} switch to greek font
 #   \f{} switch to normal font
 #
-while getopts :hetfca:su:p:b: OPT ; do
+while getopts :hetfca:su:o:b: OPT ; do
   case $OPT in 
     t) AWKSTRING="$AWKSTRING \" \" \$4 " # temperature (Kelvin)
        YLABEL="${YLABEL}\R{$ICOLOR}T[K]; "
@@ -129,7 +130,7 @@ while getopts :hetfca:su:p:b: OPT ; do
              exit 1 ;;
        esac
       ;;
-    p) # specify output file
+    o) # specify output file
        PRINTFILE=$OPTARG
        ;;
     b) # specify batchfile to add to parameter file for xmgrace
