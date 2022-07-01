@@ -47,7 +47,7 @@
 #
 # description of usage
 #
-USAGE="Usage of $0:\n"
+USAGE="Usage of paw_resolve:\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE \t paw_resolve options\n"
 USAGE="$USAGE \n"
@@ -103,6 +103,7 @@ while getopts :hi:o:p:r:f:v OPT ; do
       ;;
     h)
       echo -e $USAGE
+      exit 0     
       ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
       echo "error in $0" >&2

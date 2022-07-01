@@ -6,7 +6,7 @@
 ##  purpose: pulls out columns from the paw protocoll            ##
 ##                                                               ##
 ##  usage:                                                       ##
-##    pawshow option rootname [outfile]                          ##
+##    pawshow option --- rootname                                ##
 ##                                                               ##
 ##  options:                                                     ##
 ##     -h       help                                             ##
@@ -19,6 +19,11 @@
 ##     -a type: friction                                         ##
 ##         type=r   friction acting on nuclei                    ##
 ##         type=p   friction acting on wave functions            ##
+##     -p file: produce output file rather than opening xmgrace  ##
+##              extension (eps,png) specifies graphics format    ##
+##              other (or no) extensions produce data for grace  ##
+##              execute with xmgrace -nxy name
+##     -b batch:add settings from batch file to xmgrace settings ##
 ##                                                               ##
 ##  dpendency:                                                   ##
 ##    uses xmgr as plotting routine                              ##
@@ -35,9 +40,14 @@ usage: paw_show option rootname [outfile]\n
 \t -c: plot conserved energy E_c in Hartree
 \t -f: plot fictitious kinetic wave function energy E_psi
 \t -t: plot temperature T in Kelvin
-\t -a: type: plot friction 
+\t -a type: plot friction 
 \t\t     type=p: for wave functions a_p
 \t\t     type=r: for atoms atoms a_R 
+\t -p filename: print to file. 
+\t\t     extensions eps,png produce graphics files
+\t\t     others or no extensions produce xmgrace input file
+\t\t     process with xmgrace -nxy filename
+\t -b batchfile: attach batch file to xmgrace settings
 3) optional argument outfile: redirects output into file outfile
 \t if this argument is absent, output is shown with xmgrace
 \n"
@@ -57,6 +67,8 @@ export YLABEL=""
 declare -i ICOLOR=1
 OPTIND=1
 AWKSTRING=""
+export PRINTFILE=""
+export BATCHFILE=""
 #
 # xmgrace typesetting:
 #   \R{n} switch to color n
@@ -65,7 +77,7 @@ AWKSTRING=""
 #   \f{SYMBOL} switch to greek font
 #   \f{} switch to normal font
 #
-while getopts :hetfca:su: OPT ; do
+while getopts :hetfca:su:p:b: OPT ; do
   case $OPT in 
     t) AWKSTRING="$AWKSTRING \" \" \$4 " # temperature (Kelvin)
        YLABEL="${YLABEL}\R{$ICOLOR}T[K]; "
@@ -117,6 +129,12 @@ while getopts :hetfca:su: OPT ; do
              exit 1 ;;
        esac
       ;;
+    p) # specify output file
+       PRINTFILE=$OPTARG
+       ;;
+    b) # specify batchfile to add to parameter file for xmgrace
+       BATCHFILE=$OPTARG
+       ;;
     h) 
        echo -e "$USAGE"
        exit 0
@@ -141,7 +159,18 @@ if [[ -z $ROOT ]] ; then
   echo "error in $0: argument ROOT not specified" >&2
   exit 1
 fi
-OUT=$2
+
+# second argument (output file) is outdated. Fallback
+if [[ $# > 1 ]] ; then
+   echo "Warning: outdated option" >&2
+   echo "second argument is treated as output file" >&2
+   if [[ -n ${PRINTFILE} ]] ; then
+     echo "error in $0" >&2
+     echo "printfile set and second argument present" >&2
+     exit 1
+   fi
+   export PRINTFILE=$2
+fi
 #
 #===================================================================
 #  make a temporary file
@@ -204,13 +233,39 @@ fi
 echo "  yaxis ticklabel prec 14"                     >> $PARMFILE
 YLABEL=${YLABEL%;*}   # remove trailin "; "
 echo "  yaxis LABEL \"${YLABEL}\""                   >> $PARMFILE
+#===================================================================
+#  append instructions from external batch file to the parameterfile
+#  this should overwrite previous settings and allows the user to 
+#  automate the plot appearance
+#===================================================================
+if [[ -n $BATCHFILE ]] ; then
+  cat $BATCHFILE >> $PARMFILE
+fi
 #
 #===================================================================
 #  print or present via xmgrace
 #===================================================================
-if [[ -n $OUT ]] ; then
-  cp ${TMPFILE} $OUT
-else
+if [[ -n ${PRINTFILE} ]] ; then
+    # gracebat -nosafe -hdevice EPS -${GRACEINCLUDE} $PARMFILE \
+    #          -hardcopy -nxy ${TMPFILE} -printfile ${PRINTFILE}.eps
+  case ${PRINTFILE##*.} in
+    eps)
+      export DEVICE="EPS"
+      ;;
+    png)
+      export DEVICE="PNG"
+      ;;
+    *)  # write xmgrace input data to file
+        # execute with "xmgrace -nxy file"
+      export DEVICE=""
+      cp ${TMPFILE} $PRINTFILE
+      ;;
+  esac
+  if [[ -n $DEVICE ]] ; then
+    gracebat -nosafe -hdevice ${DEVICE} -batch $PARMFILE \
+             -hardcopy -nxy ${TMPFILE} -printfile ${PRINTFILE}
+  fi
+else     #-- open xmgrace if no printfile specified
   xmgrace -free -noask -param $PARMFILE -nxy ${TMPFILE}
 fi
 rm ${TMPFILE}
