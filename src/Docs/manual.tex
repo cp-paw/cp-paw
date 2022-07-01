@@ -2054,6 +2054,7 @@ shearing.
 \vrules{mandatory}
 \vdefault{none}}
 
+
 %
 %----------------------------------------------------------------------
 \block{!CONTROL!QM-MM}
@@ -5952,6 +5953,38 @@ $2\times d_x$~\AA (i.e. 10~\AA) are ignored.}
 %% \vformat{character} 
 %% \vrules{mandatory}
 %% \vdefault{none}}
+
+%----------------------------------------------------------------------
+\block{!TCNTL!CELL}
+%----------------------------------------------------------------------
+\brules{optional}
+\bdescr{write unit cell to file as function of time}
+
+\mbax{\key{TIMEFORMAT}}
+\vdescr{switch to usage of time in picosecond instead of the 
+number of iteration}
+\vformat{logical}
+\vrules{optional}
+\vdefault{.false.}
+
+%----------------------------------------------------------------------
+\block{!TCNTL!CELL!FILE}
+%----------------------------------------------------------------------
+\brules{optional} 
+\bdescr{specify the file where cell data  is written to}
+
+\mbax{\key{EXT}
+	\vdescr{switch to the rootname appended by the extension provided,
+		versus using the filename (including its path).}
+	\vformat{logical} 
+	\vrules{optional}
+	\vdefault{F}}
+
+\mbax{\key{NAME}
+	\vdescr{file name}
+	\vformat{character} 
+	\vrules{optional}
+	\vdefault{the rootname appended by ``.tra.cell''}}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!SPAGHETTI}
