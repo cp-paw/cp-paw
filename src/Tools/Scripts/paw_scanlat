@@ -77,7 +77,7 @@ USAGE="$USAGE \t projectname.cntl \n"
 USAGE="$USAGE \t projectname.strc \n" 
 USAGE="$USAGE \n"
 #
-THISDIR=$(pwd)   # current directory
+export THISDIR=$(pwd)   # current directory
 # PAWXDIR is the directory holding the paw executables
 export PAWXDIR=$(which paw_fast.x); PAWXDIR=${PAWXDIR%paw_fast.x}
 #-------------------------------------------------------------------------------
@@ -163,7 +163,7 @@ fi
 #
 # when PAWCMD has not been defined via arguments, set default
 if [[ -z $PAWCMD ]] ; then
-  PAWCMD="paw_waittillempty -n $NJOBS ; paw_fast"
+  PAWCMD="paw_waittillempty -n $NJOBS ; paw_fast.x"
 fi
 #
 #   report setting of variables
@@ -199,31 +199,38 @@ if [[ $UPDATE = no ]] ; then
   export PIDS=
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo doing $X ; fi 
+
+    export ROOT=${NAME}_${X}
+    export PDIR=${ROOT%/*}   # project directory
+    export PNAME=${ROOT##*/} # project name w/o Dir.
+    if [[ ! -d $ROOT ]] ; then mkdir $ROOT ; fi
+
     #===========================================================================
     # construct structure control file from template by replacing alat
     #===========================================================================
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
-    execute "sed \"/[Ll][Uu][Nn][Ii][Tt]/s/${ALAT0}/${ALAT} /g\" ${NAME}.strc >${NAME}_${X}.strc"
+    execute "sed \"/[Ll][Uu][Nn][Ii][Tt]/s/${ALAT0}/${ALAT} /g\" \
+                                         ${NAME}.strc >$ROOT/${NAME}_${X}.strc"
     #==========================================================================
     # run paw_fast.x and place data "gap.dat" and "etot.dat"
     #==========================================================================
-    execute "cp ${NAME}.cntl ${NAME}_${X}.cntl"
-    if [[ ! -e ${NAME}_${X}.rstrt ]] ; then
+    execute "cp ${NAME}.cntl $ROOT/${NAME}_${X}.cntl"
+    if [[ ! -e $ROOT/${NAME}_${X}.rstrt ]] ; then
       if [[ -e ${NAME}.rstrt ]] ; then
-        execute "cp ${NAME}.rstrt ${NAME}_${X}.rstrt"
+        execute "cp ${NAME}.rstrt $ROOT/${NAME}_${X}.rstrt"
       else
-        echo "error in $0: source restart file ${NAME}.rstrt does not exist"
-        exit 1
+        # test, whether restart file is required
+        if [[ -z $(grep START=*T  ${PDIR}/${NAME}_${X}.cntl) ]]; then 
+          echo "source restart file ${NAME}.rstrt does not exist"
+          exit 1
+        fi
       fi
     fi
-    export ROOT=${NAME}_${X}
-    export PDIR=${ROOT%/*}   # project directory
-    export PNAME=${ROOT##*/} # project name w/o Dir.
-    BACK=$(pwd)
+    
     execute "cd ${PDIR}"
     execute "${PAWCMD} ${NAME}_${X}.cntl 1>${NAME}_${X}.out 2>&1 &" 
     PIDS="$PIDS $PID"   # store the project id returned by 'execute'
-    execute "cd ${BACK}"
+    execute "cd ${THISDIR}"
   done
 fi
 #
@@ -249,12 +256,15 @@ if [[ $UPDATE = yes ]] ; then
   if [[ -e murn.in ]]  ; then rm murn.in; fi
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo "collecting ${NAME}_$X" ; fi
-#    echo ${X} $(paw_get -w gap -u ev -n ${NAME}_${X})  >>gap.dat
-    echo ${X} $(paw_get -w etot -u H -n ${NAME}_${X}) >>etot.dat
+    export ROOT=${NAME}_${X}
+    execute "cd ${ROOT}"
+    # paw_get does not work for metals.
+#    echo ${X} $(paw_get -w gap -u ev -n ${NAME}_${X}) >>${THISDIR}/gap.dat
+    echo ${X} $(paw_get -w etot -u H -n ${NAME}_${X}) >>${THISDIR}/etot.dat
     ALAT=$(echo "$X /100 * $ALAT0 " | bc -l)
     Y=$(echo "$ALAT * $AA" | bc -l)
     Y=$(echo "$Y * $Y * $Y " | bc -l)
-    echo ${Y} $(paw_get -w etot -u H -n ${NAME}_${X}) >>murn.in
+    echo ${Y} $(paw_get -w etot -u H -n ${NAME}_${X}) >>${THISDIR}/murn.in
     #
     #  clean up
     # 
@@ -269,6 +279,7 @@ if [[ $UPDATE = yes ]] ; then
         if [[ -e $Y ]] ; then rm $Y ; fi
       done
     fi
+    execute "cd ${THISDIR}"
   done
 fi
 exit 0
