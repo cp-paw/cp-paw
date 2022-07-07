@@ -2010,8 +2010,11 @@ shearing.
 \bdescr{Constrains the dynamics of the unit cell. Let the $3\times3$
   matrix $\mat{T}$ be the matrix formed by the three lattice vectors
   $\vec{T}_1,\vec{T}_2,\vec{T}_3$ as columns of $\mat{T}$. A
-  constraint is defined by another $3\times3$ matrix $\mat{C}$
-  $\Tr[\mat{T}\mat{C}^\dagger]=\Tr[\mat{T}^{(ref)}\mat{C}^\dagger]$.
+  constraint is defined by another $3\times3$ matrix $\mat{C}$ as
+  \begin{eqnarray}
+  \Tr[\mat{T}\mat{C}^\dagger]=\Tr[\mat{T}^{(ref)}\mat{C}^\dagger]
+  \label{eq:constraintunitcell}
+  \end{eqnarray}
   The reference unit cell $\mat{T}^{ref}$ is the current unit cell.
   \begin{itemize}
   \item Caution: Constraints must not be linearly dependent!
@@ -2021,35 +2024,16 @@ shearing.
     the constraint is not isotropic.
   \item Caution: This option is under construction and requires testing!
   \end{itemize}
-
-  \begin{eqnarray}
-    \mat{T}(+)&=&\mat{\bar{T}}+\sum_{\lambda}x_\lambda\mat{C}_\lambda
-\mat{T}^{-1,\dagger}(0)
- \nonumber\\
-    \Delta\mathcal{L}(\mat{T},\dot{\mat{T}})
-&=& \sum_\lambda \gamma_\lambda
-         \Tr\Bigl[\mat{C}^\dagger_\lambda
-                  \bigl(\mat{T}(+)\mat{T}^{-1}(0)-\mat{1}\bigr)
-                  \Bigr]
-\nonumber\\
-&=& \sum_\lambda \gamma_\lambda
-         \Tr\Bigl[\bigl(\mat{\bar{T}}\mat{T}^{-1}(0)
-+\sum_{\lambda'}x_{\lambda'} \mat{C}_{\lambda'}\mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)
--\mat{1}\bigr)\mat{C}^\dagger_\lambda\Bigr]
- \nonumber\\
-    b_\lambda&=&\Tr\Bigl[\bigl(\mat{\bar{T}}\mat{T}(0)^{-1}-\mat{1}\bigr)
-                      \mat{C}_\lambda^\dagger\Bigr]
- \nonumber\\
-    A_{\lambda,\lambda'}
-        &=&\mat{C}_\lambda \mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)\mat{C}^\dagger_{\lambda'}
-\nonumber\\
-0&=&\sum_{\lambda'}A_{\lambda,\lambda'}x_{\lambda'}+b_\lambda 
-\qquad\Rightarrow\quad \vec{x}=-\mat{A}^{-1}\vec{b}
-  \end{eqnarray}
-}
+ For use cases for the choice of constraint matrices see
+ section~\ref{sec:usecasecellconstr} on
+ p.~\pageref{sec:usecasecellconstr}. See
+section~\ref{sec:unitcellconstraints} onm
+p.~\pageref{sec:unitcellconstraints} for a brief description of the
+method.}
 %
 \mbax{\key{C}
-\vdescr{Constraint matrix $\mat{C}$ for the cell dynamics}
+\vdescr{constraint matrix $\mat{C}$ for the cell dynamics as defined
+  in \eq{eq:constraintunitcell}.}
 \vformat{real(3,3)}
 \vrules{mandatory}
 \vdefault{none}}
@@ -10285,7 +10269,161 @@ There is a second implementation, which is even more approximate, but
 it provides the exact result for strictly collinear densities. This
 option must be enabled in the code.
 
+%==========================================================================
+\subsection{Cell dynamics}
+%==========================================================================
+%==========================================================================
+\subsubsection{Constraints}
+\label{sec:unitcellconstraints}
+%==========================================================================
+Let $\mat{T}(t)$ with
+\begin{eqnarray}
+\mat{T}=\left(\begin{array}{ccc}
+T_{x,1} & T_{x,2} & T_{x,3}\\
+T_{y,1} & T_{y,2} & T_{y,3}\\
+T_{z,1} & T_{z,2} & T_{z,3}\\
+\end{array}\right)
+\end{eqnarray}
+be the $3\times3$ matrix formed by the lattice vectors
+$\vec{T}_1,\vec{T}_2,\vec{T}_3$.  Each constraint is expressed in
+terms of a matrix $\mat{C}_\lambda$. 
 
+
+$\Delta\mathcal{L}$ is the contribution of the constraints to the
+Lagrangian using the method of Lagrange multipliers.  The constraints
+are labeled by $\lambda$. $\gamma_\lambda$ is the Lagrange
+multiplier.
+\begin{eqnarray}
+    \Delta\mathcal{L}(\mat{T},\dot{\mat{T}})
+&=& \sum_\lambda \gamma_\lambda
+         \Tr\Bigl[\mat{C}^\dagger_\lambda
+                  \bigl(\mat{T}(t)\mat{T}^{-1}_{\text{ref}}-\mat{1}\bigr)
+                  \Bigr]
+\end{eqnarray}
+
+The resulting force of constraint is
+\begin{eqnarray}
+-\frac{\delta\Delta\mathcal{L}(\mat{T},\dot{\mat{T}})}{\delta \mat{T}^\dagger}
+&=& -\biggl(\mat{T}^{-1}_{\text{ref}}
+\Bigl(\sum_\lambda \mat{C}^\dagger_\lambda \gamma_\lambda
+                  \Bigr)\biggr)^\dagger
+\end{eqnarray}
+
+The Lagrange multipliers are determined so that the constraint is
+obeyed along the trajectory. For discrete time steps, the constraint
+must be satisfied in the next time step.  Let $\mat{T}(0)$ be the
+lattice vectors at the current time step, which we use as the
+reference cell $\mat{T}_{\text{ref}}$. Let $\mat{T}(+)$ be the lattice
+vectors at the next time step.  $\mat{\bar{T}}$ be the lattice vectors
+propagated to the next time step, albeit without constrains.  The
+lattice vectors are first propagated without constraints. The lattice
+vectors of the next time step also experience the forces of
+constraint, so that
+\begin{eqnarray}
+\mat{T}(+)&=&\mat{\bar{T}}+\sum_{\lambda}x_\lambda\mat{C}_\lambda
+\mat{T}^{-1,\dagger}(0)
+\end{eqnarray}
+Because the Lagrange multipliers carry different factors in the
+continuous and the discrete time, we rename then from now on by a
+different symbol, namely $\vec{x}$. 
+
+The constraint labeled by $\lambda$ is
+\begin{eqnarray}
+0&=&\Tr\Bigl[\mat{C}^\dagger_\lambda
+                  \Bigl(\mat{T}(+)\mat{T}^{-1}(0)-\mat{1}\Bigr)
+                  \Bigr]
+\nonumber\\
+&=& \Tr\Bigl[\Bigl(\mat{\bar{T}}\mat{T}^{-1}(0)
++\sum_{\lambda'}x_{\lambda'} \mat{C}_{\lambda'}\mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)
+-\mat{1}\Bigr)\mat{C}^\dagger_\lambda\Bigr]
+\nonumber\\
+&=& 
+\underbrace{
+\Tr\Bigl[\Bigl(\mat{\bar{T}}\mat{T}^{-1}(0)
+-\mat{1}\Bigr)\mat{C}^\dagger_\lambda\Bigr]}_{b_\lambda}
++\sum_{\lambda'}x_{\lambda'} 
+\underbrace{
+\Tr\Bigl[
+\mat{C}_{\lambda'}\mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)
+\mat{C}^\dagger_\lambda\Bigr]
+}_{A_{\lambda,\lambda'}}
+\end{eqnarray}
+which is a linear system of equations for the $x_\lambda$.
+
+Hence, we obtain the desired values $x_\lambda$ for from
+  \begin{eqnarray}
+0&=&\sum_{\lambda'}A_{\lambda,\lambda'}x_{\lambda'}+b_\lambda 
+\qquad\Rightarrow\quad \vec{x}=-\mat{A}^{-1}\vec{b}
+  \end{eqnarray}
+with
+  \begin{eqnarray}
+    b_\lambda&=&\Tr\Bigl[\bigl(\mat{\bar{T}}\mat{T}(0)^{-1}-\mat{1}\bigr)
+                      \mat{C}_\lambda^\dagger\Bigr]
+ \nonumber\\
+    A_{\lambda,\lambda'}
+        &=&\mat{C}_\lambda \mat{T}^{-1,\dagger}(0)\mat{T}^{-1}(0)\mat{C}^\dagger_{\lambda'}
+  \end{eqnarray}
+
+
+
+%==========================================================================
+\subsubsection{Use cases for Constraints on the unit cell}
+\label{sec:usecasecellconstr}
+%==========================================================================
+\begin{itemize}
+    \item suppress any shear
+\begin{center}
+\begin{tabular}{|cccc|}
+\hline
+$C_1=$&$(0,1,0;$&$ 1,0,0 ;$&$ 0,0,0)$\\
+$C_2=$&$(0,0,1;$&$ 0,0,0 ;$&$ 1,0,0)$\\
+$C_3=$&$(0,0,0;$&$ 0,0,1 ;$&$ 0,1,0)$\\
+\hline
+\end{tabular}
+\end{center}
+%
+\item suppress any unit-cell rotation\\
+\begin{center}
+\begin{tabular}{|cccc|}
+\hline
+$C_1=$&$(0,1,0;$&$ -1,0,0;$&$ 0,0,0)$\\
+$C_2=$&$(0,0,1;$&$ 0,0,0 ;$&$ -1,0,0)$\\
+$C_3=$&$(0,0,0;$&$ 0,0,1 ;$&$ 0,-1,0)$\\
+\hline
+\end{tabular}
+\end{center}
+Caution! do not constrain rotation of unit cell and
+\textit{simultaneously} the rotation of the atoms in the unit cell,
+unless you are really shure that this is what you want!
+%
+\item suppress expansion or contraction along $x$ direction
+\begin{center}
+\begin{tabular}{|cccc|}
+\hline
+$C_1=($&$1,0,0;$&$ 0,0,0 ;$&$ 0,0,0)$\\
+\hline
+\end{tabular}
+\end{center}
+%
+\item suppress expansion or contraction along $y$ direction
+\begin{center}
+\begin{tabular}{|cccc|}
+\hline
+$C_1=$&$(0,0,0;$&$ 0,1,0 ;$&$ 0,0,0)$\\
+\hline
+\end{tabular}
+\end{center}
+%
+\item suppress expansion or contraction in $z$ direction
+\begin{center}
+\begin{tabular}{|cccc|}
+\hline
+$C_1=$&$(0,0,0;$&$ 0,0,0 ;$&$ 0,0,1)$\\
+\hline
+\end{tabular}
+\end{center}
+%
+\end{itemize}
 
 %}{} % end of \ifthenelse
 

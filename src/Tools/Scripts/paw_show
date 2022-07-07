@@ -267,7 +267,7 @@ if [[ -n ${PRINTFILE} ]] ; then
              -hardcopy -nxy ${TMPFILE} -printfile ${PRINTFILE}
   fi
 else     #-- open xmgrace if no printfile specified
-  xmgrace -free -noask -param $PARMFILE -nxy ${TMPFILE}
+  xmgrace -free -noask -batch $PARMFILE -nxy ${TMPFILE}
 fi
 rm ${TMPFILE}
 rm ${PARMFILE}
