@@ -118,12 +118,10 @@ SPECIAL="none"
 #
 BLASDIR=""
 LAPACKDIR=""
-FFTDIR="/usr/local/lib/"
-MPIDIR="/usr/local/Cellar/open-mpi/4.1.2/"
-FFT_HEADER="/usr/local/Cellar/fftw/3.3.10/include/fftw3.f03"
+FFTDIR="/opt/homebrew/lib/"
+FFT_HEADER="/opt/homebrew/Cellar/fftw/3.3.10/include/fftw3.f03"
 #
-#COMPILER_SCALAR="gfortran -fno-second-underscore "
-#COMPILER_PARALLEL="${MPIDIR}/bin/mpifort -fno-second-underscore "
+MPIDIR="/opt/homebrew/Cellar/open-mpi/4.1.4/"
 COMPILER_SCALAR="gfortran "
 COMPILER_PARALLEL="${MPIDIR}/bin/mpifort "
 #
@@ -152,8 +150,8 @@ FCFLAGS_DBG="-c -g -O3 -funroll-loops -fomit-frame-pointer -march=native -std=f2
 LDFLAGS_SCALAR="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
 LDFLAGS_PARALLEL="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
 #
-LIBS_SCALAR="-L/usr/local/lib -lfftw3"
-LIBS_PARALLEL="-L/usr/local/lib -lfftw3"
+LIBS_SCALAR="-L${FFTDIR} -lfftw3"
+LIBS_PARALLEL="-L${FFTDIR} -lfftw3"
 #
 #  variables for the c-prepocessor:
 #      CPPVAR_FFT_FFTW3 "

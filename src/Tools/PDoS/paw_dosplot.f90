@@ -39,17 +39,16 @@
 !     ==========================================================================
 !     ==  WRITE HEADER                                                        ==
 !     ==========================================================================
-      WRITE(NFILO,FMT='(82("*"))')
-      WRITE(NFILO,FMT='(82("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"           DOS PLOT TOOL                ")')
-      WRITE(NFILO,FMT='(82("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-      WRITE(NFILO,FMT='(82("*"))')
-      WRITE(NFILO,FMT='(T30 &
-     &               ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
-      WRITE(NFILO,FMT='(T30 &
-     &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &      /T30,"ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(T10 &
+     &           ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
+      WRITE(NFILO,FMT='(T10 &
+     &            ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
       WRITE(NFILO,*)
 !
 !     ==========================================================================

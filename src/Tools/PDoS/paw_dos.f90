@@ -157,10 +157,10 @@ END MODULE READCNTL_MODULE
       WRITE(NFILO,FMT='(80("*"),T15,A50)') &
      &             '    FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ' 
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(T20," P.E. BLOECHL ")')
-      WRITE(NFILO,FMT='(T20,A/T20,A)') &
-     &      '(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY' &
-     &      ,'ANY USE REQUIRES WRITTEN LICENSE FROM CUT'
+      WRITE(NFILO,FMT='(T10 &
+     &           ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
+      WRITE(NFILO,FMT='(T10 &
+     &            ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
       WRITE(NFILO,*)
 !
 !     ==========================================================================

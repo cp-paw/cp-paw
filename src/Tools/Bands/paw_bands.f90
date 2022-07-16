@@ -57,17 +57,16 @@ END MODULE REFCELL_MODULE
 !       ========================================================================
 !       ==  WRITE HEADER                                                      ==
 !       ========================================================================
-        WRITE(NFILO,FMT='(72("*"))')
-        WRITE(NFILO,FMT='(72("*"),T15 &
-     &             ,"           BANDS ANALYSIS TOOL                ")')
-        WRITE(NFILO,FMT='(72("*"),T15 &
-     &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-        WRITE(NFILO,FMT='(72("*"))')
-        WRITE(NFILO,FMT='(T28 &
-     &           ," P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY ")')
+        WRITE(NFILO,FMT='(80("*"))')
+        WRITE(NFILO,FMT='(80("*"),T15 &
+     &             ,"             BANDS ANALYSIS TOOL                ")')
+        WRITE(NFILO,FMT='(80("*"),T15 &
+     &             ,"      FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ")')
+        WRITE(NFILO,FMT='(80("*"))')
         WRITE(NFILO,FMT='(T10 &
-     &      ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+     &           ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
+        WRITE(NFILO,FMT='(T10 &
+     &            ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
         WRITE(NFILO,*)
       ENDIF  
 !

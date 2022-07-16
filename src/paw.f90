@@ -3,11 +3,9 @@
       PROGRAM MAIN
 !     **************************************************************************
 !     **                      CP-PAW                                          **
-!     **     (C) COPYRIGHT   CLAUSTHAL UNIVERSITY OF TECHNOLOGY               **
-!     **     LICENSED MATERIALS                                               **
-!     **     PROPERTY OF CLAUSTHAL UNIVERSITY OF TECHNOLOGY                   **
+!     **     (C) COPYRIGHT CLAUSTHAL UNIVERSITY OF TECHNOLOGY                 **
+!     **     LICENSED UNDER THE GNU GENERAL PUBLIC LICENSE V3                 **
 !     **************************************************************************
-!     **                                                                      **
 !     **  THIS THE CAR-PARRINELLO FIRST PRINCIPLES MOLECULAR DYNAMICS         **
 !     **  PROGRAM BASED ON THE PROJECTOR-AUGMENTED PLANE WAVE METHOD          **
 !     **  AND THE LOCAL DENSITY APPROXIMATION.                                **

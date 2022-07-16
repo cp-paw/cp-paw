@@ -133,20 +133,12 @@ the code more secure to use.
 Any other suggestions on how to improve the clarity of this description
 or the code are most welcome.
 
-Programs become outdated nearly as quickly as newspapers. Note, that
-the executable of this code may also have an expiration date.  The
-code will print a warning about a month before it expires. Please make
-sure that you know the expiration date when you receive an executable.
-If the license expires, discuss with your contact person about
-obtaining an extension of the license and a new executable program.
-
-Note that the CP-PAW code including all related material is
-copyrighted. You require a valid license to execute it. 
+The CP-PAW code including all related material is distributed under
+the the GNU Public License V3.
 
 %==========================================================================
 \section{What is the projector augmented wave method?}
 %==========================================================================
-
 The projector augmented wave method \cite{bloechl94_prb50_17953} is an
 all-electron electronic structure method, which allows accurate electronic
 structure calculations and ab-initio molecular dynamics simulations on the
@@ -190,25 +182,25 @@ traditional electronic structure method -- using a friction to
 with statistical approaches to study processes with large barriers.
 
 The {\bf projector augmented wave method (PAW)}
-\cite{bloechl94_prb50_17953} has been developed by the author in
-response to the invention of the ab-initio molecular dynamics
-approach. Whereas the latter was based on the plane wave
-pseudopotential approach, a new method was needed to enhance the
-accuracy and computational efficiency of the approach and to provide
-the correct wave functions, rather than the fictitious wave functions
-provided by the pseudopotential approach.  The PAW method describes
-the wave function by a superposition of different terms: There is a
-plane wave part, the so-called pseudo wave function, and expansions
-into atomic and pseudo atomic orbitals at each atom. On one hand, the
-plane wave part has the flexibility to describe the bonding and tail
-region of the wave functions, but used alone it would require
-prohibitive large basis sets to describe correctly all the
-oscillations of the wave function near the nuclei. On the other hand,
-the expansions into atomic orbitals are well suited to describe
-correctly the nodal structure of the wave function near the nucleus,
-but lack the variational degrees of freedom for the bonding and tail
-regions.  The PAW method combines the virtues of both numerical
-representations in one well-defined basis set.
+\cite{bloechl94_prb50_17953} has been developed in response to the
+invention of the ab-initio molecular dynamics approach. Whereas the
+latter was based on the plane wave pseudopotential approach, a new
+method was needed to enhance the accuracy and computational efficiency
+of the approach and to provide the correct wave functions, rather than
+the fictitious wave functions provided by the pseudopotential
+approach.  The PAW method describes the wave function by a
+superposition of different terms: There is a plane wave part, the
+so-called pseudo wave function, and expansions into atomic and pseudo
+atomic orbitals at each atom. On one hand, the plane wave part has the
+flexibility to describe the bonding and tail region of the wave
+functions, but used alone it would require prohibitive large basis
+sets to describe correctly all the oscillations of the wave function
+near the nuclei. On the other hand, the expansions into atomic
+orbitals are well suited to describe correctly the nodal structure of
+the wave function near the nucleus, but lack the variational degrees
+of freedom for the bonding and tail regions.  The PAW method combines
+the virtues of both numerical representations in one well-defined
+basis set.
 
 Of course, one does not want to make two electronic structure
 calculations  -- one using plane waves and one with atomic
@@ -247,11 +239,12 @@ Feel free to skip this section if you wish.
 The program is written in an {\bf OO (object-oriented)} manner. This
 means that it consists of agents (objects) that perform certain
 operations or provide the selected information. Each agent holds the
-data needed to its job, or it can request the data it needs from other
-agents. This is a major software strategy, widely used today, which
-allows the programmer to hide certain details, he need not really worry about
-at the present level of programming. It also allows him to assemble the
-code from little ``boxes'', which are easy to maintain and enhance.
+data needed to perform its job, and it can request the data it needs
+from other agents. This is a major software strategy, widely used
+today, which allows the programmer to hide certain details, he need
+not really worry about at the current level of programming. It also
+allows him to assemble the code from little ``boxes'', which are easy
+to maintain and enhance.
 
 As part of the OO design, the program uses its own low level object
 library, which customizes a number of common operations, such as
@@ -260,10 +253,9 @@ tree-linked-list structures for intuitive IO, periodic table,
 constants, DFT functionals, tracing, timing, string handling, and a
 few more. These low-level objects are rather unspecific to the PAW
 code, and can be used in combination with self-developed analysis
-tools. (However, they are still subject to the license agreement for
-the PAW code.)
+tools. 
 
-The language used is {\bf FORTRAN90}. FORTRAN90 is itself not an OO
+The language used is {\bf FORTRAN 2008}. FORTRAN is itself not an OO
 language such as C++ and Java, and thus limits the possibilities in
 this respect. However, it has a number of advantages for number
 crunching, such as good compilers and, for my taste, a natural and
@@ -272,9 +264,7 @@ it is a significant advance towards the OO features of C++ or Java
 because it incorporates features such as dynamic memory allocation,
 derived data types (structures), operator overloading, modules, etc.
 The option of using templates has been implemented using a self-made
-preprocessor.  FORTRAN90 is largely compatible with FORTRAN77, so you
-need to pick up only a few new things if you want to work with the
-existing tools.
+preprocessor.  
 
 The program allows {\bf parallel processing} using MPI (Message
 Passing Interface) \cite{mpi}. It is (almost) scalable in central
@@ -283,13 +273,20 @@ parallel version with the exception that a dummy interface is used
 instead of MPI.
 
 The program relies heavily on linear algebra packages such as LAPACK,
-BLAS and FFTW. These libraries takes care of basic computations such
+BLAS and FFTW. These libraries take care of basic computations such
 as matrix multiplications and FFTs (Fast Fourier transforms). A large
 fraction of the total CPU time is spent in these routines. In this way
 the code development concentrates on algorithmic developments and not,
 for example, on how to optimize a FFT.  The latter will be done by
 experts who continually adapt this library to modern computer
 architectures.
+
+The CP-PAW code is very restrictive in using external libraries. I
+have seen some libraries come and go, which is not acceptable for a
+code that is supposed to last several decades. (At the time of writing
+CPPAW does not use any libraries other than LAPACK, BLAS, FFTW and
+MPI.) Even these libraries are connected to the PAW code through a a
+set of interface routines, which are collected in two places, one for MPI (\verb|paw_mpelib.f90|) and one for the others \verb|paw_library.f90|. 
 
 One programming principle, I try to follow, is the engineering
 motto {\bf ``Fewer Parts!''}. For the user this implies that he will
@@ -302,7 +299,7 @@ coordinates.  Angles are handled in radian ($2\pi{\rm\ rad}=
 360~\deg$).  The conversion to other units is often done during
 printing. The conversion factors are provided by a particular agent
 (see section~\ref{constants}), which is based on the values of
-fundamental physical constants recommended in 1986 by CODATA
+fundamental physical constants recommended by CODATA
 (Committee on Data for Science and Technology of the International
 Council of Scientific Unions) \cite{mohr00_rmp72_351}.
 
@@ -318,16 +315,17 @@ utilities.
 
 Why this three-layer strategy?
 
-Analysis is both an iterative process and an art: when you find something
-interesting and want to take a closer look. Sooner or later, you will
-probably want to make your own analysis tools, because you have found a way
-to understand your data that nobody has thought of before. Or you
-want examine a property, which nobody has tried to calculate. Or
-you have a unique visualizer and need an interface for it.  And
-because you want to discuss this particular result with your colleagues
-at the upcoming coffee break, you choose the quick-and-sloppy
-approach.  You do not want to do this inside the simulation code,
-because you dare not jeopardize its operation.
+Analysis is both an iterative process and an art: when you find
+something interesting, you want to take a closer look quickly with the
+tools at hand. Sooner or later, you will probably want to make your
+own analysis tools, because you have found a way to understand your
+data that nobody has thought of before. Or you want examine a
+property, which nobody has tried to calculate. Or you have a unique
+visualizer and need an interface for it.  And because you want to
+discuss this particular result with your colleagues at the upcoming
+coffee break, you choose the quick-and-dirty approach.  You do not
+want to do this inside the simulation code, because you dare not
+jeopardize its operation.
 
 In contrast to analysis, simulation is computationally expensive.
 Therefore, it is desirable to archive as much data from the simulation
@@ -339,12 +337,8 @@ simple format so that it is easy to read them into the analysis tools.
 Visualization is also separated from analysis, because many tools
 exist and the choice is a matter of taste and wealth. The analysis
 tools that come with the CP-PAW code will write data formats for the
-visualization tools that we currently use. (Those are currently the
-IBM Dataexplorer \cite{opendx} for 3D representations of the
-wave functions or trajectories, xmgrace \cite{xmgrace} for x-y plots, and
-CryMolCAD\cite{crymolcad} for the analysis of the atomic structure.)
-However, you can easily change the format to adapt them to your
-preferred graphics programs.
+visualization tools that we currently use.  However, you can easily
+change the format to adapt them to your preferred graphics programs.
 
 Of course you can see the most important information, such as total
 energies and one-particle energies directly while the simulation is

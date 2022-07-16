@@ -669,17 +669,16 @@ END MODULE READ_MODULE
 !     ==================================================================
 !     ==  WRITE HEADER                                                ==
 !     ==================================================================
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"           PREOPTIMIZATION TOOL              ")')
-      WRITE(NFILO,FMT='(72("*"),T15 &
+      WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
-      WRITE(NFILO,FMT='(72("*"))')
-      WRITE(NFILO,FMT='(T27 &
+      WRITE(NFILO,FMT='(80("*"))')
+      WRITE(NFILO,FMT='(T10 &
      &           ,"J. SCHIMPL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
-      WRITE(NFILO,FMT='(T9 &
-     &      ,"(C) Clausthal University of Technology (CUT), Germany " &
-     &      ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT ")')
+      WRITE(NFILO,FMT='(T10 &
+     &            ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
       WRITE(NFILO,*)
       RETURN
       END SUBROUTINE INITIALIZEFILEHANDLER

@@ -255,8 +255,7 @@ END MODULE TRAJECTORY_MODULE
       WRITE(NFILO,FMT='(T10 &
      &         ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
       WRITE(NFILO,FMT='(T10 &
-     &    ,"(C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT), GERMANY " &
-     &    ,"* ANY USE REQUIRES WRITTEN LICENSE FROM CUT")')
+     &            ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
       WRITE(NFILO,*)
 !
 !     ==========================================================================

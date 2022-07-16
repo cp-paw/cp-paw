@@ -1,23 +1,23 @@
 !
-!     ...1.........2.........3.........4.........5.........6.........7 .........8 
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
-!     ***************************************************************************
-!     **  CALCULATES THE POTENTIAL AVERAGED OVER LATTICE PLANES.               **
-!     **  THIS POTENTIAL IS USED TO DETERMINE WORK FUNCTIONS OF BAND OFFSETS.  **
-!     **  THE INPUT FOR THIS CODE IS THE .WV FILE PRODUCED BY THE SIMULATION   **
-!     **  CODE USING !CONTROL!ANALYSE!POTENTIAL                                **
-!     **                                                                       **
-!     **  THE INPUT ARGUMENT IS THE NAME OF THE .WV FILE.                      **
-!     **  THE PROGRAM PRODUCES 3 FILES, ONE FOR EACH DIRECTION.                **
-!     **                                                                       **
-!     **  NOTE THAT THE DIRECTIONS ARE NOT THE LATTICE VECTORS, BUT THE        **
-!     **  LATTICE PLANE NORMALS. THE DISTANCE IS ALSO MEASURED ALONG THE       **
-!     **  LATTICE PLANE NORMAL.                                                **
-!     **                                                                       **
-!     **  EACH POTENTIAL IS CONSTRUCTED OVER TWO UNIT CELLS, SO THAT AN        **
-!     **  APPROPRIATE SHEET CAN BE SELECTED                                    **
-!     **                                                                       **
-!     ***************************************************************************
+!     **************************************************************************
+!     **  CALCULATES THE POTENTIAL AVERAGED OVER LATTICE PLANES.              **
+!     **  THIS POTENTIAL IS USED TO DETERMINE WORK FUNCTIONS OF BAND OFFSETS. **
+!     **  THE INPUT FOR THIS CODE IS THE .WV FILE PRODUCED BY THE SIMULATION  **
+!     **  CODE USING !CONTROL!ANALYSE!POTENTIAL                               **
+!     **                                                                      **
+!     **  THE INPUT ARGUMENT IS THE NAME OF THE .WV FILE.                     **
+!     **  THE PROGRAM PRODUCES 3 FILES, ONE FOR EACH DIRECTION.               **
+!     **                                                                      **
+!     **  NOTE THAT THE DIRECTIONS ARE NOT THE LATTICE VECTORS, BUT THE       **
+!     **  LATTICE PLANE NORMALS. THE DISTANCE IS ALSO MEASURED ALONG THE      **
+!     **  LATTICE PLANE NORMAL.                                               **
+!     **                                                                      **
+!     **  EACH POTENTIAL IS CONSTRUCTED OVER TWO UNIT CELLS, SO THAT AN       **
+!     **  APPROPRIATE SHEET CAN BE SELECTED                                   **
+!     **                                                                      **
+!     **************************************************************************
       IMPLICIT NONE
       CHARACTER(256)             :: ISONAME
       INTEGER(4)    ,PARAMETER   :: NFILIN=11
@@ -37,16 +37,16 @@
       REAL(8)                    :: DELTA100,DELTA010,DELTA001 ! spacings
       REAL(8)                    :: VEC(3)       ! normal vector
       INTEGER(4)                 :: I
-!     ***************************************************************************
+!     **************************************************************************
 !
-!     ===========================================================================
-!     ==                                                                       ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       CALL GET_COMMAND_ARGUMENT(1,ISONAME)
 !
-!     ===========================================================================
-!     ==  READ WV FILE                                                         ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  READ WV FILE                                                        ==
+!     ==========================================================================
       OPEN(NFILIN,FILE=TRIM(ISONAME),STATUS='OLD',FORM='UNFORMATTED')
       WRITE(*,*) 'ISONAME=',ISONAME
       READ(NFILIN) DUMMY,LENTITLE
@@ -94,9 +94,9 @@
       DEALLOCATE(Q)
       CLOSE(NFILIN)      
 !
-!     ===========================================================================
-!     ==  PREPARE NORMAL VECTORS AND SPACING                                   ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  PREPARE NORMAL VECTORS AND SPACING                                  ==
+!     ==========================================================================
       VEC(1)=RBAS(2,2)*RBAS(3,3)-RBAS(3,2)*RBAS(2,3)
       VEC(2)=RBAS(3,2)*RBAS(1,3)-RBAS(1,2)*RBAS(3,3)
       VEC(3)=RBAS(1,2)*RBAS(2,3)-RBAS(2,2)*RBAS(1,3)
@@ -115,9 +115,9 @@
       VEC=VEC/SQRT(SUM(VEC**2))
       DELTA001=DOT_PRODUCT(RBAS(:,3),VEC)/REAL(NR3,KIND=8)
 !
-!     ===========================================================================
-!     ==  WRITE POTENTIAL AVERAGED OVER (100) PLANES                           ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  WRITE POTENTIAL AVERAGED OVER (100) PLANES                          ==
+!     ==========================================================================
       OPEN(NFILOUT,FILE="AVPOT100.DAT")      
       DO I=1,NR1
          POT=SUM(POTENTIAL(I,:,:))/REAL(NR2*NR3,KIND=8)
@@ -129,9 +129,9 @@
       END DO
       CLOSE(NFILOUT)      
 !
-!     ===========================================================================
-!     ==  WRITE POTENTIAL AVERAGED OVER (010) PLANES                           ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  WRITE POTENTIAL AVERAGED OVER (010) PLANES                          ==
+!     ==========================================================================
       OPEN(NFILOUT,FILE="AVPOT010.DAT")      
       DO I=1,NR2
          POT=SUM(POTENTIAL(:,I,:))/REAL(NR1*NR3,KIND=8)
@@ -143,9 +143,9 @@
       END DO
       CLOSE(NFILOUT)      
 !
-!     ===========================================================================
-!     ==  WRITE POTENTIAL AVERAGED OVER (001) PLANES                           ==
-!     ===========================================================================
+!     ==========================================================================
+!     ==  WRITE POTENTIAL AVERAGED OVER (001) PLANES                          ==
+!     ==========================================================================
       OPEN(NFILOUT,FILE="AVPOT001.DAT")      
       DO I=1,NR3
          POT=SUM(POTENTIAL(:,:,I))/REAL(NR1*NR2, KIND=8)
