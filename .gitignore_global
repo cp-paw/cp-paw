@@ -1,0 +1,48 @@
+*~
+.DS_Store
+# gitignore file
+#
+#  do not leave any whitespace at the end of each line
+#
+# *~         # emacs backup files
+# *#         # emacs backup files
+# *.o        # object files
+# *.x        # executable
+# *_d.f90    # preprocessed fortran files
+# *.mod      # module files
+# */.DS_Store  # osx files
+# */.svn       # svn directory
+# *.aux      # latex
+# *.bbl      # latex
+# *.blg      # latex
+# *.log      # latex
+# *.dvi      # latex
+# *.idx      # latex
+# *.ilg      # latex
+# *.ind      # latex
+# */tmp.*    # temporary files
+# */tmp.*    # temporary files
+######################################################################
+*~
+*#
+*.o
+*.x
+a.out
+*_d.f90
+*.mod
+.DS_Store
+.xvpics/
+CVS/
+.svn/
+*.aux
+*.bbl
+*.blg
+*.log
+*.dvi
+*.idx
+*.ilg
+*.ind
+*/tmp.*
+tmp.*
+*.fig.bak
+*-eps-converted-to.pdf
