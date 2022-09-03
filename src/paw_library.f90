@@ -15,14 +15,17 @@
 !****                                                                      *****
 !****  THE INTERFACES SHALL BE TESTED USING LIB$TEST                       *****
 !****                                                                      *****
-!****  NOTE: THERE IS A LAPACK INTERFACE TO LAPACK                         *****
+!****  NOTE: THERE IS A LAPACK INTERFACE TO ESSL                           *****
 !****         HTTP://WWW.NETLIB.ORG/LAPACK/LAWNSPDF/LAWN82.PDF             *****
 !****         HTTP://WWW.NETLIB.ORG/LAPACK/ESSL/                           *****
+!****                                                                      *****
+!****  NOTE: THERE ARE WRAPPER ROUTINES FOR LAPACK AND FOR FFTW3 TO ESSL   *****
+!****        SEARCH FOR 'MIGRATING FROM OTHER LIBRARIES TO ESSL'           *****
+!****        ON HTTPS://WWW.IBM.COM/DOCS/EN/ESSL/                          *****
 !****                                                                      *****
 !*******************************************************************************
 !*******************************************************************************
 !****         
-!****     CPPVAR_LAPACK_ESSL        
 !****     CPPVAR_BLAS_ESSL          
 !****     CPPVAR_FFT_ESSL           
 !****     CPPVAR_FFT_FFTW           
@@ -168,7 +171,6 @@
       INTEGER       ,SAVE        :: NARG,LARG,LCUR
 !     ==  LOCAL DATA
       CHARACTER(1)               :: COPT
-!      INTEGER                    :: IARGC
       INTEGER                    :: LNAME,LOPT
       INTEGER                    :: LENG
       INTEGER                    :: ST
@@ -178,7 +180,6 @@
 !     ==========================================================================
       IF(OPTIND.LE.0) THEN
         OPTIND=0
-!       FORMERLY: NARG=IARGC()
         NARG=COMMAND_ARGUMENT_COUNT()
         CARG=' '
         CONE=' '
@@ -336,11 +337,7 @@
       INTEGER(4)            :: I
 !     **************************************************************************
 !      == GENERAL MATRIX INVERSE ===============================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$       CALL LIB_ESSL_DGEICD(N,A,AINV)
-!!$#ELSE 
       CALL LIB_LAPACK_DGETRI(N,A,AINV)
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -377,12 +374,7 @@
       INTEGER(4)            :: I
 !     **************************************************************************
 !      == GENERAL MATRIX INVERSE ===============================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL LIB_LAPACK_ZGETRI(N,A,AINV)
-!!$!      CALL LIB_ESSL_ZGETRI(N,A,AINV)
-!!$#ELSE 
       CALL LIB_LAPACK_ZGETRI(N,A,AINV)
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -422,11 +414,7 @@
       REAL(8)               :: V(N,N)
       REAL(8)               :: S(N)
 !     **************************************************************************
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
-!!$#ELSE 
       CALL LIB_LAPACK_DGESVD(N,N,A,U,S,V)
-!PRINT*,'S ',S
       DO I=1,N
         IF(ABS(S(I)).GT.SMIN) THEN
           S(I)=1.D0/S(I)
@@ -438,7 +426,6 @@
         U(:,I)=U(:,I)*S(I)
       ENDDO
       AINV(:,:)=TRANSPOSE(MATMUL(U,V))
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -472,13 +459,9 @@
       REAL(8)   ,INTENT(IN) :: A(M,N)    ! MATRIX TO BE INVERTED
       REAL(8)   ,INTENT(OUT):: U(M,M)    ! LEFT HAND ORTHOGONAL VECTORS
       REAL(8)   ,INTENT(OUT):: S(M)      ! SINGULAR VECTORS
-      REAL(8)   ,INTENT(OUT):: VT(N,N)   ! TRANSPOSED RIGHT-HAND ORTHOGONAL VECTORS
+      REAL(8)   ,INTENT(OUT):: VT(N,N)   ! TRANSPOSED RIGHT-HAND ORTHGNAL VECTRS
 !     **************************************************************************
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
-!!$#ELSE 
       CALL LIB_LAPACK_DGESVD(M,N,A,U,S,VT)
-!!$#ENDIF
       RETURN
       END
 !
@@ -496,11 +479,7 @@
       REAL(8)   ,INTENT(OUT):: S(M)      ! SINGULAR VECTORS
       COMPLEX(8),INTENT(OUT):: VT(N,N)   ! ADJUNCT RIGHT-HAND  VECTORS
 !     **************************************************************************
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('INTERFACE TO ESSL ROUTINE NOT IMPLEMENTED')
-!!$#ELSE 
       CALL LIB_LAPACK_ZGESVD(M,N,A,U,S,VT)
-!!$#ENDIF
       RETURN
       END
 !
@@ -530,20 +509,6 @@
         X(1,:)=B(1,:)/A(1,1)
         RETURN
       END IF
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$!
-!!$!     ==================================================================
-!!$!     == CALL ESSL DRIVER ROUTINES                                    ==
-!!$!     ==================================================================
-!!$      IF(N.EQ.M) THEN
-!!$        CALL LIB_ESSL_DGES(N,M,NEQ,A,X,B)
-!!$      ELSE IF(N.LT.M) THEN
-!!$        CALL LIB_ESSL_DGESVS(N,M,NEQ,A,X,B)
-!!$      ELSE
-!!$        CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
-!!$        CALL ERROR$STOP(' LIB$MATRIXSOLVER8')
-!!$      END IF
-!!$#ELSE 
 !
 !     ==================================================================
 !     == CALL LAPACK DRIVER ROUTINES                                  ==
@@ -556,7 +521,6 @@
         CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
         CALL ERROR$STOP(' LIB$MATRIXSOLVER8')
       END IF
-!!$#ENDIF
 !
 !     ==================================================================
 !     ==  TEST                                                        ==
@@ -594,20 +558,6 @@
         X(1,:)=B(1,:)/A(1,1)
         RETURN
       END IF
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$!
-!!$!     ==================================================================
-!!$!     == CALL ESSL DRIVER ROUTINES                                    ==
-!!$!     ==================================================================
-!!$      IF(N.EQ.M) THEN
-!!$        CALL LIB_ESSL_ZGES(N,M,NEQ,A,X,B)
-!!$      ELSE IF(N.LT.M) THEN
-!!$        CALL LIB_ESSL_ZGESVS(N,M,NEQ,A,X,B) 
-!!$      ELSE
-!!$        CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
-!!$        CALL ERROR$STOP(' LIB$MATRIXSOLVEC8')
-!!$      END IF
-!!$#ELSE 
       IF(N.EQ.M) THEN
         CALL LIB_LAPACK_ZGESV(N,M,NEQ,A,X,B)
       ELSE IF(N.LT.M) THEN
@@ -616,7 +566,6 @@
         CALL ERROR$MSG('SYSTEM OF EQUATIONS IS OVER DETERMINED')
         CALL ERROR$STOP(' LIB$MATRIXSOLVEC8')
       END IF
-!!$#ENDIF
       RETURN
       END SUBROUTINE LIB$MATRIXSOLVEC8
 !
@@ -649,11 +598,7 @@
 !     ==========================================================================
 !     == DIAGONALIZE                                                          ==
 !     ==========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL LIB_ESSL_DSPEV(N,H,E,U)
-!!$#ELSE
       CALL LIB_LAPACK_DSYEV(N,H,E,U)
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -720,11 +665,7 @@
 !     ==========================================================================
 !     == DIAGONALIZE                                                          ==
 !     ==========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL LIB_ESSL_ZHPEV(N,H,E,U)
-!!$#ELSE
       CALL LIB_LAPACK_ZHEEV(N,H,E,U)
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST                                                                 ==
@@ -785,10 +726,6 @@
 !     ==========================================================================
 !     == DIAGONALIZE                                                          ==
 !     ==========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('ESSL INTERFACE NOT IMPLENTED')
-!!$      CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
-!!$#ELSE
       H1=H
       CALL ZGEEV('N','N',N,H1,N,E,VL,1,VR,1,WORK,2*N,RWORK,INFO)
       IF(INFO.LT.0) THEN
@@ -804,7 +741,6 @@
         CALL ERROR$I4VAL('N',N)
         CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
       END IF
-!!$#ENDIF
       RETURN
       END
 !
@@ -839,10 +775,6 @@
 !     ==========================================================================
 !     == DIAGONALIZE                                                          ==
 !     ==========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('ESSL INTERFACE NOT IMPLENTED')
-!!$      CALL ERROR$STOP('LIB$DIAGNONHERMITEANC8')
-!!$#ELSE
 !     ==========================================================================
 !     == MAKE COPY OF MATRIX, BECAUSE IT WILL BE OVERWRITTEN                  ==
 !     ==========================================================================
@@ -877,7 +809,6 @@
         CALL ERROR$I4VAL('N',N)
         CALL ERROR$STOP('LIB$EIGVALNONHERMITEANC8')
       END IF
-!!$#ENDIF
       RETURN
       END
 !
@@ -944,15 +875,7 @@
 !     ==========================================================================
 !     == DIAGONALIZE                                                          ==
 !     ==========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      IF(TSYM) THEN
-!!$        CALL LIB_ESSL_DSYGV(N,H,S,E,U)
-!!$      ELSE
-!!$        CALL LIB_ESSL_DGEGV(N,H,S,E,U)
-!!$      END IF
-!!$#ELSE
       CALL LIB_LAPACK_DSYGV(N,H,S,E,U)
-!!$#ENDIF
 !
 !     ==========================================================================
 !     == TEST RESULT OF THE ROUTINE                                           ==
@@ -1027,10 +950,6 @@
 !     ========================================================================
 !     == CALL LAPACK ROUTINE                                                ==
 !     ========================================================================
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$      CALL ERROR$MSG('GENERALEIGENVALUE PROBLEM NOT IMPLEMENTED FOR ESSL')
-!!$      CALL ERROR$STOP('GENERALEIGENVALUEC8')  
-!!$#ELSE
       IF(GENERALEIGENVALUEC8_MODE.EQ.'ZHEGV')THEN
         CALL LIB_LAPACK_ZHEGV(N,H,S,E,U)
       ELSE IF(GENERALEIGENVALUEC8_MODE.EQ.'ZHEGVD')THEN
@@ -1040,7 +959,6 @@
         CALL ERROR$CHVAL('MODE',GENERALEIGENVALUEC8_MODE)
         CALL ERROR$STOP('LIB$GENERALEIGENVALUEC8')
       ENDIF
-!!$#ENDIF
 !
 !     ========================================================================
 !     == TEST RESULT OF THE ROUTINE                                         ==
@@ -1066,548 +984,6 @@
       END IF
       RETURN
       END
-!!$#IF DEFINED(CPPVAR_LAPACK_ESSL)
-!!$!***********************************************************************
-!!$!***********************************************************************
-!!$!****                                                               ****
-!!$!****  DRIVER ROUTINES FOR ESSL CORRESPONDING TO LAPACK             ****
-!!$!****                                                               ****
-!!$!***********************************************************************
-!!$!***********************************************************************
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DGEICD(N,A,AINV)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  INVERTS THE REAL, SQUARE MATRIX A                           **
-!!$!     **                                                              **
-!!$!     **  DEPENDENCIES:                                               **
-!!$!     **    ESSL: DGEICD                                              **
-!!$!     **                                                              **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      REAL(8)   ,INTENT(IN) :: A(N,N)
-!!$      REAL(8)   ,INTENT(OUT):: AINV(N,N)
-!!$      INTEGER(4)            :: NAUX
-!!$      REAL(8)               :: AUX(100*N)
-!!$      REAL(8)               :: RCOND
-!!$      REAL(8)               :: DET(2)
-!!$!     ******************************************************************
-!!$      NAUX=100*N
-!!$      AINV(:,:)=A(:,:)
-!!$      CALL DGEICD(AINV,N,N,0,RCOND,DET,AUX,NAUX) !ESSL
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DGES(N,M,NEQ,A,X,B)
-!!$!     ******************************************************************
-!!$!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
-!!$!     **  WHERE A IS A SQUARE MATRIX                                  **
-!!$!     **                                                              **
-!!$!     **  REMARK: WHILE DGES CAN ALSO HANDLE NON-SQUARE MATRICES      **
-!!$!     **     WE USE IT HERE FOR THIS PURPOSE ONLY.                    **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      INTEGER(4),INTENT(IN) :: M
-!!$      INTEGER(4),INTENT(IN) :: NEQ
-!!$      REAL(8)   ,INTENT(IN) :: A(N,M)
-!!$      REAL(8)   ,INTENT(OUT):: X(M,NEQ)
-!!$      REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-!!$      REAL(8)               :: AFACT(N,N)
-!!$      INTEGER(4)            :: IPVT(N)
-!!$      INTEGER(4)            :: INFO
-!!$      INTEGER(4)            :: I
-!!$      REAL(8)               :: DEV
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$!     ******************************************************************
-!!$      IF(N.NE.M) THEN  !MATRIX FACTORIZATION
-!!$        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-!!$        CALL ERROR$STOP('LIB_ESSL_DGES')
-!!$      END IF
-!!$      AFACT=A
-!!$!     == GENERAL MATRIX FACTORIZATION =================================
-!!$      CALL DGEF(AFACT,N,N,IPVT)
-!!$      X=B
-!!$      DO I=1,NEQ
-!!$        CALL DGES(AFACT,N,N,IPVT,X(:,I),0)
-!!$      ENDDO
-!!$!     =================================================================
-!!$!     ==  TEST                                                       ==
-!!$!     =================================================================
-!!$      IF(TTEST) THEN
-!!$        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',DEV
-!!$      END IF
-!!$      RETURN
-!!$      END SUBROUTINE LIB_ESSL_DGES
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DGESVS(N,M,NEQ,A,X,B)
-!!$!     ******************************************************************
-!!$!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
-!!$!     **  WHERE A IS A(N,M)                                           **
-!!$!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
-!!$!     **  SQUARE SENSE                                                **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      INTEGER(4),INTENT(IN) :: M
-!!$      INTEGER(4),INTENT(IN) :: NEQ
-!!$      REAL(8)   ,INTENT(IN) :: A(N,M)
-!!$      REAL(8)   ,INTENT(OUT):: X(M,NEQ)
-!!$      REAL(8)   ,INTENT(IN) :: B(N,NEQ)
-!!$      REAL(8)   ,ALLOCATABLE:: AFACT(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: BFACT(:,:)
-!!$      REAL(8)   ,ALLOCATABLE:: AUX(:)
-!!$      REAL(8)   ,ALLOCATABLE:: S(:)
-!!$      INTEGER(4)            :: NAUX
-!!$      INTEGER(4)            :: NM
-!!$      INTEGER(4)            :: IRANK
-!!$      REAL(8)               :: TAU=1.D-6
-!!$      INTEGER(4)            :: INFO
-!!$      INTEGER(4)            :: I
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      INTEGER(4)            :: M1,N1
-!!$!     ******************************************************************
-!!$!     ===========================================================
-!!$!     == SINGULAR VALUE DECOMPOSION WITH ESSL                  ==
-!!$!     ===========================================================
-!!$      M1=N
-!!$      N1=M
-!!$      NM=MAX(1,MAX(N,M))
-!!$      ALLOCATE(AFACT(NM,M))
-!!$      ALLOCATE(BFACT(NM,NEQ))
-!!$      AFACT(1:N,:)=A
-!!$      AFACT(N+1:,:)=0.D0
-!!$      BFACT(:N,:)=B
-!!$      NAUX=2*N1+MAX(NM,NEQ)
-!!$      ALLOCATE(S(N1))    
-!!$      ALLOCATE(AUX(NAUX))
-!!$!     ==  SINGULAR VALUES OF A GENERAL MATRIX =========================
-!!$      CALL DGESVF(2,AFACT,NM,BFACT,NM,NEQ,S,M1,N1,AUX,NAUX) !->ESSL
-!!$      DEALLOCATE(AUX)
-!!$!     ==  LINEAR LEAST SQUARES SOLUTION FOR A GENERAL MATRIX ==========
-!!$!     ==  USING THE SINGULAR VALUE DECOMPOSITION
-!!$      CALL DGESVS(AFACT,NM,BFACT,NM,NEQ,S,X,M,M1,N1,TAU) !->ESSL
-!!$      DEALLOCATE(S)
-!!$      DEALLOCATE(BFACT)
-!!$      DEALLOCATE(AFACT)
-!!$!     =================================================================
-!!$!     ==  TEST                                                       ==
-!!$!     =================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(AUX(1))
-!!$        AUX(:)=MAXVAL(ABS(MATMUL(A,X)-B))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',AUX(1)
-!!$        DEALLOCATE(AUX)
-!!$      END IF
-!!$      RETURN
-!!$      END SUBROUTINE LIB_ESSL_DGESVS
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_ZGES(N,M,NEQ,A,X,B)
-!!$!     ******************************************************************
-!!$!     **  DRIVER ROUTINE FOR ESSL                                     **
-!!$!     **                                                              **
-!!$!     **  SOLVES THE COMPLEX LINEAR EQUATION SYSTEM AX=B              **
-!!$!     **  WHERE A IS A SQUARE MATRIX                                  **
-!!$!     **                                                              **
-!!$!     **  REMARK: WHILE DGES CAN ALSO HANDLE NON-SQUARE MATRICES      **
-!!$!     **     WE USE IT HERE FOR THIS PURPOSE ONLY.                    **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      INTEGER(4),INTENT(IN) :: M
-!!$      INTEGER(4),INTENT(IN) :: NEQ
-!!$      COMPLEX(8),INTENT(IN) :: A(N,M)
-!!$      COMPLEX(8),INTENT(OUT):: X(M,NEQ)
-!!$      COMPLEX(8),INTENT(IN) :: B(N,NEQ)
-!!$      COMPLEX(8)            :: AFACT(N,N)
-!!$      INTEGER(4)            :: IPVT(N)
-!!$      INTEGER(4)            :: INFO
-!!$      INTEGER(4)            :: I
-!!$      REAL(8)               :: DEV
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$!     ******************************************************************
-!!$      IF(N.NE.M) THEN  !MATRIX FACTORIZATION
-!!$        CALL ERROR$MSG('INCONSISTENT DIMENSIONS')
-!!$        CALL ERROR$STOP('LIB_ESSL_DGES')
-!!$      END IF
-!!$      AFACT=A
-!!$!     == GENERAL MATRIX FACTORIZATION =================================
-!!$      CALL ZGEF(AFACT,N,N,IPVT)
-!!$      X=B
-!!$      DO I=1,NEQ
-!!$        CALL ZGES(AFACT,N,N,IPVT,X(:,I),0)
-!!$      ENDDO
-!!$!     =================================================================
-!!$!     ==  TEST                                                       ==
-!!$!     =================================================================
-!!$      IF(TTEST) THEN
-!!$        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ',DEV
-!!$      END IF
-!!$      RETURN
-!!$      END SUBROUTINE LIB_ESSL_ZGES
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_ZGESVS(N,M,NEQ,A,X,B)
-!!$!     ******************************************************************
-!!$!     **  SOLVES THE LINEAR EQUATION SYSTEM AX=B                      **
-!!$!     **  WHERE A IS A(N,M)                                           **
-!!$!     **  IF A IS NOT SQUARE, THE EQUATION IS SOLVED IN A LEAST       **
-!!$!     **  SQUARE SENSE                                                **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      INTEGER(4),INTENT(IN) :: M
-!!$      INTEGER(4),INTENT(IN) :: NEQ
-!!$      COMPLEX(8),INTENT(IN) :: A(N,M)
-!!$      COMPLEX(8),INTENT(OUT):: X(M,NEQ)
-!!$      COMPLEX(8),INTENT(IN) :: B(N,NEQ)
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      COMPLEX(8)            :: APLUSA(M,M)
-!!$      COMPLEX(8)            :: APLUSB(M,NEQ)
-!!$      REAL(8)               :: AMAT(2*M,2*M)
-!!$      REAL(8)               :: BMAT(2*M,NEQ)
-!!$      REAL(8)               :: XMAT(2*M,NEQ)
-!!$      REAL(8)               :: DEV
-!!$      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-!!$!     ******************************************************************
-!!$      APLUSA(:,:)=MATMUL(TRANSPOSE(A),A)
-!!$      AMAT(1:M,1:M)=REAL(APLUSA)
-!!$      AMAT(1:M,M+1:2*M)=REAL(CI*APLUSA)
-!!$      AMAT(M+1:2*M,1:M)=REAL(-CI*APLUSA)
-!!$      AMAT(M+1:2*M,M+1:2*M)=REAL(APLUSA)
-!!$      APLUSB(:,:)=MATMUL(TRANSPOSE(A),B)
-!!$      BMAT(1:M,:)=REAL(APLUSB)
-!!$      BMAT(M+1:2*M,:)=REAL(-CI*APLUSB)
-!!$      CALL LIB_ESSL_DGESVS(2*N,2*M,NEQ,AMAT,XMAT,BMAT)
-!!$!     CALL LIB_LAPACK_DGESV(2*M,2*M,NEQ,AMAT,XMAT,BMAT)
-!!$      X=CMPLX(XMAT(1:M,:),XMAT(M+1:2*M,:),KIND=8)
-!!$!     =================================================================
-!!$!     ==  TEST                                                       ==
-!!$!     =================================================================
-!!$      IF(TTEST) THEN
-!!$        DEV=MAXVAL(ABS(MATMUL(AMAT,XMAT)-BMAT))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ----',DEV
-!!$        DEV=MAXVAL(ABS(MATMUL(APLUSA,X)-APLUSB))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE ---+',DEV
-!!$        DEV=MAXVAL(ABS(MATMUL(A,X)-B))
-!!$        WRITE(*,*)'MAX ERROR OF LIB$MATRIXSOLVE --++',DEV
-!!$      END IF
-!!$      RETURN
-!!$      END SUBROUTINE LIB_ESSL_ZGESVS
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DSPEV(N,H,E,U)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  DIAGONALIZES THE REAL, SQUARE MATRIX H AFTER SYMMETRIZATION **
-!!$!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                   **
-!!$!     **                                                              **
-!!$!     **         U(K,I)*H(K,L)*U(L,J)=DELTA(I,J)*E(I)                 **
-!!$!     **                                                              **
-!!$!     **  DEPENDENCIES:                                               **
-!!$!     **    ESSL DSPEV  MATRIX DIAGONALIZATION P727                   **
-!!$!     **                                                              **
-!!$!     **  REMARKS:                                                    **
-!!$!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!!$!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!!$!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!!$!     **                                                              **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      REAL(8)   ,INTENT(IN) :: H(N,N)
-!!$      REAL(8)   ,INTENT(OUT):: E(N)
-!!$      REAL(8)   ,INTENT(OUT):: U(N,N)
-!!$      REAL(8)               :: WORK1((N*(N+1))/2)
-!!$      REAL(8)               :: WORK2(2*N)
-!!$      INTEGER(4)            :: K,I,J
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      REAL(8)               :: DEV
-!!$      REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
-!!$!     ******************************************************************
-!!$!
-!!$!     ==================================================================
-!!$!     ====  STORE IN LOWER PACKED STORAGE MODE FOR DIAGONALIZATION    ==
-!!$!     ==================================================================
-!!$      K=0
-!!$      DO J=1,N
-!!$        DO I=J,N
-!!$          K=K+1
-!!$          WORK1(K)=0.5D0*(H(I,J)+H(J,I))
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==================================================================
-!!$!     == DIAGONALIZE                                                  ==
-!!$!     ==================================================================
-!!$      CALL DSPEV(1,WORK1,E,U,N,N,WORK2,2*N) !->ESSL
-!!$!
-!!$!     ==================================================================
-!!$!     == DIAGONALIZE                                                  ==
-!!$!     ==================================================================
-!!$!
-!!$!     ==================================================================
-!!$!     == TEST                                                         ==
-!!$!     ==================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(EMAT(N,N))
-!!$!       == TEST EIGENVALUE EQUATION ====================================
-!!$        EMAT(:,:)=0.D0
-!!$        DO I=1,N
-!!$          EMAT(I,I)=E(I)
-!!$        ENDDO
-!!$        DEV=MAXVAL(ABS(MATMUL(H,U)-MATMUL(U,EMAT)))
-!!$        IF(DEV.GT.1.D-7) THEN
-!!$          CALL ERROR$MSG('DIAGONALIZATION TEST FAILED')
-!!$          CALL ERROR$R8VAL('DEV',DEV)
-!!$          CALL ERROR$STOP('LIB_ESSL_DSPEV')
-!!$        END IF
-!!$!       == TEST ORTHONORMALITY OF EIGENVECTORS =========================
-!!$        EMAT=MATMUL(TRANSPOSE(U),U)
-!!$        DO I=1,N
-!!$          EMAT(I,I)=EMAT(I,I)-1.D0
-!!$        ENDDO
-!!$        DEV=MAXVAL(ABS(EMAT))
-!!$        IF(DEV.GT.1.D-7) THEN
-!!$          CALL ERROR$MSG('ORTHONORMALIZATION TEST FAILED')
-!!$          CALL ERROR$R8VAL('DEV',DEV)
-!!$          CALL ERROR$STOP('LIB_ESSL_DSPEV')
-!!$        END IF
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_ZHPEV(N,H,E,U)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  DIAGONALIZES THE HERMITEAN, SQUARE MATRIX H                 **
-!!$!     **  AND RETURNS EIGENVALUES, AND EIGENVECTORS                   **
-!!$!     **                                                              **
-!!$!     **      CONJG(U(K,I))*H(K,L)*U(L,J)=DELTA(I,J)*E(I)             **
-!!$!     **                                                              **
-!!$!     **  DEPENDENCIES:                                               **
-!!$!     **    ESSL: ZHPEV :  MATRIX DIAGONALIZATION  P727               **
-!!$!     **                                                              **
-!!$!     **  REMARKS:                                                    **
-!!$!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!!$!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!!$!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!!$!     **                                                              **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTERFACE
-!!$        SUBROUTINE EINFO(ICODE,INF1,INF2) !ESSL ERROR HANDLING ROUTINE
-!!$        INTEGER                       :: ICODE
-!!$        INTEGER ,INTENT(OUT),OPTIONAL :: INF1
-!!$        INTEGER ,INTENT(OUT),OPTIONAL :: INF2
-!!$        END SUBROUTINE EINFO
-!!$      END INTERFACE
-!!$      LOGICAL(4) ,PARAMETER :: TESSLERR=.FALSE.
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      COMPLEX(8),INTENT(IN) :: H(N,N)
-!!$      REAL(8)   ,INTENT(OUT):: E(N)
-!!$      COMPLEX(8),INTENT(OUT):: U(N,N)
-!!$      COMPLEX(8)            :: WORK1((N*(N+1))/2)
-!!$      REAL(8)               :: RWORK(4*N)
-!!$      INTEGER(4)            :: K,I,J
-!!$      CHARACTER(8)          :: SAV2101
-!!$      INTEGER(4)            :: I1,I2
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      COMPLEX(8)            :: CSVAR
-!!$      LOGICAL(4)            :: TCHK
-!!$      COMPLEX(8),ALLOCATABLE:: WORK3(:,:)
-!!$      INTEGER(4)            :: INFO
-!!$!CLEMENS
-!!$      INTEGER               :: INF1
-!!$      INTEGER               :: INF2
-!!$!     ******************************************************************
-!!$!
-!!$!     ==================================================================
-!!$!     ====  STORE IN LOWER PACKED STORAGE MODE FOR DIAGONALIZATION    ==
-!!$!     ==================================================================
-!!$      K=0
-!!$      DO J=1,N
-!!$        DO I=J,N
-!!$          K=K+1
-!!$          WORK1(K)=0.5D0*(H(I,J)+CONJG(H(J,I)))
-!!$        ENDDO
-!!$      ENDDO
-!!$!
-!!$!     ==================================================================
-!!$!     == DIAGONALIZE                                                  ==
-!!$!     ==================================================================
-!!$      IF(TESSLERR) THEN
-!!$        CALL EINFO(0,INF1,INF2)
-!!$        CALL ERRSAV(2101,SAV2101)
-!!$        CALL ERRSET(2101,255,0,0,0,2101)
-!!$      END IF
-!!$      CALL ZHPEV(1,WORK1,E,U,N,N,RWORK,4*N)  !ESSL
-!!$!
-!!$!     ==================================================================
-!!$!     ====  OPTIONAL TEST                                             ==
-!!$!     ==================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(WORK3(N,N)) 
-!!$        TCHK=.TRUE.
-!!$        DO I=1,N
-!!$          DO J=1,N
-!!$            CSVAR=(0.D0,0.D0)
-!!$            DO K=1,N
-!!$              CSVAR=CSVAR+U(I,K)*E(K)*CONJG(U(J,K))
-!!$            ENDDO
-!!$            IF(ABS(CSVAR-H(I,J)).GT.1.D-8) THEN
-!!$              WRITE(*,FMT='(2I5,5F10.5)')I,J,CSVAR,H(I,J),ABS(CSVAR-H(I,J))
-!!$              TCHK=.FALSE.
-!!$            END IF
-!!$          ENDDO
-!!$        ENDDO
-!!$        DEALLOCATE(WORK3)
-!!$        IF(.NOT.TCHK) THEN
-!!$          CALL ERROR$MSG('DIAGONALIZATION TEST FAILED')
-!!$          CALL ERROR$STOP('LIB_ESSL_ZHPEV')
-!!$        END IF
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DSYGV(N,H,S,E,U)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  GENERALIZED REAL SYMMETRIC EIGENSYSTEM,                     ** 
-!!$!     **        HU-SUE=0,                                             **
-!!$!     **  WHERE A IS REAL SYMMETRIC                                   **
-!!$!     **  AND B IS REAL SYMMETRIC POSITIVE DEFINITE                   **
-!!$!     **                                                              **
-!!$!     **  DEPENDENCIES:                                               **
-!!$!     **    ESSL: DSYGV                                               **
-!!$!     **                                                              **
-!!$!     **  REMARKS:                                                    **
-!!$!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!!$!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!!$!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!!$!     **                                                              **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      REAL(8)   ,INTENT(IN) :: H(N,N)
-!!$      REAL(8)   ,INTENT(IN) :: S(N,N)
-!!$      REAL(8)   ,INTENT(OUT):: E(N)
-!!$      REAL(8)   ,INTENT(OUT):: U(N,N)
-!!$      REAL(8)               :: H1(N,N)
-!!$      REAL(8)               :: S1(N,N)
-!!$      REAL(8)               :: AUX(2*N)
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      INTEGER(4)            :: I
-!!$      REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
-!!$      REAL(8)               :: DEV
-!!$!     ******************************************************************
-!!$!
-!!$!     ==================================================================
-!!$!     == DIAGONALIZE                                                  ==
-!!$!     ==================================================================
-!!$      H1=H
-!!$      S1=S
-!!$      CALL DSYGV(1,H1,N,S1,N,E,U,N,N,AUX,2*N)  !ESSL
-!!$!
-!!$!     ==================================================================
-!!$!     ====  OPTIONAL TEST                                             ==
-!!$!     ==================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(EMAT(N,N)) 
-!!$        EMAT(:,:)=0.D0
-!!$        DO I=1,N
-!!$          EMAT(I,I)=E(I)
-!!$        ENDDO
-!!$        DEV=MAXVAL(ABS(MATMUL(H,U)-MATMUL(S,MATMUL(U,EMAT))))
-!!$        IF(DEV.GT.1.D-8) THEN
-!!$          CALL ERROR$MSG('DIAGONALIZATION TEST FAILED')
-!!$          CALL ERROR$R8VAL('DEV',DEV)
-!!$          CALL ERROR$STOP('LIB_ESSL_DSYGV')
-!!$        END IF
-!!$        DEALLOCATE(EMAT)
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$!
-!!$!     ..................................................................
-!!$      SUBROUTINE LIB_ESSL_DGEGV(N,H,S,E,U)
-!!$!     ******************************************************************
-!!$!     **                                                              **
-!!$!     **  GENERALIZED REAL NON-SYMMETRIC EIGENSYSTEM,                 ** 
-!!$!     **        HU-SUE=0,                                             **
-!!$!     **  WHERE H AND S ARE REAL, GENERAL MATRICES                    **
-!!$!     **                                                              **
-!!$!     **  DEPENDENCIES:                                               **
-!!$!     **    ESSL: DGEGV                                               **
-!!$!     **                                                              **
-!!$!     **  REMARKS:                                                    **
-!!$!     **   1) THE EIGENVECTORS ARE REAL BECAUSE IN CASE THEY ARE      **
-!!$!     **      COMPLEX REAL AND IMAGINARY PART ARE DEGENERATE          **
-!!$!     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
-!!$!     **   2) NOTE THAT THE EIGENVECTORS ARE NOT ORTHONORMAL!!!!      **
-!!$!     **                                                              **
-!!$!     ******************************************************************
-!!$      IMPLICIT NONE
-!!$      INTEGER(4),INTENT(IN) :: N
-!!$      REAL(8)   ,INTENT(IN) :: H(N,N)
-!!$      REAL(8)   ,INTENT(IN) :: S(N,N)
-!!$      REAL(8)   ,INTENT(OUT):: E(N)
-!!$      REAL(8)   ,INTENT(OUT):: U(N,N)
-!!$      REAL(8)               :: H1(N,N)
-!!$      REAL(8)               :: S1(N,N)
-!!$      REAL(8)               :: ALPHA(N)
-!!$      REAL(8)               :: BETA(N)
-!!$      REAL(8)               :: AUX(3*N)
-!!$      LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
-!!$      INTEGER(4)            :: I
-!!$      REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
-!!$      REAL(8)               :: DEV
-!!$!     ******************************************************************
-!!$!
-!!$!     ==================================================================
-!!$!     == DIAGONALIZE                                                  ==
-!!$!     ==================================================================
-!!$      H1=H
-!!$      S1=S
-!!$      CALL DGEGV(1,H1,N,S,N,ALPHA,BETA,U,N,N,AUX,3*N)  !ESSL
-!!$      DO I=1,N
-!!$        IF(BETA(I).EQ.0.D0) THEN
-!!$          CALL ERROR$MSG('EIGENVALUE IS INFINITE')
-!!$          CALL ERROR$I4VAL('I',I)
-!!$          CALL ERROR$STOP('LIB_ESSL_DGEGV')
-!!$        END IF
-!!$      ENDDO
-!!$      E=ALPHA/BETA
-!!$!
-!!$!     ==================================================================
-!!$!     ====  OPTIONAL TEST                                             ==
-!!$!     ==================================================================
-!!$      IF(TTEST) THEN
-!!$        ALLOCATE(EMAT(N,N)) 
-!!$        EMAT(:,:)=0.D0
-!!$        DO I=1,N
-!!$          EMAT(I,I)=E(I)
-!!$        ENDDO
-!!$        DEV=MAXVAL(ABS(MATMUL(H,U)-MATMUL(S,MATMUL(U,EMAT))))
-!!$        IF(DEV.GT.1.D-8) THEN
-!!$          CALL ERROR$MSG('DIAGONALIZATION TEST FAILED')
-!!$          CALL ERROR$R8VAL('DEV',DEV)
-!!$          CALL ERROR$STOP('LIB_ESSL_DGEGV')
-!!$        END IF
-!!$        DEALLOCATE(EMAT)
-!!$      END IF
-!!$      RETURN
-!!$      END
-!!$#ELSE     
 !***********************************************************************
 !***********************************************************************
 !****                                                               ****
@@ -1658,7 +1034,7 @@
           CALL ERROR$STOP('LIB_LAPACK_DGETRI')
         ELSE
           CALL ERROR$MSG('U(I,I) IS EXACTLY ZERO')
-          CALL ERROR$MSG('MATRIX IS SINGULAR AND ITS INVERSE COULD NOT BE COMPUTED.')
+          CALL ERROR$MSG('MATRIX IS SINGULAR: ITS INVERSE COULDNOT BE COMPUTED')
           CALL ERROR$I4VAL('I',INFO)
           CALL ERROR$STOP('LIB_LAPACK_DGETRI')
         END IF
@@ -1682,7 +1058,7 @@
       COMPLEX(8),INTENT(OUT):: AINV(N,N)
       INTEGER(4)            :: NAUX
       COMPLEX(8)            :: AUX(100*N)
-      INTEGER(4)               :: IPIV(N)
+      INTEGER(4)            :: IPIV(N)
       INTEGER               :: INFO
 !     ******************************************************************
       IF(N.LE.0) RETURN
@@ -1709,7 +1085,7 @@
           CALL ERROR$STOP('LIB_LAPACK_DGETRI')
         ELSE
           CALL ERROR$MSG('U(I,I) IS EXACTLY ZERO')
-          CALL ERROR$MSG('MATRIX IS SINGULAR AND ITS INVERSE COULD NOT BE COMPUTED.')
+          CALL ERROR$MSG('MATRIX IS SINGULAR: ITS INVERSE COULDNOT BE COMPUTED')
           CALL ERROR$I4VAL('I',INFO)
           CALL ERROR$STOP('LIB_LAPACK_ZGETRI')
         END IF
@@ -1829,7 +1205,6 @@
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
-INTEGER(4) :: I,J
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('WORKS ONLY FOR SQUARE MATRICES')
@@ -2140,7 +1515,8 @@ INTEGER(4) :: I,J
       B1=0.D0
       B1(1:M1,:)=B(:,:)
       A1=A
-      CALL ZGELSD(M1,N1,NEQ,A1,M1,B1,LDB,S,RCOND,RANK,CWORK,LCWORK,RWORK,IWORK,INFO )
+      CALL ZGELSD(M1,N1,NEQ,A1,M1,B1,LDB,S,RCOND,RANK &
+     &           ,CWORK,LCWORK,RWORK,IWORK,INFO )
       X=B1(1:N1,:)
       DEALLOCATE(CWORK)
       DEALLOCATE(RWORK)
@@ -2192,7 +1568,6 @@ INTEGER(4) :: I,J
 !     **                                                              **
 !     ******************************************************************
       IMPLICIT NONE
-      LOGICAL(4) ,PARAMETER :: TESSLERR=.FALSE.
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
       REAL(8)   ,INTENT(OUT):: E(N)
@@ -2414,7 +1789,7 @@ INTEGER(4) :: I,J
             CALL ERROR$I4VAL('I',INFO)
             CALL ERROR$STOP(' LIB_LAPACK_DSYGV')
           ELSE
-            CALL ERROR$MSG('LEADING MINOR OF ORDER I OF B IS NOT POSITIVE DEFINITE')
+            CALL ERROR$MSG('LEADNG MINOR OF ORDER I OF B IS NOT POSTVE DEFNITE')
             CALL ERROR$MSG('THE FACTORIZATION OF B COULD NOT BE COMPLETED')
             CALL ERROR$MSG('NO EIGENVALUES OR EIGENVECTORS WERE COMPUTED')
             CALL ERROR$I4VAL('I',INFO-N)
@@ -2708,15 +2083,10 @@ INTEGER(4) :: I,J
       REAL(8)   ,INTENT(IN) :: A(N,M)
       REAL(8)   ,INTENT(IN) :: B(M,L)
       REAL(8)   ,INTENT(OUT):: C(N,L)
-      CHARACTER(8),PARAMETER:: LIB='ESSL'
       REAL(8)     ,PARAMETER:: ONE=1.D0
       REAL(8)     ,PARAMETER:: ZERO=0.D0
 !     ******************************************************************
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$      CALL DGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-!!$#ELSE
       CALL DGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-!!$#ENDIF
       RETURN
       END
 !
@@ -2737,14 +2107,8 @@ INTEGER(4) :: I,J
       COMPLEX(8)  ,PARAMETER:: ONE=(1.D0,0.D0)
       COMPLEX(8)  ,PARAMETER:: ZERO=(0.D0,0.D0)
 !     ******************************************************************
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$      CALL ZGEMUL(A,N,'N',B,M,'N',C,N,N,M,L)
-!!$!#ELIF DEFINED(CPPVAR_BLAS_ATLAS)
-!!$!      CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-!!$#ELSE
       C(:,:)=(0.D0,0.D0)
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
-!!$#ENDIF
       RETURN
       END
 !
@@ -2794,13 +2158,9 @@ INTEGER(4) :: I,J
       REAL(8)   ,INTENT(IN) :: PSI2(LEN2,N)
       REAL(8)   ,INTENT(OUT):: OPERATOR(LEN1,LEN2)
 !     ******************************************************************
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$      CALL DGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'T',OPERATOR,LEN1,LEN1,N,LEN2)
-!!$#ELSE 
 !     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
       CALL DGEMM('N','T',LEN1,LEN2,N,1.D0,PSI1,LEN1,PSI2,LEN2,0.D0 &
      &          ,OPERATOR,LEN1)
-!!$#ENDIF
       RETURN
       END
 !
@@ -2818,14 +2178,10 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(IN) :: PSI2(LEN2,N)
       COMPLEX(8),INTENT(OUT):: OPERATOR(LEN1,LEN2)
 !     ******************************************************************
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$      CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
-!!$#ELSE 
 !     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
       OPERATOR(:,:)=(0.D0,0.D0)
       CALL ZGEMM('N','C',LEN1,LEN2,N,(1.D0,0.D0) &
      &          ,PSI1(:,:),LEN1,PSI2(:,:),LEN2,(0.D0,0.D0),OPERATOR,LEN1)
-!!$#ENDIF
       RETURN
       END
 !
@@ -2859,12 +2215,9 @@ INTEGER(4) :: I,J
           ENDDO
         ENDDO
       ELSE
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$        CALL DGEMUL(PSI1,LEN,'T',PSI2,LEN,'N',OVERLAP,N1,N1,LEN,N2)
-!!$#ELSE 
-        CALL DGEMM('T','N',N1,N2,LEN,1.D0,PSI1(:,:),LEN,PSI2(:,:),LEN &
+!
+      CALL DGEMM('T','N',N1,N2,LEN,1.D0,PSI1(:,:),LEN,PSI2(:,:),LEN &
      &             ,0.D0,OVERLAP,N1)
-!!$#ENDIF
       END IF
       RETURN
       END
@@ -2900,12 +2253,9 @@ INTEGER(4) :: I,J
           ENDDO
         ENDDO
       ELSE
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$        CALL ZGEMUL(PSI1,LEN,'C',PSI2,LEN,'N',OVERLAP,N1,N1,LEN,N2)
-!!$#ELSE 
-        CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
+
+      CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
      &            ,(0.D0,0.D0),OVERLAP,N1)
-!!$#ENDIF
       END IF
       RETURN
       END
@@ -2941,15 +2291,7 @@ INTEGER(4) :: I,J
       REAL(8)   ,INTENT(IN)    :: FAC
       REAL(8)   ,INTENT(IN)    :: Y(N)
 !     ******************************************************************
-      IF(FAC.EQ.-1.D0) THEN
-!!$#IF DEFINED(CPPVAR_BLAS_ESSL)
-!!$        CALL DVES(N,X,1,Y,1,X,1)
-!!$#ELSE
-        CALL DAXPY(N,FAC,X,1,Y,1)
-!!$#ENDIF
-      ELSE
-        CALL DAXPY(N,FAC,X,1,Y,1)
-      END IF
+      CALL DAXPY(N,FAC,X,1,Y,1)
       RETURN
       END
 !
