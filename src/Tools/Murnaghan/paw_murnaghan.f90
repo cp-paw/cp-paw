@@ -207,12 +207,12 @@ print*,'v1 ',v(:np)
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
-       WRITE(9,FMT='(2F10.5)')VI/lunit**3,EFIT/eunit
-!      __ convert consistent with the input data________________________________
+       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
+!      __ CONVERT CONSISTENT WITH THE INPUT DATA________________________________
        EFIT=EFIT/EUNIT
        VI=VI/VBYL3/LUNIT**3
-       IF(TL)VI=VI**(1.d0/3.d0)
-!      __ write_________________________________________________________________
+       IF(TL)VI=VI**(1.D0/3.D0)
+!      __ WRITE_________________________________________________________________
        WRITE(8,FMT='(2F10.5)')VI,EFIT
      ENDDO
      STOP
