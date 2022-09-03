@@ -309,7 +309,7 @@
       USE LAPACKOPTIONS_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      CHARACTER(6),INTENT(IN):: VAL
+      CHARACTER(*),INTENT(IN):: VAL
 !     ******************************************************************
       IF(ID.EQ.'GENERALEIGENVALUEC8_MODE') THEN
         GENERALEIGENVALUEC8_MODE=VAL
