@@ -2040,13 +2040,9 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(OUT):: X(M,NEQ)
       COMPLEX(8),INTENT(IN) :: B(N,NEQ)
       COMPLEX(8)            :: A1(N,M)
-      COMPLEX(8)            :: B1(N,NEQ)
       INTEGER               :: INFO
-      REAL(8)               :: RCOND=-1.D0
       INTEGER               :: LDWORK
-      INTEGER               :: IRANK
       INTEGER               :: IPIVOT(N)
-      REAL(8)               :: SING(N)
       REAL(8)   ,ALLOCATABLE:: WORK(:)
       INTEGER               :: N1,M1,NEQ1
 !     ******************************************************************
@@ -2295,7 +2291,6 @@ INTEGER(4) :: I,J
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
       INTEGER(4)            :: LWORK
       INTEGER(4)            :: INFO
-      COMPLEX(8)            :: CH(N,N)
       EXTERNAL ZHEEV
 !     ******************************************************************
 !     ==================================================================
@@ -2770,9 +2765,7 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(IN)   :: A(N,M)
       COMPLEX(8),INTENT(IN)   :: B(M,L)
       COMPLEX(8),INTENT(INOUT):: C(N,L)
-      COMPLEX(8)              :: SUM
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
-      INTEGER(4)              :: I,J,K
 !     ******************************************************************
       IF(TID) THEN
         ALLOCATE(WORK(N,M))
@@ -2800,8 +2793,6 @@ INTEGER(4) :: I,J
       REAL(8)   ,INTENT(IN) :: PSI1(LEN1,N)
       REAL(8)   ,INTENT(IN) :: PSI2(LEN2,N)
       REAL(8)   ,INTENT(OUT):: OPERATOR(LEN1,LEN2)
-      INTEGER(4)            :: I,J,K
-      REAL(8)               :: SUM
 !     ******************************************************************
 !!$#IF DEFINED(CPPVAR_BLAS_ESSL)
 !!$      CALL DGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'T',OPERATOR,LEN1,LEN1,N,LEN2)
@@ -2826,8 +2817,6 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(IN) :: PSI1(LEN1,N)
       COMPLEX(8),INTENT(IN) :: PSI2(LEN2,N)
       COMPLEX(8),INTENT(OUT):: OPERATOR(LEN1,LEN2)
-      INTEGER(4)            :: I,J,K
-      COMPLEX(8)            :: SUM
 !     ******************************************************************
 !!$#IF DEFINED(CPPVAR_BLAS_ESSL)
 !!$      CALL ZGEMUL(PSI1,LEN1,'N',PSI2,LEN2,'C',OPERATOR,LEN1,LEN1,N,LEN2)
@@ -2855,8 +2844,7 @@ INTEGER(4) :: I,J
       REAL(8)   ,INTENT(IN) :: PSI1(LEN,N1)
       REAL(8)   ,INTENT(IN) :: PSI2(LEN,N2)
       REAL(8)   ,INTENT(OUT):: OVERLAP(N1,N2)
-      INTEGER(4)            :: I,J,K
-      REAL(8)               :: SUM
+      INTEGER(4)            :: I,J
 !     ******************************************************************
       IF(TID.AND.N1.NE.N2) THEN
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
@@ -2896,8 +2884,7 @@ INTEGER(4) :: I,J
       COMPLEX(8),INTENT(IN) :: PSI1(LEN,N1)
       COMPLEX(8),INTENT(IN) :: PSI2(LEN,N2)
       COMPLEX(8),INTENT(OUT):: OVERLAP(N1,N2)
-      INTEGER(4)            :: I,J,K
-      COMPLEX(8)            :: SUM
+      INTEGER(4)            :: I,J
 !     ******************************************************************
       IF(TID.AND.N1.NE.N2) THEN
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
@@ -4786,10 +4773,10 @@ END MODULE RANDOM_MODULE
 !     **           WHILE WE MOSTLY NEED HALF-INTEGER ORDER                    **
 !     **************************************************************************
       IMPLICIT NONE
-      REAL(8),INTENT(IN)           :: L   ! order 
-      REAL(8),INTENT(IN)           :: X   ! argument
-      REAL(8),INTENT(OUT)          :: Y   ! bessel functiohn of first kind
-      INTEGER(4)                   :: NZ  ! nz.neq.0 in output: underflow
+      REAL(8),INTENT(IN)           :: L   ! ORDER 
+      REAL(8),INTENT(IN)           :: X   ! ARGUMENT
+      REAL(8),INTENT(OUT)          :: Y   ! BESSEL FUNCTIOHN OF FIRST KIND
+      INTEGER(4)                   :: NZ  ! NZ.NEQ.0 IN OUTPUT: UNDERFLOW
 !     **************************************************************************
       CALL DBESJ(X,L,1,Y,NZ)
       IF(NZ.NE.0)THEN
