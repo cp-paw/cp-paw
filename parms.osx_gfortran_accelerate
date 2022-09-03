@@ -127,7 +127,7 @@ COMPILER_PARALLEL="${MPIDIR}/bin/mpifort "
 #
 FCFLAGS_NONE="-c "
 FCFLAGS_OPT="-c -O3  -funroll-loops -fomit-frame-pointer -march=native -fexternal-blas "
-FCFLAGS_PROF="-c -pg -O3 -funroll-loops  -msse2"
+FCFLAGS_PROF="-c -pg -O3 -funroll-loops"
 #
 # recommendation by http://fortranwiki.org/fortran/show/Debugging+tools
 # -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
