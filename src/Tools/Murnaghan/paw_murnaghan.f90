@@ -4,7 +4,7 @@
 !    ** FROM A MURNAGHAN FIT TO A SET OF (VOLUME,ENERGY) DATA RECEIVED FROM   **
 !    ** STANDARD INPUT                                                        **
 !    ***************************MATTHE UITTEVAAL AND PETER E. BLOECHL***********
-     use strings_module
+     USE STRINGS_MODULE
      IMPLICIT NONE
      INTEGER(4),PARAMETER :: NPX=100
      REAL(8)    :: V(NPX), E(NPX)     ! INPUT VOLUMES, ENERGIES
@@ -19,9 +19,9 @@
      REAL(8)    :: LUNIT              ! LENGTH UNIT IN ATOMIC UNITS
      REAL(8)    :: VBYL3              ! VOLUME IS VBYL3*L**3
      REAL(8)    :: SVAR               ! AUXILIARY VARIABLE
-     REAL(8)    :: Scale              ! scales the result
+     REAL(8)    :: SCALE              ! SCALES THE RESULT
      CHARACTER(64) :: ARG     
-     CHARACTER(250) :: string     
+     CHARACTER(250) :: STRING     
      LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
      REAL(8)   ,PARAMETER :: ANGSTROM=1.D0/0.52917721092D0
      REAL(8)   ,PARAMETER :: JOULE=1.D0/4.35974434D-18
@@ -116,7 +116,7 @@
          EXIT
        END IF
        READ(*,*,END=100,ERR=100)V(NP),E(NP)
-       IF(TL) V(np)=V(np)**3
+       IF(TL) V(NP)=V(NP)**3
      ENDDO
 100  CONTINUE
      NP=NP-1
@@ -124,7 +124,7 @@
        WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 ARE REQUIRED!"
        STOP
      END IF
-print*,'v1 ',v(:np)
+PRINT*,'V1 ',V(:NP)
 !
 !    ==========================================================================
 !    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
@@ -133,11 +133,11 @@ print*,'v1 ',v(:np)
      V(:)=V(:)*VBYL3*LUNIT**3
 !
 !    ==========================================================================
-!    == scale results
+!    == SCALE RESULTS
 !    ==========================================================================
-     e(:)=e(:)*scale
-     v(:)=v(:)*scale
-     vbyl3=vbyl3*scale
+     E(:)=E(:)*SCALE
+     V(:)=V(:)*SCALE
+     VBYL3=VBYL3*SCALE
 !
 !    ==========================================================================
 !    == REPORT INPUT DATA =====================================================
@@ -199,7 +199,7 @@ print*,'v1 ',v(:np)
 !    ===========================================================================
      STRING=-'INTERPOLATED EQUATION OF STATE IS WRITTEN TO FILE MURN.DAT'
      STRING='(80("="),T10,"'//TRIM(STRING)//'")'
-     WRITE(*,FMT=trim(string))
+     WRITE(*,FMT=TRIM(STRING))
 !     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
 !    &                         //-' TO FILE MURN.DAT")')
      OPEN(UNIT=8,FILE=-'MURN.DAT')
@@ -207,12 +207,12 @@ print*,'v1 ',v(:np)
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
-       WRITE(9,FMT='(2F10.5)')VI/lunit**3,EFIT/eunit
-!      __ convert consistent with the input data________________________________
+       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
+!      __ CONVERT CONSISTENT WITH THE INPUT DATA________________________________
        EFIT=EFIT/EUNIT
        VI=VI/VBYL3/LUNIT**3
-       IF(TL)VI=VI**(1.d0/3.d0)
-!      __ write_________________________________________________________________
+       IF(TL)VI=VI**(1.D0/3.D0)
+!      __ WRITE_________________________________________________________________
        WRITE(8,FMT='(2F10.5)')VI,EFIT
      ENDDO
      STOP

@@ -2086,7 +2086,7 @@
            R1(:)=R(:,IAT1)+RAD1*SCALEBALL*1.001D0*DR(:)
            R2(:)=R(:,IAT2)-RAD2*SCALEBALL*1.001D0*DR(:)
            ANGLE=-ACOS(DR(2))   ! ORIGINAL ORIENTATION (0,1,0)
-           IF(ANGLE.NE.0.D0) THEN
+           IF(ABS(DR(2))-1.D0.GT.1.D-8) THEN
              AXIS(1)=-DR(3)
              AXIS(2)=0.D0
              AXIS(3)=DR(1)
