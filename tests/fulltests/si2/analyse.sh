@@ -1,7 +1,8 @@
 #!/bin/bash
 echo "comparing total energy."
-#TOTAL_ENERGY_REF=-7.4079885 before commit 85f857388191c58f050acf5be749412fcfe54d12 (enforced that dtkin is symmetric) 
-TOTAL_ENERGY_REF=-7.40813991 #tested with ifort12.1/MKL10.3 and gfortran 4.6.3/OpenBLAS/FFTW3
+TOTAL_ENERGY_REF=-7.4076060
+# tested with gfortran 11.3.0, FFTW 3.3.10, Apple Accelerate Framework
+# commit d140b678a03822efe485a1e39e0af47370bbce53
 
 TOLERANCE=0.0001
 
