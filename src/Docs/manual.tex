@@ -904,7 +904,7 @@ unless specified otherwise}
 
 \mbax{\key{NWRITE}
 \vdescr{Every ``NWRITE'' time steps, the program writes detailed information 
-into the protocoll file and it updates the restart file. Note that writing 
+into the protocol file and it updates the restart file. Note that writing 
 the restart file is time consuming.}
 \vformat{integer}
 \vrules{optional}
@@ -1296,7 +1296,7 @@ to estimate the frequency from
 \mbax{\key{STRAIGHTEN} 
   \vdescr{Transform the wave functions onto energy eigenstates. The
     transform is performed during the first big writeup of the
-    protocoll file. A unitary transform among the wave function is
+    protocol file. A unitary transform among the wave function is
     performed. That is, the Hilbert space remains unchanged.  Note,
     that the occupations may be inconsistent with the new states. It
     may be advisable to simultaneously restart the occupations.
@@ -3199,7 +3199,7 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \bdescr{Defines the augmentation, (e.g. partial waves and projector functions).}
 
 \mbax{\key{ID} 
- \vdescr{Setup identifier. Will be reported in the protocoll file.}
+ \vdescr{Setup identifier. Will be reported in the protocol file.}
 \vformat{character}
 \vrules{optional}
 \vdefault{'NONAME'}}
@@ -4988,7 +4988,7 @@ and prepares some structure files in common formats for use with
 molecular or crystal viewers.  This tool uses the {\it
   rootname}.strc\_out file of the simulation code, and writes the file
 {\it rootname}.cssr, {\it rootname}.xyz and {\it rootname}.cml.  The
-protocoll file {\it rootname}.sprot contains, among others, bond
+protocol file {\it rootname}.sprot contains, among others, bond
 lengths and bond angles and a segment to be used in the input
 structure file.
 
@@ -5888,7 +5888,7 @@ $2\times d_x$~\AA (i.e. 10~\AA) are ignored.}
 %----------------------------------------------------------------------
 \brules{optional} 
 \bdescr{picks the unit cell and the atomic position for a given
-  snapshot in a trajectory. The data are written to the protocoll file
+  snapshot in a trajectory. The data are written to the protocol file
   in a pseudo format for the structure input file and as cssr file to
   the file specified.}
 
@@ -8843,7 +8843,7 @@ current directory and copies the files with the same name but
 %==========================================================================
 \subsection{Collect energies ``paw\_collect''}
 %==========================================================================
-paw\_collect collects the last total energies from all protocoll files
+paw\_collect collects the last total energies from all protocol files
 in the current directory.
 
 %==========================================================================
@@ -8857,7 +8857,7 @@ The calling sequence is
 \subsection{Collect energies ``paw\_get''}
 %==========================================================================
 paw\_get extracts the final result of various energies from the
-protocoll file.
+protocol file.
 
 %==========================================================================
 \subsubsection{Command}
@@ -9218,7 +9218,7 @@ after operation. Write permission is required.
 \section{Specifications of formatted and unformatted output data files}
 %==========================================================================
 %==========================================================================
-\subsection{Protocoll}
+\subsection{Protocol}
 %==========================================================================
 One-particle energies: The eigenvalues of the Hamiltonian in the basis
 of the wave function are printed, unless dynamical occupations are
