@@ -118,6 +118,16 @@
           CALL ERROR$STOP('MAIN')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,ID)
+        IF(ID.NE.'STRC'.AND.ID.NE.'WAVE' &
+     &                 .AND.ID.NE.'WAVEDX' &
+     &                 .AND.ID.NE.'CUBE' &
+     &                 .AND.ID.NE.'WRL' &
+     &                 .AND.ID.NE.'GNUCONTOUR' &
+     &                 .AND.ID.NE.'GNURUBBERSHEET') THEN
+         CALL ERROR$MSG('!WCNTL!FILE!FILES:ID NOT RECOGNIZED')
+         CALL ERROR$CHVAL('ID',ID)
+         CALL ERROR$STOP('MAIN')
+        END IF
 !
 !       == GET FILE NAME ================================================
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
