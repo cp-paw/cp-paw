@@ -118,6 +118,8 @@
           CALL ERROR$STOP('MAIN')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,ID)
+        ID=+ID ! REMOVE CASE SENSITIVITY OF ID FLAG
+        CALL LINKEDLIST$SET(LL_CNTL,'ID',1,ID)
 !
 !       == GET FILE NAME ================================================
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
