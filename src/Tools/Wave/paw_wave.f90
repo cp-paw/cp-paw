@@ -207,6 +207,7 @@
        REAL(8)                   :: XK(3)
        REAL(8)                   :: SVAR
        INTEGER(4)                :: I1,I2,I3
+       LOGICAL(4)                :: TBOX
 !      *************************************************************************
        CALL TRACE$PUSH('MWAVE')
        LL_CNTL=LL_CNTL_
@@ -291,12 +292,31 @@
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'WCNTL')
        CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
+       TBOX=.FALSE.
        BOXR0(:)=0.D0
        BOXVEC(:,:)=RBAS(:,:)
-       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
        CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
-       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+       IF(TCHK) THEN
+        TBOX=.TRUE.
+        CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+       END IF
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK)  ! CENTER OF THE BOX
+       IF(TCHK) THEN
+        TBOX=.TRUE.
+        CALL LINKEDLIST$GET(LL_CNTL,'C',1,BOXR0)
+        BOXR0(:)=BOXR0(:)-0.5D0*(BOXVEC(:,1)+BOXVEC(:,2)+BOXVEC(:,3))
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+        IF(TCHK) THEN
+          CALL ERROR$MSG('OPTIONS O= AND C= MUST NOT BE SELECTED SIMULANEOUSLY')
+          CALL ERROR$STOP('MWAVE')
+        END IF
+       END IF
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+       IF(TCHK) THEN
+        TBOX=.TRUE.
+        CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
+       END IF
+       
 !
 !      ==================================================================
 !      ==  GET PLANE FOR RUBBERSHEET                                   ==
