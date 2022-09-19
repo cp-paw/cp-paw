@@ -78,11 +78,11 @@ echo no more than $NJOBX jobs shall be run at a time
 NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
 echo $NJOBS jobs are currently running. date: $(date) 
 echo entering waiting loop .....
-sleep  2s  # allow jobs to start
+sleep  2  # sleep 2 seconds to allow jobs to start
 while [ $NJOBS -ge $(echo $NJOBX | bc) ] ; do
-  sleep  10s
+  sleep  10
   NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
-  echo No.Jobs=$NJOBS Date=`date` waiting....
+  echo No.Jobs=$NJOBS; time=$(date "+ %H:%M:%S") waiting....
 done
 echo $NJOBS jobs are currently running. date: `date` 
 echo .... waiting loop finished.  
