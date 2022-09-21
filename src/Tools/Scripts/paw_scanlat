@@ -329,7 +329,10 @@ fi
 #============================================================================
 #==  wait until all submitted jobs ($PIDS) are finished
 #============================================================================
-while [[ $(countjobs) -gt 0 ]] ; do sleep 2; done
+while [[ $(countjobs) -gt 0 ]] ; do 
+  sleep 10 
+  echo "time=$(date "+ %H:%M:%S"); waiting for $(countjobs) to finish...."
+done
 
 # export NACTIVE=1
 # while [ ${NACTIVE} -gt 0 ] ; do

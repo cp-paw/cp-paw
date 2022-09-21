@@ -121,7 +121,7 @@ LAPACKDIR=""
 FFTDIR="/opt/homebrew/lib/"
 FFT_HEADER="/opt/homebrew/Cellar/fftw/3.3.10_1/include/fftw3.f03"
 #
-MPIDIR="/opt/homebrew/Cellar/open-mpi/4.1.4_1/"
+MPIDIR="/opt/homebrew/Cellar/open-mpi/4.1.4_2/"
 COMPILER_SCALAR="gfortran "
 COMPILER_PARALLEL="${MPIDIR}/bin/mpifort "
 #

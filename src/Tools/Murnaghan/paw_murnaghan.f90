@@ -112,7 +112,7 @@
      DO 
        NP=NP+1
        IF (NP.EQ.101) THEN
-         WRITE(*,*)"TOO MUCH INPUT DATA, ONLY FIRST 100 USED"
+         WRITE(*,*)"TOO MANY INPUT DATA, ONLY FIRST 100 USED"
          EXIT
        END IF
        READ(*,*,END=100,ERR=100)V(NP),E(NP)
