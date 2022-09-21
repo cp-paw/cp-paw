@@ -9,8 +9,9 @@
 #
 #   DESCRIPTION: perform a sequence of paw calculations with different
 #                lattice constants or updates data files with its results.
-#                produces the file murn.dat, which specifies the total energy
-#                vs. LUNIT^3. 
+#                produces the file latscan.dat, which lists the resuling
+#                volumes, total energies and percent changes of the 
+#                lattice constant
 #
 #       OPTIONS:
 #          -h    print this help message
@@ -18,7 +19,7 @@
 #          -l    list of percent changes of the lattice constant
 #                 (enter in apostrophes such as "98 100 102")
 #                default: "96 97 98 99 100 101 102 103 104"
-#          -u    only update of data files. No paw simulations
+#          -u    toggle: if -u is present, only update of data files, but no paw simulations
 #                if -u is absent the calculations are performed, but not updated
 #          -e    paw_command (default paw_fast.x)
 #          -j    nr. of paw_jobs allowed to run simultaneously (default 8)
@@ -46,8 +47,8 @@
 #
 #  nio.strc must contain exactly one line containing "LUNIT=" 
 #  followed by the lattice constant in atomic units, or "LUNIT[AA]="
-#  followed by the lattice constant in angstrom, followed by "!END".
-#  this occurrence will be replaced by the modified values for the 
+#  followed by the lattice constant in angstrom.
+#  This value of LUNIT will be replaced by the modified values for the 
 #  individual runs.
 #
 #  specify k-points in the structure file with !STRUCTURE!KPOINTS:DIV=
@@ -62,7 +63,7 @@
 #  Example:
 #       paw_scanlat -p nio -j3 -l "96 98 100 102 104" ./si2
 #
-#   REQUIREMENTS: paw_waittillempty, paw_get, paw_fast.x
+#   REQUIREMENTS: paw_get, paw_fast.x
 #
 #         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
 #
@@ -348,9 +349,9 @@ done
 # update data files
 #==============================================================================
 if [[ $UPDATE = yes ]] ; then
-  if [[ -e etot.dat ]] ; then rm etot.dat; fi
-  if [[ -e gap.dat ]]  ; then rm gap.dat; fi
-  if [[ -e murn.in ]]  ; then rm murn.in; fi
+  if [[ "$DRYRUN" = "no" ]] ; then
+    echo "# VOLUME[cube-abohr] ETOT[H] ${X}[percent]" >${DIR}/latscan.dat
+  fi
   for X in $ALATLIST; do
     if [[ $VERBOSE = yes ]] ; then echo collecting $X ; fi 
     export DIROFX=${DIR}/${NAME}_$X
@@ -359,16 +360,13 @@ if [[ $UPDATE = yes ]] ; then
     if [[ $VERBOSE = yes ]] ; then echo DIROFX=${DIROFX} ; fi 
     if [[ $VERBOSE = yes ]] ; then echo ROOTOFX=${ROOTOFX} ; fi 
     if [[ $VERBOSE = yes ]] ; then echo ALATOFX=${ALATX} ; fi 
-
-    # paw_get -w gap does not work for metals.
-    # echo ${X} $(paw_get -w gap -u ev -n ${ROOTOFX}) >>${DIR}/gap.dat
-    echo ${X} $(paw_get -w etot -u H -n ${ROOTOFX})   >>${DIR}/etot.dat
-    Y=$(echo "$ALATX * $AA" | bc -l)
-    Y=$(echo "$Y * $Y * $Y " | bc -l) 
-    # write (LUNIT-in-abohr^3) (energy per unit cell in hartree)
-    echo ${Y} $(paw_get -w etot -u H -n ${ROOTOFX}) >>${DIR}/murn.in
-    if [[ $VERBOSE = yes ]] ; then 
-      echo Y=${Y} ETOT=$(paw_get -w etot -u H -n ${ROOTOFX}) 
+    # "paw_get -w volume" takes the last lattice vectors from the prot file
+    VOLUME=$(paw_get -n -w volume -u a0^3 ${ROOTOFX})
+    ETOT=$(paw_get -n -w etot -u H ${ROOTOFX})
+    if [[ $VERBOSE = yes ]] ; then echo VOLUME=${VOLUME} ; fi 
+    if [[ $VERBOSE = yes ]] ; then echo ETOT=${ETOT} ; fi 
+    if [[ "$DRYRUN" = "no" ]] ; then
+      echo ${VOLUME} ${ETOT} ${X} >>${DIR}/latscan.dat
     fi
     #
     #  clean up

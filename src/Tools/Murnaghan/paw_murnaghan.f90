@@ -22,6 +22,7 @@
      REAL(8)    :: SCALE              ! SCALES THE RESULT
      CHARACTER(64) :: ARG     
      CHARACTER(250) :: STRING     
+     CHARACTER(250) :: line
      LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
      REAL(8)   ,PARAMETER :: ANGSTROM=1.D0/0.52917721092D0
      REAL(8)   ,PARAMETER :: JOULE=1.D0/4.35974434D-18
@@ -115,6 +116,12 @@
          WRITE(*,*)"TOO MANY INPUT DATA, ONLY FIRST 100 USED"
          EXIT
        END IF
+       READ(*,*,END=100,ERR=100)LINE
+       LINE=ADJUSTL(LINE)
+       IF(LINE(1:1).EQ.'#') THEN ! SKIP COMMENT LINES
+         NP=NP-1
+         CYCLE
+       END IF
        READ(*,*,END=100,ERR=100)V(NP),E(NP)
        IF(TL) V(NP)=V(NP)**3
      ENDDO
@@ -124,7 +131,6 @@
        WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 ARE REQUIRED!"
        STOP
      END IF
-PRINT*,'V1 ',V(:NP)
 !
 !    ==========================================================================
 !    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
@@ -203,11 +209,11 @@ PRINT*,'V1 ',V(:NP)
 !     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
 !    &                         //-' TO FILE MURN.DAT")')
      OPEN(UNIT=8,FILE=-'MURN.DAT')
-     OPEN(UNIT=9,FILE=-'EOFV.DAT')
+!     OPEN(UNIT=9,FILE=-'EOFV.DAT')
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
-       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
+!       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
 !      __ CONVERT CONSISTENT WITH THE INPUT DATA________________________________
        EFIT=EFIT/EUNIT
        VI=VI/VBYL3/LUNIT**3
