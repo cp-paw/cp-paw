@@ -1967,7 +1967,13 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \mbax{\key{P}
 \vdescr{external pressure}
 \vformat{real}
-\vrules{optional}
+\vrules{optional, not compatible with \texttt{P[GPA]=}.}
+\vdefault{0.0}}
+%
+\mbax{\key{P[GPA]}
+\vdescr{external pressure in units of Giga Pascal}
+\vformat{real}
+\vrules{optional, not compatible with \texttt{P=}.}
 \vdefault{0.0}}
 %
 \mbax{\key{CONSTRAINTTYPE}
