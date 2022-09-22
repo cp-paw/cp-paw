@@ -2088,7 +2088,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_    ! CONTROL LINKED LIST
       TYPE(LL_TYPE)            :: LL_CNTL
-      LOGICAL(4)               :: TCHK
+      LOGICAL(4)               :: TCHK,TCHK1
       LOGICAL(4)               :: TMOVE       ! SWITCH TO DYNAMIC LATTICE
       REAL(8)                  :: P           ! EXTERNAL PRESSURE
       REAL(8)                  :: MASS        ! MASS FOR CELL DFYNAMICS
@@ -2097,6 +2097,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
       REAL(8)                  :: DT          ! TIME STEP
       REAL(8)                  :: CONSTR(3,3)
       INTEGER(4)               :: I,NCONSTR
+      REAL(8)                  :: GIGA,PASCAL
 !     ******************************************************************
       LL_CNTL=LL_CNTL_
 !
@@ -2180,11 +2181,25 @@ CALL LMTO$SETL4('ON',.FALSE.)
       CALL CELL$SETR8('MASS',MASS)
 !     
 !     == PRESSURE ======================================================
+      P=0.D0
       CALL LINKEDLIST$EXISTD(LL_CNTL,'P',1,TCHK)
-      P=0
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'P[GPA]',1,TCHK1)
       IF(TCHK) THEN
         CALL LINKEDLIST$GET(LL_CNTL,'P',1,P)
+        IF(TCHK1) THEN
+          CALL ERROR$MSG('OPTIONS P AND P[GPA] IN !CONTROL!CELL')
+          CALL ERROR$MSG('ARE MUTUALLY EXCLUSIVE')
+          CALL ERROR$STOP('READIN_CELL')
+        END IF
+      ELSE
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'P[GPA]',1,P)
+          CALL CONSTANTS$GET('GIGA',GIGA)
+          CALL CONSTANTS$GET('PASCAL',PASCAL)
+          P=P*GIGA*PASCAL       
+        END IF
       END IF
+
       CALL CELL$SETR8('P',P)
 !     
 !     == STRESS ========================================================
