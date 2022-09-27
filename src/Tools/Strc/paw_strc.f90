@@ -490,6 +490,12 @@
      &           +RBAS(:,3)*REAL(IT3-1)
              DO IAT=1,NAT
                EL=NAME(IAT)(1:2)
+               ! TRANSFORM ATOM NAME INTO UPPERCASE + LOWERCASE LETTER 
+               ! IF EXTENDED XYZ FORMAT
+               IF(TEXTXYZ) THEN
+                 EL=+EL
+                 EL(2:2)=-EL(2:2)
+               ENDIF
                IF(EL(2:2).EQ.'_')EL(2:2)=' '
                WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')EL, &
      &              (R(:,IAT)+T(:))/ANGSTROM

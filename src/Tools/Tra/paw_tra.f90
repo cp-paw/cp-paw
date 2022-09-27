@@ -2356,6 +2356,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
 !     ******************************************************************
 !     **                                                              **
 !     ******************************************************************
+      USE STRINGS_MODULE
       INTEGER(4)  ,INTENT(IN) :: NFIL
       INTEGER(4)  ,INTENT(IN) :: FRAME
       INTEGER(4)  ,INTENT(IN) :: NAT
@@ -2367,6 +2368,7 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       REAL(8)                 :: ANGSTROM, PICO, SECOND           
       CHARACTER(100)          :: STRING
       CHARACTER(200)          :: EXTXYZ
+      CHARACTER(2)            :: SPECIES
 !     ******************************************************************
       CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
       CALL CONSTANTS$GET('PICO', PICO)
@@ -2381,7 +2383,10 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       EXTXYZ=TRIM(EXTXYZ)//TRIM(ADJUSTL(STRING))
       WRITE(NFIL,*)EXTXYZ
       DO IAT=1,NAT
-        WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X))')ID(IAT),R(:,IAT)/ANGSTROM
+        ! TRANSFORM ELEMENT SYMBOL TO UPPERCASE+LOWERCASE
+        SPECIES=+ID(IAT)
+        SPECIES(2:2)=-SPECIES(2:2)
+        WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X))')SPECIES,R(:,IAT)/ANGSTROM
       ENDDO
       RETURN
       END
