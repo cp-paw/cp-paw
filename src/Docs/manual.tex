@@ -5705,23 +5705,23 @@ the paw\_tra tool. I recommend the extension
 %----------------------------------------------------------------------
 \brules{optional} 
 \bdescr{writes a input file for OPENDX\cite{opendx} to show the moving atoms as a
-	ball-stick model. Bonds are drawn for every pair of atoms that are
-	closer than 1.2 times the sum of the covalent radii.}
+  ball-stick model. Bonds are drawn for every pair of atoms that are
+  closer than 1.2 times the sum of the covalent radii.}
 
 \mbax{\key{FORMAT}
-	\vdescr{descriptor for the format of the movie file to be created. can
-		be 'DX' (OPENDX\cite{opendx}), 'XYZ' (xyz format), 'EXTXYZ' (extended xyz format, 
-		see \url{https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html\#extxyz})}
-	\vformat{character} 
-	\vrules{optional}
-	\vdefault{'DX'}}
+\vdescr{descriptor for the format of the movie file to be created. can
+  be 'DX' (OPENDX\cite{opendx}), 'XYZ' (xyz format), 'EXTXYZ' (extended xyz format, 
+  see \url{https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html\#extxyz})}
+\vformat{character} 
+\vrules{optional}
+\vdefault{'DX'}}
 
 \mbax{\key{SKIP}
-	\vdescr{number of frames on the input trajectory files that are
-		skipped between movie frames}
-	\vformat{integer} 
-	\vrules{optional}
-	\vdefault{0.}}
+\vdescr{number of frames on the input trajectory files that are
+  skipped between movie frames}
+\vformat{integer} 
+\vrules{optional}
+\vdefault{0.}}
 
 
 %----------------------------------------------------------------------
@@ -5729,48 +5729,48 @@ the paw\_tra tool. I recommend the extension
 %----------------------------------------------------------------------
 \brules{optional} 
 \bdescr{Sets the view box. Only the data within the
-	view box are shown. The view box is defined by an origin $o$ and three
-	vectors $t_1,t_2,t_3$. The eight corners of the view box are
-	$o,o+t_1,o+t_2,o+t_3,o+t_1+t_2,o+t_2+t_3,o+t_1+t_3,o+t_1+t_2+t_3$}
+  view box are shown. The view box is defined by an origin $o$ and three
+  vectors $t_1,t_2,t_3$. The eight corners of the view box are
+  $o,o+t_1,o+t_2,o+t_3,o+t_1+t_2,o+t_2+t_3,o+t_1+t_3,o+t_1+t_2+t_3$}
 
 \mbax{\key{O}
-	\vdescr{Origin (lower left, forward point of the view box) in a.u.}
-	\vformat{real} 
-	\vrules{optional; incompatible with ``!TCNTL!MOVIE!VIEWBOX:C''}
-	\vdefault{0. 0. 0.}}
+\vdescr{Origin (lower left, forward point of the view box) in a.u.}
+\vformat{real} 
+\vrules{optional; incompatible with ``!TCNTL!MOVIE!VIEWBOX:C''}
+\vdefault{0. 0. 0.}}
 
 \mbax{\key{C}
-	\vdescr{Center of viewbox}
-	\vformat{real} 
-	\vrules{optional; incompatible with ``!TCNTL!MOVIE!VIEWBOX:O''}
-	\vdefault{see ``!TCNTL!MOVIE!VIEWBOX:O''}}
+\vdescr{Center of viewbox}
+\vformat{real} 
+\vrules{optional; incompatible with ``!TCNTL!MOVIE!VIEWBOX:O''}
+\vdefault{see ``!TCNTL!MOVIE!VIEWBOX:O''}}
 
 \mbax{\key{T}
-	\vdescr{vectors defining the edges of the view box}
-	\vformat{real(3,3)} 
-	\vrules{optional}
-	\vdefault{lattice vectors of the calculation}}
+\vdescr{vectors defining the edges of the view box}
+\vformat{real(3,3)} 
+\vrules{optional}
+\vdefault{lattice vectors of the calculation}}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!MOVIE!FILE}
 %----------------------------------------------------------------------
 \brules{optional} 
 \bdescr{specify the file where the movie plot is written. The file
-	is then used with an appropriate visualizer.}
+  is then used with an appropriate visualizer.}
 \mbax{\key{EXT}
-	\vdescr{switch to the rootname appended by the extension provided,
-		versus using the filename (including its path).}
-	\vformat{logical} 
-	\vrules{optional}
-	\vdefault{.false.}}
+\vdescr{switch to the rootname appended by the extension provided,
+  versus using the filename (including its path).}
+\vformat{logical} 
+\vrules{optional}
+\vdefault{.false.}}
 
 \mbax{\key{NAME}
-	\vdescr{file name}
-	\vformat{character} 
-	\vrules{optional}
-	\vdefault{the rootname appended by ``.movie.dx'' for 
-		!TCNTL!MOVIE:FORMAT='DX' and by ``.movie.xyz'' for 
-		!TCNTL!MOVIE:FORMAT='XYZ'/'EXTXYZ'}}
+\vdescr{file name}
+\vformat{character} 
+\vrules{optional}
+\vdefault{the rootname appended by ``.movie.dx'' for 
+!TCNTL!MOVIE:FORMAT='DX' and by ``.movie.xyz'' for 
+!TCNTL!MOVIE:FORMAT='XYZ'/'EXTXYZ'}}
 
 %----------------------------------------------------------------------
 \block{!TCNTL!MOVIE!SELECT}
