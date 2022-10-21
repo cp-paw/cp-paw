@@ -9,7 +9,6 @@
       TYPE(LL_TYPE)               :: LL_STRC
       INTEGER(4)                  :: NFIL
       LOGICAL                     :: TCRYSTAL=.FALSE.
-      LOGICAL                     :: TEXTXYZ=.FALSE.
       REAL(8)                     :: ANGSTROM
       CHARACTER(256)              :: ROOTNAME  ! COMMON ROOT OF THE FILENAMES
       CHARACTER(256)              :: OBJECTNAME
@@ -62,8 +61,7 @@
           TCM=.TRUE.
         END IF
         TCHK=STRING(1:2).EQ.'?'.OR.STRING(1:2).EQ.'-H'.OR.STRING(1:2).EQ.'-I' &
-     &                         .OR.STRING(1:2).EQ.'-C'.OR.STRING(1:2).EQ.'-M' &
-     &                         .OR.STRING(1:2).EQ.'-E'
+     &                         .OR.STRING(1:2).EQ.'-C'.OR.STRING(1:2).EQ.'-M'
         IF(.NOT.TCHK.AND.I.LT.NARGS) THEN
           WRITE(*,'("ILLEGAL ARGUMENT ",A)')TRIM(STRING)
           WRITE(*,*)
@@ -89,7 +87,6 @@
         WRITE(*,'(T2,A,T10,A)')'-CIJK','CONSIDER AS CRYSTAL'
         WRITE(*,'(T10,A)')'AND MULTIPLY UNIT CELL BY FACTORS I,J,K ALONG THE THREE LATTICE VECTORS'
         WRITE(*,'(T10,A)')'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
-        WRITE(*,'(T2,A,T10,A)')'-E','WRITE EXTENDED XYZ FORMAT'
         WRITE(*,'("OUTPUT:")')
         WRITE(*,'(T4,"ROOTNAME",A,T20,"PROTOCOLL FILE ")')-'.SPROT'
         WRITE(*,'(T4,"ROOTNAME",A,T20,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT")')-'.CML'
@@ -141,8 +138,6 @@
           TINPUT=.TRUE.
         ELSE IF(STRING(1:1).EQ.'M') THEN
           TCRYSTAL=.FALSE.
-        ELSE IF(STRING(1:1).EQ.'E') THEN
-          TEXTXYZ=.TRUE.
         ELSE
           CALL ERROR$MSG('ARGUMENT NOT RECOGNIZED')
           CALL ERROR$MSG('OBTAIN ARGUMENT LIST USING -H ARGUMENT')
@@ -361,7 +356,7 @@
 !     ==========================================================================
 !     ==  WRITE XYZ FILE                                                      ==
 !     ==========================================================================
-      CALL WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,TEXTXYZ,NDUP,ROOTNAME)
+      CALL WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,NDUP,ROOTNAME)
 !
 !     ==========================================================================
 !     ==  WRITE STRUCTURE IN POSCAR FORMAT (OF THE VASP PACKAGE)              ==
@@ -439,7 +434,7 @@
       END      
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,TEXTXYZ,NDUP,TITLE)
+      SUBROUTINE WRITEXYZ(RBAS,NAT,NAME,R,TCRYSTAL,NDUP,TITLE)
 !     **************************************************************************
 !     **  WRITES AN XYZ FILE FOR THE STRUCTURE                                **
 !     **                                                                      **
@@ -454,7 +449,6 @@
       REAL(8)   ,INTENT(IN) :: R(3,NAT)
       INTEGER(4),INTENT(IN) :: NDUP(3)
       LOGICAL(4),INTENT(IN) :: TCRYSTAL
-      LOGICAL(4),INTENT(IN) :: TEXTXYZ
       INTEGER(4)            :: NFIL
       INTEGER(4)            :: IAT
       INTEGER(4)            :: IT1,IT2,IT3
@@ -466,20 +460,16 @@
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL FILEHANDLER$UNIT('XYZ',NFIL)
       REWIND(NFIL)
-      IF(TEXTXYZ) THEN
+      IF(TCRYSTAL) THEN
         WRITE(NFIL,FMT='(I10)')NAT*NDUP(1)*NDUP(2)*NDUP(3)
-        WRITE(STRING,FMT='(9F10.5)')RBAS*NDUP(1)*NDUP(2)*NDUP(3)/ANGSTROM
-        STRING='Lattice="'//TRIM(ADJUSTL(STRING))//'" Properties=species:S:1:pos:R:3'
+        WRITE(STRING,FMT='(9F10.5)')RBAS(:,1)*NDUP(1)/ANGSTROM, &
+     &        RBAS(:,2)*NDUP(2)/ANGSTROM,RBAS(:,3)*NDUP(3)/ANGSTROM
+        STRING=+'L'//-'ATTICE="'//TRIM(ADJUSTL(STRING))//'" '//+'P'// &
+     &         -'ROPERTIES=SPECIES:'//+'S'//-':1:POS:'//+'R'//':3'
         WRITE(NFIL,FMT='(A)')STRING
       ELSE
-        IF(TCRYSTAL) THEN
-          WRITE(NFIL,FMT='(I10)')NAT*NDUP(1)*NDUP(2)*NDUP(3)
-          WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
-          STRING=TRIM(STRING)//' AS CLUSTER'        
-        ELSE
-          WRITE(NFIL,FMT='(I10)')NAT
-          STRING=' '
-        END IF
+        WRITE(NFIL,FMT='(I10)')NAT
+        STRING=' '
         WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
       END IF
       DO IT1=1,NDUP(1)
@@ -490,9 +480,9 @@
      &           +RBAS(:,3)*REAL(IT3-1)
              DO IAT=1,NAT
                EL=NAME(IAT)(1:2)
-               ! TRANSFORM ATOM NAME INTO UPPERCASE + LOWERCASE LETTER 
-               ! IF EXTENDED XYZ FORMAT
-               IF(TEXTXYZ) THEN
+               ! TRANSFORM ATOM NAME INTO UPPERCASE + LOWERCASE LETTER
+               ! IF EXTENDED XYZ FORMAT IN CRYSTAL
+               IF(TCRYSTAL) THEN
                  EL=+EL
                  EL(2:2)=-EL(2:2)
                ENDIF
