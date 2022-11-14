@@ -1405,6 +1405,9 @@
 !       == EVALUATE DENSITIES AND GRADIENTS                           ==
 !       ================================================================
         RHOT=RHO(IR,1)
+!       __ SAFEGUARD AGAINST NEGATIVE DENSITIES DUE TO FOURIER TRANSFORM________
+        RHOT=MAX(RHOT,1.D-8)
+
         IF(TSPIN) THEN
           RHOS=RHO(IR,NSPIN)
         ELSE 
