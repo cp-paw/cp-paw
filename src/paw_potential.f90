@@ -221,7 +221,7 @@
       DO ISP=1,NSP
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('LMRX',LMRX(ISP)) !FORMERCALL SETUP$LMRX(ISP,LMRX(ISP))
-        CALL SETUP$unSELECT()
+        CALL SETUP$UNSELECT()
       ENDDO
       CALL POTENTIAL_UPDATE(RBAS)
                                 CALL TRACE$POP
@@ -1405,6 +1405,9 @@
 !       == EVALUATE DENSITIES AND GRADIENTS                           ==
 !       ================================================================
         RHOT=RHO(IR,1)
+!       __ SAFEGUARD AGAINST NEGATIVE DENSITIES DUE TO FOURIER TRANSFORM________
+        RHOT=MAX(RHOT,1.D-8)
+
         IF(TSPIN) THEN
           RHOS=RHO(IR,NSPIN)
         ELSE 
