@@ -1,7 +1,7 @@
 #!/bin/bash
 if [ "$#" -ne 2 ]; then
   echo "Illegal number of parameters"
-  echo "usage: paw_checkpoint.sh [create|recover] CHECKPOINTNAME"
+  echo "usage: paw_checkpoint [create|recover] CHECKPOINTNAME"
   echo "With the option \"create\" all files from the current directory are copied into a new directory called CHECKPOINTNANE."
   echo "With the option \"recover\" ALL files from the current directory are DELETED and the content of the directory called CHECKPOINTNANE is copied into the current directory instead."
 fi
