@@ -4895,7 +4895,7 @@ the paw\_grab tool. I recommend the extension ``.gcntl''.
 \mbax{\key{UNIT(E)}
 \vdescr{Identifier of the energy unit. Can be ``HARTREE'', ``KJ/MOL''
 ``KCAL/MOL'', ``RY'', ``EV'', ``JOULE''}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{``HARTREE''}}
 
@@ -5082,7 +5082,7 @@ largely independent of the system}
 \bdescr{defines filenames.}
 
 \mbax{\key{ID}
-\vdescr{Identifier of the file. Can be 
+\vdescr{Identifier of the file can be 
 \begin{itemize}
   \item 'STRC', 
   \item 'WAVE', 
@@ -5093,7 +5093,7 @@ largely independent of the system}
   \item 'GNURUBBERSHEET' (default extension '\_r.gnu')
 \end{itemize}
 }
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{mandatory}
 \vdefault{none}}
 
@@ -5648,8 +5648,8 @@ the paw\_tra tool. I recommend the extension
 }
 
 \mbax{\key{ID}
-\vdescr{Identifier of the file.}
-\vformat{character} 
+\vdescr{Identifier of the file (see above).}
+\vformat{character, case-insensitive} 
 \vrules{mandatory}
 \vdefault{none}}
 
@@ -5703,7 +5703,7 @@ the paw\_tra tool. I recommend the extension
 \mbax{\key{FORMAT}
 \vdescr{descriptor for the format of the movie file to be created. can
   be 'DX' (OPENDX\cite{opendx}), 'XYZ' (xyz format)}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{'DX'}}
 
@@ -6956,7 +6956,7 @@ largely independent of the system}
   lattice.  ``TETRA'' denotes the calculation using the tetrahedron
   method.\cite{jepsen71_ssc9_1763, lehmann72_pssb54_469,
     bloechl94_prb49_16223}. \textbf{MODE='SAMPLE' is currently disabled.}}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{'TETRA'}}
 
@@ -7056,7 +7056,7 @@ largely independent of the system}
    \hfill\break Standard extension:'.pdos'
  \end{description}
 }
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{mandatory}
 \vdefault{none}}
 
@@ -7146,7 +7146,7 @@ described further in section~\ref{sec:dostoolorbitalprimitives}.
   first orbital per angular momentum is used. This omission can be
   undesired, in particular, when core states are treated like valence
   states.}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional; incompatible with name; mandatory if atom is
   specified.}
 \vdefault{none}}
@@ -7221,7 +7221,7 @@ The selection type is not compatible with the other two possibilities.
 \item[``EMPTY''] weight of the wave function not considered in any projection
 \item[``TOTAL''] total density of states
 \end{description}}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional; if type is specified, no blocks !atom or !orbs must
 be present}
 \vdefault{none}}
@@ -7248,7 +7248,7 @@ be present}
 \item[string holding three real numbers] The three numbers are the
   three cartesian components of the spin axis $\vec{e}_S$
 \end{description}}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{'+Z'}}
 
@@ -7275,7 +7275,7 @@ be present}
 \end{description}
 or a combination of S,P,D,F, such as ``SD''.
 }
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{none}}
 
@@ -7336,7 +7336,7 @@ or a combination of S,P,D,F, such as ``SD''.
 \item[string holding three real numbers] The three numbers are the
   three cartesian components of the spin axis $\vec{e}_S$
 \end{description}}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{'+Z'}}
 
@@ -7917,7 +7917,7 @@ largely independent of the system}
 \vdescr{defines the mode of the calculation of the bandstructure. The two
   possible values are 'LINEARINTERPOLATION'' and 'DIAGONALISATION', which are
 described below.}
-\vformat{character} 
+\vformat{character, case-insensitive} 
 \vrules{optional}
 \vdefault{LINEARINTERPOLATION}}
 

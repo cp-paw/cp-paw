@@ -226,6 +226,8 @@ END MODULE TRAJECTORY_MODULE
           CALL ERROR$STOP('MAIN')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,ID)
+        ID=+ID ! REMOVE CASE-SENSITIVITY
+        CALL LINKEDLIST$SET(LL_CNTL,'ID',1,ID)
 !
 !       == GET FILE NAME =======================================================
         CALL LINKEDLIST$GET(LL_CNTL,'NAME',1,FILE)
@@ -1187,7 +1189,8 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$UNIT('SOFT',NFIL)
       REWIND(NFIL)
       S=0.D0
-      WRITE(NFIL,FMT='(E20.5,10F10.5)')TRA%T(1)/(PICO*SECOND),S/(ANGSTROM*SQRT(U))
+      WRITE(NFIL,FMT='(E20.5,10F10.5)')TRA%T(1)/(PICO*SECOND) &
+     &                                ,S/(ANGSTROM*SQRT(U))
       DO ISTEP=2,NSTEP
         DIS=0.D0
         DO IAT=1,NATOM
@@ -1424,7 +1427,7 @@ END MODULE TRAJECTORY_MODULE
 !       ==  SPECIFY FILE                                              ==
 !       ================================================================
 ! TODO: MANDATORY !FILE BUT NOT KEYS (NAME, EXT)
-!       DEFAULT LEADS TO HIDDEN FILE ".tra.temp"
+!       DEFAULT LEADS TO HIDDEN FILE ".TRA.TEMP"
         CALL LINKEDLIST$EXISTL(LL_CNTL,'FILE',1,TFILE)
         IF(.NOT.TFILE) THEN
           CALL ERROR$MSG('!TCNTL!TEMPERATURE!FILE NOT FOUND')
@@ -1598,17 +1601,17 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$UNIT('CELL',NFIL)
 !       OUTPUT EITHER SIMULATION TIME IN PS OR ITERATION STEPS
       IF(TCHK) THEN
-        WRITE(NFIL,FMT='(10A10)')'TIME[PS]','T1X','T1Y','T1Z' &
-     &                                     ,'T2X','T2Y','T2Z' &
-     &                                     ,'T3X','T3Y','T3Z'
+        WRITE(NFIL,FMT='("#",A9,9A10)')'TIME[PS]','T1X','T1Y','T1Z' &
+     &                                           ,'T2X','T2Y','T2Z' &
+     &                                           ,'T3X','T3Y','T3Z'
         DO I=1,NSTEP
           WRITE(NFIL,FMT='(F10.5,9F10.5)')TRA%T(I)/(PICO*SECOND) &
      &                                   ,TRA%CELL(:,I)/ANGSTROM
         ENDDO
       ELSE
-        WRITE(NFIL,FMT='(10A10)')'ITER','T1X','T1Y','T1Z' &
-     &                                 ,'T2X','T2Y','T2Z' &
-     &                                 ,'T3X','T3Y','T3Z'
+        WRITE(NFIL,FMT='("#",A9,9A10)')'ITER','T1X','T1Y','T1Z' &
+     &                                       ,'T2X','T2Y','T2Z' &
+     &                                       ,'T3X','T3Y','T3Z'
         DO I=1,NSTEP
           WRITE(NFIL,FMT='(I10,9F10.5)')TRA%ISTEP(I),TRA%CELL(:,I)/ANGSTROM
         ENDDO

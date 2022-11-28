@@ -119,15 +119,15 @@ SPECIAL="none"
 BLASDIR=""
 LAPACKDIR=""
 FFTDIR="/opt/homebrew/lib/"
-FFT_HEADER="/opt/homebrew/Cellar/fftw/3.3.10/include/fftw3.f03"
+FFT_HEADER="/opt/homebrew/Cellar/fftw/3.3.10_1/include/fftw3.f03"
 #
-MPIDIR="/opt/homebrew/Cellar/open-mpi/4.1.4/"
+MPIDIR="/opt/homebrew/Cellar/open-mpi/4.1.4_1/"
 COMPILER_SCALAR="gfortran "
 COMPILER_PARALLEL="${MPIDIR}/bin/mpifort "
 #
 FCFLAGS_NONE="-c "
 FCFLAGS_OPT="-c -O3  -funroll-loops -fomit-frame-pointer -march=native -fexternal-blas "
-FCFLAGS_PROF="-c -pg -O3 -funroll-loops  -msse2"
+FCFLAGS_PROF="-c -pg -O3 -funroll-loops"
 #
 # recommendation by http://fortranwiki.org/fortran/show/Debugging+tools
 # -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
