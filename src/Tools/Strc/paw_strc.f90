@@ -455,20 +455,23 @@
       REAL(8)               :: T(3)
       REAL(8)               :: ANGSTROM
       CHARACTER(2)          :: EL
-      CHARACTER(80)         :: STRING
+      CHARACTER(160)         :: STRING
 !     **************************************************************************
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL FILEHANDLER$UNIT('XYZ',NFIL)
       REWIND(NFIL)
       IF(TCRYSTAL) THEN
         WRITE(NFIL,FMT='(I10)')NAT*NDUP(1)*NDUP(2)*NDUP(3)
-        WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
-        STRING=TRIM(STRING)//' AS CLUSTER'        
+        WRITE(STRING,FMT='(9F10.5)')RBAS(:,1)*NDUP(1)/ANGSTROM, &
+     &        RBAS(:,2)*NDUP(2)/ANGSTROM,RBAS(:,3)*NDUP(3)/ANGSTROM
+        STRING=+'L'//-'ATTICE="'//TRIM(ADJUSTL(STRING))//'" '//+'P'// &
+     &         -'ROPERTIES=SPECIES:'//+'S'//-':1:POS:'//+'R'//':3'
+        WRITE(NFIL,FMT='(A)')STRING
       ELSE
         WRITE(NFIL,FMT='(I10)')NAT
         STRING=' '
+        WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
       END IF
-      WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
       DO IT1=1,NDUP(1)
         DO IT2=1,NDUP(2)
            DO IT3=1,NDUP(3)
@@ -477,6 +480,12 @@
      &           +RBAS(:,3)*REAL(IT3-1)
              DO IAT=1,NAT
                EL=NAME(IAT)(1:2)
+               ! TRANSFORM ATOM NAME INTO UPPERCASE + LOWERCASE LETTER
+               ! IF EXTENDED XYZ FORMAT IN CRYSTAL
+               IF(TCRYSTAL) THEN
+                 EL=+EL
+                 EL(2:2)=-EL(2:2)
+               ENDIF
                IF(EL(2:2).EQ.'_')EL(2:2)=' '
                WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X),2X,A)')EL, &
      &              (R(:,IAT)+T(:))/ANGSTROM
