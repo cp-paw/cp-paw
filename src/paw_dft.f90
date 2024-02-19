@@ -1555,9 +1555,9 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
       END IF
 !
 !     ==================================================================
@@ -1633,12 +1633,12 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
-        EX_RR(I)=1.5D0*XALPHA*EX_RR(I)
-        EX_RG(I)=1.5D0*XALPHA*EX_RG(I)
-        EX_GG(I)=1.5D0*XALPHA*EX_GG(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
+        EX_RR(:)=1.5D0*XALPHA*EX_RR(:)
+        EX_RG(:)=1.5D0*XALPHA*EX_RG(:)
+        EX_GG(:)=1.5D0*XALPHA*EX_GG(:)
       END IF
 !
 !     ==================================================================
@@ -1745,16 +1745,16 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
-        EX_RR(I)=1.5D0*XALPHA*EX_RR(I)
-        EX_RG(I)=1.5D0*XALPHA*EX_RG(I)
-        EX_GG(I)=1.5D0*XALPHA*EX_GG(I)
-        EX_RRR(I)=1.5D0*XALPHA*EX_RRR(I)
-        EX_RRG(I)=1.5D0*XALPHA*EX_RRG(I)
-        EX_RGG(I)=1.5D0*XALPHA*EX_RGG(I)
-        EX_GGG(I)=1.5D0*XALPHA*EX_GGG(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
+        EX_RR(:)=1.5D0*XALPHA*EX_RR(:)
+        EX_RG(:)=1.5D0*XALPHA*EX_RG(:)
+        EX_GG(:)=1.5D0*XALPHA*EX_GG(:)
+        EX_RRR(:)=1.5D0*XALPHA*EX_RRR(:)
+        EX_RRG(:)=1.5D0*XALPHA*EX_RRG(:)
+        EX_RGG(:)=1.5D0*XALPHA*EX_RGG(:)
+        EX_GGG(:)=1.5D0*XALPHA*EX_GGG(:)
       END IF
 !
 !     ==================================================================
