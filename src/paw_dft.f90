@@ -5593,9 +5593,15 @@ END MODULE PBE_MODULE
        IMPLICIT NONE 
        PI=4.D0*ATAN(1.D0)
        RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0) ! RS=RSFAC*RHOT**(-1/3)
-       KFFAC=(3.D0*PI**2)**(1.D0/3.D0)      ! KF=KFFAC/RS
-       KSFAC=SQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/SQRT(RS)
-       TFAC=0.25D0*RSFAC/KSFAC**2          ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
+       KFFAC=(3.D0*PI**2)**(1.D0/3.D0)     ! KF=KFFAC/RS
+       KSFAC=SQRT(4.D0*KFFAC/PI)           ! KS=KSFAC/SQRT(RS)
+       TFAC=PI/(16.D0*(3.D0*PI**2)**(1.D0/3.D0))
+!      == BUG FIX ON DEC.10.2023 THE NEW VERSION IS ABOVE ======================
+!      == TFAC IS USED FOR THE DIMENSION-LESS GRADIENT AS DEFINED BELOW EQ.3  ==
+!      == IN THE PBE PAPER PERDEW96_PRL77_3865                                ==
+!      == THE OLD VERSION IS BELOW:                                           ==
+!      == TFAC=0.25D0*RSFAC/KSFAC**2        ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3) ==
+!      =========================================================================
        GAMMA=(1.D0-LOG(2.D0))/PI**2
        NU=16.D0/PI*(3*PI**2)**(1.D0/3.D0)
        BETA=NU*CC0
