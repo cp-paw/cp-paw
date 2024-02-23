@@ -1596,7 +1596,8 @@
         GLENG=SQRT(GVEC(1,IG)**2+GVEC(2,IG)**2+GVEC(3,IG)**2)
         IF(GLENG.LT.1.D-7) THEN
           YLMOFG(:,IG)=0.D0
-          YLMOFG(1,IG)=Y0
+!         == WITH NSP=0, YLMOFG(1,NG) DOES NOT EXIST ===========================
+          IF(SIZE(YLMOFG).NE.0)YLMOFG(1,IG)=Y0
           CYCLE
         END IF
         CALL GETYLM(LMX,GVEC(1,IG),YLM)

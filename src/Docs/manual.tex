@@ -1967,7 +1967,13 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \mbax{\key{P}
 \vdescr{external pressure}
 \vformat{real}
-\vrules{optional}
+\vrules{optional, not compatible with \texttt{P[GPA]=}.}
+\vdefault{0.0}}
+%
+\mbax{\key{P[GPA]}
+\vdescr{external pressure in units of Giga Pascal}
+\vformat{real}
+\vrules{optional, not compatible with \texttt{P=}.}
 \vdefault{0.0}}
 %
 \mbax{\key{CONSTRAINTTYPE}
@@ -3113,7 +3119,8 @@ shifting the grid.}
 %----------------------------------------------------------------------
 {\block{!STRUCTURE!SPECIES}
 %----------------------------------------------------------------------
-\brules{Mandatory, multiple}
+\brules{Mandatory, multiple. (Even if no atoms are present, 
+   at least one atom type (species) must be specified)}
 \bdescr{Specifies an atom type (Element).}
 
 \mbax{\key{NAME}

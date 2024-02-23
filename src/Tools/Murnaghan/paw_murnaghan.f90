@@ -4,7 +4,7 @@
 !    ** FROM A MURNAGHAN FIT TO A SET OF (VOLUME,ENERGY) DATA RECEIVED FROM   **
 !    ** STANDARD INPUT                                                        **
 !    ***************************MATTHE UITTEVAAL AND PETER E. BLOECHL***********
-     use strings_module
+     USE STRINGS_MODULE
      IMPLICIT NONE
      INTEGER(4),PARAMETER :: NPX=100
      REAL(8)    :: V(NPX), E(NPX)     ! INPUT VOLUMES, ENERGIES
@@ -19,18 +19,19 @@
      REAL(8)    :: LUNIT              ! LENGTH UNIT IN ATOMIC UNITS
      REAL(8)    :: VBYL3              ! VOLUME IS VBYL3*L**3
      REAL(8)    :: SVAR               ! AUXILIARY VARIABLE
-     REAL(8)    :: Scale              ! scales the result
+     REAL(8)    :: SCALE              ! SCALES THE RESULT
      CHARACTER(64) :: ARG     
-     CHARACTER(250) :: string     
+     CHARACTER(250) :: STRING     
+     CHARACTER(250) :: LINE
      LOGICAL(4) :: TL                 ! INPUT IS LENGTH INSTEAD OF VOLUME
      REAL(8)   ,PARAMETER :: ANGSTROM=1.D0/0.52917721092D0
      REAL(8)   ,PARAMETER :: JOULE=1.D0/4.35974434D-18
      REAL(8)   ,PARAMETER :: METER=ANGSTROM*1.D+10
      REAL(8)   ,PARAMETER :: GPASCAL=1.D+9*JOULE/METER**3
 !    ***************************************************************************
-!    ==========================================================================
-!    == START WITH PRINTING HEADER                                           ==
-!    ==========================================================================
+!    ===========================================================================
+!    == START WITH PRINTING HEADER                                            ==
+!    ===========================================================================
      WRITE(*,FMT='(80("="))')
      WRITE(*,FMT='(80("="),T15," FIT MURNAGHAN EQUATION OF STATE ")')
      WRITE(*,FMT='(80("="))')
@@ -106,17 +107,23 @@
      WRITE(*,FMT='(50("."),T1,"CELL-VOLUME / LENGTH**3",T50,F10.5)')VBYL3
 !
 !    ==========================================================================
-!    == READ DATA UNTIL ERROR THEN RESET NP                                  ==
+!    == READ DATA UNTIL ERROR, THEN RESET NP                                 ==
 !    ==========================================================================
      NP=0
      DO 
        NP=NP+1
        IF (NP.EQ.101) THEN
-         WRITE(*,*)"TOO MUCH INPUT DATA, ONLY FIRST 100 USED"
+         WRITE(*,*)"TOO MANY INPUT DATA, ONLY FIRST 100 USED"
          EXIT
        END IF
-       READ(*,*,END=100,ERR=100)V(NP),E(NP)
-       IF(TL) V(np)=V(np)**3
+       READ(*,FMT='(A)',END=100,ERR=100)LINE
+       LINE=ADJUSTL(LINE)
+       IF(LINE(1:1).EQ.'#') THEN ! SKIP COMMENT LINES
+         NP=NP-1
+         CYCLE
+       END IF
+       READ(LINE,*,END=100,ERR=100)V(NP),E(NP)
+       IF(TL) V(NP)=VBYL3*V(NP)**3   ! FIRST, V=ALAT, THEN V=VOLUME OPER CELL
      ENDDO
 100  CONTINUE
      NP=NP-1
@@ -124,27 +131,27 @@
        WRITE(*,*)"TOO FEW INPUT DATA, AT LEAST 4 ARE REQUIRED!"
        STOP
      END IF
-print*,'v1 ',v(:np)
 !
 !    ==========================================================================
 !    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
 !    ==========================================================================
      E(:)=E(:)*EUNIT
-     V(:)=V(:)*VBYL3*LUNIT**3
+     V(:)=V(:)*LUNIT**3
 !
 !    ==========================================================================
-!    == scale results
+!    == SCALE RESULTS
 !    ==========================================================================
-     e(:)=e(:)*scale
-     v(:)=v(:)*scale
-     vbyl3=vbyl3*scale
+     E(:)=E(:)*SCALE
+     V(:)=V(:)*SCALE
+     VBYL3=VBYL3*SCALE
 !
 !    ==========================================================================
 !    == REPORT INPUT DATA =====================================================
 !    ==========================================================================
      DO I=1,NP
        SVAR=(V(I)/VBYL3)**(1.D0/3.D0)
-       WRITE(*,FMT='(I5," L=",F15.5," V=",F15.5," E=",F10.5)')I,SVAR,V(I),E(I)
+       WRITE(*,FMT='(I5," L=",F15.5," A0 V=",F15.5," A0^3 E=",F10.5," H")') &
+    &          I,SVAR,V(I),E(I)
      ENDDO
 !
 !    ==========================================================================
@@ -199,21 +206,28 @@ print*,'v1 ',v(:np)
 !    ===========================================================================
      STRING=-'INTERPOLATED EQUATION OF STATE IS WRITTEN TO FILE MURN.DAT'
      STRING='(80("="),T10,"'//TRIM(STRING)//'")'
-     WRITE(*,FMT=trim(string))
+     WRITE(*,FMT=TRIM(STRING))
 !     WRITE(*,FMT=-'(80("="),T10,"INTERPOLATED EQUATION OF STATE IS WRITTEN' &
 !    &                         //-' TO FILE MURN.DAT")')
      OPEN(UNIT=8,FILE=-'MURN.DAT')
-     OPEN(UNIT=9,FILE=-'EOFV.DAT')
+!     OPEN(UNIT=9,FILE=-'EOFV.DAT')
      DO I=-10,110
        VI=V(LOW)+(V(HIGH)-V(LOW))/REAL(100)*REAL(I-1)
        CALL MURNAGHAN(PARMS,VI,EFIT,GRAD)
-       WRITE(9,FMT='(2F10.5)')VI/lunit**3,EFIT/eunit
-!      __ convert consistent with the input data________________________________
+!       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
+!      __ CONVERT CONSISTENT WITH THE INPUT DATA________________________________
        EFIT=EFIT/EUNIT
-       VI=VI/VBYL3/LUNIT**3
-       IF(TL)VI=VI**(1.d0/3.d0)
-!      __ write_________________________________________________________________
-       WRITE(8,FMT='(2F10.5)')VI,EFIT
+       VI=VI/LUNIT**3
+!      __ WRITE_________________________________________________________________
+       IF(TL) THEN
+!        __FIRST COLUMN IS THE LATTICE CONSTANT_________________________________
+         WRITE(8,FMT='(3F15.10)')(VI/VBYL3)**(1.D0/3.D0),EFIT
+       ELSE
+!        __FIRST COLUMN IS THE VOLUME PER UNIT CELL_____________________________
+!        __SECOND COLUMN IS THE ENERGY PER UNIT CELL____________________________
+!        __THIRD COLUMN IS THE LATTICE CONSTANT_________________________________
+         WRITE(8,FMT='(3F15.10)')VI,EFIT,(VI/VBYL3)**(1.D0/3.D0)
+       END IF
      ENDDO
      STOP
      END
@@ -314,7 +328,7 @@ print*,'v1 ',v(:np)
 !    ***************************************************************************
 !    **   MURNAGHAN EQUATION OF STATE:  MURNAGHAN44_PNAS30_244                **
 !    **                                                                       **
-!    **   MURNAGHAN'S EQUATION OF STATE IS BASED ON THE ASSUMPTION            **
+!    **   MURNAGHAN EQUATION OF STATE IS BASED ON THE ASSUMPTION              **
 !    **   THAT THE BULK MODULUS DEPENDS LINEARLY ON PRESSURE                  **
 !    **   $P=-\FRAC{\PARTIAL E}{\PARTIAL V}$                                  **
 !    **   $B=\FRAC{1}{\KAPPA_T}=-V\FRAC{\PARTIAL P}{\PARTIAL V}$              **
@@ -324,7 +338,7 @@ print*,'v1 ',v(:np)
 !    **   SEE BLOECHL LECTURE NOTES FOR THE PAW HANDS-ON FOR DERIVATION       **
 !    *************************PETER BLOECHL, GOSLAR 2010************************
      IMPLICIT NONE
-     REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0, V0, B0, B'
+     REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0,V0,B0,BPRIME
      REAL(8),INTENT(IN) :: V        ! INPUT VOLUME
      REAL(8),INTENT(OUT):: E        ! OUTPUT ENERGY
      REAL(8),INTENT(OUT):: GRAD(4)  ! GRADIENT OF MURN CURVE AT INPUT VOLUME
