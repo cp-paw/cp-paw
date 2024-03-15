@@ -45,9 +45,9 @@ OPTSTRING=":hv0x:o:"
 OPTIND=0
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
-    x) PAWX=$(which $OPTARG) #set executable default paw_fast.tgz
+    x) PAWX=$OPTARG #set executable. Default ist $(which paw_fast.x)
       ;;
-    o) SRCBLOB="$OPTARG" #set name of the source blob. default pawsrc.tgz
+    o) SRCBLOB="$OPTARG" #set name of the source blob. (default is pawsrc.tgz)
       ;;
     0)   #nothing:
       set -n
@@ -75,6 +75,11 @@ while getopts "${OPTSTRING}" OPT  ; do
 done
 #
 # avoid overwriting an existing file
+if [[ ! -f $PAWX ]] ; then 
+  echo "error: executable $PAWX does not exist"
+  echo "error in $0"
+  exit 1
+fi
 if [[ -e $SRCBLOB ]] ; then 
   echo "error: target file $SRCBLOB for the source blob already exists"
   echo "error in $0"
