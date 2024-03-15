@@ -53,8 +53,8 @@ MODULE DFT_MODULE
 !*******************************************************************************
 !     ==  SWITCHES =============================================================
       INTEGER(4)           :: IT=0   ! FUNCTIONAL SELECTOR SEE DFT$REPORT
-      LOGICAL(4),PARAMETER :: TSAFE  =.TRUE.  ! DENSITY GRID INTERPOLATION SUPPRESSED
-      LOGICAL(4)           :: TSPIN  =.TRUE.  ! CAN BE SET WITHOUT NEW INITIALIZATION
+      LOGICAL(4),PARAMETER :: TSAFE  =.TRUE.  ! NO DENSITY-GRID INTERPOLATION
+      LOGICAL(4)           :: TSPIN  =.TRUE.  ! CAN BE SET W.O. INITIALIZATION
       LOGICAL(4)           :: TGRA   =.FALSE. ! GRADIENTS ARE USED (OUTPUT)
       LOGICAL(4)           :: TSIC   =.FALSE. ! NOT USED
       LOGICAL(4)           :: TPLUSU =.FALSE. ! NOT USED
@@ -62,7 +62,7 @@ MODULE DFT_MODULE
       REAL(8)   ,PARAMETER :: RHOTMIN=1.D-6   ! MINIMUM DENSITY
       LOGICAL(4)           :: TINI   =.FALSE. ! INITIALIZATION DONE
       LOGICAL(4)           :: TX     =.FALSE. ! USE EXCHANGE
-      LOGICAL(4)           :: TCORRELATION =.TRUE. ! GLOBAL SWITCH FOR CORRELATION
+      LOGICAL(4)           :: TCORRELATION =.TRUE. ! SWITCH FOR CORRELATION
       LOGICAL(4)           :: TPZ    =.FALSE. ! USE PERDEW ZUNGER
       LOGICAL(4)           :: TBH    =.FALSE. ! USE BARTH HEDIN
       LOGICAL(4)           :: TPERDEW=.FALSE. ! USE PERDEW GC
@@ -203,7 +203,7 @@ MODULE DFT_MODULE
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
 !     ==========================================================================
-!     == TYPE 81:  LSD + BECKE GC + PERDEW86                                   ==
+!     == TYPE 81:  LSD + BECKE GC + PERDEW86                                  ==
 !     ==========================================================================
       ELSE IF (IT.EQ.81) THEN
         TX=.TRUE.
@@ -262,10 +262,10 @@ MODULE DFT_MODULE
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='PERDEW-WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
-        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.LETT.77, 3865 (1992))'
-        DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.B 59, 7413 (1999))'
+        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND' &
+     &                //' CORRELATION (PHYS.REV.LETT.77, 3865 (1992))'
+        DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND' &
+     &                //' CORRELATION (PHYS.REV.B 59, 7413 (1999))'
 !
 !     ==========================================================================
 !     == TYPE 12:  LSD + PW91-GC                                              ==
@@ -280,9 +280,9 @@ MODULE DFT_MODULE
         DESCRIPTION(2)='PERDEW-WANG 91 GGA FOR EXCHANGE AND CORRELATION ' &
      &                          //'(PHYS.REV.B 46, 6671 (1992))'
 !
-!     ==================================================================
-!     == TYPE 13:  LSD + REVPBE-GC                                     ==
-!     ==================================================================
+!     ==========================================================================
+!     == TYPE 13:  LSD + REVPBE-GC                                            ==
+!     ==========================================================================
       ELSE IF (IT.EQ.13) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',5)
@@ -290,12 +290,12 @@ MODULE DFT_MODULE
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
-        DESCRIPTION(2)='REVPBE OF Y. ZHANG AND W. YANG GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.LETT 80, 890 (1998))'
+        DESCRIPTION(2)='REVPBE OF Y. ZHANG AND W. YANG GGA FOR EXCHANGE AND' &
+     &                //' CORRELATION (PHYS.REV.LETT 80, 890 (1998))'
 !
-!     ==================================================================
-!     == TYPE 5001:  LOCAL HF+ BECKE XC-GC+ LYP88 CORRELATION          ==
-!     ==================================================================
+!     ==========================================================================
+!     == TYPE 5001:  LOCAL HF+ BECKE XC-GC+ LYP88 CORRELATION                 ==
+!     ==========================================================================
       ELSE IF (IT.EQ.5001) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',2)
@@ -351,17 +351,17 @@ MODULE DFT_MODULE
         DESCRIPTION(2)='PERDEW GRADIENT CORRECTION FOR CORRELATION ' &
      &                          //'(PHYS.REV.B33,P8822(1986))'
 !
-!     ============================================================================
-!     == TYPE 10004:  CORRELATION (RPBE-TYPE11 OR PBE-TYPE10 OR REVPBE-TYPE-13) ==
-!     ============================================================================
+!     ==========================================================================
+!     == TYPE 10004:CORRELATION (RPBE-TYPE11 OR PBE-TYPE10 OR REVPBE-TYPE-13) ==
+!     ==========================================================================
       ELSE IF (IT.EQ.10004) THEN
         TPBE96=.TRUE.
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='NO EXCHANGE !  (TEST OPTION) ' 
-        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.B 46, 6671 (1992-I))'
-        DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.B 59, 7413 (1999))'
+        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND' &
+     &               //' CORRELATION (PHYS.REV.B 46, 6671 (1992-I))'
+        DESCRIPTION(3)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND' &
+     &               //' CORRELATION (PHYS.REV.B 59, 7413 (1999))'
 !
 !     ==========================================================================
 !     == TYPE 10005:  PBE EXCHANGE ONLY                                       ==
@@ -384,21 +384,20 @@ MODULE DFT_MODULE
         DESCRIPTION(2)='PERDEW-WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
 !   
-!
 !     ==========================================================================
-!     == TYPE 10007:  RPBE EXCHANGE ONLY                                       ==
+!     == TYPE 10007:  RPBE EXCHANGE ONLY                                      ==
 !     ==========================================================================
       ELSE IF (IT.EQ.10007) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',4)
         TPBE96=.FALSE.
         TGRATARGET=.TRUE.
-        DESCRIPTION(1)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.B 59, 7413 (1999))'
-!     
+        DESCRIPTION(1)='HAMMER-HANSEN-NORSKOV RPBE-GGA FOR EXCHANGE AND ' &
+     &                          //'CORRELATION (PHYS.REV.B 59, 7413 (1999))'
 !
 !     ==========================================================================
-!     == ILLEGAL SELECTION                                            ==
+!     == ILLEGAL SELECTION                                                    ==
+!     ==========================================================================
       ELSE
         CALL ERROR$MSG('CHOICE OF FUNCTIONAL NOT DEFINED')
         CALL ERROR$I4VAL('IT',IT)
@@ -460,6 +459,7 @@ MODULE DFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$SETI4(ID,VALUE)
 !     **************************************************************************
+!     ** PASS INTEGER VALUE TO DFT OBJECT                                     **
 !     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
@@ -467,6 +467,10 @@ MODULE DFT_MODULE
       INTEGER(4)  ,INTENT(IN) :: VALUE
       LOGICAL(4)              :: TCHK
 !     **************************************************************************
+!
+!     ==========================================================================
+!     == SELECT DENSITY FUNCTIONAL TYPE PER INTEGER ID                        ==
+!     ==========================================================================
       IF(ID.EQ.'TYPE') THEN
         IT=VALUE
         TGRA=.FALSE.
@@ -500,7 +504,7 @@ MODULE DFT_MODULE
         IF(IT.EQ.10007) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
         IF(.NOT.TCHK) THEN
           CALL ERROR$MSG('DFT FUNCTIONAL SELECTION INVALID')
-          CALL ERROR$I4VAL('ID',VALUE)
+          CALL ERROR$I4VAL('TYPE',VALUE)
           CALL ERROR$STOP('DFT$SETI4')
         END IF
         TINI=.FALSE.
@@ -534,6 +538,9 @@ MODULE DFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$SETCH(ID,VAL)
 !     **************************************************************************
+!     ** PASS STRING VALUE TO OBJECT                                          **
+!     **                                                                      **
+!     ** E.G. SELECT DENSITY FUNCTIONAL BY NAME                               **
 !     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
@@ -542,7 +549,9 @@ MODULE DFT_MODULE
       LOGICAL(4)              :: TCHK
 !     **************************************************************************
 !
-!     == SET FUNCTIONAL TYPE ===================================================
+!     ==========================================================================
+!     == SET FUNCTIONAL TYPE (INTERFACE FOR SETI4)                            ==
+!     ==========================================================================
       IF(ID.EQ.'TYPE') THEN   
         TCHK=.TRUE.
         IF(VAL.EQ.'PZ') THEN
@@ -563,11 +572,14 @@ MODULE DFT_MODULE
           TCHK=.FALSE.
         END IF
         IF(.NOT.TCHK) THEN
-          CALL ERROR$MSG('DFT FUNCTIONAL SELECTION INVALID')
-          CALL ERROR$CHVAL('ID',VAL)
+          CALL ERROR$MSG('INVALID DENSITY FUNCTIONAL TYPE SELECTION')
+          CALL ERROR$CHVAL('DENSITY FUNCTIONAL TYPE',VAL)
           CALL ERROR$STOP('DFT$SETCH')
         END IF
         TINI=.FALSE.
+!
+!     ==========================================================================
+!     == UNRECOGNIZED ID                                                      ==
 !     ==========================================================================
       ELSE
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
@@ -580,6 +592,7 @@ MODULE DFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$SETL4(ID,VAL)
 !     **************************************************************************
+!     ** SET LOGICAL SCALAR VARIABLE INSIDE THIS OBJECT                       **
 !     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
@@ -601,6 +614,7 @@ MODULE DFT_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$GETL4(ID,VAL)
 !     **************************************************************************
+!     ** REQUEST LOGICAL SCALAR VARIABLE FROM THIS OBJECT                     **
 !     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
@@ -610,7 +624,7 @@ MODULE DFT_MODULE
       IF(ID.EQ.'GC') THEN
         VAL=TGRA
       ELSE IF(ID.EQ.'SPIN') THEN
-        VAL=TSPIN
+        VAL=TSPIN    ! SPIN-POLARIZATION CONSIDERED
       ELSE
         CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
         CALL ERROR$CHVAL('ID',ID)
@@ -621,12 +635,17 @@ MODULE DFT_MODULE
 !    
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT$GRADIENTSWITCH(TGRA_)
-!     ==========================================================================
+!     **************************************************************************
 !     == SET GRADIENT CORRECTION SWITCH                                       ==
-!     ==========================================================================
+!     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
       LOGICAL(4),INTENT(OUT) :: TGRA_
+!     **************************************************************************
+      CALL ERROR$MSG('THIS SUBROUTINE IS MARKED FOR DELETION')
+      CALL ERROR$MSG('AND MUST NOT BE USED.')
+      CALL ERROR$MSG('PLEASE INFORM DEVELOPERS!')
+      CALL ERROR$STOP('DFT$GRADIENTSWITCH')
       TGRA_=TGRA
       RETURN          
       END
@@ -675,7 +694,7 @@ MODULE DFT_MODULE
       REAL(8)               :: DEXC(5)
       REAL(8)               :: EXC1
       REAL(8)               :: DEXC1(5)
-!     ***************************************************************************
+!     **************************************************************************
       IF(.NOT.TINI) CALL DFT_INITIALIZE
       EXC=0.D0
       VXCT=0.D0
@@ -796,6 +815,9 @@ MODULE DFT_MODULE
       GVXCS2=DEXC(4)
       GVXCST=DEXC(5)
 !
+!     ==========================================================================
+!     == CATCH NAN-S (NAN=NOT-A-NUMBER)                                       ==
+!     ==========================================================================
       IF(EXC.NE.EXC.OR.VXCT.NE.VXCT.OR.VXCS.NE.VXCS &
      &             .OR.GVXCT2.NE.GVXCT2.OR.GVXCS2.NE.GVXCS2 &
                    .OR.GVXCST.NE.GVXCST) THEN
@@ -982,12 +1004,12 @@ MODULE DFT_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE DFT3(VAL_,EXC,DEXC,D2EXC,D3EXC)
-!     ******************************************************************
-!     **                                                              **
-!     **  EVALUATE EXCHANGE AND CORRELATION ENERGY                    **
-!     **  AND ITS FIRST, SECOND AND THIRD DERIVATIVES                 **
-!     **                                                              **
-!     ******************************************************************
+!     **************************************************************************
+!     **                                                                      **
+!     **  EVALUATE EXCHANGE AND CORRELATION ENERGY                            **
+!     **  AND ITS FIRST, SECOND AND THIRD DERIVATIVES                         **
+!     **                                                                      **
+!     **************************************************************************
       USE DFT_MODULE
       IMPLICIT NONE
       REAL(8)   ,INTENT(IN) :: VAL_(5)  !(RHOT,RHOS,GRHOT2,GRHOS2,GRHOST)
@@ -997,12 +1019,12 @@ MODULE DFT_MODULE
       REAL(8)   ,INTENT(OUT):: D3EXC(5,5,5)! D3EXC/(DVAL(I)DVAL(J),DVAL(K))
       REAL(8)               :: VAL(5)
       REAL(8)               :: EXC1,DEXC1(5),D2EXC1(5,5),D3EXC1(5,5,5)
-!     ******************************************************************
+!     **************************************************************************
       IF(.NOT.TINI) CALL DFT_INITIALIZE
 !
-!     ==================================================================
-!     == INITIALIZE VALUES                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == INITIALIZE VALUES                                                    ==
+!     ==========================================================================
       VAL(:)=VAL_(:)
       IF(.NOT.TSPIN) THEN
        VAL(2)=0.D0
@@ -1014,14 +1036,14 @@ MODULE DFT_MODULE
       D2EXC(:,:)=0.D0
       D3EXC(:,:,:)=0.D0
 !
-!     ==================================================================
-!     == RETURN IF TOTAL DENSITY BELOW ZERO                           ==
-!     ==================================================================
+!     ==========================================================================
+!     == RETURN IF TOTAL DENSITY BELOW ZERO                                   ==
+!     ==========================================================================
       IF(VAL(1).LE.0.D0) RETURN
 !
-!     ==================================================================
-!     == AVOID VERY SMALL DENSITIES                                   ==
-!     ==================================================================
+!     ==========================================================================
+!     == AVOID VERY SMALL DENSITIES                                           ==
+!     ==========================================================================
       IF(VAL(1).LT.RHOTMIN) THEN
         VAL(1)=RHOTMIN
       END IF
@@ -1031,9 +1053,9 @@ MODULE DFT_MODULE
         VAL(2)=MIN(VAL(2),VAL(1)-RHOTMIN)
       END IF
 !
-!     ==================================================================
-!     ==  EXCHANGE ENERGY                                             ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  EXCHANGE ENERGY                                                     ==
+!     ==========================================================================
       IF(TX) THEN
         CALL EXCHANGE$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1*SCALEX
@@ -1042,9 +1064,9 @@ MODULE DFT_MODULE
         D3EXC(:,:,:)=D3EXC(:,:,:)+D3EXC1(:,:,:)*SCALEX
       END IF
 !
-!     ==================================================================
-!     ==  PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION                   ==
+!     ==========================================================================
       IF(TPW91L.AND.TCORRELATION) THEN
         CALL PERDEWWANG91L$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
@@ -1053,9 +1075,9 @@ MODULE DFT_MODULE
         D3EXC=D3EXC+D3EXC1
       END IF
 !
-!     ==================================================================
-!     ==  PERDEW ZUNGER PARAMETERIZATION OF LOCAL CORRELATION         ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PERDEW ZUNGER PARAMETERIZATION OF LOCAL CORRELATION                 ==
+!     ==========================================================================
       IF(TPZ.AND.TCORRELATION) THEN
         CALL PERDEWZUNGER$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
@@ -1064,9 +1086,9 @@ MODULE DFT_MODULE
         D3EXC=D3EXC+D3EXC1
       END IF
 !
-!     ==================================================================
-!     ==  PERDEW GRADIENT CORRECTION TO CORRELATION                   ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PERDEW GRADIENT CORRECTION TO CORRELATION                           ==
+!     ==========================================================================
       IF(TPERDEW.AND.TCORRELATION) THEN
         CALL PERDEW$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
@@ -1092,9 +1114,9 @@ MODULE DFT_MODULE
         D2EXC(1:3,1:3)=D2EXC(1:3,1:3)+D2EXC(1:3,1:3)
       END IF
 !
-!     ==================================================================
-!     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  PBE96 EXCHANGE CORRELATION FUNCTIONAL                               ==
+!     ==========================================================================
       IF(TPBE96.AND.TCORRELATION) THEN
         CALL PBE$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
@@ -1103,9 +1125,9 @@ MODULE DFT_MODULE
         D3EXC=D3EXC+D3EXC1
       END IF
 !
-!     ==================================================================
-!     ==  LEE YANG-PARR 88 CORRELATION FUNCTIONAL                     ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  LEE YANG-PARR 88 CORRELATION FUNCTIONAL                             ==
+!     ==========================================================================
       IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
@@ -1114,9 +1136,9 @@ MODULE DFT_MODULE
         D3EXC=D3EXC+D3EXC1
       END IF
 !
-!     ==================================================================
-!     ==  WRAPUP AND CHECKS                                           ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRAPUP AND CHECKS                                                   ==
+!     ==========================================================================
       IF(VAL_(1).LT.RHOTMIN) THEN
         D3EXC(1,1,1)=0.D0
         D3EXC(1,1,2:5)=0.D0
@@ -1160,25 +1182,25 @@ MODULE DFT_MODULE
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE TABLE1D_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  NAME: TABLE1D                                                    **
-!**                                                                   **
-!**  PURPOSE: INTERPOLATES ON A EQUISPACED GRID                       **
-!**                                                                   **
-!**  FUNCTIONS:                                                       **
-!**    TABLE1D$MAKE(XTABLE,XMIN,XMAX,NX                               **
-!**    TABLE1D$XOFI(XTABLE,I,X)                                       **
-!**    TABLE1D$SETX(XTABLE,X,TCHK)                                    **
-!**    TABLE1D$GETF(XTABLE,F,FOFX)                                    **
-!**                                                                   **
-!**  REMARKS:                                                         **
-!**    ALL ROUTINES ARE INTERNAL TO THE MODULE, ALWAYS USE THE MODULE **
-!**                                                                   **
-!**  DEPENDENCIES:                                                    **
-!**    ERROR_MODULE                                                   **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: TABLE1D                                                            **
+!**                                                                           **
+!**  PURPOSE: INTERPOLATES ON A EQUISPACED GRID                               **
+!**                                                                           **
+!**  FUNCTIONS:                                                               **
+!**    TABLE1D$MAKE(XTABLE,XMIN,XMAX,NX                                       **
+!**    TABLE1D$XOFI(XTABLE,I,X)                                               **
+!**    TABLE1D$SETX(XTABLE,X,TCHK)                                            **
+!**    TABLE1D$GETF(XTABLE,F,FOFX)                                            **
+!**                                                                           **
+!**  REMARKS:                                                                 **
+!**    ALL ROUTINES ARE INTERNAL TO THE MODULE, ALWAYS USE THE MODULE         **
+!**                                                                           **
+!**  DEPENDENCIES:                                                            **
+!**    ERROR_MODULE                                                           **
+!**                                                                           **
+!*******************************************************************************
 TYPE XTABLE_TYPE
   INTEGER(4) :: IX
   REAL(8)    :: W(4)
@@ -1225,7 +1247,7 @@ CONTAINS
       INTEGER(4)        ,INTENT(IN)  :: I
       REAL(8)           ,INTENT(OUT) :: X
 !     ******************************************************************
-      X=XTABLE%XMIN+XTABLE%DX*DBLE(I-1)
+      X=XTABLE%XMIN+XTABLE%DX*REAL(I-1,KIND=8)
       RETURN
       END SUBROUTINE TABLE1D$XOFI
 !     ..................................................................
@@ -1242,9 +1264,9 @@ CONTAINS
       INTEGER(4)                       :: IREL
 !     ******************************************************************
 !
-!     ==================================================================
+!     ==========================================================================
 !     ==  RETURN WITH I1=0 IF X OUTSIDE OF GRID                       ==
-!     ==================================================================
+!     ==========================================================================
       TCHK=(X.GE.XTABLE%XMIN.AND.X.LE.XTABLE%XMAX) 
       IF(.NOT.TCHK) THEN
         XTABLE%IX=0
@@ -1254,18 +1276,18 @@ CONTAINS
         XTABLE%NHITS=XTABLE%NHITS+1
       END IF
 !
-!     ==================================================================
+!     ==========================================================================
 !     ==  OBTAINE POSITION ON THE GRID                                ==
-!     ==================================================================
+!     ==========================================================================
       XREL=(X-XTABLE%XMIN)/XTABLE%DX+1.D0
       IREL=INT(XREL)
       IREL=MIN(XTABLE%NX-2,IREL)
       IREL=MAX(2,IREL)
       XTABLE%IX=IREL-1
 !
-!     ==================================================================
+!     ==========================================================================
 !     ==  OBTAIN INTERPOLATION WEIGHTS                                ==
-!     ==================================================================
+!     ==========================================================================
       XREL=XREL-DBLE(IREL)
       XREL2=XREL*XREL
       XREL3=XREL2*XREL
@@ -1342,9 +1364,9 @@ REAL(8)            :: KAPPA
 REAL(8)            :: MUBYKAPPA
 REAL(8)            :: ALPHAB2  ! USED TO OBTAIN E_X=RHO/2R SCALING
 REAL(8)            :: XALPHA=2.D0/3.D0
-!=======================================================================
+!===============================================================================
 !== ARRAYS FOR TABLE LOOKUP OF THE GRADIENT ENHANCEMENT FACTOR        ==
-!=======================================================================
+!===============================================================================
 INTEGER(4),PARAMETER   :: NS2=10000
 REAL(8)   ,ALLOCATABLE :: FXARRAY(:)   !(NS2)
 REAL(8)   ,ALLOCATABLE :: DFXARRAY(:)  !(NS2)
@@ -1365,6 +1387,7 @@ CONTAINS
       REAL(8)           :: S2
       INTEGER(4)        :: I
 !     *****************************************************************
+!
 !     ==========================================================================
 !     ==  ALLOCATE ARRAYS FOR EXCHANGE                                        ==
 !     ==  ALLOCATED HERE RATHER THAN IN THE MODULE TO NOT OVERLOAD THE STACK  ==
@@ -1373,17 +1396,17 @@ CONTAINS
       ALLOCATE(DFXARRAY(NS2))
       ALLOCATE(D2FXARRAY(NS2))
       ALLOCATE(D3FXARRAY(NS2))
-
-!     =================================================================
+!
+!     =========================================================================
 !     ==  INITIALIZE PARAMETERS TO LOCAL EXCHANGE ETC.               ==
-!     =================================================================
+!     =========================================================================
       IPAR=2
       TXALPHA=.FALSE.
       TGRA=.FALSE.
 !
-!     =================================================================
+!     =========================================================================
 !     ==  RESOLVE SELECTION FOR EXCHANGE FUNCTIONAL                  ==
-!     =================================================================
+!     =========================================================================
       IF(ITYPE.EQ.1) THEN
 !       == LOCAL EXCHANGE =============================================        
       ELSE IF(ITYPE.EQ.12) THEN
@@ -1429,7 +1452,7 @@ CONTAINS
         CALL ERROR$STOP('EXCHANGE_INITIALIZE (SEE DFT OBJECT)')
       END IF
 !
-!     =================================================================
+!     =========================================================================
 !     ==  CALCULATE PARAMETERS                                       ==
 !     =================================================================
       PI=4.D0*ATAN(1.D0)
@@ -1482,13 +1505,12 @@ CONTAINS
         CALL ERROR$STOP('EXCHANGE_INITIALIZE')
       END IF
       MUBYKAPPA=MU/KAPPA
-!     == ALPHAB2 IS NEEDED FOR THE FORM WITH PROPER LONG-RANGE BEHAVIOR =
+!     == ALPHAB2 IS NEEDED FOR THE FORM WITH PROPER LONG-RANGE BEHAVIOR ========
       ALPHAB2=(4.D0*PI/(9.D0*KAPPA))**2
 !
-!
-!     =================================================================
+!     ==========================================================================
 !     ==  DEFINE ARRAYS FOR FAST TABLE LOOKUP                        ==
-!     =================================================================
+!     ==========================================================================
       IF(TGRA) THEN
         CALL TABLE1D$MAKE(S2TABLE,1.D-3,10.D0,NS2)
         DO I=1,NS2
@@ -1500,7 +1522,6 @@ CONTAINS
       TINI=.TRUE.
       END SUBROUTINE EXCHANGE_INITIALIZE
 END MODULE EXCHANGE_MODULE
-!
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXCHANGE$SETI4(ID,VAL_)
@@ -1518,7 +1539,6 @@ END MODULE EXCHANGE_MODULE
       RETURN 
       END
 !
-!
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE EXCHANGE$EVAL1(VAL,EXC,DEXC)
       USE EXCHANGE_MODULE
@@ -1535,9 +1555,9 @@ END MODULE EXCHANGE_MODULE
       EXC=0.D0
       DEXC(:)=0.D0
 !
-!     ==================================================================
+!     ==========================================================================
 !     == TRANSFORM INTO SPIN UP AND SPIN DOWN COMPONENTS              ==
-!     ==================================================================
+!     ==========================================================================
       IF(TSPIN) THEN
         RHO(1)=VAL(1)+VAL(2)               !=2*RHO(UP)
         RHO(2)=VAL(1)-VAL(2)               !=2*RHO(DOWN)
@@ -1558,18 +1578,18 @@ END MODULE EXCHANGE_MODULE
         CALL EXCHANGE_X1(RHO(I),GRHO2(I),EX(I),EX_R(I),EX_G(I))
       ENDDO
 !
-!     ==================================================================
+!     ==========================================================================
 !     == MODIFY FOR XALPHA                                            ==
-!     ==================================================================
+!     ==========================================================================
       IF(TXALPHA) THEN
         EX(:)=1.5D0*XALPHA*EX(:)
         EX_R(:)=1.5D0*XALPHA*EX_R(:)
         EX_G(:)=1.5D0*XALPHA*EX_G(:)
       END IF
 !
-!     ==================================================================
+!     ==========================================================================
 !     == TRANSFORM BACK TO TOTAL AND SPIN DENSITIES                   ==
-!     ==================================================================
+!     ==========================================================================
       IF(TSPIN) THEN
         EX(:)   =0.5D0*EX(:)
         EX_R(:) =0.5D0*EX_R(:)
@@ -1612,9 +1632,9 @@ END MODULE EXCHANGE_MODULE
       DEXC(:)=0.D0
       D2EXC(:,:)=0.D0
 !
-!     ==================================================================
-!     == TRANSFORM INTO SPIN UP AND SPIN DOWN COMPONENTS              ==
-!     ==================================================================
+!     ==========================================================================
+!     == TRANSFORM INTO SPIN UP AND SPIN DOWN COMPONENTS                      ==
+!     ==========================================================================
       IF(TSPIN) THEN
         RHO(1)=VAL(1)+VAL(2)               !=2*RHO(UP)
         RHO(2)=VAL(1)-VAL(2)               !=2*RHO(DOWN)
@@ -1636,9 +1656,9 @@ END MODULE EXCHANGE_MODULE
      &            ,EX_RR(I),EX_RG(I),EX_GG(I))
       ENDDO
 !
-!     ==================================================================
-!     == MODIFY FOR XALPHA                                            ==
-!     ==================================================================
+!     ==========================================================================
+!     == MODIFY FOR XALPHA                                                    ==
+!     ==========================================================================
       IF(TXALPHA) THEN
         EX(:)=1.5D0*XALPHA*EX(:)
         EX_R(:)=1.5D0*XALPHA*EX_R(:)
@@ -1648,9 +1668,9 @@ END MODULE EXCHANGE_MODULE
         EX_GG(:)=1.5D0*XALPHA*EX_GG(:)
       END IF
 !
-!     ==================================================================
-!     == TRANSFORM BACK TO TOTAL AND SPIN DENSITIES                   ==
-!     ==================================================================
+!     ==========================================================================
+!     == TRANSFORM BACK TO TOTAL AND SPIN DENSITIES                           ==
+!     ==========================================================================
       IF(TSPIN) THEN
         EX(:)   =0.5D0*EX(:)
         EX_R(:) =0.5D0*EX_R(:)
@@ -1918,7 +1938,7 @@ END MODULE EXCHANGE_MODULE
 !     *****************************************************************
 !     
 !     =================================================================
-!     == EXIT FOR SMALL DENSITIES                                   ==
+!     == EXIT FOR SMALL DENSITIES                                    ==
 !     =================================================================
       EX=0.D0
       EX_R=0.D0
@@ -1947,7 +1967,7 @@ END MODULE EXCHANGE_MODULE
       END IF
 !     
 !     =================================================================
-!     ==  CALCULATE REDUCED GRADIENT S2=(0.5*GRHO/KFRHO)**2         ==
+!     ==  CALCULATE REDUCED GRADIENT S2=(0.5*GRHO/KFRHO)**2          ==
 !     =================================================================
       SVAR=S2FAC/RHO43**2     !PROPORTIONAL RHO**(-8/3)
       S2=SVAR*GRHO2           
@@ -2497,7 +2517,8 @@ END MODULE EXCHANGE_MODULE
         FX_SS =MU*(2.D0*BFAC_S+S2*BFAC_SS)
         FX_SSS=MU*(3.D0*BFAC_SS+S2*(BFAC_SSS))
       ELSE
-        CALL ERROR$MSG('FXTYPE NOT RECOGNIZED (ALLOWED VALUES ARE "PBE", "RPBE", "BECKE")')
+        CALL ERROR$MSG('FXTYPE NOT RECOGNIZED')
+        CALL ERROR$MSG('(ALLOWED VALUES ARE "PBE", "RPBE", "BECKE")')
         CALL ERROR$CHVAL('FXTYPE',FXTYPE)
         CALL ERROR$STOP('EXCHANGE_FX3')
       END IF
@@ -3433,7 +3454,7 @@ END MODULE PERDEW_MODULE
       REAL(8),INTENT(OUT)  :: FPHI      !OLD ARRPE: -PHI=FPHI*GRHO
       REAL(8),INTENT(OUT)  :: DFPHI
       REAL(8),INTENT(OUT)  :: D2FPHI
-      REAL(8),INTENT(OUT)  :: FEXP      !OLD ARRPN1: EC=FEXP*EXP(-PHI)*GRHO2/D(SIGMA)
+      REAL(8),INTENT(OUT)  :: FEXP !OLD ARRPN1: EC=FEXP*EXP(-PHI)*GRHO2/D(SIGMA)
       REAL(8),INTENT(OUT)  :: DFEXP
       REAL(8),INTENT(OUT)  :: D2FEXP
       REAL(8)   ,PARAMETER :: ONEBY3=1.D0/3.D0
@@ -5556,9 +5577,9 @@ PRINT*,'SHORTCUT FOR H0'
        RETURN
        END
 !
-!.......................................................................
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE PBE_MODULE
-!***********************************************************************
+!*******************************************************************************
 !**                                                                   **
 !**  NAME: PBE                                                        **
 !**                                                                   **
@@ -5576,7 +5597,17 @@ MODULE PBE_MODULE
 !**    PERDEWWANG91L(PERDEWWANG91L$EPSVAL1,PERDEWWANG91L$EPSVAL2      **
 !**                 ,PERDEWWANG91L$EPSVAL3                            **
 !**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!*******************************************************************************
+!**  BECKE88 EXCHANGE (PRA38,3098(1988) IS OBTAINED                           **
+!**  WITH THE FOLLOWING PARAMETERS                                            **
+!**  MU   =16.D0*PI/3.D0*(6.D0*PI**2)**(1.D0/3.D0)*0.0042D0                   **
+!**       =0.2742931D0                                                        **
+!**  KAPPA=2.D0*PI/9.D0/(6.D0*PI**2)**(1.D0/3.D0)                             **
+!**       =0.1791102D0                                                        **
+!**  MU=16.D0*PI/3.D0*(6.D0*PI**2)**(1.D0/3.D0)*0.0042D0                      **
+!**  KAPPA=2.D0*PI/9.D0/(6.D0*PI**2)**(1.D0/3.D0)                             **
+!*******************************************************************************
 LOGICAL(4)         :: TINI=.FALSE.
 REAL(8)            :: PI
 REAL(8)            :: RSFAC   ! RS=RSFAC*RHO**(-1/3)
@@ -5660,7 +5691,7 @@ END MODULE PBE_MODULE
 !      **    T2>0; E<0 G>0                                            **    
 !      **                                                             **    
 !      *****************************************************************    
-       USE PBE_MODULE
+       USE PBE_MODULE, only: gamma
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: T2
        REAL(8),INTENT(IN) :: E
@@ -6150,14 +6181,15 @@ END MODULE PBE_MODULE
 !
 !      .................................................................
        SUBROUTINE PBE$EVAL1(VAL,EXC,DEXC)
-       USE PBE_MODULE
+       USE PBE_MODULE,only : tini &
+      &                     ,tfac
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: VAL(5)
        REAL(8),INTENT(OUT):: EXC
        REAL(8),INTENT(OUT):: DEXC(5)
-       REAL(8)            :: RHOT
-       REAL(8)            :: RHOS
-       REAL(8)            :: GRHOT2
+       REAL(8)            :: RHOT    !total electron density
+       REAL(8)            :: RHOS    !spin density
+       REAL(8)            :: GRHOT2  !squared gradient of the total density
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: ONEBY9=1.D0/9.D0
        REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
@@ -6181,14 +6213,14 @@ END MODULE PBE_MODULE
        RHOS=VAL(2)
        GRHOT2=VAL(3)
 !
-!      ================================================================
-!      == CALCULATE LOCAL CORRELATION                                ==
-!      ================================================================
+!      =========================================================================
+!      == CALCULATE LOCAL CORRELATION. e=ecuniv in PW92:EQ3                   ==
+!      =========================================================================
        CALL PERDEWWANG91L$EPSVAL(RHOT,RHOS,E,E_D,E_S)
 !
-!      ================================================================
-!      == EQ.11: SPIN DEPENDENCE G                                   ==
-!      ================================================================
+!      =========================================================================
+!      == EQ.11: SPIN DEPENDENCE G=phi(sigma) in PW92 defined below Eq.3      ==
+!      =========================================================================
        SIG=RHOS/RHOT
        P13=(1.D0+SIG)**ONEBY3
        M13=(1.D0-SIG)**ONEBY3
@@ -6197,9 +6229,12 @@ END MODULE PBE_MODULE
        G=0.5D0*(P23+M23)
        G_SIG=ONEBY3*(1.D0/P13-1.D0/M13)
 !
-!      ================================================================
-!      == T IS T**2 OF EQ. 10                                       ==
-!      ================================================================
+!      =========================================================================
+!      == T_N IS T**2 OF EQ. 10 (which reference?)                            ==
+!      == T_N=(DIMENSIONLESS DENSITY GRADIENT T)**2                           ==
+!      == SEE DEFINITION OF (DIMENSIONLESS DENSITY GRADIENT T) BELOW EQ.3     ==
+!      == OF PERDEW96_PRL77_3865 (PBE paper)                                  ==
+!      =========================================================================
        RHOT13=RHOT**ONEBY3
        T_N=TFAC/G**2/RHOT13**7
        T=T_N*GRHOT2
@@ -6243,7 +6278,7 @@ END MODULE PBE_MODULE
        H0_N  = H0_T*T_N
 !
 !      == EXCHANGE ENERGY ==============================================
-       EXC   =RHOT*(E+H0)
+       EXC    =RHOT*(E+H0)      !pw92:Eq.3
        DEXC(1) =RHOT*(E_D+H0_D)+E+H0
        DEXC(2) =RHOT*(E_S+H0_S)
        DEXC(3)=RHOT*H0_N
