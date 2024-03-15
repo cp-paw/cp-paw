@@ -70,6 +70,7 @@ MODULE DFT_MODULE
       LOGICAL(4)           :: TPW91G =.FALSE. ! USE PERDEW WANG91 GC
       LOGICAL(4)           :: TPBE96 =.FALSE. ! USE PERDEW BURKE ERNZERHOF GC
       LOGICAL(4)           :: TLYP88 =.FALSE. ! USE LEE-YANG-PARR 88 CORRELATION
+      LOGICAL(4)           :: TLIBXC =.FALSE. ! USE LIBXC INTERFACE
       REAL(8)              :: SCALEX=1.D0     ! SCALES EXCHANGE CONTRIBUTION
 !                                             ! USED FOR HYBRID FUNCTIONALS
       INTEGER(4),PARAMETER :: NDESCRIPTION=5
@@ -87,6 +88,7 @@ MODULE DFT_MODULE
       IMPLICIT NONE
       LOGICAL(4)     :: TGRATARGET=.FALSE.
 !     **************************************************************************
+      IF(TINI) RETURN
 !
 !     ==========================================================================
 !     ==  RESET FUNCTIONAL SELECTORS                                          ==
@@ -99,6 +101,7 @@ MODULE DFT_MODULE
       TPW91G =.FALSE.  ! USE PERDEW WANG91 GC
       TPBE96 =.FALSE.  ! USE PERDEW BURKE ERNZERHOF GC
       TLYP88 =.FALSE.  ! USE LEE YANG PARR GC
+      TLIBXC =.FALSE.  ! USE LIBXC INTERFACE
       DESCRIPTION(:)=' '
       DESCRIPTION(1)='NO FUNCTIONAL DESCRIPTION GIVEN'
 !
@@ -396,6 +399,36 @@ MODULE DFT_MODULE
      &                          //'CORRELATION (PHYS.REV.B 59, 7413 (1999))'
 !
 !     ==========================================================================
+!     == TYPE 20:  LIBXC-GGA INTERFACE                                    ==
+!     ==========================================================================
+      ELSE IF (IT.EQ.20) THEN
+        TLIBXC=.TRUE.
+        TGRATARGET=.FALSE.
+        CALL PAWLIBXC$SETCH('FUNCTIONAL','VWN')
+!       == THE LIBXC INTERFACE MUST USE NOT USE OUR OWN IMPLEMENTATIONS FOR   ==
+!       == exchange (HENCE TX=.FALSE), BUT THE EXCHANGE TERM                  ==
+!       == IS INTEGRATED WITH THE CORRELATION TERM                            ==
+        TX=.FALSE.
+
+        DESCRIPTION(1)='LIBXC INTERFACE CURRENTLY VWN' &
+     &               //'(---------------------)'
+!
+!     ==========================================================================
+!     == TYPE 111111:  LIBXC-GGA INTERFACE                                    ==
+!     ==========================================================================
+      ELSE IF (IT.EQ.111111) THEN
+        TLIBXC=.TRUE.
+        TGRATARGET=.TRUE.
+        CALL PAWLIBXC$SETCH('FUNCTIONAL','PBE')
+!       == THE LIBXC INTERFACE MUST USE NOT USE OUR OWN IMPLEMENTATIONS FOR   ==
+!       == (HENCE TX=.FALSE), BUT THE EXCHANGE TERM OF THE SCAN FUNCTIONAL    ==
+!       == IS INTEGRATED WITH THE CORRELATION TERM                            ==
+        TX=.FALSE.
+
+        DESCRIPTION(1)='LIBXC INTERFACE CURRENTLY PBE' &
+     &               //'(---------------------)'
+!
+!     ==========================================================================
 !     == ILLEGAL SELECTION                                                    ==
 !     ==========================================================================
       ELSE
@@ -490,6 +523,10 @@ MODULE DFT_MODULE
         IF(IT.EQ.-10) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. 
           CALL PBE$SETL4('BUGFIX1',.FALSE.)
         END IF
+!       == 111111 LIBXC-PBE   ==============================================
+        IF(IT.EQ.20)THEN ;TCHK=.TRUE. ;TGRA=.FALSE. ;END IF
+!       == 111111 LIBXC-PBE   ==============================================
+        IF(IT.EQ.111111)THEN ;TCHK=.TRUE. ;TGRA=.TRUE. ;END IF
         IF(IT.EQ.11) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.12) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.13) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
@@ -568,6 +605,8 @@ MODULE DFT_MODULE
           CALL  DFT$SETI4('TYPE',12)
         ELSE IF(VAL.EQ.'BLYP') THEN
           CALL  DFT$SETI4('TYPE',5001)
+        ELSE IF(VAL.EQ.'LIBXC-PBE') THEN
+          CALL  DFT$SETI4('TYPE',111111)
         ELSE
           TCHK=.FALSE.
         END IF
@@ -800,6 +839,24 @@ MODULE DFT_MODULE
         DEXC=DEXC+DEXC1
       END IF
 !
+!     ==========================================================================
+!     ==  LIBXC INTERFACE 
+!     ==========================================================================
+!     == THE LIBXC FUNCTIONAL DOES NOT (YET) ALLOW TO SWITCH OFF CORRELATION  ==
+!     == THEREFORE THIS TERM IS NOT SWITCHED OFF BY TCORRELATION=.FALSE.      ==
+!     == TCORRELATION IS USED FOR HYBRID FUNCTIONALS TO SELECT ONLY EXCHANGE. ==
+      IF(TLIBXC) THEN
+!       == EXCHANGE (TYPE 3) IS CALLED BEFOREHAND AS REQUIRED BY PBE
+!       == NO!!! EXCHANGE IS NOT SEPARATED OUT IN LIBXC
+!CAUTION!!!
+!       
+        EXC=0.D0
+        DEXC=0.D0
+        CALL PAWLIBXC$GGA1(VAL,EXC1,DEXC1)
+        EXC=EXC+EXC1
+        DEXC=DEXC+DEXC1
+      END IF
+!
 !     ==================================================================
 !     ==  WRAP-UP  (CHECKS ETC.)                                      ==
 !     ==================================================================
@@ -961,6 +1018,19 @@ MODULE DFT_MODULE
 !     ==================================================================
       IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL2(VAL,EXC1,DEXC1,D2EXC1)
+        EXC=EXC+EXC1
+        DEXC=DEXC+DEXC1
+        D2EXC=D2EXC+D2EXC1
+      END IF
+!
+!     ==========================================================================
+!     ==  LIBXC INTERFACE
+!     ==========================================================================
+!     == THE LIBXC INTERFACE DOES NOT (YET) ALLOW TO SWITCH OFF CORRELATION   ==
+!     == THEREFORE THIS TERM IS NOT SWITCHED OFF BY TCORRELATION=.FALZSE.     ==
+!     == TCORRELATION IS USED FOR HYBRID FUNCTIONALS TO SELECT ONLY EXCHANGE. ==
+      IF(TLIBXC) THEN
+        CALL PAWLIBXC$GGA2(VAL,EXC1,DEXC1,D2EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
         D2EXC=D2EXC+D2EXC1
@@ -1130,6 +1200,20 @@ MODULE DFT_MODULE
 !     ==========================================================================
       IF(TLYP88.AND.TCORRELATION) THEN
         CALL LYP88$EVAL3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
+        EXC=EXC+EXC1
+        DEXC=DEXC+DEXC1
+        D2EXC=D2EXC+D2EXC1
+        D3EXC=D3EXC+D3EXC1
+      END IF
+!
+!     ==========================================================================
+!     ==  LIBXC INTERFACE
+!     ==========================================================================
+!     == THE LIBXC INTERFACE DOES NOT (YET) ALLOW TO SWITCH OFF CORRELATION   ==
+!     == THEREFORE THIS TERM IS NOT SWITCHED OFF BY TCORRELATION=.FALZSE.     ==
+!     == TCORRELATION IS USED FOR HYBRID FUNCTIONALS TO SELECT ONLY EXCHANGE. ==
+      IF(TLIBXC) THEN
+        CALL PAWLIBXC$GGA3(VAL,EXC1,DEXC1,D2EXC1,D3EXC1)
         EXC=EXC+EXC1
         DEXC=DEXC+DEXC1
         D2EXC=D2EXC+D2EXC1
@@ -1445,7 +1529,14 @@ CONTAINS
 !       == + PBE96 GRADIENT CORRECTION CORRECT LONG-RANGE SCALING ======
         TGRA=.TRUE.
         FXTYPE='BECKE'
-        IPAR=3       ! SELECT PARAMETERS CONSISTENT WITH PBE EXCHNAGE
+        IPAR=3       ! SELECT PARAMETERS CONSISTENT WITH PBE EXCHANGE
+      ELSE IF(ITYPE.EQ.111111) THEN
+!       == LIBXC INTERFACE =====================================================
+        TGRA=.TRUE.
+! ATOMIC (SPHERICAL,NON-SPIN-POLARIZED) CALCULATIONS GIVE CORRECT NUMBERS,
+! BUIT FAIL TO CONVERGE, FOR EXAMPLE, FOR MG
+        CALL ERROR$MSG('THIS CODE (LIBXC) NEEDS CHECKING')
+        CALL ERROR$STOP('EXCHANGE_INITIALIZE')
       ELSE
         CALL ERROR$MSG('FUNCTIONAL SELECTION FOR EXCHANGE NOT RECOGNIZED')
         CALL ERROR$I4VAL('ITYPE',ITYPE)
