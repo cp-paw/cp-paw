@@ -231,7 +231,6 @@ $(addprefix clean_,${TOOLS}):
 #
 scripts: 
 	cp ${THISDIR}/src/Tools/Scripts/* ${BINDIR}
-	cp ${THISDIR}/src/Buildtools/Srcblob/paw_getsrc.sh ${BINDIR}
 #
 clean_scripts:
 	rm -f ${BINDIR}/paw_collect
