@@ -1,19 +1,38 @@
-!.......................................................................
+!*******************************************************************************
+!*******************************************************************************
+!****  TEMPLATE FOR NEW DENSITY FUNCTIONALS IN THE PAW_DFT OBJECT           ****
+!****                                                                       ****
+!****  THE PAW METHOD REQUIRES TWO CALLS EVAL1 AND EVAL3                    ****
+!****  - EVAL1 PROVIDES THE ENERGY AND ITS XC POTENTIAL FOR THE PLANE WAVE  ****
+!****          PART                                                         ****
+!****  - EVAL3 PROVIDES THE ENERGY AND ITS FIRST THREE DERIVATIVES WITH     ****
+!****          RESPECT TO THE ENTERING VARIABLES FOR THE ONE-CENTER EXPANS. ****
+!****          THE NON-SPHERICAL PARTS ARE INCLUDED BY A SECOND ORDER       ****
+!****          TAYLOR EXPANSION IN THE NON-SPHERICAL CONTRIBUTIONS ABOUT    ****
+!****          THE SPHERICAL PARTS                                          ****
+!*******************************************************************************
+!*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
 MODULE NEWDFT_MODULE
 LOGICAL(4) :: TINI=.FALSE.
 END MODULE NEWDFT_MODULE
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWDFT_INITIALIZE()
-      USE NEWDFT_MODULE
+      USE NEWDFT_MODULE, ONLY : TINI
+      IMPLICIT NONE
       IF(TINI) RETURN
       TINI=.TRUE.
       END SUBROUTINE NEWDFT_INITIALIZE
-!     ..................................................................
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWDFT$EVAL1(VAL,EXC,DEXC)
-!     ******************************************************************
+!     **************************************************************************
 !     **  BRIEF DESCRIPTION                                           **
-!     ******************************************************************
-      USE NEWDFT_MODULE
+!     **************************************************************************
+      USE NEWDFT_MODULE, ONLY : TINI
+      IMPLICIT NONE
       REAL(8),INTENT(IN)  :: VAL(5)
       REAL(8),INTENT(OUT) :: EXC
       REAL(8),INTENT(OUT) :: DEXC(5)
@@ -30,12 +49,13 @@ END MODULE NEWDFT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWDFT$EVAL2(VAL,EXC,DEXC,D2EXC)
-!     ******************************************************************
+!     **************************************************************************
 !     **  BRIEF DESCRIPTION                                           **
-!     ******************************************************************
-      USE NEWDFT_MODULE
+!     **************************************************************************
+      USE NEWDFT_MODULE, ONLY : TINI
+      IMPLICIT NONE
       REAL(8),INTENT(IN)  :: VAL(5)
       REAL(8),INTENT(OUT) :: EXC
       REAL(8),INTENT(OUT) :: DEXC(5)
@@ -48,11 +68,11 @@ END MODULE NEWDFT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE NEWDFT$EVAL3(VAL,EXC,DEXC,D2EXC,D3EXC)
-!     ******************************************************************
+!     **************************************************************************
 !     **  BRIEF DESCRIPTION                                           **
-!     ******************************************************************
+!     **************************************************************************
       USE NEWDFT_MODULE
       REAL(8),INTENT(IN)  :: VAL(5)
       REAL(8),INTENT(OUT) :: EXC
