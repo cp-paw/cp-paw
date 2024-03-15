@@ -238,15 +238,19 @@ MODULE DFT_MODULE
 !     ==========================================================================
 !     == TYPE 10:  LSD + PBE96-GC                                             ==
 !     ==========================================================================
-      ELSE IF (IT.EQ.10) THEN
+      ELSE IF (IT.EQ.10.OR.IT.EQ.-10) THEN
         TX=.TRUE.
         CALL EXCHANGE$SETI4('TYPE',3)
         TPBE96=.TRUE.
         TGRATARGET=.TRUE.
         DESCRIPTION(1)='PERDEW WANG PARAMETERIZATION OF LOCAL CORRELATION ' &
      &                          //'(PHYS.REV.B 45, 13244 (1992-I))'
-        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND CORRELATION ' &
-     &                          //'(PHYS.REV.LETT 77, 3865 (1996))'
+        DESCRIPTION(2)='PERDEW-BURKE-ERNZERHOF GGA FOR EXCHANGE AND' &
+     &                   //' CORRELATION (PHYS.REV.LETT 77, 3865 (1996))'
+        IF(IT.EQ.-10) THEN
+          DESCRIPTION(3)= &
+     &     'CAUTION!!! PARAMETER TFAC DIFFERS FROM REFERENCE ABOVE'
+        END IF
 !
 !     ==========================================================================
 !     == TYPE 11:  LSD + RPBE-GC                                              ==
@@ -479,6 +483,9 @@ MODULE DFT_MODULE
         IF(IT.EQ.81) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.9)  THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.10) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
+        IF(IT.EQ.-10) THEN ;TCHK=.TRUE. ;TGRA=.TRUE. 
+          CALL PBE$SETL4('BUGFIX1',.FALSE.)
+        END IF
         IF(IT.EQ.11) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.12) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
         IF(IT.EQ.13) THEN ;TCHK=.TRUE. ;TGRA=.TRUE.  ;END IF
@@ -1555,9 +1562,9 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
       END IF
 !
 !     ==================================================================
@@ -1633,12 +1640,12 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
-        EX_RR(I)=1.5D0*XALPHA*EX_RR(I)
-        EX_RG(I)=1.5D0*XALPHA*EX_RG(I)
-        EX_GG(I)=1.5D0*XALPHA*EX_GG(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
+        EX_RR(:)=1.5D0*XALPHA*EX_RR(:)
+        EX_RG(:)=1.5D0*XALPHA*EX_RG(:)
+        EX_GG(:)=1.5D0*XALPHA*EX_GG(:)
       END IF
 !
 !     ==================================================================
@@ -1745,16 +1752,16 @@ END MODULE EXCHANGE_MODULE
 !     == MODIFY FOR XALPHA                                            ==
 !     ==================================================================
       IF(TXALPHA) THEN
-        EX(I)=1.5D0*XALPHA*EX(I)
-        EX_R(I)=1.5D0*XALPHA*EX_R(I)
-        EX_G(I)=1.5D0*XALPHA*EX_G(I)
-        EX_RR(I)=1.5D0*XALPHA*EX_RR(I)
-        EX_RG(I)=1.5D0*XALPHA*EX_RG(I)
-        EX_GG(I)=1.5D0*XALPHA*EX_GG(I)
-        EX_RRR(I)=1.5D0*XALPHA*EX_RRR(I)
-        EX_RRG(I)=1.5D0*XALPHA*EX_RRG(I)
-        EX_RGG(I)=1.5D0*XALPHA*EX_RGG(I)
-        EX_GGG(I)=1.5D0*XALPHA*EX_GGG(I)
+        EX(:)=1.5D0*XALPHA*EX(:)
+        EX_R(:)=1.5D0*XALPHA*EX_R(:)
+        EX_G(:)=1.5D0*XALPHA*EX_G(:)
+        EX_RR(:)=1.5D0*XALPHA*EX_RR(:)
+        EX_RG(:)=1.5D0*XALPHA*EX_RG(:)
+        EX_GG(:)=1.5D0*XALPHA*EX_GG(:)
+        EX_RRR(:)=1.5D0*XALPHA*EX_RRR(:)
+        EX_RRG(:)=1.5D0*XALPHA*EX_RRG(:)
+        EX_RGG(:)=1.5D0*XALPHA*EX_RGG(:)
+        EX_GGG(:)=1.5D0*XALPHA*EX_GGG(:)
       END IF
 !
 !     ==================================================================
@@ -5585,6 +5592,7 @@ REAL(8)            :: MU
 REAL(8)            :: MUBYKAPPA
 REAL(8)            :: EXFAC
 REAL(8)            :: BETA    ! BETA=NU*CC0 (PWG:EQ.13)
+LOGICAL(4)         :: T_BUGFIX1=.TRUE.
 END MODULE PBE_MODULE
 !
 !      .................................................................
@@ -5593,9 +5601,18 @@ END MODULE PBE_MODULE
        IMPLICIT NONE 
        PI=4.D0*ATAN(1.D0)
        RSFAC=(3.D0/(4.D0*PI))**(1.D0/3.D0) ! RS=RSFAC*RHOT**(-1/3)
-       KFFAC=(3.D0*PI**2)**(1.D0/3.D0)      ! KF=KFFAC/RS
-       KSFAC=SQRT(4.D0*KFFAC/PI)          ! KS=KSFAC/SQRT(RS)
-       TFAC=0.25D0*RSFAC/KSFAC**2          ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
+       KFFAC=(3.D0*PI**2)**(1.D0/3.D0)     ! KF=KFFAC/RS
+       KSFAC=SQRT(4.D0*KFFAC/PI)           ! KS=KSFAC/SQRT(RS)
+       IF(T_BUGFIX1) THEN
+         TFAC=PI/(16.D0*(3.D0*PI**2)**(1.D0/3.D0))
+       ELSE 
+!        == BUG FIX ON DEC.10.2023 THE NEW VERSION IS ABOVE ====================
+!        == TFAC IS USED FOR THE DIMENSION-LESS GRADIENT AS DEFINED BELOW EQ.3==
+!        == IN THE PBE PAPER PERDEW96_PRL77_3865                              ==
+!        == THE OLD VERSION IS BELOW:                                         ==
+         TFAC=0.25D0*RSFAC/KSFAC**2        ! T2=TFAC*GRHO2/G**2*RHOT**(-7/3)
+       END IF
+!      =========================================================================
        GAMMA=(1.D0-LOG(2.D0))/PI**2
        NU=16.D0/PI*(3*PI**2)**(1.D0/3.D0)
        BETA=NU*CC0
@@ -5616,6 +5633,23 @@ END MODULE PBE_MODULE
        TINI=.TRUE.
        RETURN
        END SUBROUTINE PBE_INITIALIZE
+!
+!      ..1.........2.........3.........4.........5.........6.........7.........8
+       SUBROUTINE PBE$SETL4(ID,VAL)
+       USE PBE_MODULE, ONLY : T_BUGFIX1
+       IMPLICIT NONE
+       CHARACTER(*),INTENT(IN) :: ID
+       LOGICAL(4)  ,INTENT(IN) :: VAL
+!      *************************************************************************
+       IF(ID.EQ.'BUGFIX1') THEN
+         T_BUGFIX1=VAL
+       ELSE
+         CALL ERROR$MSG('ID NOT RECOGNIZED')
+         CALL ERROR$CHVAL('ID',ID)
+         CALL ERROR$STOP('PBE$SETL4')
+       END IF
+       RETURN
+       END
 !
 !      .................................................................
        SUBROUTINE PBE_H0OFTEG1(T2,E,G,H,H_T,H_E,H_G)
