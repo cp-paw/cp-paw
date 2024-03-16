@@ -107,7 +107,9 @@ END MODULE NEWDFT_MODULE
 !     **************************************************************************
 !     **  FIND THE INTERFACES TO LIBXC SUBROUTINES IN FILE                    **
 !     **     LIBXC/LIBXC-MASTER/SRC/LIBXC_MASTER.F90                          **
-!     **                                                                      **
+!     **************************************************************************
+!     **  FOR THE FUNCTIONAL IDENTIFIERS OF LIBXC SEE                         **
+!     **  MARQUES, OLIVIERA, BURNUS, ARXIV:1203.1739                          **
 !     **************************************************************************
 !     **  (RHO,SIGMA,LAPL,TAU)=MATINV* (RHOT,RHOS,GRHOT2,GRHOS2,GRHOST,LAPLT2..)
 !     **   RHO:    MATINV=0.25 * ( 2  2 )      MAT=0.25 * ( 4  4 )
@@ -389,6 +391,68 @@ END MODULE NEWDFT_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$SETCHA(ID,LEN,VAL)
+!     **************************************************************************
+!     **************************************************************************
+      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
+     &                          ,XC_LDA_X &
+     &                          ,XC_LDA_C_VWN &
+     &                          ,XC_GGA_X_PBE &
+     &                          ,XC_GGA_C_PBE &
+     &                          ,XC_MGGA_X_R2SCAN &
+     &                          ,XC_MGGA_C_R2SCAN &
+     &                          ,XC_F03_FUNC_INIT ! FUNCTION
+      USE PAWLIBXC_MODULE, ONLY: NXC &
+     &                          ,XC_FUNC
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      CHARACTER(*),INTENT(IN) :: VAL(LEN)
+      INTEGER(4)              :: I
+!     **************************************************************************
+      IF(ID.EQ.'FUNCTIONAL') THEN 
+        IF(ALLOCATED(XC_FUNC)) THEN
+          PRINT*,'ERROR: XC_FUNC IS ALREADY SET'
+          STOP 'DFT_LIBXC_SETCHA'
+        END IF
+        NXC=LEN
+        ALLOCATE(XC_FUNC(NXC))          
+        DO I=1,NXC
+!
+!         ======================================================================
+!         == RESOLVE FUNCTIONAL IDS AND INITIALIZE LIBXC                      ==
+!         == FORTRAN ROUTINES ARE IN LIBXC/LIBXC-MASTER/SRC/LIBXC_MASTER.F90  ==
+!         == FUNCTIONAL IDS ARE IN LIBXC/LIBXC-MASTER/SRC/LIBXC_INC.F90       ==
+!         ======================================================================
+!         XC_XC_FUNCTIONAL_GET_NAME(NUMBER) BIND(C)
+          SELECT CASE(VAL(I))
+          CASE('XC_LDA_X')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_LDA_X,XC_POLARIZED)
+          CASE('XC_LDA_C_VWN')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_LDA_C_VWN,XC_POLARIZED)
+          CASE('XC_GGA_X_PBE')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_GGA_X_PBE,XC_POLARIZED)
+          CASE('XC_GGA_C_PBE')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_GGA_C_PBE,XC_POLARIZED)
+          CASE('XC_MGGA_X_R2SCAN')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_MGGA_X_R2SCAN,XC_POLARIZED)
+          CASE('XC_MGGA_C_R2SCAN')
+            CALL XC_F03_FUNC_INIT(XC_FUNC(I),XC_MGGA_C_R2SCAN,XC_POLARIZED)
+          CASE DEFAULT
+            CALL ERROR$MSG('FUNCTIONAL ID NOT RECOGNIZED')
+            CALL ERROR$CHVAL('FUNCTIONAL ID',VAL(I))
+            CALL ERROR$STOP('PAWLIBXC$SETCHA')
+          END SELECT
+        ENDDO
+      ELSE
+        CALL ERROR$MSG('ID NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PAWLIBXC$SETCHA')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWLIBXC$GGA1(VAL,EXC,DER)
       USE PAWLIBXC_MODULE, ONLY : NXC &
      &                          ,XC_FUNC
@@ -444,7 +508,7 @@ END MODULE NEWDFT_MODULE
       REAL(8)   ,INTENT(OUT):: DER(5)      ! 
       REAL(8)   ,INTENT(OUT):: DER2(5,5)   ! 
       REAL(8)               :: X_EXC
-      REAL(8)               :: X_DER(5),X_DER2(5,5),X_DER3(5,5,5)=0.d0
+      REAL(8)               :: X_DER(5),X_DER2(5,5),X_DER3(5,5,5)=0.D0
       INTEGER(4)            :: I
 !     **************************************************************************
       CALL PAWLIBXC_INITIALIZE()

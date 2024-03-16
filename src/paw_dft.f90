@@ -406,7 +406,7 @@ MODULE DFT_MODULE
         TGRATARGET=.FALSE.
         CALL PAWLIBXC$SETCH('FUNCTIONAL','VWN')
 !       == THE LIBXC INTERFACE MUST USE NOT USE OUR OWN IMPLEMENTATIONS FOR   ==
-!       == exchange (HENCE TX=.FALSE), BUT THE EXCHANGE TERM                  ==
+!       == EXCHANGE (HENCE TX=.FALSE), BUT THE EXCHANGE TERM                  ==
 !       == IS INTEGRATED WITH THE CORRELATION TERM                            ==
         TX=.FALSE.
 
@@ -591,7 +591,10 @@ MODULE DFT_MODULE
 !     ==========================================================================
       IF(ID.EQ.'TYPE') THEN   
         TCHK=.TRUE.
-        IF(VAL.EQ.'PZ') THEN
+        IF(VAL.EQ.'XC_') THEN
+!         == CAUTION: PASSING SCALAR (VAL) INTO ARRAY ARGUMENT. IS THIS LEGAL? =
+          CALL DFT$SETCHA(ID,1,VAL)
+        ELSE IF(VAL.EQ.'PZ') THEN
           CALL  DFT$SETI4('TYPE',1)
         ELSE IF(VAL.EQ.'PERDEW-WANG:LOCAL') THEN
           CALL  DFT$SETI4('TYPE',2)
@@ -616,6 +619,50 @@ MODULE DFT_MODULE
           CALL ERROR$STOP('DFT$SETCH')
         END IF
         TINI=.FALSE.
+!
+!     ==========================================================================
+!     == UNRECOGNIZED ID                                                      ==
+!     ==========================================================================
+      ELSE
+        CALL ERROR$MSG('IDENTIFIER NOT RECOGNIZED')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('DFT$SETCH')
+      END IF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DFT$SETCHA(ID,LEN,VAL)
+!     **************************************************************************
+!     ** PASS STRING VALUES TO OBJECT                                         **
+!     **                                                                      **
+!     ** E.G. SELECT DENSITY FUNCTIONAL BY NAME                               **
+!     **************************************************************************
+      USE DFT_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      CHARACTER(*),INTENT(IN) :: VAL(LEN)
+      LOGICAL(4)              :: TCHK
+      INTEGER(4)              :: I
+!     **************************************************************************
+      IF(ID.EQ.'TYPE') THEN   
+        TCHK=.TRUE.
+        IF(VAL(1)(1:3).EQ.'XC_') THEN
+!         == THIS IS FOR THE FUNCTIONALS IN LIBXC ==============================
+          CALL PAWLIBXC$SETCHA('FUNCTIONAL',LEN,VAL)
+        ELSE
+!         == THIS IS FOR THE CPPAW INTRINSIC FUNCTIONALS =======================
+          IF(LEN.EQ.1) THEN
+            CALL DFT$SETCH(ID,VAL(1))
+          ELSE
+            CALL ERROR$MSG('UNKNOWN COMBINATION OF FUNCTIONAL ID AND LEN')
+            DO I=1,LEN
+              CALL ERROR$CHVAL('FUNCTIONAL ID',VAL(I))
+            ENDDO
+            CALL ERROR$STOP('DFT$SETCHA')
+          END IF
+        END IF  
 !
 !     ==========================================================================
 !     == UNRECOGNIZED ID                                                      ==
@@ -5782,7 +5829,7 @@ END MODULE PBE_MODULE
 !      **    T2>0; E<0 G>0                                            **    
 !      **                                                             **    
 !      *****************************************************************    
-       USE PBE_MODULE, only: gamma
+       USE PBE_MODULE, ONLY: GAMMA
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: T2
        REAL(8),INTENT(IN) :: E
@@ -6272,15 +6319,15 @@ END MODULE PBE_MODULE
 !
 !      .................................................................
        SUBROUTINE PBE$EVAL1(VAL,EXC,DEXC)
-       USE PBE_MODULE,only : tini &
-      &                     ,tfac
+       USE PBE_MODULE,ONLY : TINI &
+      &                     ,TFAC
        IMPLICIT NONE
        REAL(8),INTENT(IN) :: VAL(5)
        REAL(8),INTENT(OUT):: EXC
        REAL(8),INTENT(OUT):: DEXC(5)
-       REAL(8)            :: RHOT    !total electron density
-       REAL(8)            :: RHOS    !spin density
-       REAL(8)            :: GRHOT2  !squared gradient of the total density
+       REAL(8)            :: RHOT    !TOTAL ELECTRON DENSITY
+       REAL(8)            :: RHOS    !SPIN DENSITY
+       REAL(8)            :: GRHOT2  !SQUARED GRADIENT OF THE TOTAL DENSITY
        REAL(8),PARAMETER  :: ONEBY3=1.D0/3.D0
        REAL(8),PARAMETER  :: ONEBY9=1.D0/9.D0
        REAL(8),PARAMETER  :: FOURBY3=4.D0/3.D0
@@ -6305,12 +6352,12 @@ END MODULE PBE_MODULE
        GRHOT2=VAL(3)
 !
 !      =========================================================================
-!      == CALCULATE LOCAL CORRELATION. e=ecuniv in PW92:EQ3                   ==
+!      == CALCULATE LOCAL CORRELATION. E=ECUNIV IN PW92:EQ3                   ==
 !      =========================================================================
        CALL PERDEWWANG91L$EPSVAL(RHOT,RHOS,E,E_D,E_S)
 !
 !      =========================================================================
-!      == EQ.11: SPIN DEPENDENCE G=phi(sigma) in PW92 defined below Eq.3      ==
+!      == EQ.11: SPIN DEPENDENCE G=PHI(SIGMA) IN PW92 DEFINED BELOW EQ.3      ==
 !      =========================================================================
        SIG=RHOS/RHOT
        P13=(1.D0+SIG)**ONEBY3
@@ -6321,10 +6368,10 @@ END MODULE PBE_MODULE
        G_SIG=ONEBY3*(1.D0/P13-1.D0/M13)
 !
 !      =========================================================================
-!      == T_N IS T**2 OF EQ. 10 (which reference?)                            ==
+!      == T_N IS T**2 OF EQ. 10 (WHICH REFERENCE?)                            ==
 !      == T_N=(DIMENSIONLESS DENSITY GRADIENT T)**2                           ==
 !      == SEE DEFINITION OF (DIMENSIONLESS DENSITY GRADIENT T) BELOW EQ.3     ==
-!      == OF PERDEW96_PRL77_3865 (PBE paper)                                  ==
+!      == OF PERDEW96_PRL77_3865 (PBE PAPER)                                  ==
 !      =========================================================================
        RHOT13=RHOT**ONEBY3
        T_N=TFAC/G**2/RHOT13**7
@@ -6369,7 +6416,7 @@ END MODULE PBE_MODULE
        H0_N  = H0_T*T_N
 !
 !      == EXCHANGE ENERGY ==============================================
-       EXC    =RHOT*(E+H0)      !pw92:Eq.3
+       EXC    =RHOT*(E+H0)      !PW92:EQ.3
        DEXC(1) =RHOT*(E_D+H0_D)+E+H0
        DEXC(2) =RHOT*(E_S+H0_S)
        DEXC(3)=RHOT*H0_N
