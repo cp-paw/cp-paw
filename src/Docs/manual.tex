@@ -11176,11 +11176,911 @@ $N$        & $(\frac{1}{2},\frac{1}{2},0) \frac{2\pi}{a}$ & $(0,0,\frac{1}{2})$ 
 \end{tabular}
 \renewcommand\arraystretch{1.}
 \end{center}
-
-
-
-
 \clearpage
+
+
+%====================================================================
+\newpage
+\section{Density functionals and their identifiers in LibXC}
+%====================================================================
+In tables \ref{tab:libxc1}, the identifiers for the density
+functionals in the library LibXC are listed. They are taken from the
+file \verb|src/libxc_inc.f90| beginning of 2024. Only a small fraction
+is currently made available, but this shall change soon.
+
+
+\begin{table}[hbt]
+\caption{\label{tab:libxc1}Density Functionals and their identifiers
+  in LibXC. Part~1}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Slater exchange' & XC\_LDA\_X  &  1\\
+  'Wigner' & XC\_LDA\_C\_WIGNER  &  2\\
+  'Random Phase Approximation (RPA)' & XC\_LDA\_C\_RPA  &  3\\
+  'Hedin \& Lundqvist' & XC\_LDA\_C\_HL  &  4\\
+  'Gunnarson \& Lundqvist' & XC\_LDA\_C\_GL  &  5\\
+  'Slaters Xalpha' & XC\_LDA\_C\_XALPHA  &  6\\
+  'Vosko, Wilk \& Nusair (VWN5)' & XC\_LDA\_C\_VWN  &  7\\
+  'Vosko, Wilk \& Nusair (VWN5\_RPA)' & XC\_LDA\_C\_VWN\_RPA  &  8\\
+  'Perdew \& Zunger' & XC\_LDA\_C\_PZ  &  9\\
+  'Perdew \& Zunger (Modified)' & XC\_LDA\_C\_PZ\_MOD  & 10\\
+  'Ortiz \& Ballone (PZ parametrization)' & XC\_LDA\_C\_OB\_PZ  & 11\\
+  'Perdew \& Wang' & XC\_LDA\_C\_PW  & 12\\
+  'Perdew \& Wang (modified)' & XC\_LDA\_C\_PW\_MOD  & 13\\
+  'Ortiz \& Ballone (PW parametrization)' & XC\_LDA\_C\_OB\_PW  & 14\\
+  'AMGB (for 2D systems)' & XC\_LDA\_C\_2D\_AMGB  & 15\\
+  'PRM (for 2D systems)' & XC\_LDA\_C\_2D\_PRM  & 16\\
+  'von Barth \& Hedin' & XC\_LDA\_C\_VBH  & 17\\
+  'Casula, Sorella \& Senatore' & XC\_LDA\_C\_1D\_CSC  & 18\\
+  'Slater exchange' & XC\_LDA\_X\_2D  & 19\\
+  'Teter 93' & XC\_LDA\_XC\_TETER93  & 20\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~2}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Exchange in 1D for soft-Coulomb interaction' & XC\_LDA\_X\_1D\_SOFT  &21\\
+  'Modified LSD (version 1) of Proynov, Salahub' & XC\_LDA\_C\_ML1  & 22\\
+  'Modified LSD (version 2) of Proynov, Salahub' & XC\_LDA\_C\_ML2  & 23\\
+  'Gombas' & XC\_LDA\_C\_GOMBAS  & 24\\
+  'Perdew \& Wang (fit to the RPA energy)' & XC\_LDA\_C\_PW\_RPA  & 25\\
+  'P-F Loos correlation LDA' & XC\_LDA\_C\_1D\_LOOS  & 26\\
+  'Ragot-Cortona' & XC\_LDA\_C\_RC04  & 27\\
+  'Vosko, Wilk \& Nusair (VWN1)' & XC\_LDA\_C\_VWN\_1  & 28\\
+  'Vosko, Wilk \& Nusair (VWN2)' & XC\_LDA\_C\_VWN\_2  & 29\\
+  'Vosko, Wilk \& Nusair (VWN3)' & XC\_LDA\_C\_VWN\_3  & 30\\
+  'Vosko, Wilk \& Nusair (VWN4)' & XC\_LDA\_C\_VWN\_4  & 31\\
+  'Minnesota GAM exhange functional' & XC\_GGA\_X\_GAM  & 32\\
+  'Minnesota GAM correlation functional' & XC\_GGA\_C\_GAM  & 33\\
+  'HCTH-A' & XC\_GGA\_X\_HCTH\_A  & 34\\
+  'Engel and Vosko' & XC\_GGA\_X\_EV93  & 35\\
+  'Dispersionless Density Functional' & XC\_HYB\_MGGA\_X\_DLDF  & 36\\
+  'Dispersionless Density Functional' & XC\_MGGA\_C\_DLDF  & 37\\
+  'Burke, Cancio, Gould, and Pittalis' & XC\_GGA\_X\_BCGP  & 38\\
+  'acGGA, asymptotically corrected GGA correlation' & XC\_GGA\_C\_ACGGA  & 39\\
+  'lambda\_OC2(N) version of PBE' & XC\_GGA\_X\_LAMBDA\_OC2\_N  & 40\\
+  'Revised Becke 86 with modified gradient correction' & XC\_GGA\_X\_B86\_R  & 41\\
+  'Zhao, Levy \& Parr, Eq. (21)' & XC\_MGGA\_XC\_ZLP  & 42\\
+  'Zhao, Levy \& Parr, Eq. (20)' & XC\_LDA\_XC\_ZLP  & 43\\
+  'lambda\_CH(N) version of PBE' & XC\_GGA\_X\_LAMBDA\_CH\_N  & 44\\
+  'lambda\_LO(N) version of PBE' & XC\_GGA\_X\_LAMBDA\_LO\_N  & 45\\
+  'HJS screened exchange B88 corrected version' & XC\_GGA\_X\_HJS\_B88\_V2  & 46\\
+  'Chiodo et al' & XC\_GGA\_C\_Q2D  & 47\\
+  'Chiodo et al' & XC\_GGA\_X\_Q2D  & 48\\
+  'Reparam. PBE by del Campo, Gazquez, Trickey \& Vela' & XC\_GGA\_X\_PBE\_MOL  & 49\\
+  'Thomas-Fermi kinetic energy' & XC\_LDA\_K\_TF  & 50\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~3}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Lee and Parr Gaussian ansatz for the kinetic energy' & XC\_LDA\_K\_LP  & 51\\
+  'Thomas-Fermi plus von Weiszaecker correction' & XC\_GGA\_K\_TFVW  & 52\\
+  'interpolated version of revAPBE' & XC\_GGA\_K\_REVAPBEINT  & 53\\
+  'interpolated version of APBE' & XC\_GGA\_K\_APBEINT  & 54\\
+  'revised APBE' & XC\_GGA\_K\_REVAPBE  & 55\\
+  'Armiento \& Kuemmel 2013' & XC\_GGA\_X\_AK13  & 56\\
+  'Meyer,  Wang, and Young' & XC\_GGA\_K\_MEYER  & 57\\
+  'Berland and Hyldgaard' & XC\_GGA\_X\_LV\_RPW86  & 58\\
+  'PBE revised by Tognetti et al' & XC\_GGA\_X\_PBE\_TCA  & 59\\
+  'PBE for hybrid interfaces' & XC\_GGA\_X\_PBEINT  & 60\\
+  'spin-dependent gradient correction to PBEint' & XC\_GGA\_C\_ZPBEINT  & 61\\
+  'PBE for hybrid interfaces' & XC\_GGA\_C\_PBEINT  & 62\\
+  'spin-dependent gradient correction to PBEsol' & XC\_GGA\_C\_ZPBESOL  & 63\\
+  'oTPSS-D functional of Goerigk and Grimme' & XC\_MGGA\_XC\_OTPSS\_D  & 64\\
+  'oPBE-D functional of Goerigk and Grimme' & XC\_GGA\_XC\_OPBE\_D  & 65\\
+  'oPWLYP-D functional of Goerigk and Grimme' & XC\_GGA\_XC\_OPWLYP\_D  & 66\\
+  'oBLYP-D functional of Goerigk and Grimme' & XC\_GGA\_XC\_OBLYP\_D  & 67\\
+  'VMT{8,4} with constraint satisfaction with mu \& mu\_GE' & XC\_GGA\_X\_VMT84\_GE  & 68\\
+  'VMT{8,4} with constraint satisfaction with mu \& mu\_PBE' & XC\_GGA\_X\_VMT84\_PBE  & 69\\
+  'Vela, Medel, and Trickey with mu \& mu\_GE' & XC\_GGA\_X\_VMT\_GE  & 70\\
+  'Vela, Medel, and Trickey with mu \& mu\_PBE' & XC\_GGA\_X\_VMT\_PBE  & 71\\
+  'Colle and Salvetti' & XC\_MGGA\_C\_CS  & 72\\
+  'Minnesota MN12-SX correlation functional' & XC\_MGGA\_C\_MN12\_SX  & 73\\
+  'Minnesota MN12-L correlation functional' & XC\_MGGA\_C\_MN12\_L  & 74\\
+  'Minnesota M11-L correlation functional' & XC\_MGGA\_C\_M11\_L  & 75\\
+  'Minnesota M11 correlation functional' & XC\_MGGA\_C\_M11  & 76\\
+  'Minnesota M08-SO correlation functional' & XC\_MGGA\_C\_M08\_SO  & 77\\
+  'Minnesota M08 correlation functional' & XC\_MGGA\_C\_M08\_HX  & 78\\
+  'Minnesota N12-SX correlation functional' & XC\_GGA\_C\_N12\_SX  & 79\\
+  'Minnesota N12 correlation functional' & XC\_GGA\_C\_N12  & 80\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~3}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Minnesota N12-SX exchange functional' & XC\_HYB\_GGA\_X\_N12\_SX  & 81\\
+  'Minnesota N12 exchange functional' & XC\_GGA\_X\_N12  & 82\\
+  'regularized TPSS correlation' & XC\_GGA\_C\_REGTPSS  & 83\\
+  'one-parameter progressive functional (Xalpha version)' & XC\_GGA\_C\_OP\_XALPHA  & 84\\
+  'one-parameter progressive functional (G96 version)' & XC\_GGA\_C\_OP\_G96  & 85\\
+  'one-parameter progressive functional (PBE version)' & XC\_GGA\_C\_OP\_PBE  & 86\\
+  'one-parameter progressive functional (B88 version)' & XC\_GGA\_C\_OP\_B88  & 87\\
+  'Filatov \& Thiel correlation' & XC\_GGA\_C\_FT97  & 88\\
+  'PBE correlation to be used with the SSB exchange' & XC\_GGA\_C\_SPBE  & 89\\
+  'Swart, Sola and Bickelhaupt correction to PBE' & XC\_GGA\_X\_SSB\_SW  & 90\\
+  'Swart, Sola and Bickelhaupt' & XC\_GGA\_X\_SSB  & 91\\
+  'Swart, Sola and Bickelhaupt dispersion' & XC\_GGA\_X\_SSB\_D  & 92\\
+  'HCTH/407+' & XC\_GGA\_XC\_HCTH\_407P  & 93\\
+  'HCTH p\&7/6' & XC\_GGA\_XC\_HCTH\_P76  & 94\\
+  'HCTH p\&1/4' & XC\_GGA\_XC\_HCTH\_P14  & 95\\
+  'Becke 97 GGA-1' & XC\_GGA\_XC\_B97\_GGA1  & 96\\
+  'HCTH-A' & XC\_GGA\_C\_HCTH\_A  & 97\\
+  'BPCCAC (GRAC for the energy)' & XC\_GGA\_X\_BPCCAC  & 98\\
+  'Tognetti, Cortona, Adamo (revised)' & XC\_GGA\_C\_REVTCA  & 99\\
+  'Tognetti, Cortona, Adamo' & XC\_GGA\_C\_TCA  &100\\
+  'Perdew, Burke \& Ernzerhof' & XC\_GGA\_X\_PBE  &101\\
+  'Revised PBE from Zhang \& Yang' & XC\_GGA\_X\_PBE\_R  &102\\
+  'Becke 86' & XC\_GGA\_X\_B86  &103\\
+  'Becke 86 with modified gradient correction' & XC\_GGA\_X\_B86\_MGC  &105\\
+  'Becke 88' & XC\_GGA\_X\_B88  &106\\
+  'Gill 96' & XC\_GGA\_X\_G96  &107\\
+  'Perdew \& Wang 86' & XC\_GGA\_X\_PW86  &108\\
+  'Perdew \& Wang 91' & XC\_GGA\_X\_PW91  &109\\
+  'Handy \& Cohen OPTX 01' & XC\_GGA\_X\_OPTX  &110\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~4}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'dePristo \& Kress 87 version R1' & XC\_GGA\_X\_DK87\_R1  &111\\
+  'dePristo \& Kress 87 version R2' & XC\_GGA\_X\_DK87\_R2  &112\\
+  'Lacks \& Gordon 93' & XC\_GGA\_X\_LG93  &113\\
+  'Filatov \& Thiel 97 (version A)' & XC\_GGA\_X\_FT97\_A  &114\\
+  'Filatov \& Thiel 97 (version B)' & XC\_GGA\_X\_FT97\_B  &115\\
+  'Perdew, Burke \& Ernzerhof SOL' & XC\_GGA\_X\_PBE\_SOL  &116\\
+  'Hammer, Hansen, and Norskov' & XC\_GGA\_X\_RPBE  &117\\
+  'Wu \& Cohen' & XC\_GGA\_X\_WC  &118\\
+  'mPW91 of Adamo \& Barone' & XC\_GGA\_X\_MPW91  &119\\
+  'Armiento \& Mattsson 05' & XC\_GGA\_X\_AM05  &120\\
+  'Madsen 07' & XC\_GGA\_X\_PBEA  &121\\
+  'Adamo \& Barone modification to PBE' & XC\_GGA\_X\_MPBE  &122\\
+  'Extended PBE by Xu \& Goddard III' & XC\_GGA\_X\_XPBE  &123\\
+  'Becke 86 with modified gradient correction for 2D' & XC\_GGA\_X\_2D\_B86\_MGC  &124\\
+  'Bayesian best fit for the enhancement factor' & XC\_GGA\_X\_BAYESIAN  &125\\
+  'Reparametrized PBE by Pedroza, Silva \& Capelle' & XC\_GGA\_X\_PBE\_JSJR  &126\\
+  'Becke 88 in 2D' & XC\_GGA\_X\_2D\_B88  &127\\
+  'Becke 86 in 2D' & XC\_GGA\_X\_2D\_B86  &128\\
+  'Perdew, Burke \& Ernzerhof in 2D' & XC\_GGA\_X\_2D\_PBE  &129\\
+  'Perdew, Burke \& Ernzerhof' & XC\_GGA\_C\_PBE  &130\\
+  'Lee, Yang \& Parr' & XC\_GGA\_C\_LYP  &131\\
+  'Perdew 86' & XC\_GGA\_C\_P86  &132\\
+  'Perdew, Burke \& Ernzerhof SOL' & XC\_GGA\_C\_PBE\_SOL  &133\\
+  'Perdew \& Wang 91' & XC\_GGA\_C\_PW91  &134\\
+  'Armiento \& Mattsson 05' & XC\_GGA\_C\_AM05  &135\\
+  'Extended PBE by Xu \& Goddard III' & XC\_GGA\_C\_XPBE  &136\\
+  'Langreth \& Mehl' & XC\_GGA\_C\_LM  &137\\
+  'Reparametrized PBE by Pedroza, Silva \& Capelle' & XC\_GGA\_C\_PBE\_JRGX  &138\\
+  'opt-Becke 88 for vdW' & XC\_GGA\_X\_OPTB88\_VDW  &139\\
+  'Reparametrized PBE for vdW' & XC\_GGA\_X\_PBEK1\_VDW  &140\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~4}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Reparametrized PBE for vdW' & XC\_GGA\_X\_OPTPBE\_VDW  &141\\
+  'Regularized PBE' & XC\_GGA\_X\_RGE2  &142\\
+  'Regularized PBE' & XC\_GGA\_C\_RGE2  &143\\
+  'Refitted Perdew \& Wang 86' & XC\_GGA\_X\_RPW86  &144\\
+  'Exchange part of Keal and Tozer version 1' & XC\_GGA\_X\_KT1  &145\\
+  'Keal and Tozer, version 2' & XC\_GGA\_XC\_KT2  &146\\
+  'Wilson \& Levy' & XC\_GGA\_C\_WL  &147\\
+  'Wilson \& Ivanov' & XC\_GGA\_C\_WI  &148\\
+  'Modified Becke 88 for proton transfer' & XC\_GGA\_X\_MB88  &149\\
+  'Second-order generalized gradient approximation' & XC\_GGA\_X\_SOGGA  &150\\
+  'Second-order generalized gradient approximation 2011' & XC\_GGA\_X\_SOGGA11  &151\\
+  'Second-order generalized gradient approximation 2011' & XC\_GGA\_C\_SOGGA11  &152\\
+  'Wilson \& Ivanov initial version' & XC\_GGA\_C\_WI0  &153\\
+  'Tozer and Handy v. 1' & XC\_GGA\_XC\_TH1  &154\\
+  'Tozer and Handy v. 2' & XC\_GGA\_XC\_TH2  &155\\
+  'Tozer and Handy v. 3' & XC\_GGA\_XC\_TH3  &156\\
+  'Tozer and Handy v. 4' & XC\_GGA\_XC\_TH4  &157\\
+  'C09x to be used with the VdW of Rutgers-Chalmers' & XC\_GGA\_X\_C09X  &158\\
+  'To be used with HYB\_GGA\_X\_SOGGA11\_X' & XC\_GGA\_C\_SOGGA11\_X  &159\\
+  'van Leeuwen \& Baerends' & XC\_GGA\_X\_LB  &160\\
+  'HCTH/93' & XC\_GGA\_XC\_HCTH\_93  &161\\
+  'HCTH/120' & XC\_GGA\_XC\_HCTH\_120  &162\\
+  'HCTH/147' & XC\_GGA\_XC\_HCTH\_147  &163\\
+  'HCTH/407' & XC\_GGA\_XC\_HCTH\_407  &164\\
+  'EDF1' & XC\_GGA\_XC\_EDF1  &165\\
+  'XLYP' & XC\_GGA\_XC\_XLYP  &166\\
+  'Keal and Tozer, version 1' & XC\_GGA\_XC\_KT1  &167\\
+  'lsPBE, a PW91-like modification of PBE exchange' & XC\_GGA\_X\_LSPBE  &168\\
+  'lsRPBE, a PW91-like modification of RPBE' & XC\_GGA\_X\_LSRPBE  &169\\
+  'Becke 97-D' & XC\_GGA\_XC\_B97\_D  &170\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~5}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Becke 86 reoptimized for use with vdW functional of Dion et al' & XC\_GGA\_X\_OPTB86B\_VDW  &171\\
+  'Revised Minnesota M11 correlation functional' & XC\_MGGA\_C\_REVM11  &172\\
+  'PBE1W' & XC\_GGA\_XC\_PBE1W  &173\\
+  'mPWLYP1w' & XC\_GGA\_XC\_MPWLYP1W  &174\\
+  'PBELYP1W' & XC\_GGA\_XC\_PBELYP1W  &175\\
+  'acGGA+, asymptotically corrected GGA correlation+' & XC\_GGA\_C\_ACGGAP  &176\\
+  'LDA hybrid exchange (LDA0)' & XC\_HYB\_LDA\_XC\_LDA0  &177\\
+  'CAM version of LDA0' & XC\_HYB\_LDA\_XC\_CAM\_LDA0  &178\\
+  'Becke 88 reoptimized with the 6-311G** basis set' & XC\_GGA\_X\_B88\_6311G  &179\\
+  'Nearly correct asymptotic potential' & XC\_GGA\_X\_NCAP  &180\\
+  'NCAP exchange + P86 correlation' & XC\_GGA\_XC\_NCAP  &181\\
+  'van Leeuwen \& Baerends modified' & XC\_GGA\_X\_LBM  &182\\
+  'Exchange form based on Ou-Yang and Levy v.2' & XC\_GGA\_X\_OL2  &183\\
+  'mu fixed from the semiclassical neutral atom' & XC\_GGA\_X\_APBE  &184\\
+  'mu fixed from the semiclassical neutral atom' & XC\_GGA\_K\_APBE  &185\\
+  'mu fixed from the semiclassical neutral atom' & XC\_GGA\_C\_APBE  &186\\
+  'Tran and Wesolowski set 1 (Table II)' & XC\_GGA\_K\_TW1  &187\\
+  'Tran and Wesolowski set 2 (Table II)' & XC\_GGA\_K\_TW2  &188\\
+  'Tran and Wesolowski set 3 (Table II)' & XC\_GGA\_K\_TW3  &189\\
+  'Tran and Wesolowski set 4 (Table II)' & XC\_GGA\_K\_TW4  &190\\
+  'Haas, Tran, Blaha, and Schwarz' & XC\_GGA\_X\_HTBS  &191\\
+  'Constantin et al based on the Airy gas' & XC\_GGA\_X\_AIRY  &192\\
+  'Local Airy Gas' & XC\_GGA\_X\_LAG  &193\\
+  'Functional for organometallic chemistry' & XC\_GGA\_XC\_MOHLYP  &194\\
+  'Functional for barrier heights' & XC\_GGA\_XC\_MOHLYP2  &195\\
+  'Tozer and Handy v. FL' & XC\_GGA\_XC\_TH\_FL  &196\\
+  'Tozer and Handy v. FC' & XC\_GGA\_XC\_TH\_FC  &197\\
+  'Tozer and Handy v. FCFO' & XC\_GGA\_XC\_TH\_FCFO  &198\\
+  'Tozer and Handy v. FCO' & XC\_GGA\_XC\_TH\_FCO  &199\\
+  'Optimized correlation functional of Cohen and Handy' & XC\_GGA\_C\_OPTC  &200\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~6}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Local tau approximation' & XC\_MGGA\_X\_LTA  &201\\
+  'Tao, Perdew, Staroverov \& Scuseria' & XC\_MGGA\_X\_TPSS  &202\\
+  'Minnesota M06-L exchange functional' & XC\_MGGA\_X\_M06\_L  &203\\
+  'GVT4 (X part of VSXC)' & XC\_MGGA\_X\_GVT4  &204\\
+  'tau-HCTH from Boese and Handy' & XC\_MGGA\_X\_TAU\_HCTH  &205\\
+  'Becke-Roussel 89, gamma \& 0.8' & XC\_MGGA\_X\_BR89  &206\\
+  'Becke \& Johnson 06' & XC\_MGGA\_X\_BJ06  &207\\
+  'Tran \& Blaha 09' & XC\_MGGA\_X\_TB09  &208\\
+  'Rasanen, Pittalis \& Proetto 09' & XC\_MGGA\_X\_RPP09  &209\\
+  'Pittalis-Rasanen-Helbig-Gross 2007' & XC\_MGGA\_X\_2D\_PRHG07  &210\\
+  'PRHG07 with Pittalis-Rasanen-Proetto 2010 correction' & XC\_MGGA\_X\_2D\_PRHG07\_PRP10  &211\\
+  'revised Tao, Perdew, Staroverov \& Scuseria' & XC\_MGGA\_X\_REVTPSS  &212\\
+  'Perdew, Kurth, Zupan, and Blaha' & XC\_MGGA\_X\_PKZB  &213\\
+  'Becke-Roussel 89, gamma \& 1.0' & XC\_MGGA\_X\_BR89\_1  &214\\
+  'Engel, Chevary, Macdonald and Vosko' & XC\_GGA\_X\_ECMV92  &215\\
+  'Perdew, Burke \& Ernzerhof based on VWN correlation' & XC\_GGA\_C\_PBE\_VWN  &216\\
+  'Perdew 86 with more accurate value for ftilde' & XC\_GGA\_C\_P86\_FT  &217\\
+  'RATIONAL$^{p}$ by Lehtomaki and Lopez-Acevedo (by default $p\&3/2$, $C\_{2}\&0.7687$)' & XC\_GGA\_K\_RATIONAL\_P  &218\\
+  'PG1 (Pauli-Gaussian) functional by Constantin, Fabiano, and Della Sala' & XC\_GGA\_K\_PG1  &219\\
+  'PGSL025 (Pauli-Gaussian) functional by Constantin, Fabiano, and Della Sala' & XC\_MGGA\_K\_PGSL025  &220\\
+  'MS exchange of Sun, Xiao, and Ruzsinszky' & XC\_MGGA\_X\_MS0  &221\\
+  'MS1 exchange of Sun, et al' & XC\_MGGA\_X\_MS1  &222\\
+  'MS2 exchange of Sun, et al' & XC\_MGGA\_X\_MS2  &223\\
+  'MS2 hybrid exchange of Sun, et al' & XC\_HYB\_MGGA\_X\_MS2H  &224\\
+  'Tsuneda and Hirao' & XC\_MGGA\_X\_TH  &225\\
+  'Minnesota M11-L exchange functional' & XC\_MGGA\_X\_M11\_L  &226\\
+  'Minnesota MN12-L exchange functional' & XC\_MGGA\_X\_MN12\_L  &227\\
+  'MS2 exchange of Sun, et al with revised value for c' & XC\_MGGA\_X\_MS2\_REV  &228\\
+  'Cancio and Chou 2006' & XC\_MGGA\_XC\_CC06  &229\\
+  'Exchange for accurate virtual orbital energies' & XC\_MGGA\_X\_MK00  &230\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~7}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Tao, Perdew, Staroverov \& Scuseria' & XC\_MGGA\_C\_TPSS  &231\\
+  'VSXC (correlation part)' & XC\_MGGA\_C\_VSXC  &232\\
+  'Minnesota M06-L correlation functional' & XC\_MGGA\_C\_M06\_L  &233\\
+  'Minnesota M06-HF correlation functional' & XC\_MGGA\_C\_M06\_HF  &234\\
+  'Minnesota M06 correlation functional' & XC\_MGGA\_C\_M06  &235\\
+  'Minnesota M06-2X correlation functional' & XC\_MGGA\_C\_M06\_2X  &236\\
+  'Minnesota M05 correlation functional' & XC\_MGGA\_C\_M05  &237\\
+  'Minnesota M05-2X correlation functional' & XC\_MGGA\_C\_M05\_2X  &238\\
+  'Perdew, Kurth, Zupan, and Blaha' & XC\_MGGA\_C\_PKZB  &239\\
+  'Becke correlation 95' & XC\_MGGA\_C\_BC95  &240\\
+  'revised TPSS correlation' & XC\_MGGA\_C\_REVTPSS  &241\\
+  'TPSSLYP1W' & XC\_MGGA\_XC\_TPSSLYP1W  &242\\
+  'Exchange for accurate virtual orbital energies (v. B)' & XC\_MGGA\_X\_MK00B  &243\\
+  'functional with balanced localization' & XC\_MGGA\_X\_BLOC  &244\\
+  'Modified Tao, Perdew, Staroverov \& Scuseria' & XC\_MGGA\_X\_MODTPSS  &245\\
+  'Semilocal dynamical correlation' & XC\_GGA\_C\_PBELOC  &246\\
+  'Semilocal dynamical correlation' & XC\_MGGA\_C\_TPSSLOC  &247\\
+  'Minnesota MN12-SX hybrid exchange functional' & XC\_HYB\_MGGA\_X\_MN12\_SX  &248\\
+  'mBEEF exchange' & XC\_MGGA\_X\_MBEEF  &249\\
+  'mBEEF-vdW exchange' & XC\_MGGA\_X\_MBEEFVDW  &250\\
+  'Tao and Mo 2016 correlation' & XC\_MGGA\_C\_TM  &251\\
+  'Perdew 86 based on VWN5 correlation' & XC\_GGA\_C\_P86VWN  &252\\
+  'Perdew 86 based on VWN5 correlation, with more accurate value for ftilde' & XC\_GGA\_C\_P86VWN\_FT  &253\\
+  'B97M-V exchange-correlation functional' & XC\_MGGA\_XC\_B97M\_V  &254\\
+  'Vydrov and Van Voorhis' & XC\_GGA\_XC\_VV10  &255\\
+  'Jemmer-Knowles meta-GGA exchange' & XC\_MGGA\_X\_JK  &256\\
+  'MVS exchange of Sun, Perdew, and Ruzsinszky' & XC\_MGGA\_X\_MVS  &257\\
+  'PBE for formation energies' & XC\_GGA\_C\_PBEFE  &258\\
+  'Karasiev, Sjostrom, Dufty \& Trickey' & XC\_LDA\_XC\_KSDT  &259\\
+  'Minnesota MN15-L exchange functional' & XC\_MGGA\_X\_MN15\_L  &260\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~8}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Minnesota MN15-L correlation functional' & XC\_MGGA\_C\_MN15\_L  &261\\
+  'one-parameter progressive functional (PW91 version)' & XC\_GGA\_C\_OP\_PW91  &262\\
+  'SCAN exchange of Sun, Ruzsinszky, and Perdew' & XC\_MGGA\_X\_SCAN  &263\\
+  'SCAN hybrid exchange (SCAN0)' & XC\_HYB\_MGGA\_X\_SCAN0  &264\\
+  'PBE for formation energies' & XC\_GGA\_X\_PBEFE  &265\\
+  'version of B97 by Cohen and Handy' & XC\_HYB\_GGA\_XC\_B97\_1P  &266\\
+  'SCAN correlation of Sun, Ruzsinszky, and Perdew' & XC\_MGGA\_C\_SCAN  &267\\
+  'Minnesota MN15 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_MN15  &268\\
+  'Minnesota MN15 correlation functional' & XC\_MGGA\_C\_MN15  &269\\
+  'Correct Asymptotic Potential' & XC\_GGA\_X\_CAP  &270\\
+  'Non-empirical (excogitated) B88 functional of Becke and Elliott' & XC\_GGA\_X\_EB88  &271\\
+  'Reparametrized PBE by del Campo, Gazquez, Trickey \& Vela' & XC\_GGA\_C\_PBE\_MOL  &272\\
+  'PBEmol0' & XC\_HYB\_GGA\_XC\_PBE\_MOL0  &273\\
+  'PBEsol0' & XC\_HYB\_GGA\_XC\_PBE\_SOL0  &274\\
+  'PBEbeta0' & XC\_HYB\_GGA\_XC\_PBEB0  &275\\
+  'PBEmolbeta0' & XC\_HYB\_GGA\_XC\_PBE\_MOLB0  &276\\
+  'gamma-TFvW form by Acharya et al [$g \& 1 - 1.513/N^{0.35}]$' & XC\_GGA\_K\_ABSP3  &277\\
+  'gamma-TFvW form by Acharya et al [$g \& l \& 1/(1 + 1.332/N^{1/3})$]' & XC\_GGA\_K\_ABSP4  &278\\
+  'Boese-Martin for kinetics' & XC\_HYB\_MGGA\_X\_BMK  &279\\
+  'Boese-Martin correlation for kinetics' & XC\_GGA\_C\_BMK  &280\\
+  'correlation part of tau-hcth' & XC\_GGA\_C\_TAU\_HCTH  &281\\
+  'Hybrid version of tau-HCTH' & XC\_HYB\_MGGA\_X\_TAU\_HCTH  &282\\
+  'correlation part of hyb-tau-hcth' & XC\_GGA\_C\_HYB\_TAU\_HCTH  &283\\
+  'Becke 2000' & XC\_MGGA\_X\_B00  &284\\
+  'BEEF-vdW exchange' & XC\_GGA\_X\_BEEFVDW  &285\\
+  'BEEF-vdW exchange-correlation' & XC\_GGA\_XC\_BEEFVDW  &286\\
+  'Chachiyo simple 2 parameter correlation' & XC\_LDA\_C\_CHACHIYO  &287\\
+  'high local exchange 2017' & XC\_MGGA\_XC\_HLE17  &288\\
+  'Liu-Parr correlation' & XC\_LDA\_C\_LP96  &289\\
+  'PBE50' & XC\_HYB\_GGA\_XC\_PBE50  &290\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~9}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Gradient-regulated connection-based correction for the PBE exchange' & XC\_GGA\_X\_PBETRANS  &291\\
+  'SCAN + rVV10 correlation' & XC\_MGGA\_C\_SCAN\_RVV10  &292\\
+  'Minnesota revM06-L exchange functional' & XC\_MGGA\_X\_REVM06\_L  &293\\
+  'Minnesota revM06-L correlation functional' & XC\_MGGA\_C\_REVM06\_L  &294\\
+  'Minnesota M08-HX hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M08\_HX  &295\\
+  'Minnesota M08-SO hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M08\_SO  &296\\
+  'Minnesota M11 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M11  &297\\
+  'Chachiyo exchange' & XC\_GGA\_X\_CHACHIYO  &298\\
+  'TPSS for surface adsorption' & XC\_MGGA\_X\_RTPSS  &299\\
+  'MS2beta exchange of Furness and Sun' & XC\_MGGA\_X\_MS2B  &300\\
+  'MS2beta* exchange of Furness and Sun' & XC\_MGGA\_X\_MS2BS  &301\\
+  'MVSbeta exchange by Furness and Sun' & XC\_MGGA\_X\_MVSB  &302\\
+  'MVSbeta* exchange by Furness and Sun' & XC\_MGGA\_X\_MVSBS  &303\\
+  'Revised Minnesota M11 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_REVM11  &304\\
+  'Revised Minnesota M06 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_REVM06  &305\\
+  'Revised Minnesota M06 correlation functional' & XC\_MGGA\_C\_REVM06  &306\\
+  'Chachiyo simple 2 parameter correlation with modified spin scaling' & XC\_LDA\_C\_CHACHIYO\_MOD  &307\\
+  'Karasiev reparameterization of Chachiyo' & XC\_LDA\_C\_KARASIEV\_MOD  &308\\
+  'Chachiyo simple GGA correlation' & XC\_GGA\_C\_CHACHIYO  &309\\
+  'Minnesota M06-SX short-range hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M06\_SX  &310\\
+  'Minnesota M06-SX correlation functional' & XC\_MGGA\_C\_M06\_SX  &311\\
+  'Revised Swart, Sola and Bickelhaupt dispersion' & XC\_GGA\_X\_REVSSB\_D  &312\\
+  'ccDF: coupled-cluster motivated density functional' & XC\_GGA\_C\_CCDF  &313\\
+  'HF + LYP correlation' & XC\_HYB\_GGA\_XC\_HFLYP  &314\\
+  'B3P86, NWChem version' & XC\_HYB\_GGA\_XC\_B3P86\_NWCHEM  &315\\
+  'PW91, alternate version with more digits' & XC\_GGA\_X\_PW91\_MOD  &316\\
+  'Xie, Wu, and Zhao interpolation ansatz without fitting parameters' & XC\_LDA\_C\_W20  &317\\
+  'Corrected KSDT by Karasiev, Dufty and Trickey' & XC\_LDA\_XC\_CORRKSDT  &318\\
+  'Filatov and Thiel 1998 meta-GGA exchange' & XC\_MGGA\_X\_FT98  &319\\
+  'Perdew, Burke \& Ernzerhof with less precise value for beta' & XC\_GGA\_X\_PBE\_MOD  &320\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~10}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Perdew, Burke \& Ernzerhof with parameter values used in Gaussian' & XC\_GGA\_X\_PBE\_GAUSSIAN  &321\\
+  'Perdew, Burke \& Ernzerhof with parameters from Gaussian' & XC\_GGA\_C\_PBE\_GAUSSIAN  &322\\
+  'Tao, Perdew, Staroverov \& Scuseria with parameters from Gaussian' & XC\_MGGA\_C\_TPSS\_GAUSSIAN  &323\\
+  'Nearly correct asymptotic potential revised' & XC\_GGA\_X\_NCAPR  &324\\
+  'relPBE0 a.k.a. relPBE: PBE0 refitted for actinide compounds' & XC\_HYB\_GGA\_XC\_RELPBE0  &325\\
+  'Becke 97-3c by Grimme et. al.' & XC\_GGA\_XC\_B97\_3C  &327\\
+  'Self-interaction corrected correlation functional by Schmidt et al' & XC\_MGGA\_C\_CC  &387\\
+  'Iso-orbital corrected LDA correlation by Lebeda et al' & XC\_MGGA\_C\_CCALDA  &388\\
+  'BR3P86 hybrid meta-GGA from Neumann and Handy' & XC\_HYB\_MGGA\_XC\_BR3P86  &389\\
+  'CASE21: Constrained And Smoothed semi-Empirical 2021 functional' & XC\_HYB\_GGA\_XC\_CASE21  &390\\
+  'Revised regTM correlation by Jana et al' & XC\_MGGA\_C\_RREGTM  &391\\
+  'PBE-2X: PBE0 with 56\% exact exchange' & XC\_HYB\_GGA\_XC\_PBE\_2X  &392\\
+  'PBE38: PBE0 with 3/8 \& 37.5\% exact exchange' & XC\_HYB\_GGA\_XC\_PBE38  &393\\
+  'B3LYP with VWN functional 3 instead of RPA' & XC\_HYB\_GGA\_XC\_B3LYP3  &394\\
+  'CAM-O3LYP' & XC\_HYB\_GGA\_XC\_CAM\_O3LYP  &395\\
+  'TPSS0 with 25\% exact exchange' & XC\_HYB\_MGGA\_XC\_TPSS0  &396\\
+  'Becke 1994 meta-GGA correlation' & XC\_MGGA\_C\_B94  &397\\
+  'Becke 1994 hybrid meta-GGA' & XC\_HYB\_MGGA\_XC\_B94\_HYB  &398\\
+  'wB97X-D3 range-separated functional' & XC\_HYB\_GGA\_XC\_WB97X\_D3  &399\\
+  'LC version of BLYP' & XC\_HYB\_GGA\_XC\_LC\_BLYP  &400\\
+  'The original (ACM, B3PW91) hybrid of Becke' & XC\_HYB\_GGA\_XC\_B3PW91  &401\\
+  'B3LYP' & XC\_HYB\_GGA\_XC\_B3LYP  &402\\
+  'B3P86' & XC\_HYB\_GGA\_XC\_B3P86  &403\\
+  'O3LYP' & XC\_HYB\_GGA\_XC\_O3LYP  &404\\
+  'mPW1K' & XC\_HYB\_GGA\_XC\_MPW1K  &405\\
+  'PBEH (PBE0)' & XC\_HYB\_GGA\_XC\_PBEH  &406\\
+  'Becke 97' & XC\_HYB\_GGA\_XC\_B97  &407\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~11}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Becke 97-1' & XC\_HYB\_GGA\_XC\_B97\_1  &408\\
+  'APF hybrid functional' & XC\_HYB\_GGA\_XC\_APF  &409\\
+  'Becke 97-2' & XC\_HYB\_GGA\_XC\_B97\_2  &410\\
+  'X3LYP' & XC\_HYB\_GGA\_XC\_X3LYP  &411\\
+  'B1WC' & XC\_HYB\_GGA\_XC\_B1WC  &412\\
+  'Boese-Martin for Kinetics' & XC\_HYB\_GGA\_XC\_B97\_K  &413\\
+  'Becke 97-3' & XC\_HYB\_GGA\_XC\_B97\_3  &414\\
+  'MPW3PW of Adamo \& Barone' & XC\_HYB\_GGA\_XC\_MPW3PW  &415\\
+  'B1LYP' & XC\_HYB\_GGA\_XC\_B1LYP  &416\\
+  'B1PW91' & XC\_HYB\_GGA\_XC\_B1PW91  &417\\
+  'mPW1PW' & XC\_HYB\_GGA\_XC\_MPW1PW  &418\\
+  'MPW3LYP' & XC\_HYB\_GGA\_XC\_MPW3LYP  &419\\
+  'SB98 (1a)' & XC\_HYB\_GGA\_XC\_SB98\_1A  &420\\
+  'SB98 (1b)' & XC\_HYB\_GGA\_XC\_SB98\_1B  &421\\
+  'SB98 (1c)' & XC\_HYB\_GGA\_XC\_SB98\_1C  &422\\
+  'SB98 (2a)' & XC\_HYB\_GGA\_XC\_SB98\_2A  &423\\
+  'SB98 (2b)' & XC\_HYB\_GGA\_XC\_SB98\_2B  &424\\
+  'SB98 (2c)' & XC\_HYB\_GGA\_XC\_SB98\_2C  &425\\
+  'Hybrid based on SOGGA11 form' & XC\_HYB\_GGA\_X\_SOGGA11\_X  &426\\
+  'HSE03' & XC\_HYB\_GGA\_XC\_HSE03  &427\\
+  'HSE06' & XC\_HYB\_GGA\_XC\_HSE06  &428\\
+  'HJS hybrid screened exchange PBE version' & XC\_HYB\_GGA\_XC\_HJS\_PBE  &429\\
+  'HJS hybrid screened exchange PBE\_SOL version' & XC\_HYB\_GGA\_XC\_HJS\_PBE\_SOL  &430\\
+  'HJS hybrid screened exchange B88 version' & XC\_HYB\_GGA\_XC\_HJS\_B88  &431\\
+  'HJS hybrid screened exchange B97x version' & XC\_HYB\_GGA\_XC\_HJS\_B97X  &432\\
+  'CAM version of B3LYP' & XC\_HYB\_GGA\_XC\_CAM\_B3LYP  &433\\
+  'CAM version of B3LYP, tuned for excitations and properties' & XC\_HYB\_GGA\_XC\_TUNED\_CAM\_B3LYP  &434\\
+  'BHandH i.e. BHLYP' & XC\_HYB\_GGA\_XC\_BHANDH  &435\\
+  'BHandHLYP' & XC\_HYB\_GGA\_XC\_BHANDHLYP  &436\\
+  'B3LYP with RC04 LDA' & XC\_HYB\_GGA\_XC\_MB3LYP\_RC04  &437\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~12}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Minnesota M05 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M05  &438\\
+  'Minnesota M05-2X hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M05\_2X  &439\\
+  'Mixture of B88 with BC95 (B1B95)' & XC\_HYB\_MGGA\_XC\_B88B95  &440\\
+  'Mixture of B86 with BC95' & XC\_HYB\_MGGA\_XC\_B86B95  &441\\
+  'Mixture of PW86 with BC95' & XC\_HYB\_MGGA\_XC\_PW86B95  &442\\
+  'Mixture of B88 with BC95 from Zhao and Truhlar' & XC\_HYB\_MGGA\_XC\_BB1K  &443\\
+  'Minnesota M06-HF hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M06\_HF  &444\\
+  'Mixture of mPW91 with BC95 from Zhao and Truhlar' & XC\_HYB\_MGGA\_XC\_MPW1B95  &445\\
+  'Mixture of mPW91 with BC95 for kinetics' & XC\_HYB\_MGGA\_XC\_MPWB1K  &446\\
+  'Mixture of X with BC95' & XC\_HYB\_MGGA\_XC\_X1B95  &447\\
+  'Mixture of X with BC95 for kinetics' & XC\_HYB\_MGGA\_XC\_XB1K  &448\\
+  'Minnesota M06 hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M06  &449\\
+  'Minnesota M06-2X hybrid exchange functional' & XC\_HYB\_MGGA\_X\_M06\_2X  &450\\
+  'Mixture of PW91 with BC95 from Zhao and Truhlar' & XC\_HYB\_MGGA\_XC\_PW6B95  &451\\
+  'Mixture of PW91 with BC95 from Zhao and Truhlar for kinetics' & XC\_HYB\_MGGA\_XC\_PWB6K  &452\\
+  'MPW with 1 par. for metals/LYP' & XC\_HYB\_GGA\_XC\_MPWLYP1M  &453\\
+  'Revised B3LYP' & XC\_HYB\_GGA\_XC\_REVB3LYP  &454\\
+  'CAMY version of BLYP' & XC\_HYB\_GGA\_XC\_CAMY\_BLYP  &455\\
+  'PBE0-1/3' & XC\_HYB\_GGA\_XC\_PBE0\_13  &456\\
+  'TPSSh' & XC\_HYB\_MGGA\_XC\_TPSSH  &457\\
+  'revTPSSh' & XC\_HYB\_MGGA\_XC\_REVTPSSH  &458\\
+  'B3LYP*' & XC\_HYB\_GGA\_XC\_B3LYPS  &459\\
+  'Global hybrid for vertical ionization potentials' & XC\_HYB\_GGA\_XC\_QTP17  &460\\
+  'B3LYP-MCM1' & XC\_HYB\_GGA\_XC\_B3LYP\_MCM1  &461\\
+  'B3LYP-MCM2' & XC\_HYB\_GGA\_XC\_B3LYP\_MCM2  &462\\
+  'wB97 range-separated functional' & XC\_HYB\_GGA\_XC\_WB97  &463\\
+  'wB97X range-separated functional' & XC\_HYB\_GGA\_XC\_WB97X  &464\\
+  'Long-range corrected short-range hybrid PBE (LRC-wPBEh) by Rohrdanz, Martins and Herbert' & XC\_HYB\_GGA\_XC\_LRC\_WPBEH  &465\\
+  'wB97X-V range-separated functional' & XC\_HYB\_GGA\_XC\_WB97X\_V  &466\\
+  'LCY version of PBE' & XC\_HYB\_GGA\_XC\_LCY\_PBE  &467\\
+  'LCY version of BLYP' & XC\_HYB\_GGA\_XC\_LCY\_BLYP  &468\\
+  'Vydrov and Van Voorhis' & XC\_HYB\_GGA\_XC\_LC\_VV10  &469\\
+  'CAMY version of B3LYP' & XC\_HYB\_GGA\_XC\_CAMY\_B3LYP  &470\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~13}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'wB97X-D range-separated functional' & XC\_HYB\_GGA\_XC\_WB97X\_D  &471\\
+  'hPBEint' & XC\_HYB\_GGA\_XC\_HPBEINT  &472\\
+  'Long-range corrected PBE (LRC-wPBE) by Rohrdanz, Martins and Herbert' & XC\_HYB\_GGA\_XC\_LRC\_WPBE  &473\\
+  'MVSh hybrid exchange functional' & XC\_HYB\_MGGA\_X\_MVSH  &474\\
+  'B3LYP with VWN functional 5 instead of RPA' & XC\_HYB\_GGA\_XC\_B3LYP5  &475\\
+  'EDF2' & XC\_HYB\_GGA\_XC\_EDF2  &476\\
+  'Correct Asymptotic Potential hybrid' & XC\_HYB\_GGA\_XC\_CAP0  &477\\
+  'Long-range corrected PBE (LC-wPBE) by Vydrov and Scuseria' & XC\_HYB\_GGA\_XC\_LC\_WPBE  &478\\
+  'HSE12' & XC\_HYB\_GGA\_XC\_HSE12  &479\\
+  'HSE12 (short-range version)' & XC\_HYB\_GGA\_XC\_HSE12S  &480\\
+  'HSEsol' & XC\_HYB\_GGA\_XC\_HSE\_SOL  &481\\
+  'CAM-B3LYP retuned using ionization potentials of water' & XC\_HYB\_GGA\_XC\_CAM\_QTP\_01  &482\\
+  'mPW1LYP' & XC\_HYB\_GGA\_XC\_MPW1LYP  &483\\
+  'mPW1PBE' & XC\_HYB\_GGA\_XC\_MPW1PBE  &484\\
+  'Kang-Musgrave hybrid' & XC\_HYB\_GGA\_XC\_KMLYP  &485\\
+  'Long-range corrected PBE (LC-wPBE) by Weintraub, Henderson and Scuseria' & XC\_HYB\_GGA\_XC\_LC\_WPBE\_WHS  &486\\
+  'Long-range corrected short-range hybrid PBE (LC-wPBE) by Weintraub, Henderson and Scuseria' & XC\_HYB\_GGA\_XC\_LC\_WPBEH\_WHS  &487\\
+  'Long-range corrected PBE (LC-wPBE) by Weintraub, Henderson and Scuseria' & XC\_HYB\_GGA\_XC\_LC\_WPBE08\_WHS  &488\\
+  'Long-range corrected PBE (LC-wPBE) by Weintraub, Henderson and Scuseria' & XC\_HYB\_GGA\_XC\_LC\_WPBESOL\_WHS  &489\\
+  'CAM-B3LYP retuned using ionization potentials of water' & XC\_HYB\_GGA\_XC\_CAM\_QTP\_00  &490\\
+  'CAM-B3LYP retuned using ionization potentials of water' & XC\_HYB\_GGA\_XC\_CAM\_QTP\_02  &491\\
+  'CAM-B3LYP retuned using ionization potentials of water' & XC\_HYB\_GGA\_XC\_LC\_QTP  &492\\
+  'Regularized SCAN exchange by Bartok and Yates' & XC\_MGGA\_X\_RSCAN  &493\\
+  'Regularized SCAN correlation by Bartok and Yates' & XC\_MGGA\_C\_RSCAN  &494\\
+  'Swart 2012 GGA exchange' & XC\_GGA\_X\_S12G  &495\\
+  'Swart 2012 hybrid GGA exchange' & XC\_HYB\_GGA\_X\_S12H  &496\\
+  'Re-regularized SCAN exchange by Furness et al' & XC\_MGGA\_X\_R2SCAN  &497\\
+  'Re-regularized SCAN correlation by Furness et al' & XC\_MGGA\_C\_R2SCAN  &498\\
+  'BLYP35' & XC\_HYB\_GGA\_XC\_BLYP35  &499\\
+  'von Weiszaecker correction to Thomas-Fermi' & XC\_GGA\_K\_VW  &500\\
+  'Second-order gradient expansion of the kinetic energy density' & XC\_GGA\_K\_GE2  &501\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~14}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'TF-lambda-vW form by Golden (l \& 13/45)' & XC\_GGA\_K\_GOLDEN  &502\\
+  'TF-lambda-vW form by Yonei and Tomishima (l \& 1/5)' & XC\_GGA\_K\_YT65  &503\\
+  'TF-lambda-vW form by Baltin (l \& 5/9)' & XC\_GGA\_K\_BALTIN  &504\\
+  'TF-lambda-vW form by Lieb (l \& 0.185909191)' & XC\_GGA\_K\_LIEB  &505\\
+  'gamma-TFvW form by Acharya et al [$g \& 1 - 1.412/N^{1/3}$]' & XC\_GGA\_K\_ABSP1  &506\\
+  'gamma-TFvW form by Acharya et al [$g \& 1 - 1.332/N^{1/3}$]' & XC\_GGA\_K\_ABSP2  &507\\
+  'gamma-TFvW form by Gazquez and Robles' & XC\_GGA\_K\_GR  &508\\
+  'gamma-TFvW form by Ludena' & XC\_GGA\_K\_LUDENA  &509\\
+  'gamma-TFvW form by Ghosh and Parr' & XC\_GGA\_K\_GP85  &510\\
+  'Pearson 1992' & XC\_GGA\_K\_PEARSON  &511\\
+  'Ou-Yang and Levy v.1' & XC\_GGA\_K\_OL1  &512\\
+  'Ou-Yang and Levy v.2' & XC\_GGA\_K\_OL2  &513\\
+  'Fuentealba \& Reyes (B88 version)' & XC\_GGA\_K\_FR\_B88  &514\\
+  'Fuentealba \& Reyes (PW86 version)' & XC\_GGA\_K\_FR\_PW86  &515\\
+  'DePristo and Kress' & XC\_GGA\_K\_DK  &516\\
+  'Perdew' & XC\_GGA\_K\_PERDEW  &517\\
+  'Vitos, Skriver, and Kollar' & XC\_GGA\_K\_VSK  &518\\
+  'Vitos, Johansson, Kollar, and Skriver' & XC\_GGA\_K\_VJKS  &519\\
+  'Ernzerhof' & XC\_GGA\_K\_ERNZERHOF  &520\\
+  'Lembarki \& Chermette' & XC\_GGA\_K\_LC94  &521\\
+  'Lee, Lee \& Parr' & XC\_GGA\_K\_LLP  &522\\
+  'Thakkar 1992' & XC\_GGA\_K\_THAKKAR  &523\\
+  'short-range part of the PBE (default w\&0 gives PBEh)' & XC\_GGA\_X\_WPBEH  &524\\
+  'HJS screened exchange PBE version' & XC\_GGA\_X\_HJS\_PBE  &525\\
+  'HJS screened exchange PBE\_SOL version' & XC\_GGA\_X\_HJS\_PBE\_SOL  &526\\
+  'HJS screened exchange B88 version' & XC\_GGA\_X\_HJS\_B88  &527\\
+  'HJS screened exchange B97x version' & XC\_GGA\_X\_HJS\_B97X  &528\\
+  'Short-range recipe for B88 functional - erf' & XC\_GGA\_X\_ITYH  &529\\
+  'Short-range recipe for B88 functional - Yukawa' & XC\_GGA\_X\_SFAT  &530\\
+  'wB97M-V exchange-correlation functional' & XC\_HYB\_MGGA\_XC\_WB97M\_V  &531\\
+  'Slater exchange with relativistic corrections' & XC\_LDA\_X\_REL  &532\\
+  'Semiclassical GGA at fourth order' & XC\_GGA\_X\_SG4  &533\\
+  'Semiclassical GGA at fourth order' & XC\_GGA\_C\_SG4  &534\\
+  'Gilbert and Gill 1999' & XC\_GGA\_X\_GG99  &535\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~15}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'LDA constructed from slab-like systems of 1 electron' & XC\_LDA\_XC\_1D\_EHWLRG\_1  &536\\
+  'LDA constructed from slab-like systems of 2 electrons' & XC\_LDA\_XC\_1D\_EHWLRG\_2  &537\\
+  'LDA constructed from slab-like systems of 3 electrons' & XC\_LDA\_XC\_1D\_EHWLRG\_3  &538\\
+  'PBE power' & XC\_GGA\_X\_PBEPOW  &539\\
+  'Tao and Mo 2016 exchange' & XC\_MGGA\_X\_TM  &540\\
+  'meta-GGA version of VT{8,4} GGA' & XC\_MGGA\_X\_VT84  &541\\
+  'TPSS with correct surface asymptotics' & XC\_MGGA\_X\_SA\_TPSS  &542\\
+  'Perdew and Constantin 2007' & XC\_MGGA\_K\_PC07  &543\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption{Density Functionals and their identifiers in LibXC. Part~13}
+\begin{center}
+\begin{tabular}{llr}
+\hline
+\hline
+Description & ID & index\\
+\hline
+  'Gilbert and Gill 1999 (mixed)' & XC\_GGA\_X\_KGG99  &544\\
+  'high local exchange 2016' & XC\_GGA\_XC\_HLE16  &545\\
+  'Short-range LDA exchange with error function kernel (erfc)' & XC\_LDA\_X\_ERF  &546\\
+  'Lee-Parr reparametrization A' & XC\_LDA\_XC\_LP\_A  &547\\
+  'Lee-Parr reparametrization B' & XC\_LDA\_XC\_LP\_B  &548\\
+  'Rae self-energy corrected exchange' & XC\_LDA\_X\_RAE  &549\\
+  'Wigner including kinetic energy contribution' & XC\_LDA\_K\_ZLP  &550\\
+  'McWeeny 76' & XC\_LDA\_C\_MCWEENY  &551\\
+  'Brual \& Rothstein 78' & XC\_LDA\_C\_BR78  &552\\
+  'GGA component of SCAN' & XC\_GGA\_C\_SCAN\_E0  &553\\
+  'Proynov and Kong 2009' & XC\_LDA\_C\_PK09  &554\\
+  'GapC' & XC\_GGA\_C\_GAPC  &555\\
+  'Gaploc' & XC\_GGA\_C\_GAPLOC  &556\\
+  'another spin-dependent correction to PBEint' & XC\_GGA\_C\_ZVPBEINT  &557\\
+  'another spin-dependent correction to PBEsol' & XC\_GGA\_C\_ZVPBESOL  &558\\
+  'Takkar and McCarthy reparametrization, also known as reLYP' & XC\_GGA\_C\_TM\_LYP  &559\\
+  'Thakkar and McCarthy reparametrization' & XC\_GGA\_C\_TM\_PBE  &560\\
+  'Wilson 94 (Eq. 25)' & XC\_GGA\_C\_W94  &561\\
+  'Krieger, Chen, Iafrate, and Savin' & XC\_MGGA\_C\_KCIS  &562\\
+  'Hybrid based on KCIS' & XC\_HYB\_MGGA\_XC\_B0KCIS  &563\\
+  'Lee \& Parr, Eq. (56)' & XC\_MGGA\_XC\_LP90  &564\\
+  'A dynamical correlation functional' & XC\_GGA\_C\_CS1  &565\\
+  'MPW1KCIS for barrier heights' & XC\_HYB\_MGGA\_XC\_MPW1KCIS  &566\\
+  'MPWKCIS1K for barrier heights' & XC\_HYB\_MGGA\_XC\_MPWKCIS1K  &567\\
+  'PBE1KCIS for binding energies' & XC\_HYB\_MGGA\_XC\_PBE1KCIS  &568\\
+  'TPSS1KCIS for thermochemistry and kinetics' & XC\_HYB\_MGGA\_XC\_TPSS1KCIS  &569\\
+  'Becke 88 reoptimized to be used with tau1' & XC\_GGA\_X\_B88M  &570\\
+  'Meta-GGA correlation by Becke' & XC\_MGGA\_C\_B88  &571\\
+  'B5050LYP' & XC\_HYB\_GGA\_XC\_B5050LYP  &572\\
+  'Wigner with corresponding LYP parameters' & XC\_LDA\_C\_OW\_LYP  &573\\
+  'Optimized Wigner' & XC\_LDA\_C\_OW  &574\\
+  'GX functional of Loos' & XC\_MGGA\_X\_GX  &575\\
+  'PBE-GX functional of Loos' & XC\_MGGA\_X\_PBE\_GX  &576\\
+  'Groth, Dornheim, Sjostrom, Malone, Foulkes, Bonitz' & XC\_LDA\_XC\_GDSMFB  &577\\
+  'Gordon and Kim 1972' & XC\_LDA\_C\_GK72  &578\\
+  'Karasiev reparameterization of Chachiyo' & XC\_LDA\_C\_KARASIEV  &579\\
+  'Liu-Parr kinetic' & XC\_LDA\_K\_LP96  &580\\
+  'revised SCAN' & XC\_MGGA\_X\_REVSCAN  &581\\
+  'revised SCAN' & XC\_MGGA\_C\_REVSCAN  &582\\
+  'revised SCAN hybrid exchange (SCAN0)' & XC\_HYB\_MGGA\_X\_REVSCAN0  &583\\
+  'SCAN + VV10 correlation' & XC\_MGGA\_C\_SCAN\_VV10  &584\\
+  'REVSCAN + VV10 correlation' & XC\_MGGA\_C\_REVSCAN\_VV10  &585\\
+  'Becke-Roussel 89 with an explicit inversion of x(y), gamma \& 0.8' & XC\_MGGA\_X\_BR89\_EXPLICIT  &586\\
+  'Keal and Tozer, version 3' & XC\_GGA\_XC\_KT3  &587\\
+  'Baer and Neuhauser, gamma\&1' & XC\_HYB\_LDA\_XC\_BN05  &588\\
+  'Livshits and Baer, empirical functional also used for IP tuning' & XC\_HYB\_GGA\_XC\_LB07  &589\\
+  'Long-range LDA correlation functional' & XC\_LDA\_C\_PMGB06  &590\\
+  'Combined analytical theory with Monte Carlo sampling' & XC\_GGA\_K\_GDS08  &591\\
+  'As GDS08 but for an electron gas with spin' & XC\_GGA\_K\_GHDS10  &592\\
+  'Reparametrized GHDS10' & XC\_GGA\_K\_GHDS10R  &593\\
+  'Trickey, Karasiev, and Vela' & XC\_GGA\_K\_TKVLN  &594\\
+  'Three parameter PBE-like expansion' & XC\_GGA\_K\_PBE3  &595\\
+  'Four parameter PBE-like expansion' & XC\_GGA\_K\_PBE4  &596\\
+  'Intermediate form between PBE3 and PBE4' & XC\_GGA\_K\_EXP4  &597\\
+  'Becke 98' & XC\_HYB\_MGGA\_XC\_B98  &598\\
+  'Neural network LDA from Tozer et al' & XC\_LDA\_XC\_TIH  &599\\
+  'Exchange in 1D for an exponentially screened interaction' & XC\_LDA\_X\_1D\_EXPONENTIAL  &600\\
+  'Short-range recipe for PBE functional - Yukawa' & XC\_GGA\_X\_SFAT\_PBE  &601\\
+  'Becke-Roussel 89 with an explicit inversion of x(y), gamma \& 1.0' & XC\_MGGA\_X\_BR89\_EXPLICIT\_1  &602\\
+  'Regularized TPSS' & XC\_MGGA\_X\_REGTPSS  &603\\
+  'Functional derivative recovered from the stray LB94 potential' & XC\_GGA\_X\_FD\_LB94  &604\\
+  'Revised FD\_LB94' & XC\_GGA\_X\_FD\_REVLB94  &605\\
+  'PBEloc variation with enhanced compatibility with exact exchange' & XC\_GGA\_C\_ZVPBELOC  &606\\
+  'Hybrid based on APBE' & XC\_HYB\_GGA\_XC\_APBE0  &607\\
+  'Hybrid based in APBE and zvPBEloc' & XC\_HYB\_GGA\_XC\_HAPBE  &608\\
+  'JS17 meta-GGA for 2D' & XC\_MGGA\_X\_2D\_JS17  &609\\
+  'Similar to CAM-B3LYP, but trying to reduce the many-electron self-interaction' & XC\_HYB\_GGA\_XC\_RCAM\_B3LYP  &610\\
+  'hybrid fitted to carbon NMR shifts' & XC\_HYB\_GGA\_XC\_WC04  &611\\
+  'hybrid fitted to proton NMR shifts' & XC\_HYB\_GGA\_XC\_WP04  &612\\
+  'Luo-Karasiev-Trickey GGA kinetic' & XC\_GGA\_K\_LKT  &613\\
+  'CAM version of B3LYP, tuned for TDDFT' & XC\_HYB\_GGA\_XC\_CAMH\_B3LYP  &614\\
+  'Long-range corrected short-range hybrid PBE (whPBE0) by Shao et al' & XC\_HYB\_GGA\_XC\_WHPBE0  &615\\
+  'Three parameter PBE-like expansion' & XC\_GGA\_K\_PBE2  &616\\
+  'L0.4 by Laricchia et al' & XC\_MGGA\_K\_L04  &617\\
+  'L0.6 by Laricchia et al' & XC\_MGGA\_K\_L06  &618\\
+  'VT84F by Karasiev et al' & XC\_GGA\_K\_VT84F  &619\\
+  'LGAP by Constantin et al' & XC\_GGA\_K\_LGAP  &620\\
+  'Reduced derivative approximation by Karasiev et al' & XC\_MGGA\_K\_RDA  &621\\
+  'Short-range recipe for OPTX functional' & XC\_GGA\_X\_ITYH\_OPTX  &622\\
+  'Short-range recipe for PBE functional' & XC\_GGA\_X\_ITYH\_PBE  &623\\
+  'Short-range LYP by Ai, Fang, and Su' & XC\_GGA\_C\_LYPR  &624\\
+  'LC version of BLYP for electron affinities' & XC\_HYB\_GGA\_XC\_LC\_BLYP\_EA  &625\\
+  'Regularized Tao and Mo exchange' & XC\_MGGA\_X\_REGTM  &626\\
+  'Second-order gradient expansion' & XC\_MGGA\_K\_GEA2  &627\\
+  'Fourth-order gradient expansion' & XC\_MGGA\_K\_GEA4  &628\\
+  'mGGA-rev functional by Cancio, Stewart, and Kuna (a\&1)' & XC\_MGGA\_K\_CSK1  &629\\
+  'mGGA-rev functional by Cancio, Stewart, and Kuna (a\&4)' & XC\_MGGA\_K\_CSK4  &630\\
+  'mGGAloc-rev functional by Cancio, Stewart, and Kuna (a\&1)' & XC\_MGGA\_K\_CSK\_LOC1  &631\\
+  'mGGAloc-rev functional by Cancio, Stewart, and Kuna (a\&4)' & XC\_MGGA\_K\_CSK\_LOC4  &632\\
+  'LGAP-GE by Constantin et al' & XC\_GGA\_K\_LGAP\_GE  &633\\
+  'Reoptimized PC07 by Mejia-Rodriguez and Trickey' & XC\_MGGA\_K\_PC07\_OPT  &634\\
+  'empirically optimized gamma-TFvW form' & XC\_GGA\_K\_TFVW\_OPT  &635\\
+  'LC version of B88' & XC\_HYB\_GGA\_XC\_LC\_BOP  &636\\
+  'LC version of PBE' & XC\_HYB\_GGA\_XC\_LC\_PBEOP  &637\\
+  'Krieger, Chen, and Kurth' & XC\_MGGA\_C\_KCISK  &638\\
+  'LC version of BLYP with correlation only in the short range' & XC\_HYB\_GGA\_XC\_LC\_BLYPR  &639\\
+  'Modified CAM-B3LYP by Day, Nguyen and Pachter' & XC\_HYB\_GGA\_XC\_MCAM\_B3LYP  &640\\
+  'Short-range LDA exchange with Yukawa attenuation' & XC\_LDA\_X\_YUKAWA  &641\\
+  'Re-regularized SCAN correlation with larger value for eta' & XC\_MGGA\_C\_R2SCAN01  &642\\
+  'Revised correlation energy for MGGAC exchange functional' & XC\_MGGA\_C\_RMGGAC  &643\\
+  'MCML exchange' & XC\_MGGA\_X\_MCML  &644\\
+  'Re-regularized SCAN exchange by Furness et al with larger value for eta' & XC\_MGGA\_X\_R2SCAN01  &645\\
+  'Swart 2012 range-separated hybrid GGA exchange' & XC\_HYB\_GGA\_X\_CAM\_S12G  &646\\
+  'Swart 2012 range-separated hybrid GGA exchange' & XC\_HYB\_GGA\_X\_CAM\_S12H  &647\\
+  'r++SCAN: rSCAN with uniform density limit and coordinate scaling behavior' & XC\_MGGA\_X\_RPPSCAN  &648\\
+  'r++SCAN: rSCAN with uniform density limit and coordinate scaling behavior' & XC\_MGGA\_C\_RPPSCAN  &649\\
+  'r$^{4}$SCAN, a functional that satisfies the same exact constraints that SCAN does' & XC\_MGGA\_X\_R4SCAN  &650\\
+  'Exchange part of VCML-rVV10 by Trepte and Voss' & XC\_MGGA\_X\_VCML  &651\\
+  'VCML-rVV10 by Trepte and Voss' & XC\_MGGA\_XC\_VCML\_RVV10  &652\\
+  'Long-range corrected functional based on short-range LDA exchange (erfc)' & XC\_HYB\_LDA\_X\_ERF  &653\\
+  'Short ranged correlation LDA (erfc)' & XC\_LDA\_C\_PW\_ERF  &654\\
+  'Short ranged PBE exchange (erfc)' & XC\_GGA\_X\_PBE\_ERF\_GWS  &655\\
+  'Short-range PBE (GWS) exchange (erfc) + long-range exact exchange' & XC\_HYB\_GGA\_X\_PBE\_ERF\_GWS  &656\\
+  'Short ranged PBE correlation (erfc)' & XC\_GGA\_C\_PBE\_ERF\_GWS  &657\\
+  'Google Accelerated Science 22' & XC\_HYB\_MGGA\_XC\_GAS22  &658\\
+  'r2SCANh: r2SCAN hybrid like TPSSh with 10% exact exchange' & XC\_HYB\_MGGA\_XC\_R2SCANH  &659\\
+  'r2SCAN0: r2SCAN hybrid like PBE0 with 25% exact exchange' & XC\_HYB\_MGGA\_XC\_R2SCAN0  &660\\
+  'r2SCAN50: r2SCAN hybrid like PBE50 with 50% exact exchange' & XC\_HYB\_MGGA\_XC\_R2SCAN50  &661\\
+  'CAM hybrid screened exchange PBE version' & XC\_HYB\_GGA\_XC\_CAM\_PBEH  &681\\
+  'CAMY hybrid screened exchange PBE version' & XC\_HYB\_GGA\_XC\_CAMY\_PBEH  &682\\
+  'Ruggeri, Rios, and Alavi unrestricted fit' & XC\_LDA\_C\_UPW92  &683\\
+  'Ruggeri, Rios, and Alavi restricted fit' & XC\_LDA\_C\_RPW92  &684\\
+  'LDA-type exchange with tau-dependent potential' & XC\_MGGA\_X\_TLDA  &685\\
+  'Tao 2001' & XC\_MGGA\_X\_EDMGGA  &686\\
+  'Generalized density-matrix with a\&1/2' & XC\_MGGA\_X\_GDME\_NV  &687\\
+  'Reparametrized local-density approximation' & XC\_MGGA\_X\_RLDA  &688\\
+  'Generalized density-matrix with a\&0' & XC\_MGGA\_X\_GDME\_0  &689\\
+  'Generalized density-matrix with a\&0.00638' & XC\_MGGA\_X\_GDME\_KOS  &690\\
+  'Varied-terms (VT) mGGA of Koehl, Odom, and Scuseria' & XC\_MGGA\_X\_GDME\_VT  &691\\
+  'simple local model for Slater potential' & XC\_LDA\_X\_SLOC  &692\\
+  'revised Tao and Mo 2016 exchange' & XC\_MGGA\_X\_REVTM  &693\\
+  'revised Tao and Mo 2016 exchange' & XC\_MGGA\_C\_REVTM  &694\\
+  'EDMGGA hybrid' & XC\_HYB\_MGGA\_XC\_EDMGGAH  &695\\
+  'Modified Becke-Roussel for band gaps - cuspless hole' & XC\_MGGA\_X\_MBRXC\_BG  &696\\
+  'Modified Becke-Roussel for band gaps - hydrogen hole' & XC\_MGGA\_X\_MBRXH\_BG  &697\\
+  'Half-and-half meta-LDAized LDA exchange by Lehtola and Marques' & XC\_MGGA\_X\_HLTA  &698\\
+  'Half-and-half meta-LDAized PW correlation by Lehtola and Marques' & XC\_MGGA\_C\_HLTAPW  &699\\
+  'Deorbitalized SCAN (SCAN-L) exchange' & XC\_MGGA\_X\_SCANL  &700\\
+  'Deorbitalized revised SCAN (revSCAN-L) exchange' & XC\_MGGA\_X\_REVSCANL  &701\\
+  'Deorbitalized SCAN (SCAN-L) correlation' & XC\_MGGA\_C\_SCANL  &702\\
+  'SCAN-L + rVV10 correlation' & XC\_MGGA\_C\_SCANL\_RVV10  &703\\
+  'SCAN-L + VV10 correlation' & XC\_MGGA\_C\_SCANL\_VV10  &704\\
+  'Jana and Samal 2018, screened range-separated TM exchange' & XC\_HYB\_MGGA\_X\_JS18  &705\\
+  'Patra, Jana and Samal 2018, screened range-separated TM exchange' & XC\_HYB\_MGGA\_X\_PJS18  &706\\
+  'TASK exchange of Aschebrock and Kuemmel' & XC\_MGGA\_X\_TASK  &707\\
+  'Long-range Gaussian' & XC\_HYB\_GGA\_X\_LCGAU  &708\\
+  'Long-range Gaussian fitted to core excitations' & XC\_HYB\_GGA\_X\_LCGAU\_CORE  &709\\
+  'Long-range Gaussian 2' & XC\_HYB\_GGA\_X\_LC2GAU  &710\\
+  'MGGAC exchange of Patra et al' & XC\_MGGA\_X\_MGGAC  &711\\
+  'beta fitted to LC20 to be used with MGGAC' & XC\_GGA\_C\_MGGAC  &712\\
+  'Double hybrid of Grimme' & XC\_HYB\_GGA\_XC\_B2PLYP  &713\\
+  'Hybrid with two range separations (form 1)' & XC\_HYB\_GGA\_XC\_SRC1\_BLYP  &714\\
+  'Hybrid with two range separations (form 2)' & XC\_HYB\_GGA\_XC\_SRC2\_BLYP  &715\\
+  'modified Becke-Roussel by Patra et al' & XC\_MGGA\_X\_MBR  &716\\
+  'Middle-range hybrid from Henderson, Izmaylov, Scuseria, and Savin' & XC\_HYB\_GGA\_XC\_HISS  &717\\
+  'Deorbitalized re-regularized SCAN (r2SCAN-L) exchange' & XC\_MGGA\_X\_R2SCANL  &718\\
+  'Deorbitalized re-regularized SCAN (r2SCAN-L) correlation' & XC\_MGGA\_C\_R2SCANL  &719\\
+  'Long-range corrected TM-LYP by Jana et al' & XC\_HYB\_MGGA\_XC\_LC\_TMLYP  &720\\
+  'Double hybrid of Karton et al' & XC\_HYB\_GGA\_XC\_B2GPPLYP  &721\\
+  'Double hybrid of Casanova-Paez, Dardis and Goerigk' & XC\_HYB\_GGA\_XC\_WB2PLYP  &722\\
+  'Double hybrid of Casanova-Paez, Dardis and Goerigk' & XC\_HYB\_GGA\_XC\_WB2GPPLYP  &723\\
+  'modified TASK exchange' & XC\_MGGA\_X\_MTASK  &724\\
+  'Double hybrid of Bremond and Adamo' & XC\_HYB\_GGA\_XC\_PBE0\_DH  &725\\
+  'Double hybrid of Chai and Mao' & XC\_HYB\_GGA\_XC\_PBE0\_2  &726\\
+  'Double hybrid of Bremond et al' & XC\_HYB\_GGA\_XC\_PBE\_QIDH  &727\\
+  'Double hybrid of Toulouse et al' & XC\_HYB\_GGA\_XC\_LS1DH\_PBE  &728\\
+  'Functional for quasi-1D systems' & XC\_GGA\_X\_Q1D  &734\\
+\hline
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+
 
 
 %====================================================================
