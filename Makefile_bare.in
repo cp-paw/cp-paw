@@ -47,6 +47,8 @@ export LAPACKDIR=@LAPACKDIR@
 export FFTDIR=@FFTDIR@
 #___________________________ directory with MPI library
 export MPIDIR=@MPIDIR@
+#___________________________ directory with LIBXC library
+export LIBXCDIR=@LIBXCDIR@
 #___________________________ library archiver
 export LIBAR=@LIBAR@
 #___________________________header file for fft
