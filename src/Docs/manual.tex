@@ -1019,8 +1019,21 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
 
     {\bf(11)} RPBE exchange and correlation, includes Hammer's
               correction\cite{hammer99_prb59_7413} to Perdew-Burke-Ernzerhof
-              exchange and correlation \cite{perdew96_prl77_3865};} \vformat{integer}
-              \vrules{optional} \vdefault{1}}
+              exchange and correlation \cite{perdew96_prl77_3865};} 
+\vformat{integer}
+\vrules{optional, incompatible with LIBXC} 
+\vdefault{1}}
+
+\mbax{\key{LIBXC} \vdescr{density functional parameterization through
+    LibXC.  array of functional id's. Typicaly there are one or two
+    strings.  See appendix~\ref{sec:libxcids} on
+    p.~\pageref{sec:libxcids}.
+  %% \begin{center}
+  %% \end{center}
+}
+\vformat{character array}
+\vrules{optional, incompatible with TYPE}
+\vdefault{F}}
 
 
 \mbax{\key{VDW}
@@ -11182,6 +11195,7 @@ $N$        & $(\frac{1}{2},\frac{1}{2},0) \frac{2\pi}{a}$ & $(0,0,\frac{1}{2})$ 
 %====================================================================
 \newpage
 \section{Density functionals and their identifiers in LibXC}
+\label{sec:libxcids}
 %====================================================================
 In tables \ref{tab:libxc1}, the identifiers for the density
 functionals in the library LibXC are listed. They are taken from the

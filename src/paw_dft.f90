@@ -101,9 +101,15 @@ MODULE DFT_MODULE
       TPW91G =.FALSE.  ! USE PERDEW WANG91 GC
       TPBE96 =.FALSE.  ! USE PERDEW BURKE ERNZERHOF GC
       TLYP88 =.FALSE.  ! USE LEE YANG PARR GC
-      TLIBXC =.FALSE.  ! USE LIBXC INTERFACE
       DESCRIPTION(:)=' '
       DESCRIPTION(1)='NO FUNCTIONAL DESCRIPTION GIVEN'
+!
+!     ==========================================================================
+!     ==  HANDLE LIBXC                                                        ==
+!     ==========================================================================
+      IF(TLIBXC) THEN
+        RETURN
+      END IF
 !
 !     ==========================================================================
 !     ==  NOW SET THE FUNCTIONAL SELECTORS                                    ==
@@ -470,6 +476,18 @@ MODULE DFT_MODULE
 !     **************************************************************************
       IF(.NOT.TINI) CALL DFT_INITIALIZE
       CALL REPORT$TITLE(NFIL,'DENSITY FUNCTIONAL')
+!
+!     ==========================================================================
+!     == DELEGATE REPORTING TO PAWLIBXC OBJECT                                ==
+!     ==========================================================================
+      IF(TLIBXC) THEN
+        CALL PAWLIBXC$REPORT(NFIL)
+        RETURN
+      END IF
+!
+!     ==========================================================================
+!     == DO REPORTING FOR CPPAW INTRINSIC FUNCTIONAL IMPLEMENTATIONS          ==
+!     ==========================================================================
       IF(TSPIN) THEN
         CALL REPORT$STRING(NFIL,'SPIN POLARIZED (LSD) FUNCTIONAL')
       ELSE
@@ -638,7 +656,8 @@ MODULE DFT_MODULE
 !     **                                                                      **
 !     ** E.G. SELECT DENSITY FUNCTIONAL BY NAME                               **
 !     **************************************************************************
-      USE DFT_MODULE
+      USE DFT_MODULE, ONLY : TLIBXC &
+     &                      ,TGRA
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -648,9 +667,11 @@ MODULE DFT_MODULE
 !     **************************************************************************
       IF(ID.EQ.'TYPE') THEN   
         TCHK=.TRUE.
-        IF(VAL(1)(1:3).EQ.'XC_') THEN
+        TLIBXC=(VAL(1)(1:3).EQ.'XC_')
+        IF(TLIBXC) THEN
 !         == THIS IS FOR THE FUNCTIONALS IN LIBXC ==============================
           CALL PAWLIBXC$SETCHA('FUNCTIONAL',LEN,VAL)
+          CALL PAWLIBXC$GETL4('GRADIENT',TGRA)
         ELSE
 !         == THIS IS FOR THE CPPAW INTRINSIC FUNCTIONALS =======================
           IF(LEN.EQ.1) THEN
