@@ -1021,8 +1021,8 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
               correction\cite{hammer99_prb59_7413} to Perdew-Burke-Ernzerhof
               exchange and correlation \cite{perdew96_prl77_3865};} 
 \vformat{integer}
-\vrules{optional, incompatible with LIBXC} 
-\vdefault{1}}
+\vrules{optional, incompatible with \verb|LIBXC|} 
+\vdefault{10 (PBE functional)}}
 
 \mbax{\key{LIBXC} \vdescr{density functional parameterization through
     LibXC.  array of functional id's. Typicaly there are one or two
@@ -1032,8 +1032,8 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
   %% \end{center}
 }
 \vformat{character array}
-\vrules{optional, incompatible with TYPE}
-\vdefault{F}}
+\vrules{optional, incompatible with \verb|TYPE|}
+\vdefault{see \verb|TYPE|}}
 
 
 \mbax{\key{VDW}

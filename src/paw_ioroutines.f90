@@ -1133,9 +1133,16 @@ CALL TRACE$PASS('DONE')
         CALL ERROR$MSG('REMOVE ONE OF THEM FROM !CONTROL!DFT')
         CALL ERROR$STOP('READIN_DFT')
       END IF
-
+!
+!     == SET DEFAULT (PERDEW BURKE ERNZERHOF GGA) ==============================
+      IF((.NOT.TCHK).AND.(.NOT.TCHK1)) THEN
+        ILDA=10   ! PBE FUNCTIONAL, INTRINSIC IMPLEMENTATION 
+        CALL DFT$SETI4('TYPE',ILDA)
+      END IF
+!
+!     == READ FUNCTIONAL SPECIFICATION =========================================
       IF(TCHK) THEN
-!       == READ LIBXC INPUT ====================================================
+!       -- READ LIBXC INPUT ----------------------------------------------------
         CALL LINKEDLIST$SIZE(LL_CNTL,'LIBXC',1,LEN)
         IF(LEN.GT.SIZE(CHTYPE)) THEN
           CALL ERROR$MSG('NUMBER OF LIBXC IDENTIFIERS EXCEEDS MAXIMUM')
@@ -1143,12 +1150,8 @@ CALL TRACE$PASS('DONE')
         END IF
         CALL LINKEDLIST$GET(LL_CNTL,'LIBXC',1,CHTYPE(1:LEN))
         CALL DFT$SETCHA('TYPE',LEN,CHTYPE(1:LEN))
-      ELSE
-!       == USE INTRINSIC FUNCTIONALS W/O LIBXC
-        CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
-        IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'TYPE',0,1)
-        END IF
+      ELSE IF(TCHK1) THEN
+!       -- USE INTRINSIC FUNCTIONALS W/O LIBXC ---------------------------------
         CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
         CALL DFT$SETI4('TYPE',ILDA)
       END IF
