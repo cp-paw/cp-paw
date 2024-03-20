@@ -136,9 +136,23 @@ function execute(){
     fi
     if [[ "${DRYRUN}" = "no" ]] ; then
       eval "$@"
+      export PID=$!
     fi
 }
-
+#-------------------------------------------------------------------------------
+#  count the number of running jobs with PID in PIDS
+#-------------------------------------------------------------------------------
+function countjobs {
+################################################################################
+## returns the number of active jobs on a list PIDS on project id-s           ##
+###############################################################################
+  local NACTIVE=0
+  local X
+  for X in ${PIDS} ; do
+    if [[ -n  $(ps -p $X -o pid= ) ]] ; then  NACTIVE=$(( $NACTIVE + 1 )); fi
+  done
+echo $NACTIVE
+}
 #-------------------------------------------------------------------------------
 #  resolve argument list
 #-------------------------------------------------------------------------------
@@ -295,6 +309,8 @@ fi
 #    initialize: make directories and copy files
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
+export PIDS="" # list of project id's
+#
 for PAR1VAL in $PAR1VALS; do
   TARGETNAME=${SRCNAME}'_'${PAR1VAL}
   TARGETDIR=${SRCDIR}/${TARGETNAME}
@@ -359,8 +375,12 @@ for PAR1VAL in $PAR1VALS; do
   #
   cd $TARGETDIR
   if [[ $NNODES = 0 ]] ; then
-    execute "paw_waittillempty -n $NJOBS"
+    # pause if the number of active jobs exceeds maximum
+    while [[ $(countjobs) -ge ${NJOBS} ]] ; do sleep 2; done
+    #
+#    execute "paw_waittillempty -n $NJOBS"
     execute "$EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &"
+    PIDS="$PIDS $PID"   # store the project id returned by 'execute'
   else
     if [[ WHAT != run ]] ; then
       echo "error in $0: only -w run can be executed parallel" >&2
@@ -369,7 +389,17 @@ for PAR1VAL in $PAR1VALS; do
       exit 1
     fi
     execute "doppaw ${TARGETNAME} ${NNODES}"
+    PIDS="$PIDS $PID"   # store the project id returned by 'execute'
   fi
   cd $THISDIR
 done
+#
+#============================================================================
+#==  wait until all submitted jobs ($PIDS) are finished
+#============================================================================
+while [[ $(countjobs) -gt 0 ]] ; do 
+  sleep 10 
+  echo "time=$(date "+ %H:%M:%S"); waiting for $(countjobs) to finish...."
+done
+#
 exit 0

@@ -282,7 +282,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       Y=${Y%.cntl}
       if [[ -n $Y ]] ; then      
-        execute "nohup doppaw -n 6 $Y &"
+        execute "nohup doppaw -n 10 $Y &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
       else

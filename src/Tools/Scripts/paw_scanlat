@@ -219,7 +219,7 @@ if [[ ! -f $ROOT.strc ]] ; then
   exit 1
 fi
 if [[ ! -f $ROOT.cntl ]] ; then
-  echo "error in $0: file $ROOT.strc is missing" >&2
+  echo "error in $0: file $ROOT.cntl is missing" >&2
   exit 1
 fi
 #
@@ -257,7 +257,7 @@ if [ $VERBOSE = yes ] ; then echo ROOT=\"${ROOT}\" ; fi
 #==============================================================================
 # pick out the reference lattice constant from the structure file
 #==============================================================================
-LINE=$(grep 'LUNIT' $ROOT.strc)
+LINE=$(grep -i 'LUNIT' $ROOT.strc)
 echo "LINE(1) ${LINE}"
 LINE=${LINE#*[Ll][Uu][Nn][Ii][Tt]} #strip everything up to LUNIT
 echo "LINE(2) $LINE"
@@ -310,7 +310,7 @@ if [[ $UPDATE = no ]] ; then
         execute "cp ${ROOT}.rstrt ${ROOTOFX}.rstrt"
       else
         # test, whether restart file is required
-        if [[ -z $(grep START=*T  ${ROOTOFX}.cntl) ]]; then 
+        if [[ -z $(grep -i START=*T  ${ROOTOFX}.cntl) ]]; then 
           echo "source restart file ${ROOTOFX}.rstrt does not exist"
           exit 1
         fi
