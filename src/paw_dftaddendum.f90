@@ -87,6 +87,70 @@ END MODULE NEWDFT_MODULE
       D3EXC(:,:,:)=0.D0
       RETURN
       END
+!*******************************************************************************
+!*******************************************************************************
+!*****  interface to libxc                                                ******
+!*******************************************************************************
+!*******************************************************************************
+#IF DEFINED(CPPVAR_NOLIBXC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$GETL4(ID,VAL)
+      CHARACTER(*),INTENT(IN) :: ID
+      LOGICAL(4)  ,INTENT(OUT):: VAL
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$GETL4')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$REPORT(NFIL)
+      INTEGER(4)       ,INTENT(IN) :: NFIL
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$REPORT')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$SETCH(ID,VAL)
+      CHARACTER(*),INTENT(IN) :: ID
+      CHARACTER(*),INTENT(IN) :: VAL
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$SETCH')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$SETCHA(ID,LEN,VAL)
+      CHARACTER(*),INTENT(IN) :: ID
+      INTEGER(4)  ,INTENT(IN) :: LEN
+      CHARACTER(*),INTENT(IN) :: VAL(LEN)
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$SETCHA')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$GGA1(VAL,EXC,DER)
+      REAL(8)   ,INTENT(IN) :: VAL(5)     ! (RHOT,RHOS,GRHOT2,GRHOS2,GRHOTS)
+      REAL(8)   ,INTENT(OUT):: EXC         ! SPIN DENSITY
+      REAL(8)   ,INTENT(OUT):: DER(5)      ! 
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$GGA1')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$GGA3(VAL,EXC,DER,DER2,DER3)
+      REAL(8)   ,INTENT(IN) :: VAL(5)     ! (RHOT,RHOS,GRHOT2,GRHOS2,GRHOTS)
+      REAL(8)   ,INTENT(OUT):: EXC         ! SPIN DENSITY
+      REAL(8)   ,INTENT(OUT):: DER(5)      ! 
+      REAL(8)   ,INTENT(OUT):: DER2(5,5)   ! 
+      REAL(8)   ,INTENT(OUT):: DER3(5,5,5) ! 
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$GGA3')
+      RETURN
+      END
+#ELSE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       MODULE PAWLIBXC_MODULE
@@ -981,6 +1045,8 @@ END MODULE NEWDFT_MODULE
       END DO
       RETURN
       END
+
+
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWLIBXC$gETl4(ID,VAL)
@@ -1549,3 +1615,4 @@ END MODULE NEWDFT_MODULE
       ENDDO
       RETURN
       END
+#ENDIF
