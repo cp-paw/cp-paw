@@ -89,7 +89,7 @@ END MODULE NEWDFT_MODULE
       END
 !*******************************************************************************
 !*******************************************************************************
-!*****  interface to libxc                                                ******
+!*****  INTERFACE TO LIBXC                                                ******
 !*******************************************************************************
 !*******************************************************************************
 #IF DEFINED(CPPVAR_NOLIBXC)
@@ -1060,7 +1060,7 @@ END MODULE NEWDFT_MODULE
 
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE PAWLIBXC$gETl4(ID,VAL)
+      SUBROUTINE PAWLIBXC$GETL4(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
       USE PAWLIBXC_MODULE, ONLY: NXC &
@@ -1072,15 +1072,15 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_FAMILY_HYB_GGA &
      &                          ,XC_FAMILY_MGGA &
      &                          ,XC_FAMILY_HYB_MGGA &
-     &                          ,XC_FAMILY_unknown &
+     &                          ,XC_FAMILY_UNKNOWN &
      &                          ,XC_FAMILY_LCA &
      &                          ,XC_F03_FUNC_GET_INFO &
      &                          ,XC_F03_FUNC_INFO_GET_FAMILY
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
-      logical(4)  ,INTENT(out):: VAL
+      LOGICAL(4)  ,INTENT(OUT):: VAL
       TYPE(XC_F03_FUNC_INFO_T):: XC_INFO
-      integer(4)              :: i
+      INTEGER(4)              :: I
 !     **************************************************************************
       IF(ID.EQ.'GRADIENT') THEN 
         IF(NXC.EQ.0) THEN
@@ -1090,7 +1090,7 @@ END MODULE NEWDFT_MODULE
         END IF
         VAL=.FALSE.
         DO I=1,NXC
-          XC_INFO=XC_F03_FUNC_GET_INFO(XC_FUNC(i))
+          XC_INFO=XC_F03_FUNC_GET_INFO(XC_FUNC(I))
           SELECT CASE (XC_F03_FUNC_INFO_GET_FAMILY(XC_INFO))
           CASE(XC_FAMILY_LDA,XC_FAMILY_HYB_LDA) 
             VAL=VAL
@@ -1110,26 +1110,26 @@ END MODULE NEWDFT_MODULE
         CALL ERROR$CHVAL('ID',ID)
         CALL ERROR$STOP('PAWLIBXC$SETL4')
       END IF
-      return
-      end
+      RETURN
+      END
 !!$!
 !!$!     ...1.........2.........3.........4.........5.........6.........7.........8
-!!$      SUBROUTINE PAWLIBXC$gETch(ID,VAL)
+!!$      SUBROUTINE PAWLIBXC$GETCH(ID,VAL)
 !!$!     **************************************************************************
 !!$!     **************************************************************************
 !!$      IMPLICIT NONE
 !!$      CHARACTER(*),INTENT(IN) :: ID
 !!$      CHARACTER(*),INTENT(IN) :: VAL
 !!$!     **************************************************************************
-!!$      IF(ID.EQ.'tgra') THEN 
+!!$      IF(ID.EQ.'TGRA') THEN 
 !!$
 !!$      ELSE
 !!$        CALL ERROR$MSG('ID NOT RECOGNIZED')
 !!$        CALL ERROR$CHVAL('ID',ID)
 !!$        CALL ERROR$STOP('PAWLIBXC$SETL4')
 !!$      END IF
-!!$      return
-!!$      end
+!!$      RETURN
+!!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWLIBXC$SETCH(ID,VAL)
@@ -1219,8 +1219,8 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_MGGA_X_R2SCAN &
      &                          ,XC_MGGA_C_R2SCAN &
      &                          ,XC_F03_FUNC_INIT &! FUNCTION
-     &                          ,xc_f03_functional_get_number &
-     &                          ,xc_f03_functional_get_name
+     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
+     &                          ,XC_F03_FUNCTIONAL_GET_NAME
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC &
      &                          ,NIDX &
@@ -1230,11 +1230,11 @@ END MODULE NEWDFT_MODULE
       INTEGER(4)  ,INTENT(IN) :: LEN
       CHARACTER(*),INTENT(IN) :: VAL(LEN)
       INTEGER(4)              :: I
-      integer(c_int)          :: j
+      INTEGER(C_INT)          :: J
       LOGICAL(4)              :: TCHK
-      character(128)          :: name
+      CHARACTER(128)          :: NAME
 !     **************************************************************************
-!print*,'starting pawlibxc$setcha'
+!PRINT*,'STARTING PAWLIBXC$SETCHA'
       IF(ID.EQ.'FUNCTIONAL') THEN 
         IF(ALLOCATED(XC_FUNC)) THEN
           PRINT*,'ERROR: XC_FUNC IS ALREADY SET'
@@ -1523,9 +1523,9 @@ END MODULE NEWDFT_MODULE
       END SELECT
 
       EXC=EXCARR(1)
-      der=0.d0
-      der2=0.d0
-      der3=0.d0
+      DER=0.D0
+      DER2=0.D0
+      DER3=0.D0
       DER(1:2)=VRHO(:)
       DER(3:5)=VSIGMA(:)      
       DER2(1,1)=V2RHO2(1)
