@@ -980,7 +980,8 @@ zero.}
 \bdescr{selects density functional parameterization; default is Perdew-Zunger
 parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
 
-\mbax{\key{TYPE} \vdescr{density functional parameterization.
+\mbax{\key{TYPE} 
+  \vdescr{density functional parameterization.
     possible values are:\hfill\break 
     
     {\bf(1)} Perdew-Zunger parameterization \cite{perdew81_prb23_5048} of
@@ -996,7 +997,8 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
     {\bf(6)} Local exchange and Becke gradient correction
     \cite{becke88_pra38_3098} for exchange; 
     
-    {\bf(7)} Perdew-Wang LSD \cite{perdew92_prb45_13244} and Becke gradient correction for
+    {\bf(7)} Perdew-Wang LSD \cite{perdew92_prb45_13244} 
+     and Becke gradient correction for
     exchange \cite{becke88_pra38_3098}; 
     
     {\bf(71)} Perdew-Zunger\cite{perdew81_prb23_5048} and Becke-88 gradient
@@ -1015,16 +1017,18 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
     \cite{perdew96_prl77_3865}; Almost identical to PW91
     GGA\cite{perdew92_prb46_6671} but simpler formulation.
 
-    {\bf(-10)} like TYPE=10 but with a changed parameter used previously.
+    {\bf(-10)} like TYPE=10 but with a changed parameter used previously;
 
     {\bf(11)} RPBE exchange and correlation, includes Hammer's
               correction\cite{hammer99_prb59_7413} to Perdew-Burke-Ernzerhof
               exchange and correlation \cite{perdew96_prl77_3865};} 
 \vformat{integer}
-\vrules{optional, incompatible with \verb|LIBXC|} 
-\vdefault{10 (PBE functional)}}
+\vrules{optional, incompatible with LIBXC} 
+\vdefault{10 (PBE functional)}
+}
 
-\mbax{\key{LIBXC} \vdescr{density functional parameterization through
+\mbax{\key{LIBXC} 
+   \vdescr{density functional parameterization through
     LibXC.  array of functional id's. Typicaly there are one or two
     strings.  See appendix~\ref{sec:libxcids} on
     p.~\pageref{sec:libxcids}.
@@ -1032,8 +1036,9 @@ parameterization of the Ceperly-Alder quantum Monte-Carlo calculation}
   %% \end{center}
 }
 \vformat{character array}
-\vrules{optional, incompatible with \verb|TYPE|}
-\vdefault{see \verb|TYPE|}}
+\vrules{optional, incompatible with TYPE}
+\vdefault{see TYPE}
+}
 
 
 \mbax{\key{VDW}
