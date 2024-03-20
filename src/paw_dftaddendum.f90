@@ -140,6 +140,17 @@ END MODULE NEWDFT_MODULE
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PAWLIBXC$GGA2(VAL,EXC,DER,DER2)
+      REAL(8)   ,INTENT(IN) :: VAL(5)     ! (RHOT,RHOS,GRHOT2,GRHOS2,GRHOTS)
+      REAL(8)   ,INTENT(OUT):: EXC         ! SPIN DENSITY
+      REAL(8)   ,INTENT(OUT):: DER(5)      ! 
+      REAL(8)   ,INTENT(OUT):: DER2(5,5)   ! 
+      CALL ERROR$MSG('LIBXC NOT AVAILABLE. INSTALL WITH LIBXC')
+      CALL ERROR$STOP('PAWLIBXC$GGA2')
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PAWLIBXC$GGA3(VAL,EXC,DER,DER2,DER3)
       REAL(8)   ,INTENT(IN) :: VAL(5)     ! (RHOT,RHOS,GRHOT2,GRHOS2,GRHOTS)
       REAL(8)   ,INTENT(OUT):: EXC         ! SPIN DENSITY
