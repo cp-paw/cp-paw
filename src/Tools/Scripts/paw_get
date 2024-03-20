@@ -335,6 +335,15 @@ elif [[ "$WHATID" = "volume" ]] ; then
   export T31=$(grep "T3$WHAT" $ROOT.prot | tail -n1 | awk '{print $2}')
   export T32=$(grep "T3$WHAT" $ROOT.prot | tail -n1 | awk '{print $3}')
   export T33=$(grep "T3$WHAT" $ROOT.prot | tail -n1 | awk '{print $4}')
+
+  # text wheter info exits
+  if [[ -z $T11 ]] ; then
+    echo "error in $0: no lattice constants in prot file" >&2
+    echo "ROOT.prot= $ROOT.prot"
+    exit 1
+  fi
+
+
   DETSTRING=" $T11 * ( $T22 * $T33 - $T23 * $T32 ) \
             + $T12 * ( $T23 * $T31 - $T21 * $T33 ) \
             + $T13 * ( $T21 * $T32 - $T22 * $T31 ) "

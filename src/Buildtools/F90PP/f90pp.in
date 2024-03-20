@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set +x
 ########################################################################
 ###                                                                   ##
@@ -144,7 +144,7 @@ RC=$?
 if [[ $RC != 0 ]] ; then 
   echo "error in $0: last command failed with RC=$RC"
   echo "try to  execute ulimit -s unlimited"
-  exit 1
+  exit 2
 fi              
 exit 0
 
