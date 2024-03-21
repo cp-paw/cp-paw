@@ -1225,6 +1225,7 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_FUNC &
      &                          ,NIDX &
      &                          ,XCID
+      use strings_module
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: ID
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -1249,6 +1250,12 @@ END MODULE NEWDFT_MODULE
 !         == FORTRAN ROUTINES ARE IN LIBXC/LIBXC-MASTER/SRC/LIBXC_MASTER.F90  ==
 !         == FUNCTIONAL IDS ARE IN LIBXC/LIBXC-MASTER/SRC/LIBXC_INC.F90       ==
 !         ======================================================================
+          IF(+VAL(I)(:7).NE.+'XC_LDA_'.AND.+VAL(I)(:7).NE.+'XC_GGA_') THEN
+            CALL ERROR$MSG('LIBXC SELECTION IS NOT YET SUPPORTED')
+            CALL ERROR$CHVAL('SELECTION',TRIM(ADJUSTL(VAL(I))))
+            CALL ERROR$MSG('USE SELECTION BEGINNING WITH XC_LDA_ OR XC_GGA_')
+            CALL ERROR$STOP('PAWLIBXC$SETCHA')
+          END IF
           J=XC_F03_FUNCTIONAL_GET_NUMBER(VAL(I))
           IF(J.LT.0) THEN
             CALL ERROR$MSG('FUNCTIONAL ID NOT RECOGNIZED OR INCOMPATIBLE')
