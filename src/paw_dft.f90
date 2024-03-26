@@ -1157,6 +1157,80 @@ MODULE DFT_MODULE
       RETURN
     END SUBROUTINE DFT3
 !
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE DFT$MACDONALD(RHO,E,POT)
+!     **************************************************************************
+!     ** RELATIVISTIC CORRECTION TO ENERGY DENSITY                            **
+!     ** OF MACDONALD AND VOSKO, MACDONALD79_JPCSS12_2977                     **
+!     ** MACDONALD AND VOSKO, J.PHYS. SOL.ST. PHYS 12, 2977 (1979)            **
+!     **                                                                      **
+!     ** PHIREL= MACDONALD EQ 3.4 (CAUTION TYPO: N <-> ETA)                   **
+!     **                                                                      **
+!     ** ATTENTION: I USE THE LOCAL DENSITY EXCHANGE ENERGY OF THE            **
+!     ** NON-MAGNETIC ELECTRON GAS.                                           **
+!     **                                                                      **
+!     ** THE CORRECTION IS FORMULATED AS ADDITIVE CORRECTION RATHER THAN AS   **
+!     ** MULTIPLICATIVE CORRECTION AS IN MACDONALD AND VOSKO.                 **
+!     *************************PETER BLOECHL, GOSLAR 24.12.2023*****************
+      IMPLICIT NONE 
+      REAL(8)    ,INTENT(IN) :: RHO
+      REAL(8)    ,INTENT(OUT):: E
+      REAL(8)    ,INTENT(OUT):: POT
+      REAL(8)    ,PARAMETER  :: ONETHIRD=1.D0/3.D0
+      REAL(8)    ,PARAMETER  :: FOURTHIRD=4.D0/3.D0
+      REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)    ,PARAMETER  :: SPEEDOFLIGHT=137.035999084D0
+      REAL(8)    ,PARAMETER  :: EXFAC=-(3.d0/4.d0)*( 3.D0/PI )**(1.D0/3.D0)
+      REAL(8)                :: PHIREL,DPHIREL
+      REAL(8)                :: BETA,DBETA
+      REAL(8)                :: ETA,DETA
+      REAL(8)                :: SVAR,DSVAR
+      REAL(8)                :: EX,DEX
+!     **************************************************************************
+!
+!     ==========================================================================
+!     == avoid divide-by-zero for small densities/ non-relativistic limit ======
+!     ==========================================================================
+      if(rho.lt.1.d-12) then
+        ex=0.d0
+        dex=0.d0
+        return
+      end if
+!
+!     ==========================================================================
+!     == EXCHANGE ENERGY DENSITY OF HOMOGENEOUS ELECTRON GAS ===================
+!     ==========================================================================
+!     == RS=(3.D0/(4.D0*PI*RHO))**(1/3)
+!     == EX=-3.D0*( 9.D0/(32.D0*PI**2)**ONETHIRD / RS * RHO
+!     ==   =-1.5D0*( 3.D0/PI )**(1/3) * RHO**(4/3)
+!     ==========================================================================
+      EX=EXFAC*RHO**FOURTHIRD
+      DEX=FOURTHIRD*EXFAC*RHO**ONETHIRD
+!
+!     ==========================================================================
+!     == RELATIVISTIC CORRECTION FACTOR FROM MACDONALD AND VOSKO              ==
+!     == PHIREL=PHIC+PHIT                                                     ==
+!     ==========================================================================
+      BETA=(3.D0*PI**2*RHO)**ONETHIRD / SPEEDOFLIGHT
+      DBETA=ONETHIRD*BETA/RHO
+!
+      ETA=SQRT(1.D0+BETA**2)
+      DETA=BETA/ETA*DBETA
+!
+      SVAR=(BETA*ETA-LOG(BETA+ETA)) / BETA**2 
+      DSVAR=(DBETA*ETA+BETA*DETA-(DBETA+DETA)/(BETA+ETA) ) / BETA**2 &
+     &     -2.D0*SVAR/BETA*DBETA
+!
+      PHIREL=1.D0-1.5D0*SVAR**2
+      DPHIREL=-3.D0*SVAR*DSVAR
+!
+!     ==========================================================================
+!     == CONVERT INTO A CORRECTION TO THE ENERGY DENSITY                      ==
+!     ==========================================================================
+      E=EX*(PHIREL-1.D0)
+      POT=EX*DPHIREL+DEX*(PHIREL-1.D0)
+      RETURN
+      END
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE TABLE1D_MODULE
