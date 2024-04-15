@@ -13,8 +13,48 @@
 ##         and -U that affect which parts of the code will be selected        ##
 ## LIBS    -l options passed to the linker.                                   ##
 ##                                                                            ##
-##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
-##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
+##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} rel. to the main PAW directory   ##
+##         and where ${TYPE} is either "none", "none_parallel", "fast",       ##
+##         "fast_parallel", etc.                                              ##
+##                                                                            ##
+##  Required:                                                                 ##
+##    ${MPIDIR}/bin/mpifort                                                   ##
+##    ${MPIDIR}/include/mpi_f08.mod (use mpi_f08 in src/paw_mpelib.f90)       ##
+##    ${MPIDIR}/lib/libmpi.dylib                                              ##
+##    ${FFTDIR}/include/fftw_f77.i (include fftw_f77.i in src/paw_library.f90)##
+##    ${FFTDIR}/include/fftw.f03    (include fftw.f03 in src/paw_library.f90) ##
+##    ${FFTDIR}/lib/libfftw3.dylib                                            ##
+##    ${LIBXCDIR}/lib/libxcf03.dylib                                          ##
+##                                                                            ##
+##  MACOS AND HOMEBREW:                                                       ##
+##    in the Apple environment I am using homebrew to install external        ##
+##    libraries, such as blas, lapack, mpi, fftw3, libxc.                     ##
+##    Blas and lapack need not be specified because they are included         ##
+##    automatically when using the compiler flag -framework accellerate.      ##
+##                                                                            ##
+##    The libraries installed by homebrew (mpi, fftw, libxc) are in           ##
+##       /opt/homebrew/lib.                                                   ##
+##    Include and module files lie in /opt/homebrew/include .                 ##
+##    The lib and include directories in opt/homebrew/ contain a list of      ##
+##    of symbolic links pointing to the actual installation. Typically        ##
+##      /opt/homebrew/lib/fftw.f03                                            ##
+##           -> /opt/homebrew/Cellar/fftw/3.3.10_1/lib/fftw.f03.              ##
+##     
+##    MPI:  /opt/homebrew/Cellar/open-mpi/
+##    FFTW3 /opt/homebrew/Cellar/fftw/
+##    LIBXC /opt/homebrew/Cellar/libxc/
+##     
+##  PREPROCESSOR VARIABLES   
+##    CPPVAR_BLAS_ESSL 
+##    CPPVAR_FFT_ESSL
+##    CPPVAR_FFT_FFTW
+##    CPPVAR_FFT_FFTW3
+##    CPPVAR_FFT_ACML
+##    CPPVAR_FFT_PACK
+##    CPPVAR_USAGE_EXIST
+##    CPPVARIABLE_PARALLEL
+##    CPPVAR_MPI2
+##     
 ################################################################################
 #
 ################################################################################
@@ -42,10 +82,6 @@
 ##              for FFTW version 1 and 2: ...fortran/fftw_f77.i       ##
 ##              for FFTW version 3, the file to include is ...fftw3.f         ##
 ##              (e.g. "/usr/local/Cellar/fftw/3.3.4_1/include/fftw3.f03")
-##  MPI_HEADER: include file for mpi
-##               for mpich the file to include is include/mpif.h              ##
-##               (leave blank for POE, IBM's parallel operating environment)  ##
-##              (e.g. "${MPIDIR}/include/mpif.h"
 ##                                                                            ##
 ##----------------------------------------------------------------------------##
 ##  COMPILER_SCALAR  
@@ -78,8 +114,6 @@
 ##                                                                            ##
 ##________________________________preprocessor variables______________________##
 ##                                                                            ##
-##    CPPVAR_ENDIANCHECK: used by paw_filehandler.f90                         ##
-##                                                                            ##
 ##  library selectors for linear algebra routines                             ##
 ##    CPPVAR_LAPACK_ESSL:                                                     ##
 ##    CPPVAR_BLAS_ESSL                                                        ##
@@ -111,23 +145,58 @@
 ##  ${OBJDIR} is bin/${ARCH}/Objects/${TYPE} relative to the main PAW directory        ##
 ##   and where ${TYPE} is either "none", "none_parallel", "fast", "fast_parallel", etc.##
 ################################################################################
+##  variables that may be defined in this parmfile
+## ARCH
+## TPARALLEL
+## TUPPERCASEMOD
+## COMPILER_SCALAR
+## COMPILER_PARALLEL
+## FCFLAGS_NONE
+## FCFLAGS_OPT
+## FCFLAGS_DBG
+## FCFLAGS_PROF
+## LDFLAGS_NONE
+## LDFLAGS_OPT
+## LDFLAGS_DBG
+## LDFLAGS_PROF
+## LDFLAGS_SCALAR
+## LDFLAGS_PARALLEL
+## LIBS_SCALAR
+## LIBS_PARALLEL
+## CPPFLAGS
+## FEXT
+## BLASDIR
+## LAPACKDIR
+## FFTDIR
+## MPIDIR
+## LIBXCDIR
+## FFT_HEADER
+## LIBAR
+
+
+
+
 ARCH="osx_gfortran_accellerate"
-#
 TPARALLEL="T"
 SPECIAL="none"
-#
-BLASDIR=""
-LAPACKDIR=""
-FFTDIR="/opt/homebrew/lib/"
-FFT_HEADER="/opt/homebrew/Cellar/fftw/3.3.10_1/include/fftw3.f03"
-#
-MPIDIR="/opt/homebrew/Cellar/open-mpi/5.0.1/"
 COMPILER_SCALAR="gfortran "
 COMPILER_PARALLEL="${MPIDIR}/bin/mpifort "
+BLASDIR=""
+LAPACKDIR=""
+FFTDIR="/opt/homebrew/"
+FFT_HEADER="/opt/homebrew/include/fftw3.f03"
+MPIDIR="/opt/homebrew/"
+LIBXCDIR="/opt/homebrew/"
 #
-FCFLAGS_NONE="-c "
-FCFLAGS_OPT="-c -O3  -funroll-loops -fomit-frame-pointer -march=native -fexternal-blas "
-FCFLAGS_PROF="-c -pg -O3 -funroll-loops"
+FCFLAGS_NONE="-c -I${FFTDIR}/include -I${LIBXCDIR}/include "
+#
+FCFLAGS_OPT="-c -I${FFTDIR}/include -I${LIBXCDIR}/include -O3  -funroll-loops -fomit-frame-pointer -march=native -fexternal-blas "
+#
+FCFLAGS_PROF="-c -I${FFTDIR}/include -I${LIBXCDIR}/include -pg -O3 -funroll-loops"
+#
+FCFLAGS_DBG="-c -I${FFTDIR}/include -I${LIBXCDIR}/include -g -O3 -funroll-loops -fomit-frame-pointer -march=native -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
+
+
 #
 # recommendation by http://fortranwiki.org/fortran/show/Debugging+tools
 # -g -Wall -Wextra -Warray-temporaries -Wconversion -fimplicit-none -fbacktrace -ffree-line-length-0 -fcheck=all -ffpe-trap=zero,overflow,underflow -finit-real=nan
@@ -140,25 +209,22 @@ FCFLAGS_PROF="-c -pg -O3 -funroll-loops"
 # -Wall= -Waliasing, -Wampersand, -Wconversion, -Wsurprising, ‘-Wc-binding-type’, ‘-Wintrinsics-std’, ‘-Wno-tabs’, ‘-Wintrinsic-shadow’, ‘-Wline-truncation’, ‘-Wtarget-lifetime’, ‘-Wreal-q-constant’ and ‘-Wunused’.
 #
 #
-#FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -finit-real=snan -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Waliasing -Wampersand  -Winteger-division -Wintrinsics-std -Wsurprising -Wtabs -Wintrinsic-shadow -Wunused-dummy-argument -Wunused-parameter -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
-
-#FCFLAGS_DBG="-c -g -O2 -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
-# this is the debugging mode which also includes all optimization statements
-FCFLAGS_DBG="-c -g -O3 -funroll-loops -fomit-frame-pointer -march=native -std=f2008 -pedantic -fbacktrace -fdump-core -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion -ffpe-trap=invalid,zero,overflow -ffpe-summary=invalid,zero,overflow -fexternal-blas -Wall -Wextra -Wline-truncation  -Wuninitialized -Wno-maybe-uninitialized"
 
 #
 LDFLAGS_SCALAR="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
+#
 LDFLAGS_PARALLEL="-I${OBJDIR} -L${OBJDIR} -framework Accelerate "
 #
-LIBS_SCALAR="-L${FFTDIR} -lfftw3"
-LIBS_PARALLEL="-L${FFTDIR} -lfftw3"
+LIBS_SCALAR="-L${FFTDIR}/lib -lfftw3 -L${LIBXCDIR}/lib -lxcf03"
+#
+LIBS_PARALLEL="-L${FFTDIR}/lib -lfftw3 -L${LIBXCDIR}/lib -lxcf03"
 #
 #  variables for the c-prepocessor:
 #      CPPVAR_FFT_FFTW3 "
 #      CPPVAR_FEAST
 #      CPPVAR_JADAMILU
 #      CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
-#
+#      CPPVAR_NOLIBXC (do not link LIBXC)
 CPPFLAGS="-DCPPVAR_FFT_FFTW3"
 FEXT="f90"
 

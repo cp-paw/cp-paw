@@ -1091,7 +1091,19 @@ CALL TRACE$PASS('DONE')
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE READIN_DFT(LL_CNTL_)
-      USE LINKEDLIST_MODULE
+!     **************************************************************************
+!     **  READ INPUT DATA FROM THE !CONTROL!DFT BLOCK OF THE CONTROL FILE     **
+!     **                                                                      **
+!     **  CAUTION: VARIABLE CHTYPE OCCURS WITH SAME NAME IN LINKEDLIST_MODULE **
+!     **           THAT IS THE REASON THE USE STATEMENT BEING VERY EXPLICIT   **
+!     **************************************************************************
+      USE LINKEDLIST_MODULE, ONLY : LL_TYPE &
+     &                             ,LINKEDLIST$GET &
+     &                             ,LINKEDLIST$EXISTD &
+     &                             ,LINKEDLIST$EXISTL &
+     &                             ,LINKEDLIST$SELECT &
+     &                             ,LINKEDLIST$SET &
+     &                             ,LINKEDLIST$SIZE 
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -1099,6 +1111,8 @@ CALL TRACE$PASS('DONE')
       LOGICAL(4)               :: TCHK,TCHK1,TCHK2
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: MODUS
+      CHARACTER(32)            :: CHTYPE(3)  ! LIBXC IDENTIFIERS
+      INTEGER(4)               :: LEN
       REAL(8)                  :: ANGSTROM  ! ANGSTROM
 !     **************************************************************************
                           CALL TRACE$PUSH('READIN_DFT')
@@ -1109,13 +1123,38 @@ CALL TRACE$PASS('DONE')
       CALL LINKEDLIST$SELECT(LL_CNTL,'CONTROL')
       CALL LINKEDLIST$SELECT(LL_CNTL,'DFT')
 !
-!     == GET NON-DEFAULT VALUES ================================================
-      CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK)
-      IF(.NOT.TCHK) THEN
-        CALL LINKEDLIST$SET(LL_CNTL,'TYPE',0,1)
+!     ==========================================================================
+!     == FUNCTIONAL TYPE                                                      ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'LIBXC',1,TCHK)
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'TYPE',1,TCHK1)
+      IF(TCHK.AND.TCHK1) THEN
+        CALL ERROR$MSG('TYPE AND LIBXC ARE MUTUALLY EXCLUSIVE')
+        CALL ERROR$MSG('REMOVE ONE OF THEM FROM !CONTROL!DFT')
+        CALL ERROR$STOP('READIN_DFT')
       END IF
-      CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
-      CALL DFT$SETI4('TYPE',ILDA)
+!
+!     == SET DEFAULT (PERDEW BURKE ERNZERHOF GGA) ==============================
+      IF((.NOT.TCHK).AND.(.NOT.TCHK1)) THEN
+        ILDA=10   ! PBE FUNCTIONAL, INTRINSIC IMPLEMENTATION 
+        CALL DFT$SETI4('TYPE',ILDA)
+      END IF
+!
+!     == READ FUNCTIONAL SPECIFICATION =========================================
+      IF(TCHK) THEN
+!       -- READ LIBXC INPUT ----------------------------------------------------
+        CALL LINKEDLIST$SIZE(LL_CNTL,'LIBXC',1,LEN)
+        IF(LEN.GT.SIZE(CHTYPE)) THEN
+          CALL ERROR$MSG('NUMBER OF LIBXC IDENTIFIERS EXCEEDS MAXIMUM')
+          CALL ERROR$STOP('READIN_DFT')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'LIBXC',1,CHTYPE(1:LEN))
+        CALL DFT$SETCHA('TYPE',LEN,CHTYPE(1:LEN))
+      ELSE IF(TCHK1) THEN
+!       -- USE INTRINSIC FUNCTIONALS W/O LIBXC ---------------------------------
+        CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
+        CALL DFT$SETI4('TYPE',ILDA)
+      END IF
 !
 !     ==========================================================================
 !     == VAN DER WAALS INTERFACE                                              ==

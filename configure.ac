@@ -1,4 +1,4 @@
-dnl Process this file with autoconf to produce a configure script.
+#dnl Process this file with autoconf to produce a configure script.
 #
 #
 # This line checks if the source-directory is in the actual path
@@ -158,6 +158,7 @@ if test "$PARMFILE" != notset; then
   LAPACKDIR=`grep '^LAPACKDIR' $PARMFILE | cut -d'"' -f2`
   FFTDIR=`grep '^FFTDIR' $PARMFILE | cut -d'"' -f2`
   MPIDIR=`grep '^MPIDIR' $PARMFILE | cut -d'"' -f2`
+  LIBXCDIR=`grep '^LIBXCDIR' $PARMFILE | cut -d'"' -f2`
   FFT_HEADER=`grep '^FFT_HEADER' $PARMFILE | cut -d'"' -f2`
   LIBAR=`grep '^LIBAR' $PARMFILE | cut -d'"' -f2`
   if [[ "$LIBAR" = "" ]]; 
@@ -233,6 +234,16 @@ if test -n "$FFTDIR" ; then
   fi
 fi
 #
+#  libxc directory
+if test -n "$LIBXCDIR" ; then
+  AC_MSG_RESULT(check LibXC directory)
+  AC_CHECK_FILE($LIBXCDIR,ERROR=F,ERROR=T)
+  if test ["$ERROR" = "T"]; then
+    AC_MSG_RESULT(name of the LIBXC directory: LIBXCDIR=$LIBXCDIR)
+    AC_MSG_ERROR(LibXC directory not found)
+  fi
+fi
+#
 #########################################################################
 ##                                                                     ##
 ##  define substitutions for AC_OUTPUT                                 ##
@@ -257,7 +268,8 @@ AC_SUBST(TPARALLEL)
 AC_SUBST(BLASDIR)     
 AC_SUBST(LAPACKDIR)     
 AC_SUBST(FFTDIR)     
-AC_SUBST(MPIDIR)     
+AC_SUBST(MPIDIR)
+AC_SUBST(LIBXCDIR)
 AC_SUBST(FFT_HEADER)     
 AC_SUBST(LIBAR)     
 #
@@ -453,6 +465,7 @@ AC_MSG_RESULT(uppercase module names?        : $TUPPERCASEMOD)
 AC_MSG_RESULT(blas library                   : $BLASDIR)
 AC_MSG_RESULT(lapack library                 : $LAPACKDIR)
 AC_MSG_RESULT(libs for Fourier transforms    : $FFTDIR)
+AC_MSG_RESULT(libs for density functionals   : $LIBXCDIR)
 if test "$TPARALLEL" = "T"; then
  #AC_MSG_RESULT(---------------------------------------------------------------)
  #AC_MSG_RESULT(--------------specifics for parallel environment---------------)
