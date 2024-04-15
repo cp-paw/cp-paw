@@ -1,3 +1,11 @@
+#!/bin/bash
+export THISDIR=$(pwd)
+
+#
+# written by robert Schade
+# modifications from Peter Bloechl
+
+
 #this script creates a distribution package from the current working copy
 #this script has to be called in the root of the working copy, i.e. in the directory containing src, Docs,...
 #the first commandline argument is the destination path of the packed archive, e.g. ~/CPPAW_distrib.tar.gz
@@ -7,38 +15,155 @@
 #as temporary storage $WD is used 
 #example: sh src/Buildtools/Make_distribution_package/make_distribution_package.sh /home/user0/tmp/cppaw_distrib.tar.gz v2023.1 /home/user0/Data/git/parms.linux
 
-OUT="$1"
-VERSION="$2"
-PARMS="$3"
-echo $OUT
-WD="/tmp/CPPAW_distrib"
+#-------------------------------------------------------------------------------
+# help message
+#-------------------------------------------------------------------------------
+export USAGE="Usage of $0 \n"
+USAGE="$USAGE \n"
+USAGE="$USAGE \t src/Buildtools/Make_distribution_package/make_release_package.sh tarball versionid parmfile\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Purpose:\n"
+USAGE="$USAGE \t produces a tarball of the cp-paw distribution \
+                 with builtin version information\n"
+USAGE="$USAGE \n"
+USAGE="$USAGE Options:\n"
+# USAGE="$USAGE \t tarball \t name of the tar-ball with the distribution \
+#                             e.g. CP-PAW_V2023.1.tar.gz\n"
+# USAGE="$USAGE \t versionid \t version identifier, e.g. v2023.1\n"
+# USAGE="$USAGE \t parmfile \t name of the parmfile for the\
+#                  configuration of the CP-PAW\n"
+USAGE="$USAGE \t -b \t name of the tarball of the distribution with full path\n"
+USAGE="$USAGE \t    \t without path it is relative to /tmp\n"
+USAGE="$USAGE \t -i \t version identifier, e.g. v2023.1\n"
+USAGE="$USAGE \t -p \t parmfile\n"
+USAGE="$USAGE \t -h \t print this help message \n"
+# USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
+# USAGE="$USAGE \t -v: verbose\n"
+USAGE="$USAGE \n"
+#-------------------------------------------------------------------------------
+# resolve command line arguments
+#-------------------------------------------------------------------------------
+export TYPE='RELEASE'
+#export TYPE='DEVELOPMENT'
+export TARBALL=""
+export VERSIONID=""
+export PARMFILE=""
 
-rm $OUT
-rm -rf $WD
-mkdir -p $WD
+OPTSTRING=":hv0b:i:p:"
+OPTIND=0
+while getopts "${OPTSTRING}" OPT  ; do
+  case $OPT in
+    b) TARBALL="$OPTARG" #name of the tarball to be created
+      ;;
+    i) VERSIONID="$OPTARG" # version id
+      ;;
+    p) PARMFILE="$OPTARG" # name of the parmfile
+      ;;
+    0)   #nothing:
+      DRYRUN=yes
+#      set -n
+      ;;
+    v)   #verbose
+      VERBOSE=yes
+#      set -v
+#      set -x
+      ;;
+    h)   # help
+      echo -e $USAGE
+      exit 0
+      ;;
+    \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
+      echo "error in $0" >&2
+      echo "invalid option -$OPTARG" >&2
+      echo "retrieve argument list with:" >&2
+      echo "$0 -h" >&2
+      exit 1
+      ;;
+    :)    # no argument passed to option requiring one
+      echo "error in $0" >&2
+      echo "option -$OPTARG requires an additional argument" >&2
+      exit 1
+      ;;  
+  esac
+done
 
-cp -r * $WD
-cp -r .git $WD
+#-------------------------------------------------------------------------------
+# report command line arguments and catch missing input
+#-------------------------------------------------------------------------------
+echo -e "name of the tarball:  $TARBALL"
+echo -e "version id.........:  $VERSIONID"
+echo -e "parmfile to be used:  $PARMFILE"
 
-cp -v $PARMS $WD
 
-cd $WD
+if [[ -z $TARBALL || -z $VERSIONID || -z $PARMFILE ]] ; then 
+  if [[ -z $TARBALL ]] ; then 
+    echo 'error: name of tarball (-b) not specified'
+  fi
+  if [[ -z $VERSIONID ]] ; then 
+    echo 'error: version id (-i) not specified'
+  fi
+  if [[ -z $PARMFILE ]] ; then 
+    echo 'error: parmfile (-p) not specified'
+  fi
+  echo 'error'
+  exit 1
+fi
+
+if [[ ! -f  $PARMFILE ]] ; then
+  echo 'error: parmfile $PARMFILE does not exist'
+  exit 1
+fi
+
+
+
+#-------------------------------------------------------------------------------
+# 
+#-------------------------------------------------------------------------------
+if [[ -f ${TARBALL} ]] ; then 
+  rm ${TARBALL}
+fi
+
+export WORKDIR="/tmp/cp-paw_$VERSIONID"
+if [[ -d $WORKDIR ]] ; then rm -rf $WORKDIR; fi
+mkdir -p $WORKDIR
+cp -r * $WORKDIR
+cp -r .git $WORKDIR
+cp -v $PARMFILE $WORKDIR
+cd $WORKDIR
+
+
+#--- create src/version.info -------
 sh src/Buildtools/Version/getversion.sh
-#replace DEVELOPMENT VERSION with 
-dat=`tail -n 1 src/version.info`
 
-echo "RELEASE VERSION" > src/version.info
-echo "$VERSION" >>  src/version.info
-echo "$dat" >> src/version.info
-echo "https://github.com/cp-paw/cp-paw" >> src/version.info
+#-------------------------------------------------------------------------------
+#  rewrite src/version.info in $WORKDIR to make a release
+#-------------------------------------------------------------------------------
+if [[ ${TYPE} -eq 'RELEASE' ]] ; then
+  export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
+  echo "\'RELEASE VERSION\'" > src/version.info
+  echo "$VERSIONID" >>  src/version.info
+  echo "$dat" >> src/version.info
+  echo "https://github.com/cp-paw/cp-paw" >> src/version.info
+elif [[ ${TYPE} -eq 'DEVELOPMENT' ]] ; then
+  # do nothing
+  echo "TYPE=$TYPE"
+else
+  echo "error: illegal value of TYPE=$TYPE"
+  exit 1
+fi
 #sh src/Buildtools/Version/getversion.sh src/version.info
 
-rm -rf .git
-
-./configure --with-parmfile=`basename $PARMS`
+#-------------------------------------------------------------------------------
+#  construct documentation and clean $WORKDIR
+#-------------------------------------------------------------------------------
+./configure --with-parmfile=$(basename $PARMFILE)
 make docs
 make clean
-cd ..
+rm -rf .git
 
-tar -cvzf $OUT `basename $WD`
-rm -rf $WD
+#-------------------------------------------------------------------------------
+# make a tarball of $WORKDIR and remove $WORKDIR
+#-------------------------------------------------------------------------------
+cd ..
+tar -cvzf $TARBALL $(basename $WORKDIR)
+rm -rf $WORKDIR
