@@ -131,7 +131,6 @@ cp -r .git $WORKDIR
 cp -v $PARMFILE $WORKDIR
 cd $WORKDIR
 
-
 #--- create src/version.info -------
 sh src/Buildtools/Version/getversion.sh
 
@@ -139,6 +138,7 @@ sh src/Buildtools/Version/getversion.sh
 #  rewrite src/version.info in $WORKDIR to make a release
 #-------------------------------------------------------------------------------
 if [[ ${TYPE} -eq 'RELEASE' ]] ; then
+  echo 'converting src/version.info to release version ...'
   export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
   echo "\'RELEASE VERSION\'" > src/version.info
   echo "$VERSIONID" >>  src/version.info
@@ -156,8 +156,10 @@ fi
 #-------------------------------------------------------------------------------
 #  construct documentation and clean $WORKDIR
 #-------------------------------------------------------------------------------
+echo "configuring cppaw distribution....."
 ./configure --with-parmfile=$(basename $PARMFILE)
-make docs
+make docs 1>/dev/null 2>&1
+if [[ $? -ne 0 ]] ; then echo "latex compilation error" ; exit 1 ; fi
 make clean
 rm -rf .git
 
