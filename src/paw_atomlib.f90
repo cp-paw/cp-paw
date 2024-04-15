@@ -729,7 +729,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)   ,PARAMETER       :: XAVTOL=1.D-8
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      LOGICAL(4),PARAMETER       :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER       :: TPR=.TRUE.
       REAL(8)   ,PARAMETER       :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER       :: Y0=1.D0/SQRT(4.D0*PI) !SPH. HARM. L=0
       REAL(8)   ,PARAMETER       :: C0LL=Y0               !GAUNT COEFF
@@ -762,6 +762,7 @@ USE PERIODICTABLE_MODULE
       CHARACTER(128)             :: STRING,STRING1
       REAL(8)                    :: SCALE
       REAL(8)                    :: EFOCK,EX
+      REAL(8)                    :: EFS
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
@@ -1036,7 +1037,15 @@ USE PERIODICTABLE_MODULE
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
           CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
           ETOT=EKIN+EH+EXC
+!
+!         ======================================================================
+!         == ESTIMATE THE ENERGY DUE TO THE FINITE NUCLEAR SIZE               ==
+!         ======================================================================
+          CALL ATOMLIB_EFINITENUCSIZE(GID,NR,RBOX,AEZ,RHO,EFS)
+!
+!         ======================================================================
 !         == WORK OUT FOCK EXCHANGE ENERGY =====================================
+!         ======================================================================
           IF(TFOCK.AND.TSECOND) THEN
             CALL DFT$SETL4('XCONLY',.TRUE.)
             CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EX)
@@ -1066,11 +1075,14 @@ USE PERIODICTABLE_MODULE
 !
 !         == PRINT ENERGIES ====================================================
           ETOT=EKIN+EH+EXC+SCALE*(EFOCK-EX)
+!
           IF(TPR) THEN
+!           __I PROVIDE RESULTS HERE WITH 10^-8 H PRECISION, BECAUSE____________
+!           __ATOMIC CODES ARE TESTED IN THE MICRO-HARTREE ACCURACY_____________
             WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
-            WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.6)')ETOT
-            WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
-            WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
+            WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.8)')ETOT
+            WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.8)')EKIN
+            WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.8)')EH
             IF(TFOCK.AND.TSECOND) THEN
               WRITE(*,FMT='(30("."),T1,"EXACT XC MIXING FACTOR:",T30,F15.6)') &
      &                     SCALE
@@ -1084,6 +1096,9 @@ USE PERIODICTABLE_MODULE
             ELSE
               WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F15.6)')EXC
             END IF
+            WRITE(*,FMT='(30("."),T1,"FINITE NUCLEUS:",T30,F15.8)')EFS
+            WRITE(*,FMT='(".... CALCULATION USES FINITE NUCLEUS")') 
+            WRITE(*,FMT='(".... DO NOT ADD FINITE NUCLEUS CORRECTION")') 
           END IF
 
           POT=POTIN  ! RECOVER POT AS INPUT POTENTIAL
@@ -1707,21 +1722,21 @@ END IF
 !     ==========================================================================
       Z0=333.333D0 ! FIRST VALUE IS MEANINGLESS
       DX=1.D-2
-      X0=E-dx
-!!$IF(l.eq.0.and.nn.eq.1) THEN
-!!$X0=X0+1.d-2
-!!$end if
-!!$IF(l.eq.0.and.nn.eq.1) THEN
-!!$open(unit=1005,file='xout')
-!!$do iter=1,20000
-!!$  e=-2.d0+2.5d-4*real(iter,kind=8)
+      X0=E-DX
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
+!!$X0=X0+1.D-2
+!!$END IF
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
+!!$OPEN(UNIT=1005,FILE='XOUT')
+!!$DO ITER=1,20000
+!!$  E=-2.D0+2.5D-4*REAL(ITER,KIND=8)
 !!$  CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO,DH,DO,G,PHI)
 !!$  CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
-!!$  write(1005,*)e,z0
-!!$enddo
-!!$close(1005)
-!!$call error$stop('---')
-!!$end if
+!!$  WRITE(1005,*)E,Z0
+!!$ENDDO
+!!$CLOSE(1005)
+!!$CALL ERROR$STOP('---')
+!!$END IF
       DO ITER=1,NITER
         E=X0
 !       ========================================================================
@@ -2174,9 +2189,34 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB_EFINITENUCSIZE(GID,NR,RAD,AEZ,RHO,EFS)
+!     **************************************************************************
+!     **  ESTIMATE THE ENERGY CORRECTION DUE TO FINITE SIZE OF THE NUCLEUS    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(IN) :: RHO(NR) ! ELECTRON DENSITY
+      REAL(8)   ,INTENT(OUT):: EFS
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)               :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      CALL RADIAL$NUCPOT(GID,NR,AEZ,AUX)
+      AUX=RHO*(R**2*AUX+AEZ*R/Y0)
+      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,EFS)
+      RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOXVOFRHO(GID,NR,RAD,AEZ,RHO,POT,EH,EXC)
-!     ******************************************************************
-!     **                                                              **
+!     **************************************************************************
 !     **  ELECTROSTATIC AND EXCHANGE-CORRELATION POTENTIAL            **
 !     **                                                              **
 !     ******************************************************************
