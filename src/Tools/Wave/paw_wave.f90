@@ -267,7 +267,8 @@
              do I1=1,NR1
                do I2=1,NR2
                  do I3=1,NR3
-                   CWAVE(I1,I2,I3)=CMPLX(MAX(REAL(CWAVE(I1,I2,I3)),SVAR),MAX(AIMAG(CWAVE(I1,I2,I3)),SVAR))
+                   CWAVE(I1,I2,I3)=CMPLX(MAX(REAL(CWAVE(I1,I2,I3)),SVAR) &
+      &                                 ,MAX(AIMAG(CWAVE(I1,I2,I3)),SVAR))
                  enddo
                enddo
              enddo

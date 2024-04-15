@@ -188,7 +188,6 @@ FFT_HEADER="/opt/homebrew/include/fftw3.f03"
 MPIDIR="/opt/homebrew/"
 LIBXCDIR="/opt/homebrew/"
 #
-#
 FCFLAGS_NONE="-c -I${FFTDIR}/include -I${LIBXCDIR}/include "
 #
 FCFLAGS_OPT="-c -I${FFTDIR}/include -I${LIBXCDIR}/include -O3  -funroll-loops -fomit-frame-pointer -march=native -fexternal-blas "
