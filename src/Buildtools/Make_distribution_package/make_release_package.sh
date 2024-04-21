@@ -152,7 +152,7 @@ sh src/Buildtools/Version/getversion.sh
 if [[ ${TYPE} -eq 'RELEASE' ]] ; then
   echo 'converting src/version.info to release version ...'
   export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
-  echo "\'RELEASE VERSION\'" > src/version.info
+  echo '"RELEASE VERSION"' > src/version.info
   echo "$VERSIONID" >>  src/version.info
   echo "$dat" >> src/version.info
   echo "https://github.com/cp-paw/cp-paw" >> src/version.info
