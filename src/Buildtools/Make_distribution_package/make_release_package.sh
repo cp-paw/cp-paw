@@ -144,7 +144,7 @@ cp -v $PARMFILE $WORKDIR
 cd $WORKDIR
 
 #--- create src/version.info -------
-sh src/Buildtools/Version/getversion.sh
+sh src/Buildtools/Version/getversion.sh src/version.info
 
 #-------------------------------------------------------------------------------
 #  rewrite src/version.info in $WORKDIR to make a release
@@ -163,7 +163,6 @@ else
   echo "error: illegal value of TYPE=$TYPE"
   exit 1
 fi
-#sh src/Buildtools/Version/getversion.sh src/version.info
 
 #-------------------------------------------------------------------------------
 #  construct documentation and clean $WORKDIR
