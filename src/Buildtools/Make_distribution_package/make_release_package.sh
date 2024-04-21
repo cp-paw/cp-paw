@@ -90,11 +90,24 @@ done
 #-------------------------------------------------------------------------------
 # report command line arguments and catch missing input
 #-------------------------------------------------------------------------------
+#  default values for tarball
+if [[ -z $TARBALL && -n $VERSIONID ]] ; then
+  TARBALL="${THISDIR}/CP-PAW_"${VERSIONID}".tar.gz"
+fi
+
+# defauls value for parmfile 
+if [[ -z $PARMFILE ]] ; then
+  if [[ -f parms.in_use ]] ; then
+     PARMFILE="parms.in_use"
+  fi
+fi
+
+# report current seting
 echo -e "name of the tarball:  $TARBALL"
 echo -e "version id.........:  $VERSIONID"
 echo -e "parmfile to be used:  $PARMFILE"
 
-
+# error message for missing input
 if [[ -z $TARBALL || -z $VERSIONID || -z $PARMFILE ]] ; then 
   if [[ -z $TARBALL ]] ; then 
     echo 'error: name of tarball (-b) not specified'
@@ -109,12 +122,11 @@ if [[ -z $TARBALL || -z $VERSIONID || -z $PARMFILE ]] ; then
   exit 1
 fi
 
+# error exit for missing parmfile
 if [[ ! -f  $PARMFILE ]] ; then
   echo 'error: parmfile $PARMFILE does not exist'
   exit 1
 fi
-
-
 
 #-------------------------------------------------------------------------------
 # 
