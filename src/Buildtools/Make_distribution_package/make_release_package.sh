@@ -34,7 +34,7 @@ USAGE="$USAGE Options:\n"
 #                  configuration of the CP-PAW\n"
 USAGE="$USAGE \t -b \t name of the tarball of the distribution with full path\n"
 USAGE="$USAGE \t    \t without path it is relative to /tmp\n"
-USAGE="$USAGE \t -i \t version identifier, e.g. v2023.1\n"
+USAGE="$USAGE \t -i \t optional version identifier, e.g. v2023.1\n"
 USAGE="$USAGE \t -p \t parmfile\n"
 USAGE="$USAGE \t -h \t print this help message \n"
 # USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
@@ -95,7 +95,7 @@ if [[ -z $TARBALL && -n $VERSIONID ]] ; then
   TARBALL="${THISDIR}/CP-PAW_"${VERSIONID}".tar.gz"
 fi
 
-# defauls value for parmfile 
+# default value for parmfile 
 if [[ -z $PARMFILE ]] ; then
   if [[ -f parms.in_use ]] ; then
      PARMFILE="parms.in_use"
@@ -144,7 +144,8 @@ cp -v $PARMFILE $WORKDIR
 cd $WORKDIR
 
 #--- create src/version.info -------
-sh src/Buildtools/Version/getversion.sh src/version.info
+#sh src/Buildtools/Version/getversion.sh src/version.info
+sh src/Buildtools/Version/myversion.sh  > src/cppaw_version.info
 
 #-------------------------------------------------------------------------------
 #  rewrite src/version.info in $WORKDIR to make a release

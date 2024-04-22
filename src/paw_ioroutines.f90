@@ -18,12 +18,10 @@ TYPE(LL_TYPE) :: LL_STRC
 TYPE(LL_TYPE) :: LL_CNTL
 CONTAINS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-        SUBROUTINE PUTHEADER(NFILO,VERSIONTEXT)
+        SUBROUTINE PUTHEADER(NFILO)
         USE CLOCK_MODULE
-        USE VERSION_MODULE
         IMPLICIT NONE
         INTEGER(4)   ,INTENT(IN) :: NFILO
-        CHARACTER(*) ,INTENT(IN) :: VERSIONTEXT
         CHARACTER(32)            :: DATIME
         CHARACTER(32)            :: HOSTNAME
         INTEGER(4)               :: STATUS
@@ -41,15 +39,7 @@ CONTAINS
      &       //',"P.E. BLOECHL, (C) CLAUSTHAL UNIVERSITY OF TECHNOLOGY (CUT)")')
         WRITE(NFILO,FMT='(T10' &
      &                      //',"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERTYP)
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERINF)
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERREV)
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERAUT)
-        WRITE(NFILO,FMT='(T10,A)')TRIM(VERDAT)
-
-        IF (VERSIONTEXT (17:17).NE.'%')THEN
-          WRITE(NFILO,FMT='(A)') VERSIONTEXT
-        ENDIF
+        CALL CPPAW_WRITEVERSION(NFILO)
 
         CALL CLOCK$NOW(DATIME)
         CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
@@ -58,27 +48,6 @@ CONTAINS
      &           DATIME,HOSTNAME
         CALL LOCK$REPORT(NFILO)
         END SUBROUTINE PUTHEADER
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-        SUBROUTINE PRINTVERSION()
-        USE VERSION_MODULE
-        IMPLICIT NONE
-!       ****************************************************************
-        WRITE(*,FMT='()')
-        WRITE(*,FMT='(72("*"))')
-        WRITE(*,FMT='(72("*"),T15' &
-     &              //',"  CP-PAW VERSION INFO: ")')
-        WRITE(*,FMT='(72("*"))')
-
-        WRITE(*,FMT='(A)')TRIM(VERTYP)
-        WRITE(*,FMT='(A)')TRIM(VERINF)
-        WRITE(*,FMT='(A)')TRIM(VERREV)
-        WRITE(*,FMT='(A)')TRIM(VERAUT)
-        WRITE(*,FMT='(A)')TRIM(VERDAT)
-        WRITE(*,FMT='(72("*"))')
-        CALL ERROR$NORMALSTOP
-        STOP
-        END SUBROUTINE PRINTVERSION
 !       ................................................................
         SUBROUTINE WRITER8(NFIL,NAME,VALUE,UNIT)
         INTEGER(4)  ,INTENT(IN) :: NFIL
@@ -281,7 +250,6 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)                   :: NFILO
 !      LOGICAL(4)                   :: TOLATE
 !      INTEGER(4)                   :: MAXTIM(3)
-      CHARACTER(256)               :: VERSIONTEXT
       CHARACTER(512)               :: CNTLNAME
       CHARACTER(512)               :: ROOTNAME
       CHARACTER(32)                :: CH32SVAR
@@ -292,12 +260,13 @@ CALL TRACE$PASS('DONE')
       INTEGER(4)                   :: RUNTIME(3)
       INTEGER(4)   ,ALLOCATABLE    :: SPLITKEY(:)
       INTEGER                      :: ST
-      COMMON/VERSION/VERSIONTEXT
 !     **************************************************************************
                           CALL TRACE$PUSH('READIN')
 !
 !     ==========================================================================
 !     ==  SET CONTROLFILENAME AND STANDARD ROOT                               ==
+!     ==  PAW_VERSION, WHICH RESOLVES THE OPTIONS OF THE EXECUTABLE           ==
+!     ==  HAS BEEN CALLED ALREADY FROM THE MAIN PROGRAM. SEE PAW.F90          ==
 !     ==========================================================================
       CALL MPE$QUERY('~',NTASKS,THISTASK)
       IF(THISTASK.EQ.1) THEN
@@ -315,28 +284,6 @@ CALL TRACE$PASS('DONE')
         END IF
       END IF
       CALL MPE$BROADCAST('~',1,CNTLNAME)
-      IF(+CNTLNAME.EQ.'--HELP'.OR.+CNTLNAME.EQ.'-H'.OR.+CNTLNAME.EQ.'?') THEN
-        WRITE(*,FMT='("USAGE:"/"=====")')
-        WRITE(*,FMT='(T5,"1ST ARGUMENT",T25,"ACTION"/T5,32("-"))')
-        WRITE(*,FMT='(T5,"CONTROL FILENAME",T25,"EXECUTE ")')
-        CH32SVAR=-'--HELP'
-        WRITE(*,FMT='(T5,A6,T25,"PRINT HELP INFORMATION")')TRIM(CH32SVAR)
-        CH32SVAR=-'-H'
-        WRITE(*,FMT='(T5,A2,T25,"PRINT HELP INFORMATION")')TRIM(CH32SVAR)
-        WRITE(*,FMT='(T5,"?",T25,"PRINT HELP INFORMATION")')
-        CH32SVAR=-'--VERSION'
-        WRITE(*,FMT='(T5,A9,T25,"PRINT VERSION INFORMATION")')TRIM(CH32SVAR)
-        CH32SVAR=-'--PARMFILE'
-        WRITE(*,FMT='(T5,A10,T25,"PRINT PARMFILE")')TRIM(CH32SVAR)
-        CALL ERROR$NORMALSTOP
-      ELSE IF(+CNTLNAME.EQ.'--VERSION') THEN
-        CALL PRINTVERSION()
-        CALL ERROR$NORMALSTOP
-      ELSE IF(+CNTLNAME.EQ.'--PARMFILE') THEN
-        CALL VERSION$WRITEPARMFILE()
-        CALL ERROR$NORMALSTOP
-      END IF
-
 !
 !     ==========================================================================
 !     ==  DEFINE POLYMER IF NECESSARY                                         ==
@@ -422,7 +369,7 @@ CALL TRACE$PASS('DONE')
 !     ==  WRITE HEADER                                                        ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
-      CALL PUTHEADER(NFILO,VERSIONTEXT)
+      CALL PUTHEADER(NFILO)
 !
 !     ==========================================================================
 !     ==  READ BLOCK !DIMER  AND !CONTROL!GENERIC START= (FOR PLACEDIMER)     ==
@@ -3922,7 +3869,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       USE IO_MODULE
       USE LINKEDLIST_MODULE
       USE CONSTANTS_MODULE
-      USE VERSION_MODULE, ONLY : VERINF
       IMPLICIT NONE
       INTEGER(4)            :: NFILO   ! PROTOCOL FILE UNIT
       INTEGER(4)            :: NFIL
@@ -3930,7 +3876,6 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       INTEGER(4)            :: NKPT
       REAL(8)               :: ANGSTROM
       REAL(8)               :: SVAR
-      CHARACTER(128)        :: STPVERSION
 !     **************************************************************************
                           CALL TRACE$PUSH('STRCIN')
       CALL FILEHANDLER$UNIT('PROT',NFILO)
