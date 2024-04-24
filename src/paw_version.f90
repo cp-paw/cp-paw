@@ -13,7 +13,7 @@
       CHARACTER(512) :: COMPILEDATE='UNKNOWN'
       CHARACTER(512) :: COMPILEPERSON='UNKNOWN'
 !     **************************************************************************
-      INCLUDE 'CPPAW_VERSION.INFO'  ! FILENAME MADE LOWERCASE BY F90PP 
+      INCLUDE 'CPPAW_VERSION.INFO'  ! FILENAME MADE LOWERCASE BY F90PP.SED 
 !
       WRITE(NFIL,FMT='(82("*"),T25,"  CPPAW VERSION INFO  ")')
       WRITE(NFIL,FMT='(A)')'HASH  =      '//TRIM(HASH)
