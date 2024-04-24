@@ -688,6 +688,8 @@ ${OBJFROMPOSCAR}: ${OBJDIR}/%.o : ${TOOLDIR}/FromPOSCAR/%.f90
 ##  include dependencies through mod files                             ##
 #########################################################################
 ifeq ($(ALLDEP),T)
+ ${OBJDIR}/paw_version.o        ${OBJDIR}/cppaw_version.info
+
  ${OBJDIR}/paw_filehandler.o:   ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_periodictable.o: ${OBJDIR}/paw_strings.o
@@ -837,7 +839,6 @@ endif
  ## file:src/paw.f90
  ${OBJDIR}/paw.o : CLOCK_MODULE.mod
  ${OBJDIR}/paw.o : MPE_MODULE.mod
- VERSION_MODULE.mod : ${OBJDIR}/paw_version.o
  TIMESTEP_MODULE.mod : ${OBJDIR}/paw.o
  STOPIT_MODULE.mod : ${OBJDIR}/paw.o
  ## file:src/paw_fft.f90
@@ -864,7 +865,6 @@ endif
  ## file:src/paw_ioroutines.f90
  ${OBJDIR}/paw_ioroutines.o : LINKEDLIST_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : CLOCK_MODULE.mod
- ${OBJDIR}/paw_ioroutines.o : VERSION_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : STRINGS_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : MPE_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : PERIODICTABLE_MODULE.mod
@@ -957,7 +957,6 @@ endif
  ${OBJDIR}/paw_setups.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_setups.o : LMTO_MODULE.mod
  ${OBJDIR}/paw_setups.o : LINKEDLIST_MODULE.mod
- ${OBJDIR}/paw_setups.o : VERSION_MODULE.mod
  SETUP_MODULE.mod : ${OBJDIR}/paw_setups.o
  ## file:src/paw_softcore.f90
  CORE_MODULE.mod : ${OBJDIR}/paw_softcore.o
