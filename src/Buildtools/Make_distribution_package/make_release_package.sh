@@ -155,61 +155,23 @@ cp -r * $WORKDIR
 cp -r .git $WORKDIR
 cp -v $PARMFILE $WORKDIR
 cd $WORKDIR
-
-
-# #-------------------------------------------------------------------------------
-# #  rewrite src/version.info in $WORKDIR to make a release
-# #-------------------------------------------------------------------------------
-# if [[ ${TYPE} -eq 'RELEASE' ]] ; then
-#   echo 'converting src/version.info to release version ...'
-#   export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
-#   echo '"RELEASE VERSION"' > src/version.info
-#   echo "$VERSIONID" >>  src/version.info
-#   echo "$dat" >> src/version.info
-#   echo "https://github.com/cp-paw/cp-paw" >> src/version.info
-# elif [[ ${TYPE} -eq 'DEVELOPMENT' ]] ; then
-#   # do nothing
-#   echo "TYPE=$TYPE"
-# else
-#   echo "error: illegal value of TYPE=$TYPE"
-#   exit 1
-# fi
-
-# if [[ -f
-# if [[ ${TYPE} -eq 'RELEASE' ]] ; then
-#   echo "RELEASE=$VERSIONID" >>  src/cppaw_version.info
-
-
-# sh src/Buildtools/Version/paw_versioninfo.sh  >> ./cppaw_version.info
-
-
-
+#
 #-------------------------------------------------------------------------------
 #  construct documentation and clean $WORKDIR
 #-------------------------------------------------------------------------------
 echo "configuring cppaw distribution....."
 ./configure --with-parmfile=$(basename $PARMFILE)
 # construct cppaw_version.info in the top directory 
-
-
 echo "making cppaw_version.info....."
-echo wheami? $(pwd)
-ls
 make version 1>/dev/null 2>&1
 if [[ $? -ne 0 ]] ; then echo "error: no version information" ; exit 1 ; fi
-ls
-exit 1
-
-
-echo "RELEASE= $VERSIONID" >> cppaw_version.id
+if [[ -s cppaw_version.info ]] ; then
+  echo "RELEASE= $VERSIONID" >> cppaw_version.info
+fi
 echo "makeing cppaw_version.info....."
 # construct documentation in doc directy
 make docs 1>/dev/null 2>&1
 if [[ $? -ne 0 ]] ; then echo "latex compilation error" ; exit 1 ; fi
-
-exit 1
-
-
 make clean
 rm -rf .git
 
