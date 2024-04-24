@@ -552,13 +552,16 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
-$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${THISDIR}/cppaw_version.info
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 
+# create  include file ${OBJDIR}/cppaw_version.info for paw_version.f90 
+# if not under git control, look for ${THISDIR}/cppaw_version.info instead
+# THISDIR is the top directory of the working directory
 ${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
 	bash ${SRCDIR}/Buildtools/Version/paw_versioninfo.sh > ${OBJDIR}/cppaw_version.info
-
+        if [[ ! -s ${OBJDIR}/cppaw_version.info && -e ${THISDIR}/cppaw_version.info ]] ; then cp ${THISDIR}/cppaw_version.info ${OBJDIR}/cppaw_version.info ; fi
 #
 # generate source blob __________________________________________________
 ${SRCBLOB}:

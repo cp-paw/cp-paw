@@ -1,19 +1,32 @@
 #!/bin/bash
 export THISDIR=$(pwd)
-
+#############################################################################
 #
-# written by robert Schade
-# modifications from Peter Bloechl
+#   make_release_package options
+#
+#   purpose:
+#
+#      create a distribution package from the current working copy
+#
+#   options:
+#      -i version identifier (e.g. v2024.1)
+#      -b name of the resulting tarball, optional (e.g. cppaw_v2024.1.tgz) 
+#      -p parameter file (e.g. parms.blub.bla)
+#      -h help information
+#
+#    this script has to be called in the root of the working copy, 
+#    i.e. in the directory containing src, Docs,...
+#
+#   example: 
+#     sh src/Buildtools/Make_distribution_package/make_release_package.sh \
+#        -i v2024.1 -p parms.linux
+#
+# all the cool stuff written by Robert Schade
+# modified by Peter Bloechl
+#############################################################################
+# NO MORE: multiple parms-files are possible, the fist one is used to create docs, so it should be working on the current machine
 
-
-#this script creates a distribution package from the current working copy
-#this script has to be called in the root of the working copy, i.e. in the directory containing src, Docs,...
-#the first commandline argument is the destination path of the packed archive, e.g. ~/CPPAW_distrib.tar.gz
-#the second commandline argument is the version identifier
-#the third commandline argument is the path of the parms-file to be included, e.g. /home/bla/parms.blub_bla
-# multiple parms-files are possible, the fist one is used to create docs, so it should be working on the current machine
 #as temporary storage $WD is used 
-#example: sh src/Buildtools/Make_distribution_package/make_distribution_package.sh /home/user0/tmp/cppaw_distrib.tar.gz v2023.1 /home/user0/Data/git/parms.linux
 
 #-------------------------------------------------------------------------------
 # help message
@@ -143,35 +156,60 @@ cp -r .git $WORKDIR
 cp -v $PARMFILE $WORKDIR
 cd $WORKDIR
 
-#--- create src/version.info -------
-#sh src/Buildtools/Version/getversion.sh src/version.info
-sh src/Buildtools/Version/myversion.sh  > src/cppaw_version.info
 
-#-------------------------------------------------------------------------------
-#  rewrite src/version.info in $WORKDIR to make a release
-#-------------------------------------------------------------------------------
-if [[ ${TYPE} -eq 'RELEASE' ]] ; then
-  echo 'converting src/version.info to release version ...'
-  export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
-  echo '"RELEASE VERSION"' > src/version.info
-  echo "$VERSIONID" >>  src/version.info
-  echo "$dat" >> src/version.info
-  echo "https://github.com/cp-paw/cp-paw" >> src/version.info
-elif [[ ${TYPE} -eq 'DEVELOPMENT' ]] ; then
-  # do nothing
-  echo "TYPE=$TYPE"
-else
-  echo "error: illegal value of TYPE=$TYPE"
-  exit 1
-fi
+# #-------------------------------------------------------------------------------
+# #  rewrite src/version.info in $WORKDIR to make a release
+# #-------------------------------------------------------------------------------
+# if [[ ${TYPE} -eq 'RELEASE' ]] ; then
+#   echo 'converting src/version.info to release version ...'
+#   export dat=$(tail -n 1 ${WORKDIR}/src/version.info)
+#   echo '"RELEASE VERSION"' > src/version.info
+#   echo "$VERSIONID" >>  src/version.info
+#   echo "$dat" >> src/version.info
+#   echo "https://github.com/cp-paw/cp-paw" >> src/version.info
+# elif [[ ${TYPE} -eq 'DEVELOPMENT' ]] ; then
+#   # do nothing
+#   echo "TYPE=$TYPE"
+# else
+#   echo "error: illegal value of TYPE=$TYPE"
+#   exit 1
+# fi
+
+# if [[ -f
+# if [[ ${TYPE} -eq 'RELEASE' ]] ; then
+#   echo "RELEASE=$VERSIONID" >>  src/cppaw_version.info
+
+
+# sh src/Buildtools/Version/paw_versioninfo.sh  >> ./cppaw_version.info
+
+
 
 #-------------------------------------------------------------------------------
 #  construct documentation and clean $WORKDIR
 #-------------------------------------------------------------------------------
 echo "configuring cppaw distribution....."
 ./configure --with-parmfile=$(basename $PARMFILE)
+# construct cppaw_version.info in the top directory 
+
+
+echo "making cppaw_version.info....."
+echo wheami? $(pwd)
+ls
+make version 1>/dev/null 2>&1
+if [[ $? -ne 0 ]] ; then echo "error: no version information" ; exit 1 ; fi
+ls
+exit 1
+
+
+echo "RELEASE= $VERSIONID" >> cppaw_version.id
+echo "makeing cppaw_version.info....."
+# construct documentation in doc directy
 make docs 1>/dev/null 2>&1
 if [[ $? -ne 0 ]] ; then echo "latex compilation error" ; exit 1 ; fi
+
+exit 1
+
+
 make clean
 rm -rf .git
 
