@@ -74,11 +74,11 @@ if [[ -n $(git rev-parse --git-dir 2>/dev/null)  ]] ; then
     echo HASH=$HASH
   fi
   #----------------------------------------------------
-  # number of files changed since last commit
+  # number of changes since last commit
   #----------------------------------------------------
-  export NUM_CHANGEDFILES=$(git diff $srcdir | wc -l)
+  export NUMCHANGES=$(git diff |grep @@ |wc -l)
   if [[ $VERBOSE = T ]] ; then
-    echo NUM_CHANGEDFILES=$NUM_CHANGEDFILES
+    echo NUMCHANGES=$NUMCHANGES
   fi
   #----------------------------------------------------
   # author
@@ -106,5 +106,6 @@ echo "HASH=         '$HASH'"                      >> $OUT
 echo "SHORTREVISIONNUMBER='$SHORTREVISIONNUMBER'" >> $OUT
 echo "AUTHOR=       '$AUTHOR'"                    >> $OUT
 echo "COMMITDATE=   '$DATE'"                      >> $OUT 
+echo "NUMCHANGES=    $NUMCHANGES"                 >> $OUT 
 echo "COMPILEDATE=  '$(date)'"                    >> $OUT 
 echo "COMPILEPERSON='$(whoami)'"                  >> $OUT 
