@@ -561,7 +561,7 @@ $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${THISDIR}/cppaw_version.info
 # THISDIR is the top directory of the working directory
 ${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
 	bash ${SRCDIR}/Tools/Scripts/paw_versioninfo.sh > ${OBJDIR}/cppaw_version.info
-        if [[ ! -s ${OBJDIR}/cppaw_version.info && -e ${THISDIR}/cppaw_version.info ]] ; then cp ${THISDIR}/cppaw_version.info ${OBJDIR}/cppaw_version.info ; fi
+	if [[ ! -s ${OBJDIR}/cppaw_version.info && -e ${THISDIR}/cppaw_version.info ]] ; then cp ${THISDIR}/cppaw_version.info ${OBJDIR}/cppaw_version.info ; fi
 #
 # generate source blob __________________________________________________
 ${SRCBLOB}:

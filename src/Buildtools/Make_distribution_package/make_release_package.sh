@@ -168,7 +168,7 @@ if [[ $? -ne 0 ]] ; then echo "error: no version information" ; exit 1 ; fi
 if [[ -s cppaw_version.info ]] ; then
   echo "RELEASE= $VERSIONID" >> cppaw_version.info
 fi
-echo "makeing cppaw_version.info....."
+echo "making documantation....."
 # construct documentation in doc directy
 make docs 1>/dev/null 2>&1
 if [[ $? -ne 0 ]] ; then echo "latex compilation error" ; exit 1 ; fi
