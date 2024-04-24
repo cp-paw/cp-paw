@@ -552,7 +552,7 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
-$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${THISDIR}/cppaw_version.info
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 
