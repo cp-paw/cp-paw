@@ -560,7 +560,7 @@ $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${THISDIR}/cppaw_version.info
 # if not under git control, look for ${THISDIR}/cppaw_version.info instead
 # THISDIR is the top directory of the working directory
 ${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
-	bash ${SRCDIR}/Buildtools/Version/paw_versioninfo.sh > ${OBJDIR}/cppaw_version.info
+	bash ${SRCDIR}/Tools/Scripts/paw_versioninfo.sh > ${OBJDIR}/cppaw_version.info
         if [[ ! -s ${OBJDIR}/cppaw_version.info && -e ${THISDIR}/cppaw_version.info ]] ; then cp ${THISDIR}/cppaw_version.info ${OBJDIR}/cppaw_version.info ; fi
 #
 # generate source blob __________________________________________________
