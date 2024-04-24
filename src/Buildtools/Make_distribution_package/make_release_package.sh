@@ -166,7 +166,7 @@ echo "making cppaw_version.info....."
 make version 1>/dev/null 2>&1
 if [[ $? -ne 0 ]] ; then echo "error: no version information" ; exit 1 ; fi
 if [[ -s cppaw_version.info ]] ; then
-  echo "RELEASE= $VERSIONID" >> cppaw_version.info
+  echo "RELEASE= '$VERSIONID'" >> cppaw_version.info
 fi
 echo "making documentation....."
 # construct documentation in doc directy
