@@ -39,7 +39,7 @@
       CALL DOWNCASE(SRCSLASH)
 !     ======================================================================
       call getarg(1,file)
-!     == consider only fortan files
+!     == consider only fortran files
       ipos=index(file,dotf)
       if(ipos.eq.0) stop
 !     ==  remove backup files of emacs

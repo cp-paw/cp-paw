@@ -496,9 +496,59 @@ confusion can occur. A simple rule that avoids confusion, is not to
 use colons in atom names.
 
 %==========================================================================
+\subsection{Inquiries about the executable}
+%==========================================================================
+The CP-PAW code package is available under at
+\begin{center}
+\url{https://github.com/cp-paw/cp-paw}
+\end{center}
+
+It is under version control under GIT. There are mechanisms to
+identify the instance that has been compiled into the code used to
+produce results. The relevant information is printed in the
+protocol, the main output file, of the simulation code.
+
+The simulation code comes in different flavors, such as
+\verb|paw_dbg.x|, \verb|paw_fast.x|, \verb|paw_none.x|,
+\verb|paw_prof.x|, and the corresponding parallel version which begin
+with a double ``p'' for ``parallel paw'', such as \verb|ppaw_fast.x|.
+
+%==========================================================================
+\subsubsection{Version information}
+%==========================================================================
+The version information of a simulation code can be extracted
+with\footnote{Another possibility is to use the tool
+\texttt{\${PAWDIR}/src/Buildtools/Version/myversion.sh}}
+\begin{verbatim}
+paw_fast.x --version
+\end{verbatim}
+The information should be sufficient to identify the exact version in
+the git repository.
+
+
+%==========================================================================
+\subsubsection{Source blob}
+%==========================================================================
+A complete copy of the source code is contained in each executable of
+the simulation code. It is called the \textbf{source~blob}
+\index{source~blob}.
+
+The source blob can be extracted, for example, by\footnote{The shell
+script is located at \texttt{src/Tools/Scripts/paw\_getsrc.sh} in the
+repository and will be copied into the \texttt{bin}-directory during
+installation using \texttt{make scripts}}
+\begin{verbatim}
+paw_getsrc.sh -x paw_fast.x -o paw_src.tgz
+\end{verbatim}
+where \verb|paw_fast.x| is the executable from which the source blob
+shall be extracted and \verb|paw_src.tgz| is the resulting compressed
+tar file with the source blob.
+
+%==========================================================================
 \section{Before starting...}
 %==========================================================================
-In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are explained in the following:
+In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are
+explained in the following:
 
 %==========================================================================
 \subsection{The PAW directory}
@@ -8728,6 +8778,7 @@ The following table provides an overview:\\
 \verb|paw_resolve| & expand text files according to replacement rules.\\
 \verb|paw_scan|    & perform sequence paw calculation \\
 \verb|paw_scanlat| & scan lattice constants. \\
+\verb|paw_getsrc.sh| & extract source blob from executable\\
 \end{tabular}
 \end{center}
 

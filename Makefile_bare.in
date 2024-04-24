@@ -334,7 +334,8 @@ ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
 	cat ${THISDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
 	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
-
+#
+#__parmfilewriter_______________________________________________________
 ${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
 	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
@@ -551,10 +552,27 @@ ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
-$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info
 	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
-	bash ${SRCDIR}/Buildtools/Version/getversion.sh ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
+
+# create include file ${OBJDIR}/cppaw_version.info for paw_version.f90
+# if not under git control, look for ${THISDIR}/cppaw_version.info
+# instead THISDIR is the top directory of the working directory.  The
+# minus sign in fromt of the line makes make to continue even if
+# paw_versioninfo.sh throws an error
+
+${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
+	-bash ${SRCDIR}/Tools/Scripts/paw_versioninfo.sh > $@
+	if [[ ! -s $@ && -e ${THISDIR}/cppaw_version.info ]] ; then cp ${THISDIR}/cppaw_version.info $@ ; fi
+
+# ${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
+# 	-bash ${SRCDIR}/Tools/Scripts/paw_versioninfo.sh \
+#                             > ${OBJDIR}/cppaw_version.info
+# 	if [[ ! -s ${OBJDIR}/cppaw_version.info \
+#            && -e ${THISDIR}/cppaw_version.info ]] ; then\
+#               cp ${THISDIR}/cppaw_version.info ${OBJDIR}/cppaw_version.info \
+#         fi
 #
 # generate source blob __________________________________________________
 ${SRCBLOB}:
@@ -681,6 +699,8 @@ ${OBJFROMPOSCAR}: ${OBJDIR}/%.o : ${TOOLDIR}/FromPOSCAR/%.f90
 ##  include dependencies through mod files                             ##
 #########################################################################
 ifeq ($(ALLDEP),T)
+ ${OBJDIR}/paw_version.o        ${OBJDIR}/cppaw_version.info
+
  ${OBJDIR}/paw_filehandler.o:   ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_periodictable.o: ${OBJDIR}/paw_strings.o
@@ -830,7 +850,6 @@ endif
  ## file:src/paw.f90
  ${OBJDIR}/paw.o : CLOCK_MODULE.mod
  ${OBJDIR}/paw.o : MPE_MODULE.mod
- VERSION_MODULE.mod : ${OBJDIR}/paw_version.o
  TIMESTEP_MODULE.mod : ${OBJDIR}/paw.o
  STOPIT_MODULE.mod : ${OBJDIR}/paw.o
  ## file:src/paw_fft.f90
@@ -857,7 +876,6 @@ endif
  ## file:src/paw_ioroutines.f90
  ${OBJDIR}/paw_ioroutines.o : LINKEDLIST_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : CLOCK_MODULE.mod
- ${OBJDIR}/paw_ioroutines.o : VERSION_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : STRINGS_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : MPE_MODULE.mod
  ${OBJDIR}/paw_ioroutines.o : PERIODICTABLE_MODULE.mod
@@ -950,7 +968,6 @@ endif
  ${OBJDIR}/paw_setups.o : PERIODICTABLE_MODULE.mod
  ${OBJDIR}/paw_setups.o : LMTO_MODULE.mod
  ${OBJDIR}/paw_setups.o : LINKEDLIST_MODULE.mod
- ${OBJDIR}/paw_setups.o : VERSION_MODULE.mod
  SETUP_MODULE.mod : ${OBJDIR}/paw_setups.o
  ## file:src/paw_softcore.f90
  CORE_MODULE.mod : ${OBJDIR}/paw_softcore.o
