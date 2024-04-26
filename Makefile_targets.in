@@ -121,7 +121,7 @@ TESTS=$(addsuffix _tests,${OBJTYPES})
 ## Definition of the collective targets                                ##
 #########################################################################
 #
-default: all_new
+default: fast_new fast_parallel_new tools docs
 #
 clean: clean_all
 #

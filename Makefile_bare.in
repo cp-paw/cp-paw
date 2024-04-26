@@ -699,7 +699,7 @@ ${OBJFROMPOSCAR}: ${OBJDIR}/%.o : ${TOOLDIR}/FromPOSCAR/%.f90
 ##  include dependencies through mod files                             ##
 #########################################################################
 ifeq ($(ALLDEP),T)
- ${OBJDIR}/paw_version.o        ${OBJDIR}/cppaw_version.info
+ ${OBJDIR}/paw_version.o:       ${OBJDIR}/cppaw_version.info
 
  ${OBJDIR}/paw_filehandler.o:   ${OBJDIR}/paw_strings.o
  ${OBJDIR}/paw_linkedlist.o:    ${OBJDIR}/paw_strings.o
