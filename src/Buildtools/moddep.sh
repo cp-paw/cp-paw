@@ -30,7 +30,8 @@ if [[ ! ${X} = [Ff][0-9][0-9] ]] ; then  exit 0 ; fi
 #-------------------------------------------------------------------------------
 #-- collect dependencies of module files on fortran files                     --
 #-------------------------------------------------------------------------------
-grep -i module $IN > tmpfile
+export TMPFILE=$(mktemp)
+grep -i module $IN > ${TMPFILE}
 LIST=""
 while read -r FIRST SECOND REST ; do
   FIRST=$(echo "$FIRST" | tr '[:upper:]' '[:lower:]' )
@@ -50,12 +51,12 @@ while read -r FIRST SECOND REST ; do
       echo $SECOND.mod : $IN >> /dev/stdout
     fi
   fi
-done <  "tmpfile"
+done <  "${TMPFILE}"
 
 #-------------------------------------------------------------------------------
 #-- collect dependencies of fortran files on module files                     --
 #-------------------------------------------------------------------------------
-grep -i use $IN > tmpfile
+grep -i use $IN > ${TMPFILE}
 while read -r FIRST SECOND REST ; do
   FIRST=$(echo "$FIRST" | tr '[:upper:]' '[:lower:]' )
   # echo FIRST=$FIRST
@@ -75,10 +76,10 @@ while read -r FIRST SECOND REST ; do
       echo  $IN : $SECOND.mod >> /dev/stdout
     fi
   fi
-done <  "tmpfile"
+done <  "${TMPFILE}"
 
 #-------------------------------------------------------------------------------
 #-- clean up                                                                  --
 #-------------------------------------------------------------------------------
-rm tmpfile
+rm ${TMPFILE}
 
