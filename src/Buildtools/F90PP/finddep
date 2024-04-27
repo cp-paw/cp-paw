@@ -10,7 +10,7 @@ FILES2="${PAWDIR}/src/Tools/*/*.f90"
 #  scan all files for dependencies and write them into 
 #  the file "dependencies
 #
-g95 -o finddependencies.x finddependencies.f90
+gfortran -o finddependencies.x finddependencies.f90
 rm dependencies
 touch dependencies
 for FILE in $FILES1; do
@@ -25,6 +25,6 @@ rm finddependencies.x
 #
 # check for duplicated and circular dependencies
 #
-g95 -o circulardependencies.x circulardependencies.f90
+gfortran -o circulardependencies.x circulardependencies.f90
 circulardependencies.x <dependencies
 rm circulardependencies.x 
