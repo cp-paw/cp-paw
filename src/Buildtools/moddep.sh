@@ -21,6 +21,7 @@
 ##                                                                            ##
 ################################################################################
 export IN=$1
+export TUPPERMOD=""  # set to yes for XXX.mod rather than xxx.mod
 #-------------------------------------------------------------------------------
 #-- skip nonfortran files                                                     --
 #-------------------------------------------------------------------------------
@@ -35,6 +36,7 @@ grep -i module $IN > ${TMPFILE}
 LIST=""
 while read -r FIRST SECOND REST ; do
   FIRST=$(echo "$FIRST" | tr '[:upper:]' '[:lower:]' )
+  SECOND=$(echo "$SECOND" | tr '[:upper:]' '[:lower:]' )
   # echo FIRST=$FIRST
   # echo SECOND=$SECOND
   # echo REST=$REST
@@ -42,12 +44,15 @@ while read -r FIRST SECOND REST ; do
     SECOND=${SECOND%%!*}   # remove trailing "!"
      
     SKIP=""
-    if [[ $SECOND == [Pp][Rr][Oo][Cc][Ee][Dd][Uu][Rr][Ee] ]] ; then 
+    if [[ $SECOND == procedure ]] ; then 
        SKIP=true 
     fi
 
     if [[ -z $SKIP ]] ; then
       LIST="$LIST $SECOND "  # add to list of modules
+      if [[ -n $TUPPERMOD ]] ; then 
+        SECOND=$(echo "$SECOND" | tr '[:lower:]' '[:upper:]')
+      fi
       echo $SECOND.mod : $IN >> /dev/stdout
     fi
   fi
@@ -59,6 +64,7 @@ done <  "${TMPFILE}"
 grep -i use $IN > ${TMPFILE}
 while read -r FIRST SECOND REST ; do
   FIRST=$(echo "$FIRST" | tr '[:upper:]' '[:lower:]' )
+  SECOND=$(echo "$SECOND" | tr '[:upper:]' '[:lower:]' )
   # echo FIRST=$FIRST
   # echo SECOND=$SECOND
   # echo REST=$REST
@@ -73,6 +79,9 @@ while read -r FIRST SECOND REST ; do
     done
     if [[ -z $SKIP ]] ; then
       LIST="$LIST $SECOND"
+      if [[ -n $TUPPERMOD ]] ; then 
+        SECOND=$(echo "$SECOND" | tr '[:lower:]' '[:upper:]')
+      fi
       echo  $IN : $SECOND.mod >> /dev/stdout
     fi
   fi
