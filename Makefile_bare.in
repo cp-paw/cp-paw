@@ -324,28 +324,34 @@ OBJFROMPOSCAR=  \
 #########################################################################
 ##  create preprocessor                                                ##
 #########################################################################
-f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
-${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
-	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
+# f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
+# ${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+# 	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+# 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+# 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
 
 ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
 	cat ${THISDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
-	${F90PP} -notemplates ${OBJDIR}/version_writeparmfile.${FEXT}> ${OBJDIR}/version_writeparmfile_d.${FEXT}
+	${F90PP} <${OBJDIR}/version_writeparmfile.${FEXT} >${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 #
 #__parmfilewriter_______________________________________________________
 ${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/parmfilewriter.f90
-	${F90PP} -notemplates ${SRCDIR}/Buildtools/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+	sed -e "s/[$]/__/g" ${SRCDIR}/Buildtools/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
+
+#__f90pp_tmplts.x_______________________________________________________
+${BINDIR}/f90pp_tmplts.x : ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+	sed -e "s/[$]/__/g" ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${LINK} -o ${BINDIR}/f90pp_tmplts..x ${OBJDIR}/f90pp_tmplts..o ${LIBS}
 #
 #########################################################################
 ##  link files and produce executable PAWX                             ##
 #########################################################################
 #
-${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${LOBJS} ${LOBJSF77} \
+${PAWX} : ${SRCBLOB} ${OBJDIR}/fftw_f77.i ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
 	${LINK} -o ${PAWX} ${OBJECTS} ${OBJVERSION} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${OBJDIR}/version_writeparmfile.o ${MPE} ${LIBS}
@@ -353,10 +359,10 @@ ${PAWX} : ${SRCBLOB} f90pp ${OBJDIR}/fftw_f77.i ${LOBJS} ${LOBJSF77} \
 #########################################################################
 ##  build paw library                                                  ##
 #########################################################################
-${PAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+${PAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 
-${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+${PPAWLIB}: ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PPAWLIB) $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 #
 #########################################################################
@@ -368,12 +374,12 @@ ${PPAWLIB}: f90pp ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o 
 ##  main program.                                                      ##
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #########################################################################
-${PAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+${PAWLIBFULL}: ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_s.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PAWLIBFULL} $$EX;done
 
-${PPAWLIBFULL}: f90pp ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
+${PPAWLIBFULL}: ${OBJECTS} ${SRCBLOB} ${LOBJS} ${LOBJSF77} ${MPE} ${OBJDIR}/version_writeparmfile.o ${OBJVERSION}
 	$(LIBAR) cru $(PPAWLIBFULL) ${OBJECTS} ${OBJVERSION} ${SRCBLOB} $(LOBJS) $(LOBJSF77) ${OBJDIR}/paw_mpelib_p.o ${OBJDIR}/version_writeparmfile.o
 	$(LIBAR) -dv ${PPAWLIBFULL} paw.o
 	for EX in ${EXCLUDE}; do ar -dv ${PPAWLIBFULL} $$EX;done
@@ -548,12 +554,12 @@ varOBJTYPE_tests: ${PAWX}
 #
 #__special rule for parallel interface because of preprocessor___________
 ${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 
-	${F90PP} $< >${OBJDIR}/$*$(MODE)_d.${FEXT}
+	${F90PP} <$< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
 $(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} <$< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 
 # create include file ${OBJDIR}/cppaw_version.info for paw_version.f90
@@ -589,7 +595,7 @@ endif
 #
 #__general rule for object files_________________________________________
 $(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__general rule for object files fortran 77______________________________
@@ -601,98 +607,98 @@ $(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
 #__compile the tools____________________________________________________
 #
 ${OBJMURNAGHAN}: ${OBJDIR}/%.o : ${TOOLDIR}/Murnaghan/%.f90
-#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+#	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	echo doing murnaghan
 	cp $< ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
-#	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+#	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	cp $< ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTPA}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTEST}: ${OBJDIR}/%.o : ${TOOLDIR}/Test/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJLATTICE}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJNEWATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atomnew/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJATOM}: ${OBJDIR}/%.o : ${TOOLDIR}/Atom/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJ1DAVPOT}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCMCWAVE}: ${OBJDIR}/%.o : ${TOOLDIR}/Wave/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJGRAB}: ${OBJDIR}/%.o : ${TOOLDIR}/Grab/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOS}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJDOSPLOT}: ${OBJDIR}/%.o : ${TOOLDIR}/PDoS/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJBANDS}: ${OBJDIR}/%.o : ${TOOLDIR}/Bands/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJPRE}: ${OBJDIR}/%.o : ${TOOLDIR}/Preopt/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCONVERTTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJCLEANTRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Tra/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTOXYZ}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJTOSTRC}: ${OBJDIR}/%.o : ${TOOLDIR}/Strc/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJPOLYHEDRA}: ${OBJDIR}/%.o : ${TOOLDIR}/Polyhedra/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 ${OBJFROMPOSCAR}: ${OBJDIR}/%.o : ${TOOLDIR}/FromPOSCAR/%.f90
-	${F90PP} $< >${OBJDIR}/$*_d.${FEXT}
+	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #########################################################################

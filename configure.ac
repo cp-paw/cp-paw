@@ -169,7 +169,7 @@ if test "$PARMFILE" != notset; then
   #  
   # compose final variables
   #
-  THISDIR=`pwd`  # This is for absolute paths  
+  THISDIR=$(pwd)  # This is for absolute paths  
 #  OBJDIR="$OBJDIR/$ARCH/Objects"
   PAWX="$THISDIR/bin/$ARCH"
   COMPILE_SCALAR="$COMPILER_SCALAR"
@@ -327,14 +327,6 @@ chmod +x $THISDIR/bin/$ARCH/f90pp
 #
 if test "$TUPPERCASEMOD" = "F"; then
   AC_MSG_RESULT(modify makefile_bare for lowercase module files)
-#  sed -e 's%\([[:space]].*.mod\)%\L\1%'\
-# pattern matching: [^\/] do not match a slash; 
-#                   (/string/) save string for later use as /1
-#                   \L make expression lowercase
-# sed command       s%stringa%stringb%g  replace stringa by stringb 
-#
-#  sed -e 's%\([[^\/]]*.mod\)%\L\1%'\
-#      ${THISDIR}/Makefile_bare > ${THISDIR}/Makefile_bare_tmp
   ./lowercasemodnames.sh  < ${THISDIR}/Makefile_bare > ${THISDIR}/Makefile_bare_tmp
   cp  ${THISDIR}/Makefile_bare_tmp  ${THISDIR}/Makefile_bare
   rm  -f ${THISDIR}/Makefile_bare_tmp
