@@ -1,0 +1,29 @@
+f90pp.in will be converted by the configure file used as f90pp The
+configure file defines a number of variables and places f90pp into the
+binary directory BINDIR.
+
+The fortran preprocessor f90pp does the following
+
+1) it expands bloechl-templates in paw_mpelib.f90,
+   paw_constraints.f90, paw_fft.f90, paw_linkedlist.f90
+
+     #TEMPLATE NAME
+       Rules
+     #BODY
+       code with keywords 
+     #END TEMPLATE
+
+2) with f90pp.sed it makes a number of string conversions
+
+   -- it converts c-processor directived "#if defined", etc. to
+      lowercase
+
+   -- it converts dollar signs ($) into double underscore (__). This
+      avoids the compiler option -fdollar-ok. The dollar sings in
+      openmp directives "!$omp" are restored.
+
+   -- it converts the include file names to lowercase fftw_f77.i,
+      fftw3.f03, mpif.h
+   
+3) It uses the executable of f90pp_tmplts.f90, if it exists and
+   regenerates it if it does not or if it is older than the source.

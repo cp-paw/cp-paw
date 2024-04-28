@@ -336,8 +336,8 @@ ${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 #
 #__parmfilewriter_______________________________________________________
-${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90
-	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/parmfilewriter.f90
+	${F90PP} -notemplates ${SRCDIR}/Buildtools/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
 #
