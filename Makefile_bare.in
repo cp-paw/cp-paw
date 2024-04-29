@@ -324,33 +324,29 @@ OBJFROMPOSCAR=  \
 #########################################################################
 ##  create preprocessor                                                ##
 #########################################################################
-# f90pp: ${BINDIR}/f90pp_tmplts.x  ${OBJDIR}/version_writeparmfile.o
-# ${BINDIR}/f90pp_tmplts.x: ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
-# 	${F90PP} -notemplates ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-# 	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-# 	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
+#__f90pp_tmplts.x_______________________________________________________
+# sed statement replaces dollar with double underscore to emulate -fdollar_ok
+${BINDIR}/f90pp_tmplts.x : ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
+	sed -e 's/[$$]/__/g' ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
+	${LINK} -o ${BINDIR}/f90pp_tmplts.x ${OBJDIR}/f90pp_tmplts.o ${LIBS}
 
-${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x
+#__version_writeparmfile.o_______________________________________________
+${OBJDIR}/version_writeparmfile.o: ${BINDIR}/parmfilewriter.x ${BINDIR}/f90pp_tmplts.x
 	cat ${THISDIR}/parms.in_use | ${POE_PREFIX} ${BINDIR}/parmfilewriter.x ${POE_SUFFIX} >  ${OBJDIR}/version_writeparmfile.${FEXT}
 	${F90PP} <${OBJDIR}/version_writeparmfile.${FEXT} >${OBJDIR}/version_writeparmfile_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/version_writeparmfile.o ${OBJDIR}/version_writeparmfile_d.${FEXT}
 #
 #__parmfilewriter_______________________________________________________
+# sed statement replaces dollar with double underscore to emulate -fdollar_ok
 ${BINDIR}/parmfilewriter.x: ${SRCDIR}/Buildtools/parmfilewriter.f90
-	sed -e "s/[$]/__/g" ${SRCDIR}/Buildtools/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
+	sed -e 's/[$$]/__/g' ${SRCDIR}/Buildtools/parmfilewriter.f90 > ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${COMPILE} -o ${OBJDIR}/parmfilewriter.o ${OBJDIR}/parmfilewriter_d.${FEXT}
 	${LINK} -o ${BINDIR}/parmfilewriter.x ${OBJDIR}/parmfilewriter.o ${LIBS}
-
-#__f90pp_tmplts.x_______________________________________________________
-${BINDIR}/f90pp_tmplts.x : ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90
-	sed -e "s/[$]/__/g" ${SRCDIR}/Buildtools/F90PP/f90pp_tmplts.f90 > ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${COMPILE} -o ${OBJDIR}/f90pp_tmplts.o ${OBJDIR}/f90pp_tmplts_d.${FEXT}
-	${LINK} -o ${BINDIR}/f90pp_tmplts..x ${OBJDIR}/f90pp_tmplts..o ${LIBS}
 #
 #########################################################################
 ##  link files and produce executable PAWX                             ##
 #########################################################################
-#
 ${PAWX} : ${SRCBLOB} ${OBJDIR}/fftw_f77.i ${LOBJS} ${LOBJSF77} \
                 ${OBJDIR}/version_writeparmfile.o \
                 ${OBJVERSION} ${OBJECTS} ${MPE}
@@ -553,12 +549,12 @@ varOBJTYPE_tests: ${PAWX}
 .PHONY: ${OBJVERSION} ${SRCBLOB}
 #
 #__special rule for parallel interface because of preprocessor___________
-${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 
+${MPE} : ${OBJDIR}/%$(MODE).o: ${SRCDIR}/%.f90 ${BINDIR}/f90pp_tmplts.x
 	${F90PP} <$< >${OBJDIR}/$*$(MODE)_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*$(MODE)_d.${FEXT}
 #
 # generate version information __________________________________________
-$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info
+$(OBJVERSION): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${OBJDIR}/cppaw_version.info ${BINDIR}/f90pp_tmplts.x
 	${F90PP} <$< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 
@@ -581,6 +577,7 @@ ${OBJDIR}/cppaw_version.info : ${OBJECTS} ${LOBJS}
 #         fi
 #
 # generate source blob __________________________________________________
+# the ld option format for sectcreate is -sectcreate <segname> <sectname> <file>
 ${SRCBLOB}:
 	rm -f paw_srcblob paw_srcblob.o
 	tar -czf paw_srcblob ${SRCDIR} ${THISDIR}/parms.in_use
@@ -588,31 +585,31 @@ ifeq ($(shell uname -s),Linux)
 	ld -r -b binary -o paw_srcblob.o paw_srcblob
 endif
 ifeq ($(shell uname -s),Darwin)
-	touch paw_srcblob_dummy.f90
+	touch paw_srcblob_dummy.f90   
 	${COMPILE} -o paw_srcblob_dummy.o paw_srcblob_dummy.f90
 	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin paw_srcblob paw_srcblob_dummy.o
 endif
 #
 #__general rule for object files_________________________________________
-$(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90
+$(OBJECTS) $(LOBJS): ${OBJDIR}/%.o: ${SRCDIR}/%.f90 ${BINDIR}/f90pp_tmplts.x
 	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
 #__general rule for object files fortran 77______________________________
-$(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f
+$(LOBJSF77): ${OBJDIR}/%.o: ${SRCDIR}/%.f ${BINDIR}/f90pp
 	cp $< ${OBJDIR}/$*_d.f
 	$(COMPILE:-fimplicit-none=) -o $@ ${OBJDIR}/$*_d.f
 	#${COMPILE} -o $@ ${OBJDIR}/$*_d.f
 #
 #__compile the tools____________________________________________________
 #
-${OBJMURNAGHAN}: ${OBJDIR}/%.o : ${TOOLDIR}/Murnaghan/%.f90
+${OBJMURNAGHAN}: ${OBJDIR}/%.o : ${TOOLDIR}/Murnaghan/%.f90 
 #	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	echo doing murnaghan
 	cp $< ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}
 #
-${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90
+${OBJSTPREPORT}: ${OBJDIR}/%.o : ${TOOLDIR}/Stpa/%.f90 
 #	${F90PP} < $< >${OBJDIR}/$*_d.${FEXT}
 	cp $< ${OBJDIR}/$*_d.${FEXT}
 	${COMPILE} -o $@ ${OBJDIR}/$*_d.${FEXT}

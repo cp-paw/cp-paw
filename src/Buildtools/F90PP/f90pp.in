@@ -9,18 +9,18 @@ THISDIR="@THISDIR@"
 CPP="@CPP@ "
 #______________________ 
 ARCH="@ARCH@"
-#______________________ 
-#SPECIAL="@SPECIAL@"
+#________________________
+COMPILE="@COMPILE_SCALAR@"
 #
-#-------------------------------------------------------------------------------
-# export THISDIR=$(pwd)
-# export ARCH='osx_gfortran_accellerate'
-
-export BINDIR=${THISDIR}/bin/$ARCH
+export BINDIR=${THISDIR}/bin/${ARCH}
 export F90PPDIR=${THISDIR}/src/Buildtools/F90PP
-#BINDIR="./"
-#F90PPDIR="./"
-
+# #-----------------------------------------------------------------------------
+export F90TMPLTS_X="${BINDIR}/f90pp_tmplts.x"
+if [[ ! -e ${F90PPDIR}/f90pp.sed ]] ; then
+  echo "error in $0: $F90PPDIR/f90.sed not found"
+  exit 1
+fi
+#
 #----------------------------------------------------------------
 #  help message
 #----------------------------------------------------------------
@@ -32,7 +32,14 @@ USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -D c-preprocessor directive\n"
 #USAGE="$USAGE \t -v verbose\n"
 USAGE="$USAGE \t -h prints this help message\n"
-
+#
+#----------------------------------------------------------------
+#  compile F90TMPLTS  if not available
+#----------------------------------------------------------------
+if [[ ! -e ${F90TMPLTS_X} ]] ; then
+  sed -e "s/[$]/__/" < ${F90PPDIR}/f90pp_tmplts.f90 |\
+  ${COMPILE} -o${F90TMPLTS_X} 
+fi
 #----------------------------------------------------------------
 #  Resolve arguments
 #----------------------------------------------------------------
@@ -52,31 +59,10 @@ while getopts :hD: OPT ; do
       ;;
   esac
 done
-
-#----------------------------------------------------------------
-#  compile f90_tmplts.f90
-#----------------------------------------------------------------
-# generate executable F90TMPLTS_X if unavailable.
-# regenerate if executable is older than source
-F90TMPLTS_X="${BINDIR}/f90pp_tmplts.x"
-if [[ -f $F90TMPLTS_X ]] ; then
-  if [[ $F90TMPLTS_X -ot $F90PPDIR/f90pp_tmplts.f90 ]] ; then
-    rm $F90TMPLTS_X
-  fi
-fi
-if [[ ! -e $F90TMPLTS_X ]] ; then
- echo 'rebuilding $F90TMPLTS_X'
-  TMP=$(mktemp).f90 
-  sed 's/[$]/__/g' $F90PPDIR/f90pp_tmplts.f90 > $TMP 
-  export MODDIR=$(mktemp -d)
-  gfortran -I${MODDIR} -J${MODDIR} -o $F90TMPLTS_X $TMP
-  rm $TMP
-fi 
-
 #----------------------------------------------------------------
 # convert source code
 #----------------------------------------------------------------
 ${F90TMPLTS_X} < /dev/stdin |\
-sed -f "${F90PPDIR}/f90pp.sed"  |\
+sed -f ${F90PPDIR}/f90pp.sed |\
 sed /^@/d  |\
-$CPP -traditional -P -C -nostdinc $CPPVAR >/dev/stdout
+$CPP  $CPPVAR >/dev/stdout

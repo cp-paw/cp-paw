@@ -3806,11 +3806,6 @@ which seems to be undefined.  Please make sure it is defined" >&2;}
 
   esac
 
-
-  case $ac_file$ac_mode in
-    "$THISDIR/bin/$ARCH/f90pp":F) chmod +x $THISDIR/bin/$ARCH/f90pp ;;
-
-  esac
 done # for ac_tag
 
 

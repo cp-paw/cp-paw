@@ -307,7 +307,7 @@ fi
 #
 # create f90pp from f90pp.in and make it executable
 #
-AC_CONFIG_FILES($THISDIR/bin/$ARCH/f90pp:$THISDIR/src/Buildtools/F90PP/f90pp.in,[chmod +x $THISDIR/bin/$ARCH/f90pp])
+AC_CONFIG_FILES($THISDIR/bin/$ARCH/f90pp:$THISDIR/src/Buildtools/F90PP/f90pp.in)
 #
 # create Makefile from Makefile_targets.in 
 #
