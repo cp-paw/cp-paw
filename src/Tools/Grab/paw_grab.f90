@@ -358,16 +358,16 @@ END MODULE SUBSTANCE_MODULE
       END
 !
 !     ..................................................................
-MODULE READCNTL_MODULE
+MODULE READCNTLGRAB_MODULE
 USE LINKEDLIST_MODULE
 TYPE(LL_TYPE)   :: LL_CNTL
 SAVE
-END MODULE READCNTL_MODULE
+END MODULE READCNTLGRAB_MODULE
 !
 !     ..................................................................
       SUBROUTINE READCNTL
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE
+      USE READCNTLGRAB_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
       LOGICAL(4)           :: TCHK

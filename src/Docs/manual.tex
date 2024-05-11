@@ -1,4 +1,4 @@
-\documentclass[final,12pt]{article}    
+\documentclass[final,12pt,makeidx]{article}    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  include packages
@@ -13,7 +13,6 @@
 \usepackage{shadow}
 \usepackage{makeidx}
 \usepackage{amsmath}
-\makeindex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  if private=false certain descriptions are excluded using
@@ -80,7 +79,15 @@
 %==========================================================================
 %==                                                                     ===
 %==========================================================================
-\makeindex    % make index. uses makeidx package.
+% makeindex makes an index.
+% The entries for the index are defined by \index{string}. The index
+% is introduced with the latex command \printindex.
+% The first run of the compilation produces a file manual.idx. This
+% file is processed with the Unix command "makeindex manual.idx",
+% which produces a two files manual.ilg and manual.ind.  these will be
+% introduces in a second run of the compilation.
+\makeindex    
+
 
 %== allow links between documents ============================================
 \usepackage{xr}

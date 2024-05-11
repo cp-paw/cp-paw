@@ -1,5 +1,5 @@
 #!/bin/bash
-export THISDIR=$(PWD)
+export THISDIR=$(pwd)
 ###########################################################################
 #
 #  Purpose:

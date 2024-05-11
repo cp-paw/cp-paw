@@ -39,6 +39,7 @@ USAGE="$USAGE Dependencies on module files within the same file are omitted.\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -f filename\t name of the fortran file to be parsed.\n"
+USAGE="$USAGE \t -d directory\t directory for module and object files.\n"
 USAGE="$USAGE \t -u \t\t uppercase module file names e.g. XXX.mod.\n"
 USAGE="$USAGE \t\t\t The default are lowercase file names e.g. xxx.mod\n"
 USAGE="$USAGE \t -v \t\t verbose\n"
@@ -50,9 +51,10 @@ USAGE="$USAGE \t -h \t\t prints this help message\n"
 export TUPPERMOD=""  # set to yes for XXX.mod rather than xxx.mod
 export VERBOSE=""
 export IN=""
-while getopts :hvuf: OPT ; do
+while getopts :hvuf:d: OPT ; do
   case $OPT in
     f) IN=$OPTARG ;;
+    d) OBJDIR=$OPTARG ;;
     u) TUPPERMOD="Y" ;;
     v) VERBOSE="Y" ;;
     h) echo -e $USAGE ; exit 0  ;;
@@ -71,8 +73,13 @@ if [[ -z $IN ]] ; then
    echo "error in $0: file not specified"
    exit 1
 fi 
+if [[ -z $OBJDIR ]] ; then 
+   echo "error in $0: directory for module and object files not specified"
+   exit 1
+fi 
 if [[ -n $VERBOSE ]] ; then
    echo INPUT FILE NAME = $IN
+   echo directory for module and object files = $OBJDIR
 fi
 
 #-------------------------------------------------------------------------------
@@ -86,6 +93,15 @@ if [[ ! ${X} = [Ff][0-9][0-9] ]] ; then
   fi
   exit 0 
 fi
+
+export OBJ
+#OBJ=${OBJDIR}/${IN##*/}
+OBJ=${IN##*/}
+OBJ=${OBJ%.f*}
+OBJ=${OBJ%_d}.o    # allow also _d.f90 files
+
+export TARGETS=${OBJ}
+export PREREQUISITES=""
 #-------------------------------------------------------------------------------
 #-- collect dependencies of module files on fortran files                     --
 #-------------------------------------------------------------------------------
@@ -111,7 +127,9 @@ while read -r FIRST SECOND REST ; do
       if [[ -n $TUPPERMOD ]] ; then 
         SECOND=$(echo "$SECOND" | tr '[:lower:]' '[:upper:]')
       fi
-      echo $SECOND.mod : $IN >> /dev/stdout
+#      echo ${OBJDIR}/${SECOND}.mod : ${OBJ} >> /dev/stdout
+#      TARGETS="${TARGETS} ${OBJDIR}/$SECOND.mod"
+      TARGETS="${TARGETS} $SECOND.mod"
     fi
   fi
 done <  "${TMPFILE}"
@@ -140,10 +158,21 @@ while read -r FIRST SECOND REST ; do
       if [[ -n $TUPPERMOD ]] ; then 
         SECOND=$(echo "$SECOND" | tr '[:lower:]' '[:upper:]')
       fi
-      echo  $IN : $SECOND.mod >> /dev/stdout
+#      echo  ${OBJ} : ${OBJDIR}/${SECOND}.mod >> /dev/stdout
+      PREREQUISITES="${PREREQUISITES} ${SECOND}.mod "
     fi
   fi
 done <  "${TMPFILE}"
+
+#-------------------------------------------------------------------------------
+#-- clean up                                                                  --
+#-------------------------------------------------------------------------------
+echo "${TARGETS} &: ${PREREQUISITES}" >> /dev/stdout
+echo -e '\t $(FC) -c $(FFLAGS)' -o${OBJ} ${IN} >> /dev/stdout
+# the date of the module files is not updated if it needs no rebuild so that
+# a the rule may be applied again.
+echo -e '\t touch' ${TARGETS} >> /dev/stdout
+echo -e "##" >> /dev/stdout
 
 #-------------------------------------------------------------------------------
 #-- clean up                                                                  --
