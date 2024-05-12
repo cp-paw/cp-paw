@@ -55,13 +55,13 @@ while getopts :c:f:s:vh OPT ; do
   esac
 done
 
-if [[ -z ${PARMFILE} ]] then
-  PARMFILE=${THISDIR}/src/Builtools/defaultparmfile
+if [[ -z ${PARMFILE} ]] ; then
+  PARMFILE=${THISDIR}/src/Buildtools/defaultparmfile
   echo "Warning from $0: no parmfile specified, setting default"
-  echo "default parmfile= ${THISDIR}/src/Builtools/defaultparmfile"
+  echo "default parmfile= ${PARMFILE}"
 fi
 
-if [[ -f ${PARMFILE} ]]; then
+if [[ ! -f ${PARMFILE} ]] ; then
   echo "error in $0: parmfile does not exist"
   echo "             PARMFILE=${PARMFILE}"
   exit 1
@@ -86,6 +86,15 @@ if [[ -n $PROTECT_SUFFIX ]] ; then
   echo "Warning: option -s to paw_build.sh overwrites value from parmfile"
   SUFFIX=$PROTECT_SUFFIX
 fi
+
+################################################################################
+##  strip extra spaces
+################################################################################
+INCLUDES=$(echo ${INCLUDES} | tr -s '[:blank:]')  # strip extra spaces
+LIBS=$(echo ${LIBS} | tr -s '[:blank:]')  # strip extra spaces
+CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
 ################################################################################
 ##  report settings
@@ -116,43 +125,45 @@ fi
 #-------------------------------------------------------------------------------
 # operating system may be Darwin (=macOS), Linux
 OS=$(uname -s)
-echo OS=$OS
 #-------------------------------------------------------------------------------
 # Make: must be gnu make, version 4.3 or later
 # "grouped targets" were introduced only in version 4.3
 #-------------------------------------------------------------------------------
-for X in make gmake ; do
-  # exit loop if MAKE has already been found
-  if [[ -n ${MAKE} ]] ; then break ; fi
-  MAKE=$(which $X) 
-  if [[ -z $MAKE ]] ; then continue ; fi
-  VERSION=$(${MAKE} -v)
-  if [[ -z $(echo $VERSION | grep -Eo 'GNU Make') ]] ; then 
-    MAKE=""; continue 
-  fi
-  # the version string contains two version numbers.
-  # outer parenthesis turns the result into a string array X[0] X[1] ...
-  X=($(echo $VERSION |  grep -Eo '[0-9]+\.[0-9]+'))
-  ID=${X[0]} 
-  MAJOR=${ID%.*}
-  MINOR=${ID#*.}
-  if [[ $MAJOR -lt 4 ]] ; then MAKE="" ; continue ;fi
-  if [[ $MAJOR -eq 4 && $MINOR -lt 3 ]] ; then MAKE=""; continue;  fi
-done
-if [[ ! -x $MAKE ]]; then
-  echo "error in $0: no GNU Make version >= 4.3 found"
-  echo "MAKE=$MAKE"
-  echo 'specify variable MAKE via parmfile'
+#_____check if MAKE is defined__________________________________________________
+if [[ -z ${MAKE} ]] ; then
+  echo "error in $0: parameter MAKE not specified"
   exit 1
 fi
-echo MAKE=$MAKE
+#_____check if $MAKE exists and is executable___________________________________
+if [[ ! -x ${MAKE} ]] ; then
+  echo "error in $0: MAKE is not an executable file"
+  exit 1
+fi
+#__ check if it is gnu make version 4.3 or later________________________________
+VERSION=$(${MAKE} -v)
+if [[ -z $(echo $VERSION | grep -Eo 'GNU Make') ]] ; then 
+  echo "error in $0: MAKE is not GNU Make"
+  exit 1
+fi
+# the version string contains two version numbers.
+# outer parenthesis turns the result into a string array X[0] X[1] ...
+X=($(echo ${VERSION} |  grep -Eo '[0-9]+\.[0-9]+'))
+ID=${X[0]} 
+MAJOR=${ID%.*}
+MINOR=${ID#*.}
+if [[ $MAJOR -lt 4 ]] ; then 
+  echo "error in $0: MAKE is not version 4.3 or later"
+  exit 1
+fi
+if [[ $MAJOR -eq 4 && $MINOR -lt 3 ]] ; then 
+  echo "error in $0: MAKE is not version 4.3 or later"
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 #   C - preprocessor
 #-------------------------------------------------------------------------------
-if [[ ! -x $CPP ]]; then
-  CPP=$(which cpp) 
-fi
-if [[ ! -x $CPP ]]; then
+if [[ ! -x ${CPP} ]]; then
   echo "error in $0: no C-preprocessor found"
   echo 'specify variable CPP via parmfile'
   exit 1
@@ -161,10 +172,7 @@ fi
 #-------------------------------------------------------------------------------
 #   Archiver  (ar may become obsolete. switch to  tar instead?
 #-------------------------------------------------------------------------------
-if [[ ! -x $AR ]] ; then
-  AR=$(which ar)
-fi
-if [[ ! -x $AR ]]; then
+if [[ ! -x ${AR} ]]; then
   echo "error in $0: no Archiver (ar) found"
   echo "specify variable AR via parmfile"
   exit 1
@@ -173,288 +181,148 @@ fi
 #-------------------------------------------------------------------------------
 # Fortran compiler
 #-------------------------------------------------------------------------------
-for X in ifx xlf flang ifort gfortran ; do
-  # exit loop if FC has already been found
-  if [[ -x ${FC} ]] ; then break ; fi
-  FC=$(which $X) 
-  if [[ -z $FC ]] ; then continue ; fi
-done
-if [[ ! -x $FC ]] ; then 
-  echo "error in $0: no fortran compiler found"
-  echo 'specify variable FC via parmfile'
+if [[ -z ${FC} ]] ; then
+  echo "error in $0: parameter FC not specified"
   exit 1
 fi
-export LD=$FC  # assume linker=compiler
-
-if [[ $PARALLELL = true ]] ; then
-  echo "choose FC compatible with MPI (mpifort or so)"
+#_____check if $FC exists and is executable___________________________________
+if [[ ! -x ${FC} ]] ; then
+  echo "error in $0: FC is not an executable file"
   exit 1
 fi
 
-if [[ $VERBOSE = true ]] ; then
-   echo "----------------------------------------------------------------------"
-   echo "------------report variables after analysing system-- ----------------"
-   echo "----------------------------------------------------------------------"
-   LIST="MAKE AR CPP FC LD "
-   for X in ${LIST}; do
-      eval "Y=\${$X}"
-      Y=$(echo $Y | tr -s '[:blank:]')  # strip extra spaces
-      X="${X}.............................."
-      X=${X:0:10}
-      echo -e "$X: $Y" 
-   done
-   echo "-------------------------------------------------------done-----------"
+#-------------------------------------------------------------------------------
+# Linker
+#-------------------------------------------------------------------------------
+if [[ -z ${LD} ]] ; then
+  echo "error in $0: parameter LD not specified"
+  exit 1
+fi
+#_____check if $FC exists and is executable___________________________________
+if [[ ! -x ${LD} ]] ; then
+  echo "error in $0: LD is not an executable file"
+  exit 1
 fi
 
-################################################################################
-##     process flags
-##      -- attach parallel flag
-##      -- prepend -D to all entries in CPPFLAGS
-################################################################################
-#      CPPVAR_FEAST
-#      CPPVAR_JADAMILU
-#      CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
+#-------------------------------------------------------------------------------
+# PARALLEL
+#-------------------------------------------------------------------------------
+if [[ ! ( $PARALLEL = true || $PARALLEL = false ) ]] ; then
+  echo "error in $0: PARALLEL neither true nor false"
+  exit 1
+fi 
 
+#-------------------------------------------------------------------------------
+# CPPFLAGS
+#-------------------------------------------------------------------------------
 if [[ $PARALLEL = true && \
-      -z $(echo $(CPPFLAGS) | grep "-DCPPVARIABLE_PARALLEL") ]] ; then
-  CPPFLAGS='${CPPFLAGS} -DCPPVARIABLE_PARALLEL'
+      -z $(echo ${CPPFLAGS} | grep -Eo "CPPVARIABLE_PARALLEL") ]] ; then
+  CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
   echo "Warning: cpp flag "-DCPPVARIABLE_PARALLEL" required in parallel mode."
   echo "         Flag has been added to CPPFLAGS"
 fi
 
-#-------------------------------------------------------------------------------
-#--- remove extra blanks from flags strings-------------------------------------
-#-------------------------------------------------------------------------------
-FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-
-#-------------------------------------------------------------------------------
-#--------------report FLAGS----------------------------------------------------
-#-------------------------------------------------------------------------------
-if [[ $VERBOSE = true ]] ; then
-   echo "----------------------------------------------------------------------"
-   echo "------------report variables after setting flags----------------------"
-   echo "----------------------------------------------------------------------"
-   LIST="CPPFLAGS FFLAGS LDFLAGS"
-   for X in ${LIST}; do
-      eval "Y=\${$X}"
-      Y=$(echo $Y | tr -s '[:blank:]')  # strip extra spaces
-      X="${X}.............................."
-      X=${X:0:10}
-      echo -e "$X: $Y" 
-   done
-   echo "-------------------------------------------------------done-----------"
-fi
-
-################################################################################
-##     search Libraries: BLAS LAPACK FFTW LIBXC MPI
-################################################################################
-# there is a filesystem hierarchy Standard (FHS)
-
-# The Filesystem Hierarchy Standard describes the filesystem conventions
-# of a Linux system. In this standard, folders /lib, /usr/lib and
-# /usr/local/lib are the default folders to store shared libraries. The
-# /lib folder has libraries used during the boot time of the system but
-# also used by programs in the /bin folder. Similarly, the/usr/lib
-# folder has libraries used by programs in the /usr/bin folder. Finally,
-# /usr/local/lib folder has libraries used by programs in /usr/local/bin
-# folder.
-
-# extension "so" (shared object) denotes a dynamic library
-# extension "a" (archive) denotes a static library
-# extension "dylib" (dynamic library) denotes a dynamic library on macOS
-# https://stackoverflow.com/questions/2339679/what-are-the-differences-between-so-and-dylib-on-macos
-
-if [[ $VERBOSE = true ]] ; then 
-   echo  "searching libraries ............................................."
+if [[ -z $(echo ${CPPFLAGS} | grep -Eo "CPPVAR_FFT_FFTW3") ]] ; then
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_FFT_FFTW3"
+  echo "CPPFLAGS= $CPPFLAGS"
+  echo "Warning: cpp flag "-DCPPVAR_FFT_FFTW3" is mandatory"
+  echo "         Flag has been added to CPPFLAGS"
 fi
 
 #-------------------------------------------------------------------------------
-#--- find libraries already on the libstring                                  --
+# FCFLAGS
 #-------------------------------------------------------------------------------
-DIR=
-for X in $LIBS ; do
-  if [[ ${X:0:2} = -L ]] ; then 
-    DIR=${X#-L} 
+# no test. can be anything, even empty
+#-------------------------------------------------------------------------------
+# LDFLAGS
+#-------------------------------------------------------------------------------
+# no test. can be anything, even empty
+
+#-------------------------------------------------------------------------------
+# LIBS
+#-------------------------------------------------------------------------------
+if [[ -z $(echo ${LIBS} | grep -Eo "fftw3") ]] ; then
+  echo "error in $0: no fftw library specified on LIBS"
+  exit
+fi
+if [[ -z $(echo ${LIBS} | grep -Eo "mpi") ]] ; then
+  if [[ PARALLEL = true ]] ; then
+    echo "error in $0: no mpi library specified in parallel mode"
+    exit
+  fi
+fi
+if [[ -z $(echo ${LIBS} | grep -Eo "xcf03") ]] ; then
+  if [[ -z $(echo ${CPPFLAGS} | grep "NOLIBXC") ]] ; then
+    echo "error in $0: no LIBXC library specified, while not switched off"
+    exit
+  fi
+fi
+
+for X in ${LIBS} ; do
+  if [[ ${X:0:2} = -L ]] ; then
+    DIR=${X#-L}
   elif [[ ${X:0:2} = -l ]] ; then
     NAME=${X#-l}
-    LIB=($(ls ${DIR}/lib${NAME}.*))
-    if [[ -n $LIB ]] ; then
-      case $NAME in
-         blas)   BLASLIB=$LIB ;;
-         lapack) LAPACKLIB=$LIB ;;
-         fftw3)  FFTW3LIB=$LIB ;;
-         xcf03)  XCLIB=$LIB ;;
-         mpi)    MPILIB=$LIB ;;
-      esac
+    LIB=${DIR}/lib${NAME}*
+    if [[ -z  $LIB ]] ; then
+      echo "error in $0: Libary $LIB doesnot exist"
+      exit
     fi
+  else
+    echo "error in $0: Synatx error on LIBS"
+    echo "all entries must have prefix -L or -l not separated by a blank"
   fi
 done
-if [[ $VERBOSE = true ]] ; then
-   echo "----------------------------------------------------------------------"
-   echo "------------ libraries identified by parameter file-------------------"
-   echo "----------------------------------------------------------------------"
-   LIST="BLASLIB LAPACKLIB FFTW3LIB XCLIB MPILIB "
-   for X in ${LIST}; do
-      eval "Y=\${$X}"
-      if [[ -z $Y ]] ; then continue ; fi
-      Y=$(echo $Y | tr -s '[:blank:]')  # strip extra spaces
-      X="${X}.............................."
-      X=${X:0:20}
-      echo -e "$X: $Y" 
-   done
-   echo "-------------------------------------------------------done-----------"
-fi
 
 #-------------------------------------------------------------------------------
-#--- search for missing libraries                                           ----
+# INCLUDES
 #-------------------------------------------------------------------------------
-LIST=""
-for X in BLASLIB LAPACKLIB FFTW3LIB XCLIB MPILIB ; do
-   eval "Y=\${$X}"
-  if [[ -z ${Y} ]] ; then LIST="$LIST $X" ; fi
+if [[ -z $(echo ${INCLUDES} | grep -Eo "fftw3.f03") ]] ; then
+  echo "error in $0: no fftw.f03 include file on INCLUDES"
+  exit 1
+fi
+
+if [[ -z $(echo ${INCLUDES} | grep -Eo "xc_f03_lib_m.mod") ]] ; then
+  echo "error in $0: no xc_f03_lib_m.mod module file on INCLUDES"
+  exit 1
+fi
+
+if [[ -z $(echo ${INCLUDES} | grep -Eo "mpi_f08.mod") ]] ; then
+  if [[ $PARALLEL = true ]] ; then
+    echo "error in $0: no mpi_f08.mod module file on INCLUDES"
+    exit 1
+  fi
+fi
+for X in $INCLUDES ; do
+  if [[ ! -f $X ]] ; then
+    echo "error in $0: file $X in INCLUDES does not exist"
+    echo "INCLUDES=$INCLUDES"
+    exit 1
+  fi 
 done
-
-# for macOS, remove blas and lapack. which are included via accelerate
-if [[ $OS = Darwin ]] ; then 
-  LIST=${LIST[@]/BLASLIB}
-  LIST=${LIST[@]/LAPACKLIB}
-fi
-
-if [[ ${VERBOSE} = true ]] ; then
-  echo "searching on the system for $LIST"
-fi
-
-
-# search through the standard directories with standard extensions
-for X in $LIST ; do
-   eval "Y=\${$X}"
-   PATTERN=$(echo "$X" | tr '[:upper:]' '[:lower:]')
-   PATTERN=lib${PATTERN%lib}
-#   echo $PATTERN
-   LOCS="/opt/homebrew /lib /usr/lib /usr/include /usr/local /opt"
-   for LOC in $LOCS ; do
-     if [[ ! -d $LOC ]] ; then continue; fi
-     for EXT in dylib so a  ; do
-       if [[ -n $Y ]] ; then continue ; fi # skip if already successful
-       Z=($(find $LOC -name "$PATTERN*.$EXT" -print))
-       if [[ ! -z $Z ]] ; then 
-#        -- file encountered add to LIBS
-         eval "$X=${Z[0]}"
-         eval "Y=\${$X}"
-         DIR=${Y%/*}
-         NAME=${Y##*/lib}
-         NAME=${NAME%%.*}
-         LIBS="$LIBS -L$DIR -l$NAME"
-#         echo X=$X $Y -L$DIR -l$NAME
-         break 2   # break the loop over $LOCS
-       fi 
-     done
-  done
-done
-
-#-------------------------------------------------------------------------------
-#--- remove extra blanks from library string------------------------------------
-#-------------------------------------------------------------------------------
-LIBS=$(echo ${LIBS} | tr -s '[:blank:]')  # strip extra spaces
-
-if [[ $VERBOSE = true ]] ; then
-   echo "----------------------------------------------------------------------"
-   echo "------------libraries found on the system ----------------------------"
-   echo "----------------------------------------------------------------------"
-   for X in ${LIST}; do
-      eval "Y=\${$X}"
-      Y=$(echo $Y | tr -s '[:blank:]')  # strip extra spaces
-      X="${X}.............................."
-      X=${X:0:20}
-      echo -e "$X: $Y" 
-   done
-   echo ""
-   echo "library string LIBS=$LIBS"
-   echo "-------------------------------------------------------done-----------"
-fi
-
-
-################################################################################
-##     Include and module files                                               ##
-################################################################################
-#-------------------------------------------------------------------------------
-#-- identify files on the include string
-#-------------------------------------------------------------------------------
-LOCS="/lib /usr/lib /usr/local/lib /opt/homebrew opt"
-
-#_________search for the includ file required for fftw3_________________________
-if [[ -z $(echo $INCLUDES | grep 'fftw3.f03') ]] ; then
-echo here
-  for LOC in $LOCS ; do
-   if [[ ! -d $LOC ]] ; then continue; fi
-    X=($(find $LOC -name "fftw3.f03" -print))
-    if [[ -n $X ]] ; then 
-      X=${X[0]} 
-      INCLUDES="$INCLUDES ${X}"
-      break
-    fi 
-  done
-fi
-
-#_________search for the includ file required for libxc_________________________
-if [[ -z $(echo $INCLUDES | grep 'xc_f03_lib_m.mod') ]] ; then
-  for LOC in $LOCS ; do
-   if [[ ! -d $LOC ]] ; then continue; fi
-    X=($(find $LOC -name "xc_f03_lib_m.mod" -print))
-    if [[ -n $X ]] ; then 
-      X=${X[0]} 
-      INCLUDES="$INCLUDES ${X}"
-      break
-    fi 
-  done
-fi
-
-#_________search for the includ file required for mpi___________________________
-if [[ -z $(echo $INCLUDES | grep 'mpi_f08.mod') ]] ; then
-  for LOC in $LOCS ; do
-   if [[ ! -d $LOC ]] ; then continue; fi
-    X=($(find $LOC -name 'mpi_f08.mod' -print))
-    if [[ -n $X ]] ; then 
-      X=${X[0]} 
-      INCLUDES="$INCLUDES ${X}"
-      break
-    fi 
-  done
-fi
-
-#-------------------------------------------------------------------------------
-#--- remove extra blanks from include string------------------------------------
-#-------------------------------------------------------------------------------
-INCLUDES=$(echo ${INCLUDES} | tr -s '[:blank:]')  # strip extra spaces
-
-#-------------------------------------------------------------------------------
-#--- report include files                                                     --
-#-------------------------------------------------------------------------------
-if [[ $VERBOSE = true ]] ; then
-   echo "----------------------------------------------------------------------"
-   echo "------------include files---------------------------------------------"
-   echo "----------------------------------------------------------------------"
-   for X in ${INCLUDES}; do
-      echo -e "$X" 
-   done
-   echo "include string INCLUDES=$INCLUDES"
-   echo "-------------------------------------------------------done-----------"
-fi
 
 ################################################################################
 ##     Naming and locations                                                   ##
-##     --  main cppaw directory is the current directory (THISDIR)
-##     --  SUFFIX distinguishes various builds
 ################################################################################
 if [[ -z ${BASEDIR} ]] ; then
-  export BASEDIR=${THISDIR}
+    echo "error in $0: BASEDIR not defined"
+    exit
 fi
 
+if [[ ! -d ${BASEDIR} ]] ; then
+  echo "error in $0: BASEDIR  does not exist"
+  exit
+fi
+for X in src src/Buildtools src/Tools src/Docs ; do
+  if [[ ! -d ${BASEDIR}/$X ]] ; then
+    echo "error in $0: BASEDIR/$X  does not exist"
+    exit
+  fi
+done
 #__________ BUILDDIR____________________________________________________________
 if [[ -z ${BUILDDIR} ]] ; then
-  export BUILDDIR=${THISDIR}/bin/Build_${SUFFIX}
+  echo "error in $0: BUILDIR not defined"
+  exit
 fi
 if [[ ! -d ${BUILDDIR} ]] ; then
   mkdir -p ${BUILDDIR} ; RC=$?
@@ -464,26 +332,21 @@ if [[ ! -d ${BUILDDIR} ]] ; then
     exit 1
   fi
 fi
-if [[ ! -d ${BUILDDIR}/etc ]] ; then
-  mkdir ${BUILDDIR}/etc ; RC=$?
-  if [[ $RC -ne 0 ]] ; then
-    echo "error in $0: could not create BUILDIR/etc"
-    echo "BULDDIR=$BULDDIR"
-    exit 1
-  fi
-fi
-if [[ ! -d ${BUILDDIR}/doc ]] ; then
-  mkdir ${BUILDDIR}/doc ; RC=$?
-  if [[ $RC -ne 0 ]] ; then
-    echo "error in $0: could not create BUILDIR/doc"
-    echo "BULDDIR=$BULDDIR"
-    exit 1
-  fi
-fi
+for X in etc doc ; do
+   if [[ ! -d ${BUILDDIR}/$X ]] ; then
+     mkdir ${BUILDDIR}/$X ; RC=$?
+     if [[ $RC -ne 0 ]] ; then
+        echo "error in $0: could not create BUILDIR/$X"
+        echo "BULDDIR=$BULDDIR"
+        exit 1
+     fi
+   fi
+done
 
 #________BINDIR_________________________________________________________________
 if [[ -z ${BINDIR} ]] ; then
-  export BINDIR=${THISDIR}/bin/${SUFFIX}
+  echo "error in $0: BUILDIR not defined"
+  exit
 fi
 if [[ ! -d ${BINDIR} ]] ; then
   mkdir ${BINDIR} ; RC=$?
@@ -493,18 +356,21 @@ if [[ ! -d ${BINDIR} ]] ; then
     exit 1
   fi
 fi
-if [[ ! -d ${BINDIR}/include ]] ; then
-  mkdir ${BINDIR}/include ; RC=$?
-  if [[ $RC -ne 0 ]] ; then
-    echo "error in $0: could not create BINDIR/include"
-    echo "BINDIR/lib=${BINDIR}/include"
-    exit 1
+for X in include ; do
+  if [[ ! -d ${BINDIR}/$X ]] ; then
+    mkdir ${BINDIR}/$X ; RC=$?
+    if [[ $RC -ne 0 ]] ; then
+      echo "error in $0: could not create BINDIR/$X"
+      echo "BINDIR/lib=${BINDIR}"
+      exit 1
+    fi
   fi
-fi
+done
 
 #________DOCDIR____(installation directory for the manal.pdf____________________
 if [[ -z ${DOCDIR} ]] ; then
-  export DOCDIR=${THISDIR}/doc
+  echo "error in $0: DOCDIR not defined"
+  exit
 fi
 if [[ ! -d ${DOCDIR} ]] ; then
   mkdir ${DOCDIR} ; RC=$?
@@ -516,6 +382,15 @@ if [[ ! -d ${DOCDIR} ]] ; then
 fi
 
 ################################################################################
+##  strip extra spaces
+################################################################################
+INCLUDES=$(echo ${INCLUDES} | tr -s '[:blank:]')  # strip extra spaces
+LIBS=$(echo ${LIBS} | tr -s '[:blank:]')  # strip extra spaces
+CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+
+################################################################################
 ##     write parms.in_use
 ################################################################################
 export LIST="SUFFIX PARALLEL\
@@ -523,11 +398,17 @@ export LIST="SUFFIX PARALLEL\
                  CPPFLAGS FFLAGS LDFLAGS \
                  LIBS INCLUDES\
                  BASEDIR BUILDDIR BINDIR"
-rm -f parms.in_use
+TMP=$(mktemp)
 for X in $LIST ; do
   eval "Y=\${$X}"   # Y=value of the variable with name $X
-  echo "export $X=$Y" >> parms.in_use
+  echo "export $X=$Y" >> $TMP
 done
+#
+#___copy only if parameters habe changed to avoid a Makefile cascade_________
+if [[ $(cmp --silent "$TMP" "${BUILDDIR}/etc" ; echo $?) -ne 0 ]] ; then
+  cp ${TMP} ${BUILDDIR}/etc
+fi
+rm -f $TMP
 
 ################################################################################
 ##     construct documentation
@@ -586,11 +467,11 @@ echo " make prepare................................................"
 echo " make executable............................................."
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} executable)
 
-if [[ $PARALLEL = false ]] ; then
+if [[ ${PARALLEL} = false ]] ; then
    echo " make tools ..................................................."
    (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  tools)
   echo " make libs ..................................................."
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  tools)
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  libs)
 fi
 echo " ...........................................................made"
 
@@ -608,11 +489,15 @@ sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makeinstall.in > ${BUILDDIR}/insta
 rm -f ${SEDCOMMANDS}
 
 echo " make install................................................"
-(cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk)
+if [[ $PARALLEL = false ]] ; then
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk)
+elif [[ $PARALLEL = true ]] ; then
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f executable)
+fi
 echo "................................................installation finished"
 echo "cppaw installed in ${BINDIR}:"
-echo "files in ${BINDIR}:"
-ls ${BINDIR}
-echo "files in ${BINDIR}/include:"
-ls ${BINDIR}/include
+# echo "files in ${BINDIR}:"
+# ls ${BINDIR}
+# echo "files in ${BINDIR}/include:"
+# ls ${BINDIR}/include
 

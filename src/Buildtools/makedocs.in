@@ -62,7 +62,8 @@ doc.bib: $(BASEDIR)/src/Docs/doc.bib
 
 # -draftmode does not produce pdf 
 manual.aux manual.idx manual.toc &: manual.tex Figs all.bib doc.bib
-	pdflatex -output-format pdf -halt-on-error -draftmode $<
+	pdflatex -output-format pdf -halt-on-error -draftmode $< \
+                  1>pdflatex.out 2>pdflatex.err
 
 
 manual.bbl : manual.aux all.bib doc.bib
@@ -79,7 +80,8 @@ manual.pdf : manual.tex manual.ind manual.bbl Figs all.bib doc.bib
 	cp manual.tex manual_tmp.tex
 	cp manual.ind manual_tmp.ind
 	cp manual.bbl manual_tmp.bbl
-	pdflatex -output-format pdf -halt-on-error manual_tmp.tex
+	pdflatex -output-format pdf -halt-on-error manual_tmp.tex \
+                  1>pdflatex.out 2>pdflatex.err
 	cp manual_tmp.pdf manual.pdf
 	rm -f manual_tmp.*
 

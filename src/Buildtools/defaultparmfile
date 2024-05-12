@@ -63,11 +63,23 @@ export DOCDIR=
 ################################################################################
 OS=$(uname -s) # operating system (Linux, Darwin,...)
 
-BASEDIR=$(pwd)     # cp repository is in current directory
+MAKE=$(which gmake)
 
+AR=$(which ar)
+
+CPP=$(which cpp)
 
 FC=$(which gfortran)
+
 LD=${FC}
+
+BASEDIR=$(pwd)     
+
+BUILDDIR=$(pwd)/bin/Build_${SELECT}
+
+BINDIR=$(pwd)/bin/${SELECT}
+
+DOCDIR=$(pwd)/doc
 
 if [[ $OS = Darwin ]]; then
 
@@ -84,7 +96,6 @@ else
   echo "this parmfile works only for macOS (Darwin)"
 fi
 
-
 ################################################################################
 ## resolve selection 
 ################################################################################
@@ -99,30 +110,30 @@ case $SELECT in
             -Wall -Wextra -Wline-truncation  -Wuninitialized \
             -Wno-maybe-uninitialized
     ;;
+
   fast)
     SUFFIX=fast
     FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
     ;;
+
   fast_parallel)
     SUFFIX=fast
+    PARALLEL=true
     FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
-    MPIDIR="/opt/homebrew"
-    FC="${MPIDIR}/bin/mpifort"
-    PARALLEL=true
+    if [[ $OS = Darwin ]] ; then
+      export MPIDIR="/opt/homebrew"
+      FC="${MPIDIR}/bin/mpifort"
+      LD=${FC}
+    else
+      echo "error in $0: parmfile error"
+    fi
     CPPFLAFS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
     ;;
-  *) #-- anything else. fall back to defaults
+
+  *) #-- anything else. 
     echo "invalid selection $SELECT specified by -s in paw_build.sh"
     exit 1
     ;;
 esac
-
-################################################################################
-##  set varioables depending to parameter selections                          ##
-################################################################################
-if [[ -n ${SUFFIX} && -n ${BASEDIR} ]] ; then
-  BUILDDIR=${BASEDIR}/bin/Build_${SUFFIX}
-  BINDIR=${BASEDIR}/bin/${SUFFIX}
-fi
