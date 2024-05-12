@@ -74,7 +74,7 @@ fi
 #  Checks
 #-------------------------------------------------------------------------------
 if [[ ! -f etc/f90pp.sed ]] ; then
-  echo "error in $0: etc/f90.sed not found"
+  echo "error in $0: etc/f90pp.sed not found"
   exit 1
 fi
 if [[ ! -x etc/f90pp_tmplts.x ]] ; then
@@ -105,7 +105,7 @@ etc/f90pp_tmplts.x < $TMP2 >$TMP
 sed -f etc/f90pp.sed $TMP > $TMP2
 etc/dollar_ok.sh <$TMP2 >$TMP  # convert dollar signs by double underscore
 sed /^@/d  $TMP >$TMP2         # delete lines beginning with @
-${CPP} -P -C $CPPVAR $TMP2 $TMP 
+${CPP} -traditional -nostdinc -P -C ${CPPVAR} $TMP2 $TMP 
 cat $TMP
 rm -f $TMP
 rm -f $TMP2

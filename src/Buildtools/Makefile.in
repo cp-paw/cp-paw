@@ -1,0 +1,541 @@
+#________1_________2_________3_________4_________5_________6_________7_________8
+################################################################################
+##                                                                            ##
+##  make a paw executable and a paw library using gmake                       ##
+##  ===================================================                       ##
+##                                                                            ##
+################################################################################
+##                                                                            ##
+##  Primary targets:                                                          ##
+##    default, prepare, executable, tools libpaw, libpawfull.a                ##
+##                                                                            ##
+##  directory structure                                                       ##
+##    bin@ARCH@       executables                                             ##
+##    bin/@ARCH@/fast  optimized objects                                      ##
+##    bin/@ARCH@/dbg   objects for debugging                                  ##
+##                                                                            ##
+##  directory structure of BASEDIR                                            ##
+##    src              sources for CP-PAW main code                           ##
+##    src/Tools/*/     Tools                                                  ##
+##    src/Buildtools/   preprocessor etc                                      ##
+##                                                                            ##
+##  a srcblob is contained in the paw exectable and the libraries             ##
+##                                                                            ##
+##  MAKE,AR                                                                   ##
+##  INCLUDES,CPP,CPPFLAGS,FC,FFLAGS,LD,LDFLAGS,LIBS                           ##
+##                                                                            ##
+##                                                                            ##
+##  step0: preparation:                                                       ##
+##      -- build-tools: f90pp, f90pp_tmplts.x, parmfilewriter.x               ##
+##      -- objects: paw_srcblob.o,paw_version.o,version_writeparmfile.o       ##
+##      -- copy include files into build directory                            ##
+##                                                                            ##
+##  step1: preprocessing (*_d.f90)                                            ##
+##                                                                            ##
+##  step2: construct module dependencies: (*.mk); combine into big.mk         ##
+##                                                                            ##
+##  step3: compile using big.mk (*.o)                                         ##
+##                                                                            ##
+##  step4: link into paw.x and tools                                          ##
+##                                                                            ##
+##  stept: install                                                            ##
+##                                                                            ##
+################################################################################
+##    https://aoterodelaroza.github.io/devnotes/modern-fortran-makefiles/     ##
+##    https://bytes.usc.edu/cs104/wiki/makefile                               ##
+##                                                                            ##
+##  makefile cheat sheet:                                                     ##
+##    $@ expands into target                                                  ##
+##    $< expands into the first dependency                                    ##
+##    $^ expands into the list of dependencies                                ##
+##                                                                            ##
+##  FC fortran compiler                                                       ##
+##  AR archive maintaining program, e.g. tar                                  ##
+##  CPPFLAGS                                                                  ##
+##  FFLAGS                                                                    ##
+##  LDFLAGS                                                                   ##
+##  ARFLAGS                                                                   ##
+##  RM="rm -f"                                                                ##
+##                                                                            ##
+##  $(FC) -c $(FFLAGS) $(CPPFLAGS) *.F90                                      ##
+##  $(FC) -c $(FFLAGS) *.f90                                                  ##
+##                                                                            ##
+##   make -j -k                                                               ##
+##                                                                            ##
+##   static rule:                                                             ##
+##            $(TARGETS) : a%.target : *.prerequisite                         ##
+##                                                                            ##
+##  VPATH is makes search path variable. These directories need not be        ##
+##  specified in prerequisites                                                ##
+##                                                                            ##
+##  Trick: use anchor files x.anc to indicate that the module files from      ##
+##    the source x_d.f90 have been constructed.                               ##
+################################################################################
+##                                                                            ##
+##  Extensions for fortran codes                                              ##
+##                                                                            ##
+##  the default extension for free format fortran code is .f90                ##
+##  the default extension for fixed format (f77-style) fortran code is .f     ##
+##  (fortran code which shall be preprocessed use uppercase extensions)       ##
+##                                                                            ##
+################################################################################
+##                                                                            ##
+##  Parallel cppaw:
+##    the code can be compiles with and without parallel support by MPI
+##    
+##    The executable of the parallel version will be begin with "ppaw"
+##    rather than "paw". 
+##    
+##    Similarly, the cppaw libraries are called libppaw.a (libpaw.a)
+##    and libppawfull.a (libpawfull.a) for the parallel (scalar) version.
+##    
+################################################################################
+#____set shell__________________________________________________________________
+SHELL=/bin/bash
+#____switch off implicit rules__________________________________________________
+.SUFFIXES:
+################################################################################
+## The following block of variables is set by the configure                   ##
+## script (AC_SUBST @...@ and sed-Commands var...)                            ##
+################################################################################
+#___________________________ library archiver___________________________________
+export AR=@AR@
+#___________________________ make tool__________________________________________
+export MAKE=@MAKE@
+#____________________________c-preprocessor_____________________________________
+export CPP=@CPP@
+#____________________________fortran compiler___________________________________
+export FC=@FC@
+#_____________________________linker____________________________________________
+export LD=@LD@
+#_____________________________flags for c-preprocessor__________________________
+export CPPFLAGS=@CPPFLAGS@
+#_____________________________flags for fortran compiler________________________
+export FFLAGS=@FFLAGS@
+#_____________________________flags for linker__________________________________
+export LDFLAGS=@LDFLAGS@
+#_____________________________libraries_________________________________________
+export LIBS=@LIBS@
+#_____________________________include and module files__________________________
+export INCLUDES=@INCLUDES@
+#_____________________________main cp-paw directory_____________________________
+export BASEDIR=@BASEDIR@
+#
+#################  derived variables  ##########################################
+#
+#_____________________________search path of make_______________________________
+export VPATH=./ $(wildcard ./*) \
+             ${BASEDIR}/src $(wildcard ${BASEDIR}/src/Tools/*) 
+
+#
+################################################################################
+##  Construct lists of source files                                           ##
+##  the source codes are divided into groups                                  ##
+##      admin: Buildtools/F90/f90pp_tmplts.f90                                ##
+##             Buildtools/F90/parmfilewriter.f90                              ##
+##             version_writeparmfile (made on the fly)                        ##
+##      library: FLIBLIST, slatec.f, paw_version.f90                          ##
+##      tools:   FTOOLS                                                       ##
+##      main:    FLIST                                                        ##
+################################################################################
+
+#  slatec.f is a library written in Fortran77, which shall be removed
+#  in future versions of the code. As F77 code it requires special
+#  treatment.
+
+#-------------------------------------------------------------------------------
+#-- object files derived from FLIBLIST and  will become part                  --
+#-- of the paw library libpaw.a.                                              --
+#-------------------------------------------------------------------------------
+export FLIBLIST= \
+        paw_trace.f90 \
+        paw_error.f90 \
+        paw_filehandler.f90 \
+        paw_clock.f90 \
+        paw_lock.f90 \
+        paw_timing.f90 \
+        paw_linkedlist.f90 \
+        paw_strings.f90 \
+        paw_dft.f90 \
+        paw_dftaddendum.f90 \
+        paw_constants.f90 \
+        paw_spherical.f90 \
+        paw_generalpurpose.f90 \
+        paw_report.f90 \
+        paw_periodictable.f90 \
+        paw_radial.f90 \
+        paw_schroedinger.f90 \
+        paw_atomlib.f90 \
+        paw_specialfunctions.f90 \
+        paw_usage.f90 \
+        paw_selftest.f90 \
+        paw_strcio.f90 \
+        paw_cell.f90 \
+        paw_pdos.f90 \
+        paw_banddata.f90 \
+        paw_library.f90 \
+        paw_polynom.f90 \
+        paw_dimer.f90  \
+        paw_lmtobasics.f90 \
+        paw_debug.f90 \
+        paw_brillouin.f90 \
+        paw_gaussian.f90 \
+        paw_mpelib.f90 \
+        paw_version.f90 
+
+#-------------------------------------------------------------------------------
+#--  objects specific for the simulation code                                 --
+#-------------------------------------------------------------------------------
+FLIST1 = \
+	paw_driver.f90 \
+        paw_thermostat.f90 \
+        paw_isolate.f90 \
+        paw_assist.f90 \
+        paw_lists.f90 \
+        paw_constraints.f90 \
+        paw_lmto.f90 \
+        paw_simplelmto.f90 \
+        paw_dmft.f90 \
+        paw_fft.f90 
+#
+FLIST2 =  \
+        paw_augmentation.f90 \
+        paw_softcore.f90 \
+        paw_classical.f90 \
+        paw_forcefield.f90 \
+        paw_atoms.f90 \
+        paw.f90 \
+        paw_efg.f90 \
+        paw_ioroutines.f90 \
+        paw_iotra.f90 \
+        paw_ionew.f90 \
+        paw_qmmm.f90 \
+        paw_cosmo.f90 \
+        paw_warmup.f90 \
+        paw_optfric.f90
+
+FLIST3 =  \
+        paw_setups.f90 \
+        paw_potential.f90 \
+        paw_occupations.f90 \
+        paw_pairpotential.f90 \
+        paw_graphics.f90 \
+        paw_waves1.f90 \
+        paw_waves2.f90 \
+        paw_mixer.f90 \
+        paw_cg.f90 \
+        paw_kpoints.f90 \
+        paw_vext.f90 \
+        paw_vdw.f90 \
+        paw_ci.f90 \
+        paw_opteels.f90 \
+
+FTOOLS= \
+        Bands/paw_bands.f90 \
+        FromPOSCAR/paw_fromposcar.f90 \
+        Grab/paw_grab.f90 \
+        Murnaghan/paw_murnaghan.f90 \
+        PDoS/paw_dos.f90 \
+        PDoS/paw_dosplot.f90 \
+        Polyhedra/paw_polyhedra.f90 \
+        Preopt/paw_preopt.f90 \
+        Stpa/paw_stpa.f90 \
+        Stpa/paw_stpreport.f90 \
+        Strc/paw_strc.f90 \
+        Strc/paw_tostrc.f90 \
+        Strc/paw_toxyz.f90 \
+        Tra/paw_cleantra.f90 \
+        Tra/paw_converttra.f90 \
+        Tra/paw_tra.f90 \
+        Wave/paw_1davpot.f90 \
+        Wave/paw_cmcwave.f90 \
+        Wave/paw_wave.f90 
+
+#-------------------------------------------------------------------------------
+#  derived lists                                                              --
+#-------------------------------------------------------------------------------
+export FLIST=$(FLIST1) $(FLIST2) $(FLIST3)
+
+export DFLIST= $(addsuffix _d.f90, \
+       $(basename $(FLIST) $(FLIBLIST) $(notdir $(FTOOLS))))
+
+export MKLIST= $(addsuffix .mk, \
+       $(basename $(FLIST) $(FLIBLIST) $(notdir $(FTOOLS))))
+
+export OLIST= $(addsuffix .o, \
+       $(basename $(FLIST) $(FLIBLIST) $(notdir $(FTOOLS))))
+
+export XTOOLS=$(addsuffix .x, $(basename $(notdir $(FTOOLS))))
+
+# $(info XTOOLS="$(XTOOLS)")
+
+export OLIBLIST=$(addsuffix .o, $(basename $(FLIBLIST) slatec.o )) 
+
+#
+##########################################################################
+##  targets                                                             ##
+##  first target: make prepare
+##  second target: make all  or make executable
+##########################################################################
+.PHONY: default
+default: executable
+
+.PHONY: all
+all: executable libs tools 
+
+#________________preprocess all fortran files
+#________________construct makefile for compilation
+#________________construct prepare some object files
+.PHONY: prepare
+prepare: big.mk includes cppaw_version.info version_writeparmfile.o paw_srcblob.o
+
+.PHONY: executable
+executable: paw.x 
+
+.PHONY: tools
+tools: $(XTOOLS)
+
+.PHONY: libs
+libs: libpaw.a libpawfull.a
+
+##########################################################################
+##  Include files (module files etc)                                  
+##########################################################################
+.PHONY: includes
+includes : 
+	for X in $(INCLUDES) ; do \
+           Y=$${X##*/} ;\
+           if [[ ! -f $$X ]] ; then \
+             echo "file $$X does not exist" ;\
+             exit 1 ;\
+           fi; \
+           if [[ ! $$Y -nt $$X ]] ; then \
+             cp $$X $$Y ;\
+           fi ; \
+        done 
+
+################################################################################
+#
+#  administration codes
+#
+################################################################################
+
+#-------------------------------------------------------------------------------
+#--  f90pp fortran preprocessor
+#--  f90pp_tmplts.x can expand the self-invented method to use classes        --
+#-------------------------------------------------------------------------------
+
+#_____fortran-preprocessor______________________________________________________
+export F90PP=etc/f90pp 
+$(F90PP) : ${BASEDIR}/src/Buildtools/F90pp/f90pp.in \
+                         etc/f90pp.sed etc/f90pp_tmplts.x etc/dollar_ok.sh
+	sed -e "s|\@CPP\@|$(CPP)|g" $< > $@
+	chmod +x $@
+
+etc/f90pp.sed : ${BASEDIR}/src/Buildtools/F90pp/f90pp.sed 
+	cp $< $@
+
+etc/dollar_ok.sh : ${BASEDIR}/src/Buildtools/F90PP/dollar_ok.sh 
+	cp $< $@
+
+etc/f90pp_tmplts_d.f90 : ${BASEDIR}/src/Buildtools/F90PP/f90pp_tmplts.f90 \
+                         etc/dollar_ok.sh
+	etc/dollar_ok.sh < $<  > $@
+
+etc/f90pp_tmplts.o : etc/f90pp_tmplts_d.f90
+	${FC} -c $(FFLAGS) -o $@ $<
+
+etc/f90pp_tmplts.x : etc/f90pp_tmplts.o
+	${LD}  $(LDFLAGS) -o $@ $< 
+
+#-------------------------------------------------------------------------------
+#--  the parmfilewriter embeds text into a fortran code,                     --
+#--  which in turn is converted into an object file                           --
+#-------------------------------------------------------------------------------
+etc/parmfilewriter_d.f90: ${BASEDIR}/src/Buildtools/parmfilewriter.f90 $(F90PP)
+	$(F90PP) $(CPPFLAGS) < $< > $@
+
+etc/parmfilewriter.x: etc/parmfilewriter_d.f90
+	$(FC) $(FFLAGS) -o $@ $<
+
+#-------------------------------------------------------------------------------
+#--  embed the current parmfile in version_writeparmfile.o
+#-------------------------------------------------------------------------------
+etc/version_writeparmfile.f90 : ${BASEDIR}/parms.in_use etc/parmfilewriter.x 
+	cat $< | etc/parmfilewriter.x > $@ 
+
+version_writeparmfile_d.f90 : etc/version_writeparmfile.f90 $(F90PP)
+	$(F90PP) $(CPPFLAGS) < $< > $@
+
+version_writeparmfile.o : version_writeparmfile_d.f90
+	$(FC) -c $(FFLAGS) -o $@ $<
+
+#-------------------------------------------------------------------------------
+#   embed version information in
+# the ld option format for sectcreate is -sectcreate <segname> <sectname> <file>
+#-------------------------------------------------------------------------------
+#
+#______copy tool for extracting version information_____________________________
+etc/paw_versioninfo.sh : ${BASEDIR}/src/Tools/Scripts/paw_versioninfo.sh
+	cp $< $@
+
+#_____collect version information to be embedded________________________________
+# if not under git control, the bash script paw_versioninfo.sh will
+# fail to produce cppaw_version.info. In that case, the
+# version information is copied from ${BASEDIR}/cppaw_version.info in
+# the cppaw top directory. 
+# 
+# The minus sign in front of the line makes make to continue even if
+# paw_versioninfo.sh throws an error
+#
+# "test -s file" evaluates true if the file is of zero size
+#
+cppaw_version.info : etc/paw_versioninfo.sh
+	-bash etc/paw_versioninfo.sh > $@
+	if [[ ! -s $@ && -e ${BASEDIR}/cppaw_version.info ]] ; then \
+           cp ${BASEDIR}/cppaw_version.info $@ ; fi
+
+#____paw_version_d.f90 contains version information via include file____________
+#____include file paw_cppaw_version.info will be required for compilation
+paw_version.o : cppaw_version.info
+
+# paw_version_d.f90: $(BASEDIR)/src/paw_version.f90 cppaw_version.info \
+#                                                   $(F90PP)
+# 	$(F90PP) $(CPPFLAGS) < $< > $@
+
+# do not compile yet because module files are still missing
+# paw_version.o: paw_version_d.f90 
+# 	$(FC) -c $(FFLAGS) -o $@ $<
+
+
+
+#-------------------------------------------------------------------------------
+# generate source blob __________________________________________________
+# the ld option format for sectcreate is -sectcreate <segname> <sectname> <file>
+#-------------------------------------------------------------------------------
+# Object for source blob
+
+# $^ stands for "all prerequisites
+etc/paw_srcblob.tgz : $(BASEDIR)/parms.in_use $(BASEDIR)/src 
+	rm -f $@
+	tar -c  -z -f$@ -C$(BASEDIR) $(notdir $^)
+
+#____embed the srcblob into an object file, that will be linked into the________
+#____executable_________________________________________________________________
+#     -sectcreate <segname> <sectname> <file>
+#
+#  $(error "text") is a Make-specific command
+#
+#  OS: operating system (Darwin is macOS)
+export OS=$(shell uname -s)
+
+
+paw_srcblob.o: etc/paw_srcblob.tgz
+ifeq ($(OS),Linux) 
+	ld -r -b binary -o paw_srcblob.o etc/paw_srcblob.tgz
+else ifeq ($(OS),Darwin)
+	touch etc/paw_srcblob_dummy.f90   
+	${FC} -c $(FFLAGS) -o etc/paw_srcblob_dummy.o etc/paw_srcblob_dummy.f90
+	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin \
+                                    etc/paw_srcblob.tgz etc/paw_srcblob_dummy.o
+else
+  $(error "error: Operating system $(OS) not recognized")
+endif
+
+################################################################################
+#  Construct object files
+#
+#   1) preprocess fortran code 
+#   2) construct individual make files with the dependency information via
+#      module files (.mod)
+#   3) combine individual make files to big.mk 
+#   4) use big.mk to build all object files .o
+################################################################################
+$(DFLIST) : %_d.f90 : %.f90 $(F90PP) 
+	$(F90PP) $(CPPFLAGS) < $< > $@
+
+$(MKLIST) : %.mk : %_d.f90
+	$(BASEDIR)/src/Buildtools/moddep.sh -f $< -d ./ > $@
+
+big.mk : $(MKLIST)
+	echo 'export SHELL=/bin/bash   '  > $@
+	echo '.SUFFIXES:               ' >> $@
+	echo 'export FC=$(FC)          ' >> $@
+	echo 'export FFLAGS=$(FFLAGS)  ' >> $@
+	echo '##                       ' >> $@
+	echo 'default: $(OLIST)        ' >> $@
+	echo '.PHONY : default         ' >> $@
+	echo '##                       ' >> $@
+	echo 'print:                   ' >> $@
+#       __option -e allows interpretation of \t (=horizontal tab)_______________
+	echo -e '\t echo FC    = $$(FC)    ' >> $@
+	echo -e '\t echo FFLAGS= $$(FFLAGS)' >> $@
+	echo '##                       ' >> $@
+	cat $(MKLIST)                    >> $@
+
+
+$(OLIST) : objects
+
+.PHONY: objects
+objects :  $(addsuffix _d.f90, $(basename $(OLIST))) \
+           big.mk cppaw_version.info includes
+	echo "doing big.mk....................................................."
+	$(MAKE) -f big.mk
+	echo "..................................................... big.mk done"
+#
+#____general rule for object files fortran 77___________________________________
+#____use gmake string substitution $(var:suffix=replacement)
+slatec.o: $(BASEDIR)/src/slatec.f 
+	cp $<  slatec_d.f
+	$(FC) -c $(FFLAGS:-fimplicit-none=) -o $@ slatec_d.f
+
+################################################################################
+#  build executables
+#    1) simulation code
+#    2) tools
+#    3) paw library libpaw.a
+#    4) tests
+################################################################################
+# remove the tools to avoid having several competing main programs
+
+#-------------------------------------------------------------------------------
+#  construct cppaw executable
+#-------------------------------------------------------------------------------
+export ARGLIST=$(addsuffix .o, $(basename $(FLIST) $(FLIBLIST) slatec.f)) \
+               paw_srcblob.o version_writeparmfile.o
+
+paw.x : $(ARGLIST) objects
+	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} ${LIBS}
+
+#-------------------------------------------------------------------------------
+#  construct tools
+#-------------------------------------------------------------------------------
+$(XTOOLS) : %.x : %.o libpawfull.a
+	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
+
+#-------------------------------------------------------------------------------
+#  construct paw library libpaw.a (or libppaw.a)
+#  --  use "ppaw" instead of "paw" to identify parallel version
+#-------------------------------------------------------------------------------
+libpaw.a: ${OLIBLIST} version_writeparmfile.o paw_version.o
+	$(AR) cru libpaw.a $(OLIBLIST) slatec.o version_writeparmfile.o
+
+#-------------------------------------------------------------------------------
+##  build full paw library and optionally exclude objects              ##
+##  this target can be used to create a library of all objects         ##
+##  additionally on can exclude objects using the EXCLUDE parameter    ##
+##  for example: make libfull EXCLUDE="paw_classical.o paw_setups.o"   ##
+##  The object paw.o will allways be excluded, because it contains a   ##
+##  main program.                                                      ##
+##  This library can then be linked to a main program, like libpaw.a   ##
+#-------------------------------------------------------------------------------
+EXCLUDE="paw.o $(XTOOLS:.x=.o)"
+libpawfull.a: ${OLIST} slatec.o \
+              paw_srcblob.o version_writeparmfile.o paw_version.o
+	$(AR) cru libpawfull.a $(OLIST) paw_srcblob.o \
+                                 slatec.o paw_mpelib.o version_writeparmfile.o
+	echo EXCLUDE=${EXCLUDE}
+	for EX in ${EXCLUDE}; do $(AR) -dv libpawfull.a $$EX; done
+	ar -t libpawfull.a
+
+

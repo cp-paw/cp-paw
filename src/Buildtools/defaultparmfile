@@ -1,0 +1,128 @@
+#!/bin/bash
+################################################################################
+##                                                                            ##
+##  parmfile for cppaw                                                        ##
+##                                                                            ##
+##  use in connection with ${BASEDIR}/src/Buildtools/paw_build.sh             ##
+##  parmfile will be embedded into paw_build.sh with "source" command         ##
+##                                                                            ##
+##                                                                            ##
+##                                                                            ##
+##                                                                            ##
+################################################################################
+
+################################################################################
+## variables to be set and their explanation
+## do not touch this block. overwrite values below
+################################################################################
+#____________________________identifier for the implementation__________________
+export SUFFIX=
+#____________________________switch for parallel(true)/scalar(false) execution__
+export PARALLELL="false"
+#____________________________gnu make version 4.3 or later______________________
+export MAKE=
+#____________________________archiver___________________________________________
+export AR=
+#____________________________c-preprocessor_____________________________________
+export CPP=
+#____________________________fortran compiler___________________________________
+export FC=
+#____________________________linker (usually equal to compiler)_________________
+export LD=
+#____________________________flags for the preprocessor_________________________
+#____________________________-D will be prepended_______________________________
+#____________________________variable for parallel will be added________________
+# CPPVAR_FFT_FFTW3, CPPVAR_NOLIBXC (do not link LIBXC)
+# CPPVAR_FEAST, CPPVAR_JADAMILU #
+# CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
+# -C do not discard comments
+# -P inhibit generation of linemarkers
+# -traditional Try to imitate the behavior of pre-standard C preprocessors
+# -nostdinc Do not search the standard system directories for header files. 
+export CPPFLAGS="-DCPPVAR_FFT_FFTW3"
+export LDFLAGS=
+#___________________________list of include and module files____________________
+#___________________________required fftw3.f03, mpi_f08.mod, xc_f03_lib_m.mod___
+export INCLUDES=
+#___________________________list of libraries___________________________________
+#___________________________fftw3, mpi, blas, lapack, mpi
+export LIBS=
+#___________________________base directory of the cppaw repository______________
+export BASEDIR=
+#___________________________directory for the building process__________________
+#___________________________default: ./bin/Build_${SUFIX}
+export BUILDDIR=
+#___________________________installation directory______________________________
+#___________________________default ./bin/${SUFFIX}_____________________________
+export BINDIR=
+#___________________________nstallation directory for the documentation_________
+export DOCDIR=
+
+################################################################################
+## generic definitions
+################################################################################
+OS=$(uname -s) # operating system (Linux, Darwin,...)
+
+BASEDIR=$(pwd)     # cp repository is in current directory
+
+
+FC=$(which gfortran)
+LD=${FC}
+
+if [[ $OS = Darwin ]]; then
+
+  LDFLAGS="-framework accelerate"
+
+  LIBS="-L/opt/homebrew/lib -lfftw3 \
+        -L/opt/homebrew/lib -lxcf03 \
+        -L/opt/homebrew/lib -lmpi"
+
+  INCLUDES="/opt/homebrew/include/fftw3.f03 \
+            /opt/homebrew/include/xc_f03_lib_m.mod \
+            /opt/homebrew/include/mpi_f08.mod"
+else
+  echo "this parmfile works only for macOS (Darwin)"
+fi
+
+
+################################################################################
+## resolve selection 
+################################################################################
+case $SELECT in 
+  dbg)
+     SUFFIX=dbg
+     FFLAGS=-O3 -funroll-loops -fomit-frame-pointer -march=native \
+            -fexternal-blas -g -std=f2008 -pedantic -fbacktrace -fdump-core \
+            -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion  \
+            -ffpe-trap=invalid,zero,overflow \
+            -ffpe-summary=invalid,zero,overflow \
+            -Wall -Wextra -Wline-truncation  -Wuninitialized \
+            -Wno-maybe-uninitialized
+    ;;
+  fast)
+    SUFFIX=fast
+    FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
+             -fexternal-blas"
+    ;;
+  fast_parallel)
+    SUFFIX=fast
+    FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
+             -fexternal-blas"
+    MPIDIR="/opt/homebrew"
+    FC="${MPIDIR}/bin/mpifort"
+    PARALLEL=true
+    CPPFLAFS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
+    ;;
+  *) #-- anything else. fall back to defaults
+    echo "invalid selection $SELECT specified by -s in paw_build.sh"
+    exit 1
+    ;;
+esac
+
+################################################################################
+##  set varioables depending to parameter selections                          ##
+################################################################################
+if [[ -n ${SUFFIX} && -n ${BASEDIR} ]] ; then
+  BUILDDIR=${BASEDIR}/bin/Build_${SUFFIX}
+  BINDIR=${BASEDIR}/bin/${SUFFIX}
+fi
