@@ -21,7 +21,7 @@ USAGE="$USAGE installation script for the cppaw package\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -c choice\n"
-USAGE="$USAGE \t -f parmfile (default: "parmfile")\n"
+USAGE="$USAGE \t -f parmfile \n"
 USAGE="$USAGE \t -s suffix \n"
 USAGE="$USAGE \t -v verbose (false)\n"
 USAGE="$USAGE \t -h prints this help message\n"
@@ -55,6 +55,18 @@ while getopts :c:f:s:vh OPT ; do
   esac
 done
 
+if [[ -z ${PARMFILE} ]] then
+  PARMFILE=${THISDIR}/src/Builtools/defaultparmfile
+  echo "Warning from $0: no parmfile specified, setting default"
+  echo "default parmfile= ${THISDIR}/src/Builtools/defaultparmfile"
+fi
+
+if [[ -f ${PARMFILE} ]]; then
+  echo "error in $0: parmfile does not exist"
+  echo "             PARMFILE=${PARMFILE}"
+  exit 1
+fi
+
 ################################################################################
 ##
 ##  include $PARMFILE 
@@ -67,22 +79,14 @@ done
 ##
 ################################################################################
 PROTECT_SUFFIX=$SUFFIX
-if [[ -n ${PARMFILE} ]] ; then
-  source ${PARMFILE}
-elif [[ -f parmfile ]] ; then
-  source parmfile
-else
-  if [[ $SELECT = 'p' ]] ;  then
-    PARALLEL=true
-    SUFFIX="p"
-  fi
-fi
+
+source ${PARMFILE}
 
 if [[ -n $PROTECT_SUFFIX ]] ; then
   echo "Warning: option -s to paw_build.sh overwrites value from parmfile"
   SUFFIX=$PROTECT_SUFFIX
 fi
-#
+
 ################################################################################
 ##  report settings
 ################################################################################
@@ -103,11 +107,6 @@ if [[ $VERBOSE = true ]] ; then
    done
    echo "-------------------------------------------------------done-----------"
 fi
-
-# if [[ -z ${SUFFIX} ]] ; then 
-#   echo "error in $0: missing SUFFIX parameter"
-#   exit 1 
-# fi
 
 ################################################################################
 ##     analyze system: MAKE, CPP, AR, FC, LD 
