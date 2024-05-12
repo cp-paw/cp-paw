@@ -1,4 +1,4 @@
-f90pp.in will be converted by the configure file used as f90pp The
+f90pp.in will be converted by the paw_build.sh script file used as f90pp The
 configure file defines a number of variables and places f90pp into the
 binary directory BINDIR.
 

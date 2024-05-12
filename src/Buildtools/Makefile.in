@@ -7,12 +7,15 @@
 ################################################################################
 ##                                                                            ##
 ##  Primary targets:                                                          ##
-##    default, prepare, executable, tools libpaw, libpawfull.a                ##
+##    prepare, executable, tools, libs                                        ##
+##                                                                            ##
+##    Two calls are required:                                                 ##
+##      1) make prepare                                                       ##
+##      2) make target , where target may be (executable, tools, libs, all)   ##
 ##                                                                            ##
 ##  directory structure                                                       ##
-##    bin@ARCH@       executables                                             ##
-##    bin/@ARCH@/fast  optimized objects                                      ##
-##    bin/@ARCH@/dbg   objects for debugging                                  ##
+##    BASEDIR  cppaw distribution
+##    BUILDDIR directory for compilation
 ##                                                                            ##
 ##  directory structure of BASEDIR                                            ##
 ##    src              sources for CP-PAW main code                           ##
@@ -21,8 +24,8 @@
 ##                                                                            ##
 ##  a srcblob is contained in the paw exectable and the libraries             ##
 ##                                                                            ##
-##  MAKE,AR                                                                   ##
-##  INCLUDES,CPP,CPPFLAGS,FC,FFLAGS,LD,LDFLAGS,LIBS                           ##
+##  the following parameters are replaced by the build script                 ##
+##      MAKE,AR,CPP,CPPFLAGS,FC,FFLAGS,LD,LDFLAGS,LIBS,INCLUDES,BASEDIR       ##
 ##                                                                            ##
 ##                                                                            ##
 ##  step0: preparation:                                                       ##
@@ -49,46 +52,10 @@
 ##    $< expands into the first dependency                                    ##
 ##    $^ expands into the list of dependencies                                ##
 ##                                                                            ##
-##  FC fortran compiler                                                       ##
-##  AR archive maintaining program, e.g. tar                                  ##
-##  CPPFLAGS                                                                  ##
-##  FFLAGS                                                                    ##
-##  LDFLAGS                                                                   ##
-##  ARFLAGS                                                                   ##
-##  RM="rm -f"                                                                ##
-##                                                                            ##
-##  $(FC) -c $(FFLAGS) $(CPPFLAGS) *.F90                                      ##
-##  $(FC) -c $(FFLAGS) *.f90                                                  ##
-##                                                                            ##
-##   make -j -k                                                               ##
-##                                                                            ##
-##   static rule:                                                             ##
-##            $(TARGETS) : a%.target : *.prerequisite                         ##
 ##                                                                            ##
 ##  VPATH is makes search path variable. These directories need not be        ##
 ##  specified in prerequisites                                                ##
 ##                                                                            ##
-##  Trick: use anchor files x.anc to indicate that the module files from      ##
-##    the source x_d.f90 have been constructed.                               ##
-################################################################################
-##                                                                            ##
-##  Extensions for fortran codes                                              ##
-##                                                                            ##
-##  the default extension for free format fortran code is .f90                ##
-##  the default extension for fixed format (f77-style) fortran code is .f     ##
-##  (fortran code which shall be preprocessed use uppercase extensions)       ##
-##                                                                            ##
-################################################################################
-##                                                                            ##
-##  Parallel cppaw:
-##    the code can be compiles with and without parallel support by MPI
-##    
-##    The executable of the parallel version will be begin with "ppaw"
-##    rather than "paw". 
-##    
-##    Similarly, the cppaw libraries are called libppaw.a (libpaw.a)
-##    and libppawfull.a (libpawfull.a) for the parallel (scalar) version.
-##    
 ################################################################################
 #____set shell__________________________________________________________________
 SHELL=/bin/bash
