@@ -1,7 +1,9 @@
 #!/bin/bash
 #################################################################
 #
-#  name: paw_collect: 
+#  name: paw_collect.sh 
+#
+#  Usage: paw_collect(.sh)
 #
 #  purpose: collects total energies from CP-PAW projects
 #
@@ -46,7 +48,7 @@ for FILE in         *.prot \
             */*/*/*/*.prot ; do
   if [[ -f $FILE ]] ; then
     ROOT=${FILE%.prot}
-    ENERGY=$(paw_get -nw etot -u H -- $ROOT)
+    ENERGY=$(paw_get.sh -nw etot -u H -- $ROOT)
     echo -e "$ROOT $ENERGY"
   fi
 done

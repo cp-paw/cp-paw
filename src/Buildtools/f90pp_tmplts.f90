@@ -327,8 +327,17 @@ END MODULE TEMPLATE_MODULE
 !       == SELECT BEGINNING OF THE TEMPLATE, I.E. A LINE '#...TEMPLATE ...'
         IF(BUFFER(I)(1:1).NE.'#')CYCLE
         CALL UPPERCASE1(BUFFER(I),BUFFER(I))
+!       ___SKIP C-PREPROCESSOR DIRECTIVES_______________________________________
+        IF(INDEX(BUFFER(I),'#INCLUDE').NE.0) CYCLE
+        IF(INDEX(BUFFER(I),'#IFDEF').NE.0) CYCLE
+        IF(INDEX(BUFFER(I),'#ELSE').NE.0) CYCLE
+        IF(INDEX(BUFFER(I),'#ENDIF').NE.0) CYCLE
+!
+!       __KEEP ONLY THE BEGINNIG OF A NEW TEMPLATE DEFINITION___________________
+!       __ #  TEMPLATE NAME_____________________________________________________
         IF(INDEX(BUFFER(I),'MODULE TEMPLATE').NE.0) CYCLE
         IF(INDEX(BUFFER(I),'END TEMPLATE').NE.0) CYCLE
+!
         IF(INDEX(BUFFER(I),'TEMPLATE').EQ.0) CYCLE
         CALL RESOLVE_TEMPLATE(NLINEX,BUFFER,I,NLINE)
       ENDDO
@@ -405,6 +414,7 @@ END MODULE TEMPLATE_MODULE
 !     == EXTRACT NAME AND DETERMIN END OF TEMPLATE                 ==
 !     ===============================================================
       CALL UPPERCASE1(BUFFER(IBEGIN),LINE)
+!     == extract template name from "#template name" ===========================
       I1=INDEX(LINE,'TEMPLATE')
       LINE=LINE(I1:)
       I1=INDEX(LINE,' ')
@@ -412,6 +422,8 @@ END MODULE TEMPLATE_MODULE
       LINE=ADJUSTL(LINE)
       I2=INDEX(LINE,' ')
       NAME=LINE(1:I2-1)
+!
+!     == IDENTIFY CORRESPONDING END OF TEMPLATE "#END TEMPLATE NAME" ===========
       IEND=0
       DO ILINE=IBEGIN+1,NLINE
         IF(BUFFER(ILINE)(1:1).NE.'#') CYCLE

@@ -1,7 +1,9 @@
 #!/bin/bash
 ############################################################################
 #
-#  command: paw_get options ROOTNAME
+#  paw_get.sh
+#
+#  command: paw_get.sh options ROOTNAME
 #
 #  extracts the last value for etot|gap|homo|lumo|efermi from the
 #  specified protocoll file and prints either text or number
@@ -12,7 +14,7 @@
 #
 export USAGE="\n"
 USAGE="$USAGE Usage of $0:\n"
-USAGE="$USAGE \t paw_get options rootname\n"
+USAGE="$USAGE \t paw_get.sh options rootname\n"
 USAGE="$USAGE extracts data from file rootname.prot\n"
 USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -w whatid\n"

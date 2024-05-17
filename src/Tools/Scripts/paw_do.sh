@@ -1,9 +1,9 @@
 #!/bin/bash 
 ###############################################################################
 #
-#          NAME: paw_do
+#          NAME: paw_do.sh
 #
-#         USAGE: paw_do options 
+#         USAGE: paw_do(.sh) options 
 #
 #       OPTIONS: optional: hv0fsdw 
 #
@@ -16,25 +16,25 @@
 #          -R root  specify root file. (Default is to find it.)
 #          -F    execute paw_fast.x
 #          -K    soft kill of simulation
-#          -P    execute doppaw (ppaw_fast.x)
+#          -P    execute doppaw.sh (ppaw_fast.x)
 #          -D    execute paw_dos.x and paw_dosplot.x
 #          -E arg interface for use in shell scripts.   
 #          -B    execute paw_bands.x and xmgrace -nxy bands.dat
 #          -S    execute paw_strc.x
 #          -W    execute paw_wave.x
 #          -T    execute paw_tra.x
-#          -A    execute paw_show -ce
+#          -A    execute paw_show.sh -ce
 #          -Z    execute tail -f ROOT.prot
 #       uppercase options are chosen to select a particular tool. Lowercase
 #       options (except hv0) are treated as options for the preceeding tool 
 #
 #  Example:
-#       paw_do -F 
+#       paw_do.sh -F 
 #
 #   REQUIREMENTS: 
-#                  doppaw
+#                  doppaw.sh
 #
-#                  paw_dos.x,paw_dosplot.x,paw_show,paw_fast,paw_strc.x
+#                  paw_dos.x,paw_dosplot.x,paw_show.sh,paw_fast.x,paw_strc.x
 #                  paw_wave.x,paw_tra.x,paw_bands.x
 #
 #          the scripts rely on the fact that exactly one file with the
@@ -57,14 +57,14 @@ USAGE="$USAGE \t frontend for paw code and tools"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -h \t print this help message \n"
-USAGE="$USAGE \t -A: paw_show -ce ROOT\n"
+USAGE="$USAGE \t -A: paw_show.sh -ce ROOT\n"
 USAGE="$USAGE \t -B: paw_bands.x ROOT.bcntl\n"
 USAGE="$USAGE \t\t   xmgrace -nxy bands.dat\n"
 USAGE="$USAGE \t -F: paw_fast.x ROOT.cntl 1>out 2>&1 & \n"
 USAGE="$USAGE \t -D: paw_dos.x ROOT.dcntl \n"
 USAGE="$USAGE \t\t   paw_dosplot.x ROOT.dpcntl; xmgrace -batch ROOT.bat\n"
 USAGE="$USAGE \t -K: touch ROOT.exit (regular stop of simulation) \n"
-USAGE="$USAGE \t -P: doppaw -n 6 ROOT (parallel ppaw_fast.x with 6 tasks)\n"
+USAGE="$USAGE \t -P: doppaw.sh -n 6 ROOT (parallel ppaw_fast.x with 6 tasks)\n"
 USAGE="$USAGE \t -R  root:  specify root file. (Default is to find it.)\n"
 USAGE="$USAGE \t -S: paw_strc.x -c ROOT\n"
 USAGE="$USAGE \t -T: paw_tra.x ROOT.tcntl\n"
@@ -188,11 +188,11 @@ fi
 OPTIND=0  # reset argument position
 while getopts "${OPTSTRING}" OPT  ; do
  case $OPT in
-    A) # paw_show -ce $ROOT
+    A) # paw_show.sh -ce $ROOT
       Y=$(findroot prot)
       Y=${Y%.prot}
       if [[ -n $Y ]] ; then      
-        execute "paw_show -ce $Y"
+        execute "paw_show.sh -ce $Y"
       else
         echo "error in $0 for option $OPT" >&2
         echo "*.prot file not unique or not present" >&2
@@ -244,7 +244,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       fi
       case $OPTARG in
         P)
-          execute "nohup doppaw -n 6 $Y"
+          execute "nohup doppaw.sh -n 6 $Y"
           ;;
         F)
           execute "paw_fast.x  $Y 1>out 2>&1"
@@ -282,7 +282,7 @@ while getopts "${OPTSTRING}" OPT  ; do
       Y=$(findroot cntl)
       Y=${Y%.cntl}
       if [[ -n $Y ]] ; then      
-        execute "nohup doppaw -n 10 $Y &"
+        execute "nohup doppaw.sh -n 10 $Y &"
         execute "while [ ! -e ${Y%.cntl}.prot ] ; do sleep 1; done"
         execute "tail -f ${Y%.cntl}.prot"
       else

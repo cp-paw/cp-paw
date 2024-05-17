@@ -1,11 +1,11 @@
 #!/bin/bash
 ######################################################################
 #
-#  name:    paw_copy
+#  name:    paw_copy.sh
 #
 #  purpose: create a copy of a cp-paw project with a new root name
 #
-#  usage:  paw_copy name1 name2
+#  usage:  paw_copy(.sh) name1 name2
 #    name1: root name of the existing cp-paw project
 #    name2: root name of the new cp-paw project
 # 

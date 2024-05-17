@@ -1,9 +1,9 @@
 #!/bin/bash
 ###############################################################################
 #
-#          NAME: paw_scanlat
+#          NAME: paw_scanlat.sh
 #
-#         USAGE: paw_scanlat options 
+#         USAGE: paw_scanlat(.sh) options 
 #
 #       OPTIONS: mandatory: p optional: hlubej0v 
 #
@@ -21,8 +21,8 @@
 #                default: "96 97 98 99 100 101 102 103 104"
 #          -u    toggle: if -u is present, only update of data files, but no paw simulations
 #                if -u is absent the calculations are performed, but not updated
-#          -e    paw_command (default paw_fast.x)
-#          -j    nr. of paw_jobs allowed to run simultaneously (default 8)
+#          -e    paw command (default paw_fast.x)
+#          -j    nr. of paw jobs allowed to run simultaneously (default 8)
 #          -0    dry-run (reconstruct *.dat files only)
 #          -v    verbose
 #
@@ -61,9 +61,9 @@
 #               murn.in
 #
 #  Example:
-#       paw_scanlat -p nio -j3 -l "96 98 100 102 104" ./si2
+#       paw_scanlat.sh -p nio -j3 -l "96 98 100 102 104" ./si2
 #
-#   REQUIREMENTS: paw_get, paw_fast.x
+#   REQUIREMENTS: paw_get.sh, paw_fast.x
 #
 #         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
 #
@@ -75,7 +75,7 @@
 #==============================================================================
 export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \t paw_scanlat options\n"
+USAGE="$USAGE \t paw_scanlat[.sh] options\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -p projectname of the project to be considered (mandatory)\n"
@@ -84,8 +84,9 @@ USAGE="$USAGE \t -l list of percent changes of the lattice constant\n"
 USAGE="$USAGE \t    (enter in apostrophes \"...\")\n"
 USAGE="$USAGE \t     \"96 97 98 99 100 101 102 103 104\"\n"
 USAGE="$USAGE \t -u updates result data files (no paw simulations)\n"
-USAGE="$USAGE \t -e paw command (default: paw_waittillempty -n 8; paw_fast.x)\n"
-USAGE="$USAGE \t -j nr. of paw_jobs allowed to run simultaneously\n"
+USAGE="$USAGE \t -e paw command (default: paw_waittillempty.sh -n 8;\
+                                                              paw_fast.x)\n"
+USAGE="$USAGE \t -j nr. of paw jobs allowed to run simultaneously\n"
 USAGE="$USAGE \t -0 dry-run (reconstruct *.dat files only)\n"
 USAGE="$USAGE \t -v verbose\n"
 USAGE="$USAGE \t -h print this help message \n"
@@ -233,7 +234,7 @@ fi
 if [ $VERBOSE = yes ] ; then
   echo "root name of the project...................: ${ROOT}"
   echo "list of percent changes of lattice constant: ${ALATLIST}"
-  echo "paw_command................................: ${PAWCMD}"
+  echo "paw command................................: ${PAWCMD}"
   echo "dry-run....................................: ${DRYRUN}"
   echo "update.....................................: ${UPDATE}"
   echo "max. nr. of jobs running simultaneously....: ${NJOBS}"
@@ -360,9 +361,9 @@ if [[ $UPDATE = yes ]] ; then
     if [[ $VERBOSE = yes ]] ; then echo DIROFX=${DIROFX} ; fi 
     if [[ $VERBOSE = yes ]] ; then echo ROOTOFX=${ROOTOFX} ; fi 
     if [[ $VERBOSE = yes ]] ; then echo ALATOFX=${ALATX} ; fi 
-    # "paw_get -w volume" takes the last lattice vectors from the prot file
-    VOLUME=$(paw_get -n -w volume -u a0^3 ${ROOTOFX})
-    ETOT=$(paw_get -n -w etot -u H ${ROOTOFX})
+    # "paw_get.sh -w volume" takes the last lattice vectors from the prot file
+    VOLUME=$(paw_get.sh -n -w volume -u a0^3 ${ROOTOFX})
+    ETOT=$(paw_get.sh -n -w etot -u H ${ROOTOFX})
     if [[ $VERBOSE = yes ]] ; then echo VOLUME=${VOLUME} ; fi 
     if [[ $VERBOSE = yes ]] ; then echo ETOT=${ETOT} ; fi 
     if [[ "$DRYRUN" = "no" ]] ; then

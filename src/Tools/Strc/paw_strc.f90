@@ -76,24 +76,30 @@
 !
 !     == WRITE INFO  ===========================================================
       IF(THELP) THEN
-        WRITE(*,'("CALLING SEQUENCE: PAW_STRC.X ARGS ROOTNAME")')
-        WRITE(*,'("ROOTNAME IS THE ROOT NAME OF THE STRC_OUT FILE")')
-        WRITE(*,'("ARGUMENTS CAN BE:")')
-        WRITE(*,'(T2,A,T10,A)')'?','PRINT HELP MESSAGE'
-        WRITE(*,'(T2,A,T10,A)')'-H','PRINT HELP MESSAGE'
-        WRITE(*,'(T2,A,T10,A)')'-I','USE INPUT STRUCTURE FILE INSTEAD OF STRC_OUT'
-        WRITE(*,'(T2,A,T10,A)')'-M','CONSIDER AS MOLECULE'
-        WRITE(*,'(T2,A,T10,A)')'-C','CONSIDER AS CRYSTAL'
-        WRITE(*,'(T2,A,T10,A)')'-CIJK','CONSIDER AS CRYSTAL'
-        WRITE(*,'(T10,A)')'AND MULTIPLY UNIT CELL BY FACTORS I,J,K ALONG THE THREE LATTICE VECTORS'
-        WRITE(*,'(T10,A)')'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
+        WRITE(*,'(A)')-"CALLING SEQUENCE: PAW_STRC.X ARGS ROOTNAME"
+        WRITE(*,'(A)')-"ROOTNAME IS THE ROOT NAME OF THE STRC_OUT FILE"
+        WRITE(*,'(A)')-"ARGUMENTS CAN BE:"
+        WRITE(*,'(T2,A,T10,A)')-'?','PRINT HELP MESSAGE'
+        WRITE(*,'(T2,A,T10,A)')-'-H','PRINT HELP MESSAGE'
+        WRITE(*,'(T2,A,T10,A)') &
+    &         -'-I','USE INPUT STRUCTURE FILE INSTEAD OF STRC_OUT'
+        WRITE(*,'(T2,A,T10,A)')-'-M','CONSIDER AS MOLECULE'
+        WRITE(*,'(T2,A,T10,A)')-'-C','CONSIDER AS CRYSTAL'
+        WRITE(*,'(T2,A,T10,A)')-'-CIJK','CONSIDER AS CRYSTAL'
+        WRITE(*,'(T10,A)') &
+    &         -'AND MULTIPLY UNIT CELL BY FACTORS I,J,K' &
+    &       //-' ALONG THE THREE LATTICE VECTORS'
+        WRITE(*,'(T10,A)')-'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
         WRITE(*,'("OUTPUT:")')
         WRITE(*,'(T4,"ROOTNAME",A,T20,"PROTOCOLL FILE ")')-'.SPROT'
-        WRITE(*,'(T4,"ROOTNAME",A,T20,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT")')-'.CML'
-        WRITE(*,'(T4,"ROOTNAME",A,T20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.XYZ'
-        WRITE(*,'(T4,"ROOTNAME",A,T20,"MOLECULAR OUTPUT FOR VIEWING PURPOSES")')-'.CSSR'
+        WRITE(*,'(T4,"ROOTNAME",A,T20,A)')-'.CML' &
+    &                                ,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT"
+        WRITE(*,'(T4,"ROOTNAME",A,T20,A)')-'.XYZ' &
+    &                                  ,-"MOLECULAR OUTPUT FOR VIEWING PURPOSES"
+        WRITE(*,'(T4,"ROOTNAME",A,T20,A)')-'.CSSR' &
+    &                                  ,-"MOLECULAR OUTPUT FOR VIEWING PURPOSES"
         WRITE(*,'("REMARKS:")')
-        WRITE(*,'(T4,"REQUIRES ATOMNAMES TO START WITH THE ELEMENT SYMBOL")')
+        WRITE(*,'(T4,A)')-"REQUIRES ATOMNAMES TO START WITH THE ELEMENT SYMBOL"
         STOP
       END IF
 !
@@ -309,15 +315,15 @@
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='()')
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(80("*"),T15 &
-     &           ,"          STRUCTURE ANALYSIS                ")')
-      WRITE(NFILO,FMT='(80("*"),T15 &
-     &           ,"   FOR THE PROJECTOR-AUGMENTED WAVE METHOD   ")')
+      WRITE(NFILO,FMT='(80("*"),T15,A)') &
+     &                   "          STRUCTURE ANALYSIS                "
+      WRITE(NFILO,FMT='(80("*"),T15,A)') &
+     &                   "   FOR THE PROJECTOR-AUGMENTED WAVE METHOD   "
       WRITE(NFILO,FMT='(80("*"))')
-      WRITE(NFILO,FMT='(T10 &
-     &         ,"P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY")')
-      WRITE(NFILO,FMT='(T10 &
-     &          ,"DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3")')
+      WRITE(NFILO,FMT='(T10,A)') &
+     &                  "P.E. BLOECHL, CLAUSTHAL UNIVERSITY OF TECHNOLOGY"
+      WRITE(NFILO,FMT='(T10,A)') &
+     &                  "DISTRIBUTED UNDER THE GNU PUBLIC LICENSE V3"
       WRITE(NFILO,*)
       IF(TINPUT) THEN
         WRITE(NFILO,FMT='("INPUT STRUCTURE FILE READ")')
@@ -325,7 +331,8 @@
       IF(TINPUT) THEN
         WRITE(NFILO,FMT='("STRUCTURE FILE READ:",A)')TRIM(ROOTNAME)//-'.STRC'
       ELSE
-        WRITE(NFILO,FMT='("STRUCTURE FILE READ:",A)')TRIM(ROOTNAME)//-'.STRC_OUT'
+        WRITE(NFILO,FMT='("STRUCTURE FILE READ:",A)') &
+    &                    TRIM(ROOTNAME)//-'.STRC_OUT'
       END IF
       IF(TCRYSTAL) THEN
         WRITE(NFILO,FMT='("STRUCTURE INPRETED AS CRYSTAL")')
@@ -839,11 +846,11 @@
       IF(TCRYSTAL) THEN
         WRITE(NFIL,FMT='(T39,3F8.3 &
      &   /T22,3F8.3,T50,"SPGR = 1 P 1",T72,"OPT = 1" &
-      &   /I4,''   1 CREATED BY PAW    '' &
+      &   /I4,"   1 CREATED BY PAW    " &
      &   /"     0 ",A4,": ",A4)') &
      &   A,B,C,ALPHA,BETA,GAMMA,NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
       ELSE
-        WRITE(NFIL,FMT='(//I4,''   1 CREATED BY PAW    '' &
+        WRITE(NFIL,FMT='(//I4,"   1 CREATED BY PAW    " &
      &   /"     0 ",A4,": ",A4)')NAT,OBJECTNAME(1:4),OBJECTNAME(1:4)
       END IF
       DO IAT=1,NAT

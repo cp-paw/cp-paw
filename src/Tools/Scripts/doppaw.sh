@@ -17,7 +17,7 @@ export MPIRUN=$(which mpirun)          #package mpi execution
 ################################################################################
 export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \tdoppaw options JOB\n"
+USAGE="$USAGE \tdoppaw(.sh) options JOB\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE An ending ".cntl" of JOB is stripped away.\n"
 USAGE="$USAGE \n"

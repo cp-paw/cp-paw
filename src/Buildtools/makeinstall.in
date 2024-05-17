@@ -35,9 +35,10 @@ endif
 #_______TOOLS takes all executables except for paw.x____________________________
 export TOOLS=$(filter-out paw.x, $(wildcard *.x))
 export MODLIST=$(wildcard *.mod)
+export SCRIPTS=$(wildcard *.sh)
 
-$(info TOOLS=$(TOOLS))
-$(info MODLIST=$(MODLIST))
+# $(info TOOLS=$(TOOLS))
+# $(info MODLIST=$(MODLIST))
 
 #-------------------------------------------------------------------------------
 #-----------------------construct name of executable----------------------------
@@ -62,11 +63,14 @@ $(info PAWX=$(PAWX))
 ##                      installation                                          ##
 ################################################################################
 .PHONY: default
-default: executable tools modules library 
+default: all
+
+.PHONY: all
+all: executable tools modules library scripts
 
 #___install executable__________________________________________________________
 .PHONY: executable
-executable : ${BINDIR}/$(PAWX)
+executable : $(BINDIR)/$(PAWX) $(basename $(BINDIR)/$(PAWX))
 
 ${BINDIR}/$(PAWX): paw.x
 	cp $< $@
@@ -75,9 +79,19 @@ ifeq ($(PARALLEL),false)
 
 #___install tools_______________________________________________________________
 .PHONY: tools
-tools : $(addprefix $(BINDIR)/, $(TOOLS))
+tools : $(addprefix $(BINDIR)/, $(TOOLS)) \
+        $(basename $(addprefix $(BINDIR)/, $(TOOLS))) 
+
 $(addprefix $(BINDIR)/, $(TOOLS)) : $(BINDIR)/%.x : %.x
 	cp $< $@
+
+.PHONY: scripts
+scripts: $(addprefix $(BINDIR)/, $(SCRIPTS)) \
+         $(basename $(addprefix $(BINDIR)/, $(SCRIPTS)))
+
+$(addprefix $(BINDIR)/, $(wildcard *.sh)): $(BINDIR)/% : $(basename %)
+	cp $< $@
+
 
 #___install library_____________________________________________________________
 .PHONY: library
@@ -93,3 +107,16 @@ $(addprefix $(BINDIR)/include/,$(MODLIST)) : $(BINDIR)/include/%.mod : %.mod
 	cp $< $@
 
 endif
+
+#-------------------------------------------------------------------------------
+#-- set symbolic links to names without extension (.x,.sh)
+#-------------------------------------------------------------------------------
+$(basename $(addprefix ${BINDIR}/, $(PAWX))): % : %.x
+	ln -sf $< $@
+
+$(basename $(addprefix ${BINDIR}/, $(TOOLS))): % : %.x 
+	ln -sf $< $@
+
+$(basename $(addprefix ${BINDIR}/, $(SCRIPTS))): % : %.sh 
+	ln -sf $< $@
+

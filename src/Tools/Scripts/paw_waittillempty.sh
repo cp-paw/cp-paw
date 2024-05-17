@@ -9,7 +9,7 @@
 #
 export USAGE="Usage of $0 \n"
 export USAGE="$USAGE \n"
-export USAGE="$USAGE paw_waittillempty options\n "
+export USAGE="$USAGE paw_waittillempty[.sh] options\n "
 export USAGE="$USAGE \n"
 export USAGE="$USAGE pauses until the number of paw-related jobs \n"
 export USAGE="$USAGE falls below njobx\n"

@@ -40,7 +40,46 @@ fi
 #-------------------------------------------------------------------------------
 # operating system may be Darwin (=macOS), Linux
 OS=$(uname -s)
-echo OS=$OS
+#___ architecture (processor family)____________________________________________
+ARCH=$(uname -m)   # 
+#
+#___check for an openmpi distribtion____________________________________________
+if [ -n $(which ompi_info) ]]; then
+   OPENMPI=true
+   VERSION=$(openmpi)
+#  execute mpifort.show
+#  mpifort 
+else
+   OPENMPI=false
+fi
+
+if [[ -n $(which dpkg) ]] ; then
+#____ check for package manager for Debian, Ubuntu______________________________
+   PACKAGE=$(dpkg -l | grep "MPI")
+   COMPILERS=$(dpkg -l | grep "compiler")
+
+elif [[ -n $(which yum) ]] ; then
+#____ check for package manager RedHat, RHEL, CentOS, Fedora____________________
+   COMPILER=$(yum list installed | grep -i --color compiler)
+elif [[ -n $(which brew) ]] ; then
+   LIST="fftw openblas open-mpi libxc lapack"
+elif [[ -n $(which apt) ]] ; then
+
+elif [[ -n $(which pacman) ]] ; then
+
+fi
+
+
+#___check for an openmpi distribtion____________________________________________
+# if [ -n $(which ompi_info) ]]; then
+#    OPENMPI=true
+#    VERSION=$(openmpi)
+# #  execute mpifort.show
+# #  mpifort 
+# else
+#    OPENMPI=false
+# fi
+
 
 
 #-------------------------------------------------------------------------------

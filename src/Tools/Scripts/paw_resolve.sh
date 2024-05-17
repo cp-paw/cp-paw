@@ -1,9 +1,9 @@
 #!/bin/bash
 ################################################################################
 #
-#         FILE: paw_resolve
+#         FILE: paw_resolve.sh
 #
-#        USAGE:  paw_resolve options infile > outfile
+#        USAGE:  paw_resolve(.sh) options infile > outfile
 #
 #      OPTIONS: -h, -p prefix, -r rule, -f frule
 #
@@ -38,7 +38,7 @@
 #
 #  Example:
 #
-#    paw_resolve -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
+#    paw_resolve.sh -r id1=rep1 -rid2=rep2 -pInsertions/ infile >outfile
 #
 #       AUTHOR: Peter Bloechl; peter.bloechl@tu-clausthal.de
 #      CREATED: 14. Dec. 2013
@@ -47,9 +47,9 @@
 #
 # description of usage
 #
-USAGE="Usage of paw_resolve:\n"
+USAGE="Usage of paw_resolve.sh:\n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \t paw_resolve options\n"
+USAGE="$USAGE \t paw_resolve(.sh) options\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options:\n"
 USAGE="$USAGE \t -i input file (mandatory)\n"

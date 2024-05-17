@@ -90,16 +90,16 @@ fi
 ################################################################################
 ##  strip extra spaces
 ################################################################################
-INCLUDES=$(echo ${INCLUDES} | tr -s '[:blank:]')  # strip extra spaces
-LIBS=$(echo ${LIBS} | tr -s '[:blank:]')  # strip extra spaces
-CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+INCLUDES="$(echo ${INCLUDES} | tr -s '[:blank:]')"  # strip extra spaces
+LIBS="$(echo ${LIBS} | tr -s '[:blank:]')"          # strip extra spaces
+CPPFLAGS="$(echo ${CPPFLAGS} | tr -s '[:blank:]')"  # strip extra spaces
+FFLAGS="$(echo ${FFLAGS} | tr -s '[:blank:]')"      # strip extra spaces
+LDFLAGS="$(echo ${LDFLAGS} | tr -s '[:blank:]')"    # strip extra spaces
 
 ################################################################################
 ##  report settings
 ################################################################################
-if [[ $VERBOSE = true ]] ; then
+if [[ $VERBOSE = "true" ]] ; then
    echo "----------------------------------------------------------------------"
    echo "------------report variables after parmfile---------------------------"
    echo "----------------------------------------------------------------------"
@@ -109,10 +109,10 @@ if [[ $VERBOSE = true ]] ; then
         BASEDIR BUILDDIR BINDIR"
    for X in ${LIST}; do
       eval "Y=\${$X}"
-      Y=$(echo $Y | tr -s '[:blank:]')  # strip extra spaces
+      Y="$(echo $Y | tr -s '[:blank:]')"  # strip extra spaces
       X="${X}.............................."
-      X=${X:0:10}
-      echo -e "$X: $Y" 
+      X="${X:0:10}"
+      echo -e "${X}: ${Y}" 
    done
    echo "-------------------------------------------------------done-----------"
 fi
@@ -124,7 +124,7 @@ fi
 # operating system
 #-------------------------------------------------------------------------------
 # operating system may be Darwin (=macOS), Linux
-OS=$(uname -s)
+OS="$(uname -s)"
 #-------------------------------------------------------------------------------
 # Make: must be gnu make, version 4.3 or later
 # "grouped targets" were introduced only in version 4.3
@@ -216,7 +216,7 @@ fi
 # CPPFLAGS
 #-------------------------------------------------------------------------------
 if [[ $PARALLEL = true && \
-      -z $(echo ${CPPFLAGS} | grep -Eo "CPPVARIABLE_PARALLEL") ]] ; then
+      -z "$(echo ${CPPFLAGS} | grep -Eo "CPPVARIABLE_PARALLEL")" ]] ; then
   CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
   echo "Warning: cpp flag "-DCPPVARIABLE_PARALLEL" required in parallel mode."
   echo "         Flag has been added to CPPFLAGS"
@@ -225,9 +225,15 @@ fi
 if [[ -z $(echo ${CPPFLAGS} | grep -Eo "CPPVAR_FFT_FFTW3") ]] ; then
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_FFT_FFTW3"
   echo "CPPFLAGS= $CPPFLAGS"
-  echo "Warning: cpp flag "-DCPPVAR_FFT_FFTW3" is mandatory"
+  echo "Warning: cpp flag -DCPPVAR_FFT_FFTW3 is mandatory"
   echo "         Flag has been added to CPPFLAGS"
 fi
+
+#CPPVAR_FEAST
+#CPPVAR_SLEPC requires <FINCLUDE.SLEPCVEPSDEF.H> and slepceps.mod 
+#                                                and  ISO_C_BINDING.mod
+#CPPVAR_JADAMILU
+#PETSC_USE_FORTRAN_DATATYPES
 
 #-------------------------------------------------------------------------------
 # FCFLAGS
@@ -260,9 +266,9 @@ fi
 
 for X in ${LIBS} ; do
   if [[ ${X:0:2} = -L ]] ; then
-    DIR=${X#-L}
+    DIR="${X#-L}"
   elif [[ ${X:0:2} = -l ]] ; then
-    NAME=${X#-l}
+    NAME="${X#-l}"
     LIB=${DIR}/lib${NAME}*
     if [[ -z  $LIB ]] ; then
       echo "error in $0: Libary $LIB doesnot exist"
@@ -398,15 +404,20 @@ export LIST="SUFFIX PARALLEL\
                  CPPFLAGS FFLAGS LDFLAGS \
                  LIBS INCLUDES\
                  BASEDIR BUILDDIR BINDIR"
+#___write parameters to a temporary file $TMP and copy only if it differs_______
+#___from ${BUILDDIR}/etc/parms.in_use___________________________________________
 TMP=$(mktemp)
 for X in $LIST ; do
   eval "Y=\${$X}"   # Y=value of the variable with name $X
   echo "export $X=$Y" >> $TMP
 done
-#
-#___copy only if parameters habe changed to avoid a Makefile cascade_________
-if [[ $(cmp --silent "$TMP" "${BUILDDIR}/etc" ; echo $?) -ne 0 ]] ; then
-  cp ${TMP} ${BUILDDIR}/etc
+#___copy parms.in_use only if parameters have changed___________________________
+#___to avoid a Makefile cascade_________________________________________________
+diff "$TMP" "${BUILDDIR}/etc/parms.in_use" 
+RC=$?    # RC=0: files are identical, RC=1: files differ; RC>1: diff fails
+         # RC differs from zero also, when a file is missing
+if [[ $RC -ne 0 ]] ; then
+  cp ${TMP} ${BUILDDIR}/etc/parms.in_use
 fi
 rm -f $TMP
 
@@ -414,6 +425,7 @@ rm -f $TMP
 ##     construct documentation
 ################################################################################
 export MOPTS="-j 10"
+#export MOPTS=""
 
 export PARMLIST="DOCDIR BASEDIR"
 export SEDCOMMANDS=$(mktemp)
@@ -461,19 +473,34 @@ rm -f ${SEDCOMMANDS}
 
 # two calls to make are required because the first call constructs an 
 # intermediate make file that considers module files
-echo " make prepare................................................"
+echo ".............................................................make prepare"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} prepare)
-
-echo " make executable............................................."
-(cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} executable)
-
-if [[ ${PARALLEL} = false ]] ; then
-   echo " make tools ..................................................."
-   (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  tools)
-  echo " make libs ..................................................."
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  libs)
+RC=$?
+if [[ $RC -ne 0 ]] ; then 
+  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
+  exit 1
 fi
-echo " ...........................................................made"
+echo ".............................................................made prepare"
+
+if [[ ${PARALLEL} = true ]] ; then
+  echo "....................................................... make executable"
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} executable)
+  RC=$?
+  if [[ $RC -ne 0 ]] ; then 
+    echo "error in $0: make executable in BUILDDIR exited with RC=$RC"
+    exit 1
+  fi
+  echo " .......................................................made executable"
+elif [[ ${PARALLEL} = false ]] ; then
+  echo "...............................................................make all"
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  all)
+  RC=$?
+  if [[ $RC -ne 0 ]] ; then 
+    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+    exit 1
+  fi
+  echo " ..............................................................made all"
+fi
 
 ################################################################################
 ##     install
@@ -488,11 +515,21 @@ done
 sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makeinstall.in > ${BUILDDIR}/install.mk
 rm -f ${SEDCOMMANDS}
 
-echo " make install................................................"
+echo "............................................................make install"
 if [[ $PARALLEL = false ]] ; then
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk)
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk all)
+  RC=$?
+  if [[ $RC -ne 0 ]] ; then 
+    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+    exit 1
+  fi
 elif [[ $PARALLEL = true ]] ; then
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f executable)
+  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk executable)
+  RC=$?
+  if [[ $RC -ne 0 ]] ; then 
+    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+    exit 1
+  fi
 fi
 echo "................................................installation finished"
 echo "cppaw installed in ${BINDIR}:"

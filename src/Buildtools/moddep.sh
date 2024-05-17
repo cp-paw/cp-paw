@@ -100,8 +100,8 @@ OBJ=${IN##*/}
 OBJ=${OBJ%.f*}
 OBJ=${OBJ%_d}.o    # allow also _d.f90 files
 
-export TARGETS=${OBJ}
-export PREREQUISITES=""
+export TARGETS="${OBJ}"
+export PREREQUISITES="${IN}"
 #-------------------------------------------------------------------------------
 #-- collect dependencies of module files on fortran files                     --
 #-------------------------------------------------------------------------------

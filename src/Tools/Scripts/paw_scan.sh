@@ -1,9 +1,9 @@
 #!/bin/bash 
 ###############################################################################
 #
-#          NAME: paw_scan
+#          NAME: paw_scan.sh
 #
-#         USAGE: paw_scan options SRCROOT
+#         USAGE: paw_scan(.sh) options SRCROOT
 #
 #       OPTIONS: mandatory: wr optional: hnm0bv
 #
@@ -42,9 +42,9 @@
 # into the target directory.
 #
 #  Example:
-#       paw_scan -w run -r "EPW 20 30 40" ./si2
+#       paw_scan.sh -w run -r "EPW 20 30 40" ./si2
 #
-#   REQUIREMENTS: doppaw, paw_resolve, paw_waittillempty 
+#   REQUIREMENTS: doppaw.sh, paw_resolve.sh, paw_waittillempty.sh
 #                  paw_dos.x
 #
 #         AUTHOR: Peter E. Bloechl; peter.bloechl@tu-clausthal.de
@@ -57,7 +57,7 @@
 #-------------------------------------------------------------------------------
 export USAGE="Usage of $0 \n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \tpaw_scan options SRCROOT\n"
+USAGE="$USAGE \tpaw_scan(.sh) options SRCROOT\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Purpose:\n"
 USAGE="$USAGE \t perform a sequence of paw calculations with different \
@@ -101,7 +101,7 @@ USAGE="$USAGE a source restart file \$SRCROOT.rstrt, if present and needed, \n"
 USAGE="$USAGE will be copied into the target directory.\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Example:\n"
-USAGE="$USAGE \t paw_scan -w run -r \"EPW 20 30 40\" ./si2 \n"
+USAGE="$USAGE \t paw_scan.sh -w run -r \"EPW 20 30 40\" ./si2 \n"
 USAGE="$USAGE \n"
 #-------------------------------------------------------------------------------
 #  individual data
@@ -345,13 +345,13 @@ for PAR1VAL in $PAR1VALS; do
      #
      if [[ ! -e ${TARGET} ]] ; then
        echo copying file into $TARGET
-       paw_resolve -r "${PAR1NAME}=$PAR1VAL" \
-                   -r "SRCROOT=$SRCROOT" \
-                   -i "${SOURCE}" \
-                   -o "${TARGET}"
+       paw_resolve.sh -r "${PAR1NAME}=$PAR1VAL" \
+                      -r "SRCROOT=$SRCROOT" \
+                      -i "${SOURCE}" \
+                      -o "${TARGET}"
        RC=$?
        if [[ $RC -ne 0 ]] ; then
-         echo "error in $0: paw_resolve failed to expand ${SOURCE}" >&2
+         echo "error in $0: paw_resolve.sh failed to expand ${SOURCE}" >&2
          exit 1
        fi
      fi
@@ -378,7 +378,7 @@ for PAR1VAL in $PAR1VALS; do
     # pause if the number of active jobs exceeds maximum
     while [[ $(countjobs) -ge ${NJOBS} ]] ; do sleep 2; done
     #
-#    execute "paw_waittillempty -n $NJOBS"
+#    execute "paw_waittillempty.sh -n $NJOBS"
     execute "$EXECTBLE ${TARGETNAME}.$CNTL 1>out 2>&1 &"
     PIDS="$PIDS $PID"   # store the project id returned by 'execute'
   else
@@ -388,7 +388,7 @@ for PAR1VAL in $PAR1VALS; do
       echo "number of nodes requested: $NNODES" >&2
       exit 1
     fi
-    execute "doppaw ${TARGETNAME} ${NNODES}"
+    execute "doppaw.sh ${TARGETNAME} ${NNODES}"
     PIDS="$PIDS $PID"   # store the project id returned by 'execute'
   fi
   cd $THISDIR
