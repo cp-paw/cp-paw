@@ -125,6 +125,18 @@ fi
 #-------------------------------------------------------------------------------
 # operating system may be Darwin (=macOS), Linux
 OS="$(uname -s)"
+
+#-------------------------------------------------------------------------------
+# latexmk is required to produce the documentation
+#-------------------------------------------------------------------------------
+if [[ -z $(which latexmk) ]] ; then
+  echo "error in $0: latexmk not installed or accessible"
+  echo "see https://ctan.org/pkg/latexmk"
+  echo "usually contained in the tex installation"
+  echo "such as TeX Live https://tug.org/texlive/"
+  exit 1
+fi
+
 #-------------------------------------------------------------------------------
 # Make: must be gnu make, version 4.3 or later
 # "grouped targets" were introduced only in version 4.3
@@ -400,10 +412,10 @@ LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 ##     write parms.in_use
 ################################################################################
 export LIST="SUFFIX PARALLEL\
-                 MAKE AR CPP FC LD \
-                 CPPFLAGS FFLAGS LDFLAGS \
-                 LIBS INCLUDES\
-                 BASEDIR BUILDDIR BINDIR"
+             MAKE AR CPP FC LD\
+             CPPFLAGS FFLAGS LDFLAGS \
+             LIBS INCLUDES\
+             BASEDIR BUILDDIR BINDIR"
 #___write parameters to a temporary file $TMP and copy only if it differs_______
 #___from ${BUILDDIR}/etc/parms.in_use___________________________________________
 TMP=$(mktemp)
@@ -437,19 +449,10 @@ done
 sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makedocs.in > ${BUILDDIR}/doc/Makefile
 rm -f ${SEDCOMMANDS}
 
-echo "make docs................................................................"
+echo "................................................................make docs"
 (cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS})
 echo "................................................................made docs"
-
-################################################################################
-##     license and readme file
-################################################################################
-if [[ ! -f ${DOCDIR}/LICENSE ]]; then
-  cp ${BASEDIR}/src/Buildtools/LICENSE ${DOCDIR}/LICENSE
-fi
-if [[ ! -f ${DOCDIR}/README ]]; then
-  cp ${BASEDIR}/src/Buildtools/README ${DOCDIR}/README
-fi
+exit 1
 
 ################################################################################
 ##     compile

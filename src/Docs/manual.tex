@@ -503,17 +503,83 @@ confusion can occur. A simple rule that avoids confusion, is not to
 use colons in atom names.
 
 %==========================================================================
-\subsection{Inquiries about the executable}
+\section{Installation}
 %==========================================================================
-The CP-PAW code package is available under at
+The CP-PAW code package is publicly available under at
+\begin{verbatim}
+https://github.com/cp-paw/cp-paw
+\end{verbatim}
+
+Place the distribution into some directory, which I will call in the
+following your base-directory of the cppaw distribution. In this
+distribution you should see the following with \verb|ls|.
+\begin{verbatim}
+src README LICENSE
+\end{verbatim}
+
+%==========================================================================
+\subsection{Try your luck}
+%==========================================================================
+You can try your luck and install cppaw out of the box with the
+following command on the command line.
+\begin{verbatim}
+src/Buildtools/paw_build.sh -c fast
+\end{verbatim}
+This relies on defaults that are collected in a parameter file, which
+will be adjusted over time to further environments.  If the command
+above reports an error, proceed to the next section, which is entitled
+``Adjust the parameter file''.
+
+If you are lucky and the command above worked, go ahead and produce
+the parallel executable with
+\begin{verbatim}
+src/Buildtools/paw_build.sh -c fast_parallel
+\end{verbatim}
+
+If successful, test the success with the following commands. 
+\begin{verbatim}
+ls bin/fast_parallel/ppaw_fast
+ls bin/fast/paw_fast
+ls bin/fast/paw_strc
+ls bin/fast/libpaw.a
+ls doc/manual.pdf
+\end{verbatim}
+If none of the commands complains ``No such file or directory''. The
+installation is probably ok. 
+
+%==========================================================================
+\subsection{Adjust the parameter file}
+%==========================================================================
+If the installation with the current defaults did not work, you need
+to adjust the parameter file. First,  make a copy of
+current default parameter file, for example in the base directory. I
+assume that this is still your current directory.
 \begin{center}
-\url{https://github.com/cp-paw/cp-paw}
+cp src/Buildtools/defaultsparmfile ./parmfile
 \end{center}
 
-It is under version control under GIT. There are mechanisms to
-identify the instance that has been compiled into the code used to
-produce results. The relevant information is printed in the
-protocol, the main output file, of the simulation code.
+The parameter file is a bash script, which defines a set of parameters
+required for the installation. The parameters are briefly explained in
+the top section of the parameter file. After you adjuste the
+parameters to your needs, you try the installation again, but now with
+your own parameter file (e.g. \verb|my\_fast|) and probably with your own
+selection.
+\begin{center}
+src/Buildtools/paw\_build.sh -c my\_fast -f parmfile
+\end{center}
+
+This is the point, where you either know how to proceed, or you need
+to ask for help. This is why I do not elaborate on the installation at
+this point.
+
+
+%==========================================================================
+\subsection{Version control}
+%==========================================================================
+The CPPAW package is under version control under GIT. There are
+mechanisms to identify the instance that has been compiled into the
+code used to produce results. The relevant information is printed in
+the protocol, the main output file, of the simulation code.
 
 The simulation code comes in different flavors, such as
 \verb|paw_dbg.x|, \verb|paw_fast.x|, \verb|paw_none.x|,
@@ -521,7 +587,7 @@ The simulation code comes in different flavors, such as
 with a double ``p'' for ``parallel paw'', such as \verb|ppaw_fast.x|.
 
 %==========================================================================
-\subsubsection{Version information}
+\subsection{Version information}
 %==========================================================================
 The version information of a simulation code can be extracted
 with\footnote{Another possibility is to use the tool
@@ -534,7 +600,7 @@ the git repository.
 
 
 %==========================================================================
-\subsubsection{Source blob}
+\subsection{Source blob}
 %==========================================================================
 A complete copy of the source code is contained in each executable of
 the simulation code. It is called the \textbf{source~blob}
@@ -552,6 +618,7 @@ shall be extracted and \verb|paw_src.tgz| is the resulting compressed
 tar file with the source blob.
 
 %==========================================================================
+\newpage
 \section{Before starting...}
 %==========================================================================
 In this manual, I frequently refer to \$PAWDIR and \$ROOT. They are

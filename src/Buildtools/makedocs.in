@@ -1,7 +1,13 @@
+################################################################################
+##
+##   template for the makefile that compiles the manual of cppaw
+##
+################################################################################
 #____set shell__________________________________________________________________
 SHELL=/bin/bash
 #____switch off implicit rules__________________________________________________
 .SUFFIXES:
+
 ################################################################################
 ##  parameters in the following block will be replaced                        ##
 ################################################################################
@@ -9,7 +15,7 @@ SHELL=/bin/bash
 export BASEDIR=@BASEDIR@
 #______________________________installation directory___________________________
 export DOCDIR=@DOCDIR@
-#
+
 ################################################################################
 ##  test whether installation directory is available                          ##
 ################################################################################
@@ -17,7 +23,7 @@ ifeq ($(DOCDIR),)
   $(error "empty string for DOCDIR not allowed")
 endif
 ifeq ("$(wildcard $(DOCDIR))","")
-  $(error "BINDIR does not exist")
+  $(error "DOCDIR does not exist")
 endif
 #
 ################################################################################
@@ -26,17 +32,13 @@ endif
 .PHONY: default
 default: compile install
 
-#
-################################################################################
-##                      prepare                                               ##
-################################################################################
+.PHONY: clean
+clean :
+	latexmk -c
 
 ################################################################################
-##                      compile                                              ##
+##                     copy source files from BASEDIR                         ##
 ################################################################################
-.PHONY: compile
-compile: manual.pdf
-
 manual.tex : $(BASEDIR)/src/Docs/manual.tex
 	cp $< $@
 
@@ -44,57 +46,20 @@ Figs : $(BASEDIR)/src/Docs/Figs
 	if [[ ! -d Figs ]] ; then mkdir Figs ; fi
 	cp -r $< ./
 
-
 all.bib: $(BASEDIR)/src/Docs/all.bib
 	cp $< $@
 
 doc.bib: $(BASEDIR)/src/Docs/doc.bib
 	cp $< $@
 
-#-------------------------------------------------------------------------------
-#  pdflatex constructs .aux (cross-references),
-#                      .idx (index entries),
-#                      .toc (table of contents),
-#                      .pdf,.log,.out
-#  bibtex constructs .bbl  (the log is in .blg)
-#  makeindex constructs .ind (the log is in .ilg)
-#-------------------------------------------------------------------------------
+################################################################################
+##                      compile                                              ##
+################################################################################
+.PHONY: compile
+compile: manual.pdf
 
-# -draftmode does not produce pdf 
-manual.aux manual.idx manual.toc &: manual.tex Figs all.bib doc.bib
-	pdflatex -output-format pdf -halt-on-error -draftmode $< \
-                  1>pdflatex.out 2>pdflatex.err
-
-
-manual.bbl : manual.aux all.bib doc.bib
-	bibtex manual.aux
-
-manual.ind : manual.idx
-	makeindex manual.idx
-           
-
-# create temporary files to prevent overwriting manual.aux which is
-#  triggers another building process of by make
-
-manual.pdf : manual.tex manual.ind manual.bbl Figs all.bib doc.bib
-	cp manual.tex manual_tmp.tex
-	cp manual.ind manual_tmp.ind
-	cp manual.bbl manual_tmp.bbl
-	pdflatex -output-format pdf -halt-on-error manual_tmp.tex \
-                  1>pdflatex.out 2>pdflatex.err
-	cp manual_tmp.pdf manual.pdf
-	rm -f manual_tmp.*
-
-.PHONY: clean
-clean :
-	rm manual.bbl
-	rm manual.blg
-	rm manual.idx
-	rm manual.ilg
-	rm manual.ind
-	rm manual.log
-	rm manual.out
-	rm manual.toc
+manual.pdf : manual.tex all.bib doc.bib
+	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make manual.tex
 
 ################################################################################
 ##                      install                                               ##
