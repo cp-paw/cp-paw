@@ -5,21 +5,45 @@ See https://cppaw.org for further information
 
 
 Configuration and Installation instructions
-==========================
+===========================================
 
 1) Preconditions
 
-Have a compiler for Fortran 2008. Have configure, make installed on
-your system.  The libraries LAPACK, BLAS, FFTW3, MPI must be installed
-on your system.  The tools xmgrace, gnuplot are used for analysis
-tools.
+- fortran compiler (e.g. gfortran)
+- bash, make (GNU Make, version 4.3 or later), cpp, ar, latexmk
+- A tex (latex) distribution (e.g. TeX Live) 
+- libraries: LAPACK, BLAS, FFTW3, MPI (optional), LIBXC
+  
+For the tools, we also use xmgrace, gnuplot, avogadro1
 
 2) Installation
 
-a) adjust one of the parameter files
-(e.g. parms.osx_gfortran_accellerate) to your environment
+- Download the cppaw distribution from Github.  
 
-b) execute make all_new 
+- Unpack the distribution in a directory. I will refer to this
+  directory as the CPPAW directory (or base directory)
+
+- add the following lines to your profile (e.g. ~/.zshrc, ~/.bashrc,
+  ~/.profile)
+
+export PAWDIR="path to your cppaw distribution"
+export PATH=${PAWDIR}/bin/fast:${PAWDIR}/bin/fast_parallel:${PATH}
+
+- enter the cppaw directory and type
+
+src/Buildtools/paw_build.sh -c fast 
+src/Buildtools/paw_build.sh -c fast_parallel
+
+- if this does not work, make a copy of the default parmfile
+
+cp src/Buildtools/defaultsparmfile ./parmfile
+
+edit it and  
+
+src/Buildtools/paw_build.sh -f parmfile -c fast 
+src/Buildtools/paw_build.sh -f parmfile -c fast_parallel
+
+- consult the manual doc/manual.pdf for further information.
 
 Copyright
 =========
