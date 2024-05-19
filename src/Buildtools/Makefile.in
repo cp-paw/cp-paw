@@ -281,7 +281,7 @@ export BIGLIST=$(LIBLIST) $(PAWLIST) $(TOOLS)
 default: executable
 
 .PHONY: all
-all: executable libs tools 
+all: executable libs tools scripts
 
 .PHONY: collect
 collect: $(addsuffix .F90p, $(BIGLIST)) slatec.f\
