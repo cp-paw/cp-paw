@@ -535,8 +535,10 @@ elif [[ $PARALLEL = true ]] ; then
 fi
 echo "................................................installation finished"
 if [[ ${PARALLEL} = true && $(uname -s) = Darwin ]] ; then
+  echo "...........................................................code signing"
   codesign -vv ${BINDIR}/ppaw_${SUFFIX}.x
   codesign -d -- entitlements -- ${BINDIR}/ppaw_${SUFFIX}.x
+  echo "...........................................................code signed"
 fi
 echo "cppaw installed in ${BINDIR}:"
 # echo "files in ${BINDIR}:"
