@@ -323,21 +323,28 @@ END MODULE AUTOPILOT_MODULE
         IF(ABS(CONTROL(I)%LOWERFRICTION-CONTROL(I)%UPPERFRICTION).LE.DSMALL &
      &    .AND.ABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL &
      &    .AND.ABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
-          CALL REPORT$R8VAL(NFIL,'CONSTANT FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
-                                    ,CONTROL(I)%LOWERFRICTION,' ')
+          CALL REPORT$R8VAL(NFIL &
+     &                        ,'CONSTANT FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
+     &                                            ,CONTROL(I)%LOWERFRICTION,' ')
         ELSE
           CALL REPORT$R8VAL(NFIL,'LOWER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%LOWERFRICTION,' ')
           IF(ABS(CONTROL(I)%LOWERFACTOR-1.D0).GT.DSMALL) THEN
             CALL REPORT$R8VAL(NFIL,'SCALING FACTOR OF LOWER FRICTION FOR ' &
-   &                    //TRIM(CONTROL(I)%NAME),CONTROL(I)%LOWERFACTOR,' ')
+     &                       //TRIM(CONTROL(I)%NAME),CONTROL(I)%LOWERFACTOR,' ')
           END IF
           CALL REPORT$R8VAL(NFIL,'UPPER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
                                     ,CONTROL(I)%UPPERFRICTION,' ')
           IF(ABS(CONTROL(I)%UPPERFACTOR-1.D0).GT.DSMALL) THEN
-            CALL REPORT$R8VAL(NFIL,'SCALING FACTOR OF UPPER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
-                                    ,CONTROL(I)%UPPERFACTOR,' ')
+            CALL REPORT$R8VAL(NFIL &
+     &         ,'SCALING FACTOR OF UPPER FRICTION FOR '//TRIM(CONTROL(I)%NAME) &
+     &                                              ,CONTROL(I)%UPPERFACTOR,' ')
           END IF
+          IF(CONTROL(I)%MINFRICTION.GT.DSMALL) THEN
+            CALL REPORT$R8VAL(NFIL &
+     &                   ,'LOWEST FRICTION VALUE FOR '//TRIM(CONTROL(I)%NAME) &
+     &                                              ,CONTROL(I)%MINFRICTION,' ')
+          END IF 
         END IF
       ENDDO
       CALL REPORT$R8VAL(NFIL,'ENERGY TOLERANCE FOR TERMINATION',ETOL,' ')
@@ -552,4 +559,3 @@ END MODULE AUTOPILOT_MODULE
       END IF
       RETURN
       END 
-!#END IF
