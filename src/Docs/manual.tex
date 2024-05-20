@@ -4900,6 +4900,10 @@ on p.~\pageref{sec:extendedatomnotation})}
   are taken into account. The contribution of the pseudo wave
   functions is ignored for the sake of simplicity.
 
+  As a guideline, a potential specified in \texttt{!POT} with
+  (\texttt{VALUE=0.1 RC=3. S=1}) changes the spin splitting of
+  3d-electrons by about 5~eV.
+
 %% The relation $|\Psi\rangle\approx
 %%   \sum_i|\phi_i\rangle\langle\tilde{p}_i|\tilde\Psi\rangle$ between
 %%   the true wave function and its one-center expansion is used to
@@ -4947,7 +4951,7 @@ on p.~\pageref{sec:extendedatomnotation})}
 %
 \mbax{\key{VALUE}
 \vdescr{value $U$ of the external potential at the atomic site 
-in Hartree as defined above in \eq{eq:orbpot}}
+in Hartree as defined above in \eq{eq:orbpot}.}
 \vformat{real}
 \vrules{mandatory}
 \vdefault{none}}
@@ -6608,9 +6612,9 @@ analysis has been invaluable.
 %An example is shown in Fig.\ref{fig:h2copdos}
 
 \begin{figure}
-\centerline{
+\begin{center}
  \resizebox{12.0cm}{!}{\rotatebox{-89}{\includegraphics{Figs/h2copdos.eps}}}
-}
+\end{center}
  \caption{From top to bottom (1) total density of states of the 
    formaldehyde molecule (H$_2$CO). (2) COOP between the p-orbitals
    lying in the plane of the molecule but perpendicular to the CO
