@@ -81,6 +81,12 @@ fi
 PROTECT_SUFFIX=$SUFFIX
 
 source ${PARMFILE}
+RC=$?
+if [[ RC -ne 0 ]] ; then 
+  echo "error in $0: parmfile returned with error"
+  echo "parmfile=${PARMFILE}"
+  exit 1
+fi
 
 if [[ -n $PROTECT_SUFFIX ]] ; then
   echo "Warning: option -s to paw_build.sh overwrites value from parmfile"

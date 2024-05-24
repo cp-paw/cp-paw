@@ -9,6 +9,9 @@
 ##  The parameter SELECT is pre-defined                                       ##
 ##                                                                            ##
 ##                                                                            ##
+##  for a comparison of the flags for various compilers, see
+##  https://github.com/flang-compiler/f18-llvm-project/blob/not-main/flang/docs/OptionComparison.md
+##
 ################################################################################
 
 ################################################################################
@@ -94,15 +97,30 @@ DOCDIR="$(pwd)/doc"
 #  for the libraries
 #-------------------------------------------------------------------------------
 case $SELECT in 
-  fast_parallel)
+  *parallel*)
+     echo parallel
      PARALLEL=true
      CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
+     if [[ -z $(which mpifort) ]] ; then
+       echo "error in $0: parallel compilation requires mpifort"
+       echo "mpifort is not installed"
+       exit 1
+     fi
+     # use the compiler compatible with MPI installation.
+     # the compiler wrapper mpi-fort is not used to compile the code
+     # but the flags are added explicitely into FFLAGS, LDFLAGS, INCLUDES.
+     FC=$(mpifort -showme:command)
+     LD=${FC}
      ;;
   *)
      PARALLEL=false
     ;;
 esac
 
+#-------------------------------------------------------------------------------
+#  when pkgconfig is available, it is used to initialize the variables
+#  for the libraries
+#-------------------------------------------------------------------------------
 if [[ -n $(which pkg-config) ]] ; then
   LIBS=""
   LDFLAGS=""
@@ -117,14 +135,21 @@ if [[ -n $(which pkg-config) ]] ; then
   #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
   #-----------------------------------------------------------------------------
   LIST="fftw3 libxcf03"
+#
   if [[ ${OS} = Darwin ]] ; then
     LDFLAGS="${LDFLAGS} -framework Accelerate"
   else
     LIST="${LIST} blas lapack"
   fi
+#
   if [[ $PARALLEL = true ]] ; then
-    LIST="${LIST} ompi-fort"
+    if [[ -n $(pkg-config --list-all |grep -Eo ompi) ]] ; then
+      LIST="${LIST} ompi-fort"
+    elif [[ -n $(pkg-config --list-all |grep -Eo mpich) ]] ; then
+      LIST="${LIST} mpich-fort"
+    fi
   fi
+
   for X in ${LIST}; do
     if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
       FFLAGS="${FFLAGS} $(pkg-config --cflags $X)"
@@ -135,12 +160,11 @@ if [[ -n $(which pkg-config) ]] ; then
            INCLUDES="${INCLUDES} $Y"
           ;; 
          *mpi*)
+           FC=$(mpifort -showme:command)
+           FC=$(which ${FC})     # get full path
+           LD=${FC}
            Y=$(pkg-config --variable=includedir $X)/mpi_f08.mod
            INCLUDES="$INCLUDES $Y"
-           # use the compiler compatible with mpi installation
-           # compiler wrapper mpi-fort is not required because flags have been
-           # already added 
-           FC=$(pkg-config --variable=exec_prefix $X)/bin/mpifort --showme:command         LD=${FC}
            ;;
          *libxc*)
            Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
@@ -149,19 +173,9 @@ if [[ -n $(which pkg-config) ]] ; then
       esac
     fi   
   done
-  #-----------------------------------------------------------------------------
-  # For MPI, the libraries and flags are already set by the compiler wrapper
-  # mpifort.
-  #-----------------------------------------------------------------------------
-  # if [[ $PARALLEL = true ]] ; then
-  #   X=ompi
-  #   if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
-  #     FC=$(pkg-config --variable=exec_prefix $X)/bin/mpifort
-  #     LD=${FC}
-  #   fi
-  # fi
 fi
 
+VERBOSE=true
 if [[ $VERBOSE = true ]] ; then
   echo OS=$OS
   echo SELECT=$SELECT
@@ -173,10 +187,6 @@ if [[ $VERBOSE = true ]] ; then
   echo LIBS=$LIBS
   echo INCLUDES=$INCLUDES
 fi
-
-
-
-
 
 # if [[ $OS = Darwin ]]; then
 #   LDFLAGS="-framework accelerate"
@@ -216,14 +226,6 @@ case $SELECT in
     PARALLEL="true"
     FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
-    # if [[ $OS = Darwin ]] ; then
-    #   export MPIDIR="/opt/homebrew"
-    #   FC="${MPIDIR}/bin/mpifort"
-    #   LD=${FC}
-    # else
-    #   echo "error in $0: parmfile error"
-    # fi
-    # CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
     ;;
 
   *) #-- anything else. 
