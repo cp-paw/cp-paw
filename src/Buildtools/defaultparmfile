@@ -68,7 +68,6 @@ export DOCDIR=
 OS=$(uname -s) # can be Linux, Darwin,...
 #_____architecture (processor family)___________________________________________
 ARCH=$(uname -m)   # can be arm64,
-#
 #-------------------------------------------------------------------------------
 #--                          set generic values of parameters                 --
 #-------------------------------------------------------------------------------
@@ -90,20 +89,106 @@ BINDIR="$(pwd)/bin/${SELECT}"
 
 DOCDIR="$(pwd)/doc"
 
-if [[ $OS = Darwin ]]; then
+#-------------------------------------------------------------------------------
+#  when pkgconfig is available, it is used to initialize the variables
+#  for the libraries
+#-------------------------------------------------------------------------------
+case $SELECT in 
+  fast_parallel)
+     PARALLEL=true
+     CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
+     ;;
+  *)
+     PARALLEL=false
+    ;;
+esac
 
-  LDFLAGS="-framework accelerate"
-
-  LIBS="-L/opt/homebrew/lib -lfftw3 \
-        -L/opt/homebrew/lib -lxcf03 \
-        -L/opt/homebrew/lib -lmpi"
-
-  INCLUDES="/opt/homebrew/include/fftw3.f03 \
-            /opt/homebrew/include/xc_f03_lib_m.mod \
-            /opt/homebrew/include/mpi_f08.mod"
-else
-  echo "this parmfile works only for macOS (Darwin)"
+if [[ -n $(which pkg-config) ]] ; then
+  LIBS=""
+  LDFLAGS=""
+  INCUDES=""
+  #-----------------------------------------------------------------------------
+  #  add libraries: MPI BLAS LAPACK FFTW LIBXC 
+  #-----------------------------------------------------------------------------
+  #  do not use the compiler wrapper for MPI. We provide the parameters
+  #  to the compiler directly. (relevant for the makefile used later)
+  #-----------------------------------------------------------------------------
+  #  BLAS and Lapack are contained in framework Acellerate in MacOS 
+  #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
+  #-----------------------------------------------------------------------------
+  LIST="fftw3 libxcf03"
+  if [[ ${OS} = Darwin ]] ; then
+    LDFLAGS="${LDFLAGS} -framework Accelerate"
+  else
+    LIST="${LIST} blas lapack"
+  fi
+  if [[ $PARALLEL = true ]] ; then
+    LIST="${LIST} ompi-fort"
+  fi
+  for X in ${LIST}; do
+    if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
+      FFLAGS="${FFLAGS} $(pkg-config --cflags $X)"
+      LIBS="${LIBS} $(pkg-config --libs $X)"
+      case $X in
+         *fftw3*)
+           Y=$(pkg-config --variable=includedir $X)/fftw3.f03
+           INCLUDES="${INCLUDES} $Y"
+          ;; 
+         *mpi*)
+           Y=$(pkg-config --variable=includedir $X)/mpi_f08.mod
+           INCLUDES="$INCLUDES $Y"
+           # use the compiler compatible with mpi installation
+           # compiler wrapper mpi-fort is not required because flags have been
+           # already added 
+           FC=$(pkg-config --variable=exec_prefix $X)/bin/mpifort --showme:command         LD=${FC}
+           ;;
+         *libxc*)
+           Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
+           INCLUDES="$INCLUDES $Y"
+           ;;
+      esac
+    fi   
+  done
+  #-----------------------------------------------------------------------------
+  # For MPI, the libraries and flags are already set by the compiler wrapper
+  # mpifort.
+  #-----------------------------------------------------------------------------
+  # if [[ $PARALLEL = true ]] ; then
+  #   X=ompi
+  #   if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
+  #     FC=$(pkg-config --variable=exec_prefix $X)/bin/mpifort
+  #     LD=${FC}
+  #   fi
+  # fi
 fi
+
+if [[ $VERBOSE = true ]] ; then
+  echo OS=$OS
+  echo SELECT=$SELECT
+  echo PARALLEL=$PARALLEL
+  echo FC=$FC
+  echo LD=$LD
+  echo FFLAGS=$FFLAGS
+  echo LDLAGS=$LDFLAGS
+  echo LIBS=$LIBS
+  echo INCLUDES=$INCLUDES
+fi
+
+
+
+
+
+# if [[ $OS = Darwin ]]; then
+#   LDFLAGS="-framework accelerate"
+#   LIBS="-L/opt/homebrew/lib -lfftw3 \
+#         -L/opt/homebrew/lib -lxcf03 \
+#         -L/opt/homebrew/lib -lmpi"
+#   INCLUDES="/opt/homebrew/include/fftw3.f03 \
+#             /opt/homebrew/include/xc_f03_lib_m.mod \
+#             /opt/homebrew/include/mpi_f08.mod"
+# else
+#    echo "this parmfile works only for macOS (Darwin)"
+# fi
 
 ################################################################################
 ## resolve selection 
@@ -111,7 +196,7 @@ fi
 case $SELECT in 
   dbg)
      SUFFIX="dbg"
-     FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
+     FFLAGS="${FFLAGS} -O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas -g -std=f2008 -pedantic -fbacktrace -fdump-core \
              -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion  \
              -ffpe-trap=invalid,zero,overflow \
@@ -122,7 +207,7 @@ case $SELECT in
 
   fast)
     SUFFIX="fast"
-    FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
+    FFLAGS="${FFLAGS} -O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
     ;;
 
@@ -131,14 +216,14 @@ case $SELECT in
     PARALLEL="true"
     FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
-    if [[ $OS = Darwin ]] ; then
-      export MPIDIR="/opt/homebrew"
-      FC="${MPIDIR}/bin/mpifort"
-      LD=${FC}
-    else
-      echo "error in $0: parmfile error"
-    fi
-    CPPFLAFS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
+    # if [[ $OS = Darwin ]] ; then
+    #   export MPIDIR="/opt/homebrew"
+    #   FC="${MPIDIR}/bin/mpifort"
+    #   LD=${FC}
+    # else
+    #   echo "error in $0: parmfile error"
+    # fi
+    # CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
     ;;
 
   *) #-- anything else. 

@@ -265,8 +265,11 @@ if [[ -z $(echo ${LIBS} | grep -Eo "fftw3") ]] ; then
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "mpi") ]] ; then
   if [[ PARALLEL = true ]] ; then
-    echo "error in $0: no mpi library specified in parallel mode"
-    exit
+    if [[ -z $(echo ${FC} | grep -Eo "mpif") ]] ; then
+      echo "error in $0: no mpi library specified in parallel mode"
+      echo "no mpi compiler wrapper used: FC=${FC}"
+      exit 1
+    fi
   fi
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "xcf03") ]] ; then
@@ -307,8 +310,11 @@ fi
 
 if [[ -z $(echo ${INCLUDES} | grep -Eo "mpi_f08.mod") ]] ; then
   if [[ $PARALLEL = true ]] ; then
-    echo "error in $0: no mpi_f08.mod module file on INCLUDES"
-    exit 1
+    if [[ -z $(echo ${FC} | grep -Eo "mpif") ]] ; then
+      echo "error in $0: no mpi_f08.mod module file on INCLUDES"
+      echo "no mpi compiler wrapper used: FC=${FC}"
+      exit 1
+    fi
   fi
 fi
 for X in $INCLUDES ; do
@@ -536,8 +542,7 @@ fi
 echo "................................................installation finished"
 if [[ ${PARALLEL} = true && $(uname -s) = Darwin ]] ; then
   echo "...........................................................code signing"
-  codesign -vv ${BINDIR}/ppaw_${SUFFIX}.x
-  codesign -d -- entitlements -- ${BINDIR}/ppaw_${SUFFIX}.x
+  ${BASEDIR}/src/Buildtools/Codesign/paw_codesign.sh ${BINDIR}/ppaw_${SUFFIX}.x
   echo "...........................................................code signed"
 fi
 echo "cppaw installed in ${BINDIR}:"

@@ -58,7 +58,7 @@ doc.bib: $(BASEDIR)/src/Docs/doc.bib
 .PHONY: compile
 compile: manual.pdf
 
-manual.pdf : manual.tex all.bib doc.bib
+manual.pdf : manual.tex all.bib doc.bib Figs
 	latexmk -pdf -pdflatex="pdflatex -halt-on-error" -use-make manual.tex
 #	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make manual.tex
 

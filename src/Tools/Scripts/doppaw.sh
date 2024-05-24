@@ -4,7 +4,7 @@
 ####    parameters to be set by the user:
 ####
 ##     default for the number of nodes to be used. overwritten with option -n
-export NNODES=4
+export NNODES=10
 ##
 ##     paw executable for parallel computatiuon. Can be left as is if found
 export PARCODE=$(which ppaw_fast.x)

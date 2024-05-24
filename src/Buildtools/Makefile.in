@@ -318,7 +318,8 @@ includes :
              exit 1 ;\
            fi; \
            if [[ ! $$Y -nt $$X ]] ; then \
-             cp $$X $$Y ;\
+             rm $$Y ;\
+             ln -s $$X $$Y ;\
            fi ; \
         done 
 
