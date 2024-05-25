@@ -301,6 +301,16 @@ for X in ${LIBS} ; do
   fi
 done
 
+#  check whether commandline tools are installed on MacOS
+
+if [[ $OS = Darwin ]] ; then
+  if [[ -n $(xcode-select -p | grep -oE error) ]] ; then
+    echo "error in $0: command-line-tools of Xcode not installed"
+    echo "install command-line tools of Xcode"
+    exit 1
+  fi
+fi
+
 #-------------------------------------------------------------------------------
 # INCLUDES
 #-------------------------------------------------------------------------------

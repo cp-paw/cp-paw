@@ -175,31 +175,6 @@ if [[ -n $(which pkg-config) ]] ; then
   done
 fi
 
-VERBOSE=true
-if [[ $VERBOSE = true ]] ; then
-  echo OS=$OS
-  echo SELECT=$SELECT
-  echo PARALLEL=$PARALLEL
-  echo FC=$FC
-  echo LD=$LD
-  echo FFLAGS=$FFLAGS
-  echo LDLAGS=$LDFLAGS
-  echo LIBS=$LIBS
-  echo INCLUDES=$INCLUDES
-fi
-
-# if [[ $OS = Darwin ]]; then
-#   LDFLAGS="-framework accelerate"
-#   LIBS="-L/opt/homebrew/lib -lfftw3 \
-#         -L/opt/homebrew/lib -lxcf03 \
-#         -L/opt/homebrew/lib -lmpi"
-#   INCLUDES="/opt/homebrew/include/fftw3.f03 \
-#             /opt/homebrew/include/xc_f03_lib_m.mod \
-#             /opt/homebrew/include/mpi_f08.mod"
-# else
-#    echo "this parmfile works only for macOS (Darwin)"
-# fi
-
 ################################################################################
 ## resolve selection 
 ################################################################################

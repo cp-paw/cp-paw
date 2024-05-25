@@ -1,0 +1,25 @@
+#!/bin/bash
+export THISDIR=$(pwd)
+#
+#-------------------------------------------------------------------------------
+#--  install cp-paw package                                                   --
+#-------------------------------------------------------------------------------
+#  -c choice
+#  -f parmfile
+#  -s suffix (this parameter overwrites the value given by the parmfile)
+#  -v verbose
+#-------------------------------------------------------------------------------
+echo "======================== building dbg  =========== ======================"
+src/Buildtools/paw_build.sh -v -c dbg           # 1>out_dbg 2>&1
+echo "======================== building fast========= ========================="
+src/Buildtools/paw_build.sh -v -c fast          # 1>out_fast 2>&1
+echo "======================== building fast_parallel ========================="
+src/Buildtools/paw_build.sh -v -c fast_parallel # 1>out_fastp 2>&1
+#
+#
+echo "ensure that the following lines are in your profile (e.g. ~/.profile, ~/.bashrc, ~/.zprofile, or similar):"
+echo " "
+echo "export PAWDIR=$(pwd)"
+echo "export PATH=\${PAWDIR}/bin/fast:\${PAWDIR}/bin/fast_parallel:\${PAWDIR}/bin/dbg:\${PATH}"
+echo " "
+#

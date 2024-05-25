@@ -514,29 +514,27 @@ Place the distribution into some directory, which I will call in the
 following your base-directory of the cppaw distribution. In this
 distribution you should see the following with \verb|ls|.
 \begin{verbatim}
-src README LICENSE
+LICENSE paw_install README src 
 \end{verbatim}
 
 %==========================================================================
 \subsection{Try your luck}
 %==========================================================================
-You can try your luck and install cppaw out of the box with the
-following command on the command line.
+You can try your luck and install cppaw out of the box. Just execute
+the following command on the command line from within the base
+directory of the cppaw distribution.
 \begin{verbatim}
-src/Buildtools/paw_build.sh -c fast
-\end{verbatim}
-This relies on defaults that are collected in a parameter file, which
-will be adjusted over time to further environments.  If the command
-above reports an error, proceed to the next section, which is entitled
-``Adjust the parameter file''.
-
-If you are lucky and the command above worked, go ahead and produce
-the parallel executable with
-\begin{verbatim}
-src/Buildtools/paw_build.sh -c fast_parallel
+./paw_install
 \end{verbatim}
 
-If successful, test the success with the following commands. 
+The command relies on defaults collected in a parameter file. Within
+certain limitations, the parmfile explores the environment it runs on
+and collects a suitable set of parameters.  If the command above
+reports an error, proceed to the next section entitled ``Adjust the
+parameter file''.
+
+If you have been lucky and the install command above worked, test the
+success with the following commands.
 \begin{verbatim}
 ls bin/fast_parallel/ppaw_fast
 ls bin/fast/paw_fast
@@ -547,13 +545,18 @@ ls doc/manual.pdf
 If none of the commands complains ``No such file or directory''. The
 installation is probably ok. 
 
+Finally, open the manual \verb|doc/manual.pdf| to find further
+information.
+
+
+
 %==========================================================================
 \subsection{Adjust the parameter file}
 %==========================================================================
 If the installation with the current defaults did not work, you need
 to adjust the parameter file. First,  make a copy of
-current default parameter file, for example in the base directory. I
-assume that this is still your current directory.
+current default parameter file, for example in the base directory. (I
+assume that this is still your current directory.)
 \begin{center}
 cp src/Buildtools/defaultsparmfile ./parmfile
 \end{center}
@@ -568,10 +571,9 @@ selection.
 src/Buildtools/paw\_build.sh -c my\_fast -f parmfile
 \end{center}
 
-This is the point, where you either know how to proceed, or you need
-to ask for help. This is why I do not elaborate on the installation at
-this point.
-
+This is the point, from which you either know how to proceed, or you
+need to ask for help. This is why I do not elaborate on the
+installation at this point.
 
 %==========================================================================
 \subsection{Version control}
