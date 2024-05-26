@@ -37,22 +37,6 @@ clean :
 	latexmk -c
 
 ################################################################################
-##                     copy source files from BASEDIR                         ##
-################################################################################
-manual.tex : $(BASEDIR)/src/Docs/manual.tex
-	cp $< $@
-
-Figs : $(BASEDIR)/src/Docs/Figs
-	if [[ ! -d Figs ]] ; then mkdir Figs ; fi
-	cp -r $< ./
-
-all.bib: $(BASEDIR)/src/Docs/all.bib
-	cp $< $@
-
-doc.bib: $(BASEDIR)/src/Docs/doc.bib
-	cp $< $@
-
-################################################################################
 ##                      compile                                              ##
 ################################################################################
 .PHONY: compile

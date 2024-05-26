@@ -430,8 +430,19 @@ CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
+
 ################################################################################
-##     write parms.in_use
+##     fill build directory
+################################################################################
+${BASEDIR}/src/Buildtools/paw_mkbuilddir.sh -i ${BASEDIR} -o${BUILDDIR}
+RC=$?
+if [[ ${RC} -ne 0 ]] ; then 
+  echo "error in $0: paw_mkbuilddir.sh returned with error code ${RC}"
+  exit 1
+fi
+
+################################################################################
+##     write parms.in_use to ${BUILDDIR}/etc/
 ################################################################################
 export LIST="SUFFIX PARALLEL\
              MAKE AR CPP FC LD\
@@ -459,6 +470,7 @@ rm -f $TMP
 ##     construct documentation
 ################################################################################
 export MOPTS="-j 10"
+#export MOPTS="-j 1 --debug=b"
 #export MOPTS=""
 
 export PARMLIST="DOCDIR BASEDIR"
@@ -493,8 +505,6 @@ done
 sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/Makefile.in > ${BUILDDIR}/Makefile
 rm -f ${SEDCOMMANDS}
 
-#emacs ${BUILDDIR}/Makefile
-
 # two calls to make are required because the first call constructs an 
 # intermediate make file that considers module files
 echo ".............................................................make prepare"
@@ -505,6 +515,16 @@ if [[ $RC -ne 0 ]] ; then
   exit 1
 fi
 echo ".............................................................made prepare"
+
+echo ".......................................................xx....make big.mk"
+(cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f big.mk)
+RC=$?
+if [[ $RC -ne 0 ]] ; then 
+  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
+  exit 1
+fi
+echo "........................................................xx...made big.mk"
+
 
 if [[ ${PARALLEL} = true ]] ; then
   echo "....................................................... make executable"
