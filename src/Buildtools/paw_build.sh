@@ -57,8 +57,7 @@ done
 
 if [[ -z ${PARMFILE} ]] ; then
   PARMFILE=${THISDIR}/src/Buildtools/defaultparmfile
-  echo "Warning from $0: no parmfile specified, setting default"
-  echo "default parmfile= ${PARMFILE}"
+  echo "Using default parmfile ${PARMFILE}"
 fi
 
 if [[ ! -f ${PARMFILE} ]] ; then

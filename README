@@ -1,7 +1,9 @@
 CP-PAW code package
 ====================
 
-See https://cppaw.org for further information
+See https://cppaw.org for further information (Currently, the
+description on https://cppaw.org refers to a release and does not
+apply to the present implementation.)
 
 
 Configuration and Installation instructions
@@ -27,18 +29,18 @@ For the tools, we also use xmgrace, gnuplot, avogadro1
   ~/.profile)
 
 export PAWDIR="path to your cppaw distribution"
-export PATH=${PAWDIR}/bin/fast:${PAWDIR}/bin/fast_parallel:${PATH}
+export PATH=${PAWDIR}/bin/fast:${PAWDIR}/bin/fast_parallel:${PAWDIR}/bin/dbg:${PATH}
 
 - enter the cppaw directory and type
 
-src/Buildtools/paw_build.sh -c fast 
-src/Buildtools/paw_build.sh -c fast_parallel
+./paw_install
 
 - if this does not work, make a copy of the default parmfile
 
-cp src/Buildtools/defaultsparmfile ./parmfile
+cp src/Buildtools/defaultparmfile ./parmfile
 
-edit it and  
+After editing the parmfile open paw\_install and add "-f parmfile" as
+argumnent for paw_build.sh, such as
 
 src/Buildtools/paw_build.sh -f parmfile -c fast 
 src/Buildtools/paw_build.sh -f parmfile -c fast_parallel
