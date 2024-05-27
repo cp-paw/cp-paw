@@ -26,10 +26,9 @@
 !*******************************************************************************
 !*******************************************************************************
 !****         
+!****     FFTW3 IS THE DEFAULT    
 !****     CPPVAR_BLAS_ESSL          
 !****     CPPVAR_FFT_ESSL           
-!****     CPPVAR_FFT_FFTW           
-!****     CPPVAR_FFT_FFTW3          
 !****     CPPVAR_FFT_ACML           
 !****     CPPVAR_FFT_PACK           
 !****                               
@@ -2418,17 +2417,12 @@
 !     **************************************************************************
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-      CALL LIB_FFTW(DIR,LEN,NFFT,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_FFTW3)
-      CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
       CALL LIB_ACML_FFT1DC8(DIR,LEN,NFFT,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_PACK)
       CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
 #ELSE
-      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
-      CALL ERROR$STOP('LIB$FFTC8')
+      CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
 #ENDIF
 
       RETURN
@@ -2452,17 +2446,12 @@
 !     **************************************************************************
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-      CALL LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
-#ELIF DEFINED(CPPVAR_FFT_FFTW3)
-      CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
       CALL LIB_ACML_FFT3DC8(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_PACK)
       CALL LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
 #ELSE
-      CALL ERROR$MSG('NO FFT PACKAGE SELECTED DURING COMPILATION')
-      CALL ERROR$STOP('LIB$3DFFTC8')
+      CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
 #ENDIF
       RETURN
       END
@@ -2632,196 +2621,7 @@
       END IF
       RETURN
       END
-#ELIF DEFINED(CPPVAR_FFT_FFTW)
-!
-!*******************************************************************************
-!*******************************************************************************
-!****                                                                       ****
-!****  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE FFTW PACKAGE     ****
-!****                                                                       ****
-!*******************************************************************************
-!*******************************************************************************
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE LIB_FFTW(DIR,LEN,NFFT,X,Y)                  
-!     **************************************************************************
-!     **  1-D FFT                                                             **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
-!     **                                                                      **
-!     **  PACKAGES THE ESSL ROUTINE DCFT                                      **
-!     **  REMARK: X AND Y MAY BE IDENTICAL ARRAYS                             **
-!     **                                                                      **
-!     **************************************************************************
-      IMPLICIT NONE
-      CHARACTER(*),INTENT(IN) :: DIR !'GTOR' OR 'RTOG'
-      INTEGER(4)  ,INTENT(IN) :: LEN
-      INTEGER(4)  ,INTENT(IN) :: NFFT
-      COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
-      COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
-      CHARACTER(4),SAVE       :: DIRSAVE=' '
-      INTEGER(4)  ,SAVE       :: LENSAVE=0
-      INTEGER     ,SAVE       :: ISIGN
-      REAL(8)     ,SAVE       :: SCALE
-      COMPLEX(8)              :: XDUMMY(LEN,NFFT)
-      INTEGER(4)              :: I
-      INTEGER(4),SAVE         :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10 ! #(DIFFERENT FFT PLANS)
-      INTEGER(8),SAVE         :: PLANS(NPX,2),PLAN=-1
-      LOGICAL                 :: DEF
-      INCLUDE 'FFTW_F77.I' ! FILENAME MADE LOWERCASE BY F90PP 
-!     ***********  FFTW_F77.I *******************************************
-!     THIS FILE CONTAINS PARAMETER STATEMENTS FOR VARIOUS CONSTANTS
-!     THAT CAN BE PASSED TO FFTW ROUTINES.  YOU SHOULD INCLUDE
-!     THIS FILE IN ANY FORTRAN PROGRAM THAT CALLS THE FFTW_F77
-!     ROUTINES (EITHER DIRECTLY OR WITH AN #INCLUDE STATEMENT
-!     IF YOU USE THE C PREPROCESSOR).
-!      INTEGER,PARAMETER :: FFTW_FORWARD=-1 ! SIGN IN THE EXPONENT OF THE FORWARD FT
-!      INTEGER,PARAMETER :: FFTW_BACKWARD=1 ! SIGN IN THE EXPONENT OF THE BACKWARD FT
-!      INTEGER,PARAMETER :: FFTW_REAL_TO_COMPLEX=-1
-!      INTEGER,PARAMETER :: FFTW_COMPLEX_TO_REAL=1
-!      INTEGER,PARAMETER :: FFTW_ESTIMATE=0
-!      INTEGER,PARAMETER :: FFTW_MEASURE=1
-!      INTEGER,PARAMETER :: FFTW_OUT_OF_PLACE=0
-!      INTEGER,PARAMETER :: FFTW_IN_PLACE=8
-!      INTEGER,PARAMETER :: FFTW_USE_WISDOM=16
-!      INTEGER,PARAMETER :: FFTW_THREADSAFE=128
-!     CONSTANTS FOR THE MPI WRAPPERS:
-!      INTEGER,PARAMETER :: FFTW_TRANSPOSED_ORDER=1
-!      INTEGER,PARAMETER :: FFTW_NORMAL_ORDER=0
-!      INTEGER,PARAMETER :: FFTW_SCRAMBLED_INPUT=8192
-!      INTEGER,PARAMETER :: FFTW_SCRAMBLED_OUTPUT=16384
-!     **************************************************************************
-!
-!     ==========================================================================
-!     ==  INITIALIZE FFT                                                      ==
-!     ==========================================================================
-      IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
-        IF (DIR.EQ.'GTOR') THEN
-          ISIGN=1
-        ELSE IF (DIR.EQ.'RTOG') THEN
-          ISIGN=-1
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('1D-FFTW')
-        END IF
-!
-!       == FIND PLAN IN THE LIST ===============================================
-        DEF=.FALSE.
-        DO I=1,NP
-          IF((LEN*ISIGN).EQ.PLANS(I,1)) THEN
-            DEF=.TRUE.
-            PLAN=PLANS(I,2)
-            EXIT
-          END IF
-        END DO
-!
-!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
-        IF(.NOT.DEF) THEN
-          WRITE(*,*) 'LIB_FFTW: CREATE PLAN FOR: ',TRIM(DIR),ISIGN,LEN,NP
-          NP=NP+1
-          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
-!         CALL FFTW_F77_CREATE_PLAN(PLAN,LEN,FFTW_FORWARD,FFTW_MEASURE)
-          CALL FFTW_F77_CREATE_PLAN(PLANS(NP,2),LEN,ISIGN,FFTW_MEASURE)
-          PLANS(NP,1)=ISIGN*LEN
-          PLAN=PLANS(NP,2)
-        END IF
-        LENSAVE=LEN
-        DIRSAVE=DIR
-        SCALE=1.D0/REAL(LEN,KIND=8)
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW PERFORM FFT                                                     ==
-!     ==========================================================================
-      XDUMMY=X
-      CALL FFTW_F77(PLAN,NFFT,XDUMMY(1,1),1,LEN,Y(1,1),1,LEN)
-      IF (DIR.EQ.'RTOG') THEN
-        Y(:,:)=Y(:,:)*SCALE
-      END IF
-      RETURN
-      END
-!
-!     ..........................................................................
-      SUBROUTINE LIB_3DFFTW(DIR,N1,N2,N3,X,Y)
-!     **************************************************************************
-!     **  3-D FFT                                                             **
-!     **    DIR='GTOR' => Y(R)=     SUM_G X(G) EXP( I*G*R)                    **
-!     **    DIR='RTOG' => Y(G)=1/NR SUM_R X(R) EXP(-I*G*R)                    **
-!     **                                                                      **
-!     **    USES THE 3D FFTW ROUTINES                                         **
-!     **                                        CLEMENS FOERST, 2001          **
-!     **************************************************************************
-      IMPLICIT NONE
-      CHARACTER(4)            :: DIR
-      INTEGER                 :: DIM(3)
-      INTEGER(4)              :: N1,N2,N3
-      COMPLEX(8)              :: X(N1,N2,N3)
-      COMPLEX(8)              :: Y(N1,N2,N3)
-      INTEGER(4)  ,SAVE       :: NP=0
-      INTEGER(4),PARAMETER    :: NPX=10
-      INTEGER(8)              :: PLAN
-      INTEGER(8)  ,SAVE       :: PLANS(NPX,4)
-      REAL(8)     ,SAVE       :: SCALE
-      INTEGER     ,SAVE       :: DIMSAVE(3)=0
-      CHARACTER(4),SAVE       :: DIRSAVE=' '
-      LOGICAL                 :: DEF
-      INTEGER(4)              :: I
-      INTEGER     ,SAVE       :: ISIGN
-      INCLUDE 'FFTW_F77.I'
-!     **************************************************************************
-      DIM(1)=N1
-      DIM(2)=N2
-      DIM(3)=N3
-      IF(DIM(1).NE.DIMSAVE(1).OR.DIM(2).NE.DIMSAVE(2).OR. &
-     &  DIM(3).NE.DIMSAVE(3).OR.DIR.NE.DIRSAVE) THEN
-        IF (DIR.EQ.'GTOR') THEN
-          ISIGN=1
-        ELSE IF (DIR.EQ.'RTOG') THEN
-          ISIGN=-1
-        ELSE
-          CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
-          CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
-          CALL ERROR$CHVAL('DIR',TRIM(DIR))
-          CALL ERROR$STOP('3D-FFTW')
-        END IF
-!
-!       == FIND PLAN IN THE LIST
-        DEF=.FALSE.
-        DO I=1,NP
-          IF((DIM(1)*ISIGN).EQ.PLANS(I,1).AND.(DIM(2)*ISIGN).EQ.PLANS(I,2)&
-     &                     .AND.(DIM(3)*ISIGN).EQ.PLANS(I,3)) THEN
-            DEF=.TRUE.
-            PLAN=PLANS(I,4)
-            EXIT
-          END IF
-        END DO
-!
-!       == CREATE NEW PLAN IF NOT IN THE LIST ==================================
-        IF(.NOT.DEF) THEN
-          WRITE(*,*) '3D-FFTW CREATE PLAN FOR: ', ISIGN,DIM
-          NP=NP+1
-          IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
-          CALL FFTWND_F77_CREATE_PLAN(PLAN,3,DIM,ISIGN,FFTW_ESTIMATE)
-          PLANS(NP,1:3)=ISIGN*DIM
-          PLANS(NP,4)=PLAN
-        END IF
-        DIMSAVE=DIM
-        DIRSAVE=DIR
-        IF(DIR.EQ.'RTOG') SCALE=1.D0/REAL(N1*N2*N3,KIND=8)
-      END IF
-!
-!     ==========================================================================
-!     ==  NOW PERFORM FFT                                                     ==
-!     ==========================================================================
-      CALL FFTWND_F77_ONE(PLAN,X,Y)
-      IF (DIR.EQ.'RTOG') Y=Y*SCALE
-      RETURN
-      END
 #ENDIF
-#IF DEFINED(CPPVAR_FFT_FFTW3)
 !
 !*******************************************************************************
 !**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE FFTW3 PACKAGE        **
@@ -2974,7 +2774,6 @@
       END IF
       RETURN
       END
-#ENDIF
 !
 !*******************************************************************************
 !**  DRIVER ROUTINES FOR THE FOURIER TRANSFORMS FROM THE                      **
@@ -3263,8 +3062,6 @@
       RETURN
       END
 #ENDIF
-
-
 !
 !     .................................................................
       SUBROUTINE LIB$GETUSAGE(ID,VALUE)

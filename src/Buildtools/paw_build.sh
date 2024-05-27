@@ -23,6 +23,7 @@ USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -c choice\n"
 USAGE="$USAGE \t -f parmfile \n"
 USAGE="$USAGE \t -s suffix \n"
+USAGE="$USAGE \t -j jobs (jobs=nr parallel jobs. default 10)  \n"
 USAGE="$USAGE \t -v verbose (false)\n"
 USAGE="$USAGE \t -h prints this help message\n"
 USAGE="$USAGE \n"
@@ -36,11 +37,13 @@ export SELECT=
 export SUFFIX=
 export VERBOSE=false
 export PARALLEL=false
-while getopts :c:f:s:vh OPT ; do
+export JOBS=10
+while getopts :c:f:s:j:vh OPT ; do
   case $OPT in
     c) SELECT=$OPTARG ;;
     f) PARMFILE=$OPTARG ;;
     s) SUFFIX=$OPTARG ;;
+    j) JOBS=$OPTARG ;;
     v) VERBOSE=true ;;
     h) echo -e $USAGE ; exit 0  ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
@@ -433,7 +436,7 @@ LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 ################################################################################
 ##     fill build directory
 ################################################################################
-${BASEDIR}/src/Buildtools/paw_mkbuilddir.sh -i ${BASEDIR} -o${BUILDDIR}
+${BASEDIR}/src/Buildtools/paw_mkbuilddir.sh -b ${BASEDIR} -o${BUILDDIR} -i "$INCLUDES"
 RC=$?
 if [[ ${RC} -ne 0 ]] ; then 
   echo "error in $0: paw_mkbuilddir.sh returned with error code ${RC}"
@@ -468,9 +471,8 @@ rm -f $TMP
 ################################################################################
 ##     construct documentation
 ################################################################################
-export MOPTS="-j 10"
-#export MOPTS="-j 1 --debug=b"
-#export MOPTS=""
+export MOPTS="-j ${JOBS}"
+#export MOPTS="-j ${JOBS} --debug=b"
 
 export PARMLIST="DOCDIR BASEDIR"
 export SEDCOMMANDS=$(mktemp)
@@ -515,35 +517,24 @@ if [[ $RC -ne 0 ]] ; then
 fi
 echo ".............................................................made prepare"
 
-echo ".......................................................xx....make big.mk"
+echo "..............................................................make big.mk"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f big.mk)
 RC=$?
 if [[ $RC -ne 0 ]] ; then 
   echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
   exit 1
 fi
-echo "........................................................xx...made big.mk"
+echo "..............................................................made big.mk"
 
 
-if [[ ${PARALLEL} = true ]] ; then
-  echo "....................................................... make executable"
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} executable)
-  RC=$?
-  if [[ $RC -ne 0 ]] ; then 
-    echo "error in $0: make executable in BUILDDIR exited with RC=$RC"
-    exit 1
-  fi
-  echo " .......................................................made executable"
-elif [[ ${PARALLEL} = false ]] ; then
-  echo "...............................................................make all"
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  all)
-  RC=$?
-  if [[ $RC -ne 0 ]] ; then 
-    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
-    exit 1
-  fi
-  echo " ..............................................................made all"
+echo ".................................................................make all"
+(cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  all)
+RC=$?
+if [[ $RC -ne 0 ]] ; then 
+  echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+  exit 1
 fi
+echo " ................................................................made all"
 
 ################################################################################
 ##     install
@@ -559,28 +550,24 @@ sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makeinstall.in > ${BUILDDIR}/insta
 rm -f ${SEDCOMMANDS}
 
 echo "............................................................make install"
-if [[ $PARALLEL = false ]] ; then
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk all)
-  RC=$?
-  if [[ $RC -ne 0 ]] ; then 
-    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
-    exit 1
-  fi
-elif [[ $PARALLEL = true ]] ; then
-  (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk executable)
-  RC=$?
-  if [[ $RC -ne 0 ]] ; then 
-    echo "error in $0: make all in BUILDDIR exited with RC=$RC"
-    exit 1
-  fi
+(cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk all)
+RC=$?
+if [[ $RC -ne 0 ]] ; then 
+  echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+  exit 1
 fi
-echo "................................................installation finished"
+echo ".............................................................made install"
+
+
 if [[ ${PARALLEL} = true && $(uname -s) = Darwin ]] ; then
   echo "...........................................................code signing"
   ${BASEDIR}/src/Buildtools/Codesign/paw_codesign.sh ${BINDIR}/ppaw_${SUFFIX}.x
   echo "...........................................................code signed"
 fi
-echo "cppaw installed in ${BINDIR}:"
+echo "-------------------------------------------------------------------------"
+echo "-----------------------cppaw installed in ${BINDIR}----------------------"
+echo "-------------------------------------------------------------------------"
+
 # echo "files in ${BINDIR}:"
 # ls ${BINDIR}
 # echo "files in ${BINDIR}/include:"

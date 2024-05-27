@@ -13,8 +13,9 @@ USAGE="$USAGE \t paw_mkbbuilddir.sh options \n"
 USAGE="$USAGE installation script for the cppaw package\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options \n"
-USAGE="$USAGE \t -i cppaw base directory\n"
+USAGE="$USAGE \t -b cppaw base directory\n"
 USAGE="$USAGE \t -o build directory\n"
+USAGE="$USAGE \t -i list of include files in a single string\n"
 USAGE="$USAGE \t -v verbose (false)\n"
 USAGE="$USAGE \t -h prints this help message\n"
 USAGE="$USAGE \n"
@@ -25,9 +26,11 @@ USAGE="$USAGE \n"
 export VERBOSE=false
 export BUILDDIR=
 export BASEDIR=
-while getopts :i:o:vh OPT ; do
+export INCLUDES=
+while getopts :b:i:o:vh OPT ; do
   case $OPT in
-    i) BASEDIR=$OPTARG ;;
+    b) BASEDIR=$OPTARG ;;
+    i) INCLUDES=$OPTARG ;;
     o) BUILDDIR=$OPTARG ;;
     v) VERBOSE=true ;;
     h) echo -e $USAGE ; exit 0  ;;
@@ -65,6 +68,16 @@ fi
 if [[ ! -d ${BUILDDIR} ]]     ; then mkdir ${BUILDDIR} ; fi
 if [[ ! -d ${BUILDDIR}/etc ]] ; then mkdir ${BUILDDIR}/etc ; fi
 if [[ ! -d ${BUILDDIR}/doc ]] ; then mkdir ${BUILDDIR}/doc ; fi
+
+#-------------------------------------------------------------------------------
+#-- include files
+#-------------------------------------------------------------------------------
+for X in ${INCLUDES}; do
+   SOURCE=${X}
+   TARGET=${BUILDDIR}/${X##*/}
+   ln -sf ${SOURCE} ${TARGET}
+   touch -hr ${SOURCE} ${TARGET}
+done
 
 #-------------------------------------------------------------------------------
 #-- administration codes

@@ -75,8 +75,6 @@ executable : $(BINDIR)/$(PAWX) $(basename $(BINDIR)/$(PAWX))
 ${BINDIR}/$(PAWX): paw.x
 	cp $< $@
 
-ifeq ($(PARALLEL),false)
-
 #___install tools_______________________________________________________________
 .PHONY: tools
 tools : $(addprefix $(BINDIR)/, $(TOOLS)) \
@@ -85,6 +83,7 @@ tools : $(addprefix $(BINDIR)/, $(TOOLS)) \
 $(addprefix $(BINDIR)/, $(TOOLS)) : $(BINDIR)/%.x : %.x
 	cp $< $@
 
+#___install scripts_____________________________________________________________
 .PHONY: scripts
 scripts: $(addprefix $(BINDIR)/, $(SCRIPTS)) \
          $(basename $(addprefix $(BINDIR)/, $(SCRIPTS)))
@@ -92,11 +91,13 @@ scripts: $(addprefix $(BINDIR)/, $(SCRIPTS)) \
 $(addprefix $(BINDIR)/, $(wildcard *.sh)): $(BINDIR)/% : $(basename %)
 	cp $< $@
 
-
 #___install library_____________________________________________________________
 .PHONY: library
-library: $(BINDIR)/libpaw.a
+library: $(BINDIR)/libpaw.a $(BINDIR)/libpawfull.a
 $(BINDIR)/libpaw.a: libpaw.a
+	cp $< $@
+
+$(BINDIR)/libpawfull.a: libpawfull.a
 	cp $< $@
 
 #___install module files________________________________________________________
@@ -105,8 +106,6 @@ modules: $(addprefix $(BINDIR)/include/, $(MODLIST))
 
 $(addprefix $(BINDIR)/include/,$(MODLIST)) : $(BINDIR)/include/%.mod : %.mod
 	cp $< $@
-
-endif
 
 #-------------------------------------------------------------------------------
 #-- set symbolic links to names without extension (.x,.sh)

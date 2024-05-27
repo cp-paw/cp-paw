@@ -84,7 +84,7 @@ export LDFLAGS=@LDFLAGS@
 #_____________________________libraries_________________________________________
 export LIBS=@LIBS@
 #_____________________________include and module files__________________________
-export INCLUDES=@INCLUDES@
+#export INCLUDES=@INCLUDES@
 #_____________________________include and module files__________________________
 export BASEDIR=@BASEDIR@
 #
@@ -119,6 +119,9 @@ export LIBLIST= \
         paw_timing \
         paw_linkedlist \
         paw_strings \
+        paw_classical \
+        paw_forcefield \
+        paw_qmmm \
         paw_dft \
         paw_dftaddendum \
         paw_constants \
@@ -162,15 +165,12 @@ export PAWLIST= \
         paw_fft \
         paw_augmentation \
         paw_softcore \
-        paw_classical \
-        paw_forcefield \
         paw_atoms \
         paw \
         paw_efg \
         paw_ioroutines \
         paw_iotra \
         paw_ionew \
-        paw_qmmm \
         paw_cosmo \
         paw_warmup \
         paw_optfric \
@@ -257,7 +257,7 @@ all: executable libs tools scripts
 #________________construct makefile for compilation
 #________________construct prepare some object files
 .PHONY: prepare
-prepare: $(addsuffix .f90, $(BIGLIST)) big.mk includes \
+prepare: $(addsuffix .f90, $(BIGLIST)) big.mk \
          cppaw_version.info version_writeparmfile.o paw_srcblob.o
 
 .PHONY: executable
@@ -272,22 +272,22 @@ scripts: $(SCRIPTS)
 .PHONY: libs
 libs: libpaw.a libpawfull.a
 
-##########################################################################
-##  Include files (module files etc)                                  
-##########################################################################
-.PHONY: includes
-includes : 
-	for X in $(INCLUDES) ; do \
-           Y=$${X##*/} ;\
-           if [[ ! -f $$X ]] ; then \
-             echo "file $$X does not exist" ;\
-             exit 1 ;\
-           fi; \
-           if [[ ! $$Y -nt $$X ]] ; then \
-             rm $$Y ;\
-             ln -s $$X $$Y ;\
-           fi ; \
-        done 
+# ##########################################################################
+# ##  Include files (module files etc)                                  
+# ##########################################################################
+# .PHONY: includes
+# includes : 
+# 	for X in $(INCLUDES) ; do \
+#            Y=$${X##*/} ;\
+#            if [[ ! -f $$X ]] ; then \
+#              echo "file $$X does not exist" ;\
+#              exit 1 ;\
+#            fi; \
+#            if [[ ! $$Y -nt $$X ]] ; then \
+#              rm $$Y ;\
+#              ln -s $$X $$Y ;\
+#            fi ; \
+#         done 
 
 ################################################################################
 #
@@ -410,13 +410,6 @@ endif
 #   3) combine individual make files to big.mk 
 #   4) use big.mk to build all object files .o
 ################################################################################
-# $(DFLIST) : %_d.f90 : $(BASEDIR)/src/%.f90 $(F90PP) $(BASEDIR)/src/*/%.f90 $(F90PP) 
-# 	$(F90PP) $(CPPFLAGS) < $< > $@
-
-$(info DFLIST=$DFLIST)
-
-$(info DFTOOLS=$DFTOOLS)
-
 #__ implicit rule for running fortran preprocessor______________________________
 %.f90 : %.f90pp $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > $@
@@ -446,16 +439,16 @@ big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 $(OLIST) : objects
 
 .PHONY: objects
-objects :  $(addsuffix .f90pp , $(BIGLIST)) \
-           big.mk cppaw_version.info includes
+objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info 
 	echo "doing big.mk....................................................."
 	$(MAKE) -f big.mk
 	echo "..................................................... big.mk done"
 #
 #____general rule for object files fortran 77___________________________________
 #____use gmake string substitution $(var:suffix=replacement)
+
 slatec.o: slatec.f 
-	$(FC) -c $(FFLAGS:-fimplicit-none=) -o $@ $<
+	$(FC) -c $(FFLAGS:-fimplicit-none=) -fall-intrinsics -o $@ $<
 
 ################################################################################
 #  build executables
@@ -472,8 +465,6 @@ slatec.o: slatec.f
 export ARGLIST=$(addsuffix .o, $(PAWLIST) $(LIBLIST) slatec) \
                paw_srcblob.o version_writeparmfile.o
 
-$(info ARGLIST=$(ARGLIST))
-
 paw.x : $(ARGLIST) 
 	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} ${LIBS}
 
@@ -482,16 +473,22 @@ paw.x : $(ARGLIST)
 #-------------------------------------------------------------------------------
 $(info TOOLS.x= $(addsuffix .x, $(TOOLS)))
 
-$(addsuffix .x, $(TOOLS)) : %.x : %.o libpaw.a
+paw_bands.x : %.x : %.o libpawfull.a 
+	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
+
+$(info toolswobands=$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))))
+
+$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpaw $<  
 
 #-------------------------------------------------------------------------------
 #  construct paw library libpaw.a (or libppaw.a)
 #  --  use "ppaw" instead of "paw" to identify parallel version
 #-------------------------------------------------------------------------------
-libpaw.a: $(addsuffix .o, $(LIBLIST)) version_writeparmfile.o paw_version.o
+libpaw.a: $(addsuffix .o, $(LIBLIST)) slatec.o version_writeparmfile.o \
+                                               paw_version.o
 	$(AR) cru libpaw.a $(addsuffix .o, $(LIBLIST)) \
-                           slatec.o version_writeparmfile.o
+                           slatec.o version_writeparmfile.o paw_version.o
 
 #-------------------------------------------------------------------------------
 ##  build full paw library and optionally exclude objects              ##
@@ -502,14 +499,11 @@ libpaw.a: $(addsuffix .o, $(LIBLIST)) version_writeparmfile.o paw_version.o
 ##  main program.                                                      ##
 ##  This library can then be linked to a main program, like libpaw.a   ##
 #-------------------------------------------------------------------------------
-EXCLUDE="paw.o $(addsuffix .o, $(TOOLS))"
-libpawfull.a: ${OLIST} slatec.o \
+export EXCLUDE="paw.o $(addsuffix .o, $(TOOLS))"
+
+libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
-	$(AR) cru libpawfull.a $(OLIST) paw_srcblob.o \
-                               slatec.o paw_mpelib.o version_writeparmfile.o
-	echo EXCLUDE=${EXCLUDE}
-	for EX in ${EXCLUDE}; do $(AR) -d libpawfull.a $$EX; done
-#	for EX in ${EXCLUDE}; do $(AR) -dv libpawfull.a $$EX; done
-#	ar -t libpawfull.a
+	$(AR) cru libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
+              paw_srcblob.o version_writeparmfile.o paw_version.o
 
 

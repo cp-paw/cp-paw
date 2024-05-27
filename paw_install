@@ -9,12 +9,13 @@ export THISDIR=$(pwd)
 #  -s suffix (this parameter overwrites the value given by the parmfile)
 #  -v verbose
 #-------------------------------------------------------------------------------
-echo "======================== building dbg  =========== ======================"
-src/Buildtools/paw_build.sh -v -c dbg           # 1>out_dbg 2>&1
-echo "======================== building fast========= ========================="
-src/Buildtools/paw_build.sh -v -c fast          # 1>out_fast 2>&1
+echo "======================== building dbg  =================================="
+src/Buildtools/paw_build.sh -v -j10 -c dbg   &          # 1>out_dbg 2>&1
+echo "======================== building fast==================================="
+src/Buildtools/paw_build.sh -v -j10 -c fast  &          # 1>out_fast 2>&1
 echo "======================== building fast_parallel ========================="
-src/Buildtools/paw_build.sh -v -c fast_parallel # 1>out_fastp 2>&1
+src/Buildtools/paw_build.sh -v -j10 -c fast_parallel &   # 1>out_fastp 2>&1
+wait
 #
 #
 echo "ensure that the following lines are in your profile (e.g. ~/.profile, ~/.bashrc, ~/.zprofile, or similar):"

@@ -35,14 +35,14 @@ export LD=
 #____________________________flags for the preprocessor_________________________
 #____________________________-D will be prepended_______________________________
 #____________________________variable for parallel will be added________________
-# CPPVAR_FFT_FFTW3, CPPVAR_NOLIBXC (do not link LIBXC)
+# CPPVAR_NOLIBXC (do not link LIBXC)
 # CPPVAR_FEAST, CPPVAR_JADAMILU #
 # CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
 # -C do not discard comments
 # -P inhibit generation of linemarkers
 # -traditional Try to imitate the behavior of pre-standard C preprocessors
 # -nostdinc Do not search the standard system directories for header files. 
-export CPPFLAGS="-DCPPVAR_FFT_FFTW3"
+export CPPFLAGS=
 export LDFLAGS=
 #___________________________list of include and module files____________________
 #___________________________required fftw3.f03, mpi_f08.mod, xc_f03_lib_m.mod___
