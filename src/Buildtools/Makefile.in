@@ -487,7 +487,7 @@ $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
 #-------------------------------------------------------------------------------
 libpaw.a: $(addsuffix .o, $(LIBLIST)) slatec.o version_writeparmfile.o \
                                                paw_version.o
-	$(AR) cru libpaw.a $(addsuffix .o, $(LIBLIST)) \
+	$(AR) -cru libpaw.a $(addsuffix .o, $(LIBLIST)) \
                            slatec.o version_writeparmfile.o paw_version.o
 
 #-------------------------------------------------------------------------------
@@ -503,7 +503,7 @@ export EXCLUDE="paw.o $(addsuffix .o, $(TOOLS))"
 
 libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
-	$(AR) cru libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
+	$(AR) -cru libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
 
 
