@@ -8,40 +8,43 @@
 ##                                                                            ##
 ##  Primary targets:                                                          ##
 ##    prepare, executable, tools, libs                                        ##
+##    default(=executable), all(=executable libs tools)                       ##
 ##                                                                            ##
 ##    Two calls are required:                                                 ##
 ##      1) make prepare                                                       ##
 ##      2) make target , where target may be (executable, tools, libs, all)   ##
 ##                                                                            ##
-##  directory structure                                                       ##
-##    BASEDIR  cppaw distribution
-##    BUILDDIR directory for compilation
+##  Parameters: (defined by paw_build.sh and paw_srclist.sh)                  ##
+##    the parameters are replaced by the build script                         ##
+##    AR,MAKE,CPP,FC,LD                                                       ##
+##    CPPFLAGS,FFLAGS,LDFLAGS,LIBS: flags                                     ##
+##    BASEDIR:  cppaw distribution (used to build srcblob.tgz)                ##
+##    PAWLIST,LIBLIST,ADMINLIST,TOOLLIST: lists of sources                    ##
 ##                                                                            ##
-##  directory structure of BASEDIR                                            ##
-##    src              sources for CP-PAW main code                           ##
-##    src/Tools/*/     Tools                                                  ##
-##    src/Buildtools/   preprocessor etc                                      ##
+##  Directory structure of the local directory:                               ##
+##     this make is executed in the build directory, which contains           ##
+##     symbolic links (with correct time stamps, .f90pp) of the sources       ##
+##     required.  The build directory contains the subdirectory etc           ##
+##     containing all files required for the build process. A second          ##
+##     directory doc is irrelevant for this make file.                        ##
 ##                                                                            ##
-##  a srcblob is contained in the paw exectable and the libraries             ##
-##                                                                            ##
-##  the following parameters are replaced by the build script                 ##
-##      MAKE,AR,CPP,CPPFLAGS,FC,FFLAGS,LD,LDFLAGS,LIBS,INCLUDES,BASEDIR       ##
-##                                                                            ##
+##  a srcblob is embedded in the paw exectable and the libraries             ##
 ##                                                                            ##
 ##  step0: preparation:                                                       ##
 ##      -- build-tools: f90pp, f90pp_tmplts.x, parmfilewriter.x               ##
 ##      -- objects: paw_srcblob.o,paw_version.o,version_writeparmfile.o       ##
-##      -- copy include files into build directory                            ##
 ##                                                                            ##
-##  step1: preprocessing (*_d.f90)                                            ##
+##  step1: preprocessing (.f90pp->.f90)                                       ##
 ##                                                                            ##
-##  step2: construct module dependencies: (*.mk); combine into big.mk         ##
+##  step2: construct module dependencies: (.f90->.mk)                         ##
 ##                                                                            ##
-##  step3: compile using big.mk (*.o)                                         ##
+##  step3: combine make files into big.mk  *.mk->big.mk                       ##
 ##                                                                            ##
-##  step4: link into paw.x and tools                                          ##
+##  step4: compile using big.mk (.f90,.mod -> .o,.mod)                        ##
 ##                                                                            ##
-##  stept: install                                                            ##
+##  step5: link into paw.x and tools (.o ->.x)                                ##
+##                                                                            ##
+##  step6: librarries (.o->.a)                                                ##
 ##                                                                            ##
 ################################################################################
 ##    https://aoterodelaroza.github.io/devnotes/modern-fortran-makefiles/     ##
@@ -62,8 +65,8 @@ SHELL=/bin/bash
 #____switch off implicit rules__________________________________________________
 .SUFFIXES:
 ################################################################################
-## The following block of variables is set by the configure                   ##
-## script (AC_SUBST @...@ and sed-Commands var...)                            ##
+## The following block of variables is set by the build script                ##
+## src/Buildtools/paw_build.sh                                                ##
 ################################################################################
 #___________________________ library archiver___________________________________
 export AR=@AR@
@@ -84,170 +87,42 @@ export LDFLAGS=@LDFLAGS@
 #_____________________________libraries_________________________________________
 export LIBS=@LIBS@
 #_____________________________include and module files__________________________
-#export INCLUDES=@INCLUDES@
-#_____________________________include and module files__________________________
 export BASEDIR=@BASEDIR@
-#_________________________________
+#_____________________________codes for simulation code not in LIBLIST__________
 export PAWLIST=@PAWLIST@
-#_________________________________
+#_____________________________codes for library libpaw.a________________________
 export LIBLIST=@LIBLIST@
-#_________________________________
+#_____________________________used for installation process (goes to etc)_______
 export ADMIN=$(notdir @ADMINLIST@)
-#_________________________________
-export DIRTOOLS=@TOOLLIST@
-#_________________________________
-#################  derived variables  ##########################################
-
+#_____________________________codes for tools___________________________________
+export TOOLS=$(notdir @TOOLLIST@)
 #
 ################################################################################
-##  Construct lists of source files                                           ##
+##  Report lists of source files                                              ##
 ##  the source codes are divided into groups                                  ##
-##      admin: Buildtools/F90/f90pp_tmplts.f90                                ##
-##             Buildtools/F90/parmfilewriter.f90                              ##
-##             version_writeparmfile (made on the fly)                        ##
-##      library: FLIBLIST, slatec.f, paw_version.f90                          ##
-##      tools:   FTOOLS                                                       ##
-##      main:    FLIST                                                        ##
+##      ADMIN, LIBLIST, PAWLIST, TOOLS 
 ################################################################################
-
-#  slatec.f is a library written in Fortran77, which shall be removed
-#  in future versions of the code. As F77 code it requires special
-#  treatment.
-
-#-------------------------------------------------------------------------------
-#-- object files derived from FLIBLIST and  will become part                  --
-#-- of the paw library libpaw.a.                                              --
-#-------------------------------------------------------------------------------
-# export LIBLIST= \
-#         paw_trace \
-#         paw_error \
-#         paw_filehandler \
-#         paw_clock \
-#         paw_lock \
-#         paw_timing \
-#         paw_linkedlist \
-#         paw_strings \
-#         paw_classical \
-#         paw_forcefield \
-#         paw_dft \
-#         paw_dftaddendum \
-#         paw_constants \
-#         paw_spherical \
-#         paw_generalpurpose \
-#         paw_report \
-#         paw_periodictable \
-#         paw_radial \
-#         paw_schroedinger \
-#         paw_atomlib \
-#         paw_specialfunctions \
-#         paw_usage \
-#         paw_selftest \
-#         paw_strcio \
-#         paw_cell \
-#         paw_pdos \
-#         paw_library \
-#         paw_polynom \
-#         paw_lmtobasics \
-#         paw_brillouin \
-#         paw_gaussian \
-#         paw_mpelib \
-#         paw_ci \
-#         paw_version 
-
-#-------------------------------------------------------------------------------
-#--  objects specific for the simulation code                                 --
-#-------------------------------------------------------------------------------
-# export PAWLIST= \
-# 	paw_driver \
-#         paw_thermostat \
-#         paw_isolate \
-#         paw_dimer  \
-#         paw_debug \
-#         paw_assist \
-#         paw_lists \
-#         paw_constraints \
-#         paw_qmmm \
-#         paw_lmto \
-#         paw_simplelmto \
-#         paw_banddata \
-#         paw_dmft \
-#         paw_fft \
-#         paw_augmentation \
-#         paw_softcore \
-#         paw_atoms \
-#         paw \
-#         paw_efg \
-#         paw_ioroutines \
-#         paw_iotra \
-#         paw_ionew \
-#         paw_cosmo \
-#         paw_warmup \
-#         paw_optfric \
-#         paw_setups \
-#         paw_potential \
-#         paw_occupations \
-#         paw_pairpotential \
-#         paw_graphics \
-#         paw_waves1 \
-#         paw_waves2 \
-#         paw_mixer \
-#         paw_cg \
-#         paw_kpoints \
-#         paw_vext \
-#         paw_vdw \
-#         paw_opteels 
-
-
-# DIRTOOLS contains the names of the source files for the tools including 
-# the path relative to the tool directory $(BASEDIR)/src/
-# DIRTOOLS= \
-#         FromPOSCAR/paw_fromposcar \
-#         Grab/paw_grab \
-#         Murnaghan/paw_murnaghan \
-#         PDoS/paw_dos \
-#         PDoS/paw_dosplot \
-#         Polyhedra/paw_polyhedra \
-#         Preopt/paw_preopt \
-#         Stpa/paw_stpa \
-#         Stpa/paw_stpreport \
-#         Strc/paw_strc \
-#         Strc/paw_tostrc \
-#         Strc/paw_toxyz \
-#         Tra/paw_cleantra \
-#         Tra/paw_converttra \
-#         Tra/paw_tra \
-#         Wave/paw_1davpot \
-#         Wave/paw_cmcwave \
-#         Wave/paw_wave \
-#         Bands/paw_bands
-
-# files from $(BASEDIR)/src/Buildtools to be placed in etc
-# export ADMIN= \
-#              f90pp.in \
-#              f90pp.sed \
-#              dollar_ok.sh \
-#              f90pp_tmplts.f90 \
-#              parmfilewriter.f90 \
-#              paw_versioninfo.sh 
-
-export SCRIPTS=$(notdir $(wildcard $(BASEDIR)/src/Tools/Scripts/*.sh))
-
 $(info "----------------------------------------------------------------------")
 $(info "The source codes are divided into three subsests:")
 $(info "PAWLIST: files for the simulation code, which are NOT on the library")
 $(info "LIBLIST: files for the simulation code, which are on the library")
-$(info "DIRTOOLS: Tools")
+$(info "TOOLS: Tools")
+$(info "ADMIN: files used for the build process")
 $(info "----------------------------------------------------------------------")
 $(info "PAWLIST=$(PAWLIST)")
 $(info "----------------------------------------------------------------------")
 $(info "LIBLIST=$(LIBLIST)")
 $(info "----------------------------------------------------------------------")
-$(info "DIRTOOLS=$(DIRTOOLS)")
+$(info "TOOLS=$(TOOLS)")
 $(info "----------------------------------------------------------------------")
 $(info "ADMIN=$(ADMIN)")
 $(info "----------------------------------------------------------------------")
+$(info "slatec=slatec")
+#  slatec.f is a library written in Fortran77, which shall be removed
+#  in future versions of the code. As F77 code it requires special
+#  treatment.
+$(info "----------------------------------------------------------------------")
 
-export TOOLS=$(notdir $(DIRTOOLS))
 export BIGLIST=$(LIBLIST) $(PAWLIST) $(TOOLS)
 #
 ################################################################################
@@ -259,7 +134,7 @@ export BIGLIST=$(LIBLIST) $(PAWLIST) $(TOOLS)
 default: executable
 
 .PHONY: all
-all: executable libs tools scripts
+all: executable libs tools 
 
 #________________preprocess all fortran files
 #________________construct makefile for compilation
@@ -274,31 +149,10 @@ executable: paw.x
 .PHONY: tools
 tools: $(addsuffix .x, $(TOOLS))
 
-.PHONY : scripts
-scripts: $(SCRIPTS)
-
 .PHONY: libs
 libs: libpaw.a libpawfull.a
 
-# ##########################################################################
-# ##  Include files (module files etc)                                  
-# ##########################################################################
-# .PHONY: includes
-# includes : 
-# 	for X in $(INCLUDES) ; do \
-#            Y=$${X##*/} ;\
-#            if [[ ! -f $$X ]] ; then \
-#              echo "file $$X does not exist" ;\
-#              exit 1 ;\
-#            fi; \
-#            if [[ ! $$Y -nt $$X ]] ; then \
-#              rm $$Y ;\
-#              ln -s $$X $$Y ;\
-#            fi ; \
-#         done 
-
 ################################################################################
-#
 #  administration codes
 #
 #--  f90pp fortran preprocessor
@@ -396,7 +250,6 @@ etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src
 #
 #  OS: operating system (Darwin is macOS)
 export OS=$(shell uname -s)
-
 paw_srcblob.o: etc/paw_srcblob.tgz
 ifeq ($(OS),Linux) 
 	ld -r -b binary -o paw_srcblob.o etc/paw_srcblob.tgz
@@ -465,10 +318,9 @@ slatec.o: slatec.f
 #    3) paw library libpaw.a
 #    4) tests
 ################################################################################
-# remove the tools to avoid having several competing main programs
 
 #-------------------------------------------------------------------------------
-#  construct cppaw executable
+#  construct executables for simulation code and tools
 #-------------------------------------------------------------------------------
 export ARGLIST=$(addsuffix .o, $(filter-out paw, $(PAWLIST)) $(LIBLIST) slatec)\
                paw_srcblob.o version_writeparmfile.o
@@ -476,9 +328,6 @@ export ARGLIST=$(addsuffix .o, $(filter-out paw, $(PAWLIST)) $(LIBLIST) slatec)\
 paw.x : $(ARGLIST) 
 	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} paw.o ${LIBS} 
 
-#-------------------------------------------------------------------------------
-#  construct tools
-#-------------------------------------------------------------------------------
 export ARGLIBLIST=$(addsuffix .o, $(LIBLIST) slatec)\
                paw_srcblob.o version_writeparmfile.o
 
@@ -488,32 +337,24 @@ $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o ${ARGLIBLIST}
 paw_bands.x : paw_bands.o ${ARGLIST}
 	${LD} $(LDFLAGS) -o$@ ${ARGLIST} $< ${LIBS} 
 
-# paw_bands.x : %.x : %.o libpawfull.a 
-# 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
-
-# $(info toolswobands=$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))))
-
-# $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
-# 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpaw $<  
-
 #-------------------------------------------------------------------------------
-#  construct paw library libpaw.a (or libppaw.a)
-#  --  use "ppaw" instead of "paw" to identify parallel version
+#   construct libraries libpaw.a and libpawfull.a
+#-------------------------------------------------------------------------------
+#  libpaw.a: paw library 
+#  libpaw.a contains a subset of paw codes with general-purpose
+#  routines which do not-depend on the other paw routines. They can be
+#  used to write codes in the cppaw style.
+#-------------------------------------------------------------------------------
+#  libpawfull.a": full paw library:  
+#  libpawfull.a contains all cppaw routines except those files (listed
+#  in the variable EXCLUDE below) which themselfes contain main
+#  programs so that they result in executables themselfes
 #-------------------------------------------------------------------------------
 libpaw.a: $(addsuffix .o, $(LIBLIST)) slatec.o version_writeparmfile.o \
                                                paw_version.o
 	$(AR) -r -c libpaw.a $(addsuffix .o, $(LIBLIST)) \
                            slatec.o version_writeparmfile.o paw_version.o
 
-#-------------------------------------------------------------------------------
-##  build full paw library and optionally exclude objects              ##
-##  this target can be used to create a library of all objects         ##
-##  additionally on can exclude objects using the EXCLUDE parameter    ##
-##  for example: make libfull EXCLUDE="paw_classical.o paw_setups.o"   ##
-##  The object paw.o will allways be excluded, because it contains a   ##
-##  main program.                                                      ##
-##  This library can then be linked to a main program, like libpaw.a   ##
-#-------------------------------------------------------------------------------
 export EXCLUDE="paw.o $(addsuffix .o, $(TOOLS))"
 
 libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
