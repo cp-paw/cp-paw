@@ -87,7 +87,15 @@ export LIBS=@LIBS@
 #export INCLUDES=@INCLUDES@
 #_____________________________include and module files__________________________
 export BASEDIR=@BASEDIR@
-#
+#_________________________________
+export PAWLIST=@PAWLIST@
+#_________________________________
+export LIBLIST=@LIBLIST@
+#_________________________________
+export ADMIN=$(notdir @ADMINLIST@)
+#_________________________________
+export DIRTOOLS=@TOOLLIST@
+#_________________________________
 #################  derived variables  ##########################################
 
 #
@@ -110,117 +118,117 @@ export BASEDIR=@BASEDIR@
 #-- object files derived from FLIBLIST and  will become part                  --
 #-- of the paw library libpaw.a.                                              --
 #-------------------------------------------------------------------------------
-export LIBLIST= \
-        paw_trace \
-        paw_error \
-        paw_filehandler \
-        paw_clock \
-        paw_lock \
-        paw_timing \
-        paw_linkedlist \
-        paw_strings \
-        paw_classical \
-        paw_forcefield \
-        paw_qmmm \
-        paw_dft \
-        paw_dftaddendum \
-        paw_constants \
-        paw_spherical \
-        paw_generalpurpose \
-        paw_report \
-        paw_periodictable \
-        paw_radial \
-        paw_schroedinger \
-        paw_atomlib \
-        paw_specialfunctions \
-        paw_usage \
-        paw_selftest \
-        paw_strcio \
-        paw_cell \
-        paw_pdos \
-        paw_banddata \
-        paw_library \
-        paw_polynom \
-        paw_dimer  \
-        paw_lmtobasics \
-        paw_debug \
-        paw_brillouin \
-        paw_gaussian \
-        paw_mpelib \
-        paw_version 
+# export LIBLIST= \
+#         paw_trace \
+#         paw_error \
+#         paw_filehandler \
+#         paw_clock \
+#         paw_lock \
+#         paw_timing \
+#         paw_linkedlist \
+#         paw_strings \
+#         paw_classical \
+#         paw_forcefield \
+#         paw_dft \
+#         paw_dftaddendum \
+#         paw_constants \
+#         paw_spherical \
+#         paw_generalpurpose \
+#         paw_report \
+#         paw_periodictable \
+#         paw_radial \
+#         paw_schroedinger \
+#         paw_atomlib \
+#         paw_specialfunctions \
+#         paw_usage \
+#         paw_selftest \
+#         paw_strcio \
+#         paw_cell \
+#         paw_pdos \
+#         paw_library \
+#         paw_polynom \
+#         paw_lmtobasics \
+#         paw_brillouin \
+#         paw_gaussian \
+#         paw_mpelib \
+#         paw_ci \
+#         paw_version 
 
 #-------------------------------------------------------------------------------
 #--  objects specific for the simulation code                                 --
 #-------------------------------------------------------------------------------
-export PAWLIST= \
-	paw_driver \
-        paw_thermostat \
-        paw_isolate \
-        paw_assist \
-        paw_lists \
-        paw_constraints \
-        paw_lmto \
-        paw_simplelmto \
-        paw_dmft \
-        paw_fft \
-        paw_augmentation \
-        paw_softcore \
-        paw_atoms \
-        paw \
-        paw_efg \
-        paw_ioroutines \
-        paw_iotra \
-        paw_ionew \
-        paw_cosmo \
-        paw_warmup \
-        paw_optfric \
-        paw_setups \
-        paw_potential \
-        paw_occupations \
-        paw_pairpotential \
-        paw_graphics \
-        paw_waves1 \
-        paw_waves2 \
-        paw_mixer \
-        paw_cg \
-        paw_kpoints \
-        paw_vext \
-        paw_vdw \
-        paw_ci \
-        paw_opteels 
+# export PAWLIST= \
+# 	paw_driver \
+#         paw_thermostat \
+#         paw_isolate \
+#         paw_dimer  \
+#         paw_debug \
+#         paw_assist \
+#         paw_lists \
+#         paw_constraints \
+#         paw_qmmm \
+#         paw_lmto \
+#         paw_simplelmto \
+#         paw_banddata \
+#         paw_dmft \
+#         paw_fft \
+#         paw_augmentation \
+#         paw_softcore \
+#         paw_atoms \
+#         paw \
+#         paw_efg \
+#         paw_ioroutines \
+#         paw_iotra \
+#         paw_ionew \
+#         paw_cosmo \
+#         paw_warmup \
+#         paw_optfric \
+#         paw_setups \
+#         paw_potential \
+#         paw_occupations \
+#         paw_pairpotential \
+#         paw_graphics \
+#         paw_waves1 \
+#         paw_waves2 \
+#         paw_mixer \
+#         paw_cg \
+#         paw_kpoints \
+#         paw_vext \
+#         paw_vdw \
+#         paw_opteels 
 
 
 # DIRTOOLS contains the names of the source files for the tools including 
 # the path relative to the tool directory $(BASEDIR)/src/
-DIRTOOLS= \
-        FromPOSCAR/paw_fromposcar \
-        Grab/paw_grab \
-        Murnaghan/paw_murnaghan \
-        PDoS/paw_dos \
-        PDoS/paw_dosplot \
-        Polyhedra/paw_polyhedra \
-        Preopt/paw_preopt \
-        Stpa/paw_stpa \
-        Stpa/paw_stpreport \
-        Strc/paw_strc \
-        Strc/paw_tostrc \
-        Strc/paw_toxyz \
-        Tra/paw_cleantra \
-        Tra/paw_converttra \
-        Tra/paw_tra \
-        Wave/paw_1davpot \
-        Wave/paw_cmcwave \
-        Wave/paw_wave \
-        Bands/paw_bands
+# DIRTOOLS= \
+#         FromPOSCAR/paw_fromposcar \
+#         Grab/paw_grab \
+#         Murnaghan/paw_murnaghan \
+#         PDoS/paw_dos \
+#         PDoS/paw_dosplot \
+#         Polyhedra/paw_polyhedra \
+#         Preopt/paw_preopt \
+#         Stpa/paw_stpa \
+#         Stpa/paw_stpreport \
+#         Strc/paw_strc \
+#         Strc/paw_tostrc \
+#         Strc/paw_toxyz \
+#         Tra/paw_cleantra \
+#         Tra/paw_converttra \
+#         Tra/paw_tra \
+#         Wave/paw_1davpot \
+#         Wave/paw_cmcwave \
+#         Wave/paw_wave \
+#         Bands/paw_bands
 
 # files from $(BASEDIR)/src/Buildtools to be placed in etc
-export ADMIN= \
-             f90pp.in \
-             f90pp.sed \
-             dollar_ok.sh \
-             f90pp_tmplts.f90 \
-             parmfilewriter.f90 \
-             paw_versioninfo.sh 
+# export ADMIN= \
+#              f90pp.in \
+#              f90pp.sed \
+#              dollar_ok.sh \
+#              f90pp_tmplts.f90 \
+#              parmfilewriter.f90 \
+#              paw_versioninfo.sh 
 
 export SCRIPTS=$(notdir $(wildcard $(BASEDIR)/src/Tools/Scripts/*.sh))
 
@@ -376,7 +384,7 @@ etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src
 	rm -f $@
 	export TMP=$$(mktemp -d) ;\
 	cp -r $(BASEDIR)/src $${TMP} ;\
-	cp  etc/parmfile $${TMP}/ ;\
+	cp  etc/parms.in_use $${TMP}/ ;\
 	tar -cz -f$@  -C$${TMP} $${TMP} ;\
 
 
@@ -462,24 +470,31 @@ slatec.o: slatec.f
 #-------------------------------------------------------------------------------
 #  construct cppaw executable
 #-------------------------------------------------------------------------------
-export ARGLIST=$(addsuffix .o, $(PAWLIST) $(LIBLIST) slatec) \
+export ARGLIST=$(addsuffix .o, $(filter-out paw, $(PAWLIST)) $(LIBLIST) slatec)\
                paw_srcblob.o version_writeparmfile.o
 
 paw.x : $(ARGLIST) 
-	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} ${LIBS}
+	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} ${LIBS} paw.o
 
 #-------------------------------------------------------------------------------
 #  construct tools
 #-------------------------------------------------------------------------------
-$(info TOOLS.x= $(addsuffix .x, $(TOOLS)))
+export ARGLIBLIST=$(addsuffix .o, $(LIBLIST) slatec)\
+               paw_srcblob.o version_writeparmfile.o
 
-paw_bands.x : %.x : %.o libpawfull.a 
-	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
+$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o ${ARGLIBLIST}
+	${LD} $(LDFLAGS) -o$@ ${ARGLIBLIST} ${LIBS} $<  
 
-$(info toolswobands=$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))))
+paw_bands.x : paw_bands.o ${ARGLIST}
+	${LD} $(LDFLAGS) -o$@ ${ARGLIST} ${LIBS} $<  
 
-$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
-	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpaw $<  
+# paw_bands.x : %.x : %.o libpawfull.a 
+# 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
+
+# $(info toolswobands=$(addsuffix .x, $(filter-out paw_bands, $(TOOLS))))
+
+# $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
+# 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpaw $<  
 
 #-------------------------------------------------------------------------------
 #  construct paw library libpaw.a (or libppaw.a)
@@ -487,7 +502,7 @@ $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o libpaw.a
 #-------------------------------------------------------------------------------
 libpaw.a: $(addsuffix .o, $(LIBLIST)) slatec.o version_writeparmfile.o \
                                                paw_version.o
-	$(AR) -cru libpaw.a $(addsuffix .o, $(LIBLIST)) \
+	$(AR) -r -c libpaw.a $(addsuffix .o, $(LIBLIST)) \
                            slatec.o version_writeparmfile.o paw_version.o
 
 #-------------------------------------------------------------------------------
@@ -503,7 +518,7 @@ export EXCLUDE="paw.o $(addsuffix .o, $(TOOLS))"
 
 libpawfull.a: $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
-	$(AR) -cru libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
+	$(AR) -r -c libpawfull.a $(filter-out $(EXCLUDE), ${OLIST}) slatec.o \
               paw_srcblob.o version_writeparmfile.o paw_version.o
 
 

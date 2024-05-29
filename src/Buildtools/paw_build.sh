@@ -242,13 +242,6 @@ if [[ $PARALLEL = true && \
   echo "         Flag has been added to CPPFLAGS"
 fi
 
-if [[ -z $(echo ${CPPFLAGS} | grep -Eo "CPPVAR_FFT_FFTW3") ]] ; then
-  CPPFLAGS="${CPPFLAGS} -DCPPVAR_FFT_FFTW3"
-  echo "CPPFLAGS= $CPPFLAGS"
-  echo "Warning: cpp flag -DCPPVAR_FFT_FFTW3 is mandatory"
-  echo "         Flag has been added to CPPFLAGS"
-fi
-
 #CPPVAR_FEAST
 #CPPVAR_SLEPC requires <FINCLUDE.SLEPCVEPSDEF.H> and slepceps.mod 
 #                                                and  ISO_C_BINDING.mod
@@ -491,12 +484,19 @@ echo "................................................................made docs"
 ################################################################################
 ##     compile
 ################################################################################
+
+#  collect lists of source files (w/o extension, relative to src)
+export LIBLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -l)
+export ADMINLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -a)
+export PAWLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -p)
+export TOOLLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -t)
 #
 #______________________write sed file___________________________________________
 export PARMLIST="SUFFIX BASEDIR \
                  MAKE AR FC LD CPP \
                  CPPFLAGS FFLAGS LDFLAGS \
-                 LIBS INCLUDES"
+                 LIBS INCLUDES \
+                 ADMINLIST LIBLIST PAWLIST TOOLLIST"
 export SEDCOMMANDS=$(mktemp)
 for X in ${PARMLIST}; do
   eval "Y=\${$X}"
