@@ -474,7 +474,7 @@ export ARGLIST=$(addsuffix .o, $(filter-out paw, $(PAWLIST)) $(LIBLIST) slatec)\
                paw_srcblob.o version_writeparmfile.o
 
 paw.x : $(ARGLIST) 
-	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} ${LIBS} paw.o
+	${LD} ${LDFLAGS} -o paw.x ${ARGLIST} paw.o ${LIBS} 
 
 #-------------------------------------------------------------------------------
 #  construct tools
@@ -483,10 +483,10 @@ export ARGLIBLIST=$(addsuffix .o, $(LIBLIST) slatec)\
                paw_srcblob.o version_writeparmfile.o
 
 $(addsuffix .x, $(filter-out paw_bands, $(TOOLS))) : %.x : %.o ${ARGLIBLIST}
-	${LD} $(LDFLAGS) -o$@ ${ARGLIBLIST} ${LIBS} $<  
+	${LD} $(LDFLAGS) -o$@ ${ARGLIBLIST} $<  ${LIBS} 
 
 paw_bands.x : paw_bands.o ${ARGLIST}
-	${LD} $(LDFLAGS) -o$@ ${ARGLIST} ${LIBS} $<  
+	${LD} $(LDFLAGS) -o$@ ${ARGLIST} $< ${LIBS} 
 
 # paw_bands.x : %.x : %.o libpawfull.a 
 # 	${LD} $(LDFLAGS) -o$@ ${LIBS} -L./ -lpawfull $<  
