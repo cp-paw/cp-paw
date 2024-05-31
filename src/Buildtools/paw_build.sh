@@ -75,7 +75,7 @@ fi
 ##
 ##  define: SUFFIX, PARALLEL
 ##          MAKE,AR,CPP,FC.LD
-##          CPPFLAGS,FFLAGS,LDFLAGS
+##          CPPFLAGS,FCFLAGS,LDFLAGS
 ##          INCLUDES,LIBS,
 ##          BASEDIR,BUILDDIR,BINDIR
 ##
@@ -101,7 +101,7 @@ fi
 INCLUDES="$(echo ${INCLUDES} | tr -s '[:blank:]')"  # strip extra spaces
 LIBS="$(echo ${LIBS} | tr -s '[:blank:]')"          # strip extra spaces
 CPPFLAGS="$(echo ${CPPFLAGS} | tr -s '[:blank:]')"  # strip extra spaces
-FFLAGS="$(echo ${FFLAGS} | tr -s '[:blank:]')"      # strip extra spaces
+FCFLAGS="$(echo ${FCFLAGS} | tr -s '[:blank:]')"      # strip extra spaces
 LDFLAGS="$(echo ${LDFLAGS} | tr -s '[:blank:]')"    # strip extra spaces
 
 ################################################################################
@@ -112,7 +112,7 @@ if [[ $VERBOSE = "true" ]] ; then
    echo "------------report variables after parmfile---------------------------"
    echo "----------------------------------------------------------------------"
   LIST="SUFFIX PARALLEL MAKE AR CPP FC LD \
-        CPPFLAGS FFLAGS LDFLAGS \
+        CPPFLAGS FCFLAGS LDFLAGS \
         INCLUDES LIBS \
         BASEDIR BUILDDIR BINDIR"
    for X in ${LIST}; do
@@ -208,6 +208,7 @@ fi
 #_____check if $FC exists and is executable___________________________________
 if [[ ! -x ${FC} ]] ; then
   echo "error in $0: FC is not an executable file"
+  echo "FC=${FC}"
   exit 1
 fi
 
@@ -221,6 +222,7 @@ fi
 #_____check if $FC exists and is executable___________________________________
 if [[ ! -x ${LD} ]] ; then
   echo "error in $0: LD is not an executable file"
+  echo "LD=${LD}"
   exit 1
 fi
 
@@ -229,6 +231,7 @@ fi
 #-------------------------------------------------------------------------------
 if [[ ! ( $PARALLEL = true || $PARALLEL = false ) ]] ; then
   echo "error in $0: PARALLEL neither true nor false"
+  echo "PARALLEL=${PARALLEL}"
   exit 1
 fi 
 
@@ -266,7 +269,7 @@ if [[ -z $(echo ${LIBS} | grep -Eo "fftw3") ]] ; then
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "mpi") ]] ; then
   if [[ PARALLEL = true ]] ; then
-    if [[ -z $(echo ${FC} | grep -Eo "mpif") ]] ; then
+    if [[ -z $(echo ${FC} | grep -Eo "mpi") ]] ; then
       echo "error in $0: no mpi library specified in parallel mode"
       echo "no mpi compiler wrapper used: FC=${FC}"
       exit 1
@@ -309,25 +312,6 @@ fi
 #-------------------------------------------------------------------------------
 # INCLUDES
 #-------------------------------------------------------------------------------
-if [[ -z $(echo ${INCLUDES} | grep -Eo "fftw3.f03") ]] ; then
-  echo "error in $0: no fftw.f03 include file on INCLUDES"
-  exit 1
-fi
-
-if [[ -z $(echo ${INCLUDES} | grep -Eo "xc_f03_lib_m.mod") ]] ; then
-  echo "error in $0: no xc_f03_lib_m.mod module file on INCLUDES"
-  exit 1
-fi
-
-if [[ -z $(echo ${INCLUDES} | grep -Eo "mpi_f08.mod") ]] ; then
-  if [[ $PARALLEL = true ]] ; then
-    if [[ -z $(echo ${FC} | grep -Eo "mpif") ]] ; then
-      echo "error in $0: no mpi_f08.mod module file on INCLUDES"
-      echo "no mpi compiler wrapper used: FC=${FC}"
-      exit 1
-    fi
-  fi
-fi
 for X in $INCLUDES ; do
   if [[ ! -f $X ]] ; then
     echo "error in $0: file $X in INCLUDES does not exist"
@@ -422,7 +406,7 @@ fi
 INCLUDES=$(echo ${INCLUDES} | tr -s '[:blank:]')  # strip extra spaces
 LIBS=$(echo ${LIBS} | tr -s '[:blank:]')  # strip extra spaces
 CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
-FFLAGS=$(echo ${FFLAGS} | tr -s '[:blank:]')  # strip extra spaces
+FCFLAGS=$(echo ${FCFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
 
@@ -441,7 +425,7 @@ fi
 ################################################################################
 export LIST="SUFFIX PARALLEL\
              MAKE AR CPP FC LD\
-             CPPFLAGS FFLAGS LDFLAGS \
+             CPPFLAGS FCFLAGS LDFLAGS \
              LIBS INCLUDES\
              BASEDIR BUILDDIR BINDIR"
 #___write parameters to a temporary file $TMP and copy only if it differs_______
@@ -494,7 +478,7 @@ export TOOLLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -t)
 #______________________write sed file___________________________________________
 export PARMLIST="SUFFIX BASEDIR \
                  MAKE AR FC LD CPP \
-                 CPPFLAGS FFLAGS LDFLAGS \
+                 CPPFLAGS FCFLAGS LDFLAGS \
                  LIBS INCLUDES \
                  ADMINLIST LIBLIST PAWLIST TOOLLIST"
 export SEDCOMMANDS=$(mktemp)

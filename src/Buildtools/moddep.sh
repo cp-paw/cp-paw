@@ -153,6 +153,12 @@ while read -r FIRST SECOND REST ; do
     for X in ${LIST} ; do
        if [[ $SECOND == $X ]] ; then SKIP=true ; break ; fi
     done
+
+    # exclude module files from libraries included via FCFLAGS etc.
+    for X in xc_f03_lib_m.mod mpi_f08.mod ; do
+       if [[ $SECOND == ${X%.mod} ]] ; then SKIP=true ; break ; fi
+    done
+
     if [[ -z $SKIP ]] ; then
       LIST="$LIST $SECOND"
       if [[ -n $TUPPERMOD ]] ; then 
@@ -168,7 +174,7 @@ done <  "${TMPFILE}"
 #-- clean up                                                                  --
 #-------------------------------------------------------------------------------
 echo "${TARGETS} &: ${PREREQUISITES}" >> /dev/stdout
-echo -e '\t $(FC) -c $(FFLAGS)' -o${OBJ} ${IN} >> /dev/stdout
+echo -e '\t $(FC) -c $(FCFLAGS)' -o${OBJ} ${IN} >> /dev/stdout
 # the date of the module files is not updated if it needs no rebuild so that
 # a the rule may be applied again.
 echo -e '\t touch' ${TARGETS} >> /dev/stdout

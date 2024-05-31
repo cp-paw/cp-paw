@@ -8,20 +8,21 @@
 ##                                                                            ##
 ##  The parameter SELECT is pre-defined                                       ##
 ##                                                                            ##
-##                                                                            ##
 ##  for a comparison of the flags for various compilers, see
 ##  https://github.com/flang-compiler/f18-llvm-project/blob/not-main/flang/docs/OptionComparison.md
 ##
 ################################################################################
-
 ################################################################################
-## variables to be set and their explanation
-## do not touch this block. overwrite values below
+## Variables to be set and their explanation:
+## Do not touch this block. Rather overwrite values below.
+## Variables are initialized to zero unless they are set by the environment 
 ################################################################################
 #____________________________identifier for the implementation__________________
+#____________________________will be appended to the name of the executable_____
+#____________________________such as the suffix "fast" in "paw_fast.x"__________
 export SUFFIX=
 #____________________________switch for parallel(true)/scalar(false) execution__
-export PARALLELL="false"
+export PARALLEL=
 #____________________________gnu make version 4.3 or later______________________
 export MAKE=
 #____________________________archiver___________________________________________
@@ -32,6 +33,8 @@ export CPP=
 export FC=
 #____________________________linker (usually equal to compiler)_________________
 export LD=
+#____________________________linker (usually equal to compiler)_________________
+export LIBS= 
 #____________________________flags for the preprocessor_________________________
 #____________________________-D will be prepended_______________________________
 #____________________________variable for parallel will be added________________
@@ -43,22 +46,28 @@ export LD=
 # -traditional Try to imitate the behavior of pre-standard C preprocessors
 # -nostdinc Do not search the standard system directories for header files. 
 export CPPFLAGS=
+#___________________________compiler flags______________________________________
+export FCFLAGS=
+#___________________________linker flags________________________________________
 export LDFLAGS=
-#___________________________list of include and module files____________________
-#___________________________required fftw3.f03, mpi_f08.mod, xc_f03_lib_m.mod___
-export INCLUDES=
 #___________________________list of libraries___________________________________
-#___________________________fftw3, mpi, blas, lapack, mpi
+#___________________________(blas, lapack, fftw3, libxc)________________________
 export LIBS=
+#___________________________list of include and module files____________________
+#___________________________(fftw3.f03, mpi_f08.mod, xc_f03_lib_m.mod)__________
+#___________________________files will be soft-linked into the build directory__
+export INCLUDES=
 #___________________________base directory of the cppaw repository______________
+#___________________________default: ./_________________________________________
 export BASEDIR=
 #___________________________directory for the building process__________________
-#___________________________default: ./bin/Build_${SUFIX}
+#___________________________default: ./bin/Build_${SELECT}______________________
 export BUILDDIR=
 #___________________________installation directory______________________________
-#___________________________default ./bin/${SUFFIX}_____________________________
+#___________________________default ./bin/${SELECT}_____________________________
 export BINDIR=
-#___________________________nstallation directory for the documentation_________
+#___________________________installation directory for the documentation________
+#___________________________default ./doc_______________________________________
 export DOCDIR=
 
 ################################################################################
@@ -68,21 +77,17 @@ export DOCDIR=
 #--                          analyze system                                   --
 #-------------------------------------------------------------------------------
 #____operating system_______________________________________________________
-OS=$(uname -s) # can be Linux, Darwin,...
+export OS=$(uname -s) # can be Linux, Darwin,...
 #_____architecture (processor family)___________________________________________
-ARCH=$(uname -m)   # can be arm64,
+export ARCH=$(uname -m)   # can be arm64,
 #-------------------------------------------------------------------------------
-#--                          set generic values of parameters                 --
+#--                          set generic defaults                             --
 #-------------------------------------------------------------------------------
 MAKE="$(which gmake)"
 
 AR="$(which ar)"
 
 CPP="$(which cpp)"
-
-FC="$(which gfortran)"
-
-LD="${FC}"
 
 BASEDIR="$(pwd)"
 
@@ -93,79 +98,65 @@ BINDIR="$(pwd)/bin/${SELECT}"
 DOCDIR="$(pwd)/doc"
 
 #-------------------------------------------------------------------------------
-#  when pkgconfig is available, it is used to initialize the variables
-#  for the libraries
+#  select compiler, respectively the mpi compiler wrapper
+#  PARALLEL is true, when $SELECT contains substring "parallel"
 #-------------------------------------------------------------------------------
 case $SELECT in 
   *parallel*)
-     echo parallel
      PARALLEL=true
      CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
-     if [[ -z $(which mpifort) ]] ; then
-       echo "error in $0: parallel compilation requires mpifort"
-       echo "mpifort is not installed"
-       exit 1
-     fi
-     # use the compiler compatible with MPI installation.
-     # the compiler wrapper mpi-fort is not used to compile the code
-     # but the flags are added explicitely into FFLAGS, LDFLAGS, INCLUDES.
-     FC=$(mpifort -showme:command)
-     LD=${FC}
+     for X in mpiifort mpifort mpif90 ; do
+       if [[ -n $(which ${X}) ]] ; then
+         FC=$(which $X)
+         LD=${FC}
+         break
+       fi
+     done
      ;;
   *)
      PARALLEL=false
-    ;;
+     for X in gfortran ifort nvfortran ; do
+       if [[ -n $(which ${X}) ]] ; then
+         FC=$(which $X)
+         LD=${FC}
+         break
+       fi
+     done
+     ;;
 esac
 
 #-------------------------------------------------------------------------------
 #  when pkgconfig is available, it is used to initialize the variables
 #  for the libraries
+#  FC: gfortran ifort 
+#  MPI: ompi mpich
 #-------------------------------------------------------------------------------
 if [[ -n $(which pkg-config) ]] ; then
-  LIBS=""
-  LDFLAGS=""
-  INCUDES=""
   #-----------------------------------------------------------------------------
-  #  add libraries: MPI BLAS LAPACK FFTW LIBXC 
+  #  add libraries: BLAS LAPACK FFTW LIBXC 
   #-----------------------------------------------------------------------------
-  #  do not use the compiler wrapper for MPI. We provide the parameters
-  #  to the compiler directly. (relevant for the makefile used later)
+  #  The MPI library is not considered here because it is taken care of via the 
+  #  compiler wrapper.
   #-----------------------------------------------------------------------------
   #  BLAS and Lapack are contained in framework Acellerate in MacOS 
   #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
   #-----------------------------------------------------------------------------
   LIST="fftw3 libxcf03"
-#
   if [[ ${OS} = Darwin ]] ; then
     LDFLAGS="${LDFLAGS} -framework Accelerate"
   else
     LIST="${LIST} blas lapack"
   fi
-#
-  if [[ $PARALLEL = true ]] ; then
-    if [[ -n $(pkg-config --list-all |grep -Eo ompi) ]] ; then
-      LIST="${LIST} ompi-fort"
-    elif [[ -n $(pkg-config --list-all |grep -Eo mpich) ]] ; then
-      LIST="${LIST} mpich-fort"
-    fi
-  fi
 
   for X in ${LIST}; do
     if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
-      FFLAGS="${FFLAGS} $(pkg-config --cflags $X)"
+      FCFLAGS="${FCFLAGS} $(pkg-config --cflags $X)"
       LIBS="${LIBS} $(pkg-config --libs $X)"
       case $X in
          *fftw3*)
            Y=$(pkg-config --variable=includedir $X)/fftw3.f03
            INCLUDES="${INCLUDES} $Y"
           ;; 
-         *mpi*)
-           FC=$(mpifort -showme:command)
-           FC=$(which ${FC})     # get full path
-           LD=${FC}
-           Y=$(pkg-config --variable=includedir $X)/mpi_f08.mod
-           INCLUDES="$INCLUDES $Y"
-           ;;
          *libxc*)
            Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
            INCLUDES="$INCLUDES $Y"
@@ -181,25 +172,40 @@ fi
 case $SELECT in 
   dbg)
      SUFFIX="dbg"
-     FFLAGS="${FFLAGS} -O3 -funroll-loops -fomit-frame-pointer -march=native \
-             -fexternal-blas -g -std=f2008 -pedantic -fbacktrace -fdump-core \
-             -fimplicit-none -fcheck=bounds,do,mem,pointer,recursion  \
+     # gcc compiler options  
+     FCFLAGS="${FCFLAGS} -g3 "
+     FCFLAGS="${FCFLAGS} -Og -funroll-loops -fomit-frame-pointer -march=native"
+
+     # Fortran language options:
+     FCFLAGS="${FCFLAGS} -std=f2008 -fimplicit-none "   
+
+     # Error an Warning options:
+     # Wall="-Waliasing -Wampersand -Wconversion -Wsurprising
+     #       -Wc-binding-type -Wintrinsics-std -Wtabs -Wintrinsic-shadow
+     #       -Wline-truncation -Wtarget-lifetime -Winteger-division
+     #       -Wreal-q-constant -Wunused -Wundefined-do-loop."
+     FCFLAGS="${FCFLAGS} -Wall -Wextra -pedantic"
+
+     # Debugging options
+     FCFLAGS="${FCFLAGS}       
              -ffpe-trap=invalid,zero,overflow \
-             -ffpe-summary=invalid,zero,overflow \
-             -Wall -Wextra -Wline-truncation  -Wuninitialized \
-             -Wno-maybe-uninitialized"
-    ;;
+             -ffpe-summary=invalid,zero,overflow"
+
+     # Code generation options
+     FCFLAGS="${FCFLAGS} -fexternal-blas \
+             -fcheck=bounds,do,mem,pointer,recursion"
+     ;;
 
   fast)
     SUFFIX="fast"
-    FFLAGS="${FFLAGS} -O3 -funroll-loops -fomit-frame-pointer -march=native \
-             -fexternal-blas"
+    FCFLAGS="${FCFLAGS} -Ofast -funroll-loops -fomit-frame-pointer \
+                        -march=native -fexternal-blas"
     ;;
 
   fast_parallel)
     SUFFIX="fast"
     PARALLEL="true"
-    FFLAGS="-O3 -funroll-loops -fomit-frame-pointer -march=native \
+    FCFLAGS="-Ofast -funroll-loops -fomit-frame-pointer -march=native \
              -fexternal-blas"
     ;;
 

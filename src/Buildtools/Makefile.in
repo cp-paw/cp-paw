@@ -17,7 +17,7 @@
 ##  Parameters: (defined by paw_build.sh and paw_srclist.sh)                  ##
 ##    the parameters are replaced by the build script                         ##
 ##    AR,MAKE,CPP,FC,LD                                                       ##
-##    CPPFLAGS,FFLAGS,LDFLAGS,LIBS: flags                                     ##
+##    CPPFLAGS,FCFLAGS,LDFLAGS,LIBS: flags                                     ##
 ##    BASEDIR:  cppaw distribution (used to build srcblob.tgz)                ##
 ##    PAWLIST,LIBLIST,ADMINLIST,TOOLLIST: lists of sources                    ##
 ##                                                                            ##
@@ -81,7 +81,7 @@ export LD=@LD@
 #_____________________________flags for c-preprocessor__________________________
 export CPPFLAGS=@CPPFLAGS@
 #_____________________________flags for fortran compiler________________________
-export FFLAGS=@FFLAGS@
+export FCFLAGS=@FCFLAGS@
 #_____________________________flags for linker__________________________________
 export LDFLAGS=@LDFLAGS@
 #_____________________________libraries_________________________________________
@@ -168,7 +168,7 @@ $(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/dollar_ok.sh
 
 etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/dollar_ok.sh
 	etc/dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
-	${FC} $(FFLAGS) -o $@ etc/f90pp_tmplts_tmp.f90
+	${FC} $(FCFLAGS) -o $@ etc/f90pp_tmplts_tmp.f90
 
 #-------------------------------------------------------------------------------
 #--  the parmfilewriter embeds text into a fortran code,                     --
@@ -176,7 +176,7 @@ etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/dollar_ok.sh
 #-------------------------------------------------------------------------------
 etc/parmfilewriter.x: etc/parmfilewriter.f90 $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > etc/parmfilewriter_tmp.f90
-	$(FC) $(FFLAGS) -o $@ etc/parmfilewriter_tmp.f90
+	$(FC) $(FCFLAGS) -o $@ etc/parmfilewriter_tmp.f90
 
 #-------------------------------------------------------------------------------
 #--  embed the current parmfile in version_writeparmfile.o
@@ -188,7 +188,7 @@ version_writeparmfile.f90 : etc/version_writeparmfile.f90pp $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > $@
 
 version_writeparmfile.o : version_writeparmfile.f90
-	$(FC) -c $(FFLAGS) -o $@ $<
+	$(FC) -c $(FCFLAGS) -o $@ $<
 
 #-------------------------------------------------------------------------------
 #   embed version information in
@@ -225,7 +225,7 @@ paw_version.o : cppaw_version.info
 
 # do not compile yet because module files are still missing
 # paw_version.o: paw_version_d.f90 
-# 	$(FC) -c $(FFLAGS) -o $@ $<
+# 	$(FC) -c $(FCFLAGS) -o $@ $<
 
 #-------------------------------------------------------------------------------
 # generate source blob __________________________________________________
@@ -255,7 +255,7 @@ ifeq ($(OS),Linux)
 	ld -r -b binary -o paw_srcblob.o etc/paw_srcblob.tgz
 else ifeq ($(OS),Darwin)
 	touch etc/paw_srcblob_dummy.f90   
-	${FC} -c $(FFLAGS) -o etc/paw_srcblob_dummy.o etc/paw_srcblob_dummy.f90
+	${FC} -c $(FCFLAGS) -o etc/paw_srcblob_dummy.o etc/paw_srcblob_dummy.f90
 	ld -r -o paw_srcblob.o -sectcreate binary pawsrcblob_bin \
                                     etc/paw_srcblob.tgz etc/paw_srcblob_dummy.o
 else
@@ -285,7 +285,7 @@ big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 	echo 'export SHELL=/bin/bash   '  > $@
 	echo '.SUFFIXES:               ' >> $@
 	echo 'export FC=$(FC)          ' >> $@
-	echo 'export FFLAGS=$(FFLAGS)  ' >> $@
+	echo 'export FCFLAGS=$(FCFLAGS)  ' >> $@
 	echo '##                       ' >> $@
 	echo 'default: $(OLIST)        ' >> $@
 	echo '.PHONY : default         ' >> $@
@@ -293,7 +293,7 @@ big.mk : $(addsuffix .mk, $(PAWLIST) $(LIBLIST) $(TOOLS))
 	echo 'print:                   ' >> $@
 #       __option -e allows interpretation of \t (=horizontal tab)_______________
 	echo -e '\t echo FC    = $$(FC)    ' >> $@
-	echo -e '\t echo FFLAGS= $$(FFLAGS)' >> $@
+	echo -e '\t echo FCFLAGS= $$(FCFLAGS)' >> $@
 	echo '##                       ' >> $@
 	cat $(OLIST:.o=.mk)              >> $@
 
@@ -309,7 +309,7 @@ objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info
 #____use gmake string substitution $(var:suffix=replacement)
 
 slatec.o: slatec.f 
-	$(FC) -c $(FFLAGS:-fimplicit-none=) -fall-intrinsics -o $@ $<
+	$(FC) -c $(FCFLAGS:-fimplicit-none=) -fall-intrinsics -o $@ $<
 
 ################################################################################
 #  build executables
