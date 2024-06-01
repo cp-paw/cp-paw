@@ -175,17 +175,17 @@ if [[ -n $(which pkg-config) ]] ; then
     if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
       FCFLAGS="${FCFLAGS} $(pkg-config --cflags $X)"
       LIBS="${LIBS} $(pkg-config --libs $X)"
-# INCLUDES already considered in cflags
-      # case $X in
-      #    *fftw3*)
-      #      Y=$(pkg-config --variable=includedir $X)/fftw3.f03
-      #      INCLUDES="${INCLUDES} $Y"
-      #     ;; 
-      #    *libxc*)
-      #      Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
-      #      INCLUDES="$INCLUDES $Y"
-      #      ;;
-      # esac
+      # INCLUDES already considered in cflags. But compilers are unreliable
+      case $X in
+         *fftw3*)
+           Y=$(pkg-config --variable=includedir $X)/fftw3.f03
+           INCLUDES="${INCLUDES} $Y"
+          ;; 
+         *libxc*)
+           Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
+           INCLUDES="$INCLUDES $Y"
+           ;;
+      esac
     fi   
   done
 fi
