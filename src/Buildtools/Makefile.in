@@ -162,12 +162,12 @@ libs: libpaw.a libpawfull.a
 #
 #_____fortran-preprocessor______________________________________________________
 export F90PP=etc/f90pp 
-$(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/dollar_ok.sh
+$(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/paw_dollar_ok.sh
 	sed -e "s|\@CPP\@|$(CPP)|g" $< > $@
 	chmod +x $@
 
-etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/dollar_ok.sh
-	etc/dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
+etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
+	etc/paw_dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
 	${FC} ${FCFLAGS} $(LDFLAGS) -o $@ etc/f90pp_tmplts_tmp.f90 $(LIBS)
 
 #-------------------------------------------------------------------------------
@@ -277,7 +277,7 @@ endif
 
 #__implicit rule for constructing individual make snippets______________________
 %.mk : %.f90
-	$(BASEDIR)/src/Buildtools/moddep.sh -f $< -d ./ > $@
+	$(BASEDIR)/src/Buildtools/paw_moddep.sh -f $< -d ./ > $@
 
 export OLIST=$(addsuffix .o, $(BIGLIST))
 

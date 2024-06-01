@@ -126,6 +126,29 @@ case $SELECT in
 esac
 
 #-------------------------------------------------------------------------------
+#-- identify the compiler (underlying the compiler wrapper)
+#-- to guide the selection of compiler fflags
+#-------------------------------------------------------------------------------
+for X in gfortran ifort mpifort mpif90 mpiifort ; do
+   if [[ -n $(echo ${FC} | grep $X) ]] ; then
+     case $X in
+       gfortran) COMPILER=gfortran ;;
+       ifort|mpiifort) COMPILER=ifort ;;
+       mpifort|mpif90) COMPILER=$(mpif90 --showme:command) ;;
+       *) echo "error in $0: illegal selection $X"  
+          exit 1 
+          ;;
+     esac
+     break
+   fi
+done
+if [[ -z $COMPILER ]] ; then
+  echo "error in $0: Compiler not identified"
+  echo "FC=${FC}"
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
 #  when pkgconfig is available, it is used to initialize the variables
 #  for the libraries
 #  FC: gfortran ifort 
@@ -152,16 +175,17 @@ if [[ -n $(which pkg-config) ]] ; then
     if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
       FCFLAGS="${FCFLAGS} $(pkg-config --cflags $X)"
       LIBS="${LIBS} $(pkg-config --libs $X)"
-      case $X in
-         *fftw3*)
-           Y=$(pkg-config --variable=includedir $X)/fftw3.f03
-           INCLUDES="${INCLUDES} $Y"
-          ;; 
-         *libxc*)
-           Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
-           INCLUDES="$INCLUDES $Y"
-           ;;
-      esac
+# INCLUDES already considered in cflags
+      # case $X in
+      #    *fftw3*)
+      #      Y=$(pkg-config --variable=includedir $X)/fftw3.f03
+      #      INCLUDES="${INCLUDES} $Y"
+      #     ;; 
+      #    *libxc*)
+      #      Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
+      #      INCLUDES="$INCLUDES $Y"
+      #      ;;
+      # esac
     fi   
   done
 fi
@@ -169,44 +193,41 @@ fi
 ################################################################################
 ## resolve selection 
 ################################################################################
-case $SELECT in 
+#------------------------------------------------------------------------------
+function add_fcflags  {
+   local X=$(${BASEDIR}/src/Buildtools/paw_fcflags.sh \
+                                           -s ${OS} -c ${COMPILER} -t ${TYPE})
+   RC=$?
+   if [[ ! $RC = 0 ]] ; then
+      echo "error in $0: nonzero return code from paw_fcflags.sh"
+      echo "Operating system =$OS"
+      echo "Compiler         =$COMPILER"
+      echo "Type             =$TYPE"
+      exit 1
+   fi
+   FCFLAGS="${FCFLAGS} $X"
+   LDFLAGS="${LDFLAGS} $X"
+}
+#------------------------------------------------------------------------------
+
+case ${SELECT} in 
   dbg)
      SUFFIX="dbg"
-     # gcc compiler options  
-     FCFLAGS="${FCFLAGS} -g3 "
-     FCFLAGS="${FCFLAGS} -Og -funroll-loops -fomit-frame-pointer -march=native"
-
-     # Fortran language options:
-     FCFLAGS="${FCFLAGS} -std=f2008 -fimplicit-none "   
-
-     # Error an Warning options:
-     # Wall="-Waliasing -Wampersand -Wconversion -Wsurprising
-     #       -Wc-binding-type -Wintrinsics-std -Wtabs -Wintrinsic-shadow
-     #       -Wline-truncation -Wtarget-lifetime -Winteger-division
-     #       -Wreal-q-constant -Wunused -Wundefined-do-loop."
-     FCFLAGS="${FCFLAGS} -Wall -Wextra -pedantic"
-
-     # Debugging options
-     FCFLAGS="${FCFLAGS}       
-             -ffpe-trap=invalid,zero,overflow \
-             -ffpe-summary=invalid,zero,overflow"
-
-     # Code generation options
-     FCFLAGS="${FCFLAGS} -fexternal-blas \
-             -fcheck=bounds,do,mem,pointer,recursion"
+     TYPE="debug"  
+     add_fcflags
      ;;
 
   fast)
     SUFFIX="fast"
-    FCFLAGS="${FCFLAGS} -Ofast -funroll-loops -fomit-frame-pointer \
-                        -march=native -fexternal-blas"
+    TYPE="release"  
+    add_fcflags
     ;;
 
   fast_parallel)
     SUFFIX="fast"
     PARALLEL="true"
-    FCFLAGS="-Ofast -funroll-loops -fomit-frame-pointer -march=native \
-             -fexternal-blas"
+    TYPE="release"  
+    add_fcflags
     ;;
 
   *) #-- anything else. 
@@ -214,3 +235,4 @@ case $SELECT in
     exit 1
     ;;
 esac
+

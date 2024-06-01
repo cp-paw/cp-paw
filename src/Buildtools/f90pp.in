@@ -4,14 +4,14 @@
 ##                                                                            ##
 ## f90pp                                                                      ##
 ##                                                                            ##
-##    -- replaces dollar signs by double underscore (fdollar_ok.sh)           ##
+##    -- replaces dollar signs by double underscore (paw_dollar_ok.sh)        ##
 ##    -- removes directives (lines starting with @)                           ##
 ##    -- applies c-preprocessor (input option -D)                             ##
 ##    -- resolves templates (f90pp_tmplts.x)                                  ##
 ##    -- replacements with f90pp.sed                                          ##
 ##                                                                            ##
 ## requirements:                                                              ##
-##    etc/f90pp.tmplts.x, etc/f90pp.sed, etc/fdollar_ok.sh                    ##
+##    etc/f90pp.tmplts.x, etc/f90pp.sed, etc/paw_dollar_ok.sh                 ##
 ##                                                                            ##
 ################################################################################
 #-------------------------------------------------------------------------------
@@ -80,11 +80,11 @@ if [[ ! -x etc/f90pp_tmplts.x ]] ; then
   echo "error in $0: etc/f90pp_tmplts.x not found or not executable"
   exit 1
 fi
-if [[ ! -x etc/dollar_ok.sh ]] ; then
-  if [[ -f etc/dollar_ok.sh ]] ; then
-    echo "error in $0: etc/dollar_ok.sh present but not executable"
+if [[ ! -x etc/paw_dollar_ok.sh ]] ; then
+  if [[ -f etc/paw_dollar_ok.sh ]] ; then
+    echo "error in $0: etc/paw_dollar_ok.sh present but not executable"
   else
-    echo "error in $0: etc/dollar_ok.sh not found"
+    echo "error in $0: etc/paw_dollar_ok.sh not found"
   fi
   exit 1
 fi
@@ -102,7 +102,7 @@ TMP2=$(mktemp)
 cat < /dev/stdin > ${TMP2}
 etc/f90pp_tmplts.x < $TMP2 >$TMP
 sed -f etc/f90pp.sed $TMP > $TMP2
-etc/dollar_ok.sh <$TMP2 >$TMP  # convert dollar signs by double underscore
+etc/paw_dollar_ok.sh <$TMP2 >$TMP  # convert dollar signs by double underscore
 sed /^@/d  $TMP >$TMP2         # delete lines beginning with @
 ${CPP} -traditional -nostdinc -P -C ${CPPVAR} $TMP2 $TMP 
 cat $TMP

@@ -1,7 +1,7 @@
 #!/bin/bash
 ################################################################################
 ##
-##   dollar_ok.sh
+##   paw_dollar_ok.sh
 ##
 ##   replaces dollar signs by double underscores. Used to preprocess fortran 
 ##   codes of the cppaw distribution in order to allow dollar signs in 

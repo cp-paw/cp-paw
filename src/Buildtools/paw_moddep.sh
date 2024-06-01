@@ -1,13 +1,13 @@
 #!/bin/bash
 ################################################################################
 ##                                                                            ##
-##    moddep.sh                                                               ##
+##    paw_moddep.sh                                                           ##
 ##                                                                            ##
 ##    Purpose:                                                                ##
 ##      outputs the make-dependencies of module files from fortran code       ##
 ##                                                                            ##
 ##    Usage:                                                                  ##
-##      moddep.sh options -f file  > dependencies                             ##
+##      paw_moddep.sh options -f file  > dependencies                         ##
 ##                                                                            ##
 ##      file is a fortran code (Files not ending on .[Ff]* will be ignored)   ##
 ##                                                                            ##
@@ -27,7 +27,7 @@
 export USAGE="\n"
 USAGE="$USAGE Usage of $0:\n"
 USAGE="$USAGE \n"
-USAGE="$USAGE \t moddep.sh options -f filename >dependencies\n"
+USAGE="$USAGE \t paw_moddep.sh options -f filename >dependencies\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE extracts the module-related dependencies from a 
               fortran source file.\n"

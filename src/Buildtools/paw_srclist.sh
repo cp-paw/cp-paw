@@ -130,7 +130,7 @@ export TOOLLIST=" \
 export ADMINLIST=" \
         Buildtools/f90pp.in \
         Buildtools/f90pp.sed \
-        Buildtools/dollar_ok.sh \
+        Buildtools/paw_dollar_ok.sh \
         Buildtools/f90pp_tmplts.f90 \
         Buildtools/parmfilewriter.f90 \
         Buildtools/paw_versioninfo.sh" 
