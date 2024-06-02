@@ -83,7 +83,7 @@ if [[ ! -d ${BUILDDIR}/doc ]] ; then mkdir ${BUILDDIR}/doc ; fi
 for X in ${INCLUDES}; do
    SOURCE=${X}
    TARGET=${BUILDDIR}/${X##*/}
-   ln -shf ${SOURCE} ${TARGET}
+   ln -sf ${SOURCE} ${TARGET}
    touch -hr ${SOURCE} ${TARGET}
 done
 
@@ -94,7 +94,7 @@ export ADMINLIST=$(${BASEDIR}/src/Buildtools/paw_srclist.sh -a)
 for X in ${ADMINLIST}; do
    SOURCE=${BASEDIR}/src/${X}
    TARGET=${BUILDDIR}/etc/${X##*/}
-   ln -shf ${SOURCE} ${TARGET}
+   ln -sf ${SOURCE} ${TARGET}
    touch -hr ${SOURCE} ${TARGET}
 done
 
@@ -103,7 +103,7 @@ X=${BASEDIR}/cppaw_version.info
 if [[ -e ${X} ]] ; then
    SOURCE=${X}
    TARGET=${BUILDDIR}/etc/${X##*/}
-   ln -shf ${SOURCE} ${TARGET}
+   ln -sf ${SOURCE} ${TARGET}
    touch -hr ${SOURCE} ${TARGET}
 fi
 
@@ -121,14 +121,14 @@ export LIST="$(${BASEDIR}/src/Buildtools/paw_srclist.sh -l) \
 for X in $LIST; do
    SOURCE=${BASEDIR}/src/${X}.f90
    TARGET=${BUILDDIR}/${X##*/}.f90pp
-   ln -shf ${SOURCE} ${TARGET}
+   ln -sf ${SOURCE} ${TARGET}
    touch -hr ${SOURCE} ${TARGET}
 done
 
 X=slatec
 SOURCE=${BASEDIR}/src/${X}.f
 TARGET=${BUILDDIR}/${X##*/}.f
-ln -shf ${SOURCE} ${TARGET}
+ln -sf ${SOURCE} ${TARGET}
 touch -hr ${SOURCE} ${TARGET}
 
 
@@ -144,7 +144,7 @@ export SCRIPTS=${BASEDIR}/src/Tools/Scripts/*.sh
 for X in ${SCRIPTS}; do
    SOURCE=${X}
    TARGET=${BUILDDIR}/${X##*/}
-   ln -shf ${SOURCE} ${TARGET}
+   ln -sf ${SOURCE} ${TARGET}
    touch -hr ${SOURCE} ${TARGET}
 done
 
@@ -164,7 +164,8 @@ DOCLIST="${DOCLIST} Docs/doc.bib"
 for X in ${DOCLIST}; do
   SOURCE=${BASEDIR}/src/${X}
   TARGET=${BUILDDIR}/doc/${X##*/}
-  ln -shf ${SOURCE} ${TARGET}
+  if [[ -d $TARGET ]] ; rm -f ${TARGET} ; fi
+  ln -sf ${SOURCE} ${TARGET}
   touch -hr ${SOURCE} ${TARGET}
 done
 
