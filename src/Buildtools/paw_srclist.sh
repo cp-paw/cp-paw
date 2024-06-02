@@ -173,16 +173,3 @@ while getopts :atplh OPT ; do
   esac
 done
 
-
-
-# export TMP=$(mktemp)
-# echo "s|@ADMINLIST@|${ADMINLIST}|g"  > ${TMP}
-# echo "s|@LIBLIST@|${LIBLIST}|g"     >> ${TMP}
-# echo "s|@PAWLIST@|${PAWLIST}|g"     >> ${TMP}
-# echo "s|@TOOLLIST@|${TOOLLIST}|g"   >> ${TMP}
-
-# #more $TMP
-
-# sed -f ${TMP} < /dev/stdin >/dev/stdout
-# rm ${TMP}
-

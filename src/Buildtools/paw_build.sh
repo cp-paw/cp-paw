@@ -409,6 +409,7 @@ FCFLAGS=$(echo ${FCFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
 
+
 ################################################################################
 ##     fill build directory
 ################################################################################
@@ -430,9 +431,10 @@ export LIST="SUFFIX PARALLEL\
 #___write parameters to a temporary file $TMP and copy only if it differs_______
 #___from ${BUILDDIR}/etc/parms.in_use___________________________________________
 TMP=$(mktemp)
+echo "#!/bin/bash" >> $TMP
 for X in $LIST ; do
   eval "Y=\${$X}"   # Y=value of the variable with name $X
-  echo "export $X=$Y" >> $TMP
+  echo "export $X=\"$Y\"" >> $TMP
 done
 #___copy parms.in_use only if parameters have changed___________________________
 #___to avoid a Makefile cascade_________________________________________________

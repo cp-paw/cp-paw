@@ -234,13 +234,13 @@ paw_version.o : cppaw_version.info
 # Object for source blob
 
 # $^ stands for "all prerequisites
-etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src 
+etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src $(BASEDIR)/paw_install
 	rm -f $@
 	export TMP=$$(mktemp -d) ;\
-	cp -r $(BASEDIR)/src $${TMP} ;\
-	cp  etc/parms.in_use $${TMP}/ ;\
-	tar -cz -f$@  -C$${TMP} $${TMP} ;\
-
+	cp -r $(BASEDIR)/src $${TMP}/ ;\
+	cp etc/parms.in_use $${TMP}/ ;\
+	cp $(BASEDIR)/paw_install $${TMP}/ ;\
+        tar -cz -f$@ -C$${TMP} --strip-components 1 . 
 
 #____embed the srcblob into an object file, that will be linked into the________
 #____executable_________________________________________________________________

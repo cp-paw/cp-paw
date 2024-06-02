@@ -8,14 +8,14 @@
 !      **                                                                     **
 !      ********************************peter Bloechl, Goslar Nov. 9, 2010*******
        implicit none
-       integer,parameter  :: maxlen=77
-       integer,parameter  :: linelen=512
+       integer,parameter  :: maxlen=80
+       integer,parameter  :: linelen=1024*4
        integer,parameter  :: overheadlen=25
-       character(linelen):: line
-       character(maxlen) :: lineout
-       integer           :: len,i
-       integer,parameter :: nfilo=6    ! standard in
-       integer,parameter :: nfilin=5   ! standard out
+       character(linelen) :: line
+       character(maxlen)  :: lineout
+       integer            :: len,i
+       integer,parameter  :: nfilo=6    ! standard in
+       integer,parameter  :: nfilin=5   ! standard out
 !      *************************************************************************
 !
 !      =========================================================================
@@ -25,18 +25,21 @@
        do
          read(nfilin,fmt='(A)',err=100,end=100)line
          if(len_trim(line).eq.0) cycle
-         do i=1,256
+         line=adjustl(line)
+         len=len_trim(line)
+         do i=1,len ! replace single quotes by double quotes
            if(iachar(line(i:i)).eq.39)line(i:i)='"'
          enddo
-         len=len_trim(line)
          do while (len.gt.0)
-           lineout="write(*,fmt='(A)')'"//trim(line(1:maxlen-overheadlen))//"'"
-           write(nfilo,fmt='(A)')trim(lineout)
-           if(len.gt.maxlen-overheadlen+1) then
-              line=line(maxlen-overheadlen+1:len)
+           if(len.gt.maxlen-overheadlen) then
+             lineout="write(*,fmt='(A)')'" &
+    &              //trim(line(1:maxlen-overheadlen))//"\'"
+             line=line(maxlen-overheadlen+1:len)
            else
-              line=' '
+             lineout="write(*,fmt='(A)')'"//trim(line(1:len))//"'"
+             line=' '
            end if
+           write(nfilo,fmt='(A)')trim(lineout)
            len=len_trim(line)
          enddo
        enddo  
