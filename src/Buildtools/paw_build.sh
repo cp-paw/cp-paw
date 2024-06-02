@@ -24,6 +24,7 @@ USAGE="$USAGE \t -c choice\n"
 USAGE="$USAGE \t -f parmfile \n"
 USAGE="$USAGE \t -s suffix \n"
 USAGE="$USAGE \t -j jobs (jobs=nr parallel jobs. default 10)  \n"
+USAGE="$USAGE \t -z suppress documentation manual.pdf\n"
 USAGE="$USAGE \t -v verbose (false)\n"
 USAGE="$USAGE \t -h prints this help message\n"
 USAGE="$USAGE \n"
@@ -38,12 +39,17 @@ export SUFFIX=
 export VERBOSE=false
 export PARALLEL=false
 export JOBS=10
-while getopts :c:f:s:j:vh OPT ; do
+export NODOC=false
+while getopts :c:f:s:j:zvh OPT ; do
   case $OPT in
     c) SELECT=$OPTARG ;;
     f) PARMFILE=$OPTARG ;;
     s) SUFFIX=$OPTARG ;;
-    j) JOBS=$OPTARG ;;
+    j) JOBS=$OPTARG 
+       export MOPTS="-j ${JOBS}"
+       #export MOPTS="${MOPTS} --debug=b"
+       ;;
+    z) NODOC=true ;;
     v) VERBOSE=true ;;
     h) echo -e $USAGE ; exit 0  ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
@@ -137,12 +143,14 @@ OS="$(uname -s)"
 #-------------------------------------------------------------------------------
 # latexmk is required to produce the documentation
 #-------------------------------------------------------------------------------
-if [[ -z $(which latexmk) ]] ; then
-  echo "error in $0: latexmk not installed or accessible"
-  echo "see https://ctan.org/pkg/latexmk"
-  echo "usually contained in the tex installation"
-  echo "such as TeX Live https://tug.org/texlive/"
-  exit 1
+if [[ ${NODOC} = false ]] ; then
+  if [[ -z $(which latexmk) ]] ; then
+    echo "error in $0: latexmk not installed or accessible"
+    echo "see https://ctan.org/pkg/latexmk"
+    echo "usually contained in the tex installation"
+    echo "such as TeX Live https://tug.org/texlive/"
+    exit 1
+  fi
 fi
 
 #-------------------------------------------------------------------------------
@@ -408,8 +416,6 @@ CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 FCFLAGS=$(echo ${FCFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
-
-
 ################################################################################
 ##     fill build directory
 ################################################################################
@@ -449,22 +455,26 @@ rm -f $TMP
 ################################################################################
 ##     construct documentation
 ################################################################################
-export MOPTS="-j ${JOBS}"
-#export MOPTS="-j ${JOBS} --debug=b"
+if [[ ${DOCDIR}/manual.pdf -nt ${BASEDIR}/Docs/manual.tex ]] ; then
+  NODOC=true
+fi
 
-export PARMLIST="DOCDIR BASEDIR"
-export SEDCOMMANDS=$(mktemp)
-for X in ${PARMLIST}; do
-  eval "Y=\${$X}"
-  echo "s|@${X}@|${Y}|g" >> ${SEDCOMMANDS}
-done
-#_____construct Makefile in build directory_____________________________________
-sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makedocs.in > ${BUILDDIR}/doc/Makefile
-rm -f ${SEDCOMMANDS}
+if [[ ${NODOC} = false ]] ; then
+  export PARMLIST="DOCDIR BASEDIR"
+  export SEDCOMMANDS=$(mktemp)
+  for X in ${PARMLIST}; do
+    eval "Y=\${$X}"
+    echo "s|@${X}@|${Y}|g" >> ${SEDCOMMANDS}
+  done
+  #_____construct Makefile in build directory___________________________________
+  sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makedocs.in \
+                      > ${BUILDDIR}/doc/Makefile
+  rm -f ${SEDCOMMANDS}
 
-echo "................................................................make docs"
-(cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS})
-echo "................................................................made docs"
+  echo "..............................................................make docs"
+  (cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS})
+  echo "..............................................................made docs"
+fi
 
 ################################################################################
 ##     compile

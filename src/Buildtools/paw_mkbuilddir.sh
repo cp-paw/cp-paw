@@ -164,7 +164,7 @@ DOCLIST="${DOCLIST} Docs/doc.bib"
 for X in ${DOCLIST}; do
   SOURCE=${BASEDIR}/src/${X}
   TARGET=${BUILDDIR}/doc/${X##*/}
-  if [[ -d $TARGET ]] ; rm -f ${TARGET} ; fi
+  if [[ -d ${TARGET} ]] ; then rm -f ${TARGET} ; fi
   ln -sf ${SOURCE} ${TARGET}
   touch -hr ${SOURCE} ${TARGET}
 done
