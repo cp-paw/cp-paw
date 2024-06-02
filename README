@@ -2,8 +2,8 @@ CP-PAW code package
 ====================
 
 See https://cppaw.org for further information (Currently, the
-description on https://cppaw.org refers to a release and does not
-apply to the present implementation.)
+description on https://cppaw.org refers to an older release and does
+not apply to the present implementation.)
 
 
 Configuration and Installation instructions
@@ -11,10 +11,11 @@ Configuration and Installation instructions
 
 1) Preconditions
 
-- fortran compiler (e.g. gfortran)
-- bash, make (GNU Make, version 4.3 or later), cpp, ar, latexmk
+- fortran compiler (e.g. gfortran, ifort)
+- pkg-config, latexmk, GNU Make, version 4.3 or later
+- bash, cpp, ar, 
 - A tex (latex) distribution (e.g. TeX Live) 
-- libraries: LAPACK, BLAS, FFTW3, MPI (optional), LIBXC
+- libraries: LAPACK, BLAS, FFTW3, MPI (optional), LIBXC (optional)
   
 For the tools, we also use xmgrace, gnuplot, avogadro1
 
@@ -23,17 +24,20 @@ For the tools, we also use xmgrace, gnuplot, avogadro1
 - Download the cppaw distribution from Github.  
 
 - Unpack the distribution in a directory. I will refer to this
-  directory as the CPPAW directory (or base directory)
+  directory as the BASE directory
 
 - add the following lines to your profile (e.g. ~/.zshrc, ~/.bashrc,
-  ~/.profile)
+  ~/.profile). Replace the definition of PAWdir by the name of the
+  base direcory
 
-export PAWDIR="path to your cppaw distribution"
-export PATH=${PAWDIR}/bin/fast:${PAWDIR}/bin/fast_parallel:${PAWDIR}/bin/dbg:${PATH}
+  export PAWDIR="path to your cppaw distribution"
+  export PATH=${PAWDIR}/bin/fast:${PAWDIR}/bin/fast_parallel:${PAWDIR}/bin/dbg:${PATH}
 
-- enter the cppaw directory and type
+- execute
 
 ./paw_install
+
+  in the base directory
 
 - if this does not work, make a copy of the default parmfile
 
