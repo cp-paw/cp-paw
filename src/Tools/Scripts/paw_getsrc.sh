@@ -76,13 +76,13 @@ done
 #
 # avoid overwriting an existing file
 if [[ ! -f $PAWX ]] ; then 
-  echo "error: executable $PAWX does not exist"
-  echo "error in $0"
+  echo "error: executable $PAWX does not exist" >&2
+  echo "error in $0" >&2
   exit 1
 fi
 if [[ -e $SRCBLOB ]] ; then 
-  echo "error: target file $SRCBLOB for the source blob already exists"
-  echo "error in $0"
+  echo "error: target file $SRCBLOB for the source blob already exists" >&2
+  echo "error in $0" >&2
   exit 1
 fi
 #
@@ -92,8 +92,8 @@ fi
 # check if environment variable TMPDIR is set
 if [[ -z ${TMPDIR} ]] ; then TMPDIR=/tmp ; fi
 if [[ ! -d ${TMPDIR} ]] ; then
-  echo "error in $0: temp directory does not exist"
-  echo "TMPDIR=$TMPDIR"
+  echo "error in $0: temp directory does not exist" >&2
+  echo "TMPDIR=$TMPDIR" >&2
   exit 1
 fi
 TMPFILE1=$(mktemp ${TMPDIR}/pawsrcblobtmp.XXXXXX)

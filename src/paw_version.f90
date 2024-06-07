@@ -74,10 +74,14 @@
 !     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
+      CHARACTER(1),PARAMETER :: DOLLARSYM=ACHAR(36)
       INTEGER(4)      :: ISVAR
       CHARACTER(512)  :: CNTLNAME
       CHARACTER(32)   :: CH32SVAR
       INTEGER         :: ST,LENG
+      CHARACTER(128)  :: CMD
+      CHARACTER(512)  :: CMDMSG
+      INTEGER(4)      :: EXITSTAT,CMDSTAT
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -114,6 +118,32 @@
       ELSE IF(+CNTLNAME.EQ.'--PARMFILE'.OR.+CNTLNAME.EQ.'-P') THEN
         CALL VERSION$WRITEPARMFILE()
         WRITE(*,FMT='(T25,"ERRORS AFTER THIS LINE ARE IRRELEVANT")')
+        CALL ERROR$NORMALSTOP
+!
+      ELSE IF(+CNTLNAME.EQ.'--SRCBLOB'.OR.+CNTLNAME.EQ.'-B') THEN
+!       ========================================================================
+!       ==  EXTRACT SRCBLOB FROM EXECUTABLE ====================================
+!       ==  PAW_GETSRC.SH IS A BASH SCRIPT OF TEH CPPAW DISTRIBUTION THAT     ==
+!       ==  EXTRACTS THE SRCBLOB, WHICH IS EMBEDDED IN THE EXECUTABLE         ==
+!       ==  AND PLACES IT INTO PAW_SRCBLOB.TGZ                                ==
+!       ========================================================================
+        CALL GET_COMMAND_ARGUMENT(0,CMD)  ! COLLECT NAME OF EXECUTABLE
+        CMD=-'WHICH '//TRIM(CMD)
+        CMD=DOLLARSYM//'('//TRIM(CMD)//')'
+        CMD=-'PAW_GETSRC.SH -X '//TRIM(CMD)//-' -O PAW_SRCBLOB.TGZ >&2'
+        CMDMSG=''
+        CALL EXECUTE_COMMAND_LINE(TRIM(CMD),.TRUE.,EXITSTAT,CMDSTAT,CMDMSG)
+        IF(EXITSTAT.NE.0) THEN
+          CALL ERROR$MSG('COULD NOT EXTRACT SRCBLOB')
+          CALL ERROR$MSG(-'PAW_SRCBLOB.TGZ'//'MUST NOT EXIST ALREADY') 
+          CALL ERROR$CHVAL('CMD',TRIM(CMD))
+          CALL ERROR$I4VAL('EXITSTAT',EXITSTAT)
+          CALL ERROR$I4VAL('CMDSTAT',CMDSTAT)
+!          CALL ERROR$MSG(TRIM(CMDMSG))
+          CALL ERROR$MSG('CHECK WHETHER '//-'PAW_SRCBLOB.TGZ' &
+      &                                  //' ALREADY EXISTS')
+          CALL ERROR$STOP('PAW_VERSION')
+        END IF
         CALL ERROR$NORMALSTOP
       END IF
       RETURN
