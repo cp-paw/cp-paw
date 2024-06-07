@@ -498,122 +498,6 @@ also mandatory that original atom names are chosen such that no
 confusion can occur. A simple rule that avoids confusion, is not to
 use colons in atom names.
 
-%==========================================================================
-\section{Installation}
-%==========================================================================
-The CP-PAW code package is publicly available under at
-\begin{verbatim}
-https://github.com/cp-paw/cp-paw
-\end{verbatim}
-
-Place the distribution into some directory, which I will call in the
-following your base-directory of the cppaw distribution. In this
-distribution you should see the following with \verb|ls|.
-\begin{verbatim}
-LICENSE paw_install README src 
-\end{verbatim}
-
-%==========================================================================
-\subsection{Try your luck}
-%==========================================================================
-You can try your luck and install cppaw out of the box. Just execute
-the following command on the command line from within the base
-directory of the cppaw distribution.
-\begin{verbatim}
-./paw_install
-\end{verbatim}
-
-The command relies on defaults collected in a parameter file. Within
-certain limitations, the parmfile explores the environment it runs on
-and collects a suitable set of parameters.  If the command above
-reports an error, proceed to the next section entitled ``Adjust the
-parameter file''.
-
-If you have been lucky and the install command above worked, test the
-success with the following commands.
-\begin{verbatim}
-ls bin/fast_parallel/ppaw_fast
-ls bin/fast/paw_fast
-ls bin/fast/paw_strc
-ls bin/fast/libpaw.a
-ls doc/manual.pdf
-\end{verbatim}
-If none of the commands complains ``No such file or directory''. The
-installation is probably ok. 
-
-Finally, open the manual \verb|doc/manual.pdf| to find further
-information.
-
-
-
-%==========================================================================
-\subsection{Adjust the parameter file}
-%==========================================================================
-If the installation with the current defaults did not work, you need
-to adjust the parameter file. First,  make a copy of
-current default parameter file, for example in the base directory. (I
-assume that this is still your current directory.)
-\begin{center}
-cp src/Buildtools/defaultsparmfile ./parmfile
-\end{center}
-
-The parameter file is a bash script, which defines a set of parameters
-required for the installation. The parameters are briefly explained in
-the top section of the parameter file. After you adjuste the
-parameters to your needs, you try the installation again, but now with
-your own parameter file (e.g. \verb|my\_fast|) and probably with your own
-selection.
-\begin{center}
-src/Buildtools/paw\_build.sh -c my\_fast -f parmfile
-\end{center}
-
-This is the point, from which you either know how to proceed, or you
-need to ask for help. This is why I do not elaborate on the
-installation at this point.
-
-%==========================================================================
-\subsection{Version control}
-%==========================================================================
-The CPPAW package is under version control under GIT. There are
-mechanisms to identify the instance that has been compiled into the
-code used to produce results. The relevant information is printed in
-the protocol, the main output file, of the simulation code.
-
-The simulation code comes in different flavors, such as
-\verb|paw_dbg.x|, \verb|paw_fast.x|, \verb|paw_none.x|,
-\verb|paw_prof.x|, and the corresponding parallel version which begin
-with a double ``p'' for ``parallel paw'', such as \verb|ppaw_fast.x|.
-
-%==========================================================================
-\subsection{Version information}
-%==========================================================================
-The version information of a simulation code can be extracted
-with\footnote{Another possibility is to use the tool
-\texttt{\${PAWDIR}/src/Buildtools/Version/myversion.sh}}
-\begin{verbatim}
-paw_fast.x --version
-\end{verbatim}
-The information should be sufficient to identify the exact version in
-the git repository.
-
-
-%==========================================================================
-\subsection{Source blob}
-%==========================================================================
-A complete copy of the source code is contained in each executable of
-the simulation code. It is called the \textbf{source~blob}
-\index{source~blob}.
-
-The source blob can be extracted, for example, by\footnote{The shell
-script is located at \texttt{src/Tools/Scripts/paw\_getsrc.sh} in the
-repository and will be copied into the \texttt{bin}-directory during
-installation using \texttt{make scripts}}
-\begin{verbatim}
-paw_getsrc.sh -x paw_fast.x -o paw_src.tgz
-\end{verbatim}
-where \verb|paw_fast.x| is the executable from which the source blob
-shall be extracted and \verb|paw_src.tgz| is the resulting compressed
-tar file with the source blob.
 
 %==========================================================================
 \newpage
@@ -10840,14 +10724,126 @@ node has more arrows than shown.
 %==========================================================================
 \section{Installation}
 %==========================================================================
-The installation is described the in the installation guide also
-contained in the documentation.
+The CP-PAW code package is publicly available under at
+\begin{verbatim}
+https://github.com/cp-paw/cp-paw
+\end{verbatim}
+
+Place the distribution into some directory, which I will call in the
+following your base-directory of the cppaw distribution. In this
+distribution you should see the following with \verb|ls|.
+\begin{verbatim}
+LICENSE paw_install README src 
+\end{verbatim}
+
+
+%==========================================================================
+\subsection{Automatic installation: Try your luck}
+%==========================================================================
+Ideally, the cppaw-package installs itself when one executes
+\begin{verbatim}
+./paw_install
+\end{verbatim}
+on the command line from within the base directory of the cppaw
+distribution.
+
+The command relies on defaults collected in a parameter file. The
+parmfile actively explores the environment, it runs on, and choses a
+suitable set of parameters. Because building up the underlying
+knowlegde base is an ongoing process, one should also be prepared that
+the automatic installation fails. In that case, the parameters
+parmfile can be set by hand as sketched in the next section entitled
+``Adjust the parameter file''.
+
+If you have been lucky and the install command above worked, test the
+success with the following commands.
+\begin{verbatim}
+ls bin/fast_parallel/ppaw_fast
+ls bin/fast/paw_fast
+ls bin/fast/paw_strc
+ls bin/fast/libpaw.a
+ls doc/manual.pdf
+\end{verbatim}
+If none of the commands complains ``No such file or directory''. The
+installation is probably ok. 
+
 
 The directory structure will have the following form
 \begin{center}
 \includegraphics[width=0.8\linewidth]{Figs/PAWdirtree/pawdirtree.eps}
 \end{center}
 
+Finally, open the manual \verb|doc/manual.pdf| to find further
+information.
+
+%==========================================================================
+\subsection{Adjust the parameter file}
+%==========================================================================
+If the installation with the current defaults did not work, you need
+to adjust the parameter file. First,  make a copy of
+current default parameter file, for example in the base directory. (I
+assume that this is still your current directory.)
+\begin{verbatim}
+cp src/Buildtools/defaultsparmfile ./parmfile
+\end{verbatim}
+
+The parameter file is a bash script, which defines a set of parameters
+required for the installation. The parameters are briefly explained in
+the top section of the parameter file. After you adjuste the
+parameters to your needs, you try the installation again, but now with
+your own parameter file (e.g. \verb|my_fast|) and probably with your own
+selection.
+\begin{verbatim}
+src/Buildtools/paw_build.sh -c my_fast -f parmfile
+\end{verbatim}
+
+This is the point, from which you either know how to proceed, or you
+need to ask for help. This is why I do not elaborate on the
+installation at this point.
+
+%==========================================================================
+\subsection{Version control}
+%==========================================================================
+The CPPAW package is under version control under GIT. There are
+mechanisms to identify the instance that has been compiled into the
+code used to produce results. The relevant information is printed in
+the protocol, the main output file, of the simulation code.
+
+The simulation code comes in different flavors, such as
+\verb|paw_dbg.x|, \verb|paw_fast.x|. The corresponding parallel
+version which begin with a double ``p'' for ``parallel paw'', such as
+in \verb|ppaw_fast.x|.
+
+%==========================================================================
+\subsection{Version information}
+%==========================================================================
+The version information of a simulation code can be extracted
+with\footnote{Another possibility is to use the tool
+\texttt{\${PAWDIR}/src/Buildtools/Version/myversion.sh}}
+\begin{verbatim}
+paw_fast.x -v
+\end{verbatim}
+The information should be sufficient to identify the exact version in
+the git repository.
+
+
+%==========================================================================
+\subsection{Source blob}
+%==========================================================================
+A complete copy of the source code is contained in each executable of
+the simulation code. It is called the \textbf{source~blob}
+\index{source~blob}.
+
+The source blob can be extracted, for example, by\footnote{The shell
+script is located at \texttt{src/Tools/Scripts/paw\_getsrc.sh} in the
+repository and will be copied into the \texttt{bin}-directory during
+installation using \texttt{make scripts}}
+\begin{verbatim}
+paw_getsrc.sh -x paw_fast.x -o paw_src.tgz
+\end{verbatim}
+where \verb|paw_fast.x| is the executable from which the source blob
+shall be extracted and \verb|paw_src.tgz| is the resulting compressed
+tar file with the source blob.
 
 
 \newpage

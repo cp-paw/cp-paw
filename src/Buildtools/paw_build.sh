@@ -430,15 +430,6 @@ if [[ -z ${DOCDIR} ]] ; then
   echo "error in $0: DOCDIR not defined"
   ERROR=true
 fi
-if [[ ! -d ${DOCDIR} ]] ; then
-  mkdir ${DOCDIR} ; RC=$?
-  if [[ $RC -ne 0 ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: could not create DOCDIR"
-    echo "DOCDIR=$DOCDIR"
-    ERROR=true
-  fi
-fi
 
 ################################################################################
 ##  strip extra spaces
@@ -472,7 +463,6 @@ if [[ ${ERROR} != false ]] ; then
   echo "error exit from $0"
   exit 1
 fi
-
 
 ################################################################################
 ##     fill build directory
@@ -513,16 +503,33 @@ rm -f $TMP
 ################################################################################
 ##     construct documentation
 ################################################################################
-if [[ ${DOCDIR}/manual.pdf -nt ${BASEDIR}/Docs/manual.tex ]] ; then
+if [[ ${DOCDIR}/manual.pdf -ot ${BASEDIR}/Docs/manual.tex ]] ; then
   NODOC=true
 fi
+
 if [[ ${NODOC} = false ]] ; then
+
+  #__create doc directory_______________________________________________________
+  if [[ ! -d ${DOCDIR} ]] ; then
+    mkdir ${DOCDIR} ; RC=$?
+    if [[ $RC -ne 0 ]] ; then
+      echo "error in $0: could not create DOCDIR"
+      echo "DOCDIR=$DOCDIR"
+      echo "Potential racing condition of several paw_build.sh."
+      echo "Consider using option -z of paw_build.sh \
+            on the competing calls except one."
+      exit=1
+    fi
+  fi
+
+  #__collect sed commands_______________________________________________________
   export PARMLIST="DOCDIR BASEDIR"
   export SEDCOMMANDS=$(mktemp)
   for X in ${PARMLIST}; do
     eval "Y=\${$X}"
     echo "s|@${X}@|${Y}|g" >> ${SEDCOMMANDS}
   done
+
   #_____construct Makefile in build directory___________________________________
   sed -f $SEDCOMMANDS ${BASEDIR}/src/Buildtools/makedocs.in \
                       > ${BUILDDIR}/doc/Makefile

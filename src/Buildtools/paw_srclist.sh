@@ -19,7 +19,6 @@ USAGE="$USAGE \t -v verbose (false)\n"
 USAGE="$USAGE \t -h prints this help message\n"
 USAGE="$USAGE \n"
 
-
 #-------------------------------------------------------------------------------
 #-- object files derived from FLIBLIST and  will become part                  --
 #-- of the paw library libpaw.a.                                              --
@@ -29,7 +28,6 @@ export LIBLIST=" \
         paw_error \
         paw_filehandler \
         paw_clock \
-        paw_lock \
         paw_timing \
         paw_linkedlist \
         paw_strings \

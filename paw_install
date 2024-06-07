@@ -4,17 +4,24 @@ export THISDIR=$(pwd)
 #-------------------------------------------------------------------------------
 #--  install cp-paw package                                                   --
 #-------------------------------------------------------------------------------
-#  -c choice
-#  -f parmfile
+#  options for paw_build,sh
+#  -c choice 
+#     defaultparmfile sets PARALLEL to true, when option choice
+#     contains substring "parallel".
+#     defaultparmfile names the install directory bin/$CHOICE} per default.
+#  -f parmfile (normally omitted)
 #  -s suffix (this parameter overwrites the value given by the parmfile)
+#     the executable is named [p]paw_${SUFFIX}.x
+#  -z suppress documentation
 #  -v verbose
+#  
 #-------------------------------------------------------------------------------
 echo "======================== building dbg  =================================="
-src/Buildtools/paw_build.sh -v -j10 -c dbg   &          # 1>out_dbg 2>&1
+src/Buildtools/paw_build.sh -v -j10 -c dbg               1>out_dbg 2>&1 &
 echo "======================== building fast==================================="
-src/Buildtools/paw_build.sh -v -j10 -c fast  &          # 1>out_fast 2>&1
+src/Buildtools/paw_build.sh -v -j10 -c fast -z           1>out_fast 2>&1 &
 echo "======================== building fast_parallel ========================="
-src/Buildtools/paw_build.sh -v -j10 -c fast_parallel &   # 1>out_fastp 2>&1
+src/Buildtools/paw_build.sh -v -j10 -c fast_parallel -z  1>out_fastp 2>&1 &
 wait
 #
 #

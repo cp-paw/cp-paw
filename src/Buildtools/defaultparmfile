@@ -172,22 +172,31 @@ if [[ -n $(which pkg-config) ]] ; then
   fi
 
   for X in ${LIST}; do
-    if [[ $(pkg-config --exists $X; echo $?) = 0 ]]; then
-      FCFLAGS="${FCFLAGS} $(pkg-config --cflags $X)"
-      LIBS="${LIBS} $(pkg-config --libs $X)"
+    if [[ $(pkg-config --print-errors --exists $X; echo $?) = 0 ]]; then
+      FCFLAGS="${FCFLAGS} $(pkg-config --print-errors --cflags $X)"
+      LIBS="${LIBS} $(pkg-config --print-errors --libs $X)"
       # INCLUDES already considered in cflags. But compilers are unreliable
       case $X in
          *fftw3*)
-           Y=$(pkg-config --variable=includedir $X)/fftw3.f03
+           Y=$(pkg-config --print-errors \
+                          --variable=includedir $X)/fftw3.f03
            INCLUDES="${INCLUDES} $Y"
           ;; 
          *libxc*)
-           Y=$(pkg-config --variable=includedir $X)/xc_f03_lib_m.mod
+           Y=$(pkg-config --print-errors \
+                          --variable=includedir $X)/xc_f03_lib_m.mod
            INCLUDES="$INCLUDES $Y"
            ;;
       esac
     fi   
   done
+else
+ echo "------------------------------------------------------------------------"
+ echo "warning from $0: pkg-config not available:"
+ echo "$0 relies on pkg-config to automatically identify libraries."
+ echo "Without pkg-config, parameters must be set by hand in the parmfile."
+ echo "A missing pkg-config may cause errors below."
+ echo "------------------------------------------------------------------------"
 fi
 
 ################################################################################
@@ -195,6 +204,12 @@ fi
 ################################################################################
 #------------------------------------------------------------------------------
 function add_fcflags  {
+   #############################################################################
+   # extends compiler and linker flags. selection is based on available keywords
+   # OS        may be Linux, Darwin, Windows
+   # COMPILER  may be gfortran, ifort
+   # TYPE      may be debug, release
+   #############################################################################
    local X=$(${BASEDIR}/src/Buildtools/paw_fcflags.sh \
                                            -s ${OS} -c ${COMPILER} -t ${TYPE})
    RC=$?
@@ -214,20 +229,19 @@ case ${SELECT} in
   dbg)
      SUFFIX="dbg"
      TYPE="debug"  
-     add_fcflags
+     add_fcflags # see function definition above
      ;;
 
   fast)
     SUFFIX="fast"
     TYPE="release"  
-    add_fcflags
+    add_fcflags  # see function definition above
     ;;
 
   fast_parallel)
     SUFFIX="fast"
-    PARALLEL="true"
     TYPE="release"  
-    add_fcflags
+    add_fcflags  # see function definition above
     ;;
 
   *) #-- anything else. 
