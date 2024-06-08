@@ -64,6 +64,8 @@
 SHELL=/bin/bash
 #____switch off implicit rules__________________________________________________
 .SUFFIXES:
+#
+VERBOSE=false
 ################################################################################
 ## The following block of variables is set by the build script                ##
 ## src/Buildtools/paw_build.sh                                                ##
@@ -102,26 +104,28 @@ export TOOLS=$(notdir @TOOLLIST@)
 ##  the source codes are divided into groups                                  ##
 ##      ADMIN, LIBLIST, PAWLIST, TOOLS 
 ################################################################################
-$(info "----------------------------------------------------------------------")
-$(info "The source codes are divided into three subsests:")
-$(info "PAWLIST: files for the simulation code, which are NOT on the library")
-$(info "LIBLIST: files for the simulation code, which are on the library")
-$(info "TOOLS: Tools")
-$(info "ADMIN: files used for the build process")
-$(info "----------------------------------------------------------------------")
-$(info "PAWLIST=$(PAWLIST)")
-$(info "----------------------------------------------------------------------")
-$(info "LIBLIST=$(LIBLIST)")
-$(info "----------------------------------------------------------------------")
-$(info "TOOLS=$(TOOLS)")
-$(info "----------------------------------------------------------------------")
-$(info "ADMIN=$(ADMIN)")
-$(info "----------------------------------------------------------------------")
-$(info "slatec=slatec")
-#  slatec.f is a library written in Fortran77, which shall be removed
-#  in future versions of the code. As F77 code it requires special
-#  treatment.
-$(info "----------------------------------------------------------------------")
+ifeq ($(VERBOSE),true)
+  $(info "--------------------------------------------------------------------")
+  $(info "The source codes are divided into three subsests:")
+  $(info "PAWLIST: files for the simulation code, which are NOT on the library")
+  $(info "LIBLIST: files for the simulation code, which are on the library")
+  $(info "TOOLS: Tools")
+  $(info "ADMIN: files used for the build process")
+  $(info "--------------------------------------------------------------------")
+  $(info "PAWLIST=$(PAWLIST)")
+  $(info "--------------------------------------------------------------------")
+  $(info "LIBLIST=$(LIBLIST)")
+  $(info "--------------------------------------------------------------------")
+  $(info "TOOLS=$(TOOLS)")
+  $(info "--------------------------------------------------------------------")
+  $(info "ADMIN=$(ADMIN)")
+  $(info "--------------------------------------------------------------------")
+  $(info "slatec=slatec")
+  #  slatec.f is a library written in Fortran77, which shall be removed
+  #  in future versions of the code. As F77 code it requires special
+  #  treatment.
+  $(info "--------------------------------------------------------------------")
+endif
 
 export BIGLIST=$(LIBLIST) $(PAWLIST) $(TOOLS)
 #
@@ -237,9 +241,11 @@ paw_version.o : cppaw_version.info
 etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src $(BASEDIR)/paw_install
 	rm -f $@
 	export TMP=$$(mktemp -d) ;\
-	cp -r $(BASEDIR)/src $${TMP}/ ;\
-	cp etc/parms.in_use $${TMP}/ ;\
+	cp etc/parms.in_use       $${TMP}/ ;\
+	cp $(BASEDIR)/README      $${TMP}/ ;\
+	cp $(BASEDIR)/LICENSE     $${TMP}/ ;\
 	cp $(BASEDIR)/paw_install $${TMP}/ ;\
+	cp -r $(BASEDIR)/src      $${TMP}/ ;\
         tar -cz -f$@ -C$${TMP} --strip-components 1 . 
 
 #____embed the srcblob into an object file, that will be linked into the________
@@ -301,7 +307,7 @@ $(OLIST) : objects
 
 .PHONY: objects
 objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info 
-	echo "doing big.mk....................................................."
+	echo ".....................................................doing big.mk"
 	$(MAKE) -f big.mk
 	echo "..................................................... big.mk done"
 #

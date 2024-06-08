@@ -2,6 +2,8 @@
 SHELL=/bin/bash
 #____switch off implicit rules__________________________________________________
 .SUFFIXES:
+#
+VERBOSE=false
 ################################################################################
 ##  parameters in the following block will be replaced                        ##
 ################################################################################
@@ -56,8 +58,10 @@ else
   export PAWX=$(PP).x
 endif
 
-$(info PARALLEL=$(PARALLEL))
-$(info PAWX=$(PAWX))
+ifeq ( $(VERBOSE),true)
+  $(info PARALLEL=$(PARALLEL))
+  $(info PAWX=$(PAWX))
+endif
 
 ################################################################################
 ##                      installation                                          ##

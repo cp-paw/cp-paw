@@ -46,7 +46,7 @@ while getopts :c:f:s:j:zvh OPT ; do
     f) PARMFILE=$OPTARG ;;
     s) SUFFIX=$OPTARG ;;
     j) JOBS=$OPTARG 
-       export MOPTS="-j ${JOBS}"
+       export MOPTS="-j ${JOBS} -s"
        #export MOPTS="${MOPTS} --debug=b"
        ;;
     z) NODOC=true ;;
@@ -117,7 +117,7 @@ LDFLAGS="$(echo ${LDFLAGS} | tr -s '[:blank:]')"    # strip extra spaces
 ################################################################################
 if [[ $VERBOSE = "true" ]] ; then
    echo "----------------------------------------------------------------------"
-   echo "------------report variables after parmfile---------------------------"
+   echo "------------report parameters after parmfile--------------------------"
    echo "----------------------------------------------------------------------"
    LIST="SUFFIX PARALLEL MAKE AR CPP FC LD \
         CPPFLAGS FCFLAGS LDFLAGS \
@@ -130,7 +130,7 @@ if [[ $VERBOSE = "true" ]] ; then
       X="${X:0:10}"
       echo -e "${X}: ${Y}" 
    done
-   echo "-------------------------------------------------------done-----------"
+   echo "-------------------------------------------parameter report done------"
 fi
 
 ################################################################################
@@ -480,8 +480,7 @@ fi
 export LIST="SUFFIX PARALLEL\
              MAKE AR CPP FC LD\
              CPPFLAGS FCFLAGS LDFLAGS \
-             LIBS INCLUDES\
-             BASEDIR BUILDDIR BINDIR"
+             LIBS INCLUDES"
 #___write parameters to a temporary file $TMP and copy only if it differs_______
 #___from ${BUILDDIR}/etc/parms.in_use___________________________________________
 TMP=$(mktemp)
@@ -490,6 +489,11 @@ for X in $LIST ; do
   eval "Y=\${$X}"   # Y=value of the variable with name $X
   echo "export $X=\"$Y\"" >> $TMP
 done
+echo "export BASEDIR=./" >> $TMP
+echo "export BINDIR=./bin/rebuild" >> $TMP
+echo "export BUILDDIR=./bin/Build_rebuild" >> $TMP
+echo "export DOCDIR=./doc" >> $TMP
+
 #___copy parms.in_use only if parameters have changed___________________________
 #___to avoid a Makefile cascade_________________________________________________
 diff "$TMP" "${BUILDDIR}/etc/parms.in_use" 
@@ -536,7 +540,17 @@ if [[ ${NODOC} = false ]] ; then
   rm -f ${SEDCOMMANDS}
 
   echo "..............................................................make docs"
-  (cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS})
+  (cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS} )
+  export RC=$?
+  if [[ ${RC} -ne 0 ]] ; then
+    echo "------------------------------------------------------------------"
+    echo "error in $0: making documentation failed"
+    echo "$(sed -n '/^[!l]/p' ${BUILDDIR}/doc/manual.log)"
+    echo "consult ${BUILDDIR}/doc/manual.log for details"
+    echo "shutting down $0"
+    echo "------------------------------------------------------------------"
+    exit 1
+  fi
   echo "..............................................................made docs"
 fi
 
@@ -578,7 +592,7 @@ echo ".............................................................made prepare"
 
 echo "..............................................................make big.mk"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f big.mk)
-RC=$?
+export RC=$?
 if [[ $RC -ne 0 ]] ; then 
   echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
   exit 1
@@ -588,7 +602,7 @@ echo "..............................................................made big.mk"
 
 echo ".................................................................make all"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  all)
-RC=$?
+export RC=$?
 if [[ $RC -ne 0 ]] ; then 
   echo "error in $0: make all in BUILDDIR exited with RC=$RC"
   exit 1
@@ -624,7 +638,7 @@ if [[ ${PARALLEL} = true && $(uname -s) = Darwin ]] ; then
   echo "...........................................................code signed"
 fi
 echo "-------------------------------------------------------------------------"
-echo "-----------------------cppaw installed in ${BINDIR}----------------------"
+echo "---------- cppaw installed in ${BINDIR} -----"
 echo "-------------------------------------------------------------------------"
 
 # echo "files in ${BINDIR}:"

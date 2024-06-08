@@ -1,51 +1,56 @@
-       program main
+       PROGRAM MAIN
 !      *************************************************************************
-!      ** program reads an input file and produces a fortran subroutine       **
-!      ** which prints the input file to a specified fortran channel          **
+!      ** PROGRAM READS AN INPUT FILE AND PRODUCES A FORTRAN SUBROUTINE       **
+!      ** WHICH PRINTS THE INPUT FILE TO A SPECIFIED FORTRAN CHANNEL          **
 !      **                                                                     **
-!      ** it is used to convert the parmfile for the PAW installation into    **
-!      ** a fortran routine, that writes the parmfile to a file               **
+!      ** IT IS USED TO CONVERT THE PARMFILE FOR THE PAW INSTALLATION INTO    **
+!      ** A FORTRAN ROUTINE, THAT WRITES THE PARMFILE TO A FILE               **
 !      **                                                                     **
-!      ********************************peter Bloechl, Goslar Nov. 9, 2010*******
-       implicit none
-       integer,parameter  :: maxlen=80
-       integer,parameter  :: linelen=1024*4
-       integer,parameter  :: overheadlen=25
-       character(linelen) :: line
-       character(maxlen)  :: lineout
-       integer            :: len,i
-       integer,parameter  :: nfilo=6    ! standard in
-       integer,parameter  :: nfilin=5   ! standard out
+!      ********************************PETER BLOECHL, GOSLAR NOV. 9, 2010*******
+       IMPLICIT NONE
+       INTEGER,PARAMETER  :: MAXLEN=80
+       INTEGER,PARAMETER  :: LINELEN=1024*4
+       INTEGER,PARAMETER  :: OVERHEADLEN=25
+       CHARACTER(LINELEN) :: LINE
+       CHARACTER(MAXLEN)  :: LINEOUT
+       INTEGER            :: LEN,I
+       INTEGER,PARAMETER  :: NFILO=6    ! STANDARD IN
+       INTEGER,PARAMETER  :: NFILIN=5   ! STANDARD OUT
 !      *************************************************************************
 !
 !      =========================================================================
-!      ==  produce subroutine version$writeparmfile                           ==
+!      ==  PRODUCE SUBROUTINE VERSION$WRITEPARMFILE                           ==
 !      =========================================================================
-       write(nfilo,fmt='(A)')'subroutine version$writeparmfile()'
-       do
-         read(nfilin,fmt='(A)',err=100,end=100)line
-         if(len_trim(line).eq.0) cycle
-         line=adjustl(line)
-         len=len_trim(line)
-         do i=1,len ! replace single quotes by double quotes
-           if(iachar(line(i:i)).eq.39)line(i:i)='"'
-         enddo
-         do while (len.gt.0)
-           if(len.gt.maxlen-overheadlen) then
-             lineout="write(*,fmt='(A)')'" &
-    &              //trim(line(1:maxlen-overheadlen))//"\'"
-             line=line(maxlen-overheadlen+1:len)
-           else
-             lineout="write(*,fmt='(A)')'"//trim(line(1:len))//"'"
-             line=' '
-           end if
-           write(nfilo,fmt='(A)')trim(lineout)
-           len=len_trim(line)
-         enddo
-       enddo  
-100    continue
-       write(nfilo,fmt='(A)')'return'
-       write(nfilo,fmt='(A)')'end'
+       WRITE(NFILO,FMT='(A)')'SUBROUTINE VERSION$WRITEPARMFILE(FILE)'
+       WRITE(NFILO,FMT='(A)')'IMPLICIT NONE'
+       WRITE(NFILO,FMT='(A)')'CHARACTER(*),INTENT(IN) :: FILE'
+       WRITE(NFILO,FMT='(A)')'INTEGER     ,PARAMETER  :: NFILO=10'
+       WRITE(NFILO,FMT='(A)')'OPEN(NFILO,FILE=FILE)'
+       DO
+         READ(NFILIN,FMT='(A)',ERR=100,END=100)LINE
+         IF(LEN_TRIM(LINE).EQ.0) CYCLE
+         LINE=ADJUSTL(LINE)
+         LEN=LEN_TRIM(LINE)
+         DO I=1,LEN ! REPLACE SINGLE QUOTES BY DOUBLE QUOTES
+           IF(IACHAR(LINE(I:I)).EQ.39)LINE(I:I)='"'
+         ENDDO
+         DO WHILE (LEN.GT.0)
+           IF(LEN.GT.MAXLEN-OVERHEADLEN) THEN
+             LINEOUT="WRITE(NFILO,FMT='(A)')'" &
+    &              //TRIM(LINE(1:MAXLEN-OVERHEADLEN))//"\'"
+             LINE=LINE(MAXLEN-OVERHEADLEN+1:LEN)
+           ELSE
+             LINEOUT="WRITE(NFILO,FMT='(A)')'"//TRIM(LINE(1:LEN))//"'"
+             LINE=' '
+           END IF
+           WRITE(NFILO,FMT='(A)')TRIM(LINEOUT)
+           LEN=LEN_TRIM(LINE)
+         ENDDO
+       ENDDO  
+100    CONTINUE
+       WRITE(NFILO,FMT='(A)')'CLOSE(NFILO)'
+       WRITE(NFILO,FMT='(A)')'RETURN'
+       WRITE(NFILO,FMT='(A)')'END'
 !
 !      =========================================================================
 !      ==  PRODUCE SUBROUTINE VERSION$GETPAWDIR                               ==
@@ -65,5 +70,5 @@
        WRITE(NFILO,FMT='(A)')'RETURN'
        WRITE(NFILO,FMT='(A)')'END'
 !
-       stop
-       end
+       STOP
+       END

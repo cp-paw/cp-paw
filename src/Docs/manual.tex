@@ -8080,7 +8080,7 @@ or not given, an existing file FILE will be overwritten.}
 \vdefault{F}}
 
 %----------------------------------------------------------------------
-\block{!BCNTL!BANDSTRCUTURE!LINE!FATBAND}
+\block{!BCNTL!BANDSTRUCTURE!LINE!FATBAND}
 %----------------------------------------------------------------------
 \brules{optional,multiple}
 \bdescr{defines an orbital projected band structure (fat bands). This 
@@ -10789,10 +10789,11 @@ cp src/Buildtools/defaultsparmfile ./parmfile
 
 The parameter file is a bash script, which defines a set of parameters
 required for the installation. The parameters are briefly explained in
-the top section of the parameter file. After you adjuste the
+the top section of the parameter file. This parameter file can be
+adjusted to the system at hand.  After you adjusted the
 parameters to your needs, you try the installation again, but now with
-your own parameter file (e.g. \verb|my_fast|) and probably with your own
-selection.
+your own parameter file (e.g. \verb|my_fast|) and probably with your
+own selection.
 \begin{verbatim}
 src/Buildtools/paw_build.sh -c my_fast -f parmfile
 \end{verbatim}
@@ -10801,18 +10802,76 @@ This is the point, from which you either know how to proceed, or you
 need to ask for help. This is why I do not elaborate on the
 installation at this point.
 
+
+
 %==========================================================================
-\subsection{Version control}
+\subsubsection{Version control}
 %==========================================================================
 The CPPAW package is under version control under GIT. There are
 mechanisms to identify the instance that has been compiled into the
 code used to produce results. The relevant information is printed in
-the protocol, the main output file, of the simulation code.
+the protocol of the simulation code, its main output file, right after
+the header
+
+An example of this version information is given below.
+{\footnotesize
+\begin{verbatim}
+************************  CPPAW VERSION INFO  *************************
+this is a development version
+compiled by  ptpb  ON Wed Jun  5 18:53:01 CEST 2024
+hash=        995c5ccf9589624a54168d69dad1c22c3a326398
+branch=      feature/variatest
+remote=      https://github.com:/pbloechl/cp-paw.git
+committed on=Sun Jun 2 23:06:19 2024 +0200
+committed by=Peter Bloechl <peter.bloechl@tu-clausthal.de>
+    18 changes since last commit
+***********************************************************************
+\end{verbatim}
+}
+This example is from a development version, which may differ slightly
+from the response of a release version. The hash allows to uniquely
+identify a particular version of the distribution.
+
+%==========================================================================
+\subsection{Additional features of the simulation code}
+%==========================================================================
+The normal callling sequence of the simulation code is to supply the
+control file as argument, such as 
+\begin{center}
+\verb|paw_fast| \textit{root}\verb|.cntl|
+\end{center}
+where \textit{root} is the rootname of the project at hand.
+
+However, there is additional information embedded in the executable,
+which is useful, mostly, for archival purposes. This functionality is
+triggered by the following options
+\begin{center}
+\begin{tabular}{ll}
+?, -h, --help & print help information\\
+-v, --version & print version information\\
+-p, --parmfile & print parmfile \verb|parms.in_use|\\
+-b, --srcblob  & extract sourceblob \verb|paw_srcblob.tgz| \\
+\end{tabular}
+\end{center}
+Any existing files \verb|parms.in_use| and \verb|paw_srcblob.tgz| will
+be overwritten by the respective options.
+
+The parmfile can be used to build the code in the local
+directory. That is, the location  parameters are set as follows
+\begin{verbatim}
+DOCDIR=./doc
+BINDIDIR=./bin/rebuild
+BUILDDIR=./bin/Build_rebuild
+BASEDIR=./
+\end{verbatim}
+
 
 The simulation code comes in different flavors, such as
 \verb|paw_dbg.x|, \verb|paw_fast.x|. The corresponding parallel
 version which begin with a double ``p'' for ``parallel paw'', such as
 in \verb|ppaw_fast.x|.
+
+
 
 %==========================================================================
 \subsection{Version information}
