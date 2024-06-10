@@ -745,6 +745,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)                    :: EKIN,EH,EXC
       REAL(8)                    :: POTIN(NR)
       REAL(8)                    :: SVAR
+      REAL(8)                    :: FMAX
       INTEGER(4)                 :: I,IB,JB,ISO,L,IR
       INTEGER(4)                 :: ISVAR,IARR(1)
       LOGICAL(4)                 :: TSTART  ! CALCULATE ANGULAR MOMENTA ETC
@@ -920,19 +921,45 @@ USE PERIODICTABLE_MODULE
         END IF
 !
 !       == CORRECT FOR NON-INTEGER ATOMIC NUMBERS ==============================
-!       == THIS IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY A FRACTIONAL =
-!       == NUCLEAR AND ELECTRONIC CHARGE =======================================
-        FTOT=SUM(FOFI(:NB))
-        SVAR=AEZ-FTOT
+!       == OCCUPATIONS ARE FIRST FILLED ACCORDING TO NINT(AEZ). ================
+!       == THIS POSSIBILY IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY ====
+!       == A FRACTIONAL NUCLEAR AND ELECTRONIC CHARGE ==========================
+        FTOT=SUM(FOFI(:NB))   ! =NINT(AEZ)
+        SVAR=AEZ-FTOT         ! =AEZ-NINT(AEZ)
+        IF(ABS(SVAR).GT.0.5D0) THEN
+          CALL ERROR$MSG('ABS(FTOT-AEZ) > 0.5 NOT ALLOWED')
+          CALL ERROR$R8VAL('AEZ ',AEZ)
+          CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
+          CALL ERROR$R8VAL('#(ELECTRONS)-AEZ ',FTOT-AEZ)
+          CALL ERROR$STOP('ATOMLIB$AESCF')
+        END IF
+!
+!       == REMOVE ELECTRONS ====================================================
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
             FOFI(IB)=FOFI(IB)+SVAR
-            IF(FOFI(IB).GE.0.D0) THEN
-              EXIT
+            FOFI(IB)=MAX(0.D0,SVAR)
+            SVAR=SVAR-FOFI(IB)
+            IF(SVAR.GE.0.D0) EXIT 
+          ENDDO
+
+!       == ADD ELECTRONS =======================================================
+        ELSE IF(SVAR.GT.0.D0) THEN
+          DO IB=1,NB
+            L=LOFI(IB)
+            IF(TSO.AND.L.NE.0) THEN
+              IF(SOFI(IB).EQ.-1) THEN
+                FMAX=REAL(2*L,KIND=8)
+              ELSE IF(SOFI(IB).EQ.1) THEN
+                FMAX=REAL(2*L+2,KIND=8)
+              END IF
             ELSE
-              SVAR=FOFI(IB)
-              FOFI(IB)=0.D0
+              FMAX=REAL(2*(2*L+1),KIND=8)
             END IF
+            SVAR=SVAR+FOFI(IB)
+            FOFI(IB)=MIN(FMAX,SVAR)
+            SVAR=SVAR-FOFI(IB)
+            IF(SVAR.LE.0.D0) EXIT            
           ENDDO
         END IF
 !
@@ -947,6 +974,7 @@ USE PERIODICTABLE_MODULE
           CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
           CALL ERROR$R8VAL('AEZ ',AEZ)
           CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
+          CALL ERROR$R8VAL('#(ELECTRONS)-AEZ ',FTOT-AEZ)
           CALL ERROR$STOP('ATOMLIB$AESCF')
         END IF
 !
@@ -1737,6 +1765,7 @@ END IF
 !!$CLOSE(1005)
 !!$CALL ERROR$STOP('---')
 !!$END IF
+      ZM=0.D0 ! JUST INITIALIZATION TO MAKE COMPILER HAPPY
       DO ITER=1,NITER
         E=X0
 !       ========================================================================
@@ -1763,25 +1792,30 @@ END IF
         ELSE
           PHI2(:)=PHI(:)
         END IF
-        IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
-!!$IF(l.eq.0.and.nn.eq.1) THEN
+PRINT*,'ITER ',ITER
+PRINT*,'Z0   ',Z0
+PRINT*,'ZM   ',ZM
+        IF(ITER.GT.1) THEN
+          IF(Z0*ZM.LT.0.D0) EXIT
+        END IF
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
 !!$ CALL ATOMLIB_WRITEPHI('ERROR_PAWPSI.DAT',GID,NR,1,PHI)
 !!$ CALL ERROR$I4VAL('L',L)
 !!$ CALL ERROR$I4VAL('NN',NN)
 !!$ CALL ERROR$R8VAL('RMINNODE',RMINNODE)
-!!$ CALL ERROR$R8VAL('Rbox',Rbox)
+!!$ CALL ERROR$R8VAL('RBOX',RBOX)
 !!$ CALL ERROR$R8VAL('X0',X0)
 !!$ CALL ERROR$R8VAL('Z0',Z0)
 !!$ CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
-!!$endif
+!!$ENDIF
         IF(ITER.EQ.NITER) THEN
           CALL ERROR$MSG('SEARCH FOR BISECTION WINDOW FAILED')
           CALL ERROR$I4VAL('L',L)
           CALL ERROR$I4VAL('NN',NN)
-          CALL ERROR$r8VAL('XM',XM)
-          CALL ERROR$r8VAL('X0',X0)
-          CALL ERROR$r8VAL('ZM',ZM)
-          CALL ERROR$r8VAL('Z0',Z0)
+          CALL ERROR$R8VAL('XM',XM)
+          CALL ERROR$R8VAL('X0',X0)
+          CALL ERROR$R8VAL('ZM',ZM)
+          CALL ERROR$R8VAL('Z0',Z0)
           CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
         END IF
         IF(ITER.EQ.1) DX=SIGN(DX,-Z0)

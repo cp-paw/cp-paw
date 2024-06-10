@@ -19,6 +19,9 @@ export RC3=0
 #  -v verbose
 #  
 #-------------------------------------------------------------------------------
+# src/Buildtools/paw_build.sh -v -j10 -c dbg   
+# exit 1
+
 echo "======================== building dbg  =================================="
 src/Buildtools/paw_build.sh -v -j10 -c dbg           \
                             1>out_dbg 2>&1 ; RC1=$? &
