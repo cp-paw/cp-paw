@@ -926,13 +926,6 @@ USE PERIODICTABLE_MODULE
 !       == A FRACTIONAL NUCLEAR AND ELECTRONIC CHARGE ==========================
         FTOT=SUM(FOFI(:NB))   ! =NINT(AEZ)
         SVAR=AEZ-FTOT         ! =AEZ-NINT(AEZ)
-        IF(ABS(SVAR).GT.0.5D0) THEN
-          CALL ERROR$MSG('ABS(FTOT-AEZ) > 0.5 NOT ALLOWED')
-          CALL ERROR$R8VAL('AEZ ',AEZ)
-          CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
-          CALL ERROR$R8VAL('#(ELECTRONS)-AEZ ',FTOT-AEZ)
-          CALL ERROR$STOP('ATOMLIB$AESCF')
-        END IF
 !
 !       == REMOVE ELECTRONS ====================================================
         IF(SVAR.LT.0.D0) THEN
@@ -1765,7 +1758,7 @@ END IF
 !!$CLOSE(1005)
 !!$CALL ERROR$STOP('---')
 !!$END IF
-      ZM=0.D0 ! JUST INITIALIZATION TO MAKE COMPILER HAPPY
+      ZM=0.D0 ! INITIALIZATION TO MAKE COMPILER HAPPY
       DO ITER=1,NITER
         E=X0
 !       ========================================================================
@@ -1792,9 +1785,6 @@ END IF
         ELSE
           PHI2(:)=PHI(:)
         END IF
-PRINT*,'ITER ',ITER
-PRINT*,'Z0   ',Z0
-PRINT*,'ZM   ',ZM
         IF(ITER.GT.1) THEN
           IF(Z0*ZM.LT.0.D0) EXIT
         END IF
