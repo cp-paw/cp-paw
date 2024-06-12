@@ -446,36 +446,47 @@
 !     **  WRITES AN XYZ FILE FOR THE STRUCTURE                                **
 !     **                                                                      **
 !     **  CAUTION: ASSUMES THAT THE ATOM NAME STARTS WITH THE ELEMENT SYMBOL!!**
+!     **                                                                      **
+!     ** see "extended XYZ" format:                                           **
+!     ** https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#extxyz       **
 !     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      INTEGER(4),INTENT(IN) :: NAT
-      REAL(8)   ,INTENT(IN) :: RBAS(3,3)
+      INTEGER(4)  ,INTENT(IN):: NAT
+      REAL(8)     ,INTENT(IN):: RBAS(3,3)
       CHARACTER(*),INTENT(IN):: NAME(NAT)
       CHARACTER(*),INTENT(IN):: TITLE
-      REAL(8)   ,INTENT(IN) :: R(3,NAT)
-      INTEGER(4),INTENT(IN) :: NDUP(3)
-      LOGICAL(4),INTENT(IN) :: TCRYSTAL
+      REAL(8)     ,INTENT(IN):: R(3,NAT)
+      INTEGER(4)  ,INTENT(IN):: NDUP(3)
+      LOGICAL(4)  ,INTENT(IN):: TCRYSTAL
       INTEGER(4)            :: NFIL
       INTEGER(4)            :: IAT
       INTEGER(4)            :: IT1,IT2,IT3
       REAL(8)               :: T(3)
       REAL(8)               :: ANGSTROM
       CHARACTER(2)          :: EL
-      CHARACTER(80)         :: STRING
+      CHARACTER(160)        :: STRING
 !     **************************************************************************
       CALL CONSTANTS('ANGSTROM',ANGSTROM)
       CALL FILEHANDLER$UNIT('XYZ',NFIL)
       REWIND(NFIL)
       IF(TCRYSTAL) THEN
         WRITE(NFIL,FMT='(I10)')NAT*NDUP(1)*NDUP(2)*NDUP(3)
-        WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
-        STRING=TRIM(STRING)//' AS CLUSTER'        
+!!$        WRITE(STRING,FMT='(I1,A,I1,A,I1)')NDUP(1),-'X',NDUP(2),-'X',NDUP(3)
+!!$        STRING=TRIM(STRING)//' AS CLUSTER'        
+
+        WRITE(STRING,FMT='(9F10.5)')RBAS(:,1)*NDUP(1)/ANGSTROM, &
+     &        RBAS(:,2)*NDUP(2)/ANGSTROM,RBAS(:,3)*NDUP(3)/ANGSTROM
+        STRING=+'L'//-'ATTICE="'//TRIM(ADJUSTL(STRING))//'" '//+'P'// &
+     &         -'ROPERTIES=SPECIES:'//+'S'//-':1:POS:'//+'R'//':3'
+        WRITE(NFIL,FMT='(A)')STRING
+
       ELSE
         WRITE(NFIL,FMT='(I10)')NAT
         STRING=' '
+        WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
       END IF
-      WRITE(NFIL,FMT='(A)')TRIM(TITLE)//' '//TRIM(STRING)
+
       DO IT1=1,NDUP(1)
         DO IT2=1,NDUP(2)
            DO IT3=1,NDUP(3)

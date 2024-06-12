@@ -305,10 +305,19 @@
        CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
        BOXR0(:)=0.D0
        BOXVEC(:,:)=RBAS(:,:)
-       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
        CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK1)
+       IF(TCHK1) THEN
+         IF(TCHK) THEN
+           CALL ERROR$MSG('!WCNTL!VIEWBOX:O AND :C ARE MUTUALLY EXCLUSIVE')
+           CALL ERROR$STOP('MWAVE')
+         END IF
+         CALL LINKEDLIST$GET(LL_CNTL,'C',1,BOXR0)
+         BOXR0=BOXR0-0.5D0*MATMUL(BOXVEC,(/1.D0,1.D0,1.D0/))
+       END IF
 !
 !      ==================================================================
 !      ==  GET PLANE FOR RUBBERSHEET                                   ==
@@ -320,14 +329,25 @@
        PLANEVEC(:,:)=BOXVEC(:,:2)
        IF(TPLANE) THEN
          CALL LINKEDLIST$SELECT(LL_CNTL,'PLANE')
-         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,PLANER0)
          CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
          IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,PLANEVEC)
-       END IF
-       PLANEVEC(:,2)=PLANEVEC(:,2)-PLANEVEC(:,1) &
+!        == MAKE SECOND PLANE VECTOR PERPENDICULAR TO THE FIRST ONE ============
+         PLANEVEC(:,2)=PLANEVEC(:,2)-PLANEVEC(:,1) &
       &                       /DOT_PRODUCT(PLANEVEC(:,1),PLANEVEC(:,1)) &
       &                       *DOT_PRODUCT(PLANEVEC(:,1),PLANEVEC(:,2)) 
+
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,PLANER0)
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK1)
+         IF(TCHK1) THEN
+           IF(TCHK) THEN
+             CALL ERROR$MSG('!WCNTL!VIEWBOX:O AND :C ARE MUTUALLY EXCLUSIVE')
+             CALL ERROR$STOP('MWAVE')
+           END IF
+           CALL LINKEDLIST$GET(LL_CNTL,'C',1,PLANER0)
+           BOXR0=BOXR0-0.5D0*MATMUL(PLANEVEC,(/1.D0,1.D0/))
+         END IF
+       END IF
 !
 !      ==================================================================
 !      ==  WRITE DENSITY TO CUBE FILE                                  ==

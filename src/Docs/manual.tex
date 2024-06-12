@@ -1,8 +1,10 @@
-\documentclass[final,12pt,makeidx]{article}    
+\documentclass[final,12pt,makeidx,DIV=calc]{article}    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 %  include packages
 %
+\usepackage[T1]{fontenc}
+\usepackage{ellipsis}
 \usepackage[numbers]{natbib}     % bibliography style
 \usepackage{url}\urlstyle{tt}
 \usepackage{times}
@@ -906,11 +908,11 @@ unless specified otherwise}
 \vdescr{time step $\Delta$ in a.u. (1~a.u.$\approx$ 0.024~fs)}
 \vformat{real}
 \vrules{optional}
-\vdefault{10.0}}
+\vdefault{5.0}}
 
 \mbax{\key{NWRITE}
 \vdescr{Every ``NWRITE'' time steps, the program writes detailed information 
-into the protocoll file and it updates the restart file. Note that writing 
+into the protocol file and it updates the restart file. Note that writing 
 the restart file is time consuming.}
 \vformat{integer}
 \vrules{optional}
@@ -1322,7 +1324,7 @@ to estimate the frequency from
 \mbax{\key{STRAIGHTEN} 
   \vdescr{Transform the wave functions onto energy eigenstates. The
     transform is performed during the first big writeup of the
-    protocoll file. A unitary transform among the wave function is
+    protocol file. A unitary transform among the wave function is
     performed. That is, the Hilbert space remains unchanged.  Note,
     that the occupations may be inconsistent with the new states. It
     may be advisable to simultaneously restart the occupations.
@@ -2836,9 +2838,9 @@ relative to the real-space grid used in the calculation.}
 
 \mbax{\key{IT} \vdescr{Relative coordinates of the axis defining the
     planar averages.}  
-\vformat{integer} 
-\vrules{optional}
-\vdefault{0.4}}
+\vformat{integer(3)} 
+\vrules{mandatory}
+\vdefault{none}}
 
 %----------------------------------------------------------------------
 \block{!CONTROL!ANALYSE!EELS}
@@ -3225,7 +3227,7 @@ or if !STRUCTURE!SPECIES:NAME begins with the element symbol}
 \bdescr{Defines the augmentation, (e.g. partial waves and projector functions).}
 
 \mbax{\key{ID} 
- \vdescr{Setup identifier. Will be reported in the protocoll file.}
+ \vdescr{Setup identifier. Will be reported in the protocol file.}
 \vformat{character}
 \vrules{optional}
 \vdefault{'NONAME'}}
@@ -5018,7 +5020,7 @@ and prepares some structure files in common formats for use with
 molecular or crystal viewers.  This tool uses the {\it
   rootname}.strc\_out file of the simulation code, and writes the file
 {\it rootname}.cssr, {\it rootname}.xyz and {\it rootname}.cml.  The
-protocoll file {\it rootname}.sprot contains, among others, bond
+protocol file {\it rootname}.sprot contains, among others, bond
 lengths and bond angles and a segment to be used in the input
 structure file.
 
@@ -5172,19 +5174,29 @@ largely independent of the system}
 \block{!WCNTL!VIEWBOX}
 %----------------------------------------------------------------------
 \brules{optional} 
-\bdescr{Sets the view box. Only the data within the
-  view box are shown. The view box is defined by an origin $o$ and three
-  vectors $t_1,t_2,t_3$. The eight corners of the view box are
-  $o,o+t_1,o+t_2,o+t_3,o+t_1+t_2,o+t_2+t_3,o+t_1+t_3,o+t_1+t_2+t_3$}
+\bdescr{Sets the view box. Only the data within the view box are
+  shown. The view box is defined by an origin $\vec{O}$ and three
+  vectors $\vec{t}_1,\vec{t}_2,\vec{t}_3$. The eight corners of the
+  view box are $\vec{O}, \vec{O}+\vec{t}_1, \vec{O}+\vec{t}_2,
+  \vec{O}+\vec{t}_3, \vec{O}+\vec{t}_1+\vec{t}_2,
+  \vec{O}+\vec{t}_2+\vec{t}_3, \vec{O}+\vec{t}_1+\vec{t}_3,
+  \vec{O}+\vec{t}_1+\vec{t}_2+\vec{t}_3$}
 
 \mbax{\key{O}
 \vdescr{Origin (lower left, forward point of the view box) in a.u.}
 \vformat{real(3)} 
-\vrules{optional}
+\vrules{optional, incompatible with \texttt{!WCNTL!VIEWBOX:C}}
 \vdefault{0. 0. 0.}}
 
+\mbax{\key{C}
+\vdescr{Center of the view box in a.u. }
+\vformat{real(3)} 
+\vrules{optional, incompatible with \texttt{!WCNTL!VIEWBOX:O}}
+\vdefault{none. See \texttt{!WCNTL!VIEWBOX:O}. }}
+
 \mbax{\key{T}
-\vdescr{vectors defining the edges of the view box in a.u.}
+\vdescr{vectors $\vec{t}_1, \vec{t}_2, vec{t}_3$ defining the edges of 
+ the view box in a.u.}
 \vformat{real(3,3)} 
 \vrules{optional}
 \vdefault{lattice vectors of the calculation}}
@@ -5192,18 +5204,27 @@ largely independent of the system}
 %----------------------------------------------------------------------
 \block{!WCNTL!PLANE}
 %----------------------------------------------------------------------
-\brules{optional} \bdescr{defines a plane for a rubbersheet plot. The
-  plane is defined by an origin $o$ and two vectors
-  $t_1,t_2$. }
+\brules{optional} 
+\bdescr{defines a plane for a rubbersheet plot. The
+  plane is defined by an origin $\vec{O}$ and two vectors
+  $\vec{t}_1,\vec{t}_2$. }
 
 \mbax{\key{O}
-\vdescr{Origin (lower,forward point of the plane) in a.u.}
+\vdescr{Origin $\vec{O}$ (lower,forward point of the plane) in a.u.}
 \vformat{real(3)} 
-\vrules{optional}
+\vrules{optional, incompatible with \texttt{!WCNTL!VIEWBOX:C}}
 \vdefault{0. 0. 0.}}
 
+\mbax{\key{C}
+\vdescr{Center of the plane in a.u. }
+\vformat{real(3)} 
+\vrules{optional, incompatible with \texttt{!WCNTL!VIEWBOX:O}}
+\vdefault{none. See \texttt{!WCNTL!VIEWBOX:O}.}}
+
 \mbax{\key{T}
-\vdescr{vectors defining the edges of the plane in a.u.}
+\vdescr{vectors $\vec{t}_1, \vec{t}_2$ defining the edges of the plane
+  in a.u.  The second vector will be orthogonalized to the first
+  vector.}
 \vformat{real(3,2)} 
 \vrules{optional}
 \vdefault{first two lattice vectors of the calculation}}
@@ -5535,6 +5556,7 @@ information must be supplied separately.
 %==========================================================================
 \newpage
 \section{Band-Offset and Work-Function Tool: ``paw\_1davpot''}
+\label{sec:1davpottool}
 %==========================================================================
 The tool ``paw\_1davpot'' produces the one dimensional potential
 obtained by averaging the potential over lattice planes. By comparing
@@ -5918,7 +5940,7 @@ $2\times d_x$~\AA (i.e. 10~\AA) are ignored.}
 %----------------------------------------------------------------------
 \brules{optional} 
 \bdescr{picks the unit cell and the atomic position for a given
-  snapshot in a trajectory. The data are written to the protocoll file
+  snapshot in a trajectory. The data are written to the protocol file
   in a pseudo format for the structure input file and as cssr file to
   the file specified.}
 
@@ -8653,7 +8675,7 @@ are used which are ignored by the main simulation code. The keyword
 \mbax{\key{FFTYPE}
 \vdescr{Force field type used for this atom. This keyword can be used
   to overwrite the suggestion of the program. Possible force fields
-  can be found in section~\ref{sec:UFF} on page~\pageref{sec:uff}.}
+  can be found in section~\ref{sec:UFF} on page~\pageref{sec:UFF}.}
 \vformat{character} 
 \vrules{optional}
 \vdefault{depending on the atom type and the number of bonds to that atom}}
@@ -8874,7 +8896,7 @@ current directory and copies the files with the same name but
 %==========================================================================
 \subsection{Collect energies ``paw\_collect''}
 %==========================================================================
-paw\_collect collects the last total energies from all protocoll files
+paw\_collect collects the last total energies from all protocol files
 in the current directory.
 
 %==========================================================================
@@ -8888,7 +8910,7 @@ The calling sequence is
 \subsection{Collect energies ``paw\_get''}
 %==========================================================================
 paw\_get extracts the final result of various energies from the
-protocoll file.
+protocol file.
 
 %==========================================================================
 \subsubsection{Command}
@@ -9249,7 +9271,7 @@ after operation. Write permission is required.
 \section{Specifications of formatted and unformatted output data files}
 %==========================================================================
 %==========================================================================
-\subsection{Protocoll}
+\subsection{Protocol}
 %==========================================================================
 One-particle energies: The eigenvalues of the Hamiltonian in the basis
 of the wave function are printed, unless dynamical occupations are
@@ -9385,7 +9407,43 @@ item is $LEN=9+8*N$, where $N$ is the number of atoms. The data on
 \end{enumerate}
 
 
+%==========================================================================
+\subsection{External format: extended xyz format}
+%==========================================================================
+The xyz format is a simple format to specify a set of atomic
+positions. However, it is unable to handle lattice translation
+vectors.
 
+In order to generalize the xyz format to more general cases, the
+extended xyz format has been introduces by the Atomic Simulation
+Environment
+(ASE). \url{https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#extxyz}
+The extended xyz format is also used by Ovito
+\url{https://www.ovito.org}.
+
+The conventional xyz format specifies the number of atoms in the first
+line. The second line is a comment. Then there is one line for each
+atom with the element symbol and the cartesian coordinates xyz.
+
+
+The extended xyz format uses the second line, holding a comment, to
+supply additional information such as the lattice vectors.
+
+\begin{centerline}
+Lattice="t_{1x} t_{1y} t_{1z} t_{2x} t_{2y} t_{2z}  t_{3x} t_{3y} t_{3z}''
+Properties="species:S:1:pos:R:3:vel:R:3:select:I:1"
+\end{centerline}
+The lattice vectors are self-explanatory. The propertie string
+contains triples that describe the sequence of numbers of the
+atom-specific data. The triple contains the name, a format id (S for
+string, R for real, I for integer) and the number of items.
+
+The example above says that the first item in the line is a string
+describing the atom species, followed by three real numbers, which are
+the positions followed by the velocities expressed by three real
+numbers. The last item is select, which is a single integer number.
+
+Other property names are ``pos'', ``vel'', ``Z'', ``mass'', ``charge''.
 
 
 %==========================================================================
@@ -9864,13 +9922,14 @@ CP 106    1.000  0.000  0.000  0.000 [0 ]
 
 %==========================================================================
 \newpage
-\section{The Universal Force Field (UFF)\label{sec:UFF}}
+\section{The Universal Force Field (UFF)}
+\label{sec:UFF}
 %==========================================================================
 
-The ``Universal Force Field''(UFF)\cite{rappe92_jacs114_10024} is used in the QM-MM
-coupling and in the pre-optimization tool paw\_preopt. It has been
-published in \cite{rappe92_jacs114_10024}. Parts of that paper most important for
-calculations are given here.
+The ``Universal Force Field''(UFF)\cite{rappe92_jacs114_10024} is used
+in the QM-MM coupling and in the pre-optimization tool paw\_preopt. It
+has been published in \cite{rappe92_jacs114_10024}. Parts of that
+paper most important for calculations are given here.
 
 The original UFF has 126 atom types, however in the CP-PAW
 implementation there are currently 141 and occasionally some more may
