@@ -73,24 +73,24 @@ fi
 #  Checks
 #-------------------------------------------------------------------------------
 if [[ ! -f etc/f90pp.sed ]] ; then
-  echo "error in $0: etc/f90pp.sed not found"
+  echo "error in $0: etc/f90pp.sed not found"                                >&2
   exit 1
 fi
 if [[ ! -x etc/f90pp_tmplts.x ]] ; then
-  echo "error in $0: etc/f90pp_tmplts.x not found or not executable"
+  echo "error in $0: etc/f90pp_tmplts.x not found or not executable"         >&2
   exit 1
 fi
 if [[ ! -x etc/paw_dollar_ok.sh ]] ; then
   if [[ -f etc/paw_dollar_ok.sh ]] ; then
-    echo "error in $0: etc/paw_dollar_ok.sh present but not executable"
+    echo "error in $0: etc/paw_dollar_ok.sh present but not executable"      >&2
   else
-    echo "error in $0: etc/paw_dollar_ok.sh not found"
+    echo "error in $0: etc/paw_dollar_ok.sh not found"                       >&2
   fi
   exit 1
 fi
 if [[ ! -x ${CPP} ]] ; then
-  echo "error in $0: c-preprocessor no found"
-  echo "CPP=$CPP"
+  echo "error in $0: c-preprocessor no found"                                >&2
+  echo "CPP=$CPP"                                                            >&2
   exit 1
 fi
 

@@ -31,7 +31,7 @@ GITVERSION=$(git version 2>/dev/null)
 #
 if [[ $VERBOSE = T ]] ; then
   if [[ -z $GITVERSION ]] ; then
-    echo 'git is not installed'
+    echo 'git is not installed'                                              >&2
   else
     echo 'git is installed in version ' $GITVERSION
   fi
@@ -95,6 +95,7 @@ if [[ -n $(git rev-parse --git-dir 2>/dev/null)  ]] ; then
     echo DATE=$DATE
   fi
 else
+  echo "error in $0: not under git control"                                  >&2
   exit 2   # not under git control
 fi
 #---------------------------------------------------------------------------

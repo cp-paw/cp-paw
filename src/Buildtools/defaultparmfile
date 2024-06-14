@@ -149,10 +149,13 @@ if [[ -z $COMPILER ]] ; then
 fi
 
 #-------------------------------------------------------------------------------
+#  Autoconf archive: https://www.gnu.org/software/autoconf-archive/index.html
+#
 #  when pkgconfig is available, it is used to initialize the variables
 #  for the libraries
 #  FC: gfortran ifort 
 #  MPI: ompi mpich
+#  BLAS: openblas atlas Intel-mkl IBM-ESSL PhiPack
 #-------------------------------------------------------------------------------
 if [[ -n $(which pkg-config) ]] ; then
   #-----------------------------------------------------------------------------

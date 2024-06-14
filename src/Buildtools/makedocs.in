@@ -45,7 +45,8 @@ compile: manual.pdf
 manual.pdf : manual.tex all.bib doc.bib Figs
 	latexmk -pdf -pdflatex='pdflatex -halt-on-error %O %S' \
                 -use-make -silent manual.tex ;\
-        $$RC=$$? ; if [[ $$RC -ne 0 ]] ; then exit 1 ; fi
+        $$RC=$$? ; if [[ $$RC -ne 0 ]] ; then \
+        echo "error in makedocs: latexmk failed" >&2 ; exit 1 ; fi
 
 #	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make manual.tex
 
