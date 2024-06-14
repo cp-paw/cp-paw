@@ -53,27 +53,27 @@ while getopts :c:f:s:j:zvh OPT ; do
     v) VERBOSE=true ;;
     h) echo -e $USAGE ; exit 0  ;;
     \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
-      echo "error in $0" >&2
-      echo "invalid option -$OPTARG" >&2
-      echo "retrieve argument list with:" >&2
-      echo "$0 -h" >&2
+      echo "error in $0"                                                     >&2
+      echo "invalid option -$OPTARG"                                         >&2
+      echo "retrieve argument list with:"                                    >&2
+      echo "$0 -h"                                                           >&2
       exit 1
       ;;
     :)    # no argument passed
       ;;
   esac
 done
-ERROR=false
 
+#  specify default parmfile, when no parmfile is explicitly specified
 if [[ -z ${PARMFILE} ]] ; then
   PARMFILE=${THISDIR}/src/Buildtools/defaultparmfile
   echo "Using default parmfile ${PARMFILE}"
 fi
 
 if [[ ! -f ${PARMFILE} ]] ; then
-  echo "error in $0: parmfile does not exist"
-  echo "             PARMFILE=${PARMFILE}"
-  ERROR=true
+  echo "error in $0: parmfile does not exist"                                >&2
+  echo "             PARMFILE=${PARMFILE}"                                   >&2
+  exit 1
 fi
 
 ################################################################################
@@ -92,9 +92,9 @@ PROTECT_SUFFIX=$SUFFIX
 source ${PARMFILE}
 RC=$?
 if [[ RC -ne 0 ]] ; then 
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: parmfile returned with error"
-  echo "parmfile=${PARMFILE}"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: parmfile returned with error"                           >&2
+  echo "parmfile=${PARMFILE}"                                                >&2
   exit 1
 fi
 
@@ -109,7 +109,7 @@ fi
 INCLUDES="$(echo ${INCLUDES} | tr -s '[:blank:]')"  # strip extra spaces
 LIBS="$(echo ${LIBS} | tr -s '[:blank:]')"          # strip extra spaces
 CPPFLAGS="$(echo ${CPPFLAGS} | tr -s '[:blank:]')"  # strip extra spaces
-FCFLAGS="$(echo ${FCFLAGS} | tr -s '[:blank:]')"      # strip extra spaces
+FCFLAGS="$(echo ${FCFLAGS} | tr -s '[:blank:]')"    # strip extra spaces
 LDFLAGS="$(echo ${LDFLAGS} | tr -s '[:blank:]')"    # strip extra spaces
 
 ################################################################################
@@ -136,6 +136,9 @@ fi
 ################################################################################
 ##     analyze system: MAKE, CPP, AR, FC, LD 
 ################################################################################
+#  collect error messages before terminating the installation process
+ERROR=false
+
 #-------------------------------------------------------------------------------
 # operating system
 #-------------------------------------------------------------------------------
@@ -147,11 +150,11 @@ OS="$(uname -s)"
 #-------------------------------------------------------------------------------
 if [[ ${NODOC} = false ]] ; then
   if [[ -z $(which latexmk) ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: latexmk not installed or accessible"
-    echo "see https://ctan.org/pkg/latexmk"
-    echo "usually contained in the tex installation"
-    echo "such as TeX Live https://tug.org/texlive/"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: latexmk not installed or accessible"                  >&2
+    echo "see https://ctan.org/pkg/latexmk"                                  >&2
+    echo "usually contained in the tex installation"                         >&2
+    echo "such as TeX Live https://tug.org/texlive/"                         >&2
     ERROR=true
   fi
 fi
@@ -162,21 +165,21 @@ fi
 #-------------------------------------------------------------------------------
 #_____check if MAKE is defined__________________________________________________
 if [[ -z ${MAKE} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: parameter MAKE not specified"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: parameter MAKE not specified"                           >&2
   ERROR=true
 fi
 #_____check if $MAKE exists and is executable___________________________________
 if [[ ! -x ${MAKE} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: MAKE is not an executable file"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: MAKE is not an executable file"                         >&2
   ERROR=true
 fi
 #__ check if it is gnu make version 4.3 or later________________________________
 VERSION=$(${MAKE} -v)
 if [[ -z $(echo $VERSION | grep -Eo 'GNU Make') ]] ; then 
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: MAKE is not GNU Make"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: MAKE is not GNU Make"                                   >&2
   ERROR=true
 fi
 # the version string contains two version numbers.
@@ -186,13 +189,13 @@ ID=${X[0]}
 MAJOR=${ID%.*}
 MINOR=${ID#*.}
 if [[ $MAJOR -lt 4 ]] ; then 
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: MAKE is not version 4.3 or later"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: MAKE is not version 4.3 or later"                       >&2
   ERROR=true
 fi
 if [[ $MAJOR -eq 4 && $MINOR -lt 3 ]] ; then 
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: MAKE is not version 4.3 or later"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: MAKE is not version 4.3 or later"                       >&2
   ERROR=true
 fi
 
@@ -200,9 +203,9 @@ fi
 #   C - preprocessor
 #-------------------------------------------------------------------------------
 if [[ ! -x ${CPP} ]]; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: no C-preprocessor found"
-  echo 'specify variable CPP via parmfile'
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: no C-preprocessor found"                                >&2
+  echo 'specify variable CPP via parmfile'                                   >&2
   ERROR=true
 fi
 
@@ -210,9 +213,9 @@ fi
 #   Archiver  (ar may become obsolete. switch to  tar instead?
 #-------------------------------------------------------------------------------
 if [[ ! -x ${AR} ]]; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: no Archiver (ar) found"
-  echo "specify variable AR via parmfile"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: no Archiver (ar) found"                                 >&2
+  echo "specify variable AR via parmfile"                                    >&2
   ERROR=true
 fi
 
@@ -220,15 +223,15 @@ fi
 # Fortran compiler
 #-------------------------------------------------------------------------------
 if [[ -z ${FC} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: parameter FC not specified"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: parameter FC not specified"                             >&2
   ERROR=true
 fi
 #_____check if $FC exists and is executable___________________________________
 if [[ ! -x ${FC} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: FC is not an executable file"
-  echo "FC=${FC}"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: FC is not an executable file"                           >&2
+  echo "FC=${FC}"                                                            >&2
   ERROR=true
 fi
 
@@ -236,15 +239,15 @@ fi
 # Linker
 #-------------------------------------------------------------------------------
 if [[ -z ${LD} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: parameter LD not specified"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: parameter LD not specified"                             >&2
   ERROR=true
 fi
 #_____check if $FC exists and is executable___________________________________
 if [[ ! -x ${LD} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: LD is not an executable file"
-  echo "LD=${LD}"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: LD is not an executable file"                           >&2
+  echo "LD=${LD}"                                                            >&2
   ERROR=true
 fi
 
@@ -252,9 +255,9 @@ fi
 # PARALLEL
 #-------------------------------------------------------------------------------
 if [[ ! ( $PARALLEL = true || $PARALLEL = false ) ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: PARALLEL neither true nor false"
-  echo "PARALLEL=${PARALLEL}"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: PARALLEL neither true nor false"                        >&2
+  echo "PARALLEL=${PARALLEL}"                                                >&2
   ERROR=true
 fi 
 
@@ -287,24 +290,24 @@ fi
 # LIBS
 #-------------------------------------------------------------------------------
 if [[ -z $(echo ${LIBS} | grep -Eo "fftw3") ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: no fftw library specified on LIBS"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: no fftw library specified on LIBS"                      >&2
   ERROR=true
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "mpi") ]] ; then
   if [[ PARALLEL = true ]] ; then
     if [[ -z $(echo ${FC} | grep -Eo "mpi") ]] ; then
-      echo "-------------------------------------------------------------------"
-      echo "error in $0: no mpi library specified in parallel mode"
-      echo "no mpi compiler wrapper used: FC=${FC}"
+      echo "----------------------------------------------------------------">&2
+      echo "error in $0: no mpi library specified in parallel mode"          >&2
+      echo "no mpi compiler wrapper used: FC=${FC}"                          >&2
       ERROR=true
     fi
   fi
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "xcf03") ]] ; then
   if [[ -z $(echo ${CPPFLAGS} | grep "NOLIBXC") ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: no LIBXC library specified, while not switched off"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: no LIBXC library specified, while not switched off"   >&2
     ERROR=true
   fi
 fi
@@ -316,14 +319,14 @@ for X in ${LIBS} ; do
     NAME="${X#-l}"
     LIB=${DIR}/lib${NAME}*
     if [[ -z  $LIB ]] ; then
-      echo "-------------------------------------------------------------------"
-      echo "error in $0: Libary $LIB does not exist"
+      echo "----------------------------------------------------------------">&2
+      echo "error in $0: Libary $LIB does not exist"                         >&2
       ERROR=true
     fi
   else
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: Synatx error on LIBS"
-    echo "all entries must have prefix -L or -l not separated by a blank"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: Synatx error on LIBS"                                 >&2
+    echo "all entries must have prefix -L or -l not separated by a blank"    >&2
     ERROR=true
   fi
 done
@@ -331,9 +334,9 @@ done
 #  check whether commandline tools are installed on MacOS
 if [[ $OS = Darwin ]] ; then
   if [[ -n $(xcode-select -p | grep -oE error) ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: command-line-tools of Xcode not installed"
-    echo "install command-line tools of Xcode"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: command-line-tools of Xcode not installed"            >&2
+    echo "install command-line tools of Xcode"                               >&2
     ERROR=true
   fi
 fi
@@ -343,9 +346,9 @@ fi
 #-------------------------------------------------------------------------------
 for X in $INCLUDES ; do
   if [[ ! -f $X ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: file $X in INCLUDES does not exist"
-    echo "INCLUDES=$INCLUDES"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: file $X in INCLUDES does not exist"                   >&2
+    echo "INCLUDES=$INCLUDES"                                                >&2
     ERROR=true
   fi 
 done
@@ -359,15 +362,15 @@ if [[ -z ${BASEDIR} ]] ; then
 fi
 
 if [[ ! -d ${BASEDIR} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: BASEDIR  does not exist"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: BASEDIR  does not exist"                                >&2
   ERROR=true
 fi
 for X in src src/Buildtools src/Tools src/Docs ; do
   if [[ ! -d ${BASEDIR}/$X ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: BASEDIR/$X  does not exist"
-    ERROR=true
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: BASEDIR/$X  does not exist"                           >&2
+    ERROR=true 
   fi
 done
 #__________ BUILDDIR____________________________________________________________
@@ -379,9 +382,9 @@ fi
 if [[ ! -d ${BUILDDIR} ]] ; then
   mkdir -p ${BUILDDIR} ; RC=$?
   if [[ $RC -ne 0 ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: could not create BUILDIR"
-    echo "BULDDIR=$BULDDIR"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: could not create BUILDIR"                             >&2
+    echo "BULDDIR=$BULDDIR"                                                  >&2
     ERROR=true
   fi
 fi
@@ -389,9 +392,9 @@ for X in etc doc ; do
    if [[ ! -d ${BUILDDIR}/$X ]] ; then
      mkdir ${BUILDDIR}/$X ; RC=$?
      if [[ $RC -ne 0 ]] ; then
-        echo "-----------------------------------------------------------------"
-        echo "error in $0: could not create BUILDIR/$X"
-        echo "BULDDIR=$BULDDIR"
+        echo "--------------------------------------------------------------">&2
+        echo "error in $0: could not create BUILDIR/$X"                      >&2
+        echo "BULDDIR=$BULDDIR"                                              >&2
         ERROR=true
      fi
    fi
@@ -399,16 +402,16 @@ done
 
 #________BINDIR_________________________________________________________________
 if [[ -z ${BINDIR} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: BUILDIR not defined"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: BUILDIR not defined"                                    >&2
   ERROR=true
 fi
 if [[ ! -d ${BINDIR} ]] ; then
   mkdir ${BINDIR} ; RC=$?
   if [[ $RC -ne 0 ]] ; then
-    echo "---------------------------------------------------------------------"
-    echo "error in $0: could not create BINDIR"
-    echo "BINDIR=$BINDIR"
+    echo "------------------------------------------------------------------">&2
+    echo "error in $0: could not create BINDIR"                              >&2
+    echo "BINDIR=$BINDIR"                                                    >&2
     ERROR=true
   fi
 fi
@@ -416,9 +419,9 @@ for X in include ; do
   if [[ ! -d ${BINDIR}/$X ]] ; then
     mkdir ${BINDIR}/$X ; RC=$?
     if [[ $RC -ne 0 ]] ; then
-      echo "-------------------------------------------------------------------"
-      echo "error in $0: could not create BINDIR/$X"
-      echo "BINDIR/lib=${BINDIR}"
+      echo "----------------------------------------------------------------">&2
+      echo "error in $0: could not create BINDIR/$X"                         >&2
+      echo "BINDIR/lib=${BINDIR}"                                            >&2
       ERROR=true
     fi
   fi
@@ -426,8 +429,8 @@ done
 
 #________DOCDIR____(installation directory for the manal.pdf____________________
 if [[ -z ${DOCDIR} ]] ; then
-  echo "-----------------------------------------------------------------------"
-  echo "error in $0: DOCDIR not defined"
+  echo "--------------------------------------------------------------------">&2
+  echo "error in $0: DOCDIR not defined"                                     >&2
   ERROR=true
 fi
 
@@ -440,27 +443,28 @@ CPPFLAGS=$(echo ${CPPFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 FCFLAGS=$(echo ${FCFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 LDFLAGS=$(echo ${LDFLAGS} | tr -s '[:blank:]')  # strip extra spaces
 
-
+export ERRMSG=""
+ERRMSG="${ERRMSG}\n SUFFIX  \t=${SUFFIX}"
+ERRMSG="${ERRMSG}\n PARALLEL\t=${PARALLEL}"
+ERRMSG="${ERRMSG}\n MAKE   \t\t=${MAKE}"
+ERRMSG="${ERRMSG}\n AR     \t\t=${AR}"
+ERRMSG="${ERRMSG}\n CPP    \t\t=${CPP}"
+ERRMSG="${ERRMSG}\n FC     \t\t=${FC}"
+ERRMSG="${ERRMSG}\n LD     \t\t=${LD}"         
+ERRMSG="${ERRMSG}\n CPPFLAGS\t=${CPPFLAGS}"  
+ERRMSG="${ERRMSG}\n FCFLAGS \t=${FCFLAGS}"   
+ERRMSG="${ERRMSG}\n LDFLAGS \t=${LDFLAGS}"   
+ERRMSG="${ERRMSG}\n LIBS   \t\t=${LIBS}"      
+ERRMSG="${ERRMSG}\n INCLUDES\t=$INCLUDES"    
+ERRMSG="${ERRMSG}\n DOCDIR  \t=${DOCDIR}"    
+ERRMSG="${ERRMSG}\n BINDIR  \t=${BINDIR}"    
+ERRMSG="${ERRMSG}\n BUILDDIR\t=${BUILDDIR}"  
+ERRMSG="${ERRMSG}\n BASEDIR \t=${BASEDIR}"   
 if [[ ${ERROR} != false ]] ; then
-  echo "---------------report before error exit--------------------------------"
-  echo "SUFFIX  =${SUFFIX}"
-  echo "PARALLEL=${PARALLEL}"
-  echo "MAKE    =${MAKE}"
-  echo "AR      =${AR}"
-  echo "CPP     =${CPP}"
-  echo "FC      =${FC}"
-  echo "LD      =${LD}"
-  echo "CPPFLAGS=${CPPFLAGS}"
-  echo "FCFLAGS= ${FCFLAGS}"
-  echo "LDFLAGS= ${LDFLAGS}"
-  echo "LIBS=    ${LIBS}"
-  echo "INCLUDES=$INCLUDES"
-  echo "DOCDIR  =${DOCDIR}"
-  echo "BINDIR  =${BINDIR}"
-  echo "BUILDDIR=${BUILDDIR}"
-  echo "BASEDIR =${BASEDIR}"
-  echo "-----------------------------------------------------------------------"
-  echo "error exit from $0"
+  echo "---------------report before error exit-----------------------------">&2
+  echo -e ${ERRMSG}                                                          >&2
+  echo "--------------------------------------------------------------------">&2
+  echo "error exit from $0"                                                  >&2
   exit 1
 fi
 
@@ -470,7 +474,7 @@ fi
 ${BASEDIR}/src/Buildtools/paw_mkbuilddir.sh -b ${BASEDIR} -o${BUILDDIR} -i "$INCLUDES"
 RC=$?
 if [[ ${RC} -ne 0 ]] ; then 
-  echo "error in $0: paw_mkbuilddir.sh returned with error code ${RC}"
+  echo "error in $0: paw_mkbuilddir.sh returned with error code ${RC}"       >&2
   exit 1
 fi
 
@@ -517,11 +521,11 @@ if [[ ${NODOC} = false ]] ; then
   if [[ ! -d ${DOCDIR} ]] ; then
     mkdir ${DOCDIR} ; RC=$?
     if [[ $RC -ne 0 ]] ; then
-      echo "error in $0: could not create DOCDIR"
-      echo "DOCDIR=$DOCDIR"
-      echo "Potential racing condition of several paw_build.sh."
+      echo "error in $0: could not create DOCDIR"                            >&2
+      echo "DOCDIR=$DOCDIR"                                                  >&2
+      echo "Potential racing condition of several paw_build.sh."             >&2
       echo "Consider using option -z of paw_build.sh \
-            on the competing calls except one."
+            on the competing calls except one."                              >&2
       exit=1
     fi
   fi
@@ -543,12 +547,12 @@ if [[ ${NODOC} = false ]] ; then
   (cd ${BUILDDIR}/doc &&  ${MAKE} ${MOPTS} )
   export RC=$?
   if [[ ${RC} -ne 0 ]] ; then
-    echo "------------------------------------------------------------------"
-    echo "error in $0: making documentation failed"
-    echo "$(sed -n '/^[!l]/p' ${BUILDDIR}/doc/manual.log)"
-    echo "consult ${BUILDDIR}/doc/manual.log for details"
-    echo "shutting down $0"
-    echo "------------------------------------------------------------------"
+    echo "----------------------------------------------------------------" >&2
+    echo "error in $0: making documentation failed"                         >&2
+    echo "$(sed -n '/^[!l]/p' ${BUILDDIR}/doc/manual.log)"                  >&2
+    echo "consult ${BUILDDIR}/doc/manual.log for details"                   >&2
+    echo "shutting down $0"                                                 >&2
+    echo "----------------------------------------------------------------" >&2
     exit 1
   fi
   echo "..............................................................made docs"
@@ -585,7 +589,7 @@ echo ".............................................................make prepare"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} prepare)
 RC=$?
 if [[ $RC -ne 0 ]] ; then 
-  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
+  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"            >&2
   exit 1
 fi
 echo ".............................................................made prepare"
@@ -594,7 +598,7 @@ echo "..............................................................make big.mk"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f big.mk)
 export RC=$?
 if [[ $RC -ne 0 ]] ; then 
-  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"
+  echo "error in $0: make prepare in BUILDDIR exited with RC=$RC"            >&2
   exit 1
 fi
 echo "..............................................................made big.mk"
@@ -604,7 +608,7 @@ echo ".................................................................make all"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS}  all)
 export RC=$?
 if [[ $RC -ne 0 ]] ; then 
-  echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+  echo "error in $0: make all in BUILDDIR exited with RC=$RC"                >&2
   exit 1
 fi
 echo " ................................................................made all"
@@ -626,7 +630,7 @@ echo "............................................................make install"
 (cd ${BUILDDIR} &&  ${MAKE} ${MOPTS} -f install.mk all)
 RC=$?
 if [[ $RC -ne 0 ]] ; then 
-  echo "error in $0: make all in BUILDDIR exited with RC=$RC"
+  echo "error in $0: make all in BUILDDIR exited with RC=$RC"                >&2
   exit 1
 fi
 echo ".............................................................made install"

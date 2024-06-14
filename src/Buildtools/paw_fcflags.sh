@@ -55,22 +55,22 @@ while getopts :s:c:t:vh OPT ; do
 done
 if [[ -z $OS ]] ; then OS=$(uname -s) ; fi
 if [[ -z $COMPILER ]] ; then 
-  echo "error in $0: no compiler specified option -c is mandatory"
+  echo "error in $0: no compiler specified option -c is mandatory"           >&2
   exit 1
 else
   if [[ -z $(echo "ifort gfortran" | grep ${COMPILER}) ]]; then
-    echo "error in $0: invalid compiler selection"
-    echo "allowed are ifort gfortran"
+    echo "error in $0: invalid compiler selection"                           >&2
+    echo "allowed are ifort gfortran"                                        >&2
     exit 1
   fi
 fi
 if [[ -z $TYPE ]] ; then 
-  echo "error in $0: no type specified. option -t is mandatory"
+  echo "error in $0: no type specified. option -t is mandatory"              >&2
   exit 1
 else
   if [[ -z $(echo "debug release" | grep ${TYPE}) ]]; then
-    echo "error in $0: invalid type selected with -t"
-    echo "allowed are debug release"
+    echo "error in $0: invalid type selected with -t"                        >&2
+    echo "allowed are debug release"                                         >&2
     exit 1
   fi
 fi
@@ -460,8 +460,10 @@ elif [[ ( $OS = Linux || $OS = Windows ) \
 
 fi
 
+# because flags are written to sttout, VERBOSE messes up the result
 if [[ $VERBOSE = true ]] ; then
-  echo FCFLAGS=$FCFLAGS
+  echo "intended error exit from $0: option -v only for debugging"           >&2
+  echo FCFLAGS=$FCFLAGS                                                      >&2
   exit 1
 fi
 echo ${FCFLAGS} > /dev/stdout

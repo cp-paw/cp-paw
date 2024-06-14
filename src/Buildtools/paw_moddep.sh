@@ -70,11 +70,11 @@ while getopts :hvuf:d: OPT ; do
   esac
 done
 if [[ -z $IN ]] ; then 
-   echo "error in $0: file not specified"
+   echo "error in $0: file not specified"                                    >&2
    exit 1
 fi 
 if [[ -z $OBJDIR ]] ; then 
-   echo "error in $0: directory for module and object files not specified"
+   echo "error in $0: directory for module and object files not specified"   >&2
    exit 1
 fi 
 if [[ -n $VERBOSE ]] ; then

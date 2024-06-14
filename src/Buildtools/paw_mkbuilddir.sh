@@ -55,18 +55,18 @@ while getopts :b:i:o:vh OPT ; do
 done
 
 if [[ -z ${BASEDIR} ]] ; then
-  echo "error in $0: BASEDIR not specified (option -i missing)"
+  echo "error in $0: BASEDIR not specified (option -i missing)"              >&2
   exit 1
 else
   if [[ ! -d ${BASEDIR}/src ]] ; then
-    echo "error in $0: BASEDIR specified with option -i is invalid"
-    echo "no subdirectory src"
-    echo "specified BASEDIR=${BASEDIR}"
+    echo "error in $0: BASEDIR specified with option -i is invalid"          >&2
+    echo "no subdirectory src"                                               >&2
+    echo "specified BASEDIR=${BASEDIR}"                                      >&2
     exit 1
   fi 
 fi
 if [[ -z ${BUILDDIR} ]] ; then
-  echo "error in $0: BUILDDIR not specified (option -o missing)"
+  echo "error in $0: BUILDDIR not specified (option -o missing)"             >&2
   exit 1
 fi
 

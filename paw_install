@@ -1,8 +1,5 @@
 #!/bin/bash
 export THISDIR=$(pwd)
-export RC1=0
-export RC2=0
-export RC3=0
 #
 #-------------------------------------------------------------------------------
 #--  install cp-paw package                                                   --
@@ -19,27 +16,27 @@ export RC3=0
 #  -v verbose
 #  
 #-------------------------------------------------------------------------------
-# src/Buildtools/paw_build.sh -v -j10 -c dbg   
-# exit 1
+export NODOC=""  # suppress building documentation except once
 
-echo "======================== building dbg  =================================="
-src/Buildtools/paw_build.sh -v -j10 -c dbg           \
-                            1>out_dbg 2>&1 ; RC1=$? &
-echo "======================== building fast==================================="
-src/Buildtools/paw_build.sh -v -j10 -c fast -z   \
-                            1>out_fast 2>&1 ; RC2=$? &
-echo "======================== building fast_parallel ========================="
-src/Buildtools/paw_build.sh -v -j10 -c fast_parallel -z  \
-                            1>out_fastp 2>&1 ; RC3=$? &
-wait
-if [[ $RC1 != 0 || $RC2 != 0 || $RC3 != 0 ]] ; then
-  echo "-------------------------------------------------------------------" >&2
-  echo "error in $0: installation failed " >&2
-  echo "RC1=$RC1, RC2=$RC2, RC2=$RC3"      >&2
-  echo "shutting down $0"                  >&2
-  echo "-------------------------------------------------------------------" >&2
-  exit 1
-fi
+#  list of choices in the parmfile to be selected
+export LIST="dbg fast fast_parallel"
+for X in ${LIST} ; do
+  echo "======================== building $X  ================================="
+  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err 2>&1
+  export RC=$?
+  export NODOC="-z"  # suppress building documentation again
+  if [[ $RC -ne 0 ]] ; then
+    echo "--------------------installation failed---------------------------">&2
+    echo -e "error in $0: paw_build failed for choice $X. error file below:" >&2
+    cat err                                                                  >&2
+    echo "shutting down $0"                                                  >&2
+    echo "------------------------------------------------------------------">&2
+    echo "--------------------error exit------------------------------------">&2
+    echo "------------------------------------------------------------------">&2
+    exit 1
+  fi
+  echo "======================== building $X completed ========================"
+done
 #
 #
 echo " "
