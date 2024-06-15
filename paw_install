@@ -22,13 +22,16 @@ export NODOC=""  # suppress building documentation except once
 export LIST="dbg fast fast_parallel"
 for X in ${LIST} ; do
   echo "======================== building $X  ================================="
-  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err 2>&1
+  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err
   export RC=$?
   export NODOC="-z"  # suppress building documentation again
   if [[ $RC -ne 0 ]] ; then
     echo "--------------------installation failed---------------------------">&2
     echo -e "error in $0: paw_build failed for choice $X. error file below:" >&2
+    echo ""
     cat err                                                                  >&2
+    echo ""
+    echo -e "inspect file out_$X for further information"
     echo "shutting down $0"                                                  >&2
     echo "------------------------------------------------------------------">&2
     echo "--------------------error exit------------------------------------">&2

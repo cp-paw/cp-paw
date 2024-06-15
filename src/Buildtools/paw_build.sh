@@ -325,7 +325,7 @@ for X in ${LIBS} ; do
     fi
   else
     echo "------------------------------------------------------------------">&2
-    echo "error in $0: Synatx error on LIBS"                                 >&2
+    echo "error in $0: Syntax error on LIBS"                                 >&2
     echo "all entries must have prefix -L or -l not separated by a blank"    >&2
     ERROR=true
   fi
