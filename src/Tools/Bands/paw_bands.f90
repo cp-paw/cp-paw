@@ -215,7 +215,6 @@ END MODULE REFCELL_MODULE
       END IF
       RETURN
       END     
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPACEGROUP$SYMMETRYPOINTS(BRAVAIS,NPX,NP,NAME,G)
@@ -1802,7 +1801,6 @@ END MODULE
 !       ========================================================================
 !       ==  READ K-VECTORS                                                    ==
 !       ========================================================================
-!
 !       == SCALE FACTOR =======================================================
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LUNIT',0,TCHK1)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LUNIT[AA]',0,TCHK2)
