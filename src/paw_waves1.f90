@@ -247,7 +247,6 @@ TYPE(EXTERNALPOINTER_TYPE):: EXTPNTR
 LOGICAL(4)                :: TFIXRHO=.FALSE.
 LOGICAL(4)                :: TWRITERHO=.FALSE.
 CHARACTER(8)              :: OPTIMIZERTYPE  ! SWITCH FOR CONJUGATE GRADIENT OR DYNAMICS
-
 CONTAINS
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_SELECTWV(IKPT,ISPIN)
@@ -2073,7 +2072,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$         CALL CG$STATE_BY_STATE(MAP%NRL,NDIMD,RHO(:,:),CONVPSI,NAT,LMNXX,DH) !KAESTNERCG
 !!$         CALL TIMING$CLOCKOFF('CG')                             !KAESTNERCG
 !!$         TCONV=.FALSE. ! TCONV HAS NOT BEEN SET!!!
-            IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)             !KAESTNERCG
+!!$         IF(TCONV) CALL STOPIT$SETL4('STOP',.TRUE.)             !KAESTNERCG
 !!$      END IF                                                    !KAESTNERCG
 !
 !     ==========================================================================

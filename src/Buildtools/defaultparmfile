@@ -1,0 +1,255 @@
+#!/bin/bash
+################################################################################
+##                                                                            ##
+##  parmfile for cppaw                                                        ##
+##                                                                            ##
+##  use in connection with ${BASEDIR}/src/Buildtools/paw_build.sh             ##
+##  parmfile will be embedded into paw_build.sh with "source" command         ##
+##                                                                            ##
+##  The parameter SELECT is pre-defined                                       ##
+##                                                                            ##
+##  for a comparison of the flags for various compilers, see
+##  https://github.com/flang-compiler/f18-llvm-project/blob/not-main/flang/docs/OptionComparison.md
+##
+################################################################################
+################################################################################
+## Variables to be set and their explanation:
+## Do not touch this block. Rather overwrite values below.
+## Variables are initialized to zero unless they are set by the environment 
+################################################################################
+#____________________________identifier for the implementation__________________
+#____________________________will be appended to the name of the executable_____
+#____________________________such as the suffix "fast" in "paw_fast.x"__________
+export SUFFIX=
+#____________________________switch for parallel(true)/scalar(false) execution__
+export PARALLEL=
+#____________________________gnu make version 4.3 or later______________________
+export MAKE=
+#____________________________archiver___________________________________________
+export AR=
+#____________________________c-preprocessor_____________________________________
+export CPP=
+#____________________________fortran compiler___________________________________
+export FC=
+#____________________________linker (usually equal to compiler)_________________
+export LD=
+#____________________________linker (usually equal to compiler)_________________
+export LIBS= 
+#____________________________flags for the preprocessor_________________________
+#____________________________-D will be prepended_______________________________
+#____________________________variable for parallel will be added________________
+# CPPVAR_NOLIBXC (do not link LIBXC)
+# CPPVAR_FEAST, CPPVAR_JADAMILU #
+# CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
+# -C do not discard comments
+# -P inhibit generation of linemarkers
+# -traditional Try to imitate the behavior of pre-standard C preprocessors
+# -nostdinc Do not search the standard system directories for header files. 
+export CPPFLAGS=
+#___________________________compiler flags______________________________________
+export FCFLAGS=
+#___________________________linker flags________________________________________
+export LDFLAGS=
+#___________________________list of libraries___________________________________
+#___________________________(blas, lapack, fftw3, libxc)________________________
+export LIBS=
+#___________________________list of include and module files____________________
+#___________________________(fftw3.f03, mpi_f08.mod, xc_f03_lib_m.mod)__________
+#___________________________files will be soft-linked into the build directory__
+export INCLUDES=
+#___________________________base directory of the cppaw repository______________
+#___________________________default: ./_________________________________________
+export BASEDIR=
+#___________________________directory for the building process__________________
+#___________________________default: ./bin/Build_${SELECT}______________________
+export BUILDDIR=
+#___________________________installation directory______________________________
+#___________________________default ./bin/${SELECT}_____________________________
+export BINDIR=
+#___________________________installation directory for the documentation________
+#___________________________default ./doc_______________________________________
+export DOCDIR=
+
+################################################################################
+## generic definitions
+################################################################################
+#-------------------------------------------------------------------------------
+#--                          analyze system                                   --
+#-------------------------------------------------------------------------------
+#____operating system_______________________________________________________
+export OS=$(uname -s) # can be Linux, Darwin,...
+#_____architecture (processor family)___________________________________________
+export ARCH=$(uname -m)   # can be arm64,
+#-------------------------------------------------------------------------------
+#--                          set generic defaults                             --
+#-------------------------------------------------------------------------------
+MAKE="$(which gmake)"
+
+AR="$(which ar)"
+
+CPP="$(which cpp)"
+
+BASEDIR="$(pwd)"
+
+BUILDDIR="$(pwd)/bin/Build_${SELECT}"
+
+BINDIR="$(pwd)/bin/${SELECT}"
+
+DOCDIR="$(pwd)/doc"
+
+#-------------------------------------------------------------------------------
+#  select compiler, respectively the mpi compiler wrapper
+#  PARALLEL is true, when $SELECT contains substring "parallel"
+#-------------------------------------------------------------------------------
+case $SELECT in 
+  *parallel*)
+     PARALLEL=true
+     CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
+     for X in mpiifort mpifort mpif90 ; do
+       if [[ -n $(which ${X}) ]] ; then
+         FC=$(which $X)
+         LD=${FC}
+         break
+       fi
+     done
+     ;;
+  *)
+     PARALLEL=false
+     for X in gfortran ifort nvfortran ; do
+       if [[ -n $(which ${X}) ]] ; then
+         FC=$(which $X)
+         LD=${FC}
+         break
+       fi
+     done
+     ;;
+esac
+
+#-------------------------------------------------------------------------------
+#-- identify the compiler (underlying the compiler wrapper)
+#-- to guide the selection of compiler fflags
+#-------------------------------------------------------------------------------
+for X in gfortran ifort mpifort mpif90 mpiifort ; do
+   if [[ -n $(echo ${FC} | grep $X) ]] ; then
+     case $X in
+       gfortran) COMPILER=gfortran ;;
+       ifort|mpiifort) COMPILER=ifort ;;
+       mpifort|mpif90) COMPILER=$(mpif90 --showme:command) ;;
+       *) echo "error in $0: illegal selection $X"  
+          exit 1 
+          ;;
+     esac
+     break
+   fi
+done
+if [[ -z $COMPILER ]] ; then
+  echo "error in $0: Compiler not identified"
+  echo "FC=${FC}"
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+#  Autoconf archive: https://www.gnu.org/software/autoconf-archive/index.html
+#
+#  when pkgconfig is available, it is used to initialize the variables
+#  for the libraries
+#  FC: gfortran ifort 
+#  MPI: ompi mpich
+#  BLAS: openblas atlas Intel-mkl IBM-ESSL PhiPack
+#-------------------------------------------------------------------------------
+if [[ -n $(which pkg-config) ]] ; then
+  #-----------------------------------------------------------------------------
+  #  add libraries: BLAS LAPACK FFTW LIBXC 
+  #-----------------------------------------------------------------------------
+  #  The MPI library is not considered here because it is taken care of via the 
+  #  compiler wrapper.
+  #-----------------------------------------------------------------------------
+  #  BLAS and Lapack are contained in framework Acellerate in MacOS 
+  #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
+  #-----------------------------------------------------------------------------
+  LIST="fftw3 libxcf03"
+  if [[ ${OS} = Darwin ]] ; then
+    LDFLAGS="${LDFLAGS} -framework Accelerate"
+  else
+    LIST="${LIST} blas lapack"
+  fi
+
+  for X in ${LIST}; do
+    if [[ $(pkg-config --print-errors --exists $X; echo $?) = 0 ]]; then
+      FCFLAGS="${FCFLAGS} $(pkg-config --print-errors --cflags $X)"
+      LIBS="${LIBS} $(pkg-config --print-errors --libs $X)"
+      # INCLUDES already considered in cflags. But compilers are unreliable
+      case $X in
+         *fftw3*)
+           Y=$(pkg-config --print-errors \
+                          --variable=includedir $X)/fftw3.f03
+           INCLUDES="${INCLUDES} $Y"
+          ;; 
+         *libxc*)
+           Y=$(pkg-config --print-errors \
+                          --variable=includedir $X)/xc_f03_lib_m.mod
+           INCLUDES="$INCLUDES $Y"
+           ;;
+      esac
+    fi   
+  done
+else
+ echo "------------------------------------------------------------------------"
+ echo "warning from $0: pkg-config not available:"
+ echo "$0 relies on pkg-config to automatically identify libraries."
+ echo "Without pkg-config, parameters must be set by hand in the parmfile."
+ echo "A missing pkg-config may cause errors below."
+ echo "------------------------------------------------------------------------"
+fi
+
+################################################################################
+## resolve selection 
+################################################################################
+#------------------------------------------------------------------------------
+function add_fcflags  {
+   #############################################################################
+   # extends compiler and linker flags. selection is based on available keywords
+   # OS        may be Linux, Darwin, Windows
+   # COMPILER  may be gfortran, ifort
+   # TYPE      may be debug, release
+   #############################################################################
+   local X=$(${BASEDIR}/src/Buildtools/paw_fcflags.sh \
+                                           -s ${OS} -c ${COMPILER} -t ${TYPE})
+   RC=$?
+   if [[ ! $RC = 0 ]] ; then
+      echo "error in $0: nonzero return code from paw_fcflags.sh"
+      echo "Operating system =$OS"
+      echo "Compiler         =$COMPILER"
+      echo "Type             =$TYPE"
+      exit 1
+   fi
+   FCFLAGS="${FCFLAGS} $X"
+   LDFLAGS="${LDFLAGS} $X"
+}
+#------------------------------------------------------------------------------
+
+case ${SELECT} in 
+  dbg)
+     SUFFIX="dbg"
+     TYPE="debug"  
+     add_fcflags # see function definition above
+     ;;
+
+  fast)
+    SUFFIX="fast"
+    TYPE="release"  
+    add_fcflags  # see function definition above
+    ;;
+
+  fast_parallel)
+    SUFFIX="fast"
+    TYPE="release"  
+    add_fcflags  # see function definition above
+    ;;
+
+  *) #-- anything else. 
+    echo "invalid selection $SELECT specified by -s in paw_build.sh"
+    exit 1
+    ;;
+esac
+

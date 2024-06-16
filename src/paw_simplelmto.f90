@@ -709,7 +709,7 @@ END MODULE SIMPLELMTO_MODULE
       REAL(8)                :: SVAR
       INTEGER(4)             :: L
 !     **************************************************************************
-      LOGICAL(4),PARAMETER   :: TPR=.TRUE.
+      LOGICAL(4),PARAMETER   :: TPR=.FALSE.
       LOGICAL(4),PARAMETER   :: TH1S=.FALSE. ! OVERWRITE AECHI WITH H ORBITAL
       REAL(8)                :: RAUG       ! MATCHING RADIUS
       INTEGER(4)             :: LNXPHI     ! #(PARTIALWAVES)

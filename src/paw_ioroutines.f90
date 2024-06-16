@@ -23,7 +23,6 @@ CONTAINS
         IMPLICIT NONE
         INTEGER(4)   ,INTENT(IN) :: NFILO
         CHARACTER(32)            :: DATIME
-        CHARACTER(32)            :: HOSTNAME
         INTEGER(4)               :: STATUS
 !       ****************************************************************
         WRITE(NFILO,FMT='()')
@@ -42,11 +41,7 @@ CONTAINS
         CALL CPPAW_WRITEVERSION(NFILO)
 
         CALL CLOCK$NOW(DATIME)
-        CALL GET_ENVIRONMENT_VARIABLE('HOSTNAME',HOSTNAME,STATUS=STATUS)
-        IF(STATUS.NE.0) HOSTNAME='UNKNOWN HOSTNAME'
-        WRITE(NFILO,FMT='("PROGRAM STARTED: ",A32," ON ",A)') &
-     &           DATIME,HOSTNAME
-        CALL LOCK$REPORT(NFILO)
+        WRITE(NFILO,FMT='("PROGRAM STARTED on ",A32)')DATIME
         END SUBROUTINE PUTHEADER
 !       ................................................................
         SUBROUTINE WRITER8(NFIL,NAME,VALUE,UNIT)
@@ -341,11 +336,6 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','ACTION','READ')
       CALL FILEHANDLER$SETSPECIFICATION(+'CNTL','FORM','FORMATTED')
-!
-!     ==========================================================================
-!     ==  CHECK EXPIRATION DATE                                               ==
-!     ==========================================================================
-      CALL LOCK$BREAKPOINT
 !    
 !     ==========================================================================
 !     ==  READ BUFFER CNTL                                                    ==
@@ -1890,9 +1880,6 @@ CALL LMTO$SETL4('ON',.FALSE.)
 !     == IF OCCUPATIONS ARE DYNAMICAL THE OCCUPATIONS ARE BY DEFAULT READ
 !     == FROM THE RESTART FILE UNLESS THE PARAMETER STARTTYPE IS SPECIFIED 
 !     ==  ON INPUT IN THIS !CNTL!MERMIN BLOCK
-!
-      CALL LOCK$DISABLE('!MERMIN IN READIN_MERMIN')
-!
       CALL LINKEDLIST$SELECT(LL_CNTL,'MERMIN')
 !
 !     ==================================================================

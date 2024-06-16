@@ -279,7 +279,8 @@ END MODULE ERROR_MODULE
         CALL FILEHANDLER$CLOSEALL
       END IF
       CALL MPE$STOPALL(NCODE)
-      STOP 'IN ERROR$STOP'
+!     == JOB STOPS IN MPE$STOPALL WITH ERROR CODE NCODE ========================
+      ERROR STOP 'IN ERROR$STOP' ! THIS STATEMENT IS SUPERFLUOUS
       END
 !
 !     ..................................................................
@@ -292,11 +293,11 @@ END MODULE ERROR_MODULE
 !     ==========================================================================
 !     == MPI$STOPALL WILL STOP THE EXECUTION ALSO IN THE SCALAR VERSION
 !     ==========================================================================
-      WRITE(*,fmt='(a)')'NORMAL STOP: CALLING MPE$STOPALL TO CLOSE DOWN'
+      WRITE(*,FMT='(A)')'NORMAL STOP: CALLING MPE$STOPALL TO CLOSE DOWN'
       CALL MPE$STOPALL(0) ! BRING DOWN ALL MPI TASKS RELATED TO MPI_WORLD_COMM
 !
 !     ==========================================================================
 !     == THE FOLLOWING STOP IS SUPERFLUOUS
 !     ==========================================================================
-      STOP 'NORMAL STOP'
+      STOP 'NORMAL STOP'  ! THIS STATEMENT IS SUPERFLUOUS
       END

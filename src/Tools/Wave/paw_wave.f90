@@ -256,43 +256,44 @@
          CALL LINKEDLIST$EXISTD(LL_CNTL,'MIN',1,TCHK1)
          IF(TCHK1) THEN
            CALL LINKEDLIST$GET(LL_CNTL,'MIN',1,SVAR)
-           do I1=1,NR1
-             do I2=1,NR2
-               do I3=1,NR3
+           DO I1=1,NR1
+             DO I2=1,NR2
+               DO I3=1,NR3
                  WAVE(I1,I2,I3)=MAX(WAVE(I1,I2,I3),SVAR)
-               enddo
-             enddo
-           enddo
+               ENDDO
+             ENDDO
+           ENDDO
            IF(TC)THEN
-             do I1=1,NR1
-               do I2=1,NR2
-                 do I3=1,NR3
+             DO I1=1,NR1
+               DO I2=1,NR2
+                 DO I3=1,NR3
                    CWAVE(I1,I2,I3)=CMPLX(MAX(REAL(CWAVE(I1,I2,I3)),SVAR) &
-      &                                 ,MAX(AIMAG(CWAVE(I1,I2,I3)),SVAR))
-                 enddo
-               enddo
-             enddo
-           endif
+      &                                ,MAX(AIMAG(CWAVE(I1,I2,I3)),SVAR),KIND=8)
+                 ENDDO
+               ENDDO
+             ENDDO
+           ENDIF
          END IF     
          CALL LINKEDLIST$EXISTD(LL_CNTL,'MAX',1,TCHK1)
          IF(TCHK1) THEN
            CALL LINKEDLIST$GET(LL_CNTL,'MAX',1,SVAR)
-           do I1=1,NR1
-             do I2=1,NR2
-               do I3=1,NR3
+           DO I1=1,NR1
+             DO I2=1,NR2
+               DO I3=1,NR3
                  WAVE(I1,I2,I3)=MIN(WAVE(I1,I2,I3),SVAR)
-               enddo
-             enddo
-           enddo
+               ENDDO
+             ENDDO
+           ENDDO
            IF(TC)THEN
-             do I1=1,NR1
-               do I2=1,NR2
-                 do I3=1,NR3
-                   CWAVE(I1,I2,I3)=CMPLX(MIN(REAL(CWAVE(I1,I2,I3)),SVAR),MIN(AIMAG(CWAVE(I1,I2,I3)),SVAR))
-                 enddo
-               enddo
-             enddo
-           endif
+             DO I1=1,NR1
+               DO I2=1,NR2
+                 DO I3=1,NR3
+                   CWAVE(I1,I2,I3)=CMPLX(MIN(REAL(CWAVE(I1,I2,I3)),SVAR) &
+     &                                 ,MIN(AIMAG(CWAVE(I1,I2,I3)),SVAR),KIND=8)
+                 ENDDO
+               ENDDO
+             ENDDO
+           ENDIF
          END IF     
        END IF
 !
@@ -304,10 +305,19 @@
        CALL LINKEDLIST$SELECT(LL_CNTL,'VIEWBOX')
        BOXR0(:)=0.D0
        BOXVEC(:,:)=RBAS(:,:)
-       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
        CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
        IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,BOXVEC)
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+       IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,BOXR0)
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK1)
+       IF(TCHK1) THEN
+         IF(TCHK) THEN
+           CALL ERROR$MSG('!WCNTL!VIEWBOX:O AND :C ARE MUTUALLY EXCLUSIVE')
+           CALL ERROR$STOP('MWAVE')
+         END IF
+         CALL LINKEDLIST$GET(LL_CNTL,'C',1,BOXR0)
+         BOXR0=BOXR0-0.5D0*MATMUL(BOXVEC,(/1.D0,1.D0,1.D0/))
+       END IF
 !
 !      ==================================================================
 !      ==  GET PLANE FOR RUBBERSHEET                                   ==
@@ -319,14 +329,25 @@
        PLANEVEC(:,:)=BOXVEC(:,:2)
        IF(TPLANE) THEN
          CALL LINKEDLIST$SELECT(LL_CNTL,'PLANE')
-         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
-         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,PLANER0)
          CALL LINKEDLIST$EXISTD(LL_CNTL,'T',1,TCHK)
          IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'T',1,PLANEVEC)
-       END IF
-       PLANEVEC(:,2)=PLANEVEC(:,2)-PLANEVEC(:,1) &
+!        == MAKE SECOND PLANE VECTOR PERPENDICULAR TO THE FIRST ONE ============
+         PLANEVEC(:,2)=PLANEVEC(:,2)-PLANEVEC(:,1) &
       &                       /DOT_PRODUCT(PLANEVEC(:,1),PLANEVEC(:,1)) &
       &                       *DOT_PRODUCT(PLANEVEC(:,1),PLANEVEC(:,2)) 
+
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'O',1,TCHK)
+         IF(TCHK)CALL LINKEDLIST$GET(LL_CNTL,'O',1,PLANER0)
+         CALL LINKEDLIST$EXISTD(LL_CNTL,'C',1,TCHK1)
+         IF(TCHK1) THEN
+           IF(TCHK) THEN
+             CALL ERROR$MSG('!WCNTL!VIEWBOX:O AND :C ARE MUTUALLY EXCLUSIVE')
+             CALL ERROR$STOP('MWAVE')
+           END IF
+           CALL LINKEDLIST$GET(LL_CNTL,'C',1,PLANER0)
+           BOXR0=BOXR0-0.5D0*MATMUL(PLANEVEC,(/1.D0,1.D0/))
+         END IF
+       END IF
 !
 !      ==================================================================
 !      ==  WRITE DENSITY TO CUBE FILE                                  ==
@@ -342,14 +363,14 @@
 !      ==  WRITE RUBBERSHEET TO GNU FILE                                      ==
 !      =========================================================================
        IF(TPLANE) THEN
-         CALL TRACE$PASS('make gnu file for contour plot')
+         CALL TRACE$PASS('MAKE GNU FILE FOR CONTOUR PLOT')
 !         == ATTENTION! ONLY REAL PART IS USED =================================
          CALL FILEHANDLER$UNIT('GNUCONTOUR',NFIL)
          REWIND NFIL
          CALL MAKEGNU(NFIL,'CONTOUR',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
       &              ,PLANER0,PLANEVEC)
          CALL FILEHANDLER$CLOSE('GNUCONTOUR')
-         CALL TRACE$PASS('make gnu file for rubbersheet')
+         CALL TRACE$PASS('MAKE GNU FILE FOR RUBBERSHEET')
          CALL FILEHANDLER$UNIT('GNURUBBERSHEET',NFIL)
          REWIND NFIL
          CALL MAKEGNU(NFIL,'SURFACE',NAT,Z,POS,RBAS,NR1,NR2,NR3,WAVE &
@@ -1251,7 +1272,7 @@
       INTEGER(4),PARAMETER  :: N1=80      ! DISPLACEMENT
       INTEGER(4),PARAMETER  :: N2=80
       INTEGER(4),PARAMETER  :: N3=80
-      REAL(8)               :: DATA(N1,N2,N3)
+      REAL(8)   ,ALLOCATABLE:: DATA(:,:,:) !(N1,N2,N3)
       REAL(8)               :: RTOX(3,3)
       REAL(8)               :: VOL
       INTEGER(4)            :: NRVIEW,NRVIEWX
@@ -1263,6 +1284,7 @@
 !     ==========================================================================
 !     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
+      ALLOCATE(DATA(N1,N2,N3))
       CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE,ORIGIN,BOX,N1,N2,N3,DATA)
  !
 !     ==========================================================================
@@ -1280,6 +1302,7 @@
 !     ==  WRITE CUBE FILE                                                     ==
 !     ==========================================================================
       CALL WRITECUBEFILE(NFIL,NRVIEW,ZVIEW,RVIEW,ORIGIN,BOX,N1,N2,N3,DATA)
+      DEALLOCATE(DATA)
 !
       DEALLOCATE(RVIEW)
       DEALLOCATE(ZVIEW)
@@ -1312,7 +1335,7 @@
       INTEGER(4),PARAMETER  :: N1=160      ! DISPLACEMENT
       INTEGER(4),PARAMETER  :: N2=160
       INTEGER(4),PARAMETER  :: N3=1
-      REAL(8)               :: DATA(N1,N2,N3)
+      REAL(8)   ,ALLOCATABLE:: DATA(:,:,:) !(N1,N2,N3) TOO LARGE FOR STACK
       REAL(8)               :: RTOX(3,3)
       REAL(8)               :: VOL
       INTEGER(4)            :: NRVIEW,NRVIEWX
@@ -1327,6 +1350,7 @@
 !     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
       IF(TPLANE) THEN
+        ALLOCATE(DATA(N1,N2,N3))
         PLANEBOX(:,:)=0.D0
         PLANEBOX(:,:2)=PLANEVEC(:,:)
         CALL MAPFIELDTOGRID(RBAS,NR1,NR2,NR3,WAVE &
@@ -1359,6 +1383,7 @@
       CALL VRML$ADDBALLSTICK(NFIL,NRVIEW,ZVIEW,RVIEW)
       IF(TPLANE) THEN
         CALL VRML$ADDRUBBERSHEET(NFIL,PLANER0,PLANEBOX,N1,N2,DATA)
+        DEALLOCATE(DATA)
       END IF
 !
       DEALLOCATE(RVIEW)
@@ -1395,8 +1420,8 @@
       INTEGER(4),PARAMETER  :: N1=80      ! DISPLACEMENT
       INTEGER(4),PARAMETER  :: N2=80
       INTEGER(4),PARAMETER  :: N3=1
-      COMPLEX(8)            :: CDATA(N1,N2,N3)
-      REAL(8)               :: DATA(N1,N2,N3)
+      COMPLEX(8),ALLOCATABLE:: CDATA(:,:,:) !(N1,N2,N3)
+      REAL(8)   ,ALLOCATABLE:: DATA(:,:,:)  !(N1,N2,N3)
       REAL(8)               :: RTOX(3,3)
       REAL(8)               :: VOL
       INTEGER(4)            :: NRVIEW,NRVIEWX
@@ -1411,6 +1436,7 @@
 !     ==  INTERPOLATE WAVE FUNCTION ONTO VIEWING GRID                         ==
 !     ==========================================================================
       IF(TPLANE) THEN
+        ALLOCATE(CDATA(N1,N2,N3))
         PLANEBOX(:,:)=0.D0
         PLANEBOX(:,:2)=PLANEVEC(:,:)
         CALL MAPFIELDTOGRIDC(RBAS,XK,NR1,NR2,NR3,CWAVE &
@@ -1442,8 +1468,11 @@
       WRITE(NFIL,*)'} # CLOSE VIEWPOINT'
       CALL VRML$ADDBALLSTICK(NFIL,NRVIEW,ZVIEW,RVIEW)
       IF(TPLANE) THEN
+        ALLOCATE(DATA(N1,N2,N3))
         DATA=REAL(CDATA)
         CALL VRML$ADDRUBBERSHEET(NFIL,PLANER0,PLANEBOX,N1,N2,DATA)
+        DEALLOCATE(CDATA)
+        DEALLOCATE(DATA)
       END IF
 !
       DEALLOCATE(RVIEW)
@@ -1476,7 +1505,7 @@
       INTEGER(4),PARAMETER  :: N3=1
       REAL(8)               :: BOX3D(3,3)
       REAL(8)               :: DATA(N1,N2,N3)
-      real(8)               :: xmax,xmin,ymax,ymin
+      REAL(8)               :: XMAX,XMIN,YMAX,YMIN
       INTEGER(4)            :: I,J
 !     **************************************************************************
                               CALL TRACE$PUSH('MAKEGNU')
@@ -1566,8 +1595,8 @@
       WRITE(NFIL,*)'#=========================================================='
       WRITE(NFIL,*)-'SET CONTOUR SURFACE',' # DRAW CONTOUR ONTO THE SURFACE'
       WRITE(NFIL,*)-'SET CNTRPARAM LEVELS INCREMENTAL -0.5,0.05,0.5'
-      WRITE(NFIL,*)-'SET CNTRPARAM bspline'
-      WRITE(NFIL,*)-'SET CNTRPARAM order 6'
+      WRITE(NFIL,*)-'SET CNTRPARAM BSPLINE'
+      WRITE(NFIL,*)-'SET CNTRPARAM ORDER 6'
       WRITE(NFIL,*)-'UNSET CLABEL'       ,' # NO AUTOCOLORING OF CONTOURS'
       WRITE(NFIL,*)'#'                                                     
       WRITE(NFIL,*)'#=========================================================='
@@ -1578,7 +1607,7 @@
       WRITE(NFIL,*)-'SET VIEW ROT_X,ROT_Z,SCALE,SCALE_Z'                  
       WRITE(NFIL,*)'#'                                                   
       WRITE(NFIL,*)'#=========================================================='
-      WRITE(NFIL,*)'# SET Terminals (uncomment one)                          =='
+      WRITE(NFIL,*)'# SET TERMINALS (UNCOMMENT ONE)                          =='
       WRITE(NFIL,*)'#=========================================================='
       WRITE(NFIL,*)'#----USE POSTSCRIPT TERMINAL FOR EPS FILES-----------------'
       WRITE(NFIL,*)-'SET TERMINAL POSTSCRIPT EPS ' &
@@ -1910,12 +1939,12 @@
       REAL(8)   ,INTENT(IN) :: DATA(N1,N2,N3)
       REAL(8)               :: ANGSTROM
       REAL(8)               :: SCALE
-      integer(4)            :: sunit=1   ! =1 for Bohr radii/ =-1 for Angstrom
+      INTEGER(4)            :: SUNIT=1   ! =1 FOR BOHR RADII/ =-1 FOR ANGSTROM
       INTEGER(4)            :: IAT,I,J,K
 !     **************************************************************************
-      IF(SUNIT.EQ.1) THEN       ! lengths in bohr radii
+      IF(SUNIT.EQ.1) THEN       ! LENGTHS IN BOHR RADII
         SCALE=1.D0
-      ELSE IF(SUNIT.EQ.-1) THEN ! lengths in angstrom
+      ELSE IF(SUNIT.EQ.-1) THEN ! LENGTHS IN ANGSTROM
         CALL CONSTANTS('ANGSTROM',ANGSTROM)
         SCALE=1.D0/ANGSTROM
       ELSE
@@ -1928,14 +1957,14 @@
       WRITE(NFIL,FMT='(I5,3F12.6)')NAT,ORIGIN*SCALE
 !     == SHEARED GRIDS ARE PERMITTED BUT OFTEN NOT SUPPORTED ===================
 !     == MINUS SIGN INDICATS ANGSTROM-UNIT. OTHERWISE BOHR RADII ===============
-      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N1,BOX(:,1)/REAL(N1-1,KIND=8)*SCALE
-      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N2,BOX(:,2)/REAL(N2-1,KIND=8)*SCALE
-      WRITE(NFIL,FMT='(I5,3F12.6)')sunit*N3,BOX(:,3)/REAL(N3-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')SUNIT*N1,BOX(:,1)/REAL(N1-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')SUNIT*N2,BOX(:,2)/REAL(N2-1,KIND=8)*SCALE
+      WRITE(NFIL,FMT='(I5,3F12.6)')SUNIT*N3,BOX(:,3)/REAL(N3-1,KIND=8)*SCALE
 !
       DO IAT=1,NAT
         WRITE(NFIL,FMT='(I5,4F12.6)')NINT(Z(IAT)),0.D0,R(:,IAT)*SCALE
       ENDDO  
-!     == data are written with z as innermost and x as outermost loop
+!     == DATA ARE WRITTEN WITH Z AS INNERMOST AND X AS OUTERMOST LOOP
       WRITE(NFIL,FMT='(6(E12.6," "))')(((DATA(I,J,K),K=1,N3),J=1,N2),I=1,N1)
 !!$DO K=1,N3
 !!$  SCALE=0.D0

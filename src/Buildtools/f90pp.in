@@ -1,0 +1,110 @@
+#!/bin/bash
+#________1_________2_________3_________4_________5_________6_________7_________8
+################################################################################
+##                                                                            ##
+## f90pp                                                                      ##
+##                                                                            ##
+##    -- replaces dollar signs by double underscore (paw_dollar_ok.sh)        ##
+##    -- removes directives (lines starting with @)                           ##
+##    -- applies c-preprocessor (input option -D)                             ##
+##    -- resolves templates (f90pp_tmplts.x)                                  ##
+##    -- replacements with f90pp.sed                                          ##
+##                                                                            ##
+## requirements:                                                              ##
+##    etc/f90pp.tmplts.x, etc/f90pp.sed, etc/paw_dollar_ok.sh                 ##
+##                                                                            ##
+################################################################################
+#-------------------------------------------------------------------------------
+#  help message
+#-------------------------------------------------------------------------------
+export USAGE="\n"
+USAGE="$USAGE Usage of $0:\n"
+USAGE="$USAGE \t f90pp options <infile >outfile\n"
+USAGE="$USAGE fortran preprocessor for cppaw\n"
+USAGE="$USAGE Options \n"
+USAGE="$USAGE \t -D c-preprocessor directive\n"
+#USAGE="$USAGE \t -v verbose\n"
+USAGE="$USAGE \t -h prints this help message\n"
+
+#-------------------------------------------------------------------------------
+#  Resolve arguments
+#-------------------------------------------------------------------------------
+while getopts :hD: OPT ; do
+  case $OPT in
+    D) CPPVAR="$CPPVAR -D$OPTARG" ;;
+#    v) VERBOSE="Y" ;;
+    h) echo -e $USAGE ; exit 0  ;;
+    \?)   # unknown option (placed into OPTARG, if OPTSTRING starts with :)
+      echo "error in $0" >&2
+      echo "invalid option -$OPTARG" >&2
+      echo "retrieve argument list with:" >&2
+      echo "$0 -h" >&2
+      exit 1
+      ;;
+    :)    # no argument passed
+      ;;
+  esac
+done
+
+#___the variable @CPP@ can be replaced \
+#___by sed -s/@CPP@/${CPP}/g f90pp.in > f9ppp
+CPP=@CPP@
+if [[ ! -x $CPP ]] ; then
+   CPP=$(which cpp)
+fi
+
+#-------------------------------------------------------------------------------
+#  compile F90TMPLTS  if not available
+#-------------------------------------------------------------------------------
+# if [[ -e etc/f90pp_tmplts.x ]] ; then
+#   if [[ etc/f90pp_tmplts.x -ot ${F90PPDIR}/f90pp_tmplts.f90 ]] ; then
+#     rm etc/f90pp_tmplts.x
+#   fi
+# fi
+# if [[ ! -e etc/f90pp_tmplts.x ]] ; then
+#   TMP=$(mktemp).f90
+#   sed -e "s/[$]/__/" < ${F90PPDIR}/f90pp_tmplts.f90 >$TMP
+#   ${COMPILE} -oetc/f90pp_tmplts.x $TMP
+#   rm -f $TMP
+# fi
+
+
+#-------------------------------------------------------------------------------
+#  Checks
+#-------------------------------------------------------------------------------
+if [[ ! -f etc/f90pp.sed ]] ; then
+  echo "error in $0: etc/f90pp.sed not found"                                >&2
+  exit 1
+fi
+if [[ ! -x etc/f90pp_tmplts.x ]] ; then
+  echo "error in $0: etc/f90pp_tmplts.x not found or not executable"         >&2
+  exit 1
+fi
+if [[ ! -x etc/paw_dollar_ok.sh ]] ; then
+  if [[ -f etc/paw_dollar_ok.sh ]] ; then
+    echo "error in $0: etc/paw_dollar_ok.sh present but not executable"      >&2
+  else
+    echo "error in $0: etc/paw_dollar_ok.sh not found"                       >&2
+  fi
+  exit 1
+fi
+if [[ ! -x ${CPP} ]] ; then
+  echo "error in $0: c-preprocessor no found"                                >&2
+  echo "CPP=$CPP"                                                            >&2
+  exit 1
+fi
+
+#-------------------------------------------------------------------------------
+# convert source code
+#-------------------------------------------------------------------------------
+TMP=$(mktemp)
+TMP2=$(mktemp)
+cat < /dev/stdin > ${TMP2}
+etc/f90pp_tmplts.x < $TMP2 >$TMP
+sed -f etc/f90pp.sed $TMP > $TMP2
+etc/paw_dollar_ok.sh <$TMP2 >$TMP  # convert dollar signs by double underscore
+sed /^@/d  $TMP >$TMP2         # delete lines beginning with @
+${CPP} -traditional -nostdinc -P -C ${CPPVAR} $TMP2 $TMP 
+cat $TMP
+rm -f $TMP
+rm -f $TMP2

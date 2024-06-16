@@ -215,7 +215,6 @@ END MODULE REFCELL_MODULE
       END IF
       RETURN
       END     
-
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE SPACEGROUP$SYMMETRYPOINTS(BRAVAIS,NPX,NP,NAME,G)
@@ -1169,7 +1168,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
           DO IDIM1=1,NDIM
             I1=I*(NDIM)+(IDIM1-1)
             PSI1(:,:,:)=0.0D0
-            PSI1(I,IDIM1,1)=CMPLX(1.0D0,0.0D0)
+            PSI1(I,IDIM1,1)=CMPLX(1.D0,0.D0,KIND=8)
             HPSI1(:,:,:)=0.0D0
             CALL WAVES_VPSI(GSET,NGL,NDIM,1,NRG,PSI1(:,:,:) &
       &                                        ,VOFR(:,ISPIN),HPSI1(:,:,:))
@@ -1332,7 +1331,7 @@ PRINT*,'N1B ',N1B,N2B,N3B
         IBPRO=1+SUM(LNX(1:ISP-1))
         DO I=1,NG2
           SVAR=SUM(GVECPK(:,I)*R(:,IAT))
-          EIGR(I)=CMPLX(COS(SVAR),-SIN(SVAR))
+          EIGR(I)=CMPLX(COS(SVAR),-SIN(SVAR),KIND=8)
         ENDDO
 
 !PRINT*,"LOX",IAT,ISP,LNX_,LMNX_,LOX_(1:LNX_),IBPRO,R(:,IAT)
@@ -1500,11 +1499,12 @@ PRINT*,'N1B ',N1B,N2B,N3B
           IBPRO=1+SUM(LNX(1:ISP-1))
           DO I=1,NG2
             SVAR=SUM(GVECPK(:,I)*R(:,IAT))
-            EIGR(I)=CMPLX(COS(SVAR),SIN(SVAR))
+            EIGR(I)=CMPLX(COS(SVAR),SIN(SVAR),KIND=8)
           ENDDO
 
           CALL WAVES_EXPANDPRO(LNX_,LOX_,LMNX_,NG2,GVECPK(1:3,1:NG2) &
-       & ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX,YLM,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
+       &                      ,BAREPRO(1:NG2,IBPRO:IBPRO+LNX_-1),LMX,YLM &
+       &                      ,EIGR(1:NG2),PRO(IAT,1:NG2,1:LMNX_))
         ENDDO
         PRO(:,:,:)=SQRT(GWEIGHT)*PRO(:,:,:)
         DO IAT=1,NAT
@@ -1801,7 +1801,6 @@ END MODULE
 !       ========================================================================
 !       ==  READ K-VECTORS                                                    ==
 !       ========================================================================
-!
 !       == SCALE FACTOR =======================================================
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LUNIT',0,TCHK1)
         CALL LINKEDLIST$EXISTD(LL_CNTL,'LUNIT[AA]',0,TCHK2)
@@ -2468,7 +2467,7 @@ PRINT*,'+++++++++++++++++ SPIN=',ISPIN,'++++++++++++++++++'
       EB(:,:)=0.0D0 
       IF(TPROJ)THEN
         ALLOCATE(PROJK(NAT,NB*NSPIN,LMNXX,NKP))
-        PROJK(:,:,:,:)=CMPLX(0.0D0,0.0D0)
+        PROJK(:,:,:,:)=CMPLX(0.D0,0.D0,KIND=8)
       ENDIF
 
 !     ==========================================================================
@@ -2765,7 +2764,7 @@ PRINT*,'+++++++++++++++++ SPIN=',ISPIN,'++++++++++++++++++'
         FPM(5)=1 !PROVIDE INITIAL GUESS SUBSPACE
       ELSE
         FPM(5)=0 !PROVIDE INITIAL GUESS SUBSPACE
-        U=CMPLX(0.0D0,0.0D0)
+        U=CMPLX(0.D0,0.D0,KIND=8)
       ENDIF
 !     __CHOOSE CONVERGENCE CRITERIA:____________________________________________
 !     _________0 RELATIVE ERROR ON TRACE (EPSOUT<EPS)
