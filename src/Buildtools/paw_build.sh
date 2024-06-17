@@ -47,7 +47,7 @@ while getopts :c:f:s:j:zvh OPT ; do
     s) SUFFIX=$OPTARG ;;
     j) JOBS=$OPTARG 
        export MOPTS="-j ${JOBS}"
-#       MOPTS="${MOPTS} -s"
+       #  MOPTS="${MOPTS} --silent"
        MOPTS="${MOPTS} --debug=b"
        ;;
     z) NODOC=true ;;
