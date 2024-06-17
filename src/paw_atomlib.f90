@@ -926,18 +926,13 @@ USE PERIODICTABLE_MODULE
 !       == A FRACTIONAL NUCLEAR AND ELECTRONIC CHARGE ==========================
         FTOT=SUM(FOFI(:NB))   ! =NINT(AEZ)
         SVAR=AEZ-FTOT         ! =AEZ-NINT(AEZ)
-print*,'svar ',svar
 !
 !       == REMOVE ELECTRONS ====================================================
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
-print*,'marke 1',ib,fofi(ib),svar
             SVAR=SVAR+FOFI(IB)
-PRINT*,'MARKE 2',IB,FOFI(IB),SVAR
             FOFI(IB)=MAX(0.D0,SVAR)
-PRINT*,'MARKE 3',IB,FOFI(IB),SVAR
             SVAR=SVAR-FOFI(IB)
-PRINT*,'MARKE 4',IB,FOFI(IB),SVAR
             IF(SVAR.GE.0.D0) EXIT 
           ENDDO
 
