@@ -930,7 +930,7 @@ USE PERIODICTABLE_MODULE
 !       == REMOVE ELECTRONS ====================================================
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
-            FOFI(IB)=FOFI(IB)+SVAR
+            SVAR=SVAR+FOFI(IB)
             FOFI(IB)=MAX(0.D0,SVAR)
             SVAR=SVAR-FOFI(IB)
             IF(SVAR.GE.0.D0) EXIT 
