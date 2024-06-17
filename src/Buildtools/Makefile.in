@@ -172,7 +172,8 @@ $(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/paw_dollar_ok.sh
 
 etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 	etc/paw_dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
-	${FC} ${FCFLAGS} $(LDFLAGS) -o $@ etc/f90pp_tmplts_tmp.f90 $(LIBS)
+	${FC} ${FCFLAGS} -o etc/f90pp_tmplts_tmp.o etc/f90pp_tmplts_tmp.f90 
+	${LD} ${LDFLAGS} -o $@ etc/f90pp_tmplts_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
 #--  the parmfilewriter embeds text into a fortran code,                     --
@@ -180,7 +181,8 @@ etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 #-------------------------------------------------------------------------------
 etc/parmfilewriter.x: etc/parmfilewriter.f90 $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > etc/parmfilewriter_tmp.f90
-	$(FC) $(FCFLAGS) $(LDFLAGS) -o $@ etc/parmfilewriter_tmp.f90 $(LIBS)
+	$(FC) $(FCFLAGS) -o etc/parmfilewriter_tmp.o etc/parmfilewriter_tmp.f90 
+	$(LD) $(LDFLAGS) -o $@ etc/parmfilewriter_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
 #--  embed the current parmfile in version_writeparmfile.o

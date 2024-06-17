@@ -311,6 +311,7 @@ END MODULE TEMPLATE_MODULE
 !     ==================================================================
 !     == READ INPUT INTO BUFFER     
 !     ==================================================================
+      NLINE=0
       DO I=1,NLINEX 
         READ(*,FMT='(A)',END=1000)BUFFER(I)
         NLINE=I
