@@ -172,7 +172,7 @@ $(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/paw_dollar_ok.sh
 
 etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 	etc/paw_dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
-	${FC} ${FCFLAGS} -o etc/f90pp_tmplts_tmp.o etc/f90pp_tmplts_tmp.f90 
+	${FC} -c ${FCFLAGS} -o etc/f90pp_tmplts_tmp.o etc/f90pp_tmplts_tmp.f90 
 	${LD} ${LDFLAGS} -o $@ etc/f90pp_tmplts_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
@@ -181,7 +181,8 @@ etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 #-------------------------------------------------------------------------------
 etc/parmfilewriter.x: etc/parmfilewriter.f90 $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > etc/parmfilewriter_tmp.f90
-	$(FC) $(FCFLAGS) -o etc/parmfilewriter_tmp.o etc/parmfilewriter_tmp.f90 
+	$(FC) -c $(FCFLAGS) -o etc/parmfilewriter_tmp.o \
+                               etc/parmfilewriter_tmp.f90 
 	$(LD) $(LDFLAGS) -o $@ etc/parmfilewriter_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
