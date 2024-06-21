@@ -316,9 +316,9 @@ objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info
 #
 #____general rule for object files fortran 77___________________________________
 #____use gmake string substitution $(var:suffix=replacement)
-
+#____previously, there has been a compiler option -fall-intrinsics
 slatec.o: slatec.f 
-	$(FC) -c $(FCFLAGS:-fimplicit-none=) -fall-intrinsics -o $@ $<
+	$(FC) -c $(FCFLAGS:-fimplicit-none=) -o $@ $<
 
 ################################################################################
 #  build executables

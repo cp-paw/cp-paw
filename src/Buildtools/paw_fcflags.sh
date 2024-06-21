@@ -165,7 +165,7 @@ if [[ $OS = Unix && $COMPILER = ifort && $TYPE=debug ]] ; then
   #          -debug full -debug-parameters all \
   #          -fp-stack-check -traceback -warn declarations"
   # compromise between axel and default
-  FCFLAGS="-debug full -g3 -O0 -CB -init:snan,arrays -warn all \
+  FCFLAGS="-debug full -g2 -O0 -CB -init:snan,arrays -warn all \
            -gen-interfaces -traceback \
            -check udio_iostat -check stack 
            -check output_conversion -check contiguous -check assume \

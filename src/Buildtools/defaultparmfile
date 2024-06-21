@@ -292,9 +292,6 @@ esac
 #------------------------------------------------------------------------------
 if [[ $COMPILER == ifort ]] ; then 
   export INTELDIR=${FC%/bin/*}
-  # mpidir is not required because it is hidden inside the compiler wrapper
-  # export MPIDIR="/opt/openmpi-4.0.5_Intel/"
-
   # -mkl=sequential is deprecated option. shall we use -qmkl=sequential instead?
   LDFLAGS="${LDFLAGS} -Wl,-dn -mkl=sequential -Wl,-dy"
 
@@ -302,11 +299,11 @@ if [[ $COMPILER == ifort ]] ; then
   # the include file fftw3.f03 is not included, when the following 
   # option is used.
   # question: does the mechanism to install fftwxf_intel provided above work?
-  if [[ -z $(echo ${LIBS} | grep fftw3) ]] ; then
-    LIBS="${LIBS} -L${INTELDIR}/fftw/.libs  -lfftw3xf_intel"
-    echo "error in $0: this installation mechanism for fftw is inconsistent"
-    exit 1
-  fi
+  # if [[ -z $(echo ${LIBS} | grep fftw3) ]] ; then
+  #   LIBS="${LIBS} -L${INTELDIR}/fftw/.libs  -lfftw3xf_intel"
+  #   echo "error in $0: this installation mechanism for fftw is inconsistent"
+  #   exit 1
+  # fi
   
   #  Question: are libm, libpthread, libdl now part of the standard C library?
   #  Question: is there a need to link the standard C library?
