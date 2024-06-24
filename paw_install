@@ -29,7 +29,7 @@ for X in ${LIST} ; do
     echo "--------------------installation failed---------------------------">&2
     echo -e "error in $0: paw_build failed for choice $X. error file below:" >&2
     echo ""
-    cat err                                                                  >&2
+    cat err_${X}                                                             >&2
     echo ""
     echo -e "inspect file out_$X for further information"
     echo "shutting down $0"                                                  >&2
