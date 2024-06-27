@@ -3466,12 +3466,14 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
 !       ================================================================
         IF(THISTASK.EQ.1) THEN
-!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0 ==
-!         == https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/internal-representation-of-logical-variables.html ==
-!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT  ==
-!         == https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2024-2/logical-data-representations.html ==
-!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE               ==
-!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD PDOS FILES          ==
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD RESTART FILES           ==
           READ(NFIL)KEY,NGG_,NDIM_,NB_,ILOGICAL   !<<<<<<<<<<<<<<<<<<<<<<
           TSUPER_=BTEST(ILOGICAL,0)
           IF(KEY.NE.'PSI') THEN
@@ -5249,12 +5251,14 @@ END MODULE TOTALSPIN_MODULE
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
 !       ================================================================
         IF(THISTASK.EQ.1) THEN
-!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0 ==
-!         == https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/internal-representation-of-logical-variables.html ==
-!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT  ==
-!         == https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2024-2/logical-data-representations.html ==
-!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE               ==
-!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD PDOS FILES          ==
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD RESTART FILES           ==
           READ(NFIL)KEY,NGG_,NDIM_,NB_,ILOGICAL   !<<<<<<<<<<<<<<<<<<<<<<
           TSUPER=BTEST(ILOGICAL,0)
           IF(KEY.NE.'PSI') THEN

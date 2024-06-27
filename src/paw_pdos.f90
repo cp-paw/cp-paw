@@ -732,12 +732,14 @@
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
       
       IF(FLAG.EQ.'181213')THEN
-!       == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0 ==
-!       == https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/internal-representation-of-logical-variables.html ==
-!       == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT  ==
-!       == https://www.intel.com/content/www/us/en/docs/fortran-compiler/developer-guide-reference/2024-2/logical-data-representations.html ==
-!       == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE               ==
-!       == ENSURES BACKWARDS COMPATIBILITY WITH OLD PDOS FILES          ==
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD PDOS FILES              ==
         READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,ILOGICAL
         TINV=BTEST(ILOGICAL,0)
         READ(NFIL)SPACEGROUP,ILOGICAL
