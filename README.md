@@ -1,12 +1,11 @@
 <p align="center">
 <a href="https://cppaw.org">
-<img src="src/Docs/Figs/PAWlogo/logo_big.png" width="300" title="cppaw.org">
+<img src="src/Docs/Figs/PAWlogo/paw_github.svg" width="300" title="cppaw.org">
 </a>
 </p>
-<p align="right">
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+<p align="right"> 
+  <a href="https://www.gnu.org/licenses/gpl-3.0"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPLv3"></a>
 </p>
-
 
 # CP-PAW code package
 
