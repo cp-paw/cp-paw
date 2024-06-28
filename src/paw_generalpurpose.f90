@@ -2311,3 +2311,58 @@ END IF
       RES=REAL(B(I,J),KIND=8)
       RETURN
       END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITEBITSTRINGI4(NFIL,NAME,VAL)
+!     **************************************************************************
+!     ** WRITE THE BIT STRING OF A INTEGER(4) VARIABLE VAL                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: VAL
+      CHARACTER(64)           :: BITSTRING
+      INTEGER                 :: I
+!     **************************************************************************
+      BITSTRING=" "
+      DO I=1,BIT_SIZE(VAL)
+        IF(BTEST(VAL,I-1)) THEN
+          BITSTRING(I:I)='1'
+        ELSE 
+         BITSTRING(I:I)='0'
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='(" BITSTRING=",A," VALUE=",I10," VARIABLE NAME=",A)') &
+                     BITSTRING(1:BIT_SIZE(VAL)),VAL,TRIM(NAME)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITEBITSTRINGL4(NFIL,NAME,VAL)
+!     **************************************************************************
+!     ** WRITE THE BIT STRING OF A LOGICAL(4) VARIABLE VAL                    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(*),INTENT(IN) :: NAME
+      LOGICAL(4)  ,INTENT(IN) :: VAL
+      INTEGER                 :: IVAL
+      INTEGER                 :: LEN
+      CHARACTER(64)           :: BITSTRING
+      INTEGER                 :: I
+!     **************************************************************************
+      LEN=STORAGE_SIZE(VAL)  ! NUMBER OF BITS TO HOLD VALUE OF VAL IN MEMORY
+      LEN=MIN(LEN,BIT_SIZE(IVAL))
+      IVAL=TRANSFER(VAL,IVAL)
+      BITSTRING=" "
+      DO I=1,LEN
+        IF(BTEST(IVAL,I-1)) THEN
+          BITSTRING(I:I)='1'
+        ELSE 
+         BITSTRING(I:I)='0'
+        END IF
+      ENDDO
+      WRITE(NFIL,FMT='(" BITSTRING=",A," VALUE=",L10," VARIABLE NAME=",A)') &
+                     BITSTRING(1:LEN),VAL,TRIM(NAME)
+      RETURN
+      END

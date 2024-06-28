@@ -47,6 +47,7 @@ export LIBS=
 # -nostdinc Do not search the standard system directories for header files. 
 export CPPFLAGS=
 #___________________________compiler flags______________________________________
+#___________________________do not include -c. This is done explicitely in make
 export FCFLAGS=
 #___________________________linker flags________________________________________
 export LDFLAGS=
@@ -80,6 +81,7 @@ export DOCDIR=
 export OS=$(uname -s) # can be Linux, Darwin,...
 #_____architecture (processor family)___________________________________________
 export ARCH=$(uname -m)   # can be arm64,
+
 #-------------------------------------------------------------------------------
 #--                          set generic defaults                             --
 #-------------------------------------------------------------------------------
@@ -101,11 +103,25 @@ DOCDIR="$(pwd)/doc"
 #  select compiler, respectively the mpi compiler wrapper
 #  PARALLEL is true, when $SELECT contains substring "parallel"
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+#  x  gfortran  GNU
+#  -  flang-new LLVM
+#-----------------------commercial----------------------------------------------
+#  x  ifort     INTEL (classic)
+#  -  ifx       INTEL (new, llvm based)
+#  -  nagfor    NAG 
+#  -  xlf       IBM
+#  -  nvfortran NVIDIA
+#-------------------------------------------------------------------------------
+#   mpif90   is  the compiler wrapper for openmpi,...
+#   mpifort  is identical to mpif90 
+#   mpiifort is the compiler wrapper for the intel compiler with intel's mpi
+#-------------------------------------------------------------------------------
 case $SELECT in 
   *parallel*)
      PARALLEL=true
      CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
-     for X in mpiifort mpifort mpif90 ; do
+     for X in mpif90 mpifort mpiifort   ; do
        if [[ -n $(which ${X}) ]] ; then
          FC=$(which $X)
          LD=${FC}
@@ -115,7 +131,7 @@ case $SELECT in
      ;;
   *)
      PARALLEL=false
-     for X in gfortran ifort nvfortran ; do
+     for X in ifort gfortran flang-new ifx nvfortran nagfor xlf ; do
        if [[ -n $(which ${X}) ]] ; then
          FC=$(which $X)
          LD=${FC}
@@ -129,12 +145,16 @@ esac
 #-- identify the compiler (underlying the compiler wrapper)
 #-- to guide the selection of compiler fflags
 #-------------------------------------------------------------------------------
-for X in gfortran ifort mpifort mpif90 mpiifort ; do
+for X in ifort mpifort mpif90 mpiifort gfortran ; do
    if [[ -n $(echo ${FC} | grep $X) ]] ; then
      case $X in
-       gfortran) COMPILER=gfortran ;;
+       gfortran)       COMPILER=gfortran ;;
        ifort|mpiifort) COMPILER=ifort ;;
        mpifort|mpif90) COMPILER=$(mpif90 --showme:command) ;;
+       flang-new|ifx|nagfor|nvfortran|xlf) 
+          echo "error in $0: compiler $X not yet supported by this parmfile"
+          exit 1
+          ;;
        *) echo "error in $0: illegal selection $X"  
           exit 1 
           ;;
@@ -167,9 +187,19 @@ if [[ -n $(which pkg-config) ]] ; then
   #  BLAS and Lapack are contained in framework Acellerate in MacOS 
   #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
   #-----------------------------------------------------------------------------
-  LIST="fftw3 libxcf03"
+  LIST=""
+  if [[ ${COMPILER} == ifort ]] ; then 
+     LIST="${LIST} fftw3xf_intel"
+  else
+     LIST="${LIST} fftw3"
+  fi
+  LIST="${LIST} libxcf03"
   if [[ ${OS} = Darwin ]] ; then
     LDFLAGS="${LDFLAGS} -framework Accelerate"
+
+#Todo: check whether the mkl is available. It probably replaces blas and lapack
+#      as well
+
   else
     LIST="${LIST} blas lapack"
   fi
@@ -189,6 +219,13 @@ if [[ -n $(which pkg-config) ]] ; then
            Y=$(pkg-config --print-errors \
                           --variable=includedir $X)/xc_f03_lib_m.mod
            INCLUDES="$INCLUDES $Y"
+           ;;
+      esac
+
+    else   # action if library is not present
+      case $X in
+         *libxc*)
+           CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
            ;;
       esac
     fi   
@@ -227,11 +264,10 @@ function add_fcflags  {
    LDFLAGS="${LDFLAGS} $X"
 }
 #------------------------------------------------------------------------------
-
 case ${SELECT} in 
   dbg)
      SUFFIX="dbg"
-     TYPE="debug"  
+     TYPE="debug"  # TYPE is used in add_fcflags and paw_fcflags respectively
      add_fcflags # see function definition above
      ;;
 
@@ -248,8 +284,50 @@ case ${SELECT} in
     ;;
 
   *) #-- anything else. 
-    echo "invalid selection $SELECT specified by -s in paw_build.sh"
+    echo "invalid selection $SELECT specified by -c in paw_build.sh"
     exit 1
     ;;
 esac
 
+#------------------------------------------------------------------------------
+if [[ $COMPILER == ifort ]] ; then 
+  export INTELDIR=${FC%/bin/*}
+  # -mkl=sequential is deprecated option. shall we use -qmkl=sequential instead?
+  LDFLAGS="${LDFLAGS} -Wl,-dn -mkl=sequential -Wl,-dy"
+
+  # this rule for fftw3xf_intel is probably not required. 
+  # the include file fftw3.f03 is not included, when the following 
+  # option is used.
+  # question: does the mechanism to install fftwxf_intel provided above work?
+  # if [[ -z $(echo ${LIBS} | grep fftw3) ]] ; then
+  #   LIBS="${LIBS} -L${INTELDIR}/fftw/.libs  -lfftw3xf_intel"
+  #   echo "error in $0: this installation mechanism for fftw is inconsistent"
+  #   exit 1
+  # fi
+  
+  #  Question: are libm, libpthread, libdl now part of the standard C library?
+  #  Question: is there a need to link the standard C library?
+  #  LIBM is the standard C library of basic mathematical functions
+  #  libdl dynamic linking directory
+  #  libpthread Application program interface for creating and managing threads
+  LIBS="${LIBS} -L${INTELDIR}/lib/intel64 -lpthread -lm -ldl"
+
+  # xiar is an archive tool for IPO objects and part of intel's installation
+  export AR="$(which xiar)"
+fi
+
+################################################################################
+## special patches 
+################################################################################
+if [[ -n $(which make4.4) ]] ; then 
+  export MAKE="$(which make4.4)"
+fi
+#_____is mkl installed?_________________________________________________________
+#_____todo: check out the mkl_link_tool
+# if [[ -n ${which mkl_link_tool} ]] ; then 
+#   MKL=true
+#   # LIBS="${LIBS} $(mkl_link_tool -libs)"
+#   # FCFLAGS="${FCFLAGS} $(mkl_link_tool -opts)"
+# else
+#   MKL=false
+# fi
