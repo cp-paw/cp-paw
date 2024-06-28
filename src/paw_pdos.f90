@@ -707,6 +707,7 @@
       CHARACTER(82)          :: IOSTATMSG
       LOGICAL(4)             :: TCHK
       REAL(8)                :: OCCSUM
+      INTEGER(4)             :: ILOGICAL
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$READ')
 !
@@ -731,8 +732,18 @@
       READ(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
       
       IF(FLAG.EQ.'181213')THEN
-        READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
-        READ(NFIL)SPACEGROUP,TSHIFT
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD PDOS FILES              ==
+        READ(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,ILOGICAL
+        TINV=BTEST(ILOGICAL,0)
+        READ(NFIL)SPACEGROUP,ILOGICAL
+        TSHIFT=BTEST(ILOGICAL,0)
       ENDIF
 !
 !     ==================================================================
@@ -821,6 +832,7 @@ PRINT*,"OCCSUM",OCCSUM
       CHARACTER(6),INTENT(IN)      :: FLAG_
       INTEGER(4)                   :: ISP,IKPT
       INTEGER(4)                   :: LNX1
+      INTEGER(4)                   :: ILOGICAL
 !     ******************************************************************
                              CALL TRACE$PUSH('PDOS$WRITE')
       FLAG=FLAG_
@@ -832,8 +844,13 @@ PRINT*,"OCCSUM",OCCSUM
       WRITE(NFIL)LNX(:),LOX(:,:),ISPECIES(:)
 
       IF(FLAG_.EQ.'181213')THEN
-        WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,TINV
-        WRITE(NFIL)SPACEGROUP,TSHIFT
+!       == PDOS FILE WITH GNU STANDARD OF LOGICAL BIT REPRESENTATION ==
+        ILOGICAL=1
+        IF(.NOT.TINV)ILOGICAL=0
+        WRITE(NFIL)NKDIV(:),ISHIFT(:),RNTOT,NEL,ILOGICAL
+        ILOGICAL=1
+        IF(.NOT.TSHIFT)ILOGICAL=0
+        WRITE(NFIL)SPACEGROUP,ILOGICAL
       ENDIF
 !
 !     ==================================================================
