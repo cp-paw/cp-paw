@@ -245,7 +245,7 @@ etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src $(BASEDIR)/paw_install
 	rm -f $@
 	export TMP=$$(mktemp -d) ;\
 	cp etc/parms.in_use       $${TMP}/ ;\
-	cp $(BASEDIR)/README      $${TMP}/ ;\
+	cp $(BASEDIR)/README.md   $${TMP}/ ;\
 	cp $(BASEDIR)/LICENSE     $${TMP}/ ;\
 	cp $(BASEDIR)/paw_install $${TMP}/ ;\
 	cp -r $(BASEDIR)/src      $${TMP}/ ;\
