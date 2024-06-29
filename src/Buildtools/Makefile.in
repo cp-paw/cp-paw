@@ -172,7 +172,7 @@ $(F90PP) : etc/f90pp.in etc/f90pp.sed etc/f90pp_tmplts.x etc/paw_dollar_ok.sh
 
 etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 	etc/paw_dollar_ok.sh < $< > etc/f90pp_tmplts_tmp.f90
-	${FC} ${FCFLAGS} -o etc/f90pp_tmplts_tmp.o etc/f90pp_tmplts_tmp.f90 
+	${FC} -c ${FCFLAGS} -o etc/f90pp_tmplts_tmp.o etc/f90pp_tmplts_tmp.f90 
 	${LD} ${LDFLAGS} -o $@ etc/f90pp_tmplts_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
@@ -181,7 +181,8 @@ etc/f90pp_tmplts.x : etc/f90pp_tmplts.f90 etc/paw_dollar_ok.sh
 #-------------------------------------------------------------------------------
 etc/parmfilewriter.x: etc/parmfilewriter.f90 $(F90PP)
 	$(F90PP) $(CPPFLAGS) < $< > etc/parmfilewriter_tmp.f90
-	$(FC) $(FCFLAGS) -o etc/parmfilewriter_tmp.o etc/parmfilewriter_tmp.f90 
+	$(FC) -c $(FCFLAGS) -o etc/parmfilewriter_tmp.o \
+                               etc/parmfilewriter_tmp.f90 
 	$(LD) $(LDFLAGS) -o $@ etc/parmfilewriter_tmp.o $(LIBS)
 
 #-------------------------------------------------------------------------------
@@ -244,7 +245,7 @@ etc/paw_srcblob.tgz : etc/parms.in_use $(BASEDIR)/src $(BASEDIR)/paw_install
 	rm -f $@
 	export TMP=$$(mktemp -d) ;\
 	cp etc/parms.in_use       $${TMP}/ ;\
-	cp $(BASEDIR)/README      $${TMP}/ ;\
+	cp $(BASEDIR)/README.md   $${TMP}/ ;\
 	cp $(BASEDIR)/LICENSE     $${TMP}/ ;\
 	cp $(BASEDIR)/paw_install $${TMP}/ ;\
 	cp -r $(BASEDIR)/src      $${TMP}/ ;\
@@ -315,9 +316,9 @@ objects :  $(addsuffix .f90pp , $(BIGLIST)) big.mk cppaw_version.info
 #
 #____general rule for object files fortran 77___________________________________
 #____use gmake string substitution $(var:suffix=replacement)
-
+#____previously, there has been a compiler option -fall-intrinsics
 slatec.o: slatec.f 
-	$(FC) -c $(FCFLAGS:-fimplicit-none=) -fall-intrinsics -o $@ $<
+	$(FC) -c $(FCFLAGS:-fimplicit-none=) -o $@ $<
 
 ################################################################################
 #  build executables
