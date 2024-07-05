@@ -15,8 +15,11 @@ USAGE="${USAGE}\n"
 #-------------------------------------------------------------------------------
 #--  resolve options
 #-------------------------------------------------------------------------------
-OP=""
-OPTSTRING=":hvc:r:"
+export DRYRUN="false"
+export VERBOSE="false"
+export OP=""
+export DIRNAME=""
+OPTSTRING=":hc:r:"
 while getopts "${OPTSTRING}" OPT  ; do
   case $OPT in
     c) DIRNAME="$OPTARG" 
@@ -35,15 +38,15 @@ while getopts "${OPTSTRING}" OPT  ; do
        fi
        OP="recover"
        ;;
-    0)   #nothing:
-       DRYRUN=yes
-#      set -n
-       ;;
-    v)   #verbose
-       VERBOSE=yes
-#      set -v
+#     0)   #nothing:
+#        DRYRUN="true"
+# #      set -n
+#        ;;
+    # v)   #verbose
+    #    VERBOSE="true"
+#       set -v
 #      set -x
-      ;;
+#      ;;
     h)   # help
       echo -e $USAGE
       exit 0
@@ -72,8 +75,10 @@ case "$OP" in
       echo "WARNING: the directory $DIRNAME already exists, doing NOTHING!" 
       exit 1
     else
-      mkdir "$DIRNAME" # create directory
-      /bin/cp * "$DIRNAME" #copy all files
+      if [[ $DRYRUN != true ]] ; then
+        mkdir "$DIRNAME" # create directory
+        /bin/cp * "$DIRNAME" #copy all files
+      fi
     fi
     ;;
 #
@@ -89,11 +94,13 @@ case "$OP" in
       read answer
       if [ "$answer" = "y" ];  then
         #remove all files in the current directory
-        /bin/rm *
-        #copy all files from $DIRNAME
-        /bin/cp $DIRNAME/* .
-        echo "Now you have the all files from the directory $DIRNAME"\
+        if [[ $DRYRUN != true ]]; then
+          /bin/rm *
+          #copy all files from $DIRNAME
+          /bin/cp $DIRNAME/* .
+          echo "Now you have the all files from the directory $DIRNAME"\
              " in the current directory."
+        fi
       else
         echo "DOING NOTHING."
         exit 1
