@@ -90,10 +90,6 @@ ${BINDIR}/$(PAWX): paw.x
 tools : $(addprefix $(BINDIR)/, $(PTOOLS)) \
         $(basename $(addprefix $(BINDIR)/, $(PTOOLS))) 
 
-# #__this (two colons) is a static pattern rule of gmake.
-# $(addprefix $(BINDIR)/, $(TOOLS)) : $(BINDIR)/%.x : %.x
-# 	cp $< $@
-
 #__this (two colons) is a static pattern rule of gmake.
 $(addprefix $(BINDIR)/, $(PTOOLS)) : $(BINDIR)/$(PP)_%.x : paw_%.x
 	cp $< $@

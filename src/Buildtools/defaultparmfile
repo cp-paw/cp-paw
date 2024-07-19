@@ -187,24 +187,46 @@ if [[ -n $(which pkg-config) ]] ; then
   #  BLAS and Lapack are contained in framework Acellerate in MacOS 
   #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
   #-----------------------------------------------------------------------------
+  export LIB_BLAS_OK=""
+  export LIB_LAPACK_OK=""
+  export LIB_FFTW3_OK=""
+  export LIB_XC_OK=""
   LIST=""
-  if [[ ${COMPILER} == ifort ]] ; then 
-     LIST="${LIST} fftw3xf_intel"
-  else
-     LIST="${LIST} fftw3"
-  fi
+  LIST="${LIST} openblas mkl blas lapack" 
+  LIST="${LIST} fftw3xf_intel fftw3"
   LIST="${LIST} libxcf03"
+
   if [[ ${OS} = Darwin ]] ; then
     LDFLAGS="${LDFLAGS} -framework Accelerate"
-
-#Todo: check whether the mkl is available. It probably replaces blas and lapack
-#      as well
-
-  else
-    LIST="${LIST} blas lapack"
+    LIB_BLAS_OK="yes"
+    LIB_LAPACK_OK="yes"
   fi
 
   for X in ${LIST}; do
+    # test if something needs to be done #######################################
+    case $X in
+      openblas|mkl)
+          if [[ -n $LIB_BLAS_OK && -n $LIB_LAPACK_OK ]] ; then continue ; fi
+          ;;
+      blas)
+          if [[ -n $LIB_BLAS_OK ]] ; then continue ; fi
+          ;;
+      lapack)
+          if [[ -n $LIB_LAPACK_OK ]] ; then continue ; fi
+          ;;
+      fftw3xf_intel)
+          if [[ -n $LIB_FFTW3_OK ]] ; then continue ; fi
+          if [[ ${COMPILER} != ifort ]] ; then continue ; fi
+          ;;
+      *fftw3*)
+          if [[ -n $LIB_FFTW3_OK ]] ; then continue ; fi
+          ;;
+      *libxc*)
+          if [[ -n $LIB_XC_OK ]] ; then continue ; fi
+          ;;
+    esac
+
+    # do something #############################################################
     if [[ $(pkg-config --print-errors --exists $X; echo $?) = 0 ]]; then
       FCFLAGS="${FCFLAGS} $(pkg-config --print-errors --cflags $X)"
       LIBS="${LIBS} $(pkg-config --print-errors --libs $X)"
@@ -222,11 +244,14 @@ if [[ -n $(which pkg-config) ]] ; then
            ;;
       esac
 
-    else   # action if library is not present
+      # check what has been done ###############################################
       case $X in
-         *libxc*)
-           CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
-           ;;
+        openblas|mkl)          LIB_BLAS_OK="yes"
+                               LIB_LAPACK_OK="yes" ;;
+        blas)                  LIB_BLAS_OK="yes" ;;
+        lapack)                LIB_LAPACK_OK="yes" ;;
+        fftw3xf_intel|*fftw3*) LIB_FFTW3_OK="yes" ;;
+        *libxc*)               LIB_XC_OK="yes" ;;
       esac
     fi   
   done
@@ -237,6 +262,10 @@ else
  echo "Without pkg-config, parameters must be set by hand in the parmfile."
  echo "A missing pkg-config may cause errors below."
  echo "------------------------------------------------------------------------"
+fi
+
+if [[ -z $LIB_XC_OK ]] ; then
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
 fi
 
 ################################################################################

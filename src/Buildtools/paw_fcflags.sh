@@ -336,7 +336,8 @@ elif [[ $COMPILER = gfortran && $TYPE = debug ]] ; then
            -finit-integer=-2147483647  -finit-real=snan -fbacktrace \
            -fmax-errors=10 -Wno-maybe-uninitialized -Wall \
            -fno-unsafe-math-optimizations \
-           -fsignaling-nans -frounding-math -Wno-surprising"
+           -fsignaling-nans -frounding-math -Wno-surprising \
+           -march=native"
 
 
 elif [[ $OS = Darwin && $COMPILER = gfortran && $TYPE = release ]] ; then
@@ -467,7 +468,7 @@ elif [[ $OS = Darwin && $COMPILER = gfortran && $TYPE = release ]] ; then
  -fsplit-paths -ftree-loop-distribute-patterns \
  -ftree-loop-distribution -ftree-loop-vectorize -ftree-partial-pre \
  -ftree-slp-vectorize -funswitch-loops -fvect-cost-model \
- -fversion-loops-for-strides"
+ -fversion-loops-for-strides -march=native"
 
 elif [[ ( $OS = Linux || $OS = Windows ) \
            && $COMPILER = gfortran && $TYPE = release ]] ; then
@@ -483,9 +484,8 @@ elif [[ ( $OS = Linux || $OS = Windows ) \
   #                           aggressive optimization decisions.
   # -flto=3                 #
 
- FCFLAGS="-ftree-vectorize -funroll-loops -O3 -finline-functions
- -fwhole-program -flto=3" 
-
+ FCFLAGS="-ftree-vectorize -funroll-loops -O3 -finline-functions \
+          -fwhole-program -flto=3 -march=native" 
 fi
 
 # because flags are written to sttout, VERBOSE messes up the result
