@@ -3917,6 +3917,13 @@ END MODULE RANDOM_MODULE
       REAL(8),INTENT(OUT)          :: Y   ! BESSEL FUNCTIOHN OF FIRST KIND
       INTEGER(4)                   :: NZ  ! NZ.NEQ.0 IN OUTPUT: UNDERFLOW
 !     **************************************************************************
+!     __fortran 2008 function bessel_jn
+!     __bessel function of the first kind of order n
+!     __this routine is an elemental function and can be called for arrays
+!     __there is also a version bessel_jn(n1,n2,x) which allows a range of 
+!     __orders to be specified
+!     y=bessel_jn(l,x) !fortran 2008 intrinsic function
+
       CALL DBESJ(X,L,1,Y,NZ)
       IF(NZ.NE.0)THEN
         Y=0.D0
@@ -3939,6 +3946,8 @@ END MODULE RANDOM_MODULE
       REAL(8),INTENT(OUT)          :: Y
 !     **************************************************************************
       CALL DBESY(X,L,1,Y)
+
+!     y=bessel_yn(l,x)  !fortran 2008 intrinsic function
       RETURN
       END SUBROUTINE
 !
