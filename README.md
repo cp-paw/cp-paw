@@ -23,7 +23,7 @@ not apply to the present implementation.)
 ## Requirements
 
 - fortran compiler (e.g. gfortran, ifort)
-- pkg-config, latexmk, GNU Make, version 4.3 or later
+- pkg-config, latexmk, GNU Make (version 4.3 or later)
 - bash, cpp, ar
 - tex (latex) distribution (e.g. TeX Live) 
 - LAPACK, BLAS, FFTW3, MPI (optional), LIBXC (optional)

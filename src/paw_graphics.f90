@@ -56,6 +56,9 @@ TYPE ONEDPOTPLOT_TYPE
  CHARACTER(128)          :: TITLE ! IMAGE TITLE 
  INTEGER(4)              :: IT(3) ! RBAS*IT IS THE REAL-SPACE AXIS
 END TYPE ONEDPOTPLOT_TYPE
+TYPE ONECPOT_TYPE
+  REAL(8),ALLOCATABLE :: POT(:,:) !(NR,LMRX)
+END TYPE ONECPOT_TYPE
 TYPE(DENSITYPLOT_TYPE),ALLOCATABLE :: DENSITYPLOT(:)
 TYPE(WAVEPLOT_TYPE)   ,ALLOCATABLE :: WAVEPLOT(:)
 TYPE(POTPLOT_TYPE)                 :: POTPLOT
@@ -69,10 +72,10 @@ INTEGER(4)                :: I1DPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)   ! HARTREE POTENTIAL IN G-SPACE
 COMPLEX(8),ALLOCATABLE    :: PWTOTPOT(:)
 REAL(8)                   :: POTSHIFT=0.D0  ! ADDITIVE CONSTANT TO BE ADDED TO PWPOT,AE1CPOT, PS1CPOT
-REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
-REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
-REAL(8)   ,ALLOCATABLE    :: AE1CTOTPOT(:,:,:)  !(NRX,LMRX,NAT)
-REAL(8)   ,ALLOCATABLE    :: PS1CTOTPOT(:,:,:)  !(NRX,LMRX,NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: AE1CPOT(:)    !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: PS1CPOT(:)    !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: AE1CTOTPOT(:) !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: PS1CTOTPOT(:) !(NAT)
 INTEGER(4)                :: LMRXX=0    !INITIALLY NOT SET
 INTEGER(4)                :: NRX=0
 INTEGER(4)                :: NGL=0
@@ -1935,9 +1938,17 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ....................................................................
       SUBROUTINE GRAPHICS$SET1CPOT(ID,IDENT_,IAT_,GID,NR,NRX_,LMRX,POT)
 !     ********************************************************************
-!     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS          **
+!     **  COLLECT 1-CENTER POTENTIAL                                    **
+!     **  USE 1-CENTER POTENTIAL FOR ELECTRIC FIELD GRADIENTS           **
+!     **  AND FOR PLOTTING HARTREE POTENTIAL                            **
 !     ********************************************************************
-      USE GRAPHICS_MODULE
+      USE GRAPHICS_MODULE, ONLY : TINI &
+     &                           ,TWAKE &
+     &                           ,TPOT &
+     &                           ,AE1CPOT &
+     &                           ,PS1CPOT &
+     &                           ,AE1CTOTPOT &
+     &                           ,PS1CTOTPOT 
       IMPLICIT NONE
       CHARACTER(*) ,INTENT(IN) :: ID  ! CAN BE 'HARTREE' OR 'TOT' 
       CHARACTER(*) ,INTENT(IN) :: IDENT_  ! CAN BE 'AE' OR 'PS' 
@@ -1948,33 +1959,30 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       REAL(8)      ,INTENT(IN) :: POT(NRX_,LMRX)
       INTEGER(4)               :: NAT
 !     ********************************************************************
-      IF(.NOT.TINI) RETURN
 !     ===================================================================
 !     == CHECK WHETHER ACTION IS REQUIRED                              ==
 !     ===================================================================
+      IF(.NOT.TINI) RETURN
       IF(.NOT.TWAKE) RETURN
       IF(.NOT.TPOT) RETURN
+
       IF(.NOT.ALLOCATED(AE1CPOT)) THEN
-        NRX=NRX_
-        CALL SETUP$GETI4('LMRXX',LMRXX)
         CALL ATOMLIST$NATOM(NAT)
-        ALLOCATE(AE1CPOT(NRX,LMRXX,NAT))
-        ALLOCATE(PS1CPOT(NRX,LMRXX,NAT))
-        ALLOCATE(AE1CTOTPOT(NRX,LMRXX,NAT))
-        ALLOCATE(PS1CTOTPOT(NRX,LMRXX,NAT))
-        AE1CPOT=0.D0
-        PS1CPOT=0.D0
-        AE1CTOTPOT=0.D0
-        PS1CTOTPOT=0.D0
+        ALLOCATE(AE1CPOT(NAT))
+        ALLOCATE(PS1CPOT(NAT))
+        ALLOCATE(AE1CTOTPOT(NAT))
+        ALLOCATE(PS1CTOTPOT(NAT))
       END IF
 !
       IF(ID.EQ.'HARTREE') THEN
         IF(IDENT_.EQ.'AE') THEN
-          AE1CPOT(:,:,IAT_)=0.D0
-          AE1CPOT(:,1:LMRX,IAT_)=POT
+          IF(.NOT.ALLOCATED(AE1CPOT(IAT_)%POT)) &
+     &             ALLOCATE(AE1CPOT(IAT_)%POT(NR,LMRX))
+          AE1CPOT(IAT_)%POT=POT(:NR,:)
         ELSE IF(IDENT_.EQ.'PS') THEN
-          PS1CPOT(:,:,IAT_)=0.D0
-          PS1CPOT(:,1:LMRX,IAT_)=POT
+          IF(.NOT.ALLOCATED(PS1CPOT(IAT_)%POT)) &
+     &             ALLOCATE(PS1CPOT(IAT_)%POT(NR,LMRX))
+          PS1CPOT(IAT_)%POT=POT(:NR,:)
         ELSE
           CALL ERROR$MSG('IDENT MUST BE WITHER "AE" OR "PS"')
           CALL ERROR$CHVAL('IDENT_',IDENT_)
@@ -1983,11 +1991,13 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         END IF
       ELSE IF(ID.EQ.'TOT') THEN
         IF(IDENT_.EQ.'AE') THEN
-          AE1CTOTPOT(:,:,IAT_)=0.D0
-          AE1CTOTPOT(:,1:LMRX,IAT_)=POT
+          IF(.NOT.ALLOCATED(AE1CTOTPOT(IAT_)%POT)) &
+     &             ALLOCATE(AE1CTOTPOT(IAT_)%POT(NR,LMRX))
+          AE1CTOTPOT(IAT_)%POT=POT(:NR,:)
         ELSE IF(IDENT_.EQ.'PS') THEN
-          PS1CTOTPOT(:,:,IAT_)=0.D0
-          PS1CTOTPOT(:,1:LMRX,IAT_)=POT
+          IF(.NOT.ALLOCATED(PS1CTOTPOT(IAT_)%POT)) &
+     &             ALLOCATE(PS1CTOTPOT(IAT_)%POT(NR,LMRX))
+          PS1CTOTPOT(IAT_)%POT=POT(:NR,:)
         ELSE
           CALL ERROR$MSG('IDENT MUST BE WITHER "AE" OR "PS"')
           CALL ERROR$CHVAL('IDENT_',IDENT_)
@@ -2005,7 +2015,14 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_CREATEPOT(FILE,TITLE,DR)
 !     **************************************************************************
-      USE GRAPHICS_MODULE
+!     ** CALCULATE THE HARTREE POTENTIA ON A GRID AND WRITE IT TO FILE        **
+!     **************************************************************************
+      USE GRAPHICS_MODULE, ONLY : ONECPOT_TYPE &
+     &                           ,AE1CPOT &
+     &                           ,PS1CPOT &
+     &                           ,NGL &
+     &                           ,POTSHIFT &
+     &                           ,PWPOT
       USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)    :: TITLE
@@ -2027,12 +2044,13 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       REAL(8)   ,ALLOCATABLE     :: Z(:)
       REAL(8)   ,ALLOCATABLE     :: POS(:,:)
       INTEGER(4)                 :: NR
-      REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
+      TYPE(ONECPOT_TYPE),ALLOCATABLE :: ONECPOT(:) !(NAT)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
-      INTEGER(4)                 :: NSP   !#(ATOM TYPES)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
+      INTEGER(4),ALLOCATABLE     :: IARR(:,:)
+      INTEGER(4)                 :: LMRX
 !     **************************************************************************
                                  CALL TRACE$PUSH('GRAPHICS_CREATEPOT')
 !COLLECTING OF INFORMATION
@@ -2045,21 +2063,21 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       CALL PLANEWAVE$GETI4('NR2',NR2)
       CALL PLANEWAVE$GETI4('NR3',NR3)
 !
-!     ==================================================================
-!     ==                                                              ==
-!     ==================================================================
+!     ==========================================================================
+!     ==                                                                      ==
+!     ==========================================================================
       CALL CELL$GETR8A('T(0)',9,RBAS)
       CALL GBASS(RBAS,GBAS,DET)
       FACT=NINT(((DET/DR**3)/REAL(NR1*NR2*NR3,KIND=8))**(1./3.))
       FACT=MAX(1,FACT)
 !
-!     ==================================================================
-!     ==  EXPAND GRID BY FACT AND UNPARALLELIZE                       ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  EXPAND GRID BY FACT AND UNPARALLELIZE                               ==
+!     ==========================================================================
       NR1B=FACT*NR1
       NR2B=FACT*NR2
       NR3B=FACT*NR3
-!     == TAKE VALUES COMPATIBLE WITH FFT ROUTINES ====================
+!     == TAKE VALUES COMPATIBLE WITH FFT ROUTINES ==============================
       CALL LIB$FFTADJUSTGRD(NR1B) 
       CALL LIB$FFTADJUSTGRD(NR2B) 
       CALL LIB$FFTADJUSTGRD(NR3B) 
@@ -2079,62 +2097,81 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       DEALLOCATE(VHARTREE)
 !CALL GRAPHICS_TOM()
 !
-!     ==================================================================
-!     ==  ONE-CENTER CONTRIBUTIONS                                    ==
-!     ==================================================================
-      CALL CELL$GETR8A('T(0)',9,RBAS)
+!     ==========================================================================
+!     == COMMUNICATE AE1CPOT-PS1CPOT OVER ALL TASKS
+!     == ASSUMES THAT EACH ATOM IS ONLY ALLOCATED ON ONE TASK.
+!     ==========================================================================
       CALL ATOMLIST$NATOM(NAT)
-      ALLOCATE(ATOMNAME(NAT))
-      ALLOCATE(Z(NAT))
-      ALLOCATE(Q(NAT))
-      ALLOCATE(POS(3,NAT))
-      CALL SETUP$GETI4('NSP',NSP)
-      NRX=0
-      DO ISP=1,NSP
+      ALLOCATE(IARR(2,NAT))  ! INFO ON IARR(1) TASKS. INFO ON TASK IARR(2)
+      IARR=0
+      ALLOCATE(ONECPOT(NAT))
+      DO IAT=1,NAT
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('NR',NR)
+        CALL SETUP$GETI4('NR',NR)                
+        CALL SETUP$GETI4('LMRX',LMRX)                
         CALL SETUP$UNSELECT()
-        NRX=MAX(NRX,NR)
-      ENDDO        
-      IF(.NOT.ALLOCATED(AE1CPOT)) THEN
-        CALL SETUP$GETI4('LMRXX',LMRXX)
-        CALL ATOMLIST$NATOM(NAT)
-        ALLOCATE(AE1CPOT(NRX,LMRXX,NAT))
-        ALLOCATE(PS1CPOT(NRX,LMRXX,NAT))
-        AE1CPOT=0.D0
-        PS1CPOT=0.D0
-      END IF
-      ALLOCATE(ONECPOT(NRX,LMRXX,NAT))
-      ONECPOT=AE1CPOT-PS1CPOT
-      CALL MPE$COMBINE('MONOMER','+',ONECPOT)
+        ALLOCATE(ONECPOT(IAT)%POT(NR,LMRX))
+        IF(ALLOCATED(AE1CPOT(IAT)%POT)) THEN
+          IF(SUM(SHAPE(ONECPOT(IAT)%POT)-SHAPE(AE1CPOT(IAT)%POT)).NE.0) THEN
+            CALL ERROR$MSG('INCONSISTEN DIMENSIONS')
+            CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+          END IF
+          ONECPOT(IAT)%POT=AE1CPOT(IAT)%POT-PS1CPOT(IAT)%POT
+          IARR(1,IAT)=1
+          IARR(2,IAT)=THISTASK
+        ELSE
+          ONECPOT(IAT)%POT=0.D0
+        END IF
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',IARR)
+
+      DO IAT=1,NAT
+        IF(IARR(1,IAT).NE.0.AND.IARR(1,IAT).NE.1) THEN
+          CALL ERROR$MSG('IARR COMMUNICATION FAILED')
+          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+        END IF
+        CALL MPE$BROADCAST('MONOMER',IARR(2,IAT),ONECPOT(IAT)%POT)
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ONE-CENTER CONTRIBUTIONS                                            ==
+!     ==========================================================================
+      CALL CELL$GETR8A('T(0)',9,RBAS)
+      ALLOCATE(POS(3,NAT))
+
       DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)                
+        CALL SETUP$GETI4('NR',NR)                
+        CALL SETUP$GETI4('LMRX',LMRX)                
         CALL SETUP$UNSELECT()
-        CALL RADIAL$GETI4(GID,'NR',NR)
-!!$        IF(NRX.NE.NR) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-!!$          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
-!!$          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
-!!$        END IF
-        CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
-        CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
-        CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
+
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
+
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRXX,ONECPOT(:NR,:,IAT))
+     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRX,ONECPOT(IAT)%POT)
+
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
       DEALLOCATE(ONECPOT)
 !
-!     ==================================================================
-!     ==  WRITE TO FILE                                               ==
-!     ==================================================================
+!     ==========================================================================
+!     ==  WRITE TO FILE                                                       ==
+!     ==========================================================================
       IF(THISTASK.EQ.1) THEN
+        ALLOCATE(ATOMNAME(NAT))
+        ALLOCATE(Z(NAT))
+        ALLOCATE(Q(NAT))
+        DO IAT=1,NAT
+          CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
+          CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
+          CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
+        ENDDO
         CALL FILEHANDLER$SETFILE('WAVEPLOT',.FALSE.,TRIM(FILE))
         CALL FILEHANDLER$SETSPECIFICATION('WAVEPLOT','FORM','UNFORMATTED')
         CALL FILEHANDLER$UNIT('WAVEPLOT',NFIL)
@@ -2297,202 +2334,202 @@ PRINT*,'INCLUDED AE-CONTRIBUTIONS'
                                  CALL TRACE$POP()
       RETURN
       END
-!
-!     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE GRAPHICS_TOM()
-!     **************************************************************************
-!     **                                                                      **
-!     **                                                                      **
-!     **                                                                      **
-!     ** ASSUMES THAT A DIMERIC MOLECULE IS ALLIGNED IN THE Z-AXIS AND THAT   **
-!     ** THE LATTICE VECTORS POINT INTO THE CARTESIAN COORDINATE AXES         **
-!     **                                                                      **
-!     **************************************************************************
-      USE GRAPHICS_MODULE ! ,ONLY: PWPOT,NGL
-      USE MPE_MODULE
-      USE STRINGS_MODULE
-      IMPLICIT NONE
-      LOGICAL(4), PARAMETER :: TTOM=.TRUE.
-      REAL(8)               :: GVEC(3,NGL)
-      REAL(8)               :: RCENTER(3)
-      INTEGER(4)            :: NAT
-      INTEGER(4)            :: GID
-      INTEGER(4)            :: NR
-      CHARACTER(16)         :: ID
-      INTEGER(4)            :: NFIL
-      REAL(8)   ,PARAMETER  :: R1A=1.D-4
-      REAL(8)   ,PARAMETER  :: R1B=1.D-4
-      REAL(8)   ,PARAMETER  :: DEXA=0.05D0
-      REAL(8)   ,PARAMETER  :: DEXB=0.05D0
-      INTEGER(4),PARAMETER  :: NRA=250
-      INTEGER(4),PARAMETER  :: NRB=250
-      INTEGER(4)            :: NP
-      REAL(8)   ,ALLOCATABLE:: POT2D(:)   !(NP)
-      REAL(8)   ,ALLOCATABLE:: RVEC(:,:)  !(3,NP)
-      INTEGER(4),ALLOCATABLE:: IJ(:,:)    !(2,NP)
-      REAL(8)   ,ALLOCATABLE:: ONECPOT(:,:)
-      REAL(8)               :: RA,RB
-      INTEGER(4)            :: I,J,IAT,IG,ISP,LM,IP
-      INTEGER(4)            :: LMRX                  
-      REAL(8)   ,ALLOCATABLE:: YLM(:)
-      REAL(8)               :: SVAR,SVAR1,GR
-      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
-      INTEGER(4)            :: NTASKS,THISTASK
-      REAL(8)               :: RAT(3,2)
-      REAL(8)               :: DR(3)
-      REAL(8)               :: ATOMDISTANCE
-      REAL(8)               :: DIS
-      REAL(8)               :: ZA,ZB
-!     **************************************************************************
-      IF(.NOT.TTOM) RETURN
-      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-!
-!     ==========================================================================
-!     ==  CREATE REAL SPACE GRID FOR THE POTENTIAL                            ==
-!     ==========================================================================
-!     == GET DISTANCE OF ATOMS =================================================
-      CALL ATOMLIST$NATOM(NAT)
-      IF(NAT.GT.2) THEN
-        CALL ERROR$STOP('GRAPHICS_TOM')
-      END IF
-      DO IAT=1,NAT
-        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
-      ENDDO
-      IF(NAT.EQ.1) THEN
-        RAT(:,2)=RAT(:,1)
-      END IF
-      ATOMDISTANCE=SQRT(SUM((RAT(:,2)-RAT(:,1))**2))
-!
-!     == COUNT THE NUMBER OF GRID POINTS =====================================
-      NP=0
-      DO I=1,NRA
-        RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
-        DO J=1,NRB
-          RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
-          IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-          IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-          NP=NP+1
-        ENDDO
-      ENDDO
-      IF(NAT.EQ.1) NP=NRA
-!
-!     == ALLOCATE ARRAYS  ====================================================
-      ALLOCATE(POT2D(NP))
-      ALLOCATE(RVEC(3,NP))
-      ALLOCATE(IJ(2,NP))
-!
-!     ==  CREAT GRID POINTS ==================================================
-      IP=0
-      DO I=1,NRA
-        RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
-        IF(NAT.EQ.2) THEN
-          DO J=1,NRB
-            RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
-            IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-            IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
-            IP=IP+1
-            IJ(1,IP)=I
-            IJ(2,IP)=J
-            RVEC(3,IP)=(ATOMDISTANCE**2+RA**2-RB**2)/(2.D0*ATOMDISTANCE)
-            RVEC(1,IP)=SQRT(RA**2-RVEC(3,IP)**2)
-            RVEC(2,IP)=0.D0
-          ENDDO
-        ELSE
-          IP=IP+1
-          IJ(1,IP)=I
-          IJ(2,IP)=0
-          RVEC(1,IP)=0.D0
-          RVEC(2,IP)=0.D0
-          RVEC(3,IP)=RA
-        END IF
-      ENDDO
-!
-!     ==========================================================================
-!     == CHECK IF POTENTIAL IS AVAILABLE AND GET IT                           ==
-!     ==========================================================================
-      IF(.NOT.ALLOCATED(PWTOTPOT)) THEN
-        CALL ERROR$STOP('GRAPHICS_TOM')
-      END IF
-      CALL PLANEWAVE$SELECT('DENSITY')
-      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
-!
-!     ========================================================================
-!     ==  TRANSFORM PLANE WAVE PART ONTO A 2-DIMENSIONAL GRID               ==
-!     ==  COULD BE REPLACED BY A TWO-D FFT
-!     ========================================================================
-      DO IP=1,NP
-        SVAR=0.D0
-        DO IG=1,NGL
-          GR=DOT_PRODUCT(GVEC(:,IG),RVEC(:,IP))
-          SVAR=SVAR+REAL(PWTOTPOT(IG)*EXP(CI*GR))
-        ENDDO
-        POT2D(IP)=SVAR
-      ENDDO
-!
-!     ==========================================================================
-!     == NOW LOOP OVER ATOMS                                                  ==
-!     ==========================================================================
-      ZA=0.D0
-      ZB=0.D0
-      DO IAT=1,NAT
-        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RCENTER)
-        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
-        CALL SETUP$ISELECT(ISP)
-        CALL SETUP$GETI4('GID',GID)                
-        CALL RADIAL$GETI4(GID,'NR',NR)
-        CALL SETUP$GETI4('LMRX',LMRX)
-        IF(IAT.EQ.1) THEN
-          CALL SETUP$GETR8('AEZ',ZA)
-        ELSE
-          CALL SETUP$GETR8('AEZ',ZB)
-        END IF
-        CALL SETUP$UNSELECT()
-        ALLOCATE(ONECPOT(NR,LMRXX))
-        ALLOCATE(YLM(LMRX))
-        ONECPOT(:,:)=AE1CTOTPOT(:,:LMRX,IAT)-PS1CTOTPOT(:,:LMRX,IAT)
-        DO IP=1,NP
-          IF(MOD(IP-1,NTASKS).NE.THISTASK-1) CYCLE   !PARALLELIZATION
-          DR(:)=RVEC(:,IP)-RCENTER(:)
-          DIS=MAX(1.D-8,SQRT(SUM(DR**2)))
-          CALL GETYLM(LMRX,DR,YLM)
-          SVAR=0.D0
-          DO LM=1,LMRX
-            CALL RADIAL$VALUE(GID,NR,ONECPOT(1,LM),DIS,SVAR1)
-            SVAR=SVAR+SVAR1*YLM(LM)
-          ENDDO
-
-          POT2D(IP)=POT2D(IP)+SVAR
-        ENDDO
-        DEALLOCATE(YLM)
-        DEALLOCATE(ONECPOT)
-      ENDDO
-!
-!     ==========================================================================
-!     ==  NOW SUM OVER ALL PROCESSORS                                         ==
-!     ==========================================================================
-      CALL MPE$COMBINE('MONOMER','+',POT2D)
-!
-!     ==========================================================================
-!     == ATTACH OUTPUT FILE                                                   ==
-!     ==========================================================================
-      ID=+'TOMSPOT'
-      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.TOMSPOT')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
-      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
-      CALL FILEHANDLER$UNIT(ID,NFIL)
-      REWIND(NFIL)
-!
-!     ========================================================================
-!     ==  PRINT RESULT                                                      ==
-!     ========================================================================
-      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1A,DEXA,NRA,ZA
-      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1B,DEXB,NRB,ZB
-      WRITE(NFIL,FMT='(F15.5,I5)')ATOMDISTANCE,NP
-      DO IP=1,NP
-        WRITE(NFIL,FMT='(2I5,2F15.5)')IJ(:,IP),POT2D(IP)
-      ENDDO
-      CALL FILEHANDLER$CLOSE(ID)
-      RETURN
-      END
+!!$!
+!!$!     ...1.........2.........3.........4.........5.........6.........7.........8
+!!$      SUBROUTINE GRAPHICS_TOM()
+!!$!     **************************************************************************
+!!$!     **                                                                      **
+!!$!     **                                                                      **
+!!$!     **                                                                      **
+!!$!     ** ASSUMES THAT A DIMERIC MOLECULE IS ALLIGNED IN THE Z-AXIS AND THAT   **
+!!$!     ** THE LATTICE VECTORS POINT INTO THE CARTESIAN COORDINATE AXES         **
+!!$!     **                                                                      **
+!!$!     **************************************************************************
+!!$      USE GRAPHICS_MODULE ! ,ONLY: PWPOT,NGL
+!!$      USE MPE_MODULE
+!!$      USE STRINGS_MODULE
+!!$      IMPLICIT NONE
+!!$      LOGICAL(4), PARAMETER :: TTOM=.TRUE.
+!!$      REAL(8)               :: GVEC(3,NGL)
+!!$      REAL(8)               :: RCENTER(3)
+!!$      INTEGER(4)            :: NAT
+!!$      INTEGER(4)            :: GID
+!!$      INTEGER(4)            :: NR
+!!$      CHARACTER(16)         :: ID
+!!$      INTEGER(4)            :: NFIL
+!!$      REAL(8)   ,PARAMETER  :: R1A=1.D-4
+!!$      REAL(8)   ,PARAMETER  :: R1B=1.D-4
+!!$      REAL(8)   ,PARAMETER  :: DEXA=0.05D0
+!!$      REAL(8)   ,PARAMETER  :: DEXB=0.05D0
+!!$      INTEGER(4),PARAMETER  :: NRA=250
+!!$      INTEGER(4),PARAMETER  :: NRB=250
+!!$      INTEGER(4)            :: NP
+!!$      REAL(8)   ,ALLOCATABLE:: POT2D(:)   !(NP)
+!!$      REAL(8)   ,ALLOCATABLE:: RVEC(:,:)  !(3,NP)
+!!$      INTEGER(4),ALLOCATABLE:: IJ(:,:)    !(2,NP)
+!!$      REAL(8)   ,ALLOCATABLE:: ONECPOT(:,:)
+!!$      REAL(8)               :: RA,RB
+!!$      INTEGER(4)            :: I,J,IAT,IG,ISP,LM,IP
+!!$      INTEGER(4)            :: LMRX                  
+!!$      REAL(8)   ,ALLOCATABLE:: YLM(:)
+!!$      REAL(8)               :: SVAR,SVAR1,GR
+!!$      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+!!$      INTEGER(4)            :: NTASKS,THISTASK
+!!$      REAL(8)               :: RAT(3,2)
+!!$      REAL(8)               :: DR(3)
+!!$      REAL(8)               :: ATOMDISTANCE
+!!$      REAL(8)               :: DIS
+!!$      REAL(8)               :: ZA,ZB
+!!$!     **************************************************************************
+!!$      IF(.NOT.TTOM) RETURN
+!!$      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  CREATE REAL SPACE GRID FOR THE POTENTIAL                            ==
+!!$!     ==========================================================================
+!!$!     == GET DISTANCE OF ATOMS =================================================
+!!$      CALL ATOMLIST$NATOM(NAT)
+!!$      IF(NAT.GT.2) THEN
+!!$        CALL ERROR$STOP('GRAPHICS_TOM')
+!!$      END IF
+!!$      DO IAT=1,NAT
+!!$        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RAT(:,IAT))
+!!$      ENDDO
+!!$      IF(NAT.EQ.1) THEN
+!!$        RAT(:,2)=RAT(:,1)
+!!$      END IF
+!!$      ATOMDISTANCE=SQRT(SUM((RAT(:,2)-RAT(:,1))**2))
+!!$!
+!!$!     == COUNT THE NUMBER OF GRID POINTS =====================================
+!!$      NP=0
+!!$      DO I=1,NRA
+!!$        RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
+!!$        DO J=1,NRB
+!!$          RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
+!!$          IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+!!$          IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+!!$          NP=NP+1
+!!$        ENDDO
+!!$      ENDDO
+!!$      IF(NAT.EQ.1) NP=NRA
+!!$!
+!!$!     == ALLOCATE ARRAYS  ====================================================
+!!$      ALLOCATE(POT2D(NP))
+!!$      ALLOCATE(RVEC(3,NP))
+!!$      ALLOCATE(IJ(2,NP))
+!!$!
+!!$!     ==  CREAT GRID POINTS ==================================================
+!!$      IP=0
+!!$      DO I=1,NRA
+!!$        RA=R1A*EXP(DEXA*REAL(I-1,KIND=8))
+!!$        IF(NAT.EQ.2) THEN
+!!$          DO J=1,NRB
+!!$            RB=R1B*EXP(DEXB*REAL(J-1,KIND=8))
+!!$            IF(ABS(RA-ATOMDISTANCE).GT.RB) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+!!$            IF(ABS(RB-ATOMDISTANCE).GT.RA) CYCLE  ! EXCLUDE IMPOSSOBLE CASE
+!!$            IP=IP+1
+!!$            IJ(1,IP)=I
+!!$            IJ(2,IP)=J
+!!$            RVEC(3,IP)=(ATOMDISTANCE**2+RA**2-RB**2)/(2.D0*ATOMDISTANCE)
+!!$            RVEC(1,IP)=SQRT(RA**2-RVEC(3,IP)**2)
+!!$            RVEC(2,IP)=0.D0
+!!$          ENDDO
+!!$        ELSE
+!!$          IP=IP+1
+!!$          IJ(1,IP)=I
+!!$          IJ(2,IP)=0
+!!$          RVEC(1,IP)=0.D0
+!!$          RVEC(2,IP)=0.D0
+!!$          RVEC(3,IP)=RA
+!!$        END IF
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     == CHECK IF POTENTIAL IS AVAILABLE AND GET IT                           ==
+!!$!     ==========================================================================
+!!$      IF(.NOT.ALLOCATED(PWTOTPOT)) THEN
+!!$        CALL ERROR$STOP('GRAPHICS_TOM')
+!!$      END IF
+!!$      CALL PLANEWAVE$SELECT('DENSITY')
+!!$      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+!!$!
+!!$!     ========================================================================
+!!$!     ==  TRANSFORM PLANE WAVE PART ONTO A 2-DIMENSIONAL GRID               ==
+!!$!     ==  COULD BE REPLACED BY A TWO-D FFT
+!!$!     ========================================================================
+!!$      DO IP=1,NP
+!!$        SVAR=0.D0
+!!$        DO IG=1,NGL
+!!$          GR=DOT_PRODUCT(GVEC(:,IG),RVEC(:,IP))
+!!$          SVAR=SVAR+REAL(PWTOTPOT(IG)*EXP(CI*GR))
+!!$        ENDDO
+!!$        POT2D(IP)=SVAR
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     == NOW LOOP OVER ATOMS                                                  ==
+!!$!     ==========================================================================
+!!$      ZA=0.D0
+!!$      ZB=0.D0
+!!$      DO IAT=1,NAT
+!!$        CALL ATOMLIST$GETR8A('R(0)',IAT,3,RCENTER)
+!!$        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+!!$        CALL SETUP$ISELECT(ISP)
+!!$        CALL SETUP$GETI4('GID',GID)                
+!!$        CALL RADIAL$GETI4(GID,'NR',NR)
+!!$        CALL SETUP$GETI4('LMRX',LMRX)
+!!$        IF(IAT.EQ.1) THEN
+!!$          CALL SETUP$GETR8('AEZ',ZA)
+!!$        ELSE
+!!$          CALL SETUP$GETR8('AEZ',ZB)
+!!$        END IF
+!!$        CALL SETUP$UNSELECT()
+!!$        ALLOCATE(ONECPOT(NR,LMRXX))
+!!$        ALLOCATE(YLM(LMRX))
+!!$        ONECPOT(:,:)=AE1CTOTPOT(:,:LMRX,IAT)-PS1CTOTPOT(:,:LMRX,IAT)
+!!$        DO IP=1,NP
+!!$          IF(MOD(IP-1,NTASKS).NE.THISTASK-1) CYCLE   !PARALLELIZATION
+!!$          DR(:)=RVEC(:,IP)-RCENTER(:)
+!!$          DIS=MAX(1.D-8,SQRT(SUM(DR**2)))
+!!$          CALL GETYLM(LMRX,DR,YLM)
+!!$          SVAR=0.D0
+!!$          DO LM=1,LMRX
+!!$            CALL RADIAL$VALUE(GID,NR,ONECPOT(1,LM),DIS,SVAR1)
+!!$            SVAR=SVAR+SVAR1*YLM(LM)
+!!$          ENDDO
+!!$
+!!$          POT2D(IP)=POT2D(IP)+SVAR
+!!$        ENDDO
+!!$        DEALLOCATE(YLM)
+!!$        DEALLOCATE(ONECPOT)
+!!$      ENDDO
+!!$!
+!!$!     ==========================================================================
+!!$!     ==  NOW SUM OVER ALL PROCESSORS                                         ==
+!!$!     ==========================================================================
+!!$      CALL MPE$COMBINE('MONOMER','+',POT2D)
+!!$!
+!!$!     ==========================================================================
+!!$!     == ATTACH OUTPUT FILE                                                   ==
+!!$!     ==========================================================================
+!!$      ID=+'TOMSPOT'
+!!$      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.TOMSPOT')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
+!!$      CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
+!!$      CALL FILEHANDLER$UNIT(ID,NFIL)
+!!$      REWIND(NFIL)
+!!$!
+!!$!     ========================================================================
+!!$!     ==  PRINT RESULT                                                      ==
+!!$!     ========================================================================
+!!$      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1A,DEXA,NRA,ZA
+!!$      WRITE(NFIL,FMT='(2F10.5,I5,F10.5)')R1B,DEXB,NRB,ZB
+!!$      WRITE(NFIL,FMT='(F15.5,I5)')ATOMDISTANCE,NP
+!!$      DO IP=1,NP
+!!$        WRITE(NFIL,FMT='(2I5,2F15.5)')IJ(:,IP),POT2D(IP)
+!!$      ENDDO
+!!$      CALL FILEHANDLER$CLOSE(ID)
+!!$      RETURN
+!!$      END

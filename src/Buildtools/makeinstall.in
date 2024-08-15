@@ -52,6 +52,12 @@ else ifeq ($(PARALLEL),false)
 else
   $(error "PARALLEL=$(PARALLEL) is neither true nor false")
 endif
+#__ patsubst replaces paw_% by $(PP)_% 
+export PTOOLS=$(patsubst paw_%,$(PP)_%,$(TOOLS))
+# $(info TOOLS=$(TOOLS))
+# $(info PTOOLS=$(PTOOLS))
+
+
 ifneq ($(SUFFIX),)
   export PAWX=$(PP)_$(SUFFIX).x
 else
@@ -81,10 +87,11 @@ ${BINDIR}/$(PAWX): paw.x
 
 #___install tools_______________________________________________________________
 .PHONY: tools
-tools : $(addprefix $(BINDIR)/, $(TOOLS)) \
-        $(basename $(addprefix $(BINDIR)/, $(TOOLS))) 
+tools : $(addprefix $(BINDIR)/, $(PTOOLS)) \
+        $(basename $(addprefix $(BINDIR)/, $(PTOOLS))) 
 
-$(addprefix $(BINDIR)/, $(TOOLS)) : $(BINDIR)/%.x : %.x
+#__this (two colons) is a static pattern rule of gmake.
+$(addprefix $(BINDIR)/, $(PTOOLS)) : $(BINDIR)/$(PP)_%.x : paw_%.x
 	cp $< $@
 
 #___install scripts_____________________________________________________________
@@ -117,7 +124,7 @@ $(addprefix $(BINDIR)/include/,$(MODLIST)) : $(BINDIR)/include/%.mod : %.mod
 $(basename $(addprefix ${BINDIR}/, $(PAWX))): % : %.x
 	ln -sf $< $@
 
-$(basename $(addprefix ${BINDIR}/, $(TOOLS))): % : %.x 
+$(basename $(addprefix ${BINDIR}/, $(PTOOLS))): % : %.x 
 	ln -sf $< $@
 
 $(basename $(addprefix ${BINDIR}/, $(SCRIPTS))): % : %.sh 
