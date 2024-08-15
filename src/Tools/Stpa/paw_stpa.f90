@@ -22,6 +22,10 @@
       INTEGER(4)                  :: ISELECTION
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==========================================================================
 !     ==  DEFINE LIST OF SELECTIONS                                           ==
@@ -317,6 +321,7 @@
         END IF
         IF(NFIL.NE.6) CALL FILEHANDLER$CLOSE('DAT')
       ENDDO
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

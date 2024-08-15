@@ -67,6 +67,11 @@ END MODULE POPT_MODULE
 !     ******************************************************************
       CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
+
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER            ==
@@ -88,7 +93,8 @@ END MODULE POPT_MODULE
       DEALLOCATE(MATOM)
       DEALLOCATE(MBOND)
       CALL FILEHANDLER$CLOSEALL
-    END PROGRAM PREOPT
+      CALL ERROR$NORMALSTOP()
+      END PROGRAM PREOPT
 !     ==================================================================
 !     ==================================================================
 !     ==================================================================

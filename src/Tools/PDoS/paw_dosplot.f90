@@ -8,6 +8,11 @@
       INTEGER(4)      :: NFILO,NFIL
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
 !     **************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
  !
@@ -65,6 +70,7 @@
       CALL LINKEDLIST$SELECT(LL_CNTL,'DPCNTL')
       CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
       CALL TRACE$POP()
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

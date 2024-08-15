@@ -40,6 +40,11 @@
     &    ,'BULK MODULUS DEPENDS LINEARLY ON PRESSURE.' &
     &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
 !
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+!
 !    ==========================================================================
 !    == COLLECT UNITS FROM COMMAND LINE                                       ==
 !    ==========================================================================
@@ -229,6 +234,7 @@
          WRITE(8,FMT='(3F15.10)')VI,EFIT,(VI/VBYL3)**(1.D0/3.D0)
        END IF
      ENDDO
+     CALL ERROR$NORMALSTOP()
      STOP
      END
 !

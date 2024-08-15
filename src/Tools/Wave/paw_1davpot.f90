@@ -38,6 +38,7 @@
       REAL(8)                    :: VEC(3)       ! normal vector
       INTEGER(4)                 :: I
 !     **************************************************************************
+      CALL MPE$INIT()
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -157,6 +158,7 @@
       END DO
       CLOSE(NFILOUT)      
 !
+      CALL ERROR$NORMALSTOP()
       STOP
       END PROGRAM MAIN
 

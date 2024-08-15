@@ -31,6 +31,10 @@
        CHARACTER(256)           :: COMMENT
        CHARACTER(2)             :: MINUSH  ! LOWERCASE -H
 !      *************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !      =========================================================================
 !      == RESOLVE  ARGUMENT LIST                                              ==
@@ -90,6 +94,8 @@
        ALLOCATE(R0(3,NAT))
        R0(:,:)=R(:,:NAT)
        CALL WRITECPPAW(NFILOUT,COMMENT,NAT,LUNIT,NAME,RBAS,R0)
+!
+       CALL ERROR$NORMALSTOP()
        STOP
        END
 !

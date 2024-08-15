@@ -136,6 +136,10 @@ END MODULE READCNTL_MODULE
       CHARACTER(128)            :: FORMAT
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==========================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER                    ==

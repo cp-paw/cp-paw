@@ -34,6 +34,11 @@
       LOGICAL                     :: THELP
       LOGICAL                     :: TCM
 !     **************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+!
       NDUP(:)=1
       TINPUT=.FALSE.
       CALL LINKEDLIST$NEW(LL_STRC)
@@ -399,6 +404,7 @@
       END IF
       CALL FILEHANDLER$CLOSEALL
       WRITE(*,FMT='("======= TASK FINISHED ========")')
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

@@ -13,6 +13,10 @@
       logical(4)                  :: tcrystal
       INTEGER(4)                  :: i
       
+!     ==========================================================================
+!     == mpe$ init must be called also for non-parallel codes                 ==
+!     ==========================================================================
+      CALL MPE$INIT
 
       CALL LINKEDLIST$NEW(LL_STRC)
 !
@@ -122,7 +126,8 @@
       END IF
 
 
-       STOP
+      CALL ERROR$NORMALSTOP()
+      STOP
       END PROGRAM PAW_TOSTRC
 
 
