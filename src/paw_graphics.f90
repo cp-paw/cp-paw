@@ -56,6 +56,9 @@ TYPE ONEDPOTPLOT_TYPE
  CHARACTER(128)          :: TITLE ! IMAGE TITLE 
  INTEGER(4)              :: IT(3) ! RBAS*IT IS THE REAL-SPACE AXIS
 END TYPE ONEDPOTPLOT_TYPE
+TYPE ONECPOT_TYPE
+  REAL(8),ALLOCATABLE :: POT(:,:) !(NR,LMRX)
+END TYPE ONECPOT_TYPE
 TYPE(DENSITYPLOT_TYPE),ALLOCATABLE :: DENSITYPLOT(:)
 TYPE(WAVEPLOT_TYPE)   ,ALLOCATABLE :: WAVEPLOT(:)
 TYPE(POTPLOT_TYPE)                 :: POTPLOT
@@ -69,6 +72,12 @@ INTEGER(4)                :: I1DPOTPTR=0
 COMPLEX(8),ALLOCATABLE    :: PWPOT(:)   ! HARTREE POTENTIAL IN G-SPACE
 COMPLEX(8),ALLOCATABLE    :: PWTOTPOT(:)
 REAL(8)                   :: POTSHIFT=0.D0  ! ADDITIVE CONSTANT TO BE ADDED TO PWPOT,AE1CPOT, PS1CPOT
+
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: AE1CPOT_S(:)    !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: PS1CPOT_S(:)    !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: AE1CTOTPOT_S(:) !(NAT)
+TYPE(ONECPOT_TYPE),ALLOCATABLE    :: PS1CTOTPOT_S(:) !(NAT)
+
 REAL(8)   ,ALLOCATABLE    :: AE1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: PS1CPOT(:,:,:)  !(NRX,LMRX,NAT)
 REAL(8)   ,ALLOCATABLE    :: AE1CTOTPOT(:,:,:)  !(NRX,LMRX,NAT)
@@ -1954,6 +1963,15 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ===================================================================
       IF(.NOT.TWAKE) RETURN
       IF(.NOT.TPOT) RETURN
+
+      IF(.NOT.ALLOCATED(AE1CPOT_S)) THEN
+        CALL ATOMLIST$NATOM(NAT)
+        ALLOCATE(AE1CPOT_S(NAT))
+        ALLOCATE(PS1CPOT_S(NAT))
+        ALLOCATE(AE1CTOTPOT_S(NAT))
+        ALLOCATE(PS1CTOTPOT_S(NAT))
+      END IF
+
       IF(.NOT.ALLOCATED(AE1CPOT)) THEN
         NRX=NRX_
         CALL SETUP$GETI4('LMRXX',LMRXX)
@@ -1972,9 +1990,17 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         IF(IDENT_.EQ.'AE') THEN
           AE1CPOT(:,:,IAT_)=0.D0
           AE1CPOT(:,1:LMRX,IAT_)=POT
+
+          IF(.NOT.ALLOCATED(AE1CPOT_S(IAT_)%POT)) &
+     &             ALLOCATE(AE1CPOT_S(IAT_)%POT(NR,LMRX))
+          AE1CPOT_S(IAT_)%POT=POT(:NR,:)
         ELSE IF(IDENT_.EQ.'PS') THEN
           PS1CPOT(:,:,IAT_)=0.D0
           PS1CPOT(:,1:LMRX,IAT_)=POT
+
+          IF(.NOT.ALLOCATED(PS1CPOT_S(IAT_)%POT)) &
+     &             ALLOCATE(PS1CPOT_S(IAT_)%POT(NR,LMRX))
+          PS1CPOT_S(IAT_)%POT=POT(:NR,:)
         ELSE
           CALL ERROR$MSG('IDENT MUST BE WITHER "AE" OR "PS"')
           CALL ERROR$CHVAL('IDENT_',IDENT_)
@@ -1985,9 +2011,17 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         IF(IDENT_.EQ.'AE') THEN
           AE1CTOTPOT(:,:,IAT_)=0.D0
           AE1CTOTPOT(:,1:LMRX,IAT_)=POT
+
+          IF(.NOT.ALLOCATED(AE1CTOTPOT_S(IAT_)%POT)) &
+     &             ALLOCATE(AE1CTOTPOT_S(IAT_)%POT(NR,LMRX))
+          AE1CTOTPOT_S(IAT_)%POT=POT(:NR,:)
         ELSE IF(IDENT_.EQ.'PS') THEN
           PS1CTOTPOT(:,:,IAT_)=0.D0
           PS1CTOTPOT(:,1:LMRX,IAT_)=POT
+
+          IF(.NOT.ALLOCATED(PS1CTOTPOT_S(IAT_)%POT)) &
+     &             ALLOCATE(PS1CTOTPOT_S(IAT_)%POT(NR,LMRX))
+          PS1CTOTPOT_S(IAT_)%POT=POT(:NR,:)
         ELSE
           CALL ERROR$MSG('IDENT MUST BE WITHER "AE" OR "PS"')
           CALL ERROR$CHVAL('IDENT_',IDENT_)
@@ -2005,7 +2039,16 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE GRAPHICS_CREATEPOT(FILE,TITLE,DR)
 !     **************************************************************************
-      USE GRAPHICS_MODULE
+      USE GRAPHICS_MODULE, ONLY : ONECPOT_TYPE &
+     &                           ,AE1CPOT_S &
+     &                           ,PS1CPOT_S &
+     &                           ,AE1CPOT &
+     &                           ,PS1CPOT &
+     &                           ,LMRXX &
+     &                           ,NGL &
+     &                           ,NRX &
+     &                           ,POTSHIFT &
+     &                           ,PWPOT
       USE MPE_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)    :: TITLE
@@ -2028,11 +2071,15 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
       REAL(8)   ,ALLOCATABLE     :: POS(:,:)
       INTEGER(4)                 :: NR
       REAL(8)   ,ALLOCATABLE     :: ONECPOT(:,:,:)
+      TYPE(ONECPOT_TYPE),ALLOCATABLE :: ONECPOT_S(:) !(NAT)
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4)                 :: NR1B,NR2B,NR3B
       INTEGER(4)                 :: NSP   !#(ATOM TYPES)
       INTEGER(4)                 :: ISP
       INTEGER(4)                 :: GID
+      INTEGER(4)                 :: I1,I2
+      INTEGER(4),ALLOCATABLE     :: IARR(:,:)
+      INTEGER(4)                 :: LMRX
 !     **************************************************************************
                                  CALL TRACE$PUSH('GRAPHICS_CREATEPOT')
 !COLLECTING OF INFORMATION
@@ -2104,32 +2151,74 @@ PRINT*,'WRITEWAVEPLOTC TITLE=',TRIM(TITLE),SUM(ABS(WAVE)**2)*DET/REAL(NR1*NR2*NR
         AE1CPOT=0.D0
         PS1CPOT=0.D0
       END IF
-      ALLOCATE(ONECPOT(NRX,LMRXX,NAT))
-      ONECPOT=AE1CPOT-PS1CPOT
-      CALL MPE$COMBINE('MONOMER','+',ONECPOT)
+!
+!     ==========================================================================
+!     == COMMUNICATE AE1CPOT-PS1CPOT OVER ALL TASKS
+!     ==========================================================================
+      ALLOCATE(IARR(2,NAT))  ! INFO ON IARR(1) TASKS. INFO ON TASK IARR(2)
+      IARR=0
+      ALLOCATE(ONECPOT_S(NAT))
+      DO IAT=1,NAT
+        CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
+        CALL SETUP$ISELECT(ISP)
+        CALL SETUP$GETI4('NR',NR)                
+        CALL SETUP$GETI4('LMRX',LMRX)                
+        CALL SETUP$UNSELECT()
+        ALLOCATE(ONECPOT_S(IAT)%POT(NR,LMRX))
+        IF(ALLOCATED(AE1CPOT_S(IAT)%POT)) THEN
+          IF(SUM(SHAPE(ONECPOT_S(IAT)%POT)-SHAPE(AE1CPOT_S(IAT)%POT)).NE.0) THEN
+            CALL ERROR$MSG('INCONSISTEN DIMENSIONS')
+            CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+          END IF
+          ONECPOT_S(IAT)%POT=AE1CPOT_S(IAT)%POT-PS1CPOT_S(IAT)%POT
+          IARR(1,IAT)=1
+          IARR(2,IAT)=THISTASK
+        ELSE
+          ONECPOT_S(IAT)%POT=0.D0
+        END IF
+      ENDDO
+      CALL MPE$COMBINE('MONOMER','+',IARR)
+
+      DO IAT=1,NAT
+        IF(IARR(1,IAT).NE.0.AND.IARR(1,IAT).NE.1) THEN
+          CALL ERROR$MSG('IARR COMMUNICATION FAILED')
+          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
+        END IF
+        CALL MPE$BROADCAST('MONOMER',IARR(2,IAT),ONECPOT_S(IAT)%POT)
+      ENDDO
+!
+!!$      ALLOCATE(ONECPOT(NRX,LMRXX,NAT))
+!!$      ONECPOT=AE1CPOT-PS1CPOT
+!!$      CALL MPE$COMBINE('MONOMER','+',ONECPOT)
+!
+!     ==========================================================================
+!     == 
+!     ==========================================================================
       DO IAT=1,NAT
         CALL ATOMLIST$GETI4('ISPECIES',IAT,ISP)
         CALL SETUP$ISELECT(ISP)
         CALL SETUP$GETI4('GID',GID)                
+        CALL SETUP$GETI4('NR',NR)                
+        CALL SETUP$GETI4('LMRX',LMRX)                
         CALL SETUP$UNSELECT()
-        CALL RADIAL$GETI4(GID,'NR',NR)
-!!$        IF(NRX.NE.NR) THEN
-!!$          CALL ERROR$MSG('INCONSISTENT GRID SIZE')
-!!$          CALL ERROR$MSG('ERROR WHILE ALLOWING ATOM-SPECIFIC RADIAL GRIDS')
-!!$          CALL ERROR$STOP('GRAPHICS_CREATEPOT')
-!!$        END IF
         CALL ATOMLIST$GETCH('NAME',IAT,ATOMNAME(IAT))
         CALL ATOMLIST$GETR8A('R(0)',IAT,3,POS(:,IAT))
         CALL ATOMLIST$GETR8('Z',IAT,Z(IAT))
         CALL ATOMLIST$GETR8('Q',IAT,Q(IAT))
+
 PRINT*,'INCLUDE AE-CONTRIBUTIONS'
 CALL TIMING$CLOCKON('GRAPHICS 1CPOTENTIAL')
+
         CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
-     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRXX,ONECPOT(:NR,:,IAT))
+     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRX,ONECPOT_S(IAT)%POT)
+!!$        CALL GRAPHICS_RHOLTOR(RBAS,NR1B,NR2B,NR3B,1,NR1B &
+!!$     &           ,POTENTIAL,POS(:,IAT),GID,NR,LMRXX,ONECPOT(:NR,:,IAT))
+
 CALL TIMING$CLOCKOFF('GRAPHICS 1CPOTENTIAL')
 PRINT*,'INCLUDED AE-CONTRIBUTIONS'
       ENDDO
-      DEALLOCATE(ONECPOT)
+!      DEALLOCATE(ONECPOT)
+      DEALLOCATE(ONECPOT_S)
 !
 !     ==================================================================
 !     ==  WRITE TO FILE                                               ==
