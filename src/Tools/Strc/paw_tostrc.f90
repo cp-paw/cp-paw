@@ -126,7 +126,8 @@
       END IF
 
 
-       STOP
+      CALL ERROR$NORMALSTOP()
+      STOP
       END PROGRAM PAW_TOSTRC
 
 

@@ -93,7 +93,8 @@ END MODULE POPT_MODULE
       DEALLOCATE(MATOM)
       DEALLOCATE(MBOND)
       CALL FILEHANDLER$CLOSEALL
-    END PROGRAM PREOPT
+      CALL ERROR$NORMALSTOP()
+      END PROGRAM PREOPT
 !     ==================================================================
 !     ==================================================================
 !     ==================================================================

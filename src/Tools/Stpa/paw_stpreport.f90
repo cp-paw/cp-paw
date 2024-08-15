@@ -115,6 +115,8 @@ end module stpreport_module
          call error__i4val('return code',rc)
          call error__stop('main')
        end if
+!
+       CALL ERROR$NORMALSTOP()
        stop
        end
 !

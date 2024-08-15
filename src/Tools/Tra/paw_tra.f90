@@ -352,6 +352,7 @@ END MODULE TRAJECTORY_MODULE
       WRITE(NFILO,FMT='(72("="),T20," PAW_TRA TOOL FINISHED ")')
       WRITE(NFILO,FMT='(72("="))')
                           CALL TRACE$POP
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

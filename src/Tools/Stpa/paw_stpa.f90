@@ -321,6 +321,7 @@
         END IF
         IF(NFIL.NE.6) CALL FILEHANDLER$CLOSE('DAT')
       ENDDO
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

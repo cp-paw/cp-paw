@@ -160,6 +160,7 @@
           CALL EXTRACTCLUSTERS(IAT,RBAS,NAT,R)
         END IF
       ENDDO
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

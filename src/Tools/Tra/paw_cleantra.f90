@@ -49,6 +49,7 @@
       CALL FILEHANDLER$UNIT('TRAOUT',NFIL2)      
       CALL CORRECTTRA(NFIL1,NFIL2)
                           CALL TRACE$POP
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

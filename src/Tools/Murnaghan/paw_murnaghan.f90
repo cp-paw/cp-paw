@@ -234,6 +234,7 @@
          WRITE(8,FMT='(3F15.10)')VI,EFIT,(VI/VBYL3)**(1.D0/3.D0)
        END IF
      ENDDO
+     CALL ERROR$NORMALSTOP()
      STOP
      END
 !

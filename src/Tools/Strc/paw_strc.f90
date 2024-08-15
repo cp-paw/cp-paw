@@ -404,6 +404,7 @@
       END IF
       CALL FILEHANDLER$CLOSEALL
       WRITE(*,FMT='("======= TASK FINISHED ========")')
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

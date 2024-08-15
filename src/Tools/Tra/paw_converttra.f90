@@ -46,5 +46,6 @@ print*,'convertingg....'
 print*,'conversion finished'
       DEALLOCATE(R)
       DEALLOCATE(Q)
+      CALL ERROR$NORMALSTOP()
       STOP
       END

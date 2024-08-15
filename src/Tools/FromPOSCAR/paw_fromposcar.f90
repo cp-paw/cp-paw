@@ -94,6 +94,8 @@
        ALLOCATE(R0(3,NAT))
        R0(:,:)=R(:,:NAT)
        CALL WRITECPPAW(NFILOUT,COMMENT,NAT,LUNIT,NAME,RBAS,R0)
+!
+       CALL ERROR$NORMALSTOP()
        STOP
        END
 !

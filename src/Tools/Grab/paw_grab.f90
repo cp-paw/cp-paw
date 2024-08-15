@@ -284,6 +284,7 @@ END MODULE SUBSTANCE_MODULE
 !     ==================================================================
       DEALLOCATE(SUBSTANCE)
       CALL FILEHANDLER$CLOSEALL
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !      
