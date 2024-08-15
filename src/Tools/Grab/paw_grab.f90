@@ -65,6 +65,10 @@ END MODULE SUBSTANCE_MODULE
       REAL(8)                   :: EREACT
       CHARACTER(16)             :: string
 !     ******************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER            ==

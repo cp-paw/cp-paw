@@ -20,6 +20,11 @@
        INTEGER(4)                :: I
        INTEGER(4)                :: NLISTS
 !      ******************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
        I=COMMAND_ARGUMENT_COUNT()
        IF(I.NE.1) THEN
          WRITE(*,FMT='(A)')'CORRECT USAGE: PAW_WAVE.X [FILE]'

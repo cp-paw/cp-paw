@@ -123,6 +123,11 @@ END MODULE TRAJECTORY_MODULE
       CHARACTER(40)  :: STR
 !     **************************************************************************
                           CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL GET_COMMAND_ARGUMENT(1,FILE)
       I=INDEX(FILE,'.',BACK=.TRUE.)
       ROOT=FILE(1:I-1)

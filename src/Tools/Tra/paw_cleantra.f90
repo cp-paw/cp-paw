@@ -14,6 +14,11 @@
       INTEGER(4)     :: NARGS
 !     **************************************************************
                           CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       NARGS=COMMAND_ARGUMENT_COUNT()
       IF(NARGS.LT.1)THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
