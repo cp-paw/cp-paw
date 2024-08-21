@@ -215,7 +215,7 @@ CALL TRACE$PASS('FILEHANDLER')
       CALL FILEHANDLER$REPORT(NFILO,'USED')
 !
 !     ==================================================================
-!     == FUSH BUFFER OF PROTOCOLL FILE                                ==
+!     == FUSH BUFFER OF PROTOCOL FILE                                 ==
 !     ==================================================================
 CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$CLOSEALL
@@ -704,8 +704,8 @@ CALL TRACE$PASS('DONE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE========================================================
-!     ==  EACH MONOMER HAS ITS OWN PROTOCOLL FILE
+!     ==  PROTOCOL FILE ========================================================
+!     ==  EACH MONOMER HAS ITS OWN PROTOCOL FILE
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ID=+'PROT'
       IF(THISTASK.GT.1)THEN

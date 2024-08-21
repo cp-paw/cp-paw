@@ -96,7 +96,7 @@
     &       //-' ALONG THE THREE LATTICE VECTORS'
         WRITE(*,'(T10,A)')-'I,J,K ARE POSITIVE SINGLE-DIGIT INTEGERS'
         WRITE(*,'("OUTPUT:")')
-        WRITE(*,'(T4,"ROOTNAME",A,T20,"PROTOCOLL FILE ")')-'.SPROT'
+        WRITE(*,'(T4,"ROOTNAME",A,T20,"PROTOCOL FILE ")')-'.SPROT'
         WRITE(*,'(T4,"ROOTNAME",A,T20,A)')-'.CML' &
     &                                ,"CRYSTAL STRUCTURE FILE IN THE CML FORMAT"
         WRITE(*,'(T4,"ROOTNAME",A,T20,A)')-'.XYZ' &
@@ -315,7 +315,7 @@
       END IF
 !
 !     ==========================================================================
-!     == WRITE HEADER TO PROTOCOLL FILE .SPROT                                ==
+!     == WRITE HEADER TO PROTOCOL FILE .SPROT                                 ==
 !     ==========================================================================
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='()')
@@ -350,7 +350,7 @@
       CALL LINKEDLIST$REPORT_UNUSED(LL_STRC,NFILO)
 !
 !     ==========================================================================
-!     == WRITE BOND LENGTH TO PROTOCOLL                                       ==
+!     == WRITE BOND LENGTH TO PROTOCOL                                        ==
 !     ==========================================================================
       CALL REPORTLOCALSTRUCTURE(RBAS,NAT,NAME,R,TCRYSTAL)
 !
