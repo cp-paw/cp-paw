@@ -1354,7 +1354,7 @@ MODULE DFT_MODULE
       REAL(8)    ,PARAMETER  :: FOURTHIRD=4.D0/3.D0
       REAL(8)    ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
       REAL(8)    ,PARAMETER  :: SPEEDOFLIGHT=137.035999084D0
-      REAL(8)    ,PARAMETER  :: EXFAC=-(3.d0/4.d0)*( 3.D0/PI )**(1.D0/3.D0)
+      REAL(8)    ,PARAMETER  :: EXFAC=-(3.D0/4.D0)*( 3.D0/PI )**(1.D0/3.D0)
       REAL(8)                :: PHIREL,DPHIREL
       REAL(8)                :: BETA,DBETA
       REAL(8)                :: ETA,DETA
@@ -1363,13 +1363,13 @@ MODULE DFT_MODULE
 !     **************************************************************************
 !
 !     ==========================================================================
-!     == avoid divide-by-zero for small densities/ non-relativistic limit ======
+!     == AVOID DIVIDE-BY-ZERO FOR SMALL DENSITIES/ NON-RELATIVISTIC LIMIT ======
 !     ==========================================================================
-      if(rho.lt.1.d-12) then
-        ex=0.d0
-        dex=0.d0
-        return
-      end if
+      IF(RHO.LT.1.D-12) THEN
+        E=0.D0
+        POT=0.D0
+        RETURN
+      END IF
 !
 !     ==========================================================================
 !     == EXCHANGE ENERGY DENSITY OF HOMOGENEOUS ELECTRON GAS ===================
