@@ -62,7 +62,7 @@ USAGE="$USAGE \t -h this help message\n"
 USAGE="$USAGE \t -v verbose\n"
 USAGE="$USAGE \n"
 USAGE="$USAGE \t Caution: specify output file with -o to when using -v or -h,"
-USAGE="$USAGE \t\t to avoid piping undesired information into the outfile"
+USAGE="$USAGE \n\t\t to avoid piping undesired information into the outfile"
 #-------------------------------------------------------------------------------
 # resolve argument list
 #-------------------------------------------------------------------------------

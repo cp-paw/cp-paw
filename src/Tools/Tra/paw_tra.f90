@@ -716,7 +716,7 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$CLOSE('CORRELATION')
 !     
 !     ==========================================================================
-!     ==  WRITE ATOMS TO PROTOCOLL FILE                                       ==
+!     ==  WRITE ATOMS TO PROTOCOL FILE                                        ==
 !     ==========================================================================
 !     
 !     ==========================================================================
@@ -1071,7 +1071,7 @@ END MODULE TRAJECTORY_MODULE
         ENDDO
 !     
 !       ================================================================
-!       ==  WRITE ATOMS TO PROTOCOLL FILE                             ==
+!       ==  WRITE ATOMS TO PROTOCOL FILE                              ==
 !       ================================================================
         CALL REPORT$TITLE(NFILO,'SNAPSHOT')
         CALL REPORT$R8VAL(NFILO,'TIME',TIME/(PICO*SECOND),'PSEC')
@@ -1086,7 +1086,7 @@ END MODULE TRAJECTORY_MODULE
         WRITE(NFILO,*) 
 !     
 !       ================================================================
-!       ==  WRITE ATOMS TO PROTOCOLL FILE                             ==
+!       ==  WRITE ATOMS TO PROTOCOL FILE                              ==
 !       ================================================================
         CALL FILEHANDLER$UNIT('SNAPSHOT',NFIL)
         CALL WRITECSSR(NFIL,'TEST',RBAS,NATM,ATOMM,POSM,QM,.TRUE.)
