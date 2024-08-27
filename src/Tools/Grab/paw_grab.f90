@@ -92,7 +92,7 @@ END MODULE SUBSTANCE_MODULE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(80("*"))')
       WRITE(NFILO,FMT='(80("*"),T15 &
-     &             ,"           PROTOCOLL GRAB TOOL               ")')
+     &             ,"           PROTOCOL GRAB TOOL                ")')
       WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
       WRITE(NFILO,FMT='(80("*"))')
@@ -145,7 +145,7 @@ END MODULE SUBSTANCE_MODULE
         CALL LINKEDLIST$SELECT(LL_CNTL,'SUBSTANCE',I)
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,SUBSTANCE(I)%NAME)
         tfound=.false.
-!       == collect total energy from protocoll file
+!       == collect total energy from protocol file
         CALL LINKEDLIST$existd(LL_CNTL,'FILE',1,tchk)
         if(tchk) then
           CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,SUBSTANCE(I)%FILE)
@@ -341,7 +341,7 @@ END MODULE SUBSTANCE_MODULE
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOL FILE ================================================
       ID=+'PROT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.GPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')

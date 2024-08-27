@@ -211,7 +211,7 @@ END MODULE READCNTL_MODULE
 !
 !     ==========================================================================
 !     ==  CALCULATE ANGULAR MOMENTUM WEIGHTS AND SPINS                        ==
-!     ==  AND WRITE RESULT TO THE PROTOCOLL FILE.                             ==
+!     ==  AND WRITE RESULT TO THE PROTOCOL FILE.                              ==
 !     ==  THE VARIABLE SPIN DIR GIVES THE LOCAL SPIN AXIS AND IS KEPT FOR LATER=
 !     ==========================================================================
       ALLOCATE(SPINDIR(3,NAT))
@@ -568,7 +568,7 @@ END MODULE READCNTL_MODULE
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE========================================================
+!     ==  PROTOCOL FILE ========================================================
       ID=+'PROT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')

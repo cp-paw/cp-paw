@@ -195,7 +195,7 @@
        TYPE(LL_TYPE)             :: LL_STRC
        CHARACTER(256)            :: TITLE
        INTEGER(4)                :: NFIL
-       INTEGER(4)                :: NFILO !FORTRAN UNIT OF PROTOCOLL FILE
+       INTEGER(4)                :: NFILO !FORTRAN UNIT OF PROTOCOL FILE
        REAL(8)                   :: RBAS(3,3)
        INTEGER(4)                :: NAT
        REAL(8)      ,ALLOCATABLE :: POS(:,:)   !(3,NAT)

@@ -3,7 +3,7 @@
 ##                                                               ##
 ##  name: paw_show                                               ##
 ##                                                               ##
-##  purpose: pulls out columns from the paw protocoll            ##
+##  purpose: pulls out columns from the paw protocol             ##
 ##                                                               ##
 ##  usage:                                                       ##
 ##    pawshow option --- rootname                                ##
@@ -50,7 +50,7 @@ Usage: paw_show options --- rootname\n
 \t\t     process with xmgrace -nxy filename
 \t -b batchfile: attach batch file to xmgrace settings
 \n
-Purpose: plot time-dependent data from protocoll file
+Purpose: plot time-dependent data from protocol file
 \n"
 # use the following for qm-mm calculations:\n
 # \t -qe: plot static total energy of the environmet\n
@@ -206,7 +206,7 @@ else
 fi
 #
 #===================================================================
-#  extract data from protocoll file                               ==
+#  extract data from protocol file                                ==
 #===================================================================
 grep "\!>" ${ROOT}.prot | sed 's/!>/!> /1' \
                        | sed 's/-/ -/g' \

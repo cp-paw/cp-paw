@@ -250,7 +250,7 @@ END MODULE ERROR_MODULE
       END IF
 !
 !     ================================================================
-!     == WRITE ERROR MESSAGE ON PROTOCOLL                           ==
+!     == WRITE ERROR MESSAGE ON PROTOCOL                            ==
 !     ================================================================
       IF(NCALL.LE.1) THEN
         CALL FILEHANDLER$UNIT('PROT',NFILO) 

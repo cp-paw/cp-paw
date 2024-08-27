@@ -549,7 +549,7 @@
 !     == WRITE INFORMATION                                            ==
 !     ==================================================================
 !     ==================================================================
-!     __WRITE PROTOCOLL_________________________________________________
+!     __WRITE PROTOCOL__________________________________________________
       CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
 !
 !     ==================================================================
@@ -868,7 +868,7 @@ END MODULE STOPIT_MODULE
       CALGARY_QMMM = .FALSE.
     
 !     ==========================================================================
-!     ==   WRITE HEADER FOR PROTOCOLL FOR EACH TIME STEP                      ==
+!     ==   WRITE HEADER FOR PROTOCOL FOR EACH TIME STEP                       ==
 !     ==========================================================================
                              CALL TRACE$PASS('WRITE HEADER')
       IF(THISTASK.EQ.1.AND.TFIRST) THEN
@@ -898,9 +898,9 @@ END MODULE STOPIT_MODULE
       IF(TPRINT) TFIRST=.TRUE.
 !   
 !     ==========================================================================
-!     ==   WRITE PROTOCOLL FOR EACH TIME STEP                                 ==
+!     ==   WRITE PROTOCOL FOR EACH TIME STEP                                  ==
 !     ==========================================================================
-                             CALL TRACE$PASS('WRITE PROTOCOLL')
+                             CALL TRACE$PASS('WRITE PROTOCOL')
       IF(THISTASK.EQ.1) THEN
 
         CALL CONSTANTS('PICO',PICO)
@@ -1087,7 +1087,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ENDIF
 !
 !       ========================================================================
-!       ==   WRITE ENERGIES TO PROTOCOLL                                      ==
+!       ==   WRITE ENERGIES TO PROTOCOL                                       ==
 !       ========================================================================
                              CALL TRACE$PASS('WRITE ENERGIES')
         IF(TPRINT) THEN
@@ -1202,7 +1202,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     CALL OPTICS$EVALUATE
 !   
 !     ==========================================================================
-!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOLL                        ==
+!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOL                         ==
 !     ==========================================================================
                               CALL TRACE$PASS('BEFORE OCCUPATIONS')
       IF(TPRINT) THEN
@@ -1217,7 +1217,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       END IF
 !   
 !     ==========================================================================
-!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOLL                          ==
+!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOL                           ==
 !     ==========================================================================
                               CALL TRACE$PASS('BEFORE CONSTRAINTS')
       IF(TPRINT) THEN

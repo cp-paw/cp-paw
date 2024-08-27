@@ -350,7 +350,7 @@
       REAL(8)                 :: SVAR,SUM    ! AUXILIARY VARIABLE
       REAL(8)                 :: FAC         ! AUXILIARY VARIABLE
       COMPLEX(8)              :: CSVAR       ! AUXILIARY VARIABLE
-      INTEGER(4)              :: NFILO       ! PROTOCOLL FILE NUMBER
+      INTEGER(4)              :: NFILO       ! PROTOCOL FILE NUMBER
       REAL(8)   ,ALLOCATABLE  :: WORK1(:)    ! WORKSPACE FOR INVERSION
       REAL(8)                 :: XQI(NFCT+1,NAT)
       REAL(8)                 :: XRC(NFCT+1,NAT)
