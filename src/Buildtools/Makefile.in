@@ -218,7 +218,7 @@ version_writeparmfile.o : version_writeparmfile.f90
 # "test -s file" evaluates true if the file is of zero size
 #
 cppaw_version.info : etc/paw_versioninfo.sh
-	-bash etc/paw_versioninfo.sh > $@
+	-bash etc/paw_versioninfo.sh 1>$@ 2>/dev/null
 	if [[ ! -s $@ && -e ${BASEDIR}/cppaw_version.info ]] ; then \
            cp ${BASEDIR}/cppaw_version.info $@ ; fi
 
