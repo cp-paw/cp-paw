@@ -136,7 +136,7 @@ echo "RELEASE= '$VERSIONID'" > cppaw_version.info
 #  create temporary working directory for the construction of the tar ball
 #-------------------------------------------------------------------------------
 export TMPDIR=$(mktemp -d)
-export WORKDIR=${TMPDIR}/cppaw
+export WORKDIR=${TMPDIR}/cp-paw
 if [[ ! -d ${WORKDIR} ]] ; then mkdir ${WORKDIR}; fi
 cp -r * $WORKDIR
 #cp -r .git $WORKDIR
