@@ -46,3 +46,7 @@ CVS/
 tmp.*
 *.fig.bak
 *-eps-converted-to.pdf
+/bin/
+/doc/
+/err*
+/out*

@@ -714,7 +714,7 @@ END MODULE READ_MODULE
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOL FILE ================================================
       ID=+'PROT'
       CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')

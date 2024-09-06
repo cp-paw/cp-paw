@@ -16,7 +16,7 @@
       IMPLICIT NONE
       TYPE(LL_TYPE)             :: LL_STRC
       INTEGER(4)                :: NFIL 
-      INTEGER(4)                :: NFILO    !PROTOCOLL-FILE UNIT 
+      INTEGER(4)                :: NFILO    !PROTOCOL-FILE UNIT 
       INTEGER(4)                :: NARGS 
       LOGICAL(4)                :: TCHK
       CHARACTER(64)             :: ROOTNAME

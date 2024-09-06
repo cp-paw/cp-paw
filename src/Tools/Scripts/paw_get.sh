@@ -6,7 +6,7 @@
 #  command: paw_get.sh options ROOTNAME
 #
 #  extracts the last value for etot|gap|homo|lumo|efermi from the
-#  specified protocoll file and prints either text or number
+#  specified protocol file and prints either text or number
 #
 ############################################################################
 #
@@ -225,11 +225,11 @@ if [[ -z $UNIT ]] ; then
   esac
 fi
 #
-# Does protocoll file exist?
+# Does protocol file exist?
 #
 if [[ ! -e $ROOT.prot ]] ; then
-  echo "error in $0: protocoll file does not exist" >&2
-  echo "specified protocoll file: $ROOT.prot" >&2
+  echo "error in $0: protocol file does not exist" >&2
+  echo "specified protocol file: $ROOT.prot" >&2
   exit 1
 fi
 #
