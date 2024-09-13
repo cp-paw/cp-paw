@@ -9101,8 +9101,7 @@ The calling sequence is
 
 \noindent Example:\\[2mm]
 \begin{verbatim}
-paw_scanlat -u -l "96 98 100 102 104" -p nio \
-            -e "waittillempty -n 4; paw_fast.x"
+paw_scanlat -l "96 98 100 102 104" -p nio 
 \end{verbatim}
 
 \noindent Explanation:\\[2mm]
@@ -9117,22 +9116,15 @@ files of the project with
 and performs paw calculations.  The restart file is copied only if it
 does not yet exist.
 
-Finally \verb|paw_scanlat| extracts the total energies. It produces
-two files:
-\begin{itemize}
-\item \verb|etot.dat| containing a two-column list of (1) percentage
-  scaling specified by the option \verb|-l| and (2) the energy in
-  Hartree.  
-\item \verb|murn.in| containing a two-column list of (1) the cube of
-  the length unit in the in abohr and (2) the energy in Hartree. This
-  file is used as input file for the \verb|paw_murnaghan.x.| tool
-\end{itemize}
-
-
-
+If \verb|paw_scanlat| is called with the option -u, it extracts the
+unit-cell volumes and total energies and writes them into the file
+\verb|latscan.dat|.  This file can be used as input for the
+\verb|paw_murnaghan| tool described below in
+section~\ref{sec:pawmurnaghantool}.
 
 %==========================================================================
 \subsection{Murnaghan fit ``paw\_murnagan.x''}
+\label{sec:pawmurnaghantool}
 %==========================================================================
 {\tt paw\_murnaghan.x} extracts the minimum energy, equilibrium
 volume, bulk modulus and its pressure derivative from a
@@ -9149,11 +9141,8 @@ data.  The first column of {\tt in.dat} holds the volumes and the
 second the corresponding energies, both given in Hartree atomic
 units. 
 
-
-
 In addition a file ``{\tt murn.dat}'' is produced holding the
 interpolated data covering the range of the input volumes +10\%.
-
 
 %==========================================================================
 \subsubsection{Command}
