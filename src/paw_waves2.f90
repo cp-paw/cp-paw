@@ -2976,7 +2976,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
             CALL REPORT$TITLE(NFIL,STRING)
             ITEN=0
             DO WHILE (NB.GT.ITEN)
-              WRITE(NFIL,FMT='(I3,":",10F8.3)') &
+              WRITE(NFIL,FMT='(I4,":",10F8.3)') &
      &                               ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
               ITEN=ITEN+10
             ENDDO
