@@ -1324,7 +1324,7 @@ to estimate the frequency from
 
 \mbax{\key{STRAIGHTEN} 
   \vdescr{Transform the wave functions onto energy eigenstates. The
-    transform is performed during the first big writeup of the
+    transform is performed at every big writeup of the
     protocol file. A unitary transform among the wave function is
     performed. That is, the Hilbert space remains unchanged.  Note,
     that the occupations may be inconsistent with the new states. It
@@ -1335,7 +1335,11 @@ to estimate the frequency from
     dynamics towards energy eigenstates. It may also be useful in the
     early stages of the wave function optimization.
     The abrupt change of the wave functions can upset a nearly 
-    converged calculation.}
+    converged calculation.
+
+    Caution is required in molecular dynamics simulations, the
+    operation perturbs the dynamics at least slightly.
+    }
   \vformat{logical} 
   \vrules{optional} 
   \vdefault{F}
