@@ -961,9 +961,10 @@ taken if the energy remains within an energy window of size ETOL for
 AUTOCONV time steps.}
 \vformat{integer} 
 \vrules{optional} 
-\vdefault{$10^{-8}$~H}}
+\vdefault{$10^{-5}$~H}}
 
-\mbax{\key{RSTRTTYPE} \vdescr{allows to cut down the information on
+\mbax{\key{RSTRTTYPE} 
+\vdescr{allows to cut down the information on
 the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
 wave functions. This reduces the amount of disk space by nearly a
 factor of two. This option should not be used in a dynamical
