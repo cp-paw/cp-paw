@@ -2,13 +2,25 @@
 #________1_________2_________3_________4_________5_________6_________7_________8
 ################################################################################
 ##                                                                            ##
-## f90pp                                                                      ##
+##  f90pp.in                                                                  ##
 ##                                                                            ##
-##    -- replaces dollar signs by double underscore (paw_dollar_ok.sh)        ##
+##  f90pp.in will be converted by the paw_build.sh into script file f90pp     ##
+##                                                                            ##
+##  f90pp                                                                     ##
 ##    -- removes directives (lines starting with @)                           ##
 ##    -- applies c-preprocessor (input option -D)                             ##
-##    -- resolves templates (f90pp_tmplts.x)                                  ##
-##    -- replacements with f90pp.sed                                          ##
+##    -- [paw_dollar_ok.sh] replaces dollar signs by double underscore        ##
+##       OpenMP directives !$OMP are restored                                 ##
+##    -- [f90pp.sed]                                                          ##
+##       -- converts c-processor directives "#if defined", etc. to lowercase  ##
+##       -- makes the include filenames fftw_f77.i, fftw3.f03, mpif.h lowercase#
+##    -- [f90pp.tmplts.x] expands bloechl-templates in                        ##
+##       paw_mpelib.f90, paw_constraints.f90, paw_fft.f90, paw_linkedlist.f90 ##
+##            #TEMPLATE NAME                                                  ##
+##               Rules                                                        ##
+##            #BODY                                                           ##
+##               code with keywords                                           ##
+##            #END TEMPLATE                                                   ##
 ##                                                                            ##
 ## requirements:                                                              ##
 ##    etc/f90pp.tmplts.x, etc/f90pp.sed, etc/paw_dollar_ok.sh                 ##
