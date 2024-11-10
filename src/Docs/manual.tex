@@ -7956,8 +7956,7 @@ Gamma-point to an X-point of the neighboring cell.
 \block{!BCNTL}
 %----------------------------------------------------------------------
 \brules{optional}
-\bdescr{defines the operations done on the system; 
-largely independent of the system}
+\bdescr{Control file for band structure calculations}
 
 %----------------------------------------------------------------------
 \block{!BCNTL!INPUTFILE}
@@ -7966,27 +7965,32 @@ largely independent of the system}
 \bdescr{Defines banddata file.}
 
 \mbax{\key{NAME}
-\vdescr{file name of banddata file from paw calculation.}
+
+\vdescr{File name of banddata file from paw calculation.  Usually the
+  extension of the file name is '.banddata' and the main part is equal
+  to the rootname of the calculation.}
+
 \vformat{character} 
 \vrules{mandatory}
-%\vdefault{If none is specified, the file is the one with extension '.'}
+\vdefault{Rootname of the project with extension '.banddata'}
 }
 %----------------------------------------------------------------------
 \block{!BCNTL!BANDSTRUCTURE}
 %----------------------------------------------------------------------
-\brules{optional}
-\bdescr{defines the bandstructure to be computed and plotted including fatbands}
+\brules{optional} 
+\bdescr{defines the bandstructure to be computed and
+  plotted including fatbands}
 
-\mbax{\key{mode}
-\vdescr{defines the mode of the calculation of the bandstructure. The two
-  possible values are 'LINEARINTERPOLATION'' and 'DIAGONALISATION', which are
-described below.}
-\vformat{character} 
+\mbax{\key{MODE} \vdescr{Mode of the calculation of the
+    bandstructure. The two possible values are 'LINEARINTERPOLATION''
+    and 'DIAG', which are described below. The value 'DIAG' may be
+    replaced by 'DIAGONALISATION' or 'DIAGONALIZATION'.}
+\vformat{character, case insensitive} 
 \vrules{optional}
-\vdefault{LINEARINTERPOLATION}}
+\vdefault{'LINEARINTERPOLATION'}}
 
-\mbax{\key{method\_diag}
-\vdescr{defines the method used for the diagonalisation of the paw hamiltonian 
+\mbax{\key{METHOD\_DIAG}
+\vdescr{Method used for the diagonalisation of the paw Hamiltonian 
   (generalized eigenvalue problem). Currently the two Lapack-functions 
 zhegvd (method\_diag=1) and zhegv (method\_diag=2) can be used.}
 \vformat{integer} 
@@ -7994,7 +7998,7 @@ zhegvd (method\_diag=1) and zhegv (method\_diag=2) can be used.}
 \vdefault{1}}
 
 \mbax{\key{EPWPSI}
-\vdescr{defines the planewave cutoff in Rydberg for the calculation of the 
+\vdescr{Planewave cutoff in Rydberg for the calculation of the 
 eigenstates of the paw hamiltonian. The default is to use the same value 
 as in the paw calculation, which is stored in the banddata-file.
 Details are described below.}
@@ -8006,7 +8010,7 @@ Details are described below.}
 \block{!BCNTL!BANDSTRUCTURE!LINE}
 %----------------------------------------------------------------------
 \brules{optional,multiple}
-\bdescr{defines one line segment in k-space, i.e. a part of a bandstructure}
+\bdescr{Line segment in k-space, i.e. a part of a bandstructure}
 
 \mbax{\key{XK1} \vdescr{First point of the line segment in relative
     coordinates of the reciprocal lattice vectors. The k-point in
@@ -8186,7 +8190,7 @@ only determines the number of bands in the output files.}
 \vrules{optional}
 \vdefault{20}}
 
-\mbax{\key{method\_diag}
+\mbax{\key{METHOD\_DIAG}
 \vdescr{see !BCNTL!BANDSTRUCTURE!method\_diag}
 \vformat{integer} 
 \vrules{optional}
