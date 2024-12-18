@@ -1580,7 +1580,9 @@ END MODULE MPE_MODULE
       THIS%SENDTAG(:)=0
       THIS%RECEIVETAG(:)=0
       NULLIFY(THIS%NEXT)
-      CALL MPE$SELECT('~')
+      SENDTAG=>THIS%SENDTAG
+      RECEIVETAG=>THIS%RECEIVETAG
+!     ===  INITIAL SELECTION IS '~'  ===========================================
 #ENDIF
 !     
 !     ================================================================
