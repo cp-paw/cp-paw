@@ -5068,6 +5068,8 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
 !       ========================================================================
         CALL EXTERNAL1CPOT$SETPOT(ATOM,TYPE,ISPIN,VALUE,RC,PWR, &
      &                            NSPECIAL,STYPE,FAC)
+        DEALLOCATE(FAC)
+        DEALLOCATE(STYPE)
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
                            CALL TRACE$POP
