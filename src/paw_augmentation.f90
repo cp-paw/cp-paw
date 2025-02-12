@@ -2701,6 +2701,8 @@ END MODULE EXPERTNAL1CPOT_MODULE
         ENDDO
         DEALLOCATE(UONE)
         DEALLOCATE(LOX)
+        DEALLOCATE(LANG)
+        DEALLOCATE(MANG)
       ENDDO
 !
 !     ==========================================================================
