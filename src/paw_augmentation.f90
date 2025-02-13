@@ -2682,16 +2682,26 @@ END MODULE EXPERTNAL1CPOT_MODULE
               DO LN2=1,LNX
                 L2=LOX(LN2)
                 IF(L1.EQ.L2) THEN
-                  DO IORB=1,NORB
-                    M1=MANG(IORB)
-                    DO IORB2=1,NORB
-                      M2=MANG(IORB2)
-!                     IF SWITCH TO COMPLEX COEFFICIENTS ONE NEEDS CONJUGATE
-                      SVAR=POT1%FAC(IORB)*POT1%FAC(IORB2)*UONE(LN1,LN2)
-                      DATH(LMN1+M1,LMN2+M2,IDIMD)=DATH(LMN1+M1,LMN2+M2,IDIMD) &
-      &                                       +SVAR
+!                 SPECIAL ORBITAL
+                  IF(TRIM(POT1%TYPE).EQ.'SPECIAL') THEN
+                    DO IORB=1,NORB
+                      M1=MANG(IORB)
+                      DO IORB2=1,NORB
+                        M2=MANG(IORB2)
+  !                     IF SWITCH TO COMPLEX COEFFICIENTS ONE NEEDS CONJUGATE
+                        SVAR=POT1%FAC(IORB)*POT1%FAC(IORB2)*UONE(LN1,LN2)
+                        DATH(LMN1+M1,LMN2+M2,IDIMD)=DATH(LMN1+M1,LMN2+M2,IDIMD) &
+        &                                       +SVAR
+                      ENDDO
                     ENDDO
-                  ENDDO
+!                 CALCULATION FOR DEFAULT ORBITALS
+                  ELSE
+                    DO I=1,2*L1+1
+                      IF(.NOT.(MANG(1).EQ.I.OR.MANG(1).EQ.-1)) CYCLE
+                      DATH(LMN1+I,LMN2+I,IDIMD)=DATH(LMN1+I,LMN2+I,IDIMD) &
+        &                                      +UONE(LN1,LN2)
+                    ENDDO
+                  END IF
                 END IF
                 LMN2=LMN2+2*L2+1
               ENDDO
