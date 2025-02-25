@@ -2448,7 +2448,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4)   ,INTENT(OUT):: IT(3)       ! UNIT-CELL INDEX
       INTEGER(4)   ,INTENT(IN) :: LMXX        ! MAX LENGTH OF ORBITAL ARRAY
       COMPLEX(8)   ,INTENT(OUT):: ORB(LMXX)   ! ORBITAL COEFFICIENT VECTOR
-      CHARACTER(8)             :: TYPE  ! ORBITAL TYPE IN LOCAL COORDINATES
+      CHARACTER(32)            :: TYPE  ! ORBITAL TYPE IN LOCAL COORDINATES
       INTEGER(4)               :: IAT2
       CHARACTER(32)            :: ATOMEX      ! ATOM NAME IN EXTENDED NOTATION
       CHARACTER(32)            :: ATOM
@@ -2649,7 +2649,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
       ELSE
 !       == RESOLVE PURE REAL SPHERICAL HARMONICS ===============================
-        CALL SPHERICAL$LMBYNAME(TYPE,LM)
+        CALL SPHERICAL$LMBYNAME(TRIM(TYPE),LM)
         ORB(LM)=1.D0
       END IF
 !
@@ -3445,7 +3445,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       INTEGER(4)                :: ISET   ! SET COUNTER
       INTEGER(4)                :: IAT
       INTEGER(4)                :: IAT0
-      CHARACTER(8)              :: TYPE
+      CHARACTER(32)             :: TYPE
       CHARACTER(32)             :: NAME,SPIN
       LOGICAL(4)                :: TCHK,TCHK1
       INTEGER(4)                :: ITH, NUM
