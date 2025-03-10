@@ -3025,6 +3025,13 @@ because it incorporates (almost) all options at the same time.
       !LINE ATOM='H_2' VEC= 0.5 0.0 0.0 !END 
     !END 
   !END
+  !ORBPOT
+    !POT ATOM='H_1' TYPE='S' VALUE=-0.1 !END
+    !POT ATOM='C_1' TYPE='SPECIAL' VALUE=-0.1 
+      !ORB TYPE='PX' FAC=0.707 !END
+      !ORB TYPE='PZ' FAC=0.707 !END
+    !END
+  !END
 !END 
 !EOB
 \end{verbatim}
@@ -4788,6 +4795,23 @@ on p.~\pageref{sec:extendedatomnotation})}
   (\texttt{VALUE=0.1 RC=3. S=1}) changes the spin splitting of
   3d-electrons by about 5~eV.
 
+  A more general approach to apply external potentials is to use the
+  real spherical harmics and coefficients to construct superpositions of
+  orbitals. We can define the potential as
+  \begin{eqnarray}\nonumber
+    \tilde{U}(|\vec{r}|)&=&
+      U\mathrm{e}^{-\left(\frac{|\vec{r}-\vec{R}|}{r_c}\right)^q},\quad
+      \langle \vec{r}|\phi_\alpha\rangle=R_\alpha(|\vec{r}|)
+      Y_{\ell_\alpha,m_\alpha}(\vec{r})\\ \nonumber
+    V(\vec{r},\vec{r}')&=&\sum_{\ell,m,\ell',m'}Y_{\ell,m}(\vec{r})c_{\ell,m}
+      c_{\ell',m'}^*Y_{\ell',m'}(\vec{r}')\tilde{U}(|\vec{r}|)
+      \frac{\delta(|\vec{r}|-|\vec{r}'|)}{|\vec{r}|\cdot|\vec{r}'|}\\ \nonumber
+    \Delta\hat{H}&=&\sum_{\alpha,\beta}|\tilde{p}_\alpha\rangle
+      c_{\ell_\alpha,m_\alpha}\int dr\;r^2 \phi_\alpha^*(r)\tilde{U}(r)
+      \phi_\beta(r)c_{\ell_\beta,m_\beta}^*\langle\tilde{p}_\beta|
+  \end{eqnarray}
+  where $c_{\ell,m}$ are the coefficients of the superposition of the 
+  orbitals.
 %% The relation $|\Psi\rangle\approx
 %%   \sum_i|\phi_i\rangle\langle\tilde{p}_i|\tilde\Psi\rangle$ between
 %%   the true wave function and its one-center expansion is used to
@@ -4821,14 +4845,16 @@ on p.~\pageref{sec:extendedatomnotation})}
 \vdefault{none}}
 %
 \mbax{\key{TYPE} 
-\vdescr{orbital type, can be 'S', 'P', 'D', 'ALL' or the ID of any
+\vdescr{orbital type, can be 'S', 'P', 'D', 'ALL', 'SPECIAL' or the ID of any
   real spherical harmonics with $\ell\le3$. The allowed values for
   real spherical harmonics are provided in
   table~\ref{tab:realsphericalharmonics}
   on p.~\pageref{tab:realsphericalharmonics}.
 .  Some of them are
   'S','PX', 'PY', 'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2' or 'DZ2', 'DYZ',
-  'DXY'.}  
+  'DXY'. 'SPECIAL' is used to specify a new orbital from a superposition of real
+  spherical harmonics in one angular
+  momentum shell. Requires at least one !ORBPOT!POT!ORB block.}  
 \vformat{character} 
 \vrules{mandatory} 
 \vdefault{none}}
@@ -4867,6 +4893,34 @@ in \eq{eq:orbpot}.}
   \vrules{optional}
   \vdefault{0}
 }
+%
+%----------------------------------------------------------------------
+\block{!STRUCTURE!ORBPOT!POT!ORB}
+%----------------------------------------------------------------------
+\brules{mandatory if !ORBPOT!POT:TYPE='SPECIAL', multiple}
+\bdescr{describes superposition of orbitals to create new orbital}
+%
+\mbax{\key{TYPE} 
+\vdescr{orbital type, can be ID of any
+  real spherical harmonics with $\ell\le3$. The allowed values for
+  real spherical harmonics are provided in
+  table~\ref{tab:realsphericalharmonics}
+  on p.~\pageref{tab:realsphericalharmonics}.
+.  Some of them are
+  'S','PX', 'PY', 'PZ', 'DX2-Y2', 'DXZ', 'D3Z2-R2' or 'DZ2', 'DYZ',
+  'DXY'. Currently only !ORB:TYPE with the same angular momentum are allowed
+  within one !ORBPOT!POT block. The same orbital can not be selected in two
+  different !ORB blocks within one !ORBPOT!POT block.}  
+\vformat{character} 
+\vrules{mandatory} 
+\vdefault{none}}
+%
+\mbax{\key{FAC}
+\vdescr{factor of the orbital in the superposition. Internally all factors
+within one !ORBPOT!POT block are normalized $\sum_i|c_i|^2=1$.}
+\vformat{real}
+\vrules{mandatory}
+\vdefault{none}}
 %
 } % end of ifthenelse
 
