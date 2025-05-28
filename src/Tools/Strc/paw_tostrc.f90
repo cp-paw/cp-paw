@@ -3293,7 +3293,6 @@ print*,"===DONE==="
       ENDIF
       DO I=1,NAT
         NAME=TRIM(ADJUSTL(ATOMS(I)))
-PRINT *, LEN(TRIM(NAME))
         IF(LEN(TRIM(NAME)).EQ.1) THEN
           NAME=TRIM(NAME)//"_"//TRIM(ADJUSTL(.ITOS.I))
         ELSE IF(LEN(TRIM(NAME)).EQ.2) THEN
