@@ -4196,10 +4196,10 @@ END IF
 !       == ALL-ELECTRON WAVE FUNCTIONS =========================================
         CALL SETUP_WRITEPHI(-'AEPSIF'//TRIM(STRING),GID,NR,NB-NC,AEPSIF)
 !
-!       == PSEUDO WAVE FUNCTIONS =========================================
+!       == PSEUDO WAVE FUNCTIONS ===============================================
         CALL SETUP_WRITEPHI(-'PSPSIF'//TRIM(STRING),GID,NR,NB-NC,PSPSIF)
 !
-!       == PSEUDO WAVE FUNCTIONS =========================================
+!       == ALL-ELECTRON WAVE FUNCTIONS =========================================
         CALL SETUP_WRITEPHI(-'AUGPSIF'//TRIM(STRING),GID,NR,NB-NC,AUGPSIF)
 !
 !       == POTENTIALS  =========================================================

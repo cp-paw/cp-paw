@@ -1135,14 +1135,21 @@ END MODULE NEWDFT_MODULE
       SUBROUTINE PAWLIBXC$SETCH(ID,VAL)
 !     **************************************************************************
 !     **************************************************************************
+      USE, INTRINSIC :: ISO_C_BINDING
+!     -- SEE LIBXC_MASTER.F90 OF THE LIBXC DISTRIBUTION.
+!     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
+!     -- TO THE MODULE XC_F03_FUNCS_M.
+!     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_LDA_X &
+     &                          ,XC_F03_FUNC_INIT &! FUNCTION
+     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
+     &                          ,XC_F03_FUNCTIONAL_GET_NAME
+      USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
      &                          ,XC_LDA_C_VWN &
      &                          ,XC_GGA_X_PBE &
      &                          ,XC_GGA_C_PBE &
      &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN &
-     &                          ,XC_F03_FUNC_INIT ! FUNCTION
+     &                          ,XC_MGGA_C_R2SCAN 
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC
       IMPLICIT NONE
@@ -1211,16 +1218,20 @@ END MODULE NEWDFT_MODULE
 !     **************************************************************************
 !     **************************************************************************
       USE, INTRINSIC :: ISO_C_BINDING
+!     -- SEE LIBXC_MASTER.F90 OF THE LIBXC DISTRIBUTION.
+!     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
+!     -- TO THE MODULE XC_F03_FUNCS_M.
+!     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
-     &                          ,XC_LDA_X &
+     &                          ,XC_F03_FUNC_INIT &! FUNCTION
+     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
+     &                          ,XC_F03_FUNCTIONAL_GET_NAME
+      USE XC_F03_FUNCS_M , ONLY: XC_LDA_X & 
      &                          ,XC_LDA_C_VWN &
      &                          ,XC_GGA_X_PBE &
      &                          ,XC_GGA_C_PBE &
      &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN &
-     &                          ,XC_F03_FUNC_INIT &! FUNCTION
-     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
-     &                          ,XC_F03_FUNCTIONAL_GET_NAME
+     &                          ,XC_MGGA_C_R2SCAN 
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC &
      &                          ,NIDX &

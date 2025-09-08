@@ -1323,22 +1323,23 @@ to estimate the frequency from
 }
 
 \mbax{\key{STRAIGHTEN} 
-  \vdescr{Transform the wave functions onto energy eigenstates. The
-    transform is performed at every big writeup of the
-    protocol file. A unitary transform among the wave function is
-    performed. That is, the Hilbert space remains unchanged.  Note,
-    that the occupations may be inconsistent with the new states. It
-    may be advisable to simultaneously restart the occupations.
+   \vdescr{Transform the wave functions onto energy eigenstates.  A
+     unitary transform among the wave function is performed. The
+     transform is performed only in the first iteration.  (In an
+     earlier version, the transformation was done with every big
+     writeup) Note, that the occupations may be inconsistent with the
+     new states. It may be advisable to simultaneously restart the
+     occupations.
  
     This option can be used to accelerate convergence with
     !CONTROL!PSIDYN:SAFEORTHO=F, because it shortcuts the lengthy
     dynamics towards energy eigenstates. It may also be useful in the
     early stages of the wave function optimization.
-    The abrupt change of the wave functions can upset a nearly 
-    converged calculation.
 
-    Caution is required in molecular dynamics simulations, the
-    operation perturbs the dynamics at least slightly.
+    The abrupt change of the wave functions can upset a nearly
+    converged calculation.  Caution is required in molecular dynamics
+    simulations, the operation perturbs the dynamics at least
+    slightly.
     }
   \vformat{logical} 
   \vrules{optional} 
@@ -1966,12 +1967,13 @@ TEMPERATURE[K]; CHARGE[E]; SPIN[HBAR].}
 \block{!CONTROL!CELL}
 %----------------------------------------------------------------------
 \brules{optional; default is fixed unit cell, and no stress
-  calculation} 
-\bdescr{This option is experimental!.  Invokes pressure calculation,
-  and Parrinello-Rahman dynamics of the unit cell, if requested.//
+  calculation} \bdescr{This option invokes pressure calculation, and
+  Parrinello-Rahman dynamics of the unit cell, if requested.//
   Warning: The implementation of the unit-cell dynamics is still
   incompatible with atom constraints, because the forces of constraint
-  are not yet considered}
+  are not yet considered Some additional information on cell dynamics
+  is found in section~\ref{sec:celldynamics} on
+  p.~\pageref{sec:celldynamics}.}
 %
 \mbax{\key{MOVE}
 \vdescr{Dynamical evolution of the unit cell.}
@@ -4860,11 +4862,12 @@ in \eq{eq:orbpot}.}
 \vdefault{2.0}}
 %
 \mbax{\key{S} 
-\vdescr{restricts the spin, on which the potential acts. If this
-  parameter is omitted the potential acts on all electrons
-  irrespective of their spin direction.  For a collinear
-  spin-polarized potential only $S=1$ is allowed and defines a
-  potential acting on the $z$-component of the spin. For a
+\vdescr{restricts the spin, on which the potential
+    acts. If this parameter is omitted the potential acts on all
+    electrons irrespective of their spin direction.  For a collinear
+    spin-polarized potential only $S=1$ is allowed and defines a
+    potential acting on the $z$-component of the spin. Spin-up and
+    spin-down electrons are shifted in opposite directions. For a
   non-collinear calculation (NSPIN=3 in !STRUCTURE!GENERIC) the values
   of $S=1,S=2,S=3$ refer to the x,y,z components of the spin
   respectively.}
@@ -6389,16 +6392,17 @@ Start the Dataexplorer using
 \newpage
 \section{The Density of States Analysis Tool: paw\_dos}
 %==========================================================================
-The paw\_dos tool allows one to analyze binding, both locally and energy
-resolved. It can tell you which states contribute mostly to a
-particular $\sigma, \pi, \delta$ bond. For example, you can learn whether
-either bonding and antibonding states are close to the Fermi level
-(HOMO-LUMO gap), in which case a structural deformation or a charge
-transfer can affect such a bond strongly. This analysis is similar in
-spirit to the Crystal-Orbital-Overlap-Population (COOP) analysis of R.
-Hoffmann. It is of tremendous value to obtain a chemical (local)
-description of binding in complex systems, where states are
-delocalized and closely spaced in energy.
+The paw\_dos tool allows one to analyze binding, both locally and
+energy resolved. It can tell you which states contribute mostly to a
+particular $\sigma$-, $\pi$-, or $\delta$- bond. For example, you can
+learn whether either bonding and antibonding states are close to the
+Fermi level, respectively the HOMO-LUMO gap, in which case a
+structural deformation or a charge transfer can affect such a bond
+strongly. This analysis is similar in spirit to the
+Crystal-Orbital-Overlap-Population (COOP) analysis of R.
+Hoffmann.\cite{hughbanks83_jacs105_3528} It is of tremendous value to
+obtain a chemical (local) description of binding in complex systems,
+where states are delocalized and closely spaced in energy.
 
 %==========================================================================
 \subsection{Command}
@@ -8787,7 +8791,7 @@ option id or it may be separated from it by spaces.
 
 %==========================================================================
 \subsection{The Frontend Tool: ``paw\_do''}
-\label{sec:pawshow}
+\label{sec:pawdo}
 %==========================================================================
 The tool paw\_do simplifies a number of standard operations.  It It
 assumes that there is exactly one PAW project in the current
@@ -10264,6 +10268,8 @@ This sawtooth behavior can be suppressed by including an additional
 G-dependent bucket potential that ensures that the wave function
 coefficients at the plane wave cutoff vanish strictly.
 
+
+
 %==========================================================================
 \subsection{Overcompleteness problem when using too many projector functions}
 %==========================================================================
@@ -10360,6 +10366,7 @@ option must be enabled in the code.
 
 %==========================================================================
 \subsection{Cell dynamics}
+\label{sec:celldynamics}
 %==========================================================================
 %==========================================================================
 \subsubsection{Constraints}
@@ -10517,6 +10524,116 @@ $C_1=$&$(0,0,0;$&$ 0,0,0 ;$&$ 0,0,1)$\\
 %}{} % end of \ifthenelse
 
 %==========================================================================
+\subsection{Transition pressure}
+\label{sec:transitionpressure}
+%==========================================================================
+The enthalpy $H(p)$ of a material as function of pressure $p$ is the
+energy of the material with energy $E(V)$ and a volume reservoir with
+energy $pV$. The volume $V$ is that of the material\footnote{Because
+the sum of the volume of material and reservoir is conserved, the
+volume of the reservoir can be expressed by that of the material.}
+
+\begin{eqnarray}
+H(p)&=&\min_{V}\Bigl[ E(V)+pV \Bigr]
+\qquad\Rightarrow\qquad
+p(V)=-\frac{dE}{dV}
+\nonumber\\
+E(V)&=&\min_p\Bigl[H(p)-pV\Bigr]
+\qquad\Rightarrow\qquad
+V(p)=\frac{dH}{dp}
+\end{eqnarray}
+This amounts to a Legendre transform from $E(V)$ to $H(p)$ and back.
+
+The transition pressure $p^*$ of two materials $A$ and $B$ is given by
+\begin{eqnarray}
+H_A(p^*)=H_B(p^*)
+\end{eqnarray}
+
+Our goal is to estimate the transition pressure using the enthalpy of
+two phases for the same pressure. Let me first estimate the enthalpy
+to linear order in the deviation of the pressure from some reference value
+$\bar{p}=p_j(V)$.
+\begin{eqnarray}
+H_j(p)&=&H_j(\bar{p}_j)+(p-\bar{p}_j)\left.\frac{dH_j}{dp}\right|_{\bar{p}_j}
++\ldots
+\nonumber\\
+&=&H_j(p_j(V))+\Big(p-p_j(V)\Big)\left.\frac{dH_j}{dp}\right|_{p_j(V)}
++\ldots
+\nonumber\\
+%
+&=&
+\underbrace{
+\Bigl(H_j(p_j(V))
+-p_j(V)\left.\frac{dH_j}{dp}\right|_{p_j(V)}\Bigr)}_{E_j(V)}
++p\underbrace{\left.\frac{dH_j}{dp}\right|_{p_j(V)}}_{V}
++\ldots
+\nonumber\\
+&=&E(V)+pV+O\Bigl((p-p_j(V))^2\Bigr)
+\end{eqnarray}
+
+I used:
+\begin{eqnarray}
+H(p(V))&=&E(V)+V p(V)
+\nonumber\\
+\Rightarrow\quad
+\left.\frac{dH}{dp}\right|_{p(V)}\frac{dp}{dV}
+&=&V\frac{dp}{dV}
+\nonumber\\
+\Rightarrow\quad
+\left.\frac{dH}{dp}\right|_{p(V)}
+&=&V
+\end{eqnarray}
+
+Given a the energies $E_j(V_j)$ for each phase at a given volume, we
+thus can estimate the transition pressure as
+\begin{eqnarray}
+0&=&H_B(p)-H_A(p)\approx E_B(V_B)+pV_B-E_A(V_A)-pV_A
+\nonumber\\
+p^*&=&-\frac{E_B(V_B)-E_A(V_A)}{V_B-V_A}
+\end{eqnarray}
+If $V_B$ and $V_A$ are the equilibrium volumes at the same pressure
+$\bar{p}$, we obtain
+\begin{eqnarray}
+\nonumber\\
+p^*
+&=&\bar{p}
+-\frac{\Bigl(E_B(V_B)+\bar{p}V_B\Bigr)-\Bigl(E_A(V_A)-\bar{p}V_A\Bigr)}{V_B-V_A}
+\nonumber\\
+&=&\bar{p}-\frac{H_B(\bar{p})-H_A(\bar{p})}{V_B-V_A}
+\end{eqnarray}
+
+These considerations suggest the following procedure:
+\begin{enumerate}
+\item Make an initial guess $\bar{p}$ of the transition
+  pressure. Typically this will be zero pressure
+%
+\item For the estimate $\bar{p}$ of the transition pressure, find the
+  minimum
+\begin{eqnarray}
+H_j(\bar{p})=\min_{V,\vec{X}} \Bigl(E_j(V,\vec{X})+pV\Bigr)
+\end{eqnarray}
+ for both
+  phases $A$ and $B$.  With $\vec{X}$, I denote any other unconstrained
+  degrees of freedom such as wave functions or atomic positions, etc.
+  Obtain the equilibrium volumes $V_A$ and $V_B$ of the two phases in
+  contact with the volume reservoir.
+%
+\item Estimate the transition pressure $p^*$ from
+\begin{eqnarray}
+p^*&=&
+\bar{p}
+-\frac{\bigl(E_B(V_B)+\bar{p}V_B\bigr)-\big(E_A(V_A)+\bar{p}V_A\big)}
+{V_B-V_A}
+\end{eqnarray}
+%
+\item repeat the energy optimization with the new estimate
+  $\bar{p}=p^*$ of the transition pressure, and continue until
+  $\bar{p}=p^*$.
+%
+\item After convergence extract the transition pressure and the
+  equilibrium volumes of the two phases.
+\end{enumerate}
+%==========================================================================
 \newpage
 \section{Troubleshooting}
 %==========================================================================
@@ -10529,41 +10646,50 @@ $C_1=$&$(0,0,0;$&$ 0,0,0 ;$&$ 0,0,1)$\\
 \item A common mistake is to enter data with the wrong data type.
   In this case you will receive a message as follows, which should help
   to locate the problem.
-\begin{verbatim}
-TYPE INCONSISTENT
-VARIABLE ID HAS THE VALUE DT
-VARIABLE NTH HAS THE VALUE         1
-VARIABLE TYPE EXPECTED HAS THE VALUE R(8)
-VARIABLE ACTUAL TYPE HAS THE VALUE I(4)
-STOP IN LINKEDLIST_GETGENERIC
-\end{verbatim}
-The first line says that there is a type mismatch. The last line
-says that the problem happened in method of the linkedlist object,
-which is also responsible for linked list/tree data structures such as
-block-structured input files. In particular the program attempts to
-collect a data item from this tree structure.  The second line gives
-you the name of the variable, in this example ``DT'', which is the key
-word for the time step. It cannot tell in which file or which block
-the data is located. The third line tells you that it is the first
-data with this name in the block. The next two lines say that the
-program expects a data with type ``real(8)'', but finds one of type
-``integer(4)''. It appears that the program has mistaken your data for
-DT as an integer, because the user forgot to type the decimal point.
+  \begin{verbatim}
+  TYPE INCONSISTENT
+  VARIABLE ID HAS THE VALUE DT
+  VARIABLE NTH HAS THE VALUE         1
+  VARIABLE TYPE EXPECTED HAS THE VALUE R(8)
+  VARIABLE ACTUAL TYPE HAS THE VALUE I(4)
+  STOP IN LINKEDLIST_GETGENERIC
+  \end{verbatim}
+  The first line says that there is a type mismatch. The last line
+  says that the problem happened in method of the linkedlist object,
+  which is also responsible for linked list/tree data structures such
+  as block-structured input files. In particular the program attempts
+  to collect a data item from this tree structure.  The second line
+  gives you the name of the variable, in this example ``DT'', which is
+  the key word for the time step. It cannot tell in which file or
+  which block the data is located. The third line tells you that it is
+  the first data with this name in the block. The next two lines say
+  that the program expects a data with type ``real(8)'', but finds one
+  of type ``integer(4)''. It appears that the program has mistaken
+  your data for DT as an integer, because the user forgot to type the
+  decimal point.
+%
 \item The program does not do what you want it to. You may have mistyped
   keywords, or mixed up the tree structure. This renders a lot of data
-  invisible, and the program uses the default values. Try to consult
-  the protocol of the program. It should report all options selected.
+  invisible, and the program uses the default values. 
+
+  Consult the the protocol of the program. Below the header lines you
+  will find a section ``Unused elements of the input files''. It lists
+  keywords that have not been recognized, either because they have been
+  mistyped or purposely modified to make them invisible.
+
+  The protocoll file should furthermore report all options selected.
   If options are not listed, the option is not selected, or the
   corresponding value is zero. (Of course, it can also be that it is
   not reported. In this case see whether you get a statement in the
   protocol if you select the option. If not, please report this to the
   author.)
+%
 \item If you did not provide, or mistype, a keyword that does not have
   a default, you may receive a message like this:
-\begin{verbatim}
-KEYWORD T= IS MANDATORY
-STOP IN STRCIN; !STRUCTURE!LATTICE
-\end{verbatim}
+ \begin{verbatim}
+ KEYWORD T= IS MANDATORY
+ STOP IN STRCIN; !STRUCTURE!LATTICE
+ \end{verbatim}
 
 \end{itemize}
 

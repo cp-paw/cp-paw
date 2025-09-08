@@ -38,7 +38,7 @@
      WRITE(*,FMT='(A80)') &
     &     'MURNAGHAN EQUATION OF STATE IS BASED ON THE ASSUMPTION THAT THE' &
     &    ,'BULK MODULUS DEPENDS LINEARLY ON PRESSURE.' &
-    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
+    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1944)'
 !
 !     ==========================================================================
 !     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==

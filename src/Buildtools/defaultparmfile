@@ -241,6 +241,9 @@ if [[ -n $(which pkg-config) ]] ; then
            Y=$(pkg-config --print-errors \
                           --variable=includedir $X)/xc_f03_lib_m.mod
            INCLUDES="$INCLUDES $Y"
+           Y=$(pkg-config --print-errors \
+                          --variable=includedir $X)/xc_f03_funcs_m.mod
+           INCLUDES="$INCLUDES $Y"
            ;;
       esac
 
