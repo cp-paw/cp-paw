@@ -959,7 +959,7 @@ the friction for various dynamical variables, to test the convergence
 and to terminate the optimization loop. The decision to terminate is
 taken if the energy remains within an energy window of size ETOL for
 AUTOCONV time steps.}
-\vformat{integer} 
+\vformat{real} 
 \vrules{optional} 
 \vdefault{$10^{-5}$~H}}
 
@@ -1322,14 +1322,12 @@ to estimate the frequency from
   \vdefault{T}
 }
 
-\mbax{\key{STRAIGHTEN} 
-   \vdescr{Transform the wave functions onto energy eigenstates.  A
-     unitary transform among the wave function is performed. The
-     transform is performed only in the first iteration.  (In an
-     earlier version, the transformation was done with every big
-     writeup) Note, that the occupations may be inconsistent with the
-     new states. It may be advisable to simultaneously restart the
-     occupations.
+\mbax{\key{STRAIGHTEN} \vdescr{Transform the wave functions onto
+    energy eigenstates.  A unitary transform among the wave function
+    is performed. The transform is performed only in the first
+    iteration.  Note, that the occupations may be inconsistent with
+    the new states. It may be advisable to simultaneously restart the
+    occupations.
  
     This option can be used to accelerate convergence with
     !CONTROL!PSIDYN:SAFEORTHO=F, because it shortcuts the lengthy
