@@ -393,7 +393,6 @@ CALL TRACE$PASS('DONE')
 !     ==  READ BLOCK !RDYN                                            ==
 !     ==================================================================
       CALL READIN_RDYN(LL_CNTL)
-      CALL AUTO$SETR8('TOLERANCE',1.D-5)
 !    
 !     ==================================================================
 !     ==  READ BLOCK !MERMIN                                          ==

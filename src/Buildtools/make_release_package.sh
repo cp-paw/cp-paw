@@ -11,7 +11,6 @@ export THISDIR=$(pwd)
 #   options:
 #      -i version identifier (e.g. v2024.1)
 #      -b name of the resulting tarball, optional (e.g. cppaw_v2024.1.tgz) 
-#      -p parameter file (e.g. parms.blub.bla)
 #      -h help information
 #
 #    this script has to be called in the root of the working copy, 
@@ -19,7 +18,7 @@ export THISDIR=$(pwd)
 #
 #   example: 
 #     sh src/Buildtools/Make_distribution_package/make_release_package.sh \
-#        -i v2024.1 -p parms.linux
+#        -i v2024.1 
 #
 # all the cool stuff written by Robert Schade
 # modified by Peter Bloechl
@@ -43,12 +42,9 @@ USAGE="$USAGE Options:\n"
 # USAGE="$USAGE \t tarball \t name of the tar-ball with the distribution \
 #                             e.g. CP-PAW_V2023.1.tar.gz\n"
 # USAGE="$USAGE \t versionid \t version identifier, e.g. v2023.1\n"
-# USAGE="$USAGE \t parmfile \t name of the parmfile for the\
-#                  configuration of the CP-PAW\n"
 USAGE="$USAGE \t -b \t name of the tarball of the distribution with full path\n"
 USAGE="$USAGE \t    \t without path it is relative to /tmp\n"
 USAGE="$USAGE \t -i \t optional version identifier, e.g. v2023.1\n"
-USAGE="$USAGE \t -p \t parmfile\n"
 USAGE="$USAGE \t -h \t print this help message \n"
 # USAGE="$USAGE \t -0: dry-run (creates files but does not run jobs)\n"
 # USAGE="$USAGE \t -v: verbose\n"
@@ -60,7 +56,6 @@ export TYPE='RELEASE'
 #export TYPE='DEVELOPMENT'
 export TARBALL=""
 export VERSIONID=""
-export PARMFILE=""
 
 OPTSTRING=":hv0b:i:p:"
 OPTIND=0
@@ -69,8 +64,6 @@ while getopts "${OPTSTRING}" OPT  ; do
     b) TARBALL="$OPTARG" #name of the tarball to be created
       ;;
     i) VERSIONID="$OPTARG" # version id
-      ;;
-    p) PARMFILE="$OPTARG" # name of the parmfile
       ;;
     0)   #nothing:
       DRYRUN=yes
@@ -108,36 +101,19 @@ if [[ -z $TARBALL && -n $VERSIONID ]] ; then
   TARBALL="${THISDIR}/CP-PAW_"${VERSIONID}".tar.gz"
 fi
 
-# default value for parmfile 
-if [[ -z $PARMFILE ]] ; then
-  if [[ -f parms.in_use ]] ; then
-     PARMFILE="parms.in_use"
-  fi
-fi
-
 # report current seting
 echo -e "name of the tarball:  $TARBALL"
 echo -e "version id.........:  $VERSIONID"
-echo -e "parmfile to be used:  $PARMFILE"
 
 # error message for missing input
-if [[ -z $TARBALL || -z $VERSIONID || -z $PARMFILE ]] ; then 
+if [[ -z $TARBALL || -z $VERSIONID ]] ; then 
   if [[ -z $TARBALL ]] ; then 
     echo 'error: name of tarball (-b) not specified'
   fi
   if [[ -z $VERSIONID ]] ; then 
     echo 'error: version id (-i) not specified'
   fi
-  if [[ -z $PARMFILE ]] ; then 
-    echo 'error: parmfile (-p) not specified'
-  fi
   echo 'error'
-  exit 1
-fi
-
-# error exit for missing parmfile
-if [[ ! -f  $PARMFILE ]] ; then
-  echo 'error: parmfile $PARMFILE does not exist'
   exit 1
 fi
 
@@ -147,33 +123,51 @@ fi
 if [[ -f ${TARBALL} ]] ; then 
   rm ${TARBALL}
 fi
-
-export WORKDIR="/tmp/cp-paw_$VERSIONID"
-if [[ -d $WORKDIR ]] ; then rm -rf $WORKDIR; fi
-mkdir -p $WORKDIR
+#
+#-------------------------------------------------------------------------------
+#  construct version information. will be used during installation
+#-------------------------------------------------------------------------------
+# construct cppaw_version.info in the top directory 
+echo "collect version information....."
+echo "RELEASE= '$VERSIONID'" > cppaw_version.info
+./src/Buildtools/paw_versioninfo.sh >> cppaw_version.info
+#
+#-------------------------------------------------------------------------------
+#  create temporary working directory for the construction of the tar ball
+#-------------------------------------------------------------------------------
+export TMPDIR=$(mktemp -d)
+export WORKDIR=${TMPDIR}/cp-paw
+if [[ ! -d ${WORKDIR} ]] ; then mkdir ${WORKDIR}; fi
 cp -r * $WORKDIR
-cp -r .git $WORKDIR
-cp -v $PARMFILE $WORKDIR
+#cp -r .git $WORKDIR
 cd $WORKDIR
 #
 #-------------------------------------------------------------------------------
 #  construct documentation and clean $WORKDIR
 #-------------------------------------------------------------------------------
-echo "configuring cppaw distribution....."
-./configure --with-parmfile=$(basename $PARMFILE)
-# construct cppaw_version.info in the top directory 
-echo "making cppaw_version.info....."
-make version 1>/dev/null 2>&1
-if [[ $? -ne 0 ]] ; then echo "error: no version information" ; exit 1 ; fi
-if [[ -s cppaw_version.info ]] ; then
-  echo "RELEASE= '$VERSIONID'" >> cppaw_version.info
+
+# echo "ensure to use the local directory"
+# export PATH=${THISDIR}/src/Buildtools/:${THISDIR}/src/Tools/Scripts/:$PATH
+
+echo "install cppaw distribution....."
+./paw_install
+if [[ $? -ne 0 ]] ; then 
+  echo "paw_installation failed" 
+  echo "installation in workdirectory ${WORKDIR}" 
+  ls -al ./
+  exit 1 
 fi
-echo "making documentation....."
-# construct documentation in doc directy
-make docs 1>/dev/null 2>&1
-if [[ $? -ne 0 ]] ; then echo "latex compilation error" ; exit 1 ; fi
-make clean
-rm -rf .git
+
+echo "collect parms_in_use....."
+./bin/fast/paw_fast.x -p 1>/dev/null
+
+#-------------------------------------------------------------------------------
+# cleanup
+#-------------------------------------------------------------------------------
+rm -rf ${WORKDIR}/bin
+rm -rf ${WORKDIR}/.git
+rm -rf ${WORKDIR}/err_*
+rm -rf ${WORKDIR}/out_*
 
 #-------------------------------------------------------------------------------
 # make a tarball of $WORKDIR and remove $WORKDIR
@@ -181,3 +175,5 @@ rm -rf .git
 cd ..
 tar -cvzf $TARBALL $(basename $WORKDIR)
 rm -rf $WORKDIR
+
+

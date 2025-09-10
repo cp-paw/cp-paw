@@ -1,0 +1,30 @@
+The initialization is triggered by paw_install in the top directory of
+the installation. 
+
+paw_install calls paw_build.sh for each of the installation
+  (dbg,fast,fast_parallel)
+
+
+performs the following steps:
+
+-- execute parameter file "source ${PARMFILE}". The default
+  parmfile is src/Buildtools/defaultparmfile
+
+-- paw_mkbuilddir.sh to fill build directory
+
+-- construct \url{${BUILDDIR}/etc/parms.in_use} 
+
+-- paw_mkbuilddir.sh fills build directory
+
+-- adapt makedocs.in and place in ${BUILDDIR}/doc/Makefile. Execute it
+  to construct documentation.
+
+-- construct ${BUILDDIR}/Makefile from Makefile.in
+
+-- execute "make prepare" in ${BUILDDIR}. This does preparation work,
+   explores all dependencies (including module files) and produces a
+   new make file big.mk. This make file is executed to construct
+   the object files. A final call make all constructs the executable.
+
+-- construct install.mk from \url{${BASEDIR}/src/Buildtools/makeinstall.in}
+   to copy the files into the final directories

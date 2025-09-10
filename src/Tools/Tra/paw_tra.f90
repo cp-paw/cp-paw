@@ -1274,7 +1274,7 @@ END MODULE TRAJECTORY_MODULE
 !
         IF(NPLOT.GT.1) THEN
           WRITE(FILEID,FMT=*)IPLOT
-          FILEID='SPAGHETTI_'//ADJUSTL(FILEID)
+          FILEID='SPAGHETTI_'//TRIM(ADJUSTL(FILEID))
         ELSE
           FILEID='SPAGHETTI'
         END IF
@@ -1318,7 +1318,13 @@ END MODULE TRAJECTORY_MODULE
       SUBROUTINE TEMPERATURE(LL_CNTL_)
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
-      USE TRAJECTORY_MODULE
+      USE TRAJECTORY_MODULE, ONLY : NSTEP &
+     &                             ,NAT &
+     &                             ,QNAT &
+     &                             ,MASS &
+     &                             ,ATOM &
+     &                             ,TRA &
+     &                             ,TQMMM
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -2826,7 +2832,6 @@ INTEGER(4)                :: J,NATM
 !      =========================================================================
 !      ==   CHECK                                                             ==
 !      =========================================================================
-
        IF(.NOT.TQMMM) THEN
           DO I=1,NAT
              IF(IZ(I).EQ.0) THEN

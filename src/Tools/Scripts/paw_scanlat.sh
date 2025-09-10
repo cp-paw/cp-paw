@@ -19,8 +19,10 @@
 #          -l    list of percent changes of the lattice constant
 #                 (enter in apostrophes such as "98 100 102")
 #                default: "96 97 98 99 100 101 102 103 104"
-#          -u    toggle: if -u is present, only update of data files, but no paw simulations
-#                if -u is absent the calculations are performed, but not updated
+#          -u    toggle: if -u is present, only update of data files, 
+#                                          but no paw simulations
+#                        if -u is absent the calculations are performed, 
+#                                        but not updated
 #          -e    paw command (default paw_fast.x)
 #          -j    nr. of paw jobs allowed to run simultaneously (default 8)
 #          -0    dry-run (reconstruct *.dat files only)
@@ -35,7 +37,7 @@
 #  1) starts from a rootname ROOT specified as project by the option
 #     -p.  ROOT may contain the full path or the relative path with
 #     respect to the current directory of the parent process. As
-#     precondition there is a file $ROOT.cntl and a file $ROOT.strc
+#     precondition there must be a file $ROOT.cntl and a file $ROOT.strc
 #
 #  2) with the option -l a list of percentage changes of the lattice
 #     constant is provided
@@ -45,9 +47,9 @@
 #     ${DIROFX}=${ROOT}_$X. The rootname of this project is
 #     ${ROOTOFX}=${DIROFX}/${DIROFX##*/}.
 #
-#  nio.strc must contain exactly one line containing "LUNIT=" 
-#  followed by the lattice constant in atomic units, or "LUNIT[AA]="
-#  followed by the lattice constant in angstrom.
+#  The structure file, e.g. nio.strc, must contain exactly one line 
+#  containing "LUNIT=" followed by the lattice constant in atomic units, 
+#  or "LUNIT[AA]=" followed by the lattice constant in angstrom.
 #  This value of LUNIT will be replaced by the modified values for the 
 #  individual runs.
 #
@@ -56,9 +58,9 @@
 #  different values of lattice constant and the restart file becomes 
 #  unusable.
 #
-#  result       etot.dat 
-#               gap.dat
-#               murn.in
+#  result       latscan.dat contains a two-column list "volume energy" with
+#                           the unit-cell volume in abohr**3 and
+#                           the unit-cell energy in Hartree
 #
 #  Example:
 #       paw_scanlat.sh -p nio -j3 -l "96 98 100 102 104" ./si2
@@ -303,7 +305,7 @@ if [[ $UPDATE = no ]] ; then
     execute "sed \"/[Ll][Uu][Nn][Ii][Tt]/s/${ALAT0}/${ALATX} /g\" \
                                          ${ROOT}.strc >${ROOTOFX}.strc"
     #==========================================================================
-    # run paw_fast.x and place data "gap.dat" and "etot.dat"
+    # run paw_fast.x 
     #==========================================================================
     execute "cp ${ROOT}.cntl ${ROOTOFX}.cntl"
     if [[ ! -e ${ROOTOFX}.rstrt ]] ; then

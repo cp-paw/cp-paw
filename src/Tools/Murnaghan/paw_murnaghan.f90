@@ -38,7 +38,7 @@
      WRITE(*,FMT='(A80)') &
     &     'MURNAGHAN EQUATION OF STATE IS BASED ON THE ASSUMPTION THAT THE' &
     &    ,'BULK MODULUS DEPENDS LINEARLY ON PRESSURE.' &
-    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
+    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1944)'
 !
 !     ==========================================================================
 !     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
@@ -72,6 +72,8 @@
     &                    ,"LENGTH UNIT OF FIRST COLUMN IN ABOHR")')
          WRITE(*,FMT=-'(T5,"-VBL VALUE",T30 &
     &                    ,"VOLUME / LATTICE CONSTANT^3")')
+         WRITE(*,FMT=-'(T5,"-SCALE VALUE",T30 &
+    &                    ,"SCALE FACTOR FOR VOLUME AND ENERGY")')
          WRITE(*,FMT='("INPUT CONTAINS TWO COLUMNS WITH DATA:")')
          WRITE(*,FMT=-'(T5,"FIRST COLUMN:",T30,"LATTICE CONSTANT OR VOLUME")')
          WRITE(*,FMT=-'(T5,"SECOND COLUMN:",T30,"ENERGY")')
