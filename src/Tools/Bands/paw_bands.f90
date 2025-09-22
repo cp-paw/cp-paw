@@ -126,6 +126,10 @@ END MODULE REFCELL_MODULE
 !     ==  CLOSING                                                             ==
 !     ==========================================================================
       IF(THISTASK.EQ.1)THEN
+        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
+        CALL LINKEDLIST$SELECT(LL_CNTL,'BCNTL')
+        CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
+
         CALL FILEHANDLER$REPORT(NFILO,'USED')
         WRITE(NFILO,FMT='(72("="))')
         WRITE(NFILO,FMT='(72("="),T20,"  PAW_BANDS TOOL FINISHED  ")')
