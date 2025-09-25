@@ -4910,23 +4910,26 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
       USE LINKEDLIST_MODULE
       USE PERIODICTABLE_MODULE
       IMPLICIT NONE
-      TYPE(LL_TYPE),INTENT(IN) :: LL_STRC_
-      TYPE(LL_TYPE)            :: LL_STRC
-      LOGICAL(4)               :: TCHK
-      LOGICAL(4)               :: TON
-      CHARACTER(32)            :: ATOM,NAME
-      INTEGER(4)               :: NTH,ITH
-      CHARACTER(32)            :: TYPE
-      INTEGER(4)               :: ISPIN
-      INTEGER(4)               :: NAT
-      INTEGER(4)               :: I
-      INTEGER(4)               :: IAT
-      REAL(8)                  :: VALUE
-      REAL(8)                  :: RC
-      REAL(8)                  :: PWR
-      REAL(8)                  :: AEZ
-      REAL(8)                  :: RCOV
-      INTEGER(4)               :: LM
+      TYPE(LL_TYPE),INTENT(IN)   :: LL_STRC_
+      TYPE(LL_TYPE)              :: LL_STRC
+      LOGICAL(4)                 :: TCHK
+      LOGICAL(4)                 :: TON
+      CHARACTER(32)              :: ATOM,NAME
+      INTEGER(4)                 :: NTH,ITH
+      CHARACTER(32)              :: TYPE
+      INTEGER(4)                 :: ISPIN
+      INTEGER(4)                 :: NAT
+      INTEGER(4)                 :: I
+      INTEGER(4)                 :: IAT
+      REAL(8)                    :: VALUE
+      REAL(8)                    :: RC
+      REAL(8)                    :: PWR
+      INTEGER(4)                 :: NSPECIAL
+      REAL(8), ALLOCATABLE    :: FAC(:)
+      CHARACTER(32), ALLOCATABLE :: STYPE(:)
+      REAL(8)                    :: AEZ
+      REAL(8)                    :: RCOV
+      INTEGER(4)                 :: LM
 !     **************************************************************************
                            CALL TRACE$PUSH('STRCIN_ORBPOT')
       LL_STRC=LL_STRC_
@@ -4982,10 +4985,11 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           TYPE=+TYPE   ! MAKE INPUT CASE INSENSITIVE BY UPPERCASING TYPE
         END IF
         TCHK=.FALSE.
-        IF(TYPE.EQ.'P')   TCHK=.TRUE.
-        IF(TYPE.EQ.'D')   TCHK=.TRUE.
-        IF(TYPE.EQ.'F')   TCHK=.TRUE.
-        IF(TYPE.EQ.'ALL') TCHK=.TRUE.
+        IF(TYPE.EQ.'P')       TCHK=.TRUE.
+        IF(TYPE.EQ.'D')       TCHK=.TRUE.
+        IF(TYPE.EQ.'F')       TCHK=.TRUE.
+        IF(TYPE.EQ.'ALL')     TCHK=.TRUE.
+        IF(TYPE.EQ.'SPECIAL') TCHK=.TRUE.
 !       == PURE ANGULAR MOMENTA ================================================
 !       == SEE SPHERICAL$LMBYNAME ==============================================
         IF(.NOT.TCHK) THEN
@@ -5027,13 +5031,49 @@ CALL ERROR$STOP('READIN_ANALYSE_OPTIC')
           CALL ERROR$STOP('STRCIN_ORBPOT')
         END IF
         CALL LINKEDLIST$GET(LL_STRC,'VALUE',1,VALUE)
+!       == DEAL WITH SPECIAL ORBITAL ===========================================
+        IF(TYPE.EQ.'SPECIAL') THEN
+          CALL LINKEDLIST$NLISTS(LL_STRC,'ORB',NSPECIAL)
+          IF(NSPECIAL.EQ.0) THEN
+            CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT:TYPE=SPECIAL BUT NO !ORB')
+            CALL ERROR$STOP('STRCIN_ORBPOT')
+          END IF
+          ALLOCATE(FAC(NSPECIAL))
+          ALLOCATE(STYPE(NSPECIAL))
+          DO I=1,NSPECIAL
+            CALL LINKEDLIST$SELECT(LL_STRC,'ORB',I)
+            CALL LINKEDLIST$EXISTD(LL_STRC,'TYPE',1,TCHK)
+            IF(.NOT.TCHK) THEN
+              CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT!ORB:TYPE NOT SPECIFIED')
+              CALL ERROR$I4VAL('ORB',I)
+              CALL ERROR$STOP('STRCIN_ORBPOT')
+            END IF
+            CALL LINKEDLIST$GET(LL_STRC,'TYPE',1,STYPE(I))
+            CALL LINKEDLIST$EXISTD(LL_STRC,'FAC',1,TCHK)
+            IF(.NOT.TCHK) THEN
+              CALL ERROR$MSG('!STRUCTURE!ORBPOT!POT!ORB:FAC NOT SPECIFIED')
+              CALL ERROR$I4VAL('ORB',I)
+              CALL ERROR$STOP('STRCIN_ORBPOT')
+            END IF
+            CALL LINKEDLIST$GET(LL_STRC,'FAC',1,FAC(I))
+            CALL LINKEDLIST$SELECT(LL_STRC,'..')
+          ENDDO
+        ELSE
+!         ALLOCATE EMPTY ARRAYS AS DUMMY ARGUMENTS
+          NSPECIAL=0
+          ALLOCATE(FAC(NSPECIAL))
+          ALLOCATE(STYPE(NSPECIAL))
+        END IF
 !       ========================================================================
-        CALL EXTERNAL1CPOT$SETPOT(ATOM,TYPE,ISPIN,VALUE,RC,PWR)
+        CALL EXTERNAL1CPOT$SETPOT(ATOM,TYPE,ISPIN,VALUE,RC,PWR, &
+     &                            NSPECIAL,STYPE,FAC)
+        DEALLOCATE(FAC)
+        DEALLOCATE(STYPE)
         CALL LINKEDLIST$SELECT(LL_STRC,'..')
       ENDDO
                            CALL TRACE$POP
       RETURN
-    END SUBROUTINE STRCIN_ORBPOT
+      END SUBROUTINE STRCIN_ORBPOT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE STRCIN_GROUP(LL_STRC_)
