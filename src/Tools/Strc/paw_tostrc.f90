@@ -125,6 +125,21 @@
          CALL readCSSR(NFIL,NFILSTRC)
       END IF
 
+      IF(+SUFFIX.EQ.'XYZ') THEN
+         CALL FILEHANDLER$SETFILE('XYZ',.TRUE.,-'.XYZ')
+         CALL FILEHANDLER$SETSPECIFICATION('XYZ','STATUS','OLD')
+         CALL FILEHANDLER$SETSPECIFICATION('XYZ','POSITION','REWIND')
+         CALL FILEHANDLER$SETSPECIFICATION('XYZ','ACTION','READ')
+         CALL FILEHANDLER$SETSPECIFICATION('XYZ','FORM','FORMATTED')
+
+         !     =================================================================
+         !     == READ XYZ FILE                                               ==
+         !     =================================================================
+         CALL FILEHANDLER$UNIT('XYZ',NFIL)
+         CALL FILEHANDLER$UNIT('STRC',NFILSTRC)
+         CALL READXYZ(NFIL,NFILSTRC)
+      END IF
+
 
       CALL ERROR$NORMALSTOP()
       STOP
@@ -3215,6 +3230,80 @@ print*,"===DONE==="
         END DO
 301     RETURN
       END SUBROUTINE READPDB_RED
+
+      SUBROUTINE READXYZ(NFIL,NFILSTRC)
+      USE STRINGS_MODULE
+      IMPLICIT NONE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      INTEGER(4)  ,INTENT(IN) :: NFILSTRC
+      REAL(8) :: RBAS(3,3)
+      LOGICAL(4) :: TRBAS
+      INTEGER(4) :: NAT  ! NUMBER OF ATOMS
+      CHARACTER(2), ALLOCATABLE :: ATOMS(:) ! (NAT) ATOM SYMBOLS
+      REAL(8), ALLOCATABLE :: COORDS(:,:)  ! (3, NAT) COORDINATES OF ATOMS
+      INTEGER(4) :: I
+      INTEGER(4) :: IOSTAT
+      CHARACTER(1024) :: LINE
+      CHARACTER(10) :: NAME
+      
+      RBAS=0.0d0
+      TRBAS=.FALSE.
+      ! READ NUMBER OF ATOMS
+      READ(NFIL,*,IOSTAT=IOSTAT) NAT
+      IF(IOSTAT.NE.0) THEN
+         PRINT*,"ERROR: Could not read number of atoms from XYZ file."
+         STOP
+      END IF
+      ! READ COMMENT LINE AND CHECK FOR LATTICE VECTORS (EXTENDED XYZ)
+      READ(NFIL,'(A)',IOSTAT=IOSTAT) LINE
+      IF(IOSTAT.NE.0) THEN
+         PRINT*,"ERROR: Could not read comment line from XYZ file."
+         STOP
+      END IF
+      LINE=+LINE
+      I=INDEX(LINE,'LATTICE=')
+      IF(I>0) THEN
+        TRBAS=.TRUE.
+        ! READ LATTICE VECTORS
+        LINE=LINE(I+LEN('LATTICE="'):)
+        I=INDEX(LINE,'"')
+        IF(I>0) THEN
+          LINE=LINE(1:I-1)
+        ELSE
+          PRINT*,"ERROR: Could not find closing quote for lattice vectors in XYZ file."
+          STOP
+        END IF
+        READ(LINE,*)RBAS(:,:)
+      END IF
+      ! ALLOCATE ARRAYS
+      ALLOCATE(ATOMS(NAT))
+      ALLOCATE(COORDS(3,NAT))
+      ! READ ATOM SYMBOLS AND COORDINATES
+      DO I=1,NAT
+        READ(NFIL,*,IOSTAT=IOSTAT) ATOMS(I), COORDS(:,I)
+        IF(IOSTAT.NE.0) THEN
+          PRINT*,"ERROR: Could not read atom symbol and coordinates from XYZ file."
+          PRINT*,"ATOM NUMBER:", I
+          STOP
+        END IF
+      ENDDO
+      ! WRITE ATOM INFORMATION TO STRC FILE
+      IF(TRBAS) THEN
+        WRITE(NFILSTRC,'(A,9F20.10)') +"!LATTICE T=",RBAS(:,:)," !END"
+      ENDIF
+      DO I=1,NAT
+        NAME=TRIM(ADJUSTL(ATOMS(I)))
+        IF(LEN(TRIM(NAME)).EQ.1) THEN
+          NAME=TRIM(NAME)//"_"//TRIM(ADJUSTL(.ITOS.I))
+        ELSE IF(LEN(TRIM(NAME)).EQ.2) THEN
+          NAME=TRIM(NAME)//TRIM(ADJUSTL(.ITOS.I))
+        ELSE IF(LEN(TRIM(NAME)).GT.2) THEN
+          NAME=NAME(1:2)//TRIM(ADJUSTL(.ITOS.I))
+        END IF
+        WRITE(NFILSTRC,'(3A,3F20.10,A)') "!ATOM NAME='", &
+     &           TRIM(NAME),"' R=",COORDS(:,I)," !END"
+      END DO
+      END SUBROUTINE READXYZ
 
 
 !     ..................................................................
