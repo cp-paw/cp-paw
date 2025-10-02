@@ -9141,7 +9141,19 @@ section~\ref{sec:pawmurnaghantool}.
 volume, bulk modulus and its pressure derivative from a
 energy-vs-volume data sequence. The equation of state proposed by
 Murnaghan\cite{murnaghan44_pnas30_244} is based on the assumption that
-the bulk modulus depends linearly on pressure.
+the bulk modulus depends linearly on pressure. A derivation can be
+found in \textit{Theory of first-principles calculations} by Peter
+E. Bl\"ochl, available on \url{phisx.org}.
+
+Murnaghan's equation of state:
+\begin{eqnarray}
+E(V)&=&E_0+
+\frac{B_0V_0}{B'(B'-1)}\left[\left(\frac{V}{V_0}\right)^{-(B'-1)}-1\right]
++\frac{B_0V_0}{B'}\left[\frac{V}{V_0}-1\right]
+\end{eqnarray}
+where $V_0$ is the equilibrium volume, $E_0$ is the energy at
+equilibrium volume, $B_0$ is the bulk modulus at equilibrium volume
+and $B'$ is the pressure derivative of the Bulk modulus.
 
 The calling sequence is
 
