@@ -7464,7 +7464,7 @@ PRINT*,'EOFLN AFTER VFOCK',EOFLN
 !
         WRITE(6,FMT='(80("="),T20,"  TEST RAW PAW EQUATION  ")')
         STRING='("LN=",I2," L=",I2," RAW PAW EQ.",F10.5'
-        STRING=TRIM(ADJUSTL(STRING))//'" SCHR. EQ.",F10.5)'
+        STRING=TRIM(ADJUSTL(STRING))//'," SCHR. EQ.",F10.5)'
         DO LN=1,LNX
           WRITE(6,FMT=STRING)LN,LOX(LN),MAXVAL(ABS(TPHITEST(:,LN))) &
     &                                  ,MAXVAL(ABS(PHITEST(:,LN)))

@@ -1205,7 +1205,7 @@ END MODULE CONSTRAINTS_MODULE
             CALL LINKEDLIST$GET(LL_CNSTR,'S0',1,S0)
             CALL LINKEDLIST$GET(LL_CNSTR,'FC',1,SM)
             WRITE(NFIL,FMT='("(VAL/FORCE):"' &
-     &                    //',5("(",ES10.4E1,"/",E10.4E1,")"))') &
+     &                    //',5("(",ES10.2E2,"/",E10.2E2,")"))') &
      &              (S0(II),-SM(II),II=1,NC1)
             DEALLOCATE(SM)
             DEALLOCATE(S0)
