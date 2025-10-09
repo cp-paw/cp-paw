@@ -1140,6 +1140,10 @@ END MODULE NEWDFT_MODULE
 !     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
 !     -- TO THE MODULE XC_F03_FUNCS_M.
 !     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
+!     -- CONDITIONAL COMPILATION FOR LIBXC VERSION COMPATIBILITY
+!     -- CPPVAR_LIBXC_V7 IS SET AUTOMATICALLY BY THE BUILD SYSTEM FOR LIBXC >= 7.0.0
+#IF DEFINED(CPPVAR_LIBXC_V7)
+!     -- LIBXC >= 7.0.0: USE NEW MODULE STRUCTURE WHERE SOME CONSTANTS MOVED TO XC_F03_FUNCS_M
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
      &                          ,XC_F03_FUNC_INIT &! FUNCTION
      &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
@@ -1149,7 +1153,18 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_GGA_X_PBE &
      &                          ,XC_GGA_C_PBE &
      &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN 
+     &                          ,XC_MGGA_C_R2SCAN
+#ELSE
+!     -- LIBXC < 7.0.0: XC_F03_FUNCS_M DIDN'T EXIST, EVERYTHING IN XC_F03_LIB_M
+      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
+     &                          ,XC_LDA_X & 
+     &                          ,XC_LDA_C_VWN &
+     &                          ,XC_GGA_X_PBE &
+     &                          ,XC_GGA_C_PBE &
+     &                          ,XC_MGGA_X_R2SCAN &
+     &                          ,XC_MGGA_C_R2SCAN
+     &                          ,XC_F03_FUNC_INIT &! FUNCTION
+#ENDIF 
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC
       IMPLICIT NONE
@@ -1222,6 +1237,10 @@ END MODULE NEWDFT_MODULE
 !     -- SOME VARIABLES HAVE BEEN MOVED FROM MODULE XC_F03_LIB_M
 !     -- TO THE MODULE XC_F03_FUNCS_M.
 !     -- THE MODULE XC_F03_FUNCS_M  INCLUDES LIBXC_INC.F90.
+!     -- CONDITIONAL COMPILATION FOR LIBXC VERSION COMPATIBILITY
+!     -- CPPVAR_LIBXC_V7 IS SET AUTOMATICALLY BY THE BUILD SYSTEM FOR LIBXC >= 7.0.0
+#IF DEFINED(CPPVAR_LIBXC_V7)
+!     -- LIBXC >= 7.0.0: USE NEW MODULE STRUCTURE WHERE SOME CONSTANTS MOVED TO XC_F03_FUNCS_M
       USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
      &                          ,XC_F03_FUNC_INIT &! FUNCTION
      &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
@@ -1231,7 +1250,20 @@ END MODULE NEWDFT_MODULE
      &                          ,XC_GGA_X_PBE &
      &                          ,XC_GGA_C_PBE &
      &                          ,XC_MGGA_X_R2SCAN &
-     &                          ,XC_MGGA_C_R2SCAN 
+     &                          ,XC_MGGA_C_R2SCAN
+#ELSE
+!     -- LIBXC < 7.0.0: XC_F03_FUNCS_M DIDN'T EXIST, EVERYTHING IN XC_F03_LIB_M
+      USE XC_F03_LIB_M   , ONLY: XC_POLARIZED &
+     &                          ,XC_LDA_X & 
+     &                          ,XC_LDA_C_VWN &
+     &                          ,XC_GGA_X_PBE &
+     &                          ,XC_GGA_C_PBE &
+     &                          ,XC_MGGA_X_R2SCAN &
+     &                          ,XC_MGGA_C_R2SCAN &
+     &                          ,XC_F03_FUNC_INIT &! FUNCTION
+     &                          ,XC_F03_FUNCTIONAL_GET_NUMBER &
+     &                          ,XC_F03_FUNCTIONAL_GET_NAME
+#endif 
       USE PAWLIBXC_MODULE, ONLY: NXC &
      &                          ,XC_FUNC &
      &                          ,NIDX &
