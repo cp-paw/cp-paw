@@ -75,16 +75,16 @@ echo no more than $NJOBX jobs shall be run at a time
 #
 # pause until one more job fits
 #
-NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
-echo $NJOBS jobs are currently running. date: $(date) 
+NJOBS=$(ps -e | grep paw | grep -v waittillempty | grep -v grep | wc -l)
+echo $NJOBS jobs are currently running. time=$(date "+ %H:%M:%S") 
 echo entering waiting loop .....
 sleep  2  # sleep 2 seconds to allow jobs to start
 while [ $NJOBS -ge $(echo $NJOBX | bc) ] ; do
-  sleep  10
-  NJOBS=$(ps -e | grep -epaw_[a-z]*.x | wc -l)
-  echo No.Jobs=$NJOBS; time=$(date "+ %H:%M:%S") waiting....
+  sleep  2
+  NJOBS=$(ps -e | grep paw | grep -v waittillempty | grep -v grep | wc -l)
+  echo No.Jobs=$NJOBS time=$(date "+ %H:%M:%S") waiting....
 done
-echo $NJOBS jobs are currently running. date: `date` 
+echo $NJOBS jobs are currently running. time=$(date "+ %H:%M:%S") 
 echo .... waiting loop finished.  
 echo waittillempty terminated.
 
