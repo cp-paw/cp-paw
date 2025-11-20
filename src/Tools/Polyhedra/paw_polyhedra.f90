@@ -161,7 +161,7 @@
       DO ICENTER=1,NCENTER
         DO IAT=1,NAT
           IF(NAME(IAT).EQ.CNAME(ICENTER)) THEN
-            CALL EXTRACTCLUSTERS(IAT,RBAS,NAT,R)
+            CALL EXTRACTCLUSTERS(IAT,RBAS,NAT,R,CNAME(ICENTER))
             TCHK=.TRUE.
           END IF
           IF(IAT.EQ.NAT)THEN
@@ -178,12 +178,13 @@
       END
 !
 !     ..1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE EXTRACTCLUSTERS(IATC,RBAS,NAT,R)
+      SUBROUTINE EXTRACTCLUSTERS(IATC,RBAS,NAT,R,NAME)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: IATC
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RBAS(3,3)
       REAL(8)   ,INTENT(IN) :: R(3,NAT)
+      CHARACTER(32),INTENT(IN) :: NAME
       REAL(8)   ,PARAMETER  :: ANGSTROM=1.D0/.529177D0
       REAL(8)               :: RC(3,NAT)
       INTEGER(4)            :: IAT
@@ -243,7 +244,9 @@
 !     =========================================================================
 !     ==  WRITE ATOMIC STRUCTURE  OF THE CLUSTER                             ==
 !     =========================================================================
-      WRITE(NFILO,FMT='(82("="),T10,"  CLUSTER FOR ATOM ",I4,"  ")')IATC
+      WRITE(NFILO,FMT='(82("="))')
+      WRITE(NFILO,FMT='(82("="),T10,"  CLUSTER FOR ATOM ",A,"  ")')NAME
+      WRITE(NFILO,FMT='(82("="))')
       DO IAT=1,NCLUSTER
         WRITE(NFILO,FMT='(" R=",3F10.5," AA D=",F10.5," AA")') &
      &                        RCLUSTER(:,IAT)/ANGSTROM,DCLUSTER(IAT)/ANGSTROM
@@ -522,9 +525,9 @@
 !     __ USE CONVENTION OF DAGOTTO, "NANOSCALE PHASE SEPARATION...",2003
       WRITE(NFILO,FMT='("Q2=[D(+X)-D(+Y)]/SQRT(2)")')
       WRITE(NFILO,FMT='("Q3=[-D(+X)-D(+Y)+2D(+Z)]/SQRT(6)")')
-      WRITE(NFILO,FMT='("JAHN-TELLER DISTORTION (Q2,Q3)",T30,2F10.5," AA")') &
+      WRITE(NFILO,FMT='("JAHN-TELLER DISTORTION (Q2,Q3)",T40,2F10.5," AA")') &
      &                                                  Q2/ANGSTROM,Q3/ANGSTROM
-      WRITE(NFILO,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T30,F10.5," AA")') &
+      WRITE(NFILO,FMT='("JAHN-TELLER AMPL. |(Q2,Q3)|",T40,F10.5," AA")') &
      &                                               SQRT(Q2**2+Q3**2)/ANGSTROM
       IF(Q2**2+Q3**2.GT.1.D-8) THEN
         SVAR=ACOS(Q2/SQRT(Q2**2+Q3**2))
