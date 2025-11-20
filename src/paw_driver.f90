@@ -549,7 +549,7 @@
 !     == WRITE INFORMATION                                            ==
 !     ==================================================================
 !     ==================================================================
-!     __WRITE PROTOCOLL_________________________________________________
+!     __WRITE PROTOCOL__________________________________________________
       CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
 !
 !     ==================================================================
@@ -592,11 +592,11 @@ MODULE STOPIT_MODULE
 !**                                                                   ** 
 USE CLOCK_MODULE 
 !USE CLOCK_MODULE , ONLY : DATE_TIME,(.LATER.)
-LOGICAL(4)     :: TSTOP=.FALSE.   ! INITIATE SOFT-KILL
-LOGICAL(4)     :: DISTRIBUTED=.FALSE. ! TSTOP=TRUE ON ALL NODES
-LOGICAL(4)     :: TNOTIFY=.TRUE.  ! NOTIFICATION ABOUT STOP REQUIRED
-LOGICAL(4)     :: EXITFILEREMOVED=.FALSE.
-INTEGER(4)     :: RUNTIME=-1         ! RUNTIME IN SECONDS
+LOGICAL(4),save :: TSTOP=.FALSE.   ! INITIATE SOFT-KILL
+LOGICAL(4)      :: DISTRIBUTED=.FALSE. ! TSTOP=TRUE ON ALL NODES
+LOGICAL(4)      :: TNOTIFY=.TRUE.  ! NOTIFICATION ABOUT STOP REQUIRED
+LOGICAL(4)      :: EXITFILEREMOVED=.FALSE.
+INTEGER(4)      :: RUNTIME=-1         ! RUNTIME IN SECONDS
 TYPE(DATE_TIME) :: STARTTIME
 END MODULE STOPIT_MODULE
 !
@@ -705,16 +705,6 @@ END MODULE STOPIT_MODULE
       IF(THISTASK.EQ.1) THEN
         IF(.NOT.EXITFILEREMOVED) THEN
           CALL FILEHANDLER$DELETE('EXIT')
-!!$ THIS CODE CAN BE REMOVED AFTER TESTING. REPLACED BY FILEHANDLER$DELETE.
-!!$          CALL FILEHANDLER$FILENAME('EXIT',EXITFILE)
-!!$          INQUIRE(FILE=EXITFILE,EXIST=TCHK)
-!!$          IF(TCHK) THEN
-!!$!           == CHAR(114)//CHAR(109)='RM'  (LOWERCASE)
-!!$            CMD=CHAR(114)//CHAR(109)//' '//EXITFILE
-!!$!           CALL ERROR$MSG('SYSTEM CALL REMOVED FOR ABSOFT')
-!!$!           CALL ERROR$STOP('STOPIT$UPDATE')
-!!$            CALL LIB$SYSTEM(CMD)
-!!$          END IF
           EXITFILEREMOVED=.TRUE.
         END IF
       ELSE
@@ -878,7 +868,7 @@ END MODULE STOPIT_MODULE
       CALGARY_QMMM = .FALSE.
     
 !     ==========================================================================
-!     ==   WRITE HEADER FOR PROTOCOLL FOR EACH TIME STEP                      ==
+!     ==   WRITE HEADER FOR PROTOCOL FOR EACH TIME STEP                       ==
 !     ==========================================================================
                              CALL TRACE$PASS('WRITE HEADER')
       IF(THISTASK.EQ.1.AND.TFIRST) THEN
@@ -908,9 +898,9 @@ END MODULE STOPIT_MODULE
       IF(TPRINT) TFIRST=.TRUE.
 !   
 !     ==========================================================================
-!     ==   WRITE PROTOCOLL FOR EACH TIME STEP                                 ==
+!     ==   WRITE PROTOCOL FOR EACH TIME STEP                                  ==
 !     ==========================================================================
-                             CALL TRACE$PASS('WRITE PROTOCOLL')
+                             CALL TRACE$PASS('WRITE PROTOCOL')
       IF(THISTASK.EQ.1) THEN
 
         CALL CONSTANTS('PICO',PICO)
@@ -1097,7 +1087,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
         ENDIF
 !
 !       ========================================================================
-!       ==   WRITE ENERGIES TO PROTOCOLL                                      ==
+!       ==   WRITE ENERGIES TO PROTOCOL                                       ==
 !       ========================================================================
                              CALL TRACE$PASS('WRITE ENERGIES')
         IF(TPRINT) THEN
@@ -1212,7 +1202,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
 !     CALL OPTICS$EVALUATE
 !   
 !     ==========================================================================
-!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOLL                        ==
+!     ==   WRITE OCCUPATIONS AND ENERGIES TO PROTOCOL                         ==
 !     ==========================================================================
                               CALL TRACE$PASS('BEFORE OCCUPATIONS')
       IF(TPRINT) THEN
@@ -1227,7 +1217,7 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       END IF
 !   
 !     ==========================================================================
-!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOLL                          ==
+!     ==   WRITE CONSTRAINT INFORMATION TO PROTOCOL                           ==
 !     ==========================================================================
                               CALL TRACE$PASS('BEFORE CONSTRAINTS')
       IF(TPRINT) THEN

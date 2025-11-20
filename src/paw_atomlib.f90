@@ -729,7 +729,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)   ,PARAMETER       :: XAVTOL=1.D-8
       INTEGER(4),PARAMETER       :: NITER=1000
       LOGICAL(4),PARAMETER       :: TBROYDEN=.TRUE.
-      LOGICAL(4),PARAMETER       :: TPR=.FALSE.
+      LOGICAL(4),PARAMETER       :: TPR=.TRUE.
       REAL(8)   ,PARAMETER       :: PI=4.D0*ATAN(1.D0)
       REAL(8)   ,PARAMETER       :: Y0=1.D0/SQRT(4.D0*PI) !SPH. HARM. L=0
       REAL(8)   ,PARAMETER       :: C0LL=Y0               !GAUNT COEFF
@@ -745,6 +745,7 @@ USE PERIODICTABLE_MODULE
       REAL(8)                    :: EKIN,EH,EXC
       REAL(8)                    :: POTIN(NR)
       REAL(8)                    :: SVAR
+      REAL(8)                    :: FMAX
       INTEGER(4)                 :: I,IB,JB,ISO,L,IR
       INTEGER(4)                 :: ISVAR,IARR(1)
       LOGICAL(4)                 :: TSTART  ! CALCULATE ANGULAR MOMENTA ETC
@@ -762,6 +763,7 @@ USE PERIODICTABLE_MODULE
       CHARACTER(128)             :: STRING,STRING1
       REAL(8)                    :: SCALE
       REAL(8)                    :: EFOCK,EX
+      REAL(8)                    :: EFS
       LOGICAL                    :: TSECOND
       REAL(8)                    :: RFOCK !EXTENT OF ORBITALS DEFINING FOCK TERM
       REAL(8)       ,ALLOCATABLE :: EOFI_FOCK(:)
@@ -919,19 +921,38 @@ USE PERIODICTABLE_MODULE
         END IF
 !
 !       == CORRECT FOR NON-INTEGER ATOMIC NUMBERS ==============================
-!       == THIS IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY A FRACTIONAL =
-!       == NUCLEAR AND ELECTRONIC CHARGE =======================================
-        FTOT=SUM(FOFI(:NB))
-        SVAR=AEZ-FTOT
+!       == OCCUPATIONS ARE FIRST FILLED ACCORDING TO NINT(AEZ). ================
+!       == THIS POSSIBILY IS USED FOR DUMMY HYDROGEN ATOMS, THAT CARRY ONLY ====
+!       == A FRACTIONAL NUCLEAR AND ELECTRONIC CHARGE ==========================
+        FTOT=SUM(FOFI(:NB))   ! =NINT(AEZ)
+        SVAR=AEZ-FTOT         ! =AEZ-NINT(AEZ)
+!
+!       == REMOVE ELECTRONS ====================================================
         IF(SVAR.LT.0.D0) THEN
           DO IB=NB,1,-1
-            FOFI(IB)=FOFI(IB)+SVAR
-            IF(FOFI(IB).GE.0.D0) THEN
-              EXIT
+            SVAR=SVAR+FOFI(IB)
+            FOFI(IB)=MAX(0.D0,SVAR)
+            SVAR=SVAR-FOFI(IB)
+            IF(SVAR.GE.0.D0) EXIT 
+          ENDDO
+
+!       == ADD ELECTRONS =======================================================
+        ELSE IF(SVAR.GT.0.D0) THEN
+          DO IB=1,NB
+            L=LOFI(IB)
+            IF(TSO.AND.L.NE.0) THEN
+              IF(SOFI(IB).EQ.-1) THEN
+                FMAX=REAL(2*L,KIND=8)
+              ELSE IF(SOFI(IB).EQ.1) THEN
+                FMAX=REAL(2*L+2,KIND=8)
+              END IF
             ELSE
-              SVAR=FOFI(IB)
-              FOFI(IB)=0.D0
+              FMAX=REAL(2*(2*L+1),KIND=8)
             END IF
+            SVAR=SVAR+FOFI(IB)
+            FOFI(IB)=MIN(FMAX,SVAR)
+            SVAR=SVAR-FOFI(IB)
+            IF(SVAR.LE.0.D0) EXIT            
           ENDDO
         END IF
 !
@@ -946,6 +967,7 @@ USE PERIODICTABLE_MODULE
           CALL ERROR$MSG('INCONSISTENT NUMBER OF ELECTRONS')
           CALL ERROR$R8VAL('AEZ ',AEZ)
           CALL ERROR$R8VAL('#(ELECTRONS) ',FTOT)
+          CALL ERROR$R8VAL('#(ELECTRONS)-AEZ ',FTOT-AEZ)
           CALL ERROR$STOP('ATOMLIB$AESCF')
         END IF
 !
@@ -1036,7 +1058,15 @@ USE PERIODICTABLE_MODULE
           CALL RADIAL$VALUE(GID,NR,AUX1,RBOX,EKIN)
           CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EXC)
           ETOT=EKIN+EH+EXC
+!
+!         ======================================================================
+!         == ESTIMATE THE ENERGY DUE TO THE FINITE NUCLEAR SIZE               ==
+!         ======================================================================
+          CALL ATOMLIB_EFINITENUCSIZE(GID,NR,RBOX,AEZ,RHO,EFS)
+!
+!         ======================================================================
 !         == WORK OUT FOCK EXCHANGE ENERGY =====================================
+!         ======================================================================
           IF(TFOCK.AND.TSECOND) THEN
             CALL DFT$SETL4('XCONLY',.TRUE.)
             CALL ATOMLIB$BOXVOFRHO(GID,NR,RBOX,AEZ,RHO,POT,EH,EX)
@@ -1066,11 +1096,14 @@ USE PERIODICTABLE_MODULE
 !
 !         == PRINT ENERGIES ====================================================
           ETOT=EKIN+EH+EXC+SCALE*(EFOCK-EX)
+!
           IF(TPR) THEN
+!           __I PROVIDE RESULTS HERE WITH 10^-8 H PRECISION, BECAUSE____________
+!           __ATOMIC CODES ARE TESTED IN THE MICRO-HARTREE ACCURACY_____________
             WRITE(*,FMT='(80("="),T20,"ENERGY REPORT OF ATOMLIB$AESCF")')
-            WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.6)')ETOT
-            WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.6)')EKIN
-            WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.6)')EH
+            WRITE(*,FMT='(30("."),T1,"TOTAL ENERGY:",T30,F15.8)')ETOT
+            WRITE(*,FMT='(30("."),T1,"KINETIC ENERGY:",T30,F15.8)')EKIN
+            WRITE(*,FMT='(30("."),T1,"HARTREE ENERGY:",T30,F15.8)')EH
             IF(TFOCK.AND.TSECOND) THEN
               WRITE(*,FMT='(30("."),T1,"EXACT XC MIXING FACTOR:",T30,F15.6)') &
      &                     SCALE
@@ -1084,6 +1117,9 @@ USE PERIODICTABLE_MODULE
             ELSE
               WRITE(*,FMT='(30("."),T1,"DFT XC ENERGY:",T30,F15.6)')EXC
             END IF
+            WRITE(*,FMT='(30("."),T1,"FINITE NUCLEUS:",T30,F15.8)')EFS
+            WRITE(*,FMT='(".... CALCULATION USES FINITE NUCLEUS")') 
+            WRITE(*,FMT='(".... DO NOT ADD FINITE NUCLEUS CORRECTION")') 
           END IF
 
           POT=POTIN  ! RECOVER POT AS INPUT POTENTIAL
@@ -1707,21 +1743,22 @@ END IF
 !     ==========================================================================
       Z0=333.333D0 ! FIRST VALUE IS MEANINGLESS
       DX=1.D-2
-      X0=E-dx
-!!$IF(l.eq.0.and.nn.eq.1) THEN
-!!$X0=X0+1.d-2
-!!$end if
-!!$IF(l.eq.0.and.nn.eq.1) THEN
-!!$open(unit=1005,file='xout')
-!!$do iter=1,20000
-!!$  e=-2.d0+2.5d-4*real(iter,kind=8)
+      X0=E-DX
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
+!!$X0=X0+1.D-2
+!!$END IF
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
+!!$OPEN(UNIT=1005,FILE='XOUT')
+!!$DO ITER=1,20000
+!!$  E=-2.D0+2.5D-4*REAL(ITER,KIND=8)
 !!$  CALL ATOMLIB_PAWDER(GID,NR,L,E,PSPOT,NPRO,PRO,DH,DO,G,PHI)
 !!$  CALL SCHROEDINGER$PHASESHIFT(GID,NR,PHI,RMINNODE,RBOX,Z0)
-!!$  write(1005,*)e,z0
-!!$enddo
-!!$close(1005)
-!!$call error$stop('---')
-!!$end if
+!!$  WRITE(1005,*)E,Z0
+!!$ENDDO
+!!$CLOSE(1005)
+!!$CALL ERROR$STOP('---')
+!!$END IF
+      ZM=0.D0 ! INITIALIZATION TO MAKE COMPILER HAPPY
       DO ITER=1,NITER
         E=X0
 !       ========================================================================
@@ -1748,25 +1785,27 @@ END IF
         ELSE
           PHI2(:)=PHI(:)
         END IF
-        IF(ITER.GT.1.AND.Z0*ZM.LT.0.D0) EXIT
-!!$IF(l.eq.0.and.nn.eq.1) THEN
+        IF(ITER.GT.1) THEN
+          IF(Z0*ZM.LT.0.D0) EXIT
+        END IF
+!!$IF(L.EQ.0.AND.NN.EQ.1) THEN
 !!$ CALL ATOMLIB_WRITEPHI('ERROR_PAWPSI.DAT',GID,NR,1,PHI)
 !!$ CALL ERROR$I4VAL('L',L)
 !!$ CALL ERROR$I4VAL('NN',NN)
 !!$ CALL ERROR$R8VAL('RMINNODE',RMINNODE)
-!!$ CALL ERROR$R8VAL('Rbox',Rbox)
+!!$ CALL ERROR$R8VAL('RBOX',RBOX)
 !!$ CALL ERROR$R8VAL('X0',X0)
 !!$ CALL ERROR$R8VAL('Z0',Z0)
 !!$ CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
-!!$endif
+!!$ENDIF
         IF(ITER.EQ.NITER) THEN
           CALL ERROR$MSG('SEARCH FOR BISECTION WINDOW FAILED')
           CALL ERROR$I4VAL('L',L)
           CALL ERROR$I4VAL('NN',NN)
-          CALL ERROR$r8VAL('XM',XM)
-          CALL ERROR$r8VAL('X0',X0)
-          CALL ERROR$r8VAL('ZM',ZM)
-          CALL ERROR$r8VAL('Z0',Z0)
+          CALL ERROR$R8VAL('XM',XM)
+          CALL ERROR$R8VAL('X0',X0)
+          CALL ERROR$R8VAL('ZM',ZM)
+          CALL ERROR$R8VAL('Z0',Z0)
           CALL ERROR$STOP('ATOMLIB$PAWBOUNDSTATE')
         END IF
         IF(ITER.EQ.1) DX=SIGN(DX,-Z0)
@@ -2174,9 +2213,34 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ATOMLIB_EFINITENUCSIZE(GID,NR,RAD,AEZ,RHO,EFS)
+!     **************************************************************************
+!     **  ESTIMATE THE ENERGY CORRECTION DUE TO FINITE SIZE OF THE NUCLEUS    **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: GID
+      INTEGER(4),INTENT(IN) :: NR
+      REAL(8)   ,INTENT(IN) :: AEZ
+      REAL(8)   ,INTENT(IN) :: RAD
+      REAL(8)   ,INTENT(IN) :: RHO(NR) ! ELECTRON DENSITY
+      REAL(8)   ,INTENT(OUT):: EFS
+      REAL(8)   ,PARAMETER  :: PI=4.D0*ATAN(1.D0)
+      REAL(8)   ,PARAMETER  :: Y0=1.D0/SQRT(4.D0*PI)
+      REAL(8)               :: AUX(NR),AUX1(NR)
+      REAL(8)               :: R(NR)
+!     **************************************************************************
+      CALL RADIAL$R(GID,NR,R)
+      CALL RADIAL$NUCPOT(GID,NR,AEZ,AUX)
+      AUX=RHO*(R**2*AUX+AEZ*R/Y0)
+      CALL RADIAL$INTEGRATE(GID,NR,AUX,AUX1)
+      CALL RADIAL$VALUE(GID,NR,AUX1,RAD,EFS)
+      RETURN
+      END
+
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ATOMLIB$BOXVOFRHO(GID,NR,RAD,AEZ,RHO,POT,EH,EXC)
-!     ******************************************************************
-!     **                                                              **
+!     **************************************************************************
 !     **  ELECTROSTATIC AND EXCHANGE-CORRELATION POTENTIAL            **
 !     **                                                              **
 !     ******************************************************************

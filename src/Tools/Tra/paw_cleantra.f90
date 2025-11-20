@@ -14,6 +14,11 @@
       INTEGER(4)     :: NARGS
 !     **************************************************************
                           CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       NARGS=COMMAND_ARGUMENT_COUNT()
       IF(NARGS.LT.1)THEN
         CALL ERROR$MSG('ARGUMENT LIST OF EXECUTABLE IS EMPTY')
@@ -44,6 +49,7 @@
       CALL FILEHANDLER$UNIT('TRAOUT',NFIL2)      
       CALL CORRECTTRA(NFIL1,NFIL2)
                           CALL TRACE$POP
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

@@ -65,6 +65,10 @@ END MODULE SUBSTANCE_MODULE
       REAL(8)                   :: EREACT
       CHARACTER(16)             :: string
 !     ******************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER            ==
@@ -88,7 +92,7 @@ END MODULE SUBSTANCE_MODULE
       CALL FILEHANDLER$UNIT('PROT',NFILO)
       WRITE(NFILO,FMT='(80("*"))')
       WRITE(NFILO,FMT='(80("*"),T15 &
-     &             ,"           PROTOCOLL GRAB TOOL               ")')
+     &             ,"           PROTOCOL GRAB TOOL                ")')
       WRITE(NFILO,FMT='(80("*"),T15 &
      &             ,"    FOR THE PROJECTOR-AUGMENTED WAVE METHOD  ")')
       WRITE(NFILO,FMT='(80("*"))')
@@ -141,7 +145,7 @@ END MODULE SUBSTANCE_MODULE
         CALL LINKEDLIST$SELECT(LL_CNTL,'SUBSTANCE',I)
         CALL LINKEDLIST$GET(LL_CNTL,'ID',1,SUBSTANCE(I)%NAME)
         tfound=.false.
-!       == collect total energy from protocoll file
+!       == collect total energy from protocol file
         CALL LINKEDLIST$existd(LL_CNTL,'FILE',1,tchk)
         if(tchk) then
           CALL LINKEDLIST$GET(LL_CNTL,'FILE',1,SUBSTANCE(I)%FILE)
@@ -280,6 +284,7 @@ END MODULE SUBSTANCE_MODULE
 !     ==================================================================
       DEALLOCATE(SUBSTANCE)
       CALL FILEHANDLER$CLOSEALL
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !      
@@ -318,8 +323,6 @@ END MODULE SUBSTANCE_MODULE
 !     *****************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER :: T=.TRUE.
-      LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: CH32SVAR1
       CHARACTER(32)        :: ID
       INTEGER(4)           :: NFILO
@@ -332,15 +335,15 @@ END MODULE SUBSTANCE_MODULE
 !
 !     ==  ERROR FILE ===================================================
       ID=+'ERR'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.GERR')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.GERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOL FILE ================================================
       ID=+'PROT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.GPROT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.GPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -348,7 +351,7 @@ END MODULE SUBSTANCE_MODULE
 !
 !     ==  CONTROL FILE  == =============================================
       ID=+'CNTL'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.GCNTL')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.GCNTL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -358,16 +361,16 @@ END MODULE SUBSTANCE_MODULE
       END
 !
 !     ..................................................................
-MODULE READCNTL_MODULE
+MODULE READCNTLGRAB_MODULE
 USE LINKEDLIST_MODULE
 TYPE(LL_TYPE)   :: LL_CNTL
 SAVE
-END MODULE READCNTL_MODULE
+END MODULE READCNTLGRAB_MODULE
 !
 !     ..................................................................
       SUBROUTINE READCNTL
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE
+      USE READCNTLGRAB_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
       LOGICAL(4)           :: TCHK

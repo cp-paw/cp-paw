@@ -136,6 +136,10 @@ END MODULE READCNTL_MODULE
       CHARACTER(128)            :: FORMAT
 !     **************************************************************************
       CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==========================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER                    ==
@@ -207,7 +211,7 @@ END MODULE READCNTL_MODULE
 !
 !     ==========================================================================
 !     ==  CALCULATE ANGULAR MOMENTUM WEIGHTS AND SPINS                        ==
-!     ==  AND WRITE RESULT TO THE PROTOCOLL FILE.                             ==
+!     ==  AND WRITE RESULT TO THE PROTOCOL FILE.                              ==
 !     ==  THE VARIABLE SPIN DIR GIVES THE LOCAL SPIN AXIS AND IS KEPT FOR LATER=
 !     ==========================================================================
       ALLOCATE(SPINDIR(3,NAT))
@@ -548,8 +552,6 @@ END MODULE READCNTL_MODULE
 !     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER :: T=.TRUE.
-      LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: ID
 !     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
@@ -560,15 +562,15 @@ END MODULE READCNTL_MODULE
 !
 !     ==  ERROR FILE ===========================================================
       ID=+'ERR'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DERR')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE========================================================
+!     ==  PROTOCOL FILE ========================================================
       ID=+'PROT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DPROT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -576,7 +578,7 @@ END MODULE READCNTL_MODULE
 !
 !     ==  CONTROL FILE  == =====================================================
       ID=+'DCNTL'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DCNTL')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DCNTL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -584,7 +586,7 @@ END MODULE READCNTL_MODULE
 !
 !     ==  STRUCTURE FILE   =====================================================
       ID=+'PDOS'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PDOS')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PDOS')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -593,7 +595,7 @@ END MODULE READCNTL_MODULE
 !     ==  DENSITY OF STATES FILE PRODUCES AS OUTPUT ============================
 !     ==  WILL BE ATTACHED TO DIFFERENT FILES DURING EXECUTION =================
       ID=+'PDOSOUT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PDOSOUT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PDOSOUT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -602,7 +604,7 @@ END MODULE READCNTL_MODULE
 !     ==  NUMBER OF STATES FILE PRODUCES AS OUTPUT =============================
 !     ==  WILL BE ATTACHED TO DIFFERENT FILES DURING EXECUTION =================
       ID=+'PNOSOUT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PNOSOUT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PNOSOUT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -610,7 +612,7 @@ END MODULE READCNTL_MODULE
 !
 !     ==  SPIN GRAPHICS FILE   =================================================
       ID=+'MOL'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.MOL')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.MOL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -2446,7 +2448,7 @@ END MODULE NEWSET_MODULE
       INTEGER(4)   ,INTENT(OUT):: IT(3)       ! UNIT-CELL INDEX
       INTEGER(4)   ,INTENT(IN) :: LMXX        ! MAX LENGTH OF ORBITAL ARRAY
       COMPLEX(8)   ,INTENT(OUT):: ORB(LMXX)   ! ORBITAL COEFFICIENT VECTOR
-      CHARACTER(8)             :: TYPE  ! ORBITAL TYPE IN LOCAL COORDINATES
+      CHARACTER(32)            :: TYPE  ! ORBITAL TYPE IN LOCAL COORDINATES
       INTEGER(4)               :: IAT2
       CHARACTER(32)            :: ATOMEX      ! ATOM NAME IN EXTENDED NOTATION
       CHARACTER(32)            :: ATOM
@@ -2647,7 +2649,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !
       ELSE
 !       == RESOLVE PURE REAL SPHERICAL HARMONICS ===============================
-        CALL SPHERICAL$LMBYNAME(TYPE,LM)
+        CALL SPHERICAL$LMBYNAME(TRIM(TYPE),LM)
         ORB(LM)=1.D0
       END IF
 !
@@ -3443,7 +3445,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
       INTEGER(4)                :: ISET   ! SET COUNTER
       INTEGER(4)                :: IAT
       INTEGER(4)                :: IAT0
-      CHARACTER(8)              :: TYPE
+      CHARACTER(32)             :: TYPE
       CHARACTER(32)             :: NAME,SPIN
       LOGICAL(4)                :: TCHK,TCHK1
       INTEGER(4)                :: ITH, NUM

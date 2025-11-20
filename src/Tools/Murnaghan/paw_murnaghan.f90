@@ -29,16 +29,21 @@
      REAL(8)   ,PARAMETER :: METER=ANGSTROM*1.D+10
      REAL(8)   ,PARAMETER :: GPASCAL=1.D+9*JOULE/METER**3
 !    ***************************************************************************
-!    ==========================================================================
-!    == START WITH PRINTING HEADER                                           ==
-!    ==========================================================================
+!    ===========================================================================
+!    == START WITH PRINTING HEADER                                            ==
+!    ===========================================================================
      WRITE(*,FMT='(80("="))')
      WRITE(*,FMT='(80("="),T15," FIT MURNAGHAN EQUATION OF STATE ")')
      WRITE(*,FMT='(80("="))')
      WRITE(*,FMT='(A80)') &
     &     'MURNAGHAN EQUATION OF STATE IS BASED ON THE ASSUMPTION THAT THE' &
     &    ,'BULK MODULUS DEPENDS LINEARLY ON PRESSURE.' &
-    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1934)'
+    &    ,'SOURCE: F.D. MURNAGHAN, PNAS 30, 244 (1944)'
+!
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !    ==========================================================================
 !    == COLLECT UNITS FROM COMMAND LINE                                       ==
@@ -67,6 +72,8 @@
     &                    ,"LENGTH UNIT OF FIRST COLUMN IN ABOHR")')
          WRITE(*,FMT=-'(T5,"-VBL VALUE",T30 &
     &                    ,"VOLUME / LATTICE CONSTANT^3")')
+         WRITE(*,FMT=-'(T5,"-SCALE VALUE",T30 &
+    &                    ,"SCALE FACTOR FOR VOLUME AND ENERGY")')
          WRITE(*,FMT='("INPUT CONTAINS TWO COLUMNS WITH DATA:")')
          WRITE(*,FMT=-'(T5,"FIRST COLUMN:",T30,"LATTICE CONSTANT OR VOLUME")')
          WRITE(*,FMT=-'(T5,"SECOND COLUMN:",T30,"ENERGY")')
@@ -107,7 +114,7 @@
      WRITE(*,FMT='(50("."),T1,"CELL-VOLUME / LENGTH**3",T50,F10.5)')VBYL3
 !
 !    ==========================================================================
-!    == READ DATA UNTIL ERROR THEN RESET NP                                  ==
+!    == READ DATA UNTIL ERROR, THEN RESET NP                                 ==
 !    ==========================================================================
      NP=0
      DO 
@@ -116,14 +123,14 @@
          WRITE(*,*)"TOO MANY INPUT DATA, ONLY FIRST 100 USED"
          EXIT
        END IF
-       READ(*,*,END=100,ERR=100)LINE
+       READ(*,FMT='(A)',END=100,ERR=100)LINE
        LINE=ADJUSTL(LINE)
        IF(LINE(1:1).EQ.'#') THEN ! SKIP COMMENT LINES
          NP=NP-1
          CYCLE
        END IF
-       READ(*,*,END=100,ERR=100)V(NP),E(NP)
-       IF(TL) V(NP)=V(NP)**3
+       READ(LINE,*,END=100,ERR=100)V(NP),E(NP)
+       IF(TL) V(NP)=VBYL3*V(NP)**3   ! FIRST, V=ALAT, THEN V=VOLUME OPER CELL
      ENDDO
 100  CONTINUE
      NP=NP-1
@@ -136,7 +143,7 @@
 !    == CONVERT UNITS ACCORDING TO COMMAND LINE ARGUMENTS                    ==
 !    ==========================================================================
      E(:)=E(:)*EUNIT
-     V(:)=V(:)*VBYL3*LUNIT**3
+     V(:)=V(:)*LUNIT**3
 !
 !    ==========================================================================
 !    == SCALE RESULTS
@@ -150,7 +157,8 @@
 !    ==========================================================================
      DO I=1,NP
        SVAR=(V(I)/VBYL3)**(1.D0/3.D0)
-       WRITE(*,FMT='(I5," L=",F15.5," V=",F15.5," E=",F10.5)')I,SVAR,V(I),E(I)
+       WRITE(*,FMT='(I5," L=",F15.5," A0 V=",F15.5," A0^3 E=",F10.5," H")') &
+    &          I,SVAR,V(I),E(I)
      ENDDO
 !
 !    ==========================================================================
@@ -187,6 +195,16 @@
      WRITE(*,FMT='("EQUILIBRIUM BULK MODULUS B0 IN GPA",T50,F10.5)')SVAR
      WRITE(*,FMT='("PRESSURE DERIVATIVE OF BULK MODULUS BPRIME",T50,F10.5)') &
    &       PARMS(4)
+     WRITE(*,FMT='(A)')'MURNAGHAN EQUATION OF STATE E(V) IN FORTRAN:'
+     WRITE(*,FMT='(A)') &
+    &        'E=E0' &
+    &      //'+(B0*V0/(BPRIME*(BPRIME-1.D0)))*((V/V0)**(-BPRIME+1.D0)-1.D0)'
+     WRITE(*,FMT='(A)') &
+    &        '    +(B0*V0/BPRIME)*((V/V0)-1.D0)'
+     WRITE(*,FMT='(A)')'FOR A DERIVATION OF MURNAGHANS EQUATION OF STATE SEE:'
+     WRITE(*,FMT='(A)') &
+    &     '"THEORY OF FIRST-PRINCIPLES CALCULATIONS"' &
+    &     //' ON HTTPS://PHISX.ORG'
 !
 !    ===========================================================================
 !    == PRINT ENERGY VOLUME CURVE WITH INPUT FOR COMPARISON                   ==
@@ -216,11 +234,19 @@
 !       WRITE(9,FMT='(2F20.5)')VI/LUNIT**3,EFIT/EUNIT
 !      __ CONVERT CONSISTENT WITH THE INPUT DATA________________________________
        EFIT=EFIT/EUNIT
-       VI=VI/VBYL3/LUNIT**3
-       IF(TL)VI=VI**(1.D0/3.D0)
+       VI=VI/LUNIT**3
 !      __ WRITE_________________________________________________________________
-       WRITE(8,FMT='(2F10.5)')VI,EFIT
+       IF(TL) THEN
+!        __FIRST COLUMN IS THE LATTICE CONSTANT_________________________________
+         WRITE(8,FMT='(3F15.10)')(VI/VBYL3)**(1.D0/3.D0),EFIT
+       ELSE
+!        __FIRST COLUMN IS THE VOLUME PER UNIT CELL_____________________________
+!        __SECOND COLUMN IS THE ENERGY PER UNIT CELL____________________________
+!        __THIRD COLUMN IS THE LATTICE CONSTANT_________________________________
+         WRITE(8,FMT='(3F15.10)')VI,EFIT,(VI/VBYL3)**(1.D0/3.D0)
+       END IF
      ENDDO
+     CALL ERROR$NORMALSTOP()
      STOP
      END
 !
@@ -320,7 +346,7 @@
 !    ***************************************************************************
 !    **   MURNAGHAN EQUATION OF STATE:  MURNAGHAN44_PNAS30_244                **
 !    **                                                                       **
-!    **   MURNAGHAN'S EQUATION OF STATE IS BASED ON THE ASSUMPTION            **
+!    **   MURNAGHAN EQUATION OF STATE IS BASED ON THE ASSUMPTION              **
 !    **   THAT THE BULK MODULUS DEPENDS LINEARLY ON PRESSURE                  **
 !    **   $P=-\FRAC{\PARTIAL E}{\PARTIAL V}$                                  **
 !    **   $B=\FRAC{1}{\KAPPA_T}=-V\FRAC{\PARTIAL P}{\PARTIAL V}$              **
@@ -330,7 +356,7 @@
 !    **   SEE BLOECHL LECTURE NOTES FOR THE PAW HANDS-ON FOR DERIVATION       **
 !    *************************PETER BLOECHL, GOSLAR 2010************************
      IMPLICIT NONE
-     REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0, V0, B0, B'
+     REAL(8),INTENT(IN) :: PARMS(4) ! PARAMETERS OF MURN CURVE: E0,V0,B0,BPRIME
      REAL(8),INTENT(IN) :: V        ! INPUT VOLUME
      REAL(8),INTENT(OUT):: E        ! OUTPUT ENERGY
      REAL(8),INTENT(OUT):: GRAD(4)  ! GRADIENT OF MURN CURVE AT INPUT VOLUME

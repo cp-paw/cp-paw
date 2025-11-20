@@ -1,0 +1,60 @@
+################################################################################
+##
+##   template for the makefile that compiles the manual of cppaw
+##
+################################################################################
+#____set shell__________________________________________________________________
+SHELL=/bin/bash
+#____switch off implicit rules__________________________________________________
+.SUFFIXES:
+
+################################################################################
+##  parameters in the following block will be replaced                        ##
+################################################################################
+#______________________________top level directory of the repository____________
+export BASEDIR=@BASEDIR@
+#______________________________installation directory___________________________
+export DOCDIR=@DOCDIR@
+
+################################################################################
+##  test whether installation directory is available                          ##
+################################################################################
+ifeq ($(DOCDIR),) 
+  $(error "empty string for DOCDIR not allowed")
+endif
+ifeq ("$(wildcard $(DOCDIR))","")
+  $(error "DOCDIR does not exist")
+endif
+#
+################################################################################
+##                      main targets                                          ##
+################################################################################
+.PHONY: default
+default: compile install
+
+.PHONY: clean
+clean :
+	latexmk -c
+
+################################################################################
+##                      compile                                              ##
+################################################################################
+.PHONY: compile
+compile: manual.pdf
+
+manual.pdf : manual.tex all.bib doc.bib Figs
+	latexmk -pdf -pdflatex='pdflatex -halt-on-error %O %S' \
+                -use-make -silent manual.tex ;\
+        RC=$$? ; if [[ $$RC -ne 0 ]] ; then \
+        echo "error in makedocs: latexmk failed" >&2 ; exit 1 ; fi
+
+#	latexmk -pdf -pdflatex="pdflatex -interaction=nonstopmode" -use-make manual.tex
+
+################################################################################
+##                      install                                               ##
+################################################################################
+.PHONY: install
+install: $(DOCDIR)/manual.pdf
+
+${DOCDIR}/manual.pdf : manual.pdf
+	cp $< $@

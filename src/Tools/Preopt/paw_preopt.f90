@@ -11,10 +11,10 @@
 !     **                                                              **
 !     **  COMMENTS:                                                   **
 !     **   ALWAYS USES REAL MASS                                      **
-!     **   bond reading not yet implemented                           **
-!     **   it should be checked if MD converges better than CG line seach
+!     **   BOND READING NOT YET IMPLEMENTED                           **
+!     **   IT SHOULD BE CHECKED IF MD CONVERGES BETTER THAN CG LINE SEACH
 !     **                                                              **
-!     **   documentation (manual)                                     **
+!     **   DOCUMENTATION (MANUAL)                                     **
 !     **                                                              **
 !     ******************************************************************
 !
@@ -67,6 +67,11 @@ END MODULE POPT_MODULE
 !     ******************************************************************
       CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
+
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==================================================================
 !     ==  RESOLVE ARGUMENTLIST AND INITIALIZE FILE HANDLER            ==
@@ -80,15 +85,16 @@ END MODULE POPT_MODULE
 
       CALL REPORT_START
 
-      CALL MM_MINIMIZE_dynamic
-!      CALL MM_MINIMIZE_cg
+      CALL MM_MINIMIZE_DYNAMIC
+!      CALL MM_MINIMIZE_CG
 
       CALL REPORT_END
 
       DEALLOCATE(MATOM)
       DEALLOCATE(MBOND)
       CALL FILEHANDLER$CLOSEALL
-    END PROGRAM PREOPT
+      CALL ERROR$NORMALSTOP()
+      END PROGRAM PREOPT
 !     ==================================================================
 !     ==================================================================
 !     ==================================================================
@@ -411,7 +417,7 @@ END MODULE READ_MODULE
         CHARACTER(32)               :: STR
 !       ****************************************************************    
         CALL FILEHANDLER$UNIT('PROT',NFILO)
-        write(nfilo,*)
+        WRITE(NFILO,*)
         IF(TPRINTATOMS) THEN
            WRITE(NFILO,"(' ATOMS AS USED BY THE MINIMIZER ')")
            WRITE(NFILO,"('================================')")
@@ -552,7 +558,7 @@ END MODULE READ_MODULE
       USE LINKEDLIST_MODULE
       USE READ_MODULE
       USE POPT_MODULE
-      use strings_module
+      USE STRINGS_MODULE
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
       LOGICAL(4)           :: TCHK,TCHK2
@@ -601,7 +607,7 @@ END MODULE READ_MODULE
       END IF
 
       CALL LINKEDLIST$EXISTL(LL_CNTL,'FILES',1,TCHK)
-      IF(TCHK) then
+      IF(TCHK) THEN
         CALL LINKEDLIST$SELECT(LL_CNTL,'FILES')
         CALL LINKEDLIST$NLISTS(LL_CNTL,'FILE',NUM)
         DO ITH=1,NUM
@@ -616,7 +622,7 @@ END MODULE READ_MODULE
           CALL LINKEDLIST$SELECT(LL_CNTL,'..')
         ENDDO
         CALL LINKEDLIST$SELECT(LL_CNTL,'..')
-      end IF
+      END IF
       CALL LINKEDLIST$SELECT(LL_CNTL,'~')
       CALL LINKEDLIST$SELECT(LL_CNTL,'PCNTL')
       CALL LINKEDLIST$EXISTL(LL_CNTL,'OUTPUT',1,TCHK)
@@ -690,8 +696,6 @@ END MODULE READ_MODULE
 !     *****************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER :: T=.TRUE.
-      LOGICAL(4),PARAMETER :: F=.FALSE.
       CHARACTER(32)        :: CH32SVAR1
       CHARACTER(32)        :: ID
       INTEGER(4)           :: NFILO
@@ -704,15 +708,15 @@ END MODULE READ_MODULE
 !
 !     ==  ERROR FILE ===================================================
       ID=+'ERR'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DERR')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOL FILE ================================================
       ID=+'PROT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PPROT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','UNKNOWN')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -720,7 +724,7 @@ END MODULE READ_MODULE
 !
 !     ==  CONTROL FILE  == =============================================
       ID=+'PCNTL'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PCNTL')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PCNTL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -728,7 +732,7 @@ END MODULE READ_MODULE
 !
 !     ==  STRUCTURE FILE   =============================================
       ID=+'STRC'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.STRC')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.STRC')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -736,7 +740,7 @@ END MODULE READ_MODULE
 !
 !     ==  XYZ FILE ====================================================
       ID=+'XYZ'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.XYZ')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.XYZ')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -810,7 +814,7 @@ END MODULE READ_MODULE
       INTEGER(4)  ,INTENT(IN)   :: NDIM
       REAL(8)     ,INTENT(IN)   :: R(NDIM)
       REAL(8)     ,INTENT(OUT)  :: E
-      REAL(8)     ,INTENT(OUT)  :: FORCE(ndim)
+      REAL(8)     ,INTENT(OUT)  :: FORCE(NDIM)
 !     ******************************************************************
       CALL CLASSICAL$SETR8A('R(0)',NDIM,R)
       CALL CLASSICAL$ETOT(E)

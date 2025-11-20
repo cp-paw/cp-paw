@@ -8,6 +8,11 @@
       INTEGER(4)      :: NFILO,NFIL
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
 !     **************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL TRACE$SETL4('ON',.FALSE.)
       CALL TRACE$PUSH('MAIN')
  !
@@ -65,6 +70,7 @@
       CALL LINKEDLIST$SELECT(LL_CNTL,'DPCNTL')
       CALL LINKEDLIST$REPORT_UNUSED(LL_CNTL,NFILO)
       CALL TRACE$POP()
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !
@@ -534,7 +540,6 @@ END MODULE DOSSETS_MODULE
 !     **************************************************************************
       USE STRINGS_MODULE
       IMPLICIT NONE
-      LOGICAL(4),PARAMETER :: T=.TRUE.
       CHARACTER(32)        :: ID
 !     **************************************************************************
                                    CALL TRACE$PUSH('STANDARDFILES')
@@ -545,15 +550,15 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  ERROR FILE ===================================================
       ID=+'ERR'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DPERR')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DPERR')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'FORM','FORMATTED')
 !
-!     ==  PROTOCOLL FILE================================================
+!     ==  PROTOCOL FILE ================================================
       ID=+'PROT'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DPPROT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DPPROT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','APPEND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -561,7 +566,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  CONTROL FILE  == =============================================
       ID=+'DPCNTL'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.DPCNTL')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.DPCNTL')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','OLD')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','READ')
@@ -569,7 +574,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  COMMAND STACK FOR XMGRACE =========================================
       ID=+'GRACEBATCH'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.BAT')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.BAT')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -577,7 +582,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  EPS GRAPHICS FILE   =========================================
       ID=+'EPS'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.EPS')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.EPS')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')
@@ -585,7 +590,7 @@ END MODULE DOSSETS_MODULE
 !
 !     ==  PDF GRAPHICS FILE   =========================================
       ID=+'PDF'
-      CALL FILEHANDLER$SETFILE(ID,T,-'.PDF')
+      CALL FILEHANDLER$SETFILE(ID,.TRUE.,-'.PDF')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'STATUS','REPLACE')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'POSITION','REWIND')
       CALL FILEHANDLER$SETSPECIFICATION(ID,'ACTION','WRITE')

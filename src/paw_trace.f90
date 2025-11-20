@@ -144,7 +144,7 @@ END MODULE TRACE_MODULE
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       FMT_MEM='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5'
-      FMT_MEM=TRIM(ADJUSTL(FMT_MEM))//'" TIME",A8," ",A10)'
+      FMT_MEM=TRIM(ADJUSTL(FMT_MEM))//'," TIME",A8," ",A10)'
 !
       CALL USAGE$GET('MAXMEM',MAXMEM)
       CALL DATE_AND_TIME(DATE,TIME)
@@ -198,7 +198,7 @@ END MODULE TRACE_MODULE
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       FMT_MEM='("TRACE-MEM(",I3,"): MAXMEM[MBYTE]=",F10.5'
-      FMT_MEM=TRIM(ADJUSTL(FMT_MEM))//'" TIME",A8," ",A10)'
+      FMT_MEM=TRIM(ADJUSTL(FMT_MEM))//'," TIME",A8," ",A10)'
       CALL USAGE$GET('MAXMEM',MAXMEM)
       CALL DATE_AND_TIME(DATE,TIME)
 !
@@ -318,7 +318,7 @@ END MODULE TRACE_MODULE
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE TRACE$C8VAL(NAME,VAL)
 !     **************************************************************************
-!     ** REPORT A REAL NUMBER INSIDE THE TRACE INFORMATION                    **
+!     ** REPORT A COMPLEX NUMBER INSIDE THE TRACE INFORMATION                 **
 !     **************************************************************************
       USE TRACE_MODULE
       IMPLICIT NONE
@@ -329,7 +329,7 @@ END MODULE TRACE_MODULE
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       IF(TRACESWITCH%SILENT) RETURN
-      WRITE(*,FMT='("TRACE-VALUE",A,": ",F20.10," ON TASK ",I5)') &
+      WRITE(*,FMT='("TRACE-VALUE",A,": (",F20.10,",",F20.10,") ON TASK ",I5)') &
      &            TRIM(NAME),VAL,THISTASK 
 !
 !     ==========================================================================
@@ -337,7 +337,8 @@ END MODULE TRACE_MODULE
 !     ==========================================================================
       IF(TRACESWITCH%WRITETRACEFILE) THEN
         CALL FILEHANDLER$UNIT('TRACE',NFILTRACE)
-        WRITE(NFILTRACE,FMT='("TRACE-VALUE",A,": ",F30.20," ON TASK ",I5)') &
+        WRITE(NFILTRACE, &
+     &        FMT='("TRACE-VALUE",A,": (",F20.10,",",F20.10,") ON TASK ",I5)') &
      &            TRIM(NAME),VAL,THISTASK 
       END IF
       RETURN 
@@ -357,7 +358,7 @@ END MODULE TRACE_MODULE
       IF(TOFF) RETURN
       IF(TFIRST) CALL TRACE_FIRST
       IF(TRACESWITCH%SILENT) RETURN
-      WRITE(*,FMT='("TRACE-VALUE",A,": (",F20.10,",",F20.10,") ON TASK ",I5)') &
+      WRITE(*,FMT='("TRACE-VALUE",A,": ",I30," ON TASK ",I5)') &
      &            TRIM(NAME),VAL,THISTASK 
 !
 !     ==========================================================================

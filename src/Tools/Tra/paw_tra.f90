@@ -123,6 +123,11 @@ END MODULE TRAJECTORY_MODULE
       CHARACTER(40)  :: STR
 !     **************************************************************************
                           CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL GET_COMMAND_ARGUMENT(1,FILE)
       I=INDEX(FILE,'.',BACK=.TRUE.)
       ROOT=FILE(1:I-1)
@@ -347,6 +352,7 @@ END MODULE TRAJECTORY_MODULE
       WRITE(NFILO,FMT='(72("="),T20," PAW_TRA TOOL FINISHED ")')
       WRITE(NFILO,FMT='(72("="))')
                           CALL TRACE$POP
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !
@@ -368,7 +374,7 @@ END MODULE TRAJECTORY_MODULE
       CALL LINKEDLIST$SELECT(LL_CNTL,'TCNTL')
 !
 !     ==========================================================================
-!     ==  MAKE A DATAEXPLORER MOVIE FILE                                      ==
+!     ==  MAKE A MOVIE FILE                                                   ==
 !     ==========================================================================
       CALL LINKEDLIST$EXISTL(LL_CNTL,'MOVIE',1,TCHK)
       IF(TCHK) THEN
@@ -710,7 +716,7 @@ END MODULE TRAJECTORY_MODULE
       CALL FILEHANDLER$CLOSE('CORRELATION')
 !     
 !     ==========================================================================
-!     ==  WRITE ATOMS TO PROTOCOLL FILE                                       ==
+!     ==  WRITE ATOMS TO PROTOCOL FILE                                        ==
 !     ==========================================================================
 !     
 !     ==========================================================================
@@ -1065,7 +1071,7 @@ END MODULE TRAJECTORY_MODULE
         ENDDO
 !     
 !       ================================================================
-!       ==  WRITE ATOMS TO PROTOCOLL FILE                             ==
+!       ==  WRITE ATOMS TO PROTOCOL FILE                              ==
 !       ================================================================
         CALL REPORT$TITLE(NFILO,'SNAPSHOT')
         CALL REPORT$R8VAL(NFILO,'TIME',TIME/(PICO*SECOND),'PSEC')
@@ -1080,7 +1086,7 @@ END MODULE TRAJECTORY_MODULE
         WRITE(NFILO,*) 
 !     
 !       ================================================================
-!       ==  WRITE ATOMS TO PROTOCOLL FILE                             ==
+!       ==  WRITE ATOMS TO PROTOCOL FILE                              ==
 !       ================================================================
         CALL FILEHANDLER$UNIT('SNAPSHOT',NFIL)
         CALL WRITECSSR(NFIL,'TEST',RBAS,NATM,ATOMM,POSM,QM,.TRUE.)
@@ -1268,7 +1274,7 @@ END MODULE TRAJECTORY_MODULE
 !
         IF(NPLOT.GT.1) THEN
           WRITE(FILEID,FMT=*)IPLOT
-          FILEID='SPAGHETTI_'//ADJUSTL(FILEID)
+          FILEID='SPAGHETTI_'//TRIM(ADJUSTL(FILEID))
         ELSE
           FILEID='SPAGHETTI'
         END IF
@@ -1312,7 +1318,13 @@ END MODULE TRAJECTORY_MODULE
       SUBROUTINE TEMPERATURE(LL_CNTL_)
       USE STRINGS_MODULE
       USE LINKEDLIST_MODULE
-      USE TRAJECTORY_MODULE
+      USE TRAJECTORY_MODULE, ONLY : NSTEP &
+     &                             ,NAT &
+     &                             ,QNAT &
+     &                             ,MASS &
+     &                             ,ATOM &
+     &                             ,TRA &
+     &                             ,TQMMM
       IMPLICIT NONE
       TYPE(LL_TYPE),INTENT(IN) :: LL_CNTL_
       TYPE(LL_TYPE)            :: LL_CNTL
@@ -2272,7 +2284,9 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       &         ,BOXR0,BOXVEC)
         ELSE IF(FORMAT.EQ.'XYZ') THEN
 !PRINT*,"FLAG CALL WRITEXYZ(NATM): ",NATM
-          CALL WRITEXYZ(NFIL,IFRAME,NATM,EL,POSM)
+!          CALL WRITEXYZ(NFIL,IFRAME,NATM,EL,POSM)
+          CALL WRITEEXTXYZ(NFIL,IFRAME,NATM,EL,POSM &
+      &                   ,TRA%CELL(:,ISTEP),TRA%T(ISTEP))
         ELSE
           CALL ERROR$MSG('FORMAT NOT RECOGNIZED')
           CALL ERROR$STOP('WRITETRA')
@@ -2345,6 +2359,47 @@ PRINT*,'BOND: ATOM1=',NAME,IAT2
       WRITE(NFIL,FMT='(A10,I10)')'NONAME',FRAME
       DO IAT=1,NAT
         WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X))')ID(IAT),R(:,IAT)/ANGSTROM
+      ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WRITEEXTXYZ(NFIL,FRAME,NAT,ID,R,CELL,TIME)
+!     ******************************************************************
+!     **                                                              **
+!     ******************************************************************
+      USE STRINGS_MODULE
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      INTEGER(4)  ,INTENT(IN) :: FRAME
+      INTEGER(4)  ,INTENT(IN) :: NAT
+      CHARACTER(2),INTENT(IN) :: ID(NAT)
+      REAL(8)     ,INTENT(IN) :: R(3,NAT)
+      REAL(8)     ,INTENT(IN) :: CELL(9)
+      REAL(8)     ,INTENT(IN) :: TIME
+      INTEGER(4)              :: IAT
+      REAL(8)                 :: ANGSTROM, PICO, SECOND           
+      CHARACTER(100)          :: STRING
+      CHARACTER(200)          :: EXTXYZ
+      CHARACTER(2)            :: SPECIES
+!     ******************************************************************
+      CALL CONSTANTS$GET('ANGSTROM',ANGSTROM)
+      CALL CONSTANTS$GET('PICO', PICO)
+      CALL CONSTANTS$GET('SECOND', SECOND)
+      IF(FRAME.EQ.1) REWIND NFIL
+      WRITE(NFIL,*)NAT
+      WRITE(STRING,FMT='(9F10.5)')CELL/ANGSTROM
+      EXTXYZ=+'L'//-'ATTICE="'//TRIM(ADJUSTL(STRING))//'" '//+'P'// &
+     &       -'ROPERTIES=SPECIES:'//+'S'//-':1:POS:'//+'R:3 I'//-'TER='
+      WRITE(STRING,FMT='(I10)')FRAME
+      EXTXYZ=TRIM(EXTXYZ)//TRIM(ADJUSTL(STRING))//+' T'//-'IME='
+      WRITE(STRING,FMT='(F10.5)')TIME/(PICO*SECOND)
+      EXTXYZ=TRIM(EXTXYZ)//TRIM(ADJUSTL(STRING))
+      WRITE(NFIL,*)EXTXYZ
+      DO IAT=1,NAT
+        ! TRANSFORM ELEMENT SYMBOL TO UPPERCASE+LOWERCASE
+        SPECIES=+ID(IAT)
+        SPECIES(2:2)=-SPECIES(2:2)
+        WRITE(NFIL,FMT='(A2,2X,3(F10.5,1X))')SPECIES,R(:,IAT)/ANGSTROM
       ENDDO
       RETURN
       END
@@ -2777,7 +2832,6 @@ INTEGER(4)                :: J,NATM
 !      =========================================================================
 !      ==   CHECK                                                             ==
 !      =========================================================================
-
        IF(.NOT.TQMMM) THEN
           DO I=1,NAT
              IF(IZ(I).EQ.0) THEN

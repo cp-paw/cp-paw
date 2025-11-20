@@ -23,7 +23,7 @@ MODULE ATOMS_MODULE
 !**    'SWITCHED'                                                             **
 !**    NEXT: 'PROPAGATED WITHOUT CONSTRAINTS'                                 **
 !**                                                                           **
-!******************PETER E. BLOECHL, IBM RESEARCH LABORATORY (1996)*************
+!******************PETER E. BLOECHL, *******************************************
 REAL(8)          :: DELT=0.D0      ! TIME STEP
 REAL(8)          :: AMPRE=0.D0     ! TARGET TEMPERATURE FOR RANDOMIZATION
 REAL(8)          :: ANNER=0.D0     ! FRICTION

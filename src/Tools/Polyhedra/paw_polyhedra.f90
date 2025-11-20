@@ -25,7 +25,7 @@
       IMPLICIT NONE
       TYPE(LL_TYPE)             :: LL_STRC
       INTEGER(4)                :: NFIL 
-      INTEGER(4)                :: NFILO    !PROTOCOLL-FILE UNIT 
+      INTEGER(4)                :: NFILO    !PROTOCOL-FILE UNIT 
       INTEGER(4)                :: NARGS 
       LOGICAL(4)                :: TCHK
       CHARACTER(64)             :: ROOTNAME
@@ -41,7 +41,11 @@
       INTEGER(4)                :: NCENTER
       INTEGER(4)                :: ICENTER
 !     **************************************************************************
-      CALL TRACE$PUSH('MAIN')
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+                          CALL TRACE$PUSH('MAIN')
 !
       CALL INITIALIZEFILEHANDLER
       CALL READCNTL
@@ -169,6 +173,7 @@
           END IF
         ENDDO
       ENDDO
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !

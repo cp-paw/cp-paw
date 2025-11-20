@@ -1,0 +1,55 @@
+#!/bin/bash
+export THISDIR=$(pwd)
+#
+#-------------------------------------------------------------------------------
+#--  install cp-paw package                                                   --
+#-------------------------------------------------------------------------------
+#  options for paw_build,sh
+#  -c choice 
+#     defaultparmfile sets PARALLEL to true, when option choice
+#     contains substring "parallel".
+#     defaultparmfile names the install directory bin/$CHOICE} per default.
+#  -f parmfile (normally omitted)
+#  -s suffix (this parameter overwrites the value given by the parmfile)
+#     the executable is named [p]paw_${SUFFIX}.x
+#  -z suppress documentation
+#  -v verbose
+#  
+#-------------------------------------------------------------------------------
+export NODOC=""  # suppress building documentation except once
+
+#  list of choices in the parmfile to be selected
+export LIST="dbg fast fast_parallel"
+for X in ${LIST} ; do
+  echo "======================== building $X  ================================="
+  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err_${X}
+  export RC=$?
+  export NODOC="-z"  # suppress building documentation again
+  if [[ $RC -ne 0 ]] ; then
+    echo "--------------------installation failed---------------------------">&2
+    echo -e "error in $0: paw_build failed for choice $X. error file below:" >&2
+    echo ""
+    cat err_${X}                                                             >&2
+    echo ""
+    echo -e "inspect file out_$X for further information"
+    echo "shutting down $0"                                                  >&2
+    echo "------------------------------------------------------------------">&2
+    echo "--------------------error exit------------------------------------">&2
+    echo "------------------------------------------------------------------">&2
+    exit 1
+  fi
+  echo "======================== building $X completed ========================"
+done
+#
+#
+echo " "
+echo "-------------------------------------------------------------------------"
+echo "-----------------------paw_install finished------------------------------"
+echo "-------------------------------------------------------------------------"
+echo "ensure that the following lines are in your profile (e.g. ~/.profile, ~/.bashrc, ~/.zprofile, or similar):"
+echo " "
+echo "export PAWDIR=$(pwd)"
+echo "export PATH=\${PAWDIR}/bin/fast:\${PAWDIR}/bin/fast_parallel:\${PAWDIR}/bin/dbg:\${PATH}"
+echo "-------------------------------------------------------------------------"
+echo " "
+#

@@ -16,6 +16,11 @@
       CHARACTER(256)      :: FILEOUT
       CHARACTER(256)      :: TEXT
 !     ******************************************************************      
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL GET_COMMAND_ARGUMENT(1,FILEIN)
       CALL GET_COMMAND_ARGUMENT(2,FILEOUT)
       CALL GET_COMMAND_ARGUMENT(3,TEXT)
@@ -41,5 +46,6 @@ print*,'convertingg....'
 print*,'conversion finished'
       DEALLOCATE(R)
       DEALLOCATE(Q)
+      CALL ERROR$NORMALSTOP()
       STOP
       END

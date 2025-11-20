@@ -2976,7 +2976,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
             CALL REPORT$TITLE(NFIL,STRING)
             ITEN=0
             DO WHILE (NB.GT.ITEN)
-              WRITE(NFIL,FMT='(I3,":",10F8.3)') &
+              WRITE(NFIL,FMT='(I4,":",10F8.3)') &
      &                               ITEN,(EIG(IB)/EV,IB=ITEN+1,MIN(ITEN+10,NB))
               ITEN=ITEN+10
             ENDDO
@@ -3044,7 +3044,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
       FORMAT='(55("."),": ",T1,A,T58,F10.4," EV ")'
       WRITE(NFIL,FMT=FORMAT)'ABSOLUTE GAP',(ELUMO-EHOMO)/EV
       FORMAT=       '(T10," FROM BAND=",I5," AT IK=",I5," WITH ISPIN=",I1'
-      FORMAT=TRIM(FORMAT)//'" TO BAND ",I5," AT IK=",I5," WITH ISPIN=",I1)'
+      FORMAT=TRIM(FORMAT)//'," TO BAND ",I5," AT IK=",I5," WITH ISPIN=",I1)'
       WRITE(NFIL,FMT=FORMAT)IBHOMO,IKHOMO,ISHOMO,IBLUMO,IKLUMO,ISLUMO
       CALL REPORT$R8VAL(NFIL,'HOMO-ENERGY',EHOMO/EV,'EV')
       CALL REPORT$R8VAL(NFIL,'LUMO-ENERGY',ELUMO/EV,'EV')
@@ -3196,6 +3196,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
       INTEGER(4)              :: NWAVE=2
       INTEGER(4)              :: ISUM
       LOGICAL(4)              :: TKGROUP
+      INTEGER(4)              :: ILOGICAL
 !     **************************************************************************
               CALL TRACE$PUSH('WAVES_WRITEPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -3270,7 +3271,10 @@ PRINT*,'CELLSCALE ',CELLSCALE
         CALL MPE$SENDRECEIVE('MONOMER',KMAP(IKPTG),1,TSUPER)
         IF(THISTASK.EQ.1) THEN
           KEY='PSI'
-          WRITE(NFIL)KEY,NGG,NDIM,NB,TSUPER  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+!         == RSTRT FILE WITH GNU STANDARD OF LOGICAL BIT REPRESENTATION ==
+          ILOGICAL=1
+          IF(.NOT.TSUPER) ILOGICAL=0
+          WRITE(NFIL)KEY,NGG,NDIM,NB,ILOGICAL  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
           NREC1=NREC1+1
         END IF
 !       
@@ -3404,6 +3408,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
       COMPLEX(8)              :: CSVAR,CMAT(1,1)
       LOGICAL(4)              :: TKGROUP
       LOGICAL(4)              :: TSKIP
+      INTEGER(4)              :: ILOGICAL
 !     ******************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
@@ -3461,7 +3466,16 @@ CALL FILEHANDLER$UNIT('PROT',NFILO)
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
 !       ================================================================
         IF(THISTASK.EQ.1) THEN
-          READ(NFIL)KEY,NGG_,NDIM_,NB_,TSUPER_   !<<<<<<<<<<<<<<<<<<<<<<
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD RESTART FILES           ==
+          READ(NFIL)KEY,NGG_,NDIM_,NB_,ILOGICAL   !<<<<<<<<<<<<<<<<<<<<<<
+          TSUPER_=BTEST(ILOGICAL,0)
           IF(KEY.NE.'PSI') THEN
             CALL ERROR$MSG('ID IS NOT "PSI"')
             CALL ERROR$MSG('FILE IS CORRUPTED')
@@ -5170,6 +5184,7 @@ END MODULE TOTALSPIN_MODULE
       LOGICAL(4)              :: TKGROUP
       REAL(8)    ,ALLOCATABLE :: XK(:,:) !K-POINTS IN RELATIVE COORDINATES
       REAL(8)                 :: GBASIN(3,3)
+      INTEGER(4)              :: ILOGICAL
  REAL(8)     ,ALLOCATABLE:: TEST(:,:)
 !     **************************************************************************
                                CALL TRACE$PUSH('WAVES_READPSI')
@@ -5236,20 +5251,21 @@ END MODULE TOTALSPIN_MODULE
 !       ==  READ COORDINATES OF THE WAVE FUNCTIONS                    ==
 !       ================================================================
         IF(THISTASK.EQ.1) THEN
-!
-          READ(NFIL)KEY,NGG_,NDIM_,NB_,TSUPER_   !<<<<<<<<<<<<<<<<<<<<<<
+!         == GFORTRAN LOGICAL REPRESENTATION DEFINED WITH TRUE=1, FALSE=0     ==
+!         https://gcc.gnu.org/onlinedocs/gfortran/compiler-characteristics/
+!         internal-representation-of-logical-variables.html
+!         == IFORT LOGICAL REPRESENTATION DEFINED WITH VALUE OF LAST BIT      ==
+!         https://www.intel.com/content/www/us/en/docs/fortran-compiler/
+!         developer-guide-reference/2024-2/logical-data-representations.html
+!         == BOTH SHARE MEANING OF LAST BIT 1=TRUE, 0=FALSE                   ==
+!         == ENSURES BACKWARDS COMPATIBILITY WITH OLD RESTART FILES           ==
+          READ(NFIL)KEY,NGG_,NDIM_,NB_,ILOGICAL   !<<<<<<<<<<<<<<<<<<<<<<
+          TSUPER_=BTEST(ILOGICAL,0)
           IF(KEY.NE.'PSI') THEN
             CALL ERROR$MSG('ID IS NOT "PSI"')
             CALL ERROR$MSG('FILE IS CORRUPTED')
             CALL ERROR$I4VAL('IKPTG',IKPTG)
             CALL ERROR$STOP('WAVES_READPSI')
-          END IF
-!         __ READING A LOGICAL CAN FILL UP INSIGNIFICANT BITS, WHICH CAUSES
-!         __ PROBLEMS WITH SOME COMPILERS. (->.EQV. ; .NEQV)
-          IF(TSUPER_) THEN
-             TSUPER_=.TRUE.
-          ELSE
-             TSUPER_=.FALSE.
           END IF
 !
           ALLOCATE(IGVECG_(3,NGG_))

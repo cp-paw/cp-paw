@@ -1,0 +1,132 @@
+#____set shell__________________________________________________________________
+SHELL=/bin/bash
+#____switch off implicit rules__________________________________________________
+.SUFFIXES:
+#
+VERBOSE=false
+################################################################################
+##  parameters in the following block will be replaced                        ##
+################################################################################
+#______________________________installation directory___________________________
+export BINDIR=@BINDIR@
+#_______________________________suffix is attached to the executable name_______
+export SUFFIX=@SUFFIX@
+#______for PARALLEL=true, name executable ppaw....x rather than paw....x________
+#______for PARALLEL=true, do not install tools, library and module files________
+export PARALLEL=@PARALLEL@
+#
+################################################################################
+##  test whether installation directory is available                          ##
+################################################################################
+ifeq ($(BINDIR),) 
+  $(error "empty string for BINDIR not allowed")
+endif
+ifeq ("$(wildcard $(BINDIR))","")
+  $(error "BINDIR does not exist")
+endif
+ifeq ("$(wildcard $(BINDIR)/include)","")
+  $(error "BINDIR/include does not exist")
+endif
+#
+################################################################################
+##                      prepare                                               ##
+################################################################################
+#-------------------------------------------------------------------------------
+#-- prepare lists
+#-------------------------------------------------------------------------------
+#_______TOOLS takes all executables except for paw.x____________________________
+export TOOLS=$(filter-out paw.x, $(wildcard *.x))
+export MODLIST=$(wildcard *.mod)
+export SCRIPTS=$(wildcard *.sh)
+
+# $(info TOOLS=$(TOOLS))
+# $(info MODLIST=$(MODLIST))
+
+#-------------------------------------------------------------------------------
+#-----------------------construct name of executable----------------------------
+#-------------------------------------------------------------------------------
+ifeq ($(PARALLEL),true) 
+  export PP=ppaw
+else ifeq ($(PARALLEL),false) 
+  export PP=paw
+else
+  $(error "PARALLEL=$(PARALLEL) is neither true nor false")
+endif
+#__ patsubst replaces paw_% by $(PP)_% 
+export PTOOLS=$(patsubst paw_%,$(PP)_%,$(TOOLS))
+# $(info TOOLS=$(TOOLS))
+# $(info PTOOLS=$(PTOOLS))
+
+
+ifneq ($(SUFFIX),)
+  export PAWX=$(PP)_$(SUFFIX).x
+else
+  export PAWX=$(PP).x
+endif
+
+ifeq ( $(VERBOSE),true)
+  $(info PARALLEL=$(PARALLEL))
+  $(info PAWX=$(PAWX))
+endif
+
+################################################################################
+##                      installation                                          ##
+################################################################################
+.PHONY: default
+default: all
+
+.PHONY: all
+all: executable tools modules library scripts
+
+#___install executable__________________________________________________________
+.PHONY: executable
+executable : $(BINDIR)/$(PAWX) $(basename $(BINDIR)/$(PAWX))
+
+${BINDIR}/$(PAWX): paw.x
+	cp $< $@
+
+#___install tools_______________________________________________________________
+.PHONY: tools
+tools : $(addprefix $(BINDIR)/, $(PTOOLS)) \
+        $(basename $(addprefix $(BINDIR)/, $(PTOOLS))) 
+
+#__this (two colons) is a static pattern rule of gmake.
+$(addprefix $(BINDIR)/, $(PTOOLS)) : $(BINDIR)/$(PP)_%.x : paw_%.x
+	cp $< $@
+
+#___install scripts_____________________________________________________________
+.PHONY: scripts
+scripts: $(addprefix $(BINDIR)/, $(SCRIPTS)) \
+         $(basename $(addprefix $(BINDIR)/, $(SCRIPTS)))
+
+$(addprefix $(BINDIR)/, $(wildcard *.sh)): $(BINDIR)/% : $(basename %)
+	cp $< $@
+
+#___install library_____________________________________________________________
+.PHONY: library
+library: $(BINDIR)/libpaw.a $(BINDIR)/libpawfull.a
+$(BINDIR)/libpaw.a: libpaw.a
+	cp $< $@
+
+$(BINDIR)/libpawfull.a: libpawfull.a
+	cp $< $@
+
+#___install module files________________________________________________________
+.PHONY: modules
+modules: $(addprefix $(BINDIR)/include/, $(MODLIST))
+
+$(addprefix $(BINDIR)/include/,$(MODLIST)) : $(BINDIR)/include/%.mod : %.mod
+	cp $< $@
+
+#-------------------------------------------------------------------------------
+#-- set symbolic links to names without extension (.x,.sh)
+#-------------------------------------------------------------------------------
+$(basename $(addprefix ${BINDIR}/, $(PAWX))): % : %.x
+	ln -sf $< $@
+
+$(basename $(addprefix ${BINDIR}/, $(PTOOLS))): % : %.x 
+	ln -sf $< $@
+
+$(basename $(addprefix ${BINDIR}/, $(SCRIPTS))): % : %.sh 
+	ln -sf $< $@
+

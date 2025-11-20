@@ -22,6 +22,10 @@
       INTEGER(4)                  :: ISELECTION
       LOGICAL(4)                  :: TCHK
 !     **************************************************************************
+!     ==========================================================================
+!     == MPE$INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                  ==
+!     ==========================================================================
+      CALL MPE$INIT
 !
 !     ==========================================================================
 !     ==  DEFINE LIST OF SELECTIONS                                           ==
@@ -317,6 +321,7 @@
         END IF
         IF(NFIL.NE.6) CALL FILEHANDLER$CLOSE('DAT')
       ENDDO
+      CALL ERROR$NORMALSTOP()
       STOP
       END
 !
@@ -693,7 +698,17 @@
       CALL LINKEDLIST$SELECT(LL_STP,'SETUPREPORT',1)
       CALL LINKEDLIST$SELECT(LL_STP,'ATOM',1)
       CALL LINKEDLIST$GET(LL_STP,'NB',1,NB)
-      ALLOCATE(PSI(NR,NB))
+ 
+IF(ID.EQ.'UPSI'.OR.ID.EQ.'UPSISM') THEN
+  CALL ERROR$MSG('IDS "UPSI" AND "UPSISM" ARE TEMPORARILY DISABLED')
+  CALL ERROR$MSG('FIX IN PAW_SETUPS REQUIRED')
+  CALL ERROR$MSG('STOPPING')
+  CALL ERROR$CHVAL('ID',ID)
+  CALL ERROR$STOP('WAVEFUNCTIONS')
+END IF
+
+
+     ALLOCATE(PSI(NR,NB))
       DO IB=1,NB
         IF(ID.EQ.'AEPSI') THEN
           CALL LINKEDLIST$GET(LL_STP,'AEPSI',IB,PSI(:,IB))

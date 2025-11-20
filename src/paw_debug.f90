@@ -299,7 +299,7 @@ SUBROUTINE PAW$DEBUG_C8(LEN,OUTPUT,COMMENT)
   END IF
 END SUBROUTINE PAW$DEBUG_C8
 !
-!     ................................................................................
+!     ..........................................................................
       SUBROUTINE DEBUG$ROUND_R8(LEN,VAL,TOL)
       USE MPE_MODULE
       USE DEBUG_MODULE
@@ -307,11 +307,11 @@ END SUBROUTINE PAW$DEBUG_C8
       INTEGER(4),INTENT(IN)    ::  LEN
       REAL(8)   ,INTENT(INOUT) ::  VAL(LEN)
       REAL(8)   ,INTENT(IN)    ::  TOL
-!     **********************************************************************************
+!     **************************************************************************
       VAL(:)=NINT(VAL(:)/TOL)*TOL
       END SUBROUTINE DEBUG$ROUND_R8
 !
-!     ................................................................................
+!     ..........................................................................
       SUBROUTINE DEBUG$WAVEFUNCTIONS()
       USE WAVES_MODULE
       USE DEBUG_MODULE
@@ -334,13 +334,14 @@ END SUBROUTINE PAW$DEBUG_C8
       INTEGER(4)              :: IG
       CHARACTER(64)           :: COMMENT='WAVE FUNCTION PRINTOUT'
       REAL(8)      ,PARAMETER :: TOL=1.D-12
-!     **********************************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
 PRINT*,'ANFANG DEBUG$WAVEFUNCTIONS',THISTASK
   IF(THISTASK.EQ.1) THEN
      OPEN (DUNIT, FILE=TRIM(ADJUSTL(FILENAME)), STATUS="UNKNOWN", &
           &ACCESS="SEQUENTIAL", ACTION="WRITE", POSITION="APPEND")
-     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" )"==============",COMMENT,"==============" 
+     WRITE (UNIT=DUNIT, FMT="(3A)", ADVANCE="YES" ) &
+ &                 "==============",COMMENT,"==============" 
   END IF
       DO IKPT=1,NKPT
         CALL WAVES_SELECTWV(IKPT,1)
@@ -361,7 +362,7 @@ PRINT*,'ANFANG DEBUG$WAVEFUNCTIONS',THISTASK
           CALL PLANEWAVE$SELECT(GSET%ID)
           DO IB=1,NBH
             DO IDIM=1,NDIM
-              PSI1(:,IDIM)=THIS%HPSI(:,IDIM,IB)  !<<<<=================================
+              PSI1(:,IDIM)=THIS%HPSI(:,IDIM,IB)  !<<<<==========================
               DO IG=1,NGL
                 A=REAL(PSI1(IG,IDIM))
                 B=AIMAG(PSI1(IG,IDIM))
@@ -392,7 +393,7 @@ PRINT*,'ENDE DEBUG$WAVEFUNCTIONS',THISTASK
       CALL ERROR$NORMALSTOP
       END SUBROUTINE DEBUG$WAVEFUNCTIONS
 !
-!     .......................................................................................
+!     ..........................................................................
       SUBROUTINE DEBUG$CHKPARACONS_R8A(ID,LEN,VAL)
       USE MPE_MODULE
       IMPLICIT NONE
@@ -403,7 +404,7 @@ PRINT*,'ENDE DEBUG$WAVEFUNCTIONS',THISTASK
       REAL(8)   ,ALLOCATABLE   :: VALARR(:,:)
       INTEGER(4)               :: ITASK
       INTEGER(4)               :: ISVARARR(1),ISVAR
-!     =========================================================================================
+!     ==========================================================================
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ALLOCATE(VALARR(LEN,NTASKS))
       VALARR(:,1)=VAL(:)

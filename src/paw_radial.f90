@@ -1563,7 +1563,7 @@ REAL(8)                           :: R1
 REAL(8)                           :: DEX
 INTEGER(4)                        :: NR
 REAL(8)                           :: XEXP
-REAL(8)   ,PARAMETER              :: RMIN=1.D-8  ! OFFSET OF INNERMOST POINT 
+REAL(8)   ,PARAMETER              :: RMIN=1.D-9  ! OFFSET OF INNERMOST POINT 
                                                  !TO AVOID DIVIDE BY ZERO
 END MODULE SHLOGRADIAL_MODULE
 !

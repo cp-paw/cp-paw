@@ -1462,9 +1462,9 @@ END MODULE DYNOCC_MODULE
        CHARACTER(32)           :: FORMAT
 !      *****************************************************************
        IF(ID.EQ.'EIG') THEN
-         FORMAT='("EIG",I3,":",10F8.3)'
+         FORMAT='("EIG",I4,":",10F8.3)'
        ELSE IF(ID.EQ.'OCC') THEN
-         FORMAT='("OCC",I3,":",10F8.3)'
+         FORMAT='("OCC",I4,":",10F8.3)'
        ELSE
           CALL ERROR$MSG('ID NOT RECOGNIZED')
           CALL ERROR$STOP('DYNOCC_PREIG')

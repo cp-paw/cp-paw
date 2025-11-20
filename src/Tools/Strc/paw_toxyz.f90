@@ -36,6 +36,11 @@
       LOGICAL(4)                  :: TFORMAT=.FALSE.
       REAL(8)                     :: CELLDISTANCE,DIST
 !     ******************************************************************
+!     ==========================================================================
+!     == MPE$ INIT MUST BE CALLED ALSO FOR NON-PARALLEL CODES                 ==
+!     ==========================================================================
+      CALL MPE$INIT
+
       CALL LINKEDLIST$NEW(LL_STRC)
 !
 !     ==================================================================
@@ -283,6 +288,8 @@
       IF(PAWOK.AND.DIST.LE.6.D0) WRITE(*,*) ' THE STRC FILE IS OK FOR A PAW SIMULATION &
            &BUT THE CELL IS TOO SMALL FOR ISOLTED MOLECULES'
       IF(.NOT.PAWOK) WRITE(*,*) ' THE STRC FILE CONTAIONS ERRORS - A PAW SIMULATION WILL NOT WORK'
+      CALL ERROR$NORMALSTOP()
+      STOP
       END PROGRAM STRC2XYZ
 !
 !     ..................................................................
