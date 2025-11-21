@@ -4,11 +4,25 @@
 !     ** THIS TOOL SHALL DIVIDE THE STRUCTURE INTO POLYHEDRA                  **
 !     ** AND REPORT THEIR MAIN PARAMETERS                                     **
 !     **                                                                      **
-!     ** CAUTION: CURRENTLY DEDICATED TO ANALYZE OCTAHEDRA IN MANGANITES      **
+!     ** CAUTION: CURRENTLY DEDICATED TO ANALYZE OCTAHEDRA IN MATERIALS       **
+!     **          ASSUMES THAT OCTAHEDRA ARE ALIGNED ALONG CARTESIAN AXES     **
+!     **          READ THE CODE BEFORE USING IT!                              **
 !     **                                                                      **
-!     ** 1) exctracts cluster of atoms surrounding atoms named 'Mn...'        **
 !     **                                                                      **
+!     ** USES CONTROL FILE .POLYCNTL :                                        **
 !     **                                                                      **
+!     ** !POLYCNTL                                                            **
+!     **   !GENERIC ROT= 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 !END             **
+!     **   !CENTERS                                                           **
+!     **     !ATOM NAME='MN1' !END                                            **
+!     **     !ATOM NAME='MN2' !END                                            **
+!     **   !END                                                               **
+!     ** !END                                                                 **
+!     ** !EOB                                                                 **
+!     **                                                                      **
+!     ** !GENERIC:ROT : ROTATION MATRIX APPLIED TO THE STRUCTURE (OPTIONAL)   **
+!     ** !CENTERS : LIST OF ATOM NAMES AROUND WHICH POLYHEDRA ARE EXTRACTED   **
+!     ** !CENTERS!ATOM:NAME : ATOM NAME OF THE CENTER ATOM                    **
 !     **************************************************************************
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       MODULE READCNTL_MODULE
@@ -722,7 +736,9 @@
       IF(ISVAR.NE.0) THEN
         ROOTNAME=POLYINNAME(1:ISVAR-1)
       ELSE
-        ROOTNAME=' '
+        CALL ERROR$MSG('CONTROL FILE NAME MUST END WITH .POLYCNTL')
+        CALL ERROR$CHVAL('CONTROL FILE NAME=',POLYINNAME)
+        CALL ERROR$STOP('INITIALIZEFILEHANDLER')
       END IF
       CALL FILEHANDLER$SETROOT(ROOTNAME)
       CALL STANDARDFILES
