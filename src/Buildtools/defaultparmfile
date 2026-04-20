@@ -39,6 +39,7 @@ export LIBS=
 #____________________________-D will be prepended_______________________________
 #____________________________variable for parallel will be added________________
 # CPPVAR_NOLIBXC (do not link LIBXC)
+# CPPVAR_LIBXC_V7 (LibXC >= 7.0.0 detected, use new module structure)
 # CPPVAR_FEAST, CPPVAR_JADAMILU #
 # CPPVAR_SLEPC  (#INCLUDE <FINCLUDE/SLEPCEPSDEF.H>)
 # -C do not discard comments
@@ -238,12 +239,22 @@ if [[ -n $(which pkg-config) ]] ; then
            INCLUDES="${INCLUDES} $Y"
           ;; 
          *libxc*)
+           # Always include xc_f03_lib_m.mod
            Y=$(pkg-config --print-errors \
                           --variable=includedir $X)/xc_f03_lib_m.mod
            INCLUDES="$INCLUDES $Y"
-           Y=$(pkg-config --print-errors \
-                          --variable=includedir $X)/xc_f03_funcs_m.mod
-           INCLUDES="$INCLUDES $Y"
+           
+           # Check LibXC version for xc_f03_funcs_m.mod availability
+           LIBXC_VERSION_CHECK=$(pkg-config --modversion libxc 2>/dev/null)
+           if [[ -n $LIBXC_VERSION_CHECK ]] ; then
+             LIBXC_MAJOR_CHECK=$(echo $LIBXC_VERSION_CHECK | cut -d. -f1)
+             # Only include xc_f03_funcs_m.mod for LibXC >= 7.0.0
+             if [[ $LIBXC_MAJOR_CHECK -gt 6 ]] ; then
+               Y=$(pkg-config --print-errors \
+                              --variable=includedir $X)/xc_f03_funcs_m.mod
+               INCLUDES="$INCLUDES $Y"
+             fi
+           fi
            ;;
       esac
 
@@ -269,6 +280,23 @@ fi
 
 if [[ -z $LIB_XC_OK ]] ; then
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_NOLIBXC"
+else
+  # Detect LibXC version for conditional compilation
+  if [[ -n $(which pkg-config) ]] ; then
+    LIBXC_VERSION=$(pkg-config --modversion libxc 2>/dev/null)
+    if [[ -n $LIBXC_VERSION ]] ; then
+      # Compare version with 7.0.0
+      # In LibXC >=7.0.0, some functions moved from xc_f03_lib_m to xc_f03_funcs_m
+      LIBXC_MAJOR=$(echo $LIBXC_VERSION | cut -d. -f1)
+      LIBXC_MINOR=$(echo $LIBXC_VERSION | cut -d. -f2)
+      if [[ $LIBXC_MAJOR -gt 6 ]] || [[ $LIBXC_MAJOR -eq 7 && $LIBXC_MINOR -ge 0 ]] ; then
+        CPPFLAGS="${CPPFLAGS} -DCPPVAR_LIBXC_V7"
+        echo "LibXC version $LIBXC_VERSION detected: Using new module structure (>=7.0.0)"
+      else
+        echo "LibXC version $LIBXC_VERSION detected: Using legacy module structure (<7.0.0)"
+      fi
+    fi
+  fi
 fi
 
 ################################################################################
