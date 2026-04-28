@@ -20,6 +20,8 @@ export NODOC=""  # suppress building documentation except once
 export CPPAW_INSTALL_NVHPC="${CPPAW_INSTALL_NVHPC:-auto}"
 export CPPAW_INSTALL_NVBLAS="${CPPAW_INSTALL_NVBLAS:-auto}"
 export CPPAW_INSTALL_CUFFTW="${CPPAW_INSTALL_CUFFTW:-auto}"
+export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
+export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
 export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
 export CPPAW_INSTALL_JOBS="${CPPAW_INSTALL_JOBS:-16}"
@@ -62,6 +64,15 @@ function has_cufftw {
   for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib \
            /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64 ; do
     if [[ -f ${X}/libcufftw.so && -f ${X}/libcufft.so ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function has_cufft {
+  local X
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib \
+           /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64 ; do
+    if [[ -f ${X}/libcufft.so ]] ; then return 0 ; fi
   done
   return 1
 }
@@ -133,6 +144,10 @@ export NVBLAS_BUILT=false
 export NVBLAS_PROFILE_BUILT=false
 export CUFFTW_BUILT=false
 export CUFFTW_PROFILE_BUILT=false
+export CUFFT_BUILT=false
+export CUFFT_PROFILE_BUILT=false
+export GPU_ACC_BUILT=false
+export GPU_ACC_PROFILE_BUILT=false
 export CUBLAS_ACC_BUILT=false
 export CUBLAS_ACC_PROFILE_BUILT=false
 
@@ -273,6 +288,93 @@ function build_cufftw_choices {
   fi
 }
 
+function build_cufft_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_CUFFT}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      if ! has_cuda || ! has_cufft ; then
+        echo "CUDA/cuFFT not detected; skipping optional nvhpc_cufft builds."
+        return 0
+      fi
+      ;;
+    require|required|yes|true)
+      if ! has_cuda || ! has_cufft ; then
+        echo "error in $0: CPPAW_INSTALL_CUFFT=${CPPAW_INSTALL_CUFFT} but CUDA/cuFFT was not found" >&2
+        exit 1
+      fi
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_CUFFT=${CPPAW_INSTALL_CUFFT}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  for X in nvhpc_cufft_fast nvhpc_cufft_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      CUFFT_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_cufft_profile nvhpc_cufft_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        CUFFT_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
+function build_gpu_acc_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_GPU_ACC}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      ;;
+    require|required|yes|true)
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_GPU_ACC=${CPPAW_INSTALL_GPU_ACC}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  if ! has_cuda || ! has_nvhpc || ! has_cufft ; then
+    if [[ ${REQUIRED} = true ]] ; then
+      echo "error in $0: CPPAW_INSTALL_GPU_ACC=${CPPAW_INSTALL_GPU_ACC} but NVIDIA HPC SDK/CUDA/cuFFT was not found" >&2
+      exit 1
+    fi
+    echo "NVIDIA HPC SDK/CUDA/cuFFT not detected; skipping optional nvhpc_cufft_cublas_acc builds."
+    return 0
+  fi
+
+  for X in nvhpc_cufft_cublas_acc_fast nvhpc_cufft_cublas_acc_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      GPU_ACC_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_cufft_cublas_acc_profile nvhpc_cufft_cublas_acc_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        GPU_ACC_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
 case "${CPPAW_INSTALL_NVHPC}" in
   no|false|0)
     case "${CPPAW_INSTALL_NVBLAS}" in
@@ -284,6 +386,18 @@ case "${CPPAW_INSTALL_NVHPC}" in
     case "${CPPAW_INSTALL_CUFFTW}" in
       require|required|yes|true)
         echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
+    case "${CPPAW_INSTALL_CUFFT}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_CUFFT=${CPPAW_INSTALL_CUFFT} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
+    case "${CPPAW_INSTALL_GPU_ACC}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_GPU_ACC=${CPPAW_INSTALL_GPU_ACC} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
         exit 1
         ;;
     esac
@@ -311,6 +425,8 @@ case "${CPPAW_INSTALL_NVHPC}" in
     fi
     build_nvblas_choices false
     build_cufftw_choices false
+    build_cufft_choices false
+    build_gpu_acc_choices false
     build_cublas_acc_choices false
     ;;
   auto|"")
@@ -331,6 +447,8 @@ case "${CPPAW_INSTALL_NVHPC}" in
       fi
       build_nvblas_choices false
       build_cufftw_choices false
+      build_cufft_choices false
+      build_gpu_acc_choices false
       build_cublas_acc_choices false
     else
       case "${CPPAW_INSTALL_NVBLAS}" in
@@ -345,6 +463,18 @@ case "${CPPAW_INSTALL_NVHPC}" in
       case "${CPPAW_INSTALL_CUFFTW}" in
         require|required|yes|true)
           echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+      case "${CPPAW_INSTALL_CUFFT}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_CUFFT=${CPPAW_INSTALL_CUFFT} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+      case "${CPPAW_INSTALL_GPU_ACC}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_GPU_ACC=${CPPAW_INSTALL_GPU_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
           exit 1
           ;;
       esac
@@ -392,6 +522,18 @@ if [[ ${CUFFTW_BUILT} = true ]] ; then
 fi
 if [[ ${CUFFTW_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cufftw_profile:\${PAWDIR}/bin/nvhpc_cufftw_profile_parallel:\${PATH}"
+fi
+if [[ ${CUFFT_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufft_fast:\${PAWDIR}/bin/nvhpc_cufft_fast_parallel:\${PATH}"
+fi
+if [[ ${CUFFT_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufft_profile:\${PAWDIR}/bin/nvhpc_cufft_profile_parallel:\${PATH}"
+fi
+if [[ ${GPU_ACC_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufft_cublas_acc_fast:\${PAWDIR}/bin/nvhpc_cufft_cublas_acc_fast_parallel:\${PATH}"
+fi
+if [[ ${GPU_ACC_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufft_cublas_acc_profile:\${PAWDIR}/bin/nvhpc_cufft_cublas_acc_profile_parallel:\${PATH}"
 fi
 if [[ ${CUBLAS_ACC_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cublas_acc_fast:\${PAWDIR}/bin/nvhpc_cublas_acc_fast_parallel:\${PATH}"

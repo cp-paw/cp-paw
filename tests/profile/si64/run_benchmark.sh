@@ -43,7 +43,10 @@ MPIRUN=${MPIRUN:-$(default_mpirun)}
 serial_exe() {
   case "$1" in
     nvpl) echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
+    nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile/paw_nvhpc_nvblas_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
+    cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" ;;
+    gpu*) echo "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac
@@ -52,19 +55,29 @@ serial_exe() {
 parallel_exe() {
   case "$1" in
     nvpl) echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
+    nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
+    cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" ;;
+    gpu*) echo "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile_parallel/ppaw_nvhpc_cufft_cublas_acc_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac
 }
 
 run_command() {
-  local exe=$1
+  local case_name=$1
+  local exe=$2
+  local cmd
   if [[ "${RANKS}" -gt 1 ]]; then
     # shellcheck disable=SC2086
-    echo "${MPIRUN} ${MPI_ARGS} -np ${RANKS} ${exe} ${TEST}.cntl"
+    cmd="${MPIRUN} ${MPI_ARGS} -np ${RANKS} ${exe} ${TEST}.cntl"
   else
-    echo "${exe} ${TEST}.cntl"
+    cmd="${exe} ${TEST}.cntl"
+  fi
+  if [[ "${case_name}" = nvblas ]]; then
+    echo "$(dirname "${exe}")/paw_nvblas.sh ${cmd}"
+  else
+    echo "${cmd}"
   fi
 }
 
@@ -73,6 +86,13 @@ case_env() {
     cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     cublas_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
+    cufft) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}" ;;
+    cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
+    gpu) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
+    gpu_conservative) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
+    gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
+    gpu_no_cublas) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC=0" ;;
+    gpu_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0" ;;
     *) echo "" ;;
   esac
 }
@@ -110,7 +130,7 @@ for case_name in ${CASES}; do
         echo "env=${env_line}"
         echo "start=$(date -Is)"
       } > run.env
-      cmd=$(run_command "${exe}")
+      cmd=$(run_command "${case_name}" "${exe}")
       echo "running ${case_name} repeat ${repeat}: ${cmd}"
       if [[ -n "${env_line}" ]]; then
         # shellcheck disable=SC2086

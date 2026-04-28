@@ -2671,6 +2671,9 @@
 !     **      FFTW IS NOT AVAILABLE                                           **
 !     **                                                                      **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_FFTC8_COPY
+#ENDIF
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: DIR !'GTOR' OR 'RTOG'
       INTEGER(4)  ,INTENT(IN) :: LEN
@@ -2682,9 +2685,16 @@
       REAL(8)                  :: ACCEL_T1
       REAL(8)                  :: ACCEL_N
 #ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      LOGICAL(4)               :: ACCEL_CUFFT_USED
+#ENDIF
 !     **************************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      CALL CPPAW_CUFFT_ACC_FFTC8_COPY(DIR,LEN,NFFT,X,Y,ACCEL_CUFFT_USED)
+      IF(.NOT.ACCEL_CUFFT_USED) THEN
 #ENDIF
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
@@ -2695,13 +2705,27 @@
 #ELSE
       CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
 #ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       ACCEL_N=REAL(MAX(LEN,1),KIND=8)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      IF(ACCEL_CUFFT_USED) THEN
+        CALL ACCELPROFILE$ADD('CUFFT1D_C8' &
+     &   ,INT(LEN,KIND=8),INT(NFFT,KIND=8),0_8,0_8 &
+     &   ,5.D0*REAL(NFFT,KIND=8)*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0) &
+     &   ,32.D0*REAL(LEN,KIND=8)*REAL(NFFT,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
       CALL ACCELPROFILE$ADD('FFT1D_C8' &
      & ,INT(LEN,KIND=8),INT(NFFT,KIND=8),0_8,0_8 &
      & ,5.D0*REAL(NFFT,KIND=8)*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0) &
      & ,32.D0*REAL(LEN,KIND=8)*REAL(NFFT,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #ENDIF
 
       RETURN

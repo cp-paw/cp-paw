@@ -50,6 +50,7 @@ export LIBLIST=" \
         paw_cell \
         paw_pdos \
         paw_accel_cublas \
+        paw_accel_cufft \
         paw_library \
         paw_polynom \
         paw_lmtobasics \

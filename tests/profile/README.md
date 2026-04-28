@@ -40,6 +40,33 @@ PAWX="mpirun -np 4 ../../../bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_
 make all
 ```
 
+To test the experimental native cuFFT/OpenACC path for batched 1-D complex FFTs,
+build an `nvhpc_cufft_*` target. This uses native cuFFT for `LIB$FFTC8` when the
+runtime threshold allows it, but keeps NVPL FFTW as the CPU fallback for the rest
+of CP-PAW's FFT work:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_profile_parallel
+cd tests/profile/si64
+PAWX="mpirun -np 4 ../../../bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
+make all
+```
+
+Set `CPPAW_CUFFT_ACC=0` to run the same binary through the CPU/NVPL fallback, or
+set `CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` to offload only larger batched FFT
+calls.
+
+To profile native cuFFT and explicit cuBLAS together on one GPU, build a combined
+`nvhpc_cufft_cublas_acc_*` target. This is the preferred GPU-vs-CPU comparison
+target because the same binary can selectively disable either accelerator path:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile
+cd tests/profile/si64
+NSTEPS=1 RANKS=1 CASES="nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=8 CASES="nvpl" ./run_benchmark.sh
+```
+
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
 `CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs. Set
@@ -92,4 +119,5 @@ The top-level run directory is written to `runs/latest_overnight`; the combined
 benchmark table is `combined_benchmark.tsv`.
 
 Set `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite to the overnight
-run.
+run, `RUN_CUFFT=yes` to add a short native cuFFT comparison, or
+`RUN_GPU_ACC=yes` to compare one-rank GPU against eight-rank CPU/NVPL.
