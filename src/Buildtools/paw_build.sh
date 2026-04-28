@@ -290,13 +290,13 @@ fi
 #-------------------------------------------------------------------------------
 # LIBS
 #-------------------------------------------------------------------------------
-if [[ -z $(echo ${LIBS} | grep -Eo "fftw3") ]] ; then
+if [[ -z $(echo "${LIBS} ${LDFLAGS}" | grep -Eo "(fftw3|nvpl_fftw|Mnvpl[^ ]*fft)") ]] ; then
   echo "--------------------------------------------------------------------">&2
   echo "error in $0: no fftw library specified on LIBS"                      >&2
   ERROR=true
 fi
 if [[ -z $(echo ${LIBS} | grep -Eo "mpi") ]] ; then
-  if [[ PARALLEL = true ]] ; then
+  if [[ $PARALLEL = true ]] ; then
     if [[ -z $(echo ${FC} | grep -Eo "mpi") ]] ; then
       echo "----------------------------------------------------------------">&2
       echo "error in $0: no mpi library specified in parallel mode"          >&2
@@ -650,4 +650,3 @@ echo "-------------------------------------------------------------------------"
 # ls ${BINDIR}
 # echo "files in ${BINDIR}/include:"
 # ls ${BINDIR}/include
-

@@ -17,29 +17,281 @@ export THISDIR=$(pwd)
 #  
 #-------------------------------------------------------------------------------
 export NODOC=""  # suppress building documentation except once
+export CPPAW_INSTALL_NVHPC="${CPPAW_INSTALL_NVHPC:-auto}"
+export CPPAW_INSTALL_NVBLAS="${CPPAW_INSTALL_NVBLAS:-auto}"
+export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
+export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
 
-#  list of choices in the parmfile to be selected
-export LIST="dbg fast fast_parallel"
-for X in ${LIST} ; do
-  echo "======================== building $X  ================================="
-  src/Buildtools/paw_build.sh -v -j10 -c ${X} ${NODOC} 1>out_$X 2>err_${X}
+function has_cuda {
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 ; then
+    return 0
+  fi
+  if command -v nvcc >/dev/null 2>&1 ; then
+    return 0
+  fi
+  for X in /usr/local/cuda /usr/local/cuda-* /opt/nvidia/hpc_sdk/Linux_*/*/cuda/* ; do
+    if [[ -x ${X}/bin/nvcc ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function has_nvhpc {
+  local X
+  if command -v nvfortran >/dev/null 2>&1 ; then
+    return 0
+  fi
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/compilers/bin/nvfortran ; do
+    if [[ -x ${X} ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function has_nvblas {
+  local X
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib/libnvblas.so \
+           /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64/libnvblas.so ; do
+    if [[ -f ${X} ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function build_choice {
+  local CHOICE=$1
+  local REQUIRED=$2
+  local TOOLCHAIN=$3
+
+  LAST_BUILD_OK=false
+  echo "======================== building ${CHOICE}  ================================="
+  if [[ -n ${TOOLCHAIN} ]] ; then
+    CPPAW_TOOLCHAIN=${TOOLCHAIN} src/Buildtools/paw_build.sh \
+      -v -j10 -c ${CHOICE} ${NODOC} 1>out_${CHOICE} 2>err_${CHOICE}
+  else
+    src/Buildtools/paw_build.sh -v -j10 -c ${CHOICE} ${NODOC} \
+      1>out_${CHOICE} 2>err_${CHOICE}
+  fi
   export RC=$?
   export NODOC="-z"  # suppress building documentation again
   if [[ $RC -ne 0 ]] ; then
+    if [[ ${REQUIRED} = false ]] ; then
+      echo "warning in $0: optional build ${CHOICE} failed; see err_${CHOICE}" >&2
+      return 0
+    fi
     echo "--------------------installation failed---------------------------">&2
-    echo -e "error in $0: paw_build failed for choice $X. error file below:" >&2
+    echo -e "error in $0: paw_build failed for choice ${CHOICE}. error file below:" >&2
     echo ""
-    cat err_${X}                                                             >&2
+    cat err_${CHOICE}                                                        >&2
     echo ""
-    echo -e "inspect file out_$X for further information"
+    echo -e "inspect file out_${CHOICE} for further information"
     echo "shutting down $0"                                                  >&2
     echo "------------------------------------------------------------------">&2
     echo "--------------------error exit------------------------------------">&2
     echo "------------------------------------------------------------------">&2
     exit 1
   fi
-  echo "======================== building $X completed ========================"
+  LAST_BUILD_OK=true
+  echo "======================== building ${CHOICE} completed ========================"
+  return 0
+}
+
+#  list of choices in the parmfile to be selected
+export LIST="dbg fast fast_parallel"
+for X in ${LIST} ; do
+  build_choice "${X}" true ""
 done
+
+export PROFILE_BUILT=false
+case "${CPPAW_INSTALL_PROFILE}" in
+  no|false|0)
+    ;;
+  yes|true|require|required)
+    for X in profile profile_parallel ; do
+      build_choice "${X}" true ""
+      PROFILE_BUILT=true
+    done
+    ;;
+  *)
+    echo "error in $0: invalid CPPAW_INSTALL_PROFILE=${CPPAW_INSTALL_PROFILE}" >&2
+    echo "allowed are no, yes" >&2
+    exit 1
+    ;;
+esac
+
+export NVHPC_BUILT=false
+export NVHPC_PROFILE_BUILT=false
+export NVBLAS_BUILT=false
+export NVBLAS_PROFILE_BUILT=false
+export CUBLAS_ACC_BUILT=false
+export CUBLAS_ACC_PROFILE_BUILT=false
+
+function profile_requested {
+  [[ ${CPPAW_INSTALL_PROFILE} = yes \
+     || ${CPPAW_INSTALL_PROFILE} = true \
+     || ${CPPAW_INSTALL_PROFILE} = require \
+     || ${CPPAW_INSTALL_PROFILE} = required ]]
+}
+
+function build_nvblas_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_NVBLAS}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      if ! has_cuda || ! has_nvblas ; then
+        echo "CUDA/NVBLAS not detected; skipping optional nvhpc_nvblas builds."
+        return 0
+      fi
+      ;;
+    require|required|yes|true)
+      if ! has_cuda || ! has_nvblas ; then
+        echo "error in $0: CPPAW_INSTALL_NVBLAS=${CPPAW_INSTALL_NVBLAS} but NVBLAS was not found" >&2
+        exit 1
+      fi
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_NVBLAS=${CPPAW_INSTALL_NVBLAS}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  for X in nvhpc_nvblas_fast nvhpc_nvblas_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      NVBLAS_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_nvblas_profile nvhpc_nvblas_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        NVBLAS_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
+function build_cublas_acc_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_CUBLAS_ACC}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      ;;
+    require|required|yes|true)
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_CUBLAS_ACC=${CPPAW_INSTALL_CUBLAS_ACC}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  if ! has_cuda || ! has_nvhpc ; then
+    if [[ ${REQUIRED} = true ]] ; then
+      echo "error in $0: CPPAW_INSTALL_CUBLAS_ACC=${CPPAW_INSTALL_CUBLAS_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
+      exit 1
+    fi
+    echo "NVIDIA HPC SDK/CUDA not detected; skipping optional nvhpc_cublas_acc builds."
+    return 0
+  fi
+
+  for X in nvhpc_cublas_acc_fast nvhpc_cublas_acc_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      CUBLAS_ACC_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_cublas_acc_profile nvhpc_cublas_acc_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        CUBLAS_ACC_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
+case "${CPPAW_INSTALL_NVHPC}" in
+  no|false|0)
+    case "${CPPAW_INSTALL_NVBLAS}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_NVBLAS=${CPPAW_INSTALL_NVBLAS} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
+    case "${CPPAW_INSTALL_CUBLAS_ACC}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_CUBLAS_ACC=${CPPAW_INSTALL_CUBLAS_ACC} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  require|required|yes|true)
+    if ! has_nvhpc ; then
+      echo "error in $0: CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC} but NVIDIA HPC SDK was not found" >&2
+      exit 1
+    fi
+    for X in nvhpc_fast nvhpc_fast_parallel ; do
+      build_choice "${X}" true "nvhpc"
+      NVHPC_BUILT=true
+    done
+    if profile_requested ; then
+      for X in nvhpc_profile nvhpc_profile_parallel ; do
+        build_choice "${X}" true "nvhpc"
+        NVHPC_PROFILE_BUILT=true
+      done
+    fi
+    build_nvblas_choices false
+    build_cublas_acc_choices false
+    ;;
+  auto|"")
+    if has_nvhpc ; then
+      for X in nvhpc_fast nvhpc_fast_parallel ; do
+        build_choice "${X}" false "nvhpc"
+        if [[ ${LAST_BUILD_OK} = true ]] ; then
+          NVHPC_BUILT=true
+        fi
+      done
+      if profile_requested ; then
+        for X in nvhpc_profile nvhpc_profile_parallel ; do
+          build_choice "${X}" false "nvhpc"
+          if [[ ${LAST_BUILD_OK} = true ]] ; then
+            NVHPC_PROFILE_BUILT=true
+          fi
+        done
+      fi
+      build_nvblas_choices false
+      build_cublas_acc_choices false
+    else
+      case "${CPPAW_INSTALL_NVBLAS}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_NVBLAS=${CPPAW_INSTALL_NVBLAS} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+        *)
+          echo "NVIDIA HPC SDK/CUDA not detected; skipping optional nvhpc builds."
+          ;;
+      esac
+      case "${CPPAW_INSTALL_CUBLAS_ACC}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_CUBLAS_ACC=${CPPAW_INSTALL_CUBLAS_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+    fi
+    ;;
+  *)
+    echo "error in $0: invalid CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+    echo "allowed are auto, no, require" >&2
+    exit 1
+    ;;
+esac
 #
 #
 echo " "
@@ -50,6 +302,27 @@ echo "ensure that the following lines are in your profile (e.g. ~/.profile, ~/.b
 echo " "
 echo "export PAWDIR=$(pwd)"
 echo "export PATH=\${PAWDIR}/bin/fast:\${PAWDIR}/bin/fast_parallel:\${PAWDIR}/bin/dbg:\${PATH}"
+if [[ ${PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/profile:\${PAWDIR}/bin/profile_parallel:\${PATH}"
+fi
+if [[ ${NVHPC_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_fast:\${PAWDIR}/bin/nvhpc_fast_parallel:\${PATH}"
+fi
+if [[ ${NVHPC_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_profile:\${PAWDIR}/bin/nvhpc_profile_parallel:\${PATH}"
+fi
+if [[ ${NVBLAS_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_nvblas_fast:\${PAWDIR}/bin/nvhpc_nvblas_fast_parallel:\${PATH}"
+fi
+if [[ ${NVBLAS_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_nvblas_profile:\${PAWDIR}/bin/nvhpc_nvblas_profile_parallel:\${PATH}"
+fi
+if [[ ${CUBLAS_ACC_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cublas_acc_fast:\${PAWDIR}/bin/nvhpc_cublas_acc_fast_parallel:\${PATH}"
+fi
+if [[ ${CUBLAS_ACC_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cublas_acc_profile:\${PAWDIR}/bin/nvhpc_cublas_acc_profile_parallel:\${PATH}"
+fi
 echo "-------------------------------------------------------------------------"
 echo " "
 #
