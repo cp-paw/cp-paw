@@ -22,12 +22,12 @@ not apply to the present implementation.)
 
 ## Requirements
 
-- fortran compiler (e.g. gfortran, ifort; NVIDIA HPC SDK/nvfortran is supported on CUDA systems)
+- fortran compiler (e.g. gfortran, ifort; NVIDIA HPC SDK/nvfortran is supported)
 - pkg-config, latexmk, GNU Make (version 4.3 or later)
 - bash, cpp, ar
 - tex (latex) distribution (e.g. TeX Live) 
 - LAPACK, BLAS, FFTW3, MPI (optional), LIBXC (optional)
-- optional NVIDIA HPC SDK stack. When `nvfortran` is detected, `./paw_install` also tries `nvhpc_fast` and `nvhpc_fast_parallel` builds using NVPL when available and HPC-X MPI for parallel targets. If CUDA plus NVBLAS are available, optional `nvhpc_nvblas_*` builds link the existing BLAS-3 calls through NVIDIA's GPU BLAS interposition layer. The experimental `nvhpc_cublas_acc_*` builds require CUDA and use OpenACC data regions plus cuBLAS-v2 for selected large complex BLAS-3 kernels. Set `CPPAW_INSTALL_NVHPC=no` to skip NVIDIA builds, `CPPAW_INSTALL_NVHPC=require` to make them mandatory, `CPPAW_INSTALL_NVBLAS=no` to skip NVBLAS variants, or `CPPAW_INSTALL_CUBLAS_ACC=no` to skip cuBLAS/OpenACC variants.
+- optional NVIDIA HPC SDK stack. When `nvfortran` is detected, `./paw_install` also tries `nvhpc_fast` and `nvhpc_fast_parallel` builds using NVPL when available and HPC-X MPI for parallel targets. If CUDA plus NVBLAS are available, optional `nvhpc_nvblas_*` builds link the existing BLAS-3 calls through NVIDIA's GPU BLAS interposition layer. If CUDA plus cuFFTW/cuFFT are available, optional `nvhpc_cufftw_*` builds route CP-PAW's existing FFTW3 calls through cuFFT. The experimental `nvhpc_cublas_acc_*` builds require CUDA and use OpenACC data regions plus cuBLAS-v2 for selected large complex BLAS-3 kernels. Set `CPPAW_INSTALL_NVHPC=no` to skip NVIDIA builds, `CPPAW_INSTALL_NVHPC=require` to make them mandatory, `CPPAW_INSTALL_NVBLAS=no` to skip NVBLAS variants, `CPPAW_INSTALL_CUFFTW=no` to skip cuFFTW variants, or `CPPAW_INSTALL_CUBLAS_ACC=no` to skip cuBLAS/OpenACC variants.
 - tools: xmgrace, gnuplot, avogadro1
 
 ## Installation
@@ -47,13 +47,15 @@ not apply to the present implementation.)
    ```
    CPPAW_INSTALL_NVHPC=require ./paw_install
    ```
-   to make those builds mandatory. CUDA-dependent NVBLAS and cuBLAS/OpenACC variants are only attempted when CUDA is detected, unless requested explicitly with `CPPAW_INSTALL_NVBLAS=require` or `CPPAW_INSTALL_CUBLAS_ACC=require`.
+   to make those builds mandatory. CUDA-dependent NVBLAS, cuFFTW and cuBLAS/OpenACC variants are only attempted when CUDA is detected, unless requested explicitly with `CPPAW_INSTALL_NVBLAS=require`, `CPPAW_INSTALL_CUFFTW=require` or `CPPAW_INSTALL_CUBLAS_ACC=require`.
    The NVIDIA builds can also be selected directly:
    ```
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_fast_parallel
    ```
@@ -65,6 +67,8 @@ not apply to the present implementation.)
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile_parallel
    ```
@@ -73,6 +77,8 @@ not apply to the present implementation.)
    ```
    CPPAW_INSTALL_PROFILE=yes ./paw_install
    ```
+   The installer compiles with `CPPAW_INSTALL_JOBS=16` by default; set another
+   value if your build host needs a smaller or larger parallel make.
    A reusable 64-atom periodic silicon profiling case is available under
    `tests/profile/si64`. It is intentionally not part of the default test
    suite:
@@ -89,6 +95,12 @@ not apply to the present implementation.)
    PATH="../../../bin/nvhpc_nvblas_profile_parallel:${PATH}" \
    PAWX="mpirun -np 4 ../../../bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_profile.x" \
    NVBLAS=yes make all
+   ```
+   To try cuFFTW/cuFFT for CP-PAW's existing FFTW3 calls:
+   ```
+   cd tests/profile/si64
+   PAWX="mpirun -np 4 ../../../bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" \
+   make all
    ```
    For explicit cuBLAS/OpenACC profiling without NVBLAS interposition:
    ```

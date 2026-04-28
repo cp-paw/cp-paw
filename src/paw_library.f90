@@ -2953,10 +2953,16 @@
       INTEGER(4),PARAMETER    :: NPX=100 ! #(DIFFERENT FFT PLANS)
       TYPE(C_PTR),SAVE        :: PLANS2(NPX),PLAN
       INTEGER(4),SAVE         :: PLANS1(NPX)
+      INTEGER(4)              :: PLANFLAGS
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
       INCLUDE 'FFTW3.F03'
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFTW)
+      PLANFLAGS=FFTW_ESTIMATE
+#ELSE
+      PLANFLAGS=IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED))
+#ENDIF
       IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
         IF (DIR.EQ.'GTOR') THEN
           ISIGN=1
@@ -2986,10 +2992,10 @@
           IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
           IF(DIR.EQ.'RTOG') THEN
             PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_FORWARD &
-     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+     &                ,PLANFLAGS)
           ELSE IF (DIR.EQ.'GTOR') THEN
             PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD &
-     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+     &                ,PLANFLAGS)
           ELSE
             CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
             CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')

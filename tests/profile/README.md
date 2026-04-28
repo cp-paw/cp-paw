@@ -28,6 +28,18 @@ PAWX="mpirun -np 4 ../../../bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_
 NVBLAS=yes make all
 ```
 
+To test cuFFTW/cuFFT for the existing FFTW3 calls, build an `nvhpc_cufftw_*`
+target. This keeps CP-PAW's current FFT decomposition and uses cuFFT via the
+FFTW3-compatible wrapper. It is a correctness and profiling probe, not the
+default overnight path:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile_parallel
+cd tests/profile/si64
+PAWX="mpirun -np 4 ../../../bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" \
+make all
+```
+
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
 `CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs. Set
@@ -78,3 +90,6 @@ cd tests/profile/si64
 
 The top-level run directory is written to `runs/latest_overnight`; the combined
 benchmark table is `combined_benchmark.tsv`.
+
+Set `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite to the overnight
+run.

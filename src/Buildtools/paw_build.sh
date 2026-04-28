@@ -290,7 +290,7 @@ fi
 #-------------------------------------------------------------------------------
 # LIBS
 #-------------------------------------------------------------------------------
-if [[ -z $(echo "${LIBS} ${LDFLAGS}" | grep -Eo "(fftw3|nvpl_fftw|Mnvpl[^ ]*fft)") ]] ; then
+if [[ -z $(echo "${LIBS} ${LDFLAGS}" | grep -Eo "(fftw3|nvpl_fftw|cufftw|Mnvpl[^ ]*fft)") ]] ; then
   echo "--------------------------------------------------------------------">&2
   echo "error in $0: no fftw library specified on LIBS"                      >&2
   ERROR=true

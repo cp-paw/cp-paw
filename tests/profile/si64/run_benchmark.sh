@@ -43,6 +43,7 @@ MPIRUN=${MPIRUN:-$(default_mpirun)}
 serial_exe() {
   case "$1" in
     nvpl) echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
+    cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac
@@ -51,6 +52,7 @@ serial_exe() {
 parallel_exe() {
   case "$1" in
     nvpl) echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
+    cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac

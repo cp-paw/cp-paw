@@ -10,10 +10,12 @@ LONG_NSTEPS=${LONG_NSTEPS:-200}
 SCALING_NSTEPS=${SCALING_NSTEPS:-100}
 THRESHOLD_NSTEPS=${THRESHOLD_NSTEPS:-100}
 NSYS_NSTEPS=${NSYS_NSTEPS:-5}
+CUFFTW_NSTEPS=${CUFFTW_NSTEPS:-1}
 LONG_REPEATS=${LONG_REPEATS:-3}
 SCALING_REPEATS=${SCALING_REPEATS:-2}
 THRESHOLD_REPEATS=${THRESHOLD_REPEATS:-2}
 NSYS_RANKS=${NSYS_RANKS:-4}
+RUN_CUFFTW=${RUN_CUFFTW:-no}
 THRESHOLDS=${THRESHOLDS:-"1e6 3e6 1e7 3e7 1e8"}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
@@ -152,6 +154,13 @@ for ranks in 1 2 4; do
   run_suite "scaling_${SCALING_NSTEPS}steps_${ranks}ranks" "${SCALING_NSTEPS}" "${ranks}" \
     "${SCALING_REPEATS}" "nvpl cublas"
 done
+
+case "${RUN_CUFFTW}" in
+  yes|true|1)
+    run_suite "cufftw_${CUFFTW_NSTEPS}steps_1rank" "${CUFFTW_NSTEPS}" 1 1 \
+      "nvpl cufftw"
+    ;;
+esac
 
 for threshold in ${THRESHOLDS}; do
   safe_threshold=$(label_safe "${threshold}")

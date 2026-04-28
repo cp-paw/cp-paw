@@ -19,8 +19,10 @@ export THISDIR=$(pwd)
 export NODOC=""  # suppress building documentation except once
 export CPPAW_INSTALL_NVHPC="${CPPAW_INSTALL_NVHPC:-auto}"
 export CPPAW_INSTALL_NVBLAS="${CPPAW_INSTALL_NVBLAS:-auto}"
+export CPPAW_INSTALL_CUFFTW="${CPPAW_INSTALL_CUFFTW:-auto}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
 export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
+export CPPAW_INSTALL_JOBS="${CPPAW_INSTALL_JOBS:-16}"
 
 function has_cuda {
   if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1 ; then
@@ -55,6 +57,15 @@ function has_nvblas {
   return 1
 }
 
+function has_cufftw {
+  local X
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib \
+           /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64 ; do
+    if [[ -f ${X}/libcufftw.so && -f ${X}/libcufft.so ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
 function build_choice {
   local CHOICE=$1
   local REQUIRED=$2
@@ -64,9 +75,9 @@ function build_choice {
   echo "======================== building ${CHOICE}  ================================="
   if [[ -n ${TOOLCHAIN} ]] ; then
     CPPAW_TOOLCHAIN=${TOOLCHAIN} src/Buildtools/paw_build.sh \
-      -v -j10 -c ${CHOICE} ${NODOC} 1>out_${CHOICE} 2>err_${CHOICE}
+      -v -j"${CPPAW_INSTALL_JOBS}" -c ${CHOICE} ${NODOC} 1>out_${CHOICE} 2>err_${CHOICE}
   else
-    src/Buildtools/paw_build.sh -v -j10 -c ${CHOICE} ${NODOC} \
+    src/Buildtools/paw_build.sh -v -j"${CPPAW_INSTALL_JOBS}" -c ${CHOICE} ${NODOC} \
       1>out_${CHOICE} 2>err_${CHOICE}
   fi
   export RC=$?
@@ -120,6 +131,8 @@ export NVHPC_BUILT=false
 export NVHPC_PROFILE_BUILT=false
 export NVBLAS_BUILT=false
 export NVBLAS_PROFILE_BUILT=false
+export CUFFTW_BUILT=false
+export CUFFTW_PROFILE_BUILT=false
 export CUBLAS_ACC_BUILT=false
 export CUBLAS_ACC_PROFILE_BUILT=false
 
@@ -217,11 +230,60 @@ function build_cublas_acc_choices {
   fi
 }
 
+function build_cufftw_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_CUFFTW}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      if ! has_cuda || ! has_cufftw ; then
+        echo "CUDA/cuFFTW not detected; skipping optional nvhpc_cufftw builds."
+        return 0
+      fi
+      ;;
+    require|required|yes|true)
+      if ! has_cuda || ! has_cufftw ; then
+        echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but CUDA/cuFFTW was not found" >&2
+        exit 1
+      fi
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  for X in nvhpc_cufftw_fast nvhpc_cufftw_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      CUFFTW_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_cufftw_profile nvhpc_cufftw_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        CUFFTW_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
 case "${CPPAW_INSTALL_NVHPC}" in
   no|false|0)
     case "${CPPAW_INSTALL_NVBLAS}" in
       require|required|yes|true)
         echo "error in $0: CPPAW_INSTALL_NVBLAS=${CPPAW_INSTALL_NVBLAS} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
+    case "${CPPAW_INSTALL_CUFFTW}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
         exit 1
         ;;
     esac
@@ -248,6 +310,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
       done
     fi
     build_nvblas_choices false
+    build_cufftw_choices false
     build_cublas_acc_choices false
     ;;
   auto|"")
@@ -267,6 +330,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
         done
       fi
       build_nvblas_choices false
+      build_cufftw_choices false
       build_cublas_acc_choices false
     else
       case "${CPPAW_INSTALL_NVBLAS}" in
@@ -276,6 +340,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
           ;;
         *)
           echo "NVIDIA HPC SDK/CUDA not detected; skipping optional nvhpc builds."
+          ;;
+      esac
+      case "${CPPAW_INSTALL_CUFFTW}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
           ;;
       esac
       case "${CPPAW_INSTALL_CUBLAS_ACC}" in
@@ -316,6 +386,12 @@ if [[ ${NVBLAS_BUILT} = true ]] ; then
 fi
 if [[ ${NVBLAS_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_nvblas_profile:\${PAWDIR}/bin/nvhpc_nvblas_profile_parallel:\${PATH}"
+fi
+if [[ ${CUFFTW_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufftw_fast:\${PAWDIR}/bin/nvhpc_cufftw_fast_parallel:\${PATH}"
+fi
+if [[ ${CUFFTW_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cufftw_profile:\${PAWDIR}/bin/nvhpc_cufftw_profile_parallel:\${PATH}"
 fi
 if [[ ${CUBLAS_ACC_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cublas_acc_fast:\${PAWDIR}/bin/nvhpc_cublas_acc_fast_parallel:\${PATH}"
