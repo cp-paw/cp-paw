@@ -1665,7 +1665,14 @@
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
       INTEGER(4)            :: LWORK
       INTEGER(4)            :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_NVLAMATH)
+#ELSE
       EXTERNAL ZHEEV
+#ENDIF
 !     ******************************************************************
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
@@ -1678,6 +1685,9 @@
 !!$      END IF
       U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       LWORK=-1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
       LWORK=INT(CWORK(1))
       IF(LWORK.LT.LWMAX) THEN
@@ -1688,6 +1698,12 @@
         CALL ZHEEV('V','L',N,U,N,E,CWORK1,LWORK,RWORK,INFO) !LAPACK
         DEALLOCATE(CWORK1)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEEV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
       IF(INFO.NE.0) THEN
         IF(INFO.LT.0) THEN

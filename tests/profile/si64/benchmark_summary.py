@@ -7,7 +7,13 @@ import sys
 
 
 def profile_totals(run_dir):
-    totals = {"instrumented": 0.0, "blas": 0.0, "fft": 0.0, "mpi": 0.0}
+    totals = {
+        "instrumented": 0.0,
+        "blas": 0.0,
+        "lapack": 0.0,
+        "fft": 0.0,
+        "mpi": 0.0,
+    }
     for path in glob.glob(os.path.join(run_dir, "*_profile*.csv")):
         with open(path, newline="") as handle:
             for row in csv.DictReader(handle):
@@ -18,6 +24,8 @@ def profile_totals(run_dir):
                     totals["mpi"] += seconds
                 elif op.startswith("FFT") or op.startswith("PW_FFT"):
                     totals["fft"] += seconds
+                elif op.startswith("LAPACK"):
+                    totals["lapack"] += seconds
                 elif "GEMM" in op or "HERK" in op or "SYRK" in op:
                     totals["blas"] += seconds
     return totals
@@ -91,6 +99,7 @@ def main(argv):
                 "wall_s": wall_time(run_dir),
                 "rank_s": totals["instrumented"],
                 "blas_s": totals["blas"],
+                "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
                 "mpi_s": totals["mpi"],
                 "energy": final_energy(run_dir),
@@ -111,6 +120,7 @@ def main(argv):
         "wall_s",
         "rank_s",
         "blas_s",
+        "lapack_s",
         "fft_s",
         "mpi_s",
         "energy",

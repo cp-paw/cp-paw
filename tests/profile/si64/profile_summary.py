@@ -10,6 +10,8 @@ def category(op):
         return "MPI alltoall"
     if op.startswith("FFT") or op.startswith("PW_FFT"):
         return "FFT"
+    if op.startswith("LAPACK"):
+        return "LAPACK"
     if "GEMM" in op or "HERK" in op or "SYRK" in op:
         return "BLAS-like"
     return "other"

@@ -27,7 +27,7 @@ not apply to the present implementation.)
 - bash, cpp, ar
 - tex (latex) distribution (e.g. TeX Live) 
 - LAPACK, BLAS, FFTW3, MPI (optional), LIBXC (optional)
-- optional NVIDIA HPC SDK stack. When `nvfortran` is detected, `./paw_install` also tries `nvhpc_fast` and `nvhpc_fast_parallel` builds using NVPL when available and HPC-X MPI for parallel targets. If CUDA plus NVBLAS are available, optional `nvhpc_nvblas_*` builds link the existing BLAS-3 calls through NVIDIA's GPU BLAS interposition layer. If CUDA plus cuFFTW/cuFFT are available, optional `nvhpc_cufftw_*` builds route CP-PAW's existing FFTW3 calls through cuFFT's FFTW3-compatible wrapper. The experimental `nvhpc_cufft_*` builds require CUDA and use native cuFFT/OpenACC for selected batched 1-D complex FFTs while keeping NVPL FFTW as the fallback. The experimental `nvhpc_cublas_acc_*` builds require CUDA and use OpenACC data regions plus cuBLAS-v2 for selected large complex BLAS-3 kernels. The combined `nvhpc_cufft_cublas_acc_*` builds enable both native cuFFT and cuBLAS/OpenACC for one-GPU profiling. Set `CPPAW_INSTALL_NVHPC=no` to skip NVIDIA builds, `CPPAW_INSTALL_NVHPC=require` to make them mandatory, `CPPAW_INSTALL_NVBLAS=no` to skip NVBLAS variants, `CPPAW_INSTALL_CUFFTW=no` to skip cuFFTW variants, `CPPAW_INSTALL_CUFFT=no` to skip native cuFFT variants, `CPPAW_INSTALL_GPU_ACC=no` to skip combined GPU variants, or `CPPAW_INSTALL_CUBLAS_ACC=no` to skip cuBLAS/OpenACC variants.
+- optional NVIDIA HPC SDK stack. When `nvfortran` is detected, `./paw_install` also tries `nvhpc_fast` and `nvhpc_fast_parallel` builds using NVPL when available and HPC-X MPI for parallel targets. If CUDA plus NVBLAS are available, optional `nvhpc_nvblas_*` builds link the existing BLAS-3 calls through NVIDIA's GPU BLAS interposition layer. If CUDA plus NVLAMATH are available, optional `nvhpc_nvlamath_*` builds use NVIDIA's LAPACK/cuSOLVER wrapper path. If CUDA plus cuFFTW/cuFFT are available, optional `nvhpc_cufftw_*` builds route CP-PAW's existing FFTW3 calls through cuFFT's FFTW3-compatible wrapper. The experimental `nvhpc_cufft_*` builds require CUDA and use native cuFFT/OpenACC for selected batched 1-D complex FFTs while keeping NVPL FFTW as the fallback. The experimental `nvhpc_cublas_acc_*` builds require CUDA and use OpenACC data regions plus cuBLAS-v2 for selected large complex BLAS-3 kernels. The combined `nvhpc_cufft_cublas_acc_*` builds enable both native cuFFT and cuBLAS/OpenACC for one-GPU profiling. Set `CPPAW_INSTALL_NVHPC=no` to skip NVIDIA builds, `CPPAW_INSTALL_NVHPC=require` to make them mandatory, `CPPAW_INSTALL_NVBLAS=no` to skip NVBLAS variants, `CPPAW_INSTALL_NVLAMATH=no` to skip NVLAMATH variants, `CPPAW_INSTALL_CUFFTW=no` to skip cuFFTW variants, `CPPAW_INSTALL_CUFFT=no` to skip native cuFFT variants, `CPPAW_INSTALL_GPU_ACC=no` to skip combined GPU variants, or `CPPAW_INSTALL_CUBLAS_ACC=no` to skip cuBLAS/OpenACC variants.
 - tools: xmgrace, gnuplot, avogadro1
 
 ## Installation
@@ -47,13 +47,15 @@ not apply to the present implementation.)
    ```
    CPPAW_INSTALL_NVHPC=require ./paw_install
    ```
-   to make those builds mandatory. CUDA-dependent NVBLAS, cuFFTW, native cuFFT, combined GPU and cuBLAS/OpenACC variants are only attempted when CUDA is detected, unless requested explicitly with `CPPAW_INSTALL_NVBLAS=require`, `CPPAW_INSTALL_CUFFTW=require`, `CPPAW_INSTALL_CUFFT=require`, `CPPAW_INSTALL_GPU_ACC=require` or `CPPAW_INSTALL_CUBLAS_ACC=require`.
+   to make those builds mandatory. CUDA-dependent NVBLAS, NVLAMATH, cuFFTW, native cuFFT, combined GPU and cuBLAS/OpenACC variants are only attempted when CUDA is detected, unless requested explicitly with `CPPAW_INSTALL_NVBLAS=require`, `CPPAW_INSTALL_NVLAMATH=require`, `CPPAW_INSTALL_CUFFTW=require`, `CPPAW_INSTALL_CUFFT=require`, `CPPAW_INSTALL_GPU_ACC=require` or `CPPAW_INSTALL_CUBLAS_ACC=require`.
    The NVIDIA builds can also be selected directly:
    ```
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_fast
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_fast
@@ -71,6 +73,8 @@ not apply to the present implementation.)
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_profile_parallel
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_profile
+   CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufftw_profile_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_profile
@@ -103,6 +107,12 @@ not apply to the present implementation.)
    PATH="../../../bin/nvhpc_nvblas_profile_parallel:${PATH}" \
    PAWX="mpirun -np 4 ../../../bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_profile.x" \
    NVBLAS=yes make all
+   ```
+   To try NVLAMATH's LAPACK/cuSOLVER wrapper path for the existing LAPACK calls:
+   ```
+   cd tests/profile/si64
+   PAWX="../../../bin/nvhpc_nvlamath_profile/paw_nvhpc_nvlamath_profile.x" \
+   make all
    ```
    To try cuFFTW/cuFFT for CP-PAW's existing FFTW3 calls:
    ```

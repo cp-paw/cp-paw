@@ -28,6 +28,18 @@ PAWX="mpirun -np 4 ../../../bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_
 NVBLAS=yes make all
 ```
 
+To test NVIDIA NVLAMATH for the existing LAPACK calls, build an
+`nvhpc_nvlamath_*` target. This enables the NVIDIA HPC SDK LAPACK/cuSOLVER
+wrapper path through `-gpu=nvlamath` and keeps the regular NVPL BLAS/FFTW
+fallbacks for the rest of the build:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvlamath_profile
+cd tests/profile/si64
+PAWX="../../../bin/nvhpc_nvlamath_profile/paw_nvhpc_nvlamath_profile.x" \
+make all
+```
+
 To test cuFFTW/cuFFT for the existing FFTW3 calls, build an `nvhpc_cufftw_*`
 target. This keeps CP-PAW's current FFT decomposition and uses cuFFT via the
 FFTW3-compatible wrapper. It is a correctness and profiling probe, not the
@@ -63,7 +75,7 @@ target because the same binary can selectively disable either accelerator path:
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile
 cd tests/profile/si64
-NSTEPS=1 RANKS=1 CASES="cpu nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=1 CASES="cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 ```
 
@@ -122,7 +134,7 @@ cd tests/profile/si64
 The top-level run directory is written to `runs/latest_overnight`; the combined
 benchmark table is `combined_benchmark.tsv`.
 
-Set `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite to the overnight
-run, `RUN_CUFFT=yes` to add a short native cuFFT comparison, or
-`RUN_GPU_ACC=yes` to compare one-rank GPU against eight-rank CPU/OpenBLAS and
-CPU/NVPL references.
+Set `RUN_NVLAMATH=yes` to add a short NVLAMATH comparison suite,
+`RUN_CUFFTW=yes` to add a short cuFFTW comparison suite, `RUN_CUFFT=yes` to add
+a short native cuFFT comparison, or `RUN_GPU_ACC=yes` to compare one-rank GPU
+against eight-rank CPU/OpenBLAS and CPU/NVPL references.

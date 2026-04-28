@@ -10,6 +10,7 @@ LONG_NSTEPS=${LONG_NSTEPS:-200}
 SCALING_NSTEPS=${SCALING_NSTEPS:-100}
 THRESHOLD_NSTEPS=${THRESHOLD_NSTEPS:-100}
 NSYS_NSTEPS=${NSYS_NSTEPS:-5}
+NVLAMATH_NSTEPS=${NVLAMATH_NSTEPS:-1}
 CUFFTW_NSTEPS=${CUFFTW_NSTEPS:-1}
 CUFFT_NSTEPS=${CUFFT_NSTEPS:-1}
 GPU_ACC_NSTEPS=${GPU_ACC_NSTEPS:-1}
@@ -17,6 +18,7 @@ LONG_REPEATS=${LONG_REPEATS:-3}
 SCALING_REPEATS=${SCALING_REPEATS:-2}
 THRESHOLD_REPEATS=${THRESHOLD_REPEATS:-2}
 NSYS_RANKS=${NSYS_RANKS:-4}
+RUN_NVLAMATH=${RUN_NVLAMATH:-no}
 RUN_CUFFTW=${RUN_CUFFTW:-no}
 RUN_CUFFT=${RUN_CUFFT:-no}
 RUN_GPU_ACC=${RUN_GPU_ACC:-no}
@@ -92,6 +94,8 @@ capture_metadata() {
     echo
     ls -l "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" \
           "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" \
+          "${ROOT}/bin/nvhpc_nvlamath_profile/paw_nvhpc_nvlamath_profile.x" \
+          "${ROOT}/bin/nvhpc_nvlamath_profile_parallel/ppaw_nvhpc_nvlamath_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" \
@@ -163,6 +167,13 @@ for ranks in 1 2 4; do
     "${SCALING_REPEATS}" "nvpl cublas"
 done
 
+case "${RUN_NVLAMATH}" in
+  yes|true|1)
+    run_suite "nvlamath_${NVLAMATH_NSTEPS}steps_1rank" "${NVLAMATH_NSTEPS}" 1 1 \
+      "cpu nvpl nvlamath"
+    ;;
+esac
+
 case "${RUN_CUFFTW}" in
   yes|true|1)
     run_suite "cufftw_${CUFFTW_NSTEPS}steps_1rank" "${CUFFTW_NSTEPS}" 1 1 \
@@ -180,7 +191,7 @@ esac
 case "${RUN_GPU_ACC}" in
   yes|true|1)
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
-      "cpu nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off"
+      "cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_off"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
       "cpu nvpl"
     ;;

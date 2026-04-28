@@ -19,6 +19,7 @@ export THISDIR=$(pwd)
 export NODOC=""  # suppress building documentation except once
 export CPPAW_INSTALL_NVHPC="${CPPAW_INSTALL_NVHPC:-auto}"
 export CPPAW_INSTALL_NVBLAS="${CPPAW_INSTALL_NVBLAS:-auto}"
+export CPPAW_INSTALL_NVLAMATH="${CPPAW_INSTALL_NVLAMATH:-auto}"
 export CPPAW_INSTALL_CUFFTW="${CPPAW_INSTALL_CUFFTW:-auto}"
 export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
 export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
@@ -73,6 +74,15 @@ function has_cufft {
   for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib \
            /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64 ; do
     if [[ -f ${X}/libcufft.so ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function has_nvlamath {
+  local X
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/compilers/lib/libnvlamath.so \
+           /opt/nvidia/hpc_sdk/Linux_*/*/REDIST/compilers/lib/libnvlamath.so ; do
+    if [[ -f ${X} ]] ; then return 0 ; fi
   done
   return 1
 }
@@ -142,6 +152,8 @@ export NVHPC_BUILT=false
 export NVHPC_PROFILE_BUILT=false
 export NVBLAS_BUILT=false
 export NVBLAS_PROFILE_BUILT=false
+export NVLAMATH_BUILT=false
+export NVLAMATH_PROFILE_BUILT=false
 export CUFFTW_BUILT=false
 export CUFFTW_PROFILE_BUILT=false
 export CUFFT_BUILT=false
@@ -196,6 +208,49 @@ function build_nvblas_choices {
       build_choice "${X}" "${REQUIRED}" "nvhpc"
       if [[ ${LAST_BUILD_OK} = true ]] ; then
         NVBLAS_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
+function build_nvlamath_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_NVLAMATH}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      if ! has_cuda || ! has_nvhpc || ! has_nvlamath ; then
+        echo "NVIDIA HPC SDK/CUDA/NVLAMATH not detected; skipping optional nvhpc_nvlamath builds."
+        return 0
+      fi
+      ;;
+    require|required|yes|true)
+      if ! has_cuda || ! has_nvhpc || ! has_nvlamath ; then
+        echo "error in $0: CPPAW_INSTALL_NVLAMATH=${CPPAW_INSTALL_NVLAMATH} but NVIDIA HPC SDK/CUDA/NVLAMATH was not found" >&2
+        exit 1
+      fi
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_NVLAMATH=${CPPAW_INSTALL_NVLAMATH}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  for X in nvhpc_nvlamath_fast nvhpc_nvlamath_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      NVLAMATH_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_nvlamath_profile nvhpc_nvlamath_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        NVLAMATH_PROFILE_BUILT=true
       fi
     done
   fi
@@ -383,6 +438,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
         exit 1
         ;;
     esac
+    case "${CPPAW_INSTALL_NVLAMATH}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_NVLAMATH=${CPPAW_INSTALL_NVLAMATH} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
     case "${CPPAW_INSTALL_CUFFTW}" in
       require|required|yes|true)
         echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
@@ -424,6 +485,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
       done
     fi
     build_nvblas_choices false
+    build_nvlamath_choices false
     build_cufftw_choices false
     build_cufft_choices false
     build_gpu_acc_choices false
@@ -446,6 +508,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
         done
       fi
       build_nvblas_choices false
+      build_nvlamath_choices false
       build_cufftw_choices false
       build_cufft_choices false
       build_gpu_acc_choices false
@@ -463,6 +526,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
       case "${CPPAW_INSTALL_CUFFTW}" in
         require|required|yes|true)
           echo "error in $0: CPPAW_INSTALL_CUFFTW=${CPPAW_INSTALL_CUFFTW} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+      case "${CPPAW_INSTALL_NVLAMATH}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_NVLAMATH=${CPPAW_INSTALL_NVLAMATH} but NVIDIA HPC SDK/CUDA was not found" >&2
           exit 1
           ;;
       esac
@@ -516,6 +585,12 @@ if [[ ${NVBLAS_BUILT} = true ]] ; then
 fi
 if [[ ${NVBLAS_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_nvblas_profile:\${PAWDIR}/bin/nvhpc_nvblas_profile_parallel:\${PATH}"
+fi
+if [[ ${NVLAMATH_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_nvlamath_fast:\${PAWDIR}/bin/nvhpc_nvlamath_fast_parallel:\${PATH}"
+fi
+if [[ ${NVLAMATH_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_nvlamath_profile:\${PAWDIR}/bin/nvhpc_nvlamath_profile_parallel:\${PATH}"
 fi
 if [[ ${CUFFTW_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cufftw_fast:\${PAWDIR}/bin/nvhpc_cufftw_fast_parallel:\${PATH}"
