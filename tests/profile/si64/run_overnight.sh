@@ -180,9 +180,9 @@ esac
 case "${RUN_GPU_ACC}" in
   yes|true|1)
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
-      "nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off"
+      "cpu nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
-      "nvpl"
+      "cpu nvpl"
     ;;
 esac
 

@@ -258,17 +258,6 @@ BINDIR="$(pwd)/bin/${SELECT}"
 
 DOCDIR="$(pwd)/doc"
 
-NVHPC_ROOT=$(find_nvhpc_root)
-if [[ -n ${NVHPC_ROOT} ]] ; then
-  export NVHPC_ROOT
-  export PATH="${NVHPC_ROOT}/compilers/bin:${PATH}"
-  NVHPC_MPIFORT=$(find_nvhpc_mpifort)
-  if [[ -n ${NVHPC_MPIFORT} ]] ; then
-    export PATH="$(dirname "${NVHPC_MPIFORT}"):${PATH}"
-  fi
-fi
-detect_cuda
-
 case "${CPPAW_TOOLCHAIN}" in
   nvidia|NVIDIA|nvhpc|NVHPC) REQUESTED_TOOLCHAIN=nvhpc ;;
   gnu|GNU|gcc|GCC)           REQUESTED_TOOLCHAIN=gnu ;;
@@ -294,6 +283,13 @@ esac
 case "${SELECT}" in
   nvhpc_cublas_acc*|nvhpc_cufft_cublas_acc*) CPPAW_USE_CUBLAS_ACC=yes ;;
 esac
+
+NVHPC_ROOT=$(find_nvhpc_root)
+if [[ -n ${NVHPC_ROOT} ]] ; then
+  export NVHPC_ROOT
+fi
+detect_cuda
+
 if [[ ${REQUESTED_TOOLCHAIN} = auto \
       && ${CPPAW_AUTO_USE_NVHPC} = true \
       && ${CPPAW_CUDA_AVAILABLE} = true \
@@ -304,6 +300,13 @@ if [[ ${REQUESTED_TOOLCHAIN} = nvhpc && -z ${NVHPC_ROOT} ]] ; then
   echo "error in $0: NVIDIA HPC SDK requested but nvfortran was not found"
   echo "set NVHPC_ROOT or put nvfortran into PATH"
   exit 1
+fi
+if [[ ${REQUESTED_TOOLCHAIN} = nvhpc && -n ${NVHPC_ROOT} ]] ; then
+  export PATH="${NVHPC_ROOT}/compilers/bin:${PATH}"
+  NVHPC_MPIFORT=$(find_nvhpc_mpifort)
+  if [[ -n ${NVHPC_MPIFORT} ]] ; then
+    export PATH="$(dirname "${NVHPC_MPIFORT}"):${PATH}"
+  fi
 fi
 
 #-------------------------------------------------------------------------------

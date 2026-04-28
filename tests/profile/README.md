@@ -63,9 +63,13 @@ target because the same binary can selectively disable either accelerator path:
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile
 cd tests/profile/si64
-NSTEPS=1 RANKS=1 CASES="nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
-NSTEPS=1 RANKS=8 CASES="nvpl" ./run_benchmark.sh
+NSTEPS=1 RANKS=1 CASES="cpu nvpl gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 ```
+
+The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
+`profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
+system `mpirun`; set `CPU_MPIRUN=...` to override it.
 
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
@@ -120,4 +124,5 @@ benchmark table is `combined_benchmark.tsv`.
 
 Set `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite to the overnight
 run, `RUN_CUFFT=yes` to add a short native cuFFT comparison, or
-`RUN_GPU_ACC=yes` to compare one-rank GPU against eight-rank CPU/NVPL.
+`RUN_GPU_ACC=yes` to compare one-rank GPU against eight-rank CPU/OpenBLAS and
+CPU/NVPL references.

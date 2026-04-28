@@ -38,10 +38,27 @@ default_mpirun() {
   command -v mpirun 2>/dev/null || echo mpirun
 }
 
+system_mpirun() {
+  command -v mpirun 2>/dev/null || echo mpirun
+}
+
+if [[ -n "${MPIRUN:-}" ]]; then
+  CPU_MPIRUN=${CPU_MPIRUN:-${MPIRUN}}
+else
+  CPU_MPIRUN=${CPU_MPIRUN:-$(system_mpirun)}
+fi
 MPIRUN=${MPIRUN:-$(default_mpirun)}
+
+case_mpirun() {
+  case "$1" in
+    cpu) echo "${CPU_MPIRUN}" ;;
+    *) echo "${MPIRUN}" ;;
+  esac
+}
 
 serial_exe() {
   case "$1" in
+    cpu) echo "${ROOT}/bin/profile/paw_profile.x" ;;
     nvpl) echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
     nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile/paw_nvhpc_nvblas_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
@@ -54,6 +71,7 @@ serial_exe() {
 
 parallel_exe() {
   case "$1" in
+    cpu) echo "${ROOT}/bin/profile_parallel/ppaw_profile.x" ;;
     nvpl) echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
     nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
@@ -67,10 +85,11 @@ parallel_exe() {
 run_command() {
   local case_name=$1
   local exe=$2
-  local cmd
+  local cmd mpi_run
   if [[ "${RANKS}" -gt 1 ]]; then
+    mpi_run=$(case_mpirun "${case_name}")
     # shellcheck disable=SC2086
-    cmd="${MPIRUN} ${MPI_ARGS} -np ${RANKS} ${exe} ${TEST}.cntl"
+    cmd="${mpi_run} ${MPI_ARGS} -np ${RANKS} ${exe} ${TEST}.cntl"
   else
     cmd="${exe} ${TEST}.cntl"
   fi
