@@ -24,7 +24,7 @@ def profile_totals(run_dir):
                     totals["mpi"] += seconds
                 elif op.startswith("FFT") or op.startswith("PW_FFT"):
                     totals["fft"] += seconds
-                elif op.startswith("LAPACK"):
+                elif op.startswith("LAPACK") or op.startswith("CUSOLVER"):
                     totals["lapack"] += seconds
                 elif "GEMM" in op or "HERK" in op or "SYRK" in op:
                     totals["blas"] += seconds

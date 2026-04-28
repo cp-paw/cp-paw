@@ -24,6 +24,7 @@ export CPPAW_INSTALL_CUFFTW="${CPPAW_INSTALL_CUFFTW:-auto}"
 export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
 export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
+export CPPAW_INSTALL_CUSOLVER_ACC="${CPPAW_INSTALL_CUSOLVER_ACC:-auto}"
 export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
 export CPPAW_INSTALL_JOBS="${CPPAW_INSTALL_JOBS:-16}"
 
@@ -83,6 +84,17 @@ function has_nvlamath {
   for X in /opt/nvidia/hpc_sdk/Linux_*/*/compilers/lib/libnvlamath.so \
            /opt/nvidia/hpc_sdk/Linux_*/*/REDIST/compilers/lib/libnvlamath.so ; do
     if [[ -f ${X} ]] ; then return 0 ; fi
+  done
+  return 1
+}
+
+function has_cusolver {
+  local X
+  for X in /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/targets/*/lib \
+           /opt/nvidia/hpc_sdk/Linux_*/*/REDIST/math_libs/*/targets/*/lib \
+           /opt/nvidia/hpc_sdk/Linux_*/*/math_libs/*/lib64 \
+           /usr/local/cuda/lib64 /usr/local/cuda-*/lib64 ; do
+    if [[ -f ${X}/libcusolver.so ]] ; then return 0 ; fi
   done
   return 1
 }
@@ -162,6 +174,8 @@ export GPU_ACC_BUILT=false
 export GPU_ACC_PROFILE_BUILT=false
 export CUBLAS_ACC_BUILT=false
 export CUBLAS_ACC_PROFILE_BUILT=false
+export CUSOLVER_ACC_BUILT=false
+export CUSOLVER_ACC_PROFILE_BUILT=false
 
 function profile_requested {
   [[ ${CPPAW_INSTALL_PROFILE} = yes \
@@ -295,6 +309,50 @@ function build_cublas_acc_choices {
       build_choice "${X}" "${REQUIRED}" "nvhpc"
       if [[ ${LAST_BUILD_OK} = true ]] ; then
         CUBLAS_ACC_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
+function build_cusolver_acc_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_CUSOLVER_ACC}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      ;;
+    require|required|yes|true)
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_CUSOLVER_ACC=${CPPAW_INSTALL_CUSOLVER_ACC}" >&2
+      echo "allowed are auto, no, require" >&2
+      exit 1
+      ;;
+  esac
+
+  if ! has_cuda || ! has_nvhpc || ! has_cusolver ; then
+    if [[ ${REQUIRED} = true ]] ; then
+      echo "error in $0: CPPAW_INSTALL_CUSOLVER_ACC=${CPPAW_INSTALL_CUSOLVER_ACC} but NVIDIA HPC SDK/CUDA/cuSOLVER was not found" >&2
+      exit 1
+    fi
+    echo "NVIDIA HPC SDK/CUDA/cuSOLVER not detected; skipping optional nvhpc_cusolver_acc builds."
+    return 0
+  fi
+
+  for X in nvhpc_cusolver_acc_fast nvhpc_cusolver_acc_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      CUSOLVER_ACC_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_cusolver_acc_profile nvhpc_cusolver_acc_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        CUSOLVER_ACC_PROFILE_BUILT=true
       fi
     done
   fi
@@ -468,6 +526,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
         exit 1
         ;;
     esac
+    case "${CPPAW_INSTALL_CUSOLVER_ACC}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_CUSOLVER_ACC=${CPPAW_INSTALL_CUSOLVER_ACC} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
     ;;
   require|required|yes|true)
     if ! has_nvhpc ; then
@@ -490,6 +554,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
     build_cufft_choices false
     build_gpu_acc_choices false
     build_cublas_acc_choices false
+    build_cusolver_acc_choices false
     ;;
   auto|"")
     if has_nvhpc ; then
@@ -513,6 +578,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
       build_cufft_choices false
       build_gpu_acc_choices false
       build_cublas_acc_choices false
+      build_cusolver_acc_choices false
     else
       case "${CPPAW_INSTALL_NVBLAS}" in
         require|required|yes|true)
@@ -550,6 +616,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
       case "${CPPAW_INSTALL_CUBLAS_ACC}" in
         require|required|yes|true)
           echo "error in $0: CPPAW_INSTALL_CUBLAS_ACC=${CPPAW_INSTALL_CUBLAS_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+      case "${CPPAW_INSTALL_CUSOLVER_ACC}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_CUSOLVER_ACC=${CPPAW_INSTALL_CUSOLVER_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
           exit 1
           ;;
       esac
@@ -615,6 +687,12 @@ if [[ ${CUBLAS_ACC_BUILT} = true ]] ; then
 fi
 if [[ ${CUBLAS_ACC_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_cublas_acc_profile:\${PAWDIR}/bin/nvhpc_cublas_acc_profile_parallel:\${PATH}"
+fi
+if [[ ${CUSOLVER_ACC_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cusolver_acc_fast:\${PAWDIR}/bin/nvhpc_cusolver_acc_fast_parallel:\${PATH}"
+fi
+if [[ ${CUSOLVER_ACC_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_cusolver_acc_profile:\${PAWDIR}/bin/nvhpc_cusolver_acc_profile_parallel:\${PATH}"
 fi
 echo "-------------------------------------------------------------------------"
 echo " "

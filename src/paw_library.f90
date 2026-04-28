@@ -1009,9 +1009,16 @@
       REAL(8)               :: AUX(100*N)
       INTEGER(4)            :: IPIV(N)
       INTEGER(4)            :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       NAUX=100*N
       AINV(1:N,1:N)=A(1:N,1:N)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == PERFORM LU FACTORIZATION OF A                                ==
@@ -1022,6 +1029,13 @@
 !     == INVERT A USING THE LU FACTORIZATION                          ==
 !     ==================================================================
       CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGETRI' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,2.D0*REAL(N,KIND=8)**3 &
+     & ,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1059,10 +1073,17 @@
       COMPLEX(8)            :: AUX(100*N)
       INTEGER(4)            :: IPIV(N)
       INTEGER               :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.LE.0) RETURN
       NAUX=100*N
       AINV(1:N,1:N)=A(1:N,1:N)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == PERFORM LU FACTORIZATION OF A                                ==
@@ -1073,6 +1094,13 @@
 !     == INVERT A USING THE LU FACTORIZATION                          ==
 !     ==================================================================
       CALL ZGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGETRI' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,8.D0*REAL(N,KIND=8)**3 &
+     & ,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1111,6 +1139,10 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: INFO
       INTEGER(4)             :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       LWORK=MAX(1,3*MIN(M,N)+MAX(M,N),5*MIN(M,N))
       ALLOCATE(WORK(LWORK))
@@ -1119,7 +1151,16 @@
       U=0.D0
       VT=0.D0
       WORK=0.D0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGESVD' &
+     & ,INT(M,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,8.D0*REAL(M,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
@@ -1158,12 +1199,25 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: INFO
       INTEGER(4)             :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       LWORK=MAX(1,2*MIN(M,N)+MAX(M,N))
       ALLOCATE(WORK(LWORK))
       ALLOCATE(RWORK(5*MIN(M,N)))
       ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,RWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGESVD' &
+     & ,INT(M,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(M,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
@@ -1204,6 +1258,10 @@
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('WORKS ONLY FOR SQUARE MATRICES')
@@ -1224,7 +1282,17 @@
       ALLOCATE(A1(N,M))
       A1=A
       X=B
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL DGESV(N,NEQ,A1,N,IPIV,X,N,INFO )
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGESV' &
+     & ,INT(N,KIND=8),INT(NEQ,KIND=8),0_8,0_8 &
+     & ,2.D0/3.D0*REAL(N,KIND=8)**3 &
+     & ,8.D0*REAL(N,KIND=8)*REAL(N+NEQ,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       DEALLOCATE(A1)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ERROR EXIT FROM DGESV')
@@ -1419,6 +1487,10 @@
       INTEGER               :: IPIVOT(N)
       REAL(8)   ,ALLOCATABLE:: WORK(:)
       INTEGER               :: N1,M1,NEQ1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('ONLY SYMMETRIC MATRICES ALLOWED')
@@ -1437,7 +1509,17 @@
       A1=A 
       X=B
       ALLOCATE(WORK(LDWORK))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZGESV(N,NEQ,A1,N,IPIVOT,X,N,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGESV' &
+     & ,INT(N,KIND=8),INT(NEQ,KIND=8),0_8,0_8 &
+     & ,8.D0/3.D0*REAL(N,KIND=8)**3 &
+     & ,16.D0*REAL(N,KIND=8)*REAL(N+NEQ,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       DEALLOCATE(WORK)
 !
 !     ===================================================================
@@ -1566,6 +1648,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_DSYEVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
@@ -1577,13 +1663,47 @@
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     ******************************************************************
 !
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_DSYEVD_COPY(N,H,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       U=0.5D0*(H+TRANSPOSE(H))
       CALL DSYEV('V','U',N,U,N,E,WORK,3*N,INFO )
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_DSYEVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_DSYEV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1651,6 +1771,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEEVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)
@@ -1668,6 +1792,9 @@
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)               :: ACCEL_T0
       REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
 #ENDIF
 #IF DEFINED(CPPVAR_NVLAMATH)
 #ELSE
@@ -1688,6 +1815,13 @@
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEEVD_COPY(N,H,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+        U=0.5D0*(H+TRANSPOSE(CONJG(H)))
+        LWORK=-1
+#ENDIF
       CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
       LWORK=INT(CWORK(1))
       IF(LWORK.LT.LWMAX) THEN
@@ -1698,11 +1832,24 @@
         CALL ZHEEV('V','L',N,U,N,E,CWORK1,LWORK,RWORK,INFO) !LAPACK
         DEALLOCATE(CWORK1)
       END IF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEEVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
       CALL ACCELPROFILE$ADD('LAPACK_ZHEEV' &
      & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
      & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
 #ENDIF
 !
       IF(INFO.NE.0) THEN
@@ -1766,6 +1913,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_DSYGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
@@ -1779,14 +1930,48 @@
       REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     ******************************************************************
 !
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_DSYGVD_COPY(N,H,S,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       U=H
       B=S
       CALL DSYGV(1,'V','U',N,U,N,B,N,E,WORK,3*N,INFO )
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_DSYGVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_DSYGV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1846,6 +2031,10 @@
 !     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY            **
 !     **                                                                      **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
@@ -1860,6 +2049,13 @@
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       INTEGER               :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1883,6 +2079,14 @@
 !     ==========================================================================
 !     == CALL LAPACK ROUTINE                                                 ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEGVD_COPY(N,H,S,E,VEC,.TRUE. &
+     &                                    ,ACCEL_CUSOLVER_USED,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
       VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  
       S1=S
@@ -1894,6 +2098,26 @@
       DEALLOCATE(WORK)
       ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
+      DEALLOCATE(WORK)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEGVD_FROM_ZHEGV' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEGV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==========================================================================
 !     == ERROR MESSAGES                                                       ==
@@ -1959,6 +2183,10 @@
 !     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
 !     **                                                                 **
 !     *********************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: N
       COMPLEX(8),INTENT(IN)        :: H(N,N)    ! HAMITON MATRIX
@@ -1974,6 +2202,13 @@
       REAL(8)   ,ALLOCATABLE       :: RWORK(:)
       INTEGER(4),ALLOCATABLE       :: IWORK(:)
       CHARACTER(1)                 :: JOBZ
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                      :: ACCEL_T0
+      REAL(8)                      :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)                   :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     *********************************************************************
 !
 !     ========================================================================
@@ -1997,6 +2232,14 @@
 !     ========================================================================
 !     == CALL LAPACK ROUTINE                                                ==
 !     ========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEGVD_COPY(N,H,S,E,VEC,.FALSE. &
+     &                                    ,ACCEL_CUSOLVER_USED,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       JOBZ='V' !COMPUTE EIGENVALUES AND EIGENVECTORS
 
       ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
@@ -2032,6 +2275,25 @@
       DEALLOCATE(WORK)
       DEALLOCATE(RWORK)
       DEALLOCATE(IWORK)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEGVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEGVD' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 
       IF(INFO.NE.0)THEN
         CALL ERROR$MSG('ZHEGVD FAILED')

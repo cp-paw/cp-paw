@@ -10,7 +10,7 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
-CASES=${CASES:-"nvpl cublas cublas_conservative cublas_off"}
+CASES=${CASES:-"nvpl cublas cublas_conservative cublas_off cusolver cusolver_off"}
 
 nvhpc_platform() {
   case "$(uname -s)_$(uname -m)" in
@@ -66,6 +66,7 @@ serial_exe() {
     cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" ;;
     gpu*) echo "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" ;;
+    cusolver*) echo "${ROOT}/bin/nvhpc_cusolver_acc_profile/paw_nvhpc_cusolver_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac
 }
@@ -80,6 +81,7 @@ parallel_exe() {
     cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" ;;
     gpu*) echo "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile_parallel/ppaw_nvhpc_cufft_cublas_acc_profile.x" ;;
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" ;;
+    cusolver*) echo "${ROOT}/bin/nvhpc_cusolver_acc_profile_parallel/ppaw_nvhpc_cusolver_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
   esac
 }
@@ -107,6 +109,9 @@ case_env() {
     cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     cublas_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
+    cusolver) echo "CPPAW_CUSOLVER_ACC_MIN_N=${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
+    cusolver_conservative) echo "CPPAW_CUSOLVER_ACC_MIN_N=${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
+    cusolver_off) echo "CPPAW_CUSOLVER_ACC=0" ;;
     cufft) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}" ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
     gpu) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;

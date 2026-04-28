@@ -100,6 +100,18 @@ The run writes `si64_accel_profile.csv` for serial execution, or
 `si64_accel_profile.rankNNNNN.csv` for MPI execution, and prints a compact
 summary of the instrumented FFT, BLAS-like and MPI all-to-all regions.
 
+To test the explicit cuSOLVER/OpenACC dense eigensolver path, build an
+`nvhpc_cusolver_acc_*` target. The default offload threshold is
+`CPPAW_CUSOLVER_ACC_MIN_N=256`; set it to `1` for the small Si64 profiling
+case, or set `CPPAW_CUSOLVER_ACC=0` to run the same binary with the CPU/NVPL
+fallback:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
+cd tests/profile/si64
+NSTEPS=1 RANKS=1 CASES="nvpl cusolver cusolver_off" ./run_benchmark.sh
+```
+
 For reproducible comparisons, use the benchmark harness:
 
 ```
@@ -136,5 +148,7 @@ benchmark table is `combined_benchmark.tsv`.
 
 Set `RUN_NVLAMATH=yes` to add a short NVLAMATH comparison suite,
 `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite, `RUN_CUFFT=yes` to add
-a short native cuFFT comparison, or `RUN_GPU_ACC=yes` to compare one-rank GPU
-against eight-rank CPU/OpenBLAS and CPU/NVPL references.
+a short native cuFFT comparison, `RUN_GPU_ACC=yes` to compare one-rank GPU
+against eight-rank CPU/OpenBLAS and CPU/NVPL references, or
+`RUN_CUSOLVER=yes` to add the same one-rank cuSOLVER versus eight-rank CPU/NVPL
+resource comparison.

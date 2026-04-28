@@ -14,6 +14,7 @@ NVLAMATH_NSTEPS=${NVLAMATH_NSTEPS:-1}
 CUFFTW_NSTEPS=${CUFFTW_NSTEPS:-1}
 CUFFT_NSTEPS=${CUFFT_NSTEPS:-1}
 GPU_ACC_NSTEPS=${GPU_ACC_NSTEPS:-1}
+CUSOLVER_NSTEPS=${CUSOLVER_NSTEPS:-1}
 LONG_REPEATS=${LONG_REPEATS:-3}
 SCALING_REPEATS=${SCALING_REPEATS:-2}
 THRESHOLD_REPEATS=${THRESHOLD_REPEATS:-2}
@@ -22,6 +23,7 @@ RUN_NVLAMATH=${RUN_NVLAMATH:-no}
 RUN_CUFFTW=${RUN_CUFFTW:-no}
 RUN_CUFFT=${RUN_CUFFT:-no}
 RUN_GPU_ACC=${RUN_GPU_ACC:-no}
+RUN_CUSOLVER=${RUN_CUSOLVER:-no}
 THRESHOLDS=${THRESHOLDS:-"1e6 3e6 1e7 3e7 1e8"}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
@@ -101,7 +103,9 @@ capture_metadata() {
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile_parallel/ppaw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" \
-          "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" || true
+          "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" \
+          "${ROOT}/bin/nvhpc_cusolver_acc_profile/paw_nvhpc_cusolver_acc_profile.x" \
+          "${ROOT}/bin/nvhpc_cusolver_acc_profile_parallel/ppaw_nvhpc_cusolver_acc_profile.x" || true
   } > "${OVERNIGHT_ROOT}/metadata.txt" 2>&1
 }
 
@@ -193,6 +197,15 @@ case "${RUN_GPU_ACC}" in
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
       "cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_off"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
+      "cpu nvpl"
+    ;;
+esac
+
+case "${RUN_CUSOLVER}" in
+  yes|true|1)
+    run_suite "cusolver_${CUSOLVER_NSTEPS}steps_1rank" "${CUSOLVER_NSTEPS}" 1 1 \
+      "cpu nvpl cusolver cusolver_conservative cusolver_off"
+    run_suite "cusolver_cpu_ref_${CUSOLVER_NSTEPS}steps_8ranks" "${CUSOLVER_NSTEPS}" 8 1 \
       "cpu nvpl"
     ;;
 esac

@@ -82,6 +82,7 @@ export CPPAW_USE_NVLAMATH="${CPPAW_USE_NVLAMATH:-no}"
 export CPPAW_USE_CUFFTW="${CPPAW_USE_CUFFTW:-no}"
 export CPPAW_USE_CUFFT="${CPPAW_USE_CUFFT:-no}"
 export CPPAW_USE_CUBLAS_ACC="${CPPAW_USE_CUBLAS_ACC:-no}"
+export CPPAW_USE_CUSOLVER_ACC="${CPPAW_USE_CUSOLVER_ACC:-no}"
 export CPPAW_NVHPC_ACC_FLAGS_ADDED="${CPPAW_NVHPC_ACC_FLAGS_ADDED:-no}"
 
 ################################################################################
@@ -297,6 +298,9 @@ case "${SELECT}" in
 esac
 case "${SELECT}" in
   nvhpc_cublas_acc*|nvhpc_cufft_cublas_acc*) CPPAW_USE_CUBLAS_ACC=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_cusolver_acc*) CPPAW_USE_CUSOLVER_ACC=yes ;;
 esac
 
 NVHPC_ROOT=$(find_nvhpc_root)
@@ -571,6 +575,24 @@ function enable_nvhpc_cublas_acc {
   append_nvhpc_openacc_flags
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_ACC"
   LDFLAGS="${LDFLAGS} -cudalib=cublas"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cublas_v2.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cudafor.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+}
+
+function enable_nvhpc_cusolver_acc {
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: cuSOLVER/OpenACC target requested but CUDA was not found"
+    exit 1
+  fi
+  if [[ ${COMPILER} != nvfortran ]] ; then
+    echo "error in $0: cuSOLVER/OpenACC target requires nvfortran"
+    exit 1
+  fi
+  append_nvhpc_openacc_flags
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUSOLVER_ACC"
+  LDFLAGS="${LDFLAGS} -cudalib=cusolver,cublas"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cusolverdn.mod"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cublas_v2.mod"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cudafor.mod"
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
@@ -938,6 +960,32 @@ case ${SELECT} in
     add_fcflags
     ;;
 
+  nvhpc_cusolver_acc_fast)
+    SUFFIX="nvhpc_cusolver_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_fast_parallel)
+    SUFFIX="nvhpc_cusolver_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_profile)
+    SUFFIX="nvhpc_cusolver_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_profile_parallel)
+    SUFFIX="nvhpc_cusolver_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
   *) #-- anything else. 
     echo "invalid selection $SELECT specified by -c in paw_build.sh"
     exit 1
@@ -960,6 +1008,12 @@ if [[ ${CPPAW_USE_CUBLAS_ACC} = yes \
       || ${CPPAW_USE_CUBLAS_ACC} = true \
       || ${CPPAW_USE_CUBLAS_ACC} = 1 ]] ; then
   enable_nvhpc_cublas_acc
+fi
+
+if [[ ${CPPAW_USE_CUSOLVER_ACC} = yes \
+      || ${CPPAW_USE_CUSOLVER_ACC} = true \
+      || ${CPPAW_USE_CUSOLVER_ACC} = 1 ]] ; then
+  enable_nvhpc_cusolver_acc
 fi
 
 # CUDA is used here as a hardware/toolchain signal for NVIDIA HPC SDK builds.
