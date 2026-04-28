@@ -104,13 +104,25 @@ run_command() {
   fi
 }
 
+cusolver_env() {
+  local min_n=$1
+  local env_line="CPPAW_CUSOLVER_ACC_MIN_N=${min_n}"
+  if [[ -n "${CPPAW_CUSOLVER_ACC_CHECK:-}" ]]; then
+    env_line="${env_line} CPPAW_CUSOLVER_ACC_CHECK=${CPPAW_CUSOLVER_ACC_CHECK}"
+  fi
+  if [[ -n "${CPPAW_CUSOLVER_ACC_CHECK_TOL:-}" ]]; then
+    env_line="${env_line} CPPAW_CUSOLVER_ACC_CHECK_TOL=${CPPAW_CUSOLVER_ACC_CHECK_TOL}"
+  fi
+  echo "${env_line}"
+}
+
 case_env() {
   case "$1" in
     cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     cublas_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
-    cusolver) echo "CPPAW_CUSOLVER_ACC_MIN_N=${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
-    cusolver_conservative) echo "CPPAW_CUSOLVER_ACC_MIN_N=${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
+    cusolver) cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
+    cusolver_conservative) cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
     cusolver_off) echo "CPPAW_CUSOLVER_ACC=0" ;;
     cufft) echo "CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}" ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;

@@ -25,7 +25,9 @@
       LOGICAL(4)             :: HANDLE_READY=.FALSE.
       LOGICAL(4)             :: CONFIG_READY=.FALSE.
       LOGICAL(4)             :: ENABLED=.TRUE.
+      LOGICAL(4)             :: CHECK_ENABLED=.FALSE.
       INTEGER(4)             :: MIN_N=256
+      REAL(8)                :: CHECK_TOL=1.D-7
       CONTAINS
 !
 !     ..........................................................................
@@ -40,19 +42,49 @@
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_ACC',VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
         VALUE=ADJUSTL(VALUE)
-        IF(LEN_TRIM(VALUE).EQ.0) RETURN
-        SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
-        CASE('0','no','NO','false','FALSE','off','OFF')
-          ENABLED=.FALSE.
-        CASE DEFAULT
-          ENABLED=.TRUE.
-        END SELECT
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            ENABLED=.FALSE.
+          CASE DEFAULT
+            ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_ACC_CHECK',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            CHECK_ENABLED=.FALSE.
+          CASE DEFAULT
+            CHECK_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_ACC_CHECK_TOL',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_CHECK_TOL',VALUE &
+     &                               ,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        READ(VALUE,*,IOSTAT=IOS) CHECK_TOL
+        IF(IOS.NE.0) CHECK_TOL=1.D-7
+        IF(CHECK_TOL.LE.0.D0) CHECK_TOL=1.D-7
       END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_ACC_MIN_N',VALUE &
      &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUSOLVER_MIN_N',VALUE &
+     &                               ,STATUS=STATUS)
+      END IF
       IF(STATUS.EQ.0) THEN
         READ(VALUE,*,IOSTAT=IOS) MIN_N
         IF(IOS.NE.0) MIN_N=256
+        MIN_N=MAX(1,MIN_N)
       END IF
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_INITCONFIG
@@ -93,6 +125,175 @@
       END IF
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_ENSURE
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_DSYEVD_OK(N,H,E,U)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: H(N,N)
+      REAL(8)   ,INTENT(IN) :: E(N)
+      REAL(8)   ,INTENT(IN) :: U(N,N)
+      REAL(8)   ,ALLOCATABLE:: A(:,:)
+      REAL(8)   ,ALLOCATABLE:: R(:,:)
+      REAL(8)               :: RERR
+      REAL(8)               :: OERR
+      REAL(8)               :: SCALE
+      INTEGER(4)            :: I
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_DSYEVD_OK=.TRUE.
+      IF(.NOT.CHECK_ENABLED) RETURN
+      ALLOCATE(A(N,N))
+      ALLOCATE(R(N,N))
+      A=0.5D0*(H+TRANSPOSE(H))
+      R=MATMUL(A,U)
+      DO I=1,N
+        R(:,I)=R(:,I)-U(:,I)*E(I)
+      ENDDO
+      SCALE=MAX(1.D0,MAXVAL(ABS(A)))*MAX(1.D0,MAXVAL(ABS(U))) &
+     &     *REAL(MAX(1,N),KIND=8)
+      RERR=MAXVAL(ABS(R))/SCALE
+      R=MATMUL(TRANSPOSE(U),U)
+      DO I=1,N
+        R(I,I)=R(I,I)-1.D0
+      ENDDO
+      OERR=MAXVAL(ABS(R))
+      CPPAW_CUSOLVER_ACC_DSYEVD_OK=(RERR.LE.CHECK_TOL) &
+     &                       .AND.(OERR.LE.10.D0*CHECK_TOL)
+      DEALLOCATE(R)
+      DEALLOCATE(A)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_DSYEVD_OK
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_ZHEEVD_OK(N,H,E,U)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: H(N,N)
+      REAL(8)   ,INTENT(IN) :: E(N)
+      COMPLEX(8),INTENT(IN) :: U(N,N)
+      COMPLEX(8),ALLOCATABLE:: A(:,:)
+      COMPLEX(8),ALLOCATABLE:: R(:,:)
+      REAL(8)               :: RERR
+      REAL(8)               :: OERR
+      REAL(8)               :: SCALE
+      INTEGER(4)            :: I
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_ZHEEVD_OK=.TRUE.
+      IF(.NOT.CHECK_ENABLED) RETURN
+      ALLOCATE(A(N,N))
+      ALLOCATE(R(N,N))
+      A=0.5D0*(H+TRANSPOSE(CONJG(H)))
+      R=MATMUL(A,U)
+      DO I=1,N
+        R(:,I)=R(:,I)-U(:,I)*E(I)
+      ENDDO
+      SCALE=MAX(1.D0,MAXVAL(ABS(A)))*MAX(1.D0,MAXVAL(ABS(U))) &
+     &     *REAL(MAX(1,N),KIND=8)
+      RERR=MAXVAL(ABS(R))/SCALE
+      R=MATMUL(CONJG(TRANSPOSE(U)),U)
+      DO I=1,N
+        R(I,I)=R(I,I)-(1.D0,0.D0)
+      ENDDO
+      OERR=MAXVAL(ABS(R))
+      CPPAW_CUSOLVER_ACC_ZHEEVD_OK=(RERR.LE.CHECK_TOL) &
+     &                       .AND.(OERR.LE.10.D0*CHECK_TOL)
+      DEALLOCATE(R)
+      DEALLOCATE(A)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_ZHEEVD_OK
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_DSYGVD_OK(N,H,S,E,U)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      REAL(8)   ,INTENT(IN) :: H(N,N)
+      REAL(8)   ,INTENT(IN) :: S(N,N)
+      REAL(8)   ,INTENT(IN) :: E(N)
+      REAL(8)   ,INTENT(IN) :: U(N,N)
+      REAL(8)   ,ALLOCATABLE:: R(:,:)
+      REAL(8)   ,ALLOCATABLE:: SU(:,:)
+      REAL(8)               :: RERR
+      REAL(8)               :: OERR
+      REAL(8)               :: SCALE
+      INTEGER(4)            :: I
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_DSYGVD_OK=.TRUE.
+      IF(.NOT.CHECK_ENABLED) RETURN
+      ALLOCATE(R(N,N))
+      ALLOCATE(SU(N,N))
+      SU=MATMUL(S,U)
+      R=MATMUL(H,U)
+      DO I=1,N
+        R(:,I)=R(:,I)-SU(:,I)*E(I)
+      ENDDO
+      SCALE=MAX(1.D0,MAXVAL(ABS(H)),MAXVAL(ABS(S))) &
+     &     *MAX(1.D0,MAXVAL(ABS(U))) &
+     &     *MAX(1.D0,MAXVAL(ABS(E)))*REAL(MAX(1,N),KIND=8)
+      RERR=MAXVAL(ABS(R))/SCALE
+      R=MATMUL(TRANSPOSE(U),SU)
+      DO I=1,N
+        R(I,I)=R(I,I)-1.D0
+      ENDDO
+      OERR=MAXVAL(ABS(R))
+      CPPAW_CUSOLVER_ACC_DSYGVD_OK=(RERR.LE.CHECK_TOL) &
+     &                       .AND.(OERR.LE.10.D0*CHECK_TOL)
+      DEALLOCATE(SU)
+      DEALLOCATE(R)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_DSYGVD_OK
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_ZHEGVD_OK(N,H,S,E,VEC,SYM)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+      COMPLEX(8),INTENT(IN) :: H(N,N)
+      COMPLEX(8),INTENT(IN) :: S(N,N)
+      REAL(8)   ,INTENT(IN) :: E(N)
+      COMPLEX(8),INTENT(IN) :: VEC(N,N)
+      LOGICAL(4),INTENT(IN) :: SYM
+      COMPLEX(8),ALLOCATABLE:: A(:,:)
+      COMPLEX(8),ALLOCATABLE:: R(:,:)
+      COMPLEX(8),ALLOCATABLE:: SV(:,:)
+      REAL(8)               :: RERR
+      REAL(8)               :: OERR
+      REAL(8)               :: SCALE
+      INTEGER(4)            :: I
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_ZHEGVD_OK=.TRUE.
+      IF(.NOT.CHECK_ENABLED) RETURN
+      ALLOCATE(A(N,N))
+      ALLOCATE(R(N,N))
+      ALLOCATE(SV(N,N))
+      IF(SYM) THEN
+        A=0.5D0*(H+TRANSPOSE(CONJG(H)))
+      ELSE
+        A=H
+      END IF
+      SV=MATMUL(S,VEC)
+      R=MATMUL(A,VEC)
+      DO I=1,N
+        R(:,I)=R(:,I)-SV(:,I)*E(I)
+      ENDDO
+      SCALE=MAX(1.D0,MAXVAL(ABS(A)),MAXVAL(ABS(S))) &
+     &     *MAX(1.D0,MAXVAL(ABS(VEC))) &
+     &     *MAX(1.D0,MAXVAL(ABS(E)))*REAL(MAX(1,N),KIND=8)
+      RERR=MAXVAL(ABS(R))/SCALE
+      R=MATMUL(CONJG(TRANSPOSE(VEC)),SV)
+      DO I=1,N
+        R(I,I)=R(I,I)-(1.D0,0.D0)
+      ENDDO
+      OERR=MAXVAL(ABS(R))
+      CPPAW_CUSOLVER_ACC_ZHEGVD_OK=(RERR.LE.CHECK_TOL) &
+     &                       .AND.(OERR.LE.10.D0*CHECK_TOL)
+      DEALLOCATE(SV)
+      DEALLOCATE(R)
+      DEALLOCATE(A)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_ZHEGVD_OK
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUSOLVER_ACC_DSYEVD_COPY(N,H,E,U,USED,INFO)
@@ -143,6 +344,7 @@
         INFO=DEVINFO
         RETURN
       END IF
+      IF(.NOT.CPPAW_CUSOLVER_ACC_DSYEVD_OK(N,H,E,U)) RETURN
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_DSYEVD_COPY
@@ -196,6 +398,7 @@
         INFO=DEVINFO
         RETURN
       END IF
+      IF(.NOT.CPPAW_CUSOLVER_ACC_ZHEEVD_OK(N,H,E,U)) RETURN
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_ZHEEVD_COPY
@@ -254,6 +457,7 @@
         INFO=DEVINFO
         RETURN
       END IF
+      IF(.NOT.CPPAW_CUSOLVER_ACC_DSYGVD_OK(N,H,S,E,U)) RETURN
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_DSYGVD_COPY
@@ -317,6 +521,7 @@
         INFO=DEVINFO
         RETURN
       END IF
+      IF(.NOT.CPPAW_CUSOLVER_ACC_ZHEGVD_OK(N,H,S,E,VEC,SYM)) RETURN
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_ZHEGVD_COPY
