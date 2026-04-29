@@ -25,7 +25,7 @@ MODULE ERROR_MODULE
 !**    THE DEPENDENCY WITH THE FILEHANDLER CAN CAUSE PROBLEMS         **
 !**                                                                   **
 !***********************************************************************
-INTEGER(4),PARAMETER :: IMESSAGEX=50                                
+INTEGER(4),PARAMETER :: IMESSAGEX=200                                
 CHARACTER(82)        :: MESSAGE(IMESSAGEX)                            
 INTEGER(4)           :: IMESSAGE=0                                  
 INTEGER(4)           :: NFILERR=0                                   

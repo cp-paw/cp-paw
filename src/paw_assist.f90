@@ -264,16 +264,16 @@ CONTAINS
       RETURN
       END
 !
-!     ...................................................AUTOPI.........
+!........1.........2.........3.........4.........5.........6.........7.........8
 MODULE AUTOPILOT_MODULE
-!***********************************************************************
-!**                                                                   **
-!**  NAME: AUTOPILOT                                                  **
-!**                                                                   **
-!**  PURPOSE: ANNEALING SCHEME FOR FRICTION DYNAMICS.                 **
-!**     TUNES THE FRICTION                                            **
-!**                                                                   **
-!***********************************************************************
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: AUTOPILOT                                                          **
+!**                                                                           **
+!**  PURPOSE: ANNEALING SCHEME FOR FRICTION DYNAMICS.                         **
+!**     TUNES THE FRICTION                                                    **
+!**                                                                           **
+!*******************************************************************************
 TYPE CONTROL_TYPE
  CHARACTER(32) :: NAME
  LOGICAL(1)    :: ON
@@ -294,26 +294,29 @@ INTEGER(4)           ::NAUTO=NAUTOX
 LOGICAL(4) :: TINI=.FALSE.
 LOGICAL(4) :: TAUTO=.FALSE.  ! SWITCH(AUTOPILOT ON/OFF)
 LOGICAL(4) :: TFIRST=.TRUE.
-REAL(8)    :: EPREV=1.D+20  ! ENERGY OF PREVIOUS STEP
 INTEGER(4) :: NTOL=20       ! CONVERGENCE CRITERION: #(STEPS)
 REAL(8)    :: ETOL=1.D-5    ! CONVERGENCE CRITERION: ENERGY WINDOW
 REAL(8)    :: EMARK         !
 INTEGER(4) :: ITER          ! #(ITERATIONS WITH |ETOT-EMARK|<ETOL
 INTEGER(4) :: ISELECT       ! SELECTS ONE CONTROL FOR IO INTERFACE
+INTEGER(4),PARAMETER :: NHISTX=20   ! SIZE OF THE HISTORY ARRAY
+INTEGER(4)           :: NHIST=0     ! SIZE OF ACCUMULATED HISTORY
+REAL(8)              :: EHIST(NHISTX)=0.D0  ! HISTORY ARRAY OF ENERGIES
+INTEGER(4) :: NRETARDSWITCH=1 !SWI
 END MODULE AUTOPILOT_MODULE
 !
-!     ...................................................AUTOPI.........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUTO$REPORT(NFIL)
-!     ******************************************************************
-!     **  REPORT SETTING OF AUTOPILOT                                 **
-!     ******************************************************************
+!     **************************************************************************
+!     **  REPORT SETTING OF AUTOPILOT                                         **
+!     **************************************************************************
       USE AUTOPILOT_MODULE
       IMPLICIT NONE
       REAL(8)   ,PARAMETER  :: DSMALL=1.D-12
       INTEGER(4),INTENT(IN) :: NFIL
       INTEGER(4)            :: I
       INTEGER(4)            :: NTASKS,THISTASK
-!     ******************************************************************
+!     **************************************************************************
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       IF(THISTASK.NE.1) RETURN
       IF(.NOT.TAUTO) RETURN
@@ -354,25 +357,33 @@ END MODULE AUTOPILOT_MODULE
       RETURN
       END
 !
-!     ...................................................AUTOPI.........
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUTOPI(TSTOP)
-!     **                                                              **
-!     **  AUTOPILOT SETS THE FRICTION PARAMETERS ANNEE AND ANNER      **
-!     **                                                              **
+!     **************************************************************************
+!     **  AUTOPILOT SETS THE FRICTION PARAMETERS                              **
+!     **************************************************************************
       USE AUTOPILOT_MODULE
       IMPLICIT NONE
       REAL(8)                :: ETOT 
       LOGICAL(4),INTENT(OUT) :: TSTOP
       REAL(8)                :: FRICTION
       INTEGER(4)             :: I
-!     ******************************************************************
+      LOGICAL(4)             :: TUPPERFRICTION
+!     **************************************************************************
       TSTOP=.FALSE.
       IF(.NOT.TAUTO) RETURN
+!
+!     ==========================================================================
+!     == UPDATE HISTORY                                                       ==
+!     ==========================================================================
+      CALL ENERGYLIST$GET('TOTAL ENERGY',ETOT)
+      IF(NHIST.LT.NHISTX) NHIST=NHIST+1
+      EHIST(2:NHISTX)=EHIST(1:NHISTX-1)
+      EHIST(1)=ETOT
 !
 !     ==================================================================
 !     == CHECK CONVERGENCE                                            ==
 !     ==================================================================
-      CALL ENERGYLIST$GET('TOTAL ENERGY',ETOT)
       IF(TFIRST) THEN
         TFIRST=.FALSE.
         EMARK=ETOT
@@ -390,20 +401,34 @@ END MODULE AUTOPILOT_MODULE
         ENDIF       
       END IF
 !
-!     ==================================================================
-!     == APPLY AND SCALE FRICTIONS                                    ==
-!     ==================================================================
+!     ==========================================================================
+!     == DETERMINE SWITCH TO UPPER FRICTION VALUE                             ==
+!     ==========================================================================
+!     == UPPER FRICTION, IF ENERGY GROWS FOR THE LAST NRETARDSWITCH STEPS ======
+      TUPPERFRICTION=(NHIST.GE.NRETARDSWITCH+1) ! HISTORY TOO SHORT. NO SWITCH
+      DO I=1,NRETARDSWITCH
+        TUPPERFRICTION=TUPPERFRICTION.AND.(EHIST(I).GT.EHIST(I+1))
+      ENDDO
+!
+!     ==========================================================================
+!     == APPLY AND SCALE FRICTIONS                                            ==
+!     ==========================================================================
       DO I=1,NAUTO
         IF(.NOT.CONTROL(I)%ON) CYCLE
-        IF(ETOT.GT.EPREV) THEN
+!       == EXTRACT CURRENT FRICTION VALUE ======================================
+!       == UPDATE UPPER AND LOWER FRICTION PARAMETERS ==========================
+        IF(TUPPERFRICTION) THEN
           FRICTION=CONTROL(I)%UPPERFRICTION
         ELSE
           FRICTION=CONTROL(I)%LOWERFRICTION
-          CONTROL(I)%LOWERFRICTION=CONTROL(I)%LOWERFRICTION*CONTROL(I)%LOWERFACTOR
-          CONTROL(I)%UPPERFRICTION=CONTROL(I)%UPPERFRICTION*CONTROL(I)%UPPERFACTOR
+          CONTROL(I)%LOWERFRICTION=CONTROL(I)%LOWERFRICTION &
+    &                             *CONTROL(I)%LOWERFACTOR
+          CONTROL(I)%UPPERFRICTION=CONTROL(I)%UPPERFRICTION &
+    &                             *CONTROL(I)%UPPERFACTOR
         END IF
         FRICTION=MAX(FRICTION,CONTROL(I)%MINFRICTION)
 !
+!       == PASS CURRENT FRICTION TO OBJECTS ====================================
         IF(TRIM(CONTROL(I)%NAME).EQ.'ATOMS') THEN
            CALL ATOMS$SETR8('FRICTION',FRICTION)
         ELSE IF(TRIM(CONTROL(I)%NAME).EQ.'OCC') THEN
@@ -416,7 +441,7 @@ END MODULE AUTOPILOT_MODULE
           CALL COSMO$SETR8('FRICTION',FRICTION)
         END IF
       ENDDO
-      EPREV=ETOT
+!
       RETURN
       END
 !
@@ -472,26 +497,46 @@ END MODULE AUTOPILOT_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE AUTO$SETI4(IDENT_,VALUE)
-!     ******************************************************************
-!     ******************************************************************
+!     **************************************************************************
+!     ** SET INTEGER INTERNAL VARIABLES OF AUTOPILOT OBJECT                   **
+!     **************************************************************************
       USE AUTOPILOT_MODULE
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: IDENT_
       INTEGER(4)  ,INTENT(IN) :: VALUE
-!     ******************************************************************
+!     **************************************************************************
+!
+!     ==========================================================================
 !     == GLOBAL VARIABLES (NOT SPECIFIC FOR A PARTICULAR AUTOPILOT)
+!     ==========================================================================
       IF(IDENT_.EQ.'NTOL') THEN
         NTOL=VALUE
         RETURN
+      ELSE IF(IDENT_.EQ.'RETARD') THEN
+        NRETARDSWITCH=VALUE
+        IF(NRETARDSWITCH.GT.NHISTX-1) THEN
+          CALL ERROR$MSG('NRETARDSWITCH MUST NOT EXCEED HISTORY')
+          CALL ERROR$I4VAL('NRETARDSWITCH',NRETARDSWITCH)
+          CALL ERROR$I4VAL('SIZE OF HISTORY',NHISTX)
+          CALL ERROR$STOP('AUTO$SETI4')
+        END IF
+        RETURN
       END IF
-!     == CHECK IF A PARTICULAR AUTOPILOT IS SELECTED
+!
+!     ==========================================================================
+!     == CHECK IF A PARTICULAR AUTOPILOT IS SELECTED ===========================
+!     ==========================================================================
       IF(ISELECT.EQ.0) THEN
         CALL ERROR$MSG('CONTROL MUST BE SELECTED')
+        CALL ERROR$CHVAL('KEYWORD',IDENT_)
         CALL ERROR$STOP('AUTO$SETI4')
       END IF
-!     == SETTINGS OF A PARTICULAR AUTOPILOT 
+!
+!     ==========================================================================
+!     == SET INTERNAL VARIABLES SPECIFIC FOR A PARTICULAR AUTOPILOT           ==
+!     ==========================================================================
       IF(IDENT_.EQ.'XXX') THEN
 !        XXX=VALUE
       ELSE
