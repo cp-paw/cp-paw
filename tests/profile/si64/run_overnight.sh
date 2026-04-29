@@ -100,6 +100,8 @@ capture_metadata() {
           "${ROOT}/bin/nvhpc_nvlamath_profile_parallel/ppaw_nvhpc_nvlamath_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_acc_profile_parallel/ppaw_nvhpc_gpu_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile_parallel/ppaw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" \
@@ -195,7 +197,7 @@ esac
 case "${RUN_GPU_ACC}" in
   yes|true|1)
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
-      "cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_off"
+      "cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_off"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
       "cpu nvpl"
     ;;
