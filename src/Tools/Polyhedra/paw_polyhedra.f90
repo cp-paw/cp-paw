@@ -860,6 +860,10 @@
        INTEGER(4) :: I
        LOGICAL(4) :: TCHK
        REAL(8) :: RTEMP(9)
+       REAL(8) :: RT(3,3)
+       REAL(8) :: DET
+       REAL(8) :: MAXDEV
+       REAL(8), PARAMETER :: ETOL=1.D-6
 !      **************************************************************************
        CALL TRACE$PUSH('READCNTL$GENERIC')
 !      SET DEFAULT VALUE
@@ -877,6 +881,21 @@
        IF(TCHK)THEN
          CALL LINKEDLIST$GET(LL_CNTL,'ROT',1,RTEMP)
          R=RESHAPE(RTEMP,(/3,3/))
+         RT=MATMUL(TRANSPOSE(R),R)
+         MAXDEV=MAX(ABS(RT(1,1)-1.D0),ABS(RT(2,2)-1.D0))
+         MAXDEV=MAX(MAXDEV,ABS(RT(3,3)-1.D0))
+         MAXDEV=MAX(MAXDEV,ABS(RT(1,2)))
+         MAXDEV=MAX(MAXDEV,ABS(RT(1,3)))
+         MAXDEV=MAX(MAXDEV,ABS(RT(2,3)))
+         DET=R(1,1)*(R(2,2)*R(3,3)-R(2,3)*R(3,2))-
+      &      R(1,2)*(R(2,1)*R(3,3)-R(2,3)*R(3,1))+
+      &      R(1,3)*(R(2,1)*R(3,2)-R(2,2)*R(3,1))
+         IF(MAXDEV.GT.ETOL.OR.ABS(DET-1.D0).GT.ETOL) THEN
+           CALL ERROR$MSG('ROT MATRIX MUST BE ORTHONORMAL WITH DET=1')
+           CALL ERROR$R8VAL('MAXDEV',MAXDEV)
+           CALL ERROR$R8VAL('DET',DET)
+           CALL ERROR$STOP('READCNTL$GENERIC')
+         END IF
        END IF
        CALL TRACE$POP
        RETURN
