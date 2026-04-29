@@ -12,7 +12,7 @@
 !     ** USES CONTROL FILE .POLYCNTL :                                        **
 !     **                                                                      **
 !     ** !POLYCNTL                                                            **
-!     **   !GENERIC ROT= 1.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 1.0 !END             **
+!     **   !GENERIC Z=0.0 0.0 1.0 X=1.0 1.0 0.0 !END                          **
 !     **   !CENTERS                                                           **
 !     **     !ATOM NAME='MN1' !END                                            **
 !     **     !ATOM NAME='MN2' !END                                            **
@@ -20,7 +20,8 @@
 !     ** !END                                                                 **
 !     ** !EOB                                                                 **
 !     **                                                                      **
-!     ** !GENERIC:ROT : ROTATION MATRIX APPLIED TO THE STRUCTURE (OPTIONAL)   **
+!     ** !GENERIC:Z : Z DIRECTION OF COORDINATE SYSTEM ALONG OCTAHEDRA (OPT.) **
+!     ** !GENERIC:X : X DIRECTION OF COORDINATE SYSTEM ALONG OCTAHEDRA (OPT.) **
 !     ** !CENTERS : LIST OF ATOM NAMES AROUND WHICH POLYHEDRA ARE EXTRACTED   **
 !     ** !CENTERS!ATOM:NAME : ATOM NAME OF THE CENTER ATOM                    **
 !     **************************************************************************
@@ -858,45 +859,33 @@
        IMPLICIT NONE
        REAL(8), INTENT(OUT) :: R(3,3) ! ROTATION MATRIX
        INTEGER(4) :: I
-       LOGICAL(4) :: TCHK
-       REAL(8) :: RTEMP(9)
-       REAL(8) :: RT(3,3)
-       REAL(8) :: DET
-       REAL(8) :: MAXDEV
+       LOGICAL(4) :: TCHK,TCHK1
+       REAL(8) :: Z(3)
+       REAL(8) :: X(3)
        REAL(8), PARAMETER :: ETOL=1.D-6
 !      **************************************************************************
        CALL TRACE$PUSH('READCNTL$GENERIC')
 !      SET DEFAULT VALUE
-       R=0.D0
-       DO I=1,3
-         R(I,I)=1.D0
-       ENDDO
+       X=(/1.D0,0.D0,0.D0/)
+       Z=(/0.D0,0.D0,1.D0/)
 !      READ GENERIC BLOCK
        CALL LINKEDLIST$SELECT(LL_CNTL,'~')
        CALL LINKEDLIST$SELECT(LL_CNTL,'POLYCNTL')
        CALL LINKEDLIST$EXISTL(LL_CNTL,'GENERIC',1,TCHK)
        IF(.NOT.TCHK) RETURN
        CALL LINKEDLIST$SELECT(LL_CNTL,'GENERIC')
-       CALL LINKEDLIST$EXISTD(LL_CNTL,'ROT',1,TCHK)
-       IF(TCHK)THEN
-         CALL LINKEDLIST$GET(LL_CNTL,'ROT',1,RTEMP)
-         R=RESHAPE(RTEMP,(/3,3/))
-         RT=MATMUL(TRANSPOSE(R),R)
-         MAXDEV=MAX(ABS(RT(1,1)-1.D0),ABS(RT(2,2)-1.D0))
-         MAXDEV=MAX(MAXDEV,ABS(RT(3,3)-1.D0))
-         MAXDEV=MAX(MAXDEV,ABS(RT(1,2)))
-         MAXDEV=MAX(MAXDEV,ABS(RT(1,3)))
-         MAXDEV=MAX(MAXDEV,ABS(RT(2,3)))
-         DET=R(1,1)*(R(2,2)*R(3,3)-R(2,3)*R(3,2))-
-      &      R(1,2)*(R(2,1)*R(3,3)-R(2,3)*R(3,1))+
-      &      R(1,3)*(R(2,1)*R(3,2)-R(2,2)*R(3,1))
-         IF(MAXDEV.GT.ETOL.OR.ABS(DET-1.D0).GT.ETOL) THEN
-           CALL ERROR$MSG('ROT MATRIX MUST BE ORTHONORMAL WITH DET=1')
-           CALL ERROR$R8VAL('MAXDEV',MAXDEV)
-           CALL ERROR$R8VAL('DET',DET)
-           CALL ERROR$STOP('READCNTL$GENERIC')
-         END IF
+!      CHECK FOR X AND Z VECTORS
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'Z',1,TCHK)
+       CALL LINKEDLIST$EXISTD(LL_CNTL,'X',1,TCHK1)
+       IF(TCHK.NEQV.TCHK1) THEN
+         CALL ERROR$MSG('BOTH X AND Z VECTORS MUST BE SPECIFIED IN GENERIC BLOCK')
+         CALL ERROR$STOP('READCNTL$GENERIC')
        END IF
+       IF(TCHK) THEN
+            CALL LINKEDLIST$GET(LL_CNTL,'Z',1,Z)
+            CALL LINKEDLIST$GET(LL_CNTL,'X',1,X)
+       END IF
+       CALL RESOLVEROTATION(Z,X,R)
        CALL TRACE$POP
        RETURN
        END SUBROUTINE READCNTL$GENERIC
@@ -966,6 +955,69 @@
        CALL TRACE$POP
        RETURN
        END SUBROUTINE READCNTL$CENTER
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE RESOLVEROTATION(DZ_,DX_,ROT)
+!     **************************************************************************
+!     **************************************************************************
+      IMPLICIT NONE
+      REAL(8)   ,INTENT(IN)  :: DZ_(3)
+      REAL(8)   ,INTENT(IN)  :: DX_(3)
+      REAL(8)   ,INTENT(OUT) :: ROT(3,3)
+      REAL(8)                :: DZ(3)
+      REAL(8)                :: DX(3)
+      REAL(8)                :: DY(3)
+      REAL(8)                :: DZLEN,DXLEN
+!     **************************************************************************
+      DX=DX_
+      DZ=DZ_
+!     
+!     ==========================================================================
+!     == NORMALIZE AND COMPLETE VECTORS                                       ==
+!     ==========================================================================
+!     == SET DZ ================================================================
+      DZLEN=SQRT(DZ(1)**2+DZ(2)**2+DZ(3)**2)
+      IF(DZLEN.EQ.0.D0) THEN
+        DZ=(/0.D0,0.D0,1.D0/)
+      ELSE
+        DZ=DZ/DZLEN
+      END IF
+!     == SET DX ================================================================
+      DXLEN=SQRT(DX(1)**2+DX(2)**2+DX(3)**2)
+      IF(DXLEN.EQ.0.D0) THEN
+        DX=(/1.D0,0.D0,0.D0/)
+      ELSE
+        DX=DX/DXLEN
+      END IF
+      DX=DX-DZ*DOT_PRODUCT(DZ,DX)
+      DXLEN=SQRT(DX(1)**2+DX(2)**2+DX(3)**2)
+      IF(DXLEN.EQ.0.D0) THEN   ! DX=0 OR PARALLEL TO DZ
+        DX=(/0.D0,1.D0,0.D0/)  ! CHOOSE Y DIRECTION AS ALTERNATIVE
+        DX=DX-DZ*DOT_PRODUCT(DZ,DX) !JO AB DA
+        DXLEN=SQRT(DX(1)**2+DX(2)**2+DX(3)**2) 
+        IF(DXLEN.EQ.0.D0) THEN
+          DX=(/0.D0,0.D0,1.D0/) ! CHOOSE Z DIRECTION AS ALTERNATIVE
+          DX=DX-DZ*DOT_PRODUCT(DZ,DX) 
+          DXLEN=SQRT(DX(1)**2+DX(2)**2+DX(3)**2)   
+        END IF       !JO BIS DA
+      END IF
+      DX=DX/DXLEN
+!     == SET DY ================================================================
+      DY(1)=DZ(2)*DX(3)-DZ(3)*DX(2)
+      DY(2)=DZ(3)*DX(1)-DZ(1)*DX(3)
+      DY(3)=DZ(1)*DX(2)-DZ(2)*DX(1)
+!     
+!     ==========================================================================
+!     == NORMALIZE AND COMPLETE VECTORS                                       ==
+!     ==========================================================================
+      ROT(:,3)=DZ(:)
+      ROT(:,2)=DY(:)
+      ROT(:,1)=DX(:)
+!     WRITE(*,FMT='("ROT",3F10.5)')ROT(1,:)
+!     WRITE(*,FMT='("ROT",3F10.5)')ROT(2,:)
+!     WRITE(*,FMT='("ROT",3F10.5/)')ROT(3,:)
+      RETURN
+      END SUBROUTINE RESOLVEROTATION
 
 
 
