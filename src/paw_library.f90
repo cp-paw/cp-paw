@@ -2411,7 +2411,6 @@
       LOGICAL(4)               :: ACCEL_CUBLAS_USED
 #ENDIF
 !     ******************************************************************
-      C(:,:)=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
@@ -2598,7 +2597,6 @@
 #ENDIF
 !     ******************************************************************
 !     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
-      OPERATOR(:,:)=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
@@ -2732,7 +2730,6 @@
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-      OVERLAP(:,:)=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF

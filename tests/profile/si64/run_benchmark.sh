@@ -4,6 +4,11 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "${HERE}/../../.." && pwd)
 TEST=${TEST:-si64}
+CNTL_FILE=${CNTL_FILE:-"${HERE}/${TEST}.cntl"}
+STRC_FILE=${STRC_FILE:-"${HERE}/${TEST}.strc"}
+if [[ ! -f "${STRC_FILE}" && -f "${HERE}/si64.strc" ]]; then
+  STRC_FILE="${HERE}/si64.strc"
+fi
 NSTEPS=${NSTEPS:-20}
 RANKS=${RANKS:-1}
 REPEATS=${REPEATS:-1}
@@ -140,10 +145,22 @@ case_env() {
 prepare_case() {
   local dir=$1
   mkdir -p "${dir}"
-  cp "${HERE}/${TEST}.cntl" "${HERE}/${TEST}.strc" \
-     "${HERE}/profile_summary.py" "${HERE}/benchmark_summary.py" "${dir}/"
+  if [[ ! -f "${CNTL_FILE}" ]]; then
+    echo "Control file not found: ${CNTL_FILE}" >&2
+    return 1
+  fi
+  if [[ ! -f "${STRC_FILE}" ]]; then
+    echo "Structure file not found: ${STRC_FILE}" >&2
+    return 1
+  fi
+  cp "${CNTL_FILE}" "${dir}/${TEST}.cntl"
+  cp "${STRC_FILE}" "${dir}/${TEST}.strc"
+  cp "${HERE}/profile_summary.py" "${HERE}/benchmark_summary.py" "${dir}/"
   cp "${ROOT}/tests/fulltests/si2/stp.cntl" "${dir}/"
   perl -0pi -e "s/NSTEP\\s*=\\s*\\d+/NSTEP=${NSTEPS}/" "${dir}/${TEST}.cntl"
+  if [[ -n "${EMPTY_BANDS:-}" ]]; then
+    perl -0pi -e "s/EMPTY\\s*=\\s*\\d+/EMPTY=${EMPTY_BANDS}/" "${dir}/${TEST}.strc"
+  fi
 }
 
 mkdir -p "${RUN_ROOT}"

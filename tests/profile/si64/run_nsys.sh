@@ -4,13 +4,18 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "${HERE}/../../.." && pwd)
 TEST=${TEST:-si64}
+CNTL_FILE=${CNTL_FILE:-"${HERE}/${TEST}.cntl"}
+STRC_FILE=${STRC_FILE:-"${HERE}/${TEST}.strc"}
+if [[ ! -f "${STRC_FILE}" && -f "${HERE}/si64.strc" ]]; then
+  STRC_FILE="${HERE}/si64.strc"
+fi
 NSTEPS=${NSTEPS:-1}
-RANKS=${RANKS:-4}
+RANKS=${RANKS:-1}
 TIMEOUT=${TIMEOUT:-600}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nsys-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
-EXE=${EXE:-"${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x"}
-NSYS_TRACE=${NSYS_TRACE:-cuda,nvtx,osrt,mpi}
+EXE=${EXE:-"${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x"}
+NSYS_TRACE=${NSYS_TRACE:-cuda,nvtx,osrt}
 NSYS_STATS=${NSYS_STATS:-true}
 NSYS_MPI_MODE=${NSYS_MPI_MODE:-outer}
 
@@ -52,9 +57,22 @@ if [[ ! -x "${EXE}" ]]; then
 fi
 
 mkdir -p "${RUN_ROOT}"
-cp "${HERE}/${TEST}.cntl" "${HERE}/${TEST}.strc" "${HERE}/profile_summary.py" "${RUN_ROOT}/"
+if [[ ! -f "${CNTL_FILE}" ]]; then
+  echo "Control file not found: ${CNTL_FILE}" >&2
+  exit 1
+fi
+if [[ ! -f "${STRC_FILE}" ]]; then
+  echo "Structure file not found: ${STRC_FILE}" >&2
+  exit 1
+fi
+cp "${CNTL_FILE}" "${RUN_ROOT}/${TEST}.cntl"
+cp "${STRC_FILE}" "${RUN_ROOT}/${TEST}.strc"
+cp "${HERE}/profile_summary.py" "${RUN_ROOT}/"
 cp "${ROOT}/tests/fulltests/si2/stp.cntl" "${RUN_ROOT}/"
 perl -0pi -e "s/NSTEP\\s*=\\s*\\d+/NSTEP=${NSTEPS}/" "${RUN_ROOT}/${TEST}.cntl"
+if [[ -n "${EMPTY_BANDS:-}" ]]; then
+  perl -0pi -e "s/EMPTY\\s*=\\s*\\d+/EMPTY=${EMPTY_BANDS}/" "${RUN_ROOT}/${TEST}.strc"
+fi
 
 cd "${RUN_ROOT}"
 echo "${RUN_ROOT}" > "${HERE}/runs/latest_nsys"

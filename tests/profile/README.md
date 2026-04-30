@@ -112,6 +112,15 @@ compare one MPI rank with one GPU against one-rank CPU/NVPL and the same
 combined binary with native GPU paths disabled. Use explicit `CASES=...` for
 diagnostic sweeps.
 
+For a larger band/orthogonalization smoke test, use the `si64_bands` control
+file with the same Si64 structure and more empty bands. The harness copies
+`si64.strc` automatically when a variant-specific structure file is not present:
+
+```
+cd tests/profile/si64
+TEST=si64_bands EMPTY_BANDS=128 NSTEPS=1 ./run_benchmark.sh
+```
+
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
 `CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs and was the
@@ -152,17 +161,17 @@ The harness creates timestamped directories under `tests/profile/si64/runs`,
 writes per-run logs and profile CSV files, and emits a `benchmark.tsv` summary
 with wall time, instrumented rank-seconds, category timings and final energy.
 
-For a short Nsight Systems trace of the cuBLAS/OpenACC profile binary:
+For a short Nsight Systems trace of the recommended combined GPU profile binary:
 
 ```
 cd tests/profile/si64
-NSTEPS=1 RANKS=4 ./run_nsys.sh
+NSTEPS=1 ./run_nsys.sh
 ```
 
-By default the Nsight harness wraps `mpirun` and writes one combined
-`nsys_mpi.nsys-rep` report, which is robust for CP-PAW's current
-`MPI_ABORT(0)` shutdown path. For runs that finalize MPI normally,
-`NSYS_MPI_MODE=per_rank` writes one report per rank.
+For `RANKS>1` the Nsight harness wraps `mpirun` and writes one combined
+`nsys_mpi.nsys-rep` report, which is robust for CP-PAW's current `MPI_ABORT(0)`
+shutdown path. For runs that finalize MPI normally, `NSYS_MPI_MODE=per_rank`
+writes one report per rank.
 
 For an overnight comparison that combines a longer 4-rank run, rank scaling,
 a cuBLAS offload-threshold sweep and a short Nsight trace:
@@ -186,4 +195,5 @@ The overnight defaults use the recommended production-style cases:
 `MAIN_CASES="nvpl cublas cublas_off"`, `SCALING_CASES="nvpl cublas"`,
 `GPU_ACC_CASES="cpu nvpl gpu gpu_off"` and `THRESHOLDS="1e7"`. Set
 `RUN_GPU_DIAGNOSTICS=yes` to add `gpu_force_all` and the `gpu_no_*` ablation
-cases, or override any of these variables for a wider sweep.
+cases, set `RUN_BAND_BENCHMARK=yes` to add the `si64_bands` larger-band smoke,
+or override any of these variables for a wider sweep.
