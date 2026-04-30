@@ -53,29 +53,33 @@ make all
 ```
 
 To test the experimental native cuFFT/OpenACC path for batched 1-D complex FFTs,
-build an `nvhpc_cufft_*` target. This uses native cuFFT for `LIB$FFTC8` when the
-runtime threshold allows it, but keeps NVPL FFTW as the CPU fallback for the rest
-of CP-PAW's FFT work:
+build an `nvhpc_cufft_*` target. Native cuFFT is opt-in because the Si64
+profiling case is dominated by small 1-D FFT batches where copy/setup overheads
+outweigh device execution. When enabled, this path uses native cuFFT for
+`LIB$FFTC8` when the runtime threshold allows it, but keeps NVPL FFTW as the CPU
+fallback for the rest of CP-PAW's FFT work:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_profile_parallel
 cd tests/profile/si64
+CPPAW_CUFFT_ACC=1 \
 PAWX="mpirun -np 4 ../../../bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
 make all
 ```
 
-Set `CPPAW_CUFFT_ACC=0` to run the same binary through the CPU/NVPL fallback, or
-set `CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` to offload only larger batched FFT
+Set `CPPAW_CUFFT_ACC=1` to enable the native path, and set
+`CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` to offload only larger batched FFT
 calls.
 
-To profile native cuFFT and explicit cuBLAS together on one GPU, build a combined
-`nvhpc_cufft_cublas_acc_*` target. This is the preferred GPU-vs-CPU comparison
-target because the same binary can selectively disable either accelerator path:
+To profile the combined native GPU paths on one GPU, build an
+`nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
+cuFFT opt-in, and uses cuSOLVER only above its default size threshold. The same
+binary can selectively force or disable each accelerator path:
 
 ```
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cufft_cublas_acc_profile
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
 cd tests/profile/si64
-NSTEPS=1 RANKS=1 CASES="cpu nvpl nvlamath gpu gpu_no_cufft gpu_no_cublas gpu_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=1 CASES="cpu nvpl nvlamath gpu gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_off" ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 ```
 
@@ -85,9 +89,9 @@ system `mpirun`; set `CPU_MPIRUN=...` to override it.
 
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
-`CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs. Set
-`CPPAW_CUBLAS_ACC=0` to run the same binary with the CPU/NVPL fallback, or set
-`CPPAW_CUBLAS_ACC_MINFLOP=1e8` to keep the projection GEMMs on CPU/NVPL:
+`CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs and was the
+best Si64 threshold in the Spark C86C night run. Set `CPPAW_CUBLAS_ACC=0` to run
+the same binary with the CPU/NVPL fallback:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile_parallel

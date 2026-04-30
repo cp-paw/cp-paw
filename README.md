@@ -92,7 +92,7 @@ not apply to the present implementation.)
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile_parallel
    ```
-   Profiled runs write `cppaw_accel_profile.csv` in serial mode and `cppaw_accel_profile.rankNNNNN.csv` in parallel mode. Set `CPPAW_ACCEL_PROFILE_FILE=<prefix>` to choose another file prefix, or `CPPAW_ACCEL_PROFILE=0` to disable collection at run time. In `nvhpc_cufft_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUFFT_ACC=0` disables the native cuFFT path at run time and `CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` adjusts the batched FFT offload threshold. In `nvhpc_cublas_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUBLAS_ACC=0` disables the cuBLAS path at run time and `CPPAW_CUBLAS_ACC_MINFLOP=<flops>` adjusts the offload threshold. In `nvhpc_cusolver_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUSOLVER_ACC=0` disables the cuSOLVER path at run time and `CPPAW_CUSOLVER_ACC_MIN_N=<n>` adjusts the dense eigensolver offload threshold; `CPPAW_CUSOLVER_MIN_N=<n>` is accepted as a shorter alias. The default cuBLAS threshold is `1e7`; set `CPPAW_CUBLAS_ACC_MINFLOP=1e8` to keep the long-skinny projection kernels on CPU/NVPL. The default cuSOLVER threshold is `256`; smaller Si64 profiling runs can set `CPPAW_CUSOLVER_ACC_MIN_N=1` to force offload. Set `CPPAW_CUSOLVER_ACC_CHECK=1` to validate cuSOLVER eigensolver results by residual and orthonormality before accepting them; failures fall back to the CPU LAPACK path.
+   Profiled runs write `cppaw_accel_profile.csv` in serial mode and `cppaw_accel_profile.rankNNNNN.csv` in parallel mode. Set `CPPAW_ACCEL_PROFILE_FILE=<prefix>` to choose another file prefix, or `CPPAW_ACCEL_PROFILE=0` to disable collection at run time. In `nvhpc_cufft_*` and `nvhpc_gpu_acc_*` builds, the native cuFFT path is opt-in: set `CPPAW_CUFFT_ACC=1` to enable it and `CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` to adjust the batched FFT offload threshold. In `nvhpc_cublas_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUBLAS_ACC=0` disables the cuBLAS path at run time and `CPPAW_CUBLAS_ACC_MINFLOP=<flops>` adjusts the offload threshold. In `nvhpc_cusolver_acc_*` and `nvhpc_gpu_acc_*` builds, `CPPAW_CUSOLVER_ACC=0` disables the cuSOLVER path at run time and `CPPAW_CUSOLVER_ACC_MIN_N=<n>` adjusts the dense eigensolver offload threshold; `CPPAW_CUSOLVER_MIN_N=<n>` is accepted as a shorter alias. The default cuBLAS threshold is `1e7`; the Si64 profile favors this over more conservative thresholds. The default cuSOLVER threshold is `256`; smaller Si64 profiling runs can set `CPPAW_CUSOLVER_ACC_MIN_N=1` to force offload. Set `CPPAW_CUSOLVER_ACC_CHECK=1` to validate cuSOLVER eigensolver results by residual and orthonormality before accepting them; failures fall back to the CPU LAPACK path.
    To include profile targets in the installer run:
    ```
    CPPAW_INSTALL_PROFILE=yes ./paw_install
@@ -131,6 +131,7 @@ not apply to the present implementation.)
    To try the native cuFFT/OpenACC 1-D FFT path:
    ```
    cd tests/profile/si64
+   CPPAW_CUFFT_ACC=1 \
    PAWX="mpirun -np 4 ../../../bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
    make all
    ```
@@ -143,6 +144,7 @@ not apply to the present implementation.)
    For the combined native cuFFT + cuBLAS + cuSOLVER/OpenACC profiling path:
    ```
    cd tests/profile/si64
+   CPPAW_CUFFT_ACC=1 \
    CPPAW_CUSOLVER_ACC_MIN_N=1 \
    PAWX="../../../bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" \
    make all

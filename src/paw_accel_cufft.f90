@@ -28,7 +28,7 @@
       TYPE(CPPAW_CUFFT_ACC_PLAN_TYPE) :: PLANS(NPLANX)
       INTEGER(4)                      :: NPLAN=0
       LOGICAL(4)                      :: CONFIG_READY=.FALSE.
-      LOGICAL(4)                      :: ENABLED=.TRUE.
+      LOGICAL(4)                      :: ENABLED=.FALSE.
       REAL(8)                         :: MINELEMENTS=0.D0
       CONTAINS
 !
