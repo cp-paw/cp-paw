@@ -141,14 +141,14 @@ not apply to the present implementation.)
    PAWX="mpirun -np 4 ../../../bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" \
    make all
    ```
-   For the combined native cuFFT + cuBLAS + cuSOLVER/OpenACC profiling path:
+   For the recommended combined GPU profiling path:
    ```
    cd tests/profile/si64
-   CPPAW_CUFFT_ACC=1 \
-   CPPAW_CUSOLVER_ACC_MIN_N=1 \
    PAWX="../../../bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" \
    make all
    ```
+   To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
+   `CPPAW_CUSOLVER_ACC_MIN_N=1`.
    For explicit cuSOLVER/OpenACC dense eigensolver profiling:
    ```
    cd tests/profile/si64

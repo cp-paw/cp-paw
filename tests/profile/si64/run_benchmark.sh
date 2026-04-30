@@ -5,12 +5,12 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "${HERE}/../../.." && pwd)
 TEST=${TEST:-si64}
 NSTEPS=${NSTEPS:-20}
-RANKS=${RANKS:-4}
+RANKS=${RANKS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
-CASES=${CASES:-"nvpl gpu gpu_force_all gpu_off cublas cublas_conservative cublas_off cusolver cusolver_off"}
+CASES=${CASES:-"cpu nvpl gpu gpu_off"}
 
 nvhpc_platform() {
   case "$(uname -s)_$(uname -m)" in

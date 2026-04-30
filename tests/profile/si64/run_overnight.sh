@@ -23,8 +23,13 @@ RUN_NVLAMATH=${RUN_NVLAMATH:-no}
 RUN_CUFFTW=${RUN_CUFFTW:-no}
 RUN_CUFFT=${RUN_CUFFT:-no}
 RUN_GPU_ACC=${RUN_GPU_ACC:-no}
+RUN_GPU_DIAGNOSTICS=${RUN_GPU_DIAGNOSTICS:-no}
 RUN_CUSOLVER=${RUN_CUSOLVER:-no}
-THRESHOLDS=${THRESHOLDS:-"1e6 3e6 1e7 3e7 1e8"}
+MAIN_CASES=${MAIN_CASES:-"nvpl cublas cublas_off"}
+SCALING_CASES=${SCALING_CASES:-"nvpl cublas"}
+GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_off"}
+GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
+THRESHOLDS=${THRESHOLDS:-"1e7"}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
@@ -166,11 +171,11 @@ run_nsys_trace() {
 capture_metadata
 
 run_suite "main_${LONG_NSTEPS}steps_4ranks" "${LONG_NSTEPS}" 4 "${LONG_REPEATS}" \
-  "nvpl cublas cublas_conservative cublas_off"
+  "${MAIN_CASES}"
 
 for ranks in 1 2 4; do
   run_suite "scaling_${SCALING_NSTEPS}steps_${ranks}ranks" "${SCALING_NSTEPS}" "${ranks}" \
-    "${SCALING_REPEATS}" "nvpl cublas"
+    "${SCALING_REPEATS}" "${SCALING_CASES}"
 done
 
 case "${RUN_NVLAMATH}" in
@@ -196,8 +201,12 @@ esac
 
 case "${RUN_GPU_ACC}" in
   yes|true|1)
+    gpu_acc_cases="${GPU_ACC_CASES}"
+    case "${RUN_GPU_DIAGNOSTICS}" in
+      yes|true|1) gpu_acc_cases="${gpu_acc_cases} ${GPU_DIAGNOSTIC_CASES}" ;;
+    esac
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
-      "cpu nvpl nvlamath gpu gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_off"
+      "${gpu_acc_cases}"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
       "cpu nvpl"
     ;;
