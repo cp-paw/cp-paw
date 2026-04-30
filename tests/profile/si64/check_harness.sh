@@ -12,6 +12,7 @@ bash -n src/Buildtools/paw_build.sh
 bash -n src/Buildtools/paw_fcflags.sh
 bash -n src/Buildtools/paw_srclist.sh
 bash -n tests/profile/si64/run_benchmark.sh
+bash -n tests/profile/si64/run_followup.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_overnight.sh
 

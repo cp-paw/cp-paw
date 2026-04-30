@@ -97,11 +97,11 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `nvlamath` | NVIDIA HPC SDK NVLAMATH LAPACK/cuSOLVER wrapper path. |
 | `cufftw` | cuFFTW wrapper for CP-PAW's existing FFTW3 calls. |
 | `cufft` / `cufft_off` | Native cuFFT forced on, or disabled in the same binary. |
-| `cublas` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, or disabled. |
+| `cublas` / `cublas_nosync` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, with the post-call device synchronization disabled for diagnostics, or disabled. |
 | `cublas_conservative` | Explicit cuBLAS/OpenACC with a higher diagnostic threshold. |
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
-| `gpu` | Recommended combined GPU profile: cuBLAS default on, cuFFT opt-in/off, cuSOLVER only for large eigensolvers. |
+| `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
 | `gpu_no_cufft` / `gpu_no_cublas` / `gpu_no_cusolver` | Diagnostic ablations from `gpu_force_all`. |
 | `gpu_off` | Same combined binary with all native GPU paths disabled. |
@@ -121,11 +121,22 @@ cd tests/profile/si64
 TEST=si64_bands EMPTY_BANDS=128 NSTEPS=1 ./run_benchmark.sh
 ```
 
+The stacked follow-up benchmark compares the larger-band case across the
+resource split we want for the next optimization pass: one rank on one GPU,
+one-rank CPU references, and eight-rank CPU/NVPL references. It defaults to
+`NSTEPS_LIST="1 3 10"`:
+
+```
+cd tests/profile/si64
+./run_followup.sh
+```
+
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
 `CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs and was the
 best Si64 threshold in the Spark C86C night run. Set `CPPAW_CUBLAS_ACC=0` to run
-the same binary with the CPU/NVPL fallback:
+the same binary with the CPU/NVPL fallback. Set `CPPAW_CUBLAS_ACC_SYNC=0` only
+for diagnostic runs that compare the cost of the explicit device synchronization:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cublas_acc_profile_parallel
@@ -194,6 +205,7 @@ resource comparison.
 The overnight defaults use the recommended production-style cases:
 `MAIN_CASES="nvpl cublas cublas_off"`, `SCALING_CASES="nvpl cublas"`,
 `GPU_ACC_CASES="cpu nvpl gpu gpu_off"` and `THRESHOLDS="1e7"`. Set
-`RUN_GPU_DIAGNOSTICS=yes` to add `gpu_force_all` and the `gpu_no_*` ablation
-cases, set `RUN_BAND_BENCHMARK=yes` to add the `si64_bands` larger-band smoke,
-or override any of these variables for a wider sweep.
+`RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_force_all` and the
+`gpu_no_*` ablation cases, set `RUN_BAND_BENCHMARK=yes` to add the
+`si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank
+CPU references, or override any of these variables for a wider sweep.

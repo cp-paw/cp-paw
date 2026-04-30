@@ -16,6 +16,10 @@ TIMEOUT=${TIMEOUT:-1800}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvpl gpu gpu_off"}
+TIMEOUT_PREFIX=""
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
+fi
 
 nvhpc_platform() {
   case "$(uname -s)_$(uname -m)" in
@@ -124,6 +128,7 @@ cusolver_env() {
 case_env() {
   case "$1" in
     cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
+    cublas_nosync) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
     cublas_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
     cusolver) cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
@@ -132,6 +137,7 @@ case_env() {
     cufft) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}" ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
     gpu) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
+    gpu_nosync) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_force_all) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8} $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
     gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
@@ -140,6 +146,10 @@ case_env() {
     gpu_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     *) echo "" ;;
   esac
+}
+
+iso_now() {
+  date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
 prepare_case() {
@@ -185,24 +195,24 @@ for case_name in ${CASES}; do
         echo "ranks=${RANKS}"
         echo "exe=${exe}"
         echo "env=${env_line}"
-        echo "start=$(date -Is)"
+        echo "start=$(iso_now)"
       } > run.env
       cmd=$(run_command "${case_name}" "${exe}")
       echo "running ${case_name} repeat ${repeat}: ${cmd}"
       if [[ -n "${env_line}" ]]; then
         # shellcheck disable=SC2086
         /usr/bin/time -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" ${env_line} \
-          timeout "${TIMEOUT}s" ${cmd} > out.log 2> err.log
+          ${TIMEOUT_PREFIX} ${cmd} > out.log 2> err.log
       else
         # shellcheck disable=SC2086
         /usr/bin/time -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" \
-          timeout "${TIMEOUT}s" ${cmd} > out.log 2> err.log
+          ${TIMEOUT_PREFIX} ${cmd} > out.log 2> err.log
       fi
       python3 profile_summary.py "${case_name}_profile"*.csv > summary.txt
       grep -E "^real |^user |^sys " err.log > time.txt || true
       tail -40 out.log > out.tail.txt || true
       tail -80 err.log > err.tail.txt || true
-      echo "end=$(date -Is)" >> run.env
+      echo "end=$(iso_now)" >> run.env
     )
   done
 done

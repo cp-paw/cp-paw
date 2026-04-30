@@ -16,6 +16,7 @@ CUFFT_NSTEPS=${CUFFT_NSTEPS:-1}
 GPU_ACC_NSTEPS=${GPU_ACC_NSTEPS:-1}
 CUSOLVER_NSTEPS=${CUSOLVER_NSTEPS:-1}
 BAND_NSTEPS=${BAND_NSTEPS:-3}
+BAND_NSTEPS_LIST=${BAND_NSTEPS_LIST:-${BAND_NSTEPS}}
 LONG_REPEATS=${LONG_REPEATS:-3}
 SCALING_REPEATS=${SCALING_REPEATS:-2}
 THRESHOLD_REPEATS=${THRESHOLD_REPEATS:-2}
@@ -31,11 +32,14 @@ RUN_BAND_BENCHMARK=${RUN_BAND_BENCHMARK:-no}
 MAIN_CASES=${MAIN_CASES:-"nvpl cublas cublas_off"}
 SCALING_CASES=${SCALING_CASES:-"nvpl cublas"}
 GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_off"}
-GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
+GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
 BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
+BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
 BAND_EMPTY_BANDS=${BAND_EMPTY_BANDS:-128}
-BAND_CASES=${BAND_CASES:-"cpu nvpl gpu gpu_off"}
+BAND_CASES=${BAND_CASES:-"gpu gpu_nosync gpu_off"}
+BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvpl"}
+BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvpl"}
 THRESHOLDS=${THRESHOLDS:-"1e7"}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
@@ -78,7 +82,11 @@ SUMMARY_LOG="${OVERNIGHT_ROOT}/overnight.log"
 : > "${SUMMARY_LOG}"
 
 log() {
-  printf '%s %s\n' "$(date -Is)" "$*" | tee -a "${SUMMARY_LOG}"
+  printf '%s %s\n' "$(iso_now)" "$*" | tee -a "${SUMMARY_LOG}"
+}
+
+iso_now() {
+  date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
 label_safe() {
@@ -87,7 +95,7 @@ label_safe() {
 
 capture_metadata() {
   {
-    echo "date=$(date -Is)"
+    echo "date=$(iso_now)"
     echo "hostname=$(hostname)"
     echo "root=${ROOT}"
     echo "OMP_NUM_THREADS=${OMP_NUM_THREADS}"
@@ -230,9 +238,17 @@ esac
 
 case "${RUN_BAND_BENCHMARK}" in
   yes|true|1)
-    run_suite "${BAND_TEST}_${BAND_NSTEPS}steps_${BAND_RANKS}ranks" \
-      "${BAND_NSTEPS}" "${BAND_RANKS}" "${BAND_REPEATS}" "${BAND_CASES}" \
-      "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
+    for band_nsteps in ${BAND_NSTEPS_LIST}; do
+      run_suite "${BAND_TEST}_${band_nsteps}steps_${BAND_RANKS}ranks_gpu" \
+        "${band_nsteps}" "${BAND_RANKS}" "${BAND_REPEATS}" "${BAND_CASES}" \
+        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
+      run_suite "${BAND_TEST}_${band_nsteps}steps_1rank_cpu" \
+        "${band_nsteps}" 1 "${BAND_REPEATS}" "${BAND_ONE_RANK_CPU_CASES}" \
+        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
+      run_suite "${BAND_TEST}_${band_nsteps}steps_${BAND_CPU_RANKS}ranks_cpu_ref" \
+        "${band_nsteps}" "${BAND_CPU_RANKS}" "${BAND_REPEATS}" "${BAND_CPU_CASES}" \
+        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
+    done
     ;;
 esac
 
