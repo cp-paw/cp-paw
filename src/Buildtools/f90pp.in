@@ -10,7 +10,7 @@
 ##    -- removes directives (lines starting with @)                           ##
 ##    -- applies c-preprocessor (input option -D)                             ##
 ##    -- [paw_dollar_ok.sh] replaces dollar signs by double underscore        ##
-##       OpenMP directives !$OMP are restored                                 ##
+##       OpenMP/OpenACC directives !$OMP/!$ACC are restored                   ##
 ##    -- [f90pp.sed]                                                          ##
 ##       -- converts c-processor directives "#if defined", etc. to lowercase  ##
 ##       -- makes the include filenames fftw_f77.i, fftw3.f03, mpif.h lowercase#
