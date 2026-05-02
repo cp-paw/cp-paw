@@ -84,6 +84,7 @@ export CPPAW_USE_CUFFT="${CPPAW_USE_CUFFT:-no}"
 export CPPAW_USE_CUBLAS_ACC="${CPPAW_USE_CUBLAS_ACC:-no}"
 export CPPAW_USE_CUSOLVER_ACC="${CPPAW_USE_CUSOLVER_ACC:-no}"
 export CPPAW_NVHPC_ACC_FLAGS_ADDED="${CPPAW_NVHPC_ACC_FLAGS_ADDED:-no}"
+export CPPAW_NVHPC_GPU_MEMORY_MODE="${CPPAW_NVHPC_GPU_MEMORY_MODE:-separate}"
 
 ################################################################################
 ## generic definitions
@@ -517,10 +518,27 @@ function append_nvhpc_openacc_flags {
   local EXTRA_GPU_OPTS="${1:-}"
   local GPU_FLAGS="-acc"
   local GPU_OPTS=""
+  local MEMORY_MODE="${CPPAW_NVHPC_GPU_MEMORY_MODE:-separate}"
 
   if [[ -n ${CPPAW_CUDA_CC} ]] ; then
     GPU_OPTS="cc${CPPAW_CUDA_CC}"
   fi
+  case "${MEMORY_MODE}" in
+    separate|managed|unified)
+      if [[ -n ${GPU_OPTS} ]] ; then
+        GPU_OPTS="${GPU_OPTS},mem:${MEMORY_MODE}"
+      else
+        GPU_OPTS="mem:${MEMORY_MODE}"
+      fi
+      ;;
+    no|none|off|"")
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_NVHPC_GPU_MEMORY_MODE=${MEMORY_MODE}"
+      echo "allowed are separate, managed, unified, none"
+      exit 1
+      ;;
+  esac
   if [[ -n ${EXTRA_GPU_OPTS} ]] ; then
     if [[ -n ${GPU_OPTS} ]] ; then
       GPU_OPTS="${GPU_OPTS},${EXTRA_GPU_OPTS}"
@@ -956,6 +974,38 @@ case ${SELECT} in
   nvhpc_gpu_acc_profile_parallel)
     SUFFIX="nvhpc_gpu_acc_profile"
     TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_managed_profile)
+    SUFFIX="nvhpc_gpu_acc_managed_profile"
+    TYPE="profile"
+    CPPAW_NVHPC_GPU_MEMORY_MODE=managed
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_managed_profile_parallel)
+    SUFFIX="nvhpc_gpu_acc_managed_profile"
+    TYPE="profile"
+    CPPAW_NVHPC_GPU_MEMORY_MODE=managed
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_unified_profile)
+    SUFFIX="nvhpc_gpu_acc_unified_profile"
+    TYPE="profile"
+    CPPAW_NVHPC_GPU_MEMORY_MODE=unified
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_unified_profile_parallel)
+    SUFFIX="nvhpc_gpu_acc_unified_profile"
+    TYPE="profile"
+    CPPAW_NVHPC_GPU_MEMORY_MODE=unified
     CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
     add_fcflags
     ;;

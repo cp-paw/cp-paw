@@ -104,6 +104,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
 | `gpu_3dfft` | Diagnostic combined profile that also enables the opt-in native cuFFT 3-D wrapper. |
+| `gpu_managed` / `gpu_unified` | Separate combined GPU binaries built with NVHPC `-gpu=mem:managed` or `-gpu=mem:unified` for memory-residency experiments. |
 | `gpu_no_cufft` / `gpu_no_cublas` / `gpu_no_cusolver` | Diagnostic ablations from `gpu_force_all`. |
 | `gpu_off` | Same combined binary with all native GPU paths disabled. |
 
@@ -138,6 +139,16 @@ and captures available NVIDIA libraries plus CUDA-aware MPI hints:
 ```
 cd tests/profile/si64
 NSTEPS=1 ./run_gpu_exploration.sh
+```
+
+To compare NVHPC memory modes, build the optional profile binaries and add the
+cases explicitly:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_managed_profile
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_unified_profile
+cd tests/profile/si64
+NSTEPS=1 CASES="gpu gpu_managed gpu_unified gpu_off" ./run_benchmark.sh
 ```
 
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
