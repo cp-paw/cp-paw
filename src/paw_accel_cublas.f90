@@ -221,6 +221,110 @@
       END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_PRESENT
 !
 !     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_MATMUL_COPY(N,M,L,A,B,C,USED)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: N
+      INTEGER(4),INTENT(IN)  :: M
+      INTEGER(4),INTENT(IN)  :: L
+      REAL(8)   ,INTENT(IN)  :: A(N,M)
+      REAL(8)   ,INTENT(IN)  :: B(M,L)
+      REAL(8)   ,INTENT(OUT) :: C(N,L)
+      LOGICAL(4),INTENT(OUT) :: USED
+      REAL(8)                :: FLOPS
+!     **************************************************************************
+      FLOPS=2.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      IF(.NOT.USED) RETURN
+!$ACC DATA COPYIN(A(1:N,1:M),B(1:M,1:L)) COPYOUT(C(1:N,1:L))
+      CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(N,M,L,A,B,C)
+!$ACC END DATA
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_MATMUL_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(N,M,L,A,B,C)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: N
+      INTEGER(4),INTENT(IN)  :: M
+      INTEGER(4),INTENT(IN)  :: L
+      REAL(8)   ,INTENT(IN)  :: A(N,M)
+      REAL(8)   ,INTENT(IN)  :: B(M,L)
+      REAL(8)   ,INTENT(OUT) :: C(N,L)
+      REAL(8)                :: ONE
+      REAL(8)                :: ZERO
+      INTEGER(4)             :: ISTAT
+!     **************************************************************************
+      ONE=1.D0
+      ZERO=0.D0
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(A,B,C)
+      ISTAT=CUBLASDGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_N,N,L,M,ONE &
+     &                 ,A,N,B,M,ZERO,C,N)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASDGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_NT_COPY(LEN1,LEN2,N,PSI1 &
+     &                                         ,PSI2,OPERATOR,USED)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: LEN1
+      INTEGER(4),INTENT(IN)  :: LEN2
+      INTEGER(4),INTENT(IN)  :: N
+      REAL(8)   ,INTENT(IN)  :: PSI1(LEN1,N)
+      REAL(8)   ,INTENT(IN)  :: PSI2(LEN2,N)
+      REAL(8)   ,INTENT(OUT) :: OPERATOR(LEN1,LEN2)
+      LOGICAL(4),INTENT(OUT) :: USED
+      REAL(8)                :: FLOPS
+!     **************************************************************************
+      FLOPS=2.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      IF(.NOT.USED) RETURN
+!$ACC DATA COPYIN(PSI1(1:LEN1,1:N),PSI2(1:LEN2,1:N)) &
+!$ACC& COPYOUT(OPERATOR(1:LEN1,1:LEN2))
+      CALL CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT(LEN1,LEN2,N,PSI1 &
+     &                                      ,PSI2,OPERATOR)
+!$ACC END DATA
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_NT_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT(LEN1,LEN2,N,PSI1 &
+     &                                            ,PSI2,OPERATOR)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: LEN1
+      INTEGER(4),INTENT(IN)  :: LEN2
+      INTEGER(4),INTENT(IN)  :: N
+      REAL(8)   ,INTENT(IN)  :: PSI1(LEN1,N)
+      REAL(8)   ,INTENT(IN)  :: PSI2(LEN2,N)
+      REAL(8)   ,INTENT(OUT) :: OPERATOR(LEN1,LEN2)
+      REAL(8)                :: ONE
+      REAL(8)                :: ZERO
+      INTEGER(4)             :: ISTAT
+!     **************************************************************************
+      ONE=1.D0
+      ZERO=0.D0
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PSI1,PSI2,OPERATOR)
+      ISTAT=CUBLASDGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_T,LEN1,LEN2,N &
+     &                 ,ONE,PSI1,LEN1,PSI2,LEN2,ZERO,OPERATOR,LEN1)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASDGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NC_COPY(LEN1,LEN2,N,PSI1 &
      &                                         ,PSI2,OPERATOR,USED)
       IMPLICIT NONE
@@ -302,6 +406,87 @@
 !$ACC END DATA
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY(TID,LEN,N1,PSI1 &
+     &                                                  ,N2,PSI2,OVERLAP &
+     &                                                  ,USED)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)  :: TID
+      INTEGER(4),INTENT(IN)  :: LEN
+      INTEGER(4),INTENT(IN)  :: N1
+      INTEGER(4),INTENT(IN)  :: N2
+      REAL(8)   ,INTENT(IN)  :: PSI1(LEN,N1)
+      REAL(8)   ,INTENT(IN)  :: PSI2(LEN,N2)
+      REAL(8)   ,INTENT(OUT) :: OVERLAP(N1,N2)
+      LOGICAL(4),INTENT(OUT) :: USED
+      REAL(8)                :: FLOPS
+!     **************************************************************************
+      IF(TID) THEN
+        FLOPS=REAL(N1,KIND=8)*REAL(N1,KIND=8)*REAL(LEN,KIND=8)
+      ELSE
+        FLOPS=2.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
+      END IF
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      IF(.NOT.USED) RETURN
+!$ACC DATA COPYIN(PSI1(1:LEN,1:N1),PSI2(1:LEN,1:N2)) &
+!$ACC& COPYOUT(OVERLAP(1:N1,1:N2))
+      CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT(TID,LEN,N1,PSI1 &
+     &                                              ,N2,PSI2,OVERLAP)
+!$ACC END DATA
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT(TID,LEN,N1,PSI1 &
+     &                                                     ,N2,PSI2,OVERLAP)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)  :: TID
+      INTEGER(4),INTENT(IN)  :: LEN
+      INTEGER(4),INTENT(IN)  :: N1
+      INTEGER(4),INTENT(IN)  :: N2
+      REAL(8)   ,INTENT(IN)  :: PSI1(LEN,N1)
+      REAL(8)   ,INTENT(IN)  :: PSI2(LEN,N2)
+      REAL(8)   ,INTENT(OUT) :: OVERLAP(N1,N2)
+      REAL(8)                :: ONE
+      REAL(8)                :: ZERO
+      INTEGER(4)             :: ISTAT
+      INTEGER(4)             :: I,J
+!     **************************************************************************
+      ONE=1.D0
+      ZERO=0.D0
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+      IF(TID) THEN
+!$ACC HOST_DATA USE_DEVICE(PSI1,OVERLAP)
+        ISTAT=CUBLASDSYRK(HANDLE,CUBLAS_FILL_MODE_UPPER,CUBLAS_OP_T &
+     &                   ,N1,LEN,ONE,PSI1,LEN,ZERO,OVERLAP,N1)
+!$ACC END HOST_DATA
+        IF(ISTAT.NE.0) THEN
+          CALL ERROR$MSG('CUBLASDSYRK FAILED')
+          CALL ERROR$I4VAL('STATUS',ISTAT)
+          CALL ERROR$STOP('CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT')
+        END IF
+!$ACC PARALLEL LOOP PRESENT(OVERLAP)
+        DO I=1,N1
+          DO J=I+1,N1
+            OVERLAP(J,I)=OVERLAP(I,J)
+          ENDDO
+        ENDDO
+!$ACC END PARALLEL LOOP
+      ELSE
+!$ACC HOST_DATA USE_DEVICE(PSI1,PSI2,OVERLAP)
+        ISTAT=CUBLASDGEMM(HANDLE,CUBLAS_OP_T,CUBLAS_OP_N,N1,N2,LEN &
+     &                   ,ONE,PSI1,LEN,PSI2,LEN,ZERO,OVERLAP,N1)
+!$ACC END HOST_DATA
+        IF(ISTAT.NE.0) THEN
+          CALL ERROR$MSG('CUBLASDGEMM FAILED')
+          CALL ERROR$I4VAL('STATUS',ISTAT)
+          CALL ERROR$STOP('CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT')
+        END IF
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_PRESENT(TID,LEN,N1,PSI1 &
