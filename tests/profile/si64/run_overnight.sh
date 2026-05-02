@@ -32,7 +32,7 @@ RUN_BAND_BENCHMARK=${RUN_BAND_BENCHMARK:-no}
 MAIN_CASES=${MAIN_CASES:-"nvpl cublas cublas_off"}
 SCALING_CASES=${SCALING_CASES:-"nvpl cublas"}
 GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_off"}
-GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_force_all gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
+GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_force_all gpu_3dfft gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
 BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
 BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
@@ -112,6 +112,10 @@ capture_metadata() {
     echo
     command -v nsys >/dev/null 2>&1 && nsys --version || true
     echo
+    if [[ -x "${ROOT}/src/Tools/Scripts/paw_gpu_capabilities.sh" ]]; then
+      "${ROOT}/src/Tools/Scripts/paw_gpu_capabilities.sh" || true
+      echo
+    fi
     "${MPIRUN}" --version || true
     echo
     ls -l "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" \

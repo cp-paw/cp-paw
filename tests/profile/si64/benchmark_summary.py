@@ -22,7 +22,7 @@ def profile_totals(run_dir):
                 totals["instrumented"] += seconds
                 if op.startswith("MPI_ALLTOALL"):
                     totals["mpi"] += seconds
-                elif op.startswith("FFT") or op.startswith("PW_FFT"):
+                elif op.startswith("FFT") or op.startswith("PW_FFT") or op.startswith("CUFFT"):
                     totals["fft"] += seconds
                 elif op.startswith("LAPACK") or op.startswith("CUSOLVER"):
                     totals["lapack"] += seconds

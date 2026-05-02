@@ -103,6 +103,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
 | `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
+| `gpu_3dfft` | Diagnostic combined profile that also enables the opt-in native cuFFT 3-D wrapper. |
 | `gpu_no_cufft` / `gpu_no_cublas` / `gpu_no_cusolver` | Diagnostic ablations from `gpu_force_all`. |
 | `gpu_off` | Same combined binary with all native GPU paths disabled. |
 
@@ -129,6 +130,14 @@ one-rank CPU references, and eight-rank CPU/NVPL references. It defaults to
 ```
 cd tests/profile/si64
 ./run_followup.sh
+```
+
+For a short broad GPU exploration suite that includes the opt-in 3-D cuFFT path
+and captures available NVIDIA libraries plus CUDA-aware MPI hints:
+
+```
+cd tests/profile/si64
+NSTEPS=1 ./run_gpu_exploration.sh
 ```
 
 To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
@@ -209,3 +218,14 @@ The overnight defaults use the recommended production-style cases:
 `gpu_no_*` ablation cases, set `RUN_BAND_BENCHMARK=yes` to add the
 `si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank
 CPU references, or override any of these variables for a wider sweep.
+
+The capability helper can be run standalone:
+
+```
+src/Tools/Scripts/paw_gpu_capabilities.sh
+```
+
+It reports CUDA devices, NVIDIA HPC SDK library presence for cuBLASLt,
+cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM, and a best-effort CUDA-aware MPI
+hint. Those libraries are profiled as future candidates; they are not linked
+into CP-PAW unless a concrete code path uses them.
