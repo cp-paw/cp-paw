@@ -100,7 +100,9 @@ not apply to the present implementation.)
    CPPAW_INSTALL_PROFILE=yes ./paw_install
    ```
    The installer compiles with `CPPAW_INSTALL_JOBS=16` by default; set another
-   value if your build host needs a smaller or larger parallel make.
+   value if your build host needs a smaller or larger parallel make. Set
+   `CPPAW_INSTALL_GPU_MEMORY_PROFILES=yes` to add the optional managed/unified
+   GPU profile binaries.
    A reusable 64-atom periodic silicon profiling case is available under
    `tests/profile/si64`. It is intentionally not part of the default test
    suite:
