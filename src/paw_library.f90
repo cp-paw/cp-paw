@@ -3159,6 +3159,9 @@
 !     **    USES THE 3D FFTW ROUTINES                                         **
 !     **                                        CLEMENS FOERST, 2001          **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_3DFFTC8_COPY
+#ENDIF
       IMPLICIT NONE
       CHARACTER(4)            :: DIR !'GTOR' OR 'RTOG'
       INTEGER(4)              :: N1,N2,N3
@@ -3169,9 +3172,16 @@
       REAL(8)                 :: ACCEL_T1
       REAL(8)                 :: ACCEL_N
 #ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      LOGICAL(4)              :: ACCEL_CUFFT_USED
+#ENDIF
 !     **************************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      CALL CPPAW_CUFFT_ACC_3DFFTC8_COPY(DIR,N1,N2,N3,X,Y,ACCEL_CUFFT_USED)
+      IF(.NOT.ACCEL_CUFFT_USED) THEN
 #ENDIF
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
@@ -3182,13 +3192,27 @@
 #ELSE
       CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
 #ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       ACCEL_N=MAX(REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(N3,KIND=8),1.D0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      IF(ACCEL_CUFFT_USED) THEN
+        CALL ACCELPROFILE$ADD('CUFFT3D_C8' &
+     &   ,INT(N1,KIND=8),INT(N2,KIND=8),INT(N3,KIND=8),0_8 &
+     &   ,5.D0*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0),32.D0*ACCEL_N &
+     &   ,ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
       CALL ACCELPROFILE$ADD('FFT3D_C8' &
      & ,INT(N1,KIND=8),INT(N2,KIND=8),INT(N3,KIND=8),0_8 &
      & ,5.D0*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0),32.D0*ACCEL_N &
      & ,ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #ENDIF
       RETURN
       END
