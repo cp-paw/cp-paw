@@ -1009,9 +1009,16 @@
       REAL(8)               :: AUX(100*N)
       INTEGER(4)            :: IPIV(N)
       INTEGER(4)            :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       NAUX=100*N
       AINV(1:N,1:N)=A(1:N,1:N)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == PERFORM LU FACTORIZATION OF A                                ==
@@ -1022,6 +1029,13 @@
 !     == INVERT A USING THE LU FACTORIZATION                          ==
 !     ==================================================================
       CALL DGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGETRI' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,2.D0*REAL(N,KIND=8)**3 &
+     & ,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1059,10 +1073,17 @@
       COMPLEX(8)            :: AUX(100*N)
       INTEGER(4)            :: IPIV(N)
       INTEGER               :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.LE.0) RETURN
       NAUX=100*N
       AINV(1:N,1:N)=A(1:N,1:N)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == PERFORM LU FACTORIZATION OF A                                ==
@@ -1073,6 +1094,13 @@
 !     == INVERT A USING THE LU FACTORIZATION                          ==
 !     ==================================================================
       CALL ZGETRI(N,AINV,N,IPIV,AUX,NAUX,INFO) !LAPACK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGETRI' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,8.D0*REAL(N,KIND=8)**3 &
+     & ,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1111,6 +1139,10 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: INFO
       INTEGER(4)             :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       LWORK=MAX(1,3*MIN(M,N)+MAX(M,N),5*MIN(M,N))
       ALLOCATE(WORK(LWORK))
@@ -1119,7 +1151,16 @@
       U=0.D0
       VT=0.D0
       WORK=0.D0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL DGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGESVD' &
+     & ,INT(M,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,8.D0*REAL(M,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
@@ -1158,12 +1199,25 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: INFO
       INTEGER(4)             :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       LWORK=MAX(1,2*MIN(M,N)+MAX(M,N))
       ALLOCATE(WORK(LWORK))
       ALLOCATE(RWORK(5*MIN(M,N)))
       ACOPY=A  ! ACOPY WILL BE OVERWRITTEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZGESVD('A','A',M,N,ACOPY,M,S,U,M,VT,N,WORK,LWORK,RWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGESVD' &
+     & ,INT(M,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(M,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('THE I-TH ARGUMENT JHAS AN ILLEGAL VALUE')
         CALL ERROR$I4VAL('I',-INFO)
@@ -1204,6 +1258,10 @@
       INTEGER(4)            :: IPIV(N)
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: SVAR1,SVAR2
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('WORKS ONLY FOR SQUARE MATRICES')
@@ -1224,7 +1282,17 @@
       ALLOCATE(A1(N,M))
       A1=A
       X=B
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL DGESV(N,NEQ,A1,N,IPIV,X,N,INFO )
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_DGESV' &
+     & ,INT(N,KIND=8),INT(NEQ,KIND=8),0_8,0_8 &
+     & ,2.D0/3.D0*REAL(N,KIND=8)**3 &
+     & ,8.D0*REAL(N,KIND=8)*REAL(N+NEQ,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       DEALLOCATE(A1)
       IF(INFO.LT.0) THEN
         CALL ERROR$MSG('ERROR EXIT FROM DGESV')
@@ -1295,6 +1363,10 @@
       REAL(8)         ,PARAMETER  :: TOL=1.D-5
       REAL(8)                     :: SVAR1,SVAR2
       CHARACTER(6)    ,PARAMETER  :: TYPE='DGELS'
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                     :: ACCEL_T0
+      REAL(8)                     :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       IF(N.LT.1.OR.M.LT.1) THEN
         CALL ERROR$MSG('DIMENSIONS MUST BE NONZERO AND POSITIVE')
@@ -1324,7 +1396,17 @@
         B1(1:M1,:)=B(:,:)
         A1=A
 ! THE CALL TO DGELSD FAILED USING MKL
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
         CALL DGELSD(M1,N1,NRHS,A1,M1,B1,LDB,S,RCOND,RANK,WORK,LWORK,IWORK,INFO )
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        CALL ACCELPROFILE$ADD('LAPACK_DGELSD' &
+     &   ,INT(M1,KIND=8),INT(N1,KIND=8),INT(NRHS,KIND=8),0_8 &
+     &   ,0.D0,8.D0*REAL(M1,KIND=8)*REAL(N1+NRHS,KIND=8) &
+     &   ,ACCEL_T1-ACCEL_T0)
+#ENDIF
         DEALLOCATE(IWORK)
         DEALLOCATE(WORK)
         X=B1(1:N1,:)
@@ -1355,7 +1437,17 @@
         A1=A
         LWORK=MINMN+MAX(1,MAX(NRHS,MAXMN))
         ALLOCATE(WORK(LWORK))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
         CALL DGELS('N',M1,N1,NRHS,A1,LDA,B1,LDB,WORK,LWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        CALL ACCELPROFILE$ADD('LAPACK_DGELS' &
+     &   ,INT(M1,KIND=8),INT(N1,KIND=8),INT(NRHS,KIND=8),0_8 &
+     &   ,0.D0,8.D0*REAL(M1,KIND=8)*REAL(N1+NRHS,KIND=8) &
+     &   ,ACCEL_T1-ACCEL_T0)
+#ENDIF
         DEALLOCATE(WORK)
         X=B1(1:N1,:)
         DEALLOCATE(B1)
@@ -1372,7 +1464,17 @@
         A1=A
         LWORK=3*MINMN+MAX(2*MINMN,MAX(NRHS,MAXMN))
         ALLOCATE(WORK(LWORK))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
         CALL DGELSS(M1,N1,NRHS,A1,LDA,B1,LDB,S,RCOND,RANK,WORK,LWORK,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        CALL ACCELPROFILE$ADD('LAPACK_DGELSS' &
+     &   ,INT(M1,KIND=8),INT(N1,KIND=8),INT(NRHS,KIND=8),0_8 &
+     &   ,0.D0,8.D0*REAL(M1,KIND=8)*REAL(N1+NRHS,KIND=8) &
+     &   ,ACCEL_T1-ACCEL_T0)
+#ENDIF
         DEALLOCATE(WORK)
         X=B1(1:N1,:)
         DEALLOCATE(B1)
@@ -1419,6 +1521,10 @@
       INTEGER               :: IPIVOT(N)
       REAL(8)   ,ALLOCATABLE:: WORK(:)
       INTEGER               :: N1,M1,NEQ1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       IF(N.NE.M) THEN
         CALL ERROR$MSG('ONLY SYMMETRIC MATRICES ALLOWED')
@@ -1437,7 +1543,17 @@
       A1=A 
       X=B
       ALLOCATE(WORK(LDWORK))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZGESV(N,NEQ,A1,N,IPIVOT,X,N,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGESV' &
+     & ,INT(N,KIND=8),INT(NEQ,KIND=8),0_8,0_8 &
+     & ,8.D0/3.D0*REAL(N,KIND=8)**3 &
+     & ,16.D0*REAL(N,KIND=8)*REAL(N+NEQ,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
       DEALLOCATE(WORK)
 !
 !     ===================================================================
@@ -1497,6 +1613,10 @@
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)   ,PARAMETER  :: TOL=1.D-5
       REAL(8)               :: SVAR1,SVAR2
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
 !     ******************************************************************
       M1=N    ! LAPACK USES M AND N OPPOSITE 
       N1=M
@@ -1514,8 +1634,18 @@
       B1=0.D0
       B1(1:M1,:)=B(:,:)
       A1=A
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL ZGELSD(M1,N1,NEQ,A1,M1,B1,LDB,S,RCOND,RANK &
      &           ,CWORK,LCWORK,RWORK,IWORK,INFO )
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('LAPACK_ZGELSD' &
+     & ,INT(M1,KIND=8),INT(N1,KIND=8),INT(NEQ,KIND=8),0_8 &
+     & ,0.D0,16.D0*REAL(M1,KIND=8)*REAL(N1+NEQ,KIND=8) &
+     & ,ACCEL_T1-ACCEL_T0)
+#ENDIF
       X=B1(1:N1,:)
       DEALLOCATE(CWORK)
       DEALLOCATE(RWORK)
@@ -1566,6 +1696,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_DSYEVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
@@ -1577,13 +1711,47 @@
       REAL(8)               :: DEV
       REAL(8)  ,ALLOCATABLE :: EMAT(:,:)
       INTEGER(4)            :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     ******************************************************************
 !
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_DSYEVD_COPY(N,H,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       U=0.5D0*(H+TRANSPOSE(H))
       CALL DSYEV('V','U',N,U,N,E,WORK,3*N,INFO )
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_DSYEVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_DSYEV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1651,6 +1819,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEEVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)
@@ -1665,7 +1837,17 @@
       COMPLEX(8),ALLOCATABLE:: RES(:,:)
       INTEGER(4)            :: LWORK
       INTEGER(4)            :: INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
+#IF DEFINED(CPPVAR_NVLAMATH)
+#ELSE
       EXTERNAL ZHEEV
+#ENDIF
 !     ******************************************************************
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
@@ -1678,6 +1860,16 @@
 !!$      END IF
       U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       LWORK=-1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEEVD_COPY(N,H,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+        U=0.5D0*(H+TRANSPOSE(CONJG(H)))
+        LWORK=-1
+#ENDIF
       CALL ZHEEV('V','L',N,U,N,E,CWORK,LWORK,RWORK,INFO) !LAPACK
       LWORK=INT(CWORK(1))
       IF(LWORK.LT.LWMAX) THEN
@@ -1688,6 +1880,25 @@
         CALL ZHEEV('V','L',N,U,N,E,CWORK1,LWORK,RWORK,INFO) !LAPACK
         DEALLOCATE(CWORK1)
       END IF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEEVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEEV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
       IF(INFO.NE.0) THEN
         IF(INFO.LT.0) THEN
@@ -1750,6 +1961,10 @@
 !     **      CAN THUS CAN ACT AS EIGENVECTORS THEMSELVES             **
 !     **                                                              **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_DSYGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       REAL(8)   ,INTENT(IN) :: H(N,N)
@@ -1763,14 +1978,48 @@
       REAL(8)   ,ALLOCATABLE:: EMAT(:,:)
       REAL(8)               :: DEV
       INTEGER(4)            :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     ******************************************************************
 !
 !     ==================================================================
 !     == DIAGONALIZE                                                  ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_DSYGVD_COPY(N,H,S,E,U,ACCEL_CUSOLVER_USED &
+     &                                    ,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       U=H
       B=S
       CALL DSYGV(1,'V','U',N,U,N,B,N,E,WORK,3*N,INFO )
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_DSYGVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_DSYGV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,16.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==================================================================
 !     == CHECK ERROR CODE                                             ==
@@ -1830,6 +2079,10 @@
 !     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY            **
 !     **                                                                      **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       COMPLEX(8),INTENT(IN) :: H(N,N)    ! HAMITON MATRIX
@@ -1844,6 +2097,13 @@
       LOGICAL   ,PARAMETER  :: TTEST=.FALSE.
       REAL(8)               :: DEV
       INTEGER               :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)            :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     **************************************************************************
 !
 !     ==========================================================================
@@ -1867,6 +2127,14 @@
 !     ==========================================================================
 !     == CALL LAPACK ROUTINE                                                 ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEGVD_COPY(N,H,S,E,VEC,.TRUE. &
+     &                                    ,ACCEL_CUSOLVER_USED,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
       VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))  
       S1=S
@@ -1878,6 +2146,26 @@
       DEALLOCATE(WORK)
       ALLOCATE(WORK(LDWORK)) 
       CALL ZHEGV(1,'V','U',N,VEC,N,S1,N,E,WORK,LDWORK,RWORK,INFO)
+      DEALLOCATE(WORK)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEGVD_FROM_ZHEGV' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEGV' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 !
 !     ==========================================================================
 !     == ERROR MESSAGES                                                       ==
@@ -1943,6 +2231,10 @@
 !     **             MATMUL(TRANSPOSE(VEC),MATMUL(S,VEC))=IDENTITY       **
 !     **                                                                 **
 !     *********************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &        CPPAW_CUSOLVER_ACC_ZHEGVD_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)        :: N
       COMPLEX(8),INTENT(IN)        :: H(N,N)    ! HAMITON MATRIX
@@ -1958,6 +2250,13 @@
       REAL(8)   ,ALLOCATABLE       :: RWORK(:)
       INTEGER(4),ALLOCATABLE       :: IWORK(:)
       CHARACTER(1)                 :: JOBZ
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                      :: ACCEL_T0
+      REAL(8)                      :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      LOGICAL(4)                   :: ACCEL_CUSOLVER_USED
+#ENDIF
 !     *********************************************************************
 !
 !     ========================================================================
@@ -1981,6 +2280,14 @@
 !     ========================================================================
 !     == CALL LAPACK ROUTINE                                                ==
 !     ========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      CALL CPPAW_CUSOLVER_ACC_ZHEGVD_COPY(N,H,S,E,VEC,.FALSE. &
+     &                                    ,ACCEL_CUSOLVER_USED,INFO)
+      IF(.NOT.ACCEL_CUSOLVER_USED) THEN
+#ENDIF
       JOBZ='V' !COMPUTE EIGENVALUES AND EIGENVECTORS
 
       ! LAPACK ROUTINE OVERWRITES HAMILTONIAN WITH EIGENVECTORS
@@ -2016,6 +2323,25 @@
       DEALLOCATE(WORK)
       DEALLOCATE(RWORK)
       DEALLOCATE(IWORK)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      IF(ACCEL_CUSOLVER_USED) THEN
+        CALL ACCELPROFILE$ADD('CUSOLVER_ZHEGVD' &
+     &   ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     &   ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('LAPACK_ZHEGVD' &
+     & ,INT(N,KIND=8),INT(N,KIND=8),0_8,0_8 &
+     & ,0.D0,32.D0*REAL(N,KIND=8)*REAL(N,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+      END IF
+#ENDIF
+#ENDIF
 
       IF(INFO.NE.0)THEN
         CALL ERROR$MSG('ZHEGVD FAILED')
@@ -2075,6 +2401,10 @@
 !     ******************************************************************
 !     **  MATRIX MULTPLICATION   A*B=C                                **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_DGEMM_MATMUL_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: M
@@ -2084,8 +2414,48 @@
       REAL(8)   ,INTENT(OUT):: C(N,L)
       REAL(8)     ,PARAMETER:: ONE=1.D0
       REAL(8)     ,PARAMETER:: ZERO=0.D0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)               :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_COPY(N,M,L,A,B,C &
+     &                                       ,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       CALL DGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(ACCEL_CUBLAS_USED) THEN
+        CALL ACCELPROFILE$ADD('CUBLAS_DGEMM_MATMUL' &
+     &   ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     &   ,2.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &   ,8.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &        +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &        +REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('DGEMM_MATMUL' &
+     & ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     & ,2.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     & ,8.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &       +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &       +REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#ENDIF
       RETURN
       END
 !
@@ -2095,6 +2465,10 @@
 !     ******************************************************************
 !     **  MATRIX MULTPLICATION   A*B=C                                **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: N
       INTEGER(4),INTENT(IN) :: M
@@ -2105,9 +2479,48 @@
       CHARACTER(8),PARAMETER:: LIB='ESSL'
       COMPLEX(8)  ,PARAMETER:: ONE=(1.D0,0.D0)
       COMPLEX(8)  ,PARAMETER:: ZERO=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)               :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
-      C(:,:)=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_COPY(N,M,L,A,B,C &
+     &                                       ,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       CALL ZGEMM('N','N',N,L,M,ONE,A,N,B,M,ZERO,C,N)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(ACCEL_CUBLAS_USED) THEN
+        CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_MATMUL' &
+     &   ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     &   ,8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &   ,16.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &          +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &          +REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('ZGEMM_MATMUL' &
+     & ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     & ,8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     & ,16.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &        +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &        +REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#ENDIF
       RETURN
       END
 !
@@ -2120,6 +2533,10 @@
 !     **  C=C+MATMUL(A,B)                                             **
 !     **  FOR TID=.TRUE., A AND C MAY USE IDENTICAL STORAGE           **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NN_COPY
+#ENDIF
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN)   :: TID
       INTEGER(4),INTENT(IN)   :: N
@@ -2129,17 +2546,68 @@
       COMPLEX(8),INTENT(IN)   :: B(M,L)
       COMPLEX(8),INTENT(INOUT):: C(N,L)
       COMPLEX(8),ALLOCATABLE  :: WORK(:,:)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)               :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      ACCEL_CUBLAS_USED=.FALSE.
+#ENDIF
       IF(TID) THEN
         ALLOCATE(WORK(N,M))
         WORK=A
 !       ==  C=C+MATMUL(WORK,B) 
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_COPY(N,M,L,WORK,B,C &
+     &                                     ,ACCEL_CUBLAS_USED)
+        IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
         CALL ZGEMM('N','N',N,L,M,(1.D0,0.D0),WORK,N,B,M,(1.D0,0.D0),C,N)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
         DEALLOCATE(WORK)
       ELSE
 !       ==  C=C+MATMUL(A,B) 
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_COPY(N,M,L,A,B,C &
+     &                                     ,ACCEL_CUBLAS_USED)
+        IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
         CALL ZGEMM('N','N',N,L,M,(1.D0,0.D0),A,N,B,M,(1.D0,0.D0),C,N)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(ACCEL_CUBLAS_USED) THEN
+        CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_ADDPRODUCT' &
+     &   ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     &   ,8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &   ,16.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &          +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &          +2.D0*REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('ZGEMM_ADDPRODUCT' &
+     & ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8),0_8 &
+     & ,8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8) &
+     & ,16.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &        +REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &        +2.D0*REAL(N,KIND=8)*REAL(L,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#ENDIF
       RETURN
       END
 !
@@ -2149,6 +2617,10 @@
 !     ******************************************************************
 !     **   OPERATOR = SUM_I |PSI1(I)><PSI2(I)|                        **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_DGEMM_NT_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LEN1
       INTEGER(4),INTENT(IN) :: LEN2
@@ -2156,10 +2628,50 @@
       REAL(8)   ,INTENT(IN) :: PSI1(LEN1,N)
       REAL(8)   ,INTENT(IN) :: PSI2(LEN2,N)
       REAL(8)   ,INTENT(OUT):: OPERATOR(LEN1,LEN2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)             :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
 !     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_DGEMM_NT_COPY(LEN1,LEN2,N,PSI1,PSI2 &
+     &                                   ,OPERATOR,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       CALL DGEMM('N','T',LEN1,LEN2,N,1.D0,PSI1,LEN1,PSI2,LEN2,0.D0 &
      &          ,OPERATOR,LEN1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(ACCEL_CUBLAS_USED) THEN
+        CALL ACCELPROFILE$ADD('CUBLAS_DGEMM_DYADSUM' &
+     &   ,INT(LEN1,KIND=8),INT(LEN2,KIND=8),INT(N,KIND=8),0_8 &
+     &   ,2.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &   ,8.D0*(REAL(LEN1,KIND=8)*REAL(N,KIND=8) &
+     &       +REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &       +REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('DGEMM_DYADSUM' &
+     & ,INT(LEN1,KIND=8),INT(LEN2,KIND=8),INT(N,KIND=8),0_8 &
+     & ,2.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     & ,8.D0*(REAL(LEN1,KIND=8)*REAL(N,KIND=8) &
+     &       +REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &       +REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#ENDIF
       RETURN
       END
 !
@@ -2169,6 +2681,10 @@
 !     ******************************************************************
 !     **   OPERATOR = SUM_I |PSI1(I)><PSI2(I)|                        **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NC_COPY
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: LEN1
       INTEGER(4),INTENT(IN) :: LEN2
@@ -2176,11 +2692,50 @@
       COMPLEX(8),INTENT(IN) :: PSI1(LEN1,N)
       COMPLEX(8),INTENT(IN) :: PSI2(LEN2,N)
       COMPLEX(8),INTENT(OUT):: OPERATOR(LEN1,LEN2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)             :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
 !     == OPERATOR=MATMUL(PSI1,TRANSPOSE(PSI2))
-      OPERATOR(:,:)=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_ZGEMM_NC_COPY(LEN1,LEN2,N,PSI1,PSI2 &
+     &                                   ,OPERATOR,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       CALL ZGEMM('N','C',LEN1,LEN2,N,(1.D0,0.D0) &
      &          ,PSI1(:,:),LEN1,PSI2(:,:),LEN2,(0.D0,0.D0),OPERATOR,LEN1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(ACCEL_CUBLAS_USED) THEN
+        CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_DYADSUM' &
+     &   ,INT(LEN1,KIND=8),INT(LEN2,KIND=8),INT(N,KIND=8),0_8 &
+     &   ,8.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &   ,16.D0*(REAL(LEN1,KIND=8)*REAL(N,KIND=8) &
+     &          +REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &          +REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('ZGEMM_DYADSUM' &
+     & ,INT(LEN1,KIND=8),INT(LEN2,KIND=8),INT(N,KIND=8),0_8 &
+     & ,8.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     & ,16.D0*(REAL(LEN1,KIND=8)*REAL(N,KIND=8) &
+     &        +REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &        +REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#ENDIF
       RETURN
       END
 !
@@ -2191,6 +2746,10 @@
 !     ** PERFORMS THE SCALAR PRODUCTS OF TWO ARRAYS OF COMPLEX        **
 !     ** STATE VECTORS                                                **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY
+#ENDIF
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TID
       INTEGER(4),INTENT(IN) :: LEN
@@ -2200,11 +2759,28 @@
       REAL(8)   ,INTENT(IN) :: PSI2(LEN,N2)
       REAL(8)   ,INTENT(OUT):: OVERLAP(N1,N2)
       INTEGER(4)            :: I,J
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+      REAL(8)               :: ACCEL_FLOPS
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)            :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
       IF(TID.AND.N1.NE.N2) THEN
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTR8')
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY(TID,LEN,N1,PSI1,N2 &
+     &                                           ,PSI2,OVERLAP &
+     &                                           ,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       IF(TID) THEN
 !       ==  OVERLAP(I,J) = 0.D0*OVERLAP+1.D0*SUM_K:PSI1(K,I)*PSI1(K,J) =
         CALL DSYRK('U','T',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
@@ -2215,9 +2791,52 @@
         ENDDO
       ELSE
 !
-      CALL DGEMM('T','N',N1,N2,LEN,1.D0,PSI1(:,:),LEN,PSI2(:,:),LEN &
+     CALL DGEMM('T','N',N1,N2,LEN,1.D0,PSI1(:,:),LEN,PSI2(:,:),LEN &
      &             ,0.D0,OVERLAP,N1)
       END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      IF(TID) THEN
+        ACCEL_FLOPS=REAL(N1,KIND=8)*REAL(N1,KIND=8)*REAL(LEN,KIND=8)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(ACCEL_CUBLAS_USED) THEN
+          CALL ACCELPROFILE$ADD('CUBLAS_DSYRK_SCALARPRODUCT' &
+     &     ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &     ,ACCEL_FLOPS,8.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+        ELSE
+#ENDIF
+        CALL ACCELPROFILE$ADD('DSYRK_SCALARPRODUCT' &
+     &   ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &   ,ACCEL_FLOPS,8.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &   +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
+      ELSE
+        ACCEL_FLOPS=2.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(ACCEL_CUBLAS_USED) THEN
+          CALL ACCELPROFILE$ADD('CUBLAS_DGEMM_SCALARPRODUCT' &
+     &     ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &     ,ACCEL_FLOPS,8.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &     +REAL(LEN,KIND=8)*REAL(N2,KIND=8) &
+     &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+        ELSE
+#ENDIF
+        CALL ACCELPROFILE$ADD('DGEMM_SCALARPRODUCT' &
+     &   ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &   ,ACCEL_FLOPS,8.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &   +REAL(LEN,KIND=8)*REAL(N2,KIND=8) &
+     &   +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
+      END IF
+#ENDIF
       RETURN
       END
 !
@@ -2228,6 +2847,10 @@
 !     ** PERFORMS THE SCALAR PRODUCTS OF TWO ARRAYS OF COMPLEX        **
 !     ** STATE VECTORS                                                **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY
+#ENDIF
       IMPLICIT NONE
       LOGICAL(4),INTENT(IN) :: TID
       INTEGER(4),INTENT(IN) :: LEN
@@ -2237,12 +2860,27 @@
       COMPLEX(8),INTENT(IN) :: PSI2(LEN,N2)
       COMPLEX(8),INTENT(OUT):: OVERLAP(N1,N2)
       INTEGER(4)            :: I,J
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+      REAL(8)               :: ACCEL_FLOPS
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)            :: ACCEL_CUBLAS_USED
+#ENDIF
 !     ******************************************************************
       IF(TID.AND.N1.NE.N2) THEN
         CALL ERROR$MSG('PSI2 AND PSI1 DIFFER FOR TID=.TRUE.')
         CALL ERROR$STOP('LIB$SCALARPRODUCTC8')
       END IF
-      OVERLAP(:,:)=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY(TID,LEN,N1,PSI1,N2,PSI2 &
+     &                                        ,OVERLAP,ACCEL_CUBLAS_USED)
+      IF(.NOT.ACCEL_CUBLAS_USED) THEN
+#ENDIF
       IF(TID) THEN
 !       == ATTENTION: SCALAR FACTORS ARE SUPPOSED TO BE REAL AS THEY ARE
         CALL ZHERK('U','C',N1,LEN,1.D0,PSI1,LEN,0.D0,OVERLAP,N1)
@@ -2256,6 +2894,49 @@
       CALL ZGEMM('C','N',N1,N2,LEN,(1.D0,0.D0),PSI1,LEN,PSI2,LEN &
      &            ,(0.D0,0.D0),OVERLAP,N1)
       END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      IF(TID) THEN
+        ACCEL_FLOPS=4.D0*REAL(N1,KIND=8)*REAL(N1,KIND=8)*REAL(LEN,KIND=8)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(ACCEL_CUBLAS_USED) THEN
+          CALL ACCELPROFILE$ADD('CUBLAS_ZHERK_SCALARPRODUCT' &
+     &     ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &     ,ACCEL_FLOPS,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+        ELSE
+#ENDIF
+        CALL ACCELPROFILE$ADD('ZHERK_SCALARPRODUCT' &
+     &   ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &   ,ACCEL_FLOPS,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &   +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
+      ELSE
+        ACCEL_FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(ACCEL_CUBLAS_USED) THEN
+          CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_SCALARPRODUCT' &
+     &     ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &     ,ACCEL_FLOPS,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &     +REAL(LEN,KIND=8)*REAL(N2,KIND=8) &
+     &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+        ELSE
+#ENDIF
+        CALL ACCELPROFILE$ADD('ZGEMM_SCALARPRODUCT' &
+     &   ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &   ,ACCEL_FLOPS,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
+     &   +REAL(LEN,KIND=8)*REAL(N2,KIND=8) &
+     &   +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
+      END IF
+#ENDIF
       RETURN
       END
 !
@@ -2408,13 +3089,31 @@
 !     **      FFTW IS NOT AVAILABLE                                           **
 !     **                                                                      **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_FFTC8_COPY
+#ENDIF
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: DIR !'GTOR' OR 'RTOG'
       INTEGER(4)  ,INTENT(IN) :: LEN
       INTEGER(4)  ,INTENT(IN) :: NFFT
       COMPLEX(8)  ,INTENT(IN) :: X(LEN,NFFT)
       COMPLEX(8)  ,INTENT(OUT):: Y(LEN,NFFT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+      REAL(8)                  :: ACCEL_N
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      LOGICAL(4)               :: ACCEL_CUFFT_USED
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      CALL CPPAW_CUFFT_ACC_FFTC8_COPY(DIR,LEN,NFFT,X,Y,ACCEL_CUFFT_USED)
+      IF(.NOT.ACCEL_CUFFT_USED) THEN
+#ENDIF
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_FFTESSL(DIR,LEN,NFFT,X,Y)                  
 #ELIF DEFINED(CPPVAR_FFT_ACML)
@@ -2423,6 +3122,28 @@
       CALL LIB_FFTPACK(DIR,LEN,NFFT,X,Y)
 #ELSE
       CALL LIB_FFTW3(DIR,LEN,NFFT,X,Y)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_N=REAL(MAX(LEN,1),KIND=8)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      IF(ACCEL_CUFFT_USED) THEN
+        CALL ACCELPROFILE$ADD('CUFFT1D_C8' &
+     &   ,INT(LEN,KIND=8),INT(NFFT,KIND=8),0_8,0_8 &
+     &   ,5.D0*REAL(NFFT,KIND=8)*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0) &
+     &   ,32.D0*REAL(LEN,KIND=8)*REAL(NFFT,KIND=8),ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('FFT1D_C8' &
+     & ,INT(LEN,KIND=8),INT(NFFT,KIND=8),0_8,0_8 &
+     & ,5.D0*REAL(NFFT,KIND=8)*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0) &
+     & ,32.D0*REAL(LEN,KIND=8)*REAL(NFFT,KIND=8),ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #ENDIF
 
       RETURN
@@ -2438,12 +3159,30 @@
 !     **    USES THE 3D FFTW ROUTINES                                         **
 !     **                                        CLEMENS FOERST, 2001          **
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_3DFFTC8_COPY
+#ENDIF
       IMPLICIT NONE
       CHARACTER(4)            :: DIR !'GTOR' OR 'RTOG'
       INTEGER(4)              :: N1,N2,N3
       COMPLEX(8)              :: X(N1,N2,N3)
       COMPLEX(8)              :: Y(N1,N2,N3)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                 :: ACCEL_T0
+      REAL(8)                 :: ACCEL_T1
+      REAL(8)                 :: ACCEL_N
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      LOGICAL(4)              :: ACCEL_CUFFT_USED
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      CALL CPPAW_CUFFT_ACC_3DFFTC8_COPY(DIR,N1,N2,N3,X,Y,ACCEL_CUFFT_USED)
+      IF(.NOT.ACCEL_CUFFT_USED) THEN
+#ENDIF
 #IF DEFINED(CPPVAR_FFT_ESSL)
       CALL LIB_3DFFT_ESSL(DIR,N1,N2,N3,X,Y)
 #ELIF DEFINED(CPPVAR_FFT_ACML)
@@ -2452,6 +3191,28 @@
       CALL LIB_3DFFTPACK(DIR,N1,N2,N3,X,Y)
 #ELSE
       CALL LIB_3DFFTW3(DIR,N1,N2,N3,X,Y)
+#ENDIF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_N=MAX(REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(N3,KIND=8),1.D0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      IF(ACCEL_CUFFT_USED) THEN
+        CALL ACCELPROFILE$ADD('CUFFT3D_C8' &
+     &   ,INT(N1,KIND=8),INT(N2,KIND=8),INT(N3,KIND=8),0_8 &
+     &   ,5.D0*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0),32.D0*ACCEL_N &
+     &   ,ACCEL_T1-ACCEL_T0)
+      ELSE
+#ENDIF
+      CALL ACCELPROFILE$ADD('FFT3D_C8' &
+     & ,INT(N1,KIND=8),INT(N2,KIND=8),INT(N3,KIND=8),0_8 &
+     & ,5.D0*ACCEL_N*LOG(ACCEL_N)/LOG(2.D0),32.D0*ACCEL_N &
+     & ,ACCEL_T1-ACCEL_T0)
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      END IF
+#ENDIF
 #ENDIF
       RETURN
       END
@@ -2658,10 +3419,16 @@
       INTEGER(4),PARAMETER    :: NPX=100 ! #(DIFFERENT FFT PLANS)
       TYPE(C_PTR),SAVE        :: PLANS2(NPX),PLAN
       INTEGER(4),SAVE         :: PLANS1(NPX)
+      INTEGER(4)              :: PLANFLAGS
       LOGICAL                 :: DEF
       INTEGER(4)              :: I
       INCLUDE 'FFTW3.F03'
 !     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFTW)
+      PLANFLAGS=FFTW_ESTIMATE
+#ELSE
+      PLANFLAGS=IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED))
+#ENDIF
       IF(DIR.NE.DIRSAVE.OR.LEN.NE.LENSAVE) THEN
         IF (DIR.EQ.'GTOR') THEN
           ISIGN=1
@@ -2691,10 +3458,10 @@
           IF(NP.GE.NPX) NP=NPX ! ALLOW ONLY NPX PLANS
           IF(DIR.EQ.'RTOG') THEN
             PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_FORWARD &
-     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+     &                ,PLANFLAGS)
           ELSE IF (DIR.EQ.'GTOR') THEN
             PLANS2(NP) = FFTW_PLAN_DFT_1D(LEN,XDUMMY,YDUMMY,FFTW_BACKWARD &
-     &                ,IOR(FFTW_DESTROY_INPUT,IOR(FFTW_MEASURE,FFTW_UNALIGNED)))
+     &                ,PLANFLAGS)
           ELSE
             CALL ERROR$MSG('DIRECTION ID NOT RECOGNIZED')
             CALL ERROR$MSG('DIR MUST BE "GTOR" OR "RTOG"')
