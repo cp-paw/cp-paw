@@ -89,8 +89,9 @@ cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
 can reuse wavefunction arrays already held by an outer OpenACC data region. For
 non-superwave projections where all atom blocks pass the cuBLAS threshold, it
 also scatters the projection result into `PROPSI` on the device and copies the
-final projection array back once. `ACC_COPY_*_RES` profile rows report the
-reduced copy estimate for those paths.
+final projection array back once. The same mode also lets `ZGEMM_NN` addproduct
+calls reuse a present output matrix, which targets `WAVES_ADDPRO`. `ACC_COPY_*_RES`
+profile rows report the reduced copy estimate for those paths.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
