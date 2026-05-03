@@ -26,6 +26,7 @@
       LOGICAL(4)         :: ENABLED=.TRUE.
       LOGICAL(4)         :: SYNC_ENABLED=.TRUE.
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
+      LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
       CONTAINS
 !
@@ -125,6 +126,25 @@
       CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED=ENABLED.AND.RESIDENCY_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(ACTIVE)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN) :: ACTIVE
+!     **************************************************************************
+      WAVE_OVERLAP_RESIDENT_ACTIVE=ACTIVE
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.WAVE_OVERLAP_RESIDENT_ACTIVE
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_ENSURE
@@ -586,6 +606,41 @@
 #ENDIF
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY(TID,LEN,N1 &
+     &                                                       ,PSI1,N2,PSI2 &
+     &                                                       ,OVERLAP,USED)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)  :: TID
+      INTEGER(4),INTENT(IN)  :: LEN
+      INTEGER(4),INTENT(IN)  :: N1
+      INTEGER(4),INTENT(IN)  :: N2
+      COMPLEX(8),INTENT(IN)  :: PSI1(LEN,N1)
+      COMPLEX(8),INTENT(IN)  :: PSI2(LEN,N2)
+      COMPLEX(8),INTENT(OUT) :: OVERLAP(N1,N2)
+      LOGICAL(4),INTENT(OUT) :: USED
+      REAL(8)                :: FLOPS
+!     **************************************************************************
+      IF(TID) THEN
+        FLOPS=4.D0*REAL(N1,KIND=8)*REAL(N1,KIND=8)*REAL(LEN,KIND=8)
+      ELSE
+        FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
+      END IF
+      USED=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE() &
+     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      IF(.NOT.USED) RETURN
+!$ACC DATA PRESENT(PSI1(1:LEN,1:N1),PSI2(1:LEN,1:N2)) &
+!$ACC& COPYOUT(OVERLAP(1:N1,1:N2))
+      CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_PRESENT(TID,LEN,N1,PSI1 &
+     &                                           ,N2,PSI2,OVERLAP)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_ZSPROD_OVL_RES' &
+     &     ,LEN,N1,N2,0,16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8))
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY(TID,LEN,N1,PSI1 &

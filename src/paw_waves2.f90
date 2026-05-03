@@ -26,7 +26,8 @@
      &                        ,WAVES_SELECTWV !SUBROUTINE
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
-     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT
 #ENDIF
       IMPLICIT NONE
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
@@ -256,6 +257,19 @@ END IF
 !         ======================================================================
 !         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL ACCELPROFILE$ADD('ACC_COPY_CUBLAS_OVERLAP_RES_REGION' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8),0_8 &
+     &          ,0.D0,32.D0*REAL(NGL,KIND=8)*REAL(NDIM,KIND=8) &
+     &          *REAL(NBH,KIND=8),0.D0)
+          END IF
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.TRUE.)
+          END IF
+#ENDIF
 !$ACC DATA COPYIN(THIS%PSIM(1:NGL,1:NDIM,1:NBH) &
 !$ACC&            ,THIS%OPSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTOVERLAP)
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
@@ -300,6 +314,11 @@ END IF
           ENDDO
           DEALLOCATE(AUXMAT)
 !$ACC END DATA
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.FALSE.)
+          END IF
+#ENDIF
 !
 !         ======================================================================
 !         ==  CALCULATE LAGRANGE PARAMETERS                                   ==
@@ -770,12 +789,17 @@ END IF
        END
 !
 !      ..............................................................
-       SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT)
+      SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT)
 !      **                                                          **
 !      **  CALCULATES <PSI1|PSI2>                                  **
 !      **                                                          **
-       USE MPE_MODULE
-       IMPLICIT NONE
+      USE MPE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY &
+     &       ,CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE
+#ENDIF
+      IMPLICIT NONE
        LOGICAL(4),INTENT(IN) :: TID !INDICATES THAT PSI1=PSI2
        INTEGER(4),INTENT(IN) :: NGL
        INTEGER(4),INTENT(IN) :: NDIM
@@ -788,12 +812,31 @@ END IF
        INTEGER(4)            :: IB1A,IB1B,IB2A,IB2B,I,J
        COMPLEX(8),ALLOCATABLE:: TMAT(:,:)
        REAL(8)               :: RE,IM
-       REAL(8)               :: MAT2(2,2)
-       LOGICAL(4)            :: TINV
+      REAL(8)               :: MAT2(2,2)
+      REAL(8)               :: GWEIGHT
+      LOGICAL(4)            :: TINV
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)            :: ACCEL_CUBLAS_USED
+      LOGICAL(4)            :: TRESIDENTOVERLAP
+#ENDIF
 !      **************************************************************
                              CALL TIMING$CLOCKON('WAVES_OVERLAP')
-       TINV=(NB.NE.NBH)
-       IF(.NOT.TINV) THEN
+      TINV=(NB.NE.NBH)
+      IF(.NOT.TINV) THEN
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
+        IF(TRESIDENTOVERLAP) THEN
+          CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY(TID &
+     &        ,NGL*NDIM,NB,PSI1,NB,PSI2,MAT,ACCEL_CUBLAS_USED)
+          IF(ACCEL_CUBLAS_USED) THEN
+            CALL PLANEWAVE$GETR8('GWEIGHT',GWEIGHT)
+            MAT=MAT*GWEIGHT
+            CALL MPE$COMBINE('K','+',MAT)
+                             CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
+            RETURN
+          END IF
+        END IF
+#ENDIF
          IF(TID) THEN
            CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NB,PSI1,NB,PSI2,MAT)
          ELSE
