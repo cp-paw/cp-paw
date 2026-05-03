@@ -1,4 +1,4 @@
-!     
+!
 !........1.........2.........3.........4.........5.........6.........7.........8
 MODULE TIMING_MODULE
 !*******************************************************************************
@@ -452,4 +452,209 @@ END MODULE TIMING_MODULE
       RETURN
       END SUBROUTINE TIMING_CONVERT
 
-
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+!
+!........1.........2.........3.........4.........5.........6.........7.........8
+MODULE ACCELPROFILE_MODULE
+!*******************************************************************************
+!**                                                                           **
+!**  NAME: ACCELPROFILE                                                       **
+!**                                                                           **
+!**  PURPOSE: COLLECT LOW-OVERHEAD SIZE/TIME DATA FOR NUMERICAL HOTSPOTS      **
+!**    THAT ARE CANDIDATES FOR NVPL, cuBLAS/cuSOLVER, cuFFT OR cuFFTMp.        **
+!**                                                                           **
+!*******************************************************************************
+TYPE ACCELPROFILE_ENTRY_TYPE
+  CHARACTER(32) :: NAME=' '
+  INTEGER(8)    :: N1=0
+  INTEGER(8)    :: N2=0
+  INTEGER(8)    :: N3=0
+  INTEGER(8)    :: N4=0
+  INTEGER(8)    :: CALLS=0
+  REAL(8)       :: SECONDS=0.D0
+  REAL(8)       :: MAXSECONDS=0.D0
+  REAL(8)       :: FLOPS=0.D0
+  REAL(8)       :: BYTES=0.D0
+END TYPE ACCELPROFILE_ENTRY_TYPE
+INTEGER(4),PARAMETER              :: NENTRYX=512
+TYPE(ACCELPROFILE_ENTRY_TYPE)     :: ENTRY(NENTRYX)
+INTEGER(4)                        :: NENTRY=0
+LOGICAL(4)                        :: INITIALIZED=.FALSE.
+LOGICAL(4)                        :: ENABLED=.TRUE.
+END MODULE ACCELPROFILE_MODULE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ACCELPROFILE_INIT
+      USE ACCELPROFILE_MODULE
+      IMPLICIT NONE
+      CHARACTER(32) :: VAL
+      INTEGER(4)    :: STATUS
+!     **************************************************************************
+      IF(INITIALIZED) RETURN
+      ENABLED=.TRUE.
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_ACCEL_PROFILE',VAL,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        VAL=ADJUSTL(VAL)
+        IF(VAL(1:1).EQ.'0'.OR.VAL(1:1).EQ.'f'.OR.VAL(1:1).EQ.'F' &
+     &     .OR.VAL(1:1).EQ.'n'.OR.VAL(1:1).EQ.'N') ENABLED=.FALSE.
+      END IF
+      INITIALIZED=.TRUE.
+      RETURN
+      END SUBROUTINE ACCELPROFILE_INIT
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ACCELPROFILE$NOW(SECONDS)
+      IMPLICIT NONE
+      REAL(8),INTENT(OUT) :: SECONDS
+      INTEGER(8)          :: COUNT
+      INTEGER(8)          :: COUNTRATE
+      INTEGER(8)          :: COUNTMAX
+!     **************************************************************************
+      CALL SYSTEM_CLOCK(COUNT,COUNTRATE,COUNTMAX)
+      SECONDS=REAL(COUNT,KIND=8)/REAL(COUNTRATE,KIND=8)
+      RETURN
+      END SUBROUTINE ACCELPROFILE$NOW
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ACCELPROFILE$ADD(NAME,N1,N2,N3,N4,FLOPS,BYTES,SECONDS)
+      USE ACCELPROFILE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(8)  ,INTENT(IN) :: N1
+      INTEGER(8)  ,INTENT(IN) :: N2
+      INTEGER(8)  ,INTENT(IN) :: N3
+      INTEGER(8)  ,INTENT(IN) :: N4
+      REAL(8)     ,INTENT(IN) :: FLOPS
+      REAL(8)     ,INTENT(IN) :: BYTES
+      REAL(8)     ,INTENT(IN) :: SECONDS
+      INTEGER(4)              :: I
+      INTEGER(4)              :: IENTRY
+      CHARACTER(32)           :: NAME32
+!     **************************************************************************
+      IF(.NOT.INITIALIZED) CALL ACCELPROFILE_INIT
+      IF(.NOT.ENABLED) RETURN
+      NAME32=NAME
+      IENTRY=0
+      DO I=1,NENTRY
+        IF(ENTRY(I)%NAME.EQ.NAME32 &
+     &     .AND.ENTRY(I)%N1.EQ.N1 &
+     &     .AND.ENTRY(I)%N2.EQ.N2 &
+     &     .AND.ENTRY(I)%N3.EQ.N3 &
+     &     .AND.ENTRY(I)%N4.EQ.N4) THEN
+          IENTRY=I
+          EXIT
+        END IF
+      ENDDO
+      IF(IENTRY.EQ.0) THEN
+        IF(NENTRY.GE.NENTRYX) RETURN
+        NENTRY=NENTRY+1
+        IENTRY=NENTRY
+        ENTRY(IENTRY)%NAME=NAME32
+        ENTRY(IENTRY)%N1=N1
+        ENTRY(IENTRY)%N2=N2
+        ENTRY(IENTRY)%N3=N3
+        ENTRY(IENTRY)%N4=N4
+      END IF
+      ENTRY(IENTRY)%CALLS=ENTRY(IENTRY)%CALLS+1
+      ENTRY(IENTRY)%SECONDS=ENTRY(IENTRY)%SECONDS+SECONDS
+      ENTRY(IENTRY)%MAXSECONDS=MAX(ENTRY(IENTRY)%MAXSECONDS,SECONDS)
+      ENTRY(IENTRY)%FLOPS=ENTRY(IENTRY)%FLOPS+FLOPS
+      ENTRY(IENTRY)%BYTES=ENTRY(IENTRY)%BYTES+BYTES
+      RETURN
+      END SUBROUTINE ACCELPROFILE$ADD
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ACCELPROFILE$REPORT(CID,NFIL)
+      USE ACCELPROFILE_MODULE
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: CID
+      INTEGER(4)  ,INTENT(IN) :: NFIL
+      CHARACTER(256)          :: FILEBASE
+      CHARACTER(256)          :: FILENAME
+      CHARACTER(16)           :: RANKSTRING
+      INTEGER(4)              :: STATUS
+      INTEGER(4)              :: NFILCSV
+      INTEGER(4)              :: NTASKS
+      INTEGER(4)              :: THISTASK
+      INTEGER(4)              :: I
+      INTEGER(4)              :: J
+      INTEGER(4)              :: BEST
+      LOGICAL(4)              :: USED(NENTRYX)
+      REAL(8)                 :: AVGSECONDS
+      REAL(8)                 :: GFLOPS
+      REAL(8)                 :: GBYTES
+      REAL(8)                 :: RATE
+      REAL(8)                 :: BANDWIDTH
+!     **************************************************************************
+      IF(.NOT.INITIALIZED) CALL ACCELPROFILE_INIT
+      IF(.NOT.ENABLED) RETURN
+      CALL MPE$QUERY(CID,NTASKS,THISTASK)
+      FILEBASE='cppaw_accel_profile'
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_ACCEL_PROFILE_FILE',FILEBASE &
+     &                             ,STATUS=STATUS)
+      FILEBASE=ADJUSTL(FILEBASE)
+      IF(NTASKS.GT.1) THEN
+        WRITE(RANKSTRING,FMT='(".rank",I5.5,".csv")')THISTASK
+        FILENAME=TRIM(FILEBASE)//TRIM(RANKSTRING)
+      ELSE
+        FILENAME=TRIM(FILEBASE)//'.csv'
+      END IF
+      OPEN(NEWUNIT=NFILCSV,FILE=TRIM(FILENAME),STATUS='REPLACE' &
+     &    ,ACTION='WRITE',FORM='FORMATTED')
+      WRITE(NFILCSV,FMT='(A)') &
+     & 'op,n1,n2,n3,n4,calls,total_seconds,max_seconds,avg_seconds,'// &
+     & 'gflop,gbyte,measured_gflop_per_s,measured_gbyte_per_s'
+      DO I=1,NENTRY
+        AVGSECONDS=ENTRY(I)%SECONDS/REAL(MAX(ENTRY(I)%CALLS,1_8),KIND=8)
+        GFLOPS=ENTRY(I)%FLOPS*1.D-9
+        GBYTES=ENTRY(I)%BYTES*1.D-9
+        RATE=0.D0
+        BANDWIDTH=0.D0
+        IF(ENTRY(I)%SECONDS.GT.0.D0) THEN
+          RATE=GFLOPS/ENTRY(I)%SECONDS
+          BANDWIDTH=GBYTES/ENTRY(I)%SECONDS
+        END IF
+        WRITE(NFILCSV,FMT='(A,",",I0,",",I0,",",I0,",",I0,",",I0,'// &
+     &     '",",ES16.8,",",ES16.8,",",ES16.8,",",ES16.8,",",ES16.8,'// &
+     &     '",",ES16.8,",",ES16.8)') &
+     &     TRIM(ENTRY(I)%NAME),ENTRY(I)%N1,ENTRY(I)%N2,ENTRY(I)%N3 &
+     &     ,ENTRY(I)%N4,ENTRY(I)%CALLS,ENTRY(I)%SECONDS &
+     &     ,ENTRY(I)%MAXSECONDS,AVGSECONDS,GFLOPS,GBYTES,RATE,BANDWIDTH
+      ENDDO
+      CLOSE(NFILCSV)
+      IF(THISTASK.EQ.1) THEN
+        WRITE(NFIL,*)
+        WRITE(NFIL,FMT='(80("="))')
+        WRITE(NFIL,FMT='("ACCELERATOR PORTING PROFILE")')
+        WRITE(NFIL,FMT='(80("="))')
+        IF(NTASKS.GT.1) THEN
+          WRITE(NFIL,FMT='("CSV FILES: ",A,".rankNNNNN.csv")')TRIM(FILEBASE)
+        ELSE
+          WRITE(NFIL,FMT='("CSV FILE: ",A)')TRIM(FILENAME)
+        END IF
+        WRITE(NFIL,FMT='("Set CPPAW_ACCEL_PROFILE=0 to disable at run time.")')
+        WRITE(NFIL,*)
+        WRITE(NFIL,FMT='(T1,A,T28,A,T40,A,T52,A,T64,A)') &
+     &       'HOTSPOT','CALLS','SECONDS','GFLOP','GBYTE'
+        WRITE(NFIL,FMT='(80("-"))')
+        USED(:)=.FALSE.
+        DO I=1,MIN(20,NENTRY)
+          BEST=0
+          DO J=1,NENTRY
+            IF(USED(J)) CYCLE
+            IF(BEST.EQ.0) THEN
+              BEST=J
+            ELSE IF(ENTRY(J)%SECONDS.GT.ENTRY(BEST)%SECONDS) THEN
+              BEST=J
+            END IF
+          ENDDO
+          IF(BEST.EQ.0) EXIT
+          USED(BEST)=.TRUE.
+          WRITE(NFIL,FMT='(T1,A,T28,I10,T40,F10.3,T52,F10.3,T64,F10.3)') &
+     &       TRIM(ENTRY(BEST)%NAME),ENTRY(BEST)%CALLS,ENTRY(BEST)%SECONDS &
+     &       ,ENTRY(BEST)%FLOPS*1.D-9,ENTRY(BEST)%BYTES*1.D-9
+        ENDDO
+      END IF
+      RETURN
+      END SUBROUTINE ACCELPROFILE$REPORT
+#ENDIF

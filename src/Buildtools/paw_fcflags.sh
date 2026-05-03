@@ -24,8 +24,8 @@ USAGE="$USAGE \t paw_fcflags.sh options \n"
 USAGE="$USAGE \n"
 USAGE="$USAGE Options \n"
 USAGE="$USAGE \t -s (Darwin,Linux, Windows) operating system\n"
-USAGE="$USAGE \t -c (gfortran, ifort) Fortran compiler\n"
-USAGE="$USAGE \t -t (release, debug) type of compilation flags \n"
+USAGE="$USAGE \t -c (gfortran, ifort, nvfortran) Fortran compiler\n"
+USAGE="$USAGE \t -t (release, debug, profile) type of compilation flags \n"
 USAGE="$USAGE \t -v verbose (false) causes error exit \n"
 USAGE="$USAGE \t -h prints this help message\n"
 USAGE="$USAGE \n"
@@ -61,9 +61,9 @@ if [[ -z $COMPILER ]] ; then
   echo "error in $0: no compiler specified option -c is mandatory"           >&2
   exit 1
 else
-  if [[ -z $(echo "ifort gfortran" | grep ${COMPILER}) ]]; then
+  if [[ -z $(echo "ifort gfortran nvfortran" | grep ${COMPILER}) ]]; then
     echo "error in $0: invalid compiler selection"                           >&2
-    echo "allowed are ifort gfortran"                                        >&2
+    echo "allowed are ifort gfortran nvfortran"                              >&2
     exit 1
   fi
 fi
@@ -71,9 +71,9 @@ if [[ -z $TYPE ]] ; then
   echo "error in $0: no type specified. option -t is mandatory"              >&2
   exit 1
 else
-  if [[ -z $(echo "debug release" | grep ${TYPE}) ]]; then
+  if [[ -z $(echo "debug release profile" | grep ${TYPE}) ]]; then
     echo "error in $0: invalid type selected with -t"                        >&2
-    echo "allowed are debug release"                                         >&2
+    echo "allowed are debug release profile"                                 >&2
     exit 1
   fi
 fi
@@ -109,16 +109,20 @@ fi
 
 
 #  OS can be Unix, Darwin, Windows
-#  COMPILER can be ifort, gfortran
-#  TYPE can be debug, release
+#  COMPILER can be ifort, gfortran, nvfortran
+#  TYPE can be debug, release, profile
 #
 #  Unix          ifort debug
 #  Windows       ifort debug
 #  Windows       ifort release
 #  Unix          ifort release
 #   *            gfortran debug
+#   *            nvfortran debug
+#   *            nvfortran release
+#   *            nvfortran profile
 #  Darwin        gfortran release
 #  Linux/Windows gfortran release
+#   *            gfortran profile
 #
 #
 
@@ -269,6 +273,22 @@ elif [[ $OS = Unix && $COMPILER = ifort && $TYPE = release ]] ; then
   # axels parameter
   # FCFLAGS="-c -O3 -no-ipo -no-ip -xCORE-AVX2 -finline-functions \
   #           -finline-limit=50"
+
+elif [[ $COMPILER = nvfortran && $TYPE = debug ]] ; then
+  FCFLAGS="-Mbackslash -g -O0 -Mbounds -Mchkptr -traceback -Msave"
+
+elif [[ $COMPILER = nvfortran && $TYPE = release ]] ; then
+  # CP-PAW currently needs -Mbackslash for continuation strings in generated
+  # plotting scripts. With NVIDIA HPC SDK 26.3, -O2/-O3 can drop COMMON
+  # definitions for module data in a few large legacy modules, so release
+  # builds use the highest optimization level verified to link cleanly.
+  FCFLAGS="-Mbackslash -O1 -Mcache_align -Munroll"
+
+elif [[ $COMPILER = nvfortran && $TYPE = profile ]] ; then
+  FCFLAGS="-Mbackslash -O1 -Mcache_align -Munroll -g -traceback"
+
+elif [[ $COMPILER = ifort && $TYPE = profile ]] ; then
+  FCFLAGS="-O2 -g -traceback"
 
 elif [[ $COMPILER = gfortran && $TYPE = debug ]] ; then
   #  -g3                         # generate full debug information
@@ -486,6 +506,9 @@ elif [[ ( $OS = Linux || $OS = Windows ) \
 
  FCFLAGS="-ftree-vectorize -funroll-loops -O3 -finline-functions \
           -fwhole-program -flto=3 -march=native" 
+
+elif [[ $COMPILER = gfortran && $TYPE = profile ]] ; then
+  FCFLAGS="-O2 -g -fno-omit-frame-pointer -march=native"
 fi
 
 # because flags are written to sttout, VERBOSE messes up the result
