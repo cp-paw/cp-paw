@@ -118,6 +118,15 @@
       END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE
 !
 !     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED=ENABLED.AND.RESIDENCY_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_ENSURE
       IMPLICIT NONE
       INTEGER(4)                :: ISTAT
@@ -443,6 +452,81 @@
       CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NC_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_PRESENT(NGL,NDIM,NB,LMNX &
+     &                         ,LMNXX,IPRO,NPRO,PRO,PSI,GWEIGHT,WORK &
+     &                         ,PROPSI)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NB
+      INTEGER(4),INTENT(IN)    :: LMNX
+      INTEGER(4),INTENT(IN)    :: LMNXX
+      INTEGER(4),INTENT(IN)    :: IPRO
+      INTEGER(4),INTENT(IN)    :: NPRO
+      COMPLEX(8),INTENT(IN)    :: PRO(NGL,LMNXX)
+      COMPLEX(8),INTENT(IN)    :: PSI(NGL,NDIM,NB)
+      REAL(8)   ,INTENT(IN)    :: GWEIGHT
+      COMPLEX(8),INTENT(INOUT) :: WORK(LMNXX,NDIM*NB)
+      COMPLEX(8),INTENT(OUT)   :: PROPSI(NDIM,NB,NPRO)
+      COMPLEX(8)               :: ONE
+      COMPLEX(8)               :: ZERO
+      INTEGER(4)               :: ISTAT
+      INTEGER(4)               :: IB
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: LMN
+      INTEGER(4)               :: ICOL
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+      REAL(8)                  :: ACCEL_FLOPS
+      REAL(8)                  :: ACCEL_BYTES
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(PRO(1:NGL,1:LMNX),PSI(1:NGL,1:NDIM,1:NB)) &
+!$ACC& PRESENT(WORK(1:LMNXX,1:NDIM*NB),PROPSI(1:NDIM,1:NB,1:NPRO))
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PRO,PSI,WORK)
+      ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_C,CUBLAS_OP_N,LMNX,NDIM*NB &
+     &                 ,NGL,ONE,PRO,NGL,PSI,NGL,ZERO,WORK,LMNXX)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_PROJECTION_PRESENT')
+      END IF
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(WORK,PROPSI)
+      DO IB=1,NB
+        DO IDIM=1,NDIM
+          DO LMN=1,LMNX
+            ICOL=IDIM+(IB-1)*NDIM
+            PROPSI(IDIM,IB,IPRO-1+LMN)=GWEIGHT*WORK(LMN,ICOL)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_FLOPS=8.D0*REAL(NGL,KIND=8)*REAL(LMNX,KIND=8) &
+     &           *REAL(NDIM*NB,KIND=8)
+      ACCEL_BYTES=16.D0*(REAL(NGL,KIND=8)*REAL(LMNX,KIND=8) &
+     &                  +REAL(LMNX,KIND=8)*REAL(NDIM*NB,KIND=8))
+      CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_PROJ_RES' &
+     &     ,INT(NGL,KIND=8),INT(LMNX,KIND=8),INT(NDIM*NB,KIND=8) &
+     &     ,0_8,ACCEL_FLOPS,ACCEL_BYTES,ACCEL_T1-ACCEL_T0)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_PROJ_RES' &
+     &     ,NGL,LMNX,NDIM*NB,0,ACCEL_BYTES)
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_PRESENT
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY(TID,LEN,N1,PSI1 &

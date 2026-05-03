@@ -86,8 +86,11 @@ NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
 adds the `CPPAW_GPU_RESIDENCY=1` diagnostic mode. That currently switches the
 cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
-can reuse wavefunction arrays already held by an outer OpenACC data region.
-`ACC_COPY_*_RES` profile rows report the reduced copy estimate for that path.
+can reuse wavefunction arrays already held by an outer OpenACC data region. For
+non-superwave projections where all atom blocks pass the cuBLAS threshold, it
+also scatters the projection result into `PROPSI` on the device and copies the
+final projection array back once. `ACC_COPY_*_RES` profile rows report the
+reduced copy estimate for those paths.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
