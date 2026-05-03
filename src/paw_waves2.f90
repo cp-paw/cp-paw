@@ -808,13 +808,15 @@ END IF
        COMPLEX(8),INTENT(IN) :: PSI1(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(IN) :: PSI2(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(OUT):: MAT(NB,NB)
-       INTEGER(4)            :: IBH1,IBH2
+       INTEGER(4)            :: IBH1,IBH2,IDIM
        INTEGER(4)            :: IB1A,IB1B,IB2A,IB2B,I,J
        COMPLEX(8),ALLOCATABLE:: TMAT(:,:)
        REAL(8)               :: RE,IM
       REAL(8)               :: MAT2(2,2)
       REAL(8)               :: GWEIGHT
       LOGICAL(4)            :: TINV
+      LOGICAL(4)            :: TSUPER
+      INTEGER(4)            :: NGAMMA
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       LOGICAL(4)            :: ACCEL_CUBLAS_USED
       LOGICAL(4)            :: TRESIDENTOVERLAP
@@ -852,11 +854,42 @@ END IF
 !      =================================================================
 !      == <PSI_+|PSI_+> ================================================
        ALLOCATE(TMAT(NBH,NBH))
-       IF(TID) THEN
-         CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
-       ELSE
-         CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       ACCEL_CUBLAS_USED=.FALSE.
+       TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
+       IF(TRESIDENTOVERLAP) THEN
+         CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY(TID &
+    &        ,NGL*NDIM,NBH,PSI1,NBH,PSI2,TMAT,ACCEL_CUBLAS_USED)
        END IF
+       IF(ACCEL_CUBLAS_USED) THEN
+         CALL PLANEWAVE$GETR8('GWEIGHT',GWEIGHT)
+         CALL PLANEWAVE$GETL4('SUPER',TSUPER)
+         IF(TSUPER) THEN
+           CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
+           TMAT(:,:)=2.D0*TMAT(:,:)
+           IF(NGAMMA.NE.0) THEN
+             DO IBH1=1,NBH
+               DO IBH2=1,NBH
+                 DO IDIM=1,NDIM
+                   TMAT(IBH1,IBH2)=TMAT(IBH1,IBH2) &
+      &                 -CONJG(PSI1(NGAMMA,IDIM,IBH1)) &
+      &                       *PSI2(NGAMMA,IDIM,IBH2)
+                 ENDDO
+               ENDDO
+             ENDDO
+           END IF
+         END IF
+         TMAT(:,:)=TMAT(:,:)*GWEIGHT
+       ELSE
+#ENDIF
+         IF(TID) THEN
+           CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+         ELSE
+           CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+         END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       END IF
+#ENDIF
        DO IBH1=1,NBH
          IB1A=2*IBH1-1
          IB1B=MIN(2*IBH1,NB)

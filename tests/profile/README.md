@@ -92,11 +92,15 @@ also scatters the projection result into `PROPSI` on the device and copies the
 final projection array back once. The orthogonalization overlap section keeps
 `PSIM`/`OPSI` resident across the projection and pseudo-overlap calls, and the
 same mode routes eligible non-superwave `WAVES_OVERLAP` scalarproducts through a
-present-input cuBLAS wrapper. It also lets `ZGEMM_NN` addproduct calls reuse a
-present output matrix, which targets `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile
-rows report the reduced copy estimate for those paths; the overlap region uses
-`ACC_COPY_CUBLAS_OVERLAP_RES_REGION` for the outer copy-in and
-`ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call output copy.
+present-input cuBLAS wrapper; for inversion-symmetric superwave overlaps it also
+keeps the `<PSI_+|PSI_+>` part on the same present-input path and leaves the
+`<PSI_-|PSI_+>` inversion pass on the existing CPU/generic route. It also lets
+`ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
+`WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
+for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
+for the outer copy-in and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call
+output copy. The resident overlap cuBLAS kernels are timed separately as
+`CUBLAS_ZHERK_OVL_RES` and `CUBLAS_ZGEMM_OVL_RES`.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
