@@ -8,7 +8,7 @@ NSTEPS=${NSTEPS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
-GPU_CASES=${GPU_CASES:-"gpu gpu_force_all gpu_3dfft gpu_managed gpu_unified gpu_off"}
+GPU_CASES=${GPU_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_force_all gpu_3dfft gpu_managed gpu_unified gpu_off gpu_resident_off"}
 CPU_CASES=${CPU_CASES:-"cpu nvpl"}
 
 mkdir -p "${GPU_EXPLORATION_ROOT}"

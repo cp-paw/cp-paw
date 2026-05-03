@@ -31,13 +31,13 @@ RUN_CUSOLVER=${RUN_CUSOLVER:-no}
 RUN_BAND_BENCHMARK=${RUN_BAND_BENCHMARK:-no}
 MAIN_CASES=${MAIN_CASES:-"nvpl cublas cublas_off"}
 SCALING_CASES=${SCALING_CASES:-"nvpl cublas"}
-GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_off"}
+GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_resident gpu_off gpu_resident_off"}
 GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_force_all gpu_3dfft gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
 BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
 BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
 BAND_EMPTY_BANDS=${BAND_EMPTY_BANDS:-128}
-BAND_CASES=${BAND_CASES:-"gpu gpu_nosync gpu_off"}
+BAND_CASES=${BAND_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_off gpu_resident_off"}
 BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvpl"}
 BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvpl"}
 THRESHOLDS=${THRESHOLDS:-"1e7"}
@@ -126,6 +126,8 @@ capture_metadata() {
           "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" \
           "${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" \
           "${ROOT}/bin/nvhpc_gpu_acc_profile_parallel/ppaw_nvhpc_gpu_acc_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" \
+          "${ROOT}/bin/nvhpc_gpu_acc_residency_profile_parallel/ppaw_nvhpc_gpu_acc_residency_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile/paw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cufft_cublas_acc_profile_parallel/ppaw_nvhpc_cufft_cublas_acc_profile.x" \
           "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" \

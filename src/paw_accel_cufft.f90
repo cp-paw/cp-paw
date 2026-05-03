@@ -43,6 +43,42 @@
       CONTAINS
 !
 !     ..........................................................................
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      SUBROUTINE CPPAW_CUFFT_ACC_PROFILE_BYTES(NAME,N1,N2,N3,N4,BYTES)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      INTEGER(4)  ,INTENT(IN) :: N4
+      REAL(8)     ,INTENT(IN) :: BYTES
+!     **************************************************************************
+      CALL ACCELPROFILE$ADD(NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                     ,INT(N3,KIND=8),INT(N4,KIND=8) &
+     &                     ,0.D0,BYTES,0.D0)
+      RETURN
+      END SUBROUTINE CPPAW_CUFFT_ACC_PROFILE_BYTES
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUFFT_ACC_PROFILE_TIME(NAME,N1,N2,N3,N4,T0)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      INTEGER(4)  ,INTENT(IN) :: N4
+      REAL(8)     ,INTENT(IN) :: T0
+      REAL(8)                 :: T1
+!     **************************************************************************
+      CALL ACCELPROFILE$NOW(T1)
+      CALL ACCELPROFILE$ADD(NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                     ,INT(N3,KIND=8),INT(N4,KIND=8) &
+     &                     ,0.D0,0.D0,MAX(0.D0,T1-T0))
+      RETURN
+      END SUBROUTINE CPPAW_CUFFT_ACC_PROFILE_TIME
+#ENDIF
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUFFT_ACC_INITCONFIG
       IMPLICIT NONE
       CHARACTER(128) :: VALUE
@@ -127,6 +163,9 @@
       LOGICAL(4),INTENT(OUT) :: FOUND
       INTEGER(4)             :: I
       INTEGER(4)             :: ISTAT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       FOUND=.TRUE.
       DO I=1,NPLAN
@@ -141,7 +180,14 @@
         RETURN
       END IF
       NPLAN=NPLAN+1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       ISTAT=CUFFTPLAN1D(PLANS(NPLAN)%PLAN,LEN,CUFFT_Z2Z,NFFT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUFFT_ACC_PROFILE_TIME('ACC_SETUP_CUFFT_PLAN1D' &
+     &                                 ,LEN,NFFT,0,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0) THEN
         CALL ERROR$MSG('CUFFTPLAN1D FAILED')
         CALL ERROR$I4VAL('STATUS',ISTAT)
@@ -165,6 +211,9 @@
       LOGICAL(4),INTENT(OUT) :: FOUND
       INTEGER(4)             :: I
       INTEGER(4)             :: ISTAT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       FOUND=.TRUE.
       DO I=1,NPLAN3D
@@ -180,7 +229,14 @@
         RETURN
       END IF
       NPLAN3D=NPLAN3D+1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       ISTAT=CUFFTPLAN3D(PLANS3D(NPLAN3D)%PLAN,N3,N2,N1,CUFFT_Z2Z)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUFFT_ACC_PROFILE_TIME('ACC_SETUP_CUFFT_PLAN3D' &
+     &                                 ,N1,N2,N3,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0) THEN
         CALL ERROR$MSG('CUFFTPLAN3D FAILED')
         CALL ERROR$I4VAL('STATUS',ISTAT)
@@ -252,6 +308,10 @@
 !$ACC END PARALLEL LOOP
       END IF
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUFFT_ACC_PROFILE_BYTES('ACC_COPY_CUFFT1D_C8' &
+     &     ,LEN,NFFT,0,0,32.D0*REAL(LEN,KIND=8)*REAL(NFFT,KIND=8))
+#ENDIF
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUFFT_ACC_FFTC8_COPY
@@ -316,6 +376,11 @@
 !$ACC END PARALLEL LOOP
       END IF
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUFFT_ACC_PROFILE_BYTES('ACC_COPY_CUFFT3D_C8' &
+     &     ,N1,N2,N3,0,32.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &     *REAL(N3,KIND=8))
+#ENDIF
       USED=.TRUE.
       RETURN
       END SUBROUTINE CPPAW_CUFFT_ACC_3DFFTC8_COPY

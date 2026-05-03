@@ -978,6 +978,20 @@ case ${SELECT} in
     add_fcflags
     ;;
 
+  nvhpc_gpu_acc_residency_profile)
+    SUFFIX="nvhpc_gpu_acc_residency_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE -DCPPVAR_GPU_RESIDENCY_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_residency_profile_parallel)
+    SUFFIX="nvhpc_gpu_acc_residency_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE -DCPPVAR_GPU_RESIDENCY_PROFILE"
+    add_fcflags
+    ;;
+
   nvhpc_gpu_acc_managed_profile)
     SUFFIX="nvhpc_gpu_acc_managed_profile"
     TYPE="profile"

@@ -13,12 +13,21 @@ def profile_totals(run_dir):
         "lapack": 0.0,
         "fft": 0.0,
         "mpi": 0.0,
+        "setup": 0.0,
+        "copy_gb": 0.0,
     }
     for path in glob.glob(os.path.join(run_dir, "*_profile*.csv")):
         with open(path, newline="") as handle:
             for row in csv.DictReader(handle):
                 op = row["op"]
                 seconds = float(row["total_seconds"])
+                gbyte = float(row["gbyte"])
+                if op.startswith("ACC_COPY"):
+                    totals["copy_gb"] += gbyte
+                    continue
+                if op.startswith("ACC_SETUP"):
+                    totals["setup"] += seconds
+                    continue
                 totals["instrumented"] += seconds
                 if op.startswith("MPI_ALLTOALL"):
                     totals["mpi"] += seconds
@@ -102,6 +111,8 @@ def main(argv):
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
                 "mpi_s": totals["mpi"],
+                "setup_s": totals["setup"],
+                "copy_gb": totals["copy_gb"],
                 "energy": final_energy(run_dir),
                 "env": env.get("env"),
             }
@@ -123,6 +134,8 @@ def main(argv):
         "lapack_s",
         "fft_s",
         "mpi_s",
+        "setup_s",
+        "copy_gb",
         "energy",
         "env",
     ]
