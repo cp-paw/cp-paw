@@ -23,6 +23,7 @@ export CPPAW_INSTALL_NVLAMATH="${CPPAW_INSTALL_NVLAMATH:-auto}"
 export CPPAW_INSTALL_CUFFTW="${CPPAW_INSTALL_CUFFTW:-auto}"
 export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
 export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
+export CPPAW_INSTALL_GPU_ALL="${CPPAW_INSTALL_GPU_ALL:-no}"
 export CPPAW_INSTALL_GPU_MEMORY_PROFILES="${CPPAW_INSTALL_GPU_MEMORY_PROFILES:-no}"
 export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-no}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
@@ -185,6 +186,8 @@ export CUFFT_BUILT=false
 export CUFFT_PROFILE_BUILT=false
 export GPU_ACC_BUILT=false
 export GPU_ACC_PROFILE_BUILT=false
+export GPU_ALL_BUILT=false
+export GPU_ALL_PROFILE_BUILT=false
 export GPU_MEMORY_PROFILE_BUILT=false
 export GPU_RESIDENCY_PROFILE_BUILT=false
 export CUBLAS_ACC_BUILT=false
@@ -503,6 +506,52 @@ function build_gpu_acc_choices {
   fi
 }
 
+function build_gpu_all_choices {
+  local REQUIRED=$1
+
+  case "${CPPAW_INSTALL_GPU_ALL}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      return 0
+      ;;
+    require|required|yes|true)
+      REQUIRED=true
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_GPU_ALL=${CPPAW_INSTALL_GPU_ALL}" >&2
+      echo "allowed are no, yes, require" >&2
+      exit 1
+      ;;
+  esac
+
+  if ! has_cuda || ! has_nvhpc || ! has_cufft || ! has_cufftw \
+       || ! has_cublas || ! has_cusolver || ! has_nvlamath ; then
+    if [[ ${REQUIRED} = true ]] ; then
+      echo "error in $0: CPPAW_INSTALL_GPU_ALL=${CPPAW_INSTALL_GPU_ALL} but NVIDIA HPC SDK/CUDA/cuFFTW/cuFFT/cuBLAS/cuSOLVER/NVLAMATH was not found" >&2
+      exit 1
+    fi
+    echo "NVIDIA HPC SDK/CUDA/cuFFTW/cuFFT/cuBLAS/cuSOLVER/NVLAMATH not detected; skipping optional all-library GPU builds."
+    return 0
+  fi
+
+  for X in nvhpc_gpu_all_fast nvhpc_gpu_all_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "nvhpc"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      GPU_ALL_BUILT=true
+    fi
+  done
+  if profile_requested ; then
+    for X in nvhpc_gpu_all_profile nvhpc_gpu_all_profile_parallel ; do
+      build_choice "${X}" "${REQUIRED}" "nvhpc"
+      if [[ ${LAST_BUILD_OK} = true ]] ; then
+        GPU_ALL_PROFILE_BUILT=true
+      fi
+    done
+  fi
+}
+
 function build_gpu_memory_profile_choices {
   local REQUIRED=$1
 
@@ -610,6 +659,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
         exit 1
         ;;
     esac
+    case "${CPPAW_INSTALL_GPU_ALL}" in
+      require|required|yes|true)
+        echo "error in $0: CPPAW_INSTALL_GPU_ALL=${CPPAW_INSTALL_GPU_ALL} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
+        exit 1
+        ;;
+    esac
     case "${CPPAW_INSTALL_GPU_MEMORY_PROFILES}" in
       require|required|yes|true)
         echo "error in $0: CPPAW_INSTALL_GPU_MEMORY_PROFILES=${CPPAW_INSTALL_GPU_MEMORY_PROFILES} but CPPAW_INSTALL_NVHPC=${CPPAW_INSTALL_NVHPC}" >&2
@@ -655,6 +710,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
     build_cufftw_choices false
     build_cufft_choices false
     build_gpu_acc_choices false
+    build_gpu_all_choices false
     build_gpu_memory_profile_choices false
     build_gpu_residency_profile_choices false
     build_cublas_acc_choices false
@@ -681,6 +737,7 @@ case "${CPPAW_INSTALL_NVHPC}" in
       build_cufftw_choices false
       build_cufft_choices false
       build_gpu_acc_choices false
+      build_gpu_all_choices false
       build_gpu_memory_profile_choices false
       build_gpu_residency_profile_choices false
       build_cublas_acc_choices false
@@ -716,6 +773,12 @@ case "${CPPAW_INSTALL_NVHPC}" in
       case "${CPPAW_INSTALL_GPU_ACC}" in
         require|required|yes|true)
           echo "error in $0: CPPAW_INSTALL_GPU_ACC=${CPPAW_INSTALL_GPU_ACC} but NVIDIA HPC SDK/CUDA was not found" >&2
+          exit 1
+          ;;
+      esac
+      case "${CPPAW_INSTALL_GPU_ALL}" in
+        require|required|yes|true)
+          echo "error in $0: CPPAW_INSTALL_GPU_ALL=${CPPAW_INSTALL_GPU_ALL} but NVIDIA HPC SDK/CUDA was not found" >&2
           exit 1
           ;;
       esac
@@ -799,6 +862,12 @@ if [[ ${GPU_ACC_BUILT} = true ]] ; then
 fi
 if [[ ${GPU_ACC_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_acc_profile:\${PAWDIR}/bin/nvhpc_gpu_acc_profile_parallel:\${PATH}"
+fi
+if [[ ${GPU_ALL_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_all_fast:\${PAWDIR}/bin/nvhpc_gpu_all_fast_parallel:\${PATH}"
+fi
+if [[ ${GPU_ALL_PROFILE_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_all_profile:\${PAWDIR}/bin/nvhpc_gpu_all_profile_parallel:\${PATH}"
 fi
 if [[ ${GPU_MEMORY_PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_gpu_acc_managed_profile:\${PAWDIR}/bin/nvhpc_gpu_acc_managed_profile_parallel:\${PATH}"

@@ -289,19 +289,19 @@ case "${SELECT}" in
   nvhpc_nvblas*) CPPAW_USE_NVBLAS=yes ;;
 esac
 case "${SELECT}" in
-  nvhpc_nvlamath*) CPPAW_USE_NVLAMATH=yes ;;
+  nvhpc_nvlamath*|nvhpc_gpu_all*) CPPAW_USE_NVLAMATH=yes ;;
 esac
 case "${SELECT}" in
-  nvhpc_cufftw*) CPPAW_USE_CUFFTW=yes ;;
+  nvhpc_cufftw*|nvhpc_gpu_all*) CPPAW_USE_CUFFTW=yes ;;
 esac
 case "${SELECT}" in
-  nvhpc_cufft_*|nvhpc_gpu_acc*) CPPAW_USE_CUFFT=yes ;;
+  nvhpc_cufft_*|nvhpc_gpu_acc*|nvhpc_gpu_all*) CPPAW_USE_CUFFT=yes ;;
 esac
 case "${SELECT}" in
-  nvhpc_cublas_acc*|nvhpc_cufft_cublas_acc*|nvhpc_gpu_acc*) CPPAW_USE_CUBLAS_ACC=yes ;;
+  nvhpc_cublas_acc*|nvhpc_cufft_cublas_acc*|nvhpc_gpu_acc*|nvhpc_gpu_all*) CPPAW_USE_CUBLAS_ACC=yes ;;
 esac
 case "${SELECT}" in
-  nvhpc_cusolver_acc*|nvhpc_gpu_acc*) CPPAW_USE_CUSOLVER_ACC=yes ;;
+  nvhpc_cusolver_acc*|nvhpc_gpu_acc*|nvhpc_gpu_all*) CPPAW_USE_CUSOLVER_ACC=yes ;;
 esac
 
 NVHPC_ROOT=$(find_nvhpc_root)
@@ -978,6 +978,32 @@ case ${SELECT} in
     add_fcflags
     ;;
 
+  nvhpc_gpu_all_fast)
+    SUFFIX="nvhpc_gpu_all_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_all_fast_parallel)
+    SUFFIX="nvhpc_gpu_all_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_all_profile)
+    SUFFIX="nvhpc_gpu_all_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE -DCPPVAR_GPU_ALL_LIBS"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_all_profile_parallel)
+    SUFFIX="nvhpc_gpu_all_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE -DCPPVAR_GPU_ALL_LIBS"
+    add_fcflags
+    ;;
+
   nvhpc_gpu_acc_residency_profile)
     SUFFIX="nvhpc_gpu_acc_residency_profile"
     TYPE="profile"
@@ -1082,16 +1108,16 @@ case ${SELECT} in
     ;;
 esac
 
-if [[ ${CPPAW_USE_CUFFT} = yes \
-      || ${CPPAW_USE_CUFFT} = true \
-      || ${CPPAW_USE_CUFFT} = 1 ]] ; then
-  enable_nvhpc_cufft_acc
-fi
-
 if [[ ${CPPAW_USE_NVLAMATH} = yes \
       || ${CPPAW_USE_NVLAMATH} = true \
       || ${CPPAW_USE_NVLAMATH} = 1 ]] ; then
   enable_nvhpc_nvlamath
+fi
+
+if [[ ${CPPAW_USE_CUFFT} = yes \
+      || ${CPPAW_USE_CUFFT} = true \
+      || ${CPPAW_USE_CUFFT} = 1 ]] ; then
+  enable_nvhpc_cufft_acc
 fi
 
 if [[ ${CPPAW_USE_CUBLAS_ACC} = yes \

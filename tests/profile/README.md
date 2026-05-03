@@ -83,6 +83,17 @@ NSTEPS=1 ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 ```
 
+For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
+fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
+NVLAMATH into one executable. NVBLAS stays separate because it interposes BLAS
+calls at run time rather than being an explicit kernel path:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile
+cd tests/profile/si64
+NSTEPS=1 CASES="gpu gpu_all gpu_all_off" ./run_benchmark.sh
+```
+
 The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
 `profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
 system `mpirun`; set `CPU_MPIRUN=...` to override it.
@@ -102,6 +113,9 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
 | `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
+| `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time. |
+| `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well. |
+| `gpu_all_off` | Same all-library binary with native cuFFT/cuBLAS/cuSOLVER disabled; cuFFTW/NVLAMATH remain compiled in. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
 | `gpu_3dfft` | Diagnostic combined profile that also enables the opt-in native cuFFT 3-D wrapper. |
 | `gpu_managed` / `gpu_unified` | Separate combined GPU binaries built with NVHPC `-gpu=mem:managed` or `-gpu=mem:unified` for memory-residency experiments. |
