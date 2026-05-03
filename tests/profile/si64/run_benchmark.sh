@@ -220,8 +220,35 @@ prepare_case() {
   fi
 }
 
+capture_metadata() {
+  {
+    echo "date=$(iso_now)"
+    echo "hostname=$(hostname)"
+    echo "test=${TEST}"
+    echo "nsteps=${NSTEPS}"
+    echo "ranks=${RANKS}"
+    echo "cases=${CASES}"
+    echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
+    echo
+    uname -a
+    echo
+    for case_name in ${CASES}; do
+      exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
+      echo "case=${case_name}"
+      echo "exe=${exe}"
+      if [[ -x "${exe}" ]]; then
+        ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas" || true
+      else
+        echo "missing"
+      fi
+      echo
+    done
+  } > "${RUN_ROOT}/metadata.txt" 2>&1
+}
+
 mkdir -p "${RUN_ROOT}"
 echo "${RUN_ROOT}" > "${HERE}/runs/latest"
+capture_metadata
 
 for case_name in ${CASES}; do
   exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)

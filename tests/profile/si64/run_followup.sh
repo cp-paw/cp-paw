@@ -10,6 +10,7 @@ CPU_RANKS=${CPU_RANKS:-8}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
+EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-${EMPTY_BANDS}}
 GPU_CASES=${GPU_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_off gpu_resident_off"}
 CPU_CASES=${CPU_CASES:-"cpu nvpl"}
 ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES:-"cpu nvpl"}
@@ -65,12 +66,15 @@ run_suite() {
   append_suite "${suite}" "${suite_root}/benchmark.tsv"
 }
 
-for nsteps in ${NSTEPS_LIST}; do
-  run_suite "nstep${nsteps}_${GPU_RANKS}rank_gpu" "${nsteps}" "${GPU_RANKS}" \
-    "${GPU_CASES}"
-  run_suite "nstep${nsteps}_1rank_cpu" "${nsteps}" 1 "${ONE_RANK_CPU_CASES}"
-  run_suite "nstep${nsteps}_${CPU_RANKS}rank_cpu_ref" "${nsteps}" "${CPU_RANKS}" \
-    "${CPU_CASES}"
+for empty_bands in ${EMPTY_BANDS_LIST}; do
+  for nsteps in ${NSTEPS_LIST}; do
+    run_suite "empty${empty_bands}_nstep${nsteps}_${GPU_RANKS}rank_gpu" \
+      "${nsteps}" "${GPU_RANKS}" "${GPU_CASES}" "EMPTY_BANDS=${empty_bands}"
+    run_suite "empty${empty_bands}_nstep${nsteps}_1rank_cpu" \
+      "${nsteps}" 1 "${ONE_RANK_CPU_CASES}" "EMPTY_BANDS=${empty_bands}"
+    run_suite "empty${empty_bands}_nstep${nsteps}_${CPU_RANKS}rank_cpu_ref" \
+      "${nsteps}" "${CPU_RANKS}" "${CPU_CASES}" "EMPTY_BANDS=${empty_bands}"
+  done
 done
 
 log "ALL DONE root=${FOLLOWUP_ROOT}"

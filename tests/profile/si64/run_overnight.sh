@@ -37,6 +37,7 @@ BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
 BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
 BAND_EMPTY_BANDS=${BAND_EMPTY_BANDS:-128}
+BAND_EMPTY_BANDS_LIST=${BAND_EMPTY_BANDS_LIST:-${BAND_EMPTY_BANDS}}
 BAND_CASES=${BAND_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_off gpu_resident_off"}
 BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvpl"}
 BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvpl"}
@@ -252,16 +253,18 @@ esac
 
 case "${RUN_BAND_BENCHMARK}" in
   yes|true|1)
-    for band_nsteps in ${BAND_NSTEPS_LIST}; do
-      run_suite "${BAND_TEST}_${band_nsteps}steps_${BAND_RANKS}ranks_gpu" \
-        "${band_nsteps}" "${BAND_RANKS}" "${BAND_REPEATS}" "${BAND_CASES}" \
-        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
-      run_suite "${BAND_TEST}_${band_nsteps}steps_1rank_cpu" \
-        "${band_nsteps}" 1 "${BAND_REPEATS}" "${BAND_ONE_RANK_CPU_CASES}" \
-        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
-      run_suite "${BAND_TEST}_${band_nsteps}steps_${BAND_CPU_RANKS}ranks_cpu_ref" \
-        "${band_nsteps}" "${BAND_CPU_RANKS}" "${BAND_REPEATS}" "${BAND_CPU_CASES}" \
-        "TEST=${BAND_TEST}" "EMPTY_BANDS=${BAND_EMPTY_BANDS}"
+    for band_empty_bands in ${BAND_EMPTY_BANDS_LIST}; do
+      for band_nsteps in ${BAND_NSTEPS_LIST}; do
+        run_suite "${BAND_TEST}_empty${band_empty_bands}_${band_nsteps}steps_${BAND_RANKS}ranks_gpu" \
+          "${band_nsteps}" "${BAND_RANKS}" "${BAND_REPEATS}" "${BAND_CASES}" \
+          "TEST=${BAND_TEST}" "EMPTY_BANDS=${band_empty_bands}"
+        run_suite "${BAND_TEST}_empty${band_empty_bands}_${band_nsteps}steps_1rank_cpu" \
+          "${band_nsteps}" 1 "${BAND_REPEATS}" "${BAND_ONE_RANK_CPU_CASES}" \
+          "TEST=${BAND_TEST}" "EMPTY_BANDS=${band_empty_bands}"
+        run_suite "${BAND_TEST}_empty${band_empty_bands}_${band_nsteps}steps_${BAND_CPU_RANKS}ranks_cpu_ref" \
+          "${band_nsteps}" "${BAND_CPU_RANKS}" "${BAND_REPEATS}" "${BAND_CPU_CASES}" \
+          "TEST=${BAND_TEST}" "EMPTY_BANDS=${band_empty_bands}"
+      done
     done
     ;;
 esac
