@@ -1009,6 +1009,15 @@ CALL TRACE$PASS('DONE')
       END IF
 !
 !     ==========================================================================
+!     ==  READ BREAKRETARD  (1,2,...,NHISTX)                                  ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTD(LL_CNTL,'BREAKRETARD',0,TCHK)
+      IF(TCHK) THEN
+        CALL LINKEDLIST$GET(LL_CNTL,'BREAKRETARD',1,ISVAR)
+        CALL AUTO$SETI4('RETARD',ISVAR)
+      END IF
+!
+!     ==========================================================================
 !     ==  RESET ATOMIC STRUCTURE FROM STRUCTURE INPUT FILE                    ==
 !     ==  I.E. IGNORE UNIT CELL AND ATOMIC OPOSITIONS FROM RESTART FILE       ==
 !     == CAUTION! REDUNDANCY WITH !CNTL!RDYN:START                            ==

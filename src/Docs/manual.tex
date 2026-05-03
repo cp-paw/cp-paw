@@ -963,6 +963,13 @@ AUTOCONV time steps.}
 \vrules{optional} 
 \vdefault{$10^{-5}$~H}}
 
+\mbax{\key{BREAKRETARD} 
+\vdescr{The autopilot selects the upper friction value, if the energy
+  increases for the past ``BREAKRETARD'' time steps}
+\vformat{integer} 
+\vrules{optional} 
+\vdefault{1}}
+
 \mbax{\key{RSTRTTYPE} 
 \vdescr{allows to cut down the information on
 the restart file.  Option RSTRTTYPE='STATIC' only stores one set of
