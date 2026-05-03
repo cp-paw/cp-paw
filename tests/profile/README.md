@@ -89,9 +89,11 @@ cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
 can reuse wavefunction arrays already held by an outer OpenACC data region. For
 non-superwave projections where all atom blocks pass the cuBLAS threshold, it
 also scatters the projection result into `PROPSI` on the device and copies the
-final projection array back once. The same mode also lets `ZGEMM_NN` addproduct
-calls reuse a present output matrix, which targets `WAVES_ADDPRO`. `ACC_COPY_*_RES`
-profile rows report the reduced copy estimate for those paths.
+final projection array back once. The orthogonalization overlap section keeps
+`PSIM`/`OPSI` resident across the projection and pseudo-overlap calls, and the
+same mode also lets `ZGEMM_NN` addproduct calls reuse a present output matrix,
+which targets `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced
+copy estimate for those paths.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
@@ -123,7 +125,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
 | `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
-| `gpu_resident` / `gpu_resident_nosync` | Same combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently uses `present_or_copyin` for cuBLAS scalarproducts to reuse OpenACC-resident projection wavefunctions. |
+| `gpu_resident` / `gpu_resident_nosync` | Same combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
 | `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time. |

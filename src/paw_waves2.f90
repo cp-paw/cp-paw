@@ -24,6 +24,10 @@
      &                        ,WAVEEKIN2 &
      &                        ,DELT,ANNEE &
      &                        ,WAVES_SELECTWV !SUBROUTINE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+#ENDIF
       IMPLICIT NONE
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
       REAL(8)   ,ALLOCATABLE :: MARR(:)
@@ -56,6 +60,7 @@
       REAL(8)   ,ALLOCATABLE :: YLM(:)
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TINV
+      LOGICAL(4)             :: TRESIDENTOVERLAP
       LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8)             :: CSVAR
       REAL(8)   ,ALLOCATABLE :: NORM(:)
@@ -67,6 +72,10 @@
                              CALL TIMING$CLOCKON('WAVES$ORTHOGONALIZE')
       NPRO=MAP%NPRO
       NAT=MAP%NAT
+      TRESIDENTOVERLAP=.FALSE.
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
+#ENDIF
       CALL CELL$GETL4('MOVE',TSTRESS)
 !
 !     ==========================================================================
@@ -247,6 +256,8 @@ END IF
 !         ======================================================================
 !         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
 !         ======================================================================
+!$ACC DATA COPYIN(THIS%PSIM(1:NGL,1:NDIM,1:NBH) &
+!$ACC&            ,THIS%OPSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTOVERLAP)
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
      &                                                     ,THIS%PSIM,THIS%PROJ)
           CALL MPE$COMBINE('K','+',THIS%PROJ)
@@ -288,6 +299,7 @@ END IF
             ENDDO
           ENDDO
           DEALLOCATE(AUXMAT)
+!$ACC END DATA
 !
 !         ======================================================================
 !         ==  CALCULATE LAGRANGE PARAMETERS                                   ==
