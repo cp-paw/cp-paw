@@ -66,42 +66,118 @@ END MODULE CORE_MODULE
       RETURN
       END
 !
-!     ..................................................................
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE CORE$REPORT(NFIL)
       USE CORE_MODULE
+      USE MPE_MODULE
       IMPLICIT NONE
-      INTEGER(4)  ,INTENT(IN) :: NFIL
-      REAL(8)                 :: EV
-      CHARACTER(32)           :: NAME
-      INTEGER(4)              :: I
-      REAL(8)                 :: SVAR
-      INTEGER(4)              :: THISTASK,NTASKS
-      CHARACTER(128)          :: STRING
+      INTEGER(4)  ,INTENT(IN)  :: NFIL
+      REAL(8)                  :: EV
+      CHARACTER(32)            :: NAME
+      INTEGER(4)               :: I
+      INTEGER(4)               :: N
+      REAL(8)                  :: SVAR
+      INTEGER(4)               :: THISTASK,NTASKS
+      CHARACTER(128)           :: STRING
+      INTEGER(4)               :: NAT
+      INTEGER(4)               :: IAT
+      INTEGER(4)  ,ALLOCATABLE :: TASKARR(:)
+      INTEGER(4)  ,ALLOCATABLE :: TASKARR1(:)
+      REAL(8)     ,ALLOCATABLE :: E(:)
+      REAL(8)     ,ALLOCATABLE :: EATOM(:)
+      CHARACTER(8),ALLOCATABLE :: XTYPE(:)
+      INTEGER(4)               :: SNDTASK,RCVTASK
 !     ******************************************************************
+      IF(.NOT.TINI) RETURN
+                             CALL TRACE$PUSH('CORE$REPORT')
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
-      IF(THISTASK.NE.1) RETURN
       CALL CONSTANTS('EV',EV)
-      THIS=>FIRST
-      DO 
-        IF(THIS%IAT.EQ.0) EXIT
-        CALL ATOMLIST$GETCH('NAME',THIS%IAT,NAME)
-        CALL REPORT$TITLE(NFIL,'EIGENVALUES OF CORE STATES FROM ATOM '& 
-     &                       //TRIM(NAME))
-        WRITE(NFIL,*)'     CURRENT SYSTEM          ISOLATED ATOM' 
-        STRING='(T3,"ENERGY[H]",T14,"ENERGY[EV]"'
-        STRING=TRIM(ADJUSTL(STRING))//',T28,"ENERGY[H]",T39,"ENERGY[EV]"'
-        STRING=TRIM(ADJUSTL(STRING))//',T53,"SHIFT[H]",T64,"SHIFT[EV]"'
-        STRING=TRIM(ADJUSTL(STRING))//')'
-        WRITE(NFIL,STRING)
-        DO I=1,THIS%N
-          SVAR = THIS%E(I) - THIS%EATOM(I)
-          WRITE(NFIL,FMT='(A5,6F12.5)')TRIM(THIS%TYPE(I)) &
-    &                              ,THIS%E(I),THIS%E(I)/EV &
-    &                              ,THIS%EATOM(I),THIS%EATOM(I)/EV,SVAR,SVAR/EV
+
+!     == CREATE A MAPPING ARRAY FROM ATOMS TO TASKS FOR EACH NODE.          ==
+!     == ATOMS NOT PRESENT ON THIS TASK OBTAIN 0 FOR THE ATOM NUMBER        ==
+      CALL ATOMLIST$NATOM(NAT)
+      ALLOCATE(TASKARR(NAT))
+      TASKARR(:)=0
+!
+      IF(FIRST%IAT.NE.0) THEN 
+        THIS=>FIRST
+        DO 
+          IAT=THIS%IAT
+          TASKARR(IAT)=THISTASK
+          IF(.NOT.ASSOCIATED(THIS%NEXT)) EXIT
+          THIS=>THIS%NEXT
         ENDDO
-        IF(.NOT.ASSOCIATED(THIS%NEXT)) EXIT
-        THIS=>THIS%NEXT
-      ENDDO  
+      ENDIF
+!
+!     == COMMUNICATE A UNIQUE MAPPING KNOWN TO ALL TASKS =====================
+! THIS COMMUNICATION IS UNNECCESARILY COMPLICATED.
+      ALLOCATE(TASKARR1(NAT))
+      TASKARR1(:)=0
+      DO I=1,NTASKS
+        SNDTASK=THISTASK+1
+        SNDTASK=MODULO(SNDTASK-1,NTASKS)+1
+        RCVTASK=THISTASK-1
+        RCVTASK=MODULO(RCVTASK-1,NTASKS)+1
+        !== MPE$COMBINE WITH THE MAX FUNCTION MAY HAVE BEEN BETTER
+        TASKARR1=TASKARR
+        CALL MPE$SENDRECEIVE('MONOMER',THISTASK,SNDTASK,TASKARR1)
+        CALL MPE$SENDRECEIVE('MONOMER',RCVTASK,THISTASK,TASKARR1)
+        DO IAT=1,NAT
+          TASKARR(IAT)=MAX(TASKARR(IAT),TASKARR1(IAT))
+        ENDDO
+      ENDDO       
+      DEALLOCATE(TASKARR1)
+!     == TASKARRAY IS NOW COMMON TO ALL TASKS        
+
+      DO IAT=1,NAT
+        IF(TASKARR(IAT).EQ.0) CYCLE ! NO INFORMATION FOR THIS ATOM AVAILABLE
+
+        IF(THISTASK.EQ.TASKARR(IAT)) THEN
+          THIS=>FIRST
+          DO 
+            IF(THIS%IAT.EQ.IAT) EXIT
+            IF(.NOT.ASSOCIATED(THIS%NEXT)) EXIT
+            THIS=>THIS%NEXT
+          ENDDO
+          N=THIS%N
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',TASKARR(IAT),1,N)
+        ALLOCATE(E(N))
+        ALLOCATE(EATOM(N))
+        ALLOCATE(XTYPE(N))
+        IF(THISTASK.EQ.TASKARR(IAT)) THEN
+          E=THIS%E
+          EATOM=THIS%EATOM
+          XTYPE=THIS%TYPE
+        END IF
+        CALL MPE$SENDRECEIVE('MONOMER',TASKARR(IAT),1,E)
+        CALL MPE$SENDRECEIVE('MONOMER',TASKARR(IAT),1,EATOM)
+        CALL MPE$SENDRECEIVE('MONOMER',TASKARR(IAT),1,XTYPE)
+!       == TASK 1 RECEIVED DATA ==============================================
+!
+!       == PRINT INFORMATION ON THE FIRST TASK ===============================
+        IF(THISTASK.EQ.1) THEN
+          CALL ATOMLIST$GETCH('NAME',IAT,NAME)
+          CALL REPORT$TITLE(NFIL,'EIGENVALUES OF CORE STATES FROM ATOM '& 
+     &                     //TRIM(NAME))
+          WRITE(NFIL,*)'     CURRENT SYSTEM          ISOLATED ATOM' 
+          STRING='(T3,"ENERGY[H]",T14,"ENERGY[EV]"'
+          STRING=TRIM(ADJUSTL(STRING))//',T28,"ENERGY[H]",T39,"ENERGY[EV]"'
+          STRING=TRIM(ADJUSTL(STRING))//',T53,"SHIFT[H]",T64,"SHIFT[EV]"'
+          STRING=TRIM(ADJUSTL(STRING))//')'
+          WRITE(NFIL,STRING)
+          DO I=1,N
+            WRITE(NFIL,FMT='(A5,6F12.5)')TRIM(XTYPE(I)) &
+     &                           ,E(I),E(I)/EV &
+     &                           ,EATOM(I),EATOM(I)/EV &
+     &                           ,E(I)-EATOM(I),(E(I)-EATOM(I))/EV
+          ENDDO
+        END IF
+        DEALLOCATE(E)
+        DEALLOCATE(EATOM)
+        DEALLOCATE(XTYPE)
+      ENDDO
+                             CALL TRACE$POP()
       RETURN
       END
 !
