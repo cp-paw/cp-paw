@@ -6,6 +6,10 @@ import sys
 
 
 def category(op):
+    if op.startswith("ACC_COPY"):
+        return "ACC copy est"
+    if op.startswith("ACC_SETUP"):
+        return "ACC setup"
     if op.startswith("MPI_ALLTOALL"):
         return "MPI alltoall"
     if op.startswith("FFT") or op.startswith("PW_FFT") or op.startswith("CUFFT"):
@@ -59,9 +63,27 @@ def main(argv):
     for op, data in per_op.items():
         by_category[category(op)] += data["seconds"]
     total = sum(by_category.values())
+    primary_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if not op.startswith("ACC_")
+    )
+    setup_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("ACC_SETUP")
+    )
+    copy_gbyte = sum(
+        data["gbyte"] for op, data in per_op.items()
+        if op.startswith("ACC_COPY")
+    )
 
     print("Profile files: {}".format(len(files)))
-    print("Instrumented rank-seconds: {:.6f}".format(total))
+    print("Instrumented rank-seconds: {:.6f}".format(primary_total))
+    if setup_total or copy_gbyte:
+        print(
+            "Accelerator setup seconds: {:.6f}  copy estimate: {:.6f} GB".format(
+                setup_total, copy_gbyte
+            )
+        )
     print("")
     print("Category summary")
     for name, seconds in sorted(by_category.items(), key=lambda item: -item[1]):
@@ -79,6 +101,19 @@ def main(argv):
                 op, data["calls"], seconds, rate, bw
             )
         )
+
+    copy_ops = [
+        (op, data) for op, data in per_op.items() if op.startswith("ACC_COPY")
+    ]
+    if copy_ops:
+        print("")
+        print("Top copy estimates")
+        for op, data in sorted(copy_ops, key=lambda item: -item[1]["gbyte"])[:10]:
+            print(
+                "  {:<24s} calls={:8d} GB={:10.4f}".format(
+                    op, data["calls"], data["gbyte"]
+                )
+            )
 
     print("")
     print("Top shapes")

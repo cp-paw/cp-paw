@@ -83,6 +83,36 @@ NSTEPS=1 ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
 ```
 
+The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
+adds the `CPPAW_GPU_RESIDENCY=1` diagnostic mode. That currently switches the
+cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
+can reuse wavefunction arrays already held by an outer OpenACC data region. For
+non-superwave projections where all atom blocks pass the cuBLAS threshold, it
+also scatters the projection result into `PROPSI` on the device and copies the
+final projection array back once. The orthogonalization overlap section keeps
+`PSIM`/`OPSI` resident across the projection and pseudo-overlap calls, and the
+same mode routes eligible non-superwave `WAVES_OVERLAP` scalarproducts through a
+present-input cuBLAS wrapper; for inversion-symmetric superwave overlaps it also
+keeps the `<PSI_+|PSI_+>` part on the same present-input path and leaves the
+`<PSI_-|PSI_+>` inversion pass on the existing CPU/generic route. It also lets
+`ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
+`WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
+for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
+for the outer copy-in and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call
+output copy. The resident overlap cuBLAS kernels are timed separately as
+`CUBLAS_ZHERK_OVL_RES` and `CUBLAS_ZGEMM_OVL_RES`.
+
+For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
+fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
+NVLAMATH into one executable. NVBLAS stays separate because it interposes BLAS
+calls at run time rather than being an explicit kernel path:
+
+```
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile
+cd tests/profile/si64
+NSTEPS=1 CASES="gpu gpu_all gpu_all_off" ./run_benchmark.sh
+```
+
 The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
 `profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
 system `mpirun`; set `CPU_MPIRUN=...` to override it.
@@ -102,6 +132,12 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
 | `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
+| `gpu_resident` / `gpu_resident_nosync` | Same combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
+| `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
+| `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
+| `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time. |
+| `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well. |
+| `gpu_all_off` | Same all-library binary with native cuFFT/cuBLAS/cuSOLVER disabled; cuFFTW/NVLAMATH remain compiled in. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
 | `gpu_3dfft` | Diagnostic combined profile that also enables the opt-in native cuFFT 3-D wrapper. |
 | `gpu_managed` / `gpu_unified` | Separate combined GPU binaries built with NVHPC `-gpu=mem:managed` or `-gpu=mem:unified` for memory-residency experiments. |

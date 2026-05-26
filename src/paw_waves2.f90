@@ -24,6 +24,11 @@
      &                        ,WAVEEKIN2 &
      &                        ,DELT,ANNEE &
      &                        ,WAVES_SELECTWV !SUBROUTINE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT
+#ENDIF
       IMPLICIT NONE
       COMPLEX(8),ALLOCATABLE :: OPROJ(:,:,:)
       REAL(8)   ,ALLOCATABLE :: MARR(:)
@@ -56,6 +61,7 @@
       REAL(8)   ,ALLOCATABLE :: YLM(:)
       LOGICAL(4)             :: TSTRESS
       LOGICAL(4)             :: TINV
+      LOGICAL(4)             :: TRESIDENTOVERLAP
       LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8)             :: CSVAR
       REAL(8)   ,ALLOCATABLE :: NORM(:)
@@ -67,6 +73,10 @@
                              CALL TIMING$CLOCKON('WAVES$ORTHOGONALIZE')
       NPRO=MAP%NPRO
       NAT=MAP%NAT
+      TRESIDENTOVERLAP=.FALSE.
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
+#ENDIF
       CALL CELL$GETL4('MOVE',TSTRESS)
 !
 !     ==========================================================================
@@ -247,6 +257,21 @@ END IF
 !         ======================================================================
 !         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL ACCELPROFILE$ADD('ACC_COPY_CUBLAS_OVERLAP_RES_REGION' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8),0_8 &
+     &          ,0.D0,32.D0*REAL(NGL,KIND=8)*REAL(NDIM,KIND=8) &
+     &          *REAL(NBH,KIND=8),0.D0)
+          END IF
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.TRUE.)
+          END IF
+#ENDIF
+!$ACC DATA COPYIN(THIS%PSIM(1:NGL,1:NDIM,1:NBH) &
+!$ACC&            ,THIS%OPSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTOVERLAP)
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
      &                                                     ,THIS%PSIM,THIS%PROJ)
           CALL MPE$COMBINE('K','+',THIS%PROJ)
@@ -288,6 +313,12 @@ END IF
             ENDDO
           ENDDO
           DEALLOCATE(AUXMAT)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOVERLAP) THEN
+            CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.FALSE.)
+          END IF
+#ENDIF
 !
 !         ======================================================================
 !         ==  CALCULATE LAGRANGE PARAMETERS                                   ==
@@ -758,12 +789,17 @@ END IF
        END
 !
 !      ..............................................................
-       SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT)
+      SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT)
 !      **                                                          **
 !      **  CALCULATES <PSI1|PSI2>                                  **
 !      **                                                          **
-       USE MPE_MODULE
-       IMPLICIT NONE
+      USE MPE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY &
+     &       ,CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE
+#ENDIF
+      IMPLICIT NONE
        LOGICAL(4),INTENT(IN) :: TID !INDICATES THAT PSI1=PSI2
        INTEGER(4),INTENT(IN) :: NGL
        INTEGER(4),INTENT(IN) :: NDIM
@@ -772,16 +808,37 @@ END IF
        COMPLEX(8),INTENT(IN) :: PSI1(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(IN) :: PSI2(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(OUT):: MAT(NB,NB)
-       INTEGER(4)            :: IBH1,IBH2
+       INTEGER(4)            :: IBH1,IBH2,IDIM
        INTEGER(4)            :: IB1A,IB1B,IB2A,IB2B,I,J
        COMPLEX(8),ALLOCATABLE:: TMAT(:,:)
        REAL(8)               :: RE,IM
-       REAL(8)               :: MAT2(2,2)
-       LOGICAL(4)            :: TINV
+      REAL(8)               :: MAT2(2,2)
+      REAL(8)               :: GWEIGHT
+      LOGICAL(4)            :: TINV
+      LOGICAL(4)            :: TSUPER
+      INTEGER(4)            :: NGAMMA
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)            :: ACCEL_CUBLAS_USED
+      LOGICAL(4)            :: TRESIDENTOVERLAP
+#ENDIF
 !      **************************************************************
                              CALL TIMING$CLOCKON('WAVES_OVERLAP')
-       TINV=(NB.NE.NBH)
-       IF(.NOT.TINV) THEN
+      TINV=(NB.NE.NBH)
+      IF(.NOT.TINV) THEN
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
+        IF(TRESIDENTOVERLAP) THEN
+          CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY(TID &
+     &        ,NGL*NDIM,NB,PSI1,NB,PSI2,MAT,ACCEL_CUBLAS_USED)
+          IF(ACCEL_CUBLAS_USED) THEN
+            CALL PLANEWAVE$GETR8('GWEIGHT',GWEIGHT)
+            MAT=MAT*GWEIGHT
+            CALL MPE$COMBINE('K','+',MAT)
+                             CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
+            RETURN
+          END IF
+        END IF
+#ENDIF
          IF(TID) THEN
            CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NB,PSI1,NB,PSI2,MAT)
          ELSE
@@ -797,11 +854,42 @@ END IF
 !      =================================================================
 !      == <PSI_+|PSI_+> ================================================
        ALLOCATE(TMAT(NBH,NBH))
-       IF(TID) THEN
-         CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
-       ELSE
-         CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       ACCEL_CUBLAS_USED=.FALSE.
+       TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
+       IF(TRESIDENTOVERLAP) THEN
+         CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY(TID &
+    &        ,NGL*NDIM,NBH,PSI1,NBH,PSI2,TMAT,ACCEL_CUBLAS_USED)
        END IF
+       IF(ACCEL_CUBLAS_USED) THEN
+         CALL PLANEWAVE$GETR8('GWEIGHT',GWEIGHT)
+         CALL PLANEWAVE$GETL4('SUPER',TSUPER)
+         IF(TSUPER) THEN
+           CALL PLANEWAVE$GETI4('NGAMMA',NGAMMA)
+           TMAT(:,:)=2.D0*TMAT(:,:)
+           IF(NGAMMA.NE.0) THEN
+             DO IBH1=1,NBH
+               DO IBH2=1,NBH
+                 DO IDIM=1,NDIM
+                   TMAT(IBH1,IBH2)=TMAT(IBH1,IBH2) &
+      &                 -CONJG(PSI1(NGAMMA,IDIM,IBH1)) &
+      &                       *PSI2(NGAMMA,IDIM,IBH2)
+                 ENDDO
+               ENDDO
+             ENDDO
+           END IF
+         END IF
+         TMAT(:,:)=TMAT(:,:)*GWEIGHT
+       ELSE
+#ENDIF
+         IF(TID) THEN
+           CALL PLANEWAVE$SCALARPRODUCT('=',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+         ELSE
+           CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NBH,PSI1,NBH,PSI2,TMAT)
+         END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       END IF
+#ENDIF
        DO IBH1=1,NBH
          IB1A=2*IBH1-1
          IB1B=MIN(2*IBH1,NB)

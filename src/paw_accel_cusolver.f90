@@ -31,6 +31,43 @@
       CONTAINS
 !
 !     ..........................................................................
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      SUBROUTINE CPPAW_CUSOLVER_ACC_PROFILE_BYTES(NAME,N1,N2,N3,N4 &
+     &                                           ,BYTES)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      INTEGER(4)  ,INTENT(IN) :: N4
+      REAL(8)     ,INTENT(IN) :: BYTES
+!     **************************************************************************
+      CALL ACCELPROFILE$ADD(NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                     ,INT(N3,KIND=8),INT(N4,KIND=8) &
+     &                     ,0.D0,BYTES,0.D0)
+      RETURN
+      END SUBROUTINE CPPAW_CUSOLVER_ACC_PROFILE_BYTES
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUSOLVER_ACC_PROFILE_TIME(NAME,N1,N2,N3,N4,T0)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      INTEGER(4)  ,INTENT(IN) :: N4
+      REAL(8)     ,INTENT(IN) :: T0
+      REAL(8)                 :: T1
+!     **************************************************************************
+      CALL ACCELPROFILE$NOW(T1)
+      CALL ACCELPROFILE$ADD(NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                     ,INT(N3,KIND=8),INT(N4,KIND=8) &
+     &                     ,0.D0,0.D0,MAX(0.D0,T1-T0))
+      RETURN
+      END SUBROUTINE CPPAW_CUSOLVER_ACC_PROFILE_TIME
+#ENDIF
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUSOLVER_ACC_INITCONFIG
       IMPLICIT NONE
       CHARACTER(128) :: VALUE
@@ -308,6 +345,9 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: ISTAT
       INTEGER(4)             :: DEVINFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       USED=.FALSE.
       INFO=0
@@ -315,12 +355,20 @@
       IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
       U=0.5D0*(H+TRANSPOSE(H))
       CALL CPPAW_CUSOLVER_ACC_ENSURE
+      LWORK=0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !$ACC DATA COPYIN(U(1:N,1:N)) CREATE(E(1:N))
 !$ACC HOST_DATA USE_DEVICE(U,E)
       ISTAT=CUSOLVERDNDSYEVD_BUFFERSIZE(HANDLE,CUSOLVER_EIG_MODE_VECTOR &
      &        ,CUBLAS_FILL_MODE_UPPER,N,U,N,E,LWORK)
 !$ACC END HOST_DATA
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_TIME('ACC_SETUP_CUSOLVER_DSYEVD' &
+     &                                   ,N,MAX(LWORK,0),0,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0.OR.LWORK.LE.0) THEN
         INFO=ISTAT
         RETURN
@@ -335,6 +383,11 @@
 !$ACC END HOST_DATA
 !$ACC END DATA
       ISTAT=MAX(ISTAT,CUDADEVICESYNCHRONIZE())
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_BYTES('ACC_COPY_CUSOLVER_DSYEVD' &
+     &     ,N,LWORK,0,0,8.D0*(3.D0*REAL(N,KIND=8)*REAL(N,KIND=8) &
+     &     +REAL(N,KIND=8)))
+#ENDIF
       DEALLOCATE(WORK)
       IF(ISTAT.NE.0) THEN
         INFO=ISTAT
@@ -362,6 +415,9 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: ISTAT
       INTEGER(4)             :: DEVINFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       USED=.FALSE.
       INFO=0
@@ -369,12 +425,20 @@
       IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
       U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       CALL CPPAW_CUSOLVER_ACC_ENSURE
+      LWORK=0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !$ACC DATA COPYIN(U(1:N,1:N)) CREATE(E(1:N))
 !$ACC HOST_DATA USE_DEVICE(U,E)
       ISTAT=CUSOLVERDNZHEEVD_BUFFERSIZE(HANDLE,CUSOLVER_EIG_MODE_VECTOR &
      &        ,CUBLAS_FILL_MODE_UPPER,N,U,N,E,LWORK)
 !$ACC END HOST_DATA
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_TIME('ACC_SETUP_CUSOLVER_ZHEEVD' &
+     &                                   ,N,MAX(LWORK,0),0,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0.OR.LWORK.LE.0) THEN
         INFO=ISTAT
         RETURN
@@ -389,6 +453,11 @@
 !$ACC END HOST_DATA
 !$ACC END DATA
       ISTAT=MAX(ISTAT,CUDADEVICESYNCHRONIZE())
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_BYTES('ACC_COPY_CUSOLVER_ZHEEVD' &
+     &     ,N,LWORK,0,0,16.D0*3.D0*REAL(N,KIND=8)*REAL(N,KIND=8) &
+     &     +8.D0*REAL(N,KIND=8))
+#ENDIF
       DEALLOCATE(WORK)
       IF(ISTAT.NE.0) THEN
         INFO=ISTAT
@@ -418,6 +487,9 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: ISTAT
       INTEGER(4)             :: DEVINFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       USED=.FALSE.
       INFO=0
@@ -426,6 +498,10 @@
       U=H
       B=S
       CALL CPPAW_CUSOLVER_ACC_ENSURE
+      LWORK=0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !$ACC DATA COPYIN(U(1:N,1:N),B(1:N,1:N)) CREATE(E(1:N))
 !$ACC HOST_DATA USE_DEVICE(U,B,E)
       ISTAT=CUSOLVERDNDSYGVD_BUFFERSIZE(HANDLE,CUSOLVER_EIG_TYPE_1 &
@@ -433,6 +509,10 @@
      &        ,B,N,E,LWORK)
 !$ACC END HOST_DATA
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_TIME('ACC_SETUP_CUSOLVER_DSYGVD' &
+     &                                   ,N,MAX(LWORK,0),0,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0.OR.LWORK.LE.0) THEN
         INFO=ISTAT
         RETURN
@@ -448,6 +528,11 @@
 !$ACC END HOST_DATA
 !$ACC END DATA
       ISTAT=MAX(ISTAT,CUDADEVICESYNCHRONIZE())
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_BYTES('ACC_COPY_CUSOLVER_DSYGVD' &
+     &     ,N,LWORK,0,0,8.D0*(6.D0*REAL(N,KIND=8)*REAL(N,KIND=8) &
+     &     +REAL(N,KIND=8)))
+#ENDIF
       DEALLOCATE(WORK)
       IF(ISTAT.NE.0) THEN
         INFO=ISTAT
@@ -478,6 +563,9 @@
       INTEGER(4)             :: LWORK
       INTEGER(4)             :: ISTAT
       INTEGER(4)             :: DEVINFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+#ENDIF
 !     **************************************************************************
       USED=.FALSE.
       INFO=0
@@ -490,6 +578,10 @@
       END IF
       B=S
       CALL CPPAW_CUSOLVER_ACC_ENSURE
+      LWORK=0
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !$ACC DATA COPYIN(VEC(1:N,1:N),B(1:N,1:N)) CREATE(E(1:N))
 !$ACC HOST_DATA USE_DEVICE(VEC,B,E)
       ISTAT=CUSOLVERDNZHEGVD_BUFFERSIZE(HANDLE,CUSOLVER_EIG_TYPE_1 &
@@ -497,6 +589,10 @@
      &        ,B,N,E,LWORK)
 !$ACC END HOST_DATA
 !$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_TIME('ACC_SETUP_CUSOLVER_ZHEGVD' &
+     &                                   ,N,MAX(LWORK,0),0,0,ACCEL_T0)
+#ENDIF
       IF(ISTAT.NE.0.OR.LWORK.LE.0) THEN
         INFO=ISTAT
         RETURN
@@ -512,6 +608,11 @@
 !$ACC END HOST_DATA
 !$ACC END DATA
       ISTAT=MAX(ISTAT,CUDADEVICESYNCHRONIZE())
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUSOLVER_ACC_PROFILE_BYTES('ACC_COPY_CUSOLVER_ZHEGVD' &
+     &     ,N,LWORK,0,0,16.D0*6.D0*REAL(N,KIND=8)*REAL(N,KIND=8) &
+     &     +8.D0*REAL(N,KIND=8))
+#ENDIF
       DEALLOCATE(WORK)
       IF(ISTAT.NE.0) THEN
         INFO=ISTAT
