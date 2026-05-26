@@ -67,9 +67,10 @@ PAWX="mpirun -np 4 ../../../bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_pr
 make all
 ```
 
-Set `CPPAW_CUFFT_ACC=1` to enable the native path, and set
-`CPPAW_CUFFT_ACC_MIN_ELEMENTS=<elements>` to offload only larger batched FFT
-calls.
+Set `CPPAW_CUFFT_ACC=1` to enable the native path. The runtime default is
+conservative: only batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=1000000`
+elements are offloaded unless the environment overrides the threshold. Set the
+threshold to `0` only for force-all diagnostics of the small-FFT overhead.
 
 To profile the combined native GPU paths on one GPU, build an
 `nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
@@ -105,7 +106,10 @@ output copy. The resident overlap cuBLAS kernels are timed separately as
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
 NVLAMATH into one executable. NVBLAS stays separate because it interposes BLAS
-calls at run time rather than being an explicit kernel path:
+calls at run time rather than being an explicit kernel path. The `gpu_all`
+benchmark case enables cuFFT with the same conservative threshold, while
+`gpu_force_all` and `gpu_resident_force_all` still use
+`CPPAW_CUFFT_ACC_MIN_ELEMENTS=0` by default for overhead diagnostics:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_all_profile
@@ -115,7 +119,11 @@ NSTEPS=1 CASES="gpu gpu_all gpu_all_off" ./run_benchmark.sh
 
 The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
 `profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
-system `mpirun`; set `CPU_MPIRUN=...` to override it.
+system `mpirun`; set `CPU_MPIRUN=...` to override it. Benchmark runs pin common
+CPU threading variables to one thread by default (`OMP_NUM_THREADS`,
+`OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, `BLIS_NUM_THREADS`,
+`VECLIB_MAXIMUM_THREADS`, `NVPL_NUM_THREADS`) and record those settings plus
+linked BLAS/LAPACK/FFT libraries in each run directory's `metadata.txt`.
 
 The Si64 benchmark harness uses these `CASES` keywords:
 
@@ -126,7 +134,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `nvblas` | Existing BLAS calls through NVIDIA's NVBLAS interposition layer. |
 | `nvlamath` | NVIDIA HPC SDK NVLAMATH LAPACK/cuSOLVER wrapper path. |
 | `cufftw` | cuFFTW wrapper for CP-PAW's existing FFTW3 calls. |
-| `cufft` / `cufft_off` | Native cuFFT forced on, or disabled in the same binary. |
+| `cufft` / `cufft_force_all` / `cufft_off` | Native cuFFT enabled with the conservative size threshold, forced for all FFTs, or disabled in the same binary. |
 | `cublas` / `cublas_nosync` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, with the post-call device synchronization disabled for diagnostics, or disabled. |
 | `cublas_conservative` | Explicit cuBLAS/OpenACC with a higher diagnostic threshold. |
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
@@ -135,8 +143,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident` / `gpu_resident_nosync` | Same combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
-| `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time. |
-| `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well. |
+| `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time; cuFFT uses the conservative threshold by default. |
+| `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well, also threshold-gated by default. |
 | `gpu_all_off` | Same all-library binary with native cuFFT/cuBLAS/cuSOLVER disabled; cuFFTW/NVLAMATH remain compiled in. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
 | `gpu_3dfft` | Diagnostic combined profile that also enables the opt-in native cuFFT 3-D wrapper. |
@@ -162,12 +170,22 @@ TEST=si64_bands EMPTY_BANDS=128 NSTEPS=1 ./run_benchmark.sh
 The stacked follow-up benchmark compares the larger-band case across the
 resource split we want for the next optimization pass: one rank on one GPU,
 one-rank CPU references, and eight-rank CPU/NVPL references. It defaults to
-`NSTEPS_LIST="1 3 10"`:
+`NSTEPS_LIST="1 3 10"` and accepts `EMPTY_BANDS_LIST` for a band-size sweep:
 
 ```
 cd tests/profile/si64
 ./run_followup.sh
 ```
+
+For the larger orthogonalization preset used in the residency follow-up, run:
+
+```
+cd tests/profile/si64
+./run_large_bands.sh
+```
+
+It defaults to `EMPTY_BANDS_LIST="128 256 512 1024"`, `NSTEPS_LIST=1` and
+compares one-rank GPU, one-rank CPU, and eight-rank CPU/NVPL references.
 
 For a short broad GPU exploration suite that includes the opt-in 3-D cuFFT path
 and captures available NVIDIA libraries plus CUDA-aware MPI hints:
@@ -217,6 +235,17 @@ cd tests/profile/si64
 NSTEPS=1 RANKS=1 CASES="nvpl cusolver cusolver_off" ./run_benchmark.sh
 ```
 
+For a more targeted cuSOLVER/LAPACK follow-up on larger band matrices:
+
+```
+cd tests/profile/si64
+./run_cusolver_focus.sh
+```
+
+It defaults to `EMPTY_BANDS_LIST="128 256 512"` and compares
+`cusolver`, `cusolver_conservative`, `cusolver_off`, one-rank CPU/NVPL and
+eight-rank CPU/NVPL references.
+
 For reproducible comparisons, use the benchmark harness:
 
 ```
@@ -264,7 +293,8 @@ The overnight defaults use the recommended production-style cases:
 `RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_force_all` and the
 `gpu_no_*` ablation cases, set `RUN_BAND_BENCHMARK=yes` to add the
 `si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank
-CPU references, or override any of these variables for a wider sweep.
+CPU references, set `BAND_EMPTY_BANDS_LIST="128 256 512"` for a size sweep, or
+override any of these variables for a wider run.
 
 The capability helper can be run standalone:
 

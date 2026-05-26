@@ -21,6 +21,13 @@ if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
 fi
 
+export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
+export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
+export MKL_NUM_THREADS=${MKL_NUM_THREADS:-1}
+export BLIS_NUM_THREADS=${BLIS_NUM_THREADS:-1}
+export VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS:-1}
+export NVPL_NUM_THREADS=${NVPL_NUM_THREADS:-1}
+
 nvhpc_platform() {
   case "$(uname -s)_$(uname -m)" in
     Linux_aarch64|Linux_arm64) echo "Linux_aarch64" ;;
@@ -133,6 +140,27 @@ cusolver_env() {
   echo "${env_line}"
 }
 
+cufft_min_default() {
+  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-1000000}"
+}
+
+cufft_env() {
+  local min_elements
+  min_elements=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-$(cufft_min_default)}
+  echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${min_elements}"
+}
+
+cufft_force_env() {
+  echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}"
+}
+
+cufft3d_env() {
+  local min_elements min_3d_elements
+  min_elements=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-$(cufft_min_default)}
+  min_3d_elements=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-$(cufft_min_default)}
+  echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${min_elements} CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${min_3d_elements}"
+}
+
 case_env() {
   case "$1" in
     cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
@@ -142,25 +170,26 @@ case_env() {
     cusolver) cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
     cusolver_conservative) cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
     cusolver_off) echo "CPPAW_CUSOLVER_ACC=0" ;;
-    cufft) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0}" ;;
+    cufft) cufft_env ;;
+    cufft_force_all) cufft_force_env ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
     gpu) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     gpu_nosync) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
-    gpu_force_all) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_3dfft) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_force_all) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_3dfft) echo "$(cufft3d_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8} $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
-    gpu_all) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_all_nosync) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_all_3dfft) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all) echo "$(cufft_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all_nosync) echo "$(cufft_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all_3dfft) echo "$(cufft3d_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
-    gpu_resident_force_all) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_resident_force_all) echo "CPPAW_GPU_RESIDENCY=1 $(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_resident_off) echo "CPPAW_GPU_RESIDENCY=0 CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     gpu_managed|gpu_unified) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
     gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_no_cublas) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_no_cusolver) echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_MIN_ELEMENTS:-0} CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_no_cublas) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_no_cusolver) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUSOLVER_ACC=0" ;;
     gpu_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     *) echo "" ;;
   esac
@@ -191,8 +220,35 @@ prepare_case() {
   fi
 }
 
+capture_metadata() {
+  {
+    echo "date=$(iso_now)"
+    echo "hostname=$(hostname)"
+    echo "test=${TEST}"
+    echo "nsteps=${NSTEPS}"
+    echo "ranks=${RANKS}"
+    echo "cases=${CASES}"
+    echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
+    echo
+    uname -a
+    echo
+    for case_name in ${CASES}; do
+      exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
+      echo "case=${case_name}"
+      echo "exe=${exe}"
+      if [[ -x "${exe}" ]]; then
+        ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas" || true
+      else
+        echo "missing"
+      fi
+      echo
+    done
+  } > "${RUN_ROOT}/metadata.txt" 2>&1
+}
+
 mkdir -p "${RUN_ROOT}"
 echo "${RUN_ROOT}" > "${HERE}/runs/latest"
+capture_metadata
 
 for case_name in ${CASES}; do
   exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
@@ -213,6 +269,7 @@ for case_name in ${CASES}; do
         echo "ranks=${RANKS}"
         echo "exe=${exe}"
         echo "env=${env_line}"
+        echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
         echo "start=$(iso_now)"
       } > run.env
       cmd=$(run_command "${case_name}" "${exe}")
