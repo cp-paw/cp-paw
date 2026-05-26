@@ -1,0 +1,17 @@
+name: Profile Harness Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - nvhpc-hpc-sdk
+      - codex/nvhpc-hpc-sdk
+
+jobs:
+  profile-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell and profiling helpers
+        run: tests/profile/si64/check_harness.sh

@@ -70,6 +70,20 @@ export BINDIR=
 #___________________________installation directory for the documentation________
 #___________________________default ./doc_______________________________________
 export DOCDIR=
+export COMPILER=
+export NVHPC_ROOT="${NVHPC_ROOT:-}"
+export CPPAW_TOOLCHAIN="${CPPAW_TOOLCHAIN:-auto}"
+export CPPAW_AUTO_USE_NVHPC="${CPPAW_AUTO_USE_NVHPC:-false}"
+export CPPAW_CUDA_AVAILABLE=false
+export CPPAW_CUDA_ROOT=
+export CPPAW_CUDA_CC=
+export CPPAW_USE_NVBLAS="${CPPAW_USE_NVBLAS:-no}"
+export CPPAW_USE_NVLAMATH="${CPPAW_USE_NVLAMATH:-no}"
+export CPPAW_USE_CUFFTW="${CPPAW_USE_CUFFTW:-no}"
+export CPPAW_USE_CUFFT="${CPPAW_USE_CUFFT:-no}"
+export CPPAW_USE_CUBLAS_ACC="${CPPAW_USE_CUBLAS_ACC:-no}"
+export CPPAW_USE_CUSOLVER_ACC="${CPPAW_USE_CUSOLVER_ACC:-no}"
+export CPPAW_NVHPC_ACC_FLAGS_ADDED="${CPPAW_NVHPC_ACC_FLAGS_ADDED:-no}"
 
 ################################################################################
 ## generic definitions
@@ -81,6 +95,164 @@ export DOCDIR=
 export OS=$(uname -s) # can be Linux, Darwin,...
 #_____architecture (processor family)___________________________________________
 export ARCH=$(uname -m)   # can be arm64,
+
+#-------------------------------------------------------------------------------
+#--                          NVIDIA HPC SDK / CUDA discovery                  --
+#-------------------------------------------------------------------------------
+function command_path {
+  command -v "$1" 2>/dev/null
+}
+
+function nvhpc_platform {
+  case "${OS}_${ARCH}" in
+    Linux_aarch64|Linux_arm64) echo "Linux_aarch64" ;;
+    Linux_x86_64) echo "Linux_x86_64" ;;
+    *) echo "" ;;
+  esac
+}
+
+function find_nvhpc_root {
+  local PLATFORM
+  local COMPILER_PATH
+  local D
+
+  if [[ -n ${NVHPC_ROOT} && -x ${NVHPC_ROOT}/compilers/bin/nvfortran ]] ; then
+    echo "${NVHPC_ROOT}"
+    return 0
+  fi
+
+  COMPILER_PATH=$(command_path nvfortran)
+  if [[ -n ${COMPILER_PATH} ]] ; then
+    dirname "$(dirname "${COMPILER_PATH}")"
+    return 0
+  fi
+
+  PLATFORM=$(nvhpc_platform)
+  if [[ -n ${PLATFORM} ]] ; then
+    for D in /opt/nvidia/hpc_sdk/${PLATFORM}/* ; do
+      if [[ -x ${D}/compilers/bin/nvfortran ]] ; then
+        echo "${D}"
+      fi
+    done | sort -V | tail -1
+  fi
+}
+
+function find_nvhpc_mpifort {
+  local D
+  for D in \
+      "${NVHPC_ROOT}/comm_libs/hpcx/bin/mpifort" \
+      "${NVHPC_ROOT}"/comm_libs/*/hpcx/*/ompi/bin/mpifort \
+      "${NVHPC_ROOT}"/comm_libs/*/hpcx/bin/mpifort ; do
+    if [[ -x ${D} ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function detect_cuda {
+  local D
+  local CC
+
+  CPPAW_CUDA_AVAILABLE=false
+  CPPAW_CUDA_ROOT=
+  CPPAW_CUDA_CC=
+
+  if command_path nvidia-smi >/dev/null && nvidia-smi -L >/dev/null 2>&1 ; then
+    CPPAW_CUDA_AVAILABLE=true
+    CC=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null \
+         | head -1 | tr -d ' .')
+    if [[ -n ${CC} ]] ; then CPPAW_CUDA_CC=${CC} ; fi
+  fi
+
+  if command_path nvcc >/dev/null ; then
+    CPPAW_CUDA_AVAILABLE=true
+    CPPAW_CUDA_ROOT=$(dirname "$(dirname "$(command_path nvcc)")")
+  fi
+
+  for D in "${NVHPC_ROOT}"/cuda/* "${NVHPC_ROOT}/cuda" \
+           /usr/local/cuda /usr/local/cuda-* ; do
+    if [[ -x ${D}/bin/nvcc ]] ; then
+      CPPAW_CUDA_AVAILABLE=true
+      if [[ -z ${CPPAW_CUDA_ROOT} ]] ; then CPPAW_CUDA_ROOT=${D} ; fi
+      break
+    fi
+  done
+}
+
+function find_nvhpc_nvblas_libdir {
+  local D
+  for D in "${NVHPC_ROOT}"/math_libs/*/targets/*/lib \
+           "${NVHPC_ROOT}"/math_libs/*/lib64 \
+           "${NVHPC_ROOT}"/math_libs/*/lib ; do
+    if [[ -f ${D}/libnvblas.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function find_nvhpc_cufft_libdir {
+  local D
+  for D in "${NVHPC_ROOT}"/math_libs/*/targets/*/lib \
+           "${NVHPC_ROOT}"/math_libs/*/lib64 \
+           "${NVHPC_ROOT}"/math_libs/*/lib ; do
+    if [[ -f ${D}/libcufft.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function find_nvhpc_nvlamath_libdir {
+  local D
+  for D in "${NVHPC_ROOT}"/compilers/lib \
+           "${NVHPC_ROOT}"/REDIST/compilers/lib ; do
+    if [[ -f ${D}/libnvlamath.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function find_nvhpc_cufftw_libdir {
+  local D
+  for D in "${NVHPC_ROOT}"/math_libs/*/targets/*/lib \
+           "${NVHPC_ROOT}"/math_libs/*/lib64 \
+           "${NVHPC_ROOT}"/math_libs/*/lib ; do
+    if [[ -f ${D}/libcufftw.so && -f ${D}/libcufft.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function find_nvhpc_fftw3_include {
+  local D
+  for D in "${NVHPC_ROOT}"/compilers/include/nvpl_fftw/fftw3.f03 \
+           "${NVHPC_ROOT}"/math_libs/nvpl/include/nvpl_fftw/fftw3.f03 ; do
+    if [[ -f ${D} ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function fortran_module_works {
+  local MODULE=$1
+  local CFLAGS=$2
+  local TMPDIR_
+  local RC
+
+  TMPDIR_=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-modtest.XXXXXX") || return 1
+  printf "program module_test\n  use %s\nend program module_test\n" \
+         "${MODULE}" > "${TMPDIR_}/module_test.f90"
+  ${FC} ${FCFLAGS} ${CFLAGS} -c "${TMPDIR_}/module_test.f90" \
+        -o "${TMPDIR_}/module_test.o" >/dev/null 2>&1
+  RC=$?
+  rm -rf "${TMPDIR_}"
+  return ${RC}
+}
 
 #-------------------------------------------------------------------------------
 #--                          set generic defaults                             --
@@ -98,6 +270,63 @@ BUILDDIR="$(pwd)/bin/Build_${SELECT}"
 BINDIR="$(pwd)/bin/${SELECT}"
 
 DOCDIR="$(pwd)/doc"
+
+case "${CPPAW_TOOLCHAIN}" in
+  nvidia|NVIDIA|nvhpc|NVHPC) REQUESTED_TOOLCHAIN=nvhpc ;;
+  gnu|GNU|gcc|GCC)           REQUESTED_TOOLCHAIN=gnu ;;
+  auto|AUTO|"")              REQUESTED_TOOLCHAIN=auto ;;
+  *)
+    echo "error in $0: invalid CPPAW_TOOLCHAIN=${CPPAW_TOOLCHAIN}"
+    echo "allowed are auto, gnu, nvhpc"
+    exit 1
+    ;;
+esac
+case "${SELECT}" in
+  nvhpc*) REQUESTED_TOOLCHAIN=nvhpc ;;
+esac
+case "${SELECT}" in
+  nvhpc_nvblas*) CPPAW_USE_NVBLAS=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_nvlamath*) CPPAW_USE_NVLAMATH=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_cufftw*) CPPAW_USE_CUFFTW=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_cufft_*|nvhpc_gpu_acc*) CPPAW_USE_CUFFT=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_cublas_acc*|nvhpc_cufft_cublas_acc*|nvhpc_gpu_acc*) CPPAW_USE_CUBLAS_ACC=yes ;;
+esac
+case "${SELECT}" in
+  nvhpc_cusolver_acc*|nvhpc_gpu_acc*) CPPAW_USE_CUSOLVER_ACC=yes ;;
+esac
+
+NVHPC_ROOT=$(find_nvhpc_root)
+if [[ -n ${NVHPC_ROOT} ]] ; then
+  export NVHPC_ROOT
+fi
+detect_cuda
+
+if [[ ${REQUESTED_TOOLCHAIN} = auto \
+      && ${CPPAW_AUTO_USE_NVHPC} = true \
+      && ${CPPAW_CUDA_AVAILABLE} = true \
+      && -n ${NVHPC_ROOT} ]] ; then
+  REQUESTED_TOOLCHAIN=nvhpc
+fi
+if [[ ${REQUESTED_TOOLCHAIN} = nvhpc && -z ${NVHPC_ROOT} ]] ; then
+  echo "error in $0: NVIDIA HPC SDK requested but nvfortran was not found"
+  echo "set NVHPC_ROOT or put nvfortran into PATH"
+  exit 1
+fi
+if [[ ${REQUESTED_TOOLCHAIN} = nvhpc && -n ${NVHPC_ROOT} ]] ; then
+  export PATH="${NVHPC_ROOT}/compilers/bin:${PATH}"
+  NVHPC_MPIFORT=$(find_nvhpc_mpifort)
+  if [[ -n ${NVHPC_MPIFORT} ]] ; then
+    export PATH="$(dirname "${NVHPC_MPIFORT}"):${PATH}"
+  fi
+fi
 
 #-------------------------------------------------------------------------------
 #  select compiler, respectively the mpi compiler wrapper
@@ -121,23 +350,37 @@ case $SELECT in
   *parallel*)
      PARALLEL=true
      CPPFLAGS="${CPPFLAGS} -DCPPVARIABLE_PARALLEL"
-     for X in mpif90 mpifort mpiifort   ; do
-       if [[ -n $(which ${X}) ]] ; then
-         FC=$(which $X)
-         LD=${FC}
-         break
+     if [[ ${REQUESTED_TOOLCHAIN} = nvhpc ]] ; then
+       FC=$(find_nvhpc_mpifort)
+       if [[ -z ${FC} ]] ; then
+         echo "error in $0: NVIDIA HPC SDK requested but no HPC-X mpifort was found"
+         exit 1
        fi
-     done
+       LD=${FC}
+     else
+       for X in mpif90 mpifort mpiifort   ; do
+         if [[ -n $(which ${X}) ]] ; then
+           FC=$(which $X)
+           LD=${FC}
+           break
+         fi
+       done
+     fi
      ;;
   *)
      PARALLEL=false
-     for X in ifort gfortran flang-new ifx nvfortran nagfor xlf ; do
-       if [[ -n $(which ${X}) ]] ; then
-         FC=$(which $X)
-         LD=${FC}
-         break
-       fi
-     done
+     if [[ ${REQUESTED_TOOLCHAIN} = nvhpc ]] ; then
+       FC="${NVHPC_ROOT}/compilers/bin/nvfortran"
+       LD=${FC}
+     else
+       for X in ifort gfortran flang-new ifx nvfortran nagfor xlf ; do
+         if [[ -n $(which ${X}) ]] ; then
+           FC=$(which $X)
+           LD=${FC}
+           break
+         fi
+       done
+     fi
      ;;
 esac
 
@@ -145,23 +388,32 @@ esac
 #-- identify the compiler (underlying the compiler wrapper)
 #-- to guide the selection of compiler fflags
 #-------------------------------------------------------------------------------
-for X in ifort mpifort mpif90 mpiifort gfortran ; do
-   if [[ -n $(echo ${FC} | grep $X) ]] ; then
-     case $X in
-       gfortran)       COMPILER=gfortran ;;
-       ifort|mpiifort) COMPILER=ifort ;;
-       mpifort|mpif90) COMPILER=$(mpif90 --showme:command) ;;
-       flang-new|ifx|nagfor|nvfortran|xlf) 
-          echo "error in $0: compiler $X not yet supported by this parmfile"
-          exit 1
-          ;;
-       *) echo "error in $0: illegal selection $X"  
-          exit 1 
-          ;;
-     esac
-     break
-   fi
-done
+FC_BASE=$(basename "${FC}")
+case ${FC_BASE} in
+  gfortran) COMPILER=gfortran ;;
+  ifort)    COMPILER=ifort ;;
+  nvfortran) COMPILER=nvfortran ;;
+  mpiifort) COMPILER=ifort ;;
+  mpifort|mpif90)
+    MPI_COMMAND=$("${FC}" --showme:command 2>/dev/null \
+                  || "${FC}" -show 2>/dev/null | awk '{print $1}')
+    case $(basename "${MPI_COMMAND}") in
+      gfortran)   COMPILER=gfortran ;;
+      ifort)      COMPILER=ifort ;;
+      nvfortran)  COMPILER=nvfortran ;;
+      *)
+        echo "error in $0: MPI compiler wrapper uses unsupported compiler"
+        echo "FC=${FC}"
+        echo "underlying compiler=${MPI_COMMAND}"
+        exit 1
+        ;;
+    esac
+    ;;
+  flang-new|ifx|nagfor|xlf)
+    echo "error in $0: compiler ${FC_BASE} not yet supported by this parmfile"
+    exit 1
+    ;;
+esac
 if [[ -z $COMPILER ]] ; then
   echo "error in $0: Compiler not identified"
   echo "FC=${FC}"
@@ -177,6 +429,198 @@ fi
 #  MPI: ompi mpich
 #  BLAS: openblas atlas Intel-mkl IBM-ESSL PhiPack
 #-------------------------------------------------------------------------------
+export LIB_BLAS_OK=""
+export LIB_LAPACK_OK=""
+export LIB_FFTW3_OK=""
+export LIB_XC_OK=""
+
+if [[ ${OS} = Darwin ]] ; then
+  LDFLAGS="${LDFLAGS} -framework Accelerate"
+  LIB_BLAS_OK="yes"
+  LIB_LAPACK_OK="yes"
+fi
+
+if [[ ${COMPILER} = nvfortran && -n ${NVHPC_ROOT} ]] ; then
+  NVPL_ROOT="${NVHPC_ROOT}/math_libs/nvpl"
+  CUFFTW_LIBDIR=$(find_nvhpc_cufftw_libdir)
+  FFTW3_INCLUDE=$(find_nvhpc_fftw3_include)
+  if [[ -f ${NVPL_ROOT}/include/nvpl_fftw/fftw3.f03 \
+        && -f ${NVPL_ROOT}/lib/libnvpl_fftw.so ]] ; then
+    FCFLAGS="${FCFLAGS} -I${NVPL_ROOT}/include -I${NVPL_ROOT}/include/nvpl_fftw"
+    if [[ ${CPPAW_USE_NVBLAS} = yes \
+          || ${CPPAW_USE_NVBLAS} = true \
+          || ${CPPAW_USE_NVBLAS} = 1 ]] ; then
+      NVBLAS_LIBDIR=$(find_nvhpc_nvblas_libdir)
+      if [[ ${CPPAW_CUDA_AVAILABLE} != true || -z ${NVBLAS_LIBDIR} ]] ; then
+        echo "error in $0: NVBLAS requested but CUDA/NVBLAS was not found"
+        exit 1
+      fi
+      LDFLAGS="${LDFLAGS} -L${NVBLAS_LIBDIR} -Wl,-rpath,${NVBLAS_LIBDIR}"
+      LDFLAGS="${LDFLAGS} -L${NVPL_ROOT}/lib -Wl,-rpath,${NVPL_ROOT}/lib"
+      LIBS="${LIBS} -L${NVBLAS_LIBDIR} -lnvblas"
+      LIBS="${LIBS} -L${NVPL_ROOT}/lib"
+      LIBS="${LIBS} -lnvpl_lapack_lp64_seq -lnvpl_lapack_core"
+      LIBS="${LIBS} -lnvpl_blas_lp64_seq -lnvpl_blas_core -lnvpl_fftw"
+    elif [[ ${CPPAW_USE_CUFFTW} = yes \
+            || ${CPPAW_USE_CUFFTW} = true \
+            || ${CPPAW_USE_CUFFTW} = 1 ]] ; then
+      if [[ ${CPPAW_CUDA_AVAILABLE} != true || -z ${CUFFTW_LIBDIR} ]] ; then
+        echo "error in $0: cuFFTW requested but CUDA/cuFFTW was not found"
+        exit 1
+      fi
+      if [[ -z ${FFTW3_INCLUDE} ]] ; then
+        echo "error in $0: cuFFTW requested but fftw3.f03 was not found"
+        exit 1
+      fi
+      LDFLAGS="${LDFLAGS} -L${CUFFTW_LIBDIR} -Wl,-rpath,${CUFFTW_LIBDIR}"
+      LDFLAGS="${LDFLAGS} -L${NVPL_ROOT}/lib -Wl,-rpath,${NVPL_ROOT}/lib"
+      LIBS="${LIBS} -L${NVPL_ROOT}/lib"
+      LIBS="${LIBS} -lnvpl_lapack_lp64_seq -lnvpl_lapack_core"
+      LIBS="${LIBS} -lnvpl_blas_lp64_seq -lnvpl_blas_core"
+      LIBS="${LIBS} -L${CUFFTW_LIBDIR} -lcufftw -lcufft"
+      INCLUDES="${INCLUDES} ${FFTW3_INCLUDE}"
+      CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUFFTW"
+    else
+      LDFLAGS="${LDFLAGS} -L${NVPL_ROOT}/lib -Wl,-rpath,${NVPL_ROOT}/lib -Mnvpl=blas,lapack,fft"
+      LIBS="${LIBS} -L${NVPL_ROOT}/lib -lnvpl_fftw"
+      INCLUDES="${INCLUDES} ${NVPL_ROOT}/include/nvpl_fftw/fftw3.f03"
+    fi
+    LIB_BLAS_OK="yes"
+    LIB_LAPACK_OK="yes"
+    LIB_FFTW3_OK="yes"
+  fi
+fi
+
+if [[ ${COMPILER} = nvfortran \
+      && ( ${CPPAW_USE_CUFFTW} = yes \
+           || ${CPPAW_USE_CUFFTW} = true \
+           || ${CPPAW_USE_CUFFTW} = 1 ) \
+      && -z ${LIB_FFTW3_OK} ]] ; then
+  CUFFTW_LIBDIR=$(find_nvhpc_cufftw_libdir)
+  FFTW3_INCLUDE=$(find_nvhpc_fftw3_include)
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true || -z ${CUFFTW_LIBDIR} ]] ; then
+    echo "error in $0: cuFFTW requested but CUDA/cuFFTW was not found"
+    exit 1
+  fi
+  if [[ -z ${FFTW3_INCLUDE} ]] ; then
+    echo "error in $0: cuFFTW requested but fftw3.f03 was not found"
+    exit 1
+  fi
+  LDFLAGS="${LDFLAGS} -L${CUFFTW_LIBDIR} -Wl,-rpath,${CUFFTW_LIBDIR}"
+  LIBS="${LIBS} -L${CUFFTW_LIBDIR} -lcufftw -lcufft"
+  INCLUDES="${INCLUDES} ${FFTW3_INCLUDE}"
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUFFTW"
+  LIB_FFTW3_OK="yes"
+fi
+
+function append_nvhpc_openacc_flags {
+  local EXTRA_GPU_OPTS="${1:-}"
+  local GPU_FLAGS="-acc"
+  local GPU_OPTS=""
+
+  if [[ -n ${CPPAW_CUDA_CC} ]] ; then
+    GPU_OPTS="cc${CPPAW_CUDA_CC}"
+  fi
+  if [[ -n ${EXTRA_GPU_OPTS} ]] ; then
+    if [[ -n ${GPU_OPTS} ]] ; then
+      GPU_OPTS="${GPU_OPTS},${EXTRA_GPU_OPTS}"
+    else
+      GPU_OPTS="${EXTRA_GPU_OPTS}"
+    fi
+  fi
+  if [[ -n ${GPU_OPTS} ]] ; then
+    GPU_FLAGS="${GPU_FLAGS} -gpu=${GPU_OPTS}"
+  fi
+  if [[ ${CPPAW_NVHPC_ACC_FLAGS_ADDED} != yes ]] ; then
+    FCFLAGS="${FCFLAGS} ${GPU_FLAGS}"
+    LDFLAGS="${LDFLAGS} ${GPU_FLAGS}"
+    CPPAW_NVHPC_ACC_FLAGS_ADDED=yes
+  fi
+}
+
+function enable_nvhpc_cufft_acc {
+  local CUFFT_LIBDIR
+
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: native cuFFT/OpenACC target requested but CUDA was not found"
+    exit 1
+  fi
+  if [[ ${COMPILER} != nvfortran ]] ; then
+    echo "error in $0: native cuFFT/OpenACC target requires nvfortran"
+    exit 1
+  fi
+  CUFFT_LIBDIR=$(find_nvhpc_cufft_libdir)
+  if [[ -z ${CUFFT_LIBDIR} ]] ; then
+    echo "error in $0: native cuFFT/OpenACC target requested but libcufft.so was not found"
+    exit 1
+  fi
+  append_nvhpc_openacc_flags
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUFFT_ACC"
+  LDFLAGS="${LDFLAGS} -cudalib=cufft"
+  LDFLAGS="${LDFLAGS} -L${CUFFT_LIBDIR} -Wl,-rpath,${CUFFT_LIBDIR}"
+  LIBS="${LIBS} -L${CUFFT_LIBDIR} -lcufft"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cufft.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+}
+
+function enable_nvhpc_cublas_acc {
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: cuBLAS/OpenACC target requested but CUDA was not found"
+    exit 1
+  fi
+  if [[ ${COMPILER} != nvfortran ]] ; then
+    echo "error in $0: cuBLAS/OpenACC target requires nvfortran"
+    exit 1
+  fi
+  append_nvhpc_openacc_flags
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUBLAS_ACC"
+  LDFLAGS="${LDFLAGS} -cudalib=cublas"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cublas_v2.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cudafor.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+}
+
+function enable_nvhpc_cusolver_acc {
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: cuSOLVER/OpenACC target requested but CUDA was not found"
+    exit 1
+  fi
+  if [[ ${COMPILER} != nvfortran ]] ; then
+    echo "error in $0: cuSOLVER/OpenACC target requires nvfortran"
+    exit 1
+  fi
+  append_nvhpc_openacc_flags
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_CUSOLVER_ACC"
+  LDFLAGS="${LDFLAGS} -cudalib=cusolver,cublas"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cusolverdn.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cublas_v2.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/cudafor.mod"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/openacc.mod"
+}
+
+function enable_nvhpc_nvlamath {
+  local NVLAMATH_LIBDIR
+
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: NVLAMATH target requested but CUDA was not found"
+    exit 1
+  fi
+  if [[ ${COMPILER} != nvfortran ]] ; then
+    echo "error in $0: NVLAMATH target requires nvfortran"
+    exit 1
+  fi
+  NVLAMATH_LIBDIR=$(find_nvhpc_nvlamath_libdir)
+  if [[ -z ${NVLAMATH_LIBDIR} ]] ; then
+    echo "error in $0: NVLAMATH target requested but libnvlamath.so was not found"
+    exit 1
+  fi
+  append_nvhpc_openacc_flags nvlamath
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_NVLAMATH"
+  LDFLAGS="${LDFLAGS} -cudalib=nvlamath"
+  LDFLAGS="${LDFLAGS} -L${NVLAMATH_LIBDIR} -Wl,-rpath,${NVLAMATH_LIBDIR}"
+  INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/nvhpc_nvlamath.mod"
+}
+
 if [[ -n $(which pkg-config) ]] ; then
   #-----------------------------------------------------------------------------
   #  add libraries: BLAS LAPACK FFTW LIBXC 
@@ -187,20 +631,10 @@ if [[ -n $(which pkg-config) ]] ; then
   #  BLAS and Lapack are contained in framework Acellerate in MacOS 
   #  mpi is attached when available. It will not be used for CPPVAR_PARALLEL"
   #-----------------------------------------------------------------------------
-  export LIB_BLAS_OK=""
-  export LIB_LAPACK_OK=""
-  export LIB_FFTW3_OK=""
-  export LIB_XC_OK=""
   LIST=""
   LIST="${LIST} openblas mkl blas lapack" 
   LIST="${LIST} fftw3xf_intel fftw3"
   LIST="${LIST} libxcf03"
-
-  if [[ ${OS} = Darwin ]] ; then
-    LDFLAGS="${LDFLAGS} -framework Accelerate"
-    LIB_BLAS_OK="yes"
-    LIB_LAPACK_OK="yes"
-  fi
 
   for X in ${LIST}; do
     # test if something needs to be done #######################################
@@ -228,8 +662,17 @@ if [[ -n $(which pkg-config) ]] ; then
 
     # do something #############################################################
     if [[ $(pkg-config --print-errors --exists $X; echo $?) = 0 ]]; then
-      FCFLAGS="${FCFLAGS} $(pkg-config --print-errors --cflags $X)"
-      LIBS="${LIBS} $(pkg-config --print-errors --libs $X)"
+      PC_CFLAGS="$(pkg-config --print-errors --cflags $X)"
+      PC_LIBS="$(pkg-config --print-errors --libs $X)"
+      if [[ $X = libxcf03 ]] ; then
+        if ! fortran_module_works xc_f03_lib_m "${PC_CFLAGS}" ; then
+          echo "warning from $0: libxcf03 was found but its Fortran modules"
+          echo "are not usable with ${COMPILER}; building without LibXC."
+          continue
+        fi
+      fi
+      FCFLAGS="${FCFLAGS} ${PC_CFLAGS}"
+      LIBS="${LIBS} ${PC_LIBS}"
       # INCLUDES already considered in cflags. But compilers are unreliable
       case $X in
          *fftw3*)
@@ -315,11 +758,307 @@ case ${SELECT} in
     add_fcflags  # see function definition above
     ;;
 
+  profile)
+    SUFFIX="profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  profile_parallel)
+    SUFFIX="profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_dbg)
+     SUFFIX="nvhpc_dbg"
+     TYPE="debug"
+     add_fcflags
+     ;;
+
+  nvhpc_fast)
+    SUFFIX="nvhpc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_fast_parallel)
+    SUFFIX="nvhpc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_profile)
+    SUFFIX="nvhpc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_profile_parallel)
+    SUFFIX="nvhpc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_nvblas_fast)
+    SUFFIX="nvhpc_nvblas_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_nvblas_fast_parallel)
+    SUFFIX="nvhpc_nvblas_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_nvblas_profile)
+    SUFFIX="nvhpc_nvblas_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_nvblas_profile_parallel)
+    SUFFIX="nvhpc_nvblas_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_nvlamath_fast)
+    SUFFIX="nvhpc_nvlamath_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_nvlamath_fast_parallel)
+    SUFFIX="nvhpc_nvlamath_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_nvlamath_profile)
+    SUFFIX="nvhpc_nvlamath_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_nvlamath_profile_parallel)
+    SUFFIX="nvhpc_nvlamath_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufftw_fast)
+    SUFFIX="nvhpc_cufftw_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufftw_fast_parallel)
+    SUFFIX="nvhpc_cufftw_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufftw_profile)
+    SUFFIX="nvhpc_cufftw_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufftw_profile_parallel)
+    SUFFIX="nvhpc_cufftw_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_fast)
+    SUFFIX="nvhpc_cufft_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_fast_parallel)
+    SUFFIX="nvhpc_cufft_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_profile)
+    SUFFIX="nvhpc_cufft_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_profile_parallel)
+    SUFFIX="nvhpc_cufft_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_cublas_acc_fast)
+    SUFFIX="nvhpc_cufft_cublas_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_cublas_acc_fast_parallel)
+    SUFFIX="nvhpc_cufft_cublas_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_cublas_acc_profile)
+    SUFFIX="nvhpc_cufft_cublas_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cufft_cublas_acc_profile_parallel)
+    SUFFIX="nvhpc_cufft_cublas_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_fast)
+    SUFFIX="nvhpc_gpu_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_fast_parallel)
+    SUFFIX="nvhpc_gpu_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_profile)
+    SUFFIX="nvhpc_gpu_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_gpu_acc_profile_parallel)
+    SUFFIX="nvhpc_gpu_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cublas_acc_fast)
+    SUFFIX="nvhpc_cublas_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cublas_acc_fast_parallel)
+    SUFFIX="nvhpc_cublas_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cublas_acc_profile)
+    SUFFIX="nvhpc_cublas_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cublas_acc_profile_parallel)
+    SUFFIX="nvhpc_cublas_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_fast)
+    SUFFIX="nvhpc_cusolver_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_fast_parallel)
+    SUFFIX="nvhpc_cusolver_acc_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_profile)
+    SUFFIX="nvhpc_cusolver_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
+  nvhpc_cusolver_acc_profile_parallel)
+    SUFFIX="nvhpc_cusolver_acc_profile"
+    TYPE="profile"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_ACCEL_PROFILE"
+    add_fcflags
+    ;;
+
   *) #-- anything else. 
     echo "invalid selection $SELECT specified by -c in paw_build.sh"
     exit 1
     ;;
 esac
+
+if [[ ${CPPAW_USE_CUFFT} = yes \
+      || ${CPPAW_USE_CUFFT} = true \
+      || ${CPPAW_USE_CUFFT} = 1 ]] ; then
+  enable_nvhpc_cufft_acc
+fi
+
+if [[ ${CPPAW_USE_NVLAMATH} = yes \
+      || ${CPPAW_USE_NVLAMATH} = true \
+      || ${CPPAW_USE_NVLAMATH} = 1 ]] ; then
+  enable_nvhpc_nvlamath
+fi
+
+if [[ ${CPPAW_USE_CUBLAS_ACC} = yes \
+      || ${CPPAW_USE_CUBLAS_ACC} = true \
+      || ${CPPAW_USE_CUBLAS_ACC} = 1 ]] ; then
+  enable_nvhpc_cublas_acc
+fi
+
+if [[ ${CPPAW_USE_CUSOLVER_ACC} = yes \
+      || ${CPPAW_USE_CUSOLVER_ACC} = true \
+      || ${CPPAW_USE_CUSOLVER_ACC} = 1 ]] ; then
+  enable_nvhpc_cusolver_acc
+fi
+
+# CUDA is used here as a hardware/toolchain signal for NVIDIA HPC SDK builds.
+# CP-PAW has no CUDA Fortran kernels by default, so CUDA code generation is
+# opt-in to avoid an unnecessary CUDA runtime dependency for CPU-only binaries.
+if [[ ${COMPILER} = nvfortran \
+      && ( ${CPPAW_USE_CUDA_FORTRAN:-no} = yes \
+           || ${CPPAW_USE_CUDA_FORTRAN:-no} = true ) ]] ; then
+  if [[ ${CPPAW_CUDA_AVAILABLE} != true ]] ; then
+    echo "error in $0: CPPAW_USE_CUDA_FORTRAN requested but CUDA was not found"
+    exit 1
+  fi
+  CUDA_FORTRAN_FLAGS="-cuda"
+  if [[ -n ${CPPAW_CUDA_CC} ]] ; then
+    CUDA_FORTRAN_FLAGS="${CUDA_FORTRAN_FLAGS} -gpu=cc${CPPAW_CUDA_CC}"
+  fi
+  FCFLAGS="${FCFLAGS} ${CUDA_FORTRAN_FLAGS}"
+  LDFLAGS="${LDFLAGS} ${CUDA_FORTRAN_FLAGS}"
+fi
 
 #------------------------------------------------------------------------------
 if [[ $COMPILER == ifort ]] ; then 

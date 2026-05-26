@@ -49,6 +49,9 @@ export LIBLIST=" \
         paw_strcio \
         paw_cell \
         paw_pdos \
+        paw_accel_cublas \
+        paw_accel_cufft \
+        paw_accel_cusolver \
         paw_library \
         paw_polynom \
         paw_lmtobasics \
@@ -170,4 +173,3 @@ while getopts :atplh OPT ; do
       ;;
   esac
 done
-
