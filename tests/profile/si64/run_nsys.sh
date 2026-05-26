@@ -18,6 +18,10 @@ EXE=${EXE:-"${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x"}
 NSYS_TRACE=${NSYS_TRACE:-cuda,nvtx,osrt}
 NSYS_STATS=${NSYS_STATS:-true}
 NSYS_MPI_MODE=${NSYS_MPI_MODE:-outer}
+TIMEOUT_PREFIX=""
+if command -v timeout >/dev/null 2>&1; then
+  TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
+fi
 
 nvhpc_platform() {
   case "$(uname -s)_$(uname -m)" in
@@ -99,7 +103,7 @@ fi
 
 echo "running Nsight Systems: ${CMD}"
 # shellcheck disable=SC2086
-/usr/bin/time -p timeout "${TIMEOUT}s" ${CMD} > out.log 2> err.log
+/usr/bin/time -p ${TIMEOUT_PREFIX} ${CMD} > out.log 2> err.log
 
 python3 profile_summary.py nsys_profile*.csv > summary.txt
 grep -E "^real |^user |^sys " err.log > time.txt || true

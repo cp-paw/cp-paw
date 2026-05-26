@@ -8,7 +8,7 @@ import sys
 def category(op):
     if op.startswith("MPI_ALLTOALL"):
         return "MPI alltoall"
-    if op.startswith("FFT") or op.startswith("PW_FFT"):
+    if op.startswith("FFT") or op.startswith("PW_FFT") or op.startswith("CUFFT"):
         return "FFT"
     if op.startswith("LAPACK") or op.startswith("CUSOLVER"):
         return "LAPACK"

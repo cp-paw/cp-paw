@@ -5751,6 +5751,9 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1998)***********
       USE WAVES_MODULE, ONLY : MAP_TYPE,GSET_TYPE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: CPPAW_CUBLAS_ACC_SHOULD_USE
+#ENDIF
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
       TYPE(GSET_TYPE),INTENT(IN) :: GSET
@@ -5776,6 +5779,8 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8)     ,ALLOCATABLE:: EIGRALL(:,:)    !(NGL,NAT)
       COMPLEX(8)     ,ALLOCATABLE:: PSITMP(:,:) !(LMNX,NDIM,NB)
       COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
+      LOGICAL(4)                 :: TUSECUBLASPROJ
+      REAL(8)                    :: PROJFLOPS
 !     **************************************************************************
                                 CALL TIMING$CLOCKON('WAVES_PROJECTIONS')
 !
@@ -5805,11 +5810,22 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(EIGR(NGL))
       ALLOCATE(LOX(LNXX))
+      TUSECUBLASPROJ=.FALSE.
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      DO IAT=1,MAP%NAT
+        ISP=MAP%ISP(IAT)
+        LMNX=MAP%LMNX(ISP)
+        PROJFLOPS=8.D0*REAL(NGL,KIND=8)*REAL(LMNX,KIND=8) &
+     &           *REAL(NDIM*NB,KIND=8)
+        TUSECUBLASPROJ=TUSECUBLASPROJ &
+     &           .OR.CPPAW_CUBLAS_ACC_SHOULD_USE(PROJFLOPS)
+      ENDDO
+#ENDIF
       IF(.TRUE.) THEN
 !       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
         ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
         IPRO=1
-!$ACC DATA COPYIN(PSI(1:NGL,1:NDIM,1:NB))
+!$ACC DATA COPYIN(PSI(1:NGL,1:NDIM,1:NB)) IF(TUSECUBLASPROJ)
         DO IAT=1,MAP%NAT
           ISP=MAP%ISP(IAT)
           LNX=MAP%LNX(ISP)
