@@ -11,9 +11,9 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
 EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-${EMPTY_BANDS}}
-GPU_CASES=${GPU_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_off gpu_resident_off"}
-CPU_CASES=${CPU_CASES:-"cpu nvpl"}
-ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES:-"cpu nvpl"}
+GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_nosync gpu gpu_off"}
+CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
+ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
 
 mkdir -p "${FOLLOWUP_ROOT}"
 echo "${FOLLOWUP_ROOT}" > "${HERE}/runs/latest_followup"
@@ -78,4 +78,8 @@ for empty_bands in ${EMPTY_BANDS_LIST}; do
 done
 
 log "ALL DONE root=${FOLLOWUP_ROOT}"
-[[ -f "${COMBINED}" ]] && log "combined=${COMBINED}"
+if [[ -f "${COMBINED}" ]]; then
+  python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
+    > "${FOLLOWUP_ROOT}/combined_benchmark.md" || true
+  log "combined=${COMBINED}"
+fi

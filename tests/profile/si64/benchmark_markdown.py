@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+import csv
+import os
+import re
+import sys
+
+
+def number(value):
+    if value is None or value == "":
+        return ""
+    try:
+        return f"{float(value):.2f}"
+    except ValueError:
+        return str(value)
+
+
+def suite_label(row):
+    suite = row.get("suite", "")
+    if not suite:
+        return ""
+    match = re.search(r"empty(\d+).*nstep(\d+)", suite)
+    if match:
+        return f"empty={match.group(1)}, nsteps={match.group(2)}"
+    return suite
+
+
+def read_rows(path):
+    with open(path, newline="") as handle:
+        rows = list(csv.DictReader(handle, delimiter="\t"))
+    for row in rows:
+        if "suite" not in row:
+            row["suite"] = ""
+    return rows
+
+
+def main(argv):
+    if len(argv) != 2:
+        print("usage: benchmark_markdown.py benchmark.tsv", file=sys.stderr)
+        return 2
+    path = argv[1]
+    rows = read_rows(path)
+    if not rows:
+        return 1
+
+    print(f"### CP-PAW Benchmark Summary")
+    print()
+    print(f"Source: `{os.path.basename(path)}`")
+    print()
+    print("| suite | case | ranks | ok | wall_s | rank_s | blas_s | lapack_s | fft_s | mpi_s | copy_gb | energy |")
+    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    for row in rows:
+        print(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                suite_label(row),
+                row.get("case", ""),
+                row.get("ranks", ""),
+                row.get("ok", ""),
+                number(row.get("wall_s")),
+                number(row.get("rank_s")),
+                number(row.get("blas_s")),
+                number(row.get("lapack_s")),
+                number(row.get("fft_s")),
+                number(row.get("mpi_s")),
+                number(row.get("copy_gb")),
+                number(row.get("energy")),
+            )
+        )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))

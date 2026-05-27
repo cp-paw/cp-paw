@@ -29,18 +29,18 @@ RUN_GPU_ACC=${RUN_GPU_ACC:-no}
 RUN_GPU_DIAGNOSTICS=${RUN_GPU_DIAGNOSTICS:-no}
 RUN_CUSOLVER=${RUN_CUSOLVER:-no}
 RUN_BAND_BENCHMARK=${RUN_BAND_BENCHMARK:-no}
-MAIN_CASES=${MAIN_CASES:-"nvpl cublas cublas_off"}
-SCALING_CASES=${SCALING_CASES:-"nvpl cublas"}
-GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvpl gpu gpu_resident gpu_off gpu_resident_off"}
+MAIN_CASES=${MAIN_CASES:-"nvhpc_cpu cublas cublas_off"}
+SCALING_CASES=${SCALING_CASES:-"nvhpc_cpu cublas"}
+GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvhpc_cpu gpu_resident gpu_resident_nosync gpu gpu_off"}
 GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_force_all gpu_3dfft gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
 BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
 BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
 BAND_EMPTY_BANDS=${BAND_EMPTY_BANDS:-128}
 BAND_EMPTY_BANDS_LIST=${BAND_EMPTY_BANDS_LIST:-${BAND_EMPTY_BANDS}}
-BAND_CASES=${BAND_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_off gpu_resident_off"}
-BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvpl"}
-BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvpl"}
+BAND_CASES=${BAND_CASES:-"gpu_resident gpu_resident_nosync gpu gpu_off"}
+BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
+BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvhpc_cpu"}
 THRESHOLDS=${THRESHOLDS:-"1e7"}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
@@ -211,21 +211,21 @@ done
 case "${RUN_NVLAMATH}" in
   yes|true|1)
     run_suite "nvlamath_${NVLAMATH_NSTEPS}steps_1rank" "${NVLAMATH_NSTEPS}" 1 1 \
-      "cpu nvpl nvlamath"
+      "cpu nvhpc_cpu nvlamath"
     ;;
 esac
 
 case "${RUN_CUFFTW}" in
   yes|true|1)
     run_suite "cufftw_${CUFFTW_NSTEPS}steps_1rank" "${CUFFTW_NSTEPS}" 1 1 \
-      "nvpl cufftw"
+      "nvhpc_cpu cufftw"
     ;;
 esac
 
 case "${RUN_CUFFT}" in
   yes|true|1)
     run_suite "cufft_${CUFFT_NSTEPS}steps_4ranks" "${CUFFT_NSTEPS}" 4 1 \
-      "nvpl cufft cufft_off"
+      "nvhpc_cpu cufft cufft_off"
     ;;
 esac
 
@@ -238,16 +238,16 @@ case "${RUN_GPU_ACC}" in
     run_suite "gpu_acc_${GPU_ACC_NSTEPS}steps_1rank" "${GPU_ACC_NSTEPS}" 1 1 \
       "${gpu_acc_cases}"
     run_suite "cpu_ref_${GPU_ACC_NSTEPS}steps_8ranks" "${GPU_ACC_NSTEPS}" 8 1 \
-      "cpu nvpl"
+      "cpu nvhpc_cpu"
     ;;
 esac
 
 case "${RUN_CUSOLVER}" in
   yes|true|1)
     run_suite "cusolver_${CUSOLVER_NSTEPS}steps_1rank" "${CUSOLVER_NSTEPS}" 1 1 \
-      "cpu nvpl cusolver cusolver_conservative cusolver_off"
+      "cpu nvhpc_cpu cusolver cusolver_conservative cusolver_off"
     run_suite "cusolver_cpu_ref_${CUSOLVER_NSTEPS}steps_8ranks" "${CUSOLVER_NSTEPS}" 8 1 \
-      "cpu nvpl"
+      "cpu nvhpc_cpu"
     ;;
 esac
 
@@ -278,4 +278,8 @@ done
 run_nsys_trace
 
 log "ALL DONE root=${OVERNIGHT_ROOT}"
-[[ -f "${COMBINED}" ]] && log "combined=${COMBINED}"
+if [[ -f "${COMBINED}" ]]; then
+  python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
+    > "${OVERNIGHT_ROOT}/combined_benchmark.md" || true
+  log "combined=${COMBINED}"
+fi

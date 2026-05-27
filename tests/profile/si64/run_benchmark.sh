@@ -15,7 +15,7 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
-CASES=${CASES:-"cpu nvpl gpu gpu_off"}
+CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
 TIMEOUT_PREFIX=""
 if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
@@ -88,7 +88,7 @@ case_mpirun() {
 serial_exe() {
   case "$1" in
     cpu) echo "${ROOT}/bin/profile/paw_profile.x" ;;
-    nvpl) echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
+    nvhpc_cpu|nvpl) echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
     nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile/paw_nvhpc_nvblas_profile.x" ;;
     nvlamath) echo "${ROOT}/bin/nvhpc_nvlamath_profile/paw_nvhpc_nvlamath_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
@@ -107,7 +107,7 @@ serial_exe() {
 parallel_exe() {
   case "$1" in
     cpu) echo "${ROOT}/bin/profile_parallel/ppaw_profile.x" ;;
-    nvpl) echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
+    nvhpc_cpu|nvpl) echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
     nvblas) echo "${ROOT}/bin/nvhpc_nvblas_profile_parallel/ppaw_nvhpc_nvblas_profile.x" ;;
     nvlamath) echo "${ROOT}/bin/nvhpc_nvlamath_profile_parallel/ppaw_nvhpc_nvlamath_profile.x" ;;
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
@@ -120,6 +120,29 @@ parallel_exe() {
     cublas*) echo "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" ;;
     cusolver*) echo "${ROOT}/bin/nvhpc_cusolver_acc_profile_parallel/ppaw_nvhpc_cusolver_acc_profile.x" ;;
     *) echo "unknown case $1" >&2; return 1 ;;
+  esac
+}
+
+case_note() {
+  case "$1" in
+    nvhpc_cpu)
+      echo "NVIDIA HPC SDK CPU build; actual CPU BLAS/LAPACK/FFT libraries are listed below."
+      ;;
+    nvpl)
+      echo "Legacy alias for nvhpc_cpu; on x86 this may use OpenBLAS/FFTW fallback rather than NVPL."
+      ;;
+    gpu_resident)
+      echo "Recommended one-GPU NVHPC profile path with OpenACC residency enabled."
+      ;;
+    gpu_resident_nosync)
+      echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
+      ;;
+    gpu_all*)
+      echo "All-library diagnostic build; includes cuFFTW/NVLAMATH and is not the recommended default."
+      ;;
+    *)
+      echo ""
+      ;;
   esac
 }
 
@@ -249,6 +272,8 @@ capture_metadata() {
       exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
       echo "case=${case_name}"
       echo "exe=${exe}"
+      note=$(case_note "${case_name}")
+      [[ -n "${note}" ]] && echo "note=${note}"
       if [[ -x "${exe}" ]]; then
         ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas" || true
       else
@@ -306,4 +331,6 @@ for case_name in ${CASES}; do
 done
 
 python3 "${HERE}/benchmark_summary.py" "${RUN_ROOT}" | tee "${RUN_ROOT}/benchmark.tsv"
+python3 "${HERE}/benchmark_markdown.py" "${RUN_ROOT}/benchmark.tsv" \
+  > "${RUN_ROOT}/benchmark.md" || true
 echo "Benchmark data: ${RUN_ROOT}"

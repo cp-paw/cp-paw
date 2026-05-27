@@ -11,7 +11,7 @@ EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-"128 256 512"}
 GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
 CUSOLVER_CASES=${CUSOLVER_CASES:-"cusolver cusolver_conservative cusolver_off"}
-CPU_CASES=${CPU_CASES:-"cpu nvpl"}
+CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
 
 mkdir -p "${CUSOLVER_FOCUS_ROOT}"
 echo "${CUSOLVER_FOCUS_ROOT}" > "${HERE}/runs/latest_cusolver_focus"
@@ -68,4 +68,8 @@ for empty_bands in ${EMPTY_BANDS_LIST}; do
 done
 
 log "ALL DONE root=${CUSOLVER_FOCUS_ROOT}"
-[[ -f "${COMBINED}" ]] && log "combined=${COMBINED}"
+if [[ -f "${COMBINED}" ]]; then
+  python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
+    > "${CUSOLVER_FOCUS_ROOT}/combined_benchmark.md" || true
+  log "combined=${COMBINED}"
+fi

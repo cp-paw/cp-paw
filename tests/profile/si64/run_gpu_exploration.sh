@@ -8,8 +8,8 @@ NSTEPS=${NSTEPS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
-GPU_CASES=${GPU_CASES:-"gpu gpu_resident gpu_resident_nosync gpu_force_all gpu_3dfft gpu_managed gpu_unified gpu_off gpu_resident_off"}
-CPU_CASES=${CPU_CASES:-"cpu nvpl"}
+GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_nosync gpu gpu_force_all gpu_3dfft gpu_managed gpu_unified gpu_off"}
+CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
 
 mkdir -p "${GPU_EXPLORATION_ROOT}"
 echo "${GPU_EXPLORATION_ROOT}" > "${HERE}/runs/latest_gpu_exploration"
@@ -65,4 +65,8 @@ run_suite "one_rank_cpu" 1 "${CPU_CASES}"
 run_suite "eight_rank_cpu" 8 "${CPU_CASES}"
 
 log "ALL DONE root=${GPU_EXPLORATION_ROOT}"
-[[ -f "${COMBINED}" ]] && log "combined=${COMBINED}"
+if [[ -f "${COMBINED}" ]]; then
+  python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
+    > "${GPU_EXPLORATION_ROOT}/combined_benchmark.md" || true
+  log "combined=${COMBINED}"
+fi

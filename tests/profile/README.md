@@ -81,7 +81,7 @@ binary can selectively force or disable each accelerator path:
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
 cd tests/profile/si64
 NSTEPS=1 ./run_benchmark.sh
-NSTEPS=1 RANKS=8 CASES="cpu nvpl" ./run_benchmark.sh
+NSTEPS=1 RANKS=8 CASES="cpu nvhpc_cpu" ./run_benchmark.sh
 ```
 
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
@@ -101,7 +101,13 @@ keeps the `<PSI_+|PSI_+>` part on the same present-input path and leaves the
 for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
 for the outer copy-in and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call
 output copy. The resident overlap cuBLAS kernels are timed separately as
-`CUBLAS_ZHERK_OVL_RES` and `CUBLAS_ZGEMM_OVL_RES`.
+`CUBLAS_ZHERK_OVL_RES` and `CUBLAS_ZGEMM_OVL_RES`. This is the recommended
+NVHPC GPU performance path for the larger Si64 band benchmarks. Keep
+`gpu_resident_nosync` as a diagnostic candidate until longer correctness runs
+confirm that removing the explicit post-cuBLAS synchronization is safe for the
+target workload. For non-inversion wave sets, the residency mode also keeps the
+orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC data region;
+`ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy estimate.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
@@ -117,6 +123,11 @@ cd tests/profile/si64
 NSTEPS=1 CASES="gpu gpu_all gpu_all_off" ./run_benchmark.sh
 ```
 
+The all-library binary is intentionally not part of the default larger-band
+preset. It is useful to verify that all optional NVIDIA libraries link and run
+together, but small and medium Si64 band cases are dominated by cuFFTW/NVLAMATH
+overhead in this configuration.
+
 The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
 `profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
 system `mpirun`; set `CPU_MPIRUN=...` to override it. Benchmark runs pin common
@@ -130,7 +141,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | Keyword | Meaning |
 | --- | --- |
 | `cpu` | Plain GNU/OpenBLAS/FFTW reference build. |
-| `nvpl` | NVIDIA HPC SDK CPU build with NVPL BLAS/LAPACK/FFTW. |
+| `nvhpc_cpu` | NVIDIA HPC SDK CPU build. The actual BLAS/LAPACK/FFT backend is recorded through `ldd` in `metadata.txt`; on x86 this can be OpenBLAS/FFTW fallback rather than NVPL. |
+| `nvpl` | Legacy alias for `nvhpc_cpu`; kept for old scripts and logs. |
 | `nvblas` | Existing BLAS calls through NVIDIA's NVBLAS interposition layer. |
 | `nvlamath` | NVIDIA HPC SDK NVLAMATH LAPACK/cuSOLVER wrapper path. |
 | `cufftw` | cuFFTW wrapper for CP-PAW's existing FFTW3 calls. |
@@ -139,8 +151,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cublas_conservative` | Explicit cuBLAS/OpenACC with a higher diagnostic threshold. |
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
-| `gpu` / `gpu_nosync` | Recommended combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
-| `gpu_resident` / `gpu_resident_nosync` | Same combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
+| `gpu` / `gpu_nosync` | Combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
+| `gpu_resident` / `gpu_resident_nosync` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
 | `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time; cuFFT uses the conservative threshold by default. |
@@ -153,10 +165,10 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_off` | Same combined binary with all native GPU paths disabled. |
 
 By default, `run_benchmark.sh` uses `RANKS=1` and
-`CASES="cpu nvpl gpu gpu_off"`. This matches the current Si64 recommendation:
-compare one MPI rank with one GPU against one-rank CPU/NVPL and the same
-combined binary with native GPU paths disabled. Use explicit `CASES=...` for
-diagnostic sweeps.
+`CASES="cpu nvhpc_cpu gpu_resident gpu_off"`. This matches the current Si64
+recommendation: compare one MPI rank with one GPU residency path against
+one-rank CPU references and the same combined binary with native GPU paths
+disabled. Use explicit `CASES=...` for diagnostic sweeps.
 
 For a larger band/orthogonalization smoke test, use the `si64_bands` control
 file with the same Si64 structure and more empty bands. The harness copies
@@ -169,7 +181,7 @@ TEST=si64_bands EMPTY_BANDS=128 NSTEPS=1 ./run_benchmark.sh
 
 The stacked follow-up benchmark compares the larger-band case across the
 resource split we want for the next optimization pass: one rank on one GPU,
-one-rank CPU references, and eight-rank CPU/NVPL references. It defaults to
+one-rank CPU references, and eight-rank CPU/NVHPC references. It defaults to
 `NSTEPS_LIST="1 3 10"` and accepts `EMPTY_BANDS_LIST` for a band-size sweep:
 
 ```
@@ -185,7 +197,21 @@ cd tests/profile/si64
 ```
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512 1024"`, `NSTEPS_LIST=1` and
-compares one-rank GPU, one-rank CPU, and eight-rank CPU/NVPL references.
+compares one-rank GPU residency, one-rank CPU, and eight-rank CPU/NVHPC
+references. Set `RUN_GPU_ALL=yes` to include the all-library diagnostic cases
+`gpu_all` and `gpu_all_off`.
+
+For the longer validation preset used before promoting a residency diagnostic
+to a default, run:
+
+```
+cd tests/profile/si64
+./run_large_bands_long.sh
+```
+
+It defaults to `EMPTY_BANDS_LIST="512 1024"` and `NSTEPS_LIST="3 10"` and
+compares `gpu_resident`, `gpu_resident_nosync`, `gpu_off`, one-rank CPU and
+eight-rank CPU/NVHPC references.
 
 For a short broad GPU exploration suite that includes the opt-in 3-D cuFFT path
 and captures available NVIDIA libraries plus CUDA-aware MPI hints:
@@ -209,7 +235,7 @@ To test the explicit cuBLAS/OpenACC path for large complex `ZGEMM`/`ZHERK`
 kernels, build an `nvhpc_cublas_acc_*` target. The default offload threshold is
 `CPPAW_CUBLAS_ACC_MINFLOP=1e7`, which includes the projection GEMMs and was the
 best Si64 threshold in the Spark C86C night run. Set `CPPAW_CUBLAS_ACC=0` to run
-the same binary with the CPU/NVPL fallback. Set `CPPAW_CUBLAS_ACC_SYNC=0` only
+the same binary with the CPU fallback. Set `CPPAW_CUBLAS_ACC_SYNC=0` only
 for diagnostic runs that compare the cost of the explicit device synchronization:
 
 ```
@@ -226,13 +252,13 @@ summary of the instrumented FFT, BLAS-like and MPI all-to-all regions.
 To test the explicit cuSOLVER/OpenACC dense eigensolver path, build an
 `nvhpc_cusolver_acc_*` target. The default offload threshold is
 `CPPAW_CUSOLVER_ACC_MIN_N=256`; set it to `1` for the small Si64 profiling
-case, or set `CPPAW_CUSOLVER_ACC=0` to run the same binary with the CPU/NVPL
+case, or set `CPPAW_CUSOLVER_ACC=0` to run the same binary with the CPU/NVHPC
 fallback:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
 cd tests/profile/si64
-NSTEPS=1 RANKS=1 CASES="nvpl cusolver cusolver_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=1 CASES="nvhpc_cpu cusolver cusolver_off" ./run_benchmark.sh
 ```
 
 For a more targeted cuSOLVER/LAPACK follow-up on larger band matrices:
@@ -243,19 +269,21 @@ cd tests/profile/si64
 ```
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512"` and compares
-`cusolver`, `cusolver_conservative`, `cusolver_off`, one-rank CPU/NVPL and
-eight-rank CPU/NVPL references.
+`cusolver`, `cusolver_conservative`, `cusolver_off`, one-rank CPU/NVHPC and
+eight-rank CPU/NVHPC references.
 
 For reproducible comparisons, use the benchmark harness:
 
 ```
 cd tests/profile/si64
-NSTEPS=20 RANKS=4 REPEATS=3 CASES="nvpl cublas cublas_off" ./run_benchmark.sh
+NSTEPS=20 RANKS=4 REPEATS=3 CASES="nvhpc_cpu cublas cublas_off" ./run_benchmark.sh
 ```
 
 The harness creates timestamped directories under `tests/profile/si64/runs`,
 writes per-run logs and profile CSV files, and emits a `benchmark.tsv` summary
 with wall time, instrumented rank-seconds, category timings and final energy.
+It also writes a Markdown table (`benchmark.md` or `combined_benchmark.md`) that
+can be pasted directly into pull request comments.
 
 For a short Nsight Systems trace of the recommended combined GPU profile binary:
 
@@ -283,13 +311,15 @@ benchmark table is `combined_benchmark.tsv`.
 Set `RUN_NVLAMATH=yes` to add a short NVLAMATH comparison suite,
 `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite, `RUN_CUFFT=yes` to add
 a short native cuFFT comparison, `RUN_GPU_ACC=yes` to compare one-rank GPU
-against eight-rank CPU/OpenBLAS and CPU/NVPL references, or
-`RUN_CUSOLVER=yes` to add the same one-rank cuSOLVER versus eight-rank CPU/NVPL
+against eight-rank CPU/OpenBLAS and CPU/NVHPC references, or
+`RUN_CUSOLVER=yes` to add the same one-rank cuSOLVER versus eight-rank CPU/NVHPC
 resource comparison.
 
 The overnight defaults use the recommended production-style cases:
-`MAIN_CASES="nvpl cublas cublas_off"`, `SCALING_CASES="nvpl cublas"`,
-`GPU_ACC_CASES="cpu nvpl gpu gpu_off"` and `THRESHOLDS="1e7"`. Set
+`MAIN_CASES="nvhpc_cpu cublas cublas_off"`,
+`SCALING_CASES="nvhpc_cpu cublas"`,
+`GPU_ACC_CASES="cpu nvhpc_cpu gpu_resident gpu_resident_nosync gpu gpu_off"`
+and `THRESHOLDS="1e7"`. Set
 `RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_force_all` and the
 `gpu_no_*` ablation cases, set `RUN_BAND_BENCHMARK=yes` to add the
 `si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank

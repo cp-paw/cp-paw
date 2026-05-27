@@ -12,7 +12,10 @@ bash -n src/Buildtools/paw_build.sh
 bash -n src/Buildtools/paw_fcflags.sh
 bash -n src/Buildtools/paw_srclist.sh
 bash -n tests/profile/si64/run_benchmark.sh
+bash -n tests/profile/si64/run_cusolver_focus.sh
 bash -n tests/profile/si64/run_followup.sh
+bash -n tests/profile/si64/run_large_bands.sh
+bash -n tests/profile/si64/run_large_bands_long.sh
 bash -n tests/profile/si64/run_gpu_exploration.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_overnight.sh
@@ -20,7 +23,8 @@ bash -n src/Tools/Scripts/paw_gpu_capabilities.sh
 
 python3 -m py_compile \
   tests/profile/si64/profile_summary.py \
-  tests/profile/si64/benchmark_summary.py
+  tests/profile/si64/benchmark_summary.py \
+  tests/profile/si64/benchmark_markdown.py
 
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
