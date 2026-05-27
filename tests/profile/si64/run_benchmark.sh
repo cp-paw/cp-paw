@@ -297,7 +297,7 @@ for case_name in ${CASES}; do
           ${TIMEOUT_PREFIX} ${cmd} > out.log 2> err.log
       fi
       python3 profile_summary.py "${case_name}_profile"*.csv > summary.txt
-      grep -E "^real |^user |^sys " err.log > time.txt || true
+      tr -d '\000' < err.log | grep -E "^real |^user |^sys " > time.txt || true
       tail -40 out.log > out.tail.txt || true
       tail -80 err.log > err.tail.txt || true
       echo "end=$(iso_now)" >> run.env
