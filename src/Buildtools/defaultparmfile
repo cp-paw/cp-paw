@@ -230,6 +230,22 @@ function find_nvhpc_cufftw_libdir {
 
 function find_nvhpc_fftw3_include {
   local D
+  local PC_INCLUDEDIR
+
+  if [[ -n ${CPPAW_FFTW3_INCLUDE:-} && -f ${CPPAW_FFTW3_INCLUDE} ]] ; then
+    echo "${CPPAW_FFTW3_INCLUDE}"
+    return 0
+  fi
+
+  if command_path pkg-config >/dev/null && pkg-config --exists fftw3 ; then
+    PC_INCLUDEDIR=$(pkg-config --variable=includedir fftw3)
+    D="${PC_INCLUDEDIR}/fftw3.f03"
+    if [[ -f ${D} ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  fi
+
   for D in "${NVHPC_ROOT}"/compilers/include/nvpl_fftw/fftw3.f03 \
            "${NVHPC_ROOT}"/math_libs/nvpl/include/nvpl_fftw/fftw3.f03 ; do
     if [[ -f ${D} ]] ; then

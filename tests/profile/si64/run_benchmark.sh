@@ -21,6 +21,19 @@ if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
 fi
 
+TIME_CMD=${TIME_CMD:-}
+if [[ -z "${TIME_CMD}" ]]; then
+  if [[ -x /usr/bin/time ]]; then
+    TIME_CMD=/usr/bin/time
+  else
+    TIME_CMD=$(type -P time || true)
+  fi
+fi
+if [[ -z "${TIME_CMD}" ]]; then
+  echo "External time command not found; set TIME_CMD or install GNU time." >&2
+  exit 1
+fi
+
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
 export MKL_NUM_THREADS=${MKL_NUM_THREADS:-1}
@@ -276,11 +289,11 @@ for case_name in ${CASES}; do
       echo "running ${case_name} repeat ${repeat}: ${cmd}"
       if [[ -n "${env_line}" ]]; then
         # shellcheck disable=SC2086
-        /usr/bin/time -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" ${env_line} \
+        "${TIME_CMD}" -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" ${env_line} \
           ${TIMEOUT_PREFIX} ${cmd} > out.log 2> err.log
       else
         # shellcheck disable=SC2086
-        /usr/bin/time -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" \
+        "${TIME_CMD}" -p env CPPAW_ACCEL_PROFILE_FILE="${case_name}_profile" \
           ${TIMEOUT_PREFIX} ${cmd} > out.log 2> err.log
       fi
       python3 profile_summary.py "${case_name}_profile"*.csv > summary.txt
