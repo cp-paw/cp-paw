@@ -28,6 +28,10 @@
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
+      REAL(8)            :: MINFLOP_PROJECTION=1.D7
+      REAL(8)            :: MINFLOP_OVERLAP=1.D7
+      REAL(8)            :: MINFLOP_ADDPRODUCT=1.D7
+      REAL(8)            :: MINFLOP_MATMUL=1.D7
       CONTAINS
 !
 !     ..........................................................................
@@ -47,6 +51,24 @@
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_BYTES
 #ENDIF
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV(NAME,VALUE)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      REAL(8)     ,INTENT(INOUT) :: VALUE
+      CHARACTER(128) :: TEXT
+      REAL(8)        :: TMP
+      INTEGER(4)     :: STATUS
+      INTEGER(4)     :: IOS
+!     **************************************************************************
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,TEXT,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        READ(TEXT,*,IOSTAT=IOS) TMP
+        IF(IOS.EQ.0) VALUE=TMP
+      END IF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_INITCONFIG
@@ -75,6 +97,18 @@
         READ(VALUE,*,IOSTAT=IOS) MINFLOP
         IF(IOS.NE.0) MINFLOP=1.D7
       END IF
+      MINFLOP_PROJECTION=MINFLOP
+      MINFLOP_OVERLAP=MINFLOP
+      MINFLOP_ADDPRODUCT=MINFLOP
+      MINFLOP_MATMUL=MINFLOP
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_PROJECTION_MINFLOP',MINFLOP_PROJECTION)
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_OVERLAP_MINFLOP',MINFLOP_OVERLAP)
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ADDPRODUCT_MINFLOP',MINFLOP_ADDPRODUCT)
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_MATMUL_MINFLOP',MINFLOP_MATMUL)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_SYNC',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -117,6 +151,50 @@
       CPPAW_CUBLAS_ACC_SHOULD_USE=ENABLED.AND.(FLOPS.GE.MINFLOP)
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_PROJECTION(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_SHOULD_USE_PROJECTION=ENABLED &
+     &                                      .AND.(FLOPS.GE.MINFLOP_PROJECTION)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_PROJECTION
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP=ENABLED &
+     &                                   .AND.(FLOPS.GE.MINFLOP_OVERLAP)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT=ENABLED &
+     &                                      .AND.(FLOPS.GE.MINFLOP_ADDPRODUCT)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL=ENABLED &
+     &                                  .AND.(FLOPS.GE.MINFLOP_MATMUL)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
@@ -200,7 +278,7 @@
       REAL(8)                  :: FLOPS
 !     **************************************************************************
       FLOPS=8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8)
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(FLOPS)
       IF(.NOT.USED) RETURN
       IF(RESIDENCY_ENABLED) THEN
 !$ACC DATA PRESENT_OR_COPYIN(A(1:N,1:M),B(1:M,1:L)) COPY(C(1:N,1:L))
@@ -265,7 +343,7 @@
       REAL(8)                  :: FLOPS
 !     **************************************************************************
       FLOPS=8.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8)
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL(FLOPS)
       IF(.NOT.USED) RETURN
 !$ACC DATA COPYIN(A(1:N,1:M),B(1:M,1:L)) COPYOUT(C(1:N,1:L))
       CALL CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_PRESENT(N,M,L,A,B,C)
@@ -321,7 +399,7 @@
       REAL(8)                :: FLOPS
 !     **************************************************************************
       FLOPS=2.D0*REAL(N,KIND=8)*REAL(M,KIND=8)*REAL(L,KIND=8)
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL(FLOPS)
       IF(.NOT.USED) RETURN
 !$ACC DATA COPYIN(A(1:N,1:M),B(1:M,1:L)) COPYOUT(C(1:N,1:L))
       CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(N,M,L,A,B,C)
@@ -378,7 +456,7 @@
       REAL(8)                :: FLOPS
 !     **************************************************************************
       FLOPS=2.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8)
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
       IF(.NOT.USED) RETURN
 !$ACC DATA COPYIN(PSI1(1:LEN1,1:N),PSI2(1:LEN2,1:N)) &
 !$ACC& COPYOUT(OPERATOR(1:LEN1,1:LEN2))
@@ -438,7 +516,7 @@
       REAL(8)                  :: FLOPS
 !     **************************************************************************
       FLOPS=8.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8)
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
       IF(.NOT.USED) RETURN
 !$ACC DATA COPYIN(PSI1(1:LEN1,1:N),PSI2(1:LEN2,1:N)) &
 !$ACC& COPYOUT(OPERATOR(1:LEN1,1:LEN2))
@@ -578,7 +656,7 @@
       ELSE
         FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
       END IF
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
       IF(.NOT.USED) RETURN
       IF(RESIDENCY_ENABLED) THEN
 !$ACC DATA PRESENT_OR_COPYIN(PSI1(1:LEN,1:N1),PSI2(1:LEN,1:N2)) &
@@ -633,7 +711,7 @@
         FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
       END IF
       USED=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE() &
-     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
       IF(.NOT.USED) RETURN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
@@ -685,7 +763,7 @@
       ELSE
         FLOPS=2.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
       END IF
-      USED=CPPAW_CUBLAS_ACC_SHOULD_USE(FLOPS)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
       IF(.NOT.USED) RETURN
       IF(RESIDENCY_ENABLED) THEN
 !$ACC DATA PRESENT_OR_COPYIN(PSI1(1:LEN,1:N1),PSI2(1:LEN,1:N2)) &

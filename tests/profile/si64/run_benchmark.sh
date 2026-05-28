@@ -71,11 +71,7 @@ system_mpirun() {
   command -v mpirun 2>/dev/null || echo mpirun
 }
 
-if [[ -n "${MPIRUN:-}" ]]; then
-  CPU_MPIRUN=${CPU_MPIRUN:-${MPIRUN}}
-else
-  CPU_MPIRUN=${CPU_MPIRUN:-$(system_mpirun)}
-fi
+CPU_MPIRUN=${CPU_MPIRUN:-$(system_mpirun)}
 MPIRUN=${MPIRUN:-$(default_mpirun)}
 
 case_mpirun() {
@@ -137,6 +133,18 @@ case_note() {
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
       ;;
+    *_projection_conservative)
+      echo "cuBLAS diagnostic: raises only the projection GEMM offload threshold."
+      ;;
+    *_overlap_conservative)
+      echo "cuBLAS diagnostic: raises only the overlap/orthogonalization offload threshold."
+      ;;
+    *_addproduct_conservative)
+      echo "cuBLAS diagnostic: raises only the additive product offload threshold."
+      ;;
+    *_matmul_conservative)
+      echo "cuBLAS diagnostic: raises only the generic MATMUL offload threshold."
+      ;;
     gpu_all*)
       echo "All-library diagnostic build; includes cuFFTW/NVLAMATH and is not the recommended default."
       ;;
@@ -197,11 +205,39 @@ cufft3d_env() {
   echo "CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_MIN_ELEMENTS=${min_elements} CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${min_3d_elements}"
 }
 
+cublas_env() {
+  echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}"
+}
+
+cublas_conservative_env() {
+  echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}"
+}
+
+cublas_projection_conservative_env() {
+  echo "$(cublas_env) CPPAW_CUBLAS_ACC_PROJECTION_MINFLOP=${CPPAW_CUBLAS_PROJECTION_CONSERVATIVE_MINFLOP:-${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}}"
+}
+
+cublas_overlap_conservative_env() {
+  echo "$(cublas_env) CPPAW_CUBLAS_ACC_OVERLAP_MINFLOP=${CPPAW_CUBLAS_OVERLAP_CONSERVATIVE_MINFLOP:-${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}}"
+}
+
+cublas_addproduct_conservative_env() {
+  echo "$(cublas_env) CPPAW_CUBLAS_ACC_ADDPRODUCT_MINFLOP=${CPPAW_CUBLAS_ADDPRODUCT_CONSERVATIVE_MINFLOP:-${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}}"
+}
+
+cublas_matmul_conservative_env() {
+  echo "$(cublas_env) CPPAW_CUBLAS_ACC_MATMUL_MINFLOP=${CPPAW_CUBLAS_MATMUL_CONSERVATIVE_MINFLOP:-${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}}"
+}
+
 case_env() {
   case "$1" in
-    cublas) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
-    cublas_nosync) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
-    cublas_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}" ;;
+    cublas) cublas_env ;;
+    cublas_nosync) echo "$(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    cublas_conservative) cublas_conservative_env ;;
+    cublas_projection_conservative) cublas_projection_conservative_env ;;
+    cublas_overlap_conservative) cublas_overlap_conservative_env ;;
+    cublas_addproduct_conservative) cublas_addproduct_conservative_env ;;
+    cublas_matmul_conservative) cublas_matmul_conservative_env ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
     cusolver) cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
     cusolver_conservative) cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
@@ -209,23 +245,31 @@ case_env() {
     cufft) cufft_env ;;
     cufft_force_all) cufft_force_env ;;
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
-    gpu) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
-    gpu_nosync) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
-    gpu_force_all) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_3dfft) echo "$(cufft3d_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_conservative) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8} $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
-    gpu_all) echo "$(cufft_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_all_nosync) echo "$(cufft_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_all_3dfft) echo "$(cufft3d_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu) cublas_env ;;
+    gpu_nosync) echo "$(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    gpu_projection_conservative) cublas_projection_conservative_env ;;
+    gpu_overlap_conservative) cublas_overlap_conservative_env ;;
+    gpu_addproduct_conservative) cublas_addproduct_conservative_env ;;
+    gpu_matmul_conservative) cublas_matmul_conservative_env ;;
+    gpu_force_all) echo "$(cufft_force_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_3dfft) echo "$(cufft3d_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_conservative) echo "$(cublas_conservative_env) $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
+    gpu_all) echo "$(cufft_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all_nosync) echo "$(cufft_env) $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all_3dfft) echo "$(cufft3d_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
-    gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
-    gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUBLAS_ACC_SYNC=0" ;;
-    gpu_resident_force_all) echo "CPPAW_GPU_RESIDENCY=1 $(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
+    gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
+    gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;
+    gpu_resident_matmul_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_matmul_conservative_env)" ;;
+    gpu_resident_force_all) echo "CPPAW_GPU_RESIDENCY=1 $(cufft_force_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_resident_off) echo "CPPAW_GPU_RESIDENCY=0 CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
-    gpu_managed|gpu_unified) echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}" ;;
-    gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_managed|gpu_unified) cublas_env ;;
+    gpu_no_cufft) echo "CPPAW_CUFFT_ACC=0 $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_no_cublas) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
-    gpu_no_cusolver) echo "$(cufft_force_env) CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7} CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_no_cusolver) echo "$(cufft_force_env) $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
     gpu_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     *) echo "" ;;
   esac
