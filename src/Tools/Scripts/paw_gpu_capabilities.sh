@@ -79,6 +79,9 @@ cuda_aware_mpi() {
   else
     echo "cuda_aware_mpi=unknown mpirun=${mpirun}"
   fi
+  "${ompi_info}" --parsable --all 2>/dev/null \
+      | grep -Ei 'cuda|gpu|ucx|hcoll' \
+      | sed -n '1,40s/^/mpi_capability=/' || true
 }
 
 root=$(find_nvhpc_root || true)
@@ -113,6 +116,7 @@ yesno_path "cudss" "$(find_lib libcudss.so "${root}" || true)"
 yesno_path "nccl" "$(find_lib libnccl.so "${root}" || true)"
 yesno_path "nvshmem" "$(find_lib libnvshmem_host.so "${root}" || true)"
 cuda_aware_mpi
+echo "cuda_aware_mpi_probe=run src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh"
 
 echo "recommended_gpu_cases=gpu gpu_force_all gpu_3dfft gpu_off"
 echo "recommended_resource_cases=cpu nvpl gpu gpu_off"

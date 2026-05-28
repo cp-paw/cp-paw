@@ -17,8 +17,10 @@ bash -n tests/profile/si64/run_followup.sh
 bash -n tests/profile/si64/run_large_bands.sh
 bash -n tests/profile/si64/run_large_bands_long.sh
 bash -n tests/profile/si64/run_gpu_exploration.sh
+bash -n tests/profile/si64/run_nvhpc_standard.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_overnight.sh
+bash -n src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh
 bash -n src/Tools/Scripts/paw_gpu_capabilities.sh
 
 python3 -m py_compile \

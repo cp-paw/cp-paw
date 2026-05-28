@@ -152,11 +152,13 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `cublas` / `cublas_nosync` / `cublas_invbatch_off` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, with the post-call device synchronization disabled, with inversion scalarproduct batching disabled, or disabled. |
 | `cublas_conservative` | Explicit cuBLAS/OpenACC with a higher diagnostic threshold. |
 | `cublas_projection_conservative` / `cublas_overlap_conservative` / `cublas_addproduct_conservative` / `cublas_matmul_conservative` | Explicit cuBLAS/OpenACC with only one kernel category raised to the conservative threshold. |
-| `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
+| `cusolver` / `cusolver_standard` / `cusolver_generalized` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for all eigensolvers, only standard eigensolvers, only generalized eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
+| `cusolver_generalized_conservative` | cuSOLVER/OpenACC with only generalized eigensolvers enabled at the production threshold. |
 | `gpu` / `gpu_nosync` / `gpu_invbatch_off` | Combined GPU profile, with optional diagnostics that disable the cuBLAS post-call synchronization or inversion scalarproduct batching. |
 | `gpu_projection_conservative` / `gpu_overlap_conservative` / `gpu_addproduct_conservative` / `gpu_matmul_conservative` | Combined GPU diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident` / `gpu_resident_nosync` / `gpu_resident_invbatch_off` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse, with diagnostics for synchronization and inversion batching. |
+| `gpu_resident_no_cusolver` | Residency diagnostic with cuSOLVER disabled in the same residency binary. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
@@ -193,6 +195,19 @@ one-rank CPU references, and eight-rank CPU/NVHPC references. It defaults to
 cd tests/profile/si64
 ./run_followup.sh
 ```
+
+For the current standard NVHPC comparison used before opening follow-up PRs,
+run:
+
+```
+cd tests/profile/si64
+./run_nvhpc_standard.sh
+```
+
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and compares
+one-rank GPU residency, one-rank CPU references and eight-rank CPU/NVHPC
+references. Override `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`,
+`GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 
@@ -278,12 +293,18 @@ To test the explicit cuSOLVER/OpenACC dense eigensolver path, build an
 `nvhpc_cusolver_acc_*` target. The default offload threshold is
 `CPPAW_CUSOLVER_ACC_MIN_N=256`; set it to `1` for the small Si64 profiling
 case, or set `CPPAW_CUSOLVER_ACC=0` to run the same binary with the CPU/NVHPC
-fallback:
+fallback. The global threshold can be split into
+`CPPAW_CUSOLVER_ACC_STANDARD_MIN_N` for `DSYEVD/ZHEEVD` and
+`CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N` for `DSYGVD/ZHEGVD`; exact overrides
+`CPPAW_CUSOLVER_ACC_DSYEVD_MIN_N`, `CPPAW_CUSOLVER_ACC_ZHEEVD_MIN_N`,
+`CPPAW_CUSOLVER_ACC_DSYGVD_MIN_N` and `CPPAW_CUSOLVER_ACC_ZHEGVD_MIN_N` are
+also accepted. Use `cusolver_generalized` to force only the generalized path
+and `cusolver_generalized_conservative` for the threshold-gated variant:
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
 cd tests/profile/si64
-NSTEPS=1 RANKS=1 CASES="nvhpc_cpu cusolver cusolver_off" ./run_benchmark.sh
+NSTEPS=1 RANKS=1 CASES="nvhpc_cpu cusolver cusolver_generalized cusolver_off" ./run_benchmark.sh
 ```
 
 For a more targeted cuSOLVER/LAPACK follow-up on larger band matrices:
@@ -294,8 +315,8 @@ cd tests/profile/si64
 ```
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512"` and compares
-`cusolver`, `cusolver_conservative`, `cusolver_off`, one-rank CPU/NVHPC and
-eight-rank CPU/NVHPC references.
+`cusolver`, `cusolver_generalized`, `cusolver_generalized_conservative`,
+`cusolver_off`, one-rank CPU/NVHPC and eight-rank CPU/NVHPC references.
 
 For reproducible comparisons, use the benchmark harness:
 
@@ -361,3 +382,13 @@ It reports CUDA devices, NVIDIA HPC SDK library presence for cuBLASLt,
 cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM, and a best-effort CUDA-aware MPI
 hint. Those libraries are profiled as future candidates; they are not linked
 into CP-PAW unless a concrete code path uses them.
+
+For an active CUDA-aware MPI smoke test, use:
+
+```
+src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh
+```
+
+It compiles a tiny MPI/OpenACC allreduce probe and passes device pointers to
+MPI. A failure here means GPU-resident MPI communication should stay disabled
+for production runs until the MPI stack is configured appropriately.

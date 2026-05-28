@@ -160,6 +160,12 @@ case_note() {
     *_matmul_conservative)
       echo "cuBLAS diagnostic: raises only the generic MATMUL offload threshold."
       ;;
+    cusolver_standard)
+      echo "cuSOLVER diagnostic: enables only standard DSYEVD/ZHEEVD offload."
+      ;;
+    cusolver_generalized*)
+      echo "cuSOLVER diagnostic: enables only generalized DSYGVD/ZHEGVD offload."
+      ;;
     gpu_all*)
       echo "All-library diagnostic build; includes cuFFTW/NVLAMATH and is not the recommended default."
       ;;
@@ -190,12 +196,42 @@ run_command() {
 cusolver_env() {
   local min_n=$1
   local env_line="CPPAW_CUSOLVER_ACC_MIN_N=${min_n}"
+  if [[ -n "${CPPAW_CUSOLVER_ACC_STANDARD_MIN_N:-}" ]]; then
+    env_line="${env_line} CPPAW_CUSOLVER_ACC_STANDARD_MIN_N=${CPPAW_CUSOLVER_ACC_STANDARD_MIN_N}"
+  fi
+  if [[ -n "${CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N:-}" ]]; then
+    env_line="${env_line} CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N=${CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N}"
+  fi
   if [[ -n "${CPPAW_CUSOLVER_ACC_CHECK:-}" ]]; then
     env_line="${env_line} CPPAW_CUSOLVER_ACC_CHECK=${CPPAW_CUSOLVER_ACC_CHECK}"
   fi
   if [[ -n "${CPPAW_CUSOLVER_ACC_CHECK_TOL:-}" ]]; then
     env_line="${env_line} CPPAW_CUSOLVER_ACC_CHECK_TOL=${CPPAW_CUSOLVER_ACC_CHECK_TOL}"
   fi
+  echo "${env_line}"
+}
+
+cusolver_standard_env() {
+  local env_line
+  env_line=$(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_STANDARD_MIN_N=${CPPAW_CUSOLVER_STANDARD_FORCE_MIN_N:-1}"
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N=${CPPAW_CUSOLVER_GENERALIZED_OFF_MIN_N:-1000000000}"
+  echo "${env_line}"
+}
+
+cusolver_generalized_env() {
+  local env_line
+  env_line=$(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_STANDARD_MIN_N=${CPPAW_CUSOLVER_STANDARD_OFF_MIN_N:-1000000000}"
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N=${CPPAW_CUSOLVER_GENERALIZED_FORCE_MIN_N:-1}"
+  echo "${env_line}"
+}
+
+cusolver_generalized_conservative_env() {
+  local env_line
+  env_line=$(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_STANDARD_MIN_N=${CPPAW_CUSOLVER_STANDARD_OFF_MIN_N:-1000000000}"
+  env_line="${env_line} CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N=${CPPAW_CUSOLVER_GENERALIZED_CONSERVATIVE_MIN_N:-256}"
   echo "${env_line}"
 }
 
@@ -256,6 +292,9 @@ case_env() {
     cublas_matmul_conservative) cublas_matmul_conservative_env ;;
     cublas_off) echo "CPPAW_CUBLAS_ACC=0" ;;
     cusolver) cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}" ;;
+    cusolver_standard) cusolver_standard_env ;;
+    cusolver_generalized) cusolver_generalized_env ;;
+    cusolver_generalized_conservative) cusolver_generalized_conservative_env ;;
     cusolver_conservative) cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}" ;;
     cusolver_off) echo "CPPAW_CUSOLVER_ACC=0" ;;
     cufft) cufft_env ;;
@@ -279,6 +318,7 @@ case_env() {
     gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
+    gpu_resident_no_cusolver) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;
