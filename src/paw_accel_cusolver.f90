@@ -27,6 +27,12 @@
       LOGICAL(4)             :: ENABLED=.TRUE.
       LOGICAL(4)             :: CHECK_ENABLED=.FALSE.
       INTEGER(4)             :: MIN_N=256
+      INTEGER(4)             :: MIN_N_STANDARD=256
+      INTEGER(4)             :: MIN_N_GENERALIZED=256
+      INTEGER(4)             :: MIN_N_DSYEVD=256
+      INTEGER(4)             :: MIN_N_ZHEEVD=256
+      INTEGER(4)             :: MIN_N_DSYGVD=256
+      INTEGER(4)             :: MIN_N_ZHEGVD=256
       REAL(8)                :: CHECK_TOL=1.D-7
       CONTAINS
 !
@@ -66,6 +72,24 @@
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_PROFILE_TIME
 #ENDIF
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUSOLVER_ACC_READ_INT_ENV(NAME,VALUE)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: NAME
+      INTEGER(4) ,INTENT(INOUT) :: VALUE
+      CHARACTER(128)            :: TEXT
+      INTEGER(4)                :: STATUS
+      INTEGER(4)                :: IOS
+      INTEGER(4)                :: TMP
+!     **************************************************************************
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,TEXT,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        READ(TEXT,*,IOSTAT=IOS) TMP
+        IF(IOS.EQ.0) VALUE=MAX(1,TMP)
+      END IF
+      RETURN
+      END SUBROUTINE CPPAW_CUSOLVER_ACC_READ_INT_ENV
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUSOLVER_ACC_INITCONFIG
@@ -123,6 +147,36 @@
         IF(IOS.NE.0) MIN_N=256
         MIN_N=MAX(1,MIN_N)
       END IF
+      MIN_N_STANDARD=MIN_N
+      MIN_N_GENERALIZED=MIN_N
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_STANDARD_MIN_N',MIN_N_STANDARD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_STANDARD_MIN_N',MIN_N_STANDARD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N',MIN_N_GENERALIZED)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_GENERALIZED_MIN_N',MIN_N_GENERALIZED)
+      MIN_N_DSYEVD=MIN_N_STANDARD
+      MIN_N_ZHEEVD=MIN_N_STANDARD
+      MIN_N_DSYGVD=MIN_N_GENERALIZED
+      MIN_N_ZHEGVD=MIN_N_GENERALIZED
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_DSYEVD_MIN_N',MIN_N_DSYEVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_DSYEVD_MIN_N',MIN_N_DSYEVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_ZHEEVD_MIN_N',MIN_N_ZHEEVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ZHEEVD_MIN_N',MIN_N_ZHEEVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_DSYGVD_MIN_N',MIN_N_DSYGVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_DSYGVD_MIN_N',MIN_N_DSYGVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ACC_ZHEGVD_MIN_N',MIN_N_ZHEGVD)
+      CALL CPPAW_CUSOLVER_ACC_READ_INT_ENV &
+     &     ('CPPAW_CUSOLVER_ZHEGVD_MIN_N',MIN_N_ZHEGVD)
       RETURN
       END SUBROUTINE CPPAW_CUSOLVER_ACC_INITCONFIG
 !
@@ -135,6 +189,50 @@
       CPPAW_CUSOLVER_ACC_SHOULD_USE=ENABLED.AND.(N.GE.MIN_N)
       RETURN
       END FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYEVD(N)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYEVD=ENABLED &
+     &                                    .AND.(N.GE.MIN_N_DSYEVD)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYEVD
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEEVD(N)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEEVD=ENABLED &
+     &                                    .AND.(N.GE.MIN_N_ZHEEVD)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEEVD
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYGVD(N)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYGVD=ENABLED &
+     &                                    .AND.(N.GE.MIN_N_DSYGVD)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYGVD
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEGVD(N)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N
+!     **************************************************************************
+      CALL CPPAW_CUSOLVER_ACC_INITCONFIG
+      CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEGVD=ENABLED &
+     &                                    .AND.(N.GE.MIN_N_ZHEGVD)
+      RETURN
+      END FUNCTION CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEGVD
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUSOLVER_ACC_ENSURE
@@ -352,7 +450,7 @@
       USED=.FALSE.
       INFO=0
       IF(N.LE.0) RETURN
-      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
+      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYEVD(N)) RETURN
       U=0.5D0*(H+TRANSPOSE(H))
       CALL CPPAW_CUSOLVER_ACC_ENSURE
       LWORK=0
@@ -422,7 +520,7 @@
       USED=.FALSE.
       INFO=0
       IF(N.LE.0) RETURN
-      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
+      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEEVD(N)) RETURN
       U=0.5D0*(H+TRANSPOSE(CONJG(H)))
       CALL CPPAW_CUSOLVER_ACC_ENSURE
       LWORK=0
@@ -494,7 +592,7 @@
       USED=.FALSE.
       INFO=0
       IF(N.LE.0) RETURN
-      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
+      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE_DSYGVD(N)) RETURN
       U=H
       B=S
       CALL CPPAW_CUSOLVER_ACC_ENSURE
@@ -570,7 +668,7 @@
       USED=.FALSE.
       INFO=0
       IF(N.LE.0) RETURN
-      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE(N)) RETURN
+      IF(.NOT.CPPAW_CUSOLVER_ACC_SHOULD_USE_ZHEGVD(N)) RETURN
       IF(SYM) THEN
         VEC=0.5D0*(H+TRANSPOSE(CONJG(H)))
       ELSE

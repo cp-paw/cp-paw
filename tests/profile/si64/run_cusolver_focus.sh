@@ -10,7 +10,7 @@ TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-"128 256 512"}
 GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
-CUSOLVER_CASES=${CUSOLVER_CASES:-"cusolver cusolver_conservative cusolver_off"}
+CUSOLVER_CASES=${CUSOLVER_CASES:-"cusolver cusolver_generalized cusolver_generalized_conservative cusolver_off"}
 CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
 
 mkdir -p "${CUSOLVER_FOCUS_ROOT}"

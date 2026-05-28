@@ -2402,10 +2402,11 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8)  ,INTENT(IN)   :: F2(NGL,NDIM,N2)
       COMPLEX(8)  ,INTENT(OUT)  :: MAT(N1,N2)
       INTEGER(4)                :: NGAMMA
-      INTEGER(4)                :: I1,I2,IDIM
+      INTEGER(4)                :: I1,I2,IDIM,IG
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       COMPLEX(8)  ,ALLOCATABLE  :: F2MB(:,:,:)
+      INTEGER(4)  ,POINTER      :: MINUSGACC(:)
       LOGICAL(4)                :: TUSEINVBATCH
       REAL(8)                   :: INVBATCHFLOPS
 #ENDIF
@@ -2427,14 +2428,23 @@ END MODULE PLANEWAVE_MODULE
      &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(INVBATCHFLOPS)
         IF(TUSEINVBATCH) THEN
           ALLOCATE(F2MB(NGL,NDIM,N2))
+          MINUSGACC=>THIS%MINUSG
 !         == SUM_G F1(-G) F2(G) =CONJG(SUM_G F1(G)^* F2(-G)^*) ==========
+!$ACC DATA PRESENT_OR_COPYIN(F2(1:NGL,1:NDIM,1:N2) &
+!$ACC&                       ,MINUSGACC(1:NGL)) &
+!$ACC& CREATE(F2MB(1:NGL,1:NDIM,1:N2))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(F2,F2MB,MINUSGACC)
           DO I2=1,N2
             DO IDIM=1,NDIM
 !             __F2MB(G)=F2(-G)^*_________________________________________
-              CALL PLANEWAVE$INVERTG(NGL,F2(1,IDIM,I2),F2MB(1,IDIM,I2))
+              DO IG=1,NGL
+                F2MB(IG,IDIM,I2)=CONJG(F2(MINUSGACC(IG),IDIM,I2))
+              ENDDO
             ENDDO
           ENDDO
+!$ACC END PARALLEL LOOP
           CALL LIB$SCALARPRODUCTC8(.FALSE.,NGL*NDIM,N1,F1,N2,F2MB,MAT)
+!$ACC END DATA
           DO I1=1,N1
             DO I2=1,N2
               MAT(I1,I2)=CONJG(MAT(I1,I2))
@@ -2501,6 +2511,11 @@ END MODULE PLANEWAVE_MODULE
 !     **                                                              **
 !     ******************************************************************
       USE PLANEWAVE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &     CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED &
+     &    ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT
+#ENDIF
       IMPLICIT NONE 
       CHARACTER(*),INTENT(IN)   :: ID    ! ' ','=','-'
       INTEGER(4)  ,INTENT(IN)   :: NDIM
@@ -2510,8 +2525,13 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8)  ,INTENT(INOUT):: F1(NGL,NDIM,N1)
       COMPLEX(8)  ,INTENT(IN)   :: F2(NGL,NDIM,N2)
       COMPLEX(8)  ,INTENT(IN)   :: MAT(N2,N1)
-      INTEGER(4)                :: I2,IDIM
+      INTEGER(4)                :: I2,IDIM,IG
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:,:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      INTEGER(4)  ,POINTER      :: MINUSGACC(:)
+      LOGICAL(4)                :: TUSEACCINVERT
+      REAL(8)                   :: INVBATCHFLOPS
+#ENDIF
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
 !     ******************************************************************
                              CALL TIMING$CLOCKON('PLANEWAVE$ADDPRODUCT')
@@ -2537,12 +2557,38 @@ END MODULE PLANEWAVE_MODULE
           CALL ERROR$MSG('AND NOT FOR SUPER WAVE FUNCTIONS')
         END IF
         ALLOCATE(F2M(NGL,NDIM,N2))
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        INVBATCHFLOPS=8.D0*REAL(NGL*NDIM,KIND=8) &
+     &                     *REAL(N1,KIND=8)*REAL(N2,KIND=8)
+        TUSEACCINVERT=CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED() &
+     &      .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(INVBATCHFLOPS)
+        IF(TUSEACCINVERT) THEN
+          MINUSGACC=>THIS%MINUSG
+!$ACC DATA PRESENT_OR_COPYIN(F2(1:NGL,1:NDIM,1:N2) &
+!$ACC&                       ,MINUSGACC(1:NGL)) &
+!$ACC& CREATE(F2M(1:NGL,1:NDIM,1:N2))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(F2,F2M,MINUSGACC)
+          DO I2=1,N2
+            DO IDIM=1,NDIM
+              DO IG=1,NGL
+                F2M(IG,IDIM,I2)=CONJG(F2(MINUSGACC(IG),IDIM,I2))
+              ENDDO
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+          CALL LIB$ADDPRODUCTC8(.FALSE.,NGL*NDIM,N2,N1,F2M,MAT,F1)
+!$ACC END DATA
+        ELSE
+#ENDIF
         DO I2=1,N2
           DO IDIM=1,NDIM
             CALL PLANEWAVE$INVERTG(NGL,F2(1,IDIM,I2),F2M(1,IDIM,I2))
           ENDDO
         ENDDO
         CALL LIB$ADDPRODUCTC8(.FALSE.,NGL*NDIM,N2,N1,F2M,MAT,F1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
         DEALLOCATE(F2M)
       END IF
                             CALL TIMING$CLOCKOFF('PLANEWAVE$ADDPRODUCT')
