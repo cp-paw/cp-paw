@@ -26,6 +26,7 @@
       LOGICAL(4)         :: ENABLED=.TRUE.
       LOGICAL(4)         :: SYNC_ENABLED=.TRUE.
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
+      LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
       REAL(8)            :: MINFLOP_PROJECTION=1.D7
@@ -139,6 +140,19 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_INVERSION_BATCH' &
+     &                             ,VALUE,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            INVERSION_BATCH_ENABLED=.FALSE.
+          CASE DEFAULT
+            INVERSION_BATCH_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_INITCONFIG
 !
@@ -204,6 +218,16 @@
       CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED=ENABLED.AND.RESIDENCY_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED=ENABLED &
+     &                                      .AND.INVERSION_BATCH_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(ACTIVE)

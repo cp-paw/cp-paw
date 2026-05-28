@@ -94,8 +94,10 @@ final projection array back once. The orthogonalization overlap section keeps
 `PSIM`/`OPSI` resident across the projection and pseudo-overlap calls, and the
 same mode routes eligible non-superwave `WAVES_OVERLAP` scalarproducts through a
 present-input cuBLAS wrapper; for inversion-symmetric superwave overlaps it also
-keeps the `<PSI_+|PSI_+>` part on the same present-input path and leaves the
-`<PSI_-|PSI_+>` inversion pass on the existing CPU/generic route. It also lets
+keeps the `<PSI_+|PSI_+>` part on the same present-input path and batches the
+`<PSI_-|PSI_+>` inversion pass into one larger scalarproduct when the cuBLAS
+overlap threshold allows it. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
+the older per-column inversion scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
 `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
 for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
@@ -147,18 +149,18 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `nvlamath` | NVIDIA HPC SDK NVLAMATH LAPACK/cuSOLVER wrapper path. |
 | `cufftw` | cuFFTW wrapper for CP-PAW's existing FFTW3 calls. |
 | `cufft` / `cufft_force_all` / `cufft_off` | Native cuFFT enabled with the conservative size threshold, forced for all FFTs, or disabled in the same binary. |
-| `cublas` / `cublas_nosync` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, with the post-call device synchronization disabled for diagnostics, or disabled. |
+| `cublas` / `cublas_nosync` / `cublas_invbatch_off` / `cublas_off` | Explicit cuBLAS/OpenACC path with the default threshold, with the post-call device synchronization disabled, with inversion scalarproduct batching disabled, or disabled. |
 | `cublas_conservative` | Explicit cuBLAS/OpenACC with a higher diagnostic threshold. |
 | `cublas_projection_conservative` / `cublas_overlap_conservative` / `cublas_addproduct_conservative` / `cublas_matmul_conservative` | Explicit cuBLAS/OpenACC with only one kernel category raised to the conservative threshold. |
 | `cusolver` / `cusolver_off` | Explicit cuSOLVER/OpenACC forced for small eigensolvers, or disabled. |
 | `cusolver_conservative` | cuSOLVER/OpenACC with the production default size threshold. |
-| `gpu` / `gpu_nosync` | Combined GPU profile, with an optional diagnostic mode that disables the cuBLAS post-call synchronization. |
+| `gpu` / `gpu_nosync` / `gpu_invbatch_off` | Combined GPU profile, with optional diagnostics that disable the cuBLAS post-call synchronization or inversion scalarproduct batching. |
 | `gpu_projection_conservative` / `gpu_overlap_conservative` / `gpu_addproduct_conservative` / `gpu_matmul_conservative` | Combined GPU diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
-| `gpu_resident` / `gpu_resident_nosync` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse. |
+| `gpu_resident` / `gpu_resident_nosync` / `gpu_resident_invbatch_off` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse, with diagnostics for synchronization and inversion batching. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
-| `gpu_all` / `gpu_all_nosync` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time; cuFFT uses the conservative threshold by default. |
+| `gpu_all` / `gpu_all_nosync` / `gpu_all_invbatch_off` | All-library GPU diagnostic build with cuFFTW/NVLAMATH linked and native cuFFT/cuBLAS/cuSOLVER enabled at run time; cuFFT uses the conservative threshold by default, and inversion scalarproduct batching can be disabled for comparison. |
 | `gpu_all_3dfft` | All-library diagnostic build with the opt-in native cuFFT 3-D wrapper enabled as well, also threshold-gated by default. |
 | `gpu_all_off` | Same all-library binary with native cuFFT/cuBLAS/cuSOLVER disabled; cuFFTW/NVLAMATH remain compiled in. |
 | `gpu_force_all` | Diagnostic combined profile that forces cuFFT, cuBLAS and small cuSOLVER offload. |
@@ -250,6 +252,9 @@ be overridden by kernel category:
   scalar products
 - `CPPAW_CUBLAS_ACC_ADDPRODUCT_MINFLOP`: additive projector/product updates
 - `CPPAW_CUBLAS_ACC_MATMUL_MINFLOP`: generic library `MATMUL` replacements
+- `CPPAW_CUBLAS_ACC_INVERSION_BATCH`: keep enabled by default to turn
+  inversion-symmetry scalarproducts from many per-column cuBLAS calls into one
+  batched scalarproduct; set to `0` for the previous path.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,

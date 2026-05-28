@@ -2387,6 +2387,11 @@ END MODULE PLANEWAVE_MODULE
 !     **                                                                      **
 !     **************************************************************************
       USE PLANEWAVE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &     CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED &
+     &    ,CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP
+#ENDIF
       IMPLICIT NONE 
       CHARACTER(*),INTENT(IN)   :: ID    ! ' ','=','-'
       INTEGER(4)  ,INTENT(IN)   :: NDIM
@@ -2399,6 +2404,11 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                :: NGAMMA
       INTEGER(4)                :: I1,I2,IDIM
       COMPLEX(8)  ,ALLOCATABLE  :: F2M(:,:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      COMPLEX(8)  ,ALLOCATABLE  :: F2MB(:,:,:)
+      LOGICAL(4)                :: TUSEINVBATCH
+      REAL(8)                   :: INVBATCHFLOPS
+#ENDIF
       LOGICAL(4)  ,PARAMETER    :: TESSL=.TRUE.
 !     **************************************************************************
                           CALL TIMING$CLOCKON('PLANEWAVE$SCALARPRODUCT')
@@ -2410,6 +2420,29 @@ END MODULE PLANEWAVE_MODULE
           CALL ERROR$MSG('AND NOT FOR SUPER WAVE FUNCTIONS')
           CALL ERROR$STOP('PLANEWAVE$SCALARPRODUCT')
         END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        INVBATCHFLOPS=8.D0*REAL(NGL*NDIM,KIND=8) &
+     &                     *REAL(N1,KIND=8)*REAL(N2,KIND=8)
+        TUSEINVBATCH=CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED() &
+     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(INVBATCHFLOPS)
+        IF(TUSEINVBATCH) THEN
+          ALLOCATE(F2MB(NGL,NDIM,N2))
+!         == SUM_G F1(-G) F2(G) =CONJG(SUM_G F1(G)^* F2(-G)^*) ==========
+          DO I2=1,N2
+            DO IDIM=1,NDIM
+!             __F2MB(G)=F2(-G)^*_________________________________________
+              CALL PLANEWAVE$INVERTG(NGL,F2(1,IDIM,I2),F2MB(1,IDIM,I2))
+            ENDDO
+          ENDDO
+          CALL LIB$SCALARPRODUCTC8(.FALSE.,NGL*NDIM,N1,F1,N2,F2MB,MAT)
+          DO I1=1,N1
+            DO I2=1,N2
+              MAT(I1,I2)=CONJG(MAT(I1,I2))
+            ENDDO
+          ENDDO
+          DEALLOCATE(F2MB)
+        ELSE
+#ENDIF
         ALLOCATE(F2M(NGL,NDIM))
 !       == SUM_G F1(-G) F2(G) =CONJG(SUM_G F1(G)^* F2(-G)^*) ============
         DO I2=1,N2
@@ -2425,6 +2458,9 @@ END MODULE PLANEWAVE_MODULE
           ENDDO
         ENDDO
         DEALLOCATE(F2M)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
       END IF
 !
 !     ==================================================================

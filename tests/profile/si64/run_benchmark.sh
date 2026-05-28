@@ -145,6 +145,9 @@ case_note() {
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
       ;;
+    *_invbatch_off)
+      echo "cuBLAS diagnostic that disables batched inversion-symmetry scalarproducts."
+      ;;
     *_projection_conservative)
       echo "cuBLAS diagnostic: raises only the projection GEMM offload threshold."
       ;;
@@ -245,6 +248,7 @@ case_env() {
   case "$1" in
     cublas) cublas_env ;;
     cublas_nosync) echo "$(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    cublas_invbatch_off) echo "$(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     cublas_conservative) cublas_conservative_env ;;
     cublas_projection_conservative) cublas_projection_conservative_env ;;
     cublas_overlap_conservative) cublas_overlap_conservative_env ;;
@@ -259,6 +263,7 @@ case_env() {
     cufft_off) echo "CPPAW_CUFFT_ACC=0" ;;
     gpu) cublas_env ;;
     gpu_nosync) echo "$(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    gpu_invbatch_off) echo "$(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     gpu_projection_conservative) cublas_projection_conservative_env ;;
     gpu_overlap_conservative) cublas_overlap_conservative_env ;;
     gpu_addproduct_conservative) cublas_addproduct_conservative_env ;;
@@ -268,10 +273,12 @@ case_env() {
     gpu_conservative) echo "$(cublas_conservative_env) $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
     gpu_all) echo "$(cufft_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_nosync) echo "$(cufft_env) $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
+    gpu_all_invbatch_off) echo "$(cufft_env) $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0 $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_3dfft) echo "$(cufft3d_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_all_off) echo "CPPAW_CUFFT_ACC=0 CPPAW_CUBLAS_ACC=0 CPPAW_CUSOLVER_ACC=0" ;;
     gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
+    gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;
