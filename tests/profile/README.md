@@ -132,7 +132,11 @@ overhead in this configuration.
 
 The `cpu` case uses the plain GNU/OpenBLAS/FFTW build (`profile` or
 `profile_parallel`) as a pre-HPC-SDK reference. For MPI runs it defaults to the
-system or `cppaw-gccmpi` `mpirun`; set `CPU_MPIRUN=...` to override it. Benchmark runs pin common
+system or `cppaw-gccmpi` `mpirun`; for parallel CPU runs, the harness first
+tries to derive the matching MPI launcher and `LD_LIBRARY_PATH` entry from the
+selected executable's resolved `libmpi`. Set `CPU_MPIRUN=...` or
+`CPU_MPI_LIBDIR=...` to override either value on unusual installations.
+Benchmark runs pin common
 CPU threading variables to one thread by default (`OMP_NUM_THREADS`,
 `OPENBLAS_NUM_THREADS`, `MKL_NUM_THREADS`, `BLIS_NUM_THREADS`,
 `VECLIB_MAXIMUM_THREADS`, `NVPL_NUM_THREADS`) and record those settings plus

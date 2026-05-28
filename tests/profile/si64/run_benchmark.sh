@@ -83,12 +83,75 @@ system_mpirun() {
   command -v mpirun 2>/dev/null || echo mpirun
 }
 
+CPU_MPIRUN_USER_SET=${CPU_MPIRUN+x}
+CPU_MPI_LIBDIR_USER_SET=${CPU_MPI_LIBDIR+x}
 CPU_MPIRUN=${CPU_MPIRUN:-$(system_mpirun)}
 MPIRUN=${MPIRUN:-$(default_mpirun)}
 
+mpirun_libdir() {
+  local mpirun=$1
+  local libdir
+  if [[ "${mpirun}" = */bin/mpirun ]]; then
+    libdir=$(cd "$(dirname "${mpirun}")/../lib" 2>/dev/null && pwd || true)
+    if [[ -n "${libdir}" && -d "${libdir}" ]]; then
+      echo "${libdir}"
+    fi
+  fi
+}
+
+CPU_MPI_LIBDIR=${CPU_MPI_LIBDIR:-$(mpirun_libdir "${CPU_MPIRUN}")}
+
+exe_mpi_libdir() {
+  local exe=$1
+  local mpi_lib
+  [[ -x "${exe}" ]] || return 0
+  mpi_lib=$(ldd "${exe}" 2>/dev/null | awk '/libmpi[.]so/ { print $3; exit }')
+  if [[ -n "${mpi_lib}" && -f "${mpi_lib}" ]]; then
+    dirname "${mpi_lib}"
+  fi
+}
+
+mpirun_from_libdir() {
+  local libdir=$1
+  local fallback=$2
+  local prefix candidate
+  if [[ -n "${libdir}" ]]; then
+    prefix=${libdir%/lib}
+    for candidate in \
+        "${prefix}/bin/mpirun" \
+        "${prefix}/ompi/bin/mpirun"; do
+      if [[ -x "${candidate}" ]]; then
+        echo "${candidate}"
+        return 0
+      fi
+    done
+  fi
+  echo "${fallback}"
+}
+
+cpu_mpi_libdir_for_exe() {
+  local exe=$1
+  if [[ -n "${CPU_MPI_LIBDIR_USER_SET}" || -n "${CPU_MPIRUN_USER_SET}" ]]; then
+    echo "${CPU_MPI_LIBDIR}"
+    return 0
+  fi
+  exe_mpi_libdir "${exe}"
+}
+
+cpu_mpirun_for_exe() {
+  local exe=$1
+  local libdir
+  if [[ -n "${CPU_MPIRUN_USER_SET}" ]]; then
+    echo "${CPU_MPIRUN}"
+    return 0
+  fi
+  libdir=$(cpu_mpi_libdir_for_exe "${exe}")
+  mpirun_from_libdir "${libdir}" "${CPU_MPIRUN}"
+}
+
 case_mpirun() {
   case "$1" in
-    cpu) echo "${CPU_MPIRUN}" ;;
+    cpu) cpu_mpirun_for_exe "${2:-}" ;;
     *) echo "${MPIRUN}" ;;
   esac
 }
@@ -180,7 +243,7 @@ run_command() {
   local exe=$2
   local cmd mpi_run
   if [[ "${RANKS}" -gt 1 ]]; then
-    mpi_run=$(case_mpirun "${case_name}")
+    mpi_run=$(case_mpirun "${case_name}" "${exe}")
     # shellcheck disable=SC2086
     cmd="${mpi_run} ${MPI_ARGS} -np ${RANKS} ${exe} ${TEST}.cntl"
   else
@@ -334,6 +397,31 @@ case_env() {
   esac
 }
 
+case_runtime_env() {
+  local case_name=$1
+  local exe=${2:-}
+  local libdir
+  case "${case_name}" in
+    cpu)
+      libdir=$(cpu_mpi_libdir_for_exe "${exe}")
+      if [[ "${RANKS}" -gt 1 && -n "${libdir}" ]]; then
+        echo "LD_LIBRARY_PATH=${libdir}${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+      fi
+      ;;
+    *) echo "" ;;
+  esac
+}
+
+combined_env() {
+  local env_line=""
+  local part
+  for part in "$@"; do
+    [[ -n "${part}" ]] || continue
+    env_line="${env_line:+${env_line} }${part}"
+  done
+  echo "${env_line}"
+}
+
 iso_now() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
@@ -375,10 +463,19 @@ capture_metadata() {
       exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
       echo "case=${case_name}"
       echo "exe=${exe}"
+      if [[ "${RANKS}" -gt 1 ]]; then
+        echo "mpirun=$(case_mpirun "${case_name}" "${exe}")"
+      fi
       note=$(case_note "${case_name}")
       [[ -n "${note}" ]] && echo "note=${note}"
       if [[ -x "${exe}" ]]; then
-        ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas" || true
+        runtime_env=$(case_runtime_env "${case_name}" "${exe}")
+        if [[ -n "${runtime_env}" ]]; then
+          # shellcheck disable=SC2086
+          env ${runtime_env} ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas|libmpi" || true
+        else
+          ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas|libmpi" || true
+        fi
       else
         echo "missing"
       fi
@@ -402,7 +499,7 @@ for case_name in ${CASES}; do
     prepare_case "${run_dir}"
     (
       cd "${run_dir}"
-      env_line=$(case_env "${case_name}")
+      env_line=$(combined_env "$(case_runtime_env "${case_name}" "${exe}")" "$(case_env "${case_name}")")
       {
         echo "case=${case_name}"
         echo "repeat=${repeat}"
