@@ -68,6 +68,18 @@ default_mpirun() {
 }
 
 system_mpirun() {
+  local candidate
+  for candidate in \
+      "${CONDA_PREFIX:-}/bin/mpirun" \
+      "${MAMBA_ROOT_PREFIX:-}/envs/cppaw-gccmpi/bin/mpirun" \
+      "${HOME:-}/micromamba/envs/cppaw-gccmpi/bin/mpirun" \
+      /usr/bin/mpirun \
+      /usr/local/bin/mpirun; do
+    if [[ -x "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
   command -v mpirun 2>/dev/null || echo mpirun
 }
 
