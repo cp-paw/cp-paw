@@ -10,6 +10,10 @@ def category(op):
         return "ACC copy est"
     if op.startswith("ACC_SETUP"):
         return "ACC setup"
+    if op.startswith("PW_") and not op.startswith("PW_FFT"):
+        if "MPE_TRANSPOSE" in op:
+            return "PW MPI envelope"
+        return "PW local trace"
     if op.startswith("MPI_ALLTOALL"):
         return "MPI alltoall"
     if op.startswith("FFT") or op.startswith("PW_FFT") or op.startswith("CUFFT"):
@@ -66,6 +70,11 @@ def main(argv):
     primary_total = sum(
         data["seconds"] for op, data in per_op.items()
         if not op.startswith("ACC_")
+        and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
+    )
+    trace_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("PW_") and not op.startswith("PW_FFT")
     )
     setup_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -78,6 +87,8 @@ def main(argv):
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
+    if trace_total:
+        print("Diagnostic PW trace rank-seconds: {:.6f}".format(trace_total))
     if setup_total or copy_gbyte:
         print(
             "Accelerator setup seconds: {:.6f}  copy estimate: {:.6f} GB".format(

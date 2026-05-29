@@ -2008,6 +2008,23 @@ END MODULE PLANEWAVE_MODULE
       RETURN
       END      
 !
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+!     ..................................................................
+      SUBROUTINE PLANEWAVE_PROFILE_PHASE(NAME,N1,N2,N3,N4,BYTES,T0)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(IN) :: N1,N2,N3,N4
+      REAL(8)     ,INTENT(IN) :: BYTES
+      REAL(8)     ,INTENT(IN) :: T0
+      REAL(8)                 :: T1
+!     ******************************************************************
+      CALL ACCELPROFILE$NOW(T1)
+      CALL ACCELPROFILE$ADD(NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     & ,INT(N3,KIND=8),INT(N4,KIND=8),0.D0,BYTES,T1-T0)
+      RETURN
+      END
+#ENDIF
+!
 !     ..................................................................
       SUBROUTINE PLANEWAVE_FFTGTOR(CID,NTASKS_,NGL,NRL,NR1,NR2,NR3 &
      &           ,NSTRIPELX,NSTRIPELARR,NR1LARR,IGTOSTRIPE,ISTRIPETOYZ &
@@ -2048,7 +2065,9 @@ END MODULE PLANEWAVE_MODULE
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                   :: ACCEL_T0
       REAL(8)                   :: ACCEL_T1
+      REAL(8)                   :: ACCEL_PHASE0
       REAL(8)                   :: ACCEL_GRID
+      REAL(8)                   :: ACCEL_BYTES
 #ENDIF
 !     ******************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -2070,11 +2089,20 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == MAP TO STRIPES                                               ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(FOFG1(NR1*NSTRIPEL))
       FOFG1(:)=(0.D0,0.D0)
       DO IG=1,NGL
         FOFG1(IGTOSTRIPE(IG))=FOFG(IG)
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NR1,KIND=8)*REAL(NSTRIPEL,KIND=8) &
+     &           +32.D0*REAL(NGL,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_MAP_G',NR1,NSTRIPEL,NGL &
+     & ,NTASKS,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == TRANSFORM 1 ST DIMENSION (NR1)    FOFG(NR1,NSTRIPE)          ==
@@ -2084,6 +2112,9 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == COMMUNICATE AMONG TASKS                                      ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(UIU(NR1LX,NSTRIPELX,NTASKS))
       UIU(:,:,:)=CMPLX(0.D0,0.D0,8)
 !
@@ -2097,9 +2128,28 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(FOFG1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NR1LX,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8) &
+     &           +32.D0*REAL(NR1,KIND=8)*REAL(NSTRIPEL,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_PACK_MPI',NR1LX,NSTRIPELX &
+     & ,NTASKS,NSTRIPEL,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       CALL MPE$TRANSPOSE(CID,UIU)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NR1LX,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_MPE_TRANSPOSE',NR1LX &
+     & ,NSTRIPELX,NTASKS,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       FOFR(:)=CMPLX(0.D0,0.D0,8)
       IMID=NR3/2
       NR3END1=1
@@ -2124,6 +2174,13 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(UIU)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NRL,KIND=8) &
+     &           +32.D0*REAL(NR1L,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_UNPACK_R',NR1L,NSTRIPELX &
+     & ,NTASKS,NRL,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == FFT 2ND DIMENSION (NR2):      FOFR(NR2,NR3,NR1L)             ==
@@ -2142,6 +2199,9 @@ END MODULE PLANEWAVE_MODULE
 !     == TRANSPOSE TO OPTIMIZE STRIDE                                 ==
 !     == FOFR1(IR3,IR2,IR1L)=FOFR(IR2,IR3,IR1L)                       ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(FOFR1(NR3*NR2*NR1L))
       DO IR1L=1,NR1L
         DO IR2=1,NR2
@@ -2156,6 +2216,12 @@ END MODULE PLANEWAVE_MODULE
           ENDDO
         ENDDO
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NR3,KIND=8)*REAL(NR2,KIND=8) &
+     &           *REAL(NR1L,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_TRANSPOSE_23',NR3,NR2 &
+     & ,NR1L,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == FFT 3RD DIMENSION (NR3)                                      ==
@@ -2166,6 +2232,9 @@ END MODULE PLANEWAVE_MODULE
 !     == TRANSPOSE TO OPTIMIZE STRIDE                                 ==
 !     == FOFR(IR1,IR2,IR3)=FOFR(IR2,IR3,IR1)                         ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       STRIDE2=NR1L*NR2
       DO IR1L=1,NR1L
         DO IR2=1,NR2
@@ -2181,6 +2250,12 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(FOFR1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NR3,KIND=8)*REAL(NR2,KIND=8) &
+     &           *REAL(NR1L,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_GTOR_TRANSPOSE_OUT',NR3,NR2 &
+     & ,NR1L,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       ACCEL_GRID=REAL(NR1,KIND=8)*REAL(NR2,KIND=8)*REAL(NR3,KIND=8)
@@ -2233,7 +2308,9 @@ END MODULE PLANEWAVE_MODULE
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                   :: ACCEL_T0
       REAL(8)                   :: ACCEL_T1
+      REAL(8)                   :: ACCEL_PHASE0
       REAL(8)                   :: ACCEL_GRID
+      REAL(8)                   :: ACCEL_BYTES
 #ENDIF
 !     ******************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -2251,6 +2328,9 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == TRANSPOSE TO OPTIMIZE STRIDE                                 ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(FOFR1(NR3*NR2*NR1L))
       DO IR1L=1,NR1L
         DO IR2=1,NR2
@@ -2261,6 +2341,12 @@ END MODULE PLANEWAVE_MODULE
           ENDDO
         ENDDO
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NR3,KIND=8)*REAL(NR2,KIND=8) &
+     &           *REAL(NR1L,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_TRANSPOSE_IN',NR3,NR2 &
+     & ,NR1L,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == TRANSFORM 3 DIMENSION (NR3)                                  ==
@@ -2289,6 +2375,9 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == TRANSPOSE TO OPTIMIZE STRIDE                                 ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(FOFR2(NR2*NR3*NR1L))
       FOFR2=CMPLX(0.D0,0.D0,8)
       DO IR1L=1,NR1L
@@ -2306,6 +2395,15 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(FOFR1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NR2,KIND=8)*REAL(NR3,KIND=8) &
+     &           *REAL(NR1L,KIND=8) &
+     &           +32.D0*REAL(NR2,KIND=8) &
+     &           *REAL(NR3END1+NR3-NR3END2+1,KIND=8) &
+     &           *REAL(NR1L,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_TRANSPOSE_32',NR2,NR3 &
+     & ,NR1L,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == TRANSFORM 2ND DIMENSION (NR2)                                ==
@@ -2323,6 +2421,9 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == COMMUNICATE AMONG TASKS                                      ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(UIU(NR1LX,NSTRIPELX,NTASKS))
       UIU(:,:,:)=CMPLX(0.D0,0.D0,8)
       DO ITASK=1,NTASKS
@@ -2335,7 +2436,27 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(FOFR2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NR1LX,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8) &
+     &           +32.D0*REAL(NR1L,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_PACK_MPI',NR1LX,NSTRIPELX &
+     & ,NTASKS,NSTRIPEL,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       CALL MPE$TRANSPOSE(CID,UIU)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NR1LX,KIND=8)*REAL(NSTRIPELX,KIND=8) &
+     &           *REAL(NTASKS,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_MPE_TRANSPOSE',NR1LX &
+     & ,NSTRIPELX,NTASKS,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       ALLOCATE(FOFG1(NR1*NSTRIPEL))
       FOFG1(:)=CMPLX(0.D0,0.D0,8)
       DO ISTRIPEL=1,NSTRIPEL
@@ -2348,6 +2469,12 @@ END MODULE PLANEWAVE_MODULE
         ENDDO
       ENDDO
       DEALLOCATE(UIU)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NR1,KIND=8)*REAL(NSTRIPEL,KIND=8) &
+     &           +32.D0*REAL(NR1,KIND=8)*REAL(NSTRIPEL,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_UNPACK_G',NR1,NSTRIPEL &
+     & ,NTASKS,0,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 !
 !     ==================================================================
 !     == TRANSFORM 1 ST DIMENSION (NR1)                               ==
@@ -2357,10 +2484,18 @@ END MODULE PLANEWAVE_MODULE
 !     ==================================================================
 !     == MAP STRIPES TO IG                                            ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_PHASE0)
+#ENDIF
       DO IG=1,NGL
         FOFG(IG)=FOFG1(IGTOSTRIPE(IG))
       ENDDO
       DEALLOCATE(FOFG1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=32.D0*REAL(NGL,KIND=8)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_RTOG_MAP_G',NR1,NSTRIPEL,NGL &
+     & ,NTASKS,ACCEL_BYTES,ACCEL_PHASE0)
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       ACCEL_GRID=REAL(NR1,KIND=8)*REAL(NR2,KIND=8)*REAL(NR3,KIND=8)

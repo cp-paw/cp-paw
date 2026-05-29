@@ -13,6 +13,7 @@ def profile_totals(run_dir):
         "lapack": 0.0,
         "fft": 0.0,
         "mpi": 0.0,
+        "pw_trace": 0.0,
         "setup": 0.0,
         "copy_gb": 0.0,
     }
@@ -27,6 +28,9 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("ACC_SETUP"):
                     totals["setup"] += seconds
+                    continue
+                if op.startswith("PW_") and not op.startswith("PW_FFT"):
+                    totals["pw_trace"] += seconds
                     continue
                 totals["instrumented"] += seconds
                 if op.startswith("MPI_ALLTOALL"):
@@ -90,6 +94,15 @@ def run_ok(run_dir):
     return "NORMAL STOP" in text
 
 
+def wall_rank_time(wall, ranks):
+    if wall is None:
+        return None
+    try:
+        return wall * int(ranks)
+    except (TypeError, ValueError):
+        return None
+
+
 def main(argv):
     root = argv[1] if len(argv) > 1 else "."
     rows = []
@@ -98,6 +111,14 @@ def main(argv):
         repeat = os.path.basename(run_dir)
         totals = profile_totals(run_dir)
         env = run_env(run_dir)
+        wall = wall_time(run_dir)
+        wall_rank = wall_rank_time(wall, env.get("ranks"))
+        gap = None
+        coverage = None
+        if wall_rank is not None:
+            gap = wall_rank - totals["instrumented"]
+            if wall_rank > 0.0:
+                coverage = 100.0 * totals["instrumented"] / wall_rank
         rows.append(
             {
                 "case": case,
@@ -105,12 +126,16 @@ def main(argv):
                 "nsteps": env.get("nsteps") or env.get("nstps"),
                 "ranks": env.get("ranks"),
                 "ok": "yes" if run_ok(run_dir) else "no",
-                "wall_s": wall_time(run_dir),
+                "wall_s": wall,
+                "wall_rank_s": wall_rank,
                 "rank_s": totals["instrumented"],
+                "gap_s": gap,
+                "coverage_pct": coverage,
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
                 "mpi_s": totals["mpi"],
+                "pw_trace_s": totals["pw_trace"],
                 "setup_s": totals["setup"],
                 "copy_gb": totals["copy_gb"],
                 "energy": final_energy(run_dir),
@@ -129,11 +154,15 @@ def main(argv):
         "ranks",
         "ok",
         "wall_s",
+        "wall_rank_s",
         "rank_s",
+        "gap_s",
+        "coverage_pct",
         "blas_s",
         "lapack_s",
         "fft_s",
         "mpi_s",
+        "pw_trace_s",
         "setup_s",
         "copy_gb",
         "energy",

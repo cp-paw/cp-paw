@@ -84,6 +84,15 @@ NSTEPS=1 ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvhpc_cpu" ./run_benchmark.sh
 ```
 
+`run_benchmark.sh` writes `benchmark.tsv` and `benchmark.md` for each run. The
+summary includes both wall time and rank-normalized wall time (`wall_rank_s`),
+the primary instrumented rank-seconds (`rank_s`), and a residual
+`gap_s = wall_rank_s - rank_s`. Use `gap_s` and `coverage_pct` to decide
+whether the current CSV timers already explain the run or whether additional
+instrumentation is needed. Diagnostic Plane-wave FFT local/MPI-envelope timers
+are reported separately as `pw_trace_s`; they are intentionally kept out of
+`rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
+
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
 adds the `CPPAW_GPU_RESIDENCY=1` diagnostic mode. That currently switches the
 cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
