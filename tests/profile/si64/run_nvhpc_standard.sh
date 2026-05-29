@@ -17,11 +17,25 @@ CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
 AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
 AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
 
+dedup_space_list() {
+  local item
+  local norm=""
+  for item in "$@"; do
+    case " ${norm} " in
+      *" ${item} "*) ;;
+      *) norm="${norm:+${norm} }${item}" ;;
+    esac
+  done
+  echo "${norm}"
+}
+
 if [[ ${RUN_GPU_ALL} == yes || ${RUN_GPU_ALL} == true || ${RUN_GPU_ALL} == 1 ]]; then
   GPU_CASES="${GPU_CASES} gpu_all gpu_all_off"
 fi
 
 GPU_CASES="${GPU_CASES} gpu_off"
+GPU_CASES=$(dedup_space_list ${GPU_CASES})
+CPU_CASES=$(dedup_space_list ${CPU_CASES})
 
 REQUIRED_TARGETS=
 
