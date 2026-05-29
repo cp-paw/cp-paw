@@ -564,6 +564,23 @@ END MODULE ACCELPROFILE_MODULE
       END SUBROUTINE ACCELPROFILE$ADD
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE ACCELPROFILE$PHASE(NAME,TSTART,N1,N2,N3,N4)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: NAME
+      REAL(8)     ,INTENT(INOUT) :: TSTART
+      INTEGER(8)  ,INTENT(IN)    :: N1
+      INTEGER(8)  ,INTENT(IN)    :: N2
+      INTEGER(8)  ,INTENT(IN)    :: N3
+      INTEGER(8)  ,INTENT(IN)    :: N4
+      REAL(8)                    :: TNOW
+!     **************************************************************************
+      CALL ACCELPROFILE$NOW(TNOW)
+      CALL ACCELPROFILE$ADD(NAME,N1,N2,N3,N4,0.D0,0.D0,TNOW-TSTART)
+      TSTART=TNOW
+      RETURN
+      END SUBROUTINE ACCELPROFILE$PHASE
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE ACCELPROFILE$REPORT(CID,NFIL)
       USE ACCELPROFILE_MODULE
       IMPLICIT NONE
