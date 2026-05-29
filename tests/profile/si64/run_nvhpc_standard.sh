@@ -23,7 +23,15 @@ fi
 
 GPU_CASES="${GPU_CASES} gpu_off"
 
-declare -A REQUIRED_TARGETS
+REQUIRED_TARGETS=
+
+add_target() {
+  local target=$1
+  case " ${REQUIRED_TARGETS} " in
+    *" ${target} "*) return 0 ;;
+  esac
+  REQUIRED_TARGETS="${REQUIRED_TARGETS} ${target}"
+}
 
 case_target() {
   local case_name=$1
@@ -147,7 +155,7 @@ collect_targets() {
       echo "Unknown case in GPU/CPU selection: ${case_name}" >&2
       exit 1
     fi
-    REQUIRED_TARGETS["${target}"]=1
+    add_target "${target}"
   done
 }
 
@@ -155,12 +163,12 @@ ensure_binaries() {
   local build_targets
   local target exe missing=()
 
-  if (( ${#REQUIRED_TARGETS[@]} == 0 )); then
+  if [[ -z "${REQUIRED_TARGETS}" ]]; then
     echo "No benchmark targets were discovered from selected cases." >&2
     exit 1
   fi
 
-  for target in "${!REQUIRED_TARGETS[@]}"; do
+  for target in ${REQUIRED_TARGETS}; do
     exe=$(target_binary "${target}") || exit 1
     if [[ ! -x "${exe}" ]]; then
       missing+=("${target}")
