@@ -13,6 +13,7 @@ NSTEPS=${NSTEPS:-20}
 RANKS=${RANKS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
+REQUIRE_CASES=${REQUIRE_CASES:-no}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
@@ -491,6 +492,11 @@ capture_metadata
 for case_name in ${CASES}; do
   exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
   if [[ ! -x "${exe}" ]]; then
+    if [[ "${REQUIRE_CASES}" == "yes" || "${REQUIRE_CASES}" == "true" || "${REQUIRE_CASES}" == "1" ]]; then
+      echo "Required case missing executable: ${case_name}" >&2
+      echo "  exe=${exe}" >&2
+      exit 1
+    fi
     echo "Skipping ${case_name}: executable not found: ${exe}" >&2
     continue
   fi

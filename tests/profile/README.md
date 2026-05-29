@@ -217,10 +217,16 @@ cd tests/profile/si64
 ./run_nvhpc_standard.sh
 ```
 
-It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and compares
-one-rank GPU residency, one-rank CPU references and eight-rank CPU/NVHPC
-references. Override `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`,
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and by default
+compares `gpu_resident*` and `gpu_all*` paths on one GPU rank, plus one-rank CPU
+and eight-rank CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
+`EMPTY_BANDS`, `NSTEPS`,
 `GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
+
+Set `RUN_GPU_ALL=yes` (default) to include the all-library cases `gpu_all`
+and `gpu_all_off`. Set `RUN_GPU_ALL=no` if you only want residency-only cases.
+Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
+required profile binaries before benchmarking.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 
