@@ -44,14 +44,17 @@ case_target() {
   fi
 
   case "${case_name}" in
-    cpu|nvhpc_cpu|nvpl)
+    cpu)
+      target="profile${gpu_suffix}"
+      ;;
+    nvhpc_cpu|nvpl)
       target="nvhpc_profile${gpu_suffix}"
       ;;
     cublas*)
-      target="nvhpc_cublas_acc${gpu_suffix}"
+      target="nvhpc_cublas_acc_profile${gpu_suffix}"
       ;;
     cusolver*)
-      target="nvhpc_cusolver_acc${gpu_suffix}"
+      target="nvhpc_cusolver_acc_profile${gpu_suffix}"
       ;;
     cufftw)
       target="nvhpc_cufftw_profile${gpu_suffix}"
@@ -92,17 +95,21 @@ case_target() {
 target_binary() {
   local target=$1
   case "${target}" in
+    profile)
+      echo "${ROOT}/bin/profile/paw_profile.x" ;;
+    profile_parallel)
+      echo "${ROOT}/bin/profile_parallel/ppaw_profile.x" ;;
     nvhpc_profile)
       echo "${ROOT}/bin/nvhpc_profile/paw_nvhpc_profile.x" ;;
     nvhpc_profile_parallel)
       echo "${ROOT}/bin/nvhpc_profile_parallel/ppaw_nvhpc_profile.x" ;;
-    nvhpc_cublas_acc)
+    nvhpc_cublas_acc|nvhpc_cublas_acc_profile)
       echo "${ROOT}/bin/nvhpc_cublas_acc_profile/paw_nvhpc_cublas_acc_profile.x" ;;
-    nvhpc_cublas_acc_parallel)
+    nvhpc_cublas_acc_profile_parallel)
       echo "${ROOT}/bin/nvhpc_cublas_acc_profile_parallel/ppaw_nvhpc_cublas_acc_profile.x" ;;
-    nvhpc_cusolver_acc)
+    nvhpc_cusolver_acc|nvhpc_cusolver_acc_profile)
       echo "${ROOT}/bin/nvhpc_cusolver_acc_profile/paw_nvhpc_cusolver_acc_profile.x" ;;
-    nvhpc_cusolver_acc_parallel)
+    nvhpc_cusolver_acc_profile_parallel)
       echo "${ROOT}/bin/nvhpc_cusolver_acc_profile_parallel/ppaw_nvhpc_cusolver_acc_profile.x" ;;
     nvhpc_cufftw_profile)
       echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
