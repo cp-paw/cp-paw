@@ -78,9 +78,9 @@ cuFFT opt-in, and uses cuSOLVER only above its default size threshold. The same
 binary can selectively force or disable each accelerator path:
 
 ```
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile
 cd tests/profile/si64
-NSTEPS=1 ./run_benchmark.sh
+NSTEPS=1 CASES="cpu nvhpc_cpu gpu_resident gpu_off" ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvhpc_cpu" ./run_benchmark.sh
 ```
 
@@ -94,7 +94,8 @@ are reported separately as `pw_trace_s`; they are intentionally kept out of
 `rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
 
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
-adds the `CPPAW_GPU_RESIDENCY=1` diagnostic mode. That currently switches the
+defaults to `CPPAW_GPU_RESIDENCY=1`. Set `CPPAW_GPU_RESIDENCY=0` to disable the
+resident mode in the same binary. This currently switches the
 cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
 can reuse wavefunction arrays already held by an outer OpenACC data region. For
 non-superwave projections where all atom blocks pass the cuBLAS threshold, it
@@ -218,15 +219,20 @@ cd tests/profile/si64
 ```
 
 It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and by default
-compares `gpu_resident*` and `gpu_all*` paths on one GPU rank, plus one-rank CPU
+compares the focused `gpu_resident*` paths on one GPU rank, plus one-rank CPU
 and eight-rank CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
 `EMPTY_BANDS`, `NSTEPS`,
 `GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
 
-Set `RUN_GPU_ALL=yes` (default) to include the all-library cases `gpu_all`
-and `gpu_all_off`. Set `RUN_GPU_ALL=no` if you only want residency-only cases.
+Set `RUN_GPU_ALL=yes` to include the all-library cases `gpu_all` and
+`gpu_all_off`. The default is `RUN_GPU_ALL=no` because the Spark Si64 matrix
+showed the all-library path is useful as a diagnostic, not as a recommended
+default.
 Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
 required profile binaries before benchmarking.
+
+The Spark C86C Si64 decision table is kept in
+`tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 
