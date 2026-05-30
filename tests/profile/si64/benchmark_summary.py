@@ -13,6 +13,7 @@ def profile_totals(run_dir):
         "lapack": 0.0,
         "fft": 0.0,
         "mpi": 0.0,
+        "paw": 0.0,
         "pw_trace": 0.0,
         "setup": 0.0,
         "copy_gb": 0.0,
@@ -31,6 +32,9 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
+                    continue
+                if op.startswith("PAW_"):
+                    totals["paw"] += seconds
                     continue
                 totals["instrumented"] += seconds
                 if op.startswith("MPI_ALLTOALL"):
@@ -131,6 +135,7 @@ def main(argv):
                 "rank_s": totals["instrumented"],
                 "gap_s": gap,
                 "coverage_pct": coverage,
+                "paw_s": totals["paw"],
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
@@ -158,6 +163,7 @@ def main(argv):
         "rank_s",
         "gap_s",
         "coverage_pct",
+        "paw_s",
         "blas_s",
         "lapack_s",
         "fft_s",

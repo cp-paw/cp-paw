@@ -13,7 +13,7 @@ GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
 RUN_GPU_ALL=${RUN_GPU_ALL:-no}
 GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_addpro_host gpu_resident_pro_host gpu_resident_invbatch_off gpu_resident_no_cusolver"}
-CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
+CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
 AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
 AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
 
@@ -171,6 +171,8 @@ collect_targets() {
   local cases=$2
   local case_name target
 
+  [[ -n ${cases// } ]] || return 0
+
   for case_name in ${cases}; do
     if ! target=$(case_target "${case_name}" "${ranks}"); then
       echo "Unknown case in GPU/CPU selection: ${case_name}" >&2
@@ -247,6 +249,12 @@ run_suite() {
   local cases=$3
   local root="${NVHPC_STANDARD_ROOT}/${suite}"
   local suite_log="${NVHPC_STANDARD_ROOT}/${suite}.log"
+
+  if [[ -z ${cases// } ]]; then
+    log "SKIP  suite=${suite} empty case list"
+    echo "skipped" > "${root}.status"
+    return 0
+  fi
 
   log "START suite=${suite} empty_bands=${EMPTY_BANDS} nsteps=${NSTEPS} ranks=${ranks} cases=${cases}"
   if env TEST="${TEST}" EMPTY_BANDS="${EMPTY_BANDS}" NSTEPS="${NSTEPS}" \

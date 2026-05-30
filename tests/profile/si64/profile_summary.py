@@ -12,6 +12,8 @@ def category(op):
         return "ACC residency"
     if op.startswith("ACC_SETUP"):
         return "ACC setup"
+    if op.startswith("PAW_"):
+        return "PAW envelope"
     if op.startswith("PW_") and not op.startswith("PW_FFT"):
         if "MPE_TRANSPOSE" in op:
             return "PW MPI envelope"
@@ -72,7 +74,12 @@ def main(argv):
     primary_total = sum(
         data["seconds"] for op, data in per_op.items()
         if not op.startswith("ACC_")
+        and not op.startswith("PAW_")
         and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
+    )
+    paw_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("PAW_")
     )
     trace_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -89,6 +96,8 @@ def main(argv):
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
+    if paw_total:
+        print("PAW envelope rank-seconds (nested): {:.6f}".format(paw_total))
     if trace_total:
         print("Diagnostic PW trace rank-seconds: {:.6f}".format(trace_total))
     if setup_total or copy_gbyte:

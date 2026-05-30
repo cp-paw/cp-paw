@@ -583,7 +583,14 @@ END IF
        INTEGER(4)            :: L1,L2
        INTEGER(4)            :: IB,IDIM,M
        REAL(8)               :: DOVER1
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       REAL(8)               :: ACCEL_T0
+       REAL(8)               :: ACCEL_T1
+#ENDIF
 !      *****************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
        OPROJ(:,:,:)=(0.D0,0.D0)
        LMN10=0
        DO LN1=1,LNX
@@ -608,6 +615,12 @@ END IF
          ENDDO
          LMN10=LMN10+2*L1+1
        ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_T1)
+       CALL ACCELPROFILE$ADD('PAW_OPROJ_TOTAL' &
+      &    ,INT(NB,KIND=8),INT(LMNX,KIND=8),INT(NDIM,KIND=8) &
+      &    ,INT(LNX,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
        RETURN
        END
 !
@@ -637,8 +650,15 @@ END IF
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       REAL(8)                 :: ACCEL_T0
+       REAL(8)                 :: ACCEL_T1
+#ENDIF
 !      *************************************************************************
                                CALL TIMING$CLOCKON('WAVES_ADDOPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
        TINV=NBH.NE.NB
        NGLNDIM=NGL*NDIM
        IF(.NOT.TINV) THEN
@@ -678,6 +698,12 @@ END IF
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA2,PSIBAR)
          DEALLOCATE(LAMBDA2)
        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_T1)
+       CALL ACCELPROFILE$ADD('PAW_ADDOPSI_TOTAL' &
+      &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+      &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
                                CALL TIMING$CLOCKOFF('WAVES_ADDOPSI')
        RETURN
        END
@@ -1010,7 +1036,14 @@ END IF
       INTEGER(4)                :: IBH1,IBH2,IB1,IB2,IDIM,LNX
       COMPLEX(8)                :: CSVAR1,CSVAR2
       LOGICAL(4)                :: TINV
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                   :: ACCEL_T0
+      REAL(8)                   :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL MPE$QUERY('K',NTASKS,THISTASK)
       MAT(:,:)=(0.D0,0.D0)
       TINV=NB.NE.NBH
@@ -1143,6 +1176,12 @@ END IF
         ENDDO
         CALL MPE$COMBINE('K','+',MAT)
       ENDIF  
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_1COVERLAP_TOTAL' &
+     &    ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
       RETURN
       END
 !

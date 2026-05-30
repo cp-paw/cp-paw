@@ -261,6 +261,36 @@ large generic `CUBLAS_ZGEMM_ADDPRODUCT` copy estimate). Keep the full cache as
 the default and include `gpu_resident_addpro_host` in future standard/large-band
 sweeps.
 
+## PAW Envelope Profiling
+
+The next profiling patch adds coarse `PAW_*` envelope rows around the
+wavefunction and PAW regions that were previously mostly invisible in the
+accelerator CSV: `WAVES$HPSI`, its `VPSI`/`HPROJ`/`ADDPRO` sections,
+`WAVES_ADDPRO`, `WAVES_OPSI`, `WAVES_OPROJ`, `WAVES_ADDOPSI`,
+`WAVES_1COVERLAP`, `WAVES$RHO`, `WAVES_DENSITY`, and `WAVES$SPHERE`.
+These rows intentionally double-count lower-level BLAS/FFT rows; their purpose
+is to show where the remaining wall time sits before moving more data and
+operations into resident GPU regions.
+
+A Spark smoke test with `EMPTY_BANDS=512,NSTEPS=1` verifies the new rows.
+`coverage` remains the non-envelope coverage; `paw_s` is nested diagnostic
+time and can overlap with BLAS/FFT/LAPACK rows.
+
+| Run | Ranks | Wall time | Coverage | `paw_s` | Energy | Dominant new envelope rows |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `paw-envelope-smoke-20260530-234323-1rank` | 1 | 11.32 s | 40.33% | 5.13 s | 302.280854 Ha | `PAW_1COVERLAP_TOTAL`, `PAW_HPSI_TOTAL`, `PAW_HPSI_VPSI`, `PAW_RHO_TOTAL` |
+| `paw-envelope-smoke-20260530-234349-4rank` | 4 | 22.15 s | 19.72% | 13.16 s | 302.280854 Ha | `PAW_HPSI_TOTAL`, `PAW_1COVERLAP_TOTAL`, `PAW_HPSI_VPSI`, `PAW_ADDPRO_TOTAL` |
+
+For the expensive unresolved point, use the dedicated night-run wrapper. It
+defaults to the GPU cases only so the run is not dominated by the known slow
+8-rank CPU reference; add `RUN_CPU_REFERENCES=yes` when CPU reference numbers
+are explicitly needed.
+
+```
+cd tests/profile/si64
+EMPTY_BANDS=2048 NSTEPS=3 ./run_gap_profile_night.sh
+```
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

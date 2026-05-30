@@ -46,11 +46,11 @@ def main(argv):
     print()
     print(f"Source: `{os.path.basename(path)}`")
     print()
-    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | copy_gb | energy |")
-    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | copy_gb | energy |")
+    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rows:
         print(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 suite_label(row),
                 row.get("case", ""),
                 row.get("ranks", ""),
@@ -59,6 +59,7 @@ def main(argv):
                 number(row.get("rank_s")),
                 number(row.get("gap_s")),
                 number(row.get("coverage_pct")),
+                number(row.get("paw_s")),
                 number(row.get("blas_s")),
                 number(row.get("lapack_s")),
                 number(row.get("fft_s")),

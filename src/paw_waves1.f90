@@ -4219,9 +4219,16 @@ END IF
       INTEGER(4)             :: NBX        
       REAL(8)  ,ALLOCATABLE  :: OCC(:,:,:) 
       REAL(8)                :: SVAR1,SVAR2
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$RHO')
                               CALL TIMING$CLOCKON('W:RHO')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       IF(NDIMD_.NE.NDIMD.OR.NRL.NE.MAP%NRL) THEN
         CALL ERROR$MSG('ARRAY SIZE INCONSISTEN')
         CALL ERROR$STOP('WAVES$RHO')
@@ -4270,6 +4277,12 @@ END IF
           RHO(IR,2)=SVAR1-SVAR2   ! SPIN DENSITY
         ENDDO
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_RHO_TOTAL' &
+     &    ,INT(NRL,KIND=8),INT(NDIMD_,KIND=8),INT(NKPTL,KIND=8) &
+     &    ,INT(NSPIN,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
                               CALL TIMING$CLOCKOFF('W:RHO')
                               CALL TRACE$POP
       RETURN
@@ -4590,9 +4603,16 @@ RETURN
       REAL(8)                :: RBAS(3,3)
       REAL(8)                :: GBAS(3,3)
       REAL(8)                :: SVAR
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$SPHERE')
                               CALL TIMING$CLOCKON('W:SPHERE')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       IF(NDIMD_.NE.NDIMD.OR.NAT.NE.MAP%NAT) THEN
         CALL ERROR$MSG('ARRAY SIZE INCONSISTENT')
         CALL ERROR$STOP('WAVES$DENMAT')
@@ -4638,6 +4658,12 @@ RETURN
       CALL GBASS(RBAS,GBAS,SVAR)
       POTB=POTB/SVAR
       CALL AUGMENTATION$SYNC
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_SPHERE_TOTAL' &
+     &    ,INT(NAT,KIND=8),INT(LMNXX,KIND=8),INT(NDIMD_,KIND=8) &
+     &    ,INT(LMRXX,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
                               CALL TIMING$CLOCKOFF('W:SPHERE')
                               CALL TRACE$POP
       RETURN
@@ -4949,9 +4975,18 @@ RETURN
       INTEGER(4)             :: LMNX
       COMPLEX(8),ALLOCATABLE :: DH1(:,:,:)      ! 1CENTER HAMILTONIAN
       COMPLEX(8),ALLOCATABLE :: HPROJ(:,:,:)    ! DH*PROJ
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+      REAL(8)                :: ACCEL_TOTAL_T0
+      REAL(8)                :: ACCEL_TOTAL_T1
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
                               CALL TIMING$CLOCKON('W:HPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
+#ENDIF
       IF(NDIMD_.NE.NDIMD.OR.NRL.NE.MAP%NRL.OR.NAT.NE.MAP%NAT) THEN
         CALL ERROR$MSG('ARRAY SIZE INCONSISTENT')
         CALL ERROR$I4VAL('NDIMD_',NDIMD_)
@@ -4976,18 +5011,30 @@ RETURN
           NBH=THIS%NBH
           IF(.NOT.ASSOCIATED(THIS%HPSI))ALLOCATE(THIS%HPSI(NGL,NDIM,NBH))
 !         == NOTE: THE ARRAY RHO CONTAINS THE POTENTIAL ========================
-CALL TIMING$CLOCKON('W:HPSI.VPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.VPSI')
 !===============================================================================
-IF(1.EQ.1)THEN !OLD VERSION CHANGE WAS REQUIRED FOR KAESTNERS CONJUGATE GRADIENT
+	IF(1.EQ.1)THEN !OLD VERSION CHANGE WAS REQUIRED FOR KAESTNERS CONJUGATE GRADIENT
 !===============================================================================
-         CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,THIS%PSI0,RHO(1,ISPIN) &
-     &                   ,THIS%HPSI)
-CALL TIMING$CLOCKOFF('W:HPSI.VPSI')
+	         CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,THIS%PSI0,RHO(1,ISPIN) &
+	     &                   ,THIS%HPSI)
+	CALL TIMING$CLOCKOFF('W:HPSI.VPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          CALL ACCELPROFILE$ADD('PAW_HPSI_VPSI' &
+     &        ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &        ,INT(NRL,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !         ======================================================================
 !         ==  EVALUATE  DH<P|PSI>                                             ==
 !         ======================================================================
-CALL TIMING$CLOCKON('W:HPSI.HPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.HPROJ')
           ALLOCATE(HPROJ(NDIM,NBH,MAP%NPRO))
           HPROJ(:,:,:)=(0.D0,0.D0)
           IPRO=1
@@ -5005,7 +5052,13 @@ CALL TIMING$CLOCKON('W:HPSI.HPROJ')
             DEALLOCATE(DH1)
             IPRO=IPRO+LMNX
           ENDDO
-CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
+	CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          CALL ACCELPROFILE$ADD('PAW_HPSI_HPROJ' &
+     &        ,INT(NBH,KIND=8),INT(MAP%NPRO,KIND=8),INT(NAT,KIND=8) &
+     &        ,INT(NDIM,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !         ======================================================================
 !         ==  ADD POTENTIAL FROM LMTO INTERFACE                               ==
@@ -5026,22 +5079,37 @@ CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
 !         ======================================================================
 !         ==  ADD  |P>DH<P|PSI>                                               ==
 !         ======================================================================
-CALL TIMING$CLOCKON('W:HPSI.ADDPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.ADDPROJ')
           CALL WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NBH,MAP%NPRO &
      &                     ,THIS%HPSI,HPROJ)
-CALL TIMING$CLOCKOFF('W:HPSI.ADDPROJ')
+	CALL TIMING$CLOCKOFF('W:HPSI.ADDPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          CALL ACCELPROFILE$ADD('PAW_HPSI_ADDPRO' &
+     &        ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &        ,INT(MAP%NPRO,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
           DEALLOCATE(HPROJ)
 !===============================================================================
-ELSE
+	ELSE
 !===============================================================================
          CALL WAVES_HPSI(MAP,GSET,ISPIN,NGL,NDIM,NDIMD,NBH,MAP%NPRO,LMNXX,NAT,NRL&
      &                  ,THIS%PSI0,RHO(1,ISPIN),R,THIS%PROJ,DH,THIS%HPSI)
 !!LMTO INTERFACE MISSING!!!
 !===============================================================================
-END IF
+	END IF
 !===============================================================================
-        ENDDO
-      ENDDO
+	        ENDDO
+	      ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPSI_TOTAL' &
+     &    ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(MAP%NPRO,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
+#ENDIF
                               CALL TIMING$CLOCKOFF('W:HPSI')
                               CALL TRACE$POP
       RETURN
@@ -5067,7 +5135,14 @@ END IF
       COMPLEX(8)             :: DHUPUP,DHDNDN
       COMPLEX(8)             :: DHUPDN,DHDNUP
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       HPROJ(:,:,:)=(0.D0,0.D0)
 !
 !     ==========================================================================
@@ -5101,6 +5176,12 @@ END IF
           ENDDO
         ENDDO
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPROJ_TOTAL' &
+     &    ,INT(NB,KIND=8),INT(LMNX,KIND=8),INT(NDIM,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
       RETURN
       END
 !
@@ -5133,15 +5214,34 @@ END IF
       COMPLEX(8)     ,ALLOCATABLE:: HPROJ(:,:,:)  
       COMPLEX(8)     ,ALLOCATABLE:: DH1(:,:,:)
       INTEGER(4)                 :: IPRO,IAT,ISP,LMNX
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                    :: ACCEL_T0
+      REAL(8)                    :: ACCEL_T1
+      REAL(8)                    :: ACCEL_TOTAL_T0
+      REAL(8)                    :: ACCEL_TOTAL_T1
+#ENDIF
 !     **************************************************************************
-CALL TIMING$CLOCKON('W:HPSI.VPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.VPSI')
       CALL WAVES_VPSI(GSET,NGL,NDIM,NBH,NRL,PSI,POT,HPSI)
-CALL TIMING$CLOCKOFF('W:HPSI.VPSI')
+	CALL TIMING$CLOCKOFF('W:HPSI.VPSI')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPSI_VPSI' &
+     &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &    ,INT(NRL,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  EVALUATE  DH<P|PSI>                                                 ==
 !     ==========================================================================
-CALL TIMING$CLOCKON('W:HPSI.HPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.HPROJ')
       ALLOCATE(HPROJ(NDIM,NBH,NPRO))
       HPROJ(:,:,:)=(0.D0,0.D0)
       IPRO=1
@@ -5159,15 +5259,36 @@ CALL TIMING$CLOCKON('W:HPSI.HPROJ')
         DEALLOCATE(DH1)
         IPRO=IPRO+LMNX
       ENDDO
-CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
+	CALL TIMING$CLOCKOFF('W:HPSI.HPROJ')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPSI_HPROJ' &
+     &    ,INT(NBH,KIND=8),INT(NPRO,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(NDIM,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  ADD  |P>DH<P|PSI>                                                   ==
 !     ==========================================================================
-CALL TIMING$CLOCKON('W:HPSI.ADDPRO')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+	CALL TIMING$CLOCKON('W:HPSI.ADDPRO')
       CALL WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,HPSI,HPROJ)
-CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
+	CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPSI_ADDPRO' &
+     &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &    ,INT(NPRO,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
       DEALLOCATE(HPROJ)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
+      CALL ACCELPROFILE$ADD('PAW_HPSI_TOTAL' &
+     &    ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(NPRO,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
+#ENDIF
       RETURN
       END
 !
@@ -5193,7 +5314,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       INTEGER(4)               :: IPRO,IAT,ISP,LNX,LMNX
       COMPLEX(8) ,ALLOCATABLE  :: OPROJ(:,:,:)
       REAL(8)    ,ALLOCATABLE  :: DO(:,:)      ! 1-CENTER OVERLAP
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  EVALUATE  DO<P|PSI>  ASSUMING <PRO|PSI> IS STILL VALID              ==
@@ -5224,6 +5352,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       CALL WAVES_ADDPRO(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO,OPSI,OPROJ)
       DEALLOCATE(OPROJ)
       ! THIS THIS%OPSI IS MY O|PSI> FOR CG
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OPSI_TOTAL' &
+     &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &    ,INT(NPRO,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
       RETURN
       END 
 !
@@ -5251,7 +5385,14 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8),ALLOCATABLE :: VUPDN(:)
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:)
       COMPLEX(8)             :: PSIUP,PSIDN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  MULTIPLY WAVE FUNCTIONS WITH THE POTENTIAL                          ==
@@ -5322,6 +5463,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
         ENDDO
       END IF
       DEALLOCATE(G2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_VPSI_TOTAL' &
+     &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &    ,INT(NRL,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
       RETURN
       END
 !!$!
@@ -5536,8 +5683,15 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       REAL(8)                :: RE,IM
       REAL(8)                :: SVAR1,SVAR2
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                                CALL TRACE$PUSH('WAVES_DENSITY')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !RELEASED 8.OCT.99 
 !
 !     ==========================================================================
@@ -5716,6 +5870,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       END IF
       DEALLOCATE(PSIOFR)
       IF(TRHOKIN) DEALLOCATE(PSIKINOFR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENSITY_TOTAL' &
+     &    ,INT(NGL,KIND=8),INT(NRL,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
                                CALL TRACE$POP()
       RETURN
       END
@@ -6198,10 +6358,15 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                    :: ACCEL_T0
       REAL(8)                    :: ACCEL_T1
+      REAL(8)                    :: ACCEL_TOTAL_T0
+      REAL(8)                    :: ACCEL_TOTAL_T1
 #ENDIF
 !     **************************************************************************
                                  CALL TRACE$PUSH('WAVES_ADDPRO')
                                  CALL TIMING$CLOCKON('WAVES_ADDPRO')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  CONSISTENCY CHECKS                                                  ==
@@ -6392,6 +6557,12 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       DEALLOCATE(GVEC)
       DEALLOCATE(EIGR)
       DEALLOCATE(PROPSI1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
+      CALL ACCELPROFILE$ADD('PAW_ADDPRO_TOTAL' &
+     &    ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NB,KIND=8) &
+     &    ,INT(NPRO,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
+#ENDIF
                                  CALL TIMING$CLOCKOFF('WAVES_ADDPRO')
                                  CALL TRACE$POP()
       RETURN
