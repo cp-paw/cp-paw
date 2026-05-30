@@ -105,6 +105,49 @@ wavefunction residency would need to cover projection calls outside that
 envelope, and a separate larger target is moving or caching projector expansion
 data (`PRO`) rather than only toggling FFT/LAPACK libraries.
 
+## GPU Projector Expansion Smoke
+
+The follow-up patch moves resident-path projector expansion into OpenACC and
+adds a narrow `WAVES_GRAMSCHMIDT` projection/overlap resident region. Spark C86C
+builds succeeded for both:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+```
+
+Smoke run:
+
+```
+runs/si64_bands-nstep1-1ranks-20260530-202630
+```
+
+| Case | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident` | 54.02 s | 15.7796 GB | 302.280854 Ha | New default path: GPU projector expansion. |
+| `gpu_resident_pro_host` | 53.30 s | 16.7391 GB | 302.280854 Ha | Same binary with `CPPAW_GPU_PRO_EXPANSION=0`. |
+
+Key projector rows:
+
+| Profile row | `gpu_resident` | `gpu_resident_pro_host` | Meaning |
+| --- | ---: | ---: | --- |
+| `ACC_PRESENT_PROJ_PRO` | 384 calls, 0 GB | - | `PRO` is generated and consumed on device. |
+| `ACC_COPY_PROJ_PRO_IN` | - | 384 calls, 1.0490 GB | Old host-expanded projector transfer. |
+| `ACC_COPY_PROJ_BAREPRO_IN` | 6 calls, 0.0032 GB | - | Bare radial projectors copied once per projection call. |
+| `ACC_COPY_PROJ_YLM_IN` | 6 calls, 0.0057 GB | - | Spherical harmonics copied once per projection call. |
+| `ACC_COPY_PROJ_EIGR_UPDATE` | 384 calls, 0.0807 GB | - | Structure factor still updated per atom. |
+| `ACC_PRESENT_PROJ_PSI` | 4 calls | 4 calls | Broader residency feeds more projection calls with present `PSI`. |
+| `ACC_COPY_PROJ_PSI_IN` | 2 calls, 0.2421 GB | 2 calls, 0.2421 GB | Remaining projection calls outside resident wavefunction regions. |
+| `ACC_COPY_GRAM_PSI_IN` | 2 calls, 0.2421 GB | 2 calls, 0.2421 GB | New Gramschmidt resident projection/overlap region. |
+
+Conclusion: correctness is preserved and the explicit `PRO` copy drops by about
+0.96 GB net in this Si64 smoke. The wall time does not improve yet because the
+current OpenACC expansion kernel and per-atom `EIGR` update cost slightly more
+than the removed transfer on this small case. Keep GPU projector expansion as a
+diagnostic/default in the residency profile for larger-system testing, but the
+next optimization should fuse or cache more of the structure-factor/projector
+work before claiming a speedup.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

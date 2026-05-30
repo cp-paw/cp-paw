@@ -27,8 +27,10 @@
       LOGICAL(4)         :: SYNC_ENABLED=.TRUE.
 #IF DEFINED(CPPVAR_GPU_RESIDENCY_PROFILE)
       LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
+      LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
 #ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
+      LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
 #ENDIF
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
@@ -111,6 +113,57 @@
 #ENDIF
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D(PRESENT_NAME &
+     &                                                 ,COPY_NAME,N1,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      COMPLEX(8)              :: ARRAY(N1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),0_8,0_8,0_8 &
+     &                       ,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),0_8,0_8,0_8 &
+     &                       ,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D(PRESENT_NAME &
+     &                                                ,COPY_NAME,N1,N2,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      REAL(8)                 :: ARRAY(N1,N2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV(NAME,VALUE)
@@ -199,6 +252,23 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_PRO_EXPANSION',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_PRO_EXPANSION' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            PRO_EXPANSION_ENABLED=.FALSE.
+          CASE DEFAULT
+            PRO_EXPANSION_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_INVERSION_BATCH' &
      &                             ,VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -277,6 +347,16 @@
       CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED=ENABLED.AND.RESIDENCY_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED()

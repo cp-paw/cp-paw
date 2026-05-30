@@ -2155,6 +2155,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     *******************************************P.E. BLOECHL, (1999)***
       USE WAVES_MODULE, ONLY: MAP_TYPE,GSET_TYPE
       USE MPE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+#ENDIF
       IMPLICIT NONE
       TYPE(MAP_TYPE)  ,INTENT(IN) :: MAP
       TYPE(GSET_TYPE) ,INTENT(IN) :: GSET
@@ -2182,7 +2188,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)                     :: NORM(NB)
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
+      LOGICAL(4)                  :: TRESIDENTGRAM
 !     ******************************************************************
+      TRESIDENTGRAM=.FALSE.
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      TRESIDENTGRAM=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
+#ENDIF
 !
 !     ==================================================================
 !     ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                 ==
@@ -2191,6 +2202,21 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       TINV=GSET%TINV
       NPRO=MAP%NPRO
       ALLOCATE(PROJ(NDIM,NBH,NPRO))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(TRESIDENTGRAM) THEN
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &      ('ACC_PRESENT_GRAM_PSI','ACC_COPY_GRAM_PSI_IN' &
+     &      ,NGL,NDIM,NBH,PSI)
+      END IF
+#ENDIF
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(TRESIDENTGRAM) THEN
+        CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.TRUE.)
+      END IF
+#ENDIF
+!$ACC DATA COPYIN(PSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTGRAM)
       CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
       CALL MPE$COMBINE('K','+',PROJ)
 !     
@@ -2208,6 +2234,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       ENDDO
       DEALLOCATE(AUXMAT)
       DEALLOCATE(PROJ)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(TRESIDENTGRAM) THEN
+        CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.FALSE.)
+      END IF
+#ENDIF
 !     
 !     =================================================================
 !     ==  OBTAIN ORTHOGONALIZATION TRANSFORM                         ==

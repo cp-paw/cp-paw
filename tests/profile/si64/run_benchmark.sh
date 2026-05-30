@@ -209,6 +209,9 @@ case_note() {
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
       ;;
+    gpu_resident_pro_host)
+      echo "Residency diagnostic that keeps projector expansion on host while retaining resident cuBLAS projection."
+      ;;
     *_invbatch_off)
       echo "cuBLAS diagnostic that disables batched inversion-symmetry scalarproducts."
       ;;
@@ -383,6 +386,7 @@ case_env() {
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     gpu_resident_no_cusolver) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_resident_pro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PRO_EXPANSION=0 $(cublas_env)" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;

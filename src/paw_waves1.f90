@@ -5755,8 +5755,11 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &         CPPAW_CUBLAS_ACC_SHOULD_USE_PROJECTION &
      &        ,CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &        ,CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED &
      &        ,CPPAW_CUBLAS_ACC_PROJECTION_PRESENT &
-     &        ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+     &        ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &        ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D &
+     &        ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D
 #ENDIF
       IMPLICIT NONE
       TYPE(MAP_TYPE) ,INTENT(IN) :: MAP
@@ -5786,6 +5789,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       COMPLEX(8)     ,ALLOCATABLE:: PROTMP(:,:) !(LMNX,NDIM,NB)
       LOGICAL(4)                 :: TUSECUBLASPROJ
       LOGICAL(4)                 :: TUSERESIDENTPROJ
+      LOGICAL(4)                 :: TUSEGPUEXPANDPRO
       LOGICAL(4)                 :: TSUPER
       REAL(8)                    :: PROJFLOPS
       REAL(8)                    :: GWEIGHT
@@ -5820,6 +5824,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
       ALLOCATE(LOX(LNXX))
       TUSECUBLASPROJ=.FALSE.
       TUSERESIDENTPROJ=.FALSE.
+      TUSEGPUEXPANDPRO=.FALSE.
       TSUPER=.TRUE.
       GWEIGHT=1.D0
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
@@ -5845,6 +5850,7 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
 !       == DEVICE-RESIDENT PROJECTION PATH =====================================
         ALLOCATE(PROPSIACC(LMNXX,NDIM*NB))
         IPRO=1
+        TUSEGPUEXPANDPRO=CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED()
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
      &      ('ACC_PRESENT_PROJ_PSI','ACC_COPY_PROJ_PSI_IN' &
@@ -5853,24 +5859,65 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
      &      ('ACC_PRESENT_PROJ_PROPSI','ACC_COPY_PROJ_PROPSI_OUT' &
      &      ,NDIM,NB,NPRO,PROPSI)
 #ENDIF
-!$ACC DATA COPYIN(PSI(1:NGL,1:NDIM,1:NB)) &
+        IF(TUSEGPUEXPANDPRO) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &        ('ACC_PRESENT_PROJ_BAREPRO','ACC_COPY_PROJ_BAREPRO_IN' &
+     &        ,NGL,MAP%NBAREPRO,GSET%PRO)
+          CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &        ('ACC_PRESENT_PROJ_YLM','ACC_COPY_PROJ_YLM_IN' &
+     &        ,NGL,MAP%LMX,GSET%YLM)
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(PSI(1:NGL,1:NDIM,1:NB) &
+!$ACC&            ,GSET%PRO(1:NGL,1:MAP%NBAREPRO) &
+!$ACC&            ,GSET%YLM(1:NGL,1:MAP%LMX)) &
+!$ACC& COPYOUT(PROPSI(1:NDIM,1:NB,1:NPRO)) &
+!$ACC& CREATE(PROPSIACC(1:LMNXX,1:NDIM*NB),PRO(1:NGL,1:LMNXX) &
+!$ACC&       ,EIGR(1:NGL))
+          DO IAT=1,MAP%NAT
+            ISP=MAP%ISP(IAT)
+            LNX=MAP%LNX(ISP)
+            LMNX=MAP%LMNX(ISP)
+            LOX=MAP%LOX(:,ISP)
+            IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+            CALL PLANEWAVE$STRUCTUREFACTOR(R(:,IAT),NGL,EIGR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D &
+     &          ('ACC_PRESENT_PROJ_EIGR','ACC_COPY_PROJ_EIGR_IN' &
+     &          ,NGL,EIGR)
+            CALL ACCELPROFILE$ADD('ACC_COPY_PROJ_EIGR_UPDATE' &
+     &          ,INT(NGL,KIND=8),0_8,0_8,0_8,0.D0 &
+     &          ,16.D0*REAL(NGL,KIND=8),0.D0)
+#ENDIF
+!$ACC UPDATE DEVICE(EIGR(1:NGL))
+            CALL WAVES_EXPANDPRO_ACC(LNX,LOX,LMNX,NGL &
+     &          ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM &
+     &          ,EIGR,PRO)
+            CALL CPPAW_CUBLAS_ACC_PROJECTION_PRESENT(NGL,NDIM,NB,LMNX &
+     &          ,LMNXX,IPRO,NPRO,PRO,PSI,GWEIGHT,PROPSIACC,PROPSI)
+            IPRO=IPRO+LMNX
+          ENDDO
+!$ACC END DATA
+        ELSE
+!$ACC DATA PRESENT_OR_COPYIN(PSI(1:NGL,1:NDIM,1:NB)) &
 !$ACC& COPYOUT(PROPSI(1:NDIM,1:NB,1:NPRO)) &
 !$ACC& CREATE(PROPSIACC(1:LMNXX,1:NDIM*NB))
-        DO IAT=1,MAP%NAT
-          ISP=MAP%ISP(IAT)
-          LNX=MAP%LNX(ISP)
-          LMNX=MAP%LMNX(ISP)
-          LOX=MAP%LOX(:,ISP)
-          IBPRO=1+SUM(MAP%LNX(1:ISP-1))
-          CALL PLANEWAVE$STRUCTUREFACTOR(R(:,IAT),NGL,EIGR)
-          CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
-     &                        ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX &
-     &                        ,GSET%YLM,EIGR,PRO)
-          CALL CPPAW_CUBLAS_ACC_PROJECTION_PRESENT(NGL,NDIM,NB,LMNX &
-     &            ,LMNXX,IPRO,NPRO,PRO,PSI,GWEIGHT,PROPSIACC,PROPSI)
-          IPRO=IPRO+LMNX
-        ENDDO
+          DO IAT=1,MAP%NAT
+            ISP=MAP%ISP(IAT)
+            LNX=MAP%LNX(ISP)
+            LMNX=MAP%LMNX(ISP)
+            LOX=MAP%LOX(:,ISP)
+            IBPRO=1+SUM(MAP%LNX(1:ISP-1))
+            CALL PLANEWAVE$STRUCTUREFACTOR(R(:,IAT),NGL,EIGR)
+            CALL WAVES_EXPANDPRO(LNX,LOX,LMNX,NGL,GVEC &
+     &                          ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX &
+     &                          ,GSET%YLM,EIGR,PRO)
+            CALL CPPAW_CUBLAS_ACC_PROJECTION_PRESENT(NGL,NDIM,NB,LMNX &
+     &              ,LMNXX,IPRO,NPRO,PRO,PSI,GWEIGHT,PROPSIACC,PROPSI)
+            IPRO=IPRO+LMNX
+          ENDDO
 !$ACC END DATA
+        END IF
       ELSE IF(.TRUE.) THEN
 #ELSE
       IF(.TRUE.) THEN
@@ -6215,6 +6262,62 @@ CALL TIMING$CLOCKOFF('W:HPSI.ADDPRO')
           ENDDO
         ENDDO
       ENDDO
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_EXPANDPRO_ACC(LNX,LOX,LMNX,NGL,BAREPRO,LMX,YLM &
+     &                              ,EIGR,PRO)
+!     **************************************************************************
+!     **  OpenACC projector expansion for the resident cuBLAS projection path.  **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4)    ,INTENT(IN) :: LNX
+      INTEGER(4)    ,INTENT(IN) :: LMNX
+      INTEGER(4)    ,INTENT(IN) :: LOX(LNX)
+      INTEGER(4)    ,INTENT(IN) :: NGL
+      REAL(8)       ,INTENT(IN) :: BAREPRO(NGL,LNX)
+      INTEGER(4)    ,INTENT(IN) :: LMX
+      REAL(8)       ,INTENT(IN) :: YLM(NGL,LMX)
+      COMPLEX(8)    ,INTENT(IN) :: EIGR(NGL)
+      COMPLEX(8)    ,INTENT(OUT):: PRO(NGL,LMNX)
+      INTEGER(4)                :: LN,L,LM,LMN,LMN0,IM,IG,ILN
+      REAL(8)                   :: SVAR
+      COMPLEX(8)                :: CSVAR
+!     **************************************************************************
+!$ACC DATA PRESENT_OR_COPYIN(BAREPRO(1:NGL,1:LNX),YLM(1:NGL,1:LMX) &
+!$ACC&       ,EIGR(1:NGL)) PRESENT(PRO(1:NGL,1:LMNX)) COPYIN(LOX(1:LNX))
+!$ACC PARALLEL LOOP COLLAPSE(2) PRIVATE(LN,L,LM,LMN0,IM,ILN,SVAR,CSVAR)
+      DO LMN=1,LMNX
+        DO IG=1,NGL
+          LMN0=0
+          LN=1
+          DO ILN=1,LNX
+            IF(LMN.LE.LMN0+2*LOX(ILN)+1) THEN
+              LN=ILN
+              EXIT
+            END IF
+            LMN0=LMN0+2*LOX(ILN)+1
+          ENDDO
+          L=LOX(LN)
+          IM=LMN-LMN0
+          LM=L**2+IM
+          SELECT CASE(MOD(L,4))
+          CASE(0)
+            CSVAR=(1.D0,0.D0)
+          CASE(1)
+            CSVAR=(0.D0,-1.D0)
+          CASE(2)
+            CSVAR=(-1.D0,0.D0)
+          CASE DEFAULT
+            CSVAR=(0.D0,1.D0)
+          END SELECT
+          SVAR=YLM(IG,LM)*BAREPRO(IG,LN)
+          PRO(IG,LMN)=SVAR*CSVAR*EIGR(IG)
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
       RETURN
       END
 !
