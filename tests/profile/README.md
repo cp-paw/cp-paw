@@ -108,7 +108,10 @@ caches the full per-atom projector block `PRO` on the GPU from resident
 geometry, grid id and projector dimensions stay unchanged. Set
 `CPPAW_GPU_PRO_EXPANSION=0` (or the longer alias
 `CPPAW_CUBLAS_ACC_PRO_EXPANSION=0`) to compare against the host-expansion path;
-the benchmark case is `gpu_resident_pro_host`. The orthogonalization overlap
+the benchmark case is `gpu_resident_pro_host`. Set `CPPAW_GPU_ADDPRO_CACHE=0`
+to keep the GPU projection cache but route `WAVES_ADDPRO` through the previous
+host-expansion/addproduct path; the benchmark case is
+`gpu_resident_addpro_host`. The orthogonalization overlap
 section keeps `PSIM`/`OPSI` resident across the projection and pseudo-overlap
 calls, and the same mode routes eligible non-superwave `WAVES_OVERLAP`
 scalarproducts through a present-input cuBLAS wrapper; for inversion-symmetric
@@ -198,6 +201,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident` / `gpu_resident_nosync` / `gpu_resident_invbatch_off` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse, with diagnostics for synchronization and inversion batching. |
 | `gpu_resident_no_cusolver` | Residency diagnostic with cuSOLVER disabled in the same residency binary. |
 | `gpu_resident_pro_host` | Residency diagnostic with GPU projector expansion disabled via `CPPAW_GPU_PRO_EXPANSION=0`. |
+| `gpu_resident_addpro_host` | Residency diagnostic with the GPU projection cache kept enabled but its `WAVES_ADDPRO` reuse disabled via `CPPAW_GPU_ADDPRO_CACHE=0`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
@@ -324,6 +328,9 @@ be overridden by kernel category:
   so GPU-resident `PRO` blocks are built once and reused by `WAVES_PROJECTIONS`
   and eligible `WAVES_ADDPRO` calls; set to `0` for the previous host-expansion
   path.
+- `CPPAW_GPU_ADDPRO_CACHE`: keep enabled by default in residency-profile builds
+  so `WAVES_ADDPRO` reuses the GPU-resident `PRO` cache; set to `0` to test
+  projection caching without the cached addproduct path.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,

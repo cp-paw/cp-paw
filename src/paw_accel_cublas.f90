@@ -28,9 +28,11 @@
 #IF DEFINED(CPPVAR_GPU_RESIDENCY_PROFILE)
       LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
+      LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.TRUE.
 #ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
+      LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
 #ENDIF
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
@@ -269,6 +271,23 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_ADDPRO_CACHE',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_ADDPRO_CACHE' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            ADDPRO_CACHE_ENABLED=.FALSE.
+          CASE DEFAULT
+            ADDPRO_CACHE_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_INVERSION_BATCH' &
      &                             ,VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -357,6 +376,17 @@
      &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED &
+     &     .AND.ADDPRO_CACHE_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED()

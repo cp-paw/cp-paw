@@ -18,6 +18,8 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nvhpc-standard-20260530-124708` | Full matrix | `gpu_matmul_conservative` 42.99 s | `cpu` 84.34 s, `nvhpc_cpu` 86.48 s | `cpu` 177.86 s, `nvhpc_cpu` 166.96 s | First full matrix; GPU wins, all-library path is slow. |
 | `si64_bands-nvhpc-standard-20260530-135234` | Full matrix, latest | `gpu_resident` 44.64 s | `cpu` 72.91 s, `nvhpc_cpu` 79.66 s | `cpu` 174.13 s, `nvhpc_cpu` 167.66 s | Recommended default direction: residency + explicit cuBLAS. |
 | `si64_bands-nstep1-1ranks-20260530-211748` | PRO cache smoke | `gpu_resident` 44.08 s | - | - | Cached resident `PRO` beats the host-PRO path for this focused check. |
+| `pro-cache-sweep-20260530-213304` | 512/1024/2048 band sweep | `gpu_resident` by a small margin at 1024/3 | Included | Included | GPU residency dominates; full `PRO` cache saves traffic but is near-neutral in wall time. |
+| `addpro-cache-split-20260530-231839` | ADDPRO-cache split | `gpu_resident_addpro_host` 45.42 s at 1024/1 | - | 4-rank smoke OK | Adds a diagnostic split between projection cache and `WAVES_ADDPRO` cache reuse. |
 
 The latest full-matrix run lives at:
 
@@ -74,6 +76,9 @@ The latest full-matrix run lives at:
 
 5. The first projector follow-up is now in place: resident `PRO` is built once,
    cached on the GPU and reused by projection plus eligible addproduct calls.
+   Keep that full path as the residency default for now because it reduces copy
+   estimates substantially, but keep `gpu_resident_addpro_host` in standard
+   sweeps because its wall time can be marginally better at 1024-band size.
 
 6. The next implementation target should follow the wavefunction-residency
    question beyond the current orthogonalization envelope: reduce the remaining
@@ -201,6 +206,60 @@ Each MPI rank built the cache once and reused it seven times; the per-rank
 `ACC_BUILD_PRO_CACHE` cost was 0.063-0.070 s. This makes the cache path a useful
 baseline for larger systems and for the next residency step, but not yet proof
 that the whole PAW wavefunction path should stay permanently resident.
+
+## Larger PRO Cache Sweep
+
+The focused sweep below used the same Spark C86C branch before adding the
+separate `ADDPRO` cache switch:
+
+```
+runs/pro-cache-sweep-20260530-213304
+```
+
+Completed cases were `EMPTY_BANDS=512,1024` with `NSTEPS=1,3`, plus
+`EMPTY_BANDS=2048` with `NSTEPS=1`. The planned `2048,NSTEPS=3` point was
+stopped after the 2048/1 CPU references because the run time was no longer
+reasonable for an interactive pass; keep it as a separate night-run candidate.
+
+| Empty bands | NSTEPS | `gpu_resident` | `gpu_resident_pro_host` | `gpu_off` | 1-rank CPU best | 8-rank CPU best | Interpretation |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 512 | 1 | 12.19 s | 11.07 s | 19.30 s | 19.37 s | 32.37 s | GPU residency helps; full cache not yet a wall-time win. |
+| 512 | 3 | 20.80 s | 20.79 s | 38.14 s | 38.61 s | 49.82 s | Cache and host-PRO are tied; residency dominates. |
+| 1024 | 1 | 46.35 s | 45.98 s | 75.07 s | 69.64 s | 167.84 s | GPU residency clearly wins; `PRO` cache is near-neutral. |
+| 1024 | 3 | 69.67 s | 70.08 s | 134.36 s | 136.53 s | 245.48 s | Full cache is slightly faster and saves about 2.25 GB estimated copies. |
+| 2048 | 1 | 281.70 s | 281.02 s | 393.06 s | 386.81 s | 1130.65 s | GPU residency remains the main win; `PRO` cache is wall-time neutral. |
+
+The 2048/1 profile makes the next bottleneck clearer: `gpu_resident` records
+only about 24.4 instrumented rank-seconds inside 281.7 wall seconds. BLAS,
+LAPACK and FFT offload explain the CPU/GPU difference, but much of the remaining
+wall time is still outside the current accelerator timers. That points the next
+implementation pass toward broader PAW/wavefunction-region instrumentation and
+residency, not toward adding another NVIDIA library first.
+
+## ADDPRO Cache Split
+
+The follow-up patch adds `CPPAW_GPU_ADDPRO_CACHE=0` and the benchmark case
+`gpu_resident_addpro_host`. This keeps the GPU `PRO` cache for projections but
+routes `WAVES_ADDPRO` through the previous addproduct path, so projection-cache
+effects and addproduct-cache effects can be compared separately.
+
+```
+runs/addpro-cache-split-20260530-231839
+```
+
+| Empty bands | Ranks | `gpu_resident` | `gpu_resident_addpro_host` | `gpu_resident_pro_host` | Energy |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 512 | 1 | 11.19 s | 11.99 s | 11.14 s | 302.280854 Ha |
+| 1024 | 1 | 45.90 s | 45.42 s | 45.56 s | 302.280854 Ha |
+| 512 | 4 | - | 22.17 s | - | 302.280854 Ha |
+
+The split case is correct and useful, but it does not justify changing the
+default yet. At 1024 bands it is slightly faster, while the full cache path
+keeps much lower estimated `WAVES_ADDPRO` transfer volume
+(`ACC_COPY_ADDPRO_PROPSI_IN` plus `CUBLAS_ZGEMM_ADDPRO_CACHE` instead of the
+large generic `CUBLAS_ZGEMM_ADDPRODUCT` copy estimate). Keep the full cache as
+the default and include `gpu_resident_addpro_host` in future standard/large-band
+sweeps.
 
 ## Recommended Next Benchmark
 
