@@ -206,6 +206,9 @@ case_note() {
     gpu_resident)
       echo "Recommended one-GPU NVHPC profile path with OpenACC residency enabled."
       ;;
+    gpu_resident_1coverlap)
+      echo "Experimental residency diagnostic that enables one-center overlap cuBLAS offload."
+      ;;
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
       ;;
@@ -214,6 +217,9 @@ case_note() {
       ;;
     gpu_resident_addpro_host)
       echo "Residency diagnostic that keeps the GPU projector cache for projections but disables its WAVES_ADDPRO reuse."
+      ;;
+    gpu_resident_1coverlap_host)
+      echo "Residency diagnostic that disables only the one-center overlap cuBLAS path."
       ;;
     *_invbatch_off)
       echo "cuBLAS diagnostic that disables batched inversion-symmetry scalarproducts."
@@ -389,8 +395,10 @@ case_env() {
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     gpu_resident_no_cusolver) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_resident_1coverlap) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=1 $(cublas_env)" ;;
     gpu_resident_pro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PRO_EXPANSION=0 $(cublas_env)" ;;
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
+    gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;

@@ -281,6 +281,31 @@ time and can overlap with BLAS/FFT/LAPACK rows.
 | `paw-envelope-smoke-20260530-234323-1rank` | 1 | 11.32 s | 40.33% | 5.13 s | 302.280854 Ha | `PAW_1COVERLAP_TOTAL`, `PAW_HPSI_TOTAL`, `PAW_HPSI_VPSI`, `PAW_RHO_TOTAL` |
 | `paw-envelope-smoke-20260530-234349-4rank` | 4 | 22.15 s | 19.72% | 13.16 s | 302.280854 Ha | `PAW_HPSI_TOTAL`, `PAW_1COVERLAP_TOTAL`, `PAW_HPSI_VPSI`, `PAW_ADDPRO_TOTAL` |
 
+## One-Center Overlap Offload
+
+The next residency patch moves the dense `WAVES_1COVERLAP` contraction to
+cuBLAS when `CPPVAR_CUBLAS_ACC` is available. This is intentionally separate
+from the existing wavefunction-overlap residency path because the one-center
+projection arrays are packed from the PAW projector layout first. The first
+Spark smoke result was correct but slower (`11.89 s` for opt-in offload versus
+`10.96 s` with `CPPAW_GPU_1COVERLAP=0` at `EMPTY_BANDS=512,NSTEPS=1`), and a
+larger `2048/1` probe showed the GPU idle while the process spun on CPU. Keep
+this path opt-in for now. Use `CPPAW_GPU_1COVERLAP=1` or
+`CPPAW_CUBLAS_ACC_1COVERLAP=1` to enable it explicitly; use the benchmark case
+`gpu_resident_1coverlap`. The explicit host diagnostic remains
+`gpu_resident_1coverlap_host`.
+
+After switching the default off again, the safe residency path rebuilds and runs
+normally. The 512/1 smoke keeps the same energy for `gpu_resident` and
+`gpu_resident_1coverlap_host` (`302.280854 Ha`). The larger default-off 2048/1
+check completed as
+`onecenter-defaultoff-2048-nstep1-20260531-012732`: `288.08 s` wall time,
+`302.280854 Ha`, and `PAW_1COVERLAP_TOTAL=13.57 s`. No `CUBLAS_ZGEMM_1COV_*`
+rows are emitted unless the opt-in keyword is set. The explicit opt-in smoke
+`onecenter-optin-smoke-20260531-013314` completed correctly at 512/1
+(`12.40 s`, `302.280854 Ha`) and emitted the expected `CUBLAS_ZGEMM_1COV_*`
+profile rows.
+
 For the expensive unresolved point, use the dedicated night-run wrapper. It
 defaults to the GPU cases only so the run is not dominated by the known slow
 8-rank CPU reference; add `RUN_CPU_REFERENCES=yes` when CPU reference numbers

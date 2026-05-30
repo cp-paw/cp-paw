@@ -34,6 +34,7 @@
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
 #ENDIF
+      LOGICAL(4)         :: ONECENTER_OVERLAP_ENABLED=.FALSE.
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
@@ -288,6 +289,23 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_1COVERLAP',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_1COVERLAP' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            ONECENTER_OVERLAP_ENABLED=.FALSE.
+          CASE DEFAULT
+            ONECENTER_OVERLAP_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_INVERSION_BATCH' &
      &                             ,VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -387,6 +405,17 @@
      &     .AND.ADDPRO_CACHE_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED=ENABLED &
+     &     .AND.ONECENTER_OVERLAP_ENABLED.AND.(FLOPS.GE.MINFLOP_OVERLAP)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED()
