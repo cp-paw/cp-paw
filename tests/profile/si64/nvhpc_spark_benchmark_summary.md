@@ -17,8 +17,9 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nvhpc-standard-20260530-124102` | CPU-only partial | - | `cpu` 73.32 s, `nvhpc_cpu` 69.45 s | - | Partial run after an invalid case list; CPU context only. |
 | `si64_bands-nvhpc-standard-20260530-124708` | Full matrix | `gpu_matmul_conservative` 42.99 s | `cpu` 84.34 s, `nvhpc_cpu` 86.48 s | `cpu` 177.86 s, `nvhpc_cpu` 166.96 s | First full matrix; GPU wins, all-library path is slow. |
 | `si64_bands-nvhpc-standard-20260530-135234` | Full matrix, latest | `gpu_resident` 44.64 s | `cpu` 72.91 s, `nvhpc_cpu` 79.66 s | `cpu` 174.13 s, `nvhpc_cpu` 167.66 s | Recommended default direction: residency + explicit cuBLAS. |
+| `si64_bands-nstep1-1ranks-20260530-211748` | PRO cache smoke | `gpu_resident` 44.08 s | - | - | Cached resident `PRO` beats the host-PRO path for this focused check. |
 
-The latest run lives at:
+The latest full-matrix run lives at:
 
 ```
 /home/kuehne88/cp-paw-nvhpc-gpufull/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260530-135234
@@ -71,10 +72,14 @@ The latest run lives at:
    justify aggressive defaults for either one, although larger generalized
    eigensolver cases may change the cuSOLVER decision.
 
-5. The next implementation target should follow the wavefunction-residency
-   question: make data movement around `PSI0`, `PSIM`, `OPSI`, `PROPSI`,
-   projection, overlap, and addproduct visible first, then extend the resident
-   region only where the profile shows real host/device traffic.
+5. The first projector follow-up is now in place: resident `PRO` is built once,
+   cached on the GPU and reused by projection plus eligible addproduct calls.
+
+6. The next implementation target should follow the wavefunction-residency
+   question beyond the current orthogonalization envelope: reduce the remaining
+   `PSI`/`PROPSI` host/device traffic around projection, overlap and addproduct,
+   then retest on larger band/system cases where cache memory and reuse matter
+   more than the Si64 smoke.
 
 ## Present-Check Smoke
 
@@ -147,6 +152,55 @@ than the removed transfer on this small case. Keep GPU projector expansion as a
 diagnostic/default in the residency profile for larger-system testing, but the
 next optimization should fuse or cache more of the structure-factor/projector
 work before claiming a speedup.
+
+## Resident PRO Cache Smoke
+
+The next patch caches the full resident `PRO(NGL,LMNXX,NAT)` block on the GPU,
+stores per-atom structure factors in the same cache, and reuses it from both
+`WAVES_PROJECTIONS` and eligible `WAVES_ADDPRO` calls. Spark C86C builds
+succeeded for both serial and parallel residency targets:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+```
+
+Focused one-rank smoke:
+
+```
+runs/si64_bands-nstep1-1ranks-20260530-211748
+```
+
+| Case | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident` | 44.08 s | 15.3405 GB | 302.280854 Ha | Cached GPU `PRO` plus cached addproduct path. |
+| `gpu_resident_pro_host` | 47.24 s | 16.4970 GB | 302.280854 Ha | Same binary with `CPPAW_GPU_PRO_EXPANSION=0`. |
+
+Key cache rows from the one-rank smoke:
+
+| Profile row | `gpu_resident` | `gpu_resident_pro_host` | Meaning |
+| --- | ---: | ---: | --- |
+| `ACC_BUILD_PRO_CACHE` | 1 call, 0.0491 s, 0.1897 GB | - | Full resident projector cache is built once for this geometry/grid. |
+| `ACC_PRESENT_PRO_CACHE_REUSE` | 7 calls | - | Later projection/addproduct uses reuse the cache. |
+| `ACC_PRESENT_PROJ_PRO_CACHE` | 6 calls, 0 GB | - | Projection consumes cached `PRO` on device. |
+| `ACC_COPY_PROJ_PRO_IN` | - | 384 calls, 1.0490 GB | Old host-expanded projector transfer. |
+| `ACC_PRESENT_ADDPRO_PRO_CACHE` | 2 calls, 0 GB | - | `WAVES_ADDPRO` consumes cached `PRO` on device. |
+| `CUBLAS_ZGEMM_ADDPRO_CACHE` | 128 calls, 0.3719 s | - | Addproduct update is routed through the present-cache cuBLAS path. |
+
+Parallel 4-rank smoke:
+
+```
+runs/si64_bands-nstep1-4ranks-20260530-212047
+```
+
+| Case | Ranks | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident` | 4 | 103.72 s | 26.1007 GB | 302.280854 Ha | Parallel binary exercises the same cache path; performance is not a target because four ranks share one GPU. |
+
+Each MPI rank built the cache once and reused it seven times; the per-rank
+`ACC_BUILD_PRO_CACHE` cost was 0.063-0.070 s. This makes the cache path a useful
+baseline for larger systems and for the next residency step, but not yet proof
+that the whole PAW wavefunction path should stay permanently resident.
 
 ## Recommended Next Benchmark
 
