@@ -8,6 +8,8 @@ import sys
 def category(op):
     if op.startswith("ACC_COPY"):
         return "ACC copy est"
+    if op.startswith("ACC_PRESENT"):
+        return "ACC residency"
     if op.startswith("ACC_SETUP"):
         return "ACC setup"
     if op.startswith("PW_") and not op.startswith("PW_FFT"):
@@ -125,6 +127,15 @@ def main(argv):
                     op, data["calls"], data["gbyte"]
                 )
             )
+
+    present_ops = [
+        (op, data) for op, data in per_op.items() if op.startswith("ACC_PRESENT")
+    ]
+    if present_ops:
+        print("")
+        print("OpenACC present observations")
+        for op, data in sorted(present_ops, key=lambda item: item[0])[:20]:
+            print("  {:<24s} calls={:8d}".format(op, data["calls"]))
 
     print("")
     print("Top shapes")

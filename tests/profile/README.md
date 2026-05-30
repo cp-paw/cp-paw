@@ -121,6 +121,16 @@ target workload. For non-inversion wave sets, the residency mode also keeps the
 orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC data region;
 `ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy estimate.
 
+The residency profile also records semantic OpenACC present checks for the PAW
+wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count
+places where an array was already resident, while matching `ACC_COPY_*` rows add
+the estimated bytes for a required host/device transfer. The tracked arrays are
+`PSIM`/`OPSI` in the orthogonalization region, `PSIM`/`OPSI`/`LAMBDA` in
+`WAVES_ADDOPSI`, `PSI` and `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in
+`WAVES_ADDPRO`. These rows are meant to guide the next change: extend resident
+regions only where the profile shows repeated copies of the same wavefunction
+data.
+
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
 NVLAMATH into one executable. NVBLAS stays separate because it interposes BLAS

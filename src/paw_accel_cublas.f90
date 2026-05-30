@@ -58,6 +58,61 @@
 #ENDIF
 !
 !     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D(PRESENT_NAME &
+     &                                                 ,COPY_NAME &
+     &                                                 ,N1,N2,N3,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      COMPLEX(8)              :: ARRAY(N1,N2,N3)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(N3,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,INT(N3,KIND=8),0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,INT(N3,KIND=8),0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D(PRESENT_NAME &
+     &                                                 ,COPY_NAME &
+     &                                                 ,N1,N2,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      COMPLEX(8)              :: ARRAY(N1,N2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV(NAME,VALUE)
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN) :: NAME
@@ -625,6 +680,9 @@
       ZERO=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &    ('ACC_PRESENT_PROJ_PRO','ACC_COPY_PROJ_PRO_IN' &
+     &    ,NGL,LMNX,PRO)
 #ENDIF
 !$ACC DATA PRESENT_OR_COPYIN(PRO(1:NGL,1:LMNX),PSI(1:NGL,1:NDIM,1:NB)) &
 !$ACC& PRESENT(WORK(1:LMNXX,1:NDIM*NB),PROPSI(1:NDIM,1:NB,1:NPRO))

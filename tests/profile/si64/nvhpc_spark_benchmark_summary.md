@@ -76,6 +76,35 @@ The latest run lives at:
    projection, overlap, and addproduct visible first, then extend the resident
    region only where the profile shows real host/device traffic.
 
+## Present-Check Smoke
+
+After adding semantic OpenACC present checks, the patched
+`nvhpc_gpu_acc_residency_profile` target was rebuilt on Spark C86C and run with
+`TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`, one GPU rank:
+
+```
+runs/si64_bands-nstep1-1ranks-20260530-192928/gpu_resident/rep01
+```
+
+The run completed normally in 45.19 s with final constant energy
+302.280854 Ha. The new residency rows reported:
+
+| Profile row | Calls | Estimated copy GB | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_PRESENT_PROJ_PSI` | 2 | 0.0000 | Projection calls inside the resident orthogonalization region reuse `PSI` on device. |
+| `ACC_COPY_PROJ_PSI_IN` | 4 | 0.4841 | Projection calls outside that region still copy wavefunctions to the device. |
+| `ACC_COPY_ORTHO_PSIM_IN` | 1 | 0.1210 | `PSIM` enters the orthogonalization resident region once. |
+| `ACC_COPY_ORTHO_OPSI_IN` | 1 | 0.1210 | `OPSI` enters the orthogonalization resident region once. |
+| `ACC_COPY_PROJ_PROPSI_OUT` | 6 | 0.0460 | Projection results are still returned to host for MPI combine and one-center overlap work. |
+| `ACC_COPY_ADDPRO_PSI_IO` | 2 | 0.2421 | `WAVES_ADDPRO` still copies its updated wavefunction array in/out. |
+| `ACC_COPY_PROJ_PRO_IN` | 384 | 1.0490 | Projector blocks are generated on host and copied for each atom/projection GEMM. |
+
+This supports Peter's concern in a more concrete way: keeping `PSIM`/`OPSI`
+resident already works locally in the orthogonalization envelope, but broader
+wavefunction residency would need to cover projection calls outside that
+envelope, and a separate larger target is moving or caching projector expansion
+data (`PRO`) rather than only toggling FFT/LAPACK libraries.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
