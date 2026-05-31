@@ -180,18 +180,22 @@ the larger Si64 band benchmarks. Keep
 `gpu_resident_nosync` and `gpu_resident_orthox_nosync` as diagnostic candidates
 only; Spark Nsight traces show that removing the explicit post-cuBLAS
 synchronization mostly shifts waiting time into later stream synchronizations or
-copy calls for this workload. For non-inversion wave sets, the residency mode
-also keeps the orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC
-data region; `ACC_PRESENT_ADDOPSI_*` / `ACC_COPY_ADDOPSI_*` rows record that
-region's array-specific transfer estimate.
+copy calls for this workload. The residency mode also keeps the
+orthogonalization `WAVES_ADDOPSI` output wavefunction in a short OpenACC data
+region, recorded as `ACC_PRESENT_ADDOPSI_PSIM` /
+`ACC_COPY_ADDOPSI_PSIM_IO`. For non-inversion wave sets, `OPSI` and `LAMBDA`
+are copied into the same region. For inversion-symmetric wave sets, `OPSI` and
+the temporary lambda blocks still use the per-call cuBLAS wrapper copies
+because `OPSI` is inverted on the host between the two addproduct calls.
 
 The residency profile also records semantic OpenACC present checks for the PAW
 wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count
 places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
-`PSIM`/`OPSI` in the orthogonalization region, `PSIM`/`OPSI`/`LAMBDA` in
-`WAVES_ADDOPSI`, `PSI` and `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in
-`WAVES_ADDPRO`. The Gram-Schmidt setup keeps `PSI` resident through the final
+`PSIM`/`OPSI` in the orthogonalization region, `PSIM` in `WAVES_ADDOPSI`
+with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
+`PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in `WAVES_ADDPRO`. The
+Gram-Schmidt setup keeps `PSI` resident through the final
 wavefunction transform and records that outer input/output region as
 `ACC_COPY_GRAM_PSI_IO`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
 also use these rows for their residency paths; inversion-symmetric

@@ -874,6 +874,37 @@ Compared with the previous cleanup run, the 2048-band orthox copy estimate drops
 from 7.9844 GB to 6.6127 GB. The remaining `ZGEMM_NN_C_IO` calls are therefore
 not Gram-transform output copies; they are the next addproduct-residency target.
 
+### ADDOPSI Output Residency
+
+The orthogonalization `WAVES_ADDOPSI` step now keeps the updated wavefunction
+array resident while `LIB$ADDPRODUCTC8` accumulates into it. This removes the
+last `ACC_COPY_CUBLAS_ZGEMM_NN_C_IO` rows from the Si64 inversion-symmetric
+path. To avoid stale device data, the inversion path keeps only the output
+`PSIM`/`PSIBAR` array in the OpenACC data region; `OPSI` and the temporary
+lambda blocks are still copied by the per-call cuBLAS wrapper because `OPSI` is
+inverted on the host between the two addproduct calls.
+
+Spark C86C validation:
+
+```
+runs/addopsi-output-residency512-20260531-164747
+runs/addopsi-output-residency2048-20260531-164801
+runs/addopsi-output-residency-parallel512-20260531-164922
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `ADDOPSI_PSIM_IO` | `ZGEMM_NN_C_IO` | `ZGEMM_NN_C` present | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 6.66 s | 2.4247 GB | 1 call, 0.1345 GB | 0 calls | 6 calls | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.17 s | 1.7136 GB | 1 call, 0.1345 GB | 0 calls | 6 calls | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.32 s | 4.9482 GB | 1 call, 0.0336 GB per rank | 0 calls | 6 calls per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 41.63 s | 21.8756 GB | 1 call, 0.4572 GB | 0 calls | 6 calls | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 39.04 s | 6.1555 GB | 1 call, 0.4572 GB | 0 calls | 6 calls | 302.280854 Ha |
+
+Compared with the Gram-transform residency run, the 2048-band orthox copy
+estimate drops from 6.6127 GB to 6.1555 GB. The total drop is smaller than the
+old `ZGEMM_NN_C_IO` estimate because the remaining required output transfer is
+now charged explicitly to `ACC_COPY_ADDOPSI_PSIM_IO`.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
