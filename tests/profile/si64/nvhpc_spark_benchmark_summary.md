@@ -692,6 +692,8 @@ runs/orthox-resident-parallel-smoke512-20260531-151713
 runs/orthox-resident-nstep3-1024-20260531-151840
 runs/orthox-resident-ab1024-nstep3-repeat3-20260531-152238
 runs/orthox-resident-ab2048-nstep3-20260531-152609
+runs/orthox-cublas-accounting-smoke512-final-20260531-153740
+runs/orthox-cublas-accounting-parallel-smoke512-20260531-153831
 ```
 
 | Case | Empty bands | Ranks | Wall time | Total copy estimate | `PAW_ORTHO_X_RESIDUAL` | `PAW_ORTHO_X_UPDATE` | Final energy |
@@ -711,11 +713,13 @@ The 2048-band case is the useful signal: wall time improves by about 4.3%, the
 copy estimate drops by about 13.9 GB, the residual check shrinks from 0.2489 s
 to 0.0207 s, and the update scalar/apply/sym loops shrink from about 0.589 s to
 0.0188 s. The two transform/back-transform matrix-product pairs remain the
-dominant Ortho-X work. Because the direct present-device cuBLAS calls are timed
-inside the `PAW_ORTHO_X_*` rows rather than the generic `CUBLAS_*` wrapper rows,
-the benchmark `blas_s` column undercounts this prototype; use the Ortho-X
-subphase rows for this comparison. Keep the path opt-in until longer runs check
-multi-step energy stability and larger systems.
+dominant Ortho-X work. The accounting follow-up records the direct
+present-device cuBLAS calls as `CUBLAS_DGEMM_ORTHOX_RESIDUAL`,
+`CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and `CUBLAS_DGEMM_ORTHOX_BACKTRANS`, so the
+benchmark `blas_s` column now includes this prototype. The accounting smoke
+checks kept the 512-band energies unchanged at 302.280854 Ha for both serial
+and 4-rank runs. Keep the path opt-in until longer runs check multi-step energy
+stability and larger systems.
 
 The longer follow-up keeps that conclusion nuanced. At 1024 empty bands and
 `NSTEPS=3`, three repeats show a consistent wall-time gain for
