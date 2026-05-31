@@ -3338,6 +3338,10 @@ END IF
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_DENMAT_ENERGY_ENABLED
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: LMNXX
       INTEGER(4),INTENT(IN)  :: NDIMD_
@@ -3354,6 +3358,7 @@ END IF
       COMPLEX(8),ALLOCATABLE :: PROJ(:,:,:) !(NDIM,NBH,LMNX) <PRO|PSPSI>
       COMPLEX(8),ALLOCATABLE :: DENMAT1(:,:,:)
       COMPLEX(8),ALLOCATABLE :: EDENMAT1(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: LAGR(:,:)
       REAL(8)   ,ALLOCATABLE :: OCC(:,:,:)
       COMPLEX(8)             :: CSVAR1,CSVAR2
       INTEGER(4)             :: NTASKS,THISTASK
@@ -3361,6 +3366,11 @@ END IF
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IB
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      INTEGER(4)             :: LMNXMAX
+      LOGICAL(4)             :: TUSEACCLAGR
+      REAL(8)                :: ACCEL_DENMAT_FLOPS
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
@@ -3410,8 +3420,45 @@ END IF
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
+          CALL PLANEWAVE$GETL4('TINV',TINV)
           NBH=THIS%NBH
           NB=THIS%NB
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+          ALLOCATE(LAGR(NB,NB))
+          DO IB=1,NB
+            LAGR(:,IB)=THIS%RLAM0(:,IB)*OCC(IB,IKPT,ISPIN)
+          ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          CALL ACCELPROFILE$ADD('PAW_DENMAT_LAGR_SETUP' &
+     &      ,INT(NB,KIND=8),INT(NB,KIND=8),1_8,0_8 &
+     &      ,0.D0,16.D0*REAL(NB,KIND=8)*REAL(NB,KIND=8) &
+     &      ,ACCEL_T1-ACCEL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          LMNXMAX=0
+          DO IAT=1,NAT
+            ISP=MAP%ISP(IAT)
+            LMNXMAX=MAX(LMNXMAX,MAP%LMNX(ISP))
+          ENDDO
+          ACCEL_DENMAT_FLOPS=32.D0*REAL(NBH,KIND=8)*REAL(NBH,KIND=8) &
+     &       *REAL(LMNXMAX,KIND=8)*REAL(NDIM,KIND=8) &
+     &       +16.D0*REAL(NBH,KIND=8)*REAL(LMNXMAX,KIND=8) &
+     &       *REAL(LMNXMAX,KIND=8)*REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8)
+          TUSEACCLAGR=TINV &
+     &       .AND.CPPAW_CUBLAS_ACC_DENMAT_ENERGY_ENABLED &
+     &            (ACCEL_DENMAT_FLOPS)
+          IF(TUSEACCLAGR) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$ADD('ACC_COPY_DENMAT_LAGR_IN' &
+     &        ,INT(NB,KIND=8),INT(NB,KIND=8),1_8,0_8 &
+     &        ,0.D0,16.D0*REAL(NB,KIND=8)*REAL(NB,KIND=8),0.D0)
+#ENDIF
+!$ACC ENTER DATA COPYIN(LAGR(1:NB,1:NB))
+          END IF
+#ENDIF
           IPRO=1
           DO IAT=1,NAT
             ISP=MAP%ISP(IAT)
@@ -3444,7 +3491,7 @@ END IF
 !!$  IF(OCC(IB,IKPT,ISPIN).LT.1.D-5) CYCLE
 !!$  WRITE(*,FMT='(I3,40("(",2F10.5,")"))')IB,THIS%PROJ(:,IB,IPRO:IPRO-1+LMNX)
 !!$ENDDO
-            CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),THIS%RLAM0 &
+            CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),LAGR &
      &                       ,PROJ,DENMAT1,EDENMAT1)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
             CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -3478,6 +3525,12 @@ END IF
 #ENDIF
             IPRO=IPRO+LMNX
           ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TUSEACCLAGR) THEN
+!$ACC EXIT DATA DELETE(LAGR(1:NB,1:NB))
+          END IF
+#ENDIF
+          DEALLOCATE(LAGR)
         ENDDO
       ENDDO
 !     == THE PROJECTIONS ARE IDENTICAL AND COMPLETE FOR EACH K-GROUP
@@ -3772,7 +3825,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAMBDA,PROPSI &
+      SUBROUTINE WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC,LAGR,PROPSI &
      &                       ,DENMAT,EDENMAT)
 !     **************************************************************************
 !     **                                                                      **
@@ -3798,14 +3851,13 @@ END IF
       INTEGER(4),INTENT(IN) :: NB     ! #(STATES)
       INTEGER(4),INTENT(IN) :: LMNX   ! #(PROJECTORS ON THIS SITE)
       REAL(8)   ,INTENT(IN) :: OCC(NB)! OCCUPATIONS
-      COMPLEX(8),INTENT(IN) :: LAMBDA(NB,NB)   !LAGRANGE/F
+      COMPLEX(8),INTENT(IN) :: LAGR(NB,NB)     ! LAGRANGE/F TIMES OCCUPATION
       COMPLEX(8),INTENT(IN) :: PROPSI(NDIM,NBH,LMNX) !<PRO|PSI>
       COMPLEX(8),INTENT(OUT):: DENMAT(LMNX,LMNX,NDIM**2)
       COMPLEX(8),INTENT(OUT):: EDENMAT(LMNX,LMNX,NDIM**2)
       COMPLEX(8)            :: DENMAT1(LMNX,LMNX,NDIM,NDIM)
       COMPLEX(8)            :: EDENMAT1(LMNX,LMNX,NDIM,NDIM)
       COMPLEX(8)            :: FUNC(LMNX,NDIM)
-      COMPLEX(8)            :: LAGR(NB,NB)
       LOGICAL(4)            :: TINV
       INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB,IB1,IB2
       REAL(8)               :: SVAR1,SVAR2
@@ -3914,9 +3966,6 @@ END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
-      DO IB2=1,NB
-        LAGR(:,IB2)=LAMBDA(:,IB2)*OCC(IB2)
-      ENDDO
       EDENMAT1(:,:,:,:)=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       IF(TUSEACCENERGY) THEN
@@ -4083,6 +4132,7 @@ END IF
 !     **  site; the profiling rows show whether a broader resident rewrite is **
 !     **  worth the extra data-structure work.                                **
 !     **************************************************************************
+      USE OPENACC
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NDIM
       INTEGER(4),INTENT(IN) :: NBH
@@ -4104,6 +4154,8 @@ END IF
       REAL(8)               :: ACCEL_BYTES
       REAL(8)               :: ACCEL_FLOPS
       REAL(8)               :: ACCEL_COPY_TIME
+      LOGICAL(4)            :: TLAGRPRESENT
+      LOGICAL(4)            :: TPROPSIPRESENT
 #ENDIF
 !     **************************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -4113,14 +4165,26 @@ END IF
      &            +16.D0*REAL(NBH,KIND=8) &
      &            *REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
      &            *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8)
-      ACCEL_BYTES=16.D0*(REAL(NB,KIND=8)*REAL(NB,KIND=8) &
-     &            +REAL(NDIM,KIND=8)*REAL(NBH,KIND=8) &
-     &            *REAL(LMNX,KIND=8) &
-     &            +REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
-     &            *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8))
+      TLAGRPRESENT=ACC_IS_PRESENT(LAGR)
+      TPROPSIPRESENT=ACC_IS_PRESENT(PROPSI)
+      ACCEL_BYTES=16.D0*REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8)
+      IF(.NOT.TLAGRPRESENT) THEN
+        ACCEL_BYTES=ACCEL_BYTES &
+     &      +16.D0*REAL(NB,KIND=8)*REAL(NB,KIND=8)
+      ELSE
+        CALL ACCELPROFILE$ADD('ACC_PRESENT_DENMAT_LAGR' &
+     &      ,INT(NB,KIND=8),INT(NB,KIND=8),1_8,0_8,0.D0,0.D0,0.D0)
+      END IF
+      IF(.NOT.TPROPSIPRESENT) THEN
+        ACCEL_BYTES=ACCEL_BYTES &
+     &      +16.D0*REAL(NDIM,KIND=8)*REAL(NBH,KIND=8) &
+     &      *REAL(LMNX,KIND=8)
+      END IF
 #ENDIF
       ALLOCATE(FUNCACC(LMNX,NDIM,NBH))
-!$ACC DATA COPYIN(LAGR(1:NB,1:NB),PROPSI(1:NDIM,1:NBH,1:LMNX)) &
+!$ACC DATA PRESENT_OR_COPYIN(LAGR(1:NB,1:NB) &
+!$ACC& ,PROPSI(1:NDIM,1:NBH,1:LMNX)) &
 !$ACC& CREATE(FUNCACC(1:LMNX,1:NDIM,1:NBH)) &
 !$ACC& COPYOUT(EDENMAT1(1:LMNX,1:LMNX,1:NDIM,1:NDIM))
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
