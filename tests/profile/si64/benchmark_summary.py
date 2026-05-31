@@ -14,6 +14,7 @@ def profile_totals(run_dir):
         "fft": 0.0,
         "mpi": 0.0,
         "pw_trace": 0.0,
+        "phase": 0.0,
         "setup": 0.0,
         "copy_gb": 0.0,
     }
@@ -28,6 +29,9 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("ACC_SETUP"):
                     totals["setup"] += seconds
+                    continue
+                if op.startswith("PHASE_"):
+                    totals["phase"] += seconds
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
@@ -115,8 +119,10 @@ def main(argv):
         wall_rank = wall_rank_time(wall, env.get("ranks"))
         gap = None
         coverage = None
+        phase_gap = None
         if wall_rank is not None:
             gap = wall_rank - totals["instrumented"]
+            phase_gap = wall_rank - totals["phase"]
             if wall_rank > 0.0:
                 coverage = 100.0 * totals["instrumented"] / wall_rank
         rows.append(
@@ -136,6 +142,8 @@ def main(argv):
                 "fft_s": totals["fft"],
                 "mpi_s": totals["mpi"],
                 "pw_trace_s": totals["pw_trace"],
+                "phase_s": totals["phase"],
+                "phase_gap_s": phase_gap,
                 "setup_s": totals["setup"],
                 "copy_gb": totals["copy_gb"],
                 "energy": final_energy(run_dir),
@@ -163,6 +171,8 @@ def main(argv):
         "fft_s",
         "mpi_s",
         "pw_trace_s",
+        "phase_s",
+        "phase_gap_s",
         "setup_s",
         "copy_gb",
         "energy",

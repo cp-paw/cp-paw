@@ -23,20 +23,32 @@
       INTEGER(4)   :: NBEG      ! DECIDES IF RESTART FILE IS READ
       REAL(8)      :: DELT
       LOGICAL(4)   :: TCHK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)      :: TACC
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('PAW')
                               CALL TIMING$CLOCKON('INITIALIZATION')
       CALL STOPIT$SETSTARTTIME
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
 !
 !     ==================================================================
 !     ====  READ CONTROL INPUT DATA FILE "CNTL"                     ====
 !     ==================================================================
       CALL READIN(NBEG,NOMORE,IPRINT,DELT,TMERMN,TNWSTR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_READIN',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  READ STRUCTURAL DATA FROM FILE "STRC"                       ==
 !     ==================================================================
       CALL STRCIN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_STRCIN',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 
 !     ==================================================================
 !     ==  SET DIMER DIMENSION                                         ==
@@ -47,6 +59,9 @@
 !     ==  INITIALIZE ATOMS OBJECT                                     ==
 !     ==================================================================
       CALL ATOMS$INITIALIZE
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_ATOMS',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  GENERATE G-VECTORS                                          ==
@@ -54,6 +69,9 @@
                               CALL TIMING$CLOCKON('WAVES$INITIALIZE')
       CALL WAVES$INITIALIZE
                               CALL TIMING$CLOCKOFF('WAVES$INITIALIZE')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_WAVES',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  READ RESTART FILE (WAVE FUNCTION COEFFICIENTS, ETC)         ==
@@ -63,6 +81,9 @@
         CALL READRESTART
                               CALL TIMING$CLOCKOFF('RESTART I/O')
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_RESTART',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ================================================================
 !     ==  REPORT INPUT DATA                                         ==
@@ -79,6 +100,9 @@
 !     == ACCOUNT FOR THE FACT THAT MANY ROUTINES INIITIALIZE THEMSELFES IN THE 
 !     == FIRST ITERATION. THE TIME TO THIS RESET IS NOT PRINTED 
                               CALL TIMING$START
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_INIT_REPORT',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  RETURN IF NO ITERATIONS ARE REQUIRED                        ==
@@ -103,6 +127,9 @@
 !     ==================================================================
 !     ==  ITERATION CONTROL (PROPER STOP ETC. )                       ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
       NFI=NFI+1
       CALL STOPIT$GETL4('STOP',TSTOP)
       IF(TSTOP) TLAST=.TRUE.
@@ -113,10 +140,16 @@
       CALL GRAPHICS$SETL4('WAKE',TPRINT.AND.TLAST)
       CALL OPTEELS$SETL4('ON',TLAST)
       CALL CORE$SETL4('ON',TLAST)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_LOOP_CONTROL',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==   WRITE RESTART_OUT                                          ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
       IF(TLAST.OR.(TPRINT.AND.(.NOT.TFIRST))) THEN
                               CALL TIMING$CLOCKON('RESTART I/O') 
         CALL WRITERESTART
@@ -125,6 +158,9 @@
                               CALL TIMING$CLOCKOFF('RESTART I/O')
 !       CALL MM_PAW_WRITE_RESTART (NFI) ! CALGARY QM/MM IMPLEMENTATION
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_RESTART_WRITE',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==   PERFORM ONE TIME STEP                                      ==
@@ -140,6 +176,9 @@
 !     ==   WRITE INFORMATION AND TRAJECTORIES                         ==
 !     ==================================================================
 !     __ADD TO TRAJECTORIES (TEMPORARY BUFFER)__________________________
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
       IF(.NOT.TLAST) THEN
         CALL WRITETRAJECTORY(NFI,DELT)
       END IF
@@ -147,17 +186,26 @@
       IF(TPRINT.OR.TLAST) THEN
         CALL TRAJECTORYIO$FLUSHALL
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_TRAJECTORY_IO',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     == RESET CLOCKS FOR TIMING                                      ==
 !     == THIS IS DONE AFTER THE FIRST ITERATION TO AVOID COUNTING     ==
 !     == THE TIME FOR SELF-INITIALIZATION OF OBJECTS                  ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
       IF(TFIRST) THEN
         CALL TIMING$START
       ELSE
         CALL TIMING$COUNT
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_TIMING_COUNT',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==   STOP OR CONTINUE LOOP                                      ==
@@ -298,8 +346,14 @@
       REAL(8)                 :: SVAR
       LOGICAL(4)              :: TCHK1,TCHK2
       REAL(8)                 :: FAV,FMAX
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                 :: TACC
+#ENDIF
 !     ******************************************************************      
                               CALL TRACE$PUSH('TIMESTEP')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(TACC)
+#ENDIF
       CALL FILEHANDLER$UNIT('PROT',NFILO)
 !      
       DELTAT=DELT       !-> TIMESTEP_MODULE
@@ -323,6 +377,9 @@
       CALL THERMOSTAT$SELECT('WAVES') 
       CALL THERMOSTAT$SETR8('TIMESTEP',DELT)
       CALL DIALS$SETR8('TIMESTEP',DELT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_TS_SETUP',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -331,20 +388,32 @@
 !     ==================================================================
 !     == LDA TOTAL ENERGY ==============================================
       CALL WAVES$ETOT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_ETOT_WAVES',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     == EXTERNAL POTENTIAL ACTING ON ATOMS ============================
       CALL VEXT$APPLY
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_ETOT_VEXT',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     == OCCUPATIONS ===================================================
       CALL DYNOCC$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$SET('OCCUPATIONAL ENTROPY TERM (-TS)',SVAR)
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_ETOT_OCC',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     == UNIT CELL ========= ===================================================
       CALL CELL$ETOT()
       CALL CELL$GETR8('EPOT',SVAR)
       CALL ENERGYLIST$SET('CELLOSTAT POTENTIAL',SVAR)     
       CALL ENERGYLIST$ADD('TOTAL ENERGY',SVAR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_ETOT_CELL',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -357,6 +426,9 @@
         CALL FILEHANDLER$UNIT('PROT',NFILO)
         WRITE(NFILO,*)'STOP SIGNAL FROM AUTOPILOT'
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_AUTOPILOT',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 ! 
 !     ==================================================================
 !     ==  OBTAIN INSTANTANEOUS FRICTION VALUES FROM THERMOSTATS       ==
@@ -399,6 +471,9 @@
 !!$          CALL ATOMS$SETR8('ANNEE',ANNER)
 !!$        END IF
 !!$      END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_FRICTION',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -417,27 +492,45 @@
          CALL ATOMS$PROPAGATE()
       END IF
 !---END DIMERMERGE FIX      
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_PROP_ATOMS',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 ! 
 !     ==================================================================
 !     ==  PROPAGATE UNIT CELL                                         ==
 !     ==================================================================
       CALL CELL$PROPAGATE()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_PROP_CELL',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 ! 
 !     ==================================================================
 !     ==  APPLY CONSTRAINTS TO ATOMIC COORDINATES                     ==
 !     ==================================================================
       CALL ATOMS$CONSTRAINTS()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_CONSTRAINTS',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 ! 
 !     ==================================================================
 !     ==  PROPAGATE WAVE FUNCTIONS                                    ==
 !     ==================================================================
       CALL WAVES$PROPAGATE()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_PROP_WAVES',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
       CALL WAVES$ORTHOGONALIZE()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_ORTHOGONALIZE',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  PROPAGATE OCCUPATIONS                                       ==
 !     ==================================================================
       CALL DYNOCC$PROPAGATE()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_PROP_OCC',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 ! 
 !     ==================================================================
 !     ==  PROPAGATE THERMOSTAT FOR THE NUCLEI                         ==
@@ -451,6 +544,9 @@
 !       __PROPAGATE THERMOSTAT AND RECORD ITS ENERGY____________________
         CALL THERMOSTAT$PROPAGATE()
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_THERMO_ATOMS',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==  PROPAGATE THERMOSTAT FOR THE WAVE FUNCTIONS                 ==
@@ -466,6 +562,9 @@
         CALL THERMOSTAT$SETR8('EKIN(SYSTEM)',EKIN)
         CALL THERMOSTAT$PROPAGATE()
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_THERMO_WAVES',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -535,6 +634,9 @@
         CALL ENERGYLIST$ADD('CONSTANT ENERGY',ENOSE)
       END IF
 !     EFLUXE=-EKINC*(2.D0*ANNEE/DELT)/EMASS
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_COLLECT_ENERGY',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -543,6 +645,9 @@
 !     ==================================================================
       CALL ATOMS$FORCECRITERION(FAV,FMAX)
 !PRINT*,'FORCE FAV=',FAV,' FMAX=',FMAX
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_FORCE_CRITERION',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -551,6 +656,9 @@
 !     ==================================================================
 !     __WRITE PROTOCOL__________________________________________________
       CALL PRINFO(TPRINT,TSTOP,NFI,DELT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_PRINFO',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     ==================================================================
@@ -573,11 +681,17 @@
 !     __ATOM THERMOSTAT_________________________________________________
       CALL THERMOSTAT$SELECT('ATOMS')
       CALL THERMOSTAT$SWITCH()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_SWITCH',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
 !
 !     ==================================================================
 !     == TURN DIALS                                                   ==
 !     ==================================================================
       CALL DIALS$APPLY
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$PHASE('PHASE_DIALS',TACC,0_8,0_8,0_8,0_8)
+#ENDIF
                               CALL TRACE$POP()
       RETURN
       END SUBROUTINE TIMESTEP
@@ -1438,5 +1552,3 @@ PRINT*,'CONSTANT ENERGY ',ECONS,SVAR
       RETURN
       END
 !#END IF
-
-

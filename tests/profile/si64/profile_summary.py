@@ -6,6 +6,8 @@ import sys
 
 
 def category(op):
+    if op.startswith("PHASE_"):
+        return "Phase trace"
     if op.startswith("ACC_COPY"):
         return "ACC copy est"
     if op.startswith("ACC_SETUP"):
@@ -71,6 +73,11 @@ def main(argv):
         data["seconds"] for op, data in per_op.items()
         if not op.startswith("ACC_")
         and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
+        and not op.startswith("PHASE_")
+    )
+    phase_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("PHASE_")
     )
     trace_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -87,6 +94,8 @@ def main(argv):
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
+    if phase_total:
+        print("Diagnostic phase rank-seconds: {:.6f}".format(phase_total))
     if trace_total:
         print("Diagnostic PW trace rank-seconds: {:.6f}".format(trace_total))
     if setup_total or copy_gbyte:
@@ -123,6 +132,19 @@ def main(argv):
             print(
                 "  {:<24s} calls={:8d} GB={:10.4f}".format(
                     op, data["calls"], data["gbyte"]
+                )
+            )
+
+    phase_ops = [
+        (op, data) for op, data in per_op.items() if op.startswith("PHASE_")
+    ]
+    if phase_ops:
+        print("")
+        print("Top high-level phases")
+        for op, data in sorted(phase_ops, key=lambda item: -item[1]["seconds"])[:15]:
+            print(
+                "  {:<24s} calls={:8d} seconds={:9.4f}".format(
+                    op, data["calls"], data["seconds"]
                 )
             )
 

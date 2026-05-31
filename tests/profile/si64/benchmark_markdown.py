@@ -46,11 +46,11 @@ def main(argv):
     print()
     print(f"Source: `{os.path.basename(path)}`")
     print()
-    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | copy_gb | energy |")
-    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | phase_s | phase_gap_s | copy_gb | energy |")
+    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rows:
         print(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 suite_label(row),
                 row.get("case", ""),
                 row.get("ranks", ""),
@@ -64,6 +64,8 @@ def main(argv):
                 number(row.get("fft_s")),
                 number(row.get("mpi_s")),
                 number(row.get("pw_trace_s")),
+                number(row.get("phase_s")),
+                number(row.get("phase_gap_s")),
                 number(row.get("copy_gb")),
                 number(row.get("energy")),
             )
