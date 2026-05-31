@@ -35,6 +35,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `offden-blas-diagnostic-20260531-*` / `offden-blas-combined-20260531-*` | Off-site DENMAT BLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` 36.91 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` 9.76 s at 512/4 | Rewrites scalar `TINV` off-site local work as packed `ZGEMM`; energy-valid, much faster inside `PAW_OFFDEN_SUM_LOCAL`, still opt-in host-data diagnostic. |
 | `offden-cublas-diagnostic-20260531-*` / `offden-cublas-combined-20260531-*` | Naive off-site DENMAT cuBLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 36.79 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 9.75 s at 512/4 | Adds a forced per-neighbor cuBLAS diagnostic; energy-valid, but kernel timings are worse than host BLAS, so the next GPU attempt must batch or keep buffers resident. |
 | `offden-cublas-stack-diagnostic-20260531-*` / `offden-cublas-stack-combined-20260531-*` | Stacked off-site DENMAT cuBLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_batch` 36.10 s at 2048/1 | - | `gpu_resident_hpsi_offden_cublas_batch` 9.65 s at 512/4 | Groups neighbors with the same first atom and second-projector size into one wider cuBLAS `ZGEMM`; energy-valid and eliminates the tiny-GEMM launch problem, but host packing still dominates enough to keep it opt-in. |
+| `offden-device-pack-20260531-*` / `offden-device-pack-combined-20260531-*` | Off-site DENMAT device-pack diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` 36.03 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` 9.87 s at 512/4 | Packs the stacked off-site A/B buffers on the GPU and copies back only WORK; strong for 1 MPI/GPU, diagnostic-only when several ranks share one GPU. |
 
 The latest full-matrix run lives at:
 
@@ -1832,6 +1833,67 @@ actual GEMM row drops from about 0.157 s in the naive cuBLAS diagnostic to
 about 0.016 s. The remaining cost is now host-side packing and copy setup, so
 this should stay opt-in. The next implementation step is a resident
 projector/off-site buffer path, not forcing this diagnostic as the default.
+
+## Off-Site DENMAT Device-Pack Diagnostic
+
+The follow-up diagnostic adds `CPPAW_GPU_OFFDEN_DEVICE_PACK=1` with
+`CPPAW_CUBLAS_ACC_OFFDEN_DEVICE_PACK=1` as an alias. It keeps the stacked
+cuBLAS formulation, copies `PROJ` and `OCC` once for the off-site pass, packs
+the A/B buffers in OpenACC kernels, calls cuBLAS on present data, and copies
+only the stacked `WORK` block back for the existing host-side accumulation.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/offden-device-pack-20260531-512-4r
+runs/offden-device-pack-20260531-2048-1r
+runs/offden-device-pack-combined-20260531-512-4r
+runs/offden-device-pack-combined-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi_offden_cublas_batch` | 512 | 4 | 10.60 s | 1.8208 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack` | 512 | 4 | 9.51 s | 1.7485 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_cublas_batch` | 2048 | 1 | 37.45 s | 5.1624 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack` | 2048 | 1 | 37.37 s | 4.9162 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_batch` | 512 | 4 | 10.01 s | 1.8515 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` | 512 | 4 | 9.87 s | 1.7791 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_batch` | 2048 | 1 | 37.58 s | 5.2528 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` | 2048 | 1 | 36.03 s | 5.0066 GB | 0.000000407 Ha |
+
+| Profile row | 2048/1 HPSI stacked | 2048/1 HPSI device-pack | 512/4 HPSI stacked | 512/4 HPSI device-pack |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_BATCH_PACK` | 0.0692 s | - | 0.0212 s | - |
+| `PAW_OFFDEN_DEVICE_PACK` | - | 0.0035 s | - | 0.2960 s |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_STACK` | 0.0162 s | - | 0.1738 s | - |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_DPACK` | - | 0.0090 s | - | 0.1377 s |
+| `ACC_COPY_CUBLAS_ZGEMM_NT` | 0.2636 GB | - | 0.0924 GB | - |
+| `ACC_COPY_OFFDEN_DPACK_PROJ_IN` | - | 0.0145 GB | - | 0.0171 GB |
+| `ACC_COPY_OFFDEN_DPACK_WORK_OUT` | - | 0.0029 GB | - | 0.0029 GB |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.0858 s | 0.0138 s | 0.1969 s | 0.4444 s |
+
+| Profile row | 2048/1 DENMAT GPU stacked | 2048/1 DENMAT GPU device-pack | 512/4 DENMAT GPU stacked | 512/4 DENMAT GPU device-pack |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_BATCH_PACK` | 0.0685 s | - | 0.0225 s | - |
+| `PAW_OFFDEN_DEVICE_PACK` | - | 0.0034 s | - | 0.2978 s |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_STACK` | 0.0165 s | - | 0.1738 s | - |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_DPACK` | - | 0.0090 s | - | 0.1384 s |
+| `ACC_COPY_CUBLAS_ZGEMM_NT` | 0.2636 GB | - | 0.0924 GB | - |
+| `ACC_COPY_OFFDEN_DPACK_PROJ_IN` | - | 0.0145 GB | - | 0.0171 GB |
+| `ACC_COPY_OFFDEN_DPACK_WORK_OUT` | - | 0.0029 GB | - | 0.0029 GB |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.0954 s | 0.0137 s | 0.1987 s | 0.4480 s |
+
+Device-pack is the first off-site DENMAT path that materially reduces the
+local contraction for the 1 MPI rank / 1 GPU resource comparison. It should not
+be promoted to a default for GPU-sharing runs: the 512/4 profile shows the GPU
+packing kernels serialize poorly when four ranks share the same device. The
+next useful implementation step is true `THIS%PROJ` residency across the
+projection/off-site consumers, plus a device-side accumulation path that avoids
+copying `WORK` back for host accumulation.
 
 ## Recommended Next Benchmark
 

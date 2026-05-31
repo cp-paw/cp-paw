@@ -304,6 +304,15 @@ packed into one wider `ZGEMM(N,T)` call. The chunk length is controlled by
 `PAW_OFFDEN_BATCH_ACCUM`. This is still disabled by default because the current
 prototype keeps packing host buffers; use it to quantify whether a resident
 projector/off-site backend is worth implementing.
+`CPPAW_GPU_OFFDEN_DEVICE_PACK=1` or
+`CPPAW_CUBLAS_ACC_OFFDEN_DEVICE_PACK=1` moves that stacked packing step into an
+OpenACC region: `PROJ` and `OCC` are copied once for the off-site pass, A/B are
+packed on the GPU, cuBLAS uses present data, and only the stacked `WORK` block
+is copied back. It records `PAW_OFFDEN_DEVICE_PACK`,
+`CUBLAS_ZGEMM_OFFDEN_TINV_DPACK`, `ACC_COPY_OFFDEN_DPACK_PROJ_IN`,
+`ACC_COPY_OFFDEN_DPACK_META_IN`, and `ACC_COPY_OFFDEN_DPACK_WORK_OUT`. Spark
+Si64 shows this is useful for the 1 MPI rank / 1 GPU comparison, but can be a
+negative diagnostic when several MPI ranks share one GPU.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
@@ -382,6 +391,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_denmat_energy_offden_cublas` | Combined HPSI residency, DENMAT energy/Lambda diagnostic, and scalar off-site DENMAT cuBLAS diagnostic. |
 | `gpu_resident_hpsi_offden_cublas_batch` | Combined HPSI residency plus stacked scalar off-site DENMAT cuBLAS diagnostic. |
 | `gpu_resident_hpsi_denmat_energy_offden_cublas_batch` | Combined HPSI residency, DENMAT energy/Lambda diagnostic, and stacked scalar off-site DENMAT cuBLAS diagnostic. |
+| `gpu_resident_hpsi_offden_cublas_devicepack` | Combined HPSI residency plus stacked scalar off-site DENMAT cuBLAS with OpenACC device packing. |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` | Combined HPSI residency, DENMAT energy/Lambda diagnostic, and stacked scalar off-site DENMAT cuBLAS with OpenACC device packing. |
 | `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
