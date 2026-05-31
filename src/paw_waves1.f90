@@ -1793,9 +1793,16 @@ END MODULE WAVES_MODULE
       LOGICAL(4)             :: TRHOKIN=.FALSE. !KINETIC ENERGY DENSITY REQUIRED
       INTEGER(4) ::NTASKS_W,THISTASK_W
 REAL(8) :: RBASM(3,3)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_ETOT_T0
+      REAL(8)                :: ACCEL_ETOT_T1
+#ENDIF
 !     **************************************************************************
       CALL MPE$QUERY('~',NTASKS_W,THISTASK_W)
                               CALL TRACE$PUSH('WAVES$ETOT')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == CHECK CONSISTENCY WITH OCCUPATIONS OBJECT                            ==
@@ -1817,6 +1824,12 @@ REAL(8) :: RBASM(3,3)
       TFORCE=TFORCE.OR.TFORCEX
       IF(TSTRESS)CALL POTENTIAL$SETL4('STRESS',TSTRESS)
       IF(TFORCE)CALL POTENTIAL$SETL4('FORCE',TFORCE)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_FLAGS' &
+     &    ,0_8,0_8,0_8,0_8,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == COLLECT VARIABLES                                                    ==
@@ -1832,6 +1845,13 @@ REAL(8) :: RBASM(3,3)
       FORCE(:,:)=0.D0
 !     == NUMBER OF BANDS =======================================================
       CALL DYNOCC$GETI4('NB',NBX)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_COLLECT' &
+     &    ,INT(NAT,KIND=8),INT(NBX,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == INITIALIZE GSET: YLM, PRO, EIGR                                      ==
@@ -1839,6 +1859,13 @@ REAL(8) :: RBASM(3,3)
       IF(TFIRST.OR.TSTRESS) THEN
         CALL WAVES_UPDATEGSET()
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_GSET' &
+     &    ,INT(NAT,KIND=8),INT(NBX,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == DEALLOCATE EIGENVALUES AND EIGENVECTORS                              ==
@@ -1851,9 +1878,23 @@ REAL(8) :: RBASM(3,3)
           IF(ASSOCIATED(THIS%EIGVEC))DEALLOCATE(THIS%EIGVEC)
         ENDDO
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_DEALLOC' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NBX,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
       IF(OPTIMIZERTYPE.EQ.'CG') THEN   !KAESTNERCG
         CALL WAVES$KAESTNERCG1(TFIRST)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_CG' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == RANDOMIZE INITIAL WAVE FUNCTIONS                                     ==
@@ -1861,6 +1902,13 @@ REAL(8) :: RBASM(3,3)
       IF(TFIRST.AND.TRANDOM) THEN
         CALL WAVES$RANDOMIZE()
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_RANDOM' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == GRAMM-SCHMIDT ORTHOGONALIZATION OF INITIAL WAVE FUNCTIONS            ==
@@ -1870,6 +1918,13 @@ REAL(8) :: RBASM(3,3)
       IF(TFIRST) THEN
         CALL WAVES$GRAMMSCHMIDT()
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_GRAM' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == CALCULATE PROJECTIONS                                                ==
@@ -1877,6 +1932,13 @@ REAL(8) :: RBASM(3,3)
       IF(TFIRST) THEN
         CALL WAVES$PROJECTIONS('PSI0')
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_PROJECTIONS' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == CALCULATE LMTO STRUCTURE CONSTANTS                                   ==
@@ -1888,6 +1950,13 @@ REAL(8) :: RBASM(3,3)
 !END IF
                                CALL TIMING$CLOCKOFF('STRUCTURECONSTANTS')
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_LMTO' &
+     &    ,INT(NAT,KIND=8),0_8,0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
                                CALL TIMING$CLOCKON('WAVES$ETOT')
 !!$                               CALL TIMING$CLOCKON('WAVES$TONTBO')
 !!$      CALL WAVES$TONTBO()
@@ -1898,6 +1967,12 @@ REAL(8) :: RBASM(3,3)
 !     == KINETIC ENERGY                                                       ==
 !     ==========================================================================
       CALL WAVES$EKIN(EKIN,STRESSKIN)   !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_EKIN' &
+     &    ,0_8,0_8,0_8,0_8,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
       STRESS(:,:)=STRESS(:,:)+STRESSKIN(:,:)
       CALL ENERGYLIST$SET('PS  KINETIC',EKIN)
       CALL ENERGYLIST$ADD('AE  KINETIC',EKIN)
@@ -1930,6 +2005,13 @@ END IF
       ALLOCATE(EDENMAT(LMNXX,LMNXX,NDIMD,NAT))
       CALL WAVES$DENMAT(LMNXX,NDIMD,NAT,DENMAT,EDENMAT) !<<<<<<<<<<<<<<<<<<<<<<<
       CALL WAVES$OFFSITEDENMAT()  !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_DENMAT' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == PSEUDO DENSITY STILL WITHOUT PSEUDOCORE                              ==
@@ -1941,6 +2023,13 @@ END IF
       ALLOCATE(RHO(NRL,NDIMD))
       ALLOCATE(RHOKIN(NRL,NDIMD))
       CALL WAVES$RHO(NRL,NDIMD,RHO,TRHOKIN,RHOKIN)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_RHO' &
+     &    ,INT(NRL,KIND=8),INT(NDIMD,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -1993,6 +2082,13 @@ CALL ERROR$STOP('WAVES$ETOT')
       IF(TWRITERHO) THEN
         CALL WAVES_FIXRHOSET(NRL,NDIMD,LMRXX,NAT,QLM,RHO,DENMAT)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_MOMENTS' &
+     &    ,INT(LMRXX,KIND=8),INT(NAT,KIND=8),INT(LMNXX,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == ANALYSE SPIN DENSITY                                                 ==
@@ -2007,6 +2103,13 @@ CALL ERROR$STOP('WAVES$ETOT')
       ALLOCATE(VQLM(LMRXX,NAT))
       CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
       DEALLOCATE(QLM)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_VOFRHO' &
+     &    ,INT(NRL,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(LMRXX,KIND=8),0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 
 !      ALLOCATE(FORCET(3,NAT))
 !      ALLOCATE(VQLM(LMRXX,NAT))
@@ -2024,6 +2127,13 @@ CALL ERROR$STOP('WAVES$ETOT')
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
       CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
      &                 ,VQLM,DH,DO,POTB)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SPHERE' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(LMRXX,KIND=8),0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == INTERFACE TO NTBO BASIS                                              ==
@@ -2037,6 +2147,12 @@ CALL ERROR$STOP('WAVES$ETOT')
 !!$      DEALLOCATE(DH1)
 !
       CALL SIMPLELMTO$ETOT()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_SIMPLELMTO' &
+     &    ,0_8,0_8,0_8,0_8,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  SUBTRACT AVERAGE ELECTROSTATIC POTENTIAL                            ==
@@ -2046,6 +2162,13 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
       CALL WAVES$ADDCONSTANTPOT(NRL,LMNXX,NDIMD,NAT,POTB,RHO,DH,DO)
       CALL GRAPHICS$SETR8('POTSHIFT',POTB)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_ADDCONSTANT' &
+     &    ,INT(NRL,KIND=8),INT(LMNXX,KIND=8),INT(NDIMD,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == COMMUNICATE DATA WITH OPTICS MODULE                                  ==
@@ -2174,6 +2297,13 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL BANDDATA$SETR8A('VOFRL',NRL*NDIMD,RHO(:,:))
       CALL BANDDATA$SETC8A('DH',LMNXX*LMNXX*NDIMD*NAT,DH(:,:,:,:))
       CALL BANDDATA$SETR8A('DO',LMNXX*LMNXX*NDIMD*NAT,DO(:,:,:,:))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_BANDDATA' &
+     &    ,INT(NRL,KIND=8),INT(LMNXX,KIND=8),INT(NDIMD,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  RECEIVE POTENTIALS FROM NTBO INTERFACE                              ==
@@ -2182,6 +2312,13 @@ CALL ERROR$STOP('WAVES$ETOT')
 !      CALL WAVES$FROMNTBO()
       CALL WAVES$OFFSITEHAMIL() ! CALCULATE THIS$HPROJ
                                CALL TIMING$CLOCKOFF('WAVES$FROMNTBO')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_OFFSITEHAMIL' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == FORCES AND STRESSES                                                  ==
@@ -2195,6 +2332,13 @@ CALL ERROR$STOP('WAVES$ETOT')
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(2,:)
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(3,:)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_FORCE' &
+     &    ,INT(NAT,KIND=8),INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  CALL GONJUGATE GRADIENT                                             ==
@@ -2212,6 +2356,13 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
       CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_HPSI' &
+     &    ,INT(NRL,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(LMNXX,KIND=8),0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
       DEALLOCATE(RHO)
       DEALLOCATE(DH)
       DEALLOCATE(DO)
@@ -2336,11 +2487,24 @@ PRINT*,'......STATES STRAIGHTENED'
       END IF
 !
 CALL TIMING$CLOCKOFF('W:EXPECT')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_EXPECT' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  FIRST HALF OF WAVE FUNCTIONS KINETIC ENERGY                         ==
 !     ==========================================================================
       CALL WAVES_WAVEKINETIC(WAVEEKIN1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_WAVEKINETIC' &
+     &    ,0_8,0_8,0_8,0_8,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  CLOSE DOWN                                                          ==
@@ -2358,6 +2522,11 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     == DEALLOCATE ARRAYS =====================================================
       DEALLOCATE(FORCE)
       DEALLOCATE(R)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
+      CALL ACCELPROFILE$ADD('PAW_ETOT_CLOSE' &
+     &    ,0_8,0_8,0_8,0_8,0.D0,0.D0,ACCEL_ETOT_T1-ACCEL_ETOT_T0)
+#ENDIF
                               CALL TIMING$CLOCKOFF('WAVES$ETOT')
                               CALL TRACE$POP
       RETURN

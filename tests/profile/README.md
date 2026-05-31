@@ -98,6 +98,11 @@ because they are coarse envelopes around existing numerical kernel timers. Use
 the phase columns to localize unexplained wall time before adding lower-level
 kernel instrumentation.
 
+`WAVES$ETOT` is split further by `PAW_ETOT_*` rows, and the initial
+Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
+diagnostic envelopes: use them to identify the next target, not as additive
+wall-clock accounting.
+
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
 defaults to `CPPAW_GPU_RESIDENCY=1`. Set `CPPAW_GPU_RESIDENCY=0` to disable the
 resident mode in the same binary. This currently switches the
