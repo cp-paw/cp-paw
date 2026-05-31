@@ -3788,6 +3788,10 @@ END IF
 !     **  SUPERWAVE FUNCTIONS ARE DEFINED AS: PSI=PSI1+I*PSI2                 **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1999)***********
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_DENMAT_ENERGY_ENABLED
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN) :: NDIM   ! #(SPINOR COMPONENTS)
       INTEGER(4),INTENT(IN) :: NBH    ! #(WAVE FUNCTIONS
@@ -3810,6 +3814,10 @@ END IF
       INTEGER(4)            :: NFILO
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)             :: TUSEACCENERGY
+      REAL(8)                :: ACCEL_ENERGY_FLOPS
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
@@ -3834,6 +3842,16 @@ END IF
           CALL ERROR$STOP('WAVES_DENMAT')
         END IF
       END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      ACCEL_ENERGY_FLOPS=32.D0*REAL(NBH,KIND=8)*REAL(NBH,KIND=8) &
+     &                  *REAL(LMNX,KIND=8)*REAL(NDIM,KIND=8) &
+     &                  +16.D0*REAL(NBH,KIND=8) &
+     &                  *REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
+     &                  *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8)
+      TUSEACCENERGY=TINV &
+     &             .AND.CPPAW_CUBLAS_ACC_DENMAT_ENERGY_ENABLED &
+     &                  (ACCEL_ENERGY_FLOPS)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  SUM UP THE DENSITY MATRIX                                           ==
@@ -3900,6 +3918,12 @@ END IF
         LAGR(:,IB2)=LAMBDA(:,IB2)*OCC(IB2)
       ENDDO
       EDENMAT1(:,:,:,:)=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(TUSEACCENERGY) THEN
+        CALL WAVES_DENMAT_ENERGY_TINV_ACC(NDIM,NBH,NB,LMNX,LAGR &
+     &                                   ,PROPSI,EDENMAT1)
+      ELSE
+#ENDIF
       IF(TINV) THEN
         DO IB1=1,NBH
           FUNC(:,:)=(0.D0,0.D0)
@@ -3946,6 +3970,9 @@ END IF
           ENDDO
         ENDDO
       END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       CALL ACCELPROFILE$ADD('PAW_DENMAT_ENERGY_LOOP' &
@@ -4047,6 +4074,143 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      SUBROUTINE WAVES_DENMAT_ENERGY_TINV_ACC(NDIM,NBH,NB,LMNX,LAGR &
+     &                                       ,PROPSI,EDENMAT1)
+!     **************************************************************************
+!     **  OpenACC diagnostic for the time-inversion one-center energy matrix. **
+!     **  It is intentionally opt-in because it copies the Lambda block per   **
+!     **  site; the profiling rows show whether a broader resident rewrite is **
+!     **  worth the extra data-structure work.                                **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NDIM
+      INTEGER(4),INTENT(IN) :: NBH
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: LMNX
+      COMPLEX(8),INTENT(IN) :: LAGR(NB,NB)
+      COMPLEX(8),INTENT(IN) :: PROPSI(NDIM,NBH,LMNX)
+      COMPLEX(8),INTENT(OUT):: EDENMAT1(LMNX,LMNX,NDIM,NDIM)
+      COMPLEX(8),ALLOCATABLE :: FUNCACC(:,:,:)
+      INTEGER(4)            :: LMN1,LMN2,IDIM1,IDIM2,IB1,IB2
+      REAL(8)               :: RSUM,ISUM
+      COMPLEX(8)            :: CFACR,CFACI,CFAC1,CFAC2,CTMP
+      COMPLEX(8),PARAMETER  :: CI=(0.D0,1.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+      REAL(8)               :: ACCEL_KERNEL_T0
+      REAL(8)               :: ACCEL_KERNEL_T1
+      REAL(8)               :: ACCEL_BYTES
+      REAL(8)               :: ACCEL_FLOPS
+      REAL(8)               :: ACCEL_COPY_TIME
+#ENDIF
+!     **************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+      ACCEL_FLOPS=32.D0*REAL(NBH,KIND=8)*REAL(NBH,KIND=8) &
+     &            *REAL(LMNX,KIND=8)*REAL(NDIM,KIND=8) &
+     &            +16.D0*REAL(NBH,KIND=8) &
+     &            *REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8)
+      ACCEL_BYTES=16.D0*(REAL(NB,KIND=8)*REAL(NB,KIND=8) &
+     &            +REAL(NDIM,KIND=8)*REAL(NBH,KIND=8) &
+     &            *REAL(LMNX,KIND=8) &
+     &            +REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NDIM,KIND=8))
+#ENDIF
+      ALLOCATE(FUNCACC(LMNX,NDIM,NBH))
+!$ACC DATA COPYIN(LAGR(1:NB,1:NB),PROPSI(1:NDIM,1:NBH,1:LMNX)) &
+!$ACC& CREATE(FUNCACC(1:LMNX,1:NDIM,1:NBH)) &
+!$ACC& COPYOUT(EDENMAT1(1:LMNX,1:LMNX,1:NDIM,1:NDIM))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_KERNEL_T0)
+#ENDIF
+!$ACC PARALLEL LOOP COLLAPSE(3) GANG &
+!$ACC& PRIVATE(IB2,RSUM,ISUM,CFACR,CFACI,CFAC1,CFAC2,CTMP) &
+!$ACC& PRESENT(LAGR,PROPSI,FUNCACC)
+      DO IB1=1,NBH
+        DO IDIM2=1,NDIM
+          DO LMN2=1,LMNX
+            RSUM=0.D0
+            ISUM=0.D0
+!$ACC LOOP VECTOR REDUCTION(+:RSUM,ISUM)
+            DO IB2=1,NBH
+              CFACR=LAGR(2*IB1-1,2*IB2-1) &
+     &             +CI*LAGR(2*IB1,2*IB2-1)
+              CFACI=LAGR(2*IB1-1,2*IB2) &
+     &             +CI*LAGR(2*IB1,2*IB2)
+              CFAC1=0.5D0*(CFACR-CI*CFACI)
+              CFAC2=0.5D0*(CFACR+CI*CFACI)
+              CTMP=CFAC1*PROPSI(IDIM2,IB2,LMN2) &
+     &            +CFAC2*CONJG(PROPSI(IDIM2,IB2,LMN2))
+              RSUM=RSUM+REAL(CTMP,KIND=8)
+              ISUM=ISUM+AIMAG(CTMP)
+            ENDDO
+            FUNCACC(LMN2,IDIM2,IB1)=CMPLX(RSUM,ISUM,KIND=8)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC PARALLEL LOOP COLLAPSE(4) GANG &
+!$ACC& PRIVATE(IB1,RSUM,ISUM,CTMP) &
+!$ACC& PRESENT(PROPSI,FUNCACC,EDENMAT1)
+      DO IDIM2=1,NDIM
+        DO IDIM1=1,NDIM
+          DO LMN2=1,LMNX
+            DO LMN1=1,LMNX
+              RSUM=0.D0
+              ISUM=0.D0
+!$ACC LOOP VECTOR REDUCTION(+:RSUM,ISUM)
+              DO IB1=1,NBH
+                CTMP=CONJG(PROPSI(IDIM1,IB1,LMN1)) &
+     &              *FUNCACC(LMN2,IDIM2,IB1)
+                RSUM=RSUM+REAL(CTMP,KIND=8)
+                ISUM=ISUM+AIMAG(CTMP)
+              ENDDO
+              EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
+     &          =CMPLX(RSUM,ISUM,KIND=8)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC PARALLEL LOOP COLLAPSE(4) PRESENT(EDENMAT1)
+      DO IDIM2=1,NDIM
+        DO IDIM1=1,NDIM
+          DO LMN2=1,LMNX
+            DO LMN1=1,LMNX
+              EDENMAT1(LMN1,LMN2,IDIM1,IDIM2) &
+     &          =REAL(EDENMAT1(LMN1,LMN2,IDIM1,IDIM2),KIND=8)
+            ENDDO
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+!$ACC WAIT
+      CALL ACCELPROFILE$NOW(ACCEL_KERNEL_T1)
+      CALL ACCELPROFILE$ADD('ACC_KERNEL_DENMAT_ENERGY_TINV' &
+     &    ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),ACCEL_FLOPS,0.D0 &
+     &    ,ACCEL_KERNEL_T1-ACCEL_KERNEL_T0)
+#ENDIF
+!$ACC END DATA
+      DEALLOCATE(FUNCACC)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_COPY_TIME=(ACCEL_T1-ACCEL_T0) &
+     &               -(ACCEL_KERNEL_T1-ACCEL_KERNEL_T0)
+      IF(ACCEL_COPY_TIME.LT.0.D0) ACCEL_COPY_TIME=0.D0
+      CALL ACCELPROFILE$ADD('ACC_COPY_DENMAT_ENERGY_TINV' &
+     &    ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,ACCEL_BYTES,ACCEL_COPY_TIME)
+#ENDIF
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+#ENDIF
       SUBROUTINE WAVES$OFFSITEDENMAT()
 !     **************************************************************************
 !     ** EVALUATES THE DENSITY MATRIX FOR A NEIGHBORLIST                      **
