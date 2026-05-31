@@ -25,6 +25,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `fresh-energy-guard-sweep-20260531-174614` | Energy-guard refresh | `gpu_resident_orthox` 13.39 s at 1024/1 | `cpu` 70.83 s, `nvhpc_cpu` 71.85 s | `cpu` 168.36 s, `nvhpc_cpu` 167.20 s | Confirms `WAVES_ORTHO_X` workspace residency is now the best default inside the residency profile. |
 | `gram-profile-contexts-20260531-180922` | Gram context profiling | `gpu_resident` 6.94 s at 512/1 | - | `gpu_resident` 9.15 s at 512/4 | Splits the initial Gram wavefunction copy into `PSI0` and `PSIM` rows. |
 | `opsi-build-residency-20260531-164302` | OPSI build-residency diagnostic | `gpu_resident`/`gpu_resident_opsi` tied for Si64 | - | `gpu_resident`/`gpu_resident_opsi` tied at 512/4 | Adds an opt-in non-superwave OPSI residency switch; Si64 is a superwave case, so the guard correctly leaves it unchanged. |
+| `superwave-opsi-hostscale-20260531-*` | Superwave overlap residency | `gpu_resident`/`gpu_resident_opsi` tied and energy-valid | - | `gpu_resident_opsi` 9.15 s at 512/4 | Makes the superwave inversion overlap term resident; keeps superwave OPSI host-built/host-scaled before entering device residency. |
 
 The latest full-matrix run lives at:
 
@@ -1208,11 +1209,44 @@ The exact final commit was also rebuilt and checked at 512/1:
 
 A discarded superwave-widening experiment did reduce the copy estimate
 (`gpu_resident_opsi` at 512/1: 1.3774 GB; at 2048/1: 5.0124 GB), but it changed
-the Si64 energy to 296.752801 Ha, about 5.528 Ha away from the reference. The
-likely missing piece is the superwave `PLANEWAVE$SCALARPRODUCT('-'...)` overlap
-path, which still has host-side assumptions around the inversion contribution.
-Do not enable OPSI build residency for superwave cases until that overlap path is
-made resident and revalidated.
+the Si64 energy to 296.752801 Ha, about 5.528 Ha away from the reference. That
+made the resident superwave overlap path the next correctness target, followed
+by a narrower retest of where superwave OPSI can safely enter the resident
+region.
+
+## Superwave Overlap Residency
+
+The follow-up patch moves the superwave `<PSI_-|PSI_+>` inversion contribution
+onto an explicit resident cuBLAS path, recorded as `CUBLAS_ZGEMM_OVL_RES_INV`.
+It also makes the gamma correction in the resident `<PSI_+|PSI_+>` branch read
+the gamma slice from device data. This removes the last host-side overlap
+assumption that blocked a safe superwave OPSI staging experiment.
+
+The fully resident superwave OPSI build/scale path was still energy-invalid:
+building OPSI with resident `WAVES_ADDPRO`, or scaling the freshly built OPSI on
+the device, reproduced the bad 296.752801 Ha Si64 energy. The committed
+superwave OPSI diagnostic is therefore conservative: build OPSI on the host,
+mass-scale it on the host, and only then enter the device-resident
+projection/overlap/`WAVES_ADDOPSI` region. This is correctness-preserving but
+does not reduce the Si64 copy estimate versus `gpu_resident`; it is useful as a
+guarded staging point for future superwave `WAVES_ADDPRO` and mass-scaling work.
+
+Spark C86C validation:
+
+```
+runs/superwave-opsi-hostscale-20260531-512-1r
+runs/superwave-opsi-hostscale-20260531-512-4r
+runs/superwave-opsi-hostscale-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.09 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 1 | 7.06 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.45 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 4 | 9.15 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 38.74 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_opsi` | 2048 | 1 | 38.73 s | 5.3749 GB | 0.000000407 Ha |
 
 ## Recommended Next Benchmark
 
