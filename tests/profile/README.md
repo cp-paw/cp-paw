@@ -292,8 +292,9 @@ cd tests/profile/si64
 ```
 
 It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and by default
-compares the focused `gpu_resident*` paths on one GPU rank, plus one-rank CPU
-and eight-rank CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
+compares the focused `gpu_resident*` paths on one GPU rank, including the
+opt-in Ortho-X workspace-residency diagnostic, plus one-rank CPU and eight-rank
+CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
 `EMPTY_BANDS`, `NSTEPS`,
 `GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
 

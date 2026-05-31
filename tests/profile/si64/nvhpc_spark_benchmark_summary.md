@@ -690,6 +690,8 @@ runs/orthox-resident-smoke512-20260531-151403
 runs/orthox-resident-smoke2048-20260531-151428
 runs/orthox-resident-parallel-smoke512-20260531-151713
 runs/orthox-resident-nstep3-1024-20260531-151840
+runs/orthox-resident-ab1024-nstep3-repeat3-20260531-152238
+runs/orthox-resident-ab2048-nstep3-20260531-152609
 ```
 
 | Case | Empty bands | Ranks | Wall time | Total copy estimate | `PAW_ORTHO_X_RESIDUAL` | `PAW_ORTHO_X_UPDATE` | Final energy |
@@ -700,6 +702,10 @@ runs/orthox-resident-nstep3-1024-20260531-151840
 | `gpu_resident_orthox` | 2048 | 1 | 39.86 s | 8.2058 GB | 2.4293 s | 4.6135 s | 302.280854 Ha |
 | `gpu_resident_orthox` | 512 | 4 | 9.38 s | 3.5241 GB | - | - | 302.280854 Ha |
 | `gpu_resident_orthox` | 1024, `NSTEPS=3` | 1 | 33.42 s | 9.8012 GB | - | - | 208.886424 Ha |
+| `gpu_resident`, repeat avg | 1024, `NSTEPS=3` | 1 | 33.99 s | 18.8042 GB | - | - | 208.886424 Ha |
+| `gpu_resident_orthox`, repeat avg | 1024, `NSTEPS=3` | 1 | 32.79 s | 9.8012 GB | - | - | 208.886424 Ha |
+| `gpu_resident` | 2048, `NSTEPS=3` | 1 | 105.64 s | 56.2853 GB | - | - | 208.886424 Ha |
+| `gpu_resident_orthox` | 2048, `NSTEPS=3` | 1 | 106.04 s | 17.4964 GB | - | - | 208.886424 Ha |
 
 The 2048-band case is the useful signal: wall time improves by about 4.3%, the
 copy estimate drops by about 13.9 GB, the residual check shrinks from 0.2489 s
@@ -710,6 +716,15 @@ inside the `PAW_ORTHO_X_*` rows rather than the generic `CUBLAS_*` wrapper rows,
 the benchmark `blas_s` column undercounts this prototype; use the Ortho-X
 subphase rows for this comparison. Keep the path opt-in until longer runs check
 multi-step energy stability and larger systems.
+
+The longer follow-up keeps that conclusion nuanced. At 1024 empty bands and
+`NSTEPS=3`, three repeats show a consistent wall-time gain for
+`gpu_resident_orthox` (32.79 s average versus 33.99 s). At 2048 empty bands and
+`NSTEPS=3`, the same path is wall-time neutral on Spark (106.04 s versus
+105.64 s) while still cutting the copy estimate from 56.3 GB to 17.5 GB. The
+standard NVHPC comparison now includes `gpu_resident_orthox` so future runs keep
+tracking this tradeoff, but the recommended default remains plain
+`gpu_resident`.
 
 ## Recommended Next Benchmark
 
