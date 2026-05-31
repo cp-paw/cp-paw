@@ -4531,6 +4531,7 @@ END IF
       LOGICAL(4)             :: TOFFDENCUBLAS
       LOGICAL(4)             :: TOFFDENBATCH
       LOGICAL(4)             :: TOFFDENDEVICEPACK
+      LOGICAL(4)             :: TOFFDENDEVICEACCUM
       INTEGER(4)             :: OFFDENBATCHSIZE
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
@@ -4559,6 +4560,7 @@ END IF
       TOFFDENCUBLAS=.FALSE.
       TOFFDENBATCH=.FALSE.
       TOFFDENDEVICEPACK=.FALSE.
+      TOFFDENDEVICEACCUM=.FALSE.
       OFFDENBATCHSIZE=64
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_LOCAL',ENVVAL &
      &                             ,STATUS=ENVSTAT)
@@ -4622,6 +4624,24 @@ END IF
           TOFFDENDEVICEPACK=.FALSE.
         END SELECT
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_DEVICE_ACCUM' &
+     &                             ,ENVVAL,STATUS=ENVSTAT)
+      IF(ENVSTAT.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_OFFDEN_DEVICE_ACCUM' &
+     &                               ,ENVVAL,STATUS=ENVSTAT)
+      END IF
+      IF(ENVSTAT.EQ.0) THEN
+        SELECT CASE(TRIM(ADJUSTL(ENVVAL)))
+        CASE('1','T','t','TRUE','true','True','YES','yes','ON','on')
+          TOFFDENBLAS=.TRUE.
+          TOFFDENCUBLAS=.TRUE.
+          TOFFDENBATCH=.TRUE.
+          TOFFDENDEVICEPACK=.TRUE.
+          TOFFDENDEVICEACCUM=.TRUE.
+        CASE DEFAULT
+          TOFFDENDEVICEACCUM=.FALSE.
+        END SELECT
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_BATCH_SIZE' &
      &                             ,ENVVAL,STATUS=ENVSTAT)
       IF(ENVSTAT.EQ.0) READ(ENVVAL,*,ERR=101,END=101) OFFDENBATCHSIZE
@@ -4683,7 +4703,7 @@ END IF
      &           ,NPROAT,IPRO1,NTASKS,THISTASK,NBH,NB,NDIMD &
      &           ,NSPIN,ISPIN,OFFDENBATCHSIZE,OCC(1,IKPT,ISPIN) &
      &           ,XK(1,IKPT),THIS%PROJ(1,1,1),OSDENMAT &
-     &           ,TOFFDENDEVICEPACK)
+     &           ,TOFFDENDEVICEPACK,TOFFDENDEVICEACCUM)
             CYCLE
           END IF
           ICOUNT=0
@@ -4964,7 +4984,8 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_OFFDEN_TINV_NDIM1_CUBLAS_BATCH(NND,NPRO &
      &          ,NPROAT,IPRO1,NTASKS,THISTASK,NBH,NB,NDIMD,NSPIN &
-     &          ,ISPIN,BATCHSIZE,OCC,XK,PROJ,OSDENMAT,TDEVICEPACK)
+     &          ,ISPIN,BATCHSIZE,OCC,XK,PROJ,OSDENMAT,TDEVICEPACK &
+     &          ,TDEVICEACCUM)
       USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE OPENACC
@@ -4978,7 +4999,8 @@ END IF
 !     **  density-matrix contractions. Neighbors sharing the same first atom  **
 !     **  and second-projector size are stacked into one wide ZGEMM.          **
 !     **  The optional device-pack mode keeps PROJ/OCC in one OpenACC region, **
-!     **  packs A/B on the GPU, and copies only the stacked WORK block back.   **
+!     **  packs A/B on the GPU, and can accumulate WORK into real MATPACK     **
+!     **  output on device before copying the host-visible result back.       **
 !     **************************************************************************
       IMPLICIT NONE
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
@@ -5000,6 +5022,7 @@ END IF
       COMPLEX(8),INTENT(IN)  :: PROJ(NBH,NPRO)
       TYPE(RSPACEMAT_TYPE),INTENT(INOUT) :: OSDENMAT(NND)
       LOGICAL(4),INTENT(IN)  :: TDEVICEPACK
+      LOGICAL(4),INTENT(IN)  :: TDEVICEACCUM
       LOGICAL(4),ALLOCATABLE :: DONE(:)
       INTEGER(4),ALLOCATABLE :: IDX(:)
       INTEGER(4),ALLOCATABLE :: J0ARR(:)
@@ -5007,6 +5030,7 @@ END IF
       COMPLEX(8),ALLOCATABLE :: B(:,:)
       COMPLEX(8),ALLOCATABLE :: WORK(:,:)
       COMPLEX(8),ALLOCATABLE :: EIKRARR(:)
+      REAL(8)   ,ALLOCATABLE :: MATPACK(:,:,:,:)
       COMPLEX(8)            :: ONE
       COMPLEX(8)            :: ZERO
       COMPLEX(8)            :: EIKR
@@ -5019,6 +5043,7 @@ END IF
       INTEGER(4)            :: K
       INTEGER(4)            :: I
       INTEGER(4)            :: J
+      INTEGER(4)            :: JDIM
       INTEGER(4)            :: IBH
       INTEGER(4)            :: IAT1
       INTEGER(4)            :: IAT2
@@ -5030,6 +5055,7 @@ END IF
       INTEGER(4)            :: MAXBATCH
       INTEGER(4)            :: IOFF
       LOGICAL(4)            :: TDEVICEACTIVE
+      LOGICAL(4)            :: TDEVICEACCUMACTIVE
       LOGICAL(4)            :: TCUBLAS_USED
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)               :: ACCEL_T0
@@ -5097,14 +5123,17 @@ END IF
         OFFDENFLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
      &             *REAL(NBH,KIND=8)*REAL(COUNT,KIND=8)
         TDEVICEACTIVE=.FALSE.
+        TDEVICEACCUMACTIVE=.FALSE.
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
         TDEVICEACTIVE=TDEVICEPACK &
      &      .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OFFDEN(OFFDENFLOPS)
 #ENDIF
         I0=IPRO1(IAT1)-1
         IF(TDEVICEACTIVE) THEN
+          TDEVICEACCUMACTIVE=TDEVICEACCUM
           ALLOCATE(J0ARR(COUNT))
           ALLOCATE(EIKRARR(COUNT))
+          IF(TDEVICEACCUMACTIVE) ALLOCATE(MATPACK(N1,N2,NDIMD,COUNT))
           DO K=1,COUNT
             NN=IDX(K)
             IAT2=OSDENMAT(NN)%IAT2
@@ -5115,9 +5144,16 @@ END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
+          IF(TDEVICEACCUMACTIVE) THEN
+!$ACC ENTER DATA CREATE(A(1:N1,1:NBH),B(1:N2*COUNT,1:NBH) &
+!$ACC&                  ,WORK(1:N1,1:N2*COUNT) &
+!$ACC&                  ,MATPACK(1:N1,1:N2,1:NDIMD,1:COUNT)) &
+!$ACC& COPYIN(J0ARR(1:COUNT),EIKRARR(1:COUNT))
+          ELSE
 !$ACC ENTER DATA CREATE(A(1:N1,1:NBH),B(1:N2*COUNT,1:NBH) &
 !$ACC&                  ,WORK(1:N1,1:N2*COUNT)) &
 !$ACC& COPYIN(J0ARR(1:COUNT),EIKRARR(1:COUNT))
+          END IF
 !$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(PROJ,A)
           DO IBH=1,NBH
             DO I=1,N1
@@ -5169,19 +5205,67 @@ END IF
      &        ,ACCEL_T1-ACCEL_T0)
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
+          IF(TDEVICEACCUMACTIVE) THEN
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(IOFF) PRESENT(WORK,MATPACK)
+            DO K=1,COUNT
+              DO J=1,N2
+                DO I=1,N1
+                  IOFF=(K-1)*N2
+                  IF(NSPIN.EQ.1) THEN
+                    MATPACK(I,J,1,K)=REAL(WORK(I,IOFF+J),KIND=8)
+                  ELSE IF(NSPIN.EQ.2) THEN
+                    IF(ISPIN.EQ.1) THEN
+                      MATPACK(I,J,1,K)=REAL(WORK(I,IOFF+J),KIND=8)
+                      MATPACK(I,J,2,K)=REAL(WORK(I,IOFF+J),KIND=8)
+                    ELSE
+                      MATPACK(I,J,1,K)=REAL(WORK(I,IOFF+J),KIND=8)
+                      MATPACK(I,J,2,K)=-REAL(WORK(I,IOFF+J),KIND=8)
+                    END IF
+                  END IF
+                ENDDO
+              ENDDO
+            ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC WAIT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('PAW_OFFDEN_DEVICE_ACCUM' &
+     &          ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NDIMD,KIND=8) &
+     &          ,INT(COUNT,KIND=8),0.D0 &
+     &          ,8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &          *REAL(NDIMD,KIND=8)*REAL(COUNT,KIND=8),ACCEL_T1-ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC UPDATE SELF(MATPACK(1:N1,1:N2,1:NDIMD,1:COUNT))
+!$ACC WAIT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('ACC_COPY_OFFDEN_DPACK_MAT_OUT' &
+     &          ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NDIMD,KIND=8) &
+     &          ,INT(COUNT,KIND=8),0.D0 &
+     &          ,8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &          *REAL(NDIMD,KIND=8)*REAL(COUNT,KIND=8),ACCEL_T1-ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC EXIT DATA DELETE(A(1:N1,1:NBH),B(1:N2*COUNT,1:NBH) &
+!$ACC&                 ,WORK(1:N1,1:N2*COUNT) &
+!$ACC&                 ,MATPACK(1:N1,1:N2,1:NDIMD,1:COUNT) &
+!$ACC&                 ,J0ARR(1:COUNT),EIKRARR(1:COUNT))
+          ELSE
 !$ACC UPDATE SELF(WORK(1:N1,1:N2*COUNT))
 !$ACC WAIT
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
-          CALL ACCELPROFILE$NOW(ACCEL_T1)
-          CALL ACCELPROFILE$ADD('ACC_COPY_OFFDEN_DPACK_WORK_OUT' &
-     &        ,INT(N1,KIND=8),INT(N2,KIND=8),INT(COUNT,KIND=8),0_8 &
-     &        ,0.D0,16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
-     &        *REAL(COUNT,KIND=8),ACCEL_T1-ACCEL_T0)
-          CALL ACCELPROFILE$NOW(ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('ACC_COPY_OFFDEN_DPACK_WORK_OUT' &
+     &          ,INT(N1,KIND=8),INT(N2,KIND=8),INT(COUNT,KIND=8),0_8 &
+     &          ,0.D0,16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &          *REAL(COUNT,KIND=8),ACCEL_T1-ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
 !$ACC EXIT DATA DELETE(A(1:N1,1:NBH),B(1:N2*COUNT,1:NBH) &
 !$ACC&                 ,WORK(1:N1,1:N2*COUNT),J0ARR(1:COUNT) &
 !$ACC&                 ,EIKRARR(1:COUNT))
+          END IF
           DEALLOCATE(EIKRARR)
           DEALLOCATE(J0ARR)
         ELSE
@@ -5245,32 +5329,43 @@ END IF
         DO K=1,COUNT
           NN=IDX(K)
           IOFF=(K-1)*N2
-          IF(NSPIN.EQ.1) THEN
-            DO J=1,N2
-              DO I=1,N1
-                OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
-     &              +REAL(WORK(I,IOFF+J),KIND=8)
+          IF(TDEVICEACCUMACTIVE) THEN
+            DO JDIM=1,NDIMD
+              DO J=1,N2
+                DO I=1,N1
+                  OSDENMAT(NN)%MAT(I,J,JDIM) &
+     &              =OSDENMAT(NN)%MAT(I,J,JDIM)+MATPACK(I,J,JDIM,K)
+                ENDDO
               ENDDO
             ENDDO
-          ELSE IF(NSPIN.EQ.2) THEN
-            IF(ISPIN.EQ.1) THEN
+          ELSE
+            IF(NSPIN.EQ.1) THEN
               DO J=1,N2
                 DO I=1,N1
                   OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
      &                +REAL(WORK(I,IOFF+J),KIND=8)
-                  OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
-     &                +REAL(WORK(I,IOFF+J),KIND=8)
                 ENDDO
               ENDDO
-            ELSE
-              DO J=1,N2
-                DO I=1,N1
-                  OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
-     &                +REAL(WORK(I,IOFF+J),KIND=8)
-                  OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
-     &                -REAL(WORK(I,IOFF+J),KIND=8)
+            ELSE IF(NSPIN.EQ.2) THEN
+              IF(ISPIN.EQ.1) THEN
+                DO J=1,N2
+                  DO I=1,N1
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                  +REAL(WORK(I,IOFF+J),KIND=8)
+                    OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                  +REAL(WORK(I,IOFF+J),KIND=8)
+                  ENDDO
                 ENDDO
-              ENDDO
+              ELSE
+                DO J=1,N2
+                  DO I=1,N1
+                    OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                  +REAL(WORK(I,IOFF+J),KIND=8)
+                    OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                  -REAL(WORK(I,IOFF+J),KIND=8)
+                  ENDDO
+                ENDDO
+              END IF
             END IF
           END IF
         ENDDO
@@ -5280,6 +5375,7 @@ END IF
      &      ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NDIMD,KIND=8) &
      &      ,INT(COUNT,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
 #ENDIF
+        IF(TDEVICEACCUMACTIVE) DEALLOCATE(MATPACK)
         DEALLOCATE(WORK)
         DEALLOCATE(B)
         DEALLOCATE(A)
