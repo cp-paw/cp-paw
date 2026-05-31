@@ -24,6 +24,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `addpro-profile-contexts512-20260531-172542` | ADDPRO context profiling | `gpu_resident` 6.66 s at 512/1 | - | `gpu_resident` 9.52 s at 512/4 | Splits ADDPRO copies into `HPSI` and `OPSI` and corrects the `PSI` row to input/output accounting. |
 | `fresh-energy-guard-sweep-20260531-174614` | Energy-guard refresh | `gpu_resident_orthox` 13.39 s at 1024/1 | `cpu` 70.83 s, `nvhpc_cpu` 71.85 s | `cpu` 168.36 s, `nvhpc_cpu` 167.20 s | Confirms `WAVES_ORTHO_X` workspace residency is now the best default inside the residency profile. |
 | `gram-profile-contexts-20260531-180922` | Gram context profiling | `gpu_resident` 6.94 s at 512/1 | - | `gpu_resident` 9.15 s at 512/4 | Splits the initial Gram wavefunction copy into `PSI0` and `PSIM` rows. |
+| `opsi-build-residency-20260531-164302` | OPSI build-residency diagnostic | `gpu_resident`/`gpu_resident_opsi` tied for Si64 | - | `gpu_resident`/`gpu_resident_opsi` tied at 512/4 | Adds an opt-in non-superwave OPSI residency switch; Si64 is a superwave case, so the guard correctly leaves it unchanged. |
 
 The latest full-matrix run lives at:
 
@@ -1175,6 +1176,43 @@ copies in this smoke. The next optimization target remains the measured
 wavefunction updates in `ACC_COPY_ADDPRO_HPSI_PSI_IO` and
 `ACC_COPY_ADDPRO_OPSI_PSI_IO`; Hamiltonian/reporting residency can be considered
 later if the band-output path matters for production runs.
+
+## OPSI Build-Residency Diagnostic
+
+`CPPAW_GPU_OPSI_RESIDENCY=1` now enables an opt-in path that can keep
+orthogonalization `OPSI` resident from its `WAVES_OPSI` build through the later
+projection, overlap, and `WAVES_ADDOPSI` phase when the path is non-stress,
+non-superwave, and all atom blocks pass the addproduct threshold. The Si64 smoke
+uses inversion-symmetric superwaves (`NBH != NB`), so the correctness guard
+deliberately leaves the committed diagnostic inactive for this case.
+
+Spark C86C validation:
+
+```
+runs/opsi-build-residency-20260531-164302
+runs/opsi-build-residency-20260531-165523  # exact final-commit 512/1 check
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.82 s | 1.5119 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 1 | 7.64 s | 1.5119 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.30 s | 1.9022 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 4 | 9.19 s | 1.9022 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 40.92 s | 5.4696 GB | 0.000000407 Ha |
+| `gpu_resident_opsi` | 2048 | 1 | 40.94 s | 5.4696 GB | 0.000000407 Ha |
+
+The exact final commit was also rebuilt and checked at 512/1:
+`gpu_resident` 6.99 s versus `gpu_resident_opsi` 7.25 s, both with
+1.5119 GB copy estimate and a valid 0.000000401 Ha energy delta.
+
+A discarded superwave-widening experiment did reduce the copy estimate
+(`gpu_resident_opsi` at 512/1: 1.3774 GB; at 2048/1: 5.0124 GB), but it changed
+the Si64 energy to 296.752801 Ha, about 5.528 Ha away from the reference. The
+likely missing piece is the superwave `PLANEWAVE$SCALARPRODUCT('-'...)` overlap
+path, which still has host-side assumptions around the inversion contribution.
+Do not enable OPSI build residency for superwave cases until that overlap path is
+made resident and revalidated.
 
 ## Recommended Next Benchmark
 
