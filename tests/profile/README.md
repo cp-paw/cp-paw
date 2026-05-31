@@ -191,12 +191,14 @@ places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
 `PSIM`/`OPSI` in the orthogonalization region, `PSIM`/`OPSI`/`LAMBDA` in
 `WAVES_ADDOPSI`, `PSI` and `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in
-`WAVES_ADDPRO`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers also
-use these rows for their residency paths; inversion-symmetric Hermitian/symmetric
-scalarproducts no longer include the unused second wavefunction array in the
-OpenACC data region. These rows are meant to guide the next change: extend
-resident regions only where the profile shows repeated copies of the same
-wavefunction data.
+`WAVES_ADDPRO`. The Gram-Schmidt setup keeps `PSI` resident through the final
+wavefunction transform and records that outer input/output region as
+`ACC_COPY_GRAM_PSI_IO`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
+also use these rows for their residency paths; inversion-symmetric
+Hermitian/symmetric scalarproducts no longer include the unused second
+wavefunction array in the OpenACC data region. These rows are meant to guide the
+next change: extend resident regions only where the profile shows repeated
+copies of the same wavefunction data.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
