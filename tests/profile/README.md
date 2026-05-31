@@ -127,7 +127,10 @@ also has a narrow resident projection/overlap region for wavefunctions outside
 the main orthogonalization loop. The force loop keeps `THIS%PSI0` resident
 across per-atom `WAVES_DEDPRO` MATMUL calls; set
 `CPPAW_GPU_FORCE_PSI_RESIDENCY=0` to compare against the previous per-atom copy
-behavior. The real safe-orthogonalization loop also has an opt-in diagnostic
+behavior. The one-center overlap contraction packs the flattened cuBLAS input
+matrices on the GPU and is enabled by default in residency-profile builds; set
+`CPPAW_GPU_1COVERLAP=0` to compare against the host contraction path. The real
+safe-orthogonalization loop also has an opt-in diagnostic
 that keeps the constant `CHICHI` and `U` matrices resident across repeated
 `LIB$MATMULR8` calls while leaving the host-updated temporary outputs on the
 previous copy-back path; set `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1` to test it. It
@@ -216,6 +219,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_pro_host` | Residency diagnostic with GPU projector expansion disabled via `CPPAW_GPU_PRO_EXPANSION=0`. |
 | `gpu_resident_addpro_host` | Residency diagnostic with the GPU projection cache kept enabled but its `WAVES_ADDPRO` reuse disabled via `CPPAW_GPU_ADDPRO_CACHE=0`. |
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
+| `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -349,6 +353,9 @@ be overridden by kernel category:
 - `CPPAW_GPU_FORCE_PSI_RESIDENCY`: keep enabled by default in residency-profile
   builds so `WAVES$FORCE` reuses `THIS%PSI0` across the per-atom
   `WAVES_DEDPRO` MATMUL calls; set to `0` for the previous per-call copy path.
+- `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so
+  `WAVES_1COVERLAP` uses the GPU-pack/cuBLAS contraction path; set to `0` for
+  the host contraction path.
 - `CPPAW_GPU_ORTHO_CONST_RESIDENCY`: disabled by default. Set to `1` to let
   `WAVES_ORTHO_X` reuse constant `CHICHI` and `U` inputs across repeated real
   MATMUL calls while keeping temporary outputs on the host-synchronized path.

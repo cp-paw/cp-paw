@@ -207,7 +207,7 @@ case_note() {
       echo "Recommended one-GPU NVHPC profile path with OpenACC residency enabled."
       ;;
     gpu_resident_1coverlap)
-      echo "Experimental residency diagnostic that enables one-center overlap cuBLAS offload."
+      echo "Residency diagnostic that explicitly enables one-center overlap cuBLAS offload."
       ;;
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."

@@ -284,19 +284,18 @@ time and can overlap with BLAS/FFT/LAPACK rows.
 
 ## One-Center Overlap Offload
 
-The next residency patch moves the dense `WAVES_1COVERLAP` contraction to
-cuBLAS when `CPPVAR_CUBLAS_ACC` is available. This is intentionally separate
-from the existing wavefunction-overlap residency path because the one-center
-projection arrays are packed from the PAW projector layout first. The first
-Spark smoke result was correct but slower (`11.89 s` for opt-in offload versus
-`10.96 s` with `CPPAW_GPU_1COVERLAP=0` at `EMPTY_BANDS=512,NSTEPS=1`), and a
-larger `2048/1` probe showed the GPU idle while the process spun on CPU. Keep
-this path opt-in for now. Use `CPPAW_GPU_1COVERLAP=1` or
-`CPPAW_CUBLAS_ACC_1COVERLAP=1` to enable it explicitly; use the benchmark case
-`gpu_resident_1coverlap`. The explicit host diagnostic remains
-`gpu_resident_1coverlap_host`.
+The first one-center residency patch moved the dense `WAVES_1COVERLAP`
+contraction to cuBLAS when `CPPVAR_CUBLAS_ACC` is available. That version was
+correct but slower (`11.89 s` for opt-in offload versus `10.96 s` with
+`CPPAW_GPU_1COVERLAP=0` at `EMPTY_BANDS=512,NSTEPS=1`), and a larger `2048/1`
+probe showed the GPU idle while the process spun on CPU. The follow-up patch
+keeps the one-center path but packs the flattened cuBLAS input matrices on the
+GPU (`ACC_PACK_CUBLAS_1COV`) before the two `ZGEMM` contractions. With that
+fix, the path is enabled by default in residency-profile builds. Use
+`CPPAW_GPU_1COVERLAP=0` or `CPPAW_CUBLAS_ACC_1COVERLAP=0` to disable it; the
+explicit host diagnostic remains `gpu_resident_1coverlap_host`.
 
-After switching the default off again, the safe residency path rebuilds and runs
+Historical default-off checks showed that the safe residency path rebuilt and ran
 normally. The 512/1 smoke keeps the same energy for `gpu_resident` and
 `gpu_resident_1coverlap_host` (`302.280854 Ha`). The larger default-off 2048/1
 check completed as
@@ -306,6 +305,28 @@ rows are emitted unless the opt-in keyword is set. The explicit opt-in smoke
 `onecenter-optin-smoke-20260531-013314` completed correctly at 512/1
 (`12.40 s`, `302.280854 Ha`) and emitted the expected `CUBLAS_ZGEMM_1COV_*`
 profile rows.
+
+GPU-pack follow-up smokes:
+
+```
+runs/onecoverlap-gpupack-smoke512-20260531-133923
+runs/onecoverlap-gpupack-smoke1024-20260531-134008
+runs/onecoverlap-gpupack-smoke2048-20260531-134158
+runs/onecoverlap-gpupack-final1024-20260531-135518
+```
+
+| Case | Empty bands | Wall time | `PAW_1COVERLAP_TOTAL` | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Host contraction | 512 | 11.59 s | 1.0452 s | 302.280854 Ha | Previous default path. |
+| GPU-pack cuBLAS contraction | 512 | 10.62 s | 0.0566 s | 302.280854 Ha | New path is faster even in the small smoke. |
+| Host contraction | 1024 | 45.54 s | 3.4300 s | 302.280854 Ha | Previous default path. |
+| GPU-pack cuBLAS contraction | 1024 | 39.49 s | 0.1472 s | 302.280854 Ha | Best Si64 1024-band signal so far. |
+| Host contraction | 2048 | 282.69 s | 12.2053 s | 302.280854 Ha | Previous large-band problem case. |
+| GPU-pack cuBLAS contraction | 2048 | 269.85 s | 0.4511 s | 302.280854 Ha | Contract bottleneck is removed; total wall time still has other large-band costs. |
+
+After enabling the GPU-pack path by default, the final 1024-band smoke reported
+`gpu_resident` at 41.69 s versus 45.22 s for
+`gpu_resident_1coverlap_host`, both with final energy 302.280854 Ha.
 
 For the expensive unresolved point, use the dedicated night-run wrapper. It
 defaults to the GPU cases only so the run is not dominated by the known slow
