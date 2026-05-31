@@ -154,7 +154,12 @@ that keeps the constant `CHICHI` and `U` matrices resident across repeated
 `LIB$MATMULR8` calls while leaving the host-updated temporary outputs on the
 previous copy-back path; set `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1` to test it. It
 is disabled by default because Spark Si64 smokes reduced copy volume but did not
-improve wall time. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
+improve wall time. A broader opt-in diagnostic keeps the real `WAVES_ORTHO_X`
+iteration workspace (`LAMBDA`, `GAMN`, `HAUX`, and scalar loop inputs) resident
+and routes the large transform pairs through present-input cuBLAS calls; set
+`CPPAW_GPU_ORTHO_X_RESIDENCY=1` or use `gpu_resident_orthox` to test it. It is
+kept off by default until longer correctness and scaling runs cover more than
+the Si64 smoke set. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
 the older per-column inversion scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
 `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
@@ -240,6 +245,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
+| `gpu_resident_orthox` | Residency diagnostic with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
