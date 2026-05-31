@@ -33,6 +33,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `denmat-lagr-residency-20260531-*` | DENMAT LAGR setup/residency | `gpu_resident_hpsi` 37.19 s, `gpu_resident_hpsi_denmat_energy` 37.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.56 s at 512/4 | Precomputes `LAGR=LAMBDA*OCC` once per k-point/spin and keeps it resident for the DENMAT diagnostic; copy volume drops sharply, wall time remains neutral at 2048/1. |
 | `offden-profile-split-20260531-*` | Off-site DENMAT profiling split | `gpu_resident_hpsi_denmat_energy` 36.39 s at 2048/1 | - | `gpu_resident_hpsi` 9.75 s at 512/4 | Splits `PAW_OFFDEN_SUM` into setup/zero/local/combine; off-site time is mostly local contraction, not MPI combine. |
 | `offden-blas-diagnostic-20260531-*` / `offden-blas-combined-20260531-*` | Off-site DENMAT BLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` 36.91 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` 9.76 s at 512/4 | Rewrites scalar `TINV` off-site local work as packed `ZGEMM`; energy-valid, much faster inside `PAW_OFFDEN_SUM_LOCAL`, still opt-in host-data diagnostic. |
+| `offden-cublas-diagnostic-20260531-*` / `offden-cublas-combined-20260531-*` | Naive off-site DENMAT cuBLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 36.79 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 9.75 s at 512/4 | Adds a forced per-neighbor cuBLAS diagnostic; energy-valid, but kernel timings are worse than host BLAS, so the next GPU attempt must batch or keep buffers resident. |
 
 The latest full-matrix run lives at:
 
@@ -1720,6 +1721,61 @@ Si64 step is dominated by other phases and the prototype still packs host
 buffers every neighbor. The next useful GPU step is therefore not another
 off-site timing split, but keeping projector/packed off-site buffers resident
 and moving this matrix formulation behind an OpenACC/cuBLAS-aware backend.
+
+## Off-Site DENMAT cuBLAS Diagnostic
+
+The follow-up cuBLAS diagnostic adds `CPPAW_GPU_OFFDEN_CUBLAS=1` with
+`CPPAW_CUBLAS_ACC_OFFDEN=1` as an alias and a separate
+`CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP` threshold. The harness forces that threshold
+to 1 for `gpu_resident_*_offden_cublas` cases. This path still packs host
+buffers per neighbor, then sends one small `ZGEMM(N,T)` to cuBLAS per neighbor.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/offden-cublas-diagnostic-20260531-512-4r
+runs/offden-cublas-diagnostic-20260531-2048-1r
+runs/offden-cublas-repro-20260531-2048-1r
+runs/offden-cublas-combined-repro-20260531-2048-1r
+runs/offden-cublas-combined-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi_offden_blas` | 512 | 4 | 10.23 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_cublas` | 512 | 4 | 10.00 s | 1.8762 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_blas` | 2048 | 1 | 40.52 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_offden_cublas` | 2048 | 1 | 39.04 s | 5.3941 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_blas` | 512 | 4 | 9.75 s | 1.7591 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas` | 512 | 4 | 9.80 s | 1.9069 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_blas` | 2048 | 1 | 36.79 s | 4.9892 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas` | 2048 | 1 | 37.52 s | 5.4846 GB | 0.000000407 Ha |
+
+| Profile row | 2048/1 HPSI+BLAS | 2048/1 HPSI+cuBLAS | 512/4 HPSI+BLAS, rank 1 | 512/4 HPSI+cuBLAS, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_BLAS_PACK` | 0.0227 s | 0.0285 s | 0.0059 s | 0.0083 s |
+| `ZGEMM_OFFDEN_TINV_NDIM1` | 0.0492 s | - | 0.0118 s | - |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_NDIM1` | - | 0.1593 s | - | 0.3990 s |
+| `ACC_COPY_CUBLAS_ZGEMM_NT` | - | 0.4954 GB | - | 0.0369 GB |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.0733 s | 0.1905 s | 0.0183 s | 0.4084 s |
+
+| Profile row | 2048/1 DENMAT GPU+BLAS | 2048/1 DENMAT GPU+cuBLAS | 512/4 DENMAT GPU+BLAS, rank 1 | 512/4 DENMAT GPU+cuBLAS, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_BLAS_PACK` | 0.0222 s | 0.0260 s | 0.0057 s | 0.0080 s |
+| `ZGEMM_OFFDEN_TINV_NDIM1` | 0.0490 s | - | 0.0118 s | - |
+| `CUBLAS_ZGEMM_OFFDEN_TINV_NDIM1` | - | 0.1595 s | - | 0.3998 s |
+| `ACC_COPY_CUBLAS_ZGEMM_NT` | - | 0.4954 GB | - | 0.0369 GB |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.0727 s | 0.1875 s | 0.0181 s | 0.4090 s |
+
+The naive cuBLAS implementation is therefore a negative control: it is
+correct, but the per-neighbor launch/copy pattern loses to host BLAS inside the
+off-site local contraction. The useful GPU direction is a batched/strided
+formulation grouped by projector shape, ideally with packed `A`/`B` buffers
+resident across neighbors. A simple one-cuBLAS-call-per-neighbor rewrite should
+not become the default.
 
 ## Recommended Next Benchmark
 
