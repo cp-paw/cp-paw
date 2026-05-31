@@ -39,6 +39,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `proj-residency-fixed-20260531-*` | `THIS%PROJ` residency diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` 36.57 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` 9.48 s at 512/4 | Keeps the combined projection result present for eligible off-site device-pack consumers; energy-valid after invalidating stale present `PROPSI`, useful as an opt-in diagnostic but too narrow for default promotion. |
 | `offden-device-accum-20260601-*` | Off-site DENMAT device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.26 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.59 s at 512/4 | Converts stacked complex `WORK` to real `MATPACK` on the GPU and copies that back; energy-valid and reduces copy volume, but kernel overhead keeps it opt-in. |
 | `offden-flat-accum-20260601-*` | Off-site DENMAT flat device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.64 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum` 9.62 s at 512/4 | Accumulates batches into one flat real off-site matrix buffer on the GPU and copies it back once per k-point/spin pass; energy-valid, useful at 1 MPI/GPU, neutral/noisy when four ranks share one GPU. |
+| `psim-present-copy-20260601-*` | PSIM propagation present-or-copy accounting | `gpu_resident` 6.36 s at 512/1 | - | `gpu_resident` 9.18 s at 512/4 | Changes the PSIM propagation data region to `present_or_copy`; energy-valid and correct for future broader residency, but current Si64 still copies PSIM in/out because no enclosing resident producer is active. |
 
 The latest full-matrix run lives at:
 
@@ -1491,6 +1492,41 @@ the current implementation adds `PSI0`, `PSIM`, `HPSI`, coefficient input
 copies and a `PSIM` copy-out. The performance-positive path is still broader
 projector, PRO, and wavefunction residency that lets later phases consume the
 GPU-resident data instead of copying it back immediately.
+
+## PSIM Present-Or-Copy Accounting
+
+The follow-up changes the PSIM propagation data region from unconditional
+`copy/copyin` clauses to `present_or_copy` for `PSIM` and `present_or_copyin`
+for `PSI0`/`HPSI`. The profile bookkeeping now uses the existing in/out helper
+for `PSIM`, so a future broader resident region records `ACC_PRESENT_PROP_PSIM`
+instead of an unconditional output copy row.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/psim-present-copy-20260601-512-1r
+runs/psim-present-copy-20260601-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 6.36 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 1 | 7.35 s | 1.7730 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 1 | 7.27 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 1 | 7.41 s | 1.6369 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.18 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 4 | 9.31 s | 2.1387 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.65 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 4 | 9.66 s | 1.9977 GB | 0.000000401 Ha |
+
+The current Si64 path still records `ACC_COPY_PROP_PSIM_IN` and
+`ACC_COPY_PROP_PSIM_OUT`, which proves that no enclosing phase keeps `PSIM`
+present into `WAVES$PROPAGATE` yet. The code path is nevertheless now ready for
+that next step: once orthogonalization/projection leaves `PSIM` resident, the
+propagation kernel can reuse it without another local data-region rewrite.
 
 ## DENMAT Profiling Split
 
