@@ -28,6 +28,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `superwave-opsi-hostscale-20260531-*` | Superwave overlap residency | `gpu_resident`/`gpu_resident_opsi` tied and energy-valid | - | `gpu_resident_opsi` 9.15 s at 512/4 | Makes the superwave inversion overlap term resident; keeps superwave OPSI host-built/host-scaled before entering device residency. |
 | `addpro-context-cache-20260531-*` | ADDPRO context-cache controls | `gpu_resident_opsi` 40.03 s at 2048/1 | - | `gpu_resident_addpro_hpsi_host` 9.30 s at 512/4 | Adds independent HPSI/OPSI `WAVES_ADDPRO` cache switches; all cases remain energy-valid, but timings are neutral/noisy. |
 | `1cov-split-20260531-*` | One-center overlap copy accounting | `gpu_resident_hpsi` 40.48 s at 2048/1 | - | `gpu_resident_hpsi` 9.78 s at 512/4 | Splits the 1COV copy estimate into packed projector input and overlap-matrix output rows. |
+| `wave-io-split-20260531-*` | Wavefunction IO copy accounting | `gpu_resident_hpsi` 39.22 s at 2048/1 | - | `gpu_resident_hpsi` 9.72 s at 512/4 | Splits Gram, ORTHO, ADDPRO, and ADDOPSI wavefunction IO estimates into input and output rows. |
 
 The latest full-matrix run lives at:
 
@@ -1416,6 +1417,34 @@ but it is not the leading copy source after HPSI residency. The larger remaining
 rows are still the wavefunction input/output regions around Gram,
 orthogonalization, and ADDPRO, so the next performance work should target
 those repeated wavefunction edges before optimizing 1COV matrix-output copies.
+
+## Wavefunction IO Copy Split
+
+The generic 3D wavefunction IO profiler now records separate input and output
+rows for arrays that are updated in an OpenACC data region. This replaces
+aggregate `*_PSI_IO` rows in Gram-Schmidt, the orthogonalization outer region,
+`WAVES_ADDPRO`, and `WAVES_ADDOPSI` without changing the actual data regions or
+the total semantic copy estimate.
+
+Spark C86C validation:
+
+```
+runs/wave-io-split-20260531-2048-1r
+runs/wave-io-split-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Example split rows | Energy delta |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `gpu_resident_hpsi` | 2048 | 1 | 39.22 s | 4.8988 GB | `GRAM_PSI0_PSI_IN/OUT`, `GRAM_PSIM_PSI_IN/OUT`, `ORTHO_PSIM_IN/OUT`, `ADDPRO_OPSI_PSI_IN/OUT` each 0.2286 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.72 s | 1.7284 GB | same rows each 0.0168 GB | 0.000000401 Ha |
+
+No old `ACC_COPY_*_PSI_IO` rows remain in the checked profiles. The split shows
+that the next meaningful optimization is not a single output-only writeback:
+for the large Si64 smoke, Gram `PSI0`, Gram `PSIM`, orthogonalization `PSIM`,
+and ADDPRO `OPSI` each still have equal input and output sides. A future
+residency experiment should therefore try to keep one of these wavefunctions
+resident across the producing and consuming phases, rather than only suppressing
+copy-out accounting.
 
 ## Recommended Next Benchmark
 
