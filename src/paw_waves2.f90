@@ -71,9 +71,38 @@
       REAL(8)   ,ALLOCATABLE :: RMAT(:,:),ROMAT(:,:),ROOMAT(:,:),RLAMBDA(:,:)
       INTEGER(4),ALLOCATABLE :: SMAP(:)
       INTEGER(4)             :: I1,J1,K
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+      REAL(8)                :: ACCEL_TOTAL_T0
+      REAL(8)                :: ACCEL_TOTAL_T1
+      REAL(8)                :: ACCEL_OPSI_T
+      REAL(8)                :: ACCEL_MASS_T
+      REAL(8)                :: ACCEL_STRESS_T
+      REAL(8)                :: ACCEL_PROJ_T
+      REAL(8)                :: ACCEL_1C_T
+      REAL(8)                :: ACCEL_PWOVL_T
+      REAL(8)                :: ACCEL_SOLVE_T
+      REAL(8)                :: ACCEL_ADDOPSI_T
+      REAL(8)                :: ACCEL_ADDOPROJ_T
+      REAL(8)                :: ACCEL_WAVEKIN_T
+#ENDIF
 !     **************************************************************************
                              CALL TRACE$PUSH('WAVES$ORTHOGONALIZE')
                              CALL TIMING$CLOCKON('WAVES$ORTHOGONALIZE')
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_OPSI_T=0.D0
+      ACCEL_MASS_T=0.D0
+      ACCEL_STRESS_T=0.D0
+      ACCEL_PROJ_T=0.D0
+      ACCEL_1C_T=0.D0
+      ACCEL_PWOVL_T=0.D0
+      ACCEL_SOLVE_T=0.D0
+      ACCEL_ADDOPSI_T=0.D0
+      ACCEL_ADDOPROJ_T=0.D0
+      ACCEL_WAVEKIN_T=0.D0
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
+#ENDIF
       NPRO=MAP%NPRO
       NAT=MAP%NAT
       TRESIDENTOVERLAP=.FALSE.
@@ -102,6 +131,9 @@
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 IF(1.EQ.0) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 !
 !         ======================================================================
@@ -147,10 +179,17 @@ ELSE
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
 !++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
 END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_OPSI_T=ACCEL_OPSI_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !
 !         ======================================================================
 !         ==  DIVIDE BY WAVE FUNCTION MASS                                    ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
           ALLOCATE(MARR(NGL))
           CALL PLANEWAVE$GETR8A('G2',NGL,MARR)
 !PB070802          IF(ASSOCIATED(GSET%DMPSI)) THEN
@@ -175,6 +214,10 @@ END IF
             ENDDO
           ENDDO
           DEALLOCATE(MARR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_MASS_T=ACCEL_MASS_T+ACCEL_T1-ACCEL_T0
+#ENDIF
         ENDDO
       ENDDO
 !
@@ -184,6 +227,9 @@ END IF
       ALLOCATE(RP(3,NAT))
       CALL ATOMLIST$GETR8A('R(+)',0,3*NAT,RP)
       IF(TSTRESS) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !       == PREDICT NEW POSITIONS =======================================
         CALL CELL$GETR8A('TP',9,RBAS)
         CALL CELL$GETR8A('MAPTOCELL',9,MAPTOCELL)
@@ -243,6 +289,10 @@ END IF
             THIS%OPSI(:,:,:)=THIS%OPSI(:,:,:)*CELLSCALE 
           ENDDO
         ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_STRESS_T=ACCEL_T1-ACCEL_T0
+#ENDIF
       ELSE
         CELLSCALE=1.D0
       END IF
@@ -261,6 +311,9 @@ END IF
 !         ======================================================================
 !         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           IF(TRESIDENTOVERLAP) THEN
             CALL ACCELPROFILE$ADD('ACC_COPY_CUBLAS_OVERLAP_RES_REGION' &
@@ -291,16 +344,28 @@ END IF
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
      &                                                         ,THIS%OPSI,OPROJ)
           CALL MPE$COMBINE('K','+',OPROJ)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_PROJ_T=ACCEL_PROJ_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !
 !         ======================================================================
 !         ==  1C-OVERLAP OF <PSI0|PSI0>, <OPSI|PSI0> AND <OPSI|OPSI>          ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
           ALLOCATE(MAT(NB,NB))
           CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,THIS%PROJ,THIS%PROJ,MAT)
           ALLOCATE(OMAT(NB,NB))
           CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,THIS%PROJ,OMAT)
           ALLOCATE(OOMAT(NB,NB))
           CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,OOMAT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_1C_T=ACCEL_1C_T+ACCEL_T1-ACCEL_T0
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !         ======================================================================
 !         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                        ==
@@ -325,6 +390,10 @@ END IF
             ENDDO
           ENDDO
           DEALLOCATE(AUXMAT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_PWOVL_T=ACCEL_PWOVL_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !$ACC END DATA
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           IF(TRESIDENTOVERLAP) THEN
@@ -335,6 +404,9 @@ END IF
 !         ======================================================================
 !         ==  CALCULATE LAGRANGE PARAMETERS                                   ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
           ALLOCATE(LAMBDA(NB,NB))
           LAMBDA(:,:)=THIS%RLAM0(:,:)
           DO I=1,NB
@@ -429,10 +501,17 @@ END IF
           DEALLOCATE(OMAT)
           DEALLOCATE(OOMAT)
           IF(.NOT.TSAFEORTHO)DEALLOCATE(SMAP)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_SOLVE_T=ACCEL_SOLVE_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !
 !         ======================================================================
 !         ==  CALCULATE |PSI(+)>=|PSI>+|CHI>LAMBDA                            ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
           TRESIDENTADDOPSI=TRESIDENTOVERLAP.AND.(NBH.EQ.NB)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           IF(TRESIDENTADDOPSI) THEN
@@ -460,11 +539,22 @@ END IF
           CALL WAVES_ADDOPSI(NGL,NDIM,NBH,NB,THIS%PSIM,THIS%OPSI,LAMBDA)
 !$ACC END DATA
           DEALLOCATE(THIS%OPSI)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_ADDOPSI_T=ACCEL_ADDOPSI_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !PRINT*,'WARNING FROM WAVES$ORTHOGONALIZE:'
 !PRINT*,'MAKE SURE THAT PDOS AND GRAPHICS PICK UP A CONSISTENT SET OF '
 !PRINT*,'WAVE FUNCTIONS  AND PROJECTOR FUNCTIONS'
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
           CALL WAVES_ADDOPROJ(NPRO,NDIM,NBH,NB,THIS%PROJ,OPROJ,LAMBDA)
           DEALLOCATE(OPROJ)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_ADDOPROJ_T=ACCEL_ADDOPROJ_T+ACCEL_T1-ACCEL_T0
+#ENDIF
 !
 !         ======================================================================
 !         ======================================================================
@@ -555,7 +645,50 @@ END IF
 !     ==================================================================
 !     ==  CALCULATE SECOND PART OF WAVE FUNCTION KINETIC ENERGY       ==
 !     ==================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL WAVES_WAVEKINETIC(WAVEEKIN2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_WAVEKIN_T=ACCEL_T1-ACCEL_T0
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_OPSI' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_OPSI_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_MASS' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_MASS_T)
+      IF(TSTRESS) THEN
+        CALL ACCELPROFILE$ADD('PAW_ORTHO_STRESS' &
+     &      ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &      ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_STRESS_T)
+      END IF
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_PROJ' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_PROJ_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_1COVERLAP' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_1C_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_PW_OVERLAP' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_PWOVL_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_SOLVE' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_SOLVE_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_ADDOPSI' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_ADDOPSI_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_ADDOPROJ' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_ADDOPROJ_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_WAVEKIN' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_WAVEKIN_T)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_TOTAL' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
+#ENDIF
                              CALL TIMING$CLOCKOFF('WAVES$ORTHOGONALIZE')
                                     CALL TRACE$POP
       RETURN
@@ -1054,11 +1187,20 @@ END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                   :: ACCEL_T0
       REAL(8)                   :: ACCEL_T1
+      REAL(8)                   :: ACCEL_TOTAL_T0
+      REAL(8)                   :: ACCEL_TOTAL_T1
+      REAL(8)                   :: ACCEL_PACK_T
+      REAL(8)                   :: ACCEL_CONTRACT_T
+      REAL(8)                   :: ACCEL_UNRAVEL_T
       REAL(8)                   :: ACCEL_CUBLAS_T0
       REAL(8)                   :: ACCEL_CUBLAS_T1
 #ENDIF
 !     **************************************************************************
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_PACK_T=0.D0
+      ACCEL_CONTRACT_T=0.D0
+      ACCEL_UNRAVEL_T=0.D0
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
       CALL MPE$QUERY('K',NTASKS,THISTASK)
@@ -1129,6 +1271,11 @@ END IF
         IPRO=IPRO+LMNX
         IPROX=IPROX+LMNX
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_PACK_T=ACCEL_T1-ACCEL_T0
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================     
 !     ==  MAT(I,J)= SUM_{K,L} <PSI_I|P_K>   * [ DO(K,L)*<P_L|PSI_J>]          ==
@@ -1260,6 +1407,11 @@ END IF
 #ENDIF
       DEALLOCATE(PROJ1A)
       DEALLOCATE(PROJ2A)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_CONTRACT_T=ACCEL_T1-ACCEL_T0
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================     
 !     ==  UNRAVEL SUPER WAVE FUNCTIONS  PSISUP=PSI1+CI*PSI2 WITH REAL PSI1/2  ==
@@ -1285,10 +1437,25 @@ END IF
         CALL MPE$COMBINE('K','+',MAT)
       ENDIF  
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
-      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      IF(TINV) THEN
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_UNRAVEL_T=ACCEL_T1-ACCEL_T0
+      END IF
+      CALL ACCELPROFILE$ADD('PAW_1COVERLAP_PACK' &
+     &    ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_PACK_T)
+      CALL ACCELPROFILE$ADD('PAW_1COVERLAP_CONTRACT' &
+     &    ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NPRO,KIND=8) &
+     &    ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_CONTRACT_T)
+      IF(TINV) THEN
+        CALL ACCELPROFILE$ADD('PAW_1COVERLAP_UNRAVEL' &
+     &      ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NPRO,KIND=8) &
+     &      ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_UNRAVEL_T)
+      END IF
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
       CALL ACCELPROFILE$ADD('PAW_1COVERLAP_TOTAL' &
      &    ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NPRO,KIND=8) &
-     &    ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+     &    ,INT(MAP%NAT,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
 #ENDIF
       RETURN
       END

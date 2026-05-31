@@ -354,6 +354,33 @@ larger unresolved algorithmic hotspot remains the dense Gram/overlap side:
 and matmul rows. That is the better next design target than another local loop
 offload.
 
+## Orthogonalization and 1COVERLAP Phase Profiling
+
+The next profiling patch splits the orthogonalization step into context rows and
+breaks `WAVES_1COVERLAP` into pack, contraction, and superwave-unravel phases.
+This is a diagnostic-only change; it does not alter the numerical path or any
+NVHPC defaults.
+
+Spark C86C validation after the split:
+
+| Run | Empty bands | Ranks | Wall time | Energy | Main new signal |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `si64_bands-nstep1-1ranks-20260531-120036` | 512 | 1 | 11.09 s | 302.280854 Ha | `PAW_1COVERLAP_CONTRACT=1.0021 s` of `1.0320 s`; `PAW_ORTHO_1COVERLAP=0.6184 s`. |
+| `si64_bands-nstep1-4ranks-20260531-120104` | 512 | 4 | 21.93 s | 302.280854 Ha | `PAW_ORTHO_SOLVE=2.3215 s`, `PAW_ORTHO_ADDOPROJ=2.1621 s`, `PAW_1COVERLAP_CONTRACT=1.6548 s` rank-summed. |
+| `si64_bands-nstep1-1ranks-20260531-120141` | 2048 | 1 | 280.99 s | 302.280854 Ha | `PAW_ORTHO_TOTAL=21.5684 s`, with `PAW_ORTHO_SOLVE=8.6428 s` and `PAW_ORTHO_1COVERLAP=7.5910 s`. |
+
+The 2048/1 result sharpens the next implementation choice. The one-center
+overlap bottleneck is not packing or superwave expansion:
+`PAW_1COVERLAP_PACK=0.1396 s`,
+`PAW_1COVERLAP_UNRAVEL=0.0149 s`, but
+`PAW_1COVERLAP_CONTRACT=12.3631 s` out of
+`PAW_1COVERLAP_TOTAL=12.5175 s`. The earlier opt-in cuBLAS 1C path should
+therefore not be replaced by more host packing work; it needs either a robust
+contract-only GPU implementation or an algorithmic change that avoids repeating
+the dense contraction in the current form. Orthogonalization also exposes a
+second CPU-side target at large band count: the overlap solve/update phase
+(`PAW_ORTHO_SOLVE`) is now comparable to the 1C contribution.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
