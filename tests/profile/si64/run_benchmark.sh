@@ -254,6 +254,9 @@ case_note() {
     gpu_resident_hpsi)
       echo "Residency diagnostic that keeps HPSI on the GPU from WAVES_ADDPRO through the immediate expectation/Hamiltonian overlaps."
       ;;
+    gpu_resident_hpsi_opsi)
+      echo "Residency diagnostic that combines HPSI and OPSI wavefunction residency switches."
+      ;;
     gpu_resident_1coverlap_host)
       echo "Residency diagnostic that disables only the one-center overlap cuBLAS path."
       ;;
@@ -392,6 +395,20 @@ cublas_matmul_conservative_env() {
   echo "$(cublas_env) CPPAW_CUBLAS_ACC_MATMUL_MINFLOP=${CPPAW_CUBLAS_MATMUL_CONSERVATIVE_MINFLOP:-${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}}"
 }
 
+inherited_accel_env() {
+  local name value env_line=""
+  while IFS='=' read -r name value; do
+    case "${name}" in
+      CPPAW_GPU_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
+        if [[ "${value}" =~ ^[A-Za-z0-9_./:+-]+$ ]]; then
+          env_line="${env_line:+${env_line} }${name}=${value}"
+        fi
+        ;;
+    esac
+  done < <(env)
+  echo "${env_line}"
+}
+
 case_env() {
   case "$1" in
     cublas) cublas_env ;;
@@ -444,6 +461,7 @@ case_env() {
     gpu_resident_orthox_nosync) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_hpsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_hpsi_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_gram_cholesky) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=1 $(cublas_env)" ;;
     gpu_resident_gram_legacy) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=0 $(cublas_env)" ;;
@@ -537,6 +555,8 @@ capture_metadata() {
       fi
       note=$(case_note "${case_name}")
       [[ -n "${note}" ]] && echo "note=${note}"
+      extra_env=$(inherited_accel_env)
+      [[ -n "${extra_env}" ]] && echo "inherited_accel_env=${extra_env}"
       if [[ -x "${exe}" ]]; then
         runtime_env=$(case_runtime_env "${case_name}" "${exe}")
         if [[ -n "${runtime_env}" ]]; then
@@ -573,7 +593,8 @@ for case_name in ${CASES}; do
     prepare_case "${run_dir}"
     (
       cd "${run_dir}"
-      env_line=$(combined_env "$(case_runtime_env "${case_name}" "${exe}")" "$(case_env "${case_name}")")
+      env_line=$(combined_env "$(inherited_accel_env)" \
+        "$(case_runtime_env "${case_name}" "${exe}")" "$(case_env "${case_name}")")
       {
         echo "case=${case_name}"
         echo "repeat=${repeat}"

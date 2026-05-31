@@ -1366,6 +1366,31 @@ for the reused wavefunction. Wall time improves for the small 1-rank smoke, but
 is neutral to slightly slower for the larger and 4-rank checks, so the switch
 remains opt-in rather than a new default.
 
+## HPSI + OPSI Benchmark Keyword
+
+The harness follow-up adds the explicit combined keyword
+`gpu_resident_hpsi_opsi` and records inherited `CPPAW_*` accelerator switches in
+the benchmark `env` column. This avoids ambiguous runs where an extra shell
+environment switch affects the executable but is not visible in the TSV.
+
+Spark C86C validation:
+
+```
+runs/hpsi-opsi-keyword-20260531-512-1r
+runs/hpsi-opsi-keyword-20260531-2048-1r
+runs/hpsi-opsi-keyword-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi_opsi` | 512 | 1 | 7.21 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_opsi` | 2048 | 1 | 39.75 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 4 | 9.65 s | 1.7284 GB | 0.000000401 Ha |
+
+The combined keyword is energy-valid and reproduces the HPSI copy reduction,
+but OPSI residency does not add another copy reduction for these Si64 smoke
+cases. Keep it as a reproducible diagnostic combination, not a new default.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

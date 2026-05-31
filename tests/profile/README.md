@@ -102,6 +102,11 @@ final constant energy against the built-in reference (`EXPECTED_ENERGY`,
 default `302.280854`) with `ENERGY_TOL=1e-5`. A run with normal termination but
 an energy mismatch is reported as `ok=no` and carries `energy_delta` in the TSV
 and Markdown summaries.
+The harness also records inherited `CPPAW_GPU_*`, `CPPAW_CUBLAS_ACC_*`,
+`CPPAW_CUSOLVER_ACC_*`, `CPPAW_CUFFT_ACC*`, and `CPPAW_GRAM_CHOLESKY`
+environment switches in `run.env` and the benchmark `env` column. Case-specific
+settings are appended after inherited settings, so explicit `CASES` keywords
+remain reproducible and override broader shell defaults.
 
 `WAVES$ETOT` is split further by `PAW_ETOT_*` rows, and the initial
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
@@ -307,6 +312,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_opsi` | Opt-in residency diagnostic that keeps orthogonalization `OPSI` on the GPU through projection/overlap/`WAVES_ADDOPSI` via `CPPAW_GPU_OPSI_RESIDENCY=1`; superwave cases use conservative host build/scale staging before device residency. |
 | `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
+| `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
