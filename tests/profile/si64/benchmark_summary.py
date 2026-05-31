@@ -102,6 +102,21 @@ def run_ok(run_dir):
     return "NORMAL STOP" in text
 
 
+def energy_check(energy, env):
+    expected = env.get("expected_energy") or env.get("EXPECTED_ENERGY")
+    if not expected:
+        return None, None
+    if energy is None:
+        return None, False
+    try:
+        expected_value = float(expected)
+        tolerance = float(env.get("energy_tol") or env.get("ENERGY_TOL") or "1e-5")
+    except ValueError:
+        return None, False
+    delta = abs(energy - expected_value)
+    return delta, delta <= tolerance
+
+
 def wall_rank_time(wall, ranks):
     if wall is None:
         return None
@@ -121,6 +136,9 @@ def main(argv):
         env = run_env(run_dir)
         wall = wall_time(run_dir)
         wall_rank = wall_rank_time(wall, env.get("ranks"))
+        energy = final_energy(run_dir)
+        energy_delta, energy_is_ok = energy_check(energy, env)
+        ok = run_ok(run_dir) and (energy_is_ok is not False)
         gap = None
         coverage = None
         phase_gap = None
@@ -135,7 +153,7 @@ def main(argv):
                 "repeat": repeat,
                 "nsteps": env.get("nsteps") or env.get("nstps"),
                 "ranks": env.get("ranks"),
-                "ok": "yes" if run_ok(run_dir) else "no",
+                "ok": "yes" if ok else "no",
                 "wall_s": wall,
                 "wall_rank_s": wall_rank,
                 "rank_s": totals["instrumented"],
@@ -151,7 +169,11 @@ def main(argv):
                 "phase_gap_s": phase_gap,
                 "setup_s": totals["setup"],
                 "copy_gb": totals["copy_gb"],
-                "energy": final_energy(run_dir),
+                "energy": energy,
+                "energy_delta": energy_delta,
+                "energy_ok": (
+                    "" if energy_is_ok is None else ("yes" if energy_is_ok else "no")
+                ),
                 "env": env.get("env"),
             }
         )
@@ -182,6 +204,8 @@ def main(argv):
         "setup_s",
         "copy_gb",
         "energy",
+        "energy_delta",
+        "energy_ok",
         "env",
     ]
     print("\t".join(fields))

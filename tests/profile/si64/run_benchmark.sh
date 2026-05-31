@@ -17,6 +17,8 @@ REQUIRE_CASES=${REQUIRE_CASES:-no}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
+EXPECTED_ENERGY=${EXPECTED_ENERGY:-}
+ENERGY_TOL=${ENERGY_TOL:-1e-5}
 TIMEOUT_PREFIX=""
 if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
@@ -34,6 +36,10 @@ if [[ -z "${TIME_CMD}" ]]; then
   echo "External time command not found; set TIME_CMD or install GNU time." >&2
   exit 1
 fi
+
+case "${TEST}" in
+  si64|si64_bands) EXPECTED_ENERGY=${EXPECTED_ENERGY:-302.280854} ;;
+esac
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
@@ -490,6 +496,10 @@ capture_metadata() {
     echo "nsteps=${NSTEPS}"
     echo "ranks=${RANKS}"
     echo "cases=${CASES}"
+    if [[ -n "${EXPECTED_ENERGY}" ]]; then
+      echo "expected_energy=${EXPECTED_ENERGY}"
+      echo "energy_tol=${ENERGY_TOL}"
+    fi
     echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
     echo
     uname -a
@@ -547,6 +557,10 @@ for case_name in ${CASES}; do
         echo "ranks=${RANKS}"
         echo "exe=${exe}"
         echo "env=${env_line}"
+        if [[ -n "${EXPECTED_ENERGY}" ]]; then
+          echo "expected_energy=${EXPECTED_ENERGY}"
+          echo "energy_tol=${ENERGY_TOL}"
+        fi
         echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
         echo "start=$(iso_now)"
       } > run.env
