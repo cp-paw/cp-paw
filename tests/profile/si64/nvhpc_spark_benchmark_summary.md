@@ -1334,6 +1334,38 @@ as expected when the fallback `PSI` input/output region is counted explicitly.
 The context switches remain diagnostics, while the resident ADDPRO cache stays
 the recommended default path.
 
+## HPSI Residency Diagnostic
+
+The next opt-in diagnostic keeps the Hamiltonian-side `HPSI` wavefunction
+resident after `WAVES_ADDPRO` and reuses it for the immediate expectation and
+full-Hamiltonian overlaps:
+
+- `CPPAW_GPU_HPSI_RESIDENCY=1`
+- benchmark case: `gpu_resident_hpsi`
+
+Spark C86C validation:
+
+```
+runs/hpsi-residency-20260531-512-1r
+runs/hpsi-residency-20260531-2048-1r
+runs/hpsi-residency-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.62 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 1 | 6.29 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 39.89 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 40.29 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident` | 512 | 4 | 9.40 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.61 s | 1.7284 GB | 0.000000401 Ha |
+
+All runs are energy-valid. The diagnostic consistently lowers the semantic copy
+estimate and records `ACC_PRESENT_EXPECT_HPSI` and `ACC_PRESENT_HAMILTON_HPSI`
+for the reused wavefunction. Wall time improves for the small 1-rank smoke, but
+is neutral to slightly slower for the larger and 4-rank checks, so the switch
+remains opt-in rather than a new default.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

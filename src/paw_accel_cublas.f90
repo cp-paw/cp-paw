@@ -32,6 +32,7 @@
       LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.TRUE.
       LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.TRUE.
       LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.TRUE.
+      LOGICAL(4)         :: HPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: OPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_CONST_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_X_RESIDENCY_ENABLED=.TRUE.
@@ -43,6 +44,7 @@
       LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.FALSE.
       LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.FALSE.
+      LOGICAL(4)         :: HPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: OPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_CONST_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_X_RESIDENCY_ENABLED=.FALSE.
@@ -50,6 +52,7 @@
 #ENDIF
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
+      LOGICAL(4)         :: WAVE_OVERLAP_FORCE_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
       REAL(8)            :: MINFLOP_PROJECTION=1.D7
       REAL(8)            :: MINFLOP_OVERLAP=1.D7
@@ -474,6 +477,23 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_HPSI_RESIDENCY',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_HPSI_RESIDENCY' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            HPSI_RESIDENCY_ENABLED=.FALSE.
+          CASE DEFAULT
+            HPSI_RESIDENCY_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OPSI_RESIDENCY',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
@@ -673,6 +693,16 @@
       END FUNCTION CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED
 !
 !     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.HPSI_RESIDENCY_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED
+!
+!     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_OPSI_RESIDENCY_ENABLED()
       IMPLICIT NONE
 !     **************************************************************************
@@ -731,6 +761,15 @@
       WAVE_OVERLAP_RESIDENT_ACTIVE=ACTIVE
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_FORCE(ACTIVE)
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN) :: ACTIVE
+!     **************************************************************************
+      WAVE_OVERLAP_FORCE_ACTIVE=ACTIVE
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_FORCE
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE()
@@ -1316,7 +1355,8 @@
         FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(LEN,KIND=8)
       END IF
       USED=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE() &
-     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
+     &     .AND.(WAVE_OVERLAP_FORCE_ACTIVE &
+     &           .OR.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS))
       IF(.NOT.USED) RETURN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
@@ -1438,7 +1478,8 @@
      &          *REAL(N2,KIND=8)
       USED=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE() &
      &     .AND.CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED() &
-     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
+     &     .AND.(WAVE_OVERLAP_FORCE_ACTIVE &
+     &           .OR.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS))
       IF(.NOT.USED) RETURN
       ONE=(1.D0,0.D0)
       ZERO=(0.D0,0.D0)
