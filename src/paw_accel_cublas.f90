@@ -1289,6 +1289,147 @@
       END SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY
 !
 !     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_GAMMA_CORRECTION_RESIDENT(NGL,NDIM &
+     &                                                       ,N1,PSI1 &
+     &                                                       ,N2,PSI2 &
+     &                                                       ,NGAMMA &
+     &                                                       ,OVERLAP)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NGL
+      INTEGER(4),INTENT(IN)  :: NDIM
+      INTEGER(4),INTENT(IN)  :: N1
+      INTEGER(4),INTENT(IN)  :: N2
+      INTEGER(4),INTENT(IN)  :: NGAMMA
+      COMPLEX(8),INTENT(IN)  :: PSI1(NGL,NDIM,N1)
+      COMPLEX(8),INTENT(IN)  :: PSI2(NGL,NDIM,N2)
+      COMPLEX(8),INTENT(INOUT):: OVERLAP(N1,N2)
+      COMPLEX(8),ALLOCATABLE :: GAMMA1(:,:)
+      COMPLEX(8),ALLOCATABLE :: GAMMA2(:,:)
+      INTEGER(4)             :: I1
+      INTEGER(4)             :: I2
+      INTEGER(4)             :: IDIM
+!     **************************************************************************
+      IF(NGAMMA.EQ.0) RETURN
+      ALLOCATE(GAMMA1(NDIM,N1))
+      ALLOCATE(GAMMA2(NDIM,N2))
+!$ACC DATA PRESENT(PSI1(1:NGL,1:NDIM,1:N1),PSI2(1:NGL,1:NDIM,1:N2)) &
+!$ACC& COPYOUT(GAMMA1(1:NDIM,1:N1),GAMMA2(1:NDIM,1:N2))
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(PSI1,GAMMA1)
+      DO I1=1,N1
+        DO IDIM=1,NDIM
+          GAMMA1(IDIM,I1)=PSI1(NGAMMA,IDIM,I1)
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(PSI2,GAMMA2)
+      DO I2=1,N2
+        DO IDIM=1,NDIM
+          GAMMA2(IDIM,I2)=PSI2(NGAMMA,IDIM,I2)
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
+      DO I1=1,N1
+        DO I2=1,N2
+          DO IDIM=1,NDIM
+            OVERLAP(I1,I2)=OVERLAP(I1,I2) &
+     &                    -CONJG(GAMMA1(IDIM,I1))*GAMMA2(IDIM,I2)
+          ENDDO
+        ENDDO
+      ENDDO
+      DEALLOCATE(GAMMA1)
+      DEALLOCATE(GAMMA2)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_GAMMA_CORRECTION_RESIDENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_INVERSION_RESIDENT_COPY(NGL,NDIM,N1 &
+     &                                                    ,PSI1,N2,PSI2 &
+     &                                                    ,MINUSG,OVERLAP &
+     &                                                    ,USED)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NGL
+      INTEGER(4),INTENT(IN)  :: NDIM
+      INTEGER(4),INTENT(IN)  :: N1
+      INTEGER(4),INTENT(IN)  :: N2
+      COMPLEX(8),INTENT(IN)  :: PSI1(NGL,NDIM,N1)
+      COMPLEX(8),INTENT(IN)  :: PSI2(NGL,NDIM,N2)
+      INTEGER(4),INTENT(IN)  :: MINUSG(NGL)
+      COMPLEX(8),INTENT(OUT) :: OVERLAP(N1,N2)
+      LOGICAL(4),INTENT(OUT) :: USED
+      COMPLEX(8),ALLOCATABLE :: PSI2M(:,:)
+      COMPLEX(8)             :: ONE
+      COMPLEX(8)             :: ZERO
+      REAL(8)                :: FLOPS
+      INTEGER(4)             :: ISTAT
+      INTEGER(4)             :: I1
+      INTEGER(4)             :: I2
+      INTEGER(4)             :: IDIM
+      INTEGER(4)             :: IG
+      INTEGER(4)             :: I
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+      REAL(8)                :: ACCEL_BYTES
+#ENDIF
+!     **************************************************************************
+      FLOPS=8.D0*REAL(NGL*NDIM,KIND=8)*REAL(N1,KIND=8) &
+     &          *REAL(N2,KIND=8)
+      USED=CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE() &
+     &     .AND.CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED() &
+     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP(FLOPS)
+      IF(.NOT.USED) RETURN
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+      ALLOCATE(PSI2M(NGL*NDIM,N2))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC DATA PRESENT(PSI1(1:NGL,1:NDIM,1:N1),PSI2(1:NGL,1:NDIM,1:N2)) &
+!$ACC& PRESENT_OR_COPYIN(MINUSG(1:NGL)) CREATE(PSI2M(1:NGL*NDIM,1:N2)) &
+!$ACC& COPYOUT(OVERLAP(1:N1,1:N2))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(I) PRESENT(PSI2,PSI2M,MINUSG)
+      DO I2=1,N2
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            I=(IDIM-1)*NGL+IG
+            PSI2M(I,I2)=CONJG(PSI2(MINUSG(IG),IDIM,I2))
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PSI1,PSI2M,OVERLAP)
+      ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_C,CUBLAS_OP_N,N1,N2,NGL*NDIM &
+     &                  ,ONE,PSI1,NGL*NDIM,PSI2M,NGL*NDIM,ZERO &
+     &                  ,OVERLAP,N1)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_INVERSION_RESIDENT_COPY')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+!$ACC END DATA
+      DO I1=1,N1
+        DO I2=1,N2
+          OVERLAP(I1,I2)=CONJG(OVERLAP(I1,I2))
+        ENDDO
+      ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_BYTES=16.D0*(REAL(NGL*NDIM,KIND=8)*REAL(N2,KIND=8) &
+     &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)) &
+     &     +4.D0*REAL(NGL,KIND=8)
+      CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_OVL_RES_INV' &
+     &     ,INT(NGL*NDIM,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
+     &     ,FLOPS,ACCEL_BYTES,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      DEALLOCATE(PSI2M)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_INVERSION_RESIDENT_COPY
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_COPY(TID,LEN,N1,PSI1 &
      &                                                  ,N2,PSI2,OVERLAP &
      &                                                  ,USED)
