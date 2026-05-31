@@ -43,6 +43,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `psim-focus-harness-20260601-*` | Focused PSIM propagation harness | `gpu_psim_propagate` 6.20 s at 512/1 | - | `gpu_psim_propagate` 9.19 s at 512/4 | Adds a reusable PSIM/HPSI propagation sweep; all cases are energy-valid, but the single-run 512-band timings are noisy and the PSIM path still increases copy volume, so this is a regression harness rather than a default promotion. |
 | `psim-phase-residency-20260601-*` | Cross-phase PSIM residency diagnostic | `gpu_resident` 37.61 s, `gpu_resident_psim_phase` 37.75 s at 2048/1 | - | `gpu_resident_psim_phase` 9.11 s at 512/4 | Leaves propagated `PSIM` resident into orthogonalization and copies it back at the orthogonalization boundary; energy-valid and reduces copy volume, but wall time is neutral/noisy, so keep it opt-in. |
 | `psim-lifecycle-20260601-rerun-*` | Two-step PSIM lifecycle harness | `gpu_resident_hpsi` 10.05 s at 512/1 | - | - | Adds an `NSTEPS=2` harness plus per-case copy-row extraction; all cases finish with the same two-step energy, and the profile confirms the next boundary is still `PSI0`/`HPSI`/ADDPRO-style residency rather than another immediate PSIM-only promotion. |
+| `opsi-present-consumers-20260601-*` | OPSI present-or-copy consumer cleanup | `gpu_resident_hpsi_opsi` 10.13 s at 512/1 | - | - | Converts downstream projection/ADDPRO/ADDOPSI data regions to `present_or_copy*`; correctness is preserved, but the superwave OPSI build remains the real copy target. |
 
 The latest full-matrix run lives at:
 
@@ -2185,6 +2186,46 @@ substitution, yet wall time stays noisy and total copy volume still grows when
 PSIM propagation is enabled. The next useful technical lever is broader
 `PSI0`/`HPSI`/ADDPRO consumer residency around `WAVES$ETOT` and the following
 step, not a standalone promotion of `CPPAW_GPU_PSIM_PHASE_RESIDENCY`.
+
+## OPSI Present-Or-Copy Consumers
+
+The follow-up changes downstream OpenACC data regions that consume already
+resident wavefunction buffers from unconditional `copy/copyin` to
+`present_or_copy/present_or_copyin`. This covers the fallback projection input
+path, the non-cache `WAVES_ADDPRO` input/output region, and both standard and
+TINV `WAVES_ADDOPSI` consumers. It deliberately does not keep superwave OPSI
+resident through `WAVES_OPSI` build/mass scaling yet, because the superwave
+projection path can still read host data.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/opsi-present-consumers-20260601-512-nstep2-1r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 10.22 s | 2.3443 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 10.13 s | 2.3443 GB | 269.022536 Ha |
+
+| Profile row | HPSI | HPSI + OPSI | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_ORTHO_OPSI_IN` | 0.1345 GB | - | Existing OPSI residency removes the later orthogonalization copy-in. |
+| `ACC_COPY_OPSI_BUILD_IN` | - | 0.1345 GB | Superwave OPSI still enters residency only after host build/mass scaling. |
+| `ACC_COPY_ADDPRO_OPSI_PSI_IN` | 0.1345 GB | 0.1345 GB | The remaining build-time ADDPRO input copy is not solved by consumer cleanup. |
+| `ACC_COPY_ADDPRO_OPSI_PSI_OUT` | 0.1345 GB | 0.1345 GB | The build-time ADDPRO output copy remains the next target. |
+| `ACC_PRESENT_ADDOPSI_OPSI_TINV` | 2 calls | 2 calls | The TINV ADDOPSI consumer already sees OPSI as present. |
+| `ACC_PRESENT_PROJ_ORTHO_OPSI_PSI` | 2 calls | 2 calls | The projection consumer is prepared for resident inputs. |
+
+Conclusion: this is a low-risk enabling patch, not a performance promotion by
+itself. It preserves correctness and makes downstream consumers tolerant of
+resident inputs, while the measured copy rows point to the next real step:
+make the superwave `WAVES_OPSI` build/mass-scale path device-resident only once
+the projection path can consume that resident result without falling back to
+stale host data.
 
 ## Recommended Next Benchmark
 
