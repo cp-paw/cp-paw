@@ -316,6 +316,44 @@ cd tests/profile/si64
 EMPTY_BANDS=2048 NSTEPS=3 ./run_gap_profile_night.sh
 ```
 
+## Inner PAW Split Profiling
+
+The next profiling pass splits the coarse PAW envelope rows into actionable
+subregions without changing the numerical path. The new rows distinguish
+`PAW_OPSI_OPROJ` from `PAW_OPSI_ADDPRO`, split `WAVES_VPSI` into
+`PAW_VPSI_FFT_GTOR`, `PAW_VPSI_POT`, `PAW_VPSI_FFT_RTOG`,
+`PAW_VPSI_KIN`, and optional `PAW_VPSI_BUCKET`, and split
+`WAVES_DENSITY`/`WAVES$RHO` into FFT, kinetic-density, accumulation, combine,
+and spin-conversion rows. `PAW_DENSITY_KIN_*` rows only appear when kinetic
+density is requested.
+
+Spark C86C validation after the split:
+
+| Run | Empty bands | Ranks | Wall time | `paw_s` | `blas_s` | `fft_s` | Energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `si64_bands-nstep1-1ranks-20260531-091623` | 512 | 1 | 12.81 s | 7.03 s | 3.19 s | 2.14 s | 302.280854 Ha |
+| `si64_bands-nstep1-1ranks-20260531-091705` | 2048 | 1 | 282.52 s | 32.17 s | 16.35 s | 7.04 s | 302.280854 Ha |
+| `si64_bands-nstep1-4ranks-20260531-092220` | 512 | 4 | 22.12 s | 17.41 s | 10.20 s | 4.63 s | 302.280854 Ha |
+
+The 2048/1 split confirms the current direction. `PAW_VPSI_TOTAL=2.4375 s`
+is almost entirely the two FFT phases
+(`PAW_VPSI_FFT_GTOR=1.2045 s`,
+`PAW_VPSI_FFT_RTOG=1.1913 s`), while the real-space potential multiply is only
+`0.0280 s` and kinetic addition is `0.0137 s`. `PAW_RHO_TOTAL=1.6100 s` is
+likewise almost entirely `PAW_DENSITY_FFT=1.5336 s`; the density accumulation is
+only `0.0053 s`. `PAW_OPSI_TOTAL=0.3631 s` is dominated by
+`PAW_OPSI_ADDPRO=0.3571 s`, and the small one-center `OPROJ` contraction is not
+a bottleneck.
+
+Practical conclusion: for this Si64 stress input, accelerating the scalar
+real-space loops inside `VPSI` or `RHO` would not move wall time. If we keep more
+PAW data on the GPU, the value comes from making FFT and projection phases
+consume resident wavefunction/projector data instead of copying around them. The
+larger unresolved algorithmic hotspot remains the dense Gram/overlap side:
+`PAW_1COVERLAP_TOTAL=12.8553 s` at 2048/1, plus the heavy cuBLAS scalar-product
+and matmul rows. That is the better next design target than another local loop
+offload.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
