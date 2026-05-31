@@ -19,6 +19,7 @@ MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
 EXPECTED_ENERGY=${EXPECTED_ENERGY:-}
 ENERGY_TOL=${ENERGY_TOL:-1e-5}
+ENERGY_CHECK=${ENERGY_CHECK:-yes}
 TIMEOUT_PREFIX=""
 if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_PREFIX="timeout ${TIMEOUT}s"
@@ -37,8 +38,20 @@ if [[ -z "${TIME_CMD}" ]]; then
   exit 1
 fi
 
-case "${TEST}" in
-  si64|si64_bands) EXPECTED_ENERGY=${EXPECTED_ENERGY:-302.280854} ;;
+case "${EXPECTED_ENERGY}" in
+  none|off|skip)
+    EXPECTED_ENERGY=
+    ENERGY_CHECK=no
+    ;;
+esac
+
+case "${ENERGY_CHECK}" in
+  no|false|0) EXPECTED_ENERGY= ;;
+  *)
+    case "${TEST}" in
+      si64|si64_bands) EXPECTED_ENERGY=${EXPECTED_ENERGY:-302.280854} ;;
+    esac
+    ;;
 esac
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}

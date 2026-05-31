@@ -21,11 +21,13 @@ bash -n tests/profile/si64/run_gpu_exploration.sh
 bash -n tests/profile/si64/run_nvhpc_standard.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_overnight.sh
+bash -n tests/profile/si64/run_psim_lifecycle.sh
 bash -n src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh
 bash -n src/Tools/Scripts/paw_gpu_capabilities.sh
 
 python3 -m py_compile \
   tests/profile/si64/profile_summary.py \
+  tests/profile/si64/profile_copy_rows.py \
   tests/profile/si64/benchmark_summary.py \
   tests/profile/si64/benchmark_markdown.py \
   tests/profile/si64/nsys_sql_summary.py

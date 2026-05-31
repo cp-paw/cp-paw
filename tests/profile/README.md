@@ -520,6 +520,24 @@ run directories. Set `RUN_LARGE_GPU=yes` to add a one-rank
 `SHARED_GPU_RANKS`, `EMPTY_BANDS`, and `RUN_SHARED_GPU=no` for narrower
 checks.
 
+For the PSIM lifecycle comparison across at least two time steps, run:
+
+```
+cd tests/profile/si64
+./run_psim_lifecycle.sh
+```
+
+It uses `NSTEPS=2` by default and compares the same PSIM/HPSI diagnostics as
+`run_psim_focus.sh`, but keeps the run shape centered on one GPU rank. This is
+intended to expose copies around the propagation, orthogonalization, and next
+time-step boundaries before broader cross-step wavefunction residency is enabled.
+Because the one-step Si64 reference energy is not valid for multi-step dynamics,
+the fixed energy check is disabled by default for this harness; compare the
+reported energies between cases instead. It writes the normal combined benchmark
+TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`.
+Override `NSTEPS_LIST`, `EMPTY_BANDS_LIST`, `RUN_SHARED_GPU=yes`,
+`RUN_LARGE_GPU=yes`, or `PSIM_LIFECYCLE_CASES` for wider sweeps.
+
 For the larger orthogonalization preset used in the residency follow-up, run:
 
 ```
