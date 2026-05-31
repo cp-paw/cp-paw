@@ -165,10 +165,12 @@ kept off by default until longer correctness and scaling runs cover more than
 the Si64 smoke set. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
 the older per-column inversion scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
-`WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
-for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
-for the outer copy-in and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call
-output copy. Projector-residency diagnostics include `ACC_BUILD_PRO_CACHE`,
+`WAVES_ADDPRO`. Generic resident cuBLAS wrappers split their copy accounting
+into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
+inputs are counted separately from real transfer estimates. The overlap region
+uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION` for the outer copy-in and
+`ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call output copy.
+Projector-residency diagnostics include `ACC_BUILD_PRO_CACHE`,
 `ACC_PRESENT_PRO_CACHE_REUSE`, `ACC_PRESENT_PROJ_PRO_CACHE`,
 `ACC_PRESENT_ADDPRO_PRO_CACHE`, `CUBLAS_ZGEMM_ADDPRO_CACHE`, and the
 disappearance or reduction of `ACC_COPY_PROJ_PRO_IN`. The resident overlap
@@ -189,9 +191,12 @@ places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
 `PSIM`/`OPSI` in the orthogonalization region, `PSIM`/`OPSI`/`LAMBDA` in
 `WAVES_ADDOPSI`, `PSI` and `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in
-`WAVES_ADDPRO`. These rows are meant to guide the next change: extend resident
-regions only where the profile shows repeated copies of the same wavefunction
-data.
+`WAVES_ADDPRO`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers also
+use these rows for their residency paths; inversion-symmetric Hermitian/symmetric
+scalarproducts no longer include the unused second wavefunction array in the
+OpenACC data region. These rows are meant to guide the next change: extend
+resident regions only where the profile shows repeated copies of the same
+wavefunction data.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and

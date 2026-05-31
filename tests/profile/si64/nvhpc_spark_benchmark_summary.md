@@ -779,6 +779,41 @@ tables; for the `gpu_resident_orthox_nosync` smoke it highlighted
 `cuStreamSynchronize` as the leading runtime row and kept the energy unchanged
 at 302.280854 Ha.
 
+### Present-Aware cuBLAS Copy Accounting
+
+The generic resident cuBLAS wrappers now split estimated transfers into
+per-array `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows instead of using
+the older aggregate `ACC_COPY_CUBLAS_{ZSPROD,DSPROD,ZGEMM_NN}_RES` estimates.
+For Hermitian/symmetric scalarproduct calls with `TID=.TRUE.`, the OpenACC data
+region also omits the unused second wavefunction array. This is primarily a
+profiling correctness change: it keeps already-resident arrays visible without
+charging them as host/device copies, and it leaves the numerical path
+unchanged.
+
+Spark C86C validation:
+
+```
+runs/present-aware-cublas-copy-smoke512-20260531-161837
+runs/present-aware-cublas-copy-parallel512-20260531-161936
+runs/present-aware-cublas-copy2048-20260531-162011
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Generic resident cuBLAS copy rows | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.25 s | 4.1716 GB | 1.4993 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.09 s | 3.4606 GB | 0.7103 GB | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.40 s | 6.7718 GB | 0.5943-0.5949 GB per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 41.71 s | 25.2977 GB | 10.0257 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 40.05 s | 9.5775 GB | 4.6847 GB | 302.280854 Ha |
+
+All checked profile CSV files contained the new granular rows and no hits for
+the old aggregate `ACC_COPY_CUBLAS_ZSPROD_RES`,
+`ACC_COPY_CUBLAS_DSPROD_RES`, or `ACC_COPY_CUBLAS_ZGEMM_NN_RES` rows. In the
+2048-band orthox case, the remaining large generic cuBLAS copy estimates are
+now explicit: `ACC_COPY_CUBLAS_ZGEMM_NN_C_IO` accounts for 2.7434 GB, while the
+real `DSPROD` input/output rows account for the next major block. That makes the
+next residency target clearer than the old aggregate estimate did.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
