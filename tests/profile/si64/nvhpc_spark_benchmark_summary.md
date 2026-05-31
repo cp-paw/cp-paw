@@ -966,6 +966,36 @@ copy rows are now outside this local addproduct path: the outer Gram
 `PSI` input/output region, projection wavefunction inputs, and force/setup
 wavefunction copies.
 
+### Orthogonalization Wave Region
+
+The main orthogonalization OpenACC data region now keeps `PSIM` and `OPSI`
+resident from the projection/overlap phase through the final `WAVES_ADDOPSI`
+update. `PSIM` is copied back once at the end of that broader region, and
+`OPSI` remains input-only. This removes the separate ADDOPSI output/input
+copies while keeping the CPU Lagrange solve unchanged.
+
+Spark C86C validation:
+
+```
+runs/orthogonalize-wave-region512-20260531-171440
+runs/orthogonalize-wave-region2048-20260531-171455
+runs/orthogonalize-wave-region-parallel512-20260531-171612
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | ADDOPSI wave rows | Final energy |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `gpu_resident` | 512 | 1 | 7.66 s | 2.0885 GB | `PSIM` present, `OPSI` present | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 6.77 s | 1.3774 GB | `PSIM` present, `OPSI` present | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.25 s | 4.6120 GB | `PSIM` present, `OPSI` present per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 39.02 s | 20.7325 GB | `PSIM` present, `OPSI` present | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 38.04 s | 5.0124 GB | `PSIM` present, `OPSI` present | 302.280854 Ha |
+
+Compared with the ADDOPSI device-inversion run, the 2048-band orthox copy
+estimate drops from 5.4696 GB to 5.0124 GB. `ACC_COPY_ADDOPSI_PSIM_IO` and
+`ACC_COPY_ADDOPSI_OPSI_TINV_IN` disappear from the checked profiles; the broader
+region instead records one `ACC_COPY_ORTHO_PSIM_IO` and one
+`ACC_COPY_ORTHO_OPSI_IN`.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
