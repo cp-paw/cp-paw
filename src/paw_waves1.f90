@@ -4464,12 +4464,19 @@ END IF
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                                     CALL TRACE$PUSH('WAVES_SUMMUPOFFSITEDENMAT')
 !
 !     ==========================================================================
 !     ==  GET K-POINTS IN RELATIVE COORDINATES                                ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       ALLOCATE(XK(3,NKPTL))
       CALL WAVES_DYNOCCGETR8A('XK',3*NKPTL,XK)
       CALL DYNOCC$GETI4('NB',NBX)
@@ -4489,17 +4496,36 @@ END IF
         NPROAT(IAT)=MAP%LMNX(ISP)
         IPRO=IPRO+NPROAT(IAT)
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_SUM_SETUP' &
+     &    ,INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),INT(NAT,KIND=8),0_8 &
+     &    ,0.D0,8.D0*REAL(NBX,KIND=8)*REAL(NKPTL,KIND=8) &
+     &    *REAL(NSPIN,KIND=8),ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  ADD UP DENSITY MATRIX                                               ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       NND=SIZE(OSDENMAT)
       DO NN=1,NND
         OSDENMAT(NN)%MAT=0.D0
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_SUM_ZERO' &
+     &    ,INT(NND,KIND=8),INT(NDIMD,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
       NPRO=MAP%NPRO
       CALL MPE$QUERY('K',NTASKS,THISTASK)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -4585,6 +4611,12 @@ END IF
           ENDDO   !NN
         ENDDO   !ISPIN
       ENDDO  !IKPT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_SUM_LOCAL' &
+     &    ,INT(NND,KIND=8),INT(NPRO,KIND=8),INT(NB,KIND=8) &
+     &    ,INT(NTASKS,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  SUM OVER MONOMER INCLUDES ALSO THE KPOINT SUM                       ==
@@ -4594,11 +4626,20 @@ END IF
 !     == THIS WAS DUE TO DIFFERING NEIGHBORLISTS ON DIFFERENT TASKS ============
 !     == THE PROBLEM IS FIXED BY BROADCASTING THE NEIGHBORLIST =================
 !     == IN WAVES$OFFSITEDENMAT(). =============================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       DO NN=1,NND
 !       -- ONCE, THE CODE FAILED WITHIN MPI IN THE FOLLOWING CALL. THE FAILURE -
 !       -- WAS NOT DETERMINISTIC -----------------------------------------------
         CALL MPE$COMBINE('MONOMER','+',OSDENMAT(NN)%MAT)
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_SUM_COMBINE' &
+     &    ,INT(NND,KIND=8),INT(NDIMD,KIND=8),INT(NTASKS,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==                                                                      ==

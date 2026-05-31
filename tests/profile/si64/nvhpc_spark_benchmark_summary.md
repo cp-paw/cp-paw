@@ -31,6 +31,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `wave-io-split-20260531-*` | Wavefunction IO copy accounting | `gpu_resident_hpsi` 39.22 s at 2048/1 | - | `gpu_resident_hpsi` 9.72 s at 512/4 | Splits Gram, ORTHO, ADDPRO, and ADDOPSI wavefunction IO estimates into input and output rows. |
 | `denmat-energy-acc-v2-20260531-*` | DENMAT energy OpenACC diagnostic | `gpu_resident_hpsi` 39.00 s, `gpu_resident_hpsi_denmat_energy` 39.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.75 s at 512/4 | Adds an opt-in two-stage OpenACC diagnostic for the time-inversion DENMAT energy/Lambda contraction; DENMAT shrinks, but Lambda copies keep it diagnostic-only. |
 | `denmat-lagr-residency-20260531-*` | DENMAT LAGR setup/residency | `gpu_resident_hpsi` 37.19 s, `gpu_resident_hpsi_denmat_energy` 37.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.56 s at 512/4 | Precomputes `LAGR=LAMBDA*OCC` once per k-point/spin and keeps it resident for the DENMAT diagnostic; copy volume drops sharply, wall time remains neutral at 2048/1. |
+| `offden-profile-split-20260531-*` | Off-site DENMAT profiling split | `gpu_resident_hpsi_denmat_energy` 36.39 s at 2048/1 | - | `gpu_resident_hpsi` 9.75 s at 512/4 | Splits `PAW_OFFDEN_SUM` into setup/zero/local/combine; off-site time is mostly local contraction, not MPI combine. |
 
 The latest full-matrix run lives at:
 
@@ -1610,6 +1611,49 @@ shrinks strongly, but the full Si64 wall time remains dominated by other phases
 at 2048/1. Keep the DENMAT energy path opt-in and use these rows to decide
 whether the next step should be a batched BLAS formulation or broader
 projector/wavefunction residency around the one-center work.
+
+## Off-Site DENMAT Split
+
+The next instrumentation pass splits the previous `PAW_OFFDEN_SUM` envelope
+inside `WAVES_SUMMUPOFFSITEDENMAT` into setup, zeroing, local contraction, and
+MPI combine rows:
+
+```
+PAW_OFFDEN_SUM_SETUP
+PAW_OFFDEN_SUM_ZERO
+PAW_OFFDEN_SUM_LOCAL
+PAW_OFFDEN_SUM_COMBINE
+```
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/offden-profile-split-20260531-512-4r
+runs/offden-profile-split-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 4 | 9.75 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 512 | 4 | 9.77 s | 1.7591 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 38.70 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 2048 | 1 | 36.39 s | 4.9892 GB | 0.000000407 Ha |
+
+| Profile row | 2048/1 baseline | 2048/1 DENMAT GPU | 512/4 baseline, rank 1 | 512/4 DENMAT GPU, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_SUM_SETUP` | 0.0000 s | 0.0000 s | 0.0001 s | 0.0000 s |
+| `PAW_OFFDEN_SUM_ZERO` | 0.0000 s | 0.0000 s | 0.0001 s | 0.0001 s |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.7136 s | 0.6979 s | 0.1386 s | 0.1374 s |
+| `PAW_OFFDEN_SUM_COMBINE` | 0.0000 s | 0.0000 s | 0.0152 s | 0.0394 s |
+
+The off-site remainder is therefore mostly local contraction work. At 2048/1
+the MPI combine row is negligible; at 512/4 it is visible but still smaller
+than the local loop on rank 1. This points the next off-site acceleration pass
+toward a local matrix-kernel rewrite or GPU residency around `THIS%PROJ`, not
+first toward MPI reduction tuning.
 
 ## Recommended Next Benchmark
 
