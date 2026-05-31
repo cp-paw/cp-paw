@@ -81,11 +81,10 @@ The latest full-matrix run lives at:
    estimates substantially, but keep `gpu_resident_addpro_host` in standard
    sweeps because its wall time can be marginally better at 1024-band size.
 
-6. The next implementation target should follow the wavefunction-residency
-   question beyond the current orthogonalization envelope: reduce the remaining
-   `PSI`/`PROPSI` host/device traffic around projection, overlap and addproduct,
-   then retest on larger band/system cases where cache memory and reuse matter
-   more than the Si64 smoke.
+6. The one-center overlap GPU-pack path removes the previous large
+   `WAVES_1COVERLAP` bottleneck. The next large-band hotspot is now the initial
+   Gram-Schmidt solve inside `WAVES_ORTHO_Y_C`, not another FFT/LAPACK library
+   toggle.
 
 ## Present-Check Smoke
 
@@ -541,6 +540,40 @@ without penalizing the current recommended Spark path.
 The final one-repeat smoke with the finished harness semantics reported
 `gpu_resident` at 42.68 s and 7.7153 GB copy versus `gpu_resident_orthoconst`
 at 45.08 s and 7.1208 GB copy, both with final energy 302.280854 Ha.
+
+## ETOT and Gram-Schmidt Profiling
+
+After the one-center GPU-pack path, the 2048-band profile still showed a large
+`PHASE_ETOT_WAVES` block with too little internal structure. The follow-up
+profiling patch splits `WAVES$ETOT` into `PAW_ETOT_*` rows and further splits
+the initial `WAVES$GRAMMSCHMIDT` call into `PAW_GRAM_*` rows. This is a
+diagnostic-only change; it does not change the numerical path or runtime
+defaults.
+
+Spark C86C validation:
+
+```
+runs/gram-profile-final1024-20260531-141705
+runs/gram-profile-final2048-20260531-141807
+```
+
+| Empty bands | Wall time | `PAW_ETOT_SETUP_GRAM` | `PAW_GRAM_SOLVE` | `PAW_GRAM_PROJECTIONS` | `PAW_GRAM_TRANSFORM` | Final energy |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1024 | 40.38 s | 28.6252 s | 26.5881 s | 0.9343 s | 0.4761 s | 302.280854 Ha |
+| 2048 | 279.67 s | 241.9808 s | 237.5816 s | 1.2245 s | 1.5176 s | 302.280854 Ha |
+
+At 2048 bands, the now-fast one-center path is no longer the main problem:
+`PAW_1COVERLAP_TOTAL=0.4809 s`, while the initial Gram-Schmidt solve consumes
+almost all of `WAVES$ETOT`. The regular orthogonalization phase still has a
+smaller solve component (`PAW_ORTHO_SOLVE=8.7036 s` of
+`PAW_ORTHO_TOTAL=14.8484 s`), so both call paths point at the same underlying
+routine family.
+
+Practical conclusion: the next implementation PR should target
+`WAVES_ORTHO_Y_C` or replace the initial Gram-Schmidt orthogonalization with a
+more accelerator-friendly dense linear algebra path. Moving more FFT calls to
+cuFFT or adding more projector packing will not move the 2048-band wall time
+until this solve is addressed.
 
 ## Recommended Next Benchmark
 
