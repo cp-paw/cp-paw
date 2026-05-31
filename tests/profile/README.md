@@ -92,6 +92,11 @@ whether the current CSV timers already explain the run or whether additional
 instrumentation is needed. Diagnostic Plane-wave FFT local/MPI-envelope timers
 are reported separately as `pw_trace_s`; they are intentionally kept out of
 `rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
+High-level `PHASE_*` timers are reported separately as `phase_s` and
+`phase_gap_s = wall_rank_s - phase_s`; they are also kept out of `rank_s`
+because they are coarse envelopes around existing numerical kernel timers. Use
+the phase columns to localize unexplained wall time before adding lower-level
+kernel instrumentation.
 
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
 defaults to `CPPAW_GPU_RESIDENCY=1`. Set `CPPAW_GPU_RESIDENCY=0` to disable the
