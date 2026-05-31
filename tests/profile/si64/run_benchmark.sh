@@ -224,6 +224,15 @@ case_note() {
     gpu_resident_addpro_host)
       echo "Residency diagnostic that keeps the GPU projector cache for projections but disables its WAVES_ADDPRO reuse."
       ;;
+    gpu_resident_addpro_hpsi_host)
+      echo "Residency diagnostic that disables only HPSI-side WAVES_ADDPRO cache reuse."
+      ;;
+    gpu_resident_addpro_opsi_host)
+      echo "Residency diagnostic that disables only OPSI-side WAVES_ADDPRO cache reuse."
+      ;;
+    gpu_resident_opsi_addpro_host)
+      echo "OPSI-residency diagnostic with OPSI-side WAVES_ADDPRO cache reuse disabled."
+      ;;
     gpu_resident_forcepsi_host)
       echo "Residency diagnostic that disables the force-loop PSI0 resident data region."
       ;;
@@ -422,6 +431,9 @@ case_env() {
     gpu_resident_1coverlap) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=1 $(cublas_env)" ;;
     gpu_resident_pro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PRO_EXPANSION=0 $(cublas_env)" ;;
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
+    gpu_resident_addpro_hpsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE_HPSI=0 $(cublas_env)" ;;
+    gpu_resident_addpro_opsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE_OPSI=0 $(cublas_env)" ;;
+    gpu_resident_opsi_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE_OPSI=0 $(cublas_env)" ;;
     gpu_resident_forcepsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_FORCE_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_orthoconst) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_CONST_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_orthox) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=1 $(cublas_env)" ;;

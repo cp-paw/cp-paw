@@ -26,6 +26,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `gram-profile-contexts-20260531-180922` | Gram context profiling | `gpu_resident` 6.94 s at 512/1 | - | `gpu_resident` 9.15 s at 512/4 | Splits the initial Gram wavefunction copy into `PSI0` and `PSIM` rows. |
 | `opsi-build-residency-20260531-164302` | OPSI build-residency diagnostic | `gpu_resident`/`gpu_resident_opsi` tied for Si64 | - | `gpu_resident`/`gpu_resident_opsi` tied at 512/4 | Adds an opt-in non-superwave OPSI residency switch; Si64 is a superwave case, so the guard correctly leaves it unchanged. |
 | `superwave-opsi-hostscale-20260531-*` | Superwave overlap residency | `gpu_resident`/`gpu_resident_opsi` tied and energy-valid | - | `gpu_resident_opsi` 9.15 s at 512/4 | Makes the superwave inversion overlap term resident; keeps superwave OPSI host-built/host-scaled before entering device residency. |
+| `addpro-context-cache-20260531-*` | ADDPRO context-cache controls | `gpu_resident_opsi` 40.03 s at 2048/1 | - | `gpu_resident_addpro_hpsi_host` 9.30 s at 512/4 | Adds independent HPSI/OPSI `WAVES_ADDPRO` cache switches; all cases remain energy-valid, but timings are neutral/noisy. |
 
 The latest full-matrix run lives at:
 
@@ -1247,6 +1248,51 @@ runs/superwave-opsi-hostscale-20260531-2048-1r
 | `gpu_resident_opsi` | 512 | 4 | 9.15 s | 1.8694 GB | 0.000000401 Ha |
 | `gpu_resident` | 2048 | 1 | 38.74 s | 5.3749 GB | 0.000000407 Ha |
 | `gpu_resident_opsi` | 2048 | 1 | 38.73 s | 5.3749 GB | 0.000000407 Ha |
+
+## ADDPRO Context-Cache Controls
+
+The next diagnostic split adds independent HPSI and OPSI controls for
+`WAVES_ADDPRO` cache reuse:
+
+- `CPPAW_GPU_ADDPRO_CACHE_HPSI=0`
+- `CPPAW_GPU_ADDPRO_CACHE_OPSI=0`
+
+This lets the superwave OPSI follow-up isolate whether a future bad energy comes
+from the Hamiltonian-side projector update or from the overlap-wave OPSI update,
+without disabling the shared resident `PRO` cache for projections.
+
+Spark C86C validation:
+
+```
+runs/addpro-context-cache-20260531-512-1r
+runs/addpro-context-cache-20260531-512-4r
+runs/addpro-context-cache-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.46 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_hpsi_host` | 512 | 1 | 6.35 s | 1.5441 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_opsi_host` | 512 | 1 | 6.37 s | 1.5441 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 1 | 6.41 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_opsi_addpro_host` | 512 | 1 | 7.24 s | 1.5441 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.56 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_hpsi_host` | 512 | 4 | 9.30 s | 1.9098 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_opsi_host` | 512 | 4 | 9.34 s | 1.9098 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 4 | 9.47 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_opsi_addpro_host` | 512 | 4 | 9.37 s | 1.9098 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 40.42 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_addpro_hpsi_host` | 2048 | 1 | 40.46 s | 5.0925 GB | 0.000000407 Ha |
+| `gpu_resident_addpro_opsi_host` | 2048 | 1 | 40.49 s | 5.0925 GB | 0.000000407 Ha |
+| `gpu_resident_opsi` | 2048 | 1 | 40.03 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_opsi_addpro_host` | 2048 | 1 | 40.27 s | 5.0925 GB | 0.000000407 Ha |
+
+The switches do not change the Si64 energy. Wall time is essentially neutral
+within one-run noise. The 2048 copy estimate decreases when the cached ADDPRO
+context is disabled because the current profiler counts the cached path's
+`PSI_IO` residency edge explicitly, while the fallback path is less granular.
+That makes these switches useful for isolation, not a reason to change the
+recommended default.
 
 ## Recommended Next Benchmark
 
