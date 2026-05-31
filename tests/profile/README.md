@@ -114,7 +114,8 @@ The real safe-orthogonalization solver is split further by `PAW_ORTHO_X_DIAG`,
 `PAW_ORTHO_X_UPDATE_TRANSFORM`, `PAW_ORTHO_X_UPDATE_SCALE`,
 `PAW_ORTHO_X_UPDATE_BACKTRANSFORM`, `PAW_ORTHO_X_UPDATE_APPLY`, and
 `PAW_ORTHO_X_UPDATE_SYM` subdivide the update row. These rows are nested inside
-`PAW_ORTHO_SOLVE`. When the `gpu_resident_orthox` diagnostic is enabled, its
+`PAW_ORTHO_SOLVE`. In residency-profile builds, the broader `WAVES_ORTHO_X`
+iteration-workspace residency is enabled by default and its
 direct present-device cuBLAS calls are also reported as
 `CUBLAS_DGEMM_ORTHOX_RESIDUAL`, `CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and
 `CUBLAS_DGEMM_ORTHOX_BACKTRANS`.
@@ -162,13 +163,13 @@ that keeps the constant `CHICHI` and `U` matrices resident across repeated
 `LIB$MATMULR8` calls while leaving the host-updated temporary outputs on the
 previous copy-back path; set `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1` to test it. It
 is disabled by default because Spark Si64 smokes reduced copy volume but did not
-improve wall time. A broader opt-in diagnostic keeps the real `WAVES_ORTHO_X`
+improve wall time. A broader default path keeps the real `WAVES_ORTHO_X`
 iteration workspace (`LAMBDA`, `GAMN`, `HAUX`, and scalar loop inputs) resident
 and routes the large transform pairs through present-input cuBLAS calls; set
-`CPPAW_GPU_ORTHO_X_RESIDENCY=1` or use `gpu_resident_orthox` to test it. It is
-kept off by default until longer correctness and scaling runs cover more than
-the Si64 smoke set. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
-the older per-column inversion scalarproduct path for comparison. It also lets
+`CPPAW_GPU_ORTHO_X_RESIDENCY=0` or use `gpu_resident_orthox_off` to compare
+against the previous copy-heavy path. Set
+`CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep the older per-column inversion
+scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
 `WAVES_ADDPRO`. Generic resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
@@ -271,7 +272,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
-| `gpu_resident_orthox` | Residency diagnostic with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
+| `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
+| `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -412,6 +414,10 @@ be overridden by kernel category:
 - `CPPAW_GPU_ORTHO_CONST_RESIDENCY`: disabled by default. Set to `1` to let
   `WAVES_ORTHO_X` reuse constant `CHICHI` and `U` inputs across repeated real
   MATMUL calls while keeping temporary outputs on the host-synchronized path.
+- `CPPAW_GPU_ORTHO_X_RESIDENCY`: enabled by default in residency-profile builds
+  so the real `WAVES_ORTHO_X` iteration workspace stays on the GPU and the large
+  residual/transform/backtransform pairs use present-input cuBLAS calls; set to
+  `0` for the previous copy-heavy path.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,

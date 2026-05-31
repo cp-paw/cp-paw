@@ -22,6 +22,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `addpro-cache-split-20260530-231839` | ADDPRO-cache split | `gpu_resident_addpro_host` 45.42 s at 1024/1 | - | 4-rank smoke OK | Adds a diagnostic split between projection cache and `WAVES_ADDPRO` cache reuse. |
 | `si64_bands-nvhpc-standard-20260531-123955` | Focused standard refresh | `gpu_resident_addpro_host` 43.06 s | `cpu` 77.85 s, `nvhpc_cpu` 75.61 s | `cpu` 167.40 s, `nvhpc_cpu` 167.70 s | Confirms the residency path remains the useful GPU direction on Spark. |
 | `addpro-profile-contexts512-20260531-172542` | ADDPRO context profiling | `gpu_resident` 6.66 s at 512/1 | - | `gpu_resident` 9.52 s at 512/4 | Splits ADDPRO copies into `HPSI` and `OPSI` and corrects the `PSI` row to input/output accounting. |
+| `fresh-energy-guard-sweep-20260531-174614` | Energy-guard refresh | `gpu_resident_orthox` 13.39 s at 1024/1 | `cpu` 70.83 s, `nvhpc_cpu` 71.85 s | `cpu` 168.36 s, `nvhpc_cpu` 167.20 s | Confirms `WAVES_ORTHO_X` workspace residency is now the best default inside the residency profile. |
 
 The latest full-matrix run lives at:
 
@@ -1027,6 +1028,60 @@ This is an accounting and localization change, not a new optimization. The
 real residency target clearly: one updated wavefunction copy comes from the
 Hamiltonian application (`HPSI`) and one from overlap-wave construction (`OPSI`).
 
+## Energy-Guard Default Refresh
+
+After the Si64 energy guard was added, Spark C86C was rebuilt from
+`cp-paw-nvhpc` and rerun with the current residency implementation:
+
+```
+runs/fresh-energy-guard-sweep-20260531-174614
+```
+
+Focused `TEST=si64`, `NSTEPS=1` smokes:
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.12 s | 2.2230 GB | 0.000000401 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 6.90 s | 1.5119 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.31 s | 4.7465 GB | 0.000000401 Ha |
+| `gpu_resident_orthox` | 512 | 4 | 9.19 s | 1.9022 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 41.92 s | 21.1897 GB | 0.000000407 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 40.89 s | 5.4696 GB | 0.000000407 Ha |
+
+The refreshed `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1` standard
+comparison gives:
+
+| Suite | Case | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | --- | ---: | ---: | ---: | ---: |
+| GPU | `gpu_resident_orthox` | 1 | 13.39 s | 2.7137 GB | 0.000000407 Ha |
+| GPU | `gpu_resident_addpro_host` | 1 | 13.71 s | 6.2208 GB | 0.000000407 Ha |
+| GPU | `gpu_resident` | 1 | 13.74 s | 6.3553 GB | 0.000000407 Ha |
+| GPU | `gpu_resident_pro_host` | 1 | 14.16 s | 7.2698 GB | 0.000000407 Ha |
+| GPU | `gpu_resident_no_cusolver` | 1 | 17.02 s | 6.2597 GB | 0.000000407 Ha |
+| GPU | `gpu_off` | 1 | 74.59 s | 0.0000 GB | 0.000000398 Ha |
+| CPU | `cpu` | 1 | 70.83 s | 0.0000 GB | 0.000000398 Ha |
+| CPU | `nvhpc_cpu` | 1 | 71.85 s | 0.0000 GB | 0.000000398 Ha |
+| CPU ref | `cpu` | 8 | 168.36 s | 0.0000 GB | 0.000000398 Ha |
+| CPU ref | `nvhpc_cpu` | 8 | 167.20 s | 0.0000 GB | 0.000000398 Ha |
+
+These runs keep the energy check green and make the default change less
+speculative: `gpu_resident_orthox` is both copy-lighter and slightly faster at
+512, 2048 and the 1024-band standard point. The residency-profile build now
+enables `CPPAW_GPU_ORTHO_X_RESIDENCY=1` by default; use
+`gpu_resident_orthox_off` or `CPPAW_GPU_ORTHO_X_RESIDENCY=0` to compare against
+the previous path.
+
+Patch validation for the default flip:
+
+```
+runs/orthox-default-smoke-20260531-180220
+```
+
+| Case | Wall time | Total copy estimate | Energy delta | Meaning |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident` | 7.22 s | 1.5119 GB | 0.000000401 Ha | Default now takes the ORTHO_X resident path. |
+| `gpu_resident_orthox_off` | 7.24 s | 2.2230 GB | 0.000000401 Ha | Explicit comparison with the previous path. |
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
@@ -1041,6 +1096,6 @@ Use the full diagnostic sweep only when comparing library combinations:
 ```
 cd tests/profile/si64
 TEST=si64_bands EMPTY_BANDS=1024 NSTEPS=1 RUN_GPU_ALL=yes \
-  GPU_CASES="gpu_off gpu_all gpu_all_off gpu_resident gpu_resident_no_cusolver cublas cusolver cufft cufftw nvlamath nvblas gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_managed gpu_unified" \
+  GPU_CASES="gpu_off gpu_all gpu_all_off gpu_resident gpu_resident_orthox_off gpu_resident_no_cusolver cublas cusolver cufft cufftw nvlamath nvblas gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_managed gpu_unified" \
   ./run_nvhpc_standard.sh
 ```
