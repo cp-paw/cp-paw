@@ -41,7 +41,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `offden-flat-accum-20260601-*` | Off-site DENMAT flat device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.64 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum` 9.62 s at 512/4 | Accumulates batches into one flat real off-site matrix buffer on the GPU and copies it back once per k-point/spin pass; energy-valid, useful at 1 MPI/GPU, neutral/noisy when four ranks share one GPU. |
 | `psim-present-copy-20260601-*` | PSIM propagation present-or-copy accounting | `gpu_resident` 6.36 s at 512/1 | - | `gpu_resident` 9.18 s at 512/4 | Changes the PSIM propagation data region to `present_or_copy`; energy-valid and correct for future broader residency, but current Si64 still copies PSIM in/out because no enclosing resident producer is active. |
 | `psim-focus-harness-20260601-*` | Focused PSIM propagation harness | `gpu_psim_propagate` 6.20 s at 512/1 | - | `gpu_psim_propagate` 9.19 s at 512/4 | Adds a reusable PSIM/HPSI propagation sweep; all cases are energy-valid, but the single-run 512-band timings are noisy and the PSIM path still increases copy volume, so this is a regression harness rather than a default promotion. |
-| `psim-phase-residency-20260601-*` | Cross-phase PSIM residency diagnostic | `gpu_resident_psim_phase` 6.96 s at 512/1 | - | `gpu_resident_psim_phase` 9.11 s at 512/4 | Leaves propagated `PSIM` resident into orthogonalization and copies it back at the orthogonalization boundary; energy-valid and reduces copy volume, but wall time is still noisy, so keep it opt-in. |
+| `psim-phase-residency-20260601-*` | Cross-phase PSIM residency diagnostic | `gpu_resident` 37.61 s, `gpu_resident_psim_phase` 37.75 s at 2048/1 | - | `gpu_resident_psim_phase` 9.11 s at 512/4 | Leaves propagated `PSIM` resident into orthogonalization and copies it back at the orthogonalization boundary; energy-valid and reduces copy volume, but wall time is neutral/noisy, so keep it opt-in. |
 
 The latest full-matrix run lives at:
 
@@ -1608,6 +1608,30 @@ estimate drops by about 0.1345 GB for the 512-band one-rank case and about
 0.1345 GB per four-rank run in the shared-GPU smoke. Timings are neutral to
 slightly favorable in this small case, so the next meaningful test is a larger
 band run before considering promotion beyond diagnostic status.
+
+The 2048-band one-rank follow-up keeps the same conclusion but with more useful
+kernel sizes:
+
+```
+runs/psim-phase-residency-20260601-2048-2048-1r
+runs/psim-phase-residency-20260601-2048-combined.tsv
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 2048 | 1 | 37.61 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_psim_propagate` | 2048 | 1 | 38.26 s | 6.2897 GB | 0.000000407 Ha |
+| `gpu_resident_psim_phase` | 2048 | 1 | 37.75 s | 5.8325 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 37.87 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_hpsi_psim_propagate` | 2048 | 1 | 38.26 s | 5.8136 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_psim_phase` | 2048 | 1 | 39.18 s | 5.3563 GB | 0.000000407 Ha |
+
+Cross-phase residency removes about 0.4572 GB from the plain PSIM propagation
+path at 2048 bands, and it makes the PSIM path nearly neutral against
+`gpu_resident` in wall time. It still copies more than the no-PSIM-propagation
+baseline because `PSI0`, `HPSI`, and the propagation coefficients are not yet
+resident across the same boundary. The HPSI-plus-PSIM phase combination reduces
+copy volume too, but this single run was slower, so it remains a diagnostic.
 
 ## DENMAT Profiling Split
 
