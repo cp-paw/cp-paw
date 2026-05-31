@@ -187,6 +187,9 @@ region, recorded as `ACC_PRESENT_ADDOPSI_PSIM` /
 are copied into the same region. For inversion-symmetric wave sets, `OPSI` and
 the temporary lambda blocks still use the per-call cuBLAS wrapper copies
 because `OPSI` is inverted on the host between the two addproduct calls.
+With the inversion-batch GPU path enabled, the inversion-symmetric path copies
+`OPSI` once as `ACC_COPY_ADDOPSI_OPSI_TINV_IN`, creates the inverted
+`OPSIINV` on the device, and reports it as `ACC_PRESENT_ADDOPSI_OPSIINV_TINV`.
 
 The residency profile also records semantic OpenACC present checks for the PAW
 wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count

@@ -771,6 +771,14 @@ END IF
 !      **   FOR A ROUTINE THAT PRESERVES OPSI                                 **
 !      **                                                                     **
 !      *************************************************************************
+       USE PLANEWAVE_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+#ENDIF
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NGL
        INTEGER(4),INTENT(IN)   :: NDIM
@@ -785,6 +793,13 @@ END IF
        COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
        COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
        COMPLEX(8),ALLOCATABLE  :: TPSI(:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       COMPLEX(8),ALLOCATABLE  :: OPSIINV(:,:)
+       INTEGER(4),POINTER      :: MINUSGACC(:)
+       LOGICAL(4)              :: TUSEACCINVERT
+       REAL(8)                 :: ACCINVFLOPS
+       INTEGER(4)              :: IG
+#ENDIF
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR1,CSVAR2
        INTEGER(4)              :: NGLNDIM
@@ -799,6 +814,9 @@ END IF
 #ENDIF
        TINV=NBH.NE.NB
        NGLNDIM=NGL*NDIM
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       TUSEACCINVERT=.FALSE.
+#ENDIF
        IF(.NOT.TINV) THEN
 !        == PSIBAR=PSIBAR+OPSI*LAMBDA ==========================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA,PSIBAR)
@@ -817,6 +835,58 @@ END IF
              LAMBDA2(IBH1,IBH2)=0.5D0*(CSVAR1+CSVAR2)
            ENDDO
          ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+         ACCINVFLOPS=8.D0*REAL(NGLNDIM,KIND=8) &
+     &                    *REAL(NBH,KIND=8)*REAL(NBH,KIND=8)
+         TUSEACCINVERT=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED() &
+     &     .AND.CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED() &
+     &     .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(ACCINVFLOPS)
+         IF(TUSEACCINVERT) THEN
+           ALLOCATE(OPSIINV(NGLNDIM,NBH))
+           MINUSGACC=>THIS%MINUSG
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &         ('ACC_PRESENT_ADDOPSI_OPSI_TINV' &
+     &         ,'ACC_COPY_ADDOPSI_OPSI_TINV_IN',NGLNDIM,NBH,OPSI)
+           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &         ('ACC_PRESENT_ADDOPSI_LAM1_TINV' &
+     &         ,'ACC_COPY_ADDOPSI_LAM1_TINV_IN',NBH,NBH,LAMBDA1)
+           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &         ('ACC_PRESENT_ADDOPSI_LAM2_TINV' &
+     &         ,'ACC_COPY_ADDOPSI_LAM2_TINV_IN',NBH,NBH,LAMBDA2)
+#ENDIF
+!$ACC DATA COPYIN(OPSI(1:NGLNDIM,1:NBH),LAMBDA1(1:NBH,1:NBH) &
+!$ACC&          ,LAMBDA2(1:NBH,1:NBH),MINUSGACC(1:NGL)) &
+!$ACC& CREATE(OPSIINV(1:NGLNDIM,1:NBH))
+!          == ADD O|PSI_+>LAMBDA1 ==============================================
+           CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI &
+     &                          ,LAMBDA1,PSIBAR)
+!          == BUILD INVERTED OPSI ON DEVICE ====================================
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(I) PRESENT(OPSI,OPSIINV,MINUSGACC)
+           DO IBH1=1,NBH
+             DO IDIM=1,NDIM
+               DO IG=1,NGL
+                 I=(IDIM-1)*NGL+IG
+                 OPSIINV(I,IBH1)=CONJG(OPSI((IDIM-1)*NGL &
+     &                                      +MINUSGACC(IG),IBH1))
+               ENDDO
+             ENDDO
+           ENDDO
+!$ACC END PARALLEL LOOP
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &         ('ACC_PRESENT_ADDOPSI_OPSIINV_TINV' &
+     &         ,'ACC_COPY_ADDOPSI_OPSIINV_TINV_IN',NGLNDIM,NBH,OPSIINV)
+#ENDIF
+!          == ADD O|PSI_->LAMBDA2 ==============================================
+           CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSIINV &
+     &                          ,LAMBDA2,PSIBAR)
+!$ACC END DATA
+           DEALLOCATE(OPSIINV)
+           DEALLOCATE(LAMBDA1)
+           DEALLOCATE(LAMBDA2)
+         ELSE
+#ENDIF
 !        == ADD O|PSI_+>LAMBDA1 ================================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA1,PSIBAR)
          DEALLOCATE(LAMBDA1)
@@ -835,6 +905,9 @@ END IF
 !        == ADD O|PSI_+>LAMBDA1 ================================================
          CALL LIB$ADDPRODUCTC8(.FALSE.,NGLNDIM,NBH,NBH,OPSI,LAMBDA2,PSIBAR)
          DEALLOCATE(LAMBDA2)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+         END IF
+#ENDIF
        END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
        CALL ACCELPROFILE$NOW(ACCEL_T1)
