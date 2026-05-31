@@ -771,6 +771,14 @@ then shows the waiting time reappearing in `cuStreamSynchronize` and
 device-to-host runtime calls. The case is therefore useful for profiling
 attribution, but it is not a new recommended default on Spark.
 
+The Nsight harness also writes a compact SQL-derived CUDA activity summary when
+Nsight leaves a `.sqlite` export. Smoke run
+`runs/nsys-sql-summary-smoke512-20260531-160604` produced
+`nsys_sql_summary.txt` with top kernel, runtime, memcpy, and synchronization
+tables; for the `gpu_resident_orthox_nosync` smoke it highlighted
+`cuStreamSynchronize` as the leading runtime row and kept the energy unchanged
+at 302.280854 Ha.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

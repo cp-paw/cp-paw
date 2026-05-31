@@ -269,6 +269,7 @@ fi
 cp "${CNTL_FILE}" "${RUN_ROOT}/${TEST}.cntl"
 cp "${STRC_FILE}" "${RUN_ROOT}/${TEST}.strc"
 cp "${HERE}/profile_summary.py" "${RUN_ROOT}/"
+cp "${HERE}/nsys_sql_summary.py" "${RUN_ROOT}/"
 cp "${ROOT}/tests/fulltests/si2/stp.cntl" "${RUN_ROOT}/"
 perl -0pi -e "s/NSTEP\\s*=\\s*\\d+/NSTEP=${NSTEPS}/" "${RUN_ROOT}/${TEST}.cntl"
 if [[ -n "${EMPTY_BANDS:-}" ]]; then
@@ -310,5 +311,8 @@ echo "running Nsight Systems case ${CASE}: ${CMD}"
 /usr/bin/time -p ${TIMEOUT_PREFIX} ${CMD} > out.log 2> err.log
 
 python3 profile_summary.py nsys_profile*.csv > summary.txt
+if compgen -G "*.sqlite" >/dev/null; then
+  python3 nsys_sql_summary.py ./*.sqlite > nsys_sql_summary.txt || true
+fi
 grep -E "^real |^user |^sys " err.log > time.txt || true
 echo "Nsight data: ${RUN_ROOT}"
