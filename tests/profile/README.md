@@ -104,7 +104,12 @@ diagnostic envelopes: use them to identify the next target, not as additive
 wall-clock accounting.
 The real safe-orthogonalization solver is split further by `PAW_ORTHO_X_DIAG`,
 `PAW_ORTHO_X_RESIDUAL`, `PAW_ORTHO_X_UPDATE`, and
-`PAW_ORTHO_X_ITERATIONS`. These rows are nested inside `PAW_ORTHO_SOLVE`.
+`PAW_ORTHO_X_ITERATIONS`. `PAW_ORTHO_X_RESIDUAL_MATMUL` and
+`PAW_ORTHO_X_RESIDUAL_CHECK` subdivide the residual row, while
+`PAW_ORTHO_X_UPDATE_TRANSFORM`, `PAW_ORTHO_X_UPDATE_SCALE`,
+`PAW_ORTHO_X_UPDATE_BACKTRANSFORM`, `PAW_ORTHO_X_UPDATE_APPLY`, and
+`PAW_ORTHO_X_UPDATE_SYM` subdivide the update row. These rows are nested inside
+`PAW_ORTHO_SOLVE`.
 Residency-profile builds enable the initial Gram-Schmidt Cholesky solve by
 default. It replaces only the initial `WAVES$GRAMMSCHMIDT` solve with a LAPACK
 Cholesky orthogonalization when the overlap matrix is positive definite;
