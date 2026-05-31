@@ -21,6 +21,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `pro-cache-sweep-20260530-213304` | 512/1024/2048 band sweep | `gpu_resident` by a small margin at 1024/3 | Included | Included | GPU residency dominates; full `PRO` cache saves traffic but is near-neutral in wall time. |
 | `addpro-cache-split-20260530-231839` | ADDPRO-cache split | `gpu_resident_addpro_host` 45.42 s at 1024/1 | - | 4-rank smoke OK | Adds a diagnostic split between projection cache and `WAVES_ADDPRO` cache reuse. |
 | `si64_bands-nvhpc-standard-20260531-123955` | Focused standard refresh | `gpu_resident_addpro_host` 43.06 s | `cpu` 77.85 s, `nvhpc_cpu` 75.61 s | `cpu` 167.40 s, `nvhpc_cpu` 167.70 s | Confirms the residency path remains the useful GPU direction on Spark. |
+| `addpro-profile-contexts512-20260531-172542` | ADDPRO context profiling | `gpu_resident` 6.66 s at 512/1 | - | `gpu_resident` 9.52 s at 512/4 | Splits ADDPRO copies into `HPSI` and `OPSI` and corrects the `PSI` row to input/output accounting. |
 
 The latest full-matrix run lives at:
 
@@ -995,6 +996,36 @@ estimate drops from 5.4696 GB to 5.0124 GB. `ACC_COPY_ADDOPSI_PSIM_IO` and
 `ACC_COPY_ADDOPSI_OPSI_TINV_IN` disappear from the checked profiles; the broader
 region instead records one `ACC_COPY_ORTHO_PSIM_IO` and one
 `ACC_COPY_ORTHO_OPSI_IN`.
+
+### ADDPRO Context Copy Accounting
+
+`WAVES_ADDPRO` now tags its residency profile rows by caller context. The old
+aggregate rows `ACC_COPY_ADDPRO_PSI_IO`, `ACC_COPY_ADDPRO_PROPSI_IN`, and
+`ACC_PRESENT_ADDPRO_PRO_CACHE` are split into `HPSI` and `OPSI` rows, for
+example `ACC_COPY_ADDPRO_HPSI_PSI_IO` and `ACC_COPY_ADDPRO_OPSI_PSI_IO`.
+The `PSI` row also uses the input/output present-check helper, matching the
+`PRESENT_OR_COPY(PSI)` OpenACC data region used by the projector addition.
+
+Spark C86C validation:
+
+```
+runs/addpro-profile-contexts512-20260531-172542
+runs/addpro-profile-contexts-parallel512-20260531-172641
+runs/addpro-profile-contexts2048-20260531-172651
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | ADDPRO `PSI_IO` rows | Final energy |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `gpu_resident` | 512 | 1 | 6.66 s | 2.2230 GB | `HPSI` 0.1345 GB, `OPSI` 0.1345 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.34 s | 1.5119 GB | `HPSI` 0.1345 GB, `OPSI` 0.1345 GB | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.52 s | 4.7465 GB | context rows per rank | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 38.88 s | 5.4696 GB | `HPSI` 0.4572 GB, `OPSI` 0.4572 GB | 302.280854 Ha |
+
+This is an accounting and localization change, not a new optimization. The
+2048-band orthox copy estimate rises from 5.0124 GB to 5.4696 GB because
+`ADDPRO_PSI` is now counted as copy-in plus copy-out. The split shows the next
+real residency target clearly: one updated wavefunction copy comes from the
+Hamiltonian application (`HPSI`) and one from overlap-wave construction (`OPSI`).
 
 ## Recommended Next Benchmark
 
