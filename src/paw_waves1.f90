@@ -3361,6 +3361,10 @@ END IF
       REAL(8)   ,ALLOCATABLE :: XK(:,:)
       LOGICAL(4)             :: TINV
       INTEGER(4)             :: IB
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$DENMAT')
                               CALL TIMING$CLOCKON('W:DENMAT')
@@ -3372,16 +3376,36 @@ END IF
 !     ==========================================================================
 !     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                                  ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_OCC_SETUP' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==                                                                      ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL MPE$QUERY('K',NTASKS,THISTASK)
       DENMAT(:,:,:,:)=(0.D0,0.D0)
       EDENMAT(:,:,:,:)=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_INIT' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8),0_8 &
+     &    ,0.D0,16.D0*REAL(LMNXX,KIND=8)*REAL(LMNXX,KIND=8) &
+     &    *REAL(NDIMD,KIND=8)*REAL(NAT,KIND=8)*2.D0 &
+     &    ,ACCEL_T1-ACCEL_T0)
+#ENDIF
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -3398,10 +3422,23 @@ END IF
               IPRO=IPRO+LMNX
               CYCLE
             END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
             ALLOCATE(PROJ(NDIM,NBH,LMNX))
             PROJ(:,:,:)=THIS%PROJ(:,:,IPRO:IPRO-1+LMNX)
             ALLOCATE(DENMAT1(LMNX,LMNX,NDIMD))
             ALLOCATE(EDENMAT1(LMNX,LMNX,NDIMD))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('PAW_DENMAT_SITE_SETUP' &
+     &        ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIM,KIND=8) &
+     &        ,INT(NDIMD,KIND=8),0.D0 &
+     &        ,16.D0*REAL(LMNX,KIND=8)*REAL(NBH,KIND=8) &
+     &        *REAL(NDIM,KIND=8) &
+     &        ,ACCEL_T1-ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
 !!$PRINT*,"========  WAVES$DENMAT  ======IKPT=",IKPT,' IAT=',IAT,' IPRO=',IPRO
 !!$DO IB=1,NB
 !!$  IF(OCC(IB,IKPT,ISPIN).LT.1.D-5) CYCLE
@@ -3409,6 +3446,13 @@ END IF
 !!$ENDDO
             CALL WAVES_DENMAT(NDIM,NBH,NB,LMNX,OCC(1,IKPT,ISPIN),THIS%RLAM0 &
      &                       ,PROJ,DENMAT1,EDENMAT1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('PAW_DENMAT_SITE_KERNEL' &
+     &        ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NB,KIND=8) &
+     &        ,INT(NDIM,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+            CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
             IF(NDIM.EQ.1) THEN
               DENMAT(1:LMNX,1:LMNX,ISPIN,IAT) &
      &                   =DENMAT(1:LMNX,1:LMNX,ISPIN,IAT)+DENMAT1(:,:,1)
@@ -3423,6 +3467,15 @@ END IF
             DEALLOCATE(DENMAT1)
             DEALLOCATE(EDENMAT1)
             DEALLOCATE(PROJ)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_T1)
+            CALL ACCELPROFILE$ADD('PAW_DENMAT_SITE_ACCUM' &
+     &        ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIMD,KIND=8) &
+     &        ,0_8,0.D0 &
+     &        ,16.D0*REAL(LMNX,KIND=8)*REAL(LMNX,KIND=8) &
+     &        *REAL(NDIMD,KIND=8)*4.D0 &
+     &        ,ACCEL_T1-ACCEL_T0)
+#ENDIF
             IPRO=IPRO+LMNX
           ENDDO
         ENDDO
@@ -3431,13 +3484,28 @@ END IF
 !     == EACH K-GROUP HOLDS ONLY THE WAVE FUNCTIONS BELONGING TO IT.
 !     == EACH PROCESSOR OF EACH K-GROUP ONLY ADDS UP A FRACTION OF THE PROJECTIONS
 !     == THEREFORE THERE IS NO DOUBLE COUNTING BY SUMMING OVER THE MONOMER
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL MPE$COMBINE('MONOMER','+',DENMAT)
       CALL MPE$COMBINE('MONOMER','+',EDENMAT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_COMBINE' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(NTASKS,KIND=8),0.D0 &
+     &    ,16.D0*REAL(LMNXX,KIND=8)*REAL(LMNXX,KIND=8) &
+     &    *REAL(NDIMD,KIND=8)*REAL(NAT,KIND=8)*2.D0 &
+     &    ,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  CONVERT SPIN-UP AND SPIN-DOWN DENSITY MATRIX INTO                   ==
 !     ==  TOTAL AND SPIN DENSITY MATRICES                                     ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       IF(NSPIN.EQ.2) THEN
         DO IAT=1,NAT
           ISP=MAP%ISP(IAT)
@@ -3457,6 +3525,12 @@ END IF
           ENDDO
         ENDDO
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_SPIN_CONVERT' &
+     &    ,INT(LMNXX,KIND=8),INT(NDIMD,KIND=8),INT(NAT,KIND=8) &
+     &    ,INT(NSPIN,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  PRINT FOR TEST                                                      ==
@@ -3736,6 +3810,10 @@ END IF
       INTEGER(4)            :: NFILO
       LOGICAL(4),PARAMETER  :: TPR=.FALSE.
       COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
       NDIMD=NDIM**2
       DENMAT(:,:,:)=(0.D0,0.D0)
@@ -3766,6 +3844,9 @@ END IF
 !     == = <P|PSI1>F1<PSI1|P>+<P|PSI2>F2<PSI2|P>
 !     == + I[<P|PSI2>F1<PSI1|P>-<P|PSI1>F2<PSI2|P>]
 !     == IMAGINARY PART IS DROPPED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       DENMAT1(:,:,:,:)=(0.D0,0.D0)
       DO IB=1,NBH
 !       == FIND OCCUPATION OF THE STATE ========================================
@@ -3802,10 +3883,19 @@ END IF
       IF(TINV) THEN
         DENMAT1(:,:,:,:)=REAL(DENMAT1(:,:,:,:),KIND=8)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_DENSITY_LOOP' &
+     &    ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == NOW SUM UP EDENMAT  <P|PSITILDE>*LAMBDA*<PSITILDE|P>                 ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       DO IB2=1,NB
         LAGR(:,IB2)=LAMBDA(:,IB2)*OCC(IB2)
       ENDDO
@@ -3856,10 +3946,19 @@ END IF
           ENDDO
         ENDDO
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_ENERGY_LOOP' &
+     &    ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == MAP DENSITY MATRIX ONTO TOTAL AND SPIN DENSITY                       ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       IF(NDIM.EQ.1) THEN  !== TOTAL DENSITY ====================================
         DO LMN1=1,LMNX
           DO LMN2=1,LMNX
@@ -3922,6 +4021,12 @@ END IF
         DENMAT(:,:,1)=REAL(DENMAT(:,:,1),KIND=8)
         EDENMAT(:,:,1)=REAL(EDENMAT(:,:,1),KIND=8)
       END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENMAT_MAP_SYM' &
+     &    ,INT(LMNX,KIND=8),INT(NBH,KIND=8),INT(NDIMD,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == PRINTOUT FOR TEST                                                    ==
@@ -3971,6 +4076,10 @@ END IF
       INTEGER(4)             :: IAT1,IAT2,N1,N2
       INTEGER(4)             :: IAT,ISP,NN
       INTEGER(4)             :: NTASKS,THISTASK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+#ENDIF
 !     **************************************************************************
                                           CALL TRACE$PUSH('WAVES_OFFSITEDENMAT')
       NAT=MAP%NAT
@@ -4004,6 +4113,9 @@ END IF
 !     ==========================================================================
 !     == SET UP NEIGHBORLIST (ENCODED IN NNLIST)                              ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
       ALLOCATE(RC(NAT))
       DO IAT=1,NAT
@@ -4023,6 +4135,12 @@ END IF
       CALL MPE$BROADCAST('MONOMER',1,NNLIST(:,:NND))
       DEALLOCATE(RC)
       DEALLOCATE(R0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_NEIGHBOR' &
+     &    ,INT(NAT,KIND=8),INT(NND,KIND=8),INT(NTASKS,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==  REPORT NEIGHBORLIST                                                 ==
@@ -4039,6 +4157,9 @@ END IF
 !     ==========================================================================
 !     == ALLOCATE DENSITY MATRIX
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       ALLOCATE(OSDENMAT(NND))
       DO NN=1,NND
         IAT1=NNLIST(1,NN)
@@ -4054,11 +4175,26 @@ END IF
         ALLOCATE(OSDENMAT(NN)%MAT(N1,N2,NDIMD))
         OSDENMAT(NN)%MAT(:,:,:)=0.D0
       ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_ALLOC' &
+     &    ,INT(NAT,KIND=8),INT(NND,KIND=8),INT(NDIMD,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     == EVALUATE DENSITY MATRIX
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
       CALL WAVES_SUMMUPOFFSITEDENMAT()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_SUM' &
+     &    ,INT(NAT,KIND=8),INT(NND,KIND=8),INT(NDIMD,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
                                                                 CALL TRACE$POP()
       RETURN
       END

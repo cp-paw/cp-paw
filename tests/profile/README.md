@@ -259,6 +259,12 @@ path splits its estimated transfers into `ACC_COPY_1COV_PROJ_IN`,
 `ACC_COPY_1COV_MAT_OUT`, and, for inversion-symmetric superwave cases,
 `ACC_COPY_1COV_CMAT_OUT`; use those rows to decide whether a future optimization
 should target packed projector inputs or overlap-matrix outputs.
+One-center density-matrix profiling uses `PAW_DENMAT_*` rows to split the
+previous `PAW_ETOT_DENMAT` envelope into occupation setup, site setup, inner
+density/energy loops, accumulation, MPI combine, and spin conversion. Off-site
+density-matrix setup is split into `PAW_OFFDEN_*` rows. These rows are CPU-side
+instrumentation for deciding whether a later GPU kernel should target
+`WAVES_DENMAT` itself, the projection copy/setup edges, or off-site bookkeeping.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
