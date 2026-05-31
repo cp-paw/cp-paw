@@ -315,11 +315,12 @@ Si64 shows this is useful for the 1 MPI rank / 1 GPU comparison, but can be a
 negative diagnostic when several MPI ranks share one GPU.
 `CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1` or
 `CPPAW_CUBLAS_ACC_OFFDEN_DEVICE_ACCUM=1` keeps the device-pack path active and
-accumulates the complex `WORK` block into a real `MATPACK` result on the GPU.
-It then copies back `MATPACK` instead of `WORK`, recording
-`PAW_OFFDEN_DEVICE_ACCUM` and `ACC_COPY_OFFDEN_DPACK_MAT_OUT`. This is an
-opt-in diagnostic for reducing host round-trips before a fully device-resident
-off-site accumulation path exists.
+accumulates the complex `WORK` blocks into a flat real off-site matrix buffer
+on the GPU. It then copies that flat buffer back once per k-point/spin pass
+instead of copying each batch's complex `WORK`, recording
+`PAW_OFFDEN_DEVICE_ACCUM`, `ACC_COPY_OFFDEN_DPACK_FLAT_OUT`, and
+`PAW_OFFDEN_FLAT_ACCUM_SCATTER`. This is an opt-in diagnostic for reducing host
+round-trips before a fully device-resident off-site accumulation path exists.
 `CPPAW_GPU_PROJ_RESIDENCY=1` or `CPPAW_CUBLAS_ACC_PROJ_RESIDENCY=1` keeps
 `THIS%PROJ` present after `WAVES$PROJECTIONS` and the `K`-communicator combine.
 That lets downstream `PRESENT_OR_COPYIN` users reuse projections instead of
