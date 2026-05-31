@@ -4462,6 +4462,7 @@ END IF
       REAL(8)                :: F1,F2
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TOFFDENBLAS
+      LOGICAL(4)             :: TOFFDENCUBLAS
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
@@ -4486,6 +4487,7 @@ END IF
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
       TOFFDENBLAS=.FALSE.
+      TOFFDENCUBLAS=.FALSE.
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_LOCAL',ENVVAL &
      &                             ,STATUS=ENVSTAT)
       IF(ENVSTAT.NE.0) THEN
@@ -4498,6 +4500,21 @@ END IF
           TOFFDENBLAS=.TRUE.
         CASE DEFAULT
           TOFFDENBLAS=.FALSE.
+        END SELECT
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_CUBLAS',ENVVAL &
+     &                             ,STATUS=ENVSTAT)
+      IF(ENVSTAT.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_OFFDEN',ENVVAL &
+     &                               ,STATUS=ENVSTAT)
+      END IF
+      IF(ENVSTAT.EQ.0) THEN
+        SELECT CASE(TRIM(ADJUSTL(ENVVAL)))
+        CASE('1','T','t','TRUE','true','True','YES','yes','ON','on')
+          TOFFDENBLAS=.TRUE.
+          TOFFDENCUBLAS=.TRUE.
+        CASE DEFAULT
+          TOFFDENCUBLAS=.FALSE.
         END SELECT
       END IF
 !
@@ -4567,7 +4584,8 @@ END IF
               CALL WAVES_OFFDEN_TINV_NDIM1_BLAS(NPROAT(IAT1) &
      &             ,NPROAT(IAT2),NBH,NB,NDIMD,NSPIN,ISPIN &
      &             ,OCC(1,IKPT,ISPIN),EIKR,THIS%PROJ(1,1,I0+1) &
-     &             ,THIS%PROJ(1,1,J0+1),OSDENMAT(NN)%MAT)
+     &             ,THIS%PROJ(1,1,J0+1),OSDENMAT(NN)%MAT &
+     &             ,TOFFDENCUBLAS)
               CYCLE
             END IF
             DO I=1,NPROAT(IAT1)
@@ -4697,7 +4715,12 @@ END IF
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_OFFDEN_TINV_NDIM1_BLAS(N1,N2,NBH,NB,NDIMD &
      &                                       ,NSPIN,ISPIN,OCC,EIKR &
-     &                                       ,PROJ1,PROJ2,MAT)
+     &                                       ,PROJ1,PROJ2,MAT &
+     &                                       ,TCUBLAS)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY
+#ENDIF
 !     **************************************************************************
 !     **  BLAS diagnostic for the inversion-symmetric, scalar off-site        **
 !     **  density-matrix contraction. It is opt-in and intentionally limited  **
@@ -4716,6 +4739,7 @@ END IF
       COMPLEX(8),INTENT(IN) :: PROJ1(NBH,N1)
       COMPLEX(8),INTENT(IN) :: PROJ2(NBH,N2)
       REAL(8)   ,INTENT(INOUT) :: MAT(N1,N2,NDIMD)
+      LOGICAL(4),INTENT(IN) :: TCUBLAS
       COMPLEX(8),ALLOCATABLE :: A(:,:)
       COMPLEX(8),ALLOCATABLE :: B(:,:)
       COMPLEX(8),ALLOCATABLE :: WORK(:,:)
@@ -4724,14 +4748,17 @@ END IF
       REAL(8)               :: FPLUS
       REAL(8)               :: FMINUS
       INTEGER(4)            :: I,J,IBH
+      LOGICAL(4)            :: TCUBLAS_USED
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)               :: ACCEL_T0
       REAL(8)               :: ACCEL_T1
       REAL(8)               :: ACCEL_FLOPS
+      CHARACTER(32)         :: ACCEL_GEMM_NAME
 #ENDIF
 !     **************************************************************************
       ONE=(1.D0,0.D0)
       ZERO=(0.D0,0.D0)
+      TCUBLAS_USED=.FALSE.
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
@@ -4757,12 +4784,25 @@ END IF
      &    ,ACCEL_T1-ACCEL_T0)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
-      CALL ZGEMM('N','T',N1,N2,NBH,ONE,A,N1,B,N2,ZERO,WORK,N1)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF(TCUBLAS) THEN
+        CALL CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY(N1,N2,NBH,A,B,WORK &
+     &                                     ,TCUBLAS_USED)
+      END IF
+#ENDIF
+      IF(.NOT.TCUBLAS_USED) THEN
+        CALL ZGEMM('N','T',N1,N2,NBH,ONE,A,N1,B,N2,ZERO,WORK,N1)
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T1)
       ACCEL_FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
      &           *REAL(NBH,KIND=8)
-      CALL ACCELPROFILE$ADD('ZGEMM_OFFDEN_TINV_NDIM1' &
+      IF(TCUBLAS_USED) THEN
+        ACCEL_GEMM_NAME='CUBLAS_ZGEMM_OFFDEN_TINV_NDIM1'
+      ELSE
+        ACCEL_GEMM_NAME='ZGEMM_OFFDEN_TINV_NDIM1'
+      END IF
+      CALL ACCELPROFILE$ADD(ACCEL_GEMM_NAME &
      &    ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NBH,KIND=8),0_8 &
      &    ,ACCEL_FLOPS,16.D0*(REAL(NBH,KIND=8)*REAL(N1+N2,KIND=8) &
      &    +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)

@@ -63,6 +63,7 @@
       REAL(8)            :: MINFLOP_ADDPRODUCT=1.D7
       REAL(8)            :: MINFLOP_MATMUL=1.D7
       REAL(8)            :: MINFLOP_DENMAT=1.D8
+      REAL(8)            :: MINFLOP_OFFDEN=1.D8
       CHARACTER(16)      :: OVERLAP_PROFILE_ID=''
       CONTAINS
 !
@@ -425,6 +426,10 @@
      &    ('CPPAW_GPU_DENMAT_MINFLOP',MINFLOP_DENMAT)
       CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
      &    ('CPPAW_CUBLAS_ACC_DENMAT_MINFLOP',MINFLOP_DENMAT)
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_GPU_OFFDEN_MINFLOP',MINFLOP_OFFDEN)
+      CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP',MINFLOP_OFFDEN)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_SYNC',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -698,6 +703,17 @@
      &                                  .AND.(FLOPS.GE.MINFLOP_MATMUL)
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_OFFDEN(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_SHOULD_USE_OFFDEN=ENABLED &
+     &                                  .AND.(FLOPS.GE.MINFLOP_OFFDEN)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_SHOULD_USE_OFFDEN
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
@@ -1190,6 +1206,66 @@
       CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY(LEN1,LEN2,N,PSI1 &
+     &                                         ,PSI2,OPERATOR,USED)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: LEN1
+      INTEGER(4),INTENT(IN)  :: LEN2
+      INTEGER(4),INTENT(IN)  :: N
+      COMPLEX(8),INTENT(IN)  :: PSI1(LEN1,N)
+      COMPLEX(8),INTENT(IN)  :: PSI2(LEN2,N)
+      COMPLEX(8),INTENT(OUT) :: OPERATOR(LEN1,LEN2)
+      LOGICAL(4),INTENT(OUT) :: USED
+      REAL(8)                :: FLOPS
+!     **************************************************************************
+      FLOPS=8.D0*REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)*REAL(N,KIND=8)
+      USED=CPPAW_CUBLAS_ACC_SHOULD_USE_OFFDEN(FLOPS)
+      IF(.NOT.USED) RETURN
+!$ACC DATA COPYIN(PSI1(1:LEN1,1:N),PSI2(1:LEN2,1:N)) &
+!$ACC& COPYOUT(OPERATOR(1:LEN1,1:LEN2))
+      CALL CPPAW_CUBLAS_ACC_ZGEMM_NT_PRESENT(LEN1,LEN2,N,PSI1 &
+     &                                      ,PSI2,OPERATOR)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_ZGEMM_NT' &
+     &     ,LEN1,LEN2,N,0,16.D0*(REAL(LEN1,KIND=8)*REAL(N,KIND=8) &
+     &     +REAL(LEN2,KIND=8)*REAL(N,KIND=8) &
+     &     +REAL(LEN1,KIND=8)*REAL(LEN2,KIND=8)))
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NT_PRESENT(LEN1,LEN2,N,PSI1 &
+     &                                            ,PSI2,OPERATOR)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: LEN1
+      INTEGER(4),INTENT(IN)  :: LEN2
+      INTEGER(4),INTENT(IN)  :: N
+      COMPLEX(8),INTENT(IN)  :: PSI1(LEN1,N)
+      COMPLEX(8),INTENT(IN)  :: PSI2(LEN2,N)
+      COMPLEX(8),INTENT(OUT) :: OPERATOR(LEN1,LEN2)
+      COMPLEX(8)             :: ONE
+      COMPLEX(8)             :: ZERO
+      INTEGER(4)             :: ISTAT
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PSI1,PSI2,OPERATOR)
+      ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_T,LEN1,LEN2,N &
+     &                 ,ONE,PSI1,LEN1,PSI2,LEN2,ZERO,OPERATOR,LEN1)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_ZGEMM_NT_PRESENT')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NT_PRESENT
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NC_COPY(LEN1,LEN2,N,PSI1 &
