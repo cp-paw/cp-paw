@@ -102,6 +102,9 @@ kernel instrumentation.
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
 diagnostic envelopes: use them to identify the next target, not as additive
 wall-clock accounting.
+The real safe-orthogonalization solver is split further by `PAW_ORTHO_X_DIAG`,
+`PAW_ORTHO_X_RESIDUAL`, `PAW_ORTHO_X_UPDATE`, and
+`PAW_ORTHO_X_ITERATIONS`. These rows are nested inside `PAW_ORTHO_SOLVE`.
 Residency-profile builds enable the initial Gram-Schmidt Cholesky solve by
 default. It replaces only the initial `WAVES$GRAMMSCHMIDT` solve with a LAPACK
 Cholesky orthogonalization when the overlap matrix is positive definite;

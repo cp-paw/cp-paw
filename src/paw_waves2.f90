@@ -2469,6 +2469,13 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)                  :: U(NB,NB)       
       REAL(8)                  :: OCCI,OCCJ
       LOGICAL(4)               :: TCONVERGED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      INTEGER(4)               :: ACCEL_ORTHOX_ITER
+      REAL(8)                  :: ACCEL_ORTHOX_T0
+      REAL(8)                  :: ACCEL_ORTHOX_T1
+      REAL(8)                  :: ACCEL_ORTHOX_RESIDUAL_T
+      REAL(8)                  :: ACCEL_ORTHOX_UPDATE_T
+#ENDIF
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       LOGICAL(4)               :: TRESIDENTORTHOCONST
 #ENDIF
@@ -2476,6 +2483,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
                              CALL TRACE$PUSH('WAVES_ORTHO_X')
       ALLOCATE(GAMN(NB,NB))
       TCONVERGED=.FALSE.
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_ORTHOX_ITER=0
+      ACCEL_ORTHOX_RESIDUAL_T=0.D0
+      ACCEL_ORTHOX_UPDATE_T=0.D0
+#ENDIF
 !
 !     ==========================================================================
 !     ==  CALCULATE  PSIPSI(I,J)= <PSIBAR(I)|PSIBAR(J)>-1                     ==
@@ -2485,7 +2497,16 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ==========================================================================
 !     ==  DIAGONALIZE 0.5*(CHIPSI(I,J)+CHIPSI(J,I))                           ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T0)
+#ENDIF
       CALL LIB$DIAGR8(NB,CHIPSI,EIG,U)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_X_DIAG' &
+     &    ,INT(NB,KIND=8),0_8,0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ORTHOX_T1-ACCEL_ORTHOX_T0)
+#ENDIF
 !CALL DIAG(NB,NB,CHIPSI,EIG,U)
 !WRITE(*,FMT='("EIG",20E10.3)')EIG
 !DO I=1,NB
@@ -2513,6 +2534,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ==========================================================================
 !     ==========================================================================
       DO ITER=1,MAX
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        ACCEL_ORTHOX_ITER=ITER
+        CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T0)
+#ENDIF
 !PRINT*,'==================',ITER,'==========================='
 !       ========================================================================
 !       ==  CALCULATE <PHI(+)|PHI(+)>-1 WITH PRESENT LAMBDA                   ==
@@ -2547,6 +2572,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       == CHECK CONVERGENCE MAXVAL(ABS(OVERLAP-1))<EPS ; GAMN=OVERLAP-1      ==
 !       ========================================================================
         DIGAM=MAXVAL(ABS(GAMN))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
+        ACCEL_ORTHOX_RESIDUAL_T=ACCEL_ORTHOX_RESIDUAL_T &
+     &                         +ACCEL_ORTHOX_T1-ACCEL_ORTHOX_T0
+#ENDIF
 !       __CHECK CONVERGENCE_____________________________________________________
         IF(DIGAM.LT.EPS) THEN
           TCONVERGED=.TRUE.
@@ -2568,6 +2598,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ========================================================================
 !       ==  OBTAIN CHANGE OF THE LAMBDA MATRIX                                ==
 !       ========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T0)
+#ENDIF
 !       == TRANSFORM OVERLAP MATRIX GAMN
 !       ----  HAUX(I,L)=U(K,I)*H0(K,L)
         CALL LIB$SCALARPRODUCTR8(.FALSE.,NB,NB,U,NB,GAMN,HAUX)
@@ -2620,6 +2653,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
             END IF
           ENDDO
         ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
+        ACCEL_ORTHOX_UPDATE_T=ACCEL_ORTHOX_UPDATE_T &
+     &                       +ACCEL_ORTHOX_T1-ACCEL_ORTHOX_T0
+#ENDIF
       ENDDO
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 !$ACC END DATA
@@ -2637,6 +2675,17 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       
 !
 9000  CONTINUE
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_X_RESIDUAL' &
+     &    ,INT(NB,KIND=8),INT(ACCEL_ORTHOX_ITER,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ORTHOX_RESIDUAL_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_X_UPDATE' &
+     &    ,INT(NB,KIND=8),INT(ACCEL_ORTHOX_ITER,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_ORTHOX_UPDATE_T)
+      CALL ACCELPROFILE$ADD('PAW_ORTHO_X_ITERATIONS' &
+     &    ,INT(NB,KIND=8),INT(ACCEL_ORTHOX_ITER,KIND=8),0_8,0_8 &
+     &    ,0.D0,0.D0,0.D0)
+#ENDIF
       DEALLOCATE(GAMN)
                              CALL TRACE$POP
       RETURN
