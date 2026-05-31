@@ -262,7 +262,10 @@ should target packed projector inputs or overlap-matrix outputs.
 One-center density-matrix profiling uses `PAW_DENMAT_*` rows to split the
 previous `PAW_ETOT_DENMAT` envelope into occupation setup, site setup, inner
 density/energy loops, accumulation, MPI combine, and spin conversion. Off-site
-density-matrix setup is split into `PAW_OFFDEN_*` rows. These rows are CPU-side
+density-matrix setup is split into `PAW_OFFDEN_*` rows, and the off-site
+accumulation envelope is split further into `PAW_OFFDEN_SUM_SETUP`,
+`PAW_OFFDEN_SUM_ZERO`, `PAW_OFFDEN_SUM_LOCAL`, and
+`PAW_OFFDEN_SUM_COMBINE`. These rows are CPU-side
 instrumentation for deciding whether a later GPU kernel should target
 `WAVES_DENMAT` itself, the projection copy/setup edges, or off-site bookkeeping.
 An opt-in diagnostic, `CPPAW_GPU_DENMAT_ENERGY=1`, offloads the
