@@ -27,6 +27,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `opsi-build-residency-20260531-164302` | OPSI build-residency diagnostic | `gpu_resident`/`gpu_resident_opsi` tied for Si64 | - | `gpu_resident`/`gpu_resident_opsi` tied at 512/4 | Adds an opt-in non-superwave OPSI residency switch; Si64 is a superwave case, so the guard correctly leaves it unchanged. |
 | `superwave-opsi-hostscale-20260531-*` | Superwave overlap residency | `gpu_resident`/`gpu_resident_opsi` tied and energy-valid | - | `gpu_resident_opsi` 9.15 s at 512/4 | Makes the superwave inversion overlap term resident; keeps superwave OPSI host-built/host-scaled before entering device residency. |
 | `addpro-context-cache-20260531-*` | ADDPRO context-cache controls | `gpu_resident_opsi` 40.03 s at 2048/1 | - | `gpu_resident_addpro_hpsi_host` 9.30 s at 512/4 | Adds independent HPSI/OPSI `WAVES_ADDPRO` cache switches; all cases remain energy-valid, but timings are neutral/noisy. |
+| `1cov-split-20260531-*` | One-center overlap copy accounting | `gpu_resident_hpsi` 40.48 s at 2048/1 | - | `gpu_resident_hpsi` 9.78 s at 512/4 | Splits the 1COV copy estimate into packed projector input and overlap-matrix output rows. |
 
 The latest full-matrix run lives at:
 
@@ -1390,6 +1391,31 @@ runs/hpsi-opsi-keyword-20260531-512-4r
 The combined keyword is energy-valid and reproduces the HPSI copy reduction,
 but OPSI residency does not add another copy reduction for these Si64 smoke
 cases. Keep it as a reproducible diagnostic combination, not a new default.
+
+## One-Center Overlap Copy Split
+
+The one-center overlap cuBLAS path now replaces the aggregate
+`ACC_COPY_CUBLAS_1COV` estimate with separate transfer rows for packed
+projector input and overlap-matrix output. The change is accounting-only; the
+kernel path and total copy estimate are unchanged within rounding.
+
+Spark C86C validation:
+
+```
+runs/1cov-split-20260531-2048-1r
+runs/1cov-split-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `1COV_PROJ_IN` | `1COV_CMAT_OUT` | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 2048 | 1 | 40.48 s | 4.8988 GB | 0.2173 GB | 0.1894 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.78 s | 1.7284 GB | 0.0160 GB | 0.0164 GB | 0.000000401 Ha |
+
+For the large one-rank smoke, 1COV still contributes about 0.4067 GB in total,
+but it is not the leading copy source after HPSI residency. The larger remaining
+rows are still the wavefunction input/output regions around Gram,
+orthogonalization, and ADDPRO, so the next performance work should target
+those repeated wavefunction edges before optimizing 1COV matrix-output copies.
 
 ## Recommended Next Benchmark
 
