@@ -29,10 +29,12 @@
       LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.TRUE.
+      LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.TRUE.
 #ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
+      LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.FALSE.
 #ENDIF
       LOGICAL(4)         :: ONECENTER_OVERLAP_ENABLED=.FALSE.
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
@@ -289,6 +291,23 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_FORCE_PSI_RESIDENCY',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            FORCE_PSI_RESIDENCY_ENABLED=.FALSE.
+          CASE DEFAULT
+            FORCE_PSI_RESIDENCY_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_1COVERLAP',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
@@ -405,6 +424,16 @@
      &     .AND.ADDPRO_CACHE_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.FORCE_PSI_RESIDENCY_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED(FLOPS)

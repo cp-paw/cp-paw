@@ -439,6 +439,55 @@ step is to identify that caller's producer and either keep that operand resident
 or route it through a more semantic present-data path instead of treating it as
 an opaque `LIB$MATMUL` temporary.
 
+## Force PSI Residency
+
+The dominant complex MATMUL transfer from the previous section was traced to
+`WAVES_DEDPRO`:
+
+```
+CALL LIB$MATMULC8(NGL,NDIM*NBH,LMNX,PSI,DEDPROJ1,DEDPRO)
+```
+
+For the Si64 band profile this is the `13133 x 576 x 13` shape. The follow-up
+patch keeps `THIS%PSI0` resident across the per-atom `WAVES$FORCE` loop, so the
+64 per-atom `WAVES_DEDPRO` calls can reuse the same left MATMUL operand. The
+path is enabled by default in residency-profile builds and can be disabled with
+`CPPAW_GPU_FORCE_PSI_RESIDENCY=0`.
+
+Spark C86C builds succeeded for both:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+```
+
+Smoke run:
+
+```
+runs/forcepsi-residency-smoke-20260531-130956
+```
+
+| Case | Ranks | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident` | 1 | 42.85 s | 7.7153 GB | 302.280854 Ha | New default path with force-loop `THIS%PSI0` residency. |
+| `gpu_resident_forcepsi_host` | 1 | 45.56 s | 15.3405 GB | 302.280854 Ha | Same binary with `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
+
+Key profile rows:
+
+| Profile row | `gpu_resident` | `gpu_resident_forcepsi_host` | Meaning |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_FORCE_PSI0_IN` | 1 call, 0.1210 GB | - | One copy into the force-loop resident region. |
+| `ACC_PRESENT_ZGEMM_MAT_A` | 64 calls | - | `WAVES_DEDPRO` reuses the resident `PSI0` operand. |
+| `ACC_COPY_ZGEMM_MAT_A_IN` | - | 64 calls, 7.7462 GB | Previous per-atom copy of the same left operand. |
+| `ACC_COPY_ZGEMM_MAT_B_IN` | 64 calls, 0.0077 GB | 64 calls, 0.0077 GB | Small per-atom derivative-projector operand. |
+| `ACC_COPY_ZGEMM_MAT_C_OUT` | 64 calls, 0.1748 GB | 64 calls, 0.1748 GB | Per-atom `DEDPRO` output. |
+
+Conclusion: this is the first broad force-side wavefunction-residency win. It
+does not solve the remaining DGEMM MATMUL traffic or one-center overlap
+contraction, but it removes the largest previously ambiguous complex MATMUL copy
+without changing the energy and with a positive one-step wall-time signal on
+Spark.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
