@@ -5,11 +5,11 @@ import re
 import sys
 
 
-def number(value):
+def number(value, digits=2):
     if value is None or value == "":
         return ""
     try:
-        return f"{float(value):.2f}"
+        return f"{float(value):.{digits}f}"
     except ValueError:
         return str(value)
 
@@ -46,11 +46,11 @@ def main(argv):
     print()
     print(f"Source: `{os.path.basename(path)}`")
     print()
-    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | phase_s | phase_gap_s | copy_gb | energy |")
-    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | phase_s | phase_gap_s | copy_gb | energy | energy_delta |")
+    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rows:
         print(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 suite_label(row),
                 row.get("case", ""),
                 row.get("ranks", ""),
@@ -68,7 +68,8 @@ def main(argv):
                 number(row.get("phase_s")),
                 number(row.get("phase_gap_s")),
                 number(row.get("copy_gb")),
-                number(row.get("energy")),
+                number(row.get("energy"), 6),
+                number(row.get("energy_delta"), 6),
             )
         )
     return 0

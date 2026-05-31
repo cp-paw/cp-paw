@@ -97,6 +97,11 @@ High-level `PHASE_*` timers are reported separately as `phase_s` and
 because they are coarse envelopes around existing numerical kernel timers. Use
 the phase columns to localize unexplained wall time before adding lower-level
 kernel instrumentation.
+For the bundled `si64` and `si64_bands` cases, the harness also checks the
+final constant energy against the built-in reference (`EXPECTED_ENERGY`,
+default `302.280854`) with `ENERGY_TOL=1e-5`. A run with normal termination but
+an energy mismatch is reported as `ok=no` and carries `energy_delta` in the TSV
+and Markdown summaries.
 
 `WAVES$ETOT` is split further by `PAW_ETOT_*` rows, and the initial
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
@@ -464,9 +469,9 @@ NSTEPS=20 RANKS=4 REPEATS=3 CASES="nvhpc_cpu cublas cublas_off" ./run_benchmark.
 
 The harness creates timestamped directories under `tests/profile/si64/runs`,
 writes per-run logs and profile CSV files, and emits a `benchmark.tsv` summary
-with wall time, instrumented rank-seconds, category timings and final energy.
-It also writes a Markdown table (`benchmark.md` or `combined_benchmark.md`) that
-can be pasted directly into pull request comments.
+with wall time, instrumented rank-seconds, category timings, final energy and
+the optional energy delta. It also writes a Markdown table (`benchmark.md` or
+`combined_benchmark.md`) that can be pasted directly into pull request comments.
 
 For a short Nsight Systems trace of the recommended combined GPU profile binary:
 
