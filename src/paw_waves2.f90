@@ -1495,6 +1495,122 @@ END IF
       END
 !
 !      .................................................................
+       LOGICAL(4) FUNCTION WAVES_GRAM_CHOLESKY_ENABLED()
+!      *****************************************************************
+!      **  OPT-IN FAST PATH FOR INITIAL GRAM-SCHMIDT ORTHOGONALIZATION **
+!      *****************************************************************
+       IMPLICIT NONE
+       CHARACTER(32)              :: VALUE
+       INTEGER(4)                 :: STATUS
+!      *****************************************************************
+#IF DEFINED(CPPVAR_GPU_RESIDENCY_PROFILE)
+       WAVES_GRAM_CHOLESKY_ENABLED=.TRUE.
+#ELSE
+       WAVES_GRAM_CHOLESKY_ENABLED=.FALSE.
+#ENDIF
+       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GRAM_CHOLESKY',VALUE &
+     &                              ,STATUS=STATUS)
+       IF(STATUS.NE.0) THEN
+         CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_GRAM_CHOLESKY',VALUE &
+     &                                ,STATUS=STATUS)
+       END IF
+       IF(STATUS.EQ.0) THEN
+         VALUE=ADJUSTL(VALUE)
+         IF(LEN_TRIM(VALUE).GT.0) THEN
+           SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+           CASE('0','no','NO','false','FALSE','off','OFF')
+             WAVES_GRAM_CHOLESKY_ENABLED=.FALSE.
+           CASE DEFAULT
+             WAVES_GRAM_CHOLESKY_ENABLED=.TRUE.
+           END SELECT
+         END IF
+       END IF
+       RETURN
+       END FUNCTION WAVES_GRAM_CHOLESKY_ENABLED
+!
+!      .................................................................
+       SUBROUTINE WAVES_GRAM_CHOLESKY(NB,OVERLAP,X,TOK)
+!      *****************************************************************
+!      **  INITIAL GRAM-SCHMIDT SPECIAL CASE:                          **
+!      **    PHIPHI=CHIPHI=CHICHI=S, SO T=INV(U) WITH S=U^H U          **
+!      **    GIVES (I+X)^H S (I+X)=I AND X=T-I.                        **
+!      *****************************************************************
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)      :: NB
+       COMPLEX(8),INTENT(IN)      :: OVERLAP(NB,NB)
+       COMPLEX(8),INTENT(OUT)     :: X(NB,NB)
+       LOGICAL(4),INTENT(OUT)     :: TOK
+       COMPLEX(8),ALLOCATABLE     :: A(:,:)
+       INTEGER(4)                 :: I,J,INFO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       REAL(8)                    :: ACCEL_CHOL_T0
+       REAL(8)                    :: ACCEL_CHOL_T1
+       REAL(8)                    :: ACCEL_CHOL_TOTAL_T0
+#ENDIF
+       EXTERNAL ZPOTRF
+       EXTERNAL ZTRTRI
+!      *****************************************************************
+       TOK=.FALSE.
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+       ALLOCATE(A(NB,NB))
+       A(:,:)=OVERLAP(:,:)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_T0)
+#ENDIF
+       CALL ZPOTRF('U',NB,A,NB,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_T1)
+       CALL ACCELPROFILE$ADD('LAPACK_ZPOTRF_GRAM' &
+     &    ,INT(NB,KIND=8),0_8,0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_T0)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_T0)
+#ENDIF
+       IF(INFO.NE.0) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL ACCELPROFILE$ADD('PAW_GRAM_CHOL_FALLBACK' &
+     &      ,INT(NB,KIND=8),INT(INFO,KIND=8),0_8,0_8 &
+     &      ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+         DEALLOCATE(A)
+         RETURN
+       END IF
+       CALL ZTRTRI('U','N',NB,A,NB,INFO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_T1)
+       CALL ACCELPROFILE$ADD('LAPACK_ZTRTRI_GRAM' &
+     &    ,INT(NB,KIND=8),0_8,0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_T0)
+#ENDIF
+       IF(INFO.NE.0) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL ACCELPROFILE$ADD('PAW_GRAM_CHOL_FALLBACK' &
+     &      ,INT(NB,KIND=8),INT(INFO,KIND=8),0_8,0_8 &
+     &      ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+         DEALLOCATE(A)
+         RETURN
+       END IF
+       X(:,:)=(0.D0,0.D0)
+       DO J=1,NB
+         DO I=1,J
+           X(I,J)=A(I,J)
+         ENDDO
+         X(J,J)=X(J,J)-(1.D0,0.D0)
+       ENDDO
+       DEALLOCATE(A)
+       TOK=.TRUE.
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL ACCELPROFILE$NOW(ACCEL_CHOL_T1)
+       CALL ACCELPROFILE$ADD('PAW_GRAM_SOLVE' &
+     &    ,INT(NB,KIND=8),0_8,0_8,0_8 &
+     &    ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+       RETURN
+       END SUBROUTINE WAVES_GRAM_CHOLESKY
+!
+!      .................................................................
        SUBROUTINE WAVES_ORTHO_Y_C(NB,PHIPHI,CHIPHI,CHICHI,X,MAP)
 !      **                                                             **
 !      **  CALCULATE LAGRANGE MULTIPLIERS FOR ORTHOGONALIZATION       **
@@ -2569,6 +2685,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       COMPLEX(8)                  :: XTWOBYTWO(2,2)
       INTEGER(4)      ,ALLOCATABLE:: SMAP(:)
       LOGICAL(4)                  :: TRESIDENTGRAM
+      LOGICAL(4)                  :: TCHOLESKY
+      LOGICAL(4)                  :: WAVES_GRAM_CHOLESKY_ENABLED
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                     :: ACCEL_GRAM_T0
       REAL(8)                     :: ACCEL_GRAM_T1
@@ -2679,12 +2797,20 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       ENDDO 
       ALLOCATE(X(NB,NB))
 !== SPEICHERZUGRIFFSFEHLER IFC10
-      CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X,SMAP)
+      TCHOLESKY=.FALSE.
+      IF(WAVES_GRAM_CHOLESKY_ENABLED()) THEN
+        CALL WAVES_GRAM_CHOLESKY(NB,OVERLAP,X,TCHOLESKY)
+      END IF
+      IF(.NOT.TCHOLESKY) THEN
+        CALL WAVES_ORTHO_Y_C(NB,OVERLAP,OVERLAP,OVERLAP,X,SMAP)
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_GRAM_T1)
-      CALL ACCELPROFILE$ADD('PAW_GRAM_SOLVE' &
-     &   ,INT(NB,KIND=8),0_8,0_8,0_8 &
-     &   ,0.D0,0.D0,ACCEL_GRAM_T1-ACCEL_GRAM_T0)
+      IF(.NOT.TCHOLESKY) THEN
+        CALL ACCELPROFILE$ADD('PAW_GRAM_SOLVE' &
+     &     ,INT(NB,KIND=8),0_8,0_8,0_8 &
+     &     ,0.D0,0.D0,ACCEL_GRAM_T1-ACCEL_GRAM_T0)
+      END IF
       CALL ACCELPROFILE$NOW(ACCEL_GRAM_T0)
 #ENDIF
       DEALLOCATE(OVERLAP)

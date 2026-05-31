@@ -102,6 +102,12 @@ kernel instrumentation.
 Gram-Schmidt setup is split by `PAW_GRAM_*` rows. These are nested PAW
 diagnostic envelopes: use them to identify the next target, not as additive
 wall-clock accounting.
+Residency-profile builds enable the initial Gram-Schmidt Cholesky solve by
+default. It replaces only the initial `WAVES$GRAMMSCHMIDT` solve with a LAPACK
+Cholesky orthogonalization when the overlap matrix is positive definite;
+otherwise it falls back to the legacy solver. Set `CPPAW_GRAM_CHOLESKY=0` or
+use `gpu_resident_gram_legacy` to compare against the old path; use
+`gpu_resident_gram_cholesky` to force the new path explicitly.
 
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
 defaults to `CPPAW_GPU_RESIDENCY=1`. Set `CPPAW_GPU_RESIDENCY=0` to disable the

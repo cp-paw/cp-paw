@@ -407,6 +407,8 @@ case_env() {
     gpu_resident_forcepsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_FORCE_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_orthoconst) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_CONST_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
+    gpu_resident_gram_cholesky) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=1 $(cublas_env)" ;;
+    gpu_resident_gram_legacy) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=0 $(cublas_env)" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;

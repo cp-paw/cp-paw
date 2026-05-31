@@ -82,9 +82,9 @@ The latest full-matrix run lives at:
    sweeps because its wall time can be marginally better at 1024-band size.
 
 6. The one-center overlap GPU-pack path removes the previous large
-   `WAVES_1COVERLAP` bottleneck. The next large-band hotspot is now the initial
-   Gram-Schmidt solve inside `WAVES_ORTHO_Y_C`, not another FFT/LAPACK library
-   toggle.
+   `WAVES_1COVERLAP` bottleneck. The next large-band hotspot became the initial
+   Gram-Schmidt solve inside `WAVES_ORTHO_Y_C`; the Cholesky follow-up below is
+   the first direct fix for that path.
 
 ## Present-Check Smoke
 
@@ -574,6 +574,46 @@ Practical conclusion: the next implementation PR should target
 more accelerator-friendly dense linear algebra path. Moving more FFT calls to
 cuFFT or adding more projector packing will not move the 2048-band wall time
 until this solve is addressed.
+
+## Initial Gram-Schmidt Cholesky Solve
+
+The follow-up implementation replaces only the initial
+`WAVES$GRAMMSCHMIDT` special case where `PHIPHI=CHIPHI=CHICHI=S`. For a
+positive-definite overlap matrix, it computes `S=U^H U` with LAPACK `ZPOTRF`,
+uses `ZTRTRI` to form `T=inv(U)`, and applies `X=T-I`. If the Cholesky path
+fails, the code falls back to the legacy `WAVES_ORTHO_Y_C` solver. Residency
+profile builds enable the path by default; set `CPPAW_GRAM_CHOLESKY=0` to use
+the legacy solver for comparison.
+
+Spark C86C validation:
+
+```
+runs/gram-cholesky-smoke1024-20260531-143107
+runs/gram-cholesky-smoke2048-20260531-143226
+runs/gram-cholesky-nstep3-1024-20260531-143332
+runs/gram-cholesky-default1024-20260531-143825
+runs/gram-cholesky-parallel-smoke512-20260531-144006
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | `PAW_ETOT_SETUP_GRAM` | `PAW_GRAM_SOLVE` | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Legacy default before Cholesky | 1024 | 1 | 1 | 42.10 s | 30.2490 s | 28.2038 s | 302.280854 Ha |
+| Cholesky opt-in | 1024 | 1 | 1 | 13.57 s | 2.2011 s | 0.1479 s | 302.280854 Ha |
+| New default Cholesky | 1024 | 1 | 1 | 14.05 s | - | - | 302.280854 Ha |
+| Explicit legacy override | 1024 | 1 | 1 | 41.74 s | - | - | 302.280854 Ha |
+| Legacy default before Cholesky | 2048 | 1 | 1 | 279.67 s | 241.9808 s | 237.5816 s | 302.280854 Ha |
+| Cholesky opt-in | 2048 | 1 | 1 | 41.34 s | 5.0733 s | 0.8782 s | 302.280854 Ha |
+| Legacy default before Cholesky | 1024 | 3 | 1 | 60.59 s | - | - | 208.886424 Ha |
+| Cholesky opt-in | 1024 | 3 | 1 | 32.85 s | - | - | 208.886424 Ha |
+| Parallel Cholesky smoke | 512 | 1 | 4 | 9.31 s | - | - | 302.280854 Ha |
+
+The 2048-band result is the clearest design signal: the previous 237.6 s
+initial Gram-Schmidt solve shrinks below 0.9 s, and the total run drops from
+279.67 s to 41.34 s with the same final energy. This path currently uses CPU
+LAPACK through the active NVHPC/NVPL linkage, not a GPU kernel. That is already
+enough to remove the dominant bottleneck; a later cuSOLVER `potrf/trtri` variant
+is only worth pursuing if larger runs show that this remaining sub-second block
+grows again.
 
 ## Recommended Next Benchmark
 
