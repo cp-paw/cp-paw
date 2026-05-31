@@ -40,6 +40,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `offden-device-accum-20260601-*` | Off-site DENMAT device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.26 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.59 s at 512/4 | Converts stacked complex `WORK` to real `MATPACK` on the GPU and copies that back; energy-valid and reduces copy volume, but kernel overhead keeps it opt-in. |
 | `offden-flat-accum-20260601-*` | Off-site DENMAT flat device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.64 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum` 9.62 s at 512/4 | Accumulates batches into one flat real off-site matrix buffer on the GPU and copies it back once per k-point/spin pass; energy-valid, useful at 1 MPI/GPU, neutral/noisy when four ranks share one GPU. |
 | `psim-present-copy-20260601-*` | PSIM propagation present-or-copy accounting | `gpu_resident` 6.36 s at 512/1 | - | `gpu_resident` 9.18 s at 512/4 | Changes the PSIM propagation data region to `present_or_copy`; energy-valid and correct for future broader residency, but current Si64 still copies PSIM in/out because no enclosing resident producer is active. |
+| `psim-focus-harness-20260601-*` | Focused PSIM propagation harness | `gpu_psim_propagate` 6.20 s at 512/1 | - | `gpu_psim_propagate` 9.19 s at 512/4 | Adds a reusable PSIM/HPSI propagation sweep; all cases are energy-valid, but the single-run 512-band timings are noisy and the PSIM path still increases copy volume, so this is a regression harness rather than a default promotion. |
 
 The latest full-matrix run lives at:
 
@@ -1527,6 +1528,40 @@ The current Si64 path still records `ACC_COPY_PROP_PSIM_IN` and
 present into `WAVES$PROPAGATE` yet. The code path is nevertheless now ready for
 that next step: once orthogonalization/projection leaves `PSIM` resident, the
 propagation kernel can reuse it without another local data-region rewrite.
+
+## PSIM Focus Harness
+
+The follow-up adds `tests/profile/si64/run_psim_focus.sh` so the PSIM/HPSI
+propagation comparison is reproducible instead of being an ad-hoc case list. The
+default sweep compares `gpu_resident`, `gpu_psim_propagate`,
+`gpu_resident_hpsi`, and `gpu_hpsi_psim_propagate` at `NSTEPS=1`,
+`EMPTY_BANDS=512`, first with one GPU rank and then with four ranks sharing the
+same GPU. Set `RUN_LARGE_GPU=yes` to add the 2048-band one-rank check.
+
+Spark C86C validation:
+
+```
+runs/psim-focus-harness-20260601-512-1r
+runs/psim-focus-harness-20260601-512-4r
+runs/psim-focus-harness-20260601-combined.tsv
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.13 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 1 | 6.20 s | 1.7730 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 1 | 6.38 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 1 | 6.17 s | 1.6369 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.29 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 4 | 9.19 s | 2.1387 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.77 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 4 | 9.56 s | 1.9977 GB | 0.000000401 Ha |
+
+The PSIM-propagation cases can look favorable in individual 512-band smokes, but
+they still copy more data than the corresponding no-PSIM-offload paths. Treat
+this harness as the guardrail for the broader future step: keeping `PSIM`
+resident across the orthogonalization/propagation boundary instead of copying it
+back immediately.
 
 ## DENMAT Profiling Split
 
