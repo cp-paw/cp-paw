@@ -30,6 +30,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `1cov-split-20260531-*` | One-center overlap copy accounting | `gpu_resident_hpsi` 40.48 s at 2048/1 | - | `gpu_resident_hpsi` 9.78 s at 512/4 | Splits the 1COV copy estimate into packed projector input and overlap-matrix output rows. |
 | `wave-io-split-20260531-*` | Wavefunction IO copy accounting | `gpu_resident_hpsi` 39.22 s at 2048/1 | - | `gpu_resident_hpsi` 9.72 s at 512/4 | Splits Gram, ORTHO, ADDPRO, and ADDOPSI wavefunction IO estimates into input and output rows. |
 | `denmat-energy-acc-v2-20260531-*` | DENMAT energy OpenACC diagnostic | `gpu_resident_hpsi` 39.00 s, `gpu_resident_hpsi_denmat_energy` 39.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.75 s at 512/4 | Adds an opt-in two-stage OpenACC diagnostic for the time-inversion DENMAT energy/Lambda contraction; DENMAT shrinks, but Lambda copies keep it diagnostic-only. |
+| `denmat-lagr-residency-20260531-*` | DENMAT LAGR setup/residency | `gpu_resident_hpsi` 37.19 s, `gpu_resident_hpsi_denmat_energy` 37.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.56 s at 512/4 | Precomputes `LAGR=LAMBDA*OCC` once per k-point/spin and keeps it resident for the DENMAT diagnostic; copy volume drops sharply, wall time remains neutral at 2048/1. |
 
 The latest full-matrix run lives at:
 
@@ -1560,6 +1561,55 @@ Spark because the prototype transfers Lambda once per site. The next useful
 step is therefore not to enable this by default, but to make Lambda/LAGR or the
 whole DENMAT working set resident across the atom loop, or to reformulate the
 contraction into a small batched BLAS path.
+
+## DENMAT LAGR Residency
+
+The next DENMAT follow-up precomputes `LAGR=LAMBDA*OCC` once per k-point/spin in
+the outer `WAVES$DENMAT` loop instead of rebuilding it inside every atom-site
+`WAVES_DENMAT` call. When `CPPAW_GPU_DENMAT_ENERGY=1` is active, the same LAGR
+block is copied to the GPU once and kept resident across the atom loop. New
+profile rows are `PAW_DENMAT_LAGR_SETUP`, `ACC_COPY_DENMAT_LAGR_IN`, and
+`ACC_PRESENT_DENMAT_LAGR`.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/denmat-lagr-residency-20260531-512-1r
+runs/denmat-lagr-residency-20260531-2048-1r
+runs/denmat-lagr-residency-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 1 | 7.10 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 512 | 1 | 6.43 s | 1.3786 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 37.19 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 2048 | 1 | 37.40 s | 4.9892 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.81 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 512 | 4 | 9.56 s | 1.7591 GB | 0.000000401 Ha |
+
+| Profile row | 2048/1 baseline | 2048/1 DENMAT GPU | 512/4 baseline, rank 1 | 512/4 DENMAT GPU, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_DENMAT_LAGR_SETUP` | 0.0217 s | 0.0249 s | 0.0024 s | 0.0022 s |
+| `ACC_COPY_DENMAT_LAGR_IN` | - | 0.0758 GB | - | 0.0066 GB |
+| `ACC_PRESENT_DENMAT_LAGR` | - | 64 calls | - | 16 calls |
+| `PAW_ETOT_DENMAT` | 2.0660 s | 0.8893 s | 0.2280 s | 0.1910 s |
+| `PAW_DENMAT_SITE_KERNEL` | 1.3356 s | 0.1399 s | 0.0705 s | 0.0325 s |
+| `PAW_DENMAT_ENERGY_LOOP` | 1.3226 s | 0.1268 s | 0.0681 s | 0.0302 s |
+| `ACC_KERNEL_DENMAT_ENERGY_TINV` | - | 0.1252 s | - | 0.0214 s |
+| `ACC_COPY_DENMAT_ENERGY_TINV` | - | 0.0147 GB | - | 0.0011 GB |
+| `PAW_OFFDEN_SUM` | 0.6993 s | 0.7135 s | 0.1524 s | 0.1527 s |
+
+Compared with the previous DENMAT GPU diagnostic, the total copy estimate for
+`gpu_resident_hpsi_denmat_energy` drops from 9.7620 GB to 4.9892 GB at 2048/1
+and from 2.1523 GB to 1.7591 GB at 512/4. The DENMAT envelope itself also
+shrinks strongly, but the full Si64 wall time remains dominated by other phases
+at 2048/1. Keep the DENMAT energy path opt-in and use these rows to decide
+whether the next step should be a batched BLAS formulation or broader
+projector/wavefunction residency around the one-center work.
 
 ## Recommended Next Benchmark
 
