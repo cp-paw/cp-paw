@@ -672,6 +672,45 @@ parallel 512-band smoke completed with 4 MPI ranks in 9.53 s and the same final
 energy. This makes the next useful Ortho-X target narrower: optimize or reduce
 the repeated transform/back-transform BLAS pairs, not the small scalar loops.
 
+## Ortho-X Workspace Residency
+
+The next implementation prototype adds the opt-in `gpu_resident_orthox` case,
+also enabled directly by `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. It keeps
+`LAMBDA`, `GAMN`, `HAUX`, `PSIPSI`, `CHIPSI`, `OCC`, and `EIG` in one OpenACC
+data region for the real `WAVES_ORTHO_X` iteration loop. The large transform
+pairs call the existing present-device cuBLAS helpers directly, while the
+residual check, denominator scaling, `LAMBDA` update, and occupation
+symmetrization loops run as OpenACC kernels. The numerical update formula is
+unchanged.
+
+Spark C86C validation:
+
+```
+runs/orthox-resident-smoke512-20260531-151403
+runs/orthox-resident-smoke2048-20260531-151428
+runs/orthox-resident-parallel-smoke512-20260531-151713
+runs/orthox-resident-nstep3-1024-20260531-151840
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `PAW_ORTHO_X_RESIDUAL` | `PAW_ORTHO_X_UPDATE` | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.15 s | 3.6863 GB | - | - | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.70 s | 3.0571 GB | - | - | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 41.63 s | 22.1456 GB | 2.8577 s | 5.3654 s | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 39.86 s | 8.2058 GB | 2.4293 s | 4.6135 s | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 4 | 9.38 s | 3.5241 GB | - | - | 302.280854 Ha |
+| `gpu_resident_orthox` | 1024, `NSTEPS=3` | 1 | 33.42 s | 9.8012 GB | - | - | 208.886424 Ha |
+
+The 2048-band case is the useful signal: wall time improves by about 4.3%, the
+copy estimate drops by about 13.9 GB, the residual check shrinks from 0.2489 s
+to 0.0207 s, and the update scalar/apply/sym loops shrink from about 0.589 s to
+0.0188 s. The two transform/back-transform matrix-product pairs remain the
+dominant Ortho-X work. Because the direct present-device cuBLAS calls are timed
+inside the `PAW_ORTHO_X_*` rows rather than the generic `CUBLAS_*` wrapper rows,
+the benchmark `blas_s` column undercounts this prototype; use the Ortho-X
+subphase rows for this comparison. Keep the path opt-in until longer runs check
+multi-step energy stability and larger systems.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

@@ -224,6 +224,9 @@ case_note() {
     gpu_resident_orthoconst)
       echo "Residency diagnostic that enables resident CHICHI/U inputs in WAVES_ORTHO_X."
       ;;
+    gpu_resident_orthox)
+      echo "Residency diagnostic that keeps the WAVES_ORTHO_X iteration workspace on the GPU."
+      ;;
     gpu_resident_1coverlap_host)
       echo "Residency diagnostic that disables only the one-center overlap cuBLAS path."
       ;;
@@ -406,6 +409,7 @@ case_env() {
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
     gpu_resident_forcepsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_FORCE_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_orthoconst) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_CONST_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_orthox) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_gram_cholesky) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=1 $(cublas_env)" ;;
     gpu_resident_gram_legacy) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=0 $(cublas_env)" ;;

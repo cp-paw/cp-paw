@@ -2448,7 +2448,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_ORTHO_CONST_RESIDENCY_ENABLED &
-     &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D
+     &      ,CPPAW_CUBLAS_ACC_ORTHO_X_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ,CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT &
+     &      ,CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT &
+     &      ,CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT
 #ENDIF
       IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
@@ -2486,10 +2490,12 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       LOGICAL(4)               :: TRESIDENTORTHOCONST
 #ENDIF
+      LOGICAL(4)               :: TRESIDENTORTHOX
 !     **************************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_X')
       ALLOCATE(GAMN(NB,NB))
       TCONVERGED=.FALSE.
+      TRESIDENTORTHOX=.FALSE.
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       ACCEL_ORTHOX_ITER=0
       ACCEL_ORTHOX_RESIDUAL_T=0.D0
@@ -2528,6 +2534,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !ENDDO
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       TRESIDENTORTHOCONST=CPPAW_CUBLAS_ACC_ORTHO_CONST_RESIDENCY_ENABLED()
+      TRESIDENTORTHOX=CPPAW_CUBLAS_ACC_ORTHO_X_RESIDENCY_ENABLED()
+      TRESIDENTORTHOCONST=TRESIDENTORTHOCONST.OR.TRESIDENTORTHOX
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       IF(TRESIDENTORTHOCONST) THEN
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
@@ -2537,10 +2545,25 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
      &      ('ACC_PRESENT_ORTHO_U','ACC_COPY_ORTHO_U_IN' &
      &      ,NB,NB,U)
       END IF
+      IF(TRESIDENTORTHOX) THEN
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ('ACC_PRESENT_ORTHO_X_LAMBDA','ACC_COPY_ORTHO_X_LAMBDA_IO' &
+     &      ,NB,NB,LAMBDA)
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ('ACC_PRESENT_ORTHO_X_PSIPSI','ACC_COPY_ORTHO_X_PSIPSI_IN' &
+     &      ,NB,NB,PSIPSI)
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ('ACC_PRESENT_ORTHO_X_CHIPSI','ACC_COPY_ORTHO_X_CHIPSI_IN' &
+     &      ,NB,NB,CHIPSI)
+      END IF
 #ENDIF
 !$ACC DATA PRESENT_OR_COPYIN(CHICHI(1:NB,1:NB),U(1:NB,1:NB)) &
 !$ACC& IF(TRESIDENTORTHOCONST)
 #ENDIF
+!$ACC DATA COPYIN(PSIPSI(1:NB,1:NB),CHIPSI(1:NB,1:NB)) &
+!$ACC& COPYIN(EIG(1:NB),OCC(1:NB)) COPY(LAMBDA(1:NB,1:NB)) &
+!$ACC& CREATE(GAMN(1:NB,1:NB),HAUX(1:NB,1:NB)) &
+!$ACC& IF(TRESIDENTORTHOX)
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -2560,6 +2583,21 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ==           +LAMBDA(K,I)*CHICHI(K,L)*LAMBDA(L,J)-1(I,J)              ==
 !       ========================================================================
 !       __GAMN(I,J) = CHICHI(I,K)*LAMBDA(K,J)___________________________________
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+          CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(NB,NB,NB &
+     &        ,CHICHI,LAMBDA,HAUX)
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(HAUX,CHIPSI)
+          DO J=1,NB
+            DO I=1,NB
+              HAUX(I,J)=HAUX(I,J)+2.D0*CHIPSI(I,J)
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+          CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT(.FALSE. &
+     &        ,NB,NB,LAMBDA,NB,HAUX,GAMN)
+        ELSE
+#ENDIF
         CALL LIB$MATMULR8(NB,NB,NB,CHICHI,LAMBDA,HAUX)
 !CALL DGEMUL(CHICHI,NB,'N',LAMBDA,NB,'N',HAUX,NB,NB,NB,NB)
 !       __HAUX(I,J) = HAUX(I,J)+2*CHIPSI(I,J)___________________________________
@@ -2568,6 +2606,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       __GAMN(I,J) = LAMBDA(K,I)*HAUX(K,J)_____________________________________
         CALL LIB$SCALARPRODUCTR8(.FALSE.,NB,NB,LAMBDA,NB,HAUX,GAMN)
 !CALL DGEMUL(LAMBDA,NB,'T',HAUX,NB,'N',GAMN,NB,NB,NB,NB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_RESIDUAL_MATMUL_T=ACCEL_ORTHOX_RESIDUAL_MATMUL_T &
@@ -2577,6 +2618,28 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T0)
 #ENDIF
 !       __GAMN(I,J) = GAMN(I,J)-1_______________________________________________
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+          DIGAM=0.D0
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(GAMN,PSIPSI) &
+!$ACC& REDUCTION(MAX:DIGAM) PRIVATE(SVAR)
+          DO J=1,NB
+            DO I=1,NB
+              IF(I.LT.J) THEN
+                SVAR=0.5D0*(GAMN(I,J)+GAMN(J,I))+PSIPSI(I,J)
+                GAMN(J,I)=SVAR
+                GAMN(I,J)=SVAR
+                IF(ABS(SVAR).GT.DIGAM) DIGAM=ABS(SVAR)
+              ELSE IF(I.EQ.J) THEN
+                SVAR=GAMN(I,I)+PSIPSI(I,I)-1.D0
+                GAMN(I,I)=SVAR
+                IF(ABS(SVAR).GT.DIGAM) DIGAM=ABS(SVAR)
+              END IF
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        ELSE
+#ENDIF
         DO I=1,NB
           DO J=I,NB
             SVAR=0.5D0*(GAMN(I,J)+GAMN(J,I))+PSIPSI(I,J)
@@ -2594,6 +2657,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       == CHECK CONVERGENCE MAXVAL(ABS(OVERLAP-1))<EPS ; GAMN=OVERLAP-1      ==
 !       ========================================================================
         DIGAM=MAXVAL(ABS(GAMN))
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_RESIDUAL_CHECK_T=ACCEL_ORTHOX_RESIDUAL_CHECK_T &
@@ -2627,11 +2693,22 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #ENDIF
 !       == TRANSFORM OVERLAP MATRIX GAMN
 !       ----  HAUX(I,L)=U(K,I)*H0(K,L)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+          CALL CPPAW_CUBLAS_ACC_SCALARPRODUCT_R8_PRESENT(.FALSE. &
+     &        ,NB,NB,U,NB,GAMN,HAUX)
+          CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(NB,NB,NB &
+     &        ,HAUX,U,GAMN)
+        ELSE
+#ENDIF
         CALL LIB$SCALARPRODUCTR8(.FALSE.,NB,NB,U,NB,GAMN,HAUX)
 !CALL DGEMUL(U,NB,'T',GAMN,NB,'N',HAUX,NB,NB,NB,NB)
 !       ----  GAMN(I,J)=HAUX(I,L)*U(L,I)
         CALL LIB$MATMULR8(NB,NB,NB,HAUX,U,GAMN)
 !CALL DGEMUL(HAUX,NB,'N',U,NB,'N',GAMN,NB,NB,NB,NB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_UPDATE_TRANSFORM_T=ACCEL_ORTHOX_UPDATE_TRANSFORM_T &
@@ -2642,12 +2719,26 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #ENDIF
 !
 !       ==  MULTIPLY WITH 1/(EIG(I)+EIG(J))
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(GAMN,EIG)
+          DO J=1,NB
+            DO I=1,NB
+              GAMN(I,J)=GAMN(I,J)/(EIG(I)+EIG(J))
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        ELSE
+#ENDIF
         DO I=1,NB
           EIGI=EIG(I)
           DO J=1,NB
             GAMN(I,J)=GAMN(I,J)/(EIGI+EIG(J))
           ENDDO
         ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_UPDATE_SCALE_T=ACCEL_ORTHOX_UPDATE_SCALE_T &
@@ -2659,11 +2750,22 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !
 !       == TRANSFORM OVERLAP MATRIX GAMN BACK
 !       ----  HAUX(I,L)=U(K,I)*H0(K,L)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+          CALL CPPAW_CUBLAS_ACC_DGEMM_MATMUL_PRESENT(NB,NB,NB &
+     &        ,U,GAMN,HAUX)
+          CALL CPPAW_CUBLAS_ACC_DGEMM_NT_PRESENT(NB,NB,NB &
+     &        ,HAUX,U,GAMN)
+        ELSE
+#ENDIF
         CALL LIB$MATMULR8(NB,NB,NB,U,GAMN,HAUX)
 !CALL DGEMUL(U,NB,'N',GAMN,NB,'N',HAUX,NB,NB,NB,NB)
 !       ----  GAMN(I,J)=HAUX(I,L)*U(L,I)
         CALL LIB$DYADSUMR8(NB,NB,NB,HAUX,U,GAMN)
 !CALL DGEMUL(HAUX,NB,'N',U,NB,'T',GAMN,NB,NB,NB,NB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_UPDATE_BACKTRANSFORM_T &
@@ -2680,6 +2782,21 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ========================================================================
 !       ==  PROPAGATE GAMMA                                                   ==
 !       ========================================================================
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(LAMBDA,GAMN,OCC) &
+!$ACC& PRIVATE(OCCI,OCCJ,SVAR)
+          DO J=1,NB
+            DO I=1,NB
+              OCCI=OCC(I)+DSMALL
+              OCCJ=OCC(J)+DSMALL
+              SVAR=2.D0*OCCI/(OCCI+OCCJ)
+              LAMBDA(I,J)=LAMBDA(I,J)-SVAR*GAMN(I,J)
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        ELSE
+#ENDIF
         DO I=1,NB
           OCCI=OCC(I)+DSMALL
           DO J=1,NB
@@ -2688,6 +2805,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
             LAMBDA(I,J)=LAMBDA(I,J)-SVAR*GAMN(I,J)
           ENDDO
         ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_UPDATE_APPLY_T=ACCEL_ORTHOX_UPDATE_APPLY_T &
@@ -2703,6 +2823,19 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ========================================================================
 !       == SYMMETRIZE LAMBDA                                                  ==
 !       ========================================================================
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        IF(TRESIDENTORTHOX) THEN
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(LAMBDA,OCC)
+          DO J=1,NB
+            DO I=1,NB
+              IF(OCC(I).LT.OCC(J)) THEN
+                LAMBDA(I,J)=LAMBDA(J,I)*(OCC(I)+DSMALL)/(OCC(J)+DSMALL)
+              END IF
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        ELSE
+#ENDIF
         DO I=1,NB
           DO J=1,NB
             IF(OCC(I).LT.OCC(J)) THEN
@@ -2710,6 +2843,9 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
             END IF
           ENDDO
         ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_ORTHOX_T1)
         ACCEL_ORTHOX_UPDATE_SYM_T=ACCEL_ORTHOX_UPDATE_SYM_T &
@@ -2718,6 +2854,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
      &                       +ACCEL_ORTHOX_T1-ACCEL_ORTHOX_T0
 #ENDIF
       ENDDO
+!$ACC END DATA
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 !$ACC END DATA
 #ENDIF
