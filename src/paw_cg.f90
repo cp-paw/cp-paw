@@ -100,7 +100,7 @@ WRITE(*,"('CG-MIXER: POT   :',3F10.7)") V(1:3,1)
             ALLOCATE(R0(3,NAT))
             CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R0)
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,MAP%NPRO &
-                ,THIS%PSI0,THIS%PROJ) 
+                ,THIS%PSI0,THIS%PROJ,'CG_STATE')
             DEALLOCATE(R0)
             !DEALLOCATE(PROJ)
             CALL TIMING$CLOCKOFF('CG-PRO2')
@@ -146,7 +146,7 @@ WRITE(*,"('CG-MIXER: POT   :',3F10.7)") V(1:3,1)
          IF(TNEWPRO) THEN
             CALL TIMING$CLOCKON('CG-PROJ')
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,1,1,NPRO &
-                 ,PSI,PROJ)
+                 ,PSI,PROJ,'CG_HPSI')
             CALL TIMING$CLOCKOFF('CG-PROJ')
          END IF
 !WRITE(*,"('HPSI PROJ 2',3F10.5)") REAL(PROJ(1,1:3))
@@ -168,7 +168,7 @@ WRITE(*,"('CG-MIXER: POT   :',3F10.7)") V(1:3,1)
          IF(TNEWPRO) THEN
             CALL TIMING$CLOCKON('CG-PROJ')
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,1,1,NPRO &
-                 ,PSI,PROJ)
+                 ,PSI,PROJ,'CG_OPSI')
             CALL TIMING$CLOCKOFF('CG-PROJ')
          END IF
 !WRITE(*,"('OPSI PROJ  ',3F10.5)") REAL(PROJ(1,1:3))
@@ -710,7 +710,5 @@ WRITE(*,*)
 !WRITE(*,"('NORM PROJ 2',3F10.5)") REAL(PROJ(1,1:3))
       RETURN
       END SUBROUTINE CG_INTERNAL_NORMALIZE
-
-
 
 

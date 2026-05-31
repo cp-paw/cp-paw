@@ -201,8 +201,10 @@ places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
 `PSIM`/`OPSI` in the orthogonalization region and `WAVES_ADDOPSI`,
 with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
-`PROPSI` in `WAVES_PROJECTIONS`, and context-specific `PSI`/`PROPSI` rows in
-`WAVES_ADDPRO` (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
+`PROPSI` in `WAVES_PROJECTIONS`, and context-specific projection `PSI` rows
+such as `ACC_COPY_PROJ_SETUP0_PSI_IN`, `ACC_COPY_PROJ_GRAM_PSI0_PSI_IN`, and
+`ACC_COPY_PROJ_ORTHO_PSIM_PSI_IN`. `WAVES_ADDPRO` has context-specific
+`PSI`/`PROPSI` rows (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
 copy estimates because the projector addition updates the wavefunction. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
 and records that outer input/output region with context-specific rows such as

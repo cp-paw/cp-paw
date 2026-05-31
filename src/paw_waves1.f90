@@ -3013,7 +3013,7 @@ END IF
           NBH=THIS%NBH
           IF(ID.EQ.'PSI0') THEN
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,MAP%NPRO &
-     &                            ,THIS%PSI0,THIS%PROJ)
+     &                            ,THIS%PSI0,THIS%PROJ,'SETUP0')
             CALL MPE$COMBINE('K','+',THIS%PROJ)
           ELSE
             CALL ERROR$MSG('ID NOT RECOGNIZED')
@@ -6416,7 +6416,8 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NB,NPRO,PSI,PROPSI)
+      SUBROUTINE WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NB,NPRO,PSI &
+     &                             ,PROPSI,PROFILE_ID)
 !     **************************************************************************
 !     **                                                                      **
 !     **  CALCULATE PROJECTIONS                                               **
@@ -6446,6 +6447,7 @@ RETURN
       INTEGER(4)     ,INTENT(IN) :: NPRO       ! #(PROJECTIONS)
       COMPLEX(8)     ,INTENT(IN) :: PSI(NGL,NDIM,NB) !WAVEFUNCTIONS
       COMPLEX(8)     ,INTENT(OUT):: PROPSI(NDIM,NB,NPRO) !
+      CHARACTER(*)   ,INTENT(IN) :: PROFILE_ID
       REAL(8)        ,ALLOCATABLE:: GVEC(:,:)  !(3,NGL)
       COMPLEX(8)     ,ALLOCATABLE:: PRO(:,:)   !(NGL,LMNXX)
       COMPLEX(8)     ,ALLOCATABLE:: PROPSI1(:) !(LMNX,NDIM,NB)
@@ -6467,6 +6469,10 @@ RETURN
       LOGICAL(4)                 :: TSUPER
       REAL(8)                    :: PROJFLOPS
       REAL(8)                    :: GWEIGHT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CHARACTER(32)               :: ACC_PRESENT_PSI
+      CHARACTER(32)               :: ACC_COPY_PSI
+#ENDIF
 !     **************************************************************************
                                 CALL TIMING$CLOCKON('WAVES_PROJECTIONS')
 !
@@ -6526,9 +6532,10 @@ RETURN
         IPRO=1
         TUSEGPUEXPANDPRO=CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED()
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        ACC_PRESENT_PSI='ACC_PRESENT_PROJ_'//TRIM(PROFILE_ID)//'_PSI'
+        ACC_COPY_PSI='ACC_COPY_PROJ_'//TRIM(PROFILE_ID)//'_PSI_IN'
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
-     &      ('ACC_PRESENT_PROJ_PSI','ACC_COPY_PROJ_PSI_IN' &
-     &      ,NGL,NDIM,NB,PSI)
+     &      (ACC_PRESENT_PSI,ACC_COPY_PSI,NGL,NDIM,NB,PSI)
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
      &      ('ACC_PRESENT_PROJ_PROPSI','ACC_COPY_PROJ_PROPSI_OUT' &
      &      ,NDIM,NB,NPRO,PROPSI)
@@ -6584,9 +6591,10 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         IF(TUSECUBLASPROJ) THEN
+          ACC_PRESENT_PSI='ACC_PRESENT_PROJ_'//TRIM(PROFILE_ID)//'_PSI'
+          ACC_COPY_PSI='ACC_COPY_PROJ_'//TRIM(PROFILE_ID)//'_PSI_IN'
           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
-     &        ('ACC_PRESENT_PROJ_PSI','ACC_COPY_PROJ_PSI_IN' &
-     &        ,NGL,NDIM,NB,PSI)
+     &        (ACC_PRESENT_PSI,ACC_COPY_PSI,NGL,NDIM,NB,PSI)
         END IF
 #ENDIF
 #ENDIF

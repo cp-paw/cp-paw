@@ -336,11 +336,13 @@ END IF
 !$ACC DATA COPY(THIS%PSIM(1:NGL,1:NDIM,1:NBH)) &
 !$ACC& COPYIN(THIS%OPSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTOVERLAP)
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
-     &                                                     ,THIS%PSIM,THIS%PROJ)
+     &                                               ,THIS%PSIM,THIS%PROJ &
+     &                                               ,'ORTHO_PSIM')
           CALL MPE$COMBINE('K','+',THIS%PROJ)
           ALLOCATE(OPROJ(NDIM,NBH,NPRO))
           CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
-     &                                                         ,THIS%OPSI,OPROJ)
+     &                                                    ,THIS%OPSI,OPROJ &
+     &                                                    ,'ORTHO_OPSI')
           CALL MPE$COMBINE('K','+',OPROJ)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -588,7 +590,8 @@ END IF
 !         ======================================================================
           IF(TTEST) THEN
             ALLOCATE(OPROJ(NDIM,NBH,NPRO))
-            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO,THIS%PSIM,OPROJ)
+            CALL WAVES_PROJECTIONS(MAP,GSET,NAT,RP,NGL,NDIM,NBH,NPRO &
+     &                             ,THIS%PSIM,OPROJ,'ORTHO_TEST')
             CALL MPE$COMBINE('K','+',OPROJ)
             ALLOCATE(AUXMAT(NB,NB))
             CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,OPROJ,OPROJ,AUXMAT)
@@ -3156,7 +3159,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       CALL ACCELPROFILE$NOW(ACCEL_GRAM_T0)
 #ENDIF
 !$ACC DATA COPY(PSI(1:NGL,1:NDIM,1:NBH)) IF(TRESIDENTGRAM)
-      CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
+      CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI &
+     &                       ,PROJ,'GRAM_'//TRIM(PROFILE_ID))
       CALL MPE$COMBINE('K','+',PROJ)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_GRAM_T1)
@@ -3361,7 +3365,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     =================================================================
       IF(TTEST) THEN
         ALLOCATE(PROJ(NDIM,NBH,NPRO))
-        CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI,PROJ)
+        CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO,PSI &
+     &                         ,PROJ,'GRAM_TEST')
         CALL MPE$COMBINE('K','+',PROJ)
         ALLOCATE(AUXMAT(NB,NB))
         CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
@@ -3998,7 +4003,7 @@ PRINT*,'CELLSCALE ',CELLSCALE
 !           =============================================================
             ALLOCATE(PROJ(NDIM,NBH,NPRO))
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NBH,NPRO &
-       &                          ,THIS%PSI0,PROJ)
+       &                          ,THIS%PSI0,PROJ,'WRITEPDOS')
             CALL MPE$COMBINE('K','+',PROJ)
           END IF
           IF(KMAP(IKPTG).EQ.THISTASK) THEN
@@ -6798,10 +6803,12 @@ DEALLOCATE(TEST)
           ALLOCATE(THISPROJ(NDIM,NBH,NPRO))
           IF(ID.EQ.'0') THEN
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO &
-     &                                                     ,THIS%PSI0,THISPROJ)
+     &                                               ,THIS%PSI0,THISPROJ &
+     &                                               ,'TEST0')
           ELSE IF(ID.EQ.'-') THEN
             CALL WAVES_PROJECTIONS(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NPRO &
-     &                                                     ,THIS%PSIM,THISPROJ)
+     &                                               ,THIS%PSIM,THISPROJ &
+     &                                               ,'TESTM')
           ELSE
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('WAVES$TESTORTHO')
