@@ -495,6 +495,22 @@ DENMAT-energy cases. By default it runs `EMPTY_BANDS=2048` on one GPU rank and
 `OFFDEN_CASES`, `GPU_RANKS`, `SHARED_GPU_RANKS`, `EMPTY_BANDS`, or
 `RUN_SHARED_GPU=no` for narrower checks.
 
+For the focused PSIM propagation comparison, run:
+
+```
+cd tests/profile/si64
+./run_psim_focus.sh
+```
+
+It compares the default residency path, PSIM propagation, HPSI residency, and
+the combined HPSI-plus-PSIM propagation diagnostic. By default it runs
+`EMPTY_BANDS=512` with one GPU rank and `SHARED_EMPTY_BANDS=512` with four
+ranks sharing the GPU, then writes a combined TSV/Markdown summary next to the
+run directories. Set `RUN_LARGE_GPU=yes` to add a one-rank
+`LARGE_EMPTY_BANDS=2048` sweep, or override `PSIM_CASES`, `GPU_RANKS`,
+`SHARED_GPU_RANKS`, `EMPTY_BANDS`, and `RUN_SHARED_GPU=no` for narrower
+checks.
+
 For the larger orthogonalization preset used in the residency follow-up, run:
 
 ```
