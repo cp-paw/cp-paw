@@ -627,7 +627,9 @@ be overridden by kernel category:
   orthogonalization `OPSI` resident through projection, overlap, and
   `WAVES_ADDOPSI` on eligible non-stress paths. Non-superwave paths can keep
   OPSI resident from build and mass scaling; superwave paths currently build and
-  mass-scale OPSI on the host before entering the resident region. The
+  mass-scale OPSI on the host before entering the resident region, while later
+  projection and `WAVES_ADDOPSI` consumers use `present_or_copyin` data regions.
+  The
   compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
   `WAVES$PROPAGATE` on the GPU for non-stress steps and copy the updated `PSIM`
