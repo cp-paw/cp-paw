@@ -290,11 +290,20 @@ case_note() {
     gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack)
       echo "Combined HPSI residency, DENMAT energy/Lambda diagnostic, and stacked cuBLAS off-site DENMAT with OpenACC device packing."
       ;;
+    gpu_resident_hpsi_offden_cublas_devicepack_accum)
+      echo "Device-pack off-site DENMAT diagnostic that accumulates the stacked cuBLAS result into a real matrix pack on the GPU."
+      ;;
+    gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum)
+      echo "Combined DENMAT energy/device-pack diagnostic with GPU-side off-site real-matrix accumulation."
+      ;;
     gpu_resident_hpsi_offden_cublas_devicepack_proj)
       echo "Device-pack off-site DENMAT diagnostic with HPSI and persistent THIS%PROJ residency enabled."
       ;;
     gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj)
       echo "Combined DENMAT energy/device-pack off-site diagnostic with persistent THIS%PROJ residency enabled."
+      ;;
+    gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum)
+      echo "Combined DENMAT energy/device-pack off-site diagnostic with persistent THIS%PROJ and GPU-side real-matrix accumulation."
       ;;
     gpu_resident_offden_blas)
       echo "Residency diagnostic that enables the opt-in scalar TINV off-site DENMAT BLAS prototype."
@@ -527,8 +536,11 @@ case_env() {
     gpu_resident_hpsi_denmat_energy_offden_cublas_batch) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_hpsi_offden_cublas_devicepack) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
+    gpu_resident_hpsi_offden_cublas_devicepack_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
+    gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_hpsi_offden_cublas_devicepack_proj) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
+    gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_offden_blas) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 $(cublas_env)" ;;
     gpu_resident_hpsi_offden_blas) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 $(cublas_env)" ;;
     gpu_psim_propagate|gpu_resident_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
