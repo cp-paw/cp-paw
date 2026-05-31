@@ -269,9 +269,14 @@ An opt-in diagnostic, `CPPAW_GPU_DENMAT_ENERGY=1`, offloads the
 time-inversion `WAVES_DENMAT` energy/Lambda contraction with OpenACC and records
 `ACC_KERNEL_DENMAT_ENERGY_TINV` plus `ACC_COPY_DENMAT_ENERGY_TINV`; the harness
 cases are `gpu_resident_denmat_energy` and
-`gpu_resident_hpsi_denmat_energy`. It is disabled by default because the
-prototype copies the Lambda block per site and is meant to measure the value of
-a broader resident rewrite.
+`gpu_resident_hpsi_denmat_energy`. The outer `WAVES$DENMAT` setup records
+`PAW_DENMAT_LAGR_SETUP`, builds `LAGR=LAMBDA*OCC` once per k-point/spin, and,
+when the diagnostic is active, keeps that block resident across the atom loop.
+The LAGR device lifetime is visible through `ACC_COPY_DENMAT_LAGR_IN` and
+`ACC_PRESENT_DENMAT_LAGR`; the remaining per-site output copy is reported as
+`ACC_COPY_DENMAT_ENERGY_TINV`. It is disabled by default because the current
+Si64 wall time is still neutral even though the DENMAT envelope and transfer
+estimate shrink.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
@@ -506,7 +511,9 @@ be overridden by kernel category:
   time-inversion one-center DENMAT energy/Lambda contraction with OpenACC. The
   compatibility alias is `CPPAW_CUBLAS_ACC_DENMAT_ENERGY`; use
   `CPPAW_GPU_DENMAT_MINFLOP` or `CPPAW_CUBLAS_ACC_DENMAT_MINFLOP` to adjust the
-  offload threshold.
+  offload threshold. Residency-profile builds precompute the corresponding
+  `LAGR=LAMBDA*OCC` block once per k-point/spin and keep it on the GPU while
+  the DENMAT diagnostic is active.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,
