@@ -7563,6 +7563,11 @@ RETURN
 !     **                                                                      **
 !     **************************************************************************
       USE WAVES_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_PSIM_PROPAGATE_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+#ENDIF
       IMPLICIT NONE
       INTEGER(4)            :: IKPT,ISPIN,IG,IDIM,IB
       INTEGER(4)            :: NGL
@@ -7575,6 +7580,9 @@ RETURN
       REAL(8)               :: FRICMAT(3,3)
       REAL(8)  ,ALLOCATABLE :: GVEC(:,:)
       REAL(8)  ,ALLOCATABLE :: ANNEEVEC(:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)            :: TRESIDENTPSIM
+#ENDIF
 !     **************************************************************************
       IF(OPTIMIZERTYPE.EQ.'CG') RETURN                           !KAESTNERCG
                               CALL TRACE$PUSH('WAVES$PROPAGATE')
@@ -7650,15 +7658,60 @@ RETURN
             CALL ERROR$STOP('WAVES$PROPAGATE')
           END IF
           NBH=THIS%NBH
-          DO IB=1,NBH
-            DO IDIM=1,NDIM
-              DO IG=1,NGL
-                THIS%PSIM(IG,IDIM,IB)=ARR1(IG)*THIS%PSI0(IG,IDIM,IB) &
-       &                             +ARR2(IG)*THIS%PSIM(IG,IDIM,IB) &
-       &                             +ARR3(IG)*THIS%HPSI(IG,IDIM,IB) 
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          TRESIDENTPSIM=CPPAW_CUBLAS_ACC_PSIM_PROPAGATE_ENABLED() &
+     &                  .AND.(.NOT.TSTRESS)
+          IF(TRESIDENTPSIM) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_PROP_PSI0','ACC_COPY_PROP_PSI0_IN' &
+     &          ,NGL,NDIM,NBH,THIS%PSI0)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_PROP_PSIM','ACC_COPY_PROP_PSIM_IN' &
+     &          ,NGL,NDIM,NBH,THIS%PSIM)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_PROP_HPSI','ACC_COPY_PROP_HPSI_IN' &
+     &          ,NGL,NDIM,NBH,THIS%HPSI)
+            CALL ACCELPROFILE$ADD('ACC_COPY_PROP_COEFF_IN' &
+     &          ,INT(NGL,KIND=8),3_8,0_8,0_8 &
+     &          ,0.D0,8.D0*3.D0*REAL(NGL,KIND=8),0.D0)
+#ENDIF
+            CALL WAVES_PROPAGATE_PSIM_ACC(NGL,NDIM,NBH,ARR1,ARR2,ARR3 &
+     &                                    ,THIS%PSI0,THIS%PSIM,THIS%HPSI)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$ADD('ACC_COPY_PROP_PSIM_OUT' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &          ,0_8,0.D0,16.D0*REAL(NGL,KIND=8) &
+     &          *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
+#ENDIF
+            IF(THIS%HPSI_ACC_RESIDENT) THEN
+!$ACC EXIT DATA DELETE(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
+            END IF
+            THIS%HPSI_ACC_RESIDENT=.FALSE.
+          ELSE
+            IF(THIS%HPSI_ACC_RESIDENT) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$ADD('ACC_COPY_PROP_HPSI_HOST_OUT' &
+     &            ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &            ,0_8,0.D0,16.D0*REAL(NGL,KIND=8) &
+     &            *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
+#ENDIF
+!$ACC EXIT DATA COPYOUT(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
+              THIS%HPSI_ACC_RESIDENT=.FALSE.
+            END IF
+#ENDIF
+            DO IB=1,NBH
+              DO IDIM=1,NDIM
+                DO IG=1,NGL
+                  THIS%PSIM(IG,IDIM,IB)=ARR1(IG)*THIS%PSI0(IG,IDIM,IB) &
+       &                               +ARR2(IG)*THIS%PSIM(IG,IDIM,IB) &
+       &                               +ARR3(IG)*THIS%HPSI(IG,IDIM,IB)
+                ENDDO
               ENDDO
             ENDDO
-          ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          END IF
+#ENDIF
           DEALLOCATE(THIS%HPSI)
         ENDDO
         DEALLOCATE(ARR1)
@@ -7666,6 +7719,48 @@ RETURN
         DEALLOCATE(ARR3)
       ENDDO
                               CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_PROPAGATE_PSIM_ACC(NGL,NDIM,NBH,ARR1,ARR2,ARR3 &
+     &                                    ,PSI0,PSIM,HPSI)
+!     **************************************************************************
+!     **  GPU PROTOTYPE FOR THE PROPAGATION UPDATE OF PSIM.                  **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NBH
+      REAL(8)   ,INTENT(IN)    :: ARR1(NGL)
+      REAL(8)   ,INTENT(IN)    :: ARR2(NGL)
+      REAL(8)   ,INTENT(IN)    :: ARR3(NGL)
+      COMPLEX(8),INTENT(IN)    :: PSI0(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(INOUT) :: PSIM(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(IN)    :: HPSI(NGL,NDIM,NBH)
+      INTEGER(4)               :: IG
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: IB
+!     **************************************************************************
+!$ACC DATA COPY(PSIM(1:NGL,1:NDIM,1:NBH)) &
+!$ACC& COPYIN(PSI0(1:NGL,1:NDIM,1:NBH) &
+!$ACC&       ,ARR1(1:NGL),ARR2(1:NGL),ARR3(1:NGL)) &
+!$ACC& PRESENT_OR_COPYIN(HPSI(1:NGL,1:NDIM,1:NBH))
+!$ACC PARALLEL LOOP COLLAPSE(3) &
+!$ACC& PRESENT(PSI0(1:NGL,1:NDIM,1:NBH),PSIM(1:NGL,1:NDIM,1:NBH) &
+!$ACC&        ,HPSI(1:NGL,1:NDIM,1:NBH) &
+!$ACC&        ,ARR1(1:NGL),ARR2(1:NGL),ARR3(1:NGL))
+      DO IB=1,NBH
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            PSIM(IG,IDIM,IB)=ARR1(IG)*PSI0(IG,IDIM,IB) &
+     &                       +ARR2(IG)*PSIM(IG,IDIM,IB) &
+     &                       +ARR3(IG)*HPSI(IG,IDIM,IB)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
       RETURN
       END
 !

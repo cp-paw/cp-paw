@@ -172,7 +172,7 @@ serial_exe() {
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile/paw_nvhpc_cufftw_profile.x" ;;
     cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile/paw_nvhpc_cufft_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile/paw_nvhpc_gpu_all_profile.x" ;;
-    gpu_resident*) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" ;;
+    gpu_resident*|gpu_psim_propagate|gpu_hpsi_psim_propagate) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile/paw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile/paw_nvhpc_gpu_acc_managed_profile.x" ;;
     gpu_unified*) echo "${ROOT}/bin/nvhpc_gpu_acc_unified_profile/paw_nvhpc_gpu_acc_unified_profile.x" ;;
     gpu*) echo "${ROOT}/bin/nvhpc_gpu_acc_profile/paw_nvhpc_gpu_acc_profile.x" ;;
@@ -191,7 +191,7 @@ parallel_exe() {
     cufftw) echo "${ROOT}/bin/nvhpc_cufftw_profile_parallel/ppaw_nvhpc_cufftw_profile.x" ;;
     cufft|cufft_off) echo "${ROOT}/bin/nvhpc_cufft_profile_parallel/ppaw_nvhpc_cufft_profile.x" ;;
     gpu_all*) echo "${ROOT}/bin/nvhpc_gpu_all_profile_parallel/ppaw_nvhpc_gpu_all_profile.x" ;;
-    gpu_resident*) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile_parallel/ppaw_nvhpc_gpu_acc_residency_profile.x" ;;
+    gpu_resident*|gpu_psim_propagate|gpu_hpsi_psim_propagate) echo "${ROOT}/bin/nvhpc_gpu_acc_residency_profile_parallel/ppaw_nvhpc_gpu_acc_residency_profile.x" ;;
     gpu_managed*) echo "${ROOT}/bin/nvhpc_gpu_acc_managed_profile_parallel/ppaw_nvhpc_gpu_acc_managed_profile.x" ;;
     gpu_unified*) echo "${ROOT}/bin/nvhpc_gpu_acc_unified_profile_parallel/ppaw_nvhpc_gpu_acc_unified_profile.x" ;;
     gpu*) echo "${ROOT}/bin/nvhpc_gpu_acc_profile_parallel/ppaw_nvhpc_gpu_acc_profile.x" ;;
@@ -253,6 +253,12 @@ case_note() {
       ;;
     gpu_resident_hpsi)
       echo "Residency diagnostic that keeps HPSI on the GPU from WAVES_ADDPRO through the immediate expectation/Hamiltonian overlaps."
+      ;;
+    gpu_psim_propagate|gpu_resident_psim)
+      echo "Diagnostic that propagates PSIM on the GPU and copies it back before orthogonalization."
+      ;;
+    gpu_hpsi_psim_propagate|gpu_resident_hpsi_psim)
+      echo "Diagnostic that combines HPSI residency with GPU PSIM propagation."
       ;;
     gpu_resident_hpsi_opsi)
       echo "Residency diagnostic that combines HPSI and OPSI wavefunction residency switches."
@@ -461,6 +467,8 @@ case_env() {
     gpu_resident_orthox_nosync) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_hpsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_psim_propagate|gpu_resident_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
+    gpu_hpsi_psim_propagate|gpu_resident_hpsi_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
     gpu_resident_hpsi_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_gram_cholesky) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=1 $(cublas_env)" ;;

@@ -191,9 +191,16 @@ show that the reduced copy volume also improves wall time. Another opt-in
 diagnostic keeps `HPSI` resident after the Hamiltonian-side `WAVES_ADDPRO`
 update and reuses it for the immediate expectation and full-Hamiltonian overlap
 calls; set `CPPAW_GPU_HPSI_RESIDENCY=1` or use `gpu_resident_hpsi` to test it.
-The longer alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. It is disabled by
-default because these downstream overlaps can be small, so the benchmark must
-show whether reduced transfers beat forced GPU execution. Generic
+The longer alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. A separate opt-in
+diagnostic propagates `PSIM` on the GPU and immediately copies the updated
+wavefunction back before the following host-side projection work; set
+`CPPAW_GPU_PSIM_PROPAGATE=1` or use `gpu_psim_propagate` /
+`gpu_hpsi_psim_propagate`. The older `CPPAW_GPU_PSIM_RESIDENCY` alias is still
+accepted for compatibility, but true cross-orthogonalization PSIM residency needs
+broader projection/PRO residency first. These switches are disabled by default
+because the extra propagation inputs and output copy can outweigh the kernel
+offload.
+Generic
 resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
 inputs are counted separately from real transfer estimates. The overlap region
@@ -319,6 +326,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_opsi` | Opt-in residency diagnostic that keeps orthogonalization `OPSI` on the GPU through projection/overlap/`WAVES_ADDOPSI` via `CPPAW_GPU_OPSI_RESIDENCY=1`; superwave cases use conservative host build/scale staging before device residency. |
 | `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
+| `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
+| `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -473,6 +482,11 @@ be overridden by kernel category:
   OPSI resident from build and mass scaling; superwave paths currently build and
   mass-scale OPSI on the host before entering the resident region. The
   compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
+- `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
+  `WAVES$PROPAGATE` on the GPU for non-stress steps and copy the updated `PSIM`
+  back before orthogonalization. The compatibility aliases are
+  `CPPAW_GPU_PSIM_RESIDENCY` and `CPPAW_CUBLAS_ACC_PSIM_RESIDENCY`; they do not
+  imply true cross-orthogonalization residency in the current implementation.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,
