@@ -411,6 +411,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_offden_cublas_devicepack_accum` | Device-pack off-site DENMAT diagnostic with GPU-side real-matrix accumulation. |
 | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum` | Combined DENMAT energy/device-pack diagnostic with GPU-side real-matrix accumulation. |
 | `gpu_resident_hpsi_offden_cublas_devicepack_proj` | Device-pack off-site DENMAT diagnostic with HPSI and persistent `THIS%PROJ` residency enabled. |
+| `gpu_resident_hpsi_offden_cublas_devicepack_proj_accum` | Device-pack off-site DENMAT diagnostic with HPSI, persistent `THIS%PROJ`, and GPU-side real-matrix accumulation. |
 | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` | Combined DENMAT energy/device-pack off-site diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Combined DENMAT energy/device-pack diagnostic with persistent `THIS%PROJ` and GPU-side real-matrix accumulation. |
 | `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
@@ -477,6 +478,20 @@ required profile binaries before benchmarking.
 
 The Spark C86C Si64 decision table is kept in
 `tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
+
+For the focused off-site DENMAT residency comparison, run:
+
+```
+cd tests/profile/si64
+./run_offden_focus.sh
+```
+
+It compares device-pack, flat device-accumulation, projection residency, and the
+combined projection-plus-accumulation paths for both HPSI-only and
+DENMAT-energy cases. By default it runs `EMPTY_BANDS=2048` on one GPU rank and
+`SHARED_EMPTY_BANDS=512` on four ranks sharing the GPU. Override
+`OFFDEN_CASES`, `GPU_RANKS`, `SHARED_GPU_RANKS`, `EMPTY_BANDS`, or
+`RUN_SHARED_GPU=no` for narrower checks.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 
