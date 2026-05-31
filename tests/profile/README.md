@@ -212,8 +212,9 @@ only; Spark Nsight traces show that removing the explicit post-cuBLAS
 synchronization mostly shifts waiting time into later stream synchronizations or
 copy calls for this workload. The residency mode keeps the orthogonalization
 `PSIM`/`OPSI` wavefunction pair resident from the projection/overlap phase
-through `WAVES_ADDOPSI`. The `PSIM` region is recorded as
-`ACC_COPY_ORTHO_PSIM_IO`, and the ADDOPSI update itself should report
+through `WAVES_ADDOPSI`. The `PSIM` region is recorded as split
+`ACC_COPY_ORTHO_PSIM_IN` / `ACC_COPY_ORTHO_PSIM_OUT` rows when it is not
+already present, and the ADDOPSI update itself should report
 `ACC_PRESENT_ADDOPSI_PSIM`. For non-inversion wave sets, `OPSI` and `LAMBDA`
 are copied into the addproduct region. With the inversion-batch GPU path enabled,
 the inversion-symmetric path keeps `OPSI` present, creates the inverted
@@ -228,11 +229,12 @@ with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 `PROPSI` in `WAVES_PROJECTIONS`, and context-specific projection `PSI` rows
 such as `ACC_COPY_PROJ_SETUP0_PSI_IN`, `ACC_COPY_PROJ_GRAM_PSI0_PSI_IN`, and
 `ACC_COPY_PROJ_ORTHO_PSIM_PSI_IN`. `WAVES_ADDPRO` has context-specific
-`PSI`/`PROPSI` rows (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
-copy estimates because the projector addition updates the wavefunction. They are
-emitted for both the resident projector-cache path and the host-expansion
-fallback path; in the fallback path, per-atom `PRO`/`PROPSI` transfers remain in
-the generic cuBLAS `ZGEMM_NN` copy rows to avoid double counting. The
+`PSI`/`PROPSI` rows (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are split into
+`*_PSI_IN` and `*_PSI_OUT` estimates because the projector addition updates the
+wavefunction. They are emitted for both the resident projector-cache path and
+the host-expansion fallback path; in the fallback path, per-atom `PRO`/`PROPSI`
+transfers remain in the generic cuBLAS `ZGEMM_NN` copy rows to avoid double
+counting. The
 wavefunction overlap `ZSPROD` rows are also tagged by `WAVES_OVERLAP` caller
 context, for example `ACC_COPY_ZSP_ORTH_PSIM_P1_IN`,
 `ACC_PRESENT_ZSP_GRAM_PSI0_P1`, and `ACC_COPY_ZSP_HAMILTON_P2_IN`.
@@ -240,7 +242,8 @@ The suffixes `P1`, `P2`, `OUT`, and `OVL` identify the first input, second
 input, generic scalarproduct output, and resident-overlap output rows. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
 and records that outer input/output region with context-specific rows such as
-`ACC_COPY_GRAM_PSI0_PSI_IO` and `ACC_COPY_GRAM_PSIM_PSI_IO`. The
+`ACC_COPY_GRAM_PSI0_PSI_IN`, `ACC_COPY_GRAM_PSI0_PSI_OUT`,
+`ACC_COPY_GRAM_PSIM_PSI_IN`, and `ACC_COPY_GRAM_PSIM_PSI_OUT`. The
 transform scratch `PSIINV` is created on the device from resident `PSI`,
 recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
 as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
