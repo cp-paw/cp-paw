@@ -730,6 +730,26 @@ standard NVHPC comparison now includes `gpu_resident_orthox` so future runs keep
 tracking this tradeoff, but the recommended default remains plain
 `gpu_resident`.
 
+### Nsight Case Harness
+
+The Nsight Systems harness now accepts a `CASE` keyword, selects the matching
+serial or parallel executable, applies the GPU/library runtime switches, and
+writes the resolved settings to `nsys_case.env` in the run directory. Spark
+C86C smoke traces:
+
+```
+runs/nsys-case-gpu_resident-smoke512-20260531-154536
+runs/nsys-case-gpu_resident_orthox-smoke512-20260531-154549
+runs/nsys-case-gpu_resident_orthox-final-smoke512-20260531-154929
+```
+
+Both 512-band traces produced `nsys.nsys-rep`, `nsys_profile.csv`, and
+`summary.txt`. The `gpu_resident_orthox` trace recorded
+`CPPAW_GPU_ORTHO_X_RESIDENCY=1` in `nsys_case.env`, kept the energy at
+302.280854 Ha, and included `CUBLAS_DGEMM_ORTHOX_RESIDUAL`,
+`CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and `CUBLAS_DGEMM_ORTHOX_BACKTRANS` in the
+profile CSV.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
