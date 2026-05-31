@@ -488,6 +488,39 @@ contraction, but it removes the largest previously ambiguous complex MATMUL copy
 without changing the energy and with a positive one-step wall-time signal on
 Spark.
 
+## Orthogonalization Constant Residency Diagnostic
+
+The remaining real generic MATMUL traffic is mainly inside `WAVES_ORTHO_X`.
+A prototype kept only the constant `CHICHI` and `U` inputs resident across the
+safe-orthogonalization loop, while leaving host-updated temporaries on the
+existing copy-back path. This reduced DGEMM input-copy volume but did not improve
+Spark wall time, so the path is kept as an opt-in diagnostic instead of a
+residency-profile default.
+
+Spark C86C validation:
+
+```
+runs/orthoconst-residency-repeat-20260531-132042
+runs/orthoconst-residency-bands1536-20260531-132557
+runs/orthoconst-final-smoke-20260531-133304
+```
+
+| Case | Bands setting | Repeats | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Orthogonalization constants resident | `EMPTY_BANDS=1024` | 3 | 44.50 s avg | 7.1208 GB | 302.280854 Ha | Saves about 0.59 GB copy but is slower than the default in this smoke. |
+| Default per-call DGEMM input copies | `EMPTY_BANDS=1024` | 3 | 43.50 s avg | 7.7153 GB | 302.280854 Ha | Better wall time on Spark despite more copy volume. |
+| Orthogonalization constants resident | `EMPTY_BANDS=1536` | 1 | 129.54 s | 12.4526 GB | 302.280854 Ha | Saves about 1.44 GB copy in the larger band smoke. |
+| Default per-call DGEMM input copies | `EMPTY_BANDS=1536` | 1 | 123.72 s | 13.8925 GB | 302.280854 Ha | Still faster on Spark, so default remains off. |
+
+The diagnostic is exposed as `gpu_resident_orthoconst` and can also be enabled
+directly with `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. This keeps the implementation
+available for larger systems or different interconnect/GPU-memory behavior
+without penalizing the current recommended Spark path.
+
+The final one-repeat smoke with the finished harness semantics reported
+`gpu_resident` at 42.68 s and 7.7153 GB copy versus `gpu_resident_orthoconst`
+at 45.08 s and 7.1208 GB copy, both with final energy 302.280854 Ha.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

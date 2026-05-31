@@ -2295,6 +2295,11 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     **    (PLENUM PUBLISHING CORPORATION,1989)                              **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1992)***********
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_ORTHO_CONST_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D
+#ENDIF
       IMPLICIT NONE
       REAL(8)   ,PARAMETER     :: EPS    = 1.D-8
       REAL(8)   ,PARAMETER     :: DSMALL = 1.D-12
@@ -2313,9 +2318,14 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       REAL(8)                  :: HAUX(NB,NB)    
       REAL(8)                  :: U(NB,NB)       
       REAL(8)                  :: OCCI,OCCJ
+      LOGICAL(4)               :: TCONVERGED
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)               :: TRESIDENTORTHOCONST
+#ENDIF
 !     **************************************************************************
                              CALL TRACE$PUSH('WAVES_ORTHO_X')
       ALLOCATE(GAMN(NB,NB))
+      TCONVERGED=.FALSE.
 !
 !     ==========================================================================
 !     ==  CALCULATE  PSIPSI(I,J)= <PSIBAR(I)|PSIBAR(J)>-1                     ==
@@ -2331,6 +2341,21 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !DO I=1,NB
 !  WRITE(*,FMT='("U",I2,20E10.3)')I,U(I,:)
 !ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      TRESIDENTORTHOCONST=CPPAW_CUBLAS_ACC_ORTHO_CONST_RESIDENCY_ENABLED()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      IF(TRESIDENTORTHOCONST) THEN
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ('ACC_PRESENT_ORTHO_CHICHI','ACC_COPY_ORTHO_CHICHI_IN' &
+     &      ,NB,NB,CHICHI)
+        CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D &
+     &      ('ACC_PRESENT_ORTHO_U','ACC_COPY_ORTHO_U_IN' &
+     &      ,NB,NB,U)
+      END IF
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(CHICHI(1:NB,1:NB),U(1:NB,1:NB)) &
+!$ACC& IF(TRESIDENTORTHOCONST)
+#ENDIF
 !
 !     ==========================================================================
 !     ==========================================================================
@@ -2373,7 +2398,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !       ========================================================================
         DIGAM=MAXVAL(ABS(GAMN))
 !       __CHECK CONVERGENCE_____________________________________________________
-        IF(DIGAM.LT.EPS) GOTO 9000
+        IF(DIGAM.LT.EPS) THEN
+          TCONVERGED=.TRUE.
+          EXIT
+        END IF
 !
 !       __CHECK WHETHER LOOP DIVERGES___________________________________________
         IF(TPR.OR.DIGAM.GT.1.D+5)  THEN
@@ -2443,6 +2471,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
           ENDDO
         ENDDO
       ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+!$ACC END DATA
+#ENDIF
+      IF(TCONVERGED) GOTO 9000
       CALL ERROR$MSG('LOOP FOR ORTHOGONALIZATION IS NOT CONVERGED')
       CALL ERROR$MSG('THIS IS NOT AN UNUSUAL PROBLEM DURING STARTUP')
       CALL ERROR$MSG('1) SPECIFY SAFEORTHO=F, WHICH IS MORE ROBUST')
