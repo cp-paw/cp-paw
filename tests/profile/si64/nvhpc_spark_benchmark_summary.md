@@ -42,6 +42,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `psim-present-copy-20260601-*` | PSIM propagation present-or-copy accounting | `gpu_resident` 6.36 s at 512/1 | - | `gpu_resident` 9.18 s at 512/4 | Changes the PSIM propagation data region to `present_or_copy`; energy-valid and correct for future broader residency, but current Si64 still copies PSIM in/out because no enclosing resident producer is active. |
 | `psim-focus-harness-20260601-*` | Focused PSIM propagation harness | `gpu_psim_propagate` 6.20 s at 512/1 | - | `gpu_psim_propagate` 9.19 s at 512/4 | Adds a reusable PSIM/HPSI propagation sweep; all cases are energy-valid, but the single-run 512-band timings are noisy and the PSIM path still increases copy volume, so this is a regression harness rather than a default promotion. |
 | `psim-phase-residency-20260601-*` | Cross-phase PSIM residency diagnostic | `gpu_resident` 37.61 s, `gpu_resident_psim_phase` 37.75 s at 2048/1 | - | `gpu_resident_psim_phase` 9.11 s at 512/4 | Leaves propagated `PSIM` resident into orthogonalization and copies it back at the orthogonalization boundary; energy-valid and reduces copy volume, but wall time is neutral/noisy, so keep it opt-in. |
+| `psim-lifecycle-20260601-rerun-*` | Two-step PSIM lifecycle harness | `gpu_resident_hpsi` 10.05 s at 512/1 | - | - | Adds an `NSTEPS=2` harness plus per-case copy-row extraction; all cases finish with the same two-step energy, and the profile confirms the next boundary is still `PSI0`/`HPSI`/ADDPRO-style residency rather than another immediate PSIM-only promotion. |
 
 The latest full-matrix run lives at:
 
@@ -2143,6 +2144,47 @@ from 37.29 s to 35.64 s. The 512/4 shared-GPU case is neutral/noisy, so this
 still belongs behind an opt-in switch. The next useful step is to keep the
 consumer of `OSDENMAT` closer to this packed/device representation so the
 host-side scatter is no longer the synchronization boundary.
+
+## PSIM Lifecycle Harness
+
+The follow-up adds `tests/profile/si64/run_psim_lifecycle.sh` and
+`tests/profile/si64/profile_copy_rows.py`. The lifecycle harness defaults to
+`NSTEPS=2`, disables the fixed one-step Si64 energy check, and compares the
+reported energies between cases. The copy-row helper reads the profile CSV
+header and aggregates the `gbyte` column for `ACC_COPY*` rows, avoiding fragile
+positional parsing.
+
+Spark C86C validation:
+
+```
+runs/psim-lifecycle-20260601-rerun-empty512-nstep2-1r
+runs/psim-lifecycle-20260601-rerun-combined.tsv
+runs/psim-lifecycle-20260601-rerun-copy-rows.md
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 2 | 1 | 10.14 s | 2.6165 GB | 269.022536 Ha |
+| `gpu_psim_propagate` | 512 | 2 | 1 | 10.05 s | 3.1551 GB | 269.022536 Ha |
+| `gpu_resident_psim_phase` | 512 | 2 | 1 | 10.98 s | 2.8861 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 10.05 s | 2.3443 GB | 269.022536 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 2 | 1 | 10.76 s | 2.8829 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_psim_phase` | 512 | 2 | 1 | 10.60 s | 2.6139 GB | 269.022536 Ha |
+
+| Profile row | Plain PSIM | PSIM phase | HPSI | HPSI + PSIM phase | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `ACC_COPY_PROP_PSIM_OUT` | 0.1345 GB | - | - | - | Cross-phase PSIM residency removes the immediate propagation copy-out. |
+| `ACC_COPY_ORTHO_PSIM_IN` | - | - | 0.1345 GB | - | Plain HPSI still enters orthogonalization through a copied `PSIM`. |
+| `ACC_COPY_FORCE_PSI0_IN` | 0.1345 GB | 0.1345 GB | 0.1345 GB | 0.1345 GB | The force path still creates a new `PSI0` residency boundary each step. |
+| `ACC_COPY_HPSI_ADDPRO_IN` | - | - | 0.1345 GB | 0.1345 GB | HPSI residency is local to the current ADDPRO/overlap envelope. |
+| `ACC_COPY_ADDPRO_OPSI_PSI_IN` | - | 0.1345 GB | 0.1345 GB | 0.1345 GB | The OPSI/ADDPRO side remains a repeated wavefunction copy target. |
+
+Conclusion: the lifecycle run is correctness-clean, but it reinforces the
+earlier design choice. PSIM phase residency is doing the intended copy
+substitution, yet wall time stays noisy and total copy volume still grows when
+PSIM propagation is enabled. The next useful technical lever is broader
+`PSI0`/`HPSI`/ADDPRO consumer residency around `WAVES$ETOT` and the following
+step, not a standalone promotion of `CPPAW_GPU_PSIM_PHASE_RESIDENCY`.
 
 ## Recommended Next Benchmark
 
