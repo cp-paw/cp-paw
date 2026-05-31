@@ -175,11 +175,13 @@ disappearance or reduction of `ACC_COPY_PROJ_PRO_IN`. The resident overlap
 cuBLAS kernels are timed separately as `CUBLAS_ZHERK_OVL_RES` and
 `CUBLAS_ZGEMM_OVL_RES`. This is the recommended NVHPC GPU performance path for
 the larger Si64 band benchmarks. Keep
-`gpu_resident_nosync` as a diagnostic candidate until longer correctness runs
-confirm that removing the explicit post-cuBLAS synchronization is safe for the
-target workload. For non-inversion wave sets, the residency mode also keeps the
-orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC data region;
-`ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy estimate.
+`gpu_resident_nosync` and `gpu_resident_orthox_nosync` as diagnostic candidates
+only; Spark Nsight traces show that removing the explicit post-cuBLAS
+synchronization mostly shifts waiting time into later stream synchronizations or
+copy calls for this workload. For non-inversion wave sets, the residency mode
+also keeps the orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC
+data region; `ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy
+estimate.
 
 The residency profile also records semantic OpenACC present checks for the PAW
 wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count
@@ -249,6 +251,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Residency diagnostic with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
+| `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |

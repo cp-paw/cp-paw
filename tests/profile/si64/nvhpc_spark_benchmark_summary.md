@@ -750,6 +750,27 @@ Both 512-band traces produced `nsys.nsys-rep`, `nsys_profile.csv`, and
 `CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and `CUBLAS_DGEMM_ORTHOX_BACKTRANS` in the
 profile CSV.
 
+The 2048-band Nsight comparison made the synchronization tradeoff explicit:
+
+```
+runs/nsys-case-gpu_resident-smoke2048-20260531-155236
+runs/nsys-case-gpu_resident_orthox-smoke2048-20260531-155323
+runs/nsys-case-gpu_resident_orthox_nosync-smoke2048-20260531-155936
+runs/orthox-nosync-case2048-20260531-155722
+```
+
+| Case | Wall time | Instrumented rank-s | Gap | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_orthox` | 39.54 s | 24.7906 s | 14.7494 s | 8.2058 GB | 302.280854 Ha |
+| `gpu_resident_orthox_nosync` | 39.73 s | 17.2575 s | 22.4725 s | 8.2058 GB | 302.280854 Ha |
+| `gpu_resident_nosync` | 41.14 s | 24.4806 s | 16.6594 s | 22.1456 GB | 302.280854 Ha |
+
+`gpu_resident_orthox_nosync` removes the explicit cuBLAS-side
+`cudaDeviceSynchronize` time from the instrumented rows, but the Nsight trace
+then shows the waiting time reappearing in `cuStreamSynchronize` and
+device-to-host runtime calls. The case is therefore useful for profiling
+attribution, but it is not a new recommended default on Spark.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
