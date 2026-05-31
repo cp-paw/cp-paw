@@ -180,22 +180,20 @@ the larger Si64 band benchmarks. Keep
 `gpu_resident_nosync` and `gpu_resident_orthox_nosync` as diagnostic candidates
 only; Spark Nsight traces show that removing the explicit post-cuBLAS
 synchronization mostly shifts waiting time into later stream synchronizations or
-copy calls for this workload. The residency mode also keeps the
-orthogonalization `WAVES_ADDOPSI` output wavefunction in a short OpenACC data
-region, recorded as `ACC_PRESENT_ADDOPSI_PSIM` /
-`ACC_COPY_ADDOPSI_PSIM_IO`. For non-inversion wave sets, `OPSI` and `LAMBDA`
-are copied into the same region. For inversion-symmetric wave sets, `OPSI` and
-the temporary lambda blocks still use the per-call cuBLAS wrapper copies
-because `OPSI` is inverted on the host between the two addproduct calls.
-With the inversion-batch GPU path enabled, the inversion-symmetric path copies
-`OPSI` once as `ACC_COPY_ADDOPSI_OPSI_TINV_IN`, creates the inverted
+copy calls for this workload. The residency mode keeps the orthogonalization
+`PSIM`/`OPSI` wavefunction pair resident from the projection/overlap phase
+through `WAVES_ADDOPSI`. The `PSIM` region is recorded as
+`ACC_COPY_ORTHO_PSIM_IO`, and the ADDOPSI update itself should report
+`ACC_PRESENT_ADDOPSI_PSIM`. For non-inversion wave sets, `OPSI` and `LAMBDA`
+are copied into the addproduct region. With the inversion-batch GPU path enabled,
+the inversion-symmetric path keeps `OPSI` present, creates the inverted
 `OPSIINV` on the device, and reports it as `ACC_PRESENT_ADDOPSI_OPSIINV_TINV`.
 
 The residency profile also records semantic OpenACC present checks for the PAW
 wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count
 places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
-`PSIM`/`OPSI` in the orthogonalization region, `PSIM` in `WAVES_ADDOPSI`
+`PSIM`/`OPSI` in the orthogonalization region and `WAVES_ADDOPSI`,
 with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in `WAVES_ADDPRO`. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
