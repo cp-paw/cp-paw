@@ -615,6 +615,37 @@ enough to remove the dominant bottleneck; a later cuSOLVER `potrf/trtri` variant
 is only worth pursuing if larger runs show that this remaining sub-second block
 grows again.
 
+## Real Ortho-X Solver Profiling
+
+The next diagnostic patch keeps the numerical path unchanged and splits the
+real `WAVES_ORTHO_X` solver inside `PAW_ORTHO_SOLVE` into diagonalization,
+residual construction, update, and iteration-count rows. This was added after a
+naive exact Cholesky-root experiment was rejected: on the 512-band smoke it
+completed but changed the final energy from 302.280854 Ha to 322.671562 Ha.
+That means any future exact solve must preserve the physically relevant root
+near the current `LAMBDA`, not merely satisfy the quadratic orthogonality
+equation.
+
+Spark C86C validation:
+
+```
+runs/orthox-profile-smoke512-20260531-145356
+runs/orthox-profile-smoke2048-20260531-145404
+runs/orthox-profile-parallel-smoke512-20260531-145527
+```
+
+| Case | Empty bands | Ranks | Wall time | `PAW_ORTHO_SOLVE` | `PAW_ORTHO_X_DIAG` | `PAW_ORTHO_X_RESIDUAL` | `PAW_ORTHO_X_UPDATE` | Iterations | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Serial smoke | 512 | 1 | 7.17 s | - | - | - | - | - | 302.280854 Ha |
+| Serial large-band smoke | 2048 | 1 | 40.27 s | 8.5702 s | 0.2726 s | 2.8195 s | 5.2874 s | 24 | 302.280854 Ha |
+| Parallel smoke | 512 | 4 | 9.31 s | - | - | - | - | - | 302.280854 Ha |
+
+The 2048-band solve now has a precise split: the update half dominates, not the
+initial diagonalization. The next implementation attempt should therefore aim
+to reduce the 24 Newton-style update iterations or keep the update operands
+resident across the transform/back-transform sequence, while preserving the
+root selected by the current iterative algorithm.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
