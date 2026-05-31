@@ -646,6 +646,32 @@ to reduce the 24 Newton-style update iterations or keep the update operands
 resident across the transform/back-transform sequence, while preserving the
 root selected by the current iterative algorithm.
 
+The follow-up subphase split keeps the same numerical path and divides the
+residual and update rows into their matrix products and host-side loops:
+
+```
+runs/orthox-update-profile2048-20260531-150019
+runs/orthox-update-profile-parallel-smoke512-20260531-150303
+```
+
+| Profile row | 2048-band total | Iterations | Interpretation |
+| --- | ---: | ---: | --- |
+| `PAW_ORTHO_X_DIAG` | 0.2711 s | - | Diagonalization remains small after the Cholesky setup fix. |
+| `PAW_ORTHO_X_RESIDUAL` | 2.8238 s | 24 | Residual envelope. |
+| `PAW_ORTHO_X_RESIDUAL_MATMUL` | 2.5759 s | 24 | Residual cost is mostly the two BLAS-style products. |
+| `PAW_ORTHO_X_RESIDUAL_CHECK` | 0.2479 s | 24 | Symmetrization and convergence check are minor. |
+| `PAW_ORTHO_X_UPDATE` | 5.2925 s | 24 | Update envelope. |
+| `PAW_ORTHO_X_UPDATE_TRANSFORM` | 2.3523 s | 24 | First half of the update matrix transform. |
+| `PAW_ORTHO_X_UPDATE_SCALE` | 0.1937 s | 24 | Eigenvalue-denominator scaling is not the main cost. |
+| `PAW_ORTHO_X_UPDATE_BACKTRANSFORM` | 2.3527 s | 24 | Back-transform costs the same as the forward transform. |
+| `PAW_ORTHO_X_UPDATE_APPLY` | 0.3671 s | 24 | Host-side `LAMBDA` update is secondary. |
+| `PAW_ORTHO_X_UPDATE_SYM` | 0.0266 s | 24 | Occupation symmetrization is negligible. |
+
+The 2048-band run completed in 41.62 s with final energy 302.280854 Ha. The
+parallel 512-band smoke completed with 4 MPI ranks in 9.53 s and the same final
+energy. This makes the next useful Ortho-X target narrower: optimize or reduce
+the repeated transform/back-transform BLAS pairs, not the small scalar loops.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
