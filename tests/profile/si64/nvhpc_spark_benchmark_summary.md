@@ -29,6 +29,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `addpro-context-cache-20260531-*` | ADDPRO context-cache controls | `gpu_resident_opsi` 40.03 s at 2048/1 | - | `gpu_resident_addpro_hpsi_host` 9.30 s at 512/4 | Adds independent HPSI/OPSI `WAVES_ADDPRO` cache switches; all cases remain energy-valid, but timings are neutral/noisy. |
 | `1cov-split-20260531-*` | One-center overlap copy accounting | `gpu_resident_hpsi` 40.48 s at 2048/1 | - | `gpu_resident_hpsi` 9.78 s at 512/4 | Splits the 1COV copy estimate into packed projector input and overlap-matrix output rows. |
 | `wave-io-split-20260531-*` | Wavefunction IO copy accounting | `gpu_resident_hpsi` 39.22 s at 2048/1 | - | `gpu_resident_hpsi` 9.72 s at 512/4 | Splits Gram, ORTHO, ADDPRO, and ADDOPSI wavefunction IO estimates into input and output rows. |
+| `denmat-energy-acc-v2-20260531-*` | DENMAT energy OpenACC diagnostic | `gpu_resident_hpsi` 39.00 s, `gpu_resident_hpsi_denmat_energy` 39.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.75 s at 512/4 | Adds an opt-in two-stage OpenACC diagnostic for the time-inversion DENMAT energy/Lambda contraction; DENMAT shrinks, but Lambda copies keep it diagnostic-only. |
 
 The latest full-matrix run lives at:
 
@@ -1519,6 +1520,46 @@ candidate than further micro-optimizing DENMAT host setup. In the 4-rank smoke,
 the local DENMAT kernel is much smaller and off-site summation is the larger
 remaining subpiece, so a parallel follow-up should keep MPI/off-site behavior in
 view.
+
+## DENMAT Energy OpenACC Diagnostic
+
+The follow-up adds an opt-in OpenACC path for the time-inversion
+`WAVES_DENMAT` energy/Lambda contraction. The runtime switch is
+`CPPAW_GPU_DENMAT_ENERGY=1` and the benchmark cases are
+`gpu_resident_denmat_energy` and `gpu_resident_hpsi_denmat_energy`. The
+implementation is two-stage: first build the per-band `FUNC` contraction on the
+GPU, then form the small one-center output block. The path is disabled by
+default because it still copies the full Lambda block per site.
+
+Spark C86C validation:
+
+```
+runs/denmat-energy-acc-v2-20260531-512-1r
+runs/denmat-energy-acc-v2-20260531-2048-1r
+runs/denmat-energy-acc-v2-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 2048 | 1 | 39.00 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 2048 | 1 | 39.40 s | 9.7620 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.88 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 512 | 4 | 9.75 s | 2.1523 GB | 0.000000401 Ha |
+
+| Profile row | 2048/1 baseline | 2048/1 DENMAT GPU | 512/4 baseline, rank 1 | 512/4 DENMAT GPU, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_ETOT_DENMAT` | 3.9086 s | 2.7775 s | 0.2365 s | 0.2003 s |
+| `PAW_DENMAT_SITE_KERNEL` | 3.2040 s | 2.0633 s | 0.0816 s | 0.0460 s |
+| `PAW_DENMAT_ENERGY_LOOP` | 2.8304 s | 1.6985 s | 0.0792 s | 0.0435 s |
+| `ACC_KERNEL_DENMAT_ENERGY_TINV` | - | 0.1265 s | - | 0.0245 s |
+| `ACC_COPY_DENMAT_ENERGY_TINV` | - | 4.8633 GB | - | 0.1060 GB |
+
+All runs are energy-valid. This is the first DENMAT GPU path that reduces the
+measured DENMAT envelope itself, but the full Si64 wall time is still neutral on
+Spark because the prototype transfers Lambda once per site. The next useful
+step is therefore not to enable this by default, but to make Lambda/LAGR or the
+whole DENMAT working set resident across the atom loop, or to reformulate the
+contraction into a small batched BLAS path.
 
 ## Recommended Next Benchmark
 

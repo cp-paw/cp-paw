@@ -265,6 +265,13 @@ density/energy loops, accumulation, MPI combine, and spin conversion. Off-site
 density-matrix setup is split into `PAW_OFFDEN_*` rows. These rows are CPU-side
 instrumentation for deciding whether a later GPU kernel should target
 `WAVES_DENMAT` itself, the projection copy/setup edges, or off-site bookkeeping.
+An opt-in diagnostic, `CPPAW_GPU_DENMAT_ENERGY=1`, offloads the
+time-inversion `WAVES_DENMAT` energy/Lambda contraction with OpenACC and records
+`ACC_KERNEL_DENMAT_ENERGY_TINV` plus `ACC_COPY_DENMAT_ENERGY_TINV`; the harness
+cases are `gpu_resident_denmat_energy` and
+`gpu_resident_hpsi_denmat_energy`. It is disabled by default because the
+prototype copies the Lambda block per site and is meant to measure the value of
+a broader resident rewrite.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
@@ -332,6 +339,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_opsi` | Opt-in residency diagnostic that keeps orthogonalization `OPSI` on the GPU through projection/overlap/`WAVES_ADDOPSI` via `CPPAW_GPU_OPSI_RESIDENCY=1`; superwave cases use conservative host build/scale staging before device residency. |
 | `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
+| `gpu_resident_denmat_energy` | Opt-in diagnostic that sets `CPPAW_GPU_DENMAT_ENERGY=1` and forces the time-inversion one-center DENMAT energy/Lambda OpenACC prototype for comparison. |
+| `gpu_resident_hpsi_denmat_energy` | Combined diagnostic with HPSI residency and the DENMAT energy/Lambda OpenACC prototype enabled together. |
 | `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
@@ -493,6 +502,11 @@ be overridden by kernel category:
   back before orthogonalization. The compatibility aliases are
   `CPPAW_GPU_PSIM_RESIDENCY` and `CPPAW_CUBLAS_ACC_PSIM_RESIDENCY`; they do not
   imply true cross-orthogonalization residency in the current implementation.
+- `CPPAW_GPU_DENMAT_ENERGY`: disabled by default. Set to `1` to offload the
+  time-inversion one-center DENMAT energy/Lambda contraction with OpenACC. The
+  compatibility alias is `CPPAW_CUBLAS_ACC_DENMAT_ENERGY`; use
+  `CPPAW_GPU_DENMAT_MINFLOP` or `CPPAW_CUBLAS_ACC_DENMAT_MINFLOP` to adjust the
+  offload threshold.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,
