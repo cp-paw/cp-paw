@@ -171,7 +171,13 @@ against the previous copy-heavy path. Set
 `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep the older per-column inversion
 scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
-`WAVES_ADDPRO`. Generic resident cuBLAS wrappers split their copy accounting
+`WAVES_ADDPRO`. An opt-in diagnostic can keep the orthogonalization `OPSI`
+wavefunction resident from its `WAVES_OPSI` build through the projection,
+overlap, and `WAVES_ADDOPSI` phase on non-stress, non-superwave paths where all
+atom blocks pass the addproduct threshold; set `CPPAW_GPU_OPSI_RESIDENCY=1` or
+use `gpu_resident_opsi` to test it. It is disabled by default until broader
+benchmarks show that the reduced copy volume also improves wall time. Generic
+resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
 inputs are counted separately from real transfer estimates. The overlap region
 uses `ACC_PRESENT_ORTHO_*` / `ACC_COPY_ORTHO_*` rows for its outer wavefunction
@@ -283,6 +289,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
+| `gpu_resident_opsi` | Opt-in residency diagnostic that keeps orthogonalization `OPSI` on the GPU from `WAVES_OPSI` through `WAVES_ADDOPSI` via `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
@@ -426,6 +433,10 @@ be overridden by kernel category:
   so the real `WAVES_ORTHO_X` iteration workspace stays on the GPU and the large
   residual/transform/backtransform pairs use present-input cuBLAS calls; set to
   `0` for the previous copy-heavy path.
+- `CPPAW_GPU_OPSI_RESIDENCY`: disabled by default. Set to `1` to keep
+  orthogonalization `OPSI` resident from its build through projection, overlap,
+  and `WAVES_ADDOPSI` on eligible non-stress, non-superwave paths. The
+  compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,

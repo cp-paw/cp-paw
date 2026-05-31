@@ -27,6 +27,8 @@
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_OPSI_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT &
      &       ,CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT &
      &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
      &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_IO &
@@ -66,8 +68,11 @@
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TRESIDENTOVERLAP
       LOGICAL(4)             :: TRESIDENTADDOPSI
+      LOGICAL(4)             :: TRESIDENTOPSIBASE
+      LOGICAL(4)             :: TRESIDENTOPSI
       LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8)             :: CSVAR
+      REAL(8)                :: ADDPROFLOPS
       REAL(8)   ,ALLOCATABLE :: NORM(:)
       REAL(8)   ,ALLOCATABLE :: RMAT(:,:),ROMAT(:,:),ROOMAT(:,:),RLAMBDA(:,:)
       INTEGER(4),ALLOCATABLE :: SMAP(:)
@@ -108,10 +113,15 @@
       NAT=MAP%NAT
       TRESIDENTOVERLAP=.FALSE.
       TRESIDENTADDOPSI=.FALSE.
+      TRESIDENTOPSIBASE=.FALSE.
+      TRESIDENTOPSI=.FALSE.
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
+      TRESIDENTOPSIBASE=CPPAW_CUBLAS_ACC_OPSI_RESIDENCY_ENABLED() &
+     &                  .AND.TRESIDENTOVERLAP
 #ENDIF
       CALL CELL$GETL4('MOVE',TSTRESS)
+      IF(TSTRESS) TRESIDENTOPSIBASE=.FALSE.
 !
 !     ==========================================================================
 !     == COLLECT OCCUPATIONS                                                  ==
@@ -132,6 +142,19 @@
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
+          TRESIDENTOPSI=TRESIDENTOPSIBASE.AND.(NBH.EQ.NB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOPSI) THEN
+            DO IAT=1,NAT
+              ISP=MAP%ISP(IAT)
+              LMNX=MAP%LMNX(ISP)
+              ADDPROFLOPS=8.D0*REAL(NGL,KIND=8)*REAL(LMNX,KIND=8) &
+     &                   *REAL(NDIM*NBH,KIND=8)
+              TRESIDENTOPSI=TRESIDENTOPSI &
+     &           .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(ADDPROFLOPS)
+            ENDDO
+          END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
@@ -176,6 +199,16 @@ IF(1.EQ.0) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
 ELSE
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOPSI) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_OPSI_BUILD','ACC_COPY_OPSI_BUILD_IN' &
+     &          ,NGL,NDIM,NBH,THIS%OPSI)
+#ENDIF
+!$ACC ENTER DATA COPYIN(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
+          END IF
+#ENDIF
 !++++++++++++++++++++++++ FROM HERE +++++++++++++++++++++++++++++++++++++
 !         __ THIS$PROJ=<PTILDE|THIS%PSI0>_______________________________________
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
@@ -208,13 +241,31 @@ END IF
               MARR(IG)=SVAR/GSET%MPSI(IG)
             ENDDO
 !PB070802          END IF
-          DO IB=1,NBH
-            DO IDIM=1,NDIM
-              DO IG=1,NGL
-                THIS%OPSI(IG,IDIM,IB)=MARR(IG)*THIS%OPSI(IG,IDIM,IB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOPSI) THEN
+!$ACC DATA COPYIN(MARR(1:NGL)) PRESENT(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(MARR,THIS%OPSI)
+            DO IB=1,NBH
+              DO IDIM=1,NDIM
+                DO IG=1,NGL
+                  THIS%OPSI(IG,IDIM,IB)=MARR(IG)*THIS%OPSI(IG,IDIM,IB)
+                ENDDO
               ENDDO
             ENDDO
-          ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
+          ELSE
+#ENDIF
+            DO IB=1,NBH
+              DO IDIM=1,NDIM
+                DO IG=1,NGL
+                  THIS%OPSI(IG,IDIM,IB)=MARR(IG)*THIS%OPSI(IG,IDIM,IB)
+                ENDDO
+              ENDDO
+            ENDDO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          END IF
+#ENDIF
           DEALLOCATE(MARR)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -309,6 +360,19 @@ END IF
           NGL=GSET%NGL
           NBH=THIS%NBH
           NB=THIS%NB
+          TRESIDENTOPSI=TRESIDENTOPSIBASE.AND.(NBH.EQ.NB)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOPSI) THEN
+            DO IAT=1,NAT
+              ISP=MAP%ISP(IAT)
+              LMNX=MAP%LMNX(ISP)
+              ADDPROFLOPS=8.D0*REAL(NGL,KIND=8)*REAL(LMNX,KIND=8) &
+     &                   *REAL(NDIM*NBH,KIND=8)
+              TRESIDENTOPSI=TRESIDENTOPSI &
+     &           .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(ADDPROFLOPS)
+            ENDDO
+          END IF
+#ENDIF
 !
 !         ======================================================================
 !         ==  CALCULATE PROJECTIONS FOR THE NEW POSITIONS                     ==
@@ -549,6 +613,9 @@ END IF
      &                        ,LAMBDA)
           END IF
 !$ACC END DATA
+          IF(TRESIDENTOPSI) THEN
+!$ACC EXIT DATA DELETE(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
+          END IF
           DEALLOCATE(THIS%OPSI)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
