@@ -1482,6 +1482,44 @@ copies and a `PSIM` copy-out. The performance-positive path is still broader
 projector, PRO, and wavefunction residency that lets later phases consume the
 GPU-resident data instead of copying it back immediately.
 
+## DENMAT Profiling Split
+
+The one-center density-matrix follow-up splits the previous coarse
+`PAW_ETOT_DENMAT` envelope into `PAW_DENMAT_*` rows for occupation setup, site
+setup, inner density/energy loops, accumulation, MPI combine, and spin
+conversion. It also adds coarse `PAW_OFFDEN_*` rows for off-site density-matrix
+bookkeeping. This is instrumentation only; it does not change the accelerator
+data path.
+
+Spark C86C validation:
+
+```
+runs/denmat-profiling-final-20260531-2048-1r
+runs/denmat-profiling-final-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 2048 | 1 | 41.70 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.85 s | 1.7284 GB | 0.000000401 Ha |
+
+| Profile row | 2048 bands, 1 rank | 512 bands, 4 ranks, rank 1 |
+| --- | ---: | ---: |
+| `PAW_ETOT_DENMAT` | 4.1846 s | 0.2378 s |
+| `PAW_DENMAT_SITE_KERNEL` | 3.4608 s | 0.0827 s |
+| `PAW_DENMAT_ENERGY_LOOP` | 3.0668 s | 0.0798 s |
+| `PAW_DENMAT_DENSITY_LOOP` | 0.0131 s | 0.0023 s |
+| `PAW_OFFDEN_SUM` | 0.7213 s | 0.1534 s |
+
+All runs are energy-valid. The split shows that the large one-rank Si64 case is
+not dominated by projector setup or accumulation inside `WAVES$DENMAT`; it is
+dominated by the inner `WAVES_DENMAT` energy/Lambda loop. That makes a future
+GPU or BLAS-style rewrite of the one-center energy-density contraction a better
+candidate than further micro-optimizing DENMAT host setup. In the 4-rank smoke,
+the local DENMAT kernel is much smaller and off-site summation is the larger
+remaining subpiece, so a parallel follow-up should keep MPI/off-site behavior in
+view.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
