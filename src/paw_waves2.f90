@@ -3063,7 +3063,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       END
 !
 !     ..................................................................
-      SUBROUTINE WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,PSI)
+      SUBROUTINE WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R,NGL,NDIM,NBH,NB,PSI &
+     &                            ,PROFILE_ID)
 !     ******************************************************************
 !     **                                                              **
 !     **  GRAM-SCHMIDT ORTHOGONALIZATION OF A SET OF WAVE FUNCTIONS   **
@@ -3089,6 +3090,7 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
       INTEGER(4)      ,INTENT(IN) :: NBH
       INTEGER(4)      ,INTENT(IN) :: NB
       COMPLEX(8)      ,INTENT(INOUT):: PSI(NGL,NDIM,NBH)
+      CHARACTER(*)    ,INTENT(IN) :: PROFILE_ID
       LOGICAL(4)      ,PARAMETER  :: TTEST=.FALSE.
       COMPLEX(8)      ,PARAMETER  :: CI=(0.D0,1.D0)
       INTEGER(4)                  :: NPRO
@@ -3112,6 +3114,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                     :: ACCEL_GRAM_T0
       REAL(8)                     :: ACCEL_GRAM_T1
+      CHARACTER(32)               :: ACC_PRESENT_PSI
+      CHARACTER(32)               :: ACC_COPY_PSI
 #ENDIF
 !     ******************************************************************
       TRESIDENTGRAM=.FALSE.
@@ -3132,9 +3136,10 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       IF(TRESIDENTGRAM) THEN
+        ACC_PRESENT_PSI='ACC_PRESENT_GRAM_'//TRIM(PROFILE_ID)//'_PSI'
+        ACC_COPY_PSI='ACC_COPY_GRAM_'//TRIM(PROFILE_ID)//'_PSI_IO'
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_IO &
-     &      ('ACC_PRESENT_GRAM_PSI','ACC_COPY_GRAM_PSI_IO' &
-     &      ,NGL,NDIM,NBH,PSI)
+     &      (ACC_PRESENT_PSI,ACC_COPY_PSI,NGL,NDIM,NBH,PSI)
       END IF
 #ENDIF
 #ENDIF

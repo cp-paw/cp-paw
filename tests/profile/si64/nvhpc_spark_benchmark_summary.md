@@ -23,6 +23,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nvhpc-standard-20260531-123955` | Focused standard refresh | `gpu_resident_addpro_host` 43.06 s | `cpu` 77.85 s, `nvhpc_cpu` 75.61 s | `cpu` 167.40 s, `nvhpc_cpu` 167.70 s | Confirms the residency path remains the useful GPU direction on Spark. |
 | `addpro-profile-contexts512-20260531-172542` | ADDPRO context profiling | `gpu_resident` 6.66 s at 512/1 | - | `gpu_resident` 9.52 s at 512/4 | Splits ADDPRO copies into `HPSI` and `OPSI` and corrects the `PSI` row to input/output accounting. |
 | `fresh-energy-guard-sweep-20260531-174614` | Energy-guard refresh | `gpu_resident_orthox` 13.39 s at 1024/1 | `cpu` 70.83 s, `nvhpc_cpu` 71.85 s | `cpu` 168.36 s, `nvhpc_cpu` 167.20 s | Confirms `WAVES_ORTHO_X` workspace residency is now the best default inside the residency profile. |
+| `gram-profile-contexts-20260531-180922` | Gram context profiling | `gpu_resident` 6.94 s at 512/1 | - | `gpu_resident` 9.15 s at 512/4 | Splits the initial Gram wavefunction copy into `PSI0` and `PSIM` rows. |
 
 The latest full-matrix run lives at:
 
@@ -1081,6 +1082,31 @@ runs/orthox-default-smoke-20260531-180220
 | --- | ---: | ---: | ---: | --- |
 | `gpu_resident` | 7.22 s | 1.5119 GB | 0.000000401 Ha | Default now takes the ORTHO_X resident path. |
 | `gpu_resident_orthox_off` | 7.24 s | 2.2230 GB | 0.000000401 Ha | Explicit comparison with the previous path. |
+
+## Gram Context Copy Accounting
+
+`WAVES_GRAMSCHMIDT` now tags its outer resident wavefunction copy by caller
+context. The old aggregate `ACC_COPY_GRAM_PSI_IO` row is split into
+`ACC_COPY_GRAM_PSI0_PSI_IO` and `ACC_COPY_GRAM_PSIM_PSI_IO`, while the scratch
+and transform rows remain unchanged.
+
+Spark C86C validation:
+
+```
+runs/gram-profile-contexts-20260531-180922
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Gram `PSI_IO` rows | Energy delta |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `gpu_resident` | 512 | 1 | 6.94 s | 1.5119 GB | `PSI0` 0.1345 GB, `PSIM` 0.1345 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.15 s | 1.9022 GB | context rows per rank | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 41.02 s | 5.4696 GB | `PSI0` 0.4572 GB, `PSIM` 0.4572 GB | 0.000000407 Ha |
+
+This is instrumentation, not a speedup. It shows that the remaining initial
+Gram wavefunction transfer is symmetric between the `PSI0` and `PSIM`
+orthogonalization calls. A later optimization should therefore either cover both
+initial Gram calls with a broader, verified wavefunction lifetime or leave this
+path alone and focus first on the non-Gram projection/Addpro edges.
 
 ## Recommended Next Benchmark
 
