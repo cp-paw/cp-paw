@@ -199,9 +199,15 @@ wavefunction back before the following host-side projection work; set
 accepted for compatibility, but true cross-orthogonalization PSIM residency needs
 broader projection/PRO residency first. These switches are disabled by default
 because the extra propagation inputs and output copy can outweigh the kernel
-offload. The propagation kernel uses `present_or_copy` for `PSIM` and
-`present_or_copyin` for `PSI0`/`HPSI`, so a later broader resident region can
-reuse already-present wavefunction data without changing this call site.
+offload. Set `CPPAW_GPU_PSIM_PHASE_RESIDENCY=1` or use
+`gpu_resident_psim_phase` / `gpu_resident_hpsi_psim_phase` to keep the updated
+`PSIM` array present from `WAVES$PROPAGATE` into the immediately following
+orthogonalization block and copy it back only when orthogonalization finishes.
+This cross-phase path is still opt-in because it relies on the current timestep
+ordering and needs broader benchmarks before promotion. The propagation kernel
+uses `present_or_copy` for `PSIM` and `present_or_copyin` for `PSI0`/`HPSI`, so
+the broader resident region can reuse already-present wavefunction data without
+changing the kernel body.
 Generic
 resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
@@ -418,6 +424,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Combined DENMAT energy/device-pack diagnostic with persistent `THIS%PROJ` and GPU-side real-matrix accumulation. |
 | `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
+| `gpu_resident_psim_phase` | Opt-in diagnostic that also sets `CPPAW_GPU_PSIM_PHASE_RESIDENCY=1`, leaving propagated `PSIM` present until orthogonalization copies it back. |
+| `gpu_resident_hpsi_psim_phase` | Combined HPSI plus cross-phase PSIM propagation residency diagnostic. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -502,8 +510,9 @@ cd tests/profile/si64
 ./run_psim_focus.sh
 ```
 
-It compares the default residency path, PSIM propagation, HPSI residency, and
-the combined HPSI-plus-PSIM propagation diagnostic. By default it runs
+It compares the default residency path, PSIM propagation, cross-phase PSIM
+propagation residency, HPSI residency, and the combined HPSI-plus-PSIM
+diagnostics. By default it runs
 `EMPTY_BANDS=512` with one GPU rank and `SHARED_EMPTY_BANDS=512` with four
 ranks sharing the GPU, then writes a combined TSV/Markdown summary next to the
 run directories. Set `RUN_LARGE_GPU=yes` to add a one-rank
@@ -607,6 +616,12 @@ be overridden by kernel category:
   back before orthogonalization. The compatibility aliases are
   `CPPAW_GPU_PSIM_RESIDENCY` and `CPPAW_CUBLAS_ACC_PSIM_RESIDENCY`; they do not
   imply true cross-orthogonalization residency in the current implementation.
+- `CPPAW_GPU_PSIM_PHASE_RESIDENCY`: disabled by default and requires
+  `CPPAW_GPU_PSIM_PROPAGATE=1`. Set to `1` to leave the propagated `PSIM` array
+  present until the immediately following orthogonalization block copies the
+  final orthogonalized wavefunction back. The compatibility aliases are
+  `CPPAW_GPU_PSIM_KEEP_RESIDENT` and
+  `CPPAW_CUBLAS_ACC_PSIM_PHASE_RESIDENCY`.
 - `CPPAW_GPU_DENMAT_ENERGY`: disabled by default. Set to `1` to offload the
   time-inversion one-center DENMAT energy/Lambda contraction with OpenACC. The
   compatibility alias is `CPPAW_CUBLAS_ACC_DENMAT_ENERGY`; use

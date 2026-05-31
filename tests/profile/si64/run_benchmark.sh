@@ -320,6 +320,12 @@ case_note() {
     gpu_hpsi_psim_propagate|gpu_resident_hpsi_psim)
       echo "Diagnostic that combines HPSI residency with GPU PSIM propagation."
       ;;
+    gpu_resident_psim_phase)
+      echo "Diagnostic that leaves the propagated PSIM present until the following orthogonalization copies it back."
+      ;;
+    gpu_resident_hpsi_psim_phase)
+      echo "Diagnostic that combines HPSI residency with cross-phase PSIM propagation residency."
+      ;;
     gpu_resident_hpsi_opsi)
       echo "Residency diagnostic that combines HPSI and OPSI wavefunction residency switches."
       ;;
@@ -549,6 +555,8 @@ case_env() {
     gpu_resident_hpsi_offden_blas) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 $(cublas_env)" ;;
     gpu_psim_propagate|gpu_resident_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
     gpu_hpsi_psim_propagate|gpu_resident_hpsi_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
+    gpu_resident_psim_phase) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_hpsi_psim_phase) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_hpsi_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_gram_cholesky) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GRAM_CHOLESKY=1 $(cublas_env)" ;;
