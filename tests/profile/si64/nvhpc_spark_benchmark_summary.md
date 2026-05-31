@@ -905,6 +905,36 @@ estimate drops from 6.6127 GB to 6.1555 GB. The total drop is smaller than the
 old `ZGEMM_NN_C_IO` estimate because the remaining required output transfer is
 now charged explicitly to `ACC_COPY_ADDOPSI_PSIM_IO`.
 
+### Gram Transform Device Input
+
+The final Gram-Schmidt transform now creates the `PSIINV` scratch wavefunction
+on the device and fills it from the already resident `PSI` array before calling
+`PLANEWAVE$ADDPRODUCT`. The host `PSIINV=PSI` assignment is kept for CPU
+fallback correctness, but the residency-profile cuBLAS path no longer needs a
+host/device copy for this scratch input. The transform matrices `X`, `X1`, and
+`X2` are still host-computed and copied explicitly.
+
+Spark C86C validation:
+
+```
+runs/gram-transform-device-input512-20260531-170001
+runs/gram-transform-device-input2048-20260531-170014
+runs/gram-transform-device-input-parallel512-20260531-170136
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `PSIINV` row | Remaining `ZGEMM_NN_A_IN` | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 6.39 s | 2.2902 GB | present, 2 calls | 2 calls, 0.1345 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.05 s | 1.5792 GB | present, 2 calls | 2 calls, 0.1345 GB | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.45 s | 4.8137 GB | present, 2 calls per rank | 2 calls, 0.0336 GB per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 41.23 s | 21.4184 GB | present, 2 calls | 2 calls, 0.4572 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 40.20 s | 5.6982 GB | present, 2 calls | 2 calls, 0.4572 GB | 302.280854 Ha |
+
+Compared with the ADDOPSI output residency run, the 2048-band orthox copy
+estimate drops from 6.1555 GB to 5.6982 GB. The remaining
+`ACC_COPY_CUBLAS_ZGEMM_NN_A_IN` rows now correspond to the `WAVES_ADDOPSI`
+`OPSI` inputs, not the Gram transform scratch copy.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

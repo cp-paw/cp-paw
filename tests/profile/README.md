@@ -195,9 +195,11 @@ the estimated bytes for a required host/device transfer. The tracked arrays are
 `PSIM`/`OPSI` in the orthogonalization region, `PSIM` in `WAVES_ADDOPSI`
 with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in `WAVES_ADDPRO`. The
-Gram-Schmidt setup keeps `PSI` resident through the final
-wavefunction transform and records that outer input/output region as
-`ACC_COPY_GRAM_PSI_IO`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
+Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
+and records that outer input/output region as `ACC_COPY_GRAM_PSI_IO`. The
+transform scratch `PSIINV` is created on the device from resident `PSI`,
+recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
+as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
 also use these rows for their residency paths; inversion-symmetric
 Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
