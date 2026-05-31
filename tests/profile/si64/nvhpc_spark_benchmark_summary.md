@@ -1294,6 +1294,46 @@ context is disabled because the current profiler counts the cached path's
 That makes these switches useful for isolation, not a reason to change the
 recommended default.
 
+## ADDPRO Fallback Copy Accounting
+
+The follow-up records `ACC_COPY_ADDPRO_<ctx>_PSI_IO` before the
+host-expansion/addproduct fallback enters its OpenACC `COPY(PSI)` region. This
+puts the fallback path on the same semantic accounting basis as the resident
+projector-cache path. Per-atom `PRO`/`PROPSI` transfers in the fallback path
+remain in the generic cuBLAS `ZGEMM_NN` copy rows to avoid double counting.
+
+Spark C86C validation:
+
+```
+runs/addpro-fallback-copyacct-20260531-512-1r
+runs/addpro-fallback-copyacct-20260531-512-4r
+runs/addpro-fallback-copyacct-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.39 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_hpsi_host` | 512 | 1 | 6.46 s | 1.6786 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_opsi_host` | 512 | 1 | 7.25 s | 1.6786 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 1 | 7.06 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_resident_opsi_addpro_host` | 512 | 1 | 7.02 s | 1.6786 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.50 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_hpsi_host` | 512 | 4 | 9.61 s | 2.0443 GB | 0.000000401 Ha |
+| `gpu_resident_addpro_opsi_host` | 512 | 4 | 9.61 s | 2.0443 GB | 0.000000401 Ha |
+| `gpu_resident_opsi` | 512 | 4 | 9.50 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_opsi_addpro_host` | 512 | 4 | 9.39 s | 2.0443 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 39.44 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_addpro_hpsi_host` | 2048 | 1 | 40.02 s | 5.5498 GB | 0.000000407 Ha |
+| `gpu_resident_addpro_opsi_host` | 2048 | 1 | 40.99 s | 5.5498 GB | 0.000000407 Ha |
+| `gpu_resident_opsi` | 2048 | 1 | 40.09 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_opsi_addpro_host` | 2048 | 1 | 38.97 s | 5.5498 GB | 0.000000407 Ha |
+
+All runs are energy-valid. The previous 2048-band copy decrease for the
+cache-disabled contexts is now gone; those contexts show a higher copy estimate,
+as expected when the fallback `PSI` input/output region is counted explicitly.
+The context switches remain diagnostics, while the resident ADDPRO cache stays
+the recommended default path.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

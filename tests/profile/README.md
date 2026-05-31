@@ -218,7 +218,10 @@ with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 such as `ACC_COPY_PROJ_SETUP0_PSI_IN`, `ACC_COPY_PROJ_GRAM_PSI0_PSI_IN`, and
 `ACC_COPY_PROJ_ORTHO_PSIM_PSI_IN`. `WAVES_ADDPRO` has context-specific
 `PSI`/`PROPSI` rows (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
-copy estimates because the projector addition updates the wavefunction. The
+copy estimates because the projector addition updates the wavefunction. They are
+emitted for both the resident projector-cache path and the host-expansion
+fallback path; in the fallback path, per-atom `PRO`/`PROPSI` transfers remain in
+the generic cuBLAS `ZGEMM_NN` copy rows to avoid double counting. The
 wavefunction overlap `ZSPROD` rows are also tagged by `WAVES_OVERLAP` caller
 context, for example `ACC_COPY_ZSP_ORTH_PSIM_P1_IN`,
 `ACC_PRESENT_ZSP_GRAM_PSI0_P1`, and `ACC_COPY_ZSP_HAMILTON_P2_IN`.
