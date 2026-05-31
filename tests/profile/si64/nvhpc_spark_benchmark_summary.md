@@ -935,6 +935,37 @@ estimate drops from 6.1555 GB to 5.6982 GB. The remaining
 `ACC_COPY_CUBLAS_ZGEMM_NN_A_IN` rows now correspond to the `WAVES_ADDOPSI`
 `OPSI` inputs, not the Gram transform scratch copy.
 
+### ADDOPSI Device Inversion
+
+The inversion-symmetric `WAVES_ADDOPSI` path now uses the same inversion-batch
+idea as the plane-wave addproduct helper. The residency-profile GPU path copies
+`OPSI` once, builds an inverted `OPSIINV` scratch array on the device using
+`MINUSG`, and runs both addproducts with present inputs. The original host
+inversion branch remains the fallback when residency or inversion batching is
+disabled.
+
+Spark C86C validation:
+
+```
+runs/addopsi-device-inversion512-20260531-170700
+runs/addopsi-device-inversion2048-20260531-170715
+runs/addopsi-device-inversion-parallel512-20260531-170835
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `OPSI_TINV_IN` | `OPSIINV_TINV` | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.27 s | 2.2230 GB | 1 call, 0.0672 GB | present, 1 call | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.41 s | 1.5119 GB | 1 call, 0.0672 GB | present, 1 call | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.32 s | 4.7465 GB | 1 call, 0.0168 GB per rank | present, 1 call per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 40.98 s | 21.1897 GB | 1 call, 0.2286 GB | present, 1 call | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 39.37 s | 5.4696 GB | 1 call, 0.2286 GB | present, 1 call | 302.280854 Ha |
+
+Compared with the Gram-transform device-input run, the 2048-band orthox copy
+estimate drops from 5.6982 GB to 5.4696 GB. The remaining large wavefunction
+copy rows are now outside this local addproduct path: the outer Gram
+`PSI` input/output region, projection wavefunction inputs, and force/setup
+wavefunction copies.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
