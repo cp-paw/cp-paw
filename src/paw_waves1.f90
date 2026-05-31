@@ -4461,9 +4461,12 @@ END IF
       REAL(8)                :: SVAR
       REAL(8)                :: F1,F2
       LOGICAL(4)             :: TINV
+      LOGICAL(4)             :: TOFFDENBLAS
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
+      CHARACTER(16)          :: ENVVAL
+      INTEGER(4)             :: ENVSTAT
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
@@ -4482,6 +4485,21 @@ END IF
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+      TOFFDENBLAS=.FALSE.
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_LOCAL',ENVVAL &
+     &                             ,STATUS=ENVSTAT)
+      IF(ENVSTAT.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_OFFDEN_BLAS',ENVVAL &
+     &                               ,STATUS=ENVSTAT)
+      END IF
+      IF(ENVSTAT.EQ.0) THEN
+        SELECT CASE(TRIM(ADJUSTL(ENVVAL)))
+        CASE('1','T','t','TRUE','true','True','YES','yes','ON','on')
+          TOFFDENBLAS=.TRUE.
+        CASE DEFAULT
+          TOFFDENBLAS=.FALSE.
+        END SELECT
+      END IF
 !
 !     ==========================================================================
 !     ==  CONSTRUCT INDEX ARRAYS                                              ==
@@ -4545,6 +4563,13 @@ END IF
             EIKR=EXP(CI*SVAR)  !<P_{R+T}|PSI>=<P_R|PSI>*EIKR
             I0=IPRO1(IAT1)-1
             J0=IPRO1(IAT2)-1
+            IF(TOFFDENBLAS.AND.TINV.AND.NDIM.EQ.1) THEN
+              CALL WAVES_OFFDEN_TINV_NDIM1_BLAS(NPROAT(IAT1) &
+     &             ,NPROAT(IAT2),NBH,NB,NDIMD,NSPIN,ISPIN &
+     &             ,OCC(1,IKPT,ISPIN),EIKR,THIS%PROJ(1,1,I0+1) &
+     &             ,THIS%PROJ(1,1,J0+1),OSDENMAT(NN)%MAT)
+              CYCLE
+            END IF
             DO I=1,NPROAT(IAT1)
               DO J=1,NPROAT(IAT2)
 !
@@ -4666,6 +4691,115 @@ END IF
         CALL ERROR$STOP('WAVES_SUMMUPOFFSITEDENMAT')
       END IF
                                                                 CALL TRACE$POP()
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_OFFDEN_TINV_NDIM1_BLAS(N1,N2,NBH,NB,NDIMD &
+     &                                       ,NSPIN,ISPIN,OCC,EIKR &
+     &                                       ,PROJ1,PROJ2,MAT)
+!     **************************************************************************
+!     **  BLAS diagnostic for the inversion-symmetric, scalar off-site        **
+!     **  density-matrix contraction. It is opt-in and intentionally limited  **
+!     **  to NDIM=1, where the original tensor-to-spin mapping is scalar.     **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: N1
+      INTEGER(4),INTENT(IN) :: N2
+      INTEGER(4),INTENT(IN) :: NBH
+      INTEGER(4),INTENT(IN) :: NB
+      INTEGER(4),INTENT(IN) :: NDIMD
+      INTEGER(4),INTENT(IN) :: NSPIN
+      INTEGER(4),INTENT(IN) :: ISPIN
+      REAL(8)   ,INTENT(IN) :: OCC(NB)
+      COMPLEX(8),INTENT(IN) :: EIKR
+      COMPLEX(8),INTENT(IN) :: PROJ1(NBH,N1)
+      COMPLEX(8),INTENT(IN) :: PROJ2(NBH,N2)
+      REAL(8)   ,INTENT(INOUT) :: MAT(N1,N2,NDIMD)
+      COMPLEX(8),ALLOCATABLE :: A(:,:)
+      COMPLEX(8),ALLOCATABLE :: B(:,:)
+      COMPLEX(8),ALLOCATABLE :: WORK(:,:)
+      COMPLEX(8)            :: ONE
+      COMPLEX(8)            :: ZERO
+      REAL(8)               :: FPLUS
+      REAL(8)               :: FMINUS
+      INTEGER(4)            :: I,J,IBH
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+      REAL(8)               :: ACCEL_FLOPS
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+      ALLOCATE(A(N1,NBH))
+      ALLOCATE(B(N2,NBH))
+      ALLOCATE(WORK(N1,N2))
+      DO IBH=1,NBH
+        FPLUS=0.5D0*(OCC(2*IBH-1)+OCC(2*IBH))
+        FMINUS=0.5D0*(OCC(2*IBH-1)-OCC(2*IBH))
+        DO I=1,N1
+          A(I,IBH)=PROJ1(IBH,I)
+        ENDDO
+        DO J=1,N2
+          B(J,IBH)=FPLUS*CONJG(PROJ2(IBH,J))*CONJG(EIKR) &
+     &            +FMINUS*PROJ2(IBH,J)*EIKR
+        ENDDO
+      ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_BLAS_PACK' &
+     &    ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NBH,KIND=8),0_8 &
+     &    ,0.D0,16.D0*REAL(NBH,KIND=8)*REAL(N1+N2,KIND=8) &
+     &    ,ACCEL_T1-ACCEL_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+      CALL ZGEMM('N','T',N1,N2,NBH,ONE,A,N1,B,N2,ZERO,WORK,N1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &           *REAL(NBH,KIND=8)
+      CALL ACCELPROFILE$ADD('ZGEMM_OFFDEN_TINV_NDIM1' &
+     &    ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NBH,KIND=8),0_8 &
+     &    ,ACCEL_FLOPS,16.D0*(REAL(NBH,KIND=8)*REAL(N1+N2,KIND=8) &
+     &    +REAL(N1,KIND=8)*REAL(N2,KIND=8)),ACCEL_T1-ACCEL_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+      IF(NSPIN.EQ.1) THEN
+        DO J=1,N2
+          DO I=1,N1
+            MAT(I,J,1)=MAT(I,J,1)+REAL(WORK(I,J),KIND=8)
+          ENDDO
+        ENDDO
+      ELSE IF(NSPIN.EQ.2) THEN
+        IF(ISPIN.EQ.1) THEN
+          DO J=1,N2
+            DO I=1,N1
+              MAT(I,J,1)=MAT(I,J,1)+REAL(WORK(I,J),KIND=8)
+              MAT(I,J,2)=MAT(I,J,2)+REAL(WORK(I,J),KIND=8)
+            ENDDO
+          ENDDO
+        ELSE
+          DO J=1,N2
+            DO I=1,N1
+              MAT(I,J,1)=MAT(I,J,1)+REAL(WORK(I,J),KIND=8)
+              MAT(I,J,2)=MAT(I,J,2)-REAL(WORK(I,J),KIND=8)
+            ENDDO
+          ENDDO
+        END IF
+      END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('PAW_OFFDEN_BLAS_ACCUM' &
+     &    ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NDIMD,KIND=8),0_8 &
+     &    ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      DEALLOCATE(WORK)
+      DEALLOCATE(B)
+      DEALLOCATE(A)
       RETURN
       END
 !

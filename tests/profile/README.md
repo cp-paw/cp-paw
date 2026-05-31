@@ -280,6 +280,14 @@ The LAGR device lifetime is visible through `ACC_COPY_DENMAT_LAGR_IN` and
 `ACC_COPY_DENMAT_ENERGY_TINV`. It is disabled by default because the current
 Si64 wall time is still neutral even though the DENMAT envelope and transfer
 estimate shrink.
+The scalar time-inversion off-site DENMAT diagnostic is enabled with
+`CPPAW_GPU_OFFDEN_LOCAL=1`; `CPPAW_OFFDEN_BLAS=1` is kept as a shorter alias.
+It rewrites the `TINV`/`NDIM=1` off-site local contraction as packed
+`ZGEMM` calls and records `PAW_OFFDEN_BLAS_PACK`,
+`ZGEMM_OFFDEN_TINV_NDIM1`, and `PAW_OFFDEN_BLAS_ACCUM`. This is still a
+host-data BLAS prototype rather than a full resident GPU path, so it is
+disabled by default and should be used to quantify whether keeping projector
+buffers resident on the GPU would be worthwhile.
 Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
@@ -349,6 +357,10 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
 | `gpu_resident_denmat_energy` | Opt-in diagnostic that sets `CPPAW_GPU_DENMAT_ENERGY=1` and forces the time-inversion one-center DENMAT energy/Lambda OpenACC prototype for comparison. |
 | `gpu_resident_hpsi_denmat_energy` | Combined diagnostic with HPSI residency and the DENMAT energy/Lambda OpenACC prototype enabled together. |
+| `gpu_resident_offden_blas` | Opt-in diagnostic that sets `CPPAW_GPU_OFFDEN_LOCAL=1` and rewrites scalar `TINV` off-site DENMAT local work as packed BLAS. |
+| `gpu_resident_hpsi_offden_blas` | Combined HPSI residency plus scalar `TINV` off-site DENMAT BLAS diagnostic. |
+| `gpu_resident_denmat_energy_offden_blas` | Combined DENMAT energy/Lambda diagnostic plus scalar `TINV` off-site DENMAT BLAS diagnostic. |
+| `gpu_resident_hpsi_denmat_energy_offden_blas` | Combined HPSI residency, DENMAT energy/Lambda diagnostic, and scalar `TINV` off-site DENMAT BLAS diagnostic. |
 | `gpu_psim_propagate` | Opt-in diagnostic that propagates `PSIM` on the GPU and copies it back before orthogonalization via `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |

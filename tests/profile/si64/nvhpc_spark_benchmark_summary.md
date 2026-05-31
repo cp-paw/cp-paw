@@ -32,6 +32,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `denmat-energy-acc-v2-20260531-*` | DENMAT energy OpenACC diagnostic | `gpu_resident_hpsi` 39.00 s, `gpu_resident_hpsi_denmat_energy` 39.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.75 s at 512/4 | Adds an opt-in two-stage OpenACC diagnostic for the time-inversion DENMAT energy/Lambda contraction; DENMAT shrinks, but Lambda copies keep it diagnostic-only. |
 | `denmat-lagr-residency-20260531-*` | DENMAT LAGR setup/residency | `gpu_resident_hpsi` 37.19 s, `gpu_resident_hpsi_denmat_energy` 37.40 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy` 9.56 s at 512/4 | Precomputes `LAGR=LAMBDA*OCC` once per k-point/spin and keeps it resident for the DENMAT diagnostic; copy volume drops sharply, wall time remains neutral at 2048/1. |
 | `offden-profile-split-20260531-*` | Off-site DENMAT profiling split | `gpu_resident_hpsi_denmat_energy` 36.39 s at 2048/1 | - | `gpu_resident_hpsi` 9.75 s at 512/4 | Splits `PAW_OFFDEN_SUM` into setup/zero/local/combine; off-site time is mostly local contraction, not MPI combine. |
+| `offden-blas-diagnostic-20260531-*` / `offden-blas-combined-20260531-*` | Off-site DENMAT BLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` 36.91 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` 9.76 s at 512/4 | Rewrites scalar `TINV` off-site local work as packed `ZGEMM`; energy-valid, much faster inside `PAW_OFFDEN_SUM_LOCAL`, still opt-in host-data diagnostic. |
 
 The latest full-matrix run lives at:
 
@@ -1654,6 +1655,71 @@ the MPI combine row is negligible; at 512/4 it is visible but still smaller
 than the local loop on rank 1. This points the next off-site acceleration pass
 toward a local matrix-kernel rewrite or GPU residency around `THIS%PROJ`, not
 first toward MPI reduction tuning.
+
+## Off-Site DENMAT BLAS Diagnostic
+
+The follow-up diagnostic adds `CPPAW_GPU_OFFDEN_LOCAL=1` with
+`CPPAW_OFFDEN_BLAS=1` as an alias. For scalar `TINV`/`NDIM=1` off-site DENMAT
+neighbors it packs the projector factors and evaluates the local contraction
+with `ZGEMM`, recording:
+
+```
+PAW_OFFDEN_BLAS_PACK
+ZGEMM_OFFDEN_TINV_NDIM1
+PAW_OFFDEN_BLAS_ACCUM
+```
+
+This is still a host-data BLAS prototype, not a fully resident cuBLAS path.
+It is intentionally disabled by default. Its role is to measure whether the
+local loop has enough matrix-kernel structure to justify a later resident
+projector/GPU implementation.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/offden-blas-diagnostic-20260531-512-4r
+runs/offden-blas-diagnostic-20260531-2048-1r
+runs/offden-blas-combined-20260531-512-4r
+runs/offden-blas-combined-20260531-2048-1r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 4 | 9.86 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_blas` | 512 | 4 | 10.16 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 38.79 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_offden_blas` | 2048 | 1 | 37.91 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 512 | 4 | 9.83 s | 1.7591 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_blas` | 512 | 4 | 9.76 s | 1.7591 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy` | 2048 | 1 | 37.75 s | 4.9892 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_blas` | 2048 | 1 | 36.91 s | 4.9892 GB | 0.000000407 Ha |
+
+| Profile row | 2048/1 HPSI | 2048/1 HPSI+BLAS | 512/4 HPSI, rank 1 | 512/4 HPSI+BLAS, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.7183 s | 0.0723 s | 0.1396 s | 0.0194 s |
+| `PAW_OFFDEN_SUM_COMBINE` | 0.0000 s | 0.0000 s | 0.0166 s | 0.0209 s |
+| `PAW_OFFDEN_BLAS_PACK` | - | 0.0219 s | - | 0.0058 s |
+| `ZGEMM_OFFDEN_TINV_NDIM1` | - | 0.0490 s | - | 0.0126 s |
+| `PAW_OFFDEN_BLAS_ACCUM` | - | 0.0002 s | - | 0.0001 s |
+
+| Profile row | 2048/1 DENMAT GPU | 2048/1 DENMAT GPU+BLAS | 512/4 DENMAT GPU, rank 1 | 512/4 DENMAT GPU+BLAS, rank 1 |
+| --- | ---: | ---: | ---: | ---: |
+| `PAW_OFFDEN_SUM_LOCAL` | 0.7151 s | 0.0734 s | 0.1403 s | 0.0181 s |
+| `PAW_OFFDEN_SUM_COMBINE` | 0.0000 s | 0.0000 s | 0.0152 s | 0.0158 s |
+| `PAW_OFFDEN_BLAS_PACK` | - | 0.0220 s | - | 0.0056 s |
+| `ZGEMM_OFFDEN_TINV_NDIM1` | - | 0.0498 s | - | 0.0119 s |
+| `PAW_OFFDEN_BLAS_ACCUM` | - | 0.0002 s | - | 0.0001 s |
+
+The local contraction shrinks by roughly one order of magnitude in both the
+plain HPSI and combined DENMAT-GPU cases, while all energy checks remain within
+the existing Si64 tolerance. The total wall-time change is modest because the
+Si64 step is dominated by other phases and the prototype still packs host
+buffers every neighbor. The next useful GPU step is therefore not another
+off-site timing split, but keeping projector/packed off-site buffers resident
+and moving this matrix formulation behind an OpenACC/cuBLAS-aware backend.
 
 ## Recommended Next Benchmark
 
