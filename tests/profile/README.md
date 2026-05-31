@@ -244,8 +244,12 @@ and records that outer input/output region with context-specific rows such as
 transform scratch `PSIINV` is created on the device from resident `PSI`,
 recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
 as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
-also use these rows for their residency paths; inversion-symmetric
-Hermitian/symmetric scalarproducts no longer include the unused second
+also use these rows for their residency paths. The one-center overlap cuBLAS
+path splits its estimated transfers into `ACC_COPY_1COV_PROJ_IN`,
+`ACC_COPY_1COV_MAT_OUT`, and, for inversion-symmetric superwave cases,
+`ACC_COPY_1COV_CMAT_OUT`; use those rows to decide whether a future optimization
+should target packed projector inputs or overlap-matrix outputs.
+Inversion-symmetric Hermitian/symmetric scalarproducts no longer include the unused second
 wavefunction array in the OpenACC data region. These rows are meant to guide the
 next change: extend resident regions only where the profile shows repeated
 copies of the same wavefunction data.
