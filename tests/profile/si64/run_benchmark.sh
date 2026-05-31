@@ -221,6 +221,9 @@ case_note() {
     gpu_resident_forcepsi_host)
       echo "Residency diagnostic that disables the force-loop PSI0 resident data region."
       ;;
+    gpu_resident_orthoconst)
+      echo "Residency diagnostic that enables resident CHICHI/U inputs in WAVES_ORTHO_X."
+      ;;
     gpu_resident_1coverlap_host)
       echo "Residency diagnostic that disables only the one-center overlap cuBLAS path."
       ;;
@@ -402,6 +405,7 @@ case_env() {
     gpu_resident_pro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PRO_EXPANSION=0 $(cublas_env)" ;;
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
     gpu_resident_forcepsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_FORCE_PSI_RESIDENCY=0 $(cublas_env)" ;;
+    gpu_resident_orthoconst) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_CONST_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;

@@ -127,7 +127,12 @@ also has a narrow resident projection/overlap region for wavefunctions outside
 the main orthogonalization loop. The force loop keeps `THIS%PSI0` resident
 across per-atom `WAVES_DEDPRO` MATMUL calls; set
 `CPPAW_GPU_FORCE_PSI_RESIDENCY=0` to compare against the previous per-atom copy
-behavior. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
+behavior. The real safe-orthogonalization loop also has an opt-in diagnostic
+that keeps the constant `CHICHI` and `U` matrices resident across repeated
+`LIB$MATMULR8` calls while leaving the host-updated temporary outputs on the
+previous copy-back path; set `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1` to test it. It
+is disabled by default because Spark Si64 smokes reduced copy volume but did not
+improve wall time. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
 the older per-column inversion scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
 `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
@@ -211,6 +216,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_pro_host` | Residency diagnostic with GPU projector expansion disabled via `CPPAW_GPU_PRO_EXPANSION=0`. |
 | `gpu_resident_addpro_host` | Residency diagnostic with the GPU projection cache kept enabled but its `WAVES_ADDPRO` reuse disabled via `CPPAW_GPU_ADDPRO_CACHE=0`. |
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
+| `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
@@ -343,6 +349,9 @@ be overridden by kernel category:
 - `CPPAW_GPU_FORCE_PSI_RESIDENCY`: keep enabled by default in residency-profile
   builds so `WAVES$FORCE` reuses `THIS%PSI0` across the per-atom
   `WAVES_DEDPRO` MATMUL calls; set to `0` for the previous per-call copy path.
+- `CPPAW_GPU_ORTHO_CONST_RESIDENCY`: disabled by default. Set to `1` to let
+  `WAVES_ORTHO_X` reuse constant `CHICHI` and `U` inputs across repeated real
+  MATMUL calls while keeping temporary outputs on the host-synchronized path.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,
