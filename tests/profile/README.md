@@ -453,9 +453,13 @@ For a short Nsight Systems trace of the recommended combined GPU profile binary:
 
 ```
 cd tests/profile/si64
-NSTEPS=1 ./run_nsys.sh
+CASE=gpu_resident NSTEPS=1 ./run_nsys.sh
 ```
 
+`run_nsys.sh` accepts the same GPU-oriented case names as the benchmark harness,
+for example `gpu_resident`, `gpu_resident_orthox`, `gpu_all`, `gpu_no_cufft`,
+`cublas`, `cusolver`, and `cufft`. It writes `nsys_case.env` into the run
+directory so a trace can be matched to the executable and runtime switches.
 For `RANKS>1` the Nsight harness wraps `mpirun` and writes one combined
 `nsys_mpi.nsys-rep` report, which is robust for CP-PAW's current `MPI_ABORT(0)`
 shutdown path. For runs that finalize MPI normally, `NSYS_MPI_MODE=per_rank`
