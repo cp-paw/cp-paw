@@ -168,8 +168,8 @@ the older per-column inversion scalarproduct path for comparison. It also lets
 `WAVES_ADDPRO`. Generic resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
 inputs are counted separately from real transfer estimates. The overlap region
-uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION` for the outer copy-in and
-`ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call output copy.
+uses `ACC_PRESENT_ORTHO_*` / `ACC_COPY_ORTHO_*` rows for its outer wavefunction
+arrays and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call output copy.
 Projector-residency diagnostics include `ACC_BUILD_PRO_CACHE`,
 `ACC_PRESENT_PRO_CACHE_REUSE`, `ACC_PRESENT_PROJ_PRO_CACHE`,
 `ACC_PRESENT_ADDPRO_PRO_CACHE`, `CUBLAS_ZGEMM_ADDPRO_CACHE`, and the
@@ -182,8 +182,8 @@ only; Spark Nsight traces show that removing the explicit post-cuBLAS
 synchronization mostly shifts waiting time into later stream synchronizations or
 copy calls for this workload. For non-inversion wave sets, the residency mode
 also keeps the orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC
-data region; `ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy
-estimate.
+data region; `ACC_PRESENT_ADDOPSI_*` / `ACC_COPY_ADDOPSI_*` rows record that
+region's array-specific transfer estimate.
 
 The residency profile also records semantic OpenACC present checks for the PAW
 wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count

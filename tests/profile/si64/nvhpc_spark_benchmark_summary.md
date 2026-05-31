@@ -814,6 +814,38 @@ now explicit: `ACC_COPY_CUBLAS_ZGEMM_NN_C_IO` accounts for 2.7434 GB, while the
 real `DSPROD` input/output rows account for the next major block. That makes the
 next residency target clearer than the old aggregate estimate did.
 
+### Residency Copy Accounting Cleanup
+
+A follow-up removed the older aggregate region estimates
+`ACC_COPY_CUBLAS_PROJ_RES`, `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`, and
+`ACC_COPY_CUBLAS_ADDOPSI_RES_REGION`. Their component arrays are already covered
+by the present-aware `ACC_PRESENT_*` / `ACC_COPY_*` rows, so keeping the
+aggregate rows double-counted the same residency regions in the `copy_gb`
+summary. The kernel path is unchanged; this only makes the copy accounting match
+the array-level profile rows.
+
+Spark C86C validation:
+
+```
+runs/residency-copy-accounting-cleanup512-20260531-162946
+runs/residency-copy-accounting-cleanup2048-20260531-163012
+runs/residency-copy-accounting-cleanup-parallel512-20260531-163144
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.49 s | 2.9626 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.98 s | 2.2516 GB | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.42 s | 5.4861 GB | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 42.15 s | 23.7046 GB | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 38.94 s | 7.9844 GB | 302.280854 Ha |
+
+All checked CSV files had no hits for the removed aggregate rows. After cleanup,
+the largest remaining explicit copy target in the 2048-band orthox profile is
+`ACC_COPY_CUBLAS_ZGEMM_NN_C_IO` at 2.7434 GB, followed by real wavefunction
+input/output rows such as `ACC_COPY_PROJ_PSI_IN`, `ACC_COPY_GRAM_PSI_IN`, and
+`ACC_COPY_ADDPRO_PSI_IO` at 0.4572 GB each.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
