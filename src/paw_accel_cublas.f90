@@ -49,7 +49,25 @@
       REAL(8)            :: MINFLOP_OVERLAP=1.D7
       REAL(8)            :: MINFLOP_ADDPRODUCT=1.D7
       REAL(8)            :: MINFLOP_MATMUL=1.D7
+      CHARACTER(16)      :: OVERLAP_PROFILE_ID=''
       CONTAINS
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_SET_OVERLAP_PROFILE(PROFILE_ID)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PROFILE_ID
+!     **************************************************************************
+      OVERLAP_PROFILE_ID=ADJUSTL(PROFILE_ID)
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_SET_OVERLAP_PROFILE
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE()
+      IMPLICIT NONE
+!     **************************************************************************
+      OVERLAP_PROFILE_ID=''
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE
 !
 !     ..........................................................................
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -67,6 +85,51 @@
      &                     ,0.D0,BYTES,0.D0)
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_BYTES
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ZSPROD_NAMES(SUFFIX,PRESENT_NAME &
+     &                                        ,COPY_NAME)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)  :: SUFFIX
+      CHARACTER(32),INTENT(OUT):: PRESENT_NAME
+      CHARACTER(32),INTENT(OUT):: COPY_NAME
+!     **************************************************************************
+      IF(LEN_TRIM(OVERLAP_PROFILE_ID).GT.0) THEN
+        PRESENT_NAME='ACC_PRESENT_ZSP_'//TRIM(OVERLAP_PROFILE_ID)//'_' &
+     &       //TRIM(SUFFIX)
+        COPY_NAME='ACC_COPY_ZSP_'//TRIM(OVERLAP_PROFILE_ID)//'_' &
+     &       //TRIM(SUFFIX)
+        IF(TRIM(SUFFIX).EQ.'P1') COPY_NAME=TRIM(COPY_NAME)//'_IN'
+        IF(TRIM(SUFFIX).EQ.'P2') COPY_NAME=TRIM(COPY_NAME)//'_IN'
+      ELSE IF(TRIM(SUFFIX).EQ.'P1') THEN
+        PRESENT_NAME='ACC_PRESENT_CUBLAS_ZSPROD_PSI1'
+        COPY_NAME='ACC_COPY_CUBLAS_ZSPROD_PSI1_IN'
+      ELSE IF(TRIM(SUFFIX).EQ.'P2') THEN
+        PRESENT_NAME='ACC_PRESENT_CUBLAS_ZSPROD_PSI2'
+        COPY_NAME='ACC_COPY_CUBLAS_ZSPROD_PSI2_IN'
+      ELSE
+        PRESENT_NAME='ACC_PRESENT_CUBLAS_ZSPROD_OUT'
+        COPY_NAME='ACC_COPY_CUBLAS_ZSPROD_OUT'
+      END IF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ZSPROD_NAMES
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ZSPROD_COPY_NAME(SUFFIX,COPY_NAME)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)   :: SUFFIX
+      CHARACTER(32),INTENT(OUT) :: COPY_NAME
+!     **************************************************************************
+      IF(LEN_TRIM(OVERLAP_PROFILE_ID).GT.0) THEN
+        COPY_NAME='ACC_COPY_ZSP_'//TRIM(OVERLAP_PROFILE_ID)//'_' &
+     &       //TRIM(SUFFIX)
+      ELSE IF(TRIM(SUFFIX).EQ.'OVL') THEN
+        COPY_NAME='ACC_COPY_CUBLAS_ZSPROD_OVL_RES'
+      ELSE
+        COPY_NAME='ACC_COPY_CUBLAS_ZSPROD'
+      END IF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ZSPROD_COPY_NAME
 #ENDIF
 !
 !     ..........................................................................
@@ -1059,6 +1122,15 @@
       COMPLEX(8),INTENT(OUT) :: OVERLAP(N1,N2)
       LOGICAL(4),INTENT(OUT) :: USED
       REAL(8)                :: FLOPS
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CHARACTER(32)          :: ACC_PRESENT_PSI1
+      CHARACTER(32)          :: ACC_COPY_PSI1
+      CHARACTER(32)          :: ACC_PRESENT_PSI2
+      CHARACTER(32)          :: ACC_COPY_PSI2
+      CHARACTER(32)          :: ACC_PRESENT_OUT
+      CHARACTER(32)          :: ACC_COPY_OUT
+      CHARACTER(32)          :: ACC_COPY_AGG
+#ENDIF
 !     **************************************************************************
       IF(TID) THEN
         FLOPS=4.D0*REAL(N1,KIND=8)*REAL(N1,KIND=8)*REAL(LEN,KIND=8)
@@ -1069,17 +1141,20 @@
       IF(.NOT.USED) RETURN
       IF(RESIDENCY_ENABLED) THEN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL CPPAW_CUBLAS_ACC_ZSPROD_NAMES('P1',ACC_PRESENT_PSI1 &
+     &      ,ACC_COPY_PSI1)
+        CALL CPPAW_CUBLAS_ACC_ZSPROD_NAMES('P2',ACC_PRESENT_PSI2 &
+     &      ,ACC_COPY_PSI2)
+        CALL CPPAW_CUBLAS_ACC_ZSPROD_NAMES('OUT',ACC_PRESENT_OUT &
+     &      ,ACC_COPY_OUT)
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
-     &      ('ACC_PRESENT_CUBLAS_ZSPROD_PSI1' &
-     &      ,'ACC_COPY_CUBLAS_ZSPROD_PSI1_IN',LEN,N1,PSI1)
+     &      (ACC_PRESENT_PSI1,ACC_COPY_PSI1,LEN,N1,PSI1)
         IF(.NOT.TID) THEN
           CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
-     &        ('ACC_PRESENT_CUBLAS_ZSPROD_PSI2' &
-     &        ,'ACC_COPY_CUBLAS_ZSPROD_PSI2_IN',LEN,N2,PSI2)
+     &        (ACC_PRESENT_PSI2,ACC_COPY_PSI2,LEN,N2,PSI2)
         END IF
         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
-     &      ('ACC_PRESENT_CUBLAS_ZSPROD_OUT' &
-     &      ,'ACC_COPY_CUBLAS_ZSPROD_OUT',N1,N2,OVERLAP)
+     &      (ACC_PRESENT_OUT,ACC_COPY_OUT,N1,N2,OVERLAP)
 #ENDIF
         IF(TID) THEN
 !$ACC DATA PRESENT_OR_COPYIN(PSI1(1:LEN,1:N1)) &
@@ -1102,7 +1177,8 @@
      &                                             ,N2,PSI2,OVERLAP)
 !$ACC END DATA
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
-        CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_ZSPROD' &
+        CALL CPPAW_CUBLAS_ACC_ZSPROD_COPY_NAME('GEN',ACC_COPY_AGG)
+        CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES(ACC_COPY_AGG &
      &       ,LEN,N1,N2,0,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
      &       +REAL(N1,KIND=8)*REAL(N2,KIND=8)))
 #ENDIF
@@ -1114,7 +1190,8 @@
      &                                           ,N2,PSI2,OVERLAP)
 !$ACC END DATA
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
-      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_ZSPROD' &
+      CALL CPPAW_CUBLAS_ACC_ZSPROD_COPY_NAME('GEN',ACC_COPY_AGG)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES(ACC_COPY_AGG &
      &     ,LEN,N1,N2,0,16.D0*(REAL(LEN,KIND=8)*REAL(N1,KIND=8) &
      &     +REAL(LEN,KIND=8)*REAL(N2,KIND=8) &
      &     +REAL(N1,KIND=8)*REAL(N2,KIND=8)))
@@ -1140,6 +1217,7 @@
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
       REAL(8)                :: ACCEL_BYTES
+      CHARACTER(32)          :: ACC_COPY_OVL_RES
 #ENDIF
 !     **************************************************************************
       IF(TID) THEN
@@ -1174,7 +1252,8 @@
      &       ,INT(LEN,KIND=8),INT(N1,KIND=8),INT(N2,KIND=8),0_8 &
      &       ,FLOPS,ACCEL_BYTES,ACCEL_T1-ACCEL_T0)
       END IF
-      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES('ACC_COPY_CUBLAS_ZSPROD_OVL_RES' &
+      CALL CPPAW_CUBLAS_ACC_ZSPROD_COPY_NAME('OVL',ACC_COPY_OVL_RES)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_BYTES(ACC_COPY_OVL_RES &
      &     ,LEN,N1,N2,0,16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8))
 #ENDIF
       RETURN
