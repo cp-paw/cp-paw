@@ -20,6 +20,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nstep1-1ranks-20260530-211748` | PRO cache smoke | `gpu_resident` 44.08 s | - | - | Cached resident `PRO` beats the host-PRO path for this focused check. |
 | `pro-cache-sweep-20260530-213304` | 512/1024/2048 band sweep | `gpu_resident` by a small margin at 1024/3 | Included | Included | GPU residency dominates; full `PRO` cache saves traffic but is near-neutral in wall time. |
 | `addpro-cache-split-20260530-231839` | ADDPRO-cache split | `gpu_resident_addpro_host` 45.42 s at 1024/1 | - | 4-rank smoke OK | Adds a diagnostic split between projection cache and `WAVES_ADDPRO` cache reuse. |
+| `si64_bands-nvhpc-standard-20260531-123955` | Focused standard refresh | `gpu_resident_addpro_host` 43.06 s | `cpu` 77.85 s, `nvhpc_cpu` 75.61 s | `cpu` 167.40 s, `nvhpc_cpu` 167.70 s | Confirms the residency path remains the useful GPU direction on Spark. |
 
 The latest full-matrix run lives at:
 
@@ -380,6 +381,63 @@ contract-only GPU implementation or an algorithmic change that avoids repeating
 the dense contraction in the current form. Orthogonalization also exposes a
 second CPU-side target at large band count: the overlap solve/update phase
 (`PAW_ORTHO_SOLVE`) is now comparable to the 1C contribution.
+
+## Standard Refresh and MATMUL Residency Split
+
+The 2026-05-31 Spark refresh reran the focused standard comparison on the
+current `cp-paw-nvhpc` baseline with `TEST=si64_bands`, `EMPTY_BANDS=1024`,
+`NSTEPS=1`, one GPU rank, and one-/eight-rank CPU references:
+
+```
+runs/si64_bands-nvhpc-standard-20260531-123955
+```
+
+| Case | Ranks | Wall time | Total copy estimate | Final energy | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident` | 1 | 43.70 s | 15.3405 GB | 302.280854 Ha | Main residency default remains fast and correct. |
+| `gpu_resident_addpro_host` | 1 | 43.06 s | 15.4480 GB | 302.280854 Ha | Slightly fastest in this run; still kept as a diagnostic split rather than the default. |
+| `gpu_resident_invbatch_off` | 1 | 48.54 s | 432.9138 GB | 302.280854 Ha | Confirms inverse-batch residency should stay enabled. |
+| `gpu_resident_no_cusolver` | 1 | 48.94 s | 15.2439 GB | 302.280854 Ha | cuSOLVER is useful but not the main Si64 lever. |
+| `cpu` | 1 | 77.85 s | - | 302.280854 Ha | Plain CPU reference. |
+| `nvhpc_cpu` | 1 | 75.61 s | - | 302.280854 Ha | NVPL/NVHPC CPU reference. |
+| `cpu` | 8 | 167.40 s | - | 302.280854 Ha | Resource comparison; not efficient on the Spark CPU state used here. |
+| `nvhpc_cpu` | 8 | 167.70 s | - | 302.280854 Ha | NVPL does not rescue this 8-rank Spark comparison. |
+
+The follow-up patch adds resident-aware data regions and granular copy/present
+profiling around the generic `LIB$MATMUL` cuBLAS paths. It also fixes NVHPC root
+detection when only `nvfortran` from `$NVHPC_ROOT/compilers/bin` is visible in
+`PATH`. Spark builds succeeded for both serial and parallel residency targets
+with `NVHPC_ROOT` unset.
+
+Post-patch smoke:
+
+```
+runs/matmul-residency-smoke-20260531-125804
+```
+
+| Case | Ranks | Wall time | Total copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 1 | 46.02 s | 15.3405 GB | 302.280854 Ha |
+| `gpu_resident_addpro_host` | 1 | 45.56 s | 15.4480 GB | 302.280854 Ha |
+
+The old aggregate `ACC_COPY_CUBLAS_ZGEMM_MAT` row is now split by operand in
+the residency path:
+
+| Profile row | Calls | Estimated copy GB | Meaning |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_ZGEMM_MAT_A_IN` | 64 | 7.7462 | Dominant remaining generic complex MATMUL transfer. |
+| `ACC_COPY_ZGEMM_MAT_B_IN` | 64 | 0.0077 | Small right-hand operand. |
+| `ACC_COPY_ZGEMM_MAT_C_OUT` | 64 | 0.1748 | Small result relative to the left operand. |
+| `ACC_COPY_DGEMM_MAT_A_IN` | 58 | 0.6158 | Real MATMUL left operand. |
+| `ACC_COPY_DGEMM_MAT_B_IN` | 58 | 0.6158 | Real MATMUL right operand. |
+| `ACC_COPY_DGEMM_MAT_C_OUT` | 58 | 0.6158 | Real MATMUL result. |
+
+Conclusion: the major unresolved copy target in this Si64 profile is no longer
+ambiguous. The complex generic MATMUL shape is `13133 x 576 x 13`, and almost
+all of its transfer volume is the left operand. The next useful implementation
+step is to identify that caller's producer and either keep that operand resident
+or route it through a more semantic present-data path instead of treating it as
+an opaque `LIB$MATMUL` temporary.
 
 ## Recommended Next Benchmark
 

@@ -124,7 +124,14 @@ function find_nvhpc_root {
 
   COMPILER_PATH=$(command_path nvfortran)
   if [[ -n ${COMPILER_PATH} ]] ; then
-    dirname "$(dirname "${COMPILER_PATH}")"
+    D=$(dirname "$(dirname "${COMPILER_PATH}")")
+    PARENT=$(dirname "${D}")
+    if [[ $(basename "${D}") = compilers \
+          && -x ${PARENT}/compilers/bin/nvfortran ]] ; then
+      echo "${PARENT}"
+    else
+      echo "${D}"
+    fi
     return 0
   fi
 
