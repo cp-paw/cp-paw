@@ -205,7 +205,8 @@ with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 `WAVES_ADDPRO` (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
 copy estimates because the projector addition updates the wavefunction. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
-and records that outer input/output region as `ACC_COPY_GRAM_PSI_IO`. The
+and records that outer input/output region with context-specific rows such as
+`ACC_COPY_GRAM_PSI0_PSI_IO` and `ACC_COPY_GRAM_PSIM_PSI_IO`. The
 transform scratch `PSIINV` is created on the device from resident `PSI`,
 recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
 as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
