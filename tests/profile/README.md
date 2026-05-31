@@ -199,7 +199,9 @@ wavefunction back before the following host-side projection work; set
 accepted for compatibility, but true cross-orthogonalization PSIM residency needs
 broader projection/PRO residency first. These switches are disabled by default
 because the extra propagation inputs and output copy can outweigh the kernel
-offload.
+offload. The propagation kernel uses `present_or_copy` for `PSIM` and
+`present_or_copyin` for `PSI0`/`HPSI`, so a later broader resident region can
+reuse already-present wavefunction data without changing this call site.
 Generic
 resident cuBLAS wrappers split their copy accounting
 into `ACC_PRESENT_CUBLAS_*` and `ACC_COPY_CUBLAS_*` rows so already-resident
