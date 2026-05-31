@@ -41,6 +41,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `offden-flat-accum-20260601-*` | Off-site DENMAT flat device-accum diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.64 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_accum` 9.62 s at 512/4 | Accumulates batches into one flat real off-site matrix buffer on the GPU and copies it back once per k-point/spin pass; energy-valid, useful at 1 MPI/GPU, neutral/noisy when four ranks share one GPU. |
 | `psim-present-copy-20260601-*` | PSIM propagation present-or-copy accounting | `gpu_resident` 6.36 s at 512/1 | - | `gpu_resident` 9.18 s at 512/4 | Changes the PSIM propagation data region to `present_or_copy`; energy-valid and correct for future broader residency, but current Si64 still copies PSIM in/out because no enclosing resident producer is active. |
 | `psim-focus-harness-20260601-*` | Focused PSIM propagation harness | `gpu_psim_propagate` 6.20 s at 512/1 | - | `gpu_psim_propagate` 9.19 s at 512/4 | Adds a reusable PSIM/HPSI propagation sweep; all cases are energy-valid, but the single-run 512-band timings are noisy and the PSIM path still increases copy volume, so this is a regression harness rather than a default promotion. |
+| `psim-phase-residency-20260601-*` | Cross-phase PSIM residency diagnostic | `gpu_resident_psim_phase` 6.96 s at 512/1 | - | `gpu_resident_psim_phase` 9.11 s at 512/4 | Leaves propagated `PSIM` resident into orthogonalization and copies it back at the orthogonalization boundary; energy-valid and reduces copy volume, but wall time is still noisy, so keep it opt-in. |
 
 The latest full-matrix run lives at:
 
@@ -1562,6 +1563,51 @@ they still copy more data than the corresponding no-PSIM-offload paths. Treat
 this harness as the guardrail for the broader future step: keeping `PSIM`
 resident across the orthogonalization/propagation boundary instead of copying it
 back immediately.
+
+## PSIM Cross-Phase Residency
+
+The cross-phase diagnostic adds `CPPAW_GPU_PSIM_PHASE_RESIDENCY=1` and harness
+cases `gpu_resident_psim_phase` and `gpu_resident_hpsi_psim_phase`. The path is
+still opt-in. It relies on the current timestep ordering, where
+`WAVES$PROPAGATE()` is followed immediately by `WAVES$ORTHOGONALIZE()`, so the
+updated `PSIM` can remain device-resident until the orthogonalization block
+finishes and copies the orthogonalized wavefunction back.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/psim-phase-residency-20260601-512-1r
+runs/psim-phase-residency-20260601-512-4r
+runs/psim-phase-residency-20260601-combined.tsv
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.08 s | 1.5037 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 1 | 7.11 s | 1.7730 GB | 0.000000401 Ha |
+| `gpu_resident_psim_phase` | 512 | 1 | 6.96 s | 1.6385 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 1 | 6.47 s | 1.3676 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 1 | 7.72 s | 1.6369 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_psim_phase` | 512 | 1 | 7.50 s | 1.5024 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.24 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_psim_propagate` | 512 | 4 | 9.34 s | 2.1387 GB | 0.000000401 Ha |
+| `gpu_resident_psim_phase` | 512 | 4 | 9.11 s | 2.0042 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 9.68 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 4 | 9.89 s | 1.9977 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_psim_phase` | 512 | 4 | 9.57 s | 1.8632 GB | 0.000000401 Ha |
+
+Profile rows show the intended data-lifetime change. The non-phase PSIM cases
+record `ACC_COPY_PROP_PSIM_IN` and `ACC_COPY_PROP_PSIM_OUT`. The phase cases
+record `ACC_COPY_PROP_PSIM_IN`, then `ACC_PRESENT_ORTHO_PSIM`, and finally
+`ACC_COPY_ORTHO_PSIM_OUT`. This removes one immediate propagation copy-out and
+lets orthogonalization consume the propagated device array directly. The copy
+estimate drops by about 0.1345 GB for the 512-band one-rank case and about
+0.1345 GB per four-rank run in the shared-GPU smoke. Timings are neutral to
+slightly favorable in this small case, so the next meaningful test is a larger
+band run before considering promotion beyond diagnostic status.
 
 ## DENMAT Profiling Split
 
