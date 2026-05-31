@@ -13,6 +13,7 @@ NSTEPS=${NSTEPS:-20}
 RANKS=${RANKS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
+REQUIRE_CASES=${REQUIRE_CASES:-no}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
@@ -205,8 +206,20 @@ case_note() {
     gpu_resident)
       echo "Recommended one-GPU NVHPC profile path with OpenACC residency enabled."
       ;;
+    gpu_resident_1coverlap)
+      echo "Experimental residency diagnostic that enables one-center overlap cuBLAS offload."
+      ;;
     gpu_resident_nosync)
       echo "Residency diagnostic that disables the explicit post-cuBLAS device synchronization."
+      ;;
+    gpu_resident_pro_host)
+      echo "Residency diagnostic that keeps projector expansion on host while retaining resident cuBLAS projection."
+      ;;
+    gpu_resident_addpro_host)
+      echo "Residency diagnostic that keeps the GPU projector cache for projections but disables its WAVES_ADDPRO reuse."
+      ;;
+    gpu_resident_1coverlap_host)
+      echo "Residency diagnostic that disables only the one-center overlap cuBLAS path."
       ;;
     *_invbatch_off)
       echo "cuBLAS diagnostic that disables batched inversion-symmetry scalarproducts."
@@ -382,6 +395,10 @@ case_env() {
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_invbatch_off) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_INVERSION_BATCH=0" ;;
     gpu_resident_no_cusolver) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUSOLVER_ACC=0" ;;
+    gpu_resident_1coverlap) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=1 $(cublas_env)" ;;
+    gpu_resident_pro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PRO_EXPANSION=0 $(cublas_env)" ;;
+    gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
+    gpu_resident_1coverlap_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_1COVERLAP=0 $(cublas_env)" ;;
     gpu_resident_projection_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_projection_conservative_env)" ;;
     gpu_resident_overlap_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_overlap_conservative_env)" ;;
     gpu_resident_addproduct_conservative) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_addproduct_conservative_env)" ;;
@@ -491,6 +508,11 @@ capture_metadata
 for case_name in ${CASES}; do
   exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)
   if [[ ! -x "${exe}" ]]; then
+    if [[ "${REQUIRE_CASES}" == "yes" || "${REQUIRE_CASES}" == "true" || "${REQUIRE_CASES}" == "1" ]]; then
+      echo "Required case missing executable: ${case_name}" >&2
+      echo "  exe=${exe}" >&2
+      exit 1
+    fi
     echo "Skipping ${case_name}: executable not found: ${exe}" >&2
     continue
   fi

@@ -25,7 +25,7 @@ export CPPAW_INSTALL_CUFFT="${CPPAW_INSTALL_CUFFT:-auto}"
 export CPPAW_INSTALL_GPU_ACC="${CPPAW_INSTALL_GPU_ACC:-auto}"
 export CPPAW_INSTALL_GPU_ALL="${CPPAW_INSTALL_GPU_ALL:-no}"
 export CPPAW_INSTALL_GPU_MEMORY_PROFILES="${CPPAW_INSTALL_GPU_MEMORY_PROFILES:-no}"
-export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-no}"
+export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-auto}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
 export CPPAW_INSTALL_CUSOLVER_ACC="${CPPAW_INSTALL_CUSOLVER_ACC:-auto}"
 export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
@@ -598,14 +598,16 @@ function build_gpu_residency_profile_choices {
       return 0
       ;;
     auto|"")
-      return 0
+      if ! profile_requested ; then
+        return 0
+      fi
       ;;
     require|required|yes|true)
       REQUIRED=true
       ;;
     *)
       echo "error in $0: invalid CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE}" >&2
-      echo "allowed are no, yes, require" >&2
+      echo "allowed are auto, no, yes, require" >&2
       exit 1
       ;;
   esac

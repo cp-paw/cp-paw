@@ -14,6 +14,7 @@ bash -n src/Buildtools/paw_srclist.sh
 bash -n tests/profile/si64/run_benchmark.sh
 bash -n tests/profile/si64/run_cusolver_focus.sh
 bash -n tests/profile/si64/run_followup.sh
+bash -n tests/profile/si64/run_gap_profile_night.sh
 bash -n tests/profile/si64/run_large_bands.sh
 bash -n tests/profile/si64/run_large_bands_long.sh
 bash -n tests/profile/si64/run_gpu_exploration.sh

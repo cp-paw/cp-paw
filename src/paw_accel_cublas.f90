@@ -25,7 +25,16 @@
       LOGICAL(4)         :: CONFIG_READY=.FALSE.
       LOGICAL(4)         :: ENABLED=.TRUE.
       LOGICAL(4)         :: SYNC_ENABLED=.TRUE.
+#IF DEFINED(CPPVAR_GPU_RESIDENCY_PROFILE)
+      LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
+      LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
+      LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.TRUE.
+#ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
+      LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
+      LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
+#ENDIF
+      LOGICAL(4)         :: ONECENTER_OVERLAP_ENABLED=.FALSE.
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
       LOGICAL(4)         :: WAVE_OVERLAP_RESIDENT_ACTIVE=.FALSE.
       REAL(8)            :: MINFLOP=1.D7
@@ -52,6 +61,112 @@
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_BYTES
 #ENDIF
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D(PRESENT_NAME &
+     &                                                 ,COPY_NAME &
+     &                                                 ,N1,N2,N3,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      INTEGER(4)  ,INTENT(IN) :: N3
+      COMPLEX(8)              :: ARRAY(N1,N2,N3)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)*REAL(N3,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,INT(N3,KIND=8),0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,INT(N3,KIND=8),0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D(PRESENT_NAME &
+     &                                                 ,COPY_NAME &
+     &                                                 ,N1,N2,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      COMPLEX(8)              :: ARRAY(N1,N2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D(PRESENT_NAME &
+     &                                                 ,COPY_NAME,N1,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      COMPLEX(8)              :: ARRAY(N1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=16.D0*REAL(N1,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),0_8,0_8,0_8 &
+     &                       ,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),0_8,0_8,0_8 &
+     &                       ,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_1D
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D(PRESENT_NAME &
+     &                                                ,COPY_NAME,N1,N2,ARRAY)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PRESENT_NAME
+      CHARACTER(*),INTENT(IN) :: COPY_NAME
+      INTEGER(4)  ,INTENT(IN) :: N1
+      INTEGER(4)  ,INTENT(IN) :: N2
+      REAL(8)                 :: ARRAY(N1,N2)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      LOGICAL(4)              :: ISPRESENT
+      REAL(8)                 :: BYTES
+!     **************************************************************************
+      ISPRESENT=ACC_IS_PRESENT(ARRAY)
+      BYTES=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8)
+      IF(ISPRESENT) THEN
+        CALL ACCELPROFILE$ADD(PRESENT_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,0.D0,0.D0)
+      ELSE
+        CALL ACCELPROFILE$ADD(COPY_NAME,INT(N1,KIND=8),INT(N2,KIND=8) &
+     &                       ,0_8,0_8,0.D0,BYTES,0.D0)
+      END IF
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROFILE_PRESENT_R8_2D
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV(NAME,VALUE)
@@ -140,6 +255,57 @@
           END SELECT
         END IF
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_PRO_EXPANSION',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_PRO_EXPANSION' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            PRO_EXPANSION_ENABLED=.FALSE.
+          CASE DEFAULT
+            PRO_EXPANSION_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_ADDPRO_CACHE',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_ADDPRO_CACHE' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            ADDPRO_CACHE_ENABLED=.FALSE.
+          CASE DEFAULT
+            ADDPRO_CACHE_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_1COVERLAP',VALUE &
+     &                             ,STATUS=STATUS)
+      IF(STATUS.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_1COVERLAP' &
+     &                               ,VALUE,STATUS=STATUS)
+      END IF
+      IF(STATUS.EQ.0) THEN
+        VALUE=ADJUSTL(VALUE)
+        IF(LEN_TRIM(VALUE).GT.0) THEN
+          SELECT CASE(VALUE(1:MIN(LEN(VALUE),LEN_TRIM(VALUE))))
+          CASE('0','no','NO','false','FALSE','off','OFF')
+            ONECENTER_OVERLAP_ENABLED=.FALSE.
+          CASE DEFAULT
+            ONECENTER_OVERLAP_ENABLED=.TRUE.
+          END SELECT
+        END IF
+      END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_INVERSION_BATCH' &
      &                             ,VALUE,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -218,6 +384,38 @@
       CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED=ENABLED.AND.RESIDENCY_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED &
+     &     .AND.ADDPRO_CACHE_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED(FLOPS)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED=ENABLED &
+     &     .AND.ONECENTER_OVERLAP_ENABLED.AND.(FLOPS.GE.MINFLOP_OVERLAP)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED()
@@ -621,6 +819,9 @@
       ZERO=(0.D0,0.D0)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &    ('ACC_PRESENT_PROJ_PRO','ACC_COPY_PROJ_PRO_IN' &
+     &    ,NGL,LMNX,PRO)
 #ENDIF
 !$ACC DATA PRESENT_OR_COPYIN(PRO(1:NGL,1:LMNX),PSI(1:NGL,1:NDIM,1:NB)) &
 !$ACC& PRESENT(WORK(1:LMNXX,1:NDIM*NB),PROPSI(1:NDIM,1:NB,1:NPRO))

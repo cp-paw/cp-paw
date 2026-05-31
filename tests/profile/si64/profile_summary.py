@@ -10,8 +10,12 @@ def category(op):
         return "Phase trace"
     if op.startswith("ACC_COPY"):
         return "ACC copy est"
+    if op.startswith("ACC_PRESENT"):
+        return "ACC residency"
     if op.startswith("ACC_SETUP"):
         return "ACC setup"
+    if op.startswith("PAW_"):
+        return "PAW envelope"
     if op.startswith("PW_") and not op.startswith("PW_FFT"):
         if "MPE_TRANSPOSE" in op:
             return "PW MPI envelope"
@@ -72,12 +76,17 @@ def main(argv):
     primary_total = sum(
         data["seconds"] for op, data in per_op.items()
         if not op.startswith("ACC_")
+        and not op.startswith("PAW_")
         and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
         and not op.startswith("PHASE_")
     )
     phase_total = sum(
         data["seconds"] for op, data in per_op.items()
         if op.startswith("PHASE_")
+    )
+    paw_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("PAW_")
     )
     trace_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -94,6 +103,8 @@ def main(argv):
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
+    if paw_total:
+        print("PAW envelope rank-seconds (nested): {:.6f}".format(paw_total))
     if phase_total:
         print("Diagnostic phase rank-seconds: {:.6f}".format(phase_total))
     if trace_total:
@@ -134,6 +145,15 @@ def main(argv):
                     op, data["calls"], data["gbyte"]
                 )
             )
+
+    present_ops = [
+        (op, data) for op, data in per_op.items() if op.startswith("ACC_PRESENT")
+    ]
+    if present_ops:
+        print("")
+        print("OpenACC present observations")
+        for op, data in sorted(present_ops, key=lambda item: item[0])[:20]:
+            print("  {:<24s} calls={:8d}".format(op, data["calls"]))
 
     phase_ops = [
         (op, data) for op, data in per_op.items() if op.startswith("PHASE_")

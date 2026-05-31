@@ -78,9 +78,9 @@ cuFFT opt-in, and uses cuSOLVER only above its default size threshold. The same
 binary can selectively force or disable each accelerator path:
 
 ```
-CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_profile
+CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_residency_profile
 cd tests/profile/si64
-NSTEPS=1 ./run_benchmark.sh
+NSTEPS=1 CASES="cpu nvhpc_cpu gpu_resident gpu_off" ./run_benchmark.sh
 NSTEPS=1 RANKS=8 CASES="cpu nvhpc_cpu" ./run_benchmark.sh
 ```
 
@@ -99,31 +99,59 @@ the phase columns to localize unexplained wall time before adding lower-level
 kernel instrumentation.
 
 The `nvhpc_gpu_acc_residency_*` target keeps the same accelerator choices but
-adds the `CPPAW_GPU_RESIDENCY=1` diagnostic mode. That currently switches the
+defaults to `CPPAW_GPU_RESIDENCY=1`. Set `CPPAW_GPU_RESIDENCY=0` to disable the
+resident mode in the same binary. This currently switches the
 cuBLAS scalarproduct copy wrapper to `present_or_copyin`, so projection loops
 can reuse wavefunction arrays already held by an outer OpenACC data region. For
 non-superwave projections where all atom blocks pass the cuBLAS threshold, it
 also scatters the projection result into `PROPSI` on the device and copies the
-final projection array back once. The orthogonalization overlap section keeps
-`PSIM`/`OPSI` resident across the projection and pseudo-overlap calls, and the
-same mode routes eligible non-superwave `WAVES_OVERLAP` scalarproducts through a
-present-input cuBLAS wrapper; for inversion-symmetric superwave overlaps it also
-keeps the `<PSI_+|PSI_+>` part on the same present-input path and batches the
-`<PSI_-|PSI_+>` inversion pass into one larger scalarproduct when the cuBLAS
-overlap threshold allows it. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
+final projection array back once. The default residency profile now builds and
+caches the full per-atom projector block `PRO` on the GPU from resident
+`GSET%PRO`, `GSET%YLM`, and the updated structure factors, instead of expanding
+`PRO` on the host and copying it for every atom/projection use.
+`WAVES_PROJECTIONS` and eligible `WAVES_ADDPRO` calls share this cache while the
+geometry, grid id and projector dimensions stay unchanged. Set
+`CPPAW_GPU_PRO_EXPANSION=0` (or the longer alias
+`CPPAW_CUBLAS_ACC_PRO_EXPANSION=0`) to compare against the host-expansion path;
+the benchmark case is `gpu_resident_pro_host`. Set `CPPAW_GPU_ADDPRO_CACHE=0`
+to keep the GPU projection cache but route `WAVES_ADDPRO` through the previous
+host-expansion/addproduct path; the benchmark case is
+`gpu_resident_addpro_host`. The orthogonalization overlap
+section keeps `PSIM`/`OPSI` resident across the projection and pseudo-overlap
+calls, and the same mode routes eligible non-superwave `WAVES_OVERLAP`
+scalarproducts through a present-input cuBLAS wrapper; for inversion-symmetric
+superwave overlaps it also keeps the `<PSI_+|PSI_+>` part on the same
+present-input path and batches the `<PSI_-|PSI_+>` inversion pass into one larger
+scalarproduct when the cuBLAS overlap threshold allows it. `WAVES_GRAMSCHMIDT`
+also has a narrow resident projection/overlap region for wavefunctions outside
+the main orthogonalization loop. Set `CPPAW_CUBLAS_ACC_INVERSION_BATCH=0` to keep
 the older per-column inversion scalarproduct path for comparison. It also lets
 `ZGEMM_NN` addproduct calls reuse a present output matrix, which targets
 `WAVES_ADDPRO`. `ACC_COPY_*_RES` profile rows report the reduced copy estimate
 for those paths; the overlap region uses `ACC_COPY_CUBLAS_OVERLAP_RES_REGION`
 for the outer copy-in and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call
-output copy. The resident overlap cuBLAS kernels are timed separately as
-`CUBLAS_ZHERK_OVL_RES` and `CUBLAS_ZGEMM_OVL_RES`. This is the recommended
-NVHPC GPU performance path for the larger Si64 band benchmarks. Keep
+output copy. Projector-residency diagnostics include `ACC_BUILD_PRO_CACHE`,
+`ACC_PRESENT_PRO_CACHE_REUSE`, `ACC_PRESENT_PROJ_PRO_CACHE`,
+`ACC_PRESENT_ADDPRO_PRO_CACHE`, `CUBLAS_ZGEMM_ADDPRO_CACHE`, and the
+disappearance or reduction of `ACC_COPY_PROJ_PRO_IN`. The resident overlap
+cuBLAS kernels are timed separately as `CUBLAS_ZHERK_OVL_RES` and
+`CUBLAS_ZGEMM_OVL_RES`. This is the recommended NVHPC GPU performance path for
+the larger Si64 band benchmarks. Keep
 `gpu_resident_nosync` as a diagnostic candidate until longer correctness runs
 confirm that removing the explicit post-cuBLAS synchronization is safe for the
 target workload. For non-inversion wave sets, the residency mode also keeps the
 orthogonalization `WAVES_ADDOPSI` addproduct in a short OpenACC data region;
 `ACC_COPY_CUBLAS_ADDOPSI_RES_REGION` records that region's copy estimate.
+
+The residency profile also records semantic OpenACC present checks for the PAW
+wavefunction arrays that dominate this follow-up. `ACC_PRESENT_*` rows count
+places where an array was already resident, while matching `ACC_COPY_*` rows add
+the estimated bytes for a required host/device transfer. The tracked arrays are
+`PSIM`/`OPSI` in the orthogonalization region, `PSIM`/`OPSI`/`LAMBDA` in
+`WAVES_ADDOPSI`, `PSI` and `PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in
+`WAVES_ADDPRO`. These rows are meant to guide the next change: extend resident
+regions only where the profile shows repeated copies of the same wavefunction
+data.
 
 For an all-library diagnostic binary, build `nvhpc_gpu_all_*`. This links NVPL
 fallbacks, cuFFTW, native cuFFT/OpenACC, cuBLAS/OpenACC, cuSOLVER/OpenACC and
@@ -177,6 +205,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_projection_conservative` / `gpu_overlap_conservative` / `gpu_addproduct_conservative` / `gpu_matmul_conservative` | Combined GPU diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident` / `gpu_resident_nosync` / `gpu_resident_invbatch_off` | Recommended combined GPU profile with `CPPAW_GPU_RESIDENCY=1`; currently keeps selected wavefunction loops in OpenACC data regions for cuBLAS scalarproduct/projection/addproduct reuse, with diagnostics for synchronization and inversion batching. |
 | `gpu_resident_no_cusolver` | Residency diagnostic with cuSOLVER disabled in the same residency binary. |
+| `gpu_resident_pro_host` | Residency diagnostic with GPU projector expansion disabled via `CPPAW_GPU_PRO_EXPANSION=0`. |
+| `gpu_resident_addpro_host` | Residency diagnostic with the GPU projection cache kept enabled but its `WAVES_ADDPRO` reuse disabled via `CPPAW_GPU_ADDPRO_CACHE=0`. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
@@ -222,10 +252,21 @@ cd tests/profile/si64
 ./run_nvhpc_standard.sh
 ```
 
-It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and compares
-one-rank GPU residency, one-rank CPU references and eight-rank CPU/NVHPC
-references. Override `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`,
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and by default
+compares the focused `gpu_resident*` paths on one GPU rank, plus one-rank CPU
+and eight-rank CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
+`EMPTY_BANDS`, `NSTEPS`,
 `GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
+
+Set `RUN_GPU_ALL=yes` to include the all-library cases `gpu_all` and
+`gpu_all_off`. The default is `RUN_GPU_ALL=no` because the Spark Si64 matrix
+showed the all-library path is useful as a diagnostic, not as a recommended
+default.
+Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
+required profile binaries before benchmarking.
+
+The Spark C86C Si64 decision table is kept in
+`tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 
@@ -288,6 +329,13 @@ be overridden by kernel category:
 - `CPPAW_CUBLAS_ACC_INVERSION_BATCH`: keep enabled by default to turn
   inversion-symmetry scalarproducts from many per-column cuBLAS calls into one
   batched scalarproduct; set to `0` for the previous path.
+- `CPPAW_GPU_PRO_EXPANSION`: keep enabled by default in residency-profile builds
+  so GPU-resident `PRO` blocks are built once and reused by `WAVES_PROJECTIONS`
+  and eligible `WAVES_ADDPRO` calls; set to `0` for the previous host-expansion
+  path.
+- `CPPAW_GPU_ADDPRO_CACHE`: keep enabled by default in residency-profile builds
+  so `WAVES_ADDPRO` reuses the GPU-resident `PRO` cache; set to `0` to test
+  projection caching without the cached addproduct path.
 
 The benchmark harness exposes conservative diagnostic cases such as
 `gpu_resident_projection_conservative`, `gpu_resident_overlap_conservative`,
