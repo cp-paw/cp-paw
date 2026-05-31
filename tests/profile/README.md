@@ -109,7 +109,10 @@ The real safe-orthogonalization solver is split further by `PAW_ORTHO_X_DIAG`,
 `PAW_ORTHO_X_UPDATE_TRANSFORM`, `PAW_ORTHO_X_UPDATE_SCALE`,
 `PAW_ORTHO_X_UPDATE_BACKTRANSFORM`, `PAW_ORTHO_X_UPDATE_APPLY`, and
 `PAW_ORTHO_X_UPDATE_SYM` subdivide the update row. These rows are nested inside
-`PAW_ORTHO_SOLVE`.
+`PAW_ORTHO_SOLVE`. When the `gpu_resident_orthox` diagnostic is enabled, its
+direct present-device cuBLAS calls are also reported as
+`CUBLAS_DGEMM_ORTHOX_RESIDUAL`, `CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and
+`CUBLAS_DGEMM_ORTHOX_BACKTRANS`.
 Residency-profile builds enable the initial Gram-Schmidt Cholesky solve by
 default. It replaces only the initial `WAVES$GRAMMSCHMIDT` solve with a LAPACK
 Cholesky orthogonalization when the overlap matrix is positive definite;
