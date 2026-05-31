@@ -4463,6 +4463,8 @@ END IF
       LOGICAL(4)             :: TINV
       LOGICAL(4)             :: TOFFDENBLAS
       LOGICAL(4)             :: TOFFDENCUBLAS
+      LOGICAL(4)             :: TOFFDENBATCH
+      INTEGER(4)             :: OFFDENBATCHSIZE
       INTEGER(4)             :: IAT1,IAT2,IT(3),I0,J0,IDIM,JDIM
       COMPLEX(8)             :: EIKR,C1(NDIM),C2(NDIM),CSVAR22(NDIM,NDIM)
       INTEGER(4)             :: NTASKS,THISTASK,ICOUNT
@@ -4488,6 +4490,8 @@ END IF
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
       TOFFDENBLAS=.FALSE.
       TOFFDENCUBLAS=.FALSE.
+      TOFFDENBATCH=.FALSE.
+      OFFDENBATCHSIZE=64
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_LOCAL',ENVVAL &
      &                             ,STATUS=ENVSTAT)
       IF(ENVSTAT.NE.0) THEN
@@ -4517,6 +4521,27 @@ END IF
           TOFFDENCUBLAS=.FALSE.
         END SELECT
       END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_CUBLAS_BATCH' &
+     &                             ,ENVVAL,STATUS=ENVSTAT)
+      IF(ENVSTAT.NE.0) THEN
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_OFFDEN_BATCH' &
+     &                               ,ENVVAL,STATUS=ENVSTAT)
+      END IF
+      IF(ENVSTAT.EQ.0) THEN
+        SELECT CASE(TRIM(ADJUSTL(ENVVAL)))
+        CASE('1','T','t','TRUE','true','True','YES','yes','ON','on')
+          TOFFDENBLAS=.TRUE.
+          TOFFDENCUBLAS=.TRUE.
+          TOFFDENBATCH=.TRUE.
+        CASE DEFAULT
+          TOFFDENBATCH=.FALSE.
+        END SELECT
+      END IF
+      CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_OFFDEN_BATCH_SIZE' &
+     &                             ,ENVVAL,STATUS=ENVSTAT)
+      IF(ENVSTAT.EQ.0) READ(ENVVAL,*,ERR=101,END=101) OFFDENBATCHSIZE
+  101 CONTINUE
+      IF(OFFDENBATCHSIZE.LT.1) OFFDENBATCHSIZE=64
 !
 !     ==========================================================================
 !     ==  CONSTRUCT INDEX ARRAYS                                              ==
@@ -4568,6 +4593,13 @@ END IF
           CALL PLANEWAVE$GETL4('TINV',TINV)
           NBH=THIS%NBH
           NB=THIS%NB
+          IF(TOFFDENBATCH.AND.TINV.AND.NDIM.EQ.1) THEN
+            CALL WAVES_OFFDEN_TINV_NDIM1_CUBLAS_BATCH(NND,NPRO &
+     &           ,NPROAT,IPRO1,NTASKS,THISTASK,NBH,NB,NDIMD &
+     &           ,NSPIN,ISPIN,OFFDENBATCHSIZE,OCC(1,IKPT,ISPIN) &
+     &           ,XK(1,IKPT),THIS%PROJ(1,1,1),OSDENMAT)
+            CYCLE
+          END IF
           ICOUNT=0
           DO NN=1,NND
             ICOUNT=ICOUNT+1
@@ -4840,6 +4872,215 @@ END IF
       DEALLOCATE(WORK)
       DEALLOCATE(B)
       DEALLOCATE(A)
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_OFFDEN_TINV_NDIM1_CUBLAS_BATCH(NND,NPRO &
+     &          ,NPROAT,IPRO1,NTASKS,THISTASK,NBH,NB,NDIMD,NSPIN &
+     &          ,ISPIN,BATCHSIZE,OCC,XK,PROJ,OSDENMAT)
+      USE RSPACEOP_MODULE, ONLY: RSPACEMAT_TYPE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY
+#ENDIF
+!     **************************************************************************
+!     **  Chunked cuBLAS diagnostic for scalar, inversion-symmetric off-site  **
+!     **  density-matrix contractions. Neighbors sharing the same first atom  **
+!     **  and second-projector size are stacked into one wide ZGEMM.          **
+!     **************************************************************************
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
+      REAL(8)   ,PARAMETER   :: PI=4.D0*ATAN(1.D0)
+      INTEGER(4),INTENT(IN)  :: NND
+      INTEGER(4),INTENT(IN)  :: NPRO
+      INTEGER(4),INTENT(IN)  :: NPROAT(*)
+      INTEGER(4),INTENT(IN)  :: IPRO1(*)
+      INTEGER(4),INTENT(IN)  :: NTASKS
+      INTEGER(4),INTENT(IN)  :: THISTASK
+      INTEGER(4),INTENT(IN)  :: NBH
+      INTEGER(4),INTENT(IN)  :: NB
+      INTEGER(4),INTENT(IN)  :: NDIMD
+      INTEGER(4),INTENT(IN)  :: NSPIN
+      INTEGER(4),INTENT(IN)  :: ISPIN
+      INTEGER(4),INTENT(IN)  :: BATCHSIZE
+      REAL(8)   ,INTENT(IN)  :: OCC(NB)
+      REAL(8)   ,INTENT(IN)  :: XK(3)
+      COMPLEX(8),INTENT(IN)  :: PROJ(NBH,NPRO)
+      TYPE(RSPACEMAT_TYPE),INTENT(INOUT) :: OSDENMAT(NND)
+      LOGICAL(4),ALLOCATABLE :: DONE(:)
+      INTEGER(4),ALLOCATABLE :: IDX(:)
+      COMPLEX(8),ALLOCATABLE :: A(:,:)
+      COMPLEX(8),ALLOCATABLE :: B(:,:)
+      COMPLEX(8),ALLOCATABLE :: WORK(:,:)
+      COMPLEX(8)            :: ONE
+      COMPLEX(8)            :: ZERO
+      COMPLEX(8)            :: EIKR
+      REAL(8)               :: SVAR
+      REAL(8)               :: FPLUS
+      REAL(8)               :: FMINUS
+      INTEGER(4)            :: NN0
+      INTEGER(4)            :: NN
+      INTEGER(4)            :: K
+      INTEGER(4)            :: I
+      INTEGER(4)            :: J
+      INTEGER(4)            :: IBH
+      INTEGER(4)            :: IAT1
+      INTEGER(4)            :: IAT2
+      INTEGER(4)            :: I0
+      INTEGER(4)            :: J0
+      INTEGER(4)            :: N1
+      INTEGER(4)            :: N2
+      INTEGER(4)            :: COUNT
+      INTEGER(4)            :: MAXBATCH
+      INTEGER(4)            :: IOFF
+      LOGICAL(4)            :: TCUBLAS_USED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)               :: ACCEL_T0
+      REAL(8)               :: ACCEL_T1
+      REAL(8)               :: ACCEL_FLOPS
+      CHARACTER(32)         :: ACCEL_GEMM_NAME
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+      MAXBATCH=MAX(1,BATCHSIZE)
+      ALLOCATE(DONE(NND))
+      ALLOCATE(IDX(MAXBATCH))
+      DONE=.FALSE.
+      DO NN0=1,NND
+        IF(DONE(NN0)) CYCLE
+        IF(MOD(NN0-1,NTASKS).NE.THISTASK-1) THEN
+          DONE(NN0)=.TRUE.
+          CYCLE
+        END IF
+        IAT1=OSDENMAT(NN0)%IAT1
+        IAT2=OSDENMAT(NN0)%IAT2
+        N1=NPROAT(IAT1)
+        N2=NPROAT(IAT2)
+        COUNT=0
+        DO NN=NN0,NND
+          IF(DONE(NN)) CYCLE
+          IF(MOD(NN-1,NTASKS).NE.THISTASK-1) THEN
+            DONE(NN)=.TRUE.
+            CYCLE
+          END IF
+          IF(OSDENMAT(NN)%IAT1.NE.IAT1) CYCLE
+          IF(NPROAT(OSDENMAT(NN)%IAT2).NE.N2) CYCLE
+          COUNT=COUNT+1
+          IDX(COUNT)=NN
+          DONE(NN)=.TRUE.
+          IF(COUNT.EQ.MAXBATCH) EXIT
+        ENDDO
+        IF(COUNT.EQ.0) CYCLE
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        ALLOCATE(A(N1,NBH))
+        ALLOCATE(B(N2*COUNT,NBH))
+        ALLOCATE(WORK(N1,N2*COUNT))
+        I0=IPRO1(IAT1)-1
+        DO IBH=1,NBH
+          DO I=1,N1
+            A(I,IBH)=PROJ(IBH,I0+I)
+          ENDDO
+        ENDDO
+        DO K=1,COUNT
+          NN=IDX(K)
+          IAT2=OSDENMAT(NN)%IAT2
+          J0=IPRO1(IAT2)-1
+          IOFF=(K-1)*N2
+          SVAR=2.D0*PI*SUM(XK(:)*REAL(OSDENMAT(NN)%IT,KIND=8))
+          EIKR=EXP(CI*SVAR)
+          DO IBH=1,NBH
+            FPLUS=0.5D0*(OCC(2*IBH-1)+OCC(2*IBH))
+            FMINUS=0.5D0*(OCC(2*IBH-1)-OCC(2*IBH))
+            DO J=1,N2
+              B(IOFF+J,IBH)=FPLUS*CONJG(PROJ(IBH,J0+J))*CONJG(EIKR) &
+     &                  +FMINUS*PROJ(IBH,J0+J)*EIKR
+            ENDDO
+          ENDDO
+        ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        CALL ACCELPROFILE$ADD('PAW_OFFDEN_BATCH_PACK' &
+     &      ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NBH,KIND=8) &
+     &      ,INT(COUNT,KIND=8),0.D0 &
+     &      ,16.D0*REAL(NBH,KIND=8) &
+     &      *(REAL(N1,KIND=8)+REAL(N2,KIND=8)*REAL(COUNT,KIND=8)) &
+     &      ,ACCEL_T1-ACCEL_T0)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        TCUBLAS_USED=.FALSE.
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+        CALL CPPAW_CUBLAS_ACC_ZGEMM_NT_COPY(N1,N2*COUNT,NBH &
+     &       ,A,B,WORK,TCUBLAS_USED)
+#ENDIF
+        IF(.NOT.TCUBLAS_USED) THEN
+          CALL ZGEMM('N','T',N1,N2*COUNT,NBH,ONE,A,N1 &
+     &              ,B,N2*COUNT,ZERO,WORK,N1)
+        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_FLOPS=8.D0*REAL(N1,KIND=8)*REAL(N2,KIND=8) &
+     &             *REAL(NBH,KIND=8)*REAL(COUNT,KIND=8)
+        IF(TCUBLAS_USED) THEN
+          ACCEL_GEMM_NAME='CUBLAS_ZGEMM_OFFDEN_TINV_STACK'
+        ELSE
+          ACCEL_GEMM_NAME='ZGEMM_OFFDEN_TINV_STACK'
+        END IF
+        CALL ACCELPROFILE$ADD(ACCEL_GEMM_NAME &
+     &      ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NBH,KIND=8) &
+     &      ,INT(COUNT,KIND=8),ACCEL_FLOPS &
+     &      ,16.D0*(REAL(NBH,KIND=8)*REAL(N1+N2,KIND=8) &
+     &      +REAL(N1,KIND=8)*REAL(N2,KIND=8))*REAL(COUNT,KIND=8) &
+     &      ,ACCEL_T1-ACCEL_T0)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        DO K=1,COUNT
+          NN=IDX(K)
+          IOFF=(K-1)*N2
+          IF(NSPIN.EQ.1) THEN
+            DO J=1,N2
+              DO I=1,N1
+                OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &              +REAL(WORK(I,IOFF+J),KIND=8)
+              ENDDO
+            ENDDO
+          ELSE IF(NSPIN.EQ.2) THEN
+            IF(ISPIN.EQ.1) THEN
+              DO J=1,N2
+                DO I=1,N1
+                  OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                +REAL(WORK(I,IOFF+J),KIND=8)
+                  OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                +REAL(WORK(I,IOFF+J),KIND=8)
+                ENDDO
+              ENDDO
+            ELSE
+              DO J=1,N2
+                DO I=1,N1
+                  OSDENMAT(NN)%MAT(I,J,1)=OSDENMAT(NN)%MAT(I,J,1) &
+     &                +REAL(WORK(I,IOFF+J),KIND=8)
+                  OSDENMAT(NN)%MAT(I,J,2)=OSDENMAT(NN)%MAT(I,J,2) &
+     &                -REAL(WORK(I,IOFF+J),KIND=8)
+                ENDDO
+              ENDDO
+            END IF
+          END IF
+        ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        CALL ACCELPROFILE$ADD('PAW_OFFDEN_BATCH_ACCUM' &
+     &      ,INT(N1,KIND=8),INT(N2,KIND=8),INT(NDIMD,KIND=8) &
+     &      ,INT(COUNT,KIND=8),0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
+        DEALLOCATE(WORK)
+        DEALLOCATE(B)
+        DEALLOCATE(A)
+      ENDDO
+      DEALLOCATE(IDX)
+      DEALLOCATE(DONE)
       RETURN
       END
 !
