@@ -1108,6 +1108,34 @@ orthogonalization calls. A later optimization should therefore either cover both
 initial Gram calls with a broader, verified wavefunction lifetime or leave this
 path alone and focus first on the non-Gram projection/Addpro edges.
 
+## Projection Context Copy Accounting
+
+`WAVES_PROJECTIONS` now tags the profiled `PSI` input copy by caller context.
+The old aggregate `ACC_COPY_PROJ_PSI_IN` row is split into rows such as
+`ACC_COPY_PROJ_SETUP0_PSI_IN`, `ACC_COPY_PROJ_WRITEPDOS_PSI_IN`, and present
+checks for resident callers such as `ACC_PRESENT_PROJ_GRAM_PSI0_PSI`.
+`PROPSI_OUT` stays aggregate because the profiler label length is intentionally
+kept short.
+
+Spark C86C validation:
+
+```
+runs/projection-profile-contexts-20260531-181555
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Projection `PSI` rows | Energy delta |
+| --- | ---: | ---: | ---: | ---: | --- | ---: |
+| `gpu_resident` | 512 | 1 | 7.04 s | 1.5119 GB | `SETUP0` 0.0672 GB, `WRITEPDOS` 0.0672 GB; Gram/Ortho present | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.36 s | 1.9022 GB | `SETUP0` and `WRITEPDOS` about 0.0168 GB per rank; Gram/Ortho present | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 39.94 s | 5.4696 GB | `SETUP0` 0.2286 GB, `WRITEPDOS` 0.2286 GB; Gram/Ortho present | 0.000000407 Ha |
+
+This is instrumentation, not a speedup. The split moves an important design
+decision out of the dark: the remaining projection wavefunction copies in the
+current Si64 smoke are setup and PDOS/reporting edges, while the Gram and
+orthogonalization projection calls already see resident `PSI`. The next
+optimization should therefore prioritize the measured `ADDPRO_HPSI` and
+`ADDPRO_OPSI` edges before widening projection residency.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
