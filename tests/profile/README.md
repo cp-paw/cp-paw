@@ -172,7 +172,7 @@ uses `ACC_PRESENT_ORTHO_*` / `ACC_COPY_ORTHO_*` rows for its outer wavefunction
 arrays and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` for the per-call output copy.
 Projector-residency diagnostics include `ACC_BUILD_PRO_CACHE`,
 `ACC_PRESENT_PRO_CACHE_REUSE`, `ACC_PRESENT_PROJ_PRO_CACHE`,
-`ACC_PRESENT_ADDPRO_PRO_CACHE`, `CUBLAS_ZGEMM_ADDPRO_CACHE`, and the
+`ACC_PRESENT_ADDPRO_<ctx>_CACHE`, `CUBLAS_ZGEMM_ADDPRO_CACHE`, and the
 disappearance or reduction of `ACC_COPY_PROJ_PRO_IN`. The resident overlap
 cuBLAS kernels are timed separately as `CUBLAS_ZHERK_OVL_RES` and
 `CUBLAS_ZGEMM_OVL_RES`. This is the recommended NVHPC GPU performance path for
@@ -195,7 +195,9 @@ places where an array was already resident, while matching `ACC_COPY_*` rows add
 the estimated bytes for a required host/device transfer. The tracked arrays are
 `PSIM`/`OPSI` in the orthogonalization region and `WAVES_ADDOPSI`,
 with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
-`PROPSI` in `WAVES_PROJECTIONS`, and `PSI` in `WAVES_ADDPRO`. The
+`PROPSI` in `WAVES_PROJECTIONS`, and context-specific `PSI`/`PROPSI` rows in
+`WAVES_ADDPRO` (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are input/output
+copy estimates because the projector addition updates the wavefunction. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
 and records that outer input/output region as `ACC_COPY_GRAM_PSI_IO`. The
 transform scratch `PSIINV` is created on the device from resident `PSI`,
