@@ -144,7 +144,10 @@ geometry, grid id and projector dimensions stay unchanged. Set
 the benchmark case is `gpu_resident_pro_host`. Set `CPPAW_GPU_ADDPRO_CACHE=0`
 to keep the GPU projection cache but route `WAVES_ADDPRO` through the previous
 host-expansion/addproduct path; the benchmark case is
-`gpu_resident_addpro_host`. The orthogonalization overlap
+`gpu_resident_addpro_host`. The narrower `CPPAW_GPU_ADDPRO_CACHE_HPSI=0` and
+`CPPAW_GPU_ADDPRO_CACHE_OPSI=0` switches isolate the Hamiltonian and overlap
+wavefunction `WAVES_ADDPRO` contexts without disabling the shared projection
+cache. The orthogonalization overlap
 section keeps `PSIM`/`OPSI` resident across the projection and pseudo-overlap
 calls, and the same mode routes eligible `WAVES_OVERLAP`
 scalarproducts through a present-input cuBLAS wrapper; for inversion-symmetric
@@ -424,6 +427,10 @@ be overridden by kernel category:
 - `CPPAW_GPU_ADDPRO_CACHE`: keep enabled by default in residency-profile builds
   so `WAVES_ADDPRO` reuses the GPU-resident `PRO` cache; set to `0` to test
   projection caching without the cached addproduct path.
+- `CPPAW_GPU_ADDPRO_CACHE_HPSI` and `CPPAW_GPU_ADDPRO_CACHE_OPSI`: keep enabled
+  by default and override only the `HPSI` or `OPSI` `WAVES_ADDPRO` context. The
+  harness cases are `gpu_resident_addpro_hpsi_host`,
+  `gpu_resident_addpro_opsi_host`, and `gpu_resident_opsi_addpro_host`.
 - `CPPAW_GPU_FORCE_PSI_RESIDENCY`: keep enabled by default in residency-profile
   builds so `WAVES$FORCE` reuses `THIS%PSI0` across the per-atom
   `WAVES_DEDPRO` MATMUL calls; set to `0` for the previous per-call copy path.

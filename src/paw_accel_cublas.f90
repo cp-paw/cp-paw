@@ -29,6 +29,8 @@
       LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.TRUE.
+      LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.TRUE.
+      LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.TRUE.
       LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: OPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_CONST_RESIDENCY_ENABLED=.FALSE.
@@ -38,6 +40,8 @@
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
+      LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.FALSE.
+      LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.FALSE.
       LOGICAL(4)         :: FORCE_PSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: OPSI_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ORTHO_CONST_RESIDENCY_ENABLED=.FALSE.
@@ -314,11 +318,36 @@
       END SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV
 !
 !     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV(NAME,VALUE,FOUND)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)    :: NAME
+      LOGICAL(4)  ,INTENT(INOUT) :: VALUE
+      LOGICAL(4)  ,INTENT(OUT)   :: FOUND
+      CHARACTER(128)             :: TEXT
+      INTEGER(4)                 :: STATUS
+!     **************************************************************************
+      FOUND=.FALSE.
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,TEXT,STATUS=STATUS)
+      IF(STATUS.NE.0) RETURN
+      TEXT=ADJUSTL(TEXT)
+      IF(LEN_TRIM(TEXT).EQ.0) RETURN
+      FOUND=.TRUE.
+      SELECT CASE(TEXT(1:MIN(LEN(TEXT),LEN_TRIM(TEXT))))
+      CASE('0','no','NO','false','FALSE','off','OFF')
+        VALUE=.FALSE.
+      CASE DEFAULT
+        VALUE=.TRUE.
+      END SELECT
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_INITCONFIG
       IMPLICIT NONE
       CHARACTER(128) :: VALUE
       INTEGER(4)     :: STATUS
       INTEGER(4)     :: IOS
+      LOGICAL(4)     :: FOUND
 !     **************************************************************************
       IF(CONFIG_READY) RETURN
       CONFIG_READY=.TRUE.
@@ -416,6 +445,18 @@
           END SELECT
         END IF
       END IF
+      CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_GPU_ADDPRO_CACHE_HPSI' &
+     &    ,ADDPRO_CACHE_HPSI_ENABLED,FOUND)
+      IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ADDPRO_CACHE_HPSI' &
+     &    ,ADDPRO_CACHE_HPSI_ENABLED,FOUND)
+      CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_GPU_ADDPRO_CACHE_OPSI' &
+     &    ,ADDPRO_CACHE_OPSI_ENABLED,FOUND)
+      IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ADDPRO_CACHE_OPSI' &
+     &    ,ADDPRO_CACHE_OPSI_ENABLED,FOUND)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_FORCE_PSI_RESIDENCY',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
@@ -600,6 +641,26 @@
      &     .AND.ADDPRO_CACHE_ENABLED
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_CONTEXT_ENABLED &
+     &                                    (PROFILE_ID)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PROFILE_ID
+      LOGICAL(4)              :: TCONTEXT
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      TCONTEXT=.TRUE.
+      IF(INDEX(TRIM(PROFILE_ID),'HPSI').GT.0) THEN
+        TCONTEXT=ADDPRO_CACHE_HPSI_ENABLED
+      ELSE IF(INDEX(TRIM(PROFILE_ID),'OPSI').GT.0) THEN
+        TCONTEXT=ADDPRO_CACHE_OPSI_ENABLED
+      END IF
+      CPPAW_CUBLAS_ACC_ADDPRO_CACHE_CONTEXT_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED &
+     &     .AND.ADDPRO_CACHE_ENABLED.AND.TCONTEXT
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_CONTEXT_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
