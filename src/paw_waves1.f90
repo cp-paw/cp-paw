@@ -4770,6 +4770,11 @@ RETURN
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE MPE_MODULE
       USE WAVES_MODULE
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NAT
       INTEGER(4),INTENT(IN)  :: LMNXX
@@ -4800,6 +4805,9 @@ RETURN
       REAL(8)                :: SVAR
       REAL(8)                :: R(3,NAT)
       REAL(8)   ,PARAMETER   :: RSMALL=1.D-20
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)             :: TRESIDENTFORCEPSI
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$FORCE')
                               CALL TIMING$CLOCKON('W:FORCE')
@@ -4861,6 +4869,18 @@ RETURN
 !         ======================================================================
 !         ==                                                                  ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          TRESIDENTFORCEPSI=CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          IF(TRESIDENTFORCEPSI) THEN
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_FORCE_PSI0','ACC_COPY_FORCE_PSI0_IN' &
+     &          ,NGL,NDIM,NBH,THIS%PSI0)
+          END IF
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH)) &
+!$ACC& IF(TRESIDENTFORCEPSI)
+#ENDIF
           IPRO=1
           DO IAT=1,NAT
             ISP=MAP%ISP(IAT)
@@ -4919,6 +4939,9 @@ RETURN
             IPRO=IPRO+LMNX
             CALL SETUP$UNSELECT()
           ENDDO ! END OF LOOP OVER IAT
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+!$ACC END DATA
+#ENDIF
           DEALLOCATE(GIJ)
           DEALLOCATE(GVEC)
         ENDDO  ! END OF LOOP OVER ISPIN
