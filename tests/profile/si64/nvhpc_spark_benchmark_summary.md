@@ -1446,6 +1446,42 @@ residency experiment should therefore try to keep one of these wavefunctions
 resident across the producing and consuming phases, rather than only suppressing
 copy-out accounting.
 
+## PSIM Propagation Diagnostic
+
+The PSIM propagation follow-up adds the opt-in switch
+`CPPAW_GPU_PSIM_PROPAGATE=1` and benchmark cases `gpu_psim_propagate` and
+`gpu_hpsi_psim_propagate`. This path runs the final
+`PSIM = A*PSI0 + B*PSIM + C*HPSI` update of `WAVES$PROPAGATE` on the GPU and
+copies `PSIM` back before the next orthogonalization block. The older
+environment aliases `CPPAW_GPU_PSIM_RESIDENCY` and
+`CPPAW_CUBLAS_ACC_PSIM_RESIDENCY` remain accepted for compatibility.
+
+Spark C86C validation:
+
+```
+runs/psim-propagate-subroutine-20260531-2048-1r
+runs/psim-propagate-final-20260531-2048-1r
+runs/psim-propagate-final-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 2048 | 1 | 39.20 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_psim_propagate` | 2048 | 1 | 39.39 s | 6.2897 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 2048 | 1 | 39.50 s | 4.8988 GB | 0.000000407 Ha |
+| `gpu_hpsi_psim_propagate` | 2048 | 1 | 39.45 s | 5.8136 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi` | 512 | 4 | 27.28 s | 1.7284 GB | 0.000000401 Ha |
+| `gpu_hpsi_psim_propagate` | 512 | 4 | 25.39 s | 1.9977 GB | 0.000000401 Ha |
+
+All runs are energy-valid. A direct OpenACC kernel on the `THIS%PSIM` component
+was energy-invalid for this case; moving the update into a standalone
+dummy-array subroutine fixed correctness. The diagnostic is therefore useful as
+a regression harness for future residency work, but it is not a new default:
+the current implementation adds `PSI0`, `PSIM`, `HPSI`, coefficient input
+copies and a `PSIM` copy-out. The performance-positive path is still broader
+projector, PRO, and wavefunction residency that lets later phases consume the
+GPU-resident data instead of copying it back immediately.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
