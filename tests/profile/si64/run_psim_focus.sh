@@ -15,7 +15,7 @@ RUN_SHARED_GPU=${RUN_SHARED_GPU:-yes}
 RUN_LARGE_GPU=${RUN_LARGE_GPU:-no}
 LARGE_EMPTY_BANDS=${LARGE_EMPTY_BANDS:-2048}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-${RUN_ROOT:-"${HERE}/runs/psim-focus-$(date +%Y%m%d-%H%M%S)"}}
-PSIM_CASES=${PSIM_CASES:-"gpu_resident gpu_psim_propagate gpu_resident_hpsi gpu_hpsi_psim_propagate"}
+PSIM_CASES=${PSIM_CASES:-"gpu_resident gpu_psim_propagate gpu_resident_psim_phase gpu_resident_hpsi gpu_hpsi_psim_propagate gpu_resident_hpsi_psim_phase"}
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 : > "${COMBINED}"
