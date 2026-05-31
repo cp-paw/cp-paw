@@ -2385,12 +2385,14 @@ CALL TIMING$CLOCKON('W:EXPECT')
           DO IB=1,NBH
             IF(GSET%TINV) THEN
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,2 &
-     &              ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
+     &              ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON &
+     &              ,'EXPECT_INV')
               EIG(2*IB-1,IKPT,ISPIN)=REAL(HAMILTON(1,1),KIND=8)
               EIG(2*IB  ,IKPT,ISPIN)=REAL(HAMILTON(2,2),KIND=8)
             ELSE 
               CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,1,1 &
-     &            ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON)
+     &            ,THIS%PSI0(:,:,IB),THIS%HPSI(:,:,IB),HAMILTON &
+     &            ,'EXPECT')
               EIG(IB,IKPT,ISPIN)=REAL(HAMILTON(1,1),KIND=8)
             END IF
           ENDDO
@@ -2448,7 +2450,7 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
             NGL=GSET%NGL
             ALLOCATE(HAMILTON(NB,NB))
             CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%PSI0,THIS%HPSI &
-     &                        ,HAMILTON)
+     &                        ,HAMILTON,'HAMILTON')
             IF(.NOT.ASSOCIATED(THIS%EIGVAL))ALLOCATE(THIS%EIGVAL(NB))
             IF(.NOT.ASSOCIATED(THIS%EIGVEC))ALLOCATE(THIS%EIGVEC(NB,NB))
             CALL LIB$DIAGC8(NB,HAMILTON,THIS%EIGVAL,THIS%EIGVEC)

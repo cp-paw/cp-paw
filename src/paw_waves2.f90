@@ -371,19 +371,22 @@ END IF
 !         ==  NOW ADD OVERLAP OF PSEUDO WAVE FUNCTIONS                        ==
 !         ======================================================================
           ALLOCATE(AUXMAT(NB,NB))
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM &
+     &                       ,THIS%PSIM,AUXMAT,'ORTH_PSIM')
           DO I=1,NB
             DO J=1,NB
               MAT(I,J)=MAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%PSIM,AUXMAT)
+          CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,THIS%OPSI &
+     &                       ,THIS%PSIM,AUXMAT,'ORTH_OPM')
           DO I=1,NB
             DO J=1,NB
               OMAT(I,J)=OMAT(I,J)+AUXMAT(I,J)
             ENDDO
           ENDDO
-          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%OPSI,THIS%OPSI,AUXMAT)
+          CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%OPSI &
+     &                       ,THIS%OPSI,AUXMAT,'ORTH_OPSI')
           DO I=1,NB
             DO J=1,NB
               OOMAT(I,J)=OOMAT(I,J)+AUXMAT(I,J)
@@ -602,7 +605,8 @@ END IF
             ENDDO
 !PRINT*,'1C-CHARGE AFTER ORTHOGONALIZATION ',CSUM
             ALLOCATE(MAT(NB,NB))
-            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,MAT)
+            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM &
+     &                         ,THIS%PSIM,MAT,'ORTH_TEST')
             CSUM=(0.D0,0.D0)
             DO I=1,NB
               CSUM=CSUM+MAT(I,I)*OCC(I,IKPT,ISPIN)
@@ -1067,7 +1071,8 @@ END IF
        END
 !
 !      ..............................................................
-      SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT)
+      SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT &
+     &                        ,PROFILE_ID)
 !      **                                                          **
 !      **  CALCULATES <PSI1|PSI2>                                  **
 !      **                                                          **
@@ -1075,7 +1080,9 @@ END IF
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &        CPPAW_CUBLAS_ACC_SCALARPRODUCT_RESIDENT_COPY &
-     &       ,CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE
+     &       ,CPPAW_CUBLAS_ACC_WAVE_OVERLAP_RESIDENT_ACTIVE &
+     &       ,CPPAW_CUBLAS_ACC_SET_OVERLAP_PROFILE &
+     &       ,CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE
 #ENDIF
       IMPLICIT NONE
        LOGICAL(4),INTENT(IN) :: TID !INDICATES THAT PSI1=PSI2
@@ -1086,6 +1093,7 @@ END IF
        COMPLEX(8),INTENT(IN) :: PSI1(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(IN) :: PSI2(NGL,NDIM,NBH)
        COMPLEX(8),INTENT(OUT):: MAT(NB,NB)
+       CHARACTER(*),INTENT(IN):: PROFILE_ID
        INTEGER(4)            :: IBH1,IBH2,IDIM
        INTEGER(4)            :: IB1A,IB1B,IB2A,IB2B,I,J
        COMPLEX(8),ALLOCATABLE:: TMAT(:,:)
@@ -1101,6 +1109,9 @@ END IF
 #ENDIF
 !      **************************************************************
                              CALL TIMING$CLOCKON('WAVES_OVERLAP')
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_SET_OVERLAP_PROFILE(PROFILE_ID)
+#ENDIF
       TINV=(NB.NE.NBH)
       IF(.NOT.TINV) THEN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
@@ -1112,6 +1123,9 @@ END IF
             CALL PLANEWAVE$GETR8('GWEIGHT',GWEIGHT)
             MAT=MAT*GWEIGHT
             CALL MPE$COMBINE('K','+',MAT)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            CALL CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE()
+#ENDIF
                              CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
             RETURN
           END IF
@@ -1123,6 +1137,9 @@ END IF
            CALL PLANEWAVE$SCALARPRODUCT(' ',NGL,NDIM,NB,PSI1,NB,PSI2,MAT)
          END IF
          CALL MPE$COMBINE('K','+',MAT)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+         CALL CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE()
+#ENDIF
                              CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
          RETURN
        ENDIF
@@ -1214,9 +1231,12 @@ END IF
        ENDDO
        DEALLOCATE(TMAT)
        CALL MPE$COMBINE('K','+',MAT)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      CALL CPPAW_CUBLAS_ACC_CLEAR_OVERLAP_PROFILE()
+#ENDIF
                              CALL TIMING$CLOCKOFF('WAVES_OVERLAP')
-       RETURN
-       END
+      RETURN
+      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ1,PROJ2,MAT)
@@ -3175,7 +3195,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
 !     ==================================================================
       ALLOCATE(OVERLAP(NB,NB))
       ALLOCATE(AUXMAT(NB,NB))
-      CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP)
+      CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP &
+     &                   ,'GRAM_'//TRIM(PROFILE_ID))
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_GRAM_T1)
       CALL ACCELPROFILE$ADD('PAW_GRAM_PW_OVERLAP' &
@@ -3372,7 +3393,8 @@ PRINT*,'A     ',(A(I,I),I=1,NB)
         CALL WAVES_1COVERLAP(MAP,NDIM,NBH,NB,NPRO,PROJ,PROJ,AUXMAT)
         DEALLOCATE(PROJ)
         ALLOCATE(OVERLAP(NB,NB))
-        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP)
+        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,PSI,PSI,OVERLAP &
+     &                     ,'GRAM_TEST')
         DO J=1,NB
           DO I=1,NB
             OVERLAP(I,J)=OVERLAP(I,J)+AUXMAT(I,J)
@@ -6061,7 +6083,8 @@ PRINT*,'XK ',XK
         NDIMHALF=1
         ALLOCATE(AUXMAT(NBD,NBD))
         CALL WAVES_1COVERLAP(MAP,NDIMHALF,NBD,NBD,MAP%NPRO,THIS%PROJ,THIS%PROJ,AUXMAT)
-        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIMHALF,NBD,NBD,THIS%PSI0,THIS%PSI0,QMAT)
+        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIMHALF,NBD,NBD,THIS%PSI0 &
+     &                     ,THIS%PSI0,QMAT,'S2_NC')
         DO J=1,NBD
           DO I=1,NBD
             QMAT(I,J)=(QMAT(I,J)+AUXMAT(I,J))*0.5D0
@@ -6100,7 +6123,8 @@ PRINT*,'XK ',XK
               PSI0(:,:,NBH+1:2*NBH)=THIS%PSI0
            END IF
         END DO
-        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH*2,NB*2,PSI0,PSI0,AUXMAT2)
+        CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH*2,NB*2,PSI0,PSI0 &
+     &                     ,AUXMAT2,'S2_COL')
         DEALLOCATE(PSI0)
 
         QMAT=(0.D0,0.D0)
@@ -6826,9 +6850,11 @@ DEALLOCATE(TEST)
 !         ======================================================================
           ALLOCATE(AUXMAT(NB,NB))
           IF(ID.EQ.'0') THEN
-            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSI0,THIS%PSI0,AUXMAT)
+            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSI0 &
+     &                         ,THIS%PSI0,AUXMAT,'TEST0')
           ELSE IF(ID.EQ.'-') THEN
-            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM,THIS%PSIM,AUXMAT)
+            CALL WAVES_OVERLAP(.TRUE.,NGL,NDIM,NBH,NB,THIS%PSIM &
+     &                         ,THIS%PSIM,AUXMAT,'TESTM')
           ELSE
             CALL ERROR$CHVAL('ID',ID)
             CALL ERROR$STOP('WAVES$TESTORTHO')

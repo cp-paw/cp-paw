@@ -1136,6 +1136,46 @@ orthogonalization projection calls already see resident `PSI`. The next
 optimization should therefore prioritize the measured `ADDPRO_HPSI` and
 `ADDPRO_OPSI` edges before widening projection residency.
 
+## Overlap Context Copy Accounting
+
+`WAVES_OVERLAP` now tags the generic cuBLAS `ZSPROD` copy/present rows by
+caller context. The old aggregate rows such as
+`ACC_COPY_CUBLAS_ZSPROD_PSI1_IN`, `ACC_COPY_CUBLAS_ZSPROD_PSI2_IN`,
+`ACC_COPY_CUBLAS_ZSPROD_OUT`, and `ACC_COPY_CUBLAS_ZSPROD_OVL_RES` are split
+into short rows such as `ACC_COPY_ZSP_HAMILTON_P1_IN`,
+`ACC_PRESENT_ZSP_GRAM_PSI0_P1`, and `ACC_COPY_ZSP_ORTH_PSIM_OVL`.
+
+Spark C86C validation:
+
+```
+runs/overlap-profile-contexts-20260531-162835
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.03 s | 1.5119 GB | 0.000000401 Ha |
+| `gpu_resident` | 512 | 4 | 9.35 s | 1.9022 GB | 0.000000401 Ha |
+| `gpu_resident` | 2048 | 1 | 39.04 s | 5.4696 GB | 0.000000407 Ha |
+
+The 2048-band context split shows that the large remaining non-resident overlap
+copies are Hamiltonian/reporting edges:
+
+| Row | Calls | Copy estimate | Meaning |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_ZSP_HAMILTON_P1_IN` | 2 | 0.4572 GB | First Hamiltonian overlap input is copied. |
+| `ACC_COPY_ZSP_HAMILTON_P2_IN` | 1 | 0.2286 GB | Second Hamiltonian overlap input is copied once; the other call sees it present. |
+| `ACC_COPY_ZSP_HAMILTON_OUT` | 2 | 0.0379 GB | Hamiltonian overlap output copy. |
+| `ACC_PRESENT_ZSP_GRAM_PSI0_P1/P2` | 1 each | 0 GB | Gram overlap inputs are resident. |
+| `ACC_PRESENT_ZSP_GRAM_PSIM_P1/P2` | 1 each | 0 GB | Gram overlap inputs are resident. |
+| `ACC_PRESENT_ZSP_ORTH_*_P1/P2` | 1 each | 0 GB | Orthogonalization overlap inputs are resident. |
+
+This is instrumentation, not a speedup. It shows that widening overlap
+residency inside Gram/Ortho would not attack the dominant remaining `ZSPROD`
+copies in this smoke. The next optimization target remains the measured
+wavefunction updates in `ACC_COPY_ADDPRO_HPSI_PSI_IO` and
+`ACC_COPY_ADDPRO_OPSI_PSI_IO`; Hamiltonian/reporting residency can be considered
+later if the band-output path matters for production runs.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
