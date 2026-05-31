@@ -260,6 +260,12 @@ case_note() {
     gpu_resident_hpsi_denmat_energy)
       echo "Combined HPSI residency plus DENMAT energy/Lambda OpenACC diagnostic."
       ;;
+    gpu_resident_offden_blas)
+      echo "Residency diagnostic that enables the opt-in scalar TINV off-site DENMAT BLAS prototype."
+      ;;
+    gpu_resident_hpsi_offden_blas)
+      echo "Combined HPSI residency plus scalar TINV off-site DENMAT BLAS prototype."
+      ;;
     gpu_psim_propagate|gpu_resident_psim)
       echo "Diagnostic that propagates PSIM on the GPU and copies it back before orthogonalization."
       ;;
@@ -475,6 +481,8 @@ case_env() {
     gpu_resident_hpsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_denmat_energy) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} $(cublas_env)" ;;
     gpu_resident_hpsi_denmat_energy) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} $(cublas_env)" ;;
+    gpu_resident_offden_blas) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 $(cublas_env)" ;;
+    gpu_resident_hpsi_offden_blas) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 $(cublas_env)" ;;
     gpu_psim_propagate|gpu_resident_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
     gpu_hpsi_psim_propagate|gpu_resident_hpsi_psim) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_PSIM_PROPAGATE=1 $(cublas_env)" ;;
     gpu_resident_hpsi_opsi) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 $(cublas_env)" ;;
