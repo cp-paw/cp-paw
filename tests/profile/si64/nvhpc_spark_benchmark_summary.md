@@ -846,6 +846,34 @@ the largest remaining explicit copy target in the 2048-band orthox profile is
 input/output rows such as `ACC_COPY_PROJ_PSI_IN`, `ACC_COPY_GRAM_PSI_IN`, and
 `ACC_COPY_ADDPRO_PSI_IO` at 0.4572 GB each.
 
+### Gram Transform Residency
+
+The Gram-Schmidt resident region now keeps `PSI` on the device through the final
+wavefunction transform, changing the outer Gram row from `ACC_COPY_GRAM_PSI_IN`
+to `ACC_COPY_GRAM_PSI_IO`. This lets the `LIB$ADDPRODUCTC8` transform calls see
+their output matrix as present instead of opening an additional cuBLAS copy
+region for the same wavefunction data.
+
+Spark C86C validation:
+
+```
+runs/gram-transform-residency512-20260531-163751
+runs/gram-transform-residency2048-20260531-163818
+runs/gram-transform-residency-parallel512-20260531-163945
+```
+
+| Case | Empty bands | Ranks | Wall time | Total copy estimate | `ZGEMM_NN_C_IO` | `ZGEMM_NN_C` present | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 1 | 7.14 s | 2.5592 GB | 2 calls, 0.2690 GB | 4 calls | 302.280854 Ha |
+| `gpu_resident_orthox` | 512 | 1 | 7.24 s | 1.8481 GB | 2 calls, 0.2690 GB | 4 calls | 302.280854 Ha |
+| `gpu_resident` | 512 | 4 | 9.31 s | 5.0827 GB | 2 calls, 0.0672 GB per rank | 4 calls per rank | 302.280854 Ha |
+| `gpu_resident` | 2048 | 1 | 40.26 s | 22.3328 GB | 2 calls, 0.9145 GB | 4 calls | 302.280854 Ha |
+| `gpu_resident_orthox` | 2048 | 1 | 39.13 s | 6.6127 GB | 2 calls, 0.9145 GB | 4 calls | 302.280854 Ha |
+
+Compared with the previous cleanup run, the 2048-band orthox copy estimate drops
+from 7.9844 GB to 6.6127 GB. The remaining `ZGEMM_NN_C_IO` calls are therefore
+not Gram-transform output copies; they are the next addproduct-residency target.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
