@@ -36,6 +36,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `offden-cublas-diagnostic-20260531-*` / `offden-cublas-combined-20260531-*` | Naive off-site DENMAT cuBLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 36.79 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_blas` remains better at 9.75 s at 512/4 | Adds a forced per-neighbor cuBLAS diagnostic; energy-valid, but kernel timings are worse than host BLAS, so the next GPU attempt must batch or keep buffers resident. |
 | `offden-cublas-stack-diagnostic-20260531-*` / `offden-cublas-stack-combined-20260531-*` | Stacked off-site DENMAT cuBLAS diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_batch` 36.10 s at 2048/1 | - | `gpu_resident_hpsi_offden_cublas_batch` 9.65 s at 512/4 | Groups neighbors with the same first atom and second-projector size into one wider cuBLAS `ZGEMM`; energy-valid and eliminates the tiny-GEMM launch problem, but host packing still dominates enough to keep it opt-in. |
 | `offden-device-pack-20260531-*` / `offden-device-pack-combined-20260531-*` | Off-site DENMAT device-pack diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` 36.03 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` 9.87 s at 512/4 | Packs the stacked off-site A/B buffers on the GPU and copies back only WORK; strong for 1 MPI/GPU, diagnostic-only when several ranks share one GPU. |
+| `proj-residency-fixed-20260531-*` | `THIS%PROJ` residency diagnostic | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` 36.57 s at 2048/1 | - | `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` 9.48 s at 512/4 | Keeps the combined projection result present for eligible off-site device-pack consumers; energy-valid after invalidating stale present `PROPSI`, useful as an opt-in diagnostic but too narrow for default promotion. |
 
 The latest full-matrix run lives at:
 
@@ -1891,9 +1892,59 @@ Device-pack is the first off-site DENMAT path that materially reduces the
 local contraction for the 1 MPI rank / 1 GPU resource comparison. It should not
 be promoted to a default for GPU-sharing runs: the 512/4 profile shows the GPU
 packing kernels serialize poorly when four ranks share the same device. The
-next useful implementation step is true `THIS%PROJ` residency across the
-projection/off-site consumers, plus a device-side accumulation path that avoids
+follow-up `THIS%PROJ` residency diagnostic is recorded below. After that, the
+next useful implementation step is a device-side accumulation path that avoids
 copying `WORK` back for host accumulation.
+
+## `THIS%PROJ` Residency Diagnostic
+
+The follow-up diagnostic adds `CPPAW_GPU_PROJ_RESIDENCY=1` with
+`CPPAW_CUBLAS_ACC_PROJ_RESIDENCY=1` as an alias. It copies the combined
+`THIS%PROJ` projection result to the device after `WAVES$PROJECTIONS` and lets
+eligible off-site DENMAT device-pack paths consume it with `PRESENT_OR_COPYIN`.
+Projection recomputation now invalidates any present `PROPSI` output mapping
+before entering its `COPYOUT` region; without that guard, later projection calls
+could reuse stale device state for an `INTENT(OUT)` result.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/proj-residency-fixed-20260531-2048-1r
+runs/proj-residency-fixed-20260531-512-4r
+```
+
+| Case | Empty bands | Ranks | Wall time | Copy estimate | Energy delta |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 2048 | 1 | 38.68 s | 5.3749 GB | 0.000000407 Ha |
+| `gpu_resident_proj` | 2048 | 1 | 39.44 s | 5.3894 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack` | 2048 | 1 | 38.93 s | 4.9162 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack_proj` | 2048 | 1 | 38.30 s | 4.9162 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` | 2048 | 1 | 36.93 s | 5.0066 GB | 0.000000407 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` | 2048 | 1 | 36.57 s | 5.0066 GB | 0.000000407 Ha |
+| `gpu_resident` | 512 | 4 | 9.20 s | 1.8694 GB | 0.000000401 Ha |
+| `gpu_resident_proj` | 512 | 4 | 9.27 s | 1.8865 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack` | 512 | 4 | 9.58 s | 1.7485 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_offden_cublas_devicepack_proj` | 512 | 4 | 10.10 s | 1.7484 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack` | 512 | 4 | 9.64 s | 1.7791 GB | 0.000000401 Ha |
+| `gpu_resident_hpsi_denmat_energy_offden_cublas_devicepack_proj` | 512 | 4 | 9.48 s | 1.7791 GB | 0.000000401 Ha |
+
+| Profile row | 2048/1 no PROJ residency | 2048/1 PROJ residency | 512/4 no PROJ residency | 512/4 PROJ residency |
+| --- | ---: | ---: | ---: | ---: |
+| `ACC_COPY_THIS_PROJ_IN` | - | 1 call, 0.0145 GB | - | 1 call/rank, 0.0043 GB/rank |
+| `ACC_COPY_OFFDEN_DPACK_PROJ_IN` | 1 call, 0.0145 GB | - | 1 call/rank, 0.0043 GB/rank | - |
+| `ACC_PRESENT_OFFDEN_DPACK_PROJ` | - | 1 call, 0 GB | - | 1 call/rank, 0 GB |
+| `ACC_COPY_PROJ_PROPSI_OUT` | 6 calls, 0.0869 GB | 6 calls, 0.0869 GB | 6 calls/rank, 0.0256 GB/rank | 6 calls/rank, 0.0256 GB/rank |
+
+Conclusion: this is a correctness-safe diagnostic hook for testing broader
+projection residency, and it proves the off-site device-pack consumer can avoid
+its own `PROJ` copy when the combined projection result is already present. The
+net copy estimate does not drop in the current shape because the copy is moved
+from the off-site consumer to the post-projection residency step. Keep it
+opt-in until more consumers can reuse the same resident `THIS%PROJ` block or the
+off-site accumulation path stays fully on the GPU.
 
 ## Recommended Next Benchmark
 
