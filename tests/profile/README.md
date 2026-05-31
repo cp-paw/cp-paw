@@ -625,10 +625,11 @@ be overridden by kernel category:
   `0` for the previous copy-heavy path.
 - `CPPAW_GPU_OPSI_RESIDENCY`: disabled by default. Set to `1` to keep
   orthogonalization `OPSI` resident through projection, overlap, and
-  `WAVES_ADDOPSI` on eligible non-stress paths. Non-superwave paths can keep
-  OPSI resident from build and mass scaling; superwave paths currently build and
-  mass-scale OPSI on the host before entering the resident region, while later
-  projection and `WAVES_ADDOPSI` consumers use `present_or_copyin` data regions.
+  `WAVES_ADDOPSI` on eligible non-stress paths. Eligible paths keep OPSI
+  resident from build and mass scaling; inversion-symmetric superwave paths take
+  one host snapshot after mass scaling so remaining host-side projection
+  fallbacks see the same OPSI data while later projection and `WAVES_ADDOPSI`
+  consumers use `present_or_copyin` data regions.
   The
   compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
