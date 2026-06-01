@@ -2669,7 +2669,9 @@ Use the full diagnostic sweep only when comparing library combinations:
 
 ```
 cd tests/profile/si64
-TEST=si64_bands EMPTY_BANDS=1024 NSTEPS=1 RUN_GPU_ALL=yes \
-  GPU_CASES="gpu_off gpu_all gpu_all_off gpu_resident gpu_resident_orthox_off gpu_resident_no_cusolver cublas cusolver cufft cufftw nvlamath nvblas gpu_no_cufft gpu_no_cublas gpu_no_cusolver gpu_managed gpu_unified" \
-  ./run_nvhpc_standard.sh
+./run_gpu_library_matrix.sh
 ```
+
+The library-matrix wrapper delegates to `run_nvhpc_standard.sh` with the same
+1024-band, one-step shape and expands the GPU case list to the all-library,
+single-library, library-disabled, NVLAMATH/NVBLAS, and memory-mode diagnostics.

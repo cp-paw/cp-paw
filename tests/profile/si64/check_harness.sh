@@ -18,6 +18,7 @@ bash -n tests/profile/si64/run_gap_profile_night.sh
 bash -n tests/profile/si64/run_large_bands.sh
 bash -n tests/profile/si64/run_large_bands_long.sh
 bash -n tests/profile/si64/run_gpu_exploration.sh
+bash -n tests/profile/si64/run_gpu_library_matrix.sh
 bash -n tests/profile/si64/run_nvhpc_standard.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_offden_focus.sh
