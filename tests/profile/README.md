@@ -871,8 +871,8 @@ be overridden by kernel category:
   `gpu_resident_stack_force_dedpro`.
   Acceleration-profile builds also split `WAVES$FORCE` into
   `PAW_FORCE_OCC_SETUP`, `PAW_FORCE_GSPACE_SETUP`, `PAW_FORCE_SITE_TOTAL`,
-  `PAW_FORCE_DEDPROJ`, `PAW_FORCE_HTBC`, `PAW_FORCE_STRUCTURE_FACTOR`,
-  `PAW_FORCE_DEDPRO`, `PAW_FORCE_PROFORCE`, and
+  `PAW_FORCE_LAMBDA_SETUP`, `PAW_FORCE_DEDPROJ`, `PAW_FORCE_HTBC`,
+  `PAW_FORCE_STRUCTURE_FACTOR`, `PAW_FORCE_DEDPRO`, `PAW_FORCE_PROFORCE`, and
   `PAW_FORCE_DEDPRO_ACC_TOTAL` rows so force-side GPU candidates can be ranked
   without relying on the coarse `PAW_ETOT_FORCE` total alone.
 - `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so

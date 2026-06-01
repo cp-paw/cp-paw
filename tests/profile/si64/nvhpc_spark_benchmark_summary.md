@@ -4194,6 +4194,54 @@ this breakdown. The next force-side GPU target should therefore be `DEDPROJ`
 residency/offload and projection-state reuse, not further tuning of
 `WAVES_PROFORCE`.
 
+## 2026-06-01 Force Lambda Hoist
+
+The force split above showed that `PAW_FORCE_DEDPROJ` was dominated neither by
+`WAVES_HPROJ` nor by `WAVES_OPROJ`; both were sub-0.1 s at 4096 bands. The
+expensive piece was rebuilding the dense `LAMBDA(NB,NB)` matrix inside every
+per-atom `WAVES_DEDPROJ` call. Since `LAMBDA` depends only on the current
+occupations and `THIS%RLAM0`, it is now built once per k-point/spin in
+`WAVES$FORCE` and passed into each atom's `WAVES_DEDPROJ`.
+
+Run directories on Spark GB10:
+
+```
+512 smoke:
+tests/profile/si64/runs/force-lambda-hoist-smoke512-20260601
+
+4096 default threshold:
+tests/profile/si64/runs/force-lambda-hoist-4096-20260601
+
+4096 diagnostic with CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO=1:
+tests/profile/si64/runs/force-lambda-hoist-addoproj-min1-4096-20260601
+
+Spark 4-rank smoke:
+tests/profile/si64/runs/force-lambda-hoist-4r-smoke512-20260601
+```
+
+The large one-rank runs used
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram`,
+`TEST=si64_bands`, `EMPTY_BANDS=4096`, `NSTEPS=1`, and one GPU rank.
+
+| Case | Wall time | Transfer estimate | `PAW_ETOT_FORCE` | `PAW_FORCE_DEDPROJ` | `PAW_FORCE_LAMBDA_SETUP` | Energy check |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Force split baseline | 138.96 s | 8.0690 GB | 29.0665 s | 28.3467 s | absent | yes |
+| Lambda hoist | 122.31 s | 8.0690 GB | 12.8041 s | 11.8668 s | 0.2044 s | yes |
+| Lambda hoist + ADDOPROJ min1 diagnostic | 118.72 s | 17.2885 GB | 9.6502 s | 8.7272 s | 0.1924 s | yes |
+
+The default-threshold lambda hoist is the clean win: it removes about 16.65 s
+from the 4096-band wall time without increasing the transfer estimate. Lowering
+`CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO` to `1` wins another 3.59 s on Spark GB10,
+but it adds about 9.22 GB of additional `LAMBDA1/2` transfer from the per-atom
+ADDOPROJ offload. Keep that as a diagnostic on Spark/unified-memory-like
+systems rather than changing the conservative default. A separate force-specific
+ADDOPROJ residency path would need to keep the transformed Lambda matrices
+present across atoms before it is attractive as a default.
+
+Spark rebuilt both serial and parallel residency-profile targets. The four-rank
+smoke used `gpu_resident_addoproj`, `EMPTY_BANDS=512`, `NSTEPS=1`, passed the
+energy check, and verifies that the shared `FORCE_LAMBDA` path is MPI-safe.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

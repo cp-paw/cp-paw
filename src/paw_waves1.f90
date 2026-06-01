@@ -6495,6 +6495,7 @@ RETURN
       INTEGER(4)             :: NBH         ! #(SUPER WAVE FUNCTIONS)
       INTEGER(4)             :: NGL         ! LOCAL #(G-VECTORS) 
       INTEGER(4)             :: IJ,I,J,IPRO,ISP,IAT,IBPRO,LMNX,LNX,IG
+      INTEGER(4)             :: IB1,IB2
       REAL(8)   ,ALLOCATABLE :: GVEC(:,:)   ! (3,NGL)    
       REAL(8)   ,ALLOCATABLE :: GIJ(:,:)    ! (6,NGL)    
       REAL(8)   ,ALLOCATABLE :: DO1(:,:)    ! (LNX,LNX)    
@@ -6506,7 +6507,9 @@ RETURN
       REAL(8)                :: FORCE1(3)
       REAL(8)                :: STRESS1(3,3)
       REAL(8)                :: SVAR
+      REAL(8)                :: F1,F2
       REAL(8)                :: R(3,NAT)
+      COMPLEX(8),ALLOCATABLE :: FORCE_LAMBDA(:,:) ! (NB,NB)
       REAL(8)   ,PARAMETER   :: RSMALL=1.D-20
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       LOGICAL(4)             :: TRESIDENTFORCEPSI
@@ -6600,6 +6603,27 @@ RETURN
 !         ======================================================================
 !         ==                                                                  ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
+          ALLOCATE(FORCE_LAMBDA(NB,NB))
+          DO IB1=1,NB
+            F1=OCC(IB1,IKPT,ISPIN)
+            DO IB2=1,NB
+              F2=OCC(IB2,IKPT,ISPIN)
+              FORCE_LAMBDA(IB1,IB2)=-THIS%RLAM0(IB1,IB2)*0.5D0*(F1+F2)
+            ENDDO
+          ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+          CALL ACCELPROFILE$ADD('PAW_FORCE_LAMBDA_SETUP' &
+     &        ,INT(NB,KIND=8),INT(NBH,KIND=8),INT(NAT,KIND=8),0_8 &
+     &        ,0.D0,0.D0,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
+!
+!         ======================================================================
+!         ==                                                                  ==
+!         ======================================================================
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           TRESIDENTFORCEPSI=CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
           TFORCEDEDPROACC= &
@@ -6659,7 +6683,7 @@ RETURN
             CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:LNX,ISP),LMNX &
      &                        ,OCC(:,IKPT,ISPIN) &
      &                        ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),DH1,DO1 &
-     &                        ,THIS%RLAM0,DEDPROJ)
+     &                        ,FORCE_LAMBDA,DEDPROJ)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
             CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
             CALL ACCELPROFILE$ADD('PAW_FORCE_DEDPROJ' &
@@ -6776,6 +6800,7 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 !$ACC END DATA
 #ENDIF
+          DEALLOCATE(FORCE_LAMBDA)
           DEALLOCATE(GIJ)
           DEALLOCATE(GVEC)
         ENDDO  ! END OF LOOP OVER ISPIN
@@ -8347,14 +8372,14 @@ RETURN
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DEDPROJ(NDIM,NBH,NB,LNX,LOX,LMNX,OCC &
-     &                       ,PROJ,DH,DO,EPS,DEDPROJ)
+     &                       ,PROJ,DH,DO,LAMBDA,DEDPROJ)
 !     **************************************************************************
 !     **  CALCULATES THE DERIVATIVE OF THE ONE-CENTER                         **
 !     **  ENERGIES WITH RESPECT TO THE PROJECTOR FUNCTIONS                    **
 !     **    DEDPROJ = DE/(DPROJ)                                              **
 !     **            = DH<P|PSITILDE>F-DO<P|PSITILDE>*LAMBDA                   **
 !     **  LAMBDA IS CALCULATED FROM THIS%RLAM0 BY MULTIPLICATION WITH         **
-!     **  0.5*(FI+FJ)                                                         **
+!     **  0.5*(FI+FJ) BEFORE THE PER-ATOM FORCE LOOP.                         **
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1999)***********
       IMPLICIT NONE
@@ -8368,11 +8393,10 @@ RETURN
       INTEGER(4),INTENT(IN)   :: LNX
       INTEGER(4),INTENT(IN)   :: LOX(LNX)
       REAL(8)   ,INTENT(IN)   :: DO(LNX,LNX) ! DO/DD
-      COMPLEX(8),INTENT(IN)   :: EPS(NB,NB)
+      COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
       COMPLEX(8),INTENT(OUT)  :: DEDPROJ(NDIM,NBH,LMNX)    ! DE/D<P|
       LOGICAL(4)              :: TINV
       COMPLEX(8),ALLOCATABLE  :: OPROJ(:,:,:)
-      COMPLEX(8),ALLOCATABLE  :: LAMBDA(:,:)
       REAL(8)                 :: F1,F2
       INTEGER(4)              :: IB,IB1,IB2,LMN,IDIM
       COMPLEX(8)              :: CSVAR
@@ -8430,18 +8454,9 @@ RETURN
 !     ==========================================================================
 !     ==  ADD -DO<P|PSI>LAMBDA*(FI+FJ)/2                                      ==
 !     ==========================================================================
-      ALLOCATE(LAMBDA(NB,NB))
-      DO IB1=1,NB
-        F1=OCC(IB1)
-        DO IB2=1,NB
-          F2=OCC(IB2)
-          LAMBDA(IB1,IB2)=-EPS(IB1,IB2)*0.5D0*(F1+F2)
-        ENDDO
-      ENDDO
       ALLOCATE(OPROJ(NDIM,NBH,LMNX))
       CALL WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NBH,PROJ,OPROJ)
       CALL WAVES_ADDOPROJ(LMNX,NDIM,NBH,NB,DEDPROJ,OPROJ,LAMBDA)
-      DEALLOCATE(LAMBDA)
       DEALLOCATE(OPROJ)
                                CALL TRACE$POP
       RETURN
