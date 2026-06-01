@@ -96,10 +96,7 @@ boundary. If the input, output, map arrays, and cached full-grid work buffer are
 already present, the ACCMAP data region is skipped and reported as
 `ACC_PRESENT_SERIAL3D_DATA` plus direction-specific
 `ACC_PRESENT_SERIAL3D_GTOR_DATA` / `ACC_PRESENT_SERIAL3D_RTOG_DATA` rows;
-non-resident callers keep the same present-or-copy fallback behavior. The
-`WAVES_VPSI` scalar-spin producer can pass one-call residency hints for its
-HPSI-producing RTOG step so section-based device residency is not lost at the
-generic `PLANEWAVE$FFT` boundary.
+non-resident callers keep the same present-or-copy fallback behavior.
 `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is an opt-in follow-up that keeps the ACCMAP
 full-grid work array and map arrays present across calls. The cache is released
 by the plane-wave accelerator cleanup hook before shutdown. Use
