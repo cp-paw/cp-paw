@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import csv
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,30 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PROFILE_HEADER = (
     "op,n1,n2,n3,n4,calls,total_seconds,max_seconds,avg_seconds,"
     "gflop,gbyte,measured_gflop_per_s,measured_gbyte_per_s"
+)
+
+REQUIRED_NSYS_CASES = (
+    "gpu_all",
+    "gpu_no_cublas",
+    "gpu_no_cufft",
+    "gpu_no_cusolver",
+    "gpu_hpsi_psim_propagate",
+    "gpu_psim_propagate",
+    "gpu_resident",
+    "gpu_resident_addpro_host",
+    "gpu_resident_addpro_hpsi_host",
+    "gpu_resident_addpro_opsi_host",
+    "gpu_resident_hpsi",
+    "gpu_resident_hpsi_opsi",
+    "gpu_resident_hpsi_opsi_psim_phase",
+    "gpu_resident_hpsi_psim_phase",
+    "gpu_resident_no_cusolver",
+    "gpu_resident_opsi_addpro_host",
+    "gpu_resident_proj",
+    "gpu_resident_psim_phase",
+    "gpu_resident_stack",
+    "gpu_resident_stack_cufft",
+    "gpu_resident_stack_cufft_force",
 )
 
 
@@ -55,6 +80,50 @@ def markdown_table(text):
         for row in rows[2:]
     ]
     return header, data
+
+
+def case_env_cases(script_name):
+    path = os.path.join(HERE, script_name)
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+
+    in_case_env = False
+    cases = set()
+    for line in text.splitlines():
+        if line.startswith("case_env()"):
+            in_case_env = True
+            continue
+        if in_case_env and line.strip() == "esac":
+            break
+        if not in_case_env:
+            continue
+
+        match = re.match(r"\s*([A-Za-z0-9_|*]+)\)\s+echo", line)
+        if match:
+            cases.update(
+                case for case in match.group(1).split("|") if "*" not in case
+            )
+    return cases
+
+
+def check_nsys_case_coverage():
+    benchmark_cases = case_env_cases("run_benchmark.sh")
+    nsys_cases = case_env_cases("run_nsys.sh")
+    required = set(REQUIRED_NSYS_CASES)
+
+    missing_benchmark = sorted(required - benchmark_cases)
+    if missing_benchmark:
+        raise AssertionError(
+            "required Nsight cases missing from benchmark case_env: "
+            + ", ".join(missing_benchmark)
+        )
+
+    missing_nsys = sorted(required - nsys_cases)
+    if missing_nsys:
+        raise AssertionError(
+            "benchmark cases missing from Nsight case_env: "
+            + ", ".join(missing_nsys)
+        )
 
 
 def check_summary_and_markdown(tmpdir):
@@ -208,6 +277,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         check_summary_and_markdown(tmpdir)
         check_compare(tmpdir)
+    check_nsys_case_coverage()
     return 0
 
 
