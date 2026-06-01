@@ -6,6 +6,32 @@ import re
 import sys
 
 
+def copy_bucket(op):
+    if "OFFDEN" in op:
+        return "copy_offden_gb"
+    if "DENMAT" in op:
+        return "copy_denmat_gb"
+    if any(token in op for token in ("PROPSI", "PRO_CACHE", "THIS_PROJ")):
+        return "copy_proj_gb"
+    if any(
+        token in op
+        for token in (
+            "_PSI0",
+            "_PSI1",
+            "_PSI2",
+            "_PSI_IN",
+            "_PSI_OUT",
+            "_PSIM",
+            "_OPSI",
+            "_HPSI",
+        )
+    ):
+        return "copy_wave_gb"
+    if any(token in op for token in ("PROJ", "ADDPRO")):
+        return "copy_proj_gb"
+    return None
+
+
 def profile_totals(run_dir):
     totals = {
         "instrumented": 0.0,
@@ -20,6 +46,10 @@ def profile_totals(run_dir):
         "phase": 0.0,
         "setup": 0.0,
         "copy_gb": 0.0,
+        "copy_wave_gb": 0.0,
+        "copy_proj_gb": 0.0,
+        "copy_offden_gb": 0.0,
+        "copy_denmat_gb": 0.0,
     }
     for path in glob.glob(os.path.join(run_dir, "*_profile*.csv")):
         with open(path, newline="") as handle:
@@ -29,6 +59,9 @@ def profile_totals(run_dir):
                 gbyte = float(row["gbyte"])
                 if op.startswith("ACC_COPY"):
                     totals["copy_gb"] += gbyte
+                    bucket = copy_bucket(op)
+                    if bucket:
+                        totals[bucket] += gbyte
                     continue
                 if op.startswith("ACC_SETUP"):
                     totals["setup"] += seconds
@@ -177,6 +210,10 @@ def main(argv):
                 "phase_gap_s": phase_gap,
                 "setup_s": totals["setup"],
                 "copy_gb": totals["copy_gb"],
+                "copy_wave_gb": totals["copy_wave_gb"],
+                "copy_proj_gb": totals["copy_proj_gb"],
+                "copy_offden_gb": totals["copy_offden_gb"],
+                "copy_denmat_gb": totals["copy_denmat_gb"],
                 "energy": energy,
                 "energy_delta": energy_delta,
                 "energy_ok": (
@@ -213,6 +250,10 @@ def main(argv):
         "phase_gap_s",
         "setup_s",
         "copy_gb",
+        "copy_wave_gb",
+        "copy_proj_gb",
+        "copy_offden_gb",
+        "copy_denmat_gb",
         "energy",
         "energy_delta",
         "energy_ok",
