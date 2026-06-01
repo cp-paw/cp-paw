@@ -3819,8 +3819,8 @@ Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
 
 | System | `*_accmap_cache` | `*_hpsi_rtog_vpsi_internal_cache` | Energy delta |
 | --- | ---: | ---: | ---: |
-| Spark GB10 | 43.13 s / 7.04 GB | 42.35 s / 4.01 GB | 0.000000 |
-| Terok A40 | 33.48 s / 7.04 GB | 32.19 s / 4.01 GB | 0.000001 |
+| Spark GB10 | 43.13 s / 7.05 GB | 42.35 s / 4.01 GB | 0.000000 |
+| Terok A40 | 33.48 s / 7.05 GB | 32.19 s / 4.01 GB | 0.000001 |
 
 The split rows show the same byte accounting on both systems. For the isolated
 cache case, the serial-3D transfer total is 4.0978 GB, split into 1.2897 GB
