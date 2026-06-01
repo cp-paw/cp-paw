@@ -8169,19 +8169,10 @@ RETURN
 #ENDIF
 !
 !     ==========================================================================
-!     ==  COLLECT G-VECTORS                                                   ==
-!     ==========================================================================
-      ALLOCATE(GVEC(3,NGL))
-      CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
-!
-!     ==========================================================================
 !     ==  <PRO|PSI>                                                           ==
 !     ==========================================================================
       LMNXX=MAXVAL(MAP%LMNX)
       LNXX=MAXVAL(MAP%LNX)
-      ALLOCATE(PRO(NGL,LMNXX))
-      ALLOCATE(EIGR(NGL))
-      ALLOCATE(LOX(LNXX))
       TUSECUBLASPROJ=.FALSE.
       TUSERESIDENTPROJ=.FALSE.
       TUSEGPUEXPANDPRO=.FALSE.
@@ -8243,6 +8234,11 @@ RETURN
           ENDDO
 !$ACC END DATA
         ELSE
+          ALLOCATE(GVEC(3,NGL))
+          CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
+          ALLOCATE(PRO(NGL,LMNXX))
+          ALLOCATE(EIGR(NGL))
+          ALLOCATE(LOX(LNXX))
 !$ACC DATA PRESENT_OR_COPYIN(PSI(1:NGL,1:NDIM,1:NB)) &
 !$ACC& COPYOUT(PROPSI(1:NDIM,1:NB,1:NPRO)) &
 !$ACC& CREATE(PROPSIACC(1:LMNXX,1:NDIM*NB))
@@ -8269,6 +8265,11 @@ RETURN
 #ENDIF
 !       == UNBLOCKED ORIGINAL CODE SEGMENT =====================================
         ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
+        ALLOCATE(GVEC(3,NGL))
+        CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
+        ALLOCATE(PRO(NGL,LMNXX))
+        ALLOCATE(EIGR(NGL))
+        ALLOCATE(LOX(LNXX))
         IPRO=1
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -8311,6 +8312,9 @@ RETURN
 !$ACC END DATA
       ELSE
 !       == BLOCKED CODE SEGMENT ================================================
+        ALLOCATE(GVEC(3,NGL))
+        CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
+        ALLOCATE(LOX(LNXX))
         ALLOCATE(EIGRALL(NGL,MAP%NAT))
         DO IAT=1,MAP%NAT
           CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
@@ -8360,12 +8364,12 @@ RETURN
         DEALLOCATE(EIGRALL)
 !       == END OF BLOCKED CODE SEGMENT =========================================
       END IF
-      DEALLOCATE(LOX)
-      DEALLOCATE(PRO)
+      IF(ALLOCATED(LOX)) DEALLOCATE(LOX)
+      IF(ALLOCATED(PRO)) DEALLOCATE(PRO)
       IF(ALLOCATED(PROPSI1)) DEALLOCATE(PROPSI1)
       IF(ALLOCATED(PROPSIACC)) DEALLOCATE(PROPSIACC)
-      DEALLOCATE(EIGR)
-      DEALLOCATE(GVEC)
+      IF(ALLOCATED(EIGR)) DEALLOCATE(EIGR)
+      IF(ALLOCATED(GVEC)) DEALLOCATE(GVEC)
 
 !!$DO IB=1,NB
 !!$  PRINT*,'PSI '
@@ -8462,20 +8466,11 @@ RETURN
       END IF
 !
 !     ==========================================================================
-!     ==  COLLECT G-VECTORS                                                   ==
-!     ==========================================================================
-      ALLOCATE(GVEC(3,NGL))
-      CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
-!
-!     ==========================================================================
-!     ==  COLLECT G-VECTORS                                                   ==
+!     ==  PREPARE PROJECTOR DIMENSIONS                                        ==
 !     ==========================================================================
       LMNXX=MAXVAL(MAP%LMNX)
       LNXX=MAXVAL(MAP%LNX)
-      ALLOCATE(PRO(NGL,LMNXX))
       ALLOCATE(PROPSI1(LMNXX*NDIM*NB))
-      ALLOCATE(EIGR(NGL))
-      ALLOCATE(LOX(LNXX))
       TUSEGPUADDPROCACHE=.FALSE.
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       TUSECUBLASADDPRO=.TRUE.
@@ -8558,6 +8553,11 @@ RETURN
 !$ACC END DATA
 #ENDIF
         ELSE
+          ALLOCATE(GVEC(3,NGL))
+          CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
+          ALLOCATE(PRO(NGL,LMNXX))
+          ALLOCATE(EIGR(NGL))
+          ALLOCATE(LOX(LNXX))
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           ACC_PRESENT_PSI='ACC_PRESENT_ADDPRO_'//TRIM(PROFILE_ID)//'_PSI'
@@ -8600,6 +8600,9 @@ RETURN
 !
       ELSE
 !       == BLOCKED CODE SEGMENT ================================================
+        ALLOCATE(GVEC(3,NGL))
+        CALL PLANEWAVE$GETR8A('GVEC',3*GSET%NGL,GVEC)
+        ALLOCATE(LOX(LNXX))
         ALLOCATE(EIGRALL(NGL,MAP%NAT))
         DO IAT=1,MAP%NAT
           CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGRALL(:,IAT))
@@ -8654,10 +8657,10 @@ RETURN
         DEALLOCATE(EIGRALL)
 !       == END OF BLOCKED CODE SEGMENT =========================================
       END IF  
-      DEALLOCATE(LOX)
-      DEALLOCATE(PRO)
-      DEALLOCATE(GVEC)
-      DEALLOCATE(EIGR)
+      IF(ALLOCATED(LOX)) DEALLOCATE(LOX)
+      IF(ALLOCATED(PRO)) DEALLOCATE(PRO)
+      IF(ALLOCATED(GVEC)) DEALLOCATE(GVEC)
+      IF(ALLOCATED(EIGR)) DEALLOCATE(EIGR)
       DEALLOCATE(PROPSI1)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)

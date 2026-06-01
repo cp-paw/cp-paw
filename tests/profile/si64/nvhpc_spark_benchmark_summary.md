@@ -59,6 +59,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `psim-switch-accdelete-spark-20260601-104028` / `psim-switch-accdelete-terok-20260601-104027` | NSTEPS=2 PSIM switch residency | `gpu_resident_stack_hpsi_prop_psim_switch` 20.61 s on Spark, 20.25 s on Terok | - | - | Carries resident `PSIM` through `WAVES$SWITCH` as the next `PSI0`, removes one more 0.1210 GB force-side `PSI0` copy per two-step run, and fixes the Spark partially-present delete failure. |
 | `accdims-switch-spark-20260601-105947` / `accdims-switch-terok-20260601-105946` | Resident wavefunction dimension tracking | `gpu_resident_stack_hpsi_prop_psim_switch` 20.84 s on Spark, 23.50 s on Terok | - | 4-rank smokes OK | Stores resident `PSI0`/`PSIM`/`HPSI` dimensions in `WVSET_TYPE` and routes lifecycle cleanup through mark/clear/delete helpers, preserving the previous switch-residency transfer pattern. |
 | `vpsi-cufft-refresh-spark-20260601-110633` / `vpsi-cufft-refresh-terok-20260601-110633` | Current VPSI/cuFFT refresh | `gpu_resident_stack_cufft` neutral/slightly favorable; force cuFFT slower | - | - | Rechecks cuFFT after the latest residency work. Threshold-gated cuFFT remains harmless, but forced cuFFT inflates transfer to 10.97/19.62 GB and slows VPSI strongly. |
+| `lazy-scratch-*-20260601-1118/1121` | Lazy host scratch allocation for resident `PRO` cache paths | `gpu_resident_stack` 12.12 s on Spark, 11.99 s on Terok at 1024/1 | - | 4-rank smokes OK | Avoids building unused host `GVEC`/`PRO`/`EIGR` scratch in cached resident `PRO` projection and addproduct paths; both cache and host-PRO ablation paths stay energy-valid. |
 
 The latest full-matrix run lives at:
 
@@ -427,6 +428,45 @@ therefore not broader forced cuFFT activation inside the current host-oriented
 or a narrower effort to keep the wavefunction buffers resident around the
 current FFT producer/consumer boundary.
 
+## Lazy Projector Scratch Allocation
+
+The resident `PRO` cache path no longer allocates and fills host-side
+`GVEC`/`PRO`/`EIGR` scratch arrays before entering the cached GPU projection and
+addproduct paths. Those arrays are still allocated lazily for the host-expanded
+fallback and for `CPPAW_GPU_PRO_EXPANSION=0`, so the ablation path remains
+available.
+
+Validation rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` on Spark C86C and Terok, then checked
+both the recommended cache path and the host-PRO ablation:
+
+```
+runs/lazy-scratch-spark-20260601-1118
+runs/lazy-scratch-terok-20260601-1118
+runs/lazy-scratch-1024-spark-20260601-1121
+runs/lazy-scratch-1024-terok-20260601-1121
+runs/lazy-scratch-parallel-spark-20260601-1118
+runs/lazy-scratch-parallel-terok-20260601-1120
+```
+
+| Machine | Empty bands | Ranks | Case | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | --- | ---: | ---: | --- |
+| Spark C86C | 512 | 1 | `gpu_resident_stack` | 6.63 s | 0.8465 GB | yes |
+| Spark C86C | 512 | 1 | `gpu_resident_pro_host` | 6.80 s | 2.9023 GB | yes |
+| Terok A40 | 512 | 1 | `gpu_resident_stack` | 6.72 s | 0.8465 GB | yes |
+| Terok A40 | 512 | 1 | `gpu_resident_pro_host` | 7.59 s | 2.9023 GB | yes |
+| Spark C86C | 1024 | 1 | `gpu_resident_stack` | 12.12 s | 1.5099 GB | yes |
+| Spark C86C | 1024 | 1 | `gpu_resident_pro_host` | 13.01 s | 4.0858 GB | yes |
+| Terok A40 | 1024 | 1 | `gpu_resident_stack` | 11.99 s | 1.5099 GB | yes |
+| Terok A40 | 1024 | 1 | `gpu_resident_pro_host` | 14.36 s | 4.0858 GB | yes |
+| Spark C86C | 512 | 4 | `gpu_resident_stack` | 9.63 s | 1.2398 GB | yes |
+| Terok A40 | 512 | 4 | `gpu_resident_stack` | 8.14 s | 1.2398 GB | yes |
+
+Interpretation: this is a cleanup and robustness step for the recommended
+resident-cache stack, not a new library or a claimed standalone speedup. It
+removes unused host work from the hot projection/addproduct setup while keeping
+the `gpu_resident_pro_host` fallback exercised and correct.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -454,7 +494,9 @@ current FFT producer/consumer boundary.
    cached on the GPU and reused by projection plus eligible addproduct calls.
    Keep that full path as part of the residency default because it reduces copy
    estimates substantially, while the latest benchmark shows that the later
-   PSI/HPSI/OPSI residency work is the dominant Spark speedup.
+   PSI/HPSI/OPSI residency work is the dominant Spark speedup. The latest
+   lazy-scratch cleanup keeps this path leaner by avoiding unused host
+   projector scratch allocation in the cached resident `PRO` route.
 
 6. The one-center overlap GPU-pack path removes the previous large
    `WAVES_1COVERLAP` bottleneck. The new `PSI0`-to-`PRINFO` and
