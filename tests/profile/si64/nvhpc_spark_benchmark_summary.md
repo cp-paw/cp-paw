@@ -2697,6 +2697,43 @@ shorten or delay the conservative host synchronization only where CPU consumers
 can be proven absent, or to attack the still-large `PSIM`, `HPSI`, `OPSI`, and
 `WRITEPDOS` wavefunction boundaries.
 
+## Stack Plus PSIM-Phase Diagnostic
+
+The follow-up check combines the focused stack with the existing cross-phase
+`PSIM` propagation path via the new harness case
+`gpu_resident_stack_psim_phase`. This tests whether `PSIM` should become part of
+the stack meta-keyword now that setup `PSI0` residency is in place.
+
+Validation used the already rebuilt residency binaries:
+
+```
+runs/stack-psim-phase-spark-1024-nstep1-20260601-071411
+runs/stack-psim-phase-terok-1024-nstep1-20260601-071411
+```
+
+| Machine | Case | Empty bands | Repeats | Median wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Spark C86C | `gpu_resident_stack` | 1024 | 3 | 12.20 s | 1.7519 GB | yes |
+| Spark C86C | `gpu_resident_stack_psim_phase` | 1024 | 3 | 12.13 s | 1.9943 GB | yes |
+| Terok A40 | `gpu_resident_stack` | 1024 | 3 | 12.08 s | 1.7519 GB | yes |
+| Terok A40 | `gpu_resident_stack_psim_phase` | 1024 | 3 | 12.60 s | 1.9943 GB | yes |
+
+Key copy rows are identical on Spark and Terok for representative repeats:
+
+| Profile row | Stack | Stack + PSIM phase | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_ORTHO_PSIM_IN` | 0.1210 GB | absent | Cross-phase residency removes the orthogonalization input copy. |
+| `ACC_COPY_PROP_PSI0_IN` | absent | 0.1210 GB | Propagation now needs a `PSI0` input on device. |
+| `ACC_COPY_PROP_PSIM_IN` | absent | 0.1210 GB | Propagation also needs the previous `PSIM`. |
+| `ACC_COPY_PROP_HPSI_IN` | absent | 0.1210 GB | Propagation also needs `HPSI`. |
+| `ACC_COPY_ORTHO_PSIM_OUT` | 0.1210 GB | 0.1210 GB | The final host refresh remains. |
+
+Conclusion: this is a useful diagnostic and remains energy-valid, but it should
+not be folded into `CPPAW_GPU_RESIDENCY_STACK` yet. It trades one removed
+orthogonalization input copy for three propagation input copies, increasing the
+honest transfer estimate by about 0.24 GB per 1024-band step; Spark timing is
+noise-level neutral and Terok is worse in the median.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
