@@ -11,7 +11,7 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
 EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-${EMPTY_BANDS}}
-GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_nosync gpu gpu_off"}
+GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"}
 CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
 ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
 
