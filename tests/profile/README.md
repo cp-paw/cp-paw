@@ -200,8 +200,11 @@ alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. When HPSI residency is active and
 the input `PSI` is already present, the final `WAVES_VPSI` kinetic/bucket
 G-space update can finish on the device. The host-side FFT/RTOG boundary still
 requires one `HPSI` host-to-device transfer, recorded as
-`ACC_COPY_VPSI_HPSI_IN`, but the following `WAVES_ADDPRO` consumer should then
-record `ACC_PRESENT_HPSI_ADDPRO` instead of `ACC_COPY_HPSI_ADDPRO_IN`. A
+`ACC_COPY_VPSI_HPSI_IN`; if `HPSI` is already present on the device, the same
+required transfer is recorded as `ACC_UPDATE_VPSI_HPSI_IN` and the device copy
+is refreshed explicitly before the kinetic/bucket update. The following
+`WAVES_ADDPRO` consumer should then record `ACC_PRESENT_HPSI_ADDPRO` instead of
+`ACC_COPY_HPSI_ADDPRO_IN`. A
 separate opt-in
 diagnostic propagates `PSIM` on the GPU and immediately copies the updated
 wavefunction back before the following host-side projection work; set
@@ -284,8 +287,10 @@ force-loop residency created the `PSI0` device copy earlier in the same
 `WAVES$ETOT`, `WAVES$HPSI` records `ACC_PRESENT_HPSI_PSI0` instead of
 `ACC_COPY_HPSI_PSI0_IN`. The `WAVES_VPSI` finish path records resident input
 `PSI` as `ACC_PRESENT_VPSI_PSI`, the still-required host FFT/RTOG output
-boundary as `ACC_COPY_VPSI_HPSI_IN`, and small kinetic/bucket inputs as
-`ACC_COPY_VPSI_G2_IN` or `ACC_COPY_VPSI_BUCKET_IN`. When this producer-side
+boundary as `ACC_COPY_VPSI_HPSI_IN`, or as `ACC_UPDATE_VPSI_HPSI_IN` when an
+existing HPSI device allocation must be refreshed, and small kinetic/bucket
+inputs as `ACC_COPY_VPSI_G2_IN` or `ACC_COPY_VPSI_BUCKET_IN`. When this
+producer-side
 device finish is active, the following ADDPRO step records
 `ACC_PRESENT_HPSI_ADDPRO`. The
 one-center overlap cuBLAS
