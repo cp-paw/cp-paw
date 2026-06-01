@@ -117,6 +117,11 @@ def read_rows(path):
         rows = list(csv.DictReader(handle, delimiter="\t"))
     for row in rows:
         row.setdefault("suite", "")
+        if row.get("transfer_gb") in (None, ""):
+            copy_gb = parse_float(row.get("copy_gb"))
+            update_gb = parse_float(row.get("update_gb"))
+            if copy_gb is not None or update_gb is not None:
+                row["transfer_gb"] = str((copy_gb or 0.0) + (update_gb or 0.0))
         row["_wall"] = parse_float(row.get("wall_s"))
         row["_group"], row["_kind"] = case_kind(row)
     return rows
