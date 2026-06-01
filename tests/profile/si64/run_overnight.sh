@@ -23,6 +23,7 @@ SCALING_REPEATS=${SCALING_REPEATS:-2}
 THRESHOLD_REPEATS=${THRESHOLD_REPEATS:-2}
 BAND_REPEATS=${BAND_REPEATS:-1}
 NSYS_RANKS=${NSYS_RANKS:-1}
+DRY_RUN=${DRY_RUN:-no}
 RUN_NVLAMATH=${RUN_NVLAMATH:-no}
 RUN_CUFFTW=${RUN_CUFFTW:-no}
 RUN_CUFFT=${RUN_CUFFT:-no}
@@ -178,6 +179,7 @@ capture_metadata() {
     echo "BLIS_NUM_THREADS=${BLIS_NUM_THREADS}"
     echo "VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS}"
     echo "NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
+    echo "DRY_RUN=${DRY_RUN}"
     echo "MAIN_CASES=${MAIN_CASES}"
     echo "SCALING_CASES=${SCALING_CASES}"
     echo "GPU_ACC_CASES=${GPU_ACC_CASES}"
@@ -278,6 +280,13 @@ run_nsys_trace() {
     echo "skipped" > "${suite_root}.status"
     return 0
   fi
+  case "${DRY_RUN}" in
+    yes|true|1)
+      log "DRY-RUN skip suite=${suite} case=${nsys_case}"
+      echo "dry-run" > "${suite_root}.status"
+      return 0
+      ;;
+  esac
 
   log "START suite=${suite} case=${nsys_case}"
   if env NSTEPS="${NSYS_NSTEPS}" RANKS="${NSYS_RANKS}" TIMEOUT="${TIMEOUT}" \

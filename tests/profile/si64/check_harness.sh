@@ -226,7 +226,6 @@ DRY_RUN=yes \
   LONG_REPEATS=1 \
   SCALING_REPEATS=1 \
   THRESHOLD_REPEATS=1 \
-  RUN_NSYS=no \
   tests/profile/si64/run_overnight.sh \
     > "${tmpdir}/overnight-auto-dry-run.out" 2>&1
 grep -q "selected_cases main='cpu nvhpc_cpu gpu_resident_stack' scaling='cpu nvhpc_cpu gpu_resident_stack'.*threshold='gpu_resident_stack' nsys='gpu_resident_stack'" \
@@ -239,8 +238,9 @@ grep -q "case=nvhpc_cpu" \
   "${tmpdir}/overnight-auto-dry-run/scaling_1steps_4ranks/metadata.txt"
 grep -q "case=gpu_resident_stack" \
   "${tmpdir}/overnight-auto-dry-run/threshold_1e7_1steps_4ranks/metadata.txt"
-grep -q "SKIP  suite=nsys disabled_or_empty_case" \
+grep -q "DRY-RUN skip suite=nsys_nstep5_1ranks case=gpu_resident_stack" \
   "${tmpdir}/overnight-auto-dry-run/overnight.log"
+test "$(cat "${tmpdir}/overnight-auto-dry-run/nsys_nstep5_1ranks.status")" = "dry-run"
 
 DRY_RUN=yes \
   CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_nohost_capabilities.txt" \
