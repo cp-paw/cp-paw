@@ -55,6 +55,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-focus-20260601-0a43a65-2048-nstep1-1r` | 2048-band focused stack validation | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.28 s | - | - | Confirms the focused stack also wins at 2048/1, so expose it as a short benchmark keyword. |
 | `vpsi-boundary-20260601-d3cd6cc-512-nstep1` / `vpsi-boundary-20260601-7ad2625-smoke` | VPSI/HPSI boundary harness | `gpu_resident_stack` 6.56 s at 512/1, 28.46 s at 512/4 | - | - | Adds a focused producer-boundary harness plus seconds-sorted `PAW_VPSI_*` rows; the final smoke shows VPSI time is almost entirely GTOR/RTOG. |
 | `psi0-prinfo-spark-20260601-074852` / `psi0-prinfo-terok-20260601-074852` | PSI0-to-PRINFO residency | `gpu_resident_stack` 12.11 s on Spark, 12.77 s on Terok | - | - | Keeps `PSI0` resident through `PRINFO/WRITEPDOS`, removing one more 0.1210 GB wavefunction copy; energy-valid on both systems, wall time neutral/noisy. |
+| `hpsi-prop-spark-20260601-100735` / `hpsi-prop-terok-20260601-101036` | HPSI-to-propagate residency diagnostic | `gpu_resident_stack_hpsi_prop_psim_phase` 12.13 s on Spark, 12.59 s on Terok | - | - | Keeps `HPSI` resident from ETOT overlap/Hamiltonian into GPU PSIM propagation; removes the extra 0.1210 GB `PROP_HPSI_IN` copy from the PSIM-phase diagnostic and stays energy-valid on both systems. |
 
 The latest full-matrix run lives at:
 
@@ -264,6 +265,40 @@ time remains too noisy for a speedup claim, but this is the first clean
 post-orthogonalization consumer reuse and it validates the broader residency
 design Peter suggested: keep wavefunction data resident across multiple PAW
 phases, with explicit lifecycle cleanup at pointer-swap boundaries.
+
+## HPSI-To-Propagate Residency Diagnostic
+
+The next targeted diagnostic keeps `HPSI` resident after the ETOT
+expectation/Hamiltonian overlaps when the GPU `PSIM` propagation path is active.
+This is controlled by `CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1` and the harness case
+`gpu_resident_stack_hpsi_prop_psim_phase`. It is deliberately not enabled by the
+plain stack keyword yet, because it changes the propagation path and still needs
+the surrounding `PSIM` lifecycle to become more complete.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries with `TEST=si64_bands`,
+`EMPTY_BANDS=1024`, `NSTEPS=1`, `REPEATS=3`, one GPU rank:
+
+```
+runs/hpsi-prop-spark-20260601-100735
+runs/hpsi-prop-terok-20260601-101036
+```
+
+| Machine | Case | Median wall time | Transfer estimate | Key marker | Energy check |
+| --- | --- | ---: | ---: | --- | --- |
+| Spark C86C | `gpu_resident_stack` | 12.25 s | 1.5099 GB | baseline stack | yes |
+| Spark C86C | `gpu_resident_stack_psim_phase` | 12.23 s | 1.6312 GB | `ACC_COPY_PROP_HPSI_IN` | yes |
+| Spark C86C | `gpu_resident_stack_hpsi_prop_psim_phase` | 12.13 s | 1.5102 GB | `ACC_PRESENT_PROP_HPSI` | yes |
+| Terok A40 | `gpu_resident_stack` | 13.75 s | 1.5099 GB | baseline stack | yes |
+| Terok A40 | `gpu_resident_stack_psim_phase` | 12.33 s | 1.6312 GB | `ACC_COPY_PROP_HPSI_IN` | yes |
+| Terok A40 | `gpu_resident_stack_hpsi_prop_psim_phase` | 12.59 s | 1.5102 GB | `ACC_PRESENT_PROP_HPSI` | yes |
+
+The profile rows are identical on Spark and Terok: over three repeats,
+`gpu_resident_stack_psim_phase` records `ACC_COPY_PROP_HPSI_IN` at 0.3631 GB,
+while the new case records `ACC_PRESENT_PROP_HPSI` and no `PROP_HPSI` copy. This
+turns the PSIM-phase path from a net-copy regression into a near-transfer-neutral
+diagnostic. Wall time remains noisy, so the result is a validated residency
+building block rather than a default promotion.
 
 ## Current Conclusions
 

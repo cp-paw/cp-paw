@@ -34,6 +34,35 @@ if [[ -z "${TIME_CMD}" ]]; then
     TIME_CMD=$(type -P time || true)
   fi
 fi
+if [[ -z "${TIME_CMD}" ]] && command -v python3 >/dev/null 2>&1; then
+  mkdir -p "${RUN_ROOT}"
+  TIME_CMD="$(cd "${RUN_ROOT}" && pwd)/time_posix.py"
+  cat > "${TIME_CMD}" <<'PY'
+#!/usr/bin/env python3
+import resource
+import subprocess
+import sys
+import time
+
+args = sys.argv[1:]
+if args and args[0] == "-p":
+    args = args[1:]
+
+start_time = time.time()
+start_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+proc = subprocess.run(args)
+end_usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+elapsed = time.time() - start_time
+user = end_usage.ru_utime - start_usage.ru_utime
+system = end_usage.ru_stime - start_usage.ru_stime
+
+sys.stderr.write(f"real {elapsed:.2f}\n")
+sys.stderr.write(f"user {user:.2f}\n")
+sys.stderr.write(f"sys {system:.2f}\n")
+raise SystemExit(proc.returncode)
+PY
+  chmod +x "${TIME_CMD}"
+fi
 if [[ -z "${TIME_CMD}" ]]; then
   case "${DRY_RUN}" in
     yes|true|1) ;;
@@ -372,6 +401,9 @@ case_note() {
     gpu_resident_stack_psim_phase)
       echo "Focused residency stack plus cross-phase PSIM propagation residency."
       ;;
+    gpu_resident_stack_hpsi_prop_psim_phase)
+      echo "Focused residency stack plus HPSI-to-propagate and cross-phase PSIM propagation residency."
+      ;;
     gpu_resident_stack_cufft)
       echo "Focused residency stack plus threshold-gated native cuFFT for LIB\$FFTC8 calls."
       ;;
@@ -618,6 +650,7 @@ case_env() {
     gpu_resident_stack_psi0_prinfo_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_PRINFO_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_setup_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_SETUP_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_stack_hpsi_prop_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_stack_cufft) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_env) $(cublas_env)" ;;
     gpu_resident_stack_cufft_force) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_force_env) $(cublas_env)" ;;
     gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;

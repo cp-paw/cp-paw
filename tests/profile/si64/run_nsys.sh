@@ -252,6 +252,7 @@ case_env() {
     gpu_resident_stack_psi0_prinfo_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_PRINFO_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_setup_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_SETUP_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_stack_hpsi_prop_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_stack_cufft) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_env) $(cublas_env)" ;;
     gpu_resident_stack_cufft_force) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_force_env) $(cublas_env)" ;;
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
