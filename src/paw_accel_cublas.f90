@@ -1370,7 +1370,7 @@
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_PRESENT(NGL,NDIM,NB,LMNX &
      &                         ,LMNXX,IPRO,NPRO,PRO,PSI,GWEIGHT,WORK &
-     &                         ,PROPSI)
+     &                         ,TSUPER,NGAMMA,PROPSI)
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)    :: NGL
       INTEGER(4),INTENT(IN)    :: NDIM
@@ -1382,10 +1382,13 @@
       COMPLEX(8),INTENT(IN)    :: PRO(NGL,LMNXX)
       COMPLEX(8),INTENT(IN)    :: PSI(NGL,NDIM,NB)
       REAL(8)   ,INTENT(IN)    :: GWEIGHT
+      LOGICAL(4),INTENT(IN)    :: TSUPER
+      INTEGER(4),INTENT(IN)    :: NGAMMA
       COMPLEX(8),INTENT(INOUT) :: WORK(LMNXX,NDIM*NB)
       COMPLEX(8),INTENT(OUT)   :: PROPSI(NDIM,NB,NPRO)
       COMPLEX(8)               :: ONE
       COMPLEX(8)               :: ZERO
+      COMPLEX(8)               :: CVAL
       INTEGER(4)               :: ISTAT
       INTEGER(4)               :: IB
       INTEGER(4)               :: IDIM
@@ -1418,12 +1421,20 @@
         CALL ERROR$I4VAL('STATUS',ISTAT)
         CALL ERROR$STOP('CPPAW_CUBLAS_ACC_PROJECTION_PRESENT')
       END IF
-!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(WORK,PROPSI)
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(ICOL,CVAL) &
+!$ACC& PRESENT(WORK,PROPSI,PRO,PSI)
       DO IB=1,NB
         DO IDIM=1,NDIM
           DO LMN=1,LMNX
             ICOL=IDIM+(IB-1)*NDIM
-            PROPSI(IDIM,IB,IPRO-1+LMN)=GWEIGHT*WORK(LMN,ICOL)
+            CVAL=WORK(LMN,ICOL)
+            IF(TSUPER) THEN
+              CVAL=2.D0*CVAL
+              IF(NGAMMA.NE.0) THEN
+                CVAL=CVAL-CONJG(PRO(NGAMMA,LMN))*PSI(NGAMMA,IDIM,IB)
+              END IF
+            END IF
+            PROPSI(IDIM,IB,IPRO-1+LMN)=GWEIGHT*CVAL
           ENDDO
         ENDDO
       ENDDO
