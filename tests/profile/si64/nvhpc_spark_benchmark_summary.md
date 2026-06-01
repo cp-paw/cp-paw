@@ -4308,6 +4308,50 @@ MPI-safe `gpu_resident_addoproj` case plus `CPPAW_GPU_FORCE_ADDOPROJ=1`, because
 the fully combined named stack also enables density-internal residency, which
 requires the serial 3-D ACCMAP GTOR path and is not the right MPI smoke target.
 
+## Ortho-X Follow-Up
+
+After the force-side cleanup, the dominant 4096-band block is again
+`PAW_ORTHO_SOLVE`, especially the iterative `WAVES_ORTHO_X` matrix updates:
+
+| Row | 4096 force-ADDOPROJ run |
+| --- | ---: |
+| `PAW_ORTHO_SOLVE` | 56.9411 s |
+| `PAW_ORTHO_X_RESIDUAL` | 18.6986 s |
+| `PAW_ORTHO_X_UPDATE_TRANSFORM` | 17.8521 s |
+| `PAW_ORTHO_X_UPDATE_BACKTRANSFORM` | 17.8557 s |
+| `PAW_ORTHO_X_ITERATIONS` | 26 |
+
+Run directory for the synchronization diagnostic:
+
+```
+tests/profile/si64/runs/orthox-nosync-4096-20260601
+```
+
+Run directory for the profile-accounting smoke:
+
+```
+tests/profile/si64/runs/orthox-profile-accounting-smoke512-20260601
+```
+
+`CPPAW_CUBLAS_ACC_SYNC=0` with the full force-ADDOPROJ stack completed the same
+4096-band case in 110.19 s versus 110.73 s for the synchronized run, with the
+same energy check. This is only a noise-level wall-time improvement, so explicit
+cuBLAS synchronization is not the main Ortho-X bottleneck. The no-sync profile
+also undercounts cuBLAS substep time because operations become asynchronous;
+use the wall time and high-level PAW envelope for that diagnostic.
+
+The Ortho-X cuBLAS profile rows previously reported too-low GF/s and byte rates:
+their seconds were accumulated over all iterations, but the synthetic flop/byte
+estimates were for one iteration. The profile accounting now multiplies
+`CUBLAS_DGEMM_ORTHOX_RESIDUAL`, `CUBLAS_DGEMM_ORTHOX_TRANSFORM`, and
+`CUBLAS_DGEMM_ORTHOX_BACKTRANS` by `PAW_ORTHO_X_ITERATIONS`. This does not
+change runtime behavior; it corrects the interpretation of future 4096-band
+profiles and prevents us from mistaking the current Ortho-X path for a
+low-throughput cuBLAS dispatch problem. The 512-band smoke after the accounting
+fix completed in 4.71 s with the standard Si64 energy check; its Ortho-X rows
+show 13 iterations and corrected cuBLAS rates of about 350-380 GF/s for the
+residual, transform, and backtransform blocks.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
