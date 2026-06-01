@@ -49,8 +49,10 @@ DRY_RUN=yes \
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_no_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
