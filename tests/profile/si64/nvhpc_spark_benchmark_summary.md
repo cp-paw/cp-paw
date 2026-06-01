@@ -1,9 +1,10 @@
 # NVHPC Spark Si64 Benchmark Summary
 
 This note summarizes the Spark C86C Si64 band benchmarks used to choose the
-current NVIDIA HPC SDK development defaults. The case is the periodic Si64
-profile input with `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`, one GPU
-rank for GPU cases, and one-rank plus eight-rank CPU references.
+current NVIDIA HPC SDK development defaults. Unless noted otherwise, the case
+is the periodic Si64 profile input with `TEST=si64_bands`,
+`EMPTY_BANDS=1024`, `NSTEPS=1`, one GPU rank for GPU cases, and one-rank plus
+eight-rank CPU references.
 
 The intent is decision support, not a universal performance claim. Si64 is a
 good smoke and orthogonalization/projection case, but larger systems still need
@@ -73,6 +74,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `accmap-cache-*-20260601-*` | Cached serial 3D ACCMAP work/map arrays | Spark/GB10: combined HPSI-RTOG+VPSI internal cache improves NSTEPS=3 from 39.09 to 34.58 s and lowers transfer from 4.8517 to 4.5655 GB | Terok/A40: same cache improves NSTEPS=3 from 33.10 to 23.66 s and lowers transfer identically | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` / `*_hpsi_rtog_vpsi_internal_cache`; validated as a useful diagnostic, but still not a default because the serial ACCMAP path remains system-dependent. |
 | `accmap-cleanup-final-*-20260601-*` | ACCMAP cache cleanup and non-CUBLAS build guard | Spark/GB10: final cache smoke is 8.16 s at 512/1 and 6.53 s at 256/4 | Terok/A40: final cache smoke is 5.25 s at 512/1 and 8.58 s at 256/4 | Energy-valid; `nvhpc_profile` and GPU serial/parallel builds pass on both systems | Moves the cached ACCMAP state into `PLANEWAVE_MODULE`, releases it through `PLANEWAVE$ACC_CLEANUP`, and restores the non-CUBLAS `nvhpc_profile` build by guarding setup-PSIM residency code. |
 | `auto-standard-spark-20260601-164010` / `auto-standard-terok-fftw-20260601-164730` | Capability-driven standard smoke | Spark/GB10: `gpu_resident_stack_serial3dfft` 11.13 s, `gpu_resident_stack` 12.14 s | Spark: `cpu` 73.51 s, `nvhpc_cpu` 69.11 s; 8-rank CPU 166.30/166.41 s | Terok x86_64 builds and runs after local FFTW plus NVHPC compiler BLAS/LAPACK fallback | Confirms the auto recommendation path and the new host-library gating. Spark remains the performance reference; Terok is the x86/NVHPC portability check. |
+| `si64-bands2048-focused-spark-20260601-174042` / `si64-bands2048-focused-terok-20260601-174041` | 2048-band resource comparison | Spark: `gpu_resident_stack_serial3dfft_force_dedpro` 32.06 s; Terok: `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` 32.79 s | Spark `nvhpc_cpu` 388.98 s; Terok `nvhpc_cpu` 1109.15 s | Spark `nvhpc_cpu` 1122.63 s; Terok `nvhpc_cpu` 1341.45 s | Larger band stress confirms that one MPI rank plus one GPU beats both one-rank and eight-rank CPU/NVHPC decisively; ACCMAP remains system-dependent. |
 
 The latest auto-standard smoke runs live at:
 
@@ -3752,6 +3754,50 @@ both hosts, while the four-rank CPU/NVHPC path remains faster for Si64. This
 keeps the design direction unchanged: Si64 is a correctness and harness smoke,
 not the deciding performance target; larger band/projection-heavy cases remain
 necessary before promoting more GPU residency paths into defaults.
+
+## 2026-06-01 2048-Band Resource Comparison
+
+The larger follow-up uses the same current branch and binaries, but increases
+the Si64 band stress to `EMPTY_BANDS=2048`, keeps `NSTEPS=1`, and compares one
+MPI rank plus one GPU against one-rank and eight-rank `nvhpc_cpu`. The GPU list
+is focused on the current resident stack and the strongest single-rank FFT/force
+diagnostics, without the fallback/off matrix:
+
+```
+GPU_CASES="gpu_resident_stack gpu_resident_stack_serial3dfft \
+gpu_resident_stack_serial3dfft_force_dedpro \
+gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache"
+CPU_CASES="nvhpc_cpu" GPU_RANKS=1 CPU_RANKS=8 ADD_GPU_FALLBACK=no
+```
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/si64-bands2048-focused-spark-20260601-174042
+Terok: tests/profile/si64/runs/si64-bands2048-focused-terok-20260601-174041
+```
+
+| System | Best one-GPU case | `gpu_resident_stack` | 1-rank `nvhpc_cpu` | 8-rank `nvhpc_cpu` | Best GPU speedup | Energy delta |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Spark GB10 | `gpu_resident_stack_serial3dfft_force_dedpro` 32.06 s | 35.28 s | 388.98 s | 1122.63 s | 12.13x vs 1 CPU, 35.02x vs 8 CPU | 0.0000004 |
+| Terok A40 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` 32.79 s | 36.69 s | 1109.15 s | 1341.45 s | 33.83x vs 1 CPU, 40.91x vs 8 CPU | 0.0000009 |
+
+GPU case details:
+
+| Case | Spark wall / transfer | Terok wall / transfer | Interpretation |
+| --- | ---: | ---: | --- |
+| `gpu_resident_stack` | 35.28 s / 2.95 GB | 36.69 s / 2.95 GB | Conservative default remains strong and portable. |
+| `gpu_resident_stack_serial3dfft` | 32.40 s / 10.69 GB | 34.06 s / 10.69 GB | Faster on both systems despite the explicit full-grid copy volume. |
+| `gpu_resident_stack_serial3dfft_force_dedpro` | 32.06 s / 10.64 GB | 34.89 s / 10.64 GB | Best on Spark; force DEDPRO composes cleanly with serial 3-D FFT. |
+| `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` | 42.92 s / 4.01 GB | 32.79 s / 4.01 GB | Best on Terok, but still hurts Spark; keep ACCMAP/cache opt-in. |
+
+This is the first larger resource comparison where the GPU result is not merely
+faster than a serial CPU reference: on both machines, one MPI rank with one GPU
+also beats the eight-rank CPU/NVHPC run decisively for this single-k-point,
+band-heavy Si64 stress. The default should therefore stay with the conservative
+resident stack, while the single-rank serial 3-D FFT and force-DEDPRO paths are
+worth keeping as explicit benchmark cases. The ACCMAP/cache path remains a
+system-dependent diagnostic until its Spark behavior is understood.
 
 ## Recommended Next Benchmark
 
