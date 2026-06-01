@@ -795,6 +795,9 @@ writes per-run logs and profile CSV files, and emits a `benchmark.tsv` summary
 with wall time, instrumented rank-seconds, category timings, final energy and
 the optional energy delta. It also writes a Markdown table (`benchmark.md` or
 `combined_benchmark.md`) that can be pasted directly into pull request comments.
+The combined GPU exploration and follow-up harnesses also write
+`combined_compare.md`, which reports wall-time speedups against the matching
+one-rank and eight-rank CPU baselines plus the GPU residency copy buckets.
 
 For a short Nsight Systems trace of the recommended combined GPU profile binary:
 
