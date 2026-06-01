@@ -5,13 +5,13 @@ import glob
 import sys
 
 
-def copy_bucket(op):
+def transfer_kind(op):
     if "OFFDEN" in op:
-        return "ACC copy offden"
+        return "offden"
     if "DENMAT" in op:
-        return "ACC copy denmat"
+        return "denmat"
     if any(token in op for token in ("PROPSI", "PRO_CACHE", "THIS_PROJ")):
-        return "ACC copy proj"
+        return "proj"
     if any(
         token in op
         for token in (
@@ -25,10 +25,22 @@ def copy_bucket(op):
             "_HPSI",
         )
     ):
-        return "ACC copy wave"
+        return "wave"
     if any(token in op for token in ("PROJ", "ADDPRO")):
-        return "ACC copy proj"
-    return "ACC copy other"
+        return "proj"
+    return "other"
+
+
+def transfer_bucket(op, prefix):
+    return f"{prefix} {transfer_kind(op)}"
+
+
+def copy_bucket(op):
+    return transfer_bucket(op, "ACC copy")
+
+
+def update_bucket(op):
+    return transfer_bucket(op, "ACC update")
 
 
 def category(op):
@@ -36,6 +48,8 @@ def category(op):
         return "Phase trace"
     if op.startswith("ACC_COPY"):
         return copy_bucket(op)
+    if op.startswith("ACC_UPDATE"):
+        return update_bucket(op)
     if op.startswith("ACC_PRESENT"):
         return "ACC residency"
     if op.startswith("ACC_SETUP"):
@@ -126,10 +140,17 @@ def main(argv):
         data["gbyte"] for op, data in per_op.items()
         if op.startswith("ACC_COPY")
     )
+    update_gbyte = sum(
+        data["gbyte"] for op, data in per_op.items()
+        if op.startswith("ACC_UPDATE")
+    )
     copy_bucket_gbyte = collections.defaultdict(float)
+    update_bucket_gbyte = collections.defaultdict(float)
     for op, data in per_op.items():
         if op.startswith("ACC_COPY"):
             copy_bucket_gbyte[copy_bucket(op)] += data["gbyte"]
+        elif op.startswith("ACC_UPDATE"):
+            update_bucket_gbyte[update_bucket(op)] += data["gbyte"]
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
@@ -139,16 +160,22 @@ def main(argv):
         print("Diagnostic phase rank-seconds: {:.6f}".format(phase_total))
     if trace_total:
         print("Diagnostic PW trace rank-seconds: {:.6f}".format(trace_total))
-    if setup_total or copy_gbyte:
+    if setup_total or copy_gbyte or update_gbyte:
         print(
-            "Accelerator setup seconds: {:.6f}  copy estimate: {:.6f} GB".format(
-                setup_total, copy_gbyte
+            "Accelerator setup seconds: {:.6f}  copy estimate: {:.6f} GB  update estimate: {:.6f} GB".format(
+                setup_total, copy_gbyte, update_gbyte
             )
         )
     if copy_bucket_gbyte:
         print("Copy bucket estimates")
         for name, gbyte in sorted(
             copy_bucket_gbyte.items(), key=lambda item: -item[1]
+        ):
+            print("  {:<16s} {:10.4f} GB".format(name, gbyte))
+    if update_bucket_gbyte:
+        print("Update bucket estimates")
+        for name, gbyte in sorted(
+            update_bucket_gbyte.items(), key=lambda item: -item[1]
         ):
             print("  {:<16s} {:10.4f} GB".format(name, gbyte))
     print("")

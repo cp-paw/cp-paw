@@ -60,6 +60,8 @@ def check_summary_and_markdown(tmpdir):
                 "ACC_COPY_OFFDEN_DPACK_PROJ_IN,1,1,1,0,1,0,0,0,0,3.5,0,0",
                 "ACC_COPY_DENMAT_LAGR_IN,1,1,1,0,1,0,0,0,0,4.5,0,0",
                 "ACC_COPY_MISC_IN,1,1,1,0,1,0,0,0,0,0.75,0,0",
+                "ACC_UPDATE_VPSI_HPSI_IN,1,1,1,0,1,0,0,0,0,1.25,0,0",
+                "ACC_PRESENT_ADDOPSI_PSIM,1,1,1,0,2,0,0,0,0,0,0,0",
                 "PW_GTOR_TOTAL,1,1,1,0,1,1,1,1,0,0,0,0",
                 "PW_RTOG_TOTAL,1,1,1,0,1,2,2,2,0,0,0,0",
                 "PW_FFT_RTOG_TOTAL,1,1,1,0,1,4,4,4,0,0,0,0",
@@ -90,9 +92,13 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["copy_proj_gb"], "3", "copy_proj_gb")
     assert_equal(row["copy_offden_gb"], "3.5", "copy_offden_gb")
     assert_equal(row["copy_denmat_gb"], "4.5", "copy_denmat_gb")
+    assert_equal(row["update_gb"], "1.25", "update_gb")
+    assert_equal(row["update_wave_gb"], "1.25", "update_wave_gb")
+    assert_equal(row["update_proj_gb"], "0", "update_proj_gb")
 
     markdown = run_tool("benchmark_markdown.py", tsv_path)
     assert_contains(markdown, "copy_wave_gb", "benchmark markdown header")
+    assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
     assert_contains(markdown, "|  | case | 1 | yes | 10.00 |", "benchmark markdown row")
 
     profile_summary = run_tool(
@@ -102,6 +108,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC copy proj", "profile copy proj bucket")
     assert_contains(profile_summary, "ACC copy offden", "profile copy offden bucket")
     assert_contains(profile_summary, "ACC copy denmat", "profile copy denmat bucket")
+    assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
 
 
 def check_compare(tmpdir):
