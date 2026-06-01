@@ -513,8 +513,12 @@ After enabling the GPU-pack path by default, the final 1024-band smoke reported
 
 For the expensive unresolved point, use the dedicated night-run wrapper. It
 defaults to the GPU cases only so the run is not dominated by the known slow
-8-rank CPU reference; add `RUN_CPU_REFERENCES=yes` when CPU reference numbers
-are explicitly needed.
+8-rank CPU reference. The default case list now includes the current HPSI,
+OPSI, and stacked residency candidates, plus the older addproduct/projector
+host-side ablations for continuity. Add `RUN_CPU_REFERENCES=yes` when CPU
+reference numbers are explicitly needed. The wrapper delegates to
+`run_nvhpc_standard.sh`, so it writes the same combined benchmark, comparison,
+transfer-row, and present-row reports.
 
 ```
 cd tests/profile/si64

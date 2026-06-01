@@ -667,6 +667,20 @@ compares `gpu_resident`, `gpu_resident_nosync`, `gpu_off`, one-rank CPU and
 eight-rank CPU/NVHPC references. It inherits the follow-up benchmark's combined
 comparison, transfer-row, and present-row reports.
 
+For the expensive unresolved large-band gap profile, run:
+
+```
+cd tests/profile/si64
+./run_gap_profile_night.sh
+```
+
+It defaults to `EMPTY_BANDS=2048`, `NSTEPS=3` and GPU-only cases covering the
+current HPSI/OPSI residency candidates, the stacked diagnostic, and the older
+host-side addproduct/projector ablations. Set `RUN_CPU_REFERENCES=yes` to add
+one-rank and eight-rank CPU references. This wrapper delegates to
+`run_nvhpc_standard.sh`, so it writes the same combined benchmark, comparison,
+transfer-row, and present-row reports.
+
 For a short broad GPU exploration suite that includes the opt-in 3-D cuFFT path
 and captures available NVIDIA libraries plus CUDA-aware MPI hints:
 
