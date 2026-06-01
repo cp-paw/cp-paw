@@ -49,14 +49,18 @@ dedicated follow-up runs before promoting any path to production default.
 | `psi0-hpsi-copy-boundaries-20260601-512-nstep2-*` | HPSI/PSI0 ETOT residency | `gpu_resident` 11.20 s at 512/1; `gpu_resident_hpsi_opsi` lowest copy | - | `gpu_resident_hpsi_opsi` 15.33 s at 512/4 | Keeps `PSI0` present from HPSI into the immediate expectation/Hamiltonian overlaps; energy-valid and removes one more 0.1345 GB copy block from HPSI/OPSI diagnostics. |
 | `force-to-hpsi-psi0-residency-20260601-512-nstep2-*` | Force-to-HPSI `PSI0` residency | `gpu_resident_hpsi_opsi` 11.03 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.06 s at 512/4 | Reuses the force-loop `PSI0` device copy in the following HPSI path; energy-valid and removes the HPSI-side `PSI0` copy. |
 | `vpsi-device-finish-residency-20260601-512-nstep2-*` | VPSI HPSI device finish | `gpu_resident_hpsi_opsi` 11.11 s at 512/1 | - | `gpu_resident_hpsi` 15.16 s at 512/4 | Moves the still-required HPSI transfer from the ADDPRO consumer boundary to the VPSI producer boundary; energy-valid and keeps HPSI present for ADDPRO. |
+| `si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1` | Current full matrix after HPSI/VPSI residency | `gpu_resident_hpsi_opsi` 12.83 s | `cpu` 73.32 s, `nvhpc_cpu` 69.50 s | `cpu` 167.49 s, `nvhpc_cpu` 166.88 s | Confirms wavefunction residency dominates on Spark; all-library paths remain diagnostic-only. |
 
 The latest full-matrix run lives at:
 
 ```
-/home/kuehne88/cp-paw-nvhpc-gpufull/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260530-135234
+/home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1
 ```
 
-## Full Matrix Comparison
+## Previous Full Matrix Comparison
+
+The table below is retained as the May 30 full-matrix comparison. The current
+June 1 refresh matrix is listed in the next section.
 
 | Case | Previous full matrix | Latest full matrix | Change | Interpretation |
 | --- | ---: | ---: | ---: | --- |
@@ -85,6 +89,40 @@ The latest full-matrix run lives at:
 | `gpu_all_off` | 174.37 s | 171.40 s | -1.7% | Slow; useful only as all-library fallback diagnostic. |
 | `gpu_all_invbatch_off` | 162.34 s | 179.33 s | +10.5% | Slow; keep as diagnostic only. |
 
+## 2026-06-01 Refresh Matrix
+
+This Spark C86C refresh used current `cp-paw-nvhpc` commit `85882ef` with
+`TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`, one GPU rank for GPU cases,
+and one-rank plus eight-rank CPU references. All listed cases completed and
+matched the Si64 reference energy within tolerance.
+
+| Suite | Case | Ranks | Wall time | Copy estimate | Interpretation |
+| --- | --- | ---: | ---: | ---: | --- |
+| GPU | `gpu_resident_hpsi_opsi` | 1 | 12.83 s | 1.96 GB | Best current case; broad PSI/HPSI/OPSI residency wins. |
+| GPU | `gpu_resident` | 1 | 12.88 s | 2.69 GB | Same performance class with slightly more copy traffic. |
+| GPU | `gpu_resident_hpsi` | 1 | 12.90 s | 2.20 GB | HPSI residency is correct and essentially tied. |
+| GPU | `gpu_no_cufft` | 1 | 45.01 s | 96.55 GB | cuFFT is not the useful lever; cuBLAS still matters. |
+| GPU | `cublas` | 1 | 49.71 s | 96.45 GB | Explicit cuBLAS alone is good, but residency is much better. |
+| GPU | `gpu_no_cusolver` | 1 | 50.56 s | 104.99 GB | cuSOLVER is not decisive for this Si64 matrix. |
+| GPU | `cusolver` | 1 | 70.26 s | 0.10 GB | Correct, but near CPU wall time without residency. |
+| GPU | `gpu_off` | 1 | 70.27 s | 0.00 GB | Same GPU-capable binary with accelerators disabled. |
+| GPU | `cufft` | 1 | 70.79 s | 0.00 GB | Native cuFFT alone does not help this workload. |
+| GPU | `nvlamath` | 1 | 72.81 s | 0.00 GB | Builds and runs after the Cholesky symbol fix, but no speedup. |
+| GPU | `gpu_no_cublas` | 1 | 73.31 s | 8.64 GB | Disabling cuBLAS removes most of the GPU benefit. |
+| GPU | `nvblas` | 1 | 91.50 s | 0.00 GB | Interposition path remains too slow as a default. |
+| GPU | `gpu_all` | 1 | 155.46 s | 96.55 GB | Combining all libraries is counterproductive here. |
+| GPU | `cufftw` | 1 | 177.06 s | 0.00 GB | FFTW-compatible cuFFT wrapper is not attractive. |
+| GPU | `gpu_all_off` | 1 | 178.07 s | 0.00 GB | All-library binary with accelerators disabled is diagnostic only. |
+| CPU | `nvhpc_cpu` | 1 | 69.50 s | 0.00 GB | Best one-rank CPU reference. |
+| CPU | `cpu` | 1 | 73.32 s | 0.00 GB | Plain one-rank CPU reference. |
+| CPU | `nvhpc_cpu` | 8 | 166.88 s | 0.00 GB | Eight-rank CPU/NVHPC reference; slower wall time for this case. |
+| CPU | `cpu` | 8 | 167.49 s | 0.00 GB | Eight-rank plain CPU reference; MPI overhead dominates. |
+
+The decisive comparison is therefore `gpu_resident_hpsi_opsi` at 12.83 s
+against `nvhpc_cpu` at 69.50 s on one rank and 166.88 s on eight ranks. This
+strongly favors continued wavefunction/projector residency work over adding
+more optional libraries to the default path.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -92,27 +130,30 @@ The latest full-matrix run lives at:
    `nvhpc_gpu_acc_residency_profile_parallel`.
 
 2. The main win is device residency around wavefunction-heavy regions plus
-   explicit cuBLAS. In the latest run, `gpu_resident` is 44.64 s versus
-   72.91 s for the one-rank plain CPU reference.
+   explicit cuBLAS. In the latest run, `gpu_resident_hpsi_opsi` is 12.83 s
+   versus 69.50 s for the one-rank NVHPC CPU reference and 166.88 s for the
+   eight-rank NVHPC CPU reference.
 
 3. Do not make all optional NVIDIA libraries active by default. The
    `gpu_all*`, `cufftw`, `nvblas`, and `nvlamath` cases are valuable diagnostics
-   but are slower for this workload.
+   but are slower for this workload. The current `gpu_all` path is 155.46 s,
+   while the best residency path is 12.83 s.
 
 4. Keep native cuFFT and cuSOLVER threshold-gated. The Si64 result does not
-   justify aggressive defaults for either one, although larger generalized
-   eigensolver cases may change the cuSOLVER decision.
+   justify aggressive defaults for either one: native `cufft` is 70.79 s and
+   `cusolver` is 70.26 s in the refresh matrix. Larger generalized eigensolver
+   cases may still change the cuSOLVER decision.
 
 5. The first projector follow-up is now in place: resident `PRO` is built once,
    cached on the GPU and reused by projection plus eligible addproduct calls.
-   Keep that full path as the residency default for now because it reduces copy
-   estimates substantially, but keep `gpu_resident_addpro_host` in standard
-   sweeps because its wall time can be marginally better at 1024-band size.
+   Keep that full path as part of the residency default because it reduces copy
+   estimates substantially, while the latest benchmark shows that the later
+   PSI/HPSI/OPSI residency work is the dominant Spark speedup.
 
 6. The one-center overlap GPU-pack path removes the previous large
-   `WAVES_1COVERLAP` bottleneck. The next large-band hotspot became the initial
-   Gram-Schmidt solve inside `WAVES_ORTHO_Y_C`; the Cholesky follow-up below is
-   the first direct fix for that path.
+   `WAVES_1COVERLAP` bottleneck. The next useful default-candidate work should
+   target the remaining host-side FFT/RTOG and producer-side HPSI/projector
+   boundaries, not broader default activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
 
 ## Present-Check Smoke
 
