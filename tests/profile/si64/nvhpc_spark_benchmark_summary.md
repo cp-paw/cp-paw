@@ -47,6 +47,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `opsi-superwave-build-residency-20260601-final-v2` | Superwave OPSI build residency | `gpu_resident_hpsi_opsi` 10.36 s at 512/1 | - | - | Keeps superwave OPSI resident through build/mass scaling with one post-mass host snapshot; energy-valid and removes ADDPRO-OPSI in/out copies. |
 | `superwave-projection-residency-20260601-512-nstep2-*` | Superwave projection residency | `gpu_resident_hpsi_opsi` 10.61 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.14 s at 512/4 | Enables the resident cuBLAS projection path for superwave OPSI with gamma correction; removes the post-mass OPSI host snapshot. |
 | `psi0-hpsi-copy-boundaries-20260601-512-nstep2-*` | HPSI/PSI0 ETOT residency | `gpu_resident` 11.20 s at 512/1; `gpu_resident_hpsi_opsi` lowest copy | - | `gpu_resident_hpsi_opsi` 15.33 s at 512/4 | Keeps `PSI0` present from HPSI into the immediate expectation/Hamiltonian overlaps; energy-valid and removes one more 0.1345 GB copy block from HPSI/OPSI diagnostics. |
+| `force-to-hpsi-psi0-residency-20260601-512-nstep2-*` | Force-to-HPSI `PSI0` residency | `gpu_resident_hpsi_opsi` 11.03 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.06 s at 512/4 | Reuses the force-loop `PSI0` device copy in the following HPSI path; energy-valid and removes the HPSI-side `PSI0` copy. |
 
 The latest full-matrix run lives at:
 
@@ -2355,6 +2356,49 @@ HPSI+OPSI copy estimates each drop by 0.1345 GB in the one-rank case, exactly
 matching the removed duplicate `PSI0` consumer transfer. Wall time remains noisy
 at this small size, so this is a copy-boundary cleanup and enabling patch rather
 than a new default performance claim.
+
+## Force-To-HPSI PSI0 Residency
+
+The next follow-up reuses the `PSI0` device copy created by the default
+force-loop residency when `CPPAW_GPU_HPSI_RESIDENCY=1` is also active.
+`WAVES$FORCE` keeps `THIS%PSI0` resident after the per-atom `WAVES_DEDPRO`
+loop, and the following `WAVES$HPSI` boundary records that array as present
+instead of copying it again. The lifetime still ends inside `WAVES$ETOT` after
+the immediate HPSI/expectation/Hamiltonian consumers.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/force-to-hpsi-psi0-residency-20260601-512-nstep2-1r
+runs/force-to-hpsi-psi0-residency-20260601-512-nstep2-4r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 11.10 s | 2.0753 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 11.03 s | 1.8064 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 4 | 15.08 s | 2.7095 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 4 | 15.06 s | 2.4405 GB | 269.022536 Ha |
+
+| Profile row | HPSI | HPSI + OPSI | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_FORCE_PSI0_IN` | 0.1345 GB | 0.1345 GB | The force loop creates the `PSI0` device copy once per step. |
+| `ACC_PRESENT_HPSI_PSI0` | 2 calls | 2 calls | HPSI reuses the force-loop `PSI0` copy. |
+| `ACC_COPY_HPSI_PSI0_IN` | absent | absent | The HPSI-side duplicate `PSI0` copy is removed. |
+| `ACC_PRESENT_EXPECT_PSI0` | 2 calls | 2 calls | Expectation still reuses resident `PSI0`. |
+| `ACC_PRESENT_HAMILTON_PSI0` | 2 calls | 2 calls | Full-Hamiltonian overlap still reuses resident `PSI0`. |
+| `ACC_COPY_HPSI_ADDPRO_IN` | 0.1345 GB | 0.1345 GB | `HPSI` itself still enters the addproduct residency boundary after host-side VPSI/HPROJ work. |
+| `ACC_COPY_OPSI_BUILD_IN` | - | 0.1345 GB | OPSI build residency remains the next independent wavefunction copy. |
+
+Conclusion: the copy estimate drops by another 0.1345 GB versus the prior
+HPSI/PSI0 boundary branch, with unchanged final energy for 1-rank and 4-rank
+smokes. This is still a small-boundary cleanup, but it is a useful step toward
+Peter's broader "keep the PAW wavefunctions on the GPU" direction because it
+connects two previously separate ETOT-local resident regions without widening
+the lifetime beyond the energy evaluation.
 
 ## Recommended Next Benchmark
 
