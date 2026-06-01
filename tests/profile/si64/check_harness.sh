@@ -54,6 +54,22 @@ grep -q "case=gpu_no_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 
+set +e
+DRY_RUN=yes \
+  REQUIRE_CASES=yes \
+  RUN_ROOT="${tmpdir}/dry-run-required" \
+  CASES="gpu_resident_stack" \
+  tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run-required.out" 2>&1
+dry_run_required_status=$?
+set -e
+if grep -q "^missing$" "${tmpdir}/dry-run-required/metadata.txt"; then
+  test "${dry_run_required_status}" -ne 0
+  grep -q "Required benchmark cases missing executable:" \
+    "${tmpdir}/dry-run-required.out"
+else
+  test "${dry_run_required_status}" -eq 0
+fi
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl
