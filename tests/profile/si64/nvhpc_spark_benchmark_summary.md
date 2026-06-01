@@ -53,6 +53,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `hpsi-opsi-combo-cases-20260601-512-nstep2-*` | Combined HPSI/OPSI diagnostic keywords | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.58 s at 512/1 | - | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` 15.02 s at 512/4 | Adds harness cases for HPSI+OPSI with PROJ/off-site/DENMAT combinations; all cases are energy-valid, so future standard sweeps can compare the full stack directly. |
 | `si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1` | Current standard refresh with combined HPSI/OPSI cases | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 12.21 s | `cpu` 77.79 s, `nvhpc_cpu` 75.23 s | `cpu` 672.52 s, `nvhpc_cpu` 392.07 s | Full focused residency stack is now the best 1024/1 case; eight-rank CPU is a poor resource comparison for this small smoke. |
 | `si64_bands-focus-20260601-0a43a65-2048-nstep1-1r` | 2048-band focused stack validation | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.28 s | - | - | Confirms the focused stack also wins at 2048/1, so expose it as a short benchmark keyword. |
+| `vpsi-boundary-20260601-d3cd6cc-512-nstep1` / `vpsi-boundary-20260601-7ad2625-smoke` | VPSI/HPSI boundary harness | `gpu_resident_stack` 6.56 s at 512/1, 28.46 s at 512/4 | - | - | Adds a focused producer-boundary harness plus seconds-sorted `PAW_VPSI_*` rows; the final smoke shows VPSI time is almost entirely GTOR/RTOG. |
 
 The latest full-matrix run lives at:
 
@@ -187,6 +188,49 @@ The keyword was smoke-tested after adding the lowered stack thresholds:
 | `residency-stack-keyword-20260601-fixed-512-nstep1-1r` | 1 | 6.22 s | 6.74 s | yes | Same energy and copy estimate as the long explicit case. |
 | `residency-stack-keyword-20260601-fixed-512-nstep1-4r` | 4 | 16.77 s | 9.70 s | yes | Both cases use the same profile path, including `CUBLAS_ZGEMM_PROJ_RES`; this short four-rank smoke is run-order/noise sensitive. |
 | `residency-stack-keyword-20260601-fixed-512-nstep1-4r-rev` | 4 | 33.65 s | 32.28 s | yes | Reversing the case order makes the wall times converge, confirming that the keyword is not missing the projection/off-site stack. |
+
+## VPSI Boundary Harness
+
+The next focused harness is `run_vpsi_boundary.sh`. It compares
+`gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`, and `gpu_resident_stack` around
+the `WAVES_VPSI` producer boundary, then writes both the normal benchmark
+summary and selected profile rows. `profile_copy_rows.py` now accepts
+`--op-prefix`, `--op-regex`, `--include-zero`, and `--sort-by`, so the harness
+can report copy/present/update rows separately from seconds-sorted
+`PAW_VPSI_*` timing rows.
+
+Spark C86C validation:
+
+```
+runs/vpsi-boundary-20260601-d3cd6cc-512-nstep1
+runs/vpsi-boundary-20260601-7ad2625-smoke
+```
+
+| Suite | Case | Ranks | Wall time | Copy estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | --- |
+| 512/NSTEPS=1 | `gpu_resident_hpsi` | 1 | 6.00 s | 1.2332 GB | yes |
+| 512/NSTEPS=1 | `gpu_resident_hpsi_opsi` | 1 | 6.85 s | 1.0988 GB | yes |
+| 512/NSTEPS=1 | `gpu_resident_stack` | 1 | 6.56 s | 1.1155 GB | yes |
+| 512/NSTEPS=1 | `gpu_resident_hpsi` | 4 | 31.37 s | 1.5941 GB | yes |
+| 512/NSTEPS=1 | `gpu_resident_hpsi_opsi` | 4 | 31.75 s | 1.4596 GB | yes |
+| 512/NSTEPS=1 | `gpu_resident_stack` | 4 | 28.46 s | 1.5088 GB | yes |
+
+The final one-case reporting smoke for `gpu_resident_stack` produced these
+VPSI timing rows:
+
+| Row | Seconds |
+| --- | ---: |
+| `PAW_VPSI_TOTAL` | 0.7235 |
+| `PAW_VPSI_FFT_GTOR` | 0.3565 |
+| `PAW_VPSI_FFT_RTOG` | 0.3565 |
+| `PAW_VPSI_POT` | 0.0083 |
+| `PAW_VPSI_KIN` | 0.0009 |
+
+This confirms the design direction: optimizing the scalar real-space potential
+or kinetic loops inside `WAVES_VPSI` will not move the needle for Si64. The next
+actual implementation target should be GPU-resident FFT/RTOG or a broader
+producer-side wavefunction region that removes the required `HPSI` refresh
+after host-side FFT output.
 
 ## Current Conclusions
 
