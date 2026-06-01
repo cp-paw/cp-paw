@@ -484,10 +484,13 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_off` | Same combined binary with all native GPU paths disabled. |
 
 By default, `run_benchmark.sh` uses `RANKS=1` and
-`CASES="cpu nvhpc_cpu gpu_resident gpu_off"`. This matches the current Si64
+`CASES="cpu nvhpc_cpu gpu_resident gpu_off"`. This matches the small Si64
 recommendation: compare one MPI rank with one GPU residency path against
 one-rank CPU references and the same combined binary with native GPU paths
-disabled. Use explicit `CASES=...` for diagnostic sweeps.
+disabled. The larger follow-up and band sweeps add `gpu_resident_stack` by
+default so HPSI, OPSI, persistent projection, DENMAT-energy, and off-site
+device-pack residency are measured in the CPU/GPU resource comparison. Use
+explicit `CASES=...` or `GPU_CASES=...` for diagnostic sweeps.
 
 For a larger band/orthogonalization smoke test, use the `si64_bands` control
 file with the same Si64 structure and more empty bands. The harness copies
@@ -839,10 +842,11 @@ resource comparison.
 The overnight defaults use the recommended production-style cases:
 `MAIN_CASES="nvhpc_cpu cublas cublas_off"`,
 `SCALING_CASES="nvhpc_cpu cublas"`,
-`GPU_ACC_CASES="cpu nvhpc_cpu gpu_resident gpu_resident_nosync gpu gpu_off"`
+`GPU_ACC_CASES="cpu nvhpc_cpu gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"`
 and `THRESHOLDS="1e7"`. Set
-`RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_force_all` and the
-`gpu_no_*` ablation cases, set `RUN_BAND_BENCHMARK=yes` to add the
+`RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_resident_stack_cufft`,
+`gpu_force_all` and the `gpu_no_*` ablation cases, set
+`RUN_BAND_BENCHMARK=yes` to add the
 `si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank
 CPU references, set `BAND_EMPTY_BANDS_LIST="128 256 512"` for a size sweep, or
 override any of these variables for a wider run.
