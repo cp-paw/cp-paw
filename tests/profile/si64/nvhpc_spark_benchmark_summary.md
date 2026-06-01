@@ -58,6 +58,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `hpsi-prop-spark-20260601-100735` / `hpsi-prop-terok-20260601-101036` | HPSI-to-propagate residency diagnostic | `gpu_resident_stack_hpsi_prop_psim_phase` 12.13 s on Spark, 12.59 s on Terok | - | - | Keeps `HPSI` resident from ETOT overlap/Hamiltonian into GPU PSIM propagation; removes the extra 0.1210 GB `PROP_HPSI_IN` copy from the PSIM-phase diagnostic and stays energy-valid on both systems. |
 | `psim-switch-accdelete-spark-20260601-104028` / `psim-switch-accdelete-terok-20260601-104027` | NSTEPS=2 PSIM switch residency | `gpu_resident_stack_hpsi_prop_psim_switch` 20.61 s on Spark, 20.25 s on Terok | - | - | Carries resident `PSIM` through `WAVES$SWITCH` as the next `PSI0`, removes one more 0.1210 GB force-side `PSI0` copy per two-step run, and fixes the Spark partially-present delete failure. |
 | `accdims-switch-spark-20260601-105947` / `accdims-switch-terok-20260601-105946` | Resident wavefunction dimension tracking | `gpu_resident_stack_hpsi_prop_psim_switch` 20.84 s on Spark, 23.50 s on Terok | - | 4-rank smokes OK | Stores resident `PSI0`/`PSIM`/`HPSI` dimensions in `WVSET_TYPE` and routes lifecycle cleanup through mark/clear/delete helpers, preserving the previous switch-residency transfer pattern. |
+| `vpsi-cufft-refresh-spark-20260601-110633` / `vpsi-cufft-refresh-terok-20260601-110633` | Current VPSI/cuFFT refresh | `gpu_resident_stack_cufft` neutral/slightly favorable; force cuFFT slower | - | - | Rechecks cuFFT after the latest residency work. Threshold-gated cuFFT remains harmless, but forced cuFFT inflates transfer to 10.97/19.62 GB and slows VPSI strongly. |
 
 The latest full-matrix run lives at:
 
@@ -387,6 +388,45 @@ The transfer estimates remain identical to the pre-refactor switch run:
 case. That is the desired result: this patch tightens lifecycle bookkeeping
 without changing the numerical path or promoting a new default.
 
+## Current VPSI/cuFFT Refresh
+
+After adding explicit wavefunction residency dimensions, the VPSI boundary
+harness was rerun to check whether the latest stack changes alter the cuFFT
+decision. The focused comparison used `gpu_resident_stack`,
+`gpu_resident_stack_cufft`, and `gpu_resident_stack_cufft_force` with
+`NSTEPS=2`, `REPEATS=1`, one GPU rank, and energy checking on Spark C86C and
+Terok:
+
+```
+runs/vpsi-cufft-refresh-spark-20260601-110633
+runs/vpsi-cufft-refresh-terok-20260601-110633
+```
+
+| Machine | Empty bands | Case | Wall time | Transfer estimate | `PAW_VPSI_TOTAL` | Energy check |
+| --- | ---: | --- | ---: | ---: | ---: | --- |
+| Spark C86C | 512 | `gpu_resident_stack` | 10.79 s | 1.4366 GB | 1.4492 s | yes |
+| Spark C86C | 512 | `gpu_resident_stack_cufft` | 10.14 s | 1.4366 GB | 1.4750 s | yes |
+| Spark C86C | 512 | `gpu_resident_stack_cufft_force` | 13.37 s | 10.9731 GB | 3.6147 s | yes |
+| Spark C86C | 1024 | `gpu_resident_stack` | 20.92 s | 2.5346 GB | 2.6477 s | yes |
+| Spark C86C | 1024 | `gpu_resident_stack_cufft` | 20.77 s | 2.5346 GB | 2.6498 s | yes |
+| Spark C86C | 1024 | `gpu_resident_stack_cufft_force` | 26.31 s | 19.6164 GB | 6.3722 s | yes |
+| Terok A40 | 512 | `gpu_resident_stack` | 10.80 s | 1.4366 GB | 1.5866 s | yes |
+| Terok A40 | 512 | `gpu_resident_stack_cufft` | 10.33 s | 1.4366 GB | 1.4988 s | yes |
+| Terok A40 | 512 | `gpu_resident_stack_cufft_force` | 19.62 s | 10.9731 GB | 7.8295 s | yes |
+| Terok A40 | 1024 | `gpu_resident_stack` | 27.51 s | 2.5346 GB | 2.6961 s | yes |
+| Terok A40 | 1024 | `gpu_resident_stack_cufft` | 20.79 s | 2.5346 GB | 2.5499 s | yes |
+| Terok A40 | 1024 | `gpu_resident_stack_cufft_force` | 38.83 s | 19.6164 GB | 13.0076 s | yes |
+
+Interpretation: threshold-gated native cuFFT remains safe as a diagnostic and
+can be neutral to slightly favorable in this one-repeat refresh, but the
+force-all mode is decisively worse. It increases the estimated transfer volume
+by roughly 9.5 GB at 512 empty bands and 17.1 GB at 1024 empty bands, and it
+more than doubles `PAW_VPSI_TOTAL` on both machines. The next useful FFT work is
+therefore not broader forced cuFFT activation inside the current host-oriented
+3D FFT path. It should be either a genuinely device-resident FFT/RTOG pipeline
+or a narrower effort to keep the wavefunction buffers resident around the
+current FFT producer/consumer boundary.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -424,7 +464,13 @@ without changing the numerical path or promoting a new default.
    FFT/RTOG and producer-side HPSI/projector boundaries, not broader default
    activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
 
-7. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
+7. Keep forced cuFFT out of the recommended stack. The current VPSI/cuFFT
+   refresh confirms that threshold-gated cuFFT is harmless, but force-all cuFFT
+   is slower and transfer-heavy on both Spark and Terok. A useful FFT follow-up
+   needs device-resident dataflow, not just more `LIB$FFTC8` calls routed
+   through cuFFT.
+
+8. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
    the 4fbe2cd refresh it produced 302.773536 Ha instead of 302.280854 Ha and
    therefore failed the energy guard.
 
