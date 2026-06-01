@@ -71,6 +71,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `hpsi-rtog-*-20260601-*` | HPSI RTOG output residency in the serial 3D FFT ACCMAP path | Spark/GB10: output-present accounting lowers the validated NSTEPS=1 transfer estimate to 3.4119 GB; wall time is modestly favorable in the initial sweep | Terok/A40: NSTEPS=1 remains mixed/noisy, but the transfer accounting is identical | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` / `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`; useful as a producer-boundary diagnostic, not a default promotion. |
 | `vpsi-internal-*-20260601-*` | Resident `WAVES_VPSI` real-space scratch in the serial 3D FFT ACCMAP path | Spark/GB10: isolated scratch residency lowers transfer to 2.2890 GB at NSTEPS=1; combined with HPSI-RTOG it reaches 2.0469 GB | Terok/A40: isolated scratch residency lowers transfer identically, but combined HPSI-RTOG is the better diagnostic at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Adds separate `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` and combined `*_hpsi_rtog_vpsi_internal` cases; useful and measurable, but still opt-in because wall time is case/system noisy. |
 | `accmap-cache-*-20260601-*` | Cached serial 3D ACCMAP work/map arrays | Spark/GB10: combined HPSI-RTOG+VPSI internal cache improves NSTEPS=3 from 39.09 to 34.58 s and lowers transfer from 4.8517 to 4.5655 GB | Terok/A40: same cache improves NSTEPS=3 from 33.10 to 23.66 s and lowers transfer identically | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` / `*_hpsi_rtog_vpsi_internal_cache`; validated as a useful diagnostic, but still not a default because the serial ACCMAP path remains system-dependent. |
+| `accmap-cleanup-final-*-20260601-*` | ACCMAP cache cleanup and non-CUBLAS build guard | Spark/GB10: final cache smoke is 8.16 s at 512/1 and 6.53 s at 256/4 | Terok/A40: final cache smoke is 5.25 s at 512/1 and 8.58 s at 256/4 | Energy-valid; `nvhpc_profile` and GPU serial/parallel builds pass on both systems | Moves the cached ACCMAP state into `PLANEWAVE_MODULE`, releases it through `PLANEWAVE$ACC_CLEANUP`, and restores the non-CUBLAS `nvhpc_profile` build by guarding setup-PSIM residency code. |
 
 The latest full-matrix run lives at:
 
@@ -225,10 +226,10 @@ map arrays present across calls when `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is set.
 The benchmark case
 `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` combines
 that cache with HPSI RTOG output residency and resident `WAVES_VPSI` real-space
-scratch. This is intentionally opt-in because the cached device allocations do
-not yet have a production lifecycle hook; it is meant to test whether repeated
-temporary workspace creation and map transfers explain the remaining ACCMAP
-overhead.
+scratch. This is intentionally opt-in because serial ACCMAP remains
+system-dependent, but the cached device allocations now have an explicit
+plane-wave accelerator cleanup hook. The case tests whether repeated temporary
+workspace creation and map transfers explain the remaining ACCMAP overhead.
 
 Run directories:
 
@@ -260,6 +261,42 @@ at one step but strongly favorable at three steps in this run. The result is
 therefore strong enough to keep the cache as a validated diagnostic switch, but
 not strong enough to make serial 3-D ACCMAP itself part of the recommended
 default stack.
+
+## 2026-06-01 Serial 3D ACCMAP Cache Cleanup
+
+The cache follow-up moves the saved ACCMAP work array and cache bookkeeping into
+`PLANEWAVE_MODULE` and releases the OpenACC data in `PLANEWAVE$ACC_CLEANUP`,
+which is called after the timing/profiling report. Non-`CPPVAR_CUFFT_ACC` builds
+compile the cleanup routine as a no-op. The same patch also guards the setup
+`PSIM` residency block in `WAVES$GRAMMSCHMIDT`, restoring the plain
+`nvhpc_profile` build without `CPPVAR_CUBLAS_ACC`.
+
+Build validation:
+
+```
+Spark: nvhpc_profile, nvhpc_gpu_acc_residency_profile, nvhpc_gpu_acc_residency_profile_parallel
+Terok: nvhpc_profile, nvhpc_gpu_acc_residency_profile, nvhpc_gpu_acc_residency_profile_parallel
+```
+
+Runtime smoke directories:
+
+```
+Spark serial: tests/profile/si64/runs/accmap-cleanup-final-serial-spark-20260601-161939
+Spark 4-rank: tests/profile/si64/runs/accmap-cleanup-final-4rank-spark-20260601-161947
+Terok serial: tests/profile/si64/runs/accmap-cleanup-final-serial-terok-20260601-161938
+Terok 4-rank: tests/profile/si64/runs/accmap-cleanup-final-4rank-terok-20260601-161944
+```
+
+| System | Ranks | Empty bands | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Spark GB10 | 1 | 512 | 8.16 s | 1.0923 GB | yes |
+| Spark GB10 | 4 | 256 | 6.53 s | 0.6901 GB | yes |
+| Terok A40 | 1 | 512 | 5.25 s | 1.0923 GB | yes |
+| Terok A40 | 4 | 256 | 8.58 s | 0.6901 GB | yes |
+
+Interpretation: this is a robustness patch for the diagnostic ACCMAP cache, not
+a default-promotion signal. The cache now has a real cleanup boundary and the
+CPU-only NVHPC profile build remains valid.
 
 ## 2026-06-01 Current Stack Default Refresh
 

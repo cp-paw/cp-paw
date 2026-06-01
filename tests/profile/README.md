@@ -87,7 +87,8 @@ The ACCMAP profiler reports its visible mapping subphases as
 `ACC_SERIAL3D_RTOG_GATHER`; compare them with `CUFFT3D_C8_PRESENT` and the
 larger FFT envelope to identify data-region/runtime overhead.
 `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is an opt-in follow-up that keeps the ACCMAP
-full-grid work array and map arrays present across calls.
+full-grid work array and map arrays present across calls. The cache is released
+by the plane-wave accelerator cleanup hook before shutdown.
 `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` is a narrower follow-up diagnostic for
 that ACCMAP path: when HPSI residency is already active, it lets the
 `WAVES_VPSI` RTOG step leave the produced `HPSI` device copy present for the
@@ -520,7 +521,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus resident `WAVES_VPSI` real-space scratch via `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus opt-in HPSI RTOG output residency via `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`, plus resident `WAVES_VPSI` real-space scratch via `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`. |
-| `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`, plus cached ACCMAP work/map arrays via `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1`. |
+| `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`, plus cached ACCMAP work/map arrays via `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1`; the cache is released by the plane-wave accelerator cleanup hook. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |

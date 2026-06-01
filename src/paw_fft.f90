@@ -126,8 +126,69 @@ END TYPE PWPARALLEL_TYPE
 LOGICAL(4)                     :: TINI=.FALSE.
 TYPE (PWPARALLEL_TYPE),POINTER :: THIS
 LOGICAL(4)                     :: LAST_FFT_ACC_MAP_USED=.FALSE.
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+COMPLEX(8),ALLOCATABLE         :: SERIAL3D_ACC_WORK_CACHE(:,:,:)
+INTEGER(4)                     :: SERIAL3D_ACC_CACHE_INIT=0
+INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR1=0
+INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR2=0
+INTEGER(4)                     :: SERIAL3D_ACC_CACHE_NR3=0
+LOGICAL(4)                     :: SERIAL3D_ACC_CACHE_ENABLED=.FALSE.
+#ENDIF
 END MODULE PLANEWAVE_MODULE
 !*******************************************************************************
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE PLANEWAVE$ACC_CLEANUP()
+!     **************************************************************************
+!     **  Release OpenACC plane-wave caches that intentionally outlive one     **
+!     **  FFT call. Normal non-accelerated builds compile this as a no-op.     **
+!     **************************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE MPE_MODULE
+      USE OPENACC
+      USE PLANEWAVE_MODULE
+      IMPLICIT NONE
+      TYPE(PWPARALLEL_TYPE),POINTER :: THIS1
+      INTEGER(4)                    :: NTASKS
+      INTEGER(4)                    :: THISTASK
+      INTEGER(4)                    :: NGL
+      INTEGER(4)                    :: NSTRIPEL
+!     **************************************************************************
+      IF(ALLOCATED(SERIAL3D_ACC_WORK_CACHE)) THEN
+        IF(ACC_IS_PRESENT(SERIAL3D_ACC_WORK_CACHE)) THEN
+!$ACC EXIT DATA DELETE(SERIAL3D_ACC_WORK_CACHE)
+        END IF
+        DEALLOCATE(SERIAL3D_ACC_WORK_CACHE)
+      END IF
+      SERIAL3D_ACC_CACHE_NR1=0
+      SERIAL3D_ACC_CACHE_NR2=0
+      SERIAL3D_ACC_CACHE_NR3=0
+      IF(.NOT.SERIAL3D_ACC_CACHE_ENABLED) RETURN
+      IF(.NOT.TINI) RETURN
+      IF(.NOT.ASSOCIATED(THIS)) RETURN
+      THIS1=>THIS
+      DO
+        CALL MPE$QUERY(THIS1%CID,NTASKS,THISTASK)
+        IF(NTASKS.EQ.1) THEN
+          NGL=THIS1%NGLARR(THISTASK)
+          NSTRIPEL=THIS1%NSTRIPELARR(THISTASK)
+          IF(ASSOCIATED(THIS1%IGTOSTRIPE).AND.NGL.GT.0) THEN
+            IF(ACC_IS_PRESENT(THIS1%IGTOSTRIPE(1:NGL))) THEN
+!$ACC EXIT DATA DELETE(THIS1%IGTOSTRIPE(1:NGL))
+            END IF
+          END IF
+          IF(ASSOCIATED(THIS1%ISTRIPETOYZ).AND.NSTRIPEL.GT.0) THEN
+            IF(ACC_IS_PRESENT(THIS1%ISTRIPETOYZ(1:NSTRIPEL,THISTASK))) THEN
+!$ACC EXIT DATA DELETE(THIS1%ISTRIPETOYZ(1:NSTRIPEL,THISTASK))
+            END IF
+          END IF
+        END IF
+        THIS1=>THIS1%NEXT
+        IF(ASSOCIATED(THIS1,THIS)) EXIT
+      ENDDO
+#ENDIF
+      RETURN
+      END
 !     
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE PLANEWAVE$REPORT(NFIL)
@@ -2218,6 +2279,13 @@ END MODULE PLANEWAVE_MODULE
 !     ******************************************************************
       USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_3DFFTC8_PRESENT
       USE OPENACC
+      USE PLANEWAVE_MODULE, ONLY: &
+     &      WORK => SERIAL3D_ACC_WORK_CACHE &
+     &     ,CACHE_INIT => SERIAL3D_ACC_CACHE_INIT &
+     &     ,CACHE_NR1 => SERIAL3D_ACC_CACHE_NR1 &
+     &     ,CACHE_NR2 => SERIAL3D_ACC_CACHE_NR2 &
+     &     ,CACHE_NR3 => SERIAL3D_ACC_CACHE_NR3 &
+     &     ,TCACHE => SERIAL3D_ACC_CACHE_ENABLED
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: ID
       INTEGER(4),INTENT(IN)     :: NGL
@@ -2229,13 +2297,9 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8),INTENT(INOUT)  :: FOFG(NGL)
       COMPLEX(8),INTENT(INOUT)  :: FOFR(NRL)
       LOGICAL(4),INTENT(OUT)    :: USED
-      COMPLEX(8),ALLOCATABLE,SAVE :: WORK(:,:,:)
       INTEGER(4)                :: IG,IR,IR1,IR2,IR3
       INTEGER(4)                :: I23,IND,ISTRIPEL
       LOGICAL(4)                :: CUFFT_USED
-      INTEGER(4),SAVE           :: CACHE_INIT=0
-      INTEGER(4),SAVE           :: CACHE_NR1=0,CACHE_NR2=0,CACHE_NR3=0
-      LOGICAL(4),SAVE           :: TCACHE=.FALSE.
       LOGICAL(4)                :: MAP_PRESENT
       CHARACTER(128)            :: ENVVAL_CACHE
       INTEGER(4)                :: ENVSTATUS_CACHE
