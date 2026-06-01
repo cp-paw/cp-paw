@@ -509,7 +509,9 @@ TEST=si64_bands EMPTY_BANDS=128 NSTEPS=1 ./run_benchmark.sh
 The stacked follow-up benchmark compares the larger-band case across the
 resource split we want for the next optimization pass: one rank on one GPU,
 one-rank CPU references, and eight-rank CPU/NVHPC references. It defaults to
-`NSTEPS_LIST="1 3 10"` and accepts `EMPTY_BANDS_LIST` for a band-size sweep:
+`NSTEPS_LIST="1 3 10"` and accepts `EMPTY_BANDS_LIST` for a band-size sweep. It
+also writes `combined_transfer_rows.md` and `combined_present_rows.md` so the
+remaining data motion and resident reuse sites can be compared across the sweep:
 
 ```
 cd tests/profile/si64
@@ -658,6 +660,10 @@ and captures available NVIDIA libraries plus CUDA-aware MPI hints:
 cd tests/profile/si64
 NSTEPS=1 ./run_gpu_exploration.sh
 ```
+
+The exploration run writes the same combined benchmark, comparison, transfer-row,
+and present-row reports as the standard benchmark, plus `gpu_capabilities.txt`
+when the capability helper is available.
 
 To compare NVHPC memory modes, build the optional profile binaries and add the
 cases explicitly:
