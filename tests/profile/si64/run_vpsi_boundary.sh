@@ -22,8 +22,11 @@ VPSI_BOUNDARY_CASES=${VPSI_BOUNDARY_CASES:-"gpu_resident_hpsi gpu_resident_hpsi_
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 ROWS_COMBINED="${RUN_ROOT_BASE}-profile-rows.md"
+ROWS_COMBINED_TSV="${RUN_ROOT_BASE}-profile-rows.tsv"
 VPSI_ROWS_COMBINED="${RUN_ROOT_BASE}-vpsi-rows.md"
+VPSI_ROWS_COMBINED_TSV="${RUN_ROOT_BASE}-vpsi-rows.tsv"
 FFT_ROWS_COMBINED="${RUN_ROOT_BASE}-fft-phase-rows.md"
+FFT_ROWS_COMBINED_TSV="${RUN_ROOT_BASE}-fft-phase-rows.tsv"
 : > "${COMBINED}"
 
 declare -a SUITE_ROOTS=()
@@ -131,16 +134,34 @@ if [[ -s "${COMBINED}" ]]; then
 fi
 
 if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
-  python3 "${HERE}/profile_copy_rows.py" --per-case --top "${ROW_TOP}" \
-    --markdown "${PROFILE_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
-    > "${ROWS_COMBINED}" || true
-  echo "Combined profile-row data: ${ROWS_COMBINED}"
-  python3 "${HERE}/profile_copy_rows.py" --per-case --top "${VPSI_ROW_TOP}" \
-    --markdown "${VPSI_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
-    > "${VPSI_ROWS_COMBINED}" || true
-  echo "Combined VPSI-row data: ${VPSI_ROWS_COMBINED}"
-  python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
-    --markdown "${FFT_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
-    > "${FFT_ROWS_COMBINED}" || true
-  echo "Combined FFT phase-row data: ${FFT_ROWS_COMBINED}"
+  if python3 "${HERE}/profile_copy_rows.py" --per-case --top "${ROW_TOP}" \
+      --markdown "${PROFILE_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${ROWS_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case --top "${ROW_TOP}" \
+      "${PROFILE_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${ROWS_COMBINED_TSV}" || true
+    echo "Combined profile-row data: ${ROWS_COMBINED}"
+  else
+    echo "Combined profile-row data: none"
+  fi
+  if python3 "${HERE}/profile_copy_rows.py" --per-case --top "${VPSI_ROW_TOP}" \
+      --markdown "${VPSI_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${VPSI_ROWS_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case --top "${VPSI_ROW_TOP}" \
+      "${VPSI_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${VPSI_ROWS_COMBINED_TSV}" || true
+    echo "Combined VPSI-row data: ${VPSI_ROWS_COMBINED}"
+  else
+    echo "Combined VPSI-row data: none"
+  fi
+  if python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
+      --markdown "${FFT_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${FFT_ROWS_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
+      "${FFT_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+      > "${FFT_ROWS_COMBINED_TSV}" || true
+    echo "Combined FFT phase-row data: ${FFT_ROWS_COMBINED}"
+  else
+    echo "Combined FFT phase-row data: none"
+  fi
 fi

@@ -631,7 +631,7 @@ host-side FFT/RTOG output, then refreshes or creates the device-present `HPSI`
 buffer for the following `WAVES_ADDPRO` consumer. The harness compares
 `gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`, `gpu_resident_stack`, and
 stack-plus-cuFFT variants with `NSTEPS=2` by default and writes combined
-benchmark tables plus selected profile tables for
+benchmark tables plus selected Markdown/TSV profile tables for
 `ACC_COPY`/`ACC_UPDATE`/`ACC_PRESENT` rows, separate seconds-sorted
 `PAW_VPSI_*` timing rows, and separate seconds-sorted `PW_GTOR_*`/`PW_RTOG_*`
 phase rows. Its comparison Markdown reports the stack and cuFFT variants
