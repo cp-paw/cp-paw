@@ -4234,13 +4234,79 @@ from the 4096-band wall time without increasing the transfer estimate. Lowering
 `CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO` to `1` wins another 3.59 s on Spark GB10,
 but it adds about 9.22 GB of additional `LAMBDA1/2` transfer from the per-atom
 ADDOPROJ offload. Keep that as a diagnostic on Spark/unified-memory-like
-systems rather than changing the conservative default. A separate force-specific
-ADDOPROJ residency path would need to keep the transformed Lambda matrices
-present across atoms before it is attractive as a default.
+systems rather than changing the conservative default. This motivated the
+force-specific ADDOPROJ residency path below, which keeps the transformed
+Lambda matrices present across atoms instead of lowering the global
+orthogonalization threshold.
 
 Spark rebuilt both serial and parallel residency-profile targets. The four-rank
 smoke used `gpu_resident_addoproj`, `EMPTY_BANDS=512`, `NSTEPS=1`, passed the
 energy check, and verifies that the shared `FORCE_LAMBDA` path is MPI-safe.
+
+## Force ADDOPROJ Residency
+
+Implementation:
+
+- adds `CPPAW_GPU_FORCE_ADDOPROJ` / `CPPAW_CUBLAS_ACC_FORCE_ADDOPROJ`
+- precomputes the time-inversion transformed `LAMBDA1/2` blocks once per
+  k-point/spin in `WAVES$FORCE`
+- keeps those blocks present on the GPU across the atom loop
+- routes eligible `WAVES_DEDPROJ` calls through
+  `WAVES_ADDOPROJ_FORCE_CUBLAS_ACC`
+
+Run directories on Spark GB10:
+
+```
+512 smoke:
+tests/profile/si64/runs/force-addoproj-resident-smoke512-20260601
+
+512 named harness-case smoke:
+tests/profile/si64/runs/force-addoproj-resident-case-smoke512-20260601
+
+512 named harness-case smoke after final signature cleanup:
+tests/profile/si64/runs/force-addoproj-resident-case-smoke512-after-review-20260601
+
+4096 force-specific ADDOPROJ:
+tests/profile/si64/runs/force-addoproj-resident-4096-20260601
+
+Spark 4-rank smoke:
+tests/profile/si64/runs/force-addoproj-resident-4r-smoke512-20260601
+
+Spark 4-rank smoke after final signature cleanup:
+tests/profile/si64/runs/force-addoproj-resident-4r-smoke512-after-review-safe-20260601
+```
+
+The large one-rank run used
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram`,
+`CPPAW_GPU_FORCE_ADDOPROJ=1`, `TEST=si64_bands`, `EMPTY_BANDS=4096`,
+`NSTEPS=1`, and one GPU rank.
+
+| Case | Wall time | Transfer estimate | `PAW_ETOT_FORCE` | `PAW_FORCE_DEDPROJ` | `PAW_FORCE_LAMBDA_SETUP` | Energy check |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Force split baseline | 138.96 s | 8.0690 GB | 29.0665 s | 28.3467 s | absent | yes |
+| Lambda hoist | 122.31 s | 8.0690 GB | 12.8041 s | 11.8668 s | 0.2044 s | yes |
+| Lambda hoist + ADDOPROJ min1 diagnostic | 118.72 s | 17.2885 GB | 9.6502 s | 8.7272 s | 0.1924 s | yes |
+| Force ADDOPROJ residency | 110.73 s | 8.1533 GB | 1.5884 s | 0.5242 s | 0.2013 s | yes |
+
+The force-specific resident path is the clean force-side win: compared with the
+original force split baseline it removes 28.87 s from `PAW_ETOT_FORCE` and
+about 28.37 s from `PAW_FORCE_DEDPROJ`, while keeping the host-device transfer
+estimate near the previous default-threshold runs. The important profile check
+is that `ACC_PRESENT_FADDOP_LAM1` and `ACC_PRESENT_FADDOP_LAM2` have 64 calls
+and zero transfer bytes; the reported `CUBLAS_ZGEMM_FADDOP_TINV1/2` `gbyte`
+columns are arithmetic byte estimates for throughput, not extra copy traffic.
+
+The 512-band serial smoke completed in 4.77 s with energy
+`302.280854` and `energy_delta=4.01329658e-07`. The named harness case
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj`
+completed the same smoke in 4.82 s, and 4.83 s after the final signature
+cleanup, with the same energy delta and recorded `CPPAW_GPU_FORCE_ADDOPROJ=1`
+in the run environment. The 512-band four-rank smoke completed in 8.66 s before
+the signature cleanup and 8.75 s after it, with energy `302.280854` and
+`energy_delta=4.01339094e-07`. The four-rank smoke intentionally uses the
+MPI-safe `gpu_resident_addoproj` case plus `CPPAW_GPU_FORCE_ADDOPROJ=1`, because
+the fully combined named stack also enables density-internal residency, which
+requires the serial 3-D ACCMAP GTOR path and is not the right MPI smoke target.
 
 ## Recommended Next Benchmark
 

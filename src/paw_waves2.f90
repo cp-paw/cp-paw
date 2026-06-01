@@ -1446,6 +1446,67 @@ END IF
 #ENDIF
 !
 !      ..............................................................
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       SUBROUTINE WAVES_ADDOPROJ_FORCE_CUBLAS_ACC(NPRO,NDIM,NBH,PROJ &
+     &                                      ,OPROJ,LAMBDA1,LAMBDA2)
+!      *************************************************************************
+!      **  FORCE-SIDE DEVICE ADDOPROJ WITH PRECOMPUTED TINV LAMBDA MATRICES.   **
+!      *************************************************************************
+       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_INOUT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)   :: NDIM
+       INTEGER(4),INTENT(IN)   :: NBH
+       INTEGER(4),INTENT(IN)   :: NPRO
+       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
+       COMPLEX(8),INTENT(IN)   :: OPROJ(NDIM,NBH,NPRO)
+       COMPLEX(8),INTENT(IN)   :: LAMBDA1(NBH,NBH)
+       COMPLEX(8),INTENT(IN)   :: LAMBDA2(NBH,NBH)
+       INTEGER(4)              :: IDIM,IBH1,IPRO
+       COMPLEX(8),ALLOCATABLE  :: OPROJC(:,:,:)
+!      *************************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_INOUT &
+     &   ('ACC_PRESENT_FADDOP_PROJ','ACC_COPY_FADDOP_PROJ_IN' &
+     &   ,'ACC_COPY_FADDOP_PROJ_OUT',NDIM,NBH,NPRO,PROJ)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &   ('ACC_PRESENT_FADDOP_OPROJ','ACC_COPY_FADDOP_OPROJ_IN' &
+     &   ,NDIM,NBH,NPRO,OPROJ)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &   ('ACC_PRESENT_FADDOP_LAM1','ACC_COPY_FADDOP_LAM1_IN' &
+     &   ,NBH,NBH,LAMBDA1)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &   ('ACC_PRESENT_FADDOP_LAM2','ACC_COPY_FADDOP_LAM2_IN' &
+     &   ,NBH,NBH,LAMBDA2)
+#ENDIF
+       ALLOCATE(OPROJC(NDIM,NBH,NPRO))
+!$ACC DATA COPY(PROJ(1:NDIM,1:NBH,1:NPRO)) &
+!$ACC& PRESENT_OR_COPYIN(OPROJ(1:NDIM,1:NBH,1:NPRO) &
+!$ACC&       ,LAMBDA1(1:NBH,1:NBH),LAMBDA2(1:NBH,1:NBH)) &
+!$ACC& CREATE(OPROJC(1:NDIM,1:NBH,1:NPRO))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(OPROJ,OPROJC)
+       DO IPRO=1,NPRO
+         DO IBH1=1,NBH
+           DO IDIM=1,NDIM
+             OPROJC(IDIM,IBH1,IPRO)=CONJG(OPROJ(IDIM,IBH1,IPRO))
+           ENDDO
+         ENDDO
+       ENDDO
+!$ACC END PARALLEL LOOP
+       CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT(NDIM,NBH,NBH &
+     &     ,NPRO,OPROJ,LAMBDA1,PROJ,'FADDOP_TINV1')
+       CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT(NDIM,NBH,NBH &
+     &     ,NPRO,OPROJC,LAMBDA2,PROJ,'FADDOP_TINV2')
+!$ACC END DATA
+       DEALLOCATE(OPROJC)
+       RETURN
+       END
+#ENDIF
+!
+!      ..............................................................
       SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT &
      &                        ,PROFILE_ID)
 !      **                                                          **

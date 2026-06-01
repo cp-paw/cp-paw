@@ -502,6 +502,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_density_1cov_batch` | Current density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to compare the batch path against the best current Spark/Terok stack. |
 | `gpu_resident_stack_density_1cov_addoproj` | Current density-resident stack plus batched one-center overlap and opt-in `WAVES_ADDOPROJ` cuBLAS slice GEMMs. |
 | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram` | Current density-resident stack plus ADDOPROJ slice GEMMs and opt-in large-matrix Gram-Cholesky through cuSOLVER `ZPOTRF` plus cuBLAS `ZTRSM`. |
+| `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj` | Same combined case plus force-side resident `WAVES_ADDOPROJ` cuBLAS for `WAVES_DEDPROJ`, enabled through `CPPAW_GPU_FORCE_ADDOPROJ=1`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
@@ -875,12 +876,26 @@ be overridden by kernel category:
   `PAW_FORCE_STRUCTURE_FACTOR`, `PAW_FORCE_DEDPRO`, `PAW_FORCE_PROFORCE`, and
   `PAW_FORCE_DEDPRO_ACC_TOTAL` rows so force-side GPU candidates can be ranked
   without relying on the coarse `PAW_ETOT_FORCE` total alone.
+- `CPPAW_GPU_FORCE_ADDOPROJ`: disabled by default. Set to `1` to use a
+  force-specific `WAVES_ADDOPROJ` cuBLAS path inside eligible `WAVES_DEDPROJ`
+  loops. The transformed `LAMBDA1/2` blocks are built once per k-point/spin,
+  kept present across atoms, and reused by the per-atom cuBLAS GEMMs so the
+  small per-site offload does not repeatedly transfer dense Lambda matrices.
+  Use `CPPAW_GPU_FORCE_ADDOPROJ_MIN_NPRO` or the compatibility alias
+  `CPPAW_CUBLAS_ACC_FORCE_ADDOPROJ_MIN_NPRO` to raise the minimum projector
+  count. The harness case is
+  `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj`.
 - `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so
   `WAVES_1COVERLAP` uses the GPU-pack/cuBLAS contraction path; set to `0` for
   the host contraction path.
 - `CPPAW_GPU_1COVERLAP_BATCH`: disabled by default. Set to `1` to replace the
   three orthogonalization `WAVES_1COVERLAP` calls with one combined cuBLAS path
   that reuses folded `PROJ`/`OPROJ` work arrays.
+- `CPPAW_GPU_ORTHO_ADDOPROJ`: disabled by default. Set to `1` to offload large
+  orthogonalization `WAVES_ADDOPROJ` projector updates through cuBLAS slice
+  GEMMs. The default `CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO=64` keeps the
+  per-atom force calls on the host unless the force-specific path above is
+  explicitly selected.
 - `CPPAW_GPU_ORTHO_CONST_RESIDENCY`: disabled by default. Set to `1` to let
   `WAVES_ORTHO_X` reuse constant `CHICHI` and `U` inputs across repeated real
   MATMUL calls while keeping temporary outputs on the host-synchronized path.

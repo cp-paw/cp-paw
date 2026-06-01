@@ -6474,6 +6474,7 @@ RETURN
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED &
      &      ,CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_FORCE_ADDOPROJ_ENABLED &
      &      ,CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED &
      &      ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT &
      &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
@@ -6516,7 +6517,15 @@ RETURN
       LOGICAL(4)             :: TKEEPPSI0FORHPSI
       LOGICAL(4)             :: TFORCEDEDPROACC
       LOGICAL(4)             :: TFORCEDEDPROUSED
+      LOGICAL(4)             :: TFORCEADDOPROJACC
+      LOGICAL(4)             :: TFORCEADDOPROJTHIS
+      INTEGER(4)             :: IB1A,IB1B,IB2A,IB2B
       REAL(8)                :: ADDPROFLOPS
+      REAL(8)                :: FORCEADDOPROJFLOPS
+      COMPLEX(8),ALLOCATABLE :: FORCE_LAMBDA1(:,:) ! (NBH,NBH)
+      COMPLEX(8),ALLOCATABLE :: FORCE_LAMBDA2(:,:) ! (NBH,NBH)
+      COMPLEX(8)             :: CSVAR1,CSVAR2
+      COMPLEX(8),PARAMETER   :: CI=(0.D0,1.D0)
 #ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_FORCE_T0
@@ -6625,6 +6634,39 @@ RETURN
 !         ==                                                                  ==
 !         ======================================================================
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
+          TFORCEADDOPROJACC=.FALSE.
+          IF(TINV) THEN
+            DO IAT=1,NAT
+              ISP=MAP%ISP(IAT)
+              LMNX=MAP%LMNX(ISP)
+              FORCEADDOPROJFLOPS=16.D0*REAL(NDIM,KIND=8) &
+     &             *REAL(LMNX,KIND=8)*REAL(NBH,KIND=8) &
+     &             *REAL(NBH,KIND=8)
+              TFORCEADDOPROJACC=TFORCEADDOPROJACC.OR. &
+     &             CPPAW_CUBLAS_ACC_FORCE_ADDOPROJ_ENABLED &
+     &             (FORCEADDOPROJFLOPS,LMNX)
+            ENDDO
+          END IF
+          IF(TFORCEADDOPROJACC) THEN
+            ALLOCATE(FORCE_LAMBDA1(NBH,NBH))
+            ALLOCATE(FORCE_LAMBDA2(NBH,NBH))
+            DO IB1=1,NBH
+              IB1A=2*IB1-1
+              IB1B=2*IB1
+              DO IB2=1,NBH
+                IB2A=2*IB2-1
+                IB2B=2*IB2
+                CSVAR1=   FORCE_LAMBDA(IB1A,IB2A) &
+     &                 +CI*FORCE_LAMBDA(IB1A,IB2B)
+                CSVAR2=CI*FORCE_LAMBDA(IB1B,IB2A) &
+     &                 -   FORCE_LAMBDA(IB1B,IB2B)
+                FORCE_LAMBDA1(IB1,IB2)=0.5D0*(CSVAR1-CSVAR2)
+                FORCE_LAMBDA2(IB1,IB2)=0.5D0*(CSVAR1+CSVAR2)
+              ENDDO
+            ENDDO
+!$ACC ENTER DATA COPYIN(FORCE_LAMBDA1(1:NBH,1:NBH) &
+!$ACC&                  ,FORCE_LAMBDA2(1:NBH,1:NBH))
+          END IF
           TRESIDENTFORCEPSI=CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
           TFORCEDEDPROACC= &
      &        CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED() &
@@ -6676,14 +6718,38 @@ RETURN
             ELSE 
               DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
             END IF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            TFORCEADDOPROJTHIS=.FALSE.
+            IF(TFORCEADDOPROJACC) THEN
+              FORCEADDOPROJFLOPS=16.D0*REAL(NDIM,KIND=8) &
+     &             *REAL(LMNX,KIND=8)*REAL(NBH,KIND=8) &
+     &             *REAL(NBH,KIND=8)
+              TFORCEADDOPROJTHIS= &
+     &             CPPAW_CUBLAS_ACC_FORCE_ADDOPROJ_ENABLED &
+     &             (FORCEADDOPROJFLOPS,LMNX)
+            END IF
+#ENDIF
 !           ==  DEDPROJ=DE/D<PSPSI|PRO>=DH*<PRO|PSPSI>
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
             CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            IF(TFORCEADDOPROJTHIS) THEN
+              CALL WAVES_DEDPROJ_FORCE_ADDOPROJ_ACC(NDIM,NBH,NB,LNX &
+     &                        ,MAP%LOX(1:LNX,ISP),LMNX &
+     &                        ,OCC(:,IKPT,ISPIN) &
+     &                        ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),DH1,DO1 &
+     &                        ,FORCE_LAMBDA1,FORCE_LAMBDA2 &
+     &                        ,DEDPROJ)
+            ELSE
 #ENDIF
             CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:LNX,ISP),LMNX &
      &                        ,OCC(:,IKPT,ISPIN) &
      &                        ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),DH1,DO1 &
      &                        ,FORCE_LAMBDA,DEDPROJ)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            END IF
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
             CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
             CALL ACCELPROFILE$ADD('PAW_FORCE_DEDPROJ' &
@@ -6799,6 +6865,12 @@ RETURN
           ENDDO ! END OF LOOP OVER IAT
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 !$ACC END DATA
+          IF(TFORCEADDOPROJACC) THEN
+!$ACC EXIT DATA DELETE(FORCE_LAMBDA1(1:NBH,1:NBH) &
+!$ACC&                 ,FORCE_LAMBDA2(1:NBH,1:NBH))
+            DEALLOCATE(FORCE_LAMBDA2)
+            DEALLOCATE(FORCE_LAMBDA1)
+          END IF
 #ENDIF
           DEALLOCATE(FORCE_LAMBDA)
           DEALLOCATE(GIJ)
@@ -8461,6 +8533,84 @@ RETURN
                                CALL TRACE$POP
       RETURN
       END
+!
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_DEDPROJ_FORCE_ADDOPROJ_ACC(NDIM,NBH,NB,LNX,LOX &
+     &                       ,LMNX,OCC,PROJ,DH,DO,LAMBDA1,LAMBDA2 &
+     &                       ,DEDPROJ)
+!     **************************************************************************
+!     **  FORCE-SIDE DEDPROJ WITH DEVICE ADDOPROJ AND PRECOMPUTED TINV LAMBDA. **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)   :: NDIM      ! #(SPINOR COMPONENTS)
+      INTEGER(4),INTENT(IN)   :: NB        ! #(BANDS)
+      INTEGER(4),INTENT(IN)   :: NBH       ! #(WAVE FUNCTIONS)
+      INTEGER(4),INTENT(IN)   :: LMNX      ! #(PROJECTORS ON THIS SITE)
+      REAL(8)   ,INTENT(IN)   :: OCC(NB)   ! OCCUPATIONS
+      COMPLEX(8),INTENT(IN)   :: PROJ(NDIM,NBH,LMNX) ! <P|PSI>
+      COMPLEX(8),INTENT(IN)   :: DH(LMNX,LMNX,NDIM**2) ! DE/DD
+      INTEGER(4),INTENT(IN)   :: LNX
+      INTEGER(4),INTENT(IN)   :: LOX(LNX)
+      REAL(8)   ,INTENT(IN)   :: DO(LNX,LNX) ! DO/DD
+      COMPLEX(8),INTENT(IN)   :: LAMBDA1(NBH,NBH)
+      COMPLEX(8),INTENT(IN)   :: LAMBDA2(NBH,NBH)
+      COMPLEX(8),INTENT(OUT)  :: DEDPROJ(NDIM,NBH,LMNX)    ! DE/D<P|
+      LOGICAL(4)              :: TINV
+      COMPLEX(8),ALLOCATABLE  :: OPROJ(:,:,:)
+      REAL(8)                 :: F1,F2
+      INTEGER(4)              :: IB,IB1,IB2,LMN,IDIM
+      COMPLEX(8)              :: CSVAR
+!     **************************************************************************
+                               CALL TRACE$PUSH('WAVES_DEDPROJ_FORCE_ADDOPROJ_ACC')
+!
+!     ==========================================================================
+!     ==  CHECK IF SUPERWAVEFUNCTIONS ARE USED AND IF #(BANDS) CORRECT        ==
+!     ==========================================================================
+      CALL PLANEWAVE$GETL4('TINV',TINV)
+      IF(.NOT.TINV) THEN
+        CALL ERROR$MSG('FORCE ADDOPROJ ACC PATH REQUIRES TINV')
+        CALL ERROR$STOP('WAVES_DEDPROJ_FORCE_ADDOPROJ_ACC')
+      END IF
+      IF(NBH.NE.(NB+1)/2) THEN
+        CALL ERROR$MSG('INCONSISTENT NUMBER OF BANDS')
+        CALL ERROR$STOP('WAVES_DEDPROJ_FORCE_ADDOPROJ_ACC')
+      END IF
+!
+!     ==========================================================================
+!     ==  HPROJ = DH<P|PSI>                                                   ==
+!     ==========================================================================
+      CALL WAVES_HPROJ(NDIM,NBH,LMNX,DH,PROJ,DEDPROJ)
+!
+!     ==========================================================================
+!     ==  HPROJ = DH<P|PSI>*F                                                 ==
+!     ==========================================================================
+      DO IB=1,NBH
+        IB1=2*IB-1
+        IB2=IB1+1
+        F1=0.5D0*(OCC(IB1)+OCC(IB2))
+        F2=0.5D0*(OCC(IB1)-OCC(IB2))
+        DO LMN=1,LMNX
+          DO IDIM=1,NDIM
+            CSVAR=DEDPROJ(IDIM,IB,LMN)
+            DEDPROJ(IDIM,IB,LMN)=F1*CSVAR+F2*CONJG(CSVAR)
+          ENDDO
+        ENDDO
+      ENDDO
+!
+!     ==========================================================================
+!     ==  ADD -DO<P|PSI>LAMBDA*(FI+FJ)/2                                      ==
+!     ==========================================================================
+      ALLOCATE(OPROJ(NDIM,NBH,LMNX))
+      CALL WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NBH,PROJ,OPROJ)
+      CALL WAVES_ADDOPROJ_FORCE_CUBLAS_ACC(LMNX,NDIM,NBH,DEDPROJ &
+     &                                    ,OPROJ,LAMBDA1,LAMBDA2)
+      DEALLOCATE(OPROJ)
+                               CALL TRACE$POP
+      RETURN
+      END
+!
+#ENDIF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DEDPRO(TINV,NGL,NDIM,NBH,PSI,LMNX,DEDPROJ,DEDPRO)
