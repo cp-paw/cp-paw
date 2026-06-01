@@ -674,6 +674,7 @@ prepare_case() {
 }
 
 capture_metadata() {
+  local missing_cases=0
   {
     echo "date=$(iso_now)"
     echo "hostname=$(hostname)"
@@ -724,10 +725,19 @@ capture_metadata() {
         fi
       else
         echo "missing"
+        missing_cases=$((missing_cases+1))
       fi
       echo
     done
   } > "${RUN_ROOT}/metadata.txt" 2>&1
+  if [[ "${missing_cases}" -gt 0 \
+      && ( "${REQUIRE_CASES}" == "yes" \
+           || "${REQUIRE_CASES}" == "true" \
+           || "${REQUIRE_CASES}" == "1" ) ]]; then
+    echo "Required benchmark cases missing executable: ${missing_cases}" >&2
+    echo "See ${RUN_ROOT}/metadata.txt for case details." >&2
+    return 1
+  fi
 }
 
 mkdir -p "${RUN_ROOT}" "${HERE}/runs"
