@@ -69,7 +69,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `setup-psim-isolated-*-20260601-*` | Setup `PSIM` residency in the focused stack | Spark/GB10: `gpu_resident_stack` 27.96 s at NSTEPS=3; Terok/A40: 29.54 s at NSTEPS=3 | Ablation with `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`: 28.23 s on Spark and 39.17 s on Terok at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Keeps initial setup `PSIM` resident into Gram-Schmidt/propagation; removes one 0.1210 GB propagation copy without broadening non-phase PSIM diagnostics. |
 | `accmap-present-nstep*-spark/terok` | Present-input reuse in the serial 3D cuFFT ACCMAP path | Transfer estimate drops from 4.0171 to 3.6540 GB at NSTEPS=1 and from 10.5201 to 9.6729 GB at NSTEPS=3 | Wall time remains mixed: Terok NSTEPS=3 improves to 24.71 s, Spark NSTEPS=3 is 41.99 s | NSTEPS=1 energy-valid on both systems | Changes the ACCMAP data region to `PRESENT_OR_COPYIN` for the FFT input vector. This reduces redundant host-to-device traffic but does not make ACCMAP a Spark default. |
 | `hpsi-rtog-*-20260601-*` | HPSI RTOG output residency in the serial 3D FFT ACCMAP path | Spark/GB10: output-present accounting lowers the validated NSTEPS=1 transfer estimate to 3.4119 GB; wall time is modestly favorable in the initial sweep | Terok/A40: NSTEPS=1 remains mixed/noisy, but the transfer accounting is identical | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` / `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`; useful as a producer-boundary diagnostic, not a default promotion. |
-| `vpsi-internal-*-20260601-*` | Resident `WAVES_VPSI` real-space scratch in the serial 3D FFT ACCMAP path | Spark/GB10: transfer drops to 2.0469 GB at NSTEPS=1 and 4.8517 GB at NSTEPS=3; wall time improves in both smokes | Terok/A40: transfer drop is identical and NSTEPS=3 improves strongly, 32.70 s to 23.82 s | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1` / `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`; this is the first clearly positive VPSI producer-internal residency result. |
+| `vpsi-internal-*-20260601-*` | Resident `WAVES_VPSI` real-space scratch in the serial 3D FFT ACCMAP path | Spark/GB10: isolated scratch residency lowers transfer to 2.2890 GB at NSTEPS=1; combined with HPSI-RTOG it reaches 2.0469 GB | Terok/A40: isolated scratch residency lowers transfer identically, but combined HPSI-RTOG is the better diagnostic at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Adds separate `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` and combined `*_hpsi_rtog_vpsi_internal` cases; useful and measurable, but still opt-in because wall time is case/system noisy. |
 
 The latest full-matrix run lives at:
 
@@ -131,7 +131,8 @@ real-space scratch `PSIOFR` present on the GPU between GTOR, the local potential
 multiplication, and RTOG. It is deliberately narrow: `NDIM=1`, HPSI residency
 active, serial 3-D FFT ACCMAP active, and `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`.
 The benchmark case is
-`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`, which also
+`gpu_resident_stack_serial3dfft_accmap_vpsi_internal`; the combined
+`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal` case also
 enables `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`.
 
 Run directories:
@@ -139,8 +140,12 @@ Run directories:
 ```
 Spark: tests/profile/si64/runs/vpsi-internal-spark-20260601-152856
 Spark: tests/profile/si64/runs/vpsi-internal-n3-spark-20260601-153002
+Spark: tests/profile/si64/runs/vpsi-internal-isolated-spark-20260601-153725
+Spark: tests/profile/si64/runs/vpsi-internal-isolated-n3-spark-20260601-153837
 Terok: tests/profile/si64/runs/vpsi-internal-terok-20260601-152855
 Terok: tests/profile/si64/runs/vpsi-internal-n3-terok-20260601-153002
+Terok: tests/profile/si64/runs/vpsi-internal-isolated-terok-20260601-153724
+Terok: tests/profile/si64/runs/vpsi-internal-isolated-n3-terok-20260601-153836
 ```
 
 | System | NSTEPS | Case | Wall time | VPSI time | Transfer estimate | Energy check |
@@ -159,6 +164,30 @@ case: `ACC_COPY_SERIAL3D_ACC_MAP` drops from 2.1438 GB to 0.7782 GB,
 `ACC_PRESENT_VPSI_PSIOFR` records 576 resident scratch uses, and
 `ACC_COPY_VPSI_V_IN` adds only 0.0006 GB for the local potential input. This is
 therefore a real transfer reduction, not just a row-label change.
+
+The isolation follow-up splits the effects: `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY`
+alone keeps `PSIOFR` resident but still leaves the old `ACC_COPY_VPSI_HPSI_IN`
+boundary, while the combined case also makes RTOG produce resident `HPSI`:
+
+| System | NSTEPS | Case | Wall time | VPSI time | Transfer estimate | Energy check |
+| --- | ---: | --- | ---: | ---: | ---: | --- |
+| Spark GB10 | 1 | ACCMAP baseline | 16.94 s | 1.2259 s | 3.6540 GB | yes |
+| Spark GB10 | 1 | VPSI internal scratch only | 15.06 s | 0.8582 s | 2.2890 GB | yes |
+| Spark GB10 | 1 | VPSI internal scratch + HPSI-RTOG | 17.42 s | 0.1062 s | 2.0469 GB | yes |
+| Spark GB10 | 3 | ACCMAP baseline | 38.17 s | 3.2642 s | 9.6729 GB | n/a |
+| Spark GB10 | 3 | VPSI internal scratch only | 37.27 s | 2.6285 s | 5.5779 GB | n/a |
+| Spark GB10 | 3 | VPSI internal scratch + HPSI-RTOG | 35.02 s | 0.3156 s | 4.8517 GB | n/a |
+| Terok A40 | 1 | ACCMAP baseline | 11.08 s | 0.7460 s | 3.6540 GB | yes |
+| Terok A40 | 1 | VPSI internal scratch only | 10.51 s | 0.2843 s | 2.2890 GB | yes |
+| Terok A40 | 1 | VPSI internal scratch + HPSI-RTOG | 10.38 s | 0.1321 s | 2.0469 GB | yes |
+| Terok A40 | 3 | ACCMAP baseline | 24.77 s | 2.0431 s | 9.6729 GB | n/a |
+| Terok A40 | 3 | VPSI internal scratch only | 37.32 s | 1.0991 s | 5.5779 GB | n/a |
+| Terok A40 | 3 | VPSI internal scratch + HPSI-RTOG | 24.47 s | 0.4335 s | 4.8517 GB | n/a |
+
+The isolated case therefore proves the `PSIOFR` residency accounting and
+correctness independently, but the combined case is the more useful ACCMAP
+diagnostic. Neither should be folded into `CPPAW_GPU_RESIDENCY_STACK` yet,
+because the serial 3-D ACCMAP path itself is still system-dependent.
 
 ## 2026-06-01 Current Stack Default Refresh
 
