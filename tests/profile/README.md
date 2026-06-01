@@ -564,7 +564,12 @@ DENMAT-energy cases. By default it runs `EMPTY_BANDS=2048` on one GPU rank and
 `OFFDEN_CASES`, `GPU_RANKS`, `SHARED_GPU_RANKS`, `EMPTY_BANDS`, or
 `RUN_SHARED_GPU=no` for narrower checks. It writes combined benchmark and
 comparison Markdown so the device-pack variants can be compared against the
-first successful focus-case baseline.
+first successful focus-case baseline. It also writes
+`combined_offden_rows.md`/`.tsv` for seconds-sorted `PAW_OFFDEN_*` and
+`CUBLAS_ZGEMM_OFFDEN_*` rows, plus `combined_transfer_rows.md`/`.tsv` and
+`combined_present_rows.md`/`.tsv` for the largest remaining OpenACC transfers
+and resident-buffer reuse checks. Set `OFFDEN_ROW_TOP`, `PROFILE_ROW_TOP`, or
+`PRESENT_ROW_TOP` to widen those reports.
 
 For the focused PSIM propagation comparison, run:
 
@@ -582,7 +587,12 @@ run directories, including a comparison table against the focus baseline. Set
 `RUN_LARGE_GPU=yes` to add a one-rank
 `LARGE_EMPTY_BANDS=2048` sweep, or override `PSIM_CASES`, `GPU_RANKS`,
 `SHARED_GPU_RANKS`, `EMPTY_BANDS`, and `RUN_SHARED_GPU=no` for narrower
-checks.
+checks. It also writes `combined_psim_rows.md`/`.tsv` for seconds-sorted
+PSIM/OPSI/propagation/orthogonalization rows, plus
+`combined_transfer_rows.md`/`.tsv` and `combined_present_rows.md`/`.tsv` for
+the remaining data motion and resident reuse around the PSIM propagation
+boundary. Set `PSIM_ROW_TOP`, `PROFILE_ROW_TOP`, or `PRESENT_ROW_TOP` to widen
+those reports.
 
 For the PSIM lifecycle comparison across at least two time steps, run:
 
