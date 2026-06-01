@@ -885,9 +885,11 @@ cd tests/profile/si64
 CASE=gpu_resident NSTEPS=1 ./run_nsys.sh
 ```
 
-`run_nsys.sh` accepts the same GPU-oriented case names as the benchmark harness,
-for example `gpu_resident`, `gpu_resident_orthox`, `gpu_all`, `gpu_no_cufft`,
-`cublas`, `cusolver`, and `cufft`. It writes `nsys_case.env` into the run
+`run_nsys.sh` accepts the current GPU-oriented case names used by the benchmark
+harness, including `gpu_resident`, `gpu_resident_hpsi`,
+`gpu_resident_hpsi_opsi`, `gpu_resident_stack`, PSIM phase diagnostics,
+`gpu_all`, `gpu_no_cufft`, `cublas`, `cusolver`, and `cufft`. It writes
+`nsys_case.env` into the run
 directory so a trace can be matched to the executable and runtime switches. If
 Nsight leaves a SQLite export next to the report, the harness also writes
 `nsys_sql_summary.txt` with the top CUDA kernels, runtime calls, memcpy totals,
