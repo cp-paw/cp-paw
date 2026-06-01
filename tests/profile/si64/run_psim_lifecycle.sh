@@ -15,11 +15,18 @@ RUN_SHARED_GPU=${RUN_SHARED_GPU:-no}
 RUN_LARGE_GPU=${RUN_LARGE_GPU:-no}
 LARGE_EMPTY_BANDS=${LARGE_EMPTY_BANDS:-2048}
 COPY_TOP=${COPY_TOP:-8}
+PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-${COPY_TOP}}
+PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-${COPY_TOP}}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-${RUN_ROOT:-"${HERE}/runs/psim-lifecycle-$(date +%Y%m%d-%H%M%S)"}}
 PSIM_LIFECYCLE_CASES=${PSIM_LIFECYCLE_CASES:-"gpu_resident gpu_psim_propagate gpu_resident_psim_phase gpu_resident_hpsi gpu_hpsi_psim_propagate gpu_resident_hpsi_psim_phase"}
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 COPY_COMBINED="${RUN_ROOT_BASE}-copy-rows.md"
+COPY_COMBINED_TSV="${RUN_ROOT_BASE}-copy-rows.tsv"
+TRANSFER_COMBINED="${RUN_ROOT_BASE}-combined_transfer_rows.md"
+TRANSFER_COMBINED_TSV="${RUN_ROOT_BASE}-combined_transfer_rows.tsv"
+PRESENT_COMBINED="${RUN_ROOT_BASE}-combined_present_rows.md"
+PRESENT_COMBINED_TSV="${RUN_ROOT_BASE}-combined_present_rows.tsv"
 : > "${COMBINED}"
 
 declare -a SUITE_ROOTS=()
@@ -94,7 +101,38 @@ if [[ -s "${COMBINED}" ]]; then
 fi
 
 if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
-  python3 "${HERE}/profile_copy_rows.py" --per-case --top "${COPY_TOP}" \
-    --markdown "${SUITE_ROOTS[@]}" > "${COPY_COMBINED}" || true
-  echo "Combined copy-row data: ${COPY_COMBINED}"
+  if python3 "${HERE}/profile_copy_rows.py" --per-case --top "${COPY_TOP}" \
+      --markdown "${SUITE_ROOTS[@]}" > "${COPY_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case --top "${COPY_TOP}" \
+      "${SUITE_ROOTS[@]}" > "${COPY_COMBINED_TSV}" || true
+    echo "Combined copy-row data: ${COPY_COMBINED}"
+  else
+    echo "Combined copy-row data: none"
+  fi
+
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" --markdown \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" > "${TRANSFER_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" > "${TRANSFER_COMBINED_TSV}" || true
+    echo "Combined transfer row data: ${TRANSFER_COMBINED}"
+  else
+    echo "Combined transfer row data: none"
+  fi
+
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --markdown --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" > "${PRESENT_COMBINED}"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" > "${PRESENT_COMBINED_TSV}" || true
+    echo "Combined present row data: ${PRESENT_COMBINED}"
+  else
+    echo "Combined present row data: none"
+  fi
 fi

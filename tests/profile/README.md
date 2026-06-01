@@ -608,12 +608,14 @@ time-step boundaries before broader cross-step wavefunction residency is enabled
 Because the one-step Si64 reference energy is not valid for multi-step dynamics,
 the fixed energy check is disabled by default for this harness; compare the
 reported energies between cases instead. It writes the normal combined benchmark
-TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`;
-the comparison Markdown reports each GPU-only focus case relative to the
-selected group baseline. The helper also accepts `--op-prefix`, `--op-regex`,
-and `--include-zero` for broader profile-row reports such as
-present/update/timing rows; its size column is `gbyte`, so mixed copy, update,
-and present reports do not imply every selected row is a copy.
+TSV/Markdown plus per-case and combined `ACC_COPY` row summaries from
+`profile_copy_rows.py`; the comparison Markdown reports each GPU-only focus
+case relative to the selected group baseline. It also writes
+`combined_transfer_rows.md`/`.tsv` for `ACC_COPY` plus `ACC_UPDATE` rows and
+`combined_present_rows.md`/`.tsv` for the most frequent resident-buffer checks,
+so lifecycle runs show both the remaining data motion and whether PSIM/OPSI
+buffers are reused across the step boundary. Set `COPY_TOP`,
+`PROFILE_ROW_TOP`, or `PRESENT_ROW_TOP` to widen those reports.
 Override `NSTEPS_LIST`, `EMPTY_BANDS_LIST`, `RUN_SHARED_GPU=yes`,
 `RUN_LARGE_GPU=yes`, or `PSIM_LIFECYCLE_CASES` for wider sweeps.
 
