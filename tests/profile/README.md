@@ -190,8 +190,11 @@ was energy-invalid in Si64. It is disabled by default until broader benchmarks
 show that the reduced copy volume also improves wall time. Another opt-in
 diagnostic keeps `HPSI` resident after the Hamiltonian-side `WAVES_ADDPRO`
 update and reuses it for the immediate expectation and full-Hamiltonian overlap
-calls; set `CPPAW_GPU_HPSI_RESIDENCY=1` or use `gpu_resident_hpsi` to test it.
-The longer alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. A separate opt-in
+calls. Eligible paths also keep `PSI0` present across the same local
+`WAVES$ETOT` HPSI/expectation/Hamiltonian boundary and delete that ETOT-local
+`PSI0` residency before leaving the energy evaluation; set
+`CPPAW_GPU_HPSI_RESIDENCY=1` or use `gpu_resident_hpsi` to test it. The longer
+alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. A separate opt-in
 diagnostic propagates `PSIM` on the GPU and immediately copies the updated
 wavefunction back before the following host-side projection work; set
 `CPPAW_GPU_PSIM_PROPAGATE=1` or use `gpu_psim_propagate` /
@@ -265,7 +268,11 @@ and records that outer input/output region with context-specific rows such as
 transform scratch `PSIINV` is created on the device from resident `PSI`,
 recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
 as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
-also use these rows for their residency paths. The one-center overlap cuBLAS
+also use these rows for their residency paths. HPSI residency records the
+ETOT-local `PSI0` boundary as `ACC_COPY_HPSI_PSI0_IN` when it must create the
+device copy, and the immediate consumers as `ACC_PRESENT_EXPECT_PSI0` and
+`ACC_PRESENT_HAMILTON_PSI0` when they can reuse that resident buffer. The
+one-center overlap cuBLAS
 path splits its estimated transfers into `ACC_COPY_1COV_PROJ_IN`,
 `ACC_COPY_1COV_MAT_OUT`, and, for inversion-symmetric superwave cases,
 `ACC_COPY_1COV_CMAT_OUT`; use those rows to decide whether a future optimization
@@ -405,7 +412,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
 | `gpu_resident_orthox_nosync` | Diagnostic that combines `gpu_resident_orthox` with `CPPAW_CUBLAS_ACC_SYNC=0`; use for profiling synchronization overhead, not as the default. |
 | `gpu_resident_opsi` | Opt-in residency diagnostic that keeps orthogonalization `OPSI` on the GPU through projection/overlap/`WAVES_ADDOPSI` via `CPPAW_GPU_OPSI_RESIDENCY=1`; superwave cases use conservative host build/scale staging before device residency. |
-| `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
+| `gpu_resident_hpsi` | Opt-in residency diagnostic that keeps `HPSI` and ETOT-local `PSI0` on the GPU from Hamiltonian-side `WAVES_ADDPRO` through the immediate expectation/Hamiltonian overlaps via `CPPAW_GPU_HPSI_RESIDENCY=1`. |
 | `gpu_resident_denmat_energy` | Opt-in diagnostic that sets `CPPAW_GPU_DENMAT_ENERGY=1` and forces the time-inversion one-center DENMAT energy/Lambda OpenACC prototype for comparison. |
 | `gpu_resident_hpsi_denmat_energy` | Combined diagnostic with HPSI residency and the DENMAT energy/Lambda OpenACC prototype enabled together. |
 | `gpu_resident_offden_blas` | Opt-in diagnostic that sets `CPPAW_GPU_OFFDEN_LOCAL=1` and rewrites scalar `TINV` off-site DENMAT local work as packed BLAS. |
@@ -635,6 +642,11 @@ be overridden by kernel category:
   projection, overlap, and `WAVES_ADDOPSI` consumers use present device data.
   The
   compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
+- `CPPAW_GPU_HPSI_RESIDENCY`: disabled by default. Set to `1` to keep the
+  Hamiltonian-side `HPSI` and matching `PSI0` inputs resident through the
+  immediate expectation and full-Hamiltonian overlap calls within
+  `WAVES$ETOT`. The compatibility alias is
+  `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
   `WAVES$PROPAGATE` on the GPU for non-stress steps and copy the updated `PSIM`
   back before orthogonalization. The compatibility aliases are
