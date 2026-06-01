@@ -641,7 +641,9 @@ be overridden by kernel category:
   device-pack accumulation. It also lowers the projection, overlap, addproduct,
   DENMAT, and off-site DENMAT thresholds for that run. Specific `CPPAW_GPU_*`
   or `CPPAW_CUBLAS_ACC_*` switches still override the corresponding part of
-  the stack. The
+  the stack; disabling an off-site parent switch also disables its dependent
+  child paths unless a later, more specific child switch explicitly re-enables
+  the required parent path. The
   compatibility alias is `CPPAW_CUBLAS_ACC_RESIDENCY_STACK`.
 - `CPPAW_GPU_PRO_EXPANSION`: keep enabled by default in residency-profile builds
   so GPU-resident `PRO` blocks are built once and reused by `WAVES_PROJECTIONS`
