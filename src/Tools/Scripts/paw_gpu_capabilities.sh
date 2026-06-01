@@ -386,6 +386,17 @@ elif [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
   recommended_resource_cases="${recommended_cpu_cases} gpu_resident_stack"
   recommended_gpu_diagnostic_cases="gpu_resident_stack_force_dedpro gpu_resident_nosync"
   recommended_large_band_gpu_cases="gpu_resident_stack"
+  if [[ -n "${cufft_path}" && -n "${cusolver_path}" ]]; then
+    recommended_gpu_cases=$(append_case \
+      "${recommended_gpu_cases}" \
+      "gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack")
+    recommended_resource_cases=$(append_case \
+      "${recommended_resource_cases}" \
+      "gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack")
+    recommended_large_band_gpu_cases=$(append_case \
+      "${recommended_large_band_gpu_cases}" \
+      "gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack")
+  fi
   if [[ -n "${cusolver_path}" ]]; then
     recommended_gpu_diagnostic_cases=$(append_case \
       "${recommended_gpu_diagnostic_cases}" "gpu_resident_no_cusolver")

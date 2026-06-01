@@ -609,8 +609,11 @@ cd tests/profile/si64
 It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1` and resolves
 `GPU_CASES=auto`/`CPU_CASES=auto` from `paw_gpu_capabilities.sh`. On CUDA
 systems with cuBLAS, the one-rank GPU suite starts from the current residency
-stack recommendations and adds a same-binary `gpu_resident_off` fallback; on
-hosts without a visible CUDA GPU, the GPU suite is skipped. Override
+stack recommendations and adds a same-binary `gpu_resident_off` fallback. When
+cuFFT and cuSOLVER are also visible, the validated full Projection/AddPRO stack
+case is included in the automatic comparison without changing the runtime
+defaults of the residency-profile binary; on hosts without a visible CUDA GPU,
+the GPU suite is skipped. Override
 `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`, `GPU_RANKS` or `CPU_RANKS`
 for a targeted sweep; set `ADD_GPU_FALLBACK=no` if an explicit `GPU_CASES`
 selection should not be extended with `gpu_resident_off`. It writes both
@@ -640,8 +643,9 @@ cd tests/profile/si64
 It defaults to `TEST=si64_bands`, `EMPTY_BANDS=2048`, `NSTEPS=1`, one GPU rank
 and eight CPU ranks. `GPU_CASES=auto` resolves
 `recommended_large_band_gpu_cases` from `paw_gpu_capabilities.sh`, currently the
-conservative resident stack plus the single-rank serial 3-D FFT,
-force-DEDPRO, and ACCMAP/cache diagnostics when cuFFT is available. The wrapper
+conservative resident stack plus the validated Projection/AddPRO full-stack
+case when cuFFT and cuSOLVER are visible, followed by the single-rank serial
+3-D FFT, force-DEDPRO, and ACCMAP/cache diagnostics when cuFFT is available. The wrapper
 delegates to `run_nvhpc_standard.sh`, keeps `ADD_GPU_FALLBACK=no`, and writes
 the normal combined benchmark, comparison, transfer-row, and present-row
 reports. Override `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`, or set
@@ -1109,10 +1113,12 @@ library/include and BLAS/LAPACK availability, current `recommended_cpu_cases`,
 `recommended_large_band_gpu_cases`, `recommended_resource_cases`, and a
 best-effort CUDA-aware MPI hint. On CUDA systems with cuBLAS and a usable host
 numerical stack, the recommended routine GPU cases start from
-`gpu_resident_stack`; cuFFT-dependent diagnostics are only listed when
-`libcufft.so` is found. Future-candidate libraries such as cuBLASLt, cuSPARSE,
-cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning but are not linked
-into CP-PAW unless a concrete code path uses them.
+`gpu_resident_stack`; when `libcufft.so` and `libcusolver.so` are both found,
+the measured full Projection/AddPRO stack case is added to automatic benchmark
+comparisons while remaining opt-in at runtime. cuFFT-dependent diagnostics are
+only listed when `libcufft.so` is found. Future-candidate libraries such as
+cuBLASLt, cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning
+but are not linked into CP-PAW unless a concrete code path uses them.
 The standard, exploration, resource-comparison, and overnight wrappers consume
 these values when their case-list variables are set to `auto`; set
 `CPPAW_GPU_CAPABILITIES_FILE` to replay a captured capability scan.

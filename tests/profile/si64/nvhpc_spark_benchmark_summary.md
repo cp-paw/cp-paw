@@ -4397,6 +4397,13 @@ correct and measurable. The absolute 4096 gain is still capped by the dominant
 Ortho-X DGEMMs, so the switches remain opt-in diagnostics rather than default
 promotions.
 
+Follow-up harness decision: CUDA systems where the capability helper sees
+cuBLAS, cuFFT, and cuSOLVER now include
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack`
+in the automatic standard/resource benchmark recommendations. This keeps the
+runtime default conservative while ensuring future PR comments compare the
+validated full-stack case against the base residency stack and CPU references.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
