@@ -470,6 +470,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_hpsi_psim_propagate` | Combined diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_PSIM_PROPAGATE=1`. |
 | `gpu_resident_psim_phase` | Opt-in diagnostic that also sets `CPPAW_GPU_PSIM_PHASE_RESIDENCY=1`, leaving propagated `PSIM` present until orthogonalization copies it back. |
 | `gpu_resident_hpsi_psim_phase` | Combined HPSI plus cross-phase PSIM propagation residency diagnostic. |
+| `gpu_resident_hpsi_opsi_psim_phase` | Combined HPSI/OPSI residency plus cross-phase PSIM propagation residency diagnostic. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
@@ -593,8 +594,8 @@ cd tests/profile/si64
 ```
 
 It compares the default residency path, PSIM propagation, cross-phase PSIM
-propagation residency, HPSI residency, and the combined HPSI-plus-PSIM
-diagnostics. By default it runs
+propagation residency, HPSI residency, HPSI/OPSI residency, and the combined
+HPSI/OPSI-plus-PSIM diagnostics. By default it runs
 `EMPTY_BANDS=512` with one GPU rank and `SHARED_EMPTY_BANDS=512` with four
 ranks sharing the GPU, then writes a combined TSV/Markdown summary next to the
 run directories, including a comparison table against the focus baseline. Set
@@ -615,8 +616,8 @@ cd tests/profile/si64
 ./run_psim_lifecycle.sh
 ```
 
-It uses `NSTEPS=2` by default and compares the same PSIM/HPSI diagnostics as
-`run_psim_focus.sh`, but keeps the run shape centered on one GPU rank. This is
+It uses `NSTEPS=2` by default and compares the same PSIM/HPSI/OPSI diagnostics
+as `run_psim_focus.sh`, but keeps the run shape centered on one GPU rank. This is
 intended to expose copies around the propagation, orthogonalization, and next
 time-step boundaries before broader cross-step wavefunction residency is enabled.
 Because the one-step Si64 reference energy is not valid for multi-step dynamics,
