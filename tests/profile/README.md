@@ -298,7 +298,13 @@ input, generic scalarproduct output, and resident-overlap output rows. The
 Gram-Schmidt setup keeps `PSI` resident through the final wavefunction transform
 and records that outer input/output region with context-specific rows such as
 `ACC_COPY_GRAM_PSI0_PSI_IN`, `ACC_COPY_GRAM_PSI0_PSI_OUT`,
-`ACC_COPY_GRAM_PSIM_PSI_IN`, and `ACC_COPY_GRAM_PSIM_PSI_OUT`. The
+`ACC_COPY_GRAM_PSIM_PSI_IN`, and `ACC_COPY_GRAM_PSIM_PSI_OUT`. The focused
+stack can instead create explicit setup-resident wavefunction copies, recorded
+as `ACC_COPY_SETUP_PSI0_IN` and `ACC_COPY_SETUP_PSIM_IN`, followed by explicit
+host refresh rows such as `ACC_UPDATE_GRAM_PSIM_PSI_OUT`. The setup `PSIM`
+extension is gated by `CPPAW_GPU_SETUP_PSIM_RESIDENCY` and the PSIM
+phase-residency path so it does not silently extend `PSIM` lifetime in
+non-phase diagnostics. The
 transform scratch `PSIINV` is created on the device from resident `PSI`,
 recorded as `ACC_PRESENT_GRAM_PSIINV`, while the transform matrices are tracked
 as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
@@ -484,7 +490,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
-| `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
+| `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated setup wavefunction, HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
+| `gpu_resident_stack_setup_psim_host` | Focused residency stack with only setup `PSIM` residency disabled via `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`. |
 | `gpu_resident_stack_cufft` / `gpu_resident_stack_cufft_force` | Focused residency stack plus native cuFFT enabled with the conservative threshold, or forced for all `LIB$FFTC8` calls. |
 | `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
 | `gpu_resident_stack_serial3dfft_accmap` | Same as `gpu_resident_stack_serial3dfft`, plus device-side sparse/full-grid mapping via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |

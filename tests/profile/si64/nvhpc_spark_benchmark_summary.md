@@ -66,6 +66,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `current-stack-spark-1024-nstep1-*` | Fresh Spark stack-default refresh plus CPU-build guard | `gpu_resident_stack` 12.19 s; threshold-gated cuFFT 12.19 s; forced cuFFT 15.30 s | `nvhpc_cpu` 72.41 s | `nvhpc_cpu` 166.04 s | Fixes the non-CUBLAS `WAVES$HPSI` CPU build guard and confirms the current stack default is energy-valid and much faster than the CPU references. Forced cuFFT remains diagnostic-only because it raises transfer volume to 10.05 GB. |
 | `dual-switch-*-20260601-1249/1250/1252` | Bidirectional PSIM/PSI0 switch residency | `gpu_resident_stack` keeps the old `PSI0` as resident `PSIM` across `WAVES$SWITCH`; `ACC_COPY_PROP_PSIM_IN` drops from 3 calls to 1 at 1024/3 | - | 4-rank smoke OK | Removes 0.2421 GB of repeated propagation input traffic in the 1024/3 smoke, while the 1024/1 and 512/1x4 smokes remain energy-valid. |
 | `serial3dfft-accmap-final-*-20260601-*` | Device-side sparse/full-grid mapping for single-rank 3D cuFFT | Terok/A40: `gpu_resident_stack_serial3dfft_accmap` 10.62 s at NSTEPS=1 and 25.55 s at NSTEPS=3 | Spark/GB10: regular `gpu_resident_stack_serial3dfft` 11.02 s at NSTEPS=1 and 23.44 s at NSTEPS=3 | - | Adds an explicit diagnostic case for device-side mapping. It helps on A40 but hurts on GB10, so it remains opt-in via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
+| `setup-psim-isolated-*-20260601-*` | Setup `PSIM` residency in the focused stack | Spark/GB10: `gpu_resident_stack` 27.96 s at NSTEPS=3; Terok/A40: 29.54 s at NSTEPS=3 | Ablation with `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`: 28.23 s on Spark and 39.17 s on Terok at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Keeps initial setup `PSIM` resident into Gram-Schmidt/propagation; removes one 0.1210 GB propagation copy without broadening non-phase PSIM diagnostics. |
 
 The latest full-matrix run lives at:
 
@@ -175,6 +176,45 @@ against the original serial-3D cuFFT wrapper, but Spark GB10 spends much more
 time in the mapping kernels. Terok A40 benefits clearly. The path therefore
 stays a separate diagnostic case rather than replacing
 `gpu_resident_stack_serial3dfft`.
+
+## 2026-06-01 Setup PSIM Residency
+
+The focused stack now has a separate setup `PSIM` residency switch. The stack
+default enables it through `CPPAW_GPU_RESIDENCY_STACK=1`, while the ablation
+case `gpu_resident_stack_setup_psim_host` sets
+`CPPAW_GPU_SETUP_PSIM_RESIDENCY=0` and leaves the rest of the stack unchanged.
+The implementation is additionally gated by PSIM phase residency, so it does not
+extend `PSIM` lifetime for unrelated diagnostics.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/setup-psim-isolated-spark-nstep1-20260601-140034
+Spark: tests/profile/si64/runs/setup-psim-isolated-spark-nstep3-20260601-140123
+Terok: tests/profile/si64/runs/setup-psim-isolated-terok-nstep1-20260601-140034
+Terok: tests/profile/si64/runs/setup-psim-isolated-terok-nstep3-20260601-140123
+```
+
+| System | Case | NSTEPS | Wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | --- |
+| Spark GB10 | `gpu_resident_stack` | 1 | 12.37 s | 1.3892 GB | yes |
+| Spark GB10 | `gpu_resident_stack_setup_psim_host` | 1 | 12.44 s | 1.5102 GB | yes |
+| Terok A40 | `gpu_resident_stack` | 1 | 18.06 s | 1.3892 GB | yes |
+| Terok A40 | `gpu_resident_stack_setup_psim_host` | 1 | 15.47 s | 1.5102 GB | yes |
+| Spark GB10 | `gpu_resident_stack` | 3 | 27.96 s | 2.8783 GB | n/a |
+| Spark GB10 | `gpu_resident_stack_setup_psim_host` | 3 | 28.23 s | 2.9994 GB | n/a |
+| Terok A40 | `gpu_resident_stack` | 3 | 29.54 s | 2.8783 GB | n/a |
+| Terok A40 | `gpu_resident_stack_setup_psim_host` | 3 | 39.17 s | 2.9994 GB | n/a |
+
+The copy-boundary evidence is the important part of this diagnostic. With setup
+`PSIM` residency enabled, both Spark and Terok record
+`ACC_COPY_SETUP_PSIM_IN` once and `ACC_PRESENT_PROP_PSIM` for all three
+propagation calls in the NSTEPS=3 run. With the ablation enabled, the profile
+falls back to `ACC_COPY_GRAM_PSIM_PSI_IN`, `ACC_COPY_GRAM_PSIM_PSI_OUT`, and one
+`ACC_COPY_PROP_PSIM_IN` row. This removes one 0.1210 GB propagation input copy
+from the stack default. The single-step wall time is noisy, especially on Terok,
+but the three-step run confirms that the reduced copy boundary is not just an
+accounting artifact.
 
 ## Previous Full Matrix Comparison
 

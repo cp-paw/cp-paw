@@ -403,7 +403,10 @@ case_note() {
       echo "Focused residency stack with PSI0-to-PRINFO residency disabled for WRITEPDOS projection diagnostics."
       ;;
     gpu_resident_stack_setup_host)
-      echo "Focused residency stack with setup PSI0 residency disabled for copy-boundary diagnostics."
+      echo "Focused residency stack with setup PSI0/PSIM residency disabled for copy-boundary diagnostics."
+      ;;
+    gpu_resident_stack_setup_psim_host)
+      echo "Focused residency stack with only setup PSIM residency disabled for copy-boundary diagnostics."
       ;;
     gpu_resident_stack_psim_phase)
       echo "Focused residency stack plus cross-phase PSIM propagation residency."
@@ -665,6 +668,7 @@ case_env() {
     gpu_resident_stack_psi0_ortho_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_ORTHO_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_psi0_prinfo_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_PRINFO_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_setup_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_SETUP_PSI_RESIDENCY=0 $(cublas_env)" ;;
+    gpu_resident_stack_setup_psim_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_SETUP_PSIM_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_stack_hpsi_prop_psim_phase) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_stack_hpsi_prop_psim_switch) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1 CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1 $(cublas_env)" ;;
