@@ -52,6 +52,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1` | Current full matrix after HPSI/VPSI residency | `gpu_resident_hpsi_opsi` 12.83 s | `cpu` 73.32 s, `nvhpc_cpu` 69.50 s | `cpu` 167.49 s, `nvhpc_cpu` 166.88 s | Confirms wavefunction residency dominates on Spark; all-library paths remain diagnostic-only. |
 | `hpsi-opsi-combo-cases-20260601-512-nstep2-*` | Combined HPSI/OPSI diagnostic keywords | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.58 s at 512/1 | - | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` 15.02 s at 512/4 | Adds harness cases for HPSI+OPSI with PROJ/off-site/DENMAT combinations; all cases are energy-valid, so future standard sweeps can compare the full stack directly. |
 | `si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1` | Current standard refresh with combined HPSI/OPSI cases | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 12.21 s | `cpu` 77.79 s, `nvhpc_cpu` 75.23 s | `cpu` 672.52 s, `nvhpc_cpu` 392.07 s | Full focused residency stack is now the best 1024/1 case; eight-rank CPU is a poor resource comparison for this small smoke. |
+| `si64_bands-focus-20260601-0a43a65-2048-nstep1-1r` | 2048-band focused stack validation | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.28 s | - | - | Confirms the focused stack also wins at 2048/1, so expose it as a short benchmark keyword. |
 
 The latest full-matrix run lives at:
 
@@ -159,6 +160,34 @@ the next larger case rather than an immediate production default. The 8-rank
 CPU numbers are included for completeness; in this small smoke they mostly
 measure MPI/setup overhead and should not be used to reject GPU offload.
 
+## 2026-06-01 2048-Band Focus Validation
+
+The follow-up focused run used current `cp-paw-nvhpc` commit `0a43a65` with
+`TEST=si64_bands`, `EMPTY_BANDS=2048`, `NSTEPS=1`, and one GPU rank:
+
+```
+runs/si64_bands-focus-20260601-0a43a65-2048-nstep1-1r
+```
+
+| Case | Wall time | Copy estimate | Energy check | Interpretation |
+| --- | ---: | ---: | --- | --- |
+| `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | 35.28 s | 4.0908 GB | yes | Best focused case; the 1024 gain is not just a small-case artifact. |
+| `gpu_resident_hpsi_opsi` | 37.17 s | 3.9844 GB | yes | Safe broad residency comparison remains close but slower. |
+| `gpu_resident` | 37.33 s | 5.3749 GB | yes | Baseline residency path is energy-valid but moves more data. |
+
+This is enough evidence to add the shorter harness case `gpu_resident_stack`
+and the runtime meta-keyword `CPPAW_GPU_RESIDENCY_STACK=1`. The keyword enables
+the same focused HPSI/OPSI/PROJ/DENMAT/off-site device-pack accumulation stack
+while leaving the individual `CPPAW_GPU_*` switches available for ablations.
+
+The keyword was smoke-tested after adding the lowered stack thresholds:
+
+| Run directory | Ranks | `gpu_resident_stack` | Long explicit stack | Energy check | Notes |
+| --- | ---: | ---: | ---: | --- | --- |
+| `residency-stack-keyword-20260601-fixed-512-nstep1-1r` | 1 | 6.22 s | 6.74 s | yes | Same energy and copy estimate as the long explicit case. |
+| `residency-stack-keyword-20260601-fixed-512-nstep1-4r` | 4 | 16.77 s | 9.70 s | yes | Both cases use the same profile path, including `CUBLAS_ZGEMM_PROJ_RES`; this short four-rank smoke is run-order/noise sensitive. |
+| `residency-stack-keyword-20260601-fixed-512-nstep1-4r-rev` | 4 | 33.65 s | 32.28 s | yes | Reversing the case order makes the wall times converge, confirming that the keyword is not missing the projection/off-site stack. |
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -166,15 +195,16 @@ measure MPI/setup overhead and should not be used to reject GPU offload.
    `nvhpc_gpu_acc_residency_profile_parallel`.
 
 2. The main win is device residency around wavefunction-heavy regions plus
-   explicit cuBLAS. In the latest run, the focused full-stack case is 12.21 s
-   and `gpu_resident_hpsi_opsi` is 12.77 s versus 75.23 s for the one-rank
-   NVHPC CPU reference.
+   explicit cuBLAS. In the latest 1024/1 standard run, the focused full-stack
+   case is 12.21 s and `gpu_resident_hpsi_opsi` is 12.77 s versus 75.23 s for
+   the one-rank NVHPC CPU reference. The 2048/1 focus run keeps the same order:
+   35.28 s for the focused stack versus 37.17 s for HPSI/OPSI residency.
 
 3. Do not make all optional NVIDIA libraries active by default. The
    `gpu_all*`, `cufftw`, `nvblas`, and `nvlamath` cases are valuable diagnostics
    but are slower for this workload. The focused combined residency stack is
-   different from broad all-library activation and is now the next larger-case
-   candidate.
+   different from broad all-library activation and is now exposed as
+   `CPPAW_GPU_RESIDENCY_STACK=1` for focused benchmark runs.
 
 4. Keep native cuFFT and cuSOLVER threshold-gated. The Si64 result does not
    justify aggressive defaults for either one: native `cufft` is 70.79 s and

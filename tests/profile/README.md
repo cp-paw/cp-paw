@@ -460,6 +460,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
 | `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
+| `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -633,6 +634,15 @@ be overridden by kernel category:
 - `CPPAW_CUBLAS_ACC_INVERSION_BATCH`: keep enabled by default to turn
   inversion-symmetry scalarproducts from many per-column cuBLAS calls into one
   batched scalarproduct; set to `0` for the previous path.
+- `CPPAW_GPU_RESIDENCY_STACK`: disabled by default. Set to `1` to enable the
+  focused Spark-validated residency stack in one switch: base residency,
+  projector expansion/cache, HPSI and OPSI residency, persistent `THIS%PROJ`,
+  one-center overlap, DENMAT energy offload, and off-site DENMAT cuBLAS
+  device-pack accumulation. It also lowers the projection, overlap, addproduct,
+  DENMAT, and off-site DENMAT thresholds for that run. Specific `CPPAW_GPU_*`
+  or `CPPAW_CUBLAS_ACC_*` switches still override the corresponding part of
+  the stack. The
+  compatibility alias is `CPPAW_CUBLAS_ACC_RESIDENCY_STACK`.
 - `CPPAW_GPU_PRO_EXPANSION`: keep enabled by default in residency-profile builds
   so GPU-resident `PRO` blocks are built once and reused by `WAVES_PROJECTIONS`
   and eligible `WAVES_ADDPRO` calls; set to `0` for the previous host-expansion
