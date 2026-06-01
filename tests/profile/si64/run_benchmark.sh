@@ -704,6 +704,17 @@ capture_metadata() {
       [[ -n "${runtime_env}" ]] && echo "runtime_env=${runtime_env}"
       case_env_line=$(case_env "${case_name}")
       [[ -n "${case_env_line}" ]] && echo "case_env=${case_env_line}"
+      env_line=$(combined_env "${extra_env}" "${runtime_env}" "${case_env_line}")
+      [[ -n "${env_line}" ]] && echo "planned_env=${env_line}"
+      cmd=$(run_command "${case_name}" "${exe}")
+      echo "planned_command=${cmd}"
+      time_part="${TIME_CMD:+${TIME_CMD} -p }"
+      timeout_part="${TIMEOUT_PREFIX:+${TIMEOUT_PREFIX} }"
+      if [[ -n "${env_line}" ]]; then
+        echo "planned_full_command=${time_part}env CPPAW_ACCEL_PROFILE_FILE=${case_name}_profile ${env_line} ${timeout_part}${cmd}"
+      else
+        echo "planned_full_command=${time_part}env CPPAW_ACCEL_PROFILE_FILE=${case_name}_profile ${timeout_part}${cmd}"
+      fi
       if [[ -x "${exe}" ]]; then
         if [[ -n "${runtime_env}" ]]; then
           # shellcheck disable=SC2086
