@@ -162,8 +162,8 @@ def main(argv):
         print("Diagnostic PW trace rank-seconds: {:.6f}".format(trace_total))
     if setup_total or copy_gbyte or update_gbyte:
         print(
-            "Accelerator setup seconds: {:.6f}  copy estimate: {:.6f} GB  update estimate: {:.6f} GB".format(
-                setup_total, copy_gbyte, update_gbyte
+            "Accelerator setup seconds: {:.6f}  transfer estimate: {:.6f} GB  copy estimate: {:.6f} GB  update estimate: {:.6f} GB".format(
+                setup_total, copy_gbyte + update_gbyte, copy_gbyte, update_gbyte
             )
         )
     if copy_bucket_gbyte:
