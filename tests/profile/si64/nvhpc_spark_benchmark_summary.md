@@ -2450,6 +2450,9 @@ already present. The FFT/RTOG part is still host-side, so one `HPSI`
 host-to-device transfer remains; the point of this patch is to move that copy
 accounting to the producing `WAVES_VPSI` boundary and let the following
 `WAVES_ADDPRO` step consume `HPSI` as present.
+If an HPSI device allocation already exists at this boundary, the refreshed
+path records `ACC_UPDATE_VPSI_HPSI_IN` and explicitly updates the device copy
+instead of treating the previous device allocation as valid.
 
 The force-to-HPSI `PSI0` carry also uses the same addproduct threshold guard as
 the HPSI residency path, so it only extends `PSI0` lifetime when the following
