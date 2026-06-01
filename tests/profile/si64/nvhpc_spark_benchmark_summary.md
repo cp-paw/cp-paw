@@ -46,6 +46,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `opsi-present-consumers-20260601-*` | OPSI present-or-copy consumer cleanup | `gpu_resident_hpsi_opsi` 10.13 s at 512/1 | - | - | Converts downstream projection/ADDPRO/ADDOPSI data regions to `present_or_copy*`; correctness is preserved, but the superwave OPSI build remains the real copy target. |
 | `opsi-superwave-build-residency-20260601-final-v2` | Superwave OPSI build residency | `gpu_resident_hpsi_opsi` 10.36 s at 512/1 | - | - | Keeps superwave OPSI resident through build/mass scaling with one post-mass host snapshot; energy-valid and removes ADDPRO-OPSI in/out copies. |
 | `superwave-projection-residency-20260601-512-nstep2-*` | Superwave projection residency | `gpu_resident_hpsi_opsi` 10.61 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.14 s at 512/4 | Enables the resident cuBLAS projection path for superwave OPSI with gamma correction; removes the post-mass OPSI host snapshot. |
+| `psi0-hpsi-copy-boundaries-20260601-512-nstep2-*` | HPSI/PSI0 ETOT residency | `gpu_resident` 11.20 s at 512/1; `gpu_resident_hpsi_opsi` lowest copy | - | `gpu_resident_hpsi_opsi` 15.33 s at 512/4 | Keeps `PSI0` present from HPSI into the immediate expectation/Hamiltonian overlaps; energy-valid and removes one more 0.1345 GB copy block from HPSI/OPSI diagnostics. |
 
 The latest full-matrix run lives at:
 
@@ -2309,6 +2310,51 @@ for the 4-rank shared-GPU run. The copy estimate drops by another 0.1345 GB in
 the 1-rank case compared with the previous OPSI-build branch, matching removal
 of `ACC_COPY_OPSI_MASS_OUT`. This makes the OPSI residency path internally
 consistent through build, mass scaling, projection, overlap, and ADDOPSI.
+
+## PSI0/HPSI Copy Boundary
+
+The follow-up keeps the `PSI0` input resident when `CPPAW_GPU_HPSI_RESIDENCY=1`
+has already selected the HPSI residency path. The lifetime is deliberately
+local to `WAVES$ETOT`: `WAVES$HPSI` creates the device copy if needed, the
+immediate expectation and full-Hamiltonian overlap calls reuse it through
+OpenACC present checks, and `WAVES$ETOT` deletes that temporary residency before
+leaving the energy evaluation.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/psi0-hpsi-copy-boundaries-20260601-512-nstep2-1r
+runs/psi0-hpsi-copy-boundaries-20260601-512-nstep2-4r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident` | 512 | 2 | 1 | 11.20 s | 2.6165 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 11.52 s | 2.2098 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 11.76 s | 1.9409 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 4 | 15.46 s | 2.8440 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 4 | 15.33 s | 2.5750 GB | 269.022536 Ha |
+
+| Profile row | HPSI | HPSI + OPSI | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_HPSI_PSI0_IN` | 0.1345 GB | 0.1345 GB | `PSI0` enters the ETOT-local HPSI residency once per step. |
+| `ACC_PRESENT_EXPECT_PSI0` | 2 calls | 2 calls | The immediate expectation overlap reuses resident `PSI0`. |
+| `ACC_PRESENT_HAMILTON_PSI0` | 2 calls | 2 calls | The full-Hamiltonian overlap reuses resident `PSI0`. |
+| `ACC_COPY_EXPECT_PSI0_IN` / `ACC_COPY_HAMILTON_PSI0_IN` | absent | absent | The consumers no longer create their own `PSI0` transfers. |
+| `ACC_COPY_HPSI_ADDPRO_IN` | 0.1345 GB | 0.1345 GB | The updated `HPSI` buffer itself still enters the resident addproduct boundary. |
+| `ACC_COPY_OPSI_BUILD_IN` | - | 0.1345 GB | OPSI build residency remains explicit and energy-valid. |
+| `ACC_PRESENT_ADDPRO_OPSI_PSI` | - | 2 calls | OPSI build-time ADDPRO still updates resident OPSI. |
+| `ACC_PRESENT_ORTHO_OPSI` | - | 2 calls | Orthogonalization still sees OPSI present. |
+
+Conclusion: correctness is preserved for both one-rank and four-rank Si64
+smokes. Compared with the previous superwave-projection branch, the HPSI and
+HPSI+OPSI copy estimates each drop by 0.1345 GB in the one-rank case, exactly
+matching the removed duplicate `PSI0` consumer transfer. Wall time remains noisy
+at this small size, so this is a copy-boundary cleanup and enabling patch rather
+than a new default performance claim.
 
 ## Recommended Next Benchmark
 
