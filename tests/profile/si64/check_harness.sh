@@ -40,6 +40,18 @@ python3 -m py_compile \
 
 python3 tests/profile/si64/check_benchmark_tools.py
 
+tmpdir=$(mktemp -d)
+trap 'rm -rf "${tmpdir}"' EXIT
+DRY_RUN=yes \
+  RUN_ROOT="${tmpdir}/dry-run" \
+  CASES="gpu_resident_stack gpu_no_cufft" \
+  tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
+grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
+grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_no_cufft" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl
