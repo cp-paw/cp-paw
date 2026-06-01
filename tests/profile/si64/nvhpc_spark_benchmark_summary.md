@@ -56,6 +56,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `vpsi-boundary-20260601-d3cd6cc-512-nstep1` / `vpsi-boundary-20260601-7ad2625-smoke` | VPSI/HPSI boundary harness | `gpu_resident_stack` 6.56 s at 512/1, 28.46 s at 512/4 | - | - | Adds a focused producer-boundary harness plus seconds-sorted `PAW_VPSI_*` rows; the final smoke shows VPSI time is almost entirely GTOR/RTOG. |
 | `psi0-prinfo-spark-20260601-074852` / `psi0-prinfo-terok-20260601-074852` | PSI0-to-PRINFO residency | `gpu_resident_stack` 12.11 s on Spark, 12.77 s on Terok | - | - | Keeps `PSI0` resident through `PRINFO/WRITEPDOS`, removing one more 0.1210 GB wavefunction copy; energy-valid on both systems, wall time neutral/noisy. |
 | `hpsi-prop-spark-20260601-100735` / `hpsi-prop-terok-20260601-101036` | HPSI-to-propagate residency diagnostic | `gpu_resident_stack_hpsi_prop_psim_phase` 12.13 s on Spark, 12.59 s on Terok | - | - | Keeps `HPSI` resident from ETOT overlap/Hamiltonian into GPU PSIM propagation; removes the extra 0.1210 GB `PROP_HPSI_IN` copy from the PSIM-phase diagnostic and stays energy-valid on both systems. |
+| `psim-switch-accdelete-spark-20260601-104028` / `psim-switch-accdelete-terok-20260601-104027` | NSTEPS=2 PSIM switch residency | `gpu_resident_stack_hpsi_prop_psim_switch` 20.61 s on Spark, 20.25 s on Terok | - | - | Carries resident `PSIM` through `WAVES$SWITCH` as the next `PSI0`, removes one more 0.1210 GB force-side `PSI0` copy per two-step run, and fixes the Spark partially-present delete failure. |
 
 The latest full-matrix run lives at:
 
@@ -300,6 +301,48 @@ turns the PSIM-phase path from a net-copy regression into a near-transfer-neutra
 diagnostic. Wall time remains noisy, so the result is a validated residency
 building block rather than a default promotion.
 
+## PSIM-To-Switch Residency Diagnostic
+
+The next cross-step diagnostic carries the resident `PSIM` allocation through
+`WAVES$SWITCH` and marks it as the next step's resident `PSI0` after the host
+pointers are swapped. This is controlled by
+`CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1` and exposed in the harness as
+`gpu_resident_stack_hpsi_prop_psim_switch`. It depends on the preceding
+PSIM/HPSI propagation switches and remains opt-in because multi-step
+wavefunction residency still needs more lifecycle coverage.
+
+This change also replaces the old OpenACC directive delete in `WAVES$SWITCH`
+with the OpenACC runtime `acc_delete` call for still-resident old `PSI0`/`PSIM`
+arrays. Spark exposed a partially-present failure for the directive form at
+`NSTEPS=2`; the runtime delete path completed on both Spark and Terok.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries with `TEST=si64_bands`,
+`EMPTY_BANDS=1024`, `NSTEPS=2`, `EXPECTED_ENERGY=269.022536`, `REPEATS=3`, and
+one GPU rank:
+
+```
+runs/psim-switch-accdelete-spark-20260601-104028
+runs/psim-switch-accdelete-terok-20260601-104027
+```
+
+| Machine | Case | Median wall time | Transfer estimate | Key marker | Energy check |
+| --- | --- | ---: | ---: | --- | --- |
+| Spark C86C | `gpu_resident_stack_hpsi_prop_psim_phase` | 20.84 s | 2.5352 GB | baseline two-step PSIM phase | yes |
+| Spark C86C | `gpu_resident_stack_hpsi_prop_psim_switch` | 20.61 s | 2.4142 GB | `ACC_PRESENT_SWITCH_PSI0_PSIM` | yes |
+| Terok A40 | `gpu_resident_stack_hpsi_prop_psim_phase` | 20.96 s | 2.5352 GB | baseline two-step PSIM phase | yes |
+| Terok A40 | `gpu_resident_stack_hpsi_prop_psim_switch` | 20.25 s | 2.4142 GB | `ACC_PRESENT_SWITCH_PSI0_PSIM` | yes |
+
+The deterministic effect is modest but clean: the switch case removes the
+force-side `ACC_COPY_FORCE_PSI0_IN` row, 0.3631 GB over three repeats, or
+0.1210 GB per two-step run. Wall time moves in the right direction on both
+machines, but the important result is correctness plus an explicit cross-step
+wavefunction lifecycle hook for the next residency pass.
+
+After shortening the profile marker to avoid CSV truncation, one-repeat marker
+smokes on both machines produced `ACC_PRESENT_SWITCH_PSI0_PSIM` with `ok=yes`
+and the same 2.4142 GB transfer estimate.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -330,11 +373,12 @@ building block rather than a default promotion.
    PSI/HPSI/OPSI residency work is the dominant Spark speedup.
 
 6. The one-center overlap GPU-pack path removes the previous large
-   `WAVES_1COVERLAP` bottleneck. The new `PSI0`-to-`PRINFO` residency removes
-   another deterministic 0.1210 GB copy from the focused stack, but wall time is
-   still neutral/noisy. The next useful default-candidate work should target the
-   remaining host-side FFT/RTOG and producer-side HPSI/projector boundaries, not
-   broader default activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
+   `WAVES_1COVERLAP` bottleneck. The new `PSI0`-to-`PRINFO` and
+   `PSIM`-to-switch residency diagnostics each remove another deterministic
+   0.1210 GB copy in their focused runs, but wall time is still neutral/noisy.
+   The next useful default-candidate work should target the remaining host-side
+   FFT/RTOG and producer-side HPSI/projector boundaries, not broader default
+   activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
 
 7. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
    the 4fbe2cd refresh it produced 302.773536 Ha instead of 302.280854 Ha and
