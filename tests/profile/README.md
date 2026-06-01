@@ -569,9 +569,30 @@ time-step boundaries before broader cross-step wavefunction residency is enabled
 Because the one-step Si64 reference energy is not valid for multi-step dynamics,
 the fixed energy check is disabled by default for this harness; compare the
 reported energies between cases instead. It writes the normal combined benchmark
-TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`.
+TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`;
+the helper also accepts `--op-prefix`, `--op-regex`, and `--include-zero` for
+broader profile-row reports such as present/update/timing rows.
 Override `NSTEPS_LIST`, `EMPTY_BANDS_LIST`, `RUN_SHARED_GPU=yes`,
 `RUN_LARGE_GPU=yes`, or `PSIM_LIFECYCLE_CASES` for wider sweeps.
+
+For the VPSI/HPSI producer-boundary comparison, run:
+
+```
+cd tests/profile/si64
+./run_vpsi_boundary.sh
+```
+
+It focuses on the current remaining HPSI boundary: `WAVES_VPSI` still receives
+host-side FFT/RTOG output, then refreshes or creates the device-present `HPSI`
+buffer for the following `WAVES_ADDPRO` consumer. The harness compares
+`gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`, and `gpu_resident_stack` with
+`NSTEPS=2` by default and writes combined benchmark tables plus selected
+profile tables for `ACC_COPY`/`ACC_UPDATE`/`ACC_PRESENT` rows and separate
+seconds-sorted `PAW_VPSI_*` timing rows.
+Because multi-step Si64 energies are not the one-step reference, fixed energy
+checking is disabled by default; compare energies between cases. Override
+`VPSI_BOUNDARY_CASES`, `NSTEPS_LIST`, `EMPTY_BANDS_LIST`,
+`RUN_SHARED_GPU=yes`, or `RUN_LARGE_GPU=yes` for wider sweeps.
 
 For the larger orthogonalization preset used in the residency follow-up, run:
 

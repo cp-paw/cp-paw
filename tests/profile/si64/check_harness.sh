@@ -22,6 +22,7 @@ bash -n tests/profile/si64/run_nvhpc_standard.sh
 bash -n tests/profile/si64/run_nsys.sh
 bash -n tests/profile/si64/run_overnight.sh
 bash -n tests/profile/si64/run_psim_lifecycle.sh
+bash -n tests/profile/si64/run_vpsi_boundary.sh
 bash -n src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh
 bash -n src/Tools/Scripts/paw_gpu_capabilities.sh
 

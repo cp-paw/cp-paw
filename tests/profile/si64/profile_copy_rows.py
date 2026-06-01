@@ -4,6 +4,7 @@ import collections
 import csv
 import glob
 import os
+import re
 import sys
 
 
@@ -40,7 +41,13 @@ def case_and_repeat(path):
     return case, ""
 
 
-def collect(paths):
+def selected_op(op, prefixes, regexes):
+    if any(op.startswith(prefix) for prefix in prefixes):
+        return True
+    return any(regex.search(op) for regex in regexes)
+
+
+def collect(paths, prefixes, regexes, include_zero):
     rows = collections.defaultdict(
         lambda: {"calls": 0, "seconds": 0.0, "gbyte": 0.0, "files": set()}
     )
@@ -52,15 +59,17 @@ def collect(paths):
             with open(path, newline="") as handle:
                 for row in csv.DictReader(handle):
                     op = row.get("op", "")
-                    if not op.startswith("ACC_COPY"):
+                    if not selected_op(op, prefixes, regexes):
                         continue
                     gbyte = float(row.get("gbyte") or 0.0)
-                    if gbyte <= 0.0:
+                    seconds = float(row.get("total_seconds") or 0.0)
+                    calls = int(row.get("calls") or 0)
+                    if not include_zero and gbyte <= 0.0:
                         continue
                     key = (suite, case, repeat, op)
                     data = rows[key]
-                    data["calls"] += int(row.get("calls") or 0)
-                    data["seconds"] += float(row.get("total_seconds") or 0.0)
+                    data["calls"] += calls
+                    data["seconds"] += seconds
                     data["gbyte"] += gbyte
                     data["files"].add(path)
     return rows
@@ -80,14 +89,22 @@ def aggregate(rows, include_repeat):
     return merged
 
 
-def selected_rows(rows, top, per_case, min_gb):
+def sort_key(item, sort_by):
+    if sort_by == "seconds":
+        return (-item[1]["seconds"], -item[1]["gbyte"], -item[1]["calls"])
+    if sort_by == "calls":
+        return (-item[1]["calls"], -item[1]["gbyte"], -item[1]["seconds"])
+    return (-item[1]["gbyte"], -item[1]["seconds"], -item[1]["calls"])
+
+
+def selected_rows(rows, top, per_case, min_gb, sort_by):
     items = [
         (key, data)
         for key, data in rows.items()
         if data["gbyte"] >= min_gb
     ]
     if not per_case:
-        return sorted(items, key=lambda item: -item[1]["gbyte"])[:top]
+        return sorted(items, key=lambda item: sort_key(item, sort_by))[:top]
 
     grouped = collections.defaultdict(list)
     for key, data in items:
@@ -95,7 +112,7 @@ def selected_rows(rows, top, per_case, min_gb):
         grouped[(suite, case, repeat)].append((key, data))
     selected = []
     for group_key in sorted(grouped):
-        group = sorted(grouped[group_key], key=lambda item: -item[1]["gbyte"])
+        group = sorted(grouped[group_key], key=lambda item: sort_key(item, sort_by))
         selected.extend(group[:top])
     return selected
 
@@ -137,7 +154,7 @@ def print_markdown(rows):
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        description="Summarize ACC_COPY profile rows from CP-PAW profile CSV files."
+        description="Summarize selected CP-PAW profile rows from profile CSV files."
     )
     parser.add_argument("paths", nargs="+", help="profile CSV, glob, or run root")
     parser.add_argument("--top", type=int, default=10, help="rows per table/group")
@@ -152,13 +169,41 @@ def main(argv):
         help="keep repeats separate instead of aggregating them",
     )
     parser.add_argument("--min-gb", type=float, default=0.0)
+    parser.add_argument(
+        "--op-prefix",
+        action="append",
+        dest="op_prefixes",
+        help="include operations with this prefix; default is ACC_COPY",
+    )
+    parser.add_argument(
+        "--op-regex",
+        action="append",
+        default=[],
+        help="include operations matching this regular expression",
+    )
+    parser.add_argument(
+        "--include-zero",
+        action="store_true",
+        help="keep rows with zero copied GB, useful for ACC_PRESENT or timing rows",
+    )
+    parser.add_argument(
+        "--sort-by",
+        choices=("gbyte", "seconds", "calls"),
+        default="gbyte",
+        help="primary row ordering key; default is gbyte",
+    )
     parser.add_argument("--markdown", action="store_true")
     args = parser.parse_args(argv[1:])
 
-    rows = aggregate(collect(args.paths), args.include_repeat)
-    chosen = selected_rows(rows, args.top, args.per_case, args.min_gb)
+    prefixes = args.op_prefixes if args.op_prefixes else ["ACC_COPY"]
+    regexes = [re.compile(pattern) for pattern in args.op_regex]
+    rows = aggregate(
+        collect(args.paths, prefixes, regexes, args.include_zero),
+        args.include_repeat,
+    )
+    chosen = selected_rows(rows, args.top, args.per_case, args.min_gb, args.sort_by)
     if not chosen:
-        print("No ACC_COPY rows found.", file=sys.stderr)
+        print("No matching profile rows found.", file=sys.stderr)
         return 1
     if args.markdown:
         print_markdown(chosen)
