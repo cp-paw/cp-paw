@@ -81,5 +81,7 @@ log "ALL DONE root=${FOLLOWUP_ROOT}"
 if [[ -f "${COMBINED}" ]]; then
   python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
     > "${FOLLOWUP_ROOT}/combined_benchmark.md" || true
+  python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
+    > "${FOLLOWUP_ROOT}/combined_compare.md" || true
   log "combined=${COMBINED}"
 fi
