@@ -85,11 +85,11 @@ SAVE
 END MODULE DOS_WGHT_MODULE
 !
 !........1.........2.........3.........4.........5.........6.........7.........8
-MODULE READCNTL_MODULE
+MODULE PDOS_READCNTL_MODULE
 USE LINKEDLIST_MODULE,ONLY : LL_TYPE
 TYPE(LL_TYPE)   :: LL_CNTL
 SAVE
-END MODULE READCNTL_MODULE
+END MODULE PDOS_READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM PDOS
@@ -103,7 +103,7 @@ END MODULE READCNTL_MODULE
 !     **************************************************************************
       USE LINKEDLIST_MODULE,ONLY : LINKEDLIST$REPORT_UNUSED &
      &                            ,LINKEDLIST$SELECT
-      USE READCNTL_MODULE  ,ONLY : LL_CNTL
+      USE PDOS_READCNTL_MODULE,ONLY : LL_CNTL
       USE SPINDIR_MODULE   ,ONLY : SPINDIR !(IS ONLY ALLOCATED)
       IMPLICIT NONE
       INTEGER(4)                :: NFILO
@@ -2923,7 +2923,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE, ONLY : LL_CNTL
+      USE PDOS_READCNTL_MODULE, ONLY : LL_CNTL
       IMPLICIT NONE
       LOGICAL(4),PARAMETER :: TPR=.FALSE.
       LOGICAL(4)           :: TCHK
@@ -2984,7 +2984,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ** READ !DCNTL!GENERIC BLOCK FROM THE CONTROL FILE                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE, ONLY: LL_CNTL
+      USE PDOS_READCNTL_MODULE, ONLY: LL_CNTL
       IMPLICIT NONE
       CHARACTER(*),INTENT(OUT) :: MODE    ! "SAMPLE" OR "TETRA"
       CHARACTER(*),INTENT(OUT) :: PREFIX  ! PREFIX FOR DOS AND NOS FILES
@@ -3054,7 +3054,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
      &                          ,NKPT &
      &                          ,STATEARR,STATE 
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE, ONLY: LL_CNTL
+      USE PDOS_READCNTL_MODULE, ONLY: LL_CNTL
       IMPLICIT NONE
       REAL(8)   ,INTENT(OUT)   :: EMIN   ! MINIMUM OF ENERGY GRID
       REAL(8)   ,INTENT(OUT)   :: EMAX   ! MAXIMMUM OF ENERGY GRID
@@ -3195,7 +3195,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     ** 
 !     **************************************************************************
       USE LINKEDLIST_MODULE 
-      USE READCNTL_MODULE   ,ONLY : LL_CNTL
+      USE PDOS_READCNTL_MODULE,ONLY : LL_CNTL
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN) :: NPRO
       INTEGER(4)   ,INTENT(IN) :: NAT
@@ -3330,7 +3330,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **************************************************************************
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE, ONLY : LL_CNTL
+      USE PDOS_READCNTL_MODULE, ONLY : LL_CNTL
       IMPLICIT NONE
       INTEGER(4),INTENT(OUT) :: NSET
       INTEGER(4)             :: I
@@ -3431,7 +3431,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **                                                                      **
 !     **************************************************************************
       USE LINKEDLIST_MODULE
-      USE READCNTL_MODULE
+      USE PDOS_READCNTL_MODULE
       USE STRINGS_MODULE
       IMPLICIT NONE
       INTEGER(4)   ,INTENT(IN)  :: NKPT
@@ -3748,7 +3748,7 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
 !     **************************************************************************
 !     **************************************************************************
       USE STRINGS_MODULE
-      USE READCNTL_MODULE
+      USE PDOS_READCNTL_MODULE
       USE DOS_WGHT_MODULE
       USE NEWSET_MODULE  ,ONLY : NEWSET
       IMPLICIT NONE
@@ -4294,4 +4294,3 @@ CALL LINKEDLIST$REPORT(LL_CNTL,6)
                           CALL TRACE$POP()
       RETURN
       END SUBROUTINE GENERATE_TETRA_WGHT
-

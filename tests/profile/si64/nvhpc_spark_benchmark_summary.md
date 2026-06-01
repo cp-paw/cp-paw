@@ -146,12 +146,13 @@ should remain conservative, but the auto benchmark recommendation should keep
 this opt-in case because it is now both energy-valid and the fastest standard
 Spark path.
 
-Operational note: the fresh `AUTO_BUILD_JOBS=16` auto-build hit an NVFORTRAN
-stale-module race while compiling `profile_parallel`
-(`Corrupt or Old Module file ./readcntl_module.mod` from `paw_dos.f90`). A
-single-target rebuild with `-j1` succeeded, and the completed benchmark above
-was then run with `AUTO_BUILD_TARGETS=no`. This is a build-system follow-up,
-not a GPU correctness failure.
+Operational note: the fresh `AUTO_BUILD_JOBS=16` auto-build exposed an
+NVFORTRAN stale-module race while compiling `profile_parallel`
+(`Corrupt or Old Module file ./readcntl_module.mod` from `paw_dos.f90`). The
+root cause was that `paw_dos.f90` and `paw_polyhedra.f90` both emitted a local
+`READCNTL_MODULE`. A follow-up rename to tool-specific module names was
+validated by a fresh Spark `profile_parallel` build with `-j16` in
+`/home/kuehne88/cp-paw-nvhpc-buildrace-20260602-000124`.
 
 Terok initially exposed the portability gap: NVHPC 24.5 on x86_64 provides
 cuBLAS, cuFFT, cuSOLVER, cuTENSOR, NCCL, and NVSHMEM, but no usable host NVPL

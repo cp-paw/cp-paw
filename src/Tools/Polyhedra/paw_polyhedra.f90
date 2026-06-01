@@ -26,17 +26,17 @@
 !     ** !CENTERS!ATOM:NAME : ATOM NAME OF THE CENTER ATOM                    **
 !     **************************************************************************
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      MODULE READCNTL_MODULE
+      MODULE POLYHEDRA_READCNTL_MODULE
       USE LINKEDLIST_MODULE,ONLY : LL_TYPE
       TYPE(LL_TYPE) :: LL_CNTL
       SAVE
-      END MODULE READCNTL_MODULE      
+      END MODULE POLYHEDRA_READCNTL_MODULE
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       PROGRAM MAIN
       USE LINKEDLIST_MODULE
       USE STRINGS_MODULE
-      USE READCNTL_MODULE,ONLY : LL_CNTL
+      USE POLYHEDRA_READCNTL_MODULE,ONLY : LL_CNTL
       IMPLICIT NONE
       TYPE(LL_TYPE)             :: LL_STRC
       INTEGER(4)                :: NFIL 
@@ -806,7 +806,7 @@
 !      **************************************************************************
 !      **************************************************************************
        USE LINKEDLIST_MODULE
-       USE READCNTL_MODULE, ONLY : LL_CNTL
+       USE POLYHEDRA_READCNTL_MODULE, ONLY : LL_CNTL
        IMPLICIT NONE
        LOGICAL(4) :: TPR=.FALSE.
        LOGICAL(4) :: TCHK
@@ -856,7 +856,7 @@
 !      **************************************************************************
 !      **************************************************************************
        USE LINKEDLIST_MODULE
-       USE READCNTL_MODULE, ONLY : LL_CNTL
+       USE POLYHEDRA_READCNTL_MODULE, ONLY : LL_CNTL
        IMPLICIT NONE
        REAL(8), INTENT(OUT) :: R(3,3) ! ROTATION MATRIX
        INTEGER(4) :: I
@@ -897,7 +897,7 @@
 !      **************************************************************************
 !      **************************************************************************
        USE LINKEDLIST_MODULE
-       USE READCNTL_MODULE, ONLY : LL_CNTL
+       USE POLYHEDRA_READCNTL_MODULE, ONLY : LL_CNTL
        IMPLICIT NONE
        INTEGER(4), INTENT(OUT) :: NUM
        INTEGER(4) :: I
@@ -936,7 +936,7 @@
 !      **************************************************************************
 !      **************************************************************************
        USE LINKEDLIST_MODULE
-       USE READCNTL_MODULE, ONLY : LL_CNTL
+       USE POLYHEDRA_READCNTL_MODULE, ONLY : LL_CNTL
        IMPLICIT NONE
        INTEGER(4), INTENT(IN)     :: N
        CHARACTER(32), INTENT(OUT) :: NAMES(N)
@@ -1019,6 +1019,5 @@
 !     WRITE(*,FMT='("ROT",3F10.5/)')ROT(3,:)
       RETURN
       END SUBROUTINE RESOLVEROTATION
-
 
 
