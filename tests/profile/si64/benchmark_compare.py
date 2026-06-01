@@ -188,13 +188,13 @@ def main(argv):
     print()
     print(
         "| suite | case | ranks | ok | wall_s | base_case | vs_base | "
-        "vs_1cpu | vs_8cpu | rank_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | "
-        "copy_denmat_gb | update_gb | update_wave_gb | update_proj_gb | update_offden_gb | "
-        "update_denmat_gb | energy_delta |"
+        "vs_1cpu | vs_8cpu | rank_s | transfer_gb | copy_gb | copy_wave_gb | "
+        "copy_proj_gb | copy_offden_gb | copy_denmat_gb | update_gb | update_wave_gb | "
+        "update_proj_gb | update_offden_gb | update_denmat_gb | energy_delta |"
     )
     print(
         "| --- | --- | ---: | --- | ---: | --- | ---: | ---: | ---: | "
-        "---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+        "---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
     )
     for group in sorted(groups):
         group_rows = groups[group]
@@ -214,7 +214,7 @@ def main(argv):
             ),
         ):
             print(
-                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                     suite_label(row),
                     row.get("case", ""),
                     row.get("ranks", ""),
@@ -225,6 +225,7 @@ def main(argv):
                     number(speedup(one_cpu_wall, row.get("_wall"))),
                     number(speedup(eight_cpu_wall, row.get("_wall"))),
                     number(row.get("rank_s")),
+                    number(row.get("transfer_gb")),
                     number(row.get("copy_gb")),
                     number(row.get("copy_wave_gb")),
                     number(row.get("copy_proj_gb")),

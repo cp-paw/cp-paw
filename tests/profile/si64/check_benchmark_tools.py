@@ -87,6 +87,7 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["pw_gtor_s"], "1", "pw_gtor_s")
     assert_equal(row["pw_rtog_s"], "2", "pw_rtog_s")
     assert_equal(row["fft_s"], "4", "fft_s")
+    assert_equal(row["transfer_gb"], "14.75", "transfer_gb")
     assert_equal(row["copy_gb"], "13.5", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")
     assert_equal(row["copy_proj_gb"], "3", "copy_proj_gb")
@@ -97,6 +98,7 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["update_proj_gb"], "0", "update_proj_gb")
 
     markdown = run_tool("benchmark_markdown.py", tsv_path)
+    assert_contains(markdown, "transfer_gb", "benchmark markdown transfer header")
     assert_contains(markdown, "copy_wave_gb", "benchmark markdown header")
     assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
     assert_contains(markdown, "|  | case | 1 | yes | 10.00 |", "benchmark markdown row")
@@ -109,6 +111,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC copy offden", "profile copy offden bucket")
     assert_contains(profile_summary, "ACC copy denmat", "profile copy denmat bucket")
     assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
+    assert_contains(profile_summary, "transfer estimate: 14.750000 GB", "profile transfer total")
 
 
 def check_compare(tmpdir):

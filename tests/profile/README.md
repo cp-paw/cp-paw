@@ -101,8 +101,9 @@ kernel instrumentation. The aggregate copy estimate `copy_gb` is split into
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center
-density-matrix transfers. OpenACC `ACC_UPDATE_*` rows are reported separately
-as `update_gb` with matching `update_wave_gb`, `update_proj_gb`,
+density-matrix transfers. `transfer_gb` is the combined host/device movement
+estimate (`copy_gb + update_gb`). OpenACC `ACC_UPDATE_*` rows are reported
+separately as `update_gb` with matching `update_wave_gb`, `update_proj_gb`,
 `update_offden_gb`, and `update_denmat_gb` buckets, so required boundary
 refreshes are visible without inflating the pure copy estimate. These buckets
 are subsets of `copy_gb` or `update_gb` and are meant to show whether a
