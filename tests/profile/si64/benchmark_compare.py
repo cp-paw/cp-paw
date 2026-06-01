@@ -39,17 +39,41 @@ def speedup(base_wall, wall):
 def suite_group_kind(suite):
     if not suite:
         return "", ""
-    patterns = (
-        (r"^(.*)_1rank_gpu$", "gpu"),
-        (r"^(.*)_1rank_cpu$", "cpu1"),
-        (r"^(.*)_8rank_cpu_ref$", "cpu8"),
-        (r"^(.*)_8rank_cpu$", "cpu8"),
-        (r"^(.*)-1r$", "gpu"),
+    match = re.match(r"^gpu_acc_(.*)_1rank$", suite)
+    if match:
+        return f"gpu_acc_{match.group(1)}", ""
+    match = re.match(r"^cpu_ref_(.*)_\d+ranks?$", suite)
+    if match:
+        return f"gpu_acc_{match.group(1)}", "cpu8"
+    match = re.match(r"^cusolver_(.*)_1rank$", suite)
+    if match:
+        return f"cusolver_{match.group(1)}", ""
+    match = re.match(r"^cusolver_cpu_ref_(.*)_\d+ranks?$", suite)
+    if match:
+        return f"cusolver_{match.group(1)}", "cpu8"
+    match = re.match(r"^gpu_(\d+)rank$", suite)
+    if match:
+        return "default", "gpu"
+    match = re.match(r"^cpu_1rank$", suite)
+    if match:
+        return "default", "cpu1"
+    match = re.match(r"^cpu_(\d+)rank_ref$", suite)
+    if match:
+        return "default", "cpu8"
+    rank_patterns = (
+        (r"^(.*)_(\d+)ranks?_gpu$", "gpu"),
+        (r"^(.*)_(\d+)ranks?_cpu_ref$", "cpu8"),
+        (r"^(.*)_(\d+)ranks?_cpu$", "cpu"),
     )
-    for pattern, kind in patterns:
+    for pattern, kind in rank_patterns:
         match = re.match(pattern, suite)
         if match:
+            if kind == "cpu":
+                kind = "cpu1" if match.group(2) == "1" else "cpu8"
             return match.group(1), kind
+    match = re.match(r"^(.*)-1r$", suite)
+    if match:
+        return match.group(1), "gpu"
     if suite == "one_rank_gpu":
         return "default", "gpu"
     if suite == "one_rank_cpu":
