@@ -90,8 +90,9 @@ the primary instrumented rank-seconds (`rank_s`), and a residual
 `gap_s = wall_rank_s - rank_s`. Use `gap_s` and `coverage_pct` to decide
 whether the current CSV timers already explain the run or whether additional
 instrumentation is needed. Diagnostic Plane-wave FFT local/MPI-envelope timers
-are reported separately as `pw_trace_s`; they are intentionally kept out of
-`rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
+are reported separately as `pw_trace_s`; the GTOR and RTOG subsets are also
+reported as `pw_gtor_s` and `pw_rtog_s`. These columns are intentionally kept
+out of `rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
 High-level `PHASE_*` timers are reported separately as `phase_s` and
 `phase_gap_s = wall_rank_s - phase_s`; they are also kept out of `rank_s`
 because they are coarse envelopes around existing numerical kernel timers. Use
