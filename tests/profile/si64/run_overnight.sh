@@ -310,6 +310,7 @@ run_nsys_trace() {
 if cppaw_write_capabilities_file "${OVERNIGHT_ROOT}/gpu_capabilities.txt"; then
   log "gpu_capabilities=${OVERNIGHT_ROOT}/gpu_capabilities.txt"
 fi
+cppaw_apply_capability_env
 
 MAIN_CASES=$(resolve_case_list "${MAIN_CASES}" recommended_resource_cases "${DEFAULT_MAIN_CASES}")
 SCALING_CASES=$(resolve_case_list "${SCALING_CASES}" recommended_resource_cases "${DEFAULT_SCALING_CASES}")

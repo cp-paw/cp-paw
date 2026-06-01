@@ -47,6 +47,8 @@ trap 'rm -rf "${tmpdir}"' EXIT
 
 src/Tools/Scripts/paw_gpu_capabilities.sh > "${tmpdir}/gpu_capabilities.txt"
 grep -q "^host_fftw=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^host_fftw_ld_library_path=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^host_fftw_pkg_config_path=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^host_blas_lapack=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_cpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_gpu_cases=" "${tmpdir}/gpu_capabilities.txt"
@@ -59,6 +61,9 @@ grep -q "^recommended_large_band_command=cd tests/profile/si64" \
   "${tmpdir}/gpu_capabilities.txt"
 
 cat > "${tmpdir}/fake_gpu_capabilities.txt" <<'EOF'
+host_fftw=yes path=/tmp/fftw/lib/libfftw3 include=/tmp/fftw/include/fftw3.f03
+host_fftw_ld_library_path=/tmp/fftw/lib
+host_fftw_pkg_config_path=/tmp/fftw/lib/pkgconfig
 recommended_cpu_cases=cpu nvhpc_cpu
 recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft
 recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync
@@ -68,6 +73,8 @@ EOF
 
 cat > "${tmpdir}/fake_nohost_capabilities.txt" <<'EOF'
 host_fftw=no
+host_fftw_ld_library_path=none
+host_fftw_pkg_config_path=none
 host_blas_lapack=yes path=/opt/nvidia/hpc_sdk/Linux_x86_64/2024/compilers/lib/lib{blas,lapack}.so
 recommended_cpu_reason=no_host_fftw_runtime_found
 recommended_gpu_reason=no_host_fftw_runtime_found
@@ -77,6 +84,14 @@ recommended_gpu_diagnostic_cases=none
 recommended_large_band_gpu_cases=none
 recommended_resource_cases=none
 EOF
+
+PKG_CONFIG_PATH= \
+LD_LIBRARY_PATH= \
+CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_gpu_capabilities.txt" \
+bash -c '. tests/profile/si64/case_recommendations.sh
+cppaw_apply_capability_env
+case ":${PKG_CONFIG_PATH}:" in *":/tmp/fftw/lib/pkgconfig:"*) ;; *) exit 1 ;; esac
+case ":${LD_LIBRARY_PATH}:" in *":/tmp/fftw/lib:"*) ;; *) exit 1 ;; esac'
 
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \

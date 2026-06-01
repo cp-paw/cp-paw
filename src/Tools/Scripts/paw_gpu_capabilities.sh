@@ -110,6 +110,8 @@ find_host_fftw_include() {
       "${root}"/compilers/include/nvpl_fftw \
       "${root}"/math_libs/nvpl/include/nvpl_fftw \
       "${root}"/REDIST/math_libs/nvpl/include/nvpl_fftw \
+      "${HOME:-}"/opt/fftw-*/include \
+      /opt/fftw-*/include \
       /usr/local/include \
       /usr/include \
       /opt/homebrew/include; do
@@ -140,6 +142,8 @@ find_host_fftw() {
       "${root}"/REDIST/math_libs/nvpl/lib \
       "${root}"/compilers/lib \
       "${root}"/REDIST/compilers/lib \
+      "${HOME:-}"/opt/fftw-*/lib \
+      /opt/fftw-*/lib \
       /usr/local/lib \
       /usr/lib64 \
       /usr/lib \
@@ -153,6 +157,43 @@ find_host_fftw() {
       return 0
     fi
   done
+}
+
+host_fftw_libdir_from_path() {
+  local path=$1
+  local libpart prefix
+
+  case "${path}" in
+    pkg-config:*)
+      case "${path}" in
+        *" prefix="*)
+          prefix=${path#* prefix=}
+          prefix=${prefix%% *}
+          if [[ -d "${prefix}/lib" ]]; then
+            echo "${prefix}/lib"
+            return 0
+          fi
+          ;;
+      esac
+      ;;
+    *)
+      libpart=${path%% include=*}
+      if [[ -n "${libpart}" && -e "${libpart}" ]]; then
+        dirname "${libpart}"
+        return 0
+      fi
+      ;;
+  esac
+}
+
+host_fftw_pkgconfig_from_path() {
+  local path=$1
+  local libdir
+
+  libdir=$(host_fftw_libdir_from_path "${path}" || true)
+  if [[ -n "${libdir}" && -d "${libdir}/pkgconfig" ]]; then
+    echo "${libdir}/pkgconfig"
+  fi
 }
 
 find_host_blas_lapack() {
@@ -297,8 +338,12 @@ nccl_path=$(find_lib libnccl.so "${root}" || true)
 nvshmem_path=$(find_lib libnvshmem_host.so "${root}" || true)
 host_fftw_path=$(find_host_fftw "${root}" || true)
 host_blas_lapack_path=$(find_host_blas_lapack "${root}" || true)
+host_fftw_ld_library_path=$(host_fftw_libdir_from_path "${host_fftw_path}" || true)
+host_fftw_pkg_config_path=$(host_fftw_pkgconfig_from_path "${host_fftw_path}" || true)
 
 yesno_path "host_fftw" "${host_fftw_path}"
+echo "host_fftw_ld_library_path=${host_fftw_ld_library_path:-none}"
+echo "host_fftw_pkg_config_path=${host_fftw_pkg_config_path:-none}"
 yesno_path "host_blas_lapack" "${host_blas_lapack_path}"
 yesno_path "cublas" "${cublas_path}"
 yesno_path "cublaslt" "${cublaslt_path}"

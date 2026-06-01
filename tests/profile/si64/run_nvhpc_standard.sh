@@ -243,6 +243,7 @@ log() {
 if cppaw_write_capabilities_file "${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"; then
   log "gpu_capabilities=${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"
 fi
+cppaw_apply_capability_env
 log "selected_cases gpu='${GPU_CASES:-none}' cpu='${CPU_CASES:-none}'"
 if [[ -z ${GPU_CASES// } && -z ${CPU_CASES// } ]]; then
   log "SKIP all suites empty case lists"

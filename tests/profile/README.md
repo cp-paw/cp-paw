@@ -1040,6 +1040,10 @@ into CP-PAW unless a concrete code path uses them.
 The standard, exploration, resource-comparison, and overnight wrappers consume
 these values when their case-list variables are set to `auto`; set
 `CPPAW_GPU_CAPABILITIES_FILE` to replay a captured capability scan.
+If FFTW is installed in a local prefix such as `$HOME/opt/fftw-3.3.10`, the
+capability helper reports the matching `lib/pkgconfig` and `lib` directories,
+and the wrappers prepend them to `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` before
+auto-builds or runs.
 
 For an active CUDA-aware MPI smoke test, use:
 

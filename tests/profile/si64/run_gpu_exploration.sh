@@ -38,6 +38,7 @@ log() {
 if cppaw_write_capabilities_file "${GPU_EXPLORATION_ROOT}/gpu_capabilities.txt"; then
   log "gpu_capabilities=${GPU_EXPLORATION_ROOT}/gpu_capabilities.txt"
 fi
+cppaw_apply_capability_env
 
 GPU_CASES=$(cppaw_resolve_recommended_gpu_exploration_cases \
   "${GPU_CASES}" "${DEFAULT_GPU_EXPLORATION_CASES}")

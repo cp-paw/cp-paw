@@ -115,3 +115,26 @@ cppaw_write_capabilities_file() {
   cppaw_load_capabilities || return 1
   printf '%s\n' "${CPPAW_GPU_CAPABILITIES_OUTPUT}" > "${path}"
 }
+
+cppaw_prepend_path_value() {
+  local name=$1
+  local value=$2
+  local current
+
+  [[ -n "${value}" && "${value}" != none ]] || return 0
+  current=${!name:-}
+  case ":${current}:" in
+    *":${value}:"*) ;;
+    *) export "${name}=${value}${current:+:${current}}" ;;
+  esac
+}
+
+cppaw_apply_capability_env() {
+  local path
+
+  path=$(cppaw_capability_value host_fftw_pkg_config_path || true)
+  cppaw_prepend_path_value PKG_CONFIG_PATH "${path}"
+
+  path=$(cppaw_capability_value host_fftw_ld_library_path || true)
+  cppaw_prepend_path_value LD_LIBRARY_PATH "${path}"
+}
