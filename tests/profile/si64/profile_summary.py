@@ -5,11 +5,37 @@ import glob
 import sys
 
 
+def copy_bucket(op):
+    if "OFFDEN" in op:
+        return "ACC copy offden"
+    if "DENMAT" in op:
+        return "ACC copy denmat"
+    if any(token in op for token in ("PROPSI", "PRO_CACHE", "THIS_PROJ")):
+        return "ACC copy proj"
+    if any(
+        token in op
+        for token in (
+            "_PSI0",
+            "_PSI1",
+            "_PSI2",
+            "_PSI_IN",
+            "_PSI_OUT",
+            "_PSIM",
+            "_OPSI",
+            "_HPSI",
+        )
+    ):
+        return "ACC copy wave"
+    if any(token in op for token in ("PROJ", "ADDPRO")):
+        return "ACC copy proj"
+    return "ACC copy other"
+
+
 def category(op):
     if op.startswith("PHASE_"):
         return "Phase trace"
     if op.startswith("ACC_COPY"):
-        return "ACC copy est"
+        return copy_bucket(op)
     if op.startswith("ACC_PRESENT"):
         return "ACC residency"
     if op.startswith("ACC_SETUP"):
@@ -100,6 +126,10 @@ def main(argv):
         data["gbyte"] for op, data in per_op.items()
         if op.startswith("ACC_COPY")
     )
+    copy_bucket_gbyte = collections.defaultdict(float)
+    for op, data in per_op.items():
+        if op.startswith("ACC_COPY"):
+            copy_bucket_gbyte[copy_bucket(op)] += data["gbyte"]
 
     print("Profile files: {}".format(len(files)))
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
@@ -115,6 +145,12 @@ def main(argv):
                 setup_total, copy_gbyte
             )
         )
+    if copy_bucket_gbyte:
+        print("Copy bucket estimates")
+        for name, gbyte in sorted(
+            copy_bucket_gbyte.items(), key=lambda item: -item[1]
+        ):
+            print("  {:<16s} {:10.4f} GB".format(name, gbyte))
     print("")
     print("Category summary")
     for name, seconds in sorted(by_category.items(), key=lambda item: -item[1]):
