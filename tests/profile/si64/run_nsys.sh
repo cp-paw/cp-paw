@@ -34,12 +34,18 @@ nvhpc_platform() {
 default_mpirun() {
   local platform root candidate
   platform=$(nvhpc_platform)
-  for root in "${NVHPC_ROOT:-}" /opt/nvidia/hpc_sdk/${platform}/*; do
+  for root in \
+      "${NVHPC_ROOT:-}" \
+      /opt/nvidia/hpc_sdk/${platform}/* \
+      "${HOME:-}"/opt/nvidia/hpc_sdk/${platform}/*; do
     [[ -n "${root}" && -d "${root}" ]] || continue
     for candidate in \
         "${root}/comm_libs/hpcx/bin/mpirun" \
         "${root}"/comm_libs/*/hpcx/*/ompi/bin/mpirun \
-        "${root}"/comm_libs/*/hpcx/bin/mpirun; do
+        "${root}"/comm_libs/*/hpcx/bin/mpirun \
+        "${root}"/../*/comm_libs/hpcx/bin/mpirun \
+        "${root}"/../*/comm_libs/*/hpcx/*/ompi/bin/mpirun \
+        "${root}"/../*/comm_libs/*/hpcx/bin/mpirun; do
       if [[ -x "${candidate}" ]]; then
         echo "${candidate}"
         return 0

@@ -59,6 +59,35 @@ find_lib() {
   done
 }
 
+find_nvhpc_mpirun() {
+  local root=${1:-}
+  local platform candidate version_root
+  platform=$(nvhpc_platform)
+
+  for candidate in \
+      "${MPIRUN:-}" \
+      "${root}"/comm_libs/hpcx/bin/mpirun \
+      "${root}"/comm_libs/*/hpcx/*/ompi/bin/mpirun \
+      "${root}"/comm_libs/*/hpcx/bin/mpirun \
+      "${root}"/../*/comm_libs/hpcx/bin/mpirun \
+      "${root}"/../*/comm_libs/*/hpcx/*/ompi/bin/mpirun \
+      "${root}"/../*/comm_libs/*/hpcx/bin/mpirun \
+      /opt/nvidia/hpc_sdk/${platform}/*/comm_libs/hpcx/bin/mpirun \
+      /opt/nvidia/hpc_sdk/${platform}/*/comm_libs/*/hpcx/*/ompi/bin/mpirun \
+      /opt/nvidia/hpc_sdk/${platform}/*/comm_libs/*/hpcx/bin/mpirun \
+      "${HOME:-}"/opt/nvidia/hpc_sdk/${platform}/*/comm_libs/hpcx/bin/mpirun \
+      "${HOME:-}"/opt/nvidia/hpc_sdk/${platform}/*/comm_libs/*/hpcx/*/ompi/bin/mpirun \
+      "${HOME:-}"/opt/nvidia/hpc_sdk/${platform}/*/comm_libs/*/hpcx/bin/mpirun; do
+    if [[ -x "${candidate}" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+
+  version_root=$(command -v mpirun 2>/dev/null || true)
+  [[ -n "${version_root}" ]] && echo "${version_root}"
+}
+
 find_host_fftw_include() {
   local root=${1:-}
   local dir
@@ -184,10 +213,11 @@ yesno_path() {
 }
 
 cuda_aware_mpi() {
+  local root=${1:-}
   local mpirun=${MPIRUN:-}
   local ompi_info
   if [[ -z "${mpirun}" ]]; then
-    mpirun=$(command -v mpirun 2>/dev/null || true)
+    mpirun=$(find_nvhpc_mpirun "${root}" || true)
   fi
   if [[ -z "${mpirun}" ]]; then
     echo "cuda_aware_mpi=unknown reason=no_mpirun"
@@ -222,15 +252,21 @@ append_case() {
 }
 
 root=$(find_nvhpc_root || true)
+mpirun_path=$(find_nvhpc_mpirun "${root}" || true)
 echo "date=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "hostname=$(hostname)"
 echo "os=$(uname -s)"
 echo "arch=$(uname -m)"
 echo "nvhpc_root=${root}"
-echo "nvfortran=$(command -v nvfortran 2>/dev/null || true)"
-if command -v nvfortran >/dev/null 2>&1; then
-  nvfortran --version 2>&1 | head -3 | sed 's/^/nvfortran_version=/'
+nvfortran_path=$(command -v nvfortran 2>/dev/null || true)
+if [[ -z "${nvfortran_path}" && -n "${root}" && -x "${root}/compilers/bin/nvfortran" ]]; then
+  nvfortran_path="${root}/compilers/bin/nvfortran"
 fi
+echo "nvfortran=${nvfortran_path}"
+if [[ -n "${nvfortran_path}" ]]; then
+  "${nvfortran_path}" --version 2>&1 | head -3 | sed 's/^/nvfortran_version=/'
+fi
+echo "mpirun=${mpirun_path}"
 echo "nvcc=$(command -v nvcc 2>/dev/null || true)"
 if command -v nvcc >/dev/null 2>&1; then
   nvcc --version 2>&1 | tail -1 | sed 's/^/nvcc_version=/'
@@ -274,7 +310,7 @@ yesno_path "cutensor" "${cutensor_path}"
 yesno_path "cudss" "${cudss_path}"
 yesno_path "nccl" "${nccl_path}"
 yesno_path "nvshmem" "${nvshmem_path}"
-cuda_aware_mpi
+cuda_aware_mpi "${root}"
 echo "cuda_aware_mpi_probe=run src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh"
 
 recommended_cpu_cases="cpu"
