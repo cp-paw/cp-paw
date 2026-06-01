@@ -51,11 +51,12 @@ dedicated follow-up runs before promoting any path to production default.
 | `vpsi-device-finish-residency-20260601-512-nstep2-*` | VPSI HPSI device finish | `gpu_resident_hpsi_opsi` 11.11 s at 512/1 | - | `gpu_resident_hpsi` 15.16 s at 512/4 | Moves the still-required HPSI transfer from the ADDPRO consumer boundary to the VPSI producer boundary; energy-valid and keeps HPSI present for ADDPRO. |
 | `si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1` | Current full matrix after HPSI/VPSI residency | `gpu_resident_hpsi_opsi` 12.83 s | `cpu` 73.32 s, `nvhpc_cpu` 69.50 s | `cpu` 167.49 s, `nvhpc_cpu` 166.88 s | Confirms wavefunction residency dominates on Spark; all-library paths remain diagnostic-only. |
 | `hpsi-opsi-combo-cases-20260601-512-nstep2-*` | Combined HPSI/OPSI diagnostic keywords | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.58 s at 512/1 | - | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` 15.02 s at 512/4 | Adds harness cases for HPSI+OPSI with PROJ/off-site/DENMAT combinations; all cases are energy-valid, so future standard sweeps can compare the full stack directly. |
+| `si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1` | Current standard refresh with combined HPSI/OPSI cases | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 12.21 s | `cpu` 77.79 s, `nvhpc_cpu` 75.23 s | `cpu` 672.52 s, `nvhpc_cpu` 392.07 s | Full focused residency stack is now the best 1024/1 case; eight-rank CPU is a poor resource comparison for this small smoke. |
 
 The latest full-matrix run lives at:
 
 ```
-/home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1
+/home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1
 ```
 
 ## Previous Full Matrix Comparison
@@ -124,6 +125,40 @@ against `nvhpc_cpu` at 69.50 s on one rank and 166.88 s on eight ranks. This
 strongly favors continued wavefunction/projector residency work over adding
 more optional libraries to the default path.
 
+## 2026-06-01 4fbe2cd Standard Refresh
+
+After adding the direct combined HPSI/OPSI benchmark cases, Spark C86C was
+rerun at current `cp-paw-nvhpc` commit `4fbe2cd` with `TEST=si64_bands`,
+`EMPTY_BANDS=1024`, `NSTEPS=1`, one GPU rank for GPU cases, and one-rank plus
+eight-rank CPU references. The default standard GPU list now includes the safe
+HPSI/OPSI residency path and the full focused residency stack:
+
+```
+runs/si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1
+```
+
+| Suite | Case | Ranks | Wall time | Copy estimate | Energy check | Interpretation |
+| --- | --- | ---: | ---: | ---: | --- | --- |
+| GPU | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | 1 | 12.21 s | 1.9940 GB | yes | Best 1024/1 case; HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combine cleanly. |
+| GPU | `gpu_resident_hpsi_opsi` | 1 | 12.77 s | 1.9558 GB | yes | Safest broad wavefunction-residency comparison; very close to the full stack. |
+| GPU | `gpu_resident` | 1 | 12.87 s | 2.6872 GB | yes | Baseline resident path remains strong but moves more data. |
+| GPU | `gpu_resident_hpsi` | 1 | 12.94 s | 2.1978 GB | yes | HPSI-only residency is correct but not the best 1024/1 point. |
+| GPU | `gpu_resident_no_cusolver` | 1 | 15.66 s | 2.5916 GB | yes | cuSOLVER still helps the current resident matrix, but less than residency itself. |
+| GPU | `gpu_resident_invbatch_off` | 1 | 16.22 s | 73.2764 GB | no | Negative-control case; disabling inversion batching changes the Si64 energy and must not be promoted. |
+| GPU | `gpu_off` | 1 | 77.94 s | 0.0000 GB | yes | Same GPU-capable binary with accelerators disabled; near the plain CPU reference. |
+| CPU | `nvhpc_cpu` | 1 | 75.23 s | 0.0000 GB | yes | Best one-rank CPU reference in this refresh. |
+| CPU | `cpu` | 1 | 77.79 s | 0.0000 GB | yes | Plain one-rank CPU reference. |
+| CPU | `nvhpc_cpu` | 8 | 392.07 s | 0.0000 GB | yes | NVHPC/NVPL improves the eight-rank CPU run, but MPI/setup overhead dominates this small smoke. |
+| CPU | `cpu` | 8 | 672.52 s | 0.0000 GB | yes | Plain eight-rank CPU reference; not a useful resource-equivalent comparison for this case. |
+
+The key comparison is now `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum`
+at 12.21 s against `gpu_resident_hpsi_opsi` at 12.77 s and the one-rank NVHPC
+CPU reference at 75.23 s. The focused full stack is energy-valid and finally
+has a positive 1024/1 signal, but it should still be treated as a candidate for
+the next larger case rather than an immediate production default. The 8-rank
+CPU numbers are included for completeness; in this small smoke they mostly
+measure MPI/setup overhead and should not be used to reject GPU offload.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -131,14 +166,15 @@ more optional libraries to the default path.
    `nvhpc_gpu_acc_residency_profile_parallel`.
 
 2. The main win is device residency around wavefunction-heavy regions plus
-   explicit cuBLAS. In the latest run, `gpu_resident_hpsi_opsi` is 12.83 s
-   versus 69.50 s for the one-rank NVHPC CPU reference and 166.88 s for the
-   eight-rank NVHPC CPU reference.
+   explicit cuBLAS. In the latest run, the focused full-stack case is 12.21 s
+   and `gpu_resident_hpsi_opsi` is 12.77 s versus 75.23 s for the one-rank
+   NVHPC CPU reference.
 
 3. Do not make all optional NVIDIA libraries active by default. The
    `gpu_all*`, `cufftw`, `nvblas`, and `nvlamath` cases are valuable diagnostics
-   but are slower for this workload. The current `gpu_all` path is 155.46 s,
-   while the best residency path is 12.83 s.
+   but are slower for this workload. The focused combined residency stack is
+   different from broad all-library activation and is now the next larger-case
+   candidate.
 
 4. Keep native cuFFT and cuSOLVER threshold-gated. The Si64 result does not
    justify aggressive defaults for either one: native `cufft` is 70.79 s and
@@ -155,6 +191,10 @@ more optional libraries to the default path.
    `WAVES_1COVERLAP` bottleneck. The next useful default-candidate work should
    target the remaining host-side FFT/RTOG and producer-side HPSI/projector
    boundaries, not broader default activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
+
+7. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
+   the 4fbe2cd refresh it produced 302.773536 Ha instead of 302.280854 Ha and
+   therefore failed the energy guard.
 
 ## Present-Check Smoke
 
