@@ -4101,6 +4101,55 @@ Conclusion: the path is worth keeping for large band/Gram cases, but should
 remain opt-in and threshold-gated until a second large system or multi-step
 case confirms the transfer trade-off.
 
+## 2026-06-01 Ortho-X Resident DSYEVD And Gram Transform Copy Cleanup
+
+The next residency cleanup keeps the real `WAVES_ORTHO_X` diagonalization on
+the device when Ortho-X residency is active. Instead of calling the generic
+copy-in/copy-out `LIB$DIAGR8` cuSOLVER route and then copying `U`/`EIG` back to
+the GPU for the Newton iterations, `CUSOLVER_DSYEVD_PRESENT` symmetrizes
+`CHIPSI` into resident `U`, runs cuSOLVER `DSYEVD`, and leaves `U` and `EIG`
+resident for the following cuBLAS DGEMMs. The checked path is still available:
+`CPPAW_CUSOLVER_ACC_CHECK=1` disables this present-device shortcut. The same
+patch removes a redundant host `PSIINV=PSI` assignment in the Gram transform;
+the existing explicit copy loop remains the single CPU/GPU copy path.
+
+Run directories on Spark GB10:
+
+```
+512 smoke:
+tests/profile/si64/runs/orthox-present-diag-smoke512-20260601
+
+2048 repeats:
+tests/profile/si64/runs/orthox-present-diag-2048-repeat-20260601
+
+4096 probe:
+tests/profile/si64/runs/orthox-present-diag-4096-20260601
+
+Spark 4-rank smoke:
+tests/profile/si64/runs/orthox-present-diag-4r-smoke512-20260601
+
+Terok x86/A40 smoke:
+tests/profile/si64/runs/orthox-present-diag-terok-smoke512-20260601
+```
+
+| Empty bands | Case | Repeats | Wall time | Transfer estimate | `PAW_ORTHO_X_DIAG` | `PAW_GRAM_TRANSFORM` | Energy check |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 4096 | previous cuSOLVER Gram harness case | 1 | 136.61 s | 8.7827 GB | 1.8607 s | 5.0584 s | yes |
+| 4096 | + resident DSYEVD / no redundant `PSIINV` host copy | 1 | 137.85 s | 8.0690 GB | 1.7410 s | 4.8103 s | yes |
+| 2048 | resident DSYEVD / no redundant `PSIINV` host copy | 3 | 30.89 s | 2.5413 GB | 0.2572 s | 1.2923 s | yes |
+
+Spark also rebuilt both the serial and parallel residency-profile targets. The
+4-rank smoke used the non-density `gpu_resident_addoproj` case, passed the
+energy check, and recorded `CUSOLVER_DSYEVD_PRESENT` in rank-local profiles.
+Terok rebuilt the serial target and passed the 512-band density-stack smoke
+with `CUSOLVER_DSYEVD_PRESENT=0.0283 s`.
+
+Conclusion: this is a memory-traffic/residency cleanup, not yet a wall-time
+win. It removes the 4096-band `ACC_COPY_CUSOLVER_DSYEVD` traffic and trims the
+Gram transform envelope, but the dominant cost remains the Ortho-X DGEMM
+iteration sequence and force phase. Keep using it as enabling work for broader
+wavefunction residency rather than as a standalone speedup claim.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

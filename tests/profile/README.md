@@ -962,7 +962,10 @@ and `cusolver_generalized_conservative` for the threshold-gated variant:
 `CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY=1` enables the separate initial
 Gram-Schmidt Cholesky diagnostic, with
 `CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY_MIN_N=4096` as the conservative default
-inside the combined harness case.
+inside the combined harness case. In Ortho-X residency mode, the real
+`WAVES_ORTHO_X` diagonalization can keep `CHIPSI`, `U`, and `EIG` on the device
+through `CUSOLVER_DSYEVD_PRESENT`; set `CPPAW_CUSOLVER_ACC_CHECK=1` to force
+the checked copy-in/copy-out path instead.
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
