@@ -387,7 +387,7 @@ case_note() {
       echo "Combined HPSI/OPSI residency plus off-site DENMAT device packing and GPU-side real-matrix accumulation."
       ;;
     gpu_resident_stack)
-      echo "Focused residency stack keyword: setup PSI0, PSI0-to-PRINFO, HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation."
+      echo "Focused residency stack keyword: setup PSI0, PSI0-to-PRINFO, HPSI/OPSI, PSIM switch, PROJ, DENMAT energy, and off-site device-pack accumulation."
       ;;
     gpu_resident_stack_psi0_ortho_host)
       echo "Focused residency stack with cross-orthogonalization PSI0 residency disabled for copy-boundary diagnostics."

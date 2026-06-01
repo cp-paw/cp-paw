@@ -60,8 +60,9 @@ dedicated follow-up runs before promoting any path to production default.
 | `accdims-switch-spark-20260601-105947` / `accdims-switch-terok-20260601-105946` | Resident wavefunction dimension tracking | `gpu_resident_stack_hpsi_prop_psim_switch` 20.84 s on Spark, 23.50 s on Terok | - | 4-rank smokes OK | Stores resident `PSI0`/`PSIM`/`HPSI` dimensions in `WVSET_TYPE` and routes lifecycle cleanup through mark/clear/delete helpers, preserving the previous switch-residency transfer pattern. |
 | `vpsi-cufft-refresh-spark-20260601-110633` / `vpsi-cufft-refresh-terok-20260601-110633` | Current VPSI/cuFFT refresh | `gpu_resident_stack_cufft` neutral/slightly favorable; force cuFFT slower | - | - | Rechecks cuFFT after the latest residency work. Threshold-gated cuFFT remains harmless, but forced cuFFT inflates transfer to 10.97/19.62 GB and slows VPSI strongly. |
 | `lazy-scratch-*-20260601-1118/1121` | Lazy host scratch allocation for resident `PRO` cache paths | `gpu_resident_stack` 12.12 s on Spark, 11.99 s on Terok at 1024/1 | - | 4-rank smokes OK | Avoids building unused host `GVEC`/`PRO`/`EIGR` scratch in cached resident `PRO` projection and addproduct paths; both cache and host-PRO ablation paths stay energy-valid. |
-| `psim-stack-default-*-20260601-1140/1145/1150` | PSIM/HPSI stack-default probe | Serial opt-in saves 0.1204 GB at 1024/2; Terok 4-rank is much slower when promoted | - | Terok 4-rank regression | Confirms PSIM/HPSI propagate/switch residency should remain opt-in for 1 MPI + 1 GPU, not part of the broad `CPPAW_GPU_RESIDENCY_STACK` default yet. |
+| `psim-stack-default-*-20260601-1140/1145/1150` | Pre-lifecycle-fix PSIM stack-default probe | Serial opt-in saves 0.1204 GB at 1024/2; Terok 4-rank was much slower before the dimension/lifecycle cleanup | - | Terok 4-rank regression in old probe | Superseded by the later resident-dimension cleanup and default retest below; kept as cautionary history. |
 | existing `lazy-scratch-1024-*` profiles re-summarized | FFT/VPSI benchmark collector fields | Spark `gpu_resident_stack`: `vpsi_s=1.2877`, `vpsi_gtor_s=0.6415`, `vpsi_rtog_s=0.6279` | - | tooling OK | Adds `pw_fft_gtor_s`, `pw_fft_rtog_s`, `vpsi_s`, `vpsi_gtor_s`, and `vpsi_rtog_s` to `benchmark_summary.py`; `run_vpsi_boundary.sh` now includes `PW_FFT_*` rows in its FFT-phase table. |
+| `stack-default-psim-*-20260601-1206/1208` | PSIM switch promoted into stack default after lifecycle cleanup | `gpu_resident_stack` now matches the explicit switch case at 512/2: 9.73 s on Spark, 11.07 s on Terok; `NSTEPS=1` smokes OK | - | 4-rank smokes OK | `CPPAW_GPU_RESIDENCY_STACK` now enables PSIM propagation/phase/switch and HPSI-to-propagate residency by default, removing `ACC_COPY_ORTHO_PSIM_IN` and saving 0.0666 GB at 512/2. |
 
 The latest full-matrix run lives at:
 
@@ -508,14 +509,55 @@ runs/psim-stack-default-parallel-terok-repeat-20260601-1150
 | Terok A40 | 512 | 2 | 4 | promoted stack | 41.44 s / 37.94 s | 2.0691 GB | yes |
 | Terok A40 | 512 | 2 | 4 | legacy stack | 12.33 s / 23.15 s | 2.1357 GB | yes |
 
-Interpretation: the opt-in path is still useful for the intended resource split
-of one MPI rank per GPU because it removes one deterministic wavefunction copy
-per two-step run and is energy-valid. It should not become the broad stack
-default yet: Terok's 4-rank shared-GPU runs repeatedly slow down when the
-PSIM/HPSI propagation path is promoted, despite the lower transfer estimate.
-The safe policy is to keep `gpu_resident_stack_hpsi_prop_psim_switch` as an
-explicit one-rank/GPU diagnostic and leave `CPPAW_GPU_RESIDENCY_STACK=1`
-parallel-safe.
+Interpretation at the time: the opt-in path was useful for the intended
+resource split of one MPI rank per GPU, but this pre-cleanup promotion probe
+showed a Terok 4-rank shared-GPU slowdown. The later resident-dimension and
+lifecycle cleanup removed that instability; see the next section for the
+current default decision.
+
+## PSIM Switch In Stack Default
+
+After the resident wavefunction dimension tracking and cleanup helpers were in
+place, the PSIM propagation/switch stack was promoted again and retested as the
+plain `gpu_resident_stack` default. The default now enables:
+
+```
+CPPAW_GPU_PSIM_PROPAGATE=1
+CPPAW_GPU_PSIM_PHASE_RESIDENCY=1
+CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1
+CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1
+```
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries on Spark C86C and Terok:
+
+```
+runs/stack-default-psim-spark-512-nstep2-1r-20260601-120645
+runs/stack-default-psim-terok-512-nstep2-1r-20260601-120645
+runs/stack-default-psim-spark-512-nstep2-4r-20260601-120826
+runs/stack-default-psim-terok-512-nstep2-4r-20260601-120826
+runs/stack-default-psim-spark-512-nstep1-1r-20260601-120855
+runs/stack-default-psim-terok-512-nstep1-1r-20260601-120855
+```
+
+| Machine | Empty bands | NSTEPS | Ranks | Case | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | --- |
+| Spark C86C | 512 | 2 | 1 | `gpu_resident_stack` avg | 9.73 s | 1.3700 GB | yes |
+| Spark C86C | 512 | 2 | 1 | explicit switch avg | 9.62 s | 1.3700 GB | yes |
+| Terok A40 | 512 | 2 | 1 | `gpu_resident_stack` avg | 11.07 s | 1.3700 GB | yes |
+| Terok A40 | 512 | 2 | 1 | explicit switch avg | 11.06 s | 1.3700 GB | yes |
+| Spark C86C | 512 | 2 | 4 | `gpu_resident_stack` | 15.07 s | 2.0691 GB | yes |
+| Terok A40 | 512 | 2 | 4 | `gpu_resident_stack` | 12.03 s | 2.0691 GB | yes |
+| Spark C86C | 512 | 1 | 1 | `gpu_resident_stack` | 6.65 s | 0.8468 GB | yes |
+| Terok A40 | 512 | 1 | 1 | `gpu_resident_stack` | 6.61 s | 0.8468 GB | yes |
+
+Profile checks confirm that `ACC_COPY_ORTHO_PSIM_IN` disappears from the plain
+`gpu_resident_stack` profile, while `ACC_COPY_ORTHO_PSIM_OUT` remains because
+the host still needs the updated wavefunction after orthogonalization. Compared
+with the old stack at 512 empty bands and `NSTEPS=2`, this removes 0.0666 GB of
+deterministic transfer on both machines. The explicit
+`gpu_resident_stack_hpsi_prop_psim_switch` case is now equivalent to the stack
+default and remains useful only as a compatibility/debug spelling.
 
 ## FFT/VPSI Collector Fields
 
