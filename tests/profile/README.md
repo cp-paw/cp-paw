@@ -71,6 +71,12 @@ Set `CPPAW_CUFFT_ACC=1` to enable the native path. The runtime default is
 conservative: only batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=1000000`
 elements are offloaded unless the environment overrides the threshold. Set the
 threshold to `0` only for force-all diagnostics of the small-FFT overhead.
+For single-rank plane-wave diagnostics, `CPPAW_FFT_SERIAL_3D=1` switches
+`PLANEWAVE$FFT` from the stripe/MPI-envelope implementation to a full-grid
+serial 3-D transform. Combined with `CPPAW_CUFFT_ACC=1`,
+`CPPAW_CUFFT_ACC_3D=1`, and `CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=0`, the
+`gpu_resident_stack_serial3dfft` case tests whether one GPU-rank benefits from
+full-grid cuFFT despite the additional full-grid copy volume.
 
 To profile the combined native GPU paths on one GPU, build an
 `nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
@@ -476,6 +482,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
 | `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
 | `gpu_resident_stack_cufft` / `gpu_resident_stack_cufft_force` | Focused residency stack plus native cuFFT enabled with the conservative threshold, or forced for all `LIB$FFTC8` calls. |
+| `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |

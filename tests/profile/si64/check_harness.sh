@@ -44,7 +44,7 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
-  CASES="gpu_resident_stack gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_no_cufft" \
+  CASES="gpu_resident_stack gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_no_cufft" \
   tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
@@ -62,6 +62,9 @@ grep -q "planned_full_command=.*CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1" "${tmpdir}
 grep -q "case=gpu_resident_stack_hpsi_prop_psim_switch" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSIM_PROPAGATE=1 CPPAW_GPU_PSIM_PHASE_RESIDENCY=1 CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1 CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_resident_stack_serial3dfft" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=0" "${tmpdir}/dry-run/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_FFT_SERIAL_3D=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_no_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"

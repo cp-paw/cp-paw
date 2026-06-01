@@ -3213,6 +3213,46 @@ Conclusion: this is correctness-valid on both GPU machines and removes one
 first positive cross-boundary residency result that directly supports the
 "keep wavefunction data on the GPU" direction.
 
+## Single-Rank Full-Grid 3D FFT Diagnostic
+
+`CPPAW_FFT_SERIAL_3D=1` adds an opt-in single-rank `PLANEWAVE$FFT` path that
+maps the plane-wave stripes to a full local 3D grid, calls `LIB$3DFFTC8`, and
+maps the result back. In GPU builds this can be combined with
+`CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=0`;
+the harness case is `gpu_resident_stack_serial3dfft`.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries on Spark C86C:
+
+```
+runs/serial3dfft-probe-20260601-131207
+runs/serial3dfft-nsteps3-20260601-131244
+runs/serial3dfft-parallel-fallback-20260601-131530
+```
+
+| Machine | Case | Empty bands | NSTEPS | Wall time | `vpsi_s` | `fft_s` | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Spark C86C | `gpu_resident_stack` | 1024 | 1 | 12.26 s | 1.3298 s | 3.8647 s | 1.5102 GB | yes |
+| Spark C86C | `gpu_resident_stack_serial3dfft` | 1024 | 1 | 10.56 s | 0.3453 s | 0.9354 s | 5.6070 GB | yes |
+| Spark C86C | `gpu_resident_stack` | 1024 | 3 | 28.40 s | 3.9662 s | 11.4046 s | 2.9994 GB | check disabled |
+| Spark C86C | `gpu_resident_stack_serial3dfft` | 1024 | 3 | 23.53 s | 1.0505 s | 2.6596 s | 15.2897 GB | check disabled |
+
+Representative profile rows for the one-step case:
+
+| Profile row | Stack | Serial 3D FFT | Interpretation |
+| --- | ---: | ---: | --- |
+| `PAW_VPSI_TOTAL` | 1.3298 s | 0.3453 s | The local 3D cuFFT path removes most of the stripe FFT envelope cost for one rank. |
+| `PW_FFT_SERIAL3D_TOTAL` | absent | 0.6539 s | New full-grid path covers the `PLANEWAVE$FFT` calls. |
+| `CUFFT3D_C8` | absent | 0.2590 s | Actual cuFFT time is a fraction of the serial-3D envelope. |
+| `ACC_COPY_CUFFT3D_C8` | absent | 4.0968 GB | The current wrapper still copies full grids in/out. |
+
+The 4-rank fallback smoke (`EMPTY_BANDS=128`, `NSTEPS=1`) is energy-valid and
+shows no `PW_FFT_SERIAL3D_TOTAL`/`CUFFT3D_C8` rows, so the new path is confined
+to `NTASKS=1`. Conclusion: this is the first FFT-side GPU diagnostic with a
+clear wall-time win for the intended one-rank/one-GPU comparison, despite the
+larger explicit transfer estimate. It should remain opt-in until a resident
+full-grid cuFFT path removes the copy volume.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

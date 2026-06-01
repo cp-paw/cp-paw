@@ -1960,6 +1960,10 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: NSTRIPELX
       INTEGER(4)                 :: IFFT
       INTEGER(4)                 :: NTASKS,THISTASK
+      INTEGER(4),SAVE            :: SERIAL3D_INIT=0
+      LOGICAL(4),SAVE            :: TSERIAL3D=.FALSE.
+      CHARACTER(128)             :: ENVVAL
+      INTEGER(4)                 :: ENVSTATUS
 !     ******************************************************************
       CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
                                  CALL TIMING$CLOCKON('PLANEWAVE$FFT')
@@ -1985,6 +1989,44 @@ END MODULE PLANEWAVE_MODULE
       NR2=THIS%NR2
       NR3=THIS%NR3
       NSTRIPELX=MAXVAL(THIS%NSTRIPELARR)
+      IF(SERIAL3D_INIT.EQ.0) THEN
+        SERIAL3D_INIT=1
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_FFT_SERIAL_3D',ENVVAL &
+     &                               ,STATUS=ENVSTATUS)
+        IF(ENVSTATUS.EQ.0) THEN
+          ENVVAL=ADJUSTL(ENVVAL)
+          IF(LEN_TRIM(ENVVAL).GT.0) THEN
+            SELECT CASE(ENVVAL(1:MIN(LEN_TRIM(ENVVAL),LEN(ENVVAL))))
+            CASE('1','yes','YES','true','TRUE','on','ON')
+              TSERIAL3D=.TRUE.
+            CASE DEFAULT
+              TSERIAL3D=.FALSE.
+            END SELECT
+          END IF
+        END IF
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_SERIAL_3DFFT',ENVVAL &
+     &                               ,STATUS=ENVSTATUS)
+        IF(ENVSTATUS.EQ.0) THEN
+          ENVVAL=ADJUSTL(ENVVAL)
+          IF(LEN_TRIM(ENVVAL).GT.0) THEN
+            SELECT CASE(ENVVAL(1:MIN(LEN_TRIM(ENVVAL),LEN(ENVVAL))))
+            CASE('1','yes','YES','true','TRUE','on','ON')
+              TSERIAL3D=.TRUE.
+            CASE('0','no','NO','false','FALSE','off','OFF')
+              TSERIAL3D=.FALSE.
+            END SELECT
+          END IF
+        END IF
+      END IF
+      IF(TSERIAL3D.AND.NTASKS.EQ.1) THEN
+        DO IFFT=1,NFFT
+          CALL PLANEWAVE_FFT_SERIAL3D(ID,NGL,NRL,NR1,NR2,NR3 &
+     &       ,THIS%NSTRIPELARR(THISTASK),THIS%IGTOSTRIPE &
+     &       ,THIS%ISTRIPETOYZ(1,THISTASK),FOFG(1,IFFT),FOFR(1,IFFT))
+        ENDDO
+                                 CALL TIMING$CLOCKOFF('PLANEWAVE$FFT')
+        RETURN
+      END IF
       IF(ID.EQ.'GTOR') THEN
         DO IFFT=1,NFFT
           CALL PLANEWAVE_FFTGTOR(THIS%CID,NTASKS,NGL,NRL,NR1,NR2,NR3 &
@@ -2007,6 +2049,111 @@ END MODULE PLANEWAVE_MODULE
                                  CALL TIMING$CLOCKOFF('PLANEWAVE$FFT')
       RETURN
       END      
+!
+!     ..................................................................
+      SUBROUTINE PLANEWAVE_FFT_SERIAL3D(ID,NGL,NRL,NR1,NR2,NR3 &
+     &                                 ,NSTRIPEL,IGTOSTRIPE,ISTRIPETOYZ &
+     &                                 ,FOFG,FOFR)
+!     ******************************************************************
+!     **  Single-rank full-grid 3D FFT path. This is opt-in because the **
+!     **  parallel stripe implementation remains the conservative path. **
+!     ******************************************************************
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)   :: ID
+      INTEGER(4),INTENT(IN)     :: NGL
+      INTEGER(4),INTENT(IN)     :: NRL
+      INTEGER(4),INTENT(IN)     :: NR1,NR2,NR3
+      INTEGER(4),INTENT(IN)     :: NSTRIPEL
+      INTEGER(4),INTENT(IN)     :: IGTOSTRIPE(NGL)
+      INTEGER(4),INTENT(IN)     :: ISTRIPETOYZ(NSTRIPEL)
+      COMPLEX(8),INTENT(INOUT)  :: FOFG(NGL)
+      COMPLEX(8),INTENT(INOUT)  :: FOFR(NRL)
+      COMPLEX(8),ALLOCATABLE    :: WORK(:,:,:)
+      INTEGER(4)                :: IG,IR,IR1,IR2,IR3
+      INTEGER(4)                :: I23,IND,ISTRIPEL
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                   :: ACCEL_T0
+      REAL(8)                   :: ACCEL_GRID
+#ENDIF
+!     ******************************************************************
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+      IF(NRL.NE.NR1*NR2*NR3) THEN
+        CALL ERROR$MSG('SERIAL 3D FFT REQUIRES A FULL LOCAL GRID')
+        CALL ERROR$I4VAL('NRL',NRL)
+        CALL ERROR$I4VAL('NR1*NR2*NR3',NR1*NR2*NR3)
+        CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D')
+      END IF
+      ALLOCATE(WORK(NR1,NR2,NR3))
+      IF(ID.EQ.'GTOR') THEN
+        WORK(:,:,:)=CMPLX(0.D0,0.D0,KIND=8)
+        DO IG=1,NGL
+          IND=IGTOSTRIPE(IG)
+          IR1=1+MOD(IND-1,NR1)
+          ISTRIPEL=1+(IND-1)/NR1
+          IF(ISTRIPEL.LT.1.OR.ISTRIPEL.GT.NSTRIPEL) THEN
+            CALL ERROR$MSG('STRIPE INDEX OUT OF RANGE')
+            CALL ERROR$I4VAL('ISTRIPEL',ISTRIPEL)
+            CALL ERROR$I4VAL('NSTRIPEL',NSTRIPEL)
+            CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D')
+          END IF
+          I23=ISTRIPETOYZ(ISTRIPEL)
+          IR2=1+MOD(I23-1,NR2)
+          IR3=1+(I23-1)/NR2
+          WORK(IR1,IR2,IR3)=FOFG(IG)
+        ENDDO
+        CALL LIB$3DFFTC8('GTOR',NR1,NR2,NR3,WORK,WORK)
+        IR=0
+        DO IR3=1,NR3
+          DO IR2=1,NR2
+            DO IR1=1,NR1
+              IR=IR+1
+              FOFR(IR)=WORK(IR1,IR2,IR3)
+            ENDDO
+          ENDDO
+        ENDDO
+      ELSE IF(ID.EQ.'RTOG') THEN
+        IR=0
+        DO IR3=1,NR3
+          DO IR2=1,NR2
+            DO IR1=1,NR1
+              IR=IR+1
+              WORK(IR1,IR2,IR3)=FOFR(IR)
+            ENDDO
+          ENDDO
+        ENDDO
+        CALL LIB$3DFFTC8('RTOG',NR1,NR2,NR3,WORK,WORK)
+        DO IG=1,NGL
+          IND=IGTOSTRIPE(IG)
+          IR1=1+MOD(IND-1,NR1)
+          ISTRIPEL=1+(IND-1)/NR1
+          IF(ISTRIPEL.LT.1.OR.ISTRIPEL.GT.NSTRIPEL) THEN
+            CALL ERROR$MSG('STRIPE INDEX OUT OF RANGE')
+            CALL ERROR$I4VAL('ISTRIPEL',ISTRIPEL)
+            CALL ERROR$I4VAL('NSTRIPEL',NSTRIPEL)
+            CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D')
+          END IF
+          I23=ISTRIPETOYZ(ISTRIPEL)
+          IR2=1+MOD(I23-1,NR2)
+          IR3=1+(I23-1)/NR2
+          FOFG(IG)=WORK(IR1,IR2,IR3)
+        ENDDO
+      ELSE
+        CALL ERROR$MSG('ID MUST BE WITHER GTOR OR RTOG')
+        CALL ERROR$CHVAL('ID',ID)
+        CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D')
+      END IF
+      DEALLOCATE(WORK)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_GRID=MAX(REAL(NR1,KIND=8)*REAL(NR2,KIND=8) &
+     &              *REAL(NR3,KIND=8),1.D0)
+      CALL PLANEWAVE_PROFILE_PHASE('PW_FFT_SERIAL3D_TOTAL' &
+     & ,NR1,NR2,NR3,NGL &
+     & ,32.D0*ACCEL_GRID,ACCEL_T0)
+#ENDIF
+      RETURN
+      END
 !
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
 !     ..................................................................

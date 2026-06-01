@@ -19,7 +19,7 @@ ROW_TOP=${ROW_TOP:-16}
 VPSI_ROW_TOP=${VPSI_ROW_TOP:-8}
 FFT_ROW_TOP=${FFT_ROW_TOP:-12}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-${RUN_ROOT:-"${HERE}/runs/vpsi-boundary-$(date +%Y%m%d-%H%M%S)"}}
-VPSI_BOUNDARY_CASES=${VPSI_BOUNDARY_CASES:-"gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_stack_cufft gpu_resident_stack_cufft_force"}
+VPSI_BOUNDARY_CASES=${VPSI_BOUNDARY_CASES:-"gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_stack_cufft gpu_resident_stack_cufft_force gpu_resident_stack_serial3dfft"}
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 ROWS_COMBINED="${RUN_ROOT_BASE}-profile-rows.md"
