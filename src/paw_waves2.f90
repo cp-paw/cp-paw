@@ -2370,6 +2370,10 @@ END IF
 !      **    PHIPHI=CHIPHI=CHICHI=S, SO T=INV(U) WITH S=U^H U          **
 !      **    GIVES (I+X)^H S (I+X)=I AND X=T-I.                        **
 !      *****************************************************************
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+       USE CPPAW_CUSOLVER_ACC_MODULE, ONLY: &
+     &      CPPAW_CUSOLVER_ACC_ZGRAM_CHOLESKY_COPY
+#ENDIF
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)      :: NB
        COMPLEX(8),INTENT(IN)      :: OVERLAP(NB,NB)
@@ -2377,6 +2381,9 @@ END IF
        LOGICAL(4),INTENT(OUT)     :: TOK
        COMPLEX(8),ALLOCATABLE     :: A(:,:)
        INTEGER(4)                 :: I,J,INFO
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+       LOGICAL(4)                 :: ACCEL_CUSOLVER_USED
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
        REAL(8)                    :: ACCEL_CHOL_T0
        REAL(8)                    :: ACCEL_CHOL_T1
@@ -2391,6 +2398,29 @@ END IF
        TOK=.FALSE.
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
        CALL ACCELPROFILE$NOW(ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+#IF DEFINED(CPPVAR_CUSOLVER_ACC)
+       CALL CPPAW_CUSOLVER_ACC_ZGRAM_CHOLESKY_COPY(NB,OVERLAP,X &
+     &                                           ,ACCEL_CUSOLVER_USED &
+     &                                           ,INFO)
+       IF(ACCEL_CUSOLVER_USED) THEN
+         TOK=.TRUE.
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL ACCELPROFILE$NOW(ACCEL_CHOL_T1)
+         CALL ACCELPROFILE$ADD('PAW_GRAM_SOLVE' &
+     &      ,INT(NB,KIND=8),0_8,0_8,1_8 &
+     &      ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+         RETURN
+       END IF
+       IF(INFO.NE.0) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL ACCELPROFILE$NOW(ACCEL_CHOL_T1)
+         CALL ACCELPROFILE$ADD('CUSOLVER_GRAM_CHOL_FALLBACK' &
+     &      ,INT(NB,KIND=8),INT(INFO,KIND=8),0_8,0_8 &
+     &      ,0.D0,0.D0,ACCEL_CHOL_T1-ACCEL_CHOL_TOTAL_T0)
+#ENDIF
+       END IF
 #ENDIF
        ALLOCATE(A(NB,NB))
        A(:,:)=OVERLAP(:,:)

@@ -4052,6 +4052,55 @@ a clear wall-time signal beyond copy accounting. Keep it opt-in until a larger
 multi-step case confirms that the extra projector/Lambda traffic remains small
 outside the Si64 one-step benchmark.
 
+## 2026-06-01 cuSOLVER Gram-Cholesky Diagnostic
+
+`CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY=1` enables an opt-in initial Gram-Schmidt
+Cholesky path for large matrices. The prototype performs the `ZPOTRF` step with
+cuSOLVER and then computes `inv(U)` through cuBLAS `ZTRSM`, preserving the
+existing CPU LAPACK fallback. The harness case is
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram`; it keeps the
+conservative default threshold at
+`CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY_MIN_N=4096`, because the 2048-band Si64 case
+is compute-faster but still wall-time neutral after the extra matrix transfer.
+
+Run directories on Spark GB10:
+
+```
+2048 repeats:
+tests/profile/si64/runs/cusolver-gram-refresh-baseline-2048-20260601
+tests/profile/si64/runs/cusolver-gram-refresh-gram-2048-20260601
+tests/profile/si64/runs/cusolver-gram-refresh-gram-force-2048-20260601
+
+4096 probe:
+tests/profile/si64/runs/cusolver-gram-probe-baseline-4096-20260601
+tests/profile/si64/runs/cusolver-gram-probe-gram-4096-20260601
+
+Final harness case validation:
+tests/profile/si64/runs/cusolver-gram-final-case-4096-20260601
+
+Terok x86/A40 build and path smoke:
+tests/profile/si64/runs/cusolver-gram-terok-smoke-2048-20260601
+```
+
+| Empty bands | Case | Repeats | Wall time | `PAW_GRAM_SOLVE` | `PAW_ETOT_SETUP_GRAM` | Transfer estimate | Energy check |
+| ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| 2048 | ADDOPROJ stack | 3 | 30.27 s | 0.8527 s | 5.1160 s | 2.7307 GB | yes |
+| 2048 | + cuSOLVER Gram | 3 | 30.22 s | 0.4436 s | 4.6776 s | 3.1853 GB | yes |
+| 2048 | + cuSOLVER Gram + force DEDPRO | 3 | 30.31 s | 0.4491 s | 4.7266 s | 3.1416 GB | yes |
+| 4096 | ADDOPROJ stack | 1 | 144.09 s | 5.9272 s | 17.6746 s | 7.0698 GB | yes |
+| 4096 | + cuSOLVER Gram harness case | 1 | 136.61 s | 2.5734 s | 14.1987 s | 8.7827 GB | yes |
+
+Representative 4096 rows show the intended split:
+`CUSOLVER_ZPOTRF_GRAM=0.6185 s` and `CUBLAS_ZTRSM_GRAM=1.5685 s`, replacing
+the CPU `LAPACK_ZPOTRF_GRAM=2.6692 s` and `LAPACK_ZTRTRI_GRAM=2.8986 s`.
+The same code path also built on Terok x86/A40; a 2048-band smoke with the
+threshold forced to `1` passed the Si64 energy check and recorded
+`CUSOLVER_ZPOTRF_GRAM=0.1221 s`, `CUBLAS_ZTRSM_GRAM=0.2226 s`, and
+`PAW_GRAM_SOLVE=0.4704 s`.
+Conclusion: the path is worth keeping for large band/Gram cases, but should
+remain opt-in and threshold-gated until a second large system or multi-step
+case confirms the transfer trade-off.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

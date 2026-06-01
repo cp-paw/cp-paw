@@ -501,6 +501,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_addoproj` | Opt-in diagnostic that sets `CPPAW_GPU_ORTHO_ADDOPROJ=1` and offloads large orthogonalization `WAVES_ADDOPROJ` projector updates through cuBLAS slice GEMMs; the default `CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO=64` avoids small per-atom calls. |
 | `gpu_resident_stack_density_1cov_batch` | Current density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to compare the batch path against the best current Spark/Terok stack. |
 | `gpu_resident_stack_density_1cov_addoproj` | Current density-resident stack plus batched one-center overlap and opt-in `WAVES_ADDOPROJ` cuBLAS slice GEMMs. |
+| `gpu_resident_stack_density_1cov_addoproj_cusolver_gram` | Current density-resident stack plus ADDOPROJ slice GEMMs and opt-in large-matrix Gram-Cholesky through cuSOLVER `ZPOTRF` plus cuBLAS `ZTRSM`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
@@ -958,6 +959,10 @@ fallback. The global threshold can be split into
 `CPPAW_CUSOLVER_ACC_DSYGVD_MIN_N` and `CPPAW_CUSOLVER_ACC_ZHEGVD_MIN_N` are
 also accepted. Use `cusolver_generalized` to force only the generalized path
 and `cusolver_generalized_conservative` for the threshold-gated variant:
+`CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY=1` enables the separate initial
+Gram-Schmidt Cholesky diagnostic, with
+`CPPAW_CUSOLVER_ACC_GRAM_CHOLESKY_MIN_N=4096` as the conservative default
+inside the combined harness case.
 
 ```
 CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_cusolver_acc_profile
