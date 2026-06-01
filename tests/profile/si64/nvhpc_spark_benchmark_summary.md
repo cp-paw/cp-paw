@@ -3895,10 +3895,22 @@ Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
 | Terok A40 | 33.13 s / 7.05 GB | 31.68 s / 4.01 GB | 0.000001 |
 
 The new present row appears only in the fully resident combined case, with
-2176 `ACC_PRESENT_SERIAL3D_DATA` calls on both systems. That is the expected
-shape: the isolated cache case still has a non-resident input/output boundary,
-while `*_hpsi_rtog_vpsi_internal_cache` keeps enough arrays present to skip the
-data region.
+2176 `ACC_PRESENT_SERIAL3D_DATA` calls on both systems. A follow-up direction
+split, validated after removing an experimental caller hint, resolves that
+total into 1088 `ACC_PRESENT_SERIAL3D_GTOR_DATA` and 1088
+`ACC_PRESENT_SERIAL3D_RTOG_DATA` calls:
+
+```
+Spark: tests/profile/si64/runs/accmap-direction-spark-20260601-192642
+Terok: tests/profile/si64/runs/accmap-direction-terok-20260601-192641
+```
+
+That is the expected shape: the isolated cache case still has a non-resident
+input/output boundary, while `*_hpsi_rtog_vpsi_internal_cache` keeps the
+`WAVES_VPSI` GTOR/RTOG pair resident enough to skip the data region. The
+remaining 1.2897 GB `ACC_COPY_SERIAL3D_ACC_OUTPUT` in the combined case is
+therefore not the VPSI RTOG boundary; it comes from another GTOR output
+boundary that still lacks a resident consumer.
 
 The change is correctness-safe in this smoke case, but its timing impact is
 system-dependent. Terok's `PW_FFT_SERIAL3D_TOTAL` drops from about 0.87 s in the
