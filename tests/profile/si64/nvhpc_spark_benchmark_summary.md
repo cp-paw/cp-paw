@@ -61,6 +61,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `vpsi-cufft-refresh-spark-20260601-110633` / `vpsi-cufft-refresh-terok-20260601-110633` | Current VPSI/cuFFT refresh | `gpu_resident_stack_cufft` neutral/slightly favorable; force cuFFT slower | - | - | Rechecks cuFFT after the latest residency work. Threshold-gated cuFFT remains harmless, but forced cuFFT inflates transfer to 10.97/19.62 GB and slows VPSI strongly. |
 | `lazy-scratch-*-20260601-1118/1121` | Lazy host scratch allocation for resident `PRO` cache paths | `gpu_resident_stack` 12.12 s on Spark, 11.99 s on Terok at 1024/1 | - | 4-rank smokes OK | Avoids building unused host `GVEC`/`PRO`/`EIGR` scratch in cached resident `PRO` projection and addproduct paths; both cache and host-PRO ablation paths stay energy-valid. |
 | `psim-stack-default-*-20260601-1140/1145/1150` | PSIM/HPSI stack-default probe | Serial opt-in saves 0.1204 GB at 1024/2; Terok 4-rank is much slower when promoted | - | Terok 4-rank regression | Confirms PSIM/HPSI propagate/switch residency should remain opt-in for 1 MPI + 1 GPU, not part of the broad `CPPAW_GPU_RESIDENCY_STACK` default yet. |
+| existing `lazy-scratch-1024-*` profiles re-summarized | FFT/VPSI benchmark collector fields | Spark `gpu_resident_stack`: `vpsi_s=1.2877`, `vpsi_gtor_s=0.6415`, `vpsi_rtog_s=0.6279` | - | tooling OK | Adds `pw_fft_gtor_s`, `pw_fft_rtog_s`, `vpsi_s`, `vpsi_gtor_s`, and `vpsi_rtog_s` to `benchmark_summary.py`; `run_vpsi_boundary.sh` now includes `PW_FFT_*` rows in its FFT-phase table. |
 
 The latest full-matrix run lives at:
 
@@ -516,6 +517,35 @@ The safe policy is to keep `gpu_resident_stack_hpsi_prop_psim_switch` as an
 explicit one-rank/GPU diagnostic and leave `CPPAW_GPU_RESIDENCY_STACK=1`
 parallel-safe.
 
+## FFT/VPSI Collector Fields
+
+The benchmark tooling now exposes the FFT/VPSI structure directly in the main
+`benchmark.tsv` output instead of requiring a manual profile-row query. New
+columns are:
+
+```
+pw_fft_gtor_s
+pw_fft_rtog_s
+vpsi_s
+vpsi_gtor_s
+vpsi_rtog_s
+```
+
+The focused VPSI harness also includes `PW_FFT_*` rows in its FFT-phase tables.
+Re-summarizing the existing 1024/1 lazy-scratch profiles gives:
+
+| Machine | Case | `fft_s` | `pw_fft_gtor_s` | `pw_fft_rtog_s` | `vpsi_s` | `vpsi_gtor_s` | `vpsi_rtog_s` |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Spark C86C | `gpu_resident_stack` | 3.6887 s | 1.4310 s | 0.6335 s | 1.2877 s | 0.6415 s | 0.6279 s |
+| Spark C86C | `gpu_resident_pro_host` | 3.8184 s | 1.4800 s | 0.6640 s | 1.3339 s | 0.6517 s | 0.6583 s |
+| Terok A40 | `gpu_resident_stack` | 3.2424 s | 1.4389 s | 0.6048 s | 1.2514 s | 0.6135 s | 0.5964 s |
+| Terok A40 | `gpu_resident_pro_host` | 3.6762 s | 1.6118 s | 0.8601 s | 1.8034 s | 0.8833 s | 0.8513 s |
+
+This does not change physics or runtime behavior. It makes future night runs
+more diagnostic: a useful FFT/RTOG change should reduce `vpsi_*` and the
+corresponding `PW_FFT_*` columns, not only move time between broad `PAW_*`
+envelopes.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -562,7 +592,8 @@ parallel-safe.
    refresh confirms that threshold-gated cuFFT is harmless, but force-all cuFFT
    is slower and transfer-heavy on both Spark and Terok. A useful FFT follow-up
    needs device-resident dataflow, not just more `LIB$FFTC8` calls routed
-   through cuFFT.
+   through cuFFT. The benchmark tooling now reports `vpsi_*` and `PW_FFT_*`
+   timing columns directly so those changes can be evaluated from the main TSV.
 
 8. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
    the 4fbe2cd refresh it produced 302.773536 Ha instead of 302.280854 Ha and

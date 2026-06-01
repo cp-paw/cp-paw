@@ -43,6 +43,7 @@ VPSI_ROW_ARGS=(
   --sort-by seconds
 )
 FFT_ROW_ARGS=(
+  --op-prefix PW_FFT_
   --op-prefix PW_GTOR_
   --op-prefix PW_RTOG_
   --include-zero

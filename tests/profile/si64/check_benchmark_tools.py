@@ -111,7 +111,11 @@ def check_summary_and_markdown(tmpdir):
                 "ACC_PRESENT_ADDOPSI_PSIM,1,1,1,0,2,0,0,0,0,0,0,0",
                 "PW_GTOR_TOTAL,1,1,1,0,1,1,1,1,0,0,0,0",
                 "PW_RTOG_TOTAL,1,1,1,0,1,2,2,2,0,0,0,0",
+                "PW_FFT_GTOR_TOTAL,1,1,1,0,1,3,3,3,0,0,0,0",
                 "PW_FFT_RTOG_TOTAL,1,1,1,0,1,4,4,4,0,0,0,0",
+                "PAW_VPSI_FFT_GTOR,1,1,1,0,1,5,5,5,0,0,0,0",
+                "PAW_VPSI_FFT_RTOG,1,1,1,0,1,6,6,6,0,0,0,0",
+                "PAW_VPSI_TOTAL,1,1,1,0,1,12,12,12,0,0,0,0",
             ]
         )
         + "\n",
@@ -133,7 +137,12 @@ def check_summary_and_markdown(tmpdir):
     row = rows[0]
     assert_equal(row["pw_gtor_s"], "1", "pw_gtor_s")
     assert_equal(row["pw_rtog_s"], "2", "pw_rtog_s")
-    assert_equal(row["fft_s"], "4", "fft_s")
+    assert_equal(row["fft_s"], "7", "fft_s")
+    assert_equal(row["pw_fft_gtor_s"], "3", "pw_fft_gtor_s")
+    assert_equal(row["pw_fft_rtog_s"], "4", "pw_fft_rtog_s")
+    assert_equal(row["vpsi_s"], "12", "vpsi_s")
+    assert_equal(row["vpsi_gtor_s"], "5", "vpsi_gtor_s")
+    assert_equal(row["vpsi_rtog_s"], "6", "vpsi_rtog_s")
     assert_equal(row["transfer_gb"], "14.75", "transfer_gb")
     assert_equal(row["copy_gb"], "13.5", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")

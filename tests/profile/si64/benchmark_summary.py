@@ -53,8 +53,13 @@ def profile_totals(run_dir):
         "blas": 0.0,
         "lapack": 0.0,
         "fft": 0.0,
+        "pw_fft_gtor": 0.0,
+        "pw_fft_rtog": 0.0,
         "mpi": 0.0,
         "paw": 0.0,
+        "vpsi": 0.0,
+        "vpsi_gtor": 0.0,
+        "vpsi_rtog": 0.0,
         "pw_trace": 0.0,
         "pw_gtor": 0.0,
         "pw_rtog": 0.0,
@@ -102,6 +107,16 @@ def profile_totals(run_dir):
                     elif op.startswith("PW_RTOG_"):
                         totals["pw_rtog"] += seconds
                     continue
+                if op.startswith("PW_FFT_GTOR"):
+                    totals["pw_fft_gtor"] += seconds
+                elif op.startswith("PW_FFT_RTOG"):
+                    totals["pw_fft_rtog"] += seconds
+                if op == "PAW_VPSI_TOTAL":
+                    totals["vpsi"] += seconds
+                elif op.startswith("PAW_VPSI_FFT_GTOR"):
+                    totals["vpsi_gtor"] += seconds
+                elif op.startswith("PAW_VPSI_FFT_RTOG"):
+                    totals["vpsi_rtog"] += seconds
                 if op.startswith("PAW_"):
                     totals["paw"] += seconds
                     continue
@@ -228,6 +243,11 @@ def main(argv):
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
+                "pw_fft_gtor_s": totals["pw_fft_gtor"],
+                "pw_fft_rtog_s": totals["pw_fft_rtog"],
+                "vpsi_s": totals["vpsi"],
+                "vpsi_gtor_s": totals["vpsi_gtor"],
+                "vpsi_rtog_s": totals["vpsi_rtog"],
                 "mpi_s": totals["mpi"],
                 "pw_trace_s": totals["pw_trace"],
                 "pw_gtor_s": totals["pw_gtor"],
@@ -274,6 +294,11 @@ def main(argv):
         "blas_s",
         "lapack_s",
         "fft_s",
+        "pw_fft_gtor_s",
+        "pw_fft_rtog_s",
+        "vpsi_s",
+        "vpsi_gtor_s",
+        "vpsi_rtog_s",
         "mpi_s",
         "pw_trace_s",
         "pw_gtor_s",
