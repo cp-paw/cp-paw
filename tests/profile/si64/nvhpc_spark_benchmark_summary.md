@@ -3922,6 +3922,44 @@ boundary is not the remaining large cost: `PW_FFT_SERIAL3D_TOTAL` stays near
 bookkeeping in the resident path, but keep ACCMAP/cache opt-in and continue
 looking for Spark's remaining serial-3D overhead elsewhere.
 
+## 2026-06-01 Density GTOR Residency Prototype
+
+Commit `7b19235` adds the opt-in
+`CPPAW_GPU_DENSITY_INTERNAL_RESIDENCY=1` diagnostic. For scalar,
+non-kinetic-density calls in `WAVES_DENSITY`, the GTOR output stays resident on
+the GPU, `RHO` is accumulated with OpenACC, and only the final density is copied
+back. The harness case is
+`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache`.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/density-spark-20260601-194229
+Terok: tests/profile/si64/runs/density-terok-20260601-194229
+```
+
+Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
+
+| System | Cache baseline | + density residency | Energy delta |
+| --- | ---: | ---: | ---: |
+| Spark GB10 | 40.43 s / 4.01 GB | 31.49 s / 2.72 GB | 0.000000 |
+| Terok A40 | 32.00 s / 4.01 GB | 31.54 s / 2.72 GB | 0.000001 |
+
+The transfer reduction is exactly the formerly remaining density-side serial
+3-D output boundary: `ACC_COPY_SERIAL3D_ACC_OUTPUT` drops from 1.2897 GB to
+zero bytes, while the new diagnostic records one
+`ACC_PRESENT_DENS_PSIOFR(74088,1,1088)` row. The only new explicit density
+transfers are small: occupations (`0.000017 GB`), `RHO` copyout
+(`0.000593 GB`), and the time-inversion phase factor (`0.001185 GB`).
+
+The density timing confirms the source of Spark's large serial-3D overhead. On
+Spark, `PAW_DENSITY_TOTAL` drops from 8.9750 s to 0.1588 s
+(`PAW_DENSITY_FFT`: 8.9092 s to 0.1555 s). On Terok, the same path drops from
+0.4697 s to 0.1044 s. Energy remains within the existing tolerance on both
+systems. This is the strongest current evidence that broader caller-side
+residency around `PLANEWAVE$FFT` is more valuable than tuning the isolated
+ACCMAP kernels alone, especially on Spark.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
