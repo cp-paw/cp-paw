@@ -11,7 +11,7 @@ export TIMEOUT=${TIMEOUT:-43200}
 export GPU_RANKS=${GPU_RANKS:-1}
 export CPU_RANKS=${CPU_RANKS:-8}
 export RUN_GPU_ALL=${RUN_GPU_ALL:-no}
-export GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_addpro_host gpu_resident_pro_host gpu_off"}
+export GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_addpro_host gpu_resident_pro_host gpu_off"}
 export AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
 export AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
 
