@@ -196,7 +196,13 @@ calls. Eligible paths also keep `PSI0` present across the same local
 `WAVES$ETOT` HPSI/expectation/Hamiltonian boundary and delete that ETOT-local
 `PSI0` residency before leaving the energy evaluation; set
 `CPPAW_GPU_HPSI_RESIDENCY=1` or use `gpu_resident_hpsi` to test it. The longer
-alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. A separate opt-in
+alias is `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`. When HPSI residency is active and
+the input `PSI` is already present, the final `WAVES_VPSI` kinetic/bucket
+G-space update can finish on the device. The host-side FFT/RTOG boundary still
+requires one `HPSI` host-to-device transfer, recorded as
+`ACC_COPY_VPSI_HPSI_IN`, but the following `WAVES_ADDPRO` consumer should then
+record `ACC_PRESENT_HPSI_ADDPRO` instead of `ACC_COPY_HPSI_ADDPRO_IN`. A
+separate opt-in
 diagnostic propagates `PSIM` on the GPU and immediately copies the updated
 wavefunction back before the following host-side projection work; set
 `CPPAW_GPU_PSIM_PROPAGATE=1` or use `gpu_psim_propagate` /
@@ -276,7 +282,12 @@ device copy, and the immediate consumers as `ACC_PRESENT_EXPECT_PSI0` and
 `ACC_PRESENT_HAMILTON_PSI0` when they can reuse that resident buffer. If the
 force-loop residency created the `PSI0` device copy earlier in the same
 `WAVES$ETOT`, `WAVES$HPSI` records `ACC_PRESENT_HPSI_PSI0` instead of
-`ACC_COPY_HPSI_PSI0_IN`. The
+`ACC_COPY_HPSI_PSI0_IN`. The `WAVES_VPSI` finish path records resident input
+`PSI` as `ACC_PRESENT_VPSI_PSI`, the still-required host FFT/RTOG output
+boundary as `ACC_COPY_VPSI_HPSI_IN`, and small kinetic/bucket inputs as
+`ACC_COPY_VPSI_G2_IN` or `ACC_COPY_VPSI_BUCKET_IN`. When this producer-side
+device finish is active, the following ADDPRO step records
+`ACC_PRESENT_HPSI_ADDPRO`. The
 one-center overlap cuBLAS
 path splits its estimated transfers into `ACC_COPY_1COV_PROJ_IN`,
 `ACC_COPY_1COV_MAT_OUT`, and, for inversion-symmetric superwave cases,

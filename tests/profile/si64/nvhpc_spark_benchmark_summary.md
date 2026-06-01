@@ -48,6 +48,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `superwave-projection-residency-20260601-512-nstep2-*` | Superwave projection residency | `gpu_resident_hpsi_opsi` 10.61 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.14 s at 512/4 | Enables the resident cuBLAS projection path for superwave OPSI with gamma correction; removes the post-mass OPSI host snapshot. |
 | `psi0-hpsi-copy-boundaries-20260601-512-nstep2-*` | HPSI/PSI0 ETOT residency | `gpu_resident` 11.20 s at 512/1; `gpu_resident_hpsi_opsi` lowest copy | - | `gpu_resident_hpsi_opsi` 15.33 s at 512/4 | Keeps `PSI0` present from HPSI into the immediate expectation/Hamiltonian overlaps; energy-valid and removes one more 0.1345 GB copy block from HPSI/OPSI diagnostics. |
 | `force-to-hpsi-psi0-residency-20260601-512-nstep2-*` | Force-to-HPSI `PSI0` residency | `gpu_resident_hpsi_opsi` 11.03 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.06 s at 512/4 | Reuses the force-loop `PSI0` device copy in the following HPSI path; energy-valid and removes the HPSI-side `PSI0` copy. |
+| `vpsi-device-finish-residency-20260601-512-nstep2-*` | VPSI HPSI device finish | `gpu_resident_hpsi_opsi` 11.11 s at 512/1 | - | `gpu_resident_hpsi` 15.16 s at 512/4 | Moves the still-required HPSI transfer from the ADDPRO consumer boundary to the VPSI producer boundary; energy-valid and keeps HPSI present for ADDPRO. |
 
 The latest full-matrix run lives at:
 
@@ -2399,6 +2400,53 @@ smokes. This is still a small-boundary cleanup, but it is a useful step toward
 Peter's broader "keep the PAW wavefunctions on the GPU" direction because it
 connects two previously separate ETOT-local resident regions without widening
 the lifetime beyond the energy evaluation.
+
+## VPSI Device-Finish HPSI Residency
+
+The next boundary cleanup lets `WAVES_VPSI` finish the kinetic/bucket G-space
+addition on the device when HPSI residency is active and the input `PSI` is
+already present. The FFT/RTOG part is still host-side, so one `HPSI`
+host-to-device transfer remains; the point of this patch is to move that copy
+accounting to the producing `WAVES_VPSI` boundary and let the following
+`WAVES_ADDPRO` step consume `HPSI` as present.
+
+The force-to-HPSI `PSI0` carry also uses the same addproduct threshold guard as
+the HPSI residency path, so it only extends `PSI0` lifetime when the following
+HPSI path can actually use the resident addproduct implementation.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/vpsi-device-finish-residency-20260601-512-nstep2-1r
+runs/vpsi-device-finish-residency-20260601-512-nstep2-4r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 11.38 s | 2.0755 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 11.11 s | 1.8066 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 4 | 15.16 s | 2.7097 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 4 | 15.36 s | 2.4407 GB | 269.022536 Ha |
+
+| Profile row | HPSI | HPSI + OPSI | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_PRESENT_VPSI_PSI` | 2 calls | 2 calls | VPSI sees the input wavefunction already resident. |
+| `ACC_COPY_VPSI_HPSI_IN` | 0.1345 GB | 0.1345 GB | The required HPSI transfer now belongs to the VPSI producer boundary. |
+| `ACC_COPY_VPSI_G2_IN` | 0.0002 GB | 0.0002 GB | The kinetic factor copy is tiny compared with the wavefunction transfer. |
+| `ACC_PRESENT_HPSI_ADDPRO` | 2 calls | 2 calls | ADDPRO consumes HPSI as present. |
+| `ACC_COPY_HPSI_ADDPRO_IN` | absent | absent | The old consumer-side HPSI copy boundary is removed. |
+| `ACC_PRESENT_HPSI_PSI0` | 2 calls | 2 calls | HPSI still reuses force-loop `PSI0`. |
+| `ACC_PRESENT_EXPECT_PSI0` | 2 calls | 2 calls | Expectation still reuses resident `PSI0`. |
+| `ACC_PRESENT_HAMILTON_PSI0` | 2 calls | 2 calls | Full-Hamiltonian overlap still reuses resident `PSI0`. |
+
+Conclusion: this does not yet remove the HPSI host/device copy, because the
+FFT/RTOG producer remains host-side. It does make the lifetime graph cleaner:
+VPSI produces a device-present `HPSI`, ADDPRO consumes it without another
+enter-data boundary, and the profile now points at the real next large target,
+namely GPU-resident FFT/RTOG or a broader producer-side wavefunction residency.
 
 ## Recommended Next Benchmark
 
