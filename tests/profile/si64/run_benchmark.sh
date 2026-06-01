@@ -778,6 +778,7 @@ capture_metadata() {
     echo "date=$(iso_now)"
     echo "hostname=$(hostname)"
     echo "test=${TEST}"
+    echo "empty_bands=${EMPTY_BANDS:-}"
     echo "nsteps=${NSTEPS}"
     echo "ranks=${RANKS}"
     echo "cases=${CASES}"
@@ -786,6 +787,8 @@ capture_metadata() {
       echo "energy_tol=${ENERGY_TOL}"
     fi
     echo "threads=OMP_NUM_THREADS=${OMP_NUM_THREADS} OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS} MKL_NUM_THREADS=${MKL_NUM_THREADS} BLIS_NUM_THREADS=${BLIS_NUM_THREADS} VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS} NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
+    [[ -n "${PKG_CONFIG_PATH:-}" ]] && echo "pkg_config_path=${PKG_CONFIG_PATH}"
+    [[ -n "${LD_LIBRARY_PATH:-}" ]] && echo "ld_library_path=${LD_LIBRARY_PATH}"
     echo
     uname -a
     echo

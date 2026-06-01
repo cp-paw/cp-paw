@@ -99,6 +99,7 @@ DRY_RUN=yes \
   tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
+grep -q "^empty_bands=$" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_resident_stack_force_dedpro" "${tmpdir}/dry-run/metadata.txt"
@@ -299,6 +300,12 @@ grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_stack_serial3dfft g
 grep -q "^recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache" \
   "${tmpdir}/resource-dry-run/gpu_capabilities.txt"
 grep -q "case=gpu_resident_stack_serial3dfft_force_dedpro" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "^empty_bands=2048$" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "^pkg_config_path=/tmp/fftw/lib/pkgconfig" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "^ld_library_path=/tmp/fftw/lib" \
   "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1.*CPPAW_FFT_SERIAL_3D=1" \
   "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
