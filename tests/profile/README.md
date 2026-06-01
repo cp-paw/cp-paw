@@ -244,10 +244,13 @@ with `OPSI`/`LAMBDA` tracked for the non-inversion data region, `PSI` and
 `PROPSI` in `WAVES_PROJECTIONS`, and context-specific projection `PSI` rows
 such as `ACC_COPY_PROJ_SETUP0_PSI_IN`, `ACC_COPY_PROJ_GRAM_PSI0_PSI_IN`, and
 `ACC_COPY_PROJ_ORTHO_PSIM_PSI_IN`. `WAVES_ADDPRO` has context-specific
-`PSI`/`PROPSI` rows (`HPSI` and `OPSI`). The ADDPRO `PSI` rows are split into
-`*_PSI_IN` and `*_PSI_OUT` estimates because the projector addition updates the
-wavefunction. They are emitted for both the resident projector-cache path and
-the host-expansion fallback path; in the fallback path, per-atom `PRO`/`PROPSI`
+`PSI`/`PROPSI` rows (`HPSI` and `OPSI`). Superwave projections use the same
+resident cuBLAS projection path as ordinary wavefunctions, with the factor-two
+and gamma-point correction applied on device before copying `PROPSI` back for
+the communicator combine. The ADDPRO `PSI` rows are split into `*_PSI_IN` and
+`*_PSI_OUT` estimates because the projector addition updates the wavefunction.
+They are emitted for both the resident projector-cache path and the
+host-expansion fallback path; in the fallback path, per-atom `PRO`/`PROPSI`
 transfers remain in the generic cuBLAS `ZGEMM_NN` copy rows to avoid double
 counting. The
 wavefunction overlap `ZSPROD` rows are also tagged by `WAVES_OVERLAP` caller
@@ -626,10 +629,10 @@ be overridden by kernel category:
 - `CPPAW_GPU_OPSI_RESIDENCY`: disabled by default. Set to `1` to keep
   orthogonalization `OPSI` resident through projection, overlap, and
   `WAVES_ADDOPSI` on eligible non-stress paths. Eligible paths keep OPSI
-  resident from build and mass scaling; inversion-symmetric superwave paths take
-  one host snapshot after mass scaling so remaining host-side projection
-  fallbacks see the same OPSI data while later projection and `WAVES_ADDOPSI`
-  consumers use `present_or_copyin` data regions.
+  resident from build and mass scaling. Inversion-symmetric superwave paths are
+  only admitted when the projection threshold also selects the resident cuBLAS
+  projection path, so the post-mass host snapshot is avoided and the later
+  projection, overlap, and `WAVES_ADDOPSI` consumers use present device data.
   The
   compatibility alias is `CPPAW_CUBLAS_ACC_OPSI_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run

@@ -45,6 +45,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `psim-lifecycle-20260601-rerun-*` | Two-step PSIM lifecycle harness | `gpu_resident_hpsi` 10.05 s at 512/1 | - | - | Adds an `NSTEPS=2` harness plus per-case copy-row extraction; all cases finish with the same two-step energy, and the profile confirms the next boundary is still `PSI0`/`HPSI`/ADDPRO-style residency rather than another immediate PSIM-only promotion. |
 | `opsi-present-consumers-20260601-*` | OPSI present-or-copy consumer cleanup | `gpu_resident_hpsi_opsi` 10.13 s at 512/1 | - | - | Converts downstream projection/ADDPRO/ADDOPSI data regions to `present_or_copy*`; correctness is preserved, but the superwave OPSI build remains the real copy target. |
 | `opsi-superwave-build-residency-20260601-final-v2` | Superwave OPSI build residency | `gpu_resident_hpsi_opsi` 10.36 s at 512/1 | - | - | Keeps superwave OPSI resident through build/mass scaling with one post-mass host snapshot; energy-valid and removes ADDPRO-OPSI in/out copies. |
+| `superwave-projection-residency-20260601-512-nstep2-*` | Superwave projection residency | `gpu_resident_hpsi_opsi` 10.61 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.14 s at 512/4 | Enables the resident cuBLAS projection path for superwave OPSI with gamma correction; removes the post-mass OPSI host snapshot. |
 
 The latest full-matrix run lives at:
 
@@ -2266,6 +2267,48 @@ switch now removes the repeated ADDPRO input/output copies for superwave
 builds. The remaining host snapshot is intentional; the next cleanup target is
 the host-side superwave projection fallback so `ACC_COPY_OPSI_MASS_OUT` can be
 reduced or removed later.
+
+## Superwave Projection Residency
+
+The follow-up enables the resident cuBLAS projection path for superwave
+wavefunctions. `CPPAW_CUBLAS_ACC_PROJECTION_PRESENT` now applies the same
+superwave completion used by `PLANEWAVE$SCALARPRODUCT`: double the projected
+sum, subtract the gamma-point term when present, and then apply `GWEIGHT`.
+`WAVES_PROJECTIONS` no longer disables the resident path for `SUPER`, and
+`CPPAW_GPU_OPSI_RESIDENCY=1` now requires the projection threshold before it
+skips the host snapshot after OPSI mass scaling.
+
+Spark C86C validation:
+
+```
+nvhpc_gpu_acc_residency_profile
+nvhpc_gpu_acc_residency_profile_parallel
+
+runs/superwave-projection-residency-20260601-512-nstep2-1r
+runs/superwave-projection-residency-20260601-512-nstep2-4r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi` | 512 | 2 | 1 | 10.86 s | 2.3443 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 10.61 s | 2.0753 GB | 269.022536 Ha |
+| `gpu_resident_hpsi` | 512 | 2 | 4 | 15.24 s | 2.9785 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 4 | 15.14 s | 2.7095 GB | 269.022536 Ha |
+
+| Current OPSI-case profile row | Value | Interpretation |
+| --- | ---: | --- |
+| `ACC_COPY_OPSI_MASS_OUT` | absent | The superwave projection path no longer needs a post-mass host OPSI snapshot. |
+| `ACC_COPY_OPSI_BUILD_IN` | 0.1345 GB | OPSI enters the build path on device. |
+| `ACC_PRESENT_ADDPRO_OPSI_PSI` | 2 calls | Build-time ADDPRO updates resident OPSI. |
+| `ACC_PRESENT_ORTHO_OPSI` | 2 calls | Orthogonalization sees OPSI present. |
+| `ACC_PRESENT_PROJ_ORTHO_OPSI_PSI` | 2 calls | The orthogonalization projection sees OPSI present. |
+| `CUBLAS_ZGEMM_PROJ_RES` | 576 calls | Superwave projections use the resident cuBLAS projection kernel. |
+
+Conclusion: the two-step 512-band smoke stays energy-clean for 1 MPI/GPU and
+for the 4-rank shared-GPU run. The copy estimate drops by another 0.1345 GB in
+the 1-rank case compared with the previous OPSI-build branch, matching removal
+of `ACC_COPY_OPSI_MASS_OUT`. This makes the OPSI residency path internally
+consistent through build, mass scaling, projection, overlap, and ADDOPSI.
 
 ## Recommended Next Benchmark
 
