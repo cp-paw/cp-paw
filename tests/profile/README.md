@@ -101,10 +101,14 @@ kernel instrumentation. The aggregate copy estimate `copy_gb` is split into
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center
-density-matrix transfers. These buckets are subsets of `copy_gb` and are meant
-to show whether a residency change actually removes the expected data motion.
-`profile_summary.py` uses the same buckets in its category summary and prints
-their GB totals for single-run CSV inspection.
+density-matrix transfers. OpenACC `ACC_UPDATE_*` rows are reported separately
+as `update_gb` with matching `update_wave_gb`, `update_proj_gb`,
+`update_offden_gb`, and `update_denmat_gb` buckets, so required boundary
+refreshes are visible without inflating the pure copy estimate. These buckets
+are subsets of `copy_gb` or `update_gb` and are meant to show whether a
+residency change actually removes the expected data motion. `profile_summary.py`
+uses the same buckets in its category summary and prints their GB totals for
+single-run CSV inspection.
 For the bundled `si64` and `si64_bands` cases, the harness also checks the
 final constant energy against the built-in reference (`EXPECTED_ENERGY`,
 default `302.280854`) with `ENERGY_TOL=1e-5`. A run with normal termination but

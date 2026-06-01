@@ -189,11 +189,12 @@ def main(argv):
     print(
         "| suite | case | ranks | ok | wall_s | base_case | vs_base | "
         "vs_1cpu | vs_8cpu | rank_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | "
-        "copy_denmat_gb | energy_delta |"
+        "copy_denmat_gb | update_gb | update_wave_gb | update_proj_gb | update_offden_gb | "
+        "update_denmat_gb | energy_delta |"
     )
     print(
         "| --- | --- | ---: | --- | ---: | --- | ---: | ---: | ---: | "
-        "---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+        "---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
     )
     for group in sorted(groups):
         group_rows = groups[group]
@@ -213,7 +214,7 @@ def main(argv):
             ),
         ):
             print(
-                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                     suite_label(row),
                     row.get("case", ""),
                     row.get("ranks", ""),
@@ -229,6 +230,11 @@ def main(argv):
                     number(row.get("copy_proj_gb")),
                     number(row.get("copy_offden_gb")),
                     number(row.get("copy_denmat_gb")),
+                    number(row.get("update_gb")),
+                    number(row.get("update_wave_gb")),
+                    number(row.get("update_proj_gb")),
+                    number(row.get("update_offden_gb")),
+                    number(row.get("update_denmat_gb")),
                     number(row.get("energy_delta"), 6),
                 )
             )

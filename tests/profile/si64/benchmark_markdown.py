@@ -46,11 +46,11 @@ def main(argv):
     print()
     print(f"Source: `{os.path.basename(path)}`")
     print()
-    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | pw_gtor_s | pw_rtog_s | phase_s | phase_gap_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | copy_denmat_gb | energy | energy_delta |")
-    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | pw_gtor_s | pw_rtog_s | phase_s | phase_gap_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | copy_denmat_gb | update_gb | update_wave_gb | update_proj_gb | update_offden_gb | update_denmat_gb | energy | energy_delta |")
+    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for row in rows:
         print(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 suite_label(row),
                 row.get("case", ""),
                 row.get("ranks", ""),
@@ -74,6 +74,11 @@ def main(argv):
                 number(row.get("copy_proj_gb")),
                 number(row.get("copy_offden_gb")),
                 number(row.get("copy_denmat_gb")),
+                number(row.get("update_gb")),
+                number(row.get("update_wave_gb")),
+                number(row.get("update_proj_gb")),
+                number(row.get("update_offden_gb")),
+                number(row.get("update_denmat_gb")),
                 number(row.get("energy"), 6),
                 number(row.get("energy_delta"), 6),
             )

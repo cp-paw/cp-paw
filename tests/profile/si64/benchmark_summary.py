@@ -6,13 +6,13 @@ import re
 import sys
 
 
-def copy_bucket(op):
+def transfer_kind(op):
     if "OFFDEN" in op:
-        return "copy_offden_gb"
+        return "offden"
     if "DENMAT" in op:
-        return "copy_denmat_gb"
+        return "denmat"
     if any(token in op for token in ("PROPSI", "PRO_CACHE", "THIS_PROJ")):
-        return "copy_proj_gb"
+        return "proj"
     if any(
         token in op
         for token in (
@@ -26,10 +26,25 @@ def copy_bucket(op):
             "_HPSI",
         )
     ):
-        return "copy_wave_gb"
+        return "wave"
     if any(token in op for token in ("PROJ", "ADDPRO")):
-        return "copy_proj_gb"
+        return "proj"
     return None
+
+
+def transfer_bucket(op, prefix):
+    kind = transfer_kind(op)
+    if not kind:
+        return None
+    return f"{prefix}_{kind}_gb"
+
+
+def copy_bucket(op):
+    return transfer_bucket(op, "copy")
+
+
+def update_bucket(op):
+    return transfer_bucket(op, "update")
 
 
 def profile_totals(run_dir):
@@ -50,6 +65,11 @@ def profile_totals(run_dir):
         "copy_proj_gb": 0.0,
         "copy_offden_gb": 0.0,
         "copy_denmat_gb": 0.0,
+        "update_gb": 0.0,
+        "update_wave_gb": 0.0,
+        "update_proj_gb": 0.0,
+        "update_offden_gb": 0.0,
+        "update_denmat_gb": 0.0,
     }
     for path in glob.glob(os.path.join(run_dir, "*_profile*.csv")):
         with open(path, newline="") as handle:
@@ -60,6 +80,12 @@ def profile_totals(run_dir):
                 if op.startswith("ACC_COPY"):
                     totals["copy_gb"] += gbyte
                     bucket = copy_bucket(op)
+                    if bucket:
+                        totals[bucket] += gbyte
+                    continue
+                if op.startswith("ACC_UPDATE"):
+                    totals["update_gb"] += gbyte
+                    bucket = update_bucket(op)
                     if bucket:
                         totals[bucket] += gbyte
                     continue
@@ -214,6 +240,11 @@ def main(argv):
                 "copy_proj_gb": totals["copy_proj_gb"],
                 "copy_offden_gb": totals["copy_offden_gb"],
                 "copy_denmat_gb": totals["copy_denmat_gb"],
+                "update_gb": totals["update_gb"],
+                "update_wave_gb": totals["update_wave_gb"],
+                "update_proj_gb": totals["update_proj_gb"],
+                "update_offden_gb": totals["update_offden_gb"],
+                "update_denmat_gb": totals["update_denmat_gb"],
                 "energy": energy,
                 "energy_delta": energy_delta,
                 "energy_ok": (
@@ -254,6 +285,11 @@ def main(argv):
         "copy_proj_gb",
         "copy_offden_gb",
         "copy_denmat_gb",
+        "update_gb",
+        "update_wave_gb",
+        "update_proj_gb",
+        "update_offden_gb",
+        "update_denmat_gb",
         "energy",
         "energy_delta",
         "energy_ok",
