@@ -62,6 +62,7 @@ def suite_group_kind(suite):
         return "default", "cpu8"
     rank_patterns = (
         (r"^(.*)_(\d+)ranks?_gpu$", "gpu"),
+        (r"^(.*)_(\d+)ranks?_cusolver$", "gpu"),
         (r"^(.*)_(\d+)ranks?_cpu_ref$", "cpu8"),
         (r"^(.*)_(\d+)ranks?_cpu$", "cpu"),
     )
