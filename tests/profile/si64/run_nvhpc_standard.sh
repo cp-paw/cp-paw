@@ -16,6 +16,8 @@ GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_hpsi gpu_resident_hpsi_opsi gp
 CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
 AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
 AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
+PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
+PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
 dedup_space_list() {
   local item
@@ -227,6 +229,8 @@ COMBINED="${NVHPC_STANDARD_ROOT}/combined_benchmark.tsv"
 LOG="${NVHPC_STANDARD_ROOT}/nvhpc_standard.log"
 : > "${LOG}"
 
+declare -a SUITE_ROOTS=()
+
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "${LOG}"
 }
@@ -268,6 +272,7 @@ run_suite() {
     echo "${status}" > "${root}.status"
   fi
   append_suite "${suite}" "${root}/benchmark.tsv"
+  SUITE_ROOTS+=("${root}")
 }
 
 collect_targets "${GPU_RANKS}" "${GPU_CASES}"
@@ -286,4 +291,36 @@ if [[ -f "${COMBINED}" ]]; then
   python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
     > "${NVHPC_STANDARD_ROOT}/combined_compare.md" || true
   log "combined=${COMBINED}"
+fi
+
+if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" --markdown \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" \
+      > "${NVHPC_STANDARD_ROOT}/combined_transfer_rows.md"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" \
+      > "${NVHPC_STANDARD_ROOT}/combined_transfer_rows.tsv" || true
+    log "transfer_rows=${NVHPC_STANDARD_ROOT}/combined_transfer_rows.md"
+  else
+    log "transfer_rows=none"
+  fi
+
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --markdown --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" \
+      > "${NVHPC_STANDARD_ROOT}/combined_present_rows.md"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" \
+      > "${NVHPC_STANDARD_ROOT}/combined_present_rows.tsv" || true
+    log "present_rows=${NVHPC_STANDARD_ROOT}/combined_present_rows.md"
+  else
+    log "present_rows=none"
+  fi
 fi
