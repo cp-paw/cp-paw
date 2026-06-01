@@ -161,7 +161,9 @@ present-input path and batches the `<PSI_-|PSI_+>` inversion pass into one large
 scalarproduct when the cuBLAS overlap threshold allows it. `WAVES_GRAMSCHMIDT`
 also has a narrow resident projection/overlap region for wavefunctions outside
 the main orthogonalization loop. The force loop keeps `THIS%PSI0` resident
-across per-atom `WAVES_DEDPRO` MATMUL calls; set
+across per-atom `WAVES_DEDPRO` MATMUL calls; when HPSI residency is also
+enabled, that same `PSI0` device copy is carried forward to the following
+`WAVES$HPSI`/expectation/Hamiltonian boundary. Set
 `CPPAW_GPU_FORCE_PSI_RESIDENCY=0` to compare against the previous per-atom copy
 behavior. The one-center overlap contraction packs the flattened cuBLAS input
 matrices on the GPU and is enabled by default in residency-profile builds; set
@@ -271,7 +273,10 @@ as `ACC_COPY_GRAM_X*`. The generic cuBLAS scalarproduct and `ZGEMM_NN` wrappers
 also use these rows for their residency paths. HPSI residency records the
 ETOT-local `PSI0` boundary as `ACC_COPY_HPSI_PSI0_IN` when it must create the
 device copy, and the immediate consumers as `ACC_PRESENT_EXPECT_PSI0` and
-`ACC_PRESENT_HAMILTON_PSI0` when they can reuse that resident buffer. The
+`ACC_PRESENT_HAMILTON_PSI0` when they can reuse that resident buffer. If the
+force-loop residency created the `PSI0` device copy earlier in the same
+`WAVES$ETOT`, `WAVES$HPSI` records `ACC_PRESENT_HPSI_PSI0` instead of
+`ACC_COPY_HPSI_PSI0_IN`. The
 one-center overlap cuBLAS
 path splits its estimated transfers into `ACC_COPY_1COV_PROJ_IN`,
 `ACC_COPY_1COV_MAT_OUT`, and, for inversion-symmetric superwave cases,
@@ -622,7 +627,9 @@ be overridden by kernel category:
   `gpu_resident_addpro_opsi_host`, and `gpu_resident_opsi_addpro_host`.
 - `CPPAW_GPU_FORCE_PSI_RESIDENCY`: keep enabled by default in residency-profile
   builds so `WAVES$FORCE` reuses `THIS%PSI0` across the per-atom
-  `WAVES_DEDPRO` MATMUL calls; set to `0` for the previous per-call copy path.
+  `WAVES_DEDPRO` MATMUL calls. When `CPPAW_GPU_HPSI_RESIDENCY=1` is also set,
+  the same `PSI0` device copy is kept for the immediately following HPSI
+  overlap consumers; set to `0` for the previous per-call copy path.
 - `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so
   `WAVES_1COVERLAP` uses the GPU-pack/cuBLAS contraction path; set to `0` for
   the host contraction path.
