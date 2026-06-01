@@ -547,6 +547,20 @@ default.
 Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
 required profile binaries before benchmarking.
 
+Use the full diagnostic sweep only when comparing library combinations:
+
+```
+cd tests/profile/si64
+./run_gpu_library_matrix.sh
+```
+
+It defaults to the same `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`
+shape, but expands `GPU_CASES` to include all-library, single-library,
+library-disabled, NVLAMATH/NVBLAS, and memory-mode diagnostics. It delegates to
+`run_nvhpc_standard.sh`, so it writes the same benchmark, comparison,
+transfer-row, and present-row reports. Set `AUTO_BUILD_TARGETS=yes` when the
+optional profile binaries should be built before the sweep.
+
 The Spark C86C Si64 decision table is kept in
 `tests/profile/si64/nvhpc_spark_benchmark_summary.md`.
 
