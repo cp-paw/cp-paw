@@ -12,6 +12,7 @@ TIMEOUT=${TIMEOUT:-7200}
 GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
 RUN_GPU_ALL=${RUN_GPU_ALL:-no}
+DRY_RUN=${DRY_RUN:-no}
 GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_orthox_off gpu_resident_addpro_host gpu_resident_pro_host gpu_resident_invbatch_off gpu_resident_no_cusolver"}
 CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
 AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
@@ -230,6 +231,7 @@ LOG="${NVHPC_STANDARD_ROOT}/nvhpc_standard.log"
 : > "${LOG}"
 
 declare -a SUITE_ROOTS=()
+FAILED_SUITES=0
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "${LOG}"
@@ -270,6 +272,7 @@ run_suite() {
     local status=$?
     log "FAIL  suite=${suite} status=${status}"
     echo "${status}" > "${root}.status"
+    FAILED_SUITES=$((FAILED_SUITES+1))
   fi
   append_suite "${suite}" "${root}/benchmark.tsv"
   SUITE_ROOTS+=("${root}")
@@ -278,7 +281,14 @@ run_suite() {
 collect_targets "${GPU_RANKS}" "${GPU_CASES}"
 collect_targets "1" "${CPU_CASES}"
 collect_targets "${CPU_RANKS}" "${CPU_CASES}"
-ensure_binaries
+case "${DRY_RUN}" in
+  yes|true|1)
+    log "DRY-RUN skip pre-build binary check; suite metadata records missing executables"
+    ;;
+  *)
+    ensure_binaries
+    ;;
+esac
 
 run_suite "gpu_${GPU_RANKS}rank" "${GPU_RANKS}" "${GPU_CASES}"
 run_suite "cpu_1rank" 1 "${CPU_CASES}"
@@ -323,4 +333,11 @@ if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
   else
     log "present_rows=none"
   fi
+fi
+
+if (( FAILED_SUITES > 0 )); then
+  log "FAILED suites=${FAILED_SUITES}"
+  case "${DRY_RUN}" in
+    yes|true|1) exit 1 ;;
+  esac
 fi

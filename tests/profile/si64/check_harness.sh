@@ -70,6 +70,25 @@ else
   test "${dry_run_required_status}" -eq 0
 fi
 
+set +e
+DRY_RUN=yes \
+  NVHPC_STANDARD_ROOT="${tmpdir}/standard-dry-run" \
+  GPU_CASES="gpu_resident_stack" \
+  CPU_CASES="" \
+  tests/profile/si64/run_nvhpc_standard.sh > "${tmpdir}/standard-dry-run.out" 2>&1
+standard_dry_run_status=$?
+set -e
+grep -q "DRY-RUN skip pre-build binary check" \
+  "${tmpdir}/standard-dry-run/nvhpc_standard.log"
+grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" \
+  "${tmpdir}/standard-dry-run/gpu_1rank/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/standard-dry-run/gpu_1rank/metadata.txt"; then
+  test "${standard_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/standard-dry-run/nvhpc_standard.log"
+else
+  test "${standard_dry_run_status}" -eq 0
+fi
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl
