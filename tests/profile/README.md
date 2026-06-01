@@ -81,6 +81,12 @@ full-grid cuFFT despite the additional full-grid copy volume.
 this is exposed as `gpu_resident_stack_serial3dfft_accmap` rather than folded
 into the default serial-3D case because it can help on some systems while
 hurting on others.
+`CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` is a narrower follow-up diagnostic for
+that ACCMAP path: when HPSI residency is already active, it lets the
+`WAVES_VPSI` RTOG step leave the produced `HPSI` device copy present for the
+following HPSI consumers. It removes one HPSI host-to-device update, but current
+Spark/Terok timings are mixed, so use the
+`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` case explicitly.
 
 To profile the combined native GPU paths on one GPU, build an
 `nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
@@ -497,6 +503,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
 | `gpu_resident_stack_serial3dfft_force_dedpro` | Focused residency stack plus single-rank 3-D cuFFT and opt-in non-stress force `DEDPRO`/`WAVES_PROFORCE` device path. |
 | `gpu_resident_stack_serial3dfft_accmap` | Same as `gpu_resident_stack_serial3dfft`, plus device-side sparse/full-grid mapping via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
+| `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus opt-in HPSI RTOG output residency via `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -817,6 +824,11 @@ be overridden by kernel category:
   immediate expectation and full-Hamiltonian overlap calls within
   `WAVES$ETOT`. The compatibility alias is
   `CPPAW_CUBLAS_ACC_HPSI_RESIDENCY`.
+- `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY`: disabled by default and requires HPSI
+  residency plus the serial 3-D FFT ACCMAP path. Set to `1` to keep the
+  `WAVES_VPSI` RTOG-produced `HPSI` output on the GPU instead of immediately
+  updating the already-present `HPSI` device copy from the host. The
+  compatibility alias is `CPPAW_CUBLAS_ACC_VPSI_HPSI_RTOG_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
   `WAVES$PROPAGATE` on the GPU for non-stress steps and copy the updated `PSIM`
   back before orthogonalization. The compatibility aliases are

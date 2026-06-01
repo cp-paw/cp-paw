@@ -125,6 +125,7 @@ TYPE PWPARALLEL_TYPE
 END TYPE PWPARALLEL_TYPE
 LOGICAL(4)                     :: TINI=.FALSE.
 TYPE (PWPARALLEL_TYPE),POINTER :: THIS
+LOGICAL(4)                     :: LAST_FFT_ACC_MAP_USED=.FALSE.
 END MODULE PLANEWAVE_MODULE
 !*******************************************************************************
 !     
@@ -1962,11 +1963,13 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4)                 :: NTASKS,THISTASK
       INTEGER(4),SAVE            :: SERIAL3D_INIT=0
       LOGICAL(4),SAVE            :: TSERIAL3D=.FALSE.
+      LOGICAL(4)                 :: SERIAL_ACC_USED
       CHARACTER(128)             :: ENVVAL
       INTEGER(4)                 :: ENVSTATUS
 !     ******************************************************************
       CALL MPE$QUERY(THIS%CID,NTASKS,THISTASK)
                                  CALL TIMING$CLOCKON('PLANEWAVE$FFT')
+      LAST_FFT_ACC_MAP_USED=.FALSE.
       IF(NGL.NE.THIS%NGLARR(THISTASK)) THEN
         CALL ERROR$MSG('SIZE OF F(G) INCONSISTENT')
         CALL ERROR$I4VAL('NGL',NGL)
@@ -2022,7 +2025,9 @@ END MODULE PLANEWAVE_MODULE
         DO IFFT=1,NFFT
           CALL PLANEWAVE_FFT_SERIAL3D(ID,NGL,NRL,NR1,NR2,NR3 &
      &       ,THIS%NSTRIPELARR(THISTASK),THIS%IGTOSTRIPE &
-     &       ,THIS%ISTRIPETOYZ(1,THISTASK),FOFG(1,IFFT),FOFR(1,IFFT))
+     &       ,THIS%ISTRIPETOYZ(1,THISTASK),FOFG(1,IFFT),FOFR(1,IFFT) &
+     &       ,SERIAL_ACC_USED)
+          LAST_FFT_ACC_MAP_USED=LAST_FFT_ACC_MAP_USED.OR.SERIAL_ACC_USED
         ENDDO
                                  CALL TIMING$CLOCKOFF('PLANEWAVE$FFT')
         RETURN
@@ -2053,7 +2058,7 @@ END MODULE PLANEWAVE_MODULE
 !     ..................................................................
       SUBROUTINE PLANEWAVE_FFT_SERIAL3D(ID,NGL,NRL,NR1,NR2,NR3 &
      &                                 ,NSTRIPEL,IGTOSTRIPE,ISTRIPETOYZ &
-     &                                 ,FOFG,FOFR)
+     &                                 ,FOFG,FOFR,ACC_USED)
 !     ******************************************************************
 !     **  Single-rank full-grid 3D FFT path. This is opt-in because the **
 !     **  parallel stripe implementation remains the conservative path. **
@@ -2071,6 +2076,7 @@ END MODULE PLANEWAVE_MODULE
       INTEGER(4),INTENT(IN)     :: ISTRIPETOYZ(NSTRIPEL)
       COMPLEX(8),INTENT(INOUT)  :: FOFG(NGL)
       COMPLEX(8),INTENT(INOUT)  :: FOFR(NRL)
+      LOGICAL(4),INTENT(OUT)    :: ACC_USED
       COMPLEX(8),ALLOCATABLE    :: WORK(:,:,:)
       INTEGER(4)                :: IG,IR,IR1,IR2,IR3
       INTEGER(4)                :: I23,IND,ISTRIPEL
@@ -2089,6 +2095,7 @@ END MODULE PLANEWAVE_MODULE
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
+      ACC_USED=.FALSE.
       IF(NRL.NE.NR1*NR2*NR3) THEN
         CALL ERROR$MSG('SERIAL 3D FFT REQUIRES A FULL LOCAL GRID')
         CALL ERROR$I4VAL('NRL',NRL)
@@ -2118,6 +2125,7 @@ END MODULE PLANEWAVE_MODULE
      &       ,NSTRIPEL,IGTOSTRIPE,ISTRIPETOYZ,FOFG,FOFR &
      &       ,ACCEL_CUFFT_USED)
         IF(ACCEL_CUFFT_USED) THEN
+          ACC_USED=.TRUE.
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           ACCEL_GRID=MAX(REAL(NR1,KIND=8)*REAL(NR2,KIND=8) &
      &                *REAL(NR3,KIND=8),1.D0)

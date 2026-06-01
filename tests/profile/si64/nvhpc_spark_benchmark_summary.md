@@ -68,12 +68,48 @@ dedicated follow-up runs before promoting any path to production default.
 | `serial3dfft-accmap-final-*-20260601-*` | Device-side sparse/full-grid mapping for single-rank 3D cuFFT | Terok/A40: `gpu_resident_stack_serial3dfft_accmap` 10.62 s at NSTEPS=1 and 25.55 s at NSTEPS=3 | Spark/GB10: regular `gpu_resident_stack_serial3dfft` 11.02 s at NSTEPS=1 and 23.44 s at NSTEPS=3 | - | Adds an explicit diagnostic case for device-side mapping. It helps on A40 but hurts on GB10, so it remains opt-in via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
 | `setup-psim-isolated-*-20260601-*` | Setup `PSIM` residency in the focused stack | Spark/GB10: `gpu_resident_stack` 27.96 s at NSTEPS=3; Terok/A40: 29.54 s at NSTEPS=3 | Ablation with `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`: 28.23 s on Spark and 39.17 s on Terok at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Keeps initial setup `PSIM` resident into Gram-Schmidt/propagation; removes one 0.1210 GB propagation copy without broadening non-phase PSIM diagnostics. |
 | `accmap-present-nstep*-spark/terok` | Present-input reuse in the serial 3D cuFFT ACCMAP path | Transfer estimate drops from 4.0171 to 3.6540 GB at NSTEPS=1 and from 10.5201 to 9.6729 GB at NSTEPS=3 | Wall time remains mixed: Terok NSTEPS=3 improves to 24.71 s, Spark NSTEPS=3 is 41.99 s | NSTEPS=1 energy-valid on both systems | Changes the ACCMAP data region to `PRESENT_OR_COPYIN` for the FFT input vector. This reduces redundant host-to-device traffic but does not make ACCMAP a Spark default. |
+| `hpsi-rtog-*-20260601-*` | HPSI RTOG output residency in the serial 3D FFT ACCMAP path | Spark/GB10: transfer drops by 0.1210 GB at NSTEPS=1 and 0.3631 GB at NSTEPS=3; wall time improves modestly | Terok/A40: NSTEPS=1 is mixed/slower, NSTEPS=3 is noisy but transfer reduction is identical | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` / `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`; useful as a producer-boundary diagnostic, not a default promotion. |
 
 The latest full-matrix run lives at:
 
 ```
 /home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1
 ```
+
+## 2026-06-01 HPSI RTOG Output Residency Diagnostic
+
+The serial 3-D FFT ACCMAP follow-up can create `HPSI` on the GPU before
+`WAVES_VPSI`, let the RTOG mapping write into that device copy, and then skip
+the old `ACC_COPY_VPSI_HPSI_IN` / update boundary when the FFT path actually
+used ACCMAP. It is gated by `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` and exposed
+as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`.
+
+Run directories:
+
+```
+runs/hpsi-rtog-spark-rep3-20260601-150822-{base,rtog}
+runs/hpsi-rtog-terok-rep3-20260601-150821-{base,rtog}
+runs/hpsi-rtog-spark-n3-20260601-151020-{base,rtog}
+runs/hpsi-rtog-terok-n3-20260601-151019-{base,rtog}
+```
+
+| System | NSTEPS | Case | Wall time | VPSI time | Transfer estimate | Energy check |
+| --- | ---: | --- | ---: | ---: | ---: | --- |
+| Spark GB10 | 1 | ACCMAP baseline, 3-run avg | 16.37 s | 1.2115 s | 3.6540 GB | yes |
+| Spark GB10 | 1 | `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`, 3-run avg | 15.61 s | 0.2467 s | 3.5330 GB | yes |
+| Spark GB10 | 3 | ACCMAP baseline | 41.60 s | 3.7410 s | 9.6729 GB | n/a |
+| Spark GB10 | 3 | `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` | 38.72 s | 0.7037 s | 9.3098 GB | n/a |
+| Terok A40 | 1 | ACCMAP baseline, 3-run avg | 10.52 s | 0.5596 s | 3.6540 GB | yes |
+| Terok A40 | 1 | `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`, 3-run avg | 13.67 s | 0.4329 s | 3.5330 GB | yes |
+| Terok A40 | 3 | ACCMAP baseline, noisy single run | 43.16 s | 9.4256 s | 9.6729 GB | n/a |
+| Terok A40 | 3 | `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`, noisy single run | 25.12 s | 1.8182 s | 9.3098 GB | n/a |
+
+The profile row changes as intended: the baseline reports
+`ACC_COPY_VPSI_HPSI_IN` with 0.1210 GB at NSTEPS=1, while the opt-in path
+reports `ACC_PRESENT_VPSI_HPSI` and removes that transfer. Spark benefits in
+both short smokes. Terok is noisy and the NSTEPS=1 average is slower, so this
+stays an explicit diagnostic for broader producer/consumer residency work rather
+than part of `CPPAW_GPU_RESIDENCY_STACK`.
 
 ## 2026-06-01 Current Stack Default Refresh
 
