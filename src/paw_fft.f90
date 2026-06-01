@@ -2058,6 +2058,9 @@ END MODULE PLANEWAVE_MODULE
 !     **  Single-rank full-grid 3D FFT path. This is opt-in because the **
 !     **  parallel stripe implementation remains the conservative path. **
 !     ******************************************************************
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_SHOULD_USE_3D
+#ENDIF
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)   :: ID
       INTEGER(4),INTENT(IN)     :: NGL
@@ -2071,6 +2074,13 @@ END MODULE PLANEWAVE_MODULE
       COMPLEX(8),ALLOCATABLE    :: WORK(:,:,:)
       INTEGER(4)                :: IG,IR,IR1,IR2,IR3
       INTEGER(4)                :: I23,IND,ISTRIPEL
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      LOGICAL(4)                :: ACCEL_CUFFT_USED
+      INTEGER(4),SAVE           :: ACCMAP_INIT=0
+      LOGICAL(4),SAVE           :: TACC_MAP=.FALSE.
+      CHARACTER(128)            :: ENVVAL_ACC
+      INTEGER(4)                :: ENVSTATUS_ACC
+#ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                   :: ACCEL_T0
       REAL(8)                   :: ACCEL_GRID
@@ -2085,6 +2095,39 @@ END MODULE PLANEWAVE_MODULE
         CALL ERROR$I4VAL('NR1*NR2*NR3',NR1*NR2*NR3)
         CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D')
       END IF
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+      IF(ACCMAP_INIT.EQ.0) THEN
+        ACCMAP_INIT=1
+        CALL GET_ENVIRONMENT_VARIABLE('CPPAW_FFT_SERIAL_3D_ACC_MAP' &
+     &                               ,ENVVAL_ACC,STATUS=ENVSTATUS_ACC)
+        IF(ENVSTATUS_ACC.EQ.0) THEN
+          ENVVAL_ACC=ADJUSTL(ENVVAL_ACC)
+          IF(LEN_TRIM(ENVVAL_ACC).GT.0) THEN
+            SELECT CASE(ENVVAL_ACC(1:MIN(LEN_TRIM(ENVVAL_ACC) &
+     &                                 ,LEN(ENVVAL_ACC))))
+            CASE('1','yes','YES','true','TRUE','on','ON')
+              TACC_MAP=.TRUE.
+            CASE DEFAULT
+              TACC_MAP=.FALSE.
+            END SELECT
+          END IF
+        END IF
+      END IF
+      IF(TACC_MAP.AND.CPPAW_CUFFT_ACC_SHOULD_USE_3D(NR1,NR2,NR3)) THEN
+        CALL PLANEWAVE_FFT_SERIAL3D_ACC(ID,NGL,NRL,NR1,NR2,NR3 &
+     &       ,NSTRIPEL,IGTOSTRIPE,ISTRIPETOYZ,FOFG,FOFR &
+     &       ,ACCEL_CUFFT_USED)
+        IF(ACCEL_CUFFT_USED) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          ACCEL_GRID=MAX(REAL(NR1,KIND=8)*REAL(NR2,KIND=8) &
+     &                *REAL(NR3,KIND=8),1.D0)
+          CALL PLANEWAVE_PROFILE_PHASE('PW_FFT_SERIAL3D_TOTAL' &
+     &     ,NR1,NR2,NR3,NGL,32.D0*ACCEL_GRID,ACCEL_T0)
+#ENDIF
+          RETURN
+        END IF
+      END IF
+#ENDIF
       ALLOCATE(WORK(NR1,NR2,NR3))
       IF(ID.EQ.'GTOR') THEN
         WORK(:,:,:)=CMPLX(0.D0,0.D0,KIND=8)
@@ -2154,6 +2197,128 @@ END MODULE PLANEWAVE_MODULE
 #ENDIF
       RETURN
       END
+!
+#IF DEFINED(CPPVAR_CUFFT_ACC)
+!     ..................................................................
+      SUBROUTINE PLANEWAVE_FFT_SERIAL3D_ACC(ID,NGL,NRL,NR1,NR2,NR3 &
+     &                                 ,NSTRIPEL,IGTOSTRIPE,ISTRIPETOYZ &
+     &                                 ,FOFG,FOFR,USED)
+!     ******************************************************************
+!     **  Single-rank 3D cuFFT path with device-side sparse/full-grid  **
+!     **  mapping. The host fallback above remains the conservative     **
+!     **  implementation for non-accelerated builds and MPI ranks > 1.  **
+!     ******************************************************************
+      USE CPPAW_CUFFT_ACC_MODULE, ONLY: CPPAW_CUFFT_ACC_3DFFTC8_PRESENT
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN)   :: ID
+      INTEGER(4),INTENT(IN)     :: NGL
+      INTEGER(4),INTENT(IN)     :: NRL
+      INTEGER(4),INTENT(IN)     :: NR1,NR2,NR3
+      INTEGER(4),INTENT(IN)     :: NSTRIPEL
+      INTEGER(4),INTENT(IN)     :: IGTOSTRIPE(NGL)
+      INTEGER(4),INTENT(IN)     :: ISTRIPETOYZ(NSTRIPEL)
+      COMPLEX(8),INTENT(INOUT)  :: FOFG(NGL)
+      COMPLEX(8),INTENT(INOUT)  :: FOFR(NRL)
+      LOGICAL(4),INTENT(OUT)    :: USED
+      COMPLEX(8),ALLOCATABLE    :: WORK(:,:,:)
+      INTEGER(4)                :: IG,IR,IR1,IR2,IR3
+      INTEGER(4)                :: I23,IND,ISTRIPEL
+      LOGICAL(4)                :: CUFFT_USED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                   :: ACCEL_BYTES
+#ENDIF
+!     ******************************************************************
+      USED=.FALSE.
+      IF(.NOT.(ID.EQ.'GTOR'.OR.ID.EQ.'RTOG')) RETURN
+      ALLOCATE(WORK(NR1,NR2,NR3))
+      IF(ID.EQ.'GTOR') THEN
+!$ACC DATA COPYIN(FOFG(1:NGL),IGTOSTRIPE(1:NGL) &
+!$ACC&          ,ISTRIPETOYZ(1:NSTRIPEL)) COPYOUT(FOFR(1:NRL)) &
+!$ACC&          CREATE(WORK(1:NR1,1:NR2,1:NR3))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(WORK)
+        DO IR3=1,NR3
+          DO IR2=1,NR2
+            DO IR1=1,NR1
+              WORK(IR1,IR2,IR3)=CMPLX(0.D0,0.D0,KIND=8)
+            ENDDO
+          ENDDO
+        ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC PARALLEL LOOP PRESENT(WORK,FOFG,IGTOSTRIPE,ISTRIPETOYZ)
+        DO IG=1,NGL
+          IND=IGTOSTRIPE(IG)
+          IR1=1+MOD(IND-1,NR1)
+          ISTRIPEL=1+(IND-1)/NR1
+          I23=ISTRIPETOYZ(ISTRIPEL)
+          IR2=1+MOD(I23-1,NR2)
+          IR3=1+(I23-1)/NR2
+          WORK(IR1,IR2,IR3)=FOFG(IG)
+        ENDDO
+!$ACC END PARALLEL LOOP
+        CALL CPPAW_CUFFT_ACC_3DFFTC8_PRESENT('GTOR',NR1,NR2,NR3 &
+     &                                      ,WORK,CUFFT_USED)
+        IF(.NOT.CUFFT_USED) THEN
+          CALL ERROR$MSG('PRESENT CUFFT 3D PATH WAS NOT USED')
+          CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D_ACC')
+        END IF
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(WORK,FOFR)
+        DO IR3=1,NR3
+          DO IR2=1,NR2
+            DO IR1=1,NR1
+              IR=IR1+NR1*(IR2-1)+NR1*NR2*(IR3-1)
+              FOFR(IR)=WORK(IR1,IR2,IR3)
+            ENDDO
+          ENDDO
+        ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
+      ELSE IF(ID.EQ.'RTOG') THEN
+!$ACC DATA COPYIN(FOFR(1:NRL),IGTOSTRIPE(1:NGL) &
+!$ACC&          ,ISTRIPETOYZ(1:NSTRIPEL)) COPYOUT(FOFG(1:NGL)) &
+!$ACC&          CREATE(WORK(1:NR1,1:NR2,1:NR3))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(WORK,FOFR)
+        DO IR3=1,NR3
+          DO IR2=1,NR2
+            DO IR1=1,NR1
+              IR=IR1+NR1*(IR2-1)+NR1*NR2*(IR3-1)
+              WORK(IR1,IR2,IR3)=FOFR(IR)
+            ENDDO
+          ENDDO
+        ENDDO
+!$ACC END PARALLEL LOOP
+        CALL CPPAW_CUFFT_ACC_3DFFTC8_PRESENT('RTOG',NR1,NR2,NR3 &
+     &                                      ,WORK,CUFFT_USED)
+        IF(.NOT.CUFFT_USED) THEN
+          CALL ERROR$MSG('PRESENT CUFFT 3D PATH WAS NOT USED')
+          CALL ERROR$STOP('PLANEWAVE_FFT_SERIAL3D_ACC')
+        END IF
+!$ACC PARALLEL LOOP PRESENT(WORK,FOFG,IGTOSTRIPE,ISTRIPETOYZ)
+        DO IG=1,NGL
+          IND=IGTOSTRIPE(IG)
+          IR1=1+MOD(IND-1,NR1)
+          ISTRIPEL=1+(IND-1)/NR1
+          I23=ISTRIPETOYZ(ISTRIPEL)
+          IR2=1+MOD(I23-1,NR2)
+          IR3=1+(I23-1)/NR2
+          FOFG(IG)=WORK(IR1,IR2,IR3)
+        ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
+      END IF
+      DEALLOCATE(WORK)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NRL,KIND=8) &
+     &           +20.D0*REAL(NGL,KIND=8) &
+     &           + 4.D0*REAL(NSTRIPEL,KIND=8)
+      CALL ACCELPROFILE$ADD('ACC_COPY_SERIAL3D_ACC_MAP' &
+     & ,INT(NR1,KIND=8),INT(NR2,KIND=8),INT(NR3,KIND=8) &
+     & ,INT(NGL,KIND=8),0.D0,ACCEL_BYTES,0.D0)
+#ENDIF
+      USED=.TRUE.
+      RETURN
+      END
+!
+#ENDIF
 !
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
 !     ..................................................................

@@ -65,6 +65,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `stack-default-psim-*-20260601-1206/1208` | PSIM switch promoted into stack default after lifecycle cleanup | `gpu_resident_stack` now matches the explicit switch case at 512/2: 9.73 s on Spark, 11.07 s on Terok; `NSTEPS=1` smokes OK | - | 4-rank smokes OK | `CPPAW_GPU_RESIDENCY_STACK` now enables PSIM propagation/phase/switch and HPSI-to-propagate residency by default, removing `ACC_COPY_ORTHO_PSIM_IN` and saving 0.0666 GB at 512/2. |
 | `current-stack-spark-1024-nstep1-*` | Fresh Spark stack-default refresh plus CPU-build guard | `gpu_resident_stack` 12.19 s; threshold-gated cuFFT 12.19 s; forced cuFFT 15.30 s | `nvhpc_cpu` 72.41 s | `nvhpc_cpu` 166.04 s | Fixes the non-CUBLAS `WAVES$HPSI` CPU build guard and confirms the current stack default is energy-valid and much faster than the CPU references. Forced cuFFT remains diagnostic-only because it raises transfer volume to 10.05 GB. |
 | `dual-switch-*-20260601-1249/1250/1252` | Bidirectional PSIM/PSI0 switch residency | `gpu_resident_stack` keeps the old `PSI0` as resident `PSIM` across `WAVES$SWITCH`; `ACC_COPY_PROP_PSIM_IN` drops from 3 calls to 1 at 1024/3 | - | 4-rank smoke OK | Removes 0.2421 GB of repeated propagation input traffic in the 1024/3 smoke, while the 1024/1 and 512/1x4 smokes remain energy-valid. |
+| `serial3dfft-accmap-final-*-20260601-*` | Device-side sparse/full-grid mapping for single-rank 3D cuFFT | Terok/A40: `gpu_resident_stack_serial3dfft_accmap` 10.62 s at NSTEPS=1 and 25.55 s at NSTEPS=3 | Spark/GB10: regular `gpu_resident_stack_serial3dfft` 11.02 s at NSTEPS=1 and 23.44 s at NSTEPS=3 | - | Adds an explicit diagnostic case for device-side mapping. It helps on A40 but hurts on GB10, so it remains opt-in via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
 
 The latest full-matrix run lives at:
 
@@ -135,6 +136,45 @@ final value (`208.886424`), so this is benchmark-harness behavior for the
 multi-step wavefunction dynamics, not a GPU correctness regression. The harness
 now applies the built-in Si64 energy reference only to `NSTEPS=1` unless an
 explicit `EXPECTED_ENERGY` is supplied.
+
+## 2026-06-01 Serial 3D cuFFT Device Mapping
+
+The first single-rank 3D cuFFT diagnostic still copied the full temporary
+`WORK(NR1,NR2,NR3)` grid through the generic `LIB$3DFFTC8` wrapper. A follow-up
+diagnostic keeps the sparse/full-grid mapping on the GPU and runs cuFFT on a
+present full-grid buffer. It is selected only when both
+`CPPAW_FFT_SERIAL_3D=1` and `CPPAW_FFT_SERIAL_3D_ACC_MAP=1` are set; the
+benchmark keyword is `gpu_resident_stack_serial3dfft_accmap`.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/serial3dfft-accmap-final-spark-20260601-133950
+Spark: tests/profile/si64/runs/serial3dfft-accmap-final-spark-nsteps3-20260601-134222
+Terok: tests/profile/si64/runs/serial3dfft-accmap-final-terok-20260601-133949
+Terok: tests/profile/si64/runs/serial3dfft-accmap-final-terok-nsteps3-20260601-134222
+```
+
+| System | Case | NSTEPS | Wall time | FFT time | VPSI time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Spark GB10 | `gpu_resident_stack` | 1 | 12.37 s | 3.7735 s | 1.3191 s | 1.5102 GB | yes |
+| Spark GB10 | `gpu_resident_stack_serial3dfft` | 1 | 11.02 s | 0.9500 s | 0.3643 s | 5.6070 GB | yes |
+| Spark GB10 | `gpu_resident_stack_serial3dfft_accmap` | 1 | 18.38 s | 7.9962 s | 1.5265 s | 4.0171 GB | yes |
+| Terok A40 | `gpu_resident_stack` | 1 | 12.27 s | 3.4416 s | 1.4953 s | 1.5102 GB | yes |
+| Terok A40 | `gpu_resident_stack_serial3dfft` | 1 | 11.54 s | 2.7489 s | 1.0131 s | 5.6070 GB | yes |
+| Terok A40 | `gpu_resident_stack_serial3dfft_accmap` | 1 | 10.62 s | 0.9957 s | 0.3850 s | 4.0171 GB | yes |
+| Spark GB10 | `gpu_resident_stack` | 3 | 28.09 s | 11.2278 s | 3.9124 s | 2.9994 GB | n/a |
+| Spark GB10 | `gpu_resident_stack_serial3dfft` | 3 | 23.44 s | 2.6494 s | 1.0490 s | 15.2897 GB | n/a |
+| Spark GB10 | `gpu_resident_stack_serial3dfft_accmap` | 3 | 41.22 s | 19.0376 s | 3.7872 s | 10.5201 GB | n/a |
+| Terok A40 | `gpu_resident_stack` | 3 | 32.86 s | 9.5358 s | 3.8142 s | 2.9994 GB | n/a |
+| Terok A40 | `gpu_resident_stack_serial3dfft` | 3 | 35.39 s | 13.4791 s | 5.8015 s | 15.2897 GB | n/a |
+| Terok A40 | `gpu_resident_stack_serial3dfft_accmap` | 3 | 25.55 s | 2.8725 s | 1.5215 s | 10.5201 GB | n/a |
+
+The result is intentionally mixed. Device-side mapping reduces transfer volume
+against the original serial-3D cuFFT wrapper, but Spark GB10 spends much more
+time in the mapping kernels. Terok A40 benefits clearly. The path therefore
+stays a separate diagnostic case rather than replacing
+`gpu_resident_stack_serial3dfft`.
 
 ## Previous Full Matrix Comparison
 
