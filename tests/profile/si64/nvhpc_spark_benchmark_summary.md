@@ -75,10 +75,12 @@ dedicated follow-up runs before promoting any path to production default.
 | `accmap-cleanup-final-*-20260601-*` | ACCMAP cache cleanup and non-CUBLAS build guard | Spark/GB10: final cache smoke is 8.16 s at 512/1 and 6.53 s at 256/4 | Terok/A40: final cache smoke is 5.25 s at 512/1 and 8.58 s at 256/4 | Energy-valid; `nvhpc_profile` and GPU serial/parallel builds pass on both systems | Moves the cached ACCMAP state into `PLANEWAVE_MODULE`, releases it through `PLANEWAVE$ACC_CLEANUP`, and restores the non-CUBLAS `nvhpc_profile` build by guarding setup-PSIM residency code. |
 | `auto-standard-spark-20260601-164010` / `auto-standard-terok-fftw-20260601-164730` | Capability-driven standard smoke | Spark/GB10: `gpu_resident_stack_serial3dfft` 11.13 s, `gpu_resident_stack` 12.14 s | Spark: `cpu` 73.51 s, `nvhpc_cpu` 69.11 s; 8-rank CPU 166.30/166.41 s | Terok x86_64 builds and runs after local FFTW plus NVHPC compiler BLAS/LAPACK fallback | Confirms the auto recommendation path and the new host-library gating. Spark remains the performance reference; Terok is the x86/NVHPC portability check. |
 | `si64-bands2048-focused-spark-20260601-174042` / `si64-bands2048-focused-terok-20260601-174041` | 2048-band resource comparison | Spark: `gpu_resident_stack_serial3dfft_force_dedpro` 32.06 s; Terok: `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` 32.79 s | Spark `nvhpc_cpu` 388.98 s; Terok `nvhpc_cpu` 1109.15 s | Spark `nvhpc_cpu` 1122.63 s; Terok `nvhpc_cpu` 1341.45 s | Larger band stress confirms that one MPI rank plus one GPU beats both one-rank and eight-rank CPU/NVHPC decisively; ACCMAP remains system-dependent. |
+| `si64_bands-nvhpc-standard-20260601-234711` | Auto-standard refresh after Projection/AddPRO stacking | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack` 8.24 s | `cpu` 72.71 s, `nvhpc_cpu` 68.78 s | `cpu` 166.08 s, `nvhpc_cpu` 166.19 s | Capability-gated auto list now includes the validated Projection/AddPRO full stack; it wins the 1024/1 standard matrix and remains opt-in at runtime. |
 
 The latest auto-standard smoke runs live at:
 
 ```
+Spark full-stack refresh: /home/kuehne88/cp-paw-nvhpc-standard-20260601-234217/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-234711
 Spark: /home/kuehne88/cp-paw-nvhpc-auto-20260601-163927/tests/profile/si64/runs/auto-standard-spark-20260601-164010
 Terok: /home/kuehne88/cp-paw-nvhpc-auto-20260601-163926/tests/profile/si64/runs/auto-standard-terok-fftw-20260601-164730
 ```
@@ -115,6 +117,41 @@ comparison. `gpu_resident_stack_serial3dfft` is the fastest one-step result, but
 it still carries the explicit full-grid copy estimate, so the routine default
 stays the conservative resident stack while serial 3D FFT remains an opt-in
 diagnostic.
+
+After the Projection/AddPRO stacked GEMM work, Spark was refreshed through the
+same standard wrapper with the capability helper's new full-stack
+recommendation enabled:
+
+```
+/home/kuehne88/cp-paw-nvhpc-standard-20260601-234217/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-234711
+```
+
+| Case | Ranks | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack` | 1 | 8.24 s | 1.2358 GB | yes |
+| `gpu_resident_stack_serial3dfft` | 1 | 9.94 s | 5.4328 GB | yes |
+| `gpu_resident_stack` | 1 | 11.69 s | 1.3361 GB | yes |
+| `gpu_resident_stack_cufft` | 1 | 11.83 s | 1.3361 GB | yes |
+| `gpu_resident_off` | 1 | 45.18 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 1 | 68.78 s | 0.0000 GB | yes |
+| `cpu` | 1 | 72.71 s | 0.0000 GB | yes |
+| `cpu` | 8 | 166.08 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 8 | 166.19 s | 0.0000 GB | yes |
+
+The full stack is therefore 1.42x faster than the base resident stack, 8.35x
+faster than the one-rank NVHPC CPU reference, and 20.16x faster than the
+eight-rank NVHPC CPU resource comparison in this harness. It also lowers the
+profiled transfer estimate from 1.3361 GB to 1.2358 GB. The runtime default
+should remain conservative, but the auto benchmark recommendation should keep
+this opt-in case because it is now both energy-valid and the fastest standard
+Spark path.
+
+Operational note: the fresh `AUTO_BUILD_JOBS=16` auto-build hit an NVFORTRAN
+stale-module race while compiling `profile_parallel`
+(`Corrupt or Old Module file ./readcntl_module.mod` from `paw_dos.f90`). A
+single-target rebuild with `-j1` succeeded, and the completed benchmark above
+was then run with `AUTO_BUILD_TARGETS=no`. This is a build-system follow-up,
+not a GPU correctness failure.
 
 Terok initially exposed the portability gap: NVHPC 24.5 on x86_64 provides
 cuBLAS, cuFFT, cuSOLVER, cuTENSOR, NCCL, and NVSHMEM, but no usable host NVPL
