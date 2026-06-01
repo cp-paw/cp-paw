@@ -16,6 +16,7 @@ bash -n tests/profile/si64/case_recommendations.sh
 bash -n tests/profile/si64/run_cusolver_focus.sh
 bash -n tests/profile/si64/run_followup.sh
 bash -n tests/profile/si64/run_gap_profile_night.sh
+bash -n tests/profile/si64/run_gpu_resource_comparison.sh
 bash -n tests/profile/si64/run_large_bands.sh
 bash -n tests/profile/si64/run_large_bands_long.sh
 bash -n tests/profile/si64/run_gpu_exploration.sh
@@ -50,14 +51,18 @@ grep -q "^host_blas_lapack=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_cpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_gpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_gpu_diagnostic_cases=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_large_band_gpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_resource_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_standard_command=cd tests/profile/si64" \
+  "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_large_band_command=cd tests/profile/si64" \
   "${tmpdir}/gpu_capabilities.txt"
 
 cat > "${tmpdir}/fake_gpu_capabilities.txt" <<'EOF'
 recommended_cpu_cases=cpu nvhpc_cpu
 recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft
 recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync
+recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache
 recommended_resource_cases=cpu nvhpc_cpu gpu_resident_stack
 EOF
 
@@ -69,6 +74,7 @@ recommended_gpu_reason=no_host_fftw_runtime_found
 recommended_cpu_cases=none
 recommended_gpu_cases=none
 recommended_gpu_diagnostic_cases=none
+recommended_large_band_gpu_cases=none
 recommended_resource_cases=none
 EOF
 
@@ -262,6 +268,38 @@ grep -q "SKIP  suite=threshold empty case list" \
 grep -q "SKIP  suite=nsys disabled_or_empty_case" \
   "${tmpdir}/overnight-nohost-dry-run/overnight.log"
 test ! -e "${tmpdir}/overnight-nohost-dry-run/main_1steps_4ranks/metadata.txt"
+
+set +e
+DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_gpu_capabilities.txt" \
+  GPU_RESOURCE_COMPARISON_ROOT="${tmpdir}/resource-dry-run" \
+  GPU_CASES=auto \
+  CPU_CASES="" \
+  tests/profile/si64/run_gpu_resource_comparison.sh \
+    > "${tmpdir}/resource-dry-run.out" 2>&1
+resource_dry_run_status=$?
+set -e
+grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache' cpu='none'" \
+  "${tmpdir}/resource-dry-run/nvhpc_standard.log"
+grep -q "^recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache" \
+  "${tmpdir}/resource-dry-run/gpu_capabilities.txt"
+grep -q "case=gpu_resident_stack_serial3dfft_force_dedpro" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1.*CPPAW_FFT_SERIAL_3D=1" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "case=gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_FFT_SERIAL_3D_ACC_CACHE=1" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
+grep -q "SKIP  suite=cpu_1rank empty case list" \
+  "${tmpdir}/resource-dry-run/nvhpc_standard.log"
+test ! -e "${tmpdir}/resource-dry-run/cpu_1rank/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"; then
+  test "${resource_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/resource-dry-run/nvhpc_standard.log"
+else
+  test "${resource_dry_run_status}" -eq 0
+fi
 
 set +e
 DRY_RUN=yes \

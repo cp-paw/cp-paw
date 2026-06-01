@@ -319,6 +319,7 @@ if [[ -n "${root}" && -x "${root}/compilers/bin/nvfortran" ]]; then
 fi
 recommended_gpu_cases="none"
 recommended_gpu_diagnostic_cases=""
+recommended_large_band_gpu_cases="none"
 recommended_resource_cases="${recommended_cpu_cases}"
 
 if [[ -z "${host_fftw_path}" ]]; then
@@ -335,6 +336,7 @@ elif [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
   recommended_gpu_cases="gpu_resident_stack gpu_resident_off"
   recommended_resource_cases="${recommended_cpu_cases} gpu_resident_stack"
   recommended_gpu_diagnostic_cases="gpu_resident_stack_force_dedpro gpu_resident_nosync"
+  recommended_large_band_gpu_cases="gpu_resident_stack"
   if [[ -n "${cusolver_path}" ]]; then
     recommended_gpu_diagnostic_cases=$(append_case \
       "${recommended_gpu_diagnostic_cases}" "gpu_resident_no_cusolver")
@@ -347,8 +349,17 @@ elif [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
     recommended_gpu_diagnostic_cases=$(append_case \
       "${recommended_gpu_diagnostic_cases}" \
       "gpu_resident_stack_serial3dfft_force_dedpro")
+    recommended_large_band_gpu_cases=$(append_case \
+      "${recommended_large_band_gpu_cases}" \
+      "gpu_resident_stack_serial3dfft")
+    recommended_large_band_gpu_cases=$(append_case \
+      "${recommended_large_band_gpu_cases}" \
+      "gpu_resident_stack_serial3dfft_force_dedpro")
     recommended_gpu_diagnostic_cases=$(append_case \
       "${recommended_gpu_diagnostic_cases}" \
+      "gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache")
+    recommended_large_band_gpu_cases=$(append_case \
+      "${recommended_large_band_gpu_cases}" \
       "gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache")
   fi
   recommended_gpu_diagnostic_cases=$(append_case \
@@ -362,5 +373,7 @@ fi
 echo "recommended_cpu_cases=${recommended_cpu_cases}"
 echo "recommended_gpu_cases=${recommended_gpu_cases}"
 echo "recommended_gpu_diagnostic_cases=${recommended_gpu_diagnostic_cases:-none}"
+echo "recommended_large_band_gpu_cases=${recommended_large_band_gpu_cases}"
 echo "recommended_resource_cases=${recommended_resource_cases}"
 echo "recommended_standard_command=cd tests/profile/si64 && TEST=si64_bands EMPTY_BANDS=1024 NSTEPS=1 ./run_nvhpc_standard.sh"
+echo "recommended_large_band_command=cd tests/profile/si64 && ./run_gpu_resource_comparison.sh"

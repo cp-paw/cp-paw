@@ -596,6 +596,24 @@ default.
 Set `AUTO_BUILD_TARGETS=yes` (with `AUTO_BUILD_JOBS`) to automatically build all
 required profile binaries before benchmarking.
 
+For the larger one-GPU versus CPU resource comparison that stresses the
+band/orthogonalization path, run:
+
+```
+cd tests/profile/si64
+./run_gpu_resource_comparison.sh
+```
+
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=2048`, `NSTEPS=1`, one GPU rank
+and eight CPU ranks. `GPU_CASES=auto` resolves
+`recommended_large_band_gpu_cases` from `paw_gpu_capabilities.sh`, currently the
+conservative resident stack plus the single-rank serial 3-D FFT,
+force-DEDPRO, and ACCMAP/cache diagnostics when cuFFT is available. The wrapper
+delegates to `run_nvhpc_standard.sh`, keeps `ADD_GPU_FALLBACK=no`, and writes
+the normal combined benchmark, comparison, transfer-row, and present-row
+reports. Override `GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`, or set
+`AUTO_BUILD_TARGETS=yes` for targeted reproductions.
+
 Use the full diagnostic sweep only when comparing library combinations:
 
 ```
@@ -1012,15 +1030,16 @@ src/Tools/Scripts/paw_gpu_capabilities.sh
 It reports CUDA devices, NVIDIA HPC SDK library presence, host FFTW
 library/include and BLAS/LAPACK availability, current `recommended_cpu_cases`,
 `recommended_gpu_cases`, `recommended_gpu_diagnostic_cases`,
-`recommended_resource_cases`, and a best-effort CUDA-aware MPI hint. On CUDA
-systems with cuBLAS and a usable host numerical stack, the recommended routine
-GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics are only
-listed when `libcufft.so` is found. Future-candidate libraries such as cuBLASLt,
-cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning but are
-not linked into CP-PAW unless a concrete code path uses them.
-The standard, exploration, and overnight wrappers consume these values when
-their case-list variables are set to `auto`; set `CPPAW_GPU_CAPABILITIES_FILE`
-to replay a captured capability scan.
+`recommended_large_band_gpu_cases`, `recommended_resource_cases`, and a
+best-effort CUDA-aware MPI hint. On CUDA systems with cuBLAS and a usable host
+numerical stack, the recommended routine GPU cases start from
+`gpu_resident_stack`; cuFFT-dependent diagnostics are only listed when
+`libcufft.so` is found. Future-candidate libraries such as cuBLASLt, cuSPARSE,
+cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning but are not linked
+into CP-PAW unless a concrete code path uses them.
+The standard, exploration, resource-comparison, and overnight wrappers consume
+these values when their case-list variables are set to `auto`; set
+`CPPAW_GPU_CAPABILITIES_FILE` to replay a captured capability scan.
 
 For an active CUDA-aware MPI smoke test, use:
 

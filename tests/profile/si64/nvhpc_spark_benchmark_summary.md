@@ -3821,3 +3821,15 @@ cd tests/profile/si64
 The library-matrix wrapper delegates to `run_nvhpc_standard.sh` with the same
 1024-band, one-step shape and expands the GPU case list to the all-library,
 single-library, library-disabled, NVLAMATH/NVBLAS, and memory-mode diagnostics.
+
+Use the larger resource comparison when checking whether one MPI rank plus one
+GPU still beats one-rank and eight-rank CPU/NVHPC references for the
+band/orthogonalization-heavy path:
+
+```
+cd tests/profile/si64
+./run_gpu_resource_comparison.sh
+```
+
+This wrapper codifies the `EMPTY_BANDS=2048`, `NSTEPS=1` focused case used in
+the 2026-06-01 Spark/Terok comparison above.
