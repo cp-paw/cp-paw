@@ -50,6 +50,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `force-to-hpsi-psi0-residency-20260601-512-nstep2-*` | Force-to-HPSI `PSI0` residency | `gpu_resident_hpsi_opsi` 11.03 s at 512/1 | - | `gpu_resident_hpsi_opsi` 15.06 s at 512/4 | Reuses the force-loop `PSI0` device copy in the following HPSI path; energy-valid and removes the HPSI-side `PSI0` copy. |
 | `vpsi-device-finish-residency-20260601-512-nstep2-*` | VPSI HPSI device finish | `gpu_resident_hpsi_opsi` 11.11 s at 512/1 | - | `gpu_resident_hpsi` 15.16 s at 512/4 | Moves the still-required HPSI transfer from the ADDPRO consumer boundary to the VPSI producer boundary; energy-valid and keeps HPSI present for ADDPRO. |
 | `si64_bands-nvhpc-refresh-20260601-85882ef-1024-nstep1` | Current full matrix after HPSI/VPSI residency | `gpu_resident_hpsi_opsi` 12.83 s | `cpu` 73.32 s, `nvhpc_cpu` 69.50 s | `cpu` 167.49 s, `nvhpc_cpu` 166.88 s | Confirms wavefunction residency dominates on Spark; all-library paths remain diagnostic-only. |
+| `hpsi-opsi-combo-cases-20260601-512-nstep2-*` | Combined HPSI/OPSI diagnostic keywords | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 9.58 s at 512/1 | - | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` 15.02 s at 512/4 | Adds harness cases for HPSI+OPSI with PROJ/off-site/DENMAT combinations; all cases are energy-valid, so future standard sweeps can compare the full stack directly. |
 
 The latest full-matrix run lives at:
 
@@ -2491,6 +2492,48 @@ FFT/RTOG producer remains host-side. It does make the lifetime graph cleaner:
 VPSI produces a device-present `HPSI`, ADDPRO consumes it without another
 enter-data boundary, and the profile now points at the real next large target,
 namely GPU-resident FFT/RTOG or a broader producer-side wavefunction residency.
+
+## HPSI/OPSI Combined Diagnostic Cases
+
+The follow-up harness patch adds direct `CASES` names for the combinations that
+matter now that HPSI and OPSI residency both work:
+
+- `gpu_resident_hpsi_opsi_proj`
+- `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum`
+- `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum`
+
+Spark C86C validation used the existing residency binaries:
+
+```
+runs/hpsi-opsi-combo-cases-20260601-512-nstep2-1r
+runs/hpsi-opsi-combo-cases-20260601-512-nstep2-4r
+```
+
+| Case | Empty bands | NSTEPS | Ranks | Wall time | Copy estimate | Final energy |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 1 | 10.47 s | 1.8066 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_proj` | 512 | 2 | 1 | 11.49 s | 1.8108 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | 512 | 2 | 1 | 10.61 s | 1.8181 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | 512 | 2 | 1 | 9.58 s | 1.8401 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi` | 512 | 2 | 4 | 15.11 s | 2.4407 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_proj` | 512 | 2 | 4 | 15.03 s | 2.4578 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | 512 | 2 | 4 | 15.02 s | 2.4778 GB | 269.022536 Ha |
+| `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | 512 | 2 | 4 | 15.04 s | 2.5391 GB | 269.022536 Ha |
+
+Key profile checks:
+
+| Profile row | Meaning |
+| --- | --- |
+| `ACC_PRESENT_HPSI_ADDPRO` | HPSI remains present through the ADDPRO consumer. |
+| `ACC_PRESENT_ADDPRO_OPSI_PSI` | OPSI build-time ADDPRO updates resident OPSI. |
+| `ACC_COPY_THIS_PROJ_IN` plus `ACC_PRESENT_OFFDEN_DPACK_PROJ` | PROJ-residency cases move the projection copy to the producer and let the off-site device-pack consumer see it as present. |
+| `PAW_OFFDEN_DEVICE_ACCUM` | Device-pack accumulation remains active when combined with HPSI and OPSI residency. |
+
+Conclusion: the combined switches do not expose a correctness conflict, and the
+short Spark smoke is neutral-to-slightly-positive. Treat the full combination
+as a diagnostic case for now; the stronger decision still needs the standard
+1024/NSTEPS=1 refresh and a larger case before promoting more than HPSI+OPSI
+into the recommended path.
 
 ## Recommended Next Benchmark
 

@@ -458,6 +458,9 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_psim_phase` | Opt-in diagnostic that also sets `CPPAW_GPU_PSIM_PHASE_RESIDENCY=1`, leaving propagated `PSIM` present until orthogonalization copies it back. |
 | `gpu_resident_hpsi_psim_phase` | Combined HPSI plus cross-phase PSIM propagation residency diagnostic. |
 | `gpu_resident_hpsi_opsi` | Combined residency diagnostic with both `CPPAW_GPU_HPSI_RESIDENCY=1` and `CPPAW_GPU_OPSI_RESIDENCY=1`. |
+| `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
+| `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
+| `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
 | `gpu_resident_off` | Residency binary with native cuFFT/cuBLAS/cuSOLVER disabled for same-executable fallback comparison. |
