@@ -189,6 +189,34 @@ correctness independently, but the combined case is the more useful ACCMAP
 diagnostic. Neither should be folded into `CPPAW_GPU_RESIDENCY_STACK` yet,
 because the serial 3-D ACCMAP path itself is still system-dependent.
 
+## 2026-06-01 Serial 3D ACCMAP Phase Profiling
+
+The ACCMAP path now reports the visible device-side mapping subphases separately:
+`ACC_SERIAL3D_GTOR_ZERO`, `ACC_SERIAL3D_GTOR_SCATTER`,
+`ACC_SERIAL3D_GTOR_GATHER`, `ACC_SERIAL3D_RTOG_LOAD`, and
+`ACC_SERIAL3D_RTOG_GATHER`. The cuFFT call itself is already reported by
+`CUFFT3D_C8_PRESENT`.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-phase-profile-spark-20260601-154539
+Terok: tests/profile/si64/runs/accmap-phase-profile-terok-20260601-154539
+```
+
+Both systems used `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`
+with `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`, `RANKS=1`.
+
+| System | Wall time | FFT time | VPSI time | Mapping kernels | `CUFFT3D_C8_PRESENT` | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Spark GB10 | 15.48 s | 5.1413 s | 0.1069 s | 0.0919 s | 0.0393 s | 2.0469 GB | yes |
+| Terok A40 | 10.03 s | 0.5504 s | 0.1359 s | 0.0970 s | 0.0431 s | 2.0469 GB | yes |
+
+The visible mapping kernels and cuFFT call are much smaller than the reported
+FFT envelope, especially on Spark. This points away from the map kernels
+themselves and toward per-call OpenACC data-region/runtime overhead and repeated
+temporary full-grid workspace lifetimes as the next serial-3D ACCMAP target.
+
 ## 2026-06-01 Current Stack Default Refresh
 
 After promoting PSIM switch/phase/propagation residency into

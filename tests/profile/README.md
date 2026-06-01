@@ -81,6 +81,11 @@ full-grid cuFFT despite the additional full-grid copy volume.
 this is exposed as `gpu_resident_stack_serial3dfft_accmap` rather than folded
 into the default serial-3D case because it can help on some systems while
 hurting on others.
+The ACCMAP profiler reports its visible mapping subphases as
+`ACC_SERIAL3D_GTOR_ZERO`, `ACC_SERIAL3D_GTOR_SCATTER`,
+`ACC_SERIAL3D_GTOR_GATHER`, `ACC_SERIAL3D_RTOG_LOAD`, and
+`ACC_SERIAL3D_RTOG_GATHER`; compare them with `CUFFT3D_C8_PRESENT` and the
+larger FFT envelope to identify data-region/runtime overhead.
 `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` is a narrower follow-up diagnostic for
 that ACCMAP path: when HPSI residency is already active, it lets the
 `WAVES_VPSI` RTOG step leave the produced `HPSI` device copy present for the
