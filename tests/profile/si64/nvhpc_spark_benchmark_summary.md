@@ -54,6 +54,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1` | Current standard refresh with combined HPSI/OPSI cases | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 12.21 s | `cpu` 77.79 s, `nvhpc_cpu` 75.23 s | `cpu` 672.52 s, `nvhpc_cpu` 392.07 s | Full focused residency stack is now the best 1024/1 case; eight-rank CPU is a poor resource comparison for this small smoke. |
 | `si64_bands-focus-20260601-0a43a65-2048-nstep1-1r` | 2048-band focused stack validation | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` 35.28 s | - | - | Confirms the focused stack also wins at 2048/1, so expose it as a short benchmark keyword. |
 | `vpsi-boundary-20260601-d3cd6cc-512-nstep1` / `vpsi-boundary-20260601-7ad2625-smoke` | VPSI/HPSI boundary harness | `gpu_resident_stack` 6.56 s at 512/1, 28.46 s at 512/4 | - | - | Adds a focused producer-boundary harness plus seconds-sorted `PAW_VPSI_*` rows; the final smoke shows VPSI time is almost entirely GTOR/RTOG. |
+| `psi0-prinfo-spark-20260601-074852` / `psi0-prinfo-terok-20260601-074852` | PSI0-to-PRINFO residency | `gpu_resident_stack` 12.11 s on Spark, 12.77 s on Terok | - | - | Keeps `PSI0` resident through `PRINFO/WRITEPDOS`, removing one more 0.1210 GB wavefunction copy; energy-valid on both systems, wall time neutral/noisy. |
 
 The latest full-matrix run lives at:
 
@@ -232,6 +233,38 @@ actual implementation target should be GPU-resident FFT/RTOG or a broader
 producer-side wavefunction region that removes the required `HPSI` refresh
 after host-side FFT output.
 
+## PSI0-To-PRINFO Residency
+
+The next positive cross-boundary residency step keeps `PSI0` present after the
+OPSI build until `PRINFO/WRITEPDOS` has consumed it for the PDOS projection.
+`WAVES$SWITCH` deletes any still-resident old `PSI0` before swapping the
+`PSI0`/`PSIM` pointers, so the OpenACC present table cannot carry stale data
+into the next step. The opt-out diagnostic case is
+`gpu_resident_stack_psi0_prinfo_host`, equivalent to
+`CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_PRINFO_RESIDENCY=0`.
+
+Validation runs used `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`,
+`REPEATS=3`, one GPU rank:
+
+```
+runs/psi0-prinfo-spark-20260601-074852
+runs/psi0-prinfo-terok-20260601-074852
+```
+
+| Machine | Case | Median wall time | Transfer estimate | Key marker | Energy check |
+| --- | --- | ---: | ---: | --- | --- |
+| Spark C86C | `gpu_resident_stack` | 12.11 s | 1.5099 GB | `ACC_PRESENT_PROJ_WRITEPDOS_PSI` | yes |
+| Spark C86C | `gpu_resident_stack_psi0_prinfo_host` | 12.24 s | 1.6309 GB | `ACC_COPY_PROJ_WRITEPDOS_PSI_IN` | yes |
+| Terok A40 | `gpu_resident_stack` | 12.77 s | 1.5099 GB | `ACC_PRESENT_PROJ_WRITEPDOS_PSI` | yes |
+| Terok A40 | `gpu_resident_stack_psi0_prinfo_host` | 14.03 s | 1.6309 GB | `ACC_COPY_PROJ_WRITEPDOS_PSI_IN` | yes |
+
+The copy reduction is deterministic: the stack removes exactly one
+`THIS%PSI0` projection input copy for this 1024-band Si64 step, 0.1210 GB. Wall
+time remains too noisy for a speedup claim, but this is the first clean
+post-orthogonalization consumer reuse and it validates the broader residency
+design Peter suggested: keep wavefunction data resident across multiple PAW
+phases, with explicit lifecycle cleanup at pointer-swap boundaries.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -262,9 +295,11 @@ after host-side FFT output.
    PSI/HPSI/OPSI residency work is the dominant Spark speedup.
 
 6. The one-center overlap GPU-pack path removes the previous large
-   `WAVES_1COVERLAP` bottleneck. The next useful default-candidate work should
-   target the remaining host-side FFT/RTOG and producer-side HPSI/projector
-   boundaries, not broader default activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
+   `WAVES_1COVERLAP` bottleneck. The new `PSI0`-to-`PRINFO` residency removes
+   another deterministic 0.1210 GB copy from the focused stack, but wall time is
+   still neutral/noisy. The next useful default-candidate work should target the
+   remaining host-side FFT/RTOG and producer-side HPSI/projector boundaries, not
+   broader default activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
 
 7. Keep `gpu_resident_invbatch_off` as a negative-control diagnostic only. In
    the 4fbe2cd refresh it produced 302.773536 Ha instead of 302.280854 Ha and
