@@ -66,8 +66,8 @@ host_fftw_ld_library_path=/tmp/fftw/lib
 host_fftw_pkg_config_path=/tmp/fftw/lib/pkgconfig
 recommended_cpu_cases=cpu nvhpc_cpu
 recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft
-recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync
-recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache
+recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache
+recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache
 recommended_resource_cases=cpu nvhpc_cpu gpu_resident_stack
 EOF
 
@@ -299,10 +299,12 @@ DRY_RUN=yes \
     > "${tmpdir}/resource-dry-run.out" 2>&1
 resource_dry_run_status=$?
 set -e
-grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache' cpu='none'" \
+grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache' cpu='none'" \
   "${tmpdir}/resource-dry-run/nvhpc_standard.log"
-grep -q "^recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache" \
+grep -q "^recommended_large_band_gpu_cases=gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache" \
   "${tmpdir}/resource-dry-run/gpu_capabilities.txt"
+grep -q "case=gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache" \
+  "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
 grep -q "case=gpu_resident_stack_serial3dfft_force_dedpro" \
   "${tmpdir}/resource-dry-run/gpu_1rank/metadata.txt"
 grep -q "^empty_bands=2048$" \
@@ -383,13 +385,15 @@ DRY_RUN=yes \
     > "${tmpdir}/exploration-auto-dry-run.out" 2>&1
 exploration_auto_dry_run_status=$?
 set -e
-grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_force_dedpro gpu_resident_nosync' cpu='none'" \
+grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache' cpu='none'" \
   "${tmpdir}/exploration-auto-dry-run/gpu_exploration.log"
 grep -q "case=gpu_resident_stack_cufft" \
   "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
 grep -q "case=gpu_resident_stack_force_dedpro" \
   "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
 grep -q "case=gpu_resident_nosync" \
+  "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
+grep -q "case=gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache" \
   "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
 grep -q "SKIP  suite=one_rank_cpu empty case list" \
   "${tmpdir}/exploration-auto-dry-run/gpu_exploration.log"

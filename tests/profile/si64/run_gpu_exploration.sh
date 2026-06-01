@@ -11,7 +11,7 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
 DRY_RUN=${DRY_RUN:-no}
-DEFAULT_GPU_EXPLORATION_CASES="gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_force_all"
+DEFAULT_GPU_EXPLORATION_CASES="gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_force_all"
 if [[ -z "${GPU_CASES+x}" ]]; then
   GPU_CASES=auto
 fi
