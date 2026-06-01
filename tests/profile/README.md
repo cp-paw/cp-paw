@@ -531,7 +531,12 @@ CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
 `EMPTY_BANDS`, `NSTEPS`,
 `GPU_RANKS` or `CPU_RANKS` for a targeted sweep. It writes both
 `combined_benchmark.md` and `combined_compare.md` so PR comments can include
-raw timings and the one-GPU versus CPU-resource speedup view.
+raw timings and the one-GPU versus CPU-resource speedup view. It also writes
+`combined_transfer_rows.md`/`.tsv` for the largest `ACC_COPY` and `ACC_UPDATE`
+rows and `combined_present_rows.md`/`.tsv` for the most frequent
+`ACC_PRESENT` rows across the suites, so the next residency change can be picked
+from the measured remaining data-motion and reuse sites. Set `PROFILE_ROW_TOP`
+or `PRESENT_ROW_TOP` to widen those reports.
 
 Set `RUN_GPU_ALL=yes` to include the all-library cases `gpu_all` and
 `gpu_all_off`. The default is `RUN_GPU_ALL=no` because the Spark Si64 matrix
