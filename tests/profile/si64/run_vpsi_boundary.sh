@@ -16,12 +16,14 @@ RUN_LARGE_GPU=${RUN_LARGE_GPU:-no}
 LARGE_EMPTY_BANDS=${LARGE_EMPTY_BANDS:-2048}
 ROW_TOP=${ROW_TOP:-16}
 VPSI_ROW_TOP=${VPSI_ROW_TOP:-8}
+FFT_ROW_TOP=${FFT_ROW_TOP:-12}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-${RUN_ROOT:-"${HERE}/runs/vpsi-boundary-$(date +%Y%m%d-%H%M%S)"}}
-VPSI_BOUNDARY_CASES=${VPSI_BOUNDARY_CASES:-"gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack"}
+VPSI_BOUNDARY_CASES=${VPSI_BOUNDARY_CASES:-"gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_stack_cufft gpu_resident_stack_cufft_force"}
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 ROWS_COMBINED="${RUN_ROOT_BASE}-profile-rows.md"
 VPSI_ROWS_COMBINED="${RUN_ROOT_BASE}-vpsi-rows.md"
+FFT_ROWS_COMBINED="${RUN_ROOT_BASE}-fft-phase-rows.md"
 : > "${COMBINED}"
 
 declare -a SUITE_ROOTS=()
@@ -33,6 +35,12 @@ PROFILE_ROW_ARGS=(
 )
 VPSI_ROW_ARGS=(
   --op-prefix PAW_VPSI_
+  --include-zero
+  --sort-by seconds
+)
+FFT_ROW_ARGS=(
+  --op-prefix PW_GTOR_
+  --op-prefix PW_RTOG_
   --include-zero
   --sort-by seconds
 )
@@ -79,6 +87,13 @@ run_suite() {
       --include-repeat "${VPSI_ROW_ARGS[@]}" "${root}" \
       > "${root}/vpsi_rows.tsv"
   fi
+  if python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
+      --include-repeat --markdown "${FFT_ROW_ARGS[@]}" "${root}" \
+      > "${root}/fft_phase_rows.md"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
+      --include-repeat "${FFT_ROW_ARGS[@]}" "${root}" \
+      > "${root}/fft_phase_rows.tsv"
+  fi
   SUITE_ROOTS+=("${root}")
 }
 
@@ -122,4 +137,8 @@ if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
     --markdown "${VPSI_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
     > "${VPSI_ROWS_COMBINED}" || true
   echo "Combined VPSI-row data: ${VPSI_ROWS_COMBINED}"
+  python3 "${HERE}/profile_copy_rows.py" --per-case --top "${FFT_ROW_TOP}" \
+    --markdown "${FFT_ROW_ARGS[@]}" "${SUITE_ROOTS[@]}" \
+    > "${FFT_ROWS_COMBINED}" || true
+  echo "Combined FFT phase-row data: ${FFT_ROWS_COMBINED}"
 fi

@@ -461,6 +461,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
 | `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
+| `gpu_resident_stack_cufft` / `gpu_resident_stack_cufft_force` | Focused residency stack plus native cuFFT enabled with the conservative threshold, or forced for all `LIB$FFTC8` calls. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -585,10 +586,12 @@ cd tests/profile/si64
 It focuses on the current remaining HPSI boundary: `WAVES_VPSI` still receives
 host-side FFT/RTOG output, then refreshes or creates the device-present `HPSI`
 buffer for the following `WAVES_ADDPRO` consumer. The harness compares
-`gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`, and `gpu_resident_stack` with
-`NSTEPS=2` by default and writes combined benchmark tables plus selected
-profile tables for `ACC_COPY`/`ACC_UPDATE`/`ACC_PRESENT` rows and separate
-seconds-sorted `PAW_VPSI_*` timing rows.
+`gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`, `gpu_resident_stack`, and
+stack-plus-cuFFT variants with `NSTEPS=2` by default and writes combined
+benchmark tables plus selected profile tables for
+`ACC_COPY`/`ACC_UPDATE`/`ACC_PRESENT` rows, separate seconds-sorted
+`PAW_VPSI_*` timing rows, and separate seconds-sorted `PW_GTOR_*`/`PW_RTOG_*`
+phase rows.
 Because multi-step Si64 energies are not the one-step reference, fixed energy
 checking is disabled by default; compare energies between cases. Override
 `VPSI_BOUNDARY_CASES`, `NSTEPS_LIST`, `EMPTY_BANDS_LIST`,
