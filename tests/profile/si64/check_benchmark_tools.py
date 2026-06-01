@@ -107,6 +107,10 @@ def check_summary_and_markdown(tmpdir):
                 "ACC_COPY_OFFDEN_DPACK_PROJ_IN,1,1,1,0,1,0,0,0,0,3.5,0,0",
                 "ACC_COPY_DENMAT_LAGR_IN,1,1,1,0,1,0,0,0,0,4.5,0,0",
                 "ACC_COPY_MISC_IN,1,1,1,0,1,0,0,0,0,0.75,0,0",
+                "ACC_COPY_SERIAL3D_ACC_MAP,1,1,1,0,1,0,0,0,0,4.0,0,0",
+                "ACC_COPY_SERIAL3D_ACC_INPUT,1,1,1,0,1,0,0,0,0,1.0,0,0",
+                "ACC_COPY_SERIAL3D_ACC_OUTPUT,1,1,1,0,1,0,0,0,0,2.0,0,0",
+                "ACC_COPY_SERIAL3D_ACC_MAP_META,1,1,1,0,1,0,0,0,0,0.5,0,0",
                 "ACC_UPDATE_VPSI_HPSI_IN,1,1,1,0,1,0,0,0,0,1.25,0,0",
                 "ACC_PRESENT_ADDOPSI_PSIM,1,1,1,0,2,0,0,0,0,0,0,0",
                 "PW_GTOR_TOTAL,1,1,1,0,1,1,1,1,0,0,0,0",
@@ -143,8 +147,8 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["vpsi_s"], "12", "vpsi_s")
     assert_equal(row["vpsi_gtor_s"], "5", "vpsi_gtor_s")
     assert_equal(row["vpsi_rtog_s"], "6", "vpsi_rtog_s")
-    assert_equal(row["transfer_gb"], "14.75", "transfer_gb")
-    assert_equal(row["copy_gb"], "13.5", "copy_gb")
+    assert_equal(row["transfer_gb"], "18.75", "transfer_gb")
+    assert_equal(row["copy_gb"], "17.5", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")
     assert_equal(row["copy_proj_gb"], "3", "copy_proj_gb")
     assert_equal(row["copy_offden_gb"], "3.5", "copy_offden_gb")
@@ -167,7 +171,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC copy offden", "profile copy offden bucket")
     assert_contains(profile_summary, "ACC copy denmat", "profile copy denmat bucket")
     assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
-    assert_contains(profile_summary, "transfer estimate: 14.750000 GB", "profile transfer total")
+    assert_contains(profile_summary, "transfer estimate: 18.750000 GB", "profile transfer total")
 
     copy_rows = run_tool(
         "profile_copy_rows.py",
@@ -178,6 +182,8 @@ def check_summary_and_markdown(tmpdir):
         "--op-prefix",
         "ACC_PRESENT",
         "--include-zero",
+        "--top",
+        "20",
         os.path.join(run_dir, "test_profile.csv"),
     )
     assert_contains(
@@ -189,6 +195,11 @@ def check_summary_and_markdown(tmpdir):
         copy_rows,
         "ACC_UPDATE_VPSI_HPSI_IN\t1\t1.25",
         "profile row update bytes",
+    )
+    assert_contains(
+        copy_rows,
+        "ACC_COPY_SERIAL3D_ACC_INPUT\t1\t1",
+        "profile row detail bytes",
     )
     assert_contains(
         copy_rows,

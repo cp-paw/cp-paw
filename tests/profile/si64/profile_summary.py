@@ -43,6 +43,14 @@ def update_bucket(op):
     return transfer_bucket(op, "ACC update")
 
 
+def is_copy_detail_row(op):
+    return op in (
+        "ACC_COPY_SERIAL3D_ACC_INPUT",
+        "ACC_COPY_SERIAL3D_ACC_OUTPUT",
+        "ACC_COPY_SERIAL3D_ACC_MAP_META",
+    )
+
+
 def category(op):
     if op.startswith("PHASE_"):
         return "Phase trace"
@@ -138,7 +146,7 @@ def main(argv):
     )
     copy_gbyte = sum(
         data["gbyte"] for op, data in per_op.items()
-        if op.startswith("ACC_COPY")
+        if op.startswith("ACC_COPY") and not is_copy_detail_row(op)
     )
     update_gbyte = sum(
         data["gbyte"] for op, data in per_op.items()
@@ -147,7 +155,7 @@ def main(argv):
     copy_bucket_gbyte = collections.defaultdict(float)
     update_bucket_gbyte = collections.defaultdict(float)
     for op, data in per_op.items():
-        if op.startswith("ACC_COPY"):
+        if op.startswith("ACC_COPY") and not is_copy_detail_row(op):
             copy_bucket_gbyte[copy_bucket(op)] += data["gbyte"]
         elif op.startswith("ACC_UPDATE"):
             update_bucket_gbyte[update_bucket(op)] += data["gbyte"]

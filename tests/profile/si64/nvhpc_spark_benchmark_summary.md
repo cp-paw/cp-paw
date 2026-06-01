@@ -3819,8 +3819,8 @@ Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
 
 | System | `*_accmap_cache` | `*_hpsi_rtog_vpsi_internal_cache` | Energy delta |
 | --- | ---: | ---: | ---: |
-| Spark GB10 | 43.13 s / 11.14 GB | 42.35 s / 5.30 GB | 0.000000 |
-| Terok A40 | 33.48 s / 11.14 GB | 32.19 s / 5.30 GB | 0.000001 |
+| Spark GB10 | 43.13 s / 7.04 GB | 42.35 s / 4.01 GB | 0.000000 |
+| Terok A40 | 33.48 s / 7.04 GB | 32.19 s / 4.01 GB | 0.000001 |
 
 The split rows show the same byte accounting on both systems. For the isolated
 cache case, the serial-3D transfer total is 4.0978 GB, split into 1.2897 GB
@@ -3829,7 +3829,9 @@ HPSI/VPSI residency cache case, input drops to 0.0000 GB, output remains
 1.2897 GB, map metadata remains 0.0000 GB, and the legacy total row is
 1.2897 GB. That confirms the cache removes repeated map metadata traffic and
 the combined residency removes the remaining input traffic; the main remaining
-ACCMAP transfer is the RTOG/GTOR output boundary.
+ACCMAP transfer is the RTOG/GTOR output boundary. The split rows are treated as
+diagnostic detail rows in the summary tools so the legacy total row remains the
+only serial-3D ACCMAP contribution to the aggregate transfer estimate.
 
 Interpretation is unchanged but sharper: Terok still benefits from the full
 ACCMAP/cache/residency combination, while Spark still pays a runtime cost even

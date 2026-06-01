@@ -47,6 +47,14 @@ def update_bucket(op):
     return transfer_bucket(op, "update")
 
 
+def is_copy_detail_row(op):
+    return op in (
+        "ACC_COPY_SERIAL3D_ACC_INPUT",
+        "ACC_COPY_SERIAL3D_ACC_OUTPUT",
+        "ACC_COPY_SERIAL3D_ACC_MAP_META",
+    )
+
+
 def profile_totals(run_dir):
     totals = {
         "instrumented": 0.0,
@@ -83,10 +91,11 @@ def profile_totals(run_dir):
                 seconds = float(row["total_seconds"])
                 gbyte = float(row["gbyte"])
                 if op.startswith("ACC_COPY"):
-                    totals["copy_gb"] += gbyte
-                    bucket = copy_bucket(op)
-                    if bucket:
-                        totals[bucket] += gbyte
+                    if not is_copy_detail_row(op):
+                        totals["copy_gb"] += gbyte
+                        bucket = copy_bucket(op)
+                        if bucket:
+                            totals[bucket] += gbyte
                     continue
                 if op.startswith("ACC_UPDATE"):
                     totals["update_gb"] += gbyte
