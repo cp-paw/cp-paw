@@ -172,8 +172,8 @@ not apply to the present implementation.)
    availability plus current `recommended_*` case lists. On CUDA systems with
    cuBLAS and a usable host numerical stack it points routine GPU checks at the
    residency stack rather than the older force-all diagnostic cases. The
-   standard and exploration benchmark wrappers consume those recommendations
-   when `GPU_CASES=auto`, which is their default.
+   standard, exploration, and overnight benchmark wrappers consume those
+   recommendations through their `auto` case-list defaults.
    To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
    `CPPAW_CUSOLVER_ACC_MIN_N=1`.
    To inspect a benchmark matrix without starting CP-PAW runs, use the dry-run

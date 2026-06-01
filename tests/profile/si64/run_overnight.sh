@@ -3,6 +3,7 @@ set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "${HERE}/../../.." && pwd)
+. "${HERE}/case_recommendations.sh"
 TEST=${TEST:-si64}
 OVERNIGHT_ROOT=${OVERNIGHT_ROOT:-"${HERE}/runs/${TEST}-overnight-$(date +%Y%m%d-%H%M%S)"}
 TIMEOUT=${TIMEOUT:-7200}
@@ -29,21 +30,33 @@ RUN_GPU_ACC=${RUN_GPU_ACC:-no}
 RUN_GPU_DIAGNOSTICS=${RUN_GPU_DIAGNOSTICS:-no}
 RUN_CUSOLVER=${RUN_CUSOLVER:-no}
 RUN_BAND_BENCHMARK=${RUN_BAND_BENCHMARK:-no}
-MAIN_CASES=${MAIN_CASES:-"nvhpc_cpu cublas cublas_off"}
-SCALING_CASES=${SCALING_CASES:-"nvhpc_cpu cublas"}
-GPU_ACC_CASES=${GPU_ACC_CASES:-"cpu nvhpc_cpu gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"}
-GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-"gpu_nosync gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_accmap gpu_force_all gpu_3dfft gpu_no_cufft gpu_no_cublas gpu_no_cusolver"}
+RUN_NSYS=${RUN_NSYS:-auto}
+MAIN_CASES=${MAIN_CASES:-auto}
+SCALING_CASES=${SCALING_CASES:-auto}
+GPU_ACC_CASES=${GPU_ACC_CASES:-auto}
+GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES:-auto}
 BAND_TEST=${BAND_TEST:-si64_bands}
 BAND_RANKS=${BAND_RANKS:-1}
 BAND_CPU_RANKS=${BAND_CPU_RANKS:-8}
 BAND_EMPTY_BANDS=${BAND_EMPTY_BANDS:-128}
 BAND_EMPTY_BANDS_LIST=${BAND_EMPTY_BANDS_LIST:-${BAND_EMPTY_BANDS}}
-BAND_CASES=${BAND_CASES:-"gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"}
-BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
-BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvhpc_cpu"}
+BAND_CASES=${BAND_CASES:-auto}
+BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-auto}
+BAND_CPU_CASES=${BAND_CPU_CASES:-auto}
 THRESHOLDS=${THRESHOLDS:-"1e7"}
+THRESHOLD_CASES=${THRESHOLD_CASES:-auto}
+NSYS_CASE=${NSYS_CASE:-auto}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
+
+DEFAULT_MAIN_CASES="nvhpc_cpu cublas cublas_off"
+DEFAULT_SCALING_CASES="nvhpc_cpu cublas"
+DEFAULT_GPU_ACC_CASES="cpu nvhpc_cpu gpu_resident_stack gpu_resident_off"
+DEFAULT_GPU_DIAGNOSTIC_CASES="gpu_nosync gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_accmap gpu_force_all gpu_3dfft gpu_no_cufft gpu_no_cublas gpu_no_cusolver"
+DEFAULT_BAND_CASES="gpu_resident_stack gpu_resident_off"
+DEFAULT_CPU_CASES="cpu nvhpc_cpu"
+DEFAULT_THRESHOLD_CASES="cublas"
+DEFAULT_NSYS_CASE="gpu_resident_stack"
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
@@ -97,8 +110,61 @@ iso_now() {
   date -u +%Y-%m-%dT%H:%M:%SZ
 }
 
+first_case() {
+  local item
+  for item in "$@"; do
+    [[ -n "${item}" ]] || continue
+    echo "${item}"
+    return 0
+  done
+}
+
 label_safe() {
   printf '%s' "$1" | tr '.+' 'pp' | tr -c 'A-Za-z0-9_-' '_'
+}
+
+resolve_case_list() {
+  local selected=$1
+  local key=$2
+  local fallback=$3
+  local cases
+
+  cases=$(cppaw_resolve_recommended_cases "${selected}" "${key}" "${fallback}")
+  cppaw_dedup_space_list ${cases}
+}
+
+resolve_first_case() {
+  local selected=$1
+  local key=$2
+  local fallback=$3
+  local cases
+
+  cases=$(resolve_case_list "${selected}" "${key}" "${fallback}")
+  first_case ${cases}
+}
+
+resolve_threshold_cases() {
+  local selected=$1
+  local key=$2
+  local fallback=$3
+
+  case "${selected}" in
+    auto|recommended)
+      resolve_first_case "${selected}" "${key}" "${fallback}"
+      ;;
+    *)
+      resolve_case_list "${selected}" "${key}" "${fallback}"
+      ;;
+  esac
+}
+
+run_enabled() {
+  case "$1" in
+    yes|true|1) return 0 ;;
+    no|false|0) return 1 ;;
+    auto|recommended) [[ -n ${2// } ]] ;;
+    *) return 1 ;;
+  esac
 }
 
 capture_metadata() {
@@ -112,6 +178,15 @@ capture_metadata() {
     echo "BLIS_NUM_THREADS=${BLIS_NUM_THREADS}"
     echo "VECLIB_MAXIMUM_THREADS=${VECLIB_MAXIMUM_THREADS}"
     echo "NVPL_NUM_THREADS=${NVPL_NUM_THREADS}"
+    echo "MAIN_CASES=${MAIN_CASES}"
+    echo "SCALING_CASES=${SCALING_CASES}"
+    echo "GPU_ACC_CASES=${GPU_ACC_CASES}"
+    echo "GPU_DIAGNOSTIC_CASES=${GPU_DIAGNOSTIC_CASES}"
+    echo "BAND_CASES=${BAND_CASES}"
+    echo "BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES}"
+    echo "BAND_CPU_CASES=${BAND_CPU_CASES}"
+    echo "THRESHOLD_CASES=${THRESHOLD_CASES}"
+    echo "NSYS_CASE=${NSYS_CASE}"
     echo
     uname -a
     echo
@@ -171,6 +246,12 @@ run_suite() {
   local suite_root="${OVERNIGHT_ROOT}/${suite}"
   local suite_log="${OVERNIGHT_ROOT}/${suite}.log"
 
+  if [[ -z ${cases// } ]]; then
+    log "SKIP  suite=${suite} empty case list"
+    echo "skipped" > "${suite_root}.status"
+    return 0
+  fi
+
   log "START suite=${suite} nsteps=${nsteps} ranks=${ranks} repeats=${repeats} cases=${cases} env=[$*]"
   if env NSTEPS="${nsteps}" RANKS="${ranks}" REPEATS="${repeats}" CASES="${cases}" \
       TIMEOUT="${TIMEOUT}" RUN_ROOT="${suite_root}" "$@" \
@@ -187,13 +268,21 @@ run_suite() {
 }
 
 run_nsys_trace() {
+  local nsys_case=$1
   local suite="nsys_nstep${NSYS_NSTEPS}_${NSYS_RANKS}ranks"
   local suite_root="${OVERNIGHT_ROOT}/${suite}"
   local suite_log="${OVERNIGHT_ROOT}/${suite}.log"
 
-  log "START suite=${suite}"
+  if [[ -z ${nsys_case// } ]]; then
+    log "SKIP  suite=${suite} empty Nsight case"
+    echo "skipped" > "${suite_root}.status"
+    return 0
+  fi
+
+  log "START suite=${suite} case=${nsys_case}"
   if env NSTEPS="${NSYS_NSTEPS}" RANKS="${NSYS_RANKS}" TIMEOUT="${TIMEOUT}" \
-      RUN_ROOT="${suite_root}" "${HERE}/run_nsys.sh" > "${suite_log}" 2>&1; then
+      CASE="${nsys_case}" RUN_ROOT="${suite_root}" \
+      "${HERE}/run_nsys.sh" > "${suite_log}" 2>&1; then
     log "DONE  suite=${suite}"
     echo 0 > "${suite_root}.status"
   else
@@ -202,6 +291,22 @@ run_nsys_trace() {
     echo "${status}" > "${suite_root}.status"
   fi
 }
+
+if cppaw_write_capabilities_file "${OVERNIGHT_ROOT}/gpu_capabilities.txt"; then
+  log "gpu_capabilities=${OVERNIGHT_ROOT}/gpu_capabilities.txt"
+fi
+
+MAIN_CASES=$(resolve_case_list "${MAIN_CASES}" recommended_resource_cases "${DEFAULT_MAIN_CASES}")
+SCALING_CASES=$(resolve_case_list "${SCALING_CASES}" recommended_resource_cases "${DEFAULT_SCALING_CASES}")
+GPU_ACC_CASES=$(resolve_case_list "${GPU_ACC_CASES}" recommended_resource_cases "${DEFAULT_GPU_ACC_CASES}")
+GPU_DIAGNOSTIC_CASES=$(resolve_case_list "${GPU_DIAGNOSTIC_CASES}" recommended_gpu_diagnostic_cases "${DEFAULT_GPU_DIAGNOSTIC_CASES}")
+BAND_CASES=$(resolve_case_list "${BAND_CASES}" recommended_gpu_cases "${DEFAULT_BAND_CASES}")
+BAND_ONE_RANK_CPU_CASES=$(resolve_case_list "${BAND_ONE_RANK_CPU_CASES}" recommended_cpu_cases "${DEFAULT_CPU_CASES}")
+BAND_CPU_CASES=$(resolve_case_list "${BAND_CPU_CASES}" recommended_cpu_cases "${DEFAULT_CPU_CASES}")
+THRESHOLD_CASES=$(resolve_threshold_cases "${THRESHOLD_CASES}" recommended_gpu_cases "${DEFAULT_THRESHOLD_CASES}")
+NSYS_CASE=$(resolve_first_case "${NSYS_CASE}" recommended_gpu_cases "${DEFAULT_NSYS_CASE}")
+
+log "selected_cases main='${MAIN_CASES:-none}' scaling='${SCALING_CASES:-none}' gpu_acc='${GPU_ACC_CASES:-none}' diagnostics='${GPU_DIAGNOSTIC_CASES:-none}' band_gpu='${BAND_CASES:-none}' band_cpu='${BAND_CPU_CASES:-none}' threshold='${THRESHOLD_CASES:-none}' nsys='${NSYS_CASE:-none}'"
 
 capture_metadata
 
@@ -274,13 +379,21 @@ case "${RUN_BAND_BENCHMARK}" in
     ;;
 esac
 
-for threshold in ${THRESHOLDS}; do
-  safe_threshold=$(label_safe "${threshold}")
-  run_suite "threshold_${safe_threshold}_${THRESHOLD_NSTEPS}steps_4ranks" "${THRESHOLD_NSTEPS}" 4 \
-    "${THRESHOLD_REPEATS}" "cublas" "CPPAW_CUBLAS_ACC_MINFLOP=${threshold}"
-done
+if [[ -n ${THRESHOLD_CASES// } ]]; then
+  for threshold in ${THRESHOLDS}; do
+    safe_threshold=$(label_safe "${threshold}")
+    run_suite "threshold_${safe_threshold}_${THRESHOLD_NSTEPS}steps_4ranks" "${THRESHOLD_NSTEPS}" 4 \
+      "${THRESHOLD_REPEATS}" "${THRESHOLD_CASES}" "CPPAW_CUBLAS_ACC_MINFLOP=${threshold}"
+  done
+else
+  log "SKIP  suite=threshold empty case list"
+fi
 
-run_nsys_trace
+if run_enabled "${RUN_NSYS}" "${NSYS_CASE}"; then
+  run_nsys_trace "${NSYS_CASE}"
+else
+  log "SKIP  suite=nsys disabled_or_empty_case"
+fi
 
 log "ALL DONE root=${OVERNIGHT_ROOT}"
 if [[ -f "${COMBINED}" ]]; then

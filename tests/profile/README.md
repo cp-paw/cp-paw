@@ -968,7 +968,7 @@ shutdown path. For runs that finalize MPI normally, `NSYS_MPI_MODE=per_rank`
 writes one report per rank.
 
 For an overnight comparison that combines a longer 4-rank run, rank scaling,
-a cuBLAS offload-threshold sweep and a short Nsight trace:
+a capability-selected cuBLAS offload-threshold sweep and a short Nsight trace:
 
 ```
 cd tests/profile/si64
@@ -988,17 +988,20 @@ against eight-rank CPU/OpenBLAS and CPU/NVHPC references, or
 `RUN_CUSOLVER=yes` to add the same one-rank cuSOLVER versus eight-rank CPU/NVHPC
 resource comparison.
 
-The overnight defaults use the recommended production-style cases:
-`MAIN_CASES="nvhpc_cpu cublas cublas_off"`,
-`SCALING_CASES="nvhpc_cpu cublas"`,
-`GPU_ACC_CASES="cpu nvhpc_cpu gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"`
-and `THRESHOLDS="1e7"`. Set
-`RUN_GPU_DIAGNOSTICS=yes` to add `gpu_nosync`, `gpu_resident_stack_cufft`,
-`gpu_force_all` and the `gpu_no_*` ablation cases, set
-`RUN_BAND_BENCHMARK=yes` to add the
-`si64_bands` larger-band matrix over one-rank GPU, one-rank CPU and eight-rank
-CPU references, set `BAND_EMPTY_BANDS_LIST="128 256 512"` for a size sweep, or
-override any of these variables for a wider run.
+The overnight defaults now use `auto` case lists from
+`paw_gpu_capabilities.sh`: the main/scaling suites use
+`recommended_resource_cases`, GPU diagnostics use
+`recommended_gpu_diagnostic_cases`, band GPU suites use
+`recommended_gpu_cases`, and CPU suites use `recommended_cpu_cases`. The
+threshold sweep and Nsight trace take the first recommended GPU case and skip
+cleanly when no usable GPU case is recommended. Override `MAIN_CASES`,
+`SCALING_CASES`, `GPU_ACC_CASES`, `GPU_DIAGNOSTIC_CASES`, `BAND_CASES`,
+`BAND_CPU_CASES`, `THRESHOLD_CASES`, or `NSYS_CASE` for a wider or fixed run.
+Set `RUN_GPU_DIAGNOSTICS=yes` to add the recommended diagnostic GPU cases, set
+`RUN_BAND_BENCHMARK=yes` to add the `si64_bands` larger-band matrix over
+one-rank GPU, one-rank CPU and eight-rank CPU references, set
+`BAND_EMPTY_BANDS_LIST="128 256 512"` for a size sweep, or override
+`CPPAW_GPU_CAPABILITIES_FILE` to replay a captured capability scan.
 
 The capability helper can be run standalone:
 
@@ -1015,9 +1018,9 @@ GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics are only
 listed when `libcufft.so` is found. Future-candidate libraries such as cuBLASLt,
 cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning but are
 not linked into CP-PAW unless a concrete code path uses them.
-The standard and exploration wrappers consume these values when `GPU_CASES=auto`
-or `CPU_CASES=auto`; set `CPPAW_GPU_CAPABILITIES_FILE` to replay a captured
-capability scan.
+The standard, exploration, and overnight wrappers consume these values when
+their case-list variables are set to `auto`; set `CPPAW_GPU_CAPABILITIES_FILE`
+to replay a captured capability scan.
 
 For an active CUDA-aware MPI smoke test, use:
 

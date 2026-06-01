@@ -217,6 +217,52 @@ grep -q "SKIP all suites empty case lists" \
 test ! -e "${tmpdir}/standard-nohost-dry-run/gpu_1rank/metadata.txt"
 test ! -e "${tmpdir}/standard-nohost-dry-run/cpu_1rank/metadata.txt"
 
+DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_gpu_capabilities.txt" \
+  OVERNIGHT_ROOT="${tmpdir}/overnight-auto-dry-run" \
+  LONG_NSTEPS=1 \
+  SCALING_NSTEPS=1 \
+  THRESHOLD_NSTEPS=1 \
+  LONG_REPEATS=1 \
+  SCALING_REPEATS=1 \
+  THRESHOLD_REPEATS=1 \
+  RUN_NSYS=no \
+  tests/profile/si64/run_overnight.sh \
+    > "${tmpdir}/overnight-auto-dry-run.out" 2>&1
+grep -q "selected_cases main='cpu nvhpc_cpu gpu_resident_stack' scaling='cpu nvhpc_cpu gpu_resident_stack'.*threshold='gpu_resident_stack' nsys='gpu_resident_stack'" \
+  "${tmpdir}/overnight-auto-dry-run/overnight.log"
+grep -q "case=gpu_resident_stack" \
+  "${tmpdir}/overnight-auto-dry-run/main_1steps_4ranks/metadata.txt"
+grep -q "case=cpu" \
+  "${tmpdir}/overnight-auto-dry-run/scaling_1steps_1ranks/metadata.txt"
+grep -q "case=nvhpc_cpu" \
+  "${tmpdir}/overnight-auto-dry-run/scaling_1steps_4ranks/metadata.txt"
+grep -q "case=gpu_resident_stack" \
+  "${tmpdir}/overnight-auto-dry-run/threshold_1e7_1steps_4ranks/metadata.txt"
+grep -q "SKIP  suite=nsys disabled_or_empty_case" \
+  "${tmpdir}/overnight-auto-dry-run/overnight.log"
+
+DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_nohost_capabilities.txt" \
+  OVERNIGHT_ROOT="${tmpdir}/overnight-nohost-dry-run" \
+  LONG_NSTEPS=1 \
+  SCALING_NSTEPS=1 \
+  THRESHOLD_NSTEPS=1 \
+  LONG_REPEATS=1 \
+  SCALING_REPEATS=1 \
+  THRESHOLD_REPEATS=1 \
+  tests/profile/si64/run_overnight.sh \
+    > "${tmpdir}/overnight-nohost-dry-run.out" 2>&1
+grep -q "selected_cases main='none' scaling='none'.*threshold='none' nsys='none'" \
+  "${tmpdir}/overnight-nohost-dry-run/overnight.log"
+grep -q "SKIP  suite=main_1steps_4ranks empty case list" \
+  "${tmpdir}/overnight-nohost-dry-run/overnight.log"
+grep -q "SKIP  suite=threshold empty case list" \
+  "${tmpdir}/overnight-nohost-dry-run/overnight.log"
+grep -q "SKIP  suite=nsys disabled_or_empty_case" \
+  "${tmpdir}/overnight-nohost-dry-run/overnight.log"
+test ! -e "${tmpdir}/overnight-nohost-dry-run/main_1steps_4ranks/metadata.txt"
+
 set +e
 DRY_RUN=yes \
   GPU_LIBRARY_MATRIX_ROOT="${tmpdir}/matrix-dry-run" \
