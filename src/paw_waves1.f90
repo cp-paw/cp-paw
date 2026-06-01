@@ -7794,6 +7794,10 @@ RETURN
 !     **  IF(TRHOKIN) CALCULATE ALSO KINETIC-ENERGY DENSITY RHOKIN IN R. SPACE**
 !     **                                                                      **
 !     *******************************************P.E. BLOECHL, (1991-2021)******
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_DENSITY_INTERNAL_RESIDENCY_ENABLED
+#ENDIF
       IMPLICIT NONE
       INTEGER(4),INTENT(IN)  :: NGL         ! MAX # PLANE WAVES
       INTEGER(4),INTENT(IN)  :: NRL         ! # R-SPACE POINTS
@@ -7854,6 +7858,16 @@ RETURN
           CALL ERROR$STOP('WAVES_DENSITY')
         END IF
       END IF
+!
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      IF((NDIM.EQ.1).AND.(.NOT.TRHOKIN) &
+     &   .AND.CPPAW_CUBLAS_ACC_DENSITY_INTERNAL_RESIDENCY_ENABLED()) THEN
+        CALL WAVES_DENSITY_ACC_INTERNAL(NGL,NRL,NDIM,NB,NBH,F,PSIOFG &
+     &                                  ,RHO,TINV)
+                               CALL TRACE$POP()
+        RETURN
+      END IF
+#ENDIF
 !
 !     ==========================================================================
 !     ==  FFT                                                                 ==
@@ -8064,6 +8078,178 @@ RETURN
                                CALL TRACE$POP()
       RETURN
       END
+!
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_DENSITY_ACC_INTERNAL(NGL,NRL,NDIM,NB,NBH,F &
+     &                                      ,PSIOFG,RHO,TINV)
+!     **************************************************************************
+!     **  Opt-in scalar-density prototype that keeps the GTOR real-space      **
+!     **  wavefunction on the GPU and accumulates RHO before copying only     **
+!     **  the final density back to the host. It requires the serial 3-D      **
+!     **  ACCMAP PLANEWAVE$FFT path.                                         **
+!     **************************************************************************
+      USE OPENACC
+      USE PLANEWAVE_MODULE, ONLY: LAST_FFT_ACC_MAP_USED
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NGL
+      INTEGER(4),INTENT(IN)  :: NRL
+      INTEGER(4),INTENT(IN)  :: NDIM
+      INTEGER(4),INTENT(IN)  :: NB
+      INTEGER(4),INTENT(IN)  :: NBH
+      REAL(8)   ,INTENT(IN)  :: F(NB)
+      COMPLEX(8),INTENT(IN)  :: PSIOFG(NGL,NDIM,NBH)
+      REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIM**2)
+      LOGICAL(4),INTENT(IN)  :: TINV
+      COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: EI2KR(:)
+      COMPLEX(8)             :: CSVAR
+      INTEGER(4)             :: IBH,IR
+      REAL(8)                :: F1,F2
+      REAL(8)                :: RE,IM
+      REAL(8)                :: SVAR1,SVAR2
+      LOGICAL(4)             :: TACC_FFT_USED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_T0
+      REAL(8)                :: ACCEL_T1
+      REAL(8)                :: ACCEL_TOTAL_T0
+      REAL(8)                :: ACCEL_TOTAL_T1
+      REAL(8)                :: ACCEL_FFT_T
+      REAL(8)                :: ACCEL_ACCUM_T
+#ENDIF
+!     **************************************************************************
+      ALLOCATE(PSIOFR(NRL,NDIM,NBH))
+      TACC_FFT_USED=.FALSE.
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_FFT_T=0.D0
+      ACCEL_ACCUM_T=0.D0
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
+      CALL ACCELPROFILE$ADD('ACC_COPY_DENS_F_IN' &
+     &    ,INT(NB,KIND=8),1_8,0_8,0_8 &
+     &    ,0.D0,8.D0*REAL(NB,KIND=8),0.D0)
+      CALL ACCELPROFILE$ADD('ACC_COPY_DENS_RHO_OUT' &
+     &    ,INT(NRL,KIND=8),1_8,0_8,0_8 &
+     &    ,0.D0,8.D0*REAL(NRL,KIND=8),0.D0)
+#ENDIF
+      IF(TINV) THEN
+        ALLOCATE(EI2KR(NRL))
+        CALL PLANEWAVE$GETC8A('EIKR',NRL,EI2KR)
+        DO IR=1,NRL
+          EI2KR(IR)=EI2KR(IR)**2
+        ENDDO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$ADD('ACC_COPY_DENS_EI2KR_IN' &
+     &      ,INT(NRL,KIND=8),1_8,0_8,0_8 &
+     &      ,0.D0,16.D0*REAL(NRL,KIND=8),0.D0)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC DATA CREATE(PSIOFR(1:NRL,1:NDIM,1:NBH)) &
+!$ACC& COPYIN(F(1:NB),EI2KR(1:NRL)) COPYOUT(RHO(1:NRL,1:1))
+        CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSIOFG,NRL,PSIOFR)
+        TACC_FFT_USED=LAST_FFT_ACC_MAP_USED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_FFT_T=ACCEL_T1-ACCEL_T0
+        IF(TACC_FFT_USED) THEN
+          CALL ACCELPROFILE$ADD('ACC_PRESENT_DENS_PSIOFR' &
+     &        ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &        ,0_8,0.D0,0.D0,0.D0)
+        END IF
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        IF(TACC_FFT_USED) THEN
+!$ACC PARALLEL LOOP PRESENT(PSIOFR,F,EI2KR,RHO) &
+!$ACC& PRIVATE(IBH,F1,F2,SVAR1,SVAR2,CSVAR)
+          DO IR=1,NRL
+            RHO(IR,1)=0.D0
+            DO IBH=1,NBH
+              F1=F(2*IBH-1)
+              F2=0.D0
+              IF(2*IBH.LE.NB) F2=F(2*IBH)
+              SVAR1=0.5D0*(F1+F2)
+              SVAR2=0.5D0*(F1-F2)
+              IF((SVAR1.NE.0.D0).OR.(SVAR2.NE.0.D0)) THEN
+                CSVAR=SVAR1*CONJG(PSIOFR(IR,1,IBH))
+                IF(SVAR2.NE.0.D0) THEN
+                  CSVAR=CSVAR+SVAR2*PSIOFR(IR,1,IBH)*EI2KR(IR)
+                END IF
+                RHO(IR,1)=RHO(IR,1) &
+     &                    +REAL(PSIOFR(IR,1,IBH)*CSVAR,KIND=8)
+              END IF
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_ACCUM_T=ACCEL_T1-ACCEL_T0
+#ENDIF
+!$ACC END DATA
+        DEALLOCATE(EI2KR)
+      ELSE
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC DATA CREATE(PSIOFR(1:NRL,1:NDIM,1:NBH)) &
+!$ACC& COPYIN(F(1:NB)) COPYOUT(RHO(1:NRL,1:1))
+        CALL PLANEWAVE$FFT('GTOR',NBH*NDIM,NGL,PSIOFG,NRL,PSIOFR)
+        TACC_FFT_USED=LAST_FFT_ACC_MAP_USED
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_FFT_T=ACCEL_T1-ACCEL_T0
+        IF(TACC_FFT_USED) THEN
+          CALL ACCELPROFILE$ADD('ACC_PRESENT_DENS_PSIOFR' &
+     &        ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &        ,0_8,0.D0,0.D0,0.D0)
+        END IF
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        IF(TACC_FFT_USED) THEN
+!$ACC PARALLEL LOOP PRESENT(PSIOFR,F,RHO) &
+!$ACC& PRIVATE(IBH,F1,RE,IM)
+          DO IR=1,NRL
+            RHO(IR,1)=0.D0
+            DO IBH=1,NB
+              F1=F(IBH)
+              IF(F1.NE.0.D0) THEN
+                RE= REAL(PSIOFR(IR,1,IBH),KIND=8)
+                IM=AIMAG(PSIOFR(IR,1,IBH))
+                RHO(IR,1)=RHO(IR,1)+F1*(RE**2+IM**2)
+              END IF
+            ENDDO
+          ENDDO
+!$ACC END PARALLEL LOOP
+        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_ACCUM_T=ACCEL_T1-ACCEL_T0
+#ENDIF
+!$ACC END DATA
+      END IF
+      IF(.NOT.TACC_FFT_USED) THEN
+        CALL ERROR$MSG('DENSITY INTERNAL RESIDENCY REQUIRES SERIAL 3D')
+        CALL ERROR$MSG('ACCMAP PLANEWAVE$FFT FOR THE GTOR STEP')
+        CALL ERROR$STOP('WAVES_DENSITY_ACC_INTERNAL')
+      END IF
+      DEALLOCATE(PSIOFR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$ADD('PAW_DENSITY_FFT' &
+     &    ,INT(NGL,KIND=8),INT(NRL,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_FFT_T)
+      CALL ACCELPROFILE$ADD('PAW_DENSITY_ACCUM' &
+     &    ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NB,KIND=8) &
+     &    ,0_8,0.D0,0.D0,ACCEL_ACCUM_T)
+      CALL ACCELPROFILE$ADD('PAW_DENSITY_ACCUM_ACC' &
+     &    ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NB,KIND=8) &
+     &    ,0_8,0.D0,0.D0,ACCEL_ACCUM_T)
+      CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
+      CALL ACCELPROFILE$ADD('PAW_DENSITY_TOTAL' &
+     &    ,INT(NGL,KIND=8),INT(NRL,KIND=8),INT(NDIM,KIND=8) &
+     &    ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_TOTAL_T1-ACCEL_TOTAL_T0)
+#ENDIF
+      RETURN
+      END SUBROUTINE WAVES_DENSITY_ACC_INTERNAL
+#ENDIF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_DEDPROJ(NDIM,NBH,NB,LNX,LOX,LMNX,OCC &

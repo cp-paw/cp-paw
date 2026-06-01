@@ -115,6 +115,12 @@ directions and is exposed as
 `gpu_resident_stack_serial3dfft_accmap_vpsi_internal`, or combined with HPSI
 RTOG output residency as
 `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`.
+`CPPAW_GPU_DENSITY_INTERNAL_RESIDENCY=1` is a follow-up diagnostic for the
+remaining density-side GTOR boundary. For scalar, non-kinetic-density calls it
+keeps the `WAVES_DENSITY` GTOR output on the GPU, accumulates `RHO` with
+OpenACC, and copies back only the final density. It requires the serial 3-D
+ACCMAP FFT path and is exposed in the harness as
+`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache`.
 
 To profile the combined native GPU paths on one GPU, build an
 `nvhpc_gpu_acc_*` target. This enables explicit cuBLAS by default, keeps native
@@ -536,6 +542,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus opt-in HPSI RTOG output residency via `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`, plus resident `WAVES_VPSI` real-space scratch via `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal`, plus cached ACCMAP work/map arrays via `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1`; the cache is released by the plane-wave accelerator cleanup hook. |
+| `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_density_cache` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache`, plus opt-in scalar `WAVES_DENSITY` GTOR-output residency and GPU-side `RHO` accumulation via `CPPAW_GPU_DENSITY_INTERNAL_RESIDENCY=1`. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |
 | `gpu_resident_force_all` | Residency diagnostic that also forces cuFFT and small cuSOLVER offload. |
@@ -891,6 +898,11 @@ be overridden by kernel category:
   `WAVES_VPSI` real-space scratch on the GPU between GTOR, the local potential
   multiplication, and RTOG for scalar-spin (`NDIM=1`) calls. The compatibility
   alias is `CPPAW_CUBLAS_ACC_VPSI_INTERNAL_RESIDENCY`.
+- `CPPAW_GPU_DENSITY_INTERNAL_RESIDENCY`: disabled by default and requires the
+  serial 3-D FFT ACCMAP path. Set to `1` to keep the scalar, non-kinetic
+  `WAVES_DENSITY` GTOR output on the GPU and accumulate `RHO` before copying the
+  final density back to the host. The compatibility alias is
+  `CPPAW_CUBLAS_ACC_DENSITY_INTERNAL_RESIDENCY`.
 - `CPPAW_GPU_PSIM_PROPAGATE`: disabled by default. Set to `1` to run
   `WAVES$PROPAGATE` on the GPU for non-stress steps and copy the updated `PSIM`
   back before orthogonalization. The compatibility aliases are
