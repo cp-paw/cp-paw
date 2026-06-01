@@ -3799,6 +3799,44 @@ resident stack, while the single-rank serial 3-D FFT and force-DEDPRO paths are
 worth keeping as explicit benchmark cases. The ACCMAP/cache path remains a
 system-dependent diagnostic until its Spark behavior is understood.
 
+## 2026-06-01 ACCMAP Split/Cache Validation
+
+Commit `b4a18ed` splits the serial 3-D ACCMAP transfer accounting into
+`ACC_COPY_SERIAL3D_ACC_INPUT`, `ACC_COPY_SERIAL3D_ACC_OUTPUT`, and
+`ACC_COPY_SERIAL3D_ACC_MAP_META`, while keeping the legacy total row
+`ACC_COPY_SERIAL3D_ACC_MAP`. It also adds
+`gpu_resident_stack_serial3dfft_accmap_cache` so the ACCMAP cache can be tested
+without the HPSI/VPSI residency follow-ups.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-split-cache-spark-20260601-185329
+Terok: tests/profile/si64/runs/accmap-split-cache-terok-20260601-185329
+```
+
+Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
+
+| System | `*_accmap_cache` | `*_hpsi_rtog_vpsi_internal_cache` | Energy delta |
+| --- | ---: | ---: | ---: |
+| Spark GB10 | 43.13 s / 11.14 GB | 42.35 s / 5.30 GB | 0.000000 |
+| Terok A40 | 33.48 s / 11.14 GB | 32.19 s / 5.30 GB | 0.000001 |
+
+The split rows show the same byte accounting on both systems. For the isolated
+cache case, the serial-3D transfer total is 4.0978 GB, split into 1.2897 GB
+input, 2.8081 GB output, and 0.0000 GB map metadata. For the combined
+HPSI/VPSI residency cache case, input drops to 0.0000 GB, output remains
+1.2897 GB, map metadata remains 0.0000 GB, and the legacy total row is
+1.2897 GB. That confirms the cache removes repeated map metadata traffic and
+the combined residency removes the remaining input traffic; the main remaining
+ACCMAP transfer is the RTOG/GTOR output boundary.
+
+Interpretation is unchanged but sharper: Terok still benefits from the full
+ACCMAP/cache/residency combination, while Spark still pays a runtime cost even
+after the byte volume is lower. Keep ACCMAP/cache opt-in and use the split rows
+to decide whether the next useful step is output-boundary residency or avoiding
+the serial mapping kernels entirely.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
