@@ -70,6 +70,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `accmap-present-nstep*-spark/terok` | Present-input reuse in the serial 3D cuFFT ACCMAP path | Transfer estimate drops from 4.0171 to 3.6540 GB at NSTEPS=1 and from 10.5201 to 9.6729 GB at NSTEPS=3 | Wall time remains mixed: Terok NSTEPS=3 improves to 24.71 s, Spark NSTEPS=3 is 41.99 s | NSTEPS=1 energy-valid on both systems | Changes the ACCMAP data region to `PRESENT_OR_COPYIN` for the FFT input vector. This reduces redundant host-to-device traffic but does not make ACCMAP a Spark default. |
 | `hpsi-rtog-*-20260601-*` | HPSI RTOG output residency in the serial 3D FFT ACCMAP path | Spark/GB10: output-present accounting lowers the validated NSTEPS=1 transfer estimate to 3.4119 GB; wall time is modestly favorable in the initial sweep | Terok/A40: NSTEPS=1 remains mixed/noisy, but the transfer accounting is identical | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` / `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`; useful as a producer-boundary diagnostic, not a default promotion. |
 | `vpsi-internal-*-20260601-*` | Resident `WAVES_VPSI` real-space scratch in the serial 3D FFT ACCMAP path | Spark/GB10: isolated scratch residency lowers transfer to 2.2890 GB at NSTEPS=1; combined with HPSI-RTOG it reaches 2.0469 GB | Terok/A40: isolated scratch residency lowers transfer identically, but combined HPSI-RTOG is the better diagnostic at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Adds separate `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` and combined `*_hpsi_rtog_vpsi_internal` cases; useful and measurable, but still opt-in because wall time is case/system noisy. |
+| `accmap-cache-*-20260601-*` | Cached serial 3D ACCMAP work/map arrays | Spark/GB10: combined HPSI-RTOG+VPSI internal cache improves NSTEPS=3 from 39.09 to 34.58 s and lowers transfer from 4.8517 to 4.5655 GB | Terok/A40: same cache improves NSTEPS=3 from 33.10 to 23.66 s and lowers transfer identically | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` / `*_hpsi_rtog_vpsi_internal_cache`; validated as a useful diagnostic, but still not a default because the serial ACCMAP path remains system-dependent. |
 
 The latest full-matrix run lives at:
 
@@ -216,6 +217,49 @@ The visible mapping kernels and cuFFT call are much smaller than the reported
 FFT envelope, especially on Spark. This points away from the map kernels
 themselves and toward per-call OpenACC data-region/runtime overhead and repeated
 temporary full-grid workspace lifetimes as the next serial-3D ACCMAP target.
+
+## 2026-06-01 Serial 3D ACCMAP Work/Map Cache
+
+The immediate follow-up keeps the serial 3-D ACCMAP full-grid `WORK` array and
+map arrays present across calls when `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is set.
+The benchmark case
+`gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache` combines
+that cache with HPSI RTOG output residency and resident `WAVES_VPSI` real-space
+scratch. This is intentionally opt-in because the cached device allocations do
+not yet have a production lifecycle hook; it is meant to test whether repeated
+temporary workspace creation and map transfers explain the remaining ACCMAP
+overhead.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-cache-spark-20260601-155300
+Spark: tests/profile/si64/runs/accmap-cache-n3-spark-20260601-155518
+Terok: tests/profile/si64/runs/accmap-cache-terok-20260601-155301
+Terok: tests/profile/si64/runs/accmap-cache-n3-terok-20260601-155616
+Spark 4-rank smoke: tests/profile/si64/runs/accmap-cache-parallel-smoke-spark-20260601-160305
+Terok 4-rank smoke: tests/profile/si64/runs/accmap-cache-parallel-smoke-terok-20260601-160304
+```
+
+| System | NSTEPS | Case | Wall time | FFT time | VPSI time | Transfer estimate | `ACC_COPY_SERIAL3D_ACC_MAP` | Energy check |
+| --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Spark GB10 | 1 | HPSI-RTOG + VPSI internal | 15.46 s | 5.3818 s | 0.1071 s | 2.0469 GB | 0.7782 GB | yes |
+| Spark GB10 | 1 | HPSI-RTOG + VPSI internal + cache | 15.20 s | 5.3771 s | 0.0954 s | 1.9516 GB | 0.6828 GB | yes |
+| Spark GB10 | 3 | HPSI-RTOG + VPSI internal | 39.09 s | 17.2552 s | 0.3199 s | 4.8517 GB | 2.3347 GB | n/a |
+| Spark GB10 | 3 | HPSI-RTOG + VPSI internal + cache | 34.58 s | 13.0891 s | 0.2859 s | 4.5655 GB | 2.0484 GB | n/a |
+| Terok A40 | 1 | HPSI-RTOG + VPSI internal | 10.67 s | 0.6057 s | 0.1350 s | 2.0469 GB | 0.7782 GB | yes |
+| Terok A40 | 1 | HPSI-RTOG + VPSI internal + cache | 10.68 s | 0.7889 s | 0.1189 s | 1.9516 GB | 0.6828 GB | yes |
+| Terok A40 | 3 | HPSI-RTOG + VPSI internal | 33.10 s | 5.6455 s | 3.0183 s | 4.8517 GB | 2.3347 GB | n/a |
+| Terok A40 | 3 | HPSI-RTOG + VPSI internal + cache | 23.66 s | 1.6763 s | 0.3509 s | 4.5655 GB | 2.0484 GB | n/a |
+
+The cache adds one `ACC_COPY_SERIAL3D_ACC_MAP_CACHE` row of only 0.000055 GB
+for this Si64 grid and one `ACC_CREATE_SERIAL3D_ACC_WORK` row, then reduces the
+repeated map-copy estimate by 0.0954 GB at NSTEPS=1 and 0.2863 GB at NSTEPS=3.
+Spark sees a small one-step gain and a clear three-step gain. Terok is neutral
+at one step but strongly favorable at three steps in this run. The result is
+therefore strong enough to keep the cache as a validated diagnostic switch, but
+not strong enough to make serial 3-D ACCMAP itself part of the recommended
+default stack.
 
 ## 2026-06-01 Current Stack Default Refresh
 
