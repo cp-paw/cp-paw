@@ -172,7 +172,7 @@
      &           .AND.CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT(ACCINVFLOPS)
             END IF
           END IF
-          TRESIDENTOPSIBUILD=TRESIDENTOPSI.AND.(NBH.EQ.NB)
+          TRESIDENTOPSIBUILD=TRESIDENTOPSI
 #ENDIF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T0)
@@ -262,17 +262,7 @@ END IF
 !PB070802          END IF
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           IF(TRESIDENTOPSIBUILD) THEN
-!$ACC DATA COPYIN(MARR(1:NGL)) PRESENT(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
-!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(MARR,THIS%OPSI)
-            DO IB=1,NBH
-              DO IDIM=1,NDIM
-                DO IG=1,NGL
-                  THIS%OPSI(IG,IDIM,IB)=MARR(IG)*THIS%OPSI(IG,IDIM,IB)
-                ENDDO
-              ENDDO
-            ENDDO
-!$ACC END PARALLEL LOOP
-!$ACC END DATA
+            CALL WAVES_SCALE_OPSI_ACC(NGL,NDIM,NBH,MARR,THIS%OPSI)
           ELSE
 #ENDIF
             DO IB=1,NBH
@@ -287,6 +277,15 @@ END IF
 #ENDIF
           DEALLOCATE(MARR)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTOPSI.AND.TRESIDENTOPSIBUILD) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$ADD('ACC_COPY_OPSI_MASS_OUT' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &          ,0_8,0.D0,16.D0*REAL(NGL,KIND=8) &
+     &          *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
+#ENDIF
+!$ACC UPDATE SELF(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
+          END IF
           IF(TRESIDENTOPSI.AND.(.NOT.TRESIDENTOPSIBUILD)) THEN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
             CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
@@ -844,7 +843,36 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-       SUBROUTINE WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NB,PROJ,OPROJ)
+      SUBROUTINE WAVES_SCALE_OPSI_ACC(NGL,NDIM,NBH,MARR,OPSI)
+!     **************************************************************************
+!     **  SCALE RESIDENT OPSI BY THE WAVE-FUNCTION MASS FACTOR.                **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NBH
+      REAL(8)   ,INTENT(IN)    :: MARR(NGL)
+      COMPLEX(8),INTENT(INOUT) :: OPSI(NGL,NDIM,NBH)
+      INTEGER(4)               :: IG
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: IB
+!     **************************************************************************
+!$ACC DATA COPYIN(MARR(1:NGL)) PRESENT(OPSI(1:NGL,1:NDIM,1:NBH))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(MARR,OPSI)
+      DO IB=1,NBH
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            OPSI(IG,IDIM,IB)=MARR(IG)*OPSI(IG,IDIM,IB)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+!$ACC END DATA
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_OPROJ(LNX,LOX,DO,NDIM,LMNX,NB,PROJ,OPROJ)
 !      *****************************************************************
 !      **                                                             **
 !      **  DO<PRO|PSI>                                                **
