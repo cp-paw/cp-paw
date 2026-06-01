@@ -4003,6 +4003,55 @@ projector-transfer reduction. Keep the switch opt-in for now; it is correct and
 slightly favorable in these runs, but the total wall-time gain is well within
 run-to-run noise.
 
+## 2026-06-01 Orthogonalization ADDOPROJ Slice GEMMs
+
+The opt-in `CPPAW_GPU_ORTHO_ADDOPROJ=1` diagnostic moves the large
+orthogonalization `WAVES_ADDOPROJ` update to cuBLAS slice GEMMs:
+`PROJ(:,:,p) += OPROJ(:,:,p) * LAMBDA`. The time-inversion path builds
+`LAMBDA1`/`LAMBDA2` on the host, copies them once for the large projector block,
+and applies both the direct and conjugated `OPROJ` contributions on the GPU.
+`CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO` defaults to `64`; this avoids offloading the
+small per-atom `NPRO=13` calls that otherwise copy the same large Lambda blocks
+many times.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/addoproj-threshold-2048-20260601
+Spark 4-rank smoke: tests/profile/si64/runs/addoproj-threshold-4r-20260601
+Terok: tests/profile/si64/runs/addoproj-threshold-terok-2048-20260601
+```
+
+The large one-rank comparisons used `EMPTY_BANDS=2048`, `NSTEPS=1`, the
+density-resident stack, and the batched one-center overlap path.
+
+| System | Case | Wall time | `PAW_ORTHO_ADDOPROJ` | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | --- |
+| Spark GB10 median of 3 | density stack + 1C batch | 33.07 s | 2.6095 s | 2.6494 GB | yes |
+| Spark GB10 median of 3 | + ADDOPROJ slice GEMMs | 30.13 s | 0.1610 s | 2.7307 GB | yes |
+| Terok A40 single run | density stack + 1C batch | 31.98 s | 2.1271 s | 2.6494 GB | yes |
+| Terok A40 single run | + ADDOPROJ slice GEMMs | 29.74 s | 0.1106 s | 2.7307 GB | yes |
+
+The added transfer is small after the `NPRO` threshold: Spark's projector copy
+estimate rises from `0.2752 GB` to `0.3565 GB`, mostly from one copy each of
+`PROJ`, `OPROJ`, `LAMBDA1`, and `LAMBDA2`. The initial ungated prototype also
+offloaded 64 small per-atom calls and raised total transfers to `5.1985 GB`;
+the threshold removes that side effect while preserving the large-block speedup.
+
+The four-rank Spark smoke used `EMPTY_BANDS=512`, `NSTEPS=1`, and the focused
+non-density cases because density residency is intentionally restricted to the
+serial 3-D ACCMAP path.
+
+| Case | Ranks | Wall time | `PAW_ORTHO_ADDOPROJ` | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident_1coverlap_batch` | 4 | 9.31 s | 2.0954 s rank-summed | 1.8482 GB | yes |
+| `gpu_resident_addoproj` | 4 | 8.94 s | about 0.39 s rank-summed | 1.9337 GB | yes |
+
+This is the first orthogonalization-side diagnostic in the current branch with
+a clear wall-time signal beyond copy accounting. Keep it opt-in until a larger
+multi-step case confirms that the extra projector/Lambda traffic remains small
+outside the Si64 one-step benchmark.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

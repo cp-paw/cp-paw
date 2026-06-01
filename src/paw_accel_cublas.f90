@@ -52,6 +52,7 @@
       LOGICAL(4)         :: ORTHO_X_RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: ONECENTER_OVERLAP_ENABLED=.TRUE.
       LOGICAL(4)         :: ONECENTER_OVERLAP_BATCH_ENABLED=.FALSE.
+      LOGICAL(4)         :: ORTHO_ADDOPROJ_ENABLED=.FALSE.
       LOGICAL(4)         :: DENMAT_ENERGY_ENABLED=.FALSE.
 #ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
@@ -80,6 +81,7 @@
       LOGICAL(4)         :: ORTHO_X_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ONECENTER_OVERLAP_ENABLED=.FALSE.
       LOGICAL(4)         :: ONECENTER_OVERLAP_BATCH_ENABLED=.FALSE.
+      LOGICAL(4)         :: ORTHO_ADDOPROJ_ENABLED=.FALSE.
       LOGICAL(4)         :: DENMAT_ENERGY_ENABLED=.FALSE.
 #ENDIF
       LOGICAL(4)         :: INVERSION_BATCH_ENABLED=.TRUE.
@@ -92,6 +94,7 @@
       REAL(8)            :: MINFLOP_MATMUL=1.D7
       REAL(8)            :: MINFLOP_DENMAT=1.D8
       REAL(8)            :: MINFLOP_OFFDEN=1.D8
+      INTEGER(4)         :: ORTHO_ADDOPROJ_MIN_NPRO=64
       CHARACTER(16)      :: OVERLAP_PROFILE_ID=''
       CONTAINS
 !
@@ -387,6 +390,24 @@
       END SUBROUTINE CPPAW_CUBLAS_ACC_READ_REAL_ENV
 !
 !     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_READ_INT_ENV(NAME,VALUE)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: NAME
+      INTEGER(4)  ,INTENT(INOUT) :: VALUE
+      CHARACTER(128) :: TEXT
+      INTEGER(4)     :: TMP
+      INTEGER(4)     :: STATUS
+      INTEGER(4)     :: IOS
+!     **************************************************************************
+      CALL GET_ENVIRONMENT_VARIABLE(NAME,TEXT,STATUS=STATUS)
+      IF(STATUS.EQ.0) THEN
+        READ(TEXT,*,IOSTAT=IOS) TMP
+        IF(IOS.EQ.0) VALUE=TMP
+      END IF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_READ_INT_ENV
+!
+!     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV(NAME,VALUE,FOUND)
       IMPLICIT NONE
       CHARACTER(*),INTENT(IN)    :: NAME
@@ -491,6 +512,11 @@
      &    ('CPPAW_GPU_OFFDEN_MINFLOP',MINFLOP_OFFDEN)
       CALL CPPAW_CUBLAS_ACC_READ_REAL_ENV &
      &    ('CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP',MINFLOP_OFFDEN)
+      CALL CPPAW_CUBLAS_ACC_READ_INT_ENV &
+     &    ('CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO',ORTHO_ADDOPROJ_MIN_NPRO)
+      CALL CPPAW_CUBLAS_ACC_READ_INT_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_MIN_NPRO' &
+     &    ,ORTHO_ADDOPROJ_MIN_NPRO)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUBLAS_ACC_SYNC',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
@@ -759,6 +785,12 @@
       IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
      &    ('CPPAW_CUBLAS_ACC_1COVERLAP_BATCH' &
      &    ,ONECENTER_OVERLAP_BATCH_ENABLED,FOUND)
+      CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_GPU_ORTHO_ADDOPROJ' &
+     &    ,ORTHO_ADDOPROJ_ENABLED,FOUND)
+      IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ' &
+     &    ,ORTHO_ADDOPROJ_ENABLED,FOUND)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_DENMAT_ENERGY',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
@@ -1128,6 +1160,20 @@
       END FUNCTION CPPAW_CUBLAS_ACC_1COVERLAP_BATCH_ENABLED
 !
 !     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_ENABLED &
+     &                                  (FLOPS,NPRO)
+      IMPLICIT NONE
+      REAL(8),INTENT(IN) :: FLOPS
+      INTEGER(4),INTENT(IN) :: NPRO
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_ENABLED=ENABLED &
+     &     .AND.ORTHO_ADDOPROJ_ENABLED.AND.(FLOPS.GE.MINFLOP_ADDPRODUCT) &
+     &     .AND.(NPRO.GE.ORTHO_ADDOPROJ_MIN_NPRO)
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_ENABLED
+!
+!     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_DENMAT_ENERGY_ENABLED &
      &                                  (FLOPS)
       IMPLICIT NONE
@@ -1276,6 +1322,7 @@
       INTEGER(4)               :: ISTAT
 !     **************************************************************************
       ONE=(1.D0,0.D0)
+      ISTAT=0
       CALL CPPAW_CUBLAS_ACC_ENSURE
 !$ACC HOST_DATA USE_DEVICE(A,B,C)
       ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_N,N,L,M,ONE &
@@ -1289,6 +1336,65 @@
       CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NN_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT &
+     &                                   (N,M,L,BATCH,A,B,C,PROFILE_ID)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: N
+      INTEGER(4),INTENT(IN)    :: M
+      INTEGER(4),INTENT(IN)    :: L
+      INTEGER(4),INTENT(IN)    :: BATCH
+      COMPLEX(8),INTENT(IN)    :: A(N,M,BATCH)
+      COMPLEX(8),INTENT(IN)    :: B(M,L)
+      COMPLEX(8),INTENT(INOUT) :: C(N,L,BATCH)
+      CHARACTER(*),INTENT(IN)  :: PROFILE_ID
+      COMPLEX(8)               :: ONE
+      INTEGER(4)               :: ISTAT
+      INTEGER(4)               :: IBATCH
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+      REAL(8)                  :: ACCEL_FLOPS
+      REAL(8)                  :: ACCEL_BYTES
+      CHARACTER(32)            :: ACCEL_NAME
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ISTAT=0
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC HOST_DATA USE_DEVICE(A,B,C)
+      DO IBATCH=1,BATCH
+        ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_N,N,L,M,ONE &
+     &                   ,A(1,1,IBATCH),N,B,M,ONE,C(1,1,IBATCH),N)
+        IF(ISTAT.NE.0) EXIT
+      ENDDO
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_FLOPS=8.D0*REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &           *REAL(L,KIND=8)*REAL(BATCH,KIND=8)
+      ACCEL_BYTES=16.D0*(REAL(N,KIND=8)*REAL(M,KIND=8) &
+     &           *REAL(BATCH,KIND=8)+REAL(M,KIND=8)*REAL(L,KIND=8) &
+     &           +2.D0*REAL(N,KIND=8)*REAL(L,KIND=8) &
+     &           *REAL(BATCH,KIND=8))
+      ACCEL_NAME='CUBLAS_ZGEMM_'//TRIM(PROFILE_ID)
+      CALL ACCELPROFILE$ADD(ACCEL_NAME &
+     &   ,INT(N,KIND=8),INT(M,KIND=8),INT(L,KIND=8) &
+     &   ,INT(BATCH,KIND=8),ACCEL_FLOPS,ACCEL_BYTES &
+     &   ,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_COPY(N,M,L,A,B,C,USED)

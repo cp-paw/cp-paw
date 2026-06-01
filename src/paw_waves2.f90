@@ -1262,6 +1262,10 @@ END IF
 !      **                                                                     **
 !      **                                                                     **
 !      *************************************************************************
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_ENABLED
+#ENDIF
        IMPLICIT NONE
        INTEGER(4),INTENT(IN)   :: NDIM
        INTEGER(4),INTENT(IN)   :: NBH
@@ -1278,8 +1282,24 @@ END IF
        COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
        COMPLEX(8)              :: CSVAR,CSVAR1,CSVAR2
        INTEGER(4)              :: IPRO
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       LOGICAL(4)              :: TUSEACCADDOPROJ
+       REAL(8)                 :: ADDOPROJFLOPS
+#ENDIF
 !      *****************************************************************
        TINV=NBH.NE.NB
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       ADDOPROJFLOPS=8.D0*REAL(NDIM,KIND=8)*REAL(NPRO,KIND=8) &
+     &              *REAL(NBH,KIND=8)*REAL(NBH,KIND=8)
+       IF(TINV) ADDOPROJFLOPS=2.D0*ADDOPROJFLOPS
+       TUSEACCADDOPROJ= &
+     &      CPPAW_CUBLAS_ACC_ORTHO_ADDOPROJ_ENABLED(ADDOPROJFLOPS,NPRO)
+       IF(TUSEACCADDOPROJ) THEN
+         CALL WAVES_ADDOPROJ_CUBLAS_ACC(NPRO,NDIM,NBH,NB,PROJ,OPROJ &
+     &                                  ,LAMBDA)
+         RETURN
+       END IF
+#ENDIF
        IF(.NOT.TINV) THEN
          DO IBH1=1,NBH
            DO IBH2=1,NBH
@@ -1326,6 +1346,104 @@ END IF
        END IF
        RETURN
        END
+!
+!      ..............................................................
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+       SUBROUTINE WAVES_ADDOPROJ_CUBLAS_ACC(NPRO,NDIM,NBH,NB,PROJ &
+     &                                      ,OPROJ,LAMBDA)
+!      *************************************************************************
+!      **  DEVICE ADDOPROJ PROTOTYPE: PROJ(:,:,P)+=OPROJ(:,:,P)*LAMBDA.        **
+!      *************************************************************************
+       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &        CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_INOUT &
+     &       ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D
+       IMPLICIT NONE
+       INTEGER(4),INTENT(IN)   :: NDIM
+       INTEGER(4),INTENT(IN)   :: NBH
+       INTEGER(4),INTENT(IN)   :: NB
+       INTEGER(4),INTENT(IN)   :: NPRO
+       COMPLEX(8),INTENT(INOUT):: PROJ(NDIM,NBH,NPRO)
+       COMPLEX(8),INTENT(IN)   :: OPROJ(NDIM,NBH,NPRO)
+       COMPLEX(8),INTENT(IN)   :: LAMBDA(NB,NB)
+       LOGICAL(4)              :: TINV
+       INTEGER(4)              :: IBH1,IBH2,IB1A,IB1B,IB2A,IB2B
+       INTEGER(4)              :: IDIM,IPRO
+       COMPLEX(8),ALLOCATABLE  :: LAMBDA1(:,:)
+       COMPLEX(8),ALLOCATABLE  :: LAMBDA2(:,:)
+       COMPLEX(8),ALLOCATABLE  :: OPROJC(:,:,:)
+       COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
+       COMPLEX(8)              :: CSVAR1,CSVAR2
+!      *************************************************************************
+       TINV=NBH.NE.NB
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D_INOUT &
+     &   ('ACC_PRESENT_ADDOPROJ_PROJ','ACC_COPY_ADDOPROJ_PROJ_IN' &
+     &   ,'ACC_COPY_ADDOPROJ_PROJ_OUT',NDIM,NBH,NPRO,PROJ)
+       CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &   ('ACC_PRESENT_ADDOPROJ_OPROJ','ACC_COPY_ADDOPROJ_OPROJ_IN' &
+     &   ,NDIM,NBH,NPRO,OPROJ)
+#ENDIF
+       IF(.NOT.TINV) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &     ('ACC_PRESENT_ADDOPROJ_LAM','ACC_COPY_ADDOPROJ_LAM_IN' &
+     &     ,NB,NB,LAMBDA)
+#ENDIF
+!$ACC DATA COPY(PROJ(1:NDIM,1:NBH,1:NPRO)) &
+!$ACC& COPYIN(OPROJ(1:NDIM,1:NBH,1:NPRO),LAMBDA(1:NBH,1:NBH))
+         CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT(NDIM,NBH,NBH &
+     &       ,NPRO,OPROJ,LAMBDA,PROJ,'ADDOPROJ')
+!$ACC END DATA
+       ELSE
+         ALLOCATE(LAMBDA1(NBH,NBH))
+         ALLOCATE(LAMBDA2(NBH,NBH))
+         DO IBH1=1,NBH
+           IB1A=2*IBH1-1
+           IB1B=2*IBH1
+           DO IBH2=1,NBH
+             IB2A=2*IBH2-1
+             IB2B=2*IBH2
+             CSVAR1=   LAMBDA(IB1A,IB2A)+CI*LAMBDA(IB1A,IB2B)
+             CSVAR2=CI*LAMBDA(IB1B,IB2A)-   LAMBDA(IB1B,IB2B)
+             LAMBDA1(IBH1,IBH2)=0.5D0*(CSVAR1-CSVAR2)
+             LAMBDA2(IBH1,IBH2)=0.5D0*(CSVAR1+CSVAR2)
+           ENDDO
+         ENDDO
+         ALLOCATE(OPROJC(NDIM,NBH,NPRO))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &     ('ACC_PRESENT_ADDOPROJ_LAM1_TINV' &
+     &     ,'ACC_COPY_ADDOPROJ_LAM1_TINV_IN',NBH,NBH,LAMBDA1)
+         CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_2D &
+     &     ('ACC_PRESENT_ADDOPROJ_LAM2_TINV' &
+     &     ,'ACC_COPY_ADDOPROJ_LAM2_TINV_IN',NBH,NBH,LAMBDA2)
+#ENDIF
+!$ACC DATA COPY(PROJ(1:NDIM,1:NBH,1:NPRO)) &
+!$ACC& COPYIN(OPROJ(1:NDIM,1:NBH,1:NPRO),LAMBDA1(1:NBH,1:NBH) &
+!$ACC&       ,LAMBDA2(1:NBH,1:NBH)) CREATE(OPROJC(1:NDIM,1:NBH,1:NPRO))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(OPROJ,OPROJC)
+         DO IPRO=1,NPRO
+           DO IBH1=1,NBH
+             DO IDIM=1,NDIM
+               OPROJC(IDIM,IBH1,IPRO)=CONJG(OPROJ(IDIM,IBH1,IPRO))
+             ENDDO
+           ENDDO
+         ENDDO
+!$ACC END PARALLEL LOOP
+         CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT(NDIM,NBH,NBH &
+     &       ,NPRO,OPROJ,LAMBDA1,PROJ,'ADDOPROJ_TINV1')
+         CALL CPPAW_CUBLAS_ACC_ZGEMM_NN_SLICES_PRESENT(NDIM,NBH,NBH &
+     &       ,NPRO,OPROJC,LAMBDA2,PROJ,'ADDOPROJ_TINV2')
+!$ACC END DATA
+         DEALLOCATE(OPROJC)
+         DEALLOCATE(LAMBDA1)
+         DEALLOCATE(LAMBDA2)
+       END IF
+       RETURN
+       END
+#ENDIF
 !
 !      ..............................................................
       SUBROUTINE WAVES_OVERLAP(TID,NGL,NDIM,NBH,NB,PSI1,PSI2,MAT &

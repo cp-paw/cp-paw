@@ -498,7 +498,9 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
 | `gpu_resident_1coverlap_batch` | Opt-in diagnostic that sets `CPPAW_GPU_1COVERLAP_BATCH=1` and computes the three orthogonalization one-center overlap matrices through one batched cuBLAS packing path. |
+| `gpu_resident_addoproj` | Opt-in diagnostic that sets `CPPAW_GPU_ORTHO_ADDOPROJ=1` and offloads large orthogonalization `WAVES_ADDOPROJ` projector updates through cuBLAS slice GEMMs; the default `CPPAW_GPU_ORTHO_ADDOPROJ_MIN_NPRO=64` avoids small per-atom calls. |
 | `gpu_resident_stack_density_1cov_batch` | Current density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to compare the batch path against the best current Spark/Terok stack. |
+| `gpu_resident_stack_density_1cov_addoproj` | Current density-resident stack plus batched one-center overlap and opt-in `WAVES_ADDOPROJ` cuBLAS slice GEMMs. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
