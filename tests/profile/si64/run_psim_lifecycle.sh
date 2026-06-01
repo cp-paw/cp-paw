@@ -88,6 +88,8 @@ esac
 if [[ -s "${COMBINED}" ]]; then
   python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
     > "${RUN_ROOT_BASE}-combined.md" || true
+  python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
+    > "${RUN_ROOT_BASE}-compare.md" || true
   echo "Combined benchmark data: ${COMBINED}"
 fi
 

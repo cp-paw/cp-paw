@@ -550,7 +550,9 @@ combined projection-plus-accumulation paths for both HPSI-only and
 DENMAT-energy cases. By default it runs `EMPTY_BANDS=2048` on one GPU rank and
 `SHARED_EMPTY_BANDS=512` on four ranks sharing the GPU. Override
 `OFFDEN_CASES`, `GPU_RANKS`, `SHARED_GPU_RANKS`, `EMPTY_BANDS`, or
-`RUN_SHARED_GPU=no` for narrower checks.
+`RUN_SHARED_GPU=no` for narrower checks. It writes combined benchmark and
+comparison Markdown so the device-pack variants can be compared against the
+first successful focus-case baseline.
 
 For the focused PSIM propagation comparison, run:
 
@@ -564,7 +566,8 @@ propagation residency, HPSI residency, and the combined HPSI-plus-PSIM
 diagnostics. By default it runs
 `EMPTY_BANDS=512` with one GPU rank and `SHARED_EMPTY_BANDS=512` with four
 ranks sharing the GPU, then writes a combined TSV/Markdown summary next to the
-run directories. Set `RUN_LARGE_GPU=yes` to add a one-rank
+run directories, including a comparison table against the focus baseline. Set
+`RUN_LARGE_GPU=yes` to add a one-rank
 `LARGE_EMPTY_BANDS=2048` sweep, or override `PSIM_CASES`, `GPU_RANKS`,
 `SHARED_GPU_RANKS`, `EMPTY_BANDS`, and `RUN_SHARED_GPU=no` for narrower
 checks.
@@ -584,7 +587,9 @@ Because the one-step Si64 reference energy is not valid for multi-step dynamics,
 the fixed energy check is disabled by default for this harness; compare the
 reported energies between cases instead. It writes the normal combined benchmark
 TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`;
-the helper also accepts `--op-prefix`, `--op-regex`, and `--include-zero` for
+the comparison Markdown reports each GPU-only focus case relative to the
+selected group baseline. The helper also accepts `--op-prefix`, `--op-regex`,
+and `--include-zero` for
 broader profile-row reports such as present/update/timing rows.
 Override `NSTEPS_LIST`, `EMPTY_BANDS_LIST`, `RUN_SHARED_GPU=yes`,
 `RUN_LARGE_GPU=yes`, or `PSIM_LIFECYCLE_CASES` for wider sweeps.
@@ -604,7 +609,8 @@ stack-plus-cuFFT variants with `NSTEPS=2` by default and writes combined
 benchmark tables plus selected profile tables for
 `ACC_COPY`/`ACC_UPDATE`/`ACC_PRESENT` rows, separate seconds-sorted
 `PAW_VPSI_*` timing rows, and separate seconds-sorted `PW_GTOR_*`/`PW_RTOG_*`
-phase rows.
+phase rows. Its comparison Markdown reports the stack and cuFFT variants
+relative to the selected focus baseline.
 Because multi-step Si64 energies are not the one-step reference, fixed energy
 checking is disabled by default; compare energies between cases. Override
 `VPSI_BOUNDARY_CASES`, `NSTEPS_LIST`, `EMPTY_BANDS_LIST`,

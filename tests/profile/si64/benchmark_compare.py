@@ -7,6 +7,15 @@ import sys
 
 
 CPU_BASELINE_CASES = ("nvhpc_cpu", "cpu")
+GROUP_BASELINE_CASES = (
+    "gpu_resident",
+    "gpu_resident_stack",
+    "gpu",
+    "cusolver_generalized",
+    "cusolver",
+    "nvhpc_cpu",
+    "cpu",
+)
 
 
 def parse_float(value):
@@ -133,6 +142,23 @@ def baseline_for(rows, kind):
     return min(candidates, key=lambda row: row["_wall"])
 
 
+def group_baseline_for(rows):
+    candidates = [
+        row for row in rows
+        if row.get("ok", "") == "yes" and row.get("_wall") is not None
+    ]
+    if not candidates:
+        return None
+    for case in GROUP_BASELINE_CASES:
+        for row in candidates:
+            if row.get("case") == case:
+                return row
+    for row in candidates:
+        if row.get("_kind") == "gpu":
+            return row
+    return candidates[0]
+
+
 def suite_label(row):
     suite = row.get("suite", "")
     if not suite:
@@ -161,18 +187,21 @@ def main(argv):
     print(f"Source: `{os.path.basename(path)}`")
     print()
     print(
-        "| suite | case | ranks | ok | wall_s | vs_1cpu | vs_8cpu | "
-        "rank_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | "
+        "| suite | case | ranks | ok | wall_s | base_case | vs_base | "
+        "vs_1cpu | vs_8cpu | rank_s | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | "
         "copy_denmat_gb | energy_delta |"
     )
     print(
-        "| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | "
-        "---: | ---: | ---: | ---: | ---: |"
+        "| --- | --- | ---: | --- | ---: | --- | ---: | ---: | ---: | "
+        "---: | ---: | ---: | ---: | ---: | ---: | ---: |"
     )
     for group in sorted(groups):
         group_rows = groups[group]
+        group_base = group_baseline_for(group_rows)
         one_cpu = baseline_for(group_rows, "cpu1")
         eight_cpu = baseline_for(group_rows, "cpu8")
+        group_base_wall = None if group_base is None else group_base["_wall"]
+        group_base_case = "" if group_base is None else group_base.get("case", "")
         one_cpu_wall = None if one_cpu is None else one_cpu["_wall"]
         eight_cpu_wall = None if eight_cpu is None else eight_cpu["_wall"]
         for row in sorted(
@@ -184,12 +213,14 @@ def main(argv):
             ),
         ):
             print(
-                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
+                "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
                     suite_label(row),
                     row.get("case", ""),
                     row.get("ranks", ""),
                     row.get("ok", ""),
                     number(row.get("_wall")),
+                    group_base_case,
+                    number(speedup(group_base_wall, row.get("_wall"))),
                     number(speedup(one_cpu_wall, row.get("_wall"))),
                     number(speedup(eight_cpu_wall, row.get("_wall"))),
                     number(row.get("rank_s")),

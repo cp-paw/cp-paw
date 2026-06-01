@@ -123,6 +123,8 @@ def check_compare(tmpdir):
         "empty128_1rank_cusolver\tcusolver_generalized\trep1\t1\t1\tyes\t25\t25\t20\t5\t80\t0\t0\t0\t0\t0\t0\t0\t0\t20\t5\t0\t0\t0\t0\t0\t0\t302.280854\t0\tyes\t",
         "empty128_1rank_cpu\tnvhpc_cpu\trep1\t1\t1\tyes\t100\t100\t80\t20\t80\t0\t0\t0\t0\t0\t0\t0\t0\t80\t20\t0\t0\t0\t0\t0\t0\t302.280854\t0\tyes\t",
         "empty128_8rank_cpu_ref\tnvhpc_cpu\trep1\t1\t8\tyes\t40\t320\t260\t60\t81\t0\t0\t0\t0\t0\t0\t0\t0\t260\t60\t0\t0\t0\t0\t0\t0\t302.280854\t0\tyes\t",
+        "empty512-nstep2-1r\tgpu_resident\trep1\t2\t1\tyes\t20\t20\t16\t4\t80\t0\t0\t0\t0\t0\t0\t0\t0\t16\t4\t0\t8\t3\t2\t2\t1\t302.280854\t0\tyes\t",
+        "empty512-nstep2-1r\tgpu_resident_stack\trep1\t2\t1\tyes\t10\t10\t8\t2\t80\t0\t0\t0\t0\t0\t0\t0\t0\t8\t2\t0\t4\t1.5\t1\t1\t0.5\t302.280854\t0\tyes\t",
         "gpu_1rank\tgpu_resident_stack\trep1\t1\t1\tyes\t20\t20\t16\t4\t80\t0\t0\t0\t0\t0\t0\t0\t0\t16\t4\t0\t8\t3\t2\t2\t1\t302.280854\t0\tyes\t",
         "cpu_1rank\tnvhpc_cpu\trep1\t1\t1\tyes\t80\t80\t60\t20\t75\t0\t0\t0\t0\t0\t0\t0\t0\t60\t20\t0\t0\t0\t0\t0\t0\t302.280854\t0\tyes\t",
         "cpu_8rank_ref\tnvhpc_cpu\trep1\t1\t8\tyes\t32\t256\t210\t46\t82\t0\t0\t0\t0\t0\t0\t0\t0\t210\t46\t0\t0\t0\t0\t0\t0\t302.280854\t0\tyes\t",
@@ -130,10 +132,11 @@ def check_compare(tmpdir):
     write(path, "\n".join([header, *rows]) + "\n")
 
     compare = run_tool("benchmark_compare.py", path)
-    assert_contains(compare, "| gpu_acc_1steps_1rank | gpu_resident_stack | 1 | yes | 25.00 | 4.00 | 1.60 |", "gpu_acc speedups")
-    assert_contains(compare, "| si64_bands_empty128_1steps_1ranks_gpu | gpu_resident_stack | 1 | yes | 30.00 | 3.00 | 1.50 |", "band speedups")
-    assert_contains(compare, "| empty128_1rank_cusolver | cusolver_generalized | 1 | yes | 25.00 | 4.00 | 1.60 |", "cusolver speedups")
-    assert_contains(compare, "| gpu_1rank | gpu_resident_stack | 1 | yes | 20.00 | 4.00 | 1.60 |", "standard speedups")
+    assert_contains(compare, "| gpu_acc_1steps_1rank | gpu_resident_stack | 1 | yes | 25.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 |", "gpu_acc speedups")
+    assert_contains(compare, "| si64_bands_empty128_1steps_1ranks_gpu | gpu_resident_stack | 1 | yes | 30.00 | gpu_resident_stack | 1.00 | 3.00 | 1.50 |", "band speedups")
+    assert_contains(compare, "| empty128_1rank_cusolver | cusolver_generalized | 1 | yes | 25.00 | cusolver_generalized | 1.00 | 4.00 | 1.60 |", "cusolver speedups")
+    assert_contains(compare, "| empty=512, nsteps=2 | gpu_resident_stack | 1 | yes | 10.00 | gpu_resident | 2.00 |  |  |", "gpu-only base speedup")
+    assert_contains(compare, "| gpu_1rank | gpu_resident_stack | 1 | yes | 20.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 |", "standard speedups")
 
 
 def main():
