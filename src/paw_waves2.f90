@@ -1831,8 +1831,11 @@ END IF
        REAL(8)                    :: ACCEL_CHOL_T1
        REAL(8)                    :: ACCEL_CHOL_TOTAL_T0
 #ENDIF
+#IF DEFINED(CPPVAR_NVLAMATH)
+#ELSE
        EXTERNAL ZPOTRF
        EXTERNAL ZTRTRI
+#ENDIF
 !      *****************************************************************
        TOK=.FALSE.
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
