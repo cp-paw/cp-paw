@@ -131,6 +131,54 @@ else
   test "${exploration_dry_run_status}" -eq 0
 fi
 
+set +e
+DRY_RUN=yes \
+  FOLLOWUP_ROOT="${tmpdir}/followup-dry-run" \
+  NSTEPS_LIST=1 \
+  EMPTY_BANDS_LIST=128 \
+  GPU_CASES="gpu_resident_stack" \
+  ONE_RANK_CPU_CASES="" \
+  CPU_CASES="" \
+  tests/profile/si64/run_followup.sh > "${tmpdir}/followup-dry-run.out" 2>&1
+followup_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" \
+  "${tmpdir}/followup-dry-run/empty128_nstep1_1rank_gpu/metadata.txt"
+grep -q "SKIP  suite=empty128_nstep1_1rank_cpu empty case list" \
+  "${tmpdir}/followup-dry-run/followup.log"
+test ! -e "${tmpdir}/followup-dry-run/empty128_nstep1_1rank_cpu/metadata.txt"
+test ! -e "${tmpdir}/followup-dry-run/empty128_nstep1_8rank_cpu_ref/metadata.txt"
+if grep -q "^missing$" \
+    "${tmpdir}/followup-dry-run/empty128_nstep1_1rank_gpu/metadata.txt"; then
+  test "${followup_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/followup-dry-run/followup.log"
+else
+  test "${followup_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  CUSOLVER_FOCUS_ROOT="${tmpdir}/cusolver-dry-run" \
+  EMPTY_BANDS_LIST=128 \
+  CUSOLVER_CASES="cusolver_generalized" \
+  CPU_CASES="" \
+  tests/profile/si64/run_cusolver_focus.sh > "${tmpdir}/cusolver-dry-run.out" 2>&1
+cusolver_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_CUSOLVER_ACC_GENERALIZED_MIN_N=1" \
+  "${tmpdir}/cusolver-dry-run/empty128_1rank_cusolver/metadata.txt"
+grep -q "SKIP  suite=empty128_1rank_cpu empty case list" \
+  "${tmpdir}/cusolver-dry-run/cusolver_focus.log"
+test ! -e "${tmpdir}/cusolver-dry-run/empty128_1rank_cpu/metadata.txt"
+test ! -e "${tmpdir}/cusolver-dry-run/empty128_8rank_cpu_ref/metadata.txt"
+if grep -q "^missing$" \
+    "${tmpdir}/cusolver-dry-run/empty128_1rank_cusolver/metadata.txt"; then
+  test "${cusolver_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/cusolver-dry-run/cusolver_focus.log"
+else
+  test "${cusolver_dry_run_status}" -eq 0
+fi
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl

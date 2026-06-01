@@ -10,8 +10,9 @@ TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-"128 256 512"}
 GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
+DRY_RUN=${DRY_RUN:-no}
 CUSOLVER_CASES=${CUSOLVER_CASES:-"cusolver cusolver_generalized cusolver_generalized_conservative cusolver_off"}
-CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
+CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
 SOLVER_ROW_TOP=${SOLVER_ROW_TOP:-16}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
@@ -24,9 +25,17 @@ LOG="${CUSOLVER_FOCUS_ROOT}/cusolver_focus.log"
 : > "${LOG}"
 
 declare -a SUITE_ROOTS=()
+FAILED_SUITES=0
 
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "${LOG}"
+}
+
+require_cases_for_suite() {
+  case "${DRY_RUN}" in
+    yes|true|1) echo yes ;;
+    *) echo no ;;
+  esac
 }
 
 append_suite() {
@@ -48,17 +57,27 @@ run_suite() {
   local cases=$4
   local root="${CUSOLVER_FOCUS_ROOT}/${suite}"
   local suite_log="${CUSOLVER_FOCUS_ROOT}/${suite}.log"
+  local require_cases
 
+  if [[ -z ${cases// } ]]; then
+    log "SKIP  suite=${suite} empty case list"
+    echo "skipped" > "${root}.status"
+    return 0
+  fi
+
+  require_cases=$(require_cases_for_suite)
   log "START suite=${suite} empty_bands=${empty_bands} ranks=${ranks} cases=${cases}"
   if env TEST="${TEST}" EMPTY_BANDS="${empty_bands}" NSTEPS="${NSTEPS}" \
       RANKS="${ranks}" REPEATS="${REPEATS}" CASES="${cases}" TIMEOUT="${TIMEOUT}" \
-      RUN_ROOT="${root}" "${HERE}/run_benchmark.sh" > "${suite_log}" 2>&1; then
+      DRY_RUN="${DRY_RUN}" REQUIRE_CASES="${require_cases}" RUN_ROOT="${root}" \
+      "${HERE}/run_benchmark.sh" > "${suite_log}" 2>&1; then
     log "DONE  suite=${suite}"
     echo 0 > "${root}.status"
   else
     local status=$?
     log "FAIL  suite=${suite} status=${status}"
     echo "${status}" > "${root}.status"
+    FAILED_SUITES=$((FAILED_SUITES+1))
   fi
   append_suite "${suite}" "${root}/benchmark.tsv"
   SUITE_ROOTS+=("${root}")
@@ -127,4 +146,11 @@ if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
   else
     log "present_rows=none"
   fi
+fi
+
+if (( FAILED_SUITES > 0 )); then
+  log "FAILED suites=${FAILED_SUITES}"
+  case "${DRY_RUN}" in
+    yes|true|1) exit 1 ;;
+  esac
 fi
