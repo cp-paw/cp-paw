@@ -6515,6 +6515,11 @@ RETURN
       LOGICAL(4)             :: TFORCEDEDPROUSED
       REAL(8)                :: ADDPROFLOPS
 #ENDIF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                :: ACCEL_FORCE_T0
+      REAL(8)                :: ACCEL_FORCE_T1
+      REAL(8)                :: ACCEL_FORCE_SITE_T0
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$FORCE')
                               CALL TIMING$CLOCKON('W:FORCE')
@@ -6530,11 +6535,20 @@ RETURN
 !     ==========================================================================
 !     ==  GET OCCUPATIONS FROM DYNOCC OBJECT                                  ==
 !     ==========================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
       CALL CELL$GETL4('MOVE',TSTRESS)
       CALL DYNOCC$GETI4('NB',NBX)
       ALLOCATE(OCC(NBX,NKPTL,NSPIN))
       CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+      CALL ACCELPROFILE$ADD('PAW_FORCE_OCC_SETUP' &
+     &    ,INT(NBX,KIND=8),INT(NKPTL,KIND=8),INT(NSPIN,KIND=8) &
+     &    ,INT(NAT,KIND=8),0.D0,0.D0,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -6554,6 +6568,9 @@ RETURN
 !         ======================================================================
 !         ==                                                                  ==
 !         ======================================================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
           ALLOCATE(GVEC(3,NGL))
           CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
           ALLOCATE(GIJ(6,NGL))
@@ -6572,6 +6589,13 @@ RETURN
           ELSE
             GIJ(:,:)=0.D0
           END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+          CALL ACCELPROFILE$ADD('PAW_FORCE_GSPACE_SETUP' &
+     &        ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(NB,KIND=8) &
+     &        ,MERGE(1_8,0_8,TSTRESS),0.D0,0.D0 &
+     &        ,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
 !
 !         ======================================================================
 !         ==                                                                  ==
@@ -6609,6 +6633,9 @@ RETURN
 #ENDIF
           IPRO=1
           DO IAT=1,NAT
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_SITE_T0)
+#ENDIF
             ISP=MAP%ISP(IAT)
             CALL SETUP$ISELECT(ISP)
             IBPRO=1+SUM(MAP%LNX(1:ISP-1))
@@ -6626,14 +6653,27 @@ RETURN
               DH1(:,:,:)=DH(1:LMNX,1:LMNX,:,IAT)
             END IF
 !           ==  DEDPROJ=DE/D<PSPSI|PRO>=DH*<PRO|PSPSI>
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
             CALL WAVES_DEDPROJ(NDIM,NBH,NB,LNX,MAP%LOX(1:LNX,ISP),LMNX &
      &                        ,OCC(:,IKPT,ISPIN) &
      &                        ,THIS%PROJ(:,:,IPRO:IPRO+LMNX-1),DH1,DO1 &
      &                        ,THIS%RLAM0,DEDPROJ)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+            CALL ACCELPROFILE$ADD('PAW_FORCE_DEDPROJ' &
+     &          ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(LMNX,KIND=8) &
+     &          ,INT(LNX,KIND=8),0.D0,0.D0 &
+     &          ,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
             DEALLOCATE(DH1)
             DEALLOCATE(DO1)
 !
 !           == ADD CONTRIBUTION FROM NTBOS  ====================================
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
             IF(ASSOCIATED(THIS%HPROJ)) THEN
               CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
      &                                ,THIS%HPROJ(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
@@ -6643,29 +6683,76 @@ RETURN
               CALL WAVES_FORCE_ADDHTBC(NDIM,NBH,NB,LMNX,OCC(:,IKPT,ISPIN) &
      &                             ,THIS%HTBC_NEW(:,:,IPRO:IPRO+LMNX-1),DEDPROJ)
             END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+            CALL ACCELPROFILE$ADD('PAW_FORCE_HTBC' &
+     &          ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(LMNX,KIND=8) &
+     &          ,MERGE(1_8,0_8,ASSOCIATED(THIS%HPROJ)) &
+     &          +MERGE(2_8,0_8,ASSOCIATED(THIS%HTBC_NEW)) &
+     &          ,0.D0,0.D0,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
 
 !           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================
             ALLOCATE(EIGR(NGL))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
             CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+            CALL ACCELPROFILE$ADD('PAW_FORCE_STRUCTURE_FACTOR' &
+     &          ,INT(NGL,KIND=8),INT(NAT,KIND=8),0_8,0_8 &
+     &          ,0.D0,0.D0,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
             TFORCEDEDPROUSED=.FALSE.
             IF(TFORCEDEDPROACC) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
               CALL WAVES_DEDPRO_PROFORCE_ACC(GSET%TINV,NGL,NDIM,NBH &
      &             ,LNX,LMNX,MAP%LOX(1:LNX,ISP),MAP%LMX,GWEIGHT &
      &             ,THIS%PSI0,DEDPROJ,GVEC,GSET%PRO(:,IBPRO:IBPRO+LNX-1) &
      &             ,GSET%YLM,EIGR,FORCE1,TFORCEDEDPROUSED)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+              CALL ACCELPROFILE$ADD('PAW_FORCE_DEDPRO_ACC_TOTAL' &
+     &            ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(LMNX,KIND=8) &
+     &            ,MERGE(1_8,0_8,TFORCEDEDPROUSED),0.D0,0.D0 &
+     &            ,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
             END IF
             IF(.NOT.TFORCEDEDPROUSED) THEN
 #ENDIF
               ALLOCATE(DEDPRO(NGL,LMNX))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
               CALL WAVES_DEDPRO(GSET%TINV,NGL,NDIM,NBH,THIS%PSI0,LMNX &
      &                         ,DEDPROJ,DEDPRO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+              CALL ACCELPROFILE$ADD('PAW_FORCE_DEDPRO' &
+     &            ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(LMNX,KIND=8) &
+     &            ,MERGE(1_8,0_8,GSET%TINV),0.D0,0.D0 &
+     &            ,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
 !             == DE= <DPRO|DEDPRO> =============================================
 !           == F=2*RE[ <PSI|DPRO/DR>*DH*<PRO|PSI> ]
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T0)
+#ENDIF
               CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL &
      &             ,GWEIGHT,GVEC,GIJ,GSET%PRO(:,IBPRO:IBPRO+LNX-1) &
      &             ,GSET%DPRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM &
      &             ,GSET%SYLM,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+              CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+              CALL ACCELPROFILE$ADD('PAW_FORCE_PROFORCE' &
+     &            ,INT(NGL,KIND=8),INT(LNX,KIND=8),INT(LMNX,KIND=8) &
+     &            ,MERGE(1_8,0_8,TSTRESS),0.D0,0.D0 &
+     &            ,ACCEL_FORCE_T1-ACCEL_FORCE_T0)
+#ENDIF
               DEALLOCATE(DEDPRO)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
             ELSE
@@ -6678,6 +6765,13 @@ RETURN
             STRESS(:,:) =STRESS(:,:) +STRESS1(:,:)
             IPRO=IPRO+LMNX
             CALL SETUP$UNSELECT()
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$NOW(ACCEL_FORCE_T1)
+            CALL ACCELPROFILE$ADD('PAW_FORCE_SITE_TOTAL' &
+     &          ,INT(NGL,KIND=8),INT(NBH,KIND=8),INT(LMNX,KIND=8) &
+     &          ,INT(LNX,KIND=8),0.D0,0.D0 &
+     &          ,ACCEL_FORCE_T1-ACCEL_FORCE_SITE_T0)
+#ENDIF
           ENDDO ! END OF LOOP OVER IAT
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
 !$ACC END DATA

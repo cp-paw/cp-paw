@@ -4150,6 +4150,50 @@ Gram transform envelope, but the dominant cost remains the Ortho-X DGEMM
 iteration sequence and force phase. Keep using it as enabling work for broader
 wavefunction residency rather than as a standalone speedup claim.
 
+## 2026-06-01 Force Phase Profiling Split
+
+The next diagnostic splits the coarse `PAW_ETOT_FORCE` envelope inside
+`WAVES$FORCE`. New profile rows cover occupation/setup reads, G-space setup,
+per-site totals, `WAVES_DEDPROJ`, HTBC additions, structure factors, host
+`WAVES_DEDPRO`, host `WAVES_PROFORCE`, and the opt-in force `DEDPRO` GPU path.
+Rows are grouped by problem dimensions rather than atom id, so the
+acceleration-profile table stays compact for larger systems.
+
+Run directories on Spark GB10:
+
+```
+512 smoke:
+tests/profile/si64/runs/force-profile-aggregated-smoke512-20260601
+
+4096 final profile:
+tests/profile/si64/runs/force-profile-aggregated-4096-20260601
+```
+
+The final 4096-band run used
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram`,
+`TEST=si64_bands`, `EMPTY_BANDS=4096`, `NSTEPS=1`, and one GPU rank.
+
+| Metric | Value |
+| --- | ---: |
+| Wall time | 138.96 s |
+| Transfer estimate | 8.0690 GB |
+| Energy check | yes |
+| `PAW_ORTHO_SOLVE` | 57.0857 s |
+| `PAW_ETOT_FORCE` | 29.0665 s |
+| `PAW_FORCE_DEDPROJ` | 28.3467 s |
+| `PAW_FORCE_DEDPRO` | 0.7064 s |
+| `PAW_FORCE_PROFORCE` | 0.0112 s |
+| `PAW_FORCE_STRUCTURE_FACTOR` | 0.0010 s |
+
+The force split changes the prioritization: for the large band stress case,
+force time is almost entirely `WAVES_DEDPROJ`, while the earlier opt-in force
+`DEDPRO`/`PROFORCE` GPU path addresses a subsecond part of the 4096-band
+profile. The previous `CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1` 4096 probe was
+energy-valid but slower (`140.87 s`, `PAW_ETOT_FORCE=29.2596 s`), which matches
+this breakdown. The next force-side GPU target should therefore be `DEDPROJ`
+residency/offload and projection-state reuse, not further tuning of
+`WAVES_PROFORCE`.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
