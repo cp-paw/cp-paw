@@ -64,6 +64,7 @@ dedicated follow-up runs before promoting any path to production default.
 | existing `lazy-scratch-1024-*` profiles re-summarized | FFT/VPSI benchmark collector fields | Spark `gpu_resident_stack`: `vpsi_s=1.2877`, `vpsi_gtor_s=0.6415`, `vpsi_rtog_s=0.6279` | - | tooling OK | Adds `pw_fft_gtor_s`, `pw_fft_rtog_s`, `vpsi_s`, `vpsi_gtor_s`, and `vpsi_rtog_s` to `benchmark_summary.py`; `run_vpsi_boundary.sh` now includes `PW_FFT_*` rows in its FFT-phase table. |
 | `stack-default-psim-*-20260601-1206/1208` | PSIM switch promoted into stack default after lifecycle cleanup | `gpu_resident_stack` now matches the explicit switch case at 512/2: 9.73 s on Spark, 11.07 s on Terok; `NSTEPS=1` smokes OK | - | 4-rank smokes OK | `CPPAW_GPU_RESIDENCY_STACK` now enables PSIM propagation/phase/switch and HPSI-to-propagate residency by default, removing `ACC_COPY_ORTHO_PSIM_IN` and saving 0.0666 GB at 512/2. |
 | `current-stack-spark-1024-nstep1-*` | Fresh Spark stack-default refresh plus CPU-build guard | `gpu_resident_stack` 12.19 s; threshold-gated cuFFT 12.19 s; forced cuFFT 15.30 s | `nvhpc_cpu` 72.41 s | `nvhpc_cpu` 166.04 s | Fixes the non-CUBLAS `WAVES$HPSI` CPU build guard and confirms the current stack default is energy-valid and much faster than the CPU references. Forced cuFFT remains diagnostic-only because it raises transfer volume to 10.05 GB. |
+| `dual-switch-*-20260601-1249/1250/1252` | Bidirectional PSIM/PSI0 switch residency | `gpu_resident_stack` keeps the old `PSI0` as resident `PSIM` across `WAVES$SWITCH`; `ACC_COPY_PROP_PSIM_IN` drops from 3 calls to 1 at 1024/3 | - | 4-rank smoke OK | Removes 0.2421 GB of repeated propagation input traffic in the 1024/3 smoke, while the 1024/1 and 512/1x4 smokes remain energy-valid. |
 
 The latest full-matrix run lives at:
 
@@ -101,6 +102,39 @@ copy-out, setup/Gram PSIM boundaries, `VPSI` HPSI input, propagation PSIM input,
 and the final orthogonalization PSIM output. That reinforces the current design
 direction: keep widening wavefunction/projector residency across producer and
 consumer boundaries; do not promote forced cuFFT for this workload.
+
+## 2026-06-01 Bidirectional PSIM/PSI0 Switch Residency
+
+The previous stack default carried resident `PSIM` through `WAVES$SWITCH` as the
+next `PSI0`, but it deleted the old resident `PSI0`. After the pointer swap that
+old `PSI0` is exactly the next-step `PSIM`, so the following propagation copied
+it back from the host. The switch now preserves both resident sides when
+`CPPAW_GPU_PSIM_SWITCH_RESIDENCY` is enabled: old `PSIM` becomes resident
+`PSI0`, and old `PSI0` becomes resident `PSIM`.
+
+Run directories:
+
+```
+runs/psim-copy-scaling-20260601-124358
+runs/energy-triage-20260601-124513
+runs/dual-switch-residency-20260601-124939
+runs/dual-switch-smoke-20260601-125043
+runs/dual-switch-4rank-smoke-20260601-125215
+```
+
+| Case | Build | Ranks | NSTEPS | Wall time | Transfer estimate | `ACC_COPY_PROP_PSIM_IN` | Energy check | Interpretation |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- |
+| Before patch | serial GPU stack | 1 | 3 | 28.08 s | 3.2414 GB | 3 calls, 0.3631 GB | disabled | Baseline repeatedly copied the previous-step `PSIM` into propagation. |
+| After patch | serial GPU stack | 1 | 3 | 27.97 s | 2.9994 GB | 1 call, 0.1210 GB | disabled | Only the first propagation needs the host `PSIM`; two later steps record `ACC_PRESENT_PROP_PSIM`. |
+| After patch | serial GPU stack | 1 | 1 | 12.10 s | 1.5102 GB | 1 call, 0.1210 GB | yes | Standard 1024-band smoke remains energy-valid. |
+| After patch | parallel GPU stack | 4 | 1 | 9.81 s | 1.2401 GB | 4 calls, 0.0672 GB | yes | Parallel build and 4-rank smoke remain energy-valid. |
+
+The `NSTEPS=3` energy value is intentionally not checked against the one-step
+Si64 reference: a GPU-off run in the same patched binary gives the identical
+final value (`208.886424`), so this is benchmark-harness behavior for the
+multi-step wavefunction dynamics, not a GPU correctness regression. The harness
+now applies the built-in Si64 energy reference only to `NSTEPS=1` unless an
+explicit `EXPECTED_ENERGY` is supplied.
 
 ## Previous Full Matrix Comparison
 

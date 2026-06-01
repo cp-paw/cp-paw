@@ -18,6 +18,7 @@ DRY_RUN=${DRY_RUN:-no}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
+EXPECTED_ENERGY_USER_SET=${EXPECTED_ENERGY+x}
 EXPECTED_ENERGY=${EXPECTED_ENERGY:-}
 ENERGY_TOL=${ENERGY_TOL:-1e-5}
 ENERGY_CHECK=${ENERGY_CHECK:-yes}
@@ -84,7 +85,13 @@ case "${ENERGY_CHECK}" in
   no|false|0) EXPECTED_ENERGY= ;;
   *)
     case "${TEST}" in
-      si64|si64_bands) EXPECTED_ENERGY=${EXPECTED_ENERGY:-302.280854} ;;
+      si64|si64_bands)
+        if [[ -z "${EXPECTED_ENERGY_USER_SET}" && "${NSTEPS}" != "1" ]]; then
+          EXPECTED_ENERGY=
+        else
+          EXPECTED_ENERGY=${EXPECTED_ENERGY:-302.280854}
+        fi
+        ;;
     esac
     ;;
 esac

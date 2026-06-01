@@ -66,6 +66,23 @@ grep -q "case=gpu_no_cufft" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_CUFFT_ACC=0" "${tmpdir}/dry-run/metadata.txt"
 
+DRY_RUN=yes \
+  RUN_ROOT="${tmpdir}/dry-run-nsteps3" \
+  NSTEPS=3 \
+  CASES="gpu_resident_stack" \
+  tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run-nsteps3.out"
+! grep -q "^expected_energy=" "${tmpdir}/dry-run-nsteps3/metadata.txt"
+
+DRY_RUN=yes \
+  RUN_ROOT="${tmpdir}/dry-run-nsteps3-explicit" \
+  NSTEPS=3 \
+  EXPECTED_ENERGY=208.886424 \
+  CASES="gpu_resident_stack" \
+  tests/profile/si64/run_benchmark.sh \
+    > "${tmpdir}/dry-run-nsteps3-explicit.out"
+grep -q "expected_energy=208.886424" \
+  "${tmpdir}/dry-run-nsteps3-explicit/metadata.txt"
+
 set +e
 DRY_RUN=yes \
   REQUIRE_CASES=yes \
