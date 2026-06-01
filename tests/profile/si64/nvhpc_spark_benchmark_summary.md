@@ -63,12 +63,44 @@ dedicated follow-up runs before promoting any path to production default.
 | `psim-stack-default-*-20260601-1140/1145/1150` | Pre-lifecycle-fix PSIM stack-default probe | Serial opt-in saves 0.1204 GB at 1024/2; Terok 4-rank was much slower before the dimension/lifecycle cleanup | - | Terok 4-rank regression in old probe | Superseded by the later resident-dimension cleanup and default retest below; kept as cautionary history. |
 | existing `lazy-scratch-1024-*` profiles re-summarized | FFT/VPSI benchmark collector fields | Spark `gpu_resident_stack`: `vpsi_s=1.2877`, `vpsi_gtor_s=0.6415`, `vpsi_rtog_s=0.6279` | - | tooling OK | Adds `pw_fft_gtor_s`, `pw_fft_rtog_s`, `vpsi_s`, `vpsi_gtor_s`, and `vpsi_rtog_s` to `benchmark_summary.py`; `run_vpsi_boundary.sh` now includes `PW_FFT_*` rows in its FFT-phase table. |
 | `stack-default-psim-*-20260601-1206/1208` | PSIM switch promoted into stack default after lifecycle cleanup | `gpu_resident_stack` now matches the explicit switch case at 512/2: 9.73 s on Spark, 11.07 s on Terok; `NSTEPS=1` smokes OK | - | 4-rank smokes OK | `CPPAW_GPU_RESIDENCY_STACK` now enables PSIM propagation/phase/switch and HPSI-to-propagate residency by default, removing `ACC_COPY_ORTHO_PSIM_IN` and saving 0.0666 GB at 512/2. |
+| `current-stack-spark-1024-nstep1-*` | Fresh Spark stack-default refresh plus CPU-build guard | `gpu_resident_stack` 12.19 s; threshold-gated cuFFT 12.19 s; forced cuFFT 15.30 s | `nvhpc_cpu` 72.41 s | `nvhpc_cpu` 166.04 s | Fixes the non-CUBLAS `WAVES$HPSI` CPU build guard and confirms the current stack default is energy-valid and much faster than the CPU references. Forced cuFFT remains diagnostic-only because it raises transfer volume to 10.05 GB. |
 
 The latest full-matrix run lives at:
 
 ```
 /home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1
 ```
+
+## 2026-06-01 Current Stack Default Refresh
+
+After promoting PSIM switch/phase/propagation residency into
+`CPPAW_GPU_RESIDENCY_STACK`, Spark C86C was retested from a fresh checkout using
+`TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1`, and three repeats per case.
+The same validation also caught and fixed a CPU-build regression where
+`WAVES$HPSI` called the HPSI residency-clear helper outside the
+`CPPVAR_CUBLAS_ACC` guard.
+
+Run directories:
+
+```
+runs/current-stack-spark-1024-nstep1-20260601-121803
+runs/current-stack-spark-1024-nstep1-cpu1-20260601-122316
+runs/current-stack-spark-1024-nstep1-cpu8-20260601-122700
+```
+
+| Suite | Case | Ranks | Repeats | Wall time | Transfer estimate | Energy check | Interpretation |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| GPU | `gpu_resident_stack` | 1 | 3 | 12.19 s | 1.51 GB | yes | Current recommended stack keyword; broad residency remains the decisive lever. |
+| GPU | `gpu_resident_stack_cufft` | 1 | 3 | 12.19 s | 1.51 GB | yes | Threshold-gated cuFFT is neutral/harmless for this case. |
+| GPU | `gpu_resident_stack_cufft_force` | 1 | 3 | 15.30 s | 10.05 GB | yes | Forced cuFFT is slower and increases transfer volume strongly; keep diagnostic-only. |
+| CPU | `nvhpc_cpu` | 1 | 3 | 72.41 s | 0.00 GB | yes | Best direct one-rank CPU reference in this refresh. |
+| CPU | `nvhpc_cpu` | 8 | 3 | 166.04 s | 0.00 GB | yes | Poor resource comparison for this small smoke; MPI/setup overhead dominates. |
+
+The main remaining copy rows in `gpu_resident_stack` are now the ZGEMM matrix
+copy-out, setup/Gram PSIM boundaries, `VPSI` HPSI input, propagation PSIM input,
+and the final orthogonalization PSIM output. That reinforces the current design
+direction: keep widening wavefunction/projector residency across producer and
+consumer boundaries; do not promote forced cuFFT for this workload.
 
 ## Previous Full Matrix Comparison
 
