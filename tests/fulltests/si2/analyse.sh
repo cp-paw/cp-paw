@@ -1,13 +1,14 @@
 #!/bin/bash
 echo "comparing total energy."
-TOTAL_ENERGY_REF=-7.4076060
-# tested with gfortran 11.3.0, FFTW 3.3.10, Apple Accelerate Framework
-# commit d140b678a03822efe485a1e39e0af47370bbce53
+TOTAL_ENERGY_REF=-7.3657485
+# PBE TYPE=10 after the Dec. 10, 2023 PBE TFAC fix. The legacy TYPE=-10 path
+# reproduces the previous reference, -7.4076060.
 
 TOLERANCE=0.0001
 
 TOTAL_ENERGY=`grep "TOTAL ENERGY" si2.prot | tail -n 1 | awk 'BEGIN { FS = " " } ; { print $4 }'`
-CRIT=`echo "define abs(x) {if (x<0) {return -x}; return x;}scale=20;abs(($TOTAL_ENERGY_REF)-($TOTAL_ENERGY))<$TOLERANCE" | bc -l`
+CRIT=`awk -v ref="$TOTAL_ENERGY_REF" -v val="$TOTAL_ENERGY" -v tol="$TOLERANCE" \
+  'BEGIN { diff=ref-val; if (diff < 0) diff=-diff; print (diff < tol) ? 1 : 0 }'`
 #echo $CRIT
 if [ "$CRIT" = "1"  ];
 then
