@@ -15,6 +15,8 @@ def profile_totals(run_dir):
         "mpi": 0.0,
         "paw": 0.0,
         "pw_trace": 0.0,
+        "pw_gtor": 0.0,
+        "pw_rtog": 0.0,
         "phase": 0.0,
         "setup": 0.0,
         "copy_gb": 0.0,
@@ -36,6 +38,10 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
+                    if op.startswith("PW_GTOR_"):
+                        totals["pw_gtor"] += seconds
+                    elif op.startswith("PW_RTOG_"):
+                        totals["pw_rtog"] += seconds
                     continue
                 if op.startswith("PAW_"):
                     totals["paw"] += seconds
@@ -165,6 +171,8 @@ def main(argv):
                 "fft_s": totals["fft"],
                 "mpi_s": totals["mpi"],
                 "pw_trace_s": totals["pw_trace"],
+                "pw_gtor_s": totals["pw_gtor"],
+                "pw_rtog_s": totals["pw_rtog"],
                 "phase_s": totals["phase"],
                 "phase_gap_s": phase_gap,
                 "setup_s": totals["setup"],
@@ -199,6 +207,8 @@ def main(argv):
         "fft_s",
         "mpi_s",
         "pw_trace_s",
+        "pw_gtor_s",
+        "pw_rtog_s",
         "phase_s",
         "phase_gap_s",
         "setup_s",
