@@ -361,10 +361,10 @@ case_note() {
       echo "Focused residency stack keyword: HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation."
       ;;
     gpu_resident_stack_cufft)
-      echo "Focused residency stack plus threshold-gated native cuFFT for LIB\\$FFTC8 calls."
+      echo "Focused residency stack plus threshold-gated native cuFFT for LIB\$FFTC8 calls."
       ;;
     gpu_resident_stack_cufft_force)
-      echo "Focused residency stack plus force-all native cuFFT for LIB\\$FFTC8 calls."
+      echo "Focused residency stack plus force-all native cuFFT for LIB\$FFTC8 calls."
       ;;
     gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum)
       echo "Full residency diagnostic combining HPSI, OPSI, DENMAT energy, persistent THIS%PROJ, and off-site device-pack accumulation."

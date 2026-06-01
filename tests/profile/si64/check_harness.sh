@@ -179,6 +179,80 @@ else
   test "${cusolver_dry_run_status}" -eq 0
 fi
 
+set +e
+DRY_RUN=yes \
+  RUN_ROOT_BASE="${tmpdir}/offden-dry-run" \
+  OFFDEN_CASES="gpu_resident_hpsi_offden_cublas_devicepack" \
+  EMPTY_BANDS=128 \
+  RUN_SHARED_GPU=no \
+  tests/profile/si64/run_offden_focus.sh > "${tmpdir}/offden-dry-run.out" 2>&1
+offden_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_OFFDEN_DEVICE_PACK=1" \
+  "${tmpdir}/offden-dry-run-128-1r/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/offden-dry-run-128-1r/metadata.txt"; then
+  test "${offden_dry_run_status}" -ne 0
+else
+  test "${offden_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  RUN_ROOT_BASE="${tmpdir}/psim-focus-dry-run" \
+  PSIM_CASES="gpu_resident_hpsi_opsi_psim_phase" \
+  EMPTY_BANDS=128 \
+  RUN_SHARED_GPU=no \
+  RUN_LARGE_GPU=no \
+  tests/profile/si64/run_psim_focus.sh > "${tmpdir}/psim-focus-dry-run.out" 2>&1
+psim_focus_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_PSIM_PHASE_RESIDENCY=1" \
+  "${tmpdir}/psim-focus-dry-run-128-1r/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/psim-focus-dry-run-128-1r/metadata.txt"; then
+  test "${psim_focus_dry_run_status}" -ne 0
+else
+  test "${psim_focus_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  RUN_ROOT_BASE="${tmpdir}/psim-lifecycle-dry-run" \
+  PSIM_LIFECYCLE_CASES="gpu_resident_hpsi_opsi_psim_phase" \
+  NSTEPS_LIST=1 \
+  EMPTY_BANDS_LIST=128 \
+  RUN_SHARED_GPU=no \
+  RUN_LARGE_GPU=no \
+  tests/profile/si64/run_psim_lifecycle.sh > "${tmpdir}/psim-lifecycle-dry-run.out" 2>&1
+psim_lifecycle_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_PSIM_PHASE_RESIDENCY=1" \
+  "${tmpdir}/psim-lifecycle-dry-run-empty128-nstep1-1r/metadata.txt"
+if grep -q "^missing$" \
+    "${tmpdir}/psim-lifecycle-dry-run-empty128-nstep1-1r/metadata.txt"; then
+  test "${psim_lifecycle_dry_run_status}" -ne 0
+else
+  test "${psim_lifecycle_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  RUN_ROOT_BASE="${tmpdir}/vpsi-dry-run" \
+  VPSI_BOUNDARY_CASES="gpu_resident_stack_cufft_force" \
+  NSTEPS_LIST=1 \
+  EMPTY_BANDS_LIST=128 \
+  RUN_SHARED_GPU=no \
+  RUN_LARGE_GPU=no \
+  tests/profile/si64/run_vpsi_boundary.sh > "${tmpdir}/vpsi-dry-run.out" 2>&1
+vpsi_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_CUFFT_ACC_MIN_ELEMENTS=0" \
+  "${tmpdir}/vpsi-dry-run-empty128-nstep1-1r/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/vpsi-dry-run-empty128-nstep1-1r/metadata.txt"; then
+  test "${vpsi_dry_run_status}" -ne 0
+else
+  test "${vpsi_dry_run_status}" -eq 0
+fi
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl

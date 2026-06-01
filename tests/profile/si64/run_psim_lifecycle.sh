@@ -11,6 +11,7 @@ SHARED_GPU_RANKS=${SHARED_GPU_RANKS:-4}
 SHARED_EMPTY_BANDS=${SHARED_EMPTY_BANDS:-512}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-900}
+DRY_RUN=${DRY_RUN:-no}
 RUN_SHARED_GPU=${RUN_SHARED_GPU:-no}
 RUN_LARGE_GPU=${RUN_LARGE_GPU:-no}
 LARGE_EMPTY_BANDS=${LARGE_EMPTY_BANDS:-2048}
@@ -55,7 +56,8 @@ run_suite() {
   echo "Running PSIM lifecycle suite: ${label}"
   TEST="${TEST}" NSTEPS="${nsteps}" EMPTY_BANDS="${empty_bands}" \
     RANKS="${ranks}" REPEATS="${REPEATS}" CASES="${PSIM_LIFECYCLE_CASES}" \
-    TIMEOUT="${timeout}" RUN_ROOT="${root}" REQUIRE_CASES="yes" \
+    TIMEOUT="${timeout}" RUN_ROOT="${root}" DRY_RUN="${DRY_RUN}" \
+    REQUIRE_CASES="yes" \
     ENERGY_CHECK="${ENERGY_CHECK:-no}" \
     "${HERE}/run_benchmark.sh"
   append_suite "${label}" "${root}/benchmark.tsv"
