@@ -29,10 +29,13 @@ bash -n src/Tools/Scripts/paw_gpu_capabilities.sh
 python3 -m py_compile \
   tests/profile/si64/profile_summary.py \
   tests/profile/si64/profile_copy_rows.py \
+  tests/profile/si64/check_benchmark_tools.py \
   tests/profile/si64/benchmark_compare.py \
   tests/profile/si64/benchmark_summary.py \
   tests/profile/si64/benchmark_markdown.py \
   tests/profile/si64/nsys_sql_summary.py
+
+python3 tests/profile/si64/check_benchmark_tools.py
 
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
