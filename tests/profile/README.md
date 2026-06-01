@@ -638,8 +638,9 @@ cd tests/profile/si64
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512 1024"`, `NSTEPS_LIST=1` and
 compares one-rank GPU residency, one-rank CPU, and eight-rank CPU/NVHPC
-references. Set `RUN_GPU_ALL=yes` to include the all-library diagnostic cases
-`gpu_all` and `gpu_all_off`.
+references. It inherits the follow-up benchmark's combined comparison,
+transfer-row, and present-row reports. Set `RUN_GPU_ALL=yes` to include the
+all-library diagnostic cases `gpu_all` and `gpu_all_off`.
 
 For the longer validation preset used before promoting a residency diagnostic
 to a default, run:
@@ -651,7 +652,8 @@ cd tests/profile/si64
 
 It defaults to `EMPTY_BANDS_LIST="512 1024"` and `NSTEPS_LIST="3 10"` and
 compares `gpu_resident`, `gpu_resident_nosync`, `gpu_off`, one-rank CPU and
-eight-rank CPU/NVHPC references.
+eight-rank CPU/NVHPC references. It inherits the follow-up benchmark's combined
+comparison, transfer-row, and present-row reports.
 
 For a short broad GPU exploration suite that includes the opt-in 3-D cuFFT path
 and captures available NVIDIA libraries plus CUDA-aware MPI hints:
@@ -856,7 +858,10 @@ cd tests/profile/si64
 ```
 
 The top-level run directory is written to `runs/latest_overnight`; the combined
-benchmark table is `combined_benchmark.tsv`.
+benchmark table is `combined_benchmark.tsv`. The overnight run also writes
+`combined_benchmark.md`, `combined_compare.md`, `combined_transfer_rows.md` and
+`combined_present_rows.md` so the long run ends with the same speedup,
+data-motion, and resident-reuse summaries as the shorter benchmark harnesses.
 
 Set `RUN_NVLAMATH=yes` to add a short NVLAMATH comparison suite,
 `RUN_CUFFTW=yes` to add a short cuFFTW comparison suite, `RUN_CUFFT=yes` to add

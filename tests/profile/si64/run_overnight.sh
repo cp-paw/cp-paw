@@ -42,6 +42,8 @@ BAND_CASES=${BAND_CASES:-"gpu_resident gpu_resident_stack gpu_resident_nosync gp
 BAND_ONE_RANK_CPU_CASES=${BAND_ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
 BAND_CPU_CASES=${BAND_CPU_CASES:-"cpu nvhpc_cpu"}
 THRESHOLDS=${THRESHOLDS:-"1e7"}
+PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
+PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-1}
 export OPENBLAS_NUM_THREADS=${OPENBLAS_NUM_THREADS:-1}
@@ -84,6 +86,8 @@ echo "${OVERNIGHT_ROOT}" > "${HERE}/runs/latest_overnight"
 COMBINED="${OVERNIGHT_ROOT}/combined_benchmark.tsv"
 SUMMARY_LOG="${OVERNIGHT_ROOT}/overnight.log"
 : > "${SUMMARY_LOG}"
+
+declare -a SUITE_ROOTS=()
 
 log() {
   printf '%s %s\n' "$(iso_now)" "$*" | tee -a "${SUMMARY_LOG}"
@@ -179,6 +183,7 @@ run_suite() {
     echo "${status}" > "${suite_root}.status"
   fi
   append_suite "${suite}" "${suite_root}/benchmark.tsv"
+  SUITE_ROOTS+=("${suite_root}")
 }
 
 run_nsys_trace() {
@@ -284,4 +289,36 @@ if [[ -f "${COMBINED}" ]]; then
   python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
     > "${OVERNIGHT_ROOT}/combined_compare.md" || true
   log "combined=${COMBINED}"
+fi
+
+if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" --markdown \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" \
+      > "${OVERNIGHT_ROOT}/combined_transfer_rows.md"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PROFILE_ROW_TOP}" \
+      --op-prefix ACC_COPY --op-prefix ACC_UPDATE \
+      "${SUITE_ROOTS[@]}" \
+      > "${OVERNIGHT_ROOT}/combined_transfer_rows.tsv" || true
+    log "transfer_rows=${OVERNIGHT_ROOT}/combined_transfer_rows.md"
+  else
+    log "transfer_rows=none"
+  fi
+
+  if python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --markdown --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" \
+      > "${OVERNIGHT_ROOT}/combined_present_rows.md"; then
+    python3 "${HERE}/profile_copy_rows.py" --per-case \
+      --top "${PRESENT_ROW_TOP}" --include-zero --sort-by calls \
+      --op-prefix ACC_PRESENT \
+      "${SUITE_ROOTS[@]}" \
+      > "${OVERNIGHT_ROOT}/combined_present_rows.tsv" || true
+    log "present_rows=${OVERNIGHT_ROOT}/combined_present_rows.md"
+  else
+    log "present_rows=none"
+  fi
 fi
