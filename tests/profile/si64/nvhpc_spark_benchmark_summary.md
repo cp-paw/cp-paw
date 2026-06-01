@@ -60,6 +60,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `accdims-switch-spark-20260601-105947` / `accdims-switch-terok-20260601-105946` | Resident wavefunction dimension tracking | `gpu_resident_stack_hpsi_prop_psim_switch` 20.84 s on Spark, 23.50 s on Terok | - | 4-rank smokes OK | Stores resident `PSI0`/`PSIM`/`HPSI` dimensions in `WVSET_TYPE` and routes lifecycle cleanup through mark/clear/delete helpers, preserving the previous switch-residency transfer pattern. |
 | `vpsi-cufft-refresh-spark-20260601-110633` / `vpsi-cufft-refresh-terok-20260601-110633` | Current VPSI/cuFFT refresh | `gpu_resident_stack_cufft` neutral/slightly favorable; force cuFFT slower | - | - | Rechecks cuFFT after the latest residency work. Threshold-gated cuFFT remains harmless, but forced cuFFT inflates transfer to 10.97/19.62 GB and slows VPSI strongly. |
 | `lazy-scratch-*-20260601-1118/1121` | Lazy host scratch allocation for resident `PRO` cache paths | `gpu_resident_stack` 12.12 s on Spark, 11.99 s on Terok at 1024/1 | - | 4-rank smokes OK | Avoids building unused host `GVEC`/`PRO`/`EIGR` scratch in cached resident `PRO` projection and addproduct paths; both cache and host-PRO ablation paths stay energy-valid. |
+| `psim-stack-default-*-20260601-1140/1145/1150` | PSIM/HPSI stack-default probe | Serial opt-in saves 0.1204 GB at 1024/2; Terok 4-rank is much slower when promoted | - | Terok 4-rank regression | Confirms PSIM/HPSI propagate/switch residency should remain opt-in for 1 MPI + 1 GPU, not part of the broad `CPPAW_GPU_RESIDENCY_STACK` default yet. |
 
 The latest full-matrix run lives at:
 
@@ -467,6 +468,54 @@ resident-cache stack, not a new library or a claimed standalone speedup. It
 removes unused host work from the hot projection/addproduct setup while keeping
 the `gpu_resident_pro_host` fallback exercised and correct.
 
+## PSIM Stack-Default Probe
+
+The existing opt-in PSIM/HPSI propagation and switch residency was tested as a
+candidate for promotion into the broad `CPPAW_GPU_RESIDENCY_STACK` default. A
+temporary build enabled:
+
+```
+CPPAW_GPU_PSIM_PROPAGATE=1
+CPPAW_GPU_PSIM_PHASE_RESIDENCY=1
+CPPAW_GPU_HPSI_PROPAGATE_RESIDENCY=1
+CPPAW_GPU_PSIM_SWITCH_RESIDENCY=1
+```
+
+inside the stack keyword, while `gpu_resident_stack_legacy_psim` disabled those
+switches again as the old-stack ablation.
+
+Validation/probe runs:
+
+```
+runs/psim-promote-probe-spark-20260601-1130
+runs/psim-promote-probe-terok-20260601-1130
+runs/psim-stack-default-spark-20260601-1140
+runs/psim-stack-default-terok-20260601-1140
+runs/psim-stack-default-parallel-spark-20260601-1145
+runs/psim-stack-default-parallel-terok-20260601-1145
+runs/psim-stack-default-parallel-terok-repeat-20260601-1150
+```
+
+| Machine | Empty bands | NSTEPS | Ranks | Case | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | --- | ---: | ---: | --- |
+| Spark C86C | 1024 | 2 | 1 | promoted stack | 21.29 s | 2.4142 GB | yes |
+| Spark C86C | 1024 | 2 | 1 | legacy stack | 21.18 s | 2.5346 GB | yes |
+| Terok A40 | 1024 | 2 | 1 | promoted stack | 20.77 s | 2.4142 GB | yes |
+| Terok A40 | 1024 | 2 | 1 | legacy stack | 29.17 s | 2.5346 GB | yes |
+| Spark C86C | 512 | 2 | 4 | promoted stack | 15.14 s | 2.0691 GB | yes |
+| Spark C86C | 512 | 2 | 4 | legacy stack | 15.21 s | 2.1357 GB | yes |
+| Terok A40 | 512 | 2 | 4 | promoted stack | 41.44 s / 37.94 s | 2.0691 GB | yes |
+| Terok A40 | 512 | 2 | 4 | legacy stack | 12.33 s / 23.15 s | 2.1357 GB | yes |
+
+Interpretation: the opt-in path is still useful for the intended resource split
+of one MPI rank per GPU because it removes one deterministic wavefunction copy
+per two-step run and is energy-valid. It should not become the broad stack
+default yet: Terok's 4-rank shared-GPU runs repeatedly slow down when the
+PSIM/HPSI propagation path is promoted, despite the lower transfer estimate.
+The safe policy is to keep `gpu_resident_stack_hpsi_prop_psim_switch` as an
+explicit one-rank/GPU diagnostic and leave `CPPAW_GPU_RESIDENCY_STACK=1`
+parallel-safe.
+
 ## Current Conclusions
 
 1. Use the residency profile path as the recommended NVHPC GPU profiling path:
@@ -502,9 +551,12 @@ the `gpu_resident_pro_host` fallback exercised and correct.
    `WAVES_1COVERLAP` bottleneck. The new `PSI0`-to-`PRINFO` and
    `PSIM`-to-switch residency diagnostics each remove another deterministic
    0.1210 GB copy in their focused runs, but wall time is still neutral/noisy.
-   The next useful default-candidate work should target the remaining host-side
-   FFT/RTOG and producer-side HPSI/projector boundaries, not broader default
-   activation of cuFFT/cuFFTW/NVLAMATH/NVBLAS.
+   The PSIM/HPSI propagation path remains opt-in rather than part of
+   `CPPAW_GPU_RESIDENCY_STACK=1` because Terok 4-rank shared-GPU validation
+   shows a repeatable wall-time regression when it is promoted. The next useful
+   default-candidate work should target the remaining host-side FFT/RTOG and
+   producer-side HPSI/projector boundaries, not broader default activation of
+   cuFFT/cuFFTW/NVLAMATH/NVBLAS.
 
 7. Keep forced cuFFT out of the recommended stack. The current VPSI/cuFFT
    refresh confirms that threshold-gated cuFFT is harmless, but force-all cuFFT
