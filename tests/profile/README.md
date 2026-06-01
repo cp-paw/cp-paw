@@ -786,7 +786,8 @@ cd tests/profile/si64
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512"` and compares
 `cusolver`, `cusolver_generalized`, `cusolver_generalized_conservative`,
-`cusolver_off`, one-rank CPU/NVHPC and eight-rank CPU/NVHPC references.
+`cusolver_off`, one-rank CPU/NVHPC and eight-rank CPU/NVHPC references. It
+writes both `combined_benchmark.md` and `combined_compare.md`.
 
 For reproducible comparisons, use the benchmark harness:
 
