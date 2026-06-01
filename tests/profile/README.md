@@ -526,7 +526,7 @@ cd tests/profile/si64
 ./run_nvhpc_standard.sh
 ```
 
-It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=3` and by default
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1` and by default
 compares the focused `gpu_resident*` paths on one GPU rank, including the
 opt-in Ortho-X workspace-residency diagnostic, plus one-rank CPU and eight-rank
 CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,

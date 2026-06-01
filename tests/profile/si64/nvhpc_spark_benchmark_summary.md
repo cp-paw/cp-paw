@@ -2658,6 +2658,9 @@ cd tests/profile/si64
 TEST=si64_bands EMPTY_BANDS=1024 NSTEPS=1 RUN_GPU_ALL=no ./run_nvhpc_standard.sh
 ```
 
+`NSTEPS=1` is now the harness default for this standard comparison, so the
+explicit setting above is mostly documentation for reproduced Spark refreshes.
+
 Use the full diagnostic sweep only when comparing library combinations:
 
 ```
