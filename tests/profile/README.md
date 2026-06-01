@@ -103,6 +103,8 @@ arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center
 density-matrix transfers. These buckets are subsets of `copy_gb` and are meant
 to show whether a residency change actually removes the expected data motion.
+`profile_summary.py` uses the same buckets in its category summary and prints
+their GB totals for single-run CSV inspection.
 For the bundled `si64` and `si64_bands` cases, the harness also checks the
 final constant energy against the built-in reference (`EXPECTED_ENERGY`,
 default `302.280854`) with `ENERGY_TOL=1e-5`. A run with normal termination but
