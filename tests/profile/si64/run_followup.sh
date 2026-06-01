@@ -11,9 +11,10 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
 EMPTY_BANDS_LIST=${EMPTY_BANDS_LIST:-${EMPTY_BANDS}}
+DRY_RUN=${DRY_RUN:-no}
 GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_stack gpu_resident_nosync gpu gpu_off"}
-CPU_CASES=${CPU_CASES:-"cpu nvhpc_cpu"}
-ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES:-"cpu nvhpc_cpu"}
+CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
+ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES-"cpu nvhpc_cpu"}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
@@ -25,6 +26,7 @@ SUMMARY_LOG="${FOLLOWUP_ROOT}/followup.log"
 : > "${SUMMARY_LOG}"
 
 declare -a SUITE_ROOTS=()
+FAILED_SUITES=0
 
 log() {
   printf '%s %s\n' "$(iso_now)" "$*" | tee -a "${SUMMARY_LOG}"
@@ -32,6 +34,13 @@ log() {
 
 iso_now() {
   date -u +%Y-%m-%dT%H:%M:%SZ
+}
+
+require_cases_for_suite() {
+  case "${DRY_RUN}" in
+    yes|true|1) echo yes ;;
+    *) echo no ;;
+  esac
 }
 
 append_suite() {
@@ -54,11 +63,20 @@ run_suite() {
   shift 4
   local suite_root="${FOLLOWUP_ROOT}/${suite}"
   local suite_log="${FOLLOWUP_ROOT}/${suite}.log"
+  local require_cases
 
+  if [[ -z ${cases// } ]]; then
+    log "SKIP  suite=${suite} empty case list"
+    echo "skipped" > "${suite_root}.status"
+    return 0
+  fi
+
+  require_cases=$(require_cases_for_suite)
   log "START suite=${suite} nsteps=${nsteps} ranks=${ranks} cases=${cases} env=[$*]"
   if env TEST="${TEST}" EMPTY_BANDS="${EMPTY_BANDS}" NSTEPS="${nsteps}" \
       RANKS="${ranks}" REPEATS="${REPEATS}" CASES="${cases}" TIMEOUT="${TIMEOUT}" \
-      RUN_ROOT="${suite_root}" "$@" "${HERE}/run_benchmark.sh" \
+      DRY_RUN="${DRY_RUN}" REQUIRE_CASES="${require_cases}" RUN_ROOT="${suite_root}" \
+      "$@" "${HERE}/run_benchmark.sh" \
       > "${suite_log}" 2>&1; then
     log "DONE  suite=${suite}"
     echo 0 > "${suite_root}.status"
@@ -66,6 +84,7 @@ run_suite() {
     local status=$?
     log "FAIL  suite=${suite} status=${status}"
     echo "${status}" > "${suite_root}.status"
+    FAILED_SUITES=$((FAILED_SUITES+1))
   fi
   append_suite "${suite}" "${suite_root}/benchmark.tsv"
   SUITE_ROOTS+=("${suite_root}")
@@ -121,4 +140,11 @@ if [[ "${#SUITE_ROOTS[@]}" -gt 0 ]]; then
   else
     log "present_rows=none"
   fi
+fi
+
+if (( FAILED_SUITES > 0 )); then
+  log "FAILED suites=${FAILED_SUITES}"
+  case "${DRY_RUN}" in
+    yes|true|1) exit 1 ;;
+  esac
 fi
