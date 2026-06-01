@@ -3839,6 +3839,39 @@ after the byte volume is lower. Keep ACCMAP/cache opt-in and use the split rows
 to decide whether the next useful step is output-boundary residency or avoiding
 the serial mapping kernels entirely.
 
+## 2026-06-01 ACCMAP Output Present-Or-Copyout Follow-Up
+
+Commit `e475c75` changes the serial 3-D ACCMAP data region from unconditional
+`COPYOUT` to `PRESENT_OR_COPYOUT` for the GTOR/RTOG output arrays. This keeps
+the fallback semantics when no caller-owned device output exists, but avoids
+forcing an output boundary when a resident caller buffer can be used.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-presentout-spark-20260601-190535
+Terok: tests/profile/si64/runs/accmap-presentout-terok-20260601-190534
+```
+
+Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
+
+| System | `*_accmap_cache` | `*_hpsi_rtog_vpsi_internal_cache` | Energy delta |
+| --- | ---: | ---: | ---: |
+| Spark GB10 | 41.32 s / 7.05 GB | 42.12 s / 4.01 GB | 0.000000 |
+| Terok A40 | 33.58 s / 7.05 GB | 31.89 s / 4.01 GB | 0.000001 |
+
+Compared with the previous split/cache validation, the isolated cache case
+improves on Spark from 43.13 s to 41.32 s and is noise-neutral on Terok
+(33.48 s to 33.58 s). The full ACCMAP/HPSI/VPSI cache case improves slightly on
+both systems: Spark 42.35 s to 42.12 s, Terok 32.19 s to 31.89 s. The split
+transfer rows are unchanged because they are conservative caller-boundary
+accounting rows; runtime is the relevant evidence here.
+
+This is worth keeping because it is semantically narrower than a new residency
+mode and composes cleanly with existing cases, but it does not change the
+default recommendation: ACCMAP/cache still remains opt-in until Spark's
+mapping-kernel/runtime cost is reduced.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
