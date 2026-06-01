@@ -152,8 +152,12 @@ find_host_fftw() {
       echo "${dir}/libnvpl_fftw.so include=${include_path}"
       return 0
     fi
-    if [[ -f "${dir}/libfftw3.so" || -f "${dir}/libfftw3.dylib" ]]; then
-      echo "${dir}/libfftw3 include=${include_path}"
+    if [[ -f "${dir}/libfftw3.so" ]]; then
+      echo "${dir}/libfftw3.so include=${include_path}"
+      return 0
+    fi
+    if [[ -f "${dir}/libfftw3.dylib" ]]; then
+      echo "${dir}/libfftw3.dylib include=${include_path}"
       return 0
     fi
   done
