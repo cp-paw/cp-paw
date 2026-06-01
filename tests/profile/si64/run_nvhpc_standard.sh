@@ -283,5 +283,7 @@ log "ALL DONE root=${NVHPC_STANDARD_ROOT}"
 if [[ -f "${COMBINED}" ]]; then
   python3 "${HERE}/benchmark_markdown.py" "${COMBINED}" \
     > "${NVHPC_STANDARD_ROOT}/combined_benchmark.md" || true
+  python3 "${HERE}/benchmark_compare.py" "${COMBINED}" \
+    > "${NVHPC_STANDARD_ROOT}/combined_compare.md" || true
   log "combined=${COMBINED}"
 fi

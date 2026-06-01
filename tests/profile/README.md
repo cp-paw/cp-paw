@@ -524,7 +524,9 @@ compares the focused `gpu_resident*` paths on one GPU rank, including the
 opt-in Ortho-X workspace-residency diagnostic, plus one-rank CPU and eight-rank
 CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
 `EMPTY_BANDS`, `NSTEPS`,
-`GPU_RANKS` or `CPU_RANKS` for a targeted sweep.
+`GPU_RANKS` or `CPU_RANKS` for a targeted sweep. It writes both
+`combined_benchmark.md` and `combined_compare.md` so PR comments can include
+raw timings and the one-GPU versus CPU-resource speedup view.
 
 Set `RUN_GPU_ALL=yes` to include the all-library cases `gpu_all` and
 `gpu_all_off`. The default is `RUN_GPU_ALL=no` because the Spark Si64 matrix
