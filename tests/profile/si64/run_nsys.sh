@@ -259,6 +259,7 @@ case_env() {
     gpu_resident_stack_cufft) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_env) $(cublas_env)" ;;
     gpu_resident_stack_cufft_force) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_force_env) $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
+    gpu_resident_stack_serial3dfft_force_dedpro) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_accmap) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_addpro_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE=0 $(cublas_env)" ;;
     gpu_resident_addpro_hpsi_host) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ADDPRO_CACHE_HPSI=0 $(cublas_env)" ;;

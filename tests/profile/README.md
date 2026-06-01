@@ -495,6 +495,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_setup_psim_host` | Focused residency stack with only setup `PSIM` residency disabled via `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`. |
 | `gpu_resident_stack_cufft` / `gpu_resident_stack_cufft_force` | Focused residency stack plus native cuFFT enabled with the conservative threshold, or forced for all `LIB$FFTC8` calls. |
 | `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
+| `gpu_resident_stack_serial3dfft_force_dedpro` | Focused residency stack plus single-rank 3-D cuFFT and opt-in non-stress force `DEDPRO`/`WAVES_PROFORCE` device path. |
 | `gpu_resident_stack_serial3dfft_accmap` | Same as `gpu_resident_stack_serial3dfft`, plus device-side sparse/full-grid mapping via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
 | `gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum` | Full residency diagnostic that combines HPSI, OPSI, DENMAT energy, persistent `THIS%PROJ`, and off-site device-pack accumulation. |
 | `gpu_resident_projection_conservative` / `gpu_resident_overlap_conservative` / `gpu_resident_addproduct_conservative` / `gpu_resident_matmul_conservative` | Residency diagnostics with only one cuBLAS kernel category raised to the conservative threshold. |

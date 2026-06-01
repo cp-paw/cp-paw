@@ -3367,6 +3367,22 @@ Si64 step with 1024 empty bands. Wall time is modestly positive on Spark and
 neutral on Terok, so this stays opt-in rather than joining the default
 `CPPAW_GPU_RESIDENCY_STACK`.
 
+The Spark follow-up also checked the force path together with the single-rank
+3-D cuFFT diagnostic. Runs were sequential on the same GPU; parallel probe runs
+were ignored because they contended for the device.
+
+| Case | Empty bands | NSTEPS | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident_stack_serial3dfft` | 1024 | 1 | 11.17 s | 5.4859 GB | yes |
+| `gpu_resident_stack_serial3dfft_force_dedpro` | 1024 | 1 | 10.63 s | 5.4422 GB | yes |
+| `gpu_resident_stack_serial3dfft` | 1024 | 3 | 23.70 s | 15.1687 GB | check disabled |
+| `gpu_resident_stack_serial3dfft_force_dedpro` | 1024 | 3 | 23.38 s | 15.0375 GB | check disabled |
+
+Conclusion: the force DEDPRO device path remains a small opt-in diagnostic on
+its own, but it composes cleanly with the much stronger one-rank 3-D cuFFT path
+and saves the same force-transfer volume there. The harness case is
+`gpu_resident_stack_serial3dfft_force_dedpro`.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
