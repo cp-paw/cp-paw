@@ -812,7 +812,11 @@ cd tests/profile/si64
 It defaults to `EMPTY_BANDS_LIST="128 256 512"` and compares
 `cusolver`, `cusolver_generalized`, `cusolver_generalized_conservative`,
 `cusolver_off`, one-rank CPU/NVHPC and eight-rank CPU/NVHPC references. It
-writes both `combined_benchmark.md` and `combined_compare.md`.
+writes `combined_benchmark.md`, `combined_compare.md`,
+`combined_solver_rows.md`, `combined_transfer_rows.md`, and
+`combined_present_rows.md`. The solver-row report is sorted by seconds over
+`LAPACK*` and `CUSOLVER*` rows, so the focus run shows directly which
+eigensolver path was active and how much solver time remains.
 
 For reproducible comparisons, use the benchmark harness:
 
