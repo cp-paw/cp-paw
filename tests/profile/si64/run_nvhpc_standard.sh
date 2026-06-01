@@ -4,6 +4,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 TEST=${TEST:-si64_bands}
 ROOT=$(cd "${HERE}/../../.." && pwd)
+. "${HERE}/case_recommendations.sh"
 NVHPC_STANDARD_ROOT=${NVHPC_STANDARD_ROOT:-"${HERE}/runs/${TEST}-nvhpc-standard-$(date +%Y%m%d-%H%M%S)"}
 NSTEPS=${NSTEPS:-1}
 EMPTY_BANDS=${EMPTY_BANDS:-1024}
@@ -13,32 +14,34 @@ GPU_RANKS=${GPU_RANKS:-1}
 CPU_RANKS=${CPU_RANKS:-8}
 RUN_GPU_ALL=${RUN_GPU_ALL:-no}
 DRY_RUN=${DRY_RUN:-no}
-GPU_CASES=${GPU_CASES:-"gpu_resident gpu_resident_hpsi gpu_resident_hpsi_opsi gpu_resident_stack gpu_resident_orthox_off gpu_resident_addpro_host gpu_resident_pro_host gpu_resident_invbatch_off gpu_resident_no_cusolver"}
-CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
+if [[ -z "${GPU_CASES+x}" ]]; then
+  GPU_CASES=auto
+fi
+if [[ -z "${CPU_CASES+x}" ]]; then
+  CPU_CASES=auto
+fi
+ADD_GPU_FALLBACK=${ADD_GPU_FALLBACK:-yes}
 AUTO_BUILD_TARGETS=${AUTO_BUILD_TARGETS:-no}
 AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
-dedup_space_list() {
-  local item
-  local norm=""
-  for item in "$@"; do
-    case " ${norm} " in
-      *" ${item} "*) ;;
-      *) norm="${norm:+${norm} }${item}" ;;
-    esac
-  done
-  echo "${norm}"
-}
+GPU_CASES=$(cppaw_resolve_recommended_cases \
+  "${GPU_CASES}" recommended_gpu_cases "gpu_resident_stack gpu_resident_off")
+CPU_CASES=$(cppaw_resolve_recommended_cases \
+  "${CPU_CASES}" recommended_cpu_cases "cpu nvhpc_cpu")
 
-if [[ ${RUN_GPU_ALL} == yes || ${RUN_GPU_ALL} == true || ${RUN_GPU_ALL} == 1 ]]; then
-  GPU_CASES="${GPU_CASES} gpu_all gpu_all_off"
+if [[ -n ${GPU_CASES// } ]]; then
+  if [[ ${RUN_GPU_ALL} == yes || ${RUN_GPU_ALL} == true || ${RUN_GPU_ALL} == 1 ]]; then
+    GPU_CASES="${GPU_CASES} gpu_all gpu_all_off"
+  fi
+  if [[ ${ADD_GPU_FALLBACK} == yes || ${ADD_GPU_FALLBACK} == true || ${ADD_GPU_FALLBACK} == 1 ]]; then
+    GPU_CASES=$(cppaw_append_case "${GPU_CASES}" gpu_resident_off)
+  fi
 fi
 
-GPU_CASES="${GPU_CASES} gpu_off"
-GPU_CASES=$(dedup_space_list ${GPU_CASES})
-CPU_CASES=$(dedup_space_list ${CPU_CASES})
+GPU_CASES=$(cppaw_dedup_space_list ${GPU_CASES})
+CPU_CASES=$(cppaw_dedup_space_list ${CPU_CASES})
 
 REQUIRED_TARGETS=
 
@@ -236,6 +239,11 @@ FAILED_SUITES=0
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "${LOG}"
 }
+
+if cppaw_write_capabilities_file "${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"; then
+  log "gpu_capabilities=${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"
+fi
+log "selected_cases gpu='${GPU_CASES:-none}' cpu='${CPU_CASES:-none}'"
 
 append_suite() {
   local suite=$1

@@ -573,12 +573,14 @@ cd tests/profile/si64
 ./run_nvhpc_standard.sh
 ```
 
-It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1` and by default
-compares the focused `gpu_resident*` paths on one GPU rank, including the
-opt-in Ortho-X workspace-residency diagnostic, plus one-rank CPU and eight-rank
-CPU/NVHPC references. Override `GPU_CASES`, `CPU_CASES`,
-`EMPTY_BANDS`, `NSTEPS`,
-`GPU_RANKS` or `CPU_RANKS` for a targeted sweep. It writes both
+It defaults to `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=1` and resolves
+`GPU_CASES=auto`/`CPU_CASES=auto` from `paw_gpu_capabilities.sh`. On CUDA
+systems with cuBLAS, the one-rank GPU suite starts from the current residency
+stack recommendations and adds a same-binary `gpu_resident_off` fallback; on
+hosts without a visible CUDA GPU, the GPU suite is skipped. Override
+`GPU_CASES`, `CPU_CASES`, `EMPTY_BANDS`, `NSTEPS`, `GPU_RANKS` or `CPU_RANKS`
+for a targeted sweep; set `ADD_GPU_FALLBACK=no` if an explicit `GPU_CASES`
+selection should not be extended with `gpu_resident_off`. It writes both
 `combined_benchmark.md` and `combined_compare.md` so PR comments can include
 raw timings and the one-GPU versus CPU-resource speedup view. It also writes
 `combined_transfer_rows.md`/`.tsv` for the largest `ACC_COPY` and `ACC_UPDATE`
@@ -753,7 +755,9 @@ cd tests/profile/si64
 NSTEPS=1 ./run_gpu_exploration.sh
 ```
 
-The exploration run defaults to the current residency stack, a same-binary
+The exploration run also defaults to `GPU_CASES=auto`: it combines the
+capability helper's routine GPU recommendations with its diagnostic
+recommendations, typically the current residency stack, a same-binary
 residency-off fallback, threshold-gated cuFFT, one-rank serial 3-D cuFFT, the
 force-DEDPRO diagnostic, and the cached ACCMAP diagnostic. It writes the same
 combined benchmark, comparison, transfer-row, and present-row reports as the
@@ -1010,6 +1014,9 @@ routine GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics
 are only listed when `libcufft.so` is found. Future-candidate libraries such as
 cuBLASLt, cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning
 but are not linked into CP-PAW unless a concrete code path uses them.
+The standard and exploration wrappers consume these values when `GPU_CASES=auto`
+or `CPU_CASES=auto`; set `CPPAW_GPU_CAPABILITIES_FILE` to replay a captured
+capability scan.
 
 For an active CUDA-aware MPI smoke test, use:
 

@@ -2,6 +2,8 @@
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
+ROOT=$(cd "${HERE}/../../.." && pwd)
+. "${HERE}/case_recommendations.sh"
 TEST=${TEST:-si64_bands}
 GPU_EXPLORATION_ROOT=${GPU_EXPLORATION_ROOT:-"${HERE}/runs/${TEST}-gpu-exploration-$(date +%Y%m%d-%H%M%S)"}
 NSTEPS=${NSTEPS:-1}
@@ -9,8 +11,13 @@ REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-7200}
 EMPTY_BANDS=${EMPTY_BANDS:-128}
 DRY_RUN=${DRY_RUN:-no}
-GPU_CASES=${GPU_CASES:-"gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_force_all"}
-CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
+DEFAULT_GPU_EXPLORATION_CASES="gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_resident_stack_force_dedpro gpu_resident_nosync gpu_force_all"
+if [[ -z "${GPU_CASES+x}" ]]; then
+  GPU_CASES=auto
+fi
+if [[ -z "${CPU_CASES+x}" ]]; then
+  CPU_CASES=auto
+fi
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
@@ -27,6 +34,18 @@ FAILED_SUITES=0
 log() {
   printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "${LOG}"
 }
+
+if cppaw_write_capabilities_file "${GPU_EXPLORATION_ROOT}/gpu_capabilities.txt"; then
+  log "gpu_capabilities=${GPU_EXPLORATION_ROOT}/gpu_capabilities.txt"
+fi
+
+GPU_CASES=$(cppaw_resolve_recommended_gpu_exploration_cases \
+  "${GPU_CASES}" "${DEFAULT_GPU_EXPLORATION_CASES}")
+CPU_CASES=$(cppaw_resolve_recommended_cases \
+  "${CPU_CASES}" recommended_cpu_cases "cpu nvhpc_cpu")
+GPU_CASES=$(cppaw_dedup_space_list ${GPU_CASES})
+CPU_CASES=$(cppaw_dedup_space_list ${CPU_CASES})
+log "selected_cases gpu='${GPU_CASES:-none}' cpu='${CPU_CASES:-none}'"
 
 require_cases_for_suite() {
   case "${DRY_RUN}" in
@@ -78,11 +97,6 @@ run_suite() {
   append_suite "${suite}" "${root}/benchmark.tsv"
   SUITE_ROOTS+=("${root}")
 }
-
-if [[ -x "${HERE}/../../../src/Tools/Scripts/paw_gpu_capabilities.sh" ]]; then
-  "${HERE}/../../../src/Tools/Scripts/paw_gpu_capabilities.sh" \
-    > "${GPU_EXPLORATION_ROOT}/gpu_capabilities.txt" 2>&1 || true
-fi
 
 run_suite "one_rank_gpu" 1 "${GPU_CASES}"
 run_suite "one_rank_cpu" 1 "${CPU_CASES}"

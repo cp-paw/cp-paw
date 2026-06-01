@@ -12,6 +12,7 @@ bash -n src/Buildtools/paw_build.sh
 bash -n src/Buildtools/paw_fcflags.sh
 bash -n src/Buildtools/paw_srclist.sh
 bash -n tests/profile/si64/run_benchmark.sh
+bash -n tests/profile/si64/case_recommendations.sh
 bash -n tests/profile/si64/run_cusolver_focus.sh
 bash -n tests/profile/si64/run_followup.sh
 bash -n tests/profile/si64/run_gap_profile_night.sh
@@ -51,6 +52,13 @@ grep -q "^recommended_gpu_diagnostic_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_resource_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_standard_command=cd tests/profile/si64" \
   "${tmpdir}/gpu_capabilities.txt"
+
+cat > "${tmpdir}/fake_gpu_capabilities.txt" <<'EOF'
+recommended_cpu_cases=cpu nvhpc_cpu
+recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft
+recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync
+recommended_resource_cases=cpu nvhpc_cpu gpu_resident_stack
+EOF
 
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
@@ -153,6 +161,38 @@ fi
 
 set +e
 DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_gpu_capabilities.txt" \
+  NVHPC_STANDARD_ROOT="${tmpdir}/standard-auto-dry-run" \
+  GPU_CASES=auto \
+  CPU_CASES=auto \
+  tests/profile/si64/run_nvhpc_standard.sh \
+    > "${tmpdir}/standard-auto-dry-run.out" 2>&1
+standard_auto_dry_run_status=$?
+set -e
+grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft' cpu='cpu nvhpc_cpu'" \
+  "${tmpdir}/standard-auto-dry-run/nvhpc_standard.log"
+grep -q "^recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft" \
+  "${tmpdir}/standard-auto-dry-run/gpu_capabilities.txt"
+grep -q "case=gpu_resident_stack" \
+  "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
+grep -q "case=gpu_resident_off" \
+  "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
+grep -q "case=gpu_resident_stack_cufft" \
+  "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt"
+grep -q "case=cpu" "${tmpdir}/standard-auto-dry-run/cpu_1rank/metadata.txt"
+grep -q "case=nvhpc_cpu" \
+  "${tmpdir}/standard-auto-dry-run/cpu_8rank_ref/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt" \
+    || grep -q "^missing$" "${tmpdir}/standard-auto-dry-run/cpu_1rank/metadata.txt" \
+    || grep -q "^missing$" "${tmpdir}/standard-auto-dry-run/cpu_8rank_ref/metadata.txt"; then
+  test "${standard_auto_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/standard-auto-dry-run/nvhpc_standard.log"
+else
+  test "${standard_auto_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
   GPU_LIBRARY_MATRIX_ROOT="${tmpdir}/matrix-dry-run" \
   GPU_CASES="gpu_resident_stack" \
   CPU_CASES="" \
@@ -191,6 +231,34 @@ if grep -q "^missing$" "${tmpdir}/exploration-dry-run/one_rank_gpu/metadata.txt"
   grep -q "FAILED suites=" "${tmpdir}/exploration-dry-run/gpu_exploration.log"
 else
   test "${exploration_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_gpu_capabilities.txt" \
+  GPU_EXPLORATION_ROOT="${tmpdir}/exploration-auto-dry-run" \
+  GPU_CASES=auto \
+  CPU_CASES="" \
+  tests/profile/si64/run_gpu_exploration.sh \
+    > "${tmpdir}/exploration-auto-dry-run.out" 2>&1
+exploration_auto_dry_run_status=$?
+set -e
+grep -q "selected_cases gpu='gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft gpu_resident_stack_force_dedpro gpu_resident_nosync' cpu='none'" \
+  "${tmpdir}/exploration-auto-dry-run/gpu_exploration.log"
+grep -q "case=gpu_resident_stack_cufft" \
+  "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
+grep -q "case=gpu_resident_stack_force_dedpro" \
+  "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
+grep -q "case=gpu_resident_nosync" \
+  "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"
+grep -q "SKIP  suite=one_rank_cpu empty case list" \
+  "${tmpdir}/exploration-auto-dry-run/gpu_exploration.log"
+if grep -q "^missing$" \
+    "${tmpdir}/exploration-auto-dry-run/one_rank_gpu/metadata.txt"; then
+  test "${exploration_auto_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/exploration-auto-dry-run/gpu_exploration.log"
+else
+  test "${exploration_auto_dry_run_status}" -eq 0
 fi
 
 set +e
