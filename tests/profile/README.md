@@ -215,7 +215,12 @@ host-expansion/addproduct path; the benchmark case is
 `gpu_resident_addpro_host`. The narrower `CPPAW_GPU_ADDPRO_CACHE_HPSI=0` and
 `CPPAW_GPU_ADDPRO_CACHE_OPSI=0` switches isolate the Hamiltonian and overlap
 wavefunction `WAVES_ADDPRO` contexts without disabling the shared projection
-cache. The orthogonalization overlap
+cache. Set `CPPAW_GPU_PROJECTION_STACK=1` and `CPPAW_GPU_ADDPRO_STACK=1` to
+replace eligible uniform-projector `WAVES_PROJECTIONS` and cached
+`WAVES_ADDPRO` atom loops with one stacked cuBLAS GEMM per call; mixed projector
+block sizes fall back to the atomwise path. The benchmark case is
+`gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack`.
+The orthogonalization overlap
 section keeps `PSIM`/`OPSI` resident across the projection and pseudo-overlap
 calls, and the same mode routes eligible `WAVES_OVERLAP`
 scalarproducts through a present-input cuBLAS wrapper; for inversion-symmetric
@@ -503,6 +508,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_density_1cov_addoproj` | Current density-resident stack plus batched one-center overlap and opt-in `WAVES_ADDOPROJ` cuBLAS slice GEMMs. |
 | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram` | Current density-resident stack plus ADDOPROJ slice GEMMs and opt-in large-matrix Gram-Cholesky through cuSOLVER `ZPOTRF` plus cuBLAS `ZTRSM`. |
 | `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj` | Same combined case plus force-side resident `WAVES_ADDOPROJ` cuBLAS for `WAVES_DEDPROJ`, enabled through `CPPAW_GPU_FORCE_ADDOPROJ=1`. |
+| `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack` | Same combined case plus opt-in stacked projection and cached `WAVES_ADDPRO` GEMMs via `CPPAW_GPU_PROJECTION_STACK=1` and `CPPAW_GPU_ADDPRO_STACK=1`. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
@@ -860,6 +866,14 @@ be overridden by kernel category:
   by default and override only the `HPSI` or `OPSI` `WAVES_ADDPRO` context. The
   harness cases are `gpu_resident_addpro_hpsi_host`,
   `gpu_resident_addpro_opsi_host`, and `gpu_resident_opsi_addpro_host`.
+- `CPPAW_GPU_PROJECTION_STACK`: disabled by default. Set to `1` to use one
+  stacked `PRO^H*PSI` cuBLAS GEMM for uniform-projector `WAVES_PROJECTIONS`
+  calls; the compatibility alias is `CPPAW_CUBLAS_ACC_PROJECTION_STACK`.
+- `CPPAW_GPU_ADDPRO_STACK`: disabled by default. Set to `1` to use one stacked
+  cached-`PRO` cuBLAS GEMM for uniform-projector `WAVES_ADDPRO` calls; the
+  compatibility alias is `CPPAW_CUBLAS_ACC_ADDPRO_STACK`. The combined harness
+  case is
+  `gpu_resident_stack_density_1cov_addoproj_cusolver_gram_force_addoproj_projaddpro_stack`.
 - `CPPAW_GPU_FORCE_PSI_RESIDENCY`: keep enabled by default in residency-profile
   builds so `WAVES$FORCE` reuses `THIS%PSI0` across the per-atom
   `WAVES_DEDPRO` MATMUL calls. When `CPPAW_GPU_HPSI_RESIDENCY=1` is also set,

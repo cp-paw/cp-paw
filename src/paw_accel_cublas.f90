@@ -28,7 +28,9 @@
 #IF DEFINED(CPPVAR_GPU_RESIDENCY_PROFILE)
       LOGICAL(4)         :: RESIDENCY_ENABLED=.TRUE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.TRUE.
+      LOGICAL(4)         :: PROJECTION_STACK_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.TRUE.
+      LOGICAL(4)         :: ADDPRO_STACK_ENABLED=.FALSE.
       LOGICAL(4)         :: PROJ_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.TRUE.
       LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.TRUE.
@@ -58,7 +60,9 @@
 #ELSE
       LOGICAL(4)         :: RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: PRO_EXPANSION_ENABLED=.FALSE.
+      LOGICAL(4)         :: PROJECTION_STACK_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_ENABLED=.FALSE.
+      LOGICAL(4)         :: ADDPRO_STACK_ENABLED=.FALSE.
       LOGICAL(4)         :: PROJ_RESIDENCY_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_HPSI_ENABLED=.FALSE.
       LOGICAL(4)         :: ADDPRO_CACHE_OPSI_ENABLED=.FALSE.
@@ -572,6 +576,18 @@
           END SELECT
         END IF
       END IF
+      CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_GPU_PROJECTION_STACK' &
+     &    ,PROJECTION_STACK_ENABLED,FOUND)
+      IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_PROJECTION_STACK' &
+     &    ,PROJECTION_STACK_ENABLED,FOUND)
+      CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_GPU_ADDPRO_STACK' &
+     &    ,ADDPRO_STACK_ENABLED,FOUND)
+      IF(.NOT.FOUND) CALL CPPAW_CUBLAS_ACC_READ_LOGICAL_ENV &
+     &    ('CPPAW_CUBLAS_ACC_ADDPRO_STACK' &
+     &    ,ADDPRO_STACK_ENABLED,FOUND)
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_GPU_ADDPRO_CACHE',VALUE &
      &                             ,STATUS=STATUS)
       IF(STATUS.NE.0) THEN
@@ -923,6 +939,17 @@
       END FUNCTION CPPAW_CUBLAS_ACC_PRO_EXPANSION_ENABLED
 !
 !     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_PROJECTION_STACK_ENABLED()
+      IMPLICIT NONE
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      CPPAW_CUBLAS_ACC_PROJECTION_STACK_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED &
+     &     .AND.PROJECTION_STACK_ENABLED
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_PROJECTION_STACK_ENABLED
+!
+!     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_ENABLED()
       IMPLICIT NONE
 !     **************************************************************************
@@ -952,6 +979,27 @@
      &     .AND.ADDPRO_CACHE_ENABLED.AND.TCONTEXT
       RETURN
       END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_CACHE_CONTEXT_ENABLED
+!
+!     ..........................................................................
+      LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_STACK_ENABLED &
+     &                                  (PROFILE_ID)
+      IMPLICIT NONE
+      CHARACTER(*),INTENT(IN) :: PROFILE_ID
+      LOGICAL(4)              :: TCONTEXT
+!     **************************************************************************
+      CALL CPPAW_CUBLAS_ACC_INITCONFIG
+      TCONTEXT=.TRUE.
+      IF(INDEX(TRIM(PROFILE_ID),'HPSI').GT.0) THEN
+        TCONTEXT=ADDPRO_CACHE_HPSI_ENABLED
+      ELSE IF(INDEX(TRIM(PROFILE_ID),'OPSI').GT.0) THEN
+        TCONTEXT=ADDPRO_CACHE_OPSI_ENABLED
+      END IF
+      CPPAW_CUBLAS_ACC_ADDPRO_STACK_ENABLED=ENABLED &
+     &     .AND.RESIDENCY_ENABLED.AND.PRO_EXPANSION_ENABLED &
+     &     .AND.ADDPRO_CACHE_ENABLED.AND.ADDPRO_STACK_ENABLED &
+     &     .AND.TCONTEXT
+      RETURN
+      END FUNCTION CPPAW_CUBLAS_ACC_ADDPRO_STACK_ENABLED
 !
 !     ..........................................................................
       LOGICAL(4) FUNCTION CPPAW_CUBLAS_ACC_PROJ_RESIDENCY_ENABLED()
@@ -1838,6 +1886,169 @@
 #ENDIF
       RETURN
       END SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_STACK_PRESENT(NGL,NDIM,NB &
+     &                         ,NPRO,LMNXX,NAT,PRO,PSI,GWEIGHT,WORK &
+     &                         ,TSUPER,NGAMMA,PROPSI)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NB
+      INTEGER(4),INTENT(IN)    :: NPRO
+      INTEGER(4),INTENT(IN)    :: LMNXX
+      INTEGER(4),INTENT(IN)    :: NAT
+      COMPLEX(8),INTENT(IN)    :: PRO(NGL,LMNXX,NAT)
+      COMPLEX(8),INTENT(IN)    :: PSI(NGL,NDIM,NB)
+      REAL(8)   ,INTENT(IN)    :: GWEIGHT
+      LOGICAL(4),INTENT(IN)    :: TSUPER
+      INTEGER(4),INTENT(IN)    :: NGAMMA
+      COMPLEX(8),INTENT(INOUT) :: WORK(NPRO,NDIM*NB)
+      COMPLEX(8),INTENT(OUT)   :: PROPSI(NDIM,NB,NPRO)
+      COMPLEX(8)               :: ONE
+      COMPLEX(8)               :: ZERO
+      COMPLEX(8)               :: CVAL
+      INTEGER(4)               :: ISTAT
+      INTEGER(4)               :: IB
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: IP
+      INTEGER(4)               :: IAT
+      INTEGER(4)               :: LMN
+      INTEGER(4)               :: ICOL
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+      REAL(8)                  :: ACCEL_FLOPS
+      REAL(8)                  :: ACCEL_BYTES
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+      ZERO=(0.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &    ('ACC_PRESENT_PROJ_PRO_STACK','ACC_COPY_PROJ_PRO_STACK_IN' &
+     &    ,NGL,LMNXX,NAT,PRO)
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(PRO(1:NGL,1:LMNXX,1:NAT) &
+!$ACC&                       ,PSI(1:NGL,1:NDIM,1:NB)) &
+!$ACC& PRESENT(WORK(1:NPRO,1:NDIM*NB),PROPSI(1:NDIM,1:NB,1:NPRO))
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PRO,PSI,WORK)
+      ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_C,CUBLAS_OP_N,NPRO,NDIM*NB &
+     &                 ,NGL,ONE,PRO,NGL,PSI,NGL,ZERO,WORK,NPRO)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_PROJECTION_STACK_PRESENT')
+      END IF
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(ICOL,CVAL,IAT,LMN) &
+!$ACC& PRESENT(WORK,PROPSI,PRO,PSI)
+      DO IB=1,NB
+        DO IDIM=1,NDIM
+          DO IP=1,NPRO
+            ICOL=IDIM+(IB-1)*NDIM
+            CVAL=WORK(IP,ICOL)
+            IF(TSUPER) THEN
+              CVAL=2.D0*CVAL
+              IF(NGAMMA.NE.0) THEN
+                IAT=(IP-1)/LMNXX+1
+                LMN=IP-(IAT-1)*LMNXX
+                CVAL=CVAL-CONJG(PRO(NGAMMA,LMN,IAT)) &
+     &                    *PSI(NGAMMA,IDIM,IB)
+              END IF
+            END IF
+            PROPSI(IDIM,IB,IP)=GWEIGHT*CVAL
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_FLOPS=8.D0*REAL(NGL,KIND=8)*REAL(NPRO,KIND=8) &
+     &           *REAL(NDIM*NB,KIND=8)
+      ACCEL_BYTES=16.D0*(REAL(NGL,KIND=8)*REAL(NPRO,KIND=8) &
+     &                  +REAL(NPRO,KIND=8)*REAL(NDIM*NB,KIND=8))
+      CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_PROJ_STACK' &
+     &     ,INT(NGL,KIND=8),INT(NPRO,KIND=8),INT(NDIM*NB,KIND=8) &
+     &     ,0_8,ACCEL_FLOPS,ACCEL_BYTES,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_PROJECTION_STACK_PRESENT
+!
+!     ..........................................................................
+      SUBROUTINE CPPAW_CUBLAS_ACC_ADDPRO_STACK_PRESENT(NGL,NDIM,NB,NPRO &
+     &                         ,LMNXX,NAT,PRO,PROPSI,WORK,PSI)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NB
+      INTEGER(4),INTENT(IN)    :: NPRO
+      INTEGER(4),INTENT(IN)    :: LMNXX
+      INTEGER(4),INTENT(IN)    :: NAT
+      COMPLEX(8),INTENT(IN)    :: PRO(NGL,LMNXX,NAT)
+      COMPLEX(8),INTENT(IN)    :: PROPSI(NDIM,NB,NPRO)
+      COMPLEX(8),INTENT(INOUT) :: WORK(NPRO,NDIM*NB)
+      COMPLEX(8),INTENT(INOUT) :: PSI(NGL,NDIM,NB)
+      COMPLEX(8)               :: ONE
+      INTEGER(4)               :: ISTAT
+      INTEGER(4)               :: IB
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: IP
+      INTEGER(4)               :: ICOL
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                  :: ACCEL_T0
+      REAL(8)                  :: ACCEL_T1
+      REAL(8)                  :: ACCEL_FLOPS
+      REAL(8)                  :: ACCEL_BYTES
+#ENDIF
+!     **************************************************************************
+      ONE=(1.D0,0.D0)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+      CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &    ('ACC_PRESENT_ADDPRO_PRO_STACK','ACC_COPY_ADDPRO_PRO_STACK_IN' &
+     &    ,NGL,LMNXX,NAT,PRO)
+#ENDIF
+!$ACC DATA PRESENT(PRO(1:NGL,1:LMNXX,1:NAT) &
+!$ACC&          ,PROPSI(1:NDIM,1:NB,1:NPRO) &
+!$ACC&          ,WORK(1:NPRO,1:NDIM*NB),PSI(1:NGL,1:NDIM,1:NB))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRIVATE(ICOL) PRESENT(PROPSI,WORK)
+      DO IB=1,NB
+        DO IDIM=1,NDIM
+          DO IP=1,NPRO
+            ICOL=IDIM+(IB-1)*NDIM
+            WORK(IP,ICOL)=PROPSI(IDIM,IB,IP)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+      CALL CPPAW_CUBLAS_ACC_ENSURE
+!$ACC HOST_DATA USE_DEVICE(PRO,WORK,PSI)
+      ISTAT=CUBLASZGEMM(HANDLE,CUBLAS_OP_N,CUBLAS_OP_N,NGL,NDIM*NB &
+     &                 ,NPRO,ONE,PRO,NGL,WORK,NPRO,ONE,PSI,NGL)
+!$ACC END HOST_DATA
+      IF(ISTAT.NE.0) THEN
+        CALL ERROR$MSG('CUBLASZGEMM FAILED')
+        CALL ERROR$I4VAL('STATUS',ISTAT)
+        CALL ERROR$STOP('CPPAW_CUBLAS_ACC_ADDPRO_STACK_PRESENT')
+      END IF
+      CALL CPPAW_CUBLAS_ACC_FINISH(ISTAT)
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      ACCEL_FLOPS=8.D0*REAL(NGL,KIND=8)*REAL(NPRO,KIND=8) &
+     &           *REAL(NDIM*NB,KIND=8)
+      ACCEL_BYTES=16.D0*REAL(NPRO,KIND=8)*REAL(NDIM*NB,KIND=8)
+      CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_ADDPRO_STACK' &
+     &     ,INT(NGL,KIND=8),INT(NPRO,KIND=8),INT(NDIM*NB,KIND=8) &
+     &     ,0_8,ACCEL_FLOPS,ACCEL_BYTES,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      RETURN
+      END SUBROUTINE CPPAW_CUBLAS_ACC_ADDPRO_STACK_PRESENT
 !
 !     ..........................................................................
       SUBROUTINE CPPAW_CUBLAS_ACC_SCALARPRODUCT_COPY(TID,LEN,N1,PSI1 &

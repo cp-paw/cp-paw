@@ -4352,6 +4352,51 @@ fix completed in 4.71 s with the standard Si64 energy check; its Ortho-X rows
 show 13 iterations and corrected cuBLAS rates of about 350-380 GF/s for the
 residual, transform, and backtransform blocks.
 
+## Projection/AddPRO Stack GEMMs
+
+The next projector-residency follow-up adds opt-in stacked GEMMs for uniform
+projector blocks:
+
+- `CPPAW_GPU_PROJECTION_STACK=1` replaces eligible atomwise
+  `WAVES_PROJECTIONS` calls by one `PROSTACK^H*PSI` cuBLAS GEMM.
+- `CPPAW_GPU_ADDPRO_STACK=1` replaces eligible cached `WAVES_ADDPRO` atom loops
+  by one `PROSTACK*PROPSISTACK` cuBLAS GEMM.
+- Mixed projector block sizes fall back to the existing atomwise cache path.
+
+Spark GB10 runs, `TEST=si64`, `NSTEPS=1`, `RANKS=1`:
+
+| Case | Empty bands | Wall time | Energy check | Notes |
+| --- | ---: | ---: | --- | --- |
+| No stack control | 512 | 4.85 s | yes | Same fresh build, no new stack switches. |
+| Projection stack | 512 | 4.46 s | yes | `CUBLAS_ZGEMM_PROJ_STACK` active, projection RES row absent. |
+| Projection + AddPRO stack | 512 | 4.43 s | yes | Adds `CUBLAS_ZGEMM_ADDPRO_STACK`; smoke correctness passed. |
+| No stack control | 4096 | 110.97 s | yes | Direct control after the combined-stack build. |
+| Projection stack | 4096 | 110.57 s | yes | Projection kernel time dropped, wall time mostly Ortho-X limited. |
+| Projection + AddPRO stack | 4096 | 108.86 s | yes | Best measured 4096 full-stack result in this sequence. |
+
+Important profile rows for the 4096 direct comparison:
+
+| Row | No stack | Projection + AddPRO stack |
+| --- | ---: | ---: |
+| `CUBLAS_ZGEMM_PROJ_RES` / `CUBLAS_ZGEMM_PROJ_STACK` | 4.1137 s | 3.0177 s |
+| `CUBLAS_ZGEMM_ADDPRO_CACHE` / `CUBLAS_ZGEMM_ADDPRO_STACK` | 1.3310 s | 0.8736 s |
+| `PAW_ADDPRO_TOTAL` | 1.3341 s | 0.8748 s |
+| `PAW_ETOT_SETUP_PROJECTIONS` | 0.6204 s | 0.4464 s |
+| `PAW_ORTHO_PROJ` | 1.2301 s | 0.8808 s |
+
+Run directories:
+
+```
+tests/profile/si64/runs/proj-addpro-stack-smoke512-20260601
+tests/profile/si64/runs/proj-addpro-stack-4096-20260601
+tests/profile/si64/runs/proj-addpro-stack-baseline-4096-20260601
+```
+
+Conclusion: unlike the Gram host-update and Ortho-X DSYMM experiments, this is
+correct and measurable. The absolute 4096 gain is still capped by the dominant
+Ortho-X DGEMMs, so the switches remain opt-in diagnostics rather than default
+promotions.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
