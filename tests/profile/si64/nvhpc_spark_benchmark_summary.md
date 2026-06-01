@@ -67,6 +67,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `dual-switch-*-20260601-1249/1250/1252` | Bidirectional PSIM/PSI0 switch residency | `gpu_resident_stack` keeps the old `PSI0` as resident `PSIM` across `WAVES$SWITCH`; `ACC_COPY_PROP_PSIM_IN` drops from 3 calls to 1 at 1024/3 | - | 4-rank smoke OK | Removes 0.2421 GB of repeated propagation input traffic in the 1024/3 smoke, while the 1024/1 and 512/1x4 smokes remain energy-valid. |
 | `serial3dfft-accmap-final-*-20260601-*` | Device-side sparse/full-grid mapping for single-rank 3D cuFFT | Terok/A40: `gpu_resident_stack_serial3dfft_accmap` 10.62 s at NSTEPS=1 and 25.55 s at NSTEPS=3 | Spark/GB10: regular `gpu_resident_stack_serial3dfft` 11.02 s at NSTEPS=1 and 23.44 s at NSTEPS=3 | - | Adds an explicit diagnostic case for device-side mapping. It helps on A40 but hurts on GB10, so it remains opt-in via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
 | `setup-psim-isolated-*-20260601-*` | Setup `PSIM` residency in the focused stack | Spark/GB10: `gpu_resident_stack` 27.96 s at NSTEPS=3; Terok/A40: 29.54 s at NSTEPS=3 | Ablation with `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`: 28.23 s on Spark and 39.17 s on Terok at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Keeps initial setup `PSIM` resident into Gram-Schmidt/propagation; removes one 0.1210 GB propagation copy without broadening non-phase PSIM diagnostics. |
+| `accmap-present-nstep*-spark/terok` | Present-input reuse in the serial 3D cuFFT ACCMAP path | Transfer estimate drops from 4.0171 to 3.6540 GB at NSTEPS=1 and from 10.5201 to 9.6729 GB at NSTEPS=3 | Wall time remains mixed: Terok NSTEPS=3 improves to 24.71 s, Spark NSTEPS=3 is 41.99 s | NSTEPS=1 energy-valid on both systems | Changes the ACCMAP data region to `PRESENT_OR_COPYIN` for the FFT input vector. This reduces redundant host-to-device traffic but does not make ACCMAP a Spark default. |
 
 The latest full-matrix run lives at:
 
@@ -176,6 +177,29 @@ against the original serial-3D cuFFT wrapper, but Spark GB10 spends much more
 time in the mapping kernels. Terok A40 benefits clearly. The path therefore
 stays a separate diagnostic case rather than replacing
 `gpu_resident_stack_serial3dfft`.
+
+A later follow-up lets the ACCMAP path reuse a resident input vector instead of
+forcing a fresh `COPYIN` for every `PLANEWAVE$FFT` call. The output side is still
+left as `COPYOUT` for conservative host visibility when no outer device mapping
+exists. On the same 1024-empty-band Si64 probe, the profile-estimated transfer
+volume drops from 4.0171 GB to 3.6540 GB at `NSTEPS=1` and from 10.5201 GB to
+9.6729 GB at `NSTEPS=3`. The wall-time outcome remains mixed:
+
+| System | Case | NSTEPS | Wall time | FFT time | VPSI time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Spark GB10 | `gpu_resident_stack_serial3dfft_accmap` with present input | 1 | 16.79 s | 6.2755 s | 1.3117 s | 3.6540 GB | yes |
+| Spark GB10 | `gpu_resident_stack_serial3dfft_accmap` with present input | 3 | 41.99 s | 19.3489 s | 3.7334 s | 9.6729 GB | n/a |
+| Terok A40 | `gpu_resident_stack_serial3dfft_accmap` with present input | 1 | 11.49 s | 1.5243 s | 0.9400 s | 3.6540 GB | yes |
+| Terok A40 | `gpu_resident_stack_serial3dfft_accmap` with present input | 3 | 24.71 s | 2.7637 s | 1.7184 s | 9.6729 GB | n/a |
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-present-nstep1-spark
+Spark: tests/profile/si64/runs/accmap-present-nstep3-spark
+Terok: tests/profile/si64/runs/accmap-present-nstep1-terok
+Terok: tests/profile/si64/runs/accmap-present-nstep3-terok
+```
 
 ## 2026-06-01 Setup PSIM Residency
 
