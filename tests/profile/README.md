@@ -497,6 +497,8 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_addpro_host` | Residency diagnostic with the GPU projection cache kept enabled but its `WAVES_ADDPRO` reuse disabled via `CPPAW_GPU_ADDPRO_CACHE=0`. |
 | `gpu_resident_forcepsi_host` | Residency diagnostic with force-loop `THIS%PSI0` residency disabled via `CPPAW_GPU_FORCE_PSI_RESIDENCY=0`. |
 | `gpu_resident_1coverlap` / `gpu_resident_1coverlap_host` | Residency diagnostics that force or disable the one-center overlap cuBLAS path via `CPPAW_GPU_1COVERLAP`. |
+| `gpu_resident_1coverlap_batch` | Opt-in diagnostic that sets `CPPAW_GPU_1COVERLAP_BATCH=1` and computes the three orthogonalization one-center overlap matrices through one batched cuBLAS packing path. |
+| `gpu_resident_stack_density_1cov_batch` | Current density-resident stack case plus `CPPAW_GPU_1COVERLAP_BATCH=1`, used to compare the batch path against the best current Spark/Terok stack. |
 | `gpu_resident_orthoconst` | Residency diagnostic with opt-in `WAVES_ORTHO_X` constant-input residency enabled via `CPPAW_GPU_ORTHO_CONST_RESIDENCY=1`. |
 | `gpu_resident_orthox` | Explicit residency default with the real `WAVES_ORTHO_X` iteration workspace kept on the GPU via `CPPAW_GPU_ORTHO_X_RESIDENCY=1`. |
 | `gpu_resident_orthox_off` | Residency diagnostic that disables the `WAVES_ORTHO_X` iteration workspace residency via `CPPAW_GPU_ORTHO_X_RESIDENCY=0`. |
@@ -867,6 +869,9 @@ be overridden by kernel category:
 - `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so
   `WAVES_1COVERLAP` uses the GPU-pack/cuBLAS contraction path; set to `0` for
   the host contraction path.
+- `CPPAW_GPU_1COVERLAP_BATCH`: disabled by default. Set to `1` to replace the
+  three orthogonalization `WAVES_1COVERLAP` calls with one combined cuBLAS path
+  that reuses folded `PROJ`/`OPROJ` work arrays.
 - `CPPAW_GPU_ORTHO_CONST_RESIDENCY`: disabled by default. Set to `1` to let
   `WAVES_ORTHO_X` reuse constant `CHICHI` and `U` inputs across repeated real
   MATMUL calls while keeping temporary outputs on the host-synchronized path.

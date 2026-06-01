@@ -3960,6 +3960,49 @@ systems. This is the strongest current evidence that broader caller-side
 residency around `PLANEWAVE$FFT` is more valuable than tuning the isolated
 ACCMAP kernels alone, especially on Spark.
 
+## 2026-06-01 Batched Orthogonalization 1COVERLAP
+
+The opt-in `CPPAW_GPU_1COVERLAP_BATCH=1` diagnostic adds a combined cuBLAS path
+for the three `WAVES_1COVERLAP` calls inside `WAVES$ORTHOGONALIZE`: `PROJ`,
+`OPROJ`, `DO*PROJ`, and `DO*OPROJ` are packed once, then the three overlap
+matrices are formed in one device data region. The default remains unchanged.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/1cov-batch-spark-repeat-20260601-200631
+Spark 4-rank smoke: tests/profile/si64/runs/1cov-batch-spark-4r-20260601-201111
+Terok: tests/profile/si64/runs/1cov-batch-terok-20260601-201409
+```
+
+The large one-rank comparisons used `EMPTY_BANDS=2048`, `NSTEPS=1`.
+
+| System | Case | Wall time | Transfer estimate | Projector copy estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | --- |
+| Spark GB10 median of 3 | density stack | 32.58 s | 2.7218 GB | 0.3476 GB | yes |
+| Spark GB10 median of 3 | density stack + 1C batch | 32.09 s | 2.6494 GB | 0.2752 GB | yes |
+| Terok A40 single run | density stack | 31.14 s | 2.7218 GB | 0.3476 GB | yes |
+| Terok A40 single run | density stack + 1C batch | 30.93 s | 2.6494 GB | 0.2752 GB | yes |
+
+The parallel smoke used `EMPTY_BANDS=512`, `NSTEPS=1`, and four MPI ranks on
+Spark. It compares the focused one-center overlap diagnostic without density
+residency, because the density prototype intentionally requires the serial
+ACCMAP GTOR path.
+
+| Case | Ranks | Wall time | Transfer estimate | Projector copy estimate | Energy check |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `gpu_resident_1coverlap` | 4 | 9.44 s | 1.8694 GB | 0.2002 GB | yes |
+| `gpu_resident_1coverlap_batch` | 4 | 9.31 s | 1.8482 GB | 0.1789 GB | yes |
+
+Representative Spark profile rows show that the orthogonalization part moves
+from three legacy `WAVES_1COVERLAP` calls to one batch row, while the two
+Gram-Schmidt calls still use the existing helper. In the single-run profile,
+`PAW_ORTHO_1COVERLAP` is essentially neutral (`0.2523 s` baseline vs
+`0.2451 s` batch), and the real value is cleaner accounting plus a modest
+projector-transfer reduction. Keep the switch opt-in for now; it is correct and
+slightly favorable in these runs, but the total wall-time gain is well within
+run-to-run noise.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
