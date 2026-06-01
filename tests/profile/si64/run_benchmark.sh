@@ -14,6 +14,7 @@ RANKS=${RANKS:-1}
 REPEATS=${REPEATS:-1}
 TIMEOUT=${TIMEOUT:-1800}
 REQUIRE_CASES=${REQUIRE_CASES:-no}
+DRY_RUN=${DRY_RUN:-no}
 RUN_ROOT=${RUN_ROOT:-"${HERE}/runs/${TEST}-nstep${NSTEPS}-${RANKS}ranks-$(date +%Y%m%d-%H%M%S)"}
 MPI_ARGS=${MPI_ARGS:---mca coll ^hcoll}
 CASES=${CASES:-"cpu nvhpc_cpu gpu_resident gpu_off"}
@@ -34,8 +35,13 @@ if [[ -z "${TIME_CMD}" ]]; then
   fi
 fi
 if [[ -z "${TIME_CMD}" ]]; then
-  echo "External time command not found; set TIME_CMD or install GNU time." >&2
-  exit 1
+  case "${DRY_RUN}" in
+    yes|true|1) ;;
+    *)
+      echo "External time command not found; set TIME_CMD or install GNU time." >&2
+      exit 1
+      ;;
+  esac
 fi
 
 case "${EXPECTED_ENERGY}" in
@@ -694,8 +700,11 @@ capture_metadata() {
       [[ -n "${note}" ]] && echo "note=${note}"
       extra_env=$(inherited_accel_env)
       [[ -n "${extra_env}" ]] && echo "inherited_accel_env=${extra_env}"
+      runtime_env=$(case_runtime_env "${case_name}" "${exe}")
+      [[ -n "${runtime_env}" ]] && echo "runtime_env=${runtime_env}"
+      case_env_line=$(case_env "${case_name}")
+      [[ -n "${case_env_line}" ]] && echo "case_env=${case_env_line}"
       if [[ -x "${exe}" ]]; then
-        runtime_env=$(case_runtime_env "${case_name}" "${exe}")
         if [[ -n "${runtime_env}" ]]; then
           # shellcheck disable=SC2086
           env ${runtime_env} ldd "${exe}" 2>/dev/null | grep -E "blas|lapack|fftw|cufft|cusolver|cublas|nvpl|openblas|libmpi" || true
@@ -710,9 +719,15 @@ capture_metadata() {
   } > "${RUN_ROOT}/metadata.txt" 2>&1
 }
 
-mkdir -p "${RUN_ROOT}"
+mkdir -p "${RUN_ROOT}" "${HERE}/runs"
 echo "${RUN_ROOT}" > "${HERE}/runs/latest"
 capture_metadata
+case "${DRY_RUN}" in
+  yes|true|1)
+    echo "Benchmark dry-run metadata: ${RUN_ROOT}"
+    exit 0
+    ;;
+esac
 
 for case_name in ${CASES}; do
   exe=$(if [[ "${RANKS}" -gt 1 ]]; then parallel_exe "${case_name}"; else serial_exe "${case_name}"; fi)

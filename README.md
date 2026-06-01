@@ -170,6 +170,13 @@ not apply to the present implementation.)
    ```
    To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
    `CPPAW_CUSOLVER_ACC_MIN_N=1`.
+   To inspect a benchmark matrix without starting CP-PAW runs, use the dry-run
+   mode. It writes `metadata.txt` with the executable, MPI launcher, runtime
+   environment, and accelerator case variables for each selected case:
+   ```
+   cd tests/profile/si64
+   DRY_RUN=yes CASES="gpu_resident_stack gpu_no_cufft" ./run_benchmark.sh
+   ```
    For explicit cuSOLVER/OpenACC dense eigensolver profiling:
    ```
    cd tests/profile/si64
