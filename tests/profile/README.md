@@ -663,10 +663,11 @@ cd tests/profile/si64
 ```
 
 It defaults to `EMPTY_BANDS_LIST="128 256 512 1024"`, `NSTEPS_LIST=1` and
-compares one-rank GPU residency, one-rank CPU, and eight-rank CPU/NVHPC
-references. It inherits the follow-up benchmark's combined comparison,
-transfer-row, and present-row reports. Set `RUN_GPU_ALL=yes` to include the
-all-library diagnostic cases `gpu_all` and `gpu_all_off`.
+compares one-rank GPU residency, current HPSI/OPSI residency candidates, one-rank
+CPU, and eight-rank CPU/NVHPC references. It inherits the follow-up benchmark's
+combined comparison, transfer-row, and present-row reports. Set
+`RUN_GPU_ALL=yes` to include the all-library diagnostic cases `gpu_all` and
+`gpu_all_off`.
 
 For the longer validation preset used before promoting a residency diagnostic
 to a default, run:
@@ -677,9 +678,11 @@ cd tests/profile/si64
 ```
 
 It defaults to `EMPTY_BANDS_LIST="512 1024"` and `NSTEPS_LIST="3 10"` and
-compares `gpu_resident`, `gpu_resident_nosync`, `gpu_off`, one-rank CPU and
-eight-rank CPU/NVHPC references. It inherits the follow-up benchmark's combined
-comparison, transfer-row, and present-row reports.
+compares `gpu_resident`, `gpu_resident_hpsi`, `gpu_resident_hpsi_opsi`,
+`gpu_resident_stack`, the host-side addproduct/projector ablations,
+`gpu_resident_nosync`, `gpu_off`, one-rank CPU and eight-rank CPU/NVHPC
+references. It inherits the follow-up benchmark's combined comparison,
+transfer-row, and present-row reports.
 
 For the expensive unresolved large-band gap profile, run:
 
