@@ -118,7 +118,7 @@ def selected_rows(rows, top, per_case, min_gb, sort_by):
 
 
 def print_tsv(rows):
-    print("suite\tcase\trepeat\top\tcalls\tcopy_gb\tseconds\tfiles")
+    print("suite\tcase\trepeat\top\tcalls\tgbyte\tseconds\tfiles")
     for (suite, case, repeat, op), data in rows:
         print(
             "{}\t{}\t{}\t{}\t{}\t{:.9g}\t{:.9g}\t{}".format(
@@ -135,7 +135,7 @@ def print_tsv(rows):
 
 
 def print_markdown(rows):
-    print("| suite | case | repeat | op | calls | copy_gb | seconds | files |")
+    print("| suite | case | repeat | op | calls | gbyte | seconds | files |")
     print("| --- | --- | --- | --- | ---: | ---: | ---: | ---: |")
     for (suite, case, repeat, op), data in rows:
         print(
@@ -184,7 +184,7 @@ def main(argv):
     parser.add_argument(
         "--include-zero",
         action="store_true",
-        help="keep rows with zero copied GB, useful for ACC_PRESENT or timing rows",
+        help="keep rows with zero transferred GB, useful for ACC_PRESENT or timing rows",
     )
     parser.add_argument(
         "--sort-by",

@@ -45,6 +45,18 @@ def assert_contains(text, needle, label):
         raise AssertionError(f"{label}: missing {needle!r}")
 
 
+def markdown_table(text):
+    rows = [line for line in text.splitlines() if line.startswith("| ")]
+    if len(rows) < 3:
+        raise AssertionError("markdown table: no data rows")
+    header = [cell.strip() for cell in rows[0].strip("|").split("|")]
+    data = [
+        [cell.strip() for cell in row.strip("|").split("|")]
+        for row in rows[2:]
+    ]
+    return header, data
+
+
 def check_summary_and_markdown(tmpdir):
     run_dir = os.path.join(tmpdir, "case", "rep1")
     os.makedirs(run_dir)
@@ -113,6 +125,42 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
     assert_contains(profile_summary, "transfer estimate: 14.750000 GB", "profile transfer total")
 
+    copy_rows = run_tool(
+        "profile_copy_rows.py",
+        "--op-prefix",
+        "ACC_COPY",
+        "--op-prefix",
+        "ACC_UPDATE",
+        "--op-prefix",
+        "ACC_PRESENT",
+        "--include-zero",
+        os.path.join(run_dir, "test_profile.csv"),
+    )
+    assert_contains(
+        copy_rows,
+        "suite\tcase\trepeat\top\tcalls\tgbyte\tseconds\tfiles",
+        "profile row TSV header",
+    )
+    assert_contains(
+        copy_rows,
+        "ACC_UPDATE_VPSI_HPSI_IN\t1\t1.25",
+        "profile row update bytes",
+    )
+    assert_contains(
+        copy_rows,
+        "ACC_PRESENT_ADDOPSI_PSIM\t2\t0",
+        "profile row present zero bytes",
+    )
+
+    copy_rows_md = run_tool(
+        "profile_copy_rows.py",
+        "--op-prefix",
+        "ACC_UPDATE",
+        "--markdown",
+        os.path.join(run_dir, "test_profile.csv"),
+    )
+    assert_contains(copy_rows_md, "| suite | case | repeat | op | calls | gbyte | seconds | files |", "profile row markdown header")
+
 
 def check_compare(tmpdir):
     path = os.path.join(tmpdir, "combined.tsv")
@@ -142,11 +190,18 @@ def check_compare(tmpdir):
     write(path, "\n".join([header, *rows]) + "\n")
 
     compare = run_tool("benchmark_compare.py", path)
-    assert_contains(compare, "| gpu_acc_1steps_1rank | gpu_resident_stack | 1 | yes | 25.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 |", "gpu_acc speedups")
+    assert_contains(compare, "| gpu_acc_1steps_1rank | gpu_resident_stack | 1 | yes | 25.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 | 20.00 | 10.00 | 10.00 |", "gpu_acc speedups and legacy transfer")
     assert_contains(compare, "| si64_bands_empty128_1steps_1ranks_gpu | gpu_resident_stack | 1 | yes | 30.00 | gpu_resident_stack | 1.00 | 3.00 | 1.50 |", "band speedups")
     assert_contains(compare, "| empty128_1rank_cusolver | cusolver_generalized | 1 | yes | 25.00 | cusolver_generalized | 1.00 | 4.00 | 1.60 |", "cusolver speedups")
     assert_contains(compare, "| empty=512, nsteps=2 | gpu_resident_stack | 1 | yes | 10.00 | gpu_resident | 2.00 |  |  |", "gpu-only base speedup")
     assert_contains(compare, "| gpu_1rank | gpu_resident_stack | 1 | yes | 20.00 | gpu_resident_stack | 1.00 | 4.00 | 1.60 |", "standard speedups")
+
+    markdown = run_tool("benchmark_markdown.py", path)
+    header_cells, data_rows = markdown_table(markdown)
+    transfer_index = header_cells.index("transfer_gb")
+    copy_index = header_cells.index("copy_gb")
+    assert_equal(data_rows[0][transfer_index], "10.00", "legacy markdown transfer_gb")
+    assert_equal(data_rows[0][copy_index], "10.00", "legacy markdown copy_gb")
 
 
 def main():

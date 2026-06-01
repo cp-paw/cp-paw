@@ -594,8 +594,9 @@ reported energies between cases instead. It writes the normal combined benchmark
 TSV/Markdown plus per-case `ACC_COPY` row summaries from `profile_copy_rows.py`;
 the comparison Markdown reports each GPU-only focus case relative to the
 selected group baseline. The helper also accepts `--op-prefix`, `--op-regex`,
-and `--include-zero` for
-broader profile-row reports such as present/update/timing rows.
+and `--include-zero` for broader profile-row reports such as
+present/update/timing rows; its size column is `gbyte`, so mixed copy, update,
+and present reports do not imply every selected row is a copy.
 Override `NSTEPS_LIST`, `EMPTY_BANDS_LIST`, `RUN_SHARED_GPU=yes`,
 `RUN_LARGE_GPU=yes`, or `PSIM_LIFECYCLE_CASES` for wider sweeps.
 

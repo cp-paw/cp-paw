@@ -5,6 +5,15 @@ import re
 import sys
 
 
+def parse_float(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 def number(value, digits=2):
     if value is None or value == "":
         return ""
@@ -30,6 +39,11 @@ def read_rows(path):
     for row in rows:
         if "suite" not in row:
             row["suite"] = ""
+        if row.get("transfer_gb") in (None, ""):
+            copy_gb = parse_float(row.get("copy_gb"))
+            update_gb = parse_float(row.get("update_gb"))
+            if copy_gb is not None or update_gb is not None:
+                row["transfer_gb"] = str((copy_gb or 0.0) + (update_gb or 0.0))
     return rows
 
 
