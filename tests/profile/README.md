@@ -90,6 +90,9 @@ The transfer estimate keeps the legacy total row `ACC_COPY_SERIAL3D_ACC_MAP`
 and also reports `ACC_COPY_SERIAL3D_ACC_INPUT`,
 `ACC_COPY_SERIAL3D_ACC_OUTPUT`, and `ACC_COPY_SERIAL3D_ACC_MAP_META` so cache
 and residency effects can be separated from actual FFT work.
+The ACCMAP data region uses `PRESENT_OR_COPYOUT` for GTOR/RTOG outputs so a
+caller-owned device result can remain resident instead of forcing a host output
+boundary.
 `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is an opt-in follow-up that keeps the ACCMAP
 full-grid work array and map arrays present across calls. The cache is released
 by the plane-wave accelerator cleanup hook before shutdown. Use
