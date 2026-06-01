@@ -19,7 +19,7 @@ AUTO_BUILD_JOBS=${AUTO_BUILD_JOBS:-16}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-16}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-16}
 
-DEFAULT_GPU_CASES="gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache"
+DEFAULT_GPU_CASES="gpu_resident_stack gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap_cache gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache"
 if [[ -z "${GPU_CASES+x}" ]]; then
   GPU_CASES=auto
 fi

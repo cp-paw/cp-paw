@@ -438,6 +438,9 @@ case_note() {
     gpu_resident_stack_serial3dfft_accmap)
       echo "Focused residency stack plus single-rank 3D cuFFT with device-side sparse/full-grid mapping."
       ;;
+    gpu_resident_stack_serial3dfft_accmap_cache)
+      echo "Focused residency stack plus cached device-side sparse/full-grid mapping for single-rank 3D cuFFT."
+      ;;
     gpu_resident_stack_serial3dfft_accmap_vpsi_internal)
       echo "Device-side 3D FFT mapping diagnostic with resident VPSI real-space scratch."
       ;;
@@ -699,6 +702,7 @@ case_env() {
     gpu_resident_stack_serial3dfft) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_force_dedpro) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_accmap) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
+    gpu_resident_stack_serial3dfft_accmap_cache) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_FFT_SERIAL_3D_ACC_CACHE=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_accmap_vpsi_internal) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_accmap_hpsi_rtog) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;
     gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_FFT_SERIAL_3D=1 CPPAW_FFT_SERIAL_3D_ACC_MAP=1 CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1 CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1 CPPAW_CUFFT_ACC=1 CPPAW_CUFFT_ACC_3D=1 CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS=${CPPAW_CUFFT_ACC_3D_MIN_ELEMENTS:-0} $(cublas_env)" ;;

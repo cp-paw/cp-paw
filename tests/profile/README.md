@@ -86,9 +86,15 @@ The ACCMAP profiler reports its visible mapping subphases as
 `ACC_SERIAL3D_GTOR_GATHER`, `ACC_SERIAL3D_RTOG_LOAD`, and
 `ACC_SERIAL3D_RTOG_GATHER`; compare them with `CUFFT3D_C8_PRESENT` and the
 larger FFT envelope to identify data-region/runtime overhead.
+The transfer estimate keeps the legacy total row `ACC_COPY_SERIAL3D_ACC_MAP`
+and also reports `ACC_COPY_SERIAL3D_ACC_INPUT`,
+`ACC_COPY_SERIAL3D_ACC_OUTPUT`, and `ACC_COPY_SERIAL3D_ACC_MAP_META` so cache
+and residency effects can be separated from actual FFT work.
 `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` is an opt-in follow-up that keeps the ACCMAP
 full-grid work array and map arrays present across calls. The cache is released
-by the plane-wave accelerator cleanup hook before shutdown.
+by the plane-wave accelerator cleanup hook before shutdown. Use
+`gpu_resident_stack_serial3dfft_accmap_cache` to isolate the cache itself before
+combining it with HPSI/VPSI residency.
 `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1` is a narrower follow-up diagnostic for
 that ACCMAP path: when HPSI residency is already active, it lets the
 `WAVES_VPSI` RTOG step leave the produced `HPSI` device copy present for the
@@ -518,6 +524,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
 | `gpu_resident_stack_serial3dfft_force_dedpro` | Focused residency stack plus single-rank 3-D cuFFT and opt-in non-stress force `DEDPRO`/`WAVES_PROFORCE` device path. |
 | `gpu_resident_stack_serial3dfft_accmap` | Same as `gpu_resident_stack_serial3dfft`, plus device-side sparse/full-grid mapping via `CPPAW_FFT_SERIAL_3D_ACC_MAP=1`. |
+| `gpu_resident_stack_serial3dfft_accmap_cache` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus cached ACCMAP work/map arrays via `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1`, without the HPSI/VPSI residency follow-ups. |
 | `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus resident `WAVES_VPSI` real-space scratch via `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog` | Same as `gpu_resident_stack_serial3dfft_accmap`, plus opt-in HPSI RTOG output residency via `CPPAW_GPU_VPSI_HPSI_RTOG_RESIDENCY=1`. |
 | `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal` | Same as `gpu_resident_stack_serial3dfft_accmap_hpsi_rtog`, plus resident `WAVES_VPSI` real-space scratch via `CPPAW_GPU_VPSI_INTERNAL_RESIDENCY=1`. |

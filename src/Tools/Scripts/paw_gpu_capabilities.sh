@@ -409,6 +409,9 @@ elif [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
       "gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache")
     recommended_large_band_gpu_cases=$(append_case \
       "${recommended_large_band_gpu_cases}" \
+      "gpu_resident_stack_serial3dfft_accmap_cache")
+    recommended_large_band_gpu_cases=$(append_case \
+      "${recommended_large_band_gpu_cases}" \
       "gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache")
   fi
   recommended_gpu_diagnostic_cases=$(append_case \
