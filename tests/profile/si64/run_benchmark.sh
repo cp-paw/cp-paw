@@ -358,7 +358,10 @@ case_note() {
       echo "Combined HPSI/OPSI residency plus off-site DENMAT device packing and GPU-side real-matrix accumulation."
       ;;
     gpu_resident_stack)
-      echo "Focused residency stack keyword: HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation."
+      echo "Focused residency stack keyword: setup PSI0, HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation."
+      ;;
+    gpu_resident_stack_setup_host)
+      echo "Focused residency stack with setup PSI0 residency disabled for copy-boundary diagnostics."
       ;;
     gpu_resident_stack_cufft)
       echo "Focused residency stack plus threshold-gated native cuFFT for LIB\$FFTC8 calls."
@@ -602,6 +605,7 @@ case_env() {
     gpu_resident_hpsi_opsi_proj) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_stack) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_env)" ;;
+    gpu_resident_stack_setup_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_SETUP_PSI_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_cufft) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_env) $(cublas_env)" ;;
     gpu_resident_stack_cufft_force) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cufft_force_env) $(cublas_env)" ;;
     gpu_resident_hpsi_opsi_denmat_energy_offden_cublas_devicepack_proj_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 CPPAW_GPU_DENMAT_ENERGY=1 CPPAW_GPU_DENMAT_MINFLOP=${CPPAW_GPU_DENMAT_MINFLOP:-1} CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;

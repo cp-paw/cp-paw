@@ -2653,6 +2653,50 @@ as a diagnostic case for now; the stronger decision still needs the standard
 1024/NSTEPS=1 refresh and a larger case before promoting more than HPSI+OPSI
 into the recommended path.
 
+## Setup PSI0 Residency Diagnostic
+
+The next setup-boundary check keeps the initial `PSI0` array resident before
+`WAVES_GRAMSCHMIDT`, then lets the setup projection and force/HPSI path reuse
+that device allocation. The Gram-Schmidt output is still synchronized back to
+the host immediately, because later setup and density work still has CPU-side
+consumers. The profile therefore counts both the explicit setup upload
+(`ACC_COPY_SETUP_PSI0_IN`) and the conservative host update
+(`ACC_UPDATE_GRAM_PSI0_PSI_OUT`); this avoids overstating the copy reduction.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries on Spark C86C and Terok:
+
+```
+runs/setup-psi0-residency-instr-spark-3rep-20260601-065758
+runs/setup-psi0-residency-instr-terok-3rep-20260601-065757
+```
+
+| Machine | Case | Empty bands | Repeats | Median wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Spark C86C | `gpu_resident_stack` | 1024 | 3 | 12.18 s | 1.7519 GB | yes |
+| Spark C86C | `gpu_resident_stack_setup_host` | 1024 | 3 | 12.35 s | 1.9940 GB | yes |
+| Terok A40 | `gpu_resident_stack` | 1024 | 3 | 12.59 s | 1.7519 GB | yes |
+| Terok A40 | `gpu_resident_stack_setup_host` | 1024 | 3 | 12.31 s | 1.9940 GB | yes |
+
+Key profile checks from Spark:
+
+| Profile row | New stack | Setup-host control | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_SETUP_PSI0_IN` | 0.3631 GB over 3 repeats | absent | The setup path creates one explicit resident `PSI0` copy. |
+| `ACC_UPDATE_GRAM_PSI0_PSI_OUT` | 0.3631 GB over 3 repeats | absent | Gram-Schmidt still refreshes the host copy for CPU consumers. |
+| `ACC_COPY_GRAM_PSI0_PSI_IN` | absent | 0.3631 GB over 3 repeats | The Gram input copy is removed. |
+| `ACC_COPY_GRAM_PSI0_PSI_OUT` | absent | 0.3631 GB over 3 repeats | The old Gram data-region copyout is replaced by the explicit host update. |
+| `ACC_COPY_PROJ_SETUP0_PSI_IN` | absent | 0.3631 GB over 3 repeats | Setup projection reuses resident `PSI0`. |
+| `ACC_COPY_FORCE_PSI0_IN` | absent | 0.3631 GB over 3 repeats | The force/HPSI path reuses resident `PSI0`. |
+
+Conclusion: this is correctness-valid and reduces the honest transfer estimate
+by about 0.24 GB per 1024-band Si64 step on Spark, but the wall-time signal is
+machine/noise dependent. Keep it as part of the residency-stack development
+block, not as a standalone performance PR. The next useful optimization is to
+shorten or delay the conservative host synchronization only where CPU consumers
+can be proven absent, or to attack the still-large `PSIM`, `HPSI`, `OPSI`, and
+`WRITEPDOS` wavefunction boundaries.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

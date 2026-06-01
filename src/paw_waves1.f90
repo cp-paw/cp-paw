@@ -3089,6 +3089,10 @@ END IF
 !     ************P.E. BLOECHL, TU-CLAUSTHAL (2005)*****************************
       USE WAVES_MODULE, ONLY : NKPTL,NSPIN,NDIM,MAP,GSET,THIS &
      &                        ,WAVES_SELECTWV
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_SETUP_PSI_RESIDENCY_ENABLED
+#ENDIF
       IMPLICIT NONE
       INTEGER(4)             :: IKPT,ISPIN
       INTEGER(4)             :: NGL
@@ -3097,6 +3101,9 @@ END IF
       INTEGER(4)             :: NAT
       REAL(8)   ,ALLOCATABLE :: R0(:,:)
       REAL(8)   ,ALLOCATABLE :: RM(:,:)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+      LOGICAL(4)             :: TSETUPPSI0RESIDENT
+#ENDIF
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$GRAMMSCHMIDT')
                               CALL TIMING$CLOCKON('W:GRAMSCHMIDT')
@@ -3112,6 +3119,20 @@ END IF
           NGL=GSET%NGL
           NB=THIS%NB
           NBH=THIS%NBH
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          TSETUPPSI0RESIDENT= &
+     &        CPPAW_CUBLAS_ACC_SETUP_PSI_RESIDENCY_ENABLED()
+          IF(TSETUPPSI0RESIDENT.AND.(.NOT.THIS%PSI0_ACC_RESIDENT)) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL ACCELPROFILE$ADD('ACC_COPY_SETUP_PSI0_IN' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8),0_8 &
+     &          ,0.D0,16.D0*REAL(NGL,KIND=8)*REAL(NDIM,KIND=8) &
+     &          *REAL(NBH,KIND=8),0.D0)
+#ENDIF
+!$ACC ENTER DATA COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
+            THIS%PSI0_ACC_RESIDENT=.TRUE.
+          END IF
+#ENDIF
           CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NB,THIS%PSI0 &
      &                          ,'PSI0')
           CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,RM,NGL,NDIM,NBH,NB,THIS%PSIM &
