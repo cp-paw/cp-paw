@@ -3872,6 +3872,44 @@ mode and composes cleanly with existing cases, but it does not change the
 default recommendation: ACCMAP/cache still remains opt-in until Spark's
 mapping-kernel/runtime cost is reduced.
 
+## 2026-06-01 ACCMAP Resident Data-Region Skip
+
+Commit `32b4d4d` adds a resident fast path to the serial 3-D ACCMAP data
+region. If the input array, output array, cached full-grid work array, and map
+metadata are already present on the device, the structured OpenACC data region
+is skipped and the profiler records `ACC_PRESENT_SERIAL3D_DATA`. Non-resident
+callers continue to use the same `PRESENT_OR_*` fallback clauses.
+
+Run directories:
+
+```
+Spark: tests/profile/si64/runs/accmap-dataskip-spark-20260601-191252
+Terok: tests/profile/si64/runs/accmap-dataskip-terok-20260601-191252
+```
+
+Both systems used `EMPTY_BANDS=2048`, `NSTEPS=1`, one MPI rank and one GPU.
+
+| System | `*_accmap_cache` | `*_hpsi_rtog_vpsi_internal_cache` | Energy delta |
+| --- | ---: | ---: | ---: |
+| Spark GB10 | 44.17 s / 7.05 GB | 42.17 s / 4.01 GB | 0.000000 |
+| Terok A40 | 33.13 s / 7.05 GB | 31.68 s / 4.01 GB | 0.000001 |
+
+The new present row appears only in the fully resident combined case, with
+2176 `ACC_PRESENT_SERIAL3D_DATA` calls on both systems. That is the expected
+shape: the isolated cache case still has a non-resident input/output boundary,
+while `*_hpsi_rtog_vpsi_internal_cache` keeps enough arrays present to skip the
+data region.
+
+The change is correctness-safe in this smoke case, but its timing impact is
+system-dependent. Terok's `PW_FFT_SERIAL3D_TOTAL` drops from about 0.87 s in the
+previous present-or-copyout run to 0.74 s, and the wall time improves slightly
+from 31.89 s to 31.68 s. Spark confirms that this particular data-region
+boundary is not the remaining large cost: `PW_FFT_SERIAL3D_TOTAL` stays near
+9.87 s and wall time remains essentially unchanged for the combined case
+(42.12 s to 42.17 s). Keep the skip because it removes avoidable runtime
+bookkeeping in the resident path, but keep ACCMAP/cache opt-in and continue
+looking for Spark's remaining serial-3D overhead elsewhere.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
