@@ -18,7 +18,7 @@ COPY_TOP=${COPY_TOP:-8}
 PROFILE_ROW_TOP=${PROFILE_ROW_TOP:-${COPY_TOP}}
 PRESENT_ROW_TOP=${PRESENT_ROW_TOP:-${COPY_TOP}}
 RUN_ROOT_BASE=${RUN_ROOT_BASE:-${RUN_ROOT:-"${HERE}/runs/psim-lifecycle-$(date +%Y%m%d-%H%M%S)"}}
-PSIM_LIFECYCLE_CASES=${PSIM_LIFECYCLE_CASES:-"gpu_resident gpu_psim_propagate gpu_resident_psim_phase gpu_resident_hpsi gpu_hpsi_psim_propagate gpu_resident_hpsi_psim_phase"}
+PSIM_LIFECYCLE_CASES=${PSIM_LIFECYCLE_CASES:-"gpu_resident gpu_psim_propagate gpu_resident_psim_phase gpu_resident_hpsi gpu_hpsi_psim_propagate gpu_resident_hpsi_psim_phase gpu_resident_hpsi_opsi gpu_resident_hpsi_opsi_psim_phase"}
 
 COMBINED="${RUN_ROOT_BASE}-combined.tsv"
 COPY_COMBINED="${RUN_ROOT_BASE}-copy-rows.md"
