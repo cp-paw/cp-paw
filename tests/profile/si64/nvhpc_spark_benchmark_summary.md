@@ -3697,6 +3697,62 @@ its own, but it composes cleanly with the much stronger one-rank 3-D cuFFT path
 and saves the same force-transfer volume there. The harness case is
 `gpu_resident_stack_serial3dfft_force_dedpro`.
 
+## Capability-Driven Overnight Smoke
+
+The capability-driven overnight harness was refreshed on 2026-06-01 after the
+default case selection was moved to `paw_gpu_capabilities.sh`. Dry-runs on Spark
+C86C and Terok both selected the same resource comparison:
+`cpu nvhpc_cpu gpu_resident_stack` where a GNU CPU binary exists, plus focused
+GPU diagnostics, band cases, and the `gpu_resident_stack` Nsight target. Dry-run
+mode now also skips Nsight collection instead of accidentally starting `nsys`.
+
+Spark C86C then ran a real `NSTEPS=1` smoke after building the missing
+`nvhpc_gpu_acc_residency_profile_parallel` target. Run root:
+`tests/profile/si64/runs/overnight-smoke-spark-20260601-172446`.
+
+| Suite | Case | Ranks | Wall time | Energy delta |
+| --- | --- | ---: | ---: | ---: |
+| `main_1steps_4ranks` | `cpu` | 4 | 3.75 s | 0.000000 |
+| `main_1steps_4ranks` | `nvhpc_cpu` | 4 | 3.84 s | 0.000000 |
+| `main_1steps_4ranks` | `gpu_resident_stack` | 4 | 5.25 s | 0.000000 |
+| `scaling_1steps_1ranks` | `cpu` | 1 | 3.38 s | 0.000000 |
+| `scaling_1steps_1ranks` | `nvhpc_cpu` | 1 | 3.40 s | 0.000000 |
+| `scaling_1steps_1ranks` | `gpu_resident_stack` | 1 | 2.95 s | 0.000000 |
+| `scaling_1steps_2ranks` | `cpu` | 2 | 5.54 s | 0.000000 |
+| `scaling_1steps_2ranks` | `nvhpc_cpu` | 2 | 5.58 s | 0.000000 |
+| `scaling_1steps_2ranks` | `gpu_resident_stack` | 2 | 4.81 s | 0.000000 |
+| `scaling_1steps_4ranks` | `cpu` | 4 | 3.71 s | 0.000000 |
+| `scaling_1steps_4ranks` | `nvhpc_cpu` | 4 | 3.83 s | 0.000000 |
+| `scaling_1steps_4ranks` | `gpu_resident_stack` | 4 | 5.14 s | 0.000000 |
+| `threshold_1e7_1steps_4ranks` | `gpu_resident_stack` | 4 | 4.98 s | 0.000000 |
+
+Terok exposed a useful installation bug: the first real smoke found the NVHPC
+SDK under `$HOME/opt/nvidia/hpc_sdk`, but the runtime launcher search only
+checked `$NVHPC_ROOT` and `/opt/nvidia/...`. Serial runs passed, while all MPI
+runs failed with `timeout: failed to run command 'mpirun': No such file or
+directory`. The harness now searches `$HOME/opt/nvidia/hpc_sdk/<platform>/*`
+and adjacent NVHPC version directories, and `paw_gpu_capabilities.sh` reports
+the resolved `mpirun` and `nvfortran` paths. The fixed run root:
+`tests/profile/si64/runs/overnight-smoke-terok-mpirunfix-20260601-173611`.
+
+| Suite | Case | Ranks | Wall time | Energy delta |
+| --- | --- | ---: | ---: | ---: |
+| `main_1steps_4ranks` | `nvhpc_cpu` | 4 | 3.10 s | 0.000001 |
+| `main_1steps_4ranks` | `gpu_resident_stack` | 4 | 4.91 s | 0.000001 |
+| `scaling_1steps_1ranks` | `nvhpc_cpu` | 1 | 4.94 s | 0.000001 |
+| `scaling_1steps_1ranks` | `gpu_resident_stack` | 1 | 3.83 s | 0.000001 |
+| `scaling_1steps_2ranks` | `nvhpc_cpu` | 2 | 4.10 s | 0.000001 |
+| `scaling_1steps_2ranks` | `gpu_resident_stack` | 2 | 4.21 s | 0.000001 |
+| `scaling_1steps_4ranks` | `nvhpc_cpu` | 4 | 3.11 s | 0.000001 |
+| `scaling_1steps_4ranks` | `gpu_resident_stack` | 4 | 4.63 s | 0.000001 |
+| `threshold_1e7_1steps_4ranks` | `gpu_resident_stack` | 4 | 4.57 s | 0.000001 |
+
+Conclusion: the one-rank GPU path is consistently faster than one-rank CPU on
+both hosts, while the four-rank CPU/NVHPC path remains faster for Si64. This
+keeps the design direction unchanged: Si64 is a correctness and harness smoke,
+not the deciding performance target; larger band/projection-heavy cases remain
+necessary before promoting more GPU residency paths into defaults.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
