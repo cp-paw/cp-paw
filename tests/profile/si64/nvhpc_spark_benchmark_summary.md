@@ -3333,6 +3333,40 @@ clear wall-time win for the intended one-rank/one-GPU comparison, despite the
 larger explicit transfer estimate. It should remain opt-in until a resident
 full-grid cuFFT path removes the copy volume.
 
+## Force DEDPRO/PROFORCE Residency Diagnostic
+
+`CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1` adds an opt-in force-loop diagnostic for
+non-stress `TINV`, `NDIM=1` cases. It keeps the cuBLAS-built `DEDPRO` matrix on
+the GPU, applies the inversion-symmetry averaging on device, and evaluates the
+`WAVES_PROFORCE` contraction as GPU reductions so only the three force
+components return to the host. The harness case is
+`gpu_resident_stack_force_dedpro`.
+
+Validation rebuilt both `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` on Spark C86C and Terok. One-rank
+`NSTEPS=1` runs passed the Si64 energy check on both machines, and four-rank
+smokes also passed. The longer `NSTEPS=3` diagnostic used the energy check
+disabled because the expected final energy differs from the one-step reference.
+
+| Machine | Case | Empty bands | NSTEPS | Wall time | Transfer estimate | Energy |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Spark C86C | `gpu_resident_stack` | 1024 | 1 | 12.12 s | 1.3892 GB | 302.280854 |
+| Spark C86C | `gpu_resident_stack_force_dedpro` | 1024 | 1 | 12.25 s | 1.3455 GB | 302.280854 |
+| Terok | `gpu_resident_stack` | 1024 | 1 | 12.58 s | 1.3892 GB | 302.280853 |
+| Terok | `gpu_resident_stack_force_dedpro` | 1024 | 1 | 12.45 s | 1.3455 GB | 302.280853 |
+| Spark C86C | `gpu_resident_stack` | 1024 | 3 | 28.08 s | 2.8783 GB | 208.886424 |
+| Spark C86C | `gpu_resident_stack_force_dedpro` | 1024 | 3 | 27.46 s | 2.7472 GB | 208.886424 |
+| Terok | `gpu_resident_stack` | 1024 | 3 | 28.96 s | 2.8783 GB | 208.886424 |
+| Terok | `gpu_resident_stack_force_dedpro` | 1024 | 3 | 28.91 s | 2.7472 GB | 208.886424 |
+
+Representative `NSTEPS=3` profile rows show the intended transfer shift:
+`ACC_COPY_ZGEMM_MAT_C_OUT` disappears from the force `DEDPRO` calls, while
+`ACC_COPY_FORCE_DEDPRO_INPUTS_IN`, `CUBLAS_ZGEMM_FORCE_DEDPRO`, and
+`ACC_FORCE_PROFORCE` appear. The transfer saving is stable at about 44 MB per
+Si64 step with 1024 empty bands. Wall time is modestly positive on Spark and
+neutral on Terok, so this stays opt-in rather than joining the default
+`CPPAW_GPU_RESIDENCY_STACK`.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

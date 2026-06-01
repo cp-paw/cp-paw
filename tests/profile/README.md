@@ -491,6 +491,7 @@ The Si64 benchmark harness uses these `CASES` keywords:
 | `gpu_resident_hpsi_opsi_proj` | Combined HPSI/OPSI diagnostic with persistent `THIS%PROJ` residency enabled. |
 | `gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum` | Combined HPSI/OPSI diagnostic with off-site DENMAT device packing and GPU-side real-matrix accumulation. |
 | `gpu_resident_stack` | Focused residency stack keyword via `CPPAW_GPU_RESIDENCY_STACK=1`; enables the validated setup wavefunction, HPSI, OPSI, PROJ, DENMAT energy, and off-site device-pack accumulation combination. |
+| `gpu_resident_stack_force_dedpro` | Focused residency stack plus opt-in non-stress TINV force `DEDPRO`/`WAVES_PROFORCE` device path via `CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1`. |
 | `gpu_resident_stack_setup_psim_host` | Focused residency stack with only setup `PSIM` residency disabled via `CPPAW_GPU_SETUP_PSIM_RESIDENCY=0`. |
 | `gpu_resident_stack_cufft` / `gpu_resident_stack_cufft_force` | Focused residency stack plus native cuFFT enabled with the conservative threshold, or forced for all `LIB$FFTC8` calls. |
 | `gpu_resident_stack_serial3dfft` | Focused residency stack plus opt-in single-rank full-grid `PLANEWAVE$FFT` through the native 3-D cuFFT wrapper. |
@@ -786,6 +787,11 @@ be overridden by kernel category:
   `WAVES_DEDPRO` MATMUL calls. When `CPPAW_GPU_HPSI_RESIDENCY=1` is also set,
   the same `PSI0` device copy is kept for the immediately following HPSI
   overlap consumers; set to `0` for the previous per-call copy path.
+- `CPPAW_GPU_FORCE_DEDPRO_RESIDENCY`: disabled by default. Set to `1` to keep
+  cuBLAS-built `DEDPRO` on the device and run the non-stress `WAVES_PROFORCE`
+  contraction on the GPU for eligible `TINV`, `NDIM=1` force loops; ineligible
+  loops fall back to the host path. The harness case is
+  `gpu_resident_stack_force_dedpro`.
 - `CPPAW_GPU_1COVERLAP`: keep enabled by default in residency-profile builds so
   `WAVES_1COVERLAP` uses the GPU-pack/cuBLAS contraction path; set to `0` for
   the host contraction path.

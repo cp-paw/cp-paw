@@ -6470,6 +6470,7 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED &
      &      ,CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED &
      &      ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT &
      &      ,CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D
@@ -6507,6 +6508,8 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       LOGICAL(4)             :: TRESIDENTFORCEPSI
       LOGICAL(4)             :: TKEEPPSI0FORHPSI
+      LOGICAL(4)             :: TFORCEDEDPROACC
+      LOGICAL(4)             :: TFORCEDEDPROUSED
       REAL(8)                :: ADDPROFLOPS
 #ENDIF
 !     **************************************************************************
@@ -6572,6 +6575,9 @@ RETURN
 !         ======================================================================
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           TRESIDENTFORCEPSI=CPPAW_CUBLAS_ACC_FORCE_PSI_RESIDENCY_ENABLED()
+          TFORCEDEDPROACC= &
+     &        CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED() &
+     &        .AND.(.NOT.TSTRESS).AND.(NDIM.EQ.1)
           TKEEPPSI0FORHPSI=TRESIDENTFORCEPSI &
      &                    .AND.CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED()
           IF(TKEEPPSI0FORHPSI) THEN
@@ -6636,21 +6642,35 @@ RETURN
             END IF
 
 !           == |DE/DPRO>=|PSPSI>DEDPROJ ========================================
-            ALLOCATE(DEDPRO(NGL,LMNX))
-            CALL WAVES_DEDPRO(GSET%TINV,NGL,NDIM,NBH,THIS%PSI0,LMNX &
-     &                       ,DEDPROJ,DEDPRO)
-            DEALLOCATE(DEDPROJ)
-!           == DE= <DPRO|DEDPRO> ===============================================
             ALLOCATE(EIGR(NGL))
             CALL PLANEWAVE$STRUCTUREFACTOR(R(1,IAT),NGL,EIGR)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            TFORCEDEDPROUSED=.FALSE.
+            IF(TFORCEDEDPROACC) THEN
+              CALL WAVES_DEDPRO_PROFORCE_ACC(GSET%TINV,NGL,NDIM,NBH &
+     &             ,LNX,LMNX,MAP%LOX(1:LNX,ISP),MAP%LMX,GWEIGHT &
+     &             ,THIS%PSI0,DEDPROJ,GVEC,GSET%PRO(:,IBPRO:IBPRO+LNX-1) &
+     &             ,GSET%YLM,EIGR,FORCE1,TFORCEDEDPROUSED)
+            END IF
+            IF(.NOT.TFORCEDEDPROUSED) THEN
+#ENDIF
+              ALLOCATE(DEDPRO(NGL,LMNX))
+              CALL WAVES_DEDPRO(GSET%TINV,NGL,NDIM,NBH,THIS%PSI0,LMNX &
+     &                         ,DEDPROJ,DEDPRO)
+!             == DE= <DPRO|DEDPRO> =============================================
 !           == F=2*RE[ <PSI|DPRO/DR>*DH*<PRO|PSI> ]
-            CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL,GWEIGHT,GVEC &
-     &           ,GIJ &
-     &           ,GSET%PRO(:,IBPRO:IBPRO+LNX-1),GSET%DPRO(:,IBPRO:IBPRO+LNX-1) &
-     &                 ,MAP%LMX,GSET%YLM,GSET%SYLM &
-     &                 ,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
+              CALL WAVES_PROFORCE(LNX,LMNX,MAP%LOX(1:LNX,ISP),NGL &
+     &             ,GWEIGHT,GVEC,GIJ,GSET%PRO(:,IBPRO:IBPRO+LNX-1) &
+     &             ,GSET%DPRO(:,IBPRO:IBPRO+LNX-1),MAP%LMX,GSET%YLM &
+     &             ,GSET%SYLM,EIGR,DEDPRO,FORCE1,TSTRESS,STRESS1)
+              DEALLOCATE(DEDPRO)
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+            ELSE
+              STRESS1(:,:)=0.D0
+            END IF
+#ENDIF
+            DEALLOCATE(DEDPROJ)
             DEALLOCATE(EIGR)
-            DEALLOCATE(DEDPRO)
             FORCE(:,IAT)=FORCE(:,IAT)+FORCE1(:)
             STRESS(:,:) =STRESS(:,:) +STRESS1(:,:)
             IPRO=IPRO+LMNX
@@ -8104,6 +8124,158 @@ RETURN
       END IF
       RETURN
       END
+!
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_DEDPRO_PROFORCE_ACC(TINV,NGL,NDIM,NBH,LNX,LMNX &
+     &          ,LOX,LMX,GWEIGHT,PSI,DEDPROJ,GVEC,BAREPRO,YLM,EIGR &
+     &          ,FORCE,USED)
+!     **************************************************************************
+!     **  Diagnostic GPU path for the non-stress augmentation force.           **
+!     **  It keeps the cuBLAS-built DEDPRO on device, applies the TINV         **
+!     **  symmetrization on device, and reduces only the 3 force components    **
+!     **  back to the host.                                                    **
+!     **************************************************************************
+      USE OPENACC
+      USE PLANEWAVE_MODULE, ONLY: PLANEWAVE_THIS=>THIS
+      USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
+     &       CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED &
+     &      ,CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL &
+     &      ,CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_PRESENT
+      IMPLICIT NONE
+      LOGICAL(4),INTENT(IN)   :: TINV
+      INTEGER(4),INTENT(IN)   :: NGL
+      INTEGER(4),INTENT(IN)   :: NDIM
+      INTEGER(4),INTENT(IN)   :: NBH
+      INTEGER(4),INTENT(IN)   :: LNX
+      INTEGER(4),INTENT(IN)   :: LMNX
+      INTEGER(4),INTENT(IN)   :: LOX(LNX)
+      INTEGER(4),INTENT(IN)   :: LMX
+      REAL(8)   ,INTENT(IN)   :: GWEIGHT
+      COMPLEX(8),INTENT(IN)   :: PSI(NGL,NDIM*NBH)
+      COMPLEX(8),INTENT(IN)   :: DEDPROJ(NDIM*NBH,LMNX)
+      REAL(8)   ,INTENT(IN)   :: GVEC(3,NGL)
+      REAL(8)   ,INTENT(IN)   :: BAREPRO(NGL,LNX)
+      REAL(8)   ,INTENT(IN)   :: YLM(NGL,LMX)
+      COMPLEX(8),INTENT(IN)   :: EIGR(NGL)
+      REAL(8)   ,INTENT(OUT)  :: FORCE(3)
+      LOGICAL(4),INTENT(OUT)  :: USED
+      COMPLEX(8),PARAMETER    :: CI=(0.D0,1.D0)
+      COMPLEX(8),ALLOCATABLE  :: DEDPROJ1(:,:)
+      COMPLEX(8),ALLOCATABLE  :: DEDPRO(:,:)
+      COMPLEX(8),ALLOCATABLE  :: DEDPROINV(:,:)
+      INTEGER(4),POINTER      :: MINUSGACC(:)
+      INTEGER(4)              :: I
+      INTEGER(4)              :: IG
+      INTEGER(4)              :: L
+      INTEGER(4)              :: LN
+      INTEGER(4)              :: M
+      INTEGER(4)              :: LM
+      INTEGER(4)              :: LMN
+      REAL(8)                 :: FLOPS
+      REAL(8)                 :: FX,FY,FZ
+      REAL(8)                 :: SVAR
+      COMPLEX(8)              :: CIL
+      COMPLEX(8)              :: CWORK
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      REAL(8)                 :: ACCEL_T0
+      REAL(8)                 :: ACCEL_T1
+      REAL(8)                 :: ACCEL_BYTES
+#ENDIF
+!     **************************************************************************
+      USED=.FALSE.
+      FORCE(:)=0.D0
+      IF(.NOT.CPPAW_CUBLAS_ACC_FORCE_DEDPRO_RESIDENCY_ENABLED()) RETURN
+      IF(.NOT.TINV) RETURN
+      IF(NDIM.NE.1) RETURN
+      FLOPS=8.D0*REAL(NGL,KIND=8)*REAL(NDIM*NBH,KIND=8) &
+     &     *REAL(LMNX,KIND=8)
+      IF(.NOT.CPPAW_CUBLAS_ACC_SHOULD_USE_MATMUL(FLOPS)) RETURN
+      IF(.NOT.ASSOCIATED(PLANEWAVE_THIS%MINUSG)) RETURN
+      MINUSGACC=>PLANEWAVE_THIS%MINUSG
+      ALLOCATE(DEDPROJ1(NDIM*NBH,LMNX))
+      DO LMN=1,LMNX
+        DO I=1,NDIM*NBH
+          DEDPROJ1(I,LMN)=CONJG(DEDPROJ(I,LMN))
+        ENDDO
+      ENDDO
+      ALLOCATE(DEDPRO(NGL,LMNX))
+      ALLOCATE(DEDPROINV(NGL,LMNX))
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      ACCEL_BYTES=16.D0*REAL(NDIM*NBH,KIND=8)*REAL(LMNX,KIND=8) &
+     &     +4.D0*REAL(NGL,KIND=8) &
+     &     +16.D0*REAL(NGL,KIND=8) &
+     &     +24.D0*REAL(NGL,KIND=8) &
+     &     +8.D0*REAL(NGL,KIND=8)*REAL(LNX,KIND=8) &
+     &     +8.D0*REAL(NGL,KIND=8)*REAL(LMX,KIND=8)
+      CALL ACCELPROFILE$ADD('ACC_COPY_FORCE_DEDPRO_INPUTS_IN' &
+     &     ,INT(NGL,KIND=8),INT(NDIM*NBH,KIND=8),INT(LMNX,KIND=8) &
+     &     ,INT(LMX,KIND=8),0.D0,ACCEL_BYTES,0.D0)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC DATA PRESENT_OR_COPYIN(PSI(1:NGL,1:NDIM*NBH) &
+!$ACC&      ,GVEC(1:3,1:NGL),BAREPRO(1:NGL,1:LNX),YLM(1:NGL,1:LMX)) &
+!$ACC& COPYIN(DEDPROJ1(1:NDIM*NBH,1:LMNX),EIGR(1:NGL) &
+!$ACC&       ,MINUSGACC(1:NGL)) &
+!$ACC& CREATE(DEDPRO(1:NGL,1:LMNX),DEDPROINV(1:NGL,1:LMNX))
+      CALL CPPAW_CUBLAS_ACC_ZGEMM_MATMUL_PRESENT(NGL,NDIM*NBH,LMNX &
+     &      ,PSI,DEDPROJ1,DEDPRO)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('CUBLAS_ZGEMM_FORCE_DEDPRO' &
+     &     ,INT(NGL,KIND=8),INT(NDIM*NBH,KIND=8),INT(LMNX,KIND=8) &
+     &     ,0_8,FLOPS,0.D0,ACCEL_T1-ACCEL_T0)
+      CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+!$ACC PARALLEL LOOP COLLAPSE(2) PRESENT(DEDPRO,DEDPROINV,MINUSGACC)
+      DO LMN=1,LMNX
+        DO IG=1,NGL
+          DEDPROINV(IG,LMN)=0.5D0*(DEDPRO(IG,LMN) &
+     &                       +CONJG(DEDPRO(MINUSGACC(IG),LMN)))
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
+      FX=0.D0
+      FY=0.D0
+      FZ=0.D0
+      LMN=0
+      DO LN=1,LNX
+        L=LOX(LN)
+        CIL=(-CI)**L
+        LM=L**2
+        DO M=1,2*L+1
+          LM=LM+1
+          LMN=LMN+1
+!$ACC PARALLEL LOOP PRESENT(DEDPROINV,BAREPRO,YLM,EIGR,GVEC) &
+!$ACC& REDUCTION(+:FX,FY,FZ)
+          DO IG=1,NGL
+            CWORK=CI*BAREPRO(IG,LN)*CIL*EIGR(IG)
+            SVAR=REAL(CWORK*CONJG(DEDPROINV(IG,LMN)),KIND=8) &
+     &          *YLM(IG,LM)
+            FX=FX+SVAR*GVEC(1,IG)
+            FY=FY+SVAR*GVEC(2,IG)
+            FZ=FZ+SVAR*GVEC(3,IG)
+          ENDDO
+!$ACC END PARALLEL LOOP
+        ENDDO
+      ENDDO
+!$ACC END DATA
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+      CALL ACCELPROFILE$NOW(ACCEL_T1)
+      CALL ACCELPROFILE$ADD('ACC_FORCE_PROFORCE' &
+     &     ,INT(NGL,KIND=8),INT(LNX,KIND=8),INT(LMNX,KIND=8),0_8 &
+     &     ,0.D0,0.D0,ACCEL_T1-ACCEL_T0)
+#ENDIF
+      FORCE(1)=GWEIGHT*2.D0*FX
+      FORCE(2)=GWEIGHT*2.D0*FY
+      FORCE(3)=GWEIGHT*2.D0*FZ
+      DEALLOCATE(DEDPROINV)
+      DEALLOCATE(DEDPRO)
+      DEALLOCATE(DEDPROJ1)
+      USED=.TRUE.
+      RETURN
+      END SUBROUTINE WAVES_DEDPRO_PROFORCE_ACC
+#ENDIF
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_PROJECTIONS(MAP,GSET,NAT,R,NGL,NDIM,NB,NPRO,PSI &

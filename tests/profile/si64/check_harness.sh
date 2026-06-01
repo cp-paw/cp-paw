@@ -44,12 +44,15 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
-  CASES="gpu_resident_stack gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_accmap gpu_no_cufft" \
+  CASES="gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_accmap gpu_no_cufft" \
   tests/profile/si64/run_benchmark.sh > "${tmpdir}/dry-run.out"
 grep -q "Benchmark dry-run metadata:" "${tmpdir}/dry-run.out"
 grep -q "case=gpu_resident_stack" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case=gpu_resident_stack_force_dedpro" "${tmpdir}/dry-run/metadata.txt"
+grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1" "${tmpdir}/dry-run/metadata.txt"
+grep -q "planned_full_command=.*CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case=gpu_resident_stack_psi0_ortho_host" "${tmpdir}/dry-run/metadata.txt"
 grep -q "case_env=CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_ORTHO_RESIDENCY=0" "${tmpdir}/dry-run/metadata.txt"
 grep -q "planned_full_command=.*CPPAW_GPU_PSI0_ORTHO_RESIDENCY=0" "${tmpdir}/dry-run/metadata.txt"
