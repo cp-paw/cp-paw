@@ -168,6 +168,9 @@ not apply to the present implementation.)
    cd tests/profile/si64
    NSTEPS=1 ./run_gpu_exploration.sh
    ```
+   The capability helper reports current `recommended_*` case lists. On CUDA
+   systems with cuBLAS it points routine GPU checks at the residency stack
+   rather than the older force-all diagnostic cases.
    To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
    `CPPAW_CUSOLVER_ACC_MIN_N=1`.
    To inspect a benchmark matrix without starting CP-PAW runs, use the dry-run

@@ -753,9 +753,12 @@ cd tests/profile/si64
 NSTEPS=1 ./run_gpu_exploration.sh
 ```
 
-The exploration run writes the same combined benchmark, comparison, transfer-row,
-and present-row reports as the standard benchmark, plus `gpu_capabilities.txt`
-when the capability helper is available.
+The exploration run defaults to the current residency stack, a same-binary
+residency-off fallback, threshold-gated cuFFT, one-rank serial 3-D cuFFT, the
+force-DEDPRO diagnostic, and the cached ACCMAP diagnostic. It writes the same
+combined benchmark, comparison, transfer-row, and present-row reports as the
+standard benchmark, plus `gpu_capabilities.txt` when the capability helper is
+available.
 
 To compare NVHPC memory modes, build the optional profile binaries and add the
 cases explicitly:
@@ -999,10 +1002,14 @@ The capability helper can be run standalone:
 src/Tools/Scripts/paw_gpu_capabilities.sh
 ```
 
-It reports CUDA devices, NVIDIA HPC SDK library presence for cuBLASLt,
-cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM, and a best-effort CUDA-aware MPI
-hint. Those libraries are profiled as future candidates; they are not linked
-into CP-PAW unless a concrete code path uses them.
+It reports CUDA devices, NVIDIA HPC SDK library presence, current
+`recommended_cpu_cases`, `recommended_gpu_cases`,
+`recommended_gpu_diagnostic_cases`, `recommended_resource_cases`, and a
+best-effort CUDA-aware MPI hint. On CUDA systems with cuBLAS, the recommended
+routine GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics
+are only listed when `libcufft.so` is found. Future-candidate libraries such as
+cuBLASLt, cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning
+but are not linked into CP-PAW unless a concrete code path uses them.
 
 For an active CUDA-aware MPI smoke test, use:
 

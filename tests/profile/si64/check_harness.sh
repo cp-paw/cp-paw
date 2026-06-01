@@ -42,6 +42,16 @@ python3 tests/profile/si64/check_benchmark_tools.py
 
 tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
+
+src/Tools/Scripts/paw_gpu_capabilities.sh > "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_cpu_cases=cpu nvhpc_cpu" \
+  "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_gpu_cases=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_gpu_diagnostic_cases=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_resource_cases=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_standard_command=cd tests/profile/si64" \
+  "${tmpdir}/gpu_capabilities.txt"
+
 DRY_RUN=yes \
   RUN_ROOT="${tmpdir}/dry-run" \
   CASES="gpu_resident_stack gpu_resident_stack_force_dedpro gpu_resident_stack_psi0_ortho_host gpu_resident_stack_psi0_prinfo_host gpu_resident_stack_setup_psim_host gpu_resident_stack_hpsi_prop_psim_phase gpu_resident_stack_hpsi_prop_psim_switch gpu_resident_stack_serial3dfft gpu_resident_stack_serial3dfft_force_dedpro gpu_resident_stack_serial3dfft_accmap gpu_resident_stack_serial3dfft_accmap_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal gpu_resident_stack_serial3dfft_accmap_hpsi_rtog_vpsi_internal_cache gpu_no_cufft" \
