@@ -244,6 +244,11 @@ if cppaw_write_capabilities_file "${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"; 
   log "gpu_capabilities=${NVHPC_STANDARD_ROOT}/gpu_capabilities.txt"
 fi
 log "selected_cases gpu='${GPU_CASES:-none}' cpu='${CPU_CASES:-none}'"
+if [[ -z ${GPU_CASES// } && -z ${CPU_CASES// } ]]; then
+  log "SKIP all suites empty case lists"
+  log "ALL DONE root=${NVHPC_STANDARD_ROOT}"
+  exit 0
+fi
 
 append_suite() {
   local suite=$1

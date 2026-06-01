@@ -1006,14 +1006,15 @@ The capability helper can be run standalone:
 src/Tools/Scripts/paw_gpu_capabilities.sh
 ```
 
-It reports CUDA devices, NVIDIA HPC SDK library presence, current
-`recommended_cpu_cases`, `recommended_gpu_cases`,
-`recommended_gpu_diagnostic_cases`, `recommended_resource_cases`, and a
-best-effort CUDA-aware MPI hint. On CUDA systems with cuBLAS, the recommended
-routine GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics
-are only listed when `libcufft.so` is found. Future-candidate libraries such as
-cuBLASLt, cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning
-but are not linked into CP-PAW unless a concrete code path uses them.
+It reports CUDA devices, NVIDIA HPC SDK library presence, host FFTW
+library/include and BLAS/LAPACK availability, current `recommended_cpu_cases`,
+`recommended_gpu_cases`, `recommended_gpu_diagnostic_cases`,
+`recommended_resource_cases`, and a best-effort CUDA-aware MPI hint. On CUDA
+systems with cuBLAS and a usable host numerical stack, the recommended routine
+GPU cases start from `gpu_resident_stack`; cuFFT-dependent diagnostics are only
+listed when `libcufft.so` is found. Future-candidate libraries such as cuBLASLt,
+cuSPARSE, cuTENSOR, cuDSS, NCCL and NVSHMEM are reported for planning but are
+not linked into CP-PAW unless a concrete code path uses them.
 The standard and exploration wrappers consume these values when `GPU_CASES=auto`
 or `CPU_CASES=auto`; set `CPPAW_GPU_CAPABILITIES_FILE` to replay a captured
 capability scan.

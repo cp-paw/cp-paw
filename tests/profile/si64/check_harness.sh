@@ -45,8 +45,9 @@ tmpdir=$(mktemp -d)
 trap 'rm -rf "${tmpdir}"' EXIT
 
 src/Tools/Scripts/paw_gpu_capabilities.sh > "${tmpdir}/gpu_capabilities.txt"
-grep -q "^recommended_cpu_cases=cpu nvhpc_cpu" \
-  "${tmpdir}/gpu_capabilities.txt"
+grep -q "^host_fftw=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^host_blas_lapack=" "${tmpdir}/gpu_capabilities.txt"
+grep -q "^recommended_cpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_gpu_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_gpu_diagnostic_cases=" "${tmpdir}/gpu_capabilities.txt"
 grep -q "^recommended_resource_cases=" "${tmpdir}/gpu_capabilities.txt"
@@ -58,6 +59,17 @@ recommended_cpu_cases=cpu nvhpc_cpu
 recommended_gpu_cases=gpu_resident_stack gpu_resident_off gpu_resident_stack_cufft
 recommended_gpu_diagnostic_cases=gpu_resident_stack_force_dedpro gpu_resident_nosync
 recommended_resource_cases=cpu nvhpc_cpu gpu_resident_stack
+EOF
+
+cat > "${tmpdir}/fake_nohost_capabilities.txt" <<'EOF'
+host_fftw=no
+host_blas_lapack=yes path=/opt/nvidia/hpc_sdk/Linux_x86_64/2024/compilers/lib/lib{blas,lapack}.so
+recommended_cpu_reason=no_host_fftw_runtime_found
+recommended_gpu_reason=no_host_fftw_runtime_found
+recommended_cpu_cases=none
+recommended_gpu_cases=none
+recommended_gpu_diagnostic_cases=none
+recommended_resource_cases=none
 EOF
 
 DRY_RUN=yes \
@@ -190,6 +202,20 @@ if grep -q "^missing$" "${tmpdir}/standard-auto-dry-run/gpu_1rank/metadata.txt" 
 else
   test "${standard_auto_dry_run_status}" -eq 0
 fi
+
+DRY_RUN=yes \
+  CPPAW_GPU_CAPABILITIES_FILE="${tmpdir}/fake_nohost_capabilities.txt" \
+  NVHPC_STANDARD_ROOT="${tmpdir}/standard-nohost-dry-run" \
+  GPU_CASES=auto \
+  CPU_CASES=auto \
+  tests/profile/si64/run_nvhpc_standard.sh \
+    > "${tmpdir}/standard-nohost-dry-run.out" 2>&1
+grep -q "selected_cases gpu='none' cpu='none'" \
+  "${tmpdir}/standard-nohost-dry-run/nvhpc_standard.log"
+grep -q "SKIP all suites empty case lists" \
+  "${tmpdir}/standard-nohost-dry-run/nvhpc_standard.log"
+test ! -e "${tmpdir}/standard-nohost-dry-run/gpu_1rank/metadata.txt"
+test ! -e "${tmpdir}/standard-nohost-dry-run/cpu_1rank/metadata.txt"
 
 set +e
 DRY_RUN=yes \

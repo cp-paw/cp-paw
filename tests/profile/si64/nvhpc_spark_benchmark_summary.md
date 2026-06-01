@@ -72,12 +72,79 @@ dedicated follow-up runs before promoting any path to production default.
 | `vpsi-internal-*-20260601-*` | Resident `WAVES_VPSI` real-space scratch in the serial 3D FFT ACCMAP path | Spark/GB10: isolated scratch residency lowers transfer to 2.2890 GB at NSTEPS=1; combined with HPSI-RTOG it reaches 2.0469 GB | Terok/A40: isolated scratch residency lowers transfer identically, but combined HPSI-RTOG is the better diagnostic at NSTEPS=3 | NSTEPS=1 energy-valid on both systems | Adds separate `gpu_resident_stack_serial3dfft_accmap_vpsi_internal` and combined `*_hpsi_rtog_vpsi_internal` cases; useful and measurable, but still opt-in because wall time is case/system noisy. |
 | `accmap-cache-*-20260601-*` | Cached serial 3D ACCMAP work/map arrays | Spark/GB10: combined HPSI-RTOG+VPSI internal cache improves NSTEPS=3 from 39.09 to 34.58 s and lowers transfer from 4.8517 to 4.5655 GB | Terok/A40: same cache improves NSTEPS=3 from 33.10 to 23.66 s and lowers transfer identically | NSTEPS=1 energy-valid on both systems | Adds opt-in `CPPAW_FFT_SERIAL_3D_ACC_CACHE=1` / `*_hpsi_rtog_vpsi_internal_cache`; validated as a useful diagnostic, but still not a default because the serial ACCMAP path remains system-dependent. |
 | `accmap-cleanup-final-*-20260601-*` | ACCMAP cache cleanup and non-CUBLAS build guard | Spark/GB10: final cache smoke is 8.16 s at 512/1 and 6.53 s at 256/4 | Terok/A40: final cache smoke is 5.25 s at 512/1 and 8.58 s at 256/4 | Energy-valid; `nvhpc_profile` and GPU serial/parallel builds pass on both systems | Moves the cached ACCMAP state into `PLANEWAVE_MODULE`, releases it through `PLANEWAVE$ACC_CLEANUP`, and restores the non-CUBLAS `nvhpc_profile` build by guarding setup-PSIM residency code. |
+| `auto-standard-spark-20260601-164010` / `auto-standard-terok-fftw-20260601-164730` | Capability-driven standard smoke | Spark/GB10: `gpu_resident_stack_serial3dfft` 11.13 s, `gpu_resident_stack` 12.14 s | Spark: `cpu` 73.51 s, `nvhpc_cpu` 69.11 s; 8-rank CPU 166.30/166.41 s | Terok x86_64 builds and runs after local FFTW plus NVHPC compiler BLAS/LAPACK fallback | Confirms the auto recommendation path and the new host-library gating. Spark remains the performance reference; Terok is the x86/NVHPC portability check. |
 
-The latest full-matrix run lives at:
+The latest auto-standard smoke runs live at:
 
 ```
-/home/kuehne88/cp-paw-nvhpc-hpsi/tests/profile/si64/runs/si64_bands-nvhpc-standard-20260601-4fbe2cd-1024-nstep1
+Spark: /home/kuehne88/cp-paw-nvhpc-auto-20260601-163927/tests/profile/si64/runs/auto-standard-spark-20260601-164010
+Terok: /home/kuehne88/cp-paw-nvhpc-auto-20260601-163926/tests/profile/si64/runs/auto-standard-terok-fftw-20260601-164730
 ```
+
+## 2026-06-01 Auto Standard And Host Library Gating
+
+The standard wrapper now consumes the capability helper's recommended case
+lists by default and can auto-build the required profile targets. The helper no
+longer recommends GPU or NVHPC CPU cases unless the host numerical stack is
+usable: host FFTW, including `fftw3.f03`, and host BLAS/LAPACK are reported
+explicitly. If either is missing, `run_nvhpc_standard.sh` resolves both auto
+case lists to empty, logs `SKIP all suites empty case lists`, and exits cleanly
+instead of failing later inside `paw_build.sh`.
+
+Spark C86C has the full NVHPC/GB10 stack available from the system SDK. The
+auto-standard run built all required targets and completed the GPU, one-rank
+CPU, and eight-rank CPU suites:
+
+| Case | Ranks | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident_stack_serial3dfft` | 1 | 11.13 s | 5.4859 GB | yes |
+| `gpu_resident_stack` | 1 | 12.14 s | 1.3892 GB | yes |
+| `gpu_resident_stack_cufft` | 1 | 12.47 s | 1.3892 GB | yes |
+| `gpu_resident_off` | 1 | 43.77 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 1 | 69.11 s | 0.0000 GB | yes |
+| `cpu` | 1 | 73.51 s | 0.0000 GB | yes |
+| `cpu` | 8 | 166.30 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 8 | 166.41 s | 0.0000 GB | yes |
+
+The performance conclusion is unchanged but now reproduced through the auto
+path: one GPU with the resident stack is much faster than the 1-rank CPU
+reference for this Si64 smoke, and also faster than the 8-rank CPU resource
+comparison. `gpu_resident_stack_serial3dfft` is the fastest one-step result, but
+it still carries the explicit full-grid copy estimate, so the routine default
+stays the conservative resident stack while serial 3D FFT remains an opt-in
+diagnostic.
+
+Terok initially exposed the portability gap: NVHPC 24.5 on x86_64 provides
+cuBLAS, cuFFT, cuSOLVER, cuTENSOR, NCCL, and NVSHMEM, but no usable host NVPL
+FFTW library. Installing FFTW 3.3.10 into
+`/home/kuehne88/opt/fftw-3.3.10` and exporting its `PKG_CONFIG_PATH` lets the
+helper report:
+
+```
+host_fftw=yes path=pkg-config:fftw3 prefix=/home/kuehne88/opt/fftw-3.3.10
+host_blas_lapack=yes path=/home/kuehne88/opt/nvidia/hpc_sdk/Linux_x86_64/2024/compilers/lib/lib{blas,lapack}.so
+```
+
+The corresponding build fallback adds the NVHPC compiler `libblas.so` and
+`liblapack.so` when NVPL is absent. With that setup the same auto-standard
+matrix builds and runs on Terok:
+
+| Case | Ranks | Wall time | Transfer estimate | Energy check |
+| --- | ---: | ---: | ---: | --- |
+| `gpu_resident_stack_serial3dfft` | 1 | 11.95 s | 5.4859 GB | yes |
+| `gpu_resident_stack_cufft` | 1 | 12.17 s | 1.3892 GB | yes |
+| `gpu_resident_stack` | 1 | 12.71 s | 1.3892 GB | yes |
+| `gpu_resident_off` | 1 | 77.75 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 1 | 190.96 s | 0.0000 GB | yes |
+| `cpu` | 1 | 193.34 s | 0.0000 GB | yes |
+| `cpu` | 8 | 142.11 s | 0.0000 GB | yes |
+| `nvhpc_cpu` | 8 | 142.41 s | 0.0000 GB | yes |
+
+The Terok timings were taken while other CP2K/GauXC work was visible on the
+machine, so they are a portability and correctness check rather than a clean
+performance comparison. Still, every selected case is energy-valid, and the
+same capability-driven case matrix now works on both aarch64/GB10 with NVHPC
+26.3 and x86_64/A40 with NVHPC 24.5 plus a host FFTW install.
 
 ## 2026-06-01 HPSI RTOG Output Residency Diagnostic
 

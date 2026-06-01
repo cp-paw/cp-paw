@@ -168,11 +168,12 @@ not apply to the present implementation.)
    cd tests/profile/si64
    NSTEPS=1 ./run_gpu_exploration.sh
    ```
-   The capability helper reports current `recommended_*` case lists. On CUDA
-   systems with cuBLAS it points routine GPU checks at the residency stack
-   rather than the older force-all diagnostic cases. The standard and
-   exploration benchmark wrappers consume those recommendations when
-   `GPU_CASES=auto`, which is their default.
+   The capability helper reports host FFTW library/include and BLAS/LAPACK
+   availability plus current `recommended_*` case lists. On CUDA systems with
+   cuBLAS and a usable host numerical stack it points routine GPU checks at the
+   residency stack rather than the older force-all diagnostic cases. The
+   standard and exploration benchmark wrappers consume those recommendations
+   when `GPU_CASES=auto`, which is their default.
    To force all native paths for diagnostics, add `CPPAW_CUFFT_ACC=1` and
    `CPPAW_CUSOLVER_ACC_MIN_N=1`.
    To inspect a benchmark matrix without starting CP-PAW runs, use the dry-run

@@ -116,10 +116,26 @@ function find_nvhpc_root {
   local PLATFORM
   local COMPILER_PATH
   local D
+  local VERSION_ROOT
 
   if [[ -n ${NVHPC_ROOT} && -x ${NVHPC_ROOT}/compilers/bin/nvfortran ]] ; then
     echo "${NVHPC_ROOT}"
     return 0
+  fi
+
+  PLATFORM=$(nvhpc_platform)
+  if [[ -n ${NVHPC_ROOT} && -d ${NVHPC_ROOT} ]] ; then
+    VERSION_ROOT=$(
+      for D in "${NVHPC_ROOT}"/* "${NVHPC_ROOT}/${PLATFORM}"/* ; do
+        if [[ -x ${D}/compilers/bin/nvfortran ]] ; then
+          echo "${D}"
+        fi
+      done | sort -V | tail -1
+    )
+    if [[ -n ${VERSION_ROOT} ]] ; then
+      echo "${VERSION_ROOT}"
+      return 0
+    fi
   fi
 
   COMPILER_PATH=$(command_path nvfortran)
@@ -135,9 +151,9 @@ function find_nvhpc_root {
     return 0
   fi
 
-  PLATFORM=$(nvhpc_platform)
   if [[ -n ${PLATFORM} ]] ; then
-    for D in /opt/nvidia/hpc_sdk/${PLATFORM}/* ; do
+    for D in /opt/nvidia/hpc_sdk/${PLATFORM}/* \
+             "${HOME:-}"/opt/nvidia/hpc_sdk/${PLATFORM}/* ; do
       if [[ -x ${D}/compilers/bin/nvfortran ]] ; then
         echo "${D}"
       fi
@@ -223,6 +239,28 @@ function find_nvhpc_nvlamath_libdir {
   done
 }
 
+function find_nvhpc_nvpl_root {
+  local D
+  for D in "${NVHPC_ROOT}"/math_libs/nvpl \
+           "${NVHPC_ROOT}"/REDIST/math_libs/nvpl ; do
+    if [[ -f ${D}/lib/libnvpl_fftw.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
+function find_nvhpc_compiler_libdir {
+  local D
+  for D in "${NVHPC_ROOT}"/compilers/lib \
+           "${NVHPC_ROOT}"/REDIST/compilers/lib ; do
+    if [[ -f ${D}/libblas.so && -f ${D}/liblapack.so ]] ; then
+      echo "${D}"
+      return 0
+    fi
+  done
+}
+
 function find_nvhpc_cufftw_libdir {
   local D
   for D in "${NVHPC_ROOT}"/math_libs/*/targets/*/lib \
@@ -254,7 +292,8 @@ function find_nvhpc_fftw3_include {
   fi
 
   for D in "${NVHPC_ROOT}"/compilers/include/nvpl_fftw/fftw3.f03 \
-           "${NVHPC_ROOT}"/math_libs/nvpl/include/nvpl_fftw/fftw3.f03 ; do
+           "${NVHPC_ROOT}"/math_libs/nvpl/include/nvpl_fftw/fftw3.f03 \
+           "${NVHPC_ROOT}"/REDIST/math_libs/nvpl/include/nvpl_fftw/fftw3.f03 ; do
     if [[ -f ${D} ]] ; then
       echo "${D}"
       return 0
@@ -465,10 +504,11 @@ if [[ ${OS} = Darwin ]] ; then
 fi
 
 if [[ ${COMPILER} = nvfortran && -n ${NVHPC_ROOT} ]] ; then
-  NVPL_ROOT="${NVHPC_ROOT}/math_libs/nvpl"
+  NVPL_ROOT=$(find_nvhpc_nvpl_root)
   CUFFTW_LIBDIR=$(find_nvhpc_cufftw_libdir)
   FFTW3_INCLUDE=$(find_nvhpc_fftw3_include)
-  if [[ -f ${NVPL_ROOT}/include/nvpl_fftw/fftw3.f03 \
+  if [[ -n ${NVPL_ROOT} \
+        && -f ${NVPL_ROOT}/include/nvpl_fftw/fftw3.f03 \
         && -f ${NVPL_ROOT}/lib/libnvpl_fftw.so ]] ; then
     FCFLAGS="${FCFLAGS} -I${NVPL_ROOT}/include -I${NVPL_ROOT}/include/nvpl_fftw"
     if [[ ${CPPAW_USE_NVBLAS} = yes \
@@ -512,6 +552,15 @@ if [[ ${COMPILER} = nvfortran && -n ${NVHPC_ROOT} ]] ; then
     LIB_BLAS_OK="yes"
     LIB_LAPACK_OK="yes"
     LIB_FFTW3_OK="yes"
+  fi
+  if [[ -z ${LIB_BLAS_OK} || -z ${LIB_LAPACK_OK} ]] ; then
+    NVHPC_COMPILER_LIBDIR=$(find_nvhpc_compiler_libdir)
+    if [[ -n ${NVHPC_COMPILER_LIBDIR} ]] ; then
+      LDFLAGS="${LDFLAGS} -L${NVHPC_COMPILER_LIBDIR} -Wl,-rpath,${NVHPC_COMPILER_LIBDIR}"
+      LIBS="${LIBS} -L${NVHPC_COMPILER_LIBDIR} -llapack -lblas"
+      LIB_BLAS_OK="yes"
+      LIB_LAPACK_OK="yes"
+    fi
   fi
 fi
 

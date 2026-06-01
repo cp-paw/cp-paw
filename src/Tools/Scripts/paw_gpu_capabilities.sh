@@ -59,6 +59,120 @@ find_lib() {
   done
 }
 
+find_host_fftw_include() {
+  local root=${1:-}
+  local dir
+  local pc_includedir
+
+  if [[ -n "${CPPAW_FFTW3_INCLUDE:-}" && -f "${CPPAW_FFTW3_INCLUDE}" ]]; then
+    echo "${CPPAW_FFTW3_INCLUDE}"
+    return 0
+  fi
+
+  if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists fftw3; then
+    pc_includedir=$(pkg-config --variable=includedir fftw3 2>/dev/null || true)
+    if [[ -f "${pc_includedir}/fftw3.f03" ]]; then
+      echo "${pc_includedir}/fftw3.f03"
+      return 0
+    fi
+  fi
+
+  for dir in \
+      "${root}"/compilers/include/nvpl_fftw \
+      "${root}"/math_libs/nvpl/include/nvpl_fftw \
+      "${root}"/REDIST/math_libs/nvpl/include/nvpl_fftw \
+      /usr/local/include \
+      /usr/include \
+      /opt/homebrew/include; do
+    if [[ -f "${dir}/fftw3.f03" ]]; then
+      echo "${dir}/fftw3.f03"
+      return 0
+    fi
+  done
+}
+
+find_host_fftw() {
+  local root=${1:-}
+  local dir
+  local include_path
+  local pc_prefix
+
+  include_path=$(find_host_fftw_include "${root}" || true)
+  [[ -n "${include_path}" ]] || return 1
+
+  if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists fftw3; then
+    pc_prefix=$(pkg-config --variable=prefix fftw3 2>/dev/null || true)
+    echo "pkg-config:fftw3${pc_prefix:+ prefix=${pc_prefix}} include=${include_path}"
+    return 0
+  fi
+
+  for dir in \
+      "${root}"/math_libs/nvpl/lib \
+      "${root}"/REDIST/math_libs/nvpl/lib \
+      "${root}"/compilers/lib \
+      "${root}"/REDIST/compilers/lib \
+      /usr/local/lib \
+      /usr/lib64 \
+      /usr/lib \
+      /opt/homebrew/lib; do
+    if [[ -f "${dir}/libnvpl_fftw.so" ]]; then
+      echo "${dir}/libnvpl_fftw.so include=${include_path}"
+      return 0
+    fi
+    if [[ -f "${dir}/libfftw3.so" || -f "${dir}/libfftw3.dylib" ]]; then
+      echo "${dir}/libfftw3 include=${include_path}"
+      return 0
+    fi
+  done
+}
+
+find_host_blas_lapack() {
+  local root=${1:-}
+  local dir
+  local pc
+  local pc_prefix
+
+  if [[ "$(uname -s)" == Darwin ]]; then
+    echo "framework:Accelerate"
+    return 0
+  fi
+
+  if command -v pkg-config >/dev/null 2>&1; then
+    for pc in openblas mkl; do
+      if pkg-config --exists "${pc}"; then
+        pc_prefix=$(pkg-config --variable=prefix "${pc}" 2>/dev/null || true)
+        echo "pkg-config:${pc}${pc_prefix:+ prefix=${pc_prefix}}"
+        return 0
+      fi
+    done
+    if pkg-config --exists lapack && pkg-config --exists blas; then
+      pc_prefix=$(pkg-config --variable=prefix lapack 2>/dev/null || true)
+      echo "pkg-config:lapack+blas${pc_prefix:+ prefix=${pc_prefix}}"
+      return 0
+    fi
+  fi
+
+  for dir in \
+      "${root}"/math_libs/nvpl/lib \
+      "${root}"/REDIST/math_libs/nvpl/lib \
+      "${root}"/compilers/lib \
+      "${root}"/REDIST/compilers/lib \
+      /usr/local/lib \
+      /usr/lib64 \
+      /usr/lib \
+      /opt/homebrew/lib; do
+    if [[ -f "${dir}/libnvpl_blas_lp64_seq.so" \
+          && -f "${dir}/libnvpl_lapack_lp64_seq.so" ]]; then
+      echo "${dir}/libnvpl_{blas,lapack}_lp64_seq.so"
+      return 0
+    fi
+    if [[ -f "${dir}/libblas.so" && -f "${dir}/liblapack.so" ]]; then
+      echo "${dir}/lib{blas,lapack}.so"
+      return 0
+    fi
+  done
+}
+
 yesno_path() {
   local key=$1
   local path=$2
@@ -145,7 +259,11 @@ cutensor_path=$(find_lib libcutensor.so "${root}" || true)
 cudss_path=$(find_lib libcudss.so "${root}" || true)
 nccl_path=$(find_lib libnccl.so "${root}" || true)
 nvshmem_path=$(find_lib libnvshmem_host.so "${root}" || true)
+host_fftw_path=$(find_host_fftw "${root}" || true)
+host_blas_lapack_path=$(find_host_blas_lapack "${root}" || true)
 
+yesno_path "host_fftw" "${host_fftw_path}"
+yesno_path "host_blas_lapack" "${host_blas_lapack_path}"
 yesno_path "cublas" "${cublas_path}"
 yesno_path "cublaslt" "${cublaslt_path}"
 yesno_path "cufft" "${cufft_path}"
@@ -159,12 +277,25 @@ yesno_path "nvshmem" "${nvshmem_path}"
 cuda_aware_mpi
 echo "cuda_aware_mpi_probe=run src/Tools/Scripts/paw_cuda_aware_mpi_probe.sh"
 
-recommended_cpu_cases="cpu nvhpc_cpu"
+recommended_cpu_cases="cpu"
+if [[ -n "${root}" && -x "${root}/compilers/bin/nvfortran" ]]; then
+  recommended_cpu_cases=$(append_case "${recommended_cpu_cases}" "nvhpc_cpu")
+fi
 recommended_gpu_cases="none"
 recommended_gpu_diagnostic_cases=""
 recommended_resource_cases="${recommended_cpu_cases}"
 
-if [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
+if [[ -z "${host_fftw_path}" ]]; then
+  recommended_cpu_cases="none"
+  recommended_resource_cases="none"
+  echo "recommended_cpu_reason=no_host_fftw_runtime_found"
+  echo "recommended_gpu_reason=no_host_fftw_runtime_found"
+elif [[ -z "${host_blas_lapack_path}" ]]; then
+  recommended_cpu_cases="none"
+  recommended_resource_cases="none"
+  echo "recommended_cpu_reason=no_host_blas_lapack_runtime_found"
+  echo "recommended_gpu_reason=no_host_blas_lapack_runtime_found"
+elif [[ "${has_gpu}" == yes && -n "${cublas_path}" ]]; then
   recommended_gpu_cases="gpu_resident_stack gpu_resident_off"
   recommended_resource_cases="${recommended_cpu_cases} gpu_resident_stack"
   recommended_gpu_diagnostic_cases="gpu_resident_stack_force_dedpro gpu_resident_nosync"
