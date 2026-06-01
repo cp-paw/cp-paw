@@ -194,6 +194,15 @@ TYPE WVSET_TYPE  !==============================================================
   LOGICAL(4)         :: HPSI_ACC_RESIDENT=.FALSE.
   LOGICAL(4)         :: PSIM_ACC_RESIDENT=.FALSE.
   LOGICAL(4)         :: PROJ_ACC_RESIDENT=.FALSE.
+  INTEGER(4)         :: PSI0_ACC_NGL=0
+  INTEGER(4)         :: PSI0_ACC_NDIM=0
+  INTEGER(4)         :: PSI0_ACC_NBH=0
+  INTEGER(4)         :: PSIM_ACC_NGL=0
+  INTEGER(4)         :: PSIM_ACC_NDIM=0
+  INTEGER(4)         :: PSIM_ACC_NBH=0
+  INTEGER(4)         :: HPSI_ACC_NGL=0
+  INTEGER(4)         :: HPSI_ACC_NDIM=0
+  INTEGER(4)         :: HPSI_ACC_NBH=0
 END TYPE WVSET_TYPE
 TYPE EXTERNALPOINTER_TYPE !=====================================================
   INTEGER(4) :: IB
@@ -291,6 +300,174 @@ CONTAINS
       END SUBROUTINE WAVES_SELECTWV
 !
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSI0_MARK(NGL,NDIM,NBH)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NGL
+      INTEGER(4),INTENT(IN) :: NDIM
+      INTEGER(4),INTENT(IN) :: NBH
+!     **************************************************************************
+      THIS%PSI0_ACC_RESIDENT=.TRUE.
+      THIS%PSI0_ACC_NGL=NGL
+      THIS%PSI0_ACC_NDIM=NDIM
+      THIS%PSI0_ACC_NBH=NBH
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSI0_MARK
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSI0_CLEAR()
+      IMPLICIT NONE
+!     **************************************************************************
+      THIS%PSI0_ACC_RESIDENT=.FALSE.
+      THIS%PSI0_ACC_NGL=0
+      THIS%PSI0_ACC_NDIM=0
+      THIS%PSI0_ACC_NBH=0
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSI0_CLEAR
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSI0_DELETE()
+      USE OPENACC, ONLY: ACC_DELETE, ACC_IS_PRESENT
+      IMPLICIT NONE
+      INTEGER(4) :: NGL
+      INTEGER(4) :: NDIML
+      INTEGER(4) :: NBH
+      INTEGER(8) :: ACCBYTES
+!     **************************************************************************
+      IF(.NOT.ASSOCIATED(THIS)) RETURN
+      IF(.NOT.ASSOCIATED(THIS%PSI0)) THEN
+        CALL WAVES_ACC_THIS_PSI0_CLEAR()
+        RETURN
+      END IF
+      IF(.NOT.THIS%PSI0_ACC_RESIDENT) RETURN
+      NGL=THIS%PSI0_ACC_NGL
+      NDIML=THIS%PSI0_ACC_NDIM
+      NBH=THIS%PSI0_ACC_NBH
+      IF(NGL.LE.0.AND.ASSOCIATED(GSET)) NGL=GSET%NGL
+      IF(NDIML.LE.0) NDIML=NDIM
+      IF(NBH.LE.0) NBH=THIS%NBH
+      IF(ACC_IS_PRESENT(THIS%PSI0).AND.NGL.GT.0.AND.NDIML.GT.0 &
+     &                         .AND.NBH.GT.0) THEN
+        ACCBYTES=16_8*INT(NGL,KIND=8)*INT(NDIML,KIND=8) &
+     &          *INT(NBH,KIND=8)
+        CALL ACC_DELETE(THIS%PSI0,ACCBYTES)
+      END IF
+      CALL WAVES_ACC_THIS_PSI0_CLEAR()
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSI0_DELETE
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSIM_MARK(NGL,NDIM,NBH)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NGL
+      INTEGER(4),INTENT(IN) :: NDIM
+      INTEGER(4),INTENT(IN) :: NBH
+!     **************************************************************************
+      THIS%PSIM_ACC_RESIDENT=.TRUE.
+      THIS%PSIM_ACC_NGL=NGL
+      THIS%PSIM_ACC_NDIM=NDIM
+      THIS%PSIM_ACC_NBH=NBH
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSIM_MARK
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSIM_CLEAR()
+      IMPLICIT NONE
+!     **************************************************************************
+      THIS%PSIM_ACC_RESIDENT=.FALSE.
+      THIS%PSIM_ACC_NGL=0
+      THIS%PSIM_ACC_NDIM=0
+      THIS%PSIM_ACC_NBH=0
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSIM_CLEAR
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_PSIM_DELETE()
+      USE OPENACC, ONLY: ACC_DELETE, ACC_IS_PRESENT
+      IMPLICIT NONE
+      INTEGER(4) :: NGL
+      INTEGER(4) :: NDIML
+      INTEGER(4) :: NBH
+      INTEGER(8) :: ACCBYTES
+!     **************************************************************************
+      IF(.NOT.ASSOCIATED(THIS)) RETURN
+      IF(.NOT.ASSOCIATED(THIS%PSIM)) THEN
+        CALL WAVES_ACC_THIS_PSIM_CLEAR()
+        RETURN
+      END IF
+      IF(.NOT.THIS%PSIM_ACC_RESIDENT) RETURN
+      NGL=THIS%PSIM_ACC_NGL
+      NDIML=THIS%PSIM_ACC_NDIM
+      NBH=THIS%PSIM_ACC_NBH
+      IF(NGL.LE.0.AND.ASSOCIATED(GSET)) NGL=GSET%NGL
+      IF(NDIML.LE.0) NDIML=NDIM
+      IF(NBH.LE.0) NBH=THIS%NBH
+      IF(ACC_IS_PRESENT(THIS%PSIM).AND.NGL.GT.0.AND.NDIML.GT.0 &
+     &                         .AND.NBH.GT.0) THEN
+        ACCBYTES=16_8*INT(NGL,KIND=8)*INT(NDIML,KIND=8) &
+     &          *INT(NBH,KIND=8)
+        CALL ACC_DELETE(THIS%PSIM,ACCBYTES)
+      END IF
+      CALL WAVES_ACC_THIS_PSIM_CLEAR()
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_PSIM_DELETE
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_HPSI_MARK(NGL,NDIM,NBH)
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NGL
+      INTEGER(4),INTENT(IN) :: NDIM
+      INTEGER(4),INTENT(IN) :: NBH
+!     **************************************************************************
+      THIS%HPSI_ACC_RESIDENT=.TRUE.
+      THIS%HPSI_ACC_NGL=NGL
+      THIS%HPSI_ACC_NDIM=NDIM
+      THIS%HPSI_ACC_NBH=NBH
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_HPSI_MARK
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_HPSI_CLEAR()
+      IMPLICIT NONE
+!     **************************************************************************
+      THIS%HPSI_ACC_RESIDENT=.FALSE.
+      THIS%HPSI_ACC_NGL=0
+      THIS%HPSI_ACC_NDIM=0
+      THIS%HPSI_ACC_NBH=0
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_HPSI_CLEAR
+!
+!     ..........................................................................
+      SUBROUTINE WAVES_ACC_THIS_HPSI_DELETE()
+      USE OPENACC, ONLY: ACC_DELETE, ACC_IS_PRESENT
+      IMPLICIT NONE
+      INTEGER(4) :: NGL
+      INTEGER(4) :: NDIML
+      INTEGER(4) :: NBH
+      INTEGER(8) :: ACCBYTES
+!     **************************************************************************
+      IF(.NOT.ASSOCIATED(THIS)) RETURN
+      IF(.NOT.ASSOCIATED(THIS%HPSI)) THEN
+        CALL WAVES_ACC_THIS_HPSI_CLEAR()
+        RETURN
+      END IF
+      IF(.NOT.THIS%HPSI_ACC_RESIDENT) RETURN
+      NGL=THIS%HPSI_ACC_NGL
+      NDIML=THIS%HPSI_ACC_NDIM
+      NBH=THIS%HPSI_ACC_NBH
+      IF(NGL.LE.0.AND.ASSOCIATED(GSET)) NGL=GSET%NGL
+      IF(NDIML.LE.0) NDIML=NDIM
+      IF(NBH.LE.0) NBH=THIS%NBH
+      IF(ACC_IS_PRESENT(THIS%HPSI).AND.NGL.GT.0.AND.NDIML.GT.0 &
+     &                         .AND.NBH.GT.0) THEN
+        ACCBYTES=16_8*INT(NGL,KIND=8)*INT(NDIML,KIND=8) &
+     &          *INT(NBH,KIND=8)
+        CALL ACC_DELETE(THIS%HPSI,ACCBYTES)
+      END IF
+      CALL WAVES_ACC_THIS_HPSI_CLEAR()
+      RETURN
+      END SUBROUTINE WAVES_ACC_THIS_HPSI_DELETE
+!
 !     ..........................................................................
       SUBROUTINE WAVES_ACC_THIS_PROJ_DELETE()
       USE OPENACC
@@ -2502,7 +2679,7 @@ CALL TIMING$CLOCKON('W:EXPECT')
             IF(.NOT.THAMILTON) THEN
               IF(.NOT.TKEEPHPSIPROP) THEN
 !$ACC EXIT DATA COPYOUT(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
-                THIS%HPSI_ACC_RESIDENT=.FALSE.
+                CALL WAVES_ACC_THIS_HPSI_CLEAR()
               END IF
             END IF
           END IF
@@ -2588,7 +2765,7 @@ CALL TIMESTEP$GETI4('ISTEP',ISVAR)
               CALL CPPAW_CUBLAS_ACC_SET_WAVE_OVERLAP_RESIDENT(.FALSE.)
               IF(.NOT.TKEEPHPSIPROP) THEN
 !$ACC EXIT DATA COPYOUT(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
-                THIS%HPSI_ACC_RESIDENT=.FALSE.
+                CALL WAVES_ACC_THIS_HPSI_CLEAR()
               END IF
             END IF
 #ENDIF
@@ -2644,10 +2821,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
           CALL WAVES_SELECTWV(IKPT,ISPIN)
           CALL PLANEWAVE$SELECT(GSET%ID)
           IF(THIS%PSI0_ACC_RESIDENT.AND.(.NOT.TKEEPPSI0ORTHO)) THEN
-            NGL=GSET%NGL
-            NBH=THIS%NBH
-!$ACC EXIT DATA DELETE(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
-            THIS%PSI0_ACC_RESIDENT=.FALSE.
+            CALL WAVES_ACC_THIS_PSI0_DELETE()
           END IF
         ENDDO
       ENDDO
@@ -3105,6 +3279,9 @@ END IF
       USE WAVES_MODULE, ONLY : NKPTL,NSPIN,NDIM,MAP,GSET,THIS &
      &                        ,WAVES_SELECTWV
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE WAVES_MODULE, ONLY: WAVES_ACC_THIS_PSI0_MARK
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_SETUP_PSI_RESIDENCY_ENABLED
 #ENDIF
@@ -3145,7 +3322,7 @@ END IF
      &          *REAL(NBH,KIND=8),0.D0)
 #ENDIF
 !$ACC ENTER DATA COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
-            THIS%PSI0_ACC_RESIDENT=.TRUE.
+            CALL WAVES_ACC_THIS_PSI0_MARK(NGL,NDIM,NBH)
           END IF
 #ENDIF
           CALL WAVES_GRAMSCHMIDT(MAP,GSET,NAT,R0,NGL,NDIM,NBH,NB,THIS%PSI0 &
@@ -6399,7 +6576,7 @@ RETURN
 #ENDIF
           IF(TKEEPPSI0FORHPSI.AND.(.NOT.THIS%PSI0_ACC_RESIDENT)) THEN
 !$ACC ENTER DATA COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
-            THIS%PSI0_ACC_RESIDENT=.TRUE.
+            CALL WAVES_ACC_THIS_PSI0_MARK(NGL,NDIM,NBH)
           END IF
 !$ACC DATA PRESENT_OR_COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH)) &
 !$ACC& IF(TRESIDENTFORCEPSI)
@@ -6542,6 +6719,12 @@ RETURN
       USE WAVES_MODULE, ONLY : NDIMD,NDIM,NKPTL,NSPIN,MAP,GSET,THIS &
      &                        ,WAVES_SELECTWV
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
+      USE WAVES_MODULE, ONLY: &
+     &       WAVES_ACC_THIS_PSI0_MARK &
+     &      ,WAVES_ACC_THIS_HPSI_MARK &
+     &      ,WAVES_ACC_THIS_HPSI_CLEAR
+#ENDIF
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
       USE OPENACC
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &       CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED &
@@ -6605,7 +6788,7 @@ RETURN
           NGL=GSET%NGL
           NBH=THIS%NBH
           IF(.NOT.ASSOCIATED(THIS%HPSI))ALLOCATE(THIS%HPSI(NGL,NDIM,NBH))
-          THIS%HPSI_ACC_RESIDENT=.FALSE.
+          CALL WAVES_ACC_THIS_HPSI_CLEAR()
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           THPSIRESIDENT=CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED()
           IF(THPSIRESIDENT) THEN
@@ -6626,7 +6809,7 @@ RETURN
 #ENDIF
             IF(.NOT.THIS%PSI0_ACC_RESIDENT) THEN
 !$ACC ENTER DATA COPYIN(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
-              THIS%PSI0_ACC_RESIDENT=.TRUE.
+              CALL WAVES_ACC_THIS_PSI0_MARK(NGL,NDIM,NBH)
             END IF
           END IF
 #ENDIF
@@ -6713,7 +6896,7 @@ RETURN
             IF(.NOT.ACC_IS_PRESENT(THIS%HPSI)) THEN
 !$ACC ENTER DATA COPYIN(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
             END IF
-            THIS%HPSI_ACC_RESIDENT=.TRUE.
+            CALL WAVES_ACC_THIS_HPSI_MARK(NGL,NDIM,NBH)
           END IF
 #ENDIF
           CALL WAVES_ADDPRO(MAP,GSET,NAT,R,NGL,NDIM,NBH,MAP%NPRO &
@@ -9089,14 +9272,13 @@ RETURN
 #ENDIF
             IF(TPHASERESIDENTPSIM.AND.(.NOT.THIS%PSIM_ACC_RESIDENT)) THEN
 !$ACC ENTER DATA COPYIN(THIS%PSIM(1:NGL,1:NDIM,1:NBH))
-              THIS%PSIM_ACC_RESIDENT=.TRUE.
+              CALL WAVES_ACC_THIS_PSIM_MARK(NGL,NDIM,NBH)
             END IF
             CALL WAVES_PROPAGATE_PSIM_ACC(NGL,NDIM,NBH,ARR1,ARR2,ARR3 &
      &                                    ,THIS%PSI0,THIS%PSIM,THIS%HPSI)
             IF(THIS%HPSI_ACC_RESIDENT) THEN
-!$ACC EXIT DATA DELETE(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
+              CALL WAVES_ACC_THIS_HPSI_DELETE()
             END IF
-            THIS%HPSI_ACC_RESIDENT=.FALSE.
           ELSE
             IF(THIS%HPSI_ACC_RESIDENT) THEN
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -9106,7 +9288,7 @@ RETURN
      &            *REAL(NDIM,KIND=8)*REAL(NBH,KIND=8),0.D0)
 #ENDIF
 !$ACC EXIT DATA COPYOUT(THIS%HPSI(1:NGL,1:NDIM,1:NBH))
-              THIS%HPSI_ACC_RESIDENT=.FALSE.
+              CALL WAVES_ACC_THIS_HPSI_CLEAR()
             END IF
 #ENDIF
             DO IB=1,NBH

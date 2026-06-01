@@ -57,6 +57,7 @@ dedicated follow-up runs before promoting any path to production default.
 | `psi0-prinfo-spark-20260601-074852` / `psi0-prinfo-terok-20260601-074852` | PSI0-to-PRINFO residency | `gpu_resident_stack` 12.11 s on Spark, 12.77 s on Terok | - | - | Keeps `PSI0` resident through `PRINFO/WRITEPDOS`, removing one more 0.1210 GB wavefunction copy; energy-valid on both systems, wall time neutral/noisy. |
 | `hpsi-prop-spark-20260601-100735` / `hpsi-prop-terok-20260601-101036` | HPSI-to-propagate residency diagnostic | `gpu_resident_stack_hpsi_prop_psim_phase` 12.13 s on Spark, 12.59 s on Terok | - | - | Keeps `HPSI` resident from ETOT overlap/Hamiltonian into GPU PSIM propagation; removes the extra 0.1210 GB `PROP_HPSI_IN` copy from the PSIM-phase diagnostic and stays energy-valid on both systems. |
 | `psim-switch-accdelete-spark-20260601-104028` / `psim-switch-accdelete-terok-20260601-104027` | NSTEPS=2 PSIM switch residency | `gpu_resident_stack_hpsi_prop_psim_switch` 20.61 s on Spark, 20.25 s on Terok | - | - | Carries resident `PSIM` through `WAVES$SWITCH` as the next `PSI0`, removes one more 0.1210 GB force-side `PSI0` copy per two-step run, and fixes the Spark partially-present delete failure. |
+| `accdims-switch-spark-20260601-105947` / `accdims-switch-terok-20260601-105946` | Resident wavefunction dimension tracking | `gpu_resident_stack_hpsi_prop_psim_switch` 20.84 s on Spark, 23.50 s on Terok | - | 4-rank smokes OK | Stores resident `PSI0`/`PSIM`/`HPSI` dimensions in `WVSET_TYPE` and routes lifecycle cleanup through mark/clear/delete helpers, preserving the previous switch-residency transfer pattern. |
 
 The latest full-matrix run lives at:
 
@@ -342,6 +343,49 @@ wavefunction lifecycle hook for the next residency pass.
 After shortening the profile marker to avoid CSV truncation, one-repeat marker
 smokes on both machines produced `ACC_PRESENT_SWITCH_PSI0_PSIM` with `ok=yes`
 and the same 2.4142 GB transfer estimate.
+
+## Resident Wavefunction Lifecycle Dimensions
+
+The follow-up refactor stores explicit resident dimensions for `PSI0`, `PSIM`,
+and `HPSI` in each `WVSET_TYPE` and routes the common OpenACC lifecycle changes
+through mark/clear/delete helpers. This keeps `WAVES$SWITCH` and later cleanup
+sites from recomputing resident array sizes from the current `GSET`/`PROJ`
+state, which was exactly the fragile boundary exposed by the earlier
+partially-present Spark failure.
+
+This is intended as a robustness/enabling step rather than a new performance
+claim. It preserves the existing transfer accounting while making the next
+cross-step residency extensions less dependent on pointer-swap timing.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries on Spark C86C and Terok.
+The serial runs used `TEST=si64_bands`, `EMPTY_BANDS=1024`, `NSTEPS=2`,
+`EXPECTED_ENERGY=269.022536`, `REPEATS=3`, and one GPU rank:
+
+```
+runs/accdims-switch-spark-20260601-105947
+runs/accdims-switch-terok-20260601-105946
+```
+
+| Machine | Case | Median wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | --- |
+| Spark C86C | `gpu_resident_stack_hpsi_prop_psim_phase` | 20.82 s | 2.5352 GB | yes |
+| Spark C86C | `gpu_resident_stack_hpsi_prop_psim_switch` | 20.84 s | 2.4142 GB | yes |
+| Terok A40 | `gpu_resident_stack_hpsi_prop_psim_phase` | 24.54 s | 2.5352 GB | yes |
+| Terok A40 | `gpu_resident_stack_hpsi_prop_psim_switch` | 23.50 s | 2.4142 GB | yes |
+
+Parallel smoke checks used `EMPTY_BANDS=512`, `NSTEPS=2`, `RANKS=4`, and the
+switch-residency case:
+
+| Machine | Run directory | Wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | --- |
+| Spark C86C | `runs/accdims-switch-parallel-smoke-spark-20260601-110234` | 15.04 s | 2.0691 GB | yes |
+| Terok A40 | `runs/accdims-switch-parallel-smoke-terok-20260601-110233` | 41.20 s | 2.0691 GB | yes |
+
+The transfer estimates remain identical to the pre-refactor switch run:
+2.5352 GB for the phase-only diagnostic and 2.4142 GB for the switch-resident
+case. That is the desired result: this patch tightens lifecycle bookkeeping
+without changing the numerical path or promoting a new default.
 
 ## Current Conclusions
 
