@@ -89,6 +89,48 @@ else
   test "${standard_dry_run_status}" -eq 0
 fi
 
+set +e
+DRY_RUN=yes \
+  GPU_LIBRARY_MATRIX_ROOT="${tmpdir}/matrix-dry-run" \
+  GPU_CASES="gpu_resident_stack" \
+  CPU_CASES="" \
+  tests/profile/si64/run_gpu_library_matrix.sh > "${tmpdir}/matrix-dry-run.out" 2>&1
+matrix_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" \
+  "${tmpdir}/matrix-dry-run/gpu_1rank/metadata.txt"
+grep -q "SKIP  suite=cpu_1rank empty case list" \
+  "${tmpdir}/matrix-dry-run/nvhpc_standard.log"
+test ! -e "${tmpdir}/matrix-dry-run/cpu_1rank/metadata.txt"
+test ! -e "${tmpdir}/matrix-dry-run/cpu_8rank_ref/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/matrix-dry-run/gpu_1rank/metadata.txt"; then
+  test "${matrix_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/matrix-dry-run/nvhpc_standard.log"
+else
+  test "${matrix_dry_run_status}" -eq 0
+fi
+
+set +e
+DRY_RUN=yes \
+  GPU_EXPLORATION_ROOT="${tmpdir}/exploration-dry-run" \
+  GPU_CASES="gpu_resident_stack" \
+  CPU_CASES="" \
+  tests/profile/si64/run_gpu_exploration.sh > "${tmpdir}/exploration-dry-run.out" 2>&1
+exploration_dry_run_status=$?
+set -e
+grep -q "planned_full_command=.*CPPAW_GPU_RESIDENCY_STACK=1" \
+  "${tmpdir}/exploration-dry-run/one_rank_gpu/metadata.txt"
+grep -q "SKIP  suite=one_rank_cpu empty case list" \
+  "${tmpdir}/exploration-dry-run/gpu_exploration.log"
+test ! -e "${tmpdir}/exploration-dry-run/one_rank_cpu/metadata.txt"
+test ! -e "${tmpdir}/exploration-dry-run/eight_rank_cpu/metadata.txt"
+if grep -q "^missing$" "${tmpdir}/exploration-dry-run/one_rank_gpu/metadata.txt"; then
+  test "${exploration_dry_run_status}" -ne 0
+  grep -q "FAILED suites=" "${tmpdir}/exploration-dry-run/gpu_exploration.log"
+else
+  test "${exploration_dry_run_status}" -eq 0
+fi
+
 test -f tests/profile/si64/si64.cntl
 test -f tests/profile/si64/si64.strc
 test -f tests/profile/si64/si64_bands.cntl
