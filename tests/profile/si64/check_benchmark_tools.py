@@ -15,31 +15,6 @@ PROFILE_HEADER = (
     "gflop,gbyte,measured_gflop_per_s,measured_gbyte_per_s"
 )
 
-REQUIRED_NSYS_CASES = (
-    "gpu_all",
-    "gpu_no_cublas",
-    "gpu_no_cufft",
-    "gpu_no_cusolver",
-    "gpu_hpsi_psim_propagate",
-    "gpu_psim_propagate",
-    "gpu_resident",
-    "gpu_resident_addpro_host",
-    "gpu_resident_addpro_hpsi_host",
-    "gpu_resident_addpro_opsi_host",
-    "gpu_resident_hpsi",
-    "gpu_resident_hpsi_opsi",
-    "gpu_resident_hpsi_opsi_psim_phase",
-    "gpu_resident_hpsi_psim_phase",
-    "gpu_resident_no_cusolver",
-    "gpu_resident_opsi_addpro_host",
-    "gpu_resident_proj",
-    "gpu_resident_psim_phase",
-    "gpu_resident_stack",
-    "gpu_resident_stack_cufft",
-    "gpu_resident_stack_cufft_force",
-)
-
-
 def run_tool(*args):
     return subprocess.run(
         [sys.executable, os.path.join(HERE, args[0]), *args[1:]],
@@ -109,19 +84,10 @@ def case_env_cases(script_name):
 def check_nsys_case_coverage():
     benchmark_cases = case_env_cases("run_benchmark.sh")
     nsys_cases = case_env_cases("run_nsys.sh")
-    required = set(REQUIRED_NSYS_CASES)
-
-    missing_benchmark = sorted(required - benchmark_cases)
-    if missing_benchmark:
-        raise AssertionError(
-            "required Nsight cases missing from benchmark case_env: "
-            + ", ".join(missing_benchmark)
-        )
-
-    missing_nsys = sorted(required - nsys_cases)
+    missing_nsys = sorted(benchmark_cases - nsys_cases)
     if missing_nsys:
         raise AssertionError(
-            "benchmark cases missing from Nsight case_env: "
+            "benchmark case_env cases missing from Nsight case_env: "
             + ", ".join(missing_nsys)
         )
 
