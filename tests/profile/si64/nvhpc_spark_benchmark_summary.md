@@ -2734,6 +2734,48 @@ orthogonalization input copy for three propagation input copies, increasing the
 honest transfer estimate by about 0.24 GB per 1024-band step; Spark timing is
 noise-level neutral and Terok is worse in the median.
 
+## PSI0 To OPSI Residency Diagnostic
+
+The next residency step keeps `PSI0` resident across the ETOT cleanup boundary
+only when the OPSI residency path is enabled, then builds `OPSI` directly on
+the device in `WAVES$ORTHOGONALIZE`. The behavior is controlled by
+`CPPAW_GPU_PSI0_ORTHO_RESIDENCY`; it is enabled by the stack meta-keyword and
+can be disabled with `CPPAW_GPU_PSI0_ORTHO_RESIDENCY=0`.
+
+Validation used rebuilt `nvhpc_gpu_acc_residency_profile` and
+`nvhpc_gpu_acc_residency_profile_parallel` binaries on Spark C86C and Terok:
+
+```
+runs/psi0-ortho-residency-spark-r3-20260601-073321
+runs/psi0-ortho-residency-terok-r3-20260601-073321
+runs/psi0-ortho-control-spark-smoke-20260601-073508
+runs/psi0-ortho-control-terok-smoke-20260601-073508
+```
+
+| Machine | Case | Empty bands | Repeats | Median wall time | Transfer estimate | Energy check |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| Spark C86C | `gpu_resident_stack` | 1024 | 3 | 12.18 s | 1.6309 GB | yes |
+| Spark C86C | `gpu_resident_stack_psi0_ortho_host` | 1024 | 1 | 12.37 s | 1.7519 GB | yes |
+| Terok A40 | `gpu_resident_stack` | 1024 | 3 | 12.16 s | 1.6309 GB | yes |
+| Terok A40 | `gpu_resident_stack_psi0_ortho_host` | 1024 | 1 | 12.22 s | 1.7519 GB | yes |
+
+Key profile checks are identical on Spark and Terok for representative
+repeats:
+
+| Profile row | New stack | PSI0-ortho-host control | Interpretation |
+| --- | ---: | ---: | --- |
+| `ACC_COPY_OPSI_BUILD_IN` | absent | 0.1210 GB | The old host-built OPSI copy is removed. |
+| `ACC_PRESENT_OPSI_BUILD_PSI0` | present | absent | OPSI now starts from resident `PSI0`. |
+| `ACC_CREATE_OPSI_BUILD` | present | absent | OPSI is allocated on the device before the copy kernel. |
+| `ACC_COPY_SETUP_PSI0_IN` | 0.1210 GB | 0.1210 GB | Setup still creates the resident `PSI0` allocation. |
+| `ACC_UPDATE_GRAM_PSI0_PSI_OUT` | 0.1210 GB | 0.1210 GB | The conservative Gram-Schmidt host refresh remains. |
+
+Conclusion: this is correctness-valid on both GPU machines and removes one
+1024-band wavefunction transfer, reducing the honest transfer estimate by
+0.1210 GB per Si64 step. Wall time remains noise-level neutral, but this is the
+first positive cross-boundary residency result that directly supports the
+"keep wavefunction data on the GPU" direction.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

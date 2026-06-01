@@ -28,6 +28,7 @@
       USE CPPAW_CUBLAS_ACC_MODULE, ONLY: &
      &        CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED &
      &       ,CPPAW_CUBLAS_ACC_OPSI_RESIDENCY_ENABLED &
+     &       ,CPPAW_CUBLAS_ACC_PSI0_ORTHO_RESIDENCY_ENABLED &
      &       ,CPPAW_CUBLAS_ACC_INVERSION_BATCH_ENABLED &
      &       ,CPPAW_CUBLAS_ACC_SHOULD_USE_OVERLAP &
      &       ,CPPAW_CUBLAS_ACC_SHOULD_USE_ADDPRODUCT &
@@ -74,6 +75,8 @@
       LOGICAL(4)             :: TRESIDENTOPSIBASE
       LOGICAL(4)             :: TRESIDENTOPSI
       LOGICAL(4)             :: TRESIDENTOPSIBUILD
+      LOGICAL(4)             :: TRESIDENTOPSIDEVICEBUILD
+      LOGICAL(4)             :: TRESIDENTPSI0ORTHO
       LOGICAL(4),PARAMETER   :: TTEST=.FALSE.
       COMPLEX(8)             :: CSVAR
       REAL(8)                :: ADDPROFLOPS
@@ -123,10 +126,14 @@
       TRESIDENTOPSIBASE=.FALSE.
       TRESIDENTOPSI=.FALSE.
       TRESIDENTOPSIBUILD=.FALSE.
+      TRESIDENTOPSIDEVICEBUILD=.FALSE.
+      TRESIDENTPSI0ORTHO=.FALSE.
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
       TRESIDENTOVERLAP=CPPAW_CUBLAS_ACC_RESIDENCY_ENABLED()
       TRESIDENTOPSIBASE=CPPAW_CUBLAS_ACC_OPSI_RESIDENCY_ENABLED() &
      &                  .AND.TRESIDENTOVERLAP
+      TRESIDENTPSI0ORTHO= &
+     &    CPPAW_CUBLAS_ACC_PSI0_ORTHO_RESIDENCY_ENABLED()
 #ENDIF
       CALL CELL$GETL4('MOVE',TSTRESS)
       IF(TSTRESS) TRESIDENTOPSIBASE=.FALSE.
@@ -222,6 +229,24 @@ IF(1.EQ.0) THEN ! CHANGE FOR KAESTNERS CONJUGATE GRADIENT
           DEALLOCATE(OPROJ)
 ELSE
           ALLOCATE(THIS%OPSI(NGL,NDIM,NBH))
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          TRESIDENTOPSIDEVICEBUILD=TRESIDENTOPSIBUILD &
+     &                           .AND.TRESIDENTPSI0ORTHO &
+     &                           .AND.THIS%PSI0_ACC_RESIDENT
+          IF(TRESIDENTOPSIDEVICEBUILD) THEN
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+            CALL CPPAW_CUBLAS_ACC_PROFILE_PRESENT_C8_3D &
+     &          ('ACC_PRESENT_OPSI_BUILD_PSI0' &
+     &          ,'ACC_COPY_OPSI_BUILD_PSI0_IN' &
+     &          ,NGL,NDIM,NBH,THIS%PSI0)
+            CALL ACCELPROFILE$ADD('ACC_CREATE_OPSI_BUILD' &
+     &          ,INT(NGL,KIND=8),INT(NDIM,KIND=8),INT(NBH,KIND=8) &
+     &          ,0_8,0.D0,0.D0,0.D0)
+#ENDIF
+            CALL WAVES_COPY_PSI0_TO_OPSI_ACC(NGL,NDIM,NBH &
+     &                                      ,THIS%PSI0,THIS%OPSI)
+          ELSE
+#ENDIF
           THIS%OPSI(:,:,:)=THIS%PSI0(:,:,:)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           IF(TRESIDENTOPSIBUILD) THEN
@@ -232,11 +257,18 @@ ELSE
 #ENDIF
 !$ACC ENTER DATA COPYIN(THIS%OPSI(1:NGL,1:NDIM,1:NBH))
           END IF
+          END IF
 #ENDIF
 !++++++++++++++++++++++++ FROM HERE +++++++++++++++++++++++++++++++++++++
 !         __ THIS$PROJ=<PTILDE|THIS%PSI0>_______________________________________
           CALL WAVES_OPSI(NB,NBH,NPRO,NAT,NGL,R0,THIS%PROJ,THIS%OPSI)
 !++++++++++++++++++++++++ TO HERE +++++++++++++++++++++++++++++++++++++++
+#IF DEFINED(CPPVAR_CUBLAS_ACC)
+          IF(TRESIDENTPSI0ORTHO.AND.THIS%PSI0_ACC_RESIDENT) THEN
+!$ACC EXIT DATA DELETE(THIS%PSI0(1:NGL,1:NDIM,1:NBH))
+            THIS%PSI0_ACC_RESIDENT=.FALSE.
+          END IF
+#ENDIF
 END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -838,6 +870,34 @@ END IF
 #ENDIF
                              CALL TIMING$CLOCKOFF('WAVES$ORTHOGONALIZE')
                                     CALL TRACE$POP
+      RETURN
+      END
+!
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_COPY_PSI0_TO_OPSI_ACC(NGL,NDIM,NBH,PSI0,OPSI)
+!     **************************************************************************
+!     **  BUILD RESIDENT OPSI FROM A RESIDENT PSI0 WITHOUT A HOST COPY.        **
+!     **************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)    :: NGL
+      INTEGER(4),INTENT(IN)    :: NDIM
+      INTEGER(4),INTENT(IN)    :: NBH
+      COMPLEX(8),INTENT(IN)    :: PSI0(NGL,NDIM,NBH)
+      COMPLEX(8),INTENT(OUT)   :: OPSI(NGL,NDIM,NBH)
+      INTEGER(4)               :: IG
+      INTEGER(4)               :: IDIM
+      INTEGER(4)               :: IB
+!     **************************************************************************
+!$ACC ENTER DATA CREATE(OPSI(1:NGL,1:NDIM,1:NBH))
+!$ACC PARALLEL LOOP COLLAPSE(3) PRESENT(PSI0,OPSI)
+      DO IB=1,NBH
+        DO IDIM=1,NDIM
+          DO IG=1,NGL
+            OPSI(IG,IDIM,IB)=PSI0(IG,IDIM,IB)
+          ENDDO
+        ENDDO
+      ENDDO
+!$ACC END PARALLEL LOOP
       RETURN
       END
 !
