@@ -18,6 +18,10 @@ else()
   set(CPPAW_SKALA_LIBRARY_RPATH "$ORIGIN")
   set(CPPAW_SKALA_EXECUTABLE_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
 endif()
+if(CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+  list(APPEND CPPAW_SKALA_LIBRARY_RPATH ${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES})
+  list(APPEND CPPAW_SKALA_EXECUTABLE_RPATH ${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES})
+endif()
 
 set(CPPAW_SKALA_FTORCH_URL
     "https://github.com/Cambridge-ICCS/FTorch/archive/refs/tags/v1.0.0.tar.gz"
@@ -65,6 +69,9 @@ target_include_directories(cppaw_skala_bridge
 set_target_properties(cppaw_skala_bridge PROPERTIES
   Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/modules"
   INSTALL_RPATH "${CPPAW_SKALA_LIBRARY_RPATH}")
+if(CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+  target_compile_definitions(cppaw_skala_bridge PRIVATE CPPAW_SKALA_NVHPC_FORTRAN=1)
+endif()
 
 if(TORCH_CXX_FLAGS)
   separate_arguments(CPPAW_TORCH_CXX_FLAGS NATIVE_COMMAND "${TORCH_CXX_FLAGS}")
@@ -76,6 +83,10 @@ add_executable(cppaw_skala_smoke skala_bridge_smoke.f90)
 target_link_libraries(cppaw_skala_smoke PRIVATE cppaw_skala_bridge)
 set_target_properties(cppaw_skala_smoke PROPERTIES
   INSTALL_RPATH "${CPPAW_SKALA_EXECUTABLE_RPATH}")
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
+   CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+  target_link_options(cppaw_skala_smoke PRIVATE "LINKER:--disable-new-dtags")
+endif()
 
 install(TARGETS cppaw_skala_bridge cppaw_skala_smoke
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"

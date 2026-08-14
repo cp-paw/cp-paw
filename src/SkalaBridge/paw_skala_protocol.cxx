@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <ATen/Parallel.h>
 #include <torch/csrc/autograd/autograd.h>
 #include <torch/cuda.h>
 #include <torch/script.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -79,6 +82,24 @@ torch::Tensor *new_tensor(torch::Tensor tensor) {
   return new torch::Tensor(std::move(tensor));
 }
 
+void configure_host_threads() {
+#ifdef CPPAW_SKALA_NVHPC_FORTRAN
+  static std::once_flag configured;
+  std::call_once(configured, [] {
+    int thread_count = 1;
+    if (const char *value = std::getenv("CPPAW_SKALA_TORCH_THREADS")) {
+      char *end = nullptr;
+      const long requested = std::strtol(value, &end, 10);
+      if (end != value && *end == '\0' && requested > 0) {
+        thread_count = static_cast<int>(requested);
+      }
+    }
+    at::set_num_threads(thread_count);
+    at::set_num_interop_threads(1);
+  });
+#endif
+}
+
 } // namespace
 
 extern "C" void *cppaw_skala_model_load(const char *filename,
@@ -88,6 +109,7 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
                                          char *error,
                                          const int error_capacity) {
   try {
+    configure_host_threads();
     auto model = std::make_unique<SkalaModel>();
     model->device = select_device(device_type, device_index);
     torch::jit::ExtraFilesMap metadata{{"features", ""}, {"protocol_version", ""}};

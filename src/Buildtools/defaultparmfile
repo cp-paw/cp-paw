@@ -762,6 +762,10 @@ function enable_skala_ftorch {
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_SKALA_FTORCH"
   FCFLAGS="${FCFLAGS} -I${ROOT}/include -I${ROOT}/include/ftorch"
   LDFLAGS="${LDFLAGS} -L${LIBDIR} -Wl,-rpath,${LIBDIR}"
+  if [[ ${COMPILER} = nvfortran && ${OS} = Unix ]] ; then
+    # NVHPC runtime libraries have indirect dependencies in the same directory.
+    LDFLAGS="${LDFLAGS} -Wl,--disable-new-dtags"
+  fi
   LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge -lftorch"
   INCLUDES="${INCLUDES} ${MODFILE}"
   if [[ -f ${FTORCH_MODFILE} ]] ; then

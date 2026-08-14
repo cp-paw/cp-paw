@@ -42,3 +42,10 @@ src/Buildtools/paw_build.sh -c fast -j16 -z
 Use the CUDA bridge root with an NVIDIA target in the same way. Skala is never
 enabled implicitly, so conventional CP-PAW binaries retain their dependency
 set and behavior.
+
+Binary PyTorch packages use the GNU OpenMP runtime, while `nvfortran` links the
+NVIDIA OpenMP runtime even when CP-PAW does not enable OpenMP directives. The
+NVHPC bridge therefore defaults Torch host work to one thread; override this
+only with `CPPAW_SKALA_TORCH_THREADS`. Do not add `-mp` to a binary-PyTorch
+build. A genuinely threaded NVHPC host configuration requires a LibTorch build
+without GNU OpenMP rather than suppressing the mixed-runtime warning.
