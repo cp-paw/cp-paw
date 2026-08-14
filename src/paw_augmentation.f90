@@ -386,6 +386,8 @@ END MODULE AUGMENTATION_MODULE
         CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX,NDIMD &
      &                              ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE &
      &                              ,AERHO,PSRHO,RCUT,EKINNL)
+        CALL SKALA$ATOMFORWARD(IAT,GID,NR,LNX,LOX,LMNX,NDIMD &
+     &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT)
       END IF
 !     
 !     ================================================================

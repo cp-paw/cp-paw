@@ -6396,6 +6396,7 @@ RETURN
       REAL(8)                :: RBAS(3,3)
       REAL(8)                :: GBAS(3,3)
       REAL(8)                :: SVAR
+      LOGICAL(4)             :: TSKALA
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
@@ -6417,6 +6418,8 @@ RETURN
       DH(:,:,:,:)=(0.D0,0.D0)
       DO(:,:,:,:)=0.D0
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      CALL SKALA$GETL4('ON',TSKALA)
+      IF(TSKALA) CALL SKALA$FORWARDBEGIN
       POTB=0
       DO IAT=THISTASK,NAT,NTASKS   ! DISTRIBUTE WORK ACCROSS TASKS
         ISP=MAP%ISP(IAT)
@@ -6443,6 +6446,7 @@ RETURN
       CALL MPE$COMBINE('MONOMER','+',DH)
       CALL MPE$COMBINE('MONOMER','+',DO)
       CALL MPE$COMBINE('MONOMER','+',POTB)
+      IF(TSKALA) CALL SKALA$FORWARDEND
 !
 !     ==========================================================================
 !     ==                                                                      ==
