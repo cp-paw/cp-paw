@@ -54,6 +54,10 @@ if(NOT FTorch_FOUND)
     DOWNLOAD_EXTRACT_TIMESTAMP ON)
   FetchContent_MakeAvailable(ftorch)
 endif()
+if(TARGET ftorch AND CMAKE_Fortran_COMPILER_ID MATCHES "^(NVHPC|PGI)$")
+  set_property(TARGET ftorch APPEND PROPERTY
+    INSTALL_RPATH "${CMAKE_Fortran_IMPLICIT_LINK_DIRECTORIES}")
+endif()
 
 add_library(cppaw_skala_bridge SHARED
   paw_skala_bridge.f90
