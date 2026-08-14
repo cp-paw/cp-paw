@@ -37,6 +37,8 @@ export LIBLIST=" \
         paw_dftaddendum \
         paw_constants \
         paw_spherical \
+        paw_lebedev \
+        paw_skala_primitives \
         paw_generalpurpose \
         paw_report \
         paw_periodictable \
