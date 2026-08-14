@@ -23,9 +23,21 @@ module paw_skala_bridge
   end type paw_skala_model
 
   public :: paw_skala_load, paw_skala_evaluate, paw_skala_release
+  public :: paw_skala_cuda_available
   public :: paw_skala_device_cpu, paw_skala_device_cuda
 
 contains
+
+  logical function paw_skala_cuda_available()
+    interface
+      function cuda_available_c() result(available) &
+          bind(c, name="cppaw_skala_cuda_available")
+        import :: c_int
+        integer(c_int) :: available
+      end function cuda_available_c
+    end interface
+    paw_skala_cuda_available = cuda_available_c() /= 0
+  end function paw_skala_cuda_available
 
   integer function paw_skala_device_cpu()
     paw_skala_device_cpu = torch_kCPU

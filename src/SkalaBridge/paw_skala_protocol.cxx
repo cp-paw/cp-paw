@@ -102,6 +102,14 @@ void configure_host_threads() {
 
 } // namespace
 
+extern "C" int cppaw_skala_cuda_available() {
+  try {
+    return torch::cuda::is_available() ? 1 : 0;
+  } catch (...) {
+    return 0;
+  }
+}
+
 extern "C" void *cppaw_skala_model_load(const char *filename,
                                          const int device_type,
                                          const int device_index,

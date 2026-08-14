@@ -116,6 +116,7 @@ CALL TRACE$PASS('OCCU')
 !     ==================================================================
 CALL TRACE$PASS('DFT')
       CALL DFT$REPORT(NFILO)
+      CALL SKALA$REPORT(NFILO)
 !
 !     ==================================================================
 !     == ATOM SPECIES                                                 ==
@@ -1055,6 +1056,9 @@ CALL TRACE$PASS('DONE')
       REAL(8)                  :: SVAR
       CHARACTER(32)            :: MODUS
       CHARACTER(32)            :: CHTYPE(3)  ! LIBXC IDENTIFIERS
+      CHARACTER(2048)          :: MODELFILE
+      CHARACTER(32)            :: DEVICE
+      INTEGER(4)               :: DEVICEINDEX
       INTEGER(4)               :: LEN
       REAL(8)                  :: ANGSTROM  ! ANGSTROM
 !     **************************************************************************
@@ -1097,6 +1101,38 @@ CALL TRACE$PASS('DONE')
 !       -- USE INTRINSIC FUNCTIONALS W/O LIBXC ---------------------------------
         CALL LINKEDLIST$GET(LL_CNTL,'TYPE',1,ILDA)
         CALL DFT$SETI4('TYPE',ILDA)
+      END IF
+
+!     ==========================================================================
+!     == SKALA 1.1 PAW FUNCTIONAL                                             ==
+!     ==========================================================================
+      CALL LINKEDLIST$EXISTL(LL_CNTL,'SKALA',1,TCHK2)
+      CALL SKALA$SETL4('ON',TCHK2)
+      IF(TCHK2) THEN
+        CALL SKALA$AVAILABLE(TCHK1)
+        IF(.NOT.TCHK1) THEN
+          CALL ERROR$MSG('SKALA REQUESTED BUT CP-PAW HAS NO FTORCH SUPPORT')
+          CALL ERROR$STOP('READIN_DFT')
+        END IF
+        CALL LINKEDLIST$SELECT(LL_CNTL,'SKALA')
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'MODEL',1,TCHK1)
+        IF(.NOT.TCHK1) THEN
+          CALL ERROR$MSG('MODEL IS REQUIRED IN !CONTROL!DFT!SKALA')
+          CALL ERROR$STOP('READIN_DFT')
+        END IF
+        CALL LINKEDLIST$GET(LL_CNTL,'MODEL',1,MODELFILE)
+        CALL SKALA$SETCH('MODEL',TRIM(MODELFILE))
+        DEVICE='AUTO'
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'DEVICE',1,TCHK1)
+        IF(TCHK1) CALL LINKEDLIST$GET(LL_CNTL,'DEVICE',1,DEVICE)
+        CALL SKALA$SETCH('DEVICE',TRIM(DEVICE))
+        DEVICEINDEX=-1
+        CALL LINKEDLIST$EXISTD(LL_CNTL,'DEVICEINDEX',1,TCHK1)
+        IF(TCHK1) THEN
+          CALL LINKEDLIST$GET(LL_CNTL,'DEVICEINDEX',1,DEVICEINDEX)
+        END IF
+        CALL SKALA$SETI4('DEVICEINDEX',DEVICEINDEX)
+        CALL LINKEDLIST$SELECT(LL_CNTL,'..')
       END IF
 !
 !     ==========================================================================
@@ -7254,4 +7290,3 @@ NBONDM=NBONDM+NCONECT
                                       CALL TRACE$POP
       RETURN
     END SUBROUTINE STRCOUT
-

@@ -14,6 +14,11 @@ them to Skala protocol-v2 tensors and returns derivatives in the host layout.
 `0.5*sum_i |grad psi_i|^2`; CP-PAW's existing Laplacian-gauge `RHOKIN` is not a
 drop-in replacement.
 
+The native PAW call path is being integrated in stages. At this point the
+`!CONTROL!DFT!SKALA` block activates primitive-field input preparation and the
+positive-tau consistency check; it does not yet replace CP-PAW's conventional
+XC energy. The protocol report labels this state explicitly.
+
 For PAW, the eventual caller must construct each atom block from primary fields
 before inference:
 
@@ -45,6 +50,12 @@ src/Buildtools/paw_build.sh -c fast -j16 -z
 Use the CUDA bridge root with an NVIDIA target in the same way. Skala is never
 enabled implicitly, so conventional CP-PAW binaries retain their dependency
 set and behavior.
+
+For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
+version matches the selected PyTorch package. Set `CUDACXX` to require a
+specific compiler. CMake's CUDA architecture probe is initialized from
+PyTorch's supported architecture list; `CPPAW_SKALA_CUDA_ARCH` can override
+that value on unusual or cross-compiled systems.
 
 Binary PyTorch packages use the GNU OpenMP runtime, while `nvfortran` links the
 NVIDIA OpenMP runtime even when CP-PAW does not enable OpenMP directives. The
