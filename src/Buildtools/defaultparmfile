@@ -747,6 +747,11 @@ function enable_skala_ftorch {
     echo "error in $0: incomplete Skala/FTorch installation in ${ROOT}"
     exit 1
   fi
+  if [[ ! -f ${LIBDIR}/libftorch.so \
+        && ! -f ${LIBDIR}/libftorch.dylib ]] ; then
+    echo "error in $0: libftorch is missing from ${LIBDIR}"
+    exit 1
+  fi
   if ! fortran_module_works paw_skala_bridge "-I${ROOT}/include -I${ROOT}/include/ftorch" ; then
     echo "error in $0: paw_skala_bridge.mod is incompatible with ${COMPILER}"
     echo "rebuild the bridge with CMAKE_Fortran_COMPILER=${FC}"
@@ -757,7 +762,7 @@ function enable_skala_ftorch {
   CPPFLAGS="${CPPFLAGS} -DCPPVAR_SKALA_FTORCH"
   FCFLAGS="${FCFLAGS} -I${ROOT}/include -I${ROOT}/include/ftorch"
   LDFLAGS="${LDFLAGS} -L${LIBDIR} -Wl,-rpath,${LIBDIR}"
-  LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge"
+  LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge -lftorch"
   INCLUDES="${INCLUDES} ${MODFILE}"
   if [[ -f ${FTORCH_MODFILE} ]] ; then
     INCLUDES="${INCLUDES} ${FTORCH_MODFILE}"

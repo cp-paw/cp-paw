@@ -54,7 +54,9 @@ endif()
 add_library(cppaw_skala_bridge SHARED
   paw_skala_bridge.f90
   paw_skala_protocol.cxx)
-target_link_libraries(cppaw_skala_bridge PRIVATE FTorch::ftorch ${TORCH_LIBRARIES})
+target_link_libraries(cppaw_skala_bridge
+  PUBLIC FTorch::ftorch
+  PRIVATE ${TORCH_LIBRARIES})
 target_include_directories(cppaw_skala_bridge
   PRIVATE "${TORCH_INCLUDE_DIRS}"
   PUBLIC
