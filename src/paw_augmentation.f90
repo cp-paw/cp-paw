@@ -271,6 +271,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: AERHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DATP(:,:,:)
+      COMPLEX(8),ALLOCATABLE  :: SKALADH(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DWORK1(:)
       INTEGER(4)              :: IDIM,IR
       INTEGER(4)              :: LM,LMN1
@@ -386,8 +387,11 @@ END MODULE AUGMENTATION_MODULE
         CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX,NDIMD &
      &                              ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE &
      &                              ,AERHO,PSRHO,RCUT,EKINNL)
+        ALLOCATE(SKALADH(LMNX,LMNX,NDIMD))
         CALL SKALA$ATOMFORWARD(IAT,GID,NR,LNX,LOX,LMNX,NDIMD &
-     &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT)
+     &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT &
+     &                        ,SKALADH)
+        DEALLOCATE(SKALADH)
       END IF
 !     
 !     ================================================================
