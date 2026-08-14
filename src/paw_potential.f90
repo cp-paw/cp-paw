@@ -442,7 +442,7 @@
           RHOTEMP(IR,2)=SQRT(RHO(IR,2)**2+RHO(IR,3)**2+RHO(IR,4)**2)
         ENDDO
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                        ,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,TAUPOS,NSPIN,RBAS &
+     &               ,NR1START,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
         DO IR=1,NRL
@@ -457,7 +457,7 @@
       ELSE
         NSPIN=NDIMD
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                            ,NR1GLOB,NR1L,NR2,NR3,RHO,TAUPOS,NSPIN,RBAS &
+     &                   ,NR1START,NR1GLOB,NR1L,NR2,NR3,RHO,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
       END IF
@@ -494,7 +494,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_VOFRHO(LMRXX,NRL &
      &                    ,NSP,NAT,ISPECIES,TAU0,FION &
-     &                    ,NR1GLOB,NR1,NR2,NR3,RHOE,TAUPOS,NDIMD,RBAS &
+     &             ,NR1START,NR1GLOB,NR1,NR2,NR3,RHOE,TAUPOS,NDIMD,RBAS &
      &         ,PSCORG,DPSCORG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                    ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
 !     **************************************************************************
@@ -525,6 +525,7 @@
       REAL(8)   ,INTENT(IN)   :: TAU0(3,NAT)     !<-
       REAL(8)   ,INTENT(OUT)  :: FION(3,NAT)
       INTEGER(4),INTENT(IN)   :: NR1GLOB
+      INTEGER(4),INTENT(IN)   :: NR1START
       INTEGER(4),INTENT(IN)   :: NR1
       INTEGER(4),INTENT(IN)   :: NR2
       INTEGER(4),INTENT(IN)   :: NR3
@@ -767,6 +768,8 @@
         ALLOCATE(GRHO(1,1,1))
       END IF
       IF(TSKALA) THEN
+        CALL SKALA$SMOOTHSET(NR1START,NR1,NR1GLOB,NR2,NR3,NSPIN &
+     &                      ,RHOE,GRHO,TAUPOS,RBAS)
         CALL SKALA$SMOOTHVALIDATE(NRL,NSPIN,RHOE,GRHO,TAUPOS &
      &                           ,NR1GLOB*NR2*NR3,CELLVOL)
       END IF
@@ -2111,4 +2114,3 @@ K0LOOP:     DO K = ZMIN(3), ZMAX(3)
 !!$      ENDDO
 !!$      RETURN
 !!$      END
-
