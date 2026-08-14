@@ -19,8 +19,19 @@ The native PAW call path is being integrated in stages. At this point the
 the model, and maps its density, density-gradient, and positive-tau adjoints
 back to the one-center density matrices and smooth wave-function grid. The
 smooth scalar operator includes the Fourier-space divergence of the gradient
-adjoint. These operators are validated diagnostically; they do not yet replace
-CP-PAW's conventional XC energy or Hamiltonian.
+adjoint. These operators are validated diagnostically; they do not replace
+CP-PAW's conventional XC energy or Hamiltonian by default. `APPLY=T` enables
+the experimental electronic operator, including the generalized Kohn-Sham
+positive-tau term. Its safe default is `F`; forces and stress are not yet
+implemented for this mode.
+
+```text
+!SKALA
+ MODEL='path/to/skala-1.1-rev1-cuda.fun'
+ DEVICE='AUTO'
+ APPLY=F
+!END
+```
 
 For PAW, the eventual caller must construct each atom block from primary fields
 before inference:

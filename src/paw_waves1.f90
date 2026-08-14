@@ -2045,6 +2045,7 @@ END MODULE WAVES_MODULE
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
       LOGICAL(4)             :: TRHOKIN=.FALSE. !KINETIC ENERGY DENSITY REQUIRED
       LOGICAL(4)             :: TTAUPOS=.FALSE. !POSITIVE KINETIC ENERGY DENSITY
+      LOGICAL(4)             :: TSKALAAPPLY=.FALSE.
       INTEGER(4) ::NTASKS_W,THISTASK_W
       REAL(8) :: RBASM(3,3)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
@@ -2084,6 +2085,7 @@ END MODULE WAVES_MODULE
       IF(TSTRESS)CALL POTENTIAL$SETL4('STRESS',TSTRESS)
       IF(TFORCE)CALL POTENTIAL$SETL4('FORCE',TFORCE)
       CALL SKALA$GETL4('ON',TTAUPOS)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_FLAGS' &
@@ -2402,14 +2404,17 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
       ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
+      ALLOCATE(SKALAVTAU(NRL,NDIMD))
+      SKALAVTAU=0.D0
       CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
      &                 ,VQLM,DH,DO,POTB)
       IF(TTAUPOS) THEN
-        ALLOCATE(SKALAPOT(NRL,NDIMD),SKALAVTAU(NRL,NDIMD))
+        ALLOCATE(SKALAPOT(NRL,NDIMD))
         CALL WAVES_SKALA_ADJOINT(NRL,NDIMD,SKALAPOT,SKALAVTAU)
         CALL SKALA$SMOOTHOPERATORREPORT(SUM(SKALAPOT**2) &
      &                                 ,SUM(SKALAVTAU**2))
-        DEALLOCATE(SKALAPOT,SKALAVTAU)
+        IF(TSKALAAPPLY) RHO=RHO+SKALAPOT
+        DEALLOCATE(SKALAPOT)
       END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
@@ -2550,6 +2555,12 @@ CALL ERROR$STOP('WAVES$ETOT')
           SVAR2=RHO(IR,2)
           RHO(IR,1)=SVAR1+SVAR2
           RHO(IR,2)=SVAR1-SVAR2
+          IF(TSKALAAPPLY) THEN
+            SVAR1=SKALAVTAU(IR,1)
+            SVAR2=SKALAVTAU(IR,2)
+            SKALAVTAU(IR,1)=SVAR1+SVAR2
+            SKALAVTAU(IR,2)=SVAR1-SVAR2
+          END IF
         ENDDO
         DO IAT=1,NAT
           ISP=MAP%ISP(IAT)
@@ -2639,7 +2650,8 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==  EVALUATE H*PSI                                                      ==
 !     ==========================================================================
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
-      CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH)
+      CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH &
+     &               ,TSKALAAPPLY,SKALAVTAU)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_HPSI' &
@@ -2650,6 +2662,7 @@ CALL ERROR$STOP('WAVES$ETOT')
       DEALLOCATE(RHO)
       DEALLOCATE(RHOKIN)
       DEALLOCATE(TAUPOS)
+      DEALLOCATE(SKALAVTAU)
       DEALLOCATE(DH)
       DEALLOCATE(DO)
 !
@@ -7054,7 +7067,7 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH)
+      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH,TSKALA,VTAU)
 !     **************************************************************************
 !     **                                                                      **
 !     **  EVALUATES FORCES FROM THE AUGMENTATION PART                         **
@@ -7083,6 +7096,8 @@ RETURN
       INTEGER(4),INTENT(IN) :: NAT
       REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
       COMPLEX(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
+      LOGICAL(4),INTENT(IN) :: TSKALA
+      REAL(8)   ,INTENT(IN) :: VTAU(NRL,NDIMD_)
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
@@ -7136,6 +7151,7 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           CALL WAVES_ACC_THIS_HPSI_CLEAR()
           THPSIRESIDENT=CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED()
+          IF(TSKALA) THPSIRESIDENT=.FALSE.
           IF(THPSIRESIDENT) THEN
             DO IAT=1,NAT
               ISP=MAP%ISP(IAT)
@@ -7267,9 +7283,13 @@ RETURN
      &                  ,THIS%PSI0,RHO(1,ISPIN),R,THIS%PROJ,DH,THIS%HPSI)
 !!LMTO INTERFACE MISSING!!!
 !===============================================================================
-	END IF
+		END IF
 !===============================================================================
-	        ENDDO
+          IF(TSKALA) THEN
+            CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,THIS%PSI0 &
+     &                              ,VTAU(:,ISPIN),THIS%HPSI)
+          END IF
+		        ENDDO
 	      ENDDO
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
@@ -7281,6 +7301,53 @@ RETURN
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$HPSI
+
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,PSI,VTAU,HPSI)
+!     ***************************************************************************
+!     ** APPLY -1/2 DIV(VTAU GRAD(PSI)) FOR THE POSITIVE-TAU ADJOINT.          **
+!     ***************************************************************************
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
+      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NBH
+      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH)
+      REAL(8),INTENT(IN) :: VTAU(NRL)
+      COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
+      REAL(8),ALLOCATABLE :: GVEC(:,:)
+      COMPLEX(8),ALLOCATABLE :: WORKG(:,:),WORKR(:,:)
+      INTEGER(4) :: IB,IDIM,IDIR,IG,IR
+
+      IF(NDIM.NE.1) THEN
+        CALL ERROR$MSG('SKALA TAU OPERATOR SUPPORTS COLLINEAR SPIN ONLY')
+        CALL ERROR$STOP('WAVES_SKALA_TAUPSI')
+      END IF
+      ALLOCATE(GVEC(3,NGL),WORKG(NGL,NDIM),WORKR(NRL,NDIM))
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      DO IB=1,NBH
+        DO IDIR=1,3
+          DO IDIM=1,NDIM
+            DO IG=1,NGL
+              WORKG(IG,IDIM)=CI*GVEC(IDIR,IG)*PSI(IG,IDIM,IB)
+            END DO
+          END DO
+          CALL PLANEWAVE$FFT('GTOR',NDIM,NGL,WORKG,NRL,WORKR)
+          DO IDIM=1,NDIM
+            DO IR=1,NRL
+              WORKR(IR,IDIM)=VTAU(IR)*WORKR(IR,IDIM)
+            END DO
+          END DO
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,WORKG,NRL,WORKR)
+          DO IDIM=1,NDIM
+            DO IG=1,NGL
+              HPSI(IG,IDIM,IB)=HPSI(IG,IDIM,IB) &
+     &             -0.5D0*CI*GVEC(IDIR,IG)*WORKG(IG,IDIM)
+            END DO
+          END DO
+        END DO
+      END DO
+      DEALLOCATE(GVEC,WORKG,WORKR)
+      RETURN
+      END SUBROUTINE WAVES_SKALA_TAUPSI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)

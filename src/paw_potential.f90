@@ -579,6 +579,7 @@
       REAL(8)   ,ALLOCATABLE  :: RHELP(:)
       LOGICAL(4)              :: TBACK
       LOGICAL(4)              :: TSKALA
+      LOGICAL(4)              :: TSKALAAPPLY
       INTEGER(4)              :: NGAMMA
       LOGICAL(4)              :: TOPTIC
 !     **************************************************************************
@@ -587,6 +588,7 @@
       CALL GBASS(RBAS,GBAS,CELLVOL)
       CALL DFT$GETL4('GC',TGRA)
       CALL SKALA$GETL4('ON',TSKALA)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
       TGRA=TGRA.OR.TSKALA
       NNR=NR1*NR2*NR3
       NSPIN=1
@@ -779,8 +781,14 @@
 !     ==================================================================
                            CALL TIMING$CLOCKON('VOFRHO: XC-POTENTIAL')
       EXC=0.D0
-      CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
-     &                 ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
+      IF(TSKALA.AND.TSKALAAPPLY) THEN
+        RHOE=0.D0
+        GRHO=0.D0
+        STRESS1=0.D0
+      ELSE
+        CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
+     &                   ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
+      END IF
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
                            CALL TIMING$CLOCKOFF('VOFRHO: XC-POTENTIAL')
 !
