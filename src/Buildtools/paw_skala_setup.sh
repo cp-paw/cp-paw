@@ -84,9 +84,10 @@ cmake --install "${BUILD}"
 MODEL=
 if [[ ${DOWNLOAD_MODEL} = true ]]; then
   MODEL=$(${THISDIR}/src/Buildtools/paw_skala_model.sh "${DEVICE}" "${PREFIX}/models")
+  "${PREFIX}/bin/cppaw_skala_smoke" "${MODEL}" "${DEVICE}"
 fi
 
 echo "CP-PAW Skala bridge installed in ${PREFIX}"
 if [[ -n ${MODEL} ]]; then
-  echo "Smoke test: ${PREFIX}/bin/cppaw_skala_smoke ${MODEL} ${DEVICE}"
+  echo "Skala model and bridge smoke test passed with ${MODEL}"
 fi

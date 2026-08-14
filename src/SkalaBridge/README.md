@@ -30,4 +30,15 @@ src/Buildtools/paw_skala_setup.sh --device auto --download-model
 
 The setup script prints the installed bridge root and a smoke-test command.
 The CP-PAW build can later consume that root through
-`CPPAW_SKALA_FTORCH_ROOT` when the native PAW call path is enabled.
+`CPPAW_SKALA_FTORCH_ROOT` when the native PAW call path is enabled. The bridge
+is composable with every existing library selection:
+
+```sh
+CPPAW_USE_SKALA_FTORCH=yes \
+CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cpu" \
+src/Buildtools/paw_build.sh -c fast -j16 -z
+```
+
+Use the CUDA bridge root with an NVIDIA target in the same way. Skala is never
+enabled implicitly, so conventional CP-PAW binaries retain their dependency
+set and behavior.

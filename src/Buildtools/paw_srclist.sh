@@ -91,6 +91,7 @@ export PAWLIST=" \
         paw_warmup \
         paw_optfric \
         paw_setups \
+        paw_skala \
         paw_potential \
         paw_occupations \
         paw_pairpotential \

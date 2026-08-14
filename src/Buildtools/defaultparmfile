@@ -83,6 +83,8 @@ export CPPAW_USE_CUFFTW="${CPPAW_USE_CUFFTW:-no}"
 export CPPAW_USE_CUFFT="${CPPAW_USE_CUFFT:-no}"
 export CPPAW_USE_CUBLAS_ACC="${CPPAW_USE_CUBLAS_ACC:-no}"
 export CPPAW_USE_CUSOLVER_ACC="${CPPAW_USE_CUSOLVER_ACC:-no}"
+export CPPAW_USE_SKALA_FTORCH="${CPPAW_USE_SKALA_FTORCH:-no}"
+export CPPAW_SKALA_FTORCH_ROOT="${CPPAW_SKALA_FTORCH_ROOT:-}"
 export CPPAW_NVHPC_ACC_FLAGS_ADDED="${CPPAW_NVHPC_ACC_FLAGS_ADDED:-no}"
 export CPPAW_NVHPC_GPU_MEMORY_MODE="${CPPAW_NVHPC_GPU_MEMORY_MODE:-separate}"
 
@@ -711,6 +713,57 @@ function enable_nvhpc_nvlamath {
   INCLUDES="${INCLUDES} ${NVHPC_ROOT}/compilers/include/nvhpc_nvlamath.mod"
 }
 
+function enable_skala_ftorch {
+  local ROOT="${CPPAW_SKALA_FTORCH_ROOT}"
+  local LIBDIR=""
+  local MODFILE=""
+  local FTORCH_MODFILE=""
+  local D
+
+  if [[ -z ${ROOT} ]] ; then
+    for D in "${BASEDIR}/bin/skala_ftorch_cuda" \
+             "${BASEDIR}/bin/skala_ftorch_cpu" ; do
+      if [[ -f ${D}/include/paw_skala_bridge.mod ]] ; then
+        ROOT=${D}
+        break
+      fi
+    done
+  fi
+  if [[ -z ${ROOT} || ! -d ${ROOT} ]] ; then
+    echo "error in $0: Skala/FTorch requested but CPPAW_SKALA_FTORCH_ROOT is invalid"
+    echo "run src/Buildtools/paw_skala_setup.sh first or set the root explicitly"
+    exit 1
+  fi
+  for D in "${ROOT}/lib" "${ROOT}/lib64" ; do
+    if [[ -f ${D}/libcppaw_skala_bridge.so \
+          || -f ${D}/libcppaw_skala_bridge.dylib ]] ; then
+      LIBDIR=${D}
+      break
+    fi
+  done
+  MODFILE=${ROOT}/include/paw_skala_bridge.mod
+  FTORCH_MODFILE=${ROOT}/include/ftorch/ftorch.mod
+  if [[ -z ${LIBDIR} || ! -f ${MODFILE} ]] ; then
+    echo "error in $0: incomplete Skala/FTorch installation in ${ROOT}"
+    exit 1
+  fi
+  if ! fortran_module_works paw_skala_bridge "-I${ROOT}/include -I${ROOT}/include/ftorch" ; then
+    echo "error in $0: paw_skala_bridge.mod is incompatible with ${COMPILER}"
+    echo "rebuild the bridge with CMAKE_Fortran_COMPILER=${FC}"
+    exit 1
+  fi
+
+  CPPAW_SKALA_FTORCH_ROOT=${ROOT}
+  CPPFLAGS="${CPPFLAGS} -DCPPVAR_SKALA_FTORCH"
+  FCFLAGS="${FCFLAGS} -I${ROOT}/include -I${ROOT}/include/ftorch"
+  LDFLAGS="${LDFLAGS} -L${LIBDIR} -Wl,-rpath,${LIBDIR}"
+  LIBS="${LIBS} -L${LIBDIR} -lcppaw_skala_bridge"
+  INCLUDES="${INCLUDES} ${MODFILE}"
+  if [[ -f ${FTORCH_MODFILE} ]] ; then
+    INCLUDES="${INCLUDES} ${FTORCH_MODFILE}"
+  fi
+}
+
 if [[ -n $(which pkg-config) ]] ; then
   #-----------------------------------------------------------------------------
   #  add libraries: BLAS LAPACK FFTW LIBXC 
@@ -1202,6 +1255,12 @@ if [[ ${CPPAW_USE_CUSOLVER_ACC} = yes \
       || ${CPPAW_USE_CUSOLVER_ACC} = true \
       || ${CPPAW_USE_CUSOLVER_ACC} = 1 ]] ; then
   enable_nvhpc_cusolver_acc
+fi
+
+if [[ ${CPPAW_USE_SKALA_FTORCH} = yes \
+      || ${CPPAW_USE_SKALA_FTORCH} = true \
+      || ${CPPAW_USE_SKALA_FTORCH} = 1 ]] ; then
+  enable_skala_ftorch
 fi
 
 # CUDA is used here as a hardware/toolchain signal for NVIDIA HPC SDK builds.
