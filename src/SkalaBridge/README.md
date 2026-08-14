@@ -3,6 +3,9 @@
 This optional shared library isolates LibTorch and C++ from CP-PAW's legacy
 Fortran build. It uses FTorch v1.0.0 for array-to-tensor transfers and a small
 LibTorch protocol adapter for Skala's dictionary input and autograd output.
+The setup path builds the pinned FTorch source even if another installation is
+visible. CMake users can opt into an external package with
+`-DCPPAW_SKALA_USE_SYSTEM_FTORCH=ON`.
 
 The scientific input contract is deliberately PAW-specific. Host arrays use
 `density(npoint,2)`, `grad(npoint,3,2)`, and `kin(npoint,2)`. The bridge converts

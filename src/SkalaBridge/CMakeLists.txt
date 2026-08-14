@@ -31,6 +31,8 @@ set(CPPAW_SKALA_FTORCH_SHA256
     CACHE STRING "SHA-256 of the pinned FTorch source archive")
 set(CPPAW_SKALA_DEVICE "CPU" CACHE STRING "Torch device compiled by FTorch (CPU or CUDA)")
 set_property(CACHE CPPAW_SKALA_DEVICE PROPERTY STRINGS CPU CUDA)
+option(CPPAW_SKALA_USE_SYSTEM_FTORCH
+  "Use a separately installed FTorch instead of the pinned source archive" OFF)
 
 string(TOUPPER "${CPPAW_SKALA_DEVICE}" CPPAW_SKALA_DEVICE)
 if(NOT CPPAW_SKALA_DEVICE MATCHES "^(CPU|CUDA)$")
@@ -38,9 +40,10 @@ if(NOT CPPAW_SKALA_DEVICE MATCHES "^(CPU|CUDA)$")
 endif()
 
 find_package(Torch REQUIRED)
-find_package(FTorch CONFIG QUIET)
-if(NOT FTorch_FOUND)
-  message(STATUS "FTorch was not found; fetching the pinned v1.0.0 source archive")
+if(CPPAW_SKALA_USE_SYSTEM_FTORCH)
+  find_package(FTorch CONFIG REQUIRED)
+else()
+  message(STATUS "Fetching the pinned FTorch v1.0.0 source archive")
   set(CMAKE_BUILD_TESTS OFF CACHE BOOL "Build FTorch tests" FORCE)
   if(CPPAW_SKALA_DEVICE STREQUAL "CUDA")
     set(GPU_DEVICE CUDA CACHE STRING "FTorch target device" FORCE)
