@@ -2376,7 +2376,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     == POTENTIAL (POTENTIAL IS STORED BACK INTO THE DENSITY ARRAY!)         ==
 !     ==========================================================================
       ALLOCATE(VQLM(LMRXX,NAT))
-      CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
+      CALL WAVES_VOFRHO(NRL,NDIMD,RHO,TAUPOS,RHOB,NAT,LMRXX,QLM,VQLM)
       DEALLOCATE(QLM)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
@@ -2949,7 +2949,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
+      SUBROUTINE WAVES_VOFRHO(NRL,NDIMD,RHO,TAUPOS,RHOB,NAT,LMRXX,QLM,VQLM)
 !     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
@@ -2959,12 +2959,14 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       INTEGER(4),INTENT(IN)   :: NDIMD  !#(DENSITY COMPONENTS)
       INTEGER(4),INTENT(IN)   :: NRL    !#(LOCAL R-SPACE GRID POINTS)
       REAL(8)   ,INTENT(INOUT):: RHO(NRL,NDIMD)  
+      REAL(8)   ,INTENT(INOUT):: TAUPOS(NRL,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: RHOB   ! BACKGROUND DENSITY
       INTEGER(4),INTENT(IN)   :: NAT    !#(ATOMS)
       INTEGER(4),INTENT(IN)   :: LMRXX   !#(ANGULAR MOMENTA FOR 1-C DENSITY)
       REAL(8)   ,INTENT(IN)   :: QLM(LMRXX,NAT)  ! MULTIPOLE MOMENTS
       REAL(8)   ,INTENT(OUT)  :: VQLM(LMRXX,NAT) ! "MULTIPOLE" POTENTIALS
       REAL(8)   ,ALLOCATABLE  :: RHO_V(:,:)     ! CHARGE DENSITY
+      REAL(8)   ,ALLOCATABLE  :: TAUPOS_V(:,:)  ! POSITIVE KINETIC DENSITY
       REAL(8)                 :: RBAS(3,3)      ! LATTICE VECTORS
       REAL(8)                 :: R(3,NAT)       ! ATOMIC POSITIONS
       REAL(8)                 :: STRESS(3,3)    ! STRESS TENSOR
@@ -2972,6 +2974,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       REAL(8)                 :: FORCE(3,NAT)
       REAL(8)                 :: FORCET(3,NAT)
       INTEGER(4)              :: NR1L,NR1L_V,NR2,NR3
+      LOGICAL(4)              :: TSKALA
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES_VOFRHO')
 
@@ -2988,6 +2991,13 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     ==========================================================================
       ALLOCATE(RHO_V(NR1L_V*NR2*NR3,NDIMD))
       CALL WAVES_MAPPSITOPOT('PSITOPOT',NR1L,NR1L_V,NR2,NR3,NDIMD,RHO,RHO_V)
+      ALLOCATE(TAUPOS_V(NR1L_V*NR2*NR3,NDIMD))
+      TAUPOS_V(:,:)=0.D0
+      CALL SKALA$GETL4('ON',TSKALA)
+      IF(TSKALA) THEN
+        CALL WAVES_MAPPSITOPOT('PSITOPOT',NR1L,NR1L_V,NR2,NR3,NDIMD &
+     &                        ,TAUPOS,TAUPOS_V)
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE POTENTIAL FROM THE CHARGE DENSITY                          ==
@@ -2997,7 +3007,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       FORCE(:,:)=0.D0
       STRESS(:,:)=0.D0
       VQLM(:,:)=0.D0
-      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_V,LMRXX,NAT,QLM,VQLM &
+      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_V,TAUPOS_V &
+     &                     ,LMRXX,NAT,QLM,VQLM &
      &                     ,R,FORCE,RBAS,STRESS,RHOB)
 !
 !     ==========================================================================
@@ -3005,6 +3016,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     ==========================================================================
       CALL WAVES_MAPPSITOPOT('POTTOPSI',NR1L,NR1L_V,NR2,NR3,NDIMD,RHO,RHO_V)
       DEALLOCATE(RHO_V)
+      DEALLOCATE(TAUPOS_V)
 !
 !     ==========================================================================
 !     ==  STORE FORCES AND STRESSES BACK TO THE OWNING OBJECTS                ==

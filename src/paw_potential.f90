@@ -321,7 +321,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE POTENTIAL$VOFRHO(NRL,NDIMD,RHO,LMRXX_,NAT_,QLM,VQLM &
+      SUBROUTINE POTENTIAL$VOFRHO(NRL,NDIMD,RHO,TAUPOS,LMRXX_,NAT_,QLM,VQLM &
      &                           ,R0,FORCE,RBAS,STRESS,RHOB)
 !     **************************************************************************
 !     **  MAIN INTERFACE FOR POTENTIAL OBJECT                                 **
@@ -342,6 +342,7 @@
       REAL(8)   ,INTENT(OUT)   :: STRESS(3,3)
       REAL(8)   ,INTENT(OUT)   :: RHOB
       REAL(8)   ,INTENT(INOUT) :: RHO(NRL,NDIMD)
+      REAL(8)   ,INTENT(IN)    :: TAUPOS(NRL,NDIMD)
       INTEGER(4),ALLOCATABLE   :: ISPECIES(:) !(NAT) 
       REAL(8)   ,ALLOCATABLE   :: G2(:)       !(NGL)
       REAL(8)   ,ALLOCATABLE   :: GVEC(:,:)     !(3,NGL)
@@ -350,6 +351,7 @@
       INTEGER(4)               :: NSPIN
       INTEGER(4)               :: ISVAR
       LOGICAL(4)               :: TGRA
+      LOGICAL(4)               :: TSKALA
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
       REAL(8)   ,ALLOCATABLE   :: VEXT(:)
@@ -407,6 +409,12 @@
       CALL PLANEWAVE$GETI4('NR1',NR1GLOB)
 !     == COLLECT FROM DFT OBJECT ===============================================
       CALL DFT$GETL4('GC',TGRA)
+      CALL SKALA$GETL4('ON',TSKALA)
+      TGRA=TGRA.OR.TSKALA
+      IF(TSKALA.AND.NDIMD.EQ.4) THEN
+        CALL ERROR$MSG('SKALA CURRENTLY SUPPORTS COLLINEAR SPIN ONLY')
+        CALL ERROR$STOP('POTENTIAL$VOFRHO')
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE CONFINING POTENTIAL                                        ==
@@ -434,7 +442,7 @@
           RHOTEMP(IR,2)=SQRT(RHO(IR,2)**2+RHO(IR,3)**2+RHO(IR,4)**2)
         ENDDO
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                        ,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,NSPIN,RBAS &
+     &                        ,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
         DO IR=1,NRL
@@ -449,7 +457,7 @@
       ELSE
         NSPIN=NDIMD
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                            ,NR1GLOB,NR1L,NR2,NR3,RHO,NSPIN,RBAS &
+     &                            ,NR1GLOB,NR1L,NR2,NR3,RHO,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
       END IF
@@ -486,7 +494,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_VOFRHO(LMRXX,NRL &
      &                    ,NSP,NAT,ISPECIES,TAU0,FION &
-     &                    ,NR1GLOB,NR1,NR2,NR3,RHOE,NDIMD,RBAS &
+     &                    ,NR1GLOB,NR1,NR2,NR3,RHOE,TAUPOS,NDIMD,RBAS &
      &         ,PSCORG,DPSCORG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                    ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
 !     **************************************************************************
@@ -521,6 +529,7 @@
       INTEGER(4),INTENT(IN)   :: NR2
       INTEGER(4),INTENT(IN)   :: NR3
       REAL(8)   ,INTENT(INOUT):: RHOE(NRL,NDIMD)
+      REAL(8)   ,INTENT(IN)   :: TAUPOS(NRL,NDIMD)
       REAL(8)   ,INTENT(IN)   :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)   :: PSCORG(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: DPSCORG(NGL,NSP)
@@ -568,6 +577,7 @@
       COMPLEX(8),ALLOCATABLE  :: RHO_SELFTEST(:,:)
       REAL(8)   ,ALLOCATABLE  :: RHELP(:)
       LOGICAL(4)              :: TBACK
+      LOGICAL(4)              :: TSKALA
       INTEGER(4)              :: NGAMMA
       LOGICAL(4)              :: TOPTIC
 !     **************************************************************************
@@ -575,6 +585,8 @@
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL GBASS(RBAS,GBAS,CELLVOL)
       CALL DFT$GETL4('GC',TGRA)
+      CALL SKALA$GETL4('ON',TSKALA)
+      TGRA=TGRA.OR.TSKALA
       NNR=NR1*NR2*NR3
       NSPIN=1
       IF(NDIMD.GT.1) NSPIN=2
@@ -753,6 +765,10 @@
                        CALL TIMING$CLOCKOFF('VOFRHO: NABLA-RHO AND FFT')
       ELSE
         ALLOCATE(GRHO(1,1,1))
+      END IF
+      IF(TSKALA) THEN
+        CALL SKALA$SMOOTHVALIDATE(NRL,NSPIN,RHOE,GRHO,TAUPOS &
+     &                           ,NR1GLOB*NR2*NR3,CELLVOL)
       END IF
 !
 !     ==================================================================
@@ -2095,5 +2111,4 @@ K0LOOP:     DO K = ZMIN(3), ZMAX(3)
 !!$      ENDDO
 !!$      RETURN
 !!$      END
-
 
