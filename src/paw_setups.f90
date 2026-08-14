@@ -687,9 +687,24 @@ END MODULE SETUP_MODULE
       CALL RADIAL$GETI4(THIS%GIDG,'NR',NG)
 !
 !     ==========================================================================
+!     ==  PARTIAL-WAVE CUTOFF RADII                                          ==
+!     ==========================================================================
+      IF(ID.EQ.'RCL') THEN
+        IF(.NOT.ALLOCATED(THIS%PARMS%RCL)) THEN
+          CALL ERROR$MSG('PARTIAL-WAVE CUTOFF RADII ARE NOT AVAILABLE')
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        IF(LEN.NE.SIZE(THIS%PARMS%RCL)) THEN
+          CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
+          CALL ERROR$CHVAL('ID',ID)
+          CALL ERROR$STOP('SETUP$GETR8A')
+        END IF
+        VAL=THIS%PARMS%RCL
+!
+!     ==========================================================================
 !     == PROJECTOR FUNCTIONS                                                  ==
 !     ==========================================================================
-      IF(ID.EQ.'PRO') THEN
+      ELSE IF(ID.EQ.'PRO') THEN
         IF(LEN.NE.THIS%LNX*NR) THEN
           CALL ERROR$MSG('INCONSISTENT ARRAY SIZE')
           CALL ERROR$CHVAL('ID',ID)
@@ -10137,5 +10152,4 @@ PRINT*,'EOFPHI ',EOFPHI
 !!$ N=5 6.9208 -1.6762   7.6373     -1.7762
 !!$ N=6 9.1717 -1.9976  10.068      -2.1334 
 !!$ N=7 9.9144 -1.9896  10.03       -1.9469
-
 

@@ -257,6 +257,8 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: AECORE(:)
       REAL(8)   ,ALLOCATABLE  :: PSCORE(:)
       REAL(8)                 :: RCSM
+      REAL(8)                 :: RCUT
+      REAL(8)   ,ALLOCATABLE  :: RCL(:)
       REAL(8)   ,ALLOCATABLE  :: VADD(:)
       REAL(8)   ,ALLOCATABLE  :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE  :: DTKIN(:,:,:)
@@ -289,6 +291,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSTOTPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: RHO(:,:,:)
       CHARACTER(32)           :: SOFTCORETYPE
+      LOGICAL(4)              :: TSKALA
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
 !
@@ -304,6 +307,9 @@ END MODULE AUGMENTATION_MODULE
       CALL SETUP$GETI4('LNX',LNX)
       ALLOCATE(LOX(LNX))
       CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(RCL(MAXVAL(LOX)+1))
+      CALL SETUP$GETR8A('RCL',SIZE(RCL),RCL)
+      RCUT=MAXVAL(RCL)
       ALLOCATE(AEPHI(NR,LNX))
       CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
       ALLOCATE(PSPHI(NR,LNX))
@@ -373,6 +379,12 @@ END MODULE AUGMENTATION_MODULE
         CALL AUGMENTATION_RHO(NR,LNX,LOX,PSPHI &
      &                  ,LMNX,DENMAT(1,1,IDIM),LMRX,PSRHO(1,1,IDIM))
       ENDDO
+      CALL SKALA$GETL4('ON',TSKALA)
+      IF(TSKALA) THEN
+        CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX,NDIMD &
+     &                              ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE &
+     &                              ,AERHO,PSRHO,RCUT,EKINNL)
+      END IF
 !     
 !     ================================================================
 !     ==  EVALUATE MULTIPOLE MOMENTS                                ==
@@ -588,6 +600,7 @@ STOP
       DEALLOCATE(AERHO)
       DEALLOCATE(PSRHO)
       DEALLOCATE(LOX)
+      DEALLOCATE(RCL)
       DEALLOCATE(AEPHI)
       DEALLOCATE(PSPHI)
       DEALLOCATE(AECORE)
@@ -3097,6 +3110,5 @@ END IF
       CLOSE(100)
       RETURN
       END
-
 
 
