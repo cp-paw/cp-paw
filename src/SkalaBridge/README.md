@@ -15,9 +15,12 @@ them to Skala protocol-v2 tensors and returns derivatives in the host layout.
 drop-in replacement.
 
 The native PAW call path is being integrated in stages. At this point the
-`!CONTROL!DFT!SKALA` block activates primitive-field input preparation and the
-positive-tau consistency check; it does not yet replace CP-PAW's conventional
-XC energy. The protocol report labels this state explicitly.
+`!CONTROL!DFT!SKALA` block assembles complete hybrid PAW atom blocks, evaluates
+the model, and maps its density, density-gradient, and positive-tau adjoints
+back to the one-center density matrices and smooth wave-function grid. The
+smooth scalar operator includes the Fourier-space divergence of the gradient
+adjoint. These operators are validated diagnostically; they do not yet replace
+CP-PAW's conventional XC energy or Hamiltonian.
 
 For PAW, the eventual caller must construct each atom block from primary fields
 before inference:
