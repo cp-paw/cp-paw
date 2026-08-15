@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#include <ATen/Context.h>
 #include <ATen/Parallel.h>
 #include <torch/csrc/autograd/autograd.h>
 #include <torch/cuda.h>
@@ -12,7 +13,6 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -26,7 +26,6 @@ struct SkalaModel {
   torch::jit::script::Module module;
   torch::Device device = torch::Device(torch::kCPU);
   bool features[feature_count] = {};
-  std::unordered_set<std::string> warmed_shapes;
 };
 
 using TensorDict = c10::Dict<std::string, torch::Tensor>;
@@ -115,13 +114,6 @@ void validate_feature_shapes(const TensorDict &features) {
   require_shape(features, "atomic_grid_size_bound_shape", {-1, 0});
 }
 
-std::string evaluation_shape(const TensorDict &features) {
-  const auto &density = features.at("density");
-  const auto &atom_coords = features.at("coarse_0_atomic_coords");
-  return std::to_string(density.size(1)) + ":" +
-         std::to_string(atom_coords.size(0));
-}
-
 torch::Tensor *new_tensor(torch::Tensor tensor) {
   return new torch::Tensor(std::move(tensor));
 }
@@ -144,6 +136,31 @@ void configure_host_threads() {
 #endif
 }
 
+void configure_reproducibility() {
+  static std::once_flag configured;
+  std::call_once(configured, [] {
+    bool deterministic = true;
+    if (const char *value = std::getenv("CPPAW_SKALA_DETERMINISTIC")) {
+      const std::string setting(value);
+      deterministic = setting != "0" && setting != "false" &&
+                      setting != "FALSE" && setting != "off" &&
+                      setting != "OFF";
+    }
+    if (!deterministic) {
+      return;
+    }
+#if !defined(_WIN32)
+    if (std::getenv("CUBLAS_WORKSPACE_CONFIG") == nullptr) {
+      setenv("CUBLAS_WORKSPACE_CONFIG", ":4096:8", 0);
+    }
+#endif
+    at::globalContext().setDeterministicAlgorithms(true, false);
+    at::globalContext().setDeterministicCuDNN(true);
+    at::globalContext().setAllowTF32CuDNN(false);
+    at::globalContext().setAllowTF32CuBLAS(false);
+  });
+}
+
 } // namespace
 
 extern "C" int cppaw_skala_cuda_available() {
@@ -162,6 +179,7 @@ extern "C" void *cppaw_skala_model_load(const char *filename,
                                          const int error_capacity) {
   try {
     configure_host_threads();
+    configure_reproducibility();
     auto model = std::make_unique<SkalaModel>();
     model->device = select_device(device_type, device_index);
     torch::jit::ExtraFilesMap metadata{{"features", ""}, {"protocol_version", ""}};
@@ -250,14 +268,6 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     std::vector<c10::IValue> args;
     std::unordered_map<std::string, c10::IValue> kwargs;
     kwargs["mol"] = features;
-    const std::string shape = evaluation_shape(features);
-    if (model.warmed_shapes.find(shape) == model.warmed_shapes.end()) {
-      // CUDA's profiling executor may use a different graph on its first call.
-      // Warm each tensor shape once so MPI atom distribution cannot select a
-      // different numerical path for otherwise identical model evaluations.
-      model.module.get_method("get_exc_density")(args, kwargs).toTensor();
-      model.warmed_shapes.insert(shape);
-    }
     torch::Tensor exc_density =
         model.module.get_method("get_exc_density")(args, kwargs).toTensor();
     torch::Tensor exc = (exc_density * features.at("grid_weights")).sum();
