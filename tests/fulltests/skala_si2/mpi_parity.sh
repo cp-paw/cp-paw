@@ -21,6 +21,7 @@ expected_kpoints=${SKALA_EXPECT_KPOINTS:-8}
 energy_tolerance=${SKALA_MPI_ENERGY_TOLERANCE:-0.0000001}
 force_tolerance=${SKALA_MPI_FORCE_TOLERANCE:-0.000002}
 stress_tolerance=${SKALA_MPI_STRESS_TOLERANCE:-0.000002}
+norm_tolerance=${SKALA_MPI_NORM_TOLERANCE:-0.00002}
 radial_points=${SKALA_RADIAL_POINTS:-200}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
@@ -108,7 +109,8 @@ awk -v expected_kpoints="$expected_kpoints" \
     -v ranks="$ranks" \
     -v energy_tolerance="$energy_tolerance" \
     -v force_tolerance="$force_tolerance" \
-    -v stress_tolerance="$stress_tolerance" '
+    -v stress_tolerance="$stress_tolerance" \
+    -v norm_tolerance="$norm_tolerance" '
   FNR == NR {
     reference[FNR] = $0
     reference_count = FNR
@@ -133,6 +135,7 @@ awk -v expected_kpoints="$expected_kpoints" \
     tolerance = energy_tolerance
     if (left[1] ~ /^FORCE/) tolerance = force_tolerance
     if (left[1] ~ /^STRESS/) tolerance = stress_tolerance
+    if (left[1] ~ /_NORM$/) tolerance = norm_tolerance
     for (column = 2; column <= left_count; column++) {
       difference = right[column] - left[column]
       absolute = difference < 0.0 ? -difference : difference
@@ -152,12 +155,14 @@ awk -v expected_kpoints="$expected_kpoints" \
     energy_max = maximum["ENERGY"] + 0.0
     force_max = 0.0
     stress_max = 0.0
+    norm_max = 0.0
     for (label in maximum) {
       if (label ~ /^FORCE/ && maximum[label] > force_max) force_max = maximum[label]
       if (label ~ /^STRESS/ && maximum[label] > stress_max) stress_max = maximum[label]
+      if (label ~ /_NORM$/ && maximum[label] > norm_max) norm_max = maximum[label]
     }
-    printf "SKALA MPI PARITY ranks=1/%d energy=% .6e force=% .6e stress=% .6e\n", \
-           ranks, energy_max, force_max, stress_max
+    printf "SKALA MPI PARITY ranks=1/%d energy=% .6e force=% .6e stress=% .6e norm=% .6e\n", \
+           ranks, energy_max, force_max, stress_max, norm_max
     exit failed
   }
 ' "$work/rank1.data" "$work/rankn.data"

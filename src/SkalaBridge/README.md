@@ -115,6 +115,8 @@ default to a step of `3e-4` and an absolute tolerance of `2e-3`.
 `SKALA_RADIAL_POINTS`, `SKALA_LEBEDEV_EXACTNESS`, and
 `SKALA_LEBEDEV_ORIENTATIONS` override the local-grid settings in the force,
 stress, and MPI drivers for quadrature-convergence checks.
+`SKALA_MPI_NORM_TOLERANCE` controls the separate absolute tolerance for the
+large smooth-operator L2 diagnostics and defaults to `2e-5`.
 `quadrature_convergence.sh` defaults to radial counts `100 200 400` at Lebedev
 exactness 17 to expose coarse-grid errors and reports every result relative to
 the final, finest case. The
