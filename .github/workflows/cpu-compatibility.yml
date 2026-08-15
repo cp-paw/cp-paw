@@ -47,10 +47,8 @@ jobs:
           done
       - name: Run serial and MPI Si2 regressions
         run: |
-          make -C tests/fulltests/si2 clean
           make -C tests/fulltests/si2 all \
             TEST=si2 PAWX="$GITHUB_WORKSPACE/bin/fast/paw_fast.x"
-          make -C tests/fulltests/si2 clean
           make -C tests/fulltests/si2 all TEST=si2 \
             PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/fast_parallel/ppaw_fast.x"
 
