@@ -120,6 +120,8 @@ def check_summary_and_markdown(tmpdir):
                 "PAW_VPSI_FFT_GTOR,1,1,1,0,1,5,5,5,0,0,0,0",
                 "PAW_VPSI_FFT_RTOG,1,1,1,0,1,6,6,6,0,0,0,0",
                 "PAW_VPSI_TOTAL,1,1,1,0,1,12,12,12,0,0,0,0",
+                "SKALA_PARTITION,1,1,1,0,1,0.5,0.5,0.5,0,0,0,0",
+                "SKALA_MODEL,1,1,1,0,2,1.5,1,0.75,0,0,0,0",
             ]
         )
         + "\n",
@@ -147,6 +149,10 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["vpsi_s"], "12", "vpsi_s")
     assert_equal(row["vpsi_gtor_s"], "5", "vpsi_gtor_s")
     assert_equal(row["vpsi_rtog_s"], "6", "vpsi_rtog_s")
+    assert_equal(row["rank_s"], "7", "nested Skala exclusion")
+    assert_equal(row["skala_s"], "2", "skala_s")
+    assert_equal(row["skala_partition_s"], "0.5", "skala_partition_s")
+    assert_equal(row["skala_model_s"], "1.5", "skala_model_s")
     assert_equal(row["transfer_gb"], "18.75", "transfer_gb")
     assert_equal(row["copy_gb"], "17.5", "copy_gb")
     assert_equal(row["copy_wave_gb"], "1.75", "copy_wave_gb")
@@ -161,6 +167,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(markdown, "transfer_gb", "benchmark markdown transfer header")
     assert_contains(markdown, "copy_wave_gb", "benchmark markdown header")
     assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
+    assert_contains(markdown, "skala_atom_grid_s", "benchmark markdown Skala header")
     assert_contains(markdown, "|  | case | 1 | yes | 10.00 |", "benchmark markdown row")
 
     profile_summary = run_tool(
@@ -172,6 +179,11 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(profile_summary, "ACC copy denmat", "profile copy denmat bucket")
     assert_contains(profile_summary, "ACC update wave", "profile update wave bucket")
     assert_contains(profile_summary, "transfer estimate: 18.750000 GB", "profile transfer total")
+    assert_contains(
+        profile_summary,
+        "Skala detail rank-seconds (nested): 2.000000",
+        "profile nested Skala detail",
+    )
 
     copy_rows = run_tool(
         "profile_copy_rows.py",

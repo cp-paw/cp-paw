@@ -147,7 +147,10 @@ High-level `PHASE_*` timers are reported separately as `phase_s` and
 `phase_gap_s = wall_rank_s - phase_s`; they are also kept out of `rank_s`
 because they are coarse envelopes around existing numerical kernel timers. Use
 the phase columns to localize unexplained wall time before adding lower-level
-kernel instrumentation. The aggregate copy estimate `copy_gb` is split into
+kernel instrumentation. Nested `SKALA_*` timers are likewise kept out of
+`rank_s` and reported as `skala_s` plus per-phase columns for partitioning,
+atom-grid construction, model evaluation, one-center work, its adjoint, and
+grid back-projection. The aggregate copy estimate `copy_gb` is split into
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center

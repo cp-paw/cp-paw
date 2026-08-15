@@ -52,6 +52,8 @@ def is_copy_detail_row(op):
 
 
 def category(op):
+    if op.startswith("SKALA_"):
+        return "Skala detail"
     if op.startswith("PHASE_"):
         return "Phase trace"
     if op.startswith("ACC_COPY"):
@@ -125,6 +127,7 @@ def main(argv):
         data["seconds"] for op, data in per_op.items()
         if not op.startswith("ACC_")
         and not op.startswith("PAW_")
+        and not op.startswith("SKALA_")
         and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
         and not op.startswith("PHASE_")
     )
@@ -135,6 +138,10 @@ def main(argv):
     paw_total = sum(
         data["seconds"] for op, data in per_op.items()
         if op.startswith("PAW_")
+    )
+    skala_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if op.startswith("SKALA_")
     )
     trace_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -164,6 +171,8 @@ def main(argv):
     print("Instrumented rank-seconds: {:.6f}".format(primary_total))
     if paw_total:
         print("PAW envelope rank-seconds (nested): {:.6f}".format(paw_total))
+    if skala_total:
+        print("Skala detail rank-seconds (nested): {:.6f}".format(skala_total))
     if phase_total:
         print("Diagnostic phase rank-seconds: {:.6f}".format(phase_total))
     if trace_total:

@@ -65,6 +65,13 @@ def profile_totals(run_dir):
         "pw_fft_rtog": 0.0,
         "mpi": 0.0,
         "paw": 0.0,
+        "skala": 0.0,
+        "skala_partition": 0.0,
+        "skala_atom_grid": 0.0,
+        "skala_onecenter": 0.0,
+        "skala_model": 0.0,
+        "skala_onecenter_adjoint": 0.0,
+        "skala_grid_back": 0.0,
         "vpsi": 0.0,
         "vpsi_gtor": 0.0,
         "vpsi_rtog": 0.0,
@@ -108,6 +115,12 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("PHASE_"):
                     totals["phase"] += seconds
+                    continue
+                if op.startswith("SKALA_"):
+                    totals["skala"] += seconds
+                    key = op.lower()
+                    if key in totals:
+                        totals[key] += seconds
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
@@ -249,6 +262,13 @@ def main(argv):
                 "gap_s": gap,
                 "coverage_pct": coverage,
                 "paw_s": totals["paw"],
+                "skala_s": totals["skala"],
+                "skala_partition_s": totals["skala_partition"],
+                "skala_atom_grid_s": totals["skala_atom_grid"],
+                "skala_onecenter_s": totals["skala_onecenter"],
+                "skala_model_s": totals["skala_model"],
+                "skala_onecenter_adjoint_s": totals["skala_onecenter_adjoint"],
+                "skala_grid_back_s": totals["skala_grid_back"],
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
@@ -300,6 +320,13 @@ def main(argv):
         "gap_s",
         "coverage_pct",
         "paw_s",
+        "skala_s",
+        "skala_partition_s",
+        "skala_atom_grid_s",
+        "skala_onecenter_s",
+        "skala_model_s",
+        "skala_onecenter_adjoint_s",
+        "skala_grid_back_s",
         "blas_s",
         "lapack_s",
         "fft_s",
