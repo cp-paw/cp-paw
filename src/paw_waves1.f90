@@ -2655,7 +2655,8 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
       CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH &
-     &               ,TSKALAAPPLY.AND.TSKALAAPPLYTAU,SKALAVTAU)
+     &               ,TSKALAAPPLY.AND.TSKALAAPPLYTAU,SKALAVTAU &
+     &               ,NBX,OCC)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_HPSI' &
@@ -7082,7 +7083,8 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH,TSKALA,VTAU)
+      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH,TSKALA,VTAU &
+     &                     ,NBX,OCC)
 !     **************************************************************************
 !     **                                                                      **
 !     **  EVALUATES FORCES FROM THE AUGMENTATION PART                         **
@@ -7109,14 +7111,17 @@ RETURN
       INTEGER(4),INTENT(IN) :: NDIMD_
       INTEGER(4),INTENT(IN) :: LMNXX
       INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NBX
       REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
       COMPLEX(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
       LOGICAL(4),INTENT(IN) :: TSKALA
       REAL(8)   ,INTENT(IN) :: VTAU(NRL,NDIMD_)
+      REAL(8)   ,INTENT(IN) :: OCC(NBX,NKPTL,NSPIN)
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
       REAL(8)               :: R(3,NAT)
+      REAL(8)               :: TAUEXPECT
 !     --------------------------------------------------------------------------
       INTEGER(4)             :: IPRO
       INTEGER(4)             :: ISP
@@ -7137,6 +7142,7 @@ RETURN
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
                               CALL TIMING$CLOCKON('W:HPSI')
+      TAUEXPECT=0.D0
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
 #ENDIF
@@ -7302,10 +7308,12 @@ RETURN
 !===============================================================================
           IF(TSKALA) THEN
             CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,THIS%PSI0 &
-     &                              ,VTAU(:,ISPIN),THIS%HPSI)
+     &                              ,VTAU(:,ISPIN),THIS%HPSI &
+     &                              ,NBX,OCC(:,IKPT,ISPIN),TAUEXPECT)
           END IF
 		        ENDDO
 	      ENDDO
+      IF(TSKALA) CALL SKALA$TAUOPERATORCHECK(TAUEXPECT)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
       CALL ACCELPROFILE$ADD('PAW_HPSI_TOTAL' &
@@ -7318,19 +7326,23 @@ RETURN
       END SUBROUTINE WAVES$HPSI
 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,PSI,VTAU,HPSI)
+      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,PSI,VTAU,HPSI &
+     &                              ,NOCC,OCC,EXPECTATION)
 !     ***************************************************************************
 !     ** APPLY -1/2 DIV(VTAU GRAD(PSI)) FOR THE POSITIVE-TAU ADJOINT.          **
 !     ***************************************************************************
       IMPLICIT NONE
       COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
-      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NBH
+      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NBH,NOCC
       COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH)
       REAL(8),INTENT(IN) :: VTAU(NRL)
       COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
+      REAL(8),INTENT(IN) :: OCC(NOCC)
+      REAL(8),INTENT(INOUT) :: EXPECTATION
       REAL(8),ALLOCATABLE :: GVEC(:,:)
       COMPLEX(8),ALLOCATABLE :: WORKG(:,:),WORKR(:,:)
       INTEGER(4) :: IB,IDIM,IDIR,IG,IR
+      COMPLEX(8) :: DELTAH
 
       IF(NDIM.NE.1) THEN
         CALL ERROR$MSG('SKALA TAU OPERATOR SUPPORTS COLLINEAR SPIN ONLY')
@@ -7354,8 +7366,10 @@ RETURN
           CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,WORKG,NRL,WORKR)
           DO IDIM=1,NDIM
             DO IG=1,NGL
-              HPSI(IG,IDIM,IB)=HPSI(IG,IDIM,IB) &
-     &             -0.5D0*CI*GVEC(IDIR,IG)*WORKG(IG,IDIM)
+              DELTAH=-0.5D0*CI*GVEC(IDIR,IG)*WORKG(IG,IDIM)
+              HPSI(IG,IDIM,IB)=HPSI(IG,IDIM,IB)+DELTAH
+              IF(IB.LE.NOCC) EXPECTATION=EXPECTATION+OCC(IB) &
+     &             *REAL(CONJG(PSI(IG,IDIM,IB))*DELTAH,KIND=8)
             END DO
           END DO
         END DO
