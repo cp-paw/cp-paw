@@ -35,8 +35,8 @@ pseudo-core, positive-tau, and existing PAW projector responses.
 
 ```text
 !SKALA
- MODEL='path/to/skala-1.1-rev1-cuda.fun'
- DEVICE='AUTO'
+ MODEL='path/to/skala-1.1-rev1.fun'
+ DEVICE='CPU'
  RADIALPOINTS=200
  LEBEDEVEXACTNESS=53
  LEBEDEVORIENTATIONS=1
@@ -184,26 +184,30 @@ This differs from both separate conventional one-center XC corrections and a
 literal copy of CP2K's GAPW implementation. Nonlinear Skala features are formed
 only after the PAW fields have been combined.
 
-Build and download the hash-pinned model with:
+For a CPU-only installation, first provide a CPU PyTorch or LibTorch package,
+then build the bridge and download the hash-pinned CPU model with GNU Fortran:
 
 ```sh
-src/Buildtools/paw_skala_setup.sh --device auto --download-model
+FC=gfortran src/Buildtools/paw_skala_setup.sh --device cpu --download-model
 ```
 
 The setup script prints the installed bridge root and a smoke-test command.
-The CP-PAW build can later consume that root through
-`CPPAW_SKALA_FTORCH_ROOT` when the native PAW call path is enabled. The bridge
-is composable with every existing library selection:
+It fetches the pinned FTorch source, but never installs PyTorch or LibTorch.
+The dedicated CPU targets select the GNU toolchain and the default
+`bin/skala_ftorch_cpu` root automatically:
 
 ```sh
-CPPAW_USE_SKALA_FTORCH=yes \
-CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cpu" \
-src/Buildtools/paw_build.sh -c fast -j16 -z
+src/Buildtools/paw_build.sh -c skala_cpu_fast -j16 -z
+src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel -j16 -z
+
+# Or build both through the installer without probing NVIDIA targets.
+CPPAW_INSTALL_NVHPC=no CPPAW_INSTALL_SKALA_CPU=require ./paw_install
 ```
 
-Use the CUDA bridge root with an NVIDIA target in the same way. Skala is never
-enabled implicitly, so conventional CP-PAW binaries retain their dependency
-set and behavior.
+Set `CPPAW_SKALA_FTORCH_ROOT` for a custom CPU bridge prefix. Use a CUDA bridge
+root with an NVIDIA target in the same way. `CPPAW_INSTALL_SKALA_CPU` defaults
+to `no`, and the conventional `dbg`, `fast`, and `fast_parallel` binaries never
+enable Skala implicitly, so they retain their dependency set and behavior.
 
 For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
 version matches the selected PyTorch package. Set `CUDACXX` to require a

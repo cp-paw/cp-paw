@@ -22,6 +22,15 @@ not apply to the present implementation.)
 > run-time switch. Validate energies, forces, stress, and parallel parity for
 > the intended system before using these paths for production calculations.
 
+This branch remains fully usable without an NVIDIA GPU, CUDA, or the NVIDIA
+HPC SDK. The standard `dbg`, `fast`, and `fast_parallel` binaries retain the
+main-branch dependency set and are built first. Use
+`CPPAW_INSTALL_NVHPC=no ./paw_install` for a strictly GPU-free installation.
+Skala is also disabled by default; its CPU-only binaries have separate
+`skala_cpu_fast*` target and executable names. CI builds and runs both serial
+and MPI GNU configurations without NVIDIA libraries and checks their dynamic
+dependencies.
+
 The build system detects the NVIDIA HPC SDK, CUDA, and individual libraries
 instead of assuming that every NVIDIA installation provides the same stack.
 With the installer's default `auto` policy, unavailable optional targets are
@@ -123,12 +132,22 @@ needed for analytic forces and stress. Higher spatial derivatives enter those
 operator and moving-grid contractions even though the model input itself does
 not contain a density Hessian.
 
-Build a pinned FTorch bridge and download the model, then compose the bridge
-with the desired CP-PAW target:
+For a CPU-only installation, provide a CPU PyTorch or LibTorch package, build
+the pinned FTorch bridge with the same GNU Fortran compiler as CP-PAW, and ask
+the installer for the separate Skala binaries:
 
 ```sh
-src/Buildtools/paw_skala_setup.sh --device auto --download-model
+FC=gfortran src/Buildtools/paw_skala_setup.sh --device cpu --download-model
+CPPAW_INSTALL_NVHPC=no CPPAW_INSTALL_SKALA_CPU=require ./paw_install
+```
 
+The latter creates `bin/skala_cpu_fast/paw_skala_cpu_fast.x` and
+`bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x`. It never downloads
+PyTorch, LibTorch, FTorch, or a model; dependency setup remains an explicit
+preceding step. A CUDA bridge can instead be composed with an NVIDIA target:
+
+```sh
+src/Buildtools/paw_skala_setup.sh --device cuda --download-model
 CPPAW_USE_SKALA_FTORCH=yes \
 CPPAW_SKALA_FTORCH_ROOT="$PWD/bin/skala_ftorch_cuda" \
   src/Buildtools/paw_build.sh -c nvhpc_gpu_acc_fast -j16 -z
@@ -140,8 +159,8 @@ operator active:
 
 ```text
 !SKALA
- MODEL='path/to/skala-1.1-rev1-cuda.fun'
- DEVICE='AUTO'
+ MODEL='path/to/skala-1.1-rev1.fun'
+ DEVICE='CPU'
  RADIALPOINTS=200
  LEBEDEVEXACTNESS=53
  LEBEDEVORIENTATIONS=1
@@ -198,8 +217,9 @@ columns.
 - optional NVIDIA HPC SDK and CUDA libraries, as summarized in the
   [`cp-paw-nvhpc` development features](#cp-paw-nvhpc-development-features)
   section above
-- optional CMake, Python, FTorch, and LibTorch for the Skala bridge; the setup
-  helper installs the pinned bridge dependencies
+- optional CMake, Python, and a separately installed CPU or CUDA
+  PyTorch/LibTorch package for the Skala bridge; the setup helper fetches the
+  pinned FTorch source but does not install PyTorch or LibTorch
 - tools: xmgrace, gnuplot, avogadro1
 
 ## Installation
@@ -215,6 +235,22 @@ columns.
    ```
    ./paw_install
    ```
+   This always builds the conventional `dbg`, `fast`, and `fast_parallel`
+   binaries. To disable discovery and construction of every NVIDIA-specific
+   variant explicitly, use:
+   ```
+   CPPAW_INSTALL_NVHPC=no ./paw_install
+   ```
+   A CPU-only Skala bridge is independent of CUDA and the NVIDIA HPC SDK. After
+   preparing it explicitly, request its separately named serial and MPI
+   binaries with:
+   ```
+   FC=gfortran src/Buildtools/paw_skala_setup.sh --device cpu --download-model
+   CPPAW_INSTALL_NVHPC=no CPPAW_INSTALL_SKALA_CPU=require ./paw_install
+   ```
+   `CPPAW_INSTALL_SKALA_CPU` defaults to `no`; `auto` builds the two targets
+   only when `bin/skala_ftorch_cpu` already contains a complete bridge. The
+   installer never downloads Torch or a model as a side effect.
    On systems where the NVIDIA HPC SDK is available, the installer will additionally try CPU/NVPL builds. Use:
    ```
    CPPAW_INSTALL_NVHPC=require ./paw_install
@@ -226,6 +262,8 @@ columns.
    `CPPAW_INSTALL_GPU_RESIDENCY_PROFILE=require` to make it mandatory.
    The NVIDIA builds can also be selected directly:
    ```
+   CPPAW_TOOLCHAIN=gnu src/Buildtools/paw_build.sh -c skala_cpu_fast
+   CPPAW_TOOLCHAIN=gnu src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_fast_parallel
    CPPAW_TOOLCHAIN=nvhpc src/Buildtools/paw_build.sh -c nvhpc_nvblas_fast

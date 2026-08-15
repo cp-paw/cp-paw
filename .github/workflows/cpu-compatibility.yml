@@ -1,0 +1,101 @@
+name: CPU Compatibility
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - cp-paw-nvhpc
+
+permissions:
+  contents: read
+
+env:
+  CPPAW_TOOLCHAIN: gnu
+  CPPAW_USE_NVBLAS: "no"
+  CPPAW_USE_NVLAMATH: "no"
+  CPPAW_USE_CUFFTW: "no"
+  CPPAW_USE_CUFFT: "no"
+  CPPAW_USE_CUBLAS_ACC: "no"
+  CPPAW_USE_CUSOLVER_ACC: "no"
+
+jobs:
+  conventional-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install GNU build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gfortran libfftw3-dev libopenblas-dev libopenmpi-dev \
+            openmpi-bin pkg-config
+      - name: Build serial and MPI binaries
+        run: |
+          src/Buildtools/paw_build.sh -c fast -j2 -z
+          src/Buildtools/paw_build.sh -c fast_parallel -j2 -z
+      - name: Reject accelerator dependencies
+        run: |
+          pattern='lib(cuda|cublas|cufft|cusolver|nvblas|nvlamath|torch|ftorch)'
+          for binary in bin/fast/paw_fast.x \
+                        bin/fast_parallel/ppaw_fast.x; do
+            if ldd "${binary}" | grep -Eiq "${pattern}"; then
+              echo "Unexpected accelerator dependency in ${binary}" >&2
+              ldd "${binary}" >&2
+              exit 1
+            fi
+          done
+      - name: Run serial and MPI Si2 regressions
+        run: |
+          make -C tests/fulltests/si2 clean
+          make -C tests/fulltests/si2 all \
+            TEST=si2 PAWX="$GITHUB_WORKSPACE/bin/fast/paw_fast.x"
+          make -C tests/fulltests/si2 clean
+          make -C tests/fulltests/si2 all TEST=si2 \
+            PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/fast_parallel/ppaw_fast.x"
+
+  skala-cpu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install GNU and CPU Torch dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake g++ gfortran libfftw3-dev libopenblas-dev libopenmpi-dev \
+            openmpi-bin pkg-config
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+            torch==2.7.1
+      - name: Prepare the CPU Skala bridge and model
+        env:
+          FC: gfortran
+          CPPAW_SKALA_PYTHON: python
+        run: src/Buildtools/paw_skala_setup.sh --device cpu --download-model --jobs 2
+      - name: Build dedicated serial and MPI Skala binaries
+        run: |
+          src/Buildtools/paw_build.sh -c skala_cpu_fast -j2 -z
+          src/Buildtools/paw_build.sh -c skala_cpu_fast_parallel -j2 -z
+      - name: Reject CUDA dependencies
+        run: |
+          pattern='lib(cuda|cublas|cufft|cusolver|nvblas|nvlamath)'
+          for binary in bin/skala_cpu_fast/paw_skala_cpu_fast.x \
+                        bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x; do
+            if ldd "${binary}" | grep -Eiq "${pattern}"; then
+              echo "Unexpected CUDA dependency in ${binary}" >&2
+              ldd "${binary}" >&2
+              exit 1
+            fi
+          done
+      - name: Run serial and MPI Skala Si2 regressions
+        env:
+          SKALA_MODEL: ${{ github.workspace }}/bin/skala_ftorch_cpu/models/skala-1.1-rev1.fun
+        run: |
+          make -C tests/fulltests/skala_si2 clean
+          make -C tests/fulltests/skala_si2 all \
+            PAWX="$GITHUB_WORKSPACE/bin/skala_cpu_fast/paw_skala_cpu_fast.x"
+          make -C tests/fulltests/skala_si2 clean
+          make -C tests/fulltests/skala_si2 all \
+            PAWX="mpirun -np 2 $GITHUB_WORKSPACE/bin/skala_cpu_fast_parallel/ppaw_skala_cpu_fast.x"

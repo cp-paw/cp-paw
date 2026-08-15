@@ -28,6 +28,7 @@ export CPPAW_INSTALL_GPU_MEMORY_PROFILES="${CPPAW_INSTALL_GPU_MEMORY_PROFILES:-n
 export CPPAW_INSTALL_GPU_RESIDENCY_PROFILE="${CPPAW_INSTALL_GPU_RESIDENCY_PROFILE:-auto}"
 export CPPAW_INSTALL_CUBLAS_ACC="${CPPAW_INSTALL_CUBLAS_ACC:-auto}"
 export CPPAW_INSTALL_CUSOLVER_ACC="${CPPAW_INSTALL_CUSOLVER_ACC:-auto}"
+export CPPAW_INSTALL_SKALA_CPU="${CPPAW_INSTALL_SKALA_CPU:-no}"
 export CPPAW_INSTALL_PROFILE="${CPPAW_INSTALL_PROFILE:-no}"
 export CPPAW_INSTALL_JOBS="${CPPAW_INSTALL_JOBS:-16}"
 
@@ -173,6 +174,72 @@ case "${CPPAW_INSTALL_PROFILE}" in
     exit 1
     ;;
 esac
+
+export SKALA_CPU_BUILT=false
+
+function skala_cpu_root {
+  echo "${CPPAW_SKALA_FTORCH_ROOT:-${THISDIR}/bin/skala_ftorch_cpu}"
+}
+
+function has_skala_cpu_bridge {
+  local ROOT
+  local D
+
+  ROOT=$(skala_cpu_root)
+  if [[ ! -f ${ROOT}/include/paw_skala_bridge.mod ]] ; then
+    return 1
+  fi
+  for D in "${ROOT}/lib" "${ROOT}/lib64" ; do
+    if [[ ( -f ${D}/libcppaw_skala_bridge.so \
+            || -f ${D}/libcppaw_skala_bridge.dylib ) \
+          && ( -f ${D}/libftorch.so || -f ${D}/libftorch.dylib ) ]] ; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+function build_skala_cpu_choices {
+  local REQUIRED=false
+  local ROOT
+
+  case "${CPPAW_INSTALL_SKALA_CPU}" in
+    no|false|0)
+      return 0
+      ;;
+    auto|"")
+      if ! has_skala_cpu_bridge ; then
+        echo "CPU Skala/FTorch bridge not detected; skipping optional Skala builds."
+        return 0
+      fi
+      ;;
+    require|required|yes|true)
+      REQUIRED=true
+      if ! has_skala_cpu_bridge ; then
+        ROOT=$(skala_cpu_root)
+        echo "error in $0: CPPAW_INSTALL_SKALA_CPU=${CPPAW_INSTALL_SKALA_CPU} but the CPU bridge is incomplete in ${ROOT}" >&2
+        echo "run FC=gfortran src/Buildtools/paw_skala_setup.sh --device cpu first" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "error in $0: invalid CPPAW_INSTALL_SKALA_CPU=${CPPAW_INSTALL_SKALA_CPU}" >&2
+      echo "allowed are no, auto, yes, require" >&2
+      exit 1
+      ;;
+  esac
+
+  ROOT=$(skala_cpu_root)
+  export CPPAW_SKALA_FTORCH_ROOT="${ROOT}"
+  for X in skala_cpu_fast skala_cpu_fast_parallel ; do
+    build_choice "${X}" "${REQUIRED}" "gnu"
+    if [[ ${LAST_BUILD_OK} = true ]] ; then
+      SKALA_CPU_BUILT=true
+    fi
+  done
+}
+
+build_skala_cpu_choices
 
 export NVHPC_BUILT=false
 export NVHPC_PROFILE_BUILT=false
@@ -828,6 +895,9 @@ echo "export PAWDIR=$(pwd)"
 echo "export PATH=\${PAWDIR}/bin/fast:\${PAWDIR}/bin/fast_parallel:\${PAWDIR}/bin/dbg:\${PATH}"
 if [[ ${PROFILE_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/profile:\${PAWDIR}/bin/profile_parallel:\${PATH}"
+fi
+if [[ ${SKALA_CPU_BUILT} = true ]] ; then
+  echo "export PATH=\${PAWDIR}/bin/skala_cpu_fast:\${PAWDIR}/bin/skala_cpu_fast_parallel:\${PATH}"
 fi
 if [[ ${NVHPC_BUILT} = true ]] ; then
   echo "export PATH=\${PAWDIR}/bin/nvhpc_fast:\${PAWDIR}/bin/nvhpc_fast_parallel:\${PATH}"

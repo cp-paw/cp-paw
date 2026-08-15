@@ -200,21 +200,27 @@ elif [[ ${PREFIX} = "${DEFAULT_PREFIX}" ]]; then
 else
   BUILD=${PREFIX}.build
 fi
-FC=${FC:-$(command -v nvfortran || command -v gfortran || true)}
+if [[ -z ${FC:-} ]]; then
+  if [[ ${DEVICE} = cpu ]]; then
+    FC=$(command -v gfortran || true)
+  else
+    FC=$(command -v nvfortran || command -v gfortran || true)
+  fi
+fi
 DEVICE_CMAKE=$(printf '%s' "${DEVICE}" | tr '[:lower:]' '[:upper:]')
 if [[ -z ${FC} || -z ${CXX} ]]; then
   echo "a Fortran compiler and a C++17 compiler are required" >&2
   exit 1
 fi
 
-CUDA_CMAKE_ARGS=()
+DEVICE_CMAKE_ARGS=("-DCPPAW_SKALA_DEVICE=${DEVICE_CMAKE}")
 if [[ ${DEVICE} = cuda ]]; then
-  CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_COMPILER=${CUDA_COMPILER}")
-  CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_HOST_COMPILER=${CUDA_HOST_COMPILER}")
-  CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH}")
-  CUDA_CMAKE_ARGS+=("-DCUDAToolkit_ROOT=${CUDA_ROOT}")
-  CUDA_CMAKE_ARGS+=("-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_ROOT}")
-  CUDA_CMAKE_ARGS+=("-DCUDA_NVCC_EXECUTABLE=${CUDA_COMPILER}")
+  DEVICE_CMAKE_ARGS+=("-DCMAKE_CUDA_COMPILER=${CUDA_COMPILER}")
+  DEVICE_CMAKE_ARGS+=("-DCMAKE_CUDA_HOST_COMPILER=${CUDA_HOST_COMPILER}")
+  DEVICE_CMAKE_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH}")
+  DEVICE_CMAKE_ARGS+=("-DCUDAToolkit_ROOT=${CUDA_ROOT}")
+  DEVICE_CMAKE_ARGS+=("-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_ROOT}")
+  DEVICE_CMAKE_ARGS+=("-DCUDA_NVCC_EXECUTABLE=${CUDA_COMPILER}")
   export CUDA_HOME=${CUDA_ROOT}
   export CUDA_PATH=${CUDA_ROOT}
   export PATH="${CUDA_ROOT}/bin:${PATH}"
@@ -230,8 +236,7 @@ cmake -S "${THISDIR}/src/SkalaBridge" -B "${BUILD}" \
   -DCMAKE_PREFIX_PATH="${TORCH_PREFIX}" \
   -DCMAKE_Fortran_COMPILER="${FC}" \
   -DCMAKE_CXX_COMPILER="${CXX}" \
-  -DCPPAW_SKALA_DEVICE="${DEVICE_CMAKE}" \
-  "${CUDA_CMAKE_ARGS[@]}"
+  "${DEVICE_CMAKE_ARGS[@]}"
 cmake --build "${BUILD}" --parallel "${JOBS}"
 cmake --install "${BUILD}"
 

@@ -5,8 +5,7 @@ on:
   push:
     branches:
       - main
-      - nvhpc-hpc-sdk
-      - codex/nvhpc-hpc-sdk
+      - cp-paw-nvhpc
 
 jobs:
   profile-harness:

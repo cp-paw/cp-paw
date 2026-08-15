@@ -373,7 +373,7 @@ function fortran_module_works {
 #-------------------------------------------------------------------------------
 #--                          set generic defaults                             --
 #-------------------------------------------------------------------------------
-MAKE="$(which gmake)"
+MAKE="$(command_path gmake || command_path make)"
 
 AR="$(which ar)"
 
@@ -399,6 +399,15 @@ case "${CPPAW_TOOLCHAIN}" in
 esac
 case "${SELECT}" in
   nvhpc*) REQUESTED_TOOLCHAIN=nvhpc ;;
+esac
+case "${SELECT}" in
+  skala_cpu_*)
+    REQUESTED_TOOLCHAIN=gnu
+    CPPAW_USE_SKALA_FTORCH=yes
+    if [[ -z ${CPPAW_SKALA_FTORCH_ROOT} ]] ; then
+      CPPAW_SKALA_FTORCH_ROOT="${BASEDIR}/bin/skala_ftorch_cpu"
+    fi
+    ;;
 esac
 case "${SELECT}" in
   nvhpc_nvblas*) CPPAW_USE_NVBLAS=yes ;;
@@ -473,6 +482,24 @@ case $SELECT in
          exit 1
        fi
        LD=${FC}
+     elif [[ ${REQUESTED_TOOLCHAIN} = gnu ]] ; then
+       for X in mpif90 mpifort ; do
+         MPI_WRAPPER=$(command_path "${X}")
+         if [[ -z ${MPI_WRAPPER} ]] ; then
+           continue
+         fi
+         MPI_COMMAND=$("${MPI_WRAPPER}" --showme:command 2>/dev/null \
+                       || "${MPI_WRAPPER}" -show 2>/dev/null | awk '{print $1}')
+         if [[ $(basename "${MPI_COMMAND}") = gfortran ]] ; then
+           FC=${MPI_WRAPPER}
+           LD=${FC}
+           break
+         fi
+       done
+       if [[ -z ${FC} ]] ; then
+         echo "error in $0: GNU toolchain requested but no gfortran MPI wrapper was found"
+         exit 1
+       fi
      else
        for X in mpif90 mpifort mpiifort   ; do
          if [[ -n $(which ${X}) ]] ; then
@@ -487,6 +514,13 @@ case $SELECT in
      PARALLEL=false
      if [[ ${REQUESTED_TOOLCHAIN} = nvhpc ]] ; then
        FC="${NVHPC_ROOT}/compilers/bin/nvfortran"
+       LD=${FC}
+     elif [[ ${REQUESTED_TOOLCHAIN} = gnu ]] ; then
+       FC=$(command_path gfortran)
+       if [[ -z ${FC} ]] ; then
+         echo "error in $0: GNU toolchain requested but gfortran was not found"
+         exit 1
+       fi
        LD=${FC}
      else
        for X in ifort gfortran flang-new ifx nvfortran nagfor xlf ; do
@@ -964,6 +998,18 @@ case ${SELECT} in
     SUFFIX="fast"
     TYPE="release"  
     add_fcflags  # see function definition above
+    ;;
+
+  skala_cpu_fast)
+    SUFFIX="skala_cpu_fast"
+    TYPE="release"
+    add_fcflags
+    ;;
+
+  skala_cpu_fast_parallel)
+    SUFFIX="skala_cpu_fast"
+    TYPE="release"
+    add_fcflags
     ;;
 
   profile)
