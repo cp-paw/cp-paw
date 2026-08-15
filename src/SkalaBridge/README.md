@@ -29,7 +29,9 @@ grid, interpolated-primitive, and smooth/local partition terms in addition to
 the PAW projector response. The smooth scalar adjoint is also contracted with
 the translated pseudo-core densities after Skala inference; this contribution
 cannot be taken from the earlier conventional-XC potential. Analytic stress is
-not yet available.
+available when CP-PAW requests cell stress. It includes the model-coordinate,
+quadrature-volume, hybrid-partition, radial-blend, interpolated smooth-field,
+pseudo-core, positive-tau, and existing PAW projector responses.
 
 ```text
 !SKALA
@@ -52,7 +54,9 @@ with the primitive `integral v_tau*tau`. `CHECK=F` omits the diagnostic field
 copies and the additional wave-function overlap. Force diagnostics report the
 total energy at full double precision and list the pseudo-core contribution
 separately, so central differences can be evaluated without the rounded energy
-summary.
+summary. Stress diagnostics report each Skala contribution and the complete
+`D E / D STRAIN` tensor before CP-PAW converts it to its internal stress sign
+convention.
 
 `APPLY=F` leaves CP-PAW's conventional XC functional active. Consequently,
 subtracting forces from otherwise identical `APPLY=T` and `APPLY=F` runs gives
@@ -60,6 +64,29 @@ the Skala-minus-conventional-XC force, not the derivative of the Skala model
 energy alone. End-to-end force finite differences must compare total energies
 and analytic forces from the same applied functional at an electronically
 converged state.
+
+End-to-end stress differences likewise require an electronically converged
+restart. Apply `F = I + strain` to the restart cell and atom positions while
+retaining the old reciprocal basis stored with the wave functions, then compare
+`(E(+h)-E(-h))/(2h)` with the reported `D E / D STRAIN`. Local PAW
+radial/Lebedev offsets remain fixed in Cartesian space under this deformation;
+only their atom centers follow the affine cell motion. The interpolated smooth
+fields therefore contribute through the negative local-offset response rather
+than an affine deformation of the radial grid. The Si2 validation covers
+isotropic, uniaxial, and symmetric-shear strains and 1/4-rank MPI parity.
+
+Given an electronically converged restart and its matching structure, the
+three end-to-end checks can be repeated with:
+
+```sh
+cd tests/fulltests/skala_si2
+PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
+SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
+  ./stress_fd.sh isotropic
+```
+
+The other cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; the default
+strain step and absolute tolerance are `3e-4` and `2e-3`, respectively.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
@@ -80,6 +107,11 @@ would be required for response properties such as phonons or force constants.
 Unlike CP-PAW's nonspherical one-center XC Taylor expansion, which requests
 second and third functional derivatives, the Skala path evaluates the complete
 three-dimensional atom block directly on radial/Lebedev points.
+
+Stationary-state stress follows the same distinction: it needs first model
+derivatives and the spatial derivative structure above, including the kinetic
+tensor associated with positive tau. Second derivatives of the Skala model are
+not required unless a response derivative of stress or force is requested.
 
 When `APPLY=T`, `SAFEORTHO` defaults to `F` because the robust
 orthogonalization is required by the harder PAW one-center operator. An

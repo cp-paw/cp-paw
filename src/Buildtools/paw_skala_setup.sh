@@ -164,6 +164,7 @@ if [[ ${DEVICE} = cuda ]]; then
 fi
 
 cmake -S "${THISDIR}/src/SkalaBridge" -B "${BUILD}" \
+  -UTorch_DIR -UCaffe2_DIR '-UTORCH_*' \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="${PREFIX}" \
   -DCMAKE_PREFIX_PATH="${TORCH_PREFIX}" \
