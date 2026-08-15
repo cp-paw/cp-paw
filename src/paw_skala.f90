@@ -419,7 +419,8 @@
      &                                ,PAW_SKALA_LOCAL_GRID_SIZE &
      &                                ,PAW_SKALA_LOCAL_GRID &
      &                                ,PAW_SKALA_GRID_INTERPOLATE &
-     &                                ,PAW_SKALA_GRID_INTERPOLATION_ADJOINT
+     &                                ,PAW_SKALA_GRID_INTERPOLATE_PRIMITIVES &
+     &                                ,PAW_SKALA_GRID_PRIMITIVES_ADJOINT
       USE PAW_SKALA_PRIMITIVES_MODULE, ONLY: PAW_SKALA_ONECENTER_POINTS &
      &                                      ,PAW_SKALA_ONECENTER_ADJOINT_POINTS
       IMPLICIT NONE
@@ -619,22 +620,10 @@
         GRIDWEIGHTS(IP)=LOCALWEIGHT(ILOC)*PARTWEIGHT
         ATOMICGRIDWEIGHTS(IP)=LOCALWEIGHT(ILOC) &
      &        *PAW_SKALA_PARTITION_TAPER(PARTWEIGHT)
-        RHOCOMP=0.D0
-        TAUCOMP=0.D0
-        GRADCOMP=0.D0
-        DO IDIM=1,NDIMD
-          CALL PAW_SKALA_GRID_INTERPOLATE(SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3 &
-     &                                   ,SMOOTH_RBAS,SMOOTH_RHO(:,:,:,IDIM) &
-     &                                   ,POINT,RHOCOMP(IDIM))
-          CALL PAW_SKALA_GRID_INTERPOLATE(SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3 &
-     &                                   ,SMOOTH_RBAS,SMOOTH_TAU(:,:,:,IDIM) &
-     &                                   ,POINT,TAUCOMP(IDIM))
-          DO ICART=1,3
-            CALL PAW_SKALA_GRID_INTERPOLATE &
-     &           (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS &
-     &           ,SMOOTH_GRHO(:,:,:,ICART,IDIM),POINT,GRADCOMP(ICART,IDIM))
-          END DO
-        END DO
+        CALL PAW_SKALA_GRID_INTERPOLATE_PRIMITIVES &
+     &       (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS,NDIMD &
+     &       ,SMOOTH_RHO,SMOOTH_GRHO,SMOOTH_TAU,POINT &
+     &       ,RHOCOMP(1:NDIMD),GRADCOMP(:,1:NDIMD),TAUCOMP(1:NDIMD))
         IF(NDIMD.EQ.1) THEN
           DENSITY(IP,:)=0.5D0*RHOCOMP(1)
           KIN(IP,:)=0.5D0*TAUCOMP(1)
@@ -794,19 +783,11 @@
             ADJGRAD(ICART,IDIM)=0.5D0*(DGRAD(IP,ICART,1) &
      &                                     +FACTOR*DGRAD(IP,ICART,2))
           END DO
-          CALL PAW_SKALA_GRID_INTERPOLATION_ADJOINT &
-     &         (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS &
-     &         ,SMOOTH_ADJ_RHO(:,:,:,IDIM),POINT,ADJRHO(IDIM))
-          CALL PAW_SKALA_GRID_INTERPOLATION_ADJOINT &
-     &         (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS &
-     &         ,SMOOTH_ADJ_TAU(:,:,:,IDIM),POINT,ADJTAU(IDIM))
-          DO ICART=1,3
-            CALL PAW_SKALA_GRID_INTERPOLATION_ADJOINT &
-     &           (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS &
-     &           ,SMOOTH_ADJ_GRHO(:,:,:,ICART,IDIM),POINT &
-     &           ,ADJGRAD(ICART,IDIM))
-          END DO
         END DO
+        CALL PAW_SKALA_GRID_PRIMITIVES_ADJOINT &
+     &       (SMOOTH_NR1,SMOOTH_NR2,SMOOTH_NR3,SMOOTH_RBAS,NDIMD &
+     &       ,SMOOTH_ADJ_RHO,SMOOTH_ADJ_GRHO,SMOOTH_ADJ_TAU,POINT &
+     &       ,ADJRHO(1:NDIMD),ADJGRAD(:,1:NDIMD),ADJTAU(1:NDIMD))
       END DO
       IF(IP.NE.NPOINT) THEN
         CALL ERROR$MSG('SKALA ADJOINT GRID COUNT CHANGED')
