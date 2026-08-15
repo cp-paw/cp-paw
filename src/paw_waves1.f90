@@ -2656,7 +2656,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
       CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH &
      &               ,TSKALAAPPLY.AND.TSKALAAPPLYTAU,SKALAVTAU &
-     &               ,NBX,OCC)
+     &               ,NBX)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_HPSI' &
@@ -7084,7 +7084,7 @@ RETURN
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH,TSKALA,VTAU &
-     &                     ,NBX,OCC)
+     &                     ,NBX)
 !     **************************************************************************
 !     **                                                                      **
 !     **  EVALUATES FORCES FROM THE AUGMENTATION PART                         **
@@ -7116,12 +7116,12 @@ RETURN
       COMPLEX(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
       LOGICAL(4),INTENT(IN) :: TSKALA
       REAL(8)   ,INTENT(IN) :: VTAU(NRL,NDIMD_)
-      REAL(8)   ,INTENT(IN) :: OCC(NBX,NKPTL,NSPIN)
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
       REAL(8)               :: R(3,NAT)
       REAL(8)               :: TAUEXPECT
+      REAL(8),ALLOCATABLE   :: OCC(:,:,:)
 !     --------------------------------------------------------------------------
       INTEGER(4)             :: IPRO
       INTEGER(4)             :: ISP
@@ -7157,6 +7157,10 @@ RETURN
         CALL ERROR$STOP('WAVES$HPSI')
       END IF
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
+      IF(TSKALA) THEN
+        ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+        CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+      END IF
 
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -7307,13 +7311,16 @@ RETURN
 		END IF
 !===============================================================================
           IF(TSKALA) THEN
-            CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,THIS%PSI0 &
+            CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,THIS%NB,NBH,THIS%PSI0 &
      &                              ,VTAU(:,ISPIN),THIS%HPSI &
-     &                              ,NBX,OCC(:,IKPT,ISPIN),TAUEXPECT)
+     &                              ,OCC(:,IKPT,ISPIN),TAUEXPECT)
           END IF
 		        ENDDO
 	      ENDDO
-      IF(TSKALA) CALL SKALA$TAUOPERATORCHECK(TAUEXPECT)
+      IF(TSKALA) THEN
+        CALL SKALA$TAUOPERATORCHECK(TAUEXPECT)
+        DEALLOCATE(OCC)
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
       CALL ACCELPROFILE$ADD('PAW_HPSI_TOTAL' &
@@ -7326,22 +7333,24 @@ RETURN
       END SUBROUTINE WAVES$HPSI
 
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NBH,PSI,VTAU,HPSI &
-     &                              ,NOCC,OCC,EXPECTATION)
+      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NB,NBH,PSI,VTAU,HPSI &
+     &                              ,OCC,EXPECTATION)
 !     ***************************************************************************
 !     ** APPLY -1/2 DIV(VTAU GRAD(PSI)) FOR THE POSITIVE-TAU ADJOINT.          **
 !     ***************************************************************************
+      USE MPE_MODULE
       IMPLICIT NONE
       COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
-      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NBH,NOCC
+      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NB,NBH
       COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH)
       REAL(8),INTENT(IN) :: VTAU(NRL)
       COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
-      REAL(8),INTENT(IN) :: OCC(NOCC)
+      REAL(8),INTENT(IN) :: OCC(NB)
       REAL(8),INTENT(INOUT) :: EXPECTATION
       REAL(8),ALLOCATABLE :: GVEC(:,:)
       COMPLEX(8),ALLOCATABLE :: WORKG(:,:),WORKR(:,:)
-      INTEGER(4) :: IB,IDIM,IDIR,IG,IR
+      COMPLEX(8),ALLOCATABLE :: DELTAHPSI(:,:,:),HAMILTON(:,:)
+      INTEGER(4) :: IB,IDIM,IDIR,IG,IR,NTASKS,THISTASK
       COMPLEX(8) :: DELTAH
 
       IF(NDIM.NE.1) THEN
@@ -7349,6 +7358,8 @@ RETURN
         CALL ERROR$STOP('WAVES_SKALA_TAUPSI')
       END IF
       ALLOCATE(GVEC(3,NGL),WORKG(NGL,NDIM),WORKR(NRL,NDIM))
+      ALLOCATE(DELTAHPSI(NGL,NDIM,NBH),HAMILTON(NB,NB))
+      DELTAHPSI=CMPLX(0.D0,0.D0,KIND=8)
       CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
       DO IB=1,NBH
         DO IDIR=1,3
@@ -7368,13 +7379,21 @@ RETURN
             DO IG=1,NGL
               DELTAH=-0.5D0*CI*GVEC(IDIR,IG)*WORKG(IG,IDIM)
               HPSI(IG,IDIM,IB)=HPSI(IG,IDIM,IB)+DELTAH
-              IF(IB.LE.NOCC) EXPECTATION=EXPECTATION+OCC(IB) &
-     &             *REAL(CONJG(PSI(IG,IDIM,IB))*DELTAH,KIND=8)
+              DELTAHPSI(IG,IDIM,IB)=DELTAHPSI(IG,IDIM,IB)+DELTAH
             END DO
           END DO
         END DO
       END DO
-      DEALLOCATE(GVEC,WORKG,WORKR)
+      CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,PSI,DELTAHPSI &
+     &                  ,HAMILTON,'SKALA_TAU_EXPECT')
+      CALL MPE$QUERY('K',NTASKS,THISTASK)
+      IF(THISTASK.EQ.1) THEN
+        DO IB=1,NB
+          EXPECTATION=EXPECTATION+OCC(IB) &
+     &               *REAL(HAMILTON(IB,IB),KIND=8)
+        END DO
+      END IF
+      DEALLOCATE(GVEC,WORKG,WORKR,DELTAHPSI,HAMILTON)
       RETURN
       END SUBROUTINE WAVES_SKALA_TAUPSI
 !
