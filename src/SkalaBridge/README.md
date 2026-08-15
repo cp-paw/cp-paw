@@ -41,6 +41,12 @@ stress are not yet implemented for this mode.
 `CHECK=T` performs a one-time central finite-difference check of the model
 adjoint and its PAW one-center density-matrix contraction.
 
+When `APPLY=T`, `SAFEORTHO` defaults to `F` because the robust
+orthogonalization is required by the harder PAW one-center operator. An
+explicit `SAFEORTHO` value is respected. Start electronic dynamics with a
+conservative `DT**2/MPSI`; the conventional CP-PAW default is too aggressive
+for the current experimental operator.
+
 For PAW, the eventual caller must construct each atom block from primary fields
 before inference:
 

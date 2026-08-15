@@ -1384,6 +1384,7 @@ CALL LMTO$SETL4('ON',.FALSE.)
       LOGICAL(4)            :: TCHK,TCHK1,TCHK2
       REAL(8)               :: FRICTION
       LOGICAL(4)            :: TSTOPE
+      LOGICAL(4)            :: TSKALAAPPLY
       LOGICAL(4)            :: TRANE
       REAL(8)               :: AMPRE
       REAL(8)               :: EMASS
@@ -1481,7 +1482,10 @@ CALL LMTO$SETL4('ON',.FALSE.)
 !     ==  SAFEORTHO=T STRICTLY CONSERVES ENERGY,                              ==
 !     ==  BUT DOES NOT PRODUCE EIGENSTATES =====================================
       CALL LINKEDLIST$EXISTD(LL_CNTL,'SAFEORTHO',1,TCHK)
-      IF(.NOT.TCHK)CALL LINKEDLIST$SET(LL_CNTL,'SAFEORTHO',0,.TRUE.)
+      IF(.NOT.TCHK) THEN
+        CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+        CALL LINKEDLIST$SET(LL_CNTL,'SAFEORTHO',0,.NOT.TSKALAAPPLY)
+      END IF
       CALL LINKEDLIST$GET(LL_CNTL,'SAFEORTHO',1,TCHK)
       CALL WAVES$SETL4('SAFEORTHO',TCHK)
 !
