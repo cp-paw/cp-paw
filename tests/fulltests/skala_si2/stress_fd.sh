@@ -27,8 +27,10 @@ tolerance=${SKALA_STRESS_FD_TOLERANCE:-0.002}
 radial_points=${SKALA_RADIAL_POINTS:-200}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
+device=${SKALA_DEVICE:-AUTO}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
+case "$device" in AUTO|CPU|CUDA) ;; *) echo "SKALA_DEVICE must be AUTO, CPU, or CUDA" >&2; exit 2 ;; esac
 case "$radial_points" in *[!0-9]*|'') echo "SKALA_RADIAL_POINTS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_exactness" in *[!0-9]*|'') echo "SKALA_LEBEDEV_EXACTNESS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_orientations" in *[!0-9]*|'') echo "SKALA_LEBEDEV_ORIENTATIONS must be an integer" >&2; exit 2 ;; esac
@@ -75,6 +77,7 @@ make_control() {
       -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial_points/" \
       -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev_exactness/" \
       -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
+      -e "s/DEVICE='AUTO'/DEVICE='$device'/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
 }

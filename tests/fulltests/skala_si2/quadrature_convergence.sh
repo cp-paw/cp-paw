@@ -18,8 +18,10 @@ here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 radial_list=${SKALA_RADIAL_POINT_LIST:-"100 200 400"}
 lebedev_list=${SKALA_LEBEDEV_EXACTNESS_LIST:-"17"}
 orientation_list=${SKALA_LEBEDEV_ORIENTATION_LIST:-"1"}
+device=${SKALA_DEVICE:-AUTO}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
+case "$device" in AUTO|CPU|CUDA) ;; *) echo "SKALA_DEVICE must be AUTO, CPU, or CUDA" >&2; exit 2 ;; esac
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-quadrature.XXXXXX")
 keep=${SKALA_QUADRATURE_KEEP:-0}
 cleanup() {
@@ -62,6 +64,7 @@ run_case() {
       -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial/" \
       -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev/" \
       -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$orientations/" \
+      -e "s/DEVICE='AUTO'/DEVICE='$device'/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
   cp "$SKALA_RESTART" "$work/$name.rstrt"
