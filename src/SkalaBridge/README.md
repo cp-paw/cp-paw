@@ -37,8 +37,8 @@ pseudo-core, positive-tau, and existing PAW projector responses.
 !SKALA
  MODEL='path/to/skala-1.1-rev1-cuda.fun'
  DEVICE='AUTO'
- RADIALPOINTS=100
- LEBEDEVEXACTNESS=17
+ RADIALPOINTS=200
+ LEBEDEVEXACTNESS=53
  LEBEDEVORIENTATIONS=1
  APPLY=F
  APPLYSMOOTH=T
@@ -107,7 +107,8 @@ default to a step of `3e-4` and an absolute tolerance of `2e-3`.
 `SKALA_LEBEDEV_ORIENTATIONS` override the local-grid settings in the force,
 stress, and MPI drivers for quadrature-convergence checks.
 `quadrature_convergence.sh` defaults to radial counts `100 200 400` at Lebedev
-exactness 17 and reports every result relative to the final, finest case. The
+exactness 17 to expose coarse-grid errors and reports every result relative to
+the final, finest case. The
 lists can be changed with `SKALA_RADIAL_POINT_LIST` and
 `SKALA_LEBEDEV_EXACTNESS_LIST`. `SKALA_LEBEDEV_ORIENTATION_LIST` adds a
 convergence sweep over deterministic, equally weighted rotations of each
@@ -215,13 +216,19 @@ whose current periodic environments are related by a pure lattice translation
 and whose augmentation cutoffs match.
 
 `RADIALPOINTS`, `LEBEDEVEXACTNESS`, and `LEBEDEVORIENTATIONS` control the
-moving local quadrature. Their defaults are 100, 17, and 1, respectively.
-Additional orientations average deterministic rotations of the same Lebedev
-rule and preserve the normalized quadrature weights. They expose and reduce
-rotational integration error from nonlinear meta-GGA features. Energy,
-particle number, forces, and stress should be converged with respect to all
-three controls before production use; raising `RADIALPOINTS` is particularly
-relevant for sharply peaked AE core fields.
+moving local quadrature. Their portable production defaults are 200, 53, and
+1, respectively. A Si2 sweep found the former 100/17/1 grid too coarse. At
+eight orientations, 300, 360, and 400 radial points agreed within about
+`5e-6` Hartree in model XC energy. Additional orientations average
+deterministic rotations of the same Lebedev rule and preserve the normalized
+quadrature weights. They expose and reduce rotational integration error from
+nonlinear meta-GGA features.
+
+The 300/53/8 setting is a memory-intensive reference grid: Skala's nonlocal
+atom layers require complete atom blocks, so peak accelerator memory grows
+with the number of orientations. It required about 74 GB on the tested CUDA
+build. Use 200/53/1 as the portable starting point and converge energy,
+particle number, forces, and stress explicitly for demanding calculations.
 
 The hybrid quadrature joins the moving radial/Lebedev PAW grid to the fixed
 native cell grid with a quintic radial blend over the outer 20 percent of the

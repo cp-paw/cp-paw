@@ -59,8 +59,8 @@ run_case() {
       -e 's/START=T/START=F/' \
       -e 's/!CELL MOVE=T/!CELL MOVE=F/' \
       -e 's/CHECK=T/CHECK=F/' \
-      -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial/" \
-      -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev/" \
+      -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial/" \
+      -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev/" \
       -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$orientations/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"

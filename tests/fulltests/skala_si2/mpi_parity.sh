@@ -21,8 +21,8 @@ expected_kpoints=${SKALA_EXPECT_KPOINTS:-8}
 energy_tolerance=${SKALA_MPI_ENERGY_TOLERANCE:-0.0000001}
 force_tolerance=${SKALA_MPI_FORCE_TOLERANCE:-0.000002}
 stress_tolerance=${SKALA_MPI_STRESS_TOLERANCE:-0.000002}
-radial_points=${SKALA_RADIAL_POINTS:-100}
-lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-17}
+radial_points=${SKALA_RADIAL_POINTS:-200}
+lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-mpi.XXXXXX")
 keep=${SKALA_MPI_KEEP:-0}
@@ -51,8 +51,8 @@ make_case() {
   name=$1
   sed -e "s|NAME='../si2/stp.cntl'|NAME='stp.cntl'|" \
       -e 's/START=T/START=F/' \
-      -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial_points/" \
-      -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev_exactness/" \
+      -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial_points/" \
+      -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev_exactness/" \
       -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"

@@ -24,8 +24,8 @@ here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 python=${PYTHON:-python3}
 step=${SKALA_STRESS_FD_STEP:-0.0003}
 tolerance=${SKALA_STRESS_FD_TOLERANCE:-0.002}
-radial_points=${SKALA_RADIAL_POINTS:-100}
-lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-17}
+radial_points=${SKALA_RADIAL_POINTS:-200}
+lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-53}
 lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
@@ -72,8 +72,8 @@ make_control() {
   name=$1
   sed -e "s|NAME='../si2/stp.cntl'|NAME='stp.cntl'|" \
       -e 's/START=T/START=F/' \
-      -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial_points/" \
-      -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev_exactness/" \
+      -e "s/RADIALPOINTS=200/RADIALPOINTS=$radial_points/" \
+      -e "s/LEBEDEVEXACTNESS=53/LEBEDEVEXACTNESS=$lebedev_exactness/" \
       -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
