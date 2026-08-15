@@ -296,6 +296,7 @@ END MODULE AUGMENTATION_MODULE
       LOGICAL(4)              :: TSKALA
       LOGICAL(4)              :: TSKALAAPPLY
       LOGICAL(4)              :: TSKALAAPPLYONECENTER
+      LOGICAL(4)              :: TSKALACHECK
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
 !
@@ -387,10 +388,14 @@ END MODULE AUGMENTATION_MODULE
       CALL SKALA$GETL4('ON',TSKALA)
       CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
       CALL SKALA$GETL4('APPLYONECENTER',TSKALAAPPLYONECENTER)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
       IF(TSKALA) THEN
-        CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX,NDIMD &
-     &                              ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE &
-     &                              ,AERHO,PSRHO,RCUT,EKINNL)
+        IF(TSKALACHECK) THEN
+          CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX &
+     &                                ,NDIMD,DENMAT,AEPHI,PSPHI &
+     &                                ,AECORE,PSCORE,AERHO,PSRHO &
+     &                                ,RCUT,EKINNL)
+        END IF
         ALLOCATE(SKALADH(LMNX,LMNX,NDIMD))
         CALL SKALA$ATOMFORWARD(IAT,GID,NR,LNX,LOX,LMNX,NDIMD &
      &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT &

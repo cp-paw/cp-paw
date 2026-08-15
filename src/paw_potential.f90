@@ -580,6 +580,7 @@
       LOGICAL(4)              :: TBACK
       LOGICAL(4)              :: TSKALA
       LOGICAL(4)              :: TSKALAAPPLY
+      LOGICAL(4)              :: TSKALACHECK
       INTEGER(4)              :: NGAMMA
       LOGICAL(4)              :: TOPTIC
 !     **************************************************************************
@@ -589,6 +590,7 @@
       CALL DFT$GETL4('GC',TGRA)
       CALL SKALA$GETL4('ON',TSKALA)
       CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
       TGRA=TGRA.OR.TSKALA
       NNR=NR1*NR2*NR3
       NSPIN=1
@@ -772,8 +774,10 @@
       IF(TSKALA) THEN
         CALL SKALA$SMOOTHSET(NR1START,NR1,NR1GLOB,NR2,NR3,NSPIN &
      &                      ,RHOE,GRHO,TAUPOS,RBAS)
-        CALL SKALA$SMOOTHVALIDATE(NRL,NSPIN,RHOE,GRHO,TAUPOS &
-     &                           ,NR1GLOB*NR2*NR3,CELLVOL)
+        IF(TSKALACHECK) THEN
+          CALL SKALA$SMOOTHVALIDATE(NRL,NSPIN,RHOE,GRHO,TAUPOS &
+     &                             ,NR1GLOB*NR2*NR3,CELLVOL)
+        END IF
       END IF
 !
 !     ==================================================================
