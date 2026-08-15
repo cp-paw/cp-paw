@@ -24,8 +24,14 @@ here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 python=${PYTHON:-python3}
 step=${SKALA_FORCE_FD_STEP:-0.0003}
 tolerance=${SKALA_FORCE_FD_TOLERANCE:-0.002}
+radial_points=${SKALA_RADIAL_POINTS:-100}
+lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-17}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
+case "$radial_points" in *[!0-9]*|'') echo "SKALA_RADIAL_POINTS must be an integer" >&2; exit 2 ;; esac
+case "$lebedev_exactness" in *[!0-9]*|'') echo "SKALA_LEBEDEV_EXACTNESS must be an integer" >&2; exit 2 ;; esac
+test "$radial_points" -gt 0 || { echo "SKALA_RADIAL_POINTS must be positive" >&2; exit 2; }
+test "$lebedev_exactness" -gt 0 || { echo "SKALA_LEBEDEV_EXACTNESS must be positive" >&2; exit 2; }
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-force.XXXXXX")
 keep=${SKALA_FORCE_FD_KEEP:-0}
 cleanup() {
@@ -47,6 +53,8 @@ make_control() {
   sed -e "s|NAME='../si2/stp.cntl'|NAME='stp.cntl'|" \
       -e 's/START=T/START=F/' \
       -e 's/!CELL MOVE=T/!CELL MOVE=F/' \
+      -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial_points/" \
+      -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev_exactness/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
 }

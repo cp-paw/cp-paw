@@ -37,6 +37,8 @@ pseudo-core, positive-tau, and existing PAW projector responses.
 !SKALA
  MODEL='path/to/skala-1.1-rev1-cuda.fun'
  DEVICE='AUTO'
+ RADIALPOINTS=100
+ LEBEDEVEXACTNESS=17
  APPLY=F
  APPLYSMOOTH=T
  APPLYTAU=T
@@ -96,6 +98,8 @@ MPI_RANKS=4 ./mpi_parity.sh
 The force arguments select the one-based atom and Cartesian axis. The other
 stress cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; both drivers
 default to a step of `3e-4` and an absolute tolerance of `2e-3`.
+`SKALA_RADIAL_POINTS` and `SKALA_LEBEDEV_EXACTNESS` override the local-grid
+settings in all three drivers for quadrature-convergence checks.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
@@ -134,6 +138,11 @@ before inference:
 ```
 smooth atom-partitioned field - pseudo one-center field + AE one-center field
 ```
+
+"Atom-partitioned" means that each complete atom block receives its share of
+the common quadrature rows and weights. The physical `rho`, `grad(rho)`, and
+`tau` values on a retained row are not multiplied by the partition weight.
+The local rows are assembled as `smooth + AE - pseudo` before the model call.
 
 This differs from both separate conventional one-center XC corrections and a
 literal copy of CP2K's GAPW implementation. Nonlinear Skala features are formed
@@ -192,6 +201,11 @@ default remains `F` while energy and grid-convergence effects are evaluated.
 The exact default path automatically reuses local partition weights for atoms
 whose current periodic environments are related by a pure lattice translation
 and whose augmentation cutoffs match.
+
+`RADIALPOINTS` and `LEBEDEVEXACTNESS` control the moving local quadrature. Their
+defaults are 100 and 17, respectively. Energy, particle number, forces, and
+stress should be converged with respect to both before production use; raising
+`RADIALPOINTS` is particularly relevant for sharply peaked AE core fields.
 
 The hybrid quadrature joins the moving radial/Lebedev PAW grid to the fixed
 native cell grid with a quintic radial blend over the outer 20 percent of the

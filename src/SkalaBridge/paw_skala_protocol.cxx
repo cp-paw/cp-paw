@@ -246,6 +246,8 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     torch::Tensor exc = (exc_density * features.at("grid_weights")).sum();
     *energy = exc.item<double>();
 
+    // Stationary energy, force, and stress paths need first model derivatives.
+    // Keep create_graph=false; response properties require a separate contract.
     const auto gradients = torch::autograd::grad(
         {exc}, leaves, {}, false, false, true);
     std::unordered_map<std::string, torch::Tensor> by_key;
