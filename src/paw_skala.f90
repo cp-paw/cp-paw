@@ -351,6 +351,7 @@
       USE PAW_SKALA_MODULE
       USE PAW_SKALA_GRID_MODULE, ONLY: PAW_SKALA_SMOOTH_PARTITION &
      &                                ,PAW_SKALA_NEAREST_IMAGE &
+     &                                ,PAW_SKALA_INVERSE3 &
      &                                ,PAW_SKALA_PARTITION_TAPER &
      &                                ,PAW_SKALA_LOCAL_GRID_SIZE &
      &                                ,PAW_SKALA_LOCAL_GRID &
@@ -371,6 +372,7 @@
       INTEGER(8) :: ATOMICGRIDSIZES(1)
       REAL(8) :: MODELATOM(1,3),POINT(3),IMAGE(3),RELATIVE(3),DISTANCE
       REAL(8) :: CELLVOL,DVOL,FACTOR,ENERGY
+      REAL(8) :: CELL_INVERSE(3,3)
       REAL(8) :: PARTWEIGHT
       REAL(8) :: RHOCOMP(2),TAUCOMP(2),GRADCOMP(3,2)
       REAL(8) :: ADJRHO(2),ADJTAU(2),ADJGRAD(3,2)
@@ -429,6 +431,7 @@
      &           +SMOOTH_RBAS(1,3)*(SMOOTH_RBAS(2,1)*SMOOTH_RBAS(3,2) &
      &                              -SMOOTH_RBAS(2,2)*SMOOTH_RBAS(3,1)))
       DVOL=CELLVOL/REAL(SMOOTH_NR1*SMOOTH_NR2*SMOOTH_NR3,KIND=8)
+      CALL PAW_SKALA_INVERSE3(SMOOTH_RBAS,CELL_INVERSE)
       CALL PAW_SKALA_LOCAL_GRID_SIZE(LOCAL_NRADIAL,LOCAL_LEBEDEV_L &
      &                              ,NANG,NLOCAL)
       ALLOCATE(LOCALCOORD(NLOCAL,3),LOCALWEIGHT(NLOCAL))
@@ -463,7 +466,8 @@
             PARTWEIGHT=SMOOTH_PARTITION(I1,I2,I3,IAT)
             IF(PARTWEIGHT.LE.PARTITION_EPS) CYCLE
             CALL PAW_SKALA_NEAREST_IMAGE(POINT,ATOMCOORD(IAT,:) &
-     &                                   ,SMOOTH_RBAS,IMAGE,DISTANCE)
+     &                                   ,SMOOTH_RBAS,IMAGE,DISTANCE &
+     &                                   ,CELL_INVERSE)
             IF(DISTANCE.LE.RCUT) CYCLE
             NSMOOTH=NSMOOTH+1
             SMOOTHINDEX(NSMOOTH)=I1+SMOOTH_NR1 &
