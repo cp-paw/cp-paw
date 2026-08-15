@@ -127,6 +127,16 @@ lists can be changed with `SKALA_RADIAL_POINT_LIST` and
 convergence sweep over deterministic, equally weighted rotations of each
 Lebedev grid.
 
+The 2026-08-15 end-to-end validation used a stationary Si2 restart. At
+`200/53/1`, the selected force component differed from its central finite
+difference by `8.55e-4 H/bohr`. Isotropic, uniaxial, and symmetric-shear
+stress checks differed by `7.39e-4`, `8.78e-5`, and `4.95e-4 H`, respectively;
+all were below the `2e-3` absolute tolerance. One- and four-rank Gamma runs
+agreed within `4.1e-13 H` in energy, `3.8e-8 H/bohr` in forces, and
+`1.7e-7 H` in stress on the tested CPU/GPU paths. The periodic eight-k-point
+integration test also passed. These checks exercise total energies and
+stationary-state derivatives, not just the isolated Torch protocol.
+
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
 enter the generalized Kohn-Sham operator through

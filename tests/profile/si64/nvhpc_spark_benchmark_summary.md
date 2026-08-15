@@ -4506,6 +4506,39 @@ plane-wave FFT envelope. Within the 13.41 s nested Skala detail, model
 evaluation is now the largest component at 6.48 s, followed by partitioning at
 2.02 s, atom-grid assembly at 1.94 s, and grid back-projection at 0.94 s.
 
+### Terok A40 Resource Comparison
+
+A separate 2026-08-15 comparison used the same coarse `100/17/1` Si64 restart
+for every case, one host thread per MPI rank, NVHPC 24.5, and an otherwise idle
+Terok node. The coarse quadrature is a performance diagnostic, not the
+production recommendation above. The GPU cases used one A40 and complete
+MPI-root CUDA atom blocks; the CPU cases used the CPU-exported model and
+distributed atom blocks.
+
+| Case | Wall time | Model XC energy | Notes |
+| --- | ---: | ---: | --- |
+| 1 MPI, combined GPU fast | 154.947 s | -879.7566722 H | cuFFT, cuBLAS, cuSOLVER, and Skala CUDA linked |
+| 1 MPI, combined GPU profile | 157.370 s | -879.7566909 H | repeat: 157.461 s |
+| 1 MPI, NVHPC CPU profile | 216.430 s | -879.7566374 H | true CPU-exported Skala model |
+| 8 MPI, NVHPC CPU profile | 46.750 s | -879.7566378 H | repeat: 47.890 s |
+
+The profiled GPU path is `1.38x` faster than one CPU rank, while eight CPU
+ranks are `3.33x` faster than one GPU for this shape. CPU one/eight-rank model
+energies differ by only `3.4e-7 H`. The CPU/CUDA model-energy difference is
+`5.34e-5 H`, or `8.35e-7 H` per atom, consistent with the float32 model and
+different reduction order; the independently validated total-energy delta is
+the same because all other terms are shared.
+
+The GPU accelerates `SKALA_MODEL` from 70.61 s to 8.40 s (`8.40x`), but
+`SKALA_GRID_BACK` remains essentially unchanged at 113.01 s on CPU and
+112.42 s in the GPU run. It therefore occupies 71 percent of GPU wall time and
+is the next important residency/offload target. The one-second A40 sampler
+observed peak device memory use of 1215 MiB and up to 49 percent utilization;
+the 46 GiB device has ample capacity to retain substantially more PAW grid and
+projector state. The two GPU-profile repeats agree within 0.06 percent in wall
+time. Accelerator instrumentation estimates 18.77 GB of copies, primarily
+from cuBLAS scalar products/GEMMs and the many small cuFFT calls.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
