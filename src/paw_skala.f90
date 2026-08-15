@@ -1122,6 +1122,27 @@
       END
 
 !     ..................................................................
+      SUBROUTINE SKALA$TOTALFORCEREPORT(NAT,FORCE)
+      USE PAW_SKALA_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NAT
+      REAL(8),INTENT(IN) :: FORCE(3,NAT)
+      INTEGER(4) :: NTASKS,THISTASK,NFIL,IAT
+
+      IF(.NOT.TON.OR..NOT.CONFIG_APPLY.OR..NOT.CONFIG_NEEDFORCE) RETURN
+      CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      IF(THISTASK.NE.1) RETURN
+      CALL FILEHANDLER$UNIT('PROT',NFIL)
+      WRITE(NFIL,FMT='(/"SKALA TOTAL FORCE DIAGNOSTIC"/28("="))')
+      DO IAT=1,NAT
+        WRITE(NFIL,FMT='("ATOM",I6,3ES24.14)')IAT,FORCE(:,IAT)
+      END DO
+      WRITE(NFIL,FMT='("NET FORCE",T12,3ES24.14)')SUM(FORCE,DIM=2)
+      RETURN
+      END
+
+!     ..................................................................
       SUBROUTINE SKALA$SMOOTHADJOINTGET(NR1START,NR1L,NR1,NR2,NR3 &
      &                                  ,NDIMD,VRHO,VGRAD,VTAU)
       USE PAW_SKALA_MODULE
