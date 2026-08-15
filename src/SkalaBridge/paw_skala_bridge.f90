@@ -78,7 +78,7 @@ contains
     case ("cuda")
       model%device_type = torch_kCUDA
       model%device_index = 0
-      if (present(device_index)) model%device_index = device_index
+      if (present(device_index)) model%device_index = max(0, device_index)
     case default
       status = 1
       message = "Skala device must be 'cpu' or 'cuda'"
