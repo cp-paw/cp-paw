@@ -61,7 +61,8 @@ make_case() {
 
 make_case rank1
 make_case rankn
-(cd "$work" && "$PAWX" rank1.cntl >rank1.out 2>rank1.err)
+(cd "$work" && "$mpiexec" -np 1 "$PAWX" rank1.cntl \
+  >rank1.out 2>rank1.err)
 (cd "$work" && "$mpiexec" -np "$ranks" "$PAWX" rankn.cntl \
   >rankn.out 2>rankn.err)
 grep -q "PROGRAM FINISHED" "$work/rank1.prot"
@@ -71,7 +72,9 @@ extract() {
   awk '
     /NUMBER OF K-POINTS/ { kpoints = $NF }
     /SKALA TOTAL FORCE DIAGNOSTIC/ { force_section = 1; next }
-    force_section && /^TOTAL ENERGY/ { energy = $NF }
+    force_section && /^TOTAL ENERGY[[:space:]]+[-+0-9]/ && energy == "" {
+      energy = $NF
+    }
     force_section && /^ATOM[[:space:]]/ {
       force_count++
       force_label[force_count] = "FORCE" $2
