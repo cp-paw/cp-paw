@@ -93,6 +93,10 @@ SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
 PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
 SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
 MPI_RANKS=4 ./mpi_parity.sh
+
+PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
+SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
+  ./quadrature_convergence.sh
 ```
 
 The force arguments select the one-based atom and Cartesian axis. The other
@@ -100,6 +104,10 @@ stress cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; both drivers
 default to a step of `3e-4` and an absolute tolerance of `2e-3`.
 `SKALA_RADIAL_POINTS` and `SKALA_LEBEDEV_EXACTNESS` override the local-grid
 settings in all three drivers for quadrature-convergence checks.
+`quadrature_convergence.sh` defaults to radial counts `100 200 400` at Lebedev
+exactness 17 and reports every result relative to the final, finest case. The
+lists can be changed with `SKALA_RADIAL_POINT_LIST` and
+`SKALA_LEBEDEV_EXACTNESS_LIST`.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
