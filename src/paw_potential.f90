@@ -924,6 +924,61 @@
       RETURN
       END
 !
+!     ..........................................SKALACOREFORCE.........
+      SUBROUTINE POTENTIAL$SKALACOREFORCE(NRL,NAT_,VPOT,FORCE)
+!     ******************************************************************
+!     **                                                              **
+!     **  FORCE FROM THE SKALA SCALAR POTENTIAL ACTING ON THE         **
+!     **  TRANSLATED PSEUDO CORE DENSITIES.                           **
+!     **                                                              **
+!     ******************************************************************
+      USE POTENTIAL_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NRL
+      INTEGER(4),INTENT(IN)  :: NAT_
+      REAL(8),INTENT(IN)     :: VPOT(NRL)
+      REAL(8),INTENT(OUT)    :: FORCE(3,NAT_)
+      INTEGER(4),ALLOCATABLE :: ISPECIES(:)
+      REAL(8),ALLOCATABLE    :: G2(:),GVEC(:,:),TAU0(:,:)
+      COMPLEX(8),ALLOCATABLE :: VPOTG(:)
+      REAL(8)                :: RBAS(3,3),STRESS(3,3)
+      INTEGER(4)             :: NAT,NRL_
+!     ******************************************************************
+      CALL TRACE$PUSH('POTENTIAL$SKALACOREFORCE')
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('POTENTIAL OBJECT IS NOT INITIALIZED')
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      CALL ATOMLIST$NATOM(NAT)
+      IF(NAT_.NE.NAT) THEN
+        CALL ERROR$MSG('INPUT DATA INCONSISTENT WITH ATOMLIST')
+        CALL ERROR$I4VAL('NAT_',NAT_)
+        CALL ERROR$I4VAL('NAT',NAT)
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      CALL PLANEWAVE$SELECT('DENSITY')
+      CALL PLANEWAVE$GETI4('NRL',NRL_)
+      IF(NRL_.NE.NRL) THEN
+        CALL ERROR$MSG('#(GRID POINTS INCONSISTENT)')
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      ALLOCATE(ISPECIES(NAT),G2(NGL),GVEC(3,NGL),TAU0(3,NAT))
+      ALLOCATE(VPOTG(NGL))
+      CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,TAU0)
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL PLANEWAVE$SUPFFT('RTOG',1,NGL,VPOTG,NRL,VPOT)
+      CALL POTENTIAL_FPSCORE(NSP,NAT,ISPECIES,RBAS,TAU0,FORCE,STRESS &
+     &                      ,NGL,G2,GVEC,VPOTG,PSCOREG,DPSCOREG)
+      CALL MPE$COMBINE('MONOMER','+',FORCE)
+      DEALLOCATE(ISPECIES,G2,GVEC,TAU0,VPOTG)
+      CALL TRACE$POP
+      RETURN
+      END
+!
 !     ..................................................FPSCORE.........
       SUBROUTINE POTENTIAL_FPSCORE(NSP,NAT,ISPECIES,RBAS,TAU0,FORCE,STRESS &
      &                            ,NGL,G2,GVEC,VTEMP,PSCORG,DPSCORG)

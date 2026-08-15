@@ -26,7 +26,10 @@ positive-tau term. The smooth scalar, positive-tau, and one-center parts can be
 isolated with their component switches. Its safe default is `F`. Experimental
 analytic atomic forces include the explicit model-coordinate, moving local
 grid, interpolated-primitive, and smooth/local partition terms in addition to
-the PAW projector response. Analytic stress is not yet available.
+the PAW projector response. The smooth scalar adjoint is also contracted with
+the translated pseudo-core densities after Skala inference; this contribution
+cannot be taken from the earlier conventional-XC potential. Analytic stress is
+not yet available.
 
 ```text
 !SKALA
@@ -47,6 +50,13 @@ the discrete integration-by-parts identity for the density-gradient adjoint
 and compares the occupied-state expectation of the positive-tau Hamiltonian
 with the primitive `integral v_tau*tau`. `CHECK=F` omits the diagnostic field
 copies and the additional wave-function overlap.
+
+`APPLY=F` leaves CP-PAW's conventional XC functional active. Consequently,
+subtracting forces from otherwise identical `APPLY=T` and `APPLY=F` runs gives
+the Skala-minus-conventional-XC force, not the derivative of the Skala model
+energy alone. End-to-end force finite differences must compare total energies
+and analytic forces from the same applied functional at an electronically
+converged state.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
