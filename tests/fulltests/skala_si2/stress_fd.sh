@@ -103,7 +103,7 @@ run_case minus $minus
 energy() {
   awk '
     /SKALA TOTAL FORCE DIAGNOSTIC/ { section = 1; next }
-    section && /^TOTAL ENERGY/ { value = $NF }
+    section && /^TOTAL ENERGY[[:space:]]+[-+0-9]/ { value = $NF; exit }
     END { if (value == "") exit 1; print value }
   ' "$1"
 }
