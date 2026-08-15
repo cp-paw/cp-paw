@@ -15,7 +15,7 @@ RUN_OUTPUTS = $(PROFILE_PREFIX).csv $(PROFILE_PREFIX).rank*.csv \
               $(TEST)_constr.report $(TEST)_stpforz*.myxml \
               out out.log err.log nvblas.log
 #
-.PHONY: all summary benchmark nsys overnight clean
+.PHONY: all summary benchmark nsys overnight ozaki clean
 #
 all:
 	@test -n "$${PAWX}" || { echo "Set PAWX to the CP-PAW command or MPI launcher."; exit 2; }
@@ -36,6 +36,9 @@ nsys:
 
 overnight:
 	@./run_overnight.sh
+
+ozaki:
+	@./run_ozaki_bands.sh
 
 clean:
 	@rm -f $(RUN_OUTPUTS) stp.cntl

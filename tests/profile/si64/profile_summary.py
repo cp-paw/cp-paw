@@ -56,6 +56,8 @@ def is_fft_kernel_detail(op):
 
 
 def category(op):
+    if op.startswith("CUBLAS_OZAKI_"):
+        return "Ozaki telemetry"
     if op.startswith("SKALA_"):
         return "Skala detail"
     if op.startswith("PHASE_"):
@@ -247,6 +249,21 @@ def main(argv):
         print("OpenACC present observations")
         for op, data in sorted(present_ops, key=lambda item: item[0])[:20]:
             print("  {:<24s} calls={:8d}".format(op, data["calls"]))
+
+    ozaki_shapes = [
+        (key, data)
+        for key, data in per_shape.items()
+        if key[0].startswith("CUBLAS_OZAKI_")
+    ]
+    if ozaki_shapes:
+        print("")
+        print("cuBLAS FP64 Ozaki dispatch")
+        for (op, bits, strategy, workspace_mb, _), data in sorted(ozaki_shapes):
+            print(
+                "  {:<32s} calls={:8d} bits={:>3s} strategy={:>2s} workspace_mb={:>6s}".format(
+                    op, data["calls"], bits, strategy, workspace_mb
+                )
+            )
 
     phase_ops = [
         (op, data) for op, data in per_op.items() if op.startswith("PHASE_")

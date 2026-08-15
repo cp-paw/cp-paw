@@ -124,6 +124,31 @@ cublas_env() {
   echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}"
 }
 
+cublas_fp64_env() {
+  local mode=$1
+  local common
+  common="$(cublas_env) CPPAW_CUBLAS_FP64_TELEMETRY=1 CPPAW_CUBLAS_FP64_CHECK=1"
+  common="${common} CPPAW_CUBLAS_FP64_WORKSPACE_MB=${CPPAW_CUBLAS_FP64_WORKSPACE_MB:-2048}"
+  common="${common} CPPAW_CUBLAS_FP64_STRATEGY=${CPPAW_CUBLAS_FP64_STRATEGY:-performant}"
+  case "${mode}" in
+    native)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=0"
+      ;;
+    dgemm)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=1 CPPAW_CUBLAS_FP64_ZGEMM=0 CPPAW_CUBLAS_FP64_ZHERK=0"
+      ;;
+    zgemm)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=0 CPPAW_CUBLAS_FP64_ZGEMM=1 CPPAW_CUBLAS_FP64_ZHERK=0"
+      ;;
+    zherk)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=0 CPPAW_CUBLAS_FP64_ZGEMM=0 CPPAW_CUBLAS_FP64_ZHERK=1"
+      ;;
+    all)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=1 CPPAW_CUBLAS_FP64_ZGEMM=1 CPPAW_CUBLAS_FP64_ZHERK=1"
+      ;;
+  esac
+}
+
 cublas_conservative_env() {
   echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}"
 }
@@ -217,6 +242,11 @@ case_env() {
     gpu_3dfft) echo "$(cufft3d_env) $(cublas_env) $(cusolver_env "${CPPAW_CUSOLVER_ACC_MIN_N:-1}")" ;;
     gpu_conservative) echo "$(cublas_conservative_env) $(cusolver_env "${CPPAW_CUSOLVER_CONSERVATIVE_MIN_N:-256}")" ;;
     gpu_resident) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env)" ;;
+    gpu_resident_stack_ozaki_native) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env native)" ;;
+    gpu_resident_stack_ozaki_dgemm) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env dgemm)" ;;
+    gpu_resident_stack_ozaki_zgemm) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env zgemm)" ;;
+    gpu_resident_stack_ozaki_zherk) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env zherk)" ;;
+    gpu_resident_stack_ozaki_all) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env all)" ;;
     gpu_resident_nosync) echo "CPPAW_GPU_RESIDENCY=1 $(cublas_env) CPPAW_CUBLAS_ACC_SYNC=0" ;;
     gpu_resident_orthox) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_orthox_off) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_ORTHO_X_RESIDENCY=0 $(cublas_env)" ;;

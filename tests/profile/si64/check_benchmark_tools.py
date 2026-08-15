@@ -123,6 +123,10 @@ def check_summary_and_markdown(tmpdir):
                 "PAW_VPSI_TOTAL,1,1,1,0,1,12,12,12,0,0,0,0",
                 "SKALA_PARTITION,1,1,1,0,1,0.5,0.5,0.5,0,0,0,0",
                 "SKALA_MODEL,1,1,1,0,2,1.5,1,0.75,0,0,0,0",
+                "CUBLAS_OZAKI_DGEMM_USED,64,1,2048,0,3,0,0,0,0,0,0,0",
+                "CUBLAS_OZAKI_DGEMM_FALLBACK,-1,1,2048,0,2,0,0,0,0,0,0,0",
+                "CUBLAS_OZAKI_ZGEMM_USED,72,1,2048,0,4,0,0,0,0,0,0,0",
+                "CUBLAS_OZAKI_ZHERK_FALLBACK,-1,1,2048,0,5,0,0,0,0,0,0,0",
             ]
         )
         + "\n",
@@ -175,6 +179,12 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["update_gb"], "1.25", "update_gb")
     assert_equal(row["update_wave_gb"], "1.25", "update_wave_gb")
     assert_equal(row["update_proj_gb"], "0", "update_proj_gb")
+    assert_equal(row["ozaki_dgemm_used"], "3", "ozaki_dgemm_used")
+    assert_equal(row["ozaki_dgemm_fallback"], "2", "ozaki_dgemm_fallback")
+    assert_equal(row["ozaki_dgemm_max_bits"], "64", "ozaki_dgemm_max_bits")
+    assert_equal(row["ozaki_zgemm_used"], "4", "ozaki_zgemm_used")
+    assert_equal(row["ozaki_zgemm_max_bits"], "72", "ozaki_zgemm_max_bits")
+    assert_equal(row["ozaki_zherk_fallback"], "5", "ozaki_zherk_fallback")
 
     markdown = run_tool("benchmark_markdown.py", tsv_path)
     assert_contains(markdown, "transfer_gb", "benchmark markdown transfer header")
@@ -182,6 +192,7 @@ def check_summary_and_markdown(tmpdir):
     assert_contains(markdown, "update_wave_gb", "benchmark markdown update header")
     assert_contains(markdown, "skala_atom_grid_s", "benchmark markdown Skala header")
     assert_contains(markdown, "model_xc_energy", "benchmark markdown energy header")
+    assert_contains(markdown, "ozaki_zgemm_used", "benchmark markdown Ozaki header")
     assert_contains(markdown, "|  | case | 1 | yes | 10.00 |", "benchmark markdown row")
 
     profile_summary = run_tool(
@@ -202,6 +213,11 @@ def check_summary_and_markdown(tmpdir):
         profile_summary,
         "FFT kernel rank-seconds (nested): 6.500000",
         "profile nested FFT kernel detail",
+    )
+    assert_contains(
+        profile_summary,
+        "cuBLAS FP64 Ozaki dispatch",
+        "profile Ozaki dispatch section",
     )
 
     copy_rows = run_tool(
@@ -290,10 +306,56 @@ def check_compare(tmpdir):
     assert_equal(data_rows[0][copy_index], "10.00", "legacy markdown copy_gb")
 
 
+def check_ozaki_validate(tmpdir):
+    reference = os.path.join(tmpdir, "ozaki-reference")
+    candidate = os.path.join(tmpdir, "ozaki-candidate")
+    os.makedirs(reference)
+    os.makedirs(candidate)
+    common = (
+        "CPPAW FP64 ORTHO RESIDUAL 5.0000000000000000E-09\n"
+        "CPPAW FP64 FORCE ACTIVE T\n"
+        "CPPAW FP64 FORCE      1 1.0000000000000000E-03 2.0000000000000000E-03 3.0000000000000000E-03\n"
+        "CPPAW FP64 STRESS ACTIVE T\n"
+        "CPPAW FP64 STRESS  1 1.0000000000000000E-02 2.0000000000000000E-02 3.0000000000000000E-02\n"
+        "CPPAW FP64 STRESS  2 4.0000000000000000E-02 5.0000000000000000E-02 6.0000000000000000E-02\n"
+        "CPPAW FP64 STRESS  3 7.0000000000000000E-02 8.0000000000000000E-02 9.0000000000000000E-02\n"
+    )
+    write(
+        os.path.join(reference, "out.log"),
+        "CONSTANT ENERGY 1.0000000000000000E+00 0.0\n" + common,
+    )
+    write(
+        os.path.join(candidate, "out.log"),
+        "CONSTANT ENERGY 1.0000000010000000E+00 0.0\n" + common,
+    )
+    protocol = "NUMBER OF K-POINTS.....................................: 2\n"
+    write(os.path.join(reference, "test.prot"), protocol)
+    write(os.path.join(candidate, "test.prot"), protocol)
+    write(
+        os.path.join(candidate, "test_profile.csv"),
+        PROFILE_HEADER
+        + "\nCUBLAS_OZAKI_ZGEMM_USED,64,2,8192,0,4,0,0,0,0,0,0,0\n",
+    )
+    result = run_tool(
+        "ozaki_validate.py",
+        reference,
+        candidate,
+        "--expected-kpoints",
+        "2",
+        "--require-force",
+        "--require-stress",
+        "--require-ozaki",
+        "ZGEMM",
+    )
+    assert_contains(result, "ozaki_validation=pass", "Ozaki validation")
+    assert_contains(result, "kernel=ZGEMM used=4", "Ozaki dispatch count")
+
+
 def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         check_summary_and_markdown(tmpdir)
         check_compare(tmpdir)
+        check_ozaki_validate(tmpdir)
     check_nsys_case_coverage()
     return 0
 

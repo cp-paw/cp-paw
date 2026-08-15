@@ -95,6 +95,15 @@ def profile_totals(run_dir):
         "update_proj_gb": 0.0,
         "update_offden_gb": 0.0,
         "update_denmat_gb": 0.0,
+        "ozaki_dgemm_used": 0,
+        "ozaki_dgemm_fallback": 0,
+        "ozaki_dgemm_max_bits": None,
+        "ozaki_zgemm_used": 0,
+        "ozaki_zgemm_fallback": 0,
+        "ozaki_zgemm_max_bits": None,
+        "ozaki_zherk_used": 0,
+        "ozaki_zherk_fallback": 0,
+        "ozaki_zherk_max_bits": None,
     }
     for path in glob.glob(os.path.join(run_dir, "*_profile*.csv")):
         with open(path, newline="") as handle:
@@ -102,6 +111,24 @@ def profile_totals(run_dir):
                 op = row["op"]
                 seconds = float(row["total_seconds"])
                 gbyte = float(row["gbyte"])
+                match = re.match(
+                    r"^CUBLAS_OZAKI_(DGEMM|ZGEMM|ZHERK)_(USED|FALLBACK|UNKNOWN)$",
+                    op,
+                )
+                if match:
+                    kernel = match.group(1).lower()
+                    result = match.group(2).lower()
+                    calls = int(row["calls"])
+                    if result in ("used", "fallback"):
+                        totals[f"ozaki_{kernel}_{result}"] += calls
+                    if result == "used":
+                        bit_count = int(row["n1"])
+                        key = f"ozaki_{kernel}_max_bits"
+                        current = totals[key]
+                        totals[key] = bit_count if current is None else max(
+                            current, bit_count
+                        )
+                    continue
                 if op.startswith("ACC_COPY"):
                     if not is_copy_detail_row(op):
                         totals["copy_gb"] += gbyte
@@ -337,6 +364,15 @@ def main(argv):
                 "update_proj_gb": totals["update_proj_gb"],
                 "update_offden_gb": totals["update_offden_gb"],
                 "update_denmat_gb": totals["update_denmat_gb"],
+                "ozaki_dgemm_used": totals["ozaki_dgemm_used"],
+                "ozaki_dgemm_fallback": totals["ozaki_dgemm_fallback"],
+                "ozaki_dgemm_max_bits": totals["ozaki_dgemm_max_bits"],
+                "ozaki_zgemm_used": totals["ozaki_zgemm_used"],
+                "ozaki_zgemm_fallback": totals["ozaki_zgemm_fallback"],
+                "ozaki_zgemm_max_bits": totals["ozaki_zgemm_max_bits"],
+                "ozaki_zherk_used": totals["ozaki_zherk_used"],
+                "ozaki_zherk_fallback": totals["ozaki_zherk_fallback"],
+                "ozaki_zherk_max_bits": totals["ozaki_zherk_max_bits"],
                 "energy": energy,
                 "static_total_energy": protocol["static_total_energy"],
                 "model_xc_energy": protocol["model_xc_energy"],
@@ -400,6 +436,15 @@ def main(argv):
         "update_proj_gb",
         "update_offden_gb",
         "update_denmat_gb",
+        "ozaki_dgemm_used",
+        "ozaki_dgemm_fallback",
+        "ozaki_dgemm_max_bits",
+        "ozaki_zgemm_used",
+        "ozaki_zgemm_fallback",
+        "ozaki_zgemm_max_bits",
+        "ozaki_zherk_used",
+        "ozaki_zherk_fallback",
+        "ozaki_zherk_max_bits",
         "energy",
         "static_total_energy",
         "model_xc_energy",

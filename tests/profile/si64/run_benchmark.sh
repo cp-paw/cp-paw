@@ -408,6 +408,21 @@ case_note() {
     gpu_resident_stack)
       echo "Focused residency stack keyword: setup PSI0, PSI0-to-PRINFO, HPSI/OPSI, PSIM switch, PROJ, DENMAT energy, and off-site device-pack accumulation."
       ;;
+    gpu_resident_stack_ozaki_native)
+      echo "CUDA-13 FP64 benchmark baseline with the residency stack and native FP64 cuBLAS."
+      ;;
+    gpu_resident_stack_ozaki_dgemm)
+      echo "CUDA-13 dynamic-mantissa Ozaki benchmark for DGEMM only."
+      ;;
+    gpu_resident_stack_ozaki_zgemm)
+      echo "CUDA-13 dynamic-mantissa Ozaki benchmark for ZGEMM only."
+      ;;
+    gpu_resident_stack_ozaki_zherk)
+      echo "CUDA-13 dynamic-mantissa Ozaki benchmark for ZHERK only."
+      ;;
+    gpu_resident_stack_ozaki_all)
+      echo "CUDA-13 dynamic-mantissa Ozaki benchmark for DGEMM, ZGEMM, and ZHERK."
+      ;;
     gpu_resident_stack_psi0_ortho_host)
       echo "Focused residency stack with cross-orthogonalization PSI0 residency disabled for copy-boundary diagnostics."
       ;;
@@ -592,6 +607,31 @@ cublas_env() {
   echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_ACC_MINFLOP:-1e7}"
 }
 
+cublas_fp64_env() {
+  local mode=$1
+  local common
+  common="$(cublas_env) CPPAW_CUBLAS_FP64_TELEMETRY=1 CPPAW_CUBLAS_FP64_CHECK=1"
+  common="${common} CPPAW_CUBLAS_FP64_WORKSPACE_MB=${CPPAW_CUBLAS_FP64_WORKSPACE_MB:-2048}"
+  common="${common} CPPAW_CUBLAS_FP64_STRATEGY=${CPPAW_CUBLAS_FP64_STRATEGY:-performant}"
+  case "${mode}" in
+    native)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=0"
+      ;;
+    dgemm)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=1 CPPAW_CUBLAS_FP64_ZGEMM=0 CPPAW_CUBLAS_FP64_ZHERK=0"
+      ;;
+    zgemm)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=0 CPPAW_CUBLAS_FP64_ZGEMM=1 CPPAW_CUBLAS_FP64_ZHERK=0"
+      ;;
+    zherk)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=0 CPPAW_CUBLAS_FP64_ZGEMM=0 CPPAW_CUBLAS_FP64_ZHERK=1"
+      ;;
+    all)
+      echo "${common} CPPAW_CUBLAS_FP64_EMULATION=1 CPPAW_CUBLAS_FP64_DGEMM=1 CPPAW_CUBLAS_FP64_ZGEMM=1 CPPAW_CUBLAS_FP64_ZHERK=1"
+      ;;
+  esac
+}
+
 cublas_conservative_env() {
   echo "CPPAW_CUBLAS_ACC_MINFLOP=${CPPAW_CUBLAS_CONSERVATIVE_MINFLOP:-1e8}"
 }
@@ -616,7 +656,7 @@ inherited_accel_env() {
   local name value env_line=""
   while IFS='=' read -r name value; do
     case "${name}" in
-      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
+      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUBLAS_FP64_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
         if [[ "${value}" =~ ^[A-Za-z0-9_./:+-]+$ ]]; then
           env_line="${env_line:+${env_line} }${name}=${value}"
         fi
@@ -709,6 +749,11 @@ case_env() {
     gpu_resident_hpsi_opsi_proj) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_PROJ_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_hpsi_opsi_offden_cublas_devicepack_accum) echo "CPPAW_GPU_RESIDENCY=1 CPPAW_GPU_HPSI_RESIDENCY=1 CPPAW_GPU_OPSI_RESIDENCY=1 CPPAW_GPU_OFFDEN_LOCAL=1 CPPAW_GPU_OFFDEN_CUBLAS=1 CPPAW_GPU_OFFDEN_CUBLAS_BATCH=1 CPPAW_GPU_OFFDEN_DEVICE_PACK=1 CPPAW_GPU_OFFDEN_DEVICE_ACCUM=1 CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP=${CPPAW_CUBLAS_ACC_OFFDEN_MINFLOP:-1} CPPAW_GPU_OFFDEN_BATCH_SIZE=${CPPAW_GPU_OFFDEN_BATCH_SIZE:-64} $(cublas_env)" ;;
     gpu_resident_stack) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_env)" ;;
+    gpu_resident_stack_ozaki_native) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env native)" ;;
+    gpu_resident_stack_ozaki_dgemm) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env dgemm)" ;;
+    gpu_resident_stack_ozaki_zgemm) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env zgemm)" ;;
+    gpu_resident_stack_ozaki_zherk) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env zherk)" ;;
+    gpu_resident_stack_ozaki_all) echo "CPPAW_GPU_RESIDENCY_STACK=1 $(cublas_fp64_env all)" ;;
     gpu_resident_stack_force_dedpro) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_FORCE_DEDPRO_RESIDENCY=1 $(cublas_env)" ;;
     gpu_resident_stack_psi0_ortho_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_ORTHO_RESIDENCY=0 $(cublas_env)" ;;
     gpu_resident_stack_psi0_prinfo_host) echo "CPPAW_GPU_RESIDENCY_STACK=1 CPPAW_GPU_PSI0_PRINFO_RESIDENCY=0 $(cublas_env)" ;;

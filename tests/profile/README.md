@@ -844,6 +844,44 @@ best Si64 threshold in the Spark C86C night run. Set `CPPAW_CUBLAS_ACC=0` to run
 the same binary with the CPU fallback. Set `CPPAW_CUBLAS_ACC_SYNC=0` only
 for diagnostic runs that compare the cost of the explicit device synchronization:
 
+CUDA 13.0 Update 2 and newer cuBLAS installations are detected with a compile
+probe for the fixed-point emulation API. Such builds contain an opt-in FP64
+Ozaki path in the existing cuBLAS handle; older CUDA builds retain the native
+FP64 path without additional source or link dependencies.
+
+- `CPPAW_CUBLAS_FP64_EMULATION=0` is the default. Set it to `1` to request
+  dynamic-mantissa FP64 emulation. Dynamic control remains fixed in this first
+  implementation because it is the cuBLAS mode that targets native-FP64 or
+  better accuracy and may safely dispatch back to native FP64.
+- `CPPAW_CUBLAS_FP64_DGEMM=1` and `CPPAW_CUBLAS_FP64_ZGEMM=1` are the
+  per-kernel defaults after the main switch is enabled.
+  `CPPAW_CUBLAS_FP64_ZHERK=0` remains conservative by default because ZHERK
+  emulation arrived after the initial CUDA 13.0 D/ZGEMM support.
+- `CPPAW_CUBLAS_FP64_STRATEGY=performant` is the default. Use `eager` only for
+  capability and correctness tests that must attempt emulation even when the
+  device has competitive native FP64 throughput.
+- `CPPAW_CUBLAS_FP64_WORKSPACE_MB=2048` allocates one persistent device
+  workspace when emulation is enabled. Set it to `8192` for reproducible
+  large-band studies; NVIDIA documents 8 GiB as the upper bound for the
+  fixed-point workspace. Set it to `0` to let cuBLAS use its asynchronous
+  allocation path, which can fall back to native FP64 after allocation failure.
+- `CPPAW_CUBLAS_FP64_TELEMETRY=1` records
+  `CUBLAS_OZAKI_<DGEMM|ZGEMM|ZHERK>_<USED|FALLBACK|UNKNOWN>` rows. The first
+  profile dimension is the retained mantissa-bit count (`-1` means native-FP64
+  fallback), followed by strategy and workspace MiB. Telemetry synchronizes
+  the device after selected calls and is intended for validation runs rather
+  than final timing repeats.
+- `CPPAW_CUBLAS_FP64_CHECK=1` emits machine-readable orthonormality, force, and
+  stress diagnostics. `ozaki_validate.py` compares these with a native-FP64
+  run together with energy and k-point count.
+
+`run_ozaki_bands.sh` executes separate native, DGEMM, ZGEMM, ZHERK, and combined
+GPU cases at 1024, 2048, and 4096 empty bands with one MD step. It also runs the
+one-rank and eight-rank NVHPC CPU references and a two-k-point Si2
+force/stress correctness case. The performance matrix uses an 8 GiB persistent
+workspace by default and reports actual emulation/fallback counts and maximum
+mantissa bits in `benchmark.tsv`.
+
 The global threshold is still the default for all cuBLAS call sites, but it can
 be overridden by kernel category:
 
