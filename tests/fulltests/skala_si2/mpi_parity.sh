@@ -84,10 +84,15 @@ extract() {
       stress_count++
       for (i = 1; i <= 3; i++) stress[stress_count, i] = $(NF - 3 + i)
     }
+    /^SMOOTH SCALAR OPERATOR L2/ { scalar_norm = $NF }
+    /^SMOOTH TAU OPERATOR L2/ { tau_norm = $NF }
     END {
-      if (kpoints == "" || energy == "" || force_count == 0 || stress_count != 3) exit 1
+      if (kpoints == "" || energy == "" || force_count == 0 || stress_count != 3 ||
+          scalar_norm == "" || tau_norm == "") exit 1
       print "KPOINTS", kpoints
       print "ENERGY", energy
+      print "SCALAR_NORM", scalar_norm
+      print "TAU_NORM", tau_norm
       for (row = 1; row <= force_count; row++)
         print force_label[row], force[row, 1], force[row, 2], force[row, 3]
       for (row = 1; row <= stress_count; row++)
