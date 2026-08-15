@@ -18,6 +18,7 @@ program skala_bridge_smoke
   integer(int64), target :: atomic_grid_sizes(natom)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
   real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
+  real(real64) :: repeat_energy, repeat_error, repeat_values(7)
   real(real64) :: translation_error, translation_gradient(3)
   real(real64) :: analytic(7)
   integer :: device_index, i, iatom, ipoint, status
@@ -93,6 +94,24 @@ program skala_bridge_smoke
   analytic = [density_deriv(3, 2), grad_deriv(4, 2, 1), kin_deriv(5, 2), &
     & grid_coord_deriv(6, 3), grid_weight_deriv(7), atom_coord_deriv(2, 3), &
     & atomic_weight_deriv(9)]
+  repeat_energy = energy
+  call paw_skala_evaluate(model, density, grad, kin, grid_coords, grid_weights, &
+    & atom_coords, atomic_grid_weights, atomic_grid_sizes, energy, density_deriv, &
+    & grad_deriv, kin_deriv, status, message, grid_coord_deriv, grid_weight_deriv, &
+    & atom_coord_deriv, atomic_weight_deriv)
+  if (status /= 0) then
+    write (*, '(a)') "Skala repeat evaluation failed: " // trim(message)
+    stop 4
+  end if
+  repeat_values = [density_deriv(3, 2), grad_deriv(4, 2, 1), kin_deriv(5, 2), &
+    & grid_coord_deriv(6, 3), grid_weight_deriv(7), atom_coord_deriv(2, 3), &
+    & atomic_weight_deriv(9)]
+  repeat_error = max(abs(energy - repeat_energy), maxval(abs(repeat_values - analytic)))
+  write (*, '(a,es12.4)') "SKALA_BRIDGE_REPEAT max absolute difference=", repeat_error
+  if (repeat_error > 1.0e-10_real64) then
+    write (*, '(a)') "Skala repeated evaluation is not reproducible"
+    stop 8
+  end if
   max_error = 0.0_real64
   translation_gradient = sum(grid_coord_deriv, dim=1) + sum(atom_coord_deriv, dim=1)
   translation_error = maxval(abs(translation_gradient))
