@@ -12,8 +12,8 @@ export GPU_RANKS=${GPU_RANKS:-1}
 export CPU_RANKS=${CPU_RANKS:-8}
 export CPPAW_CUBLAS_FP64_WORKSPACE_MB=${CPPAW_CUBLAS_FP64_WORKSPACE_MB:-8192}
 export GPU_CASES=${GPU_CASES:-"gpu_resident_stack_ozaki_native gpu_resident_stack_ozaki_dgemm gpu_resident_stack_ozaki_zgemm gpu_resident_stack_ozaki_zherk gpu_resident_stack_ozaki_all"}
-export ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES-"nvhpc_cpu"}
-export CPU_CASES=${CPU_CASES-"nvhpc_cpu"}
+export ONE_RANK_CPU_CASES=${ONE_RANK_CPU_CASES-"cpu nvhpc_cpu"}
+export CPU_CASES=${CPU_CASES-"cpu nvhpc_cpu"}
 
 "${HERE}/run_followup.sh"
 

@@ -511,6 +511,14 @@ elif [[ $COMPILER = gfortran && $TYPE = profile ]] ; then
   FCFLAGS="-O2 -g -fno-omit-frame-pointer -march=native"
 fi
 
+if [[ $COMPILER = gfortran ]] ; then
+  GFORTRAN_VERSION=$(${COMPILER} -dumpfullversion -dumpversion 2>/dev/null)
+  GFORTRAN_MAJOR=${GFORTRAN_VERSION%%.*}
+  if [[ ${GFORTRAN_MAJOR} =~ ^[0-9]+$ && ${GFORTRAN_MAJOR} -ge 10 ]] ; then
+    FCFLAGS="${FCFLAGS} -fallow-argument-mismatch"
+  fi
+fi
+
 # because flags are written to sttout, VERBOSE messes up the result
 if [[ $VERBOSE = true ]] ; then
   echo "intended error exit from $0: option -v only for debugging"           >&2
