@@ -104,3 +104,16 @@ NVHPC bridge therefore defaults Torch host work to one thread; override this
 only with `CPPAW_SKALA_TORCH_THREADS`. Do not add `-mp` to a binary-PyTorch
 build. A genuinely threaded NVHPC host configuration requires a LibTorch build
 without GNU OpenMP rather than suppressing the mixed-runtime warning.
+
+The optional periodic Si64 regression uses the conservative electronic
+dynamics settings above and the standard Si64 structure:
+
+```sh
+cd tests/profile/si64
+TEST=si64_skala SKALA_MODEL=/absolute/path/to/skala-1.1-rev1-cuda.fun \
+  SKALA_DEVICE=AUTO SKALA_CHECK=F NSTEPS=1 CASES=gpu_all \
+  ./run_benchmark.sh
+```
+
+Set `SKALA_CHECK=T` for variational diagnostics. The check mode is intended for
+correctness runs; benchmark timings should use `SKALA_CHECK=F`.
