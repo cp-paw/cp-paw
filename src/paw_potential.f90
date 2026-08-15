@@ -925,7 +925,7 @@
       END
 !
 !     ..........................................SKALACOREFORCE.........
-      SUBROUTINE POTENTIAL$SKALACOREFORCE(NRL,NAT_,VPOT,FORCE)
+      SUBROUTINE POTENTIAL$SKALACOREFORCE(NRL,NAT_,VPOT,FORCE,STRESS)
 !     ******************************************************************
 !     **                                                              **
 !     **  FORCE FROM THE SKALA SCALAR POTENTIAL ACTING ON THE         **
@@ -939,10 +939,11 @@
       INTEGER(4),INTENT(IN)  :: NAT_
       REAL(8),INTENT(IN)     :: VPOT(NRL)
       REAL(8),INTENT(OUT)    :: FORCE(3,NAT_)
+      REAL(8),INTENT(OUT)    :: STRESS(3,3)
       INTEGER(4),ALLOCATABLE :: ISPECIES(:)
       REAL(8),ALLOCATABLE    :: G2(:),GVEC(:,:),TAU0(:,:)
       COMPLEX(8),ALLOCATABLE :: VPOTG(:)
-      REAL(8)                :: RBAS(3,3),STRESS(3,3)
+      REAL(8)                :: RBAS(3,3)
       INTEGER(4)             :: NAT,NRL_
 !     ******************************************************************
       CALL TRACE$PUSH('POTENTIAL$SKALACOREFORCE')
@@ -974,6 +975,7 @@
       CALL POTENTIAL_FPSCORE(NSP,NAT,ISPECIES,RBAS,TAU0,FORCE,STRESS &
      &                      ,NGL,G2,GVEC,VPOTG,PSCOREG,DPSCOREG)
       CALL MPE$COMBINE('MONOMER','+',FORCE)
+      CALL MPE$COMBINE('MONOMER','+',STRESS)
       DEALLOCATE(ISPECIES,G2,GVEC,TAU0,VPOTG)
       CALL TRACE$POP
       RETURN
