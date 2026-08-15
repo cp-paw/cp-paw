@@ -4495,15 +4495,16 @@ checks both equivalence to the scalar interpolator and the combined discrete
 adjoint identity; the Si64 composite electron count and model energy remain
 identical to the printed precision.
 
-A pre-translation-cache four-rank run sharing the same GPU took 349.80 s,
-`3.19x` longer than its one-rank reference. Its static total and model XC
-energies agreed within `3.4e-5 H`; the apparent `6.12 H` difference in
-`CONSTANT ENERGY` came entirely from the fictitious wave-function kinetic
-term. Multiple MPI/Torch contexts on one GPU are therefore not recommended for
-this workload. The current one-rank profile has a 2.76 s plane-wave FFT
-envelope. Within the 13.41 s nested Skala detail, model evaluation is now the
-largest component at 6.48 s, followed by partitioning at 2.02 s, atom-grid
-assembly at 1.94 s, and grid back-projection at 0.94 s.
+The current four-rank run sharing the same GPU takes 36.88 s, `1.94x` longer
+than the 19.04 s one-rank reference. This replaces the pre-translation-cache
+349.80 s result. Its static total and model XC energies agree within
+`3.4e-5 H`; the apparent rank-dependent change in `CONSTANT ENERGY` comes from
+the fictitious wave-function kinetic term. The four-rank FFT envelope grows to
+66.42 rank-seconds through GPU contention, so one MPI rank per GPU remains the
+recommended resource layout. The current one-rank profile has a 2.76 s
+plane-wave FFT envelope. Within the 13.41 s nested Skala detail, model
+evaluation is now the largest component at 6.48 s, followed by partitioning at
+2.02 s, atom-grid assembly at 1.94 s, and grid back-projection at 0.94 s.
 
 ## Recommended Next Benchmark
 
