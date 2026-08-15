@@ -17,6 +17,7 @@ program skala_bridge_smoke
   real(real64), target :: atom_coord_deriv(natom, 3), atomic_weight_deriv(npoint)
   integer(int64), target :: atomic_grid_sizes(natom)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
+  real(real64), parameter :: repeat_tolerance = 2.0e-8_real64
   real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
   real(real64) :: repeat_energy, repeat_error, repeat_values(7)
   real(real64) :: translation_error, translation_gradient(3)
@@ -108,7 +109,7 @@ program skala_bridge_smoke
     & atomic_weight_deriv(9)]
   repeat_error = max(abs(energy - repeat_energy), maxval(abs(repeat_values - analytic)))
   write (*, '(a,es12.4)') "SKALA_BRIDGE_REPEAT max absolute difference=", repeat_error
-  if (repeat_error > 1.0e-10_real64) then
+  if (repeat_error > repeat_tolerance) then
     write (*, '(a)') "Skala repeated evaluation is not reproducible"
     stop 8
   end if

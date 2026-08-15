@@ -45,9 +45,18 @@ pseudo-core, positive-tau, and existing PAW projector responses.
  APPLYTAU=T
  APPLYONECENTER=T
  INTERPOLATEPARTITION=F
+ DISTRIBUTEGPU=F
  CHECK=F
 !END
 ```
+
+CUDA model inference defaults to MPI-root execution. This keeps complete PAW
+atom blocks in one LibTorch instance and makes energy, force, and stress
+independent of how MPI distributes atoms. `DISTRIBUTEGPU=T` restores the
+experimental per-rank CUDA path. It can expose more GPU parallelism, but the
+Skala 1.1 float32 network produced rank-dependent adjoints when several MPI
+processes evaluated different atoms, so it is not the correctness default.
+CPU model inference remains distributed across MPI ranks.
 
 `CHECK=T` performs a one-time central finite-difference check of the model
 adjoint and its PAW one-center density-matrix contraction. It also verifies
@@ -199,6 +208,12 @@ NVHPC bridge therefore defaults Torch host work to one thread; override this
 only with `CPPAW_SKALA_TORCH_THREADS`. Do not add `-mp` to a binary-PyTorch
 build. A genuinely threaded NVHPC host configuration requires a LibTorch build
 without GNU OpenMP rather than suppressing the mixed-runtime warning.
+
+Set `CPPAW_SKALA_DETERMINISTIC=1` to request PyTorch's deterministic algorithm
+mode, disable TF32, and install the deterministic cuBLAS workspace setting.
+This is opt-in because it did not remove cross-process model-adjoint variation
+for Skala 1.1 and slowed the tested CUDA path. MPI-root inference is the
+reproducible default instead.
 
 The optional periodic Si64 regression uses the conservative electronic
 dynamics settings above and the standard Si64 structure:

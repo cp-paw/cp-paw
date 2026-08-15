@@ -139,12 +139,12 @@ void configure_host_threads() {
 void configure_reproducibility() {
   static std::once_flag configured;
   std::call_once(configured, [] {
-    bool deterministic = true;
+    bool deterministic = false;
     if (const char *value = std::getenv("CPPAW_SKALA_DETERMINISTIC")) {
       const std::string setting(value);
-      deterministic = setting != "0" && setting != "false" &&
-                      setting != "FALSE" && setting != "off" &&
-                      setting != "OFF";
+      deterministic = setting == "1" || setting == "true" ||
+                      setting == "TRUE" || setting == "on" ||
+                      setting == "ON";
     }
     if (!deterministic) {
       return;
