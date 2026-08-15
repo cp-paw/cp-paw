@@ -49,7 +49,10 @@ adjoint and its PAW one-center density-matrix contraction. It also verifies
 the discrete integration-by-parts identity for the density-gradient adjoint
 and compares the occupied-state expectation of the positive-tau Hamiltonian
 with the primitive `integral v_tau*tau`. `CHECK=F` omits the diagnostic field
-copies and the additional wave-function overlap.
+copies and the additional wave-function overlap. Force diagnostics report the
+total energy at full double precision and list the pseudo-core contribution
+separately, so central differences can be evaluated without the rounded energy
+summary.
 
 `APPLY=F` leaves CP-PAW's conventional XC functional active. Consequently,
 subtracting forces from otherwise identical `APPLY=T` and `APPLY=F` runs gives
