@@ -125,3 +125,8 @@ default remains `F` while energy and grid-convergence effects are evaluated.
 The exact default path automatically reuses local partition weights for atoms
 whose current periodic environments are related by a pure lattice translation
 and whose augmentation cutoffs match.
+Density, density-gradient, and kinetic-energy-density interpolation on each
+local atom-grid point shares one native-grid stencil. The reverse mapping uses
+the same weights as a combined discrete adjoint, which avoids recomputing the
+stencil separately for the five primitive fields without changing the model
+inputs or generalized-Kohn-Sham derivative.

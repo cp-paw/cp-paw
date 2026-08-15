@@ -4479,6 +4479,7 @@ on the CPU:
 | 1-D threshold 1,000,000 | 88.41 s | 66.20 s | 20.74 s | yes |
 | 1-D threshold 0 | 24.95 s | 2.70 s | not repeated | yes |
 | 1-D threshold 512 | 24.84 s | 2.71 s | 3.64 s | yes |
+| 1-D threshold 512 + shared primitive stencil | 19.04 s | 2.76 s | not repeated | yes |
 | 3-D cuFFT + ACCMAP cache | 24.67 s | 2.35 s | not repeated | yes |
 
 The 512 threshold is the recommended 1-D default: it gives a `3.56x` gain over
@@ -4486,15 +4487,23 @@ the exact cached Skala run and `5.70x` for the independent PBE control. The 3-D
 path saves only another 0.17 s at wall-clock level and remains an opt-in
 architecture diagnostic. Combining the exact PAW-grid and cuFFT improvements
 reduces the original 540.83 s Skala run to 24.84 s, a `21.77x` improvement.
+Reusing each local interpolation stencil across density, kinetic-energy density,
+and all three density-gradient components reduces the exact run further to
+19.04 s, or `28.40x` relative to the original path. The atom-grid phase falls
+from 6.08 s to 1.94 s and its exact adjoint from 3.07 s to 0.94 s. The unit test
+checks both equivalence to the scalar interpolator and the combined discrete
+adjoint identity; the Si64 composite electron count and model energy remain
+identical to the printed precision.
 
 A pre-translation-cache four-rank run sharing the same GPU took 349.80 s,
 `3.19x` longer than its one-rank reference. Its static total and model XC
 energies agreed within `3.4e-5 H`; the apparent `6.12 H` difference in
 `CONSTANT ENERGY` came entirely from the fictitious wave-function kinetic
 term. Multiple MPI/Torch contexts on one GPU are therefore not recommended for
-this workload. With the exact atom-grid bottleneck reduced, the one-rank
-profile is now dominated by the 66.20 s plane-wave FFT envelope; Skala model
-batching is secondary at 6.25 s.
+this workload. The current one-rank profile has a 2.76 s plane-wave FFT
+envelope. Within the 13.41 s nested Skala detail, model evaluation is now the
+largest component at 6.48 s, followed by partitioning at 2.02 s, atom-grid
+assembly at 1.94 s, and grid back-projection at 0.94 s.
 
 ## Recommended Next Benchmark
 
