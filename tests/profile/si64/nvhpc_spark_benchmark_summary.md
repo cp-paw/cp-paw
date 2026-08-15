@@ -4442,6 +4442,135 @@ in the automatic standard/resource benchmark recommendations. This keeps the
 runtime default conservative while ensuring future PR comments compare the
 validated full-stack case against the base residency stack and CPU references.
 
+## Skala PAW Hybrid-Grid Profiling
+
+Spark GB10 runs on 2026-08-15 used the periodic Si64 Skala input, `NSTEPS=1`,
+one MPI rank and one GPU unless stated otherwise. `CHECK=F` avoids the
+finite-difference validation quadratures. The relevant correctness quantities
+are the static `TOTAL ENERGY` and `MODEL XC ENERGY`; `CONSTANT ENERGY` also
+contains the rank-sensitive fictitious wave-function kinetic energy.
+
+| Exact-grid stage | Wall time | Skala detail | Atom grid | Model | Model XC energy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Validation gating only | 540.83 s | not split | not split | not split | -1218.0158926 H |
+| Cached smooth-grid partition | 109.51 s | 39.68 s | 25.27 s | 6.98 s | -1218.0158926 H |
+| Reused smooth-grid selections | 105.84 s | 38.18 s | 24.76 s | 6.30 s | -1218.0158926 H |
+| Reused cell inverse | 103.37 s | 38.80 s | 25.10 s | 6.48 s | -1218.0158926 H |
+| Translational local-partition cache | 88.41 s | 19.44 s | 6.08 s | 6.25 s | -1218.0158918 H |
+| Interpolated local partition diagnostic | 88.23 s | 20.14 s | 6.57 s | 6.41 s | -1218.0070782 H |
+
+The exact translational cache detects two periodic environment classes and
+reuses 62 of the 64 local 11,000-point Becke partitions. Relative to the first
+uncached Si64 run it gives a `6.12x` wall-time improvement; relative to the
+previous exact selection-cache stage it is `1.20x` faster. Its composite
+electron count differs by `1.4e-10` and the model energy by `8.1e-7 H`,
+consistent with reordered floating-point evaluation of translation-equivalent
+weights. The interpolated diagnostic is no faster and shifts the model energy
+by `8.81e-3 H`, so `INTERPOLATEPARTITION=F` remains the production default.
+
+Revisiting cuFFT after the partition work changed the earlier conclusion. The
+dominant Skala batches contain only 588 and 630 elements but occur 40,320 times
+each. The old one-million-element threshold therefore left them on FFTW. A
+512-element threshold offloads both and keeps the 500-element setup transform
+on the CPU:
+
+| FFT mode | Skala Si64 wall | FFT envelope | PBE Si64 wall | Energy check |
+| --- | ---: | ---: | ---: | --- |
+| 1-D threshold 1,000,000 | 88.41 s | 66.20 s | 20.74 s | yes |
+| 1-D threshold 0 | 24.95 s | 2.70 s | not repeated | yes |
+| 1-D threshold 512 | 24.84 s | 2.71 s | 3.64 s | yes |
+| 1-D threshold 512 + shared primitive stencil | 19.04 s | 2.76 s | not repeated | yes |
+| 3-D cuFFT + ACCMAP cache | 24.67 s | 2.35 s | not repeated | yes |
+
+The 512 threshold is the recommended 1-D default: it gives a `3.56x` gain over
+the exact cached Skala run and `5.70x` for the independent PBE control. The 3-D
+path saves only another 0.17 s at wall-clock level and remains an opt-in
+architecture diagnostic. Combining the exact PAW-grid and cuFFT improvements
+reduces the original 540.83 s Skala run to 24.84 s, a `21.77x` improvement.
+Reusing each local interpolation stencil across density, kinetic-energy density,
+and all three density-gradient components reduces the exact run further to
+19.04 s, or `28.40x` relative to the original path. The atom-grid phase falls
+from 6.08 s to 1.94 s and its exact adjoint from 3.07 s to 0.94 s. The unit test
+checks both equivalence to the scalar interpolator and the combined discrete
+adjoint identity; the Si64 composite electron count and model energy remain
+identical to the printed precision.
+
+The current four-rank run sharing the same GPU takes 36.88 s, `1.94x` longer
+than the 19.04 s one-rank reference. This replaces the pre-translation-cache
+349.80 s result. Its static total and model XC energies agree within
+`3.4e-5 H`; the apparent rank-dependent change in `CONSTANT ENERGY` comes from
+the fictitious wave-function kinetic term. The four-rank FFT envelope grows to
+66.42 rank-seconds through GPU contention, so one MPI rank per GPU remains the
+recommended resource layout. The current one-rank profile has a 2.76 s
+plane-wave FFT envelope. Within the 13.41 s nested Skala detail, model
+evaluation is now the largest component at 6.48 s, followed by partitioning at
+2.02 s, atom-grid assembly at 1.94 s, and grid back-projection at 0.94 s.
+
+### Terok A40 Resource Comparison
+
+A separate 2026-08-15 comparison used the same coarse `100/17/1` Si64 restart
+for every case, one host thread per MPI rank, NVHPC 24.5, and an otherwise idle
+Terok node. The coarse quadrature is a performance diagnostic, not the
+production recommendation above. The GPU cases used one A40 and complete
+MPI-root CUDA atom blocks; the CPU cases used the CPU-exported model and
+distributed atom blocks.
+
+| Case | Wall time | Model XC energy | Notes |
+| --- | ---: | ---: | --- |
+| 1 MPI, combined GPU fast | 154.947 s | -879.7566722 H | cuFFT, cuBLAS, cuSOLVER, and Skala CUDA linked |
+| 1 MPI, combined GPU profile | 157.370 s | -879.7566909 H | repeat: 157.461 s |
+| 1 MPI, NVHPC CPU profile | 216.430 s | -879.7566374 H | true CPU-exported Skala model |
+| 8 MPI, NVHPC CPU profile | 46.750 s | -879.7566378 H | repeat: 47.890 s |
+
+The profiled GPU path is `1.38x` faster than one CPU rank, while eight CPU
+ranks are `3.33x` faster than one GPU for this shape. CPU one/eight-rank model
+energies differ by only `3.4e-7 H`. The CPU/CUDA model-energy difference is
+`5.34e-5 H`, or `8.35e-7 H` per atom, consistent with the float32 model and
+different reduction order; the independently validated total-energy delta is
+the same because all other terms are shared.
+
+The GPU accelerates `SKALA_MODEL` from 70.61 s to 8.40 s (`8.40x`), but
+`SKALA_GRID_BACK` remains essentially unchanged at 113.01 s on CPU and
+112.42 s in the GPU run. It therefore occupies 71 percent of GPU wall time and
+is the next important residency/offload target. The one-second A40 sampler
+observed peak device memory use of 1215 MiB and up to 49 percent utilization;
+the 46 GiB device has ample capacity to retain substantially more PAW grid and
+projector state. The two GPU-profile repeats agree within 0.06 percent in wall
+time. Accelerator instrumentation estimates 18.77 GB of copies, primarily
+from cuBLAS scalar products/GEMMs and the many small cuFFT calls.
+
+To separate compiler effects from host and architecture effects, the CPU
+profile was rebuilt with NVHPC 26.5 and its matching HPC-X/Open MPI 5 stack.
+The FTorch CPU bridge passed its energy, repeatability, translation, and
+finite-difference gradient smoke tests before the comparison.
+
+| CPU toolchain | Ranks | Wall time | `SKALA_GRID_BACK` | `SKALA_MODEL` |
+| --- | ---: | ---: | ---: | ---: |
+| NVHPC 24.5 | 1 | 216.430 s | 113.008 s | 70.606 s |
+| NVHPC 26.5 | 1 | 216.440 s | 112.721 s | 71.649 s |
+| NVHPC 24.5 | 8 | 47.320 s average | 114.120 rank-s | 76.345 rank-s |
+| NVHPC 26.5 | 8 | 50.070 s average | 114.241 rank-s average | 95.847 rank-s average |
+
+The one-rank result is unchanged to 0.01 s, and the dominant back-projection
+kernel changes by only 0.25 percent. NVHPC compiler version is therefore not
+the source of the large Spark/Terok grid-back difference. The 26.5 eight-rank
+path is 5.8 percent slower than the 24.5 average and shows more variation in
+the eight independent Torch model instances; that is an MPI/runtime-contention
+effect rather than evidence of different generated code in the one-rank
+kernels. Model XC energies remain consistent within `3.4e-7 H` across ranks
+and exactly reproduce the corresponding 24.5 one-rank value to printed
+precision.
+
+The matching uninstrumented NVHPC 26.5 CPU build takes 214.320 s with one MPI
+rank and 49.510 s with eight ranks. Against the combined GPU fast result of
+154.947 s, one A40 is therefore `1.38x` faster than one CPU rank, while eight
+CPU ranks are `3.13x` faster than the single GPU for this coarse case. These
+ratios reproduce the profile comparison without attributing accelerator
+instrumentation overhead to either side. CP-PAW currently compiles both its
+NVHPC profile and release targets with `-O1 -Munroll`; the release gain here is
+mostly the removal of instrumentation and debug metadata rather than a higher
+optimization level.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:

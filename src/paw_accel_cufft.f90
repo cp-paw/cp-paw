@@ -38,7 +38,7 @@
       LOGICAL(4)                      :: CONFIG_READY=.FALSE.
       LOGICAL(4)                      :: ENABLED=.FALSE.
       LOGICAL(4)                      :: ENABLED_3D=.FALSE.
-      REAL(8)                         :: MINELEMENTS=1.D6
+      REAL(8)                         :: MINELEMENTS=512.D0
       REAL(8)                         :: MIN3DELEMENTS=1.D6
       CONTAINS
 !
@@ -102,7 +102,7 @@
      &                             ,STATUS=STATUS)
       IF(STATUS.EQ.0) THEN
         READ(VALUE,*,IOSTAT=IOS) MINELEMENTS
-        IF(IOS.NE.0) MINELEMENTS=1.D6
+        IF(IOS.NE.0) MINELEMENTS=512.D0
       END IF
       CALL GET_ENVIRONMENT_VARIABLE('CPPAW_CUFFT_ACC_3D',VALUE &
      &                             ,STATUS=STATUS)

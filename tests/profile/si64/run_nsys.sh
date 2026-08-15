@@ -100,7 +100,7 @@ case_exe() {
 }
 
 cufft_min_default() {
-  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-1000000}"
+  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-512}"
 }
 
 cufft_env() {

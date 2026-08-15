@@ -568,7 +568,7 @@ cusolver_generalized_conservative_env() {
 }
 
 cufft_min_default() {
-  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-1000000}"
+  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-512}"
 }
 
 cufft_env() {
@@ -616,7 +616,7 @@ inherited_accel_env() {
   local name value env_line=""
   while IFS='=' read -r name value; do
     case "${name}" in
-      CPPAW_GPU_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
+      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
         if [[ "${value}" =~ ^[A-Za-z0-9_./:+-]+$ ]]; then
           env_line="${env_line:+${env_line} }${name}=${value}"
         fi
@@ -783,6 +783,7 @@ iso_now() {
 
 prepare_case() {
   local dir=$1
+  local skala_device skala_check
   mkdir -p "${dir}"
   if [[ ! -f "${CNTL_FILE}" ]]; then
     echo "Control file not found: ${CNTL_FILE}" >&2
@@ -797,6 +798,26 @@ prepare_case() {
   cp "${HERE}/profile_summary.py" "${HERE}/benchmark_summary.py" "${dir}/"
   cp "${ROOT}/tests/fulltests/si2/stp.cntl" "${dir}/"
   perl -0pi -e "s/NSTEP\\s*=\\s*\\d+/NSTEP=${NSTEPS}/" "${dir}/${TEST}.cntl"
+  if grep -q '@SKALA_MODEL@' "${dir}/${TEST}.cntl"; then
+    if [[ -z "${SKALA_MODEL:-}" ]]; then
+      echo "SKALA_MODEL is required by ${CNTL_FILE}" >&2
+      return 1
+    fi
+    skala_device=${SKALA_DEVICE:-AUTO}
+    skala_check=${SKALA_CHECK:-F}
+    case "${skala_check}" in
+      T|F) ;;
+      *)
+        echo "SKALA_CHECK must be T or F" >&2
+        return 1
+        ;;
+    esac
+    SKALA_MODEL="${SKALA_MODEL}" SKALA_DEVICE="${skala_device}" \
+      SKALA_CHECK="${skala_check}" perl -0pi -e \
+      's/\@SKALA_MODEL\@/$ENV{SKALA_MODEL}/g;
+       s/\@SKALA_DEVICE\@/$ENV{SKALA_DEVICE}/g;
+       s/\@SKALA_CHECK\@/$ENV{SKALA_CHECK}/g' "${dir}/${TEST}.cntl"
+  fi
   if [[ -n "${EMPTY_BANDS:-}" ]]; then
     perl -0pi -e "s/EMPTY\\s*=\\s*\\d+/EMPTY=${EMPTY_BANDS}/" "${dir}/${TEST}.strc"
   fi

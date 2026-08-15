@@ -251,12 +251,15 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)                 :: AEZ
       INTEGER(4)              :: NR
       INTEGER(4)              :: LNX
+      INTEGER(4)              :: LX
       INTEGER(4),ALLOCATABLE  :: LOX(:)
       REAL(8)   ,ALLOCATABLE  :: AEPHI(:,:)
       REAL(8)   ,ALLOCATABLE  :: PSPHI(:,:)
       REAL(8)   ,ALLOCATABLE  :: AECORE(:)
       REAL(8)   ,ALLOCATABLE  :: PSCORE(:)
       REAL(8)                 :: RCSM
+      REAL(8)                 :: RCUT
+      REAL(8)   ,ALLOCATABLE  :: RCL(:)
       REAL(8)   ,ALLOCATABLE  :: VADD(:)
       REAL(8)   ,ALLOCATABLE  :: DOVER(:,:)
       REAL(8)   ,ALLOCATABLE  :: DTKIN(:,:,:)
@@ -268,6 +271,7 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: AERHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: PSRHO(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DATP(:,:,:)
+      COMPLEX(8),ALLOCATABLE  :: SKALADH(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: DWORK1(:)
       INTEGER(4)              :: IDIM,IR
       INTEGER(4)              :: LM,LMN1
@@ -289,6 +293,10 @@ END MODULE AUGMENTATION_MODULE
       REAL(8)   ,ALLOCATABLE  :: PSTOTPOT(:,:,:)
       REAL(8)   ,ALLOCATABLE  :: RHO(:,:,:)
       CHARACTER(32)           :: SOFTCORETYPE
+      LOGICAL(4)              :: TSKALA
+      LOGICAL(4)              :: TSKALAAPPLY
+      LOGICAL(4)              :: TSKALAAPPLYONECENTER
+      LOGICAL(4)              :: TSKALACHECK
 !     ******************************************************************
                             CALL TRACE$PUSH('AUGMENTATION$SPHERE')
 !
@@ -302,8 +310,12 @@ END MODULE AUGMENTATION_MODULE
       CALL RADIAL$R(GID,NR,R)
       CALL SETUP$GETR8('AEZ',AEZ)
       CALL SETUP$GETI4('LNX',LNX)
+      CALL SETUP$GETI4('LX',LX)
       ALLOCATE(LOX(LNX))
       CALL SETUP$GETI4A('LOX',LNX,LOX)
+      ALLOCATE(RCL(LX+1))
+      CALL SETUP$GETR8A('RCL',SIZE(RCL),RCL)
+      RCUT=MAXVAL(RCL(1:MAXVAL(LOX)+1))
       ALLOCATE(AEPHI(NR,LNX))
       CALL SETUP$GETR8A('AEPHI',NR*LNX,AEPHI)
       ALLOCATE(PSPHI(NR,LNX))
@@ -373,6 +385,22 @@ END MODULE AUGMENTATION_MODULE
         CALL AUGMENTATION_RHO(NR,LNX,LOX,PSPHI &
      &                  ,LMNX,DENMAT(1,1,IDIM),LMRX,PSRHO(1,1,IDIM))
       ENDDO
+      CALL SKALA$GETL4('ON',TSKALA)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+      CALL SKALA$GETL4('APPLYONECENTER',TSKALAAPPLYONECENTER)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
+      IF(TSKALA) THEN
+        IF(TSKALACHECK) THEN
+          CALL SKALA$ONECENTERVALIDATE(IAT,GID,NR,LNX,LOX,LMNX,LMRX &
+     &                                ,NDIMD,DENMAT,AEPHI,PSPHI &
+     &                                ,AECORE,PSCORE,AERHO,PSRHO &
+     &                                ,RCUT,EKINNL)
+        END IF
+        ALLOCATE(SKALADH(LMNX,LMNX,NDIMD))
+        CALL SKALA$ATOMFORWARD(IAT,GID,NR,LNX,LOX,LMNX,NDIMD &
+     &                        ,DENMAT,AEPHI,PSPHI,AECORE,PSCORE,RCUT &
+     &                        ,SKALADH)
+      END IF
 !     
 !     ================================================================
 !     ==  EVALUATE MULTIPOLE MOMENTS                                ==
@@ -420,18 +448,26 @@ END MODULE AUGMENTATION_MODULE
       ALLOCATE(AEXCPOT(NR,LMRX,NDIMD))
       ALLOCATE(PSXCPOT(NR,LMRX,NDIMD))
       ALLOCATE(RHO(NR,LMRX,NDIMD))
-!     == CORE ONLY EXCHANGE ENERGY ===================================
-      CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,COREEXC,AEXCPOT(:,1,1))
-      AEXCPOT(:,:,:)=0.D0
-!     == AE-EXCHANGE ENERGY AND POTENTIAL ============================
-      RHO(:,:,:)=AERHO(:,:,:)
-      RHO(:,1,1)=RHO(:,1,1)+AECORE(:)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,AEEXC,AEXCPOT)
-      AEEXC=AEEXC-COREEXC
-!     == PS-EXCHANGE ENERGY AND POTENTIAL ============================
-      RHO(:,:,:)=PSRHO(:,:,:)
-      RHO(:,1,1)=RHO(:,1,1)+PSCORE(:)
-      CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,PSEXC,PSXCPOT)
+      IF(TSKALA.AND.TSKALAAPPLY) THEN
+        COREEXC=0.D0
+        AEEXC=0.D0
+        PSEXC=0.D0
+        AEXCPOT=0.D0
+        PSXCPOT=0.D0
+      ELSE
+!       == CORE ONLY EXCHANGE ENERGY ===================================
+        CALL AUGMENTATION_XC(GID,NR,1,1,AECORE,COREEXC,AEXCPOT(:,1,1))
+        AEXCPOT(:,:,:)=0.D0
+!       == AE-EXCHANGE ENERGY AND POTENTIAL ============================
+        RHO(:,:,:)=AERHO(:,:,:)
+        RHO(:,1,1)=RHO(:,1,1)+AECORE(:)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,AEEXC,AEXCPOT)
+        AEEXC=AEEXC-COREEXC
+!       == PS-EXCHANGE ENERGY AND POTENTIAL ============================
+        RHO(:,:,:)=PSRHO(:,:,:)
+        RHO(:,1,1)=RHO(:,1,1)+PSCORE(:)
+        CALL AUGMENTATION_XC(GID,NR,LMRX,NDIMD,RHO,PSEXC,PSXCPOT)
+      END IF
       DEALLOCATE(RHO)
 !
 !     ================================================================
@@ -538,6 +574,10 @@ END MODULE AUGMENTATION_MODULE
      &                        ,AETOTPOT,PSTOTPOT,AEPHI,PSPHI,DATP)
       DATH(:,:,:)=DATH(:,:,:)+CMPLX(DATP(:,:,:),0.D0,KIND=8)
       DEALLOCATE(DATP)
+      IF(TSKALA) THEN
+        IF(TSKALAAPPLY.AND.TSKALAAPPLYONECENTER) DATH=DATH+SKALADH
+        DEALLOCATE(SKALADH)
+      END IF
 !     WRITE(TESTSTRING,FMT='("R8DATH",I2,12(" "))')IAT
 !     CALL STOREIT(TESTSTRING,8*LMNX*LMNX*NSPIN,DATH)
 !
@@ -588,6 +628,7 @@ STOP
       DEALLOCATE(AERHO)
       DEALLOCATE(PSRHO)
       DEALLOCATE(LOX)
+      DEALLOCATE(RCL)
       DEALLOCATE(AEPHI)
       DEALLOCATE(PSPHI)
       DEALLOCATE(AECORE)
@@ -3097,6 +3138,3 @@ END IF
       CLOSE(100)
       RETURN
       END
-
-
-

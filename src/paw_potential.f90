@@ -321,7 +321,7 @@
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE POTENTIAL$VOFRHO(NRL,NDIMD,RHO,LMRXX_,NAT_,QLM,VQLM &
+      SUBROUTINE POTENTIAL$VOFRHO(NRL,NDIMD,RHO,TAUPOS,LMRXX_,NAT_,QLM,VQLM &
      &                           ,R0,FORCE,RBAS,STRESS,RHOB)
 !     **************************************************************************
 !     **  MAIN INTERFACE FOR POTENTIAL OBJECT                                 **
@@ -342,6 +342,7 @@
       REAL(8)   ,INTENT(OUT)   :: STRESS(3,3)
       REAL(8)   ,INTENT(OUT)   :: RHOB
       REAL(8)   ,INTENT(INOUT) :: RHO(NRL,NDIMD)
+      REAL(8)   ,INTENT(IN)    :: TAUPOS(NRL,NDIMD)
       INTEGER(4),ALLOCATABLE   :: ISPECIES(:) !(NAT) 
       REAL(8)   ,ALLOCATABLE   :: G2(:)       !(NGL)
       REAL(8)   ,ALLOCATABLE   :: GVEC(:,:)     !(3,NGL)
@@ -350,6 +351,7 @@
       INTEGER(4)               :: NSPIN
       INTEGER(4)               :: ISVAR
       LOGICAL(4)               :: TGRA
+      LOGICAL(4)               :: TSKALA
       REAL(8)   ,ALLOCATABLE   :: RHOTEMP(:,:)
       REAL(8)                  :: SVAR
       REAL(8)   ,ALLOCATABLE   :: VEXT(:)
@@ -407,6 +409,12 @@
       CALL PLANEWAVE$GETI4('NR1',NR1GLOB)
 !     == COLLECT FROM DFT OBJECT ===============================================
       CALL DFT$GETL4('GC',TGRA)
+      CALL SKALA$GETL4('ON',TSKALA)
+      TGRA=TGRA.OR.TSKALA
+      IF(TSKALA.AND.NDIMD.EQ.4) THEN
+        CALL ERROR$MSG('SKALA CURRENTLY SUPPORTS COLLINEAR SPIN ONLY')
+        CALL ERROR$STOP('POTENTIAL$VOFRHO')
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE CONFINING POTENTIAL                                        ==
@@ -434,7 +442,7 @@
           RHOTEMP(IR,2)=SQRT(RHO(IR,2)**2+RHO(IR,3)**2+RHO(IR,4)**2)
         ENDDO
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                        ,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,NSPIN,RBAS &
+     &               ,NR1START,NR1GLOB,NR1L,NR2,NR3,RHOTEMP,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
         DO IR=1,NRL
@@ -449,7 +457,7 @@
       ELSE
         NSPIN=NDIMD
         CALL POTENTIAL_VOFRHO(LMRXX,NRL,NSP,NAT,ISPECIES,R0,FORCE &
-     &                            ,NR1GLOB,NR1L,NR2,NR3,RHO,NSPIN,RBAS &
+     &                   ,NR1START,NR1GLOB,NR1L,NR2,NR3,RHO,TAUPOS,NSPIN,RBAS &
      &       ,PSCOREG,DPSCOREG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                        ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
       END IF
@@ -486,7 +494,7 @@
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE POTENTIAL_VOFRHO(LMRXX,NRL &
      &                    ,NSP,NAT,ISPECIES,TAU0,FION &
-     &                    ,NR1GLOB,NR1,NR2,NR3,RHOE,NDIMD,RBAS &
+     &             ,NR1START,NR1GLOB,NR1,NR2,NR3,RHOE,TAUPOS,NDIMD,RBAS &
      &         ,PSCORG,DPSCORG,VBARG,DVBARG,YLMOFG,G0,V0,QLM,VQLM,LMRX &
      &                    ,NGL,GVEC,G2,RHOB,TSTRESS,DG0,DV0,STRESS)
 !     **************************************************************************
@@ -517,10 +525,12 @@
       REAL(8)   ,INTENT(IN)   :: TAU0(3,NAT)     !<-
       REAL(8)   ,INTENT(OUT)  :: FION(3,NAT)
       INTEGER(4),INTENT(IN)   :: NR1GLOB
+      INTEGER(4),INTENT(IN)   :: NR1START
       INTEGER(4),INTENT(IN)   :: NR1
       INTEGER(4),INTENT(IN)   :: NR2
       INTEGER(4),INTENT(IN)   :: NR3
       REAL(8)   ,INTENT(INOUT):: RHOE(NRL,NDIMD)
+      REAL(8)   ,INTENT(IN)   :: TAUPOS(NRL,NDIMD)
       REAL(8)   ,INTENT(IN)   :: RBAS(3,3)
       REAL(8)   ,INTENT(IN)   :: PSCORG(NGL,NSP)
       REAL(8)   ,INTENT(IN)   :: DPSCORG(NGL,NSP)
@@ -568,6 +578,9 @@
       COMPLEX(8),ALLOCATABLE  :: RHO_SELFTEST(:,:)
       REAL(8)   ,ALLOCATABLE  :: RHELP(:)
       LOGICAL(4)              :: TBACK
+      LOGICAL(4)              :: TSKALA
+      LOGICAL(4)              :: TSKALAAPPLY
+      LOGICAL(4)              :: TSKALACHECK
       INTEGER(4)              :: NGAMMA
       LOGICAL(4)              :: TOPTIC
 !     **************************************************************************
@@ -575,6 +588,10 @@
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL GBASS(RBAS,GBAS,CELLVOL)
       CALL DFT$GETL4('GC',TGRA)
+      CALL SKALA$GETL4('ON',TSKALA)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
+      TGRA=TGRA.OR.TSKALA
       NNR=NR1*NR2*NR3
       NSPIN=1
       IF(NDIMD.GT.1) NSPIN=2
@@ -754,14 +771,28 @@
       ELSE
         ALLOCATE(GRHO(1,1,1))
       END IF
+      IF(TSKALA) THEN
+        CALL SKALA$SMOOTHSET(NR1START,NR1,NR1GLOB,NR2,NR3,NSPIN &
+     &                      ,RHOE,GRHO,TAUPOS,RBAS)
+        IF(TSKALACHECK) THEN
+          CALL SKALA$SMOOTHVALIDATE(NRL,NSPIN,RHOE,GRHO,TAUPOS &
+     &                             ,NR1GLOB*NR2*NR3,CELLVOL)
+        END IF
+      END IF
 !
 !     ==================================================================
 !     == CALCULATE XC-ENERGY AND POTENTIAL                            ==
 !     ==================================================================
                            CALL TIMING$CLOCKON('VOFRHO: XC-POTENTIAL')
       EXC=0.D0
-      CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
-     &                 ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
+      IF(TSKALA.AND.TSKALAAPPLY) THEN
+        RHOE=0.D0
+        GRHO=0.D0
+        STRESS1=0.D0
+      ELSE
+        CALL POTENTIAL_XC(TGRA,NSPIN,NRL,NRL,NR1GLOB*NR2*NR3,CELLVOL &
+     &                   ,RHOE,GRHO,EXC,TSTRESS,STRESS1)
+      END IF
       STRESST(:,:)=STRESST(:,:)+STRESS1(:,:)
                            CALL TIMING$CLOCKOFF('VOFRHO: XC-POTENTIAL')
 !
@@ -890,6 +921,63 @@
       CALL PLANEWAVE$SELECT('DENSITY')
       CALL PLANEWAVE$SUPFFT('GTOR',NSPIN,NGL,RHOG,NRL,RHOE)
       DEALLOCATE(RHOG)
+      RETURN
+      END
+!
+!     ..........................................SKALACOREFORCE.........
+      SUBROUTINE POTENTIAL$SKALACOREFORCE(NRL,NAT_,VPOT,FORCE,STRESS)
+!     ******************************************************************
+!     **                                                              **
+!     **  FORCE FROM THE SKALA SCALAR POTENTIAL ACTING ON THE         **
+!     **  TRANSLATED PSEUDO CORE DENSITIES.                           **
+!     **                                                              **
+!     ******************************************************************
+      USE POTENTIAL_MODULE
+      USE MPE_MODULE
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN)  :: NRL
+      INTEGER(4),INTENT(IN)  :: NAT_
+      REAL(8),INTENT(IN)     :: VPOT(NRL)
+      REAL(8),INTENT(OUT)    :: FORCE(3,NAT_)
+      REAL(8),INTENT(OUT)    :: STRESS(3,3)
+      INTEGER(4),ALLOCATABLE :: ISPECIES(:)
+      REAL(8),ALLOCATABLE    :: G2(:),GVEC(:,:),TAU0(:,:)
+      COMPLEX(8),ALLOCATABLE :: VPOTG(:)
+      REAL(8)                :: RBAS(3,3)
+      INTEGER(4)             :: NAT,NRL_
+!     ******************************************************************
+      CALL TRACE$PUSH('POTENTIAL$SKALACOREFORCE')
+      IF(.NOT.TINI) THEN
+        CALL ERROR$MSG('POTENTIAL OBJECT IS NOT INITIALIZED')
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      CALL ATOMLIST$NATOM(NAT)
+      IF(NAT_.NE.NAT) THEN
+        CALL ERROR$MSG('INPUT DATA INCONSISTENT WITH ATOMLIST')
+        CALL ERROR$I4VAL('NAT_',NAT_)
+        CALL ERROR$I4VAL('NAT',NAT)
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      CALL PLANEWAVE$SELECT('DENSITY')
+      CALL PLANEWAVE$GETI4('NRL',NRL_)
+      IF(NRL_.NE.NRL) THEN
+        CALL ERROR$MSG('#(GRID POINTS INCONSISTENT)')
+        CALL ERROR$STOP('POTENTIAL$SKALACOREFORCE')
+      END IF
+      ALLOCATE(ISPECIES(NAT),G2(NGL),GVEC(3,NGL),TAU0(3,NAT))
+      ALLOCATE(VPOTG(NGL))
+      CALL ATOMLIST$GETI4A('ISPECIES',0,NAT,ISPECIES)
+      CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,TAU0)
+      CALL CELL$GETR8A('T0',9,RBAS)
+      CALL PLANEWAVE$GETR8A('G2',NGL,G2)
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL PLANEWAVE$SUPFFT('RTOG',1,NGL,VPOTG,NRL,VPOT)
+      CALL POTENTIAL_FPSCORE(NSP,NAT,ISPECIES,RBAS,TAU0,FORCE,STRESS &
+     &                      ,NGL,G2,GVEC,VPOTG,PSCOREG,DPSCOREG)
+      CALL MPE$COMBINE('MONOMER','+',FORCE)
+      CALL MPE$COMBINE('MONOMER','+',STRESS)
+      DEALLOCATE(ISPECIES,G2,GVEC,TAU0,VPOTG)
+      CALL TRACE$POP
       RETURN
       END
 !
@@ -2095,5 +2183,3 @@ K0LOOP:     DO K = ZMIN(3), ZMAX(3)
 !!$      ENDDO
 !!$      RETURN
 !!$      END
-
-

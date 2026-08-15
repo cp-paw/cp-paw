@@ -60,44 +60,65 @@ def main(argv):
     print()
     print(f"Source: `{os.path.basename(path)}`")
     print()
-    print("| suite | case | ranks | ok | wall_s | rank_s | gap_s | coverage_% | paw_s | blas_s | lapack_s | fft_s | mpi_s | pw_trace_s | pw_gtor_s | pw_rtog_s | phase_s | phase_gap_s | transfer_gb | copy_gb | copy_wave_gb | copy_proj_gb | copy_offden_gb | copy_denmat_gb | update_gb | update_wave_gb | update_proj_gb | update_offden_gb | update_denmat_gb | energy | energy_delta |")
-    print("| --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    columns = [
+        ("suite", None),
+        ("case", None),
+        ("ranks", None),
+        ("ok", None),
+        ("wall_s", 2),
+        ("rank_s", 2),
+        ("gap_s", 2),
+        ("coverage_pct", 2),
+        ("paw_s", 2),
+        ("skala_s", 2),
+        ("skala_partition_s", 2),
+        ("skala_atom_grid_s", 2),
+        ("skala_onecenter_s", 2),
+        ("skala_model_s", 2),
+        ("skala_onecenter_adjoint_s", 2),
+        ("skala_grid_back_s", 2),
+        ("blas_s", 2),
+        ("lapack_s", 2),
+        ("fft_s", 2),
+        ("fft_kernel_s", 2),
+        ("mpi_s", 2),
+        ("pw_trace_s", 2),
+        ("pw_gtor_s", 2),
+        ("pw_rtog_s", 2),
+        ("phase_s", 2),
+        ("phase_gap_s", 2),
+        ("transfer_gb", 2),
+        ("copy_gb", 2),
+        ("copy_wave_gb", 2),
+        ("copy_proj_gb", 2),
+        ("copy_offden_gb", 2),
+        ("copy_denmat_gb", 2),
+        ("update_gb", 2),
+        ("update_wave_gb", 2),
+        ("update_proj_gb", 2),
+        ("update_offden_gb", 2),
+        ("update_denmat_gb", 2),
+        ("energy", 6),
+        ("static_total_energy", 6),
+        ("model_xc_energy", 6),
+        ("hybrid_grid_rows", 0),
+        ("partition_classes", 0),
+        ("energy_delta", 6),
+    ]
+    labels = ["coverage_%" if key == "coverage_pct" else key for key, _ in columns]
+    print("| " + " | ".join(labels) + " |")
+    left_aligned = {"suite", "case", "ok"}
+    print(
+        "| "
+        + " | ".join("---" if key in left_aligned else "---:" for key, _ in columns)
+        + " |"
+    )
     for row in rows:
-        print(
-            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |".format(
-                suite_label(row),
-                row.get("case", ""),
-                row.get("ranks", ""),
-                row.get("ok", ""),
-                number(row.get("wall_s")),
-                number(row.get("rank_s")),
-                number(row.get("gap_s")),
-                number(row.get("coverage_pct")),
-                number(row.get("paw_s")),
-                number(row.get("blas_s")),
-                number(row.get("lapack_s")),
-                number(row.get("fft_s")),
-                number(row.get("mpi_s")),
-                number(row.get("pw_trace_s")),
-                number(row.get("pw_gtor_s")),
-                number(row.get("pw_rtog_s")),
-                number(row.get("phase_s")),
-                number(row.get("phase_gap_s")),
-                number(row.get("transfer_gb")),
-                number(row.get("copy_gb")),
-                number(row.get("copy_wave_gb")),
-                number(row.get("copy_proj_gb")),
-                number(row.get("copy_offden_gb")),
-                number(row.get("copy_denmat_gb")),
-                number(row.get("update_gb")),
-                number(row.get("update_wave_gb")),
-                number(row.get("update_proj_gb")),
-                number(row.get("update_offden_gb")),
-                number(row.get("update_denmat_gb")),
-                number(row.get("energy"), 6),
-                number(row.get("energy_delta"), 6),
-            )
-        )
+        values = []
+        for key, digits in columns:
+            value = suite_label(row) if key == "suite" else row.get(key, "")
+            values.append(str(value) if digits is None else number(value, digits))
+        print("| " + " | ".join(values) + " |")
     return 0
 
 

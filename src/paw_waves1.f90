@@ -2004,6 +2004,14 @@ END MODULE WAVES_MODULE
       REAL(8)   ,ALLOCATABLE :: VQLM(:,:)       !(LMRXX) MULTIPOLE POTENTIALS
       REAL(8)   ,ALLOCATABLE :: RHO(:,:)        ! CHARGE DENSITY
       REAL(8)   ,ALLOCATABLE :: RHOKIN(:,:)     ! KINETIC ENERGY DENSITY
+      REAL(8)   ,ALLOCATABLE :: TAUPOS(:,:)     ! POSITIVE KINETIC ENERGY DENSITY
+      REAL(8)   ,ALLOCATABLE :: SKALARHOVAL(:,:) ! VALENCE DENSITY FOR CHECK
+      REAL(8)   ,ALLOCATABLE :: SKALAPOT(:,:)    ! SKALA LOCAL SCALAR OPERATOR
+      REAL(8)   ,ALLOCATABLE :: SKALAVTAU(:,:)   ! SKALA TAU OPERATOR
+      REAL(8)   ,ALLOCATABLE :: SKALACOREFORCE(:,:) ! PS-CORE FORCE
+      REAL(8)                :: SKALACORESTRESS(3,3) ! PS-CORE STRESS
+      REAL(8)                :: SKALAMODELSTRESS(3,3) ! MODEL GRID STRESS
+      REAL(8)                :: SKALATAUSTRESS(3,3) ! TAU OPERATOR STRESS
       COMPLEX(8),ALLOCATABLE :: DENMAT(:,:,:,:) ! 1CENTER DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: EDENMAT(:,:,:,:)! ENERGY-WEIGHTED DENSITY MATRIX
       COMPLEX(8),ALLOCATABLE :: DH(:,:,:,:)     ! 1CENTER HAMILTONIAN
@@ -2041,6 +2049,11 @@ END MODULE WAVES_MODULE
       LOGICAL(4)             :: TCONV ! MIXER SAYS THAT WAVE FUNCTIONS ARE CONVERGED !KAESTNERCG
       REAL(8)                :: CONVPSI ! CONVERGENCE CRITERION FOR WAVE FUNCTIONS !KAESTNERCG
       LOGICAL(4)             :: TRHOKIN=.FALSE. !KINETIC ENERGY DENSITY REQUIRED
+      LOGICAL(4)             :: TTAUPOS=.FALSE. !POSITIVE KINETIC ENERGY DENSITY
+      LOGICAL(4)             :: TSKALAAPPLY=.FALSE.
+      LOGICAL(4)             :: TSKALAAPPLYSMOOTH=.FALSE.
+      LOGICAL(4)             :: TSKALAAPPLYTAU=.FALSE.
+      LOGICAL(4)             :: TSKALACHECK=.FALSE.
       INTEGER(4) ::NTASKS_W,THISTASK_W
       REAL(8) :: RBASM(3,3)
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
@@ -2079,6 +2092,13 @@ END MODULE WAVES_MODULE
       TFORCE=TFORCE.OR.TFORCEX
       IF(TSTRESS)CALL POTENTIAL$SETL4('STRESS',TSTRESS)
       IF(TFORCE)CALL POTENTIAL$SETL4('FORCE',TFORCE)
+      CALL SKALA$GETL4('ON',TTAUPOS)
+      CALL SKALA$GETL4('APPLY',TSKALAAPPLY)
+      CALL SKALA$GETL4('APPLYSMOOTH',TSKALAAPPLYSMOOTH)
+      CALL SKALA$GETL4('APPLYTAU',TSKALAAPPLYTAU)
+      CALL SKALA$GETL4('CHECK',TSKALACHECK)
+      CALL SKALA$SETL4('NEEDFORCE',TFORCE)
+      CALL SKALA$SETL4('NEEDSTRESS',TSTRESS)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_SETUP_FLAGS' &
@@ -2098,6 +2118,11 @@ END MODULE WAVES_MODULE
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
       ALLOCATE(FORCE(3,NAT))
       FORCE(:,:)=0.D0
+      ALLOCATE(SKALACOREFORCE(3,NAT))
+      SKALACOREFORCE(:,:)=0.D0
+      SKALACORESTRESS=0.D0
+      SKALAMODELSTRESS=0.D0
+      SKALATAUSTRESS=0.D0
 !     == NUMBER OF BANDS =======================================================
       CALL DYNOCC$GETI4('NB',NBX)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
@@ -2277,7 +2302,28 @@ END IF
       NRL=MAP%NRL
       ALLOCATE(RHO(NRL,NDIMD))
       ALLOCATE(RHOKIN(NRL,NDIMD))
-      CALL WAVES$RHO(NRL,NDIMD,RHO,TRHOKIN,RHOKIN)  !<<<<<<<<<<<<<<<<<<<<<<<<<<<
+      ALLOCATE(TAUPOS(NRL,NDIMD))
+      CALL WAVES$RHO(NRL,NDIMD,RHO,TRHOKIN,RHOKIN,TTAUPOS,TAUPOS)
+      IF(TSKALACHECK) THEN
+        ALLOCATE(SKALARHOVAL(NRL,NDIMD))
+        SKALARHOVAL=RHO
+      END IF
+      IF(TTAUPOS.AND.(.NOT.TBUCKET)) THEN
+        CALL PLANEWAVE$GETR8('RWEIGHT',SVAR2)
+        SVAR1=SUM(TAUPOS(:,1))*SVAR2
+        CALL MPE$COMBINE('MONOMER','+',SVAR1)
+        IF(ABS(SVAR1-EKIN).GT.1.D-7*MAX(1.D0,ABS(EKIN))) THEN
+          CALL ERROR$MSG('POSITIVE TAU INTEGRAL DIFFERS FROM PS KINETIC ENERGY')
+          CALL ERROR$R8VAL('INTEGRAL TAU',SVAR1)
+          CALL ERROR$R8VAL('PS KINETIC ENERGY',EKIN)
+          CALL ERROR$STOP('WAVES$ETOT')
+        END IF
+        IF(THISTASK_W.EQ.1) THEN
+          CALL FILEHANDLER$UNIT('PROT',NFILO)
+          WRITE(NFILO,FMT='("SKALA POSITIVE TAU CHECK",T40,ES24.14)') &
+     &      SVAR1-EKIN
+        END IF
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_RHO' &
@@ -2356,7 +2402,7 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     == POTENTIAL (POTENTIAL IS STORED BACK INTO THE DENSITY ARRAY!)         ==
 !     ==========================================================================
       ALLOCATE(VQLM(LMRXX,NAT))
-      CALL WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
+      CALL WAVES_VOFRHO(NRL,NDIMD,RHO,TAUPOS,RHOB,NAT,LMRXX,QLM,VQLM)
       DEALLOCATE(QLM)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
@@ -2380,8 +2426,30 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==========================================================================
       ALLOCATE(DH(LMNXX,LMNXX,NDIMD,NAT))
       ALLOCATE(DO(LMNXX,LMNXX,NDIMD,NAT))
+      ALLOCATE(SKALAVTAU(NRL,NDIMD))
+      SKALAVTAU=0.D0
       CALL WAVES$SPHERE(LMNXX,NDIMD,NAT,LMRXX,RHOB,DENMAT,EDENMAT &
      &                 ,VQLM,DH,DO,POTB)
+      IF(TSTRESS.AND.TSKALAAPPLY) THEN
+        CALL SKALA$STRESSGET(SKALAMODELSTRESS)
+        STRESS=STRESS+SKALAMODELSTRESS
+      END IF
+      IF(TTAUPOS) THEN
+        ALLOCATE(SKALAPOT(NRL,NDIMD))
+        CALL WAVES_SKALA_ADJOINT(NRL,NDIMD,SKALAPOT,SKALAVTAU &
+     &             ,(TFORCE.OR.TSTRESS).AND.TSKALAAPPLY &
+     &              .AND.TSKALAAPPLYSMOOTH,NAT,SKALACOREFORCE &
+     &             ,SKALACORESTRESS)
+        CALL SKALA$SMOOTHOPERATORREPORT(SUM(SKALAPOT**2) &
+     &                                 ,SUM(SKALAVTAU**2))
+        IF(TSKALACHECK) THEN
+          CALL PLANEWAVE$GETR8('RWEIGHT',SVAR2)
+          SVAR1=SVAR2*SUM(SKALAPOT*SKALARHOVAL)
+          CALL SKALA$SMOOTHSCALARCONTRACTION(SVAR1)
+        END IF
+        IF(TSKALAAPPLY.AND.TSKALAAPPLYSMOOTH) RHO=RHO+SKALAPOT
+        DEALLOCATE(SKALAPOT)
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_SPHERE' &
@@ -2521,6 +2589,12 @@ CALL ERROR$STOP('WAVES$ETOT')
           SVAR2=RHO(IR,2)
           RHO(IR,1)=SVAR1+SVAR2
           RHO(IR,2)=SVAR1-SVAR2
+          IF(TSKALAAPPLY.AND.TSKALAAPPLYTAU) THEN
+            SVAR1=SKALAVTAU(IR,1)
+            SVAR2=SKALAVTAU(IR,2)
+            SKALAVTAU(IR,1)=SVAR1+SVAR2
+            SKALAVTAU(IR,2)=SVAR1-SVAR2
+          END IF
         ENDDO
         DO IAT=1,NAT
           ISP=MAP%ISP(IAT)
@@ -2587,6 +2661,12 @@ CALL ERROR$STOP('WAVES$ETOT')
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(2,:)
 !WRITE(*,FMT='("PRO STRESS ",3F15.7)')STRESS1(3,:)
       END IF
+      IF(TFORCE.AND.TSKALAAPPLY.AND.TSKALAAPPLYSMOOTH) THEN
+        FORCE=FORCE+SKALACOREFORCE
+      END IF
+      IF(TSTRESS.AND.TSKALAAPPLY.AND.TSKALAAPPLYSMOOTH) THEN
+        STRESS=STRESS+SKALACORESTRESS
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_FORCE' &
@@ -2610,7 +2690,11 @@ CALL ERROR$STOP('WAVES$ETOT')
 !     ==  EVALUATE H*PSI                                                      ==
 !     ==========================================================================
 !PRINT*,'RHO',(SUM(ABS(RHO)).GT.0.D0.OR.SUM(ABS(RHO)).LE.0.D0)
-      CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH)
+      CALL WAVES$HPSI(NRL,NDIMD,NAT,LMNXX,RHO,DH &
+     &               ,TSKALAAPPLY.AND.TSKALAAPPLYTAU,SKALAVTAU &
+     &               ,TSKALACHECK,NBX,TSTRESS,SKALATAUSTRESS)
+      IF(TSTRESS.AND.TSKALAAPPLY.AND.TSKALAAPPLYTAU) &
+     &  STRESS=STRESS+SKALATAUSTRESS
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
       CALL ACCELPROFILE$ADD('PAW_ETOT_HPSI' &
@@ -2619,6 +2703,10 @@ CALL ERROR$STOP('WAVES$ETOT')
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T0)
 #ENDIF
       DEALLOCATE(RHO)
+      DEALLOCATE(RHOKIN)
+      DEALLOCATE(TAUPOS)
+      DEALLOCATE(SKALAVTAU)
+      IF(ALLOCATED(SKALARHOVAL)) DEALLOCATE(SKALARHOVAL)
       DEALLOCATE(DH)
       DEALLOCATE(DO)
 !
@@ -2847,13 +2935,17 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       CALL ATOMLIST$GETR8A('FORCE',0,3*NAT,FORCET)
       FORCE=FORCET+FORCE
       CALL ATOMLIST$SETR8A('FORCE',0,3*NAT,FORCE)
+      CALL SKALA$TOTALFORCEREPORT(NAT,FORCE)
       DEALLOCATE(FORCET)
 !     == STRESS ================================================================
       CALL CELL$GETR8A('STRESS_I',9,STRESS1)
+      CALL SKALA$TOTALSTRESSREPORT(SKALAMODELSTRESS,SKALACORESTRESS &
+     &                            ,SKALATAUSTRESS,STRESS-STRESS1)
       STRESS=STRESS1-STRESS  ! IN THIS ROUTINE STRESS=+DE/DEPSILON!
       CALL CELL$SETR8A('STRESS_I',9,STRESS)
 !     == DEALLOCATE ARRAYS =====================================================
       DEALLOCATE(FORCE)
+      DEALLOCATE(SKALACOREFORCE)
       DEALLOCATE(R)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_ETOT_T1)
@@ -2927,7 +3019,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_VOFRHO(NRL,NDIMD,RHO,RHOB,NAT,LMRXX,QLM,VQLM)
+      SUBROUTINE WAVES_VOFRHO(NRL,NDIMD,RHO,TAUPOS,RHOB,NAT,LMRXX,QLM,VQLM)
 !     **************************************************************************
 !     **                                                                      **
 !     **                                                                      **
@@ -2937,12 +3029,14 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       INTEGER(4),INTENT(IN)   :: NDIMD  !#(DENSITY COMPONENTS)
       INTEGER(4),INTENT(IN)   :: NRL    !#(LOCAL R-SPACE GRID POINTS)
       REAL(8)   ,INTENT(INOUT):: RHO(NRL,NDIMD)  
+      REAL(8)   ,INTENT(INOUT):: TAUPOS(NRL,NDIMD)
       REAL(8)   ,INTENT(OUT)  :: RHOB   ! BACKGROUND DENSITY
       INTEGER(4),INTENT(IN)   :: NAT    !#(ATOMS)
       INTEGER(4),INTENT(IN)   :: LMRXX   !#(ANGULAR MOMENTA FOR 1-C DENSITY)
       REAL(8)   ,INTENT(IN)   :: QLM(LMRXX,NAT)  ! MULTIPOLE MOMENTS
       REAL(8)   ,INTENT(OUT)  :: VQLM(LMRXX,NAT) ! "MULTIPOLE" POTENTIALS
       REAL(8)   ,ALLOCATABLE  :: RHO_V(:,:)     ! CHARGE DENSITY
+      REAL(8)   ,ALLOCATABLE  :: TAUPOS_V(:,:)  ! POSITIVE KINETIC DENSITY
       REAL(8)                 :: RBAS(3,3)      ! LATTICE VECTORS
       REAL(8)                 :: R(3,NAT)       ! ATOMIC POSITIONS
       REAL(8)                 :: STRESS(3,3)    ! STRESS TENSOR
@@ -2950,6 +3044,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       REAL(8)                 :: FORCE(3,NAT)
       REAL(8)                 :: FORCET(3,NAT)
       INTEGER(4)              :: NR1L,NR1L_V,NR2,NR3
+      LOGICAL(4)              :: TSKALA
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES_VOFRHO')
 
@@ -2966,6 +3061,13 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     ==========================================================================
       ALLOCATE(RHO_V(NR1L_V*NR2*NR3,NDIMD))
       CALL WAVES_MAPPSITOPOT('PSITOPOT',NR1L,NR1L_V,NR2,NR3,NDIMD,RHO,RHO_V)
+      ALLOCATE(TAUPOS_V(NR1L_V*NR2*NR3,NDIMD))
+      TAUPOS_V(:,:)=0.D0
+      CALL SKALA$GETL4('ON',TSKALA)
+      IF(TSKALA) THEN
+        CALL WAVES_MAPPSITOPOT('PSITOPOT',NR1L,NR1L_V,NR2,NR3,NDIMD &
+     &                        ,TAUPOS,TAUPOS_V)
+      END IF
 !
 !     ==========================================================================
 !     == CALCULATE POTENTIAL FROM THE CHARGE DENSITY                          ==
@@ -2975,7 +3077,8 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
       FORCE(:,:)=0.D0
       STRESS(:,:)=0.D0
       VQLM(:,:)=0.D0
-      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_V,LMRXX,NAT,QLM,VQLM &
+      CALL POTENTIAL$VOFRHO(NR1L_V*NR2*NR3,NDIMD,RHO_V,TAUPOS_V &
+     &                     ,LMRXX,NAT,QLM,VQLM &
      &                     ,R,FORCE,RBAS,STRESS,RHOB)
 !
 !     ==========================================================================
@@ -2983,6 +3086,7 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
 !     ==========================================================================
       CALL WAVES_MAPPSITOPOT('POTTOPSI',NR1L,NR1L_V,NR2,NR3,NDIMD,RHO,RHO_V)
       DEALLOCATE(RHO_V)
+      DEALLOCATE(TAUPOS_V)
 !
 !     ==========================================================================
 !     ==  STORE FORCES AND STRESSES BACK TO THE OWNING OBJECTS                ==
@@ -2998,6 +3102,93 @@ CALL TIMING$CLOCKOFF('W:EXPECT')
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES_VOFRHO
+
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_SKALA_ADJOINT(NRL,NDIMD,VPOT,VTAU &
+     &                              ,TCORESPONSE,NAT,FCOREFORCE &
+     &                              ,SCORESTRESS)
+!     ***************************************************************************
+!     ** MAP SKALA PRIMITIVE ADJOINTS FROM THE DENSITY GRID TO THE             **
+!     ** WAVE-FUNCTION GRID. VPOT INCLUDES -DIV(D E/D GRAD RHO).               **
+!     ***************************************************************************
+      IMPLICIT NONE
+      INTEGER(4),INTENT(IN) :: NRL,NDIMD,NAT
+      LOGICAL(4),INTENT(IN) :: TCORESPONSE
+      REAL(8),INTENT(OUT) :: VPOT(NRL,NDIMD),VTAU(NRL,NDIMD)
+      REAL(8),INTENT(OUT) :: FCOREFORCE(3,NAT)
+      REAL(8),INTENT(OUT) :: SCORESTRESS(3,3)
+      INTEGER(4) :: NR1L_P,NR1L_V,NR1,NR1START,NR2,NR3,NRLV,NGL
+      INTEGER(4) :: NTASKS,THISTASK,NFIL,IAT
+      REAL(8),ALLOCATABLE :: VRHO_V(:,:),VGRAD_V(:,:,:),VTAU_V(:,:)
+      REAL(8),ALLOCATABLE :: VDIV_V(:,:),GVEC(:,:)
+      REAL(8),ALLOCATABLE :: RHO_V(:,:),GRHO_V(:,:,:),TAU_V(:,:)
+      COMPLEX(8),ALLOCATABLE :: VGRADG(:,:)
+      REAL(8) :: DVOL,LEFT,RIGHT,TAUCONTR
+      LOGICAL(4) :: TCHECK
+
+      CALL PLANEWAVE$SELECT('DENSITY')
+      CALL PLANEWAVE$GETI4('NR1L',NR1L_V)
+      CALL PLANEWAVE$GETI4('NR1',NR1)
+      CALL PLANEWAVE$GETI4('NR1START',NR1START)
+      CALL PLANEWAVE$GETI4('NR2',NR2)
+      CALL PLANEWAVE$GETI4('NR3',NR3)
+      CALL PLANEWAVE$GETI4('NGL',NGL)
+      NR1L_P=NRL/(NR2*NR3)
+      IF(NR1L_P*NR2*NR3.NE.NRL) THEN
+        CALL ERROR$MSG('INVALID WAVE GRID FOR SKALA ADJOINT')
+        CALL ERROR$STOP('WAVES_SKALA_ADJOINT')
+      END IF
+      NRLV=NR1L_V*NR2*NR3
+      ALLOCATE(VRHO_V(NRLV,NDIMD),VGRAD_V(NRLV,3,NDIMD))
+      ALLOCATE(VTAU_V(NRLV,NDIMD),VDIV_V(NRLV,NDIMD))
+      ALLOCATE(GVEC(3,NGL),VGRADG(NGL,NDIMD))
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL SKALA$SMOOTHADJOINTGET(NR1START,NR1L_V,NR1,NR2,NR3 &
+     &                            ,NDIMD,VRHO_V,VGRAD_V,VTAU_V)
+      CALL POTENTIAL_GRADIENT('POT',NDIMD,NGL,GVEC,VGRADG,NRLV,VGRAD_V)
+      CALL PLANEWAVE$SUPFFT('GTOR',NDIMD,NGL,VGRADG,NRLV,VDIV_V)
+      CALL SKALA$GETL4('CHECK',TCHECK)
+      IF(TCHECK) THEN
+        ALLOCATE(RHO_V(NRLV,NDIMD),GRHO_V(NRLV,3,NDIMD))
+        ALLOCATE(TAU_V(NRLV,NDIMD))
+        CALL SKALA$SMOOTHFIELDSGET(NR1START,NR1L_V,NR1,NR2,NR3 &
+     &                             ,NDIMD,RHO_V,GRHO_V,TAU_V,DVOL)
+        LEFT=DVOL*SUM((VRHO_V+VDIV_V)*RHO_V)
+        RIGHT=DVOL*(SUM(VRHO_V*RHO_V)+SUM(VGRAD_V*GRHO_V))
+        TAUCONTR=DVOL*SUM(VTAU_V*TAU_V)
+        CALL SKALA$SMOOTHOPERATORCHECK(LEFT,RIGHT,TAUCONTR)
+        DEALLOCATE(RHO_V,GRHO_V,TAU_V)
+      END IF
+      VRHO_V=VRHO_V+VDIV_V
+      FCOREFORCE=0.D0
+      SCORESTRESS=0.D0
+      IF(TCORESPONSE) THEN
+        CALL POTENTIAL$SKALACOREFORCE(NRLV,NAT,VRHO_V(:,1),FCOREFORCE &
+     &                               ,SCORESTRESS)
+        IF(TCHECK) THEN
+          CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+          IF(THISTASK.EQ.1) THEN
+            CALL FILEHANDLER$UNIT('PROT',NFIL)
+            DO IAT=1,NAT
+              WRITE(NFIL,FMT='("SKALA PSCORE FORCE ATOM",I6,3ES24.14)') &
+     &             IAT,FCOREFORCE(:,IAT)
+            END DO
+            DO IAT=1,3
+              WRITE(NFIL,FMT='("SKALA PSCORE STRESS",3ES24.14)') &
+     &             SCORESTRESS(IAT,:)
+            END DO
+          END IF
+        END IF
+      END IF
+      VPOT=0.D0
+      VTAU=0.D0
+      CALL WAVES_MAPPSITOPOT('POTTOPSI',NR1L_P,NR1L_V,NR2,NR3 &
+     &                      ,NDIMD,VPOT,VRHO_V)
+      CALL WAVES_MAPPSITOPOT('POTTOPSI',NR1L_P,NR1L_V,NR2,NR3 &
+     &                      ,NDIMD,VTAU,VTAU_V)
+      DEALLOCATE(VRHO_V,VGRAD_V,VTAU_V,VDIV_V,GVEC,VGRADG)
+      RETURN
+      END SUBROUTINE WAVES_SKALA_ADJOINT
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_MAPPSITOPOT(ID,NR1L_P,NR1L_V,NR2,NR3,NDIMD,RHO_P,RHO_V)
@@ -5897,7 +6088,7 @@ END IF
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO,TRHOKIN,RHOKIN)
+      SUBROUTINE WAVES$RHO(NRL,NDIMD_,RHO,TRHOKIN,RHOKIN,TTAUPOS,TAUPOS)
 !     **************************************************************************
 !     **  EVALUATES PSEUDO-DENSITY FROM THE ACTUAL PSEUDO WAVE                **
 !     **  FUNCTIONS                                                           **
@@ -5913,8 +6104,11 @@ END IF
       REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIMD_) !ELECTRON DENSITY
       LOGICAL(4),INTENT(IN)  :: TRHOKIN         !KINETIC ENERGY DENSITY REQUIRED
       REAL(8)   ,INTENT(OUT) :: RHOKIN(NRL,NDIMD_) !KINETIC ENERGY DENSITY
+      LOGICAL(4),INTENT(IN)  :: TTAUPOS         !POSITIVE KINETIC ENERGY DENSITY
+      REAL(8)   ,INTENT(OUT) :: TAUPOS(NRL,NDIMD_)
       REAL(8)   ,ALLOCATABLE :: RHO1(:,:)    ! (NRL,NDIM**2)
       REAL(8)   ,ALLOCATABLE :: RHOKIN1(:,:) ! (NRL,NDIM**2)
+      REAL(8)   ,ALLOCATABLE :: TAUPOS1(:,:) ! (NRL,NDIM**2)
       INTEGER(4)             :: IKPT,ISPIN,IR
       INTEGER(4)             :: NBX        
       REAL(8)  ,ALLOCATABLE  :: OCC(:,:,:) 
@@ -5953,9 +6147,11 @@ END IF
 !     ==  CALCULATE DENSITY                                                   ==
 !     ==========================================================================
       ALLOCATE(RHO1(NRL,NDIM**2))
-      ALLOCATE(RHOKIN1(NRL,NDIM**2)) 
+      ALLOCATE(RHOKIN1(NRL,NDIM**2))
+      ALLOCATE(TAUPOS1(NRL,NDIM**2))
       RHO(:,:)=0.D0
       RHOKIN(:,:)=0.D0
+      TAUPOS(:,:)=0.D0
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
           CALL WAVES_SELECTWV(IKPT,ISPIN)
@@ -5964,7 +6160,8 @@ END IF
           CALL ACCELPROFILE$NOW(ACCEL_T0)
 #ENDIF
           CALL WAVES_DENSITY(GSET%NGL,MAP%NRL,NDIM,THIS%NB,THIS%NBH &
-     &             ,OCC(:THIS%NB,IKPT,ISPIN),THIS%PSI0,RHO1,TRHOKIN,RHOKIN1)
+     &             ,OCC(:THIS%NB,IKPT,ISPIN),THIS%PSI0,RHO1,TRHOKIN &
+     &             ,RHOKIN1,TTAUPOS,TAUPOS1)
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
           ACCEL_DENSITY_T=ACCEL_DENSITY_T+ACCEL_T1-ACCEL_T0
@@ -5973,9 +6170,11 @@ END IF
           IF(NDIM.EQ.1) THEN
             RHO(:,ISPIN)=RHO(:,ISPIN)+RHO1(:,1)
             IF(TRHOKIN) RHOKIN(:,ISPIN)=RHOKIN(:,ISPIN)+RHOKIN1(:,1)
+            IF(TTAUPOS) TAUPOS(:,ISPIN)=TAUPOS(:,ISPIN)+TAUPOS1(:,1)
           ELSE
             RHO=RHO+RHO1
             IF(TRHOKIN) RHOKIN=RHOKIN+RHOKIN1
+            IF(TTAUPOS) TAUPOS=TAUPOS+TAUPOS1
           END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
           CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -5984,7 +6183,8 @@ END IF
         ENDDO
       ENDDO
       DEALLOCATE(RHO1)
-      DEALLOCATE(RHOKIN1)  
+      DEALLOCATE(RHOKIN1)
+      DEALLOCATE(TAUPOS1)
 !
 !     ==========================================================================
 !     == CONVERT INTO TOTAL AND SPIN DENSITY                                  ==
@@ -5998,6 +6198,18 @@ END IF
           SVAR2=RHO(IR,2)
           RHO(IR,1)=SVAR1+SVAR2   ! TOTAL DENSITY
           RHO(IR,2)=SVAR1-SVAR2   ! SPIN DENSITY
+          IF(TRHOKIN) THEN
+            SVAR1=RHOKIN(IR,1)
+            SVAR2=RHOKIN(IR,2)
+            RHOKIN(IR,1)=SVAR1+SVAR2
+            RHOKIN(IR,2)=SVAR1-SVAR2
+          END IF
+          IF(TTAUPOS) THEN
+            SVAR1=TAUPOS(IR,1)
+            SVAR2=TAUPOS(IR,2)
+            TAUPOS(IR,1)=SVAR1+SVAR2
+            TAUPOS(IR,2)=SVAR1-SVAR2
+          END IF
         ENDDO
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
         CALL ACCELPROFILE$NOW(ACCEL_T1)
@@ -6341,6 +6553,9 @@ RETURN
       REAL(8)                :: RBAS(3,3)
       REAL(8)                :: GBAS(3,3)
       REAL(8)                :: SVAR
+      INTEGER(4)             :: IATFIRST,IATLAST,IATSTEP
+      LOGICAL(4)             :: TSKALA
+      LOGICAL(4)             :: TSKALACUDA,TSKALADISTRIBUTEGPU
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       REAL(8)                :: ACCEL_T0
       REAL(8)                :: ACCEL_T1
@@ -6362,8 +6577,26 @@ RETURN
       DH(:,:,:,:)=(0.D0,0.D0)
       DO(:,:,:,:)=0.D0
       CALL MPE$QUERY('MONOMER',NTASKS,THISTASK)
+      CALL SKALA$GETL4('ON',TSKALA)
+      TSKALACUDA=.FALSE.
+      TSKALADISTRIBUTEGPU=.FALSE.
+      IF(TSKALA) THEN
+        CALL SKALA$FORWARDBEGIN
+        CALL SKALA$GETL4('CUDA',TSKALACUDA)
+        CALL SKALA$GETL4('DISTRIBUTEGPU',TSKALADISTRIBUTEGPU)
+      END IF
       POTB=0
-      DO IAT=THISTASK,NAT,NTASKS   ! DISTRIBUTE WORK ACCROSS TASKS
+      IF(TSKALACUDA.AND.(.NOT.TSKALADISTRIBUTEGPU)) THEN
+        IATFIRST=1
+        IATLAST=NAT
+        IATSTEP=1
+        IF(THISTASK.NE.1) IATFIRST=NAT+1
+      ELSE
+        IATFIRST=THISTASK
+        IATLAST=NAT
+        IATSTEP=NTASKS
+      END IF
+      DO IAT=IATFIRST,IATLAST,IATSTEP
         ISP=MAP%ISP(IAT)
         LMNX=MAP%LMNX(ISP)
         CALL SETUP$ISELECT(ISP)
@@ -6388,6 +6621,7 @@ RETURN
       CALL MPE$COMBINE('MONOMER','+',DH)
       CALL MPE$COMBINE('MONOMER','+',DO)
       CALL MPE$COMBINE('MONOMER','+',POTB)
+      IF(TSKALA) CALL SKALA$FORWARDEND
 !
 !     ==========================================================================
 !     ==                                                                      ==
@@ -6940,7 +7174,8 @@ RETURN
       END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH)
+      SUBROUTINE WAVES$HPSI(NRL,NDIMD_,NAT,LMNXX,RHO,DH,TSKALA,VTAU &
+     &                     ,TCHECK,NBX,TSTRESS,SKALATAUSTRESS)
 !     **************************************************************************
 !     **                                                                      **
 !     **  EVALUATES FORCES FROM THE AUGMENTATION PART                         **
@@ -6967,12 +7202,20 @@ RETURN
       INTEGER(4),INTENT(IN) :: NDIMD_
       INTEGER(4),INTENT(IN) :: LMNXX
       INTEGER(4),INTENT(IN) :: NAT
+      INTEGER(4),INTENT(IN) :: NBX
       REAL(8)   ,INTENT(IN) :: RHO(NRL,NDIMD_) ! PS-POTENTIAL
       COMPLEX(8),INTENT(IN) :: DH(LMNXX,LMNXX,NDIMD_,NAT)!ONE-CENTER HAMILTONIAN
+      LOGICAL(4),INTENT(IN) :: TSKALA
+      LOGICAL(4),INTENT(IN) :: TCHECK
+      LOGICAL(4),INTENT(IN) :: TSTRESS
+      REAL(8)   ,INTENT(IN) :: VTAU(NRL,NDIMD_)
+      REAL(8)   ,INTENT(OUT):: SKALATAUSTRESS(3,3)
       INTEGER(4)            :: IKPT,ISPIN
       INTEGER(4)            :: NGL
       INTEGER(4)            :: NBH
       REAL(8)               :: R(3,NAT)
+      REAL(8)               :: TAUEXPECT
+      REAL(8),ALLOCATABLE   :: OCC(:,:,:)
 !     --------------------------------------------------------------------------
       INTEGER(4)             :: IPRO
       INTEGER(4)             :: ISP
@@ -6993,6 +7236,8 @@ RETURN
 !     **************************************************************************
                               CALL TRACE$PUSH('WAVES$HPSI')
                               CALL TIMING$CLOCKON('W:HPSI')
+      TAUEXPECT=0.D0
+      SKALATAUSTRESS=0.D0
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
 #ENDIF
@@ -7007,6 +7252,10 @@ RETURN
         CALL ERROR$STOP('WAVES$HPSI')
       END IF
       CALL ATOMLIST$GETR8A('R(0)',0,3*NAT,R)
+      IF(TSKALA) THEN
+        ALLOCATE(OCC(NBX,NKPTL,NSPIN))
+        CALL WAVES_DYNOCCGETR8A('OCC',NBX*NKPTL*NSPIN,OCC)
+      END IF
 
       DO IKPT=1,NKPTL
         DO ISPIN=1,NSPIN
@@ -7022,6 +7271,7 @@ RETURN
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
           CALL WAVES_ACC_THIS_HPSI_CLEAR()
           THPSIRESIDENT=CPPAW_CUBLAS_ACC_HPSI_RESIDENCY_ENABLED()
+          IF(TSKALA) THPSIRESIDENT=.FALSE.
           IF(THPSIRESIDENT) THEN
             DO IAT=1,NAT
               ISP=MAP%ISP(IAT)
@@ -7153,10 +7403,21 @@ RETURN
      &                  ,THIS%PSI0,RHO(1,ISPIN),R,THIS%PROJ,DH,THIS%HPSI)
 !!LMTO INTERFACE MISSING!!!
 !===============================================================================
-	END IF
+		END IF
 !===============================================================================
-	        ENDDO
+          IF(TSKALA) THEN
+            CALL WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,THIS%NB,NBH,THIS%PSI0 &
+     &                              ,VTAU(:,ISPIN),THIS%HPSI &
+     &                              ,TCHECK,OCC(:,IKPT,ISPIN),TAUEXPECT &
+     &                              ,TSTRESS,SKALATAUSTRESS)
+          END IF
+		        ENDDO
 	      ENDDO
+      IF(TSKALA) THEN
+        IF(TCHECK) CALL SKALA$TAUOPERATORCHECK(TAUEXPECT)
+        IF(TSTRESS) CALL MPE$COMBINE('MONOMER','+',SKALATAUSTRESS)
+        DEALLOCATE(OCC)
+      END IF
 #IF DEFINED(CPPVAR_ACCEL_PROFILE)
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T1)
       CALL ACCELPROFILE$ADD('PAW_HPSI_TOTAL' &
@@ -7167,6 +7428,122 @@ RETURN
                               CALL TRACE$POP
       RETURN
       END SUBROUTINE WAVES$HPSI
+
+!     ...1.........2.........3.........4.........5.........6.........7.........8
+      SUBROUTINE WAVES_SKALA_TAUPSI(NGL,NRL,NDIM,NB,NBH,PSI,VTAU,HPSI &
+     &                              ,TCHECK,OCC,EXPECTATION,TSTRESS,STRESS)
+!     ***************************************************************************
+!     ** APPLY -1/2 DIV(VTAU GRAD(PSI)) FOR THE POSITIVE-TAU ADJOINT.          **
+!     ***************************************************************************
+      USE MPE_MODULE
+      IMPLICIT NONE
+      COMPLEX(8),PARAMETER :: CI=(0.D0,1.D0)
+      INTEGER(4),INTENT(IN) :: NGL,NRL,NDIM,NB,NBH
+      COMPLEX(8),INTENT(IN) :: PSI(NGL,NDIM,NBH)
+      REAL(8),INTENT(IN) :: VTAU(NRL)
+      COMPLEX(8),INTENT(INOUT) :: HPSI(NGL,NDIM,NBH)
+      LOGICAL(4),INTENT(IN) :: TCHECK
+      LOGICAL(4),INTENT(IN) :: TSTRESS
+      REAL(8),INTENT(IN) :: OCC(NB)
+      REAL(8),INTENT(INOUT) :: EXPECTATION
+      REAL(8),INTENT(INOUT) :: STRESS(3,3)
+      REAL(8),ALLOCATABLE :: GVEC(:,:)
+      COMPLEX(8),ALLOCATABLE :: WORKG(:,:),WORKR(:,:)
+      COMPLEX(8),ALLOCATABLE :: DPSIG(:,:),DPSIR(:,:),EI2KR(:)
+      COMPLEX(8),ALLOCATABLE :: DELTAHPSI(:,:,:),HAMILTON(:,:)
+      INTEGER(4) :: IB,IDIM,IDIR,JDIR,IG,IR,NTASKS,THISTASK
+      COMPLEX(8) :: DELTAH,CWEIGHTED(3)
+      REAL(8) :: F1,F2,FPLUS,FMINUS,RWEIGHT,SVAR
+      LOGICAL(4) :: TINV
+
+      IF(NDIM.NE.1) THEN
+        CALL ERROR$MSG('SKALA TAU OPERATOR SUPPORTS COLLINEAR SPIN ONLY')
+        CALL ERROR$STOP('WAVES_SKALA_TAUPSI')
+      END IF
+      ALLOCATE(GVEC(3,NGL),WORKG(NGL,NDIM),WORKR(NRL,NDIM))
+      ALLOCATE(DPSIG(NGL,3),DPSIR(NRL,3))
+      IF(TCHECK) THEN
+        ALLOCATE(DELTAHPSI(NGL,NDIM,NBH),HAMILTON(NB,NB))
+        DELTAHPSI=CMPLX(0.D0,0.D0,KIND=8)
+      END IF
+      CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+      CALL PLANEWAVE$GETL4('TINV',TINV)
+      IF(TSTRESS) CALL PLANEWAVE$GETR8('RWEIGHT',RWEIGHT)
+      IF(TSTRESS.AND.TINV) THEN
+        ALLOCATE(EI2KR(NRL))
+        CALL PLANEWAVE$GETC8A('EIKR',NRL,EI2KR)
+        EI2KR=EI2KR**2
+      END IF
+      DO IB=1,NBH
+        DO IDIR=1,3
+          DO IG=1,NGL
+            DPSIG(IG,IDIR)=CI*GVEC(IDIR,IG)*PSI(IG,1,IB)
+          END DO
+        END DO
+        CALL PLANEWAVE$FFT('GTOR',3,NGL,DPSIG,NRL,DPSIR)
+        IF(TSTRESS) THEN
+          IF(TINV) THEN
+            F1=OCC(2*IB-1)
+            F2=0.D0
+            IF(2*IB.LE.NB) F2=OCC(2*IB)
+            FPLUS=0.5D0*(F1+F2)
+            FMINUS=0.5D0*(F1-F2)
+            DO IR=1,NRL
+              DO IDIR=1,3
+                CWEIGHTED(IDIR)=FPLUS*CONJG(DPSIR(IR,IDIR)) &
+     &              +FMINUS*DPSIR(IR,IDIR)*EI2KR(IR)
+              END DO
+              DO IDIR=1,3
+                DO JDIR=1,3
+                  SVAR=0.5D0*REAL(DPSIR(IR,IDIR)*CWEIGHTED(JDIR) &
+     &                            +DPSIR(IR,JDIR)*CWEIGHTED(IDIR),KIND=8)
+                  STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR) &
+     &                -RWEIGHT*VTAU(IR)*SVAR
+                END DO
+              END DO
+            END DO
+          ELSE
+            F1=OCC(IB)
+            DO IR=1,NRL
+              DO IDIR=1,3
+                DO JDIR=1,3
+                  STRESS(IDIR,JDIR)=STRESS(IDIR,JDIR) &
+     &                -RWEIGHT*F1*VTAU(IR) &
+     &                 *REAL(DPSIR(IR,IDIR)*CONJG(DPSIR(IR,JDIR)),KIND=8)
+                END DO
+              END DO
+            END DO
+          END IF
+        END IF
+        DO IDIR=1,3
+          WORKR(:,1)=VTAU(:)*DPSIR(:,IDIR)
+          CALL PLANEWAVE$FFT('RTOG',NDIM,NGL,WORKG,NRL,WORKR)
+          DO IDIM=1,NDIM
+            DO IG=1,NGL
+              DELTAH=-0.5D0*CI*GVEC(IDIR,IG)*WORKG(IG,IDIM)
+              HPSI(IG,IDIM,IB)=HPSI(IG,IDIM,IB)+DELTAH
+              IF(TCHECK) DELTAHPSI(IG,IDIM,IB)= &
+     &                         DELTAHPSI(IG,IDIM,IB)+DELTAH
+            END DO
+          END DO
+        END DO
+      END DO
+      IF(TCHECK) THEN
+        CALL WAVES_OVERLAP(.FALSE.,NGL,NDIM,NBH,NB,PSI,DELTAHPSI &
+     &                    ,HAMILTON,'SKALA_TAU_EXPECT')
+        CALL MPE$QUERY('K',NTASKS,THISTASK)
+        IF(THISTASK.EQ.1) THEN
+          DO IB=1,NB
+            EXPECTATION=EXPECTATION+OCC(IB) &
+     &                 *REAL(HAMILTON(IB,IB),KIND=8)
+          END DO
+        END IF
+        DEALLOCATE(DELTAHPSI,HAMILTON)
+      END IF
+      IF(ALLOCATED(EI2KR)) DEALLOCATE(EI2KR)
+      DEALLOCATE(GVEC,WORKG,WORKR,DPSIG,DPSIR)
+      RETURN
+      END SUBROUTINE WAVES_SKALA_TAUPSI
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
       SUBROUTINE WAVES_HPROJ(NDIM,NB,LMNX,DH,PROJ,HPROJ)
@@ -7979,7 +8356,8 @@ RETURN
 !!$      END
 !
 !     ...1.........2.........3.........4.........5.........6.........7.........8
-      SUBROUTINE WAVES_DENSITY(NGL,NRL,NDIM,NB,NBH,F,PSIOFG,RHO,TRHOKIN,RHOKIN)
+      SUBROUTINE WAVES_DENSITY(NGL,NRL,NDIM,NB,NBH,F,PSIOFG,RHO,TRHOKIN &
+     &                        ,RHOKIN,TTAUPOS,TAUPOS)
 !     **************************************************************************
 !     **  CALCULATE ELECTRON DENSITY RHO IN REAL SPACE                        **
 !     **  IF(TRHOKIN) CALCULATE ALSO KINETIC-ENERGY DENSITY RHOKIN IN R. SPACE**
@@ -8000,11 +8378,16 @@ RETURN
       REAL(8)   ,INTENT(OUT) :: RHO(NRL,NDIM**2) ! DENSITY IN R-SPACE
       LOGICAL(4),INTENT(IN)  :: TRHOKIN
       REAL(8)   ,INTENT(OUT) :: RHOKIN(NRL,NDIM**2) ! KINETIC-ENERGY DENSITY
+      LOGICAL(4),INTENT(IN)  :: TTAUPOS
+      REAL(8)   ,INTENT(OUT) :: TAUPOS(NRL,NDIM**2) ! 1/2 SUM F |GRAD PSI|**2
       COMPLEX(8),ALLOCATABLE :: PSIOFR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: PSIKINOFR(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: DPSIOFG(:,:,:)
+      COMPLEX(8),ALLOCATABLE :: DPSIOFR(:,:,:)
       COMPLEX(8),ALLOCATABLE :: EI2KR(:)      !(NRL) SQUARED BLOCH PHASE FACTOR
       COMPLEX(8),ALLOCATABLE :: PSI1(:)          !(NRL)
       REAL(8)   ,ALLOCATABLE :: G2(:)            !(NGL)
+      REAL(8)   ,ALLOCATABLE :: GVEC(:,:)         !(3,NGL), INCLUDES K
       COMPLEX(8),ALLOCATABLE :: PSIKINOFG(:,:,:) !(NGL,NDIM,NBH)
       COMPLEX(8)             :: CSVAR
       LOGICAL(4)             :: TINV
@@ -8022,6 +8405,9 @@ RETURN
       REAL(8)                :: ACCEL_KIN_PREP_T
       REAL(8)                :: ACCEL_KIN_FFT_T
       REAL(8)                :: ACCEL_ACCUM_T
+      REAL(8)                :: ACCEL_TAU_PREP_T
+      REAL(8)                :: ACCEL_TAU_FFT_T
+      REAL(8)                :: ACCEL_TAU_ACCUM_T
 #ENDIF
 !     **************************************************************************
                                CALL TRACE$PUSH('WAVES_DENSITY')
@@ -8030,6 +8416,9 @@ RETURN
       ACCEL_KIN_PREP_T=0.D0
       ACCEL_KIN_FFT_T=0.D0
       ACCEL_ACCUM_T=0.D0
+      ACCEL_TAU_PREP_T=0.D0
+      ACCEL_TAU_FFT_T=0.D0
+      ACCEL_TAU_ACCUM_T=0.D0
       CALL ACCELPROFILE$NOW(ACCEL_TOTAL_T0)
 #ENDIF
 !RELEASED 8.OCT.99 
@@ -8051,7 +8440,7 @@ RETURN
       END IF
 !
 #IF DEFINED(CPPVAR_CUBLAS_ACC)
-      IF((NDIM.EQ.1).AND.(.NOT.TRHOKIN) &
+      IF((NDIM.EQ.1).AND.(.NOT.TRHOKIN).AND.(.NOT.TTAUPOS) &
      &   .AND.CPPAW_CUBLAS_ACC_DENSITY_INTERNAL_RESIDENCY_ENABLED()) THEN
         CALL WAVES_DENSITY_ACC_INTERNAL(NGL,NRL,NDIM,NB,NBH,F,PSIOFG &
      &                                  ,RHO,TINV)
@@ -8102,6 +8491,89 @@ RETURN
 #ENDIF
         DEALLOCATE(PSIKINOFG)
         DEALLOCATE(G2)
+      END IF
+
+!     ==========================================================================
+!     == POSITIVE KINETIC-ENERGY DENSITY: 1/2 SUM_N F_N |GRAD PSI_N|**2       ==
+!     == GVEC IS G+K, SO THIS ALSO COVERS GENERAL BLOCH K-POINTS.              ==
+!     ==========================================================================
+      TAUPOS(:,:)=0.D0
+      IF(TTAUPOS) THEN
+        IF(NDIM.NE.1) THEN
+          CALL ERROR$MSG('SKALA POSITIVE TAU SUPPORTS COLLINEAR SPIN ONLY')
+          CALL ERROR$STOP('WAVES_DENSITY')
+        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+        ALLOCATE(GVEC(3,NGL))
+        CALL PLANEWAVE$GETR8A('GVEC',3*NGL,GVEC)
+        ALLOCATE(DPSIOFG(NGL,NDIM,NBH))
+        ALLOCATE(DPSIOFR(NRL,NDIM,NBH))
+        IF(TINV) THEN
+          ALLOCATE(EI2KR(NRL))
+          CALL PLANEWAVE$GETC8A('EIKR',NRL,EI2KR)
+          EI2KR(:)=EI2KR(:)**2
+        END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+        CALL ACCELPROFILE$NOW(ACCEL_T1)
+        ACCEL_TAU_PREP_T=ACCEL_TAU_PREP_T+ACCEL_T1-ACCEL_T0
+#ENDIF
+        DO IDIM=1,3
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+          DO IBH=1,NBH
+            DPSIOFG(:,1,IBH)=CI*GVEC(IDIM,:)*PSIOFG(:,1,IBH)
+          END DO
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_TAU_PREP_T=ACCEL_TAU_PREP_T+ACCEL_T1-ACCEL_T0
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+          CALL PLANEWAVE$FFT('GTOR',NBH,NGL,DPSIOFG,NRL,DPSIOFR)
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_TAU_FFT_T=ACCEL_TAU_FFT_T+ACCEL_T1-ACCEL_T0
+          CALL ACCELPROFILE$NOW(ACCEL_T0)
+#ENDIF
+          IF(TINV) THEN
+            DO IBH=1,NBH
+              F1=F(2*IBH-1)
+              F2=0.D0
+              IF(2*IBH.LE.NB) F2=F(2*IBH)
+              SVAR1=0.5D0*(F1+F2)
+              SVAR2=0.5D0*(F1-F2)
+              IF((SVAR1.EQ.0.D0).AND.(SVAR2.EQ.0.D0)) CYCLE
+              DO IR=1,NRL
+                CSVAR=SVAR1*CONJG(DPSIOFR(IR,1,IBH))
+                IF(SVAR2.NE.0.D0) THEN
+                  CSVAR=CSVAR+SVAR2*DPSIOFR(IR,1,IBH)*EI2KR(IR)
+                END IF
+                TAUPOS(IR,1)=TAUPOS(IR,1) &
+     &                       +0.5D0*REAL(DPSIOFR(IR,1,IBH)*CSVAR,KIND=8)
+              END DO
+            END DO
+          ELSE
+            DO IBH=1,NB
+              F1=F(IBH)
+              IF(F1.EQ.0.D0) CYCLE
+              DO IR=1,NRL
+                RE=REAL(DPSIOFR(IR,1,IBH),KIND=8)
+                IM=AIMAG(DPSIOFR(IR,1,IBH))
+                TAUPOS(IR,1)=TAUPOS(IR,1)+0.5D0*F1*(RE**2+IM**2)
+              END DO
+            END DO
+          END IF
+#IF DEFINED(CPPVAR_ACCEL_PROFILE)
+          CALL ACCELPROFILE$NOW(ACCEL_T1)
+          ACCEL_TAU_ACCUM_T=ACCEL_TAU_ACCUM_T+ACCEL_T1-ACCEL_T0
+#ENDIF
+        END DO
+        IF(TINV) DEALLOCATE(EI2KR)
+        DEALLOCATE(DPSIOFR)
+        DEALLOCATE(DPSIOFG)
+        DEALLOCATE(GVEC)
       END IF
 !
 !     ==========================================================================
@@ -8181,8 +8653,9 @@ RETURN
               F1=F(IBH)
               IF(F1.EQ.0.D0) CYCLE
               DO IR=1,NRL
-                RHO(IR,1)=RHO(IR,1) &
-                         +F1*REAL(PSIOFR(IR,1,IBH)*CONJG(PSIKINOFR(IR,1,IBH)),8)
+                RHOKIN(IR,1)=RHOKIN(IR,1) &
+     &                         +F1*REAL(PSIOFR(IR,1,IBH) &
+     &                                      *CONJG(PSIKINOFR(IR,1,IBH)),KIND=8)
               ENDDO
             ENDDO
           END IF
@@ -8257,6 +8730,17 @@ RETURN
         CALL ACCELPROFILE$ADD('PAW_DENSITY_KIN_FFT' &
      &      ,INT(NGL,KIND=8),INT(NRL,KIND=8),INT(NDIM,KIND=8) &
      &      ,INT(NB,KIND=8),0.D0,0.D0,ACCEL_KIN_FFT_T)
+      END IF
+      IF(TTAUPOS) THEN
+        CALL ACCELPROFILE$ADD('PAW_DENSITY_TAU_PREP' &
+     &      ,INT(NGL,KIND=8),INT(NRL,KIND=8),1_8,INT(NB,KIND=8) &
+     &      ,0.D0,0.D0,ACCEL_TAU_PREP_T)
+        CALL ACCELPROFILE$ADD('PAW_DENSITY_TAU_FFT' &
+     &      ,INT(NGL,KIND=8),INT(NRL,KIND=8),3_8,INT(NB,KIND=8) &
+     &      ,0.D0,0.D0,ACCEL_TAU_FFT_T)
+        CALL ACCELPROFILE$ADD('PAW_DENSITY_TAU_ACCUM' &
+     &      ,INT(NRL,KIND=8),3_8,INT(NB,KIND=8),0_8 &
+     &      ,0.D0,0.D0,ACCEL_TAU_ACCUM_T)
       END IF
       CALL ACCELPROFILE$ADD('PAW_DENSITY_ACCUM' &
      &    ,INT(NRL,KIND=8),INT(NDIM,KIND=8),INT(NB,KIND=8) &

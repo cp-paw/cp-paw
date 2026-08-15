@@ -55,16 +55,28 @@ def is_copy_detail_row(op):
     )
 
 
+def is_fft_kernel_detail(op):
+    return op.startswith(("FFT1D_", "FFT3D_", "CUFFT1D_", "CUFFT3D_"))
+
+
 def profile_totals(run_dir):
     totals = {
         "instrumented": 0.0,
         "blas": 0.0,
         "lapack": 0.0,
         "fft": 0.0,
+        "fft_kernel": 0.0,
         "pw_fft_gtor": 0.0,
         "pw_fft_rtog": 0.0,
         "mpi": 0.0,
         "paw": 0.0,
+        "skala": 0.0,
+        "skala_partition": 0.0,
+        "skala_atom_grid": 0.0,
+        "skala_onecenter": 0.0,
+        "skala_model": 0.0,
+        "skala_onecenter_adjoint": 0.0,
+        "skala_grid_back": 0.0,
         "vpsi": 0.0,
         "vpsi_gtor": 0.0,
         "vpsi_rtog": 0.0,
@@ -108,6 +120,15 @@ def profile_totals(run_dir):
                     continue
                 if op.startswith("PHASE_"):
                     totals["phase"] += seconds
+                    continue
+                if op.startswith("SKALA_"):
+                    totals["skala"] += seconds
+                    key = op.lower()
+                    if key in totals:
+                        totals[key] += seconds
+                    continue
+                if is_fft_kernel_detail(op):
+                    totals["fft_kernel"] += seconds
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
@@ -165,6 +186,38 @@ def final_energy(run_dir):
                 if values:
                     energy = float(values[0])
     return energy
+
+
+def protocol_metrics(run_dir):
+    metrics = {
+        "static_total_energy": None,
+        "model_xc_energy": None,
+        "hybrid_grid_rows": None,
+        "partition_classes": None,
+    }
+    number = r"[-+]?\d+(?:\.\d*)?(?:[EeDd][-+]?\d+)?"
+    labels = {
+        "TOTAL ENERGY": "static_total_energy",
+        "MODEL XC ENERGY": "model_xc_energy",
+        "HYBRID-GRID ROWS": "hybrid_grid_rows",
+        "PARTITION TRANSLATION CLASSES": "partition_classes",
+    }
+    for path in sorted(glob.glob(os.path.join(run_dir, "*.prot"))):
+        with open(path, errors="replace") as handle:
+            for line in handle:
+                stripped = line.strip()
+                for label, key in labels.items():
+                    if not stripped.startswith(label):
+                        continue
+                    values = re.findall(number, stripped[len(label):])
+                    if not values:
+                        continue
+                    value = values[0].replace("D", "E").replace("d", "e")
+                    if key in ("hybrid_grid_rows", "partition_classes"):
+                        metrics[key] = int(float(value))
+                    else:
+                        metrics[key] = float(value)
+    return metrics
 
 
 def run_env(run_dir):
@@ -226,6 +279,7 @@ def main(argv):
         wall = wall_time(run_dir)
         wall_rank = wall_rank_time(wall, env.get("ranks"))
         energy = final_energy(run_dir)
+        protocol = protocol_metrics(run_dir)
         energy_delta, energy_is_ok = energy_check(energy, env)
         ok = run_ok(run_dir) and (energy_is_ok is not False)
         gap = None
@@ -249,9 +303,17 @@ def main(argv):
                 "gap_s": gap,
                 "coverage_pct": coverage,
                 "paw_s": totals["paw"],
+                "skala_s": totals["skala"],
+                "skala_partition_s": totals["skala_partition"],
+                "skala_atom_grid_s": totals["skala_atom_grid"],
+                "skala_onecenter_s": totals["skala_onecenter"],
+                "skala_model_s": totals["skala_model"],
+                "skala_onecenter_adjoint_s": totals["skala_onecenter_adjoint"],
+                "skala_grid_back_s": totals["skala_grid_back"],
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
+                "fft_kernel_s": totals["fft_kernel"],
                 "pw_fft_gtor_s": totals["pw_fft_gtor"],
                 "pw_fft_rtog_s": totals["pw_fft_rtog"],
                 "vpsi_s": totals["vpsi"],
@@ -276,6 +338,10 @@ def main(argv):
                 "update_offden_gb": totals["update_offden_gb"],
                 "update_denmat_gb": totals["update_denmat_gb"],
                 "energy": energy,
+                "static_total_energy": protocol["static_total_energy"],
+                "model_xc_energy": protocol["model_xc_energy"],
+                "hybrid_grid_rows": protocol["hybrid_grid_rows"],
+                "partition_classes": protocol["partition_classes"],
                 "energy_delta": energy_delta,
                 "energy_ok": (
                     "" if energy_is_ok is None else ("yes" if energy_is_ok else "no")
@@ -300,9 +366,17 @@ def main(argv):
         "gap_s",
         "coverage_pct",
         "paw_s",
+        "skala_s",
+        "skala_partition_s",
+        "skala_atom_grid_s",
+        "skala_onecenter_s",
+        "skala_model_s",
+        "skala_onecenter_adjoint_s",
+        "skala_grid_back_s",
         "blas_s",
         "lapack_s",
         "fft_s",
+        "fft_kernel_s",
         "pw_fft_gtor_s",
         "pw_fft_rtog_s",
         "vpsi_s",
@@ -327,6 +401,10 @@ def main(argv):
         "update_offden_gb",
         "update_denmat_gb",
         "energy",
+        "static_total_energy",
+        "model_xc_energy",
+        "hybrid_grid_rows",
+        "partition_classes",
         "energy_delta",
         "energy_ok",
         "env",

@@ -68,7 +68,7 @@ make all
 ```
 
 Set `CPPAW_CUFFT_ACC=1` to enable the native path. The runtime default is
-conservative: only batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=1000000`
+profiled: batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=512`
 elements are offloaded unless the environment overrides the threshold. Set the
 threshold to `0` only for force-all diagnostics of the small-FFT overhead.
 For single-rank plane-wave diagnostics, `CPPAW_FFT_SERIAL_3D=1` switches
@@ -139,7 +139,9 @@ summary includes both wall time and rank-normalized wall time (`wall_rank_s`),
 the primary instrumented rank-seconds (`rank_s`), and a residual
 `gap_s = wall_rank_s - rank_s`. Use `gap_s` and `coverage_pct` to decide
 whether the current CSV timers already explain the run or whether additional
-instrumentation is needed. Diagnostic Plane-wave FFT local/MPI-envelope timers
+instrumentation is needed. The `PW_FFT_*_TOTAL` envelopes contribute to
+`rank_s` and `fft_s`; nested `FFT1D_*`, `FFT3D_*`, and corresponding cuFFT
+kernel timers are reported separately as `fft_kernel_s`. Diagnostic Plane-wave FFT local/MPI-envelope timers
 are reported separately as `pw_trace_s`; the GTOR and RTOG subsets are also
 reported as `pw_gtor_s` and `pw_rtog_s`. These columns are intentionally kept
 out of `rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.
@@ -147,7 +149,13 @@ High-level `PHASE_*` timers are reported separately as `phase_s` and
 `phase_gap_s = wall_rank_s - phase_s`; they are also kept out of `rank_s`
 because they are coarse envelopes around existing numerical kernel timers. Use
 the phase columns to localize unexplained wall time before adding lower-level
-kernel instrumentation. The aggregate copy estimate `copy_gb` is split into
+kernel instrumentation. Nested `SKALA_*` timers are likewise kept out of
+`rank_s` and reported as `skala_s` plus per-phase columns for partitioning,
+atom-grid construction, model evaluation, one-center work, its adjoint, and
+grid back-projection. Skala runs also expose protocol values as
+`static_total_energy`, `model_xc_energy`, `hybrid_grid_rows`, and
+`partition_classes`; use the first two instead of the Car-Parrinello
+`CONSTANT ENERGY` when checking MPI invariance. The aggregate copy estimate `copy_gb` is split into
 semantic buckets for the GPU-residency work: `copy_wave_gb` for wavefunction
 arrays, `copy_proj_gb` for projector/projection arrays, `copy_offden_gb` for
 off-site density-matrix transfers, and `copy_denmat_gb` for one-center

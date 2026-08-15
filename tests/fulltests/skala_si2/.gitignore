@@ -1,0 +1,11 @@
+__pycache__/
+err.log
+model.fun
+out.log
+skala_si2.banddata
+skala_si2.pdos
+skala_si2.prot
+skala_si2.rstrt
+skala_si2.strc_out
+skala_si2_constr.report
+skala_si2_stpforz14.myxml
