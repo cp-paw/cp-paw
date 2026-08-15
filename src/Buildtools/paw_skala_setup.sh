@@ -13,6 +13,8 @@ CUDA_COMPILER=
 CUDA_ARCH=
 CUDA_ROOT=
 TORCH_CUDA_ARCH=
+CUDA_HOST_COMPILER=
+CUDA_GLIBC_WORKAROUND=false
 
 usage() {
   cat <<USAGE
@@ -55,6 +57,11 @@ if [[ -z ${TORCH_PREFIX} ]]; then
   echo "Install PyTorch or pass --torch-prefix /path/to/torch." >&2
   exit 1
 fi
+CXX_WAS_SET=false
+CUDAHOSTCXX_WAS_SET=false
+[[ -n ${CXX:-} ]] && CXX_WAS_SET=true
+[[ -n ${CUDAHOSTCXX:-} ]] && CUDAHOSTCXX_WAS_SET=true
+CXX=${CXX:-$(command -v g++ || command -v clang++ || true)}
 if [[ ${DEVICE} = cuda ]]; then
   TORCH_CUDA=$(${PYTHON} -c 'import torch; print(int(torch.cuda.is_available()))' 2>/dev/null || echo 0)
   if [[ ${TORCH_CUDA} != 1 ]]; then
@@ -130,14 +137,70 @@ print(f"{major}{minor}")
     exit 1
   fi
   CUDA_ROOT=$(cd "$(dirname "${CUDA_COMPILER}")/.." && pwd)
+
+  CUDA_HOST_CANDIDATES=("${CUDAHOSTCXX:-${CXX}}")
+  if [[ ${CUDAHOSTCXX_WAS_SET} = false ]]; then
+    for CANDIDATE in g++-13 g++-12 g++-11; do
+      CANDIDATE_PATH=$(command -v "${CANDIDATE}" || true)
+      [[ -n ${CANDIDATE_PATH} ]] && CUDA_HOST_CANDIDATES+=("${CANDIDATE_PATH}")
+    done
+  fi
+  CUDA_PROBE_DIR=$(mktemp -d)
+  printf '%s\n' '#include <cuda_runtime.h>' 'int main() { return 0; }' \
+    >"${CUDA_PROBE_DIR}/probe.cu"
+  cuda_host_works() {
+    local host=$1
+    shift
+    "${CUDA_COMPILER}" -ccbin "${host}" "$@" -c \
+      "${CUDA_PROBE_DIR}/probe.cu" -o "${CUDA_PROBE_DIR}/probe.o" \
+      >"${CUDA_PROBE_DIR}/probe.log" 2>&1
+  }
+  for CANDIDATE in "${CUDA_HOST_CANDIDATES[@]}"; do
+    if [[ -n ${CANDIDATE} ]] && cuda_host_works "${CANDIDATE}"; then
+      CUDA_HOST_COMPILER=${CANDIDATE}
+      break
+    fi
+  done
+  if [[ -z ${CUDA_HOST_COMPILER} ]]; then
+    for CANDIDATE in "${CUDA_HOST_CANDIDATES[@]}"; do
+      if [[ -n ${CANDIDATE} ]] \
+          && cuda_host_works "${CANDIDATE}" -U_GNU_SOURCE; then
+        CUDA_HOST_COMPILER=${CANDIDATE}
+        CUDA_GLIBC_WORKAROUND=true
+        break
+      fi
+    done
+  fi
+  if [[ -z ${CUDA_HOST_COMPILER} ]]; then
+    cat "${CUDA_PROBE_DIR}/probe.log" >&2
+    rm -rf "${CUDA_PROBE_DIR}"
+    echo "No compatible CUDA host C++ compiler was found." >&2
+    echo "Set CUDAHOSTCXX to a compiler supported by ${CUDA_COMPILER}." >&2
+    exit 1
+  fi
+  rm -rf "${CUDA_PROBE_DIR}"
+  export CUDAHOSTCXX=${CUDA_HOST_COMPILER}
+  if [[ ${CXX_WAS_SET} = false ]]; then
+    CXX=${CUDA_HOST_COMPILER}
+  fi
+  if [[ ${CUDA_GLIBC_WORKAROUND} = true ]]; then
+    export NVCC_PREPEND_FLAGS="${NVCC_PREPEND_FLAGS:+${NVCC_PREPEND_FLAGS} }-U_GNU_SOURCE"
+    echo "Using -U_GNU_SOURCE for CUDA compatibility with the host glibc headers"
+  fi
 fi
 
+DEFAULT_PREFIX=${THISDIR}/bin/skala_ftorch_${DEVICE}
 if [[ -z ${PREFIX} ]]; then
-  PREFIX=${THISDIR}/bin/skala_ftorch_${DEVICE}
+  PREFIX=${DEFAULT_PREFIX}
 fi
-BUILD=${THISDIR}/bin/Build_skala_ftorch_${DEVICE}
+if [[ -n ${CPPAW_SKALA_BUILD_DIR:-} ]]; then
+  BUILD=${CPPAW_SKALA_BUILD_DIR}
+elif [[ ${PREFIX} = "${DEFAULT_PREFIX}" ]]; then
+  BUILD=${THISDIR}/bin/Build_skala_ftorch_${DEVICE}
+else
+  BUILD=${PREFIX}.build
+fi
 FC=${FC:-$(command -v nvfortran || command -v gfortran || true)}
-CXX=${CXX:-$(command -v g++ || command -v clang++ || true)}
 DEVICE_CMAKE=$(printf '%s' "${DEVICE}" | tr '[:lower:]' '[:upper:]')
 if [[ -z ${FC} || -z ${CXX} ]]; then
   echo "a Fortran compiler and a C++17 compiler are required" >&2
@@ -147,6 +210,7 @@ fi
 CUDA_CMAKE_ARGS=()
 if [[ ${DEVICE} = cuda ]]; then
   CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_COMPILER=${CUDA_COMPILER}")
+  CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_HOST_COMPILER=${CUDA_HOST_COMPILER}")
   CUDA_CMAKE_ARGS+=("-DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCH}")
   CUDA_CMAKE_ARGS+=("-DCUDAToolkit_ROOT=${CUDA_ROOT}")
   CUDA_CMAKE_ARGS+=("-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_ROOT}")

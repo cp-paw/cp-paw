@@ -184,9 +184,14 @@ set and behavior.
 
 For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
 version matches the selected PyTorch package. Set `CUDACXX` to require a
-specific compiler. CMake's CUDA architecture probe is initialized from
-the selected GPU's compute capability; `CPPAW_SKALA_CUDA_ARCH` can override
-that value on unusual or cross-compiled systems.
+specific compiler. It probes the CUDA host C++ compiler and, when necessary,
+selects an installed compatible GNU version. `CUDAHOSTCXX` makes that choice
+explicit. A narrowly scoped `-U_GNU_SOURCE` fallback handles CUDA 12.4 with
+glibc 2.41 headers after a compile probe confirms that combination. CMake's
+CUDA architecture probe is initialized from the selected GPU's compute
+capability; `CPPAW_SKALA_CUDA_ARCH` can override that value on unusual or
+cross-compiled systems. Custom installation prefixes receive independent
+build trees; `CPPAW_SKALA_BUILD_DIR` can select one explicitly.
 
 Binary PyTorch packages use the GNU OpenMP runtime, while `nvfortran` links the
 NVIDIA OpenMP runtime even when CP-PAW does not enable OpenMP directives. The
