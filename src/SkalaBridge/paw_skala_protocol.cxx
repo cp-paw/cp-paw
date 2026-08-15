@@ -12,6 +12,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -25,6 +26,7 @@ struct SkalaModel {
   torch::jit::script::Module module;
   torch::Device device = torch::Device(torch::kCPU);
   bool features[feature_count] = {};
+  std::unordered_set<std::string> warmed_shapes;
 };
 
 using TensorDict = c10::Dict<std::string, torch::Tensor>;
@@ -111,6 +113,13 @@ void validate_feature_shapes(const TensorDict &features) {
   require_shape(features, "atomic_grid_weights", {npoint});
   require_shape(features, "atomic_grid_sizes", {natom});
   require_shape(features, "atomic_grid_size_bound_shape", {-1, 0});
+}
+
+std::string evaluation_shape(const TensorDict &features) {
+  const auto &density = features.at("density");
+  const auto &atom_coords = features.at("coarse_0_atomic_coords");
+  return std::to_string(density.size(1)) + ":" +
+         std::to_string(atom_coords.size(0));
 }
 
 torch::Tensor *new_tensor(torch::Tensor tensor) {
@@ -241,6 +250,14 @@ extern "C" int cppaw_skala_model_evaluate(void *model_handle,
     std::vector<c10::IValue> args;
     std::unordered_map<std::string, c10::IValue> kwargs;
     kwargs["mol"] = features;
+    const std::string shape = evaluation_shape(features);
+    if (model.warmed_shapes.find(shape) == model.warmed_shapes.end()) {
+      // CUDA's profiling executor may use a different graph on its first call.
+      // Warm each tensor shape once so MPI atom distribution cannot select a
+      // different numerical path for otherwise identical model evaluations.
+      model.module.get_method("get_exc_density")(args, kwargs).toTensor();
+      model.warmed_shapes.insert(shape);
+    }
     torch::Tensor exc_density =
         model.module.get_method("get_exc_density")(args, kwargs).toTensor();
     torch::Tensor exc = (exc_density * features.at("grid_weights")).sum();
