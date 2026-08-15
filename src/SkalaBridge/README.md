@@ -22,14 +22,18 @@ smooth scalar operator includes the Fourier-space divergence of the gradient
 adjoint. These operators are validated diagnostically; they do not replace
 CP-PAW's conventional XC energy or Hamiltonian by default. `APPLY=T` enables
 the experimental electronic operator, including the generalized Kohn-Sham
-positive-tau term. Its safe default is `F`; forces and stress are not yet
-implemented for this mode.
+positive-tau term. The smooth scalar, positive-tau, and one-center parts can be
+isolated with their component switches. Its safe default is `F`; forces and
+stress are not yet implemented for this mode.
 
 ```text
 !SKALA
  MODEL='path/to/skala-1.1-rev1-cuda.fun'
  DEVICE='AUTO'
  APPLY=F
+ APPLYSMOOTH=T
+ APPLYTAU=T
+ APPLYONECENTER=T
 !END
 ```
 
