@@ -4561,6 +4561,16 @@ kernels. Model XC energies remain consistent within `3.4e-7 H` across ranks
 and exactly reproduce the corresponding 24.5 one-rank value to printed
 precision.
 
+The matching uninstrumented NVHPC 26.5 CPU build takes 214.320 s with one MPI
+rank and 49.510 s with eight ranks. Against the combined GPU fast result of
+154.947 s, one A40 is therefore `1.38x` faster than one CPU rank, while eight
+CPU ranks are `3.13x` faster than the single GPU for this coarse case. These
+ratios reproduce the profile comparison without attributing accelerator
+instrumentation overhead to either side. CP-PAW currently compiles both its
+NVHPC profile and release targets with `-O1 -Munroll`; the release gain here is
+mostly the removal of instrumentation and debug metadata rather than a higher
+optimization level.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
