@@ -4539,6 +4539,28 @@ projector state. The two GPU-profile repeats agree within 0.06 percent in wall
 time. Accelerator instrumentation estimates 18.77 GB of copies, primarily
 from cuBLAS scalar products/GEMMs and the many small cuFFT calls.
 
+To separate compiler effects from host and architecture effects, the CPU
+profile was rebuilt with NVHPC 26.5 and its matching HPC-X/Open MPI 5 stack.
+The FTorch CPU bridge passed its energy, repeatability, translation, and
+finite-difference gradient smoke tests before the comparison.
+
+| CPU toolchain | Ranks | Wall time | `SKALA_GRID_BACK` | `SKALA_MODEL` |
+| --- | ---: | ---: | ---: | ---: |
+| NVHPC 24.5 | 1 | 216.430 s | 113.008 s | 70.606 s |
+| NVHPC 26.5 | 1 | 216.440 s | 112.721 s | 71.649 s |
+| NVHPC 24.5 | 8 | 47.320 s average | 114.120 rank-s | 76.345 rank-s |
+| NVHPC 26.5 | 8 | 50.070 s average | 114.241 rank-s average | 95.847 rank-s average |
+
+The one-rank result is unchanged to 0.01 s, and the dominant back-projection
+kernel changes by only 0.25 percent. NVHPC compiler version is therefore not
+the source of the large Spark/Terok grid-back difference. The 26.5 eight-rank
+path is 5.8 percent slower than the 24.5 average and shows more variation in
+the eight independent Torch model instances; that is an MPI/runtime-contention
+effect rather than evidence of different generated code in the one-rank
+kernels. Model XC energies remain consistent within `3.4e-7 H` across ranks
+and exactly reproduce the corresponding 24.5 one-rank value to printed
+precision.
+
 ## Recommended Next Benchmark
 
 Use the focused default comparison for routine checks:
