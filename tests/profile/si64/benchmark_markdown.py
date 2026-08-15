@@ -80,6 +80,7 @@ def main(argv):
         ("blas_s", 2),
         ("lapack_s", 2),
         ("fft_s", 2),
+        ("fft_kernel_s", 2),
         ("mpi_s", 2),
         ("pw_trace_s", 2),
         ("pw_gtor_s", 2),

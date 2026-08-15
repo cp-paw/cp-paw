@@ -117,6 +117,7 @@ def check_summary_and_markdown(tmpdir):
                 "PW_RTOG_TOTAL,1,1,1,0,1,2,2,2,0,0,0,0",
                 "PW_FFT_GTOR_TOTAL,1,1,1,0,1,3,3,3,0,0,0,0",
                 "PW_FFT_RTOG_TOTAL,1,1,1,0,1,4,4,4,0,0,0,0",
+                "FFT1D_C8,1,1,1,0,3,6.5,3,2.1666667,0,0,0,0",
                 "PAW_VPSI_FFT_GTOR,1,1,1,0,1,5,5,5,0,0,0,0",
                 "PAW_VPSI_FFT_RTOG,1,1,1,0,1,6,6,6,0,0,0,0",
                 "PAW_VPSI_TOTAL,1,1,1,0,1,12,12,12,0,0,0,0",
@@ -144,6 +145,7 @@ def check_summary_and_markdown(tmpdir):
     assert_equal(row["pw_gtor_s"], "1", "pw_gtor_s")
     assert_equal(row["pw_rtog_s"], "2", "pw_rtog_s")
     assert_equal(row["fft_s"], "7", "fft_s")
+    assert_equal(row["fft_kernel_s"], "6.5", "fft_kernel_s")
     assert_equal(row["pw_fft_gtor_s"], "3", "pw_fft_gtor_s")
     assert_equal(row["pw_fft_rtog_s"], "4", "pw_fft_rtog_s")
     assert_equal(row["vpsi_s"], "12", "vpsi_s")
@@ -183,6 +185,11 @@ def check_summary_and_markdown(tmpdir):
         profile_summary,
         "Skala detail rank-seconds (nested): 2.000000",
         "profile nested Skala detail",
+    )
+    assert_contains(
+        profile_summary,
+        "FFT kernel rank-seconds (nested): 6.500000",
+        "profile nested FFT kernel detail",
     )
 
     copy_rows = run_tool(

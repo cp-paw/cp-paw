@@ -51,6 +51,10 @@ def is_copy_detail_row(op):
     )
 
 
+def is_fft_kernel_detail(op):
+    return op.startswith(("FFT1D_", "FFT3D_", "CUFFT1D_", "CUFFT3D_"))
+
+
 def category(op):
     if op.startswith("SKALA_"):
         return "Skala detail"
@@ -72,8 +76,10 @@ def category(op):
         return "PW local trace"
     if op.startswith("MPI_ALLTOALL"):
         return "MPI alltoall"
+    if is_fft_kernel_detail(op):
+        return "FFT kernel detail"
     if op.startswith("FFT") or op.startswith("PW_FFT") or op.startswith("CUFFT"):
-        return "FFT"
+        return "FFT envelope"
     if op.startswith("LAPACK") or op.startswith("CUSOLVER"):
         return "LAPACK"
     if "GEMM" in op or "HERK" in op or "SYRK" in op:
@@ -128,6 +134,7 @@ def main(argv):
         if not op.startswith("ACC_")
         and not op.startswith("PAW_")
         and not op.startswith("SKALA_")
+        and not is_fft_kernel_detail(op)
         and not (op.startswith("PW_") and not op.startswith("PW_FFT"))
         and not op.startswith("PHASE_")
     )
@@ -142,6 +149,10 @@ def main(argv):
     skala_total = sum(
         data["seconds"] for op, data in per_op.items()
         if op.startswith("SKALA_")
+    )
+    fft_kernel_total = sum(
+        data["seconds"] for op, data in per_op.items()
+        if is_fft_kernel_detail(op)
     )
     trace_total = sum(
         data["seconds"] for op, data in per_op.items()
@@ -173,6 +184,8 @@ def main(argv):
         print("PAW envelope rank-seconds (nested): {:.6f}".format(paw_total))
     if skala_total:
         print("Skala detail rank-seconds (nested): {:.6f}".format(skala_total))
+    if fft_kernel_total:
+        print("FFT kernel rank-seconds (nested): {:.6f}".format(fft_kernel_total))
     if phase_total:
         print("Diagnostic phase rank-seconds: {:.6f}".format(phase_total))
     if trace_total:

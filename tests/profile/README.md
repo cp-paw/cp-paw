@@ -139,7 +139,9 @@ summary includes both wall time and rank-normalized wall time (`wall_rank_s`),
 the primary instrumented rank-seconds (`rank_s`), and a residual
 `gap_s = wall_rank_s - rank_s`. Use `gap_s` and `coverage_pct` to decide
 whether the current CSV timers already explain the run or whether additional
-instrumentation is needed. Diagnostic Plane-wave FFT local/MPI-envelope timers
+instrumentation is needed. The `PW_FFT_*_TOTAL` envelopes contribute to
+`rank_s` and `fft_s`; nested `FFT1D_*`, `FFT3D_*`, and corresponding cuFFT
+kernel timers are reported separately as `fft_kernel_s`. Diagnostic Plane-wave FFT local/MPI-envelope timers
 are reported separately as `pw_trace_s`; the GTOR and RTOG subsets are also
 reported as `pw_gtor_s` and `pw_rtog_s`. These columns are intentionally kept
 out of `rank_s` because they subdivide the existing `PW_FFT_*_TOTAL` envelope.

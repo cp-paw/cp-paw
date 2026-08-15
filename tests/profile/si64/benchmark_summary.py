@@ -55,12 +55,17 @@ def is_copy_detail_row(op):
     )
 
 
+def is_fft_kernel_detail(op):
+    return op.startswith(("FFT1D_", "FFT3D_", "CUFFT1D_", "CUFFT3D_"))
+
+
 def profile_totals(run_dir):
     totals = {
         "instrumented": 0.0,
         "blas": 0.0,
         "lapack": 0.0,
         "fft": 0.0,
+        "fft_kernel": 0.0,
         "pw_fft_gtor": 0.0,
         "pw_fft_rtog": 0.0,
         "mpi": 0.0,
@@ -121,6 +126,9 @@ def profile_totals(run_dir):
                     key = op.lower()
                     if key in totals:
                         totals[key] += seconds
+                    continue
+                if is_fft_kernel_detail(op):
+                    totals["fft_kernel"] += seconds
                     continue
                 if op.startswith("PW_") and not op.startswith("PW_FFT"):
                     totals["pw_trace"] += seconds
@@ -272,6 +280,7 @@ def main(argv):
                 "blas_s": totals["blas"],
                 "lapack_s": totals["lapack"],
                 "fft_s": totals["fft"],
+                "fft_kernel_s": totals["fft_kernel"],
                 "pw_fft_gtor_s": totals["pw_fft_gtor"],
                 "pw_fft_rtog_s": totals["pw_fft_rtog"],
                 "vpsi_s": totals["vpsi"],
@@ -330,6 +339,7 @@ def main(argv):
         "blas_s",
         "lapack_s",
         "fft_s",
+        "fft_kernel_s",
         "pw_fft_gtor_s",
         "pw_fft_rtog_s",
         "vpsi_s",
