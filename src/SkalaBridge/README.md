@@ -34,8 +34,12 @@ stress are not yet implemented for this mode.
  APPLYSMOOTH=T
  APPLYTAU=T
  APPLYONECENTER=T
+ CHECK=F
 !END
 ```
+
+`CHECK=T` performs a one-time central finite-difference check of the model
+adjoint and its PAW one-center density-matrix contraction.
 
 For PAW, the eventual caller must construct each atom block from primary fields
 before inference:
