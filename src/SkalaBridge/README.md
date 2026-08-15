@@ -76,17 +76,26 @@ than an affine deformation of the radial grid. The Si2 validation covers
 isotropic, uniaxial, and symmetric-shear strains and 1/4-rank MPI parity.
 
 Given an electronically converged restart and its matching structure, the
-three end-to-end checks can be repeated with:
+force and stress checks can be repeated with:
 
 ```sh
 cd tests/fulltests/skala_si2
 PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
 SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
+  ./force_fd.sh 2 1
+
+PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
+SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
   ./stress_fd.sh isotropic
+
+PAWX=/path/to/ppaw SKALA_MODEL=/path/to/model.fun \
+SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
+MPI_RANKS=4 ./mpi_parity.sh
 ```
 
-The other cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; the default
-strain step and absolute tolerance are `3e-4` and `2e-3`, respectively.
+The force arguments select the one-based atom and Cartesian axis. The other
+stress cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; both drivers
+default to a step of `3e-4` and an absolute tolerance of `2e-3`.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
