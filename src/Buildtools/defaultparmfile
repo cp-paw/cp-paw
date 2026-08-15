@@ -711,6 +711,7 @@ function append_nvhpc_openacc_flags {
   if [[ ${CPPAW_NVHPC_ACC_FLAGS_ADDED} != yes ]] ; then
     FCFLAGS="${FCFLAGS} ${GPU_FLAGS}"
     LDFLAGS="${LDFLAGS} ${GPU_FLAGS}"
+    CPPFLAGS="${CPPFLAGS} -DCPPVAR_OPENACC"
     CPPAW_NVHPC_ACC_FLAGS_ADDED=yes
   fi
 }
