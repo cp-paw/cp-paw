@@ -23,12 +23,15 @@ force_tolerance=${SKALA_MPI_FORCE_TOLERANCE:-0.000002}
 stress_tolerance=${SKALA_MPI_STRESS_TOLERANCE:-0.000002}
 radial_points=${SKALA_RADIAL_POINTS:-100}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-17}
+lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-mpi.XXXXXX")
 keep=${SKALA_MPI_KEEP:-0}
 case "$radial_points" in *[!0-9]*|'') echo "SKALA_RADIAL_POINTS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_exactness" in *[!0-9]*|'') echo "SKALA_LEBEDEV_EXACTNESS must be an integer" >&2; exit 2 ;; esac
+case "$lebedev_orientations" in *[!0-9]*|'') echo "SKALA_LEBEDEV_ORIENTATIONS must be an integer" >&2; exit 2 ;; esac
 test "$radial_points" -gt 0 || { echo "SKALA_RADIAL_POINTS must be positive" >&2; exit 2; }
 test "$lebedev_exactness" -gt 0 || { echo "SKALA_LEBEDEV_EXACTNESS must be positive" >&2; exit 2; }
+test "$lebedev_orientations" -gt 0 || { echo "SKALA_LEBEDEV_ORIENTATIONS must be positive" >&2; exit 2; }
 cleanup() {
   if test "$keep" = 1; then
     echo "MPI parity files retained in $work"
@@ -50,6 +53,7 @@ make_case() {
       -e 's/START=T/START=F/' \
       -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial_points/" \
       -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev_exactness/" \
+      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
   cp "$SKALA_RESTART" "$work/$name.rstrt"

@@ -39,6 +39,7 @@ pseudo-core, positive-tau, and existing PAW projector responses.
  DEVICE='AUTO'
  RADIALPOINTS=100
  LEBEDEVEXACTNESS=17
+ LEBEDEVORIENTATIONS=1
  APPLY=F
  APPLYSMOOTH=T
  APPLYTAU=T
@@ -102,12 +103,15 @@ SKALA_RESTART=/path/to/si2.rstrt SKALA_STRUCTURE=/path/to/si2.strc \
 The force arguments select the one-based atom and Cartesian axis. The other
 stress cases are `xx` and `xy`. `MPI_RANKS` selects an MPI run; both drivers
 default to a step of `3e-4` and an absolute tolerance of `2e-3`.
-`SKALA_RADIAL_POINTS` and `SKALA_LEBEDEV_EXACTNESS` override the local-grid
-settings in all three drivers for quadrature-convergence checks.
+`SKALA_RADIAL_POINTS`, `SKALA_LEBEDEV_EXACTNESS`, and
+`SKALA_LEBEDEV_ORIENTATIONS` override the local-grid settings in the force,
+stress, and MPI drivers for quadrature-convergence checks.
 `quadrature_convergence.sh` defaults to radial counts `100 200 400` at Lebedev
 exactness 17 and reports every result relative to the final, finest case. The
 lists can be changed with `SKALA_RADIAL_POINT_LIST` and
-`SKALA_LEBEDEV_EXACTNESS_LIST`.
+`SKALA_LEBEDEV_EXACTNESS_LIST`. `SKALA_LEBEDEV_ORIENTATION_LIST` adds a
+convergence sweep over deterministic, equally weighted rotations of each
+Lebedev grid.
 
 Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
 density Hessian as an input tensor. Higher spatial derivatives nevertheless
@@ -210,10 +214,14 @@ The exact default path automatically reuses local partition weights for atoms
 whose current periodic environments are related by a pure lattice translation
 and whose augmentation cutoffs match.
 
-`RADIALPOINTS` and `LEBEDEVEXACTNESS` control the moving local quadrature. Their
-defaults are 100 and 17, respectively. Energy, particle number, forces, and
-stress should be converged with respect to both before production use; raising
-`RADIALPOINTS` is particularly relevant for sharply peaked AE core fields.
+`RADIALPOINTS`, `LEBEDEVEXACTNESS`, and `LEBEDEVORIENTATIONS` control the
+moving local quadrature. Their defaults are 100, 17, and 1, respectively.
+Additional orientations average deterministic rotations of the same Lebedev
+rule and preserve the normalized quadrature weights. They expose and reduce
+rotational integration error from nonlinear meta-GGA features. Energy,
+particle number, forces, and stress should be converged with respect to all
+three controls before production use; raising `RADIALPOINTS` is particularly
+relevant for sharply peaked AE core fields.
 
 The hybrid quadrature joins the moving radial/Lebedev PAW grid to the fixed
 native cell grid with a quintic radial blend over the outer 20 percent of the

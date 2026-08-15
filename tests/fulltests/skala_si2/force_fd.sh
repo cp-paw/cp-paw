@@ -26,12 +26,15 @@ step=${SKALA_FORCE_FD_STEP:-0.0003}
 tolerance=${SKALA_FORCE_FD_TOLERANCE:-0.002}
 radial_points=${SKALA_RADIAL_POINTS:-100}
 lebedev_exactness=${SKALA_LEBEDEV_EXACTNESS:-17}
+lebedev_orientations=${SKALA_LEBEDEV_ORIENTATIONS:-1}
 ranks=${MPI_RANKS:-1}
 mpiexec=${MPIEXEC:-mpirun}
 case "$radial_points" in *[!0-9]*|'') echo "SKALA_RADIAL_POINTS must be an integer" >&2; exit 2 ;; esac
 case "$lebedev_exactness" in *[!0-9]*|'') echo "SKALA_LEBEDEV_EXACTNESS must be an integer" >&2; exit 2 ;; esac
+case "$lebedev_orientations" in *[!0-9]*|'') echo "SKALA_LEBEDEV_ORIENTATIONS must be an integer" >&2; exit 2 ;; esac
 test "$radial_points" -gt 0 || { echo "SKALA_RADIAL_POINTS must be positive" >&2; exit 2; }
 test "$lebedev_exactness" -gt 0 || { echo "SKALA_LEBEDEV_EXACTNESS must be positive" >&2; exit 2; }
+test "$lebedev_orientations" -gt 0 || { echo "SKALA_LEBEDEV_ORIENTATIONS must be positive" >&2; exit 2; }
 work=$(mktemp -d "${TMPDIR:-/tmp}/cppaw-skala-force.XXXXXX")
 keep=${SKALA_FORCE_FD_KEEP:-0}
 cleanup() {
@@ -55,6 +58,7 @@ make_control() {
       -e 's/!CELL MOVE=T/!CELL MOVE=F/' \
       -e "s/RADIALPOINTS=100/RADIALPOINTS=$radial_points/" \
       -e "s/LEBEDEVEXACTNESS=17/LEBEDEVEXACTNESS=$lebedev_exactness/" \
+      -e "s/LEBEDEVORIENTATIONS=1/LEBEDEVORIENTATIONS=$lebedev_orientations/" \
       "$here/skala_si2.cntl" >"$work/$name.cntl"
   cp "$SKALA_STRUCTURE" "$work/$name.strc"
 }
