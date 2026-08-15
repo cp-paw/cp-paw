@@ -116,12 +116,8 @@ if [[ ${DEVICE} = cuda ]]; then
 
   CUDA_ARCH=${CPPAW_SKALA_CUDA_ARCH:-$(${PYTHON} -c '
 import torch
-arches = torch.cuda.get_arch_list()
-if arches:
-    print(arches[0].removeprefix("sm_"))
-else:
-    major, minor = torch.cuda.get_device_capability()
-    print(f"{major}{minor}")
+major, minor = torch.cuda.get_device_capability()
+print(f"{major}{minor}")
 ')}
   CUDA_ARCH=${CUDA_ARCH#sm_}
   if [[ ${CUDA_ARCH} =~ ^([0-9]+)([0-9])([a-z]?)$ ]]; then

@@ -154,7 +154,7 @@ set and behavior.
 For CUDA, the setup script selects an `nvcc` whose major and minor toolkit
 version matches the selected PyTorch package. Set `CUDACXX` to require a
 specific compiler. CMake's CUDA architecture probe is initialized from
-PyTorch's supported architecture list; `CPPAW_SKALA_CUDA_ARCH` can override
+the selected GPU's compute capability; `CPPAW_SKALA_CUDA_ARCH` can override
 that value on unusual or cross-compiled systems.
 
 Binary PyTorch packages use the GNU OpenMP runtime, while `nvfortran` links the
