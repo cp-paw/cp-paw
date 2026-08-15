@@ -39,7 +39,20 @@ stress are not yet implemented for this mode.
 ```
 
 `CHECK=T` performs a one-time central finite-difference check of the model
-adjoint and its PAW one-center density-matrix contraction.
+adjoint and its PAW one-center density-matrix contraction. It also verifies
+the discrete integration-by-parts identity for the density-gradient adjoint
+and compares the occupied-state expectation of the positive-tau Hamiltonian
+with the primitive `integral v_tau*tau`. `CHECK=F` omits the diagnostic field
+copies and the additional wave-function overlap.
+
+Skala consumes `rho`, `grad(rho)`, and positive `tau`; it does not require a
+density Hessian as an input tensor. Higher spatial derivatives nevertheless
+enter the generalized Kohn-Sham operator through
+`v_rho-div(dE/d grad(rho))` and `-0.5*div(v_tau*grad(psi))`. CP-PAW therefore
+constructs these divergence operators with the same Fourier discretization
+used for the corresponding primitive fields. This adjoint consistency is
+required before the electronic operator can be used reliably in SCF or wave
+function dynamics.
 
 When `APPLY=T`, `SAFEORTHO` defaults to `F` because the robust
 orthogonalization is required by the harder PAW one-center operator. An
