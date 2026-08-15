@@ -34,6 +34,7 @@ stress are not yet implemented for this mode.
  APPLYSMOOTH=T
  APPLYTAU=T
  APPLYONECENTER=T
+ INTERPOLATEPARTITION=F
  CHECK=F
 !END
 ```
@@ -117,3 +118,7 @@ TEST=si64_skala SKALA_MODEL=/absolute/path/to/skala-1.1-rev1-cuda.fun \
 
 Set `SKALA_CHECK=T` for variational diagnostics. The check mode is intended for
 correctness runs; benchmark timings should use `SKALA_CHECK=F`.
+
+`INTERPOLATEPARTITION=T` is an experimental performance mode. It interpolates
+the local atom-grid weights from the cached exact smooth-grid partition. The
+default remains `F` while energy and grid-convergence effects are evaluated.
