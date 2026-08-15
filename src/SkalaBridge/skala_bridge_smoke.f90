@@ -18,6 +18,7 @@ program skala_bridge_smoke
   integer(int64), target :: atomic_grid_sizes(natom)
   real(real64), parameter :: fd_step = 1.0e-4_real64, fd_tolerance = 2.0e-5_real64
   real(real64) :: energy, angle, radius, eplus, eminus, original, max_error
+  real(real64) :: translation_error, translation_gradient(3)
   real(real64) :: analytic(7)
   integer :: device_index, i, iatom, ipoint, status
   character(len=1024) :: model_path, device, device_index_text, message
@@ -93,6 +94,14 @@ program skala_bridge_smoke
     & grid_coord_deriv(6, 3), grid_weight_deriv(7), atom_coord_deriv(2, 3), &
     & atomic_weight_deriv(9)]
   max_error = 0.0_real64
+  translation_gradient = sum(grid_coord_deriv, dim=1) + sum(atom_coord_deriv, dim=1)
+  translation_error = maxval(abs(translation_gradient))
+  write (*, '(a,3es16.8,a,es12.4)') "SKALA_BRIDGE_TRANSLATION gradient=", &
+    & translation_gradient, " max_error=", translation_error
+  if (translation_error > 1.0e-10_real64) then
+    write (*, '(a)') "Skala coordinate gradients violate translation invariance"
+    stop 7
+  end if
 
   original = density(3, 2)
   density(3, 2) = original + fd_step
