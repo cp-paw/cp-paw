@@ -568,7 +568,7 @@ cusolver_generalized_conservative_env() {
 }
 
 cufft_min_default() {
-  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-1000000}"
+  echo "${CPPAW_CUFFT_CONSERVATIVE_MIN_ELEMENTS:-512}"
 }
 
 cufft_env() {
@@ -616,7 +616,7 @@ inherited_accel_env() {
   local name value env_line=""
   while IFS='=' read -r name value; do
     case "${name}" in
-      CPPAW_GPU_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
+      CPPAW_GPU_*|CPPAW_FFT_*|CPPAW_CUBLAS_ACC_*|CPPAW_CUSOLVER_ACC_*|CPPAW_CUFFT_ACC*|CPPAW_GRAM_CHOLESKY)
         if [[ "${value}" =~ ^[A-Za-z0-9_./:+-]+$ ]]; then
           env_line="${env_line:+${env_line} }${name}=${value}"
         fi

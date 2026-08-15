@@ -4468,6 +4468,25 @@ consistent with reordered floating-point evaluation of translation-equivalent
 weights. The interpolated diagnostic is no faster and shifts the model energy
 by `8.81e-3 H`, so `INTERPOLATEPARTITION=F` remains the production default.
 
+Revisiting cuFFT after the partition work changed the earlier conclusion. The
+dominant Skala batches contain only 588 and 630 elements but occur 40,320 times
+each. The old one-million-element threshold therefore left them on FFTW. A
+512-element threshold offloads both and keeps the 500-element setup transform
+on the CPU:
+
+| FFT mode | Skala Si64 wall | FFT envelope | PBE Si64 wall | Energy check |
+| --- | ---: | ---: | ---: | --- |
+| 1-D threshold 1,000,000 | 88.41 s | 66.20 s | 20.74 s | yes |
+| 1-D threshold 0 | 24.95 s | 2.70 s | not repeated | yes |
+| 1-D threshold 512 | 24.84 s | 2.71 s | 3.64 s | yes |
+| 3-D cuFFT + ACCMAP cache | 24.67 s | 2.35 s | not repeated | yes |
+
+The 512 threshold is the recommended 1-D default: it gives a `3.56x` gain over
+the exact cached Skala run and `5.70x` for the independent PBE control. The 3-D
+path saves only another 0.17 s at wall-clock level and remains an opt-in
+architecture diagnostic. Combining the exact PAW-grid and cuFFT improvements
+reduces the original 540.83 s Skala run to 24.84 s, a `21.77x` improvement.
+
 A pre-translation-cache four-rank run sharing the same GPU took 349.80 s,
 `3.19x` longer than its one-rank reference. Its static total and model XC
 energies agreed within `3.4e-5 H`; the apparent `6.12 H` difference in

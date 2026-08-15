@@ -68,7 +68,7 @@ make all
 ```
 
 Set `CPPAW_CUFFT_ACC=1` to enable the native path. The runtime default is
-conservative: only batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=1000000`
+profiled: batches with at least `CPPAW_CUFFT_ACC_MIN_ELEMENTS=512`
 elements are offloaded unless the environment overrides the threshold. Set the
 threshold to `0` only for force-all diagnostics of the small-FFT overhead.
 For single-rank plane-wave diagnostics, `CPPAW_FFT_SERIAL_3D=1` switches
