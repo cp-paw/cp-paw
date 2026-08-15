@@ -122,3 +122,6 @@ correctness runs; benchmark timings should use `SKALA_CHECK=F`.
 `INTERPOLATEPARTITION=T` is an experimental performance mode. It interpolates
 the local atom-grid weights from the cached exact smooth-grid partition. The
 default remains `F` while energy and grid-convergence effects are evaluated.
+The exact default path automatically reuses local partition weights for atoms
+whose current periodic environments are related by a pure lattice translation
+and whose augmentation cutoffs match.
